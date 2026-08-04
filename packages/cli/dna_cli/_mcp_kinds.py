@@ -139,6 +139,14 @@ def register_kind_tools(
     # refusal mapping.
     prefab_card_app = AppConfig(resource_uri=UI_PREFAB_URI)
 
+    # Kind Studio F3: o card INTERATIVO do Kind autorado. `author_kind` declara
+    # o template `ui://dna/kind-draft` — o host empurra o resultado (que ecoa o
+    # `schema`), o card renderiza linhas editáveis e REAUTORA via
+    # `callServerTool`. O doc continua inerte; a aprovação segue humana.
+    from dna.emit.mcp_ui import UI_KIND_DRAFT_URI
+
+    kind_draft_card_app = AppConfig(resource_uri=UI_KIND_DRAFT_URI)
+
     # THE DECLARATION THAT KEEPS THE MODEL OUT (MCP Apps / SEP-1865).
     #
     # ``visibility=["app"]`` — the list omits ``"model"``, and the spec says a
@@ -203,7 +211,7 @@ def register_kind_tools(
             f"it ({type(exc).__name__}: {exc})"
         )
 
-    @server.tool(run_in_thread=False)
+    @server.tool(run_in_thread=False, app=kind_draft_card_app)
     async def author_kind(
         kind: str, schema: dict[str, Any], traits: list[str] | None = None,
         presentation: dict[str, Any] | list[str] | None = None,

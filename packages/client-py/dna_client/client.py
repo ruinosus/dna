@@ -11,6 +11,7 @@ operation — of ANY HTTP method — with no named method here.
 """
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any
 
 import httpx
@@ -398,6 +399,100 @@ class DnaClient:
         such Kind is the caller's; 403 for a namespace two claims give to
         different owners; 503 when the namespace registry cannot be read."""
         return self._get(f"/v1/kinds/{kind}", scope=scope, tenant=tenant)
+
+    def get_registered_kind(self, kind: str, *, scope: str | None = None) -> JsonObject:
+        """The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the
+        ``ui_schema`` widget hints.
+
+        The registry sibling of :meth:`get_authored_kind`: a registered Kind is
+        the PRODUCT's data model (the same for every caller, holding nobody's
+        content), so this door does not filter. It exists so a form can DERIVE
+        validation (min/max, enums, required) from the schema instead of
+        hand-copying constraints that then drift from the kernel's.
+
+        404 for a Kind the runtime does not register."""
+        return self._get(f"/v1/kinds/registry/{kind}", scope=scope)
+
+    # -- the generic, kubernetes-shaped document read/write -------------------
+
+    def list_kind_documents(
+        self, kind: str, *,
+        api_version: str | None = None, tenant: str | None = None,
+        limit: int = 50, offset: int = 0,
+        fields: Sequence[str] | None = None,
+        order_by: Sequence[str] | None = None,
+    ) -> JsonObject:
+        """List the documents of ``kind`` — the READ face of the generic door.
+
+        The write (:meth:`write_kind_document`) accepted any Kind, but reading
+        back only worked for the Kinds someone had hand-written a route for
+        (``/v1/memories``, ``/v1/projects``, …). Whoever wrote through the
+        generic door could not read through it, and found that out AFTER
+        writing.
+
+        ``fields`` (dotted paths; an unprefixed one resolves under ``spec.``)
+        pushes the PROJECTION down to the kernel. Without it, answering "which
+        ones are open" costs 1 + N calls — list the names, then read each. On
+        Postgres the projection becomes a SELECT and the row travels trimmed.
+
+        An unknown Kind is 404 NAMING it, the same answer the write gives. An
+        empty list from a Kind that exists is 200 with ``documents: []`` —
+        "exists and holds nothing" is an answer, and conflating it with "does
+        not exist" would make a screen say *error* where it should say *none
+        yet*.
+
+        Like the write, this route takes no ``scope`` parameter — identity and
+        scope are never caller input here (see the server route's docstring).
+        """
+        return self._get(
+            f"/v1/kinds/{kind}/documents",
+            tenant=tenant, api_version=api_version, limit=limit, offset=offset,
+            # CSV on the wire: the server splits on comma. `None` stays `None`
+            # so an omitted projection means "the whole document", not "no
+            # fields" — an empty CSV would read as the latter.
+            fields=",".join(fields) if fields else None,
+            order_by=",".join(order_by) if order_by else None,
+        )
+
+    def write_kind_document(
+        self, kind: str, metadata: dict[str, Any], spec: dict[str, Any], *,
+        source_sha256: str | None = None,
+        api_version: str | None = None, tenant: str | None = None,
+        merge: bool = True, if_match: str | None = None,
+    ) -> JsonObject:
+        """Write one document of ``kind`` — the generic door, kubernetes-shaped:
+        the endpoint names the Kind (applying a CRD creates the endpoint that
+        serves it; ``kind`` is inferred from where the client submits, never
+        re-stated ambiguously), the body is exactly ``{metadata, spec}`` plus
+        an optional provenance citation.
+
+        ``metadata["name"]`` is REQUIRED — a blank/absent one is 400. The
+        server validates ``spec`` against the Kind's REGISTERED JSON Schema
+        before writing (like the Kubernetes API server since 1.25), and names
+        the offending field on refusal (400 — unknown property, or a missing
+        required one). A BOOTSTRAP Kind (Genome / LayerPolicy /
+        KindDefinition) is refused (403) — the generic write's own gate,
+        untouched here. An authored-but-unapproved Kind and a Kind nobody
+        ever authored answer the SAME 404 naming it: there is no third,
+        more-specific answer visible from this door. A stale ``if_match`` is
+        409.
+
+        ``source_sha256`` (optional) cites the ``SourceArtifact`` (by content
+        address) this document was extracted from; the server closes the
+        ``derived_refs`` provenance edge, preserving every OTHER document
+        already recorded there and updating THIS one's own entry in place on
+        a re-write rather than duplicating it. A citation naming no
+        registered artifact under ``tenant`` is 400.
+
+        There is deliberately no ``scope`` parameter and no ``claims``
+        parameter here — identity and scope are never caller input on this
+        route (see the server route's docstring)."""
+        return self._write(
+            "POST", f"/v1/kinds/{kind}/documents",
+            {"metadata": metadata, "spec": spec, "source_sha256": source_sha256},
+            tenant=tenant, api_version=api_version, merge=merge,
+            if_match=if_match,
+        )
 
     # -- definitions (bundle entries — fork a bundle-file, plane B) ----------
 

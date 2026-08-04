@@ -17,7 +17,16 @@ _CARD = {
     "name": "invoice-reader",
     "description": "Reads invoices",
     "version": "2.1.0",
-    "supportedInterfaces": [{"transport": "jsonrpc", "url": "https://vendor.example/a2a"}],
+    # A forma REAL da 1.0. A fixture dizia `{"transport": "jsonrpc"}` — um campo
+    # que não existe na especificação — e por isso o teste passava contra um
+    # Card que nenhum servidor A2A publica.
+    "supportedInterfaces": [
+        {
+            "url": "https://vendor.example/a2a",
+            "protocolBinding": "JSONRPC",
+            "protocolVersion": "1.0",
+        }
+    ],
     "capabilities": {"streaming": True, "pushNotifications": False},
     "skills": [
         {"id": "read", "name": "Read invoice", "description": "…", "tags": ["ocr"]}
@@ -93,3 +102,74 @@ def test_ingest_writes_an_INERT_document():
     )
     assert name == "remote-invoice-reader"
     assert seen["approved"] is False, "um Card buscado NÃO pode nascer aprovado"
+
+
+# ── o Card REAL, medido do a2a-sdk 1.1.2 ────────────────────────────────────
+#
+# Não é fixture inventada: é a serialização que um servidor A2A 1.0 conforme
+# publica em /.well-known/agent-card.json, capturada do SDK oficial. Contra ela,
+# `card_to_spec` + o schema do Kind recusavam DUAS vezes — `protocolBinding` era
+# propriedade desconhecida num schema fechado, e `transport` estava faltando.
+# Ou seja: nenhum agente A2A real podia ser registrado, e os 49 testes verdes
+# não sabiam disso porque as fixtures herdavam o mesmo erro de leitura.
+CARD_CONFORME = {
+    "name": "eco",
+    "description": "devolve o que recebe",
+    "version": "0.1.0",
+    "supportedInterfaces": [
+        {
+            "url": "https://exemplo/a2a",
+            "protocolBinding": "JSONRPC",
+            "protocolVersion": "1.0",
+        }
+    ],
+    "capabilities": {"streaming": True},
+    "defaultInputModes": ["text/plain"],
+    "defaultOutputModes": ["text/plain"],
+    "skills": [{"id": "eco", "name": "eco", "description": "ecoa"}],
+}
+
+
+def _validador_do_kind():
+    from pathlib import Path
+
+    import yaml
+    from jsonschema import Draft202012Validator
+
+    import dna.extensions.a2a as pacote
+
+    caminho = Path(pacote.__file__).parent / "kinds" / "remote-agent.kind.yaml"
+    schema = yaml.safe_load(caminho.read_text())["spec"]["schema"]
+    return Draft202012Validator(schema)
+
+
+def test_um_card_conforme_vira_RemoteAgent_valido():
+    spec = card_to_spec(CARD_CONFORME, data_scope_kinds=["Story"])
+    erros = [
+        f"{list(e.path)}: {e.message}" for e in _validador_do_kind().iter_errors(spec)
+    ]
+    assert not erros, "o Kind recusou um Agent Card A2A 1.0 conforme: " + "; ".join(erros)
+
+
+def test_a_interface_preserva_binding_e_versao_do_protocolo():
+    spec = card_to_spec(CARD_CONFORME, data_scope_kinds=[])
+    assert spec["supported_interfaces"] == [
+        {
+            "url": "https://exemplo/a2a",
+            "protocol_binding": "JSONRPC",
+            "protocol_version": "1.0",
+        }
+    ]
+
+
+def test_o_campo_transport_da_versao_a_mao_nao_e_mais_aceito():
+    """Sem compatibilidade, por decisão: duas leituras do mesmo campo
+    convivendo é exatamente o débito que esta troca existe para não criar."""
+    antigo = dict(
+        CARD_CONFORME,
+        supportedInterfaces=[{"transport": "jsonrpc", "url": "https://exemplo/a2a"}],
+    )
+    spec = card_to_spec(antigo, data_scope_kinds=[])
+    assert list(_validador_do_kind().iter_errors(spec)), (
+        "a forma antiga passou — o schema ainda aceita as duas leituras"
+    )

@@ -32,6 +32,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
+from dna.memory.policy import resolve_affect_palette, resolve_decay_policy
 from dna.memory.decay import (
     affect_factor,
     currently_valid,
@@ -297,6 +298,53 @@ async def is_personal_doc(
     return (base.get("spec") or {}) != spec
 
 
+#: Cache curtinho do spec da CognitivePolicy por (scope, tenant) — a política
+#: é lida por RECALL, e uma query por hit seria pagar a régua toda vez que se
+#: mede. TTL operacional via DNA_POLICY_CACHE_TTL (segundos; default 30 — o
+#: mesmo desenho do kind-refresh do live).
+_POLICY_TTL_S = 30.0
+_POLICY_CACHE: dict[tuple[str, str], tuple[float, dict | None]] = {}
+
+
+def _policy_ttl() -> float:
+    import os
+
+    bruto = os.environ.get("DNA_POLICY_CACHE_TTL")
+    try:
+        v = float(bruto) if bruto else _POLICY_TTL_S
+        return v if v >= 0 else _POLICY_TTL_S
+    except (TypeError, ValueError):
+        return _POLICY_TTL_S
+
+
+async def cognitive_policy_spec(kernel: Any, scope: str, tenant: str | None) -> dict | None:
+    """O spec da CognitivePolicy do workspace, cacheado. Falha/ausente = None
+    (defaults de código — paridade byte-igual com o mundo sem doc)."""
+    import time as _time
+
+    chave = (str(scope), str(tenant or ""))
+    agora = _time.monotonic()
+    hit = _POLICY_CACHE.get(chave)
+    if hit and agora - hit[0] < _policy_ttl():
+        return hit[1]
+    spec: dict | None = None
+    try:
+        nomes = await kernel.list_documents(scope, kind="CognitivePolicy", tenant=tenant)
+        for _kind, nome in nomes or []:
+            doc = await kernel.get_document(scope, "CognitivePolicy", nome, tenant=tenant)
+            raw = doc if isinstance(doc, dict) else None
+            cand = (raw or {}).get("spec")
+            if isinstance(cand, dict):
+                spec = cand
+                break
+    except Exception:  # noqa: BLE001 — política é refinamento, nunca custa o recall
+        spec = None
+    if len(_POLICY_CACHE) > 256:
+        _POLICY_CACHE.clear()
+    _POLICY_CACHE[chave] = (agora, spec)
+    return spec
+
+
 async def _load_spec(
     kernel: Any, scope: str, kind: str, name: str, tenant: str | None,
 ) -> dict[str, Any]:
@@ -373,6 +421,12 @@ async def recall(
             hit.setdefault("kind", kind)
             merged.append(hit)
 
+    # E2: a política do workspace alcança o scoring — decay resolvido e a
+    # PALETA do tenant (o Kind abriu o vocabulário; isto liga o fio).
+    politica = await cognitive_policy_spec(kernel, scope, tenant)
+    decay_policy = resolve_decay_policy(politica)
+    palette = resolve_affect_palette(politica)
+
     scored: list[dict[str, Any]] = []
     spec_by_name: dict[str, dict[str, Any]] = {}
     for hit in merged:
@@ -386,8 +440,10 @@ async def recall(
             continue
         base = float(hit.get("score", 0.0) or 0.0)
         if kind == "Engram" and spec:
-            adjusted, retention = decay_adjusted_score(base, spec, now=now_dt)
-            adjusted *= affect_factor(spec.get("affect"))
+            adjusted, retention = decay_adjusted_score(
+                base, spec, now=now_dt, policy=decay_policy
+            )
+            adjusted *= affect_factor(spec.get("affect"), palette)
             hit["score"] = adjusted
             hit["retention"] = round(retention, 4)
         # i-068: display enrichment + the per-item personal flag — additive,

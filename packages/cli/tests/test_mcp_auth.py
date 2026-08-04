@@ -485,3 +485,57 @@ def test_build_auth_from_config_advertises_issuers_verbatim(monkeypatch):
         provs, resource_url="https://door.test", authorization_servers=[_AS_BARE]
     )
     assert _prm_body(provider)["authorization_servers"] == [_AS_BARE]
+
+
+# ── o JWKS vem da DESCOBERTA, não de uma convenção ──────────────────────────
+
+
+def test_jwks_uri_vem_do_que_o_servidor_anuncia(monkeypatch):
+    """O `jwks_uri` derivado tem de ser o que o SERVIDOR publica.
+
+    O caso real que motivou isto: o WorkOS AuthKit anuncia
+    `<issuer>/oauth2/jwks`, e a convenção `<issuer>/.well-known/jwks.json`
+    responde 404. O verificador não achava a chave e recusava TODO token — sem
+    erro de configuração, sem erro de rede, sem mensagem. A porta respondia 401
+    contra um token perfeito.
+
+    A asserção é sobre o VALOR ANUNCIADO, não sobre uma string que eu escolhi:
+    um teste que checasse `endswith("/oauth2/jwks")` passaria com a convenção
+    trocada por outra convenção, que é o mesmo defeito com outro nome.
+    """
+    anunciado = "https://idp.test/caminho/que/ninguem/adivinharia/jwks"
+    monkeypatch.setattr(A, "_jwks_uri_anunciado", lambda issuer, **_: anunciado)
+    assert A._derive_jwks_uri("workos", "https://idp.test") == anunciado
+
+
+def test_a_convencao_sobrevive_quando_a_descoberta_nao_responde(monkeypatch):
+    """Sem metadados alcançáveis, a convenção ainda faz o provedor subir.
+
+    Um IdP que não fala descoberta — ou que está momentaneamente fora — não pode
+    derrubar o boot: a convenção é um palpite pior que a descoberta e melhor que
+    desistir.
+    """
+    monkeypatch.setattr(A, "_jwks_uri_anunciado", lambda issuer, **_: None)
+    assert (
+        A._derive_jwks_uri("oidc", "https://idp.test")
+        == "https://idp.test/.well-known/jwks.json"
+    )
+    assert (
+        A._derive_jwks_uri("entra", "https://login.microsoftonline.com/t/v2.0")
+        == "https://login.microsoftonline.com/t/discovery/v2.0/keys"
+    )
+
+
+def test_um_jwks_uri_explicito_nao_dispara_descoberta(monkeypatch):
+    """Configuração explícita vence — e nem chega a perguntar ao servidor."""
+    def _explode(*_a, **_k):  # pragma: no cover - falha o teste se chamada
+        raise AssertionError("a descoberta não devia ser consultada")
+
+    monkeypatch.setattr(A, "_jwks_uri_anunciado", _explode)
+    provs = A.parse_auth_providers(
+        {"providers": [
+            {"type": "oidc", "tenant_claim": "org_id", "issuer": "https://idp.test",
+             "audience": "a", "jwks_uri": "https://idp.test/chaves"}
+        ]}
+    )
+    assert provs[0].jwks_uri == "https://idp.test/chaves"

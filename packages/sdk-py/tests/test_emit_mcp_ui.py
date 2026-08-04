@@ -157,11 +157,15 @@ def test_module_exposes_only_the_mcp_apps_template_surface():
     memory read-tool call. It is gone; this guard keeps it gone (re-add it and
     this dies). ``__all__`` is the whole contract — no private render survives
     behind it either."""
+    # O kind-draft (Studio F3) entrou DE PROPÓSITO: é o segundo template, e o
+    # primeiro interativo. O guard continua matando renders com dado embutido.
     assert mcp_ui_module.__all__ == [
         "UI_MEMORY_LIST_URI",
+        "UI_KIND_DRAFT_URI",
         "MCP_APP_MIME",
         "HOST_DESIGN_TOKENS",
         "memory_list_card_html",
+        "kind_draft_card_html",
     ]
     for retired in ("memory_canvas_card_html", "_item_html", "_esc"):
         assert not hasattr(mcp_ui_module, retired), (

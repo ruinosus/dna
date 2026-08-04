@@ -1,0 +1,146 @@
+# AgentGrant — a concessão que deixa um TERCEIRO agir em nome de um usuário.
+#
+# ── O gêmeo de ENTRADA ───────────────────────────────────────────────────────
+#
+# `RemoteAgent` diz "podemos mandar dado para lá". Este diz "eles podem agir por
+# nós". São as duas metades da mesma pergunta, e ter só a de saída modelada foi
+# exatamente o que deixou a porta A2A de entrada inalcançável: ela aceitava
+# qualquer token válido do usuário, então "autorizar a Acme" e "ter um usuário
+# logado" eram indistinguíveis. Uma tela de permissões construída sobre isso
+# mostraria uma permissão que não existe — pior que não ter tela.
+#
+# ── Por que um DOCUMENTO, e não uma linha numa tabela do portal ──────────────
+#
+# Porque é fato sobre CAPACIDADE E PERMISSÃO — a mesma justificativa que o
+# `RemoteAgent` dá para existir. E porque quem CONCEDE (o portal) e quem VERIFICA
+# (a porta) são processos diferentes, em linguagens diferentes: uma tabela teria
+# dois donos da mesma forma. O precedente no produto é o `AccountPlan`, que é
+# Kind pelo mesmo motivo — o portal escreve, o portão lê.
+#
+# De brinde vêm versionamento, tenancy e histórico, que é justamente o que a
+# auditoria ("o que este agente fez em meu nome?") precisa.
+#
+# ── O que este Kind NUNCA carrega ────────────────────────────────────────────
+#
+# Credencial. O schema é fechado justamente para que um token não possa ser
+# anexado a uma concessão — a mesma regra do `RemoteAgent` e do Agent Card.
+# Concessão diz QUEM pode e O QUÊ; o segredo com que ele se autentica é do
+# deployment, e nunca do documento.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: agent-grant
+spec:
+  target_api_version: github.com/ruinosus/dna/a2a/v1
+  target_kind: AgentGrant
+  alias: a2a-agent-grant
+  origin: github.com/ruinosus/dna/a2a
+  tenant_scope: tenanted
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  storage:
+    type: yaml
+    container: agent-grants
+  schema:
+    type: object
+    additionalProperties: false
+    required: [client_id, subject, state]
+    properties:
+      client_id:
+        type: string
+        minLength: 1
+        description: >
+          O identificador do app que pede — LIDO DO TOKEN verificado, nunca de
+          um campo do pedido. O corpo é do chamador: um `client_id` vindo dali
+          deixaria um agente se passar por outro e usar a concessão alheia, com
+          o token continuando válido e a chamada continuando 200.
+      client_name:
+        type: string
+        minLength: 1
+        description: >
+          O nome LEGÍVEL do agente, como a tela de consentimento o exibe. Ausente
+          quando não há nome confiável — e ausente é o default, porque um
+          `client_id` cru é feio e HONESTO, enquanto um nome fabricado é legível
+          e falso. Numa tela de autorização a segunda coisa é pior.
+
+          ⚠️ NÃO é auto-declarado. O host só grava aqui um nome que veio
+          ANCORADO: o `client_id` é uma URL HTTPS (CIMD,
+          draft-ietf-oauth-client-id-metadata-document) e o nome foi lido do
+          documento servido naquela origem. Quem controla `acme.com` é o único
+          que pode declarar um nome em `acme.com`, e disso o DNS e o TLS já dão
+          prova. Aceitar nome de um campo do pedido devolveria o ataque que este
+          desenho existe para fechar: a tela do provedor, com a marca dele, no
+          instante da autorização, exibindo a mentira com aparência oficial.
+
+          A ORIGEM não é campo: ela se DERIVA do `client_id` (o host da URL), e é
+          isso que a tela deve mostrar com o mesmo peso do nome. Um campo de
+          domínio ao lado poderia divergir do `client_id`, e um domínio que
+          diverge da âncora é exatamente o nome auto-declarado com outra roupa.
+          Pela mesma razão não há campo dizendo "de onde veio o nome": com
+          `client_id` opaco não há nome ancorado possível, então a procedência
+          já está dita pela forma do `client_id`.
+
+          CONGELADO no instante do pedido, de propósito: o registro guarda o que
+          o humano VIU quando decidiu. Se o terceiro se renomear depois, a tela
+          não troca por baixo de uma decisão já tomada — e a âncora, que se
+          deriva do `client_id`, nunca envelhece.
+      subject:
+        type: string
+        minLength: 1
+        description: >
+          O usuário que concede — o identificador DURÁVEL dele, não o da sessão.
+          Durável porque a concessão sobrevive ao login: revogar um agente não é
+          deslogar a pessoa, e as duas coisas precisam ser independentes.
+      scope_kinds:
+        type: array
+        items: {type: string}
+        description: >
+          Os Kinds cujos documentos este agente pode receber. Mesmo vocabulário
+          do `RemoteAgent.data_scope.kinds`, de propósito: é a mesma pergunta
+          nas duas direções, e responder diferente de cada lado seria uma
+          armadilha para quem lê.
+
+          AUSENTE ou VAZIO significa "nada pode". Ausência FECHA, nunca abre.
+      requested_scope_kinds:
+        type: array
+        items: {type: string}
+        description: >
+          O que o agente PEDIU — separado do que foi concedido, e essa separação
+          é a regra inteira do consentimento: o agente pede, o usuário decide.
+          Um campo só faria pedir ser igual a receber.
+
+          Serve à tela, que pré-marca o pedido para o humano confirmar ou cortar.
+          Um agente que não declara nada deixa isto vazio, e nada vem marcado:
+          silêncio nunca vira permissão.
+      state:
+        type: string
+        enum: [pending, active, revoked]
+        description: >
+          Tri-estado DE PROPÓSITO, como o `signature_state` do `RemoteAgent`.
+
+          Um booleano `granted` faria "pediu e ninguém decidiu" parecer
+          "negado", e são coisas diferentes: a primeira precisa APARECER numa
+          tela para alguém decidir; a segunda já foi decidida e não pede nada.
+      requested_at:
+        type: string
+        description: Quando o agente pediu — o pedido nasce da primeira recusa.
+      granted_at:
+        type: string
+        description: Quando um HUMANO concedeu. Ausente enquanto ninguém decidiu.
+      revoked_at: {type: string}
+      last_call_at:
+        type: string
+        description: A auditoria — quando este agente agiu pela última vez.
+      call_count:
+        type: integer
+        minimum: 0
+        description: >
+          Quantas chamadas CONCEDIDAS. Só as concedidas, pela mesma razão que a
+          quota não conta recusa: um número que mistura uso e tentativa não
+          responde nem "quanto ele usou" nem "quanto ele tentou".
+  presentation:
+    # `client_name` vem ANTES de `client_id`: é a ordem em que a decisão é
+    # tomada. E `client_id` continua na lista — ele não é redundante com o nome,
+    # é a ÂNCORA dele, e some da tela junto com a razão para confiar no nome.
+    fields: [client_name, client_id, subject, state, scope_kinds, last_call_at, call_count]

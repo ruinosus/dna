@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> ⚠️ **Dívida herdada, registrada em 31/07/2026.** O que está nesta seção
+> descreve trabalho **já publicado** entre a 0.27.0 e a 0.40.2: aquelas releases
+> foram cortadas sem mover `[Unreleased]` para seções de versão. Não faz parte da
+> 0.41.0. Reconciliar exige mapear cada item à sua tag, e isso NÃO foi feito aqui
+> — inventar a atribuição seria pior que deixá-la visível.
+
 ### 🐛 Correções
 
 - **As quatro rotas `/v1/kinds*` voltam a montar em `--auth token`** (revert de
@@ -49,6 +55,191 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   IDENTIDADE verificada do chamador (a partição reservada `personal:`), nunca
   um balde compartilhado — e um token sem subject durável não é atribuível e
   segue negado. Um portão rodando aberto avisa no boot (WARNING).
+
+## [0.44.0] — 2026-08-01
+
+### 🐛 Correções
+
+- **O JWKS vem da DESCOBERTA, não de uma convenção.** `_derive_jwks_uri` montava
+  `<issuer>/.well-known/jwks.json` para todo provedor que não fosse Entra. O
+  WorkOS AuthKit publica `<issuer>/oauth2/jwks` — caminho diferente, e o derivado
+  responde **404**.
+
+  O efeito é cruel de depurar: não há erro de configuração, nem de rede, nem
+  mensagem. O verificador simplesmente não encontra a chave de assinatura e
+  recusa **todo** token, e a porta responde `401` contra um token perfeito —
+  emissor certo, assinatura válida, `sub` e `client_id` presentes.
+
+  Agora o `jwks_uri` é lido dos metadados que o servidor publica (RFC 8414 e
+  descoberta OIDC; um provedor pode servir só uma das duas). A convenção fica
+  como último recurso, para um IdP sem metadados alcançáveis continuar subindo, e
+  um `jwks_uri` explícito na configuração vence os dois.
+
+  O `CLAUDE.md` já mandava: *"OIDC — descoberta, nunca issuer/JWKS à mão."* Este
+  código era anterior à regra e a contrariava.
+
+- **O verificador multi-provedor diz POR QUE recusa.** Ele devolvia `None` em
+  silêncio, e a porta respondia `401` sem uma linha em log nenhum: quem depura
+  não sabe qual checagem falhou — emissor? audiência? assinatura? expiração? — e
+  o único caminho que sobra é desligar checagens uma a uma. Foi assim que o
+  defeito acima foi localizado, e custou quatro aprovações interativas de um
+  humano. Registra o provedor, o emissor e a audiência; **nunca** o token.
+
+## [0.43.0] — 2026-08-01
+
+### ✨ Novidades
+
+- **`GET /v1/kinds/{kind}/documents` — a LEITURA da porta genérica.** A face
+  escrevia qualquer documento por `POST /v1/kinds/{kind}/documents` e só lia os
+  Kinds para os quais alguém escrevera uma rota à mão (`/v1/memories`,
+  `/v1/projects`, …). Quem gravava pela porta genérica **não conseguia ler de
+  volta por lugar nenhum**, e descobria isso depois de gravar. O
+  `list_documents_impl` já existia completo no SDK e não tinha porta.
+
+  `fields` (CSV de caminhos pontuados; sem prefixo resolve sob `spec.`) empurra
+  a **projeção** para o kernel: sem ela, responder "quais estão abertos" custa
+  1 + N chamadas. No Postgres a projeção vira `SELECT` e a linha viaja aparada.
+
+  Um Kind desconhecido é **404 nomeando o Kind**; um Kind que existe e está
+  vazio é **200 com `documents: []`**. A distinção é o que permite uma tela
+  dizer *"nenhum ainda"* onde diria *"erro"*.
+
+  Coberto nos **dois** clientes oficiais — `list_kind_documents` (Python) e
+  `listKindDocuments` (TypeScript).
+
+### 🐛 Correções
+
+- **`/.well-known/*` nunca exige bearer.** Era um deadlock silencioso: o cliente
+  precisa do documento para saber **como obter** o token, e do token para ler o
+  documento. O espaço `/.well-known/` é reservado pela RFC 8615 justamente para
+  quem ainda não tem credencial — o Agent Card do A2A diz como alcançar o agente
+  e como se autenticar a ele; o documento de recurso protegido do OAuth diz onde
+  fica o autorizador.
+
+  O sintoma não era um 401 no lugar certo: era um terceiro que simplesmente não
+  conseguia começar, sem mensagem explicando por quê. Achado rodando a porta A2A
+  do dna-cloud no lane de produto, com o cliente oficial do `a2a-sdk` — a
+  descoberta morria antes da primeira mensagem.
+
+## [0.42.0] — 2026-07-31
+
+### ✨ Novidades
+
+- **`AgentGrant`** — a concessão que deixa um TERCEIRO agir em nome de um
+  usuário. É o **gêmeo de entrada** do `RemoteAgent`: aquele diz *"podemos mandar
+  dado para lá"*, este diz *"eles podem agir por nós"*. Kind (`plane: record`,
+  `tenant_scope: tenanted`) + a regra pura em `dna.application.agent_grant`.
+
+  Ter só a metade de SAÍDA modelada é o que deixava uma porta A2A de entrada
+  inalcançável: ela aceita qualquer token válido do usuário, então *"autorizar a
+  Acme"* e *"ter um usuário logado"* são indistinguíveis.
+
+  Duas propriedades carregam o desenho. O `state` é **tri-estado**
+  (`pending`/`active`/`revoked`), como o `signature_state` — um booleano faria
+  *"pediu e ninguém decidiu"* parecer *"negado"*. E **tudo que não é `active`
+  fecha**: ausente, pendente, revogado, malformado e *desconhecido*. A lista é de
+  UM permitido; um portão escrito ao contrário abriria para um estado que alguém
+  acrescente depois, em silêncio.
+
+  `scope_kinds` (concedido) e `requested_scope_kinds` (pedido) são campos
+  **separados** — um campo só faria pedir ser igual a receber.
+
+### 🔧 Por que esta release existe agora
+
+O `AgentGrant` entrou no `main` depois da tag `v0.41.0`, e um consumidor que
+instala do PyPI (o CI do dna-cloud) não o encontrava:
+`ModuleNotFoundError: No module named 'dna.application.agent_grant'`. Em
+desenvolvimento o `[tool.uv.sources]` resolve o checkout editável e esconde
+exatamente essa diferença — é a mesma armadilha que a 0.41.0 documentou para a
+face A2A, e ela reapareceu no ciclo seguinte.
+
+
+## [0.41.0] — 2026-07-31
+
+
+### ⚠️ Mudança com quebra
+
+- **A face A2A passa a ser o SDK oficial (`a2a-sdk`), e o Kind `RemoteAgent`
+  renomeia um campo.** `supported_interfaces[].transport` vira
+  `protocol_binding` (valores em MAIÚSCULAS — `JSONRPC` / `GRPC` / `HTTP+JSON`)
+  e o item ganha `protocol_version`. Documentos `RemoteAgent` gravados antes
+  precisam ser reescritos; não há caminho de compatibilidade, por decisão —
+  duas leituras do mesmo campo convivendo é o débito que esta troca existe para
+  não criar.
+
+  **Por quê.** A face anterior foi escrita a partir da especificação, tinha 49
+  testes verdes e mutação verde — e divergia da A2A 1.0 em **quatro** pontos,
+  todos medidos contra o `a2a-sdk` 1.1.2 instalado:
+
+  | | a versão à mão | a A2A 1.0 real |
+  |---|---|---|
+  | o campo do binding | `transport` | `protocolBinding` |
+  | o valor dele | `"jsonrpc"` | `"JSONRPC"` |
+  | uma `Part` | `{"kind": "text", "text": …}` | `{"text": …}` (é um `oneof`, sem `kind`) |
+  | os métodos JSON-RPC | `message/send`, `message/stream`, `tasks/get` | `SendMessage`, `SendStreamingMessage`, `GetTask` — os nomes com barra são da **0.3** |
+
+  Consequências: nenhum Agent Card A2A real podia ser ingerido (o schema fechado
+  recusava `protocolBinding` e exigia `transport`), nenhum cliente conforme
+  conseguia nos chamar (o `ClientFactory` filtra por `protocol_binding` e achava
+  zero interfaces), e a chamada de saída pedia um método que um servidor 1.0
+  responde com `-32601 Method not found`. As duas metades estavam erradas do
+  MESMO jeito, então conversavam entre si — e com mais ninguém.
+
+  Nenhum teste pegou, porque todos foram escritos pela mesma leitura da
+  especificação que o código. A conformidade agora é medida contra a
+  implementação de referência: `tests/test_a2a_conformance.py` sobe o servidor
+  numa porta real e deixa o cliente oficial descobrir o Card, escolher o binding
+  e conversar.
+
+### ✨ Novidades
+
+- **`dna-cli[a2a]`** — o extra da face A2A (`a2a-sdk[fastapi]>=1.1.2,<2`).
+  Próprio, ao lado de `mcp` e `api`: a árvore base do a2a-sdk traz protobuf +
+  google-api-core + googleapis-common-protos mesmo para quem só usa JSON-RPC, e
+  quem não serve A2A não paga por elas (guarda:
+  `tests/test_a2a_import_isolation.py`).
+- **`dna.extensions.a2a.executor.DnaAgentExecutor`** — adapta um agente DNA
+  (`run(text) -> str`) à interface `AgentExecutor` do SDK. É a única peça nova,
+  e é cola: o protocolo inteiro é do SDK.
+- **`dna.extensions.a2a.serve.attach_a2a`**, re-exportado por
+  **`dna_cli.serving.attach_a2a`** — monta as rotas do SDK no FastAPI que o host
+  já tem, servindo o Card da nossa projeção. Deliberadamente NÃO é uma flag de
+  `dna api serve`: os comandos `serve` são conveniência de dev e estão
+  depreciados para produção; quem serve A2A a sério monta no próprio app, com a
+  própria porta de identidade.
+- **`capabilities.streaming` do Card passa a ser DERIVADO** do executor montado,
+  em vez de um `True` fixo que prometia o que ninguém tinha implementado.
+  `DelegationTarget` ganha `streaming`, lido do Card do remoto: é ele que faz o
+  cliente escolher entre `SendStreamingMessage` e `SendMessage`, e sem ele o
+  `on_event` de `call_remote` existiria sem nunca disparar.
+
+- **O extra `mcp` declara o SDK OFICIAL direto** (`mcp>=1.28`), em vez de
+  recebê-lo por transitividade do `fastmcp`. Medido em 31/07: o `fastmcp` **não
+  implementa** o protocolo — declara `mcp<2.0,>=1.24.0` e importa `mcp.types` /
+  `mcp.server`, e o `LATEST_PROTOCOL_VERSION` que rodamos vem do pacote `mcp`.
+  `_mcp_server.py` já fazia `from mcp.types import TextContent` — import direto.
+  Declarar torna a versão da SPEC decisão nossa em vez de efeito colateral do
+  upgrade do `fastmcp`; a mesma disciplina do `prefab-ui`.
+- **`build_app` expõe o kernel vivo** (`app.state.live`) — quem monta outra face
+  sobre o app REST deixa de precisar abrir um `boot_live` próprio. Dois kernels
+  sobre a mesma fonte são duas caches de Kind e duas janelas de refresh, e o
+  descompasso aparece longe da causa.
+- **`attach_a2a` repassa o `context_builder`** — é como a identidade verificada
+  na borda alcança o executor. O contorno por `contextvar` está quebrado para
+  streaming (um `BaseHTTPMiddleware` o reseta antes de o corpo streamar), então
+  a falha apareceria só no `SendStreamingMessage`.
+- **O extra `mcp` declara `prefab-ui` direto** (#291) — a cadeia
+  `fastmcp[apps]` → `fastmcp-slim[apps]` → `prefab-ui` falhou num ambiente real
+  e toda tool que renderiza card morria com `ModuleNotFoundError` no servidor.
+
+### 🔧 Guardas
+
+- **A cadeia de release ganhou teste** (`packages/cli/tests/test_release_chain.py`):
+  a faixa `dna-sdk>=X,<Y` que o `dna-cli` publica precisa CONTER a própria versão
+  do cli. Este bump quase saiu com `dna-cli 0.41.0` exigindo `dna-sdk<0.41` — o
+  cli novo puxaria o SDK anterior, sem a face A2A, e quem instalasse receberia a
+  versão que anuncia a feature sem a feature. Invisível em dev, porque o
+  `[tool.uv.sources]` troca a faixa pelo caminho editável.
 
 ## [0.26.0] — 2026-07-22
 
@@ -2038,7 +2229,9 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.17.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.42.0...HEAD
+[0.42.0]: https://github.com/ruinosus/dna/compare/v0.41.0...v0.42.0
+[0.41.0]: https://github.com/ruinosus/dna/compare/v0.40.2...v0.41.0
 [0.17.0]: https://github.com/ruinosus/dna/compare/v0.16.0...v0.17.0
 [0.13.0]: https://github.com/ruinosus/dna/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/ruinosus/dna/compare/v0.11.0...v0.12.0

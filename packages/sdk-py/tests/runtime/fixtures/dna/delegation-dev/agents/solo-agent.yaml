@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: Agent
+metadata:
+  name: solo-agent
+  description: An agent that declares NO team_members — the negative side of
+    A.1's central property (test_delegation_wiring.py).
+spec:
+  instruction: You work alone. You have no subagents to delegate to.
+  model: gpt-5-mini
+  mcp_servers:
+  - ref: dna-mcp
+    allowed_tools: []

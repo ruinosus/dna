@@ -22,6 +22,8 @@ from dna.application.gates import (
     refuse_without_exit_criteria,
 )
 from dna.application.live import LiveDna
+from dna.application.delegation_tool import TOOL_NAME as DELEGATE_TO_TOOL_NAME
+from dna.application.delegation_tool import make_delegate_tool
 from dna.application.sdlc_family import (
     board_probe_order,
     dated_spec_fields,
@@ -127,6 +129,7 @@ from dna.application.runtime import (
     provision_workspace_owner_impl,
     read_bundle_entry_impl,
     read_definition_impl,
+    read_registered_kind_impl,
     recall_impl,
     reconcile_forks_impl,
     remember_impl,
@@ -143,6 +146,11 @@ from dna.application.runtime import (
 
 __all__ = [
     "LiveDna",
+    # delegate_to — the tool a team_members declarer gets (s-close-the-two-doors
+    # Peça A). Importing this module is cheap (langchain/pydantic are deferred
+    # INSIDE make_delegate_tool); only calling it requires the [runtime] extra.
+    "DELEGATE_TO_TOOL_NAME",
+    "make_delegate_tool",
     # generic, registry-driven document CRUD (s-mcp-generic-document-tools) —
     # the ONE path any face serves "every Kind" through, instead of N
     # hand-written per-Kind tools.
@@ -217,6 +225,8 @@ __all__ = [
     "genome_view_impl",
     # definitions: read/apply/revert a tenant-layer override (s-strain-customization-ui)
     "read_definition_impl",
+    # o descritor do Kind REGISTRADO (schema + ui_schema) — formulários derivam
+    "read_registered_kind_impl",
     "apply_definition_impl",
     "revert_definition_impl",
     # bundle entries: list/read/write/revert a bundle-file fork (plane B — s-strain-bundle-fork)

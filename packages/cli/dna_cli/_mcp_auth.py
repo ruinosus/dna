@@ -642,13 +642,70 @@ def _entra_multitenant(issuer: str | None) -> bool:
                for seg in ("common", "organizations", "consumers"))
 
 
-def _derive_jwks_uri(ptype: str, issuer: str) -> str:
-    """Derive the JWKS endpoint from the issuer per the IdP type's convention.
+#: Onde um servidor de autorização PUBLICA seus metadados. As duas: a RFC 8414
+#: (OAuth) e a descoberta OIDC. Um provedor pode servir só uma delas.
+_METADATA_PATHS = (
+    "/.well-known/oauth-authorization-server",
+    "/.well-known/openid-configuration",
+)
 
-    * ``entra`` → ``…/discovery/v2.0/keys`` (the fixed Azure AD keys endpoint).
-    * everything else → ``<issuer>/.well-known/jwks.json`` (the de-facto OIDC
-      location; override with an explicit ``jwks_uri`` if your IdP differs).
+
+def _jwks_uri_anunciado(issuer: str, *, timeout: float = 5.0) -> str | None:
+    """O ``jwks_uri`` que o próprio servidor anuncia, ou ``None`` se não deu.
+
+    ``None`` cobre servidor fora do ar, metadados sem o campo, e domínio que não
+    fala descoberta — todos casos em que a convenção ainda é um palpite melhor
+    que desistir.
     """
+    import json
+    import urllib.request
+
+    base = issuer.rstrip("/")
+    for caminho in _METADATA_PATHS:
+        try:
+            req = urllib.request.Request(
+                f"{base}{caminho}", headers={"user-agent": "dna-auth/1.0"}
+            )
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                uri = json.loads(r.read()).get("jwks_uri")
+            if isinstance(uri, str) and uri:
+                return uri
+        except Exception:  # noqa: BLE001 — indisponibilidade não é erro de config
+            continue
+    return None
+
+
+def _derive_jwks_uri(ptype: str, issuer: str) -> str:
+    """Onde buscar as chaves de assinatura — PERGUNTANDO ao servidor primeiro.
+
+    ⚠️ **A descoberta vem antes da convenção**, e isso já custou caro. Esta
+    função só derivava por convenção, e para todo provedor que não fosse Entra
+    devolvia ``<issuer>/.well-known/jwks.json``. O WorkOS AuthKit publica
+    ``<issuer>/oauth2/jwks``: caminho diferente, e o derivado responde **404**.
+
+    O efeito é cruel de depurar. Não há erro de configuração, nem de rede, nem
+    mensagem: o verificador simplesmente não encontra a chave e recusa TODO
+    token, e a porta responde `401` contra um token perfeito — emissor certo,
+    assinatura válida, `sub` e `client_id` presentes. Medido em 01/08/2026 na
+    porta A2A do dna-cloud; custou quatro aprovações interativas de um humano
+    para ser localizado.
+
+    O `CLAUDE.md` já dizia, entre os padrões não-negociáveis: *"OIDC (descoberta,
+    nunca issuer/JWKS à mão)"*. Este código é anterior à regra e a contrariava.
+
+    A convenção fica como ÚLTIMO recurso — um provedor sem metadados alcançáveis
+    ainda sobe:
+
+    * ``entra`` → ``…/discovery/v2.0/keys`` (o endpoint fixo do Azure AD).
+    * o resto → ``<issuer>/.well-known/jwks.json`` (a localização de fato).
+
+    Um ``jwks_uri`` explícito na configuração continua vencendo os dois — este
+    caminho nem é chamado nesse caso.
+    """
+    anunciado = _jwks_uri_anunciado(issuer)
+    if anunciado:
+        return anunciado
+
     base = issuer.rstrip("/")
     if ptype == "entra":
         if base.endswith("/v2.0"):
@@ -1650,14 +1707,38 @@ def _multi_provider_verifier(providers: list[ProviderConfig]) -> Any:
     ``_dna_tenant_claim`` / ``_dna_scope_prefix``), so the tenancy bridge reads the
     RIGHT per-provider claim with no global/request state — and it survives Entra
     ``common`` (where the token ``iss`` differs from the configured issuer)."""
+    import logging
+
     from fastmcp.server.auth import TokenVerifier
 
+    logger = logging.getLogger(__name__)
     pairs = [(pc, _provider_verifier(pc)) for pc in providers]
 
     class _MultiProviderVerifier(TokenVerifier):
         async def verify_token(self, token: str) -> Any:
             for pc, verifier in pairs:
                 access = await verifier.verify_token(token)
+                if access is None:
+                    # ⚠️ POR QUE a recusa, e não só QUE houve recusa.
+                    #
+                    # Antes disto o composto devolvia `None` em silêncio e a
+                    # porta respondia 401 sem uma linha em log nenhum. Quem
+                    # depura não sabe QUAL checagem falhou — emissor? audiência?
+                    # assinatura? expiração? — e o único caminho que sobra é
+                    # desligar checagens uma a uma para ver qual era. Foi
+                    # exatamente o que aconteceu em 01/08/2026, e custou três
+                    # aprovações interativas de um humano.
+                    #
+                    # Só o motivo, NUNCA o token: um bearer em log é uma
+                    # credencial vazada.
+                    logger.warning(
+                        "[dna-auth] provedor %r recusou o token "
+                        "(issuer=%s audience=%s)",
+                        pc.name,
+                        pc.issuer,
+                        pc.audience,
+                    )
+                    continue
                 if access is not None:
                     claims = dict(getattr(access, "claims", None) or {})
                     claims[_DNA_CLAIM_MARKER] = pc.tenant_claim

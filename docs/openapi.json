@@ -411,6 +411,18 @@
             ],
             "title": "Proposed By"
           },
+          "schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Schema"
+          },
           "version": {
             "anyOf": [
               {
@@ -1389,6 +1401,17 @@
             ],
             "title": "Claims"
           },
+          "detected_mime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detected Mime"
+          },
           "filename": {
             "anyOf": [
               {
@@ -1410,6 +1433,28 @@
               }
             ],
             "title": "Mime"
+          },
+          "mime_mismatch": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Mismatch"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin"
           },
           "sha256": {
             "title": "Sha256",
@@ -2504,6 +2549,68 @@
         "title": "InviteResponse",
         "type": "object"
       },
+      "ListKindDocumentsResponse": {
+        "description": "``GET /v1/kinds/{kind}/documents`` — uma página de documentos do Kind.\n\n`documents` é a linha como o kernel a moldou: `{\"name\": …}` sem projeção, e\n`{\"name\": …, \"spec\": {…}}` com `fields`. `projected` ecoa o que foi pedido,\npara um leitor distinguir uma página de nomes de uma projetada — sem isso,\num `spec` ausente seria ambíguo entre \"não pedi\" e \"não tem\".\n\n`has_more` é respondido buscando UMA linha a mais, não adivinhado a partir\nde a página ter vindo cheia.",
+        "properties": {
+          "api_version": {
+            "title": "Api Version",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "documents": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Documents",
+            "type": "array"
+          },
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "offset": {
+            "title": "Offset",
+            "type": "integer"
+          },
+          "projected": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Projected"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "kind",
+          "api_version",
+          "documents",
+          "count",
+          "offset",
+          "has_more"
+        ],
+        "title": "ListKindDocumentsResponse",
+        "type": "object"
+      },
       "MemoriesResponse": {
         "properties": {
           "memories": {
@@ -3445,6 +3552,46 @@
         "title": "RegisterArtifactResponse",
         "type": "object"
       },
+      "RegisteredKindView": {
+        "description": "``GET /v1/kinds/registry/{kind}`` — the registered Kind's descriptor:\nthe JSON ``schema`` a form derives validation from and the ``ui_schema``\nwidget hints it renders with. Product data model, not tenant data — the\nsame answer for every caller (contrast: the authored-Kind door filters).",
+        "properties": {
+          "docs": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Docs"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "plane": {
+            "default": "composition",
+            "title": "Plane",
+            "type": "string"
+          },
+          "schema": {
+            "additionalProperties": true,
+            "title": "Schema",
+            "type": "object"
+          },
+          "ui_schema": {
+            "additionalProperties": true,
+            "title": "Ui Schema",
+            "type": "object"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "RegisteredKindView",
+        "type": "object"
+      },
       "RememberResponse": {
         "properties": {
           "indexed": {
@@ -4180,6 +4327,132 @@
           "content"
         ],
         "title": "WriteBundleEntryRequest",
+        "type": "object"
+      },
+      "WriteKindDocumentRequest": {
+        "description": "``POST /v1/kinds/{kind}/documents`` — the document to write.\n\nDeliberately narrow: no ``scope``, no ``claims`` anywhere on this model —\nneither is reachable through this route's body (identity/scope are never\ncaller input here; see the route for the full reasoning).\n\n``kind`` is OPTIONAL and, when given, MUST equal the path's ``{kind}`` —\na caller naming a DIFFERENT Kind in the body is refused (400) rather than\nthe path or the body silently winning. Two sources stating one fact is\nexactly the defect this route exists to close.\n\n``source_sha256``, when given, cites the ``SourceArtifact`` (by content\naddress) this document was extracted from — the runtime closes the\nprovenance edge (``derived_refs``) server-side.",
+        "properties": {
+          "kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
+          },
+          "metadata": {
+            "additionalProperties": true,
+            "title": "Metadata",
+            "type": "object"
+          },
+          "source_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Sha256"
+          },
+          "spec": {
+            "additionalProperties": true,
+            "title": "Spec",
+            "type": "object"
+          }
+        },
+        "required": [
+          "metadata",
+          "spec"
+        ],
+        "title": "WriteKindDocumentRequest",
+        "type": "object"
+      },
+      "WriteKindDocumentResponse": {
+        "description": "``POST /v1/kinds/{kind}/documents`` — the written document. ``scope``\nis DERIVED (there is no ``scope`` field on the request to have supplied\none from).",
+        "properties": {
+          "api_version": {
+            "title": "Api Version",
+            "type": "string"
+          },
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "merged": {
+            "title": "Merged",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "source_sha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Sha256"
+          },
+          "tenant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "scope",
+          "kind",
+          "api_version",
+          "name",
+          "created",
+          "merged"
+        ],
+        "title": "WriteKindDocumentResponse",
         "type": "object"
       }
     }
@@ -6057,6 +6330,78 @@
         "summary": "Author Kind"
       }
     },
+    "/v1/kinds/registry/{kind}": {
+      "get": {
+        "description": "The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the\n``ui_schema`` widget hints, so a form can DERIVE validation (min/max,\nenums, required) instead of hand-copying it and drifting.\n\nThe registry sibling of ``GET /v1/kinds/{kind}`` (which reads an\nAUTHORED Kind and filters by caller): a registered Kind is the\nPRODUCT's data model, identical for every tenant and holding nobody's\ncontent, so this door does not filter. Declared BEFORE the\n``/{kind}/documents`` routes so ``registry`` is matched as the literal\nsegment it is (a Kind is CamelCase and can never be named\n``registry``). 404 for a Kind the runtime does not register.",
+        "operationId": "get_registered_kind_v1_kinds_registry__kind__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredKindView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Registered Kind"
+      }
+    },
     "/v1/kinds/{kind}": {
       "get": {
         "description": "Read ONE authored Kind in full — the listing's row PLUS the\n``schema`` and the ``traits``, i.e. everything a human needs to answer\n\"should this take effect?\".\n\nFiltered to the CALLER exactly as the listing is, and harder-edged\nbecause it carries more: a Kind authored by another workspace in a\nshared scope is a **404**, the same answer a Kind nobody ever authored\ngets — \"it exists but is not yours\" would hand a stranger a probe for\nwhat its neighbours are authoring, and this door would answer that probe\nwith their data model. A request that resolves NO workspace\n(``--auth none`` self-host, an explicit operator ``scope=``) is not\nfiltered, the same hinge the namespace gate uses for an unattributed\nwrite.\n\n400 for a ``kind`` that is not a CamelCase identifier (the same shared\nguard the authoring and approval doors use — it is a path segment here)\nor for a Kind the caller declared under two of its own namespaces at\nonce; 403 for a namespace two claims give to different owners; 503 when\nthe claim registry cannot be read. None of them degrades to answering\nwith the document.\n\n**Mounted on every auth mode**, and this route carries the most: the\nworkspace's JSON Schema, i.e. its data model. The 404 that keeps a\nneighbour's Kind invisible is decided from ``tenant``, so under\n``--auth config`` it is enforced against a verified identity and under\n``--auth token`` it is enforced against what the trusted caller\nresolved and supplied. See the section comment above for that\nboundary.",
@@ -6215,6 +6560,276 @@
           }
         },
         "summary": "Approve Kind"
+      }
+    },
+    "/v1/kinds/{kind}/documents": {
+      "get": {
+        "description": "Listar os documentos de ``{kind}`` — a LEITURA da porta genérica.\n\nA face escrevia qualquer documento por ``POST\n/v1/kinds/{kind}/documents`` e só lia os Kinds para os quais alguém\nescrevera uma rota à mão (``/v1/memories``, ``/v1/projects``, …). O\n``list_documents_impl`` já existia no SDK, completo, e não tinha porta:\nquem gravava por aqui não conseguia ler de volta por lugar nenhum, e\ndescobria isso depois de gravar.\n\n``fields`` (CSV, caminhos pontuados; sem prefixo resolve sob ``spec.``)\nempurra a PROJEÇÃO para o kernel. Sem ela, responder \"quais estão\nabertos\" custa 1 + N chamadas — listar os nomes e ler cada um. No\nPostgres a projeção vira SELECT e a linha viaja aparada.\n\nUm Kind desconhecido é 404 **nomeando o Kind**, a mesma resposta que a\nescrita dá. Uma lista vazia de um Kind que existe é 200 com\n``documents: []`` — \"existe e não tem nada\" é uma resposta, e confundi-la\ncom \"não existe\" faria uma tela dizer *erro* onde devia dizer *nenhum\nainda*.",
+        "operationId": "list_kind_documents_v1_kinds__kind__documents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "query",
+            "name": "api_version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Api Version"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Limit"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "fields",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Fields"
+            }
+          },
+          {
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Order By"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListKindDocumentsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Kind Documents"
+      },
+      "post": {
+        "description": "Write one document of ``{kind}`` — the generic door, kubernetes-shaped.\n\nThe body is exactly ``{metadata, spec}`` (plus the optional\n``source_sha256`` provenance citation). ``metadata.name`` is\nREQUIRED — 400 when blank or absent. A ``kind`` in the body that\nDIFFERS from the path is refused (400); one that matches is a no-op\n(redundant, not wrong).\n\nThe write goes through the kernel's own pipeline exactly as the MCP\n``write_document`` tool's does: the Kind's JSON Schema validates\n``spec`` and names the offending field on refusal (400), a BOOTSTRAP\nKind (Genome / LayerPolicy / KindDefinition) is refused (403, the\ngeneric write's own gate — untouched, not relaxed here), an authored\nKind nobody has approved yet resolves to nothing in the registry and\nis a 404 naming it (the SAME answer a Kind that was never authored at\nall gets — there is no third state visible from here), an unknown\nKind is a 404 naming it, and a stale ``if_match`` is a 409.\n\n``source_sha256`` (optional) cites the ``SourceArtifact`` this\ndocument was extracted from (by content address); the runtime closes\nthe ``derived_refs`` provenance edge server-side, preserving every\nOTHER document already recorded there and updating THIS document's\nown entry in place on a re-write — never accreting a duplicate. A\n``source_sha256`` that names no registered artifact under ``tenant``\nis refused (400).",
+        "operationId": "write_kind_document_v1_kinds__kind__documents_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "api_version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Api Version"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "query",
+            "name": "merge",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Merge",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "if_match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If Match"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WriteKindDocumentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WriteKindDocumentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Write Kind Document"
       }
     },
     "/v1/kinds/{kind}/revoke": {

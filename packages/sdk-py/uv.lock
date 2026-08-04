@@ -25,6 +25,13 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/c1/33/d414a03d5ef5a7d6d09a20dc9f8094e7fb9edb488662ff99c535a2a62cf1/a2a_sdk-1.1.2-py3-none-any.whl", hash = "sha256:eb9a698f526dc45a9ea967d7804e7aa363ff273d2c44fbed699bc68c9399f9c9", size = 245981, upload-time = "2026-07-22T13:40:49.484Z" },
 ]
 
+[package.optional-dependencies]
+fastapi = [
+    { name = "fastapi" },
+    { name = "sse-starlette" },
+    { name = "starlette" },
+]
+
 [[package]]
 name = "ag-ui-protocol"
 version = "0.1.19"
@@ -1447,7 +1454,7 @@ wheels = [
 
 [[package]]
 name = "dna-sdk"
-version = "0.38.0"
+version = "0.59.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -1469,15 +1476,24 @@ all = [
     { name = "aiosqlite" },
     { name = "alembic" },
     { name = "asyncpg" },
+    { name = "filetype" },
     { name = "google-re2" },
+    { name = "openinference-instrumentation-langchain" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
     { name = "sqlalchemy", extra = ["asyncio"] },
 ]
 dev = [
+    { name = "a2a-sdk", extra = ["fastapi"] },
     { name = "aiosqlite" },
     { name = "alembic" },
     { name = "asyncpg" },
+    { name = "filetype" },
     { name = "google-re2" },
     { name = "httpx" },
+    { name = "openinference-instrumentation-langchain" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -1485,6 +1501,7 @@ dev = [
     { name = "pytest-xdist" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "sqlite-vec" },
+    { name = "uvicorn" },
 ]
 embed-onnx = [
     { name = "fastembed" },
@@ -1492,6 +1509,14 @@ embed-onnx = [
 maf = [
     { name = "agent-framework" },
     { name = "agent-framework-ag-ui" },
+]
+mime = [
+    { name = "filetype" },
+]
+otel = [
+    { name = "openinference-instrumentation-langchain" },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
 ]
 postgres = [
     { name = "alembic" },
@@ -1540,6 +1565,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "a2a-sdk", extras = ["fastapi"], marker = "extra == 'dev'", specifier = ">=1.1.2,<2" },
     { name = "ag-ui-protocol", marker = "extra == 'agno-copilot'", specifier = ">=0.1.19" },
     { name = "agent-framework", marker = "extra == 'maf'", specifier = "==1.12.1" },
     { name = "agent-framework-ag-ui", marker = "extra == 'maf'", specifier = "==1.0.0" },
@@ -1553,12 +1579,13 @@ requires-dist = [
     { name = "detoxify", marker = "extra == 'safety-ml'", specifier = ">=0.5" },
     { name = "dna-sdk", extras = ["all"], marker = "extra == 'dev'" },
     { name = "dna-sdk", extras = ["postgres"], marker = "extra == 'search-pgvector'" },
-    { name = "dna-sdk", extras = ["postgres", "sqlite", "sql", "re2"], marker = "extra == 'all'" },
+    { name = "dna-sdk", extras = ["postgres", "sqlite", "sql", "re2", "otel", "mime"], marker = "extra == 'all'" },
     { name = "dna-sdk", extras = ["search-pgvector"], marker = "extra == 'dev'" },
     { name = "dna-sdk", extras = ["search-sqlite"], marker = "extra == 'dev'" },
     { name = "dna-sdk", extras = ["sqlite", "postgres"], marker = "extra == 'sql'" },
     { name = "fastapi", marker = "extra == 'agno-copilot'", specifier = ">=0.115" },
     { name = "fastembed", marker = "extra == 'embed-onnx'", specifier = ">=0.3" },
+    { name = "filetype", marker = "extra == 'mime'", specifier = ">=1.2" },
     { name = "google-re2", marker = "extra == 're2'", specifier = ">=1.1" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.24" },
     { name = "jsonschema", specifier = ">=4.0" },
@@ -1568,6 +1595,9 @@ requires-dist = [
     { name = "langgraph", marker = "extra == 'runtime'", specifier = "==1.2.9" },
     { name = "mcp", marker = "extra == 'agno-copilot'", specifier = ">=1.0" },
     { name = "openai", marker = "extra == 'agno-copilot'", specifier = ">=1.40" },
+    { name = "openinference-instrumentation-langchain", marker = "extra == 'otel'", specifier = ">=0.1" },
+    { name = "opentelemetry-exporter-otlp-proto-http", marker = "extra == 'otel'", specifier = ">=1.27" },
+    { name = "opentelemetry-sdk", marker = "extra == 'otel'", specifier = ">=1.27" },
     { name = "presidio-analyzer", marker = "extra == 'safety-ml'", specifier = ">=2.2" },
     { name = "presidio-anonymizer", marker = "extra == 'safety-ml'", specifier = ">=2.2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
@@ -1581,8 +1611,9 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlite'", specifier = ">=2" },
     { name = "sqlite-vec", marker = "extra == 'search-sqlite'", specifier = ">=0.1.6" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'", specifier = ">=4.4" },
+    { name = "uvicorn", marker = "extra == 'dev'", specifier = ">=0.30" },
 ]
-provides-extras = ["postgres", "sqlite", "safety-ml", "sql", "embed-onnx", "search-sqlite", "search-pgvector", "agno-copilot", "runtime", "maf", "re2", "all", "dev"]
+provides-extras = ["postgres", "sqlite", "safety-ml", "sql", "mime", "otel", "embed-onnx", "search-sqlite", "search-pgvector", "agno-copilot", "runtime", "maf", "re2", "all", "dev"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "aiosqlite", specifier = ">=0.22.1" }]
@@ -3225,6 +3256,47 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/ef/07/c4b4ea034f34f25e73cf1a872deb349e3acab6c929a5531d547a9a994890/openai_chatkit-1.6.5.tar.gz", hash = "sha256:903e9702bf26cd8a2b23d4e7b199b657bee4379758e0ca11ebaee09362d2889e", size = 65057, upload-time = "2026-05-19T05:05:14.954Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/aa/00/64b0faae946885e9bf52a8ea77d8bd01c80f6d0be967a30c1d4e73fc2ce1/openai_chatkit-1.6.5-py3-none-any.whl", hash = "sha256:9e16d3bdc6c15fec900801591dc5bb8ba9446447d3db2247dc8120518f1ca3c0", size = 44094, upload-time = "2026-05-19T05:05:13.654Z" },
+]
+
+[[package]]
+name = "openinference-instrumentation"
+version = "0.1.56"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "openinference-semantic-conventions" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-sdk" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/92/54/ad2d006229e65501eb8895d65b89a27a1330833eda41bc6e407b991aa385/openinference_instrumentation-0.1.56.tar.gz", hash = "sha256:c43bea7f1f4460fe13c3c88aff092500cc3397aaffea37188d72246489dcbc9f", size = 39137, upload-time = "2026-07-31T06:23:43.229Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bd/09/25fc4ec6f7b05948bb8bf35810805f494ecea67d3c8c3e0befe3c477aa54/openinference_instrumentation-0.1.56-py3-none-any.whl", hash = "sha256:ae7ae74bd93c0f733cf2649056c94246e1a2d0432ddf9b675dd4e58718094b62", size = 46892, upload-time = "2026-07-31T06:23:41.955Z" },
+]
+
+[[package]]
+name = "openinference-instrumentation-langchain"
+version = "0.1.68"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "openinference-instrumentation" },
+    { name = "openinference-semantic-conventions" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-semantic-conventions" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/55/09/72e4dda5e2cd03e7eaaddeeb857045a5c00da5cf8fa2b1491f11e9b123d4/openinference_instrumentation_langchain-0.1.68.tar.gz", hash = "sha256:97ca334645efaf7d21ba71dbad131d3dacd57101bb6425d05be523198d6ef0c0", size = 77162, upload-time = "2026-07-30T16:38:25.611Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/aa/c9b90bc963f3015ca5d383aba3bf3feabb3bc046c50d1b0d183f23380860/openinference_instrumentation_langchain-0.1.68-py3-none-any.whl", hash = "sha256:88493f5e93c104d0ce7b1dc0ba31fba5d9e6bca7eaa625bc26e6e15bbb10a8f8", size = 25131, upload-time = "2026-07-30T16:38:24.041Z" },
+]
+
+[[package]]
+name = "openinference-semantic-conventions"
+version = "0.1.31"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/c5/3e/8f96e000651a01c801d98736c63aaf4140dd5a68a325cad92045c53484dd/openinference_semantic_conventions-0.1.31.tar.gz", hash = "sha256:39bed2e6edabb5b8dd983e22d3d4914e660ff1f8a49d7df8ceae938af5bb5836", size = 13966, upload-time = "2026-08-01T16:13:21.334Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/b6/d5/9d32686b8911ca79001dd0a352e89069a0b3749446b37859494805dd1bf1/openinference_semantic_conventions-0.1.31-py3-none-any.whl", hash = "sha256:ae7eee916622dc9f64ea14cae26911c78653b1c0d7a62a56788934d5830f3472", size = 11241, upload-time = "2026-08-01T16:13:20.153Z" },
 ]
 
 [[package]]

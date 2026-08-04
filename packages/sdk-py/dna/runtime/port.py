@@ -39,6 +39,32 @@ class RuntimeHooks:
     #: Host-injected store, or None to let the adapter resolve one from
     #: ctx.persistence.
     store: Any = None
+    #: `Callable[[Turn], None]` — onde o registro de cada turno e GRAVADO.
+    #: `None` (o default) deixa a telemetria sem destino de produto; o OTLP,
+    #: se configurado, continua exportando. E o host que injeta porque e ele
+    #: quem tem a conexao — a mesma fronteira do `checkpointer`.
+    turn_sink: Any = None
+    #: `async (consulta, limite) -> Sequence` — a busca de memoria. O HOST a
+    #: fornece porque e ele que tem o cliente MCP, a credencial e o tenant.
+    #: `None` (o default) deixa o agente dependendo de CHAMAR `recall`, que e
+    #: exatamente o que ele esquece de fazer.
+    recall: Any = None
+    #: `async (texto, nome_da_tool) -> str | None` — onde uma saida GRANDE de
+    #: tool e guardada, devolvendo o endereco. `None` corta mesmo assim e diz
+    #: que nao guardou: um deployment sem storage prefere uma janela honesta a
+    #: um contexto que cresce sem fim.
+    offload_store: Any = None
+    #: `async (nome) -> str | None` — o corpo de um PromptTemplate do
+    #: workspace (overlay do tenant vence). O HOST fornece pela mesma razão do
+    #: `recall`: é ele que tem o cliente MCP, a credencial e o tenant. `None`
+    #: deixa cada voz no seu default de fallback — a voz é DADO, nunca código
+    #: (regra do fundador, 03/08/2026).
+    template_source: Any = None
+    #: `async () -> dict | None` — o SPEC do CognitivePolicy do workspace
+    #: (overlay do tenant). Mesma fronteira: o host tem o canal e o tenant.
+    #: `None` deixa cada knob no default de código (E1 do épico das nove
+    #: seções: `recall.retrieval.k` substitui o MAX_MEMORIES fixo).
+    policy_source: Any = None
 
 
 @runtime_checkable

@@ -77,4 +77,116 @@ __all__ = [
     "DecayPolicy",
     "DEFAULT_RECALL_POLICY",
     "DEFAULT_DECAY_POLICY",
+    "RecallInjection",
+    "resolve_recall_injection",
 ]
+
+
+# ── E2 do épico das nove seções (spec 2026-08-03): os resolvers que a
+# docstring acima dizia "deliberadamente deixados para trás" — a metade PURA.
+# Quem tem o kernel busca o SPEC (com cache); aqui só se extrai, com os
+# defaults do dataclass como fallback campo a campo.
+
+
+def resolve_decay_policy(spec: dict | None) -> DecayPolicy:
+    """`CognitivePolicy.decay` → DecayPolicy. Campo ausente/lixo = default."""
+    d = ((spec or {}).get("decay") or {}) if isinstance(spec, dict) else {}
+    tiers = d.get("stability_tiers") or {}
+
+    def _num(v, fb):
+        return float(v) if isinstance(v, (int, float)) and v > 0 else fb
+
+    base = DecayPolicy()
+    return DecayPolicy(
+        tier_faint=_num(tiers.get("faint"), base.tier_faint),
+        tier_firm=_num(tiers.get("firm"), base.tier_firm),
+        tier_burning=_num(tiers.get("burning"), base.tier_burning),
+        default_stability_days=_num(
+            d.get("default_stability_days"), base.default_stability_days
+        ),
+        max_stability_days=_num(d.get("max_stability_days"), base.max_stability_days),
+    )
+
+
+def resolve_affect_palette(spec: dict | None) -> list | None:
+    """`CognitivePolicy.affect.palette` — o vocabulário emocional PRÓPRIO do
+    workspace (o Kind Engram abriu o campo de propósito em 03/08; esta é a
+    ponta que faltava para a paleta ALCANÇAR o scoring)."""
+    a = ((spec or {}).get("affect") or {}) if isinstance(spec, dict) else {}
+    palette = a.get("palette")
+    return palette if isinstance(palette, list) and palette else None
+
+
+@dataclass(frozen=True)
+class PaginationPolicy:
+    """`CognitivePolicy.pagination` — defaults/caps das listagens (E3).
+
+    O schema declarava e citava um leitor (`dna_shared.pagination_policy`)
+    que NUNCA existiu — o formulário-sem-fio em estado puro. Este é o fio.
+    """
+
+    default_limit: int = 50
+    max_limit: int = 500
+
+
+def resolve_pagination(spec: dict | None) -> PaginationPolicy:
+    """`CognitivePolicy.pagination` → PaginationPolicy. Lixo/ausente = default;
+    sanidade: 1 <= default <= max <= 5000 (teto duro anti-acidente)."""
+    d = ((spec or {}).get("pagination") or {}) if isinstance(spec, dict) else {}
+    base = PaginationPolicy()
+
+    def _int(v, fb):
+        return int(v) if isinstance(v, int) and v >= 1 else fb
+
+    max_limit = min(_int(d.get("max_limit"), base.max_limit), 5000)
+    default_limit = min(_int(d.get("default_limit"), base.default_limit), max_limit)
+    return PaginationPolicy(default_limit=default_limit, max_limit=max_limit)
+
+
+
+@dataclass(frozen=True)
+class RecallInjection:
+    """`CognitivePolicy.recall.injection` — como o bloco lembrado ENTRA no
+    prompt (o lado do middleware; `retrieval` molda a busca, `injection` molda
+    o prompt). Defaults espelham as constantes que substituem (#36)."""
+
+    max_block_chars: int = 2000
+    min_signal_chars: int = 12
+    cue_window: int = 3
+    cue_max_chars: int = 600
+    sticky_overlap: float = 0.5
+    #: type → rótulo no bloco injetado. VAZIO = os built-ins do middleware.
+    #: Aberto porque tipo de memória é aberto — e rótulo é voz para o modelo.
+    type_labels: tuple[tuple[str, str], ...] = ()
+
+
+def resolve_recall_injection(spec: dict | None) -> RecallInjection:
+    """`recall.injection` → RecallInjection. Lixo/ausente = default campo a
+    campo, com sanidade — política é dado de tenant e um teto absurdo não pode
+    custar a janela."""
+    r = ((spec or {}).get("recall") or {}) if isinstance(spec, dict) else {}
+    d = r.get("injection") or {} if isinstance(r, dict) else {}
+    base = RecallInjection()
+
+    def _int(v, fb, lo, hi):
+        return v if isinstance(v, int) and lo <= v <= hi else fb
+
+    overlap = d.get("sticky_overlap")
+    if not (isinstance(overlap, (int, float)) and 0.0 <= overlap <= 1.0):
+        overlap = base.sticky_overlap
+    rotulos = d.get("type_labels")
+    pares: tuple[tuple[str, str], ...] = ()
+    if isinstance(rotulos, dict):
+        pares = tuple(
+            (str(k), str(v))
+            for k, v in rotulos.items()
+            if isinstance(k, str) and k and isinstance(v, str) and v.strip()
+        )
+    return RecallInjection(
+        max_block_chars=_int(d.get("max_block_chars"), base.max_block_chars, 200, 50_000),
+        min_signal_chars=_int(d.get("min_signal_chars"), base.min_signal_chars, 0, 500),
+        cue_window=_int(d.get("cue_window"), base.cue_window, 1, 20),
+        cue_max_chars=_int(d.get("cue_max_chars"), base.cue_max_chars, 100, 5_000),
+        sticky_overlap=float(overlap),
+        type_labels=pares,
+    )

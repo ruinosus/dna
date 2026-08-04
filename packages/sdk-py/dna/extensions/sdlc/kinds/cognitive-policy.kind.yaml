@@ -164,6 +164,51 @@ spec:
                 type: integer
                 default: 50
                 description: pgvector candidates pulled for the cosine overlay.
+          injection:
+            type: object
+            additionalProperties: false
+            description: How the recalled block ENTERS the prompt (the runtime
+              middleware side). `retrieval` shapes the search; `injection`
+              shapes the prompt. Defaults mirror the middleware constants they
+              replace (varredura de valores, 03/08/2026).
+            properties:
+              max_block_chars:
+                type: integer
+                default: 2000
+                description: Ceiling for the whole injected block — one long
+                  Engram must not eat the window.
+              min_signal_chars:
+                type: integer
+                default: 12
+                description: Below this the user turn triggers no search
+                  ("ok", "thanks").
+              cue_window:
+                type: integer
+                default: 3
+                description: How many recent user messages form the search cue.
+              cue_max_chars:
+                type: integer
+                default: 600
+                description: Ceiling of the cue text — a giant query does not
+                  discriminate better, it only costs more.
+              sticky_overlap:
+                type: number
+                default: 0.5
+                description: Hysteresis — fraction of the previous working set
+                  that must survive for the OLD block to be kept (prompt/cache
+                  stability, from the JARVIS prior art).
+              type_labels:
+                type: object
+                description: >-
+                  How each memory TYPE is labeled inside the injected block
+                  (`- [LABEL] text`). OPEN map (type → label), merged over the
+                  built-ins (procedural→"REGRA (siga)", episodic→"fato
+                  ocorrido", semantic→"fato") — open because memory types are
+                  open, and the label IS model-facing voice: a workspace in
+                  English declares its own.
+                additionalProperties:
+                  type: string
+                  minLength: 1
       decay:
         type: object
         additionalProperties: false
@@ -264,10 +309,12 @@ spec:
                       type: string
                     memory_type:
                       type: string
-                      enum:
-                      - episodic
-                      - semantic
-                      - procedural
+                      minLength: 1
+                      description: >-
+                        Any declared memory type. OPEN, in lockstep with the
+                        `Engram` field it matches: a closed enum here would let a
+                        workspace declare `preference` on the memory and then be
+                        unable to write a policy for it.
                 defaults:
                   type: object
                   additionalProperties: false
@@ -300,9 +347,190 @@ spec:
                       type: array
                       items:
                         type: string
+      ingestion:
+        type: object
+        additionalProperties: false
+        description: >-
+          WHEN memory is fed, and from WHAT. The workspace's own answer to "how
+          and when are memories created" — the half `recall` (how they are USED)
+          already had.
+
+          ⭐ WHY THIS IS DATA AND NOT A FLAG. Feeding memory automatically is a
+          judgement about the customer's own material: a legal team may want
+          every decision captured; a support team may want nothing from chat at
+          all. Hard-coding either answer picks a side for people whose work we
+          do not know. Absent, the built-in defaults apply and nothing changes.
+        properties:
+          enabled:
+            type: boolean
+            default: true
+            description: >-
+              Master switch. `false` stops all automatic feeding — the agent
+              still writes memory when explicitly asked, because that path is the
+              user's own instruction, not a policy decision.
+          sources:
+            type: array
+            default:
+            - chat
+            description: >-
+              WHERE facts may be extracted from. `chat` = the conversation
+              transcript; `sdlc` = board activity; `kind:<Name>` = documents of a
+              given Kind as they are written.
+
+              A source absent from this list is NEVER read — the list is an
+              allowlist, not a preference. Widening it is the workspace's
+              decision, and it is the decision that governs what the agent may
+              learn about its people.
+            items:
+              type: string
+              minLength: 1
+          trigger:
+            type: string
+            enum:
+            - per_turn
+            - batch
+            - off
+            default: per_turn
+            description: >-
+              `per_turn` extracts as the conversation happens (memory is
+              immediate; costs a model call per qualifying turn). `batch` defers
+              to a scheduled pass (cheap; memory arrives late). `off` disables
+              extraction while leaving the rest of the policy in force.
+          min_signal_chars:
+            type: integer
+            default: 25
+            minimum: 0
+            description: >-
+              Below this the turn is skipped without a model call. It exists
+              because most turns of a real conversation are "ok" / "thanks" —
+              extracting from them costs money and yields noise that later
+              SURFACES on its own in the prompt.
+          engine:
+            type: string
+            enum: [pipeline, pipeline-agent, agent]
+            default: pipeline
+            description: >-
+              The reconciliation engine. `pipeline` = two fixed model calls
+              (cheap, predictable). `pipeline-agent` = the hybrid: the fixed
+              skeleton, but the reconciliation may ESCALATE an uncertain fact
+              to the arbiter agent (one bounded round; the arbiter decides,
+              the pipeline applies). `agent` = the named agent reconciles
+              everything (reserved; not yet implemented).
+          engine_agent:
+            type: string
+            default: ""
+            description: >-
+              The Agent document that arbitrates escalations (its instruction
+              is the arbiter's role text). Empty + an escalation = the fact
+              degrades to `none` — uncertainty without a judge never writes.
+          neighbors:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 8
+            description: >-
+              How many existing memories the reconciliation compares each new
+              fact against (the recall k). More sees farther and costs more
+              tokens per turn; fewer is cheaper and can miss a conflict.
+          require_approval:
+            type: boolean
+            default: false
+            description: >-
+              Whether an automatically extracted memory goes through the human
+              approval gate before being written.
+
+              ⚠️ `false` is deliberate and is the founder's call (2026-08-03).
+              With reconciliation (a later fact can UPDATE or invalidate an
+              earlier one) a wrong memory costs "until contradicted" rather than
+              "forever" — which is what made the automatic path defensible at
+              all. Set `true` and every extracted fact becomes a card to click;
+              the trail gains coverage and the feature gains friction.
+          max_facts_per_turn:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 5
+            description: >-
+              Ceiling of facts extracted per turn. A real conversation does not
+              produce ten durable facts; a model returning ten is inventing —
+              the ceiling turns that into bounded noise.
+          max_transcript_chars:
+            type: integer
+            minimum: 200
+            default: 4000
+            description: How much transcript feeds the extraction. More does
+              not improve the fact and worsens the bill.
+          transcript_messages:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 6
+            description: How many recent messages (user AND agent) form the
+              extraction material — decisions often complete across the
+              exchange ("pode ser 60 dias?" / "fechado, 60").
+          max_arbitrations:
+            type: integer
+            minimum: 0
+            maximum: 20
+            default: 3
+            description: Ceiling of arbiter escalations per turn
+              (`pipeline-agent` engine). Beyond it, facts degrade to `none` —
+              uncertainty without budget never writes.
+          arbiter_neighbors_multiplier:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 3
+            description: The arbiter sees a WIDER neighborhood than the
+              reconciliation — `neighbors × multiplier` (capped below). It is
+              deciding a conflict, so it needs more context than the pass that
+              raised it.
+          arbiter_neighbors_cap:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 24
+            description: Hard cap of the arbiter neighborhood.
+          proposal_markers:
+            type: array
+            default: []
+            description: >-
+              Regexes that mark a turn as containing a DURABLE assertion — the
+              trigger for the "propose to remember" nudge. EMPTY means the
+              built-in markers apply — and the built-ins are Portuguese-biased
+              (decidimos/prefiro/prazo...), which is exactly why this is data:
+              an English or Spanish workspace declares its own.
+            items:
+              type: string
+              minLength: 1
+          sdlc:
+            type: object
+            additionalProperties: false
+            description: The `sdlc` source cadence — how often the board is
+              read for extraction, and how much of it.
+            properties:
+              interval_seconds:
+                type: integer
+                minimum: 300
+                default: 21600
+                description: Minimum interval between board reads per
+                  workspace (default 6h).
+              max_items:
+                type: integer
+                minimum: 1
+                maximum: 100
+                default: 12
+                description: Stories per digest — a month of board does not
+                  hold a hundred durable facts.
+
       allocation:
         type: object
         additionalProperties: false
+        # ⚠️ DECLARADO, AINDA SEM EFEITO (medição de 03/08/2026): o processo de
+        # merge-por-similaridade que estes parâmetros governariam não existe no
+        # core determinístico — só o consolidate por retenção. Data-honesty na
+        # fonte: quem declara isto hoje não muda comportamento nenhum. Vira
+        # efetivo quando o processo de alocação shippar (feature, não fio).
         description: Engram allocation (dedup/archival) knobs (ex-AllocationPolicy).
         properties:
           threshold:
@@ -352,6 +580,8 @@ spec:
       engram_strength:
         type: object
         additionalProperties: false
+        # ⚠️ DECLARADO, AINDA SEM EFEITO (03/08/2026) — mesmo caso da allocation:
+        # as regras de força inicial por gatilho não têm consumidor no core.
         description: Initial-strength rules per engraphy trigger
           (ex-EngramStrengthPolicy).
         required:
@@ -454,6 +684,86 @@ spec:
                   items:
                     type: string
                   default: []
+      methodology:
+        type: object
+        additionalProperties: false
+        description: SDLC methodology gates. Read through the session
+          kernel's document port (adapter-agnostic — filesystem, sqlite or
+          Postgres per DNA_SOURCE_URL), so journey transitions honor it
+          wherever the board lives.
+        properties:
+          auditor_window:
+            type: integer
+            minimum: 3
+            maximum: 20
+            default: 5
+            description: How many recent cycles the auditor looks at.
+          auditor_threshold:
+            type: integer
+            minimum: 2
+            maximum: 20
+            default: 3
+            description: Ad-hoc cycles within the window that trigger the
+              "next phase requires superpowers" gate.
+      intel:
+        type: object
+        additionalProperties: false
+        description: Intel-engine tuning (#36 tail) — ranker weights, dedup
+          threshold, feedback strengths and the portal action bar. Engine-wide
+          per workspace; the per-SOURCE `threshold` stays on IntelSource.
+        properties:
+          action_bar:
+            type: number
+            default: 0.85
+            description: Score at or above which an insight "requires action"
+              in the screens (product judgement, now declarable).
+          ranker:
+            type: object
+            additionalProperties: false
+            properties:
+              base:
+                type: number
+                default: 0.3
+              has_action:
+                type: number
+                default: 0.3
+              pir_match:
+                type: number
+                default: 0.15
+              evidence_weights:
+                type: object
+                additionalProperties: false
+                properties:
+                  evidence-based:
+                    type: number
+                    default: 0.25
+                  opinion-practice:
+                    type: number
+                    default: 0.12
+                  anecdotal:
+                    type: number
+                    default: 0.0
+          dedup:
+            type: object
+            additionalProperties: false
+            properties:
+              cosine_threshold:
+                type: number
+                default: 0.97
+                description: Above this cosine two insights are "the same".
+          feedback:
+            type: object
+            additionalProperties: false
+            properties:
+              sim_threshold:
+                type: number
+                default: 0.8
+              dismiss_penalty:
+                type: number
+                default: 0.5
+              action_bonus:
+                type: number
+                default: 0.1
       owner:
         type: string
       created_at:

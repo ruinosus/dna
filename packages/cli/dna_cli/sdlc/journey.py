@@ -105,6 +105,32 @@ def _write_feature_reflect_workflow_event(
 
 
 
+def _gates_da_politica(sessao: Any) -> "tuple[int, int]":
+    """(auditor_window, auditor_threshold) do `CognitivePolicy.methodology`.
+
+    Lê via `sessao.get_doc` — a porta do kernel, adapter-agnóstica (FS no CLI
+    local, Postgres no hosted; quem decide é o DNA_SOURCE_URL, não esta
+    função). Fail-soft nos defaults do módulo de gates: política é
+    refinamento, e um source sem o doc (ou sem o Kind) não custa a transição.
+    """
+    from dna_cli._methodology_gates import _AUDITOR_THRESHOLD, _AUDITOR_WINDOW
+
+    try:
+        doc = sessao.get_doc("CognitivePolicy", "cognitive-policy")
+        spec = (doc or {}).get("spec") if isinstance(doc, dict) else None
+        met = (spec or {}).get("methodology") if isinstance(spec, dict) else None
+        if isinstance(met, dict):
+            janela = met.get("auditor_window")
+            limiar = met.get("auditor_threshold")
+            return (
+                janela if isinstance(janela, int) and 3 <= janela <= 20 else _AUDITOR_WINDOW,
+                limiar if isinstance(limiar, int) and 2 <= limiar <= 20 else _AUDITOR_THRESHOLD,
+            )
+    except Exception:  # noqa: BLE001 — sem doc/Kind, os defaults valem
+        pass
+    return _AUDITOR_WINDOW, _AUDITOR_THRESHOLD
+
+
 def _list_entries_for_parent(holder_or_session: Any, parent_ref: str) -> list[Any]:
     """All WorkflowEvent docs in scope filtered by parent_ref, oldest first.
 
@@ -523,11 +549,18 @@ def cmd_journey_transition(
             GateResult, auditor_gate, plan_gate, tdd_gate,
         )
 
-        # auditor_gate: block 3+ ad-hoc streak without --methodology=superpowers.
+        # auditor_gate: block ad-hoc streak without --methodology=superpowers.
+        # Janela e limiar são POLÍTICA (`CognitivePolicy.methodology`) lida
+        # pela PORTA do kernel da sessão — ports/adapters de verdade: o
+        # DNA_SOURCE_URL decide se isso vem do FS local, de sqlite ou de
+        # Postgres, e esta linha não sabe nem quer saber. Sem doc, 5/3 valem.
         recent_methods = _recent_cycle_methodologies(entries)
+        janela, limiar = _gates_da_politica(s)
         ag = auditor_gate(
             recent_methodologies=recent_methods,
             next_methodology=methodology,
+            window=janela,
+            threshold=limiar,
         )
         if ag == GateResult.FAIL and not force:
             ad_hoc_n = sum(1 for m in recent_methods[-5:] if m == "ad-hoc")

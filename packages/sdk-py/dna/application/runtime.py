@@ -435,6 +435,41 @@ async def read_definition_impl(
     }
 
 
+async def read_registered_kind_impl(
+    live: LiveDna, *, kind: str, scope: str | None = None,
+) -> dict[str, Any]:
+    """The DESCRIPTOR of a registered Kind — its JSON Schema + ``ui_schema``.
+
+    O buraco que isto fecha (medido em 03/08/2026): nenhuma rota servia o
+    schema de um Kind REGISTRADO — ``GET /v1/kinds`` lista só os AUTORADOS, e
+    ``/v1/definitions/{kind}/{name}`` exige um documento existente e devolve o
+    ``ui_schema`` sem o schema. Resultado: todo formulário do portal copiava as
+    constraints à mão (min/max, enums, required), e cada cópia é uma deriva
+    esperando release. Com o descritor servido, o formulário DERIVA a validação
+    e o kernel continua a autoridade final na escrita.
+
+    Sem filtro por chamador, de propósito: um Kind registrado é o modelo de
+    dados do PRODUTO — o mesmo para todo tenant, sem conteúdo de ninguém. (O
+    contraste é o Kind AUTORADO, cujo schema é o modelo de dados do workspace
+    autor — aquele sai pela porta filtrada ``get_authored_kind_impl``.)
+    ``scope`` narrows the lookup to the Kinds governing that scope (i-081),
+    same hinge as ``kind_port_for``.
+
+    Raises ``ValueError`` for an unknown Kind (the face maps it to 404)."""
+    port = live.kernel.kind_port_for(kind, scope=scope)
+    if port is None:
+        raise ValueError(f"no registered Kind named {kind!r}")
+    schema_fn = getattr(port, "schema", None)
+    schema = schema_fn() if callable(schema_fn) else None
+    return {
+        "kind": getattr(port, "kind", kind),
+        "plane": getattr(port, "plane", "composition"),
+        "schema": schema or {},
+        "ui_schema": dict(getattr(port, "ui_schema", {}) or {}),
+        "docs": getattr(port, "docs", None),
+    }
+
+
 async def apply_definition_impl(
     live: LiveDna, *, scope: str, tenant: str, kind: str, name: str, spec: dict[str, Any],
 ) -> dict[str, Any]:
@@ -3105,6 +3140,9 @@ async def register_artifact_impl(
     filename: str | None = None,
     mime: str | None = None,
     size_bytes: int | None = None,
+    detected_mime: str | None = None,
+    mime_mismatch: bool | None = None,
+    origin: str | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """**Record the ORIGINAL a projection will be derived from** — the write
@@ -3168,6 +3206,17 @@ async def register_artifact_impl(
         "uri": location,
         "filename": filename or None,
         "mime": mime or None,
+        # BESIDE the declared value, never instead of it: the pair IS the
+        # evidence. Overwriting `mime` would erase the fact that they ever
+        # disagreed — and that disagreement is the only thing either field is
+        # good for on its own.
+        "detected_mime": detected_mime or None,
+        "mime_mismatch": mime_mismatch,
+        # `uploaded` (a human attached it) vs `generated` (an agent produced
+        # it). Not cosmetic: a generated artifact is REPRODUCIBLE, and a
+        # retention policy may treat it very differently from an original
+        # nobody else holds a copy of.
+        "origin": origin or None,
         "size_bytes": size_bytes,
         "uploaded_by": actor_label(identity),
         "uploaded_at": stamp,

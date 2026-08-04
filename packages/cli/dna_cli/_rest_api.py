@@ -229,6 +229,27 @@ def _resolve_cors_origins(cors_origins: list[str] | None) -> list[str]:
     return ["http://localhost:3000"]
 
 
+#: Caminhos PÚBLICOS por definição — nunca exigem bearer.
+#:
+#: `/.well-known/*` é o espaço de descoberta reservado pela RFC 8615, e o que
+#: mora ali existe para ser lido por quem AINDA NÃO tem credencial: o Agent Card
+#: do A2A diz como alcançar o agente e como se autenticar a ele, e o documento
+#: de recurso protegido do OAuth diz onde fica o autorizador.
+#:
+#: Exigir bearer neles é um deadlock silencioso — o cliente precisa do documento
+#: para saber como obter o token, e do token para ler o documento. O sintoma não
+#: é "401" no lugar certo: é um terceiro que simplesmente não consegue começar, e
+#: nenhuma mensagem explicando por quê.
+#:
+#: Achado rodando a porta A2A do dna-cloud no lane de produto: o Card respondia
+#: 401 e a descoberta do cliente oficial morria antes da primeira mensagem.
+_PUBLICO = ("/health",)
+
+
+def _e_publico(path: str) -> bool:
+    return path in _PUBLICO or path.startswith("/.well-known/")
+
+
 def build_app(
     *,
     scope: str | None = None,
@@ -308,12 +329,16 @@ def build_app(
     # HTTP. ``boot_live`` is the CLI's composition root (it wires the CLI's own
     # source/provider boot path), so it stays in ``dna_cli._mcp_server``.
     from dna.application import (
+        AmbiguousKindError,
         AuthoredKindNotFound,
         BoardItemNotFound,
+        BootstrapKindWriteRefused,
+        ConcurrentWriteError,
         MemberForbidden,
         MemberNotFound,
         NamespaceRegistryUnreadable,
         ProjectNotFound,
+        UnknownKindError,
         WorkspaceForbidden,
         WorkspaceLastOwner,
         WorkspaceMemberNotFound,
@@ -327,6 +352,8 @@ def build_app(
         compose_prompt_impl,
         create_project_impl,
         register_artifact_impl,
+        list_documents_impl,
+        write_document_impl,
         create_workspace_impl,
         genome_view_impl,
         get_authored_kind_impl,
@@ -347,6 +374,7 @@ def build_app(
         provision_workspace_owner_impl,
         read_bundle_entry_impl,
         read_definition_impl,
+        read_registered_kind_impl,
         recall_impl,
         reconcile_forks_impl,
         remember_impl,
@@ -473,7 +501,7 @@ def build_app(
 
         @app.middleware("http")
         async def _token_scope_bind(request: Request, call_next):  # type: ignore[no-untyped-def]
-            if request.url.path == "/health":
+            if _e_publico(request.url.path):
                 return await call_next(request)
             req_scope = request.query_params.get("scope")
             req_tenant = request.query_params.get("tenant")
@@ -556,7 +584,7 @@ def build_app(
         @app.middleware("http")
         async def _config_auth(request: Request, call_next):  # type: ignore[no-untyped-def]
             path = request.url.path
-            if path == "/health":
+            if _e_publico(path):
                 return await call_next(request)
 
             authz = request.headers.get("authorization")
@@ -1403,6 +1431,200 @@ def build_app(
                     exc,
                 ),
             ) from exc
+
+    @app.get("/v1/kinds/registry/{kind}", dependencies=guarded,
+             response_model=m.RegisteredKindView)
+    async def get_registered_kind(
+        kind: str,
+        scope: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the
+        ``ui_schema`` widget hints, so a form can DERIVE validation (min/max,
+        enums, required) instead of hand-copying it and drifting.
+
+        The registry sibling of ``GET /v1/kinds/{kind}`` (which reads an
+        AUTHORED Kind and filters by caller): a registered Kind is the
+        PRODUCT's data model, identical for every tenant and holding nobody's
+        content, so this door does not filter. Declared BEFORE the
+        ``/{kind}/documents`` routes so ``registry`` is matched as the literal
+        segment it is (a Kind is CamelCase and can never be named
+        ``registry``). 404 for a Kind the runtime does not register."""
+        live = await _live()
+        try:
+            return await read_registered_kind_impl(live, kind=kind, scope=scope)
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    # -- the generic, kubernetes-shaped document write ------------------------
+    #
+    # POST /v1/kinds/{kind}/documents. The gap this closes: every write route
+    # above is PER-KIND (memories, artifacts, the Kind-authoring doors,
+    # projects, workspaces, tenants) — a document of an ARBITRARY Kind,
+    # including one a tenant just authored and had approved, had no REST door
+    # at all. Without it, a proposer (e.g. a document-converter agent) that
+    # authors a Kind and matches a typed document to it has nowhere to write
+    # the document through the shared REST lane the portal calls.
+    #
+    # THE SHAPE IS KUBERNETES', DELIBERATELY (the plan cites it verbatim):
+    # applying a CRD CREATES an endpoint that serves that type; "kind is a
+    # string representing the REST resource — servers can infer it from the
+    # endpoint the client submits to"; and since 1.25 the API server VALIDATES
+    # every create/update against the registered schema before persisting.
+    # Hence the route: the PATH carries the Kind (the k8s convention), the
+    # body carries only what k8s calls ``metadata``/``spec``, and the SERVER
+    # validates — never a portal-side schema check reasoning from a belief
+    # formed turns earlier.
+    #
+    # ZERO business logic here: this is a thin delegate to the SAME
+    # ``write_document_impl`` the MCP ``write_document`` tool already calls —
+    # the bootstrap refusal, the LayerPolicy gate, the schema validation and
+    # the merge semantics are the kernel's, inherited for free.
+    #
+    # THE KIND COMES FROM THE PATH, NEVER THE BODY. A body that names a
+    # DIFFERENT kind is refused (400) below, explicitly — neither "the path
+    # wins silently" nor "the body wins": two sources stating one fact is the
+    # exact defect this project spent a day fixing elsewhere, and this route
+    # does not reintroduce it.
+    #
+    # IDENTITY AND SCOPE ARE NOT CALLER INPUT. Unlike the Model-B routes above
+    # (``register_artifact`` / ``create_project``, which take a ``claims``
+    # body field because a TRUSTED portal vouches an already-verified session
+    # under none/token auth), this route takes NEITHER a ``claims`` field NOR
+    # a ``scope`` query param — it follows the Kind-authoring doors' shape
+    # instead: only ``tenant`` as a query param, on the SAME trust boundary
+    # those doors document at length (config-bound / no second tenant under
+    # none / a trusted caller's own resolved value under token). The write
+    # scope is always DERIVED from ``tenant`` (``live.default_scope``),
+    # exactly as the artifact/project routes derive theirs — there is simply
+    # no second field here a caller could use to name a scope directly.
+    # Pinned against the PUBLISHED OpenAPI schema by
+    # ``tests/test_rest_documents.py`` (the REST analogue of
+    # ``test_tools_bind_their_scope.py``'s source-pattern guard for the MCP
+    # tools), not against this function's Python signature.
+    #
+    # MOUNTED ON EVERY AUTH MODE, like the Kind-authoring doors it depends on
+    # (a document under a freshly-approved Kind is unreachable if this route
+    # were lane-conditional while authoring/approval are not).
+
+    @app.get("/v1/kinds/{kind}/documents", dependencies=guarded,
+             response_model=m.ListKindDocumentsResponse)
+    async def list_kind_documents(
+        kind: str,
+        tenant: str | None = Query(default=None),
+        api_version: str | None = Query(default=None),
+        # E3: sem default nem teto FIXOS — a CognitivePolicy do workspace
+        # decide (default_limit quando omitido; max_limit clampa o explícito).
+        limit: int | None = Query(default=None, ge=1),
+        offset: int = Query(default=0, ge=0),
+        fields: str | None = Query(default=None),
+        order_by: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Listar os documentos de ``{kind}`` — a LEITURA da porta genérica.
+
+        A face escrevia qualquer documento por ``POST
+        /v1/kinds/{kind}/documents`` e só lia os Kinds para os quais alguém
+        escrevera uma rota à mão (``/v1/memories``, ``/v1/projects``, …). O
+        ``list_documents_impl`` já existia no SDK, completo, e não tinha porta:
+        quem gravava por aqui não conseguia ler de volta por lugar nenhum, e
+        descobria isso depois de gravar.
+
+        ``fields`` (CSV, caminhos pontuados; sem prefixo resolve sob ``spec.``)
+        empurra a PROJEÇÃO para o kernel. Sem ela, responder "quais estão
+        abertos" custa 1 + N chamadas — listar os nomes e ler cada um. No
+        Postgres a projeção vira SELECT e a linha viaja aparada.
+
+        Um Kind desconhecido é 404 **nomeando o Kind**, a mesma resposta que a
+        escrita dá. Uma lista vazia de um Kind que existe é 200 com
+        ``documents: []`` — "existe e não tem nada" é uma resposta, e confundi-la
+        com "não existe" faria uma tela dizer *erro* onde devia dizer *nenhum
+        ainda*.
+        """
+        live = await _live()
+        try:
+            return await list_documents_impl(
+                live, kind=kind, tenant=tenant,
+                api_version=api_version, limit=limit, offset=offset,
+                fields=[f.strip() for f in fields.split(",") if f.strip()] if fields else None,
+                order_by=[o.strip() for o in order_by.split(",") if o.strip()] if order_by else None,
+            )
+        except UnknownKindError as exc:
+            # 404 NOMEANDO o Kind — a mesma resposta que a escrita dá. Um leitor
+            # não pode descobrir que o Kind não existe por uma lista vazia, que é
+            # indistinguível de "existe e está vazio".
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    @app.post("/v1/kinds/{kind}/documents", dependencies=guarded, status_code=201,
+              response_model=m.WriteKindDocumentResponse)
+    async def write_kind_document(
+        kind: str,
+        body: m.WriteKindDocumentRequest,
+        api_version: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+        merge: bool = Query(default=True),
+        if_match: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Write one document of ``{kind}`` — the generic door, kubernetes-shaped.
+
+        The body is exactly ``{metadata, spec}`` (plus the optional
+        ``source_sha256`` provenance citation). ``metadata.name`` is
+        REQUIRED — 400 when blank or absent. A ``kind`` in the body that
+        DIFFERS from the path is refused (400); one that matches is a no-op
+        (redundant, not wrong).
+
+        The write goes through the kernel's own pipeline exactly as the MCP
+        ``write_document`` tool's does: the Kind's JSON Schema validates
+        ``spec`` and names the offending field on refusal (400), a BOOTSTRAP
+        Kind (Genome / LayerPolicy / KindDefinition) is refused (403, the
+        generic write's own gate — untouched, not relaxed here), an authored
+        Kind nobody has approved yet resolves to nothing in the registry and
+        is a 404 naming it (the SAME answer a Kind that was never authored at
+        all gets — there is no third state visible from here), an unknown
+        Kind is a 404 naming it, and a stale ``if_match`` is a 409.
+
+        ``source_sha256`` (optional) cites the ``SourceArtifact`` this
+        document was extracted from (by content address); the runtime closes
+        the ``derived_refs`` provenance edge server-side, preserving every
+        OTHER document already recorded there and updating THIS document's
+        own entry in place on a re-write — never accreting a duplicate. A
+        ``source_sha256`` that names no registered artifact under ``tenant``
+        is refused (400)."""
+        if body.kind is not None and body.kind != kind:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"the body names kind {body.kind!r}, the path names "
+                    f"{kind!r} — refusing rather than picking one silently. "
+                    f"The path is the single source of truth for which Kind "
+                    f"is written here: omit `kind` from the body, or make it "
+                    f"match the path."
+                ),
+            )
+        name = (body.metadata or {}).get("name")
+        name = name.strip() if isinstance(name, str) else ""
+        if not name:
+            raise HTTPException(
+                status_code=400, detail="metadata.name is required",
+            )
+        try:
+            return await write_document_impl(
+                await _live(), kind=kind, name=name, spec=body.spec,
+                tenant=tenant, api_version=api_version, merge=merge,
+                if_match=if_match, source_sha256=body.source_sha256,
+            )
+        except BootstrapKindWriteRefused as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except LayerPolicyViolationError as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from exc
+        except UnknownKindError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except ConcurrentWriteError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from None
+        except (AmbiguousKindError, ValueError, LookupError) as exc:
+            raise HTTPException(
+                status_code=400, detail=f"{type(exc).__name__}: {exc}"
+            ) from None
 
     # -- bundle entries (list/read/write/revert a bundle-file fork, plane B) -
     # A bundle-pattern Kind (Skill, and any future bundle Kind) stores MULTIPLE
@@ -2269,6 +2491,9 @@ def build_app(
         filename: str | None = Body(default=None, embed=True),
         mime: str | None = Body(default=None, embed=True),
         size_bytes: int | None = Body(default=None, embed=True),
+        detected_mime: str | None = Body(default=None, embed=True),
+        mime_mismatch: bool | None = Body(default=None, embed=True),
+        origin: str | None = Body(default=None, embed=True),
         claims: dict[str, Any] | None = Body(default=None, embed=True),
     ) -> dict[str, Any]:
         """Record the ORIGINAL a projection will be derived from.
@@ -2289,6 +2514,8 @@ def build_app(
             return await register_artifact_impl(
                 await _live(), workspace_id, sha256, uri, effective,
                 filename=filename, mime=mime, size_bytes=size_bytes,
+                detected_mime=detected_mime, mime_mismatch=mime_mismatch,
+                origin=origin,
             )
         except WorkspaceForbidden as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from None
@@ -2440,5 +2667,21 @@ def build_app(
             raise HTTPException(status_code=404, detail=str(exc)) from None
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    # O kernel vivo, alcançável por quem MONTA outra face sobre este app.
+    #
+    # `_live` já existia e era um closure — perfeito para as rotas daqui, e
+    # invisível para um host que monta mais coisa no mesmo `app`. O caso real: a
+    # porta A2A do dna-cloud faz `attach_a2a(app, …)` e precisa de um kernel
+    # para `enforce_plan` resolver plano e caps; sem este handle ela abria um
+    # SEGUNDO `boot_live`.
+    #
+    # Dois kernels sobre a mesma fonte não são só um pool de conexões a mais:
+    # são duas caches de Kind e duas janelas de refresh. Um documento reescrito
+    # fica visível numa e não na outra, e o sintoma aparece longe da causa.
+    #
+    # É a MESMA corrotina memoizada que as rotas usam — não um segundo boot com
+    # outro nome.
+    app.state.live = _live
 
     return app

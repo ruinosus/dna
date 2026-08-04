@@ -159,7 +159,7 @@ def register_document_tools(
     @server.tool(run_in_thread=False)
     async def list_documents(
         kind: str, scope: str | None = None, api_version: str | None = None,
-        limit: int = 50, offset: int = 0,
+        limit: int | None = None, offset: int = 0,
         fields: list[str] | None = None, filter: dict[str, Any] | None = None,
         order_by: list[str] | None = None,
     ) -> dict[str, Any]:

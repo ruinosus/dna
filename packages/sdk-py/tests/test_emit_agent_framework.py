@@ -196,6 +196,24 @@ def test_missing_agent_fails_loud(mi) -> None:
 # ── 5. gated: the emitted artifact loads into a live agent-framework Agent ──
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "UPSTREAM, medido em 02/08/2026 contra agent-framework-declarative 1.0.1 "
+        "(a ULTIMA release, nao a instalada): PropertySchema.from_dict filtra "
+        "'type'/'kind'/'name'/'description' e NAO filtra 'required', entao "
+        "PropertySchema.__init__ estoura com "
+        "\"unexpected keyword argument 'required'\". "
+        "`required` e JSON Schema padrao no nivel do objeto, e o emit esta CERTO: "
+        "test_tools_mapped_as_function_kind exige exatamente esse campo, e o "
+        "docstring do emitter chama a fidelidade do schema de decisao documentada. "
+        "Tirar `required` do emit para agradar um consumidor mais estreito "
+        "quebraria o teste irmao e perderia informacao real. "
+        "strict=True DE PROPOSITO: no dia em que o upstream consertar, este teste "
+        "passa e a suite FALHA avisando para remover o marcador — uma guarda "
+        "cronicamente vermelha ninguem le, e uma que sara em silencio esconde a cura."
+    ),
+)
 def test_emitted_yaml_loads_into_agent_framework(mi) -> None:
     """PROOF the emit round-trips into the real runtime — skipped when
     agent-framework-declarative (+ its .NET dependency) is not installed."""

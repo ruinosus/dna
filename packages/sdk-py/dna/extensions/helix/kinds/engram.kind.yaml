@@ -75,14 +75,25 @@ spec:
         type: array
         items:
           type: string
-          enum:
-          - feature_touched
-          - cycle_open
-          - session_start
-          - oracle_consult
+          minLength: 1
         minItems: 1
-        description: Triggers that surface this LessonLearned. Mirrors how human
-          recall fires unbidden in context.
+        description: >-
+          Triggers that surface this memory unbidden. The four the SDLC engines
+          know are `feature_touched`, `cycle_open`, `session_start` and
+          `oracle_consult`.
+
+          ⭐ OPEN ON PURPOSE (2026-08-03), and this one was BLOCKING a feature,
+          not merely constraining it. The four names are all SDLC events —
+          nothing in that list honestly describes a memory learned from a
+          CONVERSATION, and a memory extracted from chat was refused at write
+          time with a schema error. The vocabulary of triggers belongs to
+          whoever runs the agent, not to the extension that first needed four
+          of them.
+
+          ⚠️ The consequence to accept: a trigger no engine knows never fires
+          on its own. It is recorded and honoured as data — and proactive recall
+          finds the memory by RELEVANCE regardless — but nothing will surface it
+          because of that name until something is taught to look for it.
       source_refs:
         type: array
         items:
@@ -92,14 +103,24 @@ spec:
           etc.) that this memory derives from.
       affect:
         type: string
-        enum:
-        - triumph
-        - regret
-        - surprise
-        - wistful
-        - ominous
-        description: 'Emotional tone. Evocative palette (Spec §15 decision): triumph,
-          regret, surprise, wistful, ominous.'
+        minLength: 1
+        description: >-
+          Emotional tone. The five the runtime weights out of the box are
+          `triumph`, `regret`, `surprise`, `wistful` and `ominous` — an
+          affect-tagged memory RESISTS forgetting, and each of those has a
+          measured multiplier in `dna.memory.decay`.
+
+          ⭐ OPEN ON PURPOSE, in lockstep with `memory_type` (2026-08-03). A
+          closed palette makes the emotional vocabulary of the DOMAIN a constant
+          of the CODE: a workspace whose work has `urgent`, `contested` or
+          `relief` should be able to say so on the day it decides that, and to
+          give that tone a weight through `CognitivePolicy.affect`.
+
+          ⚠️ The consequence to accept: an unrecognised tone gets the NEUTRAL
+          multiplier (1.0) until a policy assigns one. It is honoured — never
+          dropped — but it does not resist forgetting more than an untagged
+          memory would. Inventing a weight for a name nobody defined would be
+          the system deciding how much a feeling matters.
       affect_reason:
         type: string
         minLength: 20
@@ -200,14 +221,32 @@ spec:
           != recall). Phase 0 (2026-06-02).'
       memory_type:
         type: string
-        enum:
-        - episodic
-        - semantic
-        - procedural
-        description: 'CoALA taxonomy — ORTHOGONAL to the Semon EngramState (type
-          vs state): episodic = what happened (instance/sequence); semantic = a
-          generalized fact about the world/user; procedural = how to act (a skill/rule).
-          Absent = untyped (legacy).'
+        minLength: 1
+        description: >-
+          What KIND of memory this is. The three CoALA names are the ones the
+          runtime treats specially — `episodic` (what happened), `semantic` (a
+          generalized fact), `procedural` (how to act; the runtime presents it
+          to the model as a RULE to follow, not as an anecdote to consider).
+
+          ⭐ OPEN ON PURPOSE, and this was a deliberate reversal. It was a closed
+          enum of exactly those three, and a closed enum makes the vocabulary of
+          the DOMAIN a constant of the CODE — which is the one thing this whole
+          system exists to avoid. A workspace whose work has `preference`,
+          `constraint` or `commitment` should be able to say so on the day it
+          decides that, not on the day someone remembers to edit a schema.
+
+          The runtime honours the distinction WITHOUT knowing the name: an
+          unrecognised type is presented to the model under its own name, because
+          the name IS the information — `[preference]` tells a model more than
+          `[fact]`, and far more than being dropped.
+
+          ⚠️ The consequence to accept: an unrecognised type gets no special
+          treatment. Only `procedural` is imperative. A workspace that invents
+          `regra_dura` gets `[regra_dura]`, not the RULE framing — because
+          promoting an unknown name to an obligation would put words in the
+          agent's mouth that nobody wrote.
+
+          Absent = untyped (legacy).
       valid_from:
         type: string
         format: date-time

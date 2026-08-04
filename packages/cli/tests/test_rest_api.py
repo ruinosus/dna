@@ -1046,3 +1046,58 @@ def test_base_import_never_pulls_fastapi():
         if ln.startswith(("import fastapi", "from fastapi"))
     ]
     assert top_level == [], f"FastAPI must be imported lazily, found top-level: {top_level}"
+
+
+# ── o kernel vivo, alcançável por quem MONTA sobre este app ─────────────────
+
+
+def test_o_app_expoe_o_kernel_vivo_que_ele_ja_abre(dna_dir):
+    """Um host que monta OUTRA face sobre este app precisa do mesmo kernel.
+
+    O caso que motivou: a porta A2A do dna-cloud monta `attach_a2a` sobre o app
+    do `build_app` e precisa de um kernel para `enforce_plan` resolver plano e
+    caps. O handle existia — o closure `_live` — e não era alcançável, então o
+    host abria um SEGUNDO `boot_live`: outro pool de conexões no mesmo processo,
+    para ler as mesmas linhas.
+
+    Não é micro-otimização. Dois kernels sobre a mesma fonte são duas caches de
+    Kind e duas janelas de refresh; um documento reescrito passa a ficar visível
+    numa e não na outra, e o sintoma aparece longe da causa.
+
+    `app.state.live` é a MESMA corrotina memoizada que as rotas usam — não um
+    segundo boot com outro nome.
+    """
+    app = R.build_app(base_dir=str(dna_dir), scope=_SCOPE, auth="none")
+
+    live = getattr(app.state, "live", None)
+    assert live is not None, "build_app não expõe o kernel vivo que ele mesmo abre"
+    assert callable(live), "app.state.live deve ser a corrotina de boot memoizada"
+
+    import asyncio
+
+    async def _duas_vezes():
+        return await live(), await live()
+
+    a, b = asyncio.run(_duas_vezes())
+    assert a is b, "cada chamada abriu um kernel novo — a memoização se perdeu"
+    assert hasattr(a, "kernel"), "o handle não é o LiveDna que enforce_plan espera"
+
+
+def test_o_espaco_well_known_e_PUBLICO_mesmo_com_auth_ligada(dna_dir):
+    """`/.well-known/*` nunca exige bearer — RFC 8615, e o motivo é um deadlock.
+
+    O que mora ali existe para ser lido por quem AINDA NÃO tem credencial: o
+    Agent Card do A2A diz como alcançar o agente e como se autenticar a ele.
+    Exigir token para lê-lo é pedir o token para descobrir como obter o token.
+
+    O sintoma não é um 401 no lugar certo — é um terceiro que não consegue
+    COMEÇAR, sem mensagem que explique. Achado rodando a porta A2A do dna-cloud
+    no lane de produto: a descoberta do cliente oficial morria antes da primeira
+    mensagem.
+    """
+    app = R.build_app(base_dir=str(dna_dir), scope=_SCOPE, auth="token", token="segredo")
+    with TestClient(app) as c:
+        # sem bearer: guardado continua guardado…
+        assert c.get("/v1/agents").status_code == 401
+        # …e o espaço de descoberta, não.
+        assert c.get("/.well-known/qualquer-coisa.json").status_code != 401

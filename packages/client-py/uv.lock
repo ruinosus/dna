@@ -92,7 +92,7 @@ wheels = [
 
 [[package]]
 name = "dna-cli"
-version = "0.36.0"
+version = "0.59.0"
 source = { editable = "../cli" }
 dependencies = [
     { name = "click" },
@@ -109,6 +109,7 @@ api = [
 
 [package.metadata]
 requires-dist = [
+    { name = "a2a-sdk", extras = ["fastapi"], marker = "extra == 'a2a'", specifier = ">=1.1.2,<2" },
     { name = "click", specifier = ">=8.1.0" },
     { name = "dna-sdk", editable = "../sdk-py" },
     { name = "dna-sdk", extras = ["search-sqlite"], marker = "extra == 'dev'", editable = "../sdk-py" },
@@ -118,8 +119,10 @@ requires-dist = [
     { name = "fastmcp", extras = ["apps"], marker = "extra == 'mcp'", specifier = ">=3.4" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
     { name = "httpx", marker = "extra == 'graph'", specifier = ">=0.27" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.28" },
     { name = "msal", marker = "extra == 'dev'", specifier = ">=1.28" },
     { name = "msal", marker = "extra == 'graph'", specifier = ">=1.28" },
+    { name = "prefab-ui", marker = "extra == 'mcp'", specifier = ">=0.18.0" },
     { name = "psycopg2-binary", marker = "extra == 'dev'", specifier = ">=2.9" },
     { name = "psycopg2-binary", marker = "extra == 'quota'", specifier = ">=2.9" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
@@ -130,11 +133,11 @@ requires-dist = [
     { name = "sqlalchemy", marker = "extra == 'quota'", specifier = ">=2" },
     { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.30" },
 ]
-provides-extras = ["mcp", "api", "graph", "quota", "dev"]
+provides-extras = ["mcp", "api", "a2a", "graph", "quota", "dev"]
 
 [[package]]
 name = "dna-client"
-version = "0.26.0"
+version = "0.59.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -156,7 +159,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "dna-sdk"
-version = "0.36.0"
+version = "0.59.0"
 source = { editable = "../sdk-py" }
 dependencies = [
     { name = "aiofiles" },
@@ -168,6 +171,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
+    { name = "a2a-sdk", extras = ["fastapi"], marker = "extra == 'dev'", specifier = ">=1.1.2,<2" },
     { name = "ag-ui-protocol", marker = "extra == 'agno-copilot'", specifier = ">=0.1.19" },
     { name = "agent-framework", marker = "extra == 'maf'", specifier = "==1.12.1" },
     { name = "agent-framework-ag-ui", marker = "extra == 'maf'", specifier = "==1.0.0" },
@@ -181,12 +185,13 @@ requires-dist = [
     { name = "detoxify", marker = "extra == 'safety-ml'", specifier = ">=0.5" },
     { name = "dna-sdk", extras = ["all"], marker = "extra == 'dev'" },
     { name = "dna-sdk", extras = ["postgres"], marker = "extra == 'search-pgvector'" },
-    { name = "dna-sdk", extras = ["postgres", "sqlite", "sql", "re2"], marker = "extra == 'all'" },
+    { name = "dna-sdk", extras = ["postgres", "sqlite", "sql", "re2", "otel", "mime"], marker = "extra == 'all'" },
     { name = "dna-sdk", extras = ["search-pgvector"], marker = "extra == 'dev'" },
     { name = "dna-sdk", extras = ["search-sqlite"], marker = "extra == 'dev'" },
     { name = "dna-sdk", extras = ["sqlite", "postgres"], marker = "extra == 'sql'" },
     { name = "fastapi", marker = "extra == 'agno-copilot'", specifier = ">=0.115" },
     { name = "fastembed", marker = "extra == 'embed-onnx'", specifier = ">=0.3" },
+    { name = "filetype", marker = "extra == 'mime'", specifier = ">=1.2" },
     { name = "google-re2", marker = "extra == 're2'", specifier = ">=1.1" },
     { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.24" },
     { name = "jsonschema", specifier = ">=4.0" },
@@ -196,6 +201,9 @@ requires-dist = [
     { name = "langgraph", marker = "extra == 'runtime'", specifier = "==1.2.9" },
     { name = "mcp", marker = "extra == 'agno-copilot'", specifier = ">=1.0" },
     { name = "openai", marker = "extra == 'agno-copilot'", specifier = ">=1.40" },
+    { name = "openinference-instrumentation-langchain", marker = "extra == 'otel'", specifier = ">=0.1" },
+    { name = "opentelemetry-exporter-otlp-proto-http", marker = "extra == 'otel'", specifier = ">=1.27" },
+    { name = "opentelemetry-sdk", marker = "extra == 'otel'", specifier = ">=1.27" },
     { name = "presidio-analyzer", marker = "extra == 'safety-ml'", specifier = ">=2.2" },
     { name = "presidio-anonymizer", marker = "extra == 'safety-ml'", specifier = ">=2.2" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0" },
@@ -209,8 +217,9 @@ requires-dist = [
     { name = "sqlalchemy", extras = ["asyncio"], marker = "extra == 'sqlite'", specifier = ">=2" },
     { name = "sqlite-vec", marker = "extra == 'search-sqlite'", specifier = ">=0.1.6" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'", specifier = ">=4.4" },
+    { name = "uvicorn", marker = "extra == 'dev'", specifier = ">=0.30" },
 ]
-provides-extras = ["postgres", "sqlite", "safety-ml", "sql", "embed-onnx", "search-sqlite", "search-pgvector", "agno-copilot", "runtime", "maf", "re2", "all", "dev"]
+provides-extras = ["postgres", "sqlite", "safety-ml", "sql", "mime", "otel", "embed-onnx", "search-sqlite", "search-pgvector", "agno-copilot", "runtime", "maf", "re2", "all", "dev"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "aiosqlite", specifier = ">=0.22.1" }]

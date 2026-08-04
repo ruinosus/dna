@@ -29,12 +29,51 @@ An ADR captures ONE architectural decision with its context, rationale, and cons
 | `deciders` | array |  | Actor names who participated in the decision. |
 | `decision` | string | yes | WHAT we decided. Active voice: 'We will X' or 'We chose X over Y'. 1-2 paragraphs. |
 | `narrative_origin` | string |  | When extracted from a Narrative.decisions[] entry during Phase 2.2 migration, this points to the source Narrative slug for provenance. |
-| `status` | string | yes | Lifecycle: proposed → accepted → deprecated\|superseded. Use `superseded` (not deprecated) when a newer ADR replaces this one — link via `superseded_by`. |
+| `status` | string | yes | Lifecycle: proposed → accepted → deprecated\|superseded. Use `superseded` (not deprecated) when a newer ADR replaces this one — link via `superseded_by`. Um de: `proposed`, `accepted`, `deprecated`, `superseded`. |
 | `superseded_by` | string |  | ADR slug that supersedes this one (when status=superseded). |
 | `supersedes` | array |  | ADR slugs this one replaces. |
 | `tags` | array |  | Free-form tags (e.g. 'persistence', 'auth', 'ui'). |
 | `title` | string | yes | Decision headline — start with imperative verb. |
 | `updated_at` | string |  |  |
+
+## AgentCatalogEntry
+
+- **Alias:** `a2a-agent-catalog-entry`
+- **apiVersion:** `github.com/ruinosus/dna/a2a/v1`
+- **Plane:** record
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `client_id` | string | yes | O `client_id` OPACO que esta entrada nomeia. Um `client_id` que seja URL é recusado pelo schema: aquele resolve por CIMD, e o nome dele vem ancorado no domínio que o publica. |
+| `client_name` | string | yes | O nome legível — DIGITADO por alguém deste workspace, e a tela diz isso. Não é equivalente ao nome de um documento CIMD, e apresentá-lo como se fosse seria pior que mostrar o id cru: o id avisa que você não sabe quem é; um nome sem procedência não avisa nada. |
+| `notes` | string |  | Por que este agente existe, para quem ler a lista depois. Um campo de contexto humano, nunca de política: nada aqui é lido para decidir. |
+| `registered_at` | string |  | Quando foi cadastrado. |
+| `registered_by` | string | yes | QUEM cadastrou — o identificador durável da pessoa. Obrigatório porque é ele que torna o rótulo possível: "cadastrado por Maria" é uma frase que o usuário pode pesar; um nome sozinho, num id opaco, não é. |
+| `vendor` | string |  | A empresa por trás do agente, se quem cadastrou souber. Também digitado, e também sem prova — pelo mesmo motivo do nome. |
+
+## AgentGrant
+
+- **Alias:** `a2a-agent-grant`
+- **apiVersion:** `github.com/ruinosus/dna/a2a/v1`
+- **Plane:** record
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `call_count` | integer |  | Quantas chamadas CONCEDIDAS. Só as concedidas, pela mesma razão que a quota não conta recusa: um número que mistura uso e tentativa não responde nem "quanto ele usou" nem "quanto ele tentou". |
+| `client_id` | string | yes | O identificador do app que pede — LIDO DO TOKEN verificado, nunca de um campo do pedido. O corpo é do chamador: um `client_id` vindo dali deixaria um agente se passar por outro e usar a concessão alheia, com o token continuando válido e a chamada continuando 200. |
+| `client_name` | string |  | O nome LEGÍVEL do agente, como a tela de consentimento o exibe. Ausente quando não há nome confiável — e ausente é o default, porque um `client_id` cru é feio e HONESTO, enquanto um nome fabricado é legível e falso. Numa tela de autorização a segunda coisa é pior. ⚠️ NÃO é auto-declarado. O host só grava aqui um nome que veio ANCORADO: o `client_id` é uma URL HTTPS (CIMD, draft-ietf-oauth-client-id-metadata-document) e o nome foi lido do documento servido naquela origem. Quem controla `acme.com` é o único que pode declarar um nome em `acme.com`, e disso o DNS e o TLS já dão prova. Aceitar nome de um campo do pedido devolveria o ataque que este desenho existe para fechar: a tela do provedor, com a marca dele, no instante da autorização, exibindo a mentira com aparência oficial. A ORIGEM não é campo: ela se DERIVA do `client_id` (o host da URL), e é isso que a tela deve mostrar com o mesmo peso do nome. Um campo de domínio ao lado poderia divergir do `client_id`, e um domínio que diverge da âncora é exatamente o nome auto-declarado com outra roupa. Pela mesma razão não há campo dizendo "de onde veio o nome": com `client_id` opaco não há nome ancorado possível, então a procedência já está dita pela forma do `client_id`. CONGELADO no instante do pedido, de propósito: o registro guarda o que o humano VIU quando decidiu. Se o terceiro se renomear depois, a tela não troca por baixo de uma decisão já tomada — e a âncora, que se deriva do `client_id`, nunca envelhece. |
+| `granted_at` | string |  | Quando um HUMANO concedeu. Ausente enquanto ninguém decidiu. |
+| `last_call_at` | string |  | A auditoria — quando este agente agiu pela última vez. |
+| `requested_at` | string |  | Quando o agente pediu — o pedido nasce da primeira recusa. |
+| `requested_scope_kinds` | array |  | O que o agente PEDIU — separado do que foi concedido, e essa separação é a regra inteira do consentimento: o agente pede, o usuário decide. Um campo só faria pedir ser igual a receber. Serve à tela, que pré-marca o pedido para o humano confirmar ou cortar. Um agente que não declara nada deixa isto vazio, e nada vem marcado: silêncio nunca vira permissão. |
+| `revoked_at` | string |  |  |
+| `scope_kinds` | array |  | Os Kinds cujos documentos este agente pode receber. Mesmo vocabulário do `RemoteAgent.data_scope.kinds`, de propósito: é a mesma pergunta nas duas direções, e responder diferente de cada lado seria uma armadilha para quem lê. AUSENTE ou VAZIO significa "nada pode". Ausência FECHA, nunca abre. |
+| `state` | string | yes | Tri-estado DE PROPÓSITO, como o `signature_state` do `RemoteAgent`. Um booleano `granted` faria "pediu e ninguém decidiu" parecer "negado", e são coisas diferentes: a primeira precisa APARECER numa tela para alguém decidir; a segunda já foi decidida e não pede nada. Um de: `pending`, `active`, `revoked`. |
+| `subject` | string | yes | O usuário que concede — o identificador DURÁVEL dele, não o da sessão. Durável porque a concessão sobrevive ao login: revogar um agente não é deslogar a pessoa, e as duas coisas precisam ser independentes. |
 
 ## AgentSession
 
@@ -53,10 +92,12 @@ A AgentSession captures a developer↔AI coding conversation as a versioned proj
 | `cost_usd` | number |  |  |
 | `ended_at` | string |  |  |
 | `file_changes` | array |  | Repo-relative paths edited during session. |
-| `journey_phase` | string |  | Universal journey phase. AgentSessions usually live in `discover` (brainstorming chats) or `build` (execution chats). The agent stamps this on capture. |
+| `journey_phase` | string |  | Universal journey phase. AgentSessions usually live in `discover` (brainstorming chats) or `build` (execution chats). The agent stamps this on capture. Um de: `discover`, `specify`, `plan`, `build`, `verify`, `reflect`. |
 | `model` | string |  | AI model identifier (e.g. claude-opus-4-7, gpt-5-codex). |
 | `participants` | array |  | Actor names (humans + agent identities). |
 | `produced_artifacts` | array |  | Refs to docs created/modified during session. |
+| `produced_artifacts[].kind` | string | yes |  |
+| `produced_artifacts[].name` | string | yes |  |
 | `raw_source` | string |  | Provenance pointer — tool-native source path or URL (JSONL file path, sqlite URI, etc). Required for re-derivation. |
 | `session_id` | string | yes | Tool-native session identifier (UUID/sqlite-rowid/etc). |
 | `started_at` | string | yes |  |
@@ -84,7 +125,7 @@ Immutable record of a role-gated HTTP endpoint invocation. Captures actor, roles
 | `captured_at` | string | yes | UTC ISO-8601 timestamp. |
 | `detail` | object |  | Free-form context: which required roles failed, body size, durations, errors. Defensive about PII — don't include request bodies verbatim. |
 | `operation` | string | yes | HTTP method + path template, e.g. 'PUT /scopes/{scope}/docs/Agent/{name}' or 'POST /assessments/{name}/run'. |
-| `outcome` | string | yes | success = decorator + handler ran clean. denied = 403 from require_role. error = handler raised (500/422/...). |
+| `outcome` | string | yes | success = decorator + handler ran clean. denied = 403 from require_role. error = handler raised (500/422/...). Um de: `success`, `denied`, `error`. |
 | `remote_ip` | string |  | Best-effort client IP (X-Forwarded-For aware). |
 | `request_id` | string |  | Correlation ID (UUIDv4) — joins logs. |
 | `roles` | array | yes | Roles claimed at request time (from JWT or DNA_DEV_ROLES). Snapshot — does NOT reflect later role revocations. |
@@ -113,11 +154,32 @@ An Automation declares background work as data — ``on`` picks the trigger (cro
 | `input` | object |  | Structured input the host resolves into the runner's context. Hosts may support tokens such as {scope}, {now}, {utc_date}. |
 | `labels` | array |  |  |
 | `on` | object | yes | The trigger. type=cron → scheduled (5-field cron expression, validated at write); type=hook → a kernel lifecycle hook name (KNOWN_HOOK_NAMES vocabulary, validated at write); type=tool → an async dispatch tool the host exposes to the model. |
+| `on.cron` | string |  | 5-field cron 'min hour dom mon dow', e.g. '0 10 * * 1,3,5'. Parsed at write time by the automation write guard (numeric fields, '*', ranges, lists, steps — no JAN/MON name aliases). |
+| `on.hook` | string |  | Kernel lifecycle hook that fires this automation, e.g. 'post_save' or 'post_build_prompt'. Must be one of the kernel's KNOWN_HOOK_NAMES — the write guard vetoes unknown names. |
+| `on.input_schema` | array |  | Declared args of the dispatch tool (all strings). |
+| `on.input_schema[].default` | string |  |  |
+| `on.input_schema[].description` | string |  |  |
+| `on.input_schema[].name` | string | yes |  |
+| `on.input_schema[].required` | boolean |  |  |
+| `on.input_schema[].type` | string |  |  |
+| `on.primary_input` | string |  | Which input arg carries the main user content fed to an agent runner. Defaults to the first input_schema entry. |
+| `on.tool_name` | string |  | The dispatch tool the model sees (e.g. deep_research_async). |
+| `on.type` | string | yes | Um de: `cron`, `hook`, `tool`. |
 | `result_kind` | string |  | Kind the automation output should be persisted as (e.g. Research, Doc) when the runner produces a document. |
 | `result_spec_template` | object |  | Deterministic persist template — when an agent runner synthesizes but does not persist a doc itself, the host creates a result_kind doc from this template ({arg} fills from the args, {output} from the agent synthesis). |
 | `runner` | object | yes |  |
+| `runner.expected_output` | string |  | For an agent runner, what the agent should produce. 'slug' = persist a real domain doc (result_kind) and return its slug; 'text'/'json' = return prose/structured output inline. Hosts default to 'text'. Um de: `slug`, `json`, `text`. |
+| `runner.kind` | string | yes | Um de: `agent`, `tool`. |
+| `runner.model` | string |  | Optional model override for the runner. |
+| `runner.ref` | string | yes | Agent name (kind=agent) or Tool name (kind=tool) that executes the automation. |
+| `runner.timeout_seconds` | number |  | Wall-clock budget the host should give one run. |
 | `running_message` | string |  | Spoken/UI copy returned at dispatch (tool trigger). |
 | `safety` | object |  | Loop-safety the HOST enforces for this automation. All fields optional — an absent field falls back to the host default. |
+| `safety.cooldown_minutes` | integer |  | Do not re-fire for the same scope within this wall-clock window. |
+| `safety.debounce_seconds` | number |  | Coalesce repeated fires within this window into one. |
+| `safety.idempotency_key` | string |  | Template, e.g. '{scope}:{utc_date}'. A 2nd fire with the same resolved key is a no-op. |
+| `safety.max_fan_out` | integer |  | Cap on documents one fire may produce. |
+| `safety.max_fires_per_minute` | integer |  | Circuit-breaker rate cap per (scope, automation). |
 
 ## Bug
 
@@ -142,8 +204,12 @@ A Bug captures a factual defect: repro_steps, severity, environment, status. Dis
 | `found_at` | string |  |  |
 | `labels` | array |  |  |
 | `owner` | string |  |  |
-| `priority` | string |  |  |
+| `priority` | string |  | Um de: `highest`, `high`, `medium`, `low`, `lowest`. |
 | `produces` | array |  | Artifacts this work item produced — any Kind (hub). |
+| `produces[].at` | string |  |  |
+| `produces[].kind` | string | yes | Artifact Kind (any). |
+| `produces[].name` | string | yes | Artifact doc name. |
+| `produces[].role` | string |  | Optional role hint (e.g. visual-spec, plan, investigation). |
 | `related_feature` | string |  |  |
 | `related_finding` | string |  |  |
 | `related_story` | string |  |  |
@@ -151,9 +217,21 @@ A Bug captures a factual defect: repro_steps, severity, environment, status. Dis
 | `repro_steps` | array |  |  |
 | `resolved_at` | string |  |  |
 | `root_cause` | string |  |  |
-| `severity` | string | yes |  |
-| `status` | string | yes |  |
+| `severity` | string | yes | Um de: `low`, `medium`, `high`, `critical`. |
+| `status` | string | yes | Um de: `open`, `triaged`, `in-progress`, `resolved`, `wont-fix`, `duplicate`, `regression`. |
 | `timeline` | array |  | Append-only activity log. Auto-stamped by the CLI on every status flip / groom / artifact write; populated by AgentSession capture for decision + artifact_produced events. Render in Studio as activity stream. |
+| `timeline[].actor` | string | yes | Who triggered the event (Actor name or 'claude-code'). |
+| `timeline[].at` | string | yes |  |
+| `timeline[].commit_ref` | string |  | Git SHA associated with this event (when relevant). |
+| `timeline[].excerpt` | string |  | decision: snippet from the source transcript. |
+| `timeline[].fields` | object |  | groom: which fields changed and to what. |
+| `timeline[].from` | string |  | status_change: previous status. |
+| `timeline[].paths` | array |  | artifact_produced: file paths touched. |
+| `timeline[].session_ref` | string |  | Back-link to a AgentSession that produced this event. |
+| `timeline[].source` | string |  | Um de: `cli`, `studio`, `mcp`, `agent-session-extracted`, `system`. |
+| `timeline[].summary` | string |  | comment/decision: short human-readable text. |
+| `timeline[].to` | string |  | status_change: new status. |
+| `timeline[].type` | string | yes | Event type. Recognized: status_change, groom, comment, decision, artifact_produced (open vocabulary — new types are additive, e.g. pr_opened). |
 | `title` | string | yes |  |
 | `updated_at` | string |  |  |
 
@@ -175,6 +253,14 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 | `title` | string | yes | Project name typically. |
 | `updated_at` | string |  |  |
 | `versions` | array |  | Reverse-chronological list of versions. |
+| `versions[].added` | array |  | New features. |
+| `versions[].changed` | array |  | Changes in existing functionality. |
+| `versions[].date` | string |  |  |
+| `versions[].deprecated` | array |  | Soon-to-be removed. |
+| `versions[].fixed` | array |  | Bug fixes. |
+| `versions[].removed` | array |  | Removed in this version. |
+| `versions[].security` | array |  | Vulnerability fixes. |
+| `versions[].version` | string | yes | SemVer 2.0 (e.g. '1.4.2') or '[Unreleased]'. |
 
 ## CognitivePolicy
 
@@ -187,16 +273,144 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `affect` | object |  | Affect vocabulary for the memory/affect engine (ex-AffectPalette). The active palette steers engraphy affect tags. |
+| `affect.palette` | array | yes |  |
+| `affect.palette[].affect_weight` | number |  |  |
+| `affect.palette[].id` | string | yes |  |
+| `affect.palette[].semantics` | string | yes |  |
+| `affect.palette[].use_when` | array |  |  |
 | `allocation` | object |  | Engram allocation (dedup/archival) knobs (ex-AllocationPolicy). |
+| `allocation.loser_policy` | string |  | Which of two overlapping engrams loses — the weaker (lower strength) or the newer one. Um de: `weaker`, `newer`. |
+| `allocation.overlap_weights` | object |  | How overlap [0,1] is scored (sum 1.0). |
+| `allocation.overlap_weights.affect` | number |  | Same affect bonus. |
+| `allocation.overlap_weights.area` | number |  | Same area bonus. |
+| `allocation.overlap_weights.source_refs` | number |  | Jaccard of shared source_refs. |
+| `allocation.threshold` | number |  | Overlap >= this proposes archiving the loser (clamped 0.5-1.0). |
 | `created_at` | string |  |  |
 | `decay` | object |  | Memory retention/forgetting knobs (ex-DecayPolicy). |
+| `decay.default_stability_days` | number |  | Fallback stability when no tier/stability is on the doc. |
+| `decay.max_stability_days` | number |  | Per-recall bump ceiling (so frequent recalls don't compound forever). |
+| `decay.ranking_formula` | string |  | simple = exponential decay (Sprint 1); actr = log power-law (Sprint 2). Um de: `simple`, `actr`. |
+| `decay.relevance_decay_seed` | number |  | Default multiplicative decay per 24h (spec override wins). |
+| `decay.stability_tiers` | object |  | Ebbinghaus stability per confidence tier, in days. |
+| `decay.stability_tiers.burning` | number |  |  |
+| `decay.stability_tiers.faint` | number |  |  |
+| `decay.stability_tiers.firm` | number |  |  |
 | `embedding` | object |  | Embedding model + dimension + search weights (ex-EmbeddingProfile). ONLY meaningful on the _lib doc — the embedding space is intrinsically global (stored vectors and every query must share one model+dimension); kernel.embedding_profile reads _lib directly and never a scope override. `recall.calibrated_for` points back here. |
+| `embedding.dimensions` | integer | yes | Vector dimension. MUST match the pgvector column + every stored embedding — changing it requires a full re-embed. |
+| `embedding.language` | string |  | Primary language the recall knobs were calibrated against. |
+| `embedding.max_input_tokens` | integer |  | Input ceiling for a single embed call (model-specific). |
+| `embedding.model` | string | yes | Embedding model id (must be served by the LiteLLM proxy). |
+| `embedding.notes` | string |  |  |
+| `embedding.search_weights` | object |  | RRF fusion weights for `cognitive search` (hybrid retrieval). |
+| `embedding.search_weights.bm25` | number |  |  |
+| `embedding.search_weights.graph` | number |  |  |
+| `embedding.search_weights.vector` | number |  |  |
 | `engram_strength` | object |  | Initial-strength rules per engraphy trigger (ex-EngramStrengthPolicy). |
+| `engram_strength.default_decay_rate_per_day` | number |  |  |
+| `engram_strength.default_decay_threshold_days` | integer |  |  |
+| `engram_strength.rules` | array | yes |  |
+| `engram_strength.rules[].engraphy_intensity` | number |  |  |
+| `engram_strength.rules[].initial_strength` | number | yes |  |
+| `engram_strength.rules[].when` | string | yes | Trigger predicate |
 | `generation` | object |  | Operational params for the memory-gen engines (the ORIGINAL CognitivePolicy body, now one section among peers). |
+| `generation.auto_shipped` | object |  | Deterministic ship → engram producer. |
+| `generation.auto_shipped.lookback_days` | integer |  | Window of recently-done Stories considered. |
+| `generation.auto_shipped.max_emit` | integer |  | Max engrams emitted per run. |
+| `generation.backfill` | object |  | Distil done Stories/Features into engrams. |
+| `generation.backfill.budget` | integer |  | Max engrams written per backfill run (resumable). |
+| `generation.consolidation` | object |  | Episodic → semantic consolidation. |
+| `generation.consolidation.min_cluster_size` | integer |  | Min episodic engrams in an area before consolidating. |
+| `ingestion` | object |  | WHEN memory is fed, and from WHAT. The workspace's own answer to "how and when are memories created" — the half `recall` (how they are USED) already had. ⭐ WHY THIS IS DATA AND NOT A FLAG. Feeding memory automatically is a judgement about the customer's own material: a legal team may want every decision captured; a support team may want nothing from chat at all. Hard-coding either answer picks a side for people whose work we do not know. Absent, the built-in defaults apply and nothing changes. |
+| `ingestion.arbiter_neighbors_cap` | integer |  | Hard cap of the arbiter neighborhood. |
+| `ingestion.arbiter_neighbors_multiplier` | integer |  | The arbiter sees a WIDER neighborhood than the reconciliation — `neighbors × multiplier` (capped below). It is deciding a conflict, so it needs more context than the pass that raised it. |
+| `ingestion.enabled` | boolean |  | Master switch. `false` stops all automatic feeding — the agent still writes memory when explicitly asked, because that path is the user's own instruction, not a policy decision. |
+| `ingestion.engine` | string |  | The reconciliation engine. `pipeline` = two fixed model calls (cheap, predictable). `pipeline-agent` = the hybrid: the fixed skeleton, but the reconciliation may ESCALATE an uncertain fact to the arbiter agent (one bounded round; the arbiter decides, the pipeline applies). `agent` = the named agent reconciles everything (reserved; not yet implemented). Um de: `pipeline`, `pipeline-agent`, `agent`. |
+| `ingestion.engine_agent` | string |  | The Agent document that arbitrates escalations (its instruction is the arbiter's role text). Empty + an escalation = the fact degrades to `none` — uncertainty without a judge never writes. |
+| `ingestion.max_arbitrations` | integer |  | Ceiling of arbiter escalations per turn (`pipeline-agent` engine). Beyond it, facts degrade to `none` — uncertainty without budget never writes. |
+| `ingestion.max_facts_per_turn` | integer |  | Ceiling of facts extracted per turn. A real conversation does not produce ten durable facts; a model returning ten is inventing — the ceiling turns that into bounded noise. |
+| `ingestion.max_transcript_chars` | integer |  | How much transcript feeds the extraction. More does not improve the fact and worsens the bill. |
+| `ingestion.min_signal_chars` | integer |  | Below this the turn is skipped without a model call. It exists because most turns of a real conversation are "ok" / "thanks" — extracting from them costs money and yields noise that later SURFACES on its own in the prompt. |
+| `ingestion.neighbors` | integer |  | How many existing memories the reconciliation compares each new fact against (the recall k). More sees farther and costs more tokens per turn; fewer is cheaper and can miss a conflict. |
+| `ingestion.proposal_markers` | array |  | Regexes that mark a turn as containing a DURABLE assertion — the trigger for the "propose to remember" nudge. EMPTY means the built-in markers apply — and the built-ins are Portuguese-biased (decidimos/prefiro/prazo...), which is exactly why this is data: an English or Spanish workspace declares its own. |
+| `ingestion.require_approval` | boolean |  | Whether an automatically extracted memory goes through the human approval gate before being written. ⚠️ `false` is deliberate and is the founder's call (2026-08-03). With reconciliation (a later fact can UPDATE or invalidate an earlier one) a wrong memory costs "until contradicted" rather than "forever" — which is what made the automatic path defensible at all. Set `true` and every extracted fact becomes a card to click; the trail gains coverage and the feature gains friction. |
+| `ingestion.sdlc` | object |  | The `sdlc` source cadence — how often the board is read for extraction, and how much of it. |
+| `ingestion.sdlc.interval_seconds` | integer |  | Minimum interval between board reads per workspace (default 6h). |
+| `ingestion.sdlc.max_items` | integer |  | Stories per digest — a month of board does not hold a hundred durable facts. |
+| `ingestion.sources` | array |  | WHERE facts may be extracted from. `chat` = the conversation transcript; `sdlc` = board activity; `kind:<Name>` = documents of a given Kind as they are written. A source absent from this list is NEVER read — the list is an allowlist, not a preference. Widening it is the workspace's decision, and it is the decision that governs what the agent may learn about its people. |
+| `ingestion.transcript_messages` | integer |  | How many recent messages (user AND agent) form the extraction material — decisions often complete across the exchange ("pode ser 60 dias?" / "fechado, 60"). |
+| `ingestion.trigger` | string |  | `per_turn` extracts as the conversation happens (memory is immediate; costs a model call per qualifying turn). `batch` defers to a scheduled pass (cheap; memory arrives late). `off` disables extraction while leaving the rest of the policy in force. Um de: `per_turn`, `batch`, `False`. |
+| `intel` | object |  | Intel-engine tuning (#36 tail) — ranker weights, dedup threshold, feedback strengths and the portal action bar. Engine-wide per workspace; the per-SOURCE `threshold` stays on IntelSource. |
+| `intel.action_bar` | number |  | Score at or above which an insight "requires action" in the screens (product judgement, now declarable). |
+| `intel.dedup` | object |  |  |
+| `intel.dedup.cosine_threshold` | number |  | Above this cosine two insights are "the same". |
+| `intel.feedback` | object |  |  |
+| `intel.feedback.action_bonus` | number |  |  |
+| `intel.feedback.dismiss_penalty` | number |  |  |
+| `intel.feedback.sim_threshold` | number |  |  |
+| `intel.ranker` | object |  |  |
+| `intel.ranker.base` | number |  |  |
+| `intel.ranker.evidence_weights` | object |  |  |
+| `intel.ranker.evidence_weights.anecdotal` | number |  |  |
+| `intel.ranker.evidence_weights.evidence-based` | number |  |  |
+| `intel.ranker.evidence_weights.opinion-practice` | number |  |  |
+| `intel.ranker.has_action` | number |  |  |
+| `intel.ranker.pir_match` | number |  |  |
 | `memory` | object |  | Agent-memory governance (ex-MemoryPolicy). Each entry in `policies` keeps the old multi-doc matcher semantics — merged most-specific-wins by dna_shared.cognitive.memory_policy. |
+| `memory.policies` | array |  |  |
+| `memory.policies[].applies_to` | object |  | Matcher: any of scope/owner/memory_type (absent = wildcard). Most-specific wins. |
+| `memory.policies[].applies_to.memory_type` | string |  | Any declared memory type. OPEN, in lockstep with the `Engram` field it matches: a closed enum here would let a workspace declare `preference` on the memory and then be unable to write a policy for it. |
+| `memory.policies[].applies_to.owner` | string |  |  |
+| `memory.policies[].applies_to.scope` | string |  |  |
+| `memory.policies[].defaults` | object |  |  |
+| `memory.policies[].defaults.include_agents` | boolean |  |  |
+| `memory.policies[].defaults.pinned_budget` | integer |  |  |
+| `memory.policies[].defaults.visibility` | string |  | Um de: `shared`, `private`, `pinned`, `archived`. |
+| `memory.policies[].remember` | object |  | Topic steering (guidance; hard enforcement stays in the write path / Presidio). |
+| `memory.policies[].remember.always` | array |  |  |
+| `memory.policies[].remember.never` | array |  |  |
+| `methodology` | object |  | SDLC methodology gates. Read through the session kernel's document port (adapter-agnostic — filesystem, sqlite or Postgres per DNA_SOURCE_URL), so journey transitions honor it wherever the board lives. |
+| `methodology.auditor_threshold` | integer |  | Ad-hoc cycles within the window that trigger the "next phase requires superpowers" gate. |
+| `methodology.auditor_window` | integer |  | How many recent cycles the auditor looks at. |
 | `owner` | string |  |  |
 | `pagination` | object |  | REST list pagination defaults/caps (ex-PaginationPolicy). Data-plane ownership — read by dna_shared.pagination_policy, not the cognitive engines. |
+| `pagination.default_limit` | integer |  | Page size when the request omits ?limit=. |
+| `pagination.max_limit` | integer |  | Hard cap — a larger ?limit= is clamped to this. |
 | `recall` | object |  | Recall-tuning knobs for the ecphory engine (ex-RecallPolicy). |
+| `recall.calibrated_for` | object |  | Validity envelope — the embedding model/dimension/language the semantic knobs were calibrated for. If the `embedding` section changes, these are stale and must be re-calibrated. |
+| `recall.calibrated_for.dimensions` | integer |  |  |
+| `recall.calibrated_for.embedding_model` | string |  |  |
+| `recall.calibrated_for.language` | string |  |  |
+| `recall.injection` | object |  | How the recalled block ENTERS the prompt (the runtime middleware side). `retrieval` shapes the search; `injection` shapes the prompt. Defaults mirror the middleware constants they replace (varredura de valores, 03/08/2026). |
+| `recall.injection.cue_max_chars` | integer |  | Ceiling of the cue text — a giant query does not discriminate better, it only costs more. |
+| `recall.injection.cue_window` | integer |  | How many recent user messages form the search cue. |
+| `recall.injection.max_block_chars` | integer |  | Ceiling for the whole injected block — one long Engram must not eat the window. |
+| `recall.injection.min_signal_chars` | integer |  | Below this the user turn triggers no search ("ok", "thanks"). |
+| `recall.injection.sticky_overlap` | number |  | Hysteresis — fraction of the previous working set that must survive for the OLD block to be kept (prompt/cache stability, from the JARVIS prior art). |
+| `recall.injection.type_labels` | object |  | How each memory TYPE is labeled inside the injected block (`- [LABEL] text`). OPEN map (type → label), merged over the built-ins (procedural→"REGRA (siga)", episodic→"fato ocorrido", semantic→"fato") — open because memory types are open, and the label IS model-facing voice: a workspace in English declares its own. |
+| `recall.retrieval` | object |  | Shape of retrieval — how many results, how to diversify and spread. Not coupled to the embedding model nor to memory theory. |
+| `recall.retrieval.k` | integer |  | Final working-set size injected per turn. |
+| `recall.retrieval.limit_direct` | integer |  | Max direct ecphory hits considered. |
+| `recall.retrieval.limit_homophonic` | integer |  | Max homophony-expanded hits considered. |
+| `recall.retrieval.mmr_lambda` | number |  | MMR redundancy penalty (diversity vs raw score). |
+| `recall.retrieval.search_n` | integer |  | pgvector candidates pulled for the cosine overlay. |
+| `recall.retrieval.spread_decay` | number |  | Activation decay per spreading hop. |
+| `recall.retrieval.spread_depth` | integer |  | Spreading-activation hops from the direct hits. |
+| `recall.semantic` | object |  | Embedding-coupled knobs (model+dimension+language). Cosine only means anything within one embedding space — re-calibrate on change. |
+| `recall.semantic.cosine_weight` | number |  | Weight on the raw embedding cosine in the content dimension (calibrated 0.55->0.61, 2026-06-15). |
+| `recall.semantic.direct_threshold` | number |  | Ecphory direct gate (mirrors theta_in). |
+| `recall.semantic.theta_in` | number |  | Enter the working set when the fresh score >= this. |
+| `recall.semantic.theta_out` | number |  | Hold a prior member while its score >= this (hysteresis). |
+| `recall.structural` | object |  | Theory-derived weights (Tulving/Nairne/Semon). Stable across model and language. |
+| `recall.structural.affect_weight` | number |  |  |
+| `recall.structural.co_topics_weight` | number |  |  |
+| `recall.structural.content_weight` | number |  |  |
+| `recall.structural.novelty_boost` | number |  |  |
+| `recall.structural.recency_boost` | number |  |  |
+| `recall.structural.saturation_decay` | number |  |  |
+| `recall.structural.saturation_threshold` | integer |  | Recent-24h cue count that triggers saturation decay. |
+| `recall.structural.source_refs_weight` | number |  |  |
+| `recall.structural.summary_partial_weight` | number |  |  |
+| `recall.structural.time_weight` | number |  |  |
 | `updated_at` | string |  |  |
 
 ## Copilot
@@ -212,14 +426,58 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `frontend` | object |  | Frontend console hints for the emitted copilot UI. |
+| `frontend.console` | string |  | Which console renders the copilot (e.g. copilotkit). |
+| `frontend.panels` | array |  | Named side panels the console mounts alongside the chat. |
+| `frontend.suggested_prompts` | array |  | Starter prompts surfaced to the user in an empty console. |
 | `hitl` | object |  | Human-in-the-loop approval surface for write tools the mounted agents gate. |
+| `hitl.approval_card` | object |  | The card shown to the user when a gated tool pauses for approval. |
+| `hitl.approval_card.details_from` | string |  | Path into the pending tool's args used to render the card body (e.g. args.text). |
+| `hitl.approval_card.reason_from` | string |  | Path into the pending tool's args used to render the reason line (e.g. args.reason). |
+| `hitl.approval_card.title` | string |  | Heading of the approval card. |
 | `hosting` | object |  | Deployment/hosting model — beyond the self-hosted AG-UI app we already emit, the hosted (managed-service) variant. mode is a variant selector over ONE agent def (the same agent emits BOTH the per-user AG-UI app AND the single-identity hosted agent, which degrades — strips per-user OBO / per-user memory / HITL). Optional. Flows to the Terraform migration modules (f-copilot-infra-binding). |
+| `hosting.env` | object |  | Non-secret config injected into the hosted container (arbitrary keys; secrets ride on refs, never here). |
+| `hosting.image` | object |  | Container-image build hints for the hosted variant. |
+| `hosting.image.base_image` | string \| null |  | Base image; null → framework default. |
+| `hosting.image.port` | integer \| null |  | Serve port; null → framework default (8088 / 8123 / 7777). |
+| `hosting.image.registry_hint` | string |  | Target registry — an OPEN set (known values acr \| ghcr \| ecr \| dockerhub). |
+| `hosting.image.remote_build` | boolean |  | Build remotely (Foundry ACR remoteBuild) vs locally. |
+| `hosting.mode` | string |  | Variant selector — self-hosted (the per-user AG-UI app) or hosted (a container image + manifest on a managed service). Um de: `self-hosted`, `hosted`. |
+| `hosting.resources` | object |  | Compute request for the hosted variant (→ sandbox tier). |
+| `hosting.resources.cpu` | string |  | CPU request (e.g. "0.5"). |
+| `hosting.resources.memory` | string |  | Memory request (e.g. 1Gi). |
+| `hosting.stores` | object |  | Managed stores the hosted target requires (langgraph-platform / agentos only — Foundry provisions its own). |
+| `hosting.stores.postgres` | string |  | Postgres requirement (e.g. required). |
+| `hosting.stores.redis` | string |  | Redis requirement (e.g. required). |
+| `hosting.target` | string |  | The hosted runtime — foundry (MS-AF, true managed, first-class), langgraph-platform (SaaS / self-host), agentos (self-host only). Um de: `foundry`, `langgraph-platform`, `agentos`. |
 | `knowledge` | object |  | RAG the copilot may read. Optional — a pure-action copilot declares none. |
+| `knowledge.collections` | array |  | Names of the knowledge collections the copilot may query (refs — resolved by the emitter). |
+| `knowledge.store` | object |  | WHERE the corpus is embedded + searched — the vector store. Lives inside knowledge so the corpus and its store stay cohesive. Optional; flows to the Terraform migration modules (f-copilot-infra-binding). |
+| `knowledge.store.backend` | string \| null | yes | Vector backend — an OPEN set (known values pgvector \| mongo-atlas \| azure-ai-search \| qdrant \| pinecone \| null); emit when built. null = no store (framework default). |
+| `knowledge.store.embed` | object |  | The embedding model and its output dimensionality. |
+| `knowledge.store.embed.dims` | integer |  | Vector dimensionality (e.g. 1536). |
+| `knowledge.store.embed.model` | string |  | Embedding model id (e.g. text-embedding-3-small). |
+| `knowledge.store.ref` | string |  | Points at the vector-store infra resource (a Terraform module output — connection string/endpoint). May share the persistence ref (one physical Postgres). |
 | `mounts` | array | yes | The Agents this copilot serves, each at a mount path. At least one is required. |
+| `mounts[].agent` | string | yes | Name of the mounted Agent (ref — resolved by the emitter to its base EmitContext). |
+| `mounts[].id` | string | yes | Stable identifier for this mount within the copilot. |
+| `mounts[].path` | string | yes | The route the mounted agent is served at (e.g. /agui). |
 | `persistence` | object |  | Storage/state backends the emitted agent binds — checkpoint (thread/run state), long-term memory, and a LangGraph-only cache. Each slot is {backend, ref}; multiple slots may share one ref (one physical store — distinct tables/objects per framework). Optional — an in-memory copilot declares none. Flows to the Terraform migration modules (f-copilot-infra-binding), killing the hardcoded in-memory default. |
+| `persistence.cache` | object |  | LangGraph-only node cache — null on the other targets (Agno / MS-AF have no first-class cache slot). |
+| `persistence.cache.backend` | string \| null | yes | Storage backend — an OPEN set (known values postgres \| sqlite \| mongo \| redis \| inmemory \| cosmos \| serialize \| null); emit when built. null = no backend (framework default / in-memory). |
+| `persistence.cache.ref` | string |  | Points at an infra resource (a Terraform module output — connection string/endpoint). Multiple slots may share one ref (one physical store). |
+| `persistence.checkpoint` | object |  | Thread/run state — survives restart/resume (LangGraph PostgresSaver · Agno PostgresDb · MS-AF serialize-to-column). |
+| `persistence.checkpoint.backend` | string \| null | yes | Storage backend — an OPEN set (known values postgres \| sqlite \| mongo \| redis \| inmemory \| cosmos \| serialize \| null); emit when built. null = no backend (framework default / in-memory). |
+| `persistence.checkpoint.ref` | string |  | Points at an infra resource (a Terraform module output — connection string/endpoint). Multiple slots may share one ref (one physical store). |
+| `persistence.memory` | object |  | Cross-session long-term memory (LangGraph PostgresStore · Agno enable_user_memories · MS-AF mem0 / VectorStore). |
+| `persistence.memory.backend` | string \| null | yes | Storage backend — an OPEN set (known values postgres \| sqlite \| mongo \| redis \| inmemory \| cosmos \| serialize \| null); emit when built. null = no backend (framework default / in-memory). |
+| `persistence.memory.ref` | string |  | Points at an infra resource (a Terraform module output — connection string/endpoint). Multiple slots may share one ref (one physical store). |
 | `serving` | object | yes | How the copilot backend is served. |
+| `serving.framework` | string |  | The self-hosted serving framework the dna.runtime port builds on; distinct from hosting.target which selects a MANAGED host (foundry/langgraph-platform/agentos). Um de: `langchain`, `maf`, `agno`, `deepagents`. |
+| `serving.transport` | string | yes | Wire protocol the copilot backend speaks. Only ag-ui (AG-UI protocol) today. Um de: `ag-ui`. |
 | `tenant` | object |  | Inbound-tenant handling. When propagate is true, the emitted serving layer derives tenant/oid from request headers into run-state for the mounted tools to read. |
+| `tenant.propagate` | boolean |  | Derive tenant from inbound request headers into run-state (default false). |
 | `workflow` | object |  | Optional multi-step workflow — agent-framework (MS Agent Framework) target only. When present the emitter emits a WorkflowBuilder chain of the named steps plus a workflow-level human-approval escalation node; absent, a plain single-agent app is emitted. A per-target advanced option (YAGNI for the core). |
+| `workflow.chain` | array |  | Ordered workflow step ids. Each becomes a chained agent-executor; the AG-UI adapter surfaces the id as the UI step name. |
 
 ## Doc
 
@@ -237,7 +495,7 @@ A Doc is one page of in-product documentation. The marker is ``docs/<name>/DOC.m
 | `category` | string \| null |  | Free-form sidebar grouping (e.g. "Getting started"). Null falls back to a flat list. |
 | `enabled` | boolean |  | If false, the page is hidden from listings. |
 | `icon` | string |  | Emoji or short string shown next to the title. |
-| `kind_of` | enum |  | Diátaxis classification (learning- / task- / information- / understanding-oriented). Null = uncategorized. |
+| `kind_of` | enum |  | Diátaxis classification (learning- / task- / information- / understanding-oriented). Null = uncategorized. Um de: `tutorial`, `how_to`, `reference`, `explanation`, `None`. |
 | `locale` | string |  | Content locale (e.g. pt-BR, en). ``dna docs`` filters on it. |
 | `order` | integer |  | Sort order in the sidebar (ascending). |
 | `subtitle` | string |  | One-line subtitle shown under the title. |
@@ -256,28 +514,44 @@ An Engram is an affective recall artifact (record plane) — the memory co-pilla
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `affect` | string | yes | Emotional tone. Evocative palette (Spec §15 decision): triumph, regret, surprise, wistful, ominous. |
+| `affect` | string | yes | Emotional tone. The five the runtime weights out of the box are `triumph`, `regret`, `surprise`, `wistful` and `ominous` — an affect-tagged memory RESISTS forgetting, and each of those has a measured multiplier in `dna.memory.decay`. ⭐ OPEN ON PURPOSE, in lockstep with `memory_type` (2026-08-03). A closed palette makes the emotional vocabulary of the DOMAIN a constant of the CODE: a workspace whose work has `urgent`, `contested` or `relief` should be able to say so on the day it decides that, and to give that tone a weight through `CognitivePolicy.affect`. ⚠️ The consequence to accept: an unrecognised tone gets the NEUTRAL multiplier (1.0) until a policy assigns one. It is honoured — never dropped — but it does not resist forgetting more than an untagged memory would. Inventing a weight for a name nobody defined would be the system deciding how much a feeling matters. |
 | `affect_evidence_refs` | array |  | Concrete refs (rem-X, verdict-Y, Story/s-Z) that back the affect choice. Required for high-stakes affects so the LLM's claim is auditable against actual artifacts in the manifest. |
 | `affect_reason` | string |  | Story s-remembrance-affect-reason-required. Concrete justification for the chosen affect — names specific slugs/SHAs/AC counts/state. NOT generic ('Story closed', 'shipped successfully'). Validator rejects writes that lack reason OR have boilerplate. Required for high-stakes affects (regret/ominous/surprise); optional for triumph/wistful but encouraged. |
 | `area` | string | yes | Scoped target: Feature/X, Epic/Y, or Roadmap/Z. The LessonLearned surfaces when this area is touched. |
 | `confidence_score` | number |  | Semon engram intensity. Multiplies the recall score. Bumps when homophonic LessonsLearned (same area) are filed — engrams reinforce each other. Decays with surface_count for hygiene. |
 | `cues_history` | array |  | Semon ecforia trace. Each time the LessonLearned is surfaced via remember(), the cue (query + actor + timestamp) is appended. History of WHY this memory kept getting recalled. |
+| `cues_history[].actor` | string |  |  |
+| `cues_history[].at` | string |  |  |
+| `cues_history[].cue` | string |  |  |
 | `encoding_context` | object |  | Snapshot of the conditions at engraphy. semon-recaller scores ecphory candidates by partial-match against this dict. |
+| `encoding_context.affect` | string |  |  |
+| `encoding_context.area` | string |  |  |
+| `encoding_context.co_topics` | array |  | Last 3-5 topic tags active at engraphy. |
+| `encoding_context.day_of_week` | string |  |  |
+| `encoding_context.engraphed_by` | string |  | Agent slug that decided to engraph (semon-scribe by default). |
+| `encoding_context.source_refs` | array |  |  |
+| `encoding_context.time_of_day` | string |  | morning\|afternoon\|evening\|night — coarse temporal cue. |
 | `homophonic_links` | array |  | Semon homophony — engrams sharing substrate features. Each link records target + resonance score + basis. semon-recaller propagates a small strength boost (+0.02) to neighbors on ecphory (resonance). |
+| `homophonic_links[].basis` | string |  | co-area \| co-affect \| co-temporal \| semantic \| manual |
+| `homophonic_links[].resonance_score` | number |  |  |
+| `homophonic_links[].target_name` | string | yes |  |
 | `last_surfaced` | string |  | Auto-stamped on each surfacing; null until first surface. |
-| `memory_type` | string |  | CoALA taxonomy — ORTHOGONAL to the Semon EngramState (type vs state): episodic = what happened (instance/sequence); semantic = a generalized fact about the world/user; procedural = how to act (a skill/rule). Absent = untyped (legacy). |
+| `memory_type` | string |  | What KIND of memory this is. The three CoALA names are the ones the runtime treats specially — `episodic` (what happened), `semantic` (a generalized fact), `procedural` (how to act; the runtime presents it to the model as a RULE to follow, not as an anecdote to consider). ⭐ OPEN ON PURPOSE, and this was a deliberate reversal. It was a closed enum of exactly those three, and a closed enum makes the vocabulary of the DOMAIN a constant of the CODE — which is the one thing this whole system exists to avoid. A workspace whose work has `preference`, `constraint` or `commitment` should be able to say so on the day it decides that, not on the day someone remembers to edit a schema. The runtime honours the distinction WITHOUT knowing the name: an unrecognised type is presented to the model under its own name, because the name IS the information — `[preference]` tells a model more than `[fact]`, and far more than being dropped. ⚠️ The consequence to accept: an unrecognised type gets no special treatment. Only `procedural` is imperative. A workspace that invents `regra_dura` gets `[regra_dura]`, not the RULE framing — because promoting an unknown name to an obligation would put words in the agent's mouth that nobody wrote. Absent = untyped (legacy). |
 | `owner` | string |  | ATTRIBUTION: which agent authored this memory (e.g. claude-code, jarvis). Orthogonal to scope + to tenant (tenant separates USERS, owner separates AGENTS). Recall AUDIENCE is governed by `visibility`, NOT by owner (s-agent-memory-phase-0-bridge, 2026-06-02 — supersedes the 2026-05-17 owner-implies-private semantics). When absent: an unowned/project lesson (shared). |
 | `relevance_decay_seed` | number |  | Multiplicative decay factor applied per 24h. Default 0.95 (~30% relevance after 14 days). |
 | `revisions` | array |  | Reconsolidation log (Nader 2000 / neo-Semon). Append-only when a recall reawakens the engram and the consumer updates the summary. |
+| `revisions[].at` | string |  |  |
+| `revisions[].by` | string |  |  |
+| `revisions[].delta` | string |  |  |
 | `source_refs` | array | yes | Pointers to source artifacts (Narrative/X, WorkflowEvent/Y, etc.) that this memory derives from. |
 | `summary` | string | yes | 1-2 sentence 'Lembre-se de...' — the recalled essence. |
 | `superseded_by_memory` | string |  | Name of the memory that invalidated this one (not `superseded_by` — that's an ADR dep_filter token). Pairs with valid_to for point-in-time audit. |
 | `surface_count` | integer |  | Increments on each surface. Damps re-surfacing via the recall scoring formula (dna/memory/decay.py). |
-| `surface_when` | array | yes | Triggers that surface this LessonLearned. Mirrors how human recall fires unbidden in context. |
+| `surface_when` | array | yes | Triggers that surface this memory unbidden. The four the SDLC engines know are `feature_touched`, `cycle_open`, `session_start` and `oracle_consult`. ⭐ OPEN ON PURPOSE (2026-08-03), and this one was BLOCKING a feature, not merely constraining it. The four names are all SDLC events — nothing in that list honestly describes a memory learned from a CONVERSATION, and a memory extracted from chat was refused at write time with a schema error. The vocabulary of triggers belongs to whoever runs the agent, not to the extension that first needed four of them. ⚠️ The consequence to accept: a trigger no engine knows never fires on its own. It is recorded and honoured as data — and proactive recall finds the memory by RELEVANCE regardless — but nothing will surface it because of that name until something is taught to look for it. |
 | `tags` | array |  |  |
 | `valid_from` | string |  | World-time validity start (Zep bi-temporal). Default: created_at. |
 | `valid_to` | string |  | World-time validity end. Set when superseded/contradicted — the memory is INVALIDATED, never hard-deleted. Default recall excludes valid_to<now. |
-| `visibility` | string |  | Recall audience (the customization axis): shared = all agents in scope recall it (cross-agent knowledge, default); private = only `owner` recalls it (an agent's raw working memory); pinned = always injected into working memory at bootstrap, bypassing recall scoring (the Letta 'memory block'); archived = retained + auditable but excluded from default recall (soft-forget). Humans audit ALL regardless of visibility (audit != recall). Phase 0 (2026-06-02). |
+| `visibility` | string |  | Recall audience (the customization axis): shared = all agents in scope recall it (cross-agent knowledge, default); private = only `owner` recalls it (an agent's raw working memory); pinned = always injected into working memory at bootstrap, bypassing recall scoring (the Letta 'memory block'); archived = retained + auditable but excluded from default recall (soft-forget). Humans audit ALL regardless of visibility (audit != recall). Phase 0 (2026-06-02). Um de: `shared`, `private`, `pinned`, `archived`. |
 
 ## Epic
 
@@ -298,16 +572,32 @@ An Epic groups Features under a single business goal (Jira/ADO terminology). May
 | `definition_of_done` | array |  |  |
 | `description` | string |  |  |
 | `features` | array |  |  |
-| `journey_phase` | string |  | Universal journey phase (discover → specify → plan → build → reflect). Additive layer over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro. |
+| `journey_phase` | string |  | Universal journey phase (discover → specify → plan → build → reflect). Additive layer over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro. Um de: `discover`, `specify`, `plan`, `build`, `verify`, `reflect`. |
 | `labels` | array |  |  |
-| `priority` | string |  |  |
+| `priority` | string |  | Um de: `highest`, `high`, `medium`, `low`, `lowest`. |
 | `produces` | array |  | Artifacts this work item produced — any Kind (hub). |
+| `produces[].at` | string |  |  |
+| `produces[].kind` | string | yes | Artifact Kind (any). |
+| `produces[].name` | string | yes | Artifact doc name. |
+| `produces[].role` | string |  | Optional role hint (e.g. visual-spec, plan, investigation). |
 | `reporter` | string |  |  |
-| `status` | string | yes |  |
+| `status` | string | yes | Um de: `planning`, `in-progress`, `done`, `cancelled`, `deprecated`. |
 | `target_date` | string |  |  |
 | `target_package` | string |  | owner/name reference to a Genome |
 | `target_version` | string |  | Semver to match Genome.spec.version when done |
 | `timeline` | array |  | Append-only activity log. Auto-stamped by the CLI on every status flip / groom / artifact write; populated by AgentSession capture for decision + artifact_produced events. Render in Studio as activity stream. |
+| `timeline[].actor` | string | yes | Who triggered the event (Actor name or 'claude-code'). |
+| `timeline[].at` | string | yes |  |
+| `timeline[].commit_ref` | string |  | Git SHA associated with this event (when relevant). |
+| `timeline[].excerpt` | string |  | decision: snippet from the source transcript. |
+| `timeline[].fields` | object |  | groom: which fields changed and to what. |
+| `timeline[].from` | string |  | status_change: previous status. |
+| `timeline[].paths` | array |  | artifact_produced: file paths touched. |
+| `timeline[].session_ref` | string |  | Back-link to a AgentSession that produced this event. |
+| `timeline[].source` | string |  | Um de: `cli`, `studio`, `mcp`, `agent-session-extracted`, `system`. |
+| `timeline[].summary` | string |  | comment/decision: short human-readable text. |
+| `timeline[].to` | string |  | status_change: new status. |
+| `timeline[].type` | string | yes | Event type. Recognized: status_change, groom, comment, decision, artifact_produced (open vocabulary — new types are additive, e.g. pr_opened). |
 | `title` | string |  | Human-readable display name (Jira 'summary'). Falls back to description, then to metadata.name slug. |
 | `updated_at` | string |  |  |
 | `watchers` | array |  |  |
@@ -342,6 +632,9 @@ An EvalCase is one declarative evaluation scenario. It names a target (default =
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `checks` | array | yes | Deterministic assertions applied to the text the target produced. ALL checks must pass for the case to pass. |
+| `checks[].case_sensitive` | boolean |  | For contains/not_contains/equals. Default true. |
+| `checks[].type` | string | yes | Um de: `contains`, `not_contains`, `regex`, `not_regex`, `equals`, `min_length`, `max_length`. |
+| `checks[].value` | string \| integer |  | The needle/pattern (string checks) or the length bound (min_length/max_length). |
 | `description` | string |  | What this case verifies (one line). |
 | `expected` | string |  | Human-readable note of the expected outcome (shown in reports; not machine-checked). |
 | `input` | string |  | Free-form input for custom targets (e.g. the user message an LLM target sends). The prompt target ignores it. |
@@ -349,6 +642,9 @@ An EvalCase is one declarative evaluation scenario. It names a target (default =
 | `skip_reason` | string |  |  |
 | `tags` | array |  |  |
 | `target` | object |  | What to evaluate. Omitted → the suite's target → {type = prompt}. type=prompt composes the agent's system prompt via build_prompt (deterministic, offline); any other type must be registered by the host as an EvalTargetPort. |
+| `target.agent` | string |  | Agent name for the prompt target (omitted → the scope's default agent). |
+| `target.scope` | string |  | Scope override for the prompt target (omitted → the scope the suite runs in). |
+| `target.type` | string |  | Target type. 'prompt' is built in; custom types are host-registered EvalTargetPorts. |
 
 ## EvalRun
 
@@ -367,6 +663,16 @@ An EvalRun is the persisted result of one local execution of an EvalSuite — pa
 | `finished_at` | string |  |  |
 | `passed` | integer | yes |  |
 | `results` | array | yes | Per-case outcomes, in execution order. |
+| `results[].case` | string | yes |  |
+| `results[].checks` | array |  | Outcome of each declared check. |
+| `results[].checks[].detail` | string |  | Why the check failed (or the error). |
+| `results[].checks[].passed` | boolean | yes |  |
+| `results[].checks[].type` | string | yes |  |
+| `results[].checks[].value` | string \| integer |  |  |
+| `results[].error` | string |  | Error message when status=error (unknown target type, target raised, case not found). |
+| `results[].output_excerpt` | string |  | First chars of the text the target produced (evidence for humans reading the run). |
+| `results[].status` | string | yes | Um de: `passed`, `failed`, `error`, `skipped`. |
+| `results[].target_type` | string |  | Resolved target type this case ran against. |
 | `skipped` | integer |  |  |
 | `started_at` | string |  |  |
 | `suite` | string | yes | Name of the EvalSuite that was executed. |
@@ -390,6 +696,9 @@ An EvalSuite groups EvalCase documents and configures how the local runner execu
 | `labels` | array |  |  |
 | `stop_on_fail` | boolean |  | Stop executing remaining cases after the first failed/errored case. Default false. |
 | `target` | object |  | Default target for cases that do not declare their own (same shape as EvalCase.target). |
+| `target.agent` | string |  |  |
+| `target.scope` | string |  |  |
+| `target.type` | string |  |  |
 
 ## Evidence
 
@@ -407,7 +716,7 @@ An Evidence document is an immutable audit event record. Captures the event type
 | `captured_at` | string |  |  |
 | `created_at` | string |  |  |
 | `document_ref` | string |  |  |
-| `event_type` | string | yes |  |
+| `event_type` | string | yes | Um de: `document_created`, `document_modified`, `document_deleted`, `eval_run_completed`, `baseline_pinned`, `finding_created`, `finding_status_changed`, `custom`, `gaia.assessment.started`, `gaia.assessment.completed`, `gaia.assessment.failed`, `gaia.pillar.completed`, `gaia.pillar.threshold_breach`, `gaia.report.issued`. |
 | `notes` | string |  |  |
 | `payload` | object |  |  |
 | `sha256` | string |  |  |
@@ -439,21 +748,40 @@ A Feature is a shippable unit. It implements one or more UseCases, decomposes in
 | `epic` | string |  | Parent Epic name |
 | `estimate` | string |  | T-shirt size or story points (free-form) |
 | `i_want` | string |  | Goal: 'I want <goal>'. INVEST/user-story format slot. |
-| `journey_phase` | string |  | Universal journey phase (discover → specify → plan → build → reflect). Additive layer over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro. |
+| `journey_phase` | string |  | Universal journey phase (discover → specify → plan → build → reflect). Additive layer over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro. Um de: `discover`, `specify`, `plan`, `build`, `verify`, `reflect`. |
 | `labels` | array |  |  |
 | `mockups` | array |  |  |
 | `narrative_line` | string |  | One-sentence agent-curated prose summary of what this Feature has been DOING (past-tense, semantic) — shown next to the Feature in Studio's narrative swimlane. Updated by the working agent as scope evolves. Distinct from `description` (intent / problem statement, written once at file-time). |
 | `owner` | string |  | Actor name |
-| `priority` | string |  |  |
+| `priority` | string |  | Um de: `highest`, `high`, `medium`, `low`, `lowest`. |
 | `produces` | array |  | Artifacts this work item produced — any Kind (hub). |
+| `produces[].at` | string |  |  |
+| `produces[].kind` | string | yes | Artifact Kind (any). |
+| `produces[].name` | string | yes | Artifact doc name. |
+| `produces[].role` | string |  | Optional role hint (e.g. visual-spec, plan, investigation). |
 | `release_target` | string |  |  |
 | `reporter` | string |  |  |
 | `so_that` | string |  | Benefit: 'so that <benefit>'. INVEST/user-story format slot. |
 | `sprint_ref` | string |  |  |
-| `status` | string | yes |  |
+| `status` | string | yes | Um de: `discovery`, `in-development`, `done`, `cancelled`, `blocked`. |
 | `stories` | array |  |  |
 | `time_tracking` | object |  |  |
+| `time_tracking.logged_h` | number |  |  |
+| `time_tracking.original_estimate_h` | number |  |  |
+| `time_tracking.remaining_h` | number |  |  |
 | `timeline` | array |  | Append-only activity log. Auto-stamped by the CLI on every status flip / groom / artifact write; populated by AgentSession capture for decision + artifact_produced events. Render in Studio as activity stream. |
+| `timeline[].actor` | string | yes | Who triggered the event (Actor name or 'claude-code'). |
+| `timeline[].at` | string | yes |  |
+| `timeline[].commit_ref` | string |  | Git SHA associated with this event (when relevant). |
+| `timeline[].excerpt` | string |  | decision: snippet from the source transcript. |
+| `timeline[].fields` | object |  | groom: which fields changed and to what. |
+| `timeline[].from` | string |  | status_change: previous status. |
+| `timeline[].paths` | array |  | artifact_produced: file paths touched. |
+| `timeline[].session_ref` | string |  | Back-link to a AgentSession that produced this event. |
+| `timeline[].source` | string |  | Um de: `cli`, `studio`, `mcp`, `agent-session-extracted`, `system`. |
+| `timeline[].summary` | string |  | comment/decision: short human-readable text. |
+| `timeline[].to` | string |  | status_change: new status. |
+| `timeline[].type` | string | yes | Event type. Recognized: status_change, groom, comment, decision, artifact_produced (open vocabulary — new types are additive, e.g. pr_opened). |
 | `title` | string |  | Human-readable display name (Jira 'summary'). |
 | `updated_at` | string |  |  |
 | `use_cases` | array |  |  |
@@ -496,8 +824,8 @@ An Initiative is a strategic investment unit (1-2 quarters) that groups Epics un
 | `labels` | array |  |  |
 | `outcome_metric` | string |  | What KR/metric this initiative is targeted at. |
 | `owner` | string |  | Actor name (PM / Product Lead). |
-| `priority` | string |  |  |
-| `status` | string | yes |  |
+| `priority` | string |  | Um de: `highest`, `high`, `medium`, `low`, `lowest`. |
+| `status` | string | yes | Um de: `proposed`, `in-flight`, `done`, `cancelled`, `deferred`. |
 | `target_value` | string |  | e.g. '+30% MAU' or '<200ms p95'. |
 | `theme_ref` | string |  | Optional Theme/OKR Objective slug. |
 | `title` | string | yes |  |
@@ -517,13 +845,15 @@ An IntelInsight is the dissemination unit of the intelligence layer — a ranked
 | --- | --- | --- | --- |
 | `action` | string \| null |  | The single suggested action. |
 | `citations` | array |  | Sources backing the fact — each a {url, title} pair. |
+| `citations[].title` | string \| null |  |  |
+| `citations[].url` | string | yes |  |
 | `created_at` | string \| null |  | ISO-8601 timestamp, stamped by the writer (not defaulted here). |
-| `evidence_rating` | string |  | How well-grounded the fact is — evidence-based, opinion/practice, or anecdotal. |
+| `evidence_rating` | string |  | How well-grounded the fact is — evidence-based, opinion/practice, or anecdotal. Um de: `evidence-based`, `opinion-practice`, `anecdotal`. |
 | `fact` | string | yes | What happened / the cited fact. |
 | `pirs` | array |  | Which Priority Intelligence Requirements this insight matches. |
 | `score` | number | yes | Actionability score (0..1). The ranker sets this; the digest suppresses insights scoring below the source's threshold. |
 | `source_ref` | string \| null |  | The IntelSource name this insight came from. |
-| `state` | string | yes | The feedback disposition — the reader's response to the insight. |
+| `state` | string | yes | The feedback disposition — the reader's response to the insight. Um de: `new`, `actioned`, `dismissed`, `snoozed`. |
 | `title` | string | yes | The insight headline. |
 | `why` | string \| null |  | Why it matters to this source. |
 
@@ -539,13 +869,13 @@ An IntelSource declares one watched portfolio source (a repo, a scope, or an ext
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `cadence` | string |  | How often the source is researched — manual (on demand), event (on a trigger), daily, or weekly. |
+| `cadence` | string |  | How often the source is researched — manual (on demand), event (on a trigger), daily, or weekly. Um de: `manual`, `event`, `daily`, `weekly`. |
 | `muted` | boolean |  | True to pause research on this source without deleting it. |
 | `name` | string | yes | The source name, e.g. copiloto-medico. The doc name SHOULD equal this. |
 | `notes` | string \| null |  | Free-form operator notes. |
 | `pirs` | array |  | Priority Intelligence Requirements — focus areas that get prioritized when researching this source. |
 | `threshold` | number |  | Actionability threshold (0..1) below which insights from this source are suppressed. Insights scoring under it are not disseminated. |
-| `type` | string | yes | What kind of source this is — a code repo, a DNA scope, or an external URL/feed. |
+| `type` | string | yes | What kind of source this is — a code repo, a DNA scope, or an external URL/feed. Um de: `repo`, `scope`, `external`. |
 | `uri` | string \| null |  | Path / URL / scope id the source points at. Null when the name alone identifies it. |
 
 ## Issue
@@ -566,24 +896,40 @@ An Issue is a human-authored ticket — bug, enhancement, question, or task. Tra
 | `description` | string | yes |  |
 | `expected_behavior` | string |  |  |
 | `github_number` | integer |  | GitHub issue number this doc is bridged to. |
-| `github_state` | string |  | Last observed GitHub-side state. |
+| `github_state` | string |  | Last observed GitHub-side state. Um de: `open`, `closed`. |
 | `github_synced_at` | string |  | When the GitHub side was last observed/synced. |
 | `github_url` | string |  | Canonical https URL of the GitHub issue. |
-| `journey_phase` | string |  | Universal journey phase (discover → specify → plan → build → reflect). Additive layer over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro. |
+| `journey_phase` | string |  | Universal journey phase (discover → specify → plan → build → reflect). Additive layer over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro. Um de: `discover`, `specify`, `plan`, `build`, `verify`, `reflect`. |
 | `labels` | array |  |  |
 | `owner` | string |  | Actor name |
-| `priority` | string |  |  |
+| `priority` | string |  | Um de: `highest`, `high`, `medium`, `low`, `lowest`. |
 | `produces` | array |  | Artifacts this work item produced — any Kind (hub). |
+| `produces[].at` | string |  |  |
+| `produces[].kind` | string | yes | Artifact Kind (any). |
+| `produces[].name` | string | yes | Artifact doc name. |
+| `produces[].role` | string |  | Optional role hint (e.g. visual-spec, plan, investigation). |
 | `related_feature` | string |  | Feature name |
 | `related_finding` | string |  | Finding name |
 | `reporter` | string |  |  |
 | `reproduction_steps` | array |  |  |
 | `resolution` | string |  |  |
-| `severity` | string | yes |  |
-| `status` | string | yes |  |
+| `severity` | string | yes | Um de: `low`, `medium`, `high`, `critical`. |
+| `status` | string | yes | Um de: `open`, `triaged`, `in-progress`, `resolved`, `wont-fix`, `duplicate`. |
 | `timeline` | array |  | Append-only activity log. Auto-stamped by the CLI on every status flip / groom / artifact write; populated by AgentSession capture for decision + artifact_produced events. Render in Studio as activity stream. |
+| `timeline[].actor` | string | yes | Who triggered the event (Actor name or 'claude-code'). |
+| `timeline[].at` | string | yes |  |
+| `timeline[].commit_ref` | string |  | Git SHA associated with this event (when relevant). |
+| `timeline[].excerpt` | string |  | decision: snippet from the source transcript. |
+| `timeline[].fields` | object |  | groom: which fields changed and to what. |
+| `timeline[].from` | string |  | status_change: previous status. |
+| `timeline[].paths` | array |  | artifact_produced: file paths touched. |
+| `timeline[].session_ref` | string |  | Back-link to a AgentSession that produced this event. |
+| `timeline[].source` | string |  | Um de: `cli`, `studio`, `mcp`, `agent-session-extracted`, `system`. |
+| `timeline[].summary` | string |  | comment/decision: short human-readable text. |
+| `timeline[].to` | string |  | status_change: new status. |
+| `timeline[].type` | string | yes | Event type. Recognized: status_change, groom, comment, decision, artifact_produced (open vocabulary — new types are additive, e.g. pr_opened). |
 | `title` | string |  | Human-readable display name (Jira 'summary'). |
-| `type` | string | yes |  |
+| `type` | string | yes | Um de: `bug`, `enhancement`, `question`, `task`. |
 | `updated_at` | string |  |  |
 | `watchers` | array |  |  |
 
@@ -604,7 +950,7 @@ A Kaizen is a continuous-improvement observation noticed while working on someth
 | `created_at` | string |  |  |
 | `issue` | string |  | Issue/Story slug tracking the fix. |
 | `labels` | array |  | Free-form theme tags (weighted into semantic-search source text). |
-| `status` | string | yes | Observation arc: observed (flagged) → routed (fix tracked in `issue`) → resolved (fix shipped). |
+| `status` | string | yes | Observation arc: observed (flagged) → routed (fix tracked in `issue`) → resolved (fix shipped). Um de: `observed`, `routed`, `resolved`. |
 | `updated_at` | string |  |  |
 | `work_item` | string |  | Kind/slug of the work item where this was observed (polymorphic — Story/Spike/Issue). |
 
@@ -638,10 +984,10 @@ A Membership is the RBAC join — a user's role at an org- or project-scope with
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `invited_at` | string \| null |  | ISO-8601 timestamp of the invite, stamped by the writer (not defaulted here). |
-| `role` | string | yes | The role granted at this scope — the standard ladder (owner > admin > member > guest). Resolution is highest-role-wins across a user's memberships, with the org owner a superuser. |
+| `role` | string | yes | The role granted at this scope — the standard ladder (owner > admin > member > guest). Resolution is highest-role-wins across a user's memberships, with the org owner a superuser. Um de: `owner`, `admin`, `member`, `guest`. |
 | `scope_ref` | string | yes | The Organization or Project name this grant applies to (paired with scope_type). |
-| `scope_type` | string | yes | What the grant is scoped to — an Organization (org) or a single Project (project). |
-| `status` | string |  | Invitation lifecycle — invited (pending acceptance) or active. |
+| `scope_type` | string | yes | What the grant is scoped to — an Organization (org) or a single Project (project). Um de: `org`, `project`. |
+| `status` | string |  | Invitation lifecycle — invited (pending acceptance) or active. Um de: `invited`, `active`. |
 | `user` | string | yes | The member's identity — an email or stable user id. |
 
 ## Memory
@@ -658,23 +1004,78 @@ A MIF Memory is DNA's byte-faithful passthrough of the external Memory Interchan
 | --- | --- | --- | --- |
 | `aliases` | array |  | Alternative names for the memory (§5.2, OPTIONAL). |
 | `citations` | array |  | Citation references (§5.4, Level 3 OPTIONAL). |
+| `citations[].@type` | string | yes | Um de: `Citation`. |
+| `citations[].accessed` | string |  | Access date, ISO 8601. |
+| `citations[].author` | any |  | One or more entity references, or plain text. |
+| `citations[].citationRole` | string | yes | Relationship to the memory (§5.4.4): supports, refutes, background, methodology, contradicts, extends, derived, source, example, review — or a custom namespaced role. |
+| `citations[].citationType` | string | yes | Source category (§5.4.3): article, book, paper, website, documentation, repository, video, podcast, specification, dataset, tool, other — or a custom namespaced type. |
+| `citations[].date` | string |  | Publication date, ISO 8601. |
+| `citations[].note` | string |  |  |
+| `citations[].relevance` | number |  |  |
+| `citations[].title` | string | yes |  |
+| `citations[].url` | string | yes |  |
 | `compressed_at` | string |  | When compression was applied (§5.6, Level 3, ISO 8601). Snake_case in the Markdown frontmatter profile (the JSON-LD projection's `compressedAt` is camelCase — a naming quirk of that derived form, not this one). |
 | `content` | string | yes | The memory content in Markdown — the marker body below the frontmatter (title H1, prose, and the optional `## Relationships` / `## Citations` mirror sections all travel as part of this string, exactly as MIF's own §5.1 structure defines). |
 | `created` | string | yes | Creation timestamp, ISO 8601 (§4.1). Maps to Engram created_at. NOTE (every date-time field on this Kind): PyYAML's SafeLoader implicitly resolves an UNQUOTED ISO-8601-looking scalar to a Python datetime.datetime at frontmatter parse time (YAML 1.1 !!timestamp implicit tag) — a pre-existing, Kind-agnostic quirk of _parse_frontmatter (dna/kernel/generic_rw.py), not specific to MIF. A real MIF .md file (whose own examples write dates unquoted) will therefore parse date-time fields as datetime objects, which this "type: string" schema then rejects on jsonschema.validate. Quoting the value in frontmatter (created is a quoted string) sidesteps it losslessly — same value, string-typed — and is what the test fixtures do; unquoted MIF input is a known gap for whoever picks up strict date-time validation SDK-wide (out of scope for this story). |
 | `embedding` | object |  | Embedding model reference (OPTIONAL). Actual vectors are stored externally or in the JSON-LD projection — the Markdown frontmatter only carries the reference. |
+| `embedding.dimensions` | integer |  |  |
+| `embedding.model` | string |  |  |
+| `embedding.modelVersion` | string |  |  |
+| `embedding.normalized` | boolean |  |  |
+| `embedding.sourceText` | string |  | The text that was embedded. |
+| `embedding.vectorUri` | string |  |  |
 | `entities` | array |  | Referenced entities (§7.5/Appendix C, OPTIONAL) — typed pointers into the bundle's `.mif/entities/` definitions, distinct from `relationships` (which point at other MEMORIES, not entities). |
+| `entities[].@type` | string | yes | Um de: `EntityReference`. |
+| `entities[].entity` | object | yes | Entity identifier object. |
+| `entities[].entity.@id` | string | yes | Entity URN, e.g. `urn:mif:entity:person:jane-doe`. |
+| `entities[].entityType` | string |  | Entity type classification: `Person`, `Organization`, `Technology`, `Concept`, `File`, or a custom ontology-defined type. |
+| `entities[].name` | string |  | Display name for the entity. |
+| `entities[].role` | string |  | Role of the entity in the memory context (e.g. author, subject, topic). |
 | `extensions` | object |  | Provider-specific extensions (§4.1/§5.2, OPTIONAL) — the vault where DNA's own physics rides along on a round-trip: confidence_score, relevance_decay_seed, surface_count, cues_history, encoding_context, affect, affect_reason, visibility. Namespaced under `x-dna` by convention so other MIF-conformant tools degrade gracefully (ignore what they don't recognize) while a DNA reader recovers everything. |
 | `id` | string | yes | MIF Memory Unit identifier — a UUID v4 in the Markdown frontmatter profile (SPECIFICATION.md §5.2/Appendix A). NOT the `urn:mif:` URN form — that's `@id` in the separately-derived JSON-LD projection (§6), never written into this frontmatter. Preserved verbatim so a re-export is stable; on import from Engram, minted once and pinned. |
 | `modified` | string |  | Last modification timestamp, ISO 8601 (§4.1, RECOMMENDED). |
 | `namespace` | string |  | Hierarchical scope path (§10), e.g. `_semantic/decisions`. Base-type roots use the reserved underscore prefixes (`_semantic`, `_episodic`, `_procedural`); visibility prefixes (`_public`, `_shared`, `_local`, `_system`) are reserved alongside them (§4.4 note, §10.2). Maps loosely to Engram.area. |
 | `ontology` | object |  | Reference to the ontology this memory conforms to (§4.3). `id` must match the `ontology.id` declared in the referenced ontology definition; ontology-extended types (§4.2.1) are expressed through the `namespace` axis, not a separate field here. |
+| `ontology.id` | string | yes | Ontology identifier. |
+| `ontology.uri` | string |  | URI to the ontology definition (not necessarily a resolvable URL — §5.2 notes it may be an identifier only). |
+| `ontology.version` | string |  | Semantic version of the ontology, e.g. "1.0.0". |
 | `provenance` | object |  | W3C-PROV-aligned source/trust data (§12, OPTIONAL). `wasAttributedTo` maps to Engram.owner; `wasDerivedFrom` maps to Engram.source_refs. additionalProperties left OPEN (`true`) because the real MIF Provenance schema is itself open — PROV graphs are explicitly open-ended (mif.schema.json ProvNode note) — not a DNA-added exception to the strict-schema convention. |
+| `provenance.agent` | string |  | Identifier of the agent that created the unit (e.g. claude-3-opus). |
+| `provenance.agentVersion` | string |  |  |
+| `provenance.confidence` | number |  |  |
+| `provenance.sourceRef` | string |  | Reference to the originating source (e.g. `conversation:conv-456`). |
+| `provenance.sourceType` | string |  | Um de: `user_explicit`, `user_implicit`, `agent_inferred`, `external_import`, `system_generated`. |
+| `provenance.trustLevel` | string |  | Um de: `verified`, `user_stated`, `high_confidence`, `moderate_confidence`, `low_confidence`, `uncertain`. |
+| `provenance.wasAttributedTo` | any |  | prov:wasAttributedTo — the agent this unit is attributed to. A string IRI or an open PROV node object. |
+| `provenance.wasDerivedFrom` | any |  | prov:wasDerivedFrom — the entity/entities this unit was derived from. A string IRI, an open PROV node object, or an array of either. |
+| `provenance.wasGeneratedBy` | any |  | prov:wasGeneratedBy — the activity that produced this unit. A string IRI or an open PROV node object. |
 | `relationships` | array |  | Typed edges to OTHER MEMORIES (§8), authoritative in this frontmatter array and mirrored in the body as `## Relationships` markdown links (§5.3/§8.4) — the frontmatter array is the source of truth, the body links are its OKF-legible mirror. The 9 core types SHOULD-recognized for interoperability (Appendix B, kebab-case): `relates-to`, `derived-from`, `supersedes`, `conflicts-with`, `part-of`, `implements`, `uses`, `created-by`, `mentioned-in`. Providers MAY define additional namespaced types (`ns:type`, §8.3) — NOT a closed enum here, matching the spec's own extensibility. derived-from maps to Engram.source_refs; supersedes pairs with `temporal.validUntil` for point-in-time audit. |
+| `relationships[].metadata` | object |  | Additional relationship metadata (open — mirrors the spec's own permissive shape for this field). |
+| `relationships[].strength` | number |  | Relationship strength (0.0-1.0). |
+| `relationships[].target` | string | yes | Bundle-relative path to the target concept (e.g. `/semantic/policy.md`) or a `urn:mif:` identifier. |
+| `relationships[].type` | string | yes | Relationship type — a kebab-case token (e.g. `derived-from`) or a custom namespaced type (e.g. `farm:contradicts`). |
 | `summary` | string |  | Compressed content summary (§5.6, Level 3, max 500 chars). |
 | `tags` | array |  | Classification tags (§4.1, OPTIONAL). 1:1 with Engram.tags. |
 | `temporal` | object |  | Bi-temporal validity + decay data (§9, OPTIONAL — RECOMMENDED at Level 2 per §13.2's "temporal metadata" bullet). `validFrom`/`validUntil` map 1:1 to Engram valid_from/valid_to — the second axis DNA and MIF already agree on. NOTE the field is `validUntil`, not `validTo`. |
+| `temporal.accessCount` | integer |  |  |
+| `temporal.decay` | object |  | Decay model parameters (§9.2). |
+| `temporal.decay.currentStrength` | number |  |  |
+| `temporal.decay.halfLife` | string |  | ISO 8601 duration, e.g. `P7D`. |
+| `temporal.decay.lastReinforced` | string |  |  |
+| `temporal.decay.model` | string |  | Um de: `none`, `linear`, `exponential`, `step`. |
+| `temporal.decay.strength` | number |  | Alias for currentStrength. |
+| `temporal.lastAccessed` | string |  |  |
+| `temporal.recordedAt` | string |  | When recorded — transaction time, distinct from `validFrom`'s valid time. |
+| `temporal.reinforcementHistory` | array |  | History of reinforcement events that strengthened or weakened the memory. |
+| `temporal.reinforcementHistory[].context` | string |  |  |
+| `temporal.reinforcementHistory[].event` | string | yes |  |
+| `temporal.reinforcementHistory[].strengthDelta` | number |  |  |
+| `temporal.reinforcementHistory[].timestamp` | string | yes |  |
+| `temporal.ttl` | string |  | Time-to-live, ISO 8601 duration (e.g. `P90D`). |
+| `temporal.validFrom` | string \| null |  | When the fact becomes valid. |
+| `temporal.validUntil` | string \| null |  | When the fact expires (null = indefinite). |
 | `title` | string |  | Human-readable title (§5.2). Optional first-H1 mirror in the body is conventional but not required by the schema. |
-| `type` | string | yes | MIF base memory type (§4.2) — CoALA-style taxonomy that maps 1:1 to Engram.memory_type: semantic = declarative facts/ concepts/preferences; episodic = time-bound events/sessions; procedural = how-to/runbooks. This is why the DNA↔MIF projection is lossless on the type axis. (The JSON-LD projection additionally accepts the deprecated `memoryType` alias — irrelevant here since this Kind only carries the Markdown frontmatter profile.) |
+| `type` | string | yes | MIF base memory type (§4.2) — CoALA-style taxonomy that maps 1:1 to Engram.memory_type: semantic = declarative facts/ concepts/preferences; episodic = time-bound events/sessions; procedural = how-to/runbooks. This is why the DNA↔MIF projection is lossless on the type axis. (The JSON-LD projection additionally accepts the deprecated `memoryType` alias — irrelevant here since this Kind only carries the Markdown frontmatter profile.) Um de: `semantic`, `episodic`, `procedural`. |
 
 ## ModelProfile
 
@@ -717,7 +1118,7 @@ A Narrative is a curated, human-readable summary of project activity. Stored as 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `actor` | string |  | Who wrote this narrative (Actor name, 'claude-code', 'human', etc.). |
-| `author_intent` | string |  | What kind of narrative this is. Drives how the morning panel groups multiple narratives — daily stack on the timeline, releases pin as marquee, retros surface in a 'lessons' filter. |
+| `author_intent` | string |  | What kind of narrative this is. Drives how the morning panel groups multiple narratives — daily stack on the timeline, releases pin as marquee, retros surface in a 'lessons' filter. Um de: `daily`, `weekly`, `release`, `retro`, `incident`, `freeform`. |
 | `auto_generated` | boolean |  | true = LLM-generated draft; false = human or agent-curated prose. Studio shows a small badge so readers know what they're reading. |
 | `body` | string | yes | Markdown body of the narrative (lives in NARRATIVE.md). Free-form — paragraphs, bullets, links to Stories/Features/commits. Should read like a human update, not a log dump. |
 | `covers_epics` | array |  | Epic names this narrative discusses. |
@@ -726,8 +1127,14 @@ A Narrative is a curated, human-readable summary of project activity. Stored as 
 | `covers_stories` | array |  | Story names this narrative discusses. |
 | `created_at` | string |  |  |
 | `decisions` | array |  | Ratified decisions made during the period covered by this narrative. Each captures the WHY, not just the WHAT — the decision-extractor pattern. |
-| `journey_phase` | string |  | Universal journey phase (discover → specify → plan → build → reflect). Additive layer over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro. |
+| `decisions[].reason` | string |  | Why — the tradeoff or driving constraint. |
+| `decisions[].summary` | string | yes | What was decided (1 sentence). |
+| `decisions[].trade_offs` | string |  | Optional: what we gave up to make this choice. |
+| `journey_phase` | string |  | Universal journey phase (discover → specify → plan → build → reflect). Additive layer over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro. Um de: `discover`, `specify`, `plan`, `build`, `verify`, `reflect`. |
 | `open_items` | array |  | Work that started but didn't close in this period. Studio's 'still open' section reads from this when present (otherwise computes heuristically from event diff). |
+| `open_items[].blocker` | string |  |  |
+| `open_items[].owner` | string |  |  |
+| `open_items[].title` | string | yes |  |
 | `paragraphs` | array |  | Structured prose: list of past-tense paragraphs describing what shipped. Studio renders these as the hero block; falls back to `body` when empty. |
 | `period_end` | string |  | End of the period (often the moment the narrative was written). |
 | `period_start` | string |  | Start of the period this narrative covers (ISO-8601). |
@@ -770,12 +1177,12 @@ A Plan is a pointer to an implementation plan document on disk. Usually descends
 | `body` | string |  | Markdown body (stored in PLAN.md). |
 | `date` | string | yes |  |
 | `epic` | string |  |  |
-| `journey_phase` | string |  | Universal journey phase. A Plan typically lives in `plan` (decomposition) and may transition to `build` once Stories start landing. |
-| `methodology` | string |  | Which planning methodology produced this plan (superpowers \| bmad \| spec-kit \| ...). Opt-in; lets the journey show the plan's origin honestly. The SDLC stays methodology-agnostic — this only records it. |
+| `journey_phase` | string |  | Universal journey phase. A Plan typically lives in `plan` (decomposition) and may transition to `build` once Stories start landing. Um de: `discover`, `specify`, `plan`, `build`, `verify`, `reflect`. |
+| `methodology` | string |  | Which planning methodology produced this plan (superpowers \| bmad \| spec-kit \| ...). Opt-in; lets the journey show the plan's origin honestly. The SDLC stays methodology-agnostic — this only records it. Um de: `superpowers`, `bmad`, `spec-kit`, `kiro`, `rfc`, `adr`, `ad-hoc`, `custom`. |
 | `origin` | string |  | Optional audit-only origin path. |
 | `pattern` | string |  |  |
 | `spec_ref` | string |  | Name of the Spec this plan implements. |
-| `status` | string | yes |  |
+| `status` | string | yes | Um de: `draft`, `proposed`, `accepted`, `deprecated`, `superseded`. |
 | `summary` | string |  |  |
 | `tags` | array |  |  |
 | `title` | string | yes |  |
@@ -814,6 +1221,11 @@ A Postmortem captures a factual analysis of an incident that happened — timeli
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `action_items` | array |  | Concrete follow-ups to prevent recurrence. |
+| `action_items[].due` | string |  |  |
+| `action_items[].owner` | string |  |  |
+| `action_items[].status` | string |  | Um de: `todo`, `in-progress`, `done`. |
+| `action_items[].story_ref` | string |  |  |
+| `action_items[].title` | string | yes |  |
 | `blameless` | boolean |  | Google SRE requirement — should always be true. |
 | `body` | string |  |  |
 | `contributing_factors` | array |  | Secondary factors that worsened the incident. |
@@ -825,9 +1237,12 @@ A Postmortem captures a factual analysis of an incident that happened — timeli
 | `related_stories` | array |  | Story slugs related to root cause or action items. |
 | `resolved_at` | string |  | When incident was mitigated. |
 | `root_cause` | string | yes | Primary cause (1-3 paragraphs). |
-| `severity` | string | yes | Incident severity (sev1=full outage, sev5=cosmetic). |
+| `severity` | string | yes | Incident severity (sev1=full outage, sev5=cosmetic). Um de: `sev1`, `sev2`, `sev3`, `sev4`, `sev5`. |
 | `tags` | array |  |  |
 | `timeline` | array |  | Chronological event log. |
+| `timeline[].actor` | string |  |  |
+| `timeline[].at` | string | yes |  |
+| `timeline[].event` | string | yes |  |
 | `title` | string | yes | Short incident headline. |
 | `updated_at` | string |  |  |
 | `what_went_well` | array |  | Detection / response things that worked. |
@@ -847,17 +1262,17 @@ A Tier declares one DNA Cloud plan's hard caps (calls/day, rate, tenants) and wh
 | --- | --- | --- | --- |
 | `aliases` | array |  | Alternate ids that resolve to this tier (legacy plan names). kernel.tier() matches these on pass 2. |
 | `calls_per_day` | integer \| null |  | Daily call quota. Null = unlimited (enterprise). THE value the quota enforcer reads — never hardcode it in code. |
-| `definitions_mode` | string |  | Definitions access level granted by the tier — the read-vs-write refinement of the `definitions` feature family, sibling of memory_mode/sdlc_mode. Only the GENERIC document tools consult it, and only on a WRITE — a plan that omits it grants none, so writing an Agent/Soul/Tool/ModelProfile through the generic tool is refused until the operator declares write here. Reads keep riding the coarse feature_families gate. |
+| `definitions_mode` | string |  | Definitions access level granted by the tier — the read-vs-write refinement of the `definitions` feature family, sibling of memory_mode/sdlc_mode. Only the GENERIC document tools consult it, and only on a WRITE — a plan that omits it grants none, so writing an Agent/Soul/Tool/ModelProfile through the generic tool is refused until the operator declares write here. Reads keep riding the coarse feature_families gate. Um de: `none`, `read`, `write`. |
 | `display_name` | string | yes | Human-facing plan name, e.g. Free, Pro, Enterprise. |
-| `emit_mode` | string |  | Emit access level granted by the tier — the same read-vs-write refinement for the `emit` feature family. Same rule as definitions_mode - consulted by the generic document tools on a write, and omitting it grants none. |
+| `emit_mode` | string |  | Emit access level granted by the tier — the same read-vs-write refinement for the `emit` feature family. Same rule as definitions_mode - consulted by the generic document tools on a write, and omitting it grants none. Um de: `none`, `read`, `write`. |
 | `feature_families` | array |  | Tool families this tier unlocks, e.g. [definitions, sdlc, memory, emit]. |
 | `max_tenants` | integer \| null |  | Number of tenants the plan allows. Null = unlimited. |
-| `memory_mode` | string |  | Memory access level granted by the tier — none, read, or write. |
+| `memory_mode` | string |  | Memory access level granted by the tier — none, read, or write. Um de: `none`, `read`, `write`. |
 | `notes` | string \| null |  | Free-form operator notes. |
 | `overage_per_1k_usd` | number \| null |  | USD charged per 1k calls above the daily quota. Null = no overage (hard cap). |
 | `price_usd_month` | number |  | Flat monthly price in USD (0 for the free tier). |
 | `rate_per_sec` | integer \| null |  | Per-second rate limit. Null = unmetered. |
-| `sdlc_mode` | string |  | SDLC board access level granted by the tier — none, read, or write. Read = list/digest/ADR; write = create/transition/comment. |
+| `sdlc_mode` | string |  | SDLC board access level granted by the tier — none, read, or write. Read = list/digest/ADR; write = create/transition/comment. Um de: `none`, `read`, `write`. |
 | `sla` | boolean |  | True when the tier includes a support/uptime SLA (enterprise). |
 | `tier_id` | string | yes | Canonical tier id, e.g. free, pro, enterprise. The doc name SHOULD equal the tier_id; kernel.tier() matches on this field first. |
 
@@ -880,7 +1295,7 @@ A Project is the multi-repo development-space container — the key Kind of the 
 | `org_ref` | string \| null |  | The Organization (name) this project belongs to. Null while unassigned. |
 | `repo_refs` | array |  | Repo names attached to this project (the N—N edge — a repo may appear on multiple projects). The edge lives on the Project side only. |
 | `slug` | string | yes | URL-safe identity for the project, e.g. copiloto-medico. Used in routes and to derive the board_scope by convention. |
-| `visibility` | string |  | Who can see the project — private (org-internal) or shared (visible across the portfolio). |
+| `visibility` | string |  | Who can see the project — private (org-internal) or shared (visible across the portfolio). Um de: `private`, `shared`. |
 | `workspace_id` | string \| null |  | The Workspace this project belongs to — the EXPLICIT owning edge (decision A1; a Project is created inside exactly one workspace and never moves). The physical `tenant` column carries the same value, so this field is the DECLARATIVE twin of the storage keying, readable without knowing how the kernel keys rows. Null only on a legacy pre-A1 doc, whose owning workspace is then its `tenant` column alone. The board_scope / scope a project resolves to is DERIVED from (workspace, slug) — presentation, never the project's identity. |
 
 ## PromptTemplate
@@ -916,7 +1331,7 @@ A PromptTemplate is a versioned, overlayable user-prompt template owned by the k
 | `created_at` | string |  |  |
 | `fetched_at` | string |  |  |
 | `key_quotes` | array |  |  |
-| `kind_of` | string | yes |  |
+| `kind_of` | string | yes | Um de: `web`, `paper`, `book`, `file`, `internal-doc`, `other`. |
 | `owner` | string |  |  |
 | `relevance` | string |  | Why this matters for THIS project. |
 | `summary` | string | yes | 1-2 sentence what this source says. |
@@ -936,19 +1351,36 @@ A PromptTemplate is a versioned, overlayable user-prompt template owned by the k
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `capabilities` | object |  | A2A `capabilities` — flags booleanas, não operações nomeadas. |
+| `capabilities.extended_agent_card` | boolean |  |  |
+| `capabilities.push_notifications` | boolean |  |  |
+| `capabilities.streaming` | boolean |  |  |
 | `data_scope` | object | yes | O que este endpoint PODE receber. Obrigatório — ver o cabeçalho. |
+| `data_scope.kinds` | array | yes | Nomes de Kind cujos documentos podem ser delegados a este remoto. Lista vazia = nada pode, o que é um estado honesto (registrado, sem permissão) e não um erro. |
 | `default_input_modes` | array |  |  |
 | `default_output_modes` | array |  |  |
 | `delegation_target_for` | object |  | O bloco COMPARTILHADO com `Agent` (kernel `DelegationTargetFor`). É o que o roster derivado lê para achar este alvo sem enumerar Kinds. |
+| `delegation_target_for.agents` | array |  | Allowlist de delegadores; `["*"]` = qualquer. |
+| `delegation_target_for.format` | string |  | Um de: `slug`, `json`, `text`. |
+| `delegation_target_for.purpose` | string |  |  |
+| `delegation_target_for.typical_seconds` | integer |  |  |
+| `delegation_target_for.use_when` | string |  |  |
 | `description` | string | yes | A2A `description`. Para que ele serve, nas palavras dele. |
 | `documentation_url` | string |  |  |
 | `icon_url` | string |  |  |
 | `name` | string | yes | A2A `name`. O nome pelo qual o agente se anuncia. |
 | `security_schemes` | object |  | A2A `securitySchemes` (forma do OpenAPI 3). Diz COMO autenticar. A credencial em si NUNCA vive aqui — o schema é fechado justamente para que um bearer não possa ser anexado ao documento. Quem guarda a credencial é o deployment, por remoto, e ela nunca é o token do usuário. |
-| `signature_state` | string |  | Tri-estado DE PROPÓSITO: um documento que não foi verificado tem de ser legível como tal. `unsigned` = o Card não trouxe assinatura; `present_unverified` = trouxe e não checamos; `verified` = checamos (não alcançável nesta versão). Um booleano `signed` faria "não verificado" parecer "não assinado", que são coisas diferentes. |
+| `signature_state` | string |  | Tri-estado DE PROPÓSITO: um documento que não foi verificado tem de ser legível como tal. `unsigned` = o Card não trouxe assinatura; `present_unverified` = trouxe e não checamos; `verified` = checamos (não alcançável nesta versão). Um booleano `signed` faria "não verificado" parecer "não assinado", que são coisas diferentes. Um de: `unsigned`, `present_unverified`, `verified`. |
 | `signatures` | array |  | A2A `signatures`, preservadas como vieram. A VERIFICAÇÃO criptográfica está fora desta versão (exige decidir a cadeia de confiança, que é decisão de produto) — por isso `signature_state` existe e é tri-estado. |
 | `skills` | array |  | A2A `skills[]` — o que ele sabe fazer, item a item. |
-| `supported_interfaces` | array | yes | A2A `supportedInterfaces` (1.0 — substituiu o `url` único das versões anteriores). Cada entrada nomeia um transporte e onde alcançá-lo. |
+| `skills[].description` | string | yes |  |
+| `skills[].examples` | array |  |  |
+| `skills[].id` | string | yes |  |
+| `skills[].name` | string | yes |  |
+| `skills[].tags` | array |  |  |
+| `supported_interfaces` | array | yes | A2A `supportedInterfaces` (1.0 — substituiu o `url` único das versões anteriores). Cada entrada nomeia um BINDING de protocolo e onde alcançá-lo. |
+| `supported_interfaces[].protocol_binding` | string | yes | Um de: `JSONRPC`, `GRPC`, `HTTP+JSON`. |
+| `supported_interfaces[].protocol_version` | string |  | A2A `protocolVersion` da interface (`"1.0"`). Opcional: a 1.0 permite omiti-lo, e o cliente oficial trata a ausência como "sem preferência" em vez de erro. |
+| `supported_interfaces[].url` | string | yes | HTTPS obrigatório. Delegar dado de workspace por texto claro seria exfiltração com um passo a menos. |
 | `version` | string |  | A2A `version` — a versão QUE O AGENTE declara de si. |
 
 ## Repo
@@ -966,7 +1398,7 @@ A Repo is a code repository the portfolio references — its name, url, provider
 | `created_at` | string \| null |  | ISO-8601 timestamp, stamped by the writer (not defaulted here). |
 | `default_branch` | string \| null |  | The repo's default branch, e.g. main. Null when unknown. |
 | `name` | string | yes | The repo name, e.g. copiloto-medico. The doc name SHOULD equal this; Project.repo_refs point at it. |
-| `provider` | string |  | Where the repo is hosted — github, gitlab, azure-devops, or other. |
+| `provider` | string |  | Where the repo is hosted — github, gitlab, azure-devops, or other. Um de: `github`, `gitlab`, `azure-devops`, `other`. |
 | `url` | string \| null |  | Clone / browse URL of the repository. Null when the name alone identifies it. |
 
 ## Retrospective
@@ -982,6 +1414,10 @@ A Retrospective captures lessons + action items from a period of work. Schema fo
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `action_items` | array |  | Concrete next-steps surfaced by the retro. |
+| `action_items[].due` | string |  |  |
+| `action_items[].owner` | string |  |  |
+| `action_items[].story_ref` | string |  | Optional Story slug if turned into work. |
+| `action_items[].title` | string | yes |  |
 | `actor` | string |  | Who wrote this retro (Actor name, 'claude-code', 'human', ...). |
 | `auto_generated` | boolean |  | true = LLM-generated draft; false = human-curated. |
 | `body` | string |  | Optional full markdown body (RETROSPECTIVE.md). Falls back from structured fields when present. |
@@ -990,11 +1426,14 @@ A Retrospective captures lessons + action items from a period of work. Schema fo
 | `covers_session` | string |  | AgentSession name (Karpathy pattern). |
 | `covers_stories` | array |  | Story names this retro discusses. |
 | `created_at` | string |  |  |
-| `intent` | string |  | What kind of retro this is. Drives Studio grouping — daily stack on timeline, releases pin as marquee, incidents surface in alert filter. |
+| `intent` | string |  | What kind of retro this is. Drives Studio grouping — daily stack on timeline, releases pin as marquee, incidents surface in alert filter. Um de: `daily`, `weekly`, `sprint`, `release`, `incident`, `freeform`. |
 | `learned` | array |  | Learned — insights surfaced during the period. Atlassian 4 Ls bucket #4. Feeds future ADRs. |
 | `longed_for` | array |  | Longed for — capabilities/conditions wished for but absent. Atlassian 4 Ls bucket #3. |
 | `narrative_origin` | string |  | When extracted from a Narrative during Phase 2.2 migration, this points to the source Narrative slug for provenance. |
 | `open_items` | array |  | Work that started but didn't close — carry-over to next period. |
+| `open_items[].blocker` | string |  |  |
+| `open_items[].owner` | string |  |  |
+| `open_items[].title` | string | yes |  |
 | `period_end` | string | yes | End of period covered. |
 | `period_start` | string | yes | Start of period covered (ISO-8601). |
 | `summary` | string |  | Optional one-line tl;dr (shown above body in Studio card). |
@@ -1017,7 +1456,7 @@ One risk entry per RiskRegister doc. PMBOK 7 + ISO 31000:2018 compliant schema: 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `body` | string |  |  |
-| `category` | string | yes | PMBOK 7 categorization. |
+| `category` | string | yes | PMBOK 7 categorization. Um de: `strategic`, `operational`, `financial`, `compliance`, `reputational`, `cyber`, `ESG`. |
 | `created_at` | string |  |  |
 | `description` | string | yes | Risk in cause→event→consequence format. ISO 31000 convention: 'If <cause>, then <event> may occur, resulting in <consequence>'. |
 | `impact` | integer | yes | 1=negligible, 5=catastrophic. |
@@ -1025,6 +1464,11 @@ One risk entry per RiskRegister doc. PMBOK 7 + ISO 31000:2018 compliant schema: 
 | `last_reviewed` | string |  |  |
 | `likelihood` | integer | yes | 1=rare, 5=almost certain. |
 | `mitigation_actions` | array |  |  |
+| `mitigation_actions[].action` | string | yes |  |
+| `mitigation_actions[].due` | string |  |  |
+| `mitigation_actions[].owner` | string |  |  |
+| `mitigation_actions[].status` | string |  | Um de: `todo`, `in-progress`, `done`. |
+| `mitigation_actions[].story_ref` | string |  |  |
 | `next_review_due` | string |  |  |
 | `owner` | string | yes | Actor name accountable for monitoring/mitigation. |
 | `related_epics` | array |  |  |
@@ -1032,8 +1476,8 @@ One risk entry per RiskRegister doc. PMBOK 7 + ISO 31000:2018 compliant schema: 
 | `residual_impact` | integer |  |  |
 | `residual_likelihood` | integer |  | Likelihood after mitigation. |
 | `residual_score` | integer |  |  |
-| `response` | string |  | Strategy: avoid\|transfer\|mitigate\|accept. |
-| `status` | string | yes | Lifecycle: identified → assessed → mitigated → (realized = risk happened) → closed. |
+| `response` | string |  | Strategy: avoid\|transfer\|mitigate\|accept. Um de: `avoid`, `transfer`, `mitigate`, `accept`. |
+| `status` | string | yes | Lifecycle: identified → assessed → mitigated → (realized = risk happened) → closed. Um de: `identified`, `assessed`, `mitigated`, `realized`, `closed`. |
 | `tags` | array |  |  |
 | `title` | string |  | Short risk name (used as doc name typically). |
 | `updated_at` | string |  |  |
@@ -1052,7 +1496,11 @@ A Roadmap groups Epics across time horizons (e.g. Q1 2026, Q2 2026). Pure organi
 | --- | --- | --- | --- |
 | `description` | string | yes |  |
 | `horizons` | array | yes |  |
-| `journey_phase` | string |  | Universal journey phase. Roadmaps typically live in `discover` or `specify` — they're the north star, not the build. |
+| `horizons[].end_date` | string |  |  |
+| `horizons[].epics` | array | yes | Names of Epic docs in this horizon |
+| `horizons[].label` | string | yes | e.g. 'Q1 2026' |
+| `horizons[].start_date` | string |  |  |
+| `journey_phase` | string |  | Universal journey phase. Roadmaps typically live in `discover` or `specify` — they're the north star, not the build. Um de: `discover`, `specify`, `plan`, `build`, `verify`, `reflect`. |
 | `links` | array |  | External URLs (Confluence, Notion, etc.) |
 | `owner_team` | string |  |  |
 
@@ -1085,8 +1533,15 @@ A Role is one rung of the RBAC ladder expressed as data — its role_id, display
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `derived_refs` | array |  | The typed documents extracted from this artifact — the projection. The edge lives HERE, on the artifact, so one upload that yields twelve documents states that fact once, and so no derived Kind has to carry a field for it. Grows as more is extracted; an empty list means the file is stored and nothing has been read out of it yet, which is an honest state and not an error. |
+| `derived_refs[].extracted_at` | string \| null |  | ISO-8601 timestamp of the extraction. |
+| `derived_refs[].kind` | string | yes | The derived document's Kind. |
+| `derived_refs[].name` | string | yes | The derived document's name within that Kind. |
+| `derived_refs[].scope` | string \| null |  | The scope it was written to, when it differs from the artifact's own. |
+| `detected_mime` | string \| null |  | What the bytes ACTUALLY are, read from their magic bytes (`dna.runtime.mime.detect_mime`). Kept BESIDE `mime`, never instead of it: the pair is the evidence. Overwriting the declared value would erase the fact that they ever disagreed, and that disagreement is the only thing either field is good for on its own. |
 | `filename` | string \| null |  | The name the file arrived with, when one did. Display only — never a path to open, and never trusted as one. |
 | `mime` | string \| null |  | The declared content type, e.g. application/pdf. What the uploader SAID it is; not proof of what it is. |
+| `mime_mismatch` | boolean \| null |  | True when `detected_mime` and what the caller declared (or the filename implied) diverge in a way that matters. NOT an error and NOT a refusal — a `.pdf` that is really a ZIP may be an innocent mistake or an attempt, and a record that cannot tell you it happened cannot help you decide which. OOXML detected as its zip container and variation within text do NOT count; a signal that fires on half the uploads is a signal nobody reads. |
+| `origin` | string \| null |  | Where the bytes came from. `uploaded` — a human attached the file; `generated` — an agent produced it (an image, a chart, a converted file). The distinction is not cosmetic: a generated artifact is REPRODUCIBLE and a retention policy may treat it very differently from an original nobody else holds a copy of. Um de: `uploaded`, `generated`, `None`. |
 | `sha256` | string | yes | Lowercase hex SHA-256 of the ORIGINAL bytes. The content address: it is what lets anyone holding the file verify that this record and those bytes belong together, and what makes a re-upload of identical content the same artifact rather than a second one. |
 | `size_bytes` | integer \| null |  | Size of the original in bytes, when known. |
 | `uploaded_at` | string \| null |  | ISO-8601 timestamp of the upload. |
@@ -1109,11 +1564,11 @@ A Spec is a top-level design artifact. Cross-cutting by default (may drive multi
 | `body` | string |  | Markdown body of the spec (stored in SPEC.md). |
 | `date` | string | yes |  |
 | `epic` | string |  |  |
-| `journey_phase` | string |  | Universal journey phase. A Spec typically lives in `specify`, but draft Specs may be `discover` and finalized ones referenced by Plans drift to `plan`. Coexists with `phase` (SDLC-view) — `journey_phase` is the methodology-agnostic layer. |
+| `journey_phase` | string |  | Universal journey phase. A Spec typically lives in `specify`, but draft Specs may be `discover` and finalized ones referenced by Plans drift to `plan`. Coexists with `phase` (SDLC-view) — `journey_phase` is the methodology-agnostic layer. Um de: `discover`, `specify`, `plan`, `build`, `verify`, `reflect`. |
 | `origin` | string |  | Optional audit trail — repo-relative path the body was harvested from (e.g. docs/superpowers/specs/X.md). Not used at runtime. |
 | `pattern` | string |  | Spec-driven pattern this artifact follows (superpowers \| bmad \| droid \| rfc \| adr \| spec-kit \| custom). |
-| `phase` | string |  | Where in the SDLC this spec's work sits. Orthogonal to status. |
-| `status` | string | yes |  |
+| `phase` | string |  | Where in the SDLC this spec's work sits. Orthogonal to status. Um de: `brainstorm`, `spec`, `plan_ready`, `implementing`, `done`. |
+| `status` | string | yes | Um de: `draft`, `proposed`, `accepted`, `deprecated`, `superseded`. |
 | `summary` | string |  | Short one-paragraph summary (auto-extracted). |
 | `supersedes` | string |  | Name of the prior Spec this one replaces. |
 | `tags` | array |  |  |
@@ -1144,15 +1599,31 @@ A Spike is a time-boxed technical investigation. ONE question + finite time budg
 | `logged_hours` | number |  |  |
 | `owner` | string |  |  |
 | `produces` | array |  | Artifacts this work item produced — any Kind (hub). |
+| `produces[].at` | string |  |  |
+| `produces[].kind` | string | yes | Artifact Kind (any). |
+| `produces[].name` | string | yes | Artifact doc name. |
+| `produces[].role` | string |  | Optional role hint (e.g. visual-spec, plan, investigation). |
 | `question_to_answer` | string | yes |  |
 | `recommendation` | string |  |  |
 | `references` | array |  | Free-form Reference names (papers, blog posts, library docs cited mid-spike). |
 | `related_spikes` | array |  | Sibling Spikes investigating overlapping questions. |
 | `research_refs` | array |  | Research names this Spike consulted (curated syntheses with N References). |
 | `started_at` | string |  |  |
-| `status` | string | yes |  |
+| `status` | string | yes | Um de: `proposed`, `in-progress`, `answered`, `abandoned`. |
 | `time_box_hours` | number |  |  |
 | `timeline` | array |  | Append-only activity log. Auto-stamped by the CLI on every status flip / groom / artifact write; populated by AgentSession capture for decision + artifact_produced events. Render in Studio as activity stream. |
+| `timeline[].actor` | string | yes | Who triggered the event (Actor name or 'claude-code'). |
+| `timeline[].at` | string | yes |  |
+| `timeline[].commit_ref` | string |  | Git SHA associated with this event (when relevant). |
+| `timeline[].excerpt` | string |  | decision: snippet from the source transcript. |
+| `timeline[].fields` | object |  | groom: which fields changed and to what. |
+| `timeline[].from` | string |  | status_change: previous status. |
+| `timeline[].paths` | array |  | artifact_produced: file paths touched. |
+| `timeline[].session_ref` | string |  | Back-link to a AgentSession that produced this event. |
+| `timeline[].source` | string |  | Um de: `cli`, `studio`, `mcp`, `agent-session-extracted`, `system`. |
+| `timeline[].summary` | string |  | comment/decision: short human-readable text. |
+| `timeline[].to` | string |  | status_change: new status. |
+| `timeline[].type` | string | yes | Event type. Recognized: status_change, groom, comment, decision, artifact_produced (open vocabulary — new types are additive, e.g. pr_opened). |
 | `title` | string | yes |  |
 | `updated_at` | string |  |  |
 
@@ -1166,9 +1637,9 @@ A Spike is a time-boxed technical investigation. ONE question + finite time budg
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `ascended_from` | string |  | If the previous verdict's confidence differs from this one, this is the previous level. Empty string when it's the first verdict. |
+| `ascended_from` | string |  | If the previous verdict's confidence differs from this one, this is the previous level. Empty string when it's the first verdict. Um de: `certain`, `guess`, `insufficient`, ``. |
 | `bumped_remembrances` | array |  | Phase 2B (squishy-jumping-nebula): audit trail written by oracle_cue_hook listing the LessonLearned slugs whose cue history was bumped because this report cited them. Bidirectional pairing with LessonLearned.cues_history. Empty when the run had nothing to bump (the field is omitted, not stored as []). |
-| `confidence` | string | yes | How firm the verdict is. `insufficient` = the heuristic didn't have enough data — the LLM was NOT called and the verdict is a stock message. |
+| `confidence` | string | yes | How firm the verdict is. `insufficient` = the heuristic didn't have enough data — the LLM was NOT called and the verdict is a stock message. Um de: `certain`, `guess`, `insufficient`. |
 | `evidence_refs` | array |  | Doc refs (Kind/name) cited as evidence for this verdict. Studio renders these as navigable links. |
 | `generated_at` | string |  |  |
 | `generated_by` | string |  | Model + actor (e.g. 'claude-sonnet-4-6'). |
@@ -1177,7 +1648,7 @@ A Spike is a time-boxed technical investigation. ONE question + finite time budg
 | `metrics` | object |  | Deterministic numbers the heuristic computed (cycle counts, frequencies, averages). Free-form object — schema varies per oracle. |
 | `owner` | string |  | Slug reference to a Agent. When set, this StatusReport is PRIVATE to that agent. When null, it is GENERAL. Phase: cognitive-reflection. |
 | `question` | string |  | The question this report answers, written out. Was an echo of an Insight's question at run time; no runner ships, so the author writes it. |
-| `rag_status` | string |  | PMO-standard RAG status (Red/Amber/Green) for executive dashboards. Red = action needed; Amber = watch; Green = healthy. Optional — heuristics that map metrics → RAG should populate this. |
+| `rag_status` | string |  | PMO-standard RAG status (Red/Amber/Green) for executive dashboards. Red = action needed; Amber = watch; Green = healthy. Optional — heuristics that map metrics → RAG should populate this. Um de: `red`, `amber`, `green`. |
 | `thresholds` | object |  | Self-describing thresholds the heuristic used (e.g. `to_certain: 'pattern_freq > 0.9 AND n>=5'`). Lets the reader know what would change the verdict. |
 | `verdict` | string | yes | Human-readable answer (1-3 sentences pt-BR). Synthesized by the LLM from the heuristic numbers. |
 
@@ -1205,20 +1676,39 @@ A Story is a granular task: one developer, one PR, one estimate. Lists acceptanc
 | `estimate` | number |  | Fibonacci story points (1, 2, 3, 5, 8, 13, 21) |
 | `feature` | string |  | Parent Feature name |
 | `i_want` | string |  | Goal: 'I want <goal>'. INVEST/user-story format slot. |
-| `journey_phase` | string |  | Universal journey phase (discover → specify → plan → build → reflect). Additive layer over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro. |
+| `journey_phase` | string |  | Universal journey phase (discover → specify → plan → build → reflect). Additive layer over Story/Feature/Epic status, Spec phase, etc. Lets the journey ledger pin this doc to one of five universal phases compatible with Superpowers / BMAD / Spec Kit / Kiro. Um de: `discover`, `specify`, `plan`, `build`, `verify`, `reflect`. |
 | `labels` | array |  | Free-form tags for swim lanes / filters. |
 | `mockups` | array |  | URLs/paths to design artifacts. |
 | `owner` | string |  | Actor name |
-| `priority` | string |  | Board priority. Jira-aligned. |
+| `priority` | string |  | Board priority. Jira-aligned. Um de: `highest`, `high`, `medium`, `low`, `lowest`. |
 | `produces` | array |  | Artifacts this work item produced — any Kind (hub). |
+| `produces[].at` | string |  |  |
+| `produces[].kind` | string | yes | Artifact Kind (any). |
+| `produces[].name` | string | yes | Artifact doc name. |
+| `produces[].role` | string |  | Optional role hint (e.g. visual-spec, plan, investigation). |
 | `release_target` | string |  | Epic name OR 'owner/pkg@semver' identifying the release this Story unblocks. |
 | `reporter` | string |  | Actor who filed it (vs `owner` who works on it). |
 | `so_that` | string |  | Benefit: 'so that <benefit>'. INVEST/user-story format slot. |
 | `spec_refs` | array |  | Spec docs (kind=Spec) this Story implements. M:N linkage between the planning axis (Story) and the design axis (Spec) — Jira/Confluence-shaped. |
 | `sprint_ref` | string |  | Sprint identifier (free-form, e.g. '2026-Q2-S2'). |
-| `status` | string | yes |  |
+| `status` | string | yes | Um de: `needs-triage`, `todo`, `in-progress`, `review`, `done`, `blocked`, `deferred`, `cancelled`. |
 | `time_tracking` | object |  |  |
+| `time_tracking.logged_h` | number |  |  |
+| `time_tracking.original_estimate_h` | number |  |  |
+| `time_tracking.remaining_h` | number |  |  |
 | `timeline` | array |  | Append-only activity log. Auto-stamped by the CLI on every status flip / groom / artifact write; populated by AgentSession capture for decision + artifact_produced events. Render in Studio as activity stream. |
+| `timeline[].actor` | string | yes | Who triggered the event (Actor name or 'claude-code'). |
+| `timeline[].at` | string | yes |  |
+| `timeline[].commit_ref` | string |  | Git SHA associated with this event (when relevant). |
+| `timeline[].excerpt` | string |  | decision: snippet from the source transcript. |
+| `timeline[].fields` | object |  | groom: which fields changed and to what. |
+| `timeline[].from` | string |  | status_change: previous status. |
+| `timeline[].paths` | array |  | artifact_produced: file paths touched. |
+| `timeline[].session_ref` | string |  | Back-link to a AgentSession that produced this event. |
+| `timeline[].source` | string |  | Um de: `cli`, `studio`, `mcp`, `agent-session-extracted`, `system`. |
+| `timeline[].summary` | string |  | comment/decision: short human-readable text. |
+| `timeline[].to` | string |  | status_change: new status. |
+| `timeline[].type` | string | yes | Event type. Recognized: status_change, groom, comment, decision, artifact_produced (open vocabulary — new types are additive, e.g. pr_opened). |
 | `title` | string |  | Human-readable display name (Jira 'summary'). |
 | `updated_at` | string |  |  |
 | `watchers` | array |  | Actor names subscribed to changes. |
@@ -1245,11 +1735,27 @@ A Task is a granular work item (horas-dias) typically as sub-item of a Story. Fo
 | `labels` | array |  |  |
 | `logged_hours` | number |  |  |
 | `owner` | string |  |  |
-| `priority` | string |  |  |
+| `priority` | string |  | Um de: `highest`, `high`, `medium`, `low`, `lowest`. |
 | `produces` | array |  | Artifacts this work item produced — any Kind (hub). |
-| `status` | string | yes |  |
+| `produces[].at` | string |  |  |
+| `produces[].kind` | string | yes | Artifact Kind (any). |
+| `produces[].name` | string | yes | Artifact doc name. |
+| `produces[].role` | string |  | Optional role hint (e.g. visual-spec, plan, investigation). |
+| `status` | string | yes | Um de: `todo`, `in-progress`, `done`, `blocked`, `cancelled`. |
 | `story_ref` | string |  |  |
 | `timeline` | array |  | Append-only activity log. Auto-stamped by the CLI on every status flip / groom / artifact write; populated by AgentSession capture for decision + artifact_produced events. Render in Studio as activity stream. |
+| `timeline[].actor` | string | yes | Who triggered the event (Actor name or 'claude-code'). |
+| `timeline[].at` | string | yes |  |
+| `timeline[].commit_ref` | string |  | Git SHA associated with this event (when relevant). |
+| `timeline[].excerpt` | string |  | decision: snippet from the source transcript. |
+| `timeline[].fields` | object |  | groom: which fields changed and to what. |
+| `timeline[].from` | string |  | status_change: previous status. |
+| `timeline[].paths` | array |  | artifact_produced: file paths touched. |
+| `timeline[].session_ref` | string |  | Back-link to a AgentSession that produced this event. |
+| `timeline[].source` | string |  | Um de: `cli`, `studio`, `mcp`, `agent-session-extracted`, `system`. |
+| `timeline[].summary` | string |  | comment/decision: short human-readable text. |
+| `timeline[].to` | string |  | status_change: new status. |
+| `timeline[].type` | string | yes | Event type. Recognized: status_change, groom, comment, decision, artifact_produced (open vocabulary — new types are additive, e.g. pr_opened). |
 | `title` | string | yes |  |
 | `updated_at` | string |  |  |
 
@@ -1266,7 +1772,7 @@ A Tool is a declarative, invocable capability an agent can call — an HTTP endp
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `auth_env_var` | string |  | Environment variable holding the credential (e.g. GITHUB_TOKEN). |
-| `auth_type` | string |  | Credential strategy for the invocation. |
+| `auth_type` | string |  | Credential strategy for the invocation. Um de: `none`, `api_key`, `bearer`, `oauth2`. |
 | `endpoint` | string |  | URL called when type=http. Supports {placeholder} templating. |
 | `examples` | array |  | Usage examples ([{input, output}]). |
 | `input_schema` | object |  | JSON Schema of the arguments the agent passes when invoking the tool — the "parameters" the model fills in. Surfaced as ``parameters`` by ``dna.load_tools`` / ``loadTools``. |
@@ -1280,7 +1786,7 @@ A Tool is a declarative, invocable capability an agent can call — an HTTP endp
 | `requires_confirmation` | boolean |  | Force user approval before each invocation. |
 | `shell_command` | string |  | Command template when type=shell. Never executed without confirmation. |
 | `tags` | array |  | Free-form labels for filtering and search. |
-| `type` | string |  | How the tool is executed. builtin \| http \| mcp \| python \| shell. |
+| `type` | string |  | How the tool is executed. builtin \| http \| mcp \| python \| shell. Um de: `http`, `mcp`, `python`, `shell`, `builtin`. |
 
 ## WorkflowEvent
 
@@ -1306,11 +1812,11 @@ Append-only journey ledger. One entry per (artifact, phase) pair. Read together 
 | `ended_at` | string |  | When the agent left this phase. Null while the phase is still active. |
 | `epic_ref` | string |  | Back-compat (deprecated): legacy form of ``parent_ref`` (Epic). |
 | `feature_ref` | string |  | Back-compat (deprecated): legacy form of ``parent_ref`` (Feature). |
-| `methodology` | string |  | Which methodology the agent followed in this phase. ``ad-hoc`` is honest — Studio renders it with a 'no methodology' badge so we can spot where we cut corners. |
+| `methodology` | string |  | Which methodology the agent followed in this phase. ``ad-hoc`` is honest — Studio renders it with a 'no methodology' badge so we can spot where we cut corners. Um de: `superpowers`, `bmad`, `spec-kit`, `kiro`, `rfc`, `adr`, `ad-hoc`, `custom`. |
 | `methodology_artifact` | string |  | Repo-relative path or URL to the methodology's external artifact, when applicable. E.g. ``docs/superpowers/plans/foo-plan.md`` for the Superpowers writing-plans output, ``.specify/foo/plan.md`` for Spec Kit, etc. |
 | `owner` | string |  | Back-compat (deprecated): legacy owner of the entry. |
 | `parent_ref` | string |  | Anchor doc grouping this entry with siblings. Typically ``Feature/<name>`` or ``Epic/<name>`` — everything in the journey of one Feature has the same parent_ref. |
-| `phase` | string | yes | Which of the five universal phases this entry represents. |
+| `phase` | string | yes | Which of the five universal phases this entry represents. Um de: `discover`, `specify`, `plan`, `build`, `verify`, `reflect`. |
 | `rationale` | string |  | Back-compat (deprecated): free-text rationale on the entry. |
 | `ref` | string |  | Doc this entry pins. Format: ``Kind/name`` (e.g. ``Spec/foo``, ``Plan/bar``, ``AgentSession/vs-baz``). |
 | `seed_from` | string |  | Name of the prior cycle's `reflect` WorkflowEvent that seeded this entry. Set on `discover` entries created via `dna sdlc journey close-cycle` — the ouroboros bite, where reflect's lessons literally feed into the next discover. Distinct from `transitioned_from`: that's the immediate predecessor across phases; this is the cross-cycle inheritance link. |
@@ -1359,8 +1865,8 @@ A WorkspaceMembership maps a verified identity (Entra oid + email + tid) to a wo
 | `identity_tid` | string \| null |  | The Azure org (tenant id) the accepting identity came from — PROVENANCE only (no longer the DNA tenant under Model B). Bound on accept. |
 | `invited_at` | string \| null |  | ISO-8601 timestamp of the invite (stamped by the writer). |
 | `invited_by` | string \| null |  | Email of the Owner/Admin who created the invite. |
-| `role` | string | yes | Workspace-level role — the standard ladder (owner > admin > member > guest, highest-role-wins). References the Role Kind. |
-| `status` | string | yes | Invite lifecycle — pending (invited, oid not yet bound) → active (accepted, oid bound). No membership / non-active → no access. |
+| `role` | string | yes | Workspace-level role — the standard ladder (owner > admin > member > guest, highest-role-wins). References the Role Kind. Um de: `owner`, `admin`, `member`, `guest`. |
+| `status` | string | yes | Invite lifecycle — pending (invited, oid not yet bound) → active (accepted, oid bound). No membership / non-active → no access. Um de: `pending`, `active`. |
 | `workspace_id` | string | yes | The workspace this grant is in — the tenant key (matches a Workspace.workspace_id). |
 
 ## WorkspaceScopeGrant
@@ -1375,12 +1881,12 @@ A WorkspaceScopeGrant records that one workspace may READ one scope that is not 
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `access` | string |  | What the grant permits, and the binder ENFORCES it - a request carries a read/write axis and this value is what answers it, so the grant that opens a second scope for reading refuses a write to it. READ only, and the enum has one member so widening it is a deliberate schema change with a reviewer - a cross-workspace WRITE is a different decision than a cross-workspace read and must not arrive as a value nobody noticed. |
+| `access` | string |  | What the grant permits, and the binder ENFORCES it - a request carries a read/write axis and this value is what answers it, so the grant that opens a second scope for reading refuses a write to it. READ only, and the enum has one member so widening it is a deliberate schema change with a reviewer - a cross-workspace WRITE is a different decision than a cross-workspace read and must not arrive as a value nobody noticed. Um de: `read`. |
 | `granted_at` | string \| null |  | ISO-8601 timestamp, stamped by the writer. |
 | `granted_by` | string \| null |  | Identity (email / oid) of whoever created the grant. |
 | `reason` | string \| null |  | Why this workspace may reach that scope. Free text, for the human reading the audit six months later. |
 | `revoked_at` | string \| null |  | ISO-8601 timestamp when status flipped to `revoked`. |
 | `scope` | string | yes | The single scope name this row grants. One scope per row on purpose - granting and revoking are then one document each, so an audit reads as a list of facts rather than a diff inside a list. |
-| `status` | string | yes | Only `active` grants anything. Revoking keeps the row (and its history) instead of deleting the evidence that access once existed. |
+| `status` | string | yes | Only `active` grants anything. Revoking keeps the row (and its history) instead of deleting the evidence that access once existed. Um de: `active`, `revoked`. |
 | `workspace_id` | string | yes | The workspace this grant is FOR — the caller's resolved workspace_id (matches a Workspace.workspace_id / the tenant key). |
 

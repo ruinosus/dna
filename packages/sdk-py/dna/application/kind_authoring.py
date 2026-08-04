@@ -237,6 +237,17 @@ async def author_kind_impl(
         raise ValueError("tenant is required to author a Kind")
     if not isinstance(schema, dict):
         raise ValueError("schema must be a JSON Schema object")
+    # ⚠️ O guard de metaschema SEMPRE existiu — mas só rodava no REGISTRO
+    # (warn+skip, registry.py:1237), nunca aqui na porta. A cadeia medida em
+    # 03/08/2026: schema inválido gravava OK, o humano APROVAVA, o Kind nunca
+    # registrava (um WARNING no log do servidor) e todo doc futuro respondia o
+    # 404 genérico de Kind desconhecido — apontando o autor para o lugar
+    # errado. A recusa pertence à porta, onde o autor ainda pode agir:
+    # SchemaGuardError é ValueError, e as duas faces já mapeiam
+    # ValueError → 400.
+    from dna.kernel.kinds.schema_guard import validate_authored_schema
+
+    validate_authored_schema(schema)
     from dna.kernel.kinds.presentation import normalize_presentation
 
     try:
@@ -366,6 +377,10 @@ async def author_kind_impl(
     return {
         "namespace": namespace, "kind": kind, "name": name,
         "approved": False, "proposed_by": proposed_by, "version": version,
+        # O eco do schema autorado: o card MCP Apps (ui://dna/kind-draft)
+        # renderiza as linhas a partir DELE — sem o eco, o card interativo
+        # não teria o que editar (Kind Studio F3).
+        "schema": schema,
     }
 
 

@@ -447,6 +447,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/kinds/registry/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Registered Kind
+         * @description The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the
+         *     ``ui_schema`` widget hints, so a form can DERIVE validation (min/max,
+         *     enums, required) instead of hand-copying it and drifting.
+         *
+         *     The registry sibling of ``GET /v1/kinds/{kind}`` (which reads an
+         *     AUTHORED Kind and filters by caller): a registered Kind is the
+         *     PRODUCT's data model, identical for every tenant and holding nobody's
+         *     content, so this door does not filter. Declared BEFORE the
+         *     ``/{kind}/documents`` routes so ``registry`` is matched as the literal
+         *     segment it is (a Kind is CamelCase and can never be named
+         *     ``registry``). 404 for a Kind the runtime does not register.
+         */
+        get: operations["get_registered_kind_v1_kinds_registry__kind__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/kinds/{kind}": {
         parameters: {
             query?: never;
@@ -534,6 +564,72 @@ export interface paths {
          *     ``TODO(hosted)`` bridge is what would move the check into this door.
          */
         post: operations["approve_kind_v1_kinds__kind__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/kinds/{kind}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Kind Documents
+         * @description Listar os documentos de ``{kind}`` — a LEITURA da porta genérica.
+         *
+         *     A face escrevia qualquer documento por ``POST
+         *     /v1/kinds/{kind}/documents`` e só lia os Kinds para os quais alguém
+         *     escrevera uma rota à mão (``/v1/memories``, ``/v1/projects``, …). O
+         *     ``list_documents_impl`` já existia no SDK, completo, e não tinha porta:
+         *     quem gravava por aqui não conseguia ler de volta por lugar nenhum, e
+         *     descobria isso depois de gravar.
+         *
+         *     ``fields`` (CSV, caminhos pontuados; sem prefixo resolve sob ``spec.``)
+         *     empurra a PROJEÇÃO para o kernel. Sem ela, responder "quais estão
+         *     abertos" custa 1 + N chamadas — listar os nomes e ler cada um. No
+         *     Postgres a projeção vira SELECT e a linha viaja aparada.
+         *
+         *     Um Kind desconhecido é 404 **nomeando o Kind**, a mesma resposta que a
+         *     escrita dá. Uma lista vazia de um Kind que existe é 200 com
+         *     ``documents: []`` — "existe e não tem nada" é uma resposta, e confundi-la
+         *     com "não existe" faria uma tela dizer *erro* onde devia dizer *nenhum
+         *     ainda*.
+         */
+        get: operations["list_kind_documents_v1_kinds__kind__documents_get"];
+        put?: never;
+        /**
+         * Write Kind Document
+         * @description Write one document of ``{kind}`` — the generic door, kubernetes-shaped.
+         *
+         *     The body is exactly ``{metadata, spec}`` (plus the optional
+         *     ``source_sha256`` provenance citation). ``metadata.name`` is
+         *     REQUIRED — 400 when blank or absent. A ``kind`` in the body that
+         *     DIFFERS from the path is refused (400); one that matches is a no-op
+         *     (redundant, not wrong).
+         *
+         *     The write goes through the kernel's own pipeline exactly as the MCP
+         *     ``write_document`` tool's does: the Kind's JSON Schema validates
+         *     ``spec`` and names the offending field on refusal (400), a BOOTSTRAP
+         *     Kind (Genome / LayerPolicy / KindDefinition) is refused (403, the
+         *     generic write's own gate — untouched, not relaxed here), an authored
+         *     Kind nobody has approved yet resolves to nothing in the registry and
+         *     is a 404 naming it (the SAME answer a Kind that was never authored at
+         *     all gets — there is no third state visible from here), an unknown
+         *     Kind is a 404 naming it, and a stale ``if_match`` is a 409.
+         *
+         *     ``source_sha256`` (optional) cites the ``SourceArtifact`` this
+         *     document was extracted from (by content address); the runtime closes
+         *     the ``derived_refs`` provenance edge server-side, preserving every
+         *     OTHER document already recorded there and updating THIS document's
+         *     own entry in place on a re-write — never accreting a duplicate. A
+         *     ``source_sha256`` that names no registered artifact under ``tenant``
+         *     is refused (400).
+         */
+        post: operations["write_kind_document_v1_kinds__kind__documents_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1300,6 +1396,10 @@ export interface components {
             namespace: string;
             /** Proposed By */
             proposed_by?: string | null;
+            /** Schema */
+            schema?: {
+                [key: string]: unknown;
+            } | null;
             /** Version */
             version?: string | null;
         };
@@ -1658,10 +1758,16 @@ export interface components {
             claims?: {
                 [key: string]: unknown;
             } | null;
+            /** Detected Mime */
+            detected_mime?: string | null;
             /** Filename */
             filename?: string | null;
             /** Mime */
             mime?: string | null;
+            /** Mime Mismatch */
+            mime_mismatch?: boolean | null;
+            /** Origin */
+            origin?: string | null;
             /** Sha256 */
             sha256: string;
             /** Size Bytes */
@@ -2116,6 +2222,38 @@ export interface components {
             /** Workspace Id */
             workspace_id: string;
         };
+        /**
+         * ListKindDocumentsResponse
+         * @description ``GET /v1/kinds/{kind}/documents`` — uma página de documentos do Kind.
+         *
+         *     `documents` é a linha como o kernel a moldou: `{"name": …}` sem projeção, e
+         *     `{"name": …, "spec": {…}}` com `fields`. `projected` ecoa o que foi pedido,
+         *     para um leitor distinguir uma página de nomes de uma projetada — sem isso,
+         *     um `spec` ausente seria ambíguo entre "não pedi" e "não tem".
+         *
+         *     `has_more` é respondido buscando UMA linha a mais, não adivinhado a partir
+         *     de a página ter vindo cheia.
+         */
+        ListKindDocumentsResponse: {
+            /** Api Version */
+            api_version: string;
+            /** Count */
+            count: number;
+            /** Documents */
+            documents: {
+                [key: string]: unknown;
+            }[];
+            /** Has More */
+            has_more: boolean;
+            /** Kind */
+            kind: string;
+            /** Offset */
+            offset: number;
+            /** Projected */
+            projected?: string[] | null;
+            /** Scope */
+            scope: string;
+        };
         /** MemoriesResponse */
         MemoriesResponse: {
             /** Memories */
@@ -2509,6 +2647,32 @@ export interface components {
             /** Workspace Id */
             workspace_id: string;
         };
+        /**
+         * RegisteredKindView
+         * @description ``GET /v1/kinds/registry/{kind}`` — the registered Kind's descriptor:
+         *     the JSON ``schema`` a form derives validation from and the ``ui_schema``
+         *     widget hints it renders with. Product data model, not tenant data — the
+         *     same answer for every caller (contrast: the authored-Kind door filters).
+         */
+        RegisteredKindView: {
+            /** Docs */
+            docs?: string | null;
+            /** Kind */
+            kind: string;
+            /**
+             * Plane
+             * @default composition
+             */
+            plane: string;
+            /** Schema */
+            schema?: {
+                [key: string]: unknown;
+            };
+            /** Ui Schema */
+            ui_schema?: {
+                [key: string]: unknown;
+            };
+        };
         /** RememberResponse */
         RememberResponse: {
             /** Indexed */
@@ -2745,6 +2909,65 @@ export interface components {
         WriteBundleEntryRequest: {
             /** Content */
             content: string;
+        };
+        /**
+         * WriteKindDocumentRequest
+         * @description ``POST /v1/kinds/{kind}/documents`` — the document to write.
+         *
+         *     Deliberately narrow: no ``scope``, no ``claims`` anywhere on this model —
+         *     neither is reachable through this route's body (identity/scope are never
+         *     caller input here; see the route for the full reasoning).
+         *
+         *     ``kind`` is OPTIONAL and, when given, MUST equal the path's ``{kind}`` —
+         *     a caller naming a DIFFERENT Kind in the body is refused (400) rather than
+         *     the path or the body silently winning. Two sources stating one fact is
+         *     exactly the defect this route exists to close.
+         *
+         *     ``source_sha256``, when given, cites the ``SourceArtifact`` (by content
+         *     address) this document was extracted from — the runtime closes the
+         *     provenance edge (``derived_refs``) server-side.
+         */
+        WriteKindDocumentRequest: {
+            /** Kind */
+            kind?: string | null;
+            /** Metadata */
+            metadata: {
+                [key: string]: unknown;
+            };
+            /** Source Sha256 */
+            source_sha256?: string | null;
+            /** Spec */
+            spec: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * WriteKindDocumentResponse
+         * @description ``POST /v1/kinds/{kind}/documents`` — the written document. ``scope``
+         *     is DERIVED (there is no ``scope`` field on the request to have supplied
+         *     one from).
+         */
+        WriteKindDocumentResponse: {
+            /** Api Version */
+            api_version: string;
+            /** Created */
+            created: boolean;
+            /** Etag */
+            etag?: string | null;
+            /** Kind */
+            kind: string;
+            /** Merged */
+            merged: boolean;
+            /** Name */
+            name: string;
+            /** Scope */
+            scope: string;
+            /** Source Sha256 */
+            source_sha256?: string | null;
+            /** Tenant */
+            tenant?: string | null;
+            /** Version */
+            version?: string | null;
         };
     };
     responses: never;
@@ -3517,6 +3740,41 @@ export interface operations {
             };
         };
     };
+    get_registered_kind_v1_kinds_registry__kind__get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisteredKindView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_authored_kind_v1_kinds__kind__get: {
         parameters: {
             query?: {
@@ -3575,6 +3833,88 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApproveKindResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_kind_documents_v1_kinds__kind__documents_get: {
+        parameters: {
+            query?: {
+                tenant?: string | null;
+                api_version?: string | null;
+                limit?: number | null;
+                offset?: number;
+                fields?: string | null;
+                order_by?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ListKindDocumentsResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    write_kind_document_v1_kinds__kind__documents_post: {
+        parameters: {
+            query?: {
+                api_version?: string | null;
+                tenant?: string | null;
+                merge?: boolean;
+                if_match?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WriteKindDocumentRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WriteKindDocumentResponse"];
                 };
             };
             /** @description Validation Error */

@@ -567,7 +567,7 @@ async def list_kinds_impl(
 async def list_documents_impl(
     live: LiveDna, *, kind: str, scope: str | None = None,
     tenant: str | None = None, api_version: str | None = None,
-    limit: int = 50, offset: int = 0,
+    limit: int | None = None, offset: int = 0,
     fields: Iterable[str] | None = None,
     filter: dict[str, Any] | None = None,  # noqa: A002 — the kernel's own kwarg
     order_by: Iterable[str] | None = None,
@@ -601,7 +601,19 @@ async def list_documents_impl(
     page is stable per adapter but not globally defined."""
     sc = scope or live.default_scope(tenant)
     port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
-    limit = max(1, min(int(limit), 500))
+    # E3: default e teto vêm da CognitivePolicy do workspace (o leitor que o
+    # schema citava e nunca existiu). Sem doc, os números de sempre (50/500) —
+    # paridade byte-igual. `limit=None` = "o chamador não pediu" = default da
+    # política; explícito é clampado ao teto DELA.
+    from dna.memory.policy import resolve_pagination
+    from dna.memory.verbs import cognitive_policy_spec
+
+    paginacao = resolve_pagination(await cognitive_policy_spec(live.kernel, sc, tenant))
+    limit = (
+        paginacao.default_limit
+        if limit is None
+        else max(1, min(int(limit), paginacao.max_limit))
+    )
     offset = max(0, int(offset))
     projection = [str(f) for f in fields] if fields else None
     rows: list[dict[str, Any]] = []
@@ -656,6 +668,7 @@ async def write_document_impl(
     scope: str | None = None, tenant: str | None = None,
     api_version: str | None = None, merge: bool = True,
     if_match: str | None = None, now: str | None = None,
+    source_sha256: str | None = None,
 ) -> dict[str, Any]:
     """Create or UPDATE one document — read-modify-merge, through
     ``kernel.write_document``.
@@ -698,7 +711,22 @@ async def write_document_impl(
     back from this call, so a chain of updates costs no extra reads.
 
     The ``apiVersion`` is taken from the resolved port, never from the caller:
-    an agent cannot smuggle a document into a different Kind's namespace."""
+    an agent cannot smuggle a document into a different Kind's namespace.
+
+    ``source_sha256`` (OPTIONAL) closes the PROVENANCE edge from the write
+    side: when given, it must name an already-registered ``SourceArtifact``
+    (``POST /v1/artifacts`` — content-addressed as ``sha256-<hex>``) under
+    ``tenant``, and this document is appended to that artifact's
+    ``derived_refs`` — the SAME field :func:`~dna.application.runtime.
+    register_artifact_impl` initializes and preserves on the artifact's own
+    side. Idempotent per ``(kind, name)``: re-writing the SAME document
+    updates its own entry (a fresh ``extracted_at``) instead of appending a
+    duplicate, and every OTHER document's entry is left untouched — the
+    write-side twin of the "a re-registration preserves ``derived_refs``"
+    property the artifact route already holds. Raises :class:`ValueError` when
+    the cited artifact does not exist under ``tenant`` (a caller cannot cite
+    what it has not registered), or when ``tenant`` is absent (there is no
+    workspace to resolve the artifact under)."""
     from dna.application.sdlc import now_iso
 
     sc = scope or live.default_scope(tenant)
@@ -756,6 +784,12 @@ async def write_document_impl(
     version = await live.kernel.write_document(
         sc, port.kind, name, raw, tenant=write_tenant,
     )
+    if source_sha256:
+        await _link_source_artifact(
+            live, scope=sc, tenant=tenant, sha256=source_sha256,
+            derived_kind=port.kind, derived_name=name,
+            now=now or now_iso(),
+        )
     return {
         "scope": sc, "kind": port.kind, "api_version": port.api_version,
         "name": name, "version": version, "tenant": write_tenant,
@@ -763,7 +797,71 @@ async def write_document_impl(
         "merged": bool(merge) and existing is not None,
         # Chain this into the next write's ``if_match`` — no re-read needed.
         "etag": spec_etag(new_spec),
+        "source_sha256": source_sha256,
     }
+
+
+async def _link_source_artifact(
+    live: LiveDna, *, scope: str, tenant: str | None, sha256: str,
+    derived_kind: str, derived_name: str, now: str,
+) -> None:
+    """Append ``{kind, name, scope, extracted_at}`` to the cited
+    ``SourceArtifact``'s ``derived_refs`` — the write side of the provenance
+    edge :func:`~dna.application.runtime.register_artifact_impl` already reads
+    and preserves on the artifact's own side (see :func:`write_document_impl`).
+
+    ``tenant`` is the WORKSPACE the artifact was registered under (the same
+    coordinate :func:`~dna.application.runtime.register_artifact_impl` binds
+    to) — never the derived document's own ``write_tenant``, which can differ
+    for a GLOBAL Kind. A ``SourceArtifact`` is always tenanted, so a caller
+    with no workspace has nothing to cite here.
+    """
+    from dna.application.runtime import artifact_name
+
+    if not tenant:
+        raise ValueError(
+            "source_sha256 was given but there is no tenant/workspace to "
+            "resolve a SourceArtifact under — register the artifact under a "
+            "workspace first (POST /v1/artifacts), then cite it from one."
+        )
+    digest = (sha256 or "").strip().lower()
+    art_name = artifact_name(digest)
+    existing = await live.kernel.get_document(
+        scope, "SourceArtifact", art_name, tenant=tenant)
+    if not isinstance(existing, dict):
+        raise ValueError(
+            f"source_sha256 {digest!r} cites no SourceArtifact registered "
+            f"under workspace {tenant!r} in scope {scope!r} — register it "
+            f"first via POST /v1/artifacts, then cite it from this write."
+        )
+    art_spec = dict(existing.get("spec") or {})
+    refs = [
+        r for r in (art_spec.get("derived_refs") or []) if isinstance(r, dict)
+    ]
+    # Idempotent per (kind, name): drop any PRIOR entry for this SAME derived
+    # document before appending the fresh one, so a re-write updates in place
+    # rather than accreting a duplicate. Every OTHER document's entry is left
+    # exactly as it was — the "preserve, don't erase" property.
+    refs = [
+        r for r in refs
+        if not (r.get("kind") == derived_kind and r.get("name") == derived_name)
+    ]
+    refs.append({
+        "kind": derived_kind, "name": derived_name, "scope": scope,
+        "extracted_at": now,
+    })
+    art_spec["derived_refs"] = refs
+    write_kernel = live.kernel.with_tenant(tenant)
+    await write_kernel.write_document(
+        scope, "SourceArtifact", art_name,
+        {
+            "apiVersion": existing.get("apiVersion"),
+            "kind": "SourceArtifact",
+            "metadata": {"name": art_name},
+            "spec": art_spec,
+        },
+        invalidate_mode="doc",
+    )
 
 
 async def delete_document_impl(

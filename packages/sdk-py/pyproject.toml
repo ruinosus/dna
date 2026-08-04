@@ -1,6 +1,6 @@
 [project]
 name = "dna-sdk"
-version = "0.38.0"
+version = "0.59.0"
 description = "DNA — Domain Notation of Anything: microkernel + extensions for declarative agent notation"
 readme = "README.md"
 license = "MIT"
@@ -50,6 +50,27 @@ postgres = ["sqlalchemy[asyncio]>=2", "asyncpg>=0.29", "alembic>=1.13"]
 sqlite = ["sqlalchemy[asyncio]>=2", "aiosqlite>=0.20", "alembic>=1.13"]
 safety-ml = ["presidio-analyzer>=2.2", "presidio-anonymizer>=2.2", "spacy>=3.7", "detoxify>=0.5"]
 sql = ["dna-sdk[sqlite,postgres]"]
+# Deteccao de MIME pelos BYTES (`dna.runtime.mime`). `filetype` e MIT, Python
+# puro e SEM dependencias — por isso entra em `all`, ao contrario do
+# `embed-onnx`. Sem ele o modulo degrada para o teste de texto e nao levanta.
+mime = ["filetype>=1.2"]
+# ⚠️ A observabilidade e um EXTRA, e o default e ela DESLIGADA. Um deployment
+# sem estes pacotes tem de SERVIR, nao crashar no boot — `setup_telemetry`
+# devolve None e segue (guarda:
+# tests/test_runtime_telemetry.py::test_setup_sem_os_pacotes_NAO_derruba_o_boot).
+#
+# O exportador OTLP vem junto porque quem liga telemetria costuma querer os
+# dois; mas ele so e usado se OTEL_EXPORTER_OTLP_ENDPOINT existir, e a tela do
+# PRODUTO nao depende dele.
+#
+# `openinference-instrumentation-langchain` e a implementacao OFICIAL (Arize) —
+# regra nao-negociavel: nao se escreve callback de tracing a mao quando existe
+# instrumentacao mantida.
+otel = [
+    "opentelemetry-sdk>=1.27",
+    "opentelemetry-exporter-otlp-proto-http>=1.27",
+    "openinference-instrumentation-langchain>=0.1",
+]
 # rec-embedding-port — the REAL EmbeddingPort (ONNX all-MiniLM-L6-v2 via
 # fastembed, which drags onnxruntime). Deliberately OUT of `all`/`dev`: it is
 # heavy (ONNX runtime) and the default/CI floor is the zero-dep
@@ -125,7 +146,7 @@ maf = ["agent-framework==1.12.1", "agent-framework-ag-ui==1.0.0"]
 # Without it, everything falls back to the #244 heuristic + Python `re`,
 # unchanged. Install: pip install "dna-sdk[re2]".
 re2 = ["google-re2>=1.1"]
-all = ["dna-sdk[postgres,sqlite,sql,re2]"]
+all = ["dna-sdk[postgres,sqlite,sql,re2,otel,mime]"]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.23",
@@ -142,6 +163,18 @@ dev = [
     # conformance suite runs for real in the CI postgres job (redundant with
     # [all] but explicit, mirroring search-sqlite).
     "dna-sdk[search-pgvector]",
+    # A face A2A é servida/consumida pelo SDK OFICIAL. O extra de PRODUÇÃO é
+    # `dna-cli[a2a]` (o código serve HTTP, e o dna-cli é quem declara faces);
+    # aqui ele entra em `dev` porque os testes moram neste pacote. Os testes que
+    # o exigem fazem `importorskip("a2a")`, então um ambiente sem ele coleta
+    # limpo — e tests/test_a2a_import_isolation.py garante que o import base do
+    # DNA continua sem tocá-lo.
+    "a2a-sdk[fastapi]>=1.1.2,<2",
+    # uvicorn: tests/test_a2a_conformance.py sobe o nosso servidor A2A de
+    # VERDADE (porta real) e deixa o cliente oficial julgá-lo. Um teste de
+    # conformidade que pula por falta de dependência é pior que nenhum — parece
+    # cobertura e não é.
+    "uvicorn>=0.30",
 ]
 
 [project.entry-points."dna.extensions"]

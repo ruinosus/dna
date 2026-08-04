@@ -34,6 +34,18 @@ _LOGGER = logging.getLogger("dna.delegation")
 #: Os formatos de retorno que o kernel declara.
 FORMATS = ("slug", "json", "text")
 
+#: Acima de quantos segundos DECLARADOS um alvo sai do request e vai para a fila.
+#:
+#: O gatilho é o `typical_seconds` que o alvo já declara no kernel — nunca uma
+#: lista de "jobs longos" mantida à mão, que é o modo de falha que este projeto
+#: viu repetidamente: a lista fica velha, ninguém percebe, e o comportamento
+#: diverge do que está escrito.
+#:
+#: A comparação é ESTRITA (`>`): exatamente no limiar ainda é síncrono. O número
+#: é arbitrário e um dia alguém vai mexer nele; que mexa sabendo de que lado a
+#: borda cai.
+DEFAULT_ASYNC_THRESHOLD_S = 30
+
 
 class DelegationRefused(Exception):
     """Uma delegação recusada, com o motivo no texto.
@@ -77,12 +89,34 @@ async def delegate(
     documents: Iterable[Mapping[str, Any]],
     run_local: Callable[[str, str], Awaitable[str]],
     call_remote: Callable[[DelegationTarget, str], Awaitable[str]],
+    enqueue: Callable[[DelegationTarget, str], Awaitable[str]] | None = None,
+    async_threshold_s: int = DEFAULT_ASYNC_THRESHOLD_S,
 ) -> dict:
     """Delegar `request` a `target_name`, em nome de `delegator`.
 
     Recusa (nunca devolve silenciosamente) quando o alvo não está no roster —
     o que cobre, pela política, tanto "o delegador não o listou" quanto "o alvo
     não aceita este delegador".
+
+    ── O terceiro transporte ────────────────────────────────────────────────
+
+    Um alvo que declara `typical_seconds` ACIMA de `async_threshold_s` sai do
+    request: `enqueue` grava o trabalho e devolve um identificador, e o chamador
+    responde na hora. Isso existe porque uma delegação longa hoje segura a
+    conexão inteira — e, se o cliente desconectar, o trabalho é DESCARTADO, não
+    apenas perdido de vista.
+
+    Duas degradações deliberadas, e nenhuma é descuido:
+
+    - **Alvo sem `typical_seconds`** → síncrono. Ausência de declaração não vira
+      "provavelmente longo"; na dúvida, o caminho conhecido.
+    - **Sem `enqueue`** → síncrono, mesmo para alvo longo. Um deployment sem
+      worker continua funcionando como hoje; recusar transformaria "ainda não
+      temos fila" em "a feature quebrou".
+
+    A política decide ANTES de qualquer transporte, o assíncrono inclusive:
+    enfileirar sem autorização seria pior que rodar sem autorização, porque fica
+    gravado e roda depois, quando ninguém está olhando.
     """
     roster = {t.name: t for t in targets_for(delegator, documents)}
     target = roster.get(target_name)
@@ -93,6 +127,23 @@ async def delegate(
             f"aceita este delegador em delegation_target_for.agents). "
             f"Alvos disponíveis: {sorted(roster) or 'nenhum'}"
         )
+
+    typical = target.typical_seconds
+    if enqueue is not None and typical is not None and typical > async_threshold_s:
+        run_id = await enqueue(target, request)
+        _LOGGER.info(
+            "delegation queued",
+            extra={"delegator": delegator, "target": target_name, "run_id": run_id},
+        )
+        # Sem `result`: não há resultado ainda, e inventá-lo seria mentir sobre
+        # um trabalho que nem começou. Passar o id por `parse_result` levantaria
+        # em `format=json` e o disfarçaria de resultado em `format=slug`.
+        return {
+            "target": target.name,
+            "transport": "queued",
+            "format": target.format,
+            "run_id": run_id,
+        }
 
     if target.kind == "RemoteAgent":
         raw = await call_remote(target, request)

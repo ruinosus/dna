@@ -191,6 +191,22 @@ class DefinitionWriteResponse(BaseModel):
     overridden: bool
 
 
+class RegisteredKindView(BaseModel):
+    """``GET /v1/kinds/registry/{kind}`` — the registered Kind's descriptor:
+    the JSON ``schema`` a form derives validation from and the ``ui_schema``
+    widget hints it renders with. Product data model, not tenant data — the
+    same answer for every caller (contrast: the authored-Kind door filters)."""
+
+    kind: str
+    plane: str = "composition"
+    #: The WIRE name (see ``AuthoredKindDetail.schema``): a JSON Schema field
+    #: is called ``schema``. The pydantic shadow warning is silenced narrowly
+    #: in the cli ``pyproject.toml``, beside the two entries already there.
+    schema: dict[str, Any] = Field(default_factory=dict)
+    ui_schema: dict[str, Any] = Field(default_factory=dict)
+    docs: str | None = None
+
+
 # ── Kind authoring (the dedicated door — writes an INERT KindDefinition) ────
 
 
@@ -207,6 +223,11 @@ class AuthorKindResponse(BaseModel):
     #: accepted — there is no request field it could have come from.
     proposed_by: str | None = None
     version: str | None = None
+    #: The authored JSON Schema, ECHOED (wire name, like the two other doors —
+    #: shadow warning silenced narrowly in pyproject). The MCP Apps kind-draft
+    #: card renders its editable rows from this echo; dropping it here would
+    #: violate the fidelity contract (FastAPI silently strips unmodeled keys).
+    schema: dict[str, Any] | None = None
 
 
 class ApproveKindResponse(BaseModel):
@@ -915,6 +936,73 @@ class RegisterArtifactResponse(BaseModel):
     scope: str
     workspace_id: str
     artifact: ArtifactSummary
+
+
+# ── the generic, kubernetes-shaped document write ───────────────────────────
+#
+# POST /v1/kinds/{kind}/documents — the path names the Kind (the k8s
+# convention this route follows: "kind is inferred from the endpoint the
+# client submits to"), the body carries only what k8s calls `metadata`/`spec`.
+
+
+class WriteKindDocumentRequest(BaseModel):
+    """``POST /v1/kinds/{kind}/documents`` — the document to write.
+
+    Deliberately narrow: no ``scope``, no ``claims`` anywhere on this model —
+    neither is reachable through this route's body (identity/scope are never
+    caller input here; see the route for the full reasoning).
+
+    ``kind`` is OPTIONAL and, when given, MUST equal the path's ``{kind}`` —
+    a caller naming a DIFFERENT Kind in the body is refused (400) rather than
+    the path or the body silently winning. Two sources stating one fact is
+    exactly the defect this route exists to close.
+
+    ``source_sha256``, when given, cites the ``SourceArtifact`` (by content
+    address) this document was extracted from — the runtime closes the
+    provenance edge (``derived_refs``) server-side."""
+
+    metadata: dict[str, Any]
+    spec: dict[str, Any]
+    kind: str | None = None
+    source_sha256: str | None = None
+
+
+class ListKindDocumentsResponse(BaseModel):
+    """``GET /v1/kinds/{kind}/documents`` — uma página de documentos do Kind.
+
+    `documents` é a linha como o kernel a moldou: `{"name": …}` sem projeção, e
+    `{"name": …, "spec": {…}}` com `fields`. `projected` ecoa o que foi pedido,
+    para um leitor distinguir uma página de nomes de uma projetada — sem isso,
+    um `spec` ausente seria ambíguo entre "não pedi" e "não tem".
+
+    `has_more` é respondido buscando UMA linha a mais, não adivinhado a partir
+    de a página ter vindo cheia."""
+
+    scope: str
+    kind: str
+    api_version: str
+    documents: list[dict[str, Any]]
+    count: int
+    offset: int
+    has_more: bool
+    projected: list[str] | None = None
+
+
+class WriteKindDocumentResponse(BaseModel):
+    """``POST /v1/kinds/{kind}/documents`` — the written document. ``scope``
+    is DERIVED (there is no ``scope`` field on the request to have supplied
+    one from)."""
+
+    scope: str
+    kind: str
+    api_version: str
+    name: str
+    tenant: str | None = None
+    version: str | None = None
+    created: bool
+    merged: bool
+    etag: str | None = None
+    source_sha256: str | None = None
 
 
 class ProvisionWorkspaceOwnerResponse(BaseModel):

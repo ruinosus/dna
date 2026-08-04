@@ -45,6 +45,59 @@ uv run --no-project pytest tests -q
 python3 scripts/brand_guard.py
 ```
 
+## Release (the version lives in FOUR files, six values)
+
+A release is a tag; the tag drives three workflows. Before tagging, the version
+must agree **everywhere** — a mismatch does not fail the build, it fails the
+publish, and one of the three workflows already fails on every release for
+exactly this reason (see below).
+
+| file | value(s) |
+|---|---|
+| `packages/sdk-py/pyproject.toml` | `version` |
+| `packages/cli/pyproject.toml` | `version`, **plus** the `dna-sdk>=X,<Y` ceiling **twice** — once in `dependencies`, once repeated in a comment further down |
+| `packages/client-py/pyproject.toml` | `version` |
+| `packages/client-ts/package.json` | `version` |
+
+**Minor moves the ceiling; patch does not.** The comment that repeats the
+ceiling has gone stale before — a ceiling that disagrees with its own comment is
+a lie that compiles, so grep for the OLD value after bumping and expect **zero**
+hits.
+
+⚠️ **`release-client` fails on EVERY release today.** It asserts the tag matches
+both client versions, and the clients sit at `0.26.0` while the SDK is at
+`0.38.0` — they have never been in lockstep, and the workflow fires on every
+`v*` tag. Verified failing identically at 0.35.3, 0.36.0, 0.37.0, 0.37.1 and
+0.38.0. **Do not spend time debugging it as if a release broke it.** The real fix
+is one of: give the clients their own tag pattern (`client-v*`), or bring them
+into the lockstep. A permanently red guard is worse than no guard — nobody reads
+it.
+
+**After tagging**, wait on the **PyPI SIMPLE index**, never the JSON API:
+
+```bash
+curl -s -H "Accept: application/vnd.pypi.simple.v1+json" \
+  https://pypi.org/simple/dna-sdk/ | grep -o "dna_sdk-<version>"
+```
+
+And wait with SLACK after it answers: the index responding to **you** does not
+mean it responds to a CI runner. A downstream CI hit a stale CDN edge five
+minutes after 0.38.0 published and failed to resolve `dna-cli` — the install
+step, not the tests. A cold `uv pip install --no-cache` into a fresh venv is the
+check that the package is actually **served**, not merely listed.
+
+## Gotcha: `pytest` needs `uv run`
+
+Bare `python -m pytest` does not work in this repo — the ambient interpreter has
+no pytest, and a shared venv elsewhere on the machine may carry a STALE
+`dna-sdk` install whose entry points silently generate wrong docs (it briefly
+made a Kind disappear from the generated reference). Always:
+
+```bash
+cd packages/sdk-py && uv run python -m pytest tests -q
+cd packages/sdk-py && uv run python ../../scripts/<guard>.py
+```
+
 ## Conventions
 
 - **Behavior that crosses a boundary is golden-locked.** Public API

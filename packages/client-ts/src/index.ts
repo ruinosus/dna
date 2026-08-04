@@ -366,6 +366,137 @@ export class DnaClient {
     );
   }
 
+  /**
+   * The descriptor of a REGISTERED Kind — its JSON `schema` plus the
+   * `ui_schema` widget hints.
+   *
+   * The registry sibling of {@link getAuthoredKind}: a registered Kind is the
+   * PRODUCT's data model (the same for every caller, holding nobody's
+   * content), so this door does not filter. It exists so a form can DERIVE
+   * validation (min/max, enums, required) from the schema instead of
+   * hand-copying constraints that then drift from the kernel's.
+   *
+   * 404 for a Kind the runtime does not register.
+   */
+  async getRegisteredKind(kind: string, query?: { scope?: string }) {
+    return this.unwrap(
+      await this.raw.GET("/v1/kinds/registry/{kind}", {
+        params: { path: { kind }, query },
+      }),
+    );
+  }
+
+  // ── the generic, kubernetes-shaped document write ────────────────────────
+
+  /**
+   * List the documents of `kind` — the READ face of the generic door.
+   *
+   * The write ({@link writeKindDocument}) accepted any Kind, but reading back
+   * only worked for the Kinds someone had hand-written a route for
+   * (`/v1/memories`, `/v1/projects`, …). Whoever wrote through the generic
+   * door could not read through it, and found that out AFTER writing.
+   *
+   * `fields` (dotted paths; an unprefixed one resolves under `spec.`) pushes
+   * the PROJECTION down to the kernel. Without it, answering "which ones are
+   * open" costs 1 + N calls — list the names, then read each. On Postgres the
+   * projection becomes a SELECT and the row travels trimmed.
+   *
+   * An unknown Kind is 404 NAMING it, the same answer the write gives. An
+   * empty list from a Kind that exists is 200 with `documents: []` — "exists
+   * and holds nothing" is an answer, and conflating it with "does not exist"
+   * would make a screen say *error* where it should say *none yet*.
+   *
+   * Like the write, no `scope` parameter: identity and scope are never caller
+   * input on this route.
+   */
+  async listKindDocuments(
+    kind: string,
+    opts?: {
+      tenant?: string;
+      apiVersion?: string;
+      limit?: number;
+      offset?: number;
+      fields?: string[];
+      orderBy?: string[];
+    },
+  ) {
+    return this.unwrap(
+      await this.raw.GET("/v1/kinds/{kind}/documents", {
+        params: {
+          path: { kind },
+          query: {
+            tenant: opts?.tenant,
+            api_version: opts?.apiVersion,
+            limit: opts?.limit,
+            offset: opts?.offset,
+            // CSV on the wire: the server splits on comma. An absent list stays
+            // `undefined` so an omitted projection means "the whole document",
+            // not "no fields" — an empty CSV would read as the latter.
+            fields: opts?.fields?.length ? opts.fields.join(",") : undefined,
+            order_by: opts?.orderBy?.length ? opts.orderBy.join(",") : undefined,
+          },
+        },
+      }),
+    );
+  }
+
+  /**
+   * Write one document of `kind` — the generic door, kubernetes-shaped: the
+   * endpoint names the Kind (applying a CRD creates the endpoint that serves
+   * it; `kind` is inferred from where the client submits, never re-stated
+   * ambiguously), the body is exactly `{ metadata, spec }` plus an optional
+   * provenance citation.
+   *
+   * `metadata.name` is REQUIRED — a blank/absent one is 400. The server
+   * validates `spec` against the Kind's REGISTERED JSON Schema before writing
+   * (like the Kubernetes API server since 1.25), and names the offending
+   * field on refusal (400 — unknown property, or a missing required one). A
+   * BOOTSTRAP Kind (Genome / LayerPolicy / KindDefinition) is refused (403) —
+   * the generic write's own gate, untouched here. An authored-but-unapproved
+   * Kind and a Kind nobody ever authored answer the SAME 404 naming it: there
+   * is no third, more-specific answer visible from this door. A stale
+   * `ifMatch` is 409.
+   *
+   * `sourceSha256` (optional) cites the `SourceArtifact` (by content address)
+   * this document was extracted from; the server closes the `derived_refs`
+   * provenance edge, preserving every OTHER document already recorded there
+   * and updating THIS one's own entry in place on a re-write rather than
+   * duplicating it. A citation naming no registered artifact under `tenant`
+   * is 400.
+   *
+   * There is deliberately no `scope` parameter and no `claims` parameter
+   * here — identity and scope are never caller input on this route (see the
+   * server route's docstring). Hence a bespoke options type rather than
+   * {@link ScopeTenant}: `scope` has no home on this call.
+   */
+  async writeKindDocument(
+    kind: string,
+    metadata: Record<string, unknown>,
+    spec: Record<string, unknown>,
+    opts?: {
+      sourceSha256?: string;
+      tenant?: string;
+      apiVersion?: string;
+      merge?: boolean;
+      ifMatch?: string;
+    },
+  ) {
+    return this.unwrap(
+      await this.raw.POST("/v1/kinds/{kind}/documents", {
+        params: {
+          path: { kind },
+          query: {
+            tenant: opts?.tenant,
+            api_version: opts?.apiVersion,
+            merge: opts?.merge,
+            if_match: opts?.ifMatch,
+          },
+        },
+        body: { metadata, spec, source_sha256: opts?.sourceSha256 },
+      }),
+    );
+  }
+
   // ── definitions (bundle entries — fork a bundle-file, plane B) ───────────
 
   /**

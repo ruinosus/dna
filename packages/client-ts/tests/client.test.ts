@@ -190,6 +190,30 @@ describe("DnaClient", () => {
     expect(new URL(calls[5]!.url).pathname).toBe("/v1/projects/proj/members/user%40x.y");
   });
 
+  test("writeKindDocument: kind in the path, {metadata,spec} in the body, no scope", async () => {
+    const { fetchImpl, calls } = stub({ ok: 1 }, 201);
+    const dna = new DnaClient({ baseUrl: BASE, fetch: fetchImpl });
+
+    await dna.writeKindDocument(
+      "Contrato",
+      { name: "c1" },
+      { titulo: "Foo" },
+      { sourceSha256: "a".repeat(64), tenant: "w1", ifMatch: "etag-1" },
+    );
+
+    expect(calls[0]!.method).toBe("POST");
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/v1/kinds/Contrato/documents");
+    expect(url.searchParams.get("tenant")).toBe("w1");
+    expect(url.searchParams.get("if_match")).toBe("etag-1");
+    expect(url.searchParams.has("scope")).toBe(false);
+    expect(JSON.parse(calls[0]!.body!)).toEqual({
+      metadata: { name: "c1" },
+      spec: { titulo: "Foo" },
+      source_sha256: "a".repeat(64),
+    });
+  });
+
   test("workspace-boundary routes do NOT receive the default scope/tenant", async () => {
     // The workspace boundary is resolved from the caller's VERIFIED identity, so
     // a client-level tenant default must never leak onto these routes and imply
@@ -228,6 +252,8 @@ const COVERED: Record<string, string> = {
   "GET /v1/genome": "genomeView",
   "GET /v1/kinds": "listAuthoredKinds",
   "GET /v1/kinds/{kind}": "getAuthoredKind",
+  "GET /v1/kinds/registry/{kind}": "getRegisteredKind",
+  "GET /v1/kinds/{kind}/documents": "listKindDocuments",
   "GET /v1/definitions/{kind}/{name}": "readDefinition",
   "GET /v1/definitions/{kind}/{name}/entries": "listBundleEntries",
   "GET /v1/definitions/{kind}/{name}/entries/{entry}": "readBundleEntry",
@@ -255,6 +281,7 @@ const COVERED: Record<string, string> = {
   "POST /v1/kinds": "authorKind",
   "POST /v1/kinds/{kind}/approve": "approveKind",
   "POST /v1/kinds/{kind}/revoke": "revokeKind",
+  "POST /v1/kinds/{kind}/documents": "writeKindDocument",
   "POST /v1/memories": "rememberMemory",
   "POST /v1/memories/import": "importMemories",
   "DELETE /v1/memories/{name}": "deleteMemory",

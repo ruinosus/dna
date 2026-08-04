@@ -30,6 +30,7 @@ from dna.extensions.intel import dedup as dedup_core
 from dna.extensions.intel import feedback as feedback_core
 from dna.extensions.intel.analyzer import Analyzer, SeedAnalyzer
 from dna.extensions.intel.ranker import rank_and_suppress, score as score_candidate
+from dna.extensions.intel.scoring import IntelScoring, resolve_intel_scoring
 
 logger = logging.getLogger("dna.intel.engine")
 
@@ -185,6 +186,17 @@ async def run_pass(
         )
 
     threshold = float(src_spec.get("threshold", 0.6))
+    # O tuning do MOTOR (`CognitivePolicy.intel`, #36) — resolvido uma vez por
+    # pass, com cache TTL do próprio cognitive_policy_spec. Falha → defaults:
+    # política é refinamento, nunca derruba o pass.
+    try:
+        from dna.memory.verbs import cognitive_policy_spec
+
+        scoring = resolve_intel_scoring(
+            await cognitive_policy_spec(kernel, scope, tenant)
+        )
+    except Exception:  # noqa: BLE001
+        scoring = IntelScoring()
     context = {
         "source_name": source_name,
         "scope": scope,
@@ -197,6 +209,27 @@ async def run_pass(
     # The analyzer is pure (no kernel) — so the engine, which owns kernel I/O,
     # pre-fetches them into context['documents'] (fail-soft, bounded). The
     # SeedAnalyzer ignores this; the LLMAnalyzer folds it into its prompt.
+    # A VOZ do analyzer (#33): os PromptTemplates bem-conhecidos do workspace
+    # sobrescrevem os defaults do LLMAnalyzer. O engine resolve (ele tem o
+    # kernel) e o analyzer continua puro — o mesmo desenho do
+    # `context['documents']` abaixo. Fail-soft: sem doc, a voz default vale.
+    overrides: dict[str, str] = {}
+    for chave, nome_template in (
+        ("system", "intel-analysis-system"),
+        ("template", "intel-analysis"),
+    ):
+        try:
+            doc_t = await kernel.get_document(
+                scope, "PromptTemplate", nome_template, tenant=tenant
+            )
+            corpo = ((doc_t or {}).get("spec") or {}).get("body")
+            if isinstance(corpo, str) and corpo.strip():
+                overrides[chave] = corpo
+        except Exception:  # noqa: BLE001 — template é refinamento
+            pass
+    if overrides:
+        context["prompt_overrides"] = overrides
+
     if src_spec.get("type") == "scope":
         target_scope = src_spec.get("uri") or source_name
         context["documents"] = await _gather_scope_documents(
@@ -208,7 +241,7 @@ async def run_pass(
     # 1. Base actionability score (+ inspectable rationale) for every candidate.
     scored: list[dict[str, Any]] = []
     for cand in candidates:
-        s = score_candidate(cand, src_spec)
+        s = score_candidate(cand, src_spec, scoring=scoring)
         annotated = dict(cand)
         annotated["score"] = s.value
         annotated["score_rationale"] = s.rationale
@@ -217,7 +250,7 @@ async def run_pass(
     # 2. Feedback loop (s-intel-feedback-loop): past dispositions tune the score
     #    — dismissed-similar candidates lose score (effective threshold rises),
     #    actioned-similar gain a reinforcement bump. No feedback engrams → no-op.
-    await _apply_feedback(kernel, scored, source_name, scope, tenant)
+    await _apply_feedback(kernel, scored, source_name, scope, tenant, scoring=scoring)
 
     # 3. Partition at the (feedback-adjusted) threshold.
     scored.sort(key=lambda c: c.get("score", 0.0), reverse=True)
@@ -231,7 +264,9 @@ async def run_pass(
 
     # 4. Dedup (s-intel-dedup-memory): drop candidates already surfaced for this
     #    source (any state). Re-running a pass yields 0 new insights.
-    kept, deduped = await _dedup_candidates(kernel, kept, source_name, scope, tenant)
+    kept, deduped = await _dedup_candidates(
+        kernel, kept, source_name, scope, tenant, scoring=scoring
+    )
 
     written: list[dict[str, Any]] = []
     for cand in kept:
@@ -393,7 +428,7 @@ async def _load_feedback_memories(
 
 async def _apply_feedback(
     kernel: Any, candidates: list[dict[str, Any]], source_name: str,
-    scope: str, tenant: str | None,
+    scope: str, tenant: str | None, *, scoring: IntelScoring | None = None,
 ) -> None:
     """Tune each candidate's score by the source's past dispositions (in place).
 
@@ -428,8 +463,12 @@ async def _apply_feedback(
     for cand, cv in zip(candidates, cand_vecs):
         sim_dismissed = max((cosine_similarity(cv, v) for v in dismissed_vecs), default=0.0)
         sim_actioned = max((cosine_similarity(cv, v) for v in actioned_vecs), default=0.0)
+        pol = scoring or IntelScoring()
         adjusted, notes = feedback_core.adjust_score(
             float(cand.get("score", 0.0)), sim_dismissed, sim_actioned,
+            threshold=pol.feedback_sim_threshold,
+            dismiss_penalty=pol.feedback_dismiss_penalty,
+            action_bonus=pol.feedback_action_bonus,
         )
         if notes:
             cand["score"] = adjusted
@@ -440,7 +479,7 @@ async def _apply_feedback(
 
 async def _dedup_candidates(
     kernel: Any, candidates: list[dict[str, Any]], source_name: str,
-    scope: str, tenant: str | None,
+    scope: str, tenant: str | None, *, scoring: IntelScoring | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Split threshold-clearing candidates into ``(fresh, deduped)`` against the
     insights already surfaced for this source (any state).
@@ -476,6 +515,7 @@ async def _dedup_candidates(
 
     fresh_idx, dup_idx, reasons = dedup_core.dedup_partition(
         cand_keys, max_cosines, existing_keys,
+        cosine_threshold=(scoring or IntelScoring()).dedup_cosine_threshold,
     )
     fresh = [candidates[i] for i in fresh_idx]
     deduped = [

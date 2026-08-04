@@ -580,7 +580,8 @@ is it.
 A [`RemoteAgent`](../reference/kinds/record.md#remoteagent)
 (`a2a-remote-agent`) is the Agent Card of a third-party A2A agent, held as a
 DNA document: `name`, `description` and `supported_interfaces` (the A2A 1.0
-transport list — `jsonrpc` / `grpc` / `http+json`, each with its own `url`)
+interface list — each entry a `protocol_binding` of `JSONRPC` / `GRPC` /
+`HTTP+JSON` with its own `url`, plus an optional `protocol_version`)
 come straight from the A2A spec in snake_case; `skills`, `capabilities` and
 `security_schemes` describe what it can do and how to authenticate to it.
 
@@ -622,6 +623,87 @@ which is a product decision, not a schema one. `verified` is reserved for when
 that lands. A plain boolean `signed` would make "we didn't check" look
 identical to "there was nothing to check," and those are different states a
 reviewer needs to be able to tell apart.
+
+### AgentGrant
+
+A [`AgentGrant`](../reference/kinds/record.md#agentgrant) (`a2a-agent-grant`) is
+the **inbound twin** of `RemoteAgent`, and the two only make sense as a pair:
+
+| | says |
+|---|---|
+| `RemoteAgent` | *we may send data over there* |
+| `AgentGrant` | *they may act on our behalf* |
+
+A third party's agent — Claude, an integration, a partner's automation — arrives
+holding a token of **one of your users**, and acts as that user. Whether it may
+is not a property of the token: a valid token only proves the user signed in.
+Without a grant, "the user authorized Acme" and "the user is logged in" are the
+same statement, and a permissions screen built on that would display a
+permission that does not exist.
+
+**Three properties carry the design.**
+
+**`state` is tri-state** — `pending`, `active`, `revoked` — for the same reason
+`RemoteAgent.signature_state` is. A boolean `granted` would make *"it asked and
+nobody decided"* look identical to *"denied"*, and those are different: the first
+needs to surface on a screen so a human can decide; the second was already
+decided and asks for nothing.
+
+**What was REQUESTED and what was GRANTED are separate fields.**
+`requested_scope_kinds` is what the agent asked for; `scope_kinds` is what a
+human allowed. One field would make asking equal to receiving. An agent that
+declares nothing leaves the request empty and nothing is pre-selected — silence
+never becomes permission, not even a suggestion of one.
+
+**Everything that is not `active` closes.** Absent, pending, revoked,
+malformed and *unrecognised* all deny. The allowed list has exactly one entry
+and the rest is the rest — a gate written the other way around (denying what it
+recognises) would open for whatever it does not, including a state some future
+version adds, and it would open silently.
+
+`scope_kinds` speaks the same vocabulary as `RemoteAgent.data_scope.kinds` on
+purpose: it is the same question in both directions, and answering it in two
+different shapes would be a trap for whoever reads them side by side.
+
+The document never carries a credential — the schema is closed precisely so a
+token cannot be attached to a grant. Who may act, and over what, lives here; the
+secret they authenticate with belongs to the deployment.
+
+### AgentCatalogEntry
+
+An [`AgentCatalogEntry`](../reference/kinds/record.md#agentcatalogentry)
+(`a2a-agent-catalog-entry`) gives a **human-readable name to an agent whose
+`client_id` is opaque** — and it is deliberately the *lesser* half of agent
+identity.
+
+The primary mechanism is **CIMD** (Client ID Metadata Documents): the `client_id`
+IS an HTTPS URL serving the client's metadata, so the name can only be declared
+at `acme.com` by whoever controls `acme.com`, and DNS plus TLS already prove
+that. It is the browser padlock's mechanism — you do not trust the text, you
+trust where it came from.
+
+This Kind covers what CIMD cannot: legacy clients with opaque ids, which publish
+no metadata and which nothing can anchor.
+
+**Two rules keep the difference visible, and both are structural.**
+
+`client_id` **may not be an HTTPS URL** — the schema refuses it. A client that
+publishes metadata already has an anchored identity, and letting someone type a
+name over it would swap proof for typing. That swap is exactly the mistake an
+earlier design made without noticing: it said *"the name must come from whoever
+verified"* and then proposed that the verifier be a person filling in a form.
+Typing is not verification; it protects against the caller lying, not against
+the registrar being wrong or deceived.
+
+`registered_by` is **required**, because it is what makes the label possible. A
+consent screen can honestly say *"Sprint Assistant · registered by Maria"* — a
+sentence the user can weigh. *"Sprint Assistant"* alone, on an opaque id, is a
+claim nobody stands behind; sitting next to an anchored name, it teaches the
+reader to trust both the same way.
+
+The entry **names, it does not authorize**. There is no scope, no state, no
+grant field: authorization lives in `AgentGrant`, and registering an agent in a
+catalog must never be a path to granting it access.
 
 ---
 

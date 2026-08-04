@@ -34,14 +34,21 @@ from importlib import resources
 
 __all__ = [
     "UI_MEMORY_LIST_URI",
+    "UI_KIND_DRAFT_URI",
     "MCP_APP_MIME",
     "HOST_DESIGN_TOKENS",
     "memory_list_card_html",
+    "kind_draft_card_html",
 ]
 
 #: The ``ui://`` scheme resource id for the memory-list card template. Stable —
 #: hosts key their prefetch/render cache on it.
 UI_MEMORY_LIST_URI = "ui://dna/memory-list"
+
+#: O card INTERATIVO de Kind autorado (Kind Studio F3) — o primeiro MCP App
+#: bidirecional próprio: renderiza o schema como linhas editáveis e reautora
+#: via ``callServerTool`` (a aprovação continua humana, no portal).
+UI_KIND_DRAFT_URI = "ui://dna/kind-draft"
 
 #: The MCP Apps profile mimeType (SEP-1865) the ``ui://dna/memory-list``
 #: resource is served with — what marks it a first-class MCP App template, not
@@ -385,3 +392,160 @@ def memory_list_card_html() -> str:
         "</body></html>"
     )
 
+_KIND_CARD_JS = """
+(function () {
+  var App = (globalThis.DnaExtApps || {}).App;
+  if (!App) return;
+  var body = document.getElementById("dna-body");
+  var note = document.getElementById("dna-note");
+  var TYPES = ["string", "integer", "number", "boolean", "array", "date"];
+  var state = null; // {kind, fields:[{name,type,required,description}]}
+  function esc(t) {
+    return String(t == null ? "" : t).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+  function typeOf(frag) {
+    frag = frag || {};
+    if (frag.type === "string" && frag.format === "date") return "date";
+    return TYPES.indexOf(frag.type) >= 0 ? frag.type : "string";
+  }
+  function fromResult(data) {
+    data = data || {};
+    var schema = data.schema || {};
+    var props = schema.properties || {};
+    var req = schema.required || [];
+    var fields = Object.keys(props).map(function (n) {
+      return {
+        name: n,
+        type: typeOf(props[n]),
+        required: req.indexOf(n) >= 0,
+        description: (props[n] || {}).description || "",
+      };
+    });
+    return { kind: data.kind || "", fields: fields };
+  }
+  function toSchema(st) {
+    var properties = {};
+    var required = [];
+    st.fields.forEach(function (f) {
+      var frag = { description: f.description };
+      if (f.type === "date") { frag.type = "string"; frag.format = "date"; }
+      else if (f.type === "array") { frag.type = "array"; frag.items = { type: "string" }; }
+      else frag.type = f.type;
+      properties[f.name] = frag;
+      if (f.required) required.push(f.name);
+    });
+    var schema = { type: "object", properties: properties };
+    if (required.length) schema.required = required.sort();
+    return schema;
+  }
+  function render() {
+    if (!state || !state.kind) {
+      body.innerHTML = '<p class="dna-empty">Waiting for the authored Kind…</p>';
+      return;
+    }
+    var rows = state.fields.map(function (f, i) {
+      var opts = TYPES.map(function (t) {
+        return '<option value="' + t + '"' + (t === f.type ? " selected" : "") + ">" + t + "</option>";
+      }).join("");
+      return (
+        '<div class="dna-krow" data-i="' + i + '">' +
+        '<code>' + esc(f.name) + "</code>" +
+        '<select data-k="type" aria-label="type of ' + esc(f.name) + '">' + opts + "</select>" +
+        '<label><input type="checkbox" data-k="required"' + (f.required ? " checked" : "") + ">req</label>" +
+        '<input type="text" data-k="description" value="' + esc(f.description) + '" aria-label="description of ' + esc(f.name) + '">' +
+        "</div>"
+      );
+    }).join("");
+    body.innerHTML =
+      '<p class="dna-ktitle">Kind <b>' + esc(state.kind) + "</b> — awaiting human approval in the portal</p>" +
+      '<div class="dna-krows">' + rows + "</div>" +
+      '<button id="dna-reauthor" class="dna-kbtn">Re-author with these edits</button>';
+    body.querySelectorAll(".dna-krow").forEach(function (row) {
+      var i = Number(row.getAttribute("data-i"));
+      row.querySelectorAll("[data-k]").forEach(function (el) {
+        el.addEventListener("change", function () {
+          var k = el.getAttribute("data-k");
+          if (k === "required") state.fields[i].required = el.checked;
+          else state.fields[i][k] = el.value;
+        });
+      });
+    });
+    var btn = document.getElementById("dna-reauthor");
+    btn.addEventListener("click", function () {
+      btn.disabled = true;
+      note.textContent = "Re-authoring…";
+      app
+        .callServerTool({ name: "author_kind", arguments: { kind: state.kind, schema: toSchema(state) } })
+        .then(function () {
+          note.textContent = "Re-authored — still awaiting human approval in the portal.";
+        })
+        .catch(function (e) {
+          note.textContent = "Refused: " + String((e && e.message) || e).slice(0, 200);
+        })
+        .then(function () { btn.disabled = false; });
+    });
+  }
+  function dataOf(result) {
+    if (result && typeof result.structuredContent === "object") return result.structuredContent;
+    if (result && typeof result.structured_content === "object") return result.structured_content;
+    return result || {};
+  }
+  var app = new App({ name: "dna-kind-draft", version: "1" });
+  app.ontoolresult = function (result) {
+    state = fromResult(dataOf(result));
+    note.textContent = "";
+    render();
+  };
+  app.connect();
+  render();
+})();
+"""
+
+
+@cache
+def kind_draft_card_html() -> str:
+    """O template MCP Apps do Kind autorado (Kind Studio F3) — estático,
+    público, sem dado embutido, MESMOS sentinelas da lib vendorada.
+
+    INTERATIVO, e o primeiro: o host empurra o resultado de ``author_kind``
+    (que ecoa o ``schema``), o card renderiza linhas editáveis
+    (nome/tipo/obrigatório/descrição) e reautora via ``callServerTool`` —
+    o documento continua INERTE; a aprovação é humana, no portal, e o card
+    o diz em toda renderização. Um host sem a extensão ignora a declaração
+    e segue lendo o ``content`` textual, byte-idêntico."""
+    return (
+        "<!doctype html>"
+        '<html lang="en"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        "<title>DNA · Kind</title><style>"
+        + _CARD_CSS
+        + ".dna-krow{display:grid;grid-template-columns:minmax(6rem,.8fr) auto auto 1.4fr;"
+        "gap:.45rem;align-items:center;padding:.3rem 0}"
+        ".dna-krow code{font-size:.8rem;overflow:hidden;text-overflow:ellipsis}"
+        ".dna-krow select,.dna-krow input[type=text]{font:inherit;font-size:.78rem;"
+        "min-width:0;padding:.15rem .35rem}"
+        ".dna-krow label{font-size:.72rem;white-space:nowrap}"
+        ".dna-ktitle{margin:.1rem 0 .4rem}"
+        ".dna-kbtn{margin-top:.55rem;font:inherit;font-size:.8rem;font-weight:600;"
+        "padding:.3rem .7rem;cursor:pointer}"
+        "</style></head><body>"
+        '<div class="dna-card">'
+        '<div class="dna-head"><span class="dna-mark">DNA</span>'
+        '<span class="dna-htitle">Kind</span></div>'
+        '<div id="dna-body"></div>'
+        '<p id="dna-note" class="dna-empty" role="status"></p>'
+        '<footer class="dna-foot">authored INERT · a human approves it in '
+        "the portal</footer>"
+        "</div>"
+        "<script>\n"
+        + _EXT_APPS_BEGIN
+        + "\n"
+        + _ext_apps_js()
+        + "\n"
+        + _EXT_APPS_END
+        + "\n</script>"
+        "<script>\n" + _KIND_CARD_JS + "</script>"
+        "</body></html>"
+    )

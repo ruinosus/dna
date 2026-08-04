@@ -46,6 +46,14 @@ class DelegationTarget:
     purpose: str | None = None
     data_scope_kinds: tuple[str, ...] | None = None
     interfaces: tuple[Mapping[str, Any], ...] = ()
+    #: `capabilities.streaming` do Card do remoto, quando ele o declara.
+    #:
+    #: `None` = não declarado, e é diferente de `False`. O cliente A2A escolhe o
+    #: caminho — streaming ou não — a partir do que o Card ANUNCIA; sem carregar
+    #: este fato até aqui, toda chamada cairia no caminho não-streaming e o
+    #: progresso (a razão de `call_remote` aceitar `on_event`) nunca chegaria.
+    #: Num alvo LOCAL não se aplica.
+    streaming: bool | None = None
 
 
 def may_delegate(
@@ -100,6 +108,7 @@ def targets_for(
         if not may_delegate(delegator, team, accepts, name):
             continue
         scope = _spec(doc).get("data_scope")
+        capabilities = _spec(doc).get("capabilities")
         out.append(
             DelegationTarget(
                 name=name,
@@ -114,6 +123,11 @@ def targets_for(
                     else None
                 ),
                 interfaces=tuple(_spec(doc).get("supported_interfaces") or ()),
+                streaming=(
+                    capabilities.get("streaming")
+                    if isinstance(capabilities, Mapping)
+                    else None
+                ),
             )
         )
     return out
