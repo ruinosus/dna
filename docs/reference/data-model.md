@@ -46,7 +46,7 @@ readable, so it is reproduced from source rather than asserted:
 
 ## Logical model — Kinds and their references
 
-83 Kinds are registered. Each is a document, not a table: a
+82 Kinds are registered. Each is a document, not a table: a
 Kind costs a YAML descriptor and zero migrations, which is the point
 of an open type system. The cost is that references between Kinds are
 not database foreign keys — they are fields holding a name.
@@ -124,7 +124,7 @@ flowchart LR
 
 ### Detail by group
 
-All 83 Kinds in one diagram is an unreadable hairball, so
+All 82 Kinds in one diagram is an unreadable hairball, so
 each group with at least 2 edges gets its
 own. A group carrying more than 20 edges is
 split again by tier, which keeps the enforced edges legible instead
@@ -580,12 +580,12 @@ rather than silently dropped, so the suppression is auditable.
 | `Tenant` | `plan` | billing/feature tier (a Tier `tier_id`), not the SDLC `Plan` Kind |
 | `Workspace` | `plan_ref` | DEPRECATED and never read — billing is per ACCOUNT (workspace → account_id → AccountPlan); also not the SDLC `Plan` Kind |
 
-### Kinds with no reference edge (25)
+### Kinds with no reference edge (24)
 
 Standalone documents — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `CopilotFlow`, `Engram`, `Genome`, `Hook`, `HtmlArtifact`, `IntelSource`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PlanBinding`, `PricingPlan`, `RemoteAgent`, `Setting`, `SourceArtifact`, `UserProfile`, `WorkspaceMembership`
+`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Engram`, `Genome`, `Hook`, `HtmlArtifact`, `IntelSource`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PlanBinding`, `PricingPlan`, `RemoteAgent`, `Setting`, `SourceArtifact`, `UserProfile`, `WorkspaceMembership`
 
 ## Physical model — the real tables
 

@@ -265,6 +265,85 @@ spec:
                 description: Points at an infra resource (a Terraform module
                   output — connection string/endpoint). Multiple slots may
                   share one ref (one physical store).
+      surfaces:
+        type: array
+        default: []
+        description: >-
+          The co-edited CANVAS SURFACES this copilot serves (F2 of
+          adr-copiloto-como-dado, dna-cloud) — the archetype measured three
+          times (spikes spike-arquetipo-*) and written once as a runtime
+          (dna-cloud `flow/` + `lib/flow/`): a screen whose form the copilot
+          manipulates through ONE validate-and-echo tool, a projection
+          middleware, a per-thread scope gate and a shared state canvas.
+          Each entry is that machine's configuration as data; the runtime
+          resolves these over its built-in registry, so a workspace can TUNE
+          a surface (its guidance template, its blocked persist tools)
+          without a deploy.
+
+          DATA-HONESTY BOUNDARY (the nine-sections lesson): entries declare
+          ONLY what the runtime consumes today. Wizard steps, gates,
+          invalidation rules and knowledge slots — the concepts the three
+          measured worlds contributed — enter WHEN the generic renderer that
+          reads them ships (recorded in the ADR as roadmap). A field nobody
+          reads is a form without wires.
+        items:
+          type: object
+          additionalProperties: false
+          required:
+          - name
+          - state_key
+          - tool_name
+          - canvas_keys
+          properties:
+            name:
+              type: string
+              minLength: 1
+              description: The surface's identity (matches the runtime's
+                built-in registry key when overriding one).
+            state_key:
+              type: string
+              minLength: 1
+              description: The graph-state key that MARKS a thread of this
+                surface (the gate decides by STATE, never by route) and
+                anchors canvas rehydration. Must appear in `canvas_keys`.
+            tool_name:
+              type: string
+              minLength: 1
+              description: The surface's single validate-and-echo tool — the
+                model's ONLY door into the shared canvas. The tool itself is
+                code (its argument schema is the surface's contract); this
+                names it.
+            canvas_keys:
+              type: array
+              minItems: 1
+              items:
+                type: string
+                minLength: 1
+              description: EVERY state key this surface projects/rehydrates.
+                The console's rehydration allowlist derives from this — a key
+                absent here does not survive a conversation reload.
+            blocked_persist_tools:
+              type: array
+              default: []
+              items:
+                type: string
+                minLength: 1
+              description: Durable-write tools REMOVED from the model's list
+                in a thread of this surface (i-061 — "save" must not bypass
+                the draft door). Tenant-tunable via overlay.
+            guidance_template:
+              type:
+              - string
+              - 'null'
+              description: The PromptTemplate name whose body steers the
+                model toward this surface's tool (directed guidance). The
+                template is the voice-as-data catalog; this names the entry.
+            description:
+              type:
+              - string
+              - 'null'
+              description: What this surface is for — shown wherever
+                surfaces are listed.
       frontend:
         type: object
         additionalProperties: false

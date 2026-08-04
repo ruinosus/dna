@@ -474,30 +474,18 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | `serving` | object | yes | How the copilot backend is served. |
 | `serving.framework` | string |  | The self-hosted serving framework the dna.runtime port builds on; distinct from hosting.target which selects a MANAGED host (foundry/langgraph-platform/agentos). Um de: `langchain`, `maf`, `agno`, `deepagents`. |
 | `serving.transport` | string | yes | Wire protocol the copilot backend speaks. Only ag-ui (AG-UI protocol) today. Um de: `ag-ui`. |
+| `surfaces` | array |  | The co-edited CANVAS SURFACES this copilot serves (F2 of adr-copiloto-como-dado, dna-cloud) — the archetype measured three times (spikes spike-arquetipo-*) and written once as a runtime (dna-cloud `flow/` + `lib/flow/`): a screen whose form the copilot manipulates through ONE validate-and-echo tool, a projection middleware, a per-thread scope gate and a shared state canvas. Each entry is that machine's configuration as data; the runtime resolves these over its built-in registry, so a workspace can TUNE a surface (its guidance template, its blocked persist tools) without a deploy. DATA-HONESTY BOUNDARY (the nine-sections lesson): entries declare ONLY what the runtime consumes today. Wizard steps, gates, invalidation rules and knowledge slots — the concepts the three measured worlds contributed — enter WHEN the generic renderer that reads them ships (recorded in the ADR as roadmap). A field nobody reads is a form without wires. |
+| `surfaces[].blocked_persist_tools` | array |  | Durable-write tools REMOVED from the model's list in a thread of this surface (i-061 — "save" must not bypass the draft door). Tenant-tunable via overlay. |
+| `surfaces[].canvas_keys` | array | yes | EVERY state key this surface projects/rehydrates. The console's rehydration allowlist derives from this — a key absent here does not survive a conversation reload. |
+| `surfaces[].description` | string \| null |  | What this surface is for — shown wherever surfaces are listed. |
+| `surfaces[].guidance_template` | string \| null |  | The PromptTemplate name whose body steers the model toward this surface's tool (directed guidance). The template is the voice-as-data catalog; this names the entry. |
+| `surfaces[].name` | string | yes | The surface's identity (matches the runtime's built-in registry key when overriding one). |
+| `surfaces[].state_key` | string | yes | The graph-state key that MARKS a thread of this surface (the gate decides by STATE, never by route) and anchors canvas rehydration. Must appear in `canvas_keys`. |
+| `surfaces[].tool_name` | string | yes | The surface's single validate-and-echo tool — the model's ONLY door into the shared canvas. The tool itself is code (its argument schema is the surface's contract); this names it. |
 | `tenant` | object |  | Inbound-tenant handling. When propagate is true, the emitted serving layer derives tenant/oid from request headers into run-state for the mounted tools to read. |
 | `tenant.propagate` | boolean |  | Derive tenant from inbound request headers into run-state (default false). |
 | `workflow` | object |  | Optional multi-step workflow — agent-framework (MS Agent Framework) target only. When present the emitter emits a WorkflowBuilder chain of the named steps plus a workflow-level human-approval escalation node; absent, a plain single-agent app is emitted. A per-target advanced option (YAGNI for the core). |
 | `workflow.chain` | array |  | Ordered workflow step ids. Each becomes a chained agent-executor; the AG-UI adapter surfaces the id as the UI step name. |
-
-## CopilotFlow
-
-- **Alias:** `copilot-flow`
-- **apiVersion:** `github.com/ruinosus/dna/v1`
-- **Plane:** record
-
-**Spec fields**
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `blocked_persist_tools` | array |  | Durable-write tools REMOVED from the model's list in a thread of this flow (i-061 — "save" must not bypass the draft door). Tenant-tunable via overlay. |
-| `canvas_keys` | array | yes | EVERY state key this flow projects/rehydrates. The console's rehydration allowlist derives from this — a key absent here does not survive a conversation reload. |
-| `created_at` | string |  |  |
-| `description` | string \| null |  | What this flow is for — shown wherever flows are listed. |
-| `guidance_template` | string \| null |  | The PromptTemplate name whose body steers the model toward this flow's tool (the directed-guidance pattern). The template itself is the voice-as-data catalog; this names which entry this flow reads. |
-| `owner` | string |  |  |
-| `state_key` | string | yes | The graph-state key that MARKS a thread of this flow (the gate decides by STATE, never by route) and anchors canvas rehydration. Must be listed in `canvas_keys`. |
-| `tool_name` | string | yes | The flow's single validate-and-echo tool — the model's ONLY door into the shared canvas. The tool itself is code (its argument schema is the flow's contract); this names it. |
-| `updated_at` | string |  |  |
 
 ## Doc
 

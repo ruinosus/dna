@@ -1186,11 +1186,24 @@ class Kernel:
         "RecallPolicy", "DecayPolicy", "MemoryPolicy", "AllocationPolicy",
         "PaginationPolicy", "EngramStrengthPolicy", "EmbeddingProfile",
         "AffectPalette",
+        # Existiu SÓ na 0.62 (um release, zero documentos no mundo) e foi
+        # dobrado em Copilot.spec.surfaces[] na 0.63 — a crítica de nome do
+        # founder pegou a colisão (Copilot.workflow + WorkflowEvent + a
+        # indústria usando "flow" para orquestração/DAG) antes do primeiro doc.
+        "CopilotFlow",
     })
 
     #: Per-Kind migration note surfaced in the KindRetiredError message so a
     #: blocked writer learns WHERE the data went, not just that it is blocked.
     _REMOVED_KIND_NOTES: dict[str, str] = {
+        "CopilotFlow": (
+            "dobrado em Copilot.spec.surfaces[] (0.63, adr-copiloto-como-dado): "
+            "cada surface declara o contrato de uma tela co-editada — "
+            "state_key, tool_name, canvas_keys, blocked_persist_tools, "
+            "guidance_template. Escreva o doc Copilot do copiloto que serve a "
+            "tela; não há documentos CopilotFlow legados (o Kind viveu um "
+            "release, 0.62, sem nenhum doc)."
+        ),
         "OracleVerdict": "migrated to StatusReport (refactor 2026-05-11)",
         "Oracle": "never a registered Kind — UA naming convention only",
         "WorkspacePlan": (
