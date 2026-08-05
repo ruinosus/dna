@@ -426,3 +426,35 @@ def test_a_lista_de_um_Kind_VAZIO_e_200_e_nao_404(dna_dir):
         r = c.get("/v1/kinds/Contrato/documents", params={"tenant": _WID})
         assert r.status_code == 200, r.text
         assert r.json()["documents"] == []
+
+
+# ── 7. GET de UM documento, verbatim — a leitura que a lista projetada não dá
+
+
+def test_get_one_document_returns_the_spec_verbatim(dna_dir):
+    """Quem gravou pelo POST genérico lê DE VOLTA o que gravou — incluindo
+    campos que a projeção da lista (vista dos readers) descartaria num Kind
+    produzível por bundle (o caso medido: Agent.spec.description e
+    tools_requiring_confirmation, 05/08/2026)."""
+    with _client(dna_dir) as c:
+        _author_and_approve(c)
+        c.post(
+            "/v1/kinds/Contrato/documents", params={"tenant": _WID},
+            json={"metadata": {"name": "c1"}, "spec": {"titulo": "Foo"}},
+        )
+        r = c.get("/v1/kinds/Contrato/documents/c1", params={"tenant": _WID})
+        assert r.status_code == 200, r.text
+        body = r.json()
+        assert body["kind"] == "Contrato" and body["name"] == "c1"
+        assert body["document"]["spec"] == {"titulo": "Foo"}
+        assert body["etag"], "o token de concorrência viaja com a leitura"
+
+
+def test_get_one_document_404s_naming_what_is_missing(dna_dir):
+    with _client(dna_dir) as c:
+        _author_and_approve(c)
+        faltando = c.get("/v1/kinds/Contrato/documents/nao-existe", params={"tenant": _WID})
+        assert faltando.status_code == 404
+        assert "nao-existe" in faltando.json()["detail"]
+        kind_desconhecido = c.get("/v1/kinds/SemKind/documents/x", params={"tenant": _WID})
+        assert kind_desconhecido.status_code == 404

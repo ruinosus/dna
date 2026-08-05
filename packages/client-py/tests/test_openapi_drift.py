@@ -83,6 +83,7 @@ _COVERED: dict[tuple[str, str], str] = {
     ("GET", "/v1/kinds/{kind}"): "get_authored_kind",
     ("GET", "/v1/kinds/registry/{kind}"): "get_registered_kind",
     ("GET", "/v1/kinds/{kind}/documents"): "list_kind_documents",
+    ("GET", "/v1/kinds/{kind}/documents/{name}"): "get_kind_document",
     ("GET", "/v1/definitions/{kind}/{name}"): "read_definition",
     ("GET", "/v1/definitions/{kind}/{name}/entries"): "list_bundle_entries",
     ("GET", "/v1/definitions/{kind}/{name}/entries/{entry}"): "read_bundle_entry",

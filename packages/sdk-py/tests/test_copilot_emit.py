@@ -1446,3 +1446,47 @@ def test_copilot_persistence_is_backcompat_when_undeclared():
     assert "db=InMemoryDb()," in agno_agent
     assert "PostgresDb" not in agno_agent
     assert "os.environ" not in agno_agent
+
+
+def test_copilot_ctx_unions_agent_level_confirmation(tmp_path):
+    """f-meus-copilotos (2026-08-05): ``AgentSpec.tools_requiring_confirmation``
+    é o gate POR AGENTE, unido ao conjunto derivado dos Tool docs. Antes só o
+    Tool doc era lido e a política por copiloto era um campo morto — o funil
+    de criação do dna-cloud gravava e nada acontecia."""
+    import shutil
+
+    from dna.emit import build_copilot_context
+    from dna.kernel import Kernel
+
+    dst = tmp_path / ".dna"
+    shutil.copytree(_BASE, dst)
+    (dst / _SCOPE / "agents" / "confirming-agent.yaml").write_text(
+        "apiVersion: github.com/ruinosus/dna/v1\n"
+        "kind: Agent\n"
+        "metadata:\n  name: confirming-agent\n"
+        "spec:\n"
+        "  instruction: Proponha um campo por vez.\n"
+        "  description: Copiloto de intake com gate humano.\n"
+        "  tools_requiring_confirmation:\n"
+        "  - update_document_draft\n"
+        "  mcp_servers:\n"
+        "  - ref: dna-mcp\n"
+        "    allowed_tools: [recall]\n"
+    )
+    (dst / _SCOPE / "copilots" / "confirming-copilot.yaml").write_text(
+        "apiVersion: github.com/ruinosus/dna/v1\n"
+        "kind: Copilot\n"
+        "metadata:\n  name: confirming-copilot\n"
+        "spec:\n"
+        "  mounts:\n"
+        "  - {id: principal, agent: confirming-agent, path: /agui}\n"
+        "  serving: {transport: ag-ui}\n"
+    )
+    mi2 = Kernel.quick(_SCOPE, base_dir=str(dst))
+    ctx = build_copilot_context(mi2, "confirming-copilot", model="azure/gpt-4o")
+    assert "update_document_draft" in ctx.tools_requiring_confirmation
+    # E o memory-copilot continua com o conjunto derivado dos Tool docs —
+    # a união não substitui o vocabulário antigo.
+    mi3 = Kernel.quick(_SCOPE, base_dir=_BASE)
+    ctx3 = build_copilot_context(mi3, "memory-copilot", model="azure/gpt-4o")
+    assert ctx3.tools_requiring_confirmation == {"remember", "forget"}

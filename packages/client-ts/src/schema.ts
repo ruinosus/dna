@@ -643,6 +643,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/kinds/{kind}/documents/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Kind Document
+         * @description Ler UM documento de ``{kind}``, VERBATIM — o que a lista não dá.
+         *
+         *     A lista com ``fields`` projeta pela VISTA quando o Kind é produzível
+         *     por readers (Agent, Skill…), e a vista normaliza — campos reais do
+         *     spec gravado (``description``, ``tools_requiring_confirmation`` de um
+         *     Agent) não viajam por ela. Quem gravou pelo POST genérico precisa
+         *     conseguir ler DE VOLTA o que gravou: esta rota é o
+         *     ``get_document_impl`` de sempre, na mesma fronteira de confiança do
+         *     POST (só ``tenant``; o scope é derivado, nunca nomeado).
+         *
+         *     404 nomeia o que faltou — o Kind desconhecido ou o documento.
+         */
+        get: operations["get_kind_document_v1_kinds__kind__documents__name__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/kinds/{kind}/revoke": {
         parameters: {
             query?: never;
@@ -2029,6 +2059,37 @@ export interface components {
             /** Scope */
             scope: string;
             ships: components["schemas"]["GenomeShips"];
+        };
+        /**
+         * GetKindDocumentResponse
+         * @description ``GET /v1/kinds/{kind}/documents/{name}`` — UM documento, VERBATIM.
+         *
+         *     A lista projetada passa pela vista dos readers quando o Kind é produzível
+         *     por bundle (Agent, Skill…) — e a vista NORMALIZA: `spec.description` e
+         *     `spec.tools_requiring_confirmation` de um Agent gravado pelo funil
+         *     genérico simplesmente não viajam por ela (medido 05/08/2026 na aba
+         *     Configuração do dna-cloud). Esta porta lê o documento como a camada do
+         *     chamador o vê, sem projeção e sem vista — o `get_document_impl` que
+         *     sempre existiu e não tinha rota.
+         *
+         *     `etag` é o token de concorrência otimista para um write subsequente
+         *     (``if_match``): um lost update vira recusa, não sobrescrita silenciosa.
+         */
+        GetKindDocumentResponse: {
+            /** Api Version */
+            api_version: string;
+            /** Document */
+            document: {
+                [key: string]: unknown;
+            };
+            /** Etag */
+            etag?: string | null;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Scope */
+            scope: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -3923,6 +3984,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["WriteKindDocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_kind_document_v1_kinds__kind__documents__name__get: {
+        parameters: {
+            query?: {
+                tenant?: string | null;
+                api_version?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GetKindDocumentResponse"];
                 };
             };
             /** @description Validation Error */

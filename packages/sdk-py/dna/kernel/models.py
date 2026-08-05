@@ -374,6 +374,25 @@ class AgentSpec:
     # MCP-only (tool_groups: [none] does NOT strip mcp_servers). Empty
     # list/absent = no MCP.
     mcp_servers: list[str | dict[str, Any]] = field(default_factory=list)
+    # f-meus-copilotos (dna-cloud, 2026-08-05) — o que o portal escrevia e o
+    # SDK não falava. Dois campos que o funil de criação de copilotos grava
+    # há semanas e que NÃO eram AgentSpec: o writer do AGENT.md os descartava
+    # do frontmatter e o reader (canônico) os perdia para sempre; o emit nem
+    # os lia. Como o allowlist do frontmatter deriva DESTE dataclass, declarar
+    # aqui abre reader+writer de uma vez (o desenho anti-drift de 2026-05-08).
+    #
+    # description: o que este agente É, no spec (o metadata.description
+    # continua existindo; este é o campo que superfícies de manutenção editam
+    # junto com a instrução).
+    description: str = ""
+    # tools_requiring_confirmation: gate HITL POR AGENTE — cada chamada destas
+    # tools pede confirmação humana antes de executar. UNIDO ao conjunto
+    # derivado dos Tool docs (`Tool.spec.requires_confirmation`) em
+    # build_copilot_context: o Tool doc diz "esta tool é sensível SEMPRE";
+    # este campo diz "NESTE agente, esta tool pede confirmação" — política
+    # por copiloto, que era exatamente o que o blueprint prometia e não
+    # entregava.
+    tools_requiring_confirmation: list[str] = field(default_factory=list)
     # Phase 14w follow-up (2026-05-08) — per-agent shell sandbox
     # opt-in. ``True`` forces the DeepAgents ``execute`` tool +
     # SessionScopedLocalShellBackend ON for this agent regardless
@@ -524,6 +543,8 @@ class AgentSpec:
             layout=raw.get("layout"),
             tool_groups=raw.get("tool_groups") or [],
             mcp_servers=raw.get("mcp_servers") or [],
+            description=raw.get("description", ""),
+            tools_requiring_confirmation=raw.get("tools_requiring_confirmation") or [],
             shell_sandbox=raw.get("shell_sandbox"),
             prompt_format=raw.get("prompt_format"),
             max_turns=raw.get("max_turns"),

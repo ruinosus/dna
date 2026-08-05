@@ -40,6 +40,7 @@ A Agent is the primary prompt target: it's what actually runs when the user talk
 | `agent_kind` | string |  |  |
 | `creative_slots` | array |  |  |
 | `delegation_target_for` | any |  |  |
+| `description` | string |  |  |
 | `guardrails` | array |  |  |
 | `input_schema` | object |  |  |
 | `instruction` | string |  |  |
@@ -67,6 +68,7 @@ A Agent is the primary prompt target: it's what actually runs when the user talk
 | `team_members` | array |  |  |
 | `tool_groups` | array |  |  |
 | `tools` | array |  |  |
+| `tools_requiring_confirmation` | array |  |  |
 | `type` | string |  |  |
 | `voice_persona` | any |  |  |
 | `writes_kind` | string |  |  |
