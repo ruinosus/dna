@@ -1780,7 +1780,8 @@ async def remember_impl(
 
 async def consolidate_impl(
     live: LiveDna, scope: str | None = None, apply: bool = False,
-    tenant: str | None = None, *, memory_scope: str = "workspace",
+    tenant: str | None = None, *, dry_run: bool = False,
+    memory_scope: str = "workspace",
     oid: str | None = None,
     family: str | None = None,
 ) -> dict[str, Any]:
@@ -1788,12 +1789,20 @@ async def consolidate_impl(
     ``apply=True`` stale memories are soft-forgotten (bi-temporal, never
     deleted). Mirrors ``dna memory consolidate``.
 
+    ``dry_run=True`` previews the pass with ZERO effect (it wins over
+    ``apply``): the report gains per-memory ``actions`` (retain / expire /
+    already_expired + deterministic reason) and deterministic
+    ``merge_candidates`` — the structured diff a HITL surface renders BEFORE
+    anyone approves ``apply`` (i-050).
+
     ``memory_scope="personal"`` consolidates ONLY the caller's personal partition
     (``personal:<oid>``) — never touches workspace memory (ADR-personal-memory §4)."""
     from dna.memory import consolidate
 
     sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
-    return await consolidate(live.kernel, sc, apply=apply, tenant=tenant)
+    return await consolidate(
+        live.kernel, sc, apply=apply, dry_run=dry_run, tenant=tenant,
+    )
 
 
 async def import_memories_impl(

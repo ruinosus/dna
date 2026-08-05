@@ -145,6 +145,81 @@ async def test_consolidate_detects_stale_without_llm(kernel_with_provider):
 
 
 @pytest.mark.asyncio
+async def test_consolidate_without_dry_run_keeps_the_legacy_shape(kernel_with_provider):
+    """Total backward compatibility: no ``dry_run`` → the report carries EXACTLY
+    the pre-dry-run keys (no additive drift for existing consumers)."""
+    kernel = kernel_with_provider
+    await remember(kernel, "demo", **_ll("rem-shape", "Feature/memory", "shape memory"))
+    report = await consolidate(kernel, "demo", apply=False)
+    assert set(report) == {"evaluated", "stale", "archived", "applied"}
+
+
+@pytest.mark.asyncio
+async def test_consolidate_dry_run_reports_actions_with_zero_effect(kernel_with_provider):
+    """``dry_run=True`` returns the per-memory diff (action + deterministic
+    reason) and NEVER writes — even with ``apply=True`` in the same call."""
+    kernel = kernel_with_provider
+    await remember(kernel, "demo", **_ll("rem-keep", "Feature/memory", "fresh kept memory"))
+    await remember(kernel, "demo", **_ll("rem-gone", "Feature/memory", "ancient stale memory"))
+    old = await kernel.get_document("demo", "Engram", "rem-gone")
+    old["spec"]["last_surfaced"] = "2000-01-01T00:00:00+00:00"
+    old["spec"]["confidence_score"] = 0.1
+    await kernel.write_document("demo", "Engram", "rem-gone", old, invalidate_mode="doc")
+    await remember(kernel, "demo", **_ll("rem-dead", "Feature/memory", "already forgotten memory"))
+    await forget(kernel, "demo", "rem-dead")
+
+    report = await consolidate(kernel, "demo", apply=True, dry_run=True)
+
+    # dry_run wins over apply: reported as not applied, and nothing was written.
+    assert report["dry_run"] is True
+    assert report["applied"] is False
+    assert report["archived"] == 0
+    still = await kernel.get_document("demo", "Engram", "rem-gone")
+    assert not still["spec"].get("valid_to")
+
+    by_name = {a["name"]: a for a in report["actions"]}
+    assert by_name["rem-keep"]["action"] == "retain"
+    assert by_name["rem-gone"]["action"] == "expire"
+    assert by_name["rem-dead"]["action"] == "already_expired"
+    # deterministic reasons carry the numbers a diff UI shows.
+    assert "floor 0.15" in by_name["rem-keep"]["reason"]
+    assert by_name["rem-gone"]["retention"] < 0.15
+    assert "valid_to" in by_name["rem-dead"]["reason"]
+    # the legacy keys are still there (superset, not a new shape).
+    assert [s["name"] for s in report["stale"]] == ["rem-gone"]
+    # actions are sorted by name (stable for goldens/diffs).
+    assert [a["name"] for a in report["actions"]] == sorted(by_name)
+
+
+@pytest.mark.asyncio
+async def test_consolidate_dry_run_surfaces_merge_candidates(kernel_with_provider):
+    """Two lexically-overlapping memories show up as ONE merge group with a
+    deterministic supersede proposal; the forgotten never participate."""
+    kernel = kernel_with_provider
+    await remember(kernel, "demo", **_ll(
+        "rem-dup-a", "Feature/deploy", "deploy broke cache invalidation kernel"))
+    await remember(kernel, "demo", **_ll(
+        "rem-dup-b", "Feature/deploy", "deploy broke cache invalidation portal"))
+    await remember(kernel, "demo", **_ll(
+        "rem-other", "Feature/food", "banana tropical smoothie recipe"))
+
+    report = await consolidate(kernel, "demo", dry_run=True, merge_overlap_floor=0.4)
+    assert len(report["merge_candidates"]) == 1
+    grp = report["merge_candidates"][0]
+    assert grp["names"] == ["rem-dup-a", "rem-dup-b"]
+    assert grp["canonical"] in grp["names"]
+    assert grp["strategy"] == "supersede"
+    assert grp["synthesized"] is False
+    assert grp["proposed_text"]
+    assert grp["pairs"][0]["overlap"] >= 0.4
+
+    # a proposal is NOT an application: both memories are still valid.
+    for name in ("rem-dup-a", "rem-dup-b"):
+        doc = await kernel.get_document("demo", "Engram", name)
+        assert not doc["spec"].get("valid_to")
+
+
+@pytest.mark.asyncio
 async def test_recall_degrades_lexical_without_provider(tmp_path):
     """No provider registered → recall still works via the kernel's honest
     lexical fallback (degraded=True), and bi-temporality still holds."""

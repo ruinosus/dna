@@ -431,6 +431,37 @@ def test_list_memories_personal_flag_per_item(dna_dir):
     assert shared["summary"] == "BASE shared chip note"
 
 
+def test_consolidate_dry_run_reports_diff_without_writing(dna_dir):
+    """``consolidate_impl(dry_run=True)`` carries the STRUCTURED report through
+    the face (per-memory actions + merge candidates) and writes NOTHING — the
+    HITL door stops carrying only ``{apply: bool}`` (i-050 unblock)."""
+    from dna_cli import _mcp_server as M
+
+    async def scenario():
+        live = await M.boot_live(base_dir=str(dna_dir))
+        a = await M.remember_impl(
+            live, "deploy broke cache invalidation kernel", scope=_SCOPE, tenant="acme")
+        b = await M.remember_impl(
+            live, "deploy broke cache invalidation portal", scope=_SCOPE, tenant="acme")
+        report = await M.consolidate_impl(
+            live, scope=_SCOPE, apply=True, dry_run=True, tenant="acme")
+        after = await M.list_memories_impl(live, scope=_SCOPE, tenant="acme")
+        return a, b, report, after
+
+    a, b, report, after = asyncio.run(scenario())
+    assert report["dry_run"] is True
+    assert report["applied"] is False and report["archived"] == 0
+    by_name = {x["name"]: x for x in report["actions"]}
+    assert by_name[a["name"]]["action"] == "retain"
+    assert by_name[a["name"]]["reason"]
+    # the overlapping pair is proposed as ONE merge group (proposal ≠ application).
+    names = {n for g in report["merge_candidates"] for n in g["names"]}
+    assert {a["name"], b["name"]} <= names
+    # zero effect: both memories still listed.
+    listed = {m["name"] for m in after["memories"]}
+    assert {a["name"], b["name"]} <= listed
+
+
 def test_forget_deletes_own_memory(dna_dir):
     """``forget`` deletes a memory from the tenant's overlay; a subsequent
     ``list_memories``/``recall`` no longer returns it."""

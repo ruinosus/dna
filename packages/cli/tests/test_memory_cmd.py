@@ -91,6 +91,40 @@ def test_consolidate_reports_cleanly(scoped):
     assert report["archived"] == 0  # nothing stale yet
 
 
+def test_consolidate_dry_run_previews_without_effect(scoped):
+    """`--dry-run` prints/returns the structured preview (per-memory action +
+    merge candidates) and changes NOTHING — even combined with `--apply`."""
+    runner = CliRunner()
+    _remember(runner, "deploy broke cache invalidation kernel", "Feature/deploy")
+    _remember(runner, "deploy broke cache invalidation portal", "Feature/deploy")
+
+    res = runner.invoke(main, [
+        "memory", "consolidate", "--scope", "demo",
+        "--dry-run", "--apply", "--json",
+    ])
+    assert res.exit_code == 0, res.output
+    report = json.loads(res.output)
+    assert report["dry_run"] is True
+    assert report["applied"] is False and report["archived"] == 0
+    assert {a["action"] for a in report["actions"]} == {"retain"}
+    assert all(a["reason"] for a in report["actions"])
+    # the overlapping pair shows up as ONE deterministic merge proposal.
+    (grp,) = report["merge_candidates"]
+    assert grp["strategy"] == "supersede" and len(grp["names"]) == 2
+    # zero effect: both memories still listed as active.
+    lst = runner.invoke(main, ["memory", "list", "--scope", "demo", "--json"])
+    assert json.loads(lst.output)["count"] == 2
+
+    # the human rendering names the actions and says it changed nothing.
+    human = runner.invoke(main, [
+        "memory", "consolidate", "--scope", "demo", "--dry-run",
+    ])
+    assert human.exit_code == 0, human.output
+    assert "retain" in human.output
+    assert "merge candidate" in human.output
+    assert "dry-run — nothing was changed" in human.output
+
+
 def test_recall_semantic_auto_on_and_flag_off(scoped):
     """s-memory-semantic-recall: with the provider present, auto mode blends the
     ecphory×embedding ranking (hits annotated, payload flags semantic:true);
