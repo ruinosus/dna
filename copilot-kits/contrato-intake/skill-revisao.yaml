@@ -1,0 +1,30 @@
+# F6.b — uma SKILL no formato agentskills.io, como DOCUMENTO do kit: o
+# agente a vê por progressive disclosure (nome+descrição no prompt; o corpo
+# só é lido quando a tarefa casa). Editável no workspace, sem deploy.
+apiVersion: agentskills.io/v1
+kind: Skill
+metadata:
+  name: revisao-de-contrato
+spec:
+  instruction: |
+    ---
+    name: revisao-de-contrato
+    description: Checklist de revisão de um ContratoDeServico antes de gravar — use quando o usuário pedir para revisar, conferir ou validar o contrato extraído.
+    ---
+
+    # Revisão de contrato
+
+    Quando o usuário pedir revisão do rascunho, percorra ESTA ordem e
+    reporte campo a campo (nunca invente valor — aponte a lacuna):
+
+    1. **Partes**: `contratante` e `contratada` são pessoas/empresas
+       DISTINTAS e não-vazias? Um contrato consigo mesmo é erro.
+    2. **Título**: reflete o objeto real? Se genérico ("Contrato"),
+       proponha um específico via `update_document_draft` com rationale.
+    3. **Coerência comercial**: `valor_mensal` > 0; `prazo_meses` ≥ 1;
+       se `renovacao_automatica` for true, `multa_rescisao` deveria
+       existir — aponte se faltar.
+    4. **Data**: `data_assinatura` em ISO-8601 e não no futuro distante.
+
+    Ao final, resuma: campos OK, campos com ressalva, campos faltantes —
+    e lembre que quem grava é o humano, no botão Gravar.

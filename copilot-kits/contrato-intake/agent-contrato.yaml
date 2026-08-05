@@ -28,6 +28,11 @@ spec:
   # registro); a ESCRITA do documento não passa por aqui —
   # `update_document_draft` é tool de código do runtime, e quem grava é o
   # humano no canvas.
+  # F6.b — a skill declarada aqui é lida pelo runtime (SkillsMiddleware
+  # oficial): nome+descrição entram no prompt; o corpo só quando a tarefa
+  # casa (progressive disclosure).
+  skills:
+  - revisao-de-contrato
   mcp_servers:
   - ref: dna-mcp
     allowed_tools:
