@@ -2078,6 +2078,52 @@
         "title": "GenomeViewResponse",
         "type": "object"
       },
+      "GetKindDocumentResponse": {
+        "description": "``GET /v1/kinds/{kind}/documents/{name}`` — UM documento, VERBATIM.\n\nA lista projetada passa pela vista dos readers quando o Kind é produzível\npor bundle (Agent, Skill…) — e a vista NORMALIZA: `spec.description` e\n`spec.tools_requiring_confirmation` de um Agent gravado pelo funil\ngenérico simplesmente não viajam por ela (medido 05/08/2026 na aba\nConfiguração do dna-cloud). Esta porta lê o documento como a camada do\nchamador o vê, sem projeção e sem vista — o `get_document_impl` que\nsempre existiu e não tinha rota.\n\n`etag` é o token de concorrência otimista para um write subsequente\n(``if_match``): um lost update vira recusa, não sobrescrita silenciosa.",
+        "properties": {
+          "api_version": {
+            "title": "Api Version",
+            "type": "string"
+          },
+          "document": {
+            "additionalProperties": true,
+            "title": "Document",
+            "type": "object"
+          },
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "kind",
+          "api_version",
+          "name",
+          "document"
+        ],
+        "title": "GetKindDocumentResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -6846,6 +6892,103 @@
           }
         },
         "summary": "Write Kind Document"
+      }
+    },
+    "/v1/kinds/{kind}/documents/{name}": {
+      "get": {
+        "description": "Ler UM documento de ``{kind}``, VERBATIM — o que a lista não dá.\n\nA lista com ``fields`` projeta pela VISTA quando o Kind é produzível\npor readers (Agent, Skill…), e a vista normaliza — campos reais do\nspec gravado (``description``, ``tools_requiring_confirmation`` de um\nAgent) não viajam por ela. Quem gravou pelo POST genérico precisa\nconseguir ler DE VOLTA o que gravou: esta rota é o\n``get_document_impl`` de sempre, na mesma fronteira de confiança do\nPOST (só ``tenant``; o scope é derivado, nunca nomeado).\n\n404 nomeia o que faltou — o Kind desconhecido ou o documento.",
+        "operationId": "get_kind_document_v1_kinds__kind__documents__name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "query",
+            "name": "api_version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Api Version"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetKindDocumentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Kind Document"
       }
     },
     "/v1/kinds/{kind}/revoke": {
