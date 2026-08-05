@@ -481,10 +481,10 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | `interaction.suggestions.static` | array |  |  |
 | `interaction.suggestions.static[].message` | string | yes |  |
 | `interaction.suggestions.static[].title` | string | yes |  |
-| `interaction.voice` | object |  | The VOICE face (spec-interaction-voice; renderer-first rule satisfied by dna-cloud#302): presence of this block is what makes the copilot's voice button exist — no block, no mint, no cost. Only fields the shipped runtime READS (the aap voice_persona fields nothing consumed — archetype, interruption_tolerance, wake_word — stay OUT by the F4 rule). The provider key never lives in the doc; the hosting layer wires it (a secret param, default empty = the face is invisible). |
+| `interaction.voice` | object |  | The VOICE face (spec-interaction-voice; renderer-first rule satisfied by dna-cloud#302): presence of this block is what makes the copilot's voice button exist — no block, no mint, no cost. Only fields the shipped runtime READS (the reference persona shape carried fields nothing consumed — archetype, interruption_tolerance, wake_word — and they stay OUT by the F4 rule). The provider key never lives in the doc; the hosting layer wires it (a secret param, default empty = the face is invisible). |
 | `interaction.voice.budget` | object |  | The per-session cost ceiling — the founder's control. Seconds because that is what the runtime can ENFORCE today (a USD cap that only notifies is a measured gap in the reference, not a control). |
 | `interaction.voice.budget.max_session_seconds` | integer |  |  |
-| `interaction.voice.identity_lock` | string |  | Authored identity assertion spoken-as-context (the aap RCA — a persona without an assertion leaks "I am ChatGPT"). |
+| `interaction.voice.identity_lock` | string |  | Authored identity assertion spoken-as-context (measured root cause in the reference implementation — a persona without an assertion leaks the vendor's own name). |
 | `interaction.voice.style` | string |  | Prosody/tone hint APPENDED to the composed instructions — refinement, never a replacement. |
 | `interaction.voice.voice` | string |  | Provider voice id (e.g. marin, cedar). Empty = provider default. |
 | `knowledge` | object |  | RAG the copilot may read. Optional — a pure-action copilot declares none. |

@@ -230,7 +230,7 @@ async def test_interaction_voice_presenca_liga(kernel):
 
 @pytest.mark.asyncio
 async def test_interaction_voice_campo_morto_e_vetado(kernel):
-    """Os campos do voice_persona do aap que NENHUM runtime lia (archetype,
+    """Os campos da persona de referência que NENHUM runtime lia (archetype,
     wake_word…) ficam FORA por regra F4 — declarar um deles é erro, não
     silêncio."""
     from dna.kernel.protocols import SpecValidationError

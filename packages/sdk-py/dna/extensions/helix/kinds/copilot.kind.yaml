@@ -376,9 +376,10 @@ spec:
               The VOICE face (spec-interaction-voice; renderer-first rule
               satisfied by dna-cloud#302): presence of this block is what
               makes the copilot's voice button exist — no block, no mint,
-              no cost. Only fields the shipped runtime READS (the aap
-              voice_persona fields nothing consumed — archetype,
-              interruption_tolerance, wake_word — stay OUT by the F4 rule).
+              no cost. Only fields the shipped runtime READS (the reference
+              persona shape carried fields nothing consumed — archetype,
+              interruption_tolerance, wake_word — and they stay OUT by the
+              F4 rule).
               The provider key never lives in the doc; the hosting layer
               wires it (a secret param, default empty = the face is
               invisible).
@@ -397,8 +398,9 @@ spec:
                 type: string
                 default: ""
                 description: Authored identity assertion spoken-as-context
-                  (the aap RCA — a persona without an assertion leaks "I
-                  am ChatGPT").
+                  (measured root cause in the reference implementation — a
+                  persona without an assertion leaks the vendor's own
+                  name).
               budget:
                 type: object
                 additionalProperties: false
