@@ -105,3 +105,19 @@ def test_extra_allowed_widens_the_filter_without_touching_mcp_servers_allowlist(
         servers, mcp_auth=lambda: {}, extra_allowed=frozenset({"host_tool"})
     )
     assert allowed == frozenset({"list_kinds", "host_tool"})
+
+
+def test_rationale_tools_is_threaded_to_the_discovery_middleware_and_defaults_empty():
+    """`LangChainRuntime.build` passes the HITL-gated MCP tool names so their
+    model-facing schemas gain the optional `rationale` arg; the delegation
+    sub-run (`run_local`) passes none — its isolated run has no human in the
+    loop, so the default MUST stay empty (wire unchanged)."""
+    servers = [_EmitMcpServerLike("https://mcp.example/mcp", ["remember"])]
+
+    middleware, _allowed = mcp_tool_stack(
+        servers, mcp_auth=lambda: {}, rationale_tools=frozenset({"remember"})
+    )
+    assert middleware[0]._rationale_tools == frozenset({"remember"})
+
+    default_middleware, _ = mcp_tool_stack(servers, mcp_auth=lambda: {})
+    assert default_middleware[0]._rationale_tools == frozenset()

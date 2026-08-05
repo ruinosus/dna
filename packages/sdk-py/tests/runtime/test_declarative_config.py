@@ -234,9 +234,9 @@ def _build_and_capture_mcp_url(tmp_path, monkeypatch) -> tuple:
         # `create_agent`'s own `AgentMiddleware` expectations (state_schema,
         # `.tools`, the wrap_* hooks) stay satisfied — only `__init__` is
         # intercepted, purely to capture the `mcp_url` the adapter passed.
-        def __init__(self, mcp_url, mcp_auth):
+        def __init__(self, mcp_url, mcp_auth, **kwargs):
             captured["mcp_url"] = mcp_url
-            super().__init__(mcp_url, mcp_auth)
+            super().__init__(mcp_url, mcp_auth, **kwargs)
 
     monkeypatch.setattr(
         "dna.runtime.adapters.langchain_rt.DnaMcpToolsMiddleware", _SpyMcpMiddleware
