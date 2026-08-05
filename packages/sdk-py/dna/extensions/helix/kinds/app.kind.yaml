@@ -4,8 +4,8 @@
 # o kit é o PACOTE (como um fluxo se distribui — `dna copilot install`); o
 # App é a INSTÂNCIA instalada (como se usa, se navega e se cobra). Um App
 # agrupa N copilotos existentes sob uma identidade própria — o console
-# renderiza `/app/<name>` derivado DESTE doc (o padrão cockpit: wizards
-# agrupados numa cara só) — e carrega o ENTITLEMENT (`requires_plan`),
+# renderiza `/app/<name>` derivado DESTE doc (wizards agrupados
+# numa cara só) — e carrega o ENTITLEMENT (`requires_plan`),
 # consultado pelo MESMO gate de plano que já mede tudo (o runtime que serve
 # decide; o kernel valida forma). É a unidade VENDÁVEL: cobra-se pelo app,
 # o app é feito de copilotos, o copiloto é medido por turnos/tokens.
@@ -32,6 +32,16 @@ spec:
   storage:
     type: yaml
     container: apps
+  docs: >-
+    An App is the NAMED composition of copilots (record plane) — the
+    installable/sellable unit of the spec-app-como-composicao decisions
+    (2026-08-05). A kit is the PACKAGE (how a flow ships); an App is the
+    INSTANCE (how it is used, navigated and charged). It groups existing
+    Copilot docs under one identity (title/description/icon), carries the
+    plan entitlement (``requires_plan`` — enforced by the serving runtime,
+    never by the kernel) and the console renders ``/app/<name>`` from this
+    document alone. ``copilots[]`` carries ``x-dna-ref: Copilot`` — the
+    write validates existence and pickers come for free (i-040).
   schema:
     type: object
     additionalProperties: false

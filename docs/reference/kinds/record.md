@@ -115,6 +115,8 @@ A AgentSession captures a developer↔AI coding conversation as a versioned proj
 - **apiVersion:** `github.com/ruinosus/dna/v1`
 - **Plane:** record
 
+An App is the NAMED composition of copilots (record plane) — the installable/sellable unit of the spec-app-como-composicao decisions (2026-08-05). A kit is the PACKAGE (how a flow ships); an App is the INSTANCE (how it is used, navigated and charged). It groups existing Copilot docs under one identity (title/description/icon), carries the plan entitlement (``requires_plan`` — enforced by the serving runtime, never by the kernel) and the console renders ``/app/<name>`` from this document alone. ``copilots[]`` carries ``x-dna-ref: Copilot`` — the write validates existence and pickers come for free (i-040).
+
 **Spec fields**
 
 | Field | Type | Required | Description |
