@@ -13,5 +13,10 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-08-05T22:46:53+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'A metade dos KINDS ficou de fora, e agora tem registro proprio: i-096. O mecanismo que este item pediu (parent_scope declarado + compute_resolution_chain) esta no ar e entrega DOCUMENTOS ao scope do tenant — medido no dna-cloud em 05/08/2026. As definicoes declarativas de Kind nao vao junto: applies_to (kernel/kinds/registry.py:388) testa pertencimento EXATO ao conjunto de scopes do port, sem caminhar a cadeia. Entao um workspace novo herda agents/tools/souls da base e mesmo assim nao consegue ler nem escrever um Kind que a base declarou. Status deste item nao foi tocado — so a ligacao entre os dois, para o proximo leitor nao concluir que a heranca esta completa.'
   created_at: '2026-07-21T17:08:45+00:00'
   updated_at: '2026-07-21T17:08:45+00:00'
