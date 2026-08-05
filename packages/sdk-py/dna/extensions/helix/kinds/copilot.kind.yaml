@@ -11,11 +11,12 @@
 # (``serving``), whether inbound tenant is propagated (``tenant``), the
 # human-in-the-loop approval surface (``hitl``), the RAG collections + vector
 # store the copilot may read (``knowledge``), the storage/state backends it
-# binds (``persistence`` — checkpoint/memory/cache), the deployment model
-# (``hosting`` — self-hosted vs a managed runtime), and the frontend console
-# hints (``frontend``). Instructions/persona/guardrails still live on the mounted
-# Agent — a Copilot never re-declares them (the byte-equal instruction contract
-# stays intact: instructions come from the Agent, unchanged).
+# binds (``persistence`` — checkpoint/memory/cache/conversation), the
+# deployment model (``hosting`` — self-hosted vs a managed runtime), and the
+# frontend console hints (``frontend``). Instructions/persona/guardrails still
+# live on the mounted Agent — a Copilot never re-declares them (the
+# byte-equal instruction contract stays intact: instructions come from the
+# Agent, unchanged).
 #
 # The optional ``workflow`` field carries a multi-step step chain consumed ONLY
 # by the agent-framework (MS Agent Framework) target: when present the emitter
@@ -265,6 +266,61 @@ spec:
                 description: Points at an infra resource (a Terraform module
                   output — connection string/endpoint). Multiple slots may
                   share one ref (one physical store).
+          conversation:
+            type: object
+            additionalProperties: false
+            required:
+            - backend
+            description: >-
+              The CONVERSATION contract (spec-conversa-como-dado-do-dna) — WHO
+              a thread belongs to, how its transcript is read back (AG-UI
+              messages) and for how long it is kept. Read by
+              ``dna.runtime.thread_store.resolve_conversation``; the port's
+              transcript half is a READ PROJECTION over whatever the framework
+              already checkpoints, so declaring this slot never makes a turn
+              write twice.
+              It does NOT duplicate ``checkpoint``: the checkpoint stays the
+              framework's engine (replay + pending interrupts) and is keyed by
+              thread id alone, so it can neither answer "list MY conversations"
+              nor refuse a forged thread id. Absent slot = exactly today's
+              behaviour (framework checkpoint only, no ownership, no
+              retention).
+            properties:
+              backend:
+                type:
+                - string
+                - "null"
+                description: Storage backend for the thread INDEX (owner,
+                  title, counts, where the thread was born) — an OPEN set
+                  (known values postgres | sqlite | mongo | redis | inmemory |
+                  cosmos | serialize | null). The transcript itself is NOT
+                  stored here; it is projected from the framework's own
+                  checkpoint. null = no backend (in-memory index).
+              ref:
+                type: string
+                description: Points at an infra resource (a Terraform module
+                  output — connection string/endpoint). Usually the SAME ref as
+                  checkpoint — one physical store, distinct tables.
+              retention:
+                type: object
+                additionalProperties: false
+                description: >-
+                  How long a conversation is KEPT. It rides on this slot
+                  because a transcript is user data (volume, PII, a short
+                  natural life) while the sibling slots hold the framework's
+                  engine and the workspace's curated memory — one retention
+                  rule over both would either keep too much or delete the wrong
+                  thing. DNA carries the number to whoever holds the
+                  connection; it does not run the purge for you (no scheduler
+                  ships with the port). Absent = keep indefinitely.
+                properties:
+                  max_age_days:
+                    type: integer
+                    minimum: 1
+                    description: Conversations untouched for longer than this
+                      are expired. ``dna.runtime.thread_store.retention_cutoff``
+                      is the shared computation, so two hosts cannot read
+                      "30 days" two different ways.
       policies:
         type: object
         additionalProperties: false
@@ -788,8 +844,9 @@ spec:
       widget: code
       language: yaml
       label: Persistence
-      help: Storage/state backends ({checkpoint, memory, cache}), each
-        {backend, ref}.
+      help: Storage/state backends ({checkpoint, memory, cache,
+        conversation}), each {backend, ref} — conversation also carries
+        {retention}.
       height: 160
       order: 55
     frontend:
@@ -827,8 +884,9 @@ spec:
     ``mounts`` (where agents serve), ``serving`` (the transport), ``tenant``
     (inbound-tenant propagation), ``hitl`` (the approval card for gated write
     tools), ``knowledge`` (RAG collections + the vector store it may read),
-    ``persistence`` (checkpoint/memory/cache storage backends), ``hosting``
-    (self-hosted vs a managed runtime), and ``frontend`` (console hints).
+    ``persistence`` (checkpoint/memory/cache/conversation storage backends),
+    ``hosting`` (self-hosted vs a managed runtime), and ``frontend`` (console
+    hints).
     Instructions and persona stay on the mounted Agent — a
     Copilot never re-declares them. One document emits a servable backend
     (Agno today), the single evolution point DNA Cloud's copilots consume.

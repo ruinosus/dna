@@ -374,8 +374,14 @@ def test_copilot_ctx_tenant_default_false_when_undeclared(mi):
 
 def test_copilot_ctx_projects_persistence(mi):
     """The Copilot ``persistence`` block rides on the ctx as
-    ``{checkpoint, memory, cache}`` — each present slot a ``{backend, ref}``;
-    a ``backend: null`` slot keeps its ref None."""
+    ``{checkpoint, memory, cache, conversation}`` — each present slot a
+    ``{backend, ref}``; a ``backend: null`` slot keeps its ref None.
+
+    ``conversation`` (spec-conversa-como-dado-do-dna) is ADDITIVE: this fixture
+    declares none, so the key is None and the copilot behaves exactly as it did
+    before the slot existed — the framework's own checkpoint, no ownership and
+    no retention contract.
+    """
     from dna.emit import build_copilot_context
 
     ctx = build_copilot_context(mi, "memory-copilot", model="azure/gpt-4o")
@@ -383,7 +389,79 @@ def test_copilot_ctx_projects_persistence(mi):
         "checkpoint": {"backend": "postgres", "ref": "primary-pg"},
         "memory": {"backend": "postgres", "ref": "primary-pg"},
         "cache": {"backend": None, "ref": None},
+        "conversation": None,
     }
+
+
+def test_copilot_kind_accepts_the_conversation_slot(mi):
+    """The Kind carries ``persistence.conversation {backend, ref, retention}``
+    and it projects onto the ctx — the shape ``dna.runtime.thread_store.
+    resolve_conversation`` reads."""
+    from dna.emit import _project_persistence
+
+    doc = load_kind_doc(
+        "Copilot",
+        {
+            "mounts": [{"id": "m", "agent": "memory-agent", "path": "/agui"}],
+            "serving": {"transport": "ag-ui"},
+            "persistence": {
+                "checkpoint": {"backend": "postgres", "ref": "primary-pg"},
+                "conversation": {
+                    "backend": "postgres",
+                    "ref": "primary-pg",
+                    "retention": {"max_age_days": 30},
+                },
+            },
+        },
+    )
+    projected = _project_persistence(doc.spec.persistence)
+    assert projected["conversation"] == {
+        "backend": "postgres",
+        "ref": "primary-pg",
+        "retention": {"max_age_days": 30},
+    }
+
+    from dna.runtime.thread_store import resolve_conversation
+
+    binding = resolve_conversation(projected)
+    assert binding is not None and binding.retention is not None
+    assert binding.retention.max_age_days == 30
+
+
+def test_conversation_slot_without_retention_keeps_forever():
+    """Retention is optional — absent means keep indefinitely (today's
+    behaviour), not "delete on some default"."""
+    from dna.emit import _project_persistence
+    from dna.runtime.thread_store import resolve_conversation
+
+    doc = load_kind_doc(
+        "Copilot",
+        {
+            "mounts": [{"id": "m", "agent": "memory-agent", "path": "/agui"}],
+            "serving": {"transport": "ag-ui"},
+            "persistence": {"conversation": {"backend": "postgres", "ref": "primary-pg"}},
+        },
+    )
+    binding = resolve_conversation(_project_persistence(doc.spec.persistence))
+    assert binding is not None and binding.retention is None
+
+
+def test_conversation_slot_rejects_undeclared_fields():
+    """``additionalProperties: false`` like every sibling — a misspelled knob is
+    a validation error, not silence."""
+    with pytest.raises(ValueError):
+        load_kind_doc(
+            "Copilot",
+            {
+                "mounts": [{"id": "m", "agent": "memory-agent", "path": "/agui"}],
+                "serving": {"transport": "ag-ui"},
+                "persistence": {
+                    "conversation": {"backend": "postgres", "retention_days": 30}
+                },
+            },
+        )
+
+
 
 
 def test_copilot_ctx_projects_knowledge_store(mi):

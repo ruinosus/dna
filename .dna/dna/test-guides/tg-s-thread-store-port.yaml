@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-thread-store-port
+spec:
+  description: 'Kit de conformidade do ThreadStorePort: as mesmas asserçoes contra a implementacao de referencia em memoria e contra a projecao de leitura do LangGraph, mais o slot persistence.conversation ponta a ponta (Kind -> ctx -> porta -> infra).'
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests/runtime/test_thread_store.py -q
+    expected: 30 passed — posse fail-closed, titulo, retencao, camadas dos Protocols, index/export/import, projecao LangGraph pelo conversor oficial, zero escrita na leitura
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests/runtime -q
+    expected: 79 passed — suite de runtime inteira
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests/test_copilot_emit.py tests/test_copilot_infra.py -q
+    expected: 105 passed 1 skipped — slot no Kind, projecao no ctx, dedup por ref no infra
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests -q
+    expected: 5045 passed 250 skipped 5 xfailed — nenhuma regressao
+  - action: cd packages/cli && uv run --no-project python -m pytest tests -q
+    expected: 1443 passed 19 skipped
+  - action: python3 scripts/brand_guard.py; scripts/data_model_guard.py; scripts/docs_coverage_guard.py
+    expected: clean nos tres
+  verifies:
+  - Story/s-thread-store-port
+  created_at: '2026-08-05T22:50:53+00:00'
+  updated_at: '2026-08-05T22:50:53+00:00'

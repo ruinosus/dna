@@ -1,0 +1,65 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-thread-store-port
+spec:
+  title: 'Fatia 1 de spec-conversa-como-dado-do-dna (i-084 do dna-cloud): o ThreadStorePor'
+  description: 'Fatia 1 de spec-conversa-como-dado-do-dna (i-084 do dna-cloud): o ThreadStorePort em dna.runtime — contrato neutro de conversa (indice/posse + transcript AG-UI + export/import), adapter LangGraph como PROJECAO DE LEITURA do checkpoint (sem dupla escrita), e o slot persistence.conversation no Kind Copilot.'
+  status: in-progress
+  feature: f-copilot-langgraph-target
+  acceptance_criteria:
+  - Given um host que hoje le transcript direto do checkpoint, When ele passa a consumir o ThreadStorePort, Then recebe as MESMAS mensagens AG-UI (conversor oficial langchain_messages_to_agui), sem escrita nova em nenhum turno
+  - Given um Copilot que declara persistence.conversation {backend, ref, retention}, When o ctx e composto, Then o slot viaja no ctx.persistence e a porta le a retencao declarada; um Copilot que NAO o declara mantem comportamento byte-identico
+  - Given um export de transcript de um thread com run pendente (interrupt), When export_transcript roda, Then o envelope diz em voz alta que o state pendente NAO atravessa (so o transcript)
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - porta + adapter + slot com testes pytest (kit de conformidade rodando contra o duble em memoria E contra o adapter LangGraph); suite de runtime inteira verde; docs de Kind regenerados; zero mudanca de comportamento existente
+  definition_of_done_source: cli-create
+  created_at: '2026-08-05T22:27:11+00:00'
+  updated_at: '2026-08-05T22:52:10+00:00'
+  timeline:
+  - at: '2026-08-05T22:27:11+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-05T22:27:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-05T22:51:14+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-thread-store-port
+    summary: TestGuide tg-s-thread-store-port (manual)
+  - at: '2026-08-05T22:51:41+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-thread-store-port-20260805-225136
+    summary: TestRun tr-tg-s-thread-store-port-20260805-225136 → pass
+    outcome: pass
+  - at: '2026-08-05T22:52:10+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Desenho que coube na fatia 1, e o porque de cada corte. (1) TRES Protocols em camada, nao um: ThreadTranscriptPort (ler), ThreadIndexPort (posse/listar), ThreadStorePort (a uniao + import_transcript). A razao e honestidade de tipo — o adapter LangGraph le o checkpoint e o checkpoint NAO sabe de quem e a conversa; com um Protocol unico ele stubaria metade dos metodos, e NotImplementedError atras de um tipo que promete e pior que um tipo menor que cumpre. O teste afirma a camada: isinstance(leitor, ThreadIndexPort) e False de proposito. (2) Transcript AG-UI pelo conversor OFICIAL (langchain_messages_to_agui do bridge), dumpado para dict na fronteira — nada de formato proprio; o grafo duble registra chamadas e o teste afirma que so houve aget_state (zero escrita, a promessa central da opcao b). (3) InMemoryThreadStore como implementacao de referencia da porta INTEIRA: prova que o contrato e implementavel e serve de par no kit de conformidade — duas implementacoes divergem em silencio, e foi assim que cada face acabou com a sua propria leitura de transcript. (4) Slot persistence.conversation {backend, ref, retention.max_age_days} no Kind Copilot, com resolve_conversation/retention_cutoff como LEITOR (regra F4 renderer-first satisfeita: o slot entra porque a porta o le, nao porque um job futuro vai ler). Retencao mora NESTE slot e nao nos irmaos porque transcript e dado de usuario (volume, PII, vida curta) enquanto checkpoint e o motor do framework e memory e o genoma curado. (5) Reachability (licao capacidade-existe-porta-nao): _LangGraphAGUIApp ganhou a property thread_store, e _MafAGUIApp declara thread_store = None — o gap do MAF fica dito no handle, verificavel, em vez de so numa issue. O Protocol AGUIApp NAO ganhou o membro (isso viraria isinstance False para adapter de terceiro; membro OPCIONAL, documentado, lido com getattr). (6) Aditivo de ponta a ponta: _project_persistence passa a emitir a chave conversation (None para quem nao declara — o unico teste existente alterado, e de proposito), e _slot_iter do infra a inclui, onde o dedup por ref garante que compartilhar o Postgres do checkpoint nao provisiona recurso nenhum. Busca antes de construir: ja registrada na spec ACEITA (agent-protocol, BaseCheckpointSaver, AG-UI, MCP, A2A, MAF, OpenAI Conversations) — ninguem empacotou transcript portavel entre frameworks; o que se adota e o FORMATO (AG-UI, oficial) e o SHAPE de thread REST.'
+    commit_ref: d117843f48861afdebb8b41b3423abd5af4fa9eb
+  produces:
+  - kind: Plan
+    name: plan-s-thread-store-port
+    role: implementation
+    at: '2026-08-05T22:27:33+00:00'
+  - kind: TestGuide
+    name: tg-s-thread-store-port
+    role: test-guide
+    at: '2026-08-05T22:51:14+00:00'
+  - kind: TestRun
+    name: tr-tg-s-thread-store-port-20260805-225136
+    role: test-run
+    at: '2026-08-05T22:51:41+00:00'

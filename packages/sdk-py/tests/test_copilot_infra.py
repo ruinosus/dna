@@ -103,6 +103,25 @@ def test_postgres_dedups_by_ref_with_pgvector(infra_ctx):
     assert tf["mongo"] == []
 
 
+def test_conversation_slot_shares_the_ref_instead_of_adding_a_resource(infra_ctx):
+    """``persistence.conversation`` (spec-conversa-como-dado-do-dna) is infra
+    like any sibling slot — but the normal case points at the SAME physical
+    Postgres as the checkpoint, so the dedup-by-ref rule records a ``used_by``
+    label and NOT a second database. A conversation contract that provisioned a
+    store per copilot would be a recurring bill for a table."""
+    infra_ctx.persistence = {
+        **(infra_ctx.persistence or {}),
+        "conversation": {
+            "backend": "postgres",
+            "ref": "primary-pg",
+            "retention": {"max_age_days": 30},
+        },
+    }
+    tf = _tfvars(infra_ctx)
+    assert len(tf["postgres"]) == 1
+    assert "persistence.conversation" in tf["postgres"][0]["used_by"]
+
+
 # ── env-injection: ref → TF output → copilot env (design §3 key rule) ────────
 
 

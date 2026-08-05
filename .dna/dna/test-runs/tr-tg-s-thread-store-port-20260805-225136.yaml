@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-thread-store-port-20260805-225136
+spec:
+  guide_ref: tg-s-thread-store-port
+  outcome: pass
+  verifies:
+  - Story/s-thread-store-port
+  executed_by: claude-code
+  executed_at: '2026-08-05T22:51:36+00:00'
+  notes: 6/6. sdk-py 5045 passed / 250 skipped / 5 xfailed; cli 1443 passed; runtime 79; kit da porta 30. Guards limpos.
