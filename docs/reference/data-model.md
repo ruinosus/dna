@@ -46,7 +46,7 @@ readable, so it is reproduced from source rather than asserted:
 
 ## Logical model — Kinds and their references
 
-82 Kinds are registered. Each is a document, not a table: a
+83 Kinds are registered. Each is a document, not a table: a
 Kind costs a YAML descriptor and zero migrations, which is the point
 of an open type system. The cost is that references between Kinds are
 not database foreign keys — they are fields holding a name.
@@ -65,7 +65,7 @@ would be the whole problem. Four tiers, strongest first:
 
 `*` on a label marks a polymorphic reference (several possible target Kinds).
 
-**108 edges: 15 declared, 66 composition-only, 27 inferred** — plus 25 reference-shaped fields left unresolved and 6 known-undeclarable ones.
+**109 edges: 16 declared, 66 composition-only, 27 inferred** — plus 25 reference-shaped fields left unresolved and 6 known-undeclarable ones.
 
 !!! warning "Only the declared tier cannot dangle"
 
@@ -89,7 +89,7 @@ flowchart LR
     eval["eval (4 Kinds)"]
     evidence["evidence (2 Kinds)"]
     guardrails["guardrails (1 Kind)"]
-    helix["helix (13 Kinds)"]
+    helix["helix (14 Kinds)"]
     intel["intel (2 Kinds)"]
     kinddef["kinddef (1 Kind)"]
     lesson["lesson (1 Kind)"]
@@ -124,7 +124,7 @@ flowchart LR
 
 ### Detail by group
 
-All 82 Kinds in one diagram is an unreadable hairball, so
+All 83 Kinds in one diagram is an unreadable hairball, so
 each group with at least 2 edges gets its
 own. A group carrying more than 20 edges is
 split again by tier, which keeps the enforced edges legible instead
@@ -167,12 +167,14 @@ erDiagram
     EvidencePolicy }o..}o WorkflowEvent : "events (inferred)"
 ```
 
-#### `helix` (15 edges)
+#### `helix` (16 edges)
 
 ```mermaid
 erDiagram
     Actor
     Agent
+    App
+    Copilot
     Guardrail
     PromptTemplate
     Recognizer
@@ -189,6 +191,7 @@ erDiagram
     Agent }o--}o Skill : "skills (dep)"
     Agent }o--|| Soul : "soul (dep)"
     Agent }o--}o Tool : "tools (dep)"
+    App }o--}o Copilot : "copilots"
     SafetyPolicy }o--}o Recognizer : "recognizers (dep)"
     UseCase }o--}o Agent : "agents (dep)"
     UseCase }o--}o Guardrail : "guardrails (dep)"
@@ -383,6 +386,7 @@ system will not let you break.
 
 | From | Field | To | Cardinality | Cross-group |
 | --- | --- | --- | --- | --- |
+| `App` | `copilots` | `Copilot` | many |  |
 | `Epic` | `features` | `Feature` | many |  |
 | `Feature` | `epic` | `Epic` | one |  |
 | `Feature` | `stories` | `Story` | many |  |
@@ -580,12 +584,12 @@ rather than silently dropped, so the suppression is auditable.
 | `Tenant` | `plan` | billing/feature tier (a Tier `tier_id`), not the SDLC `Plan` Kind |
 | `Workspace` | `plan_ref` | DEPRECATED and never read — billing is per ACCOUNT (workspace → account_id → AccountPlan); also not the SDLC `Plan` Kind |
 
-### Kinds with no reference edge (24)
+### Kinds with no reference edge (23)
 
 Standalone documents — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Copilot`, `Engram`, `Genome`, `Hook`, `HtmlArtifact`, `IntelSource`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PlanBinding`, `PricingPlan`, `RemoteAgent`, `Setting`, `SourceArtifact`, `UserProfile`, `WorkspaceMembership`
+`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Engram`, `Genome`, `Hook`, `HtmlArtifact`, `IntelSource`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PlanBinding`, `PricingPlan`, `RemoteAgent`, `Setting`, `SourceArtifact`, `UserProfile`, `WorkspaceMembership`
 
 ## Physical model — the real tables
 
