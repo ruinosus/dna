@@ -468,7 +468,7 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | `hosting.stores.postgres` | string |  | Postgres requirement (e.g. required). |
 | `hosting.stores.redis` | string |  | Redis requirement (e.g. required). |
 | `hosting.target` | string |  | The hosted runtime — foundry (MS-AF, true managed, first-class), langgraph-platform (SaaS / self-host), agentos (self-host only). Um de: `foundry`, `langgraph-platform`, `agentos`. |
-| `interaction` | object |  | The INTERACTION MENU (F6.c of spec-copilot-f6-capacidades): presence-flips-capability blocks — declaring a block IS enabling it, every field has a safe default (the pattern measured in the voice_persona precedent: "{}" works). Only blocks a shipped renderer READS live here (the F4 data-honesty rule); cards/voice land with their renderers. HITL confirmation is NOT here — it already lives where it always did (the def's tools_requiring_confirmation). |
+| `interaction` | object |  | The INTERACTION MENU (F6.c of spec-copilot-f6-capacidades): presence-flips-capability blocks — declaring a block IS enabling it, every field has a safe default (the pattern measured in the voice_persona precedent: "{}" works). Only blocks a shipped renderer READS live here (the F4 data-honesty rule); voice landed WITH its renderer (dna-cloud#302 — the Realtime mint + WebRTC button read exactly these fields); cards still wait for theirs. HITL confirmation is NOT here — it already lives where it always did (the def's tools_requiring_confirmation). |
 | `interaction.attachments` | object |  | What the chat input ACCEPTS. Presence of each sub-block enables that attachment family. |
 | `interaction.attachments.image` | object |  |  |
 | `interaction.attachments.image.max_per_turn` | integer |  |  |
@@ -481,6 +481,12 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | `interaction.suggestions.static` | array |  |  |
 | `interaction.suggestions.static[].message` | string | yes |  |
 | `interaction.suggestions.static[].title` | string | yes |  |
+| `interaction.voice` | object |  | The VOICE face (spec-interaction-voice; renderer-first rule satisfied by dna-cloud#302): presence of this block is what makes the copilot's voice button exist — no block, no mint, no cost. Only fields the shipped runtime READS (the aap voice_persona fields nothing consumed — archetype, interruption_tolerance, wake_word — stay OUT by the F4 rule). The provider key never lives in the doc; the hosting layer wires it (a secret param, default empty = the face is invisible). |
+| `interaction.voice.budget` | object |  | The per-session cost ceiling — the founder's control. Seconds because that is what the runtime can ENFORCE today (a USD cap that only notifies is a measured gap in the reference, not a control). |
+| `interaction.voice.budget.max_session_seconds` | integer |  |  |
+| `interaction.voice.identity_lock` | string |  | Authored identity assertion spoken-as-context (the aap RCA — a persona without an assertion leaks "I am ChatGPT"). |
+| `interaction.voice.style` | string |  | Prosody/tone hint APPENDED to the composed instructions — refinement, never a replacement. |
+| `interaction.voice.voice` | string |  | Provider voice id (e.g. marin, cedar). Empty = provider default. |
 | `knowledge` | object |  | RAG the copilot may read. Optional — a pure-action copilot declares none. |
 | `knowledge.collections` | array |  | Names of the knowledge collections the copilot may query (refs — resolved by the emitter). |
 | `knowledge.store` | object |  | WHERE the corpus is embedded + searched — the vector store. Lives inside knowledge so the corpus and its store stay cohesive. Optional; flows to the Terraform migration modules (f-copilot-infra-binding). |

@@ -202,3 +202,40 @@ async def test_interaction_sugestao_sem_message_e_vetada(kernel):
     doc["spec"]["interaction"] = {"suggestions": {"static": [{"title": "só título"}]}}
     with pytest.raises(SpecValidationError):
         await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
+
+
+@pytest.mark.asyncio
+async def test_interaction_voice_presenca_liga(kernel):
+    """spec-interaction-voice: o bloco voice entra no cardápio JUNTO com o
+    renderer (dna-cloud#302 — regra renderer-first cumprida). Presença liga:
+    `{}` funciona; os campos são só os que o runtime shipado lê."""
+    doc = _copilot([])
+    doc["spec"]["interaction"] = {"voice": {}}
+    await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
+    lido = await kernel.get_document("fluxos", "Copilot", "memory-copilot")
+    assert "voice" in lido["spec"]["interaction"]
+
+    doc["spec"]["interaction"] = {
+        "voice": {
+            "voice": "marin",
+            "style": "calmo, pausado",
+            "identity_lock": "Você é o copiloto de escrita do workspace.",
+            "budget": {"max_session_seconds": 120},
+        }
+    }
+    await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
+    lido = await kernel.get_document("fluxos", "Copilot", "memory-copilot")
+    assert lido["spec"]["interaction"]["voice"]["budget"]["max_session_seconds"] == 120
+
+
+@pytest.mark.asyncio
+async def test_interaction_voice_campo_morto_e_vetado(kernel):
+    """Os campos do voice_persona do aap que NENHUM runtime lia (archetype,
+    wake_word…) ficam FORA por regra F4 — declarar um deles é erro, não
+    silêncio."""
+    from dna.kernel.protocols import SpecValidationError
+
+    doc = _copilot([])
+    doc["spec"]["interaction"] = {"voice": {"archetype": "sábio"}}
+    with pytest.raises(SpecValidationError):
+        await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
