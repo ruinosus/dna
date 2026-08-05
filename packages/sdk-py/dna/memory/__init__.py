@@ -51,6 +51,15 @@ from dna.memory.policy import (
     DecayPolicy,
     RecallPolicy,
 )
+from dna.memory.merge import (
+    DEFAULT_OVERLAP_FLOOR,
+    MergeScribe,
+    canonical_name,
+    merge_candidates_report,
+    merge_groups,
+    merge_tokens,
+    overlap_score,
+)
 from dna.memory.semantic import (
     ENGRAM_TEXT_FIELDS,
     cosine_similarity,
@@ -137,6 +146,14 @@ __all__ = [
     "stamp_encoding_context_if_absent",
     # memory type
     "classify_memory_type",
+    # merge candidates (consolidate dry-run diff, i-050)
+    "DEFAULT_OVERLAP_FLOOR",
+    "MergeScribe",
+    "merge_tokens",
+    "overlap_score",
+    "canonical_name",
+    "merge_groups",
+    "merge_candidates_report",
     # interchange (Engram <-> MIF, s-memory-interchange-verbs)
     "to_mif",
     "from_mif",

@@ -1,0 +1,67 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-consolidate-dry-run-report
+spec:
+  title: 'consolidate dry-run: relatório estruturado + candidatos de fusão'
+  description: 'Desbloqueio do i-050 do dna-cloud (consolidação com diff): consolidate ganha dry_run com relatório por memória (retain/expire/already_expired + razão determinística) e candidatos de fusão determinísticos (grupos por sobreposição lexical, canônico + supersede) — a proposta separada da aplicação. A síntese de texto fundido fica no seam MergeScribe (externo, opcional): o kernel não acopla modelo.'
+  status: in-progress
+  feature: f-dna-search-memory
+  labels:
+  - memory
+  - dna-cloud-unblock
+  reporter: claude
+  acceptance_criteria:
+  - Given memórias com retenções acima e abaixo do piso, When consolidate(dry_run=True), Then o relatório traz uma ação por memória (retain/expire/already_expired) com razão determinística e NADA é escrito; Given a mesma chamada sem dry_run, Then o shape e o comportamento são byte-idênticos ao de hoje; Given duas memórias com forte sobreposição lexical, When dry_run, Then merge_candidates traz o grupo com canônico determinístico, evidência de sobreposição e proposed_spec sem LLM; Given a face MCP, When a tool consolidate recebe dry_run=true, Then o relatório estruturado atravessa a porta
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - código + testes pytest (sdk-py verbs/merge + face MCP/CLI) verdes; docstrings no padrão do pacote; contrato MergeScribe registrado; sem bump de versão; PR aberto sem merge
+  definition_of_done_source: cli-create
+  created_at: '2026-08-05T20:40:19+00:00'
+  updated_at: '2026-08-05T20:54:22+00:00'
+  timeline:
+  - at: '2026-08-05T20:40:19+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-05T20:40:37+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-05T20:48:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Decisões de desenho: (1) dry_run vence apply — preview nunca escreve, e sem dry_run o shape do relatório é byte-idêntico ao legado (guardado por teste de chaves exatas). (2) Ações são três e determinísticas: retain/expire/already_expired — ''expire'' É a demoção bi-temporal do forget, prevista; não inventei um 4º estado ''rebaixar'' porque no passe determinístico demoção e expiração são a mesma operação (valid_to). (3) Candidatos de fusão sem LLM: Jaccard sobre engram_text (mesmos planos que o recall embeda) + stopwords mínimas fixas, union-find p/ grupos transitivos, canônico por confiança>recência>nome (ordem total). Proposta default ''supersede'' (manter canônico, forget(superseded_by=canônico) nos demais — maquinário que já existe). (4) A síntese de texto fundido NÃO entrou no kernel: o contrato exato é o Protocol MergeScribe (specs do grupo, canônico primeiro → spec fundido com summary; fail-soft p/ supersede + scribe_error). (5) REST: não existe rota consolidate hoje — fora do escopo, sem rota nova. (6) Gating MCP inalterado: consolidate segue memory_op=write mesmo em dry_run — afrouxar preview p/ tier read é decisão de produto, não desta story.'
+    commit_ref: a24d2c266b0563fa91ab002e2f17b31223f4299d
+  - at: '2026-08-05T20:49:59+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-consolidate-dry-run
+    summary: TestGuide tg-consolidate-dry-run (regression)
+  - at: '2026-08-05T20:54:22+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-consolidate-dry-run-20260805-205416
+    summary: TestRun tr-tg-consolidate-dry-run-20260805-205416 → pass
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-consolidate-dry-run-report
+    role: implementation
+    at: '2026-08-05T20:40:37+00:00'
+  - kind: TestGuide
+    name: tg-consolidate-dry-run
+    role: test-guide
+    at: '2026-08-05T20:49:59+00:00'
+  - kind: TestRun
+    name: tr-tg-consolidate-dry-run-20260805-205416
+    role: test-run
+    at: '2026-08-05T20:54:22+00:00'

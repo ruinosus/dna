@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-consolidate-dry-run-20260805-205416
+spec:
+  guide_ref: tg-consolidate-dry-run
+  outcome: pass
+  verifies:
+  - Story/s-consolidate-dry-run-report
+  executed_by: claude-code
+  executed_at: '2026-08-05T20:54:16+00:00'
+  notes: 'sdk-py: 4997 passed/250 skipped/5 xfailed (suíte completa); cli: 1443 passed/19 skipped (suíte completa); brand_guard clean; gen_cli_docs regenerado (--dry-run na referência)'

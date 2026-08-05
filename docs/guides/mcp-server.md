@@ -61,7 +61,10 @@ unrestricted, exactly like `remember`.
 
 **Memory** — declarative recall:
 
-- `recall(query, scope?, k?)` · `remember(summary, …)` · `consolidate(apply?)`.
+- `recall(query, scope?, k?)` · `remember(summary, …)` ·
+  `consolidate(apply?, dry_run?)` — `dry_run` previews the pass as a
+  structured report (per-memory action + reason, deterministic merge
+  candidates) with zero effect, so a human can approve before `apply`.
 
 **Documents** — every registered Kind, generically:
 

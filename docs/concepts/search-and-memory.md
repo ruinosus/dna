@@ -127,6 +127,13 @@ flowchart LR
 - **`forget`** *demotes*, never deletes (see bi-temporality below).
 - **`consolidate`** is a deterministic decay pass: recompute retention,
   report — or with `--apply`, soft-forget — memories that have gone stale.
+  `--dry-run` previews the whole pass with zero effect: one action per memory
+  (`retain` / `expire` / `already_expired`, each with its deterministic
+  reason) plus **merge candidates** — groups of lexically-overlapping
+  memories with a proposed `supersede` fusion (keep the canonical, demote the
+  rest). The fused-*text* synthesis stays outside the SDK by design: the
+  `MergeScribe` seam (`dna.memory.merge`) is where an external LLM scribe
+  plugs in.
 
 Three mechanics carry the cognitive weight, each simpler than it sounds:
 

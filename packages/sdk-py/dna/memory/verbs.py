@@ -20,9 +20,12 @@ DELIBERATELY out — those are a service, not the SDK.
 - ``forget``   — bi-temporal DEMOTION: set ``valid_to`` (+ optional
   ``superseded_by_memory``). NEVER hard-delete.
 - ``consolidate`` — a deterministic decay pass (NO LLM): recompute retention,
-  report/soft-archive stale memories. LLM-driven consolidation is external.
+  report/soft-archive stale memories. ``dry_run=True`` previews the pass as a
+  structured report (per-memory action + reason, merge candidates) with zero
+  effect (``dna.memory.merge``). LLM-driven consolidation is external — its
+  seam is ``dna.memory.merge.MergeScribe``.
 
-s-memory-verbs (2026-07-09).
+s-memory-verbs (2026-07-09) · dry-run + merge candidates i-050 (2026-08-05).
 """
 from __future__ import annotations
 
@@ -589,6 +592,9 @@ async def consolidate(
     tenant: str | None = None,
     stale_retention_floor: float = 0.15,
     apply: bool = False,
+    dry_run: bool = False,
+    merge_overlap_floor: float | None = None,
+    scribe: Any | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Deterministic consolidation pass — NO LLM (the LLM/deep-sleep scribe is
@@ -599,32 +605,87 @@ async def consolidate(
     stale; with ``apply=True`` they are soft-forgotten (``forget`` — bi-temporal
     ``valid_to``, never deleted). Returns a report:
     ``{evaluated, stale:[{name,retention,stability_days}], archived, applied}``.
+
+    **Dry-run (i-050 — consolidação com diff):** ``dry_run=True`` returns the
+    STRUCTURED report of what the pass would do, and guarantees ZERO effect —
+    it wins over ``apply`` (nothing is soft-forgotten; ``applied`` reports
+    ``False``). The report gains, on top of the keys above:
+
+    * ``dry_run: True``;
+    * ``actions`` — one entry per memory seen, sorted by name, each
+      ``{name, action, reason, ...}`` with a DETERMINISTIC reason:
+
+      - ``retain``          — retention at/above the floor (would be kept);
+      - ``expire``          — retention below the floor (``apply=True`` would
+        bi-temporally demote it via ``forget`` — the same demotion, previewed);
+      - ``already_expired`` — ``valid_to`` already past; the pass never
+        touches it (carries ``valid_to`` instead of the retention numbers);
+
+    * ``merge_candidates`` — the deterministic fusion proposals over the
+      currently-valid memories (:func:`dna.memory.merge.merge_candidates_report`):
+      groups of lexically-overlapping memories with the overlap evidence, the
+      canonical survivor and a ``supersede`` proposal — SEPARATED from
+      application (this pass never merges; the fused-text synthesis is the
+      external :class:`~dna.memory.merge.MergeScribe` seam, pluggable via
+      ``scribe``). ``merge_overlap_floor`` tunes the Jaccard floor (default
+      :data:`~dna.memory.merge.DEFAULT_OVERLAP_FLOOR`).
+
+    Without ``dry_run`` the behavior AND the report shape are byte-identical
+    to the pre-dry-run verb (no new keys) — total backward compatibility.
     """
+    from dna.memory.merge import DEFAULT_OVERLAP_FLOOR, merge_candidates_report
+
     now_dt = now or datetime.now(timezone.utc)
     evaluated = 0
     stale: list[dict[str, Any]] = []
+    actions: list[dict[str, Any]] = []
+    valid_members: list[tuple[str, dict[str, Any]]] = []
     async for raw in kernel.query(scope, kind, tenant=tenant):
         spec = raw.get("spec") or {}
         name = (raw.get("metadata") or {}).get("name") or raw.get("name")
         if not name:
             continue
         if not currently_valid(spec.get("valid_to"), now=now_dt):
+            if dry_run:
+                actions.append({
+                    "name": name,
+                    "action": "already_expired",
+                    "reason": f"valid_to {spec.get('valid_to')} is already past",
+                    "valid_to": spec.get("valid_to"),
+                })
             continue  # already invalidated — skip
         evaluated += 1
         _adjusted, retention = decay_adjusted_score(1.0, spec, floor=0.0, now=now_dt)
+        stability = round(stability_from_spec(spec), 2)
+        elapsed = round(
+            days_since(spec.get("last_surfaced") or spec.get("created_at"), now=now_dt) or 0.0, 2,
+        )
         if retention < stale_retention_floor:
             stale.append({
                 "name": name,
                 "retention": round(retention, 4),
-                "stability_days": round(stability_from_spec(spec), 2),
-                "days_since": round(
-                    days_since(spec.get("last_surfaced") or spec.get("created_at"), now=now_dt) or 0.0, 2,
-                ),
+                "stability_days": stability,
+                "days_since": elapsed,
             })
+        if dry_run:
+            is_stale = retention < stale_retention_floor
+            actions.append({
+                "name": name,
+                "action": "expire" if is_stale else "retain",
+                "reason": (
+                    f"retention {retention:.4f} "
+                    f"{'<' if is_stale else '>='} floor {stale_retention_floor} "
+                    f"after {elapsed}d (stability {stability}d)"
+                ),
+                "retention": round(retention, 4),
+                "stability_days": stability,
+                "days_since": elapsed,
+            })
+            valid_members.append((str(name), spec))
     stale.sort(key=lambda s: (s["retention"], s["name"]))
 
     archived = 0
-    if apply:
+    if apply and not dry_run:
         for s in stale:
             try:
                 await forget(kernel, scope, s["name"], kind=kind, tenant=tenant, now=now_dt)
@@ -632,12 +693,26 @@ async def consolidate(
             except Exception as exc:  # noqa: BLE001
                 logger.warning("consolidate: archive failed for %s: %s", s["name"], exc)
 
-    return {
+    report: dict[str, Any] = {
         "evaluated": evaluated,
         "stale": stale,
         "archived": archived,
-        "applied": apply,
+        "applied": apply and not dry_run,
     }
+    if dry_run:
+        actions.sort(key=lambda a: a["name"])
+        report["dry_run"] = True
+        report["actions"] = actions
+        report["merge_candidates"] = merge_candidates_report(
+            valid_members,
+            overlap_floor=(
+                DEFAULT_OVERLAP_FLOOR if merge_overlap_floor is None
+                else merge_overlap_floor
+            ),
+            scribe=scribe,
+            now=now_dt,
+        )
+    return report
 
 
 async def import_mif_docs(

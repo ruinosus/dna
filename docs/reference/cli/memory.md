@@ -22,6 +22,7 @@ dna memory consolidate [OPTIONS]
 | Option | Description |
 | --- | --- |
 | `--apply` | Soft-forget stale memories (bi-temporal, never delete). |
+| `--dry-run` | Preview the pass (zero effect, wins over --apply): per-memory action + reason, and deterministic merge candidates. |
 | `--floor` | Retention floor below which a memory is stale. _(default: `0.15`)_ |
 | `--help` | Show this message and exit. |
 | `--json` |  |

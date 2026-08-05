@@ -1394,9 +1394,17 @@ def build_server(
 
     @server.tool(run_in_thread=False)
     async def consolidate(
-        scope: str | None = None, apply: bool = False, personal: bool = False,
+        scope: str | None = None, apply: bool = False, dry_run: bool = False,
+        personal: bool = False,
     ) -> dict[str, Any]:
         """Deterministic memory consolidation pass (retention re-score).
+
+        ``dry_run=true`` previews the pass with ZERO effect (wins over
+        ``apply``): the report adds per-memory ``actions`` (retain / expire /
+        already_expired, each with its deterministic reason) plus
+        ``merge_candidates`` (groups of overlapping memories with a proposed
+        supersede fusion) — show it to the human FIRST, then call again with
+        ``apply=true`` once approved.
 
         ``personal=true`` consolidates ONLY your own private partition — never
         the workspace's shared memory."""
@@ -1404,13 +1412,14 @@ def build_server(
             oid, family = await _personal_guard("write")
             async with _refusing():
                 return await consolidate_impl(
-                    await _live(), None, apply=apply, memory_scope="personal",
-                    oid=oid, family=family,
+                    await _live(), None, apply=apply, dry_run=dry_run,
+                    memory_scope="personal", oid=oid, family=family,
                 )
         tenant = await _guard("memory", scope=scope, memory_op="write")
         async with _refusing():
             return await consolidate_impl(
-                await _live(), scope, apply=apply, tenant=tenant)
+                await _live(), scope, apply=apply, dry_run=dry_run,
+                tenant=tenant)
 
     @server.tool(run_in_thread=False, app=memory_card_app)
     async def list_memories(

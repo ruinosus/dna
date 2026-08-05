@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-consolidate-dry-run
+spec:
+  description: Valida o dry-run estruturado do consolidate (ações por memória + merge candidates, zero efeito, shape legado intacto) nas camadas verbo/aplicação/MCP/CLI
+  kind_of_test: regression
+  status: active
+  steps:
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests/test_memory_merge.py tests/test_memory_verbs.py -q
+    expected: 16 passed — dry-run com zero efeito, shape legado intacto, merge candidates determinísticos, MergeScribe fail-soft
+  - action: cd packages/cli && uv run --no-project python -m pytest tests/test_memory_cmd.py tests/test_mcp_memory.py -q
+    expected: verde — tool MCP consolidate atravessa dry_run e o CLI --dry-run mostra ações + candidatos sem escrever
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests -q --timeout=120
+    expected: suíte completa verde (sem regressão fora do recorte)
+  verifies:
+  - Story/s-consolidate-dry-run-report
+  created_at: '2026-08-05T20:49:28+00:00'
+  updated_at: '2026-08-05T20:49:28+00:00'

@@ -10,6 +10,7 @@ Kernel-bound, no server. Memory in DNA is the Kinds it already has
     dna memory recall "cache mutation" --json
     dna memory forget rem-abc123 --superseded-by rem-def456
     dna memory list --kind Engram
+    dna memory consolidate --dry-run   # preview: per-memory action + merge candidates
     dna memory consolidate --apply
 
 With the ``search-sqlite`` extra present recall is hybrid (dense sqlite-vec +
@@ -374,11 +375,14 @@ def list_cmd(kind: str, show_all: bool, scope: str | None, tenant: str | None, a
 @click.option("--floor", "stale_floor", default=0.15, show_default=True,
               help="Retention floor below which a memory is stale.")
 @click.option("--apply", "do_apply", is_flag=True, help="Soft-forget stale memories (bi-temporal, never delete).")
+@click.option("--dry-run", "do_dry_run", is_flag=True,
+              help="Preview the pass (zero effect, wins over --apply): per-memory "
+                   "action + reason, and deterministic merge candidates.")
 @click.option("--scope", default=None)
 @click.option("--tenant", default=None)
 @click.option("--json", "as_json", is_flag=True)
 def consolidate_cmd(
-    kind: str, stale_floor: float, do_apply: bool,
+    kind: str, stale_floor: float, do_apply: bool, do_dry_run: bool,
     scope: str | None, tenant: str | None, as_json: bool,
 ) -> None:
     """Deterministic consolidation pass — recompute decay, report/soft-forget
@@ -390,6 +394,7 @@ def consolidate_cmd(
         report = s.run(consolidate(
             s.kernel, s.scope, kind=kind, tenant=tenant,
             stale_retention_floor=stale_floor, apply=do_apply,
+            dry_run=do_dry_run,
         ))
 
     if as_json:
@@ -400,6 +405,16 @@ def consolidate_cmd(
         f"{len(report['stale'])} stale · archived {report['archived']}",
         bold=True,
     )
+    if do_dry_run:
+        for act in report["actions"]:
+            click.echo(f"  · {act['name']}  {act['action']}  — {act['reason']}")
+        for grupo in report["merge_candidates"]:
+            click.echo(
+                f"  ⇄ merge candidate: {', '.join(grupo['names'])} → "
+                f"{grupo['canonical']} ({grupo['strategy']})"
+            )
+        click.secho("  (dry-run — nothing was changed)", fg="bright_black")
+        return
     for stl in report["stale"]:
         click.echo(f"  · {stl['name']}  retention={stl['retention']:.3f}  "
                    f"({stl['days_since']:.0f}d since recall)")

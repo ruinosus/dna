@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-consolidate-dry-run-report
+spec:
+  title: 'Plano: s-consolidate-dry-run-report'
+  date: '2026-08-05'
+  status: accepted
+  story_ref: s-consolidate-dry-run-report
+  journey_phase: plan
+  body: '1) dna/memory/merge.py novo (puro): tokenização, Jaccard, union-find de grupos, canônico determinístico (confiança > created_at > nome), relatório de candidatos + Protocol MergeScribe (seam externo p/ síntese LLM — não implementado no kernel). 2) verbs.consolidate ganha dry_run (relatório por memória: retain/expire/already_expired + razão; merge_candidates; zero efeito) — sem dry_run, shape idêntico. 3) application.consolidate_impl + tool MCP consolidate ganham dry_run (gating memory_op=write inalterado). 4) CLI dna memory consolidate --dry-run. 5) REST: sem rota consolidate hoje — fora do escopo, registrado. 6) pytest sdk-py (verbs+merge) + cli (mcp/memory_cmd).'
+  created_at: '2026-08-05T20:40:34+00:00'
+  updated_at: '2026-08-05T20:40:34+00:00'
