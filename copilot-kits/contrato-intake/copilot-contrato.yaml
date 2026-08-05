@@ -11,6 +11,21 @@ spec:
     path: /agui
   serving:
     transport: ag-ui
+  # F6.a — MCP EXTRA com DE-PARA: o vocabulário do bloco `tools` é o
+  # ToolTransformConfig do fastmcp, verbatim. O rename/re-descrição é o que
+  # o MODELO lê — é daí que vem a acertividade. Credencial nunca aqui:
+  # `headers_env` nomearia ENV VARS (este server é público, sem auth).
+  mcp_servers:
+  - name: deepwiki
+    url: https://mcp.deepwiki.com/mcp
+    transport: streamable_http
+    tools:
+      ask_question:
+        name: consultar_documentacao_de_github
+        description: Pergunta sobre a documentação de um repositório PÚBLICO
+          do GitHub (repoName no formato "dono/repo", ex. "jlowin/fastmcp").
+          Use quando o usuário citar uma biblioteca/projeto e a resposta
+          estiver na documentação dele.
   surfaces:
   - name: contrato-intake
     state_key: document_draft

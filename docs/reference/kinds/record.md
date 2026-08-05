@@ -449,6 +449,19 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | `hosting.stores.postgres` | string |  | Postgres requirement (e.g. required). |
 | `hosting.stores.redis` | string |  | Redis requirement (e.g. required). |
 | `hosting.target` | string |  | The hosted runtime — foundry (MS-AF, true managed, first-class), langgraph-platform (SaaS / self-host), agentos (self-host only). Um de: `foundry`, `langgraph-platform`, `agentos`. |
+| `interaction` | object |  | The INTERACTION MENU (F6.c of spec-copilot-f6-capacidades): presence-flips-capability blocks — declaring a block IS enabling it, every field has a safe default (the pattern measured in the voice_persona precedent: "{}" works). Only blocks a shipped renderer READS live here (the F4 data-honesty rule); cards/voice land with their renderers. HITL confirmation is NOT here — it already lives where it always did (the def's tools_requiring_confirmation). |
+| `interaction.attachments` | object |  | What the chat input ACCEPTS. Presence of each sub-block enables that attachment family. |
+| `interaction.attachments.image` | object |  |  |
+| `interaction.attachments.image.max_per_turn` | integer |  |  |
+| `interaction.attachments.spreadsheet` | object |  |  |
+| `interaction.attachments.text` | object |  |  |
+| `interaction.attachments.text.extensions` | array |  |  |
+| `interaction.attachments.text.max_chars` | integer |  |  |
+| `interaction.suggestions` | object |  | Chips above the chat input. |
+| `interaction.suggestions.from_steps` | boolean |  | Derive one chip per wizard step ("fill step X for me") from the surface's declared steps. |
+| `interaction.suggestions.static` | array |  |  |
+| `interaction.suggestions.static[].message` | string | yes |  |
+| `interaction.suggestions.static[].title` | string | yes |  |
 | `knowledge` | object |  | RAG the copilot may read. Optional — a pure-action copilot declares none. |
 | `knowledge.collections` | array |  | Names of the knowledge collections the copilot may query (refs — resolved by the emitter). |
 | `knowledge.store` | object |  | WHERE the corpus is embedded + searched — the vector store. Lives inside knowledge so the corpus and its store stay cohesive. Optional; flows to the Terraform migration modules (f-copilot-infra-binding). |

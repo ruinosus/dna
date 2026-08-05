@@ -265,6 +265,76 @@ spec:
                 description: Points at an infra resource (a Terraform module
                   output — connection string/endpoint). Multiple slots may
                   share one ref (one physical store).
+      interaction:
+        type: object
+        additionalProperties: false
+        description: >-
+          The INTERACTION MENU (F6.c of spec-copilot-f6-capacidades):
+          presence-flips-capability blocks — declaring a block IS enabling
+          it, every field has a safe default (the pattern measured in the
+          voice_persona precedent: "{}" works). Only blocks a shipped
+          renderer READS live here (the F4 data-honesty rule); cards/voice
+          land with their renderers. HITL confirmation is NOT here — it
+          already lives where it always did (the def's
+          tools_requiring_confirmation).
+        properties:
+          attachments:
+            type: object
+            additionalProperties: false
+            description: What the chat input ACCEPTS. Presence of each
+              sub-block enables that attachment family.
+            properties:
+              image:
+                type: object
+                additionalProperties: false
+                properties:
+                  max_per_turn:
+                    type: integer
+                    minimum: 1
+                    maximum: 10
+                    default: 4
+              text:
+                type: object
+                additionalProperties: false
+                properties:
+                  extensions:
+                    type: array
+                    default: [".txt", ".md", ".csv", ".json", ".yaml"]
+                    items:
+                      type: string
+                  max_chars:
+                    type: integer
+                    minimum: 100
+                    default: 20000
+              spreadsheet:
+                type: object
+                additionalProperties: false
+          suggestions:
+            type: object
+            additionalProperties: false
+            description: Chips above the chat input.
+            properties:
+              static:
+                type: array
+                default: []
+                items:
+                  type: object
+                  additionalProperties: false
+                  required:
+                  - title
+                  - message
+                  properties:
+                    title:
+                      type: string
+                      minLength: 1
+                    message:
+                      type: string
+                      minLength: 1
+              from_steps:
+                type: boolean
+                default: false
+                description: Derive one chip per wizard step ("fill step
+                  X for me") from the surface's declared steps.
       mcp_servers:
         type: array
         default: []

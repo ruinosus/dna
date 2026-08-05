@@ -174,3 +174,31 @@ async def test_mcp_server_sem_url_e_vetado(kernel):
     doc["spec"]["mcp_servers"] = [{"name": "quebrado"}]
     with pytest.raises(SpecValidationError):
         await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
+
+
+@pytest.mark.asyncio
+async def test_interaction_presenca_liga_com_defaults_seguros(kernel):
+    """F6.c: declarar o bloco É ligar a capacidade — `{}` funciona (o padrão
+    voice_persona medido no spike do cardápio)."""
+    doc = _copilot([])
+    doc["spec"]["interaction"] = {
+        "attachments": {"image": {}, "text": {"extensions": [".md"]}},
+        "suggestions": {"from_steps": True, "static": [
+            {"title": "Extrair", "message": "Extraia os campos do contrato anexado."}
+        ]},
+    }
+    await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
+    lido = await kernel.get_document("fluxos", "Copilot", "memory-copilot")
+    it = lido["spec"]["interaction"]
+    assert it["attachments"]["image"] == {} or "max_per_turn" in it["attachments"]["image"]
+    assert it["suggestions"]["static"][0]["title"] == "Extrair"
+
+
+@pytest.mark.asyncio
+async def test_interaction_sugestao_sem_message_e_vetada(kernel):
+    from dna.kernel.protocols import SpecValidationError
+
+    doc = _copilot([])
+    doc["spec"]["interaction"] = {"suggestions": {"static": [{"title": "só título"}]}}
+    with pytest.raises(SpecValidationError):
+        await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
