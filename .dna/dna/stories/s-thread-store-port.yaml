@@ -16,7 +16,7 @@ spec:
   - porta + adapter + slot com testes pytest (kit de conformidade rodando contra o duble em memoria E contra o adapter LangGraph); suite de runtime inteira verde; docs de Kind regenerados; zero mudanca de comportamento existente
   definition_of_done_source: cli-create
   created_at: '2026-08-05T22:27:11+00:00'
-  updated_at: '2026-08-05T22:52:10+00:00'
+  updated_at: '2026-08-05T23:02:33+00:00'
   timeline:
   - at: '2026-08-05T22:27:11+00:00'
     actor: claude-code
@@ -56,6 +56,12 @@ spec:
     source: cli
     summary: 'PR aberto: https://github.com/ruinosus/dna/pull/317'
     pr_url: https://github.com/ruinosus/dna/pull/317
+  - at: '2026-08-05T23:02:33+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR dna#317 aberto, CI verde (sdk-py 3.12/3.13, cli 3.12/3.13, postgres, brand-guard, docs — tudo pass). O QUE FICOU FORA desta fatia, com nome e dono: (1) a implementacao de ESCRITA do indice em Postgres — e do HOST (copilot_thread + gate ASGI ja existem no dna-cloud); a fatia 2 e promove-los a consumidores da porta, e o SDK nao deve carregar psycopg para isso. (2) O job de expurgo da retencao — o slot e a conta (retention_cutoff) existem; quem apaga e quem tem a conexao. (3) O adapter de thread do backend MAF — o gap agora esta DECLARADO no handle (thread_store = None) em vez de so numa issue; fechar exige o ChatMessageStoreProtocol daquele framework. (4) Kind Conversation como projecao futura sobre a porta — adiado pela propria spec. (5) Nenhum consumidor no SDK chama fetch_threads ainda: a metade de indice so tem a implementacao de referencia em memoria, por construcao — o contrato existe para o host cumprir.'
+    commit_ref: 02ae626ca6e59da935df08ef2d6ea7c3c35dd316
   produces:
   - kind: Plan
     name: plan-s-thread-store-port
