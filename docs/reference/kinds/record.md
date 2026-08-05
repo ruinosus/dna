@@ -492,6 +492,11 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | `persistence.memory` | object |  | Cross-session long-term memory (LangGraph PostgresStore · Agno enable_user_memories · MS-AF mem0 / VectorStore). |
 | `persistence.memory.backend` | string \| null | yes | Storage backend — an OPEN set (known values postgres \| sqlite \| mongo \| redis \| inmemory \| cosmos \| serialize \| null); emit when built. null = no backend (framework default / in-memory). |
 | `persistence.memory.ref` | string |  | Points at an infra resource (a Terraform module output — connection string/endpoint). Multiple slots may share one ref (one physical store). |
+| `policies` | object |  | GOVERNANCE the copilot's OWNER declares (spec-quota-como-politica, dna-cloud 05/08/2026) — distinct from the house's billing: quotas here cap USE of this copilot, whoever pays. Enforcement lives in the serving runtime (the kernel validates shape only): a run that would exceed a declared quota is refused BEFORE the model runs, with the refusal naming the cap. Absent block = no caps. |
+| `policies.quotas` | object |  |  |
+| `policies.quotas.per_user` | boolean |  | When true, each quota applies PER USER (per verified oid) instead of per copilot — "cada usuário tem N turnos", not "o copiloto todo tem N". |
+| `policies.quotas.tokens_per_day` | integer |  | Max model tokens (input+output) per UTC day, across every user of this copilot. |
+| `policies.quotas.turns_per_month` | integer |  | Max turns (user messages answered) per calendar month, across every user of this copilot. |
 | `serving` | object | yes | How the copilot backend is served. |
 | `serving.framework` | string |  | The self-hosted serving framework the dna.runtime port builds on; distinct from hosting.target which selects a MANAGED host (foundry/langgraph-platform/agentos). Um de: `langchain`, `maf`, `agno`, `deepagents`. |
 | `serving.transport` | string | yes | Wire protocol the copilot backend speaks. Only ag-ui (AG-UI protocol) today. Um de: `ag-ui`. |

@@ -265,6 +265,39 @@ spec:
                 description: Points at an infra resource (a Terraform module
                   output — connection string/endpoint). Multiple slots may
                   share one ref (one physical store).
+      policies:
+        type: object
+        additionalProperties: false
+        description: >-
+          GOVERNANCE the copilot's OWNER declares (spec-quota-como-politica,
+          dna-cloud 05/08/2026) — distinct from the house's billing: quotas
+          here cap USE of this copilot, whoever pays. Enforcement lives in
+          the serving runtime (the kernel validates shape only): a run that
+          would exceed a declared quota is refused BEFORE the model runs,
+          with the refusal naming the cap. Absent block = no caps.
+        properties:
+          quotas:
+            type: object
+            additionalProperties: false
+            properties:
+              turns_per_month:
+                type: integer
+                minimum: 1
+                description: >-
+                  Max turns (user messages answered) per calendar month,
+                  across every user of this copilot.
+              tokens_per_day:
+                type: integer
+                minimum: 1
+                description: >-
+                  Max model tokens (input+output) per UTC day, across every
+                  user of this copilot.
+              per_user:
+                type: boolean
+                description: >-
+                  When true, each quota applies PER USER (per verified oid)
+                  instead of per copilot — "cada usuário tem N turnos",
+                  not "o copiloto todo tem N".
       interaction:
         type: object
         additionalProperties: false

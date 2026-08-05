@@ -1490,3 +1490,28 @@ def test_copilot_ctx_unions_agent_level_confirmation(tmp_path):
     mi3 = Kernel.quick(_SCOPE, base_dir=_BASE)
     ctx3 = build_copilot_context(mi3, "memory-copilot", model="azure/gpt-4o")
     assert ctx3.tools_requiring_confirmation == {"remember", "forget"}
+
+
+def test_copilot_kind_accepts_owner_quota_policies():
+    """spec-quota-como-politica: o DONO declara caps de uso; o kernel valida a
+    FORMA (enforcement é do runtime que serve)."""
+    doc = load_kind_doc("Copilot", {
+        "mounts": [{"id": "m", "agent": "a", "path": "/agui"}],
+        "serving": {"transport": "ag-ui"},
+        "policies": {"quotas": {
+            "turns_per_month": 500, "tokens_per_day": 200000, "per_user": True,
+        }},
+    })
+    assert doc.spec.policies.quotas.turns_per_month == 500
+    assert doc.spec.policies.quotas.per_user is True
+
+
+def test_copilot_kind_refuses_unknown_quota_key():
+    """additionalProperties: false — um cap com nome errado é recusa, não
+    silêncio (a política que 'parece declarada' e não vale seria o pior)."""
+    with pytest.raises(ValueError):
+        load_kind_doc("Copilot", {
+            "mounts": [{"id": "m", "agent": "a", "path": "/agui"}],
+            "serving": {"transport": "ag-ui"},
+            "policies": {"quotas": {"turns_per_mont": 500}},
+        })
