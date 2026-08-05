@@ -265,6 +265,69 @@ spec:
                 description: Points at an infra resource (a Terraform module
                   output — connection string/endpoint). Multiple slots may
                   share one ref (one physical store).
+      mcp_servers:
+        type: array
+        default: []
+        description: >-
+          EXTRA MCP servers this copilot federates, with per-copilot tool
+          TRANSFORMS (F6.a of spec-copilot-f6-capacidades). The transform
+          vocabulary is fastmcp's own (ToolTransformConfig /
+          ArgTransformConfig) adopted VERBATIM — rename a tool, rewrite its
+          description, rename/hide arguments — because accuracy comes from
+          the name/description the model READS, and the official shape is
+          validated by fastmcp's Pydantic models at runtime (the schema here
+          stays permissive on the transform block by design: the authority
+          is the official vocabulary, not a hand-copied mirror of it).
+          Credentials never live in the doc: `headers_env` names ENV VARS,
+          the runtime resolves them at build.
+        items:
+          type: object
+          additionalProperties: false
+          required:
+          - name
+          - url
+          properties:
+            name:
+              type: string
+              minLength: 1
+              description: The server key (also the default tool prefix
+                namespace if the runtime applies one).
+            url:
+              type: string
+              minLength: 1
+              description: The MCP endpoint URL.
+            transport:
+              type: string
+              enum:
+              - streamable_http
+              - sse
+              default: streamable_http
+            headers_env:
+              type: object
+              additionalProperties:
+                type: string
+              description: 'Outbound header name → ENV VAR NAME holding the
+                value (never the value itself): {"X-Api-Key": "CRM_KEY"}.'
+            include_tags:
+              type: array
+              default: []
+              items:
+                type: string
+              description: Allowlist by tag (fastmcp enable(only=True)).
+            exclude_tags:
+              type: array
+              default: []
+              items:
+                type: string
+            tools:
+              type: object
+              description: 'The DE-PARA — original tool name → fastmcp
+                ToolTransformConfig shape ({name, description, enabled,
+                arguments: {old: {name, description, default, hide,
+                required, examples}}}). Permissive here; validated by
+                fastmcp Pydantic at runtime.'
+              additionalProperties:
+                type: object
       surfaces:
         type: array
         default: []

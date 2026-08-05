@@ -457,6 +457,14 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | `knowledge.store.embed.dims` | integer |  | Vector dimensionality (e.g. 1536). |
 | `knowledge.store.embed.model` | string |  | Embedding model id (e.g. text-embedding-3-small). |
 | `knowledge.store.ref` | string |  | Points at the vector-store infra resource (a Terraform module output — connection string/endpoint). May share the persistence ref (one physical Postgres). |
+| `mcp_servers` | array |  | EXTRA MCP servers this copilot federates, with per-copilot tool TRANSFORMS (F6.a of spec-copilot-f6-capacidades). The transform vocabulary is fastmcp's own (ToolTransformConfig / ArgTransformConfig) adopted VERBATIM — rename a tool, rewrite its description, rename/hide arguments — because accuracy comes from the name/description the model READS, and the official shape is validated by fastmcp's Pydantic models at runtime (the schema here stays permissive on the transform block by design: the authority is the official vocabulary, not a hand-copied mirror of it). Credentials never live in the doc: `headers_env` names ENV VARS, the runtime resolves them at build. |
+| `mcp_servers[].exclude_tags` | array |  |  |
+| `mcp_servers[].headers_env` | object |  | Outbound header name → ENV VAR NAME holding the value (never the value itself): {"X-Api-Key": "CRM_KEY"}. |
+| `mcp_servers[].include_tags` | array |  | Allowlist by tag (fastmcp enable(only=True)). |
+| `mcp_servers[].name` | string | yes | The server key (also the default tool prefix namespace if the runtime applies one). |
+| `mcp_servers[].tools` | object |  | The DE-PARA — original tool name → fastmcp ToolTransformConfig shape ({name, description, enabled, arguments: {old: {name, description, default, hide, required, examples}}}). Permissive here; validated by fastmcp Pydantic at runtime. |
+| `mcp_servers[].transport` | string |  | Um de: `streamable_http`, `sse`. |
+| `mcp_servers[].url` | string | yes | The MCP endpoint URL. |
 | `mounts` | array | yes | The Agents this copilot serves, each at a mount path. At least one is required. |
 | `mounts[].agent` | string | yes | Name of the mounted Agent (ref — resolved by the emitter to its base EmitContext). |
 | `mounts[].id` | string | yes | Stable identifier for this mount within the copilot. |

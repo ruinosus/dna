@@ -136,3 +136,41 @@ async def test_step_sem_titulo_e_vetado(kernel):
     ])
     with pytest.raises(SpecValidationError):
         await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
+
+
+@pytest.mark.asyncio
+async def test_mcp_servers_extras_gravam_e_releem(kernel):
+    """F6.a: o doc declara MCPs extras com o DE-PARA no vocabulário fastmcp
+    (bloco de transform permissivo — a autoridade é o Pydantic oficial)."""
+    doc = _copilot([])
+    doc["spec"]["mcp_servers"] = [{
+        "name": "meu-crm",
+        "url": "https://crm.example/mcp",
+        "transport": "streamable_http",
+        "headers_env": {"X-Api-Key": "CRM_KEY"},
+        "include_tags": ["leitura"],
+        "tools": {
+            "buscar_registro": {
+                "name": "buscar_cliente",
+                "description": "Busca um cliente pelo nome.",
+                "arguments": {"q": {"name": "nome_do_cliente"}},
+            }
+        },
+    }]
+    await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
+    lido = await kernel.get_document("fluxos", "Copilot", "memory-copilot")
+    srv = lido["spec"]["mcp_servers"][0]
+    assert srv["url"] == "https://crm.example/mcp"
+    assert srv["tools"]["buscar_registro"]["name"] == "buscar_cliente"
+    # credencial NUNCA no doc — só o NOME da env var viaja
+    assert srv["headers_env"] == {"X-Api-Key": "CRM_KEY"}
+
+
+@pytest.mark.asyncio
+async def test_mcp_server_sem_url_e_vetado(kernel):
+    from dna.kernel.protocols import SpecValidationError
+
+    doc = _copilot([])
+    doc["spec"]["mcp_servers"] = [{"name": "quebrado"}]
+    with pytest.raises(SpecValidationError):
+        await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
