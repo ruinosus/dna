@@ -822,6 +822,7 @@ def build_app(
     async def _plan_gate(
         request: Request, *, tenant: str | None, family: str,
         memory_op: str | None = None, sdlc_op: str | None = None,
+        family_op: str | None = None,
         quota_tenant: str | None = None,
     ) -> None:
         """Enforce the caller's plan on ONE write — the REST twin of the MCP
@@ -851,7 +852,8 @@ def build_app(
                 # An explicit plan claim on the VERIFIED token wins, exactly as
                 # on MCP; a claim-less token falls to AccountPlan → Free.
                 claimed_tier=tier_from_token(claims) if claims else None,
-                memory_op=memory_op, sdlc_op=sdlc_op, quota_tenant=quota_tenant,
+                memory_op=memory_op, sdlc_op=sdlc_op, family_op=family_op,
+                quota_tenant=quota_tenant,
             )
         except TierRegistryUnavailableError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from None
@@ -859,6 +861,36 @@ def build_app(
             raise HTTPException(status_code=403, detail=str(exc)) from None
         except OverQuotaError as exc:
             raise HTTPException(status_code=429, detail=str(exc)) from None
+
+    async def _gate_kind_write(
+        request: Request, *, kind: str, api_version: str | None,
+        tenant: str | None,
+    ) -> None:
+        """i-042 — o gate de plano do WRITE genérico, kind-aware: a família do
+        Kind ALVO decide o eixo (``sdlc_mode`` para o board, ``memory_mode``
+        para memória, ``definitions_mode`` para o resto) — o espelho exato do
+        ``_guard_for`` que o MCP sempre teve. Antes disto, os DOIS eixos que o
+        Pro desbloqueia valiam só no canal MCP: um Free escrevendo Story pela
+        REST não era barrado por nada. Resolução de família em pré-passe
+        (métrica), fail-soft para ``definitions`` como no MCP (i-090); a
+        recusa acontece ANTES do write — negado nunca escreve."""
+        from dna.application import family_for_kind, resolve_kind_port_live
+
+        familia = "definitions"
+        try:
+            live = await _live()
+            port = await resolve_kind_port_live(
+                live, kind, api_version, scope=live.default_scope(tenant),
+            )
+            familia = family_for_kind(port)
+        except Exception:  # noqa: BLE001 — resolução falhou: família default
+            familia = "definitions"
+        await _plan_gate(
+            request, tenant=tenant, family=familia,
+            memory_op="write" if familia == "memory" else None,
+            sdlc_op="write" if familia == "sdlc" else None,
+            family_op="write" if familia not in ("memory", "sdlc") else None,
+        )
 
     # -- health (unguarded) --------------------------------------------------
 
@@ -1599,6 +1631,7 @@ def build_app(
     @app.post("/v1/kinds/{kind}/documents", dependencies=guarded, status_code=201,
               response_model=m.WriteKindDocumentResponse)
     async def write_kind_document(
+        request: Request,
         kind: str,
         body: m.WriteKindDocumentRequest,
         api_version: str | None = Query(default=None),
@@ -1648,6 +1681,9 @@ def build_app(
             raise HTTPException(
                 status_code=400, detail="metadata.name is required",
             )
+        await _gate_kind_write(
+            request, kind=kind, api_version=api_version, tenant=tenant,
+        )
         try:
             return await write_document_impl(
                 await _live(), kind=kind, name=name, spec=body.spec,

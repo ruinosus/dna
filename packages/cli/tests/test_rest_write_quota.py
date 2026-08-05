@@ -446,3 +446,71 @@ def test_require_tiers_refuses_metered_rest_write(dna_dir, monkeypatch):
     monkeypatch.delenv(Q.REQUIRE_TIERS_ENV)
     with _token_client(dna_dir, store) as c:
         assert _post_memory(c, headers=_auth()).status_code == 201
+
+
+# ── i-042: a porta GENÉRICA de escrita é gated pela FAMÍLIA do Kind alvo ────
+
+
+def _tier_doc_modes(tier_id: str, *, memory_mode: str, sdlc_mode: str,
+                    definitions_mode: str) -> dict:
+    d = _tier_doc(tier_id, memory_mode=memory_mode)
+    d["spec"]["sdlc_mode"] = sdlc_mode
+    d["spec"]["definitions_mode"] = definitions_mode
+    return d
+
+
+def _seed_tiers_modes(dna_dir) -> None:
+    """Free = tudo read-only; Pro = write nos três eixos."""
+    _seed(
+        dna_dir,
+        ("PricingPlan", "free", _tier_doc_modes(
+            "free", memory_mode="read", sdlc_mode="read", definitions_mode="read")),
+        ("PricingPlan", "pro", _tier_doc_modes(
+            "pro", memory_mode="write", sdlc_mode="write", definitions_mode="write")),
+    )
+
+
+def _post_story(c, *, tenant=_WS, headers=None, name="s-quota-probe"):
+    return c.post(
+        "/v1/kinds/Story/documents", params={"tenant": tenant},
+        json={"metadata": {"name": name},
+              "spec": {"title": "quota probe", "status": "todo",
+                       "description": "sonda de quota"}},
+        headers=headers or {},
+    )
+
+
+def test_generic_write_free_blocked_by_the_kinds_family(dna_dir):
+    """i-042 — o eixo que o Pro desbloqueia vale por TENANT, não por canal:
+    um Free escrevendo Story pela REST genérica é 403 pelo MESMO sdlc_mode
+    que o MCP aplica, e a recusa não conta nem escreve."""
+    _seed_tiers_modes(dna_dir)
+    store = Q.InProcQuotaStore()
+    with _token_client(dna_dir, store) as c:
+        r = _post_story(c, headers=_auth())
+        assert r.status_code == 403, r.text
+        assert "sdlc_mode" in r.json()["detail"]
+        assert store.calls_on(_WS) == 0
+        lidos = c.get("/v1/kinds/Story/documents",
+                      params={"tenant": _WS}, headers=_auth())
+        assert all(d["name"] != "s-quota-probe"
+                   for d in lidos.json()["documents"])
+
+
+def test_generic_write_pro_allowed_and_counted(dna_dir):
+    _seed_tiers_modes(dna_dir)
+    _seed(dna_dir, *_plan_docs(_WS, _ACCT, "pro"))
+    store = Q.InProcQuotaStore()
+    with _token_client(dna_dir, store) as c:
+        r = _post_story(c, headers=_auth())
+        assert r.status_code == 201, r.text
+        assert store.calls_on(_WS) == 1
+
+
+def test_auth_none_generic_write_never_gated(dna_dir):
+    """A regra open-core: o self-host local NUNCA vê gate de plano — nem na
+    porta genérica."""
+    _seed_tiers_modes(dna_dir)
+    with TestClient(R.build_app(base_dir=str(dna_dir), scope=_SCOPE)) as c:
+        r = _post_story(c, tenant=_WS)
+        assert r.status_code == 201, r.text
