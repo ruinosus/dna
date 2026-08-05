@@ -1,10 +1,19 @@
 """C0 Task 4 — declarative config from `EmitContext`: model/mcp/persistence
-never read raw `os.environ`, except the ONE legit read `resolve_persistence`
-makes for a Postgres DSN (a SECRET named declaratively by a `ctx.persistence`
-`ref`, via the same `ref -> DNA_<REF>_URL` slug rule `dna.emit.scaffold`
-already uses)."""
+never read raw `os.environ`, except the TWO legit reads:
+
+1. `resolve_persistence` reads a Postgres DSN — a SECRET named declaratively
+   by a `ctx.persistence` `ref`, via the same `ref -> DNA_<REF>_URL` slug
+   rule `dna.emit.scaffold` already uses;
+2. `mcp_tool_stack` honors `DNA_MCP_URL` as the HOST's deploy-time override
+   over the federation's declarative placeholder URL (the fixture's
+   `https://mcp.dna-cloud.example/mcp` is exactly such a placeholder — a real
+   deployment points the SAME def at ITS endpoint via env, not by editing the
+   def). Unset, the `ctx.mcp_servers[0].url` from the def wins.
+"""
 import asyncio
 import shutil
+import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -114,13 +123,29 @@ class _FakeCM:
         return False
 
 
-@pytest.mark.skip(
-    reason="i-064: pre-existing failure (fails on baseline, unrelated to the "
-    "copilot def-read fix). Never ran in CI — the runtime extra was absent so "
-    "the whole tests/runtime dir failed collection and masked it. Quarantined "
-    "while the runtime suite is turned on in CI; fix + un-skip under i-064."
-)
+def _install_fake_module(monkeypatch, name: str, **attrs: object) -> None:
+    """Register a synthetic module (and expose it on its parent) so the
+    function-local `from <name> import X` inside `resolve_persistence` binds
+    the fake — parents (`langgraph`, `langgraph.checkpoint`,
+    `langgraph.store`) are real; only the postgres leaves are synthesized."""
+    mod = types.ModuleType(name)
+    for attr, value in attrs.items():
+        setattr(mod, attr, value)
+    monkeypatch.setitem(sys.modules, name, mod)
+    parent_name, _, child = name.rpartition(".")
+    if parent_name and parent_name in sys.modules:
+        monkeypatch.setattr(sys.modules[parent_name], child, mod, raising=False)
+
+
 def test_resolve_persistence_reads_dsn_via_ref_slug_rule(monkeypatch):
+    # i-064: was quarantined because the monkeypatch targeted the REAL
+    # `langgraph.checkpoint.postgres` module by dotted path, which the
+    # `[runtime]` extra deliberately does NOT install
+    # (`langgraph-checkpoint-postgres` is the HOST's dependency — dna-cloud's
+    # copilot pyproject declares it; `resolve_persistence` imports it inside
+    # the function for exactly that reason). What THIS test pins is the
+    # declarative DSN read (`ref -> DNA_<REF>_URL`), not the driver — so the
+    # postgres modules are synthesized instead of imported.
     monkeypatch.setenv("DNA_PRIMARY_PG_URL", "postgresql://test-user@test-host/dna")
 
     captured = {"saver_dsn": None, "store_dsn": None}
@@ -137,12 +162,20 @@ def test_resolve_persistence_reads_dsn_via_ref_slug_rule(monkeypatch):
             captured["store_dsn"] = dsn
             return _FakeCM(dsn)
 
-    monkeypatch.setattr(
-        "langgraph.checkpoint.postgres.aio.AsyncPostgresSaver",
-        _FakeAsyncPostgresSaver,
+    import langgraph.checkpoint  # noqa: F401 — real parents, fake leaves
+    import langgraph.store  # noqa: F401
+
+    _install_fake_module(monkeypatch, "langgraph.checkpoint.postgres")
+    _install_fake_module(
+        monkeypatch,
+        "langgraph.checkpoint.postgres.aio",
+        AsyncPostgresSaver=_FakeAsyncPostgresSaver,
     )
-    monkeypatch.setattr(
-        "langgraph.store.postgres.aio.AsyncPostgresStore", _FakeAsyncPostgresStore
+    _install_fake_module(monkeypatch, "langgraph.store.postgres")
+    _install_fake_module(
+        monkeypatch,
+        "langgraph.store.postgres.aio",
+        AsyncPostgresStore=_FakeAsyncPostgresStore,
     )
 
     checkpointer, store = asyncio.run(
@@ -173,20 +206,21 @@ def test_resolve_persistence_none_for_undeclared_or_inmemory_slots():
     assert (checkpointer, store) == (None, None)
 
 
-# ── (3) mcp: url comes from ctx.mcp_servers[0].url, not a DNA_MCP_URL env ───
+# ── (3) mcp url: ctx.mcp_servers[0].url by default; DNA_MCP_URL is the
+#      HOST's deploy-time override over the declarative placeholder ─────────
+#
+# i-064: the original test here (`test_mcp_url_comes_from_ctx_not_env`)
+# asserted a contract `mcp_tool_stack` deliberately retired — the adapter
+# documents `DNA_MCP_URL` as the host's env override over the federation's
+# placeholder URL (see langchain_rt.py's `mcp_tool_stack` docstring). The
+# test was quarantined instead of updated; these two pin the CURRENT
+# contract, from both sides.
 
 
-@pytest.mark.skip(
-    reason="i-064: pre-existing failure (fails on baseline, unrelated to the "
-    "copilot def-read fix). Bare fixture lacks the _lib parent scope, so the "
-    "composed ctx differs. Quarantined while the runtime suite is turned on in "
-    "CI; fix + un-skip under i-064."
-)
-def test_mcp_url_comes_from_ctx_not_env(tmp_path, monkeypatch):
+def _build_and_capture_mcp_url(tmp_path, monkeypatch) -> tuple:
+    """Build the runtime for the committed fixture and capture the `mcp_url`
+    the adapter handed `DnaMcpToolsMiddleware`; returns `(ctx, captured)`."""
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-a-real-key")
-    # A DIFFERENT url than the fixture's federation declares — pins that the
-    # adapter cannot regress to reading this env var for the MCP url.
-    monkeypatch.setenv("DNA_MCP_URL", "http://env-should-not-be-used.invalid/mcp")
     _stub_no_persistence_resolution(monkeypatch)
 
     captured = {}
@@ -209,10 +243,24 @@ def test_mcp_url_comes_from_ctx_not_env(tmp_path, monkeypatch):
     )
 
     ctx = _build_ctx(tmp_path)
-    expected_url = ctx.mcp_servers[0].url
-    assert expected_url != "http://env-should-not-be-used.invalid/mcp"
-
     hooks = RuntimeHooks(mcp_auth=lambda: {}, compose=_compose)
     asyncio.run(LangChainRuntime().build(ctx, hooks))
+    return ctx, captured
 
-    assert captured["mcp_url"] == expected_url
+
+def test_mcp_url_comes_from_ctx_when_no_host_override(tmp_path, monkeypatch):
+    monkeypatch.delenv("DNA_MCP_URL", raising=False)
+    ctx, captured = _build_and_capture_mcp_url(tmp_path, monkeypatch)
+    assert captured["mcp_url"] == ctx.mcp_servers[0].url
+
+
+def test_dna_mcp_url_env_overrides_the_declarative_placeholder(
+    tmp_path, monkeypatch
+):
+    override = "https://mcp.host-deployment.example/mcp"
+    monkeypatch.setenv("DNA_MCP_URL", override)
+    ctx, captured = _build_and_capture_mcp_url(tmp_path, monkeypatch)
+    # Sanity: the override really differs from the def's placeholder, so the
+    # assertion below can only pass via the env path.
+    assert ctx.mcp_servers[0].url != override
+    assert captured["mcp_url"] == override
