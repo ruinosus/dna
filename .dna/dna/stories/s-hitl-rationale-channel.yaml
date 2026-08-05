@@ -15,7 +15,7 @@ spec:
   - 'description-factory + inject/strip + wiring com testes pytest (mutacao: strip removido -> teste morre); suite de runtime inteira verde; sem fork do middleware canonico'
   definition_of_done_source: cli-create
   created_at: '2026-08-05T21:16:26+00:00'
-  updated_at: '2026-08-05T21:17:52+00:00'
+  updated_at: '2026-08-05T21:19:15+00:00'
   timeline:
   - at: '2026-08-05T21:16:26+00:00'
     actor: claude-code
@@ -43,6 +43,18 @@ spec:
     name: tr-tg-s-hitl-rationale-channel-20260805-211749
     summary: TestRun tr-tg-s-hitl-rationale-channel-20260805-211749 → pass
     outcome: pass
+  - at: '2026-08-05T21:18:46+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/315'
+    pr_url: https://github.com/ruinosus/dna/pull/315
+  - at: '2026-08-05T21:19:15+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Entregue no PR dna#315. Desenho que coube: (1) NENHUM fork — o HumanInTheLoopMiddleware canônico JÁ suporta description dinâmica por chamada (InterruptOnConfig.description: str | _DescriptionFactory, chamada com (tool_call, state, runtime) em _create_action_and_config — fonte instalado human_in_the_loop.py:136-190/274-281); a factory lê args[''rationale'']. (2) Shape final da description: a rationale do modelo VERBATIM (trimmed) quando presente — o portal (rationaleOf) a renderiza como o Por quê; sem rationale, a string default byte-idêntica (''Tool execution requires approval\n\nTool: X\nArgs: {...}''), que o portal degrada para ausência. Paridade testada CONTRA o canônico via after_model com interrupt capturado, não contra literal. (3) O arg rationale existe só entre modelo e middleware: injetado por model_copy no schema model-facing das tools em rationale_tools (= confirm_tools no build; run_local de delegação não passa nada) e stripado em (a)wrap_tool_call antes do MCP real; tool que já declara rationale nunca é sombreada nem stripada; ToolCall checkpointado nunca mutado. Mutation-killer do strip em test_mcp_tools_mw.py. Suite: 4998 passed.'
+    commit_ref: a8de5a316f3d1da070b61b60d0e8f6f1103aa401
   produces:
   - kind: Plan
     name: plan-s-hitl-rationale-channel
