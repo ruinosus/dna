@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-095-sdlc-kinds-por-tenant
+spec:
+  title: Kinds SDLC são GLOBAIS — board por-tenant no SaaS precisa de evolução
+  description: 'Medido em 05/08/2026 no f-board-no-portal (dna-cloud): ''write failed: Kind Feature is GLOBAL — must NOT pass a tenant''. O modelo atual serve o self-host (board por scope/repo), mas o SaaS quer board POR WORKSPACE — cada tenant com features/stories/issues próprios, escritos via MCP/REST com tenant. Decidir: (a) tornar os Kinds SDLC tenant-scopeable, (b) manter globais e o SaaS criar um scope por workspace para SDLC, ou (c) híbrido via workspace-own-scope (D5). O v1 do portal gateia o board global ao workspace vendor — honesto, mas não é ''para todos'' ainda.'
+  type: enhancement
+  severity: medium
+  status: open
+  created_at: '2026-08-05T13:22:11+00:00'
+  updated_at: '2026-08-05T13:22:11+00:00'
+  timeline:
+  - at: '2026-08-05T13:22:11+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
