@@ -11,6 +11,22 @@ spec:
     path: /agui
   serving:
     transport: ag-ui
+  # F6.c — o CARDÁPIO de interação: declarar o bloco É ligar (presença-liga).
+  # Anexos de imagem (foto do contrato) e texto; chips estáticos + um por
+  # etapa do wizard (from_steps).
+  interaction:
+    attachments:
+      image:
+        max_per_turn: 2
+      text:
+        extensions: [".txt", ".md", ".pdf"]
+    suggestions:
+      from_steps: true
+      static:
+      - title: Extrair do anexo
+        message: Extraia os campos do ContratoDeServico do documento anexado,
+          propondo cada um no rascunho com o trecho que o sustenta — eu reviso
+          antes de gravar.
   # F6.a — MCP EXTRA com DE-PARA: o vocabulário do bloco `tools` é o
   # ToolTransformConfig do fastmcp, verbatim. O rename/re-descrição é o que
   # o MODELO lê — é daí que vem a acertividade. Credencial nunca aqui:
