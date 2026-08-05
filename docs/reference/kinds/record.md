@@ -1625,7 +1625,7 @@ A Role is one rung of the RBAC ladder expressed as data — its role_id, display
 - **apiVersion:** `github.com/ruinosus/dna/sdlc/v1`
 - **Plane:** record
 
-A Spec is a top-level design artifact. Cross-cutting by default (may drive multiple Features). Pattern-agnostic — superpowers, BMAD, droid, RFC, ADR, Spec Kit all work. status is ADR-style (draft → proposed → accepted → deprecated/superseded); phase is the orthogonal SDLC view (brainstorm → spec → plan_ready → implementing → done). Linkage to work is via Story.spec_refs[] (M:N), NOT via Spec.feature — the axis flip preserves Jira/Confluence semantics.
+A Spec is a top-level design artifact. Cross-cutting by default (may drive multiple Features). Pattern-agnostic — superpowers, BMAD, droid, RFC, ADR, Spec Kit all work. status is ADR-style, widened at both terminal ends (draft → proposed → accepted → executed | shelved | deprecated | superseded): `executed` means the design became code, `shelved` means 'not now' with the design still valid — neither of which `deprecated` (no longer applicable) may be stretched to mean. phase is the orthogonal SDLC view (brainstorm → spec → plan_ready → implementing → done). Linkage to work is via Story.spec_refs[] (M:N), NOT via Spec.feature — the axis flip preserves Jira/Confluence semantics.
 
 **Spec fields**
 
@@ -1634,12 +1634,18 @@ A Spec is a top-level design artifact. Cross-cutting by default (may drive multi
 | `authors` | array |  |  |
 | `body` | string |  | Markdown body of the spec (stored in SPEC.md). |
 | `date` | string | yes |  |
+| `deprecated_at` | string |  | When the design stopped applying (status=deprecated). |
+| `deprecation_reason` | string |  | WHY the design no longer applies (`dna sdlc spec deprecate --reason`). |
 | `epic` | string |  |  |
+| `executed_at` | string |  | When the design became code (status=executed). |
+| `execution_summary` | string |  | THE PROOF the design became code — PRs, commits, releases. Required by `dna sdlc spec executed`: a terminal state nobody can audit is a claim, not a record. |
 | `journey_phase` | string |  | Universal journey phase. A Spec typically lives in `specify`, but draft Specs may be `discover` and finalized ones referenced by Plans drift to `plan`. Coexists with `phase` (SDLC-view) — `journey_phase` is the methodology-agnostic layer. Um de: `discover`, `specify`, `plan`, `build`, `verify`, `reflect`. |
 | `origin` | string |  | Optional audit trail — repo-relative path the body was harvested from (e.g. docs/superpowers/specs/X.md). Not used at runtime. |
 | `pattern` | string |  | Spec-driven pattern this artifact follows (superpowers \| bmad \| droid \| rfc \| adr \| spec-kit \| custom). |
 | `phase` | string |  | Where in the SDLC this spec's work sits. Orthogonal to status. Um de: `brainstorm`, `spec`, `plan_ready`, `implementing`, `done`. |
-| `status` | string | yes | Um de: `draft`, `proposed`, `accepted`, `deprecated`, `superseded`. |
+| `shelve_reason` | string |  | The decision and WHY. Required by `dna sdlc spec shelve` — the design stays valid, so the next reader needs to know what would have to change for it to be 'now'. |
+| `shelved_at` | string |  | When the direction was decided as 'not now' (status=shelved). |
+| `status` | string | yes | Lifecycle: draft → proposed → accepted → executed\|shelved\|deprecated\|superseded. `executed` = the design became code (terminal, positive — carries `execution_summary` as the proof). `shelved` = decided as 'not now', design still valid (terminal, neutral, reversible — carries `shelve_reason`). `deprecated` = no longer applicable. `superseded` = replaced (link via `supersedes` on the replacement). Um de: `draft`, `proposed`, `accepted`, `deprecated`, `superseded`, `executed`, `shelved`. |
 | `summary` | string |  | Short one-paragraph summary (auto-extracted). |
 | `supersedes` | string |  | Name of the prior Spec this one replaces. |
 | `tags` | array |  |  |

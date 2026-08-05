@@ -50,6 +50,20 @@ When a gap appears mid-story:
 Story statuses: `needs-triage | todo | in-progress | review | done | blocked
 | deferred | cancelled`. Issue arc: `file → triage → start → resolve`.
 
+Spec arc: `draft → proposed → accepted → executed | shelved | deprecated |
+superseded`. The three endings are three different facts, and the CLI makes you
+say which — with the evidence, always:
+
+| ending | means | verb |
+|---|---|---|
+| `executed` | the design **became code** | `spec executed <name> --summary "PRs/commits"` |
+| `shelved` | decided **"not now"**, design still valid (reversible via `propose`/`accept`) | `spec shelve <name> --reason "..."` |
+| `deprecated` | the design **no longer applies** | `spec deprecate <name> --reason "..."` |
+
+⚠️ **`accepted` is not an ending.** A spec that shipped and stayed `accepted`
+reads as pending work forever — that is what `executed` exists to stop, and
+deriving execution from citations on a screen patches the wrong layer.
+
 **Command shape:** *listing* is `dna sdlc list <Kind>` (capital-K:
 `list Story --status in-progress`, `list Issue`); *acting on one doc* is
 `dna sdlc <noun> <verb> <name>` (`story start`, `issue resolve`,

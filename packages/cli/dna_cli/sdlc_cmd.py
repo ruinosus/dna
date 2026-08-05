@@ -67,6 +67,14 @@ from dna.application.sdlc import (  # noqa: E402, F401 — enums re-exported for
     next_issue_number as _core_next_issue_number,
 )
 
+# The Spec ARC lives on the Kind that declares it (``dna.extensions.sdlc``), not
+# in a tuple here: the enum the CLI offers and the enum the schema validates
+# against must be the same object, or `--status` grows a value the write refuses.
+from dna.extensions.sdlc import (  # noqa: E402
+    SPEC_STATUSES,
+    validate_spec_transition,
+)
+
 # The shared spine (clock, actor, git/gh probes, timeline appender, document
 # envelope, post-transition hooks, scope resolution) moved to the decomposed
 # package in ``dna_cli.sdlc._common``. Re-exported here so that
@@ -3172,6 +3180,11 @@ BUG_SEVERITY = ("low", "medium", "high", "critical")
 ARTIFACT_STATUSES = ("draft", "proposed", "accepted", "deprecated", "superseded")
 # ADR omits "draft" — a decision is proposed, not drafted (matches ADRKind.schema).
 ADR_STATUSES = ("proposed", "accepted", "deprecated", "superseded")
+# Spec widened the artifact arc at both terminal ends (`executed` / `shelved`) —
+# `SPEC_STATUSES` + `validate_spec_transition`, imported at the top of the module
+# from the Kind that declares them. Plan/ADR keep the two tuples above: their
+# descriptors declare exactly those, and a `--status` this CLI offers but the
+# schema rejects is a create that fails at the write.
 
 
 # ---------------------------------------------------------------------------
@@ -3662,7 +3675,10 @@ def cmd_adr_supersede(name: str, superseded_by: str, scope: str) -> None:
 # Spec + Plan (same artifact shape + transitions)
 # ---------------------------------------------------------------------------
 
-def _make_artifact_group(kind: str, group_name: str, help_text: str):
+def _make_artifact_group(
+    kind: str, group_name: str, help_text: str,
+    *, statuses: tuple[str, ...] = ARTIFACT_STATUSES,
+):
     """Build a Spec/Plan-style group: create + propose/accept/deprecate/supersede.
 
     Spec and Plan share an identical CLI surface (title/date/status/desc/body
@@ -3670,6 +3686,13 @@ def _make_artifact_group(kind: str, group_name: str, help_text: str):
     generated from one factory rather than copy-pasted. Each group is a
     hand-registered click.Group — no metaclass, just a small builder that keeps
     the two parallel surfaces DRY without hiding the command idiom.
+
+    ``statuses`` is the arc this Kind actually declares, and it is a parameter
+    rather than a constant because the two arcs stopped being the same: Spec
+    gained ``executed`` + ``shelved`` (see ``SPEC_STATUSES``) while Plan and ADR
+    kept theirs. A ``--status`` choice the schema would then reject is not a
+    convenience, it is a create that fails at the write — so the ``executed`` /
+    ``shelve`` verbs below appear only for a Kind whose arc has those states.
     """
 
     @sdlc.group(group_name, help=help_text)
@@ -3681,7 +3704,7 @@ def _make_artifact_group(kind: str, group_name: str, help_text: str):
     @click.option("--title", required=True, help="Title (→ spec.title).")
     @click.option("--date", default=None,
                   help="Date (ISO-8601; → spec.date). Defaults to now.")
-    @click.option("--status", type=click.Choice(ARTIFACT_STATUSES), default="draft")
+    @click.option("--status", type=click.Choice(statuses), default="draft")
     @click.option("--desc", "description", default=None,
                   help="Short description (→ spec.description).")
     @click.option("--body", default=None,
@@ -3728,11 +3751,24 @@ def _make_artifact_group(kind: str, group_name: str, help_text: str):
 
     @_group.command("deprecate")
     @click.argument("name")
+    @click.option("--reason", default=None,
+                  help="WHY it no longer applies (→ spec.deprecation_reason + timeline). "
+                       "Optional for back-compat, but a deprecation whose reason lives "
+                       "outside the doc is a decision nobody can revisit.")
     @_scope_option
-    def _deprecate(name: str, scope: str) -> None:
-        _transition_workitem(scope, kind, name, "deprecated")
+    def _deprecate(name: str, reason: str | None, scope: str) -> None:
+        extras: dict[str, Any] = {"deprecated_at": _now_iso()}
+        timeline: dict[str, Any] = {}
+        if reason:
+            extras["deprecation_reason"] = reason
+            timeline["summary"] = reason
+        _transition_workitem(scope, kind, name, "deprecated", extras=extras, **timeline)
 
-    _deprecate.__doc__ = f"Mark {kind} status: deprecated."
+    _deprecate.__doc__ = (
+        f"Mark {kind} status: deprecated (no longer applicable).\n\n"
+        "    For a design that is merely NOT NOW — still valid, just not the "
+        "next thing — use `shelve`, not this."
+    )
 
     @_group.command("supersede")
     @click.argument("name")
@@ -3747,11 +3783,59 @@ def _make_artifact_group(kind: str, group_name: str, help_text: str):
 
     _supersede.__doc__ = f"Mark {kind} status: superseded."
 
+    # ── the two terminal states the arc was missing ──────────────────────
+    # Registered only for a Kind that DECLARES them, so `--help` never offers a
+    # verb the schema would refuse at the write.
+    if "executed" in statuses:
+
+        @_group.command("executed")
+        @click.argument("name")
+        @click.option("--summary", required=True,
+                      help="THE PROOF the design became code — PRs, commits, releases "
+                           "(→ spec.execution_summary + timeline).")
+        @_scope_option
+        def _executed(name: str, summary: str, scope: str) -> None:
+            _transition_workitem(
+                scope, kind, name, "executed",
+                extras={"executed_at": _now_iso(), "execution_summary": summary},
+                guard=validate_spec_transition, summary=summary,
+            )
+
+        _executed.__doc__ = (
+            f"Mark {kind} status: executed — the design became code.\n\n"
+            "    Terminal and POSITIVE, and the state that lets a board stop "
+            "counting a shipped design as pending work. --summary is required: "
+            "a terminal state nobody can audit is a claim, not a record."
+        )
+
+    if "shelved" in statuses:
+
+        @_group.command("shelve")
+        @click.argument("name")
+        @click.option("--reason", required=True,
+                      help="The decision and WHY — what would have to change for it to "
+                           "be 'now' (→ spec.shelve_reason + timeline).")
+        @_scope_option
+        def _shelve(name: str, reason: str, scope: str) -> None:
+            _transition_workitem(
+                scope, kind, name, "shelved",
+                extras={"shelved_at": _now_iso(), "shelve_reason": reason},
+                guard=validate_spec_transition, summary=reason,
+            )
+
+        _shelve.__doc__ = (
+            f"Mark {kind} status: shelved — decided as 'not now', design still valid.\n\n"
+            "    Terminal and NEUTRAL, and reversible: `propose` / `accept` "
+            "un-shelve it when the direction changes. Not `deprecate` — that "
+            "means the design no longer applies, which is a different fact."
+        )
+
     return _group
 
 
 spec_group = _make_artifact_group(
     "Spec", "spec", "Spec-level operations (design / spec documents).",
+    statuses=SPEC_STATUSES,
 )
 # NB: Plan does NOT use _make_artifact_group — the richer `@sdlc.group("plan")`
 # below (with the story-gate-aware `create`, --plan-file, etc.) is the canonical

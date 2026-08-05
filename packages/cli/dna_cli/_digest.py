@@ -108,8 +108,13 @@ def resolve_since(
 # ─── status vocabularies ──────────────────────────────────────────────
 
 # A status_change whose `to` lands here = the item shipped/closed.
+# Note what is ABSENT and deliberately so: `cancelled` / `wont-fix` /
+# `deprecated` / `shelved` are closures, not completions, and the digest's
+# `completed` bucket is a report of what got DONE. `executed` (a Spec's design
+# became code) is a completion, so it joins.
 _TERMINAL_TO = {
     "done", "shipped", "resolved", "accepted", "merged", "closed", "answered",
+    "executed",
 }
 # Rollup-level movement into an active (non-terminal) state.
 _PROGRESS_TO = {"in-progress", "in-development", "planning", "triaged", "proposed"}

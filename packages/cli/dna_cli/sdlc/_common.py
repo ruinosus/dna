@@ -11,6 +11,7 @@ can import it without cycles.
 from __future__ import annotations
 
 import os
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import Any
 
@@ -334,7 +335,9 @@ def _csv(value: str | None) -> list[str] | None:
 
 def _transition_workitem(
     scope: str, kind: str, name: str, new_status: str,
-    *, extras: dict[str, Any] | None = None, **timeline_extras: Any,
+    *, extras: dict[str, Any] | None = None,
+    guard: Callable[[str | None, str], None] | None = None,
+    **timeline_extras: Any,
 ) -> None:
     """Generic status transition for any work-item / artifact Kind.
 
@@ -343,6 +346,14 @@ def _transition_workitem(
     ``status``, apply spec-level ``extras`` (closed_at, resolution, ...),
     stamp ``updated_at``, append a ``status_change`` timeline event with
     ``from``/``to`` + any ``timeline_extras``, write, and report.
+
+    ``guard`` is an optional PURE ``(current, target) -> None`` predicate that
+    raises when the arc forbids the move (e.g.
+    ``dna.extensions.sdlc.validate_spec_transition``). It runs INSIDE the
+    session, on the status just read, so the check and the write see the same
+    document — a caller that opened its own session to look first would be
+    validating a status it no longer holds. Default ``None`` = the historical
+    behaviour: every transition this helper is asked for, it makes.
     """
     with open_session(scope) as s:
         existing = s.get_doc(kind, name)
@@ -350,6 +361,11 @@ def _transition_workitem(
             raise fail(f"{kind} '{name}' not found in scope {scope!r}")
         spec = dict(existing.spec) if isinstance(existing.spec, dict) else {}
         prev_status = spec.get("status")
+        if guard is not None:
+            try:
+                guard(prev_status, new_status)
+            except ValueError as exc:
+                raise fail(f"{kind}/{name}: {exc}") from exc
         spec["status"] = new_status
         if extras:
             spec.update(extras)

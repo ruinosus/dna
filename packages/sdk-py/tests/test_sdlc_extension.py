@@ -163,11 +163,19 @@ def test_spec_summary_extracts_metadata():
     assert s["phase"] == "done"
 
 
-def test_spec_status_enum_is_adr_style():
-    """Spec lifecycle is Nygard ADR-style: draft|proposed|accepted|deprecated|superseded."""
+def test_spec_status_enum_is_adr_style_widened_at_both_terminal_ends():
+    """Spec lifecycle is Nygard ADR-style plus `executed` and `shelved`.
+
+    The five ADR-style states are all still there and still mean what they
+    meant — the widening is ADDITIVE, which is what lets a Spec written before
+    the two new states existed keep validating unchanged."""
     from dna.extensions.sdlc import SpecKind
     statuses = SpecKind().schema()["properties"]["status"]["enum"]
-    assert set(statuses) == {"draft", "proposed", "accepted", "deprecated", "superseded"}
+    assert {"draft", "proposed", "accepted", "deprecated", "superseded"} <= set(statuses)
+    assert set(statuses) == {
+        "draft", "proposed", "accepted", "deprecated", "superseded",
+        "executed", "shelved",
+    }
 
 
 def test_spec_phase_enum_is_superpowers_style():
