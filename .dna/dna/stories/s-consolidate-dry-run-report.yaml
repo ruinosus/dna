@@ -5,20 +5,26 @@ metadata:
 spec:
   title: 'consolidate dry-run: relatório estruturado + candidatos de fusão'
   description: 'Desbloqueio do i-050 do dna-cloud (consolidação com diff): consolidate ganha dry_run com relatório por memória (retain/expire/already_expired + razão determinística) e candidatos de fusão determinísticos (grupos por sobreposição lexical, canônico + supersede) — a proposta separada da aplicação. A síntese de texto fundido fica no seam MergeScribe (externo, opcional): o kernel não acopla modelo.'
-  status: in-progress
+  status: done
   feature: f-dna-search-memory
   labels:
   - memory
   - dna-cloud-unblock
   reporter: claude
   acceptance_criteria:
-  - Given memórias com retenções acima e abaixo do piso, When consolidate(dry_run=True), Then o relatório traz uma ação por memória (retain/expire/already_expired) com razão determinística e NADA é escrito; Given a mesma chamada sem dry_run, Then o shape e o comportamento são byte-idênticos ao de hoje; Given duas memórias com forte sobreposição lexical, When dry_run, Then merge_candidates traz o grupo com canônico determinístico, evidência de sobreposição e proposed_spec sem LLM; Given a face MCP, When a tool consolidate recebe dry_run=true, Then o relatório estruturado atravessa a porta
+  - text: Given memórias com retenções acima e abaixo do piso, When consolidate(dry_run=True), Then o relatório traz uma ação por memória (retain/expire/already_expired) com razão determinística e NADA é escrito; Given a mesma chamada sem dry_run, Then o shape e o comportamento são byte-idênticos ao de hoje; Given duas memórias com forte sobreposição lexical, When dry_run, Then merge_candidates traz o grupo com canônico determinístico, evidência de sobreposição e proposed_spec sem LLM; Given a face MCP, When a tool consolidate recebe dry_run=true, Then o relatório estruturado atravessa a porta
+    done: true
+    done_at: '2026-08-05T21:02:35+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - código + testes pytest (sdk-py verbs/merge + face MCP/CLI) verdes; docstrings no padrão do pacote; contrato MergeScribe registrado; sem bump de versão; PR aberto sem merge
+  - text: código + testes pytest (sdk-py verbs/merge + face MCP/CLI) verdes; docstrings no padrão do pacote; contrato MergeScribe registrado; sem bump de versão; PR aberto sem merge
+    done: true
+    done_at: '2026-08-05T21:02:35+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-05T20:40:19+00:00'
-  updated_at: '2026-08-05T20:54:22+00:00'
+  updated_at: '2026-08-05T21:03:20+00:00'
   timeline:
   - at: '2026-08-05T20:40:19+00:00'
     actor: claude-code
@@ -52,6 +58,20 @@ spec:
     name: tr-tg-consolidate-dry-run-20260805-205416
     summary: TestRun tr-tg-consolidate-dry-run-20260805-205416 → pass
     outcome: pass
+  - at: '2026-08-05T20:55:12+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/314'
+    pr_url: https://github.com/ruinosus/dna/pull/314
+  - at: '2026-08-05T21:03:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: d0afa0507520b45cbe754633f4fee653fe4ba372
+    summary: 'dna#314 merjado: dry_run estruturado no consolidate (verbo/impl/MCP/CLI, shape legado byte-idêntico sem a flag) + merge-candidates determinísticos (Jaccard+union-find, supersede default) + Protocol MergeScribe como seam do LLM. Suítes completas verdes (4997 sdk-py / 1443 cli); TestRun pass na timeline.'
   produces:
   - kind: Plan
     name: plan-s-consolidate-dry-run-report
@@ -65,3 +85,4 @@ spec:
     name: tr-tg-consolidate-dry-run-20260805-205416
     role: test-run
     at: '2026-08-05T20:54:22+00:00'
+  closed_at: '2026-08-05T21:02:35+00:00'
