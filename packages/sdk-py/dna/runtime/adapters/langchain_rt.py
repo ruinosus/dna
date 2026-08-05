@@ -83,6 +83,7 @@ def mcp_tool_stack(
     mcp_auth: Any,
     *,
     extra_allowed: frozenset[str] = frozenset(),
+    rationale_tools: frozenset[str] = frozenset(),
 ) -> tuple[list[Any], frozenset[str]]:
     """The `(middleware, allowed_tools)` pair that gives an agent its MCP tool
     surface: `DnaMcpToolsMiddleware` (lazy discovery + schema injection) THEN
@@ -106,6 +107,13 @@ def mcp_tool_stack(
     SAME inbound request is exactly its documented contract, not a new
     assumption this function introduces.
 
+    `rationale_tools` names the HITL-gated MCP tools whose MODEL-FACING schema
+    gains the optional `rationale` argument (the WHY the approval card renders;
+    `DnaMcpToolsMiddleware` strips it again before the real MCP execution).
+    Default empty — a delegation target's isolated sub-run has no human in the
+    loop, so `run_local` correctly passes none and its wire behavior is
+    unchanged.
+
     Empty `mcp_servers` → `([], allowed)` (no MCP middleware at all) — honest
     about "this agent declared no MCP surface", never silently permissive.
     """
@@ -116,7 +124,10 @@ def mcp_tool_stack(
 
     mcp_url = os.environ.get("DNA_MCP_URL") or mcp_servers[0].url
     return (
-        [DnaMcpToolsMiddleware(mcp_url, mcp_auth), DnaAllowlistMiddleware(allowed)],
+        [
+            DnaMcpToolsMiddleware(mcp_url, mcp_auth, rationale_tools=rationale_tools),
+            DnaAllowlistMiddleware(allowed),
+        ],
         allowed,
     )
 
@@ -220,8 +231,17 @@ class LangChainRuntime:
         # reuses for a target's isolated sub-run (mcp_url resolution —
         # DNA_MCP_URL env override over the federation's declarative
         # placeholder — lives there now, once, not copy-pasted per caller).
+        # `rationale_tools=confirm_tools`: the HITL-gated MCP tools' model-facing
+        # schemas gain the optional `rationale` arg — the model's WHY, which the
+        # HITL description factory (dna_hitl_middleware below) surfaces verbatim
+        # on the approval card, and which DnaMcpToolsMiddleware strips before
+        # the real MCP call. Local `extra_confirm` tools are NOT included: their
+        # schemas are the host's, not injected here, and are left untouched.
         mcp_middleware, _allowed = mcp_tool_stack(
-            mcp_servers, hooks.mcp_auth, extra_allowed=frozenset(extra_names)
+            mcp_servers,
+            hooks.mcp_auth,
+            extra_allowed=frozenset(extra_names),
+            rationale_tools=frozenset(confirm_tools),
         )
         # ⚠️ ANTES do compose, e a ordem importa: o recall acrescenta a mensagem
         # de sistema que o compose acabou de montar. Depois dele, o bloco de

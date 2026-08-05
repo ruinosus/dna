@@ -1,0 +1,58 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-hitl-rationale-channel
+spec:
+  title: 'A fatia SDK de s-hitl-por-que-mcp-writes (dna-cloud): o interrupt HITL carrega a'
+  description: 'A fatia SDK de s-hitl-por-que-mcp-writes (dna-cloud): o interrupt HITL carrega a RAZAO do modelo — description-factory no dna_hitl_middleware lendo o arg opcional rationale, injetado no schema das tools gateadas pela injecao lazy do DnaMcpToolsMiddleware e stripado antes da execucao MCP.'
+  status: in-progress
+  feature: f-copilot-langgraph-target
+  acceptance_criteria:
+  - Given uma tool MCP gateada com rationale nos args, When o HumanInTheLoopMiddleware interrompe, Then action_requests[].description e a rationale verbatim e o arg e stripado antes da execucao MCP (schema do servidor intacto)
+  - Given nenhuma rationale fornecida, When o interrupt dispara, Then a description e byte-identica a maquinaria default canonica (portal degrada para ausencia, comportamento identico ao de hoje)
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'description-factory + inject/strip + wiring com testes pytest (mutacao: strip removido -> teste morre); suite de runtime inteira verde; sem fork do middleware canonico'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-05T21:16:26+00:00'
+  updated_at: '2026-08-05T21:17:52+00:00'
+  timeline:
+  - at: '2026-08-05T21:16:26+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-05T21:16:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-05T21:17:47+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-hitl-rationale-channel
+    summary: TestGuide tg-s-hitl-rationale-channel (regression)
+  - at: '2026-08-05T21:17:52+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-hitl-rationale-channel-20260805-211749
+    summary: TestRun tr-tg-s-hitl-rationale-channel-20260805-211749 → pass
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-hitl-rationale-channel
+    role: implementation
+    at: '2026-08-05T21:16:55+00:00'
+  - kind: TestGuide
+    name: tg-s-hitl-rationale-channel
+    role: test-guide
+    at: '2026-08-05T21:17:47+00:00'
+  - kind: TestRun
+    name: tr-tg-s-hitl-rationale-channel-20260805-211749
+    role: test-run
+    at: '2026-08-05T21:17:52+00:00'

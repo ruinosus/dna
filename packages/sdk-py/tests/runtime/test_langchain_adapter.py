@@ -100,3 +100,32 @@ def test_attach_registers_the_agui_route(tmp_path, monkeypatch):
     paths = {route.path for route in fastapi_app.routes}
     assert "/agui" in paths
     assert "/agui/health" in paths
+
+
+def test_build_wires_confirm_tools_as_rationale_tools(tmp_path, monkeypatch):
+    """The WHY channel's wiring (s-hitl-por-que-mcp-writes): the SAME
+    `tools_requiring_confirmation` set the HITL middleware gates is what the
+    MCP tool stack receives as `rationale_tools` — the fixture declares
+    remember/forget/consolidate with `requires_confirmation: true`."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-a-real-key")
+    _stub_no_mcp_discovery(monkeypatch)
+    _stub_no_persistence_resolution(monkeypatch)
+
+    import dna.runtime.adapters.langchain_rt as rt
+
+    captured = {}
+    real_stack = rt.mcp_tool_stack
+
+    def spy_stack(mcp_servers, mcp_auth, **kwargs):
+        captured.update(kwargs)
+        return real_stack(mcp_servers, mcp_auth, **kwargs)
+
+    monkeypatch.setattr(rt, "mcp_tool_stack", spy_stack)
+
+    ctx = _build_ctx(tmp_path)
+    hooks = RuntimeHooks(mcp_auth=lambda: {}, compose=_compose)
+    asyncio.run(LangChainRuntime().build(ctx, hooks))
+
+    assert captured["rationale_tools"] == frozenset(
+        {"remember", "forget", "consolidate"}
+    )

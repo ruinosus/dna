@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-hitl-rationale-channel
+spec:
+  description: 'Verifica a fatia SDK do canal de rationale HITL: description-factory (rationale verbatim / default byte-identico), inject+strip do arg rationale nas tools MCP gateadas, e o wiring confirm_tools->rationale_tools'
+  kind_of_test: regression
+  status: active
+  steps:
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests/runtime/test_hitl_mw.py tests/runtime/test_mcp_tools_mw.py tests/runtime/test_mcp_tool_stack.py tests/runtime/test_langchain_adapter.py -q
+    expected: 26 passed — rationale verbatim no interrupt, paridade byte-identica com o default canonico, strip antes da execucao (mutation-killer), wiring confirm_tools->rationale_tools
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests -q --timeout=120
+    expected: suite inteira verde (4998 passed, 256 skipped, 4 xfailed)
+  verifies:
+  - Story/s-hitl-rationale-channel
+  created_at: '2026-08-05T21:17:43+00:00'
+  updated_at: '2026-08-05T21:17:43+00:00'

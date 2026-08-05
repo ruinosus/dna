@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-hitl-rationale-channel
+spec:
+  title: 'Plano: s-hitl-rationale-channel'
+  date: '2026-08-05'
+  status: accepted
+  story_ref: s-hitl-rationale-channel
+  journey_phase: plan
+  body: '1) description-factory em dna/runtime/middleware/hitl.py (o extension point canonico InterruptOnConfig.description aceita callable — verificado no fonte instalado human_in_the_loop.py:136-190): rationale verbatim quando presente, senao a string default byte-identica. 2) DnaMcpToolsMiddleware ganha rationale_tools: schema model-facing das gateadas recebe arg opcional rationale via model_copy (tool de execucao intacta) e o arg e stripado em wrap_tool_call antes do MCP real; tool que ja declara rationale nunca e sombreada nem stripada. 3) wiring: mcp_tool_stack ganha rationale_tools; LangChainRuntime.build passa confirm_tools; run_local (delegacao) nao passa nada — sub-run isolado sem humano. 4) testes atravessando a porta (after_model com interrupt capturado; paridade contra o canonico, nao literal copiado) + mutation-killer do strip.'
+  created_at: '2026-08-05T21:16:44+00:00'
+  updated_at: '2026-08-05T21:16:44+00:00'

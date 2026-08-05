@@ -21,6 +21,17 @@ bearer is present (the httpx.Auth threaded into `load_mcp_tools` reads the reque
 contextvar). Tool SCHEMAS are identity-independent, so caching the discovered set
 process-wide across users is correct — the per-request bearer only matters for
 EXECUTION, which the tool objects' own httpx.Auth re-reads on every `ainvoke`.
+
+The WHY channel (s-hitl-por-que-mcp-writes): for the HITL-gated tools named in
+`rationale_tools`, the MODEL-FACING copy of the schema gains an optional
+`rationale: string` argument — the model's stated reason, which
+`dna_hitl_middleware`'s description factory surfaces verbatim on the approval
+card. The argument exists ONLY between model and middleware: it is injected
+into a `model_copy` of the tool (the cached execution tool keeps the MCP
+server's schema intact) and STRIPPED from the args before the real execution
+in `wrap_tool_call` — the MCP server never sees an argument it does not
+declare. A gated tool whose REAL schema already declares `rationale` is left
+untouched (never shadowed) and never stripped.
 """
 from __future__ import annotations
 
@@ -33,17 +44,59 @@ from dna.runtime.mcp_tools import load_mcp_tools
 
 _log = logging.getLogger("dna.runtime.mcp_tools_mw")
 
+_RATIONALE_ARG = "rationale"
+_RATIONALE_SCHEMA = {
+    "type": "string",
+    "description": (
+        "Why this action is needed, in one or two sentences, written in the "
+        "user's language. Shown verbatim to the human who approves or rejects "
+        "this call — state the reason, not a restatement of the arguments."
+    ),
+}
+
 
 class DnaMcpToolsMiddleware(AgentMiddleware):
     """Discover the DNA MCP tools LAZILY (first authenticated model call) and
-    both inject their schemas into the model request and execute their calls."""
+    both inject their schemas into the model request and execute their calls.
 
-    def __init__(self, mcp_url: str, mcp_auth) -> None:
+    `rationale_tools` names the HITL-gated tools whose model-facing schema
+    gains the optional `rationale` argument (stripped again before execution
+    — see module docstring). Empty by default: without it, injected schemas
+    and executed args are byte-identical to before."""
+
+    def __init__(self, mcp_url: str, mcp_auth, rationale_tools=frozenset()) -> None:
         super().__init__()
         self._mcp_url = mcp_url
         self._mcp_auth = mcp_auth
+        self._rationale_tools = frozenset(rationale_tools or ())
         self._tools: dict | None = None
+        # Model-facing tool list: gated tools swapped for their
+        # rationale-augmented copies; everything else the same objects.
+        self._model_tools: list | None = None
+        # The gated tools whose schema WE augmented — exactly the set whose
+        # `rationale` arg must be stripped before execution. A gated tool that
+        # already declared its own `rationale` is in neither.
+        self._augmented: frozenset[str] = frozenset()
         self._lock = asyncio.Lock()
+
+    def _with_rationale_arg(self, tool):
+        """A `model_copy` of `tool` whose JSON-schema dict gains the optional
+        `rationale` property — or `(tool, False)` (and no strip later) when
+        the schema is not a dict or already declares `rationale`."""
+        schema = getattr(tool, "args_schema", None)
+        if not isinstance(schema, dict):
+            return tool, False
+        props = schema.get("properties")
+        props = dict(props) if isinstance(props, dict) else {}
+        if _RATIONALE_ARG in props:
+            return tool, False  # the real tool owns this name — never shadow it
+        props[_RATIONALE_ARG] = dict(_RATIONALE_SCHEMA)
+        # `required` untouched: the rationale is optional by design (the HITL
+        # description factory degrades to the default machinery without it).
+        return (
+            tool.model_copy(update={"args_schema": {**schema, "properties": props}}),
+            True,
+        )
 
     async def _ensure_discovered(self) -> dict:
         # Fast path: already cached (schemas are identity-independent).
@@ -52,17 +105,48 @@ class DnaMcpToolsMiddleware(AgentMiddleware):
         async with self._lock:
             if self._tools is None:
                 discovered = await load_mcp_tools(self._mcp_url, self._mcp_auth)
+                model_tools = []
+                augmented = set()
+                for t in discovered:
+                    if t.name in self._rationale_tools:
+                        model_tool, did = self._with_rationale_arg(t)
+                        model_tools.append(model_tool)
+                        if did:
+                            augmented.add(t.name)
+                    else:
+                        model_tools.append(t)
+                # Execution keeps the ORIGINAL tools — the MCP server's schema
+                # stays intact; only the model sees the augmented copies.
                 self._tools = {t.name: t for t in discovered}
+                self._model_tools = model_tools
+                self._augmented = frozenset(augmented)
                 _log.debug("discovered %d MCP tool(s) lazily", len(self._tools))
         return self._tools
+
+    def _strip_rationale(self, tool_call):
+        """The tool_call to EXECUTE: for a tool whose schema we augmented, a
+        copy without the injected `rationale` arg (the server does not declare
+        it); anything else rides through verbatim. Never mutates the original
+        — the ToolCall dict lives in checkpointed message history."""
+        args = tool_call.get("args")
+        if (
+            tool_call["name"] in self._augmented
+            and isinstance(args, dict)
+            and _RATIONALE_ARG in args
+        ):
+            return {
+                **tool_call,
+                "args": {k: v for k, v in args.items() if k != _RATIONALE_ARG},
+            }
+        return tool_call
 
     # --- async hooks (the path that actually runs in production) ---------
 
     async def awrap_model_call(self, request, handler):
-        tools = await self._ensure_discovered()
+        await self._ensure_discovered()
         # Injected MCP tools FIRST, then any local tools already on the request.
         return await handler(
-            request.override(tools=[*tools.values(), *(request.tools or [])])
+            request.override(tools=[*(self._model_tools or []), *(request.tools or [])])
         )
 
     async def awrap_tool_call(self, request, handler):
@@ -70,7 +154,7 @@ class DnaMcpToolsMiddleware(AgentMiddleware):
         if self._tools and name in self._tools:
             # A BaseTool invoked with a full ToolCall dict returns a ToolMessage
             # (verified against langchain_core.tools). Bypass the static ToolNode.
-            return await self._tools[name].ainvoke(request.tool_call)
+            return await self._tools[name].ainvoke(self._strip_rationale(request.tool_call))
         # Local / unknown tool → the real ToolNode via the downstream handler.
         return await handler(request)
 
@@ -83,7 +167,9 @@ class DnaMcpToolsMiddleware(AgentMiddleware):
         # or raise — a sync call before any async warmup is a benign degrade.
         if self._tools is not None:
             return handler(
-                request.override(tools=[*self._tools.values(), *(request.tools or [])])
+                request.override(
+                    tools=[*(self._model_tools or []), *(request.tools or [])]
+                )
             )
         _log.debug("sync wrap_model_call before async warmup — MCP tools not injected")
         return handler(request)
@@ -91,5 +177,5 @@ class DnaMcpToolsMiddleware(AgentMiddleware):
     def wrap_tool_call(self, request, handler):
         name = request.tool_call["name"]
         if self._tools and name in self._tools:
-            return self._tools[name].invoke(request.tool_call)
+            return self._tools[name].invoke(self._strip_rationale(request.tool_call))
         return handler(request)
