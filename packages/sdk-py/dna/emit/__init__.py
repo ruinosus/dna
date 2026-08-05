@@ -612,12 +612,51 @@ def _project_slot(node: Any) -> dict[str, Any] | None:
     return {"backend": _spec_get(node, "backend"), "ref": _spec_get(node, "ref")}
 
 
+def _project_conversation_slot(node: Any) -> dict[str, Any] | None:
+    """Normalize the ``conversation`` slot — ``{backend, ref}`` like its siblings
+    PLUS the declared ``retention`` (``{max_age_days}`` or None).
+
+    Retention rides on THIS slot and not on the others because conversation is
+    the one holding USER data: a transcript has volume, PII and a short natural
+    life, unlike a checkpoint (the framework's engine) or workspace memory
+    (curated, long-lived). ``dna.runtime.thread_store.resolve_conversation`` is
+    the reader.
+    """
+    if node is None:
+        return None
+    retention = _spec_get(node, "retention")
+    return {
+        "backend": _spec_get(node, "backend"),
+        "ref": _spec_get(node, "ref"),
+        "retention": (
+            {"max_age_days": _spec_get(retention, "max_age_days")}
+            if retention is not None
+            else None
+        ),
+    }
+
+
 def _project_persistence(block: Any) -> dict[str, Any] | None:
-    """Normalize the ``persistence`` block to ``{checkpoint, memory, cache}``
-    (each ``{backend, ref}`` or None), or None when the whole block is absent."""
+    """Normalize the ``persistence`` block to ``{checkpoint, memory, cache,
+    conversation}`` (each ``{backend, ref}`` or None — ``conversation`` also
+    carries ``retention``), or None when the whole block is absent.
+
+    ``conversation`` is ADDITIVE: a copilot that doesn't declare it gets None in
+    that key and behaves exactly as it did before the slot existed (the
+    framework's own checkpoint, no ownership/retention contract). Declaring it
+    is what makes the conversation DNA-contracted data
+    (``dna.runtime.thread_store``).
+    """
     if block is None:
         return None
-    return {slot: _project_slot(_spec_get(block, slot)) for slot in ("checkpoint", "memory", "cache")}
+    projected = {
+        slot: _project_slot(_spec_get(block, slot))
+        for slot in ("checkpoint", "memory", "cache")
+    }
+    projected["conversation"] = _project_conversation_slot(
+        _spec_get(block, "conversation")
+    )
+    return projected
 
 
 def _project_knowledge_store(node: Any) -> dict[str, Any] | None:

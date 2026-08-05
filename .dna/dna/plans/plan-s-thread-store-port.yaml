@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-thread-store-port
+spec:
+  title: 'Plano: s-thread-store-port'
+  date: '2026-08-05'
+  status: accepted
+  story_ref: s-thread-store-port
+  journey_phase: plan
+  body: '1) dna/runtime/thread_store.py: os dataclasses neutros (ThreadRef, Transcript, TranscriptExport, ConversationBinding/ThreadRetention), a excecao ThreadOwnershipError, a decisao pura can_read_thread, e TRES Protocols em camada — ThreadTranscriptPort (leitura: fetch_transcript/export_transcript), ThreadIndexPort (index_thread/fetch_threads/thread_owner) e ThreadStorePort (a uniao + import_transcript). A camada existe porque um adapter de LEITURA sobre o checkpoint nao pode honestamente implementar indice/posse. 2) InMemoryThreadStore como implementacao de referencia da porta INTEIRA (prova o contrato implementavel + serve de dublê no kit). 3) dna/runtime/adapters/langgraph_threads.py: LangGraphTranscriptStore(graph) — aget_state + langchain_messages_to_agui oficial, allowlist de state_keys, sem escrita nenhuma. 4) Kind Copilot: persistence.conversation {backend, ref, retention.max_age_days}; _project_persistence projeta o slot; _slot_iter do infra o inclui (dedup por ref). 5) Testes: kit de conformidade rodado contra os dois + slot no emit + docs regenerados.'
+  created_at: '2026-08-05T22:27:29+00:00'
+  updated_at: '2026-08-05T22:27:29+00:00'

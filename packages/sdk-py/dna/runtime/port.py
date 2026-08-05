@@ -71,7 +71,15 @@ class RuntimeHooks:
 class AGUIApp(Protocol):
     """The handle a :class:`RuntimePort` returns — a framework-agnostic AG-UI
     app the host can mount and, where the backend is LangGraph-shaped,
-    rehydrate against."""
+    rehydrate against.
+
+    **Optional member — ``thread_store``.** An adapter MAY expose the read half
+    of :mod:`dna.runtime.thread_store` over its own backend (the LangGraph one
+    does; MAF has no thread store yet and says so with ``None``). It is
+    deliberately NOT a required member of this Protocol: making it one would
+    flip ``isinstance`` for every adapter written before it existed. Probe it
+    with ``getattr(app, "thread_store", None)``.
+    """
 
     #: The servable object for host rehydration (e.g. a LangGraph graph).
     #: May be None for backends without LangGraph-shaped state (e.g. MAF).

@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-096-kinds-declarativos-da-base-nao-herdados-pelo-tenant
+spec:
+  title: Kinds declarativos da base nao sao herdados pelo scope do tenant (i-058 entrega docs, nao Kinds)
+  description: 'Medido em 05/08/2026 no dna-cloud (f-criar-copiloto-no-portal, Kind CopilotBlueprint) e registrado la como i-088; o trabalho e do SDK, entao mora aqui. A heranca de definicoes do i-058 entrega os DOCUMENTOS do scope base ao scope do tenant, mas NAO as definicoes declarativas de Kind. Um KindDefinition semeado no scope-base (dna-cloud) registra so para ele: kinds_for(scope)/port_for(scope) filtram por applies_to (kernel/kinds/registry.py:388), que testa ''scope in port_scopes(port)'' — um conjunto EXATO, sem consultar a cadeia de resolucao. Consequencia no scope tenant-ws-<id>: GET /v1/kinds/registry/<Kind> com tenant= responde 404 e a escrita de um doc daquele Kind e recusada (''not registered on this source''), EMBORA os documentos da base aparecam na listagem do tenant — porque o caminho dos docs caminha compute_resolution_chain (kernel/compose/instance_builder.py:477-481) e o dos Kinds nao. A assimetria: extension kinds sao globais (port_scopes=None); declarativos sao scope-bound desde o i-081 — correto para isolar tenant de tenant, mas heranca de PAI para filho nao e vazamento lateral. Efeito de produto: todo Kind de PRODUTO precisa virar extension (codigo + release) em vez de doc, o que anula a promessa do Kind declarativo e do overlay por tenant. Workaround em uso no dna-cloud (apps/web/lib/dna/kind-registry.ts:62-71): fallback tenant->global apenas para RENDER, e o CopilotBlueprint nao persiste como doc — o registro de auditoria da criacao de copiloto simplesmente nao existe hoje. Fix proposto: applies_to (ou o _bind_scope que popula __scopes__) considerar a cadeia declarada (Genome.spec.parent_scope / live.workspace_definitions_base), com a mesma precedencia local-vence-parent dos documentos; ensure_kinds/ports_in_scope do tenant passam entao a incluir os Kinds que a base declara. Guarda-corpo: NAO pode reabrir o i-081 — heranca so desce a cadeia declarada, nunca alcanca um scope irmao. Pronto quando: um KindDefinition declarado so no scope base e legivel e ESCRIVEL a partir de um scope filho, um Kind de scope irmao continua invisivel (teste que prova os dois), e o dna-cloud pode remover o fallback de render e voltar a persistir o CopilotBlueprint.'
+  type: enhancement
+  severity: medium
+  status: open
+  created_at: '2026-08-05T22:46:06+00:00'
+  updated_at: '2026-08-05T22:46:06+00:00'
+  timeline:
+  - at: '2026-08-05T22:46:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

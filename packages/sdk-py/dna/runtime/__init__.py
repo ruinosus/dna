@@ -20,6 +20,22 @@ from dna.runtime.port import (
     get_runtime,
     register_runtime,
 )
+from dna.runtime.thread_store import (
+    ConversationBinding,
+    InMemoryThreadStore,
+    ThreadIndexPort,
+    ThreadOwnershipError,
+    ThreadRef,
+    ThreadRetention,
+    ThreadStorePort,
+    ThreadTranscriptPort,
+    Transcript,
+    TranscriptExport,
+    can_read_thread,
+    derive_title,
+    resolve_conversation,
+    retention_cutoff,
+)
 
 __all__ = [
     "build_copilot",
@@ -31,4 +47,19 @@ __all__ = [
     "available_runtimes",
     "get_runtime",
     "register_runtime",
+    # conversa como contrato (dna.runtime.thread_store)
+    "ConversationBinding",
+    "InMemoryThreadStore",
+    "ThreadIndexPort",
+    "ThreadOwnershipError",
+    "ThreadRef",
+    "ThreadRetention",
+    "ThreadStorePort",
+    "ThreadTranscriptPort",
+    "Transcript",
+    "TranscriptExport",
+    "can_read_thread",
+    "derive_title",
+    "resolve_conversation",
+    "retention_cutoff",
 ]

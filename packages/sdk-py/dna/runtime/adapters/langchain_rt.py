@@ -141,6 +141,27 @@ class _LangGraphAGUIApp:
 
     graph: Any
     agent_name: str
+    #: Allowlist PADRÃO de chaves de state que a leitura de conversa devolve
+    #: (ver `thread_store`). Vazia = só as mensagens — o default seguro.
+    transcript_state_keys: tuple[str, ...] = ()
+
+    @property
+    def thread_store(self) -> Any:
+        """A metade de LEITURA da `ThreadStorePort` sobre ESTE grafo — o
+        transcript em AG-UI, sem escrita nenhuma
+        (`dna.runtime.adapters.langgraph_threads.LangGraphTranscriptStore`).
+
+        É uma propriedade, e não um campo, porque um host que nunca lê conversa
+        não deve pagar import nem objeto. Existe para que a porta seja
+        ALCANÇÁVEL de quem já tem o app: uma capacidade sem caminho até ela é o
+        mesmo que não existir — e o host acaba escrevendo a sua própria leitura
+        do checkpoint, que é exatamente o que a porta veio matar.
+        """
+        from dna.runtime.adapters.langgraph_threads import LangGraphTranscriptStore
+
+        return LangGraphTranscriptStore(
+            self.graph, state_keys=self.transcript_state_keys
+        )
 
     def attach(self, app: Any, path: str = "/agui") -> None:
         from ag_ui_langgraph import LangGraphAgent, add_langgraph_fastapi_endpoint

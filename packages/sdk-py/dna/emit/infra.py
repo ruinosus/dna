@@ -100,7 +100,11 @@ def _slot_iter(ctx: EmitContext):
     """Yield ``(label, backend, ref)`` for every declared persistence slot +
     the knowledge store — the raw signals the resource grouping reads."""
     persistence = ctx.persistence or {}
-    for slot in ("checkpoint", "memory", "cache"):
+    # ``conversation`` rides here like any other slot: a declared backend is a
+    # store somebody must provision. The dedup-by-``ref`` rule below means the
+    # normal case — sharing the checkpoint's physical Postgres — adds NO
+    # resource, only a second ``used_by`` label.
+    for slot in ("checkpoint", "memory", "cache", "conversation"):
         node = persistence.get(slot)
         if node and node.get("backend"):
             yield (f"persistence.{slot}", node["backend"], node.get("ref"))

@@ -126,6 +126,14 @@ class _MafAGUIApp:
 
     agent: Any
     graph: Any = None
+    #: A metade de leitura da `ThreadStorePort` — `None` porque este backend NÃO
+    #: tem thread store: trocar `serving.framework` para cá hoje é perder o
+    #: histórico. O gap fica declarado no handle (e não só numa issue) para que
+    #: um host possa PERGUNTAR antes de prometer conversa, e para que o dia em
+    #: que este campo deixar de ser `None` seja um fato verificável. O caminho
+    #: de migração que existe hoje é o export AG-UI do backend de origem
+    #: (`export_transcript`), não uma tradução de checkpoint.
+    thread_store: Any = None
 
     def attach(self, app: Any, path: str = "/agui") -> None:
         from agent_framework.ag_ui import add_agent_framework_fastapi_endpoint
