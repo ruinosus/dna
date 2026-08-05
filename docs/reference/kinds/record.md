@@ -109,6 +109,23 @@ A AgentSession captures a developer↔AI coding conversation as a versioned proj
 | `tool_version` | string |  |  |
 | `workspace_path` | string |  |  |
 
+## App
+
+- **Alias:** `helix-app`
+- **apiVersion:** `github.com/ruinosus/dna/v1`
+- **Plane:** record
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `copilots` | array | yes | Os copilotos que COMPÕEM este App, por nome de doc — cada um traz seus fluxos (surfaces) para debaixo desta identidade. A referência é validada na gravação (x-dna-ref). |
+| `description` | string |  | Uma linha do que este App faz, na voz do produto. |
+| `icon` | string |  | Marca curta (1–2 caracteres ou emoji) para o card e a navegação. Vazio = a inicial do title. |
+| `nav_order` | integer |  | Ordem relativa na navegação do console (menor primeiro). Ausente = ordem alfabética. |
+| `requires_plan` | string |  | O plano MÍNIMO que abre este App (entitlement, decisão do founder em 05/08). Ausente = aberto a qualquer plano. Quem aplica é o runtime que serve; o kernel valida a forma. Um de: `free`, `pro`. |
+| `title` | string | yes | O nome que o usuário vê — a identidade do App no console (o doc name é o slug da rota /app/<name>). |
+
 ## AuditLog
 
 - **Alias:** `audit-auditlog`

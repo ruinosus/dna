@@ -1,0 +1,86 @@
+# App — a composição NOMEADA de copilotos (record plane).
+#
+# spec-app-como-composicao (dna-cloud, decisões do founder em 05/08/2026):
+# o kit é o PACOTE (como um fluxo se distribui — `dna copilot install`); o
+# App é a INSTÂNCIA instalada (como se usa, se navega e se cobra). Um App
+# agrupa N copilotos existentes sob uma identidade própria — o console
+# renderiza `/app/<name>` derivado DESTE doc (o padrão cockpit: wizards
+# agrupados numa cara só) — e carrega o ENTITLEMENT (`requires_plan`),
+# consultado pelo MESMO gate de plano que já mede tudo (o runtime que serve
+# decide; o kernel valida forma). É a unidade VENDÁVEL: cobra-se pelo app,
+# o app é feito de copilotos, o copiloto é medido por turnos/tokens.
+#
+# Referências por nome com `x-dna-ref` (i-040): `copilots[]` aponta docs
+# Copilot — o write valida existência (DNA_REF_VALIDATION) e o wizard de
+# criação vira picker. Record-plane puro: nunca compõe em prompt.
+#
+# tenant_scope intencionalmente NÃO declarado — permissivo (base + overlay
+# por tenant), espelhando Copilot/Tool: um workspace escreve os SEUS Apps.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: app
+spec:
+  target_api_version: github.com/ruinosus/dna/v1
+  target_kind: App
+  alias: helix-app
+  origin: github.com/ruinosus/dna/helix
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: apps
+  schema:
+    type: object
+    additionalProperties: false
+    required: [title, copilots]
+    properties:
+      title:
+        type: string
+        description: O nome que o usuário vê — a identidade do App no
+          console (o doc name é o slug da rota /app/<name>).
+      description:
+        type: string
+        description: Uma linha do que este App faz, na voz do produto.
+      icon:
+        type: string
+        description: Marca curta (1–2 caracteres ou emoji) para o card e a
+          navegação. Vazio = a inicial do title.
+      copilots:
+        type: array
+        minItems: 1
+        items:
+          type: string
+        x-dna-ref: Copilot
+        description: Os copilotos que COMPÕEM este App, por nome de doc —
+          cada um traz seus fluxos (surfaces) para debaixo desta identidade.
+          A referência é validada na gravação (x-dna-ref).
+      requires_plan:
+        type: string
+        enum: [free, pro]
+        description: O plano MÍNIMO que abre este App (entitlement,
+          decisão do founder em 05/08). Ausente = aberto a qualquer plano.
+          Quem aplica é o runtime que serve; o kernel valida a forma.
+      nav_order:
+        type: integer
+        minimum: 0
+        description: Ordem relativa na navegação do console (menor
+          primeiro). Ausente = ordem alfabética.
+  display_label: App
+  ascii_icon: "▦"
+  presentation:
+    fields:
+      - field: name
+        label: App
+        role: identifier
+      - field: title
+        label: Título
+        role: title
+      - field: description
+        label: Descrição
+        role: subtitle
+      - field: requires_plan
+        label: Plano mínimo
+        role: status
