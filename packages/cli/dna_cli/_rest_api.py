@@ -352,6 +352,7 @@ def build_app(
         compose_prompt_impl,
         create_project_impl,
         register_artifact_impl,
+        get_document_impl,
         list_documents_impl,
         write_document_impl,
         create_workspace_impl,
@@ -1564,6 +1565,36 @@ def build_app(
             raise HTTPException(status_code=404, detail=str(exc)) from None
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
+
+    @app.get("/v1/kinds/{kind}/documents/{name}", dependencies=guarded,
+             response_model=m.GetKindDocumentResponse)
+    async def get_kind_document(
+        kind: str,
+        name: str,
+        tenant: str | None = Query(default=None),
+        api_version: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Ler UM documento de ``{kind}``, VERBATIM — o que a lista não dá.
+
+        A lista com ``fields`` projeta pela VISTA quando o Kind é produzível
+        por readers (Agent, Skill…), e a vista normaliza — campos reais do
+        spec gravado (``description``, ``tools_requiring_confirmation`` de um
+        Agent) não viajam por ela. Quem gravou pelo POST genérico precisa
+        conseguir ler DE VOLTA o que gravou: esta rota é o
+        ``get_document_impl`` de sempre, na mesma fronteira de confiança do
+        POST (só ``tenant``; o scope é derivado, nunca nomeado).
+
+        404 nomeia o que faltou — o Kind desconhecido ou o documento."""
+        live = await _live()
+        try:
+            return await get_document_impl(
+                live, kind=kind, name=name, tenant=tenant,
+                api_version=api_version,
+            )
+        except UnknownKindError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
 
     @app.post("/v1/kinds/{kind}/documents", dependencies=guarded, status_code=201,
               response_model=m.WriteKindDocumentResponse)

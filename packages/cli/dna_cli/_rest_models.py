@@ -988,6 +988,28 @@ class ListKindDocumentsResponse(BaseModel):
     projected: list[str] | None = None
 
 
+class GetKindDocumentResponse(BaseModel):
+    """``GET /v1/kinds/{kind}/documents/{name}`` — UM documento, VERBATIM.
+
+    A lista projetada passa pela vista dos readers quando o Kind é produzível
+    por bundle (Agent, Skill…) — e a vista NORMALIZA: `spec.description` e
+    `spec.tools_requiring_confirmation` de um Agent gravado pelo funil
+    genérico simplesmente não viajam por ela (medido 05/08/2026 na aba
+    Configuração do dna-cloud). Esta porta lê o documento como a camada do
+    chamador o vê, sem projeção e sem vista — o `get_document_impl` que
+    sempre existiu e não tinha rota.
+
+    `etag` é o token de concorrência otimista para um write subsequente
+    (``if_match``): um lost update vira recusa, não sobrescrita silenciosa."""
+
+    scope: str
+    kind: str
+    api_version: str
+    name: str
+    document: dict[str, Any]
+    etag: str | None = None
+
+
 class WriteKindDocumentResponse(BaseModel):
     """``POST /v1/kinds/{kind}/documents`` — the written document. ``scope``
     is DERIVED (there is no ``scope`` field on the request to have supplied

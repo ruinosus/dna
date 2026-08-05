@@ -553,7 +553,16 @@ def build_copilot_context(
 
     mcp_servers = _project_mcp_servers(mi, agent_spec)
     ctx.mcp_servers = mcp_servers
-    ctx.tools_requiring_confirmation = _project_hitl_intent(mi, agent_spec)
+    # A união dos DOIS vocabulários de confirmação: o do Tool doc (a tool é
+    # sensível sempre) e o do próprio agente (política por copiloto —
+    # AgentSpec.tools_requiring_confirmation). Antes só o primeiro era lido,
+    # e a política declarada pelo funil de criação de copilotos era um campo
+    # morto (medido 05/08/2026).
+    ctx.tools_requiring_confirmation = _project_hitl_intent(mi, agent_spec) | {
+        str(t)
+        for t in (_spec_get(agent_spec, "tools_requiring_confirmation") or [])
+        if str(t).strip()
+    }
 
     tenant_block = _spec_get(cspec, "tenant") or {}
     copilot_propagate = _spec_get(tenant_block, "propagate")
