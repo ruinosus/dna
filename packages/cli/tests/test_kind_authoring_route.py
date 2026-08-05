@@ -284,6 +284,8 @@ _KIND_PATHS = {
     "/v1/kinds/registry/{kind}",
     "/v1/kinds/{kind}/approve", "/v1/kinds/{kind}/revoke",
     "/v1/kinds/{kind}/documents",
+    # A leitura VERBATIM de um doc (2026-08-05) — o par do POST genérico.
+    "/v1/kinds/{kind}/documents/{name}",
 }
 
 
