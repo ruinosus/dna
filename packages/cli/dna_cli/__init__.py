@@ -63,7 +63,12 @@ class _BannerGroup(click.Group):
     ),
     context_settings={"help_option_names": ["-h", "--help"]},
 )
-@click.version_option(version="0.1.0", prog_name="dna")
+# A versão vem do METADADO instalado, nunca de um literal: o "0.1.0" cravado
+# aqui sobreviveu do scaffold até a 0.70.0 — toda release mentia no
+# `dna --version` enquanto o pip mostrava a verdade (achado na verificação
+# da 0.70.0). package="dna-cli" explícito porque o pacote de import
+# (dna_cli) difere do nome de distribuição.
+@click.version_option(package_name="dna-cli", prog_name="dna")
 def main() -> None:
     """Top-level group — subcommands attached below."""
 
