@@ -441,6 +441,33 @@ export class DnaClient {
   }
 
   /**
+   * Read ONE document of `kind`, VERBATIM — what the list cannot give. The
+   * projected list travels through the readers' view when the Kind is
+   * bundle-producible (Agent, Skill…), and the view NORMALIZES: real spec
+   * fields written through the generic door can simply not travel through it
+   * (measured 2026-08-05: an Agent's `description` and
+   * `tools_requiring_confirmation`). This is the verbatim read, as the
+   * caller's layer sees the document, with the optimistic-concurrency `etag`
+   * for a follow-up `writeKindDocument` `ifMatch`.
+   *
+   * 404 names what is missing — the unknown Kind or the document.
+   */
+  async getKindDocument(
+    kind: string,
+    name: string,
+    opts?: { tenant?: string; apiVersion?: string },
+  ) {
+    return this.unwrap(
+      await this.raw.GET("/v1/kinds/{kind}/documents/{name}", {
+        params: {
+          path: { kind, name },
+          query: { tenant: opts?.tenant, api_version: opts?.apiVersion },
+        },
+      }),
+    );
+  }
+
+  /**
    * Write one document of `kind` — the generic door, kubernetes-shaped: the
    * endpoint names the Kind (applying a CRD creates the endpoint that serves
    * it; `kind` is inferred from where the client submits, never re-stated

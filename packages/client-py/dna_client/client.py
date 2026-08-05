@@ -461,6 +461,26 @@ class DnaClient:
             order_by=",".join(order_by) if order_by else None,
         )
 
+    def get_kind_document(
+        self, kind: str, name: str, *,
+        api_version: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """Read ONE document of ``kind``, VERBATIM — what the list cannot give.
+
+        The projected list travels through the readers' view when the Kind is
+        bundle-producible (Agent, Skill…), and the view NORMALIZES: real spec
+        fields written through the generic door can simply not travel through
+        it (measured 2026-08-05: an Agent's ``description`` and
+        ``tools_requiring_confirmation``). This is the verbatim read, as the
+        caller's layer sees the document, with the optimistic-concurrency
+        ``etag`` for a follow-up :meth:`write_kind_document` ``if_match``.
+
+        404 names what is missing — the unknown Kind or the document."""
+        return self._get(
+            f"/v1/kinds/{kind}/documents/{name}",
+            tenant=tenant, api_version=api_version,
+        )
+
     def write_kind_document(
         self, kind: str, metadata: dict[str, Any], spec: dict[str, Any], *,
         source_sha256: str | None = None,
