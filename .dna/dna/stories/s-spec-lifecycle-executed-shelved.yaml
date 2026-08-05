@@ -5,7 +5,7 @@ metadata:
 spec:
   title: 'O ciclo de vida da Spec ganha os dois estados terminais que faltavam: ''executed'''
   description: 'O ciclo de vida da Spec ganha os dois estados terminais que faltavam: ''executed'' (o desenho virou código — terminal positivo) e ''shelved'' (direção decidida como ''não agora''; o desenho continua válido — terminal neutro). Verbos com evidência obrigatória (spec executed --summary / spec shelve --reason) e --reason no deprecate, que não tinha. Aditivo e retrocompatível: os cinco estados ARTIFACT_STATUSES mantêm significado byte-a-byte e Plan/ADR não herdam nada.'
-  status: in-progress
+  status: review
   feature: f-dna-sdlc-expressiveness
   acceptance_criteria:
   - 'Given uma Spec accepted que já shipou, When ''dna sdlc spec executed <n> --summary "PR #X"'', Then status=executed + executed_at + execution_summary no doc e o summary na timeline'
@@ -17,7 +17,7 @@ spec:
   - 'código + testes (SDK: arco/transições/projeção/retrocompat; CLI: os três verbos e a evidência obrigatória) + docs regeneradas (kinds/CLI/data-model) + guards verdes'
   definition_of_done_source: cli-create
   created_at: '2026-08-05T23:01:42+00:00'
-  updated_at: '2026-08-05T23:06:57+00:00'
+  updated_at: '2026-08-05T23:17:05+00:00'
   timeline:
   - at: '2026-08-05T23:01:42+00:00'
     actor: claude-code
@@ -69,6 +69,24 @@ spec:
     name: tr-tg-spec-lifecycle-executed-shelved-20260805-230653
     summary: TestRun tr-tg-spec-lifecycle-executed-shelved-20260805-230653 → pass
     outcome: pass
+  - at: '2026-08-05T23:09:26+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR aberto: ruinosus/dna#318 (branch feat/spec-lifecycle, worktree /tmp/wt-spec-lifecycle). Sem merge, sem bump de versão.'
+    commit_ref: 86c75f0303ac077306c350c89fe0726342defb70
+  - at: '2026-08-05T23:16:57+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'CI verde no PR #318, todos os 13 jobs: brand-guard, commit-emails, gitleaks, docs-build, docs-links, client-py 3.12/3.13, client-ts, postgres, cli 3.12/3.13 e sdk-py 3.12/3.13. As 4919+36 da suíte completa do sdk-py passam no runner — o que confirma que as 36 falhas locais eram só o extra ''runtime'' (langchain) ausente da venv [dev], e não regressão.'
+    commit_ref: 86c75f0303ac077306c350c89fe0726342defb70
+  - at: '2026-08-05T23:17:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-spec-lifecycle-executed-shelved
