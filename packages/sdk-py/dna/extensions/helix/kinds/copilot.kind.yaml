@@ -306,8 +306,9 @@ spec:
           presence-flips-capability blocks — declaring a block IS enabling
           it, every field has a safe default (the pattern measured in the
           voice_persona precedent: "{}" works). Only blocks a shipped
-          renderer READS live here (the F4 data-honesty rule); cards/voice
-          land with their renderers. HITL confirmation is NOT here — it
+          renderer READS live here (the F4 data-honesty rule); voice landed
+          WITH its renderer (dna-cloud#302 — the Realtime mint + WebRTC
+          button read exactly these fields); cards still wait for theirs. HITL confirmation is NOT here — it
           already lives where it always did (the def's
           tools_requiring_confirmation).
         properties:
@@ -368,6 +369,51 @@ spec:
                 default: false
                 description: Derive one chip per wizard step ("fill step
                   X for me") from the surface's declared steps.
+          voice:
+            type: object
+            additionalProperties: false
+            description: >-
+              The VOICE face (spec-interaction-voice; renderer-first rule
+              satisfied by dna-cloud#302): presence of this block is what
+              makes the copilot's voice button exist — no block, no mint,
+              no cost. Only fields the shipped runtime READS (the reference
+              persona shape carried fields nothing consumed — archetype,
+              interruption_tolerance, wake_word — and they stay OUT by the
+              F4 rule).
+              The provider key never lives in the doc; the hosting layer
+              wires it (a secret param, default empty = the face is
+              invisible).
+            properties:
+              voice:
+                type: string
+                default: ""
+                description: Provider voice id (e.g. marin, cedar). Empty
+                  = provider default.
+              style:
+                type: string
+                default: ""
+                description: Prosody/tone hint APPENDED to the composed
+                  instructions — refinement, never a replacement.
+              identity_lock:
+                type: string
+                default: ""
+                description: Authored identity assertion spoken-as-context
+                  (measured root cause in the reference implementation — a
+                  persona without an assertion leaks the vendor's own
+                  name).
+              budget:
+                type: object
+                additionalProperties: false
+                description: The per-session cost ceiling — the founder's
+                  control. Seconds because that is what the runtime can
+                  ENFORCE today (a USD cap that only notifies is a
+                  measured gap in the reference, not a control).
+                properties:
+                  max_session_seconds:
+                    type: integer
+                    minimum: 10
+                    maximum: 7200
+                    default: 300
       mcp_servers:
         type: array
         default: []
