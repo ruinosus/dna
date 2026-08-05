@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-spec-lifecycle-executed-shelved
+spec:
+  description: 'O arco da Spec com executed/shelved: os verbos, a evidência obrigatória, as recusas e a retrocompat.'
+  kind_of_test: regression
+  status: active
+  steps:
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests/test_spec_lifecycle_states.py tests/test_sdlc_extension.py -q
+    expected: verde — arco, transições válidas/inválidas, projeção open|done|parked e retrocompat de doc antigo
+  - action: cd packages/cli && uv run --no-project python -m pytest tests/test_spec_lifecycle_cli.py tests/test_sdlc_workitem_cli.py -q
+    expected: verde — os três verbos, a evidência obrigatória, a recusa antes da escrita, e Plan sem herdar nada
+  - action: packages/sdk-py/.venv/bin/python scripts/gen_kinds_docs.py --check && packages/cli/.venv/bin/python scripts/gen_cli_docs.py --check && packages/sdk-py/.venv/bin/python scripts/gen_data_model_docs.py --check
+    expected: sem saída de diff — as três referências geradas batem com o código
+  - action: python3 scripts/brand_guard.py && packages/cli/.venv/bin/python scripts/docs_coverage_guard.py && packages/sdk-py/.venv/bin/python scripts/data_model_guard.py
+    expected: os três guards limpos
+  verifies:
+  - Story/s-spec-lifecycle-executed-shelved
+  created_at: '2026-08-05T23:06:14+00:00'
+  updated_at: '2026-08-05T23:06:14+00:00'

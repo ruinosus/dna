@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-spec-lifecycle-executed-shelved
+spec:
+  title: 'Plano: s-spec-lifecycle-executed-shelved'
+  date: '2026-08-05'
+  status: accepted
+  story_ref: s-spec-lifecycle-executed-shelved
+  journey_phase: plan
+  body: 1) Ler o Kind Spec + a máquina real (ARTIFACT_STATUSES no SDK e a cópia no CLI; _make_artifact_group monta propose/accept/deprecate/supersede). 2) SPEC_STATUSES = ARTIFACT_STATUSES + (executed, shelved) SÓ para Spec — Plan/ADR declaram enums próprios nos descritores, então nada herda por acidente. 3) SPEC_TRANSITIONS constrange APENAS os dois alvos novos; os quatro antigos seguem totais (regra retroativa reprovaria doc legal quando escrito). 4) Verbos com evidência obrigatória + guard passado ao _transition_workitem, validado DENTRO da sessão. 5) spec_board_bucket como a projeção status→coluna que o consumidor deixa de derivar. 6) Testes + docs regeneradas.
+  created_at: '2026-08-05T23:03:55+00:00'
+  updated_at: '2026-08-05T23:03:55+00:00'

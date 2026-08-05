@@ -1,0 +1,84 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-spec-lifecycle-executed-shelved
+spec:
+  title: 'O ciclo de vida da Spec ganha os dois estados terminais que faltavam: ''executed'''
+  description: 'O ciclo de vida da Spec ganha os dois estados terminais que faltavam: ''executed'' (o desenho virou código — terminal positivo) e ''shelved'' (direção decidida como ''não agora''; o desenho continua válido — terminal neutro). Verbos com evidência obrigatória (spec executed --summary / spec shelve --reason) e --reason no deprecate, que não tinha. Aditivo e retrocompatível: os cinco estados ARTIFACT_STATUSES mantêm significado byte-a-byte e Plan/ADR não herdam nada.'
+  status: in-progress
+  feature: f-dna-sdlc-expressiveness
+  acceptance_criteria:
+  - 'Given uma Spec accepted que já shipou, When ''dna sdlc spec executed <n> --summary "PR #X"'', Then status=executed + executed_at + execution_summary no doc e o summary na timeline'
+  - Given uma Spec cuja direção foi decidida como 'não agora', When 'dna sdlc spec shelve <n> --reason "..."', Then status=shelved + shelve_reason, e 'accept' a desengaveta
+  - Given uma Spec deprecated ou superseded, When 'spec executed', Then a transição é RECUSADA antes da escrita, nomeando o status atual e os que serviriam
+  - Given um doc Spec escrito antes desta mudança, When validado, Then continua válido e projeta como sempre projetou (accepted = trabalho pendente)
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'código + testes (SDK: arco/transições/projeção/retrocompat; CLI: os três verbos e a evidência obrigatória) + docs regeneradas (kinds/CLI/data-model) + guards verdes'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-05T23:01:42+00:00'
+  updated_at: '2026-08-05T23:06:57+00:00'
+  timeline:
+  - at: '2026-08-05T23:01:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-05T23:04:28+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-05T23:04:47+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'A evidência: dois defeitos MEDIDOS no board do dna-cloud em 05/08. (1) Sete specs aceitas que já shipavam continuavam ''accepted'' — o board as contava como trabalho pendente, e o dna-cloud passou a DERIVAR execução por citações (spec ↔ Feature/Story done). Derivar é paliativo de tela para buraco de modelo: a tela adivinha o que o documento nunca disse. (2) spec-porta-delegada-alem-da-microsoft teve a direção decidida pelo founder como ''não agora, mas o desenho vale'' (opção D) e o único verbo disponível era ''deprecate'', que significa OBSOLETA — registrar adiamento como inaplicável joga fora um desenho que continua correto. Somando: ''deprecate'' também não tinha --reason, então o porquê de QUALQUER encerramento ficava fora do doc.'
+    commit_ref: d117843f48861afdebb8b41b3423abd5af4fa9eb
+  - at: '2026-08-05T23:05:07+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: 'Decidi manter o arco de Plan e ADR intacto. A tentação era mexer em ARTIFACT_STATUSES, que Spec e Plan compartilhavam — mas o enum de Plan e o de ADR vivem nos DESCRITORES (plan.kind.yaml / adr.kind.yaml), não nessa tupla. Alargar a tupla daria ao ''plan create --status'' uma escolha que o schema recusaria na escrita: um CLI que oferece valor que a gravação rejeita. Então SPEC_STATUSES é próprio de Spec, o factory _make_artifact_group recebe o arco como parâmetro, e os dois verbos novos só são registrados para um Kind que DECLARA os estados.'
+    commit_ref: d117843f48861afdebb8b41b3423abd5af4fa9eb
+  - at: '2026-08-05T23:05:28+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: 'Decidi constranger APENAS os dois alvos novos. SPEC_TRANSITIONS mapeia ''executed'' e ''shelved'' aos estados de onde são alcançáveis; propose/accept/deprecate/supersede seguem totais, como sempre foram. Uma regra aplicada retroativamente recusaria movimentos que eram legais quando os documentos foram escritos — a única coisa que uma mudança aditiva não pode fazer. Consequência concreta e desejada: uma Spec ''executed'' AINDA pode ser superseded depois (o desenho shipou e mais tarde foi substituído; os dois fatos são verdadeiros). E ''shelved'' é terminal no BOARD, não no grafo: ''accept'' desengaveta, porque a direção pode mudar de volta.'
+    commit_ref: d117843f48861afdebb8b41b3423abd5af4fa9eb
+  - at: '2026-08-05T23:05:48+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Ponta REGISTRADA, não fechada: board_summary_impl (o que alimenta /v1/board) agrega Story + Feature e mais nada — Spec não entra na projeção hoje. Verificado no código, não inferido. Não ampliei o escopo; em vez disso deixei a projeção pronta e testada no SDK como spec_board_bucket(status) → open|done|parked, que é exatamente o mapeamento que o dna-cloud vinha derivando por citações. Quem for ligar Spec ao board importa essa função em vez de reinventar o conjunto de literais. Duas pontas menores na mesma linha: (a) Spec não carrega o trait sdlc.work-item, então nem o digest nem a gallery caminham suas transições — os vocabulários de status dessas duas eu atualizei mesmo assim, para que ''executed'' conte como completado e ''shelved'' não conte como pendente no dia em que passarem a ler; (b) os mapas de import de markdown legado (specify_cmd._STATUS_MAP e o gêmeo no backfill) seguem mapeando ''shipped'' → accepted, deliberadamente: mudá-los reinterpreta documentos antigos, e um import não tem a prova que o verbo ''executed'' exige.'
+    commit_ref: d117843f48861afdebb8b41b3423abd5af4fa9eb
+  - at: '2026-08-05T23:06:31+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-spec-lifecycle-executed-shelved
+    summary: TestGuide tg-spec-lifecycle-executed-shelved (regression)
+  - at: '2026-08-05T23:06:57+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-spec-lifecycle-executed-shelved-20260805-230653
+    summary: TestRun tr-tg-spec-lifecycle-executed-shelved-20260805-230653 → pass
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-spec-lifecycle-executed-shelved
+    role: implementation
+    at: '2026-08-05T23:04:28+00:00'
+  - kind: TestGuide
+    name: tg-spec-lifecycle-executed-shelved
+    role: test-guide
+    at: '2026-08-05T23:06:31+00:00'
+  - kind: TestRun
+    name: tr-tg-spec-lifecycle-executed-shelved-20260805-230653
+    role: test-run
+    at: '2026-08-05T23:06:57+00:00'

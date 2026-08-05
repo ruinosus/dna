@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-spec-lifecycle-executed-shelved-20260805-230653
+spec:
+  guide_ref: tg-spec-lifecycle-executed-shelved
+  outcome: pass
+  verifies:
+  - Story/s-spec-lifecycle-executed-shelved
+  executed_by: claude-code
+  executed_at: '2026-08-05T23:06:53+00:00'
+  notes: 'SDK: 91 passed (test_spec_lifecycle_states + test_sdlc_extension). CLI: suíte inteira 1459 passed, 21 skipped — inclui os 18 do test_spec_lifecycle_cli. Guards: brand_guard clean, data_model_guard clean, docs_coverage_guard clean (106 itens), e os três geradores --check sem diff. Ressalva honesta: a suíte completa do sdk-py acusa 36 falhas nesta venv, TODAS ModuleNotFoundError de langchain/langchain_core — o extra ''runtime'' está deliberadamente fora de [dev] no pyproject; nenhuma toca o SDLC e nenhuma vem desta mudança.'

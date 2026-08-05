@@ -43,6 +43,11 @@ from dna.extensions.sdlc.work_item_outputs import resolve_work_item_outputs
 _TERMINAL_STATUS = {
     "done", "shipped", "resolved", "accepted", "merged", "closed",
     "answered", "cancelled", "wont-fix", "duplicate", "deprecated",
+    # The two terminal states the Spec arc gained: `executed` closed positively
+    # (the design became code), `shelved` closed neutrally (decided as "not
+    # now"). Both belong here for the reason `cancelled` and `wont-fix` already
+    # do — nobody is working them, so their artifacts are for reference.
+    "executed", "shelved",
 }
 # A Story in these states is actively awaiting the delegator's eyes.
 _REVIEW_STATUS = {"review"}

@@ -2276,7 +2276,28 @@ dna sdlc spec deprecate [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
+| `--reason` | WHY it no longer applies (→ spec.deprecation_reason + timeline). Optional for back-compat, but a deprecation whose reason lives outside the doc is a decision nobody can revisit. |
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
+
+### `dna sdlc spec executed`
+
+```text
+dna sdlc spec executed [OPTIONS] NAME
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `NAME` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
+| `--summary` | THE PROOF the design became code — PRs, commits, releases (→ spec.execution_summary + timeline). |
 
 ### `dna sdlc spec propose`
 
@@ -2295,6 +2316,26 @@ dna sdlc spec propose [OPTIONS] NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
+| `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
+
+### `dna sdlc spec shelve`
+
+```text
+dna sdlc spec shelve [OPTIONS] NAME
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `NAME` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--reason` | The decision and WHY — what would have to change for it to be 'now' (→ spec.shelve_reason + timeline). |
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
 
 ### `dna sdlc spec supersede`

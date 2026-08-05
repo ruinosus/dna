@@ -713,6 +713,97 @@ class IssueKind(KindBase):
 # `supersedes` field to point at the replacement).
 ARTIFACT_STATUSES = ("draft", "proposed", "accepted", "deprecated", "superseded")
 
+# ── the Spec arc — two states the artifact arc never had ────────────────────
+#
+# ADDITIVE, and additive is the whole design: every ARTIFACT_STATUS keeps its
+# meaning byte-for-byte, so a Spec written before this exists still validates
+# and still reads the same. Plan and ADR are untouched — they declare their own
+# enums (kinds/plan.kind.yaml, kinds/adr.kind.yaml), so widening the Spec arc
+# cannot widen theirs by accident.
+#
+# `executed` — the design BECAME CODE. Terminal, positive. Without it an
+#   accepted spec that already shipped stays `accepted` forever and every
+#   reader that counts by status counts it as pending work. The consumer that
+#   hit this had to DERIVE execution from citations (spec ↔ closed work items)
+#   — a screen-level patch for a model-level hole, and it read seven specs
+#   wrong. Evidence is what makes the state honest: the writer owes the PRs /
+#   commits that are the proof (``execution_summary``).
+#
+# `shelved`  — the direction was decided as "not now", and THE DESIGN IS STILL
+#   VALID. Terminal, neutral, deliberately reversible (``propose``/``accept``
+#   un-shelve it). `deprecated` could not carry this and must not be stretched
+#   to: it means the design no longer applies, which is a different fact about
+#   a different document. The reason is the payload — a shelving whose WHY
+#   lives outside the doc is a decision nobody can revisit.
+SPEC_STATUSES = ARTIFACT_STATUSES + ("executed", "shelved")
+
+#: Spec statuses that still owe someone work — what a board's "to do" holds.
+SPEC_OPEN_STATUSES = frozenset({"draft", "proposed", "accepted"})
+#: Spec statuses that owe nobody work. `executed` closed positively; the other
+#: three closed without producing code.
+SPEC_TERMINAL_STATUSES = frozenset(SPEC_STATUSES) - SPEC_OPEN_STATUSES
+
+#: Target status → the statuses it is reachable FROM, for the two new verbs.
+#:
+#: Only the NEW targets are constrained. The pre-existing transitions
+#: (propose/accept/deprecate/supersede) stay unguarded exactly as they were —
+#: a rule applied retroactively would fail documents that were legal when
+#: written, which is the one thing an additive change may not do.
+SPEC_TRANSITIONS: dict[str, frozenset[str]] = {
+    # A design can ship without a formal `accept` — that happens, and refusing
+    # it would only teach people to lie about the status. What cannot have
+    # shipped is a design declared obsolete or replaced: in `superseded` it was
+    # the REPLACEMENT that got built, and marking this one executed hides which
+    # document the code actually follows.
+    "executed": frozenset({"draft", "proposed", "accepted", "shelved"}),
+    # Shelving is a decision about work NOT YET DONE. `executed` is already
+    # done, `deprecated`/`superseded` are already dead — none of the three is a
+    # thing you can postpone.
+    "shelved": frozenset({"draft", "proposed", "accepted"}),
+}
+
+
+class InvalidSpecTransition(ValueError):
+    """A Spec transition was asked for from a status it cannot be reached from.
+
+    The message NAMES the current status and the set that WOULD work — a
+    refusal that does not say what is legal just buys another guess."""
+
+
+def validate_spec_transition(current: str | None, target: str) -> None:
+    """Refuse a Spec transition the arc does not allow. Pure — no I/O.
+
+    Unconstrained targets (the four pre-existing ones) always pass, and a
+    ``current`` of ``None`` always passes: a legacy Spec with no ``status`` is
+    a document written before this rule and is not retroactively illegal."""
+    allowed = SPEC_TRANSITIONS.get(target)
+    if allowed is None or current is None or current in allowed:
+        return
+    raise InvalidSpecTransition(
+        f"a Spec in {current!r} cannot go to {target!r} "
+        f"(reachable from: {', '.join(sorted(allowed))})"
+    )
+
+
+def spec_board_bucket(status: str | None) -> str:
+    """``open`` | ``done`` | ``parked`` — the ONE status→column mapping a board
+    projection owes a Spec, so no reader has to hand-roll (or derive) it.
+
+    * ``open``   — draft / proposed / accepted: real pending work.
+    * ``done``   — executed: the design is code.
+    * ``parked`` — shelved / deprecated / superseded: closed, no work owed.
+      Three different reasons, one column: a board's "to do" must not hold any
+      of them, and none of them is an achievement to count.
+
+    An unknown status reads as ``open`` — a state nobody declared is the one
+    state a board must not quietly retire."""
+    if status == "executed":
+        return "done"
+    if status in SPEC_TERMINAL_STATUSES:
+        return "parked"
+    return "open"
+
+
 # Spec.phase — Superpowers/Spec-Kit phase progression. Orthogonal to
 # `status`: status is the document's lifecycle (draft → accepted →
 # superseded), phase is the SDLC's perspective on the spec (where the
@@ -751,8 +842,12 @@ class SpecKind(KindBase):
     docs = (
         "A Spec is a top-level design artifact. Cross-cutting by default "
         "(may drive multiple Features). Pattern-agnostic — superpowers, "
-        "BMAD, droid, RFC, ADR, Spec Kit all work. status is ADR-style "
-        "(draft → proposed → accepted → deprecated/superseded); phase is "
+        "BMAD, droid, RFC, ADR, Spec Kit all work. status is ADR-style, "
+        "widened at both terminal ends (draft → proposed → accepted → "
+        "executed | shelved | deprecated | superseded): `executed` means the "
+        "design became code, `shelved` means 'not now' with the design still "
+        "valid — neither of which `deprecated` (no longer applicable) may be "
+        "stretched to mean. phase is "
         "the orthogonal SDLC view (brainstorm → spec → plan_ready → "
         "implementing → done). Linkage to work is via Story.spec_refs[] "
         "(M:N), NOT via Spec.feature — the axis flip preserves "
@@ -772,7 +867,54 @@ class SpecKind(KindBase):
             "properties": {
                 "title": {"type": "string"},
                 "date": {"type": "string", "format": "date"},
-                "status": {"type": "string", "enum": list(ARTIFACT_STATUSES)},
+                "status": {
+                    "type": "string",
+                    "enum": list(SPEC_STATUSES),
+                    "description": (
+                        "Lifecycle: draft → proposed → accepted → "
+                        "executed|shelved|deprecated|superseded. `executed` = "
+                        "the design became code (terminal, positive — carries "
+                        "`execution_summary` as the proof). `shelved` = decided "
+                        "as 'not now', design still valid (terminal, neutral, "
+                        "reversible — carries `shelve_reason`). `deprecated` = "
+                        "no longer applicable. `superseded` = replaced (link "
+                        "via `supersedes` on the replacement)."
+                    ),
+                },
+                "executed_at": {
+                    "type": "string",
+                    "description": "When the design became code (status=executed).",
+                },
+                "execution_summary": {
+                    "type": "string",
+                    "description": (
+                        "THE PROOF the design became code — PRs, commits, "
+                        "releases. Required by `dna sdlc spec executed`: a "
+                        "terminal state nobody can audit is a claim, not a "
+                        "record."
+                    ),
+                },
+                "shelved_at": {
+                    "type": "string",
+                    "description": "When the direction was decided as 'not now' (status=shelved).",
+                },
+                "shelve_reason": {
+                    "type": "string",
+                    "description": (
+                        "The decision and WHY. Required by `dna sdlc spec "
+                        "shelve` — the design stays valid, so the next reader "
+                        "needs to know what would have to change for it to be "
+                        "'now'."
+                    ),
+                },
+                "deprecated_at": {
+                    "type": "string",
+                    "description": "When the design stopped applying (status=deprecated).",
+                },
+                "deprecation_reason": {
+                    "type": "string",
+                    "description": "WHY the design no longer applies (`dna sdlc spec deprecate --reason`).",
+                },
                 "phase": {
                     "type": "string",
                     "enum": list(SPEC_PHASES),
