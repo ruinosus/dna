@@ -52,6 +52,7 @@ from dna_cli.sdlc_cmd import (
     _next_issue_number,
     _now_iso,
     _scope_option,
+    _sibling_worktree_names,
     _warn_duplicate_issue_numbers,
     issue_group,
 )
@@ -244,13 +245,18 @@ def cmd_issue_import(ref: str, repo: str | None, scope: str) -> None:
                     f"— nada a fazer.", fg="yellow",
                 )
                 return
-        _warn_duplicate_issue_numbers(names)
+        # The third face of the same allocator. `issue file` reads across the
+        # clone's git worktrees now; an import that did not would keep handing
+        # out numbers a sibling tree already took — the exact defect, one door
+        # over.
+        elsewhere = _sibling_worktree_names(scope, "i")
+        _warn_duplicate_issue_numbers(names + list(elsewhere))
         # The name is claimed ATOMICALLY (`if_absent`), like `create_issue`
         # does — this path cannot delegate to it (the spec comes from GitHub,
         # not from `build_issue_spec`), and it used to write bare, so a name
         # guessed twice was an overwrite. It claims the NAME, not the number:
         # see `duplicate_issue_numbers` for why nothing here can do better.
-        start = _core_next_issue_number(names)
+        start = _core_next_issue_number(names + list(elsewhere))
         slug = f"gh{number}-{gb.slug_from_title(spec['title'])}"
         name = ""
         for candidate in range(start, start + 1000):

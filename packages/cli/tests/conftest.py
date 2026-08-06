@@ -164,6 +164,22 @@ def _isolated_sdlc_scope(monkeypatch):
     monkeypatch.setenv("DNA_SDLC_SCOPE", "dna-development")
 
 
+@pytest.fixture(autouse=True)
+def _no_worktree_scan_by_default(monkeypatch):
+    """Switch the sibling-worktree id scan OFF for the suite (autouse).
+
+    ``dna sdlc issue file`` / ``kaizen flag`` read the OTHER git worktrees of
+    this clone before taking ``max(NNN)+1`` — the fix for the ids that collided
+    between parallel agents. It shells out to ``git worktree list`` and reads
+    real directories, so leaving it on would make every id assertion in this
+    suite depend on which worktrees the developer happens to have open.
+
+    The tests that exist to prove the scan turn it back on explicitly, against a
+    real git repo they build themselves under ``tmp_path``.
+    """
+    monkeypatch.setenv("DNA_SDLC_WORKTREE_SCAN", "0")
+
+
 # --- Fake kernel session for `dna sdlc` write verbs ------------------------
 #
 # REAL creates against an in-memory store: the fake session is INJECTED through

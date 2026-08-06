@@ -39,3 +39,31 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-08-06T10:21:53+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: |-
+      Fechado o que dava para fechar aqui, e medido com dado real — branch fix/sdlc-ids-colidem.
+
+      ACHADO QUE MUDA O DESENHO REGISTRADO NESTA ISSUE. Esta Issue diz que "nada em tempo de alocação previne isso quando os escritores não se enxergam", e trata isso como um fato só. São dois, e só um é verdade: para TRAVAR não há árbitro (nenhum lock, O_EXCL ou PK atravessa dois filesystems). Para ENXERGAR há: `git worktree add` dá working dir próprio e `.dna/` próprio com UM `.git` compartilhado, então `git worktree list` de qualquer worktree enumera todas as outras por caminho absoluto. A colisão medida nunca foi uma corrida — foi um PONTO CEGO: dois agents leram dois boards limpos com horas de diferença, `max+1` deu 101 nos dois, e os nomes diferentes fizeram o merge aceitar ambos.
+
+      A PROVA de que (c) sozinha não bastava: o #321 mergeou 05/08 23:54 local, o `dna` do PATH é editable do checkout principal (logo, vivo), e às 09:29 e 09:36 de 06/08 nasceram dois i-101 diferentes. Probe, claim atômico e aviso não podiam disparar: cada árvore via um board sem duplicata e todo write era legítimo.
+
+      AO VIVO, com o conserto pronto, contra o checkout do dna-cloud: 17 worktrees, 90 Issues nesta árvore, 91 na união, `max+1` local = 104, da união = 105 — e o i-104 já existia no checkout principal. Arquivar dali produziria a terceira colisão; com o conserto, produz i-105.
+
+      O QUE ENTROU:
+      - `next_number(prefix, names)` / `duplicate_numbers(prefix, names)` — o primitivo deixa de ser só de `i-`; `next_issue_number` / `duplicate_issue_numbers` viram wrappers (nome publicado preservado).
+      - `create_issue(..., also_taken=[...])` — nomes de uma fonte que este kernel não lê. É o ÚNICO input capaz de quebrar a tautologia do max+1 (filtrar contra a própria enumeração continua sendo código morto, e o teste que prova isso continua lá). Default vazio: a face MCP, que roda contra um banco compartilhado onde worktree não existe, não muda.
+      - CLI: `_sibling_worktree_names(scope, prefix)` — `git worktree list --porcelain`, lê os NOMES DE ARQUIVO das irmãs (bootar um kernel por irmã custaria mais que o comando). Fail-soft em toda direção (sem git, fora de repo, fonte fora da árvore, irmã ilegível → {}), e `DNA_SDLC_WORKTREE_SCAN=0` desliga.
+      - `issue file` passa a união ao core E imprime QUAIS números pulou e em qual worktree — lacuna sem explicação é o que faz alguém desligar o scan.
+      - `issue import` (ponte GitHub), terceira face do mesmo alocador, também lê as irmãs.
+      - Kaizen (`kz-NNN`): o irmão que tinha o defeito INTEIRO e nenhuma proteção do #321 — max+1 de uma árvore só, `write_document` pelado (portanto uma observação sobrescrevendo outra em silêncio) e uma docstring afirmando que o contador garantia unicidade. Ganhou leitura entre worktrees, claim atômico e aviso.
+
+      IRMÃOS VERIFICADOS: os únicos ids por contador no repo são `i-NNN` e `kz-NNN`. Story/Feature/Epic/Spec/Plan/Spike/Bug/Task/ADR derivam o nome de slug humano — não têm o defeito.
+
+      O QUE NÃO SE PROMETE: não é trava. Dois processos no mesmo instante ainda veem nada, e outra CLONE (outra máquina, o CI) é invisível. `duplicate_issue_numbers` sobre a árvore merjada continua sendo o backstop. A troca é colisão → LACUNA, dita em voz alta e testada nos dois sentidos.
+
+      FALSO POSITIVO QUE SÓ O DADO REAL PEGOU: a primeira versão do aviso reportou as 90 Issues como colidindo consigo mesmas — irmãs guardam os MESMOS documentos, então a união repete cada nome. Deduplicado; a contagem voltou a bater exatamente com o baseline (94×4, 95×2, 96×2, 97×5).
+
+      BUSCA (registrada inclusive no que deu nada): nenhuma lib de id na árvore de dependências (sem ulid/nanoid/ksuid/shortuuid/cuid/uuid6/uuid_utils; Python 3.13 traz uuid1/3/4/5, uuid7 é 3.14). Arte prévia do formato exato deste problema: git-bug (9964★) — id é hash e resolve por qualquer prefixo único; jujutsu igual com change ids. É a opção (a)/(b) desta Issue e FUNCIONA — não foi implementada porque muda o FORMATO do id de itens novos, contrato visível ao fundador. Proposta registrada, decisão dele.
