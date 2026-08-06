@@ -488,6 +488,17 @@ class AgentNotFound(LookupError):
         super().__init__(f"Agent '{agent}' not found")
 
 
+class InstanceIdLookupUnsupported(NotImplementedError):
+    """The wired source cannot resolve a ``metadata.id`` prefix (i-114).
+
+    Raised rather than answering with an empty list, for the same reason
+    ``graph_refs`` answers 501 instead of ``[]`` when no edge store is
+    configured: "this adapter cannot answer" and "no instance has that id" are
+    different facts, and a caller handed silence for the first will read it as
+    the second.
+    """
+
+
 class UnknownLayout(ValueError):
     """``build_prompt`` hit an Agent whose ``layout:`` names a preset the
     Kind does not offer (s-dx-named-layouts).

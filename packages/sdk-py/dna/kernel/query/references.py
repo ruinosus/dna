@@ -38,6 +38,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from dna.kernel.identity import instance_id_of
 from dna.kernel.kinds.relations import (
     reciprocates,
     relation_values,
@@ -96,6 +97,16 @@ class ResolvedEdge:
     declared: tuple[str, ...]
     #: Does the target name us back? Tri-state — see the class docstring.
     reciprocal: bool | None = None
+    #: The target's ``metadata.id`` (i-114) — ``None`` when the relation is
+    #: dangling, or when the target predates the id and has not been
+    #: backfilled. This is the DERIVED half of the Kubernetes rule the id
+    #: feature is built on: an ``ownerReference`` carries name AND uid, because
+    #: deleting and recreating under the same name is a DIFFERENT object and a
+    #: machine must be able to tell. The authored ``.dna/`` keeps only the
+    #: name; this field is where the durable half lives, and it costs no extra
+    #: read — ``matched_doc`` was already materialized for the existence check,
+    #: which is the same economics that made ``reciprocal`` affordable.
+    to_id: str | None = None
 
 
 async def resolve_relations(
@@ -207,6 +218,8 @@ async def resolve_relations(
                 to_scope=to_scope,
                 declared=rel.to,
                 reciprocal=reciprocal,
+                # Free: the instance is in hand from the existence check above.
+                to_id=instance_id_of(matched_doc),
             ))
             if matched is None:
                 expected = " | ".join(sorted(rel.to))

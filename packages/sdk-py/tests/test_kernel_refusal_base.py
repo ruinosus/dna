@@ -276,6 +276,27 @@ _NOT_REFUSALS = {
     # map it to 501, and the caller's remedy is a different adapter, not a
     # different request.
     "GraphUnsupported",
+    # ── the instance-id lane (i-114) ──────────────────────────────────────
+    # The twin of ``GraphUnsupported`` one row up, and classified for the same
+    # reason: the wired source cannot search by id, which is a fact about the
+    # DEPLOYMENT. Raised rather than answered with ``[]`` — an empty list reads
+    # as "no instance has that id" — but it is not a denial anyone may appeal.
+    "InstanceIdLookupUnsupported",
+    # A LOOKUP MISS, exactly like ``AgentNotFound`` above: no instance carries
+    # that id. Nothing was withheld.
+    "UnknownInstanceId",
+    # The word "refusal" is in this one's own docstring, and it is STILL not a
+    # ``KernelRefusal`` — which is the distinction that base exists to keep
+    # sharp. ``KernelRefusal`` marks a verdict about the CALLER: they asked for
+    # something policy will not give, and every face relays it as such. An
+    # ambiguous prefix is a fact about the QUERY: two instances match, so there
+    # is no single answer to give. The remedy is more characters, not more
+    # permission, and reporting it as a denial would send the caller looking
+    # for an entitlement they already have.
+    "AmbiguousInstanceId",
+    # A MALFORMED query — fewer than four characters, or characters outside
+    # the id alphabet. The caller's input is not yet a question.
+    "PrefixTooShort",
 }
 
 

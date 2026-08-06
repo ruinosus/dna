@@ -202,6 +202,69 @@ class WritePipeline:
         mode = os.environ.get("DNA_REF_VALIDATION", "warn").strip().lower()
         return mode if mode in ("enforce", "warn", "off") else "warn"
 
+    async def _ensure_instance_id(
+        self, scope: str, kind: str, name: str, raw: Any,
+        *, tenant: str | None, if_absent: bool = False,
+    ) -> Any:
+        """Guarantee ``raw["metadata"]["id"]`` — minting one only for an
+        instance that does not already have one (i-114).
+
+        Three cases, and the ORDER of them is the whole contract:
+
+        1. The envelope already carries a well-formed id → keep it, untouched.
+           This is the ordinary round-trip: a ``.dna/`` file was read, edited
+           and written back, and its identity rode along in the frontmatter.
+        2. The envelope carries none, but an instance is ALREADY STORED at
+           these coordinates → **adopt the stored id**. This clause is the one
+           that matters, and it is not defensive coding. The application-level
+           write path (``dna.application.instances.write_instance_impl``)
+           rebuilds the envelope from scratch as
+           ``{"metadata": {"name": name}, "spec": …}`` — it does not carry
+           metadata forward at all. Every write through the REST and MCP doors
+           therefore arrives here with NO id. Minting a fresh one on that path
+           would re-identify the instance on every save, and every
+           ``dna_edges.to_id`` pointing at it would silently go stale: the
+           feature would look implemented and be worthless. So an id is minted
+           only where none exists to inherit.
+        3. Nothing stored, no id in the envelope → mint (see
+           :func:`dna.kernel.identity.mint_instance_id`).
+
+        ``get_instance_local`` and not ``get_instance``: the read must NOT fall
+        back to a parent scope, because inheriting a parent instance's id would
+        give two different instances the same identity — the exact confusion
+        ``to_scope`` exists elsewhere in this file to avoid.
+
+        ``if_absent`` skips the read entirely: the caller has asserted the
+        instance does not exist, and the adapter is about to refuse the write
+        if it does, so there is no id to inherit and no reason to pay for the
+        lookup.
+
+        A read that RAISES mints nothing and stamps nothing — it leaves the
+        envelope exactly as it came. Inventing an identity because the store
+        was briefly unreachable is how a transient failure becomes a permanent
+        wrong answer; a write that reaches the adapter without an id keeps the
+        id column it already has (see the adapter's COALESCE), so the honest
+        move is to say nothing.
+        """
+        from dna.kernel.identity import (  # noqa: PLC0415
+            instance_id_of, mint_instance_id, stamp_instance_id,
+        )
+        if not isinstance(raw, dict):
+            return raw
+        if instance_id_of(raw) is not None:
+            return raw
+        existing_id: str | None = None
+        if not if_absent:
+            getter = getattr(self._host, "get_instance_local", None)
+            if callable(getter):
+                try:
+                    stored = await getter(scope, kind, name, tenant=tenant)
+                except Exception:  # noqa: BLE001 — see the docstring: an
+                    # unreachable store must not mint a second identity.
+                    return raw
+                existing_id = instance_id_of(stored)
+        return stamp_instance_id(raw, existing_id or mint_instance_id())
+
     async def _resolve_references(
         self, scope: str, kind: str, name: str, raw: Any, port: Any,
         *, tenant: str | None,
@@ -566,6 +629,13 @@ class WritePipeline:
         # Resolve tenant + validate against KindPort.scope
         effective_tenant, residual_layer = self._resolve_tenant_arg(
             kind, tenant, layer, api_version=_api_version, scope=scope,
+        )
+        # i-114 — the instance's IDENTITY, stamped before anything downstream
+        # can see the envelope: hooks, schema validation, relation resolution
+        # and persistence all operate on the shape that will actually be
+        # stored, id included.
+        raw = await self._ensure_instance_id(
+            scope, kind, name, raw, tenant=effective_tenant, if_absent=if_absent,
         )
         # Phase 2a: pass tenant as a first-class kwarg to the adapter
         # if supported. Adapters that don't support tenant yet fall back

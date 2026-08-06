@@ -22,7 +22,36 @@ from dna.kernel.protocols import (
 from dna.kernel.bundle.handle import BundleHandle
 
 # Fields that belong in metadata rather than spec
-_META_FIELDS = {"name", "description", "labels"}
+_META_FIELDS = frozenset({"name", "description", "labels"})
+
+# The EMISSION order, which a frozenset cannot give. It used to be whatever
+# ``for key in _META_FIELDS`` yielded — set iteration order, which depends on
+# string hashing and therefore on ``PYTHONHASHSEED``: the same instance could
+# serialize its frontmatter keys in a different order in a different process,
+# showing a reordering in the diff that nobody made.
+_META_FIELD_ORDER = ("name", "description", "labels")
+
+#: Where a bundle-format Kind carries ``metadata.id`` (i-114) in its FLAT
+#: frontmatter — under a reserved, namespaced key, and NOT as a bare ``id``.
+#:
+#: The bare spelling was the first attempt and the market-conformance suite
+#: killed it within the hour. This frontmatter is FLAT: every key that is not
+#: one of ``_META_FIELDS`` is a SPEC field. Claiming ``id`` globally would have
+#: taken it away from any standard whose spec legitimately owns it — and one
+#: does, right here in the repo: the MIF ``Memory`` Kind (``mif-spec.dev/v1``)
+#: declares ``id`` REQUIRED in its spec, and DNA consumes that standard
+#: byte-faithful under its owner's namespace. A generic reader that quietly
+#: relocated ``spec.id`` into ``metadata`` would deform the standard on the way
+#: in and emit a non-conforming file on the way out.
+#:
+#: ``x-`` is the same extension convention the schema annotations use
+#: (``x-dna-ref``), and it is unambiguous by construction: a foreign standard
+#: does not define keys in our namespace.
+#:
+#: Envelope-shaped frontmatter (an explicit ``metadata:`` block) needs none of
+#: this — there ``metadata.id`` is already unambiguous and rides through
+#: untouched.
+_ID_FRONTMATTER_KEY = "x-dna-id"
 
 
 class _LiteralBlockSafeDumper(yaml.SafeDumper):
@@ -302,7 +331,13 @@ class GenericBundleReader(ReaderPort):
             metadata = {"name": bundle.name}
             spec = {}
             for key, val in fm.items():
-                if key in _META_FIELDS:
+                if key == _ID_FRONTMATTER_KEY:
+                    # i-114 — identity, under its reserved key. A bare ``id``
+                    # deliberately does NOT land here: in flat frontmatter it
+                    # belongs to the Kind's spec, and one standard in this repo
+                    # requires it there (see _ID_FRONTMATTER_KEY).
+                    metadata["id"] = val
+                elif key in _META_FIELDS:
                     metadata[key] = val
                 else:
                     spec[key] = val
@@ -348,7 +383,11 @@ class GenericBundleWriter(WriterPort):
 
         # Build frontmatter dict: metadata fields first, then spec fields (excluding body_field)
         fm: dict[str, Any] = {}
-        for key in _META_FIELDS:
+        # Identity first — i-114. Under the reserved key, never as a bare
+        # ``id``: see _ID_FRONTMATTER_KEY.
+        if metadata.get("id") is not None:
+            fm[_ID_FRONTMATTER_KEY] = metadata["id"]
+        for key in _META_FIELD_ORDER:
             val = metadata.get(key)
             if val is not None:
                 fm[key] = val
@@ -375,7 +414,9 @@ class GenericBundleWriter(WriterPort):
 
         # Build frontmatter dict: metadata fields first, then spec fields (excluding body_field)
         fm: dict = {}
-        for key in _META_FIELDS:
+        if metadata.get("id") is not None:
+            fm[_ID_FRONTMATTER_KEY] = metadata["id"]
+        for key in _META_FIELD_ORDER:
             val = metadata.get(key)
             if val is not None:
                 fm[key] = val
