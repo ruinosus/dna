@@ -1,0 +1,27 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-kind-inheritance-declared-chain
+spec:
+  description: 'As duas metades de i-096: o Kind da base desce a cadeia declarada, e nunca vai de lado (i-081 intacto).'
+  kind_of_test: regression
+  status: active
+  steps:
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests/test_kind_inheritance_declared_chain.py -q
+    expected: 12 passed — inclui writable-from-child, transitividade, lazy+eager, e as tres guardas de irmao/base
+  - action: git stash push packages/sdk-py/dna/ e rodar o mesmo arquivo
+    expected: 7 falham (a metade 'desce a cadeia'), 5 passam (as guardas, que sao regressao) — prova que os testes medem o conserto
+  - action: 'mutante: apagar a guarda ''if inherited_from is not None'' de register_kind_definitions e rodar'
+    expected: test_a_local_declaration_wins_over_the_inherited_one[True] falha (so o parametro LAZY mata o mutante)
+  - action: 'mutante: applies_to -> ''return True'' e rodar'
+    expected: as TRES guardas de irmao/base falham — o guarda-corpo de i-081 esta vivo
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests -q --timeout=180
+    expected: 5206 passed, 0 failed
+  - action: cd packages/cli && uv run --no-project python -m pytest tests -q
+    expected: 1523 passed
+  - action: python3 scripts/brand_guard.py
+    expected: 'brand_guard: clean'
+  verifies:
+  - Story/s-kind-inheritance-declared-chain
+  created_at: '2026-08-06T09:57:58+00:00'
+  updated_at: '2026-08-06T09:57:58+00:00'

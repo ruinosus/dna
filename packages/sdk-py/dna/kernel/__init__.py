@@ -2828,6 +2828,7 @@ class Kernel:
 
     def _register_kind_definitions(
         self, all_raws: list[dict[str, Any]], *, scope: str | None = None,
+        inherited_from: str | None = None,
     ) -> bool:
         """2-phase load Phase 1 — parse per-scope KindDefinition docs + register
         synthetic DeclarativeKindPorts (warn+skip on conflict). Thin facade over
@@ -2835,8 +2836,12 @@ class Kernel:
         iff a NEW BUNDLE reader was added (the rescan gate).
 
         ``scope`` binds the resulting Kinds to the scope whose store the
-        documents came from (i-081)."""
-        return self._kindreg.register_kind_definitions(all_raws, scope=scope)
+        documents came from (i-081); ``inherited_from`` names the ANCESTOR
+        scope those documents came from when the pass is widening a declared
+        chain downwards, which makes it never-replacing (i-096)."""
+        return self._kindreg.register_kind_definitions(
+            all_raws, scope=scope, inherited_from=inherited_from,
+        )
 
     def _register_custom_kinds(
         self, manifest: dict[str, Any], *, scope: str | None = None,

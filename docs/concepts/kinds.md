@@ -338,10 +338,10 @@ A Kind registered from CODE — an extension class, or a builtin
 applies to every scope the process serves.
 
 A Kind loaded from a STORE — a per-scope `KindDefinition` document, or a root
-document's `custom_kinds` — is **bound to the scope that declared it**. That
-scope's documents are validated against its schema and routed to its container;
-another scope does not see it at all, and a document of that Kind written there
-is simply an unregistered Kind.
+document's `custom_kinds` — is **bound to the scope that declared it**, and to
+the scopes that declare that one as an ancestor. An unrelated scope does not
+see it at all, and a document of that Kind written there is simply an
+unregistered Kind.
 
 The binding matters because registration is what *confers* schema enforcement
 and storage routing. Without it, the first scope composed in a long-lived
@@ -350,6 +350,21 @@ scopes could each declare a `Widget` and one would silently be validated
 against the other's schema (`i-081`). It also means two scopes may reuse a Kind
 name, an alias or a storage container freely: within one scope those are still
 unique, and across scopes they never meet.
+
+**Down the declared chain, though, a Kind is inherited.** A scope that declares
+`Genome.spec.parent_scope` already reads its parent's documents transitively;
+since `i-096` it also gets its parent's declared **Kinds** — so a Kind seeded
+once in a host-curated base scope is readable, enumerable and *writable* from
+every workspace that declares that base as parent, with no extension and no
+release. Precedence is the documents': a local declaration wins over an
+inherited one, and a nearer ancestor over a farther one.
+
+The direction is the whole guarantee. Inheritance **descends the declared chain
+and nothing else**: a sibling scope — one that merely lives in the same store,
+or that happens to share the same parent — is on no chain of yours, so its
+Kinds stay invisible, unenforcing and unrouting, exactly as `i-081` requires.
+Nor does it run upwards: a workspace cannot inject a Kind into the base that
+every other workspace inherits from.
 
 ### Approval and revocation: three states, not a boolean
 

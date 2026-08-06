@@ -268,6 +268,105 @@ class InstanceBuilder:
                 all_raws.append(r)
                 seen_keys.add(key)
 
+    async def _parent_scopes(self, scope: str) -> list[str]:
+        """The DECLARED ancestors of ``scope``, nearest first — the same walk
+        the documents take (``compute_resolution_chain``), fail-soft to the V1
+        single ``_lib`` hop when the chain cannot be read.
+
+        Factored out because i-096 needs the identical answer the document
+        merge below already computes: one chain, one meaning of "parent", or
+        documents and Kinds inherit along two different graphs."""
+        k = self._k
+        if scope == k._INHERIT_PARENT_SCOPE:
+            return []
+        try:
+            chain = await k._compute_resolution_chain(scope, None)
+        except Exception as e:  # noqa: BLE001
+            logger.warning(
+                "instance build: resolution chain failed for %r — "
+                "falling back to single parent %r: %s",
+                scope, k._INHERIT_PARENT_SCOPE, e,
+            )
+            return [k._INHERIT_PARENT_SCOPE]
+        seen: list[str] = []
+        for s, _t in chain:
+            if s != scope and s not in seen:
+                seen.append(s)
+        return seen
+
+    async def _register_inherited_kind_definitions(
+        self, scope: str, parents: list[str] | None = None,
+    ) -> bool:
+        """i-096 — register the Kinds ``scope``'s DECLARED ANCESTORS declare, so
+        the child scope can read *and write* them. Returns the rescan gate.
+
+        The asymmetry this closes. Documents already flow down the declared
+        chain (``compute_resolution_chain``, the merge in ``instance_async``
+        below), but the KINDS did not: ``KindDefinition`` is a BOOTSTRAP Kind,
+        so a base-scope descriptor was loaded and registered **bound to the base
+        scope only** (i-081's ``__scopes__``). In a child scope the Kind then
+        did not exist — ``kinds_for(scope)`` filtered it out — so
+        ``GET /v1/kinds/<K>/documents?tenant=<ws>`` 404'd and a write was refused
+        with *"Kind 'K' is not registered on this source"*, while documents of
+        that very Kind listed fine through the child. Every PRODUCT Kind
+        therefore had to become an extension (code + release) instead of a
+        document, which is the declarative-Kind promise inverted.
+
+        **What this is NOT (the i-081 guard-rail).** Inheritance descends the
+        DECLARED chain and nothing else. A sibling scope — one that merely
+        exists in the same store, or that shares the same parent — is on no
+        chain of this scope, so its documents are never even read here. The
+        widening is per (child scope, ancestor descriptor); it is not a
+        relaxation of ``applies_to``, which still answers from ``__scopes__``
+        alone, so every other filter i-081 installed keeps its exact shape.
+
+        **Precedence is local-wins**, the same as the documents': this pass runs
+        AFTER the scope's own Phase 1, and ``inherited_from=`` makes the funnel
+        never replace an already-registered descriptor. A nearer ancestor also
+        beats a farther one for the same reason — ``parents`` is nearest-first,
+        and the first pass to register a key owns it.
+
+        **Cost**: one ``load_bootstrap_docs`` per ancestor per MI build (the
+        bootstrap SLICE — Genome + KindDefinition + LayerPolicy, not the scope).
+        On the eager path that sits beside a full ``load_all`` per ancestor, so
+        it is noise; on the lazy path it is what ``LiveDna.ensure_kinds``
+        already pays per scope per TTL window.
+
+        Fail-soft, per ancestor: an unreadable ancestor contributes no Kinds and
+        logs — a scope that cannot be read must not turn a request that would
+        have worked into an error.
+        """
+        k = self._k
+        if k._source is None:
+            return False
+        if parents is None:
+            parents = await self._parent_scopes(scope)
+        added_readers = False
+        for parent in parents:
+            try:
+                parent_bootstrap = await k._source.load_bootstrap_docs(parent)
+            except Exception as e:  # noqa: BLE001
+                # DEBUG, unlike the document merge's WARNING for the same
+                # ancestor: this pass runs on the TTL'd ``ensure_kinds`` refresh
+                # for EVERY scope, and its commonest miss is the V1 ``_lib``
+                # tail every chain ends at, which most deployments never
+                # materialize as a real scope. A line per scope per window for
+                # an expected absence is noise that buries the real ones. The
+                # document merge below still logs loud for a parent that holds
+                # content and cannot be read.
+                logger.debug(
+                    "instance build: ancestor scope %r bootstrap load failed — "
+                    "its declared Kinds are unavailable in %r: %s",
+                    parent, scope, e,
+                )
+                continue
+            if not parent_bootstrap:
+                continue
+            added_readers |= k._register_kind_definitions(
+                parent_bootstrap, scope=scope, inherited_from=parent,
+            )
+        return added_readers
+
     async def _rescan_after_kinddef_register_async(
         self, scope: str, all_raws: list[dict], added_readers: bool,
     ) -> None:
@@ -413,6 +512,14 @@ class InstanceBuilder:
             # registration call itself, so the on-demand reads a lazy MI
             # delegates to ``kernel.query`` pick those documents up anyway.
             k._register_kind_definitions(bootstrap_docs, scope=scope)
+            # i-096 — and the Kinds the DECLARED ANCESTORS declare, AFTER the
+            # local pass so a local declaration wins. This branch is the one
+            # ``LiveDna.ensure_kinds`` drives, so it is the branch the REST/MCP
+            # document routes resolve their Kind against: without it, the
+            # inheritance would exist only on the eager path and a workspace
+            # would see the base's Kinds or not depending on which surface it
+            # arrived through.
+            await self._register_inherited_kind_definitions(scope)
             # The second door onto the same registry (``custom_kinds`` on the
             # scope's root document, same approval gate) — wired here too, or
             # "lazy and eager agree on the registry" would hold for one door
@@ -474,19 +581,12 @@ class InstanceBuilder:
         # call and see parent writes immediately; only the declared
         # ``parent_scope`` VALUE itself rides the granular Genome cache
         # (TTL ``_GRANULAR_DOC_TTL``).
-        if scope != k._INHERIT_PARENT_SCOPE:
-            try:
-                chain = await k._compute_resolution_chain(scope, None)
-                parent_scopes = [s for s, _t in chain if s != scope]
-            except Exception as e:  # noqa: BLE001
-                # fail-soft: an unreadable chain degrades to the V1
-                # single-hop parent rather than dropping inheritance.
-                logger.warning(
-                    "instance build: resolution chain failed for %r — "
-                    "falling back to single parent %r: %s",
-                    scope, k._INHERIT_PARENT_SCOPE, e,
-                )
-                parent_scopes = [k._INHERIT_PARENT_SCOPE]
+        #
+        # ``_parent_scopes`` holds the walk (and its fail-soft degradation to
+        # the V1 single hop) so the i-096 Kind pass below asks the SAME
+        # question: one chain, one meaning of "parent".
+        parent_scopes = await self._parent_scopes(scope)
+        if parent_scopes:
             seen_keys = {
                 (r.get("kind"), (r.get("metadata") or {}).get("name") or r.get("name"))
                 for r in raw_docs
@@ -547,6 +647,12 @@ class InstanceBuilder:
             all_raws_for_rescan.extend(dep_docs)
         added_readers = k._register_kind_definitions(
             all_raws_for_rescan, scope=scope,
+        )
+        # i-096 — the ancestors' declared Kinds, AFTER the local pass (local
+        # wins) and BEFORE the rescan (an inherited BUNDLE Kind installs a
+        # reader the rescan must then use).
+        added_readers |= await self._register_inherited_kind_definitions(
+            scope, parent_scopes,
         )
         await self._rescan_after_kinddef_register_async(
             scope, all_raws_for_rescan, added_readers,

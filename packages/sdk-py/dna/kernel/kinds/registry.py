@@ -62,6 +62,32 @@ for genuinely scope-free introspection (the Kind catalogue, ``kind_ports()``,
 dep_filter validation at boot); the behaviour-conferring paths — the write
 pipeline, storage routing and the kinds map handed to a ``ManifestInstance`` —
 all pass a scope.
+
+i-096 — the binding DESCENDS a declared chain; it never goes sideways
+--------------------------------------------------------------------
+i-081 answered "which scope declared this Kind"; it did not answer "which
+scopes may that declaration reach". The two are the same only in a flat world,
+and DNA's is not: a scope declares ``Genome.spec.parent_scope`` and inherits its
+parent's DOCUMENTS transitively (``compute_resolution_chain``). The Kinds did
+not follow, because ``KindDefinition`` is a BOOTSTRAP Kind and bootstrap Kinds
+never inherit as documents — so a base-scope descriptor stayed bound to the base
+alone, and in a child workspace the Kind simply did not exist: the registry
+enumeration omitted it, reads 404'd and writes were refused with *"not
+registered on this source"*, while documents of that very Kind listed fine
+through the child. The product consequence was that every PRODUCT Kind had to
+become an extension (code + release) instead of a document — the declarative
+Kind promise inverted.
+
+The fix changes nothing here and everything one layer up:
+:func:`applies_to` still answers from ``__scopes__`` alone, and
+:meth:`KindRegistry.register_kind_definitions` gained ``inherited_from=`` — the
+INSTANCE BUILDER walks the declared chain and re-runs the funnel with the
+ancestor's bootstrap documents bound to the descendant scope, so the descendant
+port is genuinely bound rather than exempted from a filter. Precedence is
+local-wins (the ancestor pass never replaces an already-registered descriptor),
+and the reach is exactly the declared chain: a SIBLING scope is on no chain, so
+i-081 stands unchanged — it is the guard-rail this feature is measured against
+(``tests/test_kind_inheritance_declared_chain.py``).
 """
 from __future__ import annotations
 
@@ -1175,6 +1201,7 @@ class KindRegistry:
 
     def register_kind_definitions(
         self, all_raws: list[dict[str, Any]], *, scope: str | None = None,
+        inherited_from: str | None = None,
     ) -> bool:
         """Phase 1 of 2-phase loading: parse KindDefinition docs + register
         synthetic DeclarativeKindPorts on the kernel.
@@ -1219,6 +1246,24 @@ class KindRegistry:
         them globally — the pre-i-081 behaviour, kept for callers that own the
         whole process (in-process tests that hand the funnel raw documents
         directly); every path that loads from a store passes its scope.
+
+        i-096 — ``inherited_from``: the documents came from ``scope``'s DECLARED
+        ANCESTOR of that name, not from ``scope``'s own store, and the Kinds
+        they declare are being widened DOWN the chain so the child scope can
+        read AND write them (documents already inherit this way through
+        ``compute_resolution_chain``; the Kinds did not, which is the defect).
+        One thing changes, and it is a narrowing: an already-registered key is
+        **never replaced**. The "different descriptor digest → swap the port in
+        place" branch (i-080 item 3) is an EDIT by the scope that owns the Kind;
+        an ancestor pass reaching it would let the base silently overwrite a
+        child's own declaration — the opposite of the local-wins precedence the
+        document chain has. The ancestor pass therefore only ever WIDENS a port
+        it recognises (same digest) and otherwise steps aside.
+
+        The guard-rail (i-081 must not reopen): this parameter does not decide
+        WHICH scopes may reach a Kind — the caller does, by walking the declared
+        chain and nothing else. A sibling scope is on no chain, so no sibling
+        document ever reaches this funnel bound to another scope.
         """
         from dna.kernel.meta import DeclarativeKindPort
         from dna.kernel.models import TypedKindDefinition
@@ -1356,8 +1401,25 @@ class KindRegistry:
                 # funnel below.
                 if getattr(existing, "__descriptor_digest__", None) == digest:
                     # i-081: the same descriptor arriving from a second scope
-                    # widens the binding instead of registering a twin.
+                    # widens the binding instead of registering a twin. i-096
+                    # rides the SAME line: an ancestor's descriptor recognised
+                    # here is widened to the descendant scope, which is exactly
+                    # what "the child inherits the base's Kind" means.
                     _bind_scope(existing, scope)
+                    continue
+                if inherited_from is not None:
+                    # i-096 — LOCAL WINS. A different digest under the same key
+                    # means the scope (or another scope sharing this registry)
+                    # already runs its own descriptor for this Kind; an ancestor
+                    # pass must not replace it. Debug, not warning: a base and a
+                    # child deliberately diverging is the overlay thesis
+                    # working, not an anomaly.
+                    logger.debug(
+                        "KindDefinition %s/%s declared in ancestor scope %r is "
+                        "shadowed for %r by an already-registered descriptor — "
+                        "the local declaration wins.",
+                        key[0], key[1], inherited_from, scope,
+                    )
                     continue
                 logger.info(
                     "KindDefinition %s/%s changed (descriptor digest %s → %s) "
