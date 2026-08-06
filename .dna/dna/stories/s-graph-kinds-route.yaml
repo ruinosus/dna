@@ -25,7 +25,7 @@ spec:
   - 'CI: pytest sdk-py + cli verdes; sem mexer em versao/release'
   definition_of_done_source: cli-create
   created_at: '2026-08-06T07:45:18+00:00'
-  updated_at: '2026-08-06T08:03:04+00:00'
+  updated_at: '2026-08-06T08:10:13+00:00'
   timeline:
   - at: '2026-08-06T07:45:18+00:00'
     actor: claude-code
@@ -65,6 +65,18 @@ spec:
     name: tr-tg-graph-kinds-route-20260806-080301
     summary: TestRun tr-tg-graph-kinds-route-20260806-080301 → pass
     outcome: pass
+  - at: '2026-08-06T08:03:54+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/323'
+    pr_url: https://github.com/ruinosus/dna/pull/323
+  - at: '2026-08-06T08:10:13+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #323 aberto (sem merge, por instrucao). CI VERDE nos 14 checks — incluindo sdk-py 3.12/3.13, o que confirma que as 36 falhas locais eram o extra ''runtime'' (langchain) fora de [dev] neste ambiente, e nao esta mudanca. Ponta com dono para a fatia 5 (dna-cloud): o laco de N readRegisteredKind em apps/web/app/dashboard/kinds/page.tsx:145-160 vira UMA chamada; o balde relationUnread passa a ter no maximo 1 item; e projectRelations pode sair inteiro se o portal consumir edges direto — ele nao sabia derivar ''tier'' (dep_filters nao esta no schema), entao a rota entrega MAIS do que a projecao em memoria tinha.'
+    commit_ref: 8503bc95c6e390335ff42831a4fa09fb4890448f
   produces:
   - kind: Plan
     name: plan-s-graph-kinds-route
