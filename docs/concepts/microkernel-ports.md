@@ -1,4 +1,4 @@
-# The microkernel and its five ports
+# The microkernel and its ports
 
 The runtime is a **microkernel**: a small, closed core that knows how to
 store, validate, version and compose *instances* — but knows nothing about
@@ -10,8 +10,8 @@ Kinds*](thesis.md#5-the-kernel-knows-no-kinds).
 
 ## The kernel as a mediator over five ports
 
-The kernel mediates five ports plus a hook registry. Each port answers one
-question:
+Five ports carry the weight, and they are the ones to learn first. Each answers
+one question:
 
 | Port | Question it answers |
 |---|---|
@@ -51,6 +51,21 @@ Because the core only ever talks to these interfaces, you can swap the
 storage backend, the fetch strategy, or the on-disk format without touching
 the composition logic — and you can add a Kind without touching the core at
 all.
+
+!!! tip "Five is where you start, not what there is"
+
+    These five are the load-bearing ones. They are not the whole surface: DNA
+    has **60** `Protocol`s, **37** of which are things you are meant to
+    implement — the conversation purge, the eval target, the contradiction
+    scribe, the scaffold resolver, the runtime backend, the embedding
+    provider, and more.
+
+    This page names seven of them. For a long time that was the entire public
+    account of DNA's extensibility, which meant the other fifty were seams
+    nobody could find. The full list, each with its contract, the capability it
+    lights up, what the face does if you skip it, and the suite that grades
+    your implementation, is **[the port catalogue](../reference/ports/index.md)**
+    — generated from the source, so a new port cannot ship invisible again.
 
 ## Extensions register Kinds
 
@@ -116,6 +131,15 @@ to let a claimed capability go unimplemented. The full contract, its
 capability protocols, and the conformance kit for authoring a new adapter are
 in [How to write a source adapter](../guides/write-a-source-adapter.md).
 
+One rule from that contract generalizes to every port, and it is the thing
+worth carrying away from this page: **a store that cannot answer must refuse,
+not approximate.** An adapter that keeps no reference graph does not return an
+empty list of references — `[]` reads as *nothing points at this instance*, a
+claim only a store that actually records edges may make, so the face answers
+`unsupported` instead. Capabilities are declared up front precisely so a face
+can tell "I found nothing" apart from "I cannot know", and the catalogue says
+which answer each port produces when you leave it unimplemented.
+
 ## The EmitterPort — materialize per runtime
 
 The five ports above are the kernel's *inward* contracts: they answer how the
@@ -152,3 +176,5 @@ in [How to write an emitter](../guides/writing-an-emitter.md).
   ports.
 - [How to write a source adapter](../guides/write-a-source-adapter.md) — the
   SourcePort contract in full.
+- [The port catalogue](../reference/ports/index.md) — all 60 ports, grouped by
+  what you are trying to change.

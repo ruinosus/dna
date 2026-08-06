@@ -12,4 +12,7 @@
 - Kinds
     - [Overview](kinds/index.md)
     - kinds/*.md
+- Ports
+    - [The catalogue](ports/index.md)
+    - ports/*.md
 - [Data model (MER)](data-model.md)

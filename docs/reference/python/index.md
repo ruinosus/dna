@@ -19,7 +19,7 @@ code because it is rebuilt from it on every `mkdocs build`.
 - **[Kernel & Runtime](kernel.md)** — the mediator over the five ports, and
   the thin `Runtime` convenience wrapper. This is the object you construct
   (`Kernel.auto()`) and the entry point to everything else.
-- **[Instance & ManifestInstance](document.md)** — the universal instance
+- **[Instance & ManifestInstance](instance.md)** — the universal instance
   wrapper and the blessed read/query surface (`all`, `one`, `root`,
   `default_agent`, `build_prompt`, `resolve`).
 - **[Ports & protocols](ports.md)** — the five port `Protocol`s a host wires

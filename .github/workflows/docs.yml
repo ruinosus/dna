@@ -46,21 +46,30 @@ jobs:
         # degradá-lo a "pular a metade física" seria exatamente o drift
         # silencioso que ele existe para impedir.
         run: pip install -e "packages/sdk-py[postgres]" -e packages/cli
-      # Regenerate the source-derived Reference: the CLI ref (Click tree) and
-      # the Kinds ref (registered Kinds' schemas). The Python API is rendered
-      # inline by mkdocstrings at build time, so it has no committed artifact.
+      # Regenerate the source-derived Reference: the CLI ref (Click tree), the
+      # Kinds ref (registered Kinds' schemas) and the Ports catalogue (every
+      # Protocol, parsed from the source). The Python API is rendered inline by
+      # mkdocstrings at build time, so it has no committed artifact.
+      #
+      # gen_ports_docs.py runs its self-test first: it carries three ratchets
+      # (a port with no prose, a prose entry naming a dead port, a hand-written
+      # page quoting a stale count) and a ratchet that has quietly stopped
+      # firing is worse than none — the same reason data_model_guard.py
+      # self-tests before it runs.
       - name: Generate the reference from source
         run: |
           python scripts/gen_cli_docs.py
           python scripts/gen_kinds_docs.py
+          python scripts/gen_ports_docs.py --self-test
+          python scripts/gen_ports_docs.py
       # Drift guard (uv/Ruff model): the committed reference must equal a fresh
       # regeneration — a stale commit fails the PR.
       - name: Fail if the generated reference is stale
         run: |
           git diff --exit-code -- \
-            docs/reference/cli docs/reference/kinds \
-            || { echo '::error::CLI/Kinds reference is stale — re-run the generators and commit.'; \
-                 git --no-pager diff -- docs/reference/cli docs/reference/kinds; \
+            docs/reference/cli docs/reference/kinds docs/reference/ports \
+            || { echo '::error::CLI/Kinds/Ports reference is stale — re-run the generators and commit.'; \
+                 git --no-pager diff -- docs/reference/cli docs/reference/kinds docs/reference/ports; \
                  exit 1; }
       # Data model (MER) drift guard. Separate from the git-diff guard above
       # because it prints WHAT drifted and self-tests that it can still fail.
