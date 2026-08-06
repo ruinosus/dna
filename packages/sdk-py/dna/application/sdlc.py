@@ -403,13 +403,73 @@ async def refuse_if_exists(
 
 
 def next_issue_number(existing_names: list[str]) -> int:
-    """Next free ``i-NNN`` number given the existing Issue doc names (pure)."""
+    """Next free ``i-NNN`` number given the existing Issue doc names (pure).
+
+    ``max + 1``. Note what that implies for any check built on the SAME read:
+    the answer is free BY CONSTRUCTION, so no "is this number taken?" filter
+    over ``existing_names`` can ever reject it. Rejecting a colliding number
+    needs information this list does not carry — see
+    :func:`duplicate_issue_numbers` for the detection that does."""
     max_n = 0
     for nm in existing_names:
         m = re.match(r"^i-(\d+)", nm or "")
         if m:
             max_n = max(max_n, int(m.group(1)))
     return max_n + 1
+
+
+def duplicate_issue_numbers(existing_names: list[str]) -> dict[int, list[str]]:
+    """``{NNN: [names…]}`` for every ``i-NNN`` claimed by more than one doc (pure).
+
+    The id of an Issue is its NUMBER; the only thing a write path can claim
+    atomically is its NAME, ``i-NNN-<slug>``. Two different slugs on the same
+    number are two different names, so every guarantee in this module —
+    #242's probe, the ``if_absent`` claim, the SQL primary key — grants both
+    writes, and is right to. Measured on the dna-cloud board 05/08/2026: 13
+    Issues sharing 4 numbers (``i-094`` ×4, ``i-097`` ×5).
+
+    Nothing at ALLOCATION time prevents that when the writers cannot see each
+    other, and the case that produced those 13 is the extreme of it: agents in
+    separate git WORKTREES are separate filesystems — no lock, no ``O_EXCL``,
+    no primary key spans them — and because the file names differ, ``git
+    merge`` joins both without a conflict.
+
+    So this is DETECTION, deliberately: cheap, exact, and it runs on the one
+    artifact where the writers finally meet — the MERGED tree. Belongs in CI.
+
+    The structural cure is to make the id the whole name (``i-NNN``: one path,
+    so ``if_absent`` becomes a real number lock AND git raises a real conflict)
+    or a number-keyed allocator Kind. Both are data-model decisions."""
+    by_number: dict[int, list[str]] = {}
+    for nm in sorted(existing_names):
+        m = re.match(r"^i-(\d+)", nm or "")
+        if m:
+            by_number.setdefault(int(m.group(1)), []).append(nm)
+    return {n: names for n, names in sorted(by_number.items()) if len(names) > 1}
+
+
+async def issue_number_is_free(kernel: Any, scope: str, number: int) -> bool:
+    """Is ``i-NNN`` unclaimed *right now*, by ANY slug? (probe-then-write path)
+
+    The number-keyed counterpart of :func:`existing_or_none`. The probe #242
+    installed asked ``get_document("i-NNN-<our slug>")``, which answers a
+    question nobody was asking: the collision that actually happens is a
+    DIFFERENT slug on the same number, and that probe returns ``None`` for it
+    every time.
+
+    Its only real power is being LATER than the enumeration that chose the
+    candidate, so it can see a write that landed in between. It cannot see a
+    writer this source never observes (another worktree), and the atomic path
+    has no equivalent — ``if_absent`` arbitrates the NAME, by definition."""
+    prefix = f"i-{number:03d}-"
+    bare = f"i-{number:03d}"
+    async for row in kernel.query(scope, "Issue", projection=["name"]):
+        meta = row.get("metadata") if isinstance(row, dict) else None
+        nm = (meta or {}).get("name") if isinstance(meta, dict) else None
+        nm = nm or (row.get("name") if isinstance(row, dict) else "") or ""
+        if nm == bare or nm.startswith(prefix):
+            return False
+    return True
 
 
 def looks_like_decision(body: str) -> bool:
@@ -626,7 +686,8 @@ async def create_issue(
     kernel: Any, scope: str, slug: str, *, description: str,
     issue_type: str = "bug", severity: str = "medium",
     title: str | None = None,
-    related_feature: str | None = None, owner: str | None = None,
+    related_feature: str | None = None, related_finding: str | None = None,
+    owner: str | None = None, status: str = "open",
     actor: str = "mcp", source: str = "mcp",
     now: datetime | None = None, overwrite: bool = False,
 ) -> dict[str, Any]:
@@ -651,11 +712,23 @@ async def create_issue(
     An adapter that does not support ``if_absent`` falls back to the #242
     behavior (probe, then a plain write) rather than failing: the race stays
     open there, exactly as documented, but nothing that worked stops working.
+    That fallback now probes the NUMBER (:func:`issue_number_is_free`) instead
+    of the full name, which is the question that was actually worth asking.
+
+    **What NONE of that protects, measured on the dna-cloud board 05/08/2026:
+    the NUMBER.** ``if_absent`` claims the NAME, and ``i-095-egress-por-plano``
+    and ``i-095-terraform-fases-2-4`` are two names. 13 Issues ended up sharing
+    4 numbers with every write behaving exactly as promised. Filtering the
+    candidate against the enumeration does not help either — ``max+1`` is free
+    by construction in the very list it was computed from — so this function
+    deliberately does NOT pretend to guard the id. The detection that works is
+    :func:`duplicate_issue_numbers`, run over the merged tree in CI; the cure
+    is structural (name == ``i-NNN``, or a number-keyed allocator Kind) and is
+    specced separately.
 
     The enumeration is still O(N) rows — documented rather than hidden — though
     it pushes a ``projection`` down, so it moves N names instead of N full Issue
-    specs. Closing THAT wants an allocator/sequence Kind, which is a data-model
-    decision rather than a fix."""
+    specs."""
     names: list[str] = []
     async for row in kernel.query(scope, "Issue", projection=["name"]):
         meta = row.get("metadata") if isinstance(row, dict) else None
@@ -665,7 +738,8 @@ async def create_issue(
     ni = now_iso(now)
     spec = build_issue_spec(
         description=description, issue_type=issue_type, severity=severity,
-        title=title, owner=owner, related_feature=related_feature,
+        status=status, title=title, owner=owner,
+        related_feature=related_feature, related_finding=related_finding,
         now=ni, actor=actor, source=source,
     )
 
@@ -705,7 +779,7 @@ async def create_issue(
                 )
             except DocumentNameTaken:
                 continue  # somebody else took it between our read and our write
-        if await existing_or_none(kernel, scope, "Issue", name) is None:
+        if await issue_number_is_free(kernel, scope, candidate_n):
             await kernel.write_document(
                 scope, "Issue", name, raw, invalidate_mode="doc")
             return {"kind": "Issue", "name": name, "type": issue_type,

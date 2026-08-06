@@ -124,8 +124,15 @@ async def test_overwrite_is_reachable_but_only_by_name(kernel):
 class _HidingKernel:
     """The real kernel with ONE Issue hidden from ``query`` — the shape of every
     enumeration that can under-report (a concurrent writer, a read replica that
-    has not caught up). ``get_document`` still sees it, which is exactly why the
-    probe is the fix and the enumeration is not."""
+    has not caught up). ``get_document`` still sees it.
+
+    ⚠️ It hides BOTH row shapes on purpose. ``create_issue`` pushes a
+    ``projection=["name"]`` down, and a projected row comes back FLAT
+    (``{"name": ...}``) with no ``metadata`` envelope — so the original version
+    of this stub, which only inspected ``row["metadata"]["name"]``, hid nothing
+    at all. Every test built on it was green because the enumeration saw
+    everything, i.e. it proved the opposite of what it claimed. A stub that
+    cannot suppress the row cannot test what happens when the row is missing."""
 
     def __init__(self, inner: Any, hidden: str) -> None:
         self._inner = inner
@@ -136,25 +143,136 @@ class _HidingKernel:
 
     async def query(self, *a: Any, **kw: Any):
         async for row in self._inner.query(*a, **kw):
-            meta = row.get("metadata") if isinstance(row, dict) else None
-            if isinstance(meta, dict) and meta.get("name") == self._hidden:
-                continue
+            if isinstance(row, dict):
+                meta = row.get("metadata")
+                name = meta.get("name") if isinstance(meta, dict) else row.get("name")
+                if name == self._hidden:
+                    continue
             yield row
 
 
 @pytest.mark.asyncio
-async def test_create_issue_probes_past_a_name_the_enumeration_missed(kernel):
+async def test_the_hiding_kernel_actually_hides(kernel):
+    """The stub above is load-bearing; a stub that silently no-ops turns every
+    test that uses it into a false green (which is exactly what happened)."""
+    await S.create_issue(kernel, _SCOPE, "first", description="d")
+    hiding = _HidingKernel(kernel, "i-001-first")
+    seen = [r async for r in hiding.query(_SCOPE, "Issue", projection=["name"])]
+    assert seen == [], f"the projected row was not suppressed: {seen}"
+
+
+@pytest.mark.asyncio
+async def test_a_missed_enumeration_never_destroys_the_document_it_missed(kernel):
+    """What the atomic claim DOES guarantee when the enumeration is blind.
+
+    With ``i-001-first`` invisible, ``max+1`` is 1 and the allocator aims at
+    number 1 — but the name it writes is ``i-001-second``, which is free, so
+    ``if_absent`` lets it through. Nothing is overwritten: the document the
+    enumeration missed keeps every byte.
+
+    What it does NOT guarantee is the ID: two Issues now share ``i-001``. That
+    is the open gap, and it is structural — the write path can claim a NAME
+    atomically and the id is a NUMBER, so nothing short of making the number
+    the whole name (``i-NNN``) or a number-keyed allocator can close it. This
+    test asserts the real behavior rather than a comfortable one; it is the
+    canary for that decision.
+    """
     await S.create_issue(kernel, _SCOPE, "first", description="the real i-001")
     hiding = _HidingKernel(kernel, "i-001-first")
 
     out = await S.create_issue(hiding, _SCOPE, "second", description="the new one")
 
-    assert out["name"] == "i-002-second", (
-        "the enumeration saw no Issues, so max+1 = 1 — the probe must step past "
-        "the i-001 that is actually there"
-    )
     kept = (await kernel.get_document(_SCOPE, "Issue", "i-001-first"))["spec"]
-    assert kept["description"] == "the real i-001"
+    assert kept["description"] == "the real i-001", "the missed doc was destroyed"
+    assert out["name"] == "i-001-second"
+
+
+# ── the id is the NUMBER; the write path can only claim the NAME ────────────
+
+
+def test_duplicate_issue_numbers_names_every_id_claimed_twice():
+    """The detection, on the shape measured on the dna-cloud board 05/08/2026."""
+    dupes = S.duplicate_issue_numbers([
+        "i-094-board-unificado-um-so",
+        "i-094-voz-so-na-surface",
+        "i-095-terraform-fases-2-4-decisao",
+        "i-096-tf-entra-nunca-importado",
+        "s-not-an-issue",
+        "",
+    ])
+    assert dupes == {94: ["i-094-board-unificado-um-so", "i-094-voz-so-na-surface"]}
+
+
+def test_duplicate_issue_numbers_is_quiet_on_a_healthy_board():
+    assert S.duplicate_issue_numbers(["i-001-a", "i-002-b", "i-003-c"]) == {}
+
+
+def test_no_filter_over_the_enumeration_can_reject_the_number_it_produced():
+    """Why ``create_issue`` does NOT try to skip 'taken' numbers.
+
+    An earlier attempt at this fix added ``if candidate in taken_numbers:
+    continue`` to the allocator loop. It read well and was dead code: the
+    candidate is ``max(taken) + 1``, computed from that very list, so the test
+    written to prove it still passed with the line deleted. The guard that
+    works has to look at something the allocator did not read — the merged
+    tree, in CI."""
+    names = ["i-001-a", "i-002-b", "i-002-b-again", "i-003-c"]
+    assert S.next_issue_number(names) not in set(S.duplicate_issue_numbers(names))
+    assert S.next_issue_number(names) == 4
+    # …and the collision that is already there is invisible to the allocator,
+    # which is exactly why detection is a separate, later step.
+    assert S.duplicate_issue_numbers(names) == {2: ["i-002-b", "i-002-b-again"]}
+
+
+class _NoAtomicLateArrival:
+    """An adapter with no ``if_absent``, plus a document that shows up only
+    AFTER the enumeration — the concurrent write that landed in between."""
+
+    def __init__(self, inner: Any, late: str) -> None:
+        self._inner = inner
+        self._late = late
+        self.reads = 0
+
+    def __getattr__(self, item: str) -> Any:
+        return getattr(self._inner, item)
+
+    async def query(self, *a: Any, **kw: Any):
+        self.reads += 1
+        first = self.reads == 1
+        async for row in self._inner.query(*a, **kw):
+            if first and isinstance(row, dict):
+                meta = row.get("metadata")
+                name = meta.get("name") if isinstance(meta, dict) else row.get("name")
+                if name == self._late:
+                    continue
+            yield row
+
+    async def write_document(self, *a: Any, **kw: Any):
+        if kw.pop("if_absent", False):
+            raise NotImplementedError("this adapter cannot claim atomically")
+        return await self._inner.write_document(*a, **kw)
+
+
+@pytest.mark.asyncio
+async def test_the_fallback_probe_asks_about_the_NUMBER_not_the_name(kernel):
+    """On the probe-then-write adapter, the probe has to be worth running.
+
+    #242's probe asked ``get_document("i-002-<our slug>")`` — a name nobody
+    else would ever pick, so it answered "free" for every real collision. The
+    probe now asks whether ANY slug holds ``i-002``, and because it re-reads,
+    it can see the write that landed after the enumeration."""
+    await S.create_issue(kernel, _SCOPE, "a", description="a")            # i-001
+    await S.create_issue(kernel, _SCOPE, "landed-late", description="b")  # i-002
+
+    k = _NoAtomicLateArrival(kernel, late="i-002-landed-late")
+    out = await S.create_issue(k, _SCOPE, "mine", description="c")
+
+    assert out["name"] == "i-003-mine", (
+        "the enumeration saw only i-001 and aimed at 002; the number probe "
+        "re-read, found i-002-landed-late, and stepped past it"
+    )
+    kept = (await kernel.get_document(_SCOPE, "Issue", "i-002-landed-late"))["spec"]
+    assert kept["description"] == "b"
 
 
 @pytest.mark.asyncio
