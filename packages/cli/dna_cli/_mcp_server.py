@@ -1376,25 +1376,43 @@ def build_server(
         tags: list[str] | None = None,
         owner: str = "mcp",
         personal: bool = False,
+        claims: list[dict[str, Any]] | None = None,
     ) -> dict[str, Any]:
         """Persist a memory (an Engram) so future recalls surface it.
 
         ``personal=true`` remembers PRIVATELY — into your own identity-keyed
         partition, portable across workspaces + clients, never shared with the
-        workspace. The default (``false``) shares to the workspace, unchanged."""
+        workspace. The default (``false``) shares to the workspace, unchanged.
+
+        **``claims`` is what lets this memory be checked for CONTRADICTION
+        against another one.** Prose cannot be compared: "the Kind still needs
+        approval" and "the Kind was approved" share almost no words, so nothing
+        can tell they disagree. A claim states the same thing structurally —
+        ``[{"subject": "KindDefinition/livro", "predicate": "approval",
+        "object": "pending"}]`` — and ``consolidate(dry_run=true)`` then reports
+        any OTHER memory asserting a different ``object`` for the same
+        ``(subject, predicate)`` while both are still believed.
+
+        ``subject`` may be omitted when ``area`` already names what the memory is
+        about in ``Kind/name`` form. ``polarity: "denies"`` states a negation
+        ("NOT approved") so it can be compared instead of being prose. Declare a
+        claim whenever you record a state that can later change — an approval, a
+        status, an owner, a decision — because that is exactly the memory that
+        goes stale in silence. A malformed claim is REFUSED naming the offending
+        index and field, and nothing is written."""
         if personal:
             oid, family = await _personal_guard("write")
             async with _refusing():
                 return await remember_impl(
                     await _live(), summary, None, area=area, affect=affect,
-                    tags=tags, owner=owner, memory_scope="personal", oid=oid,
-                    family=family,
+                    tags=tags, owner=owner, claims=claims,
+                    memory_scope="personal", oid=oid, family=family,
                 )
         tenant = await _guard("memory", scope=scope, memory_op="write")
         async with _refusing():
             return await remember_impl(
                 await _live(), summary, scope, area=area, affect=affect,
-                tags=tags, owner=owner, tenant=tenant,
+                tags=tags, owner=owner, claims=claims, tenant=tenant,
             )
 
     # `personal=` on the three tools below (i-… follow-up): `recall` and
@@ -1419,6 +1437,18 @@ def build_server(
         ``merge_candidates`` (groups of overlapping memories with a proposed
         supersede fusion) — show it to the human FIRST, then call again with
         ``apply=true`` once approved.
+
+        ``dry_run`` also returns **``contradictions``**: memories this workspace
+        believes AT THE SAME TIME that assert different values for the same
+        ``(subject, predicate)`` — the memory that was true when it was written
+        and is false now. Each entry names the conflicting memories, the claims
+        that clash, and a ``proposal`` whose ``strategy`` is
+        ``await_confirmation``: this pass never resolves one, not even with
+        ``apply=true``. RELAY THEM — answering from one side of a contradiction
+        without saying the other side exists is the failure this report was
+        built to stop. ``undecided`` lists memories about the same subject that
+        the rule could NOT judge; report those as unresolved, never as
+        agreement.
 
         ``personal=true`` consolidates ONLY your own private partition — never
         the workspace's shared memory."""

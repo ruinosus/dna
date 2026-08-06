@@ -113,6 +113,36 @@ def _slug(text: str) -> str:
     return f"rem-{h}"
 
 
+def _parse_claim(raw: str) -> dict[str, Any]:
+    """``[SUBJECT::]PREDICATE=[!]OBJECT`` → one claim dict.
+
+    The terse form exists so a claim can be typed as fast as a tag; anything
+    richer (a narrowed ``valid_from``) is authored in the YAML. A leading ``!``
+    on the object is ``polarity: denies`` — the shell-agnostic spelling of "NOT",
+    chosen over a second flag so the negation stays attached to the value it
+    negates. An empty object (``predicate=``) is an EXISTENCE claim.
+    """
+    subject, sep, rest = raw.partition("::")
+    if not sep:
+        subject, rest = "", raw
+    predicate, sep, value = rest.partition("=")
+    predicate = predicate.strip()
+    if not predicate:
+        raise click.ClickException(
+            f"--claim {raw!r}: expected [SUBJECT::]PREDICATE=OBJECT"
+        )
+    claim: dict[str, Any] = {"predicate": predicate}
+    if subject.strip():
+        claim["subject"] = subject.strip()
+    if sep:
+        value = value.strip()
+        if value.startswith("!"):
+            claim["polarity"] = "denies"
+            value = value[1:].strip()
+        claim["object"] = value or None
+    return claim
+
+
 def _engram_doc_name(mif_id: str) -> str:
     """Deterministic Engram doc name for an IMPORTED MIF memory — keyed by the
     MIF id, exactly like ``_mif_doc_name`` keys the passthrough copy.
@@ -179,12 +209,17 @@ def memory() -> None:
 @click.option("--personal", is_flag=True,
               help="Remember PRIVATELY — into your own per-user partition "
                    "(DNA_PERSONAL_ID), portable across workspaces, not shared.")
+@click.option("--claim", "claims", multiple=True, metavar="[SUBJECT::]PREDICATE=[!]OBJECT",
+              help="A structured assertion, so this memory can be checked against "
+                   "another one for CONTRADICTION and not only for repetition. "
+                   "`KindDefinition/livro::approval=pending`; SUBJECT defaults to "
+                   "--area; a leading `!` on the object means `denies`. Repeatable.")
 @click.option("--json", "as_json", is_flag=True)
 def remember_cmd(
     summary: str, kind: str, name: str | None, area: str, affect: str,
     affect_reason: str | None, source_refs: tuple[str, ...], tags: tuple[str, ...],
     owner: str | None, scope: str | None, tenant: str | None, personal: bool,
-    as_json: bool,
+    claims: tuple[str, ...], as_json: bool,
 ) -> None:
     """Write a memory Kind + deterministic encoding-context + index it."""
     from dna.memory import remember
@@ -205,6 +240,8 @@ def remember_cmd(
             spec["tags"] = list(tags)
         if owner:
             spec["owner"] = owner
+    if claims:
+        spec["claims"] = [_parse_claim(c) for c in claims]
 
     with dna_session(scope) as s:
         provider = _register_provider(s)  # registered → remember indexes on write
@@ -377,7 +414,8 @@ def list_cmd(kind: str, show_all: bool, scope: str | None, tenant: str | None, a
 @click.option("--apply", "do_apply", is_flag=True, help="Soft-forget stale memories (bi-temporal, never delete).")
 @click.option("--dry-run", "do_dry_run", is_flag=True,
               help="Preview the pass (zero effect, wins over --apply): per-memory "
-                   "action + reason, and deterministic merge candidates.")
+                   "action + reason, deterministic merge candidates, and the "
+                   "CONTRADICTIONS between memories believed at the same time.")
 @click.option("--scope", default=None)
 @click.option("--tenant", default=None)
 @click.option("--json", "as_json", is_flag=True)
@@ -412,6 +450,36 @@ def consolidate_cmd(
             click.echo(
                 f"  ⇄ merge candidate: {', '.join(grupo['names'])} → "
                 f"{grupo['canonical']} ({grupo['strategy']})"
+            )
+        for conflito in report.get("contradictions") or []:
+            proposta = conflito["proposal"]
+            click.secho(
+                f"  ⚡ CONTRADICTION on {conflito['subject']} · "
+                f"{conflito['predicate']} — {', '.join(conflito['names'])}",
+                fg="red", bold=True,
+            )
+            for par in conflito["pairs"]:
+                click.echo(
+                    f"      {par['a']} says {par['a_claim'].get('object')!r} "
+                    f"· {par['b']} says {par['b_claim'].get('object')!r} "
+                    f"({par['reason']})"
+                )
+            click.echo(
+                f"      → awaiting your call · keep {proposta['suggested_keep']} "
+                f"(by {proposta['basis']}), supersede "
+                f"{', '.join(proposta['suggested_supersede'])}"
+            )
+        for aberto in report.get("undecided") or []:
+            click.secho(
+                f"  ? undecided on {aberto['referent']}: "
+                f"{', '.join(aberto['names'])} — {aberto['reason']}",
+                fg="yellow",
+            )
+        for nome in report.get("recorded_at_approximate") or []:
+            click.secho(
+                f"  · {nome}: first version pruned — its transaction stamp is an "
+                f"upper bound, and can only decide by LOSING",
+                fg="bright_black",
             )
         click.secho("  (dry-run — nothing was changed)", fg="bright_black")
         return

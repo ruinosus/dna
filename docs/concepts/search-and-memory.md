@@ -187,6 +187,55 @@ Two refusals keep the answer honest, both deliberate:
 An `as_of` recall also does **not** reconsolidate: a read of the past that writes
 into the present is a contradiction.
 
+## Contradiction — memories that disagree, presented rather than overwritten
+
+Superseding a memory is something a caller *does*. Until `claims` existed,
+nothing could *notice* that two memories the workspace believes right now say
+opposite things — so a memory that was true when it was written kept being
+recalled long after it stopped being true.
+
+A memory may therefore declare what it asserts, structurally:
+
+```bash
+dna memory remember "O Kind Livro ainda precisa de aprovação." \
+  --area KindDefinition/livro --claim approval=pending
+dna memory remember "O Kind Livro foi aprovado no portal." \
+  --area KindDefinition/livro --claim approval=approved
+
+dna memory consolidate --dry-run   # ⚡ CONTRADICTION on KindDefinition/livro · approval
+```
+
+Two claims contradict when they **agree on subject and predicate, disagree on
+object, and their `[valid_from, valid_to)` windows share an instant** — the
+condition TOKI (arXiv:2606.06240 §2.1) states for bitemporal facts, which holds
+for nine of Allen's thirteen base relations. The four it excludes matter as much
+as the nine: a memory invalidated at exactly the instant its successor becomes
+valid is a clean **succession**, and reporting that as a conflict would flag
+every correctly superseded memory in the workspace.
+
+Three properties are deliberate:
+
+- **detection is syntactic** — three string comparisons and an interval test. No
+  model is involved, and none can be: the SDK core stays deterministic. The
+  optional `ContradictionScribe` is an *external* judge for the groups the rule
+  leaves in `undecided`, the same seam shape as `MergeScribe`;
+- **nothing is applied.** `consolidate(dry_run=True)` reports; `apply=True`
+  still only expires stale memories and never resolves a disagreement. Each
+  entry carries a `proposal` whose strategy is `await_confirmation` — a
+  suggested survivor, for a human to accept or reject;
+- **the suggestion is elected on transaction time**, not on the authored
+  `created_at` (which a caller writes, and can therefore get wrong). Where the
+  store pruned a memory's first version the stamp is only an upper bound, so it
+  may decide by losing but never by winning — the proposal then falls back to
+  the authored clock and names the bound in `recorded_at_approximate`.
+
+This is the *opposite* of `merge_candidates`: that finds memories saying the
+same thing twice (lexical overlap), this finds memories saying opposite things
+once. Contradiction is therefore grouped only by **declared** referents — a
+claim's `subject`, or the `Kind/name` the memory names in `area` /
+`source_refs` — never by vocabulary, because two memories that disagree usually
+share very few words.
+
 ## Personal vs workspace memory — the key is the person
 
 By default a memory is **workspace** memory: it lives in the tenant partition of

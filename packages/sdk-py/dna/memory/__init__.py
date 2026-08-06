@@ -50,6 +50,18 @@ from dna.memory.encoding_context import (
     stamp_encoding_context_if_absent,
     time_of_day,
 )
+from dna.memory.contradiction import (
+    ASSERTS,
+    DENIES,
+    Claim,
+    ContradictionScribe,
+    claims_contradict,
+    contradiction_report,
+    intervals_overlap,
+    parse_claims,
+    referents,
+    validate_claims,
+)
 from dna.memory.interchange import from_mif, resolve_or_mint_mif_id, to_mif
 from dna.memory.memory_type import classify_memory_type
 from dna.memory.policy import (
@@ -95,6 +107,7 @@ from dna.memory.verbs import (
     recallable_kinds,
     backfill_index,
     consolidate,
+    first_recorded_at,
     forget,
     recall,
     remember,
@@ -110,6 +123,18 @@ __all__ = [
     "forget",
     "consolidate",
     "backfill_index",
+    # contradiction detection (degrau 2 de f-poder-de-grafo)
+    "ASSERTS",
+    "DENIES",
+    "Claim",
+    "ContradictionScribe",
+    "claims_contradict",
+    "contradiction_report",
+    "intervals_overlap",
+    "parse_claims",
+    "referents",
+    "validate_claims",
+    "first_recorded_at",
     # transaction time — the belief state (s-memory-as-of)
     "AsOfResolution",
     "AsOfUnsupported",

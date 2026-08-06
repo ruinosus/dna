@@ -33,7 +33,7 @@ import copy
 import hashlib
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Sequence
 
 from dna.memory.as_of import (
     AsOfUnsupported,
@@ -157,6 +157,14 @@ async def remember(
     Then ``kernel.write_document`` (which runs the bi-temporal guard + hooks)
     and — when a search provider is registered — index the doc so ``recall``
     finds it. Returns ``{kind, name, spec, indexed}``.
+
+    A ``claims`` block (s-grafo-2-contradicao) is VALIDATED here, before the
+    write: this verb is the one chokepoint every face funnels through (MCP
+    ``remember``, ``POST /v1/memories``, ``dna memory remember``), so a
+    malformed claim comes back as a named ``ValueError`` at whichever door it
+    arrived at, instead of being stored and then silently ignored by the
+    detector. The Engram schema declares the same shape, so the raw
+    ``write_document`` door refuses it too — two doors, one contract.
     """
     allowed = recallable_kinds(kernel)
     if kind not in allowed:
@@ -164,6 +172,15 @@ async def remember(
     spec = dict(spec)  # never mutate the caller's dict
     now_iso = _now_iso(now)
     spec.setdefault("created_at", now_iso)
+
+    if "claims" in spec:
+        from dna.memory.contradiction import validate_claims
+
+        claims = validate_claims(spec.get("claims"))
+        if claims:
+            spec["claims"] = claims
+        else:
+            spec.pop("claims")
 
     if kind == "Engram":
         stamp_encoding_context_if_absent(spec)
@@ -653,6 +670,66 @@ async def forget(
     }
 
 
+# ─────────────────────────── contradiction ───────────────────────────
+
+
+async def first_recorded_at(
+    kernel: Any,
+    scope: str,
+    kind: str,
+    names: Sequence[str],
+    *,
+    api_version: str | None = None,
+) -> tuple[dict[str, str], list[str]]:
+    """When the store FIRST came to believe each memory — transaction time.
+
+    The second clock degrau 0 opened (``dna_versions.created_at``), asked in the
+    other direction: ``recall(as_of=)`` reads a document AT an instant, this
+    reads the instant a document ENTERED. It is the clock the contradiction
+    report's proposal rests on, and the spec's own ``created_at`` is not a
+    substitute — that one is authored, so a memory can claim any birthday it
+    likes and a correction filed today can claim to predate what it corrects.
+
+    Deliberately the FIRST retained version and not the newest: recall's
+    reconsolidation rewrites a surfaced memory (cue append + confidence bump),
+    which moves the newest transaction stamp every time somebody looks. "When
+    was this last written" would therefore rank a frequently-recalled old belief
+    above a genuinely new one — the exact inversion this election must not make.
+
+    Returns ``(stamps, approximate)``. A name lands in ``approximate`` when its
+    version 1 was pruned away (``VERSION_CHURN_RETENTION`` caps Engram at 3, and
+    reconsolidation reaches that cap fast), so the earliest stamp the store still
+    holds is NOT the first — the same blind spot ``recall(as_of=)`` reports as
+    ``as_of_truncated``, named for the same reason. The stamp is still RETURNED,
+    because it remains a sound UPPER bound: the memory was believed no later than
+    that, and possibly earlier. What that costs is stated where it is spent —
+    :func:`dna.memory.contradiction.contradiction_report` may elect a survivor on
+    an approximate stamp only when it loses on it, never when it wins.
+
+    A store that keeps no history at all yields ``({}, [])``: no stamps, and no
+    claim to have any.
+    """
+    src = getattr(kernel, "_source", None)
+    lister = getattr(src, "list_versions", None)
+    if not callable(lister):
+        return {}, []
+    stamps: dict[str, str] = {}
+    approximate: list[str] = []
+    for name in names:
+        try:
+            versions = await lister(scope, kind, name, api_version=api_version)
+        except Exception:  # noqa: BLE001 — a clock that cannot answer says nothing
+            continue
+        rows = [v for v in (versions or []) if isinstance(v, dict) and v.get("created_at")]
+        if not rows:
+            continue
+        oldest = min(rows, key=lambda v: int(v.get("version") or 0))
+        if int(oldest.get("version") or 0) > 1:
+            approximate.append(str(name))
+        stamps[str(name)] = str(oldest["created_at"])
+    return stamps, sorted(set(approximate))
+
+
 # ─────────────────────────── consolidate ───────────────────────────
 
 
@@ -667,6 +744,7 @@ async def consolidate(
     dry_run: bool = False,
     merge_overlap_floor: float | None = None,
     scribe: Any | None = None,
+    contradiction_scribe: Any | None = None,
     now: datetime | None = None,
 ) -> dict[str, Any]:
     """Deterministic consolidation pass — NO LLM (the LLM/deep-sleep scribe is
@@ -702,9 +780,31 @@ async def consolidate(
       ``scribe``). ``merge_overlap_floor`` tunes the Jaccard floor (default
       :data:`~dna.memory.merge.DEFAULT_OVERLAP_FLOOR`).
 
+    * ``contradictions`` — memories the system believes AT THE SAME TIME that
+      DISAGREE (s-grafo-2-contradicao, degrau 2 of ``f-poder-de-grafo``). The
+      sibling of ``merge_candidates`` and its opposite: that one finds memories
+      saying the same thing twice, this one finds memories saying opposite
+      things once. Detection is syntactic — declared ``claims`` compared on
+      ``(subject, predicate, object)`` over overlapping world-time windows
+      (:mod:`dna.memory.contradiction`) — so no model comes near the kernel;
+      the optional ``contradiction_scribe`` is the EXTERNAL judge for the groups
+      the rule leaves in ``undecided``. Each entry carries a proposal and
+      NOTHING is applied: ``apply=True`` still only expires stale memories, and
+      a contradiction is never resolved by this pass at all. The proposal's
+      suggested survivor is elected on TRANSACTION time
+      (:func:`first_recorded_at`) when the store keeps version history,
+      otherwise on the authored clock — each proposal's ``basis`` says which,
+      and the report's ``recorded_at_approximate`` names the memories whose
+      first version was pruned away, so a bound is never mistaken for a fact.
+
+    * ``undecided`` — the groups sharing a declared referent that the rule could
+      not decide. Reported rather than guessed at, and the input the external
+      judge would receive.
+
     Without ``dry_run`` the behavior AND the report shape are byte-identical
     to the pre-dry-run verb (no new keys) — total backward compatibility.
     """
+    from dna.memory.contradiction import contradiction_report
     from dna.memory.merge import DEFAULT_OVERLAP_FLOOR, merge_candidates_report
 
     now_dt = now or datetime.now(timezone.utc)
@@ -784,6 +884,32 @@ async def consolidate(
             scribe=scribe,
             now=now_dt,
         )
+        # Transaction time is asked for ONLY here, and only for the memories
+        # that carry a claim: the stamp costs one version-list read per memory,
+        # and a pass over a workspace with no claims must cost exactly what it
+        # cost yesterday.
+        claimants = [
+            name for name, spec in valid_members
+            if isinstance(spec.get("claims"), (list, tuple)) and spec.get("claims")
+        ]
+        stamps, approximate = (
+            await first_recorded_at(
+                kernel, scope, kind, claimants,
+                api_version=_resolve_api_version(kernel, kind),
+            )
+            if claimants else ({}, [])
+        )
+        contradictions = contradiction_report(
+            valid_members,
+            recorded_at=stamps,
+            recorded_at_approximate=approximate,
+            scribe=contradiction_scribe,
+            now=now_dt,
+        )
+        report["contradictions"] = contradictions["contradictions"]
+        report["undecided"] = contradictions["undecided"]
+        if approximate:
+            report["recorded_at_approximate"] = approximate
     return report
 
 

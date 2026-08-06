@@ -429,6 +429,10 @@ _INTERCHANGE_SAMPLE: dict[str, Any] = {
     "surface_when": ["feature_touched"],
     "revisions": [{"at": "2026-07-02T00:00:00+00:00"}],
     "last_surfaced": "2026-07-03T00:00:00+00:00",
+    "claims": [
+        {"subject": "Feature/interchange", "predicate": "state",
+         "object": "proven", "polarity": "asserts"},
+    ],
     "created_at": _CREATED_AT,
 }
 

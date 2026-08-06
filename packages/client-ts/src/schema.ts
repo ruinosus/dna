@@ -892,6 +892,12 @@ export interface paths {
          *     deterministic ``_slug(summary)`` name it returns is the id the portal's
          *     ``DELETE /v1/memories/{name}`` targets to undo it.
          *
+         *     ``claims`` — ``[{subject?, predicate, object?, polarity?}]`` — are the
+         *     memory's structured assertions, what makes it comparable to another
+         *     memory for CONTRADICTION (s-grafo-2-contradicao) rather than only for
+         *     lexical repetition. A malformed claim is a **400** naming the offending
+         *     index and field; nothing is written.
+         *
          *     PLAN-GATED (i-042): the same axes the MCP ``remember`` tool enforces —
          *     ``memory`` family, ``memory_mode='write'``, rate + daily cap — via the
          *     SAME shared core. 403 for a read-only tier, 429 over quota.
@@ -1957,6 +1963,10 @@ export interface components {
              * @default general
              */
             area: string;
+            /** Claims */
+            claims?: {
+                [key: string]: unknown;
+            }[] | null;
             /**
              * Owner
              * @default portal

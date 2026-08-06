@@ -1500,6 +1500,21 @@
             "title": "Area",
             "type": "string"
           },
+          "claims": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Claims"
+          },
           "owner": {
             "default": "portal",
             "title": "Owner",
@@ -8050,7 +8065,7 @@
         "summary": "Memories"
       },
       "post": {
-        "description": "Persist ONE memory (an ``Engram``) into the tenant's OWN overlay\n— the portal's ``remember`` / add affordance, tenant-scoped from the\nsession (never base, never another tenant). Reuses the SAME CORE\n``remember_impl`` the MCP ``remember`` tool delegates to (one core, three\nfaces), so a memory added here is recalled identically by MCP/CLI. The\ndeterministic ``_slug(summary)`` name it returns is the id the portal's\n``DELETE /v1/memories/{name}`` targets to undo it.\n\nPLAN-GATED (i-042): the same axes the MCP ``remember`` tool enforces —\n``memory`` family, ``memory_mode='write'``, rate + daily cap — via the\nSAME shared core. 403 for a read-only tier, 429 over quota.",
+        "description": "Persist ONE memory (an ``Engram``) into the tenant's OWN overlay\n— the portal's ``remember`` / add affordance, tenant-scoped from the\nsession (never base, never another tenant). Reuses the SAME CORE\n``remember_impl`` the MCP ``remember`` tool delegates to (one core, three\nfaces), so a memory added here is recalled identically by MCP/CLI. The\ndeterministic ``_slug(summary)`` name it returns is the id the portal's\n``DELETE /v1/memories/{name}`` targets to undo it.\n\n``claims`` — ``[{subject?, predicate, object?, polarity?}]`` — are the\nmemory's structured assertions, what makes it comparable to another\nmemory for CONTRADICTION (s-grafo-2-contradicao) rather than only for\nlexical repetition. A malformed claim is a **400** naming the offending\nindex and field; nothing is written.\n\nPLAN-GATED (i-042): the same axes the MCP ``remember`` tool enforces —\n``memory`` family, ``memory_mode='write'``, rate + daily cap — via the\nSAME shared core. 403 for a read-only tier, 429 over quota.",
         "operationId": "remember_memory_v1_memories_post",
         "parameters": [
           {

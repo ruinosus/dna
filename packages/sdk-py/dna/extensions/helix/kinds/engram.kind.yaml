@@ -262,6 +262,76 @@ spec:
         description: Name of the memory that invalidated this one (not `superseded_by`
           — that's an ADR dep_filter token). Pairs with valid_to for point-in-time
           audit.
+      claims:
+        type: array
+        default: []
+        description: >-
+          Structured assertions this memory makes, so two memories can be
+          compared for CONTRADICTION deterministically (s-grafo-2-contradicao).
+          Prose cannot be compared: "the Kind still needs approval" and "the
+          Kind was approved" share almost no vocabulary, which is why lexical
+          overlap (`dna.memory.merge`) finds repetition and never disagreement.
+
+          Each claim is `(subject, predicate, object)` over the memory's
+          bi-temporal window. Two claims CONTRADICT when they agree on subject
+          and predicate, disagree on object, and their `[valid_from, valid_to)`
+          windows share an instant — TOKI (arXiv:2606.06240 §2.1), nine of
+          Allen's thirteen base relations. `polarity: denies` states an explicit
+          negation, so "not approved" is comparable instead of being prose.
+
+          `subject` is optional and defaults to the memory's own `Kind/name`
+          referent (`area`, else the first such `source_refs` entry) — a memory
+          already scoped to `KindDefinition/livro` need only declare
+          `{predicate: approval, object: pending}`.
+
+          ⚠️ A predicate is treated as SINGLE-VALUED at an instant (the
+          functional-dependency rule). That is what makes detection decidable
+          without an ontology — cardinality declarations are degrau 3 of
+          `f-poder-de-grafo`, a founder gate. Use distinct predicates for
+          genuinely multi-valued attributes, or the pass will present them as a
+          conflict for a human to dismiss. It only ever PRESENTS: nothing here
+          overwrites, expires or merges a memory.
+        items:
+          type: object
+          required:
+          - predicate
+          additionalProperties: false
+          properties:
+            subject:
+              type: string
+              minLength: 1
+              description: What the claim is about — normally `Kind/name`. Defaults
+                to the memory's own referent.
+            predicate:
+              type: string
+              minLength: 1
+              description: The attribute being asserted (`approval`, `status`, `owner`).
+            object:
+              type:
+              - string
+              - number
+              - boolean
+              - "null"
+              description: The asserted value. Absent/null = an EXISTENCE claim, which
+                compares only against another existence claim of opposite polarity.
+            polarity:
+              type: string
+              enum:
+              - asserts
+              - denies
+              default: asserts
+              description: '`denies` negates: `asserts X` beside `denies X` is a
+                contradiction; beside `denies Y` it is not.'
+            valid_from:
+              type: string
+              format: date-time
+              description: Narrows the claim's world-time window; defaults to the memory's
+                `valid_from`.
+            valid_to:
+              type: string
+              format: date-time
+              description: Narrows the claim's world-time window; defaults to the memory's
+                `valid_to`.
       encoding_context:
         type: object
         description: Snapshot of the conditions at engraphy. semon-recaller scores
