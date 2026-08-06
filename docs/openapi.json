@@ -2595,6 +2595,270 @@
         "title": "InviteResponse",
         "type": "object"
       },
+      "KindGraphCoverage": {
+        "description": "What the graph covers — the numbers a screen must qualify itself with.\n\nThis block exists so that no consumer can honestly render the edge list as\n\"all the relations\". On the 06/08/2026 measurement the model carried 109\nschema edges of which **16** were declared; the rest was composition (66)\nor name inference (27), plus 25 reference-shaped fields left unresolved\nand 6 known-undeclarable ones. Every field here is derived from the\ncollections it counts.",
+        "properties": {
+          "composition": {
+            "default": 0,
+            "title": "Composition",
+            "type": "integer"
+          },
+          "declared": {
+            "default": 0,
+            "title": "Declared",
+            "type": "integer"
+          },
+          "edges": {
+            "title": "Edges",
+            "type": "integer"
+          },
+          "enforced_tiers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Enforced Tiers",
+            "type": "array"
+          },
+          "inferred": {
+            "default": 0,
+            "title": "Inferred",
+            "type": "integer"
+          },
+          "kinds": {
+            "title": "Kinds",
+            "type": "integer"
+          },
+          "limits": {
+            "items": {
+              "$ref": "#/components/schemas/KindGraphLimit"
+            },
+            "title": "Limits",
+            "type": "array"
+          },
+          "suppressed": {
+            "default": 0,
+            "title": "Suppressed",
+            "type": "integer"
+          },
+          "undeclarable": {
+            "default": 0,
+            "title": "Undeclarable",
+            "type": "integer"
+          },
+          "unresolved": {
+            "default": 0,
+            "title": "Unresolved",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kinds",
+          "edges"
+        ],
+        "title": "KindGraphCoverage",
+        "type": "object"
+      },
+      "KindGraphEdge": {
+        "description": "One SCHEMA edge: Kind ``from_kind`` may point at ``to_kind`` through\n``field``.\n\n``tier`` ranks how much the edge is worth — ``declared`` (``x-dna-ref``,\nthe ONLY tier the kernel resolves at write time), ``composition``\n(``dep_filters``: a real declaration that drives prompt composition and is\nnever checked against stored data), ``inferred`` (the field NAME resolves\nto exactly one registered Kind — a convention, not a contract). A renderer\nthat draws the three alike is asserting a confidence the model does not\nhave; ``coverage.enforced_tiers`` names the ones it does.\n\n``to_kind`` is ALWAYS a registered Kind: a declaration naming a Kind\nnobody registers is a gap, not an edge, and comes back under\n``unresolved``.",
+        "properties": {
+          "cardinality": {
+            "default": "one",
+            "enum": [
+              "one",
+              "many"
+            ],
+            "title": "Cardinality",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "from_kind": {
+            "title": "From Kind",
+            "type": "string"
+          },
+          "polymorphic": {
+            "default": false,
+            "title": "Polymorphic",
+            "type": "boolean"
+          },
+          "tier": {
+            "enum": [
+              "declared",
+              "composition",
+              "inferred"
+            ],
+            "title": "Tier",
+            "type": "string"
+          },
+          "to_kind": {
+            "title": "To Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "from_kind",
+          "field",
+          "to_kind",
+          "tier"
+        ],
+        "title": "KindGraphEdge",
+        "type": "object"
+      },
+      "KindGraphLimit": {
+        "description": "One thing this graph cannot see, stated by the graph itself.\n\n``code`` is the machine-readable handle a UI switches on — its own copy,\nin its own catalogue, in its own language. ``detail`` is documentation for\nwhoever reads the raw answer and is NOT display copy: a screen rendering\nEnglish shipped from a backend is the failure this project keeps its UI\nstrings in i18n catalogues to avoid.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "detail": {
+            "title": "Detail",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "detail"
+        ],
+        "title": "KindGraphLimit",
+        "type": "object"
+      },
+      "KindGraphNode": {
+        "description": "One registered Kind as a node. Identity only — the descriptor\n(``schema``/``ui_schema``) stays behind ``GET /v1/kinds/registry/{kind}``,\nbecause a graph that inlined 76 JSON Schemas would be a download, not a\ngraph.",
+        "properties": {
+          "alias": {
+            "default": "",
+            "title": "Alias",
+            "type": "string"
+          },
+          "group": {
+            "default": "ungrouped",
+            "title": "Group",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "plane": {
+            "default": "",
+            "title": "Plane",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "KindGraphNode",
+        "type": "object"
+      },
+      "KindGraphResponse": {
+        "description": "``GET /v1/graph/kinds`` — the whole SCHEMA graph in one call.\n\nSCHEMA, not data: these edges say which Kinds MAY point at which. Which\nDOCUMENTS actually point at which is a different graph, derived at write\ntime, and this route does not answer it — ``coverage.limits`` carries that\nstatement on the wire so it travels with the answer instead of living in a\ndoc page a caller may never read.",
+        "properties": {
+          "coverage": {
+            "$ref": "#/components/schemas/KindGraphCoverage"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/KindGraphEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/KindGraphNode"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope"
+          },
+          "undeclarable": {
+            "items": {
+              "$ref": "#/components/schemas/KindGraphUndeclarable"
+            },
+            "title": "Undeclarable",
+            "type": "array"
+          },
+          "unresolved": {
+            "items": {
+              "$ref": "#/components/schemas/KindGraphUnresolved"
+            },
+            "title": "Unresolved",
+            "type": "array"
+          }
+        },
+        "required": [
+          "coverage"
+        ],
+        "title": "KindGraphResponse",
+        "type": "object"
+      },
+      "KindGraphUndeclarable": {
+        "description": "A REAL reference that ``x-dna-ref`` deliberately does not declare.\n\nThe annotation resolves a target by document NAME; these fields are keyed\nby something else (an opaque id, a role id, a composite ``Kind:name``\nstring), so declaring them would produce false write-time violations on\nperfectly valid data. They are named here rather than silently missing,\nbecause a graph that hides them implies a completeness the model does not\nhave. Concrete backlog for a future ``x-dna-ref-key`` (i-040 follow-up).",
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "target": {
+            "title": "Target",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "field",
+          "target",
+          "reason"
+        ],
+        "title": "KindGraphUndeclarable",
+        "type": "object"
+      },
+      "KindGraphUnresolved": {
+        "description": "A field that clearly points at SOMETHING the model cannot name — a\n``x-dna-ref`` naming an unregistered Kind, a ``dep_filters`` alias nobody\nclaims, or a reference-shaped field name matching no Kind.\n\nReturned, not dropped: this list is the honest measure of what the model\nstill cannot express, and it shrinks when references get declared — never\nwhen the projection gets cleverer.",
+        "properties": {
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "field",
+          "reason"
+        ],
+        "title": "KindGraphUnresolved",
+        "type": "object"
+      },
       "ListKindDocumentsResponse": {
         "description": "``GET /v1/kinds/{kind}/documents`` — uma página de documentos do Kind.\n\n`documents` é a linha como o kernel a moldou: `{\"name\": …}` sem projeção, e\n`{\"name\": …, \"spec\": {…}}` com `fields`. `projected` ecoa o que foi pedido,\npara um leitor distinguir uma página de nomes de uma projetada — sem isso,\num `spec` ausente seria ambíguo entre \"não pedi\" e \"não tem\".\n\n`has_more` é respondido buscando UMA linha a mais, não adivinhado a partir\nde a página ter vindo cheia.",
         "properties": {
@@ -5952,6 +6216,85 @@
           }
         },
         "summary": "Genome"
+      }
+    },
+    "/v1/graph/kinds": {
+      "get": {
+        "description": "The SCHEMA graph of the registered Kinds — which Kind may point at\nwhich, through which field, in ONE call.\n\nReplaces \"read every Kind's descriptor and derive the graph in the\nclient\", which cost one request per Kind and got slower as a workspace\ngrew. Same projection that generates ``docs/reference/data-model.md``:\nthe tiering, the ``x-dna-ref`` reading (the SAME one the write path\nvalidates with) and the gap tables live in the SDK, so the page and\nthis route cannot disagree about what the model says.\n\n**SCHEMA, not data.** The edges say which Kinds MAY reference which.\nWhich DOCUMENTS reference which is a different graph and this route\ndoes not answer it — ``coverage.limits`` says so on the wire.\n\n``tenant`` resolves the scope the way the registry route does\n(``live.default_scope``); an explicit ``scope`` still wins. No 404:\na scope with no Kinds is an empty graph with a coverage block that\nsays ``kinds: 0``, which is an answer — conflating it with \"no such\nscope\" would make a screen say *error* where it should say *nothing\nregistered yet*.",
+        "operationId": "kind_graph_v1_graph_kinds_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KindGraphResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kind Graph"
       }
     },
     "/v1/insights": {

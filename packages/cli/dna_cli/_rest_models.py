@@ -207,6 +207,153 @@ class RegisteredKindView(BaseModel):
     docs: str | None = None
 
 
+# ── the schema graph (GET /v1/graph/kinds) ──────────────────────────────────
+#
+# The SET answer the registry could always give and no door served: which
+# Kinds may reference which, through which field. Served because deriving it
+# cost the portal one ``/v1/kinds/registry/{kind}`` call PER KIND, on every
+# render — latency that grew with the workspace, for a graph the registry
+# already holds whole.
+#
+# The models mirror ``dna.kernel.query.kind_graph`` exactly; every count in
+# ``coverage`` is DERIVED there from the collections it describes, never
+# enumerated. The tiering, the denylist and the undeclarable table live in the
+# SDK too, so this envelope and ``docs/reference/data-model.md`` are two
+# renderings of ONE computation.
+
+
+class KindGraphNode(BaseModel):
+    """One registered Kind as a node. Identity only — the descriptor
+    (``schema``/``ui_schema``) stays behind ``GET /v1/kinds/registry/{kind}``,
+    because a graph that inlined 76 JSON Schemas would be a download, not a
+    graph."""
+
+    kind: str
+    #: The Kind's alias (``sdlc-story``). Empty for a Kind that declares none.
+    alias: str = ""
+    #: Alias prefix (``sdlc``, ``helix``, …) — a grouping that comes from the
+    #: data, not from an editorial opinion. ``ungrouped`` without an alias.
+    group: str = "ungrouped"
+    plane: str = ""
+
+
+class KindGraphEdge(BaseModel):
+    """One SCHEMA edge: Kind ``from_kind`` may point at ``to_kind`` through
+    ``field``.
+
+    ``tier`` ranks how much the edge is worth — ``declared`` (``x-dna-ref``,
+    the ONLY tier the kernel resolves at write time), ``composition``
+    (``dep_filters``: a real declaration that drives prompt composition and is
+    never checked against stored data), ``inferred`` (the field NAME resolves
+    to exactly one registered Kind — a convention, not a contract). A renderer
+    that draws the three alike is asserting a confidence the model does not
+    have; ``coverage.enforced_tiers`` names the ones it does.
+
+    ``to_kind`` is ALWAYS a registered Kind: a declaration naming a Kind
+    nobody registers is a gap, not an edge, and comes back under
+    ``unresolved``."""
+
+    from_kind: str
+    field: str
+    to_kind: str
+    #: ``many`` when the declaring field is an array, else ``one``.
+    cardinality: Literal["one", "many"] = "one"
+    tier: Literal["declared", "composition", "inferred"]
+    #: True when the declaration names SEVERAL possible target Kinds; the edge
+    #: is one of them, and its siblings carry the same ``from_kind``+``field``.
+    polymorphic: bool = False
+
+
+class KindGraphUnresolved(BaseModel):
+    """A field that clearly points at SOMETHING the model cannot name — a
+    ``x-dna-ref`` naming an unregistered Kind, a ``dep_filters`` alias nobody
+    claims, or a reference-shaped field name matching no Kind.
+
+    Returned, not dropped: this list is the honest measure of what the model
+    still cannot express, and it shrinks when references get declared — never
+    when the projection gets cleverer."""
+
+    kind: str
+    field: str
+    reason: str
+
+
+class KindGraphUndeclarable(BaseModel):
+    """A REAL reference that ``x-dna-ref`` deliberately does not declare.
+
+    The annotation resolves a target by document NAME; these fields are keyed
+    by something else (an opaque id, a role id, a composite ``Kind:name``
+    string), so declaring them would produce false write-time violations on
+    perfectly valid data. They are named here rather than silently missing,
+    because a graph that hides them implies a completeness the model does not
+    have. Concrete backlog for a future ``x-dna-ref-key`` (i-040 follow-up)."""
+
+    kind: str
+    field: str
+    #: What the field really points at (``any`` for the composite case).
+    target: str
+    reason: str
+
+
+class KindGraphLimit(BaseModel):
+    """One thing this graph cannot see, stated by the graph itself.
+
+    ``code`` is the machine-readable handle a UI switches on — its own copy,
+    in its own catalogue, in its own language. ``detail`` is documentation for
+    whoever reads the raw answer and is NOT display copy: a screen rendering
+    English shipped from a backend is the failure this project keeps its UI
+    strings in i18n catalogues to avoid."""
+
+    code: str
+    detail: str
+
+
+class KindGraphCoverage(BaseModel):
+    """What the graph covers — the numbers a screen must qualify itself with.
+
+    This block exists so that no consumer can honestly render the edge list as
+    "all the relations". On the 06/08/2026 measurement the model carried 109
+    schema edges of which **16** were declared; the rest was composition (66)
+    or name inference (27), plus 25 reference-shaped fields left unresolved
+    and 6 known-undeclarable ones. Every field here is derived from the
+    collections it counts."""
+
+    kinds: int
+    edges: int
+    declared: int = 0
+    composition: int = 0
+    inferred: int = 0
+    unresolved: int = 0
+    undeclarable: int = 0
+    #: Name-convention matches suppressed as known false positives (a `plan`
+    #: that is a billing tier, a `tool` that is a provenance enum).
+    suppressed: int = 0
+    #: The tiers the runtime actually ENFORCES on write. A list, not a bare
+    #: string, so a consumer derives "is this edge enforced?" instead of
+    #: hardcoding the answer — and so the answer can grow.
+    enforced_tiers: list[str] = Field(default_factory=list)
+    limits: list[KindGraphLimit] = Field(default_factory=list)
+
+
+class KindGraphResponse(BaseModel):
+    """``GET /v1/graph/kinds`` — the whole SCHEMA graph in one call.
+
+    SCHEMA, not data: these edges say which Kinds MAY point at which. Which
+    DOCUMENTS actually point at which is a different graph, derived at write
+    time, and this route does not answer it — ``coverage.limits`` carries that
+    statement on the wire so it travels with the answer instead of living in a
+    doc page a caller may never read."""
+
+    #: The scope the registry was resolved for; ``null`` when the caller named
+    #: none and the deployment's default applied.
+    scope: str | None = None
+    kinds: list[KindGraphNode] = Field(default_factory=list)
+    edges: list[KindGraphEdge] = Field(default_factory=list)
+    unresolved: list[KindGraphUnresolved] = Field(default_factory=list)
+    undeclarable: list[KindGraphUndeclarable] = Field(default_factory=list)
+    coverage: KindGraphCoverage
+
+
 # ── Kind authoring (the dedicated door — writes an INERT KindDefinition) ────
 
 

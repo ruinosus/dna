@@ -420,6 +420,36 @@ class DnaClient:
         404 for a Kind the runtime does not register."""
         return self._get(f"/v1/kinds/registry/{kind}", scope=scope, tenant=tenant)
 
+    def kind_graph(
+        self, *, scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """The SCHEMA graph of the registered Kinds — which Kind may point at
+        which, through which field, in ONE call.
+
+        The SET sibling of :meth:`get_registered_kind`, and the reason it
+        exists: answering "which Kinds reference which here?" through the
+        per-Kind door costs one request per Kind and gets slower as a
+        workspace grows. This is the same projection that generates
+        ``docs/reference/data-model.md``, served as JSON.
+
+        Returns ``kinds`` (nodes: kind/alias/group/plane), ``edges``
+        (``from_kind``/``field``/``to_kind``/``cardinality``/``tier``/
+        ``polymorphic``), the two gap lists ``unresolved`` and
+        ``undeclarable``, and a ``coverage`` block.
+
+        **Read the coverage block.** Its per-tier counts say how much of the
+        graph the runtime actually enforces (only ``declared`` — the fields
+        carrying ``x-dna-ref``; ``composition`` comes from ``dep_filters`` and
+        is never checked against stored data, ``inferred`` is a name
+        convention), and ``limits`` names what the graph structurally cannot
+        see. The first limit is the one that matters most: these edges are
+        SCHEMA — which Kinds MAY reference which. Which DOCUMENTS reference
+        which is a different graph, and this call does not answer it.
+
+        No 404: a scope with nothing registered is an empty graph whose
+        ``coverage.kinds`` is 0, which is an answer."""
+        return self._get("/v1/graph/kinds", scope=scope, tenant=tenant)
+
     # -- the generic, kubernetes-shaped document read/write -------------------
 
     def list_kind_documents(

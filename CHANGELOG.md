@@ -37,6 +37,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Novidades
 
+- **`GET /v1/graph/kinds` — o grafo de SCHEMA numa chamada**
+  (`s-graph-kinds-route`, fatia 1 do degrau 1 do grafo). A pergunta de
+  CONJUNTO — *quais Kinds referenciam quais aqui?* — não tinha porta: derivá-la
+  pelo descritor custava **uma requisição por Kind** (o portal do DNA Cloud
+  fazia N, com concorrência 4, a cada render do catálogo, para remontar em
+  memória um grafo que o registry já tem inteiro). A rota devolve nós, arestas
+  (`from_kind`/`field`/`to_kind`/`cardinality`/`tier`/`polymorphic`) e as duas
+  listas de lacuna (`unresolved`, `undeclarable`). **Sem tabela, sem migração,
+  sem produtor**: é projeção pura do registry, lendo `x-dna-ref` pela MESMA
+  função que valida na escrita. A projeção mudou de casa — de
+  `scripts/gen_data_model_docs.py` para `dna.kernel.query.kind_graph` —, então
+  a página `docs/reference/data-model.md` e a rota são dois renderings de UMA
+  computação, e não duas leituras que podem divergir. **A resposta se
+  qualifica sozinha:** `coverage` traz as contagens por tier, quais tiers o
+  runtime de fato **impõe** (só `declared`) e os `limits` do que o grafo
+  estruturalmente não vê — porque das 109 arestas de schema do modelo apenas
+  **16 são declaradas**, e uma tela que rendesse a lista como "as relações"
+  estaria afirmando uma completude que não existe. Método nomeado nos dois
+  clientes (`kind_graph` / `kindGraph`). SCHEMA, não dado: quais Kinds PODEM
+  apontar para quais — nunca quais documentos apontam.
+
 - **`DNA_WORKSPACE_ENFORCEMENT` — desligamento explícito da fronteira de
   workspace** (`i-074`, `s-workspace-enforcement-opt-out`). Um deployment de UM
   operador ficava trancado do lado de fora: sem `WorkspaceMembership` própria,

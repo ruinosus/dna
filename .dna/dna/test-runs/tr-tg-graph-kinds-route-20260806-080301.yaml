@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-graph-kinds-route-20260806-080301
+spec:
+  guide_ref: tg-graph-kinds-route
+  outcome: pass
+  verifies:
+  - Story/s-graph-kinds-route
+  executed_by: claude-code
+  executed_at: '2026-08-06T08:03:01+00:00'
+  notes: 'sdk-py tests/test_kind_graph.py 22 passed; cli tests/test_kind_graph_rest.py 14 passed; suite do cli inteira 1516 passed / 19 skipped; client-py 22 passed (openapi em dia + cobertura por (method,path)); client-ts 17 pass + tsc limpo; data_model_guard clean/self-test/determinism (31350 bytes, byte-identico); docs_coverage_guard clean; brand_guard clean. Suite do sdk-py: 4989 passed, 36 failed — TODAS por ModuleNotFoundError: No module named ''langchain'' (o extra ''runtime'' e deliberadamente fora de [dev], ver pyproject), pre-existentes e sem relacao com esta mudanca.'
