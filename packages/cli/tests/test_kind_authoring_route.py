@@ -869,10 +869,26 @@ def test_the_detail_route_carries_the_schema_the_listing_withholds(dna_dir):
     # ``presentation`` joined that group deliberately: the approval confers how
     # instances of the Kind READ exactly as it confers what they may CONTAIN,
     # and a reviewer who cannot see the first is reviewing half of it.
-    assert set(body) == summary | {"schema", "traits", "presentation"}, sorted(body)
+    # ``relations`` + ``plane`` joined the group for the SAME reason, and they
+    # are why this is asserted as a SET rather than member by member: approval
+    # REGISTERS the Kind, and registration is what makes the write path resolve
+    # its relations and the graph draw them. A reviewer who is not shown the
+    # declared links is conferring edges nobody displayed.
+    assert set(body) == summary | {
+        "schema", "traits", "presentation", "relations", "plane",
+    }, sorted(body)
     assert body["presentation"] is None, (
         "this Kind was authored without a presentation — it must not read as "
         "declaring an empty one"
+    )
+    assert body["relations"] is None, (
+        "this Kind was authored without relations — it must not read as "
+        "declaring an empty set of them"
+    )
+    assert body["plane"] is None, (
+        "this Kind declared no plane — answering with the DEFAULT here would "
+        "make a Kind whose author chose 'composition' indistinguishable from "
+        "one that was never asked"
     )
 
     # The audit half is real, not defaulted: an authored instance names its

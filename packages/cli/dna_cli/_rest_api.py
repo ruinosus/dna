@@ -1237,11 +1237,36 @@ def build_app(
         traits: list[str] | None = Body(default=None, embed=True),
         presentation: dict[str, Any] | list[str] | None = Body(
             default=None, embed=True),
+        relations: dict[str, Any] | None = Body(default=None, embed=True),
+        plane: str | None = Body(default=None, embed=True),
         tenant: str | None = Query(default=None),
     ) -> dict[str, Any]:
         """Author a Kind for the calling workspace — a ``KindDefinition``
         instance written WITHOUT an approval marker, under the workspace's own
         assigned apiVersion namespace (minted on first use, then stable).
+
+        ``relations`` (optional) declares what the Kind POINTS AT — the
+        ``{field: {to, cardinality, inverse_of, by}}`` block
+        ``dna.kernel.kinds.relations`` defines, normalized by the same validator
+        a builtin descriptor goes through and checked against ``schema`` in the
+        same call. Without it a tenant-authored Kind could not declare a single
+        link, so every one of them was an island BY CONSTRUCTION — a product
+        that says "model your domain" and then refuses the half of a model that
+        is the edges. A malformed or self-contradicting declaration is a 400
+        naming the relation.
+
+        **Declaring a relation does not create an edge.** Relations are
+        resolved, validated and drawn only for REGISTERED Kinds, and
+        registration is what HUMAN approval turns on. An edit clears the
+        approval marker, so adding a relation to an already-approved Kind sends
+        it back to a person rather than past one. Nothing on this door can
+        confer effect, and that is the property to keep.
+
+        ``plane`` (optional) is ``composition`` or ``record``, stored only when
+        DECLARED: ``KindDefinitionSpec`` defaults it to ``composition``, and
+        whether that default is right for tenant Kinds is an open question with
+        a named owner — writing the default into every instance would settle it
+        silently and leave it unsettleable.
 
         ``presentation`` (optional) declares how instances of this Kind READ —
         the ordered fields, their human labels, their semantic roles, and what
@@ -1277,7 +1302,7 @@ def build_app(
             return await author_kind_impl(
                 live, kind=kind, schema=schema, tenant=tenant or "",
                 now=now_iso(), actor=_actor_from_state(request), traits=traits,
-                presentation=presentation,
+                presentation=presentation, relations=relations, plane=plane,
             )
         except LayerPolicyViolationError as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from exc

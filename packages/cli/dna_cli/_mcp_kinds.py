@@ -216,6 +216,8 @@ def register_kind_tools(
     async def author_kind(
         kind: str, schema: dict[str, Any], traits: list[str] | None = None,
         presentation: dict[str, Any] | list[str] | None = None,
+        relations: dict[str, Any] | None = None,
+        plane: str | None = None,
         tenant: str | None = None,
     ) -> dict[str, Any]:
         """Author a Kind for your workspace — a typed instance shape of your own.
@@ -225,6 +227,43 @@ def register_kind_tools(
         the instance's path, so anything else is refused, by name.
         ``schema`` is a JSON Schema object describing the Kind's ``spec``.
         ``traits`` (optional) are the behavioural traits the Kind opts into.
+
+        ``relations`` (optional) declares what your Kind POINTS AT. Declare them
+        and your Kind joins the graph; omit them and it is an island — findable
+        by name and connected to nothing::
+
+            {"cliente":   {"to": "Cliente",  "cardinality": "one"},
+             "anexos":    {"to": "Artifact", "cardinality": "many"},
+             "contratos": {"to": "Contrato", "cardinality": "many",
+                           "inverse_of": "apolice"}}
+
+        The relation's KEY is the ``spec`` field that holds the value, so the
+        declaration and the data stay in one place. ``to`` is a Kind NAME, a
+        LIST of names when the relation may point at several, or ``"*"`` when
+        the model genuinely does not constrain the target. ``cardinality`` is
+        ``one`` or ``many`` and is REQUIRED — it states your MODEL's
+        multiplicity, not whether the JSON happens to be an array, and a
+        relation that contradicts its own schema field is refused here rather
+        than discovered by whoever reads the graph. ``inverse_of`` (optional)
+        names the relation on the TARGET Kind that is this one's other half;
+        ``by`` (optional) says how the value addresses the target when it is not
+        the target's name.
+
+        ⚠️ **Do not put references inside ``schema``.** ``x-dna-ref`` on a
+        property is the RETIRED mechanism: nothing reads it, so a link declared
+        that way points at nothing and looks like it points at something.
+        ``relations`` is where a link goes.
+
+        ``plane`` (optional) is ``composition`` or ``record``. ``composition``
+        means instances of this Kind compose into agent prompts; ``record``
+        means they are stored and read back and never composed. Omit it unless
+        you know which you mean — the difference is a cost, not a taste.
+
+        If you declare no relations and the schema's own field names or
+        descriptions name a Kind that exists, the answer carries
+        ``suggested_relations`` and a paste-ready ``suggestion``. It is a
+        suggestion: authoring nothing is a legitimate answer, and a Kind that
+        really points at nothing should say so by staying as it is.
 
         ``presentation`` (optional) says how instances of this Kind should
         READ, so that every surface — a card in this chat, a screen in the
@@ -296,7 +335,7 @@ def register_kind_tools(
             return await author_kind_impl(
                 await live(), kind=kind, schema=schema, tenant=tenant or "",
                 now=now_iso(), actor=actor_from_context(), traits=traits,
-                presentation=presentation,
+                presentation=presentation, relations=relations, plane=plane,
             )
         except NO_REGISTRY as exc:
             raise _no_registry(exc) from exc

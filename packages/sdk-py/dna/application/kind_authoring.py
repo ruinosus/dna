@@ -43,6 +43,7 @@ __all__ = [
     "NamespaceRegistryUnreadable",
     "approve_kind_impl",
     "author_kind_impl",
+    "derive_relation_candidates",
     "get_authored_kind_impl",
     "list_authored_kinds_impl",
     "revoke_kind_impl",
@@ -188,12 +189,183 @@ def _checked_kind_name(kind: str, *, verb: str) -> str:
     return kind
 
 
+#: The suffix a plural field name wears. ONE letter, and deliberately not a
+#: pluralization library: the derivation below only SUGGESTS, so a miss costs a
+#: suggestion that is not made and never a declaration that is wrong.
+_PLURAL = "s"
+
+#: Split a field name into the words a human wrote into it — ``contrato_id`` →
+#: ``contrato``/``id``, ``contratoBase`` → ``contrato``/``Base``. Underscores
+#: and camel humps, nothing else.
+_WORDS_RE = re.compile(r"[A-Za-z0-9]+")
+
+
+def derive_relation_candidates(
+    schema: Any, kind_names: Any, *, declared: Any = None,
+) -> list[dict[str, Any]]:
+    """The relations a Kind PLAUSIBLY has and has not declared — SUGGESTIONS,
+    never declarations. Pure; the caller supplies the universe of Kind names.
+
+    This is :func:`~dna.application.sdlc.derive_served_spec_candidates`
+    transplanted, and the shape it brings with it is the whole point (i-117):
+
+    ``already declared``
+        silence. There is nothing to ask about a field that answered.
+    ``the prose NAMES exactly one live Kind``
+        the suggestion, ready to paste.
+    ``nothing named, or SEVERAL named``
+        silence. A field everyone must fill is a field everyone fills with
+        anything, and a menu is a question the author answers by picking the
+        first row.
+
+    The corpus is the field's own NAME (split into words) plus its ``title`` and
+    ``description`` — the prose the author already wrote. A word matches a Kind
+    when it equals its name, or its name plus an ``s``; the plural is where the
+    measured pairs live (``features`` → ``Feature``).
+
+    ⚠️ **This is NOT the name-shape guess ``spec.relations`` replaced.** That
+    one ran on the WRITE path and produced edges nobody declared;
+    ``dna.kernel.kinds.relations`` killed it for that reason and this function
+    does not resurrect it. The difference is not the algorithm, it is where the
+    output goes: this returns a sentence to the AUTHOR, at authoring time, and
+    nothing here is ever stored. Same reason ``cardinality`` is read off
+    ``type: array`` here while :mod:`~dna.kernel.kinds.relations` refuses to
+    infer it — a suggestion the author confirms may be derived; a declaration
+    the kernel enforces may not.
+    """
+    if not isinstance(schema, dict):
+        return []
+    props = schema.get("properties")
+    if not isinstance(props, dict) or not props:
+        return []
+    by_word: dict[str, str] = {}
+    for name in kind_names or ():
+        if not isinstance(name, str) or not name:
+            continue
+        by_word.setdefault(name.lower(), name)
+        by_word.setdefault(name.lower() + _PLURAL, name)
+    if not by_word:
+        return []
+    taken = {str(d) for d in (declared or ())}
+    out: list[dict[str, Any]] = []
+    for field_name, prop in props.items():
+        if not isinstance(field_name, str) or field_name in taken:
+            continue
+        words = list(_WORDS_RE.findall(field_name))
+        if isinstance(prop, dict):
+            for key in ("title", "description"):
+                text = prop.get(key)
+                if isinstance(text, str):
+                    words.extend(_WORDS_RE.findall(text))
+        hits = {by_word[w.lower()] for w in words if w.lower() in by_word}
+        # Exactly one, or nothing is said. See the docstring's third state.
+        if len(hits) != 1:
+            continue
+        is_array = isinstance(prop, dict) and prop.get("type") == "array"
+        out.append({
+            "field": field_name,
+            "to": hits.pop(),
+            "cardinality": "many" if is_array else "one",
+        })
+    return sorted(out, key=lambda c: c["field"])
+
+
+def _scope_kind_names(live: Any, scope: str) -> list[str]:
+    """Every Kind name VISIBLE in ``scope`` — the universe
+    :func:`derive_relation_candidates` matches against.
+
+    ``kinds_for_scope`` and not ``_kinds``: a store-loaded Kind governs one
+    scope (i-081), and suggesting a neighbouring workspace's Kind as a target
+    would leak its data model through a hint. Fail-soft — a kernel that cannot
+    answer costs the AUTHOR a suggestion, and must never cost them the write."""
+    try:
+        return sorted({
+            str(k) for _api, k in (live.kernel.kinds_for_scope(scope) or {})
+        })
+    except Exception:  # noqa: BLE001 — a suggestion is never worth a 500.
+        return []
+
+
+def _declared_relations(relations: Any) -> dict[str, Any] | None:
+    """``relations`` validated through the SHARED normalizer and returned in the
+    AUTHORING shape — or ``None`` when none were declared.
+
+    The same move ``presentation`` made, for the same reason: a relation only a
+    builtin descriptor could declare would leave every tenant Kind second-class,
+    and a second normalizer would be a second reading of one vocabulary. So this
+    calls :func:`~dna.kernel.kinds.relations.normalize_relations` — what
+    ``TypedKindDefinition.from_raw`` calls when the instance is parsed — and
+    stores ``Relation.to_declaration()``, which is what that same ``from_raw``
+    reads back.
+
+    Raises ``ValueError`` with the field NAMED (the face maps it to 400): a
+    declaration that only breaks when the registry loads it breaks far from the
+    author who could fix it, and at that point the message reaches a log rather
+    than a person."""
+    from dna.kernel.kinds.relations import normalize_relations
+
+    try:
+        parsed = normalize_relations(relations)
+    except ValueError as exc:
+        raise ValueError(f"relations — {exc}") from None
+    if parsed is None:
+        return None
+    return {name: rel.to_declaration() for name, rel in parsed.items()}
+
+
+def _checked_plane(plane: Any) -> str | None:
+    """The declared storage/cache plane, or ``None`` when the author declared
+    none — which is NOT the same as declaring the default.
+
+    Stored as a KEY-IF-PRESENT for exactly that reason. ``KindDefinitionSpec``
+    defaults ``plane`` to ``composition`` and whether that default is right for
+    tenant Kinds is an open question with a named owner (spec
+    ``spec-kind-taxonomia-o-que-eu-sou`` §12.2, founder's call). Writing the
+    default into every instance would settle it silently and make it unsettleable
+    later: an instance that says ``composition`` cannot be told apart from one
+    whose author meant it.
+
+    The vocabulary is the registry's own two words. Not re-derived from a third
+    list — the registry lint (``KindRegistry._lint_plane``) refuses anything
+    else at registration, and a door that accepted a value the registry will
+    refuse would move the refusal to the one moment the author is not there."""
+    if plane is None:
+        return None
+    if not isinstance(plane, str) or plane.strip() not in ("composition", "record"):
+        raise ValueError(
+            f"plane must be 'composition' or 'record' — 'composition' is a Kind "
+            f"that composes into agent prompts, 'record' is one that is only "
+            f"stored and read back (got {plane!r})"
+        )
+    return plane.strip()
+
+
 async def author_kind_impl(
     live: Any, *, kind: str, schema: dict, tenant: str, now: str,
     actor: str | None = None, traits: list[str] | None = None,
-    presentation: Any = None,
+    presentation: Any = None, relations: Any = None, plane: Any = None,
 ) -> dict[str, Any]:
     """Write a tenant Kind, unapproved. It has no effect until approved.
+
+    ``relations`` (optional) declares what this Kind POINTS AT — the block
+    ``dna.kernel.kinds.relations`` defines, validated by the SAME normalizer a
+    builtin descriptor goes through, checked against the ``schema`` in the same
+    call by the SAME ``schema_contradictions``. Until it was accepted here a
+    Kind authored by a tenant could not declare a single link, so every one of
+    them was an island BY CONSTRUCTION rather than by anyone's choice — the
+    defect this parameter exists to close.
+
+    ⚠️ **It confers nothing on its own, and that is the invariant to keep.** A
+    relation is resolved, validated and drawn only once the Kind is REGISTERED,
+    and registration is what approval — a separate act, by a human, in the
+    portal — turns on. Authoring a relation therefore proposes an edge; it does
+    not create one, and nothing in this function can. An EDIT drops the approval
+    (see below), so adding a relation to an already-approved Kind puts it back
+    in front of a human rather than sliding past one.
+
+    ``plane`` (optional) is ``composition`` or ``record``. Stored only when
+    DECLARED — see :func:`_checked_plane` for why the default is deliberately
+    not written down here.
 
     ``presentation`` (optional) declares how the Kind's instances READ — the
     ordered fields, their human labels, their semantic roles. It is the SAME
@@ -256,6 +428,31 @@ async def author_kind_impl(
         # Re-raised with the field named: the caller sent an instance of their
         # own and has to be told which key of it the door refused.
         raise ValueError(f"presentation — {exc}") from None
+    # ``relations`` + ``plane`` — the two fields ``KindDefinitionSpec`` has
+    # always carried and this door built its spec without. Nothing about the
+    # KindDefinition contract changes here: ``from_raw`` already parses both,
+    # the meta-schema already admits both. What changes is that a TENANT can
+    # reach them, which is the difference between "a Kind of your own" and "a
+    # Kind of your own that may not say what it points at".
+    declared_relations = _declared_relations(relations)
+    declared_plane = _checked_plane(plane)
+    if declared_relations is not None:
+        # The contradiction only THIS call can see, because it holds the
+        # relations and the schema at once — the same check ``from_raw`` runs
+        # when the instance is parsed, run here instead so the author is told
+        # rather than the log. ``partial`` is False: this door has no
+        # ``schema_fragments``, so every property a relation may name is in the
+        # schema in hand.
+        from dna.kernel.kinds.relations import (
+            normalize_relations as _nr,
+            schema_contradictions,
+        )
+
+        contradictions = schema_contradictions(_nr(declared_relations), schema)
+        if contradictions:
+            raise ValueError(
+                "relations contradict the schema: " + "; ".join(contradictions)
+            )
     proposed_by = (actor or "").strip() or None
 
     from dna.kernel.kinds.registry import generate_alias
@@ -330,6 +527,14 @@ async def author_kind_impl(
                 {"presentation": declared_presentation.to_declaration()}
                 if declared_presentation is not None else {}
             ),
+            # What this Kind POINTS AT, and which plane it lives on. Both are
+            # KEYS-IF-PRESENT, for the two different reasons spelled out on
+            # ``_declared_relations`` / ``_checked_plane``: an empty relations
+            # map and no relations map are the same statement (the normalizer
+            # says so), and an undeclared ``plane`` must stay distinguishable
+            # from a declared default while §12.2 is open.
+            **({"relations": declared_relations} if declared_relations else {}),
+            **({"plane": declared_plane} if declared_plane else {}),
             "storage": {"type": "yaml", "container": f"{kind.lower()}s"},
             # `created_at` is documented as "Runtime-stamped volatile field
             # (never authored)" and IS listed in KindPort.VOLATILE_SPEC_FIELDS
@@ -374,6 +579,17 @@ async def author_kind_impl(
         },
     }
     version = await live.kernel.write_instance(scope, _KIND, name, raw)
+    # The suggestion is computed AFTER the write, and only when the author
+    # declared no relation. Both halves matter: a hint must never be able to
+    # cost a write that already succeeded, and a Kind that DID declare its links
+    # is not asked a question it has answered — the first of the three states.
+    suggested = (
+        []
+        if declared_relations
+        else derive_relation_candidates(
+            schema, _scope_kind_names(live, scope), declared=declared_relations,
+        )
+    )
     return {
         "namespace": namespace, "kind": kind, "name": name,
         "approved": False, "proposed_by": proposed_by, "version": version,
@@ -381,7 +597,41 @@ async def author_kind_impl(
         # renderiza as linhas a partir DELE — sem o eco, o card interativo
         # não teria o que editar (Kind Studio F3).
         "schema": schema,
+        # The two new declarations, echoed in the shape they were STORED in, so
+        # a caller reading the response reads the instance rather than its own
+        # request back. ``None`` for "declared none" — and for ``plane`` that is
+        # the honest answer, not ``"composition"``: the instance stores no
+        # plane and the default is applied by whatever reads it.
+        "relations": declared_relations,
+        "plane": declared_plane,
+        # KEYS-IF-PRESENT, and the third state of i-117 is the empty case: when
+        # the prose names nothing (or names several things), NOTHING is said. A
+        # line that fires on every call is a line every caller learns to skip,
+        # and it would take the other three down with it.
+        **({"suggested_relations": suggested} if suggested else {}),
+        **({"suggestion": _suggestion_line(kind, suggested)} if suggested else {}),
     }
+
+
+def _suggestion_line(kind: str, suggested: list[dict[str, Any]]) -> str:
+    """The sentence that goes with :func:`derive_relation_candidates`' hits.
+
+    A list with no sentence is read as debris over a conversational face; a
+    sentence with no list is an accusation the author cannot act on. The line
+    below is the paste-ready ``relations`` block, which is what made the i-117
+    refusal land: the reader is one copy away from the fix, so answering costs
+    less than ignoring."""
+    block = "\n".join(
+        f"    {c['field']}: {{to: {c['to']}, cardinality: {c['cardinality']}}}"
+        for c in suggested
+    )
+    return (
+        f"{kind} declares no relations, and its own schema names "
+        f"{'a Kind' if len(suggested) == 1 else 'Kinds'} it appears to point "
+        f"at. Author it again with:\n  relations:\n{block}\n"
+        f"Or leave it as it is — a Kind that genuinely points at nothing is a "
+        f"statement, not a gap."
+    )
 
 
 async def _owns(live: Any, tenant: str) -> Any:
@@ -1002,8 +1252,9 @@ async def list_authored_kinds_impl(
 async def get_authored_kind_impl(
     live: Any, *, kind: str, tenant: str | None = None, scope: str | None = None,
 ) -> dict[str, Any]:
-    """ONE authored Kind, in full — the summary the listing publishes PLUS the
-    ``schema`` and the ``traits``.
+    """ONE authored Kind, in full — the summary the listing publishes PLUS
+    everything registration would confer effect on: ``schema``, ``traits``,
+    ``presentation``, ``relations`` and ``plane``.
 
     The listing deliberately projects ten summary fields and NOT ``spec.schema``
     (it is a roster, and a roster that inlined every JSON Schema would be
@@ -1081,4 +1332,21 @@ async def get_authored_kind_impl(
         # deciding about both, and the portal needs it the moment the Kind
         # exists. ``None``, never ``{}``, for a Kind that declares none.
         "presentation": authored_kind_presentation(spec),
+        # ⭐ The fourth thing that would take effect, and the one the human gate
+        # exists for. A relation is what the write path RESOLVES and the graph
+        # DRAWS once the Kind is registered, so a reviewer who cannot see the
+        # declared links is approving an edge they were never shown. Read off
+        # the instance exactly as the authoring door wrote it — never
+        # normalized again here: a stored declaration this runtime can no longer
+        # parse must reach the reviewer as what it is, not as ``None``.
+        "relations": (
+            spec.get("relations")
+            if isinstance(spec.get("relations"), dict) else None
+        ),
+        # ``None`` means the instance declares no plane, NOT that it is on the
+        # composition plane — the default is applied downstream and the
+        # difference is exactly what §12.2 needs kept in order to be answerable.
+        "plane": (
+            spec.get("plane") if isinstance(spec.get("plane"), str) else None
+        ),
     }

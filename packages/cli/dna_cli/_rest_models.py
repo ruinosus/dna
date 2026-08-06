@@ -462,6 +462,23 @@ class AuthorKindResponse(BaseModel):
     #: card renders its editable rows from this echo; dropping it here would
     #: violate the fidelity contract (FastAPI silently strips unmodeled keys).
     schema: dict[str, Any] | None = None
+    #: What the Kind POINTS AT, echoed in the shape it was STORED in (not the
+    #: shape the caller sent — ``Relation.to_declaration()`` drops a restated
+    #: default, so the two differ and the instance is the one worth reading
+    #: back). ``None`` for a Kind that declared none.
+    relations: dict[str, Any] | None = None
+    #: The DECLARED plane, or ``None``. ``None`` is not ``"composition"``: the
+    #: instance stores no plane at all unless one was declared, and collapsing
+    #: the two here would report a decision nobody made.
+    plane: str | None = None
+    #: DERIVED, never stored, and ``null`` unless there is something to say —
+    #: i-117's third state, where "the prose named nothing" and "the prose named
+    #: three things" both produce silence rather than a menu. Each entry is
+    #: ``{field, to, cardinality}``. MODELED because FastAPI strips unmodeled
+    #: keys, which is how a hint computed correctly reaches nobody.
+    suggested_relations: list[dict[str, Any]] | None = None
+    #: The paste-ready sentence that goes with ``suggested_relations``.
+    suggestion: str | None = None
 
 
 class ApproveKindResponse(BaseModel):
@@ -581,6 +598,23 @@ class AuthoredKindDetail(AuthoredKindSummary):
     #: reading I can read" is the honest answer, and a 500 on the screen a
     #: reviewer uses to decide whether the Kind takes effect is not.
     presentation: dict[str, Any] | None = None
+    #: ⭐ What the Kind POINTS AT — and the field that makes this route load
+    #: bearing for the human gate rather than merely informative. Approval is
+    #: what REGISTERS the Kind, and registration is what makes the write path
+    #: resolve these relations and the graph draw them. A reviewer who is not
+    #: shown the declared links is approving edges nobody displayed, which is
+    #: the shape of a gate that has stopped gating.
+    #:
+    #: Read off the instance VERBATIM, never re-normalized on the way out: a
+    #: stored declaration this runtime can no longer parse must reach the
+    #: reviewer as what it is, not as ``null``.
+    relations: dict[str, Any] | None = None
+    #: The DECLARED plane, or ``null`` for an instance that declares none.
+    #: ``null`` is NOT ``"composition"`` — the default is applied by whatever
+    #: reads the instance, and keeping the two apart is what makes "how many
+    #: tenant Kinds are on the composition plane BY CHOICE?" a question with an
+    #: answer.
+    plane: str | None = None
 
 
 class AuthoredKindsResponse(BaseModel):

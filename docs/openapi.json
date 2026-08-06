@@ -400,6 +400,17 @@
             "title": "Namespace",
             "type": "string"
           },
+          "plane": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plane"
+          },
           "proposed_by": {
             "anyOf": [
               {
@@ -410,6 +421,18 @@
               }
             ],
             "title": "Proposed By"
+          },
+          "relations": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relations"
           },
           "schema": {
             "anyOf": [
@@ -422,6 +445,32 @@
               }
             ],
             "title": "Schema"
+          },
+          "suggested_relations": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Relations"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion"
           },
           "version": {
             "anyOf": [
@@ -529,6 +578,17 @@
             ],
             "title": "Namespace"
           },
+          "plane": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plane"
+          },
           "presentation": {
             "anyOf": [
               {
@@ -562,6 +622,18 @@
               }
             ],
             "title": "Proposed By"
+          },
+          "relations": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relations"
           },
           "revoked_at": {
             "anyOf": [
@@ -1134,6 +1206,17 @@
             "title": "Kind",
             "type": "string"
           },
+          "plane": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plane"
+          },
           "presentation": {
             "anyOf": [
               {
@@ -1151,6 +1234,18 @@
               }
             ],
             "title": "Presentation"
+          },
+          "relations": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relations"
           },
           "schema": {
             "additionalProperties": true,
@@ -7207,7 +7302,7 @@
         "summary": "List Authored Kinds"
       },
       "post": {
-        "description": "Author a Kind for the calling workspace — a ``KindDefinition``\ninstance written WITHOUT an approval marker, under the workspace's own\nassigned apiVersion namespace (minted on first use, then stable).\n\n``presentation`` (optional) declares how instances of this Kind READ —\nthe ordered fields, their human labels, their semantic roles, and what\nto hide from a human. It is the SAME block a builtin Kind descriptor\ndeclares, through the same normalizer, and it is what keeps a\ntenant-authored Kind from being second-class: without it, only Kinds\nshipped inside the SDK could tell a surface how to render them. A\nmalformed declaration is a 400 naming the offending key — never a card\nthat breaks later, in front of a user, with nothing to say.\n\nThe response's ``approved`` is always ``false``. An ``approved_by`` in\nthe body is ignored, not honoured and not rejected: a caller that could\napprove its own proposal would make the gate decorative. The instance\nrecords ``proposed_by`` — the caller's VERIFIED identity, resolved\nserver-side (``_actor_from_state``) and never read from the body, and\nstamped here because a proposer cannot be back-filled onto an instance\nthat never recorded one. 400 for a missing tenant / a Kind name that is\nnot a CamelCase identifier, 403 when the namespace gate refuses the\nwrite (the workspace does not own the target namespace), 503 when the\nnamespace registry scope has not been provisioned in this store.\n\n**Mounted on every auth mode.** The namespace gate decides from\n``tenant``: under ``--auth config`` that is bound to the caller's\nVERIFIED identity, under ``--auth none`` there is no second tenant to\ntake it from, and under ``--auth token`` — a trusted server-to-server\nlane — it is caller-supplied and the CALLER is responsible for having\nresolved and verified it. See the section comment above for that\nboundary in full.",
+        "description": "Author a Kind for the calling workspace — a ``KindDefinition``\ninstance written WITHOUT an approval marker, under the workspace's own\nassigned apiVersion namespace (minted on first use, then stable).\n\n``relations`` (optional) declares what the Kind POINTS AT — the\n``{field: {to, cardinality, inverse_of, by}}`` block\n``dna.kernel.kinds.relations`` defines, normalized by the same validator\na builtin descriptor goes through and checked against ``schema`` in the\nsame call. Without it a tenant-authored Kind could not declare a single\nlink, so every one of them was an island BY CONSTRUCTION — a product\nthat says \"model your domain\" and then refuses the half of a model that\nis the edges. A malformed or self-contradicting declaration is a 400\nnaming the relation.\n\n**Declaring a relation does not create an edge.** Relations are\nresolved, validated and drawn only for REGISTERED Kinds, and\nregistration is what HUMAN approval turns on. An edit clears the\napproval marker, so adding a relation to an already-approved Kind sends\nit back to a person rather than past one. Nothing on this door can\nconfer effect, and that is the property to keep.\n\n``plane`` (optional) is ``composition`` or ``record``, stored only when\nDECLARED: ``KindDefinitionSpec`` defaults it to ``composition``, and\nwhether that default is right for tenant Kinds is an open question with\na named owner — writing the default into every instance would settle it\nsilently and leave it unsettleable.\n\n``presentation`` (optional) declares how instances of this Kind READ —\nthe ordered fields, their human labels, their semantic roles, and what\nto hide from a human. It is the SAME block a builtin Kind descriptor\ndeclares, through the same normalizer, and it is what keeps a\ntenant-authored Kind from being second-class: without it, only Kinds\nshipped inside the SDK could tell a surface how to render them. A\nmalformed declaration is a 400 naming the offending key — never a card\nthat breaks later, in front of a user, with nothing to say.\n\nThe response's ``approved`` is always ``false``. An ``approved_by`` in\nthe body is ignored, not honoured and not rejected: a caller that could\napprove its own proposal would make the gate decorative. The instance\nrecords ``proposed_by`` — the caller's VERIFIED identity, resolved\nserver-side (``_actor_from_state``) and never read from the body, and\nstamped here because a proposer cannot be back-filled onto an instance\nthat never recorded one. 400 for a missing tenant / a Kind name that is\nnot a CamelCase identifier, 403 when the namespace gate refuses the\nwrite (the workspace does not own the target namespace), 503 when the\nnamespace registry scope has not been provisioned in this store.\n\n**Mounted on every auth mode.** The namespace gate decides from\n``tenant``: under ``--auth config`` that is bound to the caller's\nVERIFIED identity, under ``--auth none`` there is no second tenant to\ntake it from, and under ``--auth token`` — a trusted server-to-server\nlane — it is caller-supplied and the CALLER is responsible for having\nresolved and verified it. See the section comment above for that\nboundary in full.",
         "operationId": "author_kind_v1_kinds_post",
         "parameters": [
           {

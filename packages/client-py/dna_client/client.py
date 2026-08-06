@@ -249,6 +249,8 @@ class DnaClient:
         self, kind: str, schema: dict[str, Any], *,
         traits: list[str] | None = None,
         presentation: dict[str, Any] | list[str] | None = None,
+        relations: dict[str, Any] | None = None,
+        plane: str | None = None,
         tenant: str | None = None,
     ) -> JsonObject:
         """Author a Kind for the calling workspace — a ``KindDefinition``
@@ -281,15 +283,33 @@ class DnaClient:
         deliberately no way to declare a colour, a column or a width — how a
         field LOOKS is each surface's own business.
 
-        400 for a missing tenant, a ``kind`` that is not such an identifier, or
-        a malformed ``presentation`` (the response names the offending key);
-        403 when the workspace does not own the target namespace; 503 when the
+        ``relations`` (optional) declares what the Kind POINTS AT:
+        ``{field: {"to": "Cliente", "cardinality": "one"}}``, where the KEY is
+        the ``spec`` field holding the value. ``to`` takes a Kind name, a list
+        of them, or ``"*"``; ``cardinality`` (``one``/``many``) is required and
+        states the MODEL's multiplicity rather than the JSON's shape;
+        ``inverse_of`` and ``by`` are optional. Omitting it leaves the Kind an
+        island — which is a legitimate statement about a domain and, until this
+        parameter existed, was the only statement a tenant Kind could make.
+        Declaring a relation does NOT create an edge: relations are resolved
+        only for REGISTERED Kinds, and registration is what human approval
+        turns on.
+
+        ``plane`` (optional) is ``composition`` or ``record``, and is stored
+        only when declared — an instance that says nothing keeps the question of
+        the right default open, which is deliberate.
+
+        400 for a missing tenant, a ``kind`` that is not such an identifier, a
+        malformed ``presentation`` or a ``relations`` block that is malformed or
+        contradicts the ``schema`` (the response names the offending key); 403
+        when the workspace does not own the target namespace; 503 when the
         store's namespace-registry scope has not been provisioned."""
         return self._write(
             "POST", "/v1/kinds",
             {
                 "kind": kind, "schema": schema, "traits": traits,
-                "presentation": presentation,
+                "presentation": presentation, "relations": relations,
+                "plane": plane,
             },
             tenant=tenant,
         )
