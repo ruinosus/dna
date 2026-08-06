@@ -240,3 +240,52 @@ def test_an_unexpected_error_is_not_dressed_up_as_a_refusal(dna_dir, monkeypatch
     msg = _refused(server, "create_story", {
         "name": "s-x", "feature": "f-x", "description": "d", "scope": _SCOPE})
     assert "ZeroDivisionError" not in msg or "refus" not in msg.lower()
+
+
+# ── the DELETE tool, which until now had no refusal to relay ────────────────
+
+
+def test_delete_instance_relays_the_on_target_delete_refusal(dna_dir, monkeypatch):
+    """``TargetDeleteRestricted`` (slice 2 of ``spec-topologia-do-grafo``) is
+    the first refusal the delete path can raise — writes had ``pre_save``,
+    deletes had nothing.
+
+    This is the whole point of the marker base, asserted rather than assumed:
+    the tool's ``except WRITE_REFUSALS`` was written before this refusal
+    existed, and it relays it anyway because the tuple names ``KernelRefusal``
+    rather than a list of types. If somebody ever narrows that tuple to an
+    enumeration, this goes red — which is the failure the enumeration caused
+    the first time."""
+    pytest.importorskip("fastmcp")
+    from dna.application import instances as D
+    from dna.kernel.errors import TargetDeleteRestricted
+    from dna_cli import _mcp_server as M
+
+    exc = TargetDeleteRestricted(
+        "refusing to delete Feature/f-x: 47 reference(s) declare "
+        "on_target_delete: restrict",
+        referrers=[{"kind": "Story", "name": "s-1", "relation": "feature"}],
+    )
+
+    async def boom(*a, **kw):
+        raise exc
+
+    monkeypatch.setattr(D, "delete_instance_impl", boom)
+    server = M.build_server(scope=_SCOPE, base_dir=str(dna_dir))
+    msg = _refused(server, "delete_instance", {
+        "kind": "ModelProfile",
+        "api_version": "github.com/ruinosus/dna/modelreg/v1",
+        "name": "x", "scope": _SCOPE})
+    assert "TargetDeleteRestricted" in msg, msg
+    assert "on_target_delete: restrict" in msg, msg
+
+
+def test_the_delete_refusal_is_inside_the_tuple_the_TOOL_catches(dna_dir):
+    """Derived from the face's own tuple, not retyped here. The test above
+    proves the relay end to end; this one names WHY it works, so a narrowing of
+    ``WRITE_REFUSALS`` fails with the reason on screen instead of as a mystery
+    in a FastMCP error string."""
+    from dna.kernel.errors import TargetDeleteRestricted
+    from dna_cli._mcp_instances import WRITE_REFUSALS
+
+    assert issubclass(TargetDeleteRestricted, WRITE_REFUSALS)

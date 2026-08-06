@@ -202,6 +202,70 @@ than showing a confident nothing.
 - **Current state, not history.** An edge carries the instance version it was
   derived from (so drift is detectable), but the table holds the present.
 
+## Answering the other half: `on_target_delete`
+
+The question at the top of this page has two halves, and the graph on its own
+answers only the first. *"What points at this?"* is a read. *"And what should
+happen to them when I delete it?"* is a policy, and it has to be declared —
+because there is no answer that is right for every relation.
+
+So a relation may say:
+
+```yaml
+spec:
+  relations:
+    feature:
+      to: Feature
+      cardinality: one
+      on_target_delete: restrict     # refuse to delete a Feature Stories hold
+```
+
+| value | deleting the target… |
+|---|---|
+| `restrict` | is **refused**, and the refusal lists what is holding it |
+| `delete_source` | takes the referring instances with it, transitively |
+| `allow` | succeeds; the reference is left pointing at nothing |
+
+The vocabulary is **Gel's** (`on target delete restrict | delete source |
+allow`), transliterated by the one rule this repo applies to every YAML key.
+Gel's fourth value, `deferred restrict`, is deliberately absent: it defers the
+check to a transaction COMMIT, and `delete_instance` is one instance per call
+with no such boundary — the word could only behave as `restrict`.
+
+**The default is `allow`, which is not Gel's.** Gel defaults to `restrict`,
+which is right for a schema authored up front in a migration somebody reads
+whole. Here the relations already exist — 63 of them across 84 Kinds, 33
+producing edges — and not one was written by an author who had this question in
+front of them. A `restrict` default would have converted 33 silent declarations
+into refusals in a single commit. So the default is what the runtime already
+did, and declaring nothing changes nothing.
+
+!!! note "An explicit `allow` is not redundant"
+    `on_target_delete: allow` and saying nothing produce the same behavior and
+    are **not** the same statement. An `AuditLog` entry about an instance that
+    was deleted *must* keep pointing at it — that is what an audit log is for,
+    not a defect. Declaring `allow` says so, and turns a dangling reference
+    from an unmodelled exception into policy the graph can report.
+
+Two things it refuses, both for the same reason — a policy needs a mechanism:
+
+- `restrict` and `delete_source` are refused **at load** on a relation the
+  kernel does not resolve (a composite `by`, or a target spec field).
+  Enforcement reads the edge graph, and only a resolved relation produces
+  edges. `allow` stays legal there, and is the useful thing to say.
+- A store that keeps **no edge graph** cannot see what points at an instance,
+  so if any policy is declared the delete is refused (`501`) rather than
+  performed. Deleting anyway would silently assert that nothing referenced it.
+
+The whole cascade is planned before anything is removed: there is no
+transaction spanning a multi-instance delete, so a refusal discovered halfway
+would already have destroyed data on its way to saying no.
+
+This is integrity of **application**, per field — not integrity imposed by the
+database. The systems that get the latter do DDL per type in an RDBMS, which is
+incompatible with a type created at runtime; every system in our group
+(Kubernetes, Foundry, Backstage, DataHub) gave it up the same way.
+
 ## See also
 
 - [Kinds — identity and composition](kinds.md) — where `spec.relations` is declared.

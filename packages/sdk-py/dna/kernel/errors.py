@@ -313,6 +313,44 @@ class RevokedKindWrite(KernelRefusal, ValueError):
     """
 
 
+class TargetDeleteRestricted(KernelRefusal, ValueError):
+    """A delete was refused because something still points at the instance, and
+    the relation that points at it declares ``on_target_delete: restrict``.
+
+    The other half of referential integrity, and the half a store like ours can
+    actually have. The spec that recommended this design also wrote down what
+    it costs: integrity imposed by the DATABASE is not available to us, because
+    everyone who has it does DDL per type in an RDBMS and that is incompatible
+    with a type created at runtime. What is available is integrity of
+    APPLICATION, per field — this — and every system in our group (Kubernetes,
+    Foundry, Backstage, DataHub) settled in the same place.
+
+    A :class:`KernelRefusal` and emphatically **not** a
+    :class:`CapabilityRefusal`, because the distinction between the two is
+    exactly the distinction between the two things that can go wrong here. This
+    is a verdict about the REQUEST: the store could have deleted the row, the
+    caller was entitled to ask, and policy said no. The remedy is a different
+    request — delete the referrers first, or repoint them. A capability refusal
+    would send the caller looking for a different deployment, which would not
+    help, since the same policy is declared in the data and would travel with
+    it.
+
+    ``ValueError`` for the reason every other kernel refusal keeps a builtin
+    base: a face written before the marker base existed still catches it.
+
+    :attr:`referrers` carries the list rather than only the count, because the
+    remedy IS the list. A refusal that says "47 things point at this" and makes
+    the caller run a second query to find out which ones has told them they
+    cannot proceed without telling them how to.
+    """
+
+    def __init__(self, message: str, *, referrers: list[dict] | None = None):
+        super().__init__(message)
+        #: ``{kind, name, relation}`` per referring instance — what the caller
+        #: has to deal with before this delete can succeed.
+        self.referrers: list[dict] = list(referrers or [])
+
+
 #: Longest path component the kernel will hand an adapter, in UTF-8 BYTES.
 #:
 #: ``NAME_MAX`` is 255 bytes on every filesystem DNA writes to, and the

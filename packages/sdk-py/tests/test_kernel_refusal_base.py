@@ -161,6 +161,20 @@ _WRITE_REFUSALS = (
     # retry forever. It also carries the one piece of reassurance the moment
     # needs: existing instances were not deleted.
     "RevokedKindWrite",
+    # dna.kernel.errors — a DELETE refused because something still points at the
+    # instance and the relation that points at it declares
+    # ``on_target_delete: restrict`` (slice 2 of ``spec-topologia-do-grafo``).
+    # The FIRST refusal on the delete path, which until now had no veto gate at
+    # all: writes have ``pre_save``, deletes had nothing, and "deleting a
+    # Feature that 47 Stories point at is accepted in silence" is the measured
+    # gap it closes. A ``KernelRefusal`` and emphatically not a
+    # ``CapabilityRefusal``: the store could have removed the row and the caller
+    # was entitled to ask, so the remedy is a different REQUEST — delete or
+    # repoint the referrers — never a different deployment. Relayed as a
+    # capability refusal it would send an author hunting for an entitlement they
+    # already have, while the policy that actually stopped them travels in the
+    # data and would follow them to any store.
+    "TargetDeleteRestricted",
 )
 
 #: The two that live on ``dna.kernel`` itself.

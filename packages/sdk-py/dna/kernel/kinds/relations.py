@@ -41,7 +41,7 @@ data in the same place, so that no instance had to change when the declaration
 moved, and so that the read which VALIDATES a relation is the read that
 produces its edge (``dna.kernel.query.references``).
 
-The four keys, and nothing else
+The five keys, and nothing else
 -------------------------------
 ``to``
     Which Kinds the relation may point at. A Kind NAME (``Story``), a LIST of
@@ -103,6 +103,65 @@ The four keys, and nothing else
     live one accepts. Resolving by key also needs an expression index the
     store does not have. Declaring the addressing costs nothing and can lie to
     nobody; resolving it is a separate slice with a separate cost.
+
+``on_target_delete``
+    What happens to THIS relation when the instance it points at is deleted —
+    :data:`ON_TARGET_DELETE`, decided per relation. See "``on_target_delete``
+    is Gel's menu" below for where the vocabulary comes from and what the
+    default costs.
+
+``on_target_delete`` is Gel's menu, minus one, with a different default
+-------------------------------------------------------------------------
+The vocabulary is **not ours**. Gel (ex-EdgeDB) declares deletion policy per
+LINK — ``edb/schema/links.py`` names the schema field ``on_target_delete`` and
+``edb/edgeql/qltypes.py`` closes its values at ``Restrict | DeleteSource |
+Allow | DeferredRestrict``, surfaced in DDL as ``on target delete restrict``
+and friends. We take the field name and three of the four values verbatim; the
+only transliteration is the one this house already applies to every YAML key —
+spaces become underscores, so ``on target delete`` is ``on_target_delete`` and
+``delete source`` is ``delete_source``. One rule, applied uniformly, is not a
+divergence in vocabulary.
+
+**``deferred restrict`` is deliberately absent**, and the reason is structural
+rather than a matter of taste: it exists to let a transaction delete both sides
+of a link in either order, deferring the check to COMMIT. There is no such
+deferral point here. ``Kernel.delete_instance`` is one instance per call and
+holds no caller-visible transaction to defer to, so ``deferred restrict`` could
+only ever behave as ``restrict`` — a keyword whose sole function would be to
+promise a semantics nothing implements. If a batched delete ever gets a real
+transaction boundary, the word is waiting and it is already Gel's.
+
+⚠️ **The default is** :data:`ON_TARGET_DELETE_DEFAULT` **=** ``allow``, **and
+that is where we leave Gel on purpose.** Gel defaults to ``restrict``, which is
+right for a schema authored up front in a migration the author reads whole. It
+is wrong here, and the number says why: measured on 06/08/2026 against
+``Kernel.auto().kind_ports()``, this registry declares **63 relations across 84
+Kinds, 33 of them resolved** — the ones that actually produce edges. Not one of
+those 63 was written by an author who had this question in front of them, so a
+``restrict`` default would convert 33 silent declarations into 33 new refusals
+in a single commit, and every one of them a behavior change nobody asked for.
+
+The default therefore has to be **what the runtime does today**, and today was
+measured rather than assumed: deleting a ``Feature`` that a ``Story`` points at
+is ACCEPTED, the row really goes (``load_one`` returns ``None`` after), and
+nothing is said. That is ``allow``, exactly. So this slice ships the mechanism
+with **zero behavior change** until a relation declares otherwise, which is the
+only shape in which a policy vocabulary can be retrofitted onto declarations
+that already exist.
+
+⚠️ **``restrict`` and ``delete_source`` are refused on an UNRESOLVED relation.**
+Only a :attr:`Relation.resolved` relation produces an edge, and the enforcement
+reads edges — so an enforcing policy on a relation addressed by a composite
+form or by a target field is a promise with no mechanism behind it. This is the
+same refusal, for the same reason, as ``inverse_of`` on a ``to: "*"`` relation.
+``allow`` stays legal there, and declaring it is the POINT: an ``AuditLog``
+whose target is deleted must keep pointing at it — that is what an audit log is
+for — and saying ``on_target_delete: allow`` turns a dangling reference from an
+unmodelled exception into declared policy. Which is also why an explicitly
+declared ``allow`` survives :meth:`Relation.to_declaration` even though it
+equals the default: ``None`` (nobody considered it) and ``allow`` (somebody
+decided it) are two different statements, and collapsing them would delete the
+only thing the declaration was written to say.
 
 ``to`` and ``by`` are two questions, and collapsing them cost 21 relations
 ---------------------------------------------------------------------------
@@ -271,6 +330,9 @@ __all__ = [
     "CARDINALITIES",
     "COMPOSITE_FORMS",
     "INVERSE_GAP_CODES",
+    "ON_TARGET_DELETE",
+    "ON_TARGET_DELETE_DEFAULT",
+    "ON_TARGET_DELETE_ENFORCING",
     "Relation",
     "inverse_gaps",
     "normalize_relations",
@@ -316,7 +378,31 @@ INVERSE_GAP_CODES: tuple[str, ...] = (
     "inverse_on_any",        # declared on a `to: "*"` relation — no target to pair with
 )
 
-_RELATION_KEYS = frozenset({"to", "cardinality", "inverse_of", "by"})
+#: What happens to a relation when the instance it points at is deleted.
+#: Gel's ``LinkTargetDeleteAction``, three of its four values, spelled in this
+#: repo's key convention (``delete source`` → ``delete_source``). See the module
+#: docstring for why ``deferred restrict`` is not here and why the default is
+#: not Gel's.
+ON_TARGET_DELETE: tuple[str, ...] = ("restrict", "delete_source", "allow")
+
+#: The policy of a relation that does not declare one — and it is ``allow``
+#: because that is what this runtime DOES today, measured, not because ``allow``
+#: is the safest word. A default that changed behavior would rewrite the
+#: semantics of every relation already declared without one.
+ON_TARGET_DELETE_DEFAULT = "allow"
+
+#: The values that make the delete path do WORK. DERIVED from
+#: :data:`ON_TARGET_DELETE` minus the one word that means "do nothing", so a
+#: fourth value added to the menu enrols itself here and fails loudly in the
+#: gate rather than passing quietly through it. Anchored on ``allow`` and NOT on
+#: :data:`ON_TARGET_DELETE_DEFAULT`: those two are equal today by decision, and
+#: subtracting the default would silently turn ``allow`` into an enforcing
+#: policy the day somebody moved the default.
+ON_TARGET_DELETE_ENFORCING: frozenset[str] = frozenset(ON_TARGET_DELETE) - {"allow"}
+
+_RELATION_KEYS = frozenset(
+    {"to", "cardinality", "inverse_of", "by", "on_target_delete"}
+)
 _NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
@@ -338,6 +424,29 @@ class Relation:
     #: How the value addresses the target — :data:`BY_NAME`, a target spec
     #: field, or a member of :data:`COMPOSITE_FORMS`.
     by: str = BY_NAME
+    #: The DECLARED deletion policy, verbatim, or ``None`` when the author did
+    #: not state one. Nullable rather than defaulted for the same reason
+    #: :attr:`inverse_of` is: "nobody considered this" and "somebody decided
+    #: ``allow``" are different statements, and the second is the whole content
+    #: of a declaration like ``AuditLog``'s. Enforcement reads
+    #: :attr:`on_target_delete_effective`, never this.
+    on_target_delete: str | None = None
+
+    @property
+    def on_target_delete_effective(self) -> str:
+        """The policy the delete path ACTUALLY applies — the declared one, or
+        :data:`ON_TARGET_DELETE_DEFAULT` when nothing was declared.
+
+        Every reader that asks "what will happen" asks THIS, for the reason
+        :attr:`resolved` exists: one place computes the fallback, so the gate,
+        the wire and a screen cannot drift into three answers."""
+        return self.on_target_delete or ON_TARGET_DELETE_DEFAULT
+
+    @property
+    def enforces_on_target_delete(self) -> bool:
+        """This relation makes the delete path do work — the single question
+        the gate asks before spending a graph query."""
+        return self.on_target_delete_effective in ON_TARGET_DELETE_ENFORCING
 
     @property
     def carries_kind(self) -> bool:
@@ -396,6 +505,13 @@ class Relation:
             out["inverse_of"] = self.inverse_of
         if self.by != BY_NAME:
             out["by"] = self.by
+        if self.on_target_delete is not None:
+            # NOT `!= ON_TARGET_DELETE_DEFAULT`, unlike `by` above. An explicit
+            # `allow` equals the default and still has to survive the round
+            # trip: it is the declaration that says a dangling reference here
+            # is CORRECT, and dropping it would put the AuditLog back into the
+            # class of unmodelled exceptions this key exists to empty.
+            out["on_target_delete"] = self.on_target_delete
         return out
 
     def to_wire(self) -> dict[str, Any]:
@@ -409,6 +525,12 @@ class Relation:
             "inverse_of": self.inverse_of,
             "by": self.by,
             "resolved": self.resolved,
+            # BOTH, for the reason `carries_kind`/`open_target` are both here:
+            # the effective policy is what will happen, the declared one is
+            # whether anybody said so, and a consumer that has to re-derive
+            # either from the other gets the AuditLog case wrong.
+            "on_target_delete": self.on_target_delete_effective,
+            "on_target_delete_declared": self.on_target_delete is not None,
             # The two facts `to: "*"` used to conflate, both on the wire so a
             # consumer never has to re-derive either from the token.
             "carries_kind": self.carries_kind,
@@ -457,7 +579,7 @@ def _relation(name: Any, raw: Any) -> Relation:
     name = name.strip()
     if not isinstance(raw, Mapping):
         raise ValueError(
-            f"relations[{name!r}] must be a {{to, cardinality, inverse_of, by}} "
+            f"relations[{name!r}] must be a {{{', '.join(sorted(_RELATION_KEYS))}}} "
             f"mapping, got {type(raw).__name__}. There is no shorthand: "
             "cardinality is required precisely because it used to be guessed"
         )
@@ -531,9 +653,43 @@ def _relation(name: Any, raw: Any) -> Relation:
                 f"a reader has to know how to PARSE the pointer. Got {by!r}"
             )
 
+    on_target_delete = raw.get("on_target_delete")
+    if on_target_delete is not None:
+        if (
+            not isinstance(on_target_delete, str)
+            or on_target_delete.strip() not in ON_TARGET_DELETE
+        ):
+            raise ValueError(
+                f"relations[{name!r}].on_target_delete must be one of "
+                f"{list(ON_TARGET_DELETE)}, got {on_target_delete!r}. The "
+                "vocabulary is Gel's `on target delete`, minus `deferred "
+                "restrict`: there is no transaction boundary here to defer to, "
+                "so the word could only ever behave as `restrict`"
+            )
+        on_target_delete = on_target_delete.strip()
+        # `resolved`, computed from what we have rather than read off a
+        # Relation that does not exist yet — same condition, one definition
+        # away, and the guard below pins the two together.
+        if (
+            on_target_delete in ON_TARGET_DELETE_ENFORCING
+            and not (bool(to) and by == BY_NAME)
+        ):
+            raise ValueError(
+                f"relations[{name!r}] declares "
+                f"on_target_delete={on_target_delete!r} on a relation the "
+                f"kernel does not resolve (to={list(to) or [ANY_TARGET]}, "
+                f"by={by!r}). Enforcement reads the derived edge graph and only "
+                "a resolved relation produces edges, so this policy has no "
+                "mechanism behind it — the same refusal, for the same reason, "
+                f"as inverse_of on a `to: {ANY_TARGET}` relation. "
+                f"{ON_TARGET_DELETE_DEFAULT!r} is legal here and is the "
+                "statement worth making: a reference that SHOULD dangle is "
+                "declared policy, not an unmodelled exception"
+            )
+
     return Relation(
         name=name, to=to, cardinality=cardinality,
-        inverse_of=inverse_of, by=by,
+        inverse_of=inverse_of, by=by, on_target_delete=on_target_delete,
     )
 
 
@@ -554,8 +710,8 @@ def normalize_relations(raw: Any) -> dict[str, Relation] | None:
         return dict(raw)
     if not isinstance(raw, Mapping):
         raise ValueError(
-            "relations must be a mapping of relation name → {to, cardinality, "
-            f"inverse_of, by}}, got {type(raw).__name__}"
+            "relations must be a mapping of relation name → "
+            f"{{{', '.join(sorted(_RELATION_KEYS))}}}, got {type(raw).__name__}"
         )
     if not raw:
         return None

@@ -885,9 +885,18 @@ class WritePipeline:
         api_version: str | None = None,
     ) -> None:
         """Real delete_instance body — the facade owns mode validation +
-        record-plane demotion; the persistence + fan-out live here. NOTE:
-        deletes have NO pre_save veto gate (only writes do)."""
-        from dna.kernel.capabilities import write_kwarg_support
+        record-plane demotion; the policy gate, the persistence and the fan-out
+        live here.
+
+        ⚠️ **THE chokepoint for ``on_target_delete``.** Deletes have no
+        ``pre_save`` veto (only writes do), and that absence is exactly what the
+        spec's slice 2 named as the gap: *"deleting a Feature that 47 Stories
+        point at is accepted in silence"*. The gate is here rather than in a
+        face because five of the six delete call sites in this repo funnel into
+        this one method — see :mod:`dna.kernel.write.target_delete` for the
+        count, and for why the sixth (source-to-source ``sync``) is deliberately
+        below it.
+        """
         host = self._host
         src = host._require_writable_source()
         # Resolve tenant + validate against KindPort.scope (back-compat for
@@ -895,6 +904,60 @@ class WritePipeline:
         effective_tenant, residual_layer = self._resolve_tenant_arg(
             kind, tenant, layer, api_version=api_version, scope=scope,
         )
+        # ── the gate ──────────────────────────────────────────────────────
+        # Raises TargetDeleteRestricted before ANYTHING is removed. Returns []
+        # — touching no store at all — whenever no registered relation declares
+        # a policy naming this Kind, which is every delete in this registry
+        # today. See the module docstring for why that has to be free.
+        from dna.kernel.write.target_delete import (
+            plan_target_delete,
+            registry_relations,
+        )
+
+        cascade = await plan_target_delete(
+            src, registry_relations(host.kind_ports()),
+            scope, kind, name, tenant=effective_tenant,
+        )
+        for cascade_kind, cascade_name in cascade:
+            # api_version is NOT passed: the edge carries a bare Kind name, and
+            # i-195 makes a Kind name globally unique by an ENFORCED registry
+            # invariant, so the bare name resolves unambiguously. Inventing an
+            # api_version here would be guessing at something the graph did not
+            # say.
+            await self._persist_delete(
+                scope, cascade_kind, cascade_name,
+                skip_hooks=skip_hooks, tenant=effective_tenant,
+                residual_layer=residual_layer, layer=layer,
+                invalidate_mode=invalidate_mode, api_version=None,
+            )
+        await self._persist_delete(
+            scope, kind, name,
+            skip_hooks=skip_hooks, tenant=effective_tenant,
+            residual_layer=residual_layer, layer=layer,
+            invalidate_mode=invalidate_mode, api_version=api_version,
+        )
+
+    async def _persist_delete(
+        self, scope: str, kind: str, name: str, *,
+        skip_hooks: bool,
+        tenant: str | None,
+        residual_layer: tuple[str, str] | None,
+        layer: tuple[str, str] | None,
+        invalidate_mode: str,
+        api_version: str | None,
+    ) -> None:
+        """One instance gone, plus the ordered invalidation fan-out.
+
+        Split out of :meth:`delete` so a ``delete_source`` cascade removes its
+        instances through the SAME persistence and fan-out as a direct delete —
+        the alternative was recursing into ``delete`` and re-planning the whole
+        closure per node, which is quadratic and, worse, would re-ask a question
+        the plan already answered for the whole set.
+        """
+        from dna.kernel.capabilities import write_kwarg_support
+        host = self._host
+        src = host._require_writable_source()
+        effective_tenant = tenant
         # s-kernel-capability-protocols — memoized kwarg probe (see write_instance).
         ws = write_kwarg_support(src)
         kwargs: dict = {}
