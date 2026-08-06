@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-graph-edge-producer
+spec:
+  title: 'Plano: s-graph-edge-producer'
+  date: '2026-08-06'
+  status: accepted
+  story_ref: s-graph-edge-producer
+  journey_phase: plan
+  body: '1) references.py: ResolvedEdge + resolve_declared_edges(port, raw, scope, tenant, getter, port_for, local_getter) -> (arestas, problemas, completo). 2) pipeline.py: _validate_references vira consumidor do MESMO retorno; write passa edges= ao save_document quando write_kwarg_support().edges. 3) capabilities.py: ''edges'' em SAVE_OPTIONAL_KWARGS + WriteKwargSupport.edges + SourceCapabilities.edge_graph; FS declara SAVE_OPTIONAL_KWARGS - {edges}. 4) schema.py + Alembic 0006: tabela edges/dna_edges nos DOIS dialetos com source_field+ordinal na PK. 5) source.py: _replace_edges no conn do save, delete das de saida no delete, traverse_edges (CTE recursiva) e scan_declared_field para o backfill. 6) kernel/query/graph.py + Kernel.graph_refs; FS responde unsupported. 7) GET /v1/kinds/{kind}/documents/{name}/refs. 8) dna graph backfill. 9) testes.'
+  created_at: '2026-08-06T07:47:43+00:00'
+  updated_at: '2026-08-06T07:47:43+00:00'

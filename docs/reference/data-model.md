@@ -595,7 +595,7 @@ record Kinds whose links are simply not modelled yet.
 
 !!! note "This diagram carries little information, by design"
 
-    10 tables on Postgres (4 on SQLite) and
+    11 tables on Postgres (5 on SQLite) and
     **1 foreign keys**. They are a generic document store:
     `documents` holds every Kind, of every type, as JSON in a
     `content` column keyed by `(scope, kind, name, tenant)`. Adding a
@@ -642,6 +642,21 @@ erDiagram
         INTEGER version
         TEXT updated_at
         TEXT tenant PK
+    }
+    dna_edges {
+        TEXT scope PK
+        TEXT tenant PK
+        TEXT from_api_version PK
+        TEXT from_kind PK
+        TEXT from_name PK
+        TEXT source_field PK
+        INTEGER ordinal PK
+        TEXT to_scope
+        TEXT to_kind
+        TEXT to_name
+        TEXT declared_to
+        INTEGER from_version
+        DATETIME updated_at
     }
     dna_layer_documents {
         TEXT scope PK
@@ -735,6 +750,7 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | `dna_approval` | — |
 | `dna_bundle_entries` | `bundle_entries` |
 | `dna_documents` | `documents` |
+| `dna_edges` | `edges` |
 | `dna_layer_documents` | `layer_documents` |
 | `dna_outbox` | — |
 | `dna_quota_counters` | — |
@@ -789,6 +805,24 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | `version` | `INTEGER` |  |  |
 | `updated_at` | `TEXT` |  |  |
 | `tenant` | `TEXT` | PK |  |
+
+#### `dna_edges`
+
+| Column | Type | Key | Nullable |
+| --- | --- | --- | --- |
+| `scope` | `TEXT` | PK |  |
+| `tenant` | `TEXT` | PK |  |
+| `from_api_version` | `TEXT` | PK |  |
+| `from_kind` | `TEXT` | PK |  |
+| `from_name` | `TEXT` | PK |  |
+| `source_field` | `TEXT` | PK |  |
+| `ordinal` | `INTEGER` | PK |  |
+| `to_scope` | `TEXT` |  | yes |
+| `to_kind` | `TEXT` |  | yes |
+| `to_name` | `TEXT` |  |  |
+| `declared_to` | `TEXT` |  |  |
+| `from_version` | `INTEGER` |  |  |
+| `updated_at` | `DATETIME` |  |  |
 
 #### `dna_layer_documents`
 

@@ -468,6 +468,50 @@ export class DnaClient {
   }
 
   /**
+   * "What points at this document?" — the derived reference graph.
+   *
+   * `direction: "in"` (the default, and the product question) returns the
+   * documents pointing AT this one; `"out"` what it points at; `"both"` the
+   * union. `depth` walks further and is clamped server-side — two of the
+   * declared references are self-referential by design, so an unbounded walk
+   * is not on offer.
+   *
+   * Each edge carries `resolved`: `false` is a DANGLING reference — declared,
+   * written, and resolving to nothing. Those rows are the list of what is
+   * broken and are never filtered out.
+   *
+   * `stop` says why the walk ended (`complete` / `depth_reached` /
+   * `truncated`) and `graph_producer` reports whether the producer is even on.
+   * A server whose store keeps no edge graph answers **501**, not an empty
+   * list — "nothing points at this" is a claim only a store that records edges
+   * may make.
+   */
+  async graphRefs(
+    kind: string,
+    name: string,
+    opts?: {
+      direction?: "in" | "out" | "both";
+      depth?: number;
+      tenant?: string;
+      apiVersion?: string;
+    },
+  ) {
+    return this.unwrap(
+      await this.raw.GET("/v1/kinds/{kind}/documents/{name}/refs", {
+        params: {
+          path: { kind, name },
+          query: {
+            tenant: opts?.tenant,
+            api_version: opts?.apiVersion,
+            direction: opts?.direction ?? "in",
+            depth: opts?.depth ?? 1,
+          },
+        },
+      }),
+    );
+  }
+
+  /**
    * Write one document of `kind` — the generic door, kubernetes-shaped: the
    * endpoint names the Kind (applying a CRD creates the endpoint that serves
    * it; `kind` is inferred from where the client submits, never re-stated

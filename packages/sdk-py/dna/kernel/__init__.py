@@ -2304,6 +2304,49 @@ class Kernel:
         raw = await self._query.get_document(scope, kind, name, tenant=tenant)
         return self._mark_validity(scope, raw)
 
+    async def get_document_local(
+        self, scope: str, kind: str, name: str, *,
+        tenant: str | None = None,
+    ) -> dict[str, Any] | None:
+        """``get_document`` WITHOUT the parent-scope fallback — this scope only.
+
+        It is the same read ``get_document`` performs FIRST, so calling it
+        straight after one is served by the granular cache rather than by a
+        second trip to the store.
+
+        It exists to answer a question ``get_document`` deliberately hides: a
+        document came back, but from WHERE? Scope inheritance is the DEFAULT
+        (``_DenylistInheritable``), so a declared reference can legitimately
+        resolve in a parent scope, and the edge producer must be able to tell
+        an intra-scope relation from an inherited one. Recording every hit as
+        local would assert relations that do not exist inside the scope — the
+        kind of quiet falsehood the graph exists to expose, not to commit.
+        """
+        assert self._source, "No source registered."
+        raw = await self._granular_doc_cached((scope, kind, name, tenant or ""))
+        return self._mark_validity(scope, raw)
+
+    async def graph_refs(
+        self, scope: str, kind: str, name: str, *,
+        tenant: str | None = None,
+        direction: str = "in",
+        depth: int | None = None,
+    ):
+        """"What points at this document?" — the derived reference graph.
+
+        Thin facade over :func:`dna.kernel.query.graph.traverse`; the policy
+        (depth ceiling, the ``unsupported`` refusal, the stop reason) lives
+        there. Raises ``GraphUnsupported`` on a source that keeps no edges —
+        never an empty list, which would read as "nothing points at it".
+        """
+        from dna.kernel.query.graph import traverse  # noqa: PLC0415
+
+        assert self._source, "No source registered."
+        return await traverse(
+            self._source, scope, kind, name,
+            tenant=tenant, direction=direction, depth=depth,
+        )
+
     # ────────────────────────────────────────────────────────────────
     # Composition Engine V2 (Phase 17, Story s-comp-f2-resolver,
     # 2026-05-28) — declarative cross-scope + tenant overlay resolution

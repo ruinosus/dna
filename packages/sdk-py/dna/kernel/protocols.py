@@ -1541,6 +1541,7 @@ class WritableSourcePort(SourcePort, Protocol):
         version_retention: int | None = None,
         if_absent: bool = False,
         if_match: str | None = None,
+        edges: list | None = None,
     ) -> str:
         """Persist one document (an UPSERT by default).
 
@@ -1561,7 +1562,24 @@ class WritableSourcePort(SourcePort, Protocol):
         against itself and agree, which is exactly the lost update i-083
         measured. Also optional and declared the same way. ``if_absent`` and
         ``if_match`` are mutually exclusive: one asserts the document is absent,
-        the other that it is present and unchanged."""
+        the other that it is present and unchanged.
+
+        ``edges`` carries the DERIVED reference graph of this document — the
+        ``x-dna-ref`` targets the write path already resolved while validating
+        them (:func:`dna.kernel.query.references.resolve_declared_edges`). An
+        adapter that declares the kwarg replaces this document's outgoing edges
+        INSIDE the same transaction as the document itself, so the two become
+        true together; one that does not declare it is never handed them, and
+        the graph face answers ``unsupported`` for that store rather than an
+        empty edge list.
+
+        Three values, three meanings, and the middle one is load-bearing:
+        a LIST replaces the stored edges (an empty list therefore REMOVES them,
+        which is how a document that stopped referencing anything stops having
+        relations); ``None`` means the kernel has nothing trustworthy to say —
+        the producer is off, or a read failed part-way — and the stored edges
+        must be LEFT ALONE, because an old known-good edge set beats a fresh
+        partial one."""
         ...
 
     async def delete_document(

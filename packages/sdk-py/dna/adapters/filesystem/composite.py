@@ -366,7 +366,14 @@ class CompositeFilesystemSource(WritableSourcePort):
             granular_one=True,
             query_pushdown=True,
             tenant_layer_writes=True,
-            write_kwargs=SAVE_OPTIONAL_KWARGS,
+            # ⚠️ MINUS ``edges``: the filesystem store has no transaction to
+            # write a document and its derived relations together, and no table
+            # to write them TO. Declaring the kwarg would make the kernel hand
+            # over edges this adapter would silently drop — and a graph face
+            # would then read the resulting nothing as "this document has no
+            # relations". It answers ``unsupported`` instead (see
+            # ``SourceCapabilities.edge_graph``).
+            write_kwargs=SAVE_OPTIONAL_KWARGS - {"edges"},
             delete_kwargs=DELETE_OPTIONAL_KWARGS,
         )
 

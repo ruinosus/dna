@@ -26,6 +26,10 @@ Start with the thesis; the rest expand its pieces.
   memory as two kernel ports with pluggable adapters: offline-first
   sqlite-vec + FTS5 + RRF, pgvector for scale, and memory as the Kinds you
   already have.
+- **[The reference graph](reference-graph.md)** — what points at this
+  document? `x-dna-ref` declarations become stored edges the write path
+  produces while it validates them, walked by one recursive CTE — plus the
+  four signals that keep the answer honest about its own gaps.
 - **[Agent-facing knowledge](agent-knowledge.md)** — why DNA represents
   knowledge as curated, cited Kinds rather than generated wiki prose.
 - **[Composing with GitHub Spec Kit](../guides/spec-kit.md)** — the layering

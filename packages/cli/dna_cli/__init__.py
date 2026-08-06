@@ -24,6 +24,7 @@ from dna_cli import (
     eval_cmd,
     explain_cmd,
     genome_cmd,
+    graph_cmd,
     init_cmd,
     install_cmd,
     intel_cmd,
@@ -83,6 +84,7 @@ main.add_command(recall_cmd.recall)
 main.add_command(recall_cmd.search)
 main.add_command(memory_cmd.memory)
 main.add_command(genome_cmd.genome)
+main.add_command(graph_cmd.graph)
 main.add_command(definition_cmd.definition)
 # Importing testkit_cmd registers `sdlc test-guide` + `sdlc test-run` on the
 # sdlc group via its decorators (TESTS as first-class SDLC).
