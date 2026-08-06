@@ -1314,6 +1314,7 @@ def build_server(
     @server.tool(run_in_thread=False, app=memory_card_app)
     async def recall(
         query: str, scope: str | None = None, k: int = 5, personal: bool = False,
+        as_of: str | None = None,
     ) -> dict[str, Any]:
         """Recall DNA memory for a query (hybrid/bi-temporal when available).
 
@@ -1341,17 +1342,30 @@ def build_server(
         the search was literal-only; never assert that no memories exist.
         ``index_refreshed: false`` (with ``index_error``) means the search index
         could not be refreshed, so anything written recently is INVISIBLE to
-        this result — it is not read-your-writes, and ``degraded`` is set."""
+        this result — it is not read-your-writes, and ``degraded`` is set.
+
+        **``as_of`` (ISO-8601, e.g. ``2026-08-01T12:00:00Z``) asks a DIFFERENT
+        question:** what this deployment BELIEVED at that instant, not what it
+        believes now. Each hit comes back as it was RECORDED then, so a memory
+        later corrected or superseded answers with its old content, and one
+        written after that instant does not appear at all. Use it for "what did
+        we think last month?", never for "what was true last month" — those are
+        different axes. The result echoes ``as_of``; any memory the store can no
+        longer answer for (history pruned past that point) is listed by name in
+        ``as_of_truncated``, and when relaying you must say the answer is
+        incomplete for those rather than implying they did not exist."""
         if personal:
             oid, family = await _personal_guard("read")
             async with _refusing():
                 return await recall_impl(
                     await _live(), query, None, k, memory_scope="personal",
-                    oid=oid, family=family,
+                    oid=oid, family=family, as_of=as_of,
                 )
         tenant = await _guard("memory", scope=scope, memory_op="read")
         async with _refusing():
-            return await recall_impl(await _live(), query, scope, k, tenant)
+            return await recall_impl(
+                await _live(), query, scope, k, tenant, as_of=as_of,
+            )
 
     @server.tool(run_in_thread=False)
     async def remember(

@@ -2659,6 +2659,31 @@
       },
       "MemoriesResponse": {
         "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "as_of_truncated": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of Truncated"
+          },
           "memories": {
             "items": {
               "$ref": "#/components/schemas/MemorySummary"
@@ -3468,6 +3493,31 @@
       "RecallResponse": {
         "description": "The recall envelope is typed; each ``hit`` stays a loose dict — its shape\nvaries with the search plane active (lexical vs. hybrid/semantic add\n``retention``/``semantic``/``rank_*`` keys), so it is honestly dynamic.",
         "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "as_of_truncated": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of Truncated"
+          },
           "degraded": {
             "default": false,
             "title": "Degraded",
@@ -7101,6 +7151,24 @@
             }
           },
           {
+            "description": "ISO-8601 instant. List the BELIEF STATE at that moment (transaction time) instead of the current one.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO-8601 instant. List the BELIEF STATE at that moment (transaction time) instead of the current one.",
+              "title": "As Of"
+            }
+          },
+          {
             "in": "header",
             "name": "authorization",
             "required": false,
@@ -7399,7 +7467,7 @@
     },
     "/v1/memories/search": {
       "get": {
-        "description": "Recall the tenant's memory for ``q`` (hybrid/bi-temporal when the\nsearch extra is present, honest lexical otherwise), tenant-scoped.",
+        "description": "Recall the tenant's memory for ``q`` (hybrid/bi-temporal when the\nsearch extra is present, honest lexical otherwise), tenant-scoped.\n\n``as_of`` adds the second time axis (s-memory-as-of): every hit is\nresolved from the version the store RECORDED at or before that instant.\nA malformed timestamp is a 422 and a store with no version history is a\n501 — never a silent fallback to the current state, which would answer a\nquestion about the past with a fact about the present.",
         "operationId": "memories_search_v1_memories_search_get",
         "parameters": [
           {
@@ -7453,6 +7521,24 @@
               "minimum": 1,
               "title": "K",
               "type": "integer"
+            }
+          },
+          {
+            "description": "ISO-8601 instant. Recall the BELIEF STATE at that moment — what this deployment believed then (transaction time), not what it believes now. Omit for the live read.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO-8601 instant. Recall the BELIEF STATE at that moment — what this deployment believed then (transaction time), not what it believes now. Omit for the live read.",
+              "title": "As Of"
             }
           },
           {

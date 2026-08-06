@@ -1828,10 +1828,34 @@ def build_app(
 
     # -- memory (list + search + the two guarded writes: remember + delete) --
 
+    async def _as_of_guarded(coro):
+        """Map the two transaction-time refusals onto HTTP, honestly.
+
+        The whole point of ``as_of`` is that it never guesses, so neither may
+        this face: a bad timestamp is the CALLER's error (422) and a store with
+        no version history is THIS DEPLOYMENT's limit (501, `Not Implemented` —
+        the request was well-formed and the server cannot fulfil it). Returning
+        200 with the current state under either would hand back a fabricated
+        past wearing a real answer's shape."""
+        from dna.memory.as_of import AsOfUnsupported
+        try:
+            return await coro
+        except AsOfUnsupported as exc:
+            raise HTTPException(status_code=501, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
+
     @app.get("/v1/memories", dependencies=guarded, response_model=m.MemoriesResponse)
     async def memories(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
+        as_of: str | None = Query(
+            default=None,
+            description=(
+                "ISO-8601 instant. List the BELIEF STATE at that moment "
+                "(transaction time) instead of the current one."
+            ),
+        ),
     ) -> dict[str, Any]:
         """List the tenant's memory — base + the tenant's OWN overlay (per the #83
         isolation), never another tenant's.
@@ -1859,7 +1883,11 @@ def build_app(
         null"."""
         from dna.application import list_memories_impl
 
-        out = await list_memories_impl(await _live(), scope, tenant=tenant)
+        async def _run() -> dict[str, Any]:
+            return await list_memories_impl(
+                await _live(), scope, tenant=tenant, as_of=as_of,
+            )
+        out = await _as_of_guarded(_run())
         return {**out, "tenant": tenant}
 
     @app.get("/v1/memories/personal", dependencies=guarded,
@@ -2156,10 +2184,28 @@ def build_app(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
         k: int = Query(default=5, ge=1, le=50),
+        as_of: str | None = Query(
+            default=None,
+            description=(
+                "ISO-8601 instant. Recall the BELIEF STATE at that moment — "
+                "what this deployment believed then (transaction time), not "
+                "what it believes now. Omit for the live read."
+            ),
+        ),
     ) -> dict[str, Any]:
         """Recall the tenant's memory for ``q`` (hybrid/bi-temporal when the
-        search extra is present, honest lexical otherwise), tenant-scoped."""
-        return await recall_impl(await _live(), q, scope, k, tenant)
+        search extra is present, honest lexical otherwise), tenant-scoped.
+
+        ``as_of`` adds the second time axis (s-memory-as-of): every hit is
+        resolved from the version the store RECORDED at or before that instant.
+        A malformed timestamp is a 422 and a store with no version history is a
+        501 — never a silent fallback to the current state, which would answer a
+        question about the past with a fact about the present."""
+        async def _run() -> dict[str, Any]:
+            return await recall_impl(
+                await _live(), q, scope, k, tenant, as_of=as_of,
+            )
+        return await _as_of_guarded(_run())
 
     @app.delete("/v1/memories/{name}", dependencies=guarded,
                 response_model=m.DeleteMemoryResponse)

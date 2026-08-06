@@ -35,6 +35,13 @@ import logging
 from datetime import datetime, timezone
 from typing import Any
 
+from dna.memory.as_of import (
+    AsOfUnsupported,
+    as_of_datetime,
+    normalize_as_of,
+    resolve_as_of,
+    store_supports_as_of,
+)
 from dna.memory.policy import resolve_affect_palette, resolve_decay_policy
 from dna.memory.decay import (
     affect_factor,
@@ -373,6 +380,7 @@ async def recall(
     actor: str = "anonymous",
     semantic: bool | None = None,
     now: datetime | None = None,
+    as_of: datetime | str | None = None,
 ) -> dict[str, Any]:
     """Hybrid recall over the memory Kinds, bi-temporal + retention re-scored.
 
@@ -399,6 +407,33 @@ async def recall(
     append + a small confidence bump (Nader light reconsolidation) via
     ``kernel.write_document`` — fail-soft.
 
+    **``as_of`` — the belief state (s-memory-as-of).** The second time axis.
+    Without it, behaviour is bit-for-bit what it always was. With it, recall
+    answers *"what did the system BELIEVE at T?"* instead of *"what does it
+    believe now?"*: every hit's spec is resolved from the store's retained
+    version recorded at or before ``as_of`` (``dna_versions.created_at`` —
+    transaction time), not from the current document.
+
+    Not to be confused with ``now``, which is world time. ``now`` shifts the
+    ``valid_to`` filter and still hands back TODAY's spec for every hit; a note
+    recorded today about last year surfaces under ``now=<last year>`` and must
+    NOT surface under ``as_of=<last year>``. When ``as_of`` is given and ``now``
+    is not, world time follows it, so the read is internally consistent: the
+    validity the system believed in, evaluated at the instant it believed it.
+
+    Three consequences, each deliberate:
+
+    - ``reconsolidate`` is forced OFF. A read of the past that writes to the
+      present is a contradiction — the past does not get more confident because
+      somebody looked at it.
+    - A store with no version history REFUSES (:class:`~dna.memory.as_of.
+      AsOfUnsupported`) rather than serving the current state under a past
+      timestamp.
+    - A memory whose history was pruned past ``as_of``
+      (``VERSION_CHURN_RETENTION`` caps Engram at 3) is dropped from ``hits``
+      and named in ``as_of_truncated`` — "no record" is reported as a blind
+      spot, never as "no memory".
+
     Returns ``{query, scope, degraded, semantic, hits:[{kind,name,score,
     retention?,semantic?,rank_recall?,rank_ecphory?,...}]}``. Each hit is
     additionally enriched for DISPLAY (i-068): ``summary``/``area``/``affect``/
@@ -408,6 +443,20 @@ async def recall(
     flag telling whether the hit resolves from the caller's ``personal:<oid>``
     partition rather than the shared base it is unioned with.
     """
+    as_of_iso: str | None = None
+    if as_of is not None:
+        as_of_iso = normalize_as_of(as_of)
+        if not store_supports_as_of(kernel):
+            raise AsOfUnsupported(
+                "recall(as_of=...) needs a store that retains version history "
+                "with a transaction timestamp. Refusing rather than returning "
+                "the CURRENT belief state under a past timestamp."
+            )
+        # A historical read must not write into the present.
+        reconsolidate = False
+        # World time follows transaction time unless the caller pinned it: the
+        # validity the system BELIEVED, evaluated WHEN it believed it.
+        now = now or as_of_datetime(as_of_iso)
     now_dt = now or datetime.now(timezone.utc)
     kinds = kinds if kinds is not None else recallable_kinds(kernel)
     overfetch = max(k * 3, 10)
@@ -432,12 +481,30 @@ async def recall(
 
     scored: list[dict[str, Any]] = []
     spec_by_name: dict[str, dict[str, Any]] = {}
+    truncated: list[str] = []
     for hit in merged:
         kind = hit.get("kind")
         name = hit.get("name")
         if not name:
             continue
-        spec = await _load_spec(kernel, scope, kind, name, tenant)
+        if as_of_iso:
+            res = await resolve_as_of(
+                kernel, scope, kind, name,
+                as_of=as_of_iso, tenant=tenant,
+                api_version=_resolve_api_version(kernel, kind),
+            )
+            if res.truncated:
+                # The store cannot know. Say so — do NOT read "no memory" out
+                # of "no record", and do NOT fall back to the current spec.
+                truncated.append(str(name))
+                continue
+            if not res.found:
+                continue  # the memory did not exist yet at `as_of`
+            spec = res.spec
+            hit["recorded_at"] = res.recorded_at
+            hit["as_of_version"] = res.version
+        else:
+            spec = await _load_spec(kernel, scope, kind, name, tenant)
         # Bi-temporal filter — a memory invalidated in the past never surfaces.
         if not currently_valid(spec.get("valid_to"), now=now_dt):
             continue
@@ -472,11 +539,16 @@ async def recall(
     if reconsolidate:
         await _reconsolidate(kernel, scope, top, query, actor, tenant, now_dt)
 
-    return {
+    out = {
         "query": query, "scope": scope,
         "degraded": degraded, "semantic": semantic_active,
         "hits": top,
     }
+    if as_of_iso:
+        out["as_of"] = as_of_iso
+        # Named, not counted: the caller can tell WHICH memory it is blind to.
+        out["as_of_truncated"] = sorted(set(truncated))
+    return out
 
 
 async def _semantic_rerank(

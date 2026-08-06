@@ -149,11 +149,43 @@ curve to flag memories whose retention fell below a floor. Nothing is
 silently dropped — decay demotes ranking, and archiving is an explicit,
 reported step.
 
-**Bi-temporality** — every memory has world-time validity (`valid_from` /
-`valid_to`) alongside record time. `forget` sets `valid_to` (optionally with
-`superseded_by`) so the memory stops surfacing in recall — but the document
-stays, auditable and revivable, and history can be reconstructed
-point-in-time. Contradicted knowledge is *superseded*, not destroyed.
+**Bi-temporality** — every memory runs on **two independent clocks**, and
+keeping them apart is the point:
+
+- **World time** — `valid_from` / `valid_to`: *when the fact was true*. `forget`
+  sets `valid_to` (optionally with `superseded_by`) so the memory stops
+  surfacing in recall, but the document stays, auditable and revivable.
+  Contradicted knowledge is *superseded*, not destroyed. `recall(now=…)` reads
+  this axis.
+- **Transaction time** — *when this system came to believe it*, taken from the
+  version snapshot's `created_at`. `recall(as_of=…)` reads this axis, and it
+  answers a different question: **"what did the system believe at T?"**
+
+They come apart the moment something is recorded late or corrected. A note
+written today about last year is **valid** last year and **believed** today: a
+world-time read at last year finds it, a transaction-time read at last year must
+not. Asking one when you meant the other is the classic bi-temporal mistake, and
+no single "point-in-time" phrasing distinguishes them — which is exactly why the
+two have separate parameters rather than one.
+
+```bash
+dna memory recall "postgres"                       # what we believe NOW
+# the belief state, over REST — not the current one:
+curl "$DNA_API/v1/memories/search?q=postgres&as_of=2026-08-01T12:00:00Z"
+```
+
+Two refusals keep the answer honest, both deliberate:
+
+- a store that keeps **no version history** (the filesystem adapter) **refuses**
+  an `as_of` read (HTTP 501) rather than serving the current state under a past
+  timestamp;
+- a memory whose history was **pruned** past `as_of` (record-plane Kinds cap
+  retained versions — `VERSION_CHURN_RETENTION`) comes back named in
+  `as_of_truncated`. "No record" is reported as a blind spot, never as "no
+  memory".
+
+An `as_of` recall also does **not** reconsolidate: a read of the past that writes
+into the present is a contradiction.
 
 ## Personal vs workspace memory — the key is the person
 

@@ -271,6 +271,14 @@ class SourceCapabilities:
     # guarantee, so the conformance kit gates the two-Kinds case on this flag
     # rather than pretending the adapters agree.
     api_version_identity: bool = False
+    # The store can answer a TRANSACTION-time read (``load_one_as_of``): "what
+    # did you believe at T?", reconstructed from retained version snapshots.
+    # Deliberately NOT folded into ``versions``, which only says version rows
+    # are readable — the filesystem adapter declares ``versions`` and keeps no
+    # history whatsoever (``list_versions`` returns ``[]``). A face must be able
+    # to REFUSE an as-of read rather than serve the current state under a past
+    # timestamp, so this has to be askable BEFORE the read.
+    as_of_reads: bool = False
 
     @property
     def granular(self) -> bool:
@@ -371,6 +379,7 @@ def derive_capabilities(source: object, *, label: str) -> SourceCapabilities:
         kernel_attachable=_has_method(source, "attach_kernel"),
         granular_list=_has_method(source, "list_doc_refs"),
         granular_one=_has_method(source, "load_one"),
+        as_of_reads=_has_method(source, "load_one_as_of"),
         query_pushdown=_has_own_query(source),
         tenant_layer_writes=("tenant" in write_kwargs and "layer" in write_kwargs),
         write_kwargs=write_kwargs,
