@@ -1,6 +1,6 @@
 """A decisão de conceder — pura, sem I/O, e por isso testável de verdade.
 
-Quem lê e escreve a instância é o HOST (a porta, no deployment). O que mora aqui
+Quem lê e escreve a instância é a HOST (a porta, no deployment). O que mora aqui
 é a REGRA, e ela é pequena de propósito: uma regra de autorização que precisa de
 banco para ser exercitada é uma regra que ninguém testa nos casos difíceis — e
 num portão os casos difíceis são exatamente os que importam.

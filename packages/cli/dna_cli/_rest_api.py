@@ -1844,7 +1844,7 @@ def build_app(
             ),
         ),
     ) -> dict[str, Any]:
-        """Ler UM instância de ``{kind}``, VERBATIM — o que a lista não dá.
+        """Ler UMA instância de ``{kind}``, VERBATIM — o que a lista não dá.
 
         A lista com ``fields`` projeta pela VISTA quando o Kind é produzível
         por readers (Agent, Skill…), e a vista normaliza — campos reais do

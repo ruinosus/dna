@@ -1235,7 +1235,7 @@ class ListKindInstancesResponse(BaseModel):
 
 
 class GetKindInstanceResponse(BaseModel):
-    """``GET /v1/kinds/{kind}/instances/{name}`` — UM instância, VERBATIM.
+    """``GET /v1/kinds/{kind}/instances/{name}`` — UMA instância, VERBATIM.
 
     A lista projetada passa pela vista dos readers quando o Kind é produzível
     por bundle (Agent, Skill…) — e a vista NORMALIZA: `spec.description` e

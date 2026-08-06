@@ -64,6 +64,10 @@ class _Db:
         async with self.engine.connect() as conn:
             return (await conn.execute(sa.text(stmt), params or {})).scalar()
 
+    async def rows(self, stmt: str, params: dict | None = None) -> list:
+        async with self.engine.connect() as conn:
+            return (await conn.execute(sa.text(stmt), params or {})).all()
+
     async def count(self, table: str) -> int:
         return await self.scalar(f"SELECT count(*) FROM {self.table(table)}")
 
@@ -241,6 +245,18 @@ async def test_os_indices_vem_junto(db_factory):
             assert not await db.index_exists("dna_documents_tenant_idx")
             assert await db.index_exists("dna_insts_status_idx")
             assert not await db.index_exists("dna_docs_status_idx")
+            # A PK das DUAS tabelas: renomear a tabela não renomeia a
+            # constraint, e um `dna_layer_documents_pkey` pendurado num
+            # `dna_layer_instances` é o nome velho sobrevivendo (medido no
+            # banco de dev depois da primeira passada desta revisão).
+            names = [r[0] for r in (await db.rows(
+                "SELECT conname FROM pg_constraint c"
+                " JOIN pg_namespace n ON n.oid = c.connamespace"
+                " WHERE n.nspname = :s AND c.contype = 'p'"
+                "   AND c.conrelid::regclass::text LIKE '%instances'",
+                {"s": db.schema},
+            ))]
+            assert not [n for n in names if "document" in n], names
         else:
             assert await db.index_exists("instances_tenant_idx")
             assert not await db.index_exists("documents_tenant_idx")

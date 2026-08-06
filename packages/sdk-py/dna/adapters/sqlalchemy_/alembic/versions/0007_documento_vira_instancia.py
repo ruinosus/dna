@@ -58,10 +58,15 @@ PG_INDEXES = [
     ("dna_docs_spec_gin_idx", "dna_insts_spec_gin_idx"),
 ]
 
-#: A PK: o nome depende de quem a criou (ver o docstring).
+#: (tabela JÁ renomeada, nome antigo da constraint, nome novo). A PK do
+#: ``dna_instances`` tem DOIS nomes possíveis: 0001 a nomeia
+#: ``dna_documents_pkey``, e a 0003 recria a PK — o Postgres pode nomear a
+#: segunda ``dna_documents_pkey1``. Só uma das duas existe num banco dado.
 PG_CONSTRAINTS = [
-    ("dna_documents_pkey", "dna_instances_pkey"),
-    ("dna_documents_pkey1", "dna_instances_pkey"),
+    ("dna_instances", "dna_documents_pkey", "dna_instances_pkey"),
+    ("dna_instances", "dna_documents_pkey1", "dna_instances_pkey"),
+    ("dna_layer_instances", "dna_layer_documents_pkey",
+     "dna_layer_instances_pkey"),
 ]
 
 SQLITE_TABLES = [
@@ -92,7 +97,7 @@ def _pg(schema: str) -> None:
     for old, new in PG_INDEXES:
         if exists(old):
             op.execute(f"ALTER INDEX {schema}.{old} RENAME TO {new}")
-    for old, new in PG_CONSTRAINTS:
+    for table, old, new in PG_CONSTRAINTS:
         got = bind.execute(sa.text(
             "SELECT 1 FROM pg_constraint c JOIN pg_namespace n"
             " ON n.oid = c.connamespace"
@@ -100,10 +105,8 @@ def _pg(schema: str) -> None:
         ), {"s": schema, "c": old}).scalar()
         if got is not None:
             op.execute(
-                f"ALTER TABLE {schema}.dna_instances "
-                f"RENAME CONSTRAINT {old} TO {new}"
+                f"ALTER TABLE {schema}.{table} RENAME CONSTRAINT {old} TO {new}"
             )
-            break
 
 
 def _sqlite() -> None:

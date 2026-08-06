@@ -739,7 +739,7 @@ export interface paths {
         };
         /**
          * Get Kind Instance
-         * @description Ler UM instância de ``{kind}``, VERBATIM — o que a lista não dá.
+         * @description Ler UMA instância de ``{kind}``, VERBATIM — o que a lista não dá.
          *
          *     A lista com ``fields`` projeta pela VISTA quando o Kind é produzível
          *     por readers (Agent, Skill…), e a vista normaliza — campos reais do
@@ -2245,7 +2245,7 @@ export interface components {
         };
         /**
          * GetKindInstanceResponse
-         * @description ``GET /v1/kinds/{kind}/instances/{name}`` — UM instância, VERBATIM.
+         * @description ``GET /v1/kinds/{kind}/instances/{name}`` — UMA instância, VERBATIM.
          *
          *     A lista projetada passa pela vista dos readers quando o Kind é produzível
          *     por bundle (Agent, Skill…) — e a vista NORMALIZA: `spec.description` e

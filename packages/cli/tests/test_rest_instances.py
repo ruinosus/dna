@@ -428,7 +428,7 @@ def test_a_lista_de_um_Kind_VAZIO_e_200_e_nao_404(dna_dir):
         assert r.json()["instances"] == []
 
 
-# ── 7. GET de UM instância, verbatim — a leitura que a lista projetada não dá
+# ── 7. GET de UMA instância, verbatim — a leitura que a lista projetada não dá
 
 
 def test_get_one_document_returns_the_spec_verbatim(dna_dir):
