@@ -244,6 +244,56 @@ class FilesystemSource(SourcePort):
         refs.sort()
         return refs
 
+    async def find_instances_by_id_prefix(
+        self, prefix: str, *, scope: str | None = None,
+        tenant: str | None = None, limit: int = 64,
+    ) -> list[Any]:
+        """Candidates whose ``metadata.id`` starts with ``prefix`` (i-114).
+
+        Candidates only — the unique-or-refuse rule lives in
+        ``dna.kernel.identity.resolve_unique_prefix``, once, for every store.
+
+        Projects from ``load_all`` per scope, like every other granular read on
+        this adapter: a directory tree has no index, and this is the dev-mode
+        store. ``scope=None`` sweeps every scope, because an id's whole value is
+        that whoever holds it need not know where the instance lives.
+
+        An instance with no ``metadata.id`` simply does not match. That is not a
+        gap to paper over: an instance the kernel has never written has no
+        identity yet, and inventing one at READ time would mint a different id
+        in every process that looked.
+        """
+        from dna.kernel.identity import (  # noqa: PLC0415
+            InstanceRef, instance_id_of,
+        )
+        scopes = [scope] if scope is not None else list(self.list_scopes())
+        out: list[Any] = []
+        readers = self._effective_readers()
+        for sc in scopes:
+            try:
+                docs: list[dict[str, Any]] = []
+                if tenant:
+                    docs.extend(await self.load_layer(
+                        sc, "tenant", tenant, readers=readers,
+                    ))
+                docs.extend(await self.load_all(sc, readers=readers))
+            except (FileNotFoundError, NotADirectoryError):
+                continue
+            for d in docs:
+                doc_id = instance_id_of(d)
+                if not doc_id or not doc_id.startswith(prefix):
+                    continue
+                meta = d.get("metadata") or {}
+                out.append(InstanceRef(
+                    id=doc_id, scope=sc, kind=d.get("kind", ""),
+                    api_version=d.get("apiVersion", "") or "",
+                    name=meta.get("name") or d.get("name", ""),
+                    tenant=tenant,
+                ))
+                if len(out) >= limit:
+                    return out
+        return out
+
     async def load_one(
         self, scope: str, kind: str, name: str, *,
         readers: list | None = None,

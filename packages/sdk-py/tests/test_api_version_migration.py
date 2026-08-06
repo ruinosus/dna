@@ -365,16 +365,39 @@ async def test_migration_preserves_every_row_and_attributes_it_correctly(
             "WHERE kind = 'Deck'"
         ) == [("",)]
 
-        # Content itself is byte-identical — the migration touched keys, not data.
+        # Content is untouched EXCEPT for the identity 0008 stamps into it
+        # (i-114). Asserted as an exact reconstruction rather than "ignore the
+        # id": the id must be there, must equal the DERIVED value for these
+        # coordinates, and nothing else in the envelope may have moved. A test
+        # that merely popped ``id`` before comparing would pass with a wrong id
+        # in it, which is the only way this migration can fail quietly.
+        from dna.kernel.identity import derived_instance_id
+
         for scope, kind, api_version, name, tenant in _seeded_docs(db):
             stored = await db.rows(
-                f"SELECT content FROM {db.table('instances')} WHERE scope = :s "
+                f"SELECT content, id FROM {db.table('instances')} WHERE scope = :s "
                 "AND kind = :k AND name = :n AND COALESCE(tenant, '') = :t",
                 {"s": scope, "k": kind, "n": name, "t": tenant},
             )
-            assert stored == [(_content(kind, api_version, name),)], (
+            assert len(stored) == 1, f"row missing for {scope}/{kind}/{name}"
+            content, column_id = stored[0]
+            expected_id = derived_instance_id(
+                tenant=tenant or None, scope=scope,
+                api_version=api_version or "", kind=kind, name=name,
+            )
+            assert column_id == expected_id, (
+                f"id column wrong for {scope}/{kind}/{name}"
+            )
+            expected = json.loads(_content(kind, api_version, name))
+            expected["metadata"] = {"id": expected_id, **expected["metadata"]}
+            assert json.loads(content) == expected, (
                 f"content changed for {scope}/{kind}/{name}"
             )
+            # The column and the envelope say the same thing. They must: the
+            # read path returns ``content``, so an id that lived only in the
+            # column would be re-minted on the next write and the backfill
+            # would have been a no-op that looked like a migration.
+            assert json.loads(content)["metadata"]["id"] == column_id
     finally:
         await cleanup()
 

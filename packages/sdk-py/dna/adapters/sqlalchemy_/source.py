@@ -745,6 +745,55 @@ class SqlAlchemySource(WritableSourcePort):
             seen.setdefault((r.kind, r.name), None)
         return list(seen.keys())
 
+    async def find_instances_by_id_prefix(
+        self, prefix: str, *, scope: str | None = None,
+        tenant: str | None = None, limit: int = 64,
+    ) -> "list[Any]":
+        """Every instance whose ``id`` starts with ``prefix`` (i-114).
+
+        Candidates only — this method does NOT decide. Arbitration lives in
+        ``dna.kernel.identity.resolve_unique_prefix``, in one place, because two
+        stores that each rounded the tie their own way would disagree exactly
+        when it mattered.
+
+        ``limit`` is a ceiling on how much ambiguity is worth reporting, not a
+        page size: any prefix matching more than a handful is already a refusal,
+        and the caller only needs enough matches to say so with examples. It is
+        deliberately more than 1 — stopping at the first match would turn
+        "ambiguous" into "resolved", which is the one outcome this feature
+        exists to make impossible.
+
+        ``scope=None`` searches every scope, which is right: an id is unique
+        across the whole store by construction, and a caller who holds an id
+        usually does NOT know which scope it lives in — that is most of what an
+        id is for.
+        """
+        from dna.kernel.identity import InstanceRef  # noqa: PLC0415
+        d = self.instances
+        stmt = sa.select(
+            d.c.id, d.c.scope, d.c.kind, d.c.api_version, d.c.name, d.c.tenant,
+        ).where(
+            d.c.id.is_not(None),
+            d.c.id.like(prefix.replace("\\", "\\\\")
+                              .replace("%", "\\%")
+                              .replace("_", "\\_") + "%", escape="\\"),
+        )
+        if scope is not None:
+            stmt = stmt.where(d.c.scope == scope)
+        if tenant is not None:
+            stmt = stmt.where(self._tenant_where(d.c.tenant, tenant))
+        stmt = stmt.order_by(d.c.id).limit(limit)
+        async with self._engine.connect() as conn:
+            rows = (await conn.execute(stmt)).all()
+        return [
+            InstanceRef(
+                id=r.id, scope=r.scope, kind=r.kind,
+                api_version=r.api_version or "", name=r.name,
+                tenant=r.tenant or None,
+            )
+            for r in rows
+        ]
+
     async def load_one(
         self, scope: str, kind: str, name: str, *,
         readers: list | None = None,
@@ -1189,6 +1238,13 @@ class SqlAlchemySource(WritableSourcePort):
             bundle_bin.update(_net_binary)
 
         content = json.dumps(raw)  # source_files already popped → no bloat
+        # i-114 — the ``id`` column is a PROJECTION of ``metadata.id``, which
+        # the kernel's write pipeline stamped before handing the envelope down.
+        # Read here, never minted: an adapter that invented an id would give
+        # the same instance a second identity on any path that reaches storage
+        # by another route, and two identities is strictly worse than none.
+        from dna.kernel.identity import instance_id_of
+        instance_id = instance_id_of(raw)
         d, v = self.instances, self.versions
         doc_tenant = self._doc_tenant(tenant)
         # The write HOLDS the instance, so it always knows the exact Kind —
@@ -1237,7 +1293,7 @@ class SqlAlchemySource(WritableSourcePort):
                 # this same transaction, so nothing observes the placeholder.
                 claim = self._upsert(d).values(
                     scope=scope, kind=kind, api_version=api_version, name=name,
-                    content=content,
+                    content=content, id=instance_id,
                     version=0, updated_at=_now(), tenant=doc_tenant,
                 ).on_conflict_do_nothing(
                     index_elements=self._doc_conflict_cols(),
@@ -1298,7 +1354,7 @@ class SqlAlchemySource(WritableSourcePort):
             # save would leave kernel writes invisible.
             ins = self._upsert(d).values(
                 scope=scope, kind=kind, api_version=api_version, name=name,
-                content=content,
+                content=content, id=instance_id,
                 version=next_version, updated_at=_now(), tenant=doc_tenant,
             )
             await conn.execute(ins.on_conflict_do_update(
@@ -1307,6 +1363,14 @@ class SqlAlchemySource(WritableSourcePort):
                     "content": ins.excluded.content,
                     "version": ins.excluded.version,
                     "updated_at": ins.excluded.updated_at,
+                    # COALESCE and not a plain assignment: a write that arrives
+                    # WITHOUT an id (a caller below the kernel, a legacy path,
+                    # an adapter test) must not erase the identity the row
+                    # already holds. Losing an id is unrecoverable — every
+                    # ``dna_edges.to_id`` naming it becomes a dangling pointer
+                    # to an object that still exists. Keeping a stale one is
+                    # not even possible: the id never changes.
+                    "id": sa.func.coalesce(ins.excluded.id, d.c.id),
                 },
             ))
             # The DERIVED reference graph — same transaction as the write, for
@@ -1380,6 +1444,11 @@ class SqlAlchemySource(WritableSourcePort):
                 "to_scope": edge.to_scope,
                 "to_kind": edge.to_kind,
                 "to_name": edge.value,
+                # i-114 — name AND id, the ``ownerReferences`` pair. ``getattr``
+                # because ``ResolvedEdge`` is also constructed by the backfill
+                # and by tests that predate the field; an edge producer that
+                # cannot say which instance it matched says NULL, not a guess.
+                "to_id": getattr(edge, "to_id", None),
                 "declared_to": " | ".join(edge.declared),
                 "from_version": from_version,
                 "updated_at": ts,
@@ -1585,8 +1654,8 @@ class SqlAlchemySource(WritableSourcePort):
 
         cols = [
             e.c.from_kind, e.c.from_name, e.c.source_field, e.c.ordinal,
-            e.c.to_scope, e.c.to_kind, e.c.to_name, e.c.declared_to,
-            e.c.from_version,
+            e.c.to_scope, e.c.to_kind, e.c.to_name, e.c.to_id,
+            e.c.declared_to, e.c.from_version,
         ]
         def closes(prev, kind_col, name_col):
             """1 when ``prev`` already visited this row's target node.
@@ -1626,8 +1695,8 @@ class SqlAlchemySource(WritableSourcePort):
 
         recursive = sa.select(
             ea.c.from_kind, ea.c.from_name, ea.c.source_field, ea.c.ordinal,
-            ea.c.to_scope, ea.c.to_kind, ea.c.to_name, ea.c.declared_to,
-            ea.c.from_version,
+            ea.c.to_scope, ea.c.to_kind, ea.c.to_name, ea.c.to_id,
+            ea.c.declared_to, ea.c.from_version,
             (walk.c.depth + 1).label("depth"),
             (walk.c.path + tail(ea_node_kind, ea_node_name)).label("path"),
             closes(walk.c.path, ea_node_kind, ea_node_name).label("closes_cycle"),
@@ -1676,6 +1745,10 @@ class SqlAlchemySource(WritableSourcePort):
                 "source_field": r.source_field, "ordinal": int(r.ordinal),
                 "to_scope": r.to_scope, "to_kind": r.to_kind,
                 "to_name": r.to_name,
+                # i-114 — the id of the instance this edge ACTUALLY resolved
+                # to, beside the name the author wrote. NULL when dangling or
+                # when the target predates the id.
+                "to_id": r.to_id,
                 "declared_to": tuple(
                     t for t in (r.declared_to or "").split(" | ") if t
                 ),

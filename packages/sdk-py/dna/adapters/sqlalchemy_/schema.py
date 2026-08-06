@@ -204,6 +204,18 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         sa.Column("api_version", sa.Text, primary_key=True, nullable=False,
                   server_default=sa.text("''")),
         sa.Column("name", sa.Text, primary_key=True, nullable=False),
+        # i-114 — the instance's IDENTITY, as opposed to its address.
+        # Deliberately NOT in the primary key: the key is still the natural
+        # 5-tuple, because that is what every reader addresses. This column is
+        # the durable handle a rename does not move, and the value ``dna_edges``
+        # records beside the target's name. Redundant with ``content``'s
+        # ``metadata.id`` on purpose — a JSON field cannot be indexed for the
+        # prefix scan that is the whole point.
+        # Nullable, and no default: NULL is the honest reading of an instance
+        # written by an adapter or a code path that has not stamped one, and a
+        # generated default here would mint identity in the STORE, which is the
+        # kernel's job and only the kernel's.
+        sa.Column("id", sa.Text, nullable=True),
         sa.Column("content", sa.Text, nullable=False),
         sa.Column("version", sa.Integer, nullable=False,
                   server_default=sa.text("1")),
@@ -211,6 +223,15 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         doc_tenant,
         sa.Index(f"{p}instances_tenant_idx", "tenant", "scope", "kind",
                  "api_version", "name"),
+        # ``tenant`` leads so a lookup never walks another tenant's ids.
+        # HONEST LIMIT: this serves the EXACT-id lookup. Prefix resolution is
+        # ``LIKE 'abcd%'``, and Postgres will not use a default-collation btree
+        # for that — it wants ``text_pattern_ops``. Not added, deliberately: an
+        # extra operator class is a thing ``alembic check`` has to be taught
+        # about forever, and the prefix scan reads a few hundred short rows on
+        # a store this size. When an instance count makes that false, the fix
+        # is a second index with the operator class, not a redesign.
+        sa.Index(f"{p}instances_id_idx", "tenant", "id"),
     )
 
     versions = sa.Table(
@@ -333,6 +354,20 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         sa.Column("to_scope", sa.Text, nullable=True),
         sa.Column("to_kind", sa.Text, nullable=True),
         sa.Column("to_name", sa.Text, nullable=False),
+        # i-114, decision 5 of this table: ``to_id`` beside ``to_name``.
+        # This is the whole point of the id feature landing in the DERIVED
+        # layer rather than in the authored file. The author wrote a NAME —
+        # that is what ``to_name`` preserves, and what keeps the ``.dna/`` diff
+        # readable. The write path RESOLVED that name to an instance, and which
+        # instance it was is a fact the author did not state and cannot be
+        # recovered later once the name moves. Kubernetes' ``ownerReferences``
+        # carries exactly this pair for exactly this reason: delete and
+        # recreate under the same name and the uid changes, so a controller can
+        # tell it is looking at a different object.
+        # NULL means one of two things, both honest: the relation is DANGLING
+        # (``to_kind`` is NULL too), or the target has no id yet. It never
+        # means "same as before".
+        sa.Column("to_id", sa.Text, nullable=True),
         sa.Column("declared_to", sa.Text, nullable=False,
                   server_default=sa.text("''")),
         sa.Column("from_version", sa.Integer, nullable=False,
