@@ -67,6 +67,7 @@ spec:
         type: string
       document_ref:
         type: string
+        x-dna-ref-composite: 'Kind:name'
         description: >-
           `Kind:name` of the document whose save triggered this event — the
           canonical Kind name and the document name, colon-joined. MEASURED,

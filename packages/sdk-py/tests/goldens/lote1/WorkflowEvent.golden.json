@@ -55,10 +55,12 @@
       },
       "ref": {
         "type": "string",
+        "x-dna-ref-composite": "Kind/name",
         "description": "Doc this entry pins. Format: ``Kind/name`` (e.g. ``Spec/foo``, ``Plan/bar``, ``AgentSession/vs-baz``)."
       },
       "parent_ref": {
         "type": "string",
+        "x-dna-ref-composite": "Kind/name",
         "description": "Anchor doc grouping this entry with siblings. Typically ``Feature/<name>`` or ``Epic/<name>`` — everything in the journey of one Feature has the same parent_ref."
       },
       "transitioned_from": {

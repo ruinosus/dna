@@ -215,7 +215,8 @@ spec:
 
 ```bash
 dna doc apply sprint.yaml                    # or, without a file:
-dna doc make Sprint 2026-Q2-S2 sprint_id=2026-Q2-S2 state=active
+dna doc make Sprint 2026-Q2-S2 sprint_id=2026-Q2-S2 \
+    starts_on=2026-04-06 ends_on=2026-04-17 state=active
 
 dna sdlc story create s-x --feature f-y --sprint 2026-Q2-S2 --desc "…"
 ```
@@ -232,12 +233,12 @@ the Sprint document later and the same value resolves. Under
 `DNA_REF_VALIDATION=enforce` it is refused, like every other declared
 reference.
 
-A Sprint carries identity plus an optional timebox (`starts_on`, `ends_on`,
-`state`) and **nothing else** — no goal, no capacity, no velocity, and no list
-of its own stories. That last omission is the deliberate one: membership is the
-inverse of `sprint_ref`, and storing it as well would be a second truth that can
-disagree with the first. Ask the graph what is in a sprint; never write it down
-twice.
+A Sprint carries identity, its timebox (`starts_on` / `ends_on`, both
+**required** — a sprint *is* a timebox) and a `state`, and **nothing else** —
+no goal, no capacity, no velocity, and no list of its own stories. That last
+omission is the deliberate one: membership is the inverse of `sprint_ref`, and
+storing it as well would be a second truth that can disagree with the first.
+Ask the graph what is in a sprint; never write it down twice.
 
 ## Agent-ready
 

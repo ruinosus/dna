@@ -257,6 +257,9 @@ class ResearchKind(KindBase):
                     "type": "array",
                     "items": {"type": "string"},
                     "default": [],
+                    # Composite: `dna sdlc cite` writes `<Kind>/<name>`, so the
+                    # value carries its own Kind and any Kind can cite.
+                    "x-dna-ref-composite": "Kind/name",
                     "description": (
                         "Kind/name of docs that cite this Research as a "
                         "grounding source. Auto-maintained by `dna sdlc "

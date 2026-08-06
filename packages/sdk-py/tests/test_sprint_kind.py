@@ -33,7 +33,9 @@ SCOPE = "sprint-kind"
 
 
 def _sprint(name: str, **spec: Any) -> dict[str, Any]:
-    base: dict[str, Any] = {"sprint_id": name}
+    base: dict[str, Any] = {
+        "sprint_id": name, "starts_on": "2026-04-06", "ends_on": "2026-04-17",
+    }
     base.update(spec)
     return {
         "apiVersion": _SDLC_API, "kind": "Sprint",
@@ -66,8 +68,18 @@ class TestTheKind:
         assert port.api_version == _SDLC_API
         assert port.plane == "record"
 
-    def test_only_sprint_id_is_required(self, port):
-        assert port.schema()["required"] == ["sprint_id"]
+    def test_identity_and_the_timebox_are_required(self, port):
+        """A sprint IS a timebox — a Sprint that cannot say when it runs is a
+        label with a Kind wrapped around it.
+
+        This REVERSED mid-change. The dates were optional while backward
+        compatibility was a constraint (backfilling a Sprint for an existing
+        free-form label would have forced two invented dates). The constraint
+        was lifted, and the measurement that made it safe is the same one that
+        made it pointless: ZERO documents carry a `sprint_ref`, so there was
+        never a label to backfill.
+        """
+        assert port.schema()["required"] == ["sprint_id", "starts_on", "ends_on"]
 
     def test_the_schema_is_closed(self, port):
         """`additionalProperties: false` is what makes the omissions REAL.
@@ -95,12 +107,23 @@ class TestTheKind:
         """
         assert absent not in port.schema()["properties"]
 
-    def test_the_timebox_is_optional_but_typed(self, port):
+    def test_the_timebox_is_a_date_and_the_state_is_closed(self, port):
         props = port.schema()["properties"]
         for field in ("starts_on", "ends_on"):
-            assert props[field]["type"] == ["string", "null"]
+            assert props[field]["type"] == "string"
             assert props[field]["format"] == "date"
         assert props["state"]["enum"] == ["planned", "active", "completed"]
+
+    def test_a_sprint_without_its_timebox_is_refused(self, port):
+        """Required means refused, not merely absent from the docs."""
+        import jsonschema
+        schema = port.schema()
+        jsonschema.validate(
+            {"sprint_id": "s1", "starts_on": "2026-04-06", "ends_on": "2026-04-17"},
+            schema,
+        )
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate({"sprint_id": "s1"}, schema)
 
 
 # ---------------------------------------------------------------------------

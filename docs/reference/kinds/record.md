@@ -1728,10 +1728,10 @@ A Sprint is the timebox that `Story.sprint_ref` and `Feature.sprint_ref` name �
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `ends_on` | string \| null |  | Last day of the timebox (ISO 8601 date). Optional, same reason as starts_on. |
+| `ends_on` | string | yes | Last day of the timebox (ISO 8601 date). REQUIRED, same reason as starts_on. |
 | `name` | string \| null |  | Human display name, e.g. 'Sprint 2 — Q2 2026'. Editable; the identity is sprint_id / the doc name, never this. |
 | `sprint_id` | string | yes | Canonical sprint identifier, e.g. '2026-Q2-S2'. THE DOC NAME MUST EQUAL IT — `Story.sprint_ref` / `Feature.sprint_ref` are declared references and resolve by document name, so a doc whose name and sprint_id disagree is reachable under one of them only. Enforced on write by the sdlc write guards, not left to convention. |
-| `starts_on` | string \| null |  | First day of the timebox (ISO 8601 date). Optional — a Sprint backfilled to make an existing free-form label resolvable should leave it null rather than invent it. |
+| `starts_on` | string | yes | First day of the timebox (ISO 8601 date). REQUIRED — a sprint IS a timebox, and one that cannot say when it starts is a label with a Kind wrapped around it. |
 | `state` | string |  | Where the timebox is in its life. Kept as data rather than derived from the dates because the dates are optional and because a sprint can be closed early — the same three-state vocabulary Jira (future/active/closed) and Azure DevOps iterations use. Um de: `planned`, `active`, `completed`. |
 
 ## StatusReport

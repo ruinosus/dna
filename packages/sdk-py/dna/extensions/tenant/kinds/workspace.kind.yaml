@@ -30,11 +30,10 @@
 # the dna-cloud portal never name it, and this Kind's own `summary`/`describe`
 # exclude it. A field that only a schema knows about is not compatibility, it is
 # a reference-shaped noun the model kept advertising.
-# ⚠️ THE ONE COST, stated: this schema is `additionalProperties: false`, so a
-# PRE-EXISTING document that still carries `plan_ref` can no longer be REWRITTEN
-# (validation is write-time only — `validate_on_parse` is not set, so reading
-# such a document is unaffected and its value keeps influencing nothing). Strip
-# the key before the next write. No document in either repo carries one.
+# The schema is `additionalProperties: false`, so a document still carrying
+# `plan_ref` can no longer be written. Measured before deleting: ZERO Workspace
+# documents exist in either repo, and neither writer (`create_workspace_impl`,
+# `seed_workspace_one.py`) ever set it. Nothing to migrate.
 #
 # Workspaces live in the `_lib` scope (`workspaces/<workspace_id>.yaml`) —
 # Workspace is GLOBAL (the tenancy boundary lives above any single workspace,

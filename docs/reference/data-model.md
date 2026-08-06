@@ -46,7 +46,7 @@ readable, so it is reproduced from source rather than asserted:
 
 ## Logical model — Kinds and their references
 
-83 Kinds are registered. Each is a document, not a table: a
+84 Kinds are registered. Each is a document, not a table: a
 Kind costs a YAML descriptor and zero migrations, which is the point
 of an open type system. The cost is that references between Kinds are
 not database foreign keys — they are fields holding a name.
@@ -65,7 +65,7 @@ would be the whole problem. Four tiers, strongest first:
 
 `*` on a label marks a polymorphic reference (several possible target Kinds).
 
-**109 edges: 16 declared, 66 composition-only, 27 inferred** — plus 23 reference-shaped fields left unresolved and 16 known-undeclarable ones.
+**111 edges: 20 declared, 66 composition-only, 25 inferred** — plus 15 reference-shaped fields left unresolved and 26 known-undeclarable ones.
 
 !!! warning "Only the declared tier cannot dangle"
 
@@ -97,7 +97,7 @@ flowchart LR
     portfolio["portfolio (5 Kinds)"]
     presidio["presidio (1 Kind)"]
     research["research (1 Kind)"]
-    sdlc["sdlc (25 Kinds)"]
+    sdlc["sdlc (26 Kinds)"]
     soulspec["soulspec (1 Kind)"]
     tenant["tenant (6 Kinds)"]
     testkit["testkit (2 Kinds)"]
@@ -113,18 +113,17 @@ flowchart LR
     helix -->|2| soulspec
     kinddef -->|1| dna
     lesson -->|1| agentskills
-    sdlc -->|1| evidence
+    portfolio -->|1| intel
     sdlc -->|13| helix
     sdlc -->|1| intel
     sdlc -->|1| mif
     sdlc -->|1| research
     tenant -->|1| portfolio
-    testkit -->|1| evidence
 ```
 
 ### Detail by group
 
-All 83 Kinds in one diagram is an unreadable hairball, so
+All 84 Kinds in one diagram is an unreadable hairball, so
 each group with at least 2 edges gets its
 own. A group carrying more than 20 edges is
 split again by tier, which keeps the enforced edges legible instead
@@ -202,21 +201,23 @@ erDiagram
     UseCase }o--}o Tool : "tools (dep)"
 ```
 
-#### `portfolio` (4 edges)
+#### `portfolio` (5 edges)
 
 ```mermaid
 erDiagram
+    IntelSource
     Membership
     Organization
     Project
     Repo
     Membership }o--|| Organization : "scope_ref *"
     Membership }o--|| Project : "scope_ref *"
+    Project }o--}o IntelSource : "intel_source_refs"
     Project }o--|| Organization : "org_ref"
     Project }o--}o Repo : "repo_refs"
 ```
 
-#### `sdlc` — declared (11 edges)
+#### `sdlc` — declared (13 edges)
 
 ```mermaid
 erDiagram
@@ -224,10 +225,12 @@ erDiagram
     Feature
     Plan
     Spec
+    Sprint
     Story
     Task
     Epic }o--}o Feature : "features"
     Feature }o--|| Epic : "epic"
+    Feature }o--|| Sprint : "sprint_ref"
     Feature }o--}o Story : "stories"
     Plan }o--|| Epic : "epic"
     Plan }o--|| Spec : "spec_ref"
@@ -236,6 +239,7 @@ erDiagram
     Story }o--}o Story : "dependencies"
     Story }o--|| Feature : "feature"
     Story }o--}o Spec : "spec_refs"
+    Story }o--|| Sprint : "sprint_ref"
     Task }o--|| Story : "story_ref"
 ```
 
@@ -319,14 +323,13 @@ erDiagram
     WorkflowEvent }o--|| WorkflowEvent : "transitioned_from (dep)"
 ```
 
-#### `sdlc` — inferred (11 edges)
+#### `sdlc` — inferred (10 edges)
 
 ```mermaid
 erDiagram
     Actor
     CognitivePolicy
     Epic
-    Evidence
     Feature
     Initiative
     IntelInsight
@@ -345,7 +348,6 @@ erDiagram
     Narrative }o..|| Actor : "actor (inferred)"
     Retrospective }o..|| Actor : "actor (inferred)"
     Spike }o..}o Research : "research_refs (inferred)"
-    StatusReport }o..}o Evidence : "evidence_refs (inferred)"
     StatusReport }o..|| IntelInsight : "insight (inferred)"
     WorkflowEvent }o..|| Actor : "actor (inferred)"
     WorkflowEvent }o..|| Epic : "epic_ref (inferred)"
@@ -366,18 +368,7 @@ erDiagram
     WorkspaceScopeGrant }o..|| Workspace : "workspace_id (inferred)"
 ```
 
-#### `testkit` (2 edges)
-
-```mermaid
-erDiagram
-    Evidence
-    TestGuide
-    TestRun
-    TestRun }o..}o Evidence : "evidence (inferred)"
-    TestRun }o..|| TestGuide : "guide_ref (inferred)"
-```
-
-Groups with fewer than 2 edges (listed, not drawn): `agentskills`, `kinddef`, `lesson`.
+Groups with fewer than 2 edges (listed, not drawn): `agentskills`, `intel`, `kinddef`, `lesson`, `testkit`.
 
 ### Declared edges (`x-dna-ref`)
 
@@ -389,11 +380,14 @@ system will not let you break.
 | `App` | `copilots` | `Copilot` | many |  |
 | `Epic` | `features` | `Feature` | many |  |
 | `Feature` | `epic` | `Epic` | one |  |
+| `Feature` | `sprint_ref` | `Sprint` | one |  |
 | `Feature` | `stories` | `Story` | many |  |
+| `IntelInsight` | `source_ref` | `IntelSource` | one |  |
 | `Membership` | `scope_ref` *(poly)* | `Organization` | one |  |
 | `Membership` | `scope_ref` *(poly)* | `Project` | one |  |
 | `Plan` | `epic` | `Epic` | one |  |
 | `Plan` | `spec_ref` | `Spec` | one |  |
+| `Project` | `intel_source_refs` | `IntelSource` | many | yes |
 | `Project` | `org_ref` | `Organization` | one |  |
 | `Project` | `repo_refs` | `Repo` | many |  |
 | `Spec` | `epic` | `Epic` | one |  |
@@ -401,6 +395,7 @@ system will not let you break.
 | `Story` | `dependencies` | `Story` | many |  |
 | `Story` | `feature` | `Feature` | one |  |
 | `Story` | `spec_refs` | `Spec` | many |  |
+| `Story` | `sprint_ref` | `Sprint` | one |  |
 | `Task` | `story_ref` | `Story` | one |  |
 
 ### Composition edges (`dep_filters` only)
@@ -500,11 +495,9 @@ name against the Kind registry — useful, and fallible.
 | `Retrospective` | `actor` | `Actor` | one | yes |
 | `Skill` | `references` | `Reference` | one | yes |
 | `Spike` | `research_refs` | `Research` | many | yes |
-| `StatusReport` | `evidence_refs` | `Evidence` | many | yes |
 | `StatusReport` | `insight` | `IntelInsight` | one | yes |
 | `TenantMembership` | `role` | `Role` | one | yes |
 | `TenantMembership` | `tenant_slug` | `Tenant` | one |  |
-| `TestRun` | `evidence` | `Evidence` | many | yes |
 | `TestRun` | `guide_ref` | `TestGuide` | one |  |
 | `UserRoleAssignment` | `roles` | `Role` | many | yes |
 | `WorkflowEvent` | `actor` | `Actor` | one | yes |
@@ -538,17 +531,27 @@ derived from the schemas, never enumerated: a field either declares
 | `AgentSession` | `produced_artifacts` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `Bug` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `Comment` | `target_ref` | `any` | composite `Kind:name` pointer — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `Engram` | `affect_evidence_refs` | `any` | composite `Kind/name` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `Engram` | `area` | `any` | composite `Kind/name` pointer — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `Engram` | `source_refs` | `any` | composite `Kind/name` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `Epic` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `Evidence` | `document_ref` | `any` | composite `Kind:name` pointer — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `Feature` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `Issue` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `Kaizen` | `work_item` | `any` | composite `Kind/slug` pointer — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `Membership` | `role` | `Role` | keyed by `role_id`, not the document name |
 | `Organization` | `plan_ref` | `PricingPlan` | keyed by `tier_id` (free/pro/enterprise), not the document name |
 | `Project` | `workspace_id` | `Workspace` | keyed by the Workspace's opaque generated `workspace_id`, not its document name |
+| `Research` | `cited_by` | `any` | composite `Kind/name` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `SourceArtifact` | `derived_refs` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `Spike` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `StatusReport` | `evidence_refs` | `any` | composite `Kind/name` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `Story` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `Task` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `TestGuide` | `verifies` | `any` | composite `Kind/name` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `TestRun` | `evidence` | `any` | composite `Kind/name` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `WorkflowEvent` | `parent_ref` | `any` | composite `Kind/name` pointer — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `WorkflowEvent` | `ref` | `any` | composite `Kind/name` pointer — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `WorkspaceMembership` | `role` | `Role` | keyed by `role_id` (owner/admin/member/guest), not the document name |
 | `WorkspaceMembership` | `workspace_id` | `Workspace` | same opaque `workspace_id` key |
 
@@ -571,10 +574,6 @@ arrives invisible in a list of false alarms.
 | `AgentCatalogEntry` | `client_id` | `shape-inferred` | reference-shaped, but `client` matches no registered Kind |
 | `AgentGrant` | `client_id` | `shape-inferred` | reference-shaped, but `client` matches no registered Kind |
 | `AuditLog` | `request_id` | `shape-inferred` | reference-shaped, but `request` matches no registered Kind |
-| `Engram` | `affect_evidence_refs` | `shape-inferred` | reference-shaped, but `affect_evidence` matches no registered Kind |
-| `Evidence` | `document_ref` | `shape-inferred` | reference-shaped, but `document` matches no registered Kind |
-| `Feature` | `sprint_ref` | `shape-inferred` | reference-shaped, but `sprint` matches no registered Kind |
-| `IntelInsight` | `source_ref` | `shape-inferred` | reference-shaped, but `source` matches no registered Kind |
 | `LayerPolicy` | `layer_id` | `shape-inferred` | reference-shaped, but `layer` matches no registered Kind |
 | `ModelProfile` | `model_id` | `shape-inferred` | reference-shaped, but `model` matches no registered Kind |
 | `PlanBinding` | `account_id` | `shape-inferred` | reference-shaped, but `account` matches no registered Kind |
@@ -582,14 +581,10 @@ arrives invisible in a list of false alarms.
 | `PlanBinding` | `stripe_subscription_id` | `shape-inferred` | reference-shaped, but `stripe_subscription` matches no registered Kind |
 | `PlanBinding` | `tier_id` | `shape-inferred` | reference-shaped, but `tier` matches no registered Kind |
 | `PricingPlan` | `tier_id` | `shape-inferred` | reference-shaped, but `tier` matches no registered Kind |
-| `Project` | `intel_source_refs` | `shape-inferred` | reference-shaped, but `intel_source` matches no registered Kind |
-| `Research` | `scope_ref` | `shape-inferred` | reference-shaped, but `scope` matches no registered Kind |
-| `Story` | `sprint_ref` | `shape-inferred` | reference-shaped, but `sprint` matches no registered Kind |
 | `TenantMembership` | `user_id` | `shape-inferred` | reference-shaped, but `user` matches no registered Kind |
 | `UserProfile` | `user_id` | `shape-inferred` | reference-shaped, but `user` matches no registered Kind |
 | `UserRoleAssignment` | `user_id` | `shape-inferred` | reference-shaped, but `user` matches no registered Kind |
 | `Workspace` | `account_id` | `shape-inferred` | reference-shaped, but `account` matches no registered Kind |
-| `Workspace` | `plan_ref` | `shape-inferred` | reference-shaped, but `plan` matches no registered Kind |
 | `WorkspaceMembership` | `identity_oid` | `shape-inferred` | reference-shaped, but `identity` matches no registered Kind |
 
 ### Suppressed name matches
@@ -612,12 +607,12 @@ the only thing stopping a wrong edge) and are absent here.
 | `Memory` | `namespace` | MIF's hierarchical memory scope path (`_semantic/decisions`, §10) — a string axis inside the document, not the `KindNamespace` Kind, whose alias `tenant-kind-namespace` merely ends in the same token |
 | `RemoteAgent` | `skills` | the A2A Card's own `skills[]` (id/name/description/tags/examples) — structured self-description of what the remote agent can do, not a reference to the `Skill` Kind (agentskills), which merely shares the singular of the field name |
 
-### Kinds with no reference edge (23)
+### Kinds with no reference edge (22)
 
 Standalone documents — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Engram`, `Genome`, `Hook`, `HtmlArtifact`, `IntelSource`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PlanBinding`, `PricingPlan`, `RemoteAgent`, `Setting`, `SourceArtifact`, `UserProfile`, `WorkspaceMembership`
+`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Engram`, `Genome`, `Hook`, `HtmlArtifact`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PlanBinding`, `PricingPlan`, `RemoteAgent`, `Setting`, `SourceArtifact`, `UserProfile`, `WorkspaceMembership`
 
 ## Physical model — the real tables
 

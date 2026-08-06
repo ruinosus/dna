@@ -49,6 +49,10 @@ GOLDEN_SCHEMA = {
         },
         "work_item": {
             "type": "string",
+            # Re-frozen 2026-08-06: `x-dna-ref-composite` added. The class this
+            # golden was captured from had no such annotation because the
+            # keyword did not exist; the VALUE contract is untouched.
+            "x-dna-ref-composite": "Kind/slug",
             "description": "Kind/slug of the work item where this was observed (polymorphic — Story/Spike/Issue).",
         },
         "issue": {

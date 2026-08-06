@@ -132,10 +132,13 @@ INFERENCE_DENYLIST: dict[tuple[str, str], str] = {
     ("Organization", "plan_ref"): (
         "the DNA Cloud `PricingPlan` this org is on, not the SDLC `Plan` Kind"
     ),
-    ("Workspace", "plan_ref"): (
-        "DEPRECATED and never read — billing is per ACCOUNT (workspace → "
-        "account_id → `PlanBinding`); also not the SDLC `Plan` Kind"
-    ),
+    # ("Workspace", "plan_ref") lived here until 2026-08-06 and is GONE because
+    # the FIELD is gone: its own description said "DEPRECATED, never read", a
+    # sweep of both repos agreed, and the property was deleted from
+    # tenant/kinds/workspace.kind.yaml. Shrink-only doing what it exists for —
+    # an entry leaves when its reason leaves. Not a judgement call, either:
+    # `test_every_denylist_entry_is_still_about_a_live_field` goes red on a
+    # suppression that can never fire again.
     ("AgentSession", "tool"): (
         "provenance enum of the AI coding tool that produced the session "
         "(claude-code | cursor | cline | …), not a `Tool` document"

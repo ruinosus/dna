@@ -31,11 +31,16 @@
 #  * `board` / `project` — a Sprint belongs to a scope by living in it. There is
 #    no cross-scope sprint to disambiguate yet.
 #
-# `starts_on` / `ends_on` / `state` are OPTIONAL on purpose. The point of the
-# Kind is to make an existing free-form identifier resolvable; requiring a
-# timebox would force whoever backfills a Sprint doc for a label like
-# `2026-Q2-S2` to invent two dates, and an invented date is worse than an
-# absent one. A Sprint that only knows its own name is thin — and honest.
+# `starts_on` / `ends_on` are REQUIRED, and that is a REVERSAL worth writing
+# down. They were optional in the first draft on a compatibility argument:
+# whoever backfilled a Sprint for an existing free-form label would be forced
+# to invent two dates. The founder then removed the compatibility constraint —
+# nobody consumes the SDK yet, production is disposable and re-seeded — and the
+# argument went with it. Measured, not assumed: ZERO documents in either repo
+# carry a `sprint_ref`, so there is no label to backfill and nothing to
+# protect. What remains is the modelling question on its own, and there the
+# answer is not close: **a sprint IS a timebox.** A Sprint that cannot say when
+# it starts and ends is a label with a Kind wrapped around it.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:
@@ -60,6 +65,8 @@ spec:
     additionalProperties: false
     required:
     - sprint_id
+    - starts_on
+    - ends_on
     properties:
       sprint_id:
         type: string
@@ -75,19 +82,15 @@ spec:
         description: Human display name, e.g. 'Sprint 2 — Q2 2026'. Editable;
           the identity is sprint_id / the doc name, never this.
       starts_on:
-        type:
-        - string
-        - 'null'
+        type: string
         format: date
-        description: First day of the timebox (ISO 8601 date). Optional — a
-          Sprint backfilled to make an existing free-form label resolvable
-          should leave it null rather than invent it.
+        description: First day of the timebox (ISO 8601 date). REQUIRED — a
+          sprint IS a timebox, and one that cannot say when it starts is a
+          label with a Kind wrapped around it.
       ends_on:
-        type:
-        - string
-        - 'null'
+        type: string
         format: date
-        description: Last day of the timebox (ISO 8601 date). Optional, same
+        description: Last day of the timebox (ISO 8601 date). REQUIRED, same
           reason as starts_on.
       state:
         type: string
