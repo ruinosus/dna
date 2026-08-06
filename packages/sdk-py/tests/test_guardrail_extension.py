@@ -140,7 +140,7 @@ class TestGuardrailSchemaEnum:
 # TestGuardrailSchemaEnum reused for the write/dry-run path (axis 2)
 # ---------------------------------------------------------------------------
 
-class TestGuardrailValidateDocument:
+class TestGuardrailValidateInstance:
     """i-validation-shallow (axis 2): ``kernel.validate_instance`` — the SAME
     check ``dna instance apply --dry-run`` runs — rejects an enum-violating spec
     BEFORE the write path. Previously validation only fired on the real write."""

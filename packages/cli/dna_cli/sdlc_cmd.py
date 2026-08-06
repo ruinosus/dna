@@ -728,11 +728,11 @@ def cmd_story_create(
         #
         # The refusal is the shared core's ``refuse_if_exists`` — same check,
         # same message, same pointer at the verbs that DO update.
-        from dna.application.sdlc import DocumentExists, refuse_if_exists
+        from dna.application.sdlc import InstanceExists, refuse_if_exists
 
         try:
             s.run(refuse_if_exists(s.kernel, scope, "Story", name))
-        except DocumentExists as exc:
+        except InstanceExists as exc:
             raise fail(str(exc)) from None
         s.run(s.kernel.write_instance(scope, "Story", name, raw))
     click.secho(f"CREATED Story/{name} (feature: {feature}, status: {status})", fg="green")

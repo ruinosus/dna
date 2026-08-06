@@ -84,7 +84,7 @@ class SdlcModeError(PermissionError):
     ``write`` (Pro). Read straight from the ``Tier`` spec — never hardcoded."""
 
 
-class DocumentModeError(PermissionError):
+class InstanceModeError(PermissionError):
     """The tier's ``<family>_mode`` does not grant the attempted GENERIC instance
     op (403) — the family-agnostic sibling of :class:`MemoryModeError` /
     :class:`SdlcModeError`.
@@ -199,7 +199,7 @@ def enforce_family_mode(
         return  # the plan never spoke about this family's modes — see above.
     _enforce_mode(
         caps=caps, tier=tier, op=op, field=field, label=family,
-        error=_FAMILY_MODE_ERRORS.get(family, DocumentModeError),
+        error=_FAMILY_MODE_ERRORS.get(family, InstanceModeError),
     )
 
 
@@ -976,7 +976,7 @@ async def enforce_plan(
     tenancy resolves no workspace but usage meters per ``personal:<oid>``
     partition). Raises the quota exception family
     (:class:`FeatureNotInPlanError` / :class:`MemoryModeError` /
-    :class:`SdlcModeError` / :class:`DocumentModeError` /
+    :class:`SdlcModeError` / :class:`InstanceModeError` /
     :class:`OverQuotaError`) or
     :class:`TierRegistryUnavailableError`; each face maps them to its transport.
     Returns the resolved tier id (observability / tests).

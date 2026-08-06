@@ -150,7 +150,7 @@ _TERMINAL_STATUS: frozenset[str] = frozenset(
 _WRITABLE_KINDS: frozenset[str] = frozenset(_STATUS_ENUMS)
 
 
-class DocumentExists(ValueError):
+class InstanceExists(ValueError):
     """A ``create_*`` verb was pointed at a name that is already taken.
 
     ``kernel.write_instance`` is an UPSERT keyed on the instance name, so a
@@ -366,7 +366,7 @@ async def existing_or_none(
 async def refuse_if_exists(
     kernel: Any, scope: str, kind: str, name: str, *, overwrite: bool = False,
 ) -> None:
-    """Raise :class:`DocumentExists` when ``(scope, kind, name)`` is already taken.
+    """Raise :class:`InstanceExists` when ``(scope, kind, name)`` is already taken.
 
     The one existence check every ``create_*`` core runs before it writes. It uses
     ``kernel.get_instance`` — the same read the update verbs use — so an instance
@@ -391,7 +391,7 @@ async def refuse_if_exists(
     spec = existing.get("spec") if isinstance(existing, dict) else None
     status = (spec or {}).get("status") if isinstance(spec, dict) else None
     title = (spec or {}).get("title") if isinstance(spec, dict) else None
-    raise DocumentExists(
+    raise InstanceExists(
         f"{kind} {name!r} already exists in scope {scope!r}"
         + (f" (status: {status})" if status else "")
         + (f" — {title!r}" if title else "")
@@ -822,7 +822,7 @@ async def create_issue(
                 scope, "Issue", name, raw, invalidate_mode="doc")
             return {"kind": "Issue", "name": name, "type": issue_type,
                     "severity": severity}
-    raise DocumentExists(  # pragma: no cover — 1000 consecutive collisions
+    raise InstanceExists(  # pragma: no cover — 1000 consecutive collisions
         f"no free Issue name found for slug {slug!r} in scope {scope!r} "
         f"after 1000 attempts from i-{n:03d} — the source is reporting every "
         f"candidate as taken."

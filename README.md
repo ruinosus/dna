@@ -139,7 +139,7 @@ else is a client of them:
 import { DnaClient } from "dna-client";
 
 const dna = new DnaClient({ baseUrl: "http://127.0.0.1:8080" });
-const agents = await dna.listDocuments({ scope: "hello-genome", kind: "Agent" });
+const agents = await dna.listInstances({ scope: "hello-genome", kind: "Agent" });
 ```
 
 Agent-to-agent (A2A) is also covered: DNA mounts the official `a2a-sdk`

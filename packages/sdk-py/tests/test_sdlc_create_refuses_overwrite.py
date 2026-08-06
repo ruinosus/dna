@@ -61,7 +61,7 @@ async def test_create_story_refuses_an_existing_name(kernel):
     )
     await S.set_status(kernel, _SCOPE, "Story", "s-one", "in-progress")
 
-    with pytest.raises(S.DocumentExists) as ei:
+    with pytest.raises(S.InstanceExists) as ei:
         await S.create_story(
             kernel, _SCOPE, "s-one", feature="f-y", description="a guess")
 
@@ -80,7 +80,7 @@ async def test_create_story_refuses_an_existing_name(kernel):
 async def test_create_feature_refuses_an_existing_name(kernel):
     await S.create_feature(
         kernel, _SCOPE, "f-one", title="T", description="the real one")
-    with pytest.raises(S.DocumentExists, match="f-one"):
+    with pytest.raises(S.InstanceExists, match="f-one"):
         await S.create_feature(
             kernel, _SCOPE, "f-one", title="T2", description="a guess")
     spec = (await kernel.get_instance(_SCOPE, "Feature", "f-one"))["spec"]
@@ -94,7 +94,7 @@ async def test_the_refusal_points_at_the_update_verbs(kernel):
     await S.create_story(
         kernel, _SCOPE, "s-one", feature="f-x", description="d",
         acceptance_criteria=["Given X"], definition_of_done=["done"])
-    with pytest.raises(S.DocumentExists) as ei:
+    with pytest.raises(S.InstanceExists) as ei:
         await S.create_story(
             kernel, _SCOPE, "s-one", feature="f-x", description="d",
             acceptance_criteria=["Given X"], definition_of_done=["done"])

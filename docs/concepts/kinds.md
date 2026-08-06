@@ -39,7 +39,7 @@ flowchart LR
 
 ### Validation at the write boundary
 
-`write_instance` / `writeDocument` validates the `spec` against the Kind's
+`write_instance` / `writeInstance` validates the `spec` against the Kind's
 declared `schema()` **before persisting** (historically this only happened
 at scan/read, fail-soft — a shape-broken doc would save fine and explode
 later, far from you). What this means for an author:

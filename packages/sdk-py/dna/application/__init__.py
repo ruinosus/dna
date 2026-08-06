@@ -69,7 +69,7 @@ from dna.application.kind_authoring import (
     revoke_kind_impl,
 )
 from dna.application.sdlc import (
-    DocumentExists,
+    InstanceExists,
     InvalidTransition,
     add_comment,
     comment_impl,
@@ -209,7 +209,7 @@ __all__ = [
     "list_authored_kinds_impl",
     "revoke_kind_impl",
     # SDLC write core (shared by the CLI + the MCP write tools)
-    "DocumentExists",
+    "InstanceExists",
     "InvalidTransition",
     "refuse_if_exists",
     "create_story",

@@ -49,7 +49,7 @@ class TestSpecDict:
         assert dict(s) == {"a": 1, "b": 2}
 
 
-class TestDocumentSpecDict:
+class TestInstanceSpecDict:
     """Instance.spec and .metadata always return SpecDict."""
 
     def test_spec_from_raw_dict(self):

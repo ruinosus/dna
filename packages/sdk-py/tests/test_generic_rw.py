@@ -450,7 +450,7 @@ class TestLiteralBlockScalarRoundtrip:
         assert reloaded["spec"]["messages"][0]["content"] == content
 
 
-class TestKernelSerializeDocument:
+class TestKernelSerializeInstance:
     def test_serialize_agent(self):
         from dna.kernel import Kernel
         from pathlib import Path

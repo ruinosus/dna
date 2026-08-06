@@ -166,7 +166,7 @@ def test_a_create_over_an_existing_story_is_refused_by_name(dna_dir):
         "name": "s-mine", "feature": "f-other", "description": "a guess",
         "ac": ["Given X, when Y, then Z"], "dod": ["code+tests"],
         "scope": _SCOPE})
-    assert "DocumentExists" in msg
+    assert "InstanceExists" in msg
     assert "s-mine" in msg          # names the existing instance
     assert "set_status" in msg      # …and what to do instead
 
@@ -188,7 +188,7 @@ def test_a_create_over_an_existing_feature_is_refused_by_name(dna_dir):
     msg = _refused(server, "create_feature", {
         "name": "f-mine", "title": "T2", "description": "a guess",
         "scope": _SCOPE})
-    assert "DocumentExists" in msg and "f-mine" in msg
+    assert "InstanceExists" in msg and "f-mine" in msg
 
 
 # ── the memory tools (which mapped nothing) ────────────────────────────────

@@ -38,7 +38,7 @@ def _make_kernel_with_mock_source(refs=None, doc_loader=None):
     return k, src
 
 
-class TestListDocuments:
+class TestListInstances:
     @pytest.mark.asyncio
     async def test_delegates_to_source_list_doc_refs(self):
         k, src = _make_kernel_with_mock_source(
@@ -115,7 +115,7 @@ class TestListDocuments:
         assert ("Feature", "f-old") in result
 
 
-class TestGetDocument:
+class TestGetInstance:
     @pytest.mark.asyncio
     async def test_delegates_to_source_load_one(self):
         k, src = _make_kernel_with_mock_source()

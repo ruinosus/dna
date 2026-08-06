@@ -190,11 +190,11 @@ describe("DnaClient", () => {
     expect(new URL(calls[5]!.url).pathname).toBe("/v1/projects/proj/members/user%40x.y");
   });
 
-  test("writeKindDocument: kind in the path, {metadata,spec} in the body, no scope", async () => {
+  test("writeKindInstance: kind in the path, {metadata,spec} in the body, no scope", async () => {
     const { fetchImpl, calls } = stub({ ok: 1 }, 201);
     const dna = new DnaClient({ baseUrl: BASE, fetch: fetchImpl });
 
-    await dna.writeKindDocument(
+    await dna.writeKindInstance(
       "Contrato",
       { name: "c1" },
       { titulo: "Foo" },
@@ -255,8 +255,8 @@ const COVERED: Record<string, string> = {
   "GET /v1/kinds/registry": "listRegisteredKinds",
   "GET /v1/kinds/registry/{kind}": "getRegisteredKind",
   "GET /v1/graph/kinds": "kindGraph",
-  "GET /v1/kinds/{kind}/instances": "listKindDocuments",
-  "GET /v1/kinds/{kind}/instances/{name}": "getKindDocument",
+  "GET /v1/kinds/{kind}/instances": "listKindInstances",
+  "GET /v1/kinds/{kind}/instances/{name}": "getKindInstance",
   "GET /v1/kinds/{kind}/instances/{name}/refs": "graphRefs",
   "GET /v1/definitions/{kind}/{name}": "readDefinition",
   "GET /v1/definitions/{kind}/{name}/entries": "listBundleEntries",
@@ -285,7 +285,7 @@ const COVERED: Record<string, string> = {
   "POST /v1/kinds": "authorKind",
   "POST /v1/kinds/{kind}/approve": "approveKind",
   "POST /v1/kinds/{kind}/revoke": "revokeKind",
-  "POST /v1/kinds/{kind}/instances": "writeKindDocument",
+  "POST /v1/kinds/{kind}/instances": "writeKindInstance",
   "POST /v1/memories": "rememberMemory",
   "POST /v1/memories/import": "importMemories",
   "DELETE /v1/memories/{name}": "deleteMemory",

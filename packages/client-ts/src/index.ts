@@ -458,7 +458,7 @@ export class DnaClient {
   /**
    * List the instances of `kind` — the READ face of the generic door.
    *
-   * The write ({@link writeKindDocument}) accepted any Kind, but reading back
+   * The write ({@link writeKindInstance}) accepted any Kind, but reading back
    * only worked for the Kinds someone had hand-written a route for
    * (`/v1/memories`, `/v1/projects`, …). Whoever wrote through the generic
    * door could not read through it, and found that out AFTER writing.
@@ -476,7 +476,7 @@ export class DnaClient {
    * Like the write, no `scope` parameter: identity and scope are never caller
    * input on this route.
    */
-  async listKindDocuments(
+  async listKindInstances(
     kind: string,
     opts?: {
       tenant?: string;
@@ -515,11 +515,11 @@ export class DnaClient {
    * (measured 2026-08-05: an Agent's `description` and
    * `tools_requiring_confirmation`). This is the verbatim read, as the
    * caller's layer sees the instance, with the optimistic-concurrency `etag`
-   * for a follow-up `writeKindDocument` `ifMatch`.
+   * for a follow-up `writeKindInstance` `ifMatch`.
    *
    * 404 names what is missing — the unknown Kind or the instance.
    */
-  async getKindDocument(
+  async getKindInstance(
     kind: string,
     name: string,
     opts?: { tenant?: string; apiVersion?: string },
@@ -607,7 +607,7 @@ export class DnaClient {
    * server route's docstring). Hence a bespoke options type rather than
    * {@link ScopeTenant}: `scope` has no home on this call.
    */
-  async writeKindDocument(
+  async writeKindInstance(
     kind: string,
     metadata: Record<string, unknown>,
     spec: Record<string, unknown>,

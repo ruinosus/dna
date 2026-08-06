@@ -656,7 +656,7 @@ def build_server(
 
     from fastmcp.exceptions import ToolError
 
-    from dna.application.sdlc import DocumentExists
+    from dna.application.sdlc import InstanceExists
     from dna.kernel.errors import KernelRefusal
 
     # Everything a tool call may legitimately be REFUSED with — the ONE tuple
@@ -677,7 +677,7 @@ def build_server(
     # A caller told "refused" stops investigating, so a crash reported as a policy
     # decision costs more than a crash reported as a crash.
     _REFUSALS: tuple[type[BaseException], ...] = (
-        KernelRefusal, InvalidTransition, DocumentExists,
+        KernelRefusal, InvalidTransition, InstanceExists,
         ValueError, LookupError, PermissionError,
     )
 
@@ -714,7 +714,7 @@ def build_server(
         personal_tenant,
     )
     from dna_cli._mcp_quota import (
-        DocumentModeError,
+        InstanceModeError,
         FeatureNotInPlanError,
         MemoryModeError,
         OverQuotaError,
@@ -924,7 +924,7 @@ def build_server(
                 quota_tenant=quota_tenant,
             )
         except (OverQuotaError, FeatureNotInPlanError, MemoryModeError,
-                SdlcModeError, DocumentModeError,
+                SdlcModeError, InstanceModeError,
                 TierRegistryUnavailableError) as exc:
             raise ToolError(str(exc)) from None
         return tenant
