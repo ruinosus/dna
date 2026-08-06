@@ -66,9 +66,34 @@ CREATE TABLE IF NOT EXISTS {{schema}}.dna_search_docs (
 
     return {
         1: [
-            # pgvector must be installed in the target database. IF NOT EXISTS
-            # makes the boot idempotent; a missing extension fails loud here.
-            "CREATE EXTENSION IF NOT EXISTS vector",
+            # pgvector must be installed in the target database. A missing
+            # extension fails loud here.
+            #
+            # ⚠️ `IF NOT EXISTS` does NOT make this concurrency-safe, and the
+            # line above used to claim it did. Postgres checks and creates in
+            # two steps with no lock between them: `IF NOT EXISTS` protects
+            # against the extension ALREADY existing, never against someone
+            # creating it in the gap. Measured on 06/08/2026 while landing
+            # migration 0010 (`spec-topologia-do-grafo` fatia 3), which hits the
+            # same statement for `btree_gist`: under xdist, six processes ran it
+            # at once against one database and FIVE died on `duplicate key value
+            # violates unique constraint "pg_extension_name_index"`.
+            #
+            # That is not a test artifact. This migration runs on the first
+            # recall/search that touches semantic memory, and dna-cloud boots
+            # eight services against one Postgres — two replicas warming up
+            # together are exactly the six-process case, just rarer.
+            #
+            # Same fix as 0010's, for the same reason: swallow both shapes the
+            # race takes. The loser's outcome is identical to the winner's.
+            """
+            DO $$
+            BEGIN
+                CREATE EXTENSION IF NOT EXISTS vector;
+            EXCEPTION WHEN duplicate_object OR unique_violation THEN
+                NULL;  -- another process won the race; the result is the same
+            END $$
+            """,
             create_docs,
             # Metadata lookup + tenant filter.
             "CREATE INDEX IF NOT EXISTS dna_search_docs_lookup "
