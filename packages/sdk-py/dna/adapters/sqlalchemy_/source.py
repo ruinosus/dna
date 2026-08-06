@@ -1569,6 +1569,87 @@ class SqlAlchemySource(WritableSourcePort):
         result["content"] = json.loads(result["content"])
         return result
 
+    async def load_one_as_of(
+        self, scope: str, kind: str, name: str, *,
+        as_of: str,
+        tenant: str | None = None,
+        api_version: str | None = None,
+    ) -> dict[str, Any]:
+        """TRANSACTION-time read — the document AS THIS STORE RECORDED IT at ``as_of``.
+
+        The second time axis. ``valid_from``/``valid_to`` on a spec are WORLD
+        time: when a fact was true. ``dna_versions.created_at`` is TRANSACTION
+        time: when this store came to believe it. They answer different
+        questions, and only the second one answers *"what did the system believe
+        at T-1?"* — a fact recorded today about last year is valid then and
+        believed now.
+
+        No new column: ``created_at`` has been the transaction stamp since
+        revision 0001, and ``content`` holds the FULL envelope per write (not a
+        diff, not a pointer), so the belief state is reconstructable from what
+        is already on disk.
+
+        Returns ``{raw, version, recorded_at, truncated}``:
+
+        - ``raw`` is the envelope of the newest version recorded at or before
+          ``as_of``, or ``None``.
+        - ``truncated`` distinguishes the two ways ``raw`` can be ``None``, and
+          the distinction is the whole point of the field. ``False`` = the
+          document DID NOT EXIST yet (its version 1 is newer than ``as_of``) —
+          an answer. ``True`` = version 1 was PRUNED away
+          (``VERSION_CHURN_RETENTION`` caps Engram at 3), so the store cannot
+          know what it believed then — a refusal. Collapsing the two would let a
+          caller read "no memory" out of "no record", which is the one mistake a
+          history read must never make.
+
+        ``as_of`` is an ISO-8601 UTC string compared lexicographically against
+        ``created_at``, which is written by :func:`_now` in exactly that shape —
+        fixed-width ISO fields sort lexicographically, so the comparison is the
+        chronological one. Normalize through
+        :func:`dna.memory.as_of.normalize_as_of` rather than formatting by hand.
+
+        ⚠️ Bundle-format Kinds (a Research's ``source_files``) live in
+        ``dna_bundle_entries``, which keeps NO history — the envelope comes back
+        as-of, its bundle does not. Engram, the memory Kind this exists for, is
+        not bundle-format.
+        """
+        v = self.versions
+        # Overlay first, base second — the same precedence `_load_one_on` uses,
+        # so an as-of read resolves the tenant lane a live read would have.
+        tenant_candidates: list[str | None] = [tenant, None] if tenant else [None]
+        async with self._engine.connect() as conn:
+            for t in tenant_candidates:
+                where = [
+                    v.c.scope == scope, v.c.kind == kind, v.c.name == name,
+                    *self._api_version_where(v.c.api_version, api_version),
+                    self._tenant_where(v.c.tenant, t),
+                ]
+                row = (await conn.execute(
+                    sa.select(v.c.version, v.c.content, v.c.created_at)
+                    .where(*where, v.c.created_at <= as_of)
+                    .order_by(v.c.version.desc()).limit(1)
+                )).first()
+                if row is not None:
+                    return {
+                        "raw": json.loads(row.content),
+                        "version": int(row.version),
+                        "recorded_at": row.created_at,
+                        "truncated": False,
+                    }
+                oldest = (await conn.execute(
+                    sa.select(v.c.version, v.c.created_at).where(*where)
+                    .order_by(v.c.version.asc()).limit(1)
+                )).first()
+                if oldest is None:
+                    continue  # nothing on this lane at all — fall through to base
+                return {
+                    "raw": None, "version": None, "recorded_at": None,
+                    # v1 still on disk ⇒ the doc genuinely post-dates `as_of`.
+                    # v1 pruned ⇒ we are blind, and must say so.
+                    "truncated": int(oldest.version) > 1,
+                }
+        return {"raw": None, "version": None, "recorded_at": None, "truncated": False}
+
     async def load_drafts(self, scope: str) -> list[dict]:
         v = self.versions
         # Grouped by (kind, apiVersion, name): two Kinds sharing a name keep
@@ -1894,4 +1975,8 @@ class SqlAlchemySource(WritableSourcePort):
             # (scope, kind, api_version, name[, tenant]) is the row key since
             # revision 0003 — the store itself keeps two Kinds apart.
             api_version_identity=True,
+            # `dna_versions` keeps the FULL envelope per write with a
+            # `created_at` transaction stamp, so this adapter can reconstruct a
+            # past belief state (`load_one_as_of`).
+            as_of_reads=True,
         )

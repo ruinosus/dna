@@ -873,6 +873,12 @@ export interface paths {
          * Memories Search
          * @description Recall the tenant's memory for ``q`` (hybrid/bi-temporal when the
          *     search extra is present, honest lexical otherwise), tenant-scoped.
+         *
+         *     ``as_of`` adds the second time axis (s-memory-as-of): every hit is
+         *     resolved from the version the store RECORDED at or before that instant.
+         *     A malformed timestamp is a 422 and a store with no version history is a
+         *     501 — never a silent fallback to the current state, which would answer a
+         *     question about the past with a fact about the present.
          */
         get: operations["memories_search_v1_memories_search_get"];
         put?: never;
@@ -2324,6 +2330,10 @@ export interface components {
         };
         /** MemoriesResponse */
         MemoriesResponse: {
+            /** As Of */
+            as_of?: string | null;
+            /** As Of Truncated */
+            as_of_truncated?: string[] | null;
             /** Memories */
             memories: components["schemas"]["MemorySummary"][];
             /** Scope */
@@ -2652,6 +2662,10 @@ export interface components {
          *     ``retention``/``semantic``/``rank_*`` keys), so it is honestly dynamic.
          */
         RecallResponse: {
+            /** As Of */
+            as_of?: string | null;
+            /** As Of Truncated */
+            as_of_truncated?: string[] | null;
             /**
              * Degraded
              * @default false
@@ -4074,6 +4088,8 @@ export interface operations {
             query?: {
                 scope?: string | null;
                 tenant?: string | null;
+                /** @description ISO-8601 instant. List the BELIEF STATE at that moment (transaction time) instead of the current one. */
+                as_of?: string | null;
             };
             header?: {
                 authorization?: string | null;
@@ -4238,6 +4254,8 @@ export interface operations {
                 scope?: string | null;
                 tenant?: string | null;
                 k?: number;
+                /** @description ISO-8601 instant. Recall the BELIEF STATE at that moment — what this deployment believed then (transaction time), not what it believes now. Omit for the live read. */
+                as_of?: string | null;
             };
             header?: {
                 authorization?: string | null;

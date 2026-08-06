@@ -1678,6 +1678,7 @@ async def recall_impl(
     tenant: str | None = None, *, memory_scope: str = "workspace",
     oid: str | None = None,
     family: str | None = None,
+    as_of: str | None = None,
 ) -> dict[str, Any]:
     """Recall DNA memory for ``query`` — hybrid + bi-temporal + retention
     re-scored when the search extra is present, honest lexical otherwise.
@@ -1701,7 +1702,15 @@ async def recall_impl(
     answer that could not contain the thing the caller had just stored — the one
     failure a memory system must never report as success. The refresh outcome now
     joins ``degraded`` / ``semantic`` in the envelope, and a failure sets
-    ``degraded`` too, because that is exactly what it is."""
+    ``degraded`` too, because that is exactly what it is.
+
+    **``as_of`` (ISO-8601) reads the BELIEF STATE** — what this deployment
+    believed at that instant, resolved from retained version history
+    (transaction time), not what it believes now. Omitted, behaviour is
+    unchanged. Given, reconsolidation is off, a store without version history
+    raises, and memories whose history was pruned past ``as_of`` come back named
+    in ``as_of_truncated`` rather than silently missing. See
+    :mod:`dna.memory.as_of`."""
     from dna.memory import recall
     from dna.memory.verbs import recallable_kinds
 
@@ -1722,7 +1731,9 @@ async def recall_impl(
                 "recall: index refresh failed for scope %s (tenant=%s): %s",
                 sc, tenant, index_error,
             )
-    res = await recall(live.kernel, sc, query, k=k, actor="mcp", tenant=tenant)
+    res = await recall(
+        live.kernel, sc, query, k=k, actor="mcp", tenant=tenant, as_of=as_of,
+    )
     res = dict(res)
     res["scope"] = sc
     res["index_refreshed"] = index_refreshed
@@ -1842,6 +1853,7 @@ async def list_memories_impl(
     tenant: str | None = None, *, memory_scope: str = "workspace",
     oid: str | None = None,
     family: str | None = None,
+    as_of: str | None = None,
 ) -> dict[str, Any]:
     """List the tenant's stored memories — the LIST surface the DNA Cloud memory
     dashboard renders. Tenant-aware via the same ``kernel.query`` idiom every
@@ -1858,15 +1870,57 @@ async def list_memories_impl(
     whether it resolves from the caller's ``personal:<oid>`` partition rather
     than the shared base a personal read unions with (same predicate recall's
     hits use, ``dna.memory.verbs.is_personal_doc``); always ``False`` on a
-    workspace read."""
+    workspace read.
+
+    **``as_of`` (ISO-8601) lists the BELIEF STATE** — the same second time axis
+    ``recall`` grew, so list and recall keep agreeing when both look backwards.
+    Each memory is projected from the version the store recorded at or before
+    ``as_of``; one that did not exist yet drops out, one whose history was pruned
+    is named in ``as_of_truncated`` rather than shown with today's text under a
+    past timestamp.
+
+    ⚠️ One honest limit, shared with recall: the candidate set comes from the
+    documents that exist NOW. A memory HARD-deleted since ``as_of`` cannot be
+    resurrected by this read — ``forget`` is a bi-temporal demotion and never
+    hard-deletes, so the memory lifecycle is covered; a manual
+    ``delete_document`` is not."""
+    from dna.memory.as_of import (
+        AsOfUnsupported, normalize_as_of, resolve_as_of, store_supports_as_of,
+    )
     from dna.memory.decay import currently_valid
-    from dna.memory.verbs import is_personal_doc, memory_created_at
+    from dna.memory.verbs import (
+        _resolve_api_version, is_personal_doc, memory_created_at,
+    )
 
     sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
+    as_of_iso: str | None = None
+    now_dt = None
+    if as_of is not None:
+        as_of_iso = normalize_as_of(as_of)
+        if not store_supports_as_of(live.kernel):
+            raise AsOfUnsupported(
+                "list_memories(as_of=...) needs a store that retains version "
+                "history with a transaction timestamp. Refusing rather than "
+                "returning the CURRENT belief state under a past timestamp."
+            )
+        now_dt = datetime.fromisoformat(as_of_iso)
+    truncated: list[str] = []
     memories: list[dict[str, Any]] = []
     for d in await _collect(live, sc, kind, tenant):
         spec = d["spec"]
-        if not currently_valid(spec.get("valid_to")):
+        if as_of_iso:
+            res = await resolve_as_of(
+                live.kernel, sc, kind, d["name"],
+                as_of=as_of_iso, tenant=tenant,
+                api_version=_resolve_api_version(live.kernel, kind),
+            )
+            if res.truncated:
+                truncated.append(str(d["name"]))
+                continue
+            if not res.found:
+                continue  # did not exist yet at `as_of`
+            spec = res.spec
+        if not currently_valid(spec.get("valid_to"), now=now_dt):
             continue  # forgotten / superseded — never surfaced (mirrors recall).
         memories.append(
             {
@@ -1884,7 +1938,11 @@ async def list_memories_impl(
             }
         )
     memories.sort(key=lambda m: (m.get("created_at") or ""), reverse=True)
-    return {"scope": sc, "memories": memories}
+    out: dict[str, Any] = {"scope": sc, "memories": memories}
+    if as_of_iso:
+        out["as_of"] = as_of_iso
+        out["as_of_truncated"] = sorted(set(truncated))
+    return out
 
 
 async def forget_impl(

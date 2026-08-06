@@ -19,6 +19,13 @@ rsh-memory-similarity-evolution → s-memory-verbs (2026-07-09).
 """
 from __future__ import annotations
 
+from dna.memory.as_of import (
+    AsOfResolution,
+    AsOfUnsupported,
+    normalize_as_of,
+    resolve_as_of,
+    store_supports_as_of,
+)
 from dna.memory.decay import (
     affect_factor,
     confidence_score_numeric,
@@ -103,6 +110,12 @@ __all__ = [
     "forget",
     "consolidate",
     "backfill_index",
+    # transaction time — the belief state (s-memory-as-of)
+    "AsOfResolution",
+    "AsOfUnsupported",
+    "normalize_as_of",
+    "resolve_as_of",
+    "store_supports_as_of",
     # personal / private per-user memory (ADR-personal-memory)
     "PERSONAL_TENANT_SCHEME",
     "PERSONAL_TENANT_PREFIX",

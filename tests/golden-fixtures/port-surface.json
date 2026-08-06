@@ -380,6 +380,10 @@
         {
           "py": "api_version_identity",
           "note": "The row key carries the Kind's own identity (scope, kind, apiVersion, name), so two Kinds sharing a name coexist and load_one/delete_document can be pinned to one of them. An adapter whose identity is registry-mediated — the filesystem path's container — declares False."
+        },
+        {
+          "py": "as_of_reads",
+          "note": "The store can answer a TRANSACTION-time read (load_one_as_of): 'what did you believe at T?', reconstructed from retained version snapshots. Separate from `versions` on purpose — the filesystem adapter declares `versions` and keeps no history at all, so a face must be able to REFUSE an as-of read rather than serve the present under a past timestamp (s-memory-as-of)."
         }
       ]
     },

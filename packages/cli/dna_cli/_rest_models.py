@@ -472,6 +472,10 @@ class MemoriesResponse(BaseModel):
     scope: str
     tenant: str | None = None
     memories: list[MemorySummary]
+    #: See :class:`RecallResponse` — the same two transaction-time fields, so
+    #: the list and the search surface stay legible as one pair.
+    as_of: str | None = None
+    as_of_truncated: list[str] | None = None
 
 
 class PersonalMemorySummary(BaseModel):
@@ -548,6 +552,14 @@ class RecallResponse(BaseModel):
     degraded: bool = False
     semantic: bool = False
     hits: list[dict[str, Any]] = []
+    #: Echoed ONLY on a transaction-time read (``?as_of=``), normalized to UTC.
+    #: Absent means "the current belief state" — a caller can tell a historical
+    #: answer from a live one without re-reading its own request.
+    as_of: str | None = None
+    #: Memories the store cannot answer for at ``as_of`` because their version
+    #: history was pruned past it. NAMED, not counted: "no record" is a blind
+    #: spot the caller must be able to SEE, never silently "no memory".
+    as_of_truncated: list[str] | None = None
 
 
 class DeleteMemoryResponse(BaseModel):

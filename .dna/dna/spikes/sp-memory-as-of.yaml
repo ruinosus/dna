@@ -1,0 +1,115 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Spike
+metadata:
+  name: sp-memory-as-of
+spec:
+  title: Tempo de transacao + leitura as-of na memoria
+  question_to_answer: 'Vale o DNA ganhar tempo de TRANSACAO + leitura as-of? Criterio de sucesso: escrever uma memoria, supersede-la, e responder ''o que o sistema acreditava em T-1?'''
+  status: answered
+  time_box_hours: 4
+  labels:
+  - memoria
+  - bitemporal
+  - as-of
+  - pesquisa-aplicada
+  body: |
+    # Tempo de transação + leitura as-of
+
+    **Origem:** `Research/rsh-semantica-agi-avaliacao` (scope `dna-cloud`), finding
+    `f-lacuna-tempo-de-transacao-e-as-of` — a lacuna nº 1 das sete, e a única que
+    fecha sem dependência nova. Referência de desenho lida e **descartada**:
+    `semantica/kg/temporal_query.py` (`query_at_time` / `reconstruct_at_time`).
+    Pegamos a forma da API, não o pacote.
+
+    ## Critério de sucesso (do fundador)
+
+    > Escrever uma memória, supersedê-la, e recuperar o estado de crença anterior.
+
+    **PASSOU.** `packages/sdk-py/tests/test_memory_as_of.py::test_the_founders_criterion`
+    — e a asserção é sobre a crença ANTIGA (`"we run postgres 14"` reaparece sob
+    `as_of=T-1` e some sob o recall de hoje), não sobre a forma da resposta.
+
+    ## O que a investigação achou ANTES de codar
+
+    1. **Não precisa de coluna nova.** `dna_versions.created_at` é o tempo de
+       transação desde a revisão 0001, e `content` guarda o **envelope inteiro** por
+       escrita — não um diff, não um ponteiro. O estado de crença já estava em disco;
+       ninguém lia. Custo real: um método de leitura, um parâmetro e duas recusas.
+       **Zero migrations.**
+    2. **`now=` NUNCA foi a resposta.** O `recall` já aceitava `now`, e é fácil
+       confundir com o que se pediu. `now` desloca o filtro de `valid_to` (tempo de
+       MUNDO) e continua devolvendo o spec de HOJE para cada hit. Uma nota escrita
+       hoje sobre o ano passado é válida no ano passado e acreditada hoje: os dois
+       eixos discordam por construção. `test_now_is_not_as_of` é o teste que teria
+       pego a gente entregando o primeiro dizendo ser o segundo.
+    3. **Dois lugares onde a resposta fácil seria uma invenção.** O adapter de
+       filesystem declara `versions=True` e **não guarda histórico nenhum**
+       (`list_versions` → `[]`); e o `VERSION_CHURN_RETENTION` corta o Engram em 3
+       versões (o hook engrafia reescreveu o MESMO Engram 6.613×). Nos dois casos,
+       devolver o estado atual sob um timestamp passado seria um passado fabricado
+       com cara de resposta real.
+
+    ## O que foi entregue
+
+    | camada | o quê |
+    |---|---|
+    | store | `SqlAlchemySource.load_one_as_of` — a versão mais nova com `created_at <= as_of`, precedência overlay→base igual à do `load_one` |
+    | capability | `SourceCapabilities.as_of_reads` — separada de `versions` de propósito: a face precisa poder RECUSAR antes de ler |
+    | core | `dna/memory/as_of.py` — `AsOfResolution` / `AsOfUnsupported` / `normalize_as_of` / `resolve_as_of` |
+    | verbo | `recall(..., as_of=)` e `list_memories_impl(..., as_of=)` |
+    | faces | REST `GET /v1/memories/search?as_of=` e `GET /v1/memories?as_of=` (501 sem histórico, 422 em timestamp inválido); MCP `recall(as_of=)` |
+    | doc | `docs/concepts/search-and-memory.md` — a promessa de "reconstrução point-in-time" era aspiracional; agora os dois eixos estão nomeados e ela é verdadeira |
+
+    ## As três invariantes de honestidade
+
+    1. **Store sem histórico RECUSA** (`AsOfUnsupported` -> 501). Não aproxima.
+    2. **"Sem registro" não é "sem memória".** Histórico podado além do `as_of` volta
+       NOMEADO em `as_of_truncated` — nunca sumido em silêncio, nunca preenchido com
+       o spec de hoje.
+    3. **Leitura histórica não escreve.** `reconsolidate` é forçado a `False` sob
+       `as_of` — e não é só filosofia: reconsolidar podaria a própria história que a
+       leitura está lendo.
+
+    ## Retrocompat
+
+    Sem `as_of`, comportamento idêntico ao de hoje — asserido, não presumido
+    (`test_without_as_of_nothing_changes`: mesmos hits, nenhuma chave `as_of` no
+    envelope, reconsolidação ainda ligada).
+
+    ## Testes
+
+    14 novos, todos verdes. Sobre `SqlAlchemySource`/sqlite — o MESMO adapter que
+    roda em postgres, sem precisar de postgres. A suíte completa do `sdk-py` fica em
+    4.959 passando, com as mesmas 36 falhas pré-existentes da baseline (extra
+    `langchain` ausente no ambiente, sem relação).
+
+    ## O que fica em aberto, de propósito
+
+    - **O teto de 3 versões do Engram** continua de pé. Ele existe por um motivo real
+      e puxá-lo é decisão de produto com preço de armazenamento — o spike o EXPÕE
+      (`as_of_truncated`) em vez de decidir sozinho.
+    - **Recall as-of parte dos documentos que existem HOJE.** Uma memória
+      hard-deletada desde então não ressuscita. O `forget` é demoção bi-temporal e
+      nunca hard-deleta, então o ciclo de vida da memória está coberto; um
+      `delete_document` manual não está.
+    - **O índice de busca não tem eixo temporal.** Os candidatos vêm do índice atual
+      e só depois são resolvidos as-of.
+  created_at: '2026-08-06T00:37:07+00:00'
+  updated_at: '2026-08-06T00:37:53+00:00'
+  timeline:
+  - at: '2026-08-06T00:37:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: in-progress
+  - at: '2026-08-06T00:37:53+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: answered
+  completed_at: '2026-08-06T00:37:52+00:00'
+  findings: 'CRITERIO DO FUNDADOR: PASSOU. test_memory_as_of.py::test_the_founders_criterion escreve um Engram, supersede-o (forget -> valid_to + superseded_by_memory), e recupera o estado de crenca anterior via recall(as_of=T-1); a assercao e sobre a CRENCA ANTIGA (''we run postgres 14'' reaparece sob as_of e some no recall de hoje), nao sobre a forma da resposta. (1) NAO precisou de coluna nova nem de migration: dna_versions.created_at ja e o tempo de transacao desde a revisao 0001, e a coluna content guarda o ENVELOPE INTEIRO por escrita (nao um diff, nao um ponteiro), entao o estado de crenca ja estava em disco e ninguem lia. O custo foi um metodo de leitura no adapter, um parametro no recall e duas recusas. (2) O parametro now= que ja existia NUNCA respondeu a pergunta, e essa e a armadilha: now desloca o filtro de valid_to (tempo de MUNDO) e continua devolvendo o spec de HOJE para cada hit. Uma nota escrita hoje sobre o ano passado e valida no ano passado e acreditada hoje - os dois eixos discordam por construcao. test_now_is_not_as_of e o teste que teria pego a entrega do primeiro dizendo ser o segundo. (3) Havia DOIS lugares onde a resposta facil seria uma invencao. O FilesystemWritableSource declara versions=True e nao guarda historico nenhum (list_versions retorna []); e o VERSION_CHURN_RETENTION corta o Engram em 3 versoes (o hook engrafia reescreveu o MESMO Engram 6.613 vezes). Nos dois casos, devolver o estado atual sob um timestamp passado seria um passado fabricado com cara de resposta real - por isso o store sem historico RECUSA (AsOfUnsupported -> HTTP 501) e o historico podado volta NOMEADO em as_of_truncated. (4) Leitura historica nao escreve: reconsolidate e forcado a False sob as_of, e nao e so filosofia - reconsolidar podaria a propria historia que a leitura esta lendo. ENTREGUE: SqlAlchemySource.load_one_as_of; SourceCapabilities.as_of_reads (separada de versions de proposito, para a face poder recusar ANTES de ler); dna/memory/as_of.py (AsOfResolution / AsOfUnsupported / normalize_as_of / resolve_as_of); recall(as_of=) e list_memories_impl(as_of=); REST GET /v1/memories/search?as_of= e GET /v1/memories?as_of= (501 sem historico, 422 em timestamp invalido); MCP recall(as_of=); e docs/concepts/search-and-memory.md, onde a promessa de ''reconstrucao point-in-time'' era aspiracional e agora e verdadeira com os dois eixos nomeados. TESTES: 14 novos, todos verdes, sobre SqlAlchemySource/sqlite - o MESMO adapter que roda em postgres, sem precisar de postgres. Suite completa do sdk-py: 4.959 passando, com as mesmas 36 falhas pre-existentes da baseline (extra langchain ausente no ambiente, sem relacao). RETROCOMPAT asserida, nao presumida: test_without_as_of_nothing_changes prova mesmos hits, nenhuma chave as_of no envelope e reconsolidacao ainda ligada quando as_of e omitido.'
+  recommendation: 'Merjar. A lacuna n.1 das sete da Research/rsh-semantica-agi-avaliacao fecha por conta propria e sem dependencia nova, entao o argumento para adotar o semantica-agi cai de oito lacunas para sete - e as sete restantes sao INGESTAO e GRAFO, que e decisao de produto (''queremos ser um KG?''), nao de biblioteca. TRES PONTAS DEIXADAS ABERTAS DE PROPOSITO, cada uma com dono: (a) o teto de 3 versoes do Engram (VERSION_CHURN_RETENTION) continua de pe - ele existe por um motivo real (175k snapshots de um hook so) e puxa-lo e decisao de produto com preco de armazenamento; o spike o EXPOE via as_of_truncated em vez de decidir sozinho. Se o as-of virar superficie de produto, essa e a primeira conversa. (b) o recall as-of parte dos documentos que existem HOJE: uma memoria hard-deletada desde entao nao ressuscita. O forget e democao bi-temporal e nunca hard-deleta, entao o ciclo de vida da memoria esta coberto - um delete_document manual nao esta. (c) o indice de busca nao tem eixo temporal: os candidatos vem do indice atual e so depois sao resolvidos as-of, entao uma memoria cujo texto mudou muito pode nao entrar na lista de candidatos. PROXIMO ROUBO da mesma pesquisa, se houver apetite: rec-conflict-detector-como-conceito - o DNA registra supersessao mas nunca DETECTA contradicao, e a fronteira de escrita (onde os hooks de veto ja moram) e o lugar certo para isso.'
+  research_refs:
+  - rsh-semantica-agi-avaliacao
