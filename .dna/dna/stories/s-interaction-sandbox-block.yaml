@@ -16,7 +16,7 @@ spec:
   - schema + testes pytest no padrao do pacote + docs de Kind regenerados (kinds reference + data model) + brand-guard verde (nenhum nome de fornecedor terceiro no schema publico)
   definition_of_done_source: cli-create
   created_at: '2026-08-05T23:58:57+00:00'
-  updated_at: '2026-08-06T00:16:05+00:00'
+  updated_at: '2026-08-06T00:17:30+00:00'
   timeline:
   - at: '2026-08-05T23:58:57+00:00'
     actor: claude-code
@@ -50,6 +50,12 @@ spec:
     source: cli
     summary: 'Desenho do bloco, e o corte. O shape saiu do CONSUMIDOR (o executor de scripts do host), nao da imaginacao: o merge de limites le exatamente budget.max_execute_seconds, budget.max_session_seconds e allow_internet. O orcamento de UPLOAD ficou FORA porque o merge preserva a constante do host e nunca olha o doc — campo sem leitor renderiza como se funcionasse, entao declara-lo e SpecValidationError e nao silencio (testado nos dois niveis: solto e dentro de budget). Os tetos absolutos viraram maximum no schema pelo mesmo raciocinio: um numero acima deles seria grampeado calado la na frente, e a escrita e o ultimo momento em que alguem ainda le a mensagem. A direcao unica (o doc so BAIXA o teto do host) e o que torna seguro ler um documento que um tenant pode ter escrito — vale inclusive para o booleano: false desliga o egress, true nao liga nada. Brand-guard: o fornecedor de sandbox nao aparece no schema publico; o bloco fala de ''a sandbox provider'' e ''the provider'', que e o que o padrao da casa manda.'
     commit_ref: ab396988f1f0f9fc215879eb3d1bb661cba46b64
+  - at: '2026-08-06T00:17:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR do lote: https://github.com/ruinosus/dna/pull/319 (as duas fatias — esta e s-thread-store-retention-e-troca — viajam juntas na mesma branch feat/sdk-072-lote, porque sao independentes entre si e o consumidor das duas e o mesmo release do dna-cloud). Sem merge: o bump e a release sao do founder.'
+    commit_ref: 2c02517a96917f0fa46a073bfe1eca03bc112aa3
   produces:
   - kind: Plan
     name: plan-s-interaction-sandbox-block
