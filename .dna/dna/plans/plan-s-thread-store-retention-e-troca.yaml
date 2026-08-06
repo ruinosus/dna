@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-thread-store-retention-e-troca
+spec:
+  title: 'Plano: s-thread-store-retention-e-troca'
+  date: '2026-08-06'
+  status: accepted
+  story_ref: s-thread-store-retention-e-troca
+  journey_phase: plan
+  body: 'PROCUREI ANTES (regra da casa, resultado registrado): grep na dependencia que JA temos achou BaseCheckpointSaver.adelete_thread/delete_thread no langgraph — o apagador OFICIAL do transcript. Nao se escreve DELETE de checkpoint a mao; o adapter delega. Fora isso, nada empacotado para ''varredura de retencao de conversa'' nem para ''envelope portavel de transcript'' (a busca da fatia 1 ja cobria o resto: agent-protocol, MCP, A2A, MAF, OpenAI Conversations). 1) thread_store ganha: thread_expired (predicado puro sobre updated_at, fail-safe — o que nao se consegue datar nunca vence), ThreadPurgePort (expired_threads + delete_thread — as duas primitivas do HOST), TranscriptPurgePort (delete_transcript — a metade que so o framework consegue), RetentionSweep e sweep_retention (o ALGORITMO no SDK: sem retencao declarada a porta nem e consultada; transcript primeiro e indice depois, para que uma queda no meio deixe uma varredura repetivel em vez de checkpoint orfao). 2) codec JSON do envelope (export_to_json/export_from_json com recusa de formato desconhecido) — sem ele o envelope nao atravessa processo e cada host inventaria o seu. 3) migrate_thread: exporta da porta velha e importa na nova, devolvendo em voz alta que o run pendente ficou. 4) LangGraphTranscriptPurge no adapter, delegando ao adelete_thread oficial. 5) InMemoryThreadStore cumpre tudo (a implementacao de referencia prova que o contrato e implementavel). Zero I/O novo, zero dependencia nova.'
+  created_at: '2026-08-06T00:04:02+00:00'
+  updated_at: '2026-08-06T00:04:02+00:00'

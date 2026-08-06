@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-thread-store-retention-e-troca-20260806-001503
+spec:
+  guide_ref: tg-s-thread-store-retention-e-troca
+  outcome: pass
+  verifies:
+  - Story/s-thread-store-retention-e-troca
+  executed_by: claude-code
+  executed_at: '2026-08-06T00:15:03+00:00'
+  notes: '53/53 no arquivo da porta (22 novos), suite de runtime verde, sdk-py e cli inteiras verdes, guards limpos. Zero dependencia nova: o apagador do transcript delega ao adelete_thread oficial do checkpointer.'

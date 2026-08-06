@@ -5,7 +5,7 @@ metadata:
 spec:
   title: 'Fatia 2 de spec-conversa-como-dado-do-dna (i-084 do dna-cloud): quem APLICA a re'
   description: 'Fatia 2 de spec-conversa-como-dado-do-dna (i-084 do dna-cloud): quem APLICA a retencao e como a troca de framework acontece de verdade. A fatia 1 deixou o slot e a conta (retention_cutoff) sem ninguem que varre, e deixou export/import como duas metades que ninguem junta. Esta fatia entrega o VERBO da varredura (algoritmo no SDK, conexao no host), o codec JSON do envelope (sem ele o envelope nao atravessa processo) e migrate_thread (a troca de framework em uma chamada). Zero I/O novo no SDK — nada de psycopg.'
-  status: todo
+  status: in-progress
   feature: f-copilot-langgraph-target
   acceptance_criteria:
   - Given um Copilot com retention.max_age_days declarado e um host que implementa as duas primitivas da porta, When sweep_retention roda, Then as conversas vencidas sao selecionadas pela MESMA conta (retention_cutoff) e apagadas, e o resultado diz quantas
@@ -17,10 +17,44 @@ spec:
   - porta + verbos + codec com testes pytest (kit rodando contra a implementacao de referencia em memoria); suite de runtime verde; zero dependencia nova; o que depende de quem tem a conexao fica REGISTRADO com dono
   definition_of_done_source: cli-create
   created_at: '2026-08-05T23:59:28+00:00'
-  updated_at: '2026-08-05T23:59:28+00:00'
+  updated_at: '2026-08-06T00:15:05+00:00'
   timeline:
   - at: '2026-08-05T23:59:28+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-08-06T00:04:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-06T00:15:01+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-thread-store-retention-e-troca
+    summary: TestGuide tg-s-thread-store-retention-e-troca (manual)
+  - at: '2026-08-06T00:15:05+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-thread-store-retention-e-troca-20260806-001503
+    summary: TestRun tr-tg-s-thread-store-retention-e-troca-20260806-001503 → pass
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-thread-store-retention-e-troca
+    role: implementation
+    at: '2026-08-06T00:04:07+00:00'
+  - kind: TestGuide
+    name: tg-s-thread-store-retention-e-troca
+    role: test-guide
+    at: '2026-08-06T00:15:01+00:00'
+  - kind: TestRun
+    name: tr-tg-s-thread-store-retention-e-troca-20260806-001503
+    role: test-run
+    at: '2026-08-06T00:15:05+00:00'

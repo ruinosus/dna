@@ -16,7 +16,7 @@ spec:
   - schema + testes pytest no padrao do pacote + docs de Kind regenerados (kinds reference + data model) + brand-guard verde (nenhum nome de fornecedor terceiro no schema publico)
   definition_of_done_source: cli-create
   created_at: '2026-08-05T23:58:57+00:00'
-  updated_at: '2026-08-05T23:59:44+00:00'
+  updated_at: '2026-08-06T00:14:46+00:00'
   timeline:
   - at: '2026-08-05T23:58:57+00:00'
     actor: claude-code
@@ -29,8 +29,31 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-08-06T00:14:41+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-interaction-sandbox-block
+    summary: TestGuide tg-s-interaction-sandbox-block (manual)
+  - at: '2026-08-06T00:14:46+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-interaction-sandbox-block-20260806-001443
+    summary: TestRun tr-tg-s-interaction-sandbox-block-20260806-001443 → pass
+    outcome: pass
   produces:
   - kind: Plan
     name: plan-s-interaction-sandbox-block
     role: implementation
     at: '2026-08-05T23:59:44+00:00'
+  - kind: TestGuide
+    name: tg-s-interaction-sandbox-block
+    role: test-guide
+    at: '2026-08-06T00:14:41+00:00'
+  - kind: TestRun
+    name: tr-tg-s-interaction-sandbox-block-20260806-001443
+    role: test-run
+    at: '2026-08-06T00:14:46+00:00'

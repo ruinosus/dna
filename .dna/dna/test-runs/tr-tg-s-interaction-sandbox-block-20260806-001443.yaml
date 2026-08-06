@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-s-interaction-sandbox-block-20260806-001443
+spec:
+  guide_ref: tg-s-interaction-sandbox-block
+  outcome: pass
+  verifies:
+  - Story/s-interaction-sandbox-block
+  executed_by: claude-code
+  executed_at: '2026-08-06T00:14:43+00:00'
+  notes: 15/15 em test_copilot_surfaces.py; suite sdk-py inteira verde (5118); cli 1461 verde; brand-guard, data_model_guard e docs_coverage_guard limpos.

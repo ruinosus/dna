@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-s-interaction-sandbox-block
+spec:
+  description: 'Banca do bloco interaction.sandbox: o doc consegue declarar, o campo sem leitor e vetado, e o teto absoluto tambem.'
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests/test_copilot_surfaces.py -q
+    expected: 15 passed — presenca-liga, shape completo, campo sem leitor vetado, teto absoluto vetado
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests -q --timeout=120
+    expected: 5118 passed, 257 skipped, 4 xfailed
+  - action: python3 scripts/brand_guard.py
+    expected: clean (nenhum nome de fornecedor no schema publico)
+  - action: packages/sdk-py/.venv/bin/python scripts/gen_kinds_docs.py && gen_data_model_docs.py && data_model_guard.py
+    expected: docs regenerados e guard clean
+  verifies:
+  - Story/s-interaction-sandbox-block
+  created_at: '2026-08-06T00:14:39+00:00'
+  updated_at: '2026-08-06T00:14:39+00:00'
