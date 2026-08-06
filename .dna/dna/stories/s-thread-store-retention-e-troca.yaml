@@ -17,7 +17,7 @@ spec:
   - porta + verbos + codec com testes pytest (kit rodando contra a implementacao de referencia em memoria); suite de runtime verde; zero dependencia nova; o que depende de quem tem a conexao fica REGISTRADO com dono
   definition_of_done_source: cli-create
   created_at: '2026-08-05T23:59:28+00:00'
-  updated_at: '2026-08-06T00:15:05+00:00'
+  updated_at: '2026-08-06T00:16:02+00:00'
   timeline:
   - at: '2026-08-05T23:59:28+00:00'
     actor: claude-code
@@ -45,6 +45,12 @@ spec:
     name: tr-tg-s-thread-store-retention-e-troca-20260806-001503
     summary: TestRun tr-tg-s-thread-store-retention-e-troca-20260806-001503 → pass
     outcome: pass
+  - at: '2026-08-06T00:16:02+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'O QUE FICOU FORA, com dono e razao — a instrucao era PARAR e registrar quando a fatia dependesse de quem tem a conexao, e ela depende em tres pontos. (1) A implementacao Postgres de ThreadPurgePort (expired_threads + delete_thread) e do HOST: o dna-cloud ja tem a tabela copilot_thread e o gate ASGI; promove-los a implementacao da porta e a fatia dele, e o SDK nao deve carregar psycopg para isso. Foi por essa razao que a varredura ficou com DUAS primitivas em vez de um metodo unico — o algoritmo (corte, quem venceu, ordem do apagamento, o que reportar) fica aqui, no SDK, para que dois hosts nao leiam a mesma politica de dois jeitos; o que sobra para o host e uma consulta e um delete no dialeto dele. (2) O JOB que chama sweep_retention: nenhum scheduler sobe com esta porta e nenhum vai subir — cron, worker ou comando e decisao de operacao, com custo recorrente, e no caso do dna-cloud um container que nao dorme e ~US/mes. O verbo esta pronto para ser chamado de um job que ja exista. (3) O adapter de thread do backend MAF continua com o gap DECLARADO no handle (thread_store = None); fechar exige o contrato de message store daquele framework, e nada nesta fatia mudou isso. Registro tambem o que a busca antes de construir mudou no desenho: eu ia escrever o apagamento do transcript, e o grep na dependencia que JA temos achou BaseCheckpointSaver.adelete_thread — o apagador oficial, que conhece as tabelas de blobs e writes que eu teria esquecido. A pergunta que pegou foi a especifica (''isto ja esta numa dependencia que este pacote carrega?''), nao a generica.'
+    commit_ref: ab396988f1f0f9fc215879eb3d1bb661cba46b64
   produces:
   - kind: Plan
     name: plan-s-thread-store-retention-e-troca
