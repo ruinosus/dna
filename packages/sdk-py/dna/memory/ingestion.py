@@ -48,6 +48,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping, Sequence
 
+from dna.prompt_defaults import prompt_default, register_prompt_default
+
 _LOGGER = logging.getLogger("dna.memory.ingestion")
 
 __all__ = [
@@ -283,6 +285,21 @@ def _template_valido(template: Any, obrigatorias: Sequence[str], nome: str) -> s
             "PromptTemplate %r ignorado: faltam as variáveis %s", nome, faltam
         )
         return None
+    # ⚠️ Um override IDÊNTICO ao default não é override — é o default.
+    #
+    # Isto não é micro-otimização, é a armadilha que o i-101/i-102 abriu ao
+    # fazer `get_template` SERVIR o default: um host que lê a voz por aquela
+    # porta e a devolve aqui como `template=` passou a entregar, para o caso
+    # "ninguém sobrescreveu nada", um texto igual ao default — e o caminho de
+    # override PULA a interpolação da política. O sintoma seria caro e mudo:
+    # um workspace com `never`/`always` perderia essas linhas do prompt, e a
+    # etapa 2 perderia a opção `escalate`, sem um erro sequer.
+    #
+    # A regra vale por si, independente de quem chama: mesmo texto, mesmo
+    # comportamento.
+    padrao = prompt_default(nome)
+    if padrao is not None and template == padrao.body:
+        return None
     return template
 
 
@@ -296,6 +313,34 @@ def _preencher(template: str, valores: Mapping[str, str]) -> str:
     for chave, valor in valores.items():
         template = template.replace("{" + chave + "}", valor)
     return template
+
+
+#: O default da etapa 1, como TEXTO — não mais como f-string dentro da função.
+#: A forma é a que `ARBITRATION_DEFAULT` já usava neste mesmo arquivo; a razão
+#: de estendê-la às etapas 1 e 2 é o i-102: um default que só existe dentro de
+#: uma f-string não pode ser SERVIDO, e o que não pode ser servido acaba
+#: copiado à mão em outro lugar (foi o que aconteceu no portal).
+#: `{max_facts}` / `{nunca}` / `{sempre}` são preenchidos pela POLÍTICA;
+#: `{transcript}` é a variável do template, e é a única que um override precisa
+#: carregar.
+EXTRACTION_DEFAULT = """Extraia FATOS DURÁVEIS sobre o usuário e o trabalho dele desta conversa.
+
+Um fato durável vale além desta conversa: uma decisão, uma preferência, uma
+restrição, um prazo, um dado do negócio. NÃO é fato durável: uma pergunta, uma
+saudação, um pedido pontual, ou algo que só vale neste turno.
+
+A resposta mais comum é uma lista VAZIA. Extraia no máximo {max_facts}.{nunca}{sempre}
+Exemplos:
+  "Oi, tudo bem?"                            -> {"facts": []}
+  "me explica como funciona o portal"        -> {"facts": []}
+  "decidimos que o prazo passa a ser 60 dias" -> {"facts": ["O prazo de renovação é 60 dias"]}
+  "prefiro resumos em tópicos curtos"        -> {"facts": ["Prefere resumos em tópicos curtos"]}
+  "o contrato da ACME vence em março de 2027" -> {"facts": ["O contrato da ACME vence em março de 2027"]}
+
+Responda SOMENTE com JSON no formato {"facts": ["...", "..."]}.
+
+Conversa:
+{transcript}"""
 
 
 def extraction_prompt(
@@ -323,24 +368,46 @@ def extraction_prompt(
     sempre = (
         f"\nPreste atenção especial a: {', '.join(p.always)}.\n" if p.always else ""
     )
-    return f"""Extraia FATOS DURÁVEIS sobre o usuário e o trabalho dele desta conversa.
+    return _preencher(
+        EXTRACTION_DEFAULT,
+        {
+            "max_facts": str(p.max_facts_per_turn),
+            "nunca": nunca,
+            "sempre": sempre,
+            "transcript": transcript[: p.max_transcript_chars],
+        },
+    )
 
-Um fato durável vale além desta conversa: uma decisão, uma preferência, uma
-restrição, um prazo, um dado do negócio. NÃO é fato durável: uma pergunta, uma
-saudação, um pedido pontual, ou algo que só vale neste turno.
 
-A resposta mais comum é uma lista VAZIA. Extraia no máximo {p.max_facts_per_turn}.{nunca}{sempre}
-Exemplos:
-  "Oi, tudo bem?"                            -> {{"facts": []}}
-  "me explica como funciona o portal"        -> {{"facts": []}}
-  "decidimos que o prazo passa a ser 60 dias" -> {{"facts": ["O prazo de renovação é 60 dias"]}}
-  "prefiro resumos em tópicos curtos"        -> {{"facts": ["Prefere resumos em tópicos curtos"]}}
-  "o contrato da ACME vence em março de 2027" -> {{"facts": ["O contrato da ACME vence em março de 2027"]}}
+#: O default da etapa 2, como TEXTO (mesma razão de `EXTRACTION_DEFAULT`).
+#: `{escalate_op}` é preenchido pela chamada (só existe quando o motor permite
+#: escalar); `{facts}` e `{memories}` são as variáveis do template, e são as
+#: duas que um override precisa carregar — sem uma delas a decisão sairia sem
+#: um dos lados.
+RECONCILIATION_DEFAULT = f"""Você gerencia a memória de um sistema. Compare os FATOS NOVOS com a MEMÓRIA ATUAL e decida, para cada fato, uma operação:
 
-Responda SOMENTE com JSON no formato {{"facts": ["...", "..."]}}.
+- "{ADD}": informação nova, não presente na memória.
+- "{UPDATE}": a memória já trata do assunto, mas o fato novo a torna mais precisa
+  ou a corrige. Informe o `id` da memória e o texto FINAL completo.
+- "{INVALIDATE}": o fato novo CONTRADIZ uma memória existente e ela deixou de
+  valer. Informe o `id`. (A memória não é apagada — é marcada como não mais
+  válida, e continua auditável.)
+- "{NONE}": o fato já está na memória, ou não vale guardar.
+{{escalate_op}}
+Prefira "{UPDATE}" a "{ADD}" quando o assunto for o mesmo: duas memórias sobre a
+mesma coisa fazem o agente servir as duas versões e parecer confuso.
 
-Conversa:
-{transcript[: p.max_transcript_chars]}"""
+MEMÓRIA ATUAL:
+{{memories}}
+
+FATOS NOVOS:
+{{facts}}
+
+Responda SOMENTE com JSON:
+{{"decisions": [{{"op": "{ADD}", "text": "..."}},
+                {{"op": "{UPDATE}", "id": "...", "text": "..."}},
+                {{"op": "{INVALIDATE}", "id": "...", "reason": "..."}},
+                {{"op": "{NONE}"}}]}}"""
 
 
 def reconciliation_prompt(
@@ -379,30 +446,10 @@ def reconciliation_prompt(
     )
     if escolhido is not None:
         return _preencher(escolhido, {"facts": fatos_json, "memories": memorias})
-    return f"""Você gerencia a memória de um sistema. Compare os FATOS NOVOS com a MEMÓRIA ATUAL e decida, para cada fato, uma operação:
-
-- "{ADD}": informação nova, não presente na memória.
-- "{UPDATE}": a memória já trata do assunto, mas o fato novo a torna mais precisa
-  ou a corrige. Informe o `id` da memória e o texto FINAL completo.
-- "{INVALIDATE}": o fato novo CONTRADIZ uma memória existente e ela deixou de
-  valer. Informe o `id`. (A memória não é apagada — é marcada como não mais
-  válida, e continua auditável.)
-- "{NONE}": o fato já está na memória, ou não vale guardar.
-{escalate_op}
-Prefira "{UPDATE}" a "{ADD}" quando o assunto for o mesmo: duas memórias sobre a
-mesma coisa fazem o agente servir as duas versões e parecer confuso.
-
-MEMÓRIA ATUAL:
-{memorias}
-
-FATOS NOVOS:
-{fatos_json}
-
-Responda SOMENTE com JSON:
-{{"decisions": [{{"op": "{ADD}", "text": "..."}},
-                {{"op": "{UPDATE}", "id": "...", "text": "..."}},
-                {{"op": "{INVALIDATE}", "id": "...", "reason": "..."}},
-                {{"op": "{NONE}"}}]}}"""
+    return _preencher(
+        RECONCILIATION_DEFAULT,
+        {"escalate_op": escalate_op, "memories": memorias, "facts": fatos_json},
+    )
 
 
 @dataclass(frozen=True)
@@ -502,6 +549,62 @@ FATO ESCALADO:
 {{fact}}
 
 Responda SOMENTE com JSON: {{{{"decisions": [{{{{"op": "...", ...}}}}]}}}}"""
+
+
+# ── i-102: as três vozes da ingestão entram no CATÁLOGO ────────────────────
+#
+# O corpo de cada uma é produzido pela MESMA função que o runtime chama, com as
+# variáveis do template deixadas no lugar. Não é sofisticação: uma cópia
+# estática aqui derivaria do original no primeiro ajuste, que é exatamente o
+# defeito que o i-102 aponta (o portal carrega uma cópia hardcoded destes
+# textos). Assim, editar o default no código muda o que o catálogo serve no
+# mesmo commit.
+_PLACEHOLDER_POLICY = IngestionPolicy()
+
+
+def _extraction_default_body() -> str:
+    return extraction_prompt("{transcript}", _PLACEHOLDER_POLICY)
+
+
+def _reconciliation_default_body() -> str:
+    return _preencher(
+        RECONCILIATION_DEFAULT,
+        {"escalate_op": "", "memories": "{memories}", "facts": "{facts}"},
+    )
+
+
+register_prompt_default(
+    EXTRACTION_TEMPLATE,
+    description=(
+        "Etapa 1 da ingestão de memória: o transcript vira fatos discretos. "
+        "A variável {transcript} é obrigatória."
+    ),
+    body=_extraction_default_body,
+    variables=("transcript",),
+    module=__name__,
+)
+register_prompt_default(
+    RECONCILIATION_TEMPLATE,
+    description=(
+        "Etapa 2 da ingestão: cada fato novo contra a memória atual (add / "
+        "update / invalidate / none). As variáveis {facts} e {memories} são "
+        "obrigatórias — sem uma delas a decisão sairia sem um dos lados."
+    ),
+    body=_reconciliation_default_body,
+    variables=("facts", "memories"),
+    module=__name__,
+)
+register_prompt_default(
+    ARBITRATION_TEMPLATE,
+    description=(
+        "Etapa 3 da ingestão: o ÁRBITRO decide um fato escalado, com contexto "
+        "ampliado e sem poder escalar de novo. Variáveis: {instruction}, "
+        "{fact}, {memories}."
+    ),
+    body=lambda: ARBITRATION_DEFAULT,
+    variables=("instruction", "fact", "memories"),
+    module=__name__,
+)
 
 
 def arbiter_prompt(

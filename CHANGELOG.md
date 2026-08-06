@@ -19,6 +19,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Correções
 
+- **O default do runtime é DADO, e a ausência de documento deixa de ser erro**
+  (i-101 + i-102 do board dna-cloud). `get_template('memory-recall-briefing')`
+  devolvia `not found` para o estado NORMAL de qualquer scope sem override — a
+  voz funcionando, e um erro vermelho na tela. Um novo degrau declarado
+  (`dna.prompt_defaults`) registra as vozes que o SDK traz prontas (o briefing
+  do recall, as três da ingestão de memória, as duas do analyzer de intel), e
+  `list_templates`/`get_template`/`list_skills`/`get_skill` passam a responder
+  com **`origin`**: `document` (alguém autorou) ou `runtime-default` (ninguém
+  autorou; é este texto que roda). O documento continua VENCENDO; um nome que
+  não é nem doc nem default do runtime continua erro — agora com a lista do que
+  existe. Efeito colateral fechado junto: um override byte-idêntico ao default
+  passa a ser tratado como ausência de override, senão a interpolação da
+  política (`never`/`always`/teto de fatos, e a opção `escalate`) sumiria em
+  silêncio para quem lesse a voz pela porta e a devolvesse como override.
 - **As quatro rotas `/v1/kinds*` voltam a montar em `--auth token`** (revert de
   uma decisão do 0.31.0). O 0.31.0 as excluiu da lane de segredo compartilhado
   argumentando que, sem identidade no HTTP, `tenant` é um query param forjável e

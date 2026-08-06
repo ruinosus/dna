@@ -1056,6 +1056,10 @@ def build_server(
         install-templates`` surface here — servable to any MCP client. Pass
         ``tenant`` for the per-workspace/tenant view (the overlay wins, no redeploy).
 
+        Every row carries ``origin``: ``document`` (someone authored it) or
+        ``runtime-default`` (no document yet — the voice the SDK ships is what
+        runs). A scope with no authored templates is NOT an empty catalog.
+
         Without ``scope`` this resolves in the server's BASE scope (the shared
         catalog), NOT your workspace scope — templates are catalog, and the
         tenant view is an OVERLAY on it. Intentional; not a resolution bug."""
@@ -1067,7 +1071,13 @@ def build_server(
     ) -> dict[str, Any]:
         """Fetch one PromptTemplate's full body + variables. With ``tenant`` the
         per-workspace/tenant OVERLAY wins live — governance without redeploy.
-        Without ``scope``, resolves in the BASE catalog scope (see list_templates)."""
+        Without ``scope``, resolves in the BASE catalog scope (see list_templates).
+
+        The reply always names its ``origin``. **No authored document is not an
+        error**: for a name the runtime ships a default for, you get the body
+        that actually runs plus ``origin: "runtime-default"`` and a note saying
+        how to override it. Only a name that is neither authored nor a known
+        runtime default fails — and that error lists the ones that exist."""
         return await get_template_impl(await _live(), name, scope, await _guard("definitions", tenant, scope=scope))
 
     @server.tool(run_in_thread=False)
@@ -1088,7 +1098,9 @@ def build_server(
     ) -> dict[str, Any]:
         """Fetch one Skill's full instruction body + metadata. With ``tenant``
         the per-workspace/tenant OVERLAY wins live — no redeploy.
-        Without ``scope``, resolves in the BASE catalog scope (see list_skills)."""
+        Without ``scope``, resolves in the BASE catalog scope (see list_skills).
+
+        Same ``origin`` contract as ``get_template``."""
         return await get_skill_impl(await _live(), name, scope, await _guard("definitions", tenant, scope=scope))
 
     # -- SDLC ----------------------------------------------------------------

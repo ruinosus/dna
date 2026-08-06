@@ -62,6 +62,7 @@ __all__ = [
 ]
 
 from dna.memory.policy import RecallInjection, resolve_recall_injection
+from dna.prompt_defaults import register_prompt_default as _register_prompt_default
 
 #: Quantas memórias entram. Três é um teto escolhido para ser BAIXO: o objetivo é
 #: lembrar o agente de que existe memória, não substituir a busca dele.
@@ -181,6 +182,22 @@ BRIEFING_DEFAULT = (
     "O que estiver marcado REGRA você DEVE seguir; o resto é contexto. "
     "Diga quando usar algo que veio da memória. "
     "Se precisar de mais, chame `recall` — isto é um resumo, não tudo."
+)
+
+# i-102: o default acima deixa de ser conhecível SÓ por quem lê este arquivo.
+# Registrado, ele é servido pelo catálogo (`get_template`/`list_templates`) com
+# a origem dita — e a resposta para "não há doc" deixa de ser um erro (i-101).
+# O corpo vai como referência ao módulo, não como cópia: uma segunda cópia aqui
+# seria o mesmo defeito que o i-102 aponta no portal.
+_register_prompt_default(
+    BRIEFING_TEMPLATE,
+    description=(
+        "O briefing do recall automático — o bloco de memórias injetado no "
+        "prompt de TODO turno com recall. A variável {memories} é obrigatória."
+    ),
+    body=lambda: BRIEFING_DEFAULT,
+    variables=("memories",),
+    module=__name__,
 )
 
 

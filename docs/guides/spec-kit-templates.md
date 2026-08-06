@@ -90,6 +90,45 @@ the base scope still returns the shared one. **No redeploy** — the kernel
 resolves the overlay live on every read. That is the whole point of serving the
 toolkit as Kinds rather than shipping files.
 
+## The third rung: the runtime default
+
+Resolution has one more rung below those two, and it is the one that runs on a
+scope where nobody has authored anything: **the voice the SDK itself ships**.
+The recall briefing (`memory-recall-briefing`), the three memory-ingestion
+prompts and the two intel-analyzer prompts all have a working default in code.
+
+Those defaults are declared (`dna.prompt_defaults`) and served by the same two
+tools, so **an unauthored template is not an error**:
+
+```jsonc
+// get_template("memory-recall-briefing")  — on a scope with no documents
+{
+  "name": "memory-recall-briefing",
+  "body": "Memórias já registradas deste workspace, ...\n{memories}\n...",
+  "variables": ["memories"],
+  "origin": "runtime-default",
+  "module": "dna.runtime.middleware.recall",
+  "note": "no PromptTemplate 'memory-recall-briefing' is authored in scope
+           'my-team' — this is the normal state, and the runtime default ... "
+}
+```
+
+Every reply from `list_templates` / `get_template` / `list_skills` /
+`get_skill` carries an **`origin`**: `document` (someone authored it — tenant
+overlay or scope base) or `runtime-default` (nobody has; this is the text that
+runs). Only a name that is *neither* raises, and that error lists the runtime
+defaults that do exist.
+
+Two consequences worth knowing:
+
+* **The document always wins.** Authoring one flips `origin` to `document` and
+  the name appears once, not twice, in the listing.
+* **An override byte-identical to the default is treated as no override.**
+  The ingestion prompts interpolate the workspace's `CognitivePolicy` (its
+  `never`/`always` lists, its fact ceiling) on the default path only — so
+  feeding the served default back in as an override would silently drop those
+  lines. Same text, same behaviour.
+
 ## The constitution as *live* governance
 
 The constitution is special: `install-templates` maps it to **both** a servable
