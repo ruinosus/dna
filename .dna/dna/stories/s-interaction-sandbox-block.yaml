@@ -1,0 +1,36 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-interaction-sandbox-block
+spec:
+  title: 'interaction.sandbox no Kind Copilot (i-097 do dna-cloud): o nivel 3 das skills ('
+  description: 'interaction.sandbox no Kind Copilot (i-097 do dna-cloud): o nivel 3 das skills (execucao de script em sandbox remoto) shipou com runtime que LE limites do doc, mas interaction fecha com additionalProperties:false — nenhum doc consegue declarar. Bloco aditivo, presenca-liga, so os campos que o runtime shipado le (regra F4), e a direcao unica: o doc so BAIXA o teto do host, nunca sobe.'
+  status: in-progress
+  feature: f-dna-copilot-emitter
+  acceptance_criteria:
+  - Given um Copilot que declara interaction.sandbox {}, When o doc e escrito, Then ele valida — presenca-liga com defaults seguros, o mesmo padrao do bloco voice
+  - Given um doc que declara interaction.sandbox.budget.max_execute_seconds e max_session_seconds e allow_internet, When o doc e escrito, Then valida e o runtime que ja existe passa a receber os numeros (a costura _sandbox_do_doc -> SandboxLimits.merge ja esta no host)
+  - Given um doc que declara um campo FORA do shape (ex. max_upload_bytes, que nenhum leitor le), When o doc e escrito, Then SpecValidationError — campo sem leitor e erro, nao silencio
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - schema + testes pytest no padrao do pacote + docs de Kind regenerados (kinds reference + data model) + brand-guard verde (nenhum nome de fornecedor terceiro no schema publico)
+  definition_of_done_source: cli-create
+  created_at: '2026-08-05T23:58:57+00:00'
+  updated_at: '2026-08-05T23:59:44+00:00'
+  timeline:
+  - at: '2026-08-05T23:58:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-05T23:59:44+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  produces:
+  - kind: Plan
+    name: plan-s-interaction-sandbox-block
+    role: implementation
+    at: '2026-08-05T23:59:44+00:00'

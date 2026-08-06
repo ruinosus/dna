@@ -1,0 +1,26 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-thread-store-retention-e-troca
+spec:
+  title: 'Fatia 2 de spec-conversa-como-dado-do-dna (i-084 do dna-cloud): quem APLICA a re'
+  description: 'Fatia 2 de spec-conversa-como-dado-do-dna (i-084 do dna-cloud): quem APLICA a retencao e como a troca de framework acontece de verdade. A fatia 1 deixou o slot e a conta (retention_cutoff) sem ninguem que varre, e deixou export/import como duas metades que ninguem junta. Esta fatia entrega o VERBO da varredura (algoritmo no SDK, conexao no host), o codec JSON do envelope (sem ele o envelope nao atravessa processo) e migrate_thread (a troca de framework em uma chamada). Zero I/O novo no SDK — nada de psycopg.'
+  status: todo
+  feature: f-copilot-langgraph-target
+  acceptance_criteria:
+  - Given um Copilot com retention.max_age_days declarado e um host que implementa as duas primitivas da porta, When sweep_retention roda, Then as conversas vencidas sao selecionadas pela MESMA conta (retention_cutoff) e apagadas, e o resultado diz quantas
+  - Given um copiloto SEM retencao declarada, When sweep_retention roda, Then nada e apagado e a porta NAO e sequer consultada — guardar para sempre e o default, e um default que apaga seria o pior bug possivel
+  - Given um envelope de export gravado em JSON pelo backend velho, When ele e lido por export_from_json e importado no backend novo, Then a conversa visivel atravessa e um formato desconhecido e RECUSADO em vez de adivinhado
+  - Given um thread com run pendente na origem, When migrate_thread roda, Then a conversa atravessa e o resultado diz em voz alta que o run pendente ficou para tras
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - porta + verbos + codec com testes pytest (kit rodando contra a implementacao de referencia em memoria); suite de runtime verde; zero dependencia nova; o que depende de quem tem a conexao fica REGISTRADO com dono
+  definition_of_done_source: cli-create
+  created_at: '2026-08-05T23:59:28+00:00'
+  updated_at: '2026-08-05T23:59:28+00:00'
+  timeline:
+  - at: '2026-08-05T23:59:28+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
