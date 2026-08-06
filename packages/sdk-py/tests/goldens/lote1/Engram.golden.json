@@ -43,7 +43,6 @@
         "items": {
           "type": "string"
         },
-        "x-dna-ref-composite": "Kind/name",
         "description": "Concrete refs (rem-X, verdict-Y, Story/s-Z) that back the affect choice. Required for high-stakes affects so the LLM's claim is auditable against actual artifacts in the manifest."
       },
       "affect_reason": {
@@ -52,7 +51,6 @@
         "type": "string"
       },
       "area": {
-        "x-dna-ref-composite": "Kind/name",
         "type": "string",
         "description": "Scoped target: Feature/X, Epic/Y, or Roadmap/Z. The LessonLearned surfaces when this area is touched."
       },
@@ -240,7 +238,6 @@
           "type": "string"
         },
         "minItems": 1,
-        "x-dna-ref-composite": "Kind/name",
         "description": "Pointers to source artifacts (Narrative/X, WorkflowEvent/Y, etc.) that this memory derives from."
       },
       "summary": {

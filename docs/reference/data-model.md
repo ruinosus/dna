@@ -54,26 +54,28 @@ not database foreign keys — they are fields holding a name.
 ### How to read the edges
 
 Not every line here is equally trustworthy, and pretending otherwise
-would be the whole problem. Four tiers, strongest first:
+would be the whole problem. Two tiers, and one flag that matters more
+than either:
 
-| Tier | Drawn | What it means |
-| --- | --- | --- |
-| **Declared** | solid | The field carries `x-dna-ref`. The kernel resolves it at write time — the only tier the system enforces. |
-| **Composition** (`dep`) | solid | `dep_filters` names the target Kind. A real declaration, but it drives prompt composition and is never checked against stored data. |
-| **Inferred** | dashed | Nothing declares it; the field NAME resolves to a Kind. A convention, not a contract. |
-| **Unresolved** | not drawn | Reference-shaped, no confident target. Tabulated below. |
+| Tier | What it means |
+| --- | --- |
+| **Declared** | The Kind's `spec.relations` says so — name, target, cardinality, and (where there is one) the inverse. |
+| **Composition** (`dep`) | `dep_filters` names the target Kind. A real declaration, but it drives prompt composition and is never checked against stored data. |
 
-`*` on a label marks a polymorphic reference (several possible target Kinds).
+**Solid line = the kernel resolves it at write time. Dashed = it does not.** That is the `enforced` flag, and it is not the same as the tier: a relation addressed by a domain key (`by: workspace_id`) or carrying its Kind in the value (`to: *`) is fully declared and deliberately not followed — resolving by key needs an index the store does not have, and a second resolution rule beside a live one can veto data the live one accepts.
 
-**111 edges: 20 declared, 66 composition-only, 25 inferred** — plus 15 reference-shaped fields left unresolved and 26 known-undeclarable ones.
+`*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the document name.
 
-!!! warning "Only the declared tier cannot dangle"
+**97 edges: 47 declared, 50 composition-only — of which 21 are ENFORCED at write time.** 26 of 84 Kinds declare at least one relation, and 25 fields are listed below as gaps.
+
+!!! warning "Declared is not enforced"
 
     `dep_filters` declares a target *Kind*; nothing validates the
     *value*. A `Feature.owner` naming an Actor that does not exist is
-    written without complaint. Solid therefore means "the model knows
-    what this points at", not "this resolves". Closing that gap is
-    what `x-dna-ref` does, one field at a time.
+    written without complaint. And a relation addressed by a key says
+    what the value MEANS without teaching the kernel to follow it. A
+    line therefore means "the model knows what this points at", and
+    only a SOLID one means "the runtime checks it".
 
 ### Overview — how the groups reference each other
 
@@ -81,43 +83,33 @@ Kinds are grouped by alias prefix (`sdlc-`, `helix-`, …) — a grouping
 that comes from the data. Arrows are counts of edges between groups;
 self-references are omitted here and shown in the detail diagrams.
 
+Relations whose target is chosen per VALUE (`to: *`) are omitted from
+this view — they belong to no group, and inventing one for them would
+be the projection guessing again. They appear in the detail diagrams
+against `ANY_KIND` and in the declared-relations table.
+
 ```mermaid
 flowchart LR
     agentskills["agentskills (1 Kind)"]
-    audit["audit (2 Kinds)"]
-    dna["dna (2 Kinds)"]
+    cloud["cloud (2 Kinds)"]
     eval["eval (4 Kinds)"]
-    evidence["evidence (2 Kinds)"]
     guardrails["guardrails (1 Kind)"]
     helix["helix (14 Kinds)"]
     intel["intel (2 Kinds)"]
-    kinddef["kinddef (1 Kind)"]
-    lesson["lesson (1 Kind)"]
-    mif["mif (1 Kind)"]
     portfolio["portfolio (5 Kinds)"]
     presidio["presidio (1 Kind)"]
-    research["research (1 Kind)"]
     sdlc["sdlc (26 Kinds)"]
     soulspec["soulspec (1 Kind)"]
     tenant["tenant (6 Kinds)"]
     testkit["testkit (2 Kinds)"]
-    agentskills -->|1| sdlc
-    audit -->|2| portfolio
-    evidence -->|1| eval
-    evidence -->|1| sdlc
     helix -->|2| agentskills
     helix -->|2| guardrails
-    helix -->|1| portfolio
     helix -->|1| presidio
-    helix -->|1| sdlc
     helix -->|2| soulspec
-    kinddef -->|1| dna
-    lesson -->|1| agentskills
+    portfolio -->|1| cloud
     portfolio -->|1| intel
-    sdlc -->|13| helix
-    sdlc -->|1| intel
-    sdlc -->|1| mif
-    sdlc -->|1| research
+    portfolio -->|1| tenant
+    sdlc -->|8| helix
     tenant -->|1| portfolio
 ```
 
@@ -130,120 +122,111 @@ split again by tier, which keeps the enforced edges legible instead
 of losing them among the unvalidated ones. A box from another group
 appearing here is a cross-group reference.
 
-#### `audit` (2 edges)
+#### `helix` (17 edges)
 
 ```mermaid
 erDiagram
-    AuditLog
-    Role
-    UserRoleAssignment
-    AuditLog }o..}o Role : "roles (inferred)"
-    UserRoleAssignment }o..}o Role : "roles (inferred)"
-```
-
-#### `eval` (3 edges)
-
-```mermaid
-erDiagram
-    EvalBaseline
-    EvalCase
-    EvalRun
-    EvalSuite
-    EvalBaseline }o..|| EvalSuite : "suite (inferred)"
-    EvalRun }o..|| EvalSuite : "suite (inferred)"
-    EvalSuite }o--}o EvalCase : "cases (dep)"
-```
-
-#### `evidence` (2 edges)
-
-```mermaid
-erDiagram
-    EvalSuite
-    Evidence
-    EvidencePolicy
-    WorkflowEvent
-    Evidence }o..|| EvalSuite : "suite (inferred)"
-    EvidencePolicy }o..}o WorkflowEvent : "events (inferred)"
-```
-
-#### `helix` (16 edges)
-
-```mermaid
-erDiagram
+    ANY_KIND
     Actor
     Agent
     App
     Copilot
+    Engram
     Guardrail
-    PromptTemplate
     Recognizer
-    Role
     SafetyPolicy
     Skill
     Soul
     Tool
     UseCase
-    Actor }o..|| Role : "role (inferred)"
-    Agent }o--|| Actor : "actors (dep)"
-    Agent }o--}o Guardrail : "guardrails (dep)"
-    Agent }o..|| PromptTemplate : "promptTemplate (inferred)"
-    Agent }o--}o Skill : "skills (dep)"
-    Agent }o--|| Soul : "soul (dep)"
-    Agent }o--}o Tool : "tools (dep)"
+    Agent }o..|| Actor : "actors (dep)"
+    Agent }o..}o Guardrail : "guardrails (dep)"
+    Agent }o..}o Skill : "skills (dep)"
+    Agent }o..|| Soul : "soul (dep)"
+    Agent }o..}o Tool : "tools (dep)"
     App }o--}o Copilot : "copilots"
-    SafetyPolicy }o--}o Recognizer : "recognizers (dep)"
-    UseCase }o--}o Agent : "agents (dep)"
-    UseCase }o--}o Guardrail : "guardrails (dep)"
-    UseCase }o--|| Actor : "primary_actor (dep)"
-    UseCase }o--}o Skill : "skills (dep)"
-    UseCase }o--|| Soul : "soul (dep)"
-    UseCase }o--}o Actor : "supporting_actors (dep)"
-    UseCase }o--}o Tool : "tools (dep)"
+    Engram }o..}o ANY_KIND : "affect_evidence_refs [Kind/name] *"
+    Engram }o..|| ANY_KIND : "area [Kind/name] *"
+    Engram }o..}o ANY_KIND : "source_refs [Kind/name] *"
+    SafetyPolicy }o..}o Recognizer : "recognizers (dep)"
+    UseCase }o..}o Agent : "agents (dep)"
+    UseCase }o..}o Guardrail : "guardrails (dep)"
+    UseCase }o..|| Actor : "primary_actor (dep)"
+    UseCase }o..}o Skill : "skills (dep)"
+    UseCase }o..|| Soul : "soul (dep)"
+    UseCase }o..}o Actor : "supporting_actors (dep)"
+    UseCase }o..}o Tool : "tools (dep)"
 ```
 
-#### `portfolio` (5 edges)
+#### `portfolio` (8 edges)
 
 ```mermaid
 erDiagram
     IntelSource
     Membership
     Organization
+    PricingPlan
     Project
     Repo
+    Role
+    Workspace
+    Membership }o..|| Role : "role [role_id]"
     Membership }o--|| Organization : "scope_ref *"
     Membership }o--|| Project : "scope_ref *"
+    Organization }o..|| PricingPlan : "plan_ref [tier_id]"
     Project }o--}o IntelSource : "intel_source_refs"
     Project }o--|| Organization : "org_ref"
     Project }o--}o Repo : "repo_refs"
+    Project }o..|| Workspace : "workspace_id [workspace_id]"
 ```
 
-#### `sdlc` — declared (13 edges)
+#### `sdlc` — declared (25 edges)
 
 ```mermaid
 erDiagram
+    ANY_KIND
+    AgentSession
+    Bug
     Epic
     Feature
+    Issue
+    Kaizen
     Plan
     Spec
+    Spike
     Sprint
+    StatusReport
     Story
     Task
+    WorkflowEvent
+    AgentSession }o..}o ANY_KIND : "produced_artifacts [{kind, name}] *"
+    Bug }o..}o ANY_KIND : "produces [{kind, name}] *"
     Epic }o--}o Feature : "features"
+    Epic }o..}o ANY_KIND : "produces [{kind, name}] *"
     Feature }o--|| Epic : "epic"
+    Feature }o..}o ANY_KIND : "produces [{kind, name}] *"
     Feature }o--|| Sprint : "sprint_ref"
     Feature }o--}o Story : "stories"
+    Issue }o..}o ANY_KIND : "produces [{kind, name}] *"
+    Kaizen }o..|| ANY_KIND : "work_item [Kind/name] *"
     Plan }o--|| Epic : "epic"
     Plan }o--|| Spec : "spec_ref"
     Spec }o--|| Epic : "epic"
     Spec }o--|| Spec : "supersedes"
+    Spike }o..}o ANY_KIND : "produces [{kind, name}] *"
+    StatusReport }o..}o ANY_KIND : "evidence_refs [Kind/name] *"
     Story }o--}o Story : "dependencies"
     Story }o--|| Feature : "feature"
+    Story }o..}o ANY_KIND : "produces [{kind, name}] *"
     Story }o--}o Spec : "spec_refs"
     Story }o--|| Sprint : "sprint_ref"
+    Task }o..}o ANY_KIND : "produces [{kind, name}] *"
     Task }o--|| Story : "story_ref"
+    WorkflowEvent }o..|| ANY_KIND : "parent_ref [Kind/name] *"
+    WorkflowEvent }o..|| ANY_KIND : "ref [Kind/name] *"
 ```
 
-#### `sdlc` — composition (52 edges)
+#### `sdlc` — composition (36 edges)
 
 ```mermaid
 erDiagram
@@ -257,7 +240,6 @@ erDiagram
     Issue
     Kaizen
     Narrative
-    Plan
     Postmortem
     Reference
     Retrospective
@@ -269,241 +251,183 @@ erDiagram
     Task
     UseCase
     WorkflowEvent
-    ADR }o--}o Feature : "covers_features (dep)"
-    ADR }o--|| ADR : "superseded_by (dep)"
-    ADR }o--}o ADR : "supersedes (dep)"
-    AgentSession }o--}o Actor : "participants (dep)"
-    Bug }o--|| ADR : "fix_adr (dep)"
-    Bug }o--|| Feature : "related_feature (dep)"
-    Bug }o--|| Story : "related_story (dep)"
-    Feature }o--|| Actor : "owner (dep)"
-    Feature }o--}o UseCase : "use_cases (dep)"
-    Initiative }o--}o Epic : "epics (dep)"
-    Initiative }o--|| Actor : "owner (dep)"
-    Issue }o--|| Actor : "owner (dep)"
-    Issue }o--|| Feature : "related_feature (dep)"
-    Kaizen }o--|| Issue : "issue (dep)"
-    Narrative }o--}o Epic : "covers_epics (dep)"
-    Narrative }o--}o Feature : "covers_features (dep)"
-    Narrative }o--}o Story : "covers_stories (dep)"
-    Postmortem }o--}o Feature : "related_features (dep)"
-    Postmortem }o--}o Story : "related_stories (dep)"
-    Retrospective }o--}o Epic : "covers_epics (dep)"
-    Retrospective }o--}o Feature : "covers_features (dep)"
-    Retrospective }o--|| AgentSession : "covers_session (dep)"
-    Retrospective }o--}o Story : "covers_stories (dep)"
-    RiskRegister }o--|| Actor : "owner (dep)"
-    RiskRegister }o--}o Epic : "related_epics (dep)"
-    RiskRegister }o--}o Feature : "related_features (dep)"
-    Roadmap }o--|| Epic : "epics (dep)"
-    Spike }o--|| Feature : "feature (dep)"
-    Spike }o--|| ADR : "follow_up_adr (dep)"
-    Spike }o--|| Spec : "follow_up_spec (dep)"
-    Spike }o--|| Story : "follow_up_story (dep)"
-    Spike }o--}o Reference : "references (dep)"
-    Spike }o--}o Spike : "related_spikes (dep)"
-    Story }o--|| Actor : "owner (dep)"
-    Task }o--|| Actor : "owner (dep)"
-    WorkflowEvent }o--|| AgentSession : "parent_ref (dep) *"
-    WorkflowEvent }o--|| Epic : "parent_ref (dep) *"
-    WorkflowEvent }o--|| Feature : "parent_ref (dep) *"
-    WorkflowEvent }o--|| Narrative : "parent_ref (dep) *"
-    WorkflowEvent }o--|| Plan : "parent_ref (dep) *"
-    WorkflowEvent }o--|| Roadmap : "parent_ref (dep) *"
-    WorkflowEvent }o--|| Spec : "parent_ref (dep) *"
-    WorkflowEvent }o--|| Story : "parent_ref (dep) *"
-    WorkflowEvent }o--|| AgentSession : "ref (dep) *"
-    WorkflowEvent }o--|| Epic : "ref (dep) *"
-    WorkflowEvent }o--|| Feature : "ref (dep) *"
-    WorkflowEvent }o--|| Narrative : "ref (dep) *"
-    WorkflowEvent }o--|| Plan : "ref (dep) *"
-    WorkflowEvent }o--|| Roadmap : "ref (dep) *"
-    WorkflowEvent }o--|| Spec : "ref (dep) *"
-    WorkflowEvent }o--|| Story : "ref (dep) *"
-    WorkflowEvent }o--|| WorkflowEvent : "transitioned_from (dep)"
+    ADR }o..}o Feature : "covers_features (dep)"
+    ADR }o..|| ADR : "superseded_by (dep)"
+    ADR }o..}o ADR : "supersedes (dep)"
+    AgentSession }o..}o Actor : "participants (dep)"
+    Bug }o..|| ADR : "fix_adr (dep)"
+    Bug }o..|| Feature : "related_feature (dep)"
+    Bug }o..|| Story : "related_story (dep)"
+    Feature }o..|| Actor : "owner (dep)"
+    Feature }o..}o UseCase : "use_cases (dep)"
+    Initiative }o..}o Epic : "epics (dep)"
+    Initiative }o..|| Actor : "owner (dep)"
+    Issue }o..|| Actor : "owner (dep)"
+    Issue }o..|| Feature : "related_feature (dep)"
+    Kaizen }o..|| Issue : "issue (dep)"
+    Narrative }o..}o Epic : "covers_epics (dep)"
+    Narrative }o..}o Feature : "covers_features (dep)"
+    Narrative }o..}o Story : "covers_stories (dep)"
+    Postmortem }o..}o Feature : "related_features (dep)"
+    Postmortem }o..}o Story : "related_stories (dep)"
+    Retrospective }o..}o Epic : "covers_epics (dep)"
+    Retrospective }o..}o Feature : "covers_features (dep)"
+    Retrospective }o..|| AgentSession : "covers_session (dep)"
+    Retrospective }o..}o Story : "covers_stories (dep)"
+    RiskRegister }o..|| Actor : "owner (dep)"
+    RiskRegister }o..}o Epic : "related_epics (dep)"
+    RiskRegister }o..}o Feature : "related_features (dep)"
+    Roadmap }o..|| Epic : "epics (dep)"
+    Spike }o..|| Feature : "feature (dep)"
+    Spike }o..|| ADR : "follow_up_adr (dep)"
+    Spike }o..|| Spec : "follow_up_spec (dep)"
+    Spike }o..|| Story : "follow_up_story (dep)"
+    Spike }o..}o Reference : "references (dep)"
+    Spike }o..}o Spike : "related_spikes (dep)"
+    Story }o..|| Actor : "owner (dep)"
+    Task }o..|| Actor : "owner (dep)"
+    WorkflowEvent }o..|| WorkflowEvent : "transitioned_from (dep)"
 ```
 
-#### `sdlc` — inferred (10 edges)
-
-```mermaid
-erDiagram
-    Actor
-    CognitivePolicy
-    Epic
-    Feature
-    Initiative
-    IntelInsight
-    Kaizen
-    Memory
-    Narrative
-    Research
-    Retrospective
-    Spike
-    StatusReport
-    Theme
-    WorkflowEvent
-    CognitivePolicy }o..|| Memory : "memory (inferred)"
-    Initiative }o..|| Theme : "theme_ref (inferred)"
-    Kaizen }o..|| Actor : "actor (inferred)"
-    Narrative }o..|| Actor : "actor (inferred)"
-    Retrospective }o..|| Actor : "actor (inferred)"
-    Spike }o..}o Research : "research_refs (inferred)"
-    StatusReport }o..|| IntelInsight : "insight (inferred)"
-    WorkflowEvent }o..|| Actor : "actor (inferred)"
-    WorkflowEvent }o..|| Epic : "epic_ref (inferred)"
-    WorkflowEvent }o..|| Feature : "feature_ref (inferred)"
-```
-
-#### `tenant` (3 edges)
+#### `tenant` (2 edges)
 
 ```mermaid
 erDiagram
     Role
-    Tenant
-    TenantMembership
     Workspace
-    WorkspaceScopeGrant
-    TenantMembership }o..|| Role : "role (inferred)"
-    TenantMembership }o..|| Tenant : "tenant_slug (inferred)"
-    WorkspaceScopeGrant }o..|| Workspace : "workspace_id (inferred)"
+    WorkspaceMembership
+    WorkspaceMembership }o..|| Role : "role [role_id]"
+    WorkspaceMembership }o..|| Workspace : "workspace_id [workspace_id]"
 ```
 
-Groups with fewer than 2 edges (listed, not drawn): `agentskills`, `intel`, `kinddef`, `lesson`, `testkit`.
+#### `testkit` (3 edges)
 
-### Declared edges (`x-dna-ref`)
+```mermaid
+erDiagram
+    ANY_KIND
+    TestGuide
+    TestRun
+    TestGuide }o..}o ANY_KIND : "verifies [Kind/name] *"
+    TestRun }o..}o ANY_KIND : "evidence [Kind/name] *"
+    TestRun }o--|| TestGuide : "guide_ref"
+```
 
-Enforced at write time. This table is the part of the graph the
-system will not let you break.
+Groups with fewer than 2 edges (listed, not drawn): `artifact`, `collab`, `eval`, `evidence`, `intel`, `research`.
 
-| From | Field | To | Cardinality | Cross-group |
-| --- | --- | --- | --- | --- |
-| `App` | `copilots` | `Copilot` | many |  |
-| `Epic` | `features` | `Feature` | many |  |
-| `Feature` | `epic` | `Epic` | one |  |
-| `Feature` | `sprint_ref` | `Sprint` | one |  |
-| `Feature` | `stories` | `Story` | many |  |
-| `IntelInsight` | `source_ref` | `IntelSource` | one |  |
-| `Membership` | `scope_ref` *(poly)* | `Organization` | one |  |
-| `Membership` | `scope_ref` *(poly)* | `Project` | one |  |
-| `Plan` | `epic` | `Epic` | one |  |
-| `Plan` | `spec_ref` | `Spec` | one |  |
-| `Project` | `intel_source_refs` | `IntelSource` | many | yes |
-| `Project` | `org_ref` | `Organization` | one |  |
-| `Project` | `repo_refs` | `Repo` | many |  |
-| `Spec` | `epic` | `Epic` | one |  |
-| `Spec` | `supersedes` | `Spec` | one |  |
-| `Story` | `dependencies` | `Story` | many |  |
-| `Story` | `feature` | `Feature` | one |  |
-| `Story` | `spec_refs` | `Spec` | many |  |
-| `Story` | `sprint_ref` | `Sprint` | one |  |
-| `Task` | `story_ref` | `Story` | one |  |
+### Declared relations (`spec.relations`)
+
+What each Kind says it points at. `Enforced` is the column that
+matters: `yes` means the kernel resolves the target at write time and
+the graph gets a data edge; blank means the relation is declared and
+the runtime does not follow it — read `By` for why.
+
+| From | Field | To | Cardinality | By | Enforced | Inverse of | Cross-group |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `AgentSession` | `produced_artifacts` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
+| `App` | `copilots` | `Copilot` | many | `name` | yes |  |  |
+| `Bug` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
+| `Comment` | `target_ref` *(poly)* | `*` | one | `Kind:name` |  |  |  |
+| `Engram` | `affect_evidence_refs` *(poly)* | `*` | many | `Kind/name` |  |  |  |
+| `Engram` | `area` *(poly)* | `*` | one | `Kind/name` |  |  |  |
+| `Engram` | `source_refs` *(poly)* | `*` | many | `Kind/name` |  |  |  |
+| `Epic` | `features` | `Feature` | many | `name` | yes | `epic` |  |
+| `Epic` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
+| `Evidence` | `document_ref` *(poly)* | `*` | one | `Kind:name` |  |  |  |
+| `Feature` | `epic` | `Epic` | one | `name` | yes | `features` |  |
+| `Feature` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
+| `Feature` | `sprint_ref` | `Sprint` | one | `name` | yes |  |  |
+| `Feature` | `stories` | `Story` | many | `name` | yes | `feature` |  |
+| `IntelInsight` | `source_ref` | `IntelSource` | one | `name` | yes |  |  |
+| `Issue` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
+| `Kaizen` | `work_item` *(poly)* | `*` | one | `Kind/name` |  |  |  |
+| `Membership` | `role` | `Role` | one | `role_id` |  |  |  |
+| `Membership` | `scope_ref` *(poly)* | `Organization` | one | `name` | yes |  |  |
+| `Membership` | `scope_ref` *(poly)* | `Project` | one | `name` | yes |  |  |
+| `Organization` | `plan_ref` | `PricingPlan` | one | `tier_id` |  |  | yes |
+| `Plan` | `epic` | `Epic` | one | `name` | yes |  |  |
+| `Plan` | `spec_ref` | `Spec` | one | `name` | yes |  |  |
+| `Project` | `intel_source_refs` | `IntelSource` | many | `name` | yes |  | yes |
+| `Project` | `org_ref` | `Organization` | one | `name` | yes |  |  |
+| `Project` | `repo_refs` | `Repo` | many | `name` | yes |  |  |
+| `Project` | `workspace_id` | `Workspace` | one | `workspace_id` |  |  | yes |
+| `Research` | `cited_by` *(poly)* | `*` | many | `Kind/name` |  |  |  |
+| `SourceArtifact` | `derived_refs` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
+| `Spec` | `epic` | `Epic` | one | `name` | yes |  |  |
+| `Spec` | `supersedes` | `Spec` | one | `name` | yes |  |  |
+| `Spike` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
+| `StatusReport` | `evidence_refs` *(poly)* | `*` | many | `Kind/name` |  |  |  |
+| `Story` | `dependencies` | `Story` | many | `name` | yes |  |  |
+| `Story` | `feature` | `Feature` | one | `name` | yes | `stories` |  |
+| `Story` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
+| `Story` | `spec_refs` | `Spec` | many | `name` | yes |  |  |
+| `Story` | `sprint_ref` | `Sprint` | one | `name` | yes |  |  |
+| `Task` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
+| `Task` | `story_ref` | `Story` | one | `name` | yes |  |  |
+| `TestGuide` | `verifies` *(poly)* | `*` | many | `Kind/name` |  |  |  |
+| `TestRun` | `evidence` *(poly)* | `*` | many | `Kind/name` |  |  |  |
+| `TestRun` | `guide_ref` | `TestGuide` | one | `name` | yes |  |  |
+| `WorkflowEvent` | `parent_ref` *(poly)* | `*` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `ref` *(poly)* | `*` | one | `Kind/name` |  |  |  |
+| `WorkspaceMembership` | `role` | `Role` | one | `role_id` |  |  | yes |
+| `WorkspaceMembership` | `workspace_id` | `Workspace` | one | `workspace_id` |  |  |  |
 
 ### Composition edges (`dep_filters` only)
 
 Declared for prompt composition, never validated against stored
-data. Each row is a candidate for an `x-dna-ref` promotion.
+data. Each row is a candidate for promotion to a relation.
 
-| From | Field | To | Cardinality | Cross-group |
-| --- | --- | --- | --- | --- |
-| `ADR` | `covers_features` | `Feature` | many |  |
-| `ADR` | `superseded_by` | `ADR` | one |  |
-| `ADR` | `supersedes` | `ADR` | many |  |
-| `Agent` | `actors` | `Actor` | one |  |
-| `Agent` | `guardrails` | `Guardrail` | many | yes |
-| `Agent` | `skills` | `Skill` | many | yes |
-| `Agent` | `soul` | `Soul` | one | yes |
-| `Agent` | `tools` | `Tool` | many |  |
-| `AgentSession` | `participants` | `Actor` | many | yes |
-| `Bug` | `fix_adr` | `ADR` | one |  |
-| `Bug` | `related_feature` | `Feature` | one |  |
-| `Bug` | `related_story` | `Story` | one |  |
-| `EvalSuite` | `cases` | `EvalCase` | many |  |
-| `Feature` | `owner` | `Actor` | one | yes |
-| `Feature` | `use_cases` | `UseCase` | many | yes |
-| `Initiative` | `epics` | `Epic` | many |  |
-| `Initiative` | `owner` | `Actor` | one | yes |
-| `Issue` | `owner` | `Actor` | one | yes |
-| `Issue` | `related_feature` | `Feature` | one |  |
-| `Kaizen` | `issue` | `Issue` | one |  |
-| `Narrative` | `covers_epics` | `Epic` | many |  |
-| `Narrative` | `covers_features` | `Feature` | many |  |
-| `Narrative` | `covers_stories` | `Story` | many |  |
-| `Postmortem` | `related_features` | `Feature` | many |  |
-| `Postmortem` | `related_stories` | `Story` | many |  |
-| `Retrospective` | `covers_epics` | `Epic` | many |  |
-| `Retrospective` | `covers_features` | `Feature` | many |  |
-| `Retrospective` | `covers_session` | `AgentSession` | one |  |
-| `Retrospective` | `covers_stories` | `Story` | many |  |
-| `RiskRegister` | `owner` | `Actor` | one | yes |
-| `RiskRegister` | `related_epics` | `Epic` | many |  |
-| `RiskRegister` | `related_features` | `Feature` | many |  |
-| `Roadmap` | `epics` | `Epic` | one |  |
-| `SafetyPolicy` | `recognizers` | `Recognizer` | many | yes |
-| `Spike` | `feature` | `Feature` | one |  |
-| `Spike` | `follow_up_adr` | `ADR` | one |  |
-| `Spike` | `follow_up_spec` | `Spec` | one |  |
-| `Spike` | `follow_up_story` | `Story` | one |  |
-| `Spike` | `references` | `Reference` | many |  |
-| `Spike` | `related_spikes` | `Spike` | many |  |
-| `Story` | `owner` | `Actor` | one | yes |
-| `Task` | `owner` | `Actor` | one | yes |
-| `UseCase` | `agents` | `Agent` | many |  |
-| `UseCase` | `guardrails` | `Guardrail` | many | yes |
-| `UseCase` | `primary_actor` | `Actor` | one |  |
-| `UseCase` | `skills` | `Skill` | many | yes |
-| `UseCase` | `soul` | `Soul` | one | yes |
-| `UseCase` | `supporting_actors` | `Actor` | many |  |
-| `UseCase` | `tools` | `Tool` | many |  |
-| `WorkflowEvent` | `parent_ref` *(poly)* | `AgentSession` | one |  |
-| `WorkflowEvent` | `parent_ref` *(poly)* | `Epic` | one |  |
-| `WorkflowEvent` | `parent_ref` *(poly)* | `Feature` | one |  |
-| `WorkflowEvent` | `parent_ref` *(poly)* | `Narrative` | one |  |
-| `WorkflowEvent` | `parent_ref` *(poly)* | `Plan` | one |  |
-| `WorkflowEvent` | `parent_ref` *(poly)* | `Roadmap` | one |  |
-| `WorkflowEvent` | `parent_ref` *(poly)* | `Spec` | one |  |
-| `WorkflowEvent` | `parent_ref` *(poly)* | `Story` | one |  |
-| `WorkflowEvent` | `ref` *(poly)* | `AgentSession` | one |  |
-| `WorkflowEvent` | `ref` *(poly)* | `Epic` | one |  |
-| `WorkflowEvent` | `ref` *(poly)* | `Feature` | one |  |
-| `WorkflowEvent` | `ref` *(poly)* | `Narrative` | one |  |
-| `WorkflowEvent` | `ref` *(poly)* | `Plan` | one |  |
-| `WorkflowEvent` | `ref` *(poly)* | `Roadmap` | one |  |
-| `WorkflowEvent` | `ref` *(poly)* | `Spec` | one |  |
-| `WorkflowEvent` | `ref` *(poly)* | `Story` | one |  |
-| `WorkflowEvent` | `transitioned_from` | `WorkflowEvent` | one |  |
-
-### Inferred edges (name convention)
-
-Not declared anywhere. Each row is this generator matching a field
-name against the Kind registry — useful, and fallible.
-
-| From | Field | To | Cardinality | Cross-group |
-| --- | --- | --- | --- | --- |
-| `Actor` | `role` | `Role` | one | yes |
-| `Agent` | `promptTemplate` | `PromptTemplate` | one | yes |
-| `AuditLog` | `roles` | `Role` | many | yes |
-| `CognitivePolicy` | `memory` | `Memory` | one | yes |
-| `EvalBaseline` | `suite` | `EvalSuite` | one |  |
-| `EvalRun` | `suite` | `EvalSuite` | one |  |
-| `Evidence` | `suite` | `EvalSuite` | one | yes |
-| `EvidencePolicy` | `events` | `WorkflowEvent` | many | yes |
-| `Initiative` | `theme_ref` | `Theme` | one | yes |
-| `Kaizen` | `actor` | `Actor` | one | yes |
-| `KindDefinition` | `docs` | `Doc` | one | yes |
-| `Lesson` | `skill` | `Skill` | one | yes |
-| `Narrative` | `actor` | `Actor` | one | yes |
-| `Retrospective` | `actor` | `Actor` | one | yes |
-| `Skill` | `references` | `Reference` | one | yes |
-| `Spike` | `research_refs` | `Research` | many | yes |
-| `StatusReport` | `insight` | `IntelInsight` | one | yes |
-| `TenantMembership` | `role` | `Role` | one | yes |
-| `TenantMembership` | `tenant_slug` | `Tenant` | one |  |
-| `TestRun` | `guide_ref` | `TestGuide` | one |  |
-| `UserRoleAssignment` | `roles` | `Role` | many | yes |
-| `WorkflowEvent` | `actor` | `Actor` | one | yes |
-| `WorkflowEvent` | `epic_ref` | `Epic` | one |  |
-| `WorkflowEvent` | `feature_ref` | `Feature` | one |  |
-| `WorkspaceScopeGrant` | `workspace_id` | `Workspace` | one |  |
+| From | Field | To | Cardinality | By | Enforced | Inverse of | Cross-group |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `ADR` | `covers_features` | `Feature` | many | `name` |  |  |  |
+| `ADR` | `superseded_by` | `ADR` | one | `name` |  |  |  |
+| `ADR` | `supersedes` | `ADR` | many | `name` |  |  |  |
+| `Agent` | `actors` | `Actor` | one | `name` |  |  |  |
+| `Agent` | `guardrails` | `Guardrail` | many | `name` |  |  | yes |
+| `Agent` | `skills` | `Skill` | many | `name` |  |  | yes |
+| `Agent` | `soul` | `Soul` | one | `name` |  |  | yes |
+| `Agent` | `tools` | `Tool` | many | `name` |  |  |  |
+| `AgentSession` | `participants` | `Actor` | many | `name` |  |  | yes |
+| `Bug` | `fix_adr` | `ADR` | one | `name` |  |  |  |
+| `Bug` | `related_feature` | `Feature` | one | `name` |  |  |  |
+| `Bug` | `related_story` | `Story` | one | `name` |  |  |  |
+| `EvalSuite` | `cases` | `EvalCase` | many | `name` |  |  |  |
+| `Feature` | `owner` | `Actor` | one | `name` |  |  | yes |
+| `Feature` | `use_cases` | `UseCase` | many | `name` |  |  | yes |
+| `Initiative` | `epics` | `Epic` | many | `name` |  |  |  |
+| `Initiative` | `owner` | `Actor` | one | `name` |  |  | yes |
+| `Issue` | `owner` | `Actor` | one | `name` |  |  | yes |
+| `Issue` | `related_feature` | `Feature` | one | `name` |  |  |  |
+| `Kaizen` | `issue` | `Issue` | one | `name` |  |  |  |
+| `Narrative` | `covers_epics` | `Epic` | many | `name` |  |  |  |
+| `Narrative` | `covers_features` | `Feature` | many | `name` |  |  |  |
+| `Narrative` | `covers_stories` | `Story` | many | `name` |  |  |  |
+| `Postmortem` | `related_features` | `Feature` | many | `name` |  |  |  |
+| `Postmortem` | `related_stories` | `Story` | many | `name` |  |  |  |
+| `Retrospective` | `covers_epics` | `Epic` | many | `name` |  |  |  |
+| `Retrospective` | `covers_features` | `Feature` | many | `name` |  |  |  |
+| `Retrospective` | `covers_session` | `AgentSession` | one | `name` |  |  |  |
+| `Retrospective` | `covers_stories` | `Story` | many | `name` |  |  |  |
+| `RiskRegister` | `owner` | `Actor` | one | `name` |  |  | yes |
+| `RiskRegister` | `related_epics` | `Epic` | many | `name` |  |  |  |
+| `RiskRegister` | `related_features` | `Feature` | many | `name` |  |  |  |
+| `Roadmap` | `epics` | `Epic` | one | `name` |  |  |  |
+| `SafetyPolicy` | `recognizers` | `Recognizer` | many | `name` |  |  | yes |
+| `Spike` | `feature` | `Feature` | one | `name` |  |  |  |
+| `Spike` | `follow_up_adr` | `ADR` | one | `name` |  |  |  |
+| `Spike` | `follow_up_spec` | `Spec` | one | `name` |  |  |  |
+| `Spike` | `follow_up_story` | `Story` | one | `name` |  |  |  |
+| `Spike` | `references` | `Reference` | many | `name` |  |  |  |
+| `Spike` | `related_spikes` | `Spike` | many | `name` |  |  |  |
+| `Story` | `owner` | `Actor` | one | `name` |  |  | yes |
+| `Task` | `owner` | `Actor` | one | `name` |  |  | yes |
+| `UseCase` | `agents` | `Agent` | many | `name` |  |  |  |
+| `UseCase` | `guardrails` | `Guardrail` | many | `name` |  |  | yes |
+| `UseCase` | `primary_actor` | `Actor` | one | `name` |  |  |  |
+| `UseCase` | `skills` | `Skill` | many | `name` |  |  | yes |
+| `UseCase` | `soul` | `Soul` | one | `name` |  |  | yes |
+| `UseCase` | `supporting_actors` | `Actor` | many | `name` |  |  |  |
+| `UseCase` | `tools` | `Tool` | many | `name` |  |  |  |
+| `WorkflowEvent` | `transitioned_from` | `WorkflowEvent` | one | `name` |  |  |  |
 
 ## What this model cannot express
 
@@ -511,108 +435,60 @@ A MER that implies completeness is worse than none. These are the
 known gaps, generated alongside everything else so they cannot be
 quietly dropped.
 
-### Known-undeclarable references
+### Gaps
 
-Real edges that `x-dna-ref` deliberately does NOT declare. It resolves
-targets by **document name**, and these are keyed by something else —
-declaring them would produce false write-time violations on perfectly
-valid data.
-
-Two families. **Keyed** ones name the Kind they really point at (an
-opaque id, a role id, a tier id); they are the concrete backlog for a
-future `x-dna-ref-key`. **Composite** ones carry the Kind IN the value
-(`Story:s-thing`, `Narrative/X`, `{kind, name}`), so `Really points at`
-is `any` — there is no single target to name. The composite family is
-derived from the schemas, never enumerated: a field either declares
-`x-dna-ref-composite` or its object shape requires `kind` + `name`.
-
-| Kind | Field | Really points at | Why undeclarable |
-| --- | --- | --- | --- |
-| `AgentSession` | `produced_artifacts` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Bug` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Comment` | `target_ref` | `any` | composite `Kind:name` pointer — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Engram` | `affect_evidence_refs` | `any` | composite `Kind/name` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Engram` | `area` | `any` | composite `Kind/name` pointer — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Engram` | `source_refs` | `any` | composite `Kind/name` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Epic` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Evidence` | `document_ref` | `any` | composite `Kind:name` pointer — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Feature` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Issue` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Kaizen` | `work_item` | `any` | composite `Kind/slug` pointer — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Membership` | `role` | `Role` | keyed by `role_id`, not the document name |
-| `Organization` | `plan_ref` | `PricingPlan` | keyed by `tier_id` (free/pro/enterprise), not the document name |
-| `Project` | `workspace_id` | `Workspace` | keyed by the Workspace's opaque generated `workspace_id`, not its document name |
-| `Research` | `cited_by` | `any` | composite `Kind/name` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `SourceArtifact` | `derived_refs` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Spike` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `StatusReport` | `evidence_refs` | `any` | composite `Kind/name` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Story` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `Task` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `TestGuide` | `verifies` | `any` | composite `Kind/name` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `TestRun` | `evidence` | `any` | composite `Kind/name` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `WorkflowEvent` | `parent_ref` | `any` | composite `Kind/name` pointer — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `WorkflowEvent` | `ref` | `any` | composite `Kind/name` pointer — the target Kind travels in the value, so it needs parsing, not a name lookup |
-| `WorkspaceMembership` | `role` | `Role` | keyed by `role_id` (owner/admin/member/guest), not the document name |
-| `WorkspaceMembership` | `workspace_id` | `Workspace` | same opaque `workspace_id` key |
-
-### Unresolved reference-shaped fields
-
-Fields that clearly point at something the model cannot name. This
-shrinks when references get declared, not when the generator gets
+This shrinks when relations get declared, not when the generator gets
 cleverer.
 
-`Origin` is the column that keeps the list honest. **declared** and
-**composition** rows are declarations the model cannot honour —
-somebody wrote a target and it does not resolve. **shape-inferred**
-rows are the projection guessing from a field NAME, and are usually
-not references at all: an OAuth `client_id`, a Stripe customer id, an
-IdP subject. Reading the two alike is how a real broken reference
-arrives invisible in a list of false alarms.
+`Origin` is the column that keeps the list honest. **declared**,
+**composition** and **inverse** rows are declarations the model cannot
+honour — somebody wrote a target, an alias or an inverse and it does
+not resolve. **undeclared** rows are fields whose NAME looks like a
+reference and which nothing declares; they are usually not references
+at all (an OAuth `client_id`, a Stripe customer id, an IdP subject),
+and this generator no longer guesses a target for them. Reading the
+two alike is how a real broken reference arrives invisible in a list
+of false alarms.
+
+The **known-undeclarable** table that used to sit here is gone, and
+its absence is the point: those were real references the annotation
+could not express. They are declared relations now, in the table
+above, with `Enforced` blank.
 
 | Kind | Field | Origin | Why unresolved |
 | --- | --- | --- | --- |
-| `AgentCatalogEntry` | `client_id` | `shape-inferred` | reference-shaped, but `client` matches no registered Kind |
-| `AgentGrant` | `client_id` | `shape-inferred` | reference-shaped, but `client` matches no registered Kind |
-| `AuditLog` | `request_id` | `shape-inferred` | reference-shaped, but `request` matches no registered Kind |
-| `LayerPolicy` | `layer_id` | `shape-inferred` | reference-shaped, but `layer` matches no registered Kind |
-| `ModelProfile` | `model_id` | `shape-inferred` | reference-shaped, but `model` matches no registered Kind |
-| `PlanBinding` | `account_id` | `shape-inferred` | reference-shaped, but `account` matches no registered Kind |
-| `PlanBinding` | `stripe_customer_id` | `shape-inferred` | reference-shaped, but `stripe_customer` matches no registered Kind |
-| `PlanBinding` | `stripe_subscription_id` | `shape-inferred` | reference-shaped, but `stripe_subscription` matches no registered Kind |
-| `PlanBinding` | `tier_id` | `shape-inferred` | reference-shaped, but `tier` matches no registered Kind |
-| `PricingPlan` | `tier_id` | `shape-inferred` | reference-shaped, but `tier` matches no registered Kind |
-| `TenantMembership` | `user_id` | `shape-inferred` | reference-shaped, but `user` matches no registered Kind |
-| `UserProfile` | `user_id` | `shape-inferred` | reference-shaped, but `user` matches no registered Kind |
-| `UserRoleAssignment` | `user_id` | `shape-inferred` | reference-shaped, but `user` matches no registered Kind |
-| `Workspace` | `account_id` | `shape-inferred` | reference-shaped, but `account` matches no registered Kind |
-| `WorkspaceMembership` | `identity_oid` | `shape-inferred` | reference-shaped, but `identity` matches no registered Kind |
+| `AgentCatalogEntry` | `client_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `AgentGrant` | `client_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `AgentSession` | `session_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `AuditLog` | `request_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `Initiative` | `theme_ref` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `LayerPolicy` | `layer_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `ModelProfile` | `model_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `PlanBinding` | `account_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `PlanBinding` | `stripe_customer_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `PlanBinding` | `stripe_subscription_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `PlanBinding` | `tier_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `PricingPlan` | `tier_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `Role` | `role_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `Spike` | `research_refs` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `Sprint` | `sprint_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `TenantMembership` | `tenant_slug` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `TenantMembership` | `user_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `UserProfile` | `user_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `UserRoleAssignment` | `user_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `WorkflowEvent` | `epic_ref` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `WorkflowEvent` | `feature_ref` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `Workspace` | `account_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `Workspace` | `workspace_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `WorkspaceMembership` | `identity_oid` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `WorkspaceScopeGrant` | `workspace_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
 
-### Suppressed name matches
-
-The name-convention pass matched these and each is wrong. Listed
-rather than silently dropped, so the suppression is auditable.
-
-What the pass DID, not what the denylist says it would: an entry only
-fires where the field name resolves to exactly one Kind, so an entry
-can go inert without being touched — `plan` stopped resolving when
-`PricingPlan` joined `Plan`, and ambiguity now stops those matches.
-Such entries stay in the source (the day the ambiguity ends they are
-the only thing stopping a wrong edge) and are absent here.
-
-| Kind | Field | Why the match is wrong |
-| --- | --- | --- |
-| `AgentSession` | `tool` | provenance enum of the AI coding tool that produced the session (claude-code \| cursor \| cline \| …), not a `Tool` document |
-| `AuditLog` | `actor` | the request identity string from claims (email/sub, or 'dev-user'), not a reference to an `Actor` document |
-| `Copilot` | `tenant` | inbound-tenant handling mode for the emitted serving layer, not a reference to a `Tenant` document |
-| `Memory` | `namespace` | MIF's hierarchical memory scope path (`_semantic/decisions`, §10) — a string axis inside the document, not the `KindNamespace` Kind, whose alias `tenant-kind-namespace` merely ends in the same token |
-| `RemoteAgent` | `skills` | the A2A Card's own `skills[]` (id/name/description/tags/examples) — structured self-description of what the remote agent can do, not a reference to the `Skill` Kind (agentskills), which merely shares the singular of the field name |
-
-### Kinds with no reference edge (22)
+### Kinds with no reference edge (32)
 
 Standalone documents — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `Automation`, `Canvas`, `Changelog`, `Comment`, `Engram`, `Genome`, `Hook`, `HtmlArtifact`, `KindNamespace`, `LayerPolicy`, `MCPFederation`, `ModelProfile`, `PlanBinding`, `PricingPlan`, `RemoteAgent`, `Setting`, `SourceArtifact`, `UserProfile`, `WorkspaceMembership`
+`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `AuditLog`, `Automation`, `Canvas`, `Changelog`, `CognitivePolicy`, `Doc`, `EvalBaseline`, `EvalRun`, `EvidencePolicy`, `Genome`, `Hook`, `HtmlArtifact`, `KindDefinition`, `KindNamespace`, `LayerPolicy`, `Lesson`, `MCPFederation`, `Memory`, `ModelProfile`, `PlanBinding`, `PromptTemplate`, `RemoteAgent`, `Setting`, `Tenant`, `TenantMembership`, `Theme`, `UserProfile`, `UserRoleAssignment`, `WorkspaceScopeGrant`
 
 ## Physical model — the real tables
 

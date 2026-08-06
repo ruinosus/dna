@@ -1369,6 +1369,41 @@ class KindPresentation(Protocol):
     def graph_meta(self, doc: Any) -> dict[str, Any] | None: ...
 
 
+class KindRelations(Protocol):
+    """Optional relations capability of a Kind (typing-only).
+
+    A sibling of :class:`KindPresentation` and deliberately not a member of it:
+    presentation says how a Kind's data READS on a surface, relations say what
+    the Kind POINTS AT — a statement about the model, true whether or not
+    anything is being rendered. Folding one into the other would make a Kind
+    that declares relations also claim a rendering opinion it never had.
+
+    Same two constraints as ``KindPresentation``, for the same reasons: NOT
+    ``@runtime_checkable`` and NOT part of ``KindPort``, because
+    ``runtime_checkable`` checks member PRESENCE and the H1 registration gate
+    would then reject every minimal third-party Kind — the breakage the
+    ``is_runtime_artifact`` addition caused once.
+
+    - ``relations`` — ``{relation name: Relation}``, where a relation's NAME is
+      the spec field holding its value. Four keys and no more: ``to`` (the
+      target Kind, a list for a polymorphic one, or ``*`` when the target
+      travels in the value), ``cardinality`` (``one``/``many``, declared and
+      never inferred from ``type: array``), ``inverse_of`` (the relation name
+      on the target that is this one's other half) and ``by`` (how the value
+      addresses the target — ``name`` by default, and the ONLY addressing the
+      kernel resolves and therefore validates). Normalized + validated by
+      ``dna.kernel.kinds.relations`` (``relations_of``). A TENANT Kind declares
+      it in the very same words, as ``KindDefinition.spec.relations``.
+    """
+
+    #: ``dict[str, Relation] | dict | None`` — typed loosely on purpose, for
+    #: the reason ``presentation`` is: protocols.py must not import the
+    #: concrete normalizer at runtime, and a hand-written Kind may carry the
+    #: raw authoring mapping until it is normalized. Read it through
+    #: ``dna.kernel.kinds.relations.relations_of``.
+    relations: Any
+
+
 @runtime_checkable
 class ExtensionHost(Protocol):
     """The registration-time surface the Kernel offers to ``Extension.register()``.
@@ -1503,6 +1538,7 @@ __all__ = [
     "resolve_visible_in_backend",
     "KindPort",
     "KindPresentation",
+    "KindRelations",
     "ExtensionHost",
     "TemplateProvider",
     "Extension",

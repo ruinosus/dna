@@ -321,7 +321,7 @@ export interface paths {
          *     Replaces "read every Kind's descriptor and derive the graph in the
          *     client", which cost one request per Kind and got slower as a workspace
          *     grew. Same projection that generates ``docs/reference/data-model.md``:
-         *     the tiering, the ``x-dna-ref`` reading (the SAME one the write path
+         *     the tiering, the ``spec.relations`` reading (the SAME one the write path
          *     validates with) and the gap tables live in the SDK, so the page and
          *     this route cannot disagree about what the model says.
          *
@@ -2349,8 +2349,11 @@ export interface components {
          *     document has no relations". A store that keeps no edge graph at all answers
          *     501, never an empty list.
          *
-         *     ⚠️ These are the DECLARED relations (``x-dna-ref``) only. The schema graph
-         *     also carries composition and name-convention edges that were never checked
+         *     ⚠️ These are the ENFORCED relations only — the ones ``spec.relations``
+         *     declares with a concrete target addressed by document name, which is the
+         *     only kind the write path resolves. The schema graph also carries relations
+         *     addressed by a domain key or carrying their Kind in the value, plus
+         *     composition edges from ``dep_filters``, none of which is ever checked
          *     against data; calling this "the relations" would claim a completeness the
          *     producer does not have.
          */
@@ -2581,11 +2584,10 @@ export interface components {
          * @description What the graph covers — the numbers a screen must qualify itself with.
          *
          *     This block exists so that no consumer can honestly render the edge list as
-         *     "all the relations". On the 06/08/2026 measurement the model carried 109
-         *     schema edges of which **16** were declared; the rest was composition (66)
-         *     or name inference (27), plus 23 reference-shaped fields left unresolved
-         *     and 16 known-undeclarable ones. Every field here is derived from the
-         *     collections it counts.
+         *     "all the relations". On the 06/08/2026 measurement, AFTER the relations
+         *     became first-class, the model carried 97 schema edges: 47 declared and 50
+         *     from composition, of which **21** are actually enforced on write. Every
+         *     field here is derived from the collections it counts.
          */
         KindGraphCoverage: {
             /**
@@ -2602,27 +2604,20 @@ export interface components {
             declared_origins?: string[];
             /** Edges */
             edges: number;
-            /** Enforced Tiers */
-            enforced_tiers?: string[];
             /**
-             * Inferred
+             * Enforced
              * @default 0
              */
-            inferred: number;
+            enforced: number;
             /** Kinds */
             kinds: number;
+            /**
+             * Kinds With Relations
+             * @default 0
+             */
+            kinds_with_relations: number;
             /** Limits */
             limits?: components["schemas"]["KindGraphLimit"][];
-            /**
-             * Suppressed
-             * @default 0
-             */
-            suppressed: number;
-            /**
-             * Undeclarable
-             * @default 0
-             */
-            undeclarable: number;
             /**
              * Unresolved
              * @default 0
@@ -2635,32 +2630,50 @@ export interface components {
         };
         /**
          * KindGraphEdge
-         * @description One SCHEMA edge: Kind ``from_kind`` may point at ``to_kind`` through
-         *     ``field``.
+         * @description One SCHEMA edge: Kind ``from_kind`` points at ``to_kind`` through the
+         *     relation ``field``.
          *
-         *     ``tier`` ranks how much the edge is worth — ``declared`` (``x-dna-ref``,
-         *     the ONLY tier the kernel resolves at write time), ``composition``
+         *     ``tier`` says where the edge comes from — ``declared`` (``spec.relations``,
+         *     the Kind's own statement about what it points at) or ``composition``
          *     (``dep_filters``: a real declaration that drives prompt composition and is
-         *     never checked against stored data), ``inferred`` (the field NAME resolves
-         *     to exactly one registered Kind — a convention, not a contract). A renderer
-         *     that draws the three alike is asserting a confidence the model does not
-         *     have; ``coverage.enforced_tiers`` names the ones it does.
+         *     never checked against stored data).
          *
-         *     ``to_kind`` is ALWAYS a registered Kind: a declaration naming a Kind
-         *     nobody registers is a gap, not an edge, and comes back under
-         *     ``unresolved``.
+         *     ⚠️ ``enforced`` is the flag that matters, and it is NOT the same as
+         *     ``tier == "declared"``. The kernel resolves a relation at write time only
+         *     when it has a concrete target Kind AND is addressed by document name
+         *     (``by == "name"``). A relation addressed by a spec field of the target
+         *     (``by: workspace_id``) or carrying its Kind in the value (``to: "*"``) is
+         *     fully declared and deliberately not resolved. A renderer that draws
+         *     enforced and unenforced edges alike is asserting a confidence the model
+         *     does not have.
+         *
+         *     ``to_kind`` is a registered Kind, or ``*`` when the target Kind travels
+         *     inside the VALUE. A declaration naming a Kind nobody registers is a gap,
+         *     not an edge, and comes back under ``unresolved``.
          */
         KindGraphEdge: {
+            /**
+             * By
+             * @default name
+             */
+            by: string;
             /**
              * Cardinality
              * @default one
              * @enum {string}
              */
             cardinality: "one" | "many";
+            /**
+             * Enforced
+             * @default false
+             */
+            enforced: boolean;
             /** Field */
             field: string;
             /** From Kind */
             from_kind: string;
+            /** Inverse Of */
+            inverse_of?: string | null;
             /**
              * Polymorphic
              * @default false
@@ -2670,7 +2683,7 @@ export interface components {
              * Tier
              * @enum {string}
              */
-            tier: "declared" | "composition" | "inferred";
+            tier: "declared" | "composition";
             /** To Kind */
             to_kind: string;
         };
@@ -2694,7 +2707,7 @@ export interface components {
          * KindGraphNode
          * @description One registered Kind as a node. Identity only — the descriptor
          *     (``schema``/``ui_schema``) stays behind ``GET /v1/kinds/registry/{kind}``,
-         *     because a graph that inlined 76 JSON Schemas would be a download, not a
+         *     because a graph that inlined 84 JSON Schemas would be a download, not a
          *     graph.
          */
         KindGraphNode: {
@@ -2725,6 +2738,11 @@ export interface components {
          *     time, and this route does not answer it — ``coverage.limits`` carries that
          *     statement on the wire so it travels with the answer instead of living in a
          *     doc page a caller may never read.
+         *
+         *     The ``undeclarable`` list this envelope used to carry is GONE, and its
+         *     absence is the feature: those rows were real references the annotation
+         *     could not express, and the declaration expresses them now. They are edges,
+         *     with ``enforced: false`` saying exactly how far the runtime goes.
          */
         KindGraphResponse: {
             coverage: components["schemas"]["KindGraphCoverage"];
@@ -2734,67 +2752,39 @@ export interface components {
             kinds?: components["schemas"]["KindGraphNode"][];
             /** Scope */
             scope?: string | null;
-            /** Undeclarable */
-            undeclarable?: components["schemas"]["KindGraphUndeclarable"][];
             /** Unresolved */
             unresolved?: components["schemas"]["KindGraphUnresolved"][];
         };
         /**
-         * KindGraphUndeclarable
-         * @description A REAL reference that ``x-dna-ref`` deliberately does not declare.
-         *
-         *     The annotation resolves a target by document NAME; these fields are keyed
-         *     by something else, so declaring them would produce false write-time
-         *     violations on perfectly valid data. They are named here rather than
-         *     silently missing, because a graph that hides them implies a completeness
-         *     the model does not have. Two families:
-         *
-         *     * **keyed** — an opaque id, a role id, a tier id. ``target`` names the Kind
-         *       it really points at. Still hand-kept in the SDK, and the targets are
-         *       resolved against the live registry by a test, because this table once
-         *       went on naming ``Tier`` for a release after the Kind became
-         *       ``PricingPlan``. Concrete backlog for a future ``x-dna-ref-key``
-         *       (i-040 follow-up).
-         *     * **composite** — the value carries its own Kind (``Story:s-thing``,
-         *       ``Narrative/X``, ``{"kind": …, "name": …}``), so ``target`` is ``any``:
-         *       there is no one Kind to name. DERIVED from the schema, never enumerated —
-         *       either the field declares ``x-dna-ref-composite`` or its object shape
-         *       requires ``kind`` + ``name``.
-         */
-        KindGraphUndeclarable: {
-            /** Field */
-            field: string;
-            /** Kind */
-            kind: string;
-            /** Reason */
-            reason: string;
-            /** Target */
-            target: string;
-        };
-        /**
          * KindGraphUnresolved
-         * @description A field that clearly points at SOMETHING the model cannot name — a
-         *     ``x-dna-ref`` naming an unregistered Kind, a ``dep_filters`` alias nobody
-         *     claims, or a reference-shaped field name matching no Kind.
+         * @description Something the model cannot honour, or a field nobody has declared.
          *
          *     Returned, not dropped: this list is the honest measure of what the model
-         *     still cannot express, and it shrinks when references get declared — never
+         *     still cannot express, and it shrinks when relations get declared — never
          *     when the projection gets cleverer.
          *
-         *     ``origin`` says WHICH of the three it is, and it is what makes the list
-         *     usable. ``declared`` and ``composition`` are DECLARATIONS the model cannot
-         *     honour — somebody wrote a target and it does not resolve, which is an
-         *     authoring error to fix. ``shape-inferred`` is this projection guessing from
-         *     a field NAME, and is usually not a reference at all: an OAuth
-         *     ``client_id``, a Stripe customer id, an IdP subject. On the 06/08/2026
-         *     measurement **every** row was ``shape-inferred``, and a screen with only
-         *     ``reason`` to go on presented all of them as broken declarations — false
-         *     for all of them, and the way a real one would have arrived invisible.
-         *     ``coverage.declared_origins`` names the origins worth alarm, so a consumer
+         *     ``origin`` says which it is, and it is what makes the list usable:
+         *
+         *     * ``declared`` — a relation's ``to`` names a Kind no registry provides;
+         *     * ``composition`` — a ``dep_filters`` alias no Kind claims;
+         *     * ``inverse`` — a declared ``inverse_of`` does not PAIR: the target
+         *       declares no such relation, or it points elsewhere, or it names a
+         *       different inverse. Two Kinds claiming to be halves of one relation while
+         *       disagreeing about it — which nothing could say before;
+         *     * ``undeclared`` — the field NAME looks like a reference
+         *       (``_id``/``_ref``/``_refs``) and no relation declares it. Often not a
+         *       reference at all: an OAuth ``client_id``, a Stripe customer id, an IdP
+         *       subject. This projection no longer guesses a TARGET, so the row states
+         *       only what it can see: somebody should look.
+         *
+         *     The first three are CLAIMS somebody made; the fourth is an invitation.
+         *     ``coverage.declared_origins`` names the ones worth alarm, so a consumer
          *     DERIVES the ranking instead of hard-coding it, and never has to translate
          *     ``reason`` — which stays English prose for whoever reads the raw answer.
          */
         KindGraphUnresolved: {
+            /** Code */
+            code?: string | null;
             /** Field */
             field: string;
             /** Kind */
@@ -2803,7 +2793,7 @@ export interface components {
              * Origin
              * @enum {string}
              */
-            origin: "declared" | "composition" | "shape-inferred";
+            origin: "declared" | "composition" | "inverse" | "undeclared";
             /** Reason */
             reason: string;
         };

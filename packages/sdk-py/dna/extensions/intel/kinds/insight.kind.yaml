@@ -36,6 +36,10 @@ spec:
   storage:
     type: yaml
     container: intel-insights
+  relations:
+    source_ref:
+      to: IntelSource
+      cardinality: one
   schema:
     type: object
     additionalProperties: false
@@ -72,11 +76,10 @@ spec:
         - 'null'
         description: The IntelSource name this insight came from. DECLARED
           (i-040) — the engine already stamps the source DOCUMENT NAME here,
-          which is exactly what `x-dna-ref` resolves by, so the declaration
-          types a relation that was already true instead of asking any producer
+          which is exactly what a name-addressed relation resolves by, so the
+          declaration types a relation that was already true instead of asking any producer
           to write differently. Null/absent stays legal — an optional reference
           that is simply unset is not a dangling one.
-        x-dna-ref: IntelSource
       pirs:
         type: array
         items:

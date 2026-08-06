@@ -41,6 +41,15 @@ spec:
     ref: sdlc-spec|sdlc-plan|sdlc-story|sdlc-feature|sdlc-epic|sdlc-roadmap|sdlc-agent-session|sdlc-narrative
     parent_ref: sdlc-spec|sdlc-plan|sdlc-story|sdlc-feature|sdlc-epic|sdlc-roadmap|sdlc-agent-session|sdlc-narrative
     transitioned_from: sdlc-workflow-event
+  relations:
+    parent_ref:
+      to: '*'
+      cardinality: one
+      by: 'Kind/name'
+    ref:
+      to: '*'
+      cardinality: one
+      by: 'Kind/name'
   schema:
     type: object
     required:
@@ -59,13 +68,10 @@ spec:
       ref:
         type: string
         # Composite: the value carries its own Kind. The journey ledger pins
-        # documents of ANY Kind, so there is no single `x-dna-ref` target.
-        x-dna-ref-composite: 'Kind/name'
         description: 'Doc this entry pins. Format: ``Kind/name`` (e.g. ``Spec/foo``,
           ``Plan/bar``, ``AgentSession/vs-baz``).'
       parent_ref:
         type: string
-        x-dna-ref-composite: 'Kind/name'
         description: Anchor doc grouping this entry with siblings. Typically ``Feature/<name>``
           or ``Epic/<name>`` — everything in the journey of one Feature has the
           same parent_ref.

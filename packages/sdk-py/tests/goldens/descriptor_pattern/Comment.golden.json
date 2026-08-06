@@ -60,7 +60,6 @@
     "properties": {
       "target_ref": {
         "type": "string",
-        "x-dna-ref-composite": "Kind:name",
         "description": "Kind:name of the target document"
       },
       "author": {

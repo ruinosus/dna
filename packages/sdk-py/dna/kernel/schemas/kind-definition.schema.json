@@ -45,7 +45,7 @@
         "alias": {
           "type": "string",
           "minLength": 1,
-          "description": "Globally unique alias, convention `<owner>-<kebab(kind)>` (e.g. `sdlc-kaizen`). Used in dep_filters, templates and cross-kind refs — never bare Kind names."
+          "description": "Globally unique alias, convention `<owner>-<kebab(kind)>` (e.g. `sdlc-kaizen`). Used in dep_filters and templates. It is NOT how a relation names its target: `spec.relations[*].to` carries the bare Kind NAME, which is unambiguous by the enforced i-195 invariant and is what the document read takes. This line used to say aliases were for \"cross-kind refs — never bare Kind names\", which no implementation ever matched (i-110 item 2)."
         },
         "origin": {
           "type": "string",
@@ -97,7 +97,39 @@
         },
         "schema": {
           "type": "object",
-          "description": "JSON Schema of the Kind's spec dict. Drives Studio form generation + validate_on_parse. New Kinds should ship `additionalProperties: false` (s-strict-schema-lint ratchet). A property may additionally carry `x-dna-ref` (i-040) to declare that the field REFERENCES another Kind by document name — a string (`x-dna-ref: Feature`) or a list for a polymorphic target (`x-dna-ref: [Organization, Project]`). On an array field every item is a reference. The kernel checks declared references at write time (see DNA_REF_VALIDATION); the annotation is optional and a Kind without it behaves exactly as before."
+          "description": "JSON Schema of the Kind's DATA — the shape of the spec dict. Drives Studio form generation + validate_on_parse. New Kinds should ship `additionalProperties: false` (s-strict-schema-lint ratchet). It carries no reference vocabulary: what a field POINTS AT is declared in `spec.relations`, which is a model statement rather than a data one. The `x-dna-ref` / `x-dna-ref-composite` annotations that used to live on a property are GONE — see spec.relations."
+        },
+        "relations": {
+          "type": ["object", "null"],
+          "additionalProperties": {
+            "type": "object",
+            "required": ["to", "cardinality"],
+            "additionalProperties": false,
+            "properties": {
+              "to": {
+                "anyOf": [
+                  { "type": "string", "minLength": 1 },
+                  { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
+                ],
+                "description": "The target. A bare Kind NAME (`Story`) — never an alias, because `target_kind` is globally unique by the ENFORCED registry invariant i-195 and is what `get_document(scope, kind, name)` takes. A LIST is polymorphic: any one of them may match. `*` means the target Kind travels inside the VALUE, and then `by` must name the composite form."
+              },
+              "cardinality": {
+                "enum": ["one", "many"],
+                "description": "REQUIRED, and deliberately not defaulted from `type: array`. Cardinality is a statement about the MODEL; a default read off the JSON Schema would be the old name-shape inference in new clothes. A contradiction between the two is refused at load."
+              },
+              "inverse_of": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The NAME of the relation on the target Kind that is this one's other half. The DECLARATION must pair (the target declares that relation, it points back here, and it names this one as ITS inverse) — enforced at load, because it reads no documents and cannot deadlock. Instance reciprocity — the target document naming this one back — is REPORTED at write, never imposed and never derived: imposing deadlocks (neither side can be written first) and deriving means the kernel mutating a document the author did not touch."
+              },
+              "by": {
+                "type": "string",
+                "minLength": 1,
+                "description": "How the VALUE addresses the target. Default `name` — the target document's metadata.name, and the ONLY addressing the kernel resolves and therefore the only one it validates. A target spec FIELD (`by: workspace_id`) declares the addressing without installing a resolution rule: resolving by key needs an expression index the store does not have, and a second rule beside a live one can veto data the live one accepts (measured: PricingPlan resolves by tier_id and THEN by aliases[]). With `to: *` this must be one of the composite forms `Kind:name`, `Kind/name`, `{kind, name}`."
+              }
+            }
+          },
+          "description": "What this Kind POINTS AT — first-class, so a relation is listable without walking properties, its cardinality is declared rather than inferred, and a reciprocal pair can say that it IS one. The relation's NAME is the spec field holding its value, which is what keeps the declaration and the data together and lets the read that VALIDATES a relation be the read that produces its edge. Normalized + enforced by dna.kernel.kinds.relations; exposed on the port as `relations`. Replaces the four mechanisms that answered this question before (`x-dna-ref`, `x-dna-ref-composite`, name-shape inference, and the denylist that existed to silence it). `dep_filters` is NOT one of them and stays separate — it drives prompt composition."
         },
         "is_root": {
           "type": "boolean",

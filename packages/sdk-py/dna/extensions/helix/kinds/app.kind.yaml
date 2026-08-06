@@ -10,7 +10,6 @@
 # decide; o kernel valida forma). É a unidade VENDÁVEL: cobra-se pelo app,
 # o app é feito de copilotos, o copiloto é medido por turnos/tokens.
 #
-# Referências por nome com `x-dna-ref` (i-040): `copilots[]` aponta docs
 # Copilot — o write valida existência (DNA_REF_VALIDATION) e o wizard de
 # criação vira picker. Record-plane puro: nunca compõe em prompt.
 #
@@ -40,8 +39,12 @@ spec:
     Copilot docs under one identity (title/description/icon), carries the
     plan entitlement (``requires_plan`` — enforced by the serving runtime,
     never by the kernel) and the console renders ``/app/<name>`` from this
-    document alone. ``copilots[]`` carries ``x-dna-ref: Copilot`` — the
+    document alone. ``copilots`` is a declared RELATION to ``Copilot`` — the
     write validates existence and pickers come for free (i-040).
+  relations:
+    copilots:
+      to: Copilot
+      cardinality: many
   schema:
     type: object
     additionalProperties: false
@@ -63,10 +66,9 @@ spec:
         minItems: 1
         items:
           type: string
-        x-dna-ref: Copilot
         description: Os copilotos que COMPÕEM este App, por nome de doc —
           cada um traz seus fluxos (surfaces) para debaixo desta identidade.
-          A referência é validada na gravação (x-dna-ref).
+          A referência é validada na gravação (`spec.relations`).
       requires_plan:
         type: string
         enum: [free, pro]

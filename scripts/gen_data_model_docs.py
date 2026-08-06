@@ -15,27 +15,36 @@ regenerates this page and fails when the committed copy disagrees.
 Two levels, because they answer different questions:
 
 * **LOGICAL — Kinds and their references.** The output that matters. Every
-  registered ``KindPort``, its ``x-dna-ref`` declarations (i-040), its
-  ``dep_filters``, and a conservative name-convention pass for what neither
-  declares.
+  registered ``KindPort``, its ``spec.relations`` declarations and its
+  ``dep_filters``.
 * **PHYSICAL — the real tables.** From ``build_metadata()``. Deliberately
   framed as the low-information diagram it is: a generic document store,
   seven tables, ZERO foreign keys. The page says so rather than faking depth.
 
-**Four edge tiers, and the ranking is the point.** A MER whose lines all look
-alike would imply the model knows more than it does:
+**Two edge tiers plus a per-edge ``enforced`` flag, and the ranking is the
+point.** A MER whose lines all look alike would imply the model knows more than
+it does:
 
-1. ``declared`` — a field carries ``x-dna-ref``. The kernel resolves it at
-   write time (``DNA_REF_VALIDATION``). This is the only tier the system
-   actually enforces.
+1. ``declared`` — the Kind's ``spec.relations`` says so. Drawn solid when the
+   kernel RESOLVES it at write time (``DNA_REF_VALIDATION``) and dashed when
+   the relation is declared but addressed by something the runtime does not
+   follow — a domain key (``by: workspace_id``) or a Kind carried in the value
+   (``to: "*"``).
 2. ``composition`` — ``dep_filters`` names the target Kind. A real
    declaration, but it exists to drive PROMPT COMPOSITION and is never
-   checked against stored data, so it can dangle silently.
-3. ``inferred`` — nothing declares it; the field NAME resolves to a
-   registered Kind. Drawn dashed. A convention, not a contract.
-4. ``unresolved`` — reference-shaped field with no confident target. NOT
-   drawn; tabulated. This tier is the honest measure of what the model still
-   cannot express, and it is meant to shrink as ``x-dna-ref`` spreads.
+   checked against stored data, so it can dangle silently. Never enforced.
+
+``unresolved`` is not a tier: it is the gap list — a declaration the registry
+cannot honour, an inverse that does not pair, or a reference-shaped field
+nobody declared. NOT drawn; tabulated. It is the honest measure of what the
+model still cannot express, and it shrinks as relations get declared.
+
+**The name-convention pass is GONE.** It produced EDGES from a field-name
+match, which drew ``KindDefinition.docs → Doc`` from a field of prose and
+``StatusReport.insight → IntelInsight`` from a field whose own description says
+the target Kind was deleted — and it needed a denylist to suppress the worst of
+them. The name SHAPE survives only as an ``undeclared`` gap row, which guesses
+no target and therefore needs no suppression table.
 
 **The projection itself moved into the SDK** — ``dna.kernel.query.kind_graph``
 — because a REST route (``GET /v1/graph/kinds``) now serves the same graph.
@@ -73,17 +82,14 @@ from pathlib import Path
 # so the REST route ``GET /v1/graph/kinds`` and this page cannot disagree
 # about what the model says. This script owns the RENDERING and nothing else.
 #
-# ⚠️ The two gap tables come through ``undeclarable_for``/``suppressed_for``,
-# NOT from the raw dicts. Reading the raw tables was a second computation
-# wearing the first one's clothes: it printed every ROW while the route served
-# what the projection FOUND, so the page went on listing 6 undeclarable
-# references where the route had 16, and 8 suppressions where 5 happened.
-from dna.kernel.query.kind_graph import (
-    build_edges,
-    kind_rows,
-    suppressed_for,
-    undeclarable_for,
-)
+# ⚠️ Everything here is READ from ``build_edges``/``kind_rows``, never
+# recomputed. The two hand-kept gap tables this page used to print
+# (``UNDECLARABLE``, ``INFERENCE_DENYLIST``) are gone with the mechanisms that
+# needed them; while they existed, reading the raw dicts instead of what the
+# projection FOUND made the page list 6 undeclarable references where the route
+# had 16, and 8 suppressions where 5 happened.
+from dna.kernel.kinds.relations import ANY_TARGET
+from dna.kernel.query.kind_graph import build_edges, kind_rows
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _OUT = _REPO_ROOT / "docs" / "reference" / "data-model.md"
@@ -147,24 +153,35 @@ def _load_tables() -> dict[str, list[dict]]:
 # --- Mermaid -----------------------------------------------------------------
 
 
+#: What the ``to: "*"`` target is CALLED in a diagram. The raw token sanitizes
+#: to a bare underscore, which reads as a rendering accident rather than as a
+#: statement — and the statement matters: these relations really do point at a
+#: document, they just choose its Kind per value.
+_ANY_NODE = "ANY_KIND"
+
+
 def _mm(name: str) -> str:
     """Mermaid entity ids must be bare identifiers."""
+    if name == ANY_TARGET:
+        return _ANY_NODE
     return re.sub(r"[^0-9A-Za-z_]", "_", name)
 
 
-_TIER_LABEL = {"declared": "", "composition": " (dep)", "inferred": " (inferred)"}
+_TIER_LABEL = {"declared": "", "composition": " (dep)"}
 
 
 def _er(nodes: list[str], edges: list[dict]) -> str:
-    """One Mermaid erDiagram. Dashed line = inferred (undeclared)."""
+    """One Mermaid erDiagram. Dashed line = NOT enforced at write time."""
     out = io.StringIO()
     out.write("```mermaid\nerDiagram\n")
     for kind in sorted(nodes):
         out.write(f"    {_mm(kind)}\n")
     for e in sorted(edges, key=lambda x: (x["source"], x["field"], x["target"])):
         right = "}o" if e["cardinality"] == "many" else "||"
-        link = ".." if e["tier"] == "inferred" else "--"
+        link = "--" if e["enforced"] else ".."
         label = e["field"] + _TIER_LABEL[e["tier"]]
+        if e["by"] != "name":
+            label += f" [{e['by']}]"
         if e["polymorphic"]:
             label += " *"
         out.write(
@@ -180,6 +197,10 @@ def _overview(kinds: list[dict], edges: list[dict]) -> str:
     group_of = {k["kind"]: k["group"] for k in kinds}
     pairs: dict[tuple[str, str], int] = {}
     for e in edges:
+        # A ``to: "*"`` relation belongs to no group — its target Kind is
+        # chosen per value. Counting it under a "?" group would invent one.
+        if e["target"] == ANY_TARGET:
+            continue
         a, b = group_of.get(e["source"], "?"), group_of.get(e["target"], "?")
         pairs[(a, b)] = pairs.get((a, b), 0) + 1
 
@@ -266,35 +287,44 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
     out.write("### How to read the edges\n\n")
     out.write(
         "Not every line here is equally trustworthy, and pretending otherwise\n"
-        "would be the whole problem. Four tiers, strongest first:\n\n"
-        "| Tier | Drawn | What it means |\n| --- | --- | --- |\n"
-        "| **Declared** | solid | The field carries `x-dna-ref`. The kernel "
-        "resolves it at write time — the only tier the system enforces. |\n"
-        "| **Composition** (`dep`) | solid | `dep_filters` names the target "
-        "Kind. A real declaration, but it drives prompt composition and is "
-        "never checked against stored data. |\n"
-        "| **Inferred** | dashed | Nothing declares it; the field NAME "
-        "resolves to a Kind. A convention, not a contract. |\n"
-        "| **Unresolved** | not drawn | Reference-shaped, no confident target. "
-        "Tabulated below. |\n\n"
-        "`*` on a label marks a polymorphic reference (several possible "
-        "target Kinds).\n\n"
+        "would be the whole problem. Two tiers, and one flag that matters more\n"
+        "than either:\n\n"
+        "| Tier | What it means |\n| --- | --- |\n"
+        "| **Declared** | The Kind's `spec.relations` says so — name, target, "
+        "cardinality, and (where there is one) the inverse. |\n"
+        "| **Composition** (`dep`) | `dep_filters` names the target Kind. A "
+        "real declaration, but it drives prompt composition and is never "
+        "checked against stored data. |\n\n"
+        "**Solid line = the kernel resolves it at write time. Dashed = it does "
+        "not.** That is the `enforced` flag, and it is not the same as the "
+        "tier: a relation addressed by a domain key (`by: workspace_id`) or "
+        "carrying its Kind in the value (`to: *`) is fully declared and "
+        "deliberately not followed — resolving by key needs an index the store "
+        "does not have, and a second resolution rule beside a live one can "
+        "veto data the live one accepts.\n\n"
+        "`*` on a label marks a polymorphic relation (several possible target "
+        "Kinds, or one chosen per value). `[key]` marks the addressing when it "
+        "is not the document name.\n\n"
     )
 
     total = len(edges)
-    d, c, i = (len(by_tier[t]) for t in ("declared", "composition", "inferred"))
+    d, c = (len(by_tier[t]) for t in ("declared", "composition"))
+    enforced = len([e for e in edges if e["enforced"]])
+    with_rel = len([k for k in kinds if k["relations"]])
     out.write(
-        f"**{total} edges: {d} declared, {c} composition-only, {i} inferred** "
-        f"— plus {len(unresolved)} reference-shaped fields left unresolved and "
-        f"{len(undeclarable_for(kinds))} known-undeclarable ones.\n\n"
+        f"**{total} edges: {d} declared, {c} composition-only — of which "
+        f"{enforced} are ENFORCED at write time.** {with_rel} of "
+        f"{len(kinds)} Kinds declare at least one relation, and "
+        f"{len(unresolved)} fields are listed below as gaps.\n\n"
     )
     out.write(
-        "!!! warning \"Only the declared tier cannot dangle\"\n\n"
+        "!!! warning \"Declared is not enforced\"\n\n"
         "    `dep_filters` declares a target *Kind*; nothing validates the\n"
         "    *value*. A `Feature.owner` naming an Actor that does not exist is\n"
-        "    written without complaint. Solid therefore means \"the model knows\n"
-        "    what this points at\", not \"this resolves\". Closing that gap is\n"
-        "    what `x-dna-ref` does, one field at a time.\n\n"
+        "    written without complaint. And a relation addressed by a key says\n"
+        "    what the value MEANS without teaching the kernel to follow it. A\n"
+        "    line therefore means \"the model knows what this points at\", and\n"
+        "    only a SOLID one means \"the runtime checks it\".\n\n"
     )
 
     # ---- overview -----------------------------------------------------------
@@ -303,6 +333,10 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
         "Kinds are grouped by alias prefix (`sdlc-`, `helix-`, …) — a grouping\n"
         "that comes from the data. Arrows are counts of edges between groups;\n"
         "self-references are omitted here and shown in the detail diagrams.\n\n"
+        "Relations whose target is chosen per VALUE (`to: *`) are omitted from\n"
+        "this view — they belong to no group, and inventing one for them would\n"
+        "be the projection guessing again. They appear in the detail diagrams\n"
+        f"against `{_ANY_NODE}` and in the declared-relations table.\n\n"
     )
     out.write(_overview(kinds, edges))
 
@@ -330,7 +364,7 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
         else:
             chunks = [
                 (tier, [e for e in group_edges if e["tier"] == tier])
-                for tier in ("declared", "composition", "inferred")
+                for tier in ("declared", "composition")
             ]
         for tier, chunk in chunks:
             if not chunk:
@@ -350,26 +384,21 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
         )
 
     # ---- edge tables --------------------------------------------------------
-    out.write("### Declared edges (`x-dna-ref`)\n\n")
+    out.write("### Declared relations (`spec.relations`)\n\n")
     out.write(
-        "Enforced at write time. This table is the part of the graph the\n"
-        "system will not let you break.\n\n"
+        "What each Kind says it points at. `Enforced` is the column that\n"
+        "matters: `yes` means the kernel resolves the target at write time and\n"
+        "the graph gets a data edge; blank means the relation is declared and\n"
+        "the runtime does not follow it — read `By` for why.\n\n"
     )
     _edge_table(out, by_tier["declared"], group_of)
 
     out.write("### Composition edges (`dep_filters` only)\n\n")
     out.write(
         "Declared for prompt composition, never validated against stored\n"
-        "data. Each row is a candidate for an `x-dna-ref` promotion.\n\n"
+        "data. Each row is a candidate for promotion to a relation.\n\n"
     )
     _edge_table(out, by_tier["composition"], group_of)
-
-    out.write("### Inferred edges (name convention)\n\n")
-    out.write(
-        "Not declared anywhere. Each row is this generator matching a field\n"
-        "name against the Kind registry — useful, and fallible.\n\n"
-    )
-    _edge_table(out, by_tier["inferred"], group_of)
 
     # ---- gaps ---------------------------------------------------------------
     out.write("## What this model cannot express\n\n")
@@ -379,39 +408,23 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
         "quietly dropped.\n\n"
     )
 
-    out.write("### Known-undeclarable references\n\n")
+    out.write("### Gaps\n\n")
     out.write(
-        "Real edges that `x-dna-ref` deliberately does NOT declare. It resolves\n"
-        "targets by **document name**, and these are keyed by something else —\n"
-        "declaring them would produce false write-time violations on perfectly\n"
-        "valid data.\n\n"
-        "Two families. **Keyed** ones name the Kind they really point at (an\n"
-        "opaque id, a role id, a tier id); they are the concrete backlog for a\n"
-        "future `x-dna-ref-key`. **Composite** ones carry the Kind IN the value\n"
-        "(`Story:s-thing`, `Narrative/X`, `{kind, name}`), so `Really points at`\n"
-        "is `any` — there is no single target to name. The composite family is\n"
-        "derived from the schemas, never enumerated: a field either declares\n"
-        "`x-dna-ref-composite` or its object shape requires `kind` + `name`.\n\n"
-    )
-    out.write("| Kind | Field | Really points at | Why undeclarable |\n")
-    out.write("| --- | --- | --- | --- |\n")
-    for row in undeclarable_for(kinds):
-        out.write(f"| `{row['source']}` | `{row['field']}` | "
-                  f"`{row['target']}` | {_md(row['reason'])} |\n")
-    out.write("\n")
-
-    out.write("### Unresolved reference-shaped fields\n\n")
-    out.write(
-        "Fields that clearly point at something the model cannot name. This\n"
-        "shrinks when references get declared, not when the generator gets\n"
+        "This shrinks when relations get declared, not when the generator gets\n"
         "cleverer.\n\n"
-        "`Origin` is the column that keeps the list honest. **declared** and\n"
-        "**composition** rows are declarations the model cannot honour —\n"
-        "somebody wrote a target and it does not resolve. **shape-inferred**\n"
-        "rows are the projection guessing from a field NAME, and are usually\n"
-        "not references at all: an OAuth `client_id`, a Stripe customer id, an\n"
-        "IdP subject. Reading the two alike is how a real broken reference\n"
-        "arrives invisible in a list of false alarms.\n\n"
+        "`Origin` is the column that keeps the list honest. **declared**,\n"
+        "**composition** and **inverse** rows are declarations the model cannot\n"
+        "honour — somebody wrote a target, an alias or an inverse and it does\n"
+        "not resolve. **undeclared** rows are fields whose NAME looks like a\n"
+        "reference and which nothing declares; they are usually not references\n"
+        "at all (an OAuth `client_id`, a Stripe customer id, an IdP subject),\n"
+        "and this generator no longer guesses a target for them. Reading the\n"
+        "two alike is how a real broken reference arrives invisible in a list\n"
+        "of false alarms.\n\n"
+        "The **known-undeclarable** table that used to sit here is gone, and\n"
+        "its absence is the point: those were real references the annotation\n"
+        "could not express. They are declared relations now, in the table\n"
+        "above, with `Enforced` blank.\n\n"
     )
     if unresolved:
         out.write("| Kind | Field | Origin | Why unresolved |\n"
@@ -421,23 +434,6 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
                       f"`{e['origin']}` | {e['reason']} |\n")
     else:
         out.write("_None._\n")
-    out.write("\n")
-
-    out.write("### Suppressed name matches\n\n")
-    out.write(
-        "The name-convention pass matched these and each is wrong. Listed\n"
-        "rather than silently dropped, so the suppression is auditable.\n\n"
-        "What the pass DID, not what the denylist says it would: an entry only\n"
-        "fires where the field name resolves to exactly one Kind, so an entry\n"
-        "can go inert without being touched — `plan` stopped resolving when\n"
-        "`PricingPlan` joined `Plan`, and ambiguity now stops those matches.\n"
-        "Such entries stay in the source (the day the ambiguity ends they are\n"
-        "the only thing stopping a wrong edge) and are absent here.\n\n"
-    )
-    out.write("| Kind | Field | Why the match is wrong |\n| --- | --- | --- |\n")
-    for row in suppressed_for(kinds):
-        out.write(f"| `{row['source']}` | `{row['field']}` | "
-                  f"{_md(row['reason'])} |\n")
     out.write("\n")
 
     connected = {e["source"] for e in edges} | {e["target"] for e in edges}
@@ -516,14 +512,24 @@ def _edge_table(out: io.StringIO, edges: list[dict], group_of: dict) -> None:
     if not edges:
         out.write("_None._\n\n")
         return
-    out.write("| From | Field | To | Cardinality | Cross-group |\n")
-    out.write("| --- | --- | --- | --- | --- |\n")
+    out.write("| From | Field | To | Cardinality | By | Enforced | Inverse of "
+              "| Cross-group |\n")
+    out.write("| --- | --- | --- | --- | --- | --- | --- | --- |\n")
     for e in sorted(edges, key=lambda x: (x["source"], x["field"], x["target"])):
-        cross = group_of.get(e["source"]) != group_of.get(e["target"])
+        # A ``*`` target belongs to no group, so it is neither cross-group
+        # nor same-group. Reporting `yes` would be an answer to a question
+        # that has none.
+        cross = (
+            e["target"] != ANY_TARGET
+            and group_of.get(e["source"]) != group_of.get(e["target"])
+        )
         field = f"`{e['field']}`" + (" *(poly)*" if e["polymorphic"] else "")
+        inverse = f"`{e['inverse_of']}`" if e["inverse_of"] else ""
         out.write(
             f"| `{e['source']}` | {field} | `{e['target']}` | "
-            f"{e['cardinality']} | {'yes' if cross else ''} |\n"
+            f"{e['cardinality']} | `{e['by']}` | "
+            f"{'yes' if e['enforced'] else ''} | {inverse} | "
+            f"{'yes' if cross else ''} |\n"
         )
     out.write("\n")
 

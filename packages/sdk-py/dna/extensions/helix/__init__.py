@@ -142,7 +142,7 @@ def _schema_from_model(model: type) -> dict[str, Any] | None:
         #
         # Inert without the metadata key: a field that declares none produces
         # byte-identical output to before, so this adds a slot without changing
-        # a single existing schema. The obvious sibling — reading `x-dna-ref`
+        # a single existing schema. The obvious sibling — reading `spec.relations`
         # off the same metadata, which would let Agent.soul / Agent.skills stop
         # being composition-tier guesses — is deliberately NOT done here: each
         # such declaration needs its own read of real data first.

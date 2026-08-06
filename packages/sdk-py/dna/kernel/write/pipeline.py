@@ -175,18 +175,18 @@ class WritePipeline:
             from dna.kernel.protocols import SpecValidationError  # noqa: PLC0415
             raise SpecValidationError(msg) from e
 
-    # -- declared cross-Kind reference validation (i-040) ---------------------
+    # -- declared relation validation (i-040, f-modelagem-das-relacoes) -------
 
     @staticmethod
     def _ref_validation_mode() -> str:
-        """Read the reference-validation knob — ``warn`` (default), ``enforce``
+        """Read the relation-validation knob — ``warn`` (default), ``enforce``
         or ``off``.
 
         Deliberately a SEPARATE knob from ``DNA_WRITE_VALIDATION``, with a
         different default, because the two checks have different costs and
         different blast radii. Schema validation is pure CPU on data already in
-        hand, so it defaults to ``enforce``. Reference validation costs one
-        document READ per declared reference (~5ms PG / ~3ms SQLite / ~20ms FS,
+        hand, so it defaults to ``enforce``. Relation validation costs one
+        document READ per declared relation (~5ms PG / ~3ms SQLite / ~20ms FS,
         LRU-cached), and it can fail on a document that is perfectly
         well-formed — a forward reference to a target written later in the same
         bootstrap is a legitimate, common pattern (a seed writing a Plan before
@@ -206,28 +206,38 @@ class WritePipeline:
         self, scope: str, kind: str, name: str, raw: Any, port: Any,
         *, tenant: str | None,
     ) -> tuple[list, bool]:
-        """Resolve declared references ONCE, validate, and hand back the edges.
+        """Resolve declared relations ONCE, validate, and hand back the edges.
 
         The validation contract is unchanged from i-040 (each clause is a
         deliberate refusal to break something):
 
-        - A Kind declaring NO references returns before doing any work — no
-          reads, no cost, byte-identical behaviour to before i-040. This is
-          what makes the change back-compatible for every existing Kind.
-        - An absent / null / empty reference field is NOT a violation. Optional
-          references stay optional.
+        - A Kind declaring NO resolvable relation returns before doing any work
+          — no reads, no cost. This is what keeps every Kind that points at
+          nothing exactly as cheap as it was.
+        - An absent / null / empty relation field is NOT a violation. Optional
+          relations stay optional.
         - Existence is checked in the SAME scope and tenant as the write.
-        - A polymorphic reference passes if the target exists as ANY declared
+        - A polymorphic relation passes if the target exists as ANY declared
           Kind.
         - If the host cannot read documents, the check is SKIPPED rather than
           guessed at.
         - ``enforce`` vetoes; ``warn`` logs and persists; ``off`` skips.
 
-        What is NEW is the return value, not the behaviour: the lookups this
-        method already performs also identify, per reference, WHICH declared
-        Kind matched — the fact the edge table is made of. Returning it makes
-        the edge a by-product of the check rather than a second derivation
-        that could disagree with it.
+        The lookups this method performs also identify, per relation value,
+        WHICH declared Kind matched — the fact the edge table is made of.
+        Returning it makes the edge a by-product of the check rather than a
+        second derivation that could disagree with it.
+
+        **Reciprocity is REPORTED here, and only reported.** When a relation
+        declares ``inverse_of`` and the target document does not name this one
+        back, that is logged in EVERY mode and vetoes in NONE — including
+        ``enforce``. The reason is in ``dna.kernel.kinds.relations``: imposing
+        the inverse deadlocks (neither half of a pair can be written first) and
+        deriving it means the kernel writing a document the author did not
+        touch. It costs nothing to report, because the target document was
+        already materialized by the existence check above. A dangling relation
+        and a one-sided pair are different failures, and only the first is the
+        author's to fix in the write they are making right now.
 
         Returns ``(edges, complete)``. ``complete=False`` means a read failed
         part-way: the validator says nothing (as it always has) and the
@@ -242,9 +252,7 @@ class WritePipeline:
             # relations". Fail-open in SILENCE is this house's signature defect.
             return [], False
 
-        from dna.kernel.query.references import (  # noqa: PLC0415
-            resolve_declared_edges,
-        )
+        from dna.kernel.query.references import resolve_relations  # noqa: PLC0415
 
         host = self._host
         # The WritePipeline's WriteHost slice is intentionally narrow and does
@@ -256,9 +264,9 @@ class WritePipeline:
         if not callable(getter):
             return [], False
 
-        edges, problems, complete = await resolve_declared_edges(
+        edges, problems, discords, complete = await resolve_relations(
             port, raw,
-            scope=scope, tenant=tenant,
+            scope=scope, name=name, tenant=tenant,
             getter=getter,
             port_for=host.kind_port_for,
             # Same duck-type as ``get_document`` above: the local-only read
@@ -268,14 +276,27 @@ class WritePipeline:
             local_getter=getattr(host, "get_document_local", None),
         )
 
+        if discords:
+            # Reported BEFORE the veto branch on purpose: a write that is about
+            # to be refused for a dangling relation may ALSO have a one-sided
+            # pair, and the author should hear both rather than discover the
+            # second one only after fixing the first.
+            logger.warning(
+                "%s/%s/%s: declared inverse not reciprocated: %s "
+                "(reported, never enforced — the other half is a separate "
+                "write, and refusing here would make a pair unwritable in "
+                "either order)",
+                scope, kind, name, "; ".join(discords),
+            )
+
         if not problems:
             return edges, complete
 
         detail = "; ".join(problems)
         msg = (
-            f"write vetoed for {scope}/{kind}/{name}: unresolved reference(s): "
+            f"write vetoed for {scope}/{kind}/{name}: unresolved relation(s): "
             f"{detail} — create the target first, or see "
-            f"`dna kind show {kind}` for the declared references"
+            f"`dna kind show {kind}` for the declared relations"
         )
         if mode == "warn":
             logger.warning(
@@ -680,11 +701,12 @@ class WritePipeline:
         # YAML-1.1 `on:` heal — mutate ctx.raw first), BEFORE persistence:
         # what gets validated is the exact shape that would be saved.
         self._validate_spec_schema(scope, kind, name, raw, _kind_port)
-        # --- declared cross-Kind reference validation (i-040) ---
+        # --- declared relation validation (i-040) ---
         # Immediately after the shape check and before persistence, for the
-        # same reason: the author hears about a dangling reference here, not
+        # same reason: the author hears about a dangling relation here, not
         # when something far away later tries to follow it. No-op (and no
-        # reads) for any Kind that declares no ``x-dna-ref``.
+        # reads) for any Kind whose ``spec.relations`` declares nothing the
+        # kernel resolves.
         edges, edges_complete = await self._resolve_references(
             scope, kind, name, raw, _kind_port, tenant=effective_tenant,
         )

@@ -1079,6 +1079,15 @@ class KindDefinitionSpec:
     # rather than carrying a literal Kind-name list. Open vocabulary: an
     # unregistered trait is legal (see dna.kernel.kinds.traits).
     traits: list[str] | None = None
+    # ---- Relations (what this Kind POINTS AT) ------------------------------
+    # First-class, so a relation is listable without walking properties, its
+    # cardinality is declared rather than inferred from ``type: array``, and a
+    # reciprocal pair can say that it IS one. Stored NORMALIZED (a
+    # ``{name: Relation}`` mapping): ``from_raw`` runs the same validator a
+    # builtin descriptor goes through, so a TENANT-authored Kind declaring
+    # relations is neither second-class nor a second code path — the precedent
+    # ``presentation`` set. Replaces ``x-dna-ref`` / ``x-dna-ref-composite``.
+    relations: Any = None
     # ---- Parity fields (i-081): what a CLASS could say and a descriptor could
     # not. Seven attributes existed only on ``KindBase``, so a YAML-declared
     # Kind was structurally second-class: it could not invalidate the schema
@@ -1254,6 +1263,34 @@ class KindDefinitionSpec:
             traits = sorted(normalize_traits(raw.get("traits")))
         except ValueError as e:
             raise ValueError(f"KindDefinition spec.traits {e}") from e
+        # ``relations`` — normalized THROUGH the shared validator, then checked
+        # against the schema the SAME from_raw just accepted. This is the one
+        # place both halves are in hand, so it is the one place the
+        # contradiction "relation `stories` is many, property `stories` is a
+        # string" can be caught at all; a registry-wide lint catches the class
+        # Kinds, which have no from_raw.
+        from dna.kernel.kinds.relations import (
+            normalize_relations,
+            schema_contradictions,
+        )
+
+        try:
+            relations = normalize_relations(raw.get("relations"))
+        except ValueError as e:
+            raise ValueError(f"KindDefinition spec.{e}") from e
+        contradictions = schema_contradictions(
+            relations, schema,
+            # A descriptor pulling in schema_fragments is looking at an
+            # INCOMPLETE schema here — the port merges them later — so a
+            # relation naming a fragment-supplied property is not a
+            # contradiction, it is a property this function cannot see.
+            partial=bool(raw.get("schema_fragments") or raw.get("workitem_common")),
+        )
+        if contradictions:
+            raise ValueError(
+                "KindDefinition spec.relations contradicts spec.schema: "
+                + "; ".join(contradictions)
+            )
         layout_names = raw.get("layout_names")
         if layout_names is not None and (
             not isinstance(layout_names, list)
@@ -1322,6 +1359,7 @@ class KindDefinitionSpec:
             description_fallback_field=raw.get("description_fallback_field"),
             presentation=presentation,
             overlayable_fields=overlayable_fields,
+            relations=relations,
             # Traits + class-parity fields (i-081)
             traits=traits or None,
             is_schema_affecting=bool(raw.get("is_schema_affecting", False)),

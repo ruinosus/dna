@@ -58,6 +58,11 @@ spec:
   storage:
     type: yaml
     container: source-artifacts
+  relations:
+    derived_refs:
+      to: '*'
+      cardinality: many
+      by: '{kind, name}'
   schema:
     type: object
     additionalProperties: false

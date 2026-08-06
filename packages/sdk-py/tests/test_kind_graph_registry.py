@@ -1,22 +1,27 @@
-"""The graph's hand-kept tables, checked against the LIVE registry.
+"""The declared relations, checked against the LIVE registry.
 
 ``test_kind_graph.py`` is pure — it builds fake ports and never a Kernel, which
-is what makes it fast and total. But two of the projection's inputs are TABLES
-somebody types by hand (``UNDECLARABLE``, ``INFERENCE_DENYLIST``), and a table
-of Kind names is a set of names that can be renamed somewhere else. Purity
-cannot see that: a fake port called ``Tier`` exists because the test made it.
+is what makes it fast and total. Purity cannot see a rename, though: a fake
+port called ``Tier`` exists because the test made it.
 
 It happened. The metering rename turned ``Tier`` into ``PricingPlan``
-(dna 0.29.0) and ``UNDECLARABLE`` went on answering
+(dna 0.29.0) and the graph's hand-kept ``UNDECLARABLE`` table went on answering
 ``{"kind": "Organization", "field": "plan_ref", "target": "Tier"}`` while
 ``GET /v1/kinds/registry/Tier`` returned 404 — a graph citing a Kind the same
 deployment says does not exist. Nothing failed, because nothing compared the
 table to the registry. The docs guard could not: it regenerates the page FROM
 the table, so both sides carried the same dead name and agreed.
 
-That is what this file is. The oracle is the registry, so these tests have no
-vocabulary of their own to drift, and a rename that misses these tables fails
-HERE — before the wire, not on somebody's screen.
+**Those two tables are gone.** ``UNDECLARABLE`` and ``INFERENCE_DENYLIST`` were
+enumerations of what the declaration could not express, and the declaration
+expresses it now — ``Organization.plan_ref`` says ``to: PricingPlan, by:
+tier_id`` on the Kind itself. The class of defect does not leave with them, it
+MOVES: a relation's ``to`` is still a Kind name typed by a human, and a rename
+can still miss it. So this file keeps its job and changes its oracle.
+
+The oracle is the registry, so these tests have no vocabulary of their own to
+drift, and a rename that misses a relation fails HERE — before the wire, not on
+somebody's screen.
 """
 from __future__ import annotations
 
@@ -24,30 +29,31 @@ import re
 
 import pytest
 
+from dna.kernel.kinds.relations import ANY_TARGET, inverse_gaps, relations_of
 from dna.kernel.query.kind_graph import (
     COVERAGE_LIMITS,
-    INFERENCE_DENYLIST,
     POLYMORPHIC_TARGET,
-    UNDECLARABLE,
     UNRESOLVED_ORIGINS,
-    _normalize,
     build_kind_graph,
     kind_rows,
-    suppressed_for,
-    target_index,
 )
 
 #: A backticked token that LOOKS like a Kind name: CamelCase, no separators.
-#: Deliberately narrow — `tier_id`, `x-dna-ref` and `Kind:name` are not Kind
-#: names and must not be accused of being retired ones.
+#: Deliberately narrow — `tier_id` and `Kind:name` are not Kind names and must
+#: not be accused of being retired ones.
 _KIND_LIKE = re.compile(r"`([A-Z][A-Za-z]*)`")
 
 
 @pytest.fixture(scope="module")
-def rows():
+def ports():
     from dna.kernel import Kernel
 
-    return kind_rows(Kernel.auto().kind_ports())
+    return list(Kernel.auto().kind_ports())
+
+
+@pytest.fixture(scope="module")
+def rows(ports):
+    return kind_rows(ports)
 
 
 @pytest.fixture(scope="module")
@@ -55,141 +61,173 @@ def registered(rows):
     return {r["kind"] for r in rows}
 
 
-class TestTheTablesCiteLiveKinds:
-    def test_every_undeclarable_target_is_a_registered_kind(self, registered):
-        """THE mutant this file exists to kill: ``Organization.plan_ref ->
-        Tier`` after ``Tier`` became ``PricingPlan``."""
+@pytest.fixture(scope="module")
+def graph(ports):
+    return build_kind_graph(ports)
+
+
+class TestEveryDeclarationResolves:
+    def test_every_relation_target_is_a_registered_kind(self, rows, registered):
+        """THE mutant this file exists to kill, in its new home: the target
+        used to be typed into a table in ``kind_graph.py`` and is now typed
+        into the Kind. A rename still has to reach it."""
         dead = [
-            f"{kind}.{field} -> {target}"
-            for (kind, field), (target, _) in sorted(UNDECLARABLE.items())
-            if target != POLYMORPHIC_TARGET and target not in registered
+            f"{r['kind']}.{name} -> {target}"
+            for r in rows
+            for name, rel in sorted(r["relations"].items())
+            for target in rel.to
+            if target not in registered
         ]
         assert dead == [], (
-            "UNDECLARABLE names Kinds no registry provides — a rename passed "
-            f"this table by: {dead}"
+            "a relation names Kinds no registry provides — a rename passed "
+            f"the declaration by: {dead}"
         )
 
-    def test_every_undeclarable_source_is_a_registered_kind(self, registered):
-        """A row whose OWN Kind is gone is dead weight that still costs a
-        reader's attention. The table only shrinks."""
-        orphans = [f"{kind}.{field}" for (kind, field) in sorted(UNDECLARABLE)
-                   if kind not in registered]
-        assert orphans == [], f"UNDECLARABLE rows for retired Kinds: {orphans}"
+    def test_the_graph_reports_no_unresolvable_declaration(self, graph):
+        """The same fact through the WIRE, which is where a consumer sees it.
+        Two readings of one truth, deliberately: this one also catches a
+        ``dep_filters`` alias nobody claims."""
+        claims = [
+            u for u in graph["unresolved"]
+            if u["origin"] in ("declared", "composition")
+        ]
+        assert claims == [], f"declarations the model cannot honour: {claims}"
 
-    def test_every_undeclarable_field_still_exists_on_its_kind(self, rows):
-        """Suppressing a field that was removed suppresses nothing, and the
-        row's justification quietly stops being about anything."""
-        props = {r["kind"]: r["properties"] for r in rows}
-        gone = [f"{kind}.{field}" for (kind, field) in sorted(UNDECLARABLE)
-                if kind in props and field not in props[kind]]
-        assert gone == [], f"UNDECLARABLE names fields that are gone: {gone}"
+    def test_every_relation_agrees_with_its_own_schema(self, ports):
+        """The contradiction check, run across the MERGED schema.
 
-    def test_every_denylist_source_is_a_registered_kind(self, registered):
-        orphans = [f"{kind}.{field}"
-                   for (kind, field) in sorted(INFERENCE_DENYLIST)
-                   if kind not in registered]
-        assert orphans == [], f"INFERENCE_DENYLIST rows for retired Kinds: {orphans}"
+        ``KindDefinitionSpec.from_raw`` cannot do this completely — a
+        descriptor pulling in ``schema_fragments`` is looking at an incomplete
+        schema there — and a hand-written class Kind has no ``from_raw`` at
+        all. This is the one place both halves are final."""
+        from dna.kernel.kinds.relations import schema_contradictions
 
-    def test_every_denylist_entry_is_still_about_a_live_field(self, rows):
-        """An entry naming a field that no longer exists suppresses nothing and
-        can never fire again — dead weight, unlike an inert-but-live one."""
-        props = {r["kind"]: r["properties"] for r in rows}
-        gone = [f"{kind}.{field}"
-                for (kind, field) in sorted(INFERENCE_DENYLIST)
-                if kind in props and field not in props[kind]]
-        assert gone == [], f"INFERENCE_DENYLIST names fields that are gone: {gone}"
+        problems = []
+        for port in ports:
+            kind = getattr(port, "kind", None)
+            try:
+                schema = port.schema() or {}
+            except Exception:  # pragma: no cover - defensive
+                continue
+            problems += [
+                f"{kind}: {p}"
+                for p in schema_contradictions(relations_of(port), schema)
+            ]
+        assert problems == [], problems
 
-    def test_the_suppressed_count_is_what_the_pass_did_not_what_the_table_says(
-        self, rows,
-    ):
-        """The second-order casualty of the same rename, measured 06/08/2026.
 
-        ``plan`` became AMBIGUOUS when ``PricingPlan`` joined ``Plan``, so the
-        three ``plan``/``plan_ref`` denylist entries stopped firing — ambiguity
-        stops those matches now. The table still listed them and
-        ``coverage.suppressed`` still counted them: 8 reported, 5 performed. A
-        counter that reports intentions is the enumeration failure wearing a
-        derivation's name.
-        """
-        _, by_token = target_index(rows)
-        props = {r["kind"]: r["properties"] for r in rows}
-        live = {
-            (kind, field) for (kind, field) in INFERENCE_DENYLIST
-            if field in props.get(kind, {}) and by_token.get(_normalize(field))
-        }
-        reported = {(s["source"], s["field"]) for s in suppressed_for(rows)}
-        assert reported == live
-        assert len(live) < len(INFERENCE_DENYLIST), (
-            "this registry no longer has an inert entry — good, but then the "
-            "assertion below is testing nothing; check before deleting it"
-        )
-        assert build_kind_graph(_ports(rows))["coverage"]["suppressed"] == len(live)
-
-    def test_no_table_prose_names_a_retired_kind(self, registered):
-        """The justifications name Kinds too, and prose is where a rename hides.
-
-        ``UNDECLARABLE`` carried ``Tier`` in a field a machine reads; the
-        denylist carried ``Tier`` AND ``AccountPlan`` in prose a machine did
-        not. Both were dead. Every backticked CamelCase token in these tables
-        (and in the coverage limits, which travel on the wire) must resolve.
-        """
-        prose = (
-            list(INFERENCE_DENYLIST.values())
-            + [why for _, why in UNDECLARABLE.values()]
-            + [limit["detail"] for limit in COVERAGE_LIMITS]
-        )
-        dead = sorted({
-            token for text in prose for token in _KIND_LIKE.findall(text)
-            if token not in registered
+class TestEveryPairPairs:
+    def test_the_registry_has_no_inverse_gap(self, ports):
+        """Dor 1, as an assertion. A declared ``inverse_of`` whose other half
+        is missing, points elsewhere, or names a different relation is an
+        authoring error the registry can prove WITHOUT reading a document."""
+        gaps = inverse_gaps({
+            str(getattr(p, "kind", "")): relations_of(p) for p in ports
+            if getattr(p, "kind", None)
         })
-        assert dead == [], (
-            f"kind_graph prose names Kinds the registry does not have: {dead}"
+        assert gaps == [], [g["reason"] for g in gaps]
+
+    def test_the_model_actually_HAS_pairs(self, rows):
+        """Guards the assertion above from being green because nothing declares
+        an inverse at all — the failure mode that made three denylist entries
+        inert while still being counted."""
+        pairs = [
+            (r["kind"], name)
+            for r in rows
+            for name, rel in sorted(r["relations"].items())
+            if rel.inverse_of
+        ]
+        assert len(pairs) >= 4, (
+            f"only {len(pairs)} relation(s) declare an inverse — the pairing "
+            "guard above is passing vacuously"
         )
+
+    def test_the_measured_pairs_are_the_two_the_model_has(self, rows):
+        """Named, because these are the two the founder measured as broken:
+        Epic⇄Feature and Feature⇄Story, each expressed as two edges with
+        nothing saying they were halves of one relation."""
+        by_kind = {r["kind"]: r["relations"] for r in rows}
+        assert by_kind["Epic"]["features"].inverse_of == "epic"
+        assert by_kind["Feature"]["epic"].inverse_of == "features"
+        assert by_kind["Feature"]["stories"].inverse_of == "feature"
+        assert by_kind["Story"]["feature"].inverse_of == "stories"
 
 
 class TestTheLiveAnswerIsWellFormed:
-    def test_every_unresolved_row_carries_a_known_origin(self, rows):
-        graph = build_kind_graph(_ports(rows))
+    def test_every_unresolved_row_carries_a_known_origin(self, graph):
         assert graph["unresolved"], "the gap list is not empty in this registry"
         assert {u["origin"] for u in graph["unresolved"]} <= set(UNRESOLVED_ORIGINS)
 
-    def test_the_origin_counts_match_the_rows_they_describe(self, rows):
-        graph = build_kind_graph(_ports(rows))
+    def test_the_origin_counts_match_the_rows_they_describe(self, graph):
         counted = graph["coverage"]["unresolved_by_origin"]
         for origin in UNRESOLVED_ORIGINS:
             actual = sum(1 for u in graph["unresolved"] if u["origin"] == origin)
             assert counted[origin] == actual
 
-    def test_no_field_is_both_a_gap_and_an_undeclarable_reference(self, rows):
-        """One field, one classification. ``Engram.source_refs`` was a gap
-        while being a real reference; it must not now be both."""
-        graph = build_kind_graph(_ports(rows))
-        gaps = {(u["kind"], u["field"]) for u in graph["unresolved"]}
-        known = {(u["kind"], u["field"]) for u in graph["undeclarable"]}
-        assert gaps & known == set()
+    def test_no_field_is_both_a_gap_and_a_declared_relation(self, graph):
+        """One field, one classification. ``Engram.source_refs`` was reported
+        as a gap while being a real reference; it must not now be both."""
+        gaps = {(u["kind"], u["field"]) for u in graph["unresolved"]
+                if u["origin"] == "undeclared"}
+        drawn = {(e["from_kind"], e["field"]) for e in graph["edges"]}
+        assert gaps & drawn == set()
 
-    def test_the_composite_family_is_classified_together(self, rows):
+    def test_the_composite_family_is_classified_together(self, graph):
         """The three fields the hand table split: one was undeclarable, two
-        were gaps. Same rule, same bucket, and the shape is what says so."""
-        graph = build_kind_graph(_ports(rows))
-        known = {(u["kind"], u["field"]): u for u in graph["undeclarable"]}
+        were gaps, one rule. They are three DECLARED relations now, drawn with
+        the same target token and the same honesty about not being enforced."""
+        edges = {(e["from_kind"], e["field"]): e for e in graph["edges"]}
         for pair in [("Comment", "target_ref"), ("Engram", "source_refs"),
                      ("SourceArtifact", "derived_refs")]:
-            assert pair in known, f"{pair} is not classified as undeclarable"
-            assert known[pair]["target"] == POLYMORPHIC_TARGET
+            assert pair in edges, f"{pair} is not declared as a relation"
+            assert edges[pair]["to_kind"] == POLYMORPHIC_TARGET == ANY_TARGET
+            assert edges[pair]["enforced"] is False
 
+    def test_the_produces_family_left_the_inexpressible_bucket(self, graph):
+        """Eight ``produces``/``produced_artifacts`` fields were reported as
+        references the model could not express. They were merely undeclared;
+        every one is a first-class relation now."""
+        declared = {
+            e["from_kind"] for e in graph["edges"] if e["field"] == "produces"
+        }
+        assert {"Epic", "Feature", "Story", "Issue", "Bug", "Task",
+                "Spike"} <= declared
 
-def _ports(rows):
-    """Replay the measured rows as ports — the graph's own input, once."""
-    class _Row:
-        def __init__(self, row):
-            self.kind = row["kind"]
-            self.alias = row["alias"]
-            self.plane = row["plane"]
-            self.dep_filters = row["dep_filters"]
-            self._schema = {"properties": row["properties"]}
+    def test_the_enforced_count_is_derived_from_the_edges(self, graph):
+        """A counter that reports intentions is the enumeration failure wearing
+        a derivation's name — the exact defect ``coverage.suppressed`` had
+        (8 reported, 5 performed)."""
+        assert graph["coverage"]["enforced"] == sum(
+            1 for e in graph["edges"] if e["enforced"]
+        )
 
-        def schema(self):
-            return self._schema
+    def test_the_key_addressed_relations_are_drawn_and_NOT_enforced(self, graph):
+        """The five rows of the retired ``UNDECLARABLE`` table. They are edges
+        now — declared, drawable, with a named target — and the ``enforced``
+        flag is what keeps that from over-claiming."""
+        edges = {(e["from_kind"], e["field"]): e for e in graph["edges"]}
+        for pair, target, key in [
+            (("Project", "workspace_id"), "Workspace", "workspace_id"),
+            (("WorkspaceMembership", "workspace_id"), "Workspace", "workspace_id"),
+            (("WorkspaceMembership", "role"), "Role", "role_id"),
+            (("Membership", "role"), "Role", "role_id"),
+            (("Organization", "plan_ref"), "PricingPlan", "tier_id"),
+        ]:
+            assert pair in edges, f"{pair} left the graph entirely"
+            assert edges[pair]["to_kind"] == target
+            assert edges[pair]["by"] == key
+            assert edges[pair]["enforced"] is False
 
-    return [_Row(r) for r in rows]
+    def test_no_coverage_prose_names_a_retired_kind(self, registered):
+        """The limits travel on the wire, and prose is where a rename hides:
+        the retired denylist carried ``Tier`` AND ``AccountPlan`` in prose a
+        machine did not read. Every backticked CamelCase token must resolve."""
+        dead = sorted({
+            token
+            for limit in COVERAGE_LIMITS
+            for token in _KIND_LIKE.findall(limit["detail"])
+            if token not in registered
+        })
+        assert dead == [], (
+            f"kind_graph prose names Kinds the registry does not have: {dead}"
+        )

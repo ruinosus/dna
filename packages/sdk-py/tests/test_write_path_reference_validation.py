@@ -1,12 +1,14 @@
-"""Write-time enforcement of declared ``x-dna-ref`` references (i-040).
+"""Write-time enforcement of declared relations (i-040,
+f-modelagem-das-relacoes).
 
-The unit tests in ``test_references.py`` pin how the annotation is READ.
-These pin what the write path DOES with it, against a source that really
-stores documents — a source that answers "no" to every read would make a
-dangling-reference test pass for the wrong reason.
+The unit tests in ``test_relations.py`` pin how a relation is READ. These pin
+what the write path DOES with it, against a source that really stores
+documents — a source that answers "no" to every read would make a
+dangling-reference test pass for entirely the wrong reason.
 
-Pinned contract:
-- ``enforce``: writing a reference to a non-existent target is vetoed and
+Pinned contract, each clause a deliberate refusal to break something:
+
+- ``enforce``: writing a relation to a non-existent target is vetoed and
   nothing persists;
 - the same write succeeds once the target exists (forward references are an
   ORDERING problem, not a permanent one);
@@ -14,10 +16,17 @@ Pinned contract:
   cannot break a working bootstrap, since a legitimate seed may write a child
   before its parent;
 - ``off`` skips entirely;
-- optional/absent references never trip the check;
-- a Kind that declares no ``x-dna-ref`` performs ZERO reads — the back-compat
-  guarantee, asserted by counting reads rather than by inspection;
-- polymorphic references resolve against any declared target.
+- optional/absent relations never trip the check;
+- a Kind that declares no resolvable relation performs ZERO extra reads,
+  asserted by counting reads rather than by inspection;
+- polymorphic relations resolve against any declared target;
+- **reciprocity is REPORTED and never enforced** — in EVERY mode, including
+  ``enforce``. That is the promise ``inverse_of`` makes, and the class that
+  pins it (``TestReciprocityIsReportedNeverImposed``) is the one that would
+  catch somebody "strengthening" it into a veto and deadlocking every pair.
+- **a relation addressed by a key is NOT resolved** — declaring `by:
+  workspace_id` must install no resolution rule, or the write path starts
+  vetoing data the live lookup accepts.
 """
 from __future__ import annotations
 
@@ -219,6 +228,17 @@ class TestWarnIsTheDefault:
 
 
 class TestUndeclaredKindsAreUntouched:
+    """Engram declares three relations and the kernel resolves NONE of them —
+    all three carry their target Kind in the value (``to: "*"``).
+
+    That makes this class prove something stronger than it used to. It was "a
+    Kind that never opted in costs what it always cost"; it is now "a Kind that
+    opted IN, with relations the runtime does not follow, still costs what it
+    always cost". If a future change starts resolving ``to: "*"`` or ``by:
+    <key>``, this goes red on the read count before anything downstream
+    notices.
+    """
+
     @staticmethod
     def _engram(name: str) -> dict:
         return {
@@ -260,3 +280,162 @@ class TestUndeclaredKindsAreUntouched:
             f"undeclared Kind paid for reference validation: "
             f"{set(enforced) - set(baseline)}"
         )
+
+
+# --- reciprocity: reported, never imposed, never derived -----------------------
+
+
+class TestReciprocityIsReportedNeverImposed:
+    """``Feature.stories`` and ``Story.feature`` declare each other as inverses.
+
+    Both halves are STORED, in two documents, written by two writes — which is
+    why they can disagree, and why the promise here is a REPORT. The three
+    promises available were: impose (deadlocks — neither half of a pair can be
+    written first), derive (a cascade write into a document the author never
+    touched), report (free, because the existence check already loaded the
+    target). These tests pin the third and, more importantly, pin that it is
+    NOT one of the other two.
+    """
+
+    @staticmethod
+    def _feature(name: str, stories: list[str] | None = None) -> dict:
+        return {
+            "apiVersion": _SDLC_API, "kind": "Feature",
+            "metadata": {"name": name},
+            "spec": {"description": "d", "status": "discovery",
+                     "stories": stories or []},
+        }
+
+    @pytest.mark.anyio
+    async def test_a_one_sided_pair_is_logged(self, kernel, source, caplog):
+        source.docs[("proj", "Feature", "f-1")] = self._feature("f-1")
+        with caplog.at_level(logging.WARNING, logger="dna.kernel"):
+            await kernel.write_document(
+                "proj", "Story", "s-1", _story("s-1", _base_spec(feature="f-1")),
+            )
+        assert "does not name this document back" in caplog.text
+        assert "stories" in caplog.text
+
+    @pytest.mark.anyio
+    async def test_a_one_sided_pair_still_PERSISTS(self, kernel, source):
+        source.docs[("proj", "Feature", "f-1")] = self._feature("f-1")
+        await kernel.write_document(
+            "proj", "Story", "s-1", _story("s-1", _base_spec(feature="f-1")),
+        )
+        assert ("proj", "Story", "s-1") in source.docs
+
+    @pytest.mark.anyio
+    async def test_ENFORCE_does_not_veto_a_one_sided_pair(
+        self, kernel, source, monkeypatch,
+    ):
+        """The mutant this kills: somebody folding ``discords`` into
+        ``problems`` so that the strict mode "also checks the inverse". It
+        would make every pair unwritable in EITHER order — the Story cannot
+        name a Feature that does not list it, and the Feature cannot list a
+        Story that does not exist yet."""
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        source.docs[("proj", "Feature", "f-1")] = self._feature("f-1")
+        await kernel.write_document(
+            "proj", "Story", "s-1", _story("s-1", _base_spec(feature="f-1")),
+        )
+        assert ("proj", "Story", "s-1") in source.docs
+
+    @pytest.mark.anyio
+    async def test_a_reciprocated_pair_logs_NOTHING(
+        self, kernel, source, caplog,
+    ):
+        """The counterpart that proves the test above measures something."""
+        source.docs[("proj", "Feature", "f-1")] = self._feature("f-1", ["s-1"])
+        with caplog.at_level(logging.WARNING, logger="dna.kernel"):
+            await kernel.write_document(
+                "proj", "Story", "s-1", _story("s-1", _base_spec(feature="f-1")),
+            )
+        assert "does not name this document back" not in caplog.text
+
+    @pytest.mark.anyio
+    async def test_the_kernel_NEVER_writes_the_other_half(
+        self, kernel, source, monkeypatch,
+    ):
+        """Deriving the missing side would mean the kernel mutating a document
+        the author did not touch, inside somebody else's version and etag. The
+        Feature must come back untouched, and no save may have been issued for
+        it."""
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        source.docs[("proj", "Feature", "f-1")] = self._feature("f-1")
+        await kernel.write_document(
+            "proj", "Story", "s-1", _story("s-1", _base_spec(feature="f-1")),
+        )
+        assert source.docs[("proj", "Feature", "f-1")]["spec"]["stories"] == []
+        assert [c for c in source.save_calls if "Feature" in c] == []
+
+    @pytest.mark.anyio
+    async def test_the_edge_carries_the_tri_state(self, kernel, source):
+        """``reciprocal`` is what a durable report would read. ``None`` is the
+        third state and is NOT ``False``: ``spec_refs`` declares no inverse, so
+        the question was never asked of it."""
+        source.docs[("proj", "Feature", "f-1")] = self._feature("f-1", ["s-1"])
+        source.seed("proj", "Feature", "f-2")
+        source.seed("proj", "Spec", "sp-1")
+        pipeline = kernel._write_pipeline
+        port = kernel.kind_port_for("Story")
+
+        async def edges_for(spec: dict):
+            edges, _ = await pipeline._resolve_references(
+                "proj", "Story", "s-1", _story("s-1", spec), port, tenant=None,
+            )
+            return {e.field: e.reciprocal for e in edges}
+
+        assert await edges_for(_base_spec(feature="f-1")) == {"feature": True}
+        assert await edges_for(_base_spec(feature="f-2")) == {"feature": False}
+        assert await edges_for(_base_spec(spec_refs=["sp-1"])) == {
+            "spec_refs": None,
+        }
+
+
+# --- a relation the kernel does NOT resolve stays unresolved -------------------
+
+
+class TestKeyAddressedRelationsAreNotFollowed:
+    """``Project.workspace_id`` declares ``to: Workspace, by: workspace_id``.
+
+    Declaring the addressing must install NO resolution rule. Resolving by key
+    needs an expression index the store does not have, and — measured — a
+    second rule beside a live one can veto data the live one accepts
+    (``kernel.tier()`` resolves a PricingPlan by ``tier_id`` and THEN by
+    ``aliases[]``; a declaration honouring only the first would refuse a valid
+    alias). These tests are what stops that arriving by accident.
+    """
+
+    @staticmethod
+    def _project(name: str, workspace_id: str) -> dict:
+        return {
+            "apiVersion": "github.com/ruinosus/dna/portfolio/v1",
+            "kind": "Project",
+            "metadata": {"name": name},
+            "spec": {"name": name, "slug": name, "workspace_id": workspace_id},
+        }
+
+    @pytest.mark.anyio
+    async def test_enforce_does_not_veto_a_key_addressed_value(
+        self, kernel, source, monkeypatch,
+    ):
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        await kernel.write_document(
+            "proj", "Project", "p-1", self._project("p-1", "ws-nobody-has"),
+            tenant="acme",
+        )
+        assert ("proj", "Project", "p-1") in source.docs
+
+    @pytest.mark.anyio
+    async def test_enforce_does_not_even_LOOK_the_target_up(
+        self, kernel, source, monkeypatch,
+    ):
+        """The sharper assertion: not "it did not refuse" but "it did not
+        ask". A lookup that happened would be a resolution rule in waiting."""
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        source.reads.clear()
+        await kernel.write_document(
+            "proj", "Project", "p-1", self._project("p-1", "ws-1"),
+            tenant="acme",
+        )
+        assert [r for r in source.reads if r[1] == "Workspace"] == []

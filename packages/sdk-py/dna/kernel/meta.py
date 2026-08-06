@@ -240,6 +240,16 @@ class DeclarativeKindPort:
         self.presentation = normalize_presentation(
             getattr(spec, "presentation", None)
         )
+        # ``relations``: what this Kind POINTS AT. Same attribute name as
+        # ``KindBase.relations``, so ``relations_of`` reads a descriptor Kind
+        # and a hand-written one through ONE getattr. Normalized again here
+        # rather than trusted, for the same reason ``presentation`` is: specs
+        # are duck-typed in tests (``SimpleNamespace``), and a raw mapping
+        # reaching the WRITE path unvalidated turns a load-time authoring error
+        # into a runtime one, far from the author.
+        from dna.kernel.kinds.relations import normalize_relations
+
+        self.relations = normalize_relations(getattr(spec, "relations", None))
         # ``overlayable_fields`` → ``OVERLAYABLE_FIELDS``, the KindBase
         # attribute name, so both policy ports read a descriptor Kind and a
         # hand-written Kind identically. Undeclared stays None = no per-field

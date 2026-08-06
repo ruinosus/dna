@@ -32,6 +32,11 @@ spec:
   storage:
     type: yaml
     container: status-reports
+  relations:
+    evidence_refs:
+      to: '*'
+      cardinality: many
+      by: 'Kind/name'
   schema:
     type: object
     required:
@@ -87,7 +92,6 @@ spec:
           type: string
         # Composite: each entry carries its own Kind. Studio renders them as
         # navigable links precisely BECAUSE the Kind travels in the value.
-        x-dna-ref-composite: 'Kind/name'
         description: Doc refs (Kind/name) cited as evidence for this verdict. Studio
           renders these as navigable links.
       generated_at:

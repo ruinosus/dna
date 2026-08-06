@@ -33,6 +33,13 @@ spec:
   dep_filters:
     spec_ref: sdlc-spec
     epic: sdlc-epic
+  relations:
+    epic:
+      to: Epic
+      cardinality: one
+    spec_ref:
+      to: Spec
+      cardinality: one
   schema:
     type: object
     required:
@@ -64,10 +71,8 @@ spec:
       spec_ref:
         type: string
         description: Name of the Spec this plan implements.
-        x-dna-ref: Spec
       epic:
         type: string
-        x-dna-ref: Epic
       authors:
         type: array
         items:

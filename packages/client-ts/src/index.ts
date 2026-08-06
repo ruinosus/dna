@@ -396,25 +396,34 @@ export class DnaClient {
    * projection that generates `docs/reference/data-model.md`, served as JSON.
    *
    * Returns `kinds` (nodes), `edges`
-   * (`from_kind`/`field`/`to_kind`/`cardinality`/`tier`/`polymorphic`), the
-   * gap lists `unresolved` and `undeclarable`, and a `coverage` block.
+   * (`from_kind`/`field`/`to_kind`/`cardinality`/`tier`/`polymorphic`/`by`/
+   * `enforced`/`inverse_of`), the gap list `unresolved`, and a `coverage`
+   * block.
    *
-   * **Rank `unresolved` by `origin`, never by `reason`.** `declared` and
-   * `composition` rows are declarations the model cannot honour — an authoring
-   * error. `shape-inferred` rows are the projection guessing from a field NAME
-   * and are usually not references at all (an OAuth `client_id`, a Stripe
-   * customer id). `coverage.declared_origins` names the ones worth alarm, so
-   * the ranking is derived from the answer instead of re-typed in a screen —
-   * and `reason` stays English prose nobody has to translate.
+   * **`tier === "declared"` is NOT the same as `enforced`.** The kernel
+   * resolves a relation at write time only when it has a concrete target Kind
+   * addressed by document name (`by === "name"`). A relation addressed by a
+   * spec field of the target (`by: "workspace_id"`) or carrying its Kind in
+   * the value (`to_kind === "*"`) is fully declared and deliberately not
+   * followed. Filter on `enforced` — never on the tier — when the question is
+   * "what does the runtime check?".
    *
-   * **Read the coverage block.** Its per-tier counts say how much of the graph
-   * the runtime actually enforces (only `declared` — the fields carrying
-   * `x-dna-ref`; `composition` comes from `dep_filters` and is never checked
-   * against stored data, `inferred` is a name convention), and `limits` names
-   * what the graph structurally cannot see. The first limit is the one that
-   * matters most: these edges are SCHEMA — which Kinds MAY reference which.
-   * Which DOCUMENTS reference which is a different graph, and this call does
-   * not answer it.
+   * **Rank `unresolved` by `origin`, never by `reason`.** `declared`,
+   * `composition` and `inverse` rows are declarations the model cannot honour
+   * — an authoring error, and `inverse` specifically means two Kinds each
+   * claim to be half of one relation while disagreeing about it.
+   * `undeclared` rows are fields whose NAME looks like a reference and which
+   * nothing declares; they are usually not references at all (an OAuth
+   * `client_id`, a Stripe customer id). `coverage.declared_origins` names the
+   * ones worth alarm, so the ranking is derived from the answer instead of
+   * re-typed in a screen — and `reason` stays English prose nobody has to
+   * translate.
+   *
+   * **Read the coverage block.** `coverage.enforced` says how much of the
+   * graph the runtime actually checks, and `limits` names what the graph
+   * structurally cannot see. The first limit is the one that matters most:
+   * these edges are SCHEMA — which Kinds MAY reference which. Which DOCUMENTS
+   * reference which is a different graph, and this call does not answer it.
    *
    * No 404: a scope with nothing registered is an empty graph whose
    * `coverage.kinds` is 0, which is an answer.

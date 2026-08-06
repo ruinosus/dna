@@ -64,7 +64,6 @@
         "items": {
           "type": "string"
         },
-        "x-dna-ref-composite": "Kind/name",
         "description": "Doc refs (Kind/name) cited as evidence for this verdict. Studio renders these as navigable links."
       },
       "generated_at": {

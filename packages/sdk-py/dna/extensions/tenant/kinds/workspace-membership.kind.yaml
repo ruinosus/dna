@@ -40,6 +40,15 @@ spec:
   storage:
     type: yaml
     container: workspace-memberships
+  relations:
+    role:
+      to: Role
+      cardinality: one
+      by: role_id
+    workspace_id:
+      to: Workspace
+      cardinality: one
+      by: workspace_id
   schema:
     type: object
     additionalProperties: false

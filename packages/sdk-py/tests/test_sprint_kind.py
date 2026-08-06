@@ -25,7 +25,7 @@ import sqlalchemy as sa
 
 from dna.kernel import Kernel
 from dna.kernel.protocols import SpecValidationError
-from dna.kernel.query.references import declared_references
+from dna.kernel.kinds.relations import relations_of
 from tests import _graph_store
 
 _SDLC_API = "github.com/ruinosus/dna/sdlc/v1"
@@ -138,24 +138,28 @@ class TestTheDeclaration:
 
     @pytest.mark.parametrize("kind", ["Story", "Feature"])
     def test_sprint_ref_declares_sprint(self, kernel, kind):
-        refs = declared_references(kernel.kind_port_for(kind))
-        by_field = {r.field: r for r in refs}
-        assert "sprint_ref" in by_field, (
-            f"{kind}.sprint_ref carries no x-dna-ref — it is reference-shaped "
+        rels = relations_of(kernel.kind_port_for(kind))
+        assert "sprint_ref" in rels, (
+            f"{kind}.sprint_ref declares no relation — it is reference-shaped "
             f"again and the model is back to guessing"
         )
-        assert by_field["sprint_ref"].targets == ("Sprint",)
-        assert by_field["sprint_ref"].is_array is False
+        assert rels["sprint_ref"].to == ("Sprint",)
+        assert rels["sprint_ref"].cardinality == "one"
+        # The claim the Kind actually makes: this one the kernel FOLLOWS. A
+        # Sprint's document name IS its sprint_id, so `by: name` is the truth
+        # here rather than a convenience.
+        assert rels["sprint_ref"].resolved is True
 
     def test_story_and_feature_agree(self, kernel):
         """Two Kinds, two definition mechanisms (a descriptor and a Python
         schema dict), one contract. They drifted apart once already — Epic
         dropped `sprint_ref` and the two survivors were edited separately.
         """
-        def target(kind: str):
-            return {r.field: r.targets for r in
-                    declared_references(kernel.kind_port_for(kind))}["sprint_ref"]
-        assert target("Story") == target("Feature")
+        def declaration(kind: str):
+            return relations_of(
+                kernel.kind_port_for(kind),
+            )["sprint_ref"].to_declaration()
+        assert declaration("Story") == declaration("Feature")
 
     def test_epic_still_has_no_sprint_ref(self, kernel):
         """Epics deliberately drop the field — sprints don't span Epics."""
