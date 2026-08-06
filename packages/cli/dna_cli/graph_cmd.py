@@ -126,3 +126,90 @@ def refs(
             f"{e['to_kind'] or '?'}/{e['to_name']}{mark}"
         )
     click.echo(f"({len(result.edges)} edge(s); stop: {result.stop})")
+
+
+@graph.command("stats")
+@click.argument("logfile", type=click.File("r", encoding="utf-8"), default="-")
+@click.option("--json", "as_json", is_flag=True,
+              help="O relatório inteiro, para um script.")
+@click.option("--gate", is_flag=True,
+              help="Sai 1 se algum gatilho disparou (para CI/cron).")
+def stats(logfile, as_json: bool, gate: bool) -> None:
+    """O GATILHO 2 de `spec-topologia-do-grafo`, lido das linhas de travessia.
+
+    A spec recomendou ficar no Postgres com dois gatilhos MEDIDOS que invertem
+    a decisão. Este comando é a porta por onde o de ESCALA vira número: ele lê
+    as linhas que `dna.graph.traversal` emite (uma por travessia) e imprime o
+    `p95` das travessias profundas, a fração truncada, e se cada limiar foi
+    ultrapassado.
+
+    \b
+    Ligar o funil:   DNA_GRAPH_TELEMETRY=on   (no serviço que serve a travessia)
+    Ler na nuvem:    az containerapp logs show -n ca-dna-api-… --tail 5000 \\
+                       | dna graph stats --gate
+    Ler local:       dna graph stats /tmp/api.log
+
+    Lê de STDIN quando LOGFILE é omitido ou `-`, então qualquer coisa que
+    cuspa as linhas serve de fonte — nada aqui precisa de banco.
+
+    ⚠️ O gatilho 1 (EXPRESSIVIDADE), que é o que de fato vira um banco de
+    grafo, NÃO é medido aqui: ele conta FORMAS de pergunta, não chamadas. Quem
+    o guarda é o teste
+    `tests/test_graph_telemetry.py::TestGatilho1Expressividade`, que fica
+    vermelho no dia em que uma segunda forma de travessia ou o primeiro
+    parâmetro que compõe entrar na rota.
+    """
+    from dna.kernel.query.graph import traversal_stats
+
+    report = traversal_stats(logfile)
+    if as_json:
+        print_json(report)
+    else:
+        deep = report["deep"]
+        trig = report["triggers"]
+        click.echo(
+            f"{report['calls']} travessia(s) lidas "
+            f"({report['ignored']} linha(s) ignoradas)"
+        )
+        if not report["calls"]:
+            # Nunca um relatório de zeros com cara de "tudo bem": zero chamada
+            # lida é o funil desligado ou o arquivo errado, e as duas coisas
+            # renderizadas como "não disparou" seriam a mentira mais fácil aqui.
+            click.echo(
+                "⚠ nenhuma linha de travessia nesta entrada — o funil está "
+                "desligado (DNA_GRAPH_TELEMETRY=on no serviço) ou a fonte "
+                "está errada. NADA foi medido; isto não é 'não disparou'."
+            )
+            return
+        click.echo(
+            f"  p95 geral: {report['p95_ms']:.1f} ms · "
+            f"por profundidade: {report['by_depth']}"
+        )
+        p95 = trig["scale_p95"]
+        click.echo(
+            f"  [{'DISPAROU' if p95['fired'] else 'ok'}] p95 depth>="
+            f"{deep['depth_min']}: {p95['value_ms']:.1f} ms "
+            f"(limiar {p95['threshold_ms']:.0f} ms, "
+            f"{deep['calls']} chamada(s))"
+        )
+        worst = report["worst_tenant"]
+        if worst:
+            click.echo(
+                f"      pior balde de tenant: {worst['tenant']} — "
+                f"{worst['p95_ms']:.1f} ms em {worst['calls']} chamada(s)"
+            )
+        tr = trig["scale_truncated"]
+        click.echo(
+            f"  [{'DISPAROU' if tr['fired'] else 'ok'}] truncadas: "
+            f"{report['truncated']}/{report['calls']} = "
+            f"{tr['value'] * 100:.2f}% (limiar "
+            f"{tr['threshold'] * 100:.0f}%)"
+        )
+        if report["fired"]:
+            click.echo(
+                "⚠ GATILHO 2 DISPAROU — spec-topologia-do-grafo §10 já nomeia "
+                "a porta: Apache AGE, no mesmo Postgres, US$ 0,00 marginal. "
+                "A fatia 6 (o SPIKE de três números) é o próximo passo."
+            )
+    if gate and report["fired"]:
+        raise SystemExit(1)

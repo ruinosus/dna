@@ -61,3 +61,47 @@ dna graph refs [OPTIONS] KIND_NAME NAME
 | `--scope` |  |
 | `--tenant` |  |
 
+## `dna graph stats`
+
+O GATILHO 2 de `spec-topologia-do-grafo`, lido das linhas de travessia.
+
+A spec recomendou ficar no Postgres com dois gatilhos MEDIDOS que invertem
+a decisão. Este comando é a porta por onde o de ESCALA vira número: ele lê
+as linhas que `dna.graph.traversal` emite (uma por travessia) e imprime o
+`p95` das travessias profundas, a fração truncada, e se cada limiar foi
+ultrapassado.
+
+
+Ligar o funil:   DNA_GRAPH_TELEMETRY=on   (no serviço que serve a travessia)
+Ler na nuvem:    az containerapp logs show -n ca-dna-api-… --tail 5000 \
+                   | dna graph stats --gate
+Ler local:       dna graph stats /tmp/api.log
+
+Lê de STDIN quando LOGFILE é omitido ou `-`, então qualquer coisa que
+cuspa as linhas serve de fonte — nada aqui precisa de banco.
+
+⚠️ O gatilho 1 (EXPRESSIVIDADE), que é o que de fato vira um banco de
+grafo, NÃO é medido aqui: ele conta FORMAS de pergunta, não chamadas. Quem
+o guarda é o teste
+`tests/test_graph_telemetry.py::TestGatilho1Expressividade`, que fica
+vermelho no dia em que uma segunda forma de travessia ou o primeiro
+parâmetro que compõe entrar na rota.
+
+```text
+dna graph stats [OPTIONS] [LOGFILE]
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `LOGFILE` | no |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--gate` | Sai 1 se algum gatilho disparou (para CI/cron). |
+| `--help` | Show this message and exit. |
+| `--json` | O relatório inteiro, para um script. |
+
