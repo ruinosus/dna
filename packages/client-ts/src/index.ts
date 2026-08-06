@@ -414,6 +414,10 @@ export class DnaClient {
   async kindGraph(query?: ScopeTenant) {
     return this.unwrap(
       await this.raw.GET("/v1/graph/kinds", { params: { query: this.q(query) } }),
+    );
+  }
+
+  /**
    * The Kind CATALOG of a scope — every Kind the registry serves here.
    *
    * The collection sibling of {@link getRegisteredKind}, and the answer to
