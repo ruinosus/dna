@@ -5,7 +5,7 @@ import pytest
 from pathlib import Path
 
 from dna.kernel import Kernel
-from dna.kernel.instance import ManifestInstance
+from dna.kernel.manifest import ManifestInstance
 from dna.kernel.protocols import LayerPolicy
 from dna.kernel.compose.layer_resolver import DefaultLayerResolver, deep_merge
 
@@ -290,7 +290,7 @@ class TestCustomKinds:
         """Custom kinds appear in mi.all() and mi.get()."""
         from dna.kernel import Kernel
         from dna.kernel.document import Document
-        from dna.kernel.instance import ManifestInstance
+        from dna.kernel.manifest import ManifestInstance
 
         k = Kernel()
         # ``approved_by`` declared for the same reason as above: an unapproved

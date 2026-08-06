@@ -38,7 +38,7 @@ ALLOWLIST: dict[str, str] = {
         "KindDefinition declares a Kind, a LayerPolicy declares who may write "
         "one. Deriving them from a trait would require reading a document whose "
         "Kind is not registered yet. The ORDER is load-bearing too. This is now "
-        "the ONE definition — kernel/__init__.py, kernel/instance.py and "
+        "the ONE definition — kernel/__init__.py, kernel/manifest.py and "
         "kernel/query/resolver.py import it rather than repeating it, which is "
         "the drift the v1.3 Milestone->Epic rename actually caused."
     ),

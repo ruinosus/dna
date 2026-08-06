@@ -55,7 +55,7 @@ from dna.kernel.protocols import CompositionResult
 if TYPE_CHECKING:  # pragma: no cover
     from dna.kernel.collaborator_ports import CompositionResolverHost
     from dna.kernel.document import Document
-    from dna.kernel.instance import ManifestInstance
+    from dna.kernel.manifest import ManifestInstance
     from dna.kernel.protocols import KindPort
 
 logger = logging.getLogger(__name__)

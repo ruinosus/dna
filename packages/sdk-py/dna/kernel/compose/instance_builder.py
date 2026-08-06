@@ -20,7 +20,7 @@ from dna.kernel.protocols import CacheItem, ResolveError
 if TYPE_CHECKING:  # pragma: no cover
     from dna.kernel.collaborator_ports import InstanceBuilderHost
     from dna.kernel.document import Document
-    from dna.kernel.instance import ManifestInstance
+    from dna.kernel.manifest import ManifestInstance
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +46,7 @@ class InstanceBuilder:
         I/O. ``skip_async_rescan`` suppresses the sync rescan when an async
         caller (instance_async) will run it itself."""
         from dna.kernel import _run_sync_helper
-        from dna.kernel.instance import ManifestInstance
+        from dna.kernel.manifest import ManifestInstance
         k = self._k
         k._ensure_generic_readers_writers()
 
@@ -480,7 +480,7 @@ class InstanceBuilder:
                 and not non_tenant_layers
             )
         if _lazy_enabled:
-            from dna.kernel.instance import ManifestInstance
+            from dna.kernel.manifest import ManifestInstance
             # Phase 1, on the lazy path too — the bootstrap load exists FOR
             # this. ``BOOTSTRAP_KIND_NAMES`` puts ``KindDefinition`` first
             # precisely so a scope's own declared Kinds are registered before

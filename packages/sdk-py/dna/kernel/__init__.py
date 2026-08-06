@@ -34,7 +34,7 @@ from dna.kernel.protocols import (
     ResolverPort, SourcePort, StorageDescriptor, StoragePattern,
     SYSTEM_SCOPE, Template, ToolDefinition, WritableSourcePort, WriterPort,
 )
-from dna.kernel.instance import ManifestInstance  # noqa: F401 — used in deferred-eval annotations
+from dna.kernel.manifest import ManifestInstance  # noqa: F401 — used in deferred-eval annotations
 from dna.kernel.compose.templates import OnConflict
 
 logger = logging.getLogger(__name__)

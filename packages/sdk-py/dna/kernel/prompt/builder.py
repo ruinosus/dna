@@ -14,7 +14,7 @@ from dna.kernel.errors import AgentNotFound, UnknownLayout
 
 if TYPE_CHECKING:
     from dna.kernel.document import Document
-    from dna.kernel.instance import ManifestInstance
+    from dna.kernel.manifest import ManifestInstance
 
 logger = logging.getLogger(__name__)
 

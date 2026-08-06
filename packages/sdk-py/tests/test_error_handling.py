@@ -231,7 +231,7 @@ class TestMIErrors:
 
     def test_composition_with_unknown_alias(self):
         """dep_filters referencing an unknown alias produces a warning, not a crash."""
-        from dna.kernel.instance import ManifestInstance
+        from dna.kernel.manifest import ManifestInstance
 
         class WeirdKind:
             api_version = "w/v1"

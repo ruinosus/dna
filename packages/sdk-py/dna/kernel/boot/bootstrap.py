@@ -35,7 +35,7 @@ from dna.kernel.protocols import EXTENSIONS_ENTRY_POINT_GROUP
 
 if TYPE_CHECKING:  # pragma: no cover
     from dna.kernel import Kernel
-    from dna.kernel.instance import ManifestInstance
+    from dna.kernel.manifest import ManifestInstance
     from dna.kernel.protocols import Extension
 
 # Preserve the historical logger name so ``[kernel] …`` / ``Auto-loaded

@@ -272,7 +272,7 @@ def test_kernel_without_kind_plane_keeps_legacy_path():
     """Kernels that don't expose kind_plane (mocks, legacy embedders) must
     never trip the record branch."""
     from dna.kernel.document import Document
-    from dna.kernel.instance import ManifestInstance
+    from dna.kernel.manifest import ManifestInstance
     kernel = MagicMock(spec=[])  # no kind_plane attribute at all
     doc = Document.from_raw(_raw("StoryLike", "s-x"))
     mi = ManifestInstance(scope="demo", documents=[doc], kinds={}, kernel=kernel)

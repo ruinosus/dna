@@ -3,7 +3,7 @@
 `s-engram-rename` renamed the memory Kind `LessonLearned` → `Engram` and
 moved its identity to `github.com/ruinosus/dna/v1`. Kind resolution is an
 exact `(apiVersion, kind)` 2-tuple lookup with **no fallback**
-(`dna/kernel/instance.py:686` — `self._kinds.get((doc.api_version,
+(`dna/kernel/manifest.py:686` — `self._kinds.get((doc.api_version,
 doc.kind))`): the instant a deployment's pin advances to an SDK version that
 only registers `Engram`, every stored document still carrying the old
 `(apiVersion, kind)` pair becomes invisible — not an error, just silently

@@ -7,7 +7,7 @@
 production DNA source is **Postgres** (``DNA_SOURCE_URL=postgresql://…``),
 so that script migrates zero production rows there. Kind resolution is an
 exact ``(apiVersion, kind)`` 2-tuple lookup with no fallback
-(``dna/kernel/instance.py:686`` — ``self._kinds.get((doc.api_version,
+(``dna/kernel/manifest.py:686`` — ``self._kinds.get((doc.api_version,
 doc.kind))``), so the moment the ``Engram``-only SDK pin ships, every
 unmigrated Postgres row becomes invisible. This module is that migration.
 
@@ -75,7 +75,7 @@ same pre-flight, just never proceeds to a write.
 Single transaction: every table's ``UPDATE`` runs inside ONE
 ``asyncpg`` transaction (``async with conn.transaction():``) — a
 half-migrated store is worse than an unmigrated one, because ``kind_for()``
-(``dna/kernel/instance.py:693``) matches on the bare kind name ignoring
+(``dna/kernel/manifest.py:693``) matches on the bare kind name ignoring
 ``apiVersion``, so a doc renamed in one table but not another would resolve
 *confusingly* (found by kind, inconsistent identity) rather than cleanly
 (simply invisible).
@@ -134,7 +134,7 @@ _VALID_SCHEMA_IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
 # Argument for "leave immutable": dna_outbox is an event LOG, not a live
 # identity surface. Nothing resolves Kind identity through it — Kind
 # resolution is the kernel's exact (apiVersion, kind) tuple lookup over
-# dna_documents-sourced instances (kernel/instance.py:686); dna_outbox rows
+# dna_documents-sourced instances (kernel/manifest.py:686); dna_outbox rows
 # are read by the eventbus (PostgresEventBus / pg_notify subscribers) purely
 # to invalidate caches and checkpoint dna_versions_seq, keyed by
 # (scope, tenant, id) — never by kind. Rewriting old rows would misrepresent

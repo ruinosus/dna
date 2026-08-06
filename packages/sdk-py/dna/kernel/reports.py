@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dna.kernel.instance import ManifestInstance
+    from dna.kernel.manifest import ManifestInstance
 
 # ─── Severity ordering (lower = more severe) ─────────────────────────
 _SEVERITY_ORDER: dict[str, int] = {

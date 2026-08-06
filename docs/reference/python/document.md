@@ -17,7 +17,7 @@ documented read API (`all`, `one`, `root`, `default_agent`, `find_agent`,
 
 ## ManifestInstance
 
-::: dna.kernel.instance.ManifestInstance
+::: dna.kernel.manifest.ManifestInstance
     options:
       show_root_heading: true
       show_source: false

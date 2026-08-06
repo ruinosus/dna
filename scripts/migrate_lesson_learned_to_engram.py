@@ -2,7 +2,7 @@
 """Migrate stored ``LessonLearned`` docs to ``Engram`` (s-engram-rename).
 
 **Clean rename, not a compat shim.** Kind resolution is an exact
-``(apiVersion, kind)`` lookup with no fallback (``kernel/instance.py:686``) —
+``(apiVersion, kind)`` lookup with no fallback (``kernel/manifest.py:686``) —
 so a doc still carrying the old identity is invisible to the new
 ``Engram`` KindPort (registered by ``HelixExtension`` from
 ``helix/kinds/engram.kind.yaml``) the instant the SDK pin advances. This

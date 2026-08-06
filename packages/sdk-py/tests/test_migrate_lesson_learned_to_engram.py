@@ -2,7 +2,7 @@
 migration.
 
 Kind resolution is an exact ``(apiVersion, kind)`` lookup with no fallback
-(``kernel/instance.py:686``) — a stored ``LessonLearned`` doc is invisible to
+(``kernel/manifest.py:686``) — a stored ``LessonLearned`` doc is invisible to
 the renamed ``Engram`` KindPort the instant the SDK pin advances, hence the
 one-time rewrite. These tests drive the script's importable functions
 directly against a scratch directory tree (never touching real ``.dna/``

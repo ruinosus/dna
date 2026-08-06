@@ -17,7 +17,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from dna.kernel.document import Document
-from dna.kernel.instance import ManifestInstance
+from dna.kernel.manifest import ManifestInstance
 
 
 def _doc(kind: str, name: str) -> Document:

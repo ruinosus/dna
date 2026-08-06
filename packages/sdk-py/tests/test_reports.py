@@ -1,6 +1,6 @@
 """Tests for ReportBuilder — eval_summary, findings_summary, evidence_manifest, compliance_matrix."""
 from dna.kernel.document import Document
-from dna.kernel.instance import ManifestInstance
+from dna.kernel.manifest import ManifestInstance
 from dna.kernel.reports import ReportBuilder
 
 

@@ -23,7 +23,7 @@ import warnings
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.instance import ManifestInstance
+from dna.kernel.manifest import ManifestInstance
 
 _FIXTURE = (
     pathlib.Path(__file__).resolve().parents[3]

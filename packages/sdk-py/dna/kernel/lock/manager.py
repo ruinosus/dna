@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dna.kernel.instance import ManifestInstance
+    from dna.kernel.manifest import ManifestInstance
     from dna.kernel.lock import Lockfile
 
 
