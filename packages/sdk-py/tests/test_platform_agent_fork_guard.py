@@ -5,7 +5,7 @@ A per-tenant overlay silently FORKS the persona and shadows the base for that
 tenant's reads — the root cause of the JARVIS 16384 outage (2026-05-29) and the
 stale-persona bug (2026-06-14, DNA_TENANT=acme pollution). The guard turns that
 silent corruption into a loud error. _lib agents are base-only (edit in git
-+ `dna doc apply --scope _lib`).
++ `dna instance apply --scope _lib`).
 """
 from __future__ import annotations
 

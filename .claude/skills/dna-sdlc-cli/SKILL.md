@@ -205,4 +205,4 @@ the cited doc gains `cited_by`) · `changelog` (release notes per scope) ·
   not the CLI).
 - Reading docs programmatically (use the SDK: `Kernel.quick(...)` /
   `mi.all("Story")`).
-- Bulk renames/deletes (use `dna doc` + a git commit, not the SDLC verbs).
+- Bulk renames/deletes (use `dna instance` + a git commit, not the SDLC verbs).

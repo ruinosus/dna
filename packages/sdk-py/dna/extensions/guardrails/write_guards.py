@@ -132,7 +132,7 @@ async def spec_kit_constitution_guard(ctx: "PreSaveContext") -> None:
         raise ConstitutionViolationError(
             f"refusing to write {ctx.kind}/{ctx.name}: {detail} "
             f"Add the Spec link, or relax the constitution's severity "
-            f"(no redeploy: `dna doc apply` a Guardrail with severity=warn)."
+            f"(no redeploy: `dna instance apply` a Guardrail with severity=warn)."
         )
     # error / warn → tolerate but surface loudly (the governance is advisory).
     logger.warning("constitution guard (severity=%s, advisory): %s", severity, detail)

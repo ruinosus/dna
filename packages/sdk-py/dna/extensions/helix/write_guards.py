@@ -46,7 +46,7 @@ def platform_agent_fork_guard(ctx: PreSaveContext) -> None:
     """Block per-tenant overlays of ``_lib`` Agents.
 
     The `_lib` scope is the shared baseline (jarvis + the 12 transversais);
-    its Agents are edited in git + ``dna doc apply --scope _lib``
+    its Agents are edited in git + ``dna instance apply --scope _lib``
     (base only). A per-tenant overlay silently FORKS the persona and shadows
     the base for that tenant's reads — the root cause of the JARVIS 16384
     outage (2026-05-29) and the stale-persona bug (2026-06-14,
@@ -58,7 +58,7 @@ def platform_agent_fork_guard(ctx: PreSaveContext) -> None:
         raise TenantNotAllowed(
             f"refusing a per-tenant overlay of the _lib agent {ctx.name!r} "
             f"(tenant={ctx.tenant!r}). _lib agents are base-only — "
-            f"edit in git + `dna doc apply --scope _lib`. A tenant fork "
+            f"edit in git + `dna instance apply --scope _lib`. A tenant fork "
             f"shadows the base persona for that tenant (JARVIS 16384 outage)."
         )
 

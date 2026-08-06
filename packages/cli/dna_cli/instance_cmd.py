@@ -1,4 +1,4 @@
-"""``dna doc`` — CRUD on instances within a scope.
+"""``dna instance`` — CRUD on instances within a scope.
 
 Migrated to dna-client for read/write CRUD (no local kernel needed
 for the common path). `apply` is the lone exception: it walks a
@@ -187,7 +187,7 @@ def make_doc(
 ) -> None:
     """Create a doc via schema-driven flags (no JSON file needed).
 
-    Syntax: dna doc make <Kind> <name> field1=value1 field2=value2 ...
+    Syntax: dna instance make <Kind> <name> field1=value1 field2=value2 ...
 
     Field types are coerced from the Kind's JSON Schema:
       severity=high                  → "high" (string)
@@ -428,7 +428,7 @@ def delete(
 # `apply` — bundle / marker handling still needs local kernel for
 # marker→kind resolution. TODO: add a server-side endpoint that takes
 # (bundle_bytes, marker_name) and returns the canonical raw doc, so
-# this can also migrate to dna-client. Until then, `dna doc apply`
+# this can also migrate to dna-client. Until then, `dna instance apply`
 # requires DNA_SOURCE_URL to be set.
 # ---------------------------------------------------------------------------
 
@@ -463,7 +463,7 @@ def _collect_bundle_files(
     """All bundle entries under ``root`` (excluding the marker + skip dirs):
     text files as ``str``, everything else (fonts, images, audio, archives)
     as ``bytes``. i-062 — the text-only collection dropped binary assets, so
-    `dna doc apply` never synced fonts/images to the target source.
+    `dna instance apply` never synced fonts/images to the target source.
 
     The downstream apply pops these from spec.source_files and writes each via
     ``kernel.write_bundle_entry_async`` (which takes ``str | bytes``).
@@ -494,7 +494,7 @@ def _collect_bundle_files(
 
 
 def _load_apply_input(path: str, kernel) -> dict:
-    """Load `dna doc apply` input — bundle dir, marker file, or YAML/JSON."""
+    """Load `dna instance apply` input — bundle dir, marker file, or YAML/JSON."""
     import yaml as _yaml
     from dna._yaml import safe_load
     from pathlib import Path as _Path
@@ -551,8 +551,8 @@ def _load_apply_input(path: str, kernel) -> dict:
     fm, body = _parse_frontmatter(raw_text, source=str(p))
     # i-061 — a single marker file (e.g. AGENT.md) is still a bundle: collect
     # its sibling entries (instruction.md, scripts/, references/) from the
-    # parent directory so `dna doc apply path/to/AGENT.md` is equivalent to
-    # `dna doc apply path/to/`. Without this, applying the marker alone dropped
+    # parent directory so `dna instance apply path/to/AGENT.md` is equivalent to
+    # `dna instance apply path/to/`. Without this, applying the marker alone dropped
     # the instruction_file fragment, zeroing the agent's instruction.
     # i-062 — collect text AND binary siblings (fonts, images, …).
     sibling_files = _collect_bundle_files(p.parent, p.name)
@@ -667,7 +667,7 @@ def _stamp_created_at_if_in_schema(s, kind_name: str, raw: dict) -> None:
 
 
 def _load_apply_inputs(path: str, kernel) -> list[dict]:
-    """Load `dna doc apply` input as a LIST of raw docs.
+    """Load `dna instance apply` input as a LIST of raw docs.
 
     YAML/JSON files may contain MULTIPLE documents separated by ``---``
     (a YAML stream); each is applied independently. Bundle directories
@@ -862,7 +862,7 @@ def apply(path: str, scope: str | None, tenant: str | None, dry_run: bool) -> No
 
     NOTE: this command still uses the local kernel (via dna_session) because
     bundle/marker → kind resolution requires walking registered Kinds. Other
-    `dna doc` commands run via dna-client and don't need DNA_SOURCE_URL set.
+    `dna instance` commands run via dna-client and don't need DNA_SOURCE_URL set.
     """
     with open_session(scope) as s:
         raws = _load_apply_inputs(path, s.kernel)

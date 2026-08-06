@@ -4,7 +4,7 @@ tools on the MCP face.
 The gap: the MCP face ships 21 HAND-WRITTEN tools and never loops over the Kind
 registry, so of the 76 registered Kinds only the handful someone hand-wrote a
 tool for is reachable by an agent. The CLI already solved this generically
-in-process (``dna_cli._ctx._LocalDocs`` → ``dna doc``); it was simply never
+in-process (``dna_cli._ctx._LocalDocs`` → ``dna instance``); it was simply never
 served. These four tools close that: ``list_kinds`` / ``list_instances`` /
 ``get_instance`` / ``write_instance``, resolved from the registry AT CALL TIME.
 

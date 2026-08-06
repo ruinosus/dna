@@ -142,7 +142,7 @@ class TestGuardrailSchemaEnum:
 
 class TestGuardrailValidateDocument:
     """i-validation-shallow (axis 2): ``kernel.validate_instance`` — the SAME
-    check ``dna doc apply --dry-run`` runs — rejects an enum-violating spec
+    check ``dna instance apply --dry-run`` runs — rejects an enum-violating spec
     BEFORE the write path. Previously validation only fired on the real write."""
 
     def _kernel(self):

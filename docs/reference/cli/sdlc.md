@@ -662,7 +662,7 @@ dna sdlc epic [OPTIONS] COMMAND [ARGS]...
 Create a new Epic.
 
 Closes the last CRUD gap in the SDLC CLI (s-dx-epic-create): Story and
-Feature had `create`, but an Epic had to be hand-authored via `dna doc
+Feature had `create`, but an Epic had to be hand-authored via `dna instance
 apply` — an asymmetry the DX epic (e-dna-dx) exists to kill. Mirrors
 `feature create`: same envelope, same write path (`kernel.write_instance`),
 same initial-timeline event. Unlike `story create`, no --ac/--dod guard —
@@ -1726,7 +1726,7 @@ dna sdlc list [OPTIONS] {Roadmap|Epic|Feature|Story|Issue|Spec|Plan}
 
 Project narrative — write cadence reminders + scaffold helpers.
 
-The Narrative Kind itself is created via ``dna doc apply`` against
+The Narrative Kind itself is created via ``dna instance apply`` against
 a NARRATIVE.md bundle (the canonical write path). These commands
 are the operator-side ergonomics: telling you when the last one
 was written, what's pending since then, and stubbing out the next
@@ -1832,7 +1832,7 @@ dna sdlc narrative add-paragraph [OPTIONS] NAME
 Scaffold a NARRATIVE.md bundle for a new Narrative doc. Writes
 the file with FLAT frontmatter (the format the bundle reader
 expects) + a body skeleton with the structured-fields headings.
-Does NOT apply — review/edit, then run `dna doc apply`.
+Does NOT apply — review/edit, then run `dna instance apply`.
 
 ```text
 dna sdlc narrative new [OPTIONS] SLUG

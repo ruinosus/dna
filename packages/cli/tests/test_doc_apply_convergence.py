@@ -1,4 +1,4 @@
-"""Regression tests for i-059 — `dna doc apply` must CONVERGE.
+"""Regression tests for i-059 — `dna instance apply` must CONVERGE.
 
 The bug: `_apply_one` compared the RESOLVED current doc (`current.spec` — the
 Kind's schema defaults are injected at parse time) against the file's RAW spec.

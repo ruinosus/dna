@@ -1,4 +1,4 @@
-"""`dna doc apply --dry-run` must VALIDATE, not just report the verb.
+"""`dna instance apply --dry-run` must VALIDATE, not just report the verb.
 
 i-validation-shallow (axis 2): the sp-exp-value-comparison spike found that a
 schema-violating doc (e.g. a Guardrail ``severity: critical``) was ACCEPTED on

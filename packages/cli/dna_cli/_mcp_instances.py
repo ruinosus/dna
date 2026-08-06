@@ -286,7 +286,7 @@ def register_instance_tools(
         The MCP face had no delete at all: an agent could create and update every
         Kind and remove nothing, so undoing a mistaken write needed a human with
         database access. This is ``kernel.delete_instance`` — the same operation
-        ``dna doc delete`` and the REST routes already use — through the same
+        ``dna instance delete`` and the REST routes already use — through the same
         tenancy + quota guard as ``write_instance``, and metered as a write.
 
         ``api_version`` is REQUIRED here, unlike ``write_instance`` where the

@@ -268,7 +268,7 @@ def test_issue_start_transition(runner, store):
 
 
 # ---------------------------------------------------------------------------
-# `dna doc apply` multi-document YAML (Tier 3).
+# `dna instance apply` multi-document YAML (Tier 3).
 # ---------------------------------------------------------------------------
 
 def _doc_fake_session(store: dict, scope: str):

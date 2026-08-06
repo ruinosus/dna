@@ -490,7 +490,7 @@ class Kernel:
     ) -> None:
         """Validate ``raw['spec']`` against the Kind's declared JSON Schema —
         the SAME check ``write_instance`` enforces on the write path, exposed as
-        a public pre-flight so read-only callers (``dna doc apply --dry-run``)
+        a public pre-flight so read-only callers (``dna instance apply --dry-run``)
         catch a schema-violating doc BEFORE the write (i-validation-shallow).
 
         Raises ``SpecValidationError`` on violation, honouring

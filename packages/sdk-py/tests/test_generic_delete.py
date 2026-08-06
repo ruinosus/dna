@@ -1,6 +1,6 @@
 """Item 2 — the faces could create and update every Kind, and delete nothing.
 
-``kernel.delete_instance`` has always existed; ``dna doc delete`` and four narrow
+``kernel.delete_instance`` has always existed; ``dna instance delete`` and four narrow
 REST routes use it. The MCP face had NO delete at all, so the only way to undo a
 mistaken generic write was a human with database access.
 

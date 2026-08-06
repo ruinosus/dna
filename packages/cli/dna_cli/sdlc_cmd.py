@@ -2884,7 +2884,7 @@ def cmd_epic_create(
     """Create a new Epic.
 
     Closes the last CRUD gap in the SDLC CLI (s-dx-epic-create): Story and
-    Feature had `create`, but an Epic had to be hand-authored via `dna doc
+    Feature had `create`, but an Epic had to be hand-authored via `dna instance
     apply` — an asymmetry the DX epic (e-dna-dx) exists to kill. Mirrors
     `feature create`: same envelope, same write path (`kernel.write_instance`),
     same initial-timeline event. Unlike `story create`, no --ac/--dod guard —

@@ -5,7 +5,7 @@ hand. The MCP face has 21 hand-written tools and no loop over the Kind registry,
 so 85% of its lines name one specific Kind — and a Kind that exists (including
 the ones declared purely by a ``*.kind.yaml`` descriptor) is invisible to an
 agent unless somebody writes tools for it. The generic path is not missing: the
-CLI's ``dna doc`` has served every Kind in-process for a long time
+CLI's ``dna instance`` has served every Kind in-process for a long time
 (``dna_cli._ctx._LocalDocs``). It was simply never *served*.
 
 These four use-cases are that generic path, transport-agnostic, resolved from
@@ -1000,7 +1000,7 @@ async def delete_instance_impl(
     """Delete one instance — the generic delete the faces were missing.
 
     ``kernel.delete_instance`` has always existed; REST reaches it through four
-    narrow routes and ``dna doc delete`` uses it, but the MCP face had NO delete
+    narrow routes and ``dna instance delete`` uses it, but the MCP face had NO delete
     at all. An agent that could create and update every Kind could remove
     nothing, so the only way to undo a mistaken write was a human with database
     access. This is the same operation, through the same guards.

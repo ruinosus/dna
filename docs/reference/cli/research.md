@@ -12,7 +12,7 @@ Manage Research synthesis instances (curated syntheses of References).
 
 Create/upsert a Research doc from a YAML/JSON file.
 
-First-class research authoring (no ``dna doc apply`` needed). Validates
+First-class research authoring (no ``dna instance apply`` needed). Validates
 kind == Research and the spec schema BEFORE writing. Tenancy is
 permissive: ``--tenant`` optional.
 

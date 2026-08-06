@@ -79,10 +79,10 @@ keeps the shared template:
 
 ```console
 # base team template
-$ dna doc apply --scope my-team speckit-spec-template.prompt
+$ dna instance apply --scope my-team speckit-spec-template.prompt
 
 # ACME's house override of the SAME template (overlay — base untouched)
-$ DNA_TENANT=acme dna doc apply --scope my-team speckit-spec-template.prompt
+$ DNA_TENANT=acme dna instance apply --scope my-team speckit-spec-template.prompt
 ```
 
 `get_template("speckit-spec-template", tenant="acme")` now returns ACME's body;
@@ -144,10 +144,10 @@ deploy*:
 
 ```console
 # tighten governance live — the next non-traceable spec-kit write is refused
-$ dna doc apply --scope my-team speckit-constitution.guardrail   # severity: hard
+$ dna instance apply --scope my-team speckit-constitution.guardrail   # severity: hard
 
 # loosen it again with zero redeploy — writes flow, advisory only
-$ dna doc apply --scope my-team speckit-constitution.guardrail   # severity: warn
+$ dna instance apply --scope my-team speckit-constitution.guardrail   # severity: warn
 ```
 
 Governance stops being a markdown file you hope people read and becomes policy

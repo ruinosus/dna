@@ -188,7 +188,7 @@ Note the two-phase load at work: the `KindDefinition` registered the
 instance of it — no Python was written. The two `Doc` pages are absent on
 purpose: `Doc` is a *record-plane* Kind (pure typed content that never
 composes into agent prompts), and the tree inventories the composition
-plane — records are reached with `dna doc list Doc --scope docs` and the
+plane — records are reached with `dna instance list Doc --scope docs` and the
 [`dna docs`](#dna-docs-browse-the-in-product-doc-corpus) group below.
 
 ## `dna genome view` — the derived Genome view
@@ -258,20 +258,20 @@ $ dna kind describe Doc | head -8
     "required": [
 ```
 
-## `dna doc` — generic instance CRUD
+## `dna instance` — generic instance CRUD
 
 [Reference →](../reference/cli/instance.md)
 
 The workhorse group: list, show, create, edit and delete instances of
-*any* Kind, with the Kind's JSON Schema enforced on every write. `dna doc
+*any* Kind, with the Kind's JSON Schema enforced on every write. `dna instance
 fields` prints the fields a Kind accepts (straight from its schema), and
-`dna doc make` builds an instance from `field=value` arguments — values are
+`dna instance make` builds an instance from `field=value` arguments — values are
 coerced to the schema's types, so you rarely need to hand-craft JSON. For
-bulk upserts from files there is `dna doc apply`, and Kinds that declare a
-status machine get generic `dna doc transition`.
+bulk upserts from files there is `dna instance apply`, and Kinds that declare a
+status machine get generic `dna instance transition`.
 
 ```console
-$ dna doc fields Comment --scope docs
+$ dna instance fields Comment --scope docs
 Fields for Comment
   required: ['author', 'body', 'created_at', 'target_ref', 'type']
 
@@ -286,12 +286,12 @@ Fields for Comment
   to_status                (string)   
   type                     (string) enum=['note', 'status_change', 'assignment', 'system'] *   
 
-$ dna doc make Comment note-1 --scope docs target_ref=Doc:welcome \
+$ dna instance make Comment note-1 --scope docs target_ref=Doc:welcome \
     author=ada body='Ship the welcome page.' type=note \
     created_at=2026-07-09T12:00:00Z
 Created Comment/note-1 in scope docs (5 fields)
 
-$ dna doc show Comment note-1 --scope docs
+$ dna instance show Comment note-1 --scope docs
 {
   "kind": "Comment",
   "name": "note-1",
@@ -312,7 +312,7 @@ $ dna doc show Comment note-1 --scope docs
 
 [Reference →](../reference/cli/docs.md)
 
-Not to be confused with `dna doc` above: `dna docs` (plural) is a reader
+Not to be confused with `dna instance` above: `dna docs` (plural) is a reader
 over one specific corpus — a scope named `docs` holding instances of the
 built-in [`Doc` Kind](../concepts/builtin-kinds.md#doc), the pattern a
 DNA-based product uses to serve its own help pages from the kernel. Each

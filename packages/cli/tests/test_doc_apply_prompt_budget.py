@@ -1,6 +1,6 @@
-"""Tests for `dna doc apply` clear failure on PromptBudgetExceededError.
+"""Tests for `dna instance apply` clear failure on PromptBudgetExceededError.
 
-Task 9: CLI dna doc apply clear failure (feat/model-profile-prompt-budget).
+Task 9: CLI dna instance apply clear failure (feat/model-profile-prompt-budget).
 
 `apply` uses the local kernel (dna_session) and calls
 kernel.write_instance() directly. When writing an over-cap voice

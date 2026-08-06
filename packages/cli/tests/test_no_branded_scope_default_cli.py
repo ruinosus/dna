@@ -4,7 +4,7 @@ dogfood board scope (``"dna-development"``) as a ``--scope`` default.
 This is the CLI half of the guard. Before this fix, every ``--scope`` option
 across ``kind_cmd``/``intel_cmd``/``instance_cmd``/``research_cmd`` defaulted to
 the literal ``"dna-development"`` — a third party running ``dna kind list``
-/ ``dna doc ...`` / ``dna research ...`` with no ``--scope`` silently got
+/ ``dna instance ...`` / ``dna research ...`` with no ``--scope`` silently got
 DNA's internal board scope as their default, not their own.
 
 The fix mirrors the pattern the repo ALREADY uses elsewhere for this exact
@@ -164,7 +164,7 @@ def test_no_dna_cli_scope_option_defaults_to_a_branded_scope():
 
 
 def test_doc_list_with_no_scope_resolves_via_dna_client_default_scope():
-    """``dna doc list`` (a ``dna_client()``/``_LocalClient`` command, not
+    """``dna instance list`` (a ``dna_client()``/``_LocalClient`` command, not
     ``dna_session``) with ``--scope`` omitted must resolve through the new
     ``_LocalClient.default_scope`` accessor and actually find real data —
     not just carry a ``None`` default that later 404s. Uses the same fixture

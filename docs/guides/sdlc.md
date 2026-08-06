@@ -214,8 +214,8 @@ spec:
 ```
 
 ```bash
-dna doc apply sprint.yaml                    # or, without a file:
-dna doc make Sprint 2026-Q2-S2 sprint_id=2026-Q2-S2 \
+dna instance apply sprint.yaml                    # or, without a file:
+dna instance make Sprint 2026-Q2-S2 sprint_id=2026-Q2-S2 \
     starts_on=2026-04-06 ends_on=2026-04-17 state=active
 
 dna sdlc story create s-x --feature f-y --sprint 2026-Q2-S2 --desc "…"

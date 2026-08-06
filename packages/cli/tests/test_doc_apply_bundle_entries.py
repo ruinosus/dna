@@ -1,4 +1,4 @@
-"""Regression tests for i-061 — `dna doc apply` must persist sibling bundle
+"""Regression tests for i-061 — `dna instance apply` must persist sibling bundle
 entries (the `instruction_file` fragment, scripts/, references/) into the
 target source.
 

@@ -224,7 +224,7 @@ def _validate_spec_or_die(path: str, spec: dict[str, Any]) -> None:
 def cmd_create(path: str, scope: str | None, tenant: str | None, status: str | None) -> None:
     """Create/upsert a Research doc from a YAML/JSON file.
 
-    First-class research authoring (no ``dna doc apply`` needed). Validates
+    First-class research authoring (no ``dna instance apply`` needed). Validates
     kind == Research and the spec schema BEFORE writing. Tenancy is
     permissive: ``--tenant`` optional.
     """

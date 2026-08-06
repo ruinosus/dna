@@ -62,10 +62,10 @@ $ dna new agent assistant --scope my-scope --soul my-brand-voice --layout person
 # 2. Author it — fill the AGENT.md instruction + wire your Soul / Guardrails / Skills.
 
 # 3. Preview the composed prompt before you ship
-$ dna doc show Agent assistant --scope my-scope
+$ dna instance show Agent assistant --scope my-scope
 
 # 4. Push it to the hosted DNA source as your tenant overlay
-$ DNA_TENANT=my-tenant dna doc apply agents/assistant/AGENT.md \
+$ DNA_TENANT=my-tenant dna instance apply agents/assistant/AGENT.md \
       --scope my-scope --source "$DNA_SOURCE_URL"
 ```
 
@@ -94,7 +94,7 @@ source (the same "Phase 2" seed step as the demo scope in
 
 ```console
 # push the whole _lib catalog to the hosted Postgres source
-$ dna doc apply examples/dna-cloud/.dna/_lib --source "$DNA_SOURCE_URL"
+$ dna instance apply examples/dna-cloud/.dna/_lib --source "$DNA_SOURCE_URL"
 # …or, on the ACA deployment, the mounted-source helper:
 $ ./scripts/push-scope.sh examples/dna-cloud/.dna
 ```

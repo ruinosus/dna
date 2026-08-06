@@ -18,7 +18,7 @@ exactly as before.
 
 NOTE: this command still uses the local kernel (via dna_session) because
 bundle/marker → kind resolution requires walking registered Kinds. Other
-`dna doc` commands run via dna-client and don't need DNA_SOURCE_URL set.
+`dna instance` commands run via dna-client and don't need DNA_SOURCE_URL set.
 
 ```text
 dna instance apply [OPTIONS] PATH
@@ -137,7 +137,7 @@ dna instance list [OPTIONS] KIND_NAME
 
 Create a doc via schema-driven flags (no JSON file needed).
 
-Syntax: dna doc make <Kind> <name> field1=value1 field2=value2 ...
+Syntax: dna instance make <Kind> <name> field1=value1 field2=value2 ...
 
 Field types are coerced from the Kind's JSON Schema:
   severity=high                  → "high" (string)

@@ -187,4 +187,4 @@ in one shot) · `produces` / `cite` (link artifacts / sources) ·
 
 - Reading instances programmatically (use the SDK: `Kernel.quick(...)` /
   `mi.all("Story")` — see the dna-sdk docs).
-- Bulk renames/deletes (use `dna doc` + a git commit, not the SDLC verbs).
+- Bulk renames/deletes (use `dna instance` + a git commit, not the SDLC verbs).
