@@ -226,6 +226,48 @@ def register_instance_tools(
             raise ToolError(str(exc)) from None
 
     @server.tool(run_in_thread=False)
+    async def resolve_instance(
+        id: str, scope: str | None = None,
+    ) -> dict[str, Any]:
+        """Find an instance by its short ``metadata.id`` — the id lane (i-114).
+
+        Every instance carries a 12-character ``metadata.id`` that NEVER changes,
+        even when the instance is renamed. Give this tool the first four or more
+        characters and it expands them to the one instance they name, the way
+        ``git`` expands a short commit hash.
+
+        Use it when you hold an id — from ``get_instance``'s ``metadata``, or
+        from a ``to_id`` on the reference graph — and want the instance it
+        belongs to WITHOUT knowing its Kind, its name or its scope. To read an
+        instance you can already name, use ``get_instance``: that is the name
+        lane, and the two stay separate so a name query can never be silently
+        answered by an id match.
+
+        **A prefix that matches more than one instance is REFUSED**, never
+        resolved to the first hit. Lengthen the prefix; the error lists the
+        candidates. Fewer than four characters is refused too — that is a typo,
+        not a question.
+        """
+        from dna.kernel.errors import (  # noqa: PLC0415
+            InstanceIdLookupUnsupported,
+        )
+        # Metered as a plain read against the DEFINITIONS family: the caller
+        # has not named a Kind, so there is no Kind whose family could govern
+        # the call, and picking one from the resolved instance would let a
+        # caller reach a family their tier does not grant by holding an id.
+        tenant = await guard(
+            D.family_for_kind(None), scope=scope, family_op="read",
+        )
+        try:
+            return await D.resolve_instance_impl(
+                await live(), id=id, scope=scope, tenant=tenant,
+            )
+        except InstanceIdLookupUnsupported as exc:
+            raise ToolError(str(exc)) from None
+        except (LookupError, ValueError) as exc:
+            raise ToolError(str(exc)) from None
+
+    @server.tool(run_in_thread=False)
     async def write_instance(
         kind: str, name: str, spec: dict[str, Any],
         scope: str | None = None, api_version: str | None = None,
@@ -327,6 +369,6 @@ def register_instance_tools(
             raise ToolError(f"{type(exc).__name__}: {exc}") from None
 
     return [
-        "list_kinds", "list_instances", "get_instance", "write_instance",
-        "delete_instance",
+        "list_kinds", "list_instances", "get_instance", "resolve_instance",
+        "write_instance", "delete_instance",
     ]

@@ -560,6 +560,36 @@ class DnaClient:
             tenant=tenant, api_version=api_version, as_of=as_of,
         )
 
+    def resolve_instance(
+        self, instance_id: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """Expand a short ``metadata.id`` PREFIX to the instance it names.
+
+        The id lane (i-114). Every instance carries a 12-character
+        ``metadata.id`` that does not move when the instance is renamed; give
+        the first four or more characters and this returns the whole instance,
+        with the FULL id echoed back — the way ``git rev-parse`` expands a short
+        commit hash.
+
+        Deliberately separate from :meth:`get_kind_instance`, which is the NAME
+        lane. A short name and a short id are both strings, so one door that
+        accepted either would eventually answer a name query with an id match,
+        and nothing in the response would say so.
+
+        It REFUSES rather than guesses: **409** the prefix matches more than one
+        instance (the detail names the candidates — lengthen it), **404** it
+        matches none, **422** it is shorter than four characters or uses
+        characters outside ``[a-z2-7]``, **501** the server's store cannot
+        search by id.
+
+        ``scope`` is normally unnecessary — ids are unique across the store, and
+        not needing to know where the instance lives is most of what an id
+        buys."""
+        return self._get(
+            f"/v1/instances/{instance_id}", tenant=tenant, scope=scope,
+        )
+
     def graph_refs(
         self, kind: str, name: str, *,
         direction: str = "in", depth: int = 1,

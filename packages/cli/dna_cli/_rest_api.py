@@ -374,6 +374,7 @@ def build_app(
         create_project_impl,
         register_artifact_impl,
         get_instance_impl,
+        resolve_instance_impl,
         graph_refs_impl,
         list_instances_impl,
         list_kinds_impl,
@@ -1904,6 +1905,68 @@ def build_app(
             raise HTTPException(status_code=400, detail=str(exc)) from None
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from None
+
+    @app.get("/v1/instances/{id}", dependencies=guarded,
+             response_model=m.ResolveInstanceResponse)
+    async def resolve_instance(
+        id: str,
+        tenant: str | None = Query(default=None),
+        scope: str | None = Query(
+            default=None,
+            description=(
+                "Narrow the search to one scope. Normally unnecessary — ids "
+                "are unique across the store, and not needing to know the "
+                "scope is most of what an id buys."
+            ),
+        ),
+    ) -> dict[str, Any]:
+        """Expand a short ``metadata.id`` PREFIX to the one instance it names.
+
+        The id lane (i-114). The ``{kind}/{name}`` routes are the NAME lane and
+        stay exactly as they were: a name is the address a human authors and
+        reviews in a diff, and it is what a ``.dna/`` reference keeps. An id is
+        the identity underneath it — stable across a rename, and the value
+        ``dna_edges.to_id`` records beside every target name.
+
+        Resolution is by unique prefix, the way ``git`` expands a short commit
+        hash. Four to twelve characters; the response echoes the FULL id.
+
+        The status codes are the whole contract:
+
+        * **200** — exactly one instance matches.
+        * **409** — MORE THAN ONE matches, and this is the refusal the feature
+          exists for. Answering with the first match would be indistinguishable
+          from answering correctly: same shape, same 200, nothing in the body
+          to say a coin was flipped. The detail names the candidates so the
+          caller can lengthen the prefix.
+        * **404** — nothing matches.
+        * **422** — the prefix is shorter than four characters, or is not an
+          id at all. A one-character prefix is a typo, not a question, and
+          calling it "ambiguous" would hide that the query is the problem.
+        * **501** — this deployment's store cannot search by id.
+        """
+        from dna.kernel.errors import InstanceIdLookupUnsupported
+        from dna.kernel.identity import (
+            AmbiguousInstanceId, PrefixTooShort, UnknownInstanceId,
+        )
+
+        live = await _live()
+        try:
+            return await resolve_instance_impl(
+                live, id=id, scope=scope, tenant=tenant,
+            )
+        except InstanceIdLookupUnsupported as exc:
+            raise HTTPException(status_code=501, detail=str(exc)) from None
+        except AmbiguousInstanceId as exc:
+            # 409 and NOT 300/400: the request was well formed and the store
+            # answered — the conflict is in the data the caller is pointing at.
+            raise HTTPException(status_code=409, detail=str(exc)) from None
+        except PrefixTooShort as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
+        except UnknownInstanceId as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
 
     @app.get("/v1/kinds/{kind}/instances/{name}/refs", dependencies=guarded,
              response_model=m.GraphRefsResponse)

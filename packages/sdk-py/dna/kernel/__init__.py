@@ -2326,6 +2326,45 @@ class Kernel:
         raw = await self._granular_doc_cached((scope, kind, name, tenant or ""))
         return self._mark_validity(scope, raw)
 
+    async def resolve_instance_id(
+        self, prefix: str, *, scope: str | None = None,
+        tenant: str | None = None,
+    ) -> "Any":
+        """Expand a short ``metadata.id`` prefix to the ONE instance it names
+        (i-114) — the git / jujutsu / git-bug move, refusal included.
+
+        Returns a :class:`~dna.kernel.identity.InstanceRef`. Raises
+        ``UnknownInstanceId`` when nothing matches, ``AmbiguousInstanceId``
+        when more than one does, and ``PrefixTooShort`` when the query is too
+        short to be a question at all.
+
+        **Ambiguity is a refusal, and that is the point of the whole feature.**
+        An id that silently resolved to the wrong instance reads exactly like
+        one that resolved to the right one — no error, no stack trace, nothing
+        in the diff. The store finds candidates; this method never picks among
+        them, and neither does the store.
+
+        ``InstanceIdLookupUnsupported`` when the wired source cannot search by
+        id. Deliberately not an empty result: "this adapter cannot answer" and
+        "no such instance" are different facts, and fail-open in silence is
+        this house's signature defect.
+        """
+        from dna.kernel.identity import resolve_unique_prefix  # noqa: PLC0415
+        assert self._source, "No source registered."
+        finder = getattr(self._source, "find_instances_by_id_prefix", None)
+        if not callable(finder):
+            from dna.kernel.errors import (  # noqa: PLC0415
+                InstanceIdLookupUnsupported,
+            )
+            raise InstanceIdLookupUnsupported(
+                f"{type(self._source).__name__} cannot look instances up by "
+                f"id prefix — it does not implement "
+                f"find_instances_by_id_prefix. Read by (kind, name) instead, "
+                f"or run against an adapter that does."
+            )
+        candidates = await finder(prefix, scope=scope, tenant=tenant)
+        return resolve_unique_prefix(prefix, list(candidates))
+
     async def graph_refs(
         self, scope: str, kind: str, name: str, *,
         tenant: str | None = None,

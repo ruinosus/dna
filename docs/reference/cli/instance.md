@@ -166,6 +166,38 @@ dna instance make [OPTIONS] KIND_NAME DOC_NAME [FIELDS]...
 | `--scope` | Scope to write the instance into (default: env / sole scope). |
 | `--tenant` | Bind the write to this tenant. |
 
+## `dna instance resolve`
+
+Expand a short instance ID prefix to the instance it names (i-114).
+
+Every instance carries a 12-character `metadata.id` that survives a rename.
+Give the first four or more characters, the way you would quote a short git
+commit hash:
+
+    dna instance resolve k7m3
+
+A prefix that matches more than one instance is REFUSED, with the
+candidates listed — it is never resolved to the first hit.
+
+```text
+dna instance resolve [OPTIONS] INSTANCE_ID
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `INSTANCE_ID` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--json` | Print the whole instance. |
+| `--scope` | Narrow the search to one scope (default: every scope). |
+| `--tenant` | Bind to this tenant (overrides DNA_TENANT). |
+
 ## `dna instance show`
 
 Print the full instance (raw frontmatter + spec) as JSON.

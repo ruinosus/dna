@@ -2221,6 +2221,17 @@
             "title": "Resolved",
             "type": "boolean"
           },
+          "to_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Id"
+          },
           "to_kind": {
             "anyOf": [
               {
@@ -4435,6 +4446,57 @@
           "repos"
         ],
         "title": "ReposResponse",
+        "type": "object"
+      },
+      "ResolveInstanceResponse": {
+        "description": "``GET /v1/instances/{id}`` — the ONE instance a short id names (i-114).\n\nThe id lane, kept separate from the ``{kind}/{name}`` lane on purpose. A\nshort name and a short id are both strings; a single door that accepted\n\"a name or maybe an id\" would eventually answer a name query with an id\nmatch, and nothing in the response would say so.\n\n``id`` echoes back the FULL id, not the prefix the caller sent — the\nexpansion is the answer, exactly as ``git rev-parse`` returns the whole\nhash. A prefix matching more than one instance is a **409**, never a pick.",
+        "properties": {
+          "api_version": {
+            "title": "Api Version",
+            "type": "string"
+          },
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "instance": {
+            "additionalProperties": true,
+            "title": "Instance",
+            "type": "object"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scope",
+          "kind",
+          "api_version",
+          "name",
+          "instance"
+        ],
+        "title": "ResolveInstanceResponse",
         "type": "object"
       },
       "RevokeKindResponse": {
@@ -6974,6 +7036,96 @@
           }
         },
         "summary": "Set Insight State"
+      }
+    },
+    "/v1/instances/{id}": {
+      "get": {
+        "description": "Expand a short ``metadata.id`` PREFIX to the one instance it names.\n\nThe id lane (i-114). The ``{kind}/{name}`` routes are the NAME lane and\nstay exactly as they were: a name is the address a human authors and\nreviews in a diff, and it is what a ``.dna/`` reference keeps. An id is\nthe identity underneath it — stable across a rename, and the value\n``dna_edges.to_id`` records beside every target name.\n\nResolution is by unique prefix, the way ``git`` expands a short commit\nhash. Four to twelve characters; the response echoes the FULL id.\n\nThe status codes are the whole contract:\n\n* **200** — exactly one instance matches.\n* **409** — MORE THAN ONE matches, and this is the refusal the feature\n  exists for. Answering with the first match would be indistinguishable\n  from answering correctly: same shape, same 200, nothing in the body\n  to say a coin was flipped. The detail names the candidates so the\n  caller can lengthen the prefix.\n* **404** — nothing matches.\n* **422** — the prefix is shorter than four characters, or is not an\n  id at all. A one-character prefix is a typo, not a question, and\n  calling it \"ambiguous\" would hide that the query is the problem.\n* **501** — this deployment's store cannot search by id.",
+        "operationId": "resolve_instance_v1_instances__id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "description": "Narrow the search to one scope. Normally unnecessary — ids are unique across the store, and not needing to know the scope is most of what an id buys.",
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Narrow the search to one scope. Normally unnecessary — ids are unique across the store, and not needing to know the scope is most of what an id buys.",
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolveInstanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Instance"
       }
     },
     "/v1/kinds": {

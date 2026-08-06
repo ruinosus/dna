@@ -579,14 +579,8 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         (migration sink). Both must be excluded so the harness's
         per-scope holder loop doesn't try to load them as manifests.
         """
-        if not self.base_dir.is_dir():
-            return []
-        reserved = {"tenants", "_legacy"}
-        return sorted(
-            d.name
-            for d in self.base_dir.iterdir()
-            if d.is_dir() and not d.name.startswith(".") and d.name not in reserved
-        )
+        from dna.adapters.filesystem.source import _scope_dirs
+        return _scope_dirs(self.base_dir)
 
     def capabilities(self) -> "SourceCapabilities":
         """Explicit contract declaration (s-sourceport-contract-cleanup) --

@@ -35,6 +35,27 @@ def fs_tenant_segment(tenant: str | None) -> str | None:
     return tenant.replace(":", "%3A")
 
 
+#: Top-level names under a store root that are NOT scopes: ``tenants/`` is the
+#: per-tenant overlay container and ``_legacy/`` the migration sink.
+_RESERVED_TOP_LEVEL = frozenset({"tenants", "_legacy"})
+
+
+def _scope_dirs(base_dir: Path) -> list[str]:
+    """The scope directories under ``base_dir``.
+
+    Shared by the read-only base and the writable subclass's ``list_scopes``
+    so the two cannot drift about what counts as a scope — the writable one is
+    a coroutine, which is exactly why a read path here cannot just call it.
+    """
+    if not base_dir.is_dir():
+        return []
+    return sorted(
+        d.name for d in base_dir.iterdir()
+        if d.is_dir() and not d.name.startswith(".")
+        and d.name not in _RESERVED_TOP_LEVEL
+    )
+
+
 class FilesystemSource(SourcePort):
     """Loads manifest instances from .dna/<scope>/ directories.
 
@@ -266,7 +287,16 @@ class FilesystemSource(SourcePort):
         from dna.kernel.identity import (  # noqa: PLC0415
             InstanceRef, instance_id_of,
         )
-        scopes = [scope] if scope is not None else list(self.list_scopes())
+        if scope is not None:
+            scopes = [scope]
+        else:
+            # NOT ``self.list_scopes()``: that method exists only on the
+            # WRITABLE subclass and is a coroutine there, so calling it from
+            # here either raises AttributeError (read-only source) or returns
+            # an un-awaited coroutine that ``list()`` chokes on. Enumerating
+            # the directory is what ``list_scopes`` does anyway, and doing it
+            # here keeps this read available on the read-only adapter too.
+            scopes = _scope_dirs(self.base_dir)
         out: list[Any] = []
         readers = self._effective_readers()
         for sc in scopes:

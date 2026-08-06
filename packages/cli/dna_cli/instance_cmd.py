@@ -115,6 +115,55 @@ def show(
     )
 
 
+@instance.command("resolve")
+@click.argument("instance_id")
+@click.option("--scope", default=None,
+              help="Narrow the search to one scope (default: every scope).")
+@click.option("--tenant", default=None, help="Bind to this tenant (overrides DNA_TENANT).")
+@click.option("--json", "as_json", is_flag=True, help="Print the whole instance.")
+def resolve(
+    instance_id: str, scope: str | None, tenant: str | None, as_json: bool,
+) -> None:
+    """Expand a short instance ID prefix to the instance it names (i-114).
+
+    Every instance carries a 12-character `metadata.id` that survives a rename.
+    Give the first four or more characters, the way you would quote a short git
+    commit hash:
+
+        dna instance resolve k7m3
+
+    A prefix that matches more than one instance is REFUSED, with the
+    candidates listed — it is never resolved to the first hit.
+    """
+    from dna.kernel.errors import InstanceIdLookupUnsupported
+    from dna.kernel.identity import (
+        AmbiguousInstanceId, PrefixTooShort, UnknownInstanceId,
+    )
+    from dna.application import resolve_instance_impl
+
+    with dna_client(tenant=tenant) as dna:
+        try:
+            body = run_async(resolve_instance_impl(
+                dna._live(), id=instance_id, scope=scope,
+                tenant=tenant,
+            ))
+        except AmbiguousInstanceId as e:
+            raise fail(str(e)) from e
+        except (UnknownInstanceId, PrefixTooShort) as e:
+            raise fail(str(e)) from e
+        except InstanceIdLookupUnsupported as e:
+            raise fail(str(e)) from e
+        except Exception as e:  # noqa: BLE001
+            raise fail(f"instance resolve failed: {e}") from e
+    if as_json:
+        print_json(body)
+        return
+    print_json({
+        "id": body["id"], "scope": body["scope"], "kind": body["kind"],
+        "name": body["name"], "api_version": body["api_version"],
+    })
+
+
 def _read_spec(spec_arg: str | None) -> dict:
     """Read spec JSON from a file path or `-` for stdin."""
     if spec_arg is None:

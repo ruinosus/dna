@@ -646,6 +646,7 @@ erDiagram
         TEXT to_scope
         TEXT to_kind
         TEXT to_name
+        TEXT to_id
         TEXT declared_to
         INTEGER from_version
         DATETIME updated_at
@@ -655,6 +656,7 @@ erDiagram
         TEXT kind PK
         TEXT api_version PK
         TEXT name PK
+        TEXT id
         TEXT content
         INTEGER version
         TEXT updated_at
@@ -809,6 +811,7 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | `to_scope` | `TEXT` |  | yes |
 | `to_kind` | `TEXT` |  | yes |
 | `to_name` | `TEXT` |  |  |
+| `to_id` | `TEXT` |  | yes |
 | `declared_to` | `TEXT` |  |  |
 | `from_version` | `INTEGER` |  |  |
 | `updated_at` | `DATETIME` |  |  |
@@ -821,6 +824,7 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | `kind` | `TEXT` | PK |  |
 | `api_version` | `TEXT` | PK |  |
 | `name` | `TEXT` | PK |  |
+| `id` | `TEXT` |  | yes |
 | `content` | `TEXT` |  |  |
 | `version` | `INTEGER` |  |  |
 | `updated_at` | `TEXT` |  |  |

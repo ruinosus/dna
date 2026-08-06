@@ -1271,6 +1271,29 @@ class GetKindInstanceResponse(BaseModel):
     as_of_recorded_at: str | None = None
 
 
+class ResolveInstanceResponse(BaseModel):
+    """``GET /v1/instances/{id}`` — the ONE instance a short id names (i-114).
+
+    The id lane, kept separate from the ``{kind}/{name}`` lane on purpose. A
+    short name and a short id are both strings; a single door that accepted
+    "a name or maybe an id" would eventually answer a name query with an id
+    match, and nothing in the response would say so.
+
+    ``id`` echoes back the FULL id, not the prefix the caller sent — the
+    expansion is the answer, exactly as ``git rev-parse`` returns the whole
+    hash. A prefix matching more than one instance is a **409**, never a pick.
+    """
+
+    #: The full 12-character id the prefix expanded to.
+    id: str
+    scope: str
+    kind: str
+    api_version: str
+    name: str
+    instance: dict[str, Any]
+    etag: str | None = None
+
+
 class GraphRefEdge(BaseModel):
     """ONE edge of the derived reference graph.
 
@@ -1296,6 +1319,13 @@ class GraphRefEdge(BaseModel):
     to_kind: str | None = None
     to_name: str
     to_scope: str | None = None
+    #: The ``metadata.id`` of the instance this edge actually resolved to
+    #: (i-114) — the pair Kubernetes' ``ownerReferences`` carries, and for the
+    #: same reason: the AUTHOR wrote ``to_name``, but which instance that name
+    #: hit is a fact only the write path knew, and it stops being recoverable
+    #: the moment the name moves. ``null`` when the edge is dangling, or when
+    #: the target predates the id. Never a stand-in for "unchanged".
+    to_id: str | None = None
     #: Every declared target — more than one means a polymorphic reference.
     declared_to: list[str] = []
     resolved: bool

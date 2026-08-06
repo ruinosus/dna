@@ -643,6 +643,44 @@ async def list_instances_impl(
     }
 
 
+async def resolve_instance_impl(
+    live: LiveDna, *, id: str, scope: str | None = None,
+    tenant: str | None = None,
+) -> dict[str, Any]:
+    """Expand a short ``metadata.id`` prefix and return the instance it names
+    (i-114) — the ONE door where an id, rather than a name, is the address.
+
+    Kept as a SEPARATE surface instead of teaching ``get_instance`` to accept
+    "a name, or maybe an id". That overload is where this design would rot: a
+    short name and a short id are both strings, so a lookup that tried both
+    would eventually answer a name query with an id match, and nobody would see
+    it happen. Two lanes, each with one meaning — the same separation the whole
+    feature rests on.
+
+    ``scope`` narrows the search and is normally unnecessary: ids are unique
+    across the store, and not having to know the scope is most of what an id
+    buys. It exists for a caller who wants the refusal scoped too.
+    """
+    ref = await live.kernel.resolve_instance_id(id, scope=scope, tenant=tenant)
+    raw = await live.kernel.get_instance(
+        ref.scope, ref.kind, ref.name, tenant=ref.tenant or tenant,
+    )
+    if raw is None:
+        # The id index and the instance disagree — a torn write, or a delete
+        # that left the row behind. Say exactly that; answering "unknown id"
+        # would send the caller hunting for a typo that is not there.
+        raise LookupError(
+            f"instance id {ref.id!r} resolves to {ref.kind} {ref.name!r} in "
+            f"scope {ref.scope!r}, but that instance could not be read"
+        )
+    return {
+        "id": ref.id, "scope": ref.scope, "kind": ref.kind,
+        "api_version": ref.api_version, "name": ref.name,
+        "instance": raw,
+        "etag": spec_etag(raw.get("spec") if isinstance(raw, dict) else None),
+    }
+
+
 async def get_instance_impl(
     live: LiveDna, *, kind: str, name: str, scope: str | None = None,
     tenant: str | None = None, api_version: str | None = None,
@@ -781,6 +819,10 @@ async def graph_refs_impl(
                 "field": e["source_field"], "ordinal": e["ordinal"],
                 "to_kind": e["to_kind"], "to_name": e["to_name"],
                 "to_scope": e["to_scope"],
+                # i-114 — name AND id on the derived edge. The face reports
+                # both because they answer different questions: the name is
+                # what the author wrote, the id is which instance it hit.
+                "to_id": e.get("to_id"),
                 "declared_to": list(e["declared_to"]),
                 "resolved": e["resolved"],
                 "closes_cycle": e["closes_cycle"],

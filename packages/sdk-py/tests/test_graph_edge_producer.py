@@ -175,6 +175,127 @@ class TestDanglingIsRecorded:
         assert rows[0]["to_name"] == "f-y"
 
 
+class TestTheEdgeCarriesTheTargetsIdentity:
+    """i-114 — ``to_id`` beside ``to_name``, and why the pair is the point.
+
+    The rule this table follows is Kubernetes': a reference a HUMAN authors
+    carries only the NAME (which is what keeps a ``.dna/`` diff legible), and a
+    reference a MACHINE writes carries name AND uid (``ownerReferences``),
+    because deleting and recreating under the same name is a DIFFERENT object
+    and a controller must not re-attach to the wrong one.
+
+    ``dna_edges`` is the machine-written side. These tests are the only thing
+    that notices if it stops carrying the id: the edge still resolves, still
+    reports the right ``to_kind``, and every other test in this file passes.
+    """
+
+    @staticmethod
+    async def _id_of(kernel, kind: str, name: str) -> str:
+        raw = await kernel.get_instance(SCOPE, kind, name)
+        return raw["metadata"]["id"]
+
+    @pytest.mark.anyio
+    async def test_the_edge_records_the_id_of_the_instance_it_resolved_to(
+        self, store,
+    ):
+        kernel, src = store
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await kernel.write_instance(
+            SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
+        )
+        target_id = await self._id_of(kernel, "Feature", "f-y")
+        rows = [r for r in await _rows(src) if r["from_name"] == "s-x"]
+        assert len(rows) == 1
+        assert rows[0]["to_name"] == "f-y"
+        assert rows[0]["to_id"] == target_id, (
+            "the derived edge kept only the name — which is exactly what a "
+            "rename erases"
+        )
+
+    @pytest.mark.anyio
+    async def test_a_dangling_edge_has_no_id_rather_than_a_wrong_one(self, store):
+        """NULL means "nothing resolved", and it must not be confused with
+        "resolved, id unknown". A dangling edge has no target to have an id."""
+        kernel, src = store
+        await kernel.write_instance(
+            SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-nope"),
+        )
+        rows = [r for r in await _rows(src) if r["from_name"] == "s-x"]
+        assert rows[0]["to_kind"] is None
+        assert rows[0]["to_id"] is None
+
+    @pytest.mark.anyio
+    async def test_recreating_the_target_under_the_same_name_changes_the_id(
+        self, store,
+    ):
+        """⚠️ The property the whole feature is bought for, stated as an
+        experiment.
+
+        Delete ``f-y``, recreate it under the SAME name, and re-derive the
+        Story's edge. ``to_name`` is identical across the two — by the name
+        alone the graph cannot tell that the target was destroyed and replaced.
+        ``to_id`` can, and that is the entire difference between an edge that
+        records a fact and one that records a string.
+
+        MUTANT: make ``mint_instance_id`` derive from the natural key instead of
+        drawing at random and the two ids become equal — this assertion is the
+        only one in the repo that goes red.
+        """
+        kernel, src = store
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await kernel.write_instance(
+            SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
+        )
+        first = [r for r in await _rows(src) if r["from_name"] == "s-x"][0]
+
+        await kernel.delete_instance(SCOPE, "Feature", "f-y")
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        # Re-derive: the Story is rewritten unchanged, which is what any real
+        # edit would do.
+        await kernel.write_instance(
+            SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
+        )
+        second = [r for r in await _rows(src) if r["from_name"] == "s-x"][0]
+
+        assert first["to_name"] == second["to_name"] == "f-y"
+        assert first["to_id"] is not None and second["to_id"] is not None
+        assert first["to_id"] != second["to_id"], (
+            "the replacement inherited the deleted instance's identity — by "
+            "the graph's own account nothing happened"
+        )
+
+    @pytest.mark.anyio
+    async def test_renaming_the_SOURCE_does_not_change_what_it_points_at(
+        self, store,
+    ):
+        """The half of "a rename must not break references" this slice
+        delivers.
+
+        A rename today is delete-then-create under a new name (``dna rename``
+        is the next slice). The instance that MOVED keeps pointing at the same
+        target instance — same ``to_id``, not merely the same string — so the
+        derived graph survives the move intact even though every authored
+        mention of the old name does not.
+        """
+        kernel, src = store
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await kernel.write_instance(
+            SCOPE, "Story", "s-old", _doc("Story", "s-old", feature="f-y"),
+        )
+        before = [r for r in await _rows(src) if r["from_name"] == "s-old"][0]
+
+        await kernel.delete_instance(SCOPE, "Story", "s-old")
+        await kernel.write_instance(
+            SCOPE, "Story", "s-new", _doc("Story", "s-new", feature="f-y"),
+        )
+        after = [r for r in await _rows(src) if r["from_name"] == "s-new"][0]
+
+        assert not [r for r in await _rows(src) if r["from_name"] == "s-old"]
+        assert after["to_id"] == before["to_id"], (
+            "renaming the SOURCE moved what it points at"
+        )
+
+
 class TestDeleteTakesOutgoingAndLeavesIncoming:
     @pytest.mark.anyio
     async def test_deleting_a_document_removes_only_its_own_assertions(
