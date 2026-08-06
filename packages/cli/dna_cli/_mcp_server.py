@@ -659,6 +659,8 @@ def build_server(
     from dna.application.sdlc import InstanceExists
     from dna.kernel.errors import KernelRefusal
 
+    from dna_cli._mcp_refusals import CAPABILITY_REFUSALS
+
     # Everything a tool call may legitimately be REFUSED with — the ONE tuple
     # every write tool relays through ``_refusing`` below.
     #
@@ -676,8 +678,20 @@ def build_server(
     # Deliberately NOT ``Exception``: a genuine bug must keep looking like a bug.
     # A caller told "refused" stops investigating, so a crash reported as a policy
     # decision costs more than a crash reported as a crash.
+    #
+    # ``dna_cli._mcp_refusals.CAPABILITY_REFUSALS`` is spliced in because those
+    # are the refusals ``KernelRefusal`` does NOT reach. They are not verdicts
+    # about the REQUEST — they are the deployment saying "this store cannot
+    # answer that at all" — so no kernel marker base covers them, and they
+    # inherit from ``RuntimeError`` / ``NotImplementedError`` / ``LookupError``.
+    # The ports catalogue states all four as CONTRACT and the REST face maps all
+    # four; this face translated only the one ``_mcp_instances`` catches inline,
+    # so ``recall(as_of=…)`` against a store with no version history reached the
+    # client as FastMCP's ``Error calling tool 'recall'`` — the type name gone,
+    # and under ``mask_error_details`` the reason gone too.
     _REFUSALS: tuple[type[BaseException], ...] = (
         KernelRefusal, InvalidTransition, InstanceExists,
+        *CAPABILITY_REFUSALS,
         ValueError, LookupError, PermissionError,
     )
 

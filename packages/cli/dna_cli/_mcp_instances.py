@@ -248,9 +248,14 @@ def register_instance_tools(
         candidates. Fewer than four characters is refused too — that is a typo,
         not a question.
         """
-        from dna.kernel.errors import (  # noqa: PLC0415
-            InstanceIdLookupUnsupported,
-        )
+        # ``CAPABILITY_REFUSALS`` rather than ``InstanceIdLookupUnsupported``
+        # alone: this arm used to name the one capability refusal THIS tool can
+        # raise today, which is correct until the tool grows a second reach. The
+        # tuple is the face's single list of "the store cannot answer that at
+        # all" (see ``dna_cli._mcp_refusals``), so a read added here later is
+        # honest without anyone remembering to widen this line.
+        from dna_cli._mcp_refusals import CAPABILITY_REFUSALS  # noqa: PLC0415
+
         # Metered as a plain read against the DEFINITIONS family: the caller
         # has not named a Kind, so there is no Kind whose family could govern
         # the call, and picking one from the resolved instance would let a
@@ -262,7 +267,7 @@ def register_instance_tools(
             return await D.resolve_instance_impl(
                 await live(), id=id, scope=scope, tenant=tenant,
             )
-        except InstanceIdLookupUnsupported as exc:
+        except CAPABILITY_REFUSALS as exc:
             raise ToolError(str(exc)) from None
         except (LookupError, ValueError) as exc:
             raise ToolError(str(exc)) from None
