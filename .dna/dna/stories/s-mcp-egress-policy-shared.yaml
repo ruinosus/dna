@@ -15,15 +15,31 @@ spec:
   - egress
   reporter: claude-code
   acceptance_criteria:
-  - Given as duas apps consumidoras hoje carregam a MESMA politica copiada, When a politica passa a morar em dna_cli, Then ambas conseguem importa-la (allowlist, predicado de URL, filtro por plano, particao all-or-nothing) e o nome da env vem do modulo, nao de um literal repetido
-  - Given a assinatura tem de servir os DOIS chamadores, When um chama com uma lista de dicts {url} e o outro com objetos de 1..N URLs, Then os dois casos sao cobertos sem que o consumidor reimplemente o laco de decisao
-  - Given retrocompat e requisito, When a mudanca entra, Then nada que ja existia no SDK/CLI muda de comportamento — e adicao pura, e o default do gate de tier reproduz exatamente a decisao vigente
+  - text: Given as duas apps consumidoras hoje carregam a MESMA politica copiada, When a politica passa a morar em dna_cli, Then ambas conseguem importa-la (allowlist, predicado de URL, filtro por plano, particao all-or-nothing) e o nome da env vem do modulo, nao de um literal repetido
+    done: true
+    done_at: '2026-08-06T06:04:16+00:00'
+    done_by: claude-code
+    evidence: commit ec50565; tg-mcp-egress-policy-shared pass; brand_guard clean; versao intocada
+  - text: Given a assinatura tem de servir os DOIS chamadores, When um chama com uma lista de dicts {url} e o outro com objetos de 1..N URLs, Then os dois casos sao cobertos sem que o consumidor reimplemente o laco de decisao
+    done: true
+    done_at: '2026-08-06T06:04:16+00:00'
+    done_by: claude-code
+    evidence: commit ec50565; tg-mcp-egress-policy-shared pass; brand_guard clean; versao intocada
+  - text: Given retrocompat e requisito, When a mudanca entra, Then nada que ja existia no SDK/CLI muda de comportamento — e adicao pura, e o default do gate de tier reproduz exatamente a decisao vigente
+    done: true
+    done_at: '2026-08-06T06:04:16+00:00'
+    done_by: claude-code
+    evidence: commit ec50565; tg-mcp-egress-policy-shared pass; brand_guard clean; versao intocada
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - modulo novo em packages/cli/dna_cli + testes no padrao do pacote (uv run pytest) verdes + brand_guard limpo + PR aberto sem merge; SEM bump de versao (o lote da release e do fundador)
+  - text: modulo novo em packages/cli/dna_cli + testes no padrao do pacote (uv run pytest) verdes + brand_guard limpo + PR aberto sem merge; SEM bump de versao (o lote da release e do fundador)
+    done: true
+    done_at: '2026-08-06T06:04:16+00:00'
+    done_by: claude-code
+    evidence: commit ec50565; tg-mcp-egress-policy-shared pass; brand_guard clean; versao intocada
   definition_of_done_source: cli-create
   created_at: '2026-08-06T05:55:33+00:00'
-  updated_at: '2026-08-06T06:03:08+00:00'
+  updated_at: '2026-08-06T06:04:16+00:00'
   timeline:
   - at: '2026-08-06T05:55:33+00:00'
     actor: claude-code
@@ -75,6 +91,38 @@ spec:
     name: tr-tg-mcp-egress-policy-shared-20260806-060306
     summary: TestRun tr-tg-mcp-egress-policy-shared-20260806-060306 → pass
     outcome: pass
+  - at: '2026-08-06T06:04:10+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: 'packages/cli/dna_cli/_mcp_egress.py: ALLOWLIST_ENV, egress_allowlist, egress_allows, filter_egress, partition_egress; teste que fixa o nome da env como contrato de operacao'
+    by: claude-code
+  - at: '2026-08-06T06:04:13+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: filter_egress(list[dict]) e partition_egress(items, urls=extractor) all-or-nothing; teste que prova que as duas formas decidem igual quando o item tem uma URL so
+    by: claude-code
+  - at: '2026-08-06T06:04:15+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: adicao pura (nenhum arquivo existente tocado); paridade antiga-vs-nova em 17 casos com zero divergencias; suite do pacote 1500 passed / 21 skipped
+    by: claude-code
+  - at: '2026-08-06T06:04:17+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 3
+    marked_dod: 1
+    evidence: commit ec50565; tg-mcp-egress-policy-shared pass; brand_guard clean; versao intocada
+    by: claude-code
   produces:
   - kind: Plan
     name: plan-s-mcp-egress-policy-shared
