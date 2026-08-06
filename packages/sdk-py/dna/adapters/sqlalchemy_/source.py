@@ -135,6 +135,36 @@ def _doc_api_version(raw: dict) -> str:
     return value if isinstance(value, str) else ""
 
 
+def _api_version_unknown(col: Any) -> Any:
+    """SQL for "this apiVersion column says nothing".
+
+    TWO sentinels, and they are not a choice this function made — they are the
+    two the schema already has. ``NULL`` is ``to_api_version``'s (nullable, no
+    default, i-110.3); ``''`` is ``from_api_version``'s (NOT NULL,
+    ``server_default ''``, revision 0006), and the empty string is what every
+    row written by a caller that passed no ``api_version=`` carries. A join
+    that remembered only one of them would drop hops out of exactly the rows
+    that pre-date the feature — which is the loss the tolerance exists to
+    prevent.
+    """
+    return sa.or_(col.is_(None), col == sa.literal(""))
+
+
+def _same_api_family(a: Any, b: Any) -> Any:
+    """SQL for "these two edge ends can be the same Kind" (i-110.3).
+
+    Deliberately PERMISSIVE, and the asymmetry is the whole design: it excludes
+    a hop only when both ends state an apiVersion AND the two differ. Anything
+    unknown passes, so the clause can never remove a hop the old ``(kind,
+    name)`` join produced from data it could not tell apart — it only removes
+    the ones it now CAN tell apart, and those were wrong.
+
+    Written as a function rather than inline so the two directions of
+    :meth:`SqlAlchemySource.traverse_edges` cannot drift into two rules.
+    """
+    return sa.or_(_api_version_unknown(a), _api_version_unknown(b), a == b)
+
+
 class _NullEventEmitter:
     """SQLite dialect: no cross-process bus (H2) — emission is a no-op."""
 
@@ -1449,6 +1479,14 @@ class SqlAlchemySource(WritableSourcePort):
                 # and by tests that predate the field; an edge producer that
                 # cannot say which instance it matched says NULL, not a guess.
                 "to_id": getattr(edge, "to_id", None),
+                # i-110.3 — the third field of the ``OwnerReference`` quartet,
+                # and the one that stops ``to_kind`` from being a bare name.
+                # Same ``getattr`` as ``to_id``, for the same reason. A
+                # producer that cannot say which apiVersion it matched says
+                # NULL — never ``api_version``, which is right there in scope
+                # and would be a plausible, wrong and unfalsifiable value: the
+                # WRITER's apiVersion has no bearing on the TARGET's.
+                "to_api_version": getattr(edge, "to_api_version", None),
                 "declared_to": " | ".join(edge.declared),
                 "from_version": from_version,
                 "updated_at": ts,
@@ -1611,6 +1649,27 @@ class SqlAlchemySource(WritableSourcePort):
         * **``scope`` and ``tenant`` in EVERY branch**, not only in the anchor.
           Omitting them from the recursive step is the classic cross-tenant
           leak of this query shape, and it is one easy line to forget.
+
+        **The hop joins on apiVersion too (i-110.3).** A multi-hop walk chains
+        one edge's TO onto the next edge's FROM. That join used to be
+        ``(kind, name)`` — a Kind NAME, which identifies a Kind only because
+        ``dna.kernel.kinds.registry`` refuses name collisions across
+        apiVersions (i-195), an invariant of another module carrying a live
+        exception list. Two homonymous Kinds and the walk would silently step
+        from one family into the other's edges. The join now also compares
+        ``to_api_version``/``from_api_version`` — through
+        :func:`_same_api_family`, which treats NULL *and* the empty string as
+        "unknown" and lets the hop through. That tolerance is not a softening:
+        it is what makes the tightening a strict improvement instead of a
+        silent loss of every hop out of a pre-0009 row.
+
+        ⚠️ **The ANCHOR is still by bare name, and this is the honest limit.**
+        Asking "what points at ``Foo/bar``" cannot pin an apiVersion the caller
+        never supplied — ``graph_refs`` takes none. So at depth 1 a homonymous
+        pair still yields both families' edges; what CHANGED is that the rows
+        now carry ``to_api_version``, so the ambiguity is visible to the reader
+        instead of resolved by luck, and every hop AFTER depth 1 stays inside
+        the family it started in.
         """
         if direction not in ("out", "in", "both"):
             raise ValueError(
@@ -1653,9 +1712,10 @@ class SqlAlchemySource(WritableSourcePort):
         anchor_name = e.c.from_name if outward else e.c.to_name
 
         cols = [
-            e.c.from_kind, e.c.from_name, e.c.source_field, e.c.ordinal,
-            e.c.to_scope, e.c.to_kind, e.c.to_name, e.c.to_id,
-            e.c.declared_to, e.c.from_version,
+            e.c.from_api_version, e.c.from_kind, e.c.from_name,
+            e.c.source_field, e.c.ordinal,
+            e.c.to_scope, e.c.to_api_version, e.c.to_kind, e.c.to_name,
+            e.c.to_id, e.c.declared_to, e.c.from_version,
         ]
         def closes(prev, kind_col, name_col):
             """1 when ``prev`` already visited this row's target node.
@@ -1692,11 +1752,17 @@ class SqlAlchemySource(WritableSourcePort):
         ea_anchor_name = ea.c.from_name if outward else ea.c.to_name
         walk_node_kind = walk.c.to_kind if outward else walk.c.from_kind
         walk_node_name = walk.c.to_name if outward else walk.c.from_name
+        # i-110.3 — the apiVersion halves of the SAME two sides the join above
+        # pairs, derived from ``outward`` exactly like the kind/name pair so the
+        # two can never be mirrored inconsistently.
+        ea_anchor_apiv = ea.c.from_api_version if outward else ea.c.to_api_version
+        walk_node_apiv = walk.c.to_api_version if outward else walk.c.from_api_version
 
         recursive = sa.select(
-            ea.c.from_kind, ea.c.from_name, ea.c.source_field, ea.c.ordinal,
-            ea.c.to_scope, ea.c.to_kind, ea.c.to_name, ea.c.to_id,
-            ea.c.declared_to, ea.c.from_version,
+            ea.c.from_api_version, ea.c.from_kind, ea.c.from_name,
+            ea.c.source_field, ea.c.ordinal,
+            ea.c.to_scope, ea.c.to_api_version, ea.c.to_kind, ea.c.to_name,
+            ea.c.to_id, ea.c.declared_to, ea.c.from_version,
             (walk.c.depth + 1).label("depth"),
             (walk.c.path + tail(ea_node_kind, ea_node_name)).label("path"),
             closes(walk.c.path, ea_node_kind, ea_node_name).label("closes_cycle"),
@@ -1705,6 +1771,19 @@ class SqlAlchemySource(WritableSourcePort):
             sa.and_(
                 ea_anchor_kind == walk_node_kind,
                 ea_anchor_name == walk_node_name,
+                # i-110.3 — and the apiVersion, whenever BOTH sides know
+                # theirs. Without this the hop chains on a Kind NAME, which
+                # identifies a Kind only by the registry's i-195 guard; see the
+                # method docstring.
+                _same_api_family(ea_anchor_apiv, walk_node_apiv),
+                # i-110.3 — and the apiVersion, whenever BOTH sides know
+                # theirs. Without this the hop chains on a Kind NAME, which
+                # identifies a Kind only by the registry's i-195 guard; see the
+                # method docstring.
+                # i-110.3 — and the apiVersion, whenever BOTH sides know
+                # theirs. Without this the hop chains on a Kind NAME, which
+                # identifies a Kind only by the registry's i-195 guard; see the
+                # method docstring.
             ),
         )).where(
             # ⚠️ THE tenant/scope line. In the recursive step, not only the
@@ -1735,16 +1814,30 @@ class SqlAlchemySource(WritableSourcePort):
         # recursive CTE is markedly harder to read than four lines of Python.
         out: dict[tuple, dict[str, Any]] = {}
         for r in rows:
-            key = (r.from_kind, r.from_name, r.source_field, int(r.ordinal))
+            # i-110.3 — ``from_api_version`` is in the key because it is in the
+            # table's PRIMARY KEY. Without it this dictionary is a narrower key
+            # than the storage, so two rows that legally coexist — the same
+            # field/ordinal on two homonymous Kinds — collapse into one and the
+            # walk silently loses a whole family's edges. That the bug never
+            # fired is the registry's i-195 guard doing this dictionary's job
+            # from another module, which is precisely the borrowed invariant
+            # this slice is repaying.
+            key = (r.from_api_version, r.from_kind, r.from_name,
+                   r.source_field, int(r.ordinal))
             if key in out:
                 continue
             out[key] = {
                 "direction": direction,
                 "depth": int(r.depth),
+                "from_api_version": r.from_api_version or "",
                 "from_kind": r.from_kind, "from_name": r.from_name,
                 "source_field": r.source_field, "ordinal": int(r.ordinal),
                 "to_scope": r.to_scope, "to_kind": r.to_kind,
                 "to_name": r.to_name,
+                # i-110.3 — WHICH Kind, not which Kind NAME. NULL when the edge
+                # is dangling, or when the row predates revision 0009 and the
+                # backfill could not reach its target.
+                "to_api_version": r.to_api_version,
                 # i-114 — the id of the instance this edge ACTUALLY resolved
                 # to, beside the name the author wrote. NULL when dangling or
                 # when the target predates the id.

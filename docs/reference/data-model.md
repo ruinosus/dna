@@ -66,7 +66,7 @@ than either:
 
 `*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the instance name.
 
-**144 edges: 100 declared, 44 composition-only — of which 34 are ENFORCED at write time.** 33 of 84 Kinds declare at least one relation, and 3 fields are listed below as gaps.
+**145 edges: 101 declared, 44 composition-only — of which 34 are ENFORCED at write time.** 33 of 84 Kinds declare at least one relation, and 3 fields are listed below as gaps.
 
 !!! warning "Declared is not enforced"
 
@@ -203,7 +203,7 @@ erDiagram
     Project }o..|| Workspace : "workspace_id [workspace_id]"
 ```
 
-#### `sdlc` — declared (55 edges)
+#### `sdlc` — declared (56 edges)
 
 ```mermaid
 erDiagram
@@ -240,6 +240,7 @@ erDiagram
     Feature }o--|| Sprint : "sprint_ref"
     Feature }o--}o Story : "stories"
     Initiative }o--}o Epic : "epics"
+    Initiative }o..}o ANY_KIND : "produces [{kind, name}] *"
     Issue }o..}o ANY_KIND : "produces [{kind, name}] *"
     Kaizen }o..|| Bug : "work_item [Kind/name] *"
     Kaizen }o..|| Epic : "work_item [Kind/name] *"
@@ -428,6 +429,7 @@ the runtime does not follow it — read `By` for why.
 | `Feature` | `sprint_ref` | `Sprint` | one | `name` | yes |  |  |
 | `Feature` | `stories` | `Story` | many | `name` | yes | `feature` |  |
 | `Initiative` | `epics` | `Epic` | many | `name` | yes |  |  |
+| `Initiative` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `IntelInsight` | `source_ref` | `IntelSource` | one | `name` | yes |  |  |
 | `Issue` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `Kaizen` | `work_item` *(poly)* | `Bug` | one | `Kind/name` |  |  |  |
@@ -688,6 +690,7 @@ erDiagram
         TEXT to_kind
         TEXT to_name
         TEXT to_id
+        TEXT to_api_version
         TEXT declared_to
         INTEGER from_version
         DATETIME updated_at
@@ -853,6 +856,7 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | `to_kind` | `TEXT` |  | yes |
 | `to_name` | `TEXT` |  |  |
 | `to_id` | `TEXT` |  | yes |
+| `to_api_version` | `TEXT` |  | yes |
 | `declared_to` | `TEXT` |  |  |
 | `from_version` | `INTEGER` |  |  |
 | `updated_at` | `DATETIME` |  |  |

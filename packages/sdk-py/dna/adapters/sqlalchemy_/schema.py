@@ -368,6 +368,39 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         # (``to_kind`` is NULL too), or the target has no id yet. It never
         # means "same as before".
         sa.Column("to_id", sa.Text, nullable=True),
+        # i-110.3 / fatia 1 de ``spec-topologia-do-grafo``: a aresta sabe de
+        # que apiVersion ela SAI e passa a saber para qual ela ENTRA.
+        #
+        # O lado FROM carrega ``from_api_version`` desde a 0006 — está na chave
+        # primária, porque é a identidade da origem. O lado TO não carregava, e
+        # a razão pela qual isso FUNCIONAVA não estava escrita em lugar nenhum
+        # desta tabela: ela morava em ``dna.kernel.kinds.registry``, na guarda
+        # da i-195 que recusa registrar dois Kinds homônimos sob apiVersions
+        # diferentes. Ou seja: a integridade do grafo dependia, calada, de uma
+        # invariante de OUTRO módulo — que tem uma lista de exceções aberta
+        # (``KIND_NAME_COLLISION_ALLOWLIST``) e nenhuma guarda ligando as duas
+        # coisas. A catraca que passa a ligá-las está em
+        # ``tests/test_edge_knows_target_api_version.py``.
+        #
+        # O docstring da revisão 0008 já tinha nomeado a consequência ao
+        # explicar por que o backfill de ``to_id`` deixa NULL: *"a aresta grava
+        # to_kind/to_name mas não a api_version do alvo, então dois Kinds
+        # homônimos em namespaces diferentes tornam o alvo indeterminado"*.
+        # Esta coluna é a resposta a essa frase.
+        #
+        # O desenho vem do MESMO lugar que ``to_id``: a ``OwnerReference`` do
+        # Kubernetes carrega ``apiVersion`` **e** ``kind`` **e** ``name`` **e**
+        # ``uid`` — quatro campos, e o ``apiVersion`` está lá exatamente porque
+        # ``kind`` sozinho é ambíguo entre grupos de API. A tabela agora carrega
+        # os quatro (``to_api_version``/``to_kind``/``to_name``/``to_id``), mais
+        # o ``to_scope`` que é o ``namespace``.
+        #
+        # Nullable e SEM default, como ``to_id`` e pelo mesmo motivo: NULL é
+        # "não sei" — aresta pendurada, ou linha escrita antes da 0009 cujo
+        # alvo o backfill não alcançou. NULL nunca significa "a mesma de
+        # sempre". String VAZIA é o "não sei" herdado do lado FROM (o
+        # ``server_default`` da 0006), e a travessia trata os dois igual.
+        sa.Column("to_api_version", sa.Text, nullable=True),
         sa.Column("declared_to", sa.Text, nullable=False,
                   server_default=sa.text("''")),
         sa.Column("from_version", sa.Integer, nullable=False,

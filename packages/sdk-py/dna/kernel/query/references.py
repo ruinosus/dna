@@ -107,6 +107,23 @@ class ResolvedEdge:
     #: read — ``matched_doc`` was already materialized for the existence check,
     #: which is the same economics that made ``reciprocal`` affordable.
     to_id: str | None = None
+    #: The ``apiVersion`` of the instance that matched (i-110.3) — ``None`` when
+    #: nothing did.
+    #:
+    #: ``to_kind`` alone does NOT identify a Kind. It identifies a Kind *name*,
+    #: and a name is unique across apiVersions only because
+    #: :mod:`dna.kernel.kinds.registry` refuses collisions (i-195) — an
+    #: invariant of ANOTHER module, carrying an open exception list
+    #: (``KIND_NAME_COLLISION_ALLOWLIST``). An edge that omitted this field was
+    #: therefore correct by borrowed luck rather than by construction.
+    #:
+    #: Free, for the third time in this class: ``matched_doc`` is already in
+    #: hand from the existence check — the same economics that paid for
+    #: ``reciprocal`` and ``to_id``. It completes the Kubernetes
+    #: ``OwnerReference`` quartet (``apiVersion``/``kind``/``name``/``uid``),
+    #: whose ``apiVersion`` exists for precisely this reason: ``kind`` alone is
+    #: ambiguous across API groups.
+    to_api_version: str | None = None
 
 
 async def resolve_relations(
@@ -220,6 +237,11 @@ async def resolve_relations(
                 reciprocal=reciprocal,
                 # Free: the instance is in hand from the existence check above.
                 to_id=instance_id_of(matched_doc),
+                # ⚠️ NOT ``matched``'s port api_version, and not the writer's:
+                # the apiVersion of the instance that ACTUALLY came back. Those
+                # three can differ, and only the third is a fact about the row
+                # this edge points at.
+                to_api_version=_api_version_of(matched_doc),
             ))
             if matched is None:
                 expected = " | ".join(sorted(rel.to))
@@ -234,6 +256,32 @@ async def resolve_relations(
                 )
 
     return edges, problems, discords, True
+
+
+def _api_version_of(doc: Any) -> str | None:
+    """The ``apiVersion`` of whatever the getter returned, or ``None``.
+
+    Reads through BOTH shapes for the same reason :func:`_spec_of` and
+    :func:`dna.kernel.identity.instance_id_of` do — the getter's contract is
+    loose (raw dict or parsed instance) and reading through only one of them is
+    how a new column becomes silently always-NULL on the shape that happens to
+    be live. That failure is invisible: the migration runs, the column exists,
+    every row says NULL, and NULL is a legal value here.
+
+    A non-string reads as absent. A blank string reads as absent too, and
+    deliberately: the empty string is the ``server_default`` the FROM side of
+    ``dna_edges`` uses for "unknown", so returning ``""`` would record
+    "unknown" spelled a second way, and the traversal would have two sentinels
+    to remember instead of one.
+    """
+    if doc is None:
+        return None
+    value = doc.get("apiVersion") if isinstance(doc, dict) else getattr(
+        doc, "api_version", getattr(doc, "apiVersion", None),
+    )
+    if not isinstance(value, str) or not value.strip():
+        return None
+    return value
 
 
 def _spec_of(doc: Any) -> Any:

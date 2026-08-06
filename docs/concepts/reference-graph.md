@@ -54,6 +54,33 @@ The rows are written by the storage adapter **inside the same transaction as
 the instance**, alongside the event outbox. Either the instance and its
 relations both land, or neither does.
 
+## What an edge records about its target: the `OwnerReference` quartet
+
+An edge points at an instance with four facts, not one — the same four
+Kubernetes puts in an `ownerReference`, for the same reasons:
+
+| column | what it answers | why the name alone is not enough |
+| --- | --- | --- |
+| `to_name` | what the **author wrote** | it is what keeps the `.dna/` diff readable |
+| `to_id` | **which instance** it hit | delete and recreate under the same name and it is a different object |
+| `to_api_version` | **which Kind** it hit | a Kind *name* is unique only while the registry refuses collisions |
+| `to_scope` | where it resolved | scope inheritance means "not always mine" |
+
+`to_api_version` is the newest of the four (i-110.3), and it repaid a borrowed
+invariant. The FROM side of the table has carried `from_api_version` in its
+primary key since the edge table was created; the TO side carried only a Kind
+NAME, and a name identifies a Kind only because `dna.kernel.kinds.registry`
+refuses to register two Kinds sharing one under different apiVersions. The
+graph's integrity therefore rested, silently, on a rule belonging to another
+module — one with an open exception list. Multi-hop traversal now chains on
+apiVersion as well as name, and a guard goes red the day two Kinds share a name.
+
+**NULL means "not known", and it is never filled by guessing.** A dangling edge
+has no target and therefore no target apiVersion; a row written before the
+column existed keeps NULL wherever the backfill could not identify the target
+by id. Traversal treats an unknown apiVersion as "let the hop through", so the
+tightening can only remove hops it can genuinely tell apart.
+
 !!! warning "This table existed once before, empty"
     `dna_edges` was created in 2026 by a migration whose own comment described
     a producer that was never written, and dropped fourteen months later with

@@ -815,8 +815,15 @@ async def graph_refs_impl(
         "edges": [
             {
                 "depth": e["depth"], "direction": e["direction"],
+                # i-110.3 — the apiVersion of BOTH ends. Without them a reader
+                # holding two rows that say ``to_kind: "Reference"`` cannot
+                # tell whether they mean the same Kind, and the answer used to
+                # be "trust the registry's collision guard, in another module,
+                # which has an exception list".
+                "from_api_version": e.get("from_api_version"),
                 "from_kind": e["from_kind"], "from_name": e["from_name"],
                 "field": e["source_field"], "ordinal": e["ordinal"],
+                "to_api_version": e.get("to_api_version"),
                 "to_kind": e["to_kind"], "to_name": e["to_name"],
                 "to_scope": e["to_scope"],
                 # i-114 — name AND id on the derived edge. The face reports
