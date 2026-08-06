@@ -32,6 +32,17 @@ spec:
   storage:
     type: yaml
     container: eval-baselines
+  # A baseline is nothing BUT two references — its own `describe` is
+  # `{suite} → {run_name}` — and it declared neither, so the Kind whose entire
+  # content is a pair of pointers rendered as an island. Safe to enforce: zero
+  # EvalBaseline instances are stored in any scope (measured 06/08/2026).
+  relations:
+    suite:
+      to: EvalSuite
+      cardinality: one
+    run_name:
+      to: EvalRun
+      cardinality: one
   schema:
     type: object
     required:

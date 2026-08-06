@@ -541,6 +541,33 @@ class TestTheNewlyDeclaredReferencesGoThroughTheDoor:
         assert ("proj", "ADR", "adr-new") in source.docs
 
     @pytest.mark.anyio
+    async def test_the_eval_spine_resolves_and_refuses(
+        self, kernel, source, monkeypatch,
+    ):
+        """All four Eval Kinds were islands. An EvalRun that does not point at
+        the suite it executed is modelling that did not happen — and every link
+        was already spelled out in the schema descriptions ("Name of the
+        EvalSuite that was executed"). Nothing was declared, so nothing was
+        checked."""
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        source.seed("proj", "EvalSuite", "suite-a")
+        run = {
+            "apiVersion": "github.com/ruinosus/dna/eval/v1", "kind": "EvalRun",
+            "metadata": {"name": "run-1"},
+            "spec": {"suite": "suite-a", "total": 1, "passed": 1, "failed": 0,
+                     "results": []},
+        }
+        await kernel.write_instance("proj", "EvalRun", "run-1", run)
+        assert ("proj", "EvalRun", "run-1") in source.docs
+
+        run["metadata"]["name"] = "run-2"
+        run["spec"] = dict(run["spec"], suite="suite-that-never-ran")
+        with pytest.raises(SpecValidationError) as exc:
+            await kernel.write_instance("proj", "EvalRun", "run-2", run)
+        assert "suite-that-never-ran" in str(exc.value)
+        assert "EvalSuite" in str(exc.value)
+
+    @pytest.mark.anyio
     async def test_tenant_slug_is_declared_and_still_not_followed(
         self, kernel, source, monkeypatch,
     ):

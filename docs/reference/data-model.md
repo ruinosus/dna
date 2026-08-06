@@ -66,7 +66,7 @@ than either:
 
 `*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the instance name.
 
-**141 edges: 96 declared, 45 composition-only — of which 30 are ENFORCED at write time.** 30 of 84 Kinds declare at least one relation, and 3 fields are listed below as gaps.
+**144 edges: 100 declared, 44 composition-only — of which 34 are ENFORCED at write time.** 33 of 84 Kinds declare at least one relation, and 3 fields are listed below as gaps.
 
 !!! warning "Declared is not enforced"
 
@@ -125,6 +125,20 @@ own. A group carrying more than 20 edges is
 split again by tier, which keeps the enforced edges legible instead
 of losing them among the unvalidated ones. A box from another group
 appearing here is a cross-group reference.
+
+#### `eval` (4 edges)
+
+```mermaid
+erDiagram
+    EvalBaseline
+    EvalCase
+    EvalRun
+    EvalSuite
+    EvalBaseline }o--|| EvalRun : "run_name"
+    EvalBaseline }o--|| EvalSuite : "suite"
+    EvalRun }o--|| EvalSuite : "suite"
+    EvalSuite }o--}o EvalCase : "cases"
+```
 
 #### `helix` (19 edges)
 
@@ -378,7 +392,7 @@ erDiagram
     TestRun }o..}o Task : "verifies [Kind/name] *"
 ```
 
-Groups with fewer than 2 edges (listed, not drawn): `artifact`, `collab`, `eval`, `evidence`, `intel`, `research`.
+Groups with fewer than 2 edges (listed, not drawn): `artifact`, `collab`, `evidence`, `intel`, `research`.
 
 ### Declared relations (`spec.relations`)
 
@@ -404,6 +418,10 @@ the runtime does not follow it — read `By` for why.
 | `Engram` | `source_refs` *(poly)* | `*` | many | `Kind/name` |  |  |  |
 | `Epic` | `features` | `Feature` | many | `name` | yes | `epic` |  |
 | `Epic` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
+| `EvalBaseline` | `run_name` | `EvalRun` | one | `name` | yes |  |  |
+| `EvalBaseline` | `suite` | `EvalSuite` | one | `name` | yes |  |  |
+| `EvalRun` | `suite` | `EvalSuite` | one | `name` | yes |  |  |
+| `EvalSuite` | `cases` | `EvalCase` | many | `name` | yes |  |  |
 | `Evidence` | `document_ref` *(poly)* | `*` | one | `Kind:name` |  |  |  |
 | `Feature` | `epic` | `Epic` | one | `name` | yes | `features` |  |
 | `Feature` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
@@ -502,7 +520,6 @@ data. Each row is a candidate for promotion to a relation.
 | `Bug` | `fix_adr` | `ADR` | one | `name` |  |  |  |
 | `Bug` | `related_feature` | `Feature` | one | `name` |  |  |  |
 | `Bug` | `related_story` | `Story` | one | `name` |  |  |  |
-| `EvalSuite` | `cases` | `EvalCase` | many | `name` |  |  |  |
 | `Feature` | `owner` | `Actor` | one | `name` |  |  | yes |
 | `Feature` | `use_cases` | `UseCase` | many | `name` |  |  | yes |
 | `Initiative` | `owner` | `Actor` | one | `name` |  |  | yes |
@@ -610,12 +627,12 @@ stale against a Kind it no longer describes.
 | `Workspace` | `workspace_id` | `self` | — |
 | `WorkspaceMembership` | `identity_oid` | `external` | `entra` |
 
-### Kinds with no reference edge (29)
+### Kinds with no reference edge (27)
 
 Standalone instances — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `AuditLog`, `Automation`, `Canvas`, `Changelog`, `CognitivePolicy`, `Doc`, `EvalBaseline`, `EvalRun`, `EvidencePolicy`, `Genome`, `Hook`, `HtmlArtifact`, `KindDefinition`, `KindNamespace`, `LayerPolicy`, `Lesson`, `MCPFederation`, `Memory`, `ModelProfile`, `PlanBinding`, `PromptTemplate`, `RemoteAgent`, `Setting`, `Theme`, `UserProfile`, `UserRoleAssignment`
+`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `AuditLog`, `Automation`, `Canvas`, `Changelog`, `CognitivePolicy`, `Doc`, `EvidencePolicy`, `Genome`, `Hook`, `HtmlArtifact`, `KindDefinition`, `KindNamespace`, `LayerPolicy`, `Lesson`, `MCPFederation`, `Memory`, `ModelProfile`, `PlanBinding`, `PromptTemplate`, `RemoteAgent`, `Setting`, `Theme`, `UserProfile`, `UserRoleAssignment`
 
 ## Physical model — the real tables
 
