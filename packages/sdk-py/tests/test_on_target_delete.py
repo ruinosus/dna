@@ -587,9 +587,16 @@ class TestAStoreThatKeepsNoGraph:
 
 def test_no_registered_relation_declares_a_policy_yet():
     """The slice ships the MECHANISM and changes no behavior — asserted, not
-    promised. When ``AuditLog`` lands (the next batch, deliberately not here),
-    this test is the one that has to be updated on purpose, which is exactly
-    the moment somebody should be looking at what changes.
+    promised. When ``AuditLog`` lands, this test is the one that has to be
+    updated on purpose, which is exactly the moment somebody should be looking
+    at what changes.
+
+    ⚠️ ``AuditLog`` did NOT land in the i-119 batch, and the reason is measured
+    in ``test_the_auditlog_target_is_still_three_fields`` below rather than
+    forgotten here: the founder's decision (declare it, with
+    ``on_target_delete: allow``) is blocked on an INDEPENDENT problem the
+    decision deliberately did not solve — the address lives in three fields and
+    a relation is named by the one field that holds its value.
 
     Derived from the live registry rather than a typed list, so a Kind added
     tomorrow is covered without anybody remembering this file."""
@@ -613,3 +620,95 @@ def test_every_registered_relation_reads_as_allow():
         if rel.enforces_on_target_delete
     ]
     assert offenders == [], offenders
+
+
+# ── 7. the AuditLog declaration that is BLOCKED, and on what ─────────────────
+
+
+class TestTheAuditLogIsBlockedOnItsAddressNotOnThisMechanism:
+    """i-119, founder decision 3 (06/08/2026): the ``AuditLog`` target must be
+    DECLARED with ``on_target_delete: allow`` — a log line about a deleted
+    instance has to keep pointing at it, and saying so turns a dangling
+    reference from an unmodelled exception into declared policy.
+
+    It could not be written, and this class is the measurement rather than an
+    apology. The decision answered *"what happens when the target dies"*; it
+    deliberately left *"what shape is the address"* open, and that second
+    problem is the blocker. A relation is NAMED BY THE SPEC FIELD THAT HOLDS
+    ITS VALUE, and ``AuditLog`` spreads its address over three fields. Of every
+    shape ``normalize_relations`` accepts, the only one that fits
+    (``by: "Kind/name"``) states that the value reads ``Agent/Y`` — and the
+    stored value is a bare ``Y``, with ``Agent`` in the field next door. A
+    wrong ``by`` is worse than the island it replaces: an island says "nothing
+    declared", a wrong ``by`` says "declared" and misleads a parser.
+
+    The two exits are both out of a slice's hands: collapse the three fields
+    into one (real data migration, a founder call), or reopen
+    :data:`COMPOSITE_FORMS` — refused, because that set is closed on purpose:
+    ``x-dna-ref-composite`` took a free-form string and that WAS the defect
+    being corrected.
+
+    ⚠️ THE MUTANT THESE TESTS KILL is the one that will actually happen: the
+    day somebody collapses the address into a single field, the reason for the
+    absence evaporates and nothing would otherwise notice. Then this class goes
+    red and points at the declaration that is now writable.
+    """
+
+    @staticmethod
+    def _audit_schema():
+        port = Kernel.auto().kind_port_for("AuditLog")
+        return port, (port.schema() or {}).get("properties") or {}
+
+    def test_the_auditlog_target_is_still_three_fields(self):
+        """The premise of the whole blockage, read off the Kind rather than
+        remembered. If ``target_kind``/``target_name`` stop being two separate
+        string properties, the blockage is over."""
+        _, props = self._audit_schema()
+        present = sorted(
+            f for f in ("target_kind", "target_name", "target_scope")
+            if isinstance(props.get(f), dict)
+        )
+        assert present == ["target_kind", "target_name", "target_scope"], (
+            "the AuditLog address changed shape. If it now holds `Kind/name` "
+            "in ONE field, declare the relation with `on_target_delete: "
+            f"allow` — that is founder decision 3 of i-119. Present: {present}"
+        )
+
+    def test_the_only_shape_the_vocabulary_accepts_misdescribes_the_data(self):
+        """Not "we decided not to declare" but "we measured what a declaration
+        would SAY". The accepted shape claims the value carries its own Kind;
+        it does not.
+
+        This is the assertion that has to be re-read the day
+        :data:`COMPOSITE_FORMS` grows a member, because a new form is exactly
+        the other exit — and it must be a DECISION, not a side effect."""
+        # Every shape that would name the address, and what the parser says.
+        refused = [
+            {"target_name": {"to": "*", "cardinality": "one", "by": "name"}},
+            {"target_name": {"to": "*", "cardinality": "one",
+                             "by": "target_kind"}},
+            {"target_kind": {"to": "*", "cardinality": "one", "by": "name"}},
+        ]
+        for raw in refused:
+            with pytest.raises(ValueError, match="composite forms"):
+                normalize_relations(raw)
+
+        accepted = normalize_relations(
+            {"target_name": {"to": "*", "cardinality": "one",
+                             "by": "Kind/name", "on_target_delete": "allow"}},
+        )["target_name"]
+        # It parses, it even carries the policy the decision asked for — and
+        # `carries_kind` is the lie: it asserts the VALUE names its own Kind.
+        assert accepted.on_target_delete == "allow"
+        assert accepted.carries_kind is True
+
+    def test_the_auditlog_declares_no_relation_and_that_is_on_purpose(self):
+        """The absence, pinned. A relation appearing here without the two
+        tests above changing means somebody declared the address in a shape
+        this file measured as wrong."""
+        port = Kernel.auto().kind_port_for("AuditLog")
+        assert relations_of(port) == {}, (
+            "AuditLog now declares a relation. If the address became a single "
+            "field, update the two tests above; if it did not, this "
+            "declaration misdescribes the stored data"
+        )

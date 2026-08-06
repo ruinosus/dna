@@ -65,6 +65,32 @@ spec:
   storage:
     type: yaml
     container: kind-namespaces
+  relations:
+    # ⭐ DECLARED 06/08/2026 (i-119, founder decision 4). This Kind's whole job
+    # is to say WHICH WORKSPACE owns a namespace, and until today it declared
+    # nothing — so the graph drew KindNamespace as an island next to Workspace,
+    # a model that contradicts the Kind's own first sentence and its own
+    # `describe: '{namespace} → {owner}'`.
+    #
+    # `by: workspace_id`, NOT `by: name` and NOT `by: slug` — the
+    # `TenantMembership.tenant_slug` REASONING applied rather than its line
+    # copied. There the value is a `Tenant.spec.slug`; here `owner` holds a
+    # `Workspace.spec.workspace_id`, which the field's own description states
+    # and `owner_of()` confirms (it compares the claim's `owner` against the
+    # writer's effective TENANT, and the kernel `tenant` column carries the
+    # workspace_id). The shared rule is the one that matters: address by the
+    # REQUIRED spec field the live comparison actually uses, never by
+    # `metadata.name`, which the reader sets from the container and which agrees
+    # with the id only by filesystem convention. `by: name` would be a second
+    # resolution rule, right by coincidence, free to veto a claim the gate
+    # accepts the day a file is renamed. Same declaration
+    # `Project.workspace_id`, `WorkspaceMembership.workspace_id` and
+    # `WorkspaceScopeGrant.workspace_id` already make: declared, drawn, and
+    # honestly not resolved.
+    owner:
+      to: Workspace
+      cardinality: one
+      by: workspace_id
   schema:
     type: object
     additionalProperties: false

@@ -38,6 +38,46 @@ spec:
   storage:
     type: yaml
     container: audit-log
+  # ⚠️ NO `relations` BLOCK, AND THE ABSENCE IS MEASURED — i-119, 06/08/2026.
+  #
+  # The founder's decision was to DECLARE the target with
+  # `on_target_delete: allow`: a log line about a deleted instance MUST keep
+  # pointing at it, and saying so turns a dangling reference from an unmodelled
+  # exception into declared policy. The mechanism for that landed in eff4a9e3
+  # and `relations.py` names this Kind as the case it exists to unblock.
+  #
+  # It still cannot be written here, and the blocker is the OTHER, independent
+  # problem the decision deliberately did not solve: THE ADDRESS IS SPREAD OVER
+  # THREE FIELDS (`target_kind` + `target_name` + `target_scope`), while a
+  # relation is NAMED BY THE ONE FIELD THAT HOLDS ITS VALUE. Every shape the
+  # vocabulary accepts was tried against `normalize_relations`:
+  #
+  #   target_name, to: "*", by: name            REFUSED — `to: *` requires a
+  #                                             composite `by`
+  #   target_name, to: "*", by: target_kind     REFUSED — same rule
+  #   target_kind, to: "*", by: name            REFUSED — same rule
+  #   target_name, to: "*", by: "Kind/name"     ACCEPTED — and it is a LIE
+  #
+  # The one accepted shape states that the value reads `Agent/Y`. Measured
+  # against the stored shape (tests/test_audit_extension.py, the only writer
+  # evidence in the repo): `target_kind: "Agent"`, `target_name: "Y"` — two
+  # bare strings. Declaring `Kind/name` would put a parse instruction on the
+  # wire that no consumer could follow, which is worse than an island: an
+  # island says "nothing declared", a wrong `by` says "declared" and misleads.
+  #
+  # The two exits are both out of this slice's hands, and both are named in
+  # i-119: (a) the AuditLog starts storing `Kind/name` in ONE field — real DATA
+  # MIGRATION, a founder call, not an edit here; (b) reopen the closed set of
+  # composite forms — REFUSED, because `relations.py` closes it on purpose:
+  # `x-dna-ref-composite` took a free-form string and that WAS the defect being
+  # corrected.
+  #
+  # A third gap sits underneath and belongs to neither: `target_kind` names a
+  # KIND, not an instance, and "points at the Kind registry" has no vocabulary
+  # at all (i-119, vocabulary gap 1 — shared with `Automation.result_kind`,
+  # `Hook.target` and `AgentGrant.scope_kinds`). It is not declared as an
+  # `identifier` either: a Kind name is minted by DNA, so `external` would name
+  # an authority that does not exist, and `self` is plainly false.
   identifiers:
     # A correlation id (UUIDv4) minted by the request pipeline, shared by every
     # log line of one request — so it is neither this instance's key (many rows

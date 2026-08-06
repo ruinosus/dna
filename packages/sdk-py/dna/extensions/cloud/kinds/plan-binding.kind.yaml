@@ -71,6 +71,30 @@ spec:
   storage:
     type: yaml
     container: account-plans
+  relations:
+    # ⭐ DECLARED 06/08/2026 (i-119, founder decision 2), reversing the note that
+    # used to sit in `identifiers` below and said this could not be declared.
+    # The note argued that `by: tier_id` would install a SECOND resolution rule
+    # beside `kernel.tier()` (which matches `PricingPlan.spec.tier_id` FIRST and
+    # `spec.aliases[]` second) and would therefore veto an alias-keyed binding
+    # the live lookup accepts. Measured, that argument is about a mechanism this
+    # vocabulary does not have: `Relation.resolved` is `bool(to) and by == name`,
+    # and `references.py` filters on it (`[r for r in relations_of(port) if
+    # r.resolved]`) before reading anything. A non-`name` `by` therefore produces
+    # NO edge and runs NO lookup — `by:` DECLARES THE ADDRESS WITHOUT INSTALLING
+    # RESOLUTION. A declaration that cannot resolve cannot veto, so the alias
+    # fallback stays what it is: a search path, never a second identity.
+    #
+    # What was true in the old note and stays true: this runtime does not FOLLOW
+    # the pointer. That is the same honest half-declaration
+    # `Project.workspace_id` and `TenantMembership.tenant_slug` already make, and
+    # declaring half is not the failure the note took it for — the failure was
+    # the graph showing PlanBinding as an island while the field's own
+    # description called itself a reference.
+    tier_id:
+      to: PricingPlan
+      cardinality: one
+      by: tier_id
   identifiers:
     # This instance's own key — `kernel.account_plan()` matches on this field
     # and the doc name should equal it. One binding covers every Workspace the
@@ -85,14 +109,10 @@ spec:
     stripe_subscription_id:
       role: external
       system: stripe
-    # ⚠️ `tier_id` is deliberately absent from BOTH blocks, and its own
-    # description says why: it IS a reference to a PricingPlan, so calling it
-    # an identifier would be a lie — and it is not declared as a relation
-    # either, because the live resolver matches `PricingPlan.spec.tier_id`
-    # FIRST and `spec.aliases[]` second. A relation resolving on `tier_id`
-    # alone would be a second rule beside the live one, free to veto a valid
-    # alias. It stays an honest open row in the gap list until the kernel can
-    # resolve by key.
+    # ⚠️ `tier_id` is deliberately absent from THIS block and always will be:
+    # it IS a reference to a PricingPlan, so calling it an identifier would be
+    # a lie. It is declared in `relations` above — see the reasoning there for
+    # why the old "it cannot be declared" note was wrong.
   schema:
     type: object
     additionalProperties: false
@@ -112,20 +132,15 @@ spec:
         description: >-
           The assigned PricingPlan's id, e.g. free, pro, enterprise. Resolved to
           caps via kernel.tier(tier_id) — never a literal in code. This IS a
-          reference, and it is deliberately NOT declared as a relation — the
-          resolver matches `PricingPlan.spec.tier_id` first and
-          `PricingPlan.spec.aliases[]` second, in the `_lib` scope, and NEVER
-          the instance name, while the kernel resolves by instance name only.
-          `by: tier_id` would DESCRIBE the addressing without resolving
-          it, which is legal — but it would describe only HALF the live
-          rule (the alias fallback has nowhere to go), and a partial
-          description of a live rule is the thing to avoid.
-          Declaring it would install a SECOND resolution rule that can disagree
-          with the live one (an alias-keyed binding is valid data the write path
-          would then veto). It is a keyed reference, the same shape as
-          `Organization.plan_ref`. NOTE the Kind was called `Tier` until the
-          metering rename (dna 0.29.0); this description named the dead Kind
-          until 2026-08-06.
+          reference and it IS declared, as `to: PricingPlan, by: tier_id` (see
+          `spec.relations`). The resolver matches `PricingPlan.spec.tier_id`
+          first and `PricingPlan.spec.aliases[]` second, in the `_lib` scope,
+          and NEVER the instance name — so this runtime does not FOLLOW the
+          declaration, exactly as it does not follow `Project.workspace_id`.
+          It is a keyed reference, the same shape as `Organization.plan_ref`.
+          NOTE the Kind was called `Tier` until the metering rename
+          (dna 0.29.0); this description named the dead Kind until 2026-08-06,
+          and claimed the field was undeclarable until 2026-08-06 as well.
       source:
         type: string
         description: Where the assignment came from, e.g. stripe / manual / trial.

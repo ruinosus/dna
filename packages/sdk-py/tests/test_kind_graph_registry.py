@@ -349,7 +349,18 @@ class TestTheGapListIsFiniteAndExplained:
     #: The gaps that stay, and why each is NOT answerable today. A row leaves
     #: this list by being declared (a relation or an identifier) or by the
     #: reason ceasing to hold — and either way somebody has to come here and
-    #: say so. Three, and the reasons are three different kinds of honest.
+    #: say so. Two, and the reasons are two different kinds of honest.
+    #:
+    #: ``("PlanBinding", "tier_id")`` LEFT this list on 06/08/2026 (i-119,
+    #: founder decision 2), and the test below going red is how it left. Its
+    #: reason used to read "a relation honouring only `tier_id` would be a
+    #: second rule free to veto a valid alias" — which described a mechanism
+    #: ``by:`` does not have. A non-``name`` ``by`` is never
+    #: ``Relation.resolved``, so it draws an edge, runs no lookup and can veto
+    #: nothing; the alias fallback stays a search path. It is declared
+    #: ``to: PricingPlan, by: tier_id``, and the alias is held open by
+    #: ``TestKeyAddressedRelationsAreNotFollowed`` in
+    #: ``test_write_path_reference_validation.py``.
     KNOWN_GAPS = {
         ("Initiative", "theme_ref"): (
             "a real reference to a Kind that does not exist. The registered "
@@ -357,12 +368,6 @@ class TestTheGapListIsFiniteAndExplained:
             "Jira-Align strategic Theme/OKR this field means — declaring it "
             "would draw the same false line the retired name-shape guess drew "
             "for `StatusReport.insight -> IntelInsight`"
-        ),
-        ("PlanBinding", "tier_id"): (
-            "a real reference the model deliberately declines to declare: "
-            "`kernel.tier()` resolves on `PricingPlan.spec.tier_id` FIRST and "
-            "`spec.aliases[]` second, so a relation honouring only the first "
-            "would be a second rule free to veto a valid alias"
         ),
         ("LayerPolicy", "layer_id"): (
             "not a reference and not expressible as an identifier either: it "
@@ -437,6 +442,92 @@ class TestTheGapListIsFiniteAndExplained:
                 )
             ]
         assert problems == [], problems
+
+
+class TestThePersonStillComesFromTheIdP:
+    """i-119, founder decision 1 (06/08/2026): the person is NOT a Kind.
+
+    Five fields across four Kinds hold the same value — the identity provider's
+    durable ``sub`` — and none of them points at an instance, because a Kind
+    for the person would duplicate the IdP's source of truth and pull personal
+    data into our store. They are islands BY DESIGN, and the point of declaring
+    them is that "island by design" and "island nobody looked at" stop looking
+    identical.
+
+    ⚠️ WHY THIS ONE IS AN ENUMERATION AND THE GAP LIST IS NOT. The undeclared
+    gap list is derived from a NAME SHAPE (``_id``/``_ref``/``_slug``), and
+    three of these five — ``subject``, ``registered_by``, and ``owner`` next
+    door — have no such shape. That invisibility is precisely why the group sat
+    unclassified while the gap list read "finite and explained": there was
+    nothing for a derivation to catch. So the enumeration here is the ANSWER to
+    an invisibility, not a substitute for a derivation, and it is written to
+    fail in BOTH directions — a row that loses its declaration, and a row that
+    becomes a relation (which is the trigger firing, and somebody has to come
+    here and say so).
+    """
+
+    #: field → the ``system`` it must name. All ``idp`` except the one that is
+    #: ``self``: ``UserRoleAssignment``'s instance name IS the user_id, and
+    #: ``system`` is FORBIDDEN beside ``self`` — bolting one on to make the row
+    #: "say where it came from" would be inventing a number.
+    THE_PERSON = {
+        ("UserProfile", "user_id"): "idp",
+        ("TenantMembership", "user_id"): "idp",
+        ("AgentGrant", "subject"): "idp",
+        ("AgentCatalogEntry", "registered_by"): "idp",
+        ("UserRoleAssignment", "user_id"): None,   # `self` — see above
+    }
+
+    def test_every_person_field_is_classified_and_names_its_system(self, graph):
+        rows = {(i["kind"], i["field"]): i for i in graph["identifiers"]}
+        missing = sorted(set(self.THE_PERSON) - set(rows))
+        assert missing == [], (
+            "fields holding the IdP subject that no longer declare what they "
+            f"are. The decision was to declare them, not to leave them: {missing}"
+        )
+        wrong = {
+            key: (rows[key]["role"], rows[key]["system"])
+            for key, system in self.THE_PERSON.items()
+            if rows[key]["system"] != system
+        }
+        assert wrong == {}, f"person fields naming the wrong minting system: {wrong}"
+
+    def test_no_person_field_became_a_relation_without_anybody_saying_so(
+        self, rows,
+    ):
+        """The trigger that inverts the decision — the day a person carries
+        data of OUR OWN, ``UserProfile`` becomes the anchor and these become
+        ``to: UserProfile, by: user_id``. That is a good change and it must not
+        arrive quietly: it lands here first."""
+        by_kind = {r["kind"]: r["relations"] for r in rows}
+        turned = sorted(
+            f"{kind}.{field}"
+            for kind, field in self.THE_PERSON
+            if field in by_kind.get(kind, {})
+        )
+        assert turned == [], (
+            "a person field is now a relation. If the trigger fired, say so "
+            f"here and in the Kind: {turned}"
+        )
+
+    def test_oauth_mints_CLIENTS_and_the_idp_mints_PEOPLE(self, graph):
+        """The confusion this group exists to prevent, asserted over the WHOLE
+        registry rather than over the five rows above.
+
+        ``AgentGrant`` and ``AgentCatalogEntry`` each hold both words at once —
+        a ``client_id`` the authorization server minted and a person the
+        identity provider minted — and a single word for both would model the
+        third-party app and the human as one namespace, on the very screen
+        built to tell them apart."""
+        offenders = sorted(
+            f"{i['kind']}.{i['field']}"
+            for i in graph["identifiers"]
+            if i["system"] == "oauth" and i["field"] != "client_id"
+        )
+        assert offenders == [], (
+            "`oauth` mints CLIENTS. A field that is not a client_id claiming "
+            f"it is naming the wrong authority: {offenders}"
+        )
 
 
 class TestTheCoverageProseStaysTrue:

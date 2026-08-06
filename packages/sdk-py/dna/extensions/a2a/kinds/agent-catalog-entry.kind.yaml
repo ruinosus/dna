@@ -61,6 +61,23 @@ spec:
     client_id:
       role: external
       system: oauth
+    # ⭐ DECLARED 06/08/2026 (i-119, founder decision 1). `registered_by` holds
+    # "o identificador DURÁVEL da pessoa" — its own description's words — which
+    # is the same value as `AgentGrant.subject`, `UserProfile.user_id` and
+    # `TenantMembership.user_id`: the IdP's `sub`. It is neither this
+    # instance's key (the entry is keyed by `client_id`) nor a pointer at any
+    # instance, and the trigger that would turn it into one is the group's:
+    # the day a person carries data of OUR OWN, `UserProfile` becomes the
+    # anchor and this becomes `to: UserProfile, by: user_id`.
+    # `idp`, not `oauth`, for the reason it matters HERE more than anywhere:
+    # this Kind holds both words at once — `client_id` is an app the
+    # authorization server minted, `registered_by` is a human the identity
+    # provider minted, and one word for both would model the person and the
+    # third-party app as one namespace on the very screen built to tell them
+    # apart.
+    registered_by:
+      role: external
+      system: idp
   schema:
     type: object
     additionalProperties: false

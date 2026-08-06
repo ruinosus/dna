@@ -95,6 +95,18 @@ class UserRoleAssignmentKind(KindBase):
     # `TenantMembership.user_id` holds the same flavour of value and is
     # `external` — its doc name is `{tenant}--{email}`, so there the id names a
     # subject rather than the row.
+    #
+    # ⭐ CONFIRMED as a DECISION on 06/08/2026 (i-119, founder decision 1): the
+    # person continues to come from the IdP, so this Kind is an island BY
+    # DESIGN and stops counting as an island-to-fix. `self` STAYS `self` and no
+    # `system` is added — `system` is forbidden beside `self` on purpose, and
+    # bolting one on to make this row "say where it came from" would be
+    # inventing a number, not answering a question. The tie-break already
+    # answered it: the value's minter is the IdP, and the CLASSIFICATION asks
+    # whether it is this instance's key, which it is.
+    # THE TRIGGER THAT INVERTS THE WHOLE GROUP: the day we must hang data of
+    # OUR OWN on a person the IdP does not have. Then `UserProfile` becomes the
+    # anchor and this becomes `to: UserProfile, by: user_id`.
     identifiers = {
         "user_id": {"role": "self"},
     }

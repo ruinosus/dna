@@ -441,6 +441,137 @@ class TestKeyAddressedRelationsAreNotFollowed:
         assert [r for r in source.reads if r[1] == "Workspace"] == []
 
 
+class TestTheAliasSurvivesTheNewPlanBindingDeclaration:
+    """``PlanBinding.tier_id`` declares ``to: PricingPlan, by: tier_id``
+    (i-119, 06/08/2026) — and this class is the exact fear that declaration had
+    to answer before it could be written.
+
+    For months the Kind refused to declare the field, and the reason written in
+    its own descriptor was that a relation keyed on ``tier_id`` would be a
+    SECOND resolution rule beside ``kernel.tier()``, free to veto an
+    ALIAS-keyed binding the live lookup happily resolves. The claim is testable
+    and it is tested here rather than argued: ``kernel.tier()`` matches
+    ``PricingPlan.spec.tier_id`` FIRST and ``spec.aliases[]`` SECOND, so a
+    binding written against an alias is VALID DATA, and the write path must not
+    develop an opinion about it.
+
+    ⚠️ The mutant this class exists to kill is one deleted line: drop ``by:
+    tier_id`` from the descriptor and the relation becomes ``by: name`` — the
+    kernel resolves it, looks for a PricingPlan INSTANCE named ``pro-annual``,
+    finds none, and refuses a binding the live resolver accepts. Both tests go
+    red, and they go red for the two different reasons that matter: one because
+    the write was refused, one because a lookup happened at all.
+    """
+
+    _PRICING = "github.com/ruinosus/dna/cloud/v1"
+
+    @staticmethod
+    def _binding(name: str, tier_id: str) -> dict:
+        return {
+            "apiVersion": "github.com/ruinosus/dna/cloud/v1",
+            "kind": "PlanBinding",
+            "metadata": {"name": name},
+            "spec": {"account_id": name, "tier_id": tier_id},
+        }
+
+    @pytest.mark.anyio
+    async def test_a_binding_keyed_on_an_ALIAS_is_not_vetoed(
+        self, kernel, source, monkeypatch,
+    ):
+        """The live resolver reaches this row through ``aliases[]``. Nothing on
+        the write path may disagree with it."""
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        source.docs[("_lib", "PricingPlan", "plan-pro")] = {
+            "apiVersion": self._PRICING, "kind": "PricingPlan",
+            "metadata": {"name": "plan-pro"},
+            "spec": {"tier_id": "pro", "aliases": ["pro-annual"]},
+        }
+        await kernel.write_instance(
+            "_lib", "PlanBinding", "acct-1",
+            self._binding("acct-1", "pro-annual"),
+        )
+        assert ("_lib", "PlanBinding", "acct-1") in source.docs
+
+    @pytest.mark.anyio
+    async def test_the_write_path_does_not_even_LOOK_a_PricingPlan_up(
+        self, kernel, source, monkeypatch,
+    ):
+        """Not "it did not refuse" but "it did not ask" — a lookup that
+        happened would be the second resolution rule already half-installed,
+        waiting for somebody to act on its answer."""
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        source.reads.clear()
+        await kernel.write_instance(
+            "_lib", "PlanBinding", "acct-2",
+            self._binding("acct-2", "tier-nobody-has"),
+        )
+        assert [r for r in source.reads if r[1] == "PricingPlan"] == []
+
+
+class TestTheKindNamespaceOwnerIsAddressedByWorkspaceId:
+    """``KindNamespace.owner`` declares ``to: Workspace, by: workspace_id``
+    (i-119, 06/08/2026).
+
+    ``owner`` holds a ``Workspace.spec.workspace_id`` — the opaque value the
+    kernel ``tenant`` column carries and the one ``owner_of()`` compares the
+    writer against. ``metadata.name`` agrees with it only by the convention
+    that the container writes ``workspaces/<workspace_id>.yaml``.
+
+    ⚠️ The mutant: drop ``by: workspace_id`` and the relation resolves by
+    instance name. It would pass on every claim whose Workspace file happens to
+    be named after its id and refuse the first one that is not — a rule right
+    by coincidence, which is the failure mode ``TenantMembership.tenant_slug``
+    was written to avoid. Seeding a Workspace under a DIFFERENT instance name
+    than its ``workspace_id`` is what makes the coincidence unavailable here,
+    so the mutant cannot hide behind it.
+    """
+
+    _TENANT = "github.com/ruinosus/dna/tenant/v1"
+
+    @staticmethod
+    def _claim(name: str, owner: str) -> dict:
+        return {
+            "apiVersion": "github.com/ruinosus/dna/tenant/v1",
+            "kind": "KindNamespace",
+            "metadata": {"name": name},
+            "spec": {
+                "namespace": "acme.example", "owner": owner,
+                "claimed_at": "2026-08-06T00:00:00Z",
+            },
+        }
+
+    @pytest.mark.anyio
+    async def test_a_claim_owned_by_a_workspace_id_is_not_vetoed(
+        self, kernel, source, monkeypatch,
+    ):
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        # The Workspace EXISTS and its instance name is deliberately NOT its
+        # workspace_id — so a `by: name` resolution has nothing to find.
+        source.docs[("_lib", "Workspace", "barnabe-labs")] = {
+            "apiVersion": self._TENANT, "kind": "Workspace",
+            "metadata": {"name": "barnabe-labs"},
+            "spec": {"workspace_id": "ws-3f9a", "name": "Barnabé Labs",
+                     "created_by": "a@b.c", "created_at": "2026-08-06T00:00:00Z"},
+        }
+        await kernel.write_instance(
+            "_lib", "KindNamespace", "acme-example",
+            self._claim("acme-example", "ws-3f9a"),
+        )
+        assert ("_lib", "KindNamespace", "acme-example") in source.docs
+
+    @pytest.mark.anyio
+    async def test_the_write_path_does_not_even_LOOK_a_Workspace_up(
+        self, kernel, source, monkeypatch,
+    ):
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        source.reads.clear()
+        await kernel.write_instance(
+            "_lib", "KindNamespace", "beta-example",
+            self._claim("beta-example", "ws-nobody-has"),
+        )
+        assert [r for r in source.reads if r[1] == "Workspace"] == []
+
+
 class TestTheNewlyDeclaredReferencesGoThroughTheDoor:
     """The 06/08/2026 sweep (i-108) turned REAL references that nothing
     declared into resolved relations. A declaration is worth exactly what the
