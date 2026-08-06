@@ -2095,11 +2095,44 @@
         "type": "object"
       },
       "GetKindDocumentResponse": {
-        "description": "``GET /v1/kinds/{kind}/documents/{name}`` — UM documento, VERBATIM.\n\nA lista projetada passa pela vista dos readers quando o Kind é produzível\npor bundle (Agent, Skill…) — e a vista NORMALIZA: `spec.description` e\n`spec.tools_requiring_confirmation` de um Agent gravado pelo funil\ngenérico simplesmente não viajam por ela (medido 05/08/2026 na aba\nConfiguração do dna-cloud). Esta porta lê o documento como a camada do\nchamador o vê, sem projeção e sem vista — o `get_document_impl` que\nsempre existiu e não tinha rota.\n\n`etag` é o token de concorrência otimista para um write subsequente\n(``if_match``): um lost update vira recusa, não sobrescrita silenciosa.",
+        "description": "``GET /v1/kinds/{kind}/documents/{name}`` — UM documento, VERBATIM.\n\nA lista projetada passa pela vista dos readers quando o Kind é produzível\npor bundle (Agent, Skill…) — e a vista NORMALIZA: `spec.description` e\n`spec.tools_requiring_confirmation` de um Agent gravado pelo funil\ngenérico simplesmente não viajam por ela (medido 05/08/2026 na aba\nConfiguração do dna-cloud). Esta porta lê o documento como a camada do\nchamador o vê, sem projeção e sem vista — o `get_document_impl` que\nsempre existiu e não tinha rota.\n\n`etag` é o token de concorrência otimista para um write subsequente\n(``if_match``): um lost update vira recusa, não sobrescrita silenciosa.\n\nOs TRÊS campos `as_of*` só aparecem quando o chamador pediu leitura no\ntempo, e existem para que uma resposta histórica não seja confundível com\numa viva por quem só olha `document` (i-106: a rota ACEITAVA `?as_of=` e\ndevolvia o presente, sem nada na resposta que a desmentisse). Presentes ⇒ o\ncorpo é o estado de crença daquele instante; ausentes ⇒ é o de agora.",
         "properties": {
           "api_version": {
             "title": "Api Version",
             "type": "string"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "as_of_recorded_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of Recorded At"
+          },
+          "as_of_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of Version"
           },
           "document": {
             "additionalProperties": true,
@@ -7708,7 +7741,7 @@
     },
     "/v1/kinds/{kind}/documents/{name}": {
       "get": {
-        "description": "Ler UM documento de ``{kind}``, VERBATIM — o que a lista não dá.\n\nA lista com ``fields`` projeta pela VISTA quando o Kind é produzível\npor readers (Agent, Skill…), e a vista normaliza — campos reais do\nspec gravado (``description``, ``tools_requiring_confirmation`` de um\nAgent) não viajam por ela. Quem gravou pelo POST genérico precisa\nconseguir ler DE VOLTA o que gravou: esta rota é o\n``get_document_impl`` de sempre, na mesma fronteira de confiança do\nPOST (só ``tenant``; o scope é derivado, nunca nomeado).\n\n404 nomeia o que faltou — o Kind desconhecido ou o documento.",
+        "description": "Ler UM documento de ``{kind}``, VERBATIM — o que a lista não dá.\n\nA lista com ``fields`` projeta pela VISTA quando o Kind é produzível\npor readers (Agent, Skill…), e a vista normaliza — campos reais do\nspec gravado (``description``, ``tools_requiring_confirmation`` de um\nAgent) não viajam por ela. Quem gravou pelo POST genérico precisa\nconseguir ler DE VOLTA o que gravou: esta rota é o\n``get_document_impl`` de sempre, na mesma fronteira de confiança do\nPOST (só ``tenant``; o scope é derivado, nunca nomeado).\n\n404 nomeia o que faltou — o Kind desconhecido ou o documento.\n\n``as_of`` (i-106) é a leitura no TEMPO, e chegou aqui por um defeito, não\npor um pedido: esta rota já **aceitava** ``?as_of=`` — o FastAPI descarta\nem silêncio um query param não declarado — e devolvia 200 com o presente.\nMedido em 06/08/2026: um Issue de 18 versões respondia `resolved` com 6\neventos tanto agora quanto \"às 14:00 do dia anterior\", quando às 14:00 do\ndia anterior ele não era nem uma coisa nem outra. Aceitar e ignorar é\npior que recusar: o chamador acredita ter visto o passado e nada na\nresposta o desmente.\n\nAs QUATRO saídas são distintas de propósito, porque colapsar duas\nquaisquer delas reintroduz o mesmo defeito uma casa adiante:\n\n* **200** — o estado de crença naquele instante, com ``as_of``,\n  ``as_of_version`` e ``as_of_recorded_at`` no corpo.\n* **404** — não existia ainda. Isto é uma RESPOSTA.\n* **410** — existia história, mas não tão atrás: as versões daquela época\n  foram podadas (``VERSION_CHURN_RETENTION``). O store não sabe, e dizer\n  404 aqui seria afirmar \"não existia\" a partir de \"não há registro\".\n* **501** — este deployment não guarda histórico nenhum (o adapter de\n  filesystem declara ``versions=True`` e não retém nada).\n\ne **422** quando o instante não é ISO-8601 — erro do chamador, não do\nservidor.",
         "operationId": "get_kind_document_v1_kinds__kind__documents__name__get",
         "parameters": [
           {
@@ -7759,6 +7792,24 @@
                 }
               ],
               "title": "Api Version"
+            }
+          },
+          {
+            "description": "ISO-8601 instant. Return the document AS THIS STORE RECORDED IT at that moment (transaction time) instead of its current state. Refuses rather than approximates: 501 if the store keeps no version history, 410 if this document's history was pruned past the instant, 404 if it did not exist yet.",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "ISO-8601 instant. Return the document AS THIS STORE RECORDED IT at that moment (transaction time) instead of its current state. Refuses rather than approximates: 501 if the store keeps no version history, 410 if this document's history was pruned past the instant, 404 if it did not exist yet.",
+              "title": "As Of"
             }
           },
           {

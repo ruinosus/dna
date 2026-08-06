@@ -1239,7 +1239,13 @@ class GetKindDocumentResponse(BaseModel):
     sempre existiu e não tinha rota.
 
     `etag` é o token de concorrência otimista para um write subsequente
-    (``if_match``): um lost update vira recusa, não sobrescrita silenciosa."""
+    (``if_match``): um lost update vira recusa, não sobrescrita silenciosa.
+
+    Os TRÊS campos `as_of*` só aparecem quando o chamador pediu leitura no
+    tempo, e existem para que uma resposta histórica não seja confundível com
+    uma viva por quem só olha `document` (i-106: a rota ACEITAVA `?as_of=` e
+    devolvia o presente, sem nada na resposta que a desmentisse). Presentes ⇒ o
+    corpo é o estado de crença daquele instante; ausentes ⇒ é o de agora."""
 
     scope: str
     kind: str
@@ -1247,6 +1253,15 @@ class GetKindDocumentResponse(BaseModel):
     name: str
     document: dict[str, Any]
     etag: str | None = None
+    #: O instante pedido, NORMALIZADO para ISO-8601 UTC — devolver o que o
+    #: chamador digitou esconderia um fuso mal lido.
+    as_of: str | None = None
+    #: Qual versão do documento respondeu (`dna_versions.version`).
+    as_of_version: int | None = None
+    #: Quando ela foi GRAVADA (tempo de transação). Nunca igual a `as_of`, e é a
+    #: distância entre os dois que diz há quanto tempo aquela crença estava
+    #: parada quando o chamador perguntou.
+    as_of_recorded_at: str | None = None
 
 
 class GraphRefEdge(BaseModel):

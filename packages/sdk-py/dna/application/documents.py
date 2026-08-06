@@ -646,20 +646,91 @@ async def list_documents_impl(
 async def get_document_impl(
     live: LiveDna, *, kind: str, name: str, scope: str | None = None,
     tenant: str | None = None, api_version: str | None = None,
+    as_of: str | None = None,
 ) -> dict[str, Any]:
-    """Read one document verbatim, as the caller's layer sees it."""
+    """Read one document verbatim, as the caller's layer sees it.
+
+    **``as_of`` (ISO-8601) reads the BELIEF STATE** — the document as this store
+    RECORDED it at or before that instant (transaction time,
+    ``dna_versions.created_at``), not as it stands now. The same second time axis
+    ``recall`` and ``list_memories`` already carry, generalised to every Kind:
+    :func:`~dna.memory.as_of.resolve_as_of` was always keyed on
+    ``(scope, kind, name)`` and the adapter's ``load_one_as_of`` never knew
+    ``Engram`` from anything else — only memory had a door to it.
+
+    i-106 is why this is a parameter and not a wish: the REST route ACCEPTED
+    ``?as_of=`` and ignored it, because FastAPI drops an undeclared query param
+    in silence. A caller asking what a document looked like yesterday got today's
+    document under a 200, with nothing in the response to say otherwise — the
+    failure mode the whole ``as_of`` module exists to refuse. The three refusals
+    below are the point; the read is the easy half.
+
+    * a store with no version history → :class:`~dna.memory.as_of.AsOfUnsupported`
+    * history pruned past ``as_of`` → :class:`~dna.memory.as_of.AsOfTruncated`
+    * the document did not exist yet → ``LookupError``, which is an ANSWER and
+      deliberately the SAME exception "no such document" already raises: at
+      ``as_of`` those two ARE the same statement (nothing was there), while
+      "pruned" is not, and only the pruned case gets its own type.
+
+    ``etag`` is computed over whatever spec is returned, so a follow-up write
+    carrying a historical etag as ``if_match`` refuses as stale instead of
+    quietly rewinding the document.
+    """
+    from dna.memory.as_of import (
+        AsOfTruncated, AsOfUnsupported, normalize_as_of, resolve_as_of,
+        store_supports_as_of,
+    )
+
     sc = scope or live.default_scope(tenant)
     port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
-    raw = await live.kernel.get_document(sc, port.kind, name, tenant=tenant)
-    if raw is None:
-        raise LookupError(f"no {port.kind} named {name!r} in scope {sc!r}")
+    if as_of is None:
+        raw = await live.kernel.get_document(sc, port.kind, name, tenant=tenant)
+        if raw is None:
+            raise LookupError(f"no {port.kind} named {name!r} in scope {sc!r}")
+        return {
+            "scope": sc, "kind": port.kind, "api_version": port.api_version,
+            "name": name, "document": raw,
+            # The optimistic-concurrency token for a follow-up write (see
+            # :func:`spec_etag`): pass it back as ``write_document``'s ``if_match``
+            # and a lost update becomes a refusal instead of a silent overwrite.
+            "etag": spec_etag(raw.get("spec") if isinstance(raw, dict) else None),
+        }
+
+    as_of_iso = normalize_as_of(as_of)  # ValueError on a non-ISO-8601 instant
+    if not store_supports_as_of(live.kernel):
+        raise AsOfUnsupported(
+            f"get_document(as_of=...) needs a store that retains version history "
+            f"with a transaction timestamp; this deployment's source does not. "
+            f"Refusing rather than returning the CURRENT state of {port.kind} "
+            f"{name!r} under a past timestamp."
+        )
+    res = await resolve_as_of(
+        live.kernel, sc, port.kind, name,
+        as_of=as_of_iso, tenant=tenant, api_version=port.api_version,
+    )
+    if res.truncated:
+        raise AsOfTruncated(
+            f"{port.kind} {name!r} in scope {sc!r} HAS history, but none of it "
+            f"reaches back to {as_of_iso} — the versions that old were pruned. "
+            f"What this store believed then is not knowable; it is not 'the "
+            f"document did not exist'."
+        )
+    if not res.found:
+        raise LookupError(
+            f"no {port.kind} named {name!r} in scope {sc!r} at {as_of_iso} — "
+            f"nothing was recorded under that name at or before that instant."
+        )
     return {
         "scope": sc, "kind": port.kind, "api_version": port.api_version,
-        "name": name, "document": raw,
-        # The optimistic-concurrency token for a follow-up write (see
-        # :func:`spec_etag`): pass it back as ``write_document``'s ``if_match``
-        # and a lost update becomes a refusal instead of a silent overwrite.
-        "etag": spec_etag(raw.get("spec") if isinstance(raw, dict) else None),
+        "name": name, "document": res.raw,
+        "etag": spec_etag(
+            res.raw.get("spec") if isinstance(res.raw, dict) else None
+        ),
+        # The three fields that keep an as-of read from being mistaken for a
+        # live one by a caller that only looks at ``document``.
+        "as_of": as_of_iso,
+        "as_of_version": res.version,
+        "as_of_recorded_at": res.recorded_at,
     }
 
 

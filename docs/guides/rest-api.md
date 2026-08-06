@@ -46,6 +46,38 @@ overlay only — never another tenant's data):
 The definitions + search endpoints call the **same** `*_impl` functions the MCP
 server uses — one core, two faces, zero duplicated logic.
 
+## Reading in time — `?as_of=`
+
+`GET /v1/kinds/{kind}/documents/{name}?as_of=<ISO-8601>` returns the document
+**as this store recorded it** at that instant — *transaction* time, not world
+time. `GET /v1/memories` and `GET /v1/memories/search` take the same parameter.
+
+It never approximates, and the four outcomes are deliberately distinct:
+
+| code | meaning |
+|---|---|
+| `200` | the belief state at that instant. The body carries `as_of`, `as_of_version` and `as_of_recorded_at` — their **absence** is how you know a body is live. |
+| `404` | the document did not exist yet. An answer. |
+| `410` | its version history was pruned past that instant. A refusal — the store does not know, which is **not** the same as "it did not exist". |
+| `501` | this deployment's store keeps no version history at all (the filesystem adapter). |
+| `422` | the instant is not ISO-8601. |
+
+## An unimplemented query parameter is refused, not ignored
+
+Send a query parameter a route does not read and you get **400** naming it.
+
+This is deliberate and it is not FastAPI's default: an undeclared query param is
+normally dropped in silence, which is fine for the public web and wrong for an
+API whose parameters change what the answer *means*. `?as_of=` on the document
+route used to be swallowed exactly that way — 200, today's document, nothing in
+the response to contradict a caller who believed they were reading yesterday
+(i-106).
+
+Two parameters are accepted on every route regardless of what it declares:
+`scope` and `tenant`. Both are read by the face's own auth layer on every path,
+and under `--auth config` the server *writes* `tenant` into the query string
+itself from the caller's verified membership.
+
 ## Kind authoring
 
 Five more endpoints let a workspace declare its **own** Kind, put it into

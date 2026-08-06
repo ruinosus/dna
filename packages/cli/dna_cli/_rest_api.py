@@ -251,6 +251,26 @@ def _e_publico(path: str) -> bool:
     return path in _PUBLICO or path.startswith("/.well-known/")
 
 
+#: Query params this FACE reads on every path, whatever the route declares.
+#:
+#: Not an escape hatch and not a convenience: these two are read by the auth
+#: middlewares themselves — ``scope`` for the i-034 scope-grant check
+#: (``scope_is_bound``) on every non-public path, ``tenant`` for the Model-B
+#: workspace bind, which then **WRITES ``tenant`` BACK into the query string**
+#: from the verified membership. So a route that never names them is still a
+#: route on which they were read, and on which the server may have injected one
+#: itself. Refusing them per-route would have the undeclared-param guard bill
+#: the caller for the face's own doing — the exact shape of dishonesty the
+#: guard exists to remove.
+#:
+#: DERIVED, not decided: ``test_rest_undeclared_query_params.py`` reads THIS
+#: module for ``request.query_params.get(...)`` calls outside the routes and
+#: asserts the two sets are equal. A middleware that starts reading a third
+#: param fails that test until this tuple says so; one that stops reading
+#: ``scope`` fails it until the tuple shrinks.
+_FACE_WIDE_QUERY_PARAMS = ("scope", "tenant")
+
+
 def build_app(
     *,
     scope: str | None = None,
@@ -474,7 +494,104 @@ def build_app(
                     _state["live"] = await boot_live(scope, base_dir)
         return _state["live"]
 
-    guarded = [Depends(_auth_dep)]
+    # -- i-106: a query param this face does not implement is REFUSED --------
+    #
+    # FastAPI drops an undeclared query param in SILENCE. That is a sane
+    # default for the public web (analytics tack `utm_*` onto every URL) and
+    # the wrong one for an API whose parameters change what the answer MEANS:
+    # `GET /v1/kinds/Issue/documents/<name>?as_of=<yesterday>` returned 200
+    # with TODAY's document, because `as_of` existed on `/v1/memories` and
+    # nowhere else. Nothing in that response contradicted the caller's belief
+    # that they were reading the past. Measured 06/08/2026 against the local
+    # runtime; the route now implements `as_of` (above), but the CLASS of
+    # defect is the point — one instance was found by accident, so the others
+    # would be too.
+    #
+    # PROCUREI ANTES DE CONSTRUIR (02/08's lesson, applied): FastAPI DOES ship
+    # a mechanism — a Pydantic query MODEL with `model_config =
+    # {"extra": "forbid"}` (tutorial "Query Parameter Models", ≥0.115) — but it
+    # is per-route and would mean rewriting all 55 signatures into models,
+    # which is a large diff that a new route silently opts out of. There is no
+    # app-wide switch (fastapi#2859 / #4764 / discussions #7697, #9016: "would
+    # not be acceptable as a default"), and no PyPI package for it
+    # (`fastapi-strict-query`, `fastapi-query-guard` → 404). So: our own
+    # dependency, derived from the route's OWN declared params rather than from
+    # a list somebody must remember to update — the derivation-not-enumeration
+    # rule this repo already learned the hard way, plus the two FACE-WIDE names
+    # the middlewares genuinely read on every path (`_FACE_WIDE_QUERY_PARAMS`).
+    #
+    # Blast radius, MEASURED rather than assumed (06/08/2026): every call site
+    # in dna-cloud that reaches this face was inventoried — ~100 of them across
+    # `apps/web/lib/**` — and each sends only params its route declares, or
+    # `scope`/`tenant`. Zero of them start failing. The one that would have
+    # (`POST /v1/kinds/{kind}/approve`, which dna-cloud calls with `scope` and
+    # which declares only `tenant`) is precisely a face-wide read, not an
+    # ignored one.
+    _declared_query_cache: dict[int, frozenset[str]] = {}
+
+    def _declared_query_names(route: Any) -> frozenset[str]:
+        """Every query key ``route`` actually reads, walked off its dependant.
+
+        DERIVED, never listed: sub-dependencies contribute their params too, so
+        a shared `Depends` that grows a param does not need this guard edited.
+        A Pydantic query model (FastAPI ≥0.115) is expanded to its own fields —
+        this face declares none today, and the guard must not start refusing
+        real params the day one appears.
+        """
+        cached = _declared_query_cache.get(id(route))
+        if cached is not None:
+            return cached
+        names: set[str] = set()
+        dep = getattr(route, "dependant", None)
+        stack: list[Any] = [dep] if dep is not None else []
+        seen: set[int] = set()
+        while stack:
+            d = stack.pop()
+            if id(d) in seen:
+                continue
+            seen.add(id(d))
+            for f in getattr(d, "query_params", ()) or ():
+                annotation = getattr(getattr(f, "field_info", None), "annotation", None)
+                model_fields = getattr(annotation, "model_fields", None)
+                if isinstance(model_fields, dict):
+                    names.update(
+                        (getattr(info, "alias", None) or fname)
+                        for fname, info in model_fields.items()
+                    )
+                    continue
+                names.add(getattr(f, "alias", None) or getattr(f, "name", ""))
+            stack.extend(getattr(d, "dependencies", ()) or ())
+        frozen = frozenset(n for n in names if n)
+        _declared_query_cache[id(route)] = frozen
+        return frozen
+
+    def _refuse_undeclared_query(request: Request) -> None:
+        """400 on a query param the matched route does not read.
+
+        Ordered AFTER ``_auth_dep`` in ``guarded`` on purpose: an
+        unauthenticated caller must still get 401, not a 400 that quietly
+        enumerates which parameters a route it cannot reach would accept.
+        """
+        route = request.scope.get("route")
+        if route is None or getattr(route, "dependant", None) is None:
+            return  # not a route this face declared — nothing to compare against
+        declared = _declared_query_names(route) | frozenset(_FACE_WIDE_QUERY_PARAMS)
+        extra = sorted({k for k in request.query_params.keys() if k not in declared})
+        if not extra:
+            return
+        accepted = ", ".join(sorted(declared)) or "no query parameters"
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"{request.method} {getattr(route, 'path', request.url.path)} "
+                f"does not implement the query parameter(s) "
+                f"{', '.join(repr(e) for e in extra)}; it accepts: {accepted}. "
+                f"Refused rather than ignored — answering 200 here would let "
+                f"you believe this route used a value it never read."
+            ),
+        )
+
+    guarded = [Depends(_auth_dep), Depends(_refuse_undeclared_query)]
 
     # The scope grant for a workspace-less authenticated credential (i-034).
     # Resolved ONCE here so every enforcement point reads the same configured set.
@@ -716,6 +833,9 @@ def build_app(
             await adopt_workspace_scope_on_access(live, workspace)
 
             # OVERWRITE the tenant query param with the membership-bound workspace.
+            # ⚠️ This line is why `tenant` is in `_FACE_WIDE_QUERY_PARAMS`: from
+            # here on `query_params` carries a key the SERVER put there, on
+            # routes that may never declare it.
             qs = parse_qs(request.scope.get("query_string", b"").decode())
             if workspace is not None:
                 qs["tenant"] = [workspace]
@@ -1713,6 +1833,16 @@ def build_app(
         name: str,
         tenant: str | None = Query(default=None),
         api_version: str | None = Query(default=None),
+        as_of: str | None = Query(
+            default=None,
+            description=(
+                "ISO-8601 instant. Return the document AS THIS STORE RECORDED "
+                "IT at that moment (transaction time) instead of its current "
+                "state. Refuses rather than approximates: 501 if the store "
+                "keeps no version history, 410 if this document's history was "
+                "pruned past the instant, 404 if it did not exist yet."
+            ),
+        ),
     ) -> dict[str, Any]:
         """Ler UM documento de ``{kind}``, VERBATIM — o que a lista não dá.
 
@@ -1724,17 +1854,56 @@ def build_app(
         ``get_document_impl`` de sempre, na mesma fronteira de confiança do
         POST (só ``tenant``; o scope é derivado, nunca nomeado).
 
-        404 nomeia o que faltou — o Kind desconhecido ou o documento."""
+        404 nomeia o que faltou — o Kind desconhecido ou o documento.
+
+        ``as_of`` (i-106) é a leitura no TEMPO, e chegou aqui por um defeito, não
+        por um pedido: esta rota já **aceitava** ``?as_of=`` — o FastAPI descarta
+        em silêncio um query param não declarado — e devolvia 200 com o presente.
+        Medido em 06/08/2026: um Issue de 18 versões respondia `resolved` com 6
+        eventos tanto agora quanto "às 14:00 do dia anterior", quando às 14:00 do
+        dia anterior ele não era nem uma coisa nem outra. Aceitar e ignorar é
+        pior que recusar: o chamador acredita ter visto o passado e nada na
+        resposta o desmente.
+
+        As QUATRO saídas são distintas de propósito, porque colapsar duas
+        quaisquer delas reintroduz o mesmo defeito uma casa adiante:
+
+        * **200** — o estado de crença naquele instante, com ``as_of``,
+          ``as_of_version`` e ``as_of_recorded_at`` no corpo.
+        * **404** — não existia ainda. Isto é uma RESPOSTA.
+        * **410** — existia história, mas não tão atrás: as versões daquela época
+          foram podadas (``VERSION_CHURN_RETENTION``). O store não sabe, e dizer
+          404 aqui seria afirmar "não existia" a partir de "não há registro".
+        * **501** — este deployment não guarda histórico nenhum (o adapter de
+          filesystem declara ``versions=True`` e não retém nada).
+
+        e **422** quando o instante não é ISO-8601 — erro do chamador, não do
+        servidor."""
+        from dna.memory.as_of import AsOfTruncated, AsOfUnsupported
+
         live = await _live()
         try:
             return await get_document_impl(
                 live, kind=kind, name=name, tenant=tenant,
-                api_version=api_version,
+                api_version=api_version, as_of=as_of,
             )
         except UnknownKindError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
+        except AsOfUnsupported as exc:
+            raise HTTPException(status_code=501, detail=str(exc)) from None
+        except AsOfTruncated as exc:
+            # 410 Gone, and it must NOT be the 404 the sibling branch gives: the
+            # pruning is deliberate and permanent, and "no record" is not
+            # "no document". LookupError's subclass, so this except comes FIRST.
+            raise HTTPException(status_code=410, detail=str(exc)) from None
         except LookupError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
+        except AmbiguousKindError as exc:
+            # 400 like the sibling list route — the ambiguity is about the KIND,
+            # not about `as_of`, and the two must not answer with one code.
+            raise HTTPException(status_code=400, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from None
 
     @app.get("/v1/kinds/{kind}/documents/{name}/refs", dependencies=guarded,
              response_model=m.GraphRefsResponse)

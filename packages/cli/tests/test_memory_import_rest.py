@@ -196,15 +196,39 @@ def test_personal_identity_in_body_is_ignored(dna_dir):
 
 
 def test_personal_identity_in_query_is_ignored(dna_dir):
-    """A `tenant`/`oid` query param must not steer the write either."""
+    """A forged `tenant` query param must not steer the write either.
+
+    `tenant` is the identity-shaped param that still REACHES this route after
+    i-106's undeclared-param guard — the config-auth middleware injects it
+    itself, so no route may refuse it — which makes it the one an attacker
+    would actually use, and this the assertion that carries INV-PERSONAL layer
+    1 on the write side."""
     with _client(dna_dir) as c:
         r = c.post("/v1/memories/import",
-                   params={"scope": _SCOPE, "tenant": f"personal:{_VICTIM_OID}",
-                           "oid": _VICTIM_OID},
+                   params={"scope": _SCOPE, "tenant": f"personal:{_VICTIM_OID}"},
                    headers={"Authorization": "Bearer alice"},
                    json={"bundle": _bundle(_mif("mif-1", "alpha"))})
     assert r.status_code == 201, r.text
     assert len(_read_partition(dna_dir, "personal:oid-alice", "Engram")) == 1
+    assert _read_partition(dna_dir, f"personal:{_VICTIM_OID}", "Engram") == []
+
+
+def test_an_oid_this_route_never_reads_is_refused_before_it_writes(dna_dir):
+    """`?oid=` is REFUSED (400), and — the half that matters — NOTHING is
+    written by the refused call.
+
+    A guard that answers 400 after the side effect would be worse than the
+    silence it replaces. i-106's family of defect is "the response does not
+    match what the server did"; a 400 over a completed write is exactly that,
+    inverted."""
+    with _client(dna_dir) as c:
+        r = c.post("/v1/memories/import",
+                   params={"scope": _SCOPE, "oid": _VICTIM_OID},
+                   headers={"Authorization": "Bearer alice"},
+                   json={"bundle": _bundle(_mif("mif-1", "alpha"))})
+    assert r.status_code == 400, r.text
+    assert "oid" in r.text
+    assert _read_partition(dna_dir, "personal:oid-alice", "Engram") == []
     assert _read_partition(dna_dir, f"personal:{_VICTIM_OID}", "Engram") == []
 
 
