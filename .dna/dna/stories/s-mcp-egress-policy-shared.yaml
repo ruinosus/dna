@@ -1,0 +1,155 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-mcp-egress-policy-shared
+spec:
+  title: A politica de egresso de MCP externo por plano vira UMA, no pacote CLI ao lado d
+  description: A politica de egresso de MCP externo por plano vira UMA, no pacote CLI ao lado do resolvedor de tier, para as duas apps do dna-cloud importarem em vez de copiarem.
+  status: review
+  feature: f-dna-hosting
+  priority: high
+  labels:
+  - cli
+  - quota
+  - mcp
+  - egress
+  reporter: claude-code
+  acceptance_criteria:
+  - text: Given as duas apps consumidoras hoje carregam a MESMA politica copiada, When a politica passa a morar em dna_cli, Then ambas conseguem importa-la (allowlist, predicado de URL, filtro por plano, particao all-or-nothing) e o nome da env vem do modulo, nao de um literal repetido
+    done: true
+    done_at: '2026-08-06T06:04:16+00:00'
+    done_by: claude-code
+    evidence: commit ec50565; tg-mcp-egress-policy-shared pass; brand_guard clean; versao intocada
+  - text: Given a assinatura tem de servir os DOIS chamadores, When um chama com uma lista de dicts {url} e o outro com objetos de 1..N URLs, Then os dois casos sao cobertos sem que o consumidor reimplemente o laco de decisao
+    done: true
+    done_at: '2026-08-06T06:04:16+00:00'
+    done_by: claude-code
+    evidence: commit ec50565; tg-mcp-egress-policy-shared pass; brand_guard clean; versao intocada
+  - text: Given retrocompat e requisito, When a mudanca entra, Then nada que ja existia no SDK/CLI muda de comportamento — e adicao pura, e o default do gate de tier reproduz exatamente a decisao vigente
+    done: true
+    done_at: '2026-08-06T06:04:16+00:00'
+    done_by: claude-code
+    evidence: commit ec50565; tg-mcp-egress-policy-shared pass; brand_guard clean; versao intocada
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - text: modulo novo em packages/cli/dna_cli + testes no padrao do pacote (uv run pytest) verdes + brand_guard limpo + PR aberto sem merge; SEM bump de versao (o lote da release e do fundador)
+    done: true
+    done_at: '2026-08-06T06:04:16+00:00'
+    done_by: claude-code
+    evidence: commit ec50565; tg-mcp-egress-policy-shared pass; brand_guard clean; versao intocada
+  definition_of_done_source: cli-create
+  created_at: '2026-08-06T05:55:33+00:00'
+  updated_at: '2026-08-06T06:05:04+00:00'
+  timeline:
+  - at: '2026-08-06T05:55:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-06T05:55:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-06T06:02:38+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: 'A casa e packages/cli/dna_cli/_mcp_egress.py — IRMAO de _mcp_quota, nao dentro dele. Tres razoes: (1) a direcao da dependencia so pode ser egresso -> resolucao de tier, e um modulo irmao torna isso estrutural; (2) _mcp_quota e o MEDIDOR (contadores, stores, caps) e egresso e politica de DESTINO, que nao conta nada; (3) NAO pode ir para dna-sdk: o resolvedor de tier que a politica consulta mora no pacote CLI, e o sdk esta ABAIXO dele no grafo de dependencia — poria metade de uma politica em cada pacote e inverteria o import.'
+    commit_ref: 546083daed8b1ada0db9939bfa1d6738bb0ce6da
+  - at: '2026-08-06T06:02:41+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: 'O gate de tier virou parametro (unrestricted_tiers) com default que reproduz a decisao vigente, e NAO um cap lido do registro — apesar do contrato do proprio Kind PricingPlan dizer que cap literal em codigo e bug. Motivo: virar cap exige campo no schema mais edicao coordenada dos documentos de plano ja implantados, e um plano sem o campo novo passaria de irrestrito para so-allowlist em silencio. O fallback que esconderia isso e o padrao errado. Registrado como Issue/i-098 em vez de contrabandeado.'
+    commit_ref: 546083daed8b1ada0db9939bfa1d6738bb0ce6da
+  - at: '2026-08-06T06:02:43+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Endurecimento de graca no caminho: no original, um resolvedor que estoura assumia ''free'' e a decisao seguia por NOME. Agora a falha devolve (tier_para_log, irrestrito=False) — restrito estruturalmente, de modo que nenhuma configuracao de unrestricted_tiers transforme queda de kernel em egresso aberto. Um teste fixa isso passando o proprio FAILSAFE_TIER como irrestrito.'
+    commit_ref: 546083daed8b1ada0db9939bfa1d6738bb0ce6da
+  - at: '2026-08-06T06:02:45+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Verificacao de que adotar e troca de import: rodei a tabela de casos inteira do teste de paridade do consumidor (dentro/fora, os dois planos, lista vazia, prefixo sosia, entrada malformada, resolvedor que cai) contra a implementacao ANTIGA e a nova, mais 5 casos de objeto com duas URLs. Zero divergencias. Suite do pacote: 1500 passed, 21 skipped; brand_guard limpo.'
+    commit_ref: 546083daed8b1ada0db9939bfa1d6738bb0ce6da
+  - at: '2026-08-06T06:03:03+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-mcp-egress-policy-shared
+    summary: TestGuide tg-mcp-egress-policy-shared (manual)
+  - at: '2026-08-06T06:03:08+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-mcp-egress-policy-shared-20260806-060306
+    summary: TestRun tr-tg-mcp-egress-policy-shared-20260806-060306 → pass
+    outcome: pass
+  - at: '2026-08-06T06:04:10+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: 'packages/cli/dna_cli/_mcp_egress.py: ALLOWLIST_ENV, egress_allowlist, egress_allows, filter_egress, partition_egress; teste que fixa o nome da env como contrato de operacao'
+    by: claude-code
+  - at: '2026-08-06T06:04:13+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: filter_egress(list[dict]) e partition_egress(items, urls=extractor) all-or-nothing; teste que prova que as duas formas decidem igual quando o item tem uma URL so
+    by: claude-code
+  - at: '2026-08-06T06:04:15+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: adicao pura (nenhum arquivo existente tocado); paridade antiga-vs-nova em 17 casos com zero divergencias; suite do pacote 1500 passed / 21 skipped
+    by: claude-code
+  - at: '2026-08-06T06:04:17+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 3
+    marked_dod: 1
+    evidence: commit ec50565; tg-mcp-egress-policy-shared pass; brand_guard clean; versao intocada
+    by: claude-code
+  - at: '2026-08-06T06:04:50+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/322'
+    pr_url: https://github.com/ruinosus/dna/pull/322
+  - at: '2026-08-06T06:05:02+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #322 aberto; sem merge — a release fica para o lote do fundador.'
+  - at: '2026-08-06T06:05:04+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-mcp-egress-policy-shared
+    role: implementation
+    at: '2026-08-06T05:55:57+00:00'
+  - kind: TestGuide
+    name: tg-mcp-egress-policy-shared
+    role: test-guide
+    at: '2026-08-06T06:03:03+00:00'
+  - kind: TestRun
+    name: tr-tg-mcp-egress-policy-shared-20260806-060306
+    role: test-run
+    at: '2026-08-06T06:03:08+00:00'

@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-mcp-egress-policy-shared
+spec:
+  title: 'Plano: s-mcp-egress-policy-shared'
+  date: '2026-08-06'
+  status: accepted
+  story_ref: s-mcp-egress-policy-shared
+  journey_phase: plan
+  body: '1) Novo modulo packages/cli/dna_cli/_mcp_egress.py — irmao de _mcp_quota (a direcao da dependencia so pode ser egress -> resolucao de tier, nunca o contrario; _mcp_quota e o MEDIDOR, egress e politica de DESTINO). 2) API: ALLOWLIST_ENV, egress_allowlist(), egress_allows(url), filter_egress(servers,...) com a mesma assinatura de hoje (troca de import pura no copiloto) e partition_egress(items, urls=...) all-or-nothing para a porta. 3) O gate de tier vira parametro (unrestricted_tiers) com default que reproduz a decisao vigente; fail-closed endurecido: resolver que cai NUNCA e irrestrito. 4) Testes em packages/cli/tests/test_mcp_egress.py. 5) Sem mexer em versao.'
+  created_at: '2026-08-06T05:55:54+00:00'
+  updated_at: '2026-08-06T05:55:54+00:00'

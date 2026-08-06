@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-098-egress-unrestricted-tier-is-a-code-default-not-a-cap
+spec:
+  description: 'A politica de egresso (dna_cli._mcp_egress) decide quais tiers podem discar qualquer destino por um DEFAULT ARGUMENT em Python (DEFAULT_UNRESTRICTED_TIERS), e nao por um cap lido do registro. Isso contradiz o contrato escrito no proprio descritor do Kind PricingPlan: ''never hardcode caps — a cap literal in code is a bug''. A casa durante seria um campo no schema (ex.: mcp_egress_mode: allowlist|any), lido junto com calls_per_day/rate_per_sec, de modo que mudar quem pode discar para fora vire edicao de documento e nao deploy. NAO foi feito junto com a unificacao da politica de proposito: e schema + edicao coordenada dos documentos de plano ja implantados, e um plano sem o campo novo passaria de irrestrito para so-allowlist EM SILENCIO. O fallback que evitaria isso e exatamente o padrao que esconde o nome errado, entao a troca precisa de migracao explicita, nao de default. Enquanto isso o parametro existe e e sobrescrevivel pelo chamador.'
+  type: task
+  severity: medium
+  status: open
+  created_at: '2026-08-06T06:02:07+00:00'
+  updated_at: '2026-08-06T06:02:07+00:00'
+  timeline:
+  - at: '2026-08-06T06:02:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
