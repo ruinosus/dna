@@ -60,6 +60,14 @@ spec:
     type: yaml
     container: sprints
   dep_filters: {}
+  # `sprint_id` is reference-SHAPED and points nowhere: it is this instance's
+  # own key. Its own description already says so in prose ("THE DOC NAME MUST
+  # EQUAL IT") and the sdlc write guard enforces it; until `spec.identifiers`
+  # existed the model had no way to state it, so the gap list carried a row
+  # nobody could ever clear.
+  identifiers:
+    sprint_id:
+      role: self
   schema:
     type: object
     additionalProperties: false

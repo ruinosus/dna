@@ -328,6 +328,111 @@ class TestACompositePointerSaysWhatItPointsAt:
         }
 
 
+class TestTheGapListIsFiniteAndExplained:
+    """The other half of i-108. A reference-SHAPED field with no relation is
+    reported as an ``undeclared`` gap — an honest invitation that, until
+    ``spec.identifiers`` existed, could never be ANSWERED. Two thirds of the 25
+    rows on 06/08/2026 were not references at all (an OAuth ``client_id``, a
+    Stripe customer id, ``Sprint.sprint_id`` naming its own instance), so the
+    list was permanent by construction and a screen could not tell a real
+    broken reference from an id.
+
+    The invariant this class holds: **every remaining row is a row somebody
+    decided to leave**, and the decision is written down."""
+
+    #: The gaps that stay, and why each is NOT answerable today. A row leaves
+    #: this list by being declared (a relation or an identifier) or by the
+    #: reason ceasing to hold — and either way somebody has to come here and
+    #: say so. Three, and the reasons are three different kinds of honest.
+    KNOWN_GAPS = {
+        ("Initiative", "theme_ref"): (
+            "a real reference to a Kind that does not exist. The registered "
+            "`Theme` is the Studio COLOUR PALETTE (`helix-theme`), not the "
+            "Jira-Align strategic Theme/OKR this field means — declaring it "
+            "would draw the same false line the retired name-shape guess drew "
+            "for `StatusReport.insight -> IntelInsight`"
+        ),
+        ("PlanBinding", "tier_id"): (
+            "a real reference the model deliberately declines to declare: "
+            "`kernel.tier()` resolves on `PricingPlan.spec.tier_id` FIRST and "
+            "`spec.aliases[]` second, so a relation honouring only the first "
+            "would be a second rule free to veto a valid alias"
+        ),
+        ("LayerPolicy", "layer_id"): (
+            "not a reference and not expressible as an identifier either: it "
+            "names a layer DIMENSION from a controlled vocabulary, matched by "
+            "string equality. No authority mints it, so `external` would need "
+            "a `system` that does not exist, and it is not this instance's "
+            "key either. A third role is a decision, not a workaround"
+        ),
+    }
+
+    def test_the_gap_list_holds_only_rows_somebody_decided_to_leave(self, graph):
+        gaps = {(u["kind"], u["field"]) for u in graph["unresolved"]
+                if u["origin"] == "undeclared"}
+        unexplained = sorted(gaps - set(self.KNOWN_GAPS))
+        assert unexplained == [], (
+            "reference-shaped fields nobody has classified. Declare a relation "
+            "(it points somewhere), or `spec.identifiers` (it does not), or "
+            f"add it to KNOWN_GAPS with the reason it can be neither: {unexplained}"
+        )
+
+    def test_no_known_gap_row_has_quietly_been_fixed(self, graph):
+        """The direction enumerated tables always miss. A row that gets
+        declared must LEAVE this list, or it slowly becomes a record of a
+        registry that no longer exists — how ``UNDECLARABLE`` came to cite a
+        Kind called ``Tier``."""
+        gaps = {(u["kind"], u["field"]) for u in graph["unresolved"]
+                if u["origin"] == "undeclared"}
+        stale = sorted(set(self.KNOWN_GAPS) - gaps)
+        assert stale == [], f"KNOWN_GAPS rows that are no longer gaps: {stale}"
+
+    def test_the_identifiers_travel_on_the_wire_with_their_reason(self, graph):
+        """A screen must be able to render "this is an id, not a broken
+        reference" without parsing English, so `role` and `system` ride along.
+        Asserted by SHAPE and by two named rows, because a length check would
+        pass on any seventeen."""
+        rows = {(i["kind"], i["field"]): i for i in graph["identifiers"]}
+        assert rows, "no Kind declares an identifier — the block is inert"
+        for key, ident in rows.items():
+            assert ident["role"] in ("self", "external"), key
+            # `system` present as None on a `self`, never absent: a stable key
+            # set is what lets a consumer type this without probing.
+            assert "system" in ident, key
+            assert (ident["system"] is not None) == (ident["role"] == "external"), key
+        assert rows[("Sprint", "sprint_id")]["role"] == "self"
+        assert rows[("PlanBinding", "stripe_customer_id")]["system"] == "stripe"
+
+    def test_the_identifier_count_is_derived_from_the_rows(self, graph):
+        """A counter that reports intentions is the enumeration failure wearing
+        a derivation's name — the defect ``coverage.suppressed`` had."""
+        assert graph["coverage"]["identifiers"] == len(graph["identifiers"])
+
+    def test_no_field_is_both_an_edge_and_an_identifier(self, ports):
+        """One field, one classification — across the WHOLE registry, which is
+        the only place a class Kind and a descriptor Kind are both in hand.
+        ``from_raw`` catches a descriptor declaring both; a hand-written Kind
+        has no ``from_raw`` at all."""
+        from dna.kernel.kinds.identifiers import (
+            identifiers_of,
+            schema_contradictions as identifier_contradictions,
+        )
+
+        problems = []
+        for port in ports:
+            try:
+                schema = port.schema() or {}
+            except Exception:  # pragma: no cover - defensive
+                continue
+            problems += [
+                f"{getattr(port, 'kind', '?')}: {p}"
+                for p in identifier_contradictions(
+                    identifiers_of(port), relations_of(port), schema,
+                )
+            ]
+        assert problems == [], problems
+
+
 class TestTheCoverageProseStaysTrue:
     def test_no_coverage_prose_names_a_retired_kind(self, registered):
         """The limits travel on the wire, and prose is where a rename hides:

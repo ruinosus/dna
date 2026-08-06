@@ -393,6 +393,13 @@ class UserProfileKind(KindBase):
         "can read/write only their own profile via the get_my_profile / "
         "update_my_profile tools — never another user's."
     )
+    # `user_id` is reference-SHAPED and points at no instance: it is the
+    # identity provider's stable subject (an email or a `sub` claim), stamped
+    # server-side from verified claims so a client cannot forge it. There is no
+    # User Kind, today or planned — an identity lives in the IdP.
+    identifiers = {
+        "user_id": {"role": "external", "system": "idp"},
+    }
 
     def dep_filters(self) -> dict[str, str]:
         return {}

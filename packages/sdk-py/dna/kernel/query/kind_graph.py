@@ -95,6 +95,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+from dna.kernel.kinds.identifiers import identifiers_of
 from dna.kernel.kinds.relations import ANY_TARGET, inverse_gaps, relations_of
 
 #: Edge tiers, strongest first. Ordered — consumers rank by index.
@@ -181,6 +182,18 @@ COVERAGE_LIMITS: tuple[dict[str, str], ...] = (
         ),
     },
     {
+        "code": "an_undeclared_gap_can_be_answered",
+        "detail": (
+            "An `undeclared` row is an invitation, and `spec.identifiers` is "
+            "how a Kind ANSWERS it: `role: self` for a field holding the "
+            "instance's own key, `role: external` plus `system` for one minted "
+            "outside DNA. Answered fields leave `unresolved` and appear under "
+            "`identifiers`, with the reason they are not pointers. Before that "
+            "block existed the list carried rows nothing could ever clear, "
+            "which made a finite backlog look like a permanent one."
+        ),
+    },
+    {
         "code": "inverse_is_declaration_only",
         "detail": (
             "`inverse` rows compare two DECLARATIONS, not two instances. A "
@@ -227,6 +240,10 @@ def kind_rows(ports: Iterable[Any]) -> list[dict]:
                     for k, v in dict(_attr(port, "dep_filters") or {}).items()
                 },
                 "relations": relations_of(port),
+                # The other half — the fields that point NOWHERE and say so.
+                # Read here so the undeclared-gap pass can be ANSWERED rather
+                # than only asked.
+                "identifiers": identifiers_of(port),
                 "properties": dict((schema or {}).get("properties") or {}),
             }
         )
@@ -335,9 +352,19 @@ def build_edges(kinds: list[dict]) -> tuple[list[dict], list[dict]]:
 
         # -- the gap: reference-shaped and undeclared --------------------------
         # No target is guessed. The row says a field LOOKS like it points
-        # somewhere and nothing declares where — which is an invitation to
-        # declare a relation, and is why this needs no denylist: a suppression
-        # table exists to stop a false CLAIM, and nothing here is claimed.
+        # somewhere and nothing declares where — an invitation, not a claim,
+        # which is why it needs no denylist: a suppression table exists to stop
+        # a false CLAIM, and nothing here is claimed.
+        #
+        # ``spec.identifiers`` is how the invitation gets ANSWERED. Until
+        # 06/08/2026 it could not be: a Kind could say where a field points and
+        # had no way to say that it points nowhere, so two thirds of this list
+        # were rows nobody could ever clear (an OAuth `client_id`, a Stripe
+        # customer id, `Sprint.sprint_id` naming its own instance). That is not
+        # a suppression — the answer is a DECLARATION, it lives on the Kind
+        # beside the schema, and it carries a machine-readable reason.
+        for field in sorted(k["identifiers"]):
+            claimed.add(field)
         for field in sorted(props):
             if field in claimed:
                 continue
@@ -345,8 +372,8 @@ def build_edges(kinds: list[dict]) -> tuple[list[dict], list[dict]]:
                 unresolved.append({
                     "source": source, "field": field,
                     "origin": "undeclared",
-                    "reason": "reference-shaped field name, and no relation "
-                              "declares what it points at",
+                    "reason": "reference-shaped field name, and neither a "
+                              "relation nor an identifier declares what it is",
                 })
 
     # -- the inverse pairs, across Kinds ---------------------------------------
@@ -394,6 +421,11 @@ def coverage(
         # relation could declare its own addressing.
         "enforced": sum(1 for e in edges if e["enforced"]),
         "kinds_with_relations": sum(1 for k in kinds if k["relations"]),
+        # The answered half of the gap list: fields that DECLARED they point
+        # nowhere. Derived from the declarations, never counted by hand — and
+        # reported beside `unresolved` on purpose, because "21 gaps" and "21
+        # gaps plus 14 answers" describe very different models.
+        "identifiers": sum(len(k["identifiers"]) for k in kinds),
         "unresolved": len(unresolved),
         # The split the single `unresolved` count could not show: 25 rows all
         # of one origin read exactly like 25 broken declarations.
@@ -435,6 +467,15 @@ def build_kind_graph(ports: Iterable[Any]) -> dict[str, Any]:
                 "inverse_of": e["inverse_of"],
             }
             for e in edges
+        ],
+        # The fields that answered the invitation: reference-SHAPED, and
+        # declared to point nowhere. On the wire beside `unresolved` so a
+        # screen can render "this is an id, not a broken reference" instead of
+        # leaving the reader to guess which rows are alarms.
+        "identifiers": [
+            {"kind": r["kind"], **ident.to_wire()}
+            for r in rows
+            for _, ident in sorted(r["identifiers"].items())
         ],
         "unresolved": [
             {

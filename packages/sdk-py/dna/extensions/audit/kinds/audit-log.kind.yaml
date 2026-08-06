@@ -38,6 +38,15 @@ spec:
   storage:
     type: yaml
     container: audit-log
+  identifiers:
+    # A correlation id (UUIDv4) minted by the request pipeline, shared by every
+    # log line of one request — so it is neither this instance's key (many rows
+    # carry the same value) nor a pointer at any instance. `external` because
+    # the minting authority really is outside the instance store, and `system`
+    # names where the value is useful: the request log.
+    request_id:
+      role: external
+      system: http-request
   schema:
     type: object
     required:

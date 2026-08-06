@@ -34,6 +34,13 @@ spec:
   storage:
     type: yaml
     container: tiers
+  # This instance's own key — `kernel.tier()` matches on this field first, then
+  # on `aliases[]`. (That second rule is exactly why `PlanBinding.tier_id`,
+  # which POINTS here, is deliberately left undeclared: a relation resolving on
+  # `tier_id` alone would veto a valid alias the live lookup accepts.)
+  identifiers:
+    tier_id:
+      role: self
   schema:
     type: object
     additionalProperties: false

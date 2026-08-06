@@ -334,6 +334,14 @@ class TenantMembershipKind(KindBase):
     relations = {
         "tenant_slug": {"to": "Tenant", "cardinality": "one", "by": "slug"},
     }
+    # `user_id` is reference-SHAPED and points at no instance: it is the
+    # identity provider's stable subject (a Clerk `sub`, an OIDC `sub`). Not
+    # `self` — this row's name is `{tenant_slug}--{email}`, so the id names a
+    # subject rather than the row (contrast `UserRoleAssignment.user_id`,
+    # whose doc name IS the user_id and is therefore `self`).
+    identifiers = {
+        "user_id": {"role": "external", "system": "idp"},
+    }
 
     def schema(self) -> dict[str, Any] | None:
         return {

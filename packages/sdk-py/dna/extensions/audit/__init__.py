@@ -82,6 +82,16 @@ class UserRoleAssignmentKind(KindBase):
         "truth for require_role decorators when Clerk webhook sync "
         "is enabled."
     )
+    # Reference-SHAPED and pointing at no instance. `self` rather than
+    # `external` even though the VALUE originates in the identity provider,
+    # because the tie-break is "is it THIS instance's key?" and the docstring
+    # answers it outright: "The doc name IS the user_id".
+    # `TenantMembership.user_id` holds the same flavour of value and is
+    # `external` — its doc name is `{tenant}--{email}`, so there the id names a
+    # subject rather than the row.
+    identifiers = {
+        "user_id": {"role": "self"},
+    }
 
     def schema(self) -> dict[str, Any] | None:
         return {

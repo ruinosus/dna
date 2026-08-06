@@ -53,6 +53,14 @@ spec:
   storage:
     type: yaml
     container: agent-catalog
+  identifiers:
+    # An OAuth client identifier, minted by the authorization server. The
+    # schema already refuses a URL-shaped one (that flavour resolves by CIMD,
+    # anchored on the publishing domain) — either way there is no DNA instance
+    # behind the value.
+    client_id:
+      role: external
+      system: oauth
   schema:
     type: object
     additionalProperties: false

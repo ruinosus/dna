@@ -41,6 +41,16 @@ spec:
   storage:
     type: yaml
     container: workspace-scope-grants
+  # NOT an identifier: this genuinely points at a Workspace, addressed by the
+  # target's `workspace_id` field rather than by its name — the identical
+  # declaration `Project.workspace_id` already carries. It sat in the gap list
+  # only because nobody had written it down, and declaring it is what takes
+  # WorkspaceScopeGrant out of the island list.
+  relations:
+    workspace_id:
+      to: Workspace
+      cardinality: one
+      by: workspace_id
   schema:
     type: object
     additionalProperties: false

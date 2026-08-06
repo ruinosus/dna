@@ -55,13 +55,14 @@ class _Port:
     """The smallest thing the projection accepts: a Kind descriptor stub."""
 
     def __init__(self, kind, *, alias="", plane="record", schema=None,
-                 dep_filters=None, relations=None):
+                 dep_filters=None, relations=None, identifiers=None):
         self.kind = kind
         self.alias = alias
         self.plane = plane
         self._schema = schema or {}
         self.dep_filters = dep_filters or {}
         self.relations = relations
+        self.identifiers = identifiers
 
     def schema(self):
         return self._schema
@@ -76,6 +77,7 @@ class _Replay:
         self.plane = row["plane"]
         self.dep_filters = row["dep_filters"]
         self.relations = row["relations"]
+        self.identifiers = row["identifiers"]
         self._schema = {"properties": row["properties"]}
 
     def schema(self):
@@ -271,7 +273,24 @@ class TestTheGapsSurvive:
         rows = kind_rows([_Port("A", schema=_props("thing_ref"))])
         _, unresolved = build_edges(rows)
         assert unresolved[0]["origin"] == "undeclared"
-        assert "no relation declares" in unresolved[0]["reason"]
+        assert "neither a relation nor an identifier" in unresolved[0]["reason"]
+
+    def test_an_identifier_ANSWERS_the_invitation(self):
+        """The half that makes the list finite. A field saying "I am not a
+        reference" (``spec.identifiers``) leaves the gap list — and this is not
+        the retired denylist returning: the gap row asserted no target, so
+        there is no false claim being silenced, and the answer lives on the
+        Kind rather than in a central table that can go stale against a Kind it
+        no longer describes."""
+        rows = kind_rows([_Port(
+            "A", schema=_props("thing_ref"),
+            identifiers={"thing_ref": {"role": "external", "system": "stripe"}},
+        )])
+        edges, unresolved = build_edges(rows)
+        assert unresolved == []
+        # And it does not become an EDGE either: it points nowhere, which is
+        # the entire statement.
+        assert edges == []
 
     def test_the_gap_row_does_NOT_guess_a_target(self):
         """The retired mechanism, refused explicitly. ``KindDefinition.docs ->

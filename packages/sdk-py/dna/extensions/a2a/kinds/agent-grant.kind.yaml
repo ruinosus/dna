@@ -42,6 +42,13 @@ spec:
   storage:
     type: yaml
     container: agent-grants
+  identifiers:
+    # Read from the VERIFIED token, never from the request body. An OAuth
+    # client identifier minted by the authorization server — no DNA instance
+    # behind it.
+    client_id:
+      role: external
+      system: oauth
   schema:
     type: object
     additionalProperties: false

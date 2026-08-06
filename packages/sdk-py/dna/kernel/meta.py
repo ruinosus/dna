@@ -250,6 +250,15 @@ class DeclarativeKindPort:
         from dna.kernel.kinds.relations import normalize_relations
 
         self.relations = normalize_relations(getattr(spec, "relations", None))
+        # ``identifiers``: the fields that point NOWHERE and say so. Same
+        # attribute name as ``KindBase.identifiers``, so ``identifiers_of``
+        # reads a descriptor Kind and a hand-written one through ONE getattr,
+        # normalized again here for the reason its two siblings are.
+        from dna.kernel.kinds.identifiers import normalize_identifiers
+
+        self.identifiers = normalize_identifiers(
+            getattr(spec, "identifiers", None)
+        )
         # ``overlayable_fields`` → ``OVERLAYABLE_FIELDS``, the KindBase
         # attribute name, so both policy ports read a descriptor Kind and a
         # hand-written Kind identically. Undeclared stays None = no per-field

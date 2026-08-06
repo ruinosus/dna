@@ -1101,6 +1101,13 @@ class AgentSessionKind(KindBase):
         # same open-by-design reason, so it reads the same constant.
         "produced_artifacts": _PRODUCES_RELATION,
     }
+    # `session_id` is reference-SHAPED and points at no instance: it is the
+    # CODING TOOL's own session handle (a Claude Code uuid, a Cursor rowid),
+    # carried so a transcript can be traced back to the tool that produced it.
+    # Nothing in DNA mints it and no Kind will ever hold it.
+    identifiers = {
+        "session_id": {"role": "external", "system": "agent-tool"},
+    }
 
     def dep_filters(self) -> dict[str, str]:
         return {

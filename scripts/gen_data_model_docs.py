@@ -425,6 +425,10 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
         "its absence is the point: those were real references the annotation\n"
         "could not express. They are declared relations now, in the table\n"
         "above, with `Enforced` blank.\n\n"
+        "An **undeclared** row can now be ANSWERED rather than only asked —\n"
+        "see the next table. What is left here is what somebody decided to\n"
+        "leave, with the reason recorded in the Kind and in\n"
+        "`tests/test_kind_graph_registry.py`.\n\n"
     )
     if unresolved:
         out.write("| Kind | Field | Origin | Why unresolved |\n"
@@ -432,6 +436,36 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
         for e in unresolved:
             out.write(f"| `{e['source']}` | `{e['field']}` | "
                       f"`{e['origin']}` | {e['reason']} |\n")
+    else:
+        out.write("_None._\n")
+    out.write("\n")
+
+    # ---- the answered half ---------------------------------------------------
+    idents = [
+        (k["kind"], ident)
+        for k in kinds
+        for _, ident in sorted(k["identifiers"].items())
+    ]
+    out.write(f"### Fields that are NOT references ({len(idents)})\n\n")
+    out.write(
+        "The gap list above is short because these fields ANSWERED it. A\n"
+        "reference-shaped name with no relation used to be an invitation with\n"
+        "no way of being accepted, so two thirds of the rows were permanent by\n"
+        "construction. `spec.identifiers` is how a Kind says a field points\n"
+        "nowhere — `self` for the instance's own key, `external` plus the\n"
+        "minting authority for an id that belongs to another system.\n\n"
+        "This is not the retired inference denylist: the gap row asserts no\n"
+        "target, so nothing false is being silenced, and the answer lives on\n"
+        "the Kind beside its schema rather than in a central table that can go\n"
+        "stale against a Kind it no longer describes.\n\n"
+    )
+    if idents:
+        out.write("| Kind | Field | Role | Minted by |\n| --- | --- | --- | --- |\n")
+        for kind, ident in sorted(idents, key=lambda r: (r[0], r[1].name)):
+            system = f"`{ident.system}`" if ident.system else "—"
+            out.write(
+                f"| `{kind}` | `{ident.name}` | `{ident.role}` | {system} |\n"
+            )
     else:
         out.write("_None._\n")
     out.write("\n")

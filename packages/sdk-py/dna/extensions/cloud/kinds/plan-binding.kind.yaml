@@ -71,6 +71,28 @@ spec:
   storage:
     type: yaml
     container: account-plans
+  identifiers:
+    # This instance's own key — `kernel.account_plan()` matches on this field
+    # and the doc name should equal it. One binding covers every Workspace the
+    # account owns.
+    account_id:
+      role: self
+    # Minted by Stripe. dna-cloud writes them; the OSS SDK never calls Stripe,
+    # and no Kind will ever exist for either.
+    stripe_customer_id:
+      role: external
+      system: stripe
+    stripe_subscription_id:
+      role: external
+      system: stripe
+    # ⚠️ `tier_id` is deliberately absent from BOTH blocks, and its own
+    # description says why: it IS a reference to a PricingPlan, so calling it
+    # an identifier would be a lie — and it is not declared as a relation
+    # either, because the live resolver matches `PricingPlan.spec.tier_id`
+    # FIRST and `spec.aliases[]` second. A relation resolving on `tier_id`
+    # alone would be a second rule beside the live one, free to veto a valid
+    # alias. It stays an honest open row in the gap list until the kernel can
+    # resolve by key.
   schema:
     type: object
     additionalProperties: false

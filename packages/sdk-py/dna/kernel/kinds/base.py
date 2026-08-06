@@ -198,6 +198,19 @@ class KindBase:
     # where "declares no reading" and "declares an empty reading" differ): a
     # Kind with no relations points at exactly the same nothing either way.
     relations: Any = None
+    # ---- Identifiers (fields that point NOWHERE, and say so) --------------
+    # ``{field name: Identifier}`` — the other half of ``relations``. A field
+    # whose NAME looks like a reference (``sprint_id``, ``stripe_customer_id``)
+    # and which points at no instance is reported by ``kind_graph`` as an
+    # ``undeclared`` gap; without this block the report could never be
+    # ANSWERED, so the gap list carried rows that were permanent by
+    # construction. ``role: self`` = this instance's own key; ``role:
+    # external`` + ``system`` = minted outside DNA. See
+    # ``dna.kernel.kinds.identifiers``, especially for why this is not the
+    # retired denylist wearing a new coat.
+    #
+    # Empty and absent are the same statement, as with ``relations``.
+    identifiers: Any = None
     # Explicit backend-visibility override; None → the storage-pattern
     # default (see protocols.resolve_visible_in_backend).
     visible_in_backend: bool | None = None

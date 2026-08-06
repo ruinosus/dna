@@ -33,6 +33,13 @@ spec:
   storage:
     type: yaml
     container: roles
+  # This instance's own key — "the doc name SHOULD equal this". What POINTS at
+  # a Role is `Membership.role` / `WorkspaceMembership.role`, declared over
+  # there as `to: Role, by: role_id`. Pointing this field at its own Kind would
+  # be a self-loop that says nothing.
+  identifiers:
+    role_id:
+      role: self
   schema:
     type: object
     additionalProperties: false

@@ -38,6 +38,11 @@ spec:
   storage:
     type: yaml
     container: model-profiles
+  # This instance's own key — `kernel.model_profile()` matches on this field
+  # first, and the doc name should equal it.
+  identifiers:
+    model_id:
+      role: self
   schema:
     type: object
     required:

@@ -66,7 +66,7 @@ than either:
 
 `*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the instance name.
 
-**140 edges: 95 declared, 45 composition-only — of which 30 are ENFORCED at write time.** 29 of 84 Kinds declare at least one relation, and 21 fields are listed below as gaps.
+**141 edges: 96 declared, 45 composition-only — of which 30 are ENFORCED at write time.** 30 of 84 Kinds declare at least one relation, and 3 fields are listed below as gaps.
 
 !!! warning "Declared is not enforced"
 
@@ -327,7 +327,7 @@ erDiagram
     Task }o..|| Actor : "owner (dep)"
 ```
 
-#### `tenant` (3 edges)
+#### `tenant` (4 edges)
 
 ```mermaid
 erDiagram
@@ -336,9 +336,11 @@ erDiagram
     TenantMembership
     Workspace
     WorkspaceMembership
+    WorkspaceScopeGrant
     TenantMembership }o..|| Tenant : "tenant_slug [slug]"
     WorkspaceMembership }o..|| Role : "role [role_id]"
     WorkspaceMembership }o..|| Workspace : "workspace_id [workspace_id]"
+    WorkspaceScopeGrant }o..|| Workspace : "workspace_id [workspace_id]"
 ```
 
 #### `testkit` (18 edges)
@@ -482,6 +484,7 @@ the runtime does not follow it — read `By` for why.
 | `WorkflowEvent` | `transitioned_from` | `WorkflowEvent` | one | `name` | yes |  |  |
 | `WorkspaceMembership` | `role` | `Role` | one | `role_id` |  |  | yes |
 | `WorkspaceMembership` | `workspace_id` | `Workspace` | one | `workspace_id` |  |  |  |
+| `WorkspaceScopeGrant` | `workspace_id` | `Workspace` | one | `workspace_id` |  |  |  |
 
 ### Composition edges (`dep_filters` only)
 
@@ -562,36 +565,57 @@ its absence is the point: those were real references the annotation
 could not express. They are declared relations now, in the table
 above, with `Enforced` blank.
 
+An **undeclared** row can now be ANSWERED rather than only asked —
+see the next table. What is left here is what somebody decided to
+leave, with the reason recorded in the Kind and in
+`tests/test_kind_graph_registry.py`.
+
 | Kind | Field | Origin | Why unresolved |
 | --- | --- | --- | --- |
-| `AgentCatalogEntry` | `client_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `AgentGrant` | `client_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `AgentSession` | `session_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `AuditLog` | `request_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `Initiative` | `theme_ref` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `LayerPolicy` | `layer_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `ModelProfile` | `model_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `PlanBinding` | `account_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `PlanBinding` | `stripe_customer_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `PlanBinding` | `stripe_subscription_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `PlanBinding` | `tier_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `PricingPlan` | `tier_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `Role` | `role_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `Sprint` | `sprint_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `TenantMembership` | `user_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `UserProfile` | `user_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `UserRoleAssignment` | `user_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `Workspace` | `account_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `Workspace` | `workspace_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `WorkspaceMembership` | `identity_oid` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `WorkspaceScopeGrant` | `workspace_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
+| `Initiative` | `theme_ref` | `undeclared` | reference-shaped field name, and neither a relation nor an identifier declares what it is |
+| `LayerPolicy` | `layer_id` | `undeclared` | reference-shaped field name, and neither a relation nor an identifier declares what it is |
+| `PlanBinding` | `tier_id` | `undeclared` | reference-shaped field name, and neither a relation nor an identifier declares what it is |
 
-### Kinds with no reference edge (30)
+### Fields that are NOT references (17)
+
+The gap list above is short because these fields ANSWERED it. A
+reference-shaped name with no relation used to be an invitation with
+no way of being accepted, so two thirds of the rows were permanent by
+construction. `spec.identifiers` is how a Kind says a field points
+nowhere — `self` for the instance's own key, `external` plus the
+minting authority for an id that belongs to another system.
+
+This is not the retired inference denylist: the gap row asserts no
+target, so nothing false is being silenced, and the answer lives on
+the Kind beside its schema rather than in a central table that can go
+stale against a Kind it no longer describes.
+
+| Kind | Field | Role | Minted by |
+| --- | --- | --- | --- |
+| `AgentCatalogEntry` | `client_id` | `external` | `oauth` |
+| `AgentGrant` | `client_id` | `external` | `oauth` |
+| `AgentSession` | `session_id` | `external` | `agent-tool` |
+| `AuditLog` | `request_id` | `external` | `http-request` |
+| `ModelProfile` | `model_id` | `self` | — |
+| `PlanBinding` | `account_id` | `self` | — |
+| `PlanBinding` | `stripe_customer_id` | `external` | `stripe` |
+| `PlanBinding` | `stripe_subscription_id` | `external` | `stripe` |
+| `PricingPlan` | `tier_id` | `self` | — |
+| `Role` | `role_id` | `self` | — |
+| `Sprint` | `sprint_id` | `self` | — |
+| `TenantMembership` | `user_id` | `external` | `idp` |
+| `UserProfile` | `user_id` | `external` | `idp` |
+| `UserRoleAssignment` | `user_id` | `self` | — |
+| `Workspace` | `account_id` | `external` | `idp` |
+| `Workspace` | `workspace_id` | `self` | — |
+| `WorkspaceMembership` | `identity_oid` | `external` | `entra` |
+
+### Kinds with no reference edge (29)
 
 Standalone instances — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `AuditLog`, `Automation`, `Canvas`, `Changelog`, `CognitivePolicy`, `Doc`, `EvalBaseline`, `EvalRun`, `EvidencePolicy`, `Genome`, `Hook`, `HtmlArtifact`, `KindDefinition`, `KindNamespace`, `LayerPolicy`, `Lesson`, `MCPFederation`, `Memory`, `ModelProfile`, `PlanBinding`, `PromptTemplate`, `RemoteAgent`, `Setting`, `Theme`, `UserProfile`, `UserRoleAssignment`, `WorkspaceScopeGrant`
+`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `AuditLog`, `Automation`, `Canvas`, `Changelog`, `CognitivePolicy`, `Doc`, `EvalBaseline`, `EvalRun`, `EvidencePolicy`, `Genome`, `Hook`, `HtmlArtifact`, `KindDefinition`, `KindNamespace`, `LayerPolicy`, `Lesson`, `MCPFederation`, `Memory`, `ModelProfile`, `PlanBinding`, `PromptTemplate`, `RemoteAgent`, `Setting`, `Theme`, `UserProfile`, `UserRoleAssignment`
 
 ## Physical model — the real tables
 

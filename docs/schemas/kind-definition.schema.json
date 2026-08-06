@@ -131,6 +131,26 @@
           },
           "description": "What this Kind POINTS AT — first-class, so a relation is listable without walking properties, its cardinality is declared rather than inferred, and a reciprocal pair can say that it IS one. The relation's NAME is the spec field holding its value, which is what keeps the declaration and the data together and lets the read that VALIDATES a relation be the read that produces its edge. Normalized + enforced by dna.kernel.kinds.relations; exposed on the port as `relations`. Replaces the four mechanisms that answered this question before (`x-dna-ref`, `x-dna-ref-composite`, name-shape inference, and the denylist that existed to silence it). `dep_filters` is NOT one of them and stays separate — it drives prompt composition."
         },
+        "identifiers": {
+          "type": ["object", "null"],
+          "additionalProperties": {
+            "type": "object",
+            "required": ["role"],
+            "additionalProperties": false,
+            "properties": {
+              "role": {
+                "enum": ["self", "external"],
+                "description": "`self` — the field holds THIS instance's own key; it names the instance rather than pointing at another one. `external` — the value is an identifier minted by a system OUTSIDE DNA (an OAuth client_id, a Stripe customer id, an IdP subject), so there is no Kind to point at and `system` says who mints it. Closed at two, for the reason `cardinality` has two words: a third role would be describing a validation rule, and the JSON Schema next door owns those."
+              },
+              "system": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Which authority mints the value — `stripe`, `oauth`, `entra`, `workos`. REQUIRED with `role: external` (that the value comes from somewhere else is already legible in the field name; WHICH somewhere is the part worth declaring) and REFUSED with `role: self` (an instance's own key is minted by this runtime, so naming an authority for it is a belief nothing can honour, and dropping it silently would leave that belief in the file). Free text on purpose: the set of systems a deployment integrates with is open, and a closed enum here would be this package deciding which SaaS a tenant may use."
+              }
+            }
+          },
+          "description": "Fields that point NOWHERE, and say so — the other half of `spec.relations`, and the half that makes the gap list finite. A field whose NAME looks like a reference (`sprint_id`, `stripe_customer_id`) but which points at no instance is reported by the schema graph as an `undeclared` gap; this block is how a Kind ANSWERS that — on itself, beside its schema, with a machine-readable reason. NOT the retired inference denylist: nothing is being suppressed (the gap row asserts no target, so there is no false claim to silence), and the declaration lives on the Kind rather than in a central table that can go stale against a Kind it no longer describes. Declaring the same field as BOTH a relation and an identifier is refused at load — one says it points somewhere, the other says it points nowhere. Normalized + enforced by dna.kernel.kinds.identifiers; exposed on the port as `identifiers`."
+        },
         "is_root": {
           "type": "boolean",
           "default": false,

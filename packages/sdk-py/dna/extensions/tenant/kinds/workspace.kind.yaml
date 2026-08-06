@@ -61,6 +61,22 @@ spec:
   storage:
     type: yaml
     container: workspaces
+  identifiers:
+    # This instance's own key — opaque, GENERATED, immutable, MINTED BY THE
+    # SERVER (decision D5), and the physical value of the `tenant` column on
+    # every row the workspace owns. What POINTS at it is
+    # `Project.workspace_id` / `WorkspaceScopeGrant.workspace_id`, declared
+    # over there as `to: Workspace, by: workspace_id`.
+    workspace_id:
+      role: self
+    # NOT this instance's key and NOT a pointer at any Kind: an account is an
+    # ORGANIZATION in the identity provider, recorded at creation from the
+    # caller's VERIFIED claims (`dna.tenancy.account_id_from_claims`). There is
+    # no Account Kind to point at, today or planned — the useful fact is who
+    # mints it, which is what `system` records.
+    account_id:
+      role: external
+      system: idp
   schema:
     type: object
     additionalProperties: false

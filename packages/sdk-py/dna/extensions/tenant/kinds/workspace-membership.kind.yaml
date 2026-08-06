@@ -49,6 +49,13 @@ spec:
       to: Workspace
       cardinality: one
       by: workspace_id
+  identifiers:
+    # The stable Entra `oid`, bound on first accepted sign-in — the durable key
+    # that post-bind re-auth uses instead of the mutable email. Minted by the
+    # identity provider; there is no DNA Kind behind it.
+    identity_oid:
+      role: external
+      system: entra
   schema:
     type: object
     additionalProperties: false

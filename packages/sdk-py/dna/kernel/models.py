@@ -1088,6 +1088,14 @@ class KindDefinitionSpec:
     # relations is neither second-class nor a second code path — the precedent
     # ``presentation`` set. Replaces ``x-dna-ref`` / ``x-dna-ref-composite``.
     relations: Any = None
+    # ---- Identifiers (what this Kind points NOWHERE with) -----------------
+    # The other half of ``relations``, and the half that makes the gap list
+    # finite: a field whose NAME looks like a reference and which points at no
+    # instance can finally SAY so — ``role: self`` (this instance's own key) or
+    # ``role: external`` + ``system`` (minted outside DNA). Stored NORMALIZED,
+    # through the same validator a builtin descriptor goes through, so a
+    # tenant-authored Kind is neither second-class nor a second code path.
+    identifiers: Any = None
     # ---- Parity fields (i-081): what a CLASS could say and a descriptor could
     # not. Seven attributes existed only on ``KindBase``, so a YAML-declared
     # Kind was structurally second-class: it could not invalidate the schema
@@ -1291,6 +1299,30 @@ class KindDefinitionSpec:
                 "KindDefinition spec.relations contradicts spec.schema: "
                 + "; ".join(contradictions)
             )
+        # ``identifiers`` — the other half: fields that point NOWHERE and say
+        # so. Normalized through ITS shared validator, and checked here for the
+        # contradiction only this function can see, because it holds the schema
+        # AND the relations at once: a field declared as both a relation and an
+        # identifier is two mechanisms answering one question, which is the
+        # disease ``relations`` was written to cure.
+        from dna.kernel.kinds.identifiers import (
+            normalize_identifiers,
+            schema_contradictions as identifier_contradictions,
+        )
+
+        try:
+            identifiers = normalize_identifiers(raw.get("identifiers"))
+        except ValueError as e:
+            raise ValueError(f"KindDefinition spec.{e}") from e
+        id_problems = identifier_contradictions(
+            identifiers, relations, schema,
+            partial=bool(raw.get("schema_fragments") or raw.get("workitem_common")),
+        )
+        if id_problems:
+            raise ValueError(
+                "KindDefinition spec.identifiers contradicts the declaration: "
+                + "; ".join(id_problems)
+            )
         layout_names = raw.get("layout_names")
         if layout_names is not None and (
             not isinstance(layout_names, list)
@@ -1360,6 +1392,7 @@ class KindDefinitionSpec:
             presentation=presentation,
             overlayable_fields=overlayable_fields,
             relations=relations,
+            identifiers=identifiers,
             # Traits + class-parity fields (i-081)
             traits=traits or None,
             is_schema_affecting=bool(raw.get("is_schema_affecting", False)),
