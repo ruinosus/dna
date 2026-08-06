@@ -118,6 +118,10 @@ _VAULT_FIELDS: tuple[str, ...] = (
     "surface_when",
     "revisions",
     "last_surfaced",
+    # s-grafo-2-contradicao: MIF has no place for a structured assertion, and
+    # dropping it on export would export a memory that can no longer be checked
+    # against anything — the round trip would return prose and call it whole.
+    "claims",
 )
 
 #: Default affect + reason stamped on a projected Engram when the source MIF

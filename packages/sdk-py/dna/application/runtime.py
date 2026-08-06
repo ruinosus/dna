@@ -1914,6 +1914,7 @@ async def remember_impl(
     owner: str = "mcp",
     tenant: str | None = None,
     *,
+    claims: list[dict[str, Any]] | None = None,
     memory_scope: str = "workspace",
     oid: str | None = None,
     family: str | None = None,
@@ -1921,6 +1922,14 @@ async def remember_impl(
     """Persist a memory Kind (deterministically enriched + indexed) — mirrors
     ``dna memory remember``. Written into the tenant overlay when ``tenant`` is
     set (the auth bridge injects it).
+
+    ``claims`` are this memory's structured assertions
+    (``[{subject?, predicate, object?, polarity?}]``) — what makes it comparable
+    to another memory for CONTRADICTION and not only for lexical repetition
+    (s-grafo-2-contradicao). Validated inside the verb
+    (:func:`dna.memory.contradiction.validate_claims`), so a malformed claim
+    comes back as a refusal at whichever door sent it rather than as a stored
+    field the detector then quietly ignores.
 
     ``memory_scope="personal"`` writes to the caller's OWN private partition
     (``personal:<oid>``, oid server-derived) — "remember privately", never shared
@@ -1942,6 +1951,8 @@ async def remember_impl(
         )
         if tags:
             spec["tags"] = list(tags)
+    if claims is not None:
+        spec["claims"] = claims
     out = await remember(live.kernel, sc, kind=kind, name=name, spec=spec, tenant=tenant)
     return {"kind": out["kind"], "name": out["name"], "indexed": out["indexed"]}
 

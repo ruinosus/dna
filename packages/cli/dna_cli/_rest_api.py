@@ -2114,6 +2114,7 @@ def build_app(
         tags: list[str] | None = Body(default=None, embed=True),
         affect: str = Body(default="triumph", embed=True),
         owner: str = Body(default="portal", embed=True),
+        claims: list[dict[str, Any]] | None = Body(default=None, embed=True),
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
     ) -> dict[str, Any]:
@@ -2125,6 +2126,12 @@ def build_app(
         deterministic ``_slug(summary)`` name it returns is the id the portal's
         ``DELETE /v1/memories/{name}`` targets to undo it.
 
+        ``claims`` — ``[{subject?, predicate, object?, polarity?}]`` — are the
+        memory's structured assertions, what makes it comparable to another
+        memory for CONTRADICTION (s-grafo-2-contradicao) rather than only for
+        lexical repetition. A malformed claim is a **400** naming the offending
+        index and field; nothing is written.
+
         PLAN-GATED (i-042): the same axes the MCP ``remember`` tool enforces —
         ``memory`` family, ``memory_mode='write'``, rate + daily cap — via the
         SAME shared core. 403 for a read-only tier, 429 over quota."""
@@ -2134,10 +2141,16 @@ def build_app(
                 status_code=400, detail="summary is required and cannot be empty"
             )
         await _plan_gate(request, tenant=tenant, family="memory", memory_op="write")
-        return await remember_impl(
-            await _live(), text, scope, area=area, affect=affect,
-            tags=tags, owner=owner, tenant=tenant,
-        )
+        try:
+            return await remember_impl(
+                await _live(), text, scope, area=area, affect=affect,
+                tags=tags, owner=owner, claims=claims, tenant=tenant,
+            )
+        except ValueError as exc:
+            # A malformed claim is the CALLER's mistake, so it must read as one:
+            # 400 with the verb's own message (which names claims[i].field),
+            # never a 500 that tells the caller nothing to fix.
+            raise HTTPException(status_code=400, detail=str(exc)) from None
 
     # The body is read RAW (see the handler) so the byte bound is enforced before
     # anything is buffered into a model — which would otherwise leave the request
