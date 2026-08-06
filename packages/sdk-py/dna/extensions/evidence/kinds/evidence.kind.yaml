@@ -67,6 +67,20 @@ spec:
         type: string
       document_ref:
         type: string
+        description: >-
+          `Kind:name` of the document whose save triggered this event — the
+          canonical Kind name and the document name, colon-joined. MEASURED,
+          not inferred — the one runtime producer is the kernel evidence
+          `post_save` handler (`dna/kernel/write/evidence.py`), which writes
+          `f"{kind}:{name}"` straight from the HookContext, and the deleted
+          TypeScript twin wrote the identical form (its test asserted
+          `EvalRun:run1`). The slash-shaped values in some Python test fixtures
+          (`Story/s-x`, `eval-evalrun/my-run`) and the older builder docstring
+          are inert inputs to a pass-through parameter and are NOT the format.
+          Nothing dereferences it today. NOT declarable with `x-dna-ref`, which
+          resolves a bare document NAME — this is the same composite as
+          `Comment.target_ref` and needs parsing, not a lookup. Absent on the
+          gaia event shape, which carries source_kind/source_name instead.
       snapshot:
         type: object
         additionalProperties: true

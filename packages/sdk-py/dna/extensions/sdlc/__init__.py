@@ -517,7 +517,18 @@ class FeatureKind(KindBase):
                 },
                 "created_at": {"type": "string", "format": "date-time"},
                 "updated_at": {"type": "string", "format": "date-time"},
-                "sprint_ref": {"type": "string"},
+                # Declared (i-040) since 2026-08-06: the identifier this has
+                # always carried IS a Sprint document's name. See
+                # kinds/sprint.kind.yaml for what the Kind deliberately omits.
+                "sprint_ref": {
+                    "type": "string",
+                    "description": (
+                        "The Sprint this Feature is committed to — the "
+                        "Sprint document's NAME, which is also its "
+                        "sprint_id (e.g. '2026-Q2-S2')."
+                    ),
+                    "x-dna-ref": "Sprint",
+                },
                 "time_tracking": {
                     "type": "object",
                     "additionalProperties": False,

@@ -27,6 +27,9 @@ _KIND = "Engram"
 
 # After the Helix guards (10/20/30) — independent rules, stable order.
 PRIORITY_BITEMPORAL = 40
+PRIORITY_SPRINT_IDENTITY = 50
+
+_SPRINT_KIND = "Sprint"
 
 
 async def bitemporal_engram_guard(ctx: PreSaveContext) -> None:
@@ -60,9 +63,52 @@ async def bitemporal_engram_guard(ctx: PreSaveContext) -> None:
             )
 
 
+async def sprint_identity_guard(ctx: PreSaveContext) -> None:
+    """A Sprint's ``spec.sprint_id`` MUST equal its document name.
+
+    ``Story.sprint_ref`` / ``Feature.sprint_ref`` are declared references
+    (``x-dna-ref: Sprint``), and a declared reference resolves by DOCUMENT
+    NAME. ``sprint_id`` restates that name inside the spec so it is queryable
+    and projectable — which means the two can disagree, and the day they do the
+    Kind has two identities: one the graph resolves by and one every human
+    reads. ``PricingPlan.tier_id`` shipped that ambiguity as a "SHOULD" and it
+    is exactly why ``PlanBinding.tier_id`` cannot be declared today.
+
+    So this VETOES rather than warns, and it vetoes at the one chokepoint every
+    write passes through (CLI, REST, MCP ``write_document``, seeds) — a rule
+    enforced only where somebody remembered to call it is a rule that is green
+    for the wrong reason.
+
+    Absent ``sprint_id`` is not this guard's business: the schema already
+    requires it, and duplicating that check here would make two places disagree
+    about the message.
+    """
+    if ctx.kind != _SPRINT_KIND or not isinstance(ctx.raw, dict):
+        return
+    spec = ctx.raw.get("spec")
+    if not isinstance(spec, dict):
+        return
+    sprint_id = spec.get("sprint_id")
+    if not isinstance(sprint_id, str) or not sprint_id:
+        return  # schema's job, not ours
+    if sprint_id != ctx.name:
+        raise ValueError(
+            f"Sprint '{ctx.name}': spec.sprint_id is {sprint_id!r} but the "
+            f"document name is {ctx.name!r}. They must match — Story.sprint_ref "
+            f"and Feature.sprint_ref resolve this Sprint by DOCUMENT NAME, so a "
+            f"mismatch makes the sprint reachable under one identity and "
+            f"queryable under the other. Rename the document to "
+            f"{sprint_id!r}, or set sprint_id to {ctx.name!r}."
+        )
+
+
 def register_write_guards(kernel: Any) -> None:
     """Wire the SDLC write guards as ``pre_save`` veto hooks (idempotent)."""
     kernel.hooks.on_veto(
         "pre_save", bitemporal_engram_guard,
         priority=PRIORITY_BITEMPORAL, key="sdlc.bitemporal-engram",
+    )
+    kernel.hooks.on_veto(
+        "pre_save", sprint_identity_guard,
+        priority=PRIORITY_SPRINT_IDENTITY, key="sdlc.sprint-identity",
     )

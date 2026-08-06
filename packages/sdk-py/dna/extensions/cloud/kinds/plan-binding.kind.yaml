@@ -87,8 +87,19 @@ spec:
           parsed.
       tier_id:
         type: string
-        description: The assigned Tier's id, e.g. free, pro, enterprise. Resolved
-          to caps via kernel.tier(tier_id) — never a literal in code.
+        description: >-
+          The assigned PricingPlan's id, e.g. free, pro, enterprise. Resolved to
+          caps via kernel.tier(tier_id) — never a literal in code. This IS a
+          reference, and it is deliberately NOT declared with `x-dna-ref` — the
+          resolver matches `PricingPlan.spec.tier_id` first and
+          `PricingPlan.spec.aliases[]` second, in the `_lib` scope, and NEVER
+          the document name, while `x-dna-ref` resolves by document name only.
+          Declaring it would install a SECOND resolution rule that can disagree
+          with the live one (an alias-keyed binding is valid data the write path
+          would then veto). It is a keyed reference, the same shape as
+          `Organization.plan_ref`. NOTE the Kind was called `Tier` until the
+          metering rename (dna 0.29.0); this description named the dead Kind
+          until 2026-08-06.
       source:
         type: string
         description: Where the assignment came from, e.g. stripe / manual / trial.

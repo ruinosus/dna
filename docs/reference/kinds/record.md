@@ -798,7 +798,7 @@ An Evidence document is an immutable audit event record. Captures the event type
 | `author` | string |  |  |
 | `captured_at` | string |  |  |
 | `created_at` | string |  |  |
-| `document_ref` | string |  |  |
+| `document_ref` | string |  | `Kind:name` of the document whose save triggered this event — the canonical Kind name and the document name, colon-joined. MEASURED, not inferred — the one runtime producer is the kernel evidence `post_save` handler (`dna/kernel/write/evidence.py`), which writes `f"{kind}:{name}"` straight from the HookContext, and the deleted TypeScript twin wrote the identical form (its test asserted `EvalRun:run1`). The slash-shaped values in some Python test fixtures (`Story/s-x`, `eval-evalrun/my-run`) and the older builder docstring are inert inputs to a pass-through parameter and are NOT the format. Nothing dereferences it today. NOT declarable with `x-dna-ref`, which resolves a bare document NAME — this is the same composite as `Comment.target_ref` and needs parsing, not a lookup. Absent on the gaia event shape, which carries source_kind/source_name instead. |
 | `event_type` | string | yes | Um de: `document_created`, `document_modified`, `document_deleted`, `eval_run_completed`, `baseline_pinned`, `finding_created`, `finding_status_changed`, `custom`, `gaia.assessment.started`, `gaia.assessment.completed`, `gaia.assessment.failed`, `gaia.pillar.completed`, `gaia.pillar.threshold_breach`, `gaia.report.issued`. |
 | `notes` | string |  |  |
 | `payload` | object |  |  |
@@ -845,7 +845,7 @@ A Feature is a shippable unit. It implements one or more UseCases, decomposes in
 | `release_target` | string |  |  |
 | `reporter` | string |  |  |
 | `so_that` | string |  | Benefit: 'so that <benefit>'. INVEST/user-story format slot. |
-| `sprint_ref` | string |  |  |
+| `sprint_ref` | string |  | The Sprint this Feature is committed to — the Sprint document's NAME, which is also its sprint_id (e.g. '2026-Q2-S2'). |
 | `status` | string | yes | Um de: `discovery`, `in-development`, `done`, `cancelled`, `blocked`. |
 | `stories` | array |  |  |
 | `time_tracking` | object |  |  |
@@ -935,7 +935,7 @@ An IntelInsight is the dissemination unit of the intelligence layer — a ranked
 | `fact` | string | yes | What happened / the cited fact. |
 | `pirs` | array |  | Which Priority Intelligence Requirements this insight matches. |
 | `score` | number | yes | Actionability score (0..1). The ranker sets this; the digest suppresses insights scoring below the source's threshold. |
-| `source_ref` | string \| null |  | The IntelSource name this insight came from. |
+| `source_ref` | string \| null |  | The IntelSource name this insight came from. DECLARED (i-040) — the engine already stamps the source DOCUMENT NAME here, which is exactly what `x-dna-ref` resolves by, so the declaration types a relation that was already true instead of asking any producer to write differently. Null/absent stays legal — an optional reference that is simply unset is not a dangling one. |
 | `state` | string | yes | The feedback disposition — the reader's response to the insight. Um de: `new`, `actioned`, `dismissed`, `snoozed`. |
 | `title` | string | yes | The insight headline. |
 | `why` | string \| null |  | Why it matters to this source. |
@@ -1288,7 +1288,7 @@ An AccountPlan maps one DNA Cloud BILLING ACCOUNT to its current Tier as GLOBAL 
 | `status` | string |  | The billing status of the assignment, e.g. active / past_due / canceled. |
 | `stripe_customer_id` | string |  | The Stripe customer id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
 | `stripe_subscription_id` | string |  | The Stripe subscription id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
-| `tier_id` | string | yes | The assigned Tier's id, e.g. free, pro, enterprise. Resolved to caps via kernel.tier(tier_id) — never a literal in code. |
+| `tier_id` | string | yes | The assigned PricingPlan's id, e.g. free, pro, enterprise. Resolved to caps via kernel.tier(tier_id) — never a literal in code. This IS a reference, and it is deliberately NOT declared with `x-dna-ref` — the resolver matches `PricingPlan.spec.tier_id` first and `PricingPlan.spec.aliases[]` second, in the `_lib` scope, and NEVER the document name, while `x-dna-ref` resolves by document name only. Declaring it would install a SECOND resolution rule that can disagree with the live one (an alias-keyed binding is valid data the write path would then veto). It is a keyed reference, the same shape as `Organization.plan_ref`. NOTE the Kind was called `Tier` until the metering rename (dna 0.29.0); this description named the dead Kind until 2026-08-06. |
 | `updated_at` | string |  | When dna-cloud last wrote this assignment (ISO 8601). |
 
 ## Postmortem
@@ -1373,7 +1373,7 @@ A Project is the multi-repo development-space container — the key Kind of the 
 | --- | --- | --- | --- |
 | `board_scope` | string \| null |  | The SDLC scope this project owns (convention <slug>-development). Where its Stories / Issues / Epics live. |
 | `created_at` | string \| null |  | ISO-8601 timestamp, stamped by the writer (not defaulted here). |
-| `intel_source_refs` | array |  | IntelSource names the intelligence layer observes for this project (the sources feeding its insight stream). |
+| `intel_source_refs` | array |  | IntelSource names the intelligence layer observes for this project (the sources feeding its insight stream). DECLARED (i-040) — every item resolves by DOCUMENT NAME, the same key `org_ref` and `repo_refs` above already use. |
 | `name` | string | yes | The project's canonical name. The doc name SHOULD equal this. |
 | `org_ref` | string \| null |  | The Organization (name) this project belongs to. Null while unassigned. |
 | `repo_refs` | array |  | Repo names attached to this project (the N—N edge — a repo may appear on multiple projects). The edge lives on the Project side only. |
@@ -1716,6 +1716,24 @@ A Spike is a time-boxed technical investigation. ONE question + finite time budg
 | `title` | string | yes |  |
 | `updated_at` | string |  |  |
 
+## Sprint
+
+- **Alias:** `sdlc-sprint`
+- **apiVersion:** `github.com/ruinosus/dna/sdlc/v1`
+- **Plane:** record
+
+A Sprint is the timebox that `Story.sprint_ref` and `Feature.sprint_ref` name — an identifier (`2026-Q2-S2`), optionally a display name, a start/end date and a state (planned/active/completed). The document NAME is the key the two references resolve by. Membership is NOT stored here — it is the inverse of `sprint_ref` and is derived from the declared reference, so there is exactly one place a story's sprint is written. Goal, capacity and velocity are deliberately absent until a consumer exists for them.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `ends_on` | string \| null |  | Last day of the timebox (ISO 8601 date). Optional, same reason as starts_on. |
+| `name` | string \| null |  | Human display name, e.g. 'Sprint 2 — Q2 2026'. Editable; the identity is sprint_id / the doc name, never this. |
+| `sprint_id` | string | yes | Canonical sprint identifier, e.g. '2026-Q2-S2'. THE DOC NAME MUST EQUAL IT — `Story.sprint_ref` / `Feature.sprint_ref` are declared references and resolve by document name, so a doc whose name and sprint_id disagree is reachable under one of them only. Enforced on write by the sdlc write guards, not left to convention. |
+| `starts_on` | string \| null |  | First day of the timebox (ISO 8601 date). Optional — a Sprint backfilled to make an existing free-form label resolvable should leave it null rather than invent it. |
+| `state` | string |  | Where the timebox is in its life. Kept as data rather than derived from the dates because the dates are optional and because a sprint can be closed early — the same three-state vocabulary Jira (future/active/closed) and Azure DevOps iterations use. Um de: `planned`, `active`, `completed`. |
+
 ## StatusReport
 
 - **Alias:** `sdlc-status-report`
@@ -1779,7 +1797,7 @@ A Story is a granular task: one developer, one PR, one estimate. Lists acceptanc
 | `reporter` | string |  | Actor who filed it (vs `owner` who works on it). |
 | `so_that` | string |  | Benefit: 'so that <benefit>'. INVEST/user-story format slot. |
 | `spec_refs` | array |  | Spec docs (kind=Spec) this Story implements. M:N linkage between the planning axis (Story) and the design axis (Spec) — Jira/Confluence-shaped. |
-| `sprint_ref` | string |  | Sprint identifier (free-form, e.g. '2026-Q2-S2'). |
+| `sprint_ref` | string |  | The Sprint this Story is committed to — the Sprint document's NAME, which is also its sprint_id (e.g. '2026-Q2-S2'). DECLARED (i-040), so the write path resolves it instead of trusting a label. The value SHAPE did not change on 2026-08-06; a `Sprint` Kind simply started existing for the identifier to name. |
 | `status` | string | yes | Um de: `needs-triage`, `todo`, `in-progress`, `review`, `done`, `blocked`, `deferred`, `cancelled`. |
 | `time_tracking` | object |  |  |
 | `time_tracking.logged_h` | number |  |  |
@@ -1932,7 +1950,6 @@ A Workspace is the DNA tenancy root — a first-class, named, DNA-native space t
 | `created_at` | string | yes | When the workspace was created (ISO 8601). |
 | `created_by` | string | yes | Email of the identity that created the workspace (its first Owner). |
 | `name` | string | yes | Human display name, e.g. "Barnabé Labs". Editable. |
-| `plan_ref` | string \| null |  | DEPRECATED, never read. Billing is per ACCOUNT, so the tier resolves as workspace → account_id → AccountPlan via kernel.account_plan(account_id) — never from a per-workspace field. Retained only so pre-existing docs carrying it still validate; writing it influences nothing. |
 | `slug` | string |  | URL-safe handle (e.g. for `/w/<slug>` links). Editable; distinct from the immutable workspace_id. |
 | `workspace_id` | string | yes | Opaque, GENERATED, immutable id — the physical value of the `tenant` column on every row this workspace owns. Never changes (renaming edits name/slug, never this). The doc name SHOULD equal it. MINTED BY THE SERVER (decision D5); a client-supplied id is refused, which is what makes workspace takeover impossible by construction. Never derived from an Azure `tid`. |
 

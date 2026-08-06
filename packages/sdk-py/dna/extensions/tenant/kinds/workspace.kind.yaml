@@ -23,6 +23,19 @@
 # per-workspace `WorkspacePlan` is a write-block tombstone in
 # `Kernel._REMOVED_KINDS`.
 #
+# `plan_ref` IS GONE (fix/kinds-referencias-honestas, 2026-08-06). It carried
+# its own epitaph — "DEPRECATED, never read" — and a sweep of BOTH repos
+# confirmed the epitaph: no code branches on it, no writer sets it
+# (`create_workspace_impl`, `seed_workspace_one.py`), the generated clients and
+# the dna-cloud portal never name it, and this Kind's own `summary`/`describe`
+# exclude it. A field that only a schema knows about is not compatibility, it is
+# a reference-shaped noun the model kept advertising.
+# ⚠️ THE ONE COST, stated: this schema is `additionalProperties: false`, so a
+# PRE-EXISTING document that still carries `plan_ref` can no longer be REWRITTEN
+# (validation is write-time only — `validate_on_parse` is not set, so reading
+# such a document is unaffected and its value keeps influencing nothing). Strip
+# the key before the next write. No document in either repo carries one.
+#
 # Workspaces live in the `_lib` scope (`workspaces/<workspace_id>.yaml`) —
 # Workspace is GLOBAL (the tenancy boundary lives above any single workspace,
 # exactly like AccountPlan) and NOT inheritable.
@@ -101,15 +114,6 @@ spec:
           second charge and never needs a second write. Null = no resolvable
           account, which resolves to the Free floor (fail-closed) — never another
           account's tier, never a paid default.
-      plan_ref:
-        type:
-        - string
-        - 'null'
-        description: DEPRECATED, never read. Billing is per ACCOUNT, so the tier
-          resolves as workspace → account_id → AccountPlan via
-          kernel.account_plan(account_id) — never from a per-workspace field.
-          Retained only so pre-existing docs carrying it still validate; writing
-          it influences nothing.
   describe: '{name} ({workspace_id})'
   summary:
     workspace_id: ''

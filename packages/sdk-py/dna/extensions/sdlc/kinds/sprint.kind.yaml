@@ -1,0 +1,123 @@
+# Sprint — the timebox `Story.sprint_ref` / `Feature.sprint_ref` point at.
+#
+# WHY IT EXISTS AT ALL. Both fields shipped as `{"type": "string"}` described
+# as "Sprint identifier (free-form, e.g. '2026-Q2-S2')". The `_ref` suffix
+# promised a document; no `Sprint` Kind existed, so the schema graph reported
+# them as reference-shaped-and-unresolvable and every consumer got a bare label
+# it could group by and nothing else. Founder decision (2026-08-06): the name
+# was not the lie — the ABSENCE was. Sprint becomes a Kind, and the two fields
+# become declared references (`x-dna-ref: Sprint`).
+#
+# THE DOC NAME IS THE KEY, and that is what makes this compatible.
+# `x-dna-ref` resolves a target by DOCUMENT NAME, so the doc name IS the
+# identifier the two fields already carry: a Story holding
+# `sprint_ref: 2026-Q2-S2` resolves the moment a Sprint document NAMED
+# `2026-Q2-S2` exists. `sprint_id` restates it inside the spec for the same
+# reason `PricingPlan.tier_id` and `Workspace.workspace_id` do — the name is
+# addressable, the field is queryable — but unlike those two, NOTHING here
+# resolves by the field. One key, one truth: the name.
+#
+# WHAT IS DELIBERATELY ABSENT, and why (a new Kind is a contract; a field
+# nobody writes is debt):
+#
+#  * `goal` — the Scrum Guide's defining artifact, and still out. No consumer
+#    exists. It is the first field to add the day a board surface renders it.
+#  * `capacity` / `velocity` / `committed_points` — planning arithmetic this
+#    repo does not do anywhere. Inventing the fields would invite invented data.
+#  * `stories` / `features` (the item list) — this is the INVERSE of
+#    `sprint_ref`, and storing it would be a second truth that can disagree
+#    with the first. The edge table already derives it from the declared
+#    reference; a query answers "what is in this sprint", not a field.
+#  * `board` / `project` — a Sprint belongs to a scope by living in it. There is
+#    no cross-scope sprint to disambiguate yet.
+#
+# `starts_on` / `ends_on` / `state` are OPTIONAL on purpose. The point of the
+# Kind is to make an existing free-form identifier resolvable; requiring a
+# timebox would force whoever backfills a Sprint doc for a label like
+# `2026-Q2-S2` to invent two dates, and an invented date is worse than an
+# absent one. A Sprint that only knows its own name is thin — and honest.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: sprint
+spec:
+  target_api_version: github.com/ruinosus/dna/sdlc/v1
+  target_kind: Sprint
+  alias: sdlc-sprint
+  origin: github.com/ruinosus/dna/sdlc
+  tenant_scope: global
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  scope_inheritable: false
+  storage:
+    type: yaml
+    container: sprints
+  dep_filters: {}
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+    - sprint_id
+    properties:
+      sprint_id:
+        type: string
+        description: Canonical sprint identifier, e.g. '2026-Q2-S2'. THE DOC
+          NAME MUST EQUAL IT — `Story.sprint_ref` / `Feature.sprint_ref` are
+          declared references and resolve by document name, so a doc whose name
+          and sprint_id disagree is reachable under one of them only. Enforced
+          on write by the sdlc write guards, not left to convention.
+      name:
+        type:
+        - string
+        - 'null'
+        description: Human display name, e.g. 'Sprint 2 — Q2 2026'. Editable;
+          the identity is sprint_id / the doc name, never this.
+      starts_on:
+        type:
+        - string
+        - 'null'
+        format: date
+        description: First day of the timebox (ISO 8601 date). Optional — a
+          Sprint backfilled to make an existing free-form label resolvable
+          should leave it null rather than invent it.
+      ends_on:
+        type:
+        - string
+        - 'null'
+        format: date
+        description: Last day of the timebox (ISO 8601 date). Optional, same
+          reason as starts_on.
+      state:
+        type: string
+        enum:
+        - planned
+        - active
+        - completed
+        default: planned
+        description: Where the timebox is in its life. Kept as data rather than
+          derived from the dates because the dates are optional and because a
+          sprint can be closed early — the same three-state vocabulary Jira
+          (future/active/closed) and Azure DevOps iterations use.
+  describe: '{sprint_id}'
+  summary:
+    sprint_id: ''
+    name: ''
+    state: planned
+    starts_on: ''
+    ends_on: ''
+  graph_style:
+    fill: '#0EA5E9'
+    stroke: '#0284C7'
+    text_color: '#fff'
+  ascii_icon: 🏃
+  display_label: Sprints
+  docs: A Sprint is the timebox that `Story.sprint_ref` and
+    `Feature.sprint_ref` name — an identifier (`2026-Q2-S2`), optionally a
+    display name, a start/end date and a state (planned/active/completed).
+    The document NAME is the key the two references resolve by. Membership is
+    NOT stored here — it is the inverse of `sprint_ref` and is derived from
+    the declared reference, so there is exactly one place a story's sprint is
+    written. Goal, capacity and velocity are deliberately absent until a
+    consumer exists for them.

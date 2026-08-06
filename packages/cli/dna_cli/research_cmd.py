@@ -126,7 +126,14 @@ def cmd_show(name: str, scope: str | None, tenant: str | None, full: bool) -> No
     click.echo(f"  confidence:   {spec.get('overall_confidence', '?')}")
     click.echo(f"  conducted_by: {spec.get('conducted_by', '?')}")
     click.echo(f"  conducted_at: {spec.get('conducted_at', '?')}")
-    click.echo(f"  scope_ref:    {spec.get('scope_ref', '?')}")
+    # `scope_ref` was renamed to `scope` (2026-08-06). Read both so a document
+    # written before the rename still shows its scope instead of a bare '?' —
+    # the schema is additionalProperties:true, so those documents are valid,
+    # not legacy junk to be punished for existing.
+    click.echo(
+        f"  scope:        "
+        f"{spec.get('scope') or spec.get('scope_ref') or '?'}"
+    )
     click.echo(f"  visibility:   {spec.get('visibility', 'scope-private')}")
     sup = spec.get("superseded_by")
     if sup:

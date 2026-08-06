@@ -178,7 +178,12 @@ spec:
         format: date-time
       sprint_ref:
         type: string
-        description: Sprint identifier (free-form, e.g. '2026-Q2-S2').
+        description: The Sprint this Story is committed to — the Sprint
+          document's NAME, which is also its sprint_id (e.g. '2026-Q2-S2').
+          DECLARED (i-040), so the write path resolves it instead of trusting
+          a label. The value SHAPE did not change on 2026-08-06; a `Sprint`
+          Kind simply started existing for the identifier to name.
+        x-dna-ref: Sprint
       time_tracking:
         type: object
         additionalProperties: false
