@@ -48,7 +48,7 @@ dna eval pin [OPTIONS] RUN_NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--label` | Why this run is the reference. |
-| `--name` | Baseline document name (default: baseline-<suite>). |
+| `--name` | Baseline instance name (default: baseline-<suite>). |
 | `--scope` | Scope to write in (default: resolved from the source). |
 
 ## `dna eval run`
@@ -73,10 +73,10 @@ dna eval run [OPTIONS] SUITE
 
 | Option | Description |
 | --- | --- |
-| `--baseline` | Compare against the EvalBaseline document NAME; exit 1 on regressions. |
+| `--baseline` | Compare against the EvalBaseline instance NAME; exit 1 on regressions. |
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable output. |
-| `--save` | Persist the result as an EvalRun document. |
+| `--save` | Persist the result as an EvalRun instance. |
 | `--scope` | Scope to run in (default: resolved from the source). |
 
 ## `dna eval show`

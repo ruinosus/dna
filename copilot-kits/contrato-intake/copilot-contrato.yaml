@@ -24,7 +24,7 @@ spec:
       from_steps: true
       static:
       - title: Extrair do anexo
-        message: Extraia os campos do ContratoDeServico do documento anexado,
+        message: Extraia os campos do ContratoDeServico da instância anexado,
           propondo cada um no rascunho com o trecho que o sustenta — eu reviso
           antes de gravar.
   # F6.a — MCP EXTRA com DE-PARA: o vocabulário do bloco `tools` é o
@@ -45,7 +45,7 @@ spec:
   surfaces:
   - name: contrato-intake
     state_key: document_draft
-    tool_name: update_document_draft
+    tool_name: update_instance_draft
     canvas_keys:
     - document_draft
     - document_kind

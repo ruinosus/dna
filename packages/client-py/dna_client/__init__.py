@@ -2,7 +2,7 @@
 (``dna api serve``).
 
 The spec-parity twin of the TypeScript ``dna-client``: both cover the SAME read
-surface, derived from the SAME OpenAPI document (``docs/openapi.json``, dumped
+surface, derived from the SAME OpenAPI instance (``docs/openapi.json``, dumped
 from the FastAPI app by ``scripts/dump_openapi.py``). The TS client generates its
 types from that spec with ``openapi-typescript``; this Python client is a
 hand-thin ``httpx`` wrapper whose method surface + query params are derived from

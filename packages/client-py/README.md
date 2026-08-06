@@ -2,7 +2,7 @@
 
 The **official Python client for the DNA REST API** (`dna api serve`).
 Spec-parity twin of the TypeScript [`dna-client`](https://www.npmjs.com/package/dna-client):
-both cover the same surface, derived from the same OpenAPI document
+both cover the same surface, derived from the same OpenAPI instance
 (`docs/openapi.json`, dumped from the FastAPI app) — so consumers stop
 hand-rolling HTTP.
 

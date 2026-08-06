@@ -10,14 +10,14 @@ The derived reference graph (declared relations).
 
 ## `dna graph backfill`
 
-Compute edges for documents that predate the producer.
+Compute edges for instances that predate the producer.
 
-For each declared ``(Kind, field)`` pair, ask the store for the documents
+For each declared ``(Kind, field)`` pair, ask the store for the instances
 whose ``spec`` HAS that field — on Postgres a JSONB key-existence query the
-``dna_docs_spec_gin_idx`` index serves directly. That is a handful of
-queries, not a walk over every document.
+``dna_insts_spec_gin_idx`` index serves directly. That is a handful of
+queries, not a walk over every instance.
 
-A document whose references cannot be resolved COMPLETELY (a read failed
+An instance whose references cannot be resolved COMPLETELY (a read failed
 part-way) is left alone and its scope is reported as pending: a partial
 edge set stored as if it were whole is a graph that lies while looking
 finished, and the screen can label an absent graph but not a lying one.
@@ -37,7 +37,7 @@ dna graph backfill [OPTIONS]
 
 ## `dna graph refs`
 
-"What points at this document?" — the same walk the REST face serves.
+"What points at this instance?" — the same walk the REST face serves.
 
 ```text
 dna graph refs [OPTIONS] KIND_NAME NAME
@@ -55,7 +55,7 @@ dna graph refs [OPTIONS] KIND_NAME NAME
 | Option | Description |
 | --- | --- |
 | `--depth` | Walk further; clamped by DNA_GRAPH_MAX_DEPTH. _(default: `1`)_ |
-| `--direction` | 'in' = what points AT this document (the product question). _(default: `in`)_ |
+| `--direction` | 'in' = what points AT this instance (the product question). _(default: `in`)_ |
 | `--help` | Show this message and exit. |
 | `--json` |  |
 | `--scope` |  |

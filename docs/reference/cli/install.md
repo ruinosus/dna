@@ -5,8 +5,8 @@ Install bundles/Kinds from a repository into the local source.
 URI is `github:owner/repo[/subdir][@ref]` (shallow clone) or
 `local:<path>` (a directory on disk). The fetched tree is scanned with the kernel's
 registered readers (Skill/Soul/AGENTS.md bundles, standalone YAML docs,
-...); each detected document is validated and then written through
-kernel.write_document, so every write guard runs.
+...); each detected instance is validated and then written through
+kernel.write_instance, so every write guard runs.
 
 Third-party manifests are UNTRUSTED DATA: schema validation is the first
 defense (an invalid doc is rejected with the reason; the install
@@ -35,8 +35,8 @@ Install bundles/Kinds from a repository into the local source.
 URI is `github:owner/repo[/subdir][@ref]` (shallow clone) or
 `local:<path>` (a directory on disk). The fetched tree is scanned with the kernel's
 registered readers (Skill/Soul/AGENTS.md bundles, standalone YAML docs,
-...); each detected document is validated and then written through
-kernel.write_document, so every write guard runs.
+...); each detected instance is validated and then written through
+kernel.write_instance, so every write guard runs.
 
 Third-party manifests are UNTRUSTED DATA: schema validation is the first
 defense (an invalid doc is rejected with the reason; the install
@@ -67,7 +67,7 @@ dna install [OPTIONS] URI
 | Option | Description |
 | --- | --- |
 | `--dry-run` | Print the install plan (what would be written where, what gets rejected and why) and stop — nothing is fetched into the source. |
-| `--force` | Overwrite documents that already exist locally (default: skip them with a warning). |
+| `--force` | Overwrite instances that already exist locally (default: skip them with a warning). |
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable summary. |
 | `--scope` | Target scope (default: derived from the URI — <owner>-<repo> for github:, the directory name for local:). Created with a minimal Genome when it does not exist yet. |

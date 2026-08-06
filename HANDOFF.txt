@@ -79,7 +79,7 @@ ARMADILHAS (o caro de redescobrir)
   distintos podiam convergir para a mesma chave no rename — blind spot real da
   pré-checagem na época (dry-run dizia "zero colisões", apply explodia).
 
-* `dna_documents`/`dna_bundle_entries` têm PK `(scope, kind, name, TENANT)` —
+* `dna_instances`/`dna_bundle_entries` têm PK `(scope, kind, name, TENANT)` —
   a migração v3 adicionou `tenant`. Ignorar isso gera falso-positivo de colisão.
 
 * O COPILOT NÃO ESCREVE NO SOURCE em runtime (verificado): o `DNA_SOURCE_URL`

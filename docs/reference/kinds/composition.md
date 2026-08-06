@@ -131,7 +131,7 @@ A Canvas is a shared whiteboard between JARVIS and the user — tldraw-backed. U
 | `created_at` | string | yes |  |
 | `edited_at` | string |  |  |
 | `from_status` | string |  |  |
-| `target_ref` | string | yes | Kind:name of the target document |
+| `target_ref` | string | yes | Kind:name of the target instance |
 | `to_status` | string |  |  |
 | `type` | string | yes | Um de: `note`, `status_change`, `assignment`, `system`. |
 
@@ -141,7 +141,7 @@ A Canvas is a shared whiteboard between JARVIS and the user — tldraw-backed. U
 - **apiVersion:** `github.com/ruinosus/dna/evidence/v1`
 - **Plane:** composition
 
-An EvidencePolicy controls which event types are automatically captured as Evidence documents. Declares the list of event types to watch, whether auto-capture is enabled, and retention period.
+An EvidencePolicy controls which event types are automatically captured as Evidence instances. Declares the list of event types to watch, whether auto-capture is enabled, and retention period.
 
 **Spec fields**
 
@@ -158,7 +158,7 @@ An EvidencePolicy controls which event types are automatically captured as Evide
 - **Plane:** composition
 - **Flags:** root
 
-A Genome is the scope-root identity document (Phase 16). It declares catalog identity (owner, owner_tenant, repository, visibility), versioning (version, changelog_url, deprecated), runtime defaults (default_agent, default_llm, budget, tags), and external dependencies. Replaces the legacy Module Kind. Layer policy moved out to LayerPolicy docs at <scope>/policies/. Custom Kinds moved out to KindDefinition docs at <scope>/kinds/.
+A Genome is the scope-root identity instance (Phase 16). It declares catalog identity (owner, owner_tenant, repository, visibility), versioning (version, changelog_url, deprecated), runtime defaults (default_agent, default_llm, budget, tags), and external dependencies. Replaces the legacy Module Kind. Layer policy moved out to LayerPolicy docs at <scope>/policies/. Custom Kinds moved out to KindDefinition docs at <scope>/kinds/.
 
 **Spec fields**
 
@@ -222,7 +222,7 @@ A Hook is a declarative lifecycle interceptor. It attaches to a kernel hook poin
 - **apiVersion:** `github.com/ruinosus/dna/core/v1`
 - **Plane:** composition
 
-A KindDefinition declaratively defines a brand-new kind without writing Python code. Its spec carries the target apiVersion, kind name, alias, JSON Schema for the document spec, storage layout, and prompt flags. The kernel's 2-phase loader parses KindDefinitions first, synthesizes a DeclarativeKindPort for each, then parses the rest of the manifest so regular documents can reference the newly registered kind.
+A KindDefinition declaratively defines a brand-new kind without writing Python code. Its spec carries the target apiVersion, kind name, alias, JSON Schema for the instance spec, storage layout, and prompt flags. The kernel's 2-phase loader parses KindDefinitions first, synthesizes a DeclarativeKindPort for each, then parses the rest of the manifest so regular instances can reference the newly registered kind.
 
 **Spec fields**
 
@@ -292,7 +292,7 @@ A LayerPolicy declares overlay rules for one layer dimension (tenant, branch, re
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `composition_rules` | object |  |  |
-| `layer_id` | string |  | Which layer DIMENSION this policy governs (e.g. tenant, branch, region, user). NOT a reference: it is matched by exact string equality against the layer being composed or written — the `layer_id` half of the (layer_id, layer_value) overlay coordinate. No `Layer` Kind exists; the `_id` suffix names an axis, not a document. |
+| `layer_id` | string |  | Which layer DIMENSION this policy governs (e.g. tenant, branch, region, user). NOT a reference: it is matched by exact string equality against the layer being composed or written — the `layer_id` half of the (layer_id, layer_value) overlay coordinate. No `Layer` Kind exists; the `_id` suffix names an axis, not an instance. |
 | `policies` | object |  |  |
 
 ## Lesson
@@ -370,7 +370,7 @@ An MCPFederation declares an external MCP server whose tools DNA agents consume:
 - **apiVersion:** `presidio/v1`
 - **Plane:** composition
 
-A Recognizer is a Presidio ad-hoc recognizer that detects PII entities using regex patterns or deny lists. Recognizers are referenced by SafetyPolicy documents and exported to LiteLLM/Presidio at runtime.
+A Recognizer is a Presidio ad-hoc recognizer that detects PII entities using regex patterns or deny lists. Recognizers are referenced by SafetyPolicy instances and exported to LiteLLM/Presidio at runtime.
 
 **Spec fields**
 
@@ -430,7 +430,7 @@ A Research is a curated synthesis of N external sources (Reference docs) with ob
 | `research_blocks[].questions` | array |  |  |
 | `research_blocks[].title` | string |  |  |
 | `retracted_reason` | string |  | Why this Research was retracted (audit trail). |
-| `scope` | string |  | Scope this research informs (e.g. 'dna-development'). A scope NAME — a partition of the document store — not a reference to any document. |
+| `scope` | string |  | Scope this research informs (e.g. 'dna-development'). A scope NAME — a partition of the instance store — not a reference to any instance. |
 | `sources` | array |  | Reference doc names this research synthesizes from. Each entry should resolve to a Reference doc (sdlc-reference Kind). |
 | `status` | string | yes | Lifecycle: brief\|ready (recipe phase) → draft\|published (output phase) → superseded\|retracted (terminal). Um de: `brief`, `ready`, `draft`, `published`, `superseded`, `retracted`. |
 | `superseded_by` | string |  | Name of newer Research that replaces this one. |
@@ -532,7 +532,7 @@ A Soul defines an agent's personality, voice, and guiding principles as prose (n
 - **apiVersion:** `github.com/ruinosus/dna/tenant/v1`
 - **Plane:** composition
 
-A Tenant is the identity of an organization/team/individual that owns scopes and the documents within them. Stored as bundle (TENANT.md frontmatter = spec) under the special `_lib` scope. Slug rules match the runtime tenant claim format ([a-z0-9-]{1,253}). Created by platform admins via POST /tenants. Suspended via PATCH; soft-deleted via DELETE (status=deleted, 30d grace period before physical purge by background cron). Member management lives in Phase B (separate TenantMembership kind).
+A Tenant is the identity of an organization/team/individual that owns scopes and the instances within them. Stored as bundle (TENANT.md frontmatter = spec) under the special `_lib` scope. Slug rules match the runtime tenant claim format ([a-z0-9-]{1,253}). Created by platform admins via POST /tenants. Suspended via PATCH; soft-deleted via DELETE (status=deleted, 30d grace period before physical purge by background cron). Member management lives in Phase B (separate TenantMembership kind).
 
 **Spec fields**
 
@@ -545,7 +545,7 @@ A Tenant is the identity of an organization/team/individual that owns scopes and
 | `metadata` | object |  | Free-form metadata (region, lgpd_consent, billing_account_id, etc). Forward-compatible. |
 | `owner_email` | string | yes | Email of the human that provisioned this tenant. First member of the tenant by default. |
 | `plan` | string |  | Billing/feature tier. Um de: `free`, `pro`, `enterprise`. |
-| `slug` | string | yes | Tenant identity. Used as the value of dna_documents.tenant for every doc owned by this tenant. Must match the runtime tenant claim format. |
+| `slug` | string | yes | Tenant identity. Used as the value of dna_instances.tenant for every doc owned by this tenant. Must match the runtime tenant claim format. |
 | `status` | string | yes | Lifecycle state. `deleted` is soft — docs stay in PG until the purge cron runs (~30d later). Um de: `active`, `suspended`, `deleted`. |
 | `suspended_at` | string |  |  |
 

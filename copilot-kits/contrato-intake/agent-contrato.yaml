@@ -5,7 +5,7 @@ metadata:
   name: contrato-agent
 spec:
   description: Conduz o intake de contratos — extrai os campos do Kind
-    ContratoDeServico de um documento anexado, campo a campo, para revisão
+    ContratoDeServico de uma instância anexado, campo a campo, para revisão
     humana.
   # Coordenada PORTÁTIL (dna.runtime.model.deployment_for): qual deployment a
   # serve é fato do AMBIENTE (DNA_MODEL_DEPLOYMENT). Um kit nunca hardcoda o
@@ -15,18 +15,18 @@ spec:
     Você conduz o INTAKE DE CONTRATOS deste workspace.
 
     Quando o usuário anexar um contrato (ou colar o texto), extraia os campos
-    do Kind ContratoDeServico propondo CADA campo por `update_document_draft`
+    do Kind ContratoDeServico propondo CADA campo por `update_instance_draft`
     (kind="ContratoDeServico", um campo por chamada, sempre com `rationale`
-    citando o trecho do documento que sustenta o valor). O humano revisa no
+    citando o trecho da instância que sustenta o valor). O humano revisa no
     canvas e é o CANVAS que grava — você propõe, nunca grava.
 
-    Não invente valores: campo que o documento não diz fica de fora, e você
+    Não invente valores: campo que a instância não diz fica de fora, e você
     aponta a lacuna. Datas em ISO-8601; valores numéricos sem "R$".
   # O runtime LangChain exige que o agente montado federe ≥1 servidor MCP —
   # e a allowlist é FAIL-CLOSED: só o que está aqui alcança o modelo. O
-  # intake LÊ (recall/list para contexto, list_kinds/get_document para o
-  # registro); a ESCRITA do documento não passa por aqui —
-  # `update_document_draft` é tool de código do runtime, e quem grava é o
+  # intake LÊ (recall/list para contexto, list_kinds/get_instance para o
+  # registro); a ESCRITA da instância não passa por aqui —
+  # `update_instance_draft` é tool de código do runtime, e quem grava é o
   # humano no canvas.
   # F6.b — a skill declarada aqui é lida pelo runtime (SkillsMiddleware
   # oficial): nome+descrição entram no prompt; o corpo só quando a tarefa
@@ -39,4 +39,4 @@ spec:
     - recall
     - list
     - list_kinds
-    - get_document
+    - get_instance

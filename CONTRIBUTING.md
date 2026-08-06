@@ -143,13 +143,13 @@ These are the gates that will turn your PR red:
 | `test_port_surface_golden.py` | The **port surface**: every member of every `typing.Protocol`. Ports are the extension contract, so adding or removing one is a public API event |
 | `test_blessed_query_surface.py` | The blessed vs deprecated read surface, and the EXACT public member set of `ManifestInstance` |
 | `test_composition_golden.py` | Prompt composition — 13 cases over chain walk, tenant overlay, catalog splice, merges, cycle guard, provenance |
-| `test_hash_golden.py` | `document_hash`'s canonical form + digest — the sync identity of a document |
+| `test_hash_golden.py` | `document_hash`'s canonical form + digest — the sync identity of an instance |
 | `test_memory_interchange_golden.py` | The MIF interchange wire format (`to_mif` / `from_mif`) |
 | `test_memory_scoring_golden.py` | The memory scoring core — decay, ecphory, semantic fusion |
 | `test_f2_query_golden.py` | The query/count core: filter, order_by, limit, offset, group_by |
 | `test_hook_names.py` | The hook-name vocabulary |
 
-Consume documents only through the **blessed query surface** (`documents`,
+Consume instances only through the **blessed query surface** (`instances`,
 `all`, `one`, `build_prompt`, `doc.typed`) — private kernel internals are
 guarded by `test_blessed_query_surface.py`.
 
@@ -166,7 +166,7 @@ never silent.
 
 ## The SDLC workflow (story-first)
 
-This repo tracks its own lifecycle **as DNA documents** under
+This repo tracks its own lifecycle **as DNA instances** under
 `.dna/dna-development/`, driven by the `dna sdlc` CLI. Non-trivial work is a
 **Story**, opened *before* the code, and narrated on its timeline as you go.
 
@@ -188,7 +188,7 @@ dna sdlc story pr s-my-work             # gh pr create, pre-filled FROM the stor
 dna sdlc story done s-my-work           # ONLY after the PR merges
 ```
 
-`dna sdlc story pr` assembles the whole PR from the Story document — title,
+`dna sdlc story pr` assembles the whole PR from the Story instance — title,
 the description, the acceptance criteria as a checklist, and an attribution
 footer — then stamps the PR URL back onto the Story timeline. When the PR
 squash-merges, the landed commit carries the `Work-Item:` trailer, so

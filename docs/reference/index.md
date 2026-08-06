@@ -15,7 +15,7 @@ mkdocstrings inline).
 
 -   :material-language-python: **[Python API](python/index.md)**
 
-    The `dna` package — `Kernel`, the five ports, `Document`,
+    The `dna` package — `Kernel`, the five ports, `Instance`,
     `ManifestInstance`, the extensions and the `dna.testing` conformance kit.
     Rendered inline from the docstrings by mkdocstrings.
 
@@ -46,7 +46,7 @@ mkdocstrings inline).
 
 The blessed, documented read/query API (`all`, `one`, `root`,
 `default_agent`, `build_prompt`, `resolve`) is walked through narratively in
-[How to read document data](../guides/read-document-data.md); the Python tree
+[How to read instance data](../guides/read-instance-data.md); the Python tree
 above is its exhaustive, machine-generated counterpart. What every source
 adapter must implement is in
 [How to write a source adapter](../guides/write-a-source-adapter.md).

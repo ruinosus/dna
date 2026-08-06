@@ -4057,7 +4057,7 @@ def _make_artifact_group(
 
 
 spec_group = _make_artifact_group(
-    "Spec", "spec", "Spec-level operations (design / spec instances).",
+    "Spec", "spec", "Spec-level operations (design / spec documents).",
     statuses=SPEC_STATUSES,
 )
 # NB: Plan does NOT use _make_artifact_group — the richer `@sdlc.group("plan")`

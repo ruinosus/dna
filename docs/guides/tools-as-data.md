@@ -4,13 +4,13 @@ The DNA already governs an agent's persona, instruction and guardrails
 declaratively. **Tools as data** closes the last gap: the *agent-facing surface*
 of a tool — the `description` a tool-calling model reads to decide whether to
 call it, and the JSON Schema of its `parameters` — moves out of hard-coded
-`@tool` functions and into a `Tool` document. Versioned, testable, tenant-
+`@tool` functions and into a `Tool` instance. Versioned, testable, tenant-
 overridable, and served to a Python backend **and** a TypeScript frontend
 from **one** source of truth.
 
 ## The `Tool` Kind
 
-A Tool is one declarative document stored at `tools/<name>.yaml`:
+A Tool is one declarative instance stored at `tools/<name>.yaml`:
 
 ```yaml
 apiVersion: github.com/ruinosus/dna/v1
@@ -18,7 +18,7 @@ kind: Tool
 metadata:
   name: generate-artifact
   # The AGENT-FACING description — the text the model reads.
-  description: Render a self-contained HTML or Markdown document into a
+  description: Render a self-contained HTML or Markdown instance into a
     shareable artifact. Returns the artifact's URL.
 spec:
   type: builtin
@@ -87,7 +87,7 @@ except ToolNotFound as exc:
 
 ## One source, every runtime (the dogfood)
 
-A Tool is one document, so the **same** surface reaches a Python `@tool`
+A Tool is one instance, so the **same** surface reaches a Python `@tool`
 backend and a TypeScript CopilotKit `useCopilotAction` frontend — the frontend
 reads it over the [REST
 face](../concepts/microkernel-ports.md#one-runtime-any-language), not through
@@ -126,8 +126,8 @@ acme["search"].description   # ACME's override — base untouched
 
 ## When you need more than the surface
 
-`load_tools` is a thin convenience over the kernel. For the full Tool document
+`load_tools` is a thin convenience over the kernel. For the full Tool instance
 (invocation metadata, auth, `output_schema`) or other kinds, reach for the
 manifest instance directly (`tools.mi`) or build your own with `Kernel.quick` /
 [`Kernel.from_config`](configuring-ports.md) and use the
-[blessed query surface](read-document-data.md).
+[blessed query surface](read-instance-data.md).

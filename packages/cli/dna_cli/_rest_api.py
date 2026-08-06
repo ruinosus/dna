@@ -1423,7 +1423,7 @@ def build_app(
         what was withdrawn is the Kind, not a schema.
 
         The revoker is the caller's VERIFIED identity, resolved server-side, on
-        exactly the terms the approval route instances above — including the
+        exactly the terms the approval route documents above — including the
         ``--auth token`` caveat, which matters here for the same reason: the
         value of the record this act writes is naming WHO made it.
 

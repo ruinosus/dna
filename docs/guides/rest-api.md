@@ -48,7 +48,7 @@ server uses — one core, two faces, zero duplicated logic.
 
 ## Reading in time — `?as_of=`
 
-`GET /v1/kinds/{kind}/documents/{name}?as_of=<ISO-8601>` returns the document
+`GET /v1/kinds/{kind}/instances/{name}?as_of=<ISO-8601>` returns the instance
 **as this store recorded it** at that instant — *transaction* time, not world
 time. `GET /v1/memories` and `GET /v1/memories/search` take the same parameter.
 
@@ -57,7 +57,7 @@ It never approximates, and the four outcomes are deliberately distinct:
 | code | meaning |
 |---|---|
 | `200` | the belief state at that instant. The body carries `as_of`, `as_of_version` and `as_of_recorded_at` — their **absence** is how you know a body is live. |
-| `404` | the document did not exist yet. An answer. |
+| `404` | the instance did not exist yet. An answer. |
 | `410` | its version history was pruned past that instant. A refusal — the store does not know, which is **not** the same as "it did not exist". |
 | `501` | this deployment's store keeps no version history at all (the filesystem adapter). |
 | `422` | the instant is not ISO-8601. |
@@ -68,8 +68,8 @@ Send a query parameter a route does not read and you get **400** naming it.
 
 This is deliberate and it is not FastAPI's default: an undeclared query param is
 normally dropped in silence, which is fine for the public web and wrong for an
-API whose parameters change what the answer *means*. `?as_of=` on the document
-route used to be swallowed exactly that way — 200, today's document, nothing in
+API whose parameters change what the answer *means*. `?as_of=` on the instance
+route used to be swallowed exactly that way — 200, today's instance, nothing in
 the response to contradict a caller who believed they were reading yesterday
 (i-106).
 
@@ -179,7 +179,7 @@ wire**: `coverage.enforced` counts what the runtime stands behind, and
 `coverage.limits` names what the graph structurally cannot see (relations
 nested below the first level of `properties`, the per-edge meaning of
 `enforced`, and — first among them — that these edges are **schema, not
-data**: which Kinds MAY reference which, never which documents do).
+data**: which Kinds MAY reference which, never which instances do).
 
 **And read `unresolved[].origin`, not `unresolved[].reason`.** The gap list
 holds two different things. `declared`, `composition` and `inverse` rows are

@@ -258,7 +258,7 @@ This is the central design question. The honest reading of the codebase:
 
 - **The tool *surface* is already data.** DNA has a `Tool` record-plane Kind
   (`packages/sdk-py/dna/tools.py`, `kinds/tool.kind.yaml`) — `description` +
-  `input_schema` as an overlayable document. That is *what the model reads*, served
+  `input_schema` as an overlayable instance. That is *what the model reads*, served
   identically to Py and TS.
 - **The tool *execution* is code.** Every MCP tool today (`compose_prompt`,
   `recall`, …) is a built-in `@server.tool` Python function in `_mcp_server.py` — a

@@ -84,9 +84,9 @@ _COVERED: dict[tuple[str, str], str] = {
     ("GET", "/v1/kinds/registry"): "list_registered_kinds",
     ("GET", "/v1/kinds/registry/{kind}"): "get_registered_kind",
     ("GET", "/v1/graph/kinds"): "kind_graph",
-    ("GET", "/v1/kinds/{kind}/documents"): "list_kind_documents",
-    ("GET", "/v1/kinds/{kind}/documents/{name}"): "get_kind_document",
-    ("GET", "/v1/kinds/{kind}/documents/{name}/refs"): "graph_refs",
+    ("GET", "/v1/kinds/{kind}/instances"): "list_kind_instances",
+    ("GET", "/v1/kinds/{kind}/instances/{name}"): "get_kind_instance",
+    ("GET", "/v1/kinds/{kind}/instances/{name}/refs"): "graph_refs",
     ("GET", "/v1/definitions/{kind}/{name}"): "read_definition",
     ("GET", "/v1/definitions/{kind}/{name}/entries"): "list_bundle_entries",
     ("GET", "/v1/definitions/{kind}/{name}/entries/{entry}"): "read_bundle_entry",
@@ -114,7 +114,7 @@ _COVERED: dict[tuple[str, str], str] = {
     ("POST", "/v1/kinds"): "author_kind",
     ("POST", "/v1/kinds/{kind}/approve"): "approve_kind",
     ("POST", "/v1/kinds/{kind}/revoke"): "revoke_kind",
-    ("POST", "/v1/kinds/{kind}/documents"): "write_kind_document",
+    ("POST", "/v1/kinds/{kind}/instances"): "write_kind_instance",
     ("POST", "/v1/memories"): "remember_memory",
     ("POST", "/v1/memories/import"): "import_memories",
     ("DELETE", "/v1/memories/{name}"): "delete_memory",
@@ -148,7 +148,7 @@ _HTTP_METHODS = frozenset(
 
 
 def _spec_operations(schema: dict) -> set[tuple[str, str]]:
-    """Every ``(METHOD, path)`` operation in the OpenAPI document."""
+    """Every ``(METHOD, path)`` operation in the OpenAPI instance."""
     return {
         (method.upper(), path)
         for path, item in schema["paths"].items()

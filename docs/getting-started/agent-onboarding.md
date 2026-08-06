@@ -3,7 +3,7 @@
 `pip install dna-sdk dna-cli` gives you a working kernel and CLI — but the
 AI coding agent working in *your* project still arrives blind: it does not
 know the story-first workflow, the `dna sdlc` verbs, or that commits should
-carry `Work-Item:` trailers. Those conventions live in documents, and until
+carry `Work-Item:` trailers. Those conventions live in instances, and until
 now they only existed inside the DNA repository itself.
 
 `dna init` closes that gap with one command — for **every** agent tool at
@@ -174,7 +174,7 @@ write to different places:
 
 | | `dna install <uri>` | `dna init --from <uri>` |
 | --- | --- | --- |
-| Writes to | Your `.dna/` **source** — documents + `installed.lock` | Agent **tool directories** — skill(s) + `AGENTS.md` |
+| Writes to | Your `.dna/` **source** — instances + `installed.lock` | Agent **tool directories** — skill(s) + `AGENTS.md` |
 | Result | Real, versioned source you compose/query/evaluate | Regenerable projections your agent reads |
 | Accepts | Any registered Kind the tree carries | Skill bundles + a root `AGENTS.md` only |
 
@@ -188,7 +188,7 @@ dna init   --from github:acme/onboarding-pack@v1  # projections → tool dirs
 
 Because a skill *is* agent instructions, a third-party pack carries the
 same inherent risk as any dependency — the validation stops path traversal
-and malformed documents, not hostile prose. Review what was projected
+and malformed instances, not hostile prose. Review what was projected
 before committing it.
 
 ## Already driving a Spec Kit run?

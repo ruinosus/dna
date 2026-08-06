@@ -203,7 +203,7 @@ describe("DnaClient", () => {
 
     expect(calls[0]!.method).toBe("POST");
     const url = new URL(calls[0]!.url);
-    expect(url.pathname).toBe("/v1/kinds/Contrato/documents");
+    expect(url.pathname).toBe("/v1/kinds/Contrato/instances");
     expect(url.searchParams.get("tenant")).toBe("w1");
     expect(url.searchParams.get("if_match")).toBe("etag-1");
     expect(url.searchParams.has("scope")).toBe(false);
@@ -255,9 +255,9 @@ const COVERED: Record<string, string> = {
   "GET /v1/kinds/registry": "listRegisteredKinds",
   "GET /v1/kinds/registry/{kind}": "getRegisteredKind",
   "GET /v1/graph/kinds": "kindGraph",
-  "GET /v1/kinds/{kind}/documents": "listKindDocuments",
-  "GET /v1/kinds/{kind}/documents/{name}": "getKindDocument",
-  "GET /v1/kinds/{kind}/documents/{name}/refs": "graphRefs",
+  "GET /v1/kinds/{kind}/instances": "listKindDocuments",
+  "GET /v1/kinds/{kind}/instances/{name}": "getKindDocument",
+  "GET /v1/kinds/{kind}/instances/{name}/refs": "graphRefs",
   "GET /v1/definitions/{kind}/{name}": "readDefinition",
   "GET /v1/definitions/{kind}/{name}/entries": "listBundleEntries",
   "GET /v1/definitions/{kind}/{name}/entries/{entry}": "readBundleEntry",
@@ -285,7 +285,7 @@ const COVERED: Record<string, string> = {
   "POST /v1/kinds": "authorKind",
   "POST /v1/kinds/{kind}/approve": "approveKind",
   "POST /v1/kinds/{kind}/revoke": "revokeKind",
-  "POST /v1/kinds/{kind}/documents": "writeKindDocument",
+  "POST /v1/kinds/{kind}/instances": "writeKindDocument",
   "POST /v1/memories": "rememberMemory",
   "POST /v1/memories/import": "importMemories",
   "DELETE /v1/memories/{name}": "deleteMemory",

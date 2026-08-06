@@ -158,7 +158,7 @@ $ curl -i -X POST https://<your-app>/mcp/ \
 ```
 
 **b) A real client connects with an Entra token.** Point a remote MCP client at
-the endpoint; it drives the OAuth flow off the PRM document, gets an Entra token,
+the endpoint; it drives the OAuth flow off the PRM instance, gets an Entra token,
 and calls the tools. To test by hand, mint a token for the exposed scope and call
 `initialize` then `compose_prompt`:
 

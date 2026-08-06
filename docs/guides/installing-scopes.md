@@ -1,11 +1,11 @@
 # How to install bundles from a repository
 
 `dna install` is the ecosystem's front door: it takes a repository URI,
-detects the DNA documents inside the fetched tree, validates each one, and
+detects the DNA instances inside the fetched tree, validates each one, and
 writes the valid ones into your local source — through the same
-`kernel.write_document` path a locally-authored document takes, so every
+`kernel.write_instance` path a locally-authored instance takes, so every
 write guard runs. This guide covers the URI grammar, the install pipeline,
-how conflicts and invalid documents are handled, and the provenance record
+how conflicts and invalid instances are handled, and the provenance record
 each install leaves behind.
 
 For a quick taste, see the [CLI tour](cli-tour.md#dna-install-install-bundles-from-a-repository);
@@ -21,10 +21,10 @@ content lands**, and that difference is the whole point:
 | | `dna install <uri>` | `dna init` (and `dna init --from <uri>`) |
 | --- | --- | --- |
 | **Goal** | Add Kinds (Skills, Agents, …) to *your project's data* | Make your project *agent-ready* — the coding agent learns how to operate it |
-| **Writes to** | Your **source** — documents under `.dna/<scope>/`, plus an `installed.lock` provenance record | **Tool directories** — the skill into `.claude/skills/`, `.github/skills/`, …, and `AGENTS.md` at the project root |
-| **Also creates** | The target scope (a minimal `Genome`) if it doesn't exist | An **empty SDLC board** (a `Genome` under `.dna/<scope>/`) + git hooks — but the pack's Skills/AGENTS are **never** written into your source as documents |
-| **Regenerable?** | No — installed documents are real, versioned source you own and edit | Yes — projections are regenerable from the Kind; re-run to refresh them |
-| **What you get** | A Skill/Soul/Agent you can compose, query, and evaluate like any other document | A `dna-sdlc-cli` skill your agent reads, and `AGENTS.md` conventions every tool honors |
+| **Writes to** | Your **source** — instances under `.dna/<scope>/`, plus an `installed.lock` provenance record | **Tool directories** — the skill into `.claude/skills/`, `.github/skills/`, …, and `AGENTS.md` at the project root |
+| **Also creates** | The target scope (a minimal `Genome`) if it doesn't exist | An **empty SDLC board** (a `Genome` under `.dna/<scope>/`) + git hooks — but the pack's Skills/AGENTS are **never** written into your source as instances |
+| **Regenerable?** | No — installed instances are real, versioned source you own and edit | Yes — projections are regenerable from the Kind; re-run to refresh them |
+| **What you get** | A Skill/Soul/Agent you can compose, query, and evaluate like any other instance | A `dna-sdlc-cli` skill your agent reads, and `AGENTS.md` conventions every tool honors |
 
 Put another way:
 
@@ -33,7 +33,7 @@ Put another way:
 | …add a marketplace Skill (or any Kind) from a repo **into my project** so I can compose/query/evaluate it | `dna install github:owner/repo` |
 | …make my AI coding agent **know how to operate this project** (the story-first workflow, the SDLC verbs) | `dna init` |
 | …hand my team its **own** onboarding skill + `AGENTS.md`, projected into every tool | `dna init --from github:owner/repo` |
-| …do the last one **and** also keep the pack's documents on my board | `dna init --from <ref>` **and** `dna install <ref>` (same ref — they compose) |
+| …do the last one **and** also keep the pack's instances on my board | `dna init --from <ref>` **and** `dna install <ref>` (same ref — they compose) |
 
 "Install" = the content becomes part of your **source**. "Init" =
 regenerable **projections** land in each agent tool's directory. The
@@ -73,17 +73,17 @@ dna install local:~/checkouts/some-skills --scope playground
    readers (the exact same detection that loads your own scopes): a
    directory with a `SKILL.md` becomes a Skill, a `SOUL.md` a Soul, and
    so on; standalone `*.yaml` files with `apiVersion` + `kind` +
-   `metadata.name` are collected as documents too. Dot-directories
+   `metadata.name` are collected as instances too. Dot-directories
    (`.git`, `.github`) are skipped. Mixed trees work: a claim consumes
    its **bundle**, not the subtree — an `AGENTS.md` at the tree root
    installs as an AgentDefinition *and* the `skills/` bundles next to it
    still install, while a Skill bundle (SKILL.md + companion files) is
-   always exactly one document.
-3. **Build the plan** — every detected document is validated (below) and checked
+   always exactly one instance.
+3. **Build the plan** — every detected instance is validated (below) and checked
    against the target scope for conflicts. `--dry-run` prints this plan
    and stops; nothing is written.
-4. **Write** — valid documents go through `kernel.write_document`, one by
-   one. A document the kernel's own `pre_save` veto guards reject is
+4. **Write** — valid instances go through `kernel.write_instance`, one by
+   one. An instance the kernel's own `pre_save` veto guards reject is
    reported and skipped; the install continues with the rest.
 5. **Record provenance** — `<scope>/installed.lock` is upserted (see
    below).
@@ -99,27 +99,27 @@ injection vector — that is the core of the
 [threat model](https://github.com/ruinosus/dna/blob/main/SECURITY.md).
 `dna install` therefore rejects, **before any write**:
 
-- documents whose `(apiVersion, kind)` is not registered in your kernel —
+- instances whose `(apiVersion, kind)` is not registered in your kernel —
   nothing is guessed or coerced;
-- documents whose `spec` fails the Kind's JSON Schema (the reported reason
+- instances whose `spec` fails the Kind's JSON Schema (the reported reason
   names the failing field);
-- documents whose `metadata.name` is not a plain slug — path-shaped names
+- instances whose `metadata.name` is not a plain slug — path-shaped names
   (`../evil`) never reach the filesystem layout;
 - **root Kinds** (`Genome`) found in the fetched tree — an install adds
   content to your scope; it never lets a remote repo redefine the scope's
   identity.
 
-Rejections are per-document and didactic: the plan shows each one with its
-reason, the valid documents still install, and the exit code is non-zero
+Rejections are per-instance and didactic: the plan shows each one with its
+reason, the valid instances still install, and the exit code is non-zero
 only when *nothing* usable landed. The kernel's `pre_save` veto guards run
 on every write as the second layer — exactly as they would for a local
 edit.
 
 ## Conflicts
 
-A document that already exists in the target scope is **skipped with a
+An instance that already exists in the target scope is **skipped with a
 warning** by default — re-running an install is idempotent. Pass `--force`
-to overwrite existing documents with the fetched versions.
+to overwrite existing instances with the fetched versions.
 
 ## Provenance — `installed.lock`
 
@@ -132,7 +132,7 @@ verifies scope lockfiles can read it:
 lockVersion: 3
 generated_at: '2026-07-10T05:02:11+00:00'
 scope: market
-documents:
+instances:
 - name: pdf
   kind: Skill
   apiVersion: agentskills.io/v1
@@ -142,8 +142,8 @@ documents:
 ```
 
 `origin` is pinned to the commit that was actually fetched (even when the
-URI said `@main` — or nothing), `path` is where the document lived inside
-the fetched tree, and `sha256` digests the installed raw document, so you
+URI said `@main` — or nothing), `path` is where the instance lived inside
+the fetched tree, and `sha256` digests the installed raw instance, so you
 can always answer *what came from where, at which revision, and has it
 changed since*. Entries merge by `(kind, name)`: reinstalls and installs
 from additional sources update their own entries and leave the rest.

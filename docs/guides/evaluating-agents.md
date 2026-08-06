@@ -4,7 +4,7 @@ Evaluation in DNA is authored as data — four record Kinds ([EvalCase,
 EvalSuite, EvalRun, EvalBaseline](../concepts/builtin-kinds.md#evaluation))
 — and executed by a **local, synchronous, offline runner**. No worker, no
 service, no LLM: the default evaluable system is the kernel itself.
-Composing a prompt is a deterministic function of your declared documents,
+Composing a prompt is a deterministic function of your declared instances,
 so *"does my agent compose the prompt I expect?"* is a real evaluation of
 declarative config — the exact thing DNA externalizes. A prompt refactor,
 a skill rename, an overlay change: the suite catches the regression in CI,
@@ -66,7 +66,7 @@ suite: greeter-suite (scope hello-genome)
 
 The exit code is 1 when any case fails or errors — `dna eval run` in a CI
 step is already a prompt-regression gate. `--save` persists the result as
-an EvalRun document under `<scope>/eval-runs/`; `dna eval list` and
+an EvalRun instance under `<scope>/eval-runs/`; `dna eval list` and
 `dna eval show <run>` read the ledger back.
 
 ## 3. Pin a baseline, gate on regressions

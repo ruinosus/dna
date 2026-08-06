@@ -1,6 +1,6 @@
 # How to write a Reader/Writer
 
-Readers detect and parse bundle directories on the filesystem. Writers serialize documents back to those directories. Together they enable the SDK's human-readable, git-friendly file formats.
+Readers detect and parse bundle directories on the filesystem. Writers serialize instances back to those directories. Together they enable the SDK's human-readable, git-friendly file formats.
 
 ---
 
@@ -128,7 +128,7 @@ You are Brad, a senior software architect. You plan before you act.
 3. Design in sections, get approval before moving on
 ```
 
-**Note:** AgentReader produces a Agent document — the same kind as `agents/*.yaml`. The difference is format: AGENT.md is a single-file bundle with frontmatter, while YAML is a structured document.
+**Note:** AgentReader produces a Agent instance — the same kind as `agents/*.yaml`. The difference is format: AGENT.md is a single-file bundle with frontmatter, while YAML is a structured instance.
 
 ### AgentDefinitionReader — standalone `AGENTS.md`
 
@@ -209,7 +209,7 @@ class ReaderPort(Protocol):
         ...
 
     def read(self, bundle: BundleHandle) -> dict[str, Any]:
-        """Read the bundle into a raw document dict."""
+        """Read the bundle into a raw instance dict."""
         ...
 ```
 
@@ -225,11 +225,11 @@ class ReaderPort(Protocol):
 ```python
 class WriterPort(Protocol):
     def can_write(self, raw: dict) -> bool:
-        """Do I own this document's kind?"""
+        """Do I own this instance's kind?"""
         ...
 
     def write(self, bundle: BundleHandle, raw: dict) -> None:
-        """Persist the document into the bundle."""
+        """Persist the instance into the bundle."""
         ...
 
     def serialize(self, raw: dict) -> list[dict[str, Any]]:
@@ -242,7 +242,7 @@ class WriterPort(Protocol):
 ```
 
 `serialize` is **part of the contract** (since `s-dna-rw-roundtrip-suite`) —
-`kernel.serialize_document` (the HTTP/MCP preview + write paths) calls it on
+`kernel.serialize_instance` (the HTTP/MCP preview + write paths) calls it on
 the first writer whose `can_write` claims the kind. **`write` and `serialize`
 must stay coherent**: the canonical implementation builds the entry list once
 and writes it through the shared helper:
@@ -312,7 +312,7 @@ and the real marketplace bundles in `scopes/market-integration`.
 
 ### Example: `CONFIG.toml` bundle
 
-Say your company uses TOML files for configuration documents:
+Say your company uses TOML files for configuration instances:
 
 ```toml
 # CONFIG.toml
@@ -362,7 +362,7 @@ from dna.kernel.writer_helpers import write_entries_to_handle
 
 
 class ConfigWriter(WriterPort):
-    """Writes Config documents back to CONFIG.toml."""
+    """Writes Config instances back to CONFIG.toml."""
 
     def can_write(self, raw: dict) -> bool:
         return raw.get("kind") == "Config"
@@ -400,7 +400,7 @@ k = Kernel()
 k.load(ConfigExtension())
 # ...
 mi = k.instance("my-module")
-configs = [d for d in mi.documents if d.kind == "Config"]
+configs = [d for d in mi.instances if d.kind == "Config"]
 for c in configs:
     print(f"{c.name}: region={c.spec.region}, replicas={c.spec.max_replicas}")
 ```
@@ -412,19 +412,19 @@ for c in configs:
 | Operation | Uses Readers? | Uses Writers? |
 |-----------|--------------|--------------|
 | `kernel.instance()` with FilesystemSource | Yes — to detect and read bundles | No |
-| `kernel.instance()` with a SQL source (SqlAlchemySource) | No — documents are self-contained JSON | No |
+| `kernel.instance()` with a SQL source (SqlAlchemySource) | No — instances are self-contained JSON | No |
 | Admin portal "Save" with filesystem backend | No | Yes — writes back to disk |
 | Admin portal "Save" with a SQL backend | No | No — stores as JSON |
 | `source.load_all(scope, readers=...)` | Yes | No |
 
-**Key insight:** Readers and Writers only matter for **filesystem-based** sources. When using a SQL backend (`SqlAlchemySource`, sqlite or postgres dialect), documents are stored as JSON blobs — no bundle detection needed. The `supports_readers` property on SourcePort indicates this:
+**Key insight:** Readers and Writers only matter for **filesystem-based** sources. When using a SQL backend (`SqlAlchemySource`, sqlite or postgres dialect), instances are stored as JSON blobs — no bundle detection needed. The `supports_readers` property on SourcePort indicates this:
 
 ```python
 class FilesystemSource:
     supports_readers = True   # Uses readers to detect bundles
 
 class SqlAlchemySource:
-    supports_readers = False  # Documents are self-contained JSON
+    supports_readers = False  # Instances are self-contained JSON
 ```
 
 ---
@@ -439,7 +439,7 @@ my-bundle/
 ├── scripts/           ← Executable scripts
 │   ├── run.py
 │   └── test.sh
-├── references/        ← Reference documents
+├── references/        ← Reference instances
 │   ├── style-guide.md
 │   └── api-spec.yaml
 ├── assets/            ← Static assets
@@ -460,7 +460,7 @@ This structure is shared by SkillReader and AgentReader. SoulReader uses a simpl
 | **detect(bundle)** | Returns True if the bundle carries this Kind's marker |
 | **read(bundle)** | Parses the bundle into `{apiVersion, kind, metadata, spec}` |
 | **_owner_container** | Optional container the reader is scoped to (scanner routing) |
-| **can_write(raw)** | Returns True if the writer handles this document kind |
+| **can_write(raw)** | Returns True if the writer handles this instance kind |
 | **write(bundle, raw)** | Creates/updates the bundle from the raw dict |
 | **serialize(raw)** | The entries write() would emit — REQUIRED, must match write() |
 | **supports_readers** | Source property — True for filesystem, False for databases |

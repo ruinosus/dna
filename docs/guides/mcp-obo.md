@@ -114,7 +114,7 @@ on the MCP surface:
   ] }
 ```
 
-The tool's `description` + `input_schema` are a **governed Tool document**
+The tool's `description` + `input_schema` are a **governed Tool instance**
 (`ms_calendar_list.yaml`), so what the model sees is data — overlayable like any
 [Tool](tools-as-data.md), not hardcoded.
 
@@ -162,12 +162,12 @@ never leaves `graph.microsoft.com`.
 
 > **Office-content limitation (this slice).** Text-convertible files — plain text,
 > Markdown, CSV, JSON, XML, YAML, HTML, source code, … — are returned as extracted
-> text (capped at ~1 MiB, `truncated: true` when clipped). Binary Office documents
+> text (capped at ~1 MiB, `truncated: true` when clipped). Binary Office instances
 > (`.docx` / `.xlsx` / `.pptx`), images, and PDFs are **not** dumped inline; you get
 > their metadata plus a `web_url` to open them. Rich Office → text extraction is a
 > tracked follow-up (see [Deferred](#deferred-follow-on-stories)).
 
-Both tools' surfaces are governed Tool documents (`ms_files_search.yaml`,
+Both tools' surfaces are governed Tool instances (`ms_files_search.yaml`,
 `ms_file_read.yaml`) — overlayable like any [Tool](tools-as-data.md).
 
 ### Honest failure modes

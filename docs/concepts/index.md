@@ -27,7 +27,7 @@ Start with the thesis; the rest expand its pieces.
   sqlite-vec + FTS5 + RRF, pgvector for scale, and memory as the Kinds you
   already have.
 - **[The reference graph](reference-graph.md)** — what points at this
-  document? `spec.relations` declarations become stored edges the write path
+  instance? `spec.relations` declarations become stored edges the write path
   produces while it validates them, walked by one recursive CTE — plus the
   four signals that keep the answer honest about its own gaps.
 - **[Agent-facing knowledge](agent-knowledge.md)** — why DNA represents

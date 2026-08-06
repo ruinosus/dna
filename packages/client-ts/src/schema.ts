@@ -104,11 +104,11 @@ export interface paths {
          *     deliberately not accepted from the caller.
          *
          *     IDEMPOTENT by content address: the same ``sha256`` updates the same
-         *     document, so a retried upload leaves no second artifact behind — and an
+         *     instance, so a retried upload leaves no second artifact behind — and an
          *     existing ``derived_refs`` survives the retry rather than being blanked.
          *
          *     ``uri`` names where the bytes live and must NOT be a signed URL: a
-         *     stored credential would make the document itself the access to its own
+         *     stored credential would make the instance itself the access to its own
          *     original. 400 on a blank workspace_id / sha256 / uri.
          */
         post: operations["register_artifact_v1_artifacts_post"];
@@ -208,7 +208,7 @@ export interface paths {
         };
         /**
          * List Bundle Entries
-         * @description List a bundle document's entry files (base ∪ tenant overlay), each
+         * @description List a bundle instance's entry files (base ∪ tenant overlay), each
          *     flagged ``overridden`` — whether THIS tenant forked that specific
          *     file. 404 for a non-bundle Kind or an unknown (kind, name).
          */
@@ -326,7 +326,7 @@ export interface paths {
          *     this route cannot disagree about what the model says.
          *
          *     **SCHEMA, not data.** The edges say which Kinds MAY reference which.
-         *     Which DOCUMENTS reference which is a different graph and this route
+         *     Which INSTANCES reference which is a different graph and this route
          *     does not answer it — ``coverage.limits`` says so on the wire.
          *
          *     ``tenant`` resolves the scope the way the registry route does
@@ -420,7 +420,7 @@ export interface paths {
         /**
          * List Authored Kinds
          * @description List the CALLER's authored Kinds with their approval state — the
-         *     audit view. Reads DOCUMENTS, not the registry: an unapproved Kind is
+         *     audit view. Reads INSTANCES, not the registry: an unapproved Kind is
          *     precisely the one the registry does not have, and it is the one a
          *     reviewer came here for.
          *
@@ -448,10 +448,10 @@ export interface paths {
         /**
          * Author Kind
          * @description Author a Kind for the calling workspace — a ``KindDefinition``
-         *     document written WITHOUT an approval marker, under the workspace's own
+         *     instance written WITHOUT an approval marker, under the workspace's own
          *     assigned apiVersion namespace (minted on first use, then stable).
          *
-         *     ``presentation`` (optional) declares how documents of this Kind READ —
+         *     ``presentation`` (optional) declares how instances of this Kind READ —
          *     the ordered fields, their human labels, their semantic roles, and what
          *     to hide from a human. It is the SAME block a builtin Kind descriptor
          *     declares, through the same normalizer, and it is what keeps a
@@ -462,10 +462,10 @@ export interface paths {
          *
          *     The response's ``approved`` is always ``false``. An ``approved_by`` in
          *     the body is ignored, not honoured and not rejected: a caller that could
-         *     approve its own proposal would make the gate decorative. The document
+         *     approve its own proposal would make the gate decorative. The instance
          *     records ``proposed_by`` — the caller's VERIFIED identity, resolved
          *     server-side (``_actor_from_state``) and never read from the body, and
-         *     stamped here because a proposer cannot be back-filled onto a document
+         *     stamped here because a proposer cannot be back-filled onto an instance
          *     that never recorded one. 400 for a missing tenant / a Kind name that is
          *     not a CamelCase identifier, 403 when the namespace gate refuses the
          *     write (the workspace does not own the target namespace), 503 when the
@@ -507,7 +507,7 @@ export interface paths {
          *     point, and it belongs to the registry, not to each caller.
          *
          *     Not the same question as ``GET /v1/kinds``, and the two must not be
-         *     confused. That one lists the caller's AUTHORED KindDefinition documents
+         *     confused. That one lists the caller's AUTHORED KindDefinition instances
          *     including the unapproved ones — the audit roster, whose subject is an
          *     approval decision. This one lists what is REGISTERED and therefore in
          *     force, built-ins included; an unapproved Kind is by definition absent.
@@ -520,7 +520,7 @@ export interface paths {
          *     ``filtered_by_plan`` is always false here rather than quietly meaning
          *     something different from the same field on the other face.
          *
-         *     ``tenant`` resolves the scope the way every document route does
+         *     ``tenant`` resolves the scope the way every instance route does
          *     (``live.default_scope``), so a portal that only knows a workspace id
          *     reaches that workspace's own registered Kinds without hardcoding the
          *     scope-prefix convention. An explicit ``scope`` still wins.
@@ -551,11 +551,11 @@ export interface paths {
          *     AUTHORED Kind and filters by caller): a registered Kind is the
          *     PRODUCT's data model, identical for every tenant and holding nobody's
          *     content, so this door does not filter. Declared BEFORE the
-         *     ``/{kind}/documents`` routes so ``registry`` is matched as the literal
+         *     ``/{kind}/instances`` routes so ``registry`` is matched as the literal
          *     segment it is (a Kind is CamelCase and can never be named
          *     ``registry``). 404 for a Kind the runtime does not register.
          *
-         *     ``tenant`` (i-094) resolves the scope the way EVERY document route
+         *     ``tenant`` (i-094) resolves the scope the way EVERY instance route
          *     does (``live.default_scope`` — under multi-workspace, ``tenant-<ws>``
          *     for an outside workspace), so a portal that only knows the workspace
          *     id reaches the workspace's OWN registered Kinds without hardcoding
@@ -599,7 +599,7 @@ export interface paths {
          *     or for a Kind the caller declared under two of its own namespaces at
          *     once; 403 for a namespace two claims give to different owners; 503 when
          *     the claim registry cannot be read. None of them degrades to answering
-         *     with the document.
+         *     with the instance.
          *
          *     **Mounted on every auth mode**, and this route carries the most: the
          *     workspace's JSON Schema, i.e. its data model. The 404 that keeps a
@@ -634,10 +634,10 @@ export interface paths {
          *     The approver is the caller's VERIFIED identity, resolved server-side
          *     (``_actor_from_state``: email → durable oid → ``sub``). An
          *     ``approved_by`` in the body reaches nothing: attribution a caller can
-         *     forge is not attribution. The document's ``proposed_by`` is preserved
+         *     forge is not attribution. The instance's ``proposed_by`` is preserved
          *     untouched, so the audit names both acts and neither wears the other's
          *     name. 404 when no such Kind was authored in this scope (approval acts on
-         *     an existing document and creates none — and a Kind authored by ANOTHER
+         *     an existing instance and creates none — and a Kind authored by ANOTHER
          *     workspace in a shared scope is a 404 too: it is not the caller's to
          *     approve, and saying "it exists but is not yours" would hand a stranger
          *     a probe for what its neighbours are authoring), 400 for a missing
@@ -664,7 +664,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/kinds/{kind}/documents": {
+    "/v1/kinds/{kind}/instances": {
         parameters: {
             query?: never;
             header?: never;
@@ -672,13 +672,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Kind Documents
-         * @description Listar os documentos de ``{kind}`` — a LEITURA da porta genérica.
+         * List Kind Instances
+         * @description Listar as instâncias de ``{kind}`` — a LEITURA da porta genérica.
          *
-         *     A face escrevia qualquer documento por ``POST
-         *     /v1/kinds/{kind}/documents`` e só lia os Kinds para os quais alguém
+         *     A face escrevia qualquer instância por ``POST
+         *     /v1/kinds/{kind}/instances`` e só lia os Kinds para os quais alguém
          *     escrevera uma rota à mão (``/v1/memories``, ``/v1/projects``, …). O
-         *     ``list_documents_impl`` já existia no SDK, completo, e não tinha porta:
+         *     ``list_instances_impl`` já existia no SDK, completo, e não tinha porta:
          *     quem gravava por aqui não conseguia ler de volta por lugar nenhum, e
          *     descobria isso depois de gravar.
          *
@@ -689,15 +689,15 @@ export interface paths {
          *
          *     Um Kind desconhecido é 404 **nomeando o Kind**, a mesma resposta que a
          *     escrita dá. Uma lista vazia de um Kind que existe é 200 com
-         *     ``documents: []`` — "existe e não tem nada" é uma resposta, e confundi-la
+         *     ``instances: []`` — "existe e não tem nada" é uma resposta, e confundi-la
          *     com "não existe" faria uma tela dizer *erro* onde devia dizer *nenhum
          *     ainda*.
          */
-        get: operations["list_kind_documents_v1_kinds__kind__documents_get"];
+        get: operations["list_kind_instances_v1_kinds__kind__instances_get"];
         put?: never;
         /**
-         * Write Kind Document
-         * @description Write one document of ``{kind}`` — the generic door, kubernetes-shaped.
+         * Write Kind Instance
+         * @description Write one instance of ``{kind}`` — the generic door, kubernetes-shaped.
          *
          *     The body is exactly ``{metadata, spec}`` (plus the optional
          *     ``source_sha256`` provenance citation). ``metadata.name`` is
@@ -706,7 +706,7 @@ export interface paths {
          *     (redundant, not wrong).
          *
          *     The write goes through the kernel's own pipeline exactly as the MCP
-         *     ``write_document`` tool's does: the Kind's JSON Schema validates
+         *     ``write_instance`` tool's does: the Kind's JSON Schema validates
          *     ``spec`` and names the offending field on refusal (400), a BOOTSTRAP
          *     Kind (Genome / LayerPolicy / KindDefinition) is refused (403, the
          *     generic write's own gate — untouched, not relaxed here), an authored
@@ -716,21 +716,21 @@ export interface paths {
          *     Kind is a 404 naming it, and a stale ``if_match`` is a 409.
          *
          *     ``source_sha256`` (optional) cites the ``SourceArtifact`` this
-         *     document was extracted from (by content address); the runtime closes
+         *     instance was extracted from (by content address); the runtime closes
          *     the ``derived_refs`` provenance edge server-side, preserving every
-         *     OTHER document already recorded there and updating THIS document's
+         *     OTHER instance already recorded there and updating THIS instance's
          *     own entry in place on a re-write — never accreting a duplicate. A
          *     ``source_sha256`` that names no registered artifact under ``tenant``
          *     is refused (400).
          */
-        post: operations["write_kind_document_v1_kinds__kind__documents_post"];
+        post: operations["write_kind_instance_v1_kinds__kind__instances_post"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/v1/kinds/{kind}/documents/{name}": {
+    "/v1/kinds/{kind}/instances/{name}": {
         parameters: {
             query?: never;
             header?: never;
@@ -738,18 +738,18 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Kind Document
-         * @description Ler UM documento de ``{kind}``, VERBATIM — o que a lista não dá.
+         * Get Kind Instance
+         * @description Ler UM instância de ``{kind}``, VERBATIM — o que a lista não dá.
          *
          *     A lista com ``fields`` projeta pela VISTA quando o Kind é produzível
          *     por readers (Agent, Skill…), e a vista normaliza — campos reais do
          *     spec gravado (``description``, ``tools_requiring_confirmation`` de um
          *     Agent) não viajam por ela. Quem gravou pelo POST genérico precisa
          *     conseguir ler DE VOLTA o que gravou: esta rota é o
-         *     ``get_document_impl`` de sempre, na mesma fronteira de confiança do
+         *     ``get_instance_impl`` de sempre, na mesma fronteira de confiança do
          *     POST (só ``tenant``; o scope é derivado, nunca nomeado).
          *
-         *     404 nomeia o que faltou — o Kind desconhecido ou o documento.
+         *     404 nomeia o que faltou — o Kind desconhecido ou a instância.
          *
          *     ``as_of`` (i-106) é a leitura no TEMPO, e chegou aqui por um defeito, não
          *     por um pedido: esta rota já **aceitava** ``?as_of=`` — o FastAPI descarta
@@ -775,7 +775,7 @@ export interface paths {
          *     e **422** quando o instante não é ISO-8601 — erro do chamador, não do
          *     servidor.
          */
-        get: operations["get_kind_document_v1_kinds__kind__documents__name__get"];
+        get: operations["get_kind_instance_v1_kinds__kind__instances__name__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -784,7 +784,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/kinds/{kind}/documents/{name}/refs": {
+    "/v1/kinds/{kind}/instances/{name}/refs": {
         parameters: {
             query?: never;
             header?: never;
@@ -793,7 +793,7 @@ export interface paths {
         };
         /**
          * Graph Refs
-         * @description "O que depende deste documento?" — o grafo de DADO, com profundidade.
+         * @description "O que depende desta instância?" — o grafo de DADO, com profundidade.
          *
          *     A tela do Kind sempre soube dizer que ``Story.feature → Feature``
          *     existe como REGRA, e nunca soube dizer que ESTAS 47 Stories apontam
@@ -802,7 +802,7 @@ export interface paths {
          *     nada aqui deriva, adivinha ou lê slug.
          *
          *     ``direction=in`` (o default, e a pergunta do produto) traz quem aponta
-         *     para cá; ``out`` o que este documento aponta; ``both`` a união.
+         *     para cá; ``out`` o que esta instância aponta; ``both`` a união.
          *     ``depth`` é OBRIGATÓRIO ter teto: ``Spec.supersedes`` e
          *     ``Story.dependencies`` são auto-referentes por desenho, e uma travessia
          *     sem limite aqui é incidente de produção, não risco teórico. O valor é
@@ -810,10 +810,10 @@ export interface paths {
          *
          *     **501, nunca lista vazia**, quando o adapter ativo não guarda arestas
          *     (o filesystem não tem transação nem tabela para guardá-las). ``[]``
-         *     se lê como "nada aponta para este documento", e essa é uma afirmação
+         *     se lê como "nada aponta para esta instância", e essa é uma afirmação
          *     que só um store que de fato registra arestas pode fazer.
          */
-        get: operations["graph_refs_v1_kinds__kind__documents__name__refs_get"];
+        get: operations["graph_refs_v1_kinds__kind__instances__name__refs_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -835,11 +835,11 @@ export interface paths {
          * Revoke Kind
          * @description Revoke an authored Kind — the act that WITHDRAWS its effect.
          *
-         *     Every existing document of the Kind becomes invalid: it is NOT deleted
+         *     Every existing instance of the Kind becomes invalid: it is NOT deleted
          *     and NOT made unreadable, it reads back MARKED (``status.valid ==
          *     false``), and in a listing it appears marked rather than vanishing — so
          *     revocation can never be used to hide data without deleting it. New
-         *     documents of the Kind are refused outright, conforming ones included:
+         *     instances of the Kind are refused outright, conforming ones included:
          *     what was withdrawn is the Kind, not a schema.
          *
          *     The revoker is the caller's VERIFIED identity, resolved server-side, on
@@ -857,7 +857,7 @@ export interface paths {
          *     Kind was authored in this scope — or when it belongs to a neighbour,
          *     because "it exists but is not yours" would hand a stranger a probe; 400
          *     for a missing tenant / a malformed Kind name / a Kind the caller
-         *     declared under two of its own namespaces; 409 when the document moved
+         *     declared under two of its own namespaces; 409 when the instance moved
          *     since it was read (i-083 — a revocation is a read-modify-write too, and
          *     unguarded it would resurrect a stale replica's shape AND mark it
          *     revoked); 403 from the namespace gate; 503 when the namespace registry
@@ -1584,7 +1584,7 @@ export interface components {
         /**
          * AuthorKindResponse
          * @description ``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false
-         *     here: this door cannot approve, so the field states the document's actual
+         *     here: this door cannot approve, so the field states the instance's actual
          *     state rather than echoing anything the caller sent.
          */
         AuthorKindResponse: {
@@ -1610,9 +1610,9 @@ export interface components {
          * @description ``GET /v1/kinds/{kind}`` — one authored Kind, in full.
          *
          *     SUBCLASSES the summary rather than restating it: the roster and the single
-         *     read describe the SAME document, and two independent field lists are two
+         *     read describe the SAME instance, and two independent field lists are two
          *     vocabularies for one thing — the kind of drift that reads, to the human
-         *     doing the review, as two different documents.
+         *     doing the review, as two different instances.
          *
          *     What it adds is what the roster deliberately withholds. ``schema`` is the
          *     reason the route exists: registration is what confers schema validation and
@@ -1621,7 +1621,7 @@ export interface components {
          *     ``traits`` travels with it because it is the other half of what the
          *     authoring door stored and the other half of what would take effect.
          *
-         *     ``schema`` is ``null``, never ``{}``, for a document that stored none —
+         *     ``schema`` is ``null``, never ``{}``, for an instance that stored none —
          *     "there is no schema here" and "the schema is the empty object" are
          *     different facts about what would be conferred.
          */
@@ -1671,7 +1671,7 @@ export interface components {
         };
         /**
          * AuthoredKindSummary
-         * @description One ``KindDefinition`` document as the audit surface sees it — ALL THREE
+         * @description One ``KindDefinition`` instance as the audit surface sees it — ALL THREE
          *     actors, so the reviewer deciding whether to confer effect can see who asked
          *     for it, and whether anyone has since taken it away, without leaving the
          *     list.
@@ -1713,7 +1713,7 @@ export interface components {
         /**
          * AuthoredKindsResponse
          * @description ``GET /v1/kinds`` — every authored Kind in the scope, approved or not.
-         *     Documents, not registry entries: an UNAPPROVED Kind is exactly the one the
+         *     Instances, not registry entries: an UNAPPROVED Kind is exactly the one the
          *     registry does not have, and it is the one a reviewer came here for.
          */
         AuthoredKindsResponse: {
@@ -2046,7 +2046,7 @@ export interface components {
         };
         /**
          * BundleEntriesView
-         * @description ``GET /v1/definitions/{kind}/{name}/entries`` — a bundle document's
+         * @description ``GET /v1/definitions/{kind}/{name}/entries`` — a bundle instance's
          *     entry files (base ∪ tenant overlay), each flagged ``overridden`` —
          *     whether THIS tenant forked that specific file.
          */
@@ -2183,7 +2183,7 @@ export interface components {
         /**
          * DefinitionWriteResponse
          * @description ``PUT``/``DELETE /v1/definitions/{kind}/{name}`` — the write result.
-         *     ``version`` is set on apply (the write's document version), absent on
+         *     ``version`` is set on apply (the write's instance version), absent on
          *     revert.
          */
         DefinitionWriteResponse: {
@@ -2244,15 +2244,15 @@ export interface components {
             ships: components["schemas"]["GenomeShips"];
         };
         /**
-         * GetKindDocumentResponse
-         * @description ``GET /v1/kinds/{kind}/documents/{name}`` — UM documento, VERBATIM.
+         * GetKindInstanceResponse
+         * @description ``GET /v1/kinds/{kind}/instances/{name}`` — UM instância, VERBATIM.
          *
          *     A lista projetada passa pela vista dos readers quando o Kind é produzível
          *     por bundle (Agent, Skill…) — e a vista NORMALIZA: `spec.description` e
          *     `spec.tools_requiring_confirmation` de um Agent gravado pelo funil
          *     genérico simplesmente não viajam por ela (medido 05/08/2026 na aba
-         *     Configuração do dna-cloud). Esta porta lê o documento como a camada do
-         *     chamador o vê, sem projeção e sem vista — o `get_document_impl` que
+         *     Configuração do dna-cloud). Esta porta lê a instância como a camada do
+         *     chamador o vê, sem projeção e sem vista — o `get_instance_impl` que
          *     sempre existiu e não tinha rota.
          *
          *     `etag` é o token de concorrência otimista para um write subsequente
@@ -2260,11 +2260,11 @@ export interface components {
          *
          *     Os TRÊS campos `as_of*` só aparecem quando o chamador pediu leitura no
          *     tempo, e existem para que uma resposta histórica não seja confundível com
-         *     uma viva por quem só olha `document` (i-106: a rota ACEITAVA `?as_of=` e
+         *     uma viva por quem só olha `instance` (i-106: a rota ACEITAVA `?as_of=` e
          *     devolvia o presente, sem nada na resposta que a desmentisse). Presentes ⇒ o
          *     corpo é o estado de crença daquele instante; ausentes ⇒ é o de agora.
          */
-        GetKindDocumentResponse: {
+        GetKindInstanceResponse: {
             /** Api Version */
             api_version: string;
             /** As Of */
@@ -2273,12 +2273,12 @@ export interface components {
             as_of_recorded_at?: string | null;
             /** As Of Version */
             as_of_version?: number | null;
-            /** Document */
-            document: {
-                [key: string]: unknown;
-            };
             /** Etag */
             etag?: string | null;
+            /** Instance */
+            instance: {
+                [key: string]: unknown;
+            };
             /** Kind */
             kind: string;
             /** Name */
@@ -2292,7 +2292,7 @@ export interface components {
          *
          *     ``resolved: false`` is a DANGLING reference — declared, written, resolving
          *     to nothing. It travels rather than being filtered out: with
-         *     ``DNA_REF_VALIDATION=warn`` (the default) such a document persists, so
+         *     ``DNA_REF_VALIDATION=warn`` (the default) such an instance persists, so
          *     dropping the row would render a tidier graph than the data deserves. These
          *     rows ARE the list of what is broken.
          *
@@ -2337,7 +2337,7 @@ export interface components {
         };
         /**
          * GraphRefsResponse
-         * @description ``GET /v1/kinds/{kind}/documents/{name}/refs`` — the DATA graph.
+         * @description ``GET /v1/kinds/{kind}/instances/{name}/refs`` — the DATA graph.
          *
          *     ``stop`` says WHY the walk ended (``complete`` / ``depth_reached`` /
          *     ``truncated``), because a caller that cannot tell "this is everything" from
@@ -2346,11 +2346,11 @@ export interface components {
          *     ``graph_producer`` reports the producer's mode (``warn`` / ``enforce`` /
          *     ``off``). With it ``off`` the write path performs no reference lookups, so
          *     no edges are produced — defensible operationally, and NOT the same as "this
-         *     document has no relations". A store that keeps no edge graph at all answers
+         *     instance has no relations". A store that keeps no edge graph at all answers
          *     501, never an empty list.
          *
          *     ⚠️ These are the ENFORCED relations only — the ones ``spec.relations``
-         *     declares with a concrete target addressed by document name, which is the
+         *     declares with a concrete target addressed by instance name, which is the
          *     only kind the write path resolves. The schema graph also carries relations
          *     addressed by a domain key or carrying their Kind in the value, plus
          *     composition edges from ``dep_filters``, none of which is ever checked
@@ -2640,7 +2640,7 @@ export interface components {
          *
          *     ⚠️ ``enforced`` is the flag that matters, and it is NOT the same as
          *     ``tier == "declared"``. The kernel resolves a relation at write time only
-         *     when it has a concrete target Kind AND is addressed by document name
+         *     when it has a concrete target Kind AND is addressed by instance name
          *     (``by == "name"``). A relation addressed by a spec field of the target
          *     (``by: workspace_id``) or carrying its Kind in the value (``to: "*"``) is
          *     fully declared and deliberately not resolved. A renderer that draws
@@ -2734,7 +2734,7 @@ export interface components {
          * @description ``GET /v1/graph/kinds`` — the whole SCHEMA graph in one call.
          *
          *     SCHEMA, not data: these edges say which Kinds MAY point at which. Which
-         *     DOCUMENTS actually point at which is a different graph, derived at write
+         *     INSTANCES actually point at which is a different graph, derived at write
          *     time, and this route does not answer it — ``coverage.limits`` carries that
          *     statement on the wire so it travels with the answer instead of living in a
          *     doc page a caller may never read.
@@ -2798,10 +2798,10 @@ export interface components {
             reason: string;
         };
         /**
-         * ListKindDocumentsResponse
-         * @description ``GET /v1/kinds/{kind}/documents`` — uma página de documentos do Kind.
+         * ListKindInstancesResponse
+         * @description ``GET /v1/kinds/{kind}/instances`` — uma página de instâncias do Kind.
          *
-         *     `documents` é a linha como o kernel a moldou: `{"name": …}` sem projeção, e
+         *     `instances` é a linha como o kernel a moldou: `{"name": …}` sem projeção, e
          *     `{"name": …, "spec": {…}}` com `fields`. `projected` ecoa o que foi pedido,
          *     para um leitor distinguir uma página de nomes de uma projetada — sem isso,
          *     um `spec` ausente seria ambíguo entre "não pedi" e "não tem".
@@ -2809,17 +2809,17 @@ export interface components {
          *     `has_more` é respondido buscando UMA linha a mais, não adivinhado a partir
          *     de a página ter vindo cheia.
          */
-        ListKindDocumentsResponse: {
+        ListKindInstancesResponse: {
             /** Api Version */
             api_version: string;
             /** Count */
             count: number;
-            /** Documents */
-            documents: {
-                [key: string]: unknown;
-            }[];
             /** Has More */
             has_more: boolean;
+            /** Instances */
+            instances: {
+                [key: string]: unknown;
+            }[];
             /** Kind */
             kind: string;
             /** Offset */
@@ -3079,7 +3079,7 @@ export interface components {
         PromptSectionProvenance: {
             /**
              * Hash
-             * @description SHA-256 (full hex) of the resolved raw document composed into this section, or null when it could not be resolved.
+             * @description SHA-256 (full hex) of the resolved raw instance composed into this section, or null when it could not be resolved.
              */
             hash?: string | null;
             /**
@@ -3094,7 +3094,7 @@ export interface components {
             kind: string;
             /**
              * Name
-             * @description The contributing document name.
+             * @description The contributing instance name.
              */
             name: string;
             /**
@@ -3119,7 +3119,7 @@ export interface components {
             source: string;
             /**
              * Version
-             * @description metadata.version of the resolved document, when the author set one.
+             * @description metadata.version of the resolved instance, when the author set one.
              */
             version?: string | null;
         };
@@ -3389,7 +3389,7 @@ export interface components {
          *     shape, who conferred effect on it, and who has just withdrawn it.
          *     ``approved_by`` is present on purpose — revoking is a third act, not an
          *     erasure of the second, and a record saying only "revoked by X" has lost the
-         *     fact that this Kind governed real documents for a while.
+         *     fact that this Kind governed real instances for a while.
          */
         RevokeKindResponse: {
             /** Approved At */
@@ -3578,8 +3578,8 @@ export interface components {
             content: string;
         };
         /**
-         * WriteKindDocumentRequest
-         * @description ``POST /v1/kinds/{kind}/documents`` — the document to write.
+         * WriteKindInstanceRequest
+         * @description ``POST /v1/kinds/{kind}/instances`` — the instance to write.
          *
          *     Deliberately narrow: no ``scope``, no ``claims`` anywhere on this model —
          *     neither is reachable through this route's body (identity/scope are never
@@ -3591,10 +3591,10 @@ export interface components {
          *     exactly the defect this route exists to close.
          *
          *     ``source_sha256``, when given, cites the ``SourceArtifact`` (by content
-         *     address) this document was extracted from — the runtime closes the
+         *     address) this instance was extracted from — the runtime closes the
          *     provenance edge (``derived_refs``) server-side.
          */
-        WriteKindDocumentRequest: {
+        WriteKindInstanceRequest: {
             /** Kind */
             kind?: string | null;
             /** Metadata */
@@ -3609,12 +3609,12 @@ export interface components {
             };
         };
         /**
-         * WriteKindDocumentResponse
-         * @description ``POST /v1/kinds/{kind}/documents`` — the written document. ``scope``
+         * WriteKindInstanceResponse
+         * @description ``POST /v1/kinds/{kind}/instances`` — the written instance. ``scope``
          *     is DERIVED (there is no ``scope`` field on the request to have supplied
          *     one from).
          */
-        WriteKindDocumentResponse: {
+        WriteKindInstanceResponse: {
             /** Api Version */
             api_version: string;
             /** Created */
@@ -4582,7 +4582,7 @@ export interface operations {
             };
         };
     };
-    list_kind_documents_v1_kinds__kind__documents_get: {
+    list_kind_instances_v1_kinds__kind__instances_get: {
         parameters: {
             query?: {
                 tenant?: string | null;
@@ -4608,7 +4608,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ListKindDocumentsResponse"];
+                    "application/json": components["schemas"]["ListKindInstancesResponse"];
                 };
             };
             /** @description Validation Error */
@@ -4622,7 +4622,7 @@ export interface operations {
             };
         };
     };
-    write_kind_document_v1_kinds__kind__documents_post: {
+    write_kind_instance_v1_kinds__kind__instances_post: {
         parameters: {
             query?: {
                 api_version?: string | null;
@@ -4640,7 +4640,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["WriteKindDocumentRequest"];
+                "application/json": components["schemas"]["WriteKindInstanceRequest"];
             };
         };
         responses: {
@@ -4650,7 +4650,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["WriteKindDocumentResponse"];
+                    "application/json": components["schemas"]["WriteKindInstanceResponse"];
                 };
             };
             /** @description Validation Error */
@@ -4664,12 +4664,12 @@ export interface operations {
             };
         };
     };
-    get_kind_document_v1_kinds__kind__documents__name__get: {
+    get_kind_instance_v1_kinds__kind__instances__name__get: {
         parameters: {
             query?: {
                 tenant?: string | null;
                 api_version?: string | null;
-                /** @description ISO-8601 instant. Return the document AS THIS STORE RECORDED IT at that moment (transaction time) instead of its current state. Refuses rather than approximates: 501 if the store keeps no version history, 410 if this document's history was pruned past the instant, 404 if it did not exist yet. */
+                /** @description ISO-8601 instant. Return the instance AS THIS STORE RECORDED IT at that moment (transaction time) instead of its current state. Refuses rather than approximates: 501 if the store keeps no version history, 410 if this instance's history was pruned past the instant, 404 if it did not exist yet. */
                 as_of?: string | null;
             };
             header?: {
@@ -4689,7 +4689,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GetKindDocumentResponse"];
+                    "application/json": components["schemas"]["GetKindInstanceResponse"];
                 };
             };
             /** @description Validation Error */
@@ -4703,7 +4703,7 @@ export interface operations {
             };
         };
     };
-    graph_refs_v1_kinds__kind__documents__name__refs_get: {
+    graph_refs_v1_kinds__kind__instances__name__refs_get: {
         parameters: {
             query?: {
                 tenant?: string | null;

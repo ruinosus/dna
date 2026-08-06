@@ -1,4 +1,4 @@
-# The reference graph — what points at this document?
+# The reference graph — what points at this instance?
 
 A Kind declares what it points at, as a thing of its own:
 
@@ -15,7 +15,7 @@ That declaration has been enforced on write for a while: save a `Story` whose
 `spec.feature` names nothing and the kernel says so. What it could not do was
 answer the question a product actually asks —
 
-> **What breaks if I delete or change this document?**
+> **What breaks if I delete or change this instance?**
 
 The Kind screen could say `Story.feature → Feature` exists as a *rule*. It
 could not say that **these forty-seven Stories** point at **this** Feature.
@@ -24,12 +24,12 @@ importantly — what it deliberately refuses to claim.
 
 ## The edge costs no extra read
 
-Validating a declared reference means loading the target document. The write
+Validating a declared reference means loading the target instance. The write
 path was already doing that, checking `is not None`, and throwing away both the
-document *and* — for a polymorphic reference — which of the declared Kinds
+instance *and* — for a polymorphic reference — which of the declared Kinds
 actually matched.
 
-So the producer is not a second mechanism that scans documents and derives
+So the producer is not a second mechanism that scans instances and derives
 relationships. It is the *same* pass, keeping its result:
 
 ```
@@ -40,24 +40,24 @@ resolve_relations(...) -> (edges, problems, discords, complete)
                              └── what the edge table stores
 ```
 
-`discords` rides along for the same reason `edges` does: the target document is
+`discords` rides along for the same reason `edges` does: the target instance is
 already in hand, so asking "does it name me back through the declared
 `inverse_of`?" costs nothing. It is REPORTED and never enforced — imposing a
 reciprocal pair deadlocks (neither half can be written first) and deriving one
-means the kernel writing a document the author never touched.
+means the kernel writing an instance the author never touched.
 
 One pass, one set of reads, two consumers. That matters for a reason beyond
 cost: an edge derived separately from the check could **disagree** with the
 check. Here it cannot — the edge *is* the validator's own finding.
 
 The rows are written by the storage adapter **inside the same transaction as
-the document**, alongside the event outbox. Either the document and its
+the instance**, alongside the event outbox. Either the instance and its
 relations both land, or neither does.
 
 !!! warning "This table existed once before, empty"
     `dna_edges` was created in 2026 by a migration whose own comment described
     a producer that was never written, and dropped fourteen months later with
-    zero rows in it. Nothing distinguished "this document has no relations"
+    zero rows in it. Nothing distinguished "this instance has no relations"
     from "nobody ever filled the table". That is why the producer, the
     migration and the test that proves a write puts a row in it ship together,
     and why the acceptance test fails if the table exists without the producer.
@@ -77,7 +77,7 @@ relations both land, or neither does.
 === "REST"
 
     ```
-    GET /v1/kinds/Feature/documents/f-poder-de-grafo/refs?direction=in&depth=2
+    GET /v1/kinds/Feature/instances/f-poder-de-grafo/refs?direction=in&depth=2
     ```
 
 The walk is one recursive CTE in standard SQL — identical on PostgreSQL and
@@ -105,7 +105,7 @@ The graph is only worth having if it is honest about its own edges, so four
 signals travel with every answer.
 
 **A dangling reference is a row, not a gap.** With `DNA_REF_VALIDATION=warn`
-(the default) a document with an unresolvable reference *persists*. Its edge is
+(the default) an instance with an unresolvable reference *persists*. Its edge is
 stored with a null target and returned with `resolved: false`. Hiding it would
 render a graph tidier than the data deserves — and those rows are precisely the
 list of what is broken. Delete a Feature that forty-seven Stories cite and the
@@ -113,7 +113,7 @@ forty-seven edges remain, now dangling: the delete path validates no references
 at all, so this is the only trace that anything broke.
 
 **A store that keeps no edges answers `unsupported`, never `[]`.** An empty
-list reads as "nothing points at this document" — a claim only a store that
+list reads as "nothing points at this instance" — a claim only a store that
 actually records edges is entitled to make. The filesystem adapter has neither
 a transaction to write edges in nor a table to write them to, so it says so
 (HTTP 501).
@@ -128,25 +128,25 @@ edges. That is a defensible operational choice; a screen rendering the
 resulting emptiness as "no relations" is not.
 
 And one refusal on the write side: if a read fails part-way through resolving a
-document's references, the stored edges are **not replaced**. A partial edge set
+instance's references, the stored edges are **not replaced**. A partial edge set
 stored as though it were whole is a graph that lies while looking finished —
 strictly worse than one that is honestly absent, because the absent one can be
 labelled.
 
-## Documents written before the producer existed
+## Instances written before the producer existed
 
 They have no edges, and there is exactly one honest way to give them some:
 
 ```console
 $ dna graph backfill --scope my-workspace --dry-run
-9 declared (Kind, field) pair(s) · 214 document(s) · would write 231 edge(s), 6 dangling
+9 declared (Kind, field) pair(s) · 214 instance(s) · would write 231 edge(s), 6 dangling
 ```
 
 The backfill asks the **same declaration** the producer reads. For each
-declared `(Kind, field)` pair it queries the documents whose `spec` carries that
+declared `(Kind, field)` pair it queries the instances whose `spec` carries that
 field — on PostgreSQL a JSONB key-existence predicate the existing GIN index
 serves directly, so it is a handful of queries rather than a walk over every
-document. It is idempotent (the same delete-then-insert per document the
+instance. It is idempotent (the same delete-then-insert per instance the
 producer uses) and runs cold: nothing in it needs the write path to have been
 warm.
 
@@ -155,7 +155,7 @@ That mechanism is what got the first edge table cancelled: guessing produces
 adivinhação, not a model, and it makes every reference that does not follow the
 convention invisible to the graph.
 
-A document whose references cannot be resolved completely is left alone and its
+An instance whose references cannot be resolved completely is left alone and its
 scope is reported as pending, so a screen can say *"still being filled"* rather
 than showing a confident nothing.
 
@@ -168,11 +168,11 @@ than showing a confident nothing.
   edges (`dep_filters`, never checked against data) and name-convention
   guesses. Calling this "the relations" would claim a completeness the producer
   does not have — which is why every surface qualifies it as *declared
-  relations (`spec.relations`, addressed by document name)*.
+  relations (`spec.relations`, addressed by instance name)*.
 - **Top-level fields only.** `references_from_schema` reads
   `schema["properties"]` and does not recurse into `items`, sub-objects,
   `$ref` or `oneOf`. A reference at `spec.foo.bar` is invisible, and stays so.
-- **Current state, not history.** An edge carries the document version it was
+- **Current state, not history.** An edge carries the instance version it was
   derived from (so drift is detectable), but the table holds the present.
 
 ## See also

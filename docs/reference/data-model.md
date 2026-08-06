@@ -9,7 +9,7 @@
 
 DNA's data model has two levels. The **logical** model — Kinds and
 the references between them — carries the meaning. The **physical**
-model is a generic document store that tells you almost nothing about
+model is a generic instance store that tells you almost nothing about
 the domain, and this page says so rather than dressing it up.
 
 ## One database, four schema owners
@@ -20,7 +20,7 @@ schema owners**, each migrating only its own tables:
 
 | Owner | Migrates | On this page |
 | --- | --- | --- |
-| DNA SDK (this repo) | the document-store tables below, via its own Alembic tree | yes — fully |
+| DNA SDK (this repo) | the instance-store tables below, via its own Alembic tree | yes — fully |
 | dna-cloud portal | its Prisma schema (accounts, plans, billing — real relational tables with real foreign keys) | **no** — separate repo, separate migration tool |
 | Copilot service | `copilot_thread` and friends | **no** |
 | LangGraph runtime | `checkpoint*` / `store*` | **no** |
@@ -46,7 +46,7 @@ readable, so it is reproduced from source rather than asserted:
 
 ## Logical model — Kinds and their references
 
-84 Kinds are registered. Each is a document, not a table: a
+84 Kinds are registered. Each is an instance, not a table: a
 Kind costs a YAML descriptor and zero migrations, which is the point
 of an open type system. The cost is that references between Kinds are
 not database foreign keys — they are fields holding a name.
@@ -64,7 +64,7 @@ than either:
 
 **Solid line = the kernel resolves it at write time. Dashed = it does not.** That is the `enforced` flag, and it is not the same as the tier: a relation addressed by a domain key (`by: workspace_id`) or carrying its Kind in the value (`to: *`) is fully declared and deliberately not followed — resolving by key needs an index the store does not have, and a second resolution rule beside a live one can veto data the live one accepts.
 
-`*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the document name.
+`*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the instance name.
 
 **97 edges: 47 declared, 50 composition-only — of which 21 are ENFORCED at write time.** 26 of 84 Kinds declare at least one relation, and 25 fields are listed below as gaps.
 
@@ -485,7 +485,7 @@ above, with `Enforced` blank.
 
 ### Kinds with no reference edge (32)
 
-Standalone documents — configuration, composition-plane behaviour, or
+Standalone instances — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
 `AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `AuditLog`, `Automation`, `Canvas`, `Changelog`, `CognitivePolicy`, `Doc`, `EvalBaseline`, `EvalRun`, `EvidencePolicy`, `Genome`, `Hook`, `HtmlArtifact`, `KindDefinition`, `KindNamespace`, `LayerPolicy`, `Lesson`, `MCPFederation`, `Memory`, `ModelProfile`, `PlanBinding`, `PromptTemplate`, `RemoteAgent`, `Setting`, `Tenant`, `TenantMembership`, `Theme`, `UserProfile`, `UserRoleAssignment`, `WorkspaceScopeGrant`
@@ -495,8 +495,8 @@ record Kinds whose links are simply not modelled yet.
 !!! note "This diagram carries little information, by design"
 
     11 tables on Postgres (5 on SQLite) and
-    **1 foreign keys**. They are a generic document store:
-    `documents` holds every Kind, of every type, as JSON in a
+    **1 foreign keys**. They are a generic instance store:
+    `instances` holds every Kind, of every type, as JSON in a
     `content` column keyed by `(scope, kind, name, tenant)`. Adding a
     Kind adds rows, never a table — so the physical diagram cannot
     show you the domain. The logical model above is where the domain
@@ -532,16 +532,6 @@ erDiagram
         TEXT tenant PK
         BLOB content_binary
     }
-    dna_documents {
-        TEXT scope PK
-        TEXT kind PK
-        TEXT api_version PK
-        TEXT name PK
-        TEXT content
-        INTEGER version
-        TEXT updated_at
-        TEXT tenant PK
-    }
     dna_edges {
         TEXT scope PK
         TEXT tenant PK
@@ -557,7 +547,17 @@ erDiagram
         INTEGER from_version
         DATETIME updated_at
     }
-    dna_layer_documents {
+    dna_instances {
+        TEXT scope PK
+        TEXT kind PK
+        TEXT api_version PK
+        TEXT name PK
+        TEXT content
+        INTEGER version
+        TEXT updated_at
+        TEXT tenant PK
+    }
+    dna_layer_instances {
         TEXT scope PK
         TEXT layer_id PK
         TEXT layer_value PK
@@ -648,9 +648,9 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | --- | --- |
 | `dna_approval` | — |
 | `dna_bundle_entries` | `bundle_entries` |
-| `dna_documents` | `documents` |
 | `dna_edges` | `edges` |
-| `dna_layer_documents` | `layer_documents` |
+| `dna_instances` | `instances` |
+| `dna_layer_instances` | `layer_instances` |
 | `dna_outbox` | — |
 | `dna_quota_counters` | — |
 | `dna_turn` | — |
@@ -692,19 +692,6 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | `tenant` | `TEXT` | PK |  |
 | `content_binary` | `BLOB` |  | yes |
 
-#### `dna_documents`
-
-| Column | Type | Key | Nullable |
-| --- | --- | --- | --- |
-| `scope` | `TEXT` | PK |  |
-| `kind` | `TEXT` | PK |  |
-| `api_version` | `TEXT` | PK |  |
-| `name` | `TEXT` | PK |  |
-| `content` | `TEXT` |  |  |
-| `version` | `INTEGER` |  |  |
-| `updated_at` | `TEXT` |  |  |
-| `tenant` | `TEXT` | PK |  |
-
 #### `dna_edges`
 
 | Column | Type | Key | Nullable |
@@ -723,7 +710,20 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | `from_version` | `INTEGER` |  |  |
 | `updated_at` | `DATETIME` |  |  |
 
-#### `dna_layer_documents`
+#### `dna_instances`
+
+| Column | Type | Key | Nullable |
+| --- | --- | --- | --- |
+| `scope` | `TEXT` | PK |  |
+| `kind` | `TEXT` | PK |  |
+| `api_version` | `TEXT` | PK |  |
+| `name` | `TEXT` | PK |  |
+| `content` | `TEXT` |  |  |
+| `version` | `INTEGER` |  |  |
+| `updated_at` | `TEXT` |  |  |
+| `tenant` | `TEXT` | PK |  |
+
+#### `dna_layer_instances`
 
 | Column | Type | Key | Nullable |
 | --- | --- | --- | --- |

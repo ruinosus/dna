@@ -3,7 +3,7 @@
 DNA (Domain Notation of Anything) is **Kubernetes CRDs for agentic
 behavior**: a declarative, typed notation in which every participant of an
 agentic system — agents, skills, souls, guardrails, tools, policies — is a
-YAML/Markdown document identified by `(apiVersion, kind)`, validated on
+YAML/Markdown instance identified by `(apiVersion, kind)`, validated on
 write against a per-Kind schema, and composed on read into prompts by a
 microkernel that itself knows no Kinds (extensions register them).
 Standards DNA did not invent are consumed byte-faithful under their owners'
@@ -16,7 +16,7 @@ other languages reach it over the REST and MCP faces.
 
 ```
 packages/sdk-py/   # THE runtime — kernel + adapters + extensions (import dna)
-packages/cli/      # `dna` binary — document CRUD + declarative SDLC (dna sdlc)
+packages/cli/      # `dna` binary — instance CRUD + declarative SDLC (dna sdlc)
 packages/client-py/ packages/client-ts/   # REST clients, generated from docs/openapi.json
 docs/              # Quick start, Kinds guide, port contract, readers/writers
 examples/          # hello-genome — minimal runnable scope
@@ -98,6 +98,40 @@ cd packages/sdk-py && uv run python -m pytest tests -q
 cd packages/sdk-py && uv run python ../../scripts/<guard>.py
 ```
 
+## ⭐ Vocabulary — the pair is **Kind / Instance**
+
+A **Kind** is the type. An **Instance** is a thing of that type. Nothing in
+this repo calls an instance a "document" any more (i-111, 06/08/2026), and the
+reason is measured: `select count(*) from dna_instances where kind =
+'KindDefinition'` returns 6 — a Kind IS an instance, stored in the same table
+as the instances it defines. "Document" therefore named the layer AND the
+thing that defines the layer, one level apart, which is why the sentence
+"create a document that is a Kind that defines documents" never closed.
+Kind/Instance closes it, reflexive case included: *the KindDefinition is an
+instance of the Kind KindDefinition*.
+
+It also stops the word lying about content: an Engram is a memory, a
+PricingPlan is a price table, a Sprint is a window of time. None of them is a
+document in any sense.
+
+| the thing | say | not |
+|---|---|---|
+| a stored thing of some Kind | instance | document, record, entity |
+| the table it lives in | `dna_instances` | `dna_documents` |
+| the Python class | `Instance` (`dna.kernel.instance`) | `Document` |
+| the kernel verbs | `write_instance` / `get_instance` / `list_instances` / `delete_instance` | `*_document` |
+| the REST collection | `/v1/kinds/{kind}/instances` | `/documents` |
+| the CLI group | `dna instance` | `dna doc` |
+
+**"Document" is still the right word where the thing IS a document** — a
+`RESEARCH.md`, an attachment, an uploaded PDF, a `SourceArtifact`, a YAML
+stream's `---`-separated documents, the noun in "documentation", and the VERB
+("this guide documents X"). `ManifestInstance` keeps its name: it is an
+instance of the manifest, not of a Kind — so `kernel.instance(scope)` returns
+one, while `kernel.get_instance(scope, kind, name)` returns an `Instance`.
+That neighbouring pair is the one ambiguity this rename did not resolve; if it
+bites, it gets its own issue.
+
 ## Conventions
 
 - **Behavior that crosses a boundary is golden-locked.** Public API
@@ -108,8 +142,8 @@ cd packages/sdk-py && uv run python ../../scripts/<guard>.py
 - **Brand guard.** This is the extracted public core of a production
   system; `scripts/brand_guard.py` fails CI on any internal brand token in
   tracked content or paths. Run it before pushing docs.
-- **Blessed query surface.** Consume documents through the public instance
-  API (`documents`, `all`, `one`, `build_prompt`, `doc.typed`) — private
+- **Blessed query surface.** Consume instances through the public instance
+  API (`instances`, `all`, `one`, `build_prompt`, `doc.typed`) — private
   kernel internals are guarded by `test_blessed_query_surface.py`.
 - **Conformance kits are the safety net.** New adapters, readers and
   writers plug into the existing kits (`test_adapter_conformance_matrix.py`,
@@ -118,7 +152,7 @@ cd packages/sdk-py && uv run python ../../scripts/<guard>.py
 
 ## SDLC protocol — work is tracked in-repo via `dna sdlc`
 
-The repo tracks its own lifecycle as DNA documents in `.dna/dna-development`
+The repo tracks its own lifecycle as DNA instances in `.dna/dna-development`
 (the CLI's default source `./.dna`; run `dna` from the repo root). The flow
 is **story-first**:
 

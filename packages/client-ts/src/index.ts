@@ -2,7 +2,7 @@
  * `dna-client` — the official TypeScript client for the **DNA REST read-API**
  * (`dna api serve`).
  *
- * The client is GENERATED from the API's OpenAPI document (`docs/openapi.json`,
+ * The client is GENERATED from the API's OpenAPI instance (`docs/openapi.json`,
  * dumped from the FastAPI app by `scripts/dump_openapi.py`): the path/param/body
  * types in `./schema.ts` are produced by `openapi-typescript`, and this module
  * is a thin, typed wrapper over `openapi-fetch` bound to those types. Because
@@ -25,7 +25,7 @@
  * `openapi-fetch` from the generated `schema.ts` — carry the real payload shape
  * (e.g. `listAgents()` → `{ scope, agents: { name, kind, description }[] }`).
  * Genuinely dynamic payloads stay loose by design: a memory recall `hit`, a
- * Document `spec`, an SDLC work-item's verbatim AC/DoD/timeline lists, and
+ * Instance `spec`, an SDLC work-item's verbatim AC/DoD/timeline lists, and
  * status→count maps are typed as open records/`unknown`.
  */
 import createClient, { type Client } from "openapi-fetch";
@@ -213,17 +213,17 @@ export class DnaClient {
   // ── Kind authoring (a workspace declares its OWN Kind) ───────────────────
 
   /**
-   * Author a Kind for the calling workspace — a `KindDefinition` document
+   * Author a Kind for the calling workspace — a `KindDefinition` instance
    * written WITHOUT an approval marker, under the workspace's own assigned
    * apiVersion namespace.
    *
    * What comes back is INERT: `approved` is always `false`, and an unapproved
-   * Kind never enters the registry, so it neither validates documents nor
+   * Kind never enters the registry, so it neither validates instances nor
    * routes their storage. Approval is a separate act with its own verified
    * actor (`approveKind`) — this call cannot perform it, and there is
-   * deliberately no parameter for an approver. The document records
+   * deliberately no parameter for an approver. The instance records
    * `proposed_by`: the server-verified identity of THIS call, stamped here
-   * because a proposer cannot be back-filled onto a document that never
+   * because a proposer cannot be back-filled onto an instance that never
    * recorded one.
    *
    * `kind` must be a CamelCase identifier — a CAPITAL letter followed by up to
@@ -259,19 +259,19 @@ export class DnaClient {
    *
    * The approver is the caller's server-VERIFIED identity; there is
    * deliberately no parameter for it, and an `approved_by` in the payload
-   * would reach nothing. The document's `proposed_by` is preserved, so the
+   * would reach nothing. The instance's `proposed_by` is preserved, so the
    * response names both acts. The two MAY be the same identity — a solo author
    * approving their own proposal is two credentials, and the audit reports the
    * coincidence rather than refusing it.
    *
    * 404 when no such Kind was authored in this scope (approval acts on an
-   * existing document and creates none); 400 for a missing tenant, a malformed
+   * existing instance and creates none); 400 for a missing tenant, a malformed
    * `kind`, or a Kind declared under two namespaces at once; 403 when the
    * namespace gate refuses the write; 409 when the Kind was edited between the
    * read and this call (re-read, then approve again).
    *
    * It is also the UNDO of {@link revokeKind}: approving again clears the
-   * revocation, and every existing document is valid once more with nothing to
+   * revocation, and every existing instance is valid once more with nothing to
    * migrate.
    */
   async approveKind(kind: string, query?: ScopeTenant) {
@@ -287,20 +287,20 @@ export class DnaClient {
    *
    * Deliberately NOT the inverse of {@link approveKind}. Un-approving would
    * return the Kind to *never approved*, and a Kind that never registered is
-   * the PERMISSIVE state — its documents are accepted with no validation at
+   * the PERMISSIVE state — its instances are accepted with no validation at
    * all — so clearing the approval would switch the gate off rather than close
    * it. Revoked is a THIRD state:
    *
-   * | state          | existing documents | new documents                |
+   * | state          | existing instances | new instances                |
    * | -------------- | ------------------ | ---------------------------- |
    * | never approved | —                  | accepted WITHOUT validation  |
    * | approved       | valid, routed      | validated against the schema |
    * | revoked        | INVALID            | REFUSED                      |
    *
-   * Nothing is deleted. Existing documents stay readable and come back MARKED
+   * Nothing is deleted. Existing instances stay readable and come back MARKED
    * (`status.valid === false`), and in a listing they appear marked rather
    * than vanishing — so this can never be used to hide data without deleting
-   * it. New documents of the Kind are refused outright, conforming ones
+   * it. New instances of the Kind are refused outright, conforming ones
    * included: what was withdrawn is the Kind, not a schema.
    *
    * Reversible in one call — {@link approveKind} clears the revocation.
@@ -312,7 +312,7 @@ export class DnaClient {
    *
    * 404 when no such Kind was authored in this scope, and equally when it
    * belongs to another workspace; 400 for a missing tenant or a malformed
-   * `kind`; 409 when the document moved since it was read; 403 when the
+   * `kind`; 409 when the instance moved since it was read; 403 when the
    * namespace gate refuses the write.
    */
   async revokeKind(kind: string, query?: ScopeTenant) {
@@ -325,7 +325,7 @@ export class DnaClient {
 
   /**
    * List the scope's authored Kinds with their approval state — the audit
-   * view. Reads DOCUMENTS, not the registry: an unapproved Kind is precisely
+   * view. Reads INSTANCES, not the registry: an unapproved Kind is precisely
    * the one the registry does not have.
    *
    * Each row carries BOTH actors (`proposed_by`/`proposed_at` and
@@ -402,7 +402,7 @@ export class DnaClient {
    *
    * **`tier === "declared"` is NOT the same as `enforced`.** The kernel
    * resolves a relation at write time only when it has a concrete target Kind
-   * addressed by document name (`by === "name"`). A relation addressed by a
+   * addressed by instance name (`by === "name"`). A relation addressed by a
    * spec field of the target (`by: "workspace_id"`) or carrying its Kind in
    * the value (`to_kind === "*"`) is fully declared and deliberately not
    * followed. Filter on `enforced` — never on the tier — when the question is
@@ -422,7 +422,7 @@ export class DnaClient {
    * **Read the coverage block.** `coverage.enforced` says how much of the
    * graph the runtime actually checks, and `limits` names what the graph
    * structurally cannot see. The first limit is the one that matters most:
-   * these edges are SCHEMA — which Kinds MAY reference which. Which DOCUMENTS
+   * these edges are SCHEMA — which Kinds MAY reference which. Which INSTANCES
    * reference which is a different graph, and this call does not answer it.
    *
    * No 404: a scope with nothing registered is an empty graph whose
@@ -443,7 +443,7 @@ export class DnaClient {
    * registry, not to each caller.
    *
    * Not {@link listAuthoredKinds}, which lists the caller's own KindDefinition
-   * DOCUMENTS *including the unapproved ones* — the audit roster behind an
+   * INSTANCES *including the unapproved ones* — the audit roster behind an
    * approval decision. This lists what is REGISTERED and therefore in force,
    * built-ins included.
    */
@@ -453,10 +453,10 @@ export class DnaClient {
     );
   }
 
-  // ── the generic, kubernetes-shaped document write ────────────────────────
+  // ── the generic, kubernetes-shaped instance write ────────────────────────
 
   /**
-   * List the documents of `kind` — the READ face of the generic door.
+   * List the instances of `kind` — the READ face of the generic door.
    *
    * The write ({@link writeKindDocument}) accepted any Kind, but reading back
    * only worked for the Kinds someone had hand-written a route for
@@ -469,7 +469,7 @@ export class DnaClient {
    * projection becomes a SELECT and the row travels trimmed.
    *
    * An unknown Kind is 404 NAMING it, the same answer the write gives. An
-   * empty list from a Kind that exists is 200 with `documents: []` — "exists
+   * empty list from a Kind that exists is 200 with `instances: []` — "exists
    * and holds nothing" is an answer, and conflating it with "does not exist"
    * would make a screen say *error* where it should say *none yet*.
    *
@@ -488,7 +488,7 @@ export class DnaClient {
     },
   ) {
     return this.unwrap(
-      await this.raw.GET("/v1/kinds/{kind}/documents", {
+      await this.raw.GET("/v1/kinds/{kind}/instances", {
         params: {
           path: { kind },
           query: {
@@ -497,7 +497,7 @@ export class DnaClient {
             limit: opts?.limit,
             offset: opts?.offset,
             // CSV on the wire: the server splits on comma. An absent list stays
-            // `undefined` so an omitted projection means "the whole document",
+            // `undefined` so an omitted projection means "the whole instance",
             // not "no fields" — an empty CSV would read as the latter.
             fields: opts?.fields?.length ? opts.fields.join(",") : undefined,
             order_by: opts?.orderBy?.length ? opts.orderBy.join(",") : undefined,
@@ -508,16 +508,16 @@ export class DnaClient {
   }
 
   /**
-   * Read ONE document of `kind`, VERBATIM — what the list cannot give. The
+   * Read ONE instance of `kind`, VERBATIM — what the list cannot give. The
    * projected list travels through the readers' view when the Kind is
    * bundle-producible (Agent, Skill…), and the view NORMALIZES: real spec
    * fields written through the generic door can simply not travel through it
    * (measured 2026-08-05: an Agent's `description` and
    * `tools_requiring_confirmation`). This is the verbatim read, as the
-   * caller's layer sees the document, with the optimistic-concurrency `etag`
+   * caller's layer sees the instance, with the optimistic-concurrency `etag`
    * for a follow-up `writeKindDocument` `ifMatch`.
    *
-   * 404 names what is missing — the unknown Kind or the document.
+   * 404 names what is missing — the unknown Kind or the instance.
    */
   async getKindDocument(
     kind: string,
@@ -525,7 +525,7 @@ export class DnaClient {
     opts?: { tenant?: string; apiVersion?: string },
   ) {
     return this.unwrap(
-      await this.raw.GET("/v1/kinds/{kind}/documents/{name}", {
+      await this.raw.GET("/v1/kinds/{kind}/instances/{name}", {
         params: {
           path: { kind, name },
           query: { tenant: opts?.tenant, api_version: opts?.apiVersion },
@@ -535,10 +535,10 @@ export class DnaClient {
   }
 
   /**
-   * "What points at this document?" — the derived reference graph.
+   * "What points at this instance?" — the derived reference graph.
    *
    * `direction: "in"` (the default, and the product question) returns the
-   * documents pointing AT this one; `"out"` what it points at; `"both"` the
+   * instances pointing AT this one; `"out"` what it points at; `"both"` the
    * union. `depth` walks further and is clamped server-side — two of the
    * declared references are self-referential by design, so an unbounded walk
    * is not on offer.
@@ -564,7 +564,7 @@ export class DnaClient {
     },
   ) {
     return this.unwrap(
-      await this.raw.GET("/v1/kinds/{kind}/documents/{name}/refs", {
+      await this.raw.GET("/v1/kinds/{kind}/instances/{name}/refs", {
         params: {
           path: { kind, name },
           query: {
@@ -579,7 +579,7 @@ export class DnaClient {
   }
 
   /**
-   * Write one document of `kind` — the generic door, kubernetes-shaped: the
+   * Write one instance of `kind` — the generic door, kubernetes-shaped: the
    * endpoint names the Kind (applying a CRD creates the endpoint that serves
    * it; `kind` is inferred from where the client submits, never re-stated
    * ambiguously), the body is exactly `{ metadata, spec }` plus an optional
@@ -596,8 +596,8 @@ export class DnaClient {
    * `ifMatch` is 409.
    *
    * `sourceSha256` (optional) cites the `SourceArtifact` (by content address)
-   * this document was extracted from; the server closes the `derived_refs`
-   * provenance edge, preserving every OTHER document already recorded there
+   * this instance was extracted from; the server closes the `derived_refs`
+   * provenance edge, preserving every OTHER instance already recorded there
    * and updating THIS one's own entry in place on a re-write rather than
    * duplicating it. A citation naming no registered artifact under `tenant`
    * is 400.
@@ -620,7 +620,7 @@ export class DnaClient {
     },
   ) {
     return this.unwrap(
-      await this.raw.POST("/v1/kinds/{kind}/documents", {
+      await this.raw.POST("/v1/kinds/{kind}/instances", {
         params: {
           path: { kind },
           query: {
@@ -638,7 +638,7 @@ export class DnaClient {
   // ── definitions (bundle entries — fork a bundle-file, plane B) ───────────
 
   /**
-   * List a bundle document's entry files (base ∪ tenant overlay), each
+   * List a bundle instance's entry files (base ∪ tenant overlay), each
    * flagged `overridden` — whether THIS tenant forked that specific file.
    */
   async listBundleEntries(kind: string, name: string, query?: ScopeTenant) {
@@ -934,8 +934,8 @@ export class DnaClient {
    * the workspace; the route refuses to accept one.
    *
    * `uri` names WHERE the bytes live and is stored verbatim. It must NOT be a
-   * signed URL: a document carrying one would BE the access to its own
-   * original, and would hand that access to anyone the document reaches.
+   * signed URL: an instance carrying one would BE the access to its own
+   * original, and would hand that access to anyone the instance reaches.
    *
    * IDEMPOTENT by content address — the same `sha256` updates the same
    * artifact, and any `derived_refs` already extracted from it survive the

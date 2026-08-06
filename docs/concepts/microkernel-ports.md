@@ -1,7 +1,7 @@
 # The microkernel and its five ports
 
 The runtime is a **microkernel**: a small, closed core that knows how to
-store, validate, version and compose *documents* — but knows nothing about
+store, validate, version and compose *instances* — but knows nothing about
 any particular Kind. All Kind-specific knowledge is contributed by
 **extensions** that plug into the kernel's ports.
 
@@ -83,10 +83,10 @@ kernel:
 
 | Face | Serve it with | What it is |
 |---|---|---|
-| **REST** | `dna api serve` | The typed read/write surface, described by an OpenAPI document (`docs/openapi.json`) dumped from the live app |
+| **REST** | `dna api serve` | The typed read/write surface, described by an OpenAPI instance (`docs/openapi.json`) dumped from the live app |
 | **MCP** | `dna mcp serve` | The tool face agents speak natively |
 
-Clients are **generated from that OpenAPI document**, not hand-written:
+Clients are **generated from that OpenAPI instance**, not hand-written:
 `dna-client` ships for [TypeScript](https://www.npmjs.com/package/dna-client)
 and [Python](https://pypi.org/project/dna-client/), and any language with an
 HTTP client can reach the same routes. Because the types come from the spec,
@@ -119,7 +119,7 @@ in [How to write a source adapter](../guides/write-a-source-adapter.md).
 ## The EmitterPort — materialize per runtime
 
 The five ports above are the kernel's *inward* contracts: they answer how the
-core stores, resolves and composes documents. There is one more first-class,
+core stores, resolves and composes instances. There is one more first-class,
 documented DNA port that sits one layer **out** — the **EmitterPort**. Where the
 kernel *composes* a neutral agent, an emitter *materializes* it into the native
 artifact a specific runtime consumes (the *de-para*): author once in DNA, emit

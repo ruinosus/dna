@@ -119,9 +119,9 @@ differently from your cue — no shared phrase, no token-subset match — can
 still surface, and the hits say why:
 
 ```console
-$ dna memory recall "mutating documents safely" --scope hello-genome -k 2
+$ dna memory recall "mutating instances safely" --scope hello-genome -k 2
 
-🧠 recall · hybrid (dense+lexical+RRF) + semantic (ecphory×cosine) · scope=hello-genome · 'mutating documents safely'
+🧠 recall · hybrid (dense+lexical+RRF) + semantic (ecphory×cosine) · scope=hello-genome · 'mutating instances safely'
    1. Engram/rem-5d60593f38  (0.0328)  [retention 1.00]  [cos 0.44]
       rem-5d60593f38 Always deep-copy a doc's spec before mutating — the cache hands back…
 ```
@@ -137,7 +137,7 @@ local `.dna-search/` store) are not a migration problem: every recall
 lazy-backfills the index first (`dna.memory.backfill_index` — idempotent by
 text hash, unchanged docs are never re-embedded).
 
-Forgetting is bi-temporal demotion — the document stays, auditable, but
+Forgetting is bi-temporal demotion — the instance stays, auditable, but
 stops surfacing:
 
 ```console

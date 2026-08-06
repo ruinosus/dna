@@ -247,12 +247,12 @@ dna sdlc backfill [OPTIONS] PATTERN
 
 ## `dna sdlc backfill-dates`
 
-Stamp the dates a document was filed without.
+Stamp the dates an instance was filed without.
 
 Repairs ``created_at`` / ``updated_at`` on every board Kind a read surface
 dates by (the digest's windows, the derived journey, recency sorts), taking
-the value from the document's own timeline, else from the commit that added
-its file. Documents with neither are LEFT ALONE and listed — inventing
+the value from the instance's own timeline, else from the commit that added
+its file. Instances with neither are LEFT ALONE and listed — inventing
 "now" would date them all as filed today and skew every digest window from
 here on. Idempotent; ``--dry-run`` previews.
 
@@ -664,7 +664,7 @@ Create a new Epic.
 Closes the last CRUD gap in the SDLC CLI (s-dx-epic-create): Story and
 Feature had `create`, but an Epic had to be hand-authored via `dna doc
 apply` — an asymmetry the DX epic (e-dna-dx) exists to kill. Mirrors
-`feature create`: same envelope, same write path (`kernel.write_document`),
+`feature create`: same envelope, same write path (`kernel.write_instance`),
 same initial-timeline event. Unlike `story create`, no --ac/--dod guard —
 Epics are roadmap nouns; exit criteria live at the Story level.
 

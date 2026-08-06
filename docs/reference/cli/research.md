@@ -1,6 +1,6 @@
 # `dna research`
 
-Manage Research synthesis documents (curated syntheses of References).
+Manage Research synthesis instances (curated syntheses of References).
 
 !!! info "Generated from the command definitions"
 

@@ -10,14 +10,13 @@ These pages are **generated from the Click command definitions** by
 | Group | What it does |
 | --- | --- |
 | [`dna sdlc`](sdlc.md) | Declarative lifecycle tracking (Roadmap/Epic/Feature/Story/Issue). |
-| [`dna research`](research.md) | Manage Research synthesis documents (curated syntheses of References). |
-| [`dna doc`](doc.md) | List, show, create, edit, delete documents. |
+| [`dna research`](research.md) | Manage Research synthesis instances (curated syntheses of References). |
 | [`dna docs`](docs.md) | Browse the in-product Doc corpus. |
 | [`dna scope`](scope.md) | List + inspect scopes (manifest modules). |
 | [`dna kind`](kind.md) | List + inspect registered Kinds. |
 | [`dna source`](source.md) | Source-level operations: declarative replicas, introspection. |
 | [`dna api`](api.md) | Expose the live DNA (definitions + memory) over a REST read-API. |
-| [`dna copilot`](copilot.md) | Copilot kits — fluxos completos instaláveis como documentos. |
+| [`dna copilot`](copilot.md) | Copilot kits — fluxos completos instaláveis como instâncias. |
 | [`dna definition`](definition.md) | Read and customize a tenant's definition overrides (the Strain). |
 | [`dna emit`](emit.md) | Emit a DNA agent as a target runtime's native artifact (the de-para). |
 | [`dna eval`](eval.md) | Run EvalSuites locally (offline, deterministic) and compare runs against a pinned EvalBaseline. |
@@ -26,6 +25,7 @@ These pages are **generated from the Click command definitions** by
 | [`dna graph`](graph.md) | The derived reference graph (declared relations). |
 | [`dna init`](init.md) | Make a project agent-ready: board + skill + AGENTS.md + git hooks. |
 | [`dna install`](install.md) | Install bundles/Kinds from a repository into the local source. |
+| [`dna instance`](instance.md) | List, show, create, edit, delete instances. |
 | [`dna intel`](intel.md) | Portfolio intelligence — run passes, inspect sources + insights. |
 | [`dna mcp`](mcp.md) | Expose the live DNA (definitions + SDLC + memory) over MCP. |
 | [`dna memory`](memory.md) | Declarative memory over existing Kinds (remember/recall/forget/consolidate). |

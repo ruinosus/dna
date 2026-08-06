@@ -126,7 +126,7 @@ agent = client.as_agent(..., context_providers=[vector_store])
 is Python-only, Cosmos is the managed-Mongo path, and there is **no** native
 Postgres/Mongo thread-store at all. So checkpoint/memory under `backend: mongo`
 is the same **serialize-yourself** wiring-point as the Postgres path — serialize
-the run's `AgentThread` to a Mongo/Cosmos document yourself. Only the **vector**
+the run's `AgentThread` to a Mongo/Cosmos instance yourself. Only the **vector**
 slot maps to a real class.
 
 ## The honest gap table

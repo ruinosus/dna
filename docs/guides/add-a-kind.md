@@ -27,8 +27,8 @@ cd packages/sdk-py && uv sync
 
 A new Kind `Hello`, persisted as YAML files at
 `<scope>/hellos/<name>.yaml`. The Kind has 3 spec fields: `greeting`,
-`recipient`, `created_at`. After this, your Hello docs show up in `mi.documents`
-(`[d for d in mi.documents if d.kind == "Hello"]`) and via
+`recipient`, `created_at`. After this, your Hello docs show up in `mi.instances`
+(`[d for d in mi.instances if d.kind == "Hello"]`) and via
 `kernel.query(scope, "Hello")`.
 
 > **Record-style Kinds don't need a class at all.** If your Kind is plain
@@ -216,7 +216,7 @@ need (see the schema helpers on the kernel surface).
 
 ### Declare how the Kind READS — `presentation`
 
-The schema says what a document may *contain*. It does not say which of
+The schema says what an instance may *contain*. It does not say which of
 those fields a person is looking for, in what order, or what to call them
 — so every surface that renders your Kind decides that for itself, and the
 decisions drift. `presentation` is where you say it once:
@@ -224,7 +224,7 @@ decisions drift. `presentation` is where you say it once:
 ```yaml
 presentation:
   fields:
-  - field: name          # the document's own name (metadata.name)
+  - field: name          # the instance's own name (metadata.name)
     label: Contract
     role: identifier
   - field: titulo
@@ -258,7 +258,7 @@ anyone writing rendering code for it.
 
 ## Step 8 — Type-safe spec access (recommended)
 
-`Document.spec` is a `SpecDict` (dict + attribute access). Without
+`Instance.spec` is a `SpecDict` (dict + attribute access). Without
 extra annotations, your IDE shows `spec.foo` as `Any` — no
 autocomplete, no typo detection. Two patterns close that gap.
 Choose based on the shape of your spec:
@@ -301,7 +301,7 @@ class HelloKind:
 Consumers access via `doc.typed`:
 
 ```python
-doc = next(d for d in mi.documents if d.kind == "Hello" and d.name == "world")
+doc = next(d for d in mi.instances if d.kind == "Hello" and d.name == "world")
 hello: TypedHello = doc.typed
 print(hello.spec.greeting)  # type: str ✅ (mypy/pyright happy)
 ```
@@ -326,7 +326,7 @@ Consumers cast at the boundary:
 from typing import cast
 from dna.extensions.hello import HelloSpec
 
-doc = next(d for d in mi.documents if d.kind == "Hello" and d.name == "world")
+doc = next(d for d in mi.instances if d.kind == "Hello" and d.name == "world")
 spec = cast(HelloSpec, doc.spec)
 print(spec["greeting"])  # type-checker knows this is str
 ```
@@ -344,7 +344,7 @@ SpecDict still works for both attribute and key access.
 
 ## Step 9 — Optional: declare what this Kind points at
 
-If a spec field holds the *name of another document*, say so — in
+If a spec field holds the *name of another instance*, say so — in
 `spec.relations`, next to the schema rather than inside it. **The schema keeps
 the data; relations keep the model.**
 
@@ -385,7 +385,7 @@ spec:
 
 **A relation's NAME is the spec field that holds its value.** That is what
 keeps the declaration and the data together, and it is why moving the
-declaration here changed no document.
+declaration here changed no instance.
 
 The same block works from a Python `KindBase` subclass — write it as a plain
 `relations = {...}` class attribute; the kernel normalizes it through the same
@@ -404,7 +404,7 @@ validator.
 
 Exactly one addressing: a concrete `to` with `by: name`. That relation is
 resolved at write time — the target must exist in the same scope and tenant —
-and the same read produces the document edge.
+and the same read produces the instance edge.
 
 Everything else is **declared and not resolved**, on purpose:
 
@@ -420,7 +420,7 @@ Both are real relations, listed in the schema graph with `enforced: false`.
 Saying "this points at a Workspace, keyed by workspace_id" is worth more than
 saying nothing, and costs nothing that could be wrong.
 
-**What it costs.** One document read per populated, resolvable relation
+**What it costs.** One instance read per populated, resolvable relation
 (roughly 5 ms on Postgres, 20 ms on the filesystem source, LRU-cached). A Kind
 with no resolvable relation performs no extra reads at all.
 
@@ -432,7 +432,7 @@ with no resolvable relation performs no extra reads at all.
 | `enforce` | Vetoes the write with `SpecValidationError`. |
 | `off` | Skips the check; no reads. |
 
-The default is `warn` rather than `enforce` deliberately. Writing a document
+The default is `warn` rather than `enforce` deliberately. Writing an instance
 before its target legitimately happens — a seed that creates a Plan ahead of
 its Story, a scope installed in an order nobody promised was dependency-first
 — and a reference that will resolve in a moment is not the same thing as a
@@ -448,21 +448,21 @@ declares `inverse_of: feature`, and `Story.feature` declares
 
 **The DECLARATION is enforced.** At load, the target must declare a relation
 by that name, it must point back here, and it must name this one as ITS
-inverse. That check reads no documents, so it cannot deadlock and costs
+inverse. That check reads no instances, so it cannot deadlock and costs
 nothing; a broken pair shows up in the schema graph as an `unresolved` row with
 `origin: inverse`.
 
-**The DATA is only reported.** When the target document does not name this one
+**The DATA is only reported.** When the target instance does not name this one
 back, the write logs it — in every mode, including `enforce` — and persists.
 It is never imposed and never derived, for two measured reasons: imposing
 deadlocks (neither half of a pair can be written first) and deriving means the
-kernel writing a document the author never touched, inside somebody else's
+kernel writing an instance the author never touched, inside somebody else's
 version and etag.
 
 !!! note "Not the same thing as `dep_filters`"
 
     `dep_filters` looks similar and drives *prompt composition*: which
-    documents get folded into an agent's context. A missing optional Skill is
+    instances get folded into an agent's context. A missing optional Skill is
     legitimately filtered out there rather than being an error, so the two stay
     separate. Where a field carries both, they must name the same Kind.
 
@@ -471,9 +471,9 @@ version and etag.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `KindRegistrationError: BUNDLE storage already registered` | Two bundle Kinds use the same `(container, marker)` pair (e.g. both `MANIFEST.md`). | Pick distinct containers. If sharing is intentional, set `marker_shared_allowed = True` on BOTH Kinds AND have their Reader.detect() distinguish at read time. |
-| New docs of `MyKind` missing from `mi.documents` after write | Writer ran but adapter didn't auto-publish (SQL adapters use draft → publish flow). | Call `await source.publish(scope, kind, name)` after `save_document`. The kernel's high-level write path doesn't auto-publish — that's deliberate to support draft workflows. |
+| New docs of `MyKind` missing from `mi.instances` after write | Writer ran but adapter didn't auto-publish (SQL adapters use draft → publish flow). | Call `await source.publish(scope, kind, name)` after `save_instance`. The kernel's high-level write path doesn't auto-publish — that's deliberate to support draft workflows. |
 | `NotImplementedError: Source adapter X does not implement BundleEntryReadable` | Custom adapter missing `fetch_bundle_entry`. | Implement the method per the `BundleEntryReadable` Protocol in `dna.kernel.capabilities`. |
-| Kind shows up as `kind=None` in `mi.documents` / `kernel.query` results | `parse()` returned a non-dict, or model class is wrong. | Return `raw` directly OR a typed model; the universal `Document` wrapper handles both. |
+| Kind shows up as `kind=None` in `mi.instances` / `kernel.query` results | `parse()` returned a non-dict, or model class is wrong. | Return `raw` directly OR a typed model; the universal `Instance` wrapper handles both. |
 
 ## Reference reading
 

@@ -52,22 +52,22 @@ what it finds:
 - **📎 Artefatos** — everything `produce`d (TestGuides, TestRuns, HTML, …).
 
 Most buckets are filled from timeline events, but **Achado** and **Decidido**
-date a document by `spec.created_at` — the moment it was *filed*, which no
-event on its own timeline claims. A document written without that stamp is
+date an instance by `spec.created_at` — the moment it was *filed*, which no
+event on its own timeline claims. An instance written without that stamp is
 undatable, and therefore silently absent from those buckets in every window.
 That is a bug this board actually hit: Issues were being filed without
 `created_at`, so no digest ever listed one. Two things keep it from recurring —
 every write path is held to `dna.application.sdlc.DATED_SPEC_FIELDS` by a guard
-suite, and `dna sdlc backfill-dates` repairs the documents already on disk:
+suite, and `dna sdlc backfill-dates` repairs the instances already on disk:
 
 ```bash
 dna sdlc backfill-dates --dry-run   # what would be stamped, and from where
 dna sdlc backfill-dates             # apply
 ```
 
-It dates each document from its own timeline, falling back to the git commit
-that added the file. A document with neither is reported and **left unstamped**:
-writing today's date onto an old document would file it into the current window
+It dates each instance from its own timeline, falling back to the git commit
+that added the file. An instance with neither is reported and **left unstamped**:
+writing today's date onto an old instance would file it into the current window
 and hide it from the one it belongs to.
 
 ## The part that matters most — "Precisa de você"

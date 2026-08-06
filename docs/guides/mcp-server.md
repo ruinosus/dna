@@ -50,7 +50,7 @@ DNA stores, plus resources:
   title, description, epic?, priority?, labels?, scope?)`.
 
 The write tools reuse the **same core** the `dna sdlc` CLI writes through
-(`dna.application.sdlc` → `kernel.write_document`, so cache invalidation, hooks +
+(`dna.application.sdlc` → `kernel.write_instance`, so cache invalidation, hooks +
 schema validation all fire) — one write path, two faces. `set_status` refuses a
 status that is not valid for the Kind (Story: `todo`/`in-progress`/`review`/`done`/
 `blocked`; Issue: `open`/`triaged`/`resolved`; Feature: `discovery`/
@@ -66,7 +66,7 @@ unrestricted, exactly like `remember`.
   structured report (per-memory action + reason, deterministic merge
   candidates) with zero effect, so a human can approve before `apply`.
 
-**Documents** — every registered Kind, generically:
+**Instances** — every registered Kind, generically:
 
 The tools above each name one Kind. These four name none — they loop over the
 **Kind registry at call time**, so a Kind that exists is a Kind an agent can use,
@@ -78,15 +78,15 @@ are declared purely by a `*.kind.yaml` descriptor.
   (`composition` = it composes into prompts, `record` = it does not),
   `tenant_scope`, `storage_pattern`, the quota `family` a call on it is metered
   under, and `writable` + `write_refusal`.
-- `list_documents(kind, scope?, api_version?, limit?, offset?)` — the documents
+- `list_instances(kind, scope?, api_version?, limit?, offset?)` — the instances
   of one Kind (paged, with an honest `has_more`).
-- `get_document(kind, name, scope?, api_version?)` — one document verbatim, as
+- `get_instance(kind, name, scope?, api_version?)` — one instance verbatim, as
   your layer sees it (the per-tenant overlay wins, live).
-- `write_document(kind, name, spec, scope?, api_version?)` — create/update one
-  document. The `apiVersion`/`kind`/`metadata` envelope is built from the
+- `write_instance(kind, name, spec, scope?, api_version?)` — create/update one
+  instance. The `apiVersion`/`kind`/`metadata` envelope is built from the
   **registered Kind**, so a caller cannot write into another Kind's namespace.
 
-The write goes through `kernel.write_document` like every other write path —
+The write goes through `kernel.write_instance` like every other write path —
 schema validation, the LayerPolicy gate (Kind-level *and* the per-field
 overlayable-fields allowlist), reference validation and the `pre_save` veto
 hooks all apply. Two refusals are the generic tool's own, and both **fail
@@ -94,10 +94,10 @@ closed**:
 
 - **Bootstrap Kinds are never written generically** — `Genome`, `LayerPolicy`
   and `KindDefinition`, i.e. exactly the Kinds the kernel marks
-  `is_overlayable: false`. Their documents declare what a scope *is* (its
+  `is_overlayable: false`. Their instances declare what a scope *is* (its
   identity and `parent_scope` inheritance; the operator's own override policy;
-  the definition of a Kind itself), so a tool that can write *any* document must
-  not be the tool that rewrites the frame every other document is validated
+  the definition of a Kind itself), so a tool that can write *any* instance must
+  not be the tool that rewrites the frame every other instance is validated
   against. They stay fully **readable**. The set is derived from the registry, so
   a Kind that declares `is_overlayable: false` in its descriptor is covered on
   arrival.
@@ -108,7 +108,7 @@ closed**:
 
 Over an authenticated server the metering is derived from the **target Kind**,
 not from which tool was called — so a board Kind is metered as `sdlc` and gated
-by `sdlc_mode` even when reached through `write_document`, and a `read` tier
+by `sdlc_mode` even when reached through `write_instance`, and a `read` tier
 cannot smuggle a board write through the generic door. A generic **write**
 additionally requires the plan to grant `write` for that family's access mode
 (`sdlc_mode` / `memory_mode` / `definitions_mode`); a plan that never declared
@@ -119,7 +119,7 @@ unrestricted, exactly like the rest of the face.
 
 **Kind authoring** — a tenant declares its own Kind, conversationally:
 
-The generic `write_document` above refuses every bootstrap Kind, `KindDefinition`
+The generic `write_instance` above refuses every bootstrap Kind, `KindDefinition`
 included, and that refusal stays. Authoring gets its own door instead, with its
 own authorization — it writes exactly one Kind, always without an approval
 marker, always under the workspace's own assigned apiVersion namespace (minted on
@@ -133,7 +133,7 @@ first use, then stable, so two workspaces can both author `Contrato`).
 - `list_my_kinds(scope?, tenant?)` — the audit view: every authored
   `KindDefinition` with its `state` (`unapproved` / `approved` / `revoked`), the
   `approved` boolean, and **all three** actors (`proposed_by`/`proposed_at`,
-  `approved_by`/`approved_at`, `revoked_by`/`revoked_at`). It reads *documents*,
+  `approved_by`/`approved_at`, `revoked_by`/`revoked_at`). It reads *instances*,
   not the registry — an unapproved Kind is precisely the one the registry does
   not have, and it is the one a reviewer came for.
 - `review_kind(kind, scope?, tenant?)` — ONE Kind in full: the same projection
@@ -189,7 +189,7 @@ plan to grant `definitions_mode: write`.
 
 **Resources** (beyond tools):
 
-- `dna://{scope}/manifest` — the scope's Kinds → document names.
+- `dna://{scope}/manifest` — the scope's Kinds → instance names.
 - `dna://{scope}/agents` — the agent roster.
 
 ## Built on FastMCP
@@ -397,7 +397,7 @@ the token's `iss` carries the real Azure tenant, not the literal `common`).
 **PRM lists every provider.** Wrap the layer as a Resource Server
 (`DNA_MCP_RESOURCE_URL` + `DNA_MCP_AUTH_SERVERS`, or the per-provider issuers by
 default) and it advertises Protected Resource Metadata (RFC 9728) naming **all**
-configured authorization servers — one discovery document, N providers.
+configured authorization servers — one discovery instance, N providers.
 
 **Providers without DCR (WorkOS, Auth0).** FastMCP's `OAuthProxy` bridges an IdP
 that lacks Dynamic Client Registration to MCP's DCR-compliant flow. It slots into

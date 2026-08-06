@@ -61,7 +61,7 @@ dna specify export-templates [OPTIONS]
 
 Ingest a Spec Kit ``.specify/`` toolkit (or one ``specs/<feature>/`` run)
 into durable DNA Kinds (ADR §4). Every write goes through
-``kernel.write_document`` so all guards fire.
+``kernel.write_instance`` so all guards fire.
 
 ```text
 dna specify import [OPTIONS] PATH
@@ -89,7 +89,7 @@ dna specify import [OPTIONS] PATH
 Ingest a Spec Kit **toolkit** (``.specify/templates/`` + slash-commands +
 ``.specify/scripts/`` + constitution) into durable, servable DNA Kinds
 (ADR §5, Layer 3). Served live over ``dna mcp serve`` and overridable per
-scope/tenant. Every write goes through ``kernel.write_document``.
+scope/tenant. Every write goes through ``kernel.write_instance``.
 
 ```text
 dna specify install-templates [OPTIONS] PATH

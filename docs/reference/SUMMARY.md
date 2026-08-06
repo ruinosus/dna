@@ -2,7 +2,7 @@
 - Python API
     - [Overview](python/index.md)
     - [Kernel & Runtime](python/kernel.md)
-    - [Document & ManifestInstance](python/document.md)
+    - [Instance & ManifestInstance](python/instance.md)
     - [Ports & protocols](python/ports.md)
     - [Extensions](python/extensions.md)
     - [Testing / conformance kit](python/testing.md)
