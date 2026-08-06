@@ -85,6 +85,8 @@ from typing import Any, Protocol, Sequence
 __all__ = [
     "ASSERTS",
     "DENIES",
+    "WHEN_TO_CLAIM",
+    "WHEN_TO_CLAIM_SHORT",
     "Claim",
     "ContradictionScribe",
     "claims_contradict",
@@ -104,6 +106,89 @@ ASSERTS = "asserts"
 DENIES = "denies"
 
 _POLARITIES = (ASSERTS, DENIES)
+
+
+# ──────────────────── when a claim is worth declaring ────────────────────
+#
+# Degrau 2 shipped the ALGEBRA and the field, and the field stayed empty: the
+# real memories in the founder's workspace carry no ``claims``, so the detector
+# answers ``undecided`` about all of them — correct, and useless. Nothing in any
+# face told a model WHEN to declare one, and a model declares what it is asked
+# to declare.
+#
+# Writing that instruction is not the easy half. The failure mode of "declare
+# claims" is WORSE than the failure mode of silence: a claim on every recorded
+# fact turns the pass into a machine that reports "Barna likes tea" as a
+# conflict with "Barna likes coffee", and a detector that flags the normal
+# trains its reader to ignore the next one — including the true one. That is the
+# same defect this repo already paid for twice (i-101's red error for a normal
+# state; the blueprint warning nobody reads).
+#
+# So the instruction is built around a DISCRIMINANT, never around a category
+# list. "Declare when you record a state that can change" is a category list in
+# disguise — a preference IS a state that can change, and it is exactly the case
+# that must NOT be claimed. The only question that separates the four cases is
+# the one :func:`claims_contradict` actually decides:
+#
+#     does a LATER value of this same (subject, predicate) make this one FALSE?
+#
+# ⚠️ ONE text, interpolated — never four copies. This string is announced by the
+# MCP ``remember`` tool (``dna_cli._mcp_server``), by ``POST /v1/memories``
+# (``dna_cli._rest_api``, hence by ``docs/openapi.json`` and both generated
+# clients) and by ``dna memory remember --help``. It lives HERE, beside the rule
+# it paraphrases, so that changing :func:`claims_contradict` stares at the
+# sentence that promised its behavior. It is CODE and not a ``PromptTemplate``
+# on purpose — see the note under :data:`WHEN_TO_CLAIM_SHORT`.
+
+#: The full instruction, as every face announces it verbatim.
+WHEN_TO_CLAIM = """\
+**When to declare one — the test is SUBSTITUTION, not importance.** Declare a \
+claim when a LATER value of the same `(subject, predicate)` would make this one \
+FALSE. Nothing else. A memory with no claims is the normal case, not a lapse.
+
+- yes — "the workspace plan is Pro" → `{"subject": "Workspace/acme", \
+"predicate": "plan", "object": "Pro"}`. A plan replaces the plan.
+- yes — "Barna is in Lisbon this week" → `{"predicate": "whereabouts", \
+"object": "Lisbon"}`. One whereabouts at a time, so next week's city makes this \
+one false.
+- no — "Barna likes tea". Liking tea does not stop him liking coffee: values \
+that ACCUMULATE never contradict, and claiming them makes the pass report a \
+normal preference as a conflict.
+- no — "met the client on 2026-08-03". An event HAPPENED, and a later meeting \
+does not un-happen it. Events and observations go in the summary alone.
+
+If the same subject can honestly hold two values of that predicate at once, use \
+distinct predicates or declare nothing — a pass that flags the normal trains \
+its reader to ignore it, including the time it is right.
+
+Format: `subject` may be omitted when the memory's area already names the \
+target in `Kind/name` form. Omit `object` only for an EXISTENCE claim ("this \
+subject HAS this predicate"), which compares against another existence claim of \
+the opposite polarity and never against a valued one. `polarity: "denies"` \
+states a negation you want compared ("NOT approved") — `asserts X` beside \
+`denies X` is a contradiction, beside `denies Y` it is not."""
+
+#: The same rule at the size of a CLI flag's help. A separate string because
+#: ``--claim``'s help sits beside a dozen other options and 1.3 KB there buries
+#: them; it is kept adjacent to the long form so an edit to one is read next to
+#: the other. The long form still reaches the CLI user, on the command's own
+#: ``--help``.
+#:
+#: ⚠️ Why this is CODE and not a ``PromptTemplate``/``prompt_defaults`` entry,
+#: even though a model reads it: the house maxim ("a voz do agente é dado")
+#: covers what an agent SAYS — a briefing, a guidance block, something a tenant
+#: may legitimately reword. This is the tool CONTRACT: it paraphrases what
+#: :func:`claims_contradict` decides, and a tenant rewording it would make the
+#: door promise a semantics the detector does not implement, with nothing able
+#: to notice. It is the twin of the JSON Schema printed beside it, not of a
+#: voice. It is also unreachable as data at the moment it is needed: FastMCP
+#: fixes tool descriptions when ``build_server`` runs, before any scope or
+#: tenant exists to resolve a template against.
+WHEN_TO_CLAIM_SHORT = (
+    "Declare one only when a LATER value of the same predicate would make this "
+    "one false (a plan, a location, a status, an approval) — never for values "
+    "that ACCUMULATE (likes tea AND coffee) nor for events that happened."
+)
 
 #: A referent looks like ``Kind/name`` — the shape ``Engram.area`` is documented
 #: with ("Scoped target: Feature/X, Epic/Y, or Roadmap/Z") and the shape

@@ -291,6 +291,23 @@ spec:
           genuinely multi-valued attributes, or the pass will present them as a
           conflict for a human to dismiss. It only ever PRESENTS: nothing here
           overwrites, expires or merges a memory.
+
+          **When to declare one — the test is SUBSTITUTION, not importance.**
+          Declare a claim when a LATER value of the same `(subject, predicate)`
+          would make this one FALSE. Nothing else; a memory with no claims is
+          the normal case, not a lapse. "the workspace plan is Pro" and "Barna
+          is in Lisbon this week" qualify — a plan replaces the plan, and there
+          is one whereabouts at a time. "Barna likes tea" does NOT: liking tea
+          does not stop him liking coffee, and values that ACCUMULATE never
+          contradict. "met the client on 2026-08-03" does NOT either: an event
+          HAPPENED, and a later meeting does not un-happen it — events and
+          observations belong in `summary` alone. Claiming those two makes the
+          pass report the normal as a conflict, and a pass that flags the
+          normal trains its reader to ignore it, including the time it is
+          right. This is the same rule the verb's faces announce
+          (`dna.memory.contradiction.WHEN_TO_CLAIM`), restated for the OTHER
+          door — a raw `write_document` on an Engram, which reads this schema
+          and never sees a tool description.
         items:
           type: object
           required:

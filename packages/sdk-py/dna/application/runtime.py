@@ -1931,6 +1931,14 @@ async def remember_impl(
     comes back as a refusal at whichever door sent it rather than as a stored
     field the detector then quietly ignores.
 
+    ⚠️ **WHEN a claim is worth declaring is deliberately NOT restated here.**
+    This core is called by faces, never by whoever decides — so the instruction
+    lives where it is read: :data:`dna.memory.contradiction.WHEN_TO_CLAIM`,
+    announced verbatim by the MCP ``remember`` tool description, by the
+    ``claims`` field of ``POST /v1/memories`` and by
+    ``dna memory remember --help``. A copy here would be a fourth text nobody
+    reads and the first one to drift.
+
     ``memory_scope="personal"`` writes to the caller's OWN private partition
     (``personal:<oid>``, oid server-derived) — "remember privately", never shared
     with the workspace (ADR-personal-memory)."""

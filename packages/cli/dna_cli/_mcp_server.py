@@ -98,7 +98,44 @@ from dna.application.runtime import (  # sdlc_digest_impl / the scope-grant bind
     workspace_granted_scopes,
 )
 from dna.emit.mcp_ui import MCP_APP_MIME  # the MCP Apps profile mimeType we serve
+from dna.memory.contradiction import WHEN_TO_CLAIM
 from dna.tenancy.enforcement import enforcement_boot_message
+
+
+# ── the `remember` tool description (a docstring cannot interpolate) ────────
+#
+# Python docstrings are literals, so the ONE `WHEN_TO_CLAIM` text (owned by
+# `dna.memory.contradiction`, beside the rule it paraphrases) cannot be spliced
+# into `remember`'s docstring — it is composed here and handed to FastMCP as
+# `description=`, which wins over the docstring (`Tool.from_function`:
+# `metadata.description if not None else parsed_fn.description`). The docstring
+# stays for the Python reader and says where the wire text comes from.
+#
+# The paragraph this replaced was the defect, not an omission: it said "declare
+# a claim whenever you record a state that can later change — an approval, a
+# status, an owner, a decision". A preference IS a state that can change, so
+# that sentence asks for exactly the claim that makes the pass cry wolf. The
+# fix is a discriminant, not a longer list.
+_REMEMBER_DESCRIPTION = f"""\
+Persist a memory (an Engram) so future recalls surface it.
+
+`personal=true` remembers PRIVATELY — into your own identity-keyed partition,
+portable across workspaces + clients, never shared with the workspace. The
+default (`false`) shares to the workspace, unchanged.
+
+**`claims` is what lets this memory be checked for CONTRADICTION against
+another one.** Prose cannot be compared: "the Kind still needs approval" and
+"the Kind was approved" share almost no words, so nothing can tell they
+disagree. A claim states the same thing structurally — `[{{"subject":
+"KindDefinition/livro", "predicate": "approval", "object": "pending"}}]` — and
+`consolidate(dry_run=true)` then reports any OTHER memory asserting a different
+`object` for the same `(subject, predicate)` while both are still believed. It
+only ever REPORTS: nothing is overwritten, expired or merged.
+
+{WHEN_TO_CLAIM}
+
+A malformed claim is REFUSED naming the offending index and field, and nothing
+is written."""
 
 
 # ── live DNA handle (composition root) ─────────────────────────────────────
@@ -1379,7 +1416,7 @@ def build_server(
                 await _live(), query, scope, k, tenant, as_of=as_of,
             )
 
-    @server.tool(run_in_thread=False)
+    @server.tool(run_in_thread=False, description=_REMEMBER_DESCRIPTION)
     async def remember(
         summary: str,
         scope: str | None = None,
@@ -1392,26 +1429,11 @@ def build_server(
     ) -> dict[str, Any]:
         """Persist a memory (an Engram) so future recalls surface it.
 
-        ``personal=true`` remembers PRIVATELY — into your own identity-keyed
-        partition, portable across workspaces + clients, never shared with the
-        workspace. The default (``false``) shares to the workspace, unchanged.
-
-        **``claims`` is what lets this memory be checked for CONTRADICTION
-        against another one.** Prose cannot be compared: "the Kind still needs
-        approval" and "the Kind was approved" share almost no words, so nothing
-        can tell they disagree. A claim states the same thing structurally —
-        ``[{"subject": "KindDefinition/livro", "predicate": "approval",
-        "object": "pending"}]`` — and ``consolidate(dry_run=true)`` then reports
-        any OTHER memory asserting a different ``object`` for the same
-        ``(subject, predicate)`` while both are still believed.
-
-        ``subject`` may be omitted when ``area`` already names what the memory is
-        about in ``Kind/name`` form. ``polarity: "denies"`` states a negation
-        ("NOT approved") so it can be compared instead of being prose. Declare a
-        claim whenever you record a state that can later change — an approval, a
-        status, an owner, a decision — because that is exactly the memory that
-        goes stale in silence. A malformed claim is REFUSED naming the offending
-        index and field, and nothing is written."""
+        ⚠️ The text a CLIENT reads is :data:`_REMEMBER_DESCRIPTION`, not this
+        docstring — it interpolates ``dna.memory.contradiction.WHEN_TO_CLAIM``,
+        the ONE statement of when a claim is worth declaring, which a docstring
+        literal cannot splice. Change the instruction there, never here, or the
+        two drift and only the wire one is read."""
         if personal:
             oid, family = await _personal_guard("write")
             async with _refusing():

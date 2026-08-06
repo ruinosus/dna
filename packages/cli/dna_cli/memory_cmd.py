@@ -30,12 +30,14 @@ import hashlib
 import json
 import os
 import re
+import textwrap
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
 import click
 
+from dna.memory.contradiction import WHEN_TO_CLAIM, WHEN_TO_CLAIM_SHORT
 from dna_cli._ctx import dna_session, print_json, print_table
 from dna_cli.recall_cmd import _register_provider
 
@@ -193,7 +195,46 @@ def memory() -> None:
     """Declarative memory over existing Kinds (remember/recall/forget/consolidate)."""
 
 
-@memory.command(name="remember")
+def _epilog(text: str, width: int = 74) -> str:
+    """``WHEN_TO_CLAIM`` as click will actually print it.
+
+    Click rewraps a help paragraph, and a rewrapped bullet list becomes one
+    paragraph — the four cases collapse into prose and the two NO cases, the
+    half that stops the detector from crying wolf, stop being findable. A ``\\b``
+    line stops the rewrap, but then click prints the source lines VERBATIM, and
+    those run past any terminal. So each block is wrapped HERE, at a width click
+    will not touch, with the ``- `` bullets kept hanging.
+    """
+    out: list[str] = []
+    for block in text.split("\n\n"):
+        # A bullet is its OWN unit: the four cases are the instruction's teeth,
+        # and joined into one paragraph the two NO cases read as an aside. Split
+        # on the LINE start, never on "- " anywhere — a dash inside a sentence
+        # would otherwise cut it in half.
+        units: list[list[str]] = []
+        for line in block.splitlines():
+            if line.startswith("- ") or not units:
+                units.append([line])
+            else:
+                units[-1].append(line)
+        lines = [
+            textwrap.fill(
+                " ".join(" ".join(unit).split()), width=width,
+                subsequent_indent="  " if unit[0].startswith("- ") else "",
+            )
+            for unit in units
+        ]
+        out.append("\b\n" + "\n".join(lines))
+    return "\n\n".join(out)
+
+
+# The long form goes in the EPILOG, not in `help=`: `dna memory remember --help`
+# keeps its one-line summary at the top, and the reader who scrolled through the
+# options finds the rule right under them.
+_CLAIM_EPILOG = _epilog(WHEN_TO_CLAIM)
+
+
+@memory.command(name="remember", epilog=_CLAIM_EPILOG)
 @click.argument("summary")
 @click.option("--kind", default="Engram", type=click.Choice(_MEMORY_KINDS), show_default=True)
 @click.option("--name", default=None, help="Doc name (default: rem-<hash> of summary).")
@@ -213,7 +254,8 @@ def memory() -> None:
               help="A structured assertion, so this memory can be checked against "
                    "another one for CONTRADICTION and not only for repetition. "
                    "`KindDefinition/livro::approval=pending`; SUBJECT defaults to "
-                   "--area; a leading `!` on the object means `denies`. Repeatable.")
+                   "--area; a leading `!` on the object means `denies`. Repeatable. "
+                   + WHEN_TO_CLAIM_SHORT + " Full rule at the bottom of --help.")
 @click.option("--json", "as_json", is_flag=True)
 def remember_cmd(
     summary: str, kind: str, name: str | None, area: str, affect: str,
