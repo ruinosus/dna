@@ -81,10 +81,32 @@ def test_workspace_schema_required_and_opaque_id():
     assert sch["required"] == ["workspace_id", "name", "created_by", "created_at"]
     props = sch["properties"]
     assert props["workspace_id"]["type"] == "string"
-    # plan_ref is nullable (Free floor = null).
-    assert props["plan_ref"]["type"] == ["string", "null"]
+    # account_id is nullable (no resolvable account = the Free floor).
+    assert props["account_id"]["type"] == ["string", "null"]
     # closed schema — no stray fields on the tenancy root.
     assert sch["additionalProperties"] is False
+
+
+def test_workspace_has_no_plan_ref_and_the_closed_schema_refuses_it():
+    """`plan_ref` is GONE, and gone means a write carrying it is refused.
+
+    Asserting only ``"plan_ref" not in props`` would pass just as happily if
+    the field had been renamed, moved, or left in a schema nobody enforces —
+    the mutant survives. The second half is the one that kills it: the schema
+    is closed, so the deletion has to be observable at the door.
+    """
+    port = _kernel().kind_port_for("Workspace")
+    sch = port.schema()
+    assert "plan_ref" not in sch["properties"]
+
+    import jsonschema
+    doc = {
+        "workspace_id": "ws-1", "name": "Barnabé Labs",
+        "created_by": "a@b.c", "created_at": "2026-08-06T00:00:00Z",
+    }
+    jsonschema.validate(doc, sch)          # the same doc without it is fine
+    with pytest.raises(jsonschema.ValidationError):
+        jsonschema.validate({**doc, "plan_ref": "pro"}, sch)
 
 
 # ---------------------------------------------------------------------------

@@ -60,6 +60,11 @@ ORIG_NON_INHERITABLE = frozenset({
     # GLOBAL data read _lib-direct. A rule ABOUT the tenancy boundary must not
     # arrive in a child scope by inheritance.
     "WorkspaceScopeGrant",
+    # "Sprint" (fix/kinds-referencias-honestas) — a board Kind, and board
+    # Kinds do not inherit: it sits beside Story/Feature/Epic for exactly the
+    # reason they do. A parent scope's sprints arriving in a child scope would
+    # make `sprint_ref` resolve against a timebox the child never planned.
+    "Sprint",
 })
 
 

@@ -130,6 +130,9 @@ class TestGuideKind(KindBase):
                     "type": "array",
                     "items": {"type": "string"},
                     "default": [],
+                    # Composite: each entry carries its own Kind, so a guide can
+                    # verify a Story and a Spec in the same list.
+                    "x-dna-ref-composite": "Kind/name",
                     "description": "Work items this guide verifies, as 'Kind/name' refs (e.g. 'Story/s-x').",
                 },
                 "prerequisites": {
@@ -238,6 +241,10 @@ class TestRunKind(KindBase):
                     "type": "array",
                     "items": {"type": "string"},
                     "default": [],
+                    # Composite AND heterogeneous: an entry is either a
+                    # `Kind/name` pointer or a plain URL. `x-dna-ref` would
+                    # veto every URL, which is valid data here.
+                    "x-dna-ref-composite": "Kind/name",
                     "description": "Refs/links backing the outcome, e.g. ['HtmlArtifact/ha-x', urls].",
                 },
                 "screenshots": {

@@ -12,7 +12,7 @@ spec:
   overall_confidence: high
   conducted_by: claude-code
   conducted_at: '2026-07-09T00:00:00+00:00'
-  scope_ref: dna-development
+  scope: dna-development
   status: published
   visibility: shared
   owner: claude-code

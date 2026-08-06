@@ -1,5 +1,5 @@
 apiVersion: github.com/ruinosus/dna/cloud/v1
-kind: Tier
+kind: PricingPlan
 metadata:
   name: free
 spec:

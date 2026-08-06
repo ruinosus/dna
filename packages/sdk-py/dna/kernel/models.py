@@ -183,7 +183,32 @@ class CompositionRule:
 
 @dataclass
 class LayerPolicySpec:
-    layer_id: str = ""
+    # NOT a reference, despite the `_id` suffix — this is the layer DIMENSION
+    # name, one half of the `(layer_id, layer_value)` coordinate that addresses
+    # an overlay: `layer_id` is the axis (`tenant`, `branch`, `region`, `user`),
+    # `layer_value` is the point on it (`acme`, `feature-x`, `prod`). Measured,
+    # not assumed: it is matched by STRING EQUALITY against the layer being
+    # written (``compose/layer_policy.py``) and against the keys of the
+    # ``layers`` dict at compose time (``compose/instance_builder.py``), and it
+    # is used verbatim as a filesystem path segment and as a
+    # ``dna_layer_documents`` primary-key column — plain TEXT, no foreign key,
+    # no CHECK, no enum type. There is no ``Layer`` Kind and never has been. The
+    # ``["tenant", "branch", "region", "user"]`` list in
+    # ``LayerPolicyKind.ui_schema`` is advisory only: nothing validates against
+    # it, and the test suite deliberately uses values outside it (``env``,
+    # ``composition``, ``hybrid``), so turning it into an ``enum`` would be a
+    # behaviour change, not documentation.
+    layer_id: str = field(
+        default="",
+        metadata={"description": (
+            "Which layer DIMENSION this policy governs (e.g. tenant, branch, "
+            "region, user). NOT a reference: it is matched by exact string "
+            "equality against the layer being composed or written — the "
+            "`layer_id` half of the (layer_id, layer_value) overlay "
+            "coordinate. No `Layer` Kind exists; the `_id` suffix names an "
+            "axis, not a document."
+        )},
+    )
     policies: dict[str, str] = field(default_factory=dict)
     # Composition Engine V2: per-Kind composition rules. Keyed by Kind
     # name (e.g. "Agent", "LottieAsset"). Absent Kinds fall back

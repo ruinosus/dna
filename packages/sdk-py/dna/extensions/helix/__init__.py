@@ -130,6 +130,25 @@ def _schema_from_model(model: type) -> dict[str, Any] | None:
                 properties[f.name] = {}
         else:
             properties[f.name] = {}
+
+        # Opt-in prose, carried on the dataclass field itself
+        # (fix/kinds-referencias-honestas). Model-derived schemas emitted TYPE
+        # and nothing else, so a Kind built this way had no way to say what a
+        # field MEANS — and a field that cannot say what it means gets guessed
+        # at: `LayerPolicy.layer_id` was read by the schema-graph heuristic as a
+        # reference to a `Layer` Kind that has never existed. The description is
+        # the only thing that can settle such a question in the model itself,
+        # rather than in a comment nobody projects.
+        #
+        # Inert without the metadata key: a field that declares none produces
+        # byte-identical output to before, so this adds a slot without changing
+        # a single existing schema. The obvious sibling — reading `x-dna-ref`
+        # off the same metadata, which would let Agent.soul / Agent.skills stop
+        # being composition-tier guesses — is deliberately NOT done here: each
+        # such declaration needs its own read of real data first.
+        description = (f.metadata or {}).get("description")
+        if description and isinstance(properties.get(f.name), dict):
+            properties[f.name]["description"] = str(description)
     return {"type": "object", "properties": properties}
 
 

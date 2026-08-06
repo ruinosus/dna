@@ -57,6 +57,9 @@ spec:
         description: The kaizen observation (what could be better).
       work_item:
         type: string
+        # Composite: the value carries its own Kind, so no single `x-dna-ref`
+        # target is right and a bare-name lookup would never resolve it.
+        x-dna-ref-composite: 'Kind/slug'
         description: "Kind/slug of the work item where this was observed (polymorphic — Story/Spike/Issue)."
       issue:
         type: string

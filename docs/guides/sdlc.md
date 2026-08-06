@@ -189,6 +189,57 @@ DNA dogfoods this itself: the `e-dna-dx` epic **produces** its own design doc as
 the `HtmlArtifact/ha-e-dna-dx-design` above — so the "why" of the work is
 traceable on the board, not lost in a chat transcript.
 
+## The sprint is a document, not a label
+
+`Story` and `Feature` carry a `sprint_ref`. Until 2026-08-06 it was a
+free-form string whose `_ref` suffix promised a document nothing provided: you
+could group a board by `2026-Q2-S2` and learn nothing else about it, and a typo
+produced a second, silent sprint.
+
+`Sprint` is now a Kind, and `sprint_ref` is a **declared reference**
+(`x-dna-ref`) the kernel resolves at write time. The document NAME is the key —
+so the identifier your board already carries is the name you give the document:
+
+```yaml
+# sprint.yaml
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Sprint
+metadata: {name: 2026-Q2-S2}
+spec:
+  sprint_id: 2026-Q2-S2          # MUST equal the document name
+  name: Sprint 2 — Q2 2026
+  starts_on: 2026-04-06
+  ends_on: 2026-04-17
+  state: active
+```
+
+```bash
+dna doc apply sprint.yaml                    # or, without a file:
+dna doc make Sprint 2026-Q2-S2 sprint_id=2026-Q2-S2 \
+    starts_on=2026-04-06 ends_on=2026-04-17 state=active
+
+dna sdlc story create s-x --feature f-y --sprint 2026-Q2-S2 --desc "…"
+```
+
+There is deliberately no `dna sdlc sprint` sub-command yet: the generic
+document door already writes the Kind, and a bespoke command is worth adding
+the day a board surface needs more than that.
+
+Nothing about an existing board has to change. The value shape is identical,
+and a `sprint_ref` naming a Sprint that does not exist yet still **persists**
+under the default `DNA_REF_VALIDATION=warn` — it is recorded as a dangling
+edge, which is a fact worth having rather than a write worth refusing. Create
+the Sprint document later and the same value resolves. Under
+`DNA_REF_VALIDATION=enforce` it is refused, like every other declared
+reference.
+
+A Sprint carries identity, its timebox (`starts_on` / `ends_on`, both
+**required** — a sprint *is* a timebox) and a `state`, and **nothing else** —
+no goal, no capacity, no velocity, and no list of its own stories. That last
+omission is the deliberate one: membership is the inverse of `sprint_ref`, and
+storing it as well would be a second truth that can disagree with the first.
+Ask the graph what is in a sprint; never write it down twice.
+
 ## Agent-ready
 
 The repo is agent-ready:

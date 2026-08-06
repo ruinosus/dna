@@ -40,7 +40,7 @@ def test_extension_registers_expected_kinds():
     list — that's the whole point of the test (prevents silent
     expansion of the public contract).
 
-    Current set (25 Kinds): SDLC core + ADO-grade doc Kinds (ADR,
+    Current set (26 Kinds): SDLC core + ADO-grade doc Kinds (ADR,
     Changelog, Initiative, Postmortem, Retrospective, RiskRegister,
     Spike, Bug, Task) + the UNIFIED CognitivePolicy (was 9 Kinds —
     RecallPolicy, DecayPolicy, MemoryPolicy, AllocationPolicy,
@@ -58,7 +58,14 @@ def test_extension_registers_expected_kinds():
     SavedView deleted (26→25): the censo found ZERO readers — no dep_filter
     points at it, nothing in the SDK/CLI consumes it, and the UI that
     justified it (a Studio ViewToolbar "Load view" dropdown) ships in no
-    distribution. Its own descriptor admitted it was "waiting on a reader"."""
+    distribution. Its own descriptor admitted it was "waiting on a reader".
+
+    Sprint ADDED (25→26, fix/kinds-referencias-honestas, 2026-08-06):
+    ``Story.sprint_ref`` and ``Feature.sprint_ref`` are reference-shaped names
+    that pointed at nothing. The Kind gives the two fields a real target so
+    they can be DECLARED (``x-dna-ref: Sprint``); it carries identity plus an
+    optional timebox and nothing else. This assertion firing on the addition is
+    the contract working, not an obstacle."""
     k = Kernel()
     k.load(SdlcExtension())
     api_kinds = sorted(kn for (av, kn) in k._kinds if av == "github.com/ruinosus/dna/sdlc/v1")
@@ -70,10 +77,10 @@ def test_extension_registers_expected_kinds():
         "Narrative",
         "Plan", "Postmortem", "PromptTemplate", "Reference",
         "Retrospective", "RiskRegister", "Roadmap", "Spec",
-        "Spike", "StatusReport", "Story",
+        "Spike", "Sprint", "StatusReport", "Story",
         "Task", "WorkflowEvent",
     ]
-    assert len(api_kinds) == 25
+    assert len(api_kinds) == 26
 
 
 def test_agent_session_kind_storage_bundle():

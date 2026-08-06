@@ -89,7 +89,10 @@ spec:
         items:
           type: string
         description: IntelSource names the intelligence layer observes for this
-          project (the sources feeding its insight stream).
+          project (the sources feeding its insight stream). DECLARED (i-040) —
+          every item resolves by DOCUMENT NAME, the same key `org_ref` and
+          `repo_refs` above already use.
+        x-dna-ref: IntelSource
       visibility:
         type: string
         enum:

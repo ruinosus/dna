@@ -126,7 +126,12 @@ def cmd_show(name: str, scope: str | None, tenant: str | None, full: bool) -> No
     click.echo(f"  confidence:   {spec.get('overall_confidence', '?')}")
     click.echo(f"  conducted_by: {spec.get('conducted_by', '?')}")
     click.echo(f"  conducted_at: {spec.get('conducted_at', '?')}")
-    click.echo(f"  scope_ref:    {spec.get('scope_ref', '?')}")
+    # Renamed from `scope_ref` (2026-08-06). ONE name is read, deliberately: a
+    # dual read is a transition mechanism, and there is no transition to serve
+    # — every Research document in both repos was migrated in the same change,
+    # and nobody consumes the SDK yet. Accepting both names would be debt
+    # bought to cover a risk that does not exist.
+    click.echo(f"  scope:        {spec.get('scope', '?')}")
     click.echo(f"  visibility:   {spec.get('visibility', 'scope-private')}")
     sup = spec.get("superseded_by")
     if sup:

@@ -291,7 +291,7 @@ A LayerPolicy declares overlay rules for one layer dimension (tenant, branch, re
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `composition_rules` | object |  |  |
-| `layer_id` | string |  |  |
+| `layer_id` | string |  | Which layer DIMENSION this policy governs (e.g. tenant, branch, region, user). NOT a reference: it is matched by exact string equality against the layer being composed or written — the `layer_id` half of the (layer_id, layer_value) overlay coordinate. No `Layer` Kind exists; the `_id` suffix names an axis, not a document. |
 | `policies` | object |  |  |
 
 ## Lesson
@@ -429,7 +429,7 @@ A Research is a curated synthesis of N external sources (Reference docs) with ob
 | `research_blocks[].questions` | array |  |  |
 | `research_blocks[].title` | string |  |  |
 | `retracted_reason` | string |  | Why this Research was retracted (audit trail). |
-| `scope_ref` | string |  | Scope this research informs (e.g. 'my-board'). |
+| `scope` | string |  | Scope this research informs (e.g. 'dna-development'). A scope NAME — a partition of the document store — not a reference to any document. |
 | `sources` | array |  | Reference doc names this research synthesizes from. Each entry should resolve to a Reference doc (sdlc-reference Kind). |
 | `status` | string | yes | Lifecycle: brief\|ready (recipe phase) → draft\|published (output phase) → superseded\|retracted (terminal). Um de: `brief`, `ready`, `draft`, `published`, `superseded`, `retracted`. |
 | `superseded_by` | string |  | Name of newer Research that replaces this one. |
