@@ -5,7 +5,7 @@ metadata:
   name: contrato-agent
 spec:
   description: Conduz o intake de contratos — extrai os campos do Kind
-    ContratoDeServico de uma instância anexado, campo a campo, para revisão
+    ContratoDeServico de um documento anexado, campo a campo, para revisão
     humana.
   # Coordenada PORTÁTIL (dna.runtime.model.deployment_for): qual deployment a
   # serve é fato do AMBIENTE (DNA_MODEL_DEPLOYMENT). Um kit nunca hardcoda o

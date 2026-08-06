@@ -2,7 +2,7 @@
 #
 # spec-app-como-composicao (dna-cloud, decisões do founder em 05/08/2026):
 # o kit é o PACOTE (como um fluxo se distribui — `dna copilot install`); o
-# App é a INSTÂNCIA instalada (como se usa, se navega e se cobra). Um App
+# App é a INSTALAÇÃO (como se usa, se navega e se cobra). Um App
 # agrupa N copilotos existentes sob uma identidade própria — o console
 # renderiza `/app/<name>` derivado DESTE doc (wizards agrupados
 # numa cara só) — e carrega o ENTITLEMENT (`requires_plan`),
