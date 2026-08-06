@@ -1,0 +1,25 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-graph-kinds-route
+spec:
+  description: 'Bateria da fatia 1 do grafo: a projecao de schema no SDK, a rota GET /v1/graph/kinds, e as tres guardas que provam que a projecao tem UMA casa (data-model byte-identico, openapi em dia, clientes cobertos).'
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: cd packages/sdk-py && uv run --no-project pytest tests/test_kind_graph.py -q
+    expected: 22 passed — a projecao le x-dna-ref pela mesma funcao do write path, os tres tiers ficam distinguiveis, as contagens de coverage batem com as colecoes que descrevem, e as lacunas (alvo nao registrado, chaveada, suprimida) sobrevivem
+  - action: cd packages/cli && .venv/bin/python -m pytest tests/test_kind_graph_rest.py -q
+    expected: 14 passed — GET /v1/graph/kinds devolve o grafo inteiro num 200, Story.feature->Feature chega como declared, coverage.enforced_tiers == ['declared'] e coverage.declared < coverage.edges, os limits viajam no fio, scope vazio e 200 e nao 404, a porta e montada E guardada na lane token
+  - action: python3 scripts/data_model_guard.py && python3 scripts/data_model_guard.py --determinism
+    expected: clean + deterministico — a pagina data-model.md e byte-identica depois da projecao mudar de casa para o SDK; prova que ha UMA computacao e nao duas
+  - action: cd packages/client-py && .venv/bin/python -m pytest tests -q
+    expected: 22 passed — docs/openapi.json em dia com a app viva e a guarda de cobertura (method,path) enxerga kind_graph
+  - action: cd packages/client-ts && bun test && bun run typecheck
+    expected: 17 pass, tsc limpo — kindGraph mapeado e o schema.ts regenerado
+  - action: python3 scripts/brand_guard.py
+    expected: clean
+  verifies:
+  - Story/s-graph-kinds-route
+  created_at: '2026-08-06T07:59:32+00:00'
+  updated_at: '2026-08-06T07:59:32+00:00'

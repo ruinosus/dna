@@ -37,6 +37,13 @@ alike would imply the model knows more than it does:
    drawn; tabulated. This tier is the honest measure of what the model still
    cannot express, and it is meant to shrink as ``x-dna-ref`` spreads.
 
+**The projection itself moved into the SDK** — ``dna.kernel.query.kind_graph``
+— because a REST route (``GET /v1/graph/kinds``) now serves the same graph.
+This script no longer OWNS the tiering, the denylist or the undeclarable
+table; it imports them and renders. One computation, two consumers: a second
+reading of ``x-dna-ref`` that could disagree with this page is precisely the
+failure ``references.py`` exists to end.
+
 **Partitioning.** 76 Kinds in one ``erDiagram`` is an unreadable hairball, so
 the detail diagrams are split by the Kind's own alias prefix (``sdlc-``,
 ``helix-``, …) — a grouping that comes from the data, not from an editorial
@@ -61,13 +68,19 @@ import re
 import sys
 from pathlib import Path
 
+# The projection this page renders — the tiers, the denylist, the
+# undeclarable table and the ``x-dna-ref`` reading itself — lives in the SDK,
+# so the REST route ``GET /v1/graph/kinds`` and this page cannot disagree
+# about what the model says. This script owns the RENDERING and nothing else.
+from dna.kernel.query.kind_graph import (
+    INFERENCE_DENYLIST,
+    UNDECLARABLE,
+    build_edges,
+    kind_rows,
+)
+
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _OUT = _REPO_ROOT / "docs" / "reference" / "data-model.md"
-
-# Suffixes that make a field "reference-shaped": it points at SOMETHING even
-# when we cannot say at what. This is what makes the unresolved tier a
-# meaningful gap list rather than a grep for nouns.
-_REF_SUFFIXES = ("_refs", "_ref", "_oid", "_ids", "_id", "_slug")
 
 # Minimum edges for a group to get its own diagram. Below this the group's
 # edges still appear in the tables and the overview — a diagram of one box
@@ -81,257 +94,20 @@ _MIN_EDGES_FOR_DIAGRAM = 2
 # under fifty composition lines.
 _MAX_EDGES_PER_DIAGRAM = 20
 
-# --- inference denylist: (Kind, field) -> why the NAME match is WRONG --------
-# The name-convention pass matches a field name against registered Kind names.
-# These matches are false positives, each confirmed against the field's own
-# schema description. They are NOT silently dropped: the page prints this
-# table with the justifications so the suppression is auditable.
-#
-# Shrink-only by convention (docs_coverage_guard.py style): an entry goes away
-# when the field gets a real ``x-dna-ref``, never grows to paper over a guess.
-INFERENCE_DENYLIST: dict[tuple[str, str], str] = {
-    ("Tenant", "plan"): (
-        "billing/feature tier (a Tier `tier_id`), not the SDLC `Plan` Kind"
-    ),
-    ("Organization", "plan_ref"): (
-        "the DNA Cloud Tier this org is on, not the SDLC `Plan` Kind"
-    ),
-    ("Workspace", "plan_ref"): (
-        "DEPRECATED and never read — billing is per ACCOUNT (workspace → "
-        "account_id → AccountPlan); also not the SDLC `Plan` Kind"
-    ),
-    ("AgentSession", "tool"): (
-        "provenance enum of the AI coding tool that produced the session "
-        "(claude-code | cursor | cline | …), not a `Tool` document"
-    ),
-    ("Copilot", "tenant"): (
-        "inbound-tenant handling mode for the emitted serving layer, not a "
-        "reference to a `Tenant` document"
-    ),
-    ("AuditLog", "actor"): (
-        "the request identity string from claims (email/sub, or 'dev-user'), "
-        "not a reference to an `Actor` document"
-    ),
-    ("Memory", "namespace"): (
-        "MIF's hierarchical memory scope path (`_semantic/decisions`, §10) — a "
-        "string axis inside the document, not the `KindNamespace` Kind, whose "
-        "alias `tenant-kind-namespace` merely ends in the same token"
-    ),
-    ("RemoteAgent", "skills"): (
-        "the A2A Card's own `skills[]` (id/name/description/tags/examples) — "
-        "structured self-description of what the remote agent can do, not a "
-        "reference to the `Skill` Kind (agentskills), which merely shares "
-        "the singular of the field name"
-    ),
-}
-
-# --- known-undeclarable references -------------------------------------------
-# Real edges that ``x-dna-ref`` deliberately does NOT declare, because it
-# resolves targets by DOCUMENT NAME and these are keyed by something else.
-# Declaring them would produce false write-time violations on valid data.
-# This is the concrete backlog for a future ``x-dna-ref-key`` (i-040 follow-up)
-# and it belongs on the page: a MER that hides these implies a completeness
-# the model does not have.
-UNDECLARABLE: dict[tuple[str, str], tuple[str, str]] = {
-    ("Project", "workspace_id"): (
-        "Workspace",
-        "keyed by the Workspace's opaque generated `workspace_id`, not its "
-        "document name",
-    ),
-    ("WorkspaceMembership", "workspace_id"): (
-        "Workspace",
-        "same opaque `workspace_id` key",
-    ),
-    ("WorkspaceMembership", "role"): (
-        "Role",
-        "keyed by `role_id` (owner/admin/member/guest), not the document name",
-    ),
-    ("Membership", "role"): (
-        "Role",
-        "keyed by `role_id`, not the document name",
-    ),
-    ("Organization", "plan_ref"): (
-        "Tier",
-        "keyed by `tier_id` (free/pro/enterprise), not the document name",
-    ),
-    ("Comment", "target_ref"): (
-        "any",
-        "a composite `Kind:name` string — needs parsing, not a name lookup",
-    ),
-}
-
 
 def _md(text: str) -> str:
     """Flatten prose for a Markdown table cell."""
     return (text or "").replace("|", "\\|").replace("\n", " ").strip()
 
 
-def _attr(port: object, name: str):
-    value = getattr(port, name, None)
-    return value() if callable(value) else value
-
-
 # --- model extraction --------------------------------------------------------
 
 
 def _load_kinds() -> list[dict]:
-    """Every registered Kind as a plain sorted dict — the logical entities."""
+    """Every registered Kind as a row, from the live registry."""
     from dna.kernel import Kernel
-    from dna.kernel.query.references import declared_references
 
-    kinds: list[dict] = []
-    for port in Kernel.auto().kind_ports():
-        name = _attr(port, "kind")
-        if not name:
-            continue
-        try:
-            schema = port.schema() or {}
-        except Exception:  # pragma: no cover - defensive
-            schema = {}
-        alias = str(_attr(port, "alias") or "")
-        kinds.append(
-            {
-                "kind": str(name),
-                "alias": alias,
-                "group": alias.split("-", 1)[0] if alias else "ungrouped",
-                "plane": str(_attr(port, "plane") or ""),
-                "dep_filters": {
-                    str(k): str(v)
-                    for k, v in dict(_attr(port, "dep_filters") or {}).items()
-                },
-                "refs": declared_references(port),
-                "properties": dict((schema or {}).get("properties") or {}),
-            }
-        )
-    kinds.sort(key=lambda k: k["kind"])
-    return kinds
-
-
-def _target_index(kinds: list[dict]) -> tuple[dict[str, str], dict[str, str]]:
-    """alias -> Kind, and lowercased-token -> Kind.
-
-    A token maps only when it resolves to exactly ONE Kind; an ambiguous token
-    resolves to nothing rather than to a guess.
-    """
-    by_alias = {k["alias"]: k["kind"] for k in kinds if k["alias"]}
-    buckets: dict[str, set[str]] = {}
-    for k in kinds:
-        tokens = {k["kind"].lower()}
-        if k["alias"]:
-            tokens.add(k["alias"].lower().rsplit("-", 1)[-1])
-            tokens.add(k["alias"].lower())
-        for token in tokens:
-            buckets.setdefault(token, set()).add(k["kind"])
-    by_token = {t: sorted(v)[0] for t, v in buckets.items() if len(v) == 1}
-    return by_alias, by_token
-
-
-def _normalize(field: str) -> str:
-    """Strip a reference suffix and a trailing plural from a field name."""
-    token = field.lower()
-    for suffix in _REF_SUFFIXES:
-        if token.endswith(suffix) and len(token) > len(suffix):
-            token = token[: -len(suffix)]
-            break
-    if token.endswith("s") and not token.endswith("ss"):
-        token = token[:-1]
-    return token
-
-
-def _cardinality(prop: dict) -> str:
-    return "many" if (prop or {}).get("type") == "array" else "one"
-
-
-def _build_edges(kinds: list[dict]) -> tuple[list[dict], list[dict]]:
-    """Return (edges, unresolved).
-
-    Each edge carries a ``tier``: ``declared`` (x-dna-ref) > ``composition``
-    (dep_filters) > ``inferred`` (name convention). A field declared by
-    ``x-dna-ref`` is never also emitted as a lower tier — the strongest
-    statement about a field wins, so no line is drawn twice.
-    """
-    by_alias, by_token = _target_index(kinds)
-    by_kind = {k["kind"]: k for k in kinds}
-
-    edges: list[dict] = []
-    unresolved: list[dict] = []
-
-    for k in kinds:
-        source = k["kind"]
-        props = k["properties"]
-        claimed: set[str] = set()
-
-        # -- tier 1: x-dna-ref (declared AND enforced at write) --------------
-        for ref in k["refs"]:
-            claimed.add(ref.field)
-            for target in ref.targets:
-                if target not in by_kind:
-                    unresolved.append({
-                        "source": source, "field": ref.field,
-                        "reason": f"`x-dna-ref` names `{_md(target)}`, "
-                                  "which no registered Kind provides",
-                    })
-                    continue
-                edges.append({
-                    "source": source, "field": ref.field, "target": target,
-                    "cardinality": "many" if ref.is_array else "one",
-                    "tier": "declared", "polymorphic": ref.polymorphic,
-                })
-
-        # -- tier 2: dep_filters (declared for composition, never checked) ---
-        for field, spec in sorted(k["dep_filters"].items()):
-            if field in claimed:
-                continue
-            targets = sorted({
-                by_alias[a] for a in str(spec).split("|") if a in by_alias
-            })
-            if not targets:
-                unresolved.append({
-                    "source": source, "field": field,
-                    "reason": f"`dep_filters` names alias(es) "
-                              f"`{_md(str(spec))}` which no registered Kind "
-                              "claims",
-                })
-                continue
-            claimed.add(field)
-            for target in targets:
-                edges.append({
-                    "source": source, "field": field, "target": target,
-                    "cardinality": _cardinality(props.get(field, {})),
-                    "tier": "composition", "polymorphic": len(targets) > 1,
-                })
-
-        # -- tiers 3 & 4: whatever nothing declared --------------------------
-        for field in sorted(props):
-            if field in claimed:
-                continue
-            token = _normalize(field)
-            target = by_token.get(token)
-            ref_shaped = field.lower().endswith(_REF_SUFFIXES)
-
-            if target == source:
-                # `Workspace.workspace_id`, `Tier.tier_id`: own identity.
-                continue
-            if target and (source, field) in INFERENCE_DENYLIST:
-                continue
-            if (source, field) in UNDECLARABLE:
-                continue
-            if target:
-                edges.append({
-                    "source": source, "field": field, "target": target,
-                    "cardinality": _cardinality(props.get(field, {})),
-                    "tier": "inferred", "polymorphic": False,
-                })
-            elif ref_shaped and token not in by_token:
-                unresolved.append({
-                    "source": source, "field": field,
-                    "reason": f"reference-shaped, but `{token}` matches no "
-                              "registered Kind",
-                })
-
-    edges.sort(key=lambda e: (e["tier"], e["source"], e["field"], e["target"]))
-    unresolved.sort(key=lambda e: (e["source"], e["field"]))
-    return edges, unresolved
+    return kind_rows(Kernel.auto().kind_ports())
 
 
 def _load_tables() -> dict[str, list[dict]]:
@@ -724,7 +500,7 @@ def _edge_table(out: io.StringIO, edges: list[dict], group_of: dict) -> None:
 
 def _build() -> str:
     kinds = _load_kinds()
-    edges, unresolved = _build_edges(kinds)
+    edges, unresolved = build_edges(kinds)
     return _page(kinds, edges, unresolved, _load_tables())
 
 

@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  name: plan-s-graph-kinds-route
+spec:
+  title: 'Plano: s-graph-kinds-route'
+  date: '2026-08-06'
+  status: accepted
+  story_ref: s-graph-kinds-route
+  journey_phase: plan
+  body: 1) Extrair a projecao do grafo de schema de scripts/gen_data_model_docs.py para dna/kernel/query/kind_graph.py (constantes INFERENCE_DENYLIST/UNDECLARABLE, _target_index, _build_edges), reusando declared_references; o gerador passa a IMPORTAR — uma computacao, dois consumidores, data_model_guard byte-identico. 2) kind_graph_impl em dna/application/runtime.py (ensure_kinds + kind_ports(scope=)). 3) Rota GET /v1/graph/kinds + modelos Pydantic com envelope de coverage/limits. 4) Testes sdk-py + cli. 5) Regenerar docs/openapi.json + clientes py/ts, mapear em _COVERED.
+  created_at: '2026-08-06T07:45:31+00:00'
+  updated_at: '2026-08-06T07:45:31+00:00'

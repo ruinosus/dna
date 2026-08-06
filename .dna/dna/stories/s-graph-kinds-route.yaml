@@ -1,0 +1,80 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-graph-kinds-route
+spec:
+  title: GET /v1/graph/kinds — o grafo de SCHEMA numa chamada
+  description: 'Fatia 1 de spec-grafo-1-arestas-e-travessia (dna-cloud): servir o grafo de referencias entre Kinds derivado do registry, matando o N+1 de N readRegisteredKind do portal. Sem tabela, sem migracao, sem produtor.'
+  status: in-progress
+  feature: f-console-backend
+  priority: high
+  labels:
+  - graph
+  - rest
+  - portal
+  reporter: claude-code
+  acceptance_criteria:
+  - Given o registry vivo, When GET /v1/graph/kinds, Then a resposta traz nodes + edges com tier (declared/composition/inferred) numa unica chamada
+  - 'Given a resposta, When a tela a le, Then ela NAO pode afirmar ''todas as relacoes'': o envelope carrega coverage (contagens por tier) e limits explicitos (top-level properties only, chaveadas indeclaraveis, schema-nao-dado)'
+  - Given a extracao de x-dna-ref, When o grafo e projetado, Then ele reusa declared_references/references_from_schema do kernel e a MESMA projecao que gera docs/reference/data-model.md — uma computacao, dois consumidores
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: dna/kernel/query/kind_graph.py (projecao no SDK), kind_graph_impl, rota + modelo Pydantic'
+  - 'Tests: unitarios da projecao no sdk-py + rota no cli, incluindo a asserção de honestidade da cobertura'
+  - 'Docs: docs/openapi.json e os clientes py/ts REGENERADOS pelos scripts; data_model_guard e brand_guard limpos'
+  - 'CI: pytest sdk-py + cli verdes; sem mexer em versao/release'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-06T07:45:18+00:00'
+  updated_at: '2026-08-06T08:03:04+00:00'
+  timeline:
+  - at: '2026-08-06T07:45:18+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-06T07:45:35+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-06T07:59:38+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-graph-kinds-route
+    summary: TestGuide tg-graph-kinds-route (manual)
+  - at: '2026-08-06T08:01:32+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'A decisao que moldou a fatia: NAO reimplementar a projecao. O grafo de schema ja existia computado — dentro de scripts/gen_data_model_docs.py, para gerar docs/reference/data-model.md. Escrever uma segunda leitura de x-dna-ref para a rota seria o defeito que references.py existe para acabar (duas leituras que podem divergir), so que agora entre a PAGINA e a PORTA. Entao a projecao mudou de casa: dna/kernel/query/kind_graph.py, e o gerador virou consumidor. Prova: data_model_guard limpo e determinista — a pagina saiu byte-identica (31350 bytes) depois da mudanca.'
+    commit_ref: 2a6acb920d4fd0dc8ab7b7efb207166605ee893a
+  - at: '2026-08-06T08:01:35+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Honestidade: a medicao da spec (109 arestas de schema, 16 declaradas) e reproduzida pela rota ao vivo — coverage devolveu edges=109, declared=16, composition=66, inferred=27, unresolved=25, undeclarable=6, suppressed=8. Por isso o envelope carrega coverage.enforced_tiers=[''declared''] e coverage.limits: os quatro tiers nao valem o mesmo, e a tela precisa do qualificador NO FIO, nao numa pagina de doc que o chamador pode nunca ler. O limit mais importante e o primeiro (schema_not_data): estas arestas dizem quais Kinds PODEM apontar para quais — nunca quais documentos apontam. Esse e o grafo da fatia 3.'
+    commit_ref: 2a6acb920d4fd0dc8ab7b7efb207166605ee893a
+  - at: '2026-08-06T08:03:04+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-graph-kinds-route-20260806-080301
+    summary: TestRun tr-tg-graph-kinds-route-20260806-080301 → pass
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-graph-kinds-route
+    role: implementation
+    at: '2026-08-06T07:45:35+00:00'
+  - kind: TestGuide
+    name: tg-graph-kinds-route
+    role: test-guide
+    at: '2026-08-06T07:59:38+00:00'
+  - kind: TestRun
+    name: tr-tg-graph-kinds-route-20260806-080301
+    role: test-run
+    at: '2026-08-06T08:03:04+00:00'

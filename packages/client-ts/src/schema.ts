@@ -306,6 +306,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/graph/kinds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kind Graph
+         * @description The SCHEMA graph of the registered Kinds — which Kind may point at
+         *     which, through which field, in ONE call.
+         *
+         *     Replaces "read every Kind's descriptor and derive the graph in the
+         *     client", which cost one request per Kind and got slower as a workspace
+         *     grew. Same projection that generates ``docs/reference/data-model.md``:
+         *     the tiering, the ``x-dna-ref`` reading (the SAME one the write path
+         *     validates with) and the gap tables live in the SDK, so the page and
+         *     this route cannot disagree about what the model says.
+         *
+         *     **SCHEMA, not data.** The edges say which Kinds MAY reference which.
+         *     Which DOCUMENTS reference which is a different graph and this route
+         *     does not answer it — ``coverage.limits`` says so on the wire.
+         *
+         *     ``tenant`` resolves the scope the way the registry route does
+         *     (``live.default_scope``); an explicit ``scope`` still wins. No 404:
+         *     a scope with no Kinds is an empty graph with a coverage block that
+         *     says ``kinds: 0``, which is an answer — conflating it with "no such
+         *     scope" would make a screen say *error* where it should say *nothing
+         *     registered yet*.
+         */
+        get: operations["kind_graph_v1_graph_kinds_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/insights": {
         parameters: {
             query?: never;
@@ -2297,6 +2336,202 @@ export interface components {
             workspace_id: string;
         };
         /**
+         * KindGraphCoverage
+         * @description What the graph covers — the numbers a screen must qualify itself with.
+         *
+         *     This block exists so that no consumer can honestly render the edge list as
+         *     "all the relations". On the 06/08/2026 measurement the model carried 109
+         *     schema edges of which **16** were declared; the rest was composition (66)
+         *     or name inference (27), plus 25 reference-shaped fields left unresolved
+         *     and 6 known-undeclarable ones. Every field here is derived from the
+         *     collections it counts.
+         */
+        KindGraphCoverage: {
+            /**
+             * Composition
+             * @default 0
+             */
+            composition: number;
+            /**
+             * Declared
+             * @default 0
+             */
+            declared: number;
+            /** Edges */
+            edges: number;
+            /** Enforced Tiers */
+            enforced_tiers?: string[];
+            /**
+             * Inferred
+             * @default 0
+             */
+            inferred: number;
+            /** Kinds */
+            kinds: number;
+            /** Limits */
+            limits?: components["schemas"]["KindGraphLimit"][];
+            /**
+             * Suppressed
+             * @default 0
+             */
+            suppressed: number;
+            /**
+             * Undeclarable
+             * @default 0
+             */
+            undeclarable: number;
+            /**
+             * Unresolved
+             * @default 0
+             */
+            unresolved: number;
+        };
+        /**
+         * KindGraphEdge
+         * @description One SCHEMA edge: Kind ``from_kind`` may point at ``to_kind`` through
+         *     ``field``.
+         *
+         *     ``tier`` ranks how much the edge is worth — ``declared`` (``x-dna-ref``,
+         *     the ONLY tier the kernel resolves at write time), ``composition``
+         *     (``dep_filters``: a real declaration that drives prompt composition and is
+         *     never checked against stored data), ``inferred`` (the field NAME resolves
+         *     to exactly one registered Kind — a convention, not a contract). A renderer
+         *     that draws the three alike is asserting a confidence the model does not
+         *     have; ``coverage.enforced_tiers`` names the ones it does.
+         *
+         *     ``to_kind`` is ALWAYS a registered Kind: a declaration naming a Kind
+         *     nobody registers is a gap, not an edge, and comes back under
+         *     ``unresolved``.
+         */
+        KindGraphEdge: {
+            /**
+             * Cardinality
+             * @default one
+             * @enum {string}
+             */
+            cardinality: "one" | "many";
+            /** Field */
+            field: string;
+            /** From Kind */
+            from_kind: string;
+            /**
+             * Polymorphic
+             * @default false
+             */
+            polymorphic: boolean;
+            /**
+             * Tier
+             * @enum {string}
+             */
+            tier: "declared" | "composition" | "inferred";
+            /** To Kind */
+            to_kind: string;
+        };
+        /**
+         * KindGraphLimit
+         * @description One thing this graph cannot see, stated by the graph itself.
+         *
+         *     ``code`` is the machine-readable handle a UI switches on — its own copy,
+         *     in its own catalogue, in its own language. ``detail`` is documentation for
+         *     whoever reads the raw answer and is NOT display copy: a screen rendering
+         *     English shipped from a backend is the failure this project keeps its UI
+         *     strings in i18n catalogues to avoid.
+         */
+        KindGraphLimit: {
+            /** Code */
+            code: string;
+            /** Detail */
+            detail: string;
+        };
+        /**
+         * KindGraphNode
+         * @description One registered Kind as a node. Identity only — the descriptor
+         *     (``schema``/``ui_schema``) stays behind ``GET /v1/kinds/registry/{kind}``,
+         *     because a graph that inlined 76 JSON Schemas would be a download, not a
+         *     graph.
+         */
+        KindGraphNode: {
+            /**
+             * Alias
+             * @default
+             */
+            alias: string;
+            /**
+             * Group
+             * @default ungrouped
+             */
+            group: string;
+            /** Kind */
+            kind: string;
+            /**
+             * Plane
+             * @default
+             */
+            plane: string;
+        };
+        /**
+         * KindGraphResponse
+         * @description ``GET /v1/graph/kinds`` — the whole SCHEMA graph in one call.
+         *
+         *     SCHEMA, not data: these edges say which Kinds MAY point at which. Which
+         *     DOCUMENTS actually point at which is a different graph, derived at write
+         *     time, and this route does not answer it — ``coverage.limits`` carries that
+         *     statement on the wire so it travels with the answer instead of living in a
+         *     doc page a caller may never read.
+         */
+        KindGraphResponse: {
+            coverage: components["schemas"]["KindGraphCoverage"];
+            /** Edges */
+            edges?: components["schemas"]["KindGraphEdge"][];
+            /** Kinds */
+            kinds?: components["schemas"]["KindGraphNode"][];
+            /** Scope */
+            scope?: string | null;
+            /** Undeclarable */
+            undeclarable?: components["schemas"]["KindGraphUndeclarable"][];
+            /** Unresolved */
+            unresolved?: components["schemas"]["KindGraphUnresolved"][];
+        };
+        /**
+         * KindGraphUndeclarable
+         * @description A REAL reference that ``x-dna-ref`` deliberately does not declare.
+         *
+         *     The annotation resolves a target by document NAME; these fields are keyed
+         *     by something else (an opaque id, a role id, a composite ``Kind:name``
+         *     string), so declaring them would produce false write-time violations on
+         *     perfectly valid data. They are named here rather than silently missing,
+         *     because a graph that hides them implies a completeness the model does not
+         *     have. Concrete backlog for a future ``x-dna-ref-key`` (i-040 follow-up).
+         */
+        KindGraphUndeclarable: {
+            /** Field */
+            field: string;
+            /** Kind */
+            kind: string;
+            /** Reason */
+            reason: string;
+            /** Target */
+            target: string;
+        };
+        /**
+         * KindGraphUnresolved
+         * @description A field that clearly points at SOMETHING the model cannot name — a
+         *     ``x-dna-ref`` naming an unregistered Kind, a ``dep_filters`` alias nobody
+         *     claims, or a reference-shaped field name matching no Kind.
+         *
+         *     Returned, not dropped: this list is the honest measure of what the model
+         *     still cannot express, and it shrinks when references get declared — never
+         *     when the projection gets cleverer.
+         */
+        KindGraphUnresolved: {
+            /** Field */
+            field: string;
+            /** Kind */
+            kind: string;
+            /** Reason */
+            reason: string;
+        };
+        /**
          * ListKindDocumentsResponse
          * @description ``GET /v1/kinds/{kind}/documents`` — uma página de documentos do Kind.
          *
@@ -3625,6 +3860,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GenomeViewResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    kind_graph_v1_graph_kinds_get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KindGraphResponse"];
                 };
             };
             /** @description Validation Error */

@@ -101,6 +101,50 @@ decided by the caller, not by the door.
 `docs/openapi.json` — the generation source for both clients — is dumped from the
 default (`none`) lane, and every lane now serves the same Kind surface.
 
+## The schema graph — `GET /v1/graph/kinds`
+
+One call returns the whole graph of **which Kinds may reference which, through
+which field**, derived from the live registry:
+
+```bash
+curl -s "$DNA_API_URL/v1/graph/kinds?tenant=$WS" | jq '.coverage'
+```
+
+It exists because the SET question had no door. Deriving "which Kinds reference
+which here?" from `GET /v1/kinds/registry/{kind}` costs **one request per
+Kind** — the DNA Cloud portal was making N of them, four at a time, on every
+render of its Kind catalogue, to rebuild in memory a graph the registry already
+held whole. This is the same projection that generates
+[the data model page](../reference/data-model.md), served as JSON:
+`dna.kernel.query.kind_graph`, reading `x-dna-ref` through the **same**
+function the write path validates with.
+
+The response carries `kinds` (nodes), `edges`
+(`from_kind` / `field` / `to_kind` / `cardinality` / `tier` / `polymorphic`),
+two gap lists — `unresolved` and `undeclarable` — and a `coverage` block.
+
+**Read the coverage block; it is not decoration.** Edges come in three tiers
+and only one of them is enforced:
+
+| tier | where it comes from | enforced? |
+| --- | --- | --- |
+| `declared` | the field carries `x-dna-ref` | **yes** — the kernel resolves it at write time |
+| `composition` | `dep_filters` names the target Kind | no — it drives prompt composition and is never checked against stored data |
+| `inferred` | the field NAME resolves to exactly one registered Kind | no — a convention, not a contract |
+
+On the 06/08/2026 measurement the model carried **109 schema edges, of which 16
+were declared**. A screen rendering the edge list as "the relations" would be
+asserting a completeness nothing here has — so the qualifier ships **on the
+wire**: `coverage.enforced_tiers` names the tiers the runtime stands behind,
+and `coverage.limits` names what the graph structurally cannot see (references
+nested below the first level of `properties`, references keyed by an id rather
+than a document name, and — first among them — that these edges are **schema,
+not data**: which Kinds MAY reference which, never which documents do).
+
+A scope with nothing registered answers `200` with an empty graph, not `404`:
+"exists and holds nothing" is an answer, and conflating it with "no such scope"
+makes a screen say *error* where it should say *nothing registered yet*.
+
 ## Workspace tenancy (Model B)
 
 The identity→workspace boundary writes (see

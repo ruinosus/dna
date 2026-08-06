@@ -130,6 +130,7 @@ from dna.application.runtime import (
     provision_workspace_owner_impl,
     read_bundle_entry_impl,
     read_definition_impl,
+    kind_graph_impl,
     read_registered_kind_impl,
     recall_impl,
     reconcile_forks_impl,
@@ -228,6 +229,8 @@ __all__ = [
     "read_definition_impl",
     # o descritor do Kind REGISTRADO (schema + ui_schema) — formulários derivam
     "read_registered_kind_impl",
+    # o GRAFO de schema do registry inteiro, numa chamada (fatia 1 do degrau 1)
+    "kind_graph_impl",
     "apply_definition_impl",
     "revert_definition_impl",
     # bundle entries: list/read/write/revert a bundle-file fork (plane B — s-strain-bundle-fork)

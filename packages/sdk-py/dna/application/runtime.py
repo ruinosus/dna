@@ -32,6 +32,7 @@ from dna.application.namespace_assignment import (
     assign_namespace,
 )
 from dna.kernel.protocols import LayerPolicyViolationError  # noqa: F401  (re-exported for the face)
+from dna.kernel.query.kind_graph import build_kind_graph
 
 logger = logging.getLogger(__name__)
 
@@ -476,6 +477,33 @@ async def read_registered_kind_impl(
         "ui_schema": dict(getattr(port, "ui_schema", {}) or {}),
         "docs": getattr(port, "docs", None),
     }
+
+
+async def kind_graph_impl(
+    live: LiveDna, *, scope: str | None = None,
+) -> dict[str, Any]:
+    """The SCHEMA graph of the registered Kinds — who may point at whom, by
+    which field, in ONE call.
+
+    The hole this closes (measured 06/08/2026): a screen that wants the SET
+    question — *which Kinds reference which in this workspace?* — had to call
+    :func:`read_registered_kind_impl` once per Kind and derive the graph in
+    memory. The portal did exactly that, N reads with a concurrency of 4, on
+    every render, and paid more the bigger the workspace got. The registry
+    already holds the whole answer; nothing but a door was missing.
+
+    Pure projection of the REGISTRY: no document is read, so this says which
+    Kinds MAY reference which — never which documents DO. The envelope says so
+    itself (``coverage.limits``), because the difference is the whole honesty
+    of the answer and a caller must not be able to lose it.
+
+    ``scope`` narrows the registry the same way the document routes do
+    (i-081), and takes the same TTL'd rebuild (i-094) — a Kind a tenant just
+    had approved belongs in its workspace's graph, not in the next replica's.
+    """
+    await live.ensure_kinds(scope)
+    graph = build_kind_graph(live.kernel.kind_ports(scope=scope))
+    return {"scope": scope, **graph}
 
 
 async def apply_definition_impl(

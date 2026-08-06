@@ -361,6 +361,7 @@ def build_app(
         get_project_impl,
         import_memories_impl,
         invite_member_impl,
+        kind_graph_impl,
         list_agents_impl,
         list_authored_kinds_impl,
         list_bundle_entries_impl,
@@ -1497,6 +1498,66 @@ def build_app(
             return await read_registered_kind_impl(live, kind=kind, scope=scope)
         except ValueError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    # -- the SCHEMA graph: the registry's SET answer, in ONE call --------------
+    #
+    # The registry sibling above answers "what does THIS Kind look like?". The
+    # question it could not answer is the SET one — "which Kinds reference
+    # which here?" — and the portal was paying for the gap: N calls to
+    # ``/v1/kinds/registry/{kind}``, a queue with concurrency 4, on EVERY
+    # render of the Kind catalogue, to rebuild in memory a graph the registry
+    # already holds whole. Latency that grew with the workspace, for a fact
+    # that is one projection away.
+    #
+    # NOT under /v1/kinds/**: this is not a Kind resource, and mounting it
+    # there would collide with the CamelCase ``{kind}`` segment the routes
+    # above own. ``/v1/graph/`` is its own noun — and it is the noun the DATA
+    # graph will land under too (a document's inbound/outbound references),
+    # which is a different question with the same shape.
+    #
+    # NOT FILTERED BY CALLER, like its registry sibling and for the same
+    # reason: a registered Kind is the PRODUCT's data model — identical for
+    # every tenant, holding nobody's content. What IS caller-visible is the
+    # scope, and it is resolved exactly as the registry route resolves it.
+    #
+    # THE ANSWER CARRIES ITS OWN CAVEATS. ``coverage`` states how many edges
+    # each tier contributed, which tiers the runtime enforces, and — in
+    # ``limits`` — the four things this graph structurally cannot see. That is
+    # not decoration: 16 of the model's 109 schema edges are declared, and a
+    # screen rendering the list as "the relations" would be asserting a
+    # completeness this repo does not have. Shipping the qualifier ON the wire
+    # is what stops each consumer from having to remember it.
+
+    @app.get("/v1/graph/kinds", dependencies=guarded,
+             response_model=m.KindGraphResponse)
+    async def kind_graph(
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """The SCHEMA graph of the registered Kinds — which Kind may point at
+        which, through which field, in ONE call.
+
+        Replaces "read every Kind's descriptor and derive the graph in the
+        client", which cost one request per Kind and got slower as a workspace
+        grew. Same projection that generates ``docs/reference/data-model.md``:
+        the tiering, the ``x-dna-ref`` reading (the SAME one the write path
+        validates with) and the gap tables live in the SDK, so the page and
+        this route cannot disagree about what the model says.
+
+        **SCHEMA, not data.** The edges say which Kinds MAY reference which.
+        Which DOCUMENTS reference which is a different graph and this route
+        does not answer it — ``coverage.limits`` says so on the wire.
+
+        ``tenant`` resolves the scope the way the registry route does
+        (``live.default_scope``); an explicit ``scope`` still wins. No 404:
+        a scope with no Kinds is an empty graph with a coverage block that
+        says ``kinds: 0``, which is an answer — conflating it with "no such
+        scope" would make a screen say *error* where it should say *nothing
+        registered yet*."""
+        live = await _live()
+        if not (scope and scope.strip()) and tenant and tenant.strip():
+            scope = live.default_scope(tenant.strip())
+        return await kind_graph_impl(live, scope=scope)
 
     # -- the generic, kubernetes-shaped document write ------------------------
     #

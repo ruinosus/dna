@@ -386,6 +386,37 @@ export class DnaClient {
     );
   }
 
+  /**
+   * The SCHEMA graph of the registered Kinds — which Kind may point at which,
+   * through which field, in ONE call.
+   *
+   * The SET sibling of {@link getRegisteredKind}, and the reason it exists:
+   * answering "which Kinds reference which here?" through the per-Kind door
+   * costs one request per Kind and gets slower as a workspace grows. Same
+   * projection that generates `docs/reference/data-model.md`, served as JSON.
+   *
+   * Returns `kinds` (nodes), `edges`
+   * (`from_kind`/`field`/`to_kind`/`cardinality`/`tier`/`polymorphic`), the
+   * gap lists `unresolved` and `undeclarable`, and a `coverage` block.
+   *
+   * **Read the coverage block.** Its per-tier counts say how much of the graph
+   * the runtime actually enforces (only `declared` — the fields carrying
+   * `x-dna-ref`; `composition` comes from `dep_filters` and is never checked
+   * against stored data, `inferred` is a name convention), and `limits` names
+   * what the graph structurally cannot see. The first limit is the one that
+   * matters most: these edges are SCHEMA — which Kinds MAY reference which.
+   * Which DOCUMENTS reference which is a different graph, and this call does
+   * not answer it.
+   *
+   * No 404: a scope with nothing registered is an empty graph whose
+   * `coverage.kinds` is 0, which is an answer.
+   */
+  async kindGraph(query?: ScopeTenant) {
+    return this.unwrap(
+      await this.raw.GET("/v1/graph/kinds", { params: { query: this.q(query) } }),
+    );
+  }
+
   // ── the generic, kubernetes-shaped document write ────────────────────────
 
   /**
