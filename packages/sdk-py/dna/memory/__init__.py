@@ -53,6 +53,8 @@ from dna.memory.encoding_context import (
 from dna.memory.contradiction import (
     ASSERTS,
     DENIES,
+    WHEN_TO_CLAIM,
+    WHEN_TO_CLAIM_SHORT,
     Claim,
     ContradictionScribe,
     claims_contradict,
@@ -126,6 +128,8 @@ __all__ = [
     # contradiction detection (degrau 2 de f-poder-de-grafo)
     "ASSERTS",
     "DENIES",
+    "WHEN_TO_CLAIM",
+    "WHEN_TO_CLAIM_SHORT",
     "Claim",
     "ContradictionScribe",
     "claims_contradict",

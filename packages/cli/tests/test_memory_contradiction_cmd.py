@@ -36,6 +36,54 @@ def scoped(tmp_path, monkeypatch):
     return tmp_path
 
 
+# ── the CLI says WHEN to declare one, to the HUMAN reading --help ───────────
+#
+# The third reader of the same instruction, and the only one who cannot be
+# handed 1.5 KB inline: `--claim` sits beside a dozen other options. So the flag
+# carries the one-line discriminant and the command's epilog carries the whole
+# rule — and BOTH must survive, because someone who reads only the flag would
+# otherwise get the trigger without its two counter-cases, which is the
+# over-triggering half on its own.
+
+
+def _remember_help() -> str:
+    result = CliRunner().invoke(main, ["memory", "remember", "--help"])
+    assert result.exit_code == 0, result.output
+    return result.output
+
+
+def test_the_flag_help_carries_the_discriminant():
+    from dna.memory.contradiction import WHEN_TO_CLAIM_SHORT
+
+    out = " ".join(_remember_help().split())  # click rewraps; compare unwrapped
+    assert "would make this one false" in out.lower(), "the flag lost the rule"
+    assert " ".join(WHEN_TO_CLAIM_SHORT.split()) in out, (
+        "`--claim` explains the SPELLING and not the trigger — a human told "
+        "only how to type a claim types one for everything"
+    )
+
+
+def test_the_command_help_carries_the_whole_rule_including_the_no_cases():
+    """The epilog, pre-wrapped by us so click prints it as a list.
+
+    Asserted on the RENDERED help and not on the constant: click reflows
+    anything it is handed, and a four-case list reflowed into one paragraph
+    loses the two NO cases exactly where they carry their weight.
+    """
+    from dna.memory.contradiction import WHEN_TO_CLAIM
+
+    rendered = _remember_help()
+    flat = " ".join(rendered.split())
+    for block in WHEN_TO_CLAIM.split("\n\n"):
+        assert " ".join(block.split()) in flat, block
+
+    bullets = [ln for ln in rendered.splitlines() if ln.strip().startswith("- ")]
+    assert len(bullets) == 4, (
+        "the four cases must render as four bullets; click reflowed them into "
+        f"prose ({len(bullets)} found)"
+    )
+
+
 # ── the shorthand ───────────────────────────────────────────────────────────
 
 

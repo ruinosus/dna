@@ -895,8 +895,12 @@ export interface paths {
          *     ``claims`` — ``[{subject?, predicate, object?, polarity?}]`` — are the
          *     memory's structured assertions, what makes it comparable to another
          *     memory for CONTRADICTION (s-grafo-2-contradicao) rather than only for
-         *     lexical repetition. A malformed claim is a **400** naming the offending
-         *     index and field; nothing is written.
+         *     lexical repetition. **WHEN one is worth declaring is on the ``claims``
+         *     field's own description** (``dna.memory.contradiction.WHEN_TO_CLAIM``),
+         *     where the caller choosing what to send is already looking — declaring
+         *     one for everything is the failure this API must not invite. A malformed
+         *     claim is a **400** naming the offending index and field; nothing is
+         *     written.
          *
          *     PLAN-GATED (i-042): the same axes the MCP ``remember`` tool enforces —
          *     ``memory`` family, ``memory_mode='write'``, rate + daily cap — via the
@@ -1963,7 +1967,21 @@ export interface components {
              * @default general
              */
             area: string;
-            /** Claims */
+            /**
+             * Claims
+             * @description Structured assertions — `[{subject?, predicate, object?, polarity?}]` — that make this memory comparable to another for CONTRADICTION (s-grafo-2-contradicao) instead of only for lexical repetition. A malformed claim is a 400 naming the offending index and field; nothing is written.
+             *
+             *     **When to declare one — the test is SUBSTITUTION, not importance.** Declare a claim when a LATER value of the same `(subject, predicate)` would make this one FALSE. Nothing else. A memory with no claims is the normal case, not a lapse.
+             *
+             *     - yes — "the workspace plan is Pro" → `{"subject": "Workspace/acme", "predicate": "plan", "object": "Pro"}`. A plan replaces the plan.
+             *     - yes — "Barna is in Lisbon this week" → `{"predicate": "whereabouts", "object": "Lisbon"}`. One whereabouts at a time, so next week's city makes this one false.
+             *     - no — "Barna likes tea". Liking tea does not stop him liking coffee: values that ACCUMULATE never contradict, and claiming them makes the pass report a normal preference as a conflict.
+             *     - no — "met the client on 2026-08-03". An event HAPPENED, and a later meeting does not un-happen it. Events and observations go in the summary alone.
+             *
+             *     If the same subject can honestly hold two values of that predicate at once, use distinct predicates or declare nothing — a pass that flags the normal trains its reader to ignore it, including the time it is right.
+             *
+             *     Format: `subject` may be omitted when the memory's area already names the target in `Kind/name` form. Omit `object` only for an EXISTENCE claim ("this subject HAS this predicate"), which compares against another existence claim of the opposite polarity and never against a valued one. `polarity: "denies"` states a negation you want compared ("NOT approved") — `asserts X` beside `denies X` is a contradiction, beside `denies Y` it is not.
+             */
             claims?: {
                 [key: string]: unknown;
             }[] | null;

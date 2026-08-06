@@ -67,6 +67,85 @@ def test_the_remember_tool_advertises_claims(dna_dir):
     )
 
 
+# ── …and TELLS the model WHEN to declare one, and when NOT to ───────────────
+#
+# Degrau 2 shipped the field and the algebra, and the acceptance still did not
+# close: the real memories carry no claims, so the detector answers `undecided`
+# about every one of them. Knowing WHAT a claim is never made anything declare
+# one — the tool has to say WHEN. These are the door-side proof that it does,
+# because a rule that lives only in a Python docstring is a rule the model
+# never reads.
+
+
+def _remember_description(dna_dir) -> str:
+    from fastmcp import Client
+
+    async def scenario():
+        server = M.build_server(base_dir=str(dna_dir))
+        async with Client(server) as client:
+            tool = next(t for t in await client.list_tools() if t.name == "remember")
+            return tool.description or ""
+
+    return asyncio.run(scenario())
+
+
+def test_the_announced_description_carries_the_one_instruction(dna_dir):
+    """VERBATIM, and from the SDK — not a paraphrase kept in the face.
+
+    The text is owned by ``dna.memory.contradiction``, beside the rule it
+    paraphrases, and interpolated into the tool's ``description=`` (a docstring
+    literal cannot interpolate). This is what makes deleting the instruction —
+    or letting this face drift to its own stale copy — a red test.
+    """
+    from dna.memory.contradiction import WHEN_TO_CLAIM
+
+    # A gutted constant is `in` every string. Say the instruction still EXISTS
+    # before asserting it travels, or emptying it passes this test.
+    assert len(WHEN_TO_CLAIM.strip()) > 200, "the instruction was emptied"
+    assert WHEN_TO_CLAIM in _remember_description(dna_dir), (
+        "the wire does not carry `WHEN_TO_CLAIM` — whatever the Python "
+        "docstrings say, the model reads only this"
+    )
+
+
+def test_the_instruction_is_a_discriminant_and_not_a_category_list(dna_dir):
+    """The trap this instruction exists to avoid is OVER-triggering.
+
+    An instruction with only the YES half — "declare a claim whenever you record
+    a state that can later change", which is what this tool said until now —
+    asks for a claim on "Barna likes tea" too, because a preference IS a state
+    that can change. The pass then reports a normal preference as a conflict,
+    and a detector that flags the normal trains its reader to ignore the next
+    one, including the true one.
+
+    So the announced text must carry BOTH halves. These are the load-bearing
+    phrases; if a rewrite drops one, this is where a reviewer is told.
+    """
+    announced = _remember_description(dna_dir).lower()
+
+    # the discriminant itself — substitution, not importance, not "is it a fact?"
+    assert "substitution" in announced
+    assert "would make this one false" in announced
+
+    # the counter-cases: the half that keeps the pass quiet about the normal
+    assert "accumulate" in announced, (
+        "no ACCUMULATE case — nothing stops a claim on 'likes tea' beside "
+        "'likes coffee', a false contradiction by construction"
+    )
+    assert "un-happen" in announced, (
+        "no EVENT case — nothing stops a claim on 'met the client on 03/08', "
+        "which substitutes nothing and can only produce noise"
+    )
+    assert "no claims is the normal case" in announced, (
+        "the tool must say that declaring NOTHING is fine, or a model reading "
+        "an instruction infers it is expected to comply on every write"
+    )
+
+    # the format the trigger implies — polarity, and when the object may go
+    assert "existence claim" in announced
+    assert "denies" in announced
+
+
 def test_the_consolidate_tool_tells_the_model_to_relay_contradictions(dna_dir):
     from fastmcp import Client
 
@@ -233,6 +312,36 @@ def test_the_rest_door_declares_claims_in_its_openapi_contract(dna_dir):
     if ref:
         body = schema["components"]["schemas"][ref.rsplit("/", 1)[-1]]
     assert "claims" in (body.get("properties") or {}), body
+
+
+def test_the_rest_door_publishes_when_to_declare_a_claim(dna_dir):
+    """On the FIELD, where the caller choosing what to send is looking.
+
+    The REST reader is a human (or a generated client's types), and the whole
+    instruction is useless one paragraph away from the decision it governs. The
+    same ``WHEN_TO_CLAIM`` the MCP tool announces — one text, three faces.
+    """
+    from dna.memory.contradiction import WHEN_TO_CLAIM
+
+    client = _rest_client(dna_dir)
+    schema = client.get("/openapi.json").json()
+    body = (
+        schema["paths"]["/v1/memories"]["post"]["requestBody"]
+        ["content"]["application/json"]["schema"]
+    )
+    ref = body.get("$ref", "")
+    if ref:
+        body = schema["components"]["schemas"][ref.rsplit("/", 1)[-1]]
+    described = body["properties"]["claims"].get("description") or ""
+    assert WHEN_TO_CLAIM in described, (
+        "`claims` is declared but not explained — a caller told only that the "
+        "field exists sends one for everything, and the pass starts crying wolf"
+    )
+    # …and the two NO cases survived into the published contract, since an
+    # emptied constant would satisfy the containment above on its own.
+    low = described.lower()
+    assert "would make this one false" in low
+    assert "accumulate" in low and "un-happen" in low
 
 
 def test_the_rest_door_accepts_a_valid_claim(dna_dir):

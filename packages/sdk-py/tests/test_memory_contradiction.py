@@ -482,3 +482,52 @@ def test_the_rules_verdict_is_distinguishable_from_the_models():
         now=_NOW,
     )
     assert {c["decided_by"] for c in report["contradictions"]} == {"rule", "scribe"}
+
+
+# ── the OTHER door: the Engram schema a raw write_document reads ─────────────
+
+
+def _find_claims_description(node) -> str:
+    """The ``claims`` property description, wherever the schema nests it."""
+    if isinstance(node, dict):
+        claims = node.get("claims")
+        if isinstance(claims, dict) and "description" in claims:
+            return str(claims["description"])
+        for value in node.values():
+            found = _find_claims_description(value)
+            if found:
+                return found
+    elif isinstance(node, list):
+        for value in node:
+            found = _find_claims_description(value)
+            if found:
+                return found
+    return ""
+
+
+def test_the_engram_schema_states_when_a_claim_is_worth_declaring():
+    """``write_document`` on an Engram never sees a tool description.
+
+    The three verb faces announce ``WHEN_TO_CLAIM``; this door reads only the
+    Kind schema, and a door told WHAT a claim is without being told WHEN is the
+    door that fills the field for everything. The schema restates the rule in
+    prose (YAML cannot interpolate the constant), so what is asserted here is
+    that the four cases are all present — not any exact wording.
+    """
+    import pathlib
+
+    import yaml
+
+    path = (
+        pathlib.Path(__file__).resolve().parents[1]
+        / "dna" / "extensions" / "helix" / "kinds" / "engram.kind.yaml"
+    )
+    doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    described = _find_claims_description(doc).lower()
+
+    assert "substitution" in described
+    assert "would make this one false" in described
+    # the two counter-cases, without which the rule can only over-trigger
+    assert "accumulate" in described
+    assert "un-happen" in described
+    assert "no claims is the normal case" in described

@@ -44,6 +44,7 @@ import os
 import secrets
 from typing import Any
 
+from dna.memory.contradiction import WHEN_TO_CLAIM
 from dna.tenancy.enforcement import enforcement_boot_message
 
 logger = logging.getLogger(__name__)
@@ -2114,7 +2115,23 @@ def build_app(
         tags: list[str] | None = Body(default=None, embed=True),
         affect: str = Body(default="triumph", embed=True),
         owner: str = Body(default="portal", embed=True),
-        claims: list[dict[str, Any]] | None = Body(default=None, embed=True),
+        claims: list[dict[str, Any]] | None = Body(
+            default=None, embed=True,
+            # The ONE instruction, from `dna.memory.contradiction`, on the FIELD
+            # rather than in the route summary: whoever decides what to send in
+            # `claims` is reading this schema (Swagger, and the generated
+            # client's own type), and a rule kept one paragraph away is a rule
+            # read by nobody. Same text the MCP tool announces and `dna memory
+            # remember --help` prints — three faces, one sentence.
+            description=(
+                "Structured assertions — `[{subject?, predicate, object?, "
+                "polarity?}]` — that make this memory comparable to another for "
+                "CONTRADICTION (s-grafo-2-contradicao) instead of only for "
+                "lexical repetition. A malformed claim is a 400 naming the "
+                "offending index and field; nothing is written.\n\n"
+                + WHEN_TO_CLAIM
+            ),
+        ),
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
     ) -> dict[str, Any]:
@@ -2129,8 +2146,12 @@ def build_app(
         ``claims`` — ``[{subject?, predicate, object?, polarity?}]`` — are the
         memory's structured assertions, what makes it comparable to another
         memory for CONTRADICTION (s-grafo-2-contradicao) rather than only for
-        lexical repetition. A malformed claim is a **400** naming the offending
-        index and field; nothing is written.
+        lexical repetition. **WHEN one is worth declaring is on the ``claims``
+        field's own description** (``dna.memory.contradiction.WHEN_TO_CLAIM``),
+        where the caller choosing what to send is already looking — declaring
+        one for everything is the failure this API must not invite. A malformed
+        claim is a **400** naming the offending index and field; nothing is
+        written.
 
         PLAN-GATED (i-042): the same axes the MCP ``remember`` tool enforces —
         ``memory`` family, ``memory_mode='write'``, rate + daily cap — via the
