@@ -1413,6 +1413,23 @@ class SpikeKind(KindBase):
     )
     relations = {
         "produces": _PRODUCES_RELATION,
+        # A REAL reference that nothing declared. The mapping is not a guess:
+        # `resolve_work_item_outputs` has always read this field as
+        # ``add("Research", r)``, so the RUNTIME already treated each value as
+        # a Research name — the declaration was the only thing missing, and the
+        # gap list could flag the field without being able to say where it
+        # pointed.
+        #
+        # ⚠️ Declaring it makes the kernel RESOLVE it, so here is the
+        # measurement `declarar às cegas` demands (06/08/2026): six values
+        # stored, and TWO will start reporting as dangling —
+        # `dna/sp-memory-as-of` → `rsh-semantica-agi-avaliacao` and
+        # `dna/sp-fusion-validation` → `rsh-dna-cloud-positioning`. Both
+        # Research docs exist, in the `dna-cloud` scope, which `dna` does not
+        # inherit from. The report is CORRECT and is the point: those two
+        # references genuinely do not resolve where they are written. Under the
+        # default `warn` they are logged and the Spike still persists.
+        "research_refs": {"to": "Research", "cardinality": "many"},
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -1536,6 +1553,32 @@ class InitiativeKind(KindBase):
         "Theme/OKR (annual) and Epic (multi-sprint). For enterprise "
         "roadmaps where Theme→Epic skip loses too much resolution."
     )
+
+    # Initiative was an ISLAND under the declared tier — the only rung of the
+    # Theme → Initiative → Epic → Feature → Story → Task ladder that declared
+    # nothing. `epics` was sitting in `dep_filters` (composition, never checked
+    # against data); it is the same reference, and a relation is the strongest
+    # thing this Kind can say about it. Safe to enforce: zero Initiative
+    # instances are stored in either scope (measured 06/08/2026), so nothing
+    # can be vetoed.
+    #
+    # ⚠️ `theme_ref` is deliberately NOT declared, and the reason is worth more
+    # than the declaration would have been. A registered Kind called `Theme`
+    # does exist — and it is the STUDIO COLOUR PALETTE (`helix-theme`: HSL
+    # triplets, light/dark, typography), not the Jira-Align strategic
+    # Theme/OKR this field means. Declaring it would draw a line from a
+    # strategic investment record to a colour scheme: the same false line the
+    # retired name-shape guess drew for `StatusReport.insight → IntelInsight`.
+    # "The target resolves in the registry" is necessary and NOT sufficient —
+    # a homonym passes that test. The strategic Theme Kind does not exist yet;
+    # when it does, this field points at it.
+    #
+    # `owner` is also NOT declared: its value is an Actor name OR a sentinel
+    # (`claude-code`, `human`), so a resolved relation would report a dangling
+    # reference on every legitimate sentinel.
+    relations = {
+        "epics": {"to": "Epic", "cardinality": "many"},
+    }
 
     def dep_filters(self) -> dict[str, str]:
         return {

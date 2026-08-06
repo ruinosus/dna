@@ -39,6 +39,40 @@ spec:
     superseded_by: sdlc-adr
     supersedes: sdlc-adr
     covers_features: sdlc-feature
+  # ADR declared NO relations until 06/08/2026 and was therefore an ISLAND — a
+  # decision record pointing at nothing, in a product whose pitch is
+  # spec-driven development. The links were not missing: three of them sat one
+  # block up in `dep_filters`, where they drive PROMPT COMPOSITION and are
+  # never checked against stored data. Promoted to relations, which is the
+  # strongest thing this Kind can say about them, and the kernel resolves all
+  # four on write.
+  #
+  # Safe to ENFORCE, and this is the measurement `declarar às cegas` demands:
+  # all four fields are EMPTY across every stored ADR — checked 06/08/2026 over
+  # the 11 ADRs in the `dna` and `dna-cloud` scopes, whose spec keys are title,
+  # status, context, decision, consequences, deciders, date, references,
+  # cited_by, produces, timeline, body, created_at, updated_at. Nothing can be
+  # vetoed because nothing is written.
+  relations:
+    # The pair the status enum already implied: `status: superseded` tells the
+    # author to "link via `superseded_by`", and `supersedes` is its other half.
+    # Two independent declarations, with nothing saying they were halves.
+    superseded_by:
+      to: ADR
+      cardinality: one
+      inverse_of: supersedes
+    supersedes:
+      to: ADR
+      cardinality: many
+      inverse_of: superseded_by
+    covers_features:
+      to: Feature
+      cardinality: many
+    # NOT in dep_filters — the reference that makes provenance traceable. An
+    # ADR extracted from a Narrative.decisions[] entry carries the source slug.
+    narrative_origin:
+      to: Narrative
+      cardinality: one
   schema:
     type: object
     required:

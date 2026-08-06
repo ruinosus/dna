@@ -439,3 +439,131 @@ class TestKeyAddressedRelationsAreNotFollowed:
             tenant="acme",
         )
         assert [r for r in source.reads if r[1] == "Workspace"] == []
+
+
+class TestTheNewlyDeclaredReferencesGoThroughTheDoor:
+    """The 06/08/2026 sweep (i-108) turned REAL references that nothing
+    declared into resolved relations. A declaration is worth exactly what the
+    write path does with it, so each is exercised HERE: write the instance with
+    a target that exists and watch the read happen; write it with one that does
+    not and watch the refusal happen.
+
+    ``Spike.research_refs`` is the sharp one — the runtime already read the
+    value as a Research name (``resolve_work_item_outputs``) and only the
+    declaration was missing. If it is ever quietly dropped, this class fails
+    instead of the graph silently losing a line.
+    """
+
+    @staticmethod
+    def _spike(name: str, **spec) -> dict:
+        base = {"title": "t", "question_to_answer": "q", "status": "open"}
+        base.update(spec)
+        return {
+            "apiVersion": _SDLC_API, "kind": "Spike",
+            "metadata": {"name": name}, "spec": base,
+        }
+
+    @staticmethod
+    def _adr(name: str, **spec) -> dict:
+        base = {"title": "t", "status": "proposed", "context": "c",
+                "decision": "d"}
+        base.update(spec)
+        return {
+            "apiVersion": _SDLC_API, "kind": "ADR",
+            "metadata": {"name": name}, "spec": base,
+        }
+
+    @pytest.mark.anyio
+    async def test_spike_research_refs_resolves_a_real_research(
+        self, kernel, source, monkeypatch,
+    ):
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        source.seed("proj", "Research", "rsh-real")
+        await kernel.write_instance(
+            "proj", "Spike", "sp-1",
+            self._spike("sp-1", research_refs=["rsh-real"]),
+        )
+        assert ("proj", "Spike", "sp-1") in source.docs
+        assert ("proj", "Research", "rsh-real") in source.reads
+
+    @pytest.mark.anyio
+    async def test_spike_research_refs_vetoes_a_dangling_one(
+        self, kernel, source, monkeypatch,
+    ):
+        """The refusal that could not happen before: the field was
+        reference-shaped, read as a Research name by the output resolver, and
+        checked by nobody."""
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        with pytest.raises(SpecValidationError) as exc:
+            await kernel.write_instance(
+                "proj", "Spike", "sp-1",
+                self._spike("sp-1", research_refs=["rsh-nobody-wrote"]),
+            )
+        assert "rsh-nobody-wrote" in str(exc.value)
+        assert "Research" in str(exc.value)
+        assert source.save_calls == []
+
+    @pytest.mark.anyio
+    async def test_adr_leaves_its_island_through_covers_features(
+        self, kernel, source, monkeypatch,
+    ):
+        """ADR declared nothing at all and was an island — a decision record
+        pointing at nothing, in a spec-driven-development product. Three of its
+        links sat in ``dep_filters``, which is never checked against stored
+        data; as relations the kernel resolves them."""
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        source.seed("proj", "Feature", "f-real")
+        await kernel.write_instance(
+            "proj", "ADR", "adr-1",
+            self._adr("adr-1", covers_features=["f-real"]),
+        )
+        assert ("proj", "ADR", "adr-1") in source.docs
+        with pytest.raises(SpecValidationError) as exc:
+            await kernel.write_instance(
+                "proj", "ADR", "adr-2",
+                self._adr("adr-2", covers_features=["f-ghost"]),
+            )
+        assert "f-ghost" in str(exc.value)
+
+    @pytest.mark.anyio
+    async def test_the_adr_supersession_pair_reports_and_never_vetoes(
+        self, kernel, source, monkeypatch,
+    ):
+        """``superseded_by``/``supersedes`` are declared inverses. Writing one
+        half while the other is silent is REPORTED, never refused — imposing it
+        would deadlock the pair, which is the promise ``inverse_of`` makes."""
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        source.seed("proj", "ADR", "adr-old")
+        await kernel.write_instance(
+            "proj", "ADR", "adr-new",
+            self._adr("adr-new", supersedes=["adr-old"]),
+        )
+        assert ("proj", "ADR", "adr-new") in source.docs
+
+    @pytest.mark.anyio
+    async def test_tenant_slug_is_declared_and_still_not_followed(
+        self, kernel, source, monkeypatch,
+    ):
+        """``TenantMembership.tenant_slug`` says ``by: slug`` — the target's
+        REQUIRED spec field, not its ``metadata.name`` (which the reader sets
+        from the bundle directory). The two agree today by filesystem
+        convention; if this ever starts resolving, the write path has begun
+        following a coincidence."""
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        source.reads.clear()
+        await kernel.write_instance(
+            "proj", "TenantMembership", "acme--a-example-com",
+            {
+                "apiVersion": "github.com/ruinosus/dna/tenant/v1",
+                "kind": "TenantMembership",
+                "metadata": {"name": "acme--a-example-com"},
+                "spec": {
+                    "tenant_slug": "no-such-tenant",
+                    "user_email": "a@example.com",
+                    "role": "member",
+                    "joined_at": "2026-08-06T00:00:00Z",
+                },
+            },
+        )
+        assert ("proj", "TenantMembership", "acme--a-example-com") in source.docs
+        assert [r for r in source.reads if r[1] == "Tenant"] == []

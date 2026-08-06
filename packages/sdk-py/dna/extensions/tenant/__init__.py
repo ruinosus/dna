@@ -318,6 +318,22 @@ class TenantMembershipKind(KindBase):
         "spec.member_count_cached is updated by the route handler on each "
         "mutation (eventually-consistent)."
     )
+    # This Kind's whole reason to exist is the link in its own docstring
+    # ("Links a user to a Tenant"), and until 06/08/2026 it declared nothing —
+    # so the graph showed TenantMembership and Tenant as two unconnected
+    # islands, which is a model that contradicts the Kind's first sentence.
+    #
+    # `by: slug`, NOT `by: name`, and the distinction is the ``PricingPlan``
+    # lesson applied rather than repeated: `Tenant.spec.slug` is a REQUIRED
+    # field of the target, while `metadata.name` is set by the reader from the
+    # bundle directory (`metadata.setdefault("name", bundle.name)`). The two
+    # agree today by filesystem convention, and a `by: name` declaration would
+    # install a SECOND resolution rule that is right by coincidence — free to
+    # veto a membership the live lookup accepts the day a bundle is renamed.
+    # Declared, drawn, and honestly not resolved.
+    relations = {
+        "tenant_slug": {"to": "Tenant", "cardinality": "one", "by": "slug"},
+    }
 
     def schema(self) -> dict[str, Any] | None:
         return {

@@ -66,7 +66,7 @@ than either:
 
 `*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the instance name.
 
-**135 edges: 85 declared, 50 composition-only — of which 21 are ENFORCED at write time.** 26 of 84 Kinds declare at least one relation, and 25 fields are listed below as gaps.
+**140 edges: 95 declared, 45 composition-only — of which 30 are ENFORCED at write time.** 29 of 84 Kinds declare at least one relation, and 21 fields are listed below as gaps.
 
 !!! warning "Declared is not enforced"
 
@@ -98,6 +98,7 @@ flowchart LR
     intel["intel (2 Kinds)"]
     portfolio["portfolio (5 Kinds)"]
     presidio["presidio (1 Kind)"]
+    research["research (1 Kind)"]
     sdlc["sdlc (26 Kinds)"]
     soulspec["soulspec (1 Kind)"]
     tenant["tenant (6 Kinds)"]
@@ -111,6 +112,7 @@ flowchart LR
     portfolio -->|1| intel
     portfolio -->|1| tenant
     sdlc -->|8| helix
+    sdlc -->|1| research
     tenant -->|1| portfolio
     testkit -->|16| sdlc
 ```
@@ -187,11 +189,12 @@ erDiagram
     Project }o..|| Workspace : "workspace_id [workspace_id]"
 ```
 
-#### `sdlc` — declared (46 edges)
+#### `sdlc` — declared (55 edges)
 
 ```mermaid
 erDiagram
     ANY_KIND
+    ADR
     AgentSession
     Bug
     Epic
@@ -201,6 +204,7 @@ erDiagram
     Kaizen
     Narrative
     Plan
+    Research
     Roadmap
     Spec
     Spike
@@ -209,6 +213,10 @@ erDiagram
     Story
     Task
     WorkflowEvent
+    ADR }o--}o Feature : "covers_features"
+    ADR }o--|| Narrative : "narrative_origin"
+    ADR }o--|| ADR : "superseded_by"
+    ADR }o--}o ADR : "supersedes"
     AgentSession }o..}o ANY_KIND : "produced_artifacts [{kind, name}] *"
     Bug }o..}o ANY_KIND : "produces [{kind, name}] *"
     Epic }o--}o Feature : "features"
@@ -217,6 +225,7 @@ erDiagram
     Feature }o..}o ANY_KIND : "produces [{kind, name}] *"
     Feature }o--|| Sprint : "sprint_ref"
     Feature }o--}o Story : "stories"
+    Initiative }o--}o Epic : "epics"
     Issue }o..}o ANY_KIND : "produces [{kind, name}] *"
     Kaizen }o..|| Bug : "work_item [Kind/name] *"
     Kaizen }o..|| Epic : "work_item [Kind/name] *"
@@ -231,6 +240,7 @@ erDiagram
     Spec }o--|| Epic : "epic"
     Spec }o--|| Spec : "supersedes"
     Spike }o..}o ANY_KIND : "produces [{kind, name}] *"
+    Spike }o--}o Research : "research_refs"
     StatusReport }o..}o ANY_KIND : "evidence_refs [Kind/name] *"
     Story }o--}o Story : "dependencies"
     Story }o--|| Feature : "feature"
@@ -239,6 +249,8 @@ erDiagram
     Story }o--|| Sprint : "sprint_ref"
     Task }o..}o ANY_KIND : "produces [{kind, name}] *"
     Task }o--|| Story : "story_ref"
+    WorkflowEvent }o--|| Epic : "epic_ref"
+    WorkflowEvent }o--|| Feature : "feature_ref"
     WorkflowEvent }o..|| AgentSession : "parent_ref [Kind/name] *"
     WorkflowEvent }o..|| Epic : "parent_ref [Kind/name] *"
     WorkflowEvent }o..|| Feature : "parent_ref [Kind/name] *"
@@ -255,9 +267,10 @@ erDiagram
     WorkflowEvent }o..|| Roadmap : "ref [Kind/name] *"
     WorkflowEvent }o..|| Spec : "ref [Kind/name] *"
     WorkflowEvent }o..|| Story : "ref [Kind/name] *"
+    WorkflowEvent }o--|| WorkflowEvent : "transitioned_from"
 ```
 
-#### `sdlc` — composition (36 edges)
+#### `sdlc` — composition (31 edges)
 
 ```mermaid
 erDiagram
@@ -281,17 +294,12 @@ erDiagram
     Story
     Task
     UseCase
-    WorkflowEvent
-    ADR }o..}o Feature : "covers_features (dep)"
-    ADR }o..|| ADR : "superseded_by (dep)"
-    ADR }o..}o ADR : "supersedes (dep)"
     AgentSession }o..}o Actor : "participants (dep)"
     Bug }o..|| ADR : "fix_adr (dep)"
     Bug }o..|| Feature : "related_feature (dep)"
     Bug }o..|| Story : "related_story (dep)"
     Feature }o..|| Actor : "owner (dep)"
     Feature }o..}o UseCase : "use_cases (dep)"
-    Initiative }o..}o Epic : "epics (dep)"
     Initiative }o..|| Actor : "owner (dep)"
     Issue }o..|| Actor : "owner (dep)"
     Issue }o..|| Feature : "related_feature (dep)"
@@ -317,16 +325,18 @@ erDiagram
     Spike }o..}o Spike : "related_spikes (dep)"
     Story }o..|| Actor : "owner (dep)"
     Task }o..|| Actor : "owner (dep)"
-    WorkflowEvent }o..|| WorkflowEvent : "transitioned_from (dep)"
 ```
 
-#### `tenant` (2 edges)
+#### `tenant` (3 edges)
 
 ```mermaid
 erDiagram
     Role
+    Tenant
+    TenantMembership
     Workspace
     WorkspaceMembership
+    TenantMembership }o..|| Tenant : "tenant_slug [slug]"
     WorkspaceMembership }o..|| Role : "role [role_id]"
     WorkspaceMembership }o..|| Workspace : "workspace_id [workspace_id]"
 ```
@@ -377,6 +387,10 @@ the runtime does not follow it — read `By` for why.
 
 | From | Field | To | Cardinality | By | Enforced | Inverse of | Cross-group |
 | --- | --- | --- | --- | --- | --- | --- | --- |
+| `ADR` | `covers_features` | `Feature` | many | `name` | yes |  |  |
+| `ADR` | `narrative_origin` | `Narrative` | one | `name` | yes |  |  |
+| `ADR` | `superseded_by` | `ADR` | one | `name` | yes | `supersedes` |  |
+| `ADR` | `supersedes` | `ADR` | many | `name` | yes | `superseded_by` |  |
 | `AgentSession` | `produced_artifacts` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `App` | `copilots` | `Copilot` | many | `name` | yes |  |  |
 | `Bug` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
@@ -393,6 +407,7 @@ the runtime does not follow it — read `By` for why.
 | `Feature` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `Feature` | `sprint_ref` | `Sprint` | one | `name` | yes |  |  |
 | `Feature` | `stories` | `Story` | many | `name` | yes | `feature` |  |
+| `Initiative` | `epics` | `Epic` | many | `name` | yes |  |  |
 | `IntelInsight` | `source_ref` | `IntelSource` | one | `name` | yes |  |  |
 | `Issue` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `Kaizen` | `work_item` *(poly)* | `Bug` | one | `Kind/name` |  |  |  |
@@ -418,6 +433,7 @@ the runtime does not follow it — read `By` for why.
 | `Spec` | `epic` | `Epic` | one | `name` | yes |  |  |
 | `Spec` | `supersedes` | `Spec` | one | `name` | yes |  |  |
 | `Spike` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
+| `Spike` | `research_refs` | `Research` | many | `name` | yes |  | yes |
 | `StatusReport` | `evidence_refs` *(poly)* | `*` | many | `Kind/name` |  |  |  |
 | `Story` | `dependencies` | `Story` | many | `name` | yes |  |  |
 | `Story` | `feature` | `Feature` | one | `name` | yes | `stories` |  |
@@ -426,6 +442,7 @@ the runtime does not follow it — read `By` for why.
 | `Story` | `sprint_ref` | `Sprint` | one | `name` | yes |  |  |
 | `Task` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `Task` | `story_ref` | `Story` | one | `name` | yes |  |  |
+| `TenantMembership` | `tenant_slug` | `Tenant` | one | `slug` |  |  |  |
 | `TestGuide` | `verifies` *(poly)* | `Bug` | many | `Kind/name` |  |  | yes |
 | `TestGuide` | `verifies` *(poly)* | `Epic` | many | `Kind/name` |  |  | yes |
 | `TestGuide` | `verifies` *(poly)* | `Feature` | many | `Kind/name` |  |  | yes |
@@ -444,6 +461,8 @@ the runtime does not follow it — read `By` for why.
 | `TestRun` | `verifies` *(poly)* | `Spike` | many | `Kind/name` |  |  | yes |
 | `TestRun` | `verifies` *(poly)* | `Story` | many | `Kind/name` |  |  | yes |
 | `TestRun` | `verifies` *(poly)* | `Task` | many | `Kind/name` |  |  | yes |
+| `WorkflowEvent` | `epic_ref` | `Epic` | one | `name` | yes |  |  |
+| `WorkflowEvent` | `feature_ref` | `Feature` | one | `name` | yes |  |  |
 | `WorkflowEvent` | `parent_ref` *(poly)* | `AgentSession` | one | `Kind/name` |  |  |  |
 | `WorkflowEvent` | `parent_ref` *(poly)* | `Epic` | one | `Kind/name` |  |  |  |
 | `WorkflowEvent` | `parent_ref` *(poly)* | `Feature` | one | `Kind/name` |  |  |  |
@@ -460,6 +479,7 @@ the runtime does not follow it — read `By` for why.
 | `WorkflowEvent` | `ref` *(poly)* | `Roadmap` | one | `Kind/name` |  |  |  |
 | `WorkflowEvent` | `ref` *(poly)* | `Spec` | one | `Kind/name` |  |  |  |
 | `WorkflowEvent` | `ref` *(poly)* | `Story` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `transitioned_from` | `WorkflowEvent` | one | `name` | yes |  |  |
 | `WorkspaceMembership` | `role` | `Role` | one | `role_id` |  |  | yes |
 | `WorkspaceMembership` | `workspace_id` | `Workspace` | one | `workspace_id` |  |  |  |
 
@@ -470,9 +490,6 @@ data. Each row is a candidate for promotion to a relation.
 
 | From | Field | To | Cardinality | By | Enforced | Inverse of | Cross-group |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `ADR` | `covers_features` | `Feature` | many | `name` |  |  |  |
-| `ADR` | `superseded_by` | `ADR` | one | `name` |  |  |  |
-| `ADR` | `supersedes` | `ADR` | many | `name` |  |  |  |
 | `Agent` | `actors` | `Actor` | one | `name` |  |  |  |
 | `Agent` | `guardrails` | `Guardrail` | many | `name` |  |  | yes |
 | `Agent` | `skills` | `Skill` | many | `name` |  |  | yes |
@@ -485,7 +502,6 @@ data. Each row is a candidate for promotion to a relation.
 | `EvalSuite` | `cases` | `EvalCase` | many | `name` |  |  |  |
 | `Feature` | `owner` | `Actor` | one | `name` |  |  | yes |
 | `Feature` | `use_cases` | `UseCase` | many | `name` |  |  | yes |
-| `Initiative` | `epics` | `Epic` | many | `name` |  |  |  |
 | `Initiative` | `owner` | `Actor` | one | `name` |  |  | yes |
 | `Issue` | `owner` | `Actor` | one | `name` |  |  | yes |
 | `Issue` | `related_feature` | `Feature` | one | `name` |  |  |  |
@@ -519,7 +535,6 @@ data. Each row is a candidate for promotion to a relation.
 | `UseCase` | `soul` | `Soul` | one | `name` |  |  | yes |
 | `UseCase` | `supporting_actors` | `Actor` | many | `name` |  |  |  |
 | `UseCase` | `tools` | `Tool` | many | `name` |  |  |  |
-| `WorkflowEvent` | `transitioned_from` | `WorkflowEvent` | one | `name` |  |  |  |
 
 ## What this model cannot express
 
@@ -562,25 +577,21 @@ above, with `Enforced` blank.
 | `PlanBinding` | `tier_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
 | `PricingPlan` | `tier_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
 | `Role` | `role_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `Spike` | `research_refs` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
 | `Sprint` | `sprint_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `TenantMembership` | `tenant_slug` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
 | `TenantMembership` | `user_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
 | `UserProfile` | `user_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
 | `UserRoleAssignment` | `user_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `WorkflowEvent` | `epic_ref` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
-| `WorkflowEvent` | `feature_ref` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
 | `Workspace` | `account_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
 | `Workspace` | `workspace_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
 | `WorkspaceMembership` | `identity_oid` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
 | `WorkspaceScopeGrant` | `workspace_id` | `undeclared` | reference-shaped field name, and no relation declares what it points at |
 
-### Kinds with no reference edge (32)
+### Kinds with no reference edge (30)
 
 Standalone instances — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `AuditLog`, `Automation`, `Canvas`, `Changelog`, `CognitivePolicy`, `Doc`, `EvalBaseline`, `EvalRun`, `EvidencePolicy`, `Genome`, `Hook`, `HtmlArtifact`, `KindDefinition`, `KindNamespace`, `LayerPolicy`, `Lesson`, `MCPFederation`, `Memory`, `ModelProfile`, `PlanBinding`, `PromptTemplate`, `RemoteAgent`, `Setting`, `Tenant`, `TenantMembership`, `Theme`, `UserProfile`, `UserRoleAssignment`, `WorkspaceScopeGrant`
+`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `AuditLog`, `Automation`, `Canvas`, `Changelog`, `CognitivePolicy`, `Doc`, `EvalBaseline`, `EvalRun`, `EvidencePolicy`, `Genome`, `Hook`, `HtmlArtifact`, `KindDefinition`, `KindNamespace`, `LayerPolicy`, `Lesson`, `MCPFederation`, `Memory`, `ModelProfile`, `PlanBinding`, `PromptTemplate`, `RemoteAgent`, `Setting`, `Theme`, `UserProfile`, `UserRoleAssignment`, `WorkspaceScopeGrant`
 
 ## Physical model — the real tables
 

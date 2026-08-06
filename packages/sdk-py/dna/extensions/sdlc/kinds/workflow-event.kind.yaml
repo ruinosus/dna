@@ -58,6 +58,26 @@ spec:
       to: [AgentSession, Epic, Feature, Narrative, Plan, Roadmap, Spec, Story]
       cardinality: one
       by: 'Kind/name'
+    # Addressed by NAME, not composite — `journey.py` writes
+    # `entry_spec["transitioned_from"] = prev_open.name`. Resolved and enforced
+    # on write, and safe: all 5 stored values resolve to an existing
+    # WorkflowEvent (measured 06/08/2026). It was in `dep_filters` only, so it
+    # was declared for prompt composition and checked by nothing.
+    transitioned_from:
+      to: WorkflowEvent
+      cardinality: one
+    # The two deprecated back-compat halves of `parent_ref` (i-144, ~1574
+    # historical entries). They hold a BARE name — the Kind is in the FIELD
+    # name, which is why they are `by: name` while `parent_ref` is composite;
+    # the repo's own back-compat fixture stores `feature_ref: "f-x"`,
+    # `epic_ref: "e-y"`. Deprecated is not undeclarable: while the field can be
+    # read, the model owes an answer for where it points.
+    feature_ref:
+      to: Feature
+      cardinality: one
+    epic_ref:
+      to: Epic
+      cardinality: one
   schema:
     type: object
     required:
