@@ -200,7 +200,14 @@ def _collect() -> tuple[list[Port], dict[str, list[str]]]:
     ports.sort(key=lambda p: p.name)
     for key in impls:
         impls[key] = sorted(set(impls[key]))
-    return ports, impls
+
+    all_classes = {
+        node.name
+        for _, tree in parsed
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ClassDef)
+    }
+    return ports, impls, all_classes
 
 
 # --- rendering ----------------------------------------------------------------
@@ -301,6 +308,9 @@ def _group_page(group_key: str, group_meta: dict, ports: list[Port], prose_by_na
     )
     for port in ports:
         out.write(_port_section(port, prose_by_name[port.name], impls))
+    appendix = (group_meta.get("appendix") or "").strip()
+    if appendix:
+        out.write(appendix + "\n")
     return out.getvalue()
 
 
@@ -377,7 +387,7 @@ def build() -> dict[str, str]:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from ports_prose import GROUPS, PROSE  # noqa: PLC0415
 
-    ports, impls = _collect()
+    ports, impls, all_classes = _collect()
     found = {p.name for p in ports}
     documented = set(PROSE)
 
@@ -385,6 +395,10 @@ def build() -> dict[str, str]:
     dead = sorted(documented - found)
     if missing or dead:
         _fail_coverage(missing, dead)
+    _check_adapters_extra(PROSE, all_classes)
+    _check_prose_counts(
+        len(ports), sum(1 for e in PROSE.values() if e["role"] == "extend")
+    )
 
     ports_by_group: dict[str, list[Port]] = {}
     for port in ports:
@@ -398,6 +412,81 @@ def build() -> dict[str, str]:
         if group_ports:
             pages[f"{key}.md"] = _group_page(key, meta, group_ports, PROSE, impls)
     return pages
+
+
+def _check_adapters_extra(prose: dict, all_classes: set[str]) -> None:
+    """Third ratchet: a hand-listed adapter must still exist.
+
+    ``adapters_extra`` is the one place the prose names code, because a class
+    that satisfies a Protocol *structurally* cannot be found by looking at
+    bases. Hand-typed names rot exactly like a hand-typed table does, so the
+    first backticked token of each entry is checked against the class names
+    actually in the tree.
+
+    Convention: an entry that STARTS with a backticked name is a class and is
+    checked. An entry that starts with anything else is free prose (a count, a
+    pointer to an entry-point group) and is left alone — there is no class name
+    in it to go stale.
+    """
+    dead: list[tuple[str, str]] = []
+    for port_name, entry in sorted(prose.items()):
+        for line in entry.get("adapters_extra", ()):
+            if not line.startswith("`"):
+                continue
+            cls = line.split("`")[1]
+            if cls and cls not in all_classes:
+                dead.append((port_name, cls))
+    if not dead:
+        return
+    print(
+        f"gen_ports_docs: {len(dead)} hand-listed adapter(s) in scripts/ports_prose.py "
+        "name a class that no longer exists:",
+        file=sys.stderr,
+    )
+    for port_name, cls in dead:
+        print(f"  - {port_name}.adapters_extra → {cls}", file=sys.stderr)
+    print(
+        "\nIt was renamed or removed. A docs table listing an adapter nobody can "
+        "import\nis worse than one listing none.",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
+
+#: Hand-written pages that quote the catalogue's counts, and the sentence
+#: shape they quote them in. A count typed into prose is a fact that rots the
+#: moment a port is added — so the generator owns it here too, and the prose
+#: is checked against the code rather than trusted.
+_COUNT_CLAIMS: tuple[tuple[str, str], ...] = (
+    ("docs/concepts/microkernel-ports.md", "has **{total}** `Protocol`s"),
+    ("docs/concepts/microkernel-ports.md", "**{extend}** of which are things"),
+    ("docs/concepts/microkernel-ports.md", "all {total} ports, grouped by"),
+)
+
+
+def _check_prose_counts(total: int, extend: int) -> None:
+    """Fail if a hand-written page quotes a count the code no longer supports."""
+    wrong: list[tuple[str, str]] = []
+    for rel, shape in _COUNT_CLAIMS:
+        path = _REPO_ROOT / rel
+        text = path.read_text(encoding="utf-8") if path.exists() else ""
+        if shape.format(total=total, extend=extend) not in text:
+            wrong.append((rel, shape.format(total=total, extend=extend)))
+    if not wrong:
+        return
+    print(
+        f"gen_ports_docs: prose quotes a stale count (the code has {total} ports, "
+        f"{extend} of them extension points):",
+        file=sys.stderr,
+    )
+    for rel, expected in wrong:
+        print(f"  - {rel} should contain: {expected!r}", file=sys.stderr)
+    print(
+        "\nUpdate the sentence, or drop the claim and link to the generated index\n"
+        "instead. A number typed into prose is a fact with no owner.",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
 
 
 def _fail_coverage(missing: list[str], dead: list[str]) -> None:
@@ -440,7 +529,7 @@ def self_test() -> int:
     """Prove the derivation and both ratchets still work. No writes."""
     failures: list[str] = []
 
-    ports, impls = _collect()
+    ports, impls, _all = _collect()
     by_name = {p.name: p for p in ports}
 
     # 1. Derivation finds the ports the old prose already named by hand — and
