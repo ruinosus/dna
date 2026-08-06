@@ -51,6 +51,7 @@ from typing import Any
 
 __all__ = [
     "AsOfResolution",
+    "AsOfTruncated",
     "AsOfUnsupported",
     "normalize_as_of",
     "resolve_as_of",
@@ -66,6 +67,27 @@ class AsOfUnsupported(RuntimeError):
     past it has no basis for — worse than not offering the read at all. The same
     reasoning the write path applies to ``if_absent``: refuse rather than
     degrade.
+    """
+
+
+class AsOfTruncated(LookupError):
+    """History for THIS document was pruned past ``as_of`` — the store cannot know.
+
+    The sibling of :class:`AsOfUnsupported`, one granularity down: that one says
+    *this deployment never retains history*, this one says *it does, and the
+    stretch you asked about is gone* (``VERSION_CHURN_RETENTION`` caps Engram at
+    3 versions precisely because autopilot rewrites the same memory thousands of
+    times). Both are refusals; neither may degrade into today's state.
+
+    It exists for the surfaces that resolve ONE document, where the list
+    surfaces' answer — collect the names into ``as_of_truncated`` beside the
+    hits — has nowhere to live: a single-document read either hands back a
+    belief state or says it cannot. ``LookupError`` and not ``RuntimeError`` so
+    the "nothing came back" family stays one family, and the *reason* is what
+    distinguishes it: a plain ``LookupError`` means the document DID NOT EXIST
+    yet at ``as_of``, which is an ANSWER. Collapsing the two would let a caller
+    read "there was no such document" out of "there is no such record" — the one
+    mistake a history read must never make (see :class:`AsOfResolution`).
     """
 
 

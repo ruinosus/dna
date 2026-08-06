@@ -524,6 +524,7 @@ class DnaClient:
     def get_kind_document(
         self, kind: str, name: str, *,
         api_version: str | None = None, tenant: str | None = None,
+        as_of: str | None = None,
     ) -> JsonObject:
         """Read ONE document of ``kind``, VERBATIM — what the list cannot give.
 
@@ -535,10 +536,20 @@ class DnaClient:
         caller's layer sees the document, with the optimistic-concurrency
         ``etag`` for a follow-up :meth:`write_kind_document` ``if_match``.
 
-        404 names what is missing — the unknown Kind or the document."""
+        404 names what is missing — the unknown Kind or the document.
+
+        ``as_of`` (ISO-8601) reads the document as the store RECORDED it at that
+        instant — transaction time, not world time. The response then carries
+        ``as_of`` / ``as_of_version`` / ``as_of_recorded_at``, which is how a
+        caller tells a historical body from a live one. It REFUSES rather than
+        approximates: **404** the document did not exist yet, **410** its
+        history was pruned past the instant (not the same statement), **501**
+        the server's store keeps no history at all, **422** the instant is not
+        ISO-8601. Before i-106 the server accepted this parameter and dropped
+        it in silence, handing back the present under a past timestamp."""
         return self._get(
             f"/v1/kinds/{kind}/documents/{name}",
-            tenant=tenant, api_version=api_version,
+            tenant=tenant, api_version=api_version, as_of=as_of,
         )
 
     def graph_refs(

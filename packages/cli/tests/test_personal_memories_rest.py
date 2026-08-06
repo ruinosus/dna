@@ -170,21 +170,51 @@ def test_shared_base_memories_ride_along_flagged_not_personal(dna_dir):
 
 
 def test_identity_in_query_is_ignored(dna_dir):
-    """`tenant`/`oid`/`personal_id` query params must not steer the read — the
-    response is the TOKEN's partition, never the named victim's."""
+    """A forged `tenant` REACHES this route and must not steer the read — the
+    response is the TOKEN's partition, never the named victim's.
+
+    ``tenant`` is the one identity-shaped param that still arrives here after
+    i-106's undeclared-param guard, and deliberately so: the config-auth
+    middleware WRITES `tenant` into the query string itself, so the face may
+    never refuse it per-route. It is therefore also the param an attacker would
+    actually reach for — which makes THIS the assertion that carries
+    INV-PERSONAL layer 1. The guard is a second wall (see the test below), not
+    a replacement for this one."""
+    with _client(dna_dir) as c:
+        _import(c, "alice", _mif("a-1", "alice private", title="alice note"))
+        _import(c, "bob", _mif("b-1", "bob private", title="bob note"))
+        r = _read(c, "alice", params={"tenant": f"personal:{_VICTIM_OID}"})
+    assert r.status_code == 200, r.text
+    summaries = {m["summary"] for m in _personal_items(r.json())}
+    assert summaries == {"alice note"}
+    assert "bob note" not in r.text
+
+
+def test_identity_params_this_route_never_reads_are_refused(dna_dir):
+    """`oid`/`personal_id`/`memory_scope`/`family` are REFUSED, not ignored.
+
+    They used to be swallowed in silence — a 200 that read the token's
+    partition while the caller believed they had selected another. The answer
+    was right and the story the response told was wrong, which is i-106's whole
+    complaint one route over: a caller cannot tell "you were overruled" from
+    "you were obeyed" when both are 200.
+
+    Asserted through the DOOR with the real params, and the message must NAME
+    them: a 400 that does not say which parameter was refused sends the caller
+    hunting."""
     with _client(dna_dir) as c:
         _import(c, "alice", _mif("a-1", "alice private", title="alice note"))
         _import(c, "bob", _mif("b-1", "bob private", title="bob note"))
         r = _read(c, "alice", params={
-            "tenant": f"personal:{_VICTIM_OID}",
             "oid": "oid-bob",
             "personal_id": "oid-bob",
             "memory_scope": "workspace",
             "family": "google",
         })
-    assert r.status_code == 200, r.text
-    summaries = {m["summary"] for m in _personal_items(r.json())}
-    assert summaries == {"alice note"}
+    assert r.status_code == 400, r.text
+    for refused in ("oid", "personal_id", "memory_scope", "family"):
+        assert refused in r.text
+    # And nothing leaked in the refusal itself.
     assert "bob note" not in r.text
 
 

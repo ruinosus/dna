@@ -750,6 +750,30 @@ export interface paths {
          *     POST (só ``tenant``; o scope é derivado, nunca nomeado).
          *
          *     404 nomeia o que faltou — o Kind desconhecido ou o documento.
+         *
+         *     ``as_of`` (i-106) é a leitura no TEMPO, e chegou aqui por um defeito, não
+         *     por um pedido: esta rota já **aceitava** ``?as_of=`` — o FastAPI descarta
+         *     em silêncio um query param não declarado — e devolvia 200 com o presente.
+         *     Medido em 06/08/2026: um Issue de 18 versões respondia `resolved` com 6
+         *     eventos tanto agora quanto "às 14:00 do dia anterior", quando às 14:00 do
+         *     dia anterior ele não era nem uma coisa nem outra. Aceitar e ignorar é
+         *     pior que recusar: o chamador acredita ter visto o passado e nada na
+         *     resposta o desmente.
+         *
+         *     As QUATRO saídas são distintas de propósito, porque colapsar duas
+         *     quaisquer delas reintroduz o mesmo defeito uma casa adiante:
+         *
+         *     * **200** — o estado de crença naquele instante, com ``as_of``,
+         *       ``as_of_version`` e ``as_of_recorded_at`` no corpo.
+         *     * **404** — não existia ainda. Isto é uma RESPOSTA.
+         *     * **410** — existia história, mas não tão atrás: as versões daquela época
+         *       foram podadas (``VERSION_CHURN_RETENTION``). O store não sabe, e dizer
+         *       404 aqui seria afirmar "não existia" a partir de "não há registro".
+         *     * **501** — este deployment não guarda histórico nenhum (o adapter de
+         *       filesystem declara ``versions=True`` e não retém nada).
+         *
+         *     e **422** quando o instante não é ISO-8601 — erro do chamador, não do
+         *     servidor.
          */
         get: operations["get_kind_document_v1_kinds__kind__documents__name__get"];
         put?: never;
@@ -2233,10 +2257,22 @@ export interface components {
          *
          *     `etag` é o token de concorrência otimista para um write subsequente
          *     (``if_match``): um lost update vira recusa, não sobrescrita silenciosa.
+         *
+         *     Os TRÊS campos `as_of*` só aparecem quando o chamador pediu leitura no
+         *     tempo, e existem para que uma resposta histórica não seja confundível com
+         *     uma viva por quem só olha `document` (i-106: a rota ACEITAVA `?as_of=` e
+         *     devolvia o presente, sem nada na resposta que a desmentisse). Presentes ⇒ o
+         *     corpo é o estado de crença daquele instante; ausentes ⇒ é o de agora.
          */
         GetKindDocumentResponse: {
             /** Api Version */
             api_version: string;
+            /** As Of */
+            as_of?: string | null;
+            /** As Of Recorded At */
+            as_of_recorded_at?: string | null;
+            /** As Of Version */
+            as_of_version?: number | null;
             /** Document */
             document: {
                 [key: string]: unknown;
@@ -4643,6 +4679,8 @@ export interface operations {
             query?: {
                 tenant?: string | null;
                 api_version?: string | null;
+                /** @description ISO-8601 instant. Return the document AS THIS STORE RECORDED IT at that moment (transaction time) instead of its current state. Refuses rather than approximates: 501 if the store keeps no version history, 410 if this document's history was pruned past the instant, 404 if it did not exist yet. */
+                as_of?: string | null;
             };
             header?: {
                 authorization?: string | null;
