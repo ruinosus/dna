@@ -55,9 +55,9 @@ UNMANAGED_INDEXES: frozenset[str] = frozenset({
     "dna_versions_semver_unique",
     "dna_versions_package_lookup",
     # SQLite — json_extract expression indices.
-    "docs_status_idx",
-    "docs_feature_idx",
-    "docs_updated_at_idx",
+    "insts_status_idx",
+    "insts_feature_idx",
+    "insts_updated_at_idx",
     # SQLite — the same two partial indexes.
     "versions_semver_unique",
     "versions_package_lookup",
@@ -209,7 +209,7 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
                   server_default=sa.text("1")),
         sa.Column("updated_at", sa.Text, nullable=False),
         doc_tenant,
-        sa.Index(f"{p}documents_tenant_idx", "tenant", "scope", "kind",
+        sa.Index(f"{p}instances_tenant_idx", "tenant", "scope", "kind",
                  "api_version", "name"),
     )
 

@@ -23,7 +23,7 @@ additive.
 
 **One shared resource.** FastMCP's default synthesises
 ``ui://prefab/tool/<hash>/renderer.html`` per tool — a separate 6.6 MB
-document per card in bundled mode. Every DNA card points ONE URI instead, so
+instance per card in bundled mode. Every DNA card points ONE URI instead, so
 the host prefetches and caches a single renderer no matter how many tools
 declare it.
 
@@ -34,12 +34,12 @@ and the MCP Apps CSP is deny-by-default. Bundled mode is self-contained: the
 library's own ``get_renderer_csp(mode="bundled")`` declares no origin at all,
 which is why the resource is registered with no CSP to declare.
 
-One caveat, measured rather than assumed: the bundled document still CONTAINS
+One caveat, measured rather than assumed: the bundled instance still CONTAINS
 a jsDelivr URL for Pyodide, reached only by the generative path the renderer
 enters on ``ontoolinputpartial``. No tool here streams a partial input, so that
 path is never entered and the string is inert — which is also why the resource
 declares the base CSP and not ``get_generative_renderer_csp``'s. Grepping the
-document for a CDN hostname therefore proves nothing either way; the test asks
+instance for a CDN hostname therefore proves nothing either way; the test asks
 the question structurally instead.
 
 **One card acts, and it is the approval one.** Every other card here is a
@@ -163,7 +163,7 @@ HOST_TOKENS = (
 #
 # NOT declared here, deliberately: `--font-sans`, `--font-mono`,
 # `--font-weight-*`. Those host token names collide EXACTLY with the renderer's
-# Tailwind theme names, so the host's inline declaration on the document element
+# Tailwind theme names, so the host's inline declaration on the instance element
 # already outranks the renderer's layered one — redeclaring them as
 # `var(--font-sans, …)` would be a self-reference, which is a cycle, which makes
 # the whole declaration invalid. `--default-font-family` is the seam that reads
@@ -250,10 +250,10 @@ def host_theme_css() -> str:
 
 @cache
 def prefab_renderer_html() -> str:
-    """The ONE renderer document served at :data:`UI_PREFAB_URI`.
+    """The ONE renderer instance served at :data:`UI_PREFAB_URI`.
 
     Prefab's bundled single-file renderer with :func:`host_theme_css` appended
-    into its ``<head>`` — the last stylesheet in the document, so the bridge
+    into its ``<head>`` — the last stylesheet in the instance, so the bridge
     wins the cascade without touching the vendored bundle's bytes.
 
     Bundled, never CDN: self-contained means the served resource declares no
@@ -311,7 +311,7 @@ def _card_columns(
     """``[(key, header)]`` for a roster — the Kind's declaration when it made
     one, the rows' own keys when it did not.
 
-    The declaration is the source: which fields a document shows, in what
+    The declaration is the source: which fields an instance shows, in what
     order, and what a human calls each of them is a fact about the DATA, so it
     lives on the Kind and every surface reads the same answer. What this card
     decides — and does not ask the Kind — is that the roster is a table at all,
@@ -351,7 +351,7 @@ def _card_columns(
 
 def documents_app(
     data: dict[str, Any], *, items_key: str,
-    fallback_label: str = "Documents",
+    fallback_label: str = "Instances",
     empty_hint: str = "anything of this Kind will appear here.",
 ) -> Any:
     """A roster card for ANY Kind — the generic builder the per-tool ones are.
@@ -403,7 +403,7 @@ def documents_app(
         "icon": icon if isinstance(icon, str) else "",
         items_key: rows,
         # Composed here so the view holds no grammar, and named for the Kind
-        # rather than for the tool — an empty roster that says "No Documents"
+        # rather than for the tool — an empty roster that says "No Instances"
         # under a heading that says "Contratos" reads as a bug.
         "empty": f"No {label} in this scope yet — {empty_hint}",
     }
@@ -586,8 +586,8 @@ def _pending_variant(pending: int) -> str:
 #: The colours are NOT a gradient from bad to good — they are three different
 #: kinds of fact, and the pair that must never look alike is amber/red. An
 #: UNAPPROVED Kind is the LOOSEST state in the system (never registered, so its
-#: documents are accepted with no validation at all); a REVOKED one is the
-#: TIGHTEST (new documents refused, existing ones read back invalid). Rendering
+#: instances are accepted with no validation at all); a REVOKED one is the
+#: TIGHTEST (new instances refused, existing ones read back invalid). Rendering
 #: both as "not approved" — which the boolean did — reads the loosest and the
 #: tightest as the same word.
 _STATE_VARIANT = {
@@ -596,20 +596,20 @@ _STATE_VARIANT = {
     "revoked": "destructive",
 }
 
-#: What each state MEANS for documents, in one sentence — the thing a reviewer
+#: What each state MEANS for instances, in one sentence — the thing a reviewer
 #: is actually deciding about. Kept beside the variant map so a new state cannot
 #: acquire a colour without acquiring an explanation.
 _STATE_MEANING = {
     "unapproved": (
-        "Not approved: this Kind is not registered, so documents of it are "
+        "Not approved: this Kind is not registered, so instances of it are "
         "accepted with NO schema validation and no storage routing."
     ),
     "approved": (
-        "Approved: documents of this Kind are validated against the schema "
+        "Approved: instances of this Kind are validated against the schema "
         "below and routed as it declares."
     ),
     "revoked": (
-        "REVOKED: new documents of this Kind are refused and existing ones "
+        "REVOKED: new instances of this Kind are refused and existing ones "
         "read back invalid. Nothing was deleted, and approving again restores "
         "every one of them."
     ),
@@ -642,7 +642,7 @@ def kinds_app(data: dict[str, Any]) -> Any:
     needs to see who proposed it, and when.
 
     THREE states, not a boolean (i-085). ``approved: false`` collapses the two
-    states that behave in OPPOSITE ways — never approved accepts documents
+    states that behave in OPPOSITE ways — never approved accepts instances
     unvalidated, revoked refuses them and marks the existing ones invalid — so
     the roster renders ``state`` from the projection and counts the revoked rows
     into their own headline badge. A listing surface that shows a revoked Kind
@@ -714,13 +714,13 @@ def kinds_app(data: dict[str, Any]) -> Any:
                     Badge("{{ revoked_label }}", variant="destructive")
             CardDescription(
                 "{{ count }} in {{ scope }} · a Kind awaiting approval exists "
-                "and has no effect yet; a revoked one refuses new documents"
+                "and has no effect yet; a revoked one refuses new instances"
             )
         with CardContent():
             with If("count > 0"):
                 DataTable(
                     columns=[
-                        DataTableColumn(key="name", header="Document", sortable=True),
+                        DataTableColumn(key="name", header="Instance", sortable=True),
                         DataTableColumn(key="kind", header="Kind", sortable=True),
                         DataTableColumn(key="api_version", header="apiVersion"),
                         DataTableColumn(key="namespace", header="Namespace", sortable=True),
@@ -753,7 +753,7 @@ def kind_review_app(data: dict[str, Any]) -> Any:
     one person: the author's agent proposes a Kind, and the person who has to
     confer effect on it wants to answer "what is there to approve?" where she
     already is. So the card shows what she is deciding about — the SCHEMA, both
-    actors, and what the current state means for documents — and carries the
+    actors, and what the current state means for instances — and carries the
     button that decides it.
 
     **The schema is not optional decoration.** A roster inlining every JSON
@@ -770,7 +770,7 @@ def kind_review_app(data: dict[str, Any]) -> Any:
 
     On a REVOKED Kind the button is shown and says so. Approving again is the
     documented one-act undo — it clears the revocation and every existing
-    document is valid again — and hiding it would leave the reviewer looking
+    instance is valid again — and hiding it would leave the reviewer looking
     for a route that does not exist on this face."""
     import json
 
@@ -797,9 +797,9 @@ def kind_review_app(data: dict[str, Any]) -> Any:
     schema = data.get("schema")
     traits = data.get("traits")
     traits = [str(t) for t in traits] if isinstance(traits, list) else []
-    # What the Kind declares about how its documents will READ — the third
+    # What the Kind declares about how its instances will READ — the third
     # thing this approval would confer, beside the schema and the traits. The
-    # schema says what a document may CONTAIN; this says what a person will see
+    # schema says what an instance may CONTAIN; this says what a person will see
     # of it, in what order, under what names, on every surface the workspace
     # has. A reviewer deciding whether to put the Kind into effect is deciding
     # about both, and only one of them was visible here.
@@ -830,7 +830,7 @@ def kind_review_app(data: dict[str, Any]) -> Any:
         "meaning": _STATE_MEANING.get(
             current,
             "This Kind's approval state could not be read, so what it does to "
-            "documents is unknown — do not act on this card.",
+            "instances is unknown — do not act on this card.",
         ),
         # Pretty-printed HERE so the view holds no formatting logic and a host
         # that renders nothing still reads the same schema in `content`.
@@ -885,7 +885,7 @@ def kind_review_app(data: dict[str, Any]) -> Any:
             Text("Traits: {{ traits }}", css_class="text-muted-foreground")
             with If("has_presentation"):
                 Text(
-                    "Documents of this Kind will read as “{{ presentation_label }}”, "
+                    "Instances of this Kind will read as “{{ presentation_label }}”, "
                     "in this order:",
                     css_class="text-muted-foreground",
                 )

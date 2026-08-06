@@ -87,7 +87,7 @@ def test_spec_executed_refused_from_a_dead_spec(runner, store, frm):
     )
     assert result.exit_code != 0
     assert frm in result.output
-    # And the document was NOT touched — a refused transition that half-wrote
+    # And the instance was NOT touched — a refused transition that half-wrote
     # would be worse than one that never ran.
     assert store[key]["spec"]["status"] == frm
     assert "executed_at" not in store[key]["spec"]

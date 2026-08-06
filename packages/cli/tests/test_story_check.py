@@ -31,7 +31,7 @@ class _FakeSession:
             def __init__(self, store):
                 self._store = store
 
-            async def write_document(self, scope, kind, name, raw):
+            async def write_instance(self, scope, kind, name, raw):
                 self._store[name] = raw
 
         self.kernel = _K(store)
@@ -114,7 +114,7 @@ _GREEDY_SPEC = {
     "acceptance_criteria": [
         "Ship the API endpoint",       # 1
         "Add 10 retries to client",    # 2 — text contains "1"
-        "Document API v1 contract",    # 3 — text contains "1"
+        "Instance API v1 contract",    # 3 — text contains "1"
     ],
     "definition_of_done": [
         "CI green on 3.12",            # 1 — text contains "1" and "2"

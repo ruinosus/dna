@@ -132,9 +132,9 @@ def test_install_templates_dry_run_writes_nothing():
     assert r.exit_code == 0, r.output
     payload = json.loads(r.output)
     assert payload["dry_run"] is True
-    kinds = {d["kind"] for d in payload["documents"]}
+    kinds = {d["kind"] for d in payload["instances"]}
     assert {"PromptTemplate", "Skill", "Guardrail"} <= kinds
-    names = {d["name"] for d in payload["documents"]}
+    names = {d["name"] for d in payload["instances"]}
     assert "speckit-spec-template" in names
     assert "speckit-specify" in names
     assert "speckit-scripts" in names

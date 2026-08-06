@@ -64,7 +64,7 @@ def _seed_layer_policy(dna_dir) -> None:
 
     async def go():
         live = await M.boot_live(base_dir=str(dna_dir))
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _SCOPE, "LayerPolicy", "tenant-default", _LAYER_POLICY_RAW)
 
     asyncio.run(go())
@@ -222,7 +222,7 @@ HELLO_PY_BASE = "print('base')\n"
 
 def _seed_skill_bundle(dna_dir) -> None:
     """A base Skill bundle — a bundle-pattern Kind's base file IS the
-    document, no ``write_document`` call needed (mirrors
+    instance, no ``write_instance`` call needed (mirrors
     ``test_bundle_entries_rest.py``'s ``_seed_skill_bundle``)."""
     d = dna_dir / _SCOPE / "skills" / _SKILL
     (d / "scripts").mkdir(parents=True)
@@ -245,7 +245,7 @@ def _seed_skill_layer_policy(dna_dir, *, skill_policy: str) -> None:
 
     async def go():
         live = await M.boot_live(base_dir=str(dna_dir))
-        await live.kernel.write_document(_SCOPE, "LayerPolicy", "tenant-default", raw)
+        await live.kernel.write_instance(_SCOPE, "LayerPolicy", "tenant-default", raw)
 
     asyncio.run(go())
 

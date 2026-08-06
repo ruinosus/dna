@@ -38,6 +38,16 @@ MOVED_FROM = "old.example/v1"
 # for a test would be a dependency the product does not have).
 # ---------------------------------------------------------------------------
 
+#: Tables that revision 0007 (i-111, documento -> instância) renamed. This
+#: harness deliberately builds databases in the PRE-0007 era and migrates them,
+#: so the PHYSICAL name depends on where in the ladder the database currently
+#: is — call sites keep naming the CURRENT name and ``table()`` resolves it.
+_RENAMED_AT_0007 = {
+    "instances": "documents",
+    "layer_instances": "layer_documents",
+}
+
+
 class _Db:
     """A database pinned at ``PREVIOUS_REVISION``, with raw SQL access."""
 
@@ -46,8 +56,11 @@ class _Db:
         self.schema = schema
         self.is_pg = engine.dialect.name == "postgresql"
         self.prefix = "dna_" if self.is_pg else ""
+        self.migrated = False
 
     def table(self, name: str) -> str:
+        if not self.migrated:
+            name = _RENAMED_AT_0007.get(name, name)
         base = f"{self.prefix}{name}"
         return f"{self.schema}.{base}" if self.schema else base
 
@@ -81,6 +94,9 @@ class _Db:
 
     async def upgrade_to_head(self) -> None:
         await self.alembic("head")
+        # Only on SUCCESS: a refused migration rolls back, and the refusal
+        # tests read the table again afterwards — under its OLD name.
+        self.migrated = True
 
 
 async def _sqlite_db(tmp_path) -> tuple[_Db, Any]:
@@ -593,8 +609,9 @@ async def test_an_undeclared_row_is_not_inferred_from_its_neighbours(db_factory)
 
         await db.upgrade_to_head()
 
+        # Re-resolved on purpose: revision 0007 renamed the table under it.
         assert dict(await db.rows(
-            f"SELECT name, api_version FROM {docs}"
+            f"SELECT name, api_version FROM {db.table('instances')}"
         )) == {"s-one": SDLC, "s-two": ""}
     finally:
         await cleanup()

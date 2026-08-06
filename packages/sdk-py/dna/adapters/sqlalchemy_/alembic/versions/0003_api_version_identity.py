@@ -9,12 +9,12 @@ Kinds depend on it: two workspaces may each declare a ``Deal`` under their
 own namespace — that is what namespacing the apiVersion is FOR. The tables
 this revision changes keyed rows on ``(scope, kind, name)`` alone, so those
 two Kinds were indistinguishable to the adapter: the second save OVERWROTE
-the first, and ``delete_instance``'s ``api_version`` argument had nowhere to
+the first, and ``delete_document``'s ``api_version`` argument had nowhere to
 go. This revision gives it somewhere.
 
-**The backfill reads the row, not a registry.** Every ``instances`` /
-``versions`` row stores the whole instance as JSON in ``content``, and a DNA
-instance carries its own ``apiVersion``. So the value is not inferred from a
+**The backfill reads the row, not a registry.** Every ``documents`` /
+``versions`` row stores the whole document as JSON in ``content``, and a DNA
+document carries its own ``apiVersion``. So the value is not inferred from a
 Kind-name → apiVersion table (which is exactly the map that cannot answer
 when two Kinds share a name, and which no migration process can be trusted
 to hold in full — a retired Kind, or one from an extension the migrating
@@ -26,8 +26,8 @@ Two consequences worth stating, because they are what make this safe:
 * **The new key is a strict superset of the old one**, so the widening can
   never merge two rows and never splits one. Row counts are preserved by
   construction, and that is asserted below rather than assumed.
-* **A row whose instance declares no apiVersion is recorded as ``''``** —
-  which is a fact about the row ("this instance states none"), not a guess at
+* **A row whose document declares no apiVersion is recorded as ``''``** —
+  which is a fact about the row ("this document states none"), not a guess at
   a Kind. ``''`` is never treated as an apiVersion by the adapter; an
   unpinned read matches it exactly as it always did.
 
@@ -38,11 +38,11 @@ this code cannot say which. That is the corruption this whole change exists
 to prevent, so it is refused — with the full list — instead of resolved by
 picking. See :func:`_refuse_undecidable_rows`.
 
-**Bundle entries** hold file bytes, not instances, so they have no apiVersion
-of their own; they inherit it from the instance they belong to (the
-``instances`` row, else the newest ``versions`` row for the same key). An
-ORPHANED entry — one whose instance is already gone — keeps ``''``: there is
-nothing left to inherit from, and no read reaches it without an instance.
+**Bundle entries** hold file bytes, not documents, so they have no apiVersion
+of their own; they inherit it from the document they belong to (the
+``documents`` row, else the newest ``versions`` row for the same key). An
+ORPHANED entry — one whose document is already gone — keeps ``''``: there is
+nothing left to inherit from, and no read reaches it without a document.
 
 Raw DDL rather than ``op.create_table``, following 0001/0002: a revision is a
 frozen historical fact and must not re-render from the model. The model is
@@ -60,7 +60,7 @@ branch_labels = None
 depends_on = None
 
 #: The tables whose row key gains ``api_version``.
-_TABLES = ("instances", "versions", "bundle_entries")
+_TABLES = ("documents", "versions", "bundle_entries")
 
 
 def _qualify(schema: str | None, prefix: str, table: str) -> str:
@@ -73,12 +73,12 @@ def _qualify(schema: str | None, prefix: str, table: str) -> str:
 # ---------------------------------------------------------------------------
 
 PG_REKEY: list[str] = [
-    # instances: (scope, kind, name, tenant) → + api_version
-    "ALTER TABLE {instances} DROP CONSTRAINT {documents_pkey}",
-    "ALTER TABLE {instances} ADD PRIMARY KEY "
+    # documents: (scope, kind, name, tenant) → + api_version
+    "ALTER TABLE {documents} DROP CONSTRAINT {documents_pkey}",
+    "ALTER TABLE {documents} ADD PRIMARY KEY "
     "(scope, kind, api_version, name, tenant)",
     "DROP INDEX IF EXISTS {schema}.dna_documents_tenant_idx",
-    "CREATE INDEX dna_documents_tenant_idx ON {instances} "
+    "CREATE INDEX dna_documents_tenant_idx ON {documents} "
     "(tenant, scope, kind, api_version, name)",
     # versions: no business PK (id is a surrogate) — the indexes carry it.
     "DROP INDEX IF EXISTS {schema}.dna_versions_tenant_idx",
@@ -131,18 +131,18 @@ CREATE TABLE documents_rekeyed (
 INSERT INTO documents_rekeyed
     (scope, kind, name, content, version, updated_at, tenant, api_version)
 SELECT scope, kind, name, content, version, updated_at, tenant, api_version
-  FROM instances
+  FROM documents
 """,
-    "DROP TABLE instances",
-    "ALTER TABLE documents_rekeyed RENAME TO instances",
+    "DROP TABLE documents",
+    "ALTER TABLE documents_rekeyed RENAME TO documents",
     # DROP TABLE took the indexes with it — restate every one of them.
-    "CREATE INDEX documents_tenant_idx ON instances "
+    "CREATE INDEX documents_tenant_idx ON documents "
     "(tenant, scope, kind, api_version, name)",
-    "CREATE INDEX docs_status_idx ON instances "
+    "CREATE INDEX docs_status_idx ON documents "
     "(scope, kind, json_extract(content, '$.spec.status'))",
-    "CREATE INDEX docs_feature_idx ON instances "
+    "CREATE INDEX docs_feature_idx ON documents "
     "(scope, kind, json_extract(content, '$.spec.feature'))",
-    "CREATE INDEX docs_updated_at_idx ON instances "
+    "CREATE INDEX docs_updated_at_idx ON documents "
     "(scope, kind, json_extract(content, '$.spec.updated_at'))",
     # versions — indexes only.
     "DROP INDEX IF EXISTS versions_semver_unique",
@@ -200,12 +200,12 @@ def _refuse_undecidable_rows(conn, tables: dict[str, str], is_pg: bool) -> None:
     prevent into a column that is about to become part of an identity.
 
     A ``(scope, kind)`` with zero or one observed apiVersion is NOT decided by
-    that observation either: the row keeps ``''``, recording what its instance
+    that observation either: the row keeps ``''``, recording what its document
     actually says (nothing) rather than borrowing a neighbour's answer.
     """
-    # Every apiVersion observed per (scope, kind), from both instance tables.
+    # Every apiVersion observed per (scope, kind), from both document tables.
     observed: dict[tuple[str, str], set[str]] = {}
-    for table in ("instances", "versions"):
+    for table in ("documents", "versions"):
         rows = conn.execute(sa.text(
             f"SELECT DISTINCT scope, kind, api_version FROM {tables[table]} "
             "WHERE api_version <> ''"
@@ -236,11 +236,11 @@ def _refuse_undecidable_rows(conn, tables: dict[str, str], is_pg: bool) -> None:
         return
 
     example = (
-        f"  UPDATE {tables['instances']} SET content = jsonb_set("
+        f"  UPDATE {tables['documents']} SET content = jsonb_set("
         "content::jsonb, '{apiVersion}', '\"<the-one-it-is>\"')::text\n"
         "   WHERE scope = ... AND kind = ... AND name = ...;"
         if is_pg else
-        f"  UPDATE {tables['instances']} SET content = json_set("
+        f"  UPDATE {tables['documents']} SET content = json_set("
         "content, '$.apiVersion', '<the-one-it-is>')\n"
         "   WHERE scope = ... AND kind = ... AND name = ...;"
     )
@@ -254,8 +254,8 @@ def _refuse_undecidable_rows(conn, tables: dict[str, str], is_pg: bool) -> None:
         "\n" + "\n".join(offenders) + "\n"
         "\n"
         "Recovery: decide each row by hand and record the decision in the "
-        "instance itself BEFORE re-running — the backfill reads apiVersion out "
-        "of content, so fixing the instance is what fixes the row:\n"
+        "document itself BEFORE re-running — the backfill reads apiVersion out "
+        "of content, so fixing the document is what fixes the row:\n"
         f"{example}\n"
         "If a row is disposable, delete it instead. Nothing has been changed: "
         "this runs inside the migration's transaction."
@@ -292,26 +292,26 @@ def upgrade() -> None:
 
     # 1. The column. NOT NULL DEFAULT '' rather than nullable-then-tighten:
     #    both dialects add it without a table rewrite, and '' is the value the
-    #    column keeps for an instance that declares no apiVersion anyway — one
+    #    column keeps for a document that declares no apiVersion anyway — one
     #    meaning for the empty string, in the transient state and the final one.
     for t in _TABLES:
         op.execute(f"ALTER TABLE {tables[t]} ADD COLUMN api_version TEXT "
                    "NOT NULL DEFAULT ''")
 
-    # 2. Backfill the instance tables from the instance each row already holds.
+    # 2. Backfill the document tables from the document each row already holds.
     expr = _api_version_expr(is_pg)
-    for t in ("instances", "versions"):
+    for t in ("documents", "versions"):
         op.execute(
             f"UPDATE {tables[t]} SET api_version = {expr} "
             f"WHERE COALESCE({expr}, '') <> ''"
         )
 
-    # 3. Bundle entries hold file bytes, not instances — they inherit from the
-    #    instance they belong to. Correlated subqueries rather than UPDATE ...
+    # 3. Bundle entries hold file bytes, not documents — they inherit from the
+    #    document they belong to. Correlated subqueries rather than UPDATE ...
     #    FROM: one statement that both dialects accept. The tenant sentinel
-    #    differs between the tables (instances may store NULL on sqlite, bundle
-    #    entries always store ''), hence COALESCE on the instance side.
-    be, docs, vers = tables["bundle_entries"], tables["instances"], tables["versions"]
+    #    differs between the tables (documents may store NULL on sqlite, bundle
+    #    entries always store ''), hence COALESCE on the document side.
+    be, docs, vers = tables["bundle_entries"], tables["documents"], tables["versions"]
     own = f"{prefix}bundle_entries"
     doc_match = (
         f"d.scope = {own}.scope AND d.kind = {own}.kind AND d.name = {own}.name "
@@ -342,7 +342,7 @@ def upgrade() -> None:
     if is_pg:
         names = {
             "schema": schema,
-            "documents_pkey": _pg_pk_name(bind, schema, "dna_instances"),
+            "documents_pkey": _pg_pk_name(bind, schema, "dna_documents"),
             "bundle_entries_pkey": _pg_pk_name(bind, schema, "dna_bundle_entries"),
             **tables,
         }

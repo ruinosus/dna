@@ -3,14 +3,14 @@
 Um KIT é um diretório de DOCUMENTOS DNA (YAML com apiVersion/kind/metadata/
 spec): tipicamente um ``Copilot`` (com ``spec.surfaces[]``), o(s) ``Agent``
 que ele monta, o ``KindDefinition`` do domínio e ``PromptTemplate``s de voz.
-Instalar = escrever cada doc pelo ``kernel.write_document`` — TODOS os guards
+Instalar = escrever cada doc pelo ``kernel.write_instance`` — TODOS os guards
 da porta disparam (schema na escrita, tombstones, layer policy), exatamente
 como o ``dna specify import`` já faz para o Spec Kit. Nada aqui reimplementa
 validação.
 
 A prova do desenho (spikes + F1/F2): o template de vitrine
 ``copilot-kits/contrato-intake`` não carrega UMA linha de código — a surface
-de documento já é schema-directed (``update_document_draft`` funciona para
+de instância já é schema-directed (``update_instance_draft`` funciona para
 qualquer Kind), então um fluxo novo completo é só dados.
 
 ## Aprovação de Kind — o humano continua no circuito
@@ -61,7 +61,7 @@ def scan_kit(root: Path) -> list[KitDoc]:
         kind = raw.get("kind")
         nome = ((raw.get("metadata") or {}).get("name")) if isinstance(raw.get("metadata"), dict) else None
         if not (raw.get("apiVersion") and isinstance(kind, str) and isinstance(nome, str)):
-            click.secho(f"  (ignorado: {f.name} não tem forma de documento DNA)", fg="yellow")
+            click.secho(f"  (ignorado: {f.name} não tem forma de instância DNA)", fg="yellow")
             continue
         docs.append(KitDoc(path=f, kind=kind, name=nome, raw=raw))
     docs.sort(key=lambda d: _ORDEM.get(d.kind, 99))
@@ -81,7 +81,7 @@ def _operador() -> str:
     return "operator"
 
 
-@click.group("copilot", help="Copilot kits — fluxos completos instaláveis como documentos.")
+@click.group("copilot", help="Copilot kits — fluxos completos instaláveis como instâncias.")
 def copilot() -> None:
     """\b
       dna copilot install copilot-kits/contrato-intake --scope meu-escopo
@@ -99,11 +99,11 @@ def copilot() -> None:
 @click.option("--dry-run", is_flag=True, help="Lista o plano; escreve nada.")
 @click.option("--json", "as_json", is_flag=True, help="Saída legível por máquina.")
 def install(path, scope, approve, dry_run, as_json) -> None:
-    """Instala um kit de copiloto: cada doc pelo ``kernel.write_document``,
+    """Instala um kit de copiloto: cada doc pelo ``kernel.write_instance``,
     com todos os guards da porta."""
     docs = scan_kit(Path(path))
     if not docs:
-        raise fail(f"nenhum documento DNA encontrado em {path}")
+        raise fail(f"nenhuma instância DNA encontrado em {path}")
 
     plano = [{"kind": d.kind, "name": d.name, "file": str(d.path)} for d in docs]
     if dry_run:
@@ -145,13 +145,13 @@ def install(path, scope, approve, dry_run, as_json) -> None:
                     raw["spec"] = spec
                 elif not spec.get("approved_by"):
                     kinds_inertes.append(d.name)
-            s.run(s.kernel.write_document(scope, d.kind, d.name, raw))
+            s.run(s.kernel.write_instance(scope, d.kind, d.name, raw))
             written += 1
 
     if as_json:
         print_json({"plan": plano, "written": written, "inert_kinds": kinds_inertes})
         return
-    click.secho(f"Kit instalado: {written} documento(s).", fg="green", bold=True)
+    click.secho(f"Kit instalado: {written} instância(s).", fg="green", bold=True)
     for p in plano:
         click.echo(f"  {p['kind']}/{p['name']}")
     if kinds_inertes:

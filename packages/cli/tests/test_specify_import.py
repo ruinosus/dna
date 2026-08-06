@@ -184,7 +184,7 @@ def test_dry_run_json_prints_mapping_writes_nothing(runner, monkeypatch):
     assert payload["constitution"] == ".specify/memory/constitution.md"
     feat = payload["features"][0]
     assert feat["feature"] == "f-taskify"
-    kinds = [d["kind"] for d in feat["documents"]]
+    kinds = [d["kind"] for d in feat["instances"]]
     assert "Soul" in kinds and "Guardrail" in kinds and "Spec" in kinds
     assert "Plan" in kinds and "Story" in kinds and "Feature" in kinds
     assert [e["phase"] for e in feat["workflow_events"]] == ["specify", "plan", "build"]

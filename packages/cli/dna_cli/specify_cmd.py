@@ -28,7 +28,7 @@ each mapped doc's verbatim body back to its ``.specify/`` path. Round-trip
 
 The ingester is a sibling of ``emit_cmd``/``dna sdlc backfill`` — it reuses the
 same markdown parse (title/status/date) and the ``dna_session`` →
-``kernel.write_document`` pipeline, so the untrusted-input defenses never fork.
+``kernel.write_instance`` pipeline, so the untrusted-input defenses never fork.
 """
 from __future__ import annotations
 
@@ -256,7 +256,7 @@ def _scan_feature(root: Path, d: Path) -> FeatureRun:
 
 @dataclass
 class DocWrite:
-    """One planned ``kernel.write_document`` call plus export metadata."""
+    """One planned ``kernel.write_instance`` call plus export metadata."""
 
     kind: str
     name: str
@@ -571,7 +571,7 @@ def _scope_opt(f):  # small local decorator, mirrors sdlc's --scope
 def import_(path, feature_override, constitution_as, dry_run, as_json, scope) -> None:
     """Ingest a Spec Kit ``.specify/`` toolkit (or one ``specs/<feature>/`` run)
     into durable DNA Kinds (ADR §4). Every write goes through
-    ``kernel.write_document`` so all guards fire."""
+    ``kernel.write_instance`` so all guards fire."""
     scan = scan_specify(Path(path))
     if not scan.features and scan.constitution is None:
         raise fail(f"no Spec Kit artifacts found under {path} "
@@ -598,7 +598,7 @@ def import_(path, feature_override, constitution_as, dry_run, as_json, scope) ->
     if not as_json:
         click.secho(
             f"\nImported Spec Kit run{'s' if len(scan.features) != 1 else ''}: "
-            f"{written} documents across {len(plans)} feature(s).",
+            f"{written} instances across {len(plans)} feature(s).",
             fg="green", bold=True,
         )
         for p in plans:
@@ -625,10 +625,10 @@ def _execute(plans: list[FeaturePlan], *, scope: str | None) -> int:
                     _merge_feature(s, scope, w)
                     written += 1
                     continue
-                s.run(s.kernel.write_document(scope, w.kind, w.name, w.raw()))
+                s.run(s.kernel.write_instance(scope, w.kind, w.name, w.raw()))
                 written += 1
             for ev in p.workflow_events:
-                s.run(s.kernel.write_document(scope, "WorkflowEvent", ev.name, ev.raw()))
+                s.run(s.kernel.write_instance(scope, "WorkflowEvent", ev.name, ev.raw()))
                 written += 1
     return written
 
@@ -648,7 +648,7 @@ def _merge_feature(s, scope: str | None, w: DocWrite) -> None:
     merged["specify_run"] = new.get("specify_run", base.get("specify_run"))
     merged.setdefault("labels", base.get("labels", new.get("labels", [])))
     raw = {"apiVersion": SDLC_API_VERSION, "kind": "Feature", "metadata": {"name": w.name}, "spec": merged}
-    s.run(s.kernel.write_document(scope, "Feature", w.name, raw))
+    s.run(s.kernel.write_instance(scope, "Feature", w.name, raw))
 
 
 # ─── dry-run / json rendering ────────────────────────────────────────────────
@@ -664,7 +664,7 @@ def _plan_json(scan: SpecifyScan, plans: list[FeaturePlan], *, dry_run: bool) ->
                 "slug": p.slug,
                 "feature": p.feature_name,
                 "reuse_feature": p.reuse_feature,
-                "documents": [
+                "instances": [
                     {"kind": w.kind, "name": w.name, "source": w.source,
                      "body_field": w.body_field, "detail": w.detail}
                     for w in p.writes
@@ -691,7 +691,7 @@ def _print_dry_run(scan: SpecifyScan, plans: list[FeaturePlan]) -> None:
         for e in p.workflow_events:
             click.echo(f"    {'WorkflowEvent':11} {e.name:34} {e.detail}")
     total = sum(len(p.writes) + len(p.workflow_events) for p in plans)
-    click.secho(f"\n{total} documents would be written (dry-run — nothing persisted).", fg="yellow")
+    click.secho(f"\n{total} instances would be written (dry-run — nothing persisted).", fg="yellow")
 
 
 # ─── export ──────────────────────────────────────────────────────────────────

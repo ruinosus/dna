@@ -18,8 +18,8 @@ Copilot, agent-framework, Bedrock AgentCore) reaches it:
     SDLC (read)  sdlc_digest · list_stories · get_adr · board_summary · board_item
     SDLC (write) create_story · create_issue · set_status · comment · create_feature
     memory       recall · remember · consolidate · list_memories · forget
-    documents    list_kinds · list_documents · get_document · write_document
-                 · delete_document
+    instances    list_kinds · list_instances · get_instance · write_instance
+                 · delete_instance
                  (GENERIC — a loop over the Kind registry, not a per-Kind tool)
     kinds        author_kind · list_my_kinds
                  (a tenant declares its OWN Kind — INERT until a human approves;
@@ -636,7 +636,7 @@ def build_server(
     # Prefab views, so they share ONE renderer resource — `resource_uri` is
     # overridden precisely to stop FastMCP synthesising
     # `ui://prefab/tool/<hash>/renderer.html` per tool, which in bundled mode
-    # is a separate 6.6 MB document each. `with_card` merges rather than
+    # is a separate 6.6 MB instance each. `with_card` merges rather than
     # replaces: `content` stays byte-identical for every client that renders
     # nothing.
     from dna_cli._mcp_cards import (
@@ -665,7 +665,7 @@ def build_server(
     # It is short because ``KernelRefusal`` is the kernel's own marker base for a
     # deliberate verdict (schema veto, LayerPolicy veto, tenancy rule, read-only
     # source, retired Kind). That base exists because THIS list used to be
-    # hand-enumerated per tool and was wrong: ``write_document`` caught
+    # hand-enumerated per tool and was wrong: ``write_instance`` caught
     # ``(ValueError, LookupError, PermissionError)`` and therefore missed the
     # LayerPolicy veto and every tenancy rule (plain ``Exception``;
     # ``NotWritableError`` is a ``RuntimeError``), while the three board create
@@ -687,7 +687,7 @@ def build_server(
 
         The type name is part of the message on purpose: an agent that reads
         ``LayerPolicyViolationError: layer 'tenant' LOCKED for alias X`` can tell
-        "the operator forbade this" from "your document is malformed" and act
+        "the operator forbade this" from "your instance is malformed" and act
         differently. A bare reason string cannot carry that."""
         try:
             yield
@@ -783,7 +783,7 @@ def build_server(
            (Free=read/recall-only, Pro=write/remember+consolidate), read from the
            Tier spec (zero hardcode). ``family_op`` is that same refinement made
            GENERIC over the family (``<family>_mode``) — what the
-           registry-driven document tools pass, since one of those tools spans
+           registry-driven instance tools pass, since one of those tools spans
            every family and its family comes from the TARGET KIND, not from
            which tool was called.
 
@@ -1020,7 +1020,7 @@ def build_server(
             "agent can create + manage the board over MCP — and declarative MEMORY "
             "(recall/remember/consolidate/list_memories/forget). "
             "Beyond those named surfaces it exposes EVERY registered Kind "
-            "generically (list_kinds/list_documents/get_document/write_document), "
+            "generically (list_kinds/list_instances/get_instance/write_instance), "
             "resolved from the Kind registry at call time — so a Kind that exists "
             "is a Kind you can use, without a hand-written tool for it. "
             "A workspace can also declare a Kind OF ITS OWN "
@@ -1093,8 +1093,8 @@ def build_server(
         install-templates`` surface here — servable to any MCP client. Pass
         ``tenant`` for the per-workspace/tenant view (the overlay wins, no redeploy).
 
-        Every row carries ``origin``: ``document`` (someone authored it) or
-        ``runtime-default`` (no document yet — the voice the SDK ships is what
+        Every row carries ``origin``: ``instance`` (someone authored it) or
+        ``runtime-default`` (no instance yet — the voice the SDK ships is what
         runs). A scope with no authored templates is NOT an empty catalog.
 
         Without ``scope`` this resolves in the server's BASE scope (the shared
@@ -1110,7 +1110,7 @@ def build_server(
         per-workspace/tenant OVERLAY wins live — governance without redeploy.
         Without ``scope``, resolves in the BASE catalog scope (see list_templates).
 
-        The reply always names its ``origin``. **No authored document is not an
+        The reply always names its ``origin``. **No authored instance is not an
         error**: for a name the runtime ships a default for, you get the body
         that actually runs plus ``origin: "runtime-default"`` and a note saying
         how to override it. Only a name that is neither authored nor a known
@@ -1185,7 +1185,7 @@ def build_server(
     # Pro=write), mirroring memory's `remember`. A denied write is an honest
     # ToolError; the stdio/OSS (no-token) path is unmetered + unrestricted. The
     # write logic is the shared `dna.application.sdlc` core the `dna sdlc` CLI
-    # also calls — one write path through `kernel.write_document`.
+    # also calls — one write path through `kernel.write_instance`.
     #
     # ATTRIBUTION (identity, not channel): every board write threads
     # `actor=actor_from_context()` — the verified identity of THIS request, read
@@ -1213,9 +1213,9 @@ def build_server(
         criteria). Returns ``{kind, name, status, feature}``. A write op — needs a
         tier whose ``sdlc_mode`` is ``write``.
 
-        CREATE means create: an existing ``name`` is REFUSED, naming the document
+        CREATE means create: an existing ``name`` is REFUSED, naming the instance
         that is already there. To change one, use ``set_status`` (status),
-        ``comment`` (narration) or ``write_document`` (any field, merged)."""
+        ``comment`` (narration) or ``write_instance`` (any field, merged)."""
         tenant = await _guard("sdlc", scope=scope, sdlc_op="write")
         async with _refusing():
             return await create_story_impl(
@@ -1326,8 +1326,8 @@ def build_server(
     #
     # `board_summary_impl` / `board_item_impl` have lived in the shared core and
     # been served over REST for a long time; they were simply never wired here.
-    # Without them, "show me the board" over MCP is `list_documents` + one
-    # `get_document` per row — 1 + N metered calls for a question the core already
+    # Without them, "show me the board" over MCP is `list_instances` + one
+    # `get_instance` per row — 1 + N metered calls for a question the core already
     # answers in one. Same `_guard` seam, `sdlc` family, read op.
 
     @server.tool(run_in_thread=False)
@@ -1337,7 +1337,7 @@ def build_server(
         """The whole board in ONE call: Story + Feature counts by status, totals,
         every item (newest first) and the ``recent`` newest — the shape the DNA
         Cloud console renders. Prefer this over listing and then reading each
-        document."""
+        instance."""
         tenant = await _guard("sdlc", scope=scope, sdlc_op="read")
         live = await _live()
         async with _refusing():
@@ -1554,7 +1554,7 @@ def build_server(
         async with _refusing():
             return await forget_impl(await _live(), name, scope, tenant=tenant)
 
-    # -- documents (GENERIC, registry-driven — every Kind, not a hand-written list)
+    # -- instances (GENERIC, registry-driven — every Kind, not a hand-written list)
     #
     # The tools above name ONE Kind each. These four name none: they loop over
     # the Kind registry at call time, so the 76 registered Kinds (49 of them
@@ -1562,10 +1562,10 @@ def build_server(
     # being invisible to an agent just because nobody hand-wrote tools for them.
     # Same `_guard` seam as everything else — with the metered family DERIVED
     # from the target Kind, so a generic tool can never be the cheap door into a
-    # family the caller's tier gates (see `dna_cli._mcp_documents`).
-    from dna_cli._mcp_documents import register_document_tools
+    # family the caller's tier gates (see `dna_cli._mcp_instances`).
+    from dna_cli._mcp_instances import register_instance_tools
 
-    register_document_tools(
+    register_instance_tools(
         server, live=_live, guard=_guard, plan_families=_plan_families,
     )
 
@@ -1587,7 +1587,7 @@ def build_server(
 
     # -- the portfolio door: workspaces / projects / repos / orgs ------------
     #
-    # These Kinds were always reachable through the generic document door, and
+    # These Kinds were always reachable through the generic instance door, and
     # the application seams already served the REST face. What was missing was
     # a NAME — and a catalog of 78 Kinds with no named tool is discoverable
     # only by luck. `list_projects` also carries the one sentence that joins
@@ -1601,12 +1601,12 @@ def build_server(
 
     @server.resource("dna://{scope}/manifest")
     async def manifest_resource(scope: str) -> dict[str, Any]:
-        """The scope's manifest as a resource: its Kinds → document names."""
+        """The scope's manifest as a resource: its Kinds → instance names."""
         mi = await (await _live()).mi(scope, await _guard("definitions", scope=scope))
         by_kind: dict[str, list[str]] = {}
-        for d in mi.documents:
+        for d in mi.instances:
             by_kind.setdefault(d.kind, []).append(d.name)
-        return {"scope": mi.scope, "documents": {k: sorted(v) for k, v in by_kind.items()}}
+        return {"scope": mi.scope, "instances": {k: sorted(v) for k, v in by_kind.items()}}
 
     @server.resource("dna://{scope}/agents")
     async def agents_resource(scope: str) -> dict[str, Any]:
@@ -1620,7 +1620,7 @@ def build_server(
         bridge appended to its ``<head>``.
 
         Shared on purpose: the default mints one renderer resource per tool,
-        and in bundled mode that is a separate 6.6 MB document each. Static,
+        and in bundled mode that is a separate 6.6 MB instance each. Static,
         public and data-free (cacheable by URI): the host pushes each tool
         result's ``structured_content`` into it over the authenticated
         session."""

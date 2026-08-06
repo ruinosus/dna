@@ -152,7 +152,7 @@ def test_install_writes_valid_docs_and_provenance(tmp_path, monkeypatch):
     assert sorted(payload["installed"]) == ["Skill/greeter", "Skill/standalone-skill"]
     assert len(payload["rejected"]) == 4
 
-    # the Skill bundle round-tripped through kernel.write_document → writer
+    # the Skill bundle round-tripped through kernel.write_instance → writer
     skill_md = base / "playground" / "skills" / "greeter" / "SKILL.md"
     assert skill_md.exists()
     assert "Say hello nicely." in skill_md.read_text(encoding="utf-8")
@@ -166,7 +166,7 @@ def test_install_writes_valid_docs_and_provenance(tmp_path, monkeypatch):
     lock = yaml.safe_load((base / "playground" / "installed.lock").read_text())
     assert lock["lockVersion"] == 3
     assert lock["scope"] == "playground"
-    by_name = {d["name"]: d for d in lock["documents"]}
+    by_name = {d["name"]: d for d in lock["instances"]}
     assert set(by_name) == {"greeter", "standalone-skill"}
     entry = by_name["greeter"]
     assert entry["origin"] == f"local:{remote}"
@@ -178,10 +178,10 @@ def test_install_writes_valid_docs_and_provenance(tmp_path, monkeypatch):
     assert not list(base.rglob("*escape*"))
 
 
-def test_install_readback_via_doc_show(tmp_path, monkeypatch):
+def test_install_readback_via_instance_show(tmp_path, monkeypatch):
     runner, _, remote = _env(tmp_path, monkeypatch)
     assert _install(runner, remote).exit_code == 0
-    res = runner.invoke(main, ["doc", "show", "Skill", "greeter", "--scope", "playground"])
+    res = runner.invoke(main, ["instance", "show", "Skill", "greeter", "--scope", "playground"])
     assert res.exit_code == 0, res.output
     assert "Say hello nicely." in res.output
 
@@ -210,7 +210,7 @@ def test_root_agents_md_does_not_hide_sibling_docs(tmp_path, monkeypatch):
 
     # every installed doc carries provenance; the root claim records path "."
     lock = yaml.safe_load((base / "playground" / "installed.lock").read_text())
-    by_name = {d["name"]: d for d in lock["documents"]}
+    by_name = {d["name"]: d for d in lock["instances"]}
     assert set(by_name) == {"remote", "greeter", "standalone-skill"}
     assert by_name["remote"]["kind"] == "AgentDefinition"
     assert by_name["remote"]["path"] == "."
@@ -220,7 +220,7 @@ def test_skill_bundle_scans_as_exactly_one_doc(tmp_path, monkeypatch):
     """The inverse guard: a Skill bundle (SKILL.md + companion files +
     subdirs) is ONE doc — the scan must not recurse into the bundle's own
     consumed content and re-collect envelope-shaped YAML companions as
-    separate documents."""
+    separate instances."""
     runner, _, remote = _env(tmp_path, monkeypatch)
     greeter = remote / "skills" / "greeter"
     # An envelope-shaped YAML at the bundle root (reader keeps it in
@@ -319,7 +319,7 @@ def test_empty_tree_is_a_didactic_error(tmp_path, monkeypatch):
     empty.mkdir()
     res = runner.invoke(main, ["install", f"local:{empty}", "--scope", "playground"])
     assert res.exit_code == 1
-    assert "no DNA documents detected" in res.output
+    assert "no DNA instances detected" in res.output
 
 
 def test_missing_local_path_is_a_didactic_error(tmp_path, monkeypatch):

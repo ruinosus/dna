@@ -10,7 +10,7 @@ versioned ``prepare-commit-msg`` hook (``scripts/git-hooks/``):
     Co-Authored-By: dna-sdlc[bot] <302582850+dna-sdlc[bot]@users.noreply.github.com>
 
 ``Work-Item: <Kind>/<name>`` is the machine-readable link back to the
-SDLC document. The co-author is **the dna sdlc tool itself** (GitHub
+SDLC instance. The co-author is **the dna sdlc tool itself** (GitHub
 bot-identity convention) — a provenance seal meaning "this commit was
 born under story governance: it has a plan, a timeline, a test gate".
 It is NOT a human co-author; human/agent authorship stays in the normal

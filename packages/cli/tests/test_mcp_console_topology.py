@@ -90,14 +90,14 @@ async def _seed(base_dir: str) -> None:
     from dna_cli import _mcp_server as M
 
     live = await M.boot_live(scope=_BASE_SCOPE, base_dir=base_dir)
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         "_lib", "WorkspaceMembership", f"{_WS}--founder",
         {"apiVersion": "github.com/ruinosus/dna/cloud/v1",
          "kind": "WorkspaceMembership",
          "metadata": {"name": f"{_WS}--founder"},
          "spec": {"workspace_id": _WS, "identity_email": "barna@x.com",
                   "identity_oid": _OID, "role": "owner", "status": "active"}})
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         _WS_SCOPE, "Genome", _WS_SCOPE,
         {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Genome",
          "metadata": {"name": _WS_SCOPE},

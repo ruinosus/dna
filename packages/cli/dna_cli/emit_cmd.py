@@ -271,6 +271,6 @@ def _emit_hosting(copilot, scope, out_path, model, provider, as_json):
     else:
         raise fail("hosting emit is multi-artifact — pass --out DIR")
     if result.losses:
-        click.secho("\n# de-para — the hosted variant DEGRADES / documents:", fg="yellow", err=True)
+        click.secho("\n# de-para — the hosted variant DEGRADES / instances:", fg="yellow", err=True)
         for loss in result.losses:
             click.secho(f"#   - {loss}", fg="yellow", err=True)

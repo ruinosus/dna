@@ -202,7 +202,7 @@ async def delete_memory_impl(
     sc = scope or live.base_scope
     kernel = live.kernel.with_tenant(tenant) if tenant else live.kernel
     try:
-        await kernel.delete_document(
+        await kernel.delete_instance(
             sc, _MEMORY_KIND, name, invalidate_mode="doc"
         )
     except ValueError as exc:  # filesystem source raises ValueError("not_found")
@@ -234,11 +234,11 @@ def _resolve_cors_origins(cors_origins: list[str] | None) -> list[str]:
 #:
 #: `/.well-known/*` é o espaço de descoberta reservado pela RFC 8615, e o que
 #: mora ali existe para ser lido por quem AINDA NÃO tem credencial: o Agent Card
-#: do A2A diz como alcançar o agente e como se autenticar a ele, e o documento
+#: do A2A diz como alcançar o agente e como se autenticar a ele, e a instância
 #: de recurso protegido do OAuth diz onde fica o autorizador.
 #:
-#: Exigir bearer neles é um deadlock silencioso — o cliente precisa do documento
-#: para saber como obter o token, e do token para ler o documento. O sintoma não
+#: Exigir bearer neles é um deadlock silencioso — o cliente precisa da instância
+#: para saber como obter o token, e do token para ler a instância. O sintoma não
 #: é "401" no lugar certo: é um terceiro que simplesmente não consegue começar, e
 #: nenhuma mensagem explicando por quê.
 #:
@@ -373,11 +373,11 @@ def build_app(
         compose_prompt_impl,
         create_project_impl,
         register_artifact_impl,
-        get_document_impl,
+        get_instance_impl,
         graph_refs_impl,
-        list_documents_impl,
+        list_instances_impl,
         list_kinds_impl,
-        write_document_impl,
+        write_instance_impl,
         create_workspace_impl,
         genome_view_impl,
         get_authored_kind_impl,
@@ -413,7 +413,7 @@ def build_app(
         write_bundle_entry_impl,
     )
     from dna.application.live import parse_scope_grants
-    from dna.kernel.errors import StaleDocumentWrite
+    from dna.kernel.errors import StaleInstanceWrite
     from dna.kernel.protocols import LayerPolicyViolationError
     from dna.tenancy import Identity
     from dna_cli._mcp_server import boot_live
@@ -499,8 +499,8 @@ def build_app(
     # FastAPI drops an undeclared query param in SILENCE. That is a sane
     # default for the public web (analytics tack `utm_*` onto every URL) and
     # the wrong one for an API whose parameters change what the answer MEANS:
-    # `GET /v1/kinds/Issue/documents/<name>?as_of=<yesterday>` returned 200
-    # with TODAY's document, because `as_of` existed on `/v1/memories` and
+    # `GET /v1/kinds/Issue/instances/<name>?as_of=<yesterday>` returned 200
+    # with TODAY's instance, because `as_of` existed on `/v1/memories` and
     # nowhere else. Nothing in that response contradicted the caller's belief
     # that they were reading the past. Measured 06/08/2026 against the local
     # runtime; the route now implements `as_of` (above), but the CLASS of
@@ -1152,9 +1152,9 @@ def build_app(
 
     # -- Kind authoring (a tenant declares its OWN Kind, inert until approved) -
     # A DEDICATED door, deliberately not a relaxation of the generic one. The
-    # generic write (``write_document_impl``) refuses every BOOTSTRAP Kind —
+    # generic write (``write_instance_impl``) refuses every BOOTSTRAP Kind —
     # KindDefinition and Genome among them — because a tool that can write any
-    # document must not be the tool that rewrites the frame every other document
+    # instance must not be the tool that rewrites the frame every other instance
     # is validated against; that refusal is untouched here and is pinned by
     # tests/test_kind_authoring_route.py.
     #
@@ -1239,10 +1239,10 @@ def build_app(
         tenant: str | None = Query(default=None),
     ) -> dict[str, Any]:
         """Author a Kind for the calling workspace — a ``KindDefinition``
-        document written WITHOUT an approval marker, under the workspace's own
+        instance written WITHOUT an approval marker, under the workspace's own
         assigned apiVersion namespace (minted on first use, then stable).
 
-        ``presentation`` (optional) declares how documents of this Kind READ —
+        ``presentation`` (optional) declares how instances of this Kind READ —
         the ordered fields, their human labels, their semantic roles, and what
         to hide from a human. It is the SAME block a builtin Kind descriptor
         declares, through the same normalizer, and it is what keeps a
@@ -1253,10 +1253,10 @@ def build_app(
 
         The response's ``approved`` is always ``false``. An ``approved_by`` in
         the body is ignored, not honoured and not rejected: a caller that could
-        approve its own proposal would make the gate decorative. The document
+        approve its own proposal would make the gate decorative. The instance
         records ``proposed_by`` — the caller's VERIFIED identity, resolved
         server-side (``_actor_from_state``) and never read from the body, and
-        stamped here because a proposer cannot be back-filled onto a document
+        stamped here because a proposer cannot be back-filled onto an instance
         that never recorded one. 400 for a missing tenant / a Kind name that is
         not a CamelCase identifier, 403 when the namespace gate refuses the
         write (the workspace does not own the target namespace), 503 when the
@@ -1321,10 +1321,10 @@ def build_app(
         The approver is the caller's VERIFIED identity, resolved server-side
         (``_actor_from_state``: email → durable oid → ``sub``). An
         ``approved_by`` in the body reaches nothing: attribution a caller can
-        forge is not attribution. The document's ``proposed_by`` is preserved
+        forge is not attribution. The instance's ``proposed_by`` is preserved
         untouched, so the audit names both acts and neither wears the other's
         name. 404 when no such Kind was authored in this scope (approval acts on
-        an existing document and creates none — and a Kind authored by ANOTHER
+        an existing instance and creates none — and a Kind authored by ANOTHER
         workspace in a shared scope is a 404 too: it is not the caller's to
         approve, and saying "it exists but is not yours" would hand a stranger
         a probe for what its neighbours are authoring), 400 for a missing
@@ -1352,7 +1352,7 @@ def build_app(
             )
         except AuthoredKindNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
-        except StaleDocumentWrite as exc:
+        except StaleInstanceWrite as exc:
             # i-083 — the Kind was edited between the reviewer's read and this
             # approval, so the write was REFUSED rather than allowed to stamp an
             # approval onto a shape nobody saw. 409 and not 400: the request was
@@ -1361,7 +1361,7 @@ def build_app(
             # move and re-reading first is the right one.
             #
             # BEFORE the ``ValueError`` arm below, which it would otherwise fall
-            # into — ``StaleDocumentWrite`` is deliberately a ``ValueError`` so
+            # into — ``StaleInstanceWrite`` is deliberately a ``ValueError`` so
             # that faces which already relay write-path vetoes surface it at all
             # — and be reported as the caller's own malformed request.
             raise HTTPException(status_code=409, detail=str(exc)) from None
@@ -1396,10 +1396,10 @@ def build_app(
 
     # THE ACT THAT WITHDRAWS EFFECT (i-085), and deliberately not the inverse of
     # the one above. Un-approving would return the Kind to *never approved*, and
-    # an unregistered Kind is the PERMISSIVE state — its documents are accepted
+    # an unregistered Kind is the PERMISSIVE state — its instances are accepted
     # with no validation at all — so revoking by clearing the approval would
     # switch the gate off instead of closing it. Revoked is a THIRD state:
-    # existing documents stay readable and are MARKED invalid, new ones are
+    # existing instances stay readable and are MARKED invalid, new ones are
     # refused, and approving again restores validity with nothing to migrate.
     #
     # It exists BEFORE any approve button reaches a conversational surface, and
@@ -1415,15 +1415,15 @@ def build_app(
     ) -> dict[str, Any]:
         """Revoke an authored Kind — the act that WITHDRAWS its effect.
 
-        Every existing document of the Kind becomes invalid: it is NOT deleted
+        Every existing instance of the Kind becomes invalid: it is NOT deleted
         and NOT made unreadable, it reads back MARKED (``status.valid ==
         false``), and in a listing it appears marked rather than vanishing — so
         revocation can never be used to hide data without deleting it. New
-        documents of the Kind are refused outright, conforming ones included:
+        instances of the Kind are refused outright, conforming ones included:
         what was withdrawn is the Kind, not a schema.
 
         The revoker is the caller's VERIFIED identity, resolved server-side, on
-        exactly the terms the approval route documents above — including the
+        exactly the terms the approval route instances above — including the
         ``--auth token`` caveat, which matters here for the same reason: the
         value of the record this act writes is naming WHO made it.
 
@@ -1437,7 +1437,7 @@ def build_app(
         Kind was authored in this scope — or when it belongs to a neighbour,
         because "it exists but is not yours" would hand a stranger a probe; 400
         for a missing tenant / a malformed Kind name / a Kind the caller
-        declared under two of its own namespaces; 409 when the document moved
+        declared under two of its own namespaces; 409 when the instance moved
         since it was read (i-083 — a revocation is a read-modify-write too, and
         unguarded it would resurrect a stale replica's shape AND mark it
         revoked); 403 from the namespace gate; 503 when the namespace registry
@@ -1451,7 +1451,7 @@ def build_app(
             )
         except AuthoredKindNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
-        except StaleDocumentWrite as exc:
+        except StaleInstanceWrite as exc:
             # BEFORE the ``ValueError`` arm — see the approval route: it is
             # deliberately a ``ValueError`` so faces that predate the refusal
             # base surface it at all, and 409 rather than 400 is what tells the
@@ -1480,7 +1480,7 @@ def build_app(
         tenant: str | None = Query(default=None),
     ) -> dict[str, Any]:
         """List the CALLER's authored Kinds with their approval state — the
-        audit view. Reads DOCUMENTS, not the registry: an unapproved Kind is
+        audit view. Reads INSTANCES, not the registry: an unapproved Kind is
         precisely the one the registry does not have, and it is the one a
         reviewer came here for.
 
@@ -1522,7 +1522,7 @@ def build_app(
     # -- the Kind CATALOG ------------------------------------------------------
     #
     # Declared HERE, above ``/v1/kinds/{kind}``, for the reason the singular
-    # ``/v1/kinds/registry/{kind}`` is declared above ``/{kind}/documents``:
+    # ``/v1/kinds/registry/{kind}`` is declared above ``/{kind}/instances``:
     # FastAPI matches in declaration order, and ``registry`` is a literal
     # segment a Kind can never collide with (a Kind name is CamelCase).
 
@@ -1544,7 +1544,7 @@ def build_app(
         point, and it belongs to the registry, not to each caller.
 
         Not the same question as ``GET /v1/kinds``, and the two must not be
-        confused. That one lists the caller's AUTHORED KindDefinition documents
+        confused. That one lists the caller's AUTHORED KindDefinition instances
         including the unapproved ones — the audit roster, whose subject is an
         approval decision. This one lists what is REGISTERED and therefore in
         force, built-ins included; an unapproved Kind is by definition absent.
@@ -1557,7 +1557,7 @@ def build_app(
         ``filtered_by_plan`` is always false here rather than quietly meaning
         something different from the same field on the other face.
 
-        ``tenant`` resolves the scope the way every document route does
+        ``tenant`` resolves the scope the way every instance route does
         (``live.default_scope``), so a portal that only knows a workspace id
         reaches that workspace's own registered Kinds without hardcoding the
         scope-prefix convention. An explicit ``scope`` still wins."""
@@ -1602,7 +1602,7 @@ def build_app(
         or for a Kind the caller declared under two of its own namespaces at
         once; 403 for a namespace two claims give to different owners; 503 when
         the claim registry cannot be read. None of them degrades to answering
-        with the document.
+        with the instance.
 
         **Mounted on every auth mode**, and this route carries the most: the
         workspace's JSON Schema, i.e. its data model. The 404 that keeps a
@@ -1648,11 +1648,11 @@ def build_app(
         AUTHORED Kind and filters by caller): a registered Kind is the
         PRODUCT's data model, identical for every tenant and holding nobody's
         content, so this door does not filter. Declared BEFORE the
-        ``/{kind}/documents`` routes so ``registry`` is matched as the literal
+        ``/{kind}/instances`` routes so ``registry`` is matched as the literal
         segment it is (a Kind is CamelCase and can never be named
         ``registry``). 404 for a Kind the runtime does not register.
 
-        ``tenant`` (i-094) resolves the scope the way EVERY document route
+        ``tenant`` (i-094) resolves the scope the way EVERY instance route
         does (``live.default_scope`` — under multi-workspace, ``tenant-<ws>``
         for an outside workspace), so a portal that only knows the workspace
         id reaches the workspace's OWN registered Kinds without hardcoding
@@ -1679,7 +1679,7 @@ def build_app(
     # NOT under /v1/kinds/**: this is not a Kind resource, and mounting it
     # there would collide with the CamelCase ``{kind}`` segment the routes
     # above own. ``/v1/graph/`` is its own noun — and it is the noun the DATA
-    # graph will land under too (a document's inbound/outbound references),
+    # graph will land under too (an instance's inbound/outbound references),
     # which is a different question with the same shape.
     #
     # NOT FILTERED BY CALLER, like its registry sibling and for the same
@@ -1712,7 +1712,7 @@ def build_app(
         this route cannot disagree about what the model says.
 
         **SCHEMA, not data.** The edges say which Kinds MAY reference which.
-        Which DOCUMENTS reference which is a different graph and this route
+        Which INSTANCES reference which is a different graph and this route
         does not answer it — ``coverage.limits`` says so on the wire.
 
         ``tenant`` resolves the scope the way the registry route does
@@ -1726,15 +1726,15 @@ def build_app(
             scope = live.default_scope(tenant.strip())
         return await kind_graph_impl(live, scope=scope)
 
-    # -- the generic, kubernetes-shaped document write ------------------------
+    # -- the generic, kubernetes-shaped instance write ------------------------
     #
-    # POST /v1/kinds/{kind}/documents. The gap this closes: every write route
+    # POST /v1/kinds/{kind}/instances. The gap this closes: every write route
     # above is PER-KIND (memories, artifacts, the Kind-authoring doors,
-    # projects, workspaces, tenants) — a document of an ARBITRARY Kind,
+    # projects, workspaces, tenants) — an instance of an ARBITRARY Kind,
     # including one a tenant just authored and had approved, had no REST door
-    # at all. Without it, a proposer (e.g. a document-converter agent) that
-    # authors a Kind and matches a typed document to it has nowhere to write
-    # the document through the shared REST lane the portal calls.
+    # at all. Without it, a proposer (e.g. an instance-converter agent) that
+    # authors a Kind and matches a typed instance to it has nowhere to write
+    # the instance through the shared REST lane the portal calls.
     #
     # THE SHAPE IS KUBERNETES', DELIBERATELY (the plan cites it verbatim):
     # applying a CRD CREATES an endpoint that serves that type; "kind is a
@@ -1747,7 +1747,7 @@ def build_app(
     # formed turns earlier.
     #
     # ZERO business logic here: this is a thin delegate to the SAME
-    # ``write_document_impl`` the MCP ``write_document`` tool already calls —
+    # ``write_instance_impl`` the MCP ``write_instance`` tool already calls —
     # the bootstrap refusal, the LayerPolicy gate, the schema validation and
     # the merge semantics are the kernel's, inherited for free.
     #
@@ -1763,7 +1763,7 @@ def build_app(
     # under none/token auth), this route takes NEITHER a ``claims`` field NOR
     # a ``scope`` query param — it follows the Kind-authoring doors' shape
     # instead: only ``tenant`` as a query param, on the SAME trust boundary
-    # those doors document at length (config-bound / no second tenant under
+    # those doors instance at length (config-bound / no second tenant under
     # none / a trusted caller's own resolved value under token). The write
     # scope is always DERIVED from ``tenant`` (``live.default_scope``),
     # exactly as the artifact/project routes derive theirs — there is simply
@@ -1774,12 +1774,12 @@ def build_app(
     # tools), not against this function's Python signature.
     #
     # MOUNTED ON EVERY AUTH MODE, like the Kind-authoring doors it depends on
-    # (a document under a freshly-approved Kind is unreachable if this route
+    # (an instance under a freshly-approved Kind is unreachable if this route
     # were lane-conditional while authoring/approval are not).
 
-    @app.get("/v1/kinds/{kind}/documents", dependencies=guarded,
-             response_model=m.ListKindDocumentsResponse)
-    async def list_kind_documents(
+    @app.get("/v1/kinds/{kind}/instances", dependencies=guarded,
+             response_model=m.ListKindInstancesResponse)
+    async def list_kind_instances(
         kind: str,
         tenant: str | None = Query(default=None),
         api_version: str | None = Query(default=None),
@@ -1790,12 +1790,12 @@ def build_app(
         fields: str | None = Query(default=None),
         order_by: str | None = Query(default=None),
     ) -> dict[str, Any]:
-        """Listar os documentos de ``{kind}`` — a LEITURA da porta genérica.
+        """Listar as instâncias de ``{kind}`` — a LEITURA da porta genérica.
 
-        A face escrevia qualquer documento por ``POST
-        /v1/kinds/{kind}/documents`` e só lia os Kinds para os quais alguém
+        A face escrevia qualquer instância por ``POST
+        /v1/kinds/{kind}/instances`` e só lia os Kinds para os quais alguém
         escrevera uma rota à mão (``/v1/memories``, ``/v1/projects``, …). O
-        ``list_documents_impl`` já existia no SDK, completo, e não tinha porta:
+        ``list_instances_impl`` já existia no SDK, completo, e não tinha porta:
         quem gravava por aqui não conseguia ler de volta por lugar nenhum, e
         descobria isso depois de gravar.
 
@@ -1806,13 +1806,13 @@ def build_app(
 
         Um Kind desconhecido é 404 **nomeando o Kind**, a mesma resposta que a
         escrita dá. Uma lista vazia de um Kind que existe é 200 com
-        ``documents: []`` — "existe e não tem nada" é uma resposta, e confundi-la
+        ``instances: []`` — "existe e não tem nada" é uma resposta, e confundi-la
         com "não existe" faria uma tela dizer *erro* onde devia dizer *nenhum
         ainda*.
         """
         live = await _live()
         try:
-            return await list_documents_impl(
+            return await list_instances_impl(
                 live, kind=kind, tenant=tenant,
                 api_version=api_version, limit=limit, offset=offset,
                 fields=[f.strip() for f in fields.split(",") if f.strip()] if fields else None,
@@ -1826,9 +1826,9 @@ def build_app(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
 
-    @app.get("/v1/kinds/{kind}/documents/{name}", dependencies=guarded,
-             response_model=m.GetKindDocumentResponse)
-    async def get_kind_document(
+    @app.get("/v1/kinds/{kind}/instances/{name}", dependencies=guarded,
+             response_model=m.GetKindInstanceResponse)
+    async def get_kind_instance(
         kind: str,
         name: str,
         tenant: str | None = Query(default=None),
@@ -1836,25 +1836,25 @@ def build_app(
         as_of: str | None = Query(
             default=None,
             description=(
-                "ISO-8601 instant. Return the document AS THIS STORE RECORDED "
+                "ISO-8601 instant. Return the instance AS THIS STORE RECORDED "
                 "IT at that moment (transaction time) instead of its current "
                 "state. Refuses rather than approximates: 501 if the store "
-                "keeps no version history, 410 if this document's history was "
+                "keeps no version history, 410 if this instance's history was "
                 "pruned past the instant, 404 if it did not exist yet."
             ),
         ),
     ) -> dict[str, Any]:
-        """Ler UM documento de ``{kind}``, VERBATIM — o que a lista não dá.
+        """Ler UM instância de ``{kind}``, VERBATIM — o que a lista não dá.
 
         A lista com ``fields`` projeta pela VISTA quando o Kind é produzível
         por readers (Agent, Skill…), e a vista normaliza — campos reais do
         spec gravado (``description``, ``tools_requiring_confirmation`` de um
         Agent) não viajam por ela. Quem gravou pelo POST genérico precisa
         conseguir ler DE VOLTA o que gravou: esta rota é o
-        ``get_document_impl`` de sempre, na mesma fronteira de confiança do
+        ``get_instance_impl`` de sempre, na mesma fronteira de confiança do
         POST (só ``tenant``; o scope é derivado, nunca nomeado).
 
-        404 nomeia o que faltou — o Kind desconhecido ou o documento.
+        404 nomeia o que faltou — o Kind desconhecido ou a instância.
 
         ``as_of`` (i-106) é a leitura no TEMPO, e chegou aqui por um defeito, não
         por um pedido: esta rota já **aceitava** ``?as_of=`` — o FastAPI descarta
@@ -1883,7 +1883,7 @@ def build_app(
 
         live = await _live()
         try:
-            return await get_document_impl(
+            return await get_instance_impl(
                 live, kind=kind, name=name, tenant=tenant,
                 api_version=api_version, as_of=as_of,
             )
@@ -1894,7 +1894,7 @@ def build_app(
         except AsOfTruncated as exc:
             # 410 Gone, and it must NOT be the 404 the sibling branch gives: the
             # pruning is deliberate and permanent, and "no record" is not
-            # "no document". LookupError's subclass, so this except comes FIRST.
+            # "no instance". LookupError's subclass, so this except comes FIRST.
             raise HTTPException(status_code=410, detail=str(exc)) from None
         except LookupError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
@@ -1905,7 +1905,7 @@ def build_app(
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from None
 
-    @app.get("/v1/kinds/{kind}/documents/{name}/refs", dependencies=guarded,
+    @app.get("/v1/kinds/{kind}/instances/{name}/refs", dependencies=guarded,
              response_model=m.GraphRefsResponse)
     async def graph_refs(
         kind: str,
@@ -1915,7 +1915,7 @@ def build_app(
         direction: str = Query(default="in"),
         depth: int = Query(default=1, ge=1),
     ) -> dict[str, Any]:
-        """"O que depende deste documento?" — o grafo de DADO, com profundidade.
+        """"O que depende desta instância?" — o grafo de DADO, com profundidade.
 
         A tela do Kind sempre soube dizer que ``Story.feature → Feature``
         existe como REGRA, e nunca soube dizer que ESTAS 47 Stories apontam
@@ -1924,7 +1924,7 @@ def build_app(
         nada aqui deriva, adivinha ou lê slug.
 
         ``direction=in`` (o default, e a pergunta do produto) traz quem aponta
-        para cá; ``out`` o que este documento aponta; ``both`` a união.
+        para cá; ``out`` o que esta instância aponta; ``both`` a união.
         ``depth`` é OBRIGATÓRIO ter teto: ``Spec.supersedes`` e
         ``Story.dependencies`` são auto-referentes por desenho, e uma travessia
         sem limite aqui é incidente de produção, não risco teórico. O valor é
@@ -1932,7 +1932,7 @@ def build_app(
 
         **501, nunca lista vazia**, quando o adapter ativo não guarda arestas
         (o filesystem não tem transação nem tabela para guardá-las). ``[]``
-        se lê como "nada aponta para este documento", e essa é uma afirmação
+        se lê como "nada aponta para esta instância", e essa é uma afirmação
         que só um store que de fato registra arestas pode fazer.
         """
         from dna.kernel.query.graph import GraphUnsupported
@@ -1950,18 +1950,18 @@ def build_app(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
 
-    @app.post("/v1/kinds/{kind}/documents", dependencies=guarded, status_code=201,
-              response_model=m.WriteKindDocumentResponse)
-    async def write_kind_document(
+    @app.post("/v1/kinds/{kind}/instances", dependencies=guarded, status_code=201,
+              response_model=m.WriteKindInstanceResponse)
+    async def write_kind_instance(
         request: Request,
         kind: str,
-        body: m.WriteKindDocumentRequest,
+        body: m.WriteKindInstanceRequest,
         api_version: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
         merge: bool = Query(default=True),
         if_match: str | None = Query(default=None),
     ) -> dict[str, Any]:
-        """Write one document of ``{kind}`` — the generic door, kubernetes-shaped.
+        """Write one instance of ``{kind}`` — the generic door, kubernetes-shaped.
 
         The body is exactly ``{metadata, spec}`` (plus the optional
         ``source_sha256`` provenance citation). ``metadata.name`` is
@@ -1970,7 +1970,7 @@ def build_app(
         (redundant, not wrong).
 
         The write goes through the kernel's own pipeline exactly as the MCP
-        ``write_document`` tool's does: the Kind's JSON Schema validates
+        ``write_instance`` tool's does: the Kind's JSON Schema validates
         ``spec`` and names the offending field on refusal (400), a BOOTSTRAP
         Kind (Genome / LayerPolicy / KindDefinition) is refused (403, the
         generic write's own gate — untouched, not relaxed here), an authored
@@ -1980,9 +1980,9 @@ def build_app(
         Kind is a 404 naming it, and a stale ``if_match`` is a 409.
 
         ``source_sha256`` (optional) cites the ``SourceArtifact`` this
-        document was extracted from (by content address); the runtime closes
+        instance was extracted from (by content address); the runtime closes
         the ``derived_refs`` provenance edge server-side, preserving every
-        OTHER document already recorded there and updating THIS document's
+        OTHER instance already recorded there and updating THIS instance's
         own entry in place on a re-write — never accreting a duplicate. A
         ``source_sha256`` that names no registered artifact under ``tenant``
         is refused (400)."""
@@ -2007,7 +2007,7 @@ def build_app(
             request, kind=kind, api_version=api_version, tenant=tenant,
         )
         try:
-            return await write_document_impl(
+            return await write_instance_impl(
                 await _live(), kind=kind, name=name, spec=body.spec,
                 tenant=tenant, api_version=api_version, merge=merge,
                 if_match=if_match, source_sha256=body.source_sha256,
@@ -2027,7 +2027,7 @@ def build_app(
 
     # -- bundle entries (list/read/write/revert a bundle-file fork, plane B) -
     # A bundle-pattern Kind (Skill, and any future bundle Kind) stores MULTIPLE
-    # files per document, not a single spec — these routes are the file-grained
+    # files per instance, not a single spec — these routes are the file-grained
     # twin of the three definition routes above, generic over any bundle Kind
     # (routed by the Kind's StorageDescriptor pattern, never Skill-specific),
     # with the SAME LayerPolicy governance: a fork on a LOCKED Kind is vetoed
@@ -2042,7 +2042,7 @@ def build_app(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
     ) -> dict[str, Any]:
-        """List a bundle document's entry files (base ∪ tenant overlay), each
+        """List a bundle instance's entry files (base ∪ tenant overlay), each
         flagged ``overridden`` — whether THIS tenant forked that specific
         file. 404 for a non-bundle Kind or an unknown (kind, name)."""
         live = await _live()
@@ -2847,7 +2847,7 @@ def build_app(
     # GLOBAL / _lib-direct: the doc's name == the account_id, so there is no query
     # param — `account_id` is the body key being assigned. Delegates to the CORE
     # set_account_plan_impl (zero logic here); idempotent under Stripe retries
-    # (write_document upserts on name).
+    # (write_instance upserts on name).
     @app.put("/v1/account-plan", dependencies=guarded,
              response_model=m.AccountPlanResponse)
     async def put_account_plan(
@@ -2981,11 +2981,11 @@ def build_app(
         deliberately not accepted from the caller.
 
         IDEMPOTENT by content address: the same ``sha256`` updates the same
-        document, so a retried upload leaves no second artifact behind — and an
+        instance, so a retried upload leaves no second artifact behind — and an
         existing ``derived_refs`` survives the retry rather than being blanked.
 
         ``uri`` names where the bytes live and must NOT be a signed URL: a
-        stored credential would make the document itself the access to its own
+        stored credential would make the instance itself the access to its own
         original. 400 on a blank workspace_id / sha256 / uri."""
         effective = _actor_claims_from_state(request) or claims or {}
         try:
@@ -3155,7 +3155,7 @@ def build_app(
     # SEGUNDO `boot_live`.
     #
     # Dois kernels sobre a mesma fonte não são só um pool de conexões a mais:
-    # são duas caches de Kind e duas janelas de refresh. Um documento reescrito
+    # são duas caches de Kind e duas janelas de refresh. Uma instância reescrito
     # fica visível numa e não na outra, e o sintoma aparece longe da causa.
     #
     # É a MESMA corrotina memoizada que as rotas usam — não um segundo boot com

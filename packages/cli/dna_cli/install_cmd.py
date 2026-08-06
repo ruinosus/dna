@@ -1,9 +1,9 @@
 """``dna install`` — install bundles/Kinds from an external repo (s-dna-install).
 
 The front door of the ecosystem: fetch a tree from a repository, detect the
-DNA documents inside it with the kernel's registered readers, validate each
+DNA instances inside it with the kernel's registered readers, validate each
 one, and write the valid ones into the local source through
-``kernel.write_document`` — so every write guard the kernel has (schema
+``kernel.write_instance`` — so every write guard the kernel has (schema
 vetoes, tenancy rules, Kind retirement blocks) runs exactly as it would for
 a locally-authored doc.
 
@@ -18,19 +18,19 @@ code you have reviewed. ``dna install`` treats them accordingly (the layered
 defense SECURITY.md's threat model calls for — "a manifest is executable
 behavior"):
 
-  * only documents whose ``(apiVersion, kind)`` resolves to a registered
+  * only instances whose ``(apiVersion, kind)`` resolves to a registered
     KindPort are considered — everything else is rejected, not guessed at;
   * each doc's ``spec`` is validated against the Kind's JSON Schema BEFORE
     any write (the first defense); the kernel's own ``pre_save`` veto guards
     then run as the second;
-  * document names must be plain slugs — path-shaped names (``../evil``)
+  * instance names must be plain slugs — path-shaped names (``../evil``)
     are rejected before they ever reach the filesystem adapter;
   * root Kinds (Genome) found in the fetched tree are never installed:
     ``dna install`` installs CONTENT into your scope, it does not let a
     remote repo redefine the scope's identity.
 
 Provenance: every install upserts ``<scope>/installed.lock`` (the lockfile
-shape from ``dna.kernel.lock`` — v3), recording per document the origin URI
+shape from ``dna.kernel.lock`` — v3), recording per instance the origin URI
 pinned to the resolved commit, the path inside the fetched tree, and a
 SHA-256 of the installed raw doc.
 """
@@ -61,18 +61,18 @@ _SKIP_DIRS = {"node_modules", "__pycache__"}
 
 @dataclass
 class ScannedDoc:
-    """One raw document found in the fetched tree."""
+    """One raw instance found in the fetched tree."""
     raw: dict
     rel_path: str  # path of the bundle dir / yaml file, relative to the root
 
 
 def _scan_tree(root: Path, readers: list, writers: list | None = None) -> list[ScannedDoc]:
-    """Walk ``root`` detecting documents with the registered readers.
+    """Walk ``root`` detecting instances with the registered readers.
 
     Mirrors ``FilesystemCache._read_tree`` (the kernel's own reader-driven
     scan of resolved dependencies) with two install-specific twists: the
     root directory itself is probed first (so a URI can point straight at a
-    single bundle), and standalone ``*.yaml`` documents are collected at
+    single bundle), and standalone ``*.yaml`` instances are collected at
     every level.
 
     A claim consumes its BUNDLE, not the subtree (i-016). When a reader
@@ -156,7 +156,7 @@ def _scan_tree(root: Path, readers: list, writers: list | None = None) -> list[S
 
 @dataclass
 class PlanItem:
-    """One document in the install plan."""
+    """One instance in the install plan."""
     kind: str
     name: str
     api_version: str
@@ -176,7 +176,7 @@ def _validate_doc(kernel, scanned: ScannedDoc) -> str | None:
     name = ((raw.get("metadata") or {}).get("name")) or ""
 
     if not name or not isinstance(name, str):
-        return "document has no metadata.name"
+        return "instance has no metadata.name"
     if not _SAFE_NAME.match(name) or ".." in name:
         return (
             f"name {name!r} is not a plain slug — path-shaped names are "
@@ -239,7 +239,7 @@ async def _build_plan(
             continue
         seen.add((kind, name))
         try:
-            existing = await kernel.get_document(scope, kind, name)
+            existing = await kernel.get_instance(scope, kind, name)
         except FileNotFoundError:
             existing = None  # scope not born yet — no local doc to conflict with
         if existing is not None:
@@ -277,7 +277,7 @@ def _write_provenance(
     lock_path = Path(base_dir) / scope / "installed.lock"
     existing = read_lockfile(lock_path)
     merged: dict[tuple[str, str], LockEntry] = {
-        (e.kind, e.name): e for e in existing.documents
+        (e.kind, e.name): e for e in existing.instances
     }
     for item in installed:
         digest = hashlib.sha256(
@@ -289,7 +289,7 @@ def _write_provenance(
         )
     lock = Lockfile(
         scope=scope,
-        documents=sorted(merged.values(), key=lambda e: (e.kind, e.name)),
+        instances=sorted(merged.values(), key=lambda e: (e.kind, e.name)),
     )
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     write_lockfile(lock, lock_path)
@@ -397,7 +397,7 @@ def _print_plan(plan: list[PlanItem], scope: str, describe: str) -> None:
 )
 @click.option(
     "--force", is_flag=True,
-    help="Overwrite documents that already exist locally (default: skip "
+    help="Overwrite instances that already exist locally (default: skip "
          "them with a warning).",
 )
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable summary.")
@@ -407,8 +407,8 @@ def install(uri: str, scope_opt: str | None, dry_run: bool, force: bool, as_json
     URI is `github:owner/repo[/subdir][@ref]` (shallow clone) or
     `local:<path>` (a directory on disk). The fetched tree is scanned with the kernel's
     registered readers (Skill/Soul/AGENTS.md bundles, standalone YAML docs,
-    ...); each detected document is validated and then written through
-    kernel.write_document, so every write guard runs.
+    ...); each detected instance is validated and then written through
+    kernel.write_instance, so every write guard runs.
 
     Third-party manifests are UNTRUSTED DATA: schema validation is the first
     defense (an invalid doc is rejected with the reason; the install
@@ -433,7 +433,7 @@ def install(uri: str, scope_opt: str | None, dry_run: bool, force: bool, as_json
         scanned = _scan_tree(fetched.root, readers, writers=list(kernel.active_writers))
         if not scanned:
             raise fail(
-                f"no DNA documents detected in {fetched.describe} — nothing the "
+                f"no DNA instances detected in {fetched.describe} — nothing the "
                 f"registered readers or the standalone-YAML scan recognize. "
                 f"Point the URI at a subtree that contains bundles "
                 f"(e.g. github:owner/repo/skills)."
@@ -476,7 +476,7 @@ def install(uri: str, scope_opt: str | None, dry_run: bool, force: bool, as_json
                 or (scope_dir / "manifest.yaml").exists()
             )
             if not has_genome:
-                await kernel.write_document(scope, "Genome", scope, {
+                await kernel.write_instance(scope, "Genome", scope, {
                     "apiVersion": "github.com/ruinosus/dna/v1",
                     "kind": "Genome",
                     "metadata": {
@@ -487,7 +487,7 @@ def install(uri: str, scope_opt: str | None, dry_run: bool, force: bool, as_json
                 })
             for item in writes:
                 try:
-                    await kernel.write_document(scope, item.kind, item.name, item.raw)
+                    await kernel.write_instance(scope, item.kind, item.name, item.raw)
                     installed.append(item)
                 except Exception as e:  # noqa: BLE001 — guard veto/adapter error on ONE doc
                     item.action = "reject"

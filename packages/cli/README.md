@@ -1,7 +1,7 @@
 # dna-cli
 
 The `dna` command-line interface for **DNA — Domain Notation of Anything**:
-document CRUD (`dna doc`, `dna kind`, `dna scope`, `dna source`), semantic
+instance CRUD (`dna doc`, `dna kind`, `dna scope`, `dna source`), semantic
 recall and memory (`dna recall`, `dna memory`), research syntheses
 (`dna research`), and a declarative, story-first SDLC (`dna sdlc`) — all
 kernel-local against your filesystem or SQL source, no service required.

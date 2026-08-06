@@ -217,7 +217,7 @@ def _seed_acme_overlay(dna_dir):
                 "model": "azure/gpt-4o",
             },
         }
-        await live.kernel.with_tenant("acme").write_document(_SCOPE, "Agent", _AGENT, overlay)
+        await live.kernel.with_tenant("acme").write_instance(_SCOPE, "Agent", _AGENT, overlay)
 
     asyncio.run(go())
 
@@ -350,7 +350,7 @@ def test_protected_resource_metadata_advertised(dna_dir, http_server, free_port)
         )
         assert resp.status_code == 200, resp.text
         meta = resp.json()
-        # RFC 9728: the document names the resource + its authorization server(s).
+        # RFC 9728: the instance names the resource + its authorization server(s).
         assert "resource" in meta
         assert "authorization_servers" in meta
 
@@ -400,7 +400,7 @@ def test_prm_advertises_authorization_servers_verbatim(dna_dir, http_server, fre
     assert meta["authorization_servers"] == [_AS_BARE, _AS_SLASHED, _AS_PATHED]
     # …and the raw bytes really do carry the un-slashed identifier.
     assert f'"{_AS_BARE}"' in resp.text
-    # Every OTHER field of the document is untouched by the fix.
+    # Every OTHER field of the instance is untouched by the fix.
     assert meta["resource"] == f"{base_url}/mcp"
     assert meta["scopes_supported"] == ["openid", "profile"]
     assert meta["bearer_methods_supported"] == ["header"]
@@ -434,7 +434,7 @@ def test_prm_route_still_answers_cors_preflight(dna_dir, http_server, free_port)
 
 
 def _prm_body(provider, *, mcp_path: str = "/mcp") -> dict:
-    """GET the provider's PRM document in-process (no socket) and return the
+    """GET the provider's PRM instance in-process (no socket) and return the
     parsed body — the serialized bytes, not a Python model."""
     import httpx
     from starlette.applications import Starlette

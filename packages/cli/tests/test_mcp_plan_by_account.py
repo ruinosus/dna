@@ -145,25 +145,25 @@ async def _seed(
     from dna_cli import _mcp_server as M
 
     live = await M.boot_live(base_dir=str(dna_dir))
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         "_lib", "PricingPlan", "free",
         _tier_doc("free", calls_per_day=2,
                   families=["definitions", "sdlc", "memory"], memory_mode="read"),
     )
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         "_lib", "PricingPlan", "pro",
         _tier_doc("pro", calls_per_day=10000,
                   families=["definitions", "sdlc", "memory", "emit"],
                   memory_mode="write"),
     )
     for workspace_id, account_id in workspaces:
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             "_lib", "Workspace", workspace_id,
             _workspace_doc(workspace_id, account_id),
         )
     if account_plan is not None:
         account_id, tier_id = account_plan
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             "_lib", "PlanBinding", account_id,
             _account_plan_doc(account_id, tier_id),
         )

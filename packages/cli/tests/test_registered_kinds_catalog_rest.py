@@ -6,7 +6,7 @@ como ``list_kinds``), mas a read-API só tinha a porta SINGULAR
 ``/v1/kinds/registry/{kind}``. Sem a coleção, todo consumidor REST que
 precisava da lista era obrigado a hardcodar uma — e lista hardcodada é
 exatamente como um Kind registrado amanhã nasce invisível. Foi o defeito
-medido: 121 documentos em 9 Kinds sem nenhuma tela no portal.
+medido: 121 instâncias em 9 Kinds sem nenhuma tela no portal.
 
 O que este módulo prende:
 
@@ -16,7 +16,7 @@ O que este módulo prende:
   ``write_refusal`` para um Kind BOOTSTRAP;
 * a rota não é engolida por ``/v1/kinds/{kind}`` (ordem de declaração), o
   mesmo risco que a irmã singular já prende;
-* ``tenant`` deriva o scope como toda rota de documento.
+* ``tenant`` deriva o scope como toda rota de instância.
 
 App real via ``TestClient`` — mesmo padrão de ``test_registered_kind_rest.py``.
 """

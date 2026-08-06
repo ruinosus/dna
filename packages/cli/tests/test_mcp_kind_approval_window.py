@@ -4,17 +4,17 @@ The core seam is measured in ``packages/sdk-py/tests/
 test_kind_approval_rebuild_trigger.py``; this file answers the only question that
 file cannot: is the seam actually WIRED into the served face?
 
-It matters because the MCP document tools do not call the core use-cases
-directly — ``_mcp_documents._guard_for`` resolves the Kind itself, before the
+It matters because the MCP instance tools do not call the core use-cases
+directly — ``_mcp_instances._guard_for`` resolves the Kind itself, before the
 use-case runs, so that it can meter the call against the target Kind's family
-(i-081). A fix applied only inside ``dna.application.documents`` would be
+(i-081). A fix applied only inside ``dna.application.instances`` would be
 bypassed by that earlier resolution and the served product would still answer
 "Kind not registered" for a Kind the workspace had just approved.
 
 The setup is a real two-replica one: a ``boot_live`` handle authors and approves
 the Kind, and the SERVER — a different process-shaped handle over the same store
 — is warmed BEFORE that happens and never told. Nothing invalidates the server,
-nothing rebuilds it. The only thing that can make the write land is the document
+nothing rebuilds it. The only thing that can make the write land is the instance
 tool's own refresh.
 """
 from __future__ import annotations
@@ -121,7 +121,7 @@ def test_the_document_tools_pick_up_a_kind_approved_elsewhere(dna_dir):
     # build would happen after the approval and would register the Kind for
     # reasons that have nothing to do with the fix.
     _call(server, "list_kinds", {"scope": _SCOPE})
-    msg = _refused(server, "write_document", {
+    msg = _refused(server, "write_instance", {
         "kind": "Deal", "name": "deal-early", "scope": _SCOPE,
         "spec": {"titulo": "cedo demais"}})
     assert "not registered" in msg, msg
@@ -129,7 +129,7 @@ def test_the_document_tools_pick_up_a_kind_approved_elsewhere(dna_dir):
     _approve_on_a_sibling_replica(dna_dir)
     time.sleep(float(_TTL) * 2)
 
-    out = _call(server, "write_document", {
+    out = _call(server, "write_instance", {
         "kind": "Deal", "name": "deal-1", "scope": _SCOPE,
         "spec": {"titulo": "chegou"}})
     assert "deal-1" in str(out)
@@ -143,7 +143,7 @@ def test_the_document_tools_close_on_a_revocation_made_elsewhere(dna_dir):
     """The half that must not lag: revoke on replica A → the SERVER refuses.
 
     A revocation that only tightens "eventually" leaves the served face
-    accepting documents of a Kind the workspace has already withdrawn."""
+    accepting instances of a Kind the workspace has already withdrawn."""
     pytest.importorskip("fastmcp")
     from dna_cli import _mcp_server as M
 
@@ -151,14 +151,14 @@ def test_the_document_tools_close_on_a_revocation_made_elsewhere(dna_dir):
     _call(server, "list_kinds", {"scope": _SCOPE})
     _approve_on_a_sibling_replica(dna_dir)
     time.sleep(float(_TTL) * 2)
-    _call(server, "write_document", {
+    _call(server, "write_instance", {
         "kind": "Deal", "name": "deal-before", "scope": _SCOPE,
         "spec": {"titulo": "antes"}})
 
     _approve_on_a_sibling_replica(dna_dir, revoke=True)
     time.sleep(float(_TTL) * 2)
 
-    msg = _refused(server, "write_document", {
+    msg = _refused(server, "write_instance", {
         "kind": "Deal", "name": "deal-after", "scope": _SCOPE,
         "spec": {"titulo": "depois"}})
     assert "revoked" in msg.lower(), msg

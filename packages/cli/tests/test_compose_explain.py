@@ -65,7 +65,7 @@ def dna_dir(tmp_path, monkeypatch):
 
 async def _overlay_agent(live) -> None:
     """Write the acme per-tenant override of the concierge Agent instruction."""
-    await live.kernel.with_tenant("acme").write_document(
+    await live.kernel.with_tenant("acme").write_instance(
         _SCOPE, "Agent", _AGENT,
         {
             "apiVersion": "github.com/ruinosus/dna/v1",
@@ -200,7 +200,7 @@ def test_attribution_heuristic_for_custom_template(dna_dir):
     the contract says so instead of pretending precision."""
     async def scenario():
         live = await M.boot_live(base_dir=str(dna_dir))
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _SCOPE, "Agent", "custom-tpl",
             {
                 "apiVersion": "github.com/ruinosus/dna/v1",
@@ -280,7 +280,7 @@ def test_rest_compose_explain_unknown_agent_404(rest_client):
 
 
 def test_rest_openapi_documents_explain(rest_client):
-    """The OpenAPI contract DOCUMENTS the semantics: the query param exists and
+    """The OpenAPI contract INSTANCES the semantics: the query param exists and
     the response schema explains the attribution honesty rule."""
     spec = rest_client.app.openapi()
     op = spec["paths"]["/v1/agents/{name}/prompt"]["get"]

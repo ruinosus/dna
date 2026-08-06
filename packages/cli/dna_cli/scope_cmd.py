@@ -49,7 +49,7 @@ def list_scopes(as_json: bool, tenant: str | None) -> None:
 @click.option("--json", "as_json", is_flag=True)
 @click.option("--tenant", default=None, help="Route as this tenant (overrides DNA_TENANT).")
 def tree(scope_name: str | None, as_json: bool, tenant: str | None) -> None:
-    """Inventory all documents in a scope, grouped by Kind.
+    """Inventory all instances in a scope, grouped by Kind.
 
     Migrated to dna-client (HTTP /scopes/{X}/tree) so it doesn't need
     DNA_SOURCE_URL set in the CLI's own env — the kinds-api already

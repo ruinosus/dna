@@ -63,7 +63,7 @@ def cmd_reference_create(
         spec["tags"] = list(tags)
     raw = _build_raw("Reference", name, spec)
     with open_session(scope) as s:
-        s.run(s.kernel.write_document(scope, "Reference", name, raw))
+        s.run(s.kernel.write_instance(scope, "Reference", name, raw))
     click.secho(f"CREATED Reference/{name} (kind_of={kind_of})", fg="green")
 
 
@@ -177,7 +177,7 @@ def cmd_cite(cited: str, from_ref: str, scope: str) -> None:
             rspec["cited_by"] = cited_by
             rspec["updated_at"] = _now_iso()
             rraw = _build_raw(cited_kind, cited_name, rspec)
-            s.run(s.kernel.write_document(scope, cited_kind, cited_name, rraw))
+            s.run(s.kernel.write_instance(scope, cited_kind, cited_name, rraw))
         # Forward: caller.spec.references += cited_ref. Bare Reference names
         # stay bare (compat); cross-Kind citations store the qualified ref.
         forward = cited_name if cited_kind == _CITE_DEFAULT_KIND else cited_ref
@@ -188,7 +188,7 @@ def cmd_cite(cited: str, from_ref: str, scope: str) -> None:
             cspec["references"] = refs
             cspec["updated_at"] = _now_iso()
             craw = _build_raw(caller_kind, caller_name, cspec)
-            s.run(s.kernel.write_document(scope, caller_kind, caller_name, craw))
+            s.run(s.kernel.write_instance(scope, caller_kind, caller_name, craw))
     click.secho(f"CITED {cited_ref} ← {from_ref}", fg="green")
 
 
@@ -214,7 +214,7 @@ def cmd_uncite(cited: str, from_ref: str, scope: str) -> None:
             rspec["cited_by"] = cited_by
             rspec["updated_at"] = _now_iso()
             rraw = _build_raw(cited_kind, cited_name, rspec)
-            s.run(s.kernel.write_document(scope, cited_kind, cited_name, rraw))
+            s.run(s.kernel.write_instance(scope, cited_kind, cited_name, rraw))
         if caller_doc:
             cspec = dict(caller_doc.spec) if isinstance(caller_doc.spec, dict) else {}
             # Tolerate either the bare or qualified form in the caller's list.
@@ -225,5 +225,5 @@ def cmd_uncite(cited: str, from_ref: str, scope: str) -> None:
             cspec["references"] = refs
             cspec["updated_at"] = _now_iso()
             craw = _build_raw(caller_kind, caller_name, cspec)
-            s.run(s.kernel.write_document(scope, caller_kind, caller_name, craw))
+            s.run(s.kernel.write_instance(scope, caller_kind, caller_name, craw))
     click.secho(f"UNCITED {cited_ref} ← {from_ref}", fg="yellow")

@@ -50,7 +50,7 @@ depends_on = None
 PG_DDL: list[str] = [
     # --- v1 -----------------------------------------------------------
     """
-CREATE TABLE IF NOT EXISTS {schema}.dna_instances (
+CREATE TABLE IF NOT EXISTS {schema}.dna_documents (
     scope      TEXT NOT NULL,
     kind       TEXT NOT NULL,
     name       TEXT NOT NULL,
@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS {schema}.dna_versions (
 )
 """,
     """
-CREATE TABLE IF NOT EXISTS {schema}.dna_layer_instances (
+CREATE TABLE IF NOT EXISTS {schema}.dna_layer_documents (
     scope       TEXT NOT NULL,
     layer_id    TEXT NOT NULL,
     layer_value TEXT NOT NULL,
@@ -109,7 +109,7 @@ CREATE INDEX IF NOT EXISTS dna_bundle_entries_scope_kind_idx
     # --- v3 tenant indexes --------------------------------------------
     """
 CREATE INDEX IF NOT EXISTS dna_documents_tenant_idx
-    ON {schema}.dna_instances (tenant, scope, kind, name)
+    ON {schema}.dna_documents (tenant, scope, kind, name)
 """,
     """
 CREATE INDEX IF NOT EXISTS dna_versions_tenant_idx
@@ -164,27 +164,27 @@ CREATE TABLE IF NOT EXISTS {schema}.dna_versions_seq (
 """,
     # --- v8 hot-field expression indices -------------------------------
     """
-CREATE INDEX IF NOT EXISTS dna_insts_status_idx
-    ON {schema}.dna_instances ((content::jsonb->'spec'->>'status'))
+CREATE INDEX IF NOT EXISTS dna_docs_status_idx
+    ON {schema}.dna_documents ((content::jsonb->'spec'->>'status'))
     WHERE content::jsonb ? 'spec'
 """,
     """
-CREATE INDEX IF NOT EXISTS dna_insts_feature_idx
-    ON {schema}.dna_instances ((content::jsonb->'spec'->>'feature'))
+CREATE INDEX IF NOT EXISTS dna_docs_feature_idx
+    ON {schema}.dna_documents ((content::jsonb->'spec'->>'feature'))
     WHERE content::jsonb ? 'spec'
 """,
     """
-CREATE INDEX IF NOT EXISTS dna_insts_updated_at_idx
-    ON {schema}.dna_instances ((content::jsonb->'spec'->>'updated_at'))
+CREATE INDEX IF NOT EXISTS dna_docs_updated_at_idx
+    ON {schema}.dna_documents ((content::jsonb->'spec'->>'updated_at'))
     WHERE content::jsonb ? 'spec'
 """,
     """
-CREATE INDEX IF NOT EXISTS dna_insts_spec_gin_idx
-    ON {schema}.dna_instances USING gin ((content::jsonb->'spec'))
+CREATE INDEX IF NOT EXISTS dna_docs_spec_gin_idx
+    ON {schema}.dna_documents USING gin ((content::jsonb->'spec'))
     WHERE content::jsonb ? 'spec'
 """,
     # v7 created dna_edges and v10 dropped it again — the net effect is
-    # nothing, so the baseline creates nothing. (i-039 instances why the
+    # nothing, so the baseline creates nothing. (i-039 documents why the
     # table was dead scaffolding: nothing ever inserted a row.)
 ]
 
@@ -195,7 +195,7 @@ CREATE INDEX IF NOT EXISTS dna_insts_spec_gin_idx
 SQLITE_DDL: list[str] = [
     # --- v1 (tenant added by v4, nullable — NOT in the PK, i-092) ------
     """
-CREATE TABLE IF NOT EXISTS instances (
+CREATE TABLE IF NOT EXISTS documents (
     scope      TEXT NOT NULL,
     kind       TEXT NOT NULL,
     name       TEXT NOT NULL,
@@ -225,7 +225,7 @@ CREATE TABLE IF NOT EXISTS versions (
 """,
     # --- v2 ------------------------------------------------------------
     """
-CREATE TABLE IF NOT EXISTS layer_instances (
+CREATE TABLE IF NOT EXISTS layer_documents (
     scope       TEXT NOT NULL,
     layer_id    TEXT NOT NULL,
     layer_value TEXT NOT NULL,
@@ -260,7 +260,7 @@ CREATE INDEX IF NOT EXISTS bundle_entries_tenant_idx
     # --- v4 ------------------------------------------------------------
     """
 CREATE INDEX IF NOT EXISTS documents_tenant_idx
-    ON instances (tenant, scope, kind, name)
+    ON documents (tenant, scope, kind, name)
 """,
     # --- v5 + v6 (v5's Module index was replaced by v6's Genome one) ---
     """
@@ -276,15 +276,15 @@ CREATE INDEX IF NOT EXISTS versions_package_lookup
     # --- v7 expression indices -----------------------------------------
     """
 CREATE INDEX IF NOT EXISTS docs_status_idx
-    ON instances (scope, kind, json_extract(content, '$.spec.status'))
+    ON documents (scope, kind, json_extract(content, '$.spec.status'))
 """,
     """
 CREATE INDEX IF NOT EXISTS docs_feature_idx
-    ON instances (scope, kind, json_extract(content, '$.spec.feature'))
+    ON documents (scope, kind, json_extract(content, '$.spec.feature'))
 """,
     """
 CREATE INDEX IF NOT EXISTS docs_updated_at_idx
-    ON instances (scope, kind, json_extract(content, '$.spec.updated_at'))
+    ON documents (scope, kind, json_extract(content, '$.spec.updated_at'))
 """,
 ]
 

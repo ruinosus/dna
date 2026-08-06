@@ -2,7 +2,7 @@
 
 Replaces the multi-step protocol (edit YAML → DELETE Postgres rows →
 reseed → restart harness → curl) with one-line commands that go through
-the kernel's write_document path. The kernel handles cache invalidation
+the kernel's write_instance path. The kernel handles cache invalidation
 via the EventBus (Phase 15.1 on Postgres) so subscribers see writes
 immediately — no reseed, no restart.
 
@@ -79,7 +79,7 @@ from dna.extensions.sdlc import (  # noqa: E402
     validate_spec_transition,
 )
 
-# The shared spine (clock, actor, git/gh probes, timeline appender, document
+# The shared spine (clock, actor, git/gh probes, timeline appender, instance
 # envelope, post-transition hooks, scope resolution) moved to the decomposed
 # package in ``dna_cli.sdlc._common``. Re-exported here so that
 # ``from dna_cli.sdlc_cmd import X`` — the path tests and host platforms use —
@@ -149,7 +149,7 @@ def _kaizen_slug(body: str) -> str:
     whole ``i-`` collision (13 Issues on 4 numbers, then two ``i-101``): the
     counter is ``max+1`` over one worktree's files, so two trees produce two
     ``kz-NNN-<different slug>`` and git merges both. The slug is what keeps the
-    two documents from overwriting each other; the number is a label.
+    two instances from overwriting each other; the number is a label.
     """
     base = re.sub(r"[^a-z0-9]+", "-", body.lower()).strip("-")
     return base[:28].rstrip("-") or "obs"
@@ -177,7 +177,7 @@ def _write_kaizen_doc(s: Any, scope: str, slug: str, spec: dict) -> str:
     cannot promise it. Before #321 the Issue path wrote bare here too, which
     made a name guessed twice an UPSERT — a Kaizen observation silently
     replacing another one, with no trace that two had ever existed."""
-    from dna.kernel.errors import DocumentNameTaken
+    from dna.kernel.errors import InstanceNameTaken
 
     names = [d.name for d in s.query_list("Kaizen")]
     elsewhere = _sibling_worktree_names(scope, "kz")
@@ -186,7 +186,7 @@ def _write_kaizen_doc(s: Any, scope: str, slug: str, spec: dict) -> str:
     if dupes:
         click.secho(
             f"⚠️  {len(dupes)} id(s) de Kaizen reivindicado(s) por mais de um "
-            f"documento: "
+            f"instância: "
             + "; ".join(f"kz-{n:03d} ({', '.join(v)})" for n, v in dupes.items()),
             fg="yellow", err=True,
         )
@@ -195,13 +195,13 @@ def _write_kaizen_doc(s: Any, scope: str, slug: str, spec: dict) -> str:
         name = f"kz-{candidate:03d}-{slug}"
         raw = _build_raw("Kaizen", name, spec)
         try:
-            s.run(s.kernel.write_document(
+            s.run(s.kernel.write_instance(
                 scope, "Kaizen", name, raw, if_absent=True))
             return name
         except NotImplementedError:
-            s.run(s.kernel.write_document(scope, "Kaizen", name, raw))
+            s.run(s.kernel.write_instance(scope, "Kaizen", name, raw))
             return name
-        except DocumentNameTaken:
+        except InstanceNameTaken:
             continue
     raise fail(  # pragma: no cover — 1000 consecutive taken names
         f"nenhum nome livre para Kaizen a partir de kz-{start:03d} "
@@ -719,7 +719,7 @@ def cmd_story_create(
     raw = _build_raw("Story", name, spec)
     with open_session(scope) as s:
         # CREATE means create (item 9). This command hand-builds its spec and
-        # wrote it with a bare ``write_document`` — an UPSERT keyed on the name —
+        # wrote it with a bare ``write_instance`` — an UPSERT keyed on the name —
         # so `story create` on a name already taken silently replaced that
         # Story's status, timeline, acceptance_criteria and definition_of_done
         # and printed CREATED. #242 closed exactly this hole on the MCP side and
@@ -734,7 +734,7 @@ def cmd_story_create(
             s.run(refuse_if_exists(s.kernel, scope, "Story", name))
         except DocumentExists as exc:
             raise fail(str(exc)) from None
-        s.run(s.kernel.write_document(scope, "Story", name, raw))
+        s.run(s.kernel.write_instance(scope, "Story", name, raw))
     click.secho(f"CREATED Story/{name} (feature: {feature}, status: {status})", fg="green")
 
 
@@ -769,7 +769,7 @@ def _update_story_status(
             **{"from": prev_status, "to": new_status, **timeline_extras},
         )
         raw = _build_raw("Story", name, spec)
-        s.run(s.kernel.write_document(scope, "Story", name, raw))
+        s.run(s.kernel.write_instance(scope, "Story", name, raw))
     click.secho(f"UPDATED Story/{name} → {new_status}", fg="green")
 
 
@@ -787,7 +787,7 @@ def _post_story_note(scope: str, name: str, note: str) -> None:
         _append_timeline(spec, event_type, summary=note)
         spec["updated_at"] = _now_iso()
         raw = _build_raw("Story", name, spec)
-        s.run(s.kernel.write_document(scope, "Story", name, raw))
+        s.run(s.kernel.write_instance(scope, "Story", name, raw))
 
 
 def _load_story_spec(scope: str, name: str) -> dict[str, Any]:
@@ -902,7 +902,7 @@ def _create_minimal_plan(
         spec["methodology"] = methodology
     with open_session(scope) as s:
         raw = _build_raw("Plan", plan_name, spec)
-        s.run(s.kernel.write_document(scope, "Plan", plan_name, raw))
+        s.run(s.kernel.write_instance(scope, "Plan", plan_name, raw))
     return plan_name
 
 
@@ -921,7 +921,7 @@ def _link_plan_to_story(scope: str, plan_name: str, story_name: str) -> None:
             spec["story_ref"] = story_name
             spec["updated_at"] = _now_iso()
             raw = _build_raw("Plan", plan_name, spec)
-            s.run(s.kernel.write_document(scope, "Plan", plan_name, raw))
+            s.run(s.kernel.write_instance(scope, "Plan", plan_name, raw))
 
 
 @story_group.command("start")
@@ -1241,7 +1241,7 @@ def cmd_story_done(
                         changed = True
                 if changed:
                     raw_doc = _build_raw("Story", name, story_spec)
-                    _s.run(_s.kernel.write_document(scope, "Story", name, raw_doc))
+                    _s.run(_s.kernel.write_instance(scope, "Story", name, raw_doc))
     except Exception:  # noqa: BLE001 — backfill is best-effort
         pass
     # Narração inline (i-114): persiste o --note ANTES dos warns/transição.
@@ -1440,7 +1440,7 @@ def cmd_story_comment(
         _append_timeline(spec, event_type, **extras)
         spec["updated_at"] = _now_iso()
         raw = _build_raw("Story", name, spec)
-        s.run(s.kernel.write_document(scope, "Story", name, raw))
+        s.run(s.kernel.write_instance(scope, "Story", name, raw))
     suffix = " (auto-promoted from comment)" if promoted else ""
     click.secho(
         f"COMMENTED Story/{name} ({event_type}){suffix}", fg="green",
@@ -1599,7 +1599,7 @@ def cmd_story_check(
             marked_ac=n_ac, marked_dod=n_dod, evidence=evidence, by=actor,
         )
         raw = _build_raw("Story", name, spec)
-        s.run(s.kernel.write_document(scope, "Story", name, raw))
+        s.run(s.kernel.write_instance(scope, "Story", name, raw))
     click.secho(
         f"✓ checked {n_ac} AC + {n_dod} DoD on Story/{name} "
         f"(evidence: {evidence[:60]})",
@@ -1730,7 +1730,7 @@ def cmd_kaizen(work_item: str, body: str, issue: str | None,
         spec["timeline"] = timeline
         spec["updated_at"] = _now_iso()
         raw = _build_raw(wi_kind, wi_name, spec)
-        s.run(s.kernel.write_document(scope, wi_kind, wi_name, raw))
+        s.run(s.kernel.write_instance(scope, wi_kind, wi_name, raw))
     suffix = f" → {issue}" if issue else ""
     click.secho(
         f"KAIZEN registrado em {wi_kind}/{wi_name}{suffix} · doc `{kz_name}`",
@@ -1744,7 +1744,7 @@ def _kaizen_transition(scope: str, name: str, command: str,
 
     Copies the sibling pattern (`_update_story_status` & co): load the doc
     via the client session, validate the transition against
-    ``_KAIZEN_TRANSITIONS``, then persist through ``kernel.write_document``
+    ``_KAIZEN_TRANSITIONS``, then persist through ``kernel.write_instance``
     so cache invalidation / hooks / schema validation fire. Returns the
     new status.
     """
@@ -1762,7 +1762,7 @@ def _kaizen_transition(scope: str, name: str, command: str,
             spec.update(extras)
         spec["updated_at"] = _now_iso()
         raw = _build_raw("Kaizen", name, spec)
-        s.run(s.kernel.write_document(scope, "Kaizen", name, raw))
+        s.run(s.kernel.write_instance(scope, "Kaizen", name, raw))
     return target
 
 
@@ -2008,7 +2008,7 @@ def cmd_story_groom(
         # carries enough context to reconstruct grooming history.
         _append_timeline(spec, "groom", fields=extras)
         raw = _build_raw("Story", name, spec)
-        s.run(s.kernel.write_document(scope, "Story", name, raw))
+        s.run(s.kernel.write_instance(scope, "Story", name, raw))
     flag_summary = ", ".join(f"{k}={v}" for k, v in extras.items())
     click.secho(f"GROOMED Story/{name} ({flag_summary})", fg="green")
 
@@ -2042,7 +2042,7 @@ def _next_issue_number(scope: str) -> int:
 # is not global (another clone, or CI, is invisible). It is the missing READ,
 # and the missing read is what produced every collision on this board.
 #
-# Deliberately reads FILE NAMES, not documents: the board is `<base>/<scope>/
+# Deliberately reads FILE NAMES, not instances: the board is `<base>/<scope>/
 # <plural>/<name>.yaml`, the name is the stem, and booting a kernel per sibling
 # (17 of them on this machine) to learn 17 lists of strings would cost more than
 # the whole command.
@@ -2126,18 +2126,18 @@ def _warn_duplicate_issue_numbers(names: list[str]) -> None:
     is where writers that never shared a ``.git`` finally meet.
 
     DE-DUPLICATES first, and that is not tidiness. Sibling worktrees mostly hold
-    the SAME documents — they branched from the same main — so the union names
+    the SAME instances — they branched from the same main — so the union names
     ``i-084-conversa-como-dado-do-dna`` once per worktree. Run against the real
     dna-cloud checkout the first version of this reported every Issue on the
     board as a collision with itself, 17 worktrees deep. A duplicate NAME across
-    trees is one document seen twice; the failure being reported here is two
+    trees is one instance seen twice; the failure being reported here is two
     different names on one number."""
     dupes = _core_duplicate_issue_numbers(sorted(set(names)))
     if not dupes:
         return
     click.secho(
         f"⚠️  {len(dupes)} id(s) de Issue reivindicado(s) por mais de um "
-        f"documento — o número deixou de identificar:", fg="yellow", err=True,
+        f"instância — o número deixou de identificar:", fg="yellow", err=True,
     )
     for number, colliding in dupes.items():
         click.secho(f"    i-{number:03d}: {', '.join(colliding)}", fg="yellow", err=True)
@@ -2269,7 +2269,7 @@ def cmd_feature_create(
 
     raw = _build_raw("Feature", name, spec)
     with open_session(scope) as s:
-        s.run(s.kernel.write_document(scope, "Feature", name, raw))
+        s.run(s.kernel.write_instance(scope, "Feature", name, raw))
     click.secho(
         f"CREATED Feature/{name} (status: {status}"
         + (f", epic: {epic}" if epic else "")
@@ -2388,7 +2388,7 @@ def cmd_feature_ship(
             **{"from": prev, "to": "done", **timeline_extras},
         )
         raw = _build_raw("Feature", name, spec)
-        s.run(s.kernel.write_document(scope, "Feature", name, raw))
+        s.run(s.kernel.write_instance(scope, "Feature", name, raw))
     click.secho(f"SHIPPED Feature/{name}", fg="green", bold=True)
     # Auto-stamp the Feature's reflect journey entry — the Narrative
     # close hook requires it. Story s-hook-fail-loudly-or-reflect-auto
@@ -2429,7 +2429,7 @@ def cmd_feature_cancel(name: str, reason: str, scope: str) -> None:
             **{"from": prev, "to": "cancelled", "summary": reason},
         )
         raw = _build_raw("Feature", name, spec)
-        s.run(s.kernel.write_document(scope, "Feature", name, raw))
+        s.run(s.kernel.write_instance(scope, "Feature", name, raw))
     click.secho(f"CANCELLED Feature/{name} — {reason}", fg="yellow")
 
 
@@ -2460,7 +2460,7 @@ def cmd_feature_start(name: str, scope: str) -> None:
             **{"from": prev, "to": "in-development"},
         )
         raw = _build_raw("Feature", name, spec)
-        s.run(s.kernel.write_document(scope, "Feature", name, raw))
+        s.run(s.kernel.write_instance(scope, "Feature", name, raw))
     click.secho(
         f"STARTED Feature/{name} ({prev} → in-development)", fg="green",
     )
@@ -2514,7 +2514,7 @@ def cmd_story_reopen(name: str, reason: str, to_status: str, scope: str) -> None
             **{"from": prev, "to": to_status, "summary": f"REOPEN: {reason}"},
         )
         raw = _build_raw("Story", name, spec)
-        s.run(s.kernel.write_document(scope, "Story", name, raw))
+        s.run(s.kernel.write_instance(scope, "Story", name, raw))
     click.secho(f"REOPENED Story/{name} ({prev} → {to_status})", fg="cyan")
 
 
@@ -2543,7 +2543,7 @@ def cmd_feature_reopen(name: str, reason: str, to_status: str, scope: str) -> No
             **{"from": prev, "to": to_status, "summary": f"REOPEN: {reason}"},
         )
         raw = _build_raw("Feature", name, spec)
-        s.run(s.kernel.write_document(scope, "Feature", name, raw))
+        s.run(s.kernel.write_instance(scope, "Feature", name, raw))
     click.secho(f"REOPENED Feature/{name} ({prev} → {to_status})", fg="cyan")
 
 
@@ -2617,7 +2617,7 @@ def cmd_feature_narrate_all(only_empty: bool, overwrite: bool, scope: str) -> No
             sp["narrative_line"] = line
             sp["updated_at"] = _now_iso()
             raw = _build_raw("Feature", ft.name, sp)
-            s.run(s.kernel.write_document(scope, "Feature", ft.name, raw))
+            s.run(s.kernel.write_instance(scope, "Feature", ft.name, raw))
             updated += 1
             click.echo(f"  ✓ {ft.name}: {line[:80]}{'…' if len(line) > 80 else ''}")
     click.secho(
@@ -2644,7 +2644,7 @@ def cmd_feature_narrative(name: str, narrative_line: str, scope: str) -> None:
         spec["narrative_line"] = narrative_line.strip()
         spec["updated_at"] = _now_iso()
         raw = _build_raw("Feature", name, spec)
-        s.run(s.kernel.write_document(scope, "Feature", name, raw))
+        s.run(s.kernel.write_instance(scope, "Feature", name, raw))
     click.secho(f"NARRATED Feature/{name}", fg="cyan")
 
 
@@ -2671,7 +2671,7 @@ def cmd_epic_reopen(name: str, reason: str, to_status: str, scope: str) -> None:
             **{"from": prev, "to": to_status, "summary": f"REOPEN: {reason}"},
         )
         raw = _build_raw("Epic", name, spec)
-        s.run(s.kernel.write_document(scope, "Epic", name, raw))
+        s.run(s.kernel.write_instance(scope, "Epic", name, raw))
     click.secho(f"REOPENED Epic/{name} ({prev} → {to_status})", fg="cyan")
 
 
@@ -2708,7 +2708,7 @@ def cmd_issue_file(
     """File a new Issue with auto-incremented i-NNN-<slug> name."""
     # ONE builder for both faces (i-078) becomes ONE WRITE PATH for both faces.
     # This command used to compute `max(NNN)+1` itself and then call
-    # `write_document` bare — so the CLI, which is how nearly every Issue is
+    # `write_instance` bare — so the CLI, which is how nearly every Issue is
     # actually filed, was the one face carrying NONE of the protections
     # `create_issue` had accumulated: no existence probe (#242) and no
     # `if_absent` atomic claim, i.e. a name guessed twice was an overwrite.
@@ -2752,7 +2752,7 @@ def cmd_issue_triage(name: str, scope: str) -> None:
         spec["status"] = "triaged"
         _append_timeline(spec, "status_change", **{"from": prev, "to": "triaged"})
         raw = _build_raw("Issue", name, spec)
-        s.run(s.kernel.write_document(scope, "Issue", name, raw))
+        s.run(s.kernel.write_instance(scope, "Issue", name, raw))
     click.secho(f"TRIAGED {name}", fg="green")
 
 
@@ -2785,7 +2785,7 @@ def cmd_issue_resolve(
             **{"from": prev, "to": "resolved", "summary": resolution},
         )
         raw = _build_raw("Issue", name, spec)
-        s.run(s.kernel.write_document(scope, "Issue", name, raw))
+        s.run(s.kernel.write_instance(scope, "Issue", name, raw))
         # GitHub bridge (s-github-issues-bridge): a published Issue closes
         # its GitHub twin with a comment. Best-effort by contract — the
         # local resolve ALREADY persisted above; a missing gh / dead
@@ -2808,7 +2808,7 @@ def cmd_issue_resolve(
                     spec["github_state"] = "closed"
                     spec["github_synced_at"] = _now_iso()
                     raw = _build_raw("Issue", name, spec)
-                    s.run(s.kernel.write_document(scope, "Issue", name, raw))
+                    s.run(s.kernel.write_instance(scope, "Issue", name, raw))
                 except Exception as e:  # noqa: BLE001 — fail-soft
                     click.secho(
                         f"⚠ não consegui atualizar github_state no doc "
@@ -2847,7 +2847,7 @@ def cmd_issue_comment(
         spec["timeline"] = list(spec.get("timeline") or [])
         _append_timeline(spec, event_type, summary=body)
         raw = _build_raw("Issue", name, spec)
-        s.run(s.kernel.write_document(scope, "Issue", name, raw))
+        s.run(s.kernel.write_instance(scope, "Issue", name, raw))
     click.secho(f"COMMENTED Issue/{name} ({event_type})", fg="green")
 
 
@@ -2886,7 +2886,7 @@ def cmd_epic_create(
     Closes the last CRUD gap in the SDLC CLI (s-dx-epic-create): Story and
     Feature had `create`, but an Epic had to be hand-authored via `dna doc
     apply` — an asymmetry the DX epic (e-dna-dx) exists to kill. Mirrors
-    `feature create`: same envelope, same write path (`kernel.write_document`),
+    `feature create`: same envelope, same write path (`kernel.write_instance`),
     same initial-timeline event. Unlike `story create`, no --ac/--dod guard —
     Epics are roadmap nouns; exit criteria live at the Story level.
 
@@ -2921,7 +2921,7 @@ def cmd_epic_create(
 
     raw = _build_raw("Epic", name, spec)
     with open_session(scope) as s:
-        s.run(s.kernel.write_document(scope, "Epic", name, raw))
+        s.run(s.kernel.write_instance(scope, "Epic", name, raw))
     click.secho(f"CREATED Epic/{name} (status: {status})", fg="green")
 
 
@@ -3054,7 +3054,7 @@ def cmd_sdlc_extract_decisions(scope: str, dry_run: bool) -> None:
                     spec["timeline"] = timeline
                     spec["updated_at"] = _now_iso()
                     raw = _build_raw(kind, doc.name, spec)
-                    s.run(s.kernel.write_document(scope, kind, doc.name, raw))
+                    s.run(s.kernel.write_instance(scope, kind, doc.name, raw))
     suffix = " (dry-run)" if dry_run else ""
     click.secho(
         f"PROMOTED {promoted} of {scanned} comment events{suffix}.",
@@ -3231,7 +3231,7 @@ def cmd_backfill(
                 click.echo(f"  [dry-run] {kind}/{doc_name} ← {rel}  status={status}")
             else:
                 try:
-                    s.run(s.kernel.write_document(scope, kind, doc_name, raw))
+                    s.run(s.kernel.write_instance(scope, kind, doc_name, raw))
                     created_count += 1
                 except Exception as e:
                     click.secho(
@@ -3260,7 +3260,7 @@ def cmd_epic_ship(name: str, scope: str) -> None:
         spec["status"] = "done"
         spec["closed_at"] = _now_iso()
         raw = _build_raw("Epic", name, spec)
-        s.run(s.kernel.write_document(scope, "Epic", name, raw))
+        s.run(s.kernel.write_instance(scope, "Epic", name, raw))
         click.secho(f"DONE Epic/{name}", fg="green", bold=True)
 
         # Reverse-lookup features (by Feature.spec.epic) and their stories
@@ -3292,7 +3292,7 @@ def cmd_epic_ship(name: str, scope: str) -> None:
                 f_spec["status"] = "done"
                 f_spec["closed_at"] = _now_iso()
                 f_raw = _build_raw("Feature", fn, f_spec)
-                s.run(s.kernel.write_document(scope, "Feature", fn, f_raw))
+                s.run(s.kernel.write_instance(scope, "Feature", fn, f_raw))
                 cascade.append(fn)
 
         if cascade:
@@ -3371,7 +3371,7 @@ from dna_cli.sdlc.reference import (  # noqa: E402, F401 — re-exported for bac
 )
 
 
-# ─── backfill-dates — repair pre-i-078 documents ──────────────────────
+# ─── backfill-dates — repair pre-i-078 instances ──────────────────────
 # Importing the module REGISTERS the command on the shared root.
 
 from dna_cli.sdlc.backfill_dates import (  # noqa: E402, F401 — re-exported for back-compat
@@ -3474,7 +3474,7 @@ def cmd_spike_create(
     _stamp_create(spec, status)
     raw = _build_raw("Spike", name, spec)
     with open_session(scope) as s:
-        s.run(s.kernel.write_document(scope, "Spike", name, raw))
+        s.run(s.kernel.write_instance(scope, "Spike", name, raw))
     click.secho(f"CREATED Spike/{name} (status: {status})", fg="green")
 
 
@@ -3549,7 +3549,7 @@ def cmd_spike_comment(
         spec["timeline"] = list(spec.get("timeline") or [])
         _append_timeline(spec, event_type, summary=body)
         raw = _build_raw("Spike", name, spec)
-        s.run(s.kernel.write_document(scope, "Spike", name, raw))
+        s.run(s.kernel.write_instance(scope, "Spike", name, raw))
     click.secho(f"COMMENTED Spike/{name} ({event_type})", fg="green")
 
 
@@ -3621,7 +3621,7 @@ def cmd_spike_link(
                 doc_spec[field] = val
                 linked.append(f"{field}={val}")
         raw = _build_raw("Spike", name, doc_spec)
-        s.run(s.kernel.write_document(scope, "Spike", name, raw))
+        s.run(s.kernel.write_instance(scope, "Spike", name, raw))
     click.secho(f"LINKED Spike/{name}: {', '.join(linked) or '(no change)'}", fg="green")
 
 
@@ -3676,7 +3676,7 @@ def cmd_bug_create(
     _stamp_create(spec, status)
     raw = _build_raw("Bug", name, spec)
     with open_session(scope) as s:
-        s.run(s.kernel.write_document(scope, "Bug", name, raw))
+        s.run(s.kernel.write_instance(scope, "Bug", name, raw))
     click.secho(f"CREATED Bug/{name} ({severity}/{status})", fg="green")
 
 
@@ -3771,7 +3771,7 @@ def cmd_task_create(
     _stamp_create(spec, status)
     raw = _build_raw("Task", name, spec)
     with open_session(scope) as s:
-        s.run(s.kernel.write_document(scope, "Task", name, raw))
+        s.run(s.kernel.write_instance(scope, "Task", name, raw))
     click.secho(f"CREATED Task/{name} (status: {status})", fg="green")
 
 
@@ -3851,7 +3851,7 @@ def cmd_adr_create(
     _stamp_create(spec, status)
     raw = _build_raw("ADR", name, spec)
     with open_session(scope) as s:
-        s.run(s.kernel.write_document(scope, "ADR", name, raw))
+        s.run(s.kernel.write_instance(scope, "ADR", name, raw))
     click.secho(f"CREATED ADR/{name} (status: {status})", fg="green")
 
 
@@ -3949,7 +3949,7 @@ def _make_artifact_group(
         _stamp_create(spec, status)
         raw = _build_raw(kind, name, spec)
         with open_session(scope) as s:
-            s.run(s.kernel.write_document(scope, kind, name, raw))
+            s.run(s.kernel.write_instance(scope, kind, name, raw))
         click.secho(f"CREATED {kind}/{name} (status: {status})", fg="green")
 
     _create.__doc__ = f"Create a new {kind}."
@@ -4057,7 +4057,7 @@ def _make_artifact_group(
 
 
 spec_group = _make_artifact_group(
-    "Spec", "spec", "Spec-level operations (design / spec documents).",
+    "Spec", "spec", "Spec-level operations (design / spec instances).",
     statuses=SPEC_STATUSES,
 )
 # NB: Plan does NOT use _make_artifact_group — the richer `@sdlc.group("plan")`
@@ -4084,7 +4084,7 @@ def cmd_issue_start(name: str, scope: str) -> None:
         spec["status"] = "in-progress"
         _append_timeline(spec, "status_change", **{"from": prev, "to": "in-progress"})
         raw = _build_raw("Issue", name, spec)
-        s.run(s.kernel.write_document(scope, "Issue", name, raw))
+        s.run(s.kernel.write_instance(scope, "Issue", name, raw))
     # Anchor beat (i-126): same live FOCUS pointer `story start` posts — a
     # started Issue is anchored work too. Best-effort, never breaks the start.
     _post_start_beat(scope, name, kind="Issue")
@@ -4154,7 +4154,7 @@ def cmd_plan_create(
     _append_timeline(spec, "status_change", **{"from": None, "to": status})
     with open_session(scope) as s:
         raw = _build_raw("Plan", name, spec)
-        s.run(s.kernel.write_document(scope, "Plan", name, raw))
+        s.run(s.kernel.write_instance(scope, "Plan", name, raw))
     click.secho(f"CREATED Plan/{name} in scope {scope}", fg="green")
     if spec.get("story_ref"):
         click.echo(f"  → lights up the `plan` phase of Story/{spec['story_ref']}")
@@ -4288,7 +4288,7 @@ def cmd_produces_add(work_item: str, artifact: str, role: str | None, scope: str
             raise fail(f"{wi_kind}/{wi_name} não encontrado em {scope!r}.")
         spec = dict(existing.spec) if isinstance(existing.spec, dict) else {}
         _append_produces(spec, art_kind, art_name, role)
-        s.run(s.kernel.write_document(scope, wi_kind, wi_name, _build_raw(wi_kind, wi_name, spec)))
+        s.run(s.kernel.write_instance(scope, wi_kind, wi_name, _build_raw(wi_kind, wi_name, spec)))
     click.secho(f"{wi_kind}/{wi_name} produces → {art_kind}/{art_name}", fg="green")
 
 
@@ -4306,7 +4306,7 @@ def cmd_produces_rm(work_item: str, artifact: str, scope: str) -> None:
             raise fail(f"{wi_kind}/{wi_name} não encontrado em {scope!r}.")
         spec = dict(existing.spec) if isinstance(existing.spec, dict) else {}
         _remove_produces(spec, art_kind, art_name)
-        s.run(s.kernel.write_document(scope, wi_kind, wi_name, _build_raw(wi_kind, wi_name, spec)))
+        s.run(s.kernel.write_instance(scope, wi_kind, wi_name, _build_raw(wi_kind, wi_name, spec)))
     click.secho(f"{wi_kind}/{wi_name} ✕ {art_kind}/{art_name}", fg="yellow")
 
 
@@ -4384,7 +4384,7 @@ def cmd_artifact_create(
     if description:
         raw["metadata"]["description"] = description
     with open_session(scope) as s:
-        s.run(s.kernel.write_document(scope, "HtmlArtifact", name, raw))
+        s.run(s.kernel.write_instance(scope, "HtmlArtifact", name, raw))
     click.secho(f"CREATED HtmlArtifact/{name} ({len(html)} bytes)", fg="green")
     click.secho(
         f"  link it: dna sdlc produces add <WiKind>/<wi> HtmlArtifact/{name}",
@@ -4506,7 +4506,7 @@ def _merge_changelog_items(entry: dict[str, Any], items: dict[str, tuple]) -> in
 def _write_changelog(scope: str, spec: dict[str, Any]) -> None:
     raw = _build_raw("Changelog", "CHANGELOG", spec)
     with open_session(scope) as s:
-        s.run(s.kernel.write_document(scope, "Changelog", "CHANGELOG", raw))
+        s.run(s.kernel.write_instance(scope, "Changelog", "CHANGELOG", raw))
 
 
 @sdlc.group("changelog", help="Release notes per scope (Keep a Changelog + SemVer).")
@@ -4770,7 +4770,7 @@ def _save_digest_report(s: Any, scope: str, dg: dict[str, Any]) -> str:
         "generated_by": f"dna-sdlc-digest ({_cli_actor()})",
     }
     raw = _build_raw("StatusReport", name, spec)
-    s.run(s.kernel.write_document(scope, "StatusReport", name, raw))
+    s.run(s.kernel.write_instance(scope, "StatusReport", name, raw))
     return name
 
 

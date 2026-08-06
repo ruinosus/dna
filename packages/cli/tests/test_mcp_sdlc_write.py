@@ -10,7 +10,7 @@ Four properties, mirroring ``test_mcp_memory.py`` / ``test_mcp_quota.py``:
 1. **pure builders + transition rules** — the spec shape, timeline event, and the
    valid-target-status guard are pure (no clock/env), shared verbatim with the CLI.
 
-2. **write cores go through ``write_document``** — each core creates/transitions
+2. **write cores go through ``write_instance``** — each core creates/transitions
    the right Kind and the write is a real kernel write (a timeline event lands, the
    doc is queryable) — proven at the impl level (data layer, no server/auth).
 
@@ -152,7 +152,7 @@ def test_set_status_transitions_and_reflects(dna_dir):
             acceptance_criteria=["a"], definition_of_done=["b"], scope=_SCOPE)
         res = await W.set_status_impl(live, "Story", "s-transition-me",
                                       "in-progress", scope=_SCOPE)
-        doc = await live.kernel.get_document(_SCOPE, "Story", "s-transition-me")
+        doc = await live.kernel.get_instance(_SCOPE, "Story", "s-transition-me")
         listed = await M.list_stories_impl(live, status="in-progress", scope=_SCOPE)
         return res, doc, listed
 
@@ -177,7 +177,7 @@ def test_set_status_terminal_stamps_closed_at(dna_dir):
         await W.set_status_impl(
             live, "Story", "s-finish-me", "done", scope=_SCOPE,
             no_code=True, gate_reason="fixture Story with no code")
-        return await live.kernel.get_document(_SCOPE, "Story", "s-finish-me")
+        return await live.kernel.get_instance(_SCOPE, "Story", "s-finish-me")
 
     doc = asyncio.run(scenario())
     assert doc["spec"]["status"] == "done"
@@ -196,7 +196,7 @@ def test_set_status_invalid_rejected_no_write(dna_dir):
             acceptance_criteria=["a"], definition_of_done=["b"], scope=_SCOPE)
         with pytest.raises(W.InvalidTransition):
             await W.set_status_impl(live, "Story", "s-guard-me", "bogus", scope=_SCOPE)
-        return await live.kernel.get_document(_SCOPE, "Story", "s-guard-me")
+        return await live.kernel.get_instance(_SCOPE, "Story", "s-guard-me")
 
     doc = asyncio.run(scenario())
     assert doc["spec"]["status"] == "todo"  # unchanged — no bad write
@@ -246,7 +246,7 @@ def test_comment_lands_on_timeline_without_status_change(dna_dir):
             live, "Story", "s-narrate-me", "agora vou fazer X", scope=_SCOPE)
         decision = await W.comment_impl(
             live, "Story", "s-narrate-me", "Decidi Y porque Z", scope=_SCOPE)
-        doc = await live.kernel.get_document(_SCOPE, "Story", "s-narrate-me")
+        doc = await live.kernel.get_instance(_SCOPE, "Story", "s-narrate-me")
         return note, decision, doc
 
     note, decision, doc = asyncio.run(scenario())
@@ -266,7 +266,7 @@ def test_create_feature_impl(dna_dir):
             live, "f-made-over-mcp", title="Made over MCP",
             description="a feature filed by an agent", priority="high",
             scope=_SCOPE)
-        doc = await live.kernel.get_document(_SCOPE, "Feature", "f-made-over-mcp")
+        doc = await live.kernel.get_instance(_SCOPE, "Feature", "f-made-over-mcp")
         return out, doc
 
     out, doc = asyncio.run(scenario())
@@ -347,11 +347,11 @@ async def _seed_tiers(dna_dir) -> None:
     live = await M.boot_live(base_dir=str(dna_dir))
     # Free KEEPS `sdlc` in families (reads pass the family gate) but sdlc_mode=read
     # → a WRITE is denied by the finer gate, not the family gate.
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         "_lib", "PricingPlan", "free",
         _tier_doc("free", families=["definitions", "sdlc", "memory"],
                   sdlc_mode="read"))
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         "_lib", "PricingPlan", "pro",
         _tier_doc("pro", families=["definitions", "sdlc", "memory", "emit"],
                   sdlc_mode="write", memory_mode="write"))

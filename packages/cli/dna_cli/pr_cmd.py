@@ -3,7 +3,7 @@
 The PR-side half of the git↔SDLC symbiosis (s-sdlc-pr-attribution): the
 same way Claude Code signs the PRs it generates, DNA signs the PRs born
 from its Stories. ``dna sdlc story pr <s-x>`` assembles ``gh pr create``
-entirely from the Story document — the PR is born FROM the story, not
+entirely from the Story instance — the PR is born FROM the story, not
 the other way around:
 
 - **title** — ``feat(<label-hint>): <story title> (<s-x>)``. Conventional-
@@ -34,7 +34,7 @@ timeline materializes both.
 Deliberately NOT here — listing PRs back in ``story show`` via ``gh pr
 list --search "Work-Item: Story/<x>"``: the GitHub *search* API is
 rate-limited (~30 req/min), its body indexing is eventually consistent
-(a fresh PR doesn't show up), and this codebase already documents the
+(a fresh PR doesn't show up), and this codebase already instances the
 gateway intermittently blocking api.github.com (i-133) — adding that to
 ``story show``, a hot fully-local command, would make it slow and flaky.
 The way back already closes deterministically with zero network: a
@@ -160,7 +160,7 @@ def _stamp_pr_on_timeline(scope: str, name: str, url: str) -> None:
             spec = dict(existing.spec) if isinstance(existing.spec, dict) else {}
             _append_timeline(spec, "pr_opened", summary=f"PR aberto: {url}", pr_url=url)
             raw = _build_raw("Story", name, spec)
-            s.run(s.kernel.write_document(scope, "Story", name, raw))
+            s.run(s.kernel.write_instance(scope, "Story", name, raw))
     except Exception as e:  # noqa: BLE001 — fail-soft by contract
         click.secho(f"⚠ não consegui carimbar o PR na timeline (non-fatal): {e}",
                     fg="yellow", err=True)

@@ -190,7 +190,7 @@ def test_the_mcp_door_refuses_a_malformed_claim(dna_dir, bad, needle):
     assert needle in message, message
     assert "ValueError" in message, (
         "the refusal must carry its type name, so a caller can tell a malformed "
-        "document from an operator veto"
+        "instance from an operator veto"
     )
 
 
@@ -264,7 +264,7 @@ def test_a_valid_claim_round_trips_through_the_door(dna_dir):
                 "claims": [{"predicate": "approval", "object": "pending"}],
             })
             name = out.structured_content["name"]
-        return await live.kernel.get_document(_SCOPE, "Engram", name)
+        return await live.kernel.get_instance(_SCOPE, "Engram", name)
 
     doc = asyncio.run(scenario())
     assert doc["spec"]["claims"] == [

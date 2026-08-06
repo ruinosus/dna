@@ -2,7 +2,7 @@
 
 The conversational face of tenant Kind authoring. A tenant talks to an agent
 over MCP (Claude Desktop, Cursor, the console copilot) and the agent writes the
-``KindDefinition`` — the same document the portal and the REST face write,
+``KindDefinition`` — the same instance the portal and the REST face write,
 through the same core (``dna.application.kind_authoring``). A Kind born in one
 face and absent from the others is worth nothing, so this is not a convenience
 surface: it is one of the three doors the feature is defined by.
@@ -44,7 +44,7 @@ The other three properties each pin something that would silently rot:
 * the PROPOSER is server-resolved. ``proposed_by`` is stamped from the verified
   identity of the request (``actor_from_context``), and there is no tool
   argument that can reach it — asserted twice, once on the tool's advertised
-  input schema and once on the STORED document after a call that tries.
+  input schema and once on the STORED instance after a call that tries.
 * a bad Kind name refuses LEGIBLY. ``kind`` is the one caller-controlled value
   that becomes a path component, so it is validated as a CamelCase identifier;
   over a conversational face an illegible refusal is a refusal the agent retries
@@ -218,7 +218,7 @@ class _Face:
         return [t for t in self.list_tools() if not app_only(t)]
 
     def stored_spec(self, name: str) -> dict:
-        """The spec of an authored document, read back from the STORE.
+        """The spec of an authored instance, read back from the STORE.
 
         Through a kernel booted FRESH over the same directory: what the tool
         returned in its response is not evidence about what was persisted."""
@@ -226,7 +226,7 @@ class _Face:
 
         async def go():
             live = await M.boot_live(base_dir=str(self._dna_dir))
-            raw = await live.kernel.get_document(_SCOPE, "KindDefinition", name)
+            raw = await live.kernel.get_instance(_SCOPE, "KindDefinition", name)
             return dict((raw or {}).get("spec") or {})
 
         return asyncio.run(go())
@@ -514,7 +514,7 @@ def test_review_kind_shows_the_schema_the_approval_would_confer_effect_on(mcp_cl
     declaration = reviewed["declaration"]
     assert declaration["schema"] == _SCHEMA, declaration
     # The SAME projection the roster publishes, plus the schema — not a second
-    # shape for one document.
+    # shape for one instance.
     assert set(row) <= set(declaration), (sorted(row), sorted(declaration))
     for field in row:
         assert declaration[field] == row[field], field
@@ -539,7 +539,7 @@ def test_the_tool_advertises_no_way_to_name_the_proposer(mcp_client):
 
 
 def test_a_forged_proposer_reaches_nothing(mcp_client):
-    """The second half, on the WIRE and then on the STORED document.
+    """The second half, on the WIRE and then on the STORED instance.
 
     MEASURED, and it is stronger than "the value is dropped": a call carrying
     ``proposed_by`` never reaches the tool at all — FastMCP validates arguments
@@ -548,7 +548,7 @@ def test_a_forged_proposer_reaches_nothing(mcp_client):
     build, and the two guards are independent.
 
     Then the honest call, checked on what was PERSISTED — a response body can be
-    right about a document that is wrong. The stored proposer is the face's
+    right about an instance that is wrong. The stored proposer is the face's
     server-resolved actor (``actor_from_context``); with no token and no
     ``DNA_PERSONAL_ID`` that is the unidentified-local marker, which is still an
     identity the server chose and not one the caller supplied."""
@@ -599,8 +599,8 @@ def test_list_my_kinds_shows_the_proposal_and_its_approval_state(mcp_client):
     assert row["approved"] is False
     # `state` says WHICH not-approved this is (i-085). The boolean cannot carry
     # three values, and the two it collapses behave in OPPOSITE ways: a Kind
-    # that was never approved accepts documents unvalidated, a REVOKED one
-    # refuses them and marks every existing document invalid.
+    # that was never approved accepts instances unvalidated, a REVOKED one
+    # refuses them and marks every existing instance invalid.
     assert row["state"] == "unapproved"
     # The audit fields `list_authored_kinds_impl` projects — reused, not
     # re-invented. A tool that shaped its own rows would drift from the portal's.
@@ -682,7 +682,7 @@ def test_o_modelo_descarta_a_propria_proposta_inerte(mcp_client):
 
 def test_kind_aprovado_nao_se_revoga_pelo_modelo(mcp_client, monkeypatch):
     """A outra metade da assimetria: com efeito conferido, a retirada é decisão
-    humana — a tool recusa e aponta o portal, em vez de invalidar documentos
+    humana — a tool recusa e aponta o portal, em vez de invalidar instâncias
     por iniciativa de um modelo."""
     import pytest as _pytest
 

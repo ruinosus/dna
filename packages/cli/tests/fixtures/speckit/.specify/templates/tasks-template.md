@@ -1,6 +1,6 @@
 # Tasks: [FEATURE NAME]
 
-**Input**: Design documents from `specs/[###-feature-name]/`
+**Input**: Design instances from `specs/[###-feature-name]/`
 
 ## Format: `[ID] [P?] Description`
 

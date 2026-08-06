@@ -7,7 +7,7 @@ existed, CLI didn't): Spike, Bug, Task, ADR, Spec, Plan — plus the new
 Approach: REAL creates against an in-memory store. The fake session is
 INJECTED through the click context (``obj={SESSION_PROVIDER_KEY: fake}``,
 f-cli-session-injection) — no reaching inside command modules. The fake's
-``kernel.write_document`` records into a dict and its ``get_doc`` reads it
+``kernel.write_instance`` records into a dict and its ``get_doc`` reads it
 back. The write path (spec assembly, timeline stamping, _build_raw) runs
 for real — only the HTTP boundary is faked. Each `create` is asserted to
 exit 0 + emit its success message, and each Kind's required-option
@@ -272,12 +272,12 @@ def test_issue_start_transition(runner, store):
 # ---------------------------------------------------------------------------
 
 def _doc_fake_session(store: dict, scope: str):
-    """Mirror of _FakeSession but matching doc_cmd's dna_session surface."""
+    """Mirror of _FakeSession but matching instance_cmd's dna_session surface."""
     return FakeSession(store, scope)
 
 
 def test_doc_apply_multi_document(runner, tmp_path):
-    from dna_cli.doc_cmd import doc
+    from dna_cli.instance_cmd import instance
 
     backing: dict = {}
 
@@ -300,7 +300,7 @@ def test_doc_apply_multi_document(runner, tmp_path):
         "spec:\n  title: T\n  status: todo\n",
         encoding="utf-8",
     )
-    result = runner.invoke(doc, ["apply", str(f), "--scope", "dna-development"], obj=doc_obj)
+    result = runner.invoke(instance, ["apply", str(f), "--scope", "dna-development"], obj=doc_obj)
     assert result.exit_code == 0, result.output
     assert ("dna-development", "Spike", "sp-a") in backing
     assert ("dna-development", "Task", "t-a") in backing
@@ -309,7 +309,7 @@ def test_doc_apply_multi_document(runner, tmp_path):
 
 
 def test_doc_apply_single_document_unchanged_behavior(runner, tmp_path):
-    from dna_cli.doc_cmd import doc
+    from dna_cli.instance_cmd import instance
 
     backing: dict = {}
 
@@ -327,13 +327,13 @@ def test_doc_apply_single_document_unchanged_behavior(runner, tmp_path):
         "spec:\n  title: T\n  status: todo\n",
         encoding="utf-8",
     )
-    result = runner.invoke(doc, ["apply", str(f), "--scope", "dna-development"], obj=doc_obj)
+    result = runner.invoke(instance, ["apply", str(f), "--scope", "dna-development"], obj=doc_obj)
     assert result.exit_code == 0, result.output
     assert ("dna-development", "Task", "t-solo") in backing
 
 
 def test_doc_apply_multi_document_missing_name_fails(runner, tmp_path):
-    from dna_cli.doc_cmd import doc
+    from dna_cli.instance_cmd import instance
 
     backing: dict = {}
 
@@ -356,7 +356,7 @@ def test_doc_apply_multi_document_missing_name_fails(runner, tmp_path):
         "spec:\n  title: T2\n  status: todo\n",
         encoding="utf-8",
     )
-    result = runner.invoke(doc, ["apply", str(f), "--scope", "dna-development"], obj=doc_obj)
+    result = runner.invoke(instance, ["apply", str(f), "--scope", "dna-development"], obj=doc_obj)
     assert result.exit_code != 0
-    # Error names the offending document index.
-    assert "document #1" in result.output
+    # Error names the offending instance index.
+    assert "instance #1" in result.output

@@ -130,7 +130,7 @@ def cmd_initiative_create(
 
     raw = _build_raw("Initiative", name, spec)
     with open_session(scope) as s:
-        s.run(s.kernel.write_document(scope, "Initiative", name, raw))
+        s.run(s.kernel.write_instance(scope, "Initiative", name, raw))
     click.secho(
         f"CREATED Initiative/{name} (status: {status}"
         + (f", epics: {len(epics)}" if epics else "")
@@ -154,7 +154,7 @@ def cmd_initiative_ship(name: str, scope: str) -> None:
         spec["closed_at"] = _now_iso()
         spec["updated_at"] = spec["closed_at"]
         raw = _build_raw("Initiative", name, spec)
-        s.run(s.kernel.write_document(scope, "Initiative", name, raw))
+        s.run(s.kernel.write_instance(scope, "Initiative", name, raw))
     click.secho(f"SHIPPED Initiative/{name}", fg="green", bold=True)
 
 
@@ -171,7 +171,7 @@ def cmd_initiative_cancel(name: str, reason: str, scope: str) -> None:
         spec["cancelled_reason"] = reason
         spec["updated_at"] = _now_iso()
         raw = _build_raw("Initiative", name, spec)
-        s.run(s.kernel.write_document(scope, "Initiative", name, raw))
+        s.run(s.kernel.write_instance(scope, "Initiative", name, raw))
     click.secho(f"CANCELLED Initiative/{name} ({reason})", fg="yellow")
 
 
@@ -181,6 +181,6 @@ def cmd_initiative_cancel(name: str, reason: str, scope: str) -> None:
 #
 # These Kinds have schemas (SdlcExtension) + Studio screens but had no CLI
 # until now. They are all bundle Kinds (body markdown → spec.body →
-# serialized to the marker file by write_document). `create` builds the
-# spec (incl. optional body) + writes via _build_raw + write_document,
+# serialized to the marker file by write_instance). `create` builds the
+# spec (incl. optional body) + writes via _build_raw + write_instance,
 # exactly like Story; transitions reuse the generic _transition_workitem.

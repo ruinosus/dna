@@ -1,6 +1,6 @@
 """Tests for ``dna new`` — scaffold a valid Kind skeleton (s-dx-new-scaffolding).
 
-Exercises the REAL write path (dna_session → kernel.write_document → the
+Exercises the REAL write path (dna_session → kernel.write_instance → the
 registered readers/writers) against a filesystem scope: the scaffolded doc
 must land on disk in the right bundle shape, read back valid, be idempotent
 (no clobber without --force), and — the whole point — an author scaffolds an
@@ -134,7 +134,7 @@ class TestZeroToComposedPrompt:
 
         from dna.kernel import Kernel
         mi = Kernel.quick("demo", base_dir=str(scope / ".dna"))
-        _ = mi.documents
+        _ = mi.instances
         prompt = mi.build_prompt(agent="concierge")
         assert "voice, values" in prompt  # soul prose landed
         assert "what this agent does" in prompt  # instruction landed

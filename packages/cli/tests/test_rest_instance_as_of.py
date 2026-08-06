@@ -1,8 +1,8 @@
-"""``GET /v1/kinds/{kind}/documents/{name}?as_of=`` — the read in TIME (i-106).
+"""``GET /v1/kinds/{kind}/instances/{name}?as_of=`` — the read in TIME (i-106).
 
 THE BUG THIS SUITE EXISTS FOR, measured 06/08/2026 against the local runtime:
 the route ACCEPTED ``?as_of=`` and ignored it. FastAPI drops an undeclared query
-param in silence, so a document with 18 versions — the first recorded at 13:19
+param in silence, so an instance with 18 versions — the first recorded at 13:19
 on the 5th, the last at 00:27 on the 6th — answered ``status: resolved`` with 6
 timeline events both for *now* and for *14:00 on the 5th*, when it was neither.
 200, no warning, nothing in the body to contradict the caller.
@@ -15,7 +15,7 @@ never knew ``Engram`` from any other Kind, and both refusals (no history at all,
 history pruned) were already written. Only memory had a door to it.
 
 **Through the door, never through the function.** The whole defect was that the
-function was never reached: a unit test on ``get_document_impl`` would have been
+function was never reached: a unit test on ``get_instance_impl`` would have been
 green on the broken build. Every assertion here is an HTTP call.
 
 The FOUR outcomes are asserted apart, because collapsing any two re-creates the
@@ -23,7 +23,7 @@ defect one house over — a caller that cannot tell them apart is back to
 guessing:
 
     200  the belief state at that instant, labelled as such
-    404  the document did not exist yet — an ANSWER
+    404  the instance did not exist yet — an ANSWER
     410  its history was pruned past the instant — a REFUSAL, not an answer
     501  this store keeps no version history at all
     422  the instant is not ISO-8601 — the caller's error, not the server's
@@ -107,7 +107,7 @@ def history(tmp_path, monkeypatch):
     """A SQLite store with REAL history, written through the REAL write path.
 
     Seeded by the kernel, never by inserting version rows: history exists in
-    this product because somebody wrote a document twice, and a fixture that
+    this product because somebody wrote an instance twice, and a fixture that
     forged the rows would let the route pass with no producer behind it.
 
     Returns the instants the assertions cut on. ``t_before`` precedes v1;
@@ -133,19 +133,19 @@ def history(tmp_path, monkeypatch):
         k.source(src)
 
         marks["t_before"] = await _tick()
-        await k.write_document(
+        await k.write_instance(
             _SCOPE, "Story", "s-x", _story("s-x", "todo", "the first belief"),
         )
         marks["t_mid"] = await _tick()
-        await k.write_document(
+        await k.write_instance(
             _SCOPE, "Story", "s-x", _story("s-x", "done", "the second belief"),
         )
 
         # An Engram rewritten past VERSION_CHURN_RETENTION (3) — the pruning is
-        # the product's, not the test's: `write_document` applies it for the
+        # the product's, not the test's: `write_instance` applies it for the
         # curated churn Kinds. Five writes leave versions 3..5 on disk.
         for i in range(5):
-            await k.write_document(
+            await k.write_instance(
                 _SCOPE, "Engram", "e-churn", _engram("e-churn", f"belief {i}"),
             )
             await asyncio.sleep(0.01)
@@ -167,25 +167,25 @@ class TestTheReadInTime:
         was that they did.
         """
         with _client() as c:
-            now = c.get("/v1/kinds/Story/documents/s-x")
+            now = c.get("/v1/kinds/Story/instances/s-x")
             then = c.get(
-                "/v1/kinds/Story/documents/s-x",
+                "/v1/kinds/Story/instances/s-x",
                 params={"as_of": history["t_mid"]},
             )
         assert now.status_code == 200, now.text
         assert then.status_code == 200, then.text
-        assert now.json()["document"]["spec"]["status"] == "done"
-        assert then.json()["document"]["spec"]["status"] == "todo", (
-            "the as-of read handed back the CURRENT document — the i-106 "
+        assert now.json()["instance"]["spec"]["status"] == "done"
+        assert then.json()["instance"]["spec"]["status"] == "todo", (
+            "the as-of read handed back the CURRENT instance — the i-106 "
             "defect, restored"
         )
-        assert then.json()["document"]["spec"]["description"] == "the first belief"
+        assert then.json()["instance"]["spec"]["description"] == "the first belief"
 
     def test_the_response_says_it_is_historical(self, history):
         """A body a caller cannot tell apart from a live read is the defect
         with extra steps: the version and the RECORDING time both travel."""
         with _client() as c:
-            r = c.get("/v1/kinds/Story/documents/s-x",
+            r = c.get("/v1/kinds/Story/instances/s-x",
                       params={"as_of": history["t_mid"]})
         body = r.json()
         assert body["as_of"], "the instant did not come back"
@@ -196,7 +196,7 @@ class TestTheReadInTime:
         # ... and a live read carries none of the three, so the distinction is
         # readable in both directions.
         with _client() as c:
-            live = c.get("/v1/kinds/Story/documents/s-x").json()
+            live = c.get("/v1/kinds/Story/instances/s-x").json()
         assert live.get("as_of") is None
         assert live.get("as_of_version") is None
         assert live.get("as_of_recorded_at") is None
@@ -205,7 +205,7 @@ class TestTheReadInTime:
         """``Z`` in, ``+00:00`` out — echoing what the caller typed would let a
         misread offset survive the round trip unnoticed."""
         with _client() as c:
-            r = c.get("/v1/kinds/Story/documents/s-x",
+            r = c.get("/v1/kinds/Story/instances/s-x",
                       params={"as_of": "2099-01-01T00:00:00Z"})
         assert r.status_code == 200, r.text
         assert r.json()["as_of"] == "2099-01-01T00:00:00+00:00"
@@ -218,7 +218,7 @@ class TestTheRefusals:
     def test_before_it_existed_is_404(self, history):
         """An ANSWER: nothing was recorded under that name by then."""
         with _client() as c:
-            r = c.get("/v1/kinds/Story/documents/s-x",
+            r = c.get("/v1/kinds/Story/instances/s-x",
                       params={"as_of": history["t_before"]})
         assert r.status_code == 404, r.text
         assert "s-x" in r.text
@@ -226,41 +226,41 @@ class TestTheRefusals:
     def test_pruned_history_is_410_not_404(self, history):
         """⚠️ The one that must NOT be a 404.
 
-        404 reads as "the document did not exist then". The store does not know
+        404 reads as "the instance did not exist then". The store does not know
         that — it knows it kept no record. Answering the first out of the second
         is the one mistake a history read may never make, so the code differs
         and the message says which situation this is.
         """
         with _client() as c:
-            r = c.get("/v1/kinds/Engram/documents/e-churn",
+            r = c.get("/v1/kinds/Engram/instances/e-churn",
                       params={"as_of": history["t_before"]})
         assert r.status_code == 410, r.text
         assert "pruned" in r.text
-        # And the same document, asked about NOW, is perfectly readable —
-        # so the 410 is about the instant, not about the document.
+        # And the same instance, asked about NOW, is perfectly readable —
+        # so the 410 is about the instant, not about the instance.
         with _client() as c:
-            assert c.get("/v1/kinds/Engram/documents/e-churn").status_code == 200
+            assert c.get("/v1/kinds/Engram/instances/e-churn").status_code == 200
 
     def test_a_store_without_history_is_501_not_the_present(self, fs_dir):
         """The refusal only this lane can prove: the filesystem adapter
         declares ``versions=True`` and keeps nothing. Serving the current
-        document here would be a fabricated past wearing a real answer's
+        instance here would be a fabricated past wearing a real answer's
         clothes."""
         with _client(base_dir=str(fs_dir)) as c:
-            r = c.get("/v1/kinds/Agent/documents/concierge",
+            r = c.get("/v1/kinds/Agent/instances/concierge",
                       params={"as_of": "2026-08-05T14:00:00Z"})
         assert r.status_code == 501, r.text
         assert "history" in r.text
         # Anti-vacuity: without `as_of` the very same call is a normal 200, so
         # the 501 is the parameter's doing and not a broken fixture.
         with _client(base_dir=str(fs_dir)) as c:
-            assert c.get("/v1/kinds/Agent/documents/concierge").status_code == 200
+            assert c.get("/v1/kinds/Agent/instances/concierge").status_code == 200
 
     def test_a_nonsense_instant_is_422(self, fs_dir):
         """The caller's error, answered BEFORE the store's capability is even
         consulted — a 501 here would blame the deployment for a typo."""
         with _client(base_dir=str(fs_dir)) as c:
-            r = c.get("/v1/kinds/Agent/documents/concierge",
+            r = c.get("/v1/kinds/Agent/instances/concierge",
                       params={"as_of": "ontem à tarde"})
         assert r.status_code == 422, r.text
         assert "ISO-8601" in r.text
@@ -275,7 +275,7 @@ def test_openapi_declares_as_of_on_this_route(fs_dir):
     learns what a route accepts, so the fix is not real until it is there."""
     with _client(base_dir=str(fs_dir)) as c:
         schema = c.get("/openapi.json").json()
-    params = schema["paths"]["/v1/kinds/{kind}/documents/{name}"]["get"]["parameters"]
+    params = schema["paths"]["/v1/kinds/{kind}/instances/{name}"]["get"]["parameters"]
     as_of = [p for p in params if p["name"] == "as_of"]
     assert as_of, "as_of is implemented but not published — an invisible feature"
     assert "transaction time" in (as_of[0].get("description") or "")
@@ -288,8 +288,8 @@ def test_the_sibling_routes_refuse_as_of_rather_than_ignoring_it(fs_dir):
     the same accident. Refusing is the honest state until somebody implements
     the read; it is not a placeholder that renders as a feature."""
     with _client(base_dir=str(fs_dir)) as c:
-        for path in ("/v1/kinds/Agent/documents",
-                     "/v1/kinds/Agent/documents/concierge/refs"):
+        for path in ("/v1/kinds/Agent/instances",
+                     "/v1/kinds/Agent/instances/concierge/refs"):
             r = c.get(path, params={"as_of": "2026-08-05T14:00:00Z"})
             assert r.status_code == 400, f"{path}: {r.text}"
             assert "as_of" in r.text

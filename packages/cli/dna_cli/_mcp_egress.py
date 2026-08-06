@@ -28,7 +28,7 @@ two packages and invert the import.
 This is defence in depth, not the only gate. A portal that lets a user declare
 an external MCP server refuses out-of-policy URLs at WRITE time, where it can
 put a sentence in front of a human. This module is the RUNTIME half: even a
-document written around the portal cannot make a container dial an unauthorised
+instance written around the portal cannot make a container dial an unauthorised
 destination — the server is dropped from the graph with a log naming the URL and
 the tier, never dialled in silence.
 
@@ -47,7 +47,7 @@ readability only; it never re-enters the decision.
 * :func:`partition_egress` — arbitrary objects carrying **one or more** URLs,
   split all-or-nothing into (allowed, refused). This is the shape a server
   mounter holds, and the all-or-nothing part is POLICY, not convenience:
-  approving a spec document fetched from an allowlisted host while the calls it
+  approving a spec instance fetched from an allowlisted host while the calls it
   describes leave for another host is exactly the hole the allowlist exists to
   close. An object is dialled whole or not at all.
 
@@ -90,7 +90,7 @@ ALLOWLIST_ENV = "DNA_MCP_EGRESS_ALLOWLIST"
 #: ⚠️ The durable home for this is a cap on the ``PricingPlan`` Kind (read from
 #: the registry like ``calls_per_day`` is, "never a cap literal in code"), not a
 #: default argument in Python. That is a schema addition plus a coordinated edit
-#: of the deployed plan documents — a plan doc missing the new field would go
+#: of the deployed plan instances — a plan doc missing the new field would go
 #: from unrestricted to allowlist-only in silence — so it is tracked as its own
 #: work item rather than smuggled in behind a fallback.
 DEFAULT_UNRESTRICTED_TIERS: tuple[str, ...] = ("pro",)
@@ -250,7 +250,7 @@ async def partition_egress(
 
     ``urls`` extracts every destination one item would reach; an item passes
     only when ALL of them pass. That is the policy, not an implementation
-    detail: an item with two destinations (a document to fetch and a base URL
+    detail: an item with two destinations (an instance to fetch and a base URL
     the calls actually go to) that is half-allowed is not partially safe, it is
     a bypass with extra steps.
 

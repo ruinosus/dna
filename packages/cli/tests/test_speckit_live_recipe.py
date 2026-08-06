@@ -97,7 +97,7 @@ def test_wired_config_points_at_a_live_dna_mcp(project):
         # seed a memory + a board Story on the server's own source (fresh boot on
         # this loop — the server's kernel is lazy too).
         live = await M.boot_live(base_dir=source_dir)
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _SCOPE, "Story", "s-speckit-live",
             {"apiVersion": "github.com/ruinosus/dna/sdlc/v1", "kind": "Story",
              "metadata": {"name": "s-speckit-live"},

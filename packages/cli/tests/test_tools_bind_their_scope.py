@@ -30,7 +30,7 @@ _SERVER = _DNA_CLI / "_mcp_server.py"
 
 #: EVERY module that declares ``@server.tool`` functions, not just the one the
 #: bug was found in. The face grew further homes for tools
-#: (``register_document_tools``, ``register_kind_tools``, ``register_graph_tools``,
+#: (``register_instance_tools``, ``register_kind_tools``, ``register_graph_tools``,
 #: the act-on-behalf server) after this guard was written, and a guard that reads
 #: one file while the tools live in five is a fence around an empty field:
 #: ``list_my_kinds`` declares a ``scope`` and was invisible here until this list
@@ -40,25 +40,25 @@ _SERVER = _DNA_CLI / "_mcp_server.py"
 #:
 #: Kept honest by derivation, not by memory: :func:`test_sources_lists_every_module_declaring_tools`
 #: greps the package for ``@server.tool`` and fails if a file here is missing.
-#: This list was wrong twice — ``_mcp_documents.py`` was reachable in name only
+#: This list was wrong twice — ``_mcp_instances.py`` was reachable in name only
 #: (see :data:`_SEAM_CALL`), and the graph / act-on-behalf tools were never
 #: listed at all — so the claim above is now measured rather than asserted.
 _SOURCES = [
     _SERVER,
     _DNA_CLI / "_mcp_kinds.py",
-    _DNA_CLI / "_mcp_documents.py",
+    _DNA_CLI / "_mcp_instances.py",
     _DNA_CLI / "_mcp_portfolio.py",
     _DNA_CLI / "graph" / "_tools.py",
     _DNA_CLI / "act_on_behalf" / "_server.py",
 ]
 
 #: The guard seam, in EVERY spelling the face actually uses — it is not one name.
-#: ``_mcp_server.py`` and ``_mcp_kinds.py`` call ``_guard(...)``; ``_mcp_documents.py``
+#: ``_mcp_server.py`` and ``_mcp_kinds.py`` call ``_guard(...)``; ``_mcp_instances.py``
 #: takes the callable injected as plain ``guard(...)`` and four of its five tools
 #: reach it through the ``_guard_for(...)`` helper. A pattern that knew only
-#: ``_guard\(`` therefore found ZERO calls in ``_mcp_documents.py`` — and zero
+#: ``_guard\(`` therefore found ZERO calls in ``_mcp_instances.py`` — and zero
 #: matches is not a failure, it is a silent pass, so listing that file fenced
-#: nothing and all five document tools were covered in name only.
+#: nothing and all five instance tools were covered in name only.
 #:
 #: Two things stay deliberately OUT of this pattern, each for a reason:
 #:  • ``_personal_guard`` — the identity-keyed personal-memory seam. It resolves
@@ -174,15 +174,15 @@ def test_every_tool_taking_a_scope_binds_it() -> None:
     assert "list_my_kinds" in bodies, (
         "the Kind-authoring tools are no longer being read — check _SOURCES"
     )
-    # …and being READ is not being FENCED. `_mcp_documents.py` was listed above
+    # …and being READ is not being FENCED. `_mcp_instances.py` was listed above
     # and still checked nothing, because its seam is spelled `guard(` / passed
     # through `_guard_for(` and the offender pattern only knew `_guard(`: no
-    # matches, no offenders, silent pass. Pin that the pattern REACHES a document
+    # matches, no offenders, silent pass. Pin that the pattern REACHES an instance
     # tool, not merely that the file was parsed — this is the assertion that
     # would have caught it, and it fails if `_SEAM_CALL` is ever narrowed back.
-    assert _SEAM_CALL.search(bodies.get("write_document", "")), (
-        "the guard seam is no longer visible inside write_document — _SEAM_CALL "
-        "does not match how _mcp_documents.py spells it, so all five document "
+    assert _SEAM_CALL.search(bodies.get("write_instance", "")), (
+        "the guard seam is no longer visible inside write_instance — _SEAM_CALL "
+        "does not match how _mcp_instances.py spells it, so all five instance "
         "tools are being checked by nothing"
     )
 
@@ -206,7 +206,7 @@ def test_every_tool_taking_a_scope_binds_it() -> None:
         # matches, so zero matches meant zero offenders meant a pass: deleting
         # the `_guard(...)` line outright from `list_my_kinds` left this file
         # reporting 6 passed. That is the same "covered in name only" shape the
-        # comment on _SEAM_CALL records for _mcp_documents.py, one level up — a
+        # comment on _SEAM_CALL records for _mcp_instances.py, one level up — a
         # tool that reads a caller-supplied `scope` and never reaches the seam
         # is not passing the scope-binding check, it is skipping it entirely.
         if not calls:

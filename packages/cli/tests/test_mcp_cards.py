@@ -15,7 +15,7 @@ The two rules this file exists to pin, both from measurement:
    ``structured_content`` a strict SUPERSET of the same data.
 2. **One shared resource URI.** The default synthesises
    ``ui://prefab/tool/<hash>/renderer.html`` per tool — a separate 6.6 MB
-   document per card in bundled mode. Every card points the same URI, and no
+   instance per card in bundled mode. Every card points the same URI, and no
    per-tool renderer is ever listed or served.
 
 And the requirement that is not a polish pass: the card wears the HOST's
@@ -199,7 +199,7 @@ def test_a_card_that_would_shadow_a_tool_field_raises(monkeypatch):
 def test_every_card_tool_points_the_one_shared_renderer(dna_dir, monkeypatch):
     """All three declarations point the SAME ``ui://`` resource. The default
     would mint ``ui://prefab/tool/<hash>/renderer.html`` per tool — a separate
-    6.6 MB document each, in a mode where every host prefetches them."""
+    6.6 MB instance each, in a mode where every host prefetches them."""
     from fastmcp import Client
 
     _declare_ui_extension(monkeypatch)
@@ -275,10 +275,10 @@ def test_the_shared_renderer_is_served_bundled_and_self_contained(dna_dir):
     assert block.mimeType == M.MCP_APP_MIME
     html = block.text
 
-    # It is the BUNDLED document, not the CDN stub. Grepping for a CDN string
+    # It is the BUNDLED instance, not the CDN stub. Grepping for a CDN string
     # cannot answer this — the bundle carries the stub's own template literals
     # as inert data — so the question is asked structurally instead: the served
-    # document is the bundled one with our stylesheet spliced in, and it is not
+    # instance is the bundled one with our stylesheet spliced in, and it is not
     # the stub.
     bundled = get_renderer_html(mode="bundled")
     stub = get_renderer_html(mode="cdn")
@@ -294,7 +294,7 @@ def test_the_shared_renderer_is_served_bundled_and_self_contained(dna_dir):
 
     # The theme bridge travels INSIDE the resource — fetched once, cached by
     # URI — rather than in every tool result. Asked for by a string only WE
-    # write: the bundled document mentions the host token names itself, in the
+    # write: the bundled instance mentions the host token names itself, in the
     # schema it validates the host context against, so a token name proves
     # nothing here.
     assert ".dna-mark{" in html, "the host-theme bridge is not in the resource"
@@ -607,8 +607,8 @@ def test_a_revoked_kind_reads_as_revoked_and_not_as_merely_unapproved():
     every listing surface has to learn to render it. This is one of them.
 
     The two states the boolean collapsed behave in OPPOSITE ways: a Kind that
-    was never approved is never registered, so its documents are accepted with
-    NO validation; a REVOKED one refuses new documents and marks every existing
+    was never approved is never registered, so its instances are accepted with
+    NO validation; a REVOKED one refuses new instances and marks every existing
     one invalid. Showing both as "not approved" reports the tightest state in
     the system as the loosest.
 
@@ -623,11 +623,11 @@ def test_a_revoked_kind_reads_as_revoked_and_not_as_merely_unapproved():
 
     assert revoked["state"] == "revoked", (
         "a revoked Kind reads as something else — and every other value here "
-        "means the opposite thing about what its documents may do"
+        "means the opposite thing about what its instances may do"
     )
     assert revoked["revoked_by"] == "ana" and revoked["revoked_at"]
     # The approval is NOT erased by the revocation: somebody conferred effect on
-    # this Kind and it governed real documents for a while.
+    # this Kind and it governed real instances for a while.
     assert revoked["approved_by"] == "barna"
 
     # Its own headline badge, in its own hue. Folded into the amber counter it
@@ -671,13 +671,13 @@ def test_the_review_card_shows_what_would_be_approved():
     A reviewer conferring effect is deciding about the SCHEMA — registration is
     what gives a Kind validation and routing — and the roster deliberately does
     not carry it. So the single-Kind card does: the schema, both actors, and a
-    sentence saying what the current state means for documents."""
+    sentence saying what the current state means for instances."""
     wire = _wire("review_kind")
     state = wire["state"]
     assert state["kind"] == "Contrato"
     assert state["state"] == "unapproved"
     assert state["state_variant"] == "warning"
-    # The schema is really there, and it is the one from the document.
+    # The schema is really there, and it is the one from the instance.
     assert state["has_schema"] is True
     schema = json.loads(state["schema"])
     assert schema == _PAYLOADS["review_kind"]["declaration"]["schema"]
@@ -930,7 +930,7 @@ def test_a_new_kind_gets_a_usable_card_with_no_new_card_code():
         {
             "scope": "acme",
             "count": 1,
-            "documents": [
+            "instances": [
                 {"name": "c-001", "parte": "Acme Ltda", "situacao": "vigente"},
             ],
             "presentation": {
@@ -944,24 +944,24 @@ def test_a_new_kind_gets_a_usable_card_with_no_new_card_code():
                 "hidden": [],
             },
         },
-        items_key="documents",
+        items_key="instances",
     ).to_json()
     assert _headers(wire) == ["Contrato", "Parte", "Situação"]
     assert wire["state"]["label"] == "Contratos"
-    assert wire["state"]["documents"][0]["situacao"] == "vigente"
+    assert wire["state"]["instances"][0]["situacao"] == "vigente"
     assert "No Contratos" in json.dumps(wire), (
         "the empty state names some other Kind — it is not derived"
     )
 
 
 def test_the_card_prints_no_python_repr_for_a_missing_value():
-    """The em dash rule survives the generalisation: a field the document does
+    """The em dash rule survives the generalisation: a field the instance does
     not carry is absent, and a card that printed ``None`` would have invented a
     value."""
     wire = C.documents_app(
         {
             "count": 1,
-            "documents": [{"name": "c-001", "parte": None}],
+            "instances": [{"name": "c-001", "parte": None}],
             "presentation": {
                 "label": "Contratos", "icon": None,
                 "fields": [{"field": "name", "label": "Contrato", "role": None},
@@ -969,14 +969,14 @@ def test_the_card_prints_no_python_repr_for_a_missing_value():
                 "hidden": [],
             },
         },
-        items_key="documents",
+        items_key="instances",
     ).to_json()
-    assert wire["state"]["documents"][0]["parte"] == "—"
+    assert wire["state"]["instances"][0]["parte"] == "—"
     assert "None" not in json.dumps(wire["state"])
 
 
 def test_the_review_card_shows_how_the_kinds_documents_will_read():
-    """``schema`` says what a document may CONTAIN; the presentation says how
+    """``schema`` says what an instance may CONTAIN; the presentation says how
     it will READ, on every surface the workspace has. Both are conferred by the
     same approval, so a reviewer sees both — and the rows here are the Kind's
     declaration, not a shape this card knows."""

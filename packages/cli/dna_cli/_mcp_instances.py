@@ -1,4 +1,4 @@
-"""``dna_cli._mcp_documents`` — the GENERIC document tools on the MCP face.
+"""``dna_cli._mcp_instances`` — the GENERIC instance tools on the MCP face.
 
 Four tools that replace what would otherwise be four hand-written tools per
 Kind. The MCP face had 21 hand-written tools and no loop over the Kind registry:
@@ -8,20 +8,20 @@ reachable by an agent. These four are resolved from the registry AT CALL TIME,
 so a Kind that exists is a Kind an agent can use:
 
     list_kinds      — the catalog: what can I act on in this scope?
-    list_documents  — the documents of one Kind
-    get_document    — one document, verbatim
-    write_document  — create/update one document
+    list_instances  — the instances of one Kind
+    get_instance    — one instance, verbatim
+    write_instance  — create/update one instance
 
 This module is a THIN adapter, exactly like the rest of the face. The behavior
-lives in the core (``dna.application.documents``); what lives HERE is the
+lives in the core (``dna.application.instances``); what lives HERE is the
 MCP-edge concern that core cannot own — the plan/tenancy seam:
 
 * every tool passes the SAME ``_guard`` the hand-written tools pass (workspace
   resolution + membership, scope binding, tier → caps → quota), so the generic
   surface opens no path a hand-written tool does not already honor;
 * the metered FAMILY is derived from the target Kind
-  (``documents.family_for_kind``), never chosen by the caller — so an ``sdlc``
-  write cannot be reached through a "document" tool by a tier that grants
+  (``instances.family_for_kind``), never chosen by the caller — so an ``sdlc``
+  write cannot be reached through a "instance" tool by a tier that grants
   ``sdlc_mode: read``;
 * a WRITE additionally requires the tier to grant ``write`` for that family's
   access mode (``_mcp_quota.enforce_family_mode``), fail closed.
@@ -34,7 +34,7 @@ from __future__ import annotations
 
 from typing import Any, Awaitable, Callable
 
-from dna.application import documents as D
+from dna.application import instances as D
 from dna.kernel.errors import KernelRefusal
 
 #: Everything a write may legitimately be REFUSED with, as one tuple.
@@ -61,14 +61,14 @@ GuardFn = Callable[..., Awaitable[Any]]
 PlanFamiliesFn = Callable[[], Awaitable[Any]]
 
 
-def register_document_tools(
+def register_instance_tools(
     server: Any,
     *,
     live: Callable[[], Awaitable[Any]],
     guard: GuardFn,
     plan_families: PlanFamiliesFn,
 ) -> list[str]:
-    """Register the four generic document tools on ``server``. Returns their
+    """Register the four generic instance tools on ``server``. Returns their
     names (the boot log prints them, like the graph tools)."""
     from fastmcp.exceptions import ToolError
 
@@ -117,10 +117,10 @@ def register_document_tools(
         #
         # i-090: and it resolves through ``resolve_kind_port_live``, which
         # refreshes this scope's Kind registry once its window has expired.
-        # Without that, a generic document tool answered "Kind not registered"
+        # Without that, a generic instance tool answered "Kind not registered"
         # for a Kind the workspace had just approved on ANOTHER replica — the
         # registry is only ever repopulated inside a Manifest Instance build and
-        # no document route builds one. The same seam closes a REVOCATION in the
+        # no instance route builds one. The same seam closes a REVOCATION in the
         # other direction, which is the half that must not lag.
         ld = await live()
         try:
@@ -135,7 +135,7 @@ def register_document_tools(
     @server.tool(run_in_thread=False)
     async def list_kinds(scope: str | None = None) -> dict[str, Any]:
         """List the Kinds this source serves — the catalog behind
-        ``list_documents`` / ``get_document`` / ``write_document``.
+        ``list_instances`` / ``get_instance`` / ``write_instance``.
 
         Each entry carries the Kind's ``alias``, ``api_version``, ``plane``
         (``composition`` = it composes into prompts, ``record`` = it does not),
@@ -148,7 +148,7 @@ def register_document_tools(
         plan's feature families unlock (``filtered_by_plan: true``) — an honest
         short list beats a long one whose entries answer 403."""
         # Metered as `definitions`: the catalog is a read OF THE REGISTRY, not
-        # of any one family's documents — the same call the `dna://{scope}/
+        # of any one family's instances — the same call the `dna://{scope}/
         # manifest` resource already guards under that family.
         tenant = await guard("definitions", scope=scope)
         return await D.list_kinds_impl(
@@ -157,18 +157,18 @@ def register_document_tools(
         )
 
     @server.tool(run_in_thread=False)
-    async def list_documents(
+    async def list_instances(
         kind: str, scope: str | None = None, api_version: str | None = None,
         limit: int | None = None, offset: int = 0,
         fields: list[str] | None = None, filter: dict[str, Any] | None = None,
         order_by: list[str] | None = None,
     ) -> dict[str, Any]:
-        """List the documents of one Kind in a scope, optionally PROJECTED and
-        FILTERED — one call instead of one per document.
+        """List the instances of one Kind in a scope, optionally PROJECTED and
+        FILTERED — one call instead of one per instance.
 
         Without ``fields`` you get names only, and answering "show me the open
-        issues" then costs 1 + N calls: a list, then a ``get_document`` per
-        document, most of them discarded. Both arguments push down into the
+        issues" then costs 1 + N calls: a list, then a ``get_instance`` per
+        instance, most of them discarded. Both arguments push down into the
         kernel's own query:
 
         * ``fields`` — dotted spec paths to include per row
@@ -186,13 +186,13 @@ def register_document_tools(
         ``offset``, with an honest ``has_more``.
 
         Metering is unchanged — one call, one unit, gated by the TARGET Kind's
-        family exactly as ``get_document`` is. A projection reaches nothing your
-        plan does not already let you read one document at a time; what it changes
+        family exactly as ``get_instance`` is. A projection reaches nothing your
+        plan does not already let you read one instance at a time; what it changes
         is how many round trips it takes."""
         port, tenant = await _guard_for(
             kind, api_version, scope=scope, family_op="read")
         try:
-            return await D.list_documents_impl(
+            return await D.list_instances_impl(
                 await live(), kind=port.kind, api_version=port.api_version,
                 scope=scope, tenant=tenant, limit=limit, offset=offset,
                 fields=fields, filter=filter, order_by=order_by,
@@ -203,22 +203,22 @@ def register_document_tools(
             raise ToolError(f"{type(exc).__name__}: {exc}") from None
 
     @server.tool(run_in_thread=False)
-    async def get_document(
+    async def get_instance(
         kind: str, name: str, scope: str | None = None,
         api_version: str | None = None,
     ) -> dict[str, Any]:
-        """Read one document verbatim (``apiVersion`` / ``kind`` / ``metadata``
+        """Read one instance verbatim (``apiVersion`` / ``kind`` / ``metadata``
         / ``spec``), as your layer sees it — the per-tenant overlay wins over the
         inherited base, live, with no redeploy. Works for EVERY registered Kind,
         including the bootstrap ones the generic write refuses.
 
-        The result also carries an ``etag``: pass it to ``write_document`` as
+        The result also carries an ``etag``: pass it to ``write_instance`` as
         ``if_match`` and your update is refused rather than silently overwriting a
         change somebody made in between."""
         port, tenant = await _guard_for(
             kind, api_version, scope=scope, family_op="read")
         try:
-            return await D.get_document_impl(
+            return await D.get_instance_impl(
                 await live(), kind=port.kind, api_version=port.api_version,
                 name=name, scope=scope, tenant=tenant,
             )
@@ -226,27 +226,27 @@ def register_document_tools(
             raise ToolError(str(exc)) from None
 
     @server.tool(run_in_thread=False)
-    async def write_document(
+    async def write_instance(
         kind: str, name: str, spec: dict[str, Any],
         scope: str | None = None, api_version: str | None = None,
         merge: bool = True, if_match: str | None = None,
     ) -> dict[str, Any]:
-        """Create or UPDATE one document of any Kind — ``spec`` is the document
+        """Create or UPDATE one instance of any Kind — ``spec`` is the instance
         body (the ``apiVersion``/``kind``/``metadata`` envelope is built from the
         registered Kind, so you cannot write into another Kind's namespace).
 
         **An update MERGES.** Send only the fields you are changing: everything
-        else in the stored document — its ``timeline`` above all, which is an
+        else in the stored instance — its ``timeline`` above all, which is an
         append-only history you cannot reconstruct — is preserved. To REMOVE a
         field, send it as ``null``. ``merge=false`` REPLACES the whole spec and
         drops anything you did not send; use it only when you mean exactly that.
 
         Board Kinds are stamped with the dates their read surfaces need
-        (``created_at`` on create, ``updated_at`` on every write), so a document
+        (``created_at`` on create, ``updated_at`` on every write), so an instance
         filed here is visible to ``sdlc_digest``.
 
-        ``if_match`` (optional): the ``etag`` from ``get_document``. With it, the
-        write is REFUSED if the document changed since you read it, instead of
+        ``if_match`` (optional): the ``etag`` from ``get_instance``. With it, the
+        write is REFUSED if the instance changed since you read it, instead of
         overwriting the other change. The result returns the new ``etag``, so a
         chain of updates needs no re-read.
 
@@ -264,7 +264,7 @@ def register_document_tools(
         port, tenant = await _guard_for(
             kind, api_version, scope=scope, family_op="write")
         try:
-            return await D.write_document_impl(
+            return await D.write_instance_impl(
                 await live(), kind=port.kind, api_version=port.api_version,
                 name=name, spec=spec, scope=scope, tenant=tenant,
                 merge=merge, if_match=if_match,
@@ -277,28 +277,28 @@ def register_document_tools(
             raise ToolError(f"{type(exc).__name__}: {exc}") from None
 
     @server.tool(run_in_thread=False)
-    async def delete_document(
+    async def delete_instance(
         kind: str, name: str, api_version: str,
         scope: str | None = None, if_match: str | None = None,
     ) -> dict[str, Any]:
-        """DELETE one document of any Kind. Destructive and not undoable here.
+        """DELETE one instance of any Kind. Destructive and not undoable here.
 
         The MCP face had no delete at all: an agent could create and update every
         Kind and remove nothing, so undoing a mistaken write needed a human with
-        database access. This is ``kernel.delete_document`` — the same operation
+        database access. This is ``kernel.delete_instance`` — the same operation
         ``dna doc delete`` and the REST routes already use — through the same
-        tenancy + quota guard as ``write_document``, and metered as a write.
+        tenancy + quota guard as ``write_instance``, and metered as a write.
 
-        ``api_version`` is REQUIRED here, unlike ``write_document`` where the
-        document supplies it. A delete carries no document, and a bare Kind NAME
+        ``api_version`` is REQUIRED here, unlike ``write_instance`` where the
+        instance supplies it. A delete carries no instance, and a bare Kind NAME
         can resolve to two ports once two workspaces each declare a Kind of the
         same name in their own namespace — so you state which Kind you mean, and
         that pin travels all the way to the storage adapter.
 
-        ``if_match`` (optional): the ``etag`` from ``get_document``. Pass it and
-        the delete is REFUSED if the document changed since you read it. It
+        ``if_match`` (optional): the ``etag`` from ``get_instance``. Pass it and
+        the delete is REFUSED if the instance changed since you read it. It
         matters more here than on a write: a write that races loses one edit, a
-        delete that races destroys a document its author never saw.
+        delete that races destroys an instance its author never saw.
 
         Two Kinds of thing are NEVER deletable here, and ``list_kinds`` reports
         both per Kind (``deletable`` / ``delete_refusal``) so you can see it
@@ -307,17 +307,17 @@ def register_document_tools(
         * BOOTSTRAP Kinds (Genome / LayerPolicy / KindDefinition) — deleting one
           is worse than writing a bad one, because a bad Genome is fixed by
           writing a better Genome while deleting a KindDefinition orphans every
-          document of that Kind with nothing left to name them;
+          instance of that Kind with nothing left to name them;
         * APPEND-ONLY records (AuditLog / Evidence / WorkflowEvent) — the record
           is the evidence of what happened; supersede it, never delete it.
 
-        A document that is not there is an ERROR, not a quiet success: reporting
+        An instance that is not there is an ERROR, not a quiet success: reporting
         success for a delete that did nothing is how a caller convinces itself
         something is gone."""
         port, tenant = await _guard_for(
             kind, api_version, scope=scope, family_op="write")
         try:
-            return await D.delete_document_impl(
+            return await D.delete_instance_impl(
                 await live(), kind=port.kind, api_version=port.api_version,
                 name=name, scope=scope, tenant=tenant, if_match=if_match,
             )
@@ -327,6 +327,6 @@ def register_document_tools(
             raise ToolError(f"{type(exc).__name__}: {exc}") from None
 
     return [
-        "list_kinds", "list_documents", "get_document", "write_document",
-        "delete_document",
+        "list_kinds", "list_instances", "get_instance", "write_instance",
+        "delete_instance",
     ]

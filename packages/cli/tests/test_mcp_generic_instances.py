@@ -1,12 +1,12 @@
-"""Story ``s-mcp-generic-document-tools`` — generic, registry-driven document
+"""Story ``s-mcp-generic-instance-tools`` — generic, registry-driven instance
 tools on the MCP face.
 
 The gap: the MCP face ships 21 HAND-WRITTEN tools and never loops over the Kind
 registry, so of the 76 registered Kinds only the handful someone hand-wrote a
 tool for is reachable by an agent. The CLI already solved this generically
 in-process (``dna_cli._ctx._LocalDocs`` → ``dna doc``); it was simply never
-served. These four tools close that: ``list_kinds`` / ``list_documents`` /
-``get_document`` / ``write_document``, resolved from the registry AT CALL TIME.
+served. These four tools close that: ``list_kinds`` / ``list_instances`` /
+``get_instance`` / ``write_instance``, resolved from the registry AT CALL TIME.
 
 Four properties:
 
@@ -37,7 +37,7 @@ import shutil
 
 import pytest
 
-from dna.application import documents as D
+from dna.application import instances as D
 from dna_cli import _mcp_quota as Q
 
 _ROOT = pathlib.Path(__file__).resolve().parents[3]
@@ -120,7 +120,7 @@ def test_unknown_kind_is_refused(dna_dir):
     async def go():
         live = await _live(dna_dir)
         with pytest.raises(D.UnknownKindError, match="Nope"):
-            await D.list_documents_impl(live, kind="Nope", scope=_SCOPE)
+            await D.list_instances_impl(live, kind="Nope", scope=_SCOPE)
 
     asyncio.run(go())
 
@@ -202,44 +202,44 @@ def test_list_kinds_reports_only_what_the_plan_unlocks(dna_dir):
 def test_list_and_read_a_kind_with_no_hand_written_tool(dna_dir):
     async def go():
         live = await _live(dna_dir)
-        listed = await D.list_documents_impl(live, kind=_UNSERVED_KIND, scope=_SCOPE)
-        got = await D.get_document_impl(
+        listed = await D.list_instances_impl(live, kind=_UNSERVED_KIND, scope=_SCOPE)
+        got = await D.get_instance_impl(
             live, kind=_UNSERVED_KIND, name=_UNSERVED_DOC, scope=_SCOPE)
         return listed, got
 
     listed, got = asyncio.run(go())
     assert listed["kind"] == _UNSERVED_KIND
-    assert _UNSERVED_DOC in {d["name"] for d in listed["documents"]}
+    assert _UNSERVED_DOC in {d["name"] for d in listed["instances"]}
     assert got["name"] == _UNSERVED_DOC
-    assert got["document"]["kind"] == _UNSERVED_KIND
-    assert got["document"]["spec"]  # the real stored spec, not a stub
+    assert got["instance"]["kind"] == _UNSERVED_KIND
+    assert got["instance"]["spec"]  # the real stored spec, not a stub
 
 
 def test_write_then_read_back_a_kind_with_no_hand_written_tool(dna_dir):
-    """``ModelProfile`` has no hand-written MCP tool AND no document in the
+    """``ModelProfile`` has no hand-written MCP tool AND no instance in the
     fixture — the generic write creates it and the generic read finds it."""
     async def go():
         live = await _live(dna_dir)
-        res = await D.write_document_impl(
+        res = await D.write_instance_impl(
             live, kind="ModelProfile", name="gpt-x", scope=_SCOPE,
             spec={"model_id": "gpt-x", "provider": "openai"},
         )
-        got = await D.get_document_impl(
+        got = await D.get_instance_impl(
             live, kind="ModelProfile", name="gpt-x", scope=_SCOPE)
         return res, got
 
     res, got = asyncio.run(go())
     assert res["kind"] == "ModelProfile" and res["name"] == "gpt-x"
-    assert got["document"]["spec"]["model_id"] == "gpt-x"
+    assert got["instance"]["spec"]["model_id"] == "gpt-x"
     # the apiVersion was taken from the registered port, never from the caller.
-    assert got["document"]["apiVersion"] == "github.com/ruinosus/dna/modelreg/v1"
+    assert got["instance"]["apiVersion"] == "github.com/ruinosus/dna/modelreg/v1"
 
 
 def test_get_document_missing_name_raises(dna_dir):
     async def go():
         live = await _live(dna_dir)
         with pytest.raises(LookupError):
-            await D.get_document_impl(
+            await D.get_instance_impl(
                 live, kind=_UNSERVED_KIND, name="nope", scope=_SCOPE)
 
     asyncio.run(go())
@@ -256,13 +256,13 @@ def test_generic_write_refuses_a_bootstrap_kind(dna_dir, kind):
     async def go():
         live = await _live(dna_dir)
         with pytest.raises(D.BootstrapKindWriteRefused) as ei:
-            await D.write_document_impl(
+            await D.write_instance_impl(
                 live, kind=kind, name="pwned", scope=_SCOPE, spec={})
         assert kind in str(ei.value)
         # the refusal is honest about WHY and about the supported path.
         assert "bootstrap" in str(ei.value).lower()
         # nothing landed.
-        return await live.kernel.get_document(_SCOPE, kind, "pwned")
+        return await live.kernel.get_instance(_SCOPE, kind, "pwned")
 
     assert asyncio.run(go()) is None
 
@@ -272,7 +272,7 @@ def test_bootstrap_kinds_stay_READABLE(dna_dir):
     Genome that governs the scope it is working in."""
     async def go():
         live = await _live(dna_dir)
-        return await D.get_document_impl(
+        return await D.get_instance_impl(
             live, kind="Genome", name="concierge", scope=_SCOPE)
 
     got = asyncio.run(go())
@@ -305,8 +305,8 @@ def test_the_four_tools_are_registered(dna_dir):
             return {t.name for t in await client.list_tools()}
 
     names = asyncio.run(go())
-    assert {"list_kinds", "list_documents", "get_document",
-            "write_document"} <= names
+    assert {"list_kinds", "list_instances", "get_instance",
+            "write_instance"} <= names
 
 
 def test_face_lists_and_reads_an_unserved_kind(dna_dir):
@@ -314,13 +314,13 @@ def test_face_lists_and_reads_an_unserved_kind(dna_dir):
     from dna_cli import _mcp_server as M
 
     server = M.build_server(scope=_SCOPE, base_dir=str(dna_dir))
-    listed = _call(server, "list_documents",
+    listed = _call(server, "list_instances",
                    {"kind": _UNSERVED_KIND, "scope": _SCOPE})
     assert _UNSERVED_DOC in {
-        d["name"] for d in listed.structured_content["documents"]}
-    got = _call(server, "get_document",
+        d["name"] for d in listed.structured_content["instances"]}
+    got = _call(server, "get_instance",
                 {"kind": _UNSERVED_KIND, "name": _UNSERVED_DOC, "scope": _SCOPE})
-    assert got.structured_content["document"]["kind"] == _UNSERVED_KIND
+    assert got.structured_content["instance"]["kind"] == _UNSERVED_KIND
 
 
 def test_face_refuses_a_bootstrap_write(dna_dir):
@@ -329,7 +329,7 @@ def test_face_refuses_a_bootstrap_write(dna_dir):
 
     server = M.build_server(scope=_SCOPE, base_dir=str(dna_dir))
     with pytest.raises(Exception) as ei:  # noqa: PT011 — FastMCP ToolError
-        _call(server, "write_document",
+        _call(server, "write_instance",
               {"kind": "LayerPolicy", "name": "pwned", "spec": {},
                "scope": _SCOPE})
     assert "bootstrap" in str(ei.value).lower()
@@ -370,11 +370,11 @@ async def _seed_tiers(dna_dir, **overrides) -> None:
     from dna_cli import _mcp_server as M
 
     live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         "_lib", "PricingPlan", "free",
         _tier_doc("free", families=["definitions", "sdlc", "memory"],
                   sdlc_mode="read"))
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         "_lib", "PricingPlan", "pro",
         _tier_doc("pro", families=["definitions", "sdlc", "memory", "emit"],
                   sdlc_mode="write", memory_mode="write",
@@ -424,10 +424,10 @@ def test_generic_write_of_an_sdlc_kind_is_denied_on_a_read_tier(dna_dir, http_se
         async with Client(url, auth=BearerAuth(token)) as client:
             # the READ half of the same family is allowed.
             listed = await client.call_tool(
-                "list_documents", {"kind": "Story", "scope": _SCOPE})
-            assert "documents" in listed.structured_content
+                "list_instances", {"kind": "Story", "scope": _SCOPE})
+            assert "instances" in listed.structured_content
             with pytest.raises(Exception) as ei:  # noqa: PT011
-                await client.call_tool("write_document", {
+                await client.call_tool("write_instance", {
                     "kind": "Story", "name": "s-smuggled",
                     "spec": {"title": "smuggled in through a generic tool"},
                     "scope": _SCOPE})
@@ -454,7 +454,7 @@ def test_generic_write_of_an_sdlc_kind_is_allowed_on_a_write_tier(dna_dir, http_
 
     async def go(url):
         async with Client(url, auth=BearerAuth(token)) as client:
-            out = await client.call_tool("write_document", {
+            out = await client.call_tool("write_instance", {
                 "kind": "Story", "name": "s-written-generically",
                 "spec": {"title": "t", "description": "d", "status": "todo",
                          "feature": "f-dna-mcp-server"},
@@ -489,9 +489,9 @@ def test_definitions_write_needs_an_explicitly_granted_definitions_mode(
         async with Client(url, auth=BearerAuth(token)) as client:
             # the READ is fine (the family gate is the read gate).
             await client.call_tool(
-                "list_documents", {"kind": _UNSERVED_KIND, "scope": _SCOPE})
+                "list_instances", {"kind": _UNSERVED_KIND, "scope": _SCOPE})
             with pytest.raises(Exception) as ei:  # noqa: PT011
-                await client.call_tool("write_document", {
+                await client.call_tool("write_instance", {
                     "kind": "ModelProfile", "name": "sneaky",
                     "spec": {"model_id": "sneaky", "provider": "x"}, "scope": _SCOPE})
             assert "definitions_mode" in str(ei.value)
@@ -515,7 +515,7 @@ def test_definitions_write_allowed_once_the_plan_grants_it(dna_dir, http_server)
 
     async def go(url):
         async with Client(url, auth=BearerAuth(token)) as client:
-            out = await client.call_tool("write_document", {
+            out = await client.call_tool("write_instance", {
                 "kind": "ModelProfile", "name": "granted",
                 "spec": {"model_id": "sneaky", "provider": "x"}, "scope": _SCOPE})
             assert out.structured_content["name"] == "granted"
@@ -535,7 +535,7 @@ def test_list_kinds_over_the_face_is_filtered_by_the_plan(dna_dir, http_server):
 
     async def seed():
         live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             "_lib", "PricingPlan", "free",
             _tier_doc("free", families=["definitions"], sdlc_mode="read"))
 
@@ -579,7 +579,7 @@ def test_generic_tools_honor_cross_workspace_scope_binding(dna_dir, http_server,
         for ws, email, oid in ((ws_vendor, "alice@a.com", "oid-alice"),
                                (ws_outside, "bob@b.com", "oid-bob")):
             name = f"{ws}--{email.replace('@', '-at-').replace('.', '-')}"
-            await live.kernel.write_document("_lib", "WorkspaceMembership", name, {
+            await live.kernel.write_instance("_lib", "WorkspaceMembership", name, {
                 "apiVersion": "github.com/ruinosus/dna/tenant/v1",
                 "kind": "WorkspaceMembership",
                 "metadata": {"name": name},
@@ -605,10 +605,10 @@ def test_generic_tools_honor_cross_workspace_scope_binding(dna_dir, http_server,
         async with Client(url, auth=BearerAuth(bob)) as client:
             for tool, args in (
                 ("list_kinds", {"scope": _SCOPE}),
-                ("list_documents", {"kind": _UNSERVED_KIND, "scope": _SCOPE}),
-                ("get_document", {"kind": _UNSERVED_KIND,
+                ("list_instances", {"kind": _UNSERVED_KIND, "scope": _SCOPE}),
+                ("get_instance", {"kind": _UNSERVED_KIND,
                                   "name": _UNSERVED_DOC, "scope": _SCOPE}),
-                ("write_document", {"kind": "ModelProfile", "name": "x",
+                ("write_instance", {"kind": "ModelProfile", "name": "x",
                                     "spec": {}, "scope": _SCOPE}),
             ):
                 with pytest.raises(Exception) as ei:  # noqa: PT011

@@ -2,7 +2,7 @@
 
 Everything here was lifted verbatim out of ``sdlc_cmd.py`` — the helpers that
 nearly every group depends on: the clock, the actor, the git/gh probes, the
-timeline appender, the document envelope, the post-transition hook registry
+timeline appender, the instance envelope, the post-transition hook registry
 and the scope-resolution chain behind ``--scope``.
 
 Kept deliberately free of any ``@sdlc.*`` command definition so group modules
@@ -191,7 +191,7 @@ def _append_timeline(spec: dict[str, Any], event_type: str, **fields: Any) -> No
 
 
 def _build_raw(kind: str, name: str, spec: dict[str, Any]) -> dict[str, Any]:
-    """The kernel document envelope — delegates to the shared core ``build_raw``
+    """The kernel instance envelope — delegates to the shared core ``build_raw``
     so the CLI + MCP write the SAME apiVersion + metadata shape."""
     return _core_build_raw(kind, name, spec)
 
@@ -351,7 +351,7 @@ def _transition_workitem(
     raises when the arc forbids the move (e.g.
     ``dna.extensions.sdlc.validate_spec_transition``). It runs INSIDE the
     session, on the status just read, so the check and the write see the same
-    document — a caller that opened its own session to look first would be
+    instance — a caller that opened its own session to look first would be
     validating a status it no longer holds. Default ``None`` = the historical
     behaviour: every transition this helper is asked for, it makes.
     """
@@ -375,7 +375,7 @@ def _transition_workitem(
             **{"from": prev_status, "to": new_status, **timeline_extras},
         )
         raw = _build_raw(kind, name, spec)
-        s.run(s.kernel.write_document(scope, kind, name, raw))
+        s.run(s.kernel.write_instance(scope, kind, name, raw))
     click.secho(f"UPDATED {kind}/{name} → {new_status}", fg="green")
 
 

@@ -187,7 +187,7 @@ class TestTheRealWalk:
                 await conn.execute(sa.text(f"DROP SCHEMA IF EXISTS {schema} CASCADE"))
                 await conn.execute(sa.text(f"CREATE SCHEMA {schema}"))
                 await conn.execute(sa.text(
-                    f"CREATE TABLE {schema}.dna_instances (x TEXT)"
+                    f"CREATE TABLE {schema}.dna_documents (x TEXT)"
                 ))
                 await conn.execute(sa.text(f"CREATE TABLE {schema}.dna_edges (x TEXT)"))
                 await conn.execute(sa.text(

@@ -1,7 +1,7 @@
 """The PORTFOLIO door at the MCP face — and the bridge from a project to its board.
 
 The Kinds (``Project`` / ``Organization`` / ``Repo``) were always registered and
-always reachable through the generic document door; the application seams were
+always reachable through the generic instance door; the application seams were
 already written and already served REST. What was missing was a NAME, and a
 catalog of 78 Kinds with no named tool is discoverable only by luck.
 
@@ -354,7 +354,7 @@ def test_the_portfolio_door_meters_the_family_the_kind_derives(dna_dir, monkeypa
     """The defect this pins, measured in production on the first battery.
 
     ``create_project`` refused with *"tier 'free' does not include the 'write'
-    tool family"* while ``write_document(kind="Project")`` — the SAME entity,
+    tool family"* while ``write_instance(kind="Project")`` — the SAME entity,
     the other door — succeeded. The generic door DERIVES the family from the
     Kind; this one NAMED ``"read"`` / ``"write"``, two strings no tier unlocks.
     Two doors disagreeing about one entity is not a policy.
@@ -362,7 +362,7 @@ def test_the_portfolio_door_meters_the_family_the_kind_derives(dna_dir, monkeypa
     Driven through the module's real registration with the guard spied on, so
     what is asserted is the family the guard ACTUALLY receives. Hardcode a
     family string again and this dies."""
-    from dna.application import documents as D
+    from dna.application import instances as D
 
     from dna_cli import _mcp_portfolio as P
 

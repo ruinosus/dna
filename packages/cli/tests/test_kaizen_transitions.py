@@ -3,7 +3,7 @@
 The Kaizen Kind declares observed → routed → resolved but the CLI only
 wrote on create; later transitions would require hand-editing YAML
 (against the repo rule). These subcommands route through
-kernel.write_document like their siblings. The historical bare form
+kernel.write_instance like their siblings. The historical bare form
 `dna sdlc kaizen <wi> --body` must keep working (default subcommand).
 """
 from __future__ import annotations
@@ -65,7 +65,7 @@ class _FakeKernel:
     def with_tenant(self, tenant):
         return self
 
-    async def write_document(self, scope, kind, name, raw, **_):
+    async def write_instance(self, scope, kind, name, raw, **_):
         self._store[(scope, kind, name)] = raw
         return "v1"
 

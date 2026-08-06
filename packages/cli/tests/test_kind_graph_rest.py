@@ -27,7 +27,7 @@ What this module pins:
   declared, without reading English prose off a backend. That was i-104: 25
   rows, all of one origin, presented as 25 broken declarations because
   ``reason`` was the only thing to go on;
-* it is SCHEMA, never data: no document read, and the envelope says which
+* it is SCHEMA, never data: no instance read, and the envelope says which
   graph it is;
 * ``tenant`` resolves the scope like the registry route, an unknown scope is
   an empty graph rather than a 404, and the route is mounted (and guarded) on
@@ -196,7 +196,7 @@ def test_the_gaps_come_back_named_not_dropped(graph):
 
 
 def test_a_key_addressed_reference_IS_an_edge_and_says_it_is_not_enforced(graph):
-    """``Comment.target_ref`` really points at a document — by a composite
+    """``Comment.target_ref`` really points at an instance — by a composite
     ``Kind:name`` string. It used to be filtered OUT of the edges into an
     "undeclarable" bucket, which is how eight ``produces`` fields ended up
     described as inexpressible when they were merely undeclared. It is an edge

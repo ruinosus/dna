@@ -3,7 +3,7 @@
 Measured on the dna-cloud board 05/08/2026: 13 Issues sharing 4 numbers
 (``i-094`` ×4, ``i-095`` ×2, ``i-096`` ×2, ``i-097`` ×5) — every one filed
 through this command, which computed ``max(NNN)+1`` from the filesystem and
-then called ``write_document`` bare. Two agents in two git WORKTREES read the
+then called ``write_instance`` bare. Two agents in two git WORKTREES read the
 same board, pick the same number, and write files with DIFFERENT names, so
 ``git merge`` joins both without a conflict.
 
@@ -65,7 +65,7 @@ def two_worktrees(tmp_path):
 
 def _plant(worktree, name: str, kind_dir: str = "issues") -> None:
     """Write a board doc into a worktree's board source, the way the CLI does:
-    one YAML per document, file stem == document name."""
+    one YAML per instance, file stem == instance name."""
     d = worktree / ".dna" / _SCOPE / kind_dir
     d.mkdir(parents=True, exist_ok=True)
     (d / f"{name}.yaml").write_text(
@@ -96,7 +96,7 @@ def test_issue_file_warns_when_the_board_already_has_a_number_claimed_twice(
 
     assert result.exit_code == 0, result.output
     assert "i-095" in result.output
-    # It names WHICH documents collide — "there is a duplicate somewhere" is
+    # It names WHICH instances collide — "there is a duplicate somewhere" is
     # not actionable, and the whole failure mode is that the number no longer
     # tells you which item is meant.
     assert "i-095-egress-por-plano-copiada-em-duas-apps" in result.output
@@ -124,7 +124,7 @@ def test_issue_file_claims_the_name_atomically_and_never_overwrites(
 ):
     """The protection the CLI gained by delegating to the shared core.
 
-    It used to build ``i-NNN-<slug>`` and call ``write_document`` — an upsert.
+    It used to build ``i-NNN-<slug>`` and call ``write_instance`` — an upsert.
     An enumeration that under-reported (a stale read, a concurrent writer, a
     replica behind) produced a number that was already taken, and the new Issue
     landed ON the live one, replacing its status and timeline while the command
@@ -133,11 +133,11 @@ def test_issue_file_claims_the_name_atomically_and_never_overwrites(
     The double below is exactly that source: ``i-001-ja-existe`` is invisible to
     the enumeration but real on disk. The old code would have written straight
     over it. Two assertions, because either alone can pass for the wrong reason
-    — that ``if_absent`` was ASKED FOR, and that the hidden document survived.
+    — that ``if_absent`` was ASKED FOR, and that the hidden instance survived.
     """
     import contextlib
 
-    from dna.kernel.errors import DocumentNameTaken
+    from dna.kernel.errors import InstanceNameTaken
     from dna_cli._ctx import SESSION_PROVIDER_KEY
 
     _seed(store, "i-001-ja-existe", description="a que já estava lá")
@@ -149,7 +149,7 @@ def test_issue_file_claims_the_name_atomically_and_never_overwrites(
         def with_tenant(self, tenant):
             return self
 
-        async def get_document(self, scope, kind, name):
+        async def get_instance(self, scope, kind, name):
             return store.get((scope, kind, name))
 
         async def query(self, scope, kind, *, projection=None, **_):
@@ -157,11 +157,11 @@ def test_issue_file_claims_the_name_atomically_and_never_overwrites(
             return
             yield  # pragma: no cover — makes this an async generator
 
-        async def write_document(self, scope, kind, name, raw, *,
+        async def write_instance(self, scope, kind, name, raw, *,
                                  if_absent=False, **_):
             asked_if_absent.append(if_absent)
             if if_absent and (scope, kind, name) in store:
-                raise DocumentNameTaken(f"{kind} {name!r} already exists")
+                raise InstanceNameTaken(f"{kind} {name!r} already exists")
             store[(scope, kind, name)] = raw
             return "v1"
 
@@ -250,7 +250,7 @@ def test_the_scan_is_what_does_it__off_the_collision_returns(
 ):
     """The same setup with ``DNA_SDLC_WORKTREE_SCAN=0`` files ``i-101``.
 
-    Two jobs. It documents the escape hatch honestly — off means the old
+    Two jobs. It instances the escape hatch honestly — off means the old
     behavior, collision included, not "off but still safe". And it is the
     mutant-killer for the test above: if the assertion there could pass with the
     scan disabled, the scan would not be what earned it.
@@ -343,7 +343,7 @@ def test_kaizen_claims_its_name_atomically_and_never_overwrites(
     """
     import contextlib
 
-    from dna.kernel.errors import DocumentNameTaken
+    from dna.kernel.errors import InstanceNameTaken
     from dna_cli._ctx import SESSION_PROVIDER_KEY
 
     store[(_SCOPE, "Story", "s-alvo")] = {
@@ -362,17 +362,17 @@ def test_kaizen_claims_its_name_atomically_and_never_overwrites(
         def with_tenant(self, tenant):
             return self
 
-        async def get_document(self, scope, kind, name):
+        async def get_instance(self, scope, kind, name):
             return store.get((scope, kind, name))
 
         async def query(self, scope, kind, *, projection=None, **_):
             return
             yield  # pragma: no cover — makes this an async generator
 
-        async def write_document(self, scope, kind, name, raw, *,
+        async def write_instance(self, scope, kind, name, raw, *,
                                  if_absent=False, **_):
             if if_absent and (scope, kind, name) in store:
-                raise DocumentNameTaken(f"{kind} {name!r} already exists")
+                raise InstanceNameTaken(f"{kind} {name!r} already exists")
             store[(scope, kind, name)] = raw
             return "v1"
 

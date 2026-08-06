@@ -2,7 +2,7 @@
 dogfood board scope (``"dna-development"``) as a ``--scope`` default.
 
 This is the CLI half of the guard. Before this fix, every ``--scope`` option
-across ``kind_cmd``/``intel_cmd``/``doc_cmd``/``research_cmd`` defaulted to
+across ``kind_cmd``/``intel_cmd``/``instance_cmd``/``research_cmd`` defaulted to
 the literal ``"dna-development"`` — a third party running ``dna kind list``
 / ``dna doc ...`` / ``dna research ...`` with no ``--scope`` silently got
 DNA's internal board scope as their default, not their own.
@@ -11,13 +11,13 @@ The fix mirrors the pattern the repo ALREADY uses elsewhere for this exact
 problem: ``dna_cli.sdlc._common._autodetect_sdlc_scope`` (sole scope in the
 source, else None) and the CLI siblings ``mcp_cmd``/``api_cmd``/``emit_cmd``/
 ``explain_cmd`` (``--scope default=None``, help "(default: env / sole
-scope)"). ``dna_client()``-based commands (``kind_cmd``, ``doc_cmd``) resolve
+scope)"). ``dna_client()``-based commands (``kind_cmd``, ``instance_cmd``) resolve
 via the new ``_LocalClient.default_scope`` accessor — the same
 holder-resolved scope ``_build_holder_async`` already computes, reused
 rather than reimplemented.
 
 Round 2 (the full sweep) fixed the remaining 12 branded ``--scope`` sites:
-``doc_cmd.py`` (list/show/make/transition/fields/create/delete — 7),
+``instance_cmd.py`` (list/show/make/transition/fields/create/delete — 7),
 ``research_cmd.py`` (list/show/create/recall — 4), and ``kind_cmd.py``'s
 ``describe`` (1, the sibling of ``list`` fixed in round 1). Round 2 also adds
 the STRUCTURAL guard below (``test_no_dna_cli_scope_option_defaults_to_a_
@@ -73,8 +73,8 @@ def test_kind_cmd_describe_scope_option_default_is_none_not_dna_development():
     assert opt.default is None
 
 
-def test_doc_cmd_scope_options_all_default_to_none():
-    from dna_cli.doc_cmd import create, delete, fields_help, list_docs, make_doc, show, transition
+def test_instance_cmd_scope_options_all_default_to_none():
+    from dna_cli.instance_cmd import create, delete, fields_help, list_docs, make_doc, show, transition
 
     for cmd in (list_docs, show, make_doc, transition, fields_help, create, delete):
         opt = next(p for p in cmd.params if p.name == "scope")
@@ -170,12 +170,12 @@ def test_doc_list_with_no_scope_resolves_via_dna_client_default_scope():
     not just carry a ``None`` default that later 404s. Uses the same fixture
     ``test_definition_cmd.py`` already proves has a real ``Agent`` doc named
     ``concierge`` in the (alphabetically-first) ``concierge`` scope."""
-    from dna_cli.doc_cmd import doc
+    from dna_cli.instance_cmd import instance
 
     base = pathlib.Path(__file__).resolve().parents[3] / "examples" / "emitting-to-a-runtime" / ".dna"
     runner = CliRunner()
     result = runner.invoke(
-        doc, ["list", "Agent", "--json"],
+        instance, ["list", "Agent", "--json"],
         env={"DNA_BASE_DIR": str(base), "DNA_SOURCE_URL": ""},
     )
     assert result.exit_code == 0, result.output
@@ -186,7 +186,7 @@ def test_doc_list_with_no_scope_resolves_via_dna_client_default_scope():
 def test_research_create_and_list_with_no_scope_round_trips_via_dna_session(tmp_path):
     """Regression for the ``s.scope`` fix in ``research_cmd.cmd_create``:
     with ``--scope`` omitted, ``dna_session(None)`` resolves the sole scope
-    — the WRITE must land there too. Before the fix, ``write_document`` was
+    — the WRITE must land there too. Before the fix, ``write_instance`` was
     called with the raw (still-``None``, once the option default changed)
     ``scope`` local instead of the session's resolved ``s.scope`` — a latent
     crash the click-level "default is None" check alone would never catch."""

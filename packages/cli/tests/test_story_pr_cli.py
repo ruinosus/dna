@@ -64,7 +64,7 @@ def _fake_session(monkeypatch, spec=_SPEC, found=True, record=None):
 
         class kernel:  # noqa: N801 — attribute shape only
             @staticmethod
-            def write_document(scope, kind, name, raw):
+            def write_instance(scope, kind, name, raw):
                 if record is not None:
                     record.append(raw)
 
@@ -282,7 +282,7 @@ def test_groom_title(runner, monkeypatch):
 
         class kernel:  # noqa: N801
             @staticmethod
-            def write_document(scope, kind, name, raw):
+            def write_instance(scope, kind, name, raw):
                 async def _noop():
                     return None
                 writes.append(raw)

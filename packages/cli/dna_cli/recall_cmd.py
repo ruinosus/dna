@@ -142,7 +142,7 @@ def _scope_kinds(session: Any) -> list[str]:
     """The record kinds present in the scope (from the built instance)."""
     mi = session.mi
     kinds: list[str] = []
-    for doc in getattr(mi, "documents", []) or []:
+    for doc in getattr(mi, "instances", []) or []:
         if doc.kind not in kinds:
             kinds.append(doc.kind)
     return kinds

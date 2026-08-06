@@ -131,7 +131,7 @@ def _seed(dna_dir, *docs: tuple[str, str, dict]) -> None:
     async def go():
         live = await M.boot_live(base_dir=str(dna_dir))
         for kind, name, doc in docs:
-            await live.kernel.write_document("_lib", kind, name, doc)
+            await live.kernel.write_instance("_lib", kind, name, doc)
 
     asyncio.run(go())
 
@@ -472,7 +472,7 @@ def _seed_tiers_modes(dna_dir) -> None:
 
 def _post_story(c, *, tenant=_WS, headers=None, name="s-quota-probe"):
     return c.post(
-        "/v1/kinds/Story/documents", params={"tenant": tenant},
+        "/v1/kinds/Story/instances", params={"tenant": tenant},
         json={"metadata": {"name": name},
               "spec": {"title": "quota probe", "status": "todo",
                        "description": "sonda de quota"}},
@@ -491,10 +491,10 @@ def test_generic_write_free_blocked_by_the_kinds_family(dna_dir):
         assert r.status_code == 403, r.text
         assert "sdlc_mode" in r.json()["detail"]
         assert store.calls_on(_WS) == 0
-        lidos = c.get("/v1/kinds/Story/documents",
+        lidos = c.get("/v1/kinds/Story/instances",
                       params={"tenant": _WS}, headers=_auth())
         assert all(d["name"] != "s-quota-probe"
-                   for d in lidos.json()["documents"])
+                   for d in lidos.json()["instances"])
 
 
 def test_generic_write_pro_allowed_and_counted(dna_dir):

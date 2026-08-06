@@ -1,7 +1,7 @@
 [project]
 name = "dna-cli"
 version = "0.73.0"
-description = "DNA command-line interface — the `dna` binary for the declarative SDLC + document CRUD (kernel-local, no service required)"
+description = "DNA command-line interface — the `dna` binary for the declarative SDLC + instance CRUD (kernel-local, no service required)"
 readme = "README.md"
 license = "MIT"
 keywords = ["dna", "cli", "agents", "declarative", "sdlc", "manifests"]
@@ -188,7 +188,7 @@ filterwarnings = [
     'ignore:Field name "schema" in "Body_author_kind_v1_kinds_post" shadows an attribute in parent "BaseModel":UserWarning',
     # The same wire name on the way OUT: `GET /v1/kinds/{kind}` returns the
     # authored Kind's JSON Schema under `schema`, because the request body and
-    # the stored document both call it that and a third spelling for one field
+    # the stored instance both call it that and a third spelling for one field
     # would be a third vocabulary for one thing. Silenced by the exact model and
     # the exact field, as above.
     'ignore:Field name "schema" in "AuthoredKindDetail" shadows an attribute in parent "AuthoredKindSummary":UserWarning',

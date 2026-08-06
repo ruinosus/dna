@@ -8,7 +8,7 @@ This helper resolves the EFFECTIVE tenant and warns on the allow-list mismatch.
 """
 from __future__ import annotations
 
-from dna_cli.doc_cmd import _tenant_write_note
+from dna_cli.instance_cmd import _tenant_write_note
 
 
 def test_flag_wins(monkeypatch) -> None:

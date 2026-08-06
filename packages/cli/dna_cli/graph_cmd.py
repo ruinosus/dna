@@ -1,13 +1,13 @@
 """``dna graph`` — the DERIVED reference graph: backfill it, ask it.
 
-The producer writes an edge every time a document is saved, inside the save's
+The producer writes an edge every time an instance is saved, inside the save's
 own transaction. Everything written BEFORE the producer existed therefore has
 no edges, and this is the command that fixes that — explicitly, from the same
 ``spec.relations`` declaration the producer reads, never from a scan that guesses at
 slug prefixes (the mechanism i-039 refused, and the reason ``dna_edges`` was
 dropped the first time).
 
-``backfill`` is idempotent (the same DELETE+INSERT per document the producer
+``backfill`` is idempotent (the same DELETE+INSERT per instance the producer
 uses) and runnable COLD: nothing in it needs the write path to be warm.
 
 ⚠️ Naming: ``dna_cli.graph`` is the Microsoft Graph OBO adapter, an unrelated
@@ -33,14 +33,14 @@ def graph() -> None:
               help="Resolve everything, write nothing — same reads, real numbers.")
 @click.option("--json", "as_json", is_flag=True)
 def backfill(scope: str | None, dry_run: bool, as_json: bool) -> None:
-    """Compute edges for documents that predate the producer.
+    """Compute edges for instances that predate the producer.
 
-    For each declared ``(Kind, field)`` pair, ask the store for the documents
+    For each declared ``(Kind, field)`` pair, ask the store for the instances
     whose ``spec`` HAS that field — on Postgres a JSONB key-existence query the
-    ``dna_docs_spec_gin_idx`` index serves directly. That is a handful of
-    queries, not a walk over every document.
+    ``dna_insts_spec_gin_idx`` index serves directly. That is a handful of
+    queries, not a walk over every instance.
 
-    A document whose references cannot be resolved COMPLETELY (a read failed
+    An instance whose references cannot be resolved COMPLETELY (a read failed
     part-way) is left alone and its scope is reported as pending: a partial
     edge set stored as if it were whole is a graph that lies while looking
     finished, and the screen can label an absent graph but not a lying one.
@@ -62,7 +62,7 @@ def backfill(scope: str | None, dry_run: bool, as_json: bool) -> None:
     verb = "would write" if dry_run else "wrote"
     click.echo(
         f"{report.pairs} declared (Kind, field) pair(s) · "
-        f"{report.documents} document(s) · {verb} {report.edges} edge(s), "
+        f"{report.instances} instance(s) · {verb} {report.edges} edge(s), "
         f"{report.dangling} dangling"
     )
     if report.skipped:
@@ -70,7 +70,7 @@ def backfill(scope: str | None, dry_run: bool, as_json: bool) -> None:
         # and an incomplete graph reported as a finished one is the whole defect
         # this degree exists to avoid.
         click.echo(
-            f"⚠ {report.skipped} document(s) left unresolved in "
+            f"⚠ {report.skipped} instance(s) left unresolved in "
             f"{', '.join(sorted(report.pending))} — their edges were NOT "
             f"replaced. Re-run once the store is healthy."
         )
@@ -83,7 +83,7 @@ def backfill(scope: str | None, dry_run: bool, as_json: bool) -> None:
 @click.option("--tenant", default=None)
 @click.option("--direction", type=click.Choice(["in", "out", "both"]),
               default="in", show_default=True,
-              help="'in' = what points AT this document (the product question).")
+              help="'in' = what points AT this instance (the product question).")
 @click.option("--depth", default=1, show_default=True,
               help="Walk further; clamped by DNA_GRAPH_MAX_DEPTH.")
 @click.option("--json", "as_json", is_flag=True)
@@ -91,7 +91,7 @@ def refs(
     kind_name: str, name: str, scope: str | None, tenant: str | None,
     direction: str, depth: int, as_json: bool,
 ) -> None:
-    """"What points at this document?" — the same walk the REST face serves."""
+    """"What points at this instance?" — the same walk the REST face serves."""
     from dna.kernel.query.graph import GraphUnsupported
 
     with open_session(scope) as s:

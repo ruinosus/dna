@@ -91,7 +91,7 @@ def _skill_names_via_cli(base: Path, scope: str, monkeypatch) -> tuple[list[str]
     async def _boot() -> tuple[list[str], Kernel]:
         holder = await _build_holder_async(scope)
         mi = await holder.kernel.instance_async(scope, lazy=False)
-        names = sorted(d.name for d in mi.documents if d.kind == "Skill")
+        names = sorted(d.name for d in mi.instances if d.kind == "Skill")
         return names, holder.kernel
 
     return asyncio.run(_boot())
@@ -99,7 +99,7 @@ def _skill_names_via_cli(base: Path, scope: str, monkeypatch) -> tuple[list[str]
 
 def _skill_names_via_quick(base: Path, scope: str) -> list[str]:
     mi = Kernel.quick(scope, base_dir=str(base))
-    return sorted(d.name for d in mi.documents if d.kind == "Skill")
+    return sorted(d.name for d in mi.instances if d.kind == "Skill")
 
 
 # ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@ was missing":
 ``Project`` / ``Organization`` / ``Repo`` are Kinds — builtin descriptors from
 the ``portfolio`` extension, registered globally, present in every store's
 catalog. Every one of them was already reachable over MCP through the GENERIC
-document door (``list_documents(kind="Project")``). The application seams were
+instance door (``list_instances(kind="Project")``). The application seams were
 already written and already served the REST face. Nothing was missing except a
 name.
 
@@ -43,7 +43,7 @@ logger = logging.getLogger(__name__)
 
 #: The signature ``_mcp_server`` injects: ``guard(family, tenant, scope=…,
 #: family_op=…)`` → the resolved workspace (or None). Raises ``ToolError`` on
-#: denial. Same contract ``_mcp_kinds`` documents.
+#: denial. Same contract ``_mcp_kinds`` instances.
 GuardFn = Callable[..., Awaitable[Any]]
 
 
@@ -65,7 +65,7 @@ def register_portfolio_tools(
         list_workspaces_impl,
     )
 
-    from dna.application import documents as D
+    from dna.application import instances as D
 
     from dna_cli._mcp_auth import claims_from_context
 
@@ -82,11 +82,11 @@ def register_portfolio_tools(
         Measured in production — every portfolio tool answered *"tier 'free'
         does not include the 'read' tool family"*.
 
-        Wrong twice because the GENERIC document door meters the very same
+        Wrong twice because the GENERIC instance door meters the very same
         entity by deriving it (``family_for_kind``), so ``Project`` was
         ``definitions`` through one door and ``write`` through the other. Two
         doors disagreeing about one entity is not a policy, and the gap was
-        immediately visible from outside: ``write_document(kind="Project")``
+        immediately visible from outside: ``write_instance(kind="Project")``
         succeeded exactly where ``create_project`` refused.
 
         Deriving makes them agree BY CONSTRUCTION, and leaves one place to
@@ -150,7 +150,7 @@ def register_portfolio_tools(
 
         A workspace is listed iff your verified identity holds an ACTIVE
         membership in it; pending invites are not listed, because they
-        authorize nothing yet. A grant whose ``Workspace`` document is missing
+        authorize nothing yet. A grant whose ``Workspace`` instance is missing
         is still listed with a ``null`` name — the id is a fact and the display
         name is not, and inventing one would be fabricating data.
 
@@ -190,7 +190,7 @@ def register_portfolio_tools(
         """One project in detail, with its ``repo_refs`` RESOLVED to real repos.
 
         ``slug`` matches the project's ``spec.slug``, falling back to the
-        document name. A ref pointing at a repo that is not there is skipped
+        instance name. A ref pointing at a repo that is not there is skipped
         rather than invented — a missing repo reads as absent, never as a
         fabricated row.
 

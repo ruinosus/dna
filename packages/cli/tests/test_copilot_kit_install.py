@@ -1,7 +1,7 @@
 """`dna copilot install` (F3) — o kit inteiro pela PORTA.
 
 Instala o kit de vitrine REAL do repo (copilot-kits/contrato-intake) num
-store temporário: cada doc passa pelo kernel.write_document com todos os
+store temporário: cada doc passa pelo kernel.write_instance com todos os
 guards; o Kind entra INERTE sem --approve e aprovado com; --dry-run não
 escreve nada."""
 
@@ -40,7 +40,7 @@ def test_dry_run_lista_o_plano_e_escreve_nada(tmp_path):
 def test_instala_o_kit_inteiro_com_kind_inerte(tmp_path):
     out = _run(tmp_path)
     assert out.exit_code == 0, out.output
-    assert "4 documento(s)" in out.output  # F6.b somou a Skill ao kit
+    assert "4 instância(s)" in out.output  # F6.b somou a Skill ao kit
     assert "INERTES" in out.output  # o humano fica no circuito
     escritos = {str(p.relative_to(tmp_path / "kitscope")) for p in (tmp_path / "kitscope").rglob("*") if p.is_file()}
     # cada Kind no SEU storage declarado: o copilot em YAML, o Agent em

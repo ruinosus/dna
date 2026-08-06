@@ -822,7 +822,7 @@ def select_provider_for_issuer(
     Exact issuer match first; then an Entra multi-tenant provider claims any token
     whose ``iss`` shares its ``login.microsoftonline.com`` host (``common`` mints
     per-tenant issuers). Returns ``None`` if no provider owns the issuer — the
-    runtime never relies on this (it uses the stamped claim), but it documents +
+    runtime never relies on this (it uses the stamped claim), but it instances +
     tests the routing intent."""
     if not iss:
         return None
@@ -1542,7 +1542,7 @@ def workos_provider_from_env() -> Any:
 #
 # RFC 8414 §3.3 makes the client compare the ``issuer`` the authorization server
 # publishes against the identifier it was handed, by **exact string equality**.
-# FastMCP builds the RFC 9728 document from ``ProtectedResourceMetadata``, whose
+# FastMCP builds the RFC 9728 instance from ``ProtectedResourceMetadata``, whose
 # ``authorization_servers`` field is typed ``list[AnyHttpUrl]`` — so pydantic
 # CANONICALIZES every identifier on the way out: a bare host gains a trailing
 # slash (``https://host`` → ``https://host/``), a default port is dropped, the
@@ -1552,7 +1552,7 @@ def workos_provider_from_env() -> Any:
 # the client never sends a single request to the server".
 #
 # The fix corrects exactly ONE field's serialization: FastMCP still builds the
-# whole document (we do not fork it, nor hand-roll the schema), and the wrapper
+# whole instance (we do not fork it, nor hand-roll the schema), and the wrapper
 # below replaces the serialized ``authorization_servers`` array with the
 # configured strings. **Verbatim means verbatim** — an identifier configured WITH
 # a path or WITH a trailing slash round-trips byte-identical too; this never
@@ -1585,7 +1585,7 @@ class _VerbatimAuthorizationServers:
             return body
         doc["authorization_servers"] = list(self._authorization_servers)
         # Same compact shape pydantic emits; dict order is insertion order, so the
-        # document's field order is preserved.
+        # instance's field order is preserved.
         return json.dumps(doc, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
 
     async def __call__(self, scope: Any, receive: Any, send: Any) -> None:
@@ -1651,7 +1651,7 @@ def resource_server(
 
         FastMCP builds its routes exactly as before; this only wraps the PRM
         route's ASGI app so the ONE coerced field carries the configured strings.
-        Nothing else about the document — ``resource``, ``scopes_supported``,
+        Nothing else about the instance — ``resource``, ``scopes_supported``,
         ``bearer_methods_supported`` — is touched, and a FastMCP that changes the
         rest of the schema keeps working.
         """

@@ -256,7 +256,7 @@ def _append_to_narrative_array(
         spec[field] = arr
         spec["updated_at"] = _now_iso()
         raw = _build_raw("Narrative", name, spec)
-        s.run(s.kernel.write_document(scope, "Narrative", name, raw))
+        s.run(s.kernel.write_instance(scope, "Narrative", name, raw))
 
 
 @narrative_group.command("add-decision")

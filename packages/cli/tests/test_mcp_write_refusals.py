@@ -3,7 +3,7 @@
 The hole: the face enumerated the exception types it would translate, and the
 enumeration was wrong.
 
-* ``write_document`` caught ``(ValueError, LookupError, PermissionError)``. But
+* ``write_instance`` caught ``(ValueError, LookupError, PermissionError)``. But
   ``LayerPolicyViolationError`` / ``TenantNotAllowed`` / ``TenantRequired`` /
   ``InvalidTenantSlug`` are plain ``Exception`` and ``NotWritableError`` is a
   ``RuntimeError`` — so not one of them matched. The LayerPolicy veto is the
@@ -84,15 +84,15 @@ def _refused(server, tool, args) -> str:
 @pytest.mark.parametrize("exc", _refusals(), ids=lambda e: type(e).__name__)
 def test_write_document_relays_every_kernel_refusal(dna_dir, monkeypatch, exc):
     pytest.importorskip("fastmcp")
-    from dna.application import documents as D
+    from dna.application import instances as D
     from dna_cli import _mcp_server as M
 
     async def boom(*a, **kw):
         raise exc
 
-    monkeypatch.setattr(D, "write_document_impl", boom)
+    monkeypatch.setattr(D, "write_instance_impl", boom)
     server = M.build_server(scope=_SCOPE, base_dir=str(dna_dir))
-    msg = _refused(server, "write_document", {
+    msg = _refused(server, "write_instance", {
         "kind": "ModelProfile", "name": "x",
         "spec": {"model_id": "x", "provider": "y"}, "scope": _SCOPE})
     assert type(exc).__name__ in msg, msg   # the client learns WHICH refusal
@@ -105,14 +105,14 @@ def test_a_stale_if_match_is_an_honest_refusal_not_a_500(dna_dir):
     from dna_cli import _mcp_server as M
 
     server = M.build_server(scope=_SCOPE, base_dir=str(dna_dir))
-    _call(server, "write_document", {
+    _call(server, "write_instance", {
         "kind": "ModelProfile", "name": "m", "scope": _SCOPE,
         "spec": {"model_id": "m", "provider": "p"}})
-    msg = _refused(server, "write_document", {
+    msg = _refused(server, "write_instance", {
         "kind": "ModelProfile", "name": "m", "scope": _SCOPE,
         "spec": {"provider": "q"}, "if_match": "not-the-current-etag"})
     assert "ConcurrentWriteError" in msg
-    assert "get_document" in msg  # names the remedy
+    assert "get_instance" in msg  # names the remedy
 
 
 # ── the board write tools (which had no ``try`` at all) ─────────────────────
@@ -167,12 +167,12 @@ def test_a_create_over_an_existing_story_is_refused_by_name(dna_dir):
         "ac": ["Given X, when Y, then Z"], "dod": ["code+tests"],
         "scope": _SCOPE})
     assert "DocumentExists" in msg
-    assert "s-mine" in msg          # names the existing document
+    assert "s-mine" in msg          # names the existing instance
     assert "set_status" in msg      # …and what to do instead
 
-    kept = _call(server, "get_document",
+    kept = _call(server, "get_instance",
                  {"kind": "Story", "name": "s-mine", "scope": _SCOPE})
-    spec = kept.structured_content["document"]["spec"]
+    spec = kept.structured_content["instance"]["spec"]
     assert spec["description"] == "the real one"
     assert spec["acceptance_criteria"] == ["Given A, when B, then C"]
 

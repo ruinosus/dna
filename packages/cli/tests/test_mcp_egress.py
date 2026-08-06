@@ -278,7 +278,7 @@ def test_a_malformed_entry_alone_does_not_even_resolve_the_tier(monkeypatch):
 
 
 class _Declared:
-    """Stand-in for a declared server carrying TWO destinations: the document
+    """Stand-in for a declared server carrying TWO destinations: the instance
     that describes it and the base URL its calls actually leave for."""
 
     def __init__(self, name, url, base_url=None):
@@ -295,7 +295,7 @@ def _urls(item):
 
 
 def test_partition_is_all_or_nothing_across_an_items_destinations(monkeypatch):
-    """THE hole this shape exists to close: a document fetched from an
+    """THE hole this shape exists to close: an instance fetched from an
     allowlisted host whose calls leave for another host is not half-safe."""
     monkeypatch.setenv(ALLOWLIST_ENV, _PREFIX)
     half = _Declared("half", url=_INSIDE, base_url=_OUTSIDE)

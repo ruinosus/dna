@@ -52,7 +52,7 @@ def _invoke_and_capture_scope(monkeypatch, *args):
             self.scope = scope
 
             class _K:
-                async def write_document(self, scope, kind, name, raw):
+                async def write_instance(self, scope, kind, name, raw):
                     pass
 
             self.kernel = _K()
