@@ -224,7 +224,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from typing import Any, Iterable, Mapping
+from typing import Any, Mapping
 
 __all__ = [
     "ANY_TARGET",
@@ -693,20 +693,4 @@ def inverse_gaps(
                             "and one of them is talking to somebody else"
                         ),
                     })
-    return out
-
-
-def relations_by_kind(ports: Iterable[Any]) -> dict[str, dict[str, Relation]]:
-    """``{Kind name: {relation name: Relation}}`` for a set of ports.
-
-    One reading of the registry, handed to every consumer that needs it — the
-    rule ``kind_rows`` follows for the same reason: two passes over the same
-    declaration are two passes that can disagree."""
-    out: dict[str, dict[str, Relation]] = {}
-    for port in ports:
-        kind = getattr(port, "kind", None)
-        kind = kind() if callable(kind) else kind
-        if not kind:
-            continue
-        out[str(kind)] = relations_of(port)
     return out

@@ -39,7 +39,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from dna.kernel.kinds.relations import (
-    Relation,
     reciprocates,
     relation_values,
     relations_of,
@@ -48,7 +47,6 @@ from dna.kernel.kinds.relations import (
 __all__ = [
     "ResolvedEdge",
     "resolve_relations",
-    "resolve_target_kinds",
 ]
 
 
@@ -238,20 +236,3 @@ def _spec_of(doc: Any) -> Any:
     if isinstance(doc, dict):
         return doc.get("spec")
     return getattr(doc, "spec", None)
-
-
-def resolve_target_kinds(
-    rel: Relation, resolve: Any,
-) -> tuple[list[str], list[str]]:
-    """Split ``rel.to`` into (known Kind names, unknown declarations).
-
-    ``resolve`` maps a declared token to a real Kind name. Declaring a target
-    that no registered Kind provides is an authoring error worth surfacing, so
-    it is returned rather than silently dropped.
-    """
-    known: list[str] = []
-    unknown: list[str] = []
-    for token in rel.to:
-        resolved = resolve(token)
-        (known if resolved else unknown).append(resolved or token)
-    return sorted(set(known)), sorted(set(unknown))
