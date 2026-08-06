@@ -49,6 +49,11 @@ class EvidencePolicyKind(KindBase):
     api_version = _API_VERSION
     kind = "EvidencePolicy"
     alias = "evidence-policy"
+    # `events` + `auto_capture` + `retention_days` are read by the
+    # post_save capture hook to decide what becomes an Evidence row.
+    # Editing one changes what the runtime records, with no deploy.
+    # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+    traits = frozenset({"governance.policy"})
     model = dict
     origin = _ORIGIN
     storage = StorageDescriptor.yaml("evidence-policies")

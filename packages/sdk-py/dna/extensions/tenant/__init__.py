@@ -303,6 +303,12 @@ class TenantMembershipKind(KindBase):
     scope = TenantScope.GLOBAL
     kind = "TenantMembership"
     alias = "tenant-membership"
+    # One row per (tenant, user) pair with a role — the platform-level
+    # grant, created by an invite and removed by a DELETE. Same role as its
+    # three siblings in three other extensions; different subject, different
+    # scope, same question asked of it.
+    # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+    traits = frozenset({"tenancy.access-grant"})
     model = dict
     origin = _ORIGIN
     storage = StorageDescriptor.bundle("tenant-memberships", "MEMBERSHIP.md")

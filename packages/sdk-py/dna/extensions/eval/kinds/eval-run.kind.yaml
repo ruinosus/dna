@@ -26,6 +26,11 @@ spec:
   target_kind: EvalRun
   alias: eval-eval-run
   origin: github.com/ruinosus/dna/eval
+  # A claim about the past: `started_at`/`finished_at`, the resolved `target`,
+  # the counts, and `suite` pointing back at the declaration it executed. A run
+  # that turns out wrong is superseded by another run, not corrected.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [execution.run]
   plane: record
   prompt_target: false
   flatten_in_context: false

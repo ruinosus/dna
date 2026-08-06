@@ -48,6 +48,12 @@ spec:
   target_kind: Automation
   alias: dna-automation
   origin: github.com/ruinosus/dna/automation
+  # `on` (the trigger) + `runner` (what executes) + `enabled` declare work for
+  # a host to run; the SDK validates and lists, the HOST executes. That
+  # declare-here/execute-in-the-host split IS this trait, and it is the same
+  # split TestGuide and EvalSuite make from two other extensions.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [execution.declared]
   plane: record
   prompt_target: false
   flatten_in_context: false

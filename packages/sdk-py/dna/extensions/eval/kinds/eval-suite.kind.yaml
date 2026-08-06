@@ -26,6 +26,10 @@ spec:
   target_kind: EvalSuite
   alias: eval-eval-suite
   origin: github.com/ruinosus/dna/eval
+  # A suite is the SCRIPT, never the outcome: `cases`, a default `target` and
+  # `stop_on_fail` say what should run; what happened lands in an EvalRun.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [execution.declared]
   plane: record
   prompt_target: false
   flatten_in_context: false

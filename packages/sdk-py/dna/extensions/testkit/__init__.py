@@ -80,6 +80,11 @@ class TestGuideKind(KindBase):
     api_version = _API_VERSION
     kind = "TestGuide"
     alias = "testkit-test-guide"
+    # The SCRIPT half of the pair: ordered `steps` (action → expected) a person
+    # or a runner executes. It records no outcome — `TestRun` does — which is
+    # why editing a guide is free and editing a run would not be.
+    # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+    traits = frozenset({"execution.declared"})
     ui = docs_ui(
         "TestGuide", mode="quality", label_en="Test Guides", label_pt="Roteiros de Teste",
         icon="🧪", display_order=70,
@@ -199,6 +204,12 @@ class TestRunKind(KindBase):
     api_version = _API_VERSION
     kind = "TestRun"
     alias = "testkit-test-run"
+    # A claim about the past: `executed_at`, `executed_by`, `outcome`,
+    # per-step results, and `guide_ref` pointing back at the declaration it
+    # executed. `sdlc.test-gated` refuses a close without a passing one, which
+    # is what makes it evidence rather than a report.
+    # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+    traits = frozenset({"execution.run"})
     ui = docs_ui(
         "TestRun", mode="quality", label_en="Test Runs", label_pt="Execuções de Teste",
         icon="🧾", display_order=71,

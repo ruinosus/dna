@@ -25,6 +25,12 @@ spec:
   target_kind: Membership
   alias: portfolio-membership
   origin: github.com/ruinosus/dna/portfolio
+  # The RBAC join inside a tenant's own portfolio: user + scope_type/
+  # scope_ref + role + invitation status. Distinct from WorkspaceMembership
+  # (the platform boundary) — and that they are distinct Kinds with the
+  # same ROLE is the argument for naming the role once.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [tenancy.access-grant]
   tenant_scope: tenanted
   plane: record
   prompt_target: false

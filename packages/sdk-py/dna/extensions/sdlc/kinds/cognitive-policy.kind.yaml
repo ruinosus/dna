@@ -39,6 +39,14 @@ spec:
   target_kind: CognitivePolicy
   alias: sdlc-cognitive-policy
   origin: github.com/ruinosus/dna/sdlc
+  # Every section (`recall`, `decay`, `memory`, `allocation`, `pagination`,
+  # `embedding`) is read by a runtime resolver, never by a person wanting to
+  # know what happened — and the resolution chain (scope doc → _lib → code
+  # defaults) is the same shape the other three policies have. That it is the
+  # UNION of nine former policy Kinds is the strongest evidence the family is
+  # real: the consolidation already found the commonality this trait names.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [governance.policy]
   plane: record
   prompt_target: false
   flatten_in_context: false

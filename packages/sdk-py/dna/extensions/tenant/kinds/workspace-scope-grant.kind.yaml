@@ -32,6 +32,12 @@ spec:
   target_kind: WorkspaceScopeGrant
   alias: tenant-workspace-scope-grant
   origin: github.com/ruinosus/dna/tenant
+  # Records that one workspace may READ one scope that is not its own — and
+  # its own docs already argue this trait's rule: the binder validates
+  # against the rows and derives NOTHING, no wildcard, enumerate. A set an
+  # authorization decision reads has to be enumerable to be auditable.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [tenancy.access-grant]
   tenant_scope: global
   plane: record
   scope_inheritable: false

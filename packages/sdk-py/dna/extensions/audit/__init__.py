@@ -61,6 +61,12 @@ class UserRoleAssignmentKind(KindBase):
     api_version = _API_VERSION
     kind = "UserRoleAssignment"
     alias = "audit-userroleassignment"
+    # "Roles list is the source of truth for require_role decorators" — its
+    # own docstring names the enforcement point, which is the test this
+    # trait applies. The doc name IS the user_id: subject, scope (the
+    # tenant) and level (roles), the family shape again.
+    # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+    traits = frozenset({"tenancy.access-grant"})
     model = dict
     origin = _ORIGIN
     storage = StorageDescriptor.yaml("user-roles")

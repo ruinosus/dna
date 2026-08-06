@@ -384,6 +384,12 @@ class LayerPolicyKind(KindBase):
 
     api_version = "github.com/ruinosus/dna/policy/v1"
     kind = "LayerPolicy"
+    # `policies` + `composition_rules` are read by the overlay resolver to
+    # decide whether a layered write is allowed. Enforcement point, not
+    # prose — and note it is `is_overlayable = False` for the same reason a
+    # policy cannot be overridden by the thing it governs.
+    # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+    traits = frozenset({"governance.policy"})
     alias = "policy-layer-policy"  # s-kind-alias-convention-fix: <owner>-<kebab(kind)>; was "policy-layer" (reversed/truncated)
     is_schema_affecting = True
     is_overlayable = False

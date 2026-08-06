@@ -35,6 +35,11 @@ spec:
   target_kind: AgentGrant
   alias: a2a-agent-grant
   origin: github.com/ruinosus/dna/a2a
+  # `subject` + `scope_kinds` + `state` + `granted_at`/`revoked_at`: a grant
+  # to a remote agent rather than to a person, which is exactly why the
+  # trait is about the ROLE and not about who the subject is.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [tenancy.access-grant]
   tenant_scope: tenanted
   plane: record
   prompt_target: false
