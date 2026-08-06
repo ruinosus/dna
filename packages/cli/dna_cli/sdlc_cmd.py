@@ -66,7 +66,9 @@ from dna.application.sdlc import (  # noqa: E402, F401 — enums re-exported for
     build_raw as _core_build_raw,
     create_issue as _core_create_issue,
     duplicate_issue_numbers as _core_duplicate_issue_numbers,
+    duplicate_numbers as _core_duplicate_numbers,
     next_issue_number as _core_next_issue_number,
+    next_number as _core_next_number,
 )
 
 # The Spec ARC lives on the Kind that declares it (``dna.extensions.sdlc``), not
@@ -140,8 +142,14 @@ def _build_kaizen_event(
 def _kaizen_slug(body: str) -> str:
     """Kebab slug from the observation body for the kz-NNN-<slug> name.
 
-    Lowercase, non-alnum runs → hyphen, capped at ~28 chars (the NNN
-    counter already guarantees uniqueness — no hash needed).
+    Lowercase, non-alnum runs → hyphen, capped at ~28 chars.
+
+    It does NOT guarantee uniqueness, and this docstring used to say the NNN
+    counter did — the same sentence, believed, is what let ``kz-`` inherit the
+    whole ``i-`` collision (13 Issues on 4 numbers, then two ``i-101``): the
+    counter is ``max+1`` over one worktree's files, so two trees produce two
+    ``kz-NNN-<different slug>`` and git merges both. The slug is what keeps the
+    two documents from overwriting each other; the number is a label.
     """
     base = re.sub(r"[^a-z0-9]+", "-", body.lower()).strip("-")
     return base[:28].rstrip("-") or "obs"
@@ -149,13 +157,55 @@ def _kaizen_slug(body: str) -> str:
 
 def _next_kaizen_number(s: Any) -> int:
     """Next available kz-NNN number (mirror of ``_next_issue_number``,
-    but reuses the caller's open session)."""
-    max_n = 0
-    for d in s.query_list("Kaizen"):
-        m = re.match(r"^kz-(\d+)", d.name)
-        if m:
-            max_n = max(max_n, int(m.group(1)))
-    return max_n + 1
+    but reuses the caller's open session).
+
+    Reads the sibling git worktrees too. ``kz-NNN`` is allocated by exactly the
+    arithmetic that produced the Issue collisions, from exactly the same
+    single-worktree list — it had simply never been looked at, because the
+    hardening in #321 went to ``issue file`` and stopped there."""
+    names = [d.name for d in s.query_list("Kaizen")]
+    names.extend(_sibling_worktree_names(s.scope, "kz"))
+    return _core_next_number("kz", names)
+
+
+def _write_kaizen_doc(s: Any, scope: str, slug: str, spec: dict) -> str:
+    """Claim a free ``kz-NNN-<slug>`` and write it; return the name written.
+
+    Mirrors ``dna.application.sdlc.create_issue``'s loop: try the ATOMIC create
+    (``if_absent=True``) and take the next number if the name was taken between
+    the read and the write; degrade to a plain write only on an adapter that
+    cannot promise it. Before #321 the Issue path wrote bare here too, which
+    made a name guessed twice an UPSERT — a Kaizen observation silently
+    replacing another one, with no trace that two had ever existed."""
+    from dna.kernel.errors import DocumentNameTaken
+
+    names = [d.name for d in s.query_list("Kaizen")]
+    elsewhere = _sibling_worktree_names(scope, "kz")
+    union = sorted(set(names) | set(elsewhere))  # same name in 2 trees = 1 doc
+    dupes = _core_duplicate_numbers("kz", union)
+    if dupes:
+        click.secho(
+            f"⚠️  {len(dupes)} id(s) de Kaizen reivindicado(s) por mais de um "
+            f"documento: "
+            + "; ".join(f"kz-{n:03d} ({', '.join(v)})" for n, v in dupes.items()),
+            fg="yellow", err=True,
+        )
+    start = _core_next_number("kz", union)
+    for candidate in range(start, start + 1000):
+        name = f"kz-{candidate:03d}-{slug}"
+        raw = _build_raw("Kaizen", name, spec)
+        try:
+            s.run(s.kernel.write_document(
+                scope, "Kaizen", name, raw, if_absent=True))
+            return name
+        except NotImplementedError:
+            s.run(s.kernel.write_document(scope, "Kaizen", name, raw))
+            return name
+        except DocumentNameTaken:
+            continue
+    raise fail(  # pragma: no cover — 1000 consecutive taken names
+        f"nenhum nome livre para Kaizen a partir de kz-{start:03d} "
+        f"no scope {scope!r}")
 
 
 def _build_kaizen_doc_spec(
@@ -1659,14 +1709,17 @@ def cmd_kaizen(work_item: str, body: str, issue: str | None,
         actor = _cli_actor()
         now = _now_iso()
         # 1) First-class Kaizen doc (record plane — cacheless, fast write).
-        kz_name = f"kz-{_next_kaizen_number(s):03d}-{_kaizen_slug(body)}"
+        #
+        # `kz-NNN` is the SAME allocator as `i-NNN` and had none of what #321
+        # gave the Issue path: no atomic claim, no probe, no warning, and a
+        # docstring asserting the counter guaranteed uniqueness. Fixing one
+        # sibling and leaving the other is how a fixed bug comes back wearing a
+        # different prefix, so it gets all three here.
         kz_spec = _build_kaizen_doc_spec(
             body=body, work_item=f"{wi_kind}/{wi_name}", issue=issue,
             actor=actor, now=now, labels=list(labels) if labels else None,
         )
-        s.run(s.kernel.write_document(
-            scope, "Kaizen", kz_name, _build_raw("Kaizen", kz_name, kz_spec),
-        ))
+        kz_name = _write_kaizen_doc(s, scope, _kaizen_slug(body), kz_spec)
         # 2) Timeline event on the work item (FOCUS feed), ref'ing the doc.
         spec = dict(existing.spec) if isinstance(existing.spec, dict) else {}
         event = _build_kaizen_event(
@@ -1966,23 +2019,120 @@ def cmd_story_groom(
 
 def _next_issue_number(scope: str) -> int:
     """Find the next available i-NNN number — delegates the numbering to the shared
-    core ``next_issue_number`` (the same primitive the MCP ``create_issue`` uses)."""
+    core ``next_issue_number`` (the same primitive the MCP ``create_issue`` uses),
+    over the board this CLI reads PLUS every sibling git worktree's copy of it."""
     with open_session(scope) as s:
         existing = [i.name for i in s.query_list("Issue")]
-    return _core_next_issue_number(existing)
+    return _core_next_issue_number(
+        existing + list(_sibling_worktree_names(scope, "i")))
+
+
+# ── the writers the enumeration could not see ──────────────────────────────
+#
+# MEASURED, dna-cloud board, 05 + 06/08/2026: 13 Issues on 4 numbers, then two
+# `i-101` on the SAME DAY, hours after the write path had been hardened with an
+# atomic claim, a probe and a warning (#321). None of those could have helped,
+# because none of them was the failure: `max(NNN)+1` was arithmetically correct
+# in BOTH trees. The list was short.
+#
+# `git worktree add` gives every worktree its own working directory and its own
+# `.dna/`, but ONE shared `.git` — so `git worktree list` from any of them
+# enumerates all the others, by absolute path, on this machine, right now.
+# That is not a lock (nothing arbitrates two writers in the same instant) and it
+# is not global (another clone, or CI, is invisible). It is the missing READ,
+# and the missing read is what produced every collision on this board.
+#
+# Deliberately reads FILE NAMES, not documents: the board is `<base>/<scope>/
+# <plural>/<name>.yaml`, the name is the stem, and booting a kernel per sibling
+# (17 of them on this machine) to learn 17 lists of strings would cost more than
+# the whole command.
+
+_WORKTREE_SCAN_ENV = "DNA_SDLC_WORKTREE_SCAN"
+
+
+def _board_base_dir() -> Any:
+    """The directory this CLI reads the board from, or ``None`` if the source is
+    not a filesystem (sqlite/postgres sources have no worktrees to scan)."""
+    from pathlib import Path
+
+    from dna_cli._ctx import _resolve_source_url
+
+    try:
+        url = _resolve_source_url()
+    except Exception:  # noqa: BLE001 — a bad env var must not break `issue file`
+        return None
+    if not url.startswith("file://"):
+        return None
+    p = Path(url[len("file://"):])
+    return p if p.is_dir() else None
+
+
+def _sibling_worktree_names(scope: str, prefix: str) -> dict[str, str]:
+    """``{doc_name: worktree_path}`` for every ``<prefix>-NNN-*`` doc that exists
+    in ANOTHER git worktree of this clone's board — the names ``max+1`` never saw.
+
+    Fail-soft in every direction (no git, not a repo, source outside the repo,
+    unreadable sibling): returns ``{}`` and the caller behaves exactly as before.
+    Set ``DNA_SDLC_WORKTREE_SCAN=0`` to switch it off.
+    """
+    from pathlib import Path
+
+    if os.getenv(_WORKTREE_SCAN_ENV, "1").strip().lower() in ("0", "false", "no"):
+        return {}
+    base = _board_base_dir()
+    if base is None:
+        return {}
+    top = _gitsym.repo_root(cwd=base)
+    if top is None:
+        return {}
+    try:
+        rel = base.resolve().relative_to(top.resolve())
+    except ValueError:  # board source lives outside the working tree
+        return {}
+    listing = _gitsym._run_git(["worktree", "list", "--porcelain"], cwd=base)
+    if not listing:
+        return {}
+
+    found: dict[str, str] = {}
+    for line in listing.splitlines():
+        if not line.startswith("worktree "):
+            continue
+        wt = Path(line[len("worktree "):].strip())
+        try:
+            if wt.resolve() == top.resolve():
+                continue  # us
+        except OSError:
+            continue
+        scope_dir = wt / rel / scope
+        if not scope_dir.is_dir():
+            continue
+        try:
+            for doc in scope_dir.rglob(f"{prefix}-*.y*ml"):
+                found.setdefault(doc.stem, str(wt))
+        except OSError:  # noqa: PERF203 — an unreadable sibling is not fatal
+            continue
+    return found
 
 
 def _warn_duplicate_issue_numbers(names: list[str]) -> None:
     """Say out loud that the board already has ids claimed twice.
 
-    The allocator cannot PREVENT this — two agents in two git worktrees are two
-    filesystems, they pick the same ``max+1``, and because the slugs differ git
-    merges both without a conflict (dna-cloud, 05/08/2026: 13 Issues on 4
-    numbers). Detection is the only move available, and this is the cheapest
-    place to spend it: filing an Issue already reads every Issue name, and the
-    person running it is the person doing board work. CI should check the same
-    thing on the merged tree — that is where the two trees actually meet."""
-    dupes = _core_duplicate_issue_numbers(names)
+    Kept even though the allocator now reads across worktrees, because the read
+    still has an edge it cannot cross — another CLONE, another machine, CI —
+    and because a board that already collided (dna-cloud: 13 Issues on 4
+    numbers) does not un-collide by itself. This is the cheapest place to spend
+    the check: filing an Issue already reads every Issue name, and the person
+    running it is the person doing board work. CI checks the merged tree, which
+    is where writers that never shared a ``.git`` finally meet.
+
+    DE-DUPLICATES first, and that is not tidiness. Sibling worktrees mostly hold
+    the SAME documents — they branched from the same main — so the union names
+    ``i-084-conversa-como-dado-do-dna`` once per worktree. Run against the real
+    dna-cloud checkout the first version of this reported every Issue on the
+    board as a collision with itself, 17 worktrees deep. A duplicate NAME across
+    trees is one document seen twice; the failure being reported here is two
+    different names on one number."""
+    dupes = _core_duplicate_issue_numbers(sorted(set(names)))
     if not dupes:
         return
     click.secho(
@@ -1992,12 +2142,46 @@ def _warn_duplicate_issue_numbers(names: list[str]) -> None:
     for number, colliding in dupes.items():
         click.secho(f"    i-{number:03d}: {', '.join(colliding)}", fg="yellow", err=True)
     click.secho(
-        "    Causa: `issue file` numera por max(NNN)+1 lido da fonte; worktrees "
-        "paralelas leem o mesmo estado e o merge não conflita (nomes diferentes).\n"
         "    O CLI resolve por nome COMPLETO, então nada foi sobrescrito — mas "
         "abreviar o id não funciona. Renumere o mais novo, ou registre a exceção.",
         fg="yellow", err=True,
     )
+
+
+def _note_skipped_for_siblings(
+    allocated: str, prefix: str, elsewhere: dict[str, str], local: list[str],
+) -> None:
+    """Explain a GAP: which numbers this allocation stepped over, and whose.
+
+    Reading across worktrees trades collisions for gaps — a number claimed in a
+    branch that is later abandoned is never re-used here. That is the better
+    trade by a wide margin (a gap is legible; a duplicated id is not), but a gap
+    with no explanation is the kind of thing someone later "fixes" by turning
+    the scan off, so the command says out loud what it skipped and where it
+    lives."""
+    m = re.match(rf"^{re.escape(prefix)}-(\d+)", allocated or "")
+    if not m or not elsewhere:
+        return
+    mine = int(m.group(1))
+    seen_local = set()
+    for nm in local:
+        lm = re.match(rf"^{re.escape(prefix)}-(\d+)", nm or "")
+        if lm:
+            seen_local.add(int(lm.group(1)))
+    skipped: list[tuple[int, str, str]] = []
+    for nm, wt in sorted(elsewhere.items()):
+        em = re.match(rf"^{re.escape(prefix)}-(\d+)", nm)
+        if em and int(em.group(1)) < mine and int(em.group(1)) not in seen_local:
+            skipped.append((int(em.group(1)), nm, wt))
+    if not skipped:
+        return
+    click.secho(
+        f"    ↑ {len(skipped)} número(s) pulado(s): já reivindicado(s) em outra "
+        f"worktree desta clone, invisível(is) para esta árvore até o merge.",
+        fg="cyan", err=True,
+    )
+    for _n, nm, wt in skipped:
+        click.secho(f"      {nm}  ({wt})", fg="cyan", err=True)
 
 
 @sdlc.group("feature")
@@ -2530,19 +2714,28 @@ def cmd_issue_file(
     # `if_absent` atomic claim, i.e. a name guessed twice was an overwrite.
     # Delegating means the next fix to the allocator reaches the CLI by
     # existing, instead of by being ported.
+    #
+    # `elsewhere` is that next fix: the Issue names living in the OTHER git
+    # worktrees of this clone. They are the ones `max+1` kept re-issuing — two
+    # `i-101` on 06/08/2026, hours apart, both arithmetically right. The core
+    # takes them as a hint, not as a lock, and says so.
+    elsewhere = _sibling_worktree_names(scope, "i")
     with open_session(scope) as s:
-        _warn_duplicate_issue_numbers([i.name for i in s.query_list("Issue")])
+        local = [i.name for i in s.query_list("Issue")]
+        _warn_duplicate_issue_numbers(local + list(elsewhere))
         out = s.run(_core_create_issue(
             s.kernel, scope, slug, description=description,
             issue_type=issue_type, severity=severity, status="open",
             title=title, owner=owner, related_feature=related_feature,
             related_finding=related_finding,
             actor=_cli_actor(), source="cli",
+            also_taken=list(elsewhere),
         ))
     click.secho(
         f"FILED Issue/{out['name']} ({issue_type}/{severity})",
         fg="yellow",
     )
+    _note_skipped_for_siblings(out["name"], "i", elsewhere, local)
 
 
 @issue_group.command("triage")

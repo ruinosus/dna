@@ -306,3 +306,59 @@ async def test_create_issue_enumerates_names_only(kernel):
     await S.create_issue(spy, _SCOPE, "a", description="a")
     assert spy.query_kwargs, "create_issue must enumerate through kernel.query"
     assert spy.query_kwargs[0].get("projection") == ["name"]
+
+
+# ── the names this kernel cannot see ───────────────────────────────────────
+
+
+def test_next_number_is_prefix_agnostic():
+    """``kz-NNN`` is the SAME allocator as ``i-NNN``, and it had none of the
+    hardening — so the primitive is one function now, not two that drift."""
+    assert S.next_number("kz", ["kz-001-a", "kz-007-b", "i-999-nao-conta"]) == 8
+    assert S.next_number("i", ["kz-042-a"]) == 1
+    assert S.duplicate_numbers("kz", ["kz-002-a", "kz-002-b", "kz-003-c"]) == {
+        2: ["kz-002-a", "kz-002-b"],
+    }
+    # The published Issue names stay published: the wrappers are the same call.
+    assert S.next_issue_number(["i-004-x"]) == S.next_number("i", ["i-004-x"])
+
+
+@pytest.mark.asyncio
+async def test_also_taken_moves_the_number_past_a_source_this_kernel_cannot_see(
+    kernel,
+):
+    """The one input that can break ``max+1``\'s tautology.
+
+    Filtering the candidate against the enumeration is dead code — it is
+    ``max+1`` of that same list. ``also_taken`` is different in kind: names from
+    a place this kernel never reads. On the board that produced the bug it is
+    the other git worktree, whose ``i-101`` is a real file on this machine and
+    absent from every row this kernel can return.
+
+    Note what it is NOT: the caller is trusting a read, not holding a lock. Two
+    processes reading each other\'s trees in the same instant still both see
+    nothing, and a clone on another machine is invisible either way — which is
+    why ``duplicate_issue_numbers`` on the merged tree stays the backstop.
+    """
+    await S.create_issue(kernel, _SCOPE, "aqui", description="a")  # i-001
+
+    out = await S.create_issue(
+        kernel, _SCOPE, "nova", description="b",
+        also_taken=["i-002-noutra-worktree", "i-003-noutra-worktree"],
+    )
+
+    assert out["name"] == "i-004-nova"
+    # …and without the hint, the same board hands out numbers the other tree
+    # already used. This is the collision; the assertion above is earned by the
+    # hint and by nothing else.
+    again = await S.create_issue(kernel, _SCOPE, "outra", description="c")
+    assert again["name"] == "i-005-outra"
+
+
+@pytest.mark.asyncio
+async def test_also_taken_defaults_to_nothing_and_changes_no_caller(kernel):
+    """A face that knows nothing about other trees keeps the old behavior —
+    the MCP tool runs against a shared database where worktrees do not exist."""
+    await S.create_issue(kernel, _SCOPE, "a", description="a")
+    out = await S.create_issue(kernel, _SCOPE, "b", description="b")
+    assert out["name"] == "i-002-b"
