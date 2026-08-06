@@ -1,0 +1,21 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-mcp-egress-policy-shared
+spec:
+  description: 'A politica de egresso por plano, unificada no pacote CLI: allowlist como config, prefixo, gate de tier fail-closed, e as duas formas de chamador decidindo igual.'
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: cd packages/cli && uv run --no-project python -m pytest tests/test_mcp_egress.py -q
+    expected: 38 passed
+  - action: cd packages/cli && DNA_OFFLINE=1 uv run --no-project python -m pytest tests -q
+    expected: suite inteira verde (nada existente mudou de comportamento)
+  - action: python3 scripts/brand_guard.py
+    expected: 'brand_guard: clean'
+  - action: rodar a tabela de casos do teste de paridade do consumidor contra a implementacao antiga e a nova
+    expected: 'FALHAS: 0'
+  verifies:
+  - Story/s-mcp-egress-policy-shared
+  created_at: '2026-08-06T06:03:00+00:00'
+  updated_at: '2026-08-06T06:03:00+00:00'

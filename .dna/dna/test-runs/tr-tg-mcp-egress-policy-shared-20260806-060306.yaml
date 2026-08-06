@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-mcp-egress-policy-shared-20260806-060306
+spec:
+  guide_ref: tg-mcp-egress-policy-shared
+  outcome: pass
+  verifies:
+  - Story/s-mcp-egress-policy-shared
+  executed_by: claude-code
+  executed_at: '2026-08-06T06:03:06+00:00'
+  notes: 38 passed no modulo novo; 1500 passed / 21 skipped na suite do pacote; brand_guard clean; paridade antiga-vs-nova com zero divergencias em 17 casos.
