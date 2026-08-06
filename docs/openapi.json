@@ -4058,6 +4058,124 @@
         "title": "RegisterArtifactResponse",
         "type": "object"
       },
+      "RegisteredKindEntry": {
+        "description": "One row of ``GET /v1/kinds/registry`` — a Kind the registry actually\nserves in this scope, with the facts a caller needs BEFORE acting on it.\n\nDeliberately the same row the MCP ``list_kinds`` tool has always returned\n(both project ``list_kinds_impl``): ``writable``/``deletable`` plus the\nrefusal that explains a ``false``, so an operation the runtime would refuse\nis visible without attempting it.",
+        "properties": {
+          "alias": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alias"
+          },
+          "api_version": {
+            "title": "Api Version",
+            "type": "string"
+          },
+          "deletable": {
+            "default": true,
+            "title": "Deletable",
+            "type": "boolean"
+          },
+          "delete_refusal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delete Refusal"
+          },
+          "display_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Label"
+          },
+          "family": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "plane": {
+            "default": "composition",
+            "title": "Plane",
+            "type": "string"
+          },
+          "storage_pattern": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Storage Pattern"
+          },
+          "tenant_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tenant Scope"
+          },
+          "traits": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Traits",
+            "type": "array"
+          },
+          "writable": {
+            "default": true,
+            "title": "Writable",
+            "type": "boolean"
+          },
+          "write_refusal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Write Refusal"
+          }
+        },
+        "required": [
+          "kind",
+          "api_version"
+        ],
+        "title": "RegisteredKindEntry",
+        "type": "object"
+      },
       "RegisteredKindView": {
         "description": "``GET /v1/kinds/registry/{kind}`` — the registered Kind's descriptor:\nthe JSON ``schema`` a form derives validation from and the ``ui_schema``\nwidget hints it renders with. Product data model, not tenant data — the\nsame answer for every caller (contrast: the authored-Kind door filters).",
         "properties": {
@@ -4096,6 +4214,42 @@
           "kind"
         ],
         "title": "RegisteredKindView",
+        "type": "object"
+      },
+      "RegisteredKindsResponse": {
+        "description": "``GET /v1/kinds/registry`` — the Kind CATALOG of one scope.\n\nThe collection sibling of ``GET /v1/kinds/registry/{kind}``, and the REST\ndoor for a capability the runtime already had: ``list_kinds_impl`` has\nserved the MCP face since the catalog existed, so a portal could ask an\nagent what Kinds exist but could not ask the read-API. Every consumer that\nwanted the list had to hardcode one — and a hardcoded list is exactly how a\nnewly-registered Kind stays invisible.\n\n``filtered_by_plan`` is true only when the caller's unlocked feature\nfamilies actually SHORTENED the catalog, with ``filtered_out`` naming how\nmany rows were withheld — so \"the plan filtered nothing\" and \"the plan hid\nforty Kinds\" are different answers.",
+        "properties": {
+          "count": {
+            "default": 0,
+            "title": "Count",
+            "type": "integer"
+          },
+          "filtered_by_plan": {
+            "default": false,
+            "title": "Filtered By Plan",
+            "type": "boolean"
+          },
+          "filtered_out": {
+            "default": 0,
+            "title": "Filtered Out",
+            "type": "integer"
+          },
+          "kinds": {
+            "items": {
+              "$ref": "#/components/schemas/RegisteredKindEntry"
+            },
+            "title": "Kinds",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "title": "RegisteredKindsResponse",
         "type": "object"
       },
       "RememberResponse": {
@@ -6913,6 +7067,85 @@
           }
         },
         "summary": "Author Kind"
+      }
+    },
+    "/v1/kinds/registry": {
+      "get": {
+        "description": "The Kind CATALOG of a scope — every Kind the registry actually\nserves here, with the facts a caller needs before acting on one.\n\nThe gap this closes is the enumeration itself. ``list_kinds_impl`` has\nanswered \"what can I act on here?\" for the MCP face since the catalog\nexisted, and the read-API had only the SINGULAR\n``/v1/kinds/registry/{kind}`` — so every REST consumer that wanted the\nlist had to hardcode one. A hardcoded list is precisely how a Kind that\ngets registered tomorrow stays invisible: the enumeration is the whole\npoint, and it belongs to the registry, not to each caller.\n\nNot the same question as ``GET /v1/kinds``, and the two must not be\nconfused. That one lists the caller's AUTHORED KindDefinition documents\nincluding the unapproved ones — the audit roster, whose subject is an\napproval decision. This one lists what is REGISTERED and therefore in\nforce, built-ins included; an unapproved Kind is by definition absent.\n\nLike its singular sibling, it does NOT filter by caller: a registered\nKind is the product's data model, identical for every tenant and\nholding nobody's content. It also does not filter by PLAN — the MCP\ncatalog shortens itself to a caller's unlocked feature families, and\nthis face has no per-request plan the way that one does, so\n``filtered_by_plan`` is always false here rather than quietly meaning\nsomething different from the same field on the other face.\n\n``tenant`` resolves the scope the way every document route does\n(``live.default_scope``), so a portal that only knows a workspace id\nreaches that workspace's own registered Kinds without hardcoding the\nscope-prefix convention. An explicit ``scope`` still wins.",
+        "operationId": "list_registered_kinds_v1_kinds_registry_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegisteredKindsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Registered Kinds"
       }
     },
     "/v1/kinds/registry/{kind}": {

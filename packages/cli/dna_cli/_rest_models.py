@@ -352,6 +352,52 @@ class KindGraphResponse(BaseModel):
     unresolved: list[KindGraphUnresolved] = Field(default_factory=list)
     undeclarable: list[KindGraphUndeclarable] = Field(default_factory=list)
     coverage: KindGraphCoverage
+class RegisteredKindEntry(BaseModel):
+    """One row of ``GET /v1/kinds/registry`` — a Kind the registry actually
+    serves in this scope, with the facts a caller needs BEFORE acting on it.
+
+    Deliberately the same row the MCP ``list_kinds`` tool has always returned
+    (both project ``list_kinds_impl``): ``writable``/``deletable`` plus the
+    refusal that explains a ``false``, so an operation the runtime would refuse
+    is visible without attempting it."""
+
+    kind: str
+    alias: str | None = None
+    api_version: str
+    #: The quota family a call on this Kind is metered under.
+    family: str | None = None
+    #: ``composition`` (it composes into prompts) or ``record`` (it does not).
+    plane: str = "composition"
+    display_label: str | None = None
+    tenant_scope: str | None = None
+    storage_pattern: str | None = None
+    traits: list[str] = Field(default_factory=list)
+    writable: bool = True
+    write_refusal: str | None = None
+    deletable: bool = True
+    delete_refusal: str | None = None
+
+
+class RegisteredKindsResponse(BaseModel):
+    """``GET /v1/kinds/registry`` — the Kind CATALOG of one scope.
+
+    The collection sibling of ``GET /v1/kinds/registry/{kind}``, and the REST
+    door for a capability the runtime already had: ``list_kinds_impl`` has
+    served the MCP face since the catalog existed, so a portal could ask an
+    agent what Kinds exist but could not ask the read-API. Every consumer that
+    wanted the list had to hardcode one — and a hardcoded list is exactly how a
+    newly-registered Kind stays invisible.
+
+    ``filtered_by_plan`` is true only when the caller's unlocked feature
+    families actually SHORTENED the catalog, with ``filtered_out`` naming how
+    many rows were withheld — so "the plan filtered nothing" and "the plan hid
+    forty Kinds" are different answers."""
+
+    scope: str
+    kinds: list[RegisteredKindEntry] = Field(default_factory=list)
+    count: int = 0
+    filtered_by_plan: bool = False
+    filtered_out: int = 0
 
 
 # ── Kind authoring (the dedicated door — writes an INERT KindDefinition) ────

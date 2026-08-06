@@ -355,6 +355,7 @@ def build_app(
         get_document_impl,
         graph_refs_impl,
         list_documents_impl,
+        list_kinds_impl,
         write_document_impl,
         create_workspace_impl,
         genome_view_impl,
@@ -1396,6 +1397,50 @@ def build_app(
                     exc,
                 ),
             ) from exc
+
+    # -- the Kind CATALOG ------------------------------------------------------
+    #
+    # Declared HERE, above ``/v1/kinds/{kind}``, for the reason the singular
+    # ``/v1/kinds/registry/{kind}`` is declared above ``/{kind}/documents``:
+    # FastAPI matches in declaration order, and ``registry`` is a literal
+    # segment a Kind can never collide with (a Kind name is CamelCase).
+
+    @app.get("/v1/kinds/registry", dependencies=guarded,
+             response_model=m.RegisteredKindsResponse)
+    async def list_registered_kinds(
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """The Kind CATALOG of a scope — every Kind the registry actually
+        serves here, with the facts a caller needs before acting on one.
+
+        The gap this closes is the enumeration itself. ``list_kinds_impl`` has
+        answered "what can I act on here?" for the MCP face since the catalog
+        existed, and the read-API had only the SINGULAR
+        ``/v1/kinds/registry/{kind}`` — so every REST consumer that wanted the
+        list had to hardcode one. A hardcoded list is precisely how a Kind that
+        gets registered tomorrow stays invisible: the enumeration is the whole
+        point, and it belongs to the registry, not to each caller.
+
+        Not the same question as ``GET /v1/kinds``, and the two must not be
+        confused. That one lists the caller's AUTHORED KindDefinition documents
+        including the unapproved ones — the audit roster, whose subject is an
+        approval decision. This one lists what is REGISTERED and therefore in
+        force, built-ins included; an unapproved Kind is by definition absent.
+
+        Like its singular sibling, it does NOT filter by caller: a registered
+        Kind is the product's data model, identical for every tenant and
+        holding nobody's content. It also does not filter by PLAN — the MCP
+        catalog shortens itself to a caller's unlocked feature families, and
+        this face has no per-request plan the way that one does, so
+        ``filtered_by_plan`` is always false here rather than quietly meaning
+        something different from the same field on the other face.
+
+        ``tenant`` resolves the scope the way every document route does
+        (``live.default_scope``), so a portal that only knows a workspace id
+        reaches that workspace's own registered Kinds without hardcoding the
+        scope-prefix convention. An explicit ``scope`` still wins."""
+        return await list_kinds_impl(await _live(), scope=scope, tenant=tenant)
 
     # ONE authored Kind, IN FULL — the audit screen's read. The listing above
     # projects ten summary fields and deliberately not ``spec.schema`` (a roster
