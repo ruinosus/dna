@@ -486,6 +486,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/kinds/registry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Registered Kinds
+         * @description The Kind CATALOG of a scope — every Kind the registry actually
+         *     serves here, with the facts a caller needs before acting on one.
+         *
+         *     The gap this closes is the enumeration itself. ``list_kinds_impl`` has
+         *     answered "what can I act on here?" for the MCP face since the catalog
+         *     existed, and the read-API had only the SINGULAR
+         *     ``/v1/kinds/registry/{kind}`` — so every REST consumer that wanted the
+         *     list had to hardcode one. A hardcoded list is precisely how a Kind that
+         *     gets registered tomorrow stays invisible: the enumeration is the whole
+         *     point, and it belongs to the registry, not to each caller.
+         *
+         *     Not the same question as ``GET /v1/kinds``, and the two must not be
+         *     confused. That one lists the caller's AUTHORED KindDefinition documents
+         *     including the unapproved ones — the audit roster, whose subject is an
+         *     approval decision. This one lists what is REGISTERED and therefore in
+         *     force, built-ins included; an unapproved Kind is by definition absent.
+         *
+         *     Like its singular sibling, it does NOT filter by caller: a registered
+         *     Kind is the product's data model, identical for every tenant and
+         *     holding nobody's content. It also does not filter by PLAN — the MCP
+         *     catalog shortens itself to a caller's unlocked feature families, and
+         *     this face has no per-request plan the way that one does, so
+         *     ``filtered_by_plan`` is always false here rather than quietly meaning
+         *     something different from the same field on the other face.
+         *
+         *     ``tenant`` resolves the scope the way every document route does
+         *     (``live.default_scope``), so a portal that only knows a workspace id
+         *     reaches that workspace's own registered Kinds without hardcoding the
+         *     scope-prefix convention. An explicit ``scope`` still wins.
+         */
+        get: operations["list_registered_kinds_v1_kinds_registry_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/kinds/registry/{kind}": {
         parameters: {
             query?: never;
@@ -3094,6 +3142,53 @@ export interface components {
             workspace_id: string;
         };
         /**
+         * RegisteredKindEntry
+         * @description One row of ``GET /v1/kinds/registry`` — a Kind the registry actually
+         *     serves in this scope, with the facts a caller needs BEFORE acting on it.
+         *
+         *     Deliberately the same row the MCP ``list_kinds`` tool has always returned
+         *     (both project ``list_kinds_impl``): ``writable``/``deletable`` plus the
+         *     refusal that explains a ``false``, so an operation the runtime would refuse
+         *     is visible without attempting it.
+         */
+        RegisteredKindEntry: {
+            /** Alias */
+            alias?: string | null;
+            /** Api Version */
+            api_version: string;
+            /**
+             * Deletable
+             * @default true
+             */
+            deletable: boolean;
+            /** Delete Refusal */
+            delete_refusal?: string | null;
+            /** Display Label */
+            display_label?: string | null;
+            /** Family */
+            family?: string | null;
+            /** Kind */
+            kind: string;
+            /**
+             * Plane
+             * @default composition
+             */
+            plane: string;
+            /** Storage Pattern */
+            storage_pattern?: string | null;
+            /** Tenant Scope */
+            tenant_scope?: string | null;
+            /** Traits */
+            traits?: string[];
+            /**
+             * Writable
+             * @default true
+             */
+            writable: boolean;
+            /** Write Refusal */
+            write_refusal?: string | null;
+        };
+        /**
          * RegisteredKindView
          * @description ``GET /v1/kinds/registry/{kind}`` — the registered Kind's descriptor:
          *     the JSON ``schema`` a form derives validation from and the ``ui_schema``
@@ -3118,6 +3213,43 @@ export interface components {
             ui_schema?: {
                 [key: string]: unknown;
             };
+        };
+        /**
+         * RegisteredKindsResponse
+         * @description ``GET /v1/kinds/registry`` — the Kind CATALOG of one scope.
+         *
+         *     The collection sibling of ``GET /v1/kinds/registry/{kind}``, and the REST
+         *     door for a capability the runtime already had: ``list_kinds_impl`` has
+         *     served the MCP face since the catalog existed, so a portal could ask an
+         *     agent what Kinds exist but could not ask the read-API. Every consumer that
+         *     wanted the list had to hardcode one — and a hardcoded list is exactly how a
+         *     newly-registered Kind stays invisible.
+         *
+         *     ``filtered_by_plan`` is true only when the caller's unlocked feature
+         *     families actually SHORTENED the catalog, with ``filtered_out`` naming how
+         *     many rows were withheld — so "the plan filtered nothing" and "the plan hid
+         *     forty Kinds" are different answers.
+         */
+        RegisteredKindsResponse: {
+            /**
+             * Count
+             * @default 0
+             */
+            count: number;
+            /**
+             * Filtered By Plan
+             * @default false
+             */
+            filtered_by_plan: boolean;
+            /**
+             * Filtered Out
+             * @default 0
+             */
+            filtered_out: number;
+            /** Kinds */
+            kinds?: components["schemas"]["RegisteredKindEntry"][];
+            /** Scope */
+            scope: string;
         };
         /** RememberResponse */
         RememberResponse: {
@@ -4207,6 +4339,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AuthorKindResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_registered_kinds_v1_kinds_registry_get: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegisteredKindsResponse"];
                 };
             };
             /** @description Validation Error */

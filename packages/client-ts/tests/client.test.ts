@@ -252,6 +252,7 @@ const COVERED: Record<string, string> = {
   "GET /v1/genome": "genomeView",
   "GET /v1/kinds": "listAuthoredKinds",
   "GET /v1/kinds/{kind}": "getAuthoredKind",
+  "GET /v1/kinds/registry": "listRegisteredKinds",
   "GET /v1/kinds/registry/{kind}": "getRegisteredKind",
   "GET /v1/graph/kinds": "kindGraph",
   "GET /v1/kinds/{kind}/documents": "listKindDocuments",

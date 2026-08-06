@@ -449,6 +449,27 @@ class DnaClient:
         No 404: a scope with nothing registered is an empty graph whose
         ``coverage.kinds`` is 0, which is an answer."""
         return self._get("/v1/graph/kinds", scope=scope, tenant=tenant)
+    def list_registered_kinds(
+        self, *, scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """The Kind CATALOG of a scope — every Kind the registry serves here.
+
+        The collection sibling of :meth:`get_registered_kind`, and the answer
+        to "what can I act on?" without hardcoding a list. A hardcoded list is
+        how a Kind registered tomorrow stays invisible; the enumeration belongs
+        to the registry, not to each caller.
+
+        Not :meth:`list_authored_kinds`, which lists the caller's own
+        KindDefinition DOCUMENTS *including the unapproved ones* — the audit
+        roster behind an approval decision. This lists what is REGISTERED and
+        therefore in force, built-ins included.
+
+        Each row carries ``kind``/``api_version``/``alias``, the quota
+        ``family``, the ``plane`` (``composition`` vs ``record``),
+        ``tenant_scope``, ``storage_pattern``, ``traits``, and the
+        ``writable``/``deletable`` pair with the refusal explaining a false —
+        so a refused operation is visible before it is attempted."""
+        return self._get("/v1/kinds/registry", scope=scope, tenant=tenant)
 
     # -- the generic, kubernetes-shaped document read/write -------------------
 

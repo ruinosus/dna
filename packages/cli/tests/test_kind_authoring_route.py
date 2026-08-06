@@ -281,6 +281,12 @@ _KIND_OPERATIONS = frozenset({
 #: The same doors, as OpenAPI paths (approve/revoke/documents share no path).
 _KIND_PATHS = {
     "/v1/kinds", "/v1/kinds/{kind}",
+    # A ENUMERAÇÃO do registry (2026-08-06). `/v1/kinds` lista só os Kinds
+    # AUTORADOS por um tenant; "o que existe aqui?" só tinha resposta pela
+    # face MCP, que um render de portal não pode discar. Sem esta rota, a
+    # única saída do consumidor era enumerar Kinds à mão — o defeito que o
+    # catálogo do conhecimento existe para acabar, não o conserto dele.
+    "/v1/kinds/registry",
     "/v1/kinds/registry/{kind}",
     "/v1/kinds/{kind}/approve", "/v1/kinds/{kind}/revoke",
     "/v1/kinds/{kind}/documents",

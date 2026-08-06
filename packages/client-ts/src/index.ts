@@ -417,6 +417,25 @@ export class DnaClient {
     );
   }
 
+  /**
+   * The Kind CATALOG of a scope — every Kind the registry serves here.
+   *
+   * The collection sibling of {@link getRegisteredKind}, and the answer to
+   * "what can I act on?" without hardcoding a list. A hardcoded list is how a
+   * Kind registered tomorrow stays invisible; the enumeration belongs to the
+   * registry, not to each caller.
+   *
+   * Not {@link listAuthoredKinds}, which lists the caller's own KindDefinition
+   * DOCUMENTS *including the unapproved ones* — the audit roster behind an
+   * approval decision. This lists what is REGISTERED and therefore in force,
+   * built-ins included.
+   */
+  async listRegisteredKinds(query?: { scope?: string; tenant?: string }) {
+    return this.unwrap(
+      await this.raw.GET("/v1/kinds/registry", { params: { query } }),
+    );
+  }
+
   // ── the generic, kubernetes-shaped document write ────────────────────────
 
   /**
