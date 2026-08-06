@@ -36,6 +36,10 @@ spec:
     type: yaml
     container: evidence
   relations:
+    # OPEN BY DESIGN — the producer is the kernel's evidence `post_save` hook,
+    # which fires for EVERY Kind written. Enumerating targets here would mean
+    # enumerating the registry, and would go stale the moment a tenant
+    # registers a Kind of its own.
     document_ref:
       to: '*'
       cardinality: one

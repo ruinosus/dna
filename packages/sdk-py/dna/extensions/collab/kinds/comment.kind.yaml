@@ -35,6 +35,13 @@ spec:
     container: comments
   dep_filters: {}
   relations:
+    # OPEN BY DESIGN — and this is the case the `*` token exists for. A comment
+    # can be left on ANY instance of ANY Kind, including Kinds a tenant will
+    # author tomorrow; the whole point of a generic comment surface is that it
+    # does not have a target list. `by` still says the pointer is composite, so
+    # a reader knows to parse it. (Contrast the ones typed on 06/08/2026 —
+    # there the model knew its targets and the declaration was not letting it
+    # say so.)
     target_ref:
       to: '*'
       cardinality: one

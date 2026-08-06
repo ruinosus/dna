@@ -218,6 +218,117 @@ class TestTheLiveAnswerIsWellFormed:
             assert edges[pair]["by"] == key
             assert edges[pair]["enforced"] is False
 
+
+class TestACompositePointerSaysWhatItPointsAt:
+    """``to: "*"`` used to mean two things at once and could only be written for
+    one of them. 21 of the 47 declared edges in this registry pointed at ``*``
+    on 06/08/2026 — so the graph knew a link existed and could not say WHAT it
+    linked to, and *"which TestGuides verify this Story?"* had no answer, only
+    *"which TestGuides verify something"*.
+
+    These tests hold the two halves of the fix apart: the pointers that ARE
+    typed must stay typed, and the ones that stay open must SAY they are open
+    on purpose rather than merely be untyped."""
+
+    #: Every relation that may keep ``to: "*"``, with the reason it is open BY
+    #: DESIGN. An allowlist, not a denylist: nothing here is being suppressed —
+    #: it is the invariant "a pointer with no declared target owes an
+    #: explanation", written where a new one cannot be added in silence. The
+    #: reason lives beside each declaration too; this is where a REVIEWER is
+    #: made to have read it.
+    OPEN_BY_DESIGN = {
+        ("AgentSession", "produced_artifacts"): "the produces hub — any Kind",
+        ("Bug", "produces"): "the produces hub — any Kind",
+        ("Comment", "target_ref"): "a comment can be left on any instance",
+        ("Engram", "affect_evidence_refs"): "evidence is whatever was in hand",
+        ("Engram", "source_refs"): "a memory derives from anything",
+        ("Epic", "produces"): "the produces hub — any Kind",
+        ("Evidence", "document_ref"): "post_save fires for every Kind written",
+        ("Feature", "produces"): "the produces hub — any Kind",
+        ("Issue", "produces"): "the produces hub — any Kind",
+        ("Research", "cited_by"): "`dna sdlc cite` joins ANY two Kinds",
+        ("SourceArtifact", "derived_refs"): "extraction yields any Kind",
+        ("Spike", "produces"): "the produces hub — any Kind",
+        ("StatusReport", "evidence_refs"): "evidence for a verdict is anything",
+        ("Story", "produces"): "the produces hub — any Kind",
+        ("Task", "produces"): "the produces hub — any Kind",
+        ("TestRun", "evidence"): "entries are refs OR bare URLs OR prose",
+    }
+
+    #: The work-item family, spelled out ONCE here. Not imported from
+    #: ``sdlc_family``: this file is the oracle, and an oracle that reads the
+    #: same constant the code reads proves only that a name is spelled the same
+    #: way twice.
+    _WORK_ITEMS = {"Bug", "Epic", "Feature", "Initiative", "Issue", "Spike",
+                   "Story", "Task"}
+    _JOURNEY_ANCHORS = {"AgentSession", "Epic", "Feature", "Narrative", "Plan",
+                        "Roadmap", "Spec", "Story"}
+
+    def test_the_typed_composites_name_their_targets(self, rows):
+        """The six that were untyped and are not any more. Named one by one,
+        because a COUNT would go green on any six."""
+        by_kind = {r["kind"]: r["relations"] for r in rows}
+        for kind, field, expected in [
+            ("Kaizen", "work_item", self._WORK_ITEMS),
+            ("TestGuide", "verifies", self._WORK_ITEMS),
+            ("TestRun", "verifies", self._WORK_ITEMS),
+            ("Engram", "area", {"Epic", "Feature", "Roadmap"}),
+            ("WorkflowEvent", "ref", self._JOURNEY_ANCHORS),
+            ("WorkflowEvent", "parent_ref", self._JOURNEY_ANCHORS),
+        ]:
+            rel = by_kind[kind][field]
+            assert set(rel.to) == expected, f"{kind}.{field}"
+            # THE mutant: typing a composite must not start RESOLVING it. If
+            # `resolved` flips, the write path begins parsing `Story/s-x` as an
+            # instance name and vetoes every value already stored.
+            assert rel.resolved is False, f"{kind}.{field} became resolved"
+            assert rel.carries_kind is True, f"{kind}.{field}"
+            assert rel.open_target is False, f"{kind}.{field}"
+
+    def test_a_typed_composite_becomes_REAL_edges_on_the_wire(self, graph):
+        """Through the door a consumer actually uses. One `*` edge answered
+        "it points at something"; the typed ones answer "which Kaizens came out
+        of this Story"."""
+        targets = {
+            e["to_kind"] for e in graph["edges"]
+            if (e["from_kind"], e["field"]) == ("Kaizen", "work_item")
+        }
+        assert ANY_TARGET not in targets
+        assert {"Story", "Issue", "Spike"} <= targets
+
+    def test_every_remaining_star_relation_is_declared_open_on_purpose(self, rows):
+        """The invariant, as a guard. A NEW relation pointing at `*` fails here
+        until somebody writes down why it is open — which is the whole
+        difference between "this can point at anything, by design" and "nobody
+        typed it". The two render identically on a screen; this file is what
+        tells them apart."""
+        undocumented = sorted(self._open(rows) - set(self.OPEN_BY_DESIGN))
+        assert undocumented == [], (
+            "these relations point at `*` with no recorded reason. If the "
+            "target really is unconstrained, add it to OPEN_BY_DESIGN with the "
+            "reason; otherwise declare `to: [Kind, ...]` — a composite `by` no "
+            f"longer forces `*`: {undocumented}"
+        )
+
+    def test_the_allowlist_has_no_row_the_registry_lost(self, rows):
+        """The other direction, and the one enumerated tables always miss: a
+        relation that gets TYPED (or deleted) must leave this list, or the list
+        slowly becomes a record of a registry that no longer exists — which is
+        exactly how ``UNDECLARABLE`` came to cite a Kind called ``Tier``."""
+        stale = sorted(set(self.OPEN_BY_DESIGN) - self._open(rows))
+        assert stale == [], f"OPEN_BY_DESIGN rows nothing declares any more: {stale}"
+
+    @staticmethod
+    def _open(rows) -> set:
+        return {
+            (r["kind"], name)
+            for r in rows
+            for name, rel in r["relations"].items()
+            if rel.open_target
+        }
+
+
+class TestTheCoverageProseStaysTrue:
     def test_no_coverage_prose_names_a_retired_kind(self, registered):
         """The limits travel on the wire, and prose is where a rename hides:
         the retired denylist carried ``Tier`` AND ``AccountPlan`` in prose a

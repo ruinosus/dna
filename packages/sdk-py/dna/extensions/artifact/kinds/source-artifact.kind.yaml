@@ -59,6 +59,10 @@ spec:
     type: yaml
     container: source-artifacts
   relations:
+    # OPEN BY DESIGN — extraction reads a file and writes whatever Kind the
+    # content turned out to be, INCLUDING Kinds a tenant authored and this
+    # package has never heard of. A closed list here would cap what may be
+    # extracted, which is a product decision hiding in a schema.
     derived_refs:
       to: '*'
       cardinality: many

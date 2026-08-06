@@ -111,7 +111,7 @@
                   { "type": "string", "minLength": 1 },
                   { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
                 ],
-                "description": "The target. A bare Kind NAME (`Story`) — never an alias, because `target_kind` is globally unique by the ENFORCED registry invariant i-195 and is what `get_instance(scope, kind, name)` takes. A LIST is polymorphic: any one of them may match. `*` means the target Kind travels inside the VALUE, and then `by` must name the composite form."
+                "description": "WHICH Kinds this relation may point at. A bare Kind NAME (`Story`) — never an alias, because `target_kind` is globally unique by the ENFORCED registry invariant i-195 and is what `get_instance(scope, kind, name)` takes. A LIST is polymorphic: any one of them may match. `*` means the model does not CONSTRAIN the target — a Comment pins anything that exists — and is not the same statement as `by` (where the target Kind name is written). Reading those two as one question left 21 declared relations in this registry pointing at `*` and therefore untypable; a composite `by` may now declare its targets."
               },
               "cardinality": {
                 "enum": ["one", "many"],
@@ -125,7 +125,7 @@
               "by": {
                 "type": "string",
                 "minLength": 1,
-                "description": "How the VALUE addresses the target. Default `name` — the target instance's metadata.name, and the ONLY addressing the kernel resolves and therefore the only one it validates. A target spec FIELD (`by: workspace_id`) declares the addressing without installing a resolution rule: resolving by key needs an expression index the store does not have, and a second rule beside a live one can veto data the live one accepts (measured: PricingPlan resolves by tier_id and THEN by aliases[]). With `to: *` this must be one of the composite forms `Kind:name`, `Kind/name`, `{kind, name}`."
+                "description": "How the VALUE addresses the target. Default `name` — the target instance's metadata.name, and the ONLY addressing the kernel resolves and therefore the only one it validates. A target spec FIELD (`by: workspace_id`) declares the addressing without installing a resolution rule: resolving by key needs an expression index the store does not have, and a second rule beside a live one can veto data the live one accepts (measured: PricingPlan resolves by tier_id and THEN by aliases[]). A composite FORM (`Kind:name`, `Kind/name`, `{kind, name}`) says the target Kind name travels INSIDE the value; it is REQUIRED with `to: *` and ALLOWED beside a declared `to`, which is how a polymorphic pointer gets typed without teaching the kernel to parse it."
               }
             }
           },

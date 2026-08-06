@@ -42,12 +42,20 @@ spec:
     parent_ref: sdlc-spec|sdlc-plan|sdlc-story|sdlc-feature|sdlc-epic|sdlc-roadmap|sdlc-agent-session|sdlc-narrative
     transitioned_from: sdlc-workflow-event
   relations:
+    # Typed from the SAME set `dep_filters` above already names — and that is
+    # the point: while these said `to: '*'`, the relation CLAIMED both fields
+    # (`build_edges` skips a dep_filters edge for a field a relation claims),
+    # so the eight typed composition edges were suppressed in favour of one
+    # untyped edge to `*`. The Kind knew its targets in one declaration and
+    # denied them in the other; the graph believed the weaker one.
+    # Measured 06/08/2026: ref → Feature ×43, Plan ×3, Spec ×3;
+    # parent_ref → Feature ×49.
     parent_ref:
-      to: '*'
+      to: [AgentSession, Epic, Feature, Narrative, Plan, Roadmap, Spec, Story]
       cardinality: one
       by: 'Kind/name'
     ref:
-      to: '*'
+      to: [AgentSession, Epic, Feature, Narrative, Plan, Roadmap, Spec, Story]
       cardinality: one
       by: 'Kind/name'
   schema:

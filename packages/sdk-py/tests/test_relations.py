@@ -94,9 +94,39 @@ class TestByIsCheckedAgainstTo:
         assert rels["r"].by == form
         assert rels["r"].carries_kind is True
 
-    def test_a_composite_form_on_a_concrete_target_is_a_contradiction(self):
-        with pytest.raises(ValueError, match="contradict"):
-            normalize_relations({"r": _rel(to="Story", by="Kind:name")})
+    def test_a_composite_form_MAY_declare_which_kinds_it_names(self):
+        """`by` says where the target Kind name is WRITTEN; `to` says which
+        Kinds it may name. Reading those as one question is what left 21
+        relations in this registry pointing at `*` — declared, and untyped."""
+        rel = normalize_relations({
+            "work_item": _rel(to=["Issue", "Spike", "Story"], by="Kind/name"),
+        })["work_item"]
+        assert rel.to == ("Issue", "Spike", "Story")
+        assert rel.by == "Kind/name"
+        assert rel.carries_kind is True      # the ADDRESS carries a Kind
+        assert rel.open_target is False      # the MODEL constrains which
+
+    def test_a_single_target_composite_is_accepted_too(self):
+        """Refusing this would force an author to write `*` — to LIE about the
+        model — for the sake of a symmetry nothing needs."""
+        rel = normalize_relations({"r": _rel(to="Story", by="Kind:name")})["r"]
+        assert rel.to == ("Story",)
+        assert rel.carries_kind is True
+        assert rel.polymorphic is False
+
+    def test_carries_kind_and_open_target_are_two_different_facts(self):
+        """The mutant this kills: `carries_kind = not self.to`. Under it a typed
+        composite reports carries_kind False — the graph would then believe the
+        value holds a bare name, and a consumer parsing it would read
+        `Story/s-x` as an instance called `Story/s-x`."""
+        typed = normalize_relations({"r": _rel(to=["A", "B"], by="Kind/name")})["r"]
+        by_name = normalize_relations({"r": _rel(to=["A", "B"])})["r"]
+        star = normalize_relations({
+            "r": _rel(to=ANY_TARGET, by="Kind/name"),
+        })["r"]
+        assert (typed.carries_kind, typed.open_target) == (True, False)
+        assert (by_name.carries_kind, by_name.open_target) == (False, False)
+        assert (star.carries_kind, star.open_target) == (True, True)
 
     def test_a_key_addressing_defaults_to_nothing_and_must_be_a_field_name(self):
         with pytest.raises(ValueError, match="spec field"):
@@ -150,6 +180,17 @@ class TestResolvedIsTheRuntimePromise:
         assert rel.polymorphic is True
         assert rel.resolved is False
 
+    def test_TYPING_a_composite_does_not_start_resolving_it(self):
+        """Declaring the targets buys the GRAPH a typed edge, and nothing else.
+        If this flips to True the write path starts parsing `Story/s-x` and
+        vetoing every instance written before the form was agreed — the same
+        second-resolution-rule trap `by: <key>` was held back from."""
+        rel = normalize_relations({
+            "verifies": _rel(to=["Feature", "Story"], cardinality="many",
+                             by="Kind/name"),
+        })["verifies"]
+        assert rel.resolved is False
+
 
 # --- the readings -------------------------------------------------------------
 
@@ -191,6 +232,7 @@ class TestNormalize:
             _rel(to=["Plan", "Spec"], cardinality="many"),
             _rel(to=ANY_TARGET, cardinality="many", by="{kind, name}"),
             _rel(to="Workspace", by="workspace_id"),
+            _rel(to=["Issue", "Story"], cardinality="many", by="Kind/name"),
         ):
             first = normalize_relations({"r": raw})["r"]
             again = normalize_relations({"r": first.to_declaration()})["r"]

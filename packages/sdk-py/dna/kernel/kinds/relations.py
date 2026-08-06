@@ -44,9 +44,10 @@ produces its edge (``dna.kernel.query.references``).
 The four keys, and nothing else
 -------------------------------
 ``to``
-    The target. A Kind NAME (``Story``), a LIST of them for a polymorphic
-    relation (``[Organization, Project]`` — any one may match), or
-    :data:`ANY_TARGET` (``"*"``) when the target Kind travels inside the VALUE.
+    Which Kinds the relation may point at. A Kind NAME (``Story``), a LIST of
+    them for a polymorphic relation (``[Organization, Project]`` — any one may
+    match), or :data:`ANY_TARGET` (``"*"``) when the model genuinely does not
+    constrain the target — ``Comment.target_ref`` can pin anything that exists.
     A bare Kind name, not an alias: ``target_kind`` is globally unique by an
     ENFORCED registry invariant (i-195 — two api_versions sharing a Kind name
     is a ``KindRegistrationError``), so a bare name resolves unambiguously by
@@ -88,9 +89,10 @@ The four keys, and nothing else
       (``Project.workspace_id``, ``WorkspaceMembership.role``) that used to sit
       in a hand-kept "undeclarable" table in ``kind_graph``, invisible to the
       Kind that owned them.
-    * a composite FORM (``by: "Kind:name"``), which only makes sense with
-      ``to: "*"``: the value carries its own target Kind, so the schema cannot
-      name one.
+    * a composite FORM (``by: "Kind:name"``): the value carries its own target
+      Kind, written inside the string (or, for ``{kind, name}``, inside the
+      object). This is a statement about the ADDRESS, and it is deliberately
+      independent of ``to`` — see below.
 
     ⚠️ **A non-``name`` ``by`` installs NO resolution rule.** It says how the
     address is written; it does not teach the kernel to follow it. That
@@ -101,6 +103,43 @@ The four keys, and nothing else
     live one accepts. Resolving by key also needs an expression index the
     store does not have. Declaring the addressing costs nothing and can lie to
     nobody; resolving it is a separate slice with a separate cost.
+
+``to`` and ``by`` are two questions, and collapsing them cost 21 relations
+---------------------------------------------------------------------------
+The first cut of this module refused ``to: [Story, Spike, Issue]`` together
+with ``by: "Kind/name"``, on the reasoning that *"a composite value carries its
+own Kind, so the two statements contradict"*. They do not contradict — they
+answer different questions:
+
+* ``by`` says **where the target Kind name is written**: in the schema
+  (``by: name`` — the field holds only the instance name) or in the VALUE
+  (a composite form — the field holds ``Story/s-foo``).
+* ``to`` says **which Kinds are allowed**. A composite address still has to
+  name a Kind, and the model usually knows the short list it may name.
+
+Collapsing the two forced every composite relation to say ``to: "*"``, and the
+price was measured on 06/08/2026: **21 of the 47 declared edges in this repo's
+registry pointed at "*"** — ``TestGuide.verifies``, ``Kaizen.work_item``, eight
+``produces`` fields, ``WorkflowEvent.ref``/``parent_ref``, ``Research.cited_by``
+and the rest. The graph knew a link existed and could not say what it linked
+to, so *"which TestGuides verify this Story?"* had no answer — only *"which
+TestGuides verify something"*. That is a declaration without a type, which is
+half the road and looks like all of it.
+
+So a composite relation MAY declare its targets, and ``ANY_TARGET`` goes back to
+meaning what it says: **the model does not constrain the target**, because the
+thing really can point at anything (``Comment.target_ref``,
+``Evidence.document_ref``, ``*.produces``). The distinction a reader needs is
+*"open by design"* versus *"we could not type it"*, and before this change the
+vocabulary could not make it.
+
+Two orthogonal properties fall out, and they are NOT the same question:
+:attr:`Relation.carries_kind` (the value names its own Kind — a fact about the
+ADDRESS) and :attr:`Relation.open_target` (no declared target — a fact about the
+MODEL). ``Relation.resolved`` is unchanged: a typed composite is declared and
+drawn, and this runtime still does not parse it. Declaring the address costs
+nothing and can lie to nobody; following it is a separate slice, exactly as it
+is for ``by: workspace_id``.
 
 What ``inverse_of`` promises — the weakest thing that ends the silence
 ---------------------------------------------------------------------
@@ -241,9 +280,12 @@ __all__ = [
     "schema_contradictions",
 ]
 
-#: ``to: "*"`` — the target Kind is chosen per VALUE, so the schema cannot name
-#: one. Deliberately not a Kind-shaped token: nothing should be able to mistake
-#: it for a name somebody might register.
+#: ``to: "*"`` — the model does not constrain the target Kind, because the
+#: relation really can point at anything (a Comment pins any instance). NOT the
+#: same statement as "the value carries its own Kind" — that is ``by``, and
+#: conflating the two is what left 21 real relations untyped. Deliberately not a
+#: Kind-shaped token: nothing should be able to mistake it for a name somebody
+#: might register.
 ANY_TARGET = "*"
 
 #: The default (and only RESOLVED) addressing: the value is the target
@@ -255,11 +297,13 @@ BY_NAME = "name"
 #: already has ``minItems``/``maxItems`` for that.
 CARDINALITIES: tuple[str, ...] = ("one", "many")
 
-#: The closed set of composite forms a ``to: "*"`` relation may declare. CLOSED
-#: on purpose: ``x-dna-ref-composite`` took a free string, and a form nobody
-#: can parse is a declaration nobody can use. ``Kind/slug`` was in use and is
-#: NOT here — an instance's slug IS its name, so it was one form written two
-#: ways, which is the drift a closed set exists to stop.
+#: The closed set of composite forms — how a value that carries its OWN target
+#: Kind is written. CLOSED on purpose: ``x-dna-ref-composite`` took a free
+#: string, and a form nobody can parse is a declaration nobody can use.
+#: ``Kind/slug`` was in use and is NOT here — an instance's slug IS its name, so
+#: it was one form written two ways, which is the drift a closed set exists to
+#: stop. Orthogonal to ``to``: a composite relation may still declare WHICH
+#: Kinds its value is allowed to name.
 COMPOSITE_FORMS: tuple[str, ...] = ("Kind:name", "Kind/name", "{kind, name}")
 
 #: Why a declared inverse does not pair. Machine-readable, because a screen
@@ -284,8 +328,8 @@ class Relation:
 
     #: The relation's name, which IS the spec field holding its value(s).
     name: str
-    #: Target Kind names, sorted. EMPTY when the target travels in the value
-    #: (``to: "*"``) — see :attr:`carries_kind`.
+    #: Target Kind names, sorted. EMPTY only for ``to: "*"`` — the model
+    #: declining to constrain the target. See :attr:`open_target`.
     to: tuple[str, ...]
     #: ``one`` | ``many`` — declared, never inferred from the JSON Schema.
     cardinality: str
@@ -297,13 +341,28 @@ class Relation:
 
     @property
     def carries_kind(self) -> bool:
-        """``to: "*"`` — the value names its own Kind."""
+        """The VALUE names its own Kind — a fact about the ADDRESS.
+
+        True for every composite ``by``, whether or not the relation also
+        declares which Kinds that address may name. This used to be spelled
+        ``not self.to``, which silently made "the value carries a Kind" and
+        "the model declares no target" one question; they are two, and
+        :attr:`open_target` is the other."""
+        return self.by in COMPOSITE_FORMS
+
+    @property
+    def open_target(self) -> bool:
+        """``to: "*"`` — the model declines to constrain the target Kind.
+
+        A fact about the MODEL, and the one a reader must be able to tell apart
+        from an untyped declaration: "this can point at anything, by design" is
+        a statement, "nobody typed it" is a gap."""
         return not self.to
 
     @property
     def polymorphic(self) -> bool:
-        """More than one declared target, or a target chosen per value."""
-        return len(self.to) > 1 or self.carries_kind
+        """More than one possible target — several declared, or unconstrained."""
+        return len(self.to) > 1 or self.open_target
 
     @property
     def is_array(self) -> bool:
@@ -329,7 +388,7 @@ class Relation:
         schema; ``by: name`` restated is noise), exactly as
         ``Presentation.to_declaration`` does."""
         out: dict[str, Any] = {
-            "to": ANY_TARGET if self.carries_kind
+            "to": ANY_TARGET if self.open_target
             else (self.to[0] if len(self.to) == 1 else list(self.to)),
             "cardinality": self.cardinality,
         }
@@ -350,6 +409,10 @@ class Relation:
             "inverse_of": self.inverse_of,
             "by": self.by,
             "resolved": self.resolved,
+            # The two facts `to: "*"` used to conflate, both on the wire so a
+            # consumer never has to re-derive either from the token.
+            "carries_kind": self.carries_kind,
+            "open_target": self.open_target,
         }
 
 
@@ -430,10 +493,12 @@ def _relation(name: Any, raw: Any) -> Relation:
         if not to:
             raise ValueError(
                 f"relations[{name!r}] declares inverse_of={inverse_of!r} on a "
-                f"`to: {ANY_TARGET}` relation. The target Kind is chosen per "
-                "value, so there is no Kind on which the other half could be "
-                "declared — and an inverse that can never be checked is a "
-                "promise with nobody to keep it"
+                f"`to: {ANY_TARGET}` relation. The model constrains the target "
+                "to nothing, so there is no Kind on which the other half could "
+                "be declared — and an inverse that can never be checked is a "
+                "promise with nobody to keep it. If the targets ARE known, "
+                "declare them: a composite `by` no longer forces "
+                f"`to: {ANY_TARGET}`"
             )
 
     by = raw.get("by")
@@ -447,16 +512,16 @@ def _relation(name: Any, raw: Any) -> Relation:
         )
     by = by.strip()
     if to:
-        if by in COMPOSITE_FORMS:
+        # A composite `by` beside a declared `to` is NOT a contradiction — it
+        # was read as one until 06/08/2026, and that reading is what left 21
+        # real relations pointing at `*`. `by` says where the target Kind name
+        # is WRITTEN; `to` says which Kinds it may name. See the module
+        # docstring, "``to`` and ``by`` are two questions".
+        if by not in COMPOSITE_FORMS and by != BY_NAME and not _NAME_RE.match(by):
             raise ValueError(
-                f"relations[{name!r}].by is the composite form {by!r} but `to` "
-                f"names {list(to)}. A composite value carries its own Kind, so "
-                f"the two statements contradict: declare `to: {ANY_TARGET}`"
-            )
-        if by != BY_NAME and not _NAME_RE.match(by):
-            raise ValueError(
-                f"relations[{name!r}].by must be {BY_NAME!r} or a spec field "
-                f"name of the target Kind, got {by!r}"
+                f"relations[{name!r}].by must be {BY_NAME!r}, a spec field "
+                f"name of the target Kind, or one of the composite forms "
+                f"{list(COMPOSITE_FORMS)}; got {by!r}"
             )
     else:
         if by not in COMPOSITE_FORMS:

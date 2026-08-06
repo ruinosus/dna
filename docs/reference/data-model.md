@@ -66,7 +66,7 @@ than either:
 
 `*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the instance name.
 
-**97 edges: 47 declared, 50 composition-only — of which 21 are ENFORCED at write time.** 26 of 84 Kinds declare at least one relation, and 25 fields are listed below as gaps.
+**135 edges: 85 declared, 50 composition-only — of which 21 are ENFORCED at write time.** 26 of 84 Kinds declare at least one relation, and 25 fields are listed below as gaps.
 
 !!! warning "Declared is not enforced"
 
@@ -105,12 +105,14 @@ flowchart LR
     helix -->|2| agentskills
     helix -->|2| guardrails
     helix -->|1| presidio
+    helix -->|3| sdlc
     helix -->|2| soulspec
     portfolio -->|1| cloud
     portfolio -->|1| intel
     portfolio -->|1| tenant
     sdlc -->|8| helix
     tenant -->|1| portfolio
+    testkit -->|16| sdlc
 ```
 
 ### Detail by group
@@ -122,7 +124,7 @@ split again by tier, which keeps the enforced edges legible instead
 of losing them among the unvalidated ones. A box from another group
 appearing here is a cross-group reference.
 
-#### `helix` (17 edges)
+#### `helix` (19 edges)
 
 ```mermaid
 erDiagram
@@ -132,8 +134,11 @@ erDiagram
     App
     Copilot
     Engram
+    Epic
+    Feature
     Guardrail
     Recognizer
+    Roadmap
     SafetyPolicy
     Skill
     Soul
@@ -146,7 +151,9 @@ erDiagram
     Agent }o..}o Tool : "tools (dep)"
     App }o--}o Copilot : "copilots"
     Engram }o..}o ANY_KIND : "affect_evidence_refs [Kind/name] *"
-    Engram }o..|| ANY_KIND : "area [Kind/name] *"
+    Engram }o..|| Epic : "area [Kind/name] *"
+    Engram }o..|| Feature : "area [Kind/name] *"
+    Engram }o..|| Roadmap : "area [Kind/name] *"
     Engram }o..}o ANY_KIND : "source_refs [Kind/name] *"
     SafetyPolicy }o..}o Recognizer : "recognizers (dep)"
     UseCase }o..}o Agent : "agents (dep)"
@@ -180,7 +187,7 @@ erDiagram
     Project }o..|| Workspace : "workspace_id [workspace_id]"
 ```
 
-#### `sdlc` — declared (25 edges)
+#### `sdlc` — declared (46 edges)
 
 ```mermaid
 erDiagram
@@ -189,9 +196,12 @@ erDiagram
     Bug
     Epic
     Feature
+    Initiative
     Issue
     Kaizen
+    Narrative
     Plan
+    Roadmap
     Spec
     Spike
     Sprint
@@ -208,7 +218,14 @@ erDiagram
     Feature }o--|| Sprint : "sprint_ref"
     Feature }o--}o Story : "stories"
     Issue }o..}o ANY_KIND : "produces [{kind, name}] *"
-    Kaizen }o..|| ANY_KIND : "work_item [Kind/name] *"
+    Kaizen }o..|| Bug : "work_item [Kind/name] *"
+    Kaizen }o..|| Epic : "work_item [Kind/name] *"
+    Kaizen }o..|| Feature : "work_item [Kind/name] *"
+    Kaizen }o..|| Initiative : "work_item [Kind/name] *"
+    Kaizen }o..|| Issue : "work_item [Kind/name] *"
+    Kaizen }o..|| Spike : "work_item [Kind/name] *"
+    Kaizen }o..|| Story : "work_item [Kind/name] *"
+    Kaizen }o..|| Task : "work_item [Kind/name] *"
     Plan }o--|| Epic : "epic"
     Plan }o--|| Spec : "spec_ref"
     Spec }o--|| Epic : "epic"
@@ -222,8 +239,22 @@ erDiagram
     Story }o--|| Sprint : "sprint_ref"
     Task }o..}o ANY_KIND : "produces [{kind, name}] *"
     Task }o--|| Story : "story_ref"
-    WorkflowEvent }o..|| ANY_KIND : "parent_ref [Kind/name] *"
-    WorkflowEvent }o..|| ANY_KIND : "ref [Kind/name] *"
+    WorkflowEvent }o..|| AgentSession : "parent_ref [Kind/name] *"
+    WorkflowEvent }o..|| Epic : "parent_ref [Kind/name] *"
+    WorkflowEvent }o..|| Feature : "parent_ref [Kind/name] *"
+    WorkflowEvent }o..|| Narrative : "parent_ref [Kind/name] *"
+    WorkflowEvent }o..|| Plan : "parent_ref [Kind/name] *"
+    WorkflowEvent }o..|| Roadmap : "parent_ref [Kind/name] *"
+    WorkflowEvent }o..|| Spec : "parent_ref [Kind/name] *"
+    WorkflowEvent }o..|| Story : "parent_ref [Kind/name] *"
+    WorkflowEvent }o..|| AgentSession : "ref [Kind/name] *"
+    WorkflowEvent }o..|| Epic : "ref [Kind/name] *"
+    WorkflowEvent }o..|| Feature : "ref [Kind/name] *"
+    WorkflowEvent }o..|| Narrative : "ref [Kind/name] *"
+    WorkflowEvent }o..|| Plan : "ref [Kind/name] *"
+    WorkflowEvent }o..|| Roadmap : "ref [Kind/name] *"
+    WorkflowEvent }o..|| Spec : "ref [Kind/name] *"
+    WorkflowEvent }o..|| Story : "ref [Kind/name] *"
 ```
 
 #### `sdlc` — composition (36 edges)
@@ -300,16 +331,39 @@ erDiagram
     WorkspaceMembership }o..|| Workspace : "workspace_id [workspace_id]"
 ```
 
-#### `testkit` (3 edges)
+#### `testkit` (18 edges)
 
 ```mermaid
 erDiagram
     ANY_KIND
+    Bug
+    Epic
+    Feature
+    Initiative
+    Issue
+    Spike
+    Story
+    Task
     TestGuide
     TestRun
-    TestGuide }o..}o ANY_KIND : "verifies [Kind/name] *"
+    TestGuide }o..}o Bug : "verifies [Kind/name] *"
+    TestGuide }o..}o Epic : "verifies [Kind/name] *"
+    TestGuide }o..}o Feature : "verifies [Kind/name] *"
+    TestGuide }o..}o Initiative : "verifies [Kind/name] *"
+    TestGuide }o..}o Issue : "verifies [Kind/name] *"
+    TestGuide }o..}o Spike : "verifies [Kind/name] *"
+    TestGuide }o..}o Story : "verifies [Kind/name] *"
+    TestGuide }o..}o Task : "verifies [Kind/name] *"
     TestRun }o..}o ANY_KIND : "evidence [Kind/name] *"
     TestRun }o--|| TestGuide : "guide_ref"
+    TestRun }o..}o Bug : "verifies [Kind/name] *"
+    TestRun }o..}o Epic : "verifies [Kind/name] *"
+    TestRun }o..}o Feature : "verifies [Kind/name] *"
+    TestRun }o..}o Initiative : "verifies [Kind/name] *"
+    TestRun }o..}o Issue : "verifies [Kind/name] *"
+    TestRun }o..}o Spike : "verifies [Kind/name] *"
+    TestRun }o..}o Story : "verifies [Kind/name] *"
+    TestRun }o..}o Task : "verifies [Kind/name] *"
 ```
 
 Groups with fewer than 2 edges (listed, not drawn): `artifact`, `collab`, `eval`, `evidence`, `intel`, `research`.
@@ -328,7 +382,9 @@ the runtime does not follow it — read `By` for why.
 | `Bug` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `Comment` | `target_ref` *(poly)* | `*` | one | `Kind:name` |  |  |  |
 | `Engram` | `affect_evidence_refs` *(poly)* | `*` | many | `Kind/name` |  |  |  |
-| `Engram` | `area` *(poly)* | `*` | one | `Kind/name` |  |  |  |
+| `Engram` | `area` *(poly)* | `Epic` | one | `Kind/name` |  |  | yes |
+| `Engram` | `area` *(poly)* | `Feature` | one | `Kind/name` |  |  | yes |
+| `Engram` | `area` *(poly)* | `Roadmap` | one | `Kind/name` |  |  | yes |
 | `Engram` | `source_refs` *(poly)* | `*` | many | `Kind/name` |  |  |  |
 | `Epic` | `features` | `Feature` | many | `name` | yes | `epic` |  |
 | `Epic` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
@@ -339,7 +395,14 @@ the runtime does not follow it — read `By` for why.
 | `Feature` | `stories` | `Story` | many | `name` | yes | `feature` |  |
 | `IntelInsight` | `source_ref` | `IntelSource` | one | `name` | yes |  |  |
 | `Issue` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
-| `Kaizen` | `work_item` *(poly)* | `*` | one | `Kind/name` |  |  |  |
+| `Kaizen` | `work_item` *(poly)* | `Bug` | one | `Kind/name` |  |  |  |
+| `Kaizen` | `work_item` *(poly)* | `Epic` | one | `Kind/name` |  |  |  |
+| `Kaizen` | `work_item` *(poly)* | `Feature` | one | `Kind/name` |  |  |  |
+| `Kaizen` | `work_item` *(poly)* | `Initiative` | one | `Kind/name` |  |  |  |
+| `Kaizen` | `work_item` *(poly)* | `Issue` | one | `Kind/name` |  |  |  |
+| `Kaizen` | `work_item` *(poly)* | `Spike` | one | `Kind/name` |  |  |  |
+| `Kaizen` | `work_item` *(poly)* | `Story` | one | `Kind/name` |  |  |  |
+| `Kaizen` | `work_item` *(poly)* | `Task` | one | `Kind/name` |  |  |  |
 | `Membership` | `role` | `Role` | one | `role_id` |  |  |  |
 | `Membership` | `scope_ref` *(poly)* | `Organization` | one | `name` | yes |  |  |
 | `Membership` | `scope_ref` *(poly)* | `Project` | one | `name` | yes |  |  |
@@ -363,11 +426,40 @@ the runtime does not follow it — read `By` for why.
 | `Story` | `sprint_ref` | `Sprint` | one | `name` | yes |  |  |
 | `Task` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `Task` | `story_ref` | `Story` | one | `name` | yes |  |  |
-| `TestGuide` | `verifies` *(poly)* | `*` | many | `Kind/name` |  |  |  |
+| `TestGuide` | `verifies` *(poly)* | `Bug` | many | `Kind/name` |  |  | yes |
+| `TestGuide` | `verifies` *(poly)* | `Epic` | many | `Kind/name` |  |  | yes |
+| `TestGuide` | `verifies` *(poly)* | `Feature` | many | `Kind/name` |  |  | yes |
+| `TestGuide` | `verifies` *(poly)* | `Initiative` | many | `Kind/name` |  |  | yes |
+| `TestGuide` | `verifies` *(poly)* | `Issue` | many | `Kind/name` |  |  | yes |
+| `TestGuide` | `verifies` *(poly)* | `Spike` | many | `Kind/name` |  |  | yes |
+| `TestGuide` | `verifies` *(poly)* | `Story` | many | `Kind/name` |  |  | yes |
+| `TestGuide` | `verifies` *(poly)* | `Task` | many | `Kind/name` |  |  | yes |
 | `TestRun` | `evidence` *(poly)* | `*` | many | `Kind/name` |  |  |  |
 | `TestRun` | `guide_ref` | `TestGuide` | one | `name` | yes |  |  |
-| `WorkflowEvent` | `parent_ref` *(poly)* | `*` | one | `Kind/name` |  |  |  |
-| `WorkflowEvent` | `ref` *(poly)* | `*` | one | `Kind/name` |  |  |  |
+| `TestRun` | `verifies` *(poly)* | `Bug` | many | `Kind/name` |  |  | yes |
+| `TestRun` | `verifies` *(poly)* | `Epic` | many | `Kind/name` |  |  | yes |
+| `TestRun` | `verifies` *(poly)* | `Feature` | many | `Kind/name` |  |  | yes |
+| `TestRun` | `verifies` *(poly)* | `Initiative` | many | `Kind/name` |  |  | yes |
+| `TestRun` | `verifies` *(poly)* | `Issue` | many | `Kind/name` |  |  | yes |
+| `TestRun` | `verifies` *(poly)* | `Spike` | many | `Kind/name` |  |  | yes |
+| `TestRun` | `verifies` *(poly)* | `Story` | many | `Kind/name` |  |  | yes |
+| `TestRun` | `verifies` *(poly)* | `Task` | many | `Kind/name` |  |  | yes |
+| `WorkflowEvent` | `parent_ref` *(poly)* | `AgentSession` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `parent_ref` *(poly)* | `Epic` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `parent_ref` *(poly)* | `Feature` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `parent_ref` *(poly)* | `Narrative` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `parent_ref` *(poly)* | `Plan` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `parent_ref` *(poly)* | `Roadmap` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `parent_ref` *(poly)* | `Spec` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `parent_ref` *(poly)* | `Story` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `ref` *(poly)* | `AgentSession` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `ref` *(poly)* | `Epic` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `ref` *(poly)* | `Feature` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `ref` *(poly)* | `Narrative` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `ref` *(poly)* | `Plan` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `ref` *(poly)* | `Roadmap` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `ref` *(poly)* | `Spec` | one | `Kind/name` |  |  |  |
+| `WorkflowEvent` | `ref` *(poly)* | `Story` | one | `Kind/name` |  |  |  |
 | `WorkspaceMembership` | `role` | `Role` | one | `role_id` |  |  | yes |
 | `WorkspaceMembership` | `workspace_id` | `Workspace` | one | `workspace_id` |  |  |  |
 

@@ -65,6 +65,12 @@ spec:
     # is NOT in the schema block below — the port merges it in. The relation is
     # declared here anyway, because a relation belongs to the Kind and not to
     # whichever file its property happened to come from.
+    #
+    # `to: '*'` is OPEN BY DESIGN, not untyped: a work item may author an
+    # artifact of any Kind, including one a tenant registers tomorrow. The full
+    # reason (and the measurement behind it) lives beside the Python twin the
+    # other seven work items share — `extensions/sdlc/__init__.py`,
+    # `_PRODUCES_RELATION`.
     produces:
       to: '*'
       cardinality: many

@@ -156,8 +156,17 @@ class ResearchKind(KindBase):
         "References into a position with recommendations."
     )
     # `cited_by` carries `<Kind>/<name>` — the target Kind travels in the
-    # VALUE, which is what `to: "*"` says. `references` is NOT here: it
-    # holds Reference doc names, and Reference is the one Kind name still
+    # VALUE, which is what `by` says.
+    #
+    # `to: "*"` here is OPEN BY DESIGN, not "we could not type it". The writer
+    # is `dna sdlc cite`, whose own docstring is "Bidirectional citation
+    # between ANY two Kinds"; it validates neither side against a family, and
+    # the stored data is spread across ADR, Spec, Story, Feature and Issue
+    # (measured 06/08/2026). Anything authorable can ground itself in a
+    # Research, so a closed `to` would be a list the next citation contradicts.
+    #
+    # `references` is NOT here: it holds Reference doc names, and Reference is
+    # the one Kind name still
     # on the collision allowlist (research/v1 AND sdlc/v1), so a bare-name
     # target would be ambiguous. Declaring it is i-110's work, not this
     # slice's — and the gap list now says so out loud.

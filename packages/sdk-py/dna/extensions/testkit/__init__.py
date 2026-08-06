@@ -27,12 +27,22 @@ from __future__ import annotations
 
 from typing import Any
 
+from dna.application.sdlc_family import FALLBACK_FAMILIES, TRAIT_WORK_ITEM
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor, TenantScope
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.studio_ui import docs_ui
 
 _API_VERSION = "github.com/ruinosus/dna/testkit/v1"
 _ORIGIN = "github.com/ruinosus/dna/testkit"
+
+#: The Kinds a guide/run may name in `verifies`. Read from the ONE work-item
+#: family table (`sdlc_family.FALLBACK_FAMILIES`) rather than retyped: that
+#: table is asserted equal to what a live registry derives from the
+#: `sdlc.work-item` trait (`test_sdlc_family_is_declarative`), so a new work
+#: item joins this relation by declaring its trait — no list edited here.
+#: `relations` is a CLASS attribute, read before any kernel exists, which is
+#: why it reads the static table and not `work_item_kinds(kernel)`.
+_WORK_ITEM_KINDS = list(FALLBACK_FAMILIES[TRAIT_WORK_ITEM])
 
 # Kinds of test a TestGuide can describe. Deliberately excludes "unit" — unit
 # tests live in the CI suites (vitest/pytest), not in human/orchestrated guides.
@@ -96,11 +106,20 @@ class TestGuideKind(KindBase):
         "chat or a generic HtmlArtifact. Links to its Story via ``verifies`` (and "
         "the Story's ``produces[]``)."
     )
-    # `verifies` holds `Kind/name`, so a guide can verify a Story and a
-    # Spec in the same list — the target Kind travels in the value.
+    # `verifies` holds `Kind/name`, so the target Kind travels in the VALUE —
+    # that is what `by` says. WHICH Kinds it may name is a separate statement,
+    # and it is not open: the `cite`-style "anything" would be a lie. A guide
+    # verifies a WORK ITEM, the CLI says so in its own help, and the data
+    # agrees (measured 06/08/2026 over 1,862 board docs: Story ×359, Issue ×2,
+    # nothing else). Typed from the ONE work-item family table that already has
+    # a guard against drift — a second hand-written list here is exactly the
+    # thirteen-lists defect `sdlc_family` was written to end.
+    #
+    # Before this the relation said `to: "*"`, so "which TestGuides verify this
+    # Story?" had no answer — only "which TestGuides verify something".
     relations = {
         "verifies": {
-            "to": "*", "cardinality": "many", "by": "Kind/name",
+            "to": _WORK_ITEM_KINDS, "cardinality": "many", "by": "Kind/name",
         },
     }
 
@@ -210,13 +229,22 @@ class TestRunKind(KindBase):
     # produces an edge. It used to be an INFERRED edge — drawn by a field-name
     # guess, enforced by nothing, and true only by luck.
     #
-    # ``evidence`` is heterogeneous: an entry is either a ``Kind/name`` pointer
-    # or a plain URL. ``to: "*"`` is the honest declaration AND the safe one —
-    # the kernel does not resolve it, so a URL cannot be refused as a dangling
-    # reference. The old annotation could not say this without vetoing valid
-    # data, which is exactly why the field went undeclared.
+    # ``verifies`` was in the schema and NOT in `relations` — the largest
+    # undeclared reference in the tree (measured 06/08/2026: 366 values, all
+    # `Story/...`), invisible to the gap list because its NAME does not end in
+    # `_ref`. It carries the guide's own list, so it is typed identically.
+    #
+    # ``evidence`` stays ``to: "*"``, and this one is OPEN BY DESIGN rather than
+    # untyped — an entry is a ``Kind/name`` pointer OR a plain URL OR free
+    # prose. Measured: of 100 stored values only 12 were `HtmlArtifact/...`;
+    # the rest were `ci`, `PR #54`, `https://…`. Enumerating targets here would
+    # be a list the data contradicts on its first row, and the kernel does not
+    # resolve the relation, so a URL cannot be refused as a dangling reference.
     relations = {
         "guide_ref": {"to": "TestGuide", "cardinality": "one"},
+        "verifies": {
+            "to": _WORK_ITEM_KINDS, "cardinality": "many", "by": "Kind/name",
+        },
         "evidence": {
             "to": "*", "cardinality": "many", "by": "Kind/name",
         },

@@ -57,7 +57,17 @@ GOLDEN_SCHEMA = {
             # `Kind/name` — an instance's slug IS its name). The golden is
             # therefore back to the shape the ORIGINAL class produced, and the
             # VALUE contract never moved at all.
-            "description": "Kind/slug of the work item where this was observed (polymorphic — Story/Spike/Issue).",
+            #
+            # THIRD re-freeze, same day, and this one is a CORRECTION rather
+            # than a move. The old prose named three Kinds; `dna sdlc kaizen`
+            # has always accepted the whole work-item family (`sdlc_cmd.py`
+            # refuses on `_WORK_ITEM_KINDS`, eight members), so the extinct
+            # class's description was wrong about the runtime it described, and
+            # freezing a wrong line does not make it right. It now points at
+            # `relations.work_item.to` — the ONE place the family is stated —
+            # so it cannot go stale against it again. The VALUE contract still
+            # has not moved.
+            "description": "Kind/slug of the work item where this was observed — polymorphic over the work-item family (see relations.work_item).",
         },
         "issue": {
             "type": "string",

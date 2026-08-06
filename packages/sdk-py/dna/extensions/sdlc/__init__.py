@@ -101,6 +101,27 @@ TIMELINE_SOURCES = (
 )
 
 
+#: The ``produces`` relation, declared ONCE and shared by every work item —
+#: Epic, Feature, Issue, Bug, Task, Spike, and AgentSession's
+#: ``produced_artifacts`` twin. Seven copies of one declaration is seven
+#: chances to drift, and this package has the receipts for that failure mode
+#: (see ``dna.application.sdlc_family``).
+#:
+#: ``to: "*"`` here is OPEN BY DESIGN, and the 06/08/2026 sweep that typed
+#: ``TestGuide.verifies``, ``Kaizen.work_item`` and ``WorkflowEvent.ref``
+#: deliberately left it alone. ``produces`` IS the hub: its whole reason to
+#: exist is that a work item may author an artifact of ANY Kind, including one
+#: a tenant registers tomorrow. Measured over 1,862 stored board docs it
+#: already names TestRun, TestGuide, Plan, HtmlArtifact, Reference, ADR and
+#: Research — seven Kinds from five extensions — and
+#: ``resolve_work_item_outputs`` unions it with seven more typed back-refs. A
+#: closed ``to`` would be a list that goes wrong on the next Kind anybody adds,
+#: and the runtime would still not enforce it.
+_PRODUCES_RELATION: dict[str, Any] = {
+    "to": "*", "cardinality": "many", "by": "{kind, name}",
+}
+
+
 def _produces_field_schema() -> dict[str, Any]:
     """JSON Schema for the spec.produces[] field (s-produces-schema-resolver).
 
@@ -330,9 +351,7 @@ class EpicKind(KindBase):
         "features": {
             "to": "Feature", "cardinality": "many", "inverse_of": "epic",
         },
-        "produces": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
+        "produces": _PRODUCES_RELATION,
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -455,9 +474,7 @@ class FeatureKind(KindBase):
         # sprint_id — the Kind is deliberately named by its id, so `by: name`
         # is the truth here and not a convenience.
         "sprint_ref": {"to": "Sprint", "cardinality": "one"},
-        "produces": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
+        "produces": _PRODUCES_RELATION,
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -653,9 +670,7 @@ class IssueKind(KindBase):
         "related Finding (eval-detected origin)."
     )
     relations = {
-        "produces": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
+        "produces": _PRODUCES_RELATION,
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -1082,9 +1097,9 @@ class AgentSessionKind(KindBase):
         "the major tools' export formats."
     )
     relations = {
-        "produced_artifacts": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
+        # The `produces` hub under its AgentSession name — same declaration,
+        # same open-by-design reason, so it reads the same constant.
+        "produced_artifacts": _PRODUCES_RELATION,
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -1251,9 +1266,7 @@ class BugKind(KindBase):
         "question/other)."
     )
     relations = {
-        "produces": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
+        "produces": _PRODUCES_RELATION,
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -1329,9 +1342,7 @@ class TaskKind(KindBase):
     )
     relations = {
         "story_ref": {"to": "Story", "cardinality": "one"},
-        "produces": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
+        "produces": _PRODUCES_RELATION,
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -1401,9 +1412,7 @@ class SpikeKind(KindBase):
         "ADR (decision já tomada)."
     )
     relations = {
-        "produces": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
+        "produces": _PRODUCES_RELATION,
     }
 
     def dep_filters(self) -> dict[str, str]:
