@@ -981,6 +981,27 @@ class KindRegistry:
         # (F3 spec D3) so the per-scope KindDefinition funnel
         # (register_kind_definitions) runs the SAME validation.
         self._lint_plane(k)
+        # The traits CARRY (spec-kind-taxonomia-o-que-eu-sou, slice 2). THIS is
+        # the door: every port — a hand-written extension class as much as a
+        # descriptor — passes through here, so a class Kind gets the trait's
+        # fields, relations and implied traits merged in exactly like a YAML
+        # one. Idempotent, so a descriptor port that already composed itself in
+        # its constructor is untouched.
+        #
+        # Conflict is refused HERE, at load, and the placement IS the design:
+        # ``TraitConflictError`` is a ``ValueError``, so a builtin descriptor
+        # takes the boot down (an authoring error, next to the author) while
+        # ``register_kind_definitions`` warn-skips a per-scope KindDefinition (a
+        # user instance never takes the process down) — the two error contracts
+        # this funnel already honours for every other malformed block.
+        from dna.kernel.kinds.traits import TraitConflictError, apply_traits
+
+        try:
+            apply_traits(k)
+        except TraitConflictError as e:
+            raise KindRegistrationError(
+                f"Kind {getattr(k, 'kind', type(k).__name__)!r}: {e}"
+            ) from e
         # i-081 item 16 — a descriptor's alias must carry its namespace owner.
         # Raised here so BOTH funnels behave as they already do: a builtin
         # descriptor fails the boot, a per-scope KindDefinition is caught by

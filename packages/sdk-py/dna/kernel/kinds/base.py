@@ -148,16 +148,32 @@ class KindBase:
     # covers still-class Kinds as well as descriptor-synthesized ports.
     embed_fields: list[str] | None = None
 
-    # ---- Traits (the open participation vocabulary) ------------------
-    # What this Kind PARTICIPATES in, for questions the kernel itself has no
-    # opinion about: ``sdlc.work-item``, ``memory.recallable``, ... Consumers
-    # ask ``kernel.kinds_with_trait(name)`` instead of carrying a literal
-    # Kind-name list, so adding a Kind to a family is a declaration, not
-    # thirteen edits in thirteen modules.
+    # ---- Traits (the roles this Kind exercises) ----------------------------
+    # ⭐ The FIRST question a Kind answers about itself, and the one that was
+    # left blank: 47 of 47 descriptors declare ``plane`` and 8 declare
+    # ``traits`` — same file, same author, same mechanism. Coverage follows the
+    # ASK, so this block asks.
+    #
+    # WHAT IT IS. The roles this Kind exercises, for questions the kernel itself
+    # has no opinion about: ``sdlc.work-item``, ``record.append-only``,
+    # ``memory.recallable``. Consumers ask ``kernel.kinds_with_trait(name)``
+    # instead of carrying a literal Kind-name list, so adding a Kind to a family
+    # is a declaration, not thirteen edits in thirteen modules.
+    #
+    # WHAT DECLARING ONE BRINGS. A trait is not a label: it CARRIES. Declaring
+    # ``sdlc.work-item`` brings the family's fields (``timeline``,
+    # ``produces``), its relations, and the traits it implies (``sdlc.dated``) —
+    # merged into this Kind's schema at load, with the Kind's own declarations
+    # winning over the trait's and any conflict between two traits REFUSED
+    # rather than resolved. Ask ``dna.kernel.kinds.traits.describe_traits()``
+    # for the live vocabulary with what each one carries.
+    #
+    # THE TEST THAT KEEPS IT FROM BECOMING ``relations``: a trait NEVER names
+    # another Kind. If the value you want is a Kind name, you wanted a relation.
     #
     # Declarable from a descriptor as ``spec.traits`` — see KindDefinitionSpec /
-    # kind-definition.schema.json. The vocabulary is OPEN: an unregistered
-    # trait is legal (dna.kernel.kinds.traits explains why).
+    # kind-definition.schema.json. The vocabulary is OPEN: an unregistered trait
+    # is legal, and carries nothing (dna.kernel.kinds.traits explains why).
     traits: frozenset[str] = frozenset()
 
     # ---- Optional presentation surface (KindPresentation) ----------

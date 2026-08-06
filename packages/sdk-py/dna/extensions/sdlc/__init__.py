@@ -2177,3 +2177,55 @@ class SdlcExtension:
                 },
             },
         )
+        SdlcExtension._attach_trait_carry()
+
+    @staticmethod
+    def _attach_trait_carry() -> None:
+        """⭐ Hang the work-item CONTRACT on the trait that names it.
+
+        ``sdlc.work-item`` and ``schema_fragments: [sdlc/work-item-activity]``
+        were the same sentence in two vocabularies sitting side by side in
+        ``story.kind.yaml``, with nothing able to check one against the other: a
+        Kind could take the trait without the fields (in the digest, no
+        ``timeline``) or the fields without the trait (a ``timeline`` nothing
+        walks). And ``produces`` was declared SEVEN times — once per work item —
+        because the family had nowhere to say it once. The comment on
+        ``_PRODUCES_RELATION`` already called that out (*"seven copies of one
+        declaration is seven chances to drift"*) and could only answer it with a
+        Python constant seven modules had to remember to import.
+
+        Now the trait carries both. Declaring ``sdlc.work-item`` IS declaring
+        ``timeline`` + ``produces`` and the ``produces`` relation.
+
+        The kernel cannot do this itself: ``sdlc/work-item-activity`` is THIS
+        extension's fragment and ``dna.kernel`` never imports from an extension.
+        So the kernel registers the trait's NAME, description and implications,
+        and the extension that owns the family attaches what it carries — which
+        is also the honest layering, because the family's contract is the
+        family's to change.
+
+        Runs from ``_register_schema_fragments`` so the ordering that block
+        already guards (fragments before descriptors) covers this too: the
+        fragment must exist by the time a Kind declaring the trait is
+        registered, and a trait pointing at an unregistered fragment is REFUSED
+        rather than silently carrying nothing.
+
+        The existing per-Kind declarations are untouched on purpose — the Kind
+        wins over the trait, and the seven copies are byte-identical to what the
+        trait now brings, so the merge is a no-op that PROVES the mechanism on
+        real data before anybody deletes a line. Removing them is authoring, and
+        authoring is the next slice.
+        """
+        try:
+            from dna.kernel.kinds.traits import CORE_TRAITS, register_trait
+        except Exception:  # noqa: BLE001 — kernel may not expose the API yet
+            return
+        register_trait(
+            "sdlc.work-item",
+            CORE_TRAITS["sdlc.work-item"],
+            schema_fragments=["sdlc/work-item-activity"],
+            relations={"produces": _PRODUCES_RELATION},
+            # Measured, not designed: every one of the 8 Kinds declaring
+            # `sdlc.work-item` on 06/08/2026 also declared `sdlc.dated`.
+            implies=["sdlc.dated"],
+        )

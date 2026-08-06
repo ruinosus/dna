@@ -262,6 +262,16 @@ _NOT_REFUSALS = {
     # above (raise at boot for builtins, warn-and-skip per scope). It refuses
     # a descriptor, not somebody's write.
     "SchemaGuardError",
+    # AUTHOR-TIME trait composition: two traits declaring the same field
+    # differently, an `implies` cycle, a trait naming a fragment nobody
+    # registered, an obligation on a field that does not exist. Same family as
+    # SchemaGuardError and the registration errors above — it fires while the
+    # Kind registry is being assembled, and the person who can fix it is the
+    # one who wrote the descriptor, not the caller of a request. Refusing the
+    # CONFLICT rather than resolving it by precedence is the whole design
+    # (spec-kind-taxonomia-o-que-eu-sou §6.3), so this type will be raised more
+    # as the vocabulary grows — and it is still never somebody's write.
+    "TraitConflictError",
     # A COMPOSITION-time budget: the assembled instruction is larger than the
     # target model's own declared cap. Not a policy denial the caller may
     # appeal — an arithmetic fact about the prompt, raised on the read/compose
