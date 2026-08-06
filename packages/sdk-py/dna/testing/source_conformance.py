@@ -562,6 +562,11 @@ async def _case_declared_write_kwargs_accepted(ctx: _Ctx) -> None:
         # would be refused as stale and this case would report an accepted
         # kwarg as a rejected one. The behaviour has its own case below.
         "if_match": None,
+        # ``None`` = "the kernel has nothing trustworthy to say about this
+        # document's references", which every adopting adapter must accept and
+        # treat as leave-the-stored-edges-alone. What the edges DO once passed
+        # is the producer's own suite, not a kwarg-acceptance case.
+        "edges": None,
     }
     save_kwargs = {k: values[k] for k in ctx.caps.write_kwargs}
     raw = {

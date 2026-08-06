@@ -286,6 +286,7 @@ class SqlAlchemySource(WritableSourcePort):
         self.versions = tables.versions
         self.bundle_entries = tables.bundle_entries
         self.layer_documents = tables.layer_documents
+        self.edges = tables.edges
         if self._is_pg:
             self.outbox = tables.outbox
             self.versions_seq = tables.versions_seq
@@ -1131,6 +1132,7 @@ class SqlAlchemySource(WritableSourcePort):
         version_retention: int | None = None,
         if_absent: bool = False,
         if_match: str | None = None,
+        edges: "list[Any] | None" = None,
     ) -> str:
         if layer is not None:
             if layer[0] == "tenant" and tenant is None:
@@ -1307,6 +1309,17 @@ class SqlAlchemySource(WritableSourcePort):
                     "updated_at": ins.excluded.updated_at,
                 },
             ))
+            # The DERIVED reference graph — same transaction as the write, for
+            # the same reason the outbox below is: the document and the facts
+            # about it must become true together. ``None`` means the kernel had
+            # nothing trustworthy to say (producer off, or a read failed
+            # mid-resolution) and the stored edges are left ALONE — an old,
+            # known edge set beats a fresh, partial one.
+            if edges is not None:
+                await self._replace_edges(
+                    conn, scope, kind, api_version, name, tenant_val,
+                    edges, next_version,
+                )
             # Eventbus (pg dialect only) — same transaction as the write.
             await self._events.emit(
                 conn, scope=scope, tenant=tenant_val, kind=kind, name=name,
@@ -1315,6 +1328,64 @@ class SqlAlchemySource(WritableSourcePort):
             )
         self.invalidate_view(scope)
         return str(next_version)
+
+    # ------------------------------------------------------------------
+    # The derived reference graph (spec-grafo-1)
+    # ------------------------------------------------------------------
+
+    def _edge_now(self) -> Any:
+        """[dialect] pg stores a real ``TIMESTAMPTZ``; sqlite the ISO text its
+        other tables use.
+
+        A Python value on BOTH, not ``sa.func.now()`` on pg: the insert is an
+        executemany over a list of parameter dicts, and asyncpg binds those as
+        VALUES — a SQL function object handed to it is rejected outright
+        (``expected a datetime, got 'now'``). Found by running these tests on
+        the second dialect; SQLite would never have said a word.
+        """
+        return datetime.now(timezone.utc) if self._is_pg else _now()
+
+    async def _replace_edges(
+        self, conn, scope: str, kind: str, api_version: str, name: str,
+        tenant_val: str, edges: "list[Any]", from_version: int,
+    ) -> None:
+        """DELETE this document's outgoing edges, then INSERT the new set.
+
+        Idempotent by construction — no diff, no leftovers, no trigger. The
+        DELETE runs even when ``edges`` is empty, and that is the point: a
+        document that just lost its last reference (or whose Kind dropped the
+        declaration) must lose its rows, and an empty INSERT with no DELETE
+        would leave the graph asserting a relation the document no longer
+        makes. The cost is one index probe on a primary-key prefix inside a
+        transaction that is already doing four statements.
+        """
+        e = self.edges
+        await conn.execute(e.delete().where(
+            e.c.scope == scope, e.c.tenant == tenant_val,
+            e.c.from_api_version == api_version,
+            e.c.from_kind == kind, e.c.from_name == name,
+        ))
+        if not edges:
+            return
+        ts = self._edge_now()
+        await conn.execute(e.insert(), [
+            {
+                "scope": scope,
+                "tenant": tenant_val,
+                "from_api_version": api_version,
+                "from_kind": kind,
+                "from_name": name,
+                "source_field": edge.field,
+                "ordinal": edge.ordinal,
+                "to_scope": edge.to_scope,
+                "to_kind": edge.to_kind,
+                "to_name": edge.value,
+                "declared_to": " | ".join(edge.declared),
+                "from_version": from_version,
+                "updated_at": ts,
+            }
+            for edge in edges
+        ])
 
     async def _replace_bundle_entries(
         self, conn, scope: str, kind: str, api_version: str, name: str,
@@ -1361,6 +1432,265 @@ class SqlAlchemySource(WritableSourcePort):
                 index_elements=_BUNDLE_CONFLICT_COLS,
                 set_=set_,
             ))
+
+    #: Hard ceiling on traversal depth, whatever a caller asks for. Two of the
+    #: sixteen declared references are SELF-referential by design
+    #: (``Spec.supersedes → Spec``, ``Story.dependencies → Story``), so an
+    #: unbounded walk here is a production incident, not a theoretical risk.
+    MAX_TRAVERSAL_DEPTH = 10
+    #: Hard ceiling on rows returned. A wide fan-out at depth 3 multiplies.
+    MAX_TRAVERSAL_ROWS = 5000
+
+    async def replace_edges(
+        self, scope: str, kind: str, name: str, edges: "list[Any]", *,
+        api_version: str = "", tenant: str | None = None,
+        from_version: int = 0,
+    ) -> None:
+        """Replace one document's outgoing edges in a transaction of its own.
+
+        The NON-atomic entry point, used by the backfill and by any repair that
+        runs outside a write. The atomic one is the ``edges=`` kwarg of
+        :meth:`save_document`; this exists because documents written before the
+        producer existed have no edges and must be able to get some without
+        being rewritten.
+        """
+        async with self._engine.begin() as conn:
+            await self._replace_edges(
+                conn, scope, kind, api_version, name, tenant or "",
+                edges, from_version,
+            )
+
+    async def list_documents_with_spec_field(
+        self, kind: str, field: str, *, scope: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Documents of ``kind`` whose ``spec`` HAS ``field`` — the backfill's
+        reader.
+
+        [dialect] Postgres uses the JSONB key-existence operator ``?``, which
+        the ``dna_docs_spec_gin_idx`` GIN index (baseline 0001) serves directly;
+        SQLite uses ``json_extract``. Either way the query is per declared
+        ``(Kind, field)`` PAIR — sixteen of them across the whole shipped
+        registry today — and not a walk over every document in the database.
+        That distinction is the whole reason the backfill is affordable, and it
+        is also why it is not a scanner: it asks the same declaration the
+        producer reads, never a slug-shaped guess.
+        """
+        d = self.documents
+        where: list[sa.ColumnElement] = [d.c.kind == kind]
+        if scope is not None:
+            where.append(d.c.scope == scope)
+        if self._is_pg:
+            # [dialect] ``content::jsonb->'spec' ? :field``. The ``?`` operator
+            # collides with the DBAPI placeholder, so it is spelled through the
+            # function form ``jsonb_exists``, which is the same operator and
+            # uses the same index.
+            from sqlalchemy.dialects.postgresql import JSONB  # noqa: PLC0415
+            where.append(sa.func.jsonb_exists(
+                sa.cast(d.c.content, JSONB)["spec"], field,
+            ))
+        else:
+            where.append(sa.func.json_extract(
+                d.c.content, f"$.spec.{field}",
+            ).isnot(None))
+        async with self._engine.connect() as conn:
+            result = (await conn.execute(
+                sa.select(
+                    d.c.scope, d.c.kind, d.c.api_version, d.c.name,
+                    d.c.version, d.c.tenant, d.c.content,
+                ).where(*where)
+            )).all()
+        return [
+            {
+                "scope": r.scope, "kind": r.kind,
+                "api_version": r.api_version or "", "name": r.name,
+                "version": int(r.version or 0), "tenant": r.tenant or "",
+                "raw": json.loads(r.content),
+            }
+            for r in result
+        ]
+
+    async def traverse_edges(
+        self, scope: str, kind: str, name: str, *,
+        tenant: str | None = None,
+        direction: str = "out",
+        depth: int = 1,
+    ) -> list[dict[str, Any]]:
+        """Walk the derived reference graph from one document.
+
+        ONE recursive CTE, standard SQL, identical on Postgres and SQLite — no
+        server extension, no second query language. (Apache AGE was considered
+        and rejected in the spec: it is a server extension the Azure platform
+        allowlists rather than we do, it would strand the SQLite and filesystem
+        adapters the SDK carries as first-class citizens, and it brings
+        openCypher to a walk that is fifteen lines of SQL.)
+
+        Three refusals, each with a dedicated test:
+
+        * **Depth is mandatory and capped.** Defaults to 1, is clamped to
+          :data:`MAX_TRAVERSAL_DEPTH`, and a self-referential Kind makes that
+          non-negotiable.
+        * **Anti-cycle on the path**, on top of the depth cap. A two-node cycle
+          would otherwise burn the whole budget producing duplicates before the
+          cap stopped it. The check is exact containment via ``replace()``
+          rather than ``LIKE`` — deliberately, because ``LIKE`` treats ``_`` as
+          a wildcard and document names are full of underscores, so a ``LIKE``
+          test would silently stop walks it was never meant to stop. The edge
+          that CLOSES a cycle is still reported once, flagged
+          ``closes_cycle``, and merely not expanded FROM: it is a relation
+          somebody really wrote, and dropping it would hide the cycle rather
+          than survive it.
+        * **``scope`` and ``tenant`` in EVERY branch**, not only in the anchor.
+          Omitting them from the recursive step is the classic cross-tenant
+          leak of this query shape, and it is one easy line to forget.
+        """
+        if direction not in ("out", "in", "both"):
+            raise ValueError(
+                f"direction must be 'out', 'in' or 'both' (got {direction!r})"
+            )
+        if direction == "both":
+            merged: list[dict[str, Any]] = []
+            for one in ("out", "in"):
+                merged.extend(await self.traverse_edges(
+                    scope, kind, name, tenant=tenant, direction=one, depth=depth,
+                ))
+            return merged
+
+        depth = max(1, min(int(depth), self.MAX_TRAVERSAL_DEPTH))
+        tenant_val = tenant or ""
+        e = self.edges
+
+        def marker(kind_col, name_col):
+            """``>Kind/name>`` — the delimiters make containment exact."""
+            return (
+                sa.literal(">") + sa.func.coalesce(kind_col, sa.literal(""))
+                + sa.literal("/") + name_col + sa.literal(">")
+            )
+
+        def tail(kind_col, name_col):
+            """The same marker without its leading ``>``; the path already
+            ends with one, and the shared delimiter is what makes
+            ``>A>B>C>`` contain ``>B>``."""
+            return (
+                sa.func.coalesce(kind_col, sa.literal(""))
+                + sa.literal("/") + name_col + sa.literal(">")
+            )
+
+        outward = direction == "out"
+        # The node an edge ARRIVES at, for this direction. Walking "in" is the
+        # same query with the join mirrored, served by the `_in` index.
+        node_kind = e.c.to_kind if outward else e.c.from_kind
+        node_name = e.c.to_name if outward else e.c.from_name
+        anchor_kind = e.c.from_kind if outward else e.c.to_kind
+        anchor_name = e.c.from_name if outward else e.c.to_name
+
+        cols = [
+            e.c.from_kind, e.c.from_name, e.c.source_field, e.c.ordinal,
+            e.c.to_scope, e.c.to_kind, e.c.to_name, e.c.declared_to,
+            e.c.from_version,
+        ]
+        def closes(prev, kind_col, name_col):
+            """1 when ``prev`` already visited this row's target node.
+
+            Exact containment through ``replace()``: removing the marker
+            changes the string only if the marker was there. ``LIKE`` would be
+            the obvious spelling and the wrong one — ``_`` is a wildcard there
+            and document names are full of underscores, so it would stop walks
+            it was never meant to stop.
+            """
+            m = marker(kind_col, name_col)
+            return sa.case(
+                (sa.func.replace(prev, m, sa.literal("")) != prev, sa.literal(1)),
+                else_=sa.literal(0),
+            )
+
+        start = sa.literal(f">{kind}/") + sa.literal(f"{name}>")
+        anchor = sa.select(
+            *cols,
+            sa.literal(1).label("depth"),
+            (start + tail(node_kind, node_name)).label("path"),
+            # A self-loop closes a cycle at the very first hop.
+            closes(start, node_kind, node_name).label("closes_cycle"),
+        ).where(
+            e.c.scope == scope, e.c.tenant == tenant_val,
+            anchor_kind == kind, anchor_name == name,
+        )
+        walk = anchor.cte("walk", recursive=True)
+
+        ea = e.alias("ee")
+        ea_node_kind = ea.c.to_kind if outward else ea.c.from_kind
+        ea_node_name = ea.c.to_name if outward else ea.c.from_name
+        ea_anchor_kind = ea.c.from_kind if outward else ea.c.to_kind
+        ea_anchor_name = ea.c.from_name if outward else ea.c.to_name
+        walk_node_kind = walk.c.to_kind if outward else walk.c.from_kind
+        walk_node_name = walk.c.to_name if outward else walk.c.from_name
+
+        recursive = sa.select(
+            ea.c.from_kind, ea.c.from_name, ea.c.source_field, ea.c.ordinal,
+            ea.c.to_scope, ea.c.to_kind, ea.c.to_name, ea.c.declared_to,
+            ea.c.from_version,
+            (walk.c.depth + 1).label("depth"),
+            (walk.c.path + tail(ea_node_kind, ea_node_name)).label("path"),
+            closes(walk.c.path, ea_node_kind, ea_node_name).label("closes_cycle"),
+        ).select_from(ea.join(
+            walk,
+            sa.and_(
+                ea_anchor_kind == walk_node_kind,
+                ea_anchor_name == walk_node_name,
+            ),
+        )).where(
+            # ⚠️ THE tenant/scope line. In the recursive step, not only the
+            # anchor — without it a walk starting in one tenant follows edges
+            # belonging to another the moment two documents share a name.
+            ea.c.scope == scope,
+            ea.c.tenant == tenant_val,
+            walk.c.depth < depth,
+            # Anti-cycle: do not expand FROM a row that already closed one.
+            # The closing edge itself was emitted by the level that found it,
+            # so the cycle is visible AND finite — a walk that simply dropped
+            # the row would hide the very thing worth reporting.
+            walk.c.closes_cycle == 0,
+        )
+        walk = walk.union_all(recursive)
+
+        async with self._engine.connect() as conn:
+            rows = (await conn.execute(
+                sa.select(walk)
+                .order_by(sa.text("depth"))
+                .limit(self.MAX_TRAVERSAL_ROWS)
+            )).all()
+        # A CTE enumerates PATHS, so a diamond reports the same edge once per
+        # route into it. The question the face asks is about EDGES ("what
+        # points at this, and how far away"), so collapse to one row per edge
+        # at its shortest depth. Done here rather than in SQL because
+        # ``DISTINCT ON`` is Postgres-only and a portable ``GROUP BY`` over a
+        # recursive CTE is markedly harder to read than four lines of Python.
+        out: dict[tuple, dict[str, Any]] = {}
+        for r in rows:
+            key = (r.from_kind, r.from_name, r.source_field, int(r.ordinal))
+            if key in out:
+                continue
+            out[key] = {
+                "direction": direction,
+                "depth": int(r.depth),
+                "from_kind": r.from_kind, "from_name": r.from_name,
+                "source_field": r.source_field, "ordinal": int(r.ordinal),
+                "to_scope": r.to_scope, "to_kind": r.to_kind,
+                "to_name": r.to_name,
+                "declared_to": tuple(
+                    t for t in (r.declared_to or "").split(" | ") if t
+                ),
+                # ``to_kind is None`` is the DANGLING edge — declared, written,
+                # resolving to nothing. It is reported, never filtered: it is
+                # the list of what is broken.
+                "resolved": r.to_kind is not None,
+                # This edge points back at a node the walk had already
+                # visited. Reported, not hidden: a cycle in the data is
+                # information, and ``Story.dependencies → Story`` makes cycles
+                # ordinary rather than corrupt.
+                "closes_cycle": bool(r.closes_cycle),
+                "from_version": int(r.from_version or 0),
+            }
+        return list(out.values())
 
     async def publish(
         self, scope: str, kind: str, name: str, *, tenant: str | None = None,
@@ -1461,6 +1791,22 @@ class SqlAlchemySource(WritableSourcePort):
                 *key(v), self._tenant_where(v.c.tenant, tenant)))
             await conn.execute(b.delete().where(
                 *key(b), b.c.tenant == tenant_val))
+            # The document's OUTGOING edges go with it: they were assertions
+            # this document made, and the document is gone.
+            #
+            # Its INCOMING edges deliberately DO NOT. They belong to OTHER
+            # documents, which still say what they said; what changed is that
+            # those statements no longer resolve. Deleting them would erase the
+            # evidence that this delete just broke three things — and the delete
+            # path has no reference gate at all (``pipeline.delete``: "deletes
+            # have NO pre_save veto"), so that evidence is the only trace there
+            # is. They become dangling, which is exactly what happened.
+            eg = self.edges
+            await conn.execute(eg.delete().where(
+                eg.c.scope == scope, eg.c.tenant == tenant_val,
+                eg.c.from_kind == kind, eg.c.from_name == name,
+                *self._api_version_where(eg.c.from_api_version, api_version),
+            ))
             # doc_version=0 is the documented sentinel for delete.
             await self._events.emit(
                 conn, scope=scope, tenant=tenant_val, kind=kind, name=name,
@@ -1979,4 +2325,9 @@ class SqlAlchemySource(WritableSourcePort):
             # `created_at` transaction stamp, so this adapter can reconstruct a
             # past belief state (`load_one_as_of`).
             as_of_reads=True,
+            # The derived reference graph is written inside the save
+            # transaction (`edges=` in write_kwargs) and walked by
+            # `traverse_edges`. Both halves, or the face would be entitled to
+            # serve an empty list it cannot back.
+            edge_graph=True,
         )

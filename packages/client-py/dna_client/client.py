@@ -511,6 +511,34 @@ class DnaClient:
             tenant=tenant, api_version=api_version,
         )
 
+    def graph_refs(
+        self, kind: str, name: str, *,
+        direction: str = "in", depth: int = 1,
+        api_version: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """"What points at this document?" — the derived reference graph.
+
+        ``direction="in"`` (the default, and the product question) returns the
+        documents pointing AT this one; ``"out"`` what it points at; ``"both"``
+        the union. ``depth`` walks further and is clamped server-side — two of
+        the declared references are self-referential by design, so an unbounded
+        walk is not on offer.
+
+        Each edge carries ``resolved``: ``false`` is a DANGLING reference —
+        declared, written, and resolving to nothing. Those rows are the list of
+        what is broken and are never filtered out.
+
+        ``stop`` says why the walk ended (``complete`` / ``depth_reached`` /
+        ``truncated``) and ``graph_producer`` reports whether the producer is
+        even on. A server whose store keeps no edge graph answers **501**, not
+        an empty list — "nothing points at this" is a claim only a store that
+        records edges may make."""
+        return self._get(
+            f"/v1/kinds/{kind}/documents/{name}/refs",
+            tenant=tenant, api_version=api_version,
+            direction=direction, depth=depth,
+        )
+
     def write_kind_document(
         self, kind: str, metadata: dict[str, Any], spec: dict[str, Any], *,
         source_sha256: str | None = None,

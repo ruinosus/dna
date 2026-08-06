@@ -1,0 +1,17 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  name: f-graph-edges
+spec:
+  title: 'Arestas de dado: produtor, travessia e backfill'
+  description: 'Arestas de DADO derivadas de x-dna-ref: produtor no write path (uma passada, dois consumidores), tabela dna_edges gravada no MESMO conn do save, travessia por CTE recursiva (PG+SQLite) e backfill pelo indice GIN. Terceira parte da i-040; spec-grafo-1-arestas-e-travessia (board dna-cloud).'
+  status: discovery
+  reporter: claude-code
+  created_at: '2026-08-06T07:47:13+00:00'
+  updated_at: '2026-08-06T07:47:13+00:00'
+  timeline:
+  - at: '2026-08-06T07:47:13+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery

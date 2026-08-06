@@ -2124,6 +2124,152 @@
         "title": "GetKindDocumentResponse",
         "type": "object"
       },
+      "GraphRefEdge": {
+        "description": "ONE edge of the derived reference graph.\n\n``resolved: false`` is a DANGLING reference — declared, written, resolving\nto nothing. It travels rather than being filtered out: with\n``DNA_REF_VALIDATION=warn`` (the default) such a document persists, so\ndropping the row would render a tidier graph than the data deserves. These\nrows ARE the list of what is broken.\n\n``to_scope`` may differ from the request's scope (a reference can resolve\nin a parent scope) and is ``null`` when the resolution went through the\ninheritance chain without the parent being recorded — never a stand-in for\n\"the same scope\".",
+        "properties": {
+          "closes_cycle": {
+            "default": false,
+            "title": "Closes Cycle",
+            "type": "boolean"
+          },
+          "declared_to": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Declared To",
+            "type": "array"
+          },
+          "depth": {
+            "title": "Depth",
+            "type": "integer"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "field": {
+            "title": "Field",
+            "type": "string"
+          },
+          "from_kind": {
+            "title": "From Kind",
+            "type": "string"
+          },
+          "from_name": {
+            "title": "From Name",
+            "type": "string"
+          },
+          "from_version": {
+            "title": "From Version",
+            "type": "integer"
+          },
+          "ordinal": {
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "resolved": {
+            "title": "Resolved",
+            "type": "boolean"
+          },
+          "to_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Kind"
+          },
+          "to_name": {
+            "title": "To Name",
+            "type": "string"
+          },
+          "to_scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Scope"
+          }
+        },
+        "required": [
+          "depth",
+          "direction",
+          "from_kind",
+          "from_name",
+          "field",
+          "ordinal",
+          "to_name",
+          "resolved",
+          "from_version"
+        ],
+        "title": "GraphRefEdge",
+        "type": "object"
+      },
+      "GraphRefsResponse": {
+        "description": "``GET /v1/kinds/{kind}/documents/{name}/refs`` — the DATA graph.\n\n``stop`` says WHY the walk ended (``complete`` / ``depth_reached`` /\n``truncated``), because a caller that cannot tell \"this is everything\" from\n\"this is where I stopped\" will render the second as the first.\n\n``graph_producer`` reports the producer's mode (``warn`` / ``enforce`` /\n``off``). With it ``off`` the write path performs no reference lookups, so\nno edges are produced — defensible operationally, and NOT the same as \"this\ndocument has no relations\". A store that keeps no edge graph at all answers\n501, never an empty list.\n\n⚠️ These are the DECLARED relations (``x-dna-ref``) only. The schema graph\nalso carries composition and name-convention edges that were never checked\nagainst data; calling this \"the relations\" would claim a completeness the\nproducer does not have.",
+        "properties": {
+          "api_version": {
+            "title": "Api Version",
+            "type": "string"
+          },
+          "depth": {
+            "title": "Depth",
+            "type": "integer"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "edges": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/GraphRefEdge"
+            },
+            "title": "Edges",
+            "type": "array"
+          },
+          "graph_producer": {
+            "title": "Graph Producer",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "stop": {
+            "title": "Stop",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope",
+          "kind",
+          "api_version",
+          "name",
+          "direction",
+          "depth",
+          "stop",
+          "graph_producer"
+        ],
+        "title": "GraphRefsResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -7382,6 +7528,124 @@
           }
         },
         "summary": "Get Kind Document"
+      }
+    },
+    "/v1/kinds/{kind}/documents/{name}/refs": {
+      "get": {
+        "description": "\"O que depende deste documento?\" — o grafo de DADO, com profundidade.\n\nA tela do Kind sempre soube dizer que ``Story.feature → Feature``\nexiste como REGRA, e nunca soube dizer que ESTAS 47 Stories apontam\npara ESTA Feature. Esta rota responde a segunda pergunta, lendo as\narestas que o próprio write path produziu ao validar as referências —\nnada aqui deriva, adivinha ou lê slug.\n\n``direction=in`` (o default, e a pergunta do produto) traz quem aponta\npara cá; ``out`` o que este documento aponta; ``both`` a união.\n``depth`` é OBRIGATÓRIO ter teto: ``Spec.supersedes`` e\n``Story.dependencies`` são auto-referentes por desenho, e uma travessia\nsem limite aqui é incidente de produção, não risco teórico. O valor é\nclampado ao teto do kernel (``DNA_GRAPH_MAX_DEPTH``).\n\n**501, nunca lista vazia**, quando o adapter ativo não guarda arestas\n(o filesystem não tem transação nem tabela para guardá-las). ``[]``\nse lê como \"nada aponta para este documento\", e essa é uma afirmação\nque só um store que de fato registra arestas pode fazer.",
+        "operationId": "graph_refs_v1_kinds__kind__documents__name__refs_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "query",
+            "name": "api_version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Api Version"
+            }
+          },
+          {
+            "in": "query",
+            "name": "direction",
+            "required": false,
+            "schema": {
+              "default": "in",
+              "title": "Direction",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "depth",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Depth",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GraphRefsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Graph Refs"
       }
     },
     "/v1/kinds/{kind}/revoke": {

@@ -279,6 +279,13 @@ class SourceCapabilities:
     # to REFUSE an as-of read rather than serve the current state under a past
     # timestamp, so this has to be askable BEFORE the read.
     as_of_reads: bool = False
+    # The store keeps the DERIVED reference graph and can walk it
+    # (``traverse_edges``). Separate from the ``edges`` WRITE kwarg on purpose,
+    # and asked BEFORE the read for the same reason ``as_of_reads`` is: an
+    # adapter that records no edges must make the face answer ``unsupported``,
+    # never an empty list. An empty list reads as "nothing points at this
+    # document" — a claim only a store that actually keeps edges may make.
+    edge_graph: bool = False
 
     @property
     def granular(self) -> bool:
@@ -303,9 +310,19 @@ class SourceCapabilities:
 # read that a read-modify-write is built on may come from a cache, and a guard
 # that re-reads through that same cache compares a stale value against itself
 # and agrees. Only the adapter sees the store.
+# ``edges`` (spec-grafo-1): the declared references the write path ALREADY
+# resolved, handed to the adapter so it can persist them in the SAME
+# transaction as the document. It is a kwarg and not a second call for the one
+# property that matters — atomicity. A follow-up write would leave a window in
+# which the document exists and its relations do not, and the alternative
+# (widening ``WriteHost`` to hand the pipeline a connection) is marked in
+# ``collaborator_ports.py`` as a code-review event. An adapter that has not
+# adopted it is never handed it, and the graph face reports ``unsupported``
+# for that adapter rather than an empty edge list — "no relations" and "this
+# store does not record relations" must not render the same.
 SAVE_OPTIONAL_KWARGS = frozenset(
     {"author", "tenant", "layer", "write_class", "version_retention",
-     "if_absent", "if_match"}
+     "if_absent", "if_match", "edges"}
 )
 # ``api_version`` (i-081 / #244 follow-up): a DELETE carries no document, so
 # before this it had no apiVersion and routed by BARE Kind name. Two
@@ -380,6 +397,7 @@ def derive_capabilities(source: object, *, label: str) -> SourceCapabilities:
         granular_list=_has_method(source, "list_doc_refs"),
         granular_one=_has_method(source, "load_one"),
         as_of_reads=_has_method(source, "load_one_as_of"),
+        edge_graph=_has_method(source, "traverse_edges"),
         query_pushdown=_has_own_query(source),
         tenant_layer_writes=("tenant" in write_kwargs and "layer" in write_kwargs),
         write_kwargs=write_kwargs,
@@ -536,6 +554,7 @@ class WriteKwargSupport:
     version_retention: bool  # save_document accepts `version_retention` (s-version-prune-record-plane-churn)
     if_absent: bool       # save_document accepts `if_absent` — an ATOMIC create (i-081)
     if_match: bool        # save_document accepts `if_match` — a GUARDED update (i-083)
+    edges: bool           # save_document accepts `edges` — the derived graph (spec-grafo-1)
 
 
 _WRITE_KWARG_CACHE_ATTR = "_dna_write_kwarg_support"
@@ -568,6 +587,7 @@ def write_kwarg_support(source: object) -> WriteKwargSupport:
         version_retention="version_retention" in caps.write_kwargs,
         if_absent="if_absent" in caps.write_kwargs,
         if_match="if_match" in caps.write_kwargs,
+        edges="edges" in caps.write_kwargs,
     )
     try:
         setattr(source, _WRITE_KWARG_CACHE_ATTR, support)

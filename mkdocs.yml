@@ -60,6 +60,7 @@ nav:
       - Market fidelity: concepts/market-fidelity.md
       - Tenancy & layers: concepts/tenancy-layers.md
       - Search & memory: concepts/search-and-memory.md
+      - The reference graph — what points at this?: concepts/reference-graph.md
       - Agent-facing knowledge: concepts/agent-knowledge.md
   - How-to guides:
       - guides/index.md

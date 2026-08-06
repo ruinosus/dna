@@ -1169,6 +1169,72 @@ class GetKindDocumentResponse(BaseModel):
     etag: str | None = None
 
 
+class GraphRefEdge(BaseModel):
+    """ONE edge of the derived reference graph.
+
+    ``resolved: false`` is a DANGLING reference — declared, written, resolving
+    to nothing. It travels rather than being filtered out: with
+    ``DNA_REF_VALIDATION=warn`` (the default) such a document persists, so
+    dropping the row would render a tidier graph than the data deserves. These
+    rows ARE the list of what is broken.
+
+    ``to_scope`` may differ from the request's scope (a reference can resolve
+    in a parent scope) and is ``null`` when the resolution went through the
+    inheritance chain without the parent being recorded — never a stand-in for
+    "the same scope"."""
+
+    depth: int
+    direction: str
+    from_kind: str
+    from_name: str
+    #: The spec field the reference was declared on.
+    field: str
+    #: Position inside an array-valued reference; 0 for a scalar one.
+    ordinal: int
+    to_kind: str | None = None
+    to_name: str
+    to_scope: str | None = None
+    #: Every declared target — more than one means a polymorphic reference.
+    declared_to: list[str] = []
+    resolved: bool
+    #: This edge points back at a node the walk had already visited. Reported
+    #: rather than hidden — ``Story.dependencies → Story`` makes cycles
+    #: ordinary data, and the closing edge is the one that shows the cycle.
+    closes_cycle: bool = False
+    #: The document version these edges were derived from. Lower than the
+    #: document's current version means the relations are STALE.
+    from_version: int
+
+
+class GraphRefsResponse(BaseModel):
+    """``GET /v1/kinds/{kind}/documents/{name}/refs`` — the DATA graph.
+
+    ``stop`` says WHY the walk ended (``complete`` / ``depth_reached`` /
+    ``truncated``), because a caller that cannot tell "this is everything" from
+    "this is where I stopped" will render the second as the first.
+
+    ``graph_producer`` reports the producer's mode (``warn`` / ``enforce`` /
+    ``off``). With it ``off`` the write path performs no reference lookups, so
+    no edges are produced — defensible operationally, and NOT the same as "this
+    document has no relations". A store that keeps no edge graph at all answers
+    501, never an empty list.
+
+    ⚠️ These are the DECLARED relations (``x-dna-ref``) only. The schema graph
+    also carries composition and name-convention edges that were never checked
+    against data; calling this "the relations" would claim a completeness the
+    producer does not have."""
+
+    scope: str
+    kind: str
+    api_version: str
+    name: str
+    direction: str
+    depth: int
+    stop: str
+    graph_producer: str
+    edges: list[GraphRefEdge] = []
+
+
 class WriteKindDocumentResponse(BaseModel):
     """``POST /v1/kinds/{kind}/documents`` — the written document. ``scope``
     is DERIVED (there is no ``scope`` field on the request to have supplied

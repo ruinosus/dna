@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-graph-edge-producer-20260806-083912
+spec:
+  guide_ref: tg-graph-edge-producer
+  outcome: pass
+  verifies:
+  - Story/s-graph-edge-producer
+  executed_by: claude-code
+  executed_at: '2026-08-06T08:39:12+00:00'
+  notes: 'Rodado em 06/08/2026 na worktree /tmp/wt-graph-edges. Postgres: o do docker-compose.dev.yml do dna-cloud (porta 5433), em schemas temporarios proprios.'

@@ -147,6 +147,8 @@ class Tables:
     versions: sa.Table
     bundle_entries: sa.Table
     layer_documents: sa.Table
+    #: The derived reference graph (spec-grafo-1) — both dialects.
+    edges: sa.Table
     # [dialect] pg-only (Phase 15.1 eventbus); None on sqlite.
     outbox: sa.Table | None
     versions_seq: sa.Table | None
@@ -281,6 +283,78 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
                  "api_version"),
         sa.Index(f"{p}bundle_entries_tenant_idx", "tenant", "scope", "kind",
                  "api_version"),
+    )
+
+    # The DERIVED reference graph (spec-grafo-1, revision 0006). One row per
+    # declared ``x-dna-ref`` VALUE of one document — written by the write path
+    # inside the same transaction as the document itself, never by a scanner
+    # and never by guessing at slugs.
+    #
+    # Present on BOTH dialects, unlike the pg-only control-plane tables: this
+    # is document data derived from document data, and a SQLite self-host asks
+    # "what points at this?" exactly as a hosted Postgres does. The traversal
+    # is a recursive CTE in standard SQL, identical on both.
+    #
+    # Four decisions the DDL retired in i-039 did not have:
+    #
+    # 1. ``source_field`` AND ``ordinal`` are IN the primary key. Without the
+    #    field, two fields of one document pointing at the same target collide
+    #    and the graph loses "by which field" — which is precisely what a
+    #    relations view renders. Without the ordinal, ``Epic.features[3]``
+    #    cannot be told from ``[0]``, and the order of an array is the author's
+    #    data.
+    # 2. ``to_kind`` NULL means DANGLING, not absent. With
+    #    ``DNA_REF_VALIDATION=warn`` (the default) a document with an
+    #    unresolvable reference persists; dropping that row would render a
+    #    tidier graph than the data deserves. The dangling rows are the most
+    #    valuable content of this table — they are the list of what is broken.
+    # 3. ``to_scope`` is separate from ``scope`` because ``get_document`` falls
+    #    back to parent scopes: a reference may resolve in a DIFFERENT scope,
+    #    and recording that as an intra-scope relation would assert a link that
+    #    does not exist. NULL = resolved through the inheritance chain, parent
+    #    not recorded.
+    # 4. ``from_version`` is the document version the edges were derived from —
+    #    the drift detector for the non-atomic paths (backfill, an adapter
+    #    without the kwarg) and the anchor a future as-of traversal needs.
+    #
+    # No foreign keys: a Kind is not a table, and ``to_name`` deliberately may
+    # name a document that does not exist.
+    edge_cols: list[sa.Column] = [
+        sa.Column("scope", sa.Text, primary_key=True, nullable=False),
+        sa.Column("tenant", sa.Text, primary_key=True, nullable=False,
+                  server_default=sa.text("''")),
+        sa.Column("from_api_version", sa.Text, primary_key=True, nullable=False,
+                  server_default=sa.text("''")),
+        sa.Column("from_kind", sa.Text, primary_key=True, nullable=False),
+        sa.Column("from_name", sa.Text, primary_key=True, nullable=False),
+        sa.Column("source_field", sa.Text, primary_key=True, nullable=False),
+        sa.Column("ordinal", sa.Integer, primary_key=True, nullable=False,
+                  server_default=sa.text("0")),
+        sa.Column("to_scope", sa.Text, nullable=True),
+        sa.Column("to_kind", sa.Text, nullable=True),
+        sa.Column("to_name", sa.Text, nullable=False),
+        sa.Column("declared_to", sa.Text, nullable=False,
+                  server_default=sa.text("''")),
+        sa.Column("from_version", sa.Integer, nullable=False,
+                  server_default=sa.text("0")),
+    ]
+    edge_cols.append(
+        # [dialect] pg gets a real timestamp with the server clock as default;
+        # sqlite keeps the ISO-8601 TEXT the rest of its tables use
+        # (``documents.updated_at``), written by the adapter's own ``_now()``.
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False,
+                  server_default=sa.text("now()"))
+        if is_pg else
+        sa.Column("updated_at", sa.Text, nullable=False)
+    )
+    edges = sa.Table(
+        f"{p}edges", md, *edge_cols,
+        # The two directions the traversal walks. "out" is served by the PK
+        # prefix as well, but naming it keeps the pair symmetric and survives a
+        # future key change; "in" has no other index that could serve it, and
+        # without it "what points at this document?" is a full scan.
+        sa.Index(f"{p}edges_out_idx", "scope", "tenant", "from_kind", "from_name"),
+        sa.Index(f"{p}edges_in_idx", "scope", "tenant", "to_kind", "to_name"),
     )
 
     layer_documents = sa.Table(
@@ -433,6 +507,7 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
     return Tables(
         metadata=md, documents=documents, versions=versions,
         bundle_entries=bundle_entries, layer_documents=layer_documents,
+        edges=edges,
         outbox=outbox, versions_seq=versions_seq,
         quota_counters=quota_counters, turn=turn, turn_step=turn_step,
         approval=approval,

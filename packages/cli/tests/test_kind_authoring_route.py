@@ -286,6 +286,12 @@ _KIND_PATHS = {
     "/v1/kinds/{kind}/documents",
     # A leitura VERBATIM de um doc (2026-08-05) — o par do POST genérico.
     "/v1/kinds/{kind}/documents/{name}",
+    # "o que aponta para este documento?" (spec-grafo-1) — o grafo de DADO do
+    # doc, na MESMA família de portas pelo mesmo motivo das outras: uma
+    # relação de um documento sob um Kind que estas portas acabaram de aprovar
+    # fica inalcançável se esta rota for montada num conjunto de lanes mais
+    # estreito do que a autoria e a aprovação.
+    "/v1/kinds/{kind}/documents/{name}/refs",
 }
 
 

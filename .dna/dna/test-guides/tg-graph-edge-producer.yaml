@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  name: tg-graph-edge-producer
+spec:
+  description: Bateria do produtor de arestas, travessia, backfill e migracao legada — nos dois dialetos.
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests/test_graph_edge_producer.py tests/test_graph_traversal.py tests/test_graph_backfill.py tests/test_graph_edges_legacy_migration.py -q
+    expected: 64 passed com DATABASE_URL setado (os dois dialetos); sem ele a metade sqlite passa e a de pg pula
+  - action: cd packages/cli && uv run --no-project python -m pytest tests -q
+    expected: 1510 passed, 17 skipped
+  - action: cd packages/sdk-py && uv run --no-project python -m pytest tests -q
+    expected: '36 falhas, TODAS pre-existentes por falta de langchain no venv (baseline na mesma maquina: 39)'
+  - action: python3 scripts/brand_guard.py && python3 scripts/docs_coverage_guard.py && python3 scripts/data_model_guard.py
+    expected: clean nos tres
+  - action: cd packages/client-py && pytest tests -q; cd packages/client-ts && bun test && bun run typecheck
+    expected: 22 passed / 17 pass / tsc limpo
+  verifies:
+  - Story/s-graph-edge-producer
+  created_at: '2026-08-06T08:38:53+00:00'
+  updated_at: '2026-08-06T08:38:53+00:00'

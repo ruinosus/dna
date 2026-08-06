@@ -267,6 +267,15 @@ _NOT_REFUSALS = {
     # appeal — an arithmetic fact about the prompt, raised on the read/compose
     # path where there is no write to refuse.
     "PromptBudgetExceededError",
+    # A CAPABILITY statement about the DEPLOYMENT, not a verdict on the
+    # request: the active source keeps no derived reference graph, so there is
+    # no answer to give. It is an exception rather than an empty list on
+    # purpose — ``[]`` reads as "nothing points at this document", a claim only
+    # a store that records edges may make — but relaying it as a refusal would
+    # tell the caller they were denied something they might appeal. The faces
+    # map it to 501, and the caller's remedy is a different adapter, not a
+    # different request.
+    "GraphUnsupported",
 }
 
 

@@ -1,0 +1,82 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-graph-edge-producer
+spec:
+  title: Produtor de arestas, travessia e backfill
+  description: 'Fatias 2, 3 e 4 da spec-grafo-1-arestas-e-travessia: resolve_declared_edges extraida de _validate_references (uma passada, dois consumidores, terceiro retorno ''completo''); revisao Alembic 0006 criando dna_edges nos dois dialetos; escrita atomica no mesmo conn do save via kwarg com sonda de capability; delete das arestas de SAIDA junto com o doc; travessia por CTE recursiva com profundidade limitada, anti-ciclo e scope+tenant no passo recursivo; GET /v1/kinds/{kind}/documents/{name}/refs; dna graph backfill pelos pares (Kind, campo) declarados.'
+  status: in-progress
+  feature: f-graph-edges
+  acceptance_criteria:
+  - Given uma Story com spec.feature='f-y' escrita num adapter SQL, When o write conclui, Then existe UMA linha em dna_edges com source_field='feature' e to_kind='Feature'; When f-y e apagada, Then a linha CONTINUA com to_kind NULL (pendurada); When a travessia roda em dois tenants com o mesmo nome de doc, Then um nao ve o outro.
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - codigo + testes (vazamento cross-tenant, ciclo, profundidade, completo=False, delete, migracao v9 legada) + revisao Alembic + brand guard limpo + PR aberto sem merge
+  definition_of_done_source: cli-create
+  created_at: '2026-08-06T07:47:29+00:00'
+  updated_at: '2026-08-06T08:39:14+00:00'
+  timeline:
+  - at: '2026-08-06T07:47:29+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-06T07:47:46+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-06T08:38:29+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      Fatias 2, 3 e 4 implementadas e verdes nos DOIS dialetos (SQLite sempre; Postgres via DATABASE_URL, rodado contra o pg local do compose do dna-cloud).
+
+      DECISOES que fecharam duvidas do desenho:
+
+      1) to_scope so e preenchido quando a resolucao foi LOCAL. get_document faz fallback para escopos pais (heranca e o DEFAULT hoje, _DenylistInheritable), e ele nao diz de onde veio o doc. Adicionei Kernel.get_document_local (a MESMA leitura que get_document faz primeiro, logo um hit de cache) so para atribuir. Resolveu num pai => to_scope NULL, nunca o scope de quem escreve — afirmar relacao intra-escopo que nao existe e a mentira que a coluna existe para evitar.
+
+      2) A aresta que FECHA um ciclo e reportada (flag closes_cycle) e apenas nao e expandida. Anti-ciclo por containment exato via replace(), NAO por LIKE: '_' e curinga em LIKE e nome de doc e cheio de underscore — um teste LIKE pararia travessias que nunca deveria parar.
+
+      3) edges=None vs edges=[]: None = 'o kernel nao tem nada confiavel a dizer' (produtor off, ou leitura falhou no meio) => NAO substitui. [] = 'este doc nao declara/nao aponta nada' => APAGA as linhas. Sem isso, tirar a ultima referencia de um doc deixaria a relacao no grafo.
+
+      4) FS declara SAVE_OPTIONAL_KWARGS - {edges} e edge_graph=False. Isso poe DUAS guardas do repo em conflito: test_record_store_port exigia paridade ESTRITA de assinatura, e derive_capabilities le a assinatura. Refinei a guarda: a divergencia permitida e exatamente vocabulario_da_porta - capabilities().write_kwargs do proprio adapter — some sem declarar, continua vermelho.
+
+      5) GraphUnsupported ficou em _NOT_REFUSALS, com motivo: e afirmacao de CAPACIDADE do deployment (501), nao veredito sobre o pedido. [] nunca e resposta: le-se 'nada aponta para este doc'.
+
+      BUG que so o segundo dialeto achou: _replace_edges passava sa.func.now() como bind param no executemany; asyncpg recusa ('expected a datetime, got now'). SQLite nunca reclamaria. Virou datetime.now(utc) em Python nos dois.
+
+      Migracao legada v9: provada, nao presumida. upgrade_sync roda a ponte ANTES do alembic (teste estrutural sempre) + caminhada v9 -> ponte -> baseline -> 0006 num Postgres real, com fixture v9 construida aplicando a revisao baseline e desfazendo so o v10 (dropar dna_edges), porque uma fixture de duas tabelas falharia no backfill da 0003 e nao provaria nada sobre arestas.
+
+      Fora do escopo, com dono: tool MCP graph_refs (fatia 6, superficie METRADA — familia de quota e decisao de produto) e a fatia 5 (portal, dna-cloud). Rota /v1/graph/kinds (fatia 1) e do outro agent.
+    commit_ref: 2a6acb920d4fd0dc8ab7b7efb207166605ee893a
+  - at: '2026-08-06T08:38:56+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-graph-edge-producer
+    summary: TestGuide tg-graph-edge-producer (manual)
+  - at: '2026-08-06T08:39:14+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-graph-edge-producer-20260806-083912
+    summary: TestRun tr-tg-graph-edge-producer-20260806-083912 → pass
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-graph-edge-producer
+    role: implementation
+    at: '2026-08-06T07:47:46+00:00'
+  - kind: TestGuide
+    name: tg-graph-edge-producer
+    role: test-guide
+    at: '2026-08-06T08:38:56+00:00'
+  - kind: TestRun
+    name: tr-tg-graph-edge-producer-20260806-083912
+    role: test-run
+    at: '2026-08-06T08:39:14+00:00'

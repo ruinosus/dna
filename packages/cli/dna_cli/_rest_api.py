@@ -353,6 +353,7 @@ def build_app(
         create_project_impl,
         register_artifact_impl,
         get_document_impl,
+        graph_refs_impl,
         list_documents_impl,
         write_document_impl,
         create_workspace_impl,
@@ -1688,6 +1689,51 @@ def build_app(
             raise HTTPException(status_code=404, detail=str(exc)) from None
         except LookupError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    @app.get("/v1/kinds/{kind}/documents/{name}/refs", dependencies=guarded,
+             response_model=m.GraphRefsResponse)
+    async def graph_refs(
+        kind: str,
+        name: str,
+        tenant: str | None = Query(default=None),
+        api_version: str | None = Query(default=None),
+        direction: str = Query(default="in"),
+        depth: int = Query(default=1, ge=1),
+    ) -> dict[str, Any]:
+        """"O que depende deste documento?" — o grafo de DADO, com profundidade.
+
+        A tela do Kind sempre soube dizer que ``Story.feature → Feature``
+        existe como REGRA, e nunca soube dizer que ESTAS 47 Stories apontam
+        para ESTA Feature. Esta rota responde a segunda pergunta, lendo as
+        arestas que o próprio write path produziu ao validar as referências —
+        nada aqui deriva, adivinha ou lê slug.
+
+        ``direction=in`` (o default, e a pergunta do produto) traz quem aponta
+        para cá; ``out`` o que este documento aponta; ``both`` a união.
+        ``depth`` é OBRIGATÓRIO ter teto: ``Spec.supersedes`` e
+        ``Story.dependencies`` são auto-referentes por desenho, e uma travessia
+        sem limite aqui é incidente de produção, não risco teórico. O valor é
+        clampado ao teto do kernel (``DNA_GRAPH_MAX_DEPTH``).
+
+        **501, nunca lista vazia**, quando o adapter ativo não guarda arestas
+        (o filesystem não tem transação nem tabela para guardá-las). ``[]``
+        se lê como "nada aponta para este documento", e essa é uma afirmação
+        que só um store que de fato registra arestas pode fazer.
+        """
+        from dna.kernel.query.graph import GraphUnsupported
+
+        live = await _live()
+        try:
+            return await graph_refs_impl(
+                live, kind=kind, name=name, tenant=tenant,
+                api_version=api_version, direction=direction, depth=depth,
+            )
+        except UnknownKindError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
+        except GraphUnsupported as exc:
+            raise HTTPException(status_code=501, detail=str(exc)) from None
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from None
 
     @app.post("/v1/kinds/{kind}/documents", dependencies=guarded, status_code=201,
               response_model=m.WriteKindDocumentResponse)

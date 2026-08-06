@@ -712,6 +712,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/kinds/{kind}/documents/{name}/refs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Graph Refs
+         * @description "O que depende deste documento?" — o grafo de DADO, com profundidade.
+         *
+         *     A tela do Kind sempre soube dizer que ``Story.feature → Feature``
+         *     existe como REGRA, e nunca soube dizer que ESTAS 47 Stories apontam
+         *     para ESTA Feature. Esta rota responde a segunda pergunta, lendo as
+         *     arestas que o próprio write path produziu ao validar as referências —
+         *     nada aqui deriva, adivinha ou lê slug.
+         *
+         *     ``direction=in`` (o default, e a pergunta do produto) traz quem aponta
+         *     para cá; ``out`` o que este documento aponta; ``both`` a união.
+         *     ``depth`` é OBRIGATÓRIO ter teto: ``Spec.supersedes`` e
+         *     ``Story.dependencies`` são auto-referentes por desenho, e uma travessia
+         *     sem limite aqui é incidente de produção, não risco teórico. O valor é
+         *     clampado ao teto do kernel (``DNA_GRAPH_MAX_DEPTH``).
+         *
+         *     **501, nunca lista vazia**, quando o adapter ativo não guarda arestas
+         *     (o filesystem não tem transação nem tabela para guardá-las). ``[]``
+         *     se lê como "nada aponta para este documento", e essa é uma afirmação
+         *     que só um store que de fato registra arestas pode fazer.
+         */
+        get: operations["graph_refs_v1_kinds__kind__documents__name__refs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/kinds/{kind}/revoke": {
         parameters: {
             query?: never;
@@ -2135,6 +2173,97 @@ export interface components {
             name: string;
             /** Scope */
             scope: string;
+        };
+        /**
+         * GraphRefEdge
+         * @description ONE edge of the derived reference graph.
+         *
+         *     ``resolved: false`` is a DANGLING reference — declared, written, resolving
+         *     to nothing. It travels rather than being filtered out: with
+         *     ``DNA_REF_VALIDATION=warn`` (the default) such a document persists, so
+         *     dropping the row would render a tidier graph than the data deserves. These
+         *     rows ARE the list of what is broken.
+         *
+         *     ``to_scope`` may differ from the request's scope (a reference can resolve
+         *     in a parent scope) and is ``null`` when the resolution went through the
+         *     inheritance chain without the parent being recorded — never a stand-in for
+         *     "the same scope".
+         */
+        GraphRefEdge: {
+            /**
+             * Closes Cycle
+             * @default false
+             */
+            closes_cycle: boolean;
+            /**
+             * Declared To
+             * @default []
+             */
+            declared_to: string[];
+            /** Depth */
+            depth: number;
+            /** Direction */
+            direction: string;
+            /** Field */
+            field: string;
+            /** From Kind */
+            from_kind: string;
+            /** From Name */
+            from_name: string;
+            /** From Version */
+            from_version: number;
+            /** Ordinal */
+            ordinal: number;
+            /** Resolved */
+            resolved: boolean;
+            /** To Kind */
+            to_kind?: string | null;
+            /** To Name */
+            to_name: string;
+            /** To Scope */
+            to_scope?: string | null;
+        };
+        /**
+         * GraphRefsResponse
+         * @description ``GET /v1/kinds/{kind}/documents/{name}/refs`` — the DATA graph.
+         *
+         *     ``stop`` says WHY the walk ended (``complete`` / ``depth_reached`` /
+         *     ``truncated``), because a caller that cannot tell "this is everything" from
+         *     "this is where I stopped" will render the second as the first.
+         *
+         *     ``graph_producer`` reports the producer's mode (``warn`` / ``enforce`` /
+         *     ``off``). With it ``off`` the write path performs no reference lookups, so
+         *     no edges are produced — defensible operationally, and NOT the same as "this
+         *     document has no relations". A store that keeps no edge graph at all answers
+         *     501, never an empty list.
+         *
+         *     ⚠️ These are the DECLARED relations (``x-dna-ref``) only. The schema graph
+         *     also carries composition and name-convention edges that were never checked
+         *     against data; calling this "the relations" would claim a completeness the
+         *     producer does not have.
+         */
+        GraphRefsResponse: {
+            /** Api Version */
+            api_version: string;
+            /** Depth */
+            depth: number;
+            /** Direction */
+            direction: string;
+            /**
+             * Edges
+             * @default []
+             */
+            edges: components["schemas"]["GraphRefEdge"][];
+            /** Graph Producer */
+            graph_producer: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Scope */
+            scope: string;
+            /** Stop */
+            stop: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -4304,6 +4433,45 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GetKindDocumentResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    graph_refs_v1_kinds__kind__documents__name__refs_get: {
+        parameters: {
+            query?: {
+                tenant?: string | null;
+                api_version?: string | null;
+                direction?: string;
+                depth?: number;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                kind: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GraphRefsResponse"];
                 };
             };
             /** @description Validation Error */

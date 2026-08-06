@@ -663,6 +663,63 @@ async def get_document_impl(
     }
 
 
+async def graph_refs_impl(
+    live: LiveDna, *, kind: str, name: str, scope: str | None = None,
+    tenant: str | None = None, api_version: str | None = None,
+    direction: str = "in", depth: int | None = None,
+) -> dict[str, Any]:
+    """"What points at this document?" — the DERIVED reference graph.
+
+    The read the product question needed and that nothing could answer: the
+    Kind screen has always been able to say ``Story.feature → Feature`` exists
+    as a RULE, and never that THESE forty-seven Stories point at THIS Feature.
+
+    Three things travel with the answer, none of them decoration:
+
+    * ``resolved`` per edge — ``false`` is a DANGLING reference (declared,
+      written, resolving to nothing). Listed, never filtered: with
+      ``DNA_REF_VALIDATION=warn`` (the default) such documents persist, and a
+      graph that hid the broken half would read as healthier than the data is.
+    * ``stop`` — ``complete`` / ``depth_reached`` / ``truncated``. A caller
+      that cannot tell "this is everything" from "this is where I stopped"
+      renders the second as the first.
+    * ``graph_producer`` — ``warn`` / ``enforce`` / ``off``. With the producer
+      ``off`` no edges are made at all; that is a defensible operational
+      choice, and a screen rendering the resulting emptiness as "no relations"
+      is not.
+
+    Raises :class:`~dna.kernel.query.graph.GraphUnsupported` on a store that
+    keeps no edges — deliberately, rather than an empty list that would read as
+    "nothing points at this document".
+    """
+    sc = scope or live.default_scope(tenant)
+    port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
+    result = await live.kernel.graph_refs(
+        sc, port.kind, name,
+        tenant=tenant, direction=direction, depth=depth,
+    )
+    return {
+        "scope": sc, "kind": port.kind, "api_version": port.api_version,
+        "name": name,
+        "direction": result.direction, "depth": result.depth,
+        "stop": result.stop, "graph_producer": result.graph_producer,
+        "edges": [
+            {
+                "depth": e["depth"], "direction": e["direction"],
+                "from_kind": e["from_kind"], "from_name": e["from_name"],
+                "field": e["source_field"], "ordinal": e["ordinal"],
+                "to_kind": e["to_kind"], "to_name": e["to_name"],
+                "to_scope": e["to_scope"],
+                "declared_to": list(e["declared_to"]),
+                "resolved": e["resolved"],
+                "closes_cycle": e["closes_cycle"],
+                "from_version": e["from_version"],
+            }
+            for e in result.edges
+        ],
+    }
+
+
 async def write_document_impl(
     live: LiveDna, *, kind: str, name: str, spec: dict[str, Any],
     scope: str | None = None, tenant: str | None = None,

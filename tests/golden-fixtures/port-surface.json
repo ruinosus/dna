@@ -384,6 +384,10 @@
         {
           "py": "as_of_reads",
           "note": "The store can answer a TRANSACTION-time read (load_one_as_of): 'what did you believe at T?', reconstructed from retained version snapshots. Separate from `versions` on purpose — the filesystem adapter declares `versions` and keeps no history at all, so a face must be able to REFUSE an as-of read rather than serve the present under a past timestamp (s-memory-as-of)."
+        },
+        {
+          "py": "edge_graph",
+          "note": "The store keeps the DERIVED reference graph (x-dna-ref edges) and can walk it (traverse_edges). Separate from the 'edges' write kwarg, and asked BEFORE the read for the same reason as_of_reads is: an adapter that records no edges must make the face answer 'unsupported', never an empty list. An empty list reads as 'nothing points at this document' — a claim only a store that actually keeps edges may make."
         }
       ]
     },

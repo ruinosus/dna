@@ -105,9 +105,42 @@ def test_runtime_checkable_rejects_non_conforming():
 
 @pytest.mark.parametrize("cls", _ADAPTERS, ids=lambda c: c.__name__)
 @pytest.mark.parametrize("method", _PORT_METHODS)
-def test_adapter_signature_matches_port(cls, method):
+def test_adapter_signature_matches_port(cls, method, tmp_path):
+    """A parity assinatura-a-assinatura, MENOS os kwargs OPCIONAIS que o
+    adapter declara nao aceitar.
+
+    A versao anterior exigia igualdade estrita, e isso funcionou enquanto os
+    tres adapters por acaso aceitavam TODO o vocabulario opcional da porta
+    (``author`` … ``if_match``). O primeiro kwarg genuinamente parcial —
+    ``edges``, a escrita ATOMICA do grafo derivado, que o filesystem nao tem
+    transacao nem tabela para honrar — poe as duas metades do contrato em
+    conflito: a igualdade estrita obriga o FS a ACEITAR o kwarg, e
+    ``derive_capabilities`` (que le a assinatura) passaria entao a DECLARAR
+    que ele o suporta. Aceitar e descartar em silencio e exatamente a mentira
+    que ``SourceCapabilities`` existe para impedir.
+
+    Entao a divergencia permitida nao e livre: e exatamente o conjunto
+    ``vocabulario_da_porta - capabilities().write_kwargs`` do proprio adapter.
+    Ele so pode omitir um kwarg se DISSER que o omite — e ai o kernel nunca
+    lho passa. Um parametro que suma sem declaracao continua vermelho.
+    """
+    from dna.kernel.capabilities import (
+        DELETE_OPTIONAL_KWARGS,
+        SAVE_OPTIONAL_KWARGS,
+        source_capabilities,
+    )
+
     expected = _params(getattr(WritableSourcePort, method))
     actual = _params(getattr(cls, method))
+    if method in ("save_document", "delete_document"):
+        caps = source_capabilities(_make(cls, tmp_path))
+        vocabulary, declared = (
+            (SAVE_OPTIONAL_KWARGS, caps.write_kwargs)
+            if method == "save_document"
+            else (DELETE_OPTIONAL_KWARGS, caps.delete_kwargs)
+        )
+        opted_out = vocabulary - declared
+        expected = [p for p in expected if p[0] not in opted_out]
     assert actual == expected, (
         f"{cls.__name__}.{method} diverge do WritableSourcePort:\n"
         f"  port:    {expected}\n  adapter: {actual}"

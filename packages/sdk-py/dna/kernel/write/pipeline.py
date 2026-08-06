@@ -202,13 +202,15 @@ class WritePipeline:
         mode = os.environ.get("DNA_REF_VALIDATION", "warn").strip().lower()
         return mode if mode in ("enforce", "warn", "off") else "warn"
 
-    async def _validate_references(
+    async def _resolve_references(
         self, scope: str, kind: str, name: str, raw: Any, port: Any,
         *, tenant: str | None,
-    ) -> None:
-        """Check every ``x-dna-ref`` the Kind declares actually resolves.
+    ) -> tuple[list, bool]:
+        """Resolve declared references ONCE, validate, and hand back the edges.
 
-        Contract (each clause is a deliberate refusal to break something):
+        The validation contract is unchanged from i-040 (each clause is a
+        deliberate refusal to break something):
+
         - A Kind declaring NO references returns before doing any work — no
           reads, no cost, byte-identical behaviour to before i-040. This is
           what makes the change back-compatible for every existing Kind.
@@ -218,20 +220,31 @@ class WritePipeline:
         - A polymorphic reference passes if the target exists as ANY declared
           Kind.
         - If the host cannot read documents, the check is SKIPPED rather than
-          guessed at — see the note below.
+          guessed at.
         - ``enforce`` vetoes; ``warn`` logs and persists; ``off`` skips.
+
+        What is NEW is the return value, not the behaviour: the lookups this
+        method already performs also identify, per reference, WHICH declared
+        Kind matched — the fact the edge table is made of. Returning it makes
+        the edge a by-product of the check rather than a second derivation
+        that could disagree with it.
+
+        Returns ``(edges, complete)``. ``complete=False`` means a read failed
+        part-way: the validator says nothing (as it always has) and the
+        producer must not replace anything, because a partial edge set stored
+        as whole is a graph that lies while looking finished.
         """
         mode = self._ref_validation_mode()
         if mode == "off" or port is None or not isinstance(raw, dict):
-            return
+            # ``off`` skips the reads, so there is no resolution and there are
+            # no edges. NOT an empty graph — the face reports the producer as
+            # off (``graph_producer``) so nobody reads silence as "no
+            # relations". Fail-open in SILENCE is this house's signature defect.
+            return [], False
 
         from dna.kernel.query.references import (  # noqa: PLC0415
-            declared_references, reference_values,
+            resolve_declared_edges,
         )
-
-        refs = declared_references(port)
-        if not refs:
-            return  # the back-compat fast path: no declaration, no reads
 
         host = self._host
         # The WritePipeline's WriteHost slice is intentionally narrow and does
@@ -241,41 +254,22 @@ class WritePipeline:
         # check must be a no-op rather than a false accusation.
         getter = getattr(host, "get_document", None)
         if not callable(getter):
-            return
+            return [], False
 
-        spec = raw.get("spec")
-        spec = spec if isinstance(spec, dict) else {}
-        problems: list[str] = []
-
-        for ref in refs:
-            values = reference_values(ref, spec)
-            if not values:
-                continue
-            targets = [
-                t for t in ref.targets
-                if host.kind_port_for(t) is not None
-            ] or list(ref.targets)
-            for value in values:
-                found = False
-                for target in targets:
-                    try:
-                        doc = await getter(scope, target, value, tenant=tenant)
-                    except Exception:  # noqa: BLE001 — a read failure is not a
-                        # dangling reference; never convert infrastructure
-                        # trouble into an authoring error.
-                        return
-                    if doc is not None:
-                        found = True
-                        break
-                if not found:
-                    expected = " | ".join(sorted(ref.targets))
-                    problems.append(
-                        f"spec.{ref.field} → `{value}` (no {expected} "
-                        f"named `{value}` in scope `{scope}`)"
-                    )
+        edges, problems, complete = await resolve_declared_edges(
+            port, raw,
+            scope=scope, tenant=tenant,
+            getter=getter,
+            port_for=host.kind_port_for,
+            # Same duck-type as ``get_document`` above: the local-only read
+            # that attributes a hit to THIS scope rather than to an inherited
+            # parent. A cache hit in practice (``get_document`` just loaded the
+            # very same key), and simply absent on a reduced host.
+            local_getter=getattr(host, "get_document_local", None),
+        )
 
         if not problems:
-            return
+            return edges, complete
 
         detail = "; ".join(problems)
         msg = (
@@ -287,9 +281,22 @@ class WritePipeline:
             logger.warning(
                 "%s (DNA_REF_VALIDATION=warn — persisted anyway)", msg,
             )
-            return
+            return edges, complete
         from dna.kernel.protocols import SpecValidationError  # noqa: PLC0415
         raise SpecValidationError(msg)
+
+    async def _validate_references(
+        self, scope: str, kind: str, name: str, raw: Any, port: Any,
+        *, tenant: str | None,
+    ) -> None:
+        """Validation-only facade over :meth:`_resolve_references` (i-040).
+
+        Kept because the check is meaningful on its own and is called that way
+        by tests and by any caller that wants the gate without the graph.
+        """
+        await self._resolve_references(
+            scope, kind, name, raw, port, tenant=tenant,
+        )
 
     # -- Kind-Writer slot↔schema validation (write-time; fired by the helix
     #    ``pre_save`` veto hook via ``kernel._validate_kind_writer`` shim) ------
@@ -678,9 +685,29 @@ class WritePipeline:
         # same reason: the author hears about a dangling reference here, not
         # when something far away later tries to follow it. No-op (and no
         # reads) for any Kind that declares no ``x-dna-ref``.
-        await self._validate_references(
+        edges, edges_complete = await self._resolve_references(
             scope, kind, name, raw, _kind_port, tenant=effective_tenant,
         )
+        # --- the derived edges ride along with the save (spec-grafo-1) --------
+        # The SAME lookups the check above just made also say which Kind each
+        # reference resolved to. Handing that to the adapter as a kwarg lets it
+        # write the edges INSIDE the transaction that writes the document —
+        # the form ``_events.emit(conn, …)`` → ``dna_outbox`` established — so
+        # the document and its edges enter together or neither does.
+        #
+        # Three refusals are encoded in this one condition:
+        #  * an adapter that has not adopted the kwarg is never handed it (the
+        #    capability probe, exactly like ``tenant`` and ``if_match``), so the
+        #    ``WriteHost`` Protocol stays untouched — widening it to pass a
+        #    connection is marked in its own file as a code-review event;
+        #  * ``complete=False`` (a read failed mid-resolution, or the producer
+        #    is off) does NOT replace what is stored: an old-but-known edge set
+        #    beats a new-but-partial one, and the backfill can repair it later;
+        #  * a document with no declared references still passes ``edges=[]``,
+        #    which is how removing the last reference from a document removes
+        #    its rows instead of leaving stale ones behind.
+        if ws.edges and edges_complete:
+            kwargs["edges"] = edges
         version = await src.save_document(scope, kind, name, raw, **kwargs)
         # R2-fix (2026-05-14): three invalidation tiers.
         #
