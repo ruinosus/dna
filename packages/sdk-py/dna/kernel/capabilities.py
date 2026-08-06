@@ -23,9 +23,22 @@ Adding a new capability:
      the method signature.
   2. Replace any ``hasattr(adapter, "method")`` in the kernel/harness
      with ``isinstance(adapter, MyCapability)``.
-  3. Document the capability in `docs/PORT-CONTRACT.md`.
-  4. Cover it in ``python/tests/test_port_contract.py`` so adapters
-     either implement it or get explicitly skipped.
+  3. Add an entry to ``scripts/ports_prose.py`` — say when an adapter
+     author would implement it, what it lights up, and (the part that
+     matters) what the face answers when it is absent. The docs
+     generator FAILS until you do, which is deliberate: a capability
+     nobody can discover is one nobody will declare.
+  4. Cover it in ``packages/sdk-py/tests/test_port_contract.py`` and add
+     a case to ``dna/testing/source_conformance.py`` so adapters either
+     implement it or are explicitly skipped for not declaring it.
+
+Reader-facing docs: ``docs/reference/ports/capabilities.md`` (generated
+from this file) and ``docs/guides/write-a-source-adapter.md`` (narrative).
+
+⚠️ Steps 3 and 4 used to point at ``docs/PORT-CONTRACT.md`` and
+``python/tests/test_port_contract.py``. Neither path has existed for a
+long time — which is the exact failure this module's own capabilities
+exist to prevent, committed in a docstring instead of in a return value.
 """
 from __future__ import annotations
 
@@ -151,17 +164,28 @@ class BundleEntryWritable(Protocol):
 class Versionable(Protocol):
     """Source adapter capability: per-Kind semver versioning.
 
-    Backs the catalog versioning flow (Phase 10): a Kind that's
-    ``Versionable`` supports ``get_version(scope, kind, name,
-    version_id)`` and ``list_versions(...)``. The harness REST
-    surface checks for this capability via ``isinstance`` to
-    decide whether to expose the ``/catalog/{owner}/{name}/versions``
-    endpoint (501 otherwise).
+    Backs the catalog versioning flow: an adapter that is ``Versionable``
+    supports ``get_version(scope, kind, name, version_id)`` and
+    ``list_versions(...)``.
 
-    The production adapters (FilesystemWritableSource and
-    SqlAlchemySource on both dialects) implement this. Custom adapters
-    that don't track per-doc versions can omit and the harness
-    will degrade gracefully with a 501 response.
+    The runtime gate is the DECLARED ``SourceCapabilities.versions`` flag,
+    not an ``isinstance`` against this Protocol — there is no such check
+    anywhere in the tree. Implement the Protocol for static typing and for
+    the reader; declare the flag for the kernel.
+
+    ⚠️ ``versions`` says version rows are READABLE and nothing more. The
+    filesystem adapter declares it while keeping no history at all
+    (``list_versions`` returns ``[]``), which is precisely why answering
+    "what did you believe at T?" had to become its OWN flag
+    (:attr:`SourceCapabilities.as_of_reads`) rather than riding on this
+    one. Do not widen this docstring's promise again: an earlier version
+    of it claimed an ``isinstance`` check and a
+    ``/catalog/{owner}/{name}/versions`` endpoint, and neither existed.
+
+    The production adapters (FilesystemWritableSource and SqlAlchemySource
+    on both dialects) implement this. An adapter that does not track
+    per-instance versions declares ``versions=False`` and the faces refuse
+    the version reads rather than inventing an answer.
     """
 
     async def get_version(

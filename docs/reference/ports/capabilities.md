@@ -311,17 +311,28 @@ Your store can return a specific published version of an instance. Worth reading
 
     Source adapter capability: per-Kind semver versioning.
 
-    Backs the catalog versioning flow (Phase 10): a Kind that's
-    ``Versionable`` supports ``get_version(scope, kind, name,
-    version_id)`` and ``list_versions(...)``. The harness REST
-    surface checks for this capability via ``isinstance`` to
-    decide whether to expose the ``/catalog/{owner}/{name}/versions``
-    endpoint (501 otherwise).
+    Backs the catalog versioning flow: an adapter that is ``Versionable``
+    supports ``get_version(scope, kind, name, version_id)`` and
+    ``list_versions(...)``.
 
-    The production adapters (FilesystemWritableSource and
-    SqlAlchemySource on both dialects) implement this. Custom adapters
-    that don't track per-doc versions can omit and the harness
-    will degrade gracefully with a 501 response.
+    The runtime gate is the DECLARED ``SourceCapabilities.versions`` flag,
+    not an ``isinstance`` against this Protocol — there is no such check
+    anywhere in the tree. Implement the Protocol for static typing and for
+    the reader; declare the flag for the kernel.
+
+    ⚠️ ``versions`` says version rows are READABLE and nothing more. The
+    filesystem adapter declares it while keeping no history at all
+    (``list_versions`` returns ``[]``), which is precisely why answering
+    "what did you believe at T?" had to become its OWN flag
+    (:attr:`SourceCapabilities.as_of_reads`) rather than riding on this
+    one. Do not widen this docstring's promise again: an earlier version
+    of it claimed an ``isinstance`` check and a
+    ``/catalog/{owner}/{name}/versions`` endpoint, and neither existed.
+
+    The production adapters (FilesystemWritableSource and SqlAlchemySource
+    on both dialects) implement this. An adapter that does not track
+    per-instance versions declares ``versions=False`` and the faces refuse
+    the version reads rather than inventing an answer.
 
 **The contract**
 
