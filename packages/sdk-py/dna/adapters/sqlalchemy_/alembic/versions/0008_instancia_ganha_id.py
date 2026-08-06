@@ -42,12 +42,27 @@ abre as duas colunas e preenche as duas.
    funcionado e teria durado até a próxima escrita. Coluna e conteúdo dizem a
    mesma coisa ou a identidade não existe.
 
-**O backfill de ``dna_edges.to_id`` recusa quando é ambíguo.** Uma aresta grava
-``to_kind``/``to_name`` mas não a ``api_version`` do alvo, então dois Kinds
-homônimos em namespaces diferentes tornam o alvo indeterminado. Nesse caso
-``to_id`` fica NULL — a mesma regra que o resolvedor de prefixo aplica: prefixo
-ambíguo é RECUSA, nunca escolha em silêncio. NULL aqui é "não sei", e é
-recuperável pelo backfill do grafo; um id errado não seria.
+**O backfill de ``dna_edges.to_id`` deixa NULL sempre que não SABE, e as duas
+razões apareceram nos dados reais:**
+
+* **ambíguo** — a aresta grava ``to_kind``/``to_name`` mas não a
+  ``api_version`` do alvo, então dois Kinds homônimos em namespaces diferentes
+  tornam o alvo indeterminado;
+* **resolvido por HERANÇA de scope** — ``to_scope`` é NULL quando a referência
+  resolveu num scope PAI e o produtor não registrou em qual (o próprio schema
+  da 0006 diz isso na decisão 3). O backfill casa em
+  ``COALESCE(e.to_scope, e.scope)``, então não alcança o alvo, e não sai
+  procurando: varrer todos os scopes atrás de um nome é exatamente o palpite
+  que esta feature existe para não dar.
+
+Medido na base de desenvolvimento em 06/08/2026: 21 arestas, 19 resolvidas, 18
+com ``to_id``. A única que ficou sem é do segundo caso — um ``App`` num scope de
+tenant apontando para um ``Copilot`` herdado do ``dna-cloud``.
+
+NULL aqui é "não sei", e **se conserta sozinho**: a próxima escrita da instância
+de origem re-deriva as arestas pelo produtor VIVO, que teve o alvo na mão e
+carimba o ``to_id`` independentemente do scope em que ele estava. Um id errado
+não teria conserto nenhum.
 
 Sem downgrade: as migrações do DNA são forward-only.
 """

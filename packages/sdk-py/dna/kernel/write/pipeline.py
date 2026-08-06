@@ -204,7 +204,8 @@ class WritePipeline:
 
     async def _ensure_instance_id(
         self, scope: str, kind: str, name: str, raw: Any,
-        *, tenant: str | None, if_absent: bool = False,
+        *, tenant: str | None, api_version: Any = None,
+        if_absent: bool = False,
     ) -> Any:
         """Guarantee ``raw["metadata"]["id"]`` — minting one only for an
         instance that does not already have one (i-114).
@@ -226,8 +227,23 @@ class WritePipeline:
            ``dna_edges.to_id`` pointing at it would silently go stale: the
            feature would look implemented and be worthless. So an id is minted
            only where none exists to inherit.
-        3. Nothing stored, no id in the envelope → mint (see
-           :func:`dna.kernel.identity.mint_instance_id`).
+        3. An instance IS stored and it has no id either → it PREDATES this
+           feature, and it gets the DERIVED id
+           (:func:`dna.kernel.identity.derived_instance_id`), not a random one.
+           This is the same rule the Postgres backfill (revision 0008) applies,
+           and it is here so that every OTHER store converges on the same
+           values without needing a migration of its own. The case is real:
+           this repo's own board lives BOTH as ``.dna/`` YAML in git and as
+           rows in a database, and if the files were minted at random while the
+           rows were derived, the same logical instance would carry two
+           identities and ``to_id`` would be right in one store and wrong in
+           the other from day one.
+        4. Nothing stored at all → a genuinely NEW instance, so mint at random
+           (see :func:`dna.kernel.identity.mint_instance_id`). The split
+           between 3 and 4 is what lets both rules be true at once: "an
+           instance that already existed converges" and "a new instance is
+           unguessable, so delete-and-recreate under the same name is visibly a
+           different object".
 
         ``get_instance_local`` and not ``get_instance``: the read must NOT fall
         back to a parent scope, because inheriting a parent instance's id would
@@ -247,13 +263,14 @@ class WritePipeline:
         move is to say nothing.
         """
         from dna.kernel.identity import (  # noqa: PLC0415
-            instance_id_of, mint_instance_id, stamp_instance_id,
+            derived_instance_id, instance_id_of, mint_instance_id,
+            stamp_instance_id,
         )
         if not isinstance(raw, dict):
             return raw
         if instance_id_of(raw) is not None:
             return raw
-        existing_id: str | None = None
+        stored: Any = None
         if not if_absent:
             getter = getattr(self._host, "get_instance_local", None)
             if callable(getter):
@@ -262,8 +279,13 @@ class WritePipeline:
                 except Exception:  # noqa: BLE001 — see the docstring: an
                     # unreachable store must not mint a second identity.
                     return raw
-                existing_id = instance_id_of(stored)
-        return stamp_instance_id(raw, existing_id or mint_instance_id())
+        if stored is None:
+            return stamp_instance_id(raw, mint_instance_id())
+        return stamp_instance_id(raw, instance_id_of(stored) or derived_instance_id(
+            tenant=tenant, scope=scope,
+            api_version=(api_version if isinstance(api_version, str) else "") or "",
+            kind=kind, name=name,
+        ))
 
     async def _resolve_references(
         self, scope: str, kind: str, name: str, raw: Any, port: Any,
@@ -635,7 +657,8 @@ class WritePipeline:
         # and persistence all operate on the shape that will actually be
         # stored, id included.
         raw = await self._ensure_instance_id(
-            scope, kind, name, raw, tenant=effective_tenant, if_absent=if_absent,
+            scope, kind, name, raw, tenant=effective_tenant,
+            api_version=_api_version, if_absent=if_absent,
         )
         # Phase 2a: pass tenant as a first-class kwarg to the adapter
         # if supported. Adapters that don't support tenant yet fall back

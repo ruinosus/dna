@@ -265,6 +265,44 @@ class TestTheEdgeCarriesTheTargetsIdentity:
         )
 
     @pytest.mark.anyio
+    async def test_an_instance_that_predates_the_id_converges_instead_of_drawing(
+        self, store,
+    ):
+        """The migration rule, enforced by the WRITE PATH so that every store
+        converges without a migration of its own.
+
+        An instance already in the store with no ``metadata.id`` predates the
+        feature. It gets the DERIVED id — the same value revision 0008's
+        backfill computes — and not a random one, because this repo's board
+        lives BOTH as ``.dna/`` YAML in git and as rows in a database, and two
+        stores minting independently would give one logical instance two
+        identities.
+
+        MUTANT: collapse cases 3 and 4 in ``_ensure_instance_id`` into a single
+        ``mint_instance_id()`` and this is the only assertion that moves — the
+        id is still stable, still unique, still survives every rewrite.
+        """
+        from dna.kernel.identity import derived_instance_id
+
+        kernel, src = store
+        # A row written UNDER the kernel: straight into the adapter, so no id
+        # is ever stamped. This is the shape every pre-i-114 instance has.
+        await src.save_instance(
+            SCOPE, "Feature", "f-old", _doc("Feature", "f-old"),
+        )
+        assert (await kernel.get_instance(
+            SCOPE, "Feature", "f-old"))["metadata"].get("id") is None
+
+        await kernel.write_instance(
+            SCOPE, "Feature", "f-old", _doc("Feature", "f-old", status="doing"),
+        )
+        got = (await kernel.get_instance(SCOPE, "Feature", "f-old"))["metadata"]["id"]
+        assert got == derived_instance_id(
+            tenant=None, scope=SCOPE, api_version=_SDLC_API,
+            kind="Feature", name="f-old",
+        ), "a pre-existing instance drew a random id instead of converging"
+
+    @pytest.mark.anyio
     async def test_renaming_the_SOURCE_does_not_change_what_it_points_at(
         self, store,
     ):
