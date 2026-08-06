@@ -1,0 +1,71 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-interaction-sandbox-block
+spec:
+  title: 'interaction.sandbox no Kind Copilot (i-097 do dna-cloud): o nivel 3 das skills ('
+  description: 'interaction.sandbox no Kind Copilot (i-097 do dna-cloud): o nivel 3 das skills (execucao de script em sandbox remoto) shipou com runtime que LE limites do doc, mas interaction fecha com additionalProperties:false — nenhum doc consegue declarar. Bloco aditivo, presenca-liga, so os campos que o runtime shipado le (regra F4), e a direcao unica: o doc so BAIXA o teto do host, nunca sobe.'
+  status: in-progress
+  feature: f-dna-copilot-emitter
+  acceptance_criteria:
+  - Given um Copilot que declara interaction.sandbox {}, When o doc e escrito, Then ele valida — presenca-liga com defaults seguros, o mesmo padrao do bloco voice
+  - Given um doc que declara interaction.sandbox.budget.max_execute_seconds e max_session_seconds e allow_internet, When o doc e escrito, Then valida e o runtime que ja existe passa a receber os numeros (a costura _sandbox_do_doc -> SandboxLimits.merge ja esta no host)
+  - Given um doc que declara um campo FORA do shape (ex. max_upload_bytes, que nenhum leitor le), When o doc e escrito, Then SpecValidationError — campo sem leitor e erro, nao silencio
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - schema + testes pytest no padrao do pacote + docs de Kind regenerados (kinds reference + data model) + brand-guard verde (nenhum nome de fornecedor terceiro no schema publico)
+  definition_of_done_source: cli-create
+  created_at: '2026-08-05T23:58:57+00:00'
+  updated_at: '2026-08-06T00:17:30+00:00'
+  timeline:
+  - at: '2026-08-05T23:58:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-05T23:59:44+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-06T00:14:41+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-interaction-sandbox-block
+    summary: TestGuide tg-s-interaction-sandbox-block (manual)
+  - at: '2026-08-06T00:14:46+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-interaction-sandbox-block-20260806-001443
+    summary: TestRun tr-tg-s-interaction-sandbox-block-20260806-001443 → pass
+    outcome: pass
+  - at: '2026-08-06T00:16:05+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Desenho do bloco, e o corte. O shape saiu do CONSUMIDOR (o executor de scripts do host), nao da imaginacao: o merge de limites le exatamente budget.max_execute_seconds, budget.max_session_seconds e allow_internet. O orcamento de UPLOAD ficou FORA porque o merge preserva a constante do host e nunca olha o doc — campo sem leitor renderiza como se funcionasse, entao declara-lo e SpecValidationError e nao silencio (testado nos dois niveis: solto e dentro de budget). Os tetos absolutos viraram maximum no schema pelo mesmo raciocinio: um numero acima deles seria grampeado calado la na frente, e a escrita e o ultimo momento em que alguem ainda le a mensagem. A direcao unica (o doc so BAIXA o teto do host) e o que torna seguro ler um documento que um tenant pode ter escrito — vale inclusive para o booleano: false desliga o egress, true nao liga nada. Brand-guard: o fornecedor de sandbox nao aparece no schema publico; o bloco fala de ''a sandbox provider'' e ''the provider'', que e o que o padrao da casa manda.'
+    commit_ref: ab396988f1f0f9fc215879eb3d1bb661cba46b64
+  - at: '2026-08-06T00:17:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR do lote: https://github.com/ruinosus/dna/pull/319 (as duas fatias — esta e s-thread-store-retention-e-troca — viajam juntas na mesma branch feat/sdk-072-lote, porque sao independentes entre si e o consumidor das duas e o mesmo release do dna-cloud). Sem merge: o bump e a release sao do founder.'
+    commit_ref: 2c02517a96917f0fa46a073bfe1eca03bc112aa3
+  produces:
+  - kind: Plan
+    name: plan-s-interaction-sandbox-block
+    role: implementation
+    at: '2026-08-05T23:59:44+00:00'
+  - kind: TestGuide
+    name: tg-s-interaction-sandbox-block
+    role: test-guide
+    at: '2026-08-06T00:14:41+00:00'
+  - kind: TestRun
+    name: tr-tg-s-interaction-sandbox-block-20260806-001443
+    role: test-run
+    at: '2026-08-06T00:14:46+00:00'

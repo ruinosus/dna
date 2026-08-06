@@ -62,6 +62,29 @@ framework: exporta AG-UI do backend velho, importa no novo. O que atravessa é o
 esperando aprovação humana vive no mecanismo do framework, e nenhum formato de
 transcript o reconstrói. :attr:`TranscriptExport.pending_state_dropped` diz isso
 em voz alta, por thread, em vez de deixar a promessa implícita e falsa.
+
+:func:`migrate_thread` é esse caminho em UMA chamada, e o par
+:func:`export_to_json` / :func:`export_from_json` é o que faz o envelope
+atravessar um processo (um arquivo, um corpo HTTP). Sem o codec, cada host
+inventaria a sua serialização do mesmo envelope — que é exatamente a divergência
+silenciosa que este módulo existe para acabar.
+
+## Retenção: a política é do documento, a conexão é do host
+
+O Kind Copilot declara ``persistence.conversation.retention.max_age_days``;
+:func:`retention_cutoff` transforma isso no instante de corte. O que faltava era
+**quem varre**. :func:`sweep_retention` é o algoritmo — no SDK, uma vez — sobre
+duas primitivas que só quem tem a conexão consegue cumprir
+(:class:`ThreadPurgePort`) mais, opcionalmente, o apagador do transcript do
+framework (:class:`TranscriptPurgePort`). Três decisões ficam travadas ali:
+
+* **sem retenção declarada, a porta não é sequer consultada.** Guardar para
+  sempre é o default, e um default que apaga seria o pior defeito possível
+  deste módulo;
+* **transcript primeiro, índice depois.** Uma queda no meio deixa a linha de
+  índice viva — e a varredura seguinte reencontra o thread e termina o serviço.
+  A ordem inversa deixaria checkpoint órfão que nenhum índice mais enxerga;
+* **o que não se consegue datar nunca vence** (:func:`thread_expired`).
 """
 from __future__ import annotations
 
@@ -180,6 +203,47 @@ class ConversationBinding:
     backend: str | None = None
     ref: str | None = None
     retention: ThreadRetention | None = None
+
+
+@dataclass(frozen=True)
+class RetentionSweep:
+    """O relatório de UMA passada de :func:`sweep_retention`.
+
+    ``cutoff`` ``None`` é o caso mais importante e o mais fácil de confundir com
+    "nada venceu": significa que **não há política declarada** e que nenhuma
+    porta foi consultada. Um chamador que loga a varredura tem de conseguir
+    distinguir "não apaguei porque não devo" de "não apaguei porque não achei".
+
+    ``expired`` são os ids selecionados; ``deleted`` é quanto o backend
+    confirmou ter apagado. Os dois existem separados porque divergir é
+    informação: um id que expirou e não foi apagado voltará na próxima passada,
+    e um contador só de sucesso esconderia isso.
+    """
+
+    cutoff: datetime | None = None
+    expired: tuple[str, ...] = ()
+    deleted: int = 0
+    dry_run: bool = False
+
+    @property
+    def has_policy(self) -> bool:
+        """Houve política a aplicar. Falso = o copiloto guarda para sempre."""
+        return self.cutoff is not None
+
+
+@dataclass(frozen=True)
+class ThreadMigration:
+    """O resultado de :func:`migrate_thread` — a troca de framework, contada.
+
+    ``pending_state_dropped`` repete o que o envelope já dizia, no nível em que
+    a decisão é tomada: quem migra precisa saber que havia uma aprovação em
+    curso do lado de lá, e ela não veio.
+    """
+
+    thread: ThreadRef
+    source: str = ""
+    message_count: int = 0
+    pending_state_dropped: bool = False
 
 
 class ThreadOwnershipError(Exception):
@@ -311,6 +375,50 @@ def retention_cutoff(
     return now - timedelta(days=int(retention.max_age_days))
 
 
+def parse_timestamp(value: Any) -> datetime | None:
+    """Um dos carimbos ISO-8601 do índice (``created_at``/``updated_at``) como
+    ``datetime`` ciente de fuso, ou ``None`` quando não dá para ler.
+
+    Duas tolerâncias deliberadas, porque o carimbo vem de hosts diferentes:
+    ``Z`` no fim (que nem toda versão de Python aceita em ``fromisoformat``) e
+    carimbo ingênuo, lido como UTC — o índice é escrito em UTC por construção.
+    Qualquer outra coisa é ``None``, e ``None`` NUNCA vence (ver
+    :func:`thread_expired`).
+    """
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if not isinstance(value, str) or not value.strip():
+        return None
+    texto = value.strip()
+    if texto.endswith(("Z", "z")):
+        texto = texto[:-1] + "+00:00"
+    try:
+        lido = datetime.fromisoformat(texto)
+    except ValueError:
+        return None
+    return lido if lido.tzinfo else lido.replace(tzinfo=timezone.utc)
+
+
+def thread_expired(thread: ThreadRef, cutoff: datetime | None) -> bool:
+    """A conversa venceu — ``updated_at`` é ANTERIOR ao corte.
+
+    Fail-safe nos dois eixos que erram para o lado errado quando invertidos:
+
+    * ``cutoff`` ``None`` (sem política) → nunca vence;
+    * carimbo ausente ou ilegível → nunca vence. Uma linha que não se consegue
+      datar é uma linha sobre a qual não se tem opinião, e a opinião default de
+      um apagador tem de ser "não". O custo do falso-negativo é guardar demais;
+      o do falso-positivo é a conversa de alguém.
+
+    A comparação é ESTRITA (``<``): uma conversa exatamente na idade limite
+    ainda está dentro dela.
+    """
+    if cutoff is None:
+        return False
+    quando = parse_timestamp(thread.updated_at)
+    return quando is not None and quando < cutoff
+
+
 # ── os Protocols ────────────────────────────────────────────────────────
 
 
@@ -394,6 +502,69 @@ class ThreadIndexPort(Protocol):
 
 
 @runtime_checkable
+class ThreadPurgePort(Protocol):
+    """As duas primitivas que **só quem tem a conexão** consegue cumprir, e que
+    são tudo o que :func:`sweep_retention` precisa do host.
+
+    São duas, e não uma varredura inteira, de propósito: o ALGORITMO (qual é o
+    corte, quem venceu, em que ordem apagar, o que reportar) é do SDK, para que
+    dois hosts não interpretem a mesma política de dois jeitos; o que sobra para
+    o host é uma consulta e um delete — o que ele já sabe escrever no seu
+    dialeto. Um host que implementasse a varredura inteira reescreveria a
+    política, e é aí que "30 dias" vira dois números diferentes.
+    """
+
+    async def expired_threads(
+        self,
+        *,
+        cutoff: datetime,
+        copilot: str | None = None,
+        limit: int = 100,
+    ) -> Sequence[ThreadRef]:
+        """As conversas com ``updated_at`` anterior a ``cutoff``, mais antigas
+        primeiro, no máximo ``limit``.
+
+        O filtro ``copilot`` não é enfeite: a retenção é declarada no documento
+        do **Copilot**, então uma varredura sem esse recorte aplicaria a
+        política de um copiloto às conversas de outro. ``None`` = todos, e só é
+        legítimo quando o host sabe que a política é única.
+
+        O lote existe para que a varredura seja repetível: quem chama roda até
+        vir vazio, e uma queda no meio não deixa trabalho perdido.
+        """
+        ...
+
+    async def delete_thread(self, thread_id: str) -> bool:
+        """Apaga a linha de ÍNDICE da conversa. ``True`` = havia algo e sumiu.
+
+        Não apaga o transcript — ele vive no mecanismo do framework, fora do
+        alcance do índice. Quem tem as duas metades passa também um
+        :class:`TranscriptPurgePort` para :func:`sweep_retention`.
+
+        Idempotente por contrato: apagar o que já não existe é ``False``, nunca
+        erro — uma varredura interrompida é retomada, não reparada.
+        """
+        ...
+
+
+@runtime_checkable
+class TranscriptPurgePort(Protocol):
+    """A metade do apagamento que só o FRAMEWORK consegue: sumir com o
+    transcript de fato (no LangGraph, as linhas de checkpoint do thread).
+
+    Protocol separado pela mesma razão que separa leitura de índice: um adapter
+    de framework não sabe de quem é a conversa nem quando ela venceu, e um
+    índice não alcança o checkpoint. Juntar os dois num tipo só obrigaria
+    alguém a stubar metade.
+    """
+
+    async def delete_transcript(self, thread_id: str) -> None:
+        """Apaga o que o framework guarda do thread. Idempotente: um thread sem
+        checkpoint não é erro."""
+        ...
+
+
+@runtime_checkable
 class ThreadStorePort(ThreadTranscriptPort, ThreadIndexPort, Protocol):
     """O contrato INTEIRO: índice + transcript + a escrita de portabilidade.
 
@@ -423,6 +594,156 @@ class ThreadStorePort(ThreadTranscriptPort, ThreadIndexPort, Protocol):
         atravessa, e o envelope já dizia isso.
         """
         ...
+
+
+# ── os verbos (o algoritmo mora aqui, a conexão mora no host) ───────────
+
+
+async def sweep_retention(
+    index: ThreadPurgePort,
+    retention: ThreadRetention | None,
+    *,
+    transcript: TranscriptPurgePort | None = None,
+    copilot: str | None = None,
+    now: datetime | None = None,
+    limit: int = 100,
+    dry_run: bool = False,
+) -> RetentionSweep:
+    """Aplica UMA passada da retenção declarada. É o "quem varre" que faltava.
+
+    O DNA carregava o número (``retention.max_age_days``) e a conta
+    (:func:`retention_cutoff`) desde a fatia 1, e nada mais: o slot existia sem
+    ninguém que agisse sobre ele. Este verbo age — sobre as primitivas do host,
+    sem abrir conexão nenhuma e sem depender de scheduler algum. Quem chama é um
+    job do host (cron, worker, comando), e chamar em laço até ``expired`` vir
+    vazio é o uso previsto.
+
+    A ordem do apagamento é contrato, não detalhe: **transcript primeiro,
+    índice depois**. Se o processo morre no meio, a linha de índice sobrevive, a
+    passada seguinte reencontra o thread e termina o serviço. A ordem inversa
+    deixaria checkpoint órfão — dado que ninguém mais lista, ninguém mais apaga
+    e ninguém mais sabe que existe.
+
+    ``dry_run`` seleciona e reporta sem apagar nada: é como se olha uma política
+    de retenção nova antes de confiar nela.
+    """
+    cutoff = retention_cutoff(retention, now=now)
+    if cutoff is None:
+        # Sem política declarada a porta NÃO é consultada. Guardar para sempre é
+        # o default de quem não declara nada, e uma varredura que "não achou
+        # nada" seria indistinguível de uma que não devia ter rodado.
+        return RetentionSweep(cutoff=None, dry_run=dry_run)
+
+    vencidas = await index.expired_threads(cutoff=cutoff, copilot=copilot, limit=limit)
+    ids = tuple(t.thread_id for t in vencidas if t.thread_id)
+    if dry_run:
+        return RetentionSweep(cutoff=cutoff, expired=ids, deleted=0, dry_run=True)
+
+    apagadas = 0
+    for thread_id in ids:
+        if transcript is not None:
+            await transcript.delete_transcript(thread_id)
+        if await index.delete_thread(thread_id):
+            apagadas += 1
+    return RetentionSweep(cutoff=cutoff, expired=ids, deleted=apagadas, dry_run=False)
+
+
+# ── o envelope atravessando processo ────────────────────────────────────
+
+
+def export_to_json(export: TranscriptExport) -> dict[str, Any]:
+    """O envelope em JSON puro — dicts, listas e escalares, nada de dataclass.
+
+    Existe porque "exporta do backend velho, importa no novo" atravessa um
+    arquivo ou um corpo HTTP, e sem um codec no contrato cada host inventaria a
+    sua serialização do MESMO envelope. Duas serializações do mesmo dado é a
+    divergência silenciosa de sempre, só que na fronteira mais cara de todas.
+    """
+    return {
+        "format": export.format,
+        "thread_id": export.thread_id,
+        "source": export.source,
+        "exported_at": export.exported_at,
+        "pending_state_dropped": export.pending_state_dropped,
+        "messages": [dict(m) for m in export.messages],
+        "state": dict(export.state),
+    }
+
+
+def export_from_json(payload: Mapping[str, Any]) -> TranscriptExport:
+    """Lê um envelope serializado — checando o ``format`` ANTES do corpo.
+
+    Um formato desconhecido é ``ValueError``, jamais uma leitura otimista: o
+    corpo de um transcript de outra versão pode até se parecer com este, e
+    "quase certo" numa conversa importada é pior do que recusar.
+    """
+    if not isinstance(payload, Mapping):
+        raise TypeError("transcript export payload must be a mapping")
+    formato = payload.get("format")
+    if formato != TRANSCRIPT_FORMAT:
+        raise ValueError(
+            f"unknown transcript format {formato!r}; this reader "
+            f"reads {TRANSCRIPT_FORMAT!r}"
+        )
+    mensagens = payload.get("messages") or ()
+    if not isinstance(mensagens, (list, tuple)):
+        raise ValueError("transcript export 'messages' must be a list")
+    estado = payload.get("state") or {}
+    if not isinstance(estado, Mapping):
+        raise ValueError("transcript export 'state' must be an object")
+    return TranscriptExport(
+        thread_id=str(payload.get("thread_id") or ""),
+        messages=tuple(dict(m) for m in mensagens if isinstance(m, Mapping)),
+        state=dict(estado),
+        format=TRANSCRIPT_FORMAT,
+        source=str(payload.get("source") or ""),
+        exported_at=str(payload.get("exported_at") or ""),
+        pending_state_dropped=bool(payload.get("pending_state_dropped")),
+    )
+
+
+async def migrate_thread(
+    source: ThreadTranscriptPort,
+    target: ThreadStorePort,
+    thread_id: str,
+    *,
+    owner: str,
+    state_keys: Sequence[str] | None = None,
+    target_thread_id: str | None = None,
+    workspace: str | None = None,
+    tenant: str | None = None,
+    copilot: str | None = None,
+    surface: str | None = None,
+) -> ThreadMigration:
+    """Troca de framework, para UMA conversa, em uma chamada: exporta de onde
+    ela está e importa onde ela vai passar a estar.
+
+    A fatia 1 deixou as duas metades prontas e ninguém as juntando — e um
+    caminho que existe só como "chame A e depois B" é um caminho que cada host
+    percorre à sua maneira, inclusive errando a ordem dos donos. Aqui a posse é
+    afirmada UMA vez, no destino: importar sobre thread alheio levanta
+    :class:`ThreadOwnershipError` antes de qualquer escrita.
+
+    O que atravessa é o histórico visível. O run pendente fica — e o resultado
+    diz, em vez de deixar o chamador descobrir quando o usuário reabrir a
+    conversa e a aprovação não estiver mais lá.
+    """
+    export = await source.export_transcript(thread_id, state_keys=state_keys)
+    ref = await target.import_transcript(
+        export,
+        owner=owner,
+        thread_id=target_thread_id or thread_id,
+        workspace=workspace,
+        tenant=tenant,
+        copilot=copilot,
+        surface=surface,
+    )
+    return ThreadMigration(
+        thread=ref,
+        source=export.source,
+        message_count=len(export.messages),
+        pending_state_dropped=export.pending_state_dropped,
+    )
 
 
 # ── implementação de referência ─────────────────────────────────────────
@@ -507,6 +828,34 @@ class InMemoryThreadStore:
     async def thread_owner(self, thread_id: str) -> str | None:
         ref = self._threads.get(thread_id)
         return ref.owner if ref else None
+
+    # -- retenção ------------------------------------------------------
+
+    async def expired_threads(
+        self,
+        *,
+        cutoff: datetime,
+        copilot: str | None = None,
+        limit: int = 100,
+    ) -> Sequence[ThreadRef]:
+        rows = [
+            t
+            for t in self._threads.values()
+            if (copilot is None or t.copilot == copilot) and thread_expired(t, cutoff)
+        ]
+        # Mais ANTIGAS primeiro: um lote que começa pelas recentes deixa as
+        # vencidas há mais tempo para o fim, que é exatamente ao contrário do
+        # que uma retenção quer.
+        rows.sort(key=lambda t: t.updated_at or "")
+        return rows[: max(0, limit)]
+
+    async def delete_thread(self, thread_id: str) -> bool:
+        return self._threads.pop(thread_id, None) is not None
+
+    async def delete_transcript(self, thread_id: str) -> None:
+        # Idempotente: aqui o transcript é um dict; num framework de verdade é o
+        # checkpoint dele. Nos dois casos, apagar o que não existe não é erro.
+        self._transcripts.pop(thread_id, None)
 
     # -- transcript ----------------------------------------------------
 
@@ -593,16 +942,26 @@ __all__ = [
     "Transcript",
     "TranscriptExport",
     "ThreadRetention",
+    "ThreadMigration",
+    "RetentionSweep",
     "ConversationBinding",
     "ThreadOwnershipError",
     "ThreadTranscriptPort",
     "ThreadIndexPort",
+    "ThreadPurgePort",
+    "TranscriptPurgePort",
     "ThreadStorePort",
     "InMemoryThreadStore",
     "can_read_thread",
     "derive_title",
+    "export_from_json",
+    "export_to_json",
     "message_role",
     "message_text",
+    "migrate_thread",
+    "parse_timestamp",
     "resolve_conversation",
     "retention_cutoff",
+    "sweep_retention",
+    "thread_expired",
 ]

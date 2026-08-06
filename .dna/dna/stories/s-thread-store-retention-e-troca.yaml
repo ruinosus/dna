@@ -1,0 +1,78 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-thread-store-retention-e-troca
+spec:
+  title: 'Fatia 2 de spec-conversa-como-dado-do-dna (i-084 do dna-cloud): quem APLICA a re'
+  description: 'Fatia 2 de spec-conversa-como-dado-do-dna (i-084 do dna-cloud): quem APLICA a retencao e como a troca de framework acontece de verdade. A fatia 1 deixou o slot e a conta (retention_cutoff) sem ninguem que varre, e deixou export/import como duas metades que ninguem junta. Esta fatia entrega o VERBO da varredura (algoritmo no SDK, conexao no host), o codec JSON do envelope (sem ele o envelope nao atravessa processo) e migrate_thread (a troca de framework em uma chamada). Zero I/O novo no SDK — nada de psycopg.'
+  status: in-progress
+  feature: f-copilot-langgraph-target
+  acceptance_criteria:
+  - Given um Copilot com retention.max_age_days declarado e um host que implementa as duas primitivas da porta, When sweep_retention roda, Then as conversas vencidas sao selecionadas pela MESMA conta (retention_cutoff) e apagadas, e o resultado diz quantas
+  - Given um copiloto SEM retencao declarada, When sweep_retention roda, Then nada e apagado e a porta NAO e sequer consultada — guardar para sempre e o default, e um default que apaga seria o pior bug possivel
+  - Given um envelope de export gravado em JSON pelo backend velho, When ele e lido por export_from_json e importado no backend novo, Then a conversa visivel atravessa e um formato desconhecido e RECUSADO em vez de adivinhado
+  - Given um thread com run pendente na origem, When migrate_thread roda, Then a conversa atravessa e o resultado diz em voz alta que o run pendente ficou para tras
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - porta + verbos + codec com testes pytest (kit rodando contra a implementacao de referencia em memoria); suite de runtime verde; zero dependencia nova; o que depende de quem tem a conexao fica REGISTRADO com dono
+  definition_of_done_source: cli-create
+  created_at: '2026-08-05T23:59:28+00:00'
+  updated_at: '2026-08-06T00:23:57+00:00'
+  timeline:
+  - at: '2026-08-05T23:59:28+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-06T00:04:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-06T00:15:01+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-s-thread-store-retention-e-troca
+    summary: TestGuide tg-s-thread-store-retention-e-troca (manual)
+  - at: '2026-08-06T00:15:05+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-s-thread-store-retention-e-troca-20260806-001503
+    summary: TestRun tr-tg-s-thread-store-retention-e-troca-20260806-001503 → pass
+    outcome: pass
+  - at: '2026-08-06T00:16:02+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'O QUE FICOU FORA, com dono e razao — a instrucao era PARAR e registrar quando a fatia dependesse de quem tem a conexao, e ela depende em tres pontos. (1) A implementacao Postgres de ThreadPurgePort (expired_threads + delete_thread) e do HOST: o dna-cloud ja tem a tabela copilot_thread e o gate ASGI; promove-los a implementacao da porta e a fatia dele, e o SDK nao deve carregar psycopg para isso. Foi por essa razao que a varredura ficou com DUAS primitivas em vez de um metodo unico — o algoritmo (corte, quem venceu, ordem do apagamento, o que reportar) fica aqui, no SDK, para que dois hosts nao leiam a mesma politica de dois jeitos; o que sobra para o host e uma consulta e um delete no dialeto dele. (2) O JOB que chama sweep_retention: nenhum scheduler sobe com esta porta e nenhum vai subir — cron, worker ou comando e decisao de operacao, com custo recorrente, e no caso do dna-cloud um container que nao dorme e ~US/mes. O verbo esta pronto para ser chamado de um job que ja exista. (3) O adapter de thread do backend MAF continua com o gap DECLARADO no handle (thread_store = None); fechar exige o contrato de message store daquele framework, e nada nesta fatia mudou isso. Registro tambem o que a busca antes de construir mudou no desenho: eu ia escrever o apagamento do transcript, e o grep na dependencia que JA temos achou BaseCheckpointSaver.adelete_thread — o apagador oficial, que conhece as tabelas de blobs e writes que eu teria esquecido. A pergunta que pegou foi a especifica (''isto ja esta numa dependencia que este pacote carrega?''), nao a generica.'
+    commit_ref: ab396988f1f0f9fc215879eb3d1bb661cba46b64
+  - at: '2026-08-06T00:16:34+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/319'
+    pr_url: https://github.com/ruinosus/dna/pull/319
+  - at: '2026-08-06T00:23:57+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR dna#319 aberto com as duas fatias, CI INTEIRAMENTE VERDE: sdk-py 3.12/3.13, cli 3.12/3.13, postgres, client-py 3.12/3.13, client-ts, brand-guard, gitleaks, docs-build, docs-links, commit-emails. Sem merge por instrucao — o bump de versao e a release sao do founder, e nada nesta branch toca versao.'
+    commit_ref: 401ae1858686968bf2c9860ed958fdb124c0e59e
+  produces:
+  - kind: Plan
+    name: plan-s-thread-store-retention-e-troca
+    role: implementation
+    at: '2026-08-06T00:04:07+00:00'
+  - kind: TestGuide
+    name: tg-s-thread-store-retention-e-troca
+    role: test-guide
+    at: '2026-08-06T00:15:01+00:00'
+  - kind: TestRun
+    name: tr-tg-s-thread-store-retention-e-troca-20260806-001503
+    role: test-run
+    at: '2026-08-06T00:15:05+00:00'

@@ -28,6 +28,21 @@ viu ao vivo, byte a byte.
   chamar aqui; esta classe devolve o que o checkpoint tem, sem opinião.
 * **Escrita.** Não há ``import_transcript``: importar significaria fabricar
   checkpoints, e é aí que a dupla escrita entraria pela porta dos fundos.
+
+## E o APAGAR mora numa classe à parte
+
+:class:`LangGraphTranscriptPurge` cumpre a metade de expurgo
+(:class:`~dna.runtime.thread_store.TranscriptPurgePort`), e é uma classe
+separada de propósito: a projeção acima promete não escrever nada, e uma
+promessa dessas não sobrevive a um método que apaga. Quem só lê nunca recebe o
+apagador.
+
+Ela também não escreve DELETE nenhum — delega ao ``adelete_thread`` do
+checkpointer, o apagador **oficial** do framework (parte do contrato
+``BaseCheckpointSaver``, implementado por cada backend de checkpoint). A regra
+da casa vale para o apagar como vale para o ler: existindo a implementação
+oficial, ela é obrigatória — e ela sabe de tabelas (blobs, writes) que uma
+varredura nossa esqueceria.
 """
 from __future__ import annotations
 
@@ -102,4 +117,35 @@ class LangGraphTranscriptStore:
         )
 
 
-__all__ = ["LangGraphTranscriptStore"]
+class LangGraphTranscriptPurge:
+    """Apaga o que o LangGraph guarda de um thread, pelo caminho oficial.
+
+    Aceita o grafo compilado (de onde tira o ``checkpointer``) ou o checkpointer
+    direto — quem varre num job normalmente tem o segundo, sem grafo montado.
+
+    Sem checkpointer não há o que apagar, e isso é um caso NORMAL (um copiloto
+    em memória), não um erro: a chamada vira no-op. Recusar ali transformaria
+    "este copiloto não persiste" numa exceção no meio de uma varredura.
+    """
+
+    def __init__(self, graph_or_checkpointer: Any) -> None:
+        self._alvo = graph_or_checkpointer
+
+    def _checkpointer(self) -> Any:
+        alvo = self._alvo
+        # Um grafo compilado expõe `.checkpointer`; um checkpointer expõe
+        # `adelete_thread`. Perguntar pelo MÉTODO (e não pelo tipo) é o que
+        # deixa um backend de terceiro servir sem herdar nada nosso.
+        if hasattr(alvo, "adelete_thread"):
+            return alvo
+        return getattr(alvo, "checkpointer", None)
+
+    async def delete_transcript(self, thread_id: str) -> None:
+        checkpointer = self._checkpointer()
+        apagar = getattr(checkpointer, "adelete_thread", None)
+        if apagar is None:
+            return
+        await apagar(thread_id)
+
+
+__all__ = ["LangGraphTranscriptStore", "LangGraphTranscriptPurge"]

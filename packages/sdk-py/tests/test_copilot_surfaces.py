@@ -239,3 +239,64 @@ async def test_interaction_voice_campo_morto_e_vetado(kernel):
     doc["spec"]["interaction"] = {"voice": {"archetype": "sábio"}}
     with pytest.raises(SpecValidationError):
         await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
+
+
+@pytest.mark.asyncio
+async def test_interaction_sandbox_presenca_liga(kernel):
+    """i-097: o bloco `sandbox` entra JUNTO com o runtime que o lê (o executor
+    de scripts de skill shipou em dna-cloud#319 e já faz o merge). Presença
+    liga — `{}` funciona e significa "sem rebaixamento": valem os limites
+    operacionais do host."""
+    doc = _copilot([])
+    doc["spec"]["interaction"] = {"sandbox": {}}
+    await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
+    lido = await kernel.get_document("fluxos", "Copilot", "memory-copilot")
+    assert "sandbox" in lido["spec"]["interaction"]
+
+    doc["spec"]["interaction"] = {
+        "sandbox": {
+            "budget": {"max_execute_seconds": 30, "max_session_seconds": 120},
+            "allow_internet": False,
+        }
+    }
+    await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
+    bloco = (await kernel.get_document("fluxos", "Copilot", "memory-copilot"))[
+        "spec"
+    ]["interaction"]["sandbox"]
+    assert bloco["budget"] == {"max_execute_seconds": 30, "max_session_seconds": 120}
+    assert bloco["allow_internet"] is False
+
+
+@pytest.mark.asyncio
+async def test_interaction_sandbox_campo_sem_leitor_e_vetado(kernel):
+    """A regra F4 aplicada ao bloco novo: o orçamento de UPLOAD é constante do
+    host — o merge do runtime preserva o valor dele e nunca olha o doc. Um campo
+    que ninguém lê renderiza como se funcionasse; declarar tem de ser ERRO."""
+    from dna.kernel.protocols import SpecValidationError
+
+    doc = _copilot([])
+    doc["spec"]["interaction"] = {"sandbox": {"max_upload_bytes": 9_000_000}}
+    with pytest.raises(SpecValidationError):
+        await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
+
+    doc["spec"]["interaction"] = {"sandbox": {"budget": {"max_upload_bytes": 9_000_000}}}
+    with pytest.raises(SpecValidationError):
+        await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
+
+
+@pytest.mark.asyncio
+async def test_interaction_sandbox_recusa_o_que_seria_grampeado_em_silencio(kernel):
+    """Os tetos ABSOLUTOS estão no schema porque um número acima deles não é um
+    rebaixamento — é um pedido que o runtime cortaria calado. Recusar na escrita
+    é o único momento em que alguém ainda lê a mensagem."""
+    from dna.kernel.protocols import SpecValidationError
+
+    doc = _copilot([])
+    for budget in (
+        {"max_execute_seconds": 3600},   # acima do teto de UM comando
+        {"max_execute_seconds": 0},      # nem existe execução de zero segundo
+        {"max_session_seconds": 86_400}, # um dia de sandbox é um job, não um turno
+    ):
+        doc["spec"]["interaction"] = {"sandbox": {"budget": budget}}
+        with pytest.raises(SpecValidationError):
+            await kernel.write_document("fluxos", "Copilot", "memory-copilot", doc)
