@@ -291,3 +291,56 @@ def test_o_motor_vem_da_politica_e_desconhecido_degrada():
                                             "engine_agent": "memory-reconciler"}}).engine == "pipeline-agent"
     assert resolve_ingestion({"ingestion": {"engine": "blockchain"}}).engine == "pipeline"
     assert resolve_ingestion(None).engine == "pipeline"
+
+
+# ── i-101/i-102: um override IDÊNTICO ao default não é override ────────────
+#
+# A armadilha que `get_template` SERVIR o default abriu: um host que lê a voz
+# pela porta e a devolve como `template=` entregaria, para o caso "ninguém
+# sobrescreveu nada", um texto igual ao default — e o caminho de override pula
+# a interpolação da política.
+
+
+def test_override_igual_ao_default_nao_apaga_a_politica():
+    """`never`/`always`/`max_facts` PRECISAM sobreviver quando o "override" é
+    o próprio default. Sem esta regra, um workspace com política perderia as
+    linhas dela do prompt, em silêncio e para sempre."""
+    from dna.memory.ingestion import IngestionPolicy, extraction_prompt
+    from dna.prompt_defaults import prompt_default
+
+    politica = IngestionPolicy(never=["saúde"], always=["prazo"], max_facts_per_turn=2)
+    servido = prompt_default("memory-extraction").body  # o que get_template devolve
+
+    com_override = extraction_prompt("T", politica, template=servido)
+    sem_override = extraction_prompt("T", politica)
+
+    assert com_override == sem_override
+    assert "NUNCA extraia nada sobre: saúde" in com_override
+    assert "Preste atenção especial a: prazo" in com_override
+    assert "no máximo 2" in com_override
+
+
+def test_override_igual_ao_default_nao_apaga_a_opcao_escalate():
+    """O mesmo, na etapa 2: o corpo servido pelo catálogo é renderizado SEM a
+    opção `escalate` (ela só existe quando o motor a permite). Tratá-lo como
+    override tiraria do árbitro a razão de existir."""
+    from dna.memory.ingestion import ESCALATE, reconciliation_prompt
+    from dna.prompt_defaults import prompt_default
+
+    servido = prompt_default("memory-reconciliation").body
+
+    com_override = reconciliation_prompt(
+        ["f"], [], template=servido, allow_escalate=True
+    )
+    sem_override = reconciliation_prompt(["f"], [], allow_escalate=True)
+
+    assert com_override == sem_override
+    assert f'"{ESCALATE}"' in com_override
+
+
+def test_um_override_DE_VERDADE_continua_vencendo():
+    """O mutante óbvio da regra acima é ela engolir overrides legítimos."""
+    from dna.memory.ingestion import extraction_prompt
+
+    saida = extraction_prompt("ABC", template="VOZ DA CASA: {transcript}")
+    assert saida == "VOZ DA CASA: ABC"

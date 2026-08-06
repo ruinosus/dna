@@ -82,11 +82,15 @@ def test_list_and_get_skills(toolkit_scope):
 
 
 def test_get_template_unknown_raises(toolkit_scope):
+    """A name that is neither authored NOR a known runtime default IS an error
+    — and the message now says which of the two it failed to be. i-101 narrowed
+    the old blanket ``not found``; it did not remove it."""
+
     async def scenario():
         live = await M.boot_live(base_dir=str(toolkit_scope))
         await M.get_template_impl(live, "nope", scope="kit")
 
-    with pytest.raises(ValueError, match="not found"):
+    with pytest.raises(ValueError, match="not a known runtime default"):
         asyncio.run(scenario())
 
 

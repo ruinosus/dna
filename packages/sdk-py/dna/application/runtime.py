@@ -33,6 +33,13 @@ from dna.application.namespace_assignment import (
 )
 from dna.kernel.protocols import LayerPolicyViolationError  # noqa: F401  (re-exported for the face)
 from dna.kernel.query.kind_graph import build_kind_graph
+from dna.prompt_defaults import (
+    ORIGIN_DOCUMENT,
+    ORIGIN_RUNTIME_DEFAULT,
+    prompt_default,
+    prompt_defaults,
+    runtime_default_note,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -377,8 +384,23 @@ async def read_definition_impl(
     eff_mi = await live.mi(scope, tenant) if tenant else base_mi
     base = await _doc_spec_for(live, base_mi, kind, name)
     effective = await _doc_spec_for(live, eff_mi, kind, name, tenant=tenant)
+    runtime_default = None
     if effective is None and base is None:
-        raise ValueError(f"no {kind} named {name!r} in scope {scope!r}")
+        # THE THIRD RUNG again (i-101/i-102), on the surface the portal's
+        # "Personalizar" reads. No doc at either layer used to raise here, so
+        # an editor opening a template whose runtime default is in effect got a
+        # 404 and had to fall back to a HARDCODED copy of the default text
+        # (``memory-template-defaults.ts``) — the copy that i-102 is about.
+        # Served here, the editor starts from the text that actually runs, and
+        # the copy has no reason to exist.
+        runtime_default = prompt_default(name, kind=kind)
+        if runtime_default is None:
+            raise ValueError(f"no {kind} named {name!r} in scope {scope!r}")
+        base = {
+            "body": runtime_default.body,
+            "description": runtime_default.description,
+            "variables": list(runtime_default.variables),
+        }
     overridden = await _tenant_layer_doc_exists(live, scope, tenant, kind, name)
     port = live.kernel.kind_port_for(kind)
     ui_schema = dict(getattr(port, "ui_schema", {}) or {}) if port else {}
@@ -428,6 +450,15 @@ async def read_definition_impl(
         "overlayable": kind_overlayable,
         "effective": effective if effective is not None else (base or {}),
         "base": base,
+        # Which rung the ``base`` came from. ``document`` for every read that
+        # already worked (so nothing existing changes shape meaningfully);
+        # ``runtime-default`` says the editor is looking at code, not at a
+        # stored doc, and saving will CREATE the first one.
+        "origin": ORIGIN_RUNTIME_DEFAULT if runtime_default else ORIGIN_DOCUMENT,
+        "note": (
+            runtime_default_note(name, scope, kind, runtime_default.module)
+            if runtime_default else None
+        ),
         "ui_schema": ui_schema,
         "overlayable_fields": list(overlayable),
         "pattern": pattern,
@@ -735,6 +766,25 @@ async def reconcile_forks_impl(
 # becomes versioned, governed, portable policy, not per-repo files). Both Kinds
 # are in ``DEFAULT_INHERITABLE_KINDS_V1`` — the overlay is the kernel's, not new
 # machinery here.
+#
+# ⭐ THE THIRD RUNG (i-101/i-102). Resolution here reads: tenant overlay → base
+# doc → **the runtime default**. That third rung always ran (it is the code
+# constant the SDK falls back to) but was never DECLARED, so these ports
+# reported it as absence: ``get_template('memory-recall-briefing')`` raised
+# ``not found`` for the NORMAL state of a fresh install, where the voice is
+# working fine. An error raised when nothing broke teaches a person — and a
+# model — to ignore the next one, including the real one.
+#
+# So absence stops being a failure and becomes a stated ORIGIN, mirroring the
+# portal's ``Sourced<T>`` (``live``/``sample``/``unprovisioned`` are said
+# states, not errors):
+#
+#   origin="document"        an authored doc won (tenant overlay or scope base)
+#   origin="runtime-default" no doc here; the SDK's built-in voice is what runs
+#
+# A name that is NEITHER authored NOR a known runtime default still raises —
+# that one IS a caller error, and the message now says which of the two it
+# failed to be, and lists what the runtime does offer.
 
 
 async def _query_rows(
@@ -754,23 +804,58 @@ def _row_name(row: dict[str, Any]) -> str | None:
     return row.get("name") if isinstance(row, dict) else None
 
 
+def _not_authored_error(kind: str, name: str, scope: str) -> ValueError:
+    """The message for a name that is neither authored NOR a runtime default.
+
+    It names the two things it failed to be and lists what the runtime does
+    offer — a bare ``not found`` sends the caller (often a model) guessing at
+    spelling when the real answer is "that voice does not exist, these do"."""
+    known = [d.name for d in prompt_defaults(kind=kind)]
+    tail = f"; runtime defaults available: {known}" if known else ""
+    return ValueError(
+        f"{kind} {name!r} is not authored in scope {scope!r} and is not a known "
+        f"runtime default{tail}"
+    )
+
+
 async def list_templates_impl(
     live: LiveDna, scope: str | None = None, tenant: str | None = None
 ) -> dict[str, Any]:
     """List the PromptTemplates in ``scope`` (name + description + variable
     count), tenant-aware. The Spec Kit templates ingested by
-    ``dna specify install-templates`` surface here — servable to any client."""
+    ``dna specify install-templates`` surface here — servable to any client.
+
+    The listing INCLUDES the runtime defaults that no document overrides yet,
+    each marked ``origin="runtime-default"``. Without them the catalog answered
+    "empty" for a deployment whose voices were all working — and a default you
+    can only reach by already knowing its name is a capability with no door."""
     sc = scope or live.base_scope
     templates: list[dict[str, Any]] = []
+    authored: set[str] = set()
     for row in await _query_rows(live, sc, "PromptTemplate", tenant):
         spec = row.get("spec") or {}
         spec = spec if isinstance(spec, dict) else {}
         variables = spec.get("variables") or []
+        nome = _row_name(row)
+        if nome:
+            authored.add(nome)
         templates.append({
-            "name": _row_name(row),
+            "name": nome,
             "description": spec.get("description") or "",
             "variables_count": len(variables) if isinstance(variables, list) else 0,
             "tags": spec.get("tags") or [],
+            "origin": ORIGIN_DOCUMENT,
+        })
+    for d in prompt_defaults():
+        if d.name in authored:
+            continue  # o doc VENCE — a direção do i-102, e é ela que não pode inverter
+        templates.append({
+            "name": d.name,
+            "description": d.description,
+            "variables_count": len(d.variables),
+            "tags": list(d.tags),
+            "origin": ORIGIN_RUNTIME_DEFAULT,
+            "module": d.module,
         })
     templates.sort(key=lambda t: t["name"] or "")
     return {"scope": sc, "templates": templates}
@@ -781,11 +866,19 @@ async def get_template_impl(
 ) -> dict[str, Any]:
     """Fetch one PromptTemplate's full body + variables, tenant-aware. With
     ``tenant`` set the per-workspace/tenant OVERLAY wins (no redeploy) — the
-    Layer 3 governance payoff."""
+    Layer 3 governance payoff.
+
+    Always answers with an ``origin``. No authored document + a known runtime
+    default is NOT an error (i-101): it is the normal state of a fresh scope,
+    and the reply serves the body that actually runs, says where it comes from,
+    and says how to override it."""
     sc = scope or live.base_scope
     raw = await live.kernel.get_document(sc, "PromptTemplate", name, tenant=tenant)
     if raw is None:
-        raise ValueError(f"PromptTemplate {name!r} not found in scope {sc!r}")
+        built_in = prompt_default(name)
+        if built_in is None:
+            raise _not_authored_error("PromptTemplate", name, sc)
+        return built_in.row(sc, tenant=tenant)
     spec = raw.get("spec") or {}
     spec = spec if isinstance(spec, dict) else {}
     return {
@@ -796,6 +889,7 @@ async def get_template_impl(
         "variables": spec.get("variables") or [],
         "description": spec.get("description") or "",
         "tags": spec.get("tags") or [],
+        "origin": ORIGIN_DOCUMENT,
     }
 
 
@@ -803,15 +897,37 @@ async def list_skills_impl(
     live: LiveDna, scope: str | None = None, tenant: str | None = None
 ) -> dict[str, Any]:
     """List the Skills in ``scope`` (name + description), tenant-aware. The Spec
-    Kit slash-command definitions ingested as Skills surface here."""
+    Kit slash-command definitions ingested as Skills surface here.
+
+    Runs through the SAME third-rung merge as ``list_templates_impl`` — the
+    sibling check the two issues asked for. Today the SDK registers no built-in
+    Skill voice, so the merged set is empty and the answer is byte-identical to
+    before; the rung is wired anyway so that a package which DOES ship a
+    built-in Skill (or a host registering one) is served, instead of being the
+    next surface to report a working default as a failure."""
     sc = scope or live.base_scope
     skills: list[dict[str, Any]] = []
+    authored: set[str] = set()
     for row in await _query_rows(live, sc, "Skill", tenant):
         meta = row.get("metadata") if isinstance(row.get("metadata"), dict) else {}
+        nome = _row_name(row)
+        if nome:
+            authored.add(nome)
         skills.append({
-            "name": _row_name(row),
+            "name": nome,
             "description": (meta.get("description") if isinstance(meta, dict) else "") or "",
             "tags": (meta.get("tags") if isinstance(meta, dict) else []) or [],
+            "origin": ORIGIN_DOCUMENT,
+        })
+    for d in prompt_defaults(kind="Skill"):
+        if d.name in authored:
+            continue
+        skills.append({
+            "name": d.name,
+            "description": d.description,
+            "tags": list(d.tags),
+            "origin": ORIGIN_RUNTIME_DEFAULT,
+            "module": d.module,
         })
     skills.sort(key=lambda s: s["name"] or "")
     return {"scope": sc, "skills": skills}
@@ -821,11 +937,23 @@ async def get_skill_impl(
     live: LiveDna, name: str, scope: str | None = None, tenant: str | None = None
 ) -> dict[str, Any]:
     """Fetch one Skill's full instruction body + metadata, tenant-aware. With
-    ``tenant`` set the per-workspace/tenant OVERLAY wins (no redeploy)."""
+    ``tenant`` set the per-workspace/tenant OVERLAY wins (no redeploy).
+
+    Same origin contract as ``get_template_impl`` (see the third-rung note)."""
     sc = scope or live.base_scope
     raw = await live.kernel.get_document(sc, "Skill", name, tenant=tenant)
     if raw is None:
-        raise ValueError(f"Skill {name!r} not found in scope {sc!r}")
+        built_in = prompt_default(name, kind="Skill")
+        if built_in is None:
+            raise _not_authored_error("Skill", name, sc)
+        row = built_in.row(sc, tenant=tenant)
+        # A Skill carries its text under ``instruction``, not ``body`` — the
+        # payload keeps the Kind's own field name so a caller does not have to
+        # learn a second shape just because the origin differs.
+        row["instruction"] = row.pop("body")
+        row.pop("variables", None)
+        row["scripts"] = []
+        return row
     spec = raw.get("spec") or {}
     spec = spec if isinstance(spec, dict) else {}
     meta = raw.get("metadata") if isinstance(raw.get("metadata"), dict) else {}
@@ -836,6 +964,7 @@ async def get_skill_impl(
         "instruction": spec.get("instruction") or "",
         "description": (meta.get("description") if isinstance(meta, dict) else "") or "",
         "scripts": sorted((spec.get("scripts") or {}).keys()) if isinstance(spec.get("scripts"), dict) else [],
+        "origin": ORIGIN_DOCUMENT,
     }
 
 

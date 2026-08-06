@@ -49,6 +49,8 @@ import os
 import pathlib
 from typing import Any, Protocol, runtime_checkable
 
+from dna.prompt_defaults import register_prompt_default
+
 logger = logging.getLogger("dna.intel.analyzer")
 
 # ── candidate insight shape (documented above) ─────────────────────────────
@@ -439,6 +441,33 @@ _DEFAULT_TEMPLATE = (
     '{"insights": [{"title": str, "fact": str, "why": str, "action": str, '
     '"pirs": [str], "citations": [{"url": str, "title": str}], '
     '"evidence_rating": "evidence-based|opinion-practice|anecdotal"}]}'
+)
+
+# i-102: as duas vozes do analyzer entram no CATÁLOGO. O engine já resolvia os
+# docs `intel-analysis`/`intel-analysis-system` e os entregava em
+# `prompt_overrides` — o caminho de override existia, faltava o default ser
+# CONHECÍVEL. Sem isto, para ajustar a voz era preciso ler este arquivo para
+# descobrir o que se estava mudando.
+register_prompt_default(
+    "intel-analysis",
+    description=(
+        "O prompt do analyzer de intel: material pesquisado + PIRs → insights "
+        "candidatos em JSON. A variável {material} é OBRIGATÓRIA — sem ela o "
+        "override é ignorado (analisaria o nada). Também aceita {name}, "
+        "{type}, {pirs} e {k}."
+    ),
+    body=lambda: _DEFAULT_TEMPLATE,
+    variables=("material",),
+    module=__name__,
+)
+register_prompt_default(
+    "intel-analysis-system",
+    description=(
+        "A mensagem de SISTEMA do analyzer de intel — quem o modelo é enquanto "
+        "faz a passada de pesquisa. Sem variáveis."
+    ),
+    body=lambda: _DEFAULT_SYSTEM,
+    module=__name__,
 )
 
 
