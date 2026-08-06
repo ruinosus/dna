@@ -177,7 +177,7 @@ dna memory remember [OPTIONS] SUMMARY
 | --- | --- |
 | `--affect` | _(default: `triumph`)_ |
 | `--area` | Scoped target area (Feature/X, Epic/Y, …). _(default: `general`)_ |
-| `--claim` | A structured assertion, so this memory can be checked against another one for CONTRADICTION and not only for repetition. `KindDefinition/livro::approval=pending`; SUBJECT defaults to --area; a leading `!` on the object means `denies`. Repeatable. |
+| `--claim` | A structured assertion, so this memory can be checked against another one for CONTRADICTION and not only for repetition. `KindDefinition/livro::approval=pending`; SUBJECT defaults to --area; a leading `!` on the object means `denies`. Repeatable. Declare one only when a LATER value of the same predicate would make this one false (a plan, a location, a status, an approval) — never for values that ACCUMULATE (likes tea AND coffee) nor for events that happened. Full rule at the bottom of --help. |
 | `--help` | Show this message and exit. |
 | `--json` |  |
 | `--kind` | _(default: `Engram`)_ |
