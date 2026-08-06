@@ -2742,7 +2742,7 @@
         "type": "object"
       },
       "KindGraphCoverage": {
-        "description": "What the graph covers — the numbers a screen must qualify itself with.\n\nThis block exists so that no consumer can honestly render the edge list as\n\"all the relations\". On the 06/08/2026 measurement the model carried 109\nschema edges of which **16** were declared; the rest was composition (66)\nor name inference (27), plus 25 reference-shaped fields left unresolved\nand 6 known-undeclarable ones. Every field here is derived from the\ncollections it counts.",
+        "description": "What the graph covers — the numbers a screen must qualify itself with.\n\nThis block exists so that no consumer can honestly render the edge list as\n\"all the relations\". On the 06/08/2026 measurement the model carried 109\nschema edges of which **16** were declared; the rest was composition (66)\nor name inference (27), plus 23 reference-shaped fields left unresolved\nand 16 known-undeclarable ones. Every field here is derived from the\ncollections it counts.",
         "properties": {
           "composition": {
             "default": 0,
@@ -2753,6 +2753,13 @@
             "default": 0,
             "title": "Declared",
             "type": "integer"
+          },
+          "declared_origins": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Declared Origins",
+            "type": "array"
           },
           "edges": {
             "title": "Edges",
@@ -2795,6 +2802,13 @@
             "default": 0,
             "title": "Unresolved",
             "type": "integer"
+          },
+          "unresolved_by_origin": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Unresolved By Origin",
+            "type": "object"
           }
         },
         "required": [
@@ -2953,7 +2967,7 @@
         "type": "object"
       },
       "KindGraphUndeclarable": {
-        "description": "A REAL reference that ``x-dna-ref`` deliberately does not declare.\n\nThe annotation resolves a target by document NAME; these fields are keyed\nby something else (an opaque id, a role id, a composite ``Kind:name``\nstring), so declaring them would produce false write-time violations on\nperfectly valid data. They are named here rather than silently missing,\nbecause a graph that hides them implies a completeness the model does not\nhave. Concrete backlog for a future ``x-dna-ref-key`` (i-040 follow-up).",
+        "description": "A REAL reference that ``x-dna-ref`` deliberately does not declare.\n\nThe annotation resolves a target by document NAME; these fields are keyed\nby something else, so declaring them would produce false write-time\nviolations on perfectly valid data. They are named here rather than\nsilently missing, because a graph that hides them implies a completeness\nthe model does not have. Two families:\n\n* **keyed** — an opaque id, a role id, a tier id. ``target`` names the Kind\n  it really points at. Still hand-kept in the SDK, and the targets are\n  resolved against the live registry by a test, because this table once\n  went on naming ``Tier`` for a release after the Kind became\n  ``PricingPlan``. Concrete backlog for a future ``x-dna-ref-key``\n  (i-040 follow-up).\n* **composite** — the value carries its own Kind (``Story:s-thing``,\n  ``Narrative/X``, ``{\"kind\": …, \"name\": …}``), so ``target`` is ``any``:\n  there is no one Kind to name. DERIVED from the schema, never enumerated —\n  either the field declares ``x-dna-ref-composite`` or its object shape\n  requires ``kind`` + ``name``.",
         "properties": {
           "field": {
             "title": "Field",
@@ -2982,7 +2996,7 @@
         "type": "object"
       },
       "KindGraphUnresolved": {
-        "description": "A field that clearly points at SOMETHING the model cannot name — a\n``x-dna-ref`` naming an unregistered Kind, a ``dep_filters`` alias nobody\nclaims, or a reference-shaped field name matching no Kind.\n\nReturned, not dropped: this list is the honest measure of what the model\nstill cannot express, and it shrinks when references get declared — never\nwhen the projection gets cleverer.",
+        "description": "A field that clearly points at SOMETHING the model cannot name — a\n``x-dna-ref`` naming an unregistered Kind, a ``dep_filters`` alias nobody\nclaims, or a reference-shaped field name matching no Kind.\n\nReturned, not dropped: this list is the honest measure of what the model\nstill cannot express, and it shrinks when references get declared — never\nwhen the projection gets cleverer.\n\n``origin`` says WHICH of the three it is, and it is what makes the list\nusable. ``declared`` and ``composition`` are DECLARATIONS the model cannot\nhonour — somebody wrote a target and it does not resolve, which is an\nauthoring error to fix. ``shape-inferred`` is this projection guessing from\na field NAME, and is usually not a reference at all: an OAuth\n``client_id``, a Stripe customer id, an IdP subject. On the 06/08/2026\nmeasurement **every** row was ``shape-inferred``, and a screen with only\n``reason`` to go on presented all of them as broken declarations — false\nfor all of them, and the way a real one would have arrived invisible.\n``coverage.declared_origins`` names the origins worth alarm, so a consumer\nDERIVES the ranking instead of hard-coding it, and never has to translate\n``reason`` — which stays English prose for whoever reads the raw answer.",
         "properties": {
           "field": {
             "title": "Field",
@@ -2990,6 +3004,15 @@
           },
           "kind": {
             "title": "Kind",
+            "type": "string"
+          },
+          "origin": {
+            "enum": [
+              "declared",
+              "composition",
+              "shape-inferred"
+            ],
+            "title": "Origin",
             "type": "string"
           },
           "reason": {
@@ -3000,6 +3023,7 @@
         "required": [
           "kind",
           "field",
+          "origin",
           "reason"
         ],
         "title": "KindGraphUnresolved",

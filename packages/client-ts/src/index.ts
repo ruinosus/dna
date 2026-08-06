@@ -399,6 +399,14 @@ export class DnaClient {
    * (`from_kind`/`field`/`to_kind`/`cardinality`/`tier`/`polymorphic`), the
    * gap lists `unresolved` and `undeclarable`, and a `coverage` block.
    *
+   * **Rank `unresolved` by `origin`, never by `reason`.** `declared` and
+   * `composition` rows are declarations the model cannot honour — an authoring
+   * error. `shape-inferred` rows are the projection guessing from a field NAME
+   * and are usually not references at all (an OAuth `client_id`, a Stripe
+   * customer id). `coverage.declared_origins` names the ones worth alarm, so
+   * the ranking is derived from the answer instead of re-typed in a screen —
+   * and `reason` stays English prose nobody has to translate.
+   *
    * **Read the coverage block.** Its per-tier counts say how much of the graph
    * the runtime actually enforces (only `declared` — the fields carrying
    * `x-dna-ref`; `composition` comes from `dep_filters` and is never checked

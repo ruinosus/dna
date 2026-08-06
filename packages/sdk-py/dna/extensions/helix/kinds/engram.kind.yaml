@@ -99,6 +99,11 @@ spec:
         items:
           type: string
         minItems: 1
+        # Each item names its OWN target Kind (`Narrative/X`), so `x-dna-ref`
+        # cannot name one for the field — see dna.kernel.query.references.
+        # Without this the schema graph read the field NAME, matched no Kind
+        # called `source`, and filed a real reference as an unresolved gap.
+        x-dna-ref-composite: 'Kind/name'
         description: Pointers to source artifacts (Narrative/X, WorkflowEvent/Y,
           etc.) that this memory derives from.
       affect:
