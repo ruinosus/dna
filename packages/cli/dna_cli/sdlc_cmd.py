@@ -1182,6 +1182,126 @@ def produces_guard(spec: dict[str, Any]) -> list[str]:
     ]
 
 
+# ── the SERVES gate (i-117) — at the door ───────────────────────────────────
+#
+# The DECISION is ``dna.application.sdlc`` (``derive_served_spec_candidates`` /
+# ``serves_refusal`` / ``apply_spec_citation``), where the long rationale lives
+# and where the MCP write face can reach it too. What stays here is the CLI's
+# vocabulary: the flag, the pt-BR refusal, the exit codes.
+#
+# One thing is worth repeating at the door, because it IS the calibration: this
+# gate is not a required field. It refuses only when the item's own prose already
+# names an open Spec it does not cite. Replayed over the real dna-cloud board
+# (263 Stories + Features + Issues, 06/08/2026):
+#
+#   11 items (4.2%) would have been asked — and each with exactly ONE candidate,
+#      so the refusal is one line to paste, never a menu;
+#   those 11 include EVERY case i-117 was filed over: s-grafo-1 (the "zero
+#      citations, complete delivery" one), i-084 and i-087 (the two Issues whose
+#      resolutions proved two Specs and cited neither);
+#   6 items (2.3%) on the board as it stands AFTER the manual pass — the drop is
+#      the eligibility rule working: a Spec that reached a terminal state stops
+#      generating questions, because the derivation can no longer get it wrong.
+#
+# A close with nothing to answer is never asked at all.
+
+_SERVES_HELP = (
+    "Que Spec esta entrega SERVE (repetível): `Spec/<nome>`, `<nome>`, ou "
+    "`none` para afirmar que não serve nenhuma. Grava a citação bidirecional "
+    "(references ↔ cited_by) — que é de onde a execução da Spec é DERIVADA (i-117)."
+)
+
+
+def _serves_resolve(
+    s: Any, scope: str, kind: str, name: str,
+    spec: dict[str, Any], serves: tuple[str, ...] | list[str],
+) -> bool:
+    """Apply ``--serves`` to a closing work item. Returns True if ``spec`` was
+    mutated (the CALLER owns the work-item write; this writes only the Spec side).
+
+    Refuses with exit 2 for a malformed / unknown reference, and exit 1 for the
+    gate itself (an unanswered candidate) — the same split ``story done`` already
+    uses between "you typed something impossible" and "the methodology says no".
+    """
+    from dna.application.sdlc import (  # noqa: PLC0415 — cheap, keeps import graph flat
+        SERVES_NONE,
+        apply_spec_citation,
+        derive_served_spec_candidates,
+        parse_serves,
+        serves_refusal,
+        stamp_serves_none,
+    )
+
+    declared: list[str] = []
+    for raw in serves or ():
+        try:
+            declared.append(parse_serves(raw))
+        except ValueError as e:
+            click.secho(f"✗ {e}", fg="red", err=True)
+            raise SystemExit(2) from None
+    if SERVES_NONE in declared and len(set(declared)) > 1:
+        click.secho(
+            "✗ `--serves none` é exclusivo: ou a entrega serve Specs, ou não "
+            "serve nenhuma. As duas coisas juntas não são uma afirmação.",
+            fg="red", err=True,
+        )
+        raise SystemExit(2)
+
+    if not declared:
+        # Nothing declared → DERIVE the candidates and refuse only if the prose
+        # named one. Fail-open on a registry hiccup: a query that broke is not
+        # evidence of an undeclared citation, and blocking a legitimate close on
+        # it would be the guard lying in the other direction.
+        try:
+            specs = {
+                d.name: (d.spec.get("status") if isinstance(d.spec, dict) else None)
+                for d in s.query_list("Spec")
+            }
+        except Exception:  # noqa: BLE001 — never crash the gate
+            specs = {}
+        msg = serves_refusal(
+            candidates=derive_served_spec_candidates(spec, specs),
+            kind=kind, name=name,
+        )
+        if msg:
+            click.secho(f"✗ {msg}", fg="red", err=True)
+            raise SystemExit(1)
+        return False
+
+    now = _now_iso()
+    if set(declared) == {SERVES_NONE}:
+        stamp_serves_none(spec, now=now)
+        click.secho(
+            f"↳ {kind}/{name}: --serves none — entrega declarada sem Spec.",
+            fg="cyan",
+        )
+        return True
+
+    changed = False
+    for spec_name in dict.fromkeys(declared):  # ordered dedup
+        target = s.get_doc("Spec", spec_name)
+        if target is None:
+            click.secho(
+                f"✗ Spec/{spec_name} não existe. `--serves` cita uma Spec REAL — "
+                f"é exatamente isso que impede o campo de virar texto livre que "
+                f"alguém preenche para passar. Veja `dna sdlc list Spec`.",
+                fg="red", err=True,
+            )
+            raise SystemExit(2)
+        tspec = dict(target.spec) if isinstance(target.spec, dict) else {}
+        caller_changed, spec_changed = apply_spec_citation(
+            caller_kind=kind, caller_name=name, caller_spec=spec,
+            spec_name=spec_name, spec_spec=tspec, now=now,
+        )
+        changed = changed or caller_changed
+        if spec_changed:
+            s.run(s.kernel.write_instance(
+                scope, "Spec", spec_name, _build_raw("Spec", spec_name, tspec),
+            ))
+        click.secho(f"↳ CITED Spec/{spec_name} ← {kind}/{name}", fg="green")
+    return changed
+
+
 @story_group.command("done")
 @click.argument("name")
 @click.option("--commit-ref", "commit_ref", default=None,
@@ -1200,11 +1320,12 @@ def produces_guard(spec: dict[str, Any]) -> list[str]:
               help="Silencia o warn de narração.")
 @click.option("--allow-no-produces", "allow_no_produces", is_flag=True,
               help="Silencia o warn de outputs vazios (produces[] + back-refs).")
+@click.option("--serves", "serves", multiple=True, help=_SERVES_HELP)
 @_scope_option
 def cmd_story_done(
     name: str, commit_ref: str | None, no_commit: bool, allow_no_tests: bool,
     summary: str | None, note: str | None, no_narrate: bool,
-    allow_no_produces: bool, scope: str,
+    allow_no_produces: bool, serves: tuple[str, ...], scope: str,
 ) -> None:
     """Mark Story status: done; auto-stamp commit_ref + optional summary."""
     # Auto-detect HEAD when --commit-ref not passed and we're inside
@@ -1284,6 +1405,19 @@ def cmd_story_done(
             fg="red", err=True,
         )
         raise SystemExit(1)
+    # SERVES gate (i-117) — LAST block before the flip, so a close refused by the
+    # test gate above never leaves a citation behind. Its own load-modify-write
+    # (the `_post_story_note` idiom), because `_update_story_status` re-reads the
+    # doc and would otherwise clobber the `references` we just appended.
+    with open_session(scope) as _sv_s:
+        _sv_doc = _sv_s.get_doc("Story", name)
+        if _sv_doc is None:
+            raise fail(f"Story '{name}' not found in scope {scope!r}")
+        _sv_spec = dict(_sv_doc.spec) if isinstance(_sv_doc.spec, dict) else {}
+        if _serves_resolve(_sv_s, scope, "Story", name, _sv_spec, serves):
+            _sv_s.run(_sv_s.kernel.write_instance(
+                scope, "Story", name, _build_raw("Story", name, _sv_spec),
+            ))
     _update_story_status(scope, name, "done", extras, **timeline_extras)
     # Clear the active-story pointer if it referenced this Story.
     # Closing some other Story in parallel must not blank the pointer.
@@ -2331,10 +2465,11 @@ def cmd_feature_show(name: str, scope: str) -> None:
               help="Mark done even when children Stories aren't all done.")
 @click.option("--allow-no-produces", "allow_no_produces", is_flag=True,
               help="Silencia o warn de outputs vazios (produces[] + back-refs).")
+@click.option("--serves", "serves", multiple=True, help=_SERVES_HELP)
 @_scope_option
 def cmd_feature_ship(
     name: str, commit_ref: str | None, summary: str | None,
-    force: bool, allow_no_produces: bool, scope: str,
+    force: bool, allow_no_produces: bool, serves: tuple[str, ...], scope: str,
 ) -> None:
     """Cascade-close a Feature: verify all children Stories are ``done``,
     then flip ``status`` to ``done`` + auto-stamp commit_ref + summary
@@ -2375,6 +2510,10 @@ def cmd_feature_ship(
         if not allow_no_produces:
             for w in produces_guard(spec):
                 click.secho(f"⚠ {w}", fg="yellow", err=True)
+        # SERVES gate (i-117) — after the children check (a Feature with open
+        # children has a bigger problem than an unstated citation) and before the
+        # mutation, so its `references` ride the same write.
+        _serves_resolve(s, scope, "Feature", name, spec, serves)
         spec["status"] = "done"
         spec["closed_at"] = _now_iso()
         spec["updated_at"] = _now_iso()
@@ -2761,9 +2900,11 @@ def cmd_issue_triage(name: str, scope: str) -> None:
 @click.option("--resolution", default=None, help="How was it resolved?")
 @click.option("--allow-no-produces", "allow_no_produces", is_flag=True,
               help="Silencia o warn de outputs vazios (produces[] + back-refs).")
+@click.option("--serves", "serves", multiple=True, help=_SERVES_HELP)
 @_scope_option
 def cmd_issue_resolve(
-    name: str, resolution: str | None, allow_no_produces: bool, scope: str,
+    name: str, resolution: str | None, allow_no_produces: bool,
+    serves: tuple[str, ...], scope: str,
 ) -> None:
     """Mark Issue status: resolved, set closed_at + optional resolution text."""
     with open_session(scope) as s:
@@ -2776,6 +2917,9 @@ def cmd_issue_resolve(
         if not allow_no_produces:
             for w in produces_guard(spec):
                 click.secho(f"⚠ {w}", fg="yellow", err=True)
+        # SERVES gate (i-117) — pre-mutation too, and its `references` ride the
+        # SAME write below (no second load-modify-write needed here).
+        _serves_resolve(s, scope, "Issue", name, spec, serves)
         spec["status"] = "resolved"
         spec["closed_at"] = _now_iso()
         if resolution:

@@ -538,6 +538,292 @@ def validate_transition(
         )
 
 
+# ── the SERVES gate (i-117) — a close must SAY what design it served ────────
+#
+# THE DEFECT. A Spec's execution is DERIVED, never stored: the portal reads the
+# Spec's ``references`` ∪ ``cited_by``, crosses each citation with the cited
+# item's own delivery state, and calls the Spec executed when a citation is
+# delivered. That design is right — "executed" is PROVED by a delivered
+# citation, not asserted by a status somebody flipped. What was missing is that
+# NOTHING OBLIGED THE CITATION. A Story that shipped a Spec without citing it
+# left the Spec looking untouched, so the bucket "accepted, not executed"
+# quietly merged two incompatible facts: *nobody did it* and *somebody did it
+# and did not say so*. That number drove work selection twice, and twice it sent
+# an agent at something already built.
+#
+# THE CURE, and why it is shaped this way. The obvious fix — make every close
+# demand a field — is the fix that destroys itself: a field everyone must fill
+# is a field everyone fills with anything, and a citation that means nothing is
+# worse than one that is absent, because it also LOOKS like evidence. Prior art
+# agrees on the shape of the escape rather than on the demand: Azure DevOps
+# ships "Check for linked work items" as a THREE-state knob (off /
+# optional-warn / required-block) precisely because always-required is
+# unusable; Jira's Linked-Issues validator scopes the demand to one link TYPE
+# rather than to every transition; GitHub never asks at all and DERIVES the link
+# from a `Closes #N` already written in the prose.
+#
+# So this gate asks only where there is already EVIDENCE, and it takes the
+# evidence from the prose, GitHub-style:
+#
+#   already cited  → silent. The trace exists; there is nothing to ask.
+#   prose NAMES a live Spec verbatim → REFUSE until the closer says something.
+#   neither        → silent. Not "warn": a close already prints up to three
+#                    warnings, and the citation-free case is ALREADY narrated by
+#                    the i-113 produces guard (``spec_refs``/``references`` are
+#                    among the back-refs it counts). A fourth line that fires on
+#                    every close is how a person learns to skip all four.
+#
+# And the answer it demands cannot be filled with noise. ``dna sdlc spec
+# executed --summary`` is the precedent for "a terminal claim owes proof", but
+# its proof is FREE TEXT, and free text under obligation degrades into "done".
+# ``--serves`` takes a REFERENCE: it must name a Spec that exists, or the
+# literal ``none``. No cheap string satisfies it — a wrong ``--serves`` is a
+# visible wrong citation on two documents, an auditable mistake rather than
+# noise.
+#
+# ``--serves none`` is the third state, and it is the point: it turns the
+# ABSENCE of a citation from a gap into an assertion — the same move
+# ``revoked_by`` made on KindDefinition. "Nobody said" and "somebody said no"
+# stop reading alike.
+
+#: The literal a closer passes to declare that this delivery served NO Spec.
+SERVES_NONE = "none"
+
+#: Where a work item stores a Spec citation today. ``spec_refs`` is the Story's
+#: declared M:N link, ``references`` is what ``dna sdlc cite`` writes (and the
+#: side the portal's derivation reads back off the Spec), ``produces`` is the
+#: generic output hub. All three count as "already traced" — the gate exists to
+#: obtain a trace, not to obtain one particular field.
+_SPEC_REF_LIST_FIELDS = ("spec_refs", "references")
+
+#: Authored prose scanned for a Spec name. Deliberately includes the timeline:
+#: measured against the real dna-cloud board, the two cases i-117 was filed over
+#: (``spec-grafo-1-arestas-e-travessia``, ``spec-conversa-como-dado-do-dna``)
+#: name their Spec ONLY in a timeline comment. A scan that trusted only
+#: title/description would be blind on exactly the defect it was built for.
+_SERVES_TEXT_FIELDS = (
+    "title", "description", "resolution", "body",
+    "as_a", "i_want", "so_that",
+)
+_SERVES_CHECKLIST_FIELDS = ("acceptance_criteria", "definition_of_done")
+
+
+def _as_str_list(v: Any) -> list[str]:
+    if isinstance(v, list):
+        return [x for x in v if isinstance(x, str)]
+    return [v] if isinstance(v, str) else []
+
+
+def parse_serves(raw: str) -> str:
+    """Normalize one ``--serves`` value to a bare Spec name (or ``SERVES_NONE``).
+
+    Accepts ``none``, ``<name>`` or ``Spec/<name>``. Any OTHER qualified Kind is
+    a refusal, not a coercion: ``--serves Feature/f-x`` is a person saying the
+    wrong sentence, and silently rewriting it to a Spec name would invent a
+    citation nobody made.
+
+    :raises ValueError: on an empty value or a non-Spec qualified reference.
+    """
+    s = (raw or "").strip()
+    if not s:
+        raise ValueError("--serves precisa de um valor (Spec/<nome> ou 'none')")
+    if s.lower() == SERVES_NONE:
+        return SERVES_NONE
+    if "/" in s:
+        kind, _, name = s.partition("/")
+        if kind.strip().lower() != "spec":
+            raise ValueError(
+                f"--serves nomeia uma Spec, não {kind.strip()!r} — "
+                f"passe Spec/<nome> (ou 'none')"
+            )
+        s = name.strip()
+    if not s:
+        raise ValueError("--serves precisa de um valor (Spec/<nome> ou 'none')")
+    return s
+
+
+def cited_spec_names(wi_spec: Any) -> set[str]:
+    """Spec names this work item ALREADY cites, in every shape the board stores.
+
+    Pure. Reads ``spec_refs`` / ``references`` (bare or ``Spec/<name>``) and the
+    ``produces`` hub (``{kind: Spec, name: …}``)."""
+    if not isinstance(wi_spec, dict):
+        return set()
+    out: set[str] = set()
+    for field in _SPEC_REF_LIST_FIELDS:
+        for ref in _as_str_list(wi_spec.get(field)):
+            ref = ref.strip()
+            if "/" in ref:
+                kind, _, name = ref.partition("/")
+                if kind.strip().lower() == "spec" and name.strip():
+                    out.add(name.strip())
+            elif ref and field == "spec_refs":
+                # A bare name in `spec_refs` IS a Spec — the field declares it.
+                # A bare name in `references` is a Reference (the `cite`
+                # default), so it is deliberately NOT read as a Spec here.
+                out.add(ref)
+    produces = wi_spec.get("produces")
+    if isinstance(produces, list):
+        for p in produces:
+            if (isinstance(p, dict) and isinstance(p.get("kind"), str)
+                    and p["kind"].lower() == "spec"
+                    and isinstance(p.get("name"), str)):
+                out.add(p["name"].strip())
+    out.discard("")
+    return out
+
+
+def serves_scan_text(wi_spec: Any) -> str:
+    """The prose of a work item, joined — authored fields, checklist items and
+    every timeline ``summary``. Pure; the corpus
+    :func:`mentioned_spec_names` reads."""
+    if not isinstance(wi_spec, dict):
+        return ""
+    parts: list[str] = []
+    for f in _SERVES_TEXT_FIELDS:
+        v = wi_spec.get(f)
+        if isinstance(v, str):
+            parts.append(v)
+    for f in _SERVES_CHECKLIST_FIELDS:
+        for item in wi_spec.get(f) or []:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict) and isinstance(item.get("text"), str):
+                parts.append(item["text"])
+    for ev in wi_spec.get("timeline") or []:
+        if isinstance(ev, dict) and isinstance(ev.get("summary"), str):
+            parts.append(ev["summary"])
+    return "\n".join(parts)
+
+
+def mentioned_spec_names(text: str, spec_names: Any) -> list[str]:
+    r"""Spec names the ``text`` names VERBATIM, as whole identifiers.
+
+    The boundary is ``[\w-]`` on BOTH sides and not ``\b``, because these names
+    are hyphenated slugs: ``\b`` would let ``spec-grafo-1`` match inside
+    ``spec-grafo-10-outra``, which is a citation to a DIFFERENT design. Matching
+    is case-insensitive — the slugs are lowercase, and ``Spec/spec-x`` in prose
+    is the same claim as ``spec-x``.
+
+    Pure and I/O-free; the caller supplies the universe of names."""
+    if not text:
+        return []
+    hits: list[str] = []
+    for name in spec_names or ():
+        if not isinstance(name, str) or not name:
+            continue
+        if re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", text, re.IGNORECASE):
+            hits.append(name)
+    return sorted(set(hits))
+
+
+def derive_served_spec_candidates(wi_spec: Any, specs: Any) -> list[str]:
+    """The Specs a closing work item PLAUSIBLY served and has not cited.
+
+    ``specs`` maps Spec name → its ``status``. Only Specs whose board bucket is
+    still ``open`` are candidates: the gate defends the DERIVATION, and a Spec
+    already ``executed`` / ``shelved`` / ``deprecated`` / ``superseded`` is not
+    in the bucket the derivation can get wrong. That eligibility is DERIVED from
+    :func:`dna.extensions.sdlc.spec_board_bucket`, never re-enumerated here — a
+    second list of "which statuses are terminal" is a list that goes stale in
+    silence.
+
+    Returns the sorted names, minus anything already cited. Pure."""
+    from dna.extensions.sdlc import spec_board_bucket  # noqa: PLC0415 — cycle
+
+    if not isinstance(specs, dict):
+        return []
+    open_names = [
+        n for n, status in specs.items()
+        if isinstance(n, str) and spec_board_bucket(
+            status if isinstance(status, str) else None
+        ) == "open"
+    ]
+    already = cited_spec_names(wi_spec)
+    return [
+        n for n in mentioned_spec_names(serves_scan_text(wi_spec), open_names)
+        if n not in already
+    ]
+
+
+def serves_refusal(
+    *, candidates: Any, kind: str = "work item", name: str = "",
+) -> str | None:
+    """The refusal text for a close that DECLARED NOTHING — or ``None`` to let it
+    through.
+
+    Refuses exactly when the prose named at least one open Spec the item does not
+    already cite. An item with no candidate is not asked a question nobody can
+    answer usefully.
+
+    The caller passes ``candidates`` only for an undeclared close, and this
+    function deliberately does NOT re-check ``declared`` itself. It did at first,
+    and that branch was unreachable from every door: no mutation of it changed
+    any behaviour, which is the shape of a guard nobody can trust. The
+    "declared → no question" half of the rule is the caller's short-circuit, and
+    it is covered at the door by the tests that close WITH ``--serves`` while a
+    candidate sits in the prose.
+
+    Pure; the caller prints + exits."""
+    cands = _as_str_list(candidates)
+    if not cands:
+        return None
+    lines = "\n".join(f"     --serves Spec/{c}" for c in cands)
+    label = f"{kind}/{name}" if name else kind
+    return (
+        f"{label} NOMEIA uma Spec no próprio texto e não a cita — feche dizendo "
+        f"o que a entrega serve.\n"
+        f"  A execução de uma Spec é DERIVADA da citação: sem ela, uma Spec já "
+        f"entregue segue contada como pendente (i-117).\n"
+        f"  Candidatas achadas no texto deste item:\n{lines}\n"
+        f"  Ou afirme que não serve nenhuma:   --serves none"
+    )
+
+
+def apply_spec_citation(
+    *, caller_kind: str, caller_name: str, caller_spec: dict[str, Any],
+    spec_name: str, spec_spec: dict[str, Any], now: str,
+) -> tuple[bool, bool]:
+    """Write the bidirectional citation ``caller ↔ Spec``, in place.
+
+    THE SAME two lists ``dna sdlc cite`` maintains, and deliberately so: the
+    portal's derivation reads the Spec's ``cited_by``, so a "serves" that landed
+    anywhere else would be a record nobody reads. Forward is stored QUALIFIED
+    (``Spec/<name>``) — a bare name in ``references`` means a Reference.
+
+    Idempotent. Returns ``(caller_changed, spec_changed)``."""
+    forward = f"Spec/{spec_name}"
+    back = f"{caller_kind}/{caller_name}"
+
+    caller_changed = False
+    refs = list(caller_spec.get("references") or [])
+    if forward not in refs:
+        refs.append(forward)
+        caller_spec["references"] = refs
+        caller_spec["updated_at"] = now
+        caller_changed = True
+
+    spec_changed = False
+    cited_by = list(spec_spec.get("cited_by") or [])
+    if back not in cited_by:
+        cited_by.append(back)
+        spec_spec["cited_by"] = cited_by
+        spec_spec["updated_at"] = now
+        spec_changed = True
+
+    return caller_changed, spec_changed
+
+
+def stamp_serves_none(wi_spec: dict[str, Any], *, now: str) -> None:
+    """Record ``--serves none`` ON the item, in place.
+
+    A timeline event alone would not do: the question a later sweep asks is
+    "which closes never declared anything?", and answering it needs a FIELD on
+    the item, not an entry buried in its history."""
+    wi_spec["serves_no_spec"] = True
+    wi_spec["serves_declared_at"] = now
+
+
 # ── pure spec builders (shared by the CLI create commands + the async cores) ─
 
 
