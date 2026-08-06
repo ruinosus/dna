@@ -5,7 +5,7 @@ metadata:
 spec:
   title: A politica de egresso de MCP externo por plano vira UMA, no pacote CLI ao lado d
   description: A politica de egresso de MCP externo por plano vira UMA, no pacote CLI ao lado do resolvedor de tier, para as duas apps do dna-cloud importarem em vez de copiarem.
-  status: in-progress
+  status: review
   feature: f-dna-hosting
   priority: high
   labels:
@@ -39,7 +39,7 @@ spec:
     evidence: commit ec50565; tg-mcp-egress-policy-shared pass; brand_guard clean; versao intocada
   definition_of_done_source: cli-create
   created_at: '2026-08-06T05:55:33+00:00'
-  updated_at: '2026-08-06T06:04:16+00:00'
+  updated_at: '2026-08-06T06:05:04+00:00'
   timeline:
   - at: '2026-08-06T05:55:33+00:00'
     actor: claude-code
@@ -123,6 +123,23 @@ spec:
     marked_dod: 1
     evidence: commit ec50565; tg-mcp-egress-policy-shared pass; brand_guard clean; versao intocada
     by: claude-code
+  - at: '2026-08-06T06:04:50+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/322'
+    pr_url: https://github.com/ruinosus/dna/pull/322
+  - at: '2026-08-06T06:05:02+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #322 aberto; sem merge — a release fica para o lote do fundador.'
+  - at: '2026-08-06T06:05:04+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-mcp-egress-policy-shared
