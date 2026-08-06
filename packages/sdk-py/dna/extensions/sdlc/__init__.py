@@ -351,7 +351,6 @@ class EpicKind(KindBase):
         "features": {
             "to": "Feature", "cardinality": "many", "inverse_of": "epic",
         },
-        "produces": _PRODUCES_RELATION,
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -409,8 +408,6 @@ class EpicKind(KindBase):
                 "business_value": {
                     "type": "number", "minimum": 0, "maximum": 1000,
                 },
-                "produces": _produces_field_schema(),
-                "timeline": _timeline_field_schema(),
             },
             "additionalProperties": True,
         }
@@ -474,7 +471,6 @@ class FeatureKind(KindBase):
         # sprint_id — the Kind is deliberately named by its id, so `by: name`
         # is the truth here and not a convenience.
         "sprint_ref": {"to": "Sprint", "cardinality": "one"},
-        "produces": _PRODUCES_RELATION,
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -588,8 +584,6 @@ class FeatureKind(KindBase):
                 },
                 "mockups": {"type": "array", "items": {"type": "string"}},
                 "release_target": {"type": "string"},
-                "produces": _produces_field_schema(),
-                "timeline": _timeline_field_schema(),
             },
             "additionalProperties": True,
         }
@@ -669,9 +663,10 @@ class IssueKind(KindBase):
         "Optional links to a parent Feature (work it belongs to) and a "
         "related Finding (eval-detected origin)."
     )
-    relations = {
-        "produces": _PRODUCES_RELATION,
-    }
+    # No relation of its own: `produces` is the whole set an Issue had, and it
+    # arrives with `sdlc.work-item`. Initiative has looked exactly like this
+    # since the trait started carrying — it never declared `produces` and has
+    # had it since a0822a34.
 
     def dep_filters(self) -> dict[str, str]:
         return {
@@ -741,8 +736,6 @@ class IssueKind(KindBase):
                 },
                 "created_at": {"type": "string", "format": "date-time"},
                 "updated_at": {"type": "string", "format": "date-time"},
-                "produces": _produces_field_schema(),
-                "timeline": _timeline_field_schema(),
             },
             "additionalProperties": True,
         }
@@ -1272,9 +1265,7 @@ class BugKind(KindBase):
         "sev1-sev5 outage analysis) e Issue umbrella (enhancement/"
         "question/other)."
     )
-    relations = {
-        "produces": _PRODUCES_RELATION,
-    }
+    # `produces` — the only relation a Bug had — arrives with `sdlc.work-item`.
 
     def dep_filters(self) -> dict[str, str]:
         return {
@@ -1311,8 +1302,6 @@ class BugKind(KindBase):
                     "type": "string", "enum": ["highest", "high", "medium", "low", "lowest"],
                 },
                 "body": {"type": "string"},
-                "produces": _produces_field_schema(),
-                "timeline": _timeline_field_schema(),
                 "created_at": {"type": "string", "format": "date-time"},
                 "updated_at": {"type": "string", "format": "date-time"},
             },
@@ -1349,7 +1338,6 @@ class TaskKind(KindBase):
     )
     relations = {
         "story_ref": {"to": "Story", "cardinality": "one"},
-        "produces": _PRODUCES_RELATION,
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -1378,8 +1366,6 @@ class TaskKind(KindBase):
                 "blocked_reason": {"type": "string"},
                 "closed_at": {"type": "string", "format": "date-time"},
                 "body": {"type": "string"},
-                "produces": _produces_field_schema(),
-                "timeline": _timeline_field_schema(),
                 "created_at": {"type": "string", "format": "date-time"},
                 "updated_at": {"type": "string", "format": "date-time"},
             },
@@ -1419,7 +1405,6 @@ class SpikeKind(KindBase):
         "ADR (decision já tomada)."
     )
     relations = {
-        "produces": _PRODUCES_RELATION,
         # A REAL reference that nothing declared. The mapping is not a guess:
         # `resolve_work_item_outputs` has always read this field as
         # ``add("Research", r)``, so the RUNTIME already treated each value as
@@ -1508,8 +1493,6 @@ class SpikeKind(KindBase):
                 "completed_at": {"type": "string", "format": "date-time"},
                 "labels": {"type": "array", "items": {"type": "string"}},
                 "body": {"type": "string"},
-                "produces": _produces_field_schema(),
-                "timeline": _timeline_field_schema(),
                 "created_at": {"type": "string", "format": "date-time"},
                 "updated_at": {"type": "string", "format": "date-time"},
             },
@@ -2210,11 +2193,21 @@ class SdlcExtension:
         registered, and a trait pointing at an unregistered fragment is REFUSED
         rather than silently carrying nothing.
 
-        The existing per-Kind declarations are untouched on purpose — the Kind
-        wins over the trait, and the seven copies are byte-identical to what the
-        trait now brings, so the merge is a no-op that PROVES the mechanism on
-        real data before anybody deletes a line. Removing them is authoring, and
-        authoring is the next slice.
+        The per-Kind copies are GONE (slice 3). Slice 2 left them deliberately —
+        the Kind wins over the trait, so seven byte-identical copies made the
+        merge a no-op that proved the mechanism on real data before anybody
+        deleted a line. Deleting them is what proves the trait CARRIES: thirteen
+        declarations came out (seven ``produces`` relations, six
+        ``produces``+``timeline`` property pairs, and Story's
+        ``schema_fragments``) and every registered Kind's schema, relations,
+        traits and fragments were BYTE-IDENTICAL afterwards. The only thing that
+        moved was ``schema_provenance``, from ``kind`` to
+        ``fragment:sdlc/work-item-activity`` — which is the whole point: those
+        fields never were the Kind's own, and now they say so.
+
+        Initiative is the control that makes the claim checkable rather than
+        merely asserted: it never declared ``produces`` in the first place, and
+        has carried it since a0822a34.
         """
         try:
             from dna.kernel.kinds.traits import CORE_TRAITS, register_trait

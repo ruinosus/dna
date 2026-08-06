@@ -245,6 +245,12 @@ class TestACompositePointerSaysWhatItPointsAt:
         ("Epic", "produces"): "the produces hub — any Kind",
         ("Evidence", "document_ref"): "post_save fires for every Kind written",
         ("Feature", "produces"): "the produces hub — any Kind",
+        # Initiative never declared `produces` in its own `relations` and never
+        # will: it arrived when `sdlc.work-item` started CARRYING the relation
+        # (a0822a34), and stays after the seven hand-written copies were
+        # deleted. Same reason as its siblings — an Initiative is a rollup work
+        # item, so it authors artifacts of any Kind.
+        ("Initiative", "produces"): "the produces hub — any Kind",
         ("Issue", "produces"): "the produces hub — any Kind",
         ("Research", "cited_by"): "`dna sdlc cite` joins ANY two Kinds",
         ("SourceArtifact", "derived_refs"): "extraction yields any Kind",

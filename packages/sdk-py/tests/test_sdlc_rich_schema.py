@@ -20,15 +20,27 @@ from dna.extensions.sdlc import (
 from dna.kernel import Kernel
 
 
-def _story_port():
-    """Story is descriptor-backed now (kinds/story.kind.yaml,
-    s-descriptor-conversion-pattern) — resolve the registered port. Its
-    timeline/produces sub-schemas come from the SAME live helpers the still-class
-    Kinds below use, via the sdlc/work-item-activity schema fragment, which is
-    exactly what test_timeline_field_present_on_story_feature_epic_issue checks."""
+def _port(kind: str):
+    """Resolve a REGISTERED port, which is the only one that carries its traits.
+
+    ``apply_traits`` runs at the registry door (``KindRegistry.register_kind``)
+    and in ``DeclarativeKindPort.__init__`` — so a class Kind CONSTRUCTED by
+    hand (``FeatureKind()``) is a port that has not been through the door and
+    carries nothing its traits bring. That was invisible while every work item
+    also wrote ``timeline``/``produces`` into its own ``schema()``: the copy
+    made the bare instance look composed. With the copies deleted it is visible,
+    which is the honest state — the fields belong to ``sdlc.work-item`` now, and
+    only a registered port has them.
+
+    Story needed this first (it is descriptor-backed, kinds/story.kind.yaml);
+    the reason simply generalised to all eight."""
     k = Kernel()
     k.load(SdlcExtension())
-    return k.kind_port_for("Story")
+    return k.kind_port_for(kind)
+
+
+def _story_port():
+    return _port("Story")
 
 
 # ─── Enum constant ─────────────────────────────────────────────────────
@@ -231,8 +243,10 @@ def test_issue_back_compat():
 
 
 def test_timeline_field_present_on_story_feature_epic_issue():
-    """Timeline opt-in field on all 4 board Kinds."""
-    for kp in (_story_port(), FeatureKind(), EpicKind(), IssueKind()):
+    """Timeline field on all 4 board Kinds — now BY TRAIT, so read it off the
+    registered port. None of the four writes `timeline` into its own schema any
+    more; `sdlc.work-item` carries it, from the same live helpers, once."""
+    for kp in (_port("Story"), _port("Feature"), _port("Epic"), _port("Issue")):
         schema = kp.schema()
         assert "timeline" in schema["properties"], f"{kp.kind} missing timeline"
         tl = schema["properties"]["timeline"]
