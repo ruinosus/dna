@@ -178,6 +178,7 @@ class InstanceBuildCtx(Protocol):
 
     def _register_kind_definitions(
         self, all_raws: list[dict[str, Any]], *, scope: str | None = ...,
+        inherited_from: str | None = ...,
     ) -> bool: ...
 
     def _register_custom_kinds(

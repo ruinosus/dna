@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  name: tr-tg-kind-inheritance-declared-chain-20260806-095859
+spec:
+  guide_ref: tg-kind-inheritance-declared-chain
+  outcome: pass
+  verifies:
+  - Story/s-kind-inheritance-declared-chain
+  executed_by: claude-code
+  executed_at: '2026-08-06T09:58:59+00:00'
+  notes: sdk-py 5206 passed / cli 1523 passed / arquivo novo 12 passed; 7 falham sem o conserto; os dois mutantes morrem; brand_guard, docs_coverage_guard e data_model_guard limpos.

@@ -1,0 +1,126 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  name: s-kind-inheritance-declared-chain
+spec:
+  title: Kinds da base descem a cadeia declarada (i-096)
+  description: 'i-096: um KindDefinition declarado no scope base nao era herdado pelo scope do tenant — os DOCUMENTOS desciam a cadeia (compute_resolution_chain) mas os KINDS nao, porque KindDefinition e Kind de BOOTSTRAP. O instance_builder passa a re-rodar o funil de registro com os bootstrap docs de cada ancestral declarado, ligados ao scope descendente.'
+  status: review
+  feature: f-dna-hosting
+  priority: high
+  labels:
+  - kernel
+  - kinds
+  - tenancy
+  acceptance_criteria:
+  - text: Given um KindDefinition aprovado declarado SO no scope base, When um scope filho que declara parent_scope=base e composto (lazy OU eager), Then o Kind e resolvivel, enumerado por list_kinds, e ESCRIVEL a partir do filho — validado pelo schema da base e roteado para o container da base, dentro do diretorio do filho.
+    done: true
+    done_at: '2026-08-06T10:07:07+00:00'
+    done_by: claude-code
+    evidence: 'PR #326 — CI inteira verde (sdk-py 3.12/3.13, cli 3.12/3.13, postgres, client-py/ts, brand-guard, docs). tests/test_kind_inheritance_declared_chain.py: 12 casos, 7 falham sem o conserto, os dois mutantes morrem.'
+  - text: 'Given um scope IRMAO que declara um Kind proprio, When o scope filho e composto no mesmo processo, Then o Kind do irmao continua invisivel: nao resolve, nao enumera, nao valida e nao roteia — i-081 intacto. Idem para cima: o Kind do filho nunca alcanca a base.'
+    done: true
+    done_at: '2026-08-06T10:07:07+00:00'
+    done_by: claude-code
+    evidence: 'PR #326 — CI inteira verde (sdk-py 3.12/3.13, cli 3.12/3.13, postgres, client-py/ts, brand-guard, docs). tests/test_kind_inheritance_declared_chain.py: 12 casos, 7 falham sem o conserto, os dois mutantes morrem.'
+  - text: Given base e filho declarando descritores divergentes para a mesma chave, When o filho e composto, Then o descritor LOCAL governa (a passada do ancestral nunca substitui uma porta ja registrada).
+    done: true
+    done_at: '2026-08-06T10:07:07+00:00'
+    done_by: claude-code
+    evidence: 'PR #326 — CI inteira verde (sdk-py 3.12/3.13, cli 3.12/3.13, postgres, client-py/ts, brand-guard, docs). tests/test_kind_inheritance_declared_chain.py: 12 casos, 7 falham sem o conserto, os dois mutantes morrem.'
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - text: 'Code: register_kind_definitions(inherited_from=) never-replacing + InstanceBuilder._parent_scopes/_register_inherited_kind_definitions nos DOIS ramos (lazy e eager) do instance_async.'
+    done: true
+    done_at: '2026-08-06T10:07:07+00:00'
+    done_by: claude-code
+    evidence: 'PR #326 — CI inteira verde (sdk-py 3.12/3.13, cli 3.12/3.13, postgres, client-py/ts, brand-guard, docs). tests/test_kind_inheritance_declared_chain.py: 12 casos, 7 falham sem o conserto, os dois mutantes morrem.'
+  - text: 'Tests: tests/test_kind_inheritance_declared_chain.py — as duas metades (desce a cadeia / nunca de lado), 12 casos, mutantes mortos (applies_to->True e a guarda never-replace).'
+    done: true
+    done_at: '2026-08-06T10:07:07+00:00'
+    done_by: claude-code
+    evidence: 'PR #326 — CI inteira verde (sdk-py 3.12/3.13, cli 3.12/3.13, postgres, client-py/ts, brand-guard, docs). tests/test_kind_inheritance_declared_chain.py: 12 casos, 7 falham sem o conserto, os dois mutantes morrem.'
+  - text: 'Docs: docs/concepts/kinds.md ''Where a Kind applies'' + a secao i-096 no docstring de registry.py.'
+    done: true
+    done_at: '2026-08-06T10:07:07+00:00'
+    done_by: claude-code
+    evidence: 'PR #326 — CI inteira verde (sdk-py 3.12/3.13, cli 3.12/3.13, postgres, client-py/ts, brand-guard, docs). tests/test_kind_inheritance_declared_chain.py: 12 casos, 7 falham sem o conserto, os dois mutantes morrem.'
+  - text: 'CI: suite sdk-py + cli verdes, brand_guard limpo.'
+    done: true
+    done_at: '2026-08-06T10:07:07+00:00'
+    done_by: claude-code
+    evidence: 'PR #326 — CI inteira verde (sdk-py 3.12/3.13, cli 3.12/3.13, postgres, client-py/ts, brand-guard, docs). tests/test_kind_inheritance_declared_chain.py: 12 casos, 7 falham sem o conserto, os dois mutantes morrem.'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-06T09:56:48+00:00'
+  updated_at: '2026-08-06T10:07:28+00:00'
+  timeline:
+  - at: '2026-08-06T09:56:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-06T09:57:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-06T09:57:37+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Duas descobertas durante a implementacao que mudam o que da para prometer. (1) O registry tem UMA porta por chave (apiVersion, kind): dois scopes que declaram descritores DIVERGENTES sob a mesma chave ja sao recusa de i-080 (''one apiVersion namespace has one owner''), o que e anterior a i-096. Entao ''local vence pai'' aqui significa a coisa mais estreita e real: a passada do ancestral nunca desregistra e substitui uma porta que o filho ja tem. (2) O mutante da guarda so morre no ramo LAZY — no eager, build() re-registra o descritor local depois, entao local venceria mesmo sem a guarda. O teste esta parametrizado por modo de boot exatamente por isso, e o lazy e o ramo que ensure_kinds (e portanto toda rota REST/MCP de documento) realmente toma.'
+    commit_ref: 2875aeb1943ec8375eebdd63c8d3ef6123f8b635
+  - at: '2026-08-06T09:58:01+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-kind-inheritance-declared-chain
+    summary: TestGuide tg-kind-inheritance-declared-chain (regression)
+  - at: '2026-08-06T09:59:02+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-kind-inheritance-declared-chain-20260806-095859
+    summary: TestRun tr-tg-kind-inheritance-declared-chain-20260806-095859 → pass
+    outcome: pass
+  - at: '2026-08-06T10:00:48+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/326'
+    pr_url: https://github.com/ruinosus/dna/pull/326
+  - at: '2026-08-06T10:07:19+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 3
+    marked_dod: 4
+    evidence: 'PR #326 — CI inteira verde (sdk-py 3.12/3.13, cli 3.12/3.13, postgres, client-py/ts, brand-guard, docs). tests/test_kind_inheritance_declared_chain.py: 12 casos, 7 falham sem o conserto, os dois mutantes morrem.'
+    by: claude-code
+  - at: '2026-08-06T10:07:24+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #326 aberto, CI verde, aguardando review + merge. Nao mexi em versao/release — entra no lote da 0.74.'
+  - at: '2026-08-06T10:07:28+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  produces:
+  - kind: Plan
+    name: plan-s-kind-inheritance-declared-chain
+    role: implementation
+    at: '2026-08-06T09:57:16+00:00'
+  - kind: TestGuide
+    name: tg-kind-inheritance-declared-chain
+    role: test-guide
+    at: '2026-08-06T09:58:01+00:00'
+  - kind: TestRun
+    name: tr-tg-kind-inheritance-declared-chain-20260806-095859
+    role: test-run
+    at: '2026-08-06T09:59:02+00:00'
