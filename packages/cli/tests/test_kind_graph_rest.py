@@ -17,6 +17,11 @@ What this module pins:
   structurally cannot see. This is the assertion that keeps a screen from
   rendering the edge list as "all the relations" — 16 of the model's 109
   schema edges are declared, and the wire has to say so;
+* **the gaps rank themselves.** Every ``unresolved`` row carries an ``origin``
+  saying which pass produced it, so a screen separates a broken DECLARATION
+  from this projection guessing at a field name — without reading English
+  prose off a backend. That was i-104: 25 rows, all of one origin, presented
+  as 25 broken declarations because ``reason`` was the only thing to go on;
 * it is SCHEMA, never data: no document read, and the envelope says which
   graph it is;
 * ``tenant`` resolves the scope like the registry route, an unknown scope is
@@ -132,6 +137,10 @@ def test_coverage_counts_are_derived_from_what_was_returned(graph):
     assert cov["declared"] + cov["composition"] + cov["inferred"] == cov["edges"]
     for tier in ("declared", "composition", "inferred"):
         assert cov[tier] == len([e for e in graph["edges"] if e["tier"] == tier])
+    assert sum(cov["unresolved_by_origin"].values()) == cov["unresolved"]
+    for origin, count in cov["unresolved_by_origin"].items():
+        assert count == len([u for u in graph["unresolved"]
+                             if u["origin"] == origin])
 
 
 def test_the_answer_says_only_the_declared_tier_is_enforced(graph):
@@ -157,6 +166,7 @@ def test_the_limits_travel_on_the_wire(graph):
     assert "declared_tier_only_enforced" in limits
     assert "top_level_properties_only" in limits
     assert "keyed_references_undeclarable" in limits
+    assert "unresolved_is_not_all_broken" in limits
     for code, detail in limits.items():
         assert detail.strip(), f"limit {code} states no reason"
 
@@ -178,6 +188,70 @@ def test_a_keyed_reference_is_never_also_an_edge(graph):
     drawn: an edge here would be one the write path cannot enforce."""
     assert not [e for e in graph["edges"]
                 if e["from_kind"] == "Comment" and e["field"] == "target_ref"]
+
+
+# --- i-104: the gap list ranks itself, through the door ----------------------
+
+
+def test_every_gap_arrives_with_a_machine_readable_origin(graph):
+    """The portal is EN/PT and must not render ``reason``. ``origin`` is the
+    half it CAN switch on, and no row may arrive without one."""
+    assert graph["unresolved"]
+    for row in graph["unresolved"]:
+        assert row["origin"] in {"declared", "composition", "shape-inferred"}, row
+        assert row["reason"], row
+
+
+def test_the_wire_names_which_origins_deserve_alarm(graph):
+    """Derived, like ``enforced_tiers`` — a screen must not re-type the
+    ranking, and the answer must be able to grow without a client release."""
+    cov = graph["coverage"]
+    assert cov["declared_origins"] == ["declared", "composition"]
+    assert "shape-inferred" not in cov["declared_origins"]
+    assert set(cov["declared_origins"]) <= set(cov["unresolved_by_origin"])
+
+
+def test_a_screen_can_separate_the_noise_from_the_alarms_without_prose(graph):
+    """The whole point, stated as the consumer would write it: filter by
+    ``origin`` against ``declared_origins``, never by reading English."""
+    declared_origins = set(graph["coverage"]["declared_origins"])
+    alarms = [u for u in graph["unresolved"] if u["origin"] in declared_origins]
+    noise = [u for u in graph["unresolved"] if u["origin"] not in declared_origins]
+    assert noise, "the field-name guesses vanished — the split stopped working"
+    assert len(alarms) + len(noise) == len(graph["unresolved"])
+    # And the measured truth of this registry: every gap is a guess. A screen
+    # that shows this list as "declarations that do not resolve" is wrong about
+    # every row, which is exactly what the portal was doing.
+    assert alarms == [], f"a DECLARED reference is dangling: {alarms}"
+
+
+def test_a_composite_pointer_is_a_known_reference_not_a_gap(graph):
+    """The misclassification i-104 measured: ``Engram.source_refs`` and
+    ``SourceArtifact.derived_refs`` carry ``Kind``+``name`` exactly like
+    ``Comment.target_ref``, which the runtime already classified right. All
+    three are one family, and they arrive together now — the two that were
+    filed as gaps are gone from that list."""
+    gaps = {(u["kind"], u["field"]) for u in graph["unresolved"]}
+    known = {(u["kind"], u["field"]): u for u in graph["undeclarable"]}
+    for pair in [("Comment", "target_ref"), ("Engram", "source_refs"),
+                 ("SourceArtifact", "derived_refs")]:
+        assert pair in known, f"{pair} is not classified as undeclarable"
+        assert pair not in gaps, f"{pair} is BOTH a gap and a known reference"
+        assert known[pair]["target"] == "any", (
+            "a composite pointer names no single target Kind"
+        )
+
+
+def test_the_undeclarable_table_never_cites_a_kind_the_registry_lacks(graph):
+    """``Organization.plan_ref -> Tier`` survived the metering rename that made
+    it ``PricingPlan``, and ``/v1/kinds/registry/Tier`` answered 404 while this
+    route kept citing it. Through the door, both sides of that contradiction
+    are visible at once — which is why the assertion belongs here."""
+    kinds = {k["kind"] for k in graph["kinds"]}
+    dead = [f"{u['kind']}.{u['field']} -> {u['target']}"
+            for u in graph["undeclarable"]
+            if u["target"] != "any" and u["target"] not in kinds]
+    assert dead == [], f"undeclarable cites Kinds this scope does not serve: {dead}"
 
 
 # --- scope, lanes, and what an empty answer means ----------------------------

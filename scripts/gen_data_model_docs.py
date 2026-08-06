@@ -72,11 +72,17 @@ from pathlib import Path
 # undeclarable table and the ``x-dna-ref`` reading itself — lives in the SDK,
 # so the REST route ``GET /v1/graph/kinds`` and this page cannot disagree
 # about what the model says. This script owns the RENDERING and nothing else.
+#
+# ⚠️ The two gap tables come through ``undeclarable_for``/``suppressed_for``,
+# NOT from the raw dicts. Reading the raw tables was a second computation
+# wearing the first one's clothes: it printed every ROW while the route served
+# what the projection FOUND, so the page went on listing 6 undeclarable
+# references where the route had 16, and 8 suppressions where 5 happened.
 from dna.kernel.query.kind_graph import (
-    INFERENCE_DENYLIST,
-    UNDECLARABLE,
     build_edges,
     kind_rows,
+    suppressed_for,
+    undeclarable_for,
 )
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -280,7 +286,7 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
     out.write(
         f"**{total} edges: {d} declared, {c} composition-only, {i} inferred** "
         f"— plus {len(unresolved)} reference-shaped fields left unresolved and "
-        f"{len(UNDECLARABLE)} known-undeclarable ones.\n\n"
+        f"{len(undeclarable_for(kinds))} known-undeclarable ones.\n\n"
     )
     out.write(
         "!!! warning \"Only the declared tier cannot dangle\"\n\n"
@@ -378,12 +384,20 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
         "Real edges that `x-dna-ref` deliberately does NOT declare. It resolves\n"
         "targets by **document name**, and these are keyed by something else —\n"
         "declaring them would produce false write-time violations on perfectly\n"
-        "valid data. This is the concrete backlog for a future `x-dna-ref-key`.\n\n"
+        "valid data.\n\n"
+        "Two families. **Keyed** ones name the Kind they really point at (an\n"
+        "opaque id, a role id, a tier id); they are the concrete backlog for a\n"
+        "future `x-dna-ref-key`. **Composite** ones carry the Kind IN the value\n"
+        "(`Story:s-thing`, `Narrative/X`, `{kind, name}`), so `Really points at`\n"
+        "is `any` — there is no single target to name. The composite family is\n"
+        "derived from the schemas, never enumerated: a field either declares\n"
+        "`x-dna-ref-composite` or its object shape requires `kind` + `name`.\n\n"
     )
     out.write("| Kind | Field | Really points at | Why undeclarable |\n")
     out.write("| --- | --- | --- | --- |\n")
-    for (kind, field), (target, why) in sorted(UNDECLARABLE.items()):
-        out.write(f"| `{kind}` | `{field}` | `{target}` | {_md(why)} |\n")
+    for row in undeclarable_for(kinds):
+        out.write(f"| `{row['source']}` | `{row['field']}` | "
+                  f"`{row['target']}` | {_md(row['reason'])} |\n")
     out.write("\n")
 
     out.write("### Unresolved reference-shaped fields\n\n")
@@ -391,11 +405,20 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
         "Fields that clearly point at something the model cannot name. This\n"
         "shrinks when references get declared, not when the generator gets\n"
         "cleverer.\n\n"
+        "`Origin` is the column that keeps the list honest. **declared** and\n"
+        "**composition** rows are declarations the model cannot honour —\n"
+        "somebody wrote a target and it does not resolve. **shape-inferred**\n"
+        "rows are the projection guessing from a field NAME, and are usually\n"
+        "not references at all: an OAuth `client_id`, a Stripe customer id, an\n"
+        "IdP subject. Reading the two alike is how a real broken reference\n"
+        "arrives invisible in a list of false alarms.\n\n"
     )
     if unresolved:
-        out.write("| Kind | Field | Why unresolved |\n| --- | --- | --- |\n")
+        out.write("| Kind | Field | Origin | Why unresolved |\n"
+                  "| --- | --- | --- | --- |\n")
         for e in unresolved:
-            out.write(f"| `{e['source']}` | `{e['field']}` | {e['reason']} |\n")
+            out.write(f"| `{e['source']}` | `{e['field']}` | "
+                      f"`{e['origin']}` | {e['reason']} |\n")
     else:
         out.write("_None._\n")
     out.write("\n")
@@ -404,10 +427,17 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
     out.write(
         "The name-convention pass matched these and each is wrong. Listed\n"
         "rather than silently dropped, so the suppression is auditable.\n\n"
+        "What the pass DID, not what the denylist says it would: an entry only\n"
+        "fires where the field name resolves to exactly one Kind, so an entry\n"
+        "can go inert without being touched — `plan` stopped resolving when\n"
+        "`PricingPlan` joined `Plan`, and ambiguity now stops those matches.\n"
+        "Such entries stay in the source (the day the ambiguity ends they are\n"
+        "the only thing stopping a wrong edge) and are absent here.\n\n"
     )
     out.write("| Kind | Field | Why the match is wrong |\n| --- | --- | --- |\n")
-    for (kind, field), why in sorted(INFERENCE_DENYLIST.items()):
-        out.write(f"| `{kind}` | `{field}` | {_md(why)} |\n")
+    for row in suppressed_for(kinds):
+        out.write(f"| `{row['source']}` | `{row['field']}` | "
+                  f"{_md(row['reason'])} |\n")
     out.write("\n")
 
     connected = {e["source"] for e in edges} | {e["target"] for e in edges}

@@ -58,6 +58,36 @@ A reference is declared **on the field**, inside the Kind's own JSON Schema::
 Back-compatibility is by construction: a Kind that declares no ``x-dna-ref``
 produces an empty reference list here, and the write path then does no reads
 and behaves exactly as it did before.
+
+The sibling annotation: ``x-dna-ref-composite``
+-----------------------------------------------
+``x-dna-ref`` resolves a target by document NAME, and the write path enforces
+it. Some fields hold a pointer that carries the Kind WITH the name —
+``Comment.target_ref`` is ``"Story:s-thing"``, ``Engram.source_refs`` holds
+``"Narrative/X"``, ``SourceArtifact.derived_refs`` holds ``{"kind": …,
+"name": …}``. Those are real references, but the target Kind is chosen per
+VALUE, so ``x-dna-ref`` cannot declare them: pointing it at a Kind would make
+the write path reject every value naming a different one.
+
+They were therefore invisible to the declaration and got classified by a
+hand-kept table in ``kind_graph`` — which is how two of the three ended up in
+the WRONG bucket (reported as unresolved gaps) while the third was classified
+right. A hand-kept table is a membership one author has to remember; that is
+the failure this annotation removes:
+
+    target_ref:
+      type: string
+      x-dna-ref-composite: "Kind:name"     # the FORM the string carries
+
+The value is the composite FORM, not a target: a parser learns the separator
+from it, and a reader learns it is a pointer. Where the schema already SAYS
+so structurally — an object (or array of objects) whose ``required`` carries
+both ``kind`` and ``name`` — nothing needs to be written at all; that shape is
+read as the composite form ``{kind, name}``. Declared where the shape cannot
+speak, derived where it can.
+
+A field carrying ``x-dna-ref`` is never also a composite: the enforced
+declaration wins, and no field is described twice.
 """
 from __future__ import annotations
 
@@ -66,6 +96,18 @@ from typing import Any
 
 #: The schema keyword that declares a reference.
 REF_KEYWORD = "x-dna-ref"
+
+#: The schema keyword that declares a COMPOSITE pointer — one that carries the
+#: target Kind alongside the name, so ``x-dna-ref`` cannot name a target.
+COMPOSITE_KEYWORD = "x-dna-ref-composite"
+
+#: The two members an object-shaped composite pointer must REQUIRE. Both, and
+#: both required: a lone ``name`` is a plain reference and a lone ``kind`` is a
+#: type tag. Only together do they address a document.
+COMPOSITE_OBJECT_MEMBERS: tuple[str, ...] = ("kind", "name")
+
+#: The form reported for the object shape above — derived, never authored.
+COMPOSITE_OBJECT_FORM = "{kind, name}"
 
 
 @dataclass(frozen=True)
@@ -135,6 +177,91 @@ def references_from_schema(schema: Any) -> list[DeclaredReference]:
             )
         )
     return out
+
+
+@dataclass(frozen=True)
+class CompositeReference:
+    """One field holding a pointer that carries its own target Kind.
+
+    ``form`` is what the value looks like (``Kind:name``, ``Kind/name``,
+    ``{kind, name}``) — machine-readable enough for a parser and specific
+    enough for a reader, without naming a target the field does not have.
+
+    ``declared`` says WHERE that knowledge came from: ``True`` for an explicit
+    ``x-dna-ref-composite``, ``False`` when the object shape said it by itself.
+    The distinction is not cosmetic — a derived one needs no maintenance and
+    cannot go stale, so it is the one to prefer when the schema can carry it.
+    """
+
+    field: str
+    form: str
+    declared: bool
+    #: True when the field is an array — every item is a composite pointer.
+    is_array: bool
+
+
+def _composite_form_from_shape(spec: dict) -> str | None:
+    """``{kind, name}`` when this property (or its items) is that object."""
+    node = spec
+    if spec.get("type") == "array":
+        node = spec.get("items")
+    if not isinstance(node, dict) or node.get("type") != "object":
+        return None
+    props = node.get("properties")
+    required = node.get("required")
+    if not isinstance(props, dict) or not isinstance(required, (list, tuple)):
+        return None
+    needed = set(COMPOSITE_OBJECT_MEMBERS)
+    if needed <= set(props) and needed <= {r for r in required if isinstance(r, str)}:
+        return COMPOSITE_OBJECT_FORM
+    return None
+
+
+def composite_references_from_schema(schema: Any) -> list[CompositeReference]:
+    """Every composite pointer ``schema`` declares or structurally reveals.
+
+    Read from the SAME first-level ``properties`` as ``x-dna-ref`` — the two
+    annotations must see the same fields, or the graph would classify by one
+    reading and the write path by another.
+    """
+    if not isinstance(schema, dict):
+        return []
+    props = schema.get("properties")
+    if not isinstance(props, dict):
+        return []
+
+    out: list[CompositeReference] = []
+    for field in sorted(props):
+        spec = props[field]
+        if not isinstance(spec, dict) or REF_KEYWORD in spec:
+            # A field the write path enforces is not "undeclarable"; the
+            # stronger statement wins, exactly as it does for the edge tiers.
+            continue
+        declared_form = spec.get(COMPOSITE_KEYWORD)
+        form: str | None = None
+        declared = False
+        if isinstance(declared_form, str) and declared_form.strip():
+            form, declared = declared_form.strip(), True
+        else:
+            form = _composite_form_from_shape(spec)
+        if not form:
+            continue
+        out.append(CompositeReference(
+            field=field, form=form, declared=declared,
+            is_array=spec.get("type") == "array",
+        ))
+    return out
+
+
+def composite_references(port: Any) -> list[CompositeReference]:
+    """``composite_references_from_schema`` off a ``KindPort`` — fail-soft."""
+    if port is None:
+        return []
+    try:
+        schema = port.schema()
+    except Exception:  # noqa: BLE001 — a broken schema stays permissive
+        return []
+    return composite_references_from_schema(schema)
 
 
 def reference_values(ref: DeclaredReference, spec: Any) -> list[str]:

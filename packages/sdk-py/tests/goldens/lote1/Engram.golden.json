@@ -238,7 +238,8 @@
           "type": "string"
         },
         "minItems": 1,
-        "type": "array"
+        "type": "array",
+        "x-dna-ref-composite": "Kind/name"
       },
       "summary": {
         "description": "1-2 sentence 'Lembre-se de...' — the recalled essence.",

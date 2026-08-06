@@ -45,6 +45,12 @@ spec:
     properties:
       target_ref:
         type: string
+        # The pointer carries its own target Kind, so `x-dna-ref` cannot name
+        # one (see dna.kernel.query.references). Declaring the FORM is what
+        # lets the schema graph classify this as a known-undeclarable
+        # reference instead of guessing from the field name and reporting a
+        # gap. It replaces a hand-kept table row in `kind_graph`.
+        x-dna-ref-composite: 'Kind:name'
         description: Kind:name of the target document
       author:
         type: string

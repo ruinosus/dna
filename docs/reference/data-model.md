@@ -65,7 +65,7 @@ would be the whole problem. Four tiers, strongest first:
 
 `*` on a label marks a polymorphic reference (several possible target Kinds).
 
-**109 edges: 16 declared, 66 composition-only, 27 inferred** — plus 25 reference-shaped fields left unresolved and 6 known-undeclarable ones.
+**109 edges: 16 declared, 66 composition-only, 27 inferred** — plus 23 reference-shaped fields left unresolved and 16 known-undeclarable ones.
 
 !!! warning "Only the declared tier cannot dangle"
 
@@ -523,14 +523,32 @@ quietly dropped.
 Real edges that `x-dna-ref` deliberately does NOT declare. It resolves
 targets by **document name**, and these are keyed by something else —
 declaring them would produce false write-time violations on perfectly
-valid data. This is the concrete backlog for a future `x-dna-ref-key`.
+valid data.
+
+Two families. **Keyed** ones name the Kind they really point at (an
+opaque id, a role id, a tier id); they are the concrete backlog for a
+future `x-dna-ref-key`. **Composite** ones carry the Kind IN the value
+(`Story:s-thing`, `Narrative/X`, `{kind, name}`), so `Really points at`
+is `any` — there is no single target to name. The composite family is
+derived from the schemas, never enumerated: a field either declares
+`x-dna-ref-composite` or its object shape requires `kind` + `name`.
 
 | Kind | Field | Really points at | Why undeclarable |
 | --- | --- | --- | --- |
-| `Comment` | `target_ref` | `any` | a composite `Kind:name` string — needs parsing, not a name lookup |
+| `AgentSession` | `produced_artifacts` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `Bug` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `Comment` | `target_ref` | `any` | composite `Kind:name` pointer — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `Engram` | `source_refs` | `any` | composite `Kind/name` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `Epic` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `Feature` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `Issue` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `Membership` | `role` | `Role` | keyed by `role_id`, not the document name |
-| `Organization` | `plan_ref` | `Tier` | keyed by `tier_id` (free/pro/enterprise), not the document name |
+| `Organization` | `plan_ref` | `PricingPlan` | keyed by `tier_id` (free/pro/enterprise), not the document name |
 | `Project` | `workspace_id` | `Workspace` | keyed by the Workspace's opaque generated `workspace_id`, not its document name |
+| `SourceArtifact` | `derived_refs` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `Spike` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `Story` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
+| `Task` | `produces` | `any` | composite `{kind, name}` pointers — the target Kind travels in the value, so it needs parsing, not a name lookup |
 | `WorkspaceMembership` | `role` | `Role` | keyed by `role_id` (owner/admin/member/guest), not the document name |
 | `WorkspaceMembership` | `workspace_id` | `Workspace` | same opaque `workspace_id` key |
 
@@ -540,38 +558,51 @@ Fields that clearly point at something the model cannot name. This
 shrinks when references get declared, not when the generator gets
 cleverer.
 
-| Kind | Field | Why unresolved |
-| --- | --- | --- |
-| `AgentCatalogEntry` | `client_id` | reference-shaped, but `client` matches no registered Kind |
-| `AgentGrant` | `client_id` | reference-shaped, but `client` matches no registered Kind |
-| `AuditLog` | `request_id` | reference-shaped, but `request` matches no registered Kind |
-| `Engram` | `affect_evidence_refs` | reference-shaped, but `affect_evidence` matches no registered Kind |
-| `Engram` | `source_refs` | reference-shaped, but `source` matches no registered Kind |
-| `Evidence` | `document_ref` | reference-shaped, but `document` matches no registered Kind |
-| `Feature` | `sprint_ref` | reference-shaped, but `sprint` matches no registered Kind |
-| `IntelInsight` | `source_ref` | reference-shaped, but `source` matches no registered Kind |
-| `LayerPolicy` | `layer_id` | reference-shaped, but `layer` matches no registered Kind |
-| `ModelProfile` | `model_id` | reference-shaped, but `model` matches no registered Kind |
-| `PlanBinding` | `account_id` | reference-shaped, but `account` matches no registered Kind |
-| `PlanBinding` | `stripe_customer_id` | reference-shaped, but `stripe_customer` matches no registered Kind |
-| `PlanBinding` | `stripe_subscription_id` | reference-shaped, but `stripe_subscription` matches no registered Kind |
-| `PlanBinding` | `tier_id` | reference-shaped, but `tier` matches no registered Kind |
-| `PricingPlan` | `tier_id` | reference-shaped, but `tier` matches no registered Kind |
-| `Project` | `intel_source_refs` | reference-shaped, but `intel_source` matches no registered Kind |
-| `Research` | `scope_ref` | reference-shaped, but `scope` matches no registered Kind |
-| `SourceArtifact` | `derived_refs` | reference-shaped, but `derived` matches no registered Kind |
-| `Story` | `sprint_ref` | reference-shaped, but `sprint` matches no registered Kind |
-| `TenantMembership` | `user_id` | reference-shaped, but `user` matches no registered Kind |
-| `UserProfile` | `user_id` | reference-shaped, but `user` matches no registered Kind |
-| `UserRoleAssignment` | `user_id` | reference-shaped, but `user` matches no registered Kind |
-| `Workspace` | `account_id` | reference-shaped, but `account` matches no registered Kind |
-| `Workspace` | `plan_ref` | reference-shaped, but `plan` matches no registered Kind |
-| `WorkspaceMembership` | `identity_oid` | reference-shaped, but `identity` matches no registered Kind |
+`Origin` is the column that keeps the list honest. **declared** and
+**composition** rows are declarations the model cannot honour —
+somebody wrote a target and it does not resolve. **shape-inferred**
+rows are the projection guessing from a field NAME, and are usually
+not references at all: an OAuth `client_id`, a Stripe customer id, an
+IdP subject. Reading the two alike is how a real broken reference
+arrives invisible in a list of false alarms.
+
+| Kind | Field | Origin | Why unresolved |
+| --- | --- | --- | --- |
+| `AgentCatalogEntry` | `client_id` | `shape-inferred` | reference-shaped, but `client` matches no registered Kind |
+| `AgentGrant` | `client_id` | `shape-inferred` | reference-shaped, but `client` matches no registered Kind |
+| `AuditLog` | `request_id` | `shape-inferred` | reference-shaped, but `request` matches no registered Kind |
+| `Engram` | `affect_evidence_refs` | `shape-inferred` | reference-shaped, but `affect_evidence` matches no registered Kind |
+| `Evidence` | `document_ref` | `shape-inferred` | reference-shaped, but `document` matches no registered Kind |
+| `Feature` | `sprint_ref` | `shape-inferred` | reference-shaped, but `sprint` matches no registered Kind |
+| `IntelInsight` | `source_ref` | `shape-inferred` | reference-shaped, but `source` matches no registered Kind |
+| `LayerPolicy` | `layer_id` | `shape-inferred` | reference-shaped, but `layer` matches no registered Kind |
+| `ModelProfile` | `model_id` | `shape-inferred` | reference-shaped, but `model` matches no registered Kind |
+| `PlanBinding` | `account_id` | `shape-inferred` | reference-shaped, but `account` matches no registered Kind |
+| `PlanBinding` | `stripe_customer_id` | `shape-inferred` | reference-shaped, but `stripe_customer` matches no registered Kind |
+| `PlanBinding` | `stripe_subscription_id` | `shape-inferred` | reference-shaped, but `stripe_subscription` matches no registered Kind |
+| `PlanBinding` | `tier_id` | `shape-inferred` | reference-shaped, but `tier` matches no registered Kind |
+| `PricingPlan` | `tier_id` | `shape-inferred` | reference-shaped, but `tier` matches no registered Kind |
+| `Project` | `intel_source_refs` | `shape-inferred` | reference-shaped, but `intel_source` matches no registered Kind |
+| `Research` | `scope_ref` | `shape-inferred` | reference-shaped, but `scope` matches no registered Kind |
+| `Story` | `sprint_ref` | `shape-inferred` | reference-shaped, but `sprint` matches no registered Kind |
+| `TenantMembership` | `user_id` | `shape-inferred` | reference-shaped, but `user` matches no registered Kind |
+| `UserProfile` | `user_id` | `shape-inferred` | reference-shaped, but `user` matches no registered Kind |
+| `UserRoleAssignment` | `user_id` | `shape-inferred` | reference-shaped, but `user` matches no registered Kind |
+| `Workspace` | `account_id` | `shape-inferred` | reference-shaped, but `account` matches no registered Kind |
+| `Workspace` | `plan_ref` | `shape-inferred` | reference-shaped, but `plan` matches no registered Kind |
+| `WorkspaceMembership` | `identity_oid` | `shape-inferred` | reference-shaped, but `identity` matches no registered Kind |
 
 ### Suppressed name matches
 
 The name-convention pass matched these and each is wrong. Listed
 rather than silently dropped, so the suppression is auditable.
+
+What the pass DID, not what the denylist says it would: an entry only
+fires where the field name resolves to exactly one Kind, so an entry
+can go inert without being touched — `plan` stopped resolving when
+`PricingPlan` joined `Plan`, and ambiguity now stops those matches.
+Such entries stay in the source (the day the ambiguity ends they are
+the only thing stopping a wrong edge) and are absent here.
 
 | Kind | Field | Why the match is wrong |
 | --- | --- | --- |
@@ -579,10 +610,7 @@ rather than silently dropped, so the suppression is auditable.
 | `AuditLog` | `actor` | the request identity string from claims (email/sub, or 'dev-user'), not a reference to an `Actor` document |
 | `Copilot` | `tenant` | inbound-tenant handling mode for the emitted serving layer, not a reference to a `Tenant` document |
 | `Memory` | `namespace` | MIF's hierarchical memory scope path (`_semantic/decisions`, §10) — a string axis inside the document, not the `KindNamespace` Kind, whose alias `tenant-kind-namespace` merely ends in the same token |
-| `Organization` | `plan_ref` | the DNA Cloud Tier this org is on, not the SDLC `Plan` Kind |
 | `RemoteAgent` | `skills` | the A2A Card's own `skills[]` (id/name/description/tags/examples) — structured self-description of what the remote agent can do, not a reference to the `Skill` Kind (agentskills), which merely shares the singular of the field name |
-| `Tenant` | `plan` | billing/feature tier (a Tier `tier_id`), not the SDLC `Plan` Kind |
-| `Workspace` | `plan_ref` | DEPRECATED and never read — billing is per ACCOUNT (workspace → account_id → AccountPlan); also not the SDLC `Plan` Kind |
 
 ### Kinds with no reference edge (23)
 

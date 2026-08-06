@@ -141,6 +141,31 @@ nested below the first level of `properties`, references keyed by an id rather
 than a document name, and — first among them — that these edges are **schema,
 not data**: which Kinds MAY reference which, never which documents do).
 
+**And read `unresolved[].origin`, not `unresolved[].reason`.** The gap list
+holds two different things. `declared` and `composition` rows are declarations
+the model cannot honour — somebody wrote a target and it does not resolve, and
+that is an authoring error worth alarm. `shape-inferred` rows are the
+projection guessing from a field NAME (`_id` / `_ref` / `_refs`) and are
+usually not references at all: `AgentCatalogEntry.client_id` is an OAuth client
+id, `PlanBinding.stripe_customer_id` is a Stripe id, `UserProfile.user_id` is
+an IdP subject — no Kind should exist for any of them. On the 06/08/2026
+measurement **every one of the 23 rows was `shape-inferred`**, and a screen with
+only `reason` to go on presented all of them as broken declarations, which is
+how a real broken one would arrive invisible. `coverage.declared_origins` names
+the origins that deserve alarm and `coverage.unresolved_by_origin` gives the
+split, so a consumer derives the ranking rather than parsing English out of
+`reason` — which stays exactly as it is, for whoever reads the raw answer.
+
+`undeclarable[]` has two families of its own, told apart by `target`. A
+**keyed** reference names the Kind it really points at (`Organization.plan_ref`
+→ `PricingPlan`, by `tier_id`). A **composite** one answers `any`, because the
+value carries its own Kind (`Comment.target_ref` is `"Story:s-thing"`,
+`Engram.source_refs` holds `Narrative/X`, `Story.produces` holds
+`{"kind": …, "name": …}`) and there is no single target to name. That family is
+derived from the schemas — a field either declares `x-dna-ref-composite` or its
+object shape requires `kind` + `name` — so a new one classifies itself instead
+of waiting for somebody to remember a table.
+
 A scope with nothing registered answers `200` with an empty graph, not `404`:
 "exists and holds nothing" is an answer, and conflating it with "no such scope"
 makes a screen say *error* where it should say *nothing registered yet*.

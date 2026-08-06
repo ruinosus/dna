@@ -19,6 +19,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Correções
 
+- **O grafo de schema diz se a referência foi DECLARADA ou só inferida pela
+  forma do nome** (i-104 do board dna-cloud). `GET /v1/graph/kinds` devolvia as
+  25 entradas de `unresolved[]` com uma única diferença entre elas: prosa em
+  inglês no `reason`. O portal é EN/PT e não atravessa prosa do runtime para a
+  tela, então apresentava todas como *"declarações que não resolvem"* — falso
+  para as 25, que eram TODAS palpite do casamento por sufixo de nome
+  (`AgentCatalogEntry.client_id` é um client_id de OAuth,
+  `PlanBinding.stripe_customer_id` é um id do Stripe). Uma referência declarada
+  e realmente quebrada chegaria invisível no meio do ruído. Cada linha passa a
+  carregar **`origin`** — `declared` (`x-dna-ref` aponta para Kind que ninguém
+  registra) · `composition` (`dep_filters` nomeia alias que ninguém reivindica)
+  · `shape-inferred` (só a forma do nome) — e `coverage.declared_origins` +
+  `coverage.unresolved_by_origin` dão o recorte DERIVADO, no mesmo contrato do
+  `enforced_tiers`: a tela ordena sem reescrever a regra e sem traduzir
+  `reason`, que continua para quem lê a API crua.
+- **Ponteiro composto `Kind/nome` deixa de ser reportado como lacuna** — a
+  regra existia e não alcançava dois dos três casos. `Comment.target_ref`
+  estava numa tabela escrita à mão e era classificado certo; `Engram.
+  source_refs` e `SourceArtifact.derived_refs` são a MESMA família e caíam em
+  `unresolved[]`. A pertinência virou leitura do schema: a nova anotação
+  **`x-dna-ref-composite`** declara a forma onde a string não revela nada
+  (`Kind:name`, `Kind/name`), e um objeto que exige `kind` + `name` é
+  reconhecido sozinho. Sem linha à mão. O efeito medido é maior que os dois
+  casos: `undeclarable[]` foi de 6 para 16 — `Story.produces` e as sete irmãs,
+  mais `AgentSession.produced_artifacts`, são referências reais que não
+  apareciam em lugar NENHUM do grafo (o nome do campo não tem forma de
+  referência, então nem lacuna viravam).
+- **A tabela de `undeclarable[]` citava Kinds que o registry não serve.**
+  `Organization.plan_ref` apontava para `Tier` desde o rename do metering
+  (0.29.0) que o tornou `PricingPlan`, com `GET /v1/kinds/registry/Tier`
+  respondendo 404 na mesma implantação; a prosa do denylist ainda citava
+  `Tier` e `AccountPlan`. Nada falhava porque nada comparava a tabela com o
+  registry — o guard de docs regenerava a página A PARTIR da tabela, então os
+  dois lados carregavam o mesmo nome morto e concordavam.
+  `tests/test_kind_graph_registry.py` resolve agora todo alvo (e todo nome em
+  backtick na prosa) contra o registry vivo. Achado do mesmo guard:
+  `coverage.suppressed` anunciava 8 supressões onde 5 aconteciam — três
+  entradas do denylist ficaram inertes quando `PricingPlan` entrou ao lado de
+  `Plan` e tornou o token `plan` ambíguo. Elas continuam na fonte (o dia em
+  que a ambiguidade acabar são a única coisa impedindo uma aresta errada), mas
+  o contador passa a reportar o que o passe FEZ.
 - **O default do runtime é DADO, e a ausência de documento deixa de ser erro**
   (i-101 + i-102 do board dna-cloud). `get_template('memory-recall-briefing')`
   devolvia `not found` para o estado NORMAL de qualquer scope sem override — a
