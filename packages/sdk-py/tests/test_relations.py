@@ -1,10 +1,10 @@
 """``spec.relations`` — the declaration itself.
 
 The pure core: how a relation is READ, what it refuses, and the two questions
-it can answer without touching a document (does the declaration pair? does it
+it can answer without touching an instance (does the declaration pair? does it
 contradict the schema?). What the WRITE path does with it lives in
 ``test_write_path_reference_validation.py``, against a source that really
-stores documents; what the REGISTRY declares lives in
+stores instances; what the REGISTRY declares lives in
 ``test_kind_graph_registry.py``.
 
 The tests are ordered by what would cost most to discover in the field: a
@@ -239,7 +239,7 @@ class TestRelationValues:
         assert relation_values(rel, {"r": [" a ", 3, None, "b"]}) == ["a", "b"]
 
     def test_a_scalar_is_read_from_a_many_relation_and_vice_versa(self):
-        """Cardinality is a MODEL statement; a document contradicting it is
+        """Cardinality is a MODEL statement; an instance contradicting it is
         the schema's business, and giving one mistake two error messages from
         two layers is worse than tolerating it here."""
         many = normalize_relations({"r": _rel(cardinality="many")})["r"]

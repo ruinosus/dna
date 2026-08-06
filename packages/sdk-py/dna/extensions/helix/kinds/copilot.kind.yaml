@@ -2,7 +2,7 @@
 #
 # A Copilot is a BINDER: it composes one-or-more mounted Agents (each already a
 # declarative Agent + its Tools + optional MCPFederation) into a single
-# servable copilot backend. From one Copilot document the emitter produces a
+# servable copilot backend. From one Copilot instance the emitter produces a
 # servable ``/agui`` app (Agno target today; MS Agent Framework later) — the
 # single evolution point DNA Cloud's Memory copilot consumes.
 #
@@ -486,11 +486,11 @@ spec:
               nothing to limit. What the block DOES is lower the ceiling.
               Every number here is merged DOWNWARD against the host's own
               operational limits and never upward, which is the property
-              that makes reading a document safe at all: a document may be
+              that makes reading an instance safe at all: an instance may be
               authored by a tenant, and a tenant must not be able to buy
               more compute by writing YAML.
               Only what the shipped runtime READS lives here (the F4 rule)
-              — the upload budget is a host constant with no document
+              — the upload budget is a host constant with no instance
               reader, so it stays OUT, and declaring it is a validation
               error rather than a silent no-op.
               The provider credential never lives in the doc.
@@ -528,7 +528,7 @@ spec:
                   Egress from the sandbox, and it travels downward like the
                   numbers: false switches egress OFF for this copilot even
                   where the host allows it, while true grants nothing the
-                  host has not already granted. A document is never how the
+                  host has not already granted. An instance is never how the
                   internet gets switched on — with egress off the sandbox
                   cannot reach a public database endpoint either, which is
                   half of why running someone's script is affordable.
@@ -728,9 +728,9 @@ spec:
               type:
               - string
               - 'null'
-              description: The target Kind whose documents this surface
+              description: The target Kind whose instances this surface
                 composes (the wizard derives its fields from this Kind's
-                schema; the review step writes a document of it). Null for
+                schema; the review step writes an instance of it). Null for
                 surfaces not bound to one Kind (the memory composer).
       frontend:
         type: object
@@ -950,6 +950,6 @@ spec:
     ``hosting`` (self-hosted vs a managed runtime), and ``frontend`` (console
     hints).
     Instructions and persona stay on the mounted Agent — a
-    Copilot never re-declares them. One document emits a servable backend
+    Copilot never re-declares them. One instance emits a servable backend
     (Agno today), the single evolution point DNA Cloud's copilots consume.
     Stored as ``copilots/<name>.yaml`` — marketplace-shareable as a bundle.

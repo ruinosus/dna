@@ -3,7 +3,7 @@
 Registers 1 KindPort:
   - AuditLog (audit-auditlog) — immutable record of every role-gated
     HTTP endpoint invocation. Distinct from Evidence (github.com/ruinosus/dna/evidence),
-    which captures content-level events (document writes, eval runs)
+    which captures content-level events (instance writes, eval runs)
     via the EvidencePolicy → hook pipeline.
 
 Why a separate Kind?

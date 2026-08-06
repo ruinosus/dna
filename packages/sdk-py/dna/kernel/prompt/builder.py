@@ -13,7 +13,7 @@ from dna.kernel._text import strip_prompt_block
 from dna.kernel.errors import AgentNotFound, UnknownLayout
 
 if TYPE_CHECKING:
-    from dna.kernel.document import Document
+    from dna.kernel.instance import Instance
     from dna.kernel.manifest import ManifestInstance
 
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ class SectionProvenance:
     agent's own instruction, its Soul, each referenced Skill, each
     Guardrail. Attribution is reconstructed from the kernel's OWN declared
     blocks (layout template + dep_filters + flatten_in_context) and the
-    layer provenance the kernel already returns from ``resolve_document`` —
+    layer provenance the kernel already returns from ``resolve_instance`` —
     NOT by re-running composition.
     """
 
@@ -40,7 +40,7 @@ class SectionProvenance:
     section: str
     #: The contributing Kind (``Agent`` / ``Soul`` / ``Skill`` / ``Guardrail``).
     kind: str
-    #: The contributing document name.
+    #: The contributing instance name.
     name: str
     #: Canonical source artifact path, e.g. ``skills/tdd/SKILL.md`` (or ``?``).
     source: str
@@ -243,7 +243,7 @@ class PromptBuilder:
         byte-identical to ``build_prompt`` by construction — explain mode
         never re-renders. Provenance is reconstructed from the kernel's own
         declared blocks (layout template + dep_filters + flatten_in_context)
-        + the layer provenance ``kernel.resolve_document`` already returns.
+        + the layer provenance ``kernel.resolve_instance`` already returns.
         """
         # Prompt = the ONE canonical composition (byte-equal gate: same path).
         prompt = self.build(
@@ -319,11 +319,11 @@ class PromptBuilder:
         if kernel is None:
             return None
         try:
-            return await kernel.resolve_document(
+            return await kernel.resolve_instance(
                 self._host.scope, kind, name, tenant=tenant,
             )
         except Exception as e:  # noqa: BLE001 — read path, fail-soft
-            logger.debug("explain: resolve_document(%s/%s) failed: %s", kind, name, e)
+            logger.debug("explain: resolve_instance(%s/%s) failed: %s", kind, name, e)
             return None
 
     # ── explain helpers ──────────────────────────────────────────────────
@@ -368,14 +368,14 @@ class PromptBuilder:
     def _named_template_body(self, tmpl: str) -> str | None:
         if not self._TEMPLATE_NAME_RE.match(tmpl):
             return None
-        for d in self._host.documents:
+        for d in self._host.instances:
             if d.kind == "PromptTemplate" and d.name == tmpl:
                 body = (d.spec or {}).get("body")
                 return body if isinstance(body, str) and body.strip() else None
         return None
 
     async def _named_template_body_async(self, tmpl: str) -> str | None:
-        """Lazy-MI-safe: enumera via ``all_async`` em vez de ``documents``
+        """Lazy-MI-safe: enumera via ``all_async`` em vez de ``instances``
         (que num MI preguiçoso re-entra o helper síncrono e levanta)."""
         if not self._TEMPLATE_NAME_RE.match(tmpl):
             return None
@@ -389,7 +389,7 @@ class PromptBuilder:
                 return body if isinstance(body, str) and body.strip() else None
         return None
 
-    def _effective_template(self, agent_doc: Document) -> str:
+    def _effective_template(self, agent_doc: Instance) -> str:
         """The template string the cascade will render (see _render_prompt).
 
         Resolves a file-ref template so section detection sees the final
@@ -413,7 +413,7 @@ class PromptBuilder:
             tmpl = corpo
         return tmpl or ""
 
-    async def _effective_template_async(self, agent_doc: Document) -> str:
+    async def _effective_template_async(self, agent_doc: Instance) -> str:
         spec = agent_doc.spec
         tmpl = spec.get("promptTemplate") or spec.get("prompt_template")
         agent_kp = self._host._kinds.get((agent_doc.api_version, agent_doc.kind))
@@ -438,7 +438,7 @@ class PromptBuilder:
         return None
 
     def _section_specs(
-        self, agent_doc: Document, template: str, enabled_slots: dict[str, list[str]],
+        self, agent_doc: Instance, template: str, enabled_slots: dict[str, list[str]],
     ) -> list[tuple[str, Any, str]]:
         """Reconstruct the ordered composition inputs → ``(label, kp, name)``.
 
@@ -488,7 +488,7 @@ class PromptBuilder:
         if getattr(kp, "flatten_in_context", False):
             # Flatten Kind (Soul): its spec string keys become top-level vars
             # (soul_content). Contributes iff one of those vars is in template.
-            for doc in self._host.documents:
+            for doc in self._host.instances:
                 if doc.kind != kp.kind or doc.name not in names:
                     continue
                 for k, v in doc.spec.items():
@@ -508,11 +508,11 @@ class PromptBuilder:
         kernel_loop = getattr(kernel, "_main_loop", None)
         try:
             return _run_sync_helper(
-                kernel.resolve_document(self._host.scope, kind, name, tenant=tenant),
+                kernel.resolve_instance(self._host.scope, kind, name, tenant=tenant),
                 loop=kernel_loop,
             )
         except Exception as e:  # noqa: BLE001 — read path, fail-soft
-            logger.debug("explain: resolve_document(%s/%s) failed: %s", kind, name, e)
+            logger.debug("explain: resolve_instance(%s/%s) failed: %s", kind, name, e)
             return None
 
     @staticmethod
@@ -610,11 +610,11 @@ class PromptBuilder:
     # Private helpers
     # -------------------------------------------------------------------------
 
-    def _find_agent(self, name: str) -> Document | None:
-        """Find prompt target document by name, preferring highest priority."""
-        best: Document | None = None
+    def _find_agent(self, name: str) -> Instance | None:
+        """Find prompt target instance by name, preferring highest priority."""
+        best: Instance | None = None
         best_priority = -1
-        for d in self._host.documents:
+        for d in self._host.instances:
             kp = self._host._kinds.get((d.api_version, d.kind))
             if kp and kp.is_prompt_target and d.name == name:
                 priority = getattr(kp, "prompt_target_priority", 0)
@@ -623,16 +623,16 @@ class PromptBuilder:
                     best_priority = priority
         return best
 
-    async def _find_agent_async(self, name: str) -> Document | None:
+    async def _find_agent_async(self, name: str) -> Instance | None:
         """Async variant of ``_find_agent`` that is safe under lazy MI.
 
-        Walking ``self._host.documents`` from inside a running loop on a
+        Walking ``self._host.instances`` from inside a running loop on a
         lazy MI triggers ``_materialize_full`` → ``_run_sync_helper`` →
         strict raise. This variant enumerates registered prompt-target
         kinds and queries each via ``all_async`` (which uses
         ``kernel.query`` end-to-end without re-entering the sync helper).
         """
-        best: Document | None = None
+        best: Instance | None = None
         best_priority = -1
         seen_kinds: set[str] = set()
         for kp in self._host._kinds.values():
@@ -661,15 +661,15 @@ class PromptBuilder:
                     best_priority = priority
         return best
 
-    async def _all_docs_async(self) -> list[Document]:
+    async def _all_docs_async(self) -> list[Instance]:
         """Lazy-MI-safe enumeration of every doc across registered kinds.
 
         Used by ``_build_context_async`` to replace the sync walk over
-        ``self._host.documents`` that breaks on lazy MI inside running
+        ``self._host.instances`` that breaks on lazy MI inside running
         loop. Order is by kind iteration (not original insertion);
         consumers must not rely on a global ordering.
         """
-        out: list[Document] = []
+        out: list[Instance] = []
         seen_kinds: set[str] = set()
         for kp in self._host._kinds.values():
             kind = getattr(kp, "kind", None)
@@ -690,11 +690,11 @@ class PromptBuilder:
 
     def _build_context(
         self,
-        agent_doc: Document,
+        agent_doc: Instance,
         extra: dict[str, Any] | None,
         enabled_slots: dict[str, list[str]] | None = None,
     ) -> dict[str, Any]:
-        """Build Mustache context from all documents."""
+        """Build Mustache context from all instances."""
         ctx: dict[str, Any] = {}
 
         # Root metadata + spec
@@ -719,8 +719,8 @@ class PromptBuilder:
         }
         ctx["agentId"] = agent_doc.name
 
-        # All documents grouped by alias (for Mustache sections)
-        for doc in self._host.documents:
+        # All instances grouped by alias (for Mustache sections)
+        for doc in self._host.instances:
             kp = self._host._kinds.get((doc.api_version, doc.kind))
             if not kp:
                 continue
@@ -769,7 +769,7 @@ class PromptBuilder:
         # String values (soul_content, agents_content, ...) get trailing
         # whitespace normalized — the template supplies the joiners (i-013).
         _reserved = {"agent", "metadata", "spec", "agentId"}
-        for doc in self._host.documents:
+        for doc in self._host.instances:
             kp = self._host._kinds.get((doc.api_version, doc.kind))
             if not kp or not kp.flatten_in_context:
                 continue
@@ -788,7 +788,7 @@ class PromptBuilder:
 
         return ctx
 
-    def _render_prompt(self, ctx: dict[str, Any], agent_doc: Document) -> str:
+    def _render_prompt(self, ctx: dict[str, Any], agent_doc: Instance) -> str:
         """Render prompt via template cascade."""
         # 1. Agent-level raw template override (poweruser escape hatch).
         agent_spec = agent_doc.spec
@@ -820,7 +820,7 @@ class PromptBuilder:
 
     async def _build_context_async(
         self,
-        agent_doc: Document,
+        agent_doc: Instance,
         extra: dict[str, Any] | None,
         enabled_slots: dict[str, list[str]] | None = None,
     ) -> dict[str, Any]:
@@ -917,7 +917,7 @@ class PromptBuilder:
         return ctx
 
     async def _render_prompt_async(
-        self, ctx: dict[str, Any], agent_doc: Document,
+        self, ctx: dict[str, Any], agent_doc: Instance,
     ) -> str:
         """Async variant of :py:meth:`_render_prompt`.
 
@@ -987,7 +987,7 @@ class PromptBuilder:
             return result
 
 
-def _get_description(doc: Document) -> str:
+def _get_description(doc: Instance) -> str:
     return doc.metadata.get("description", "")
 
 
@@ -997,15 +997,15 @@ def _get_description(doc: Document) -> str:
 
 # Sentinels standing in for content-borne mustache delimiters between the
 # two passes. Unicode Private Use Area codepoints — they carry no meaning
-# to chevron and are not expected in legitimate document content.
+# to chevron and are not expected in legitimate instance content.
 _LIT_OPEN = "\ue000"
 _LIT_CLOSE = "\ue001"
 
 # Context entries whose strings MAY carry live mustache refs. The agent
-# document is the composition root — its author writes ``instruction`` (and
+# instance is the composition root — its author writes ``instruction`` (and
 # picks/authors the template), so refs inside it are a feature (e.g. the
 # open-swe scope's instruction interpolating ``{{repository}}``). Every
-# OTHER document's content (Skill, Soul, guardrails, memory, tenant
+# OTHER instance's content (Skill, Soul, guardrails, memory, tenant
 # overlays of those docs, caller extras) is DATA: a third party's ``{{``
 # must reach the final prompt as ``{{``, not execute as template.
 _TEMPLATE_BEARING_CTX_KEYS = frozenset({"agent"})
@@ -1041,7 +1041,7 @@ def _two_pass_mustache(template: str, ctx: dict[str, Any]) -> str:
     that content is third-party input (and silent data loss for literal
     ``{{`` in honest content, which chevron erases as an unknown tag).
 
-    The rule: only the agent document's own entry
+    The rule: only the agent instance's own entry
     (``_TEMPLATE_BEARING_CTX_KEYS``) keeps live delimiters. All other
     context values have ``{{``/``}}`` swapped for sentinels before pass 1
     and restored after pass 2 — they flow through both passes untouched

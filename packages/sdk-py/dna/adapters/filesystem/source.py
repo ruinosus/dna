@@ -36,7 +36,7 @@ def fs_tenant_segment(tenant: str | None) -> str | None:
 
 
 class FilesystemSource(SourcePort):
-    """Loads manifest documents from .dna/<scope>/ directories.
+    """Loads manifest instances from .dna/<scope>/ directories.
 
     Declares the contract explicitly (s-dna-source-conformance-kit): every
     in-repo adapter subclasses its port Protocol so the relationship is
@@ -57,13 +57,13 @@ class FilesystemSource(SourcePort):
         """Resolve ``path`` and refuse it unless it stays under ``base_dir``.
 
         BELT AND BRACES — deliberately redundant with the kernel guard
-        (``validate_document_name`` / ``validate_scope_name`` at
-        ``Kernel.write_document`` / ``fetch_bundle_entry`` / …), and the
+        (``validate_instance_name`` / ``validate_scope_name`` at
+        ``Kernel.write_instance`` / ``fetch_bundle_entry`` / …), and the
         redundancy is the point. **Do not delete either layer as duplicated
         work.** The kernel guard is the PRIMARY seam: it is the door every
         application-layer writer goes through and it can name which input was
         wrong. This one exists because the adapter is reachable WITHOUT the
-        kernel — ``dna.kernel.source.sync`` calls ``save_document`` directly
+        kernel — ``dna.kernel.source.sync`` calls ``save_instance`` directly
         today (benignly: its names come from the source being copied, not from
         a request), the public conformance kit drives adapters on purpose, and
         an adapter that builds ``<base>/<scope>/<container>/<name>`` while
@@ -72,7 +72,7 @@ class FilesystemSource(SourcePort):
 
         It also covers what a per-facade validator cannot reach cheaply:
         ``scope`` lands in a path on EVERY read (``load_all`` backs
-        ``instance`` / ``list_documents`` / ``get_document`` / ``query`` …),
+        ``instance`` / ``list_instances`` / ``get_instance`` / ``query`` …),
         and ``ref`` / ``layer_value`` / a module ``version`` are path segments
         too. One check at the place the path is actually built covers all of
         them, including the door somebody adds tomorrow.
@@ -86,11 +86,11 @@ class FilesystemSource(SourcePort):
 
         COST, and where it is paid. ``Path.resolve()`` is a realpath: one lstat
         per path component, plus link traversal. This method is called on
-        ``load_all``, which backs ``instance`` / ``list_documents`` /
-        ``get_document`` / ``query`` — so the syscalls land on the READ hot
+        ``load_all``, which backs ``instance`` / ``list_instances`` /
+        ``get_instance`` / ``query`` — so the syscalls land on the READ hot
         path, not only on writes, and they scale with the DEPTH of the store
-        root rather than with the number of documents (once per facade call,
-        not once per document). It is a fixed handful of stats per call on a
+        root rather than with the number of instances (once per facade call,
+        not once per instance). It is a fixed handful of stats per call on a
         path prefix the OS has in its dentry cache; the alternative,
         ``os.path.normpath``, is pure string work and would cost nothing — and
         is rejected anyway, deliberately, because it is TEXTUAL: it cannot see
@@ -110,7 +110,7 @@ class FilesystemSource(SourcePort):
             raise PathEscapesStoreRoot(
                 f"{type(self).__name__} refused a path that leaves its store "
                 f"root: {str(resolved)!r} is not under {str(self.base_dir)!r}. "
-                f"Every segment this adapter joins — scope, container, document "
+                f"Every segment this adapter joins — scope, container, instance "
                 f"name, layer value, bundle entry, module version — is a PATH "
                 f"COMPONENT, so one that traverses ('..', '/', an absolute "
                 f"path) moves the anchor and puts the read or write outside the "
@@ -381,7 +381,7 @@ class FilesystemSource(SourcePort):
         Readers take priority: if a reader detects a bundle directory,
         any YAML file with the same stem is skipped to avoid duplicates.
         """
-        documents: list[dict[str, Any]] = []
+        instances: list[dict[str, Any]] = []
         reader_matched: set[str] = set()  # stems matched by readers
 
         # 1. Invoke readers first (bundles take priority)
@@ -393,13 +393,13 @@ class FilesystemSource(SourcePort):
                     if reader.detect(bundle):
                         doc = reader.read(bundle)
                         if isinstance(doc, dict) and "kind" in doc:
-                            documents.append(doc)
+                            instances.append(doc)
                             reader_matched.add(directory.name)
                 except Exception as e:
                     logger.warning("Reader error on %s: %s", directory, e)
 
             # Readers on subdirectories
-            await self._read_recursive(directory, readers, documents, skip, reader_matched)
+            await self._read_recursive(directory, readers, instances, skip, reader_matched)
 
         # 2. Load YAML files. Dedup against reader-loaded bundles is done in
         # step 3 by (kind, name) — stem-only dedup would drop docs of a
@@ -412,14 +412,14 @@ class FilesystemSource(SourcePort):
                 async with aiofiles.open(yaml_file, encoding="utf-8") as f:
                     content = safe_load(await f.read())
                 if isinstance(content, dict) and "kind" in content:
-                    documents.append(content)
+                    instances.append(content)
             except yaml.YAMLError as e:
                 logger.warning("Error parsing %s: %s", yaml_file, e)
 
         # 3. Deduplicate by kind/name — readers (first) take priority over YAML (later)
         seen: set[str] = set()
         deduped: list[dict[str, Any]] = []
-        for doc in documents:
+        for doc in instances:
             name = doc.get("metadata", {}).get("name") or doc.get("name", "")
             key = f"{doc.get('kind', '')}/{name}"
             if key not in seen:
@@ -429,7 +429,7 @@ class FilesystemSource(SourcePort):
 
     async def _read_recursive(
         self, directory: Path, readers: list,
-        documents: list[dict[str, Any]], skip: set[str],
+        instances: list[dict[str, Any]], skip: set[str],
         reader_matched: set[str],
     ) -> None:
         # H3 — container-aware reader routing.
@@ -477,14 +477,14 @@ class FilesystemSource(SourcePort):
                     if reader.detect(bundle):
                         doc = reader.read(bundle)
                         if isinstance(doc, dict) and "kind" in doc:
-                            documents.append(doc)
+                            instances.append(doc)
                         reader_matched.add(subdir.name)
                         matched = True
                         break
                 except Exception as e:
                     logger.warning("Reader error on %s: %s", subdir, e)
             if not matched:
-                await self._read_recursive(subdir, readers, documents, skip, reader_matched)
+                await self._read_recursive(subdir, readers, instances, skip, reader_matched)
 
     async def close(self) -> None:
         pass
@@ -525,7 +525,7 @@ class FilesystemSource(SourcePort):
 
           ``scope`` / ``container`` / ``name``
               ONE path component each. No ``/`` at all, never ``.`` or ``..``.
-              ``validate_scope_name`` / ``validate_document_name``.
+              ``validate_scope_name`` / ``validate_instance_name``.
           ``entry``
               A RELATIVE PATH, anchored at the root this method returns. ``/``
               is legitimate and normal — 482 of the 492 real bundle entries
@@ -534,11 +534,11 @@ class FilesystemSource(SourcePort):
 
         Same concept, two doors, two rules — and for two commits only one door
         was guarded. The consequence was not theoretical: a bundle entry path
-        is ALSO derived from document CONTENT by the registered writers
+        is ALSO derived from instance CONTENT by the registered writers
         (``spec.source_files``, ``spec.root_files``,
         ``spec.scripts|references|assets``, ``spec.extras``,
         ``spec.instruction_file``), and every one of those wrote a file outside
-        the store root through ``Kernel.write_document`` itself, on the base
+        the store root through ``Kernel.write_instance`` itself, on the base
         lane and the tenant lane alike. If you add a third shape here, decide
         which of the two rules it is BEFORE you join it onto anything.
         """

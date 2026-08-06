@@ -1,4 +1,4 @@
-"""``dna.application.documents`` — GENERIC, registry-driven document use-cases.
+"""``dna.application.instances`` — GENERIC, registry-driven instance use-cases.
 
 The gap this closes: every serving face DNA ships enumerated its capabilities by
 hand. The MCP face has 21 hand-written tools and no loop over the Kind registry,
@@ -12,9 +12,9 @@ These four use-cases are that generic path, transport-agnostic, resolved from
 the kernel's :class:`~dna.kernel.kinds.registry.KindRegistry` **at call time**:
 
     list_kinds_impl      — the Kind catalog (what can I act on here?)
-    list_documents_impl  — the documents of one Kind in a scope
-    get_document_impl    — one document, verbatim
-    write_document_impl  — create/update one document
+    list_instances_impl  — the instances of one Kind in a scope
+    get_instance_impl    — one instance, verbatim
+    write_instance_impl  — create/update one instance
 
 They live in the CORE (``adr-faces-reorg`` move #1) so a face is a thin adapter
 and every face inherits the same rules — most importantly the two refusals
@@ -24,7 +24,7 @@ below, which would be a hole the moment a second face re-implemented them.
 ``LayerPolicy`` or a ``KindDefinition`` is not content *inside* a scope, it is
 the declaration of what that scope *is*: the Genome carries the scope's identity
 and its ``parent_scope`` inheritance, a LayerPolicy is the operator's own
-override policy (the very gate ``write_document`` consults), and a
+override policy (the very gate ``write_instance`` consults), and a
 KindDefinition registers a brand-new Kind with its own schema, storage marker
 and dep_filters. The set is **derived**, not hand-typed: it is exactly the ports
 that declare ``is_overlayable = False`` — the kernel's own marker for "a layer
@@ -35,7 +35,7 @@ declared, with no list to keep in sync. Reads are untouched.
 name (i-195; live today whenever a per-scope ``KindDefinition`` shadows a
 builtin). Bare-name lookup resolves one deterministically, which is fine for a
 human at a CLI and wrong here: the
-resolved port decides both the document's ``apiVersion`` **and** its metering
+resolved port decides both the instance's ``apiVersion`` **and** its metering
 family, so silently picking one would let the registry pick a caller's quota
 family for them. The generic surface refuses and asks for ``api_version``.
 
@@ -61,21 +61,21 @@ __all__ = [
     "DEFAULT_FAMILY",
     "DeleteRefused",
     "TRAIT_APPEND_ONLY",
-    "UnknownDocumentError",
+    "UnknownInstanceError",
     "UnknownKindError",
     "bootstrap_kinds",
-    "delete_document_impl",
+    "delete_instance_impl",
     "delete_refusal",
     "family_for_kind",
-    "get_document_impl",
+    "get_instance_impl",
     "is_append_only_kind",
     "is_bootstrap_kind",
-    "list_documents_impl",
+    "list_instances_impl",
     "list_kinds_impl",
     "resolve_kind_port",
     "resolve_kind_port_live",
     "spec_etag",
-    "write_document_impl",
+    "write_instance_impl",
 ]
 
 
@@ -93,18 +93,18 @@ class AmbiguousKindError(ValueError):
 
 class ConcurrentWriteError(ValueError):
     """An ``if_match`` guard on a generic write did not hold — the stored
-    document changed (or vanished) since the caller read it, so the write would
+    instance changed (or vanished) since the caller read it, so the write would
     have silently overwritten somebody else's update.
 
     Subclasses ``ValueError`` so every face that already maps write-path vetoes
     to an honest client refusal surfaces it with no new wiring."""
 
 
-class UnknownDocumentError(LookupError):
-    """A generic delete named a document that is not there.
+class UnknownInstanceError(LookupError):
+    """A generic delete named an instance that is not there.
 
     Distinct from :class:`UnknownKindError`: the Kind resolved fine, the
-    document did not. Returning quietly would report success for a delete that
+    instance did not. Returning quietly would report success for a delete that
     did nothing — which is exactly how a caller convinces itself something is
     gone."""
 
@@ -114,7 +114,7 @@ class BootstrapKindWriteRefused(PermissionError):
 
     Not a plan/quota denial and not a bug: writing a Genome / LayerPolicy /
     KindDefinition changes what the scope *is*, which no generic
-    write-any-document tool should be able to do. The purpose-built paths
+    write-any-instance tool should be able to do. The purpose-built paths
     (workspace provisioning for a Genome, the operator's own policy authoring
     for a LayerPolicy, the KindDefinition wizard) stay available."""
 
@@ -176,12 +176,12 @@ async def resolve_kind_port_live(
     live: LiveDna, kind: str, api_version: str | None = None, *,
     scope: str | None = None,
 ) -> Any:
-    """:func:`resolve_kind_port`, preceded by the document routes' REBUILD
+    """:func:`resolve_kind_port`, preceded by the instance routes' REBUILD
     TRIGGER — the seam that lets an approval take effect on THIS replica (i-090).
 
-    The document routes resolve their Kind straight off the registry, and the
+    The instance routes resolve their Kind straight off the registry, and the
     registry is only ever (re)populated inside a Manifest Instance build. No
-    document route builds one, so on a replica that did not itself serve the
+    instance route builds one, so on a replica that did not itself serve the
     approval a freshly approved Kind stayed unregistered until somebody happened
     to call a ``definitions``-family route for that scope — indeterminate, per
     replica, and for a REVOCATION a door that is slow to close.
@@ -194,7 +194,7 @@ async def resolve_kind_port_live(
 
     Every generic use-case below resolves through HERE rather than through the
     bare :func:`resolve_kind_port`, precisely so a new route cannot forget the
-    trigger: it is attached to the resolution, the one thing a document route
+    trigger: it is attached to the resolution, the one thing an instance route
     cannot skip. The bare function stays exported for callers that hold a kernel
     and no live handle.
     """
@@ -203,7 +203,7 @@ async def resolve_kind_port_live(
 
 
 def is_bootstrap_kind(port: Any) -> bool:
-    """Whether ``port`` is a BOOTSTRAP Kind — one whose documents declare what a
+    """Whether ``port`` is a BOOTSTRAP Kind — one whose instances declare what a
     scope *is* rather than holding content within it.
 
     Derived from the kernel's own ``KindPort.is_overlayable`` marker (False =
@@ -227,12 +227,12 @@ def bootstrap_write_refusal(port: Any) -> str:
     """The refusal message for a generic write on ``port`` — one text, so the
     catalog's ``write_refusal`` and the raised error can never drift."""
     return (
-        f"{port.kind!r} is a BOOTSTRAP Kind: its documents declare what this "
+        f"{port.kind!r} is a BOOTSTRAP Kind: its instances declare what this "
         f"scope IS (identity + inheritance, the operator's own layer policy, or "
         f"the definition of a Kind itself), not content within it. The generic "
         f"write refuses it — fail closed — because a tool that can write any "
-        f"document must not be the tool that rewrites the frame every other "
-        f"document is validated and composed against. Use the purpose-built "
+        f"instance must not be the tool that rewrites the frame every other "
+        f"instance is validated and composed against. Use the purpose-built "
         f"path for this Kind (it is still READABLE here)."
     )
 
@@ -277,7 +277,7 @@ def delete_refusal(port: Any) -> str | None:
     write already refuses these because they declare what the scope IS. Delete
     is strictly worse than write here, and the asymmetry is the point: a bad
     Genome is recoverable by writing a better one, but deleting a KindDefinition
-    leaves every document of that Kind on disk with nothing left that can
+    leaves every instance of that Kind on disk with nothing left that can
     validate, compose or even name them — and the thing that would have told you
     what the orphans were is what you just deleted.
 
@@ -286,19 +286,19 @@ def delete_refusal(port: Any) -> str | None:
     something to hide, and there is no "write a better one" for a fact.
 
     Everything else is deletable, and deliberately so: a memory, a Story, a
-    Skill, a tenant's own document are all things whose owner may legitimately
+    Skill, a tenant's own instance are all things whose owner may legitimately
     want gone, and a delete they cannot perform is a delete they will perform by
     hand against the database."""
     if port is None:
         return None
     if is_bootstrap_kind(port):
         return (
-            f"{port.kind!r} is a BOOTSTRAP Kind: its documents declare what this "
+            f"{port.kind!r} is a BOOTSTRAP Kind: its instances declare what this "
             f"scope IS (identity + inheritance, the operator's layer policy, or "
             f"the definition of a Kind itself). The generic delete refuses it. "
             f"Deleting one is worse than writing a bad one: a bad Genome is "
             f"fixed by writing a better Genome, but deleting a KindDefinition "
-            f"leaves every document of that Kind in place with nothing left to "
+            f"leaves every instance of that Kind in place with nothing left to "
             f"validate, compose or name them — and what would have told you what "
             f"they were is what you deleted. Use the purpose-built path."
         )
@@ -353,7 +353,7 @@ def family_for_kind(port: Any) -> str:
     """The quota FEATURE FAMILY a call touching ``port``'s Kind belongs to.
 
     Derived from the target Kind, never from the caller: the same port that
-    supplies the document's ``apiVersion`` supplies the family, so the meter and
+    supplies the instance's ``apiVersion`` supplies the family, so the meter and
     the write can never disagree. ``None`` (an unregistered Kind) →
     :data:`DEFAULT_FAMILY`."""
     if port is None:
@@ -385,7 +385,7 @@ def _enum_value(value: Any) -> str | None:
 
 # ``spec_etag`` MOVED to :mod:`dna.kernel.etag` (i-083) and is re-exported here
 # unchanged, so every existing importer keeps working. It moved because the SAME
-# token now guards ``kernel.write_document`` itself, and that guard is evaluated
+# token now guards ``kernel.write_instance`` itself, and that guard is evaluated
 # by the ADAPTER — which may import ``dna.kernel.*`` and nothing above it. The
 # alternative was a second copy of the hash one layer down, and two hashes that
 # disagreed by a sort order or a separator would refuse every honest write while
@@ -431,7 +431,7 @@ def _stamp_dates(
     """Stamp the dated fields ``kind``'s read surfaces need — in place.
 
     The field list is :data:`~dna.application.sdlc.DATED_SPEC_FIELDS`, the SAME
-    registry the digest reads a document's date THROUGH and the named write paths
+    registry the digest reads an instance's date THROUGH and the named write paths
     are guarded against (i-078). Deriving from it rather than keeping a second list
     is the whole point: a Kind a reader learns to date is dated by this path on the
     day it is added there, and a Kind outside it gets nothing — many of those close
@@ -440,14 +440,14 @@ def _stamp_dates(
 
     Three rules, in order of who is most likely to be right:
 
-    * a field the CALLER sent is left alone — importing a document with its real
+    * a field the CALLER sent is left alone — importing an instance with its real
       dates has to stay possible; the stamp is a floor, not an override;
     * ``updated_at`` is always ``now`` — this write IS the update, so the claim is
       true by construction;
     * ``created_at`` is stamped ``now`` only on a CREATE. On an update it is
-      recovered from the document's own timeline (``backfill_created_at``) and
+      recovered from the instance's own timeline (``backfill_created_at``) and
       otherwise left ABSENT. Falling back to ``now`` there would date a months-old
-      document as filed today, put it in the current digest window and hide it from
+      instance as filed today, put it in the current digest window and hide it from
       the one it belongs to — a louder version of the bug this repairs. That is the
       identical rule ``plan_date_repair`` and ``set_status`` already hold.
 
@@ -455,7 +455,7 @@ def _stamp_dates(
     whether this was a groom, a decision or a status flip, the ``type`` vocabulary
     is verb-shaped, and a Kind may declare no ``timeline`` at all. Narrating a board
     item is what ``comment`` / ``set_status`` are for; what this path owes the
-    readers is the dated fields above, and what it owes the document is to not
+    readers is the dated fields above, and what it owes the instance is to not
     destroy the timeline somebody else wrote."""
     from dna.application.sdlc import DATED_SPEC_FIELDS, backfill_created_at
 
@@ -471,7 +471,7 @@ def _stamp_dates(
 
 
 def _write_tenant(port: Any, tenant: str | None) -> str | None:
-    """The tenant to thread into ``kernel.write_document``.
+    """The tenant to thread into ``kernel.write_instance``.
 
     A ``TenantScope.GLOBAL`` Kind must NOT carry one (the kernel raises
     ``TenantNotAllowed``) — for those the resolved workspace has already done
@@ -524,7 +524,7 @@ async def list_kinds_impl(
     # that govern this scope — the globals plus this scope's own. Another
     # workspace's Kind is not actionable here and must not be advertised.
     catalog_scope = scope or live.default_scope(tenant)
-    # i-090 — the catalog is a document route too: it reads the registry
+    # i-090 — the catalog is an instance route too: it reads the registry
     # directly and never built a Manifest Instance, so without this it kept
     # answering "no such Kind" for a Kind that had just been approved (and kept
     # advertising one that had just been revoked). Same TTL'd seam as
@@ -564,7 +564,7 @@ async def list_kinds_impl(
     }
 
 
-async def list_documents_impl(
+async def list_instances_impl(
     live: LiveDna, *, kind: str, scope: str | None = None,
     tenant: str | None = None, api_version: str | None = None,
     limit: int | None = None, offset: int = 0,
@@ -572,7 +572,7 @@ async def list_documents_impl(
     filter: dict[str, Any] | None = None,  # noqa: A002 — the kernel's own kwarg
     order_by: Iterable[str] | None = None,
 ) -> dict[str, Any]:
-    """List the documents of one Kind in a scope (tenant-resolved), optionally
+    """List the instances of one Kind in a scope (tenant-resolved), optionally
     PROJECTED, FILTERED and ORDERED.
 
     Names-only used to be the whole result, which made every question about a
@@ -626,31 +626,31 @@ async def list_documents_impl(
     has_more = len(rows) > limit
     page = rows[:limit]
     if projection is None:
-        documents: list[dict[str, Any]] = [
+        instances: list[dict[str, Any]] = [
             {"name": n} for n in (_row_name(r) for r in page) if n
         ]
     else:
-        documents = [r for r in page if isinstance(r, dict)]
+        instances = [r for r in page if isinstance(r, dict)]
     return {
         "scope": sc,
         "kind": port.kind,
         "api_version": port.api_version,
-        "documents": documents,
-        "count": len(documents),
+        "instances": instances,
+        "count": len(instances),
         "offset": offset,
         "has_more": has_more,
         "projected": projection,
     }
 
 
-async def get_document_impl(
+async def get_instance_impl(
     live: LiveDna, *, kind: str, name: str, scope: str | None = None,
     tenant: str | None = None, api_version: str | None = None,
     as_of: str | None = None,
 ) -> dict[str, Any]:
-    """Read one document verbatim, as the caller's layer sees it.
+    """Read one instance verbatim, as the caller's layer sees it.
 
-    **``as_of`` (ISO-8601) reads the BELIEF STATE** — the document as this store
+    **``as_of`` (ISO-8601) reads the BELIEF STATE** — the instance as this store
     RECORDED it at or before that instant (transaction time,
     ``dna_versions.created_at``), not as it stands now. The same second time axis
     ``recall`` and ``list_memories`` already carry, generalised to every Kind:
@@ -660,21 +660,21 @@ async def get_document_impl(
 
     i-106 is why this is a parameter and not a wish: the REST route ACCEPTED
     ``?as_of=`` and ignored it, because FastAPI drops an undeclared query param
-    in silence. A caller asking what a document looked like yesterday got today's
-    document under a 200, with nothing in the response to say otherwise — the
+    in silence. A caller asking what an instance looked like yesterday got today's
+    instance under a 200, with nothing in the response to say otherwise — the
     failure mode the whole ``as_of`` module exists to refuse. The three refusals
     below are the point; the read is the easy half.
 
     * a store with no version history → :class:`~dna.memory.as_of.AsOfUnsupported`
     * history pruned past ``as_of`` → :class:`~dna.memory.as_of.AsOfTruncated`
-    * the document did not exist yet → ``LookupError``, which is an ANSWER and
-      deliberately the SAME exception "no such document" already raises: at
+    * the instance did not exist yet → ``LookupError``, which is an ANSWER and
+      deliberately the SAME exception "no such instance" already raises: at
       ``as_of`` those two ARE the same statement (nothing was there), while
       "pruned" is not, and only the pruned case gets its own type.
 
     ``etag`` is computed over whatever spec is returned, so a follow-up write
     carrying a historical etag as ``if_match`` refuses as stale instead of
-    quietly rewinding the document.
+    quietly rewinding the instance.
     """
     from dna.memory.as_of import (
         AsOfTruncated, AsOfUnsupported, normalize_as_of, resolve_as_of,
@@ -684,14 +684,14 @@ async def get_document_impl(
     sc = scope or live.default_scope(tenant)
     port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
     if as_of is None:
-        raw = await live.kernel.get_document(sc, port.kind, name, tenant=tenant)
+        raw = await live.kernel.get_instance(sc, port.kind, name, tenant=tenant)
         if raw is None:
             raise LookupError(f"no {port.kind} named {name!r} in scope {sc!r}")
         return {
             "scope": sc, "kind": port.kind, "api_version": port.api_version,
-            "name": name, "document": raw,
+            "name": name, "instance": raw,
             # The optimistic-concurrency token for a follow-up write (see
-            # :func:`spec_etag`): pass it back as ``write_document``'s ``if_match``
+            # :func:`spec_etag`): pass it back as ``write_instance``'s ``if_match``
             # and a lost update becomes a refusal instead of a silent overwrite.
             "etag": spec_etag(raw.get("spec") if isinstance(raw, dict) else None),
         }
@@ -699,7 +699,7 @@ async def get_document_impl(
     as_of_iso = normalize_as_of(as_of)  # ValueError on a non-ISO-8601 instant
     if not store_supports_as_of(live.kernel):
         raise AsOfUnsupported(
-            f"get_document(as_of=...) needs a store that retains version history "
+            f"get_instance(as_of=...) needs a store that retains version history "
             f"with a transaction timestamp; this deployment's source does not. "
             f"Refusing rather than returning the CURRENT state of {port.kind} "
             f"{name!r} under a past timestamp."
@@ -713,7 +713,7 @@ async def get_document_impl(
             f"{port.kind} {name!r} in scope {sc!r} HAS history, but none of it "
             f"reaches back to {as_of_iso} — the versions that old were pruned. "
             f"What this store believed then is not knowable; it is not 'the "
-            f"document did not exist'."
+            f"instance did not exist'."
         )
     if not res.found:
         raise LookupError(
@@ -722,12 +722,12 @@ async def get_document_impl(
         )
     return {
         "scope": sc, "kind": port.kind, "api_version": port.api_version,
-        "name": name, "document": res.raw,
+        "name": name, "instance": res.raw,
         "etag": spec_etag(
             res.raw.get("spec") if isinstance(res.raw, dict) else None
         ),
         # The three fields that keep an as-of read from being mistaken for a
-        # live one by a caller that only looks at ``document``.
+        # live one by a caller that only looks at ``instance``.
         "as_of": as_of_iso,
         "as_of_version": res.version,
         "as_of_recorded_at": res.recorded_at,
@@ -739,7 +739,7 @@ async def graph_refs_impl(
     tenant: str | None = None, api_version: str | None = None,
     direction: str = "in", depth: int | None = None,
 ) -> dict[str, Any]:
-    """"What points at this document?" — the DERIVED reference graph.
+    """"What points at this instance?" — the DERIVED reference graph.
 
     The read the product question needed and that nothing could answer: the
     Kind screen has always been able to say ``Story.feature → Feature`` exists
@@ -749,7 +749,7 @@ async def graph_refs_impl(
 
     * ``resolved`` per edge — ``false`` is a DANGLING reference (declared,
       written, resolving to nothing). Listed, never filtered: with
-      ``DNA_REF_VALIDATION=warn`` (the default) such documents persist, and a
+      ``DNA_REF_VALIDATION=warn`` (the default) such instances persist, and a
       graph that hid the broken half would read as healthier than the data is.
     * ``stop`` — ``complete`` / ``depth_reached`` / ``truncated``. A caller
       that cannot tell "this is everything" from "this is where I stopped"
@@ -761,7 +761,7 @@ async def graph_refs_impl(
 
     Raises :class:`~dna.kernel.query.graph.GraphUnsupported` on a store that
     keeps no edges — deliberately, rather than an empty list that would read as
-    "nothing points at this document".
+    "nothing points at this instance".
     """
     sc = scope or live.default_scope(tenant)
     port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
@@ -791,15 +791,15 @@ async def graph_refs_impl(
     }
 
 
-async def write_document_impl(
+async def write_instance_impl(
     live: LiveDna, *, kind: str, name: str, spec: dict[str, Any],
     scope: str | None = None, tenant: str | None = None,
     api_version: str | None = None, merge: bool = True,
     if_match: str | None = None, now: str | None = None,
     source_sha256: str | None = None,
 ) -> dict[str, Any]:
-    """Create or UPDATE one document — read-modify-merge, through
-    ``kernel.write_document``.
+    """Create or UPDATE one instance — read-modify-merge, through
+    ``kernel.write_instance``.
 
     Nothing about the write path is re-implemented here: schema validation, the
     LayerPolicy gate (Kind-level and the ``OVERLAYABLE_FIELDS`` per-field
@@ -807,49 +807,49 @@ async def write_document_impl(
     invalidation fan-out are the kernel's, exactly as for the hand-written
     tools. This use-case adds the three things the kernel cannot know:
 
-    **1. the caller is a GENERIC write-any-document tool**, so the bootstrap
+    **1. the caller is a GENERIC write-any-instance tool**, so the bootstrap
     Kinds are refused (:class:`BootstrapKindWriteRefused`).
 
-    **2. an update is an update.** This path used to build the document from
+    **2. an update is an update.** This path used to build the instance from
     scratch and hand it over, which made every write a REPLACE: updating one
     field of a Story erased its ``timeline`` (append-only history), its status and
     its parent Feature unless the caller re-sent all of them. It now reads the
-    stored document first and merges the caller's ``spec`` over it at the TOP
-    LEVEL (:func:`_merged_spec` — which also documents why not deep, and how an
+    stored instance first and merges the caller's ``spec`` over it at the TOP
+    LEVEL (:func:`_merged_spec` — which also instances why not deep, and how an
     explicit ``None`` clears a field). ``merge=False`` is the old behavior, kept
     reachable but only by name: it REPLACES the spec and drops anything the caller
     did not send.
 
-    **3. the read surfaces need the document dated.** :func:`_stamp_dates` stamps
+    **3. the read surfaces need the instance dated.** :func:`_stamp_dates` stamps
     exactly what :data:`~dna.application.sdlc.DATED_SPEC_FIELDS` declares for the
-    target Kind — the same registry ``sdlc_digest`` reads a document's date
+    target Kind — the same registry ``sdlc_digest`` reads an instance's date
     through — so an ADR / Kaizen / Spike filed here is visible to the digest
     instead of permanently missing from every window (i-078, one write path
-    later). It never forges a ``created_at`` onto an older document.
+    later). It never forges a ``created_at`` onto an older instance.
 
-    ``if_match`` (OPTIONAL) is the ``etag`` from :func:`get_document_impl`: when
+    ``if_match`` (OPTIONAL) is the ``etag`` from :func:`get_instance_impl`: when
     given, the write proceeds only if the stored spec still hashes to it, else
     :class:`ConcurrentWriteError`. Opt-in rather than mandatory, deliberately —
     a CREATE has nothing to match, MCP tool calls are stateless (an agent that
-    never read the document has no token to send), and making it mandatory would
+    never read the instance has no token to send), and making it mandatory would
     turn every first write into a two-call dance. What makes the default safe is
     (2): without a token, concurrent writers no longer clobber each other's whole
-    document, only the individual fields both of them sent. A caller that cannot
+    instance, only the individual fields both of them sent. A caller that cannot
     tolerate even that reads first and passes the etag — and gets the next one
     back from this call, so a chain of updates costs no extra reads.
 
     The ``apiVersion`` is taken from the resolved port, never from the caller:
-    an agent cannot smuggle a document into a different Kind's namespace.
+    an agent cannot smuggle an instance into a different Kind's namespace.
 
     ``source_sha256`` (OPTIONAL) closes the PROVENANCE edge from the write
     side: when given, it must name an already-registered ``SourceArtifact``
     (``POST /v1/artifacts`` — content-addressed as ``sha256-<hex>``) under
-    ``tenant``, and this document is appended to that artifact's
+    ``tenant``, and this instance is appended to that artifact's
     ``derived_refs`` — the SAME field :func:`~dna.application.runtime.
     register_artifact_impl` initializes and preserves on the artifact's own
-    side. Idempotent per ``(kind, name)``: re-writing the SAME document
+    side. Idempotent per ``(kind, name)``: re-writing the SAME instance
     updates its own entry (a fresh ``extracted_at``) instead of appending a
-    duplicate, and every OTHER document's entry is left untouched — the
+    duplicate, and every OTHER instance's entry is left untouched — the
     write-side twin of the "a re-registration preserves ``derived_refs``"
     property the artifact route already holds. Raises :class:`ValueError` when
     the cited artifact does not exist under ``tenant`` (a caller cannot cite
@@ -867,14 +867,14 @@ async def write_document_impl(
     # None; this never broke, and the measurement of WHY is in
     # ``test_delete_document_tenant_coordinates.py``: a GLOBAL Kind can have no
     # tenant row at all (the write pipeline raises ``TenantNotAllowed`` for any
-    # effective tenant), and ``get_document(tenant=X)`` falls back to the base
-    # layer, so both readings returned byte-identical documents on every store.
+    # effective tenant), and ``get_instance(tenant=X)`` falls back to the base
+    # layer, so both readings returned byte-identical instances on every store.
     # It is aligned anyway because the equality is a property of TODAY's
     # declarations, not of this code: a Kind whose declared scope changes from
     # tenanted to GLOBAL leaves real overlay rows behind, and the old reading
     # would have merged one into the shared base that every tenant inherits.
     write_tenant = _write_tenant(port, tenant)
-    existing = await live.kernel.get_document(
+    existing = await live.kernel.get_instance(
         sc, port.kind, name, tenant=write_tenant)
     stored = (
         dict(existing.get("spec") or {})
@@ -886,7 +886,7 @@ async def write_document_impl(
             raise ConcurrentWriteError(
                 f"if_match={if_match!r} was given but no {port.kind} named "
                 f"{name!r} exists in scope {sc!r} — if_match asserts you are "
-                f"updating a document you read; the document was deleted, or the "
+                f"updating an instance you read; the instance was deleted, or the "
                 f"name is wrong. Re-read it, or drop if_match to create."
             )
         current = spec_etag(stored)
@@ -894,8 +894,8 @@ async def write_document_impl(
             raise ConcurrentWriteError(
                 f"{port.kind} {name!r} in scope {sc!r} changed since you read it "
                 f"(if_match={if_match!r}, now {current!r}) — refusing so your "
-                f"update does not overwrite somebody else's. Re-read the document "
-                f"with get_document and re-apply your change to the fresh etag."
+                f"update does not overwrite somebody else's. Re-read the instance "
+                f"with get_instance and re-apply your change to the fresh etag."
             )
 
     new_spec = _merged_spec(stored, dict(spec or {}), merge=merge)
@@ -909,7 +909,7 @@ async def write_document_impl(
         "metadata": {"name": name},
         "spec": new_spec,
     }
-    version = await live.kernel.write_document(
+    version = await live.kernel.write_instance(
         sc, port.kind, name, raw, tenant=write_tenant,
     )
     if source_sha256:
@@ -936,11 +936,11 @@ async def _link_source_artifact(
     """Append ``{kind, name, scope, extracted_at}`` to the cited
     ``SourceArtifact``'s ``derived_refs`` — the write side of the provenance
     edge :func:`~dna.application.runtime.register_artifact_impl` already reads
-    and preserves on the artifact's own side (see :func:`write_document_impl`).
+    and preserves on the artifact's own side (see :func:`write_instance_impl`).
 
     ``tenant`` is the WORKSPACE the artifact was registered under (the same
     coordinate :func:`~dna.application.runtime.register_artifact_impl` binds
-    to) — never the derived document's own ``write_tenant``, which can differ
+    to) — never the derived instance's own ``write_tenant``, which can differ
     for a GLOBAL Kind. A ``SourceArtifact`` is always tenanted, so a caller
     with no workspace has nothing to cite here.
     """
@@ -954,7 +954,7 @@ async def _link_source_artifact(
         )
     digest = (sha256 or "").strip().lower()
     art_name = artifact_name(digest)
-    existing = await live.kernel.get_document(
+    existing = await live.kernel.get_instance(
         scope, "SourceArtifact", art_name, tenant=tenant)
     if not isinstance(existing, dict):
         raise ValueError(
@@ -967,8 +967,8 @@ async def _link_source_artifact(
         r for r in (art_spec.get("derived_refs") or []) if isinstance(r, dict)
     ]
     # Idempotent per (kind, name): drop any PRIOR entry for this SAME derived
-    # document before appending the fresh one, so a re-write updates in place
-    # rather than accreting a duplicate. Every OTHER document's entry is left
+    # instance before appending the fresh one, so a re-write updates in place
+    # rather than accreting a duplicate. Every OTHER instance's entry is left
     # exactly as it was — the "preserve, don't erase" property.
     refs = [
         r for r in refs
@@ -980,7 +980,7 @@ async def _link_source_artifact(
     })
     art_spec["derived_refs"] = refs
     write_kernel = live.kernel.with_tenant(tenant)
-    await write_kernel.write_document(
+    await write_kernel.write_instance(
         scope, "SourceArtifact", art_name,
         {
             "apiVersion": existing.get("apiVersion"),
@@ -992,14 +992,14 @@ async def _link_source_artifact(
     )
 
 
-async def delete_document_impl(
+async def delete_instance_impl(
     live: LiveDna, *, kind: str, name: str, api_version: str,
     scope: str | None = None, tenant: str | None = None,
     if_match: str | None = None,
 ) -> dict[str, Any]:
-    """Delete one document — the generic delete the faces were missing.
+    """Delete one instance — the generic delete the faces were missing.
 
-    ``kernel.delete_document`` has always existed; REST reaches it through four
+    ``kernel.delete_instance`` has always existed; REST reaches it through four
     narrow routes and ``dna doc delete`` uses it, but the MCP face had NO delete
     at all. An agent that could create and update every Kind could remove
     nothing, so the only way to undo a mistaken write was a human with database
@@ -1012,17 +1012,17 @@ async def delete_document_impl(
 
     ``if_match`` is the same optimistic-concurrency guard the generic write
     takes, and it matters more here: a write that races loses one edit, a delete
-    that races destroys a document its author never saw. It is OPTIONAL rather
-    than required because a caller that has just read the document to decide it
+    that races destroys an instance its author never saw. It is OPTIONAL rather
+    than required because a caller that has just read the instance to decide it
     should go can pass the etag, while one deleting by name (a cleanup script)
     genuinely has nothing to match on — requiring it would only push that caller
     into an extra read whose result it ignores.
 
     ``api_version`` is REQUIRED, unlike the write path where it can be inferred
-    from the document. A delete carries no document, and a bare Kind name can
+    from the instance. A delete carries no instance, and a bare Kind name can
     resolve to two ports once two workspaces each declare a `Deal` in their own
     namespace — so the caller states which Kind it means, and the pin travels
-    all the way down to the adapter (:meth:`WritableSourcePort.delete_document`).
+    all the way down to the adapter (:meth:`WritableSourcePort.delete_instance`).
     """
     sc = scope or live.default_scope(tenant)
     port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
@@ -1035,27 +1035,27 @@ async def delete_document_impl(
     # the write that created the row had used ``write_tenant`` too. ``tenant``
     # participates in the lookup key of every store — it is in the WHERE clause
     # of both SQL dialects (and in the Postgres primary key), and it selects the
-    # overlay directory on the filesystem — so a tenant's document was reported
+    # overlay directory on the filesystem — so a tenant's instance was reported
     # as "not found" by the one operation that could remove it, while write,
     # list and get all resolved it perfectly. An existence check asked at other
     # coordinates is a check of a different question; its answer says nothing
     # about the operation that follows it.
-    existing = await live.kernel.get_document(
+    existing = await live.kernel.get_instance(
         sc, port.kind, name, tenant=write_tenant)
     if existing is None:
-        raise UnknownDocumentError(
+        raise UnknownInstanceError(
             f"{port.kind} {name!r} not found in scope {sc!r} — nothing to delete"
         )
     if if_match is not None:
         current = spec_etag((existing.get("spec") or {}) if isinstance(existing, dict) else {})
         if current != if_match:
             raise ConcurrentWriteError(
-                f"if_match {if_match!r} does not match the stored document "
+                f"if_match {if_match!r} does not match the stored instance "
                 f"(etag {current!r}): {port.kind} {name!r} changed since you read "
                 f"it. Re-read it and decide again — a delete that races destroys "
                 f"an edit its author never saw."
             )
-    await live.kernel.delete_document(
+    await live.kernel.delete_instance(
         sc, port.kind, name, tenant=write_tenant,
         api_version=port.api_version, invalidate_mode="doc",
     )

@@ -37,7 +37,7 @@ So the relation moves OUT of the data schema and becomes a first-class block::
 
 **The relation NAME is the spec field that holds the value.** That is not a
 coincidence to be tidied away later — it is what keeps the declaration and the
-data in the same place, so that no document had to change when the declaration
+data in the same place, so that no instance had to change when the declaration
 moved, and so that the read which VALIDATES a relation is the read that
 produces its edge (``dna.kernel.query.references``).
 
@@ -50,7 +50,7 @@ The four keys, and nothing else
     A bare Kind name, not an alias: ``target_kind`` is globally unique by an
     ENFORCED registry invariant (i-195 — two api_versions sharing a Kind name
     is a ``KindRegistrationError``), so a bare name resolves unambiguously by
-    construction, and it is what ``get_document(scope, kind, name)`` already
+    construction, and it is what ``get_instance(scope, kind, name)`` already
     takes. (The ``alias`` field's own description used to claim aliases were
     for "cross-kind refs"; that claim never matched any implementation and is
     corrected in the meta-schema — i-110 item 2.)
@@ -70,7 +70,7 @@ The four keys, and nothing else
     ``Story.feature`` are two independently STORED fields. Each has a real
     multiplicity of its own, both are authored, and both can be wrong. A
     cardinality derived for the second side would be describing a field the
-    document actually holds — from the other document.
+    instance actually holds — from the other instance.
 
 ``inverse_of``
     The NAME of the relation on the target Kind that is this relation's other
@@ -79,7 +79,7 @@ The four keys, and nothing else
 
 ``by``
     How the VALUE addresses the target. Default :data:`BY_NAME` — the value is
-    the target document's ``metadata.name``, which is the only addressing the
+    the target instance's ``metadata.name``, which is the only addressing the
     kernel resolves and therefore the only one it validates. Anything else is
     a DECLARATION of addressing that this runtime does not resolve:
 
@@ -111,11 +111,11 @@ Three promises were available and they are not interchangeable:
   Feature, and the Story cannot be written before the Feature exists. A rule
   whose only satisfying order is "neither first" is not a rule.
 * **DERIVE** — write the missing half. Rejected: it is a cascade write. The
-  kernel would mutate a document the author did not touch, inside someone
+  kernel would mutate an instance the author did not touch, inside someone
   else's version, etag and layer policy, and a write amplification nobody
-  asked for is how a document store becomes a graph database by accident.
+  asked for is how an instance store becomes a graph database by accident.
 * **REPORT** — say that the two disagree. Chosen, and it is FREE: the
-  existence check already materialized the target document, so asking whether
+  existence check already materialized the target instance, so asking whether
   it names us back costs no read at all. This is the same trade
   ``ResolvedEdge`` already documents — the fact is not computed, it is simply
   not discarded.
@@ -128,7 +128,7 @@ them is the author's to fix right now.
 What IS enforced is the other half of dor 1, and it costs nothing either:
 **the declaration must pair.** ``Feature.stories.inverse_of: feature`` requires
 ``Story`` to declare a relation ``feature`` that points back at ``Feature`` and
-names ``stories`` as ITS inverse. That check reads no documents, cannot
+names ``stories`` as ITS inverse. That check reads no instances, cannot
 deadlock, and is where "nada diz que são inversas" actually gets fixed —
 :func:`inverse_gaps` computes it and the schema graph reports every failure.
 
@@ -144,10 +144,10 @@ between borrowing a keyword and understanding it.
 What it buys is what those two systems do not have to worry about: in this
 model **both halves are STORED**. Gel's reverse is a view of one stored link
 and cannot disagree with itself. ``Feature.stories`` and ``Story.feature`` are
-two fields in two documents written by two writes, and they can — and did —
+two fields in two instances written by two writes, and they can — and did —
 end up saying different things with nothing able to notice. ``inverse_of``
 buys the NAME of the other half, the load-time proof that the pair is
-declared on both sides, and the write-time report that the two documents
+declared on both sides, and the write-time report that the two instances
 agree. LinkML has the keyword and concedes in its own documentation that it
 "acts as additional documentation and doesn't affect programming semantics";
 Dgraph's ``@hasInverse`` materializes the other side automatically. This is
@@ -163,12 +163,12 @@ and they deserve answers rather than a silent overwrite:
    What changed is not the argument but its price: the founder measured on
    06/08/2026 that there is no consumer of the SDK or the cloud, production is
    ``Stopped`` and re-seedable from ``.dna/`` in git. The cheapest window this
-   edit will ever have is now, and every day adds documents in the old shape.
+   edit will ever have is now, and every day adds instances in the old shape.
 2. *"Field granularity — the reference belongs next to its type and
    description, where the author will see it."* Preserved, and this is why the
    relation's NAME is the field's name: the property stays in the schema with
    its type and its prose, and the relation is one block away in the same
-   document. What moved is the MODEL, not the data.
+   instance. What moved is the MODEL, not the data.
 3. *"It does not disturb ``dep_filters``."* Unchanged. ``dep_filters`` drives
    PROMPT COMPOSITION — a missing optional Skill is legitimately filtered out
    there rather than being an error — and it is deliberately not folded in
@@ -247,7 +247,7 @@ __all__ = [
 ANY_TARGET = "*"
 
 #: The default (and only RESOLVED) addressing: the value is the target
-#: document's ``metadata.name``.
+#: instance's ``metadata.name``.
 BY_NAME = "name"
 
 #: The closed cardinality vocabulary. Two words, because a model that needs
@@ -258,7 +258,7 @@ CARDINALITIES: tuple[str, ...] = ("one", "many")
 #: The closed set of composite forms a ``to: "*"`` relation may declare. CLOSED
 #: on purpose: ``x-dna-ref-composite`` took a free string, and a form nobody
 #: can parse is a declaration nobody can use. ``Kind/slug`` was in use and is
-#: NOT here — a document's slug IS its name, so it was one form written two
+#: NOT here — an instance's slug IS its name, so it was one form written two
 #: ways, which is the drift a closed set exists to stop.
 COMPOSITE_FORMS: tuple[str, ...] = ("Kind:name", "Kind/name", "{kind, name}")
 
@@ -315,14 +315,14 @@ class Relation:
         validates it on write and produces edges from it.
 
         Exactly one addressing qualifies: concrete target Kind(s), addressed by
-        document name. Everything else is declared and reported. A reader that
+        instance name. Everything else is declared and reported. A reader that
         wants "what does the runtime actually check?" asks THIS rather than
         re-deriving the condition, so the answer cannot drift between the write
         path, the graph and a screen."""
         return bool(self.to) and self.by == BY_NAME
 
     def to_declaration(self) -> dict[str, Any]:
-        """The AUTHORING shape — what a document stores back in
+        """The AUTHORING shape — what an instance stores back in
         ``spec.relations[name]``, and what the meta-schema validates.
 
         Omits what was never declared (``inverse_of: null`` would fail the
@@ -525,7 +525,7 @@ def relations_of(kp: Any) -> dict[str, Relation]:
 
 
 def relation_values(rel: Relation, spec: Any) -> list[str]:
-    """The non-empty string values ``rel`` points at, for one document's spec.
+    """The non-empty string values ``rel`` points at, for one instance's spec.
 
     An absent field, an explicit ``null``, an empty string and an empty list
     all yield ``[]`` — an OPTIONAL relation that is simply not set is not a
@@ -533,7 +533,7 @@ def relation_values(rel: Relation, spec: Any) -> list[str]:
 
     Reads a scalar OR a list regardless of the declared cardinality. That
     tolerance is deliberate: cardinality is a statement about the MODEL, and a
-    document that contradicts it is caught by schema validation, which owns the
+    instance that contradicts it is caught by schema validation, which owns the
     data. Making this function strict too would give one mistake two different
     error messages from two different layers."""
     if not isinstance(spec, Mapping):
@@ -546,14 +546,14 @@ def relation_values(rel: Relation, spec: Any) -> list[str]:
 
 
 def reciprocates(rel: Relation, target_spec: Any, *, source_name: str) -> bool | None:
-    """Does the target document name us back through ``rel.inverse_of``?
+    """Does the target instance name us back through ``rel.inverse_of``?
 
     ``None`` when the question does not apply — no ``inverse_of`` declared, or
-    no target document in hand. ``None`` is not ``False``: "we did not ask" and
+    no target instance in hand. ``None`` is not ``False``: "we did not ask" and
     "we asked and the answer was no" are different facts, and collapsing them
-    is how a report starts accusing documents of a silence that was its own.
+    is how a report starts accusing instances of a silence that was its own.
 
-    Costs nothing. The target document was already materialized by the
+    Costs nothing. The target instance was already materialized by the
     existence check; this reads a field off it."""
     if not rel.inverse_of or not isinstance(target_spec, Mapping):
         return None
@@ -593,7 +593,7 @@ def schema_contradictions(
 
     A schema with no ``properties`` at all (a Kind that declares no data shape)
     yields nothing: there is nothing to contradict. Returns messages rather
-    than raising, so one caller can refuse a document and another can report a
+    than raising, so one caller can refuse an instance and another can report a
     registry-wide list — the two need the same reading, not the same
     consequence."""
     if not relations:
@@ -632,7 +632,7 @@ def inverse_gaps(
     """Every declared ``inverse_of`` that does not PAIR, across a whole registry.
 
     This is the enforced half of dor 1, and the reason it can be enforced is
-    that it reads no documents: a pair is a property of two DECLARATIONS. There
+    that it reads no instances: a pair is a property of two DECLARATIONS. There
     is no ordering problem (both Kinds are registered before anything is
     written), no cascade (nothing is mutated) and no cost (no I/O).
 

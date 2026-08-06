@@ -224,8 +224,8 @@ class ResearchKind(KindBase):
                     "description": "When the research was synthesized.",
                 },
                 # Renamed from `scope_ref` on 2026-08-06. The `_ref` suffix
-                # promised a document and there is none: a SCOPE is a partition
-                # of the document store, not a Kind, so the schema graph could
+                # promised an instance and there is none: a SCOPE is a partition
+                # of the instance store, not a Kind, so the schema graph could
                 # only ever report this field as reference-shaped and
                 # unresolvable. Renaming is the only lever the SCHEMA has — the
                 # projection offers no way to mark a reference-shaped NAME as
@@ -233,16 +233,16 @@ class ResearchKind(KindBase):
                 # field never referenced anything.
                 #
                 # Compatible by construction: this schema is
-                # `additionalProperties: true`, so a pre-existing document still
+                # `additionalProperties: true`, so a pre-existing instance still
                 # carrying `scope_ref` keeps validating on read AND on write; it
-                # simply stops being projected. The tracked Research documents
+                # simply stops being projected. The tracked Research instances
                 # are migrated in the same commit.
                 "scope": {
                     "type": "string",
                     "description": (
                         "Scope this research informs (e.g. "
                         "'dna-development'). A scope NAME — a partition of the "
-                        "document store — not a reference to any document."
+                        "instance store — not a reference to any instance."
                     ),
                 },
                 "visibility": {

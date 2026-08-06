@@ -2,16 +2,16 @@
 #
 # WHY IT EXISTS AT ALL. Both fields shipped as `{"type": "string"}` described
 # as "Sprint identifier (free-form, e.g. '2026-Q2-S2')". The `_ref` suffix
-# promised a document; no `Sprint` Kind existed, so the schema graph reported
+# promised an instance; no `Sprint` Kind existed, so the schema graph reported
 # them as reference-shaped-and-unresolvable and every consumer got a bare label
 # it could group by and nothing else. Founder decision (2026-08-06): the name
 # was not the lie — the ABSENCE was. Sprint becomes a Kind, and the two fields
 # become declared relations (`to: Sprint`).
 #
 # THE DOC NAME IS THE KEY, and that is what makes this compatible.
-# A `by: name` relation resolves a target by DOCUMENT NAME, so the doc name IS the
+# A `by: name` relation resolves a target by INSTANCE NAME, so the doc name IS the
 # identifier the two fields already carry: a Story holding
-# `sprint_ref: 2026-Q2-S2` resolves the moment a Sprint document NAMED
+# `sprint_ref: 2026-Q2-S2` resolves the moment a Sprint instance NAMED
 # `2026-Q2-S2` exists. `sprint_id` restates it inside the spec for the same
 # reason `PricingPlan.tier_id` and `Workspace.workspace_id` do — the name is
 # addressable, the field is queryable — but unlike those two, NOTHING here
@@ -36,7 +36,7 @@
 # whoever backfilled a Sprint for an existing free-form label would be forced
 # to invent two dates. The founder then removed the compatibility constraint —
 # nobody consumes the SDK yet, production is disposable and re-seeded — and the
-# argument went with it. Measured, not assumed: ZERO documents in either repo
+# argument went with it. Measured, not assumed: ZERO instances in either repo
 # carry a `sprint_ref`, so there is no label to backfill and nothing to
 # protect. What remains is the modelling question on its own, and there the
 # answer is not close: **a sprint IS a timebox.** A Sprint that cannot say when
@@ -72,7 +72,7 @@ spec:
         type: string
         description: Canonical sprint identifier, e.g. '2026-Q2-S2'. THE DOC
           NAME MUST EQUAL IT — `Story.sprint_ref` / `Feature.sprint_ref` are
-          declared references and resolve by document name, so a doc whose name
+          declared references and resolve by instance name, so a doc whose name
           and sprint_id disagree is reachable under one of them only. Enforced
           on write by the sdlc write guards, not left to convention.
       name:
@@ -119,7 +119,7 @@ spec:
   docs: A Sprint is the timebox that `Story.sprint_ref` and
     `Feature.sprint_ref` name — an identifier (`2026-Q2-S2`), optionally a
     display name, a start/end date and a state (planned/active/completed).
-    The document NAME is the key the two references resolve by. Membership is
+    The instance NAME is the key the two references resolve by. Membership is
     NOT stored here — it is the inverse of `sprint_ref` and is derived from
     the declared reference, so there is exactly one place a story's sprint is
     written. Goal, capacity and velocity are deliberately absent until a

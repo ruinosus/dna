@@ -25,7 +25,7 @@
 # Credencial. O schema é fechado justamente para que um token não possa ser
 # anexado a uma concessão — a mesma regra do `RemoteAgent` e do Agent Card.
 # Concessão diz QUEM pode e O QUÊ; o segredo com que ele se autentica é do
-# deployment, e nunca do documento.
+# deployment, e nunca da instância.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:
@@ -66,8 +66,8 @@ spec:
 
           ⚠️ NÃO é auto-declarado. O host só grava aqui um nome que veio
           ANCORADO: o `client_id` é uma URL HTTPS (CIMD,
-          draft-ietf-oauth-client-id-metadata-document) e o nome foi lido do
-          documento servido naquela origem. Quem controla `acme.com` é o único
+          draft-ietf-oauth-client-id-metadata-instance) e o nome foi lido da
+          instância servido naquela origem. Quem controla `acme.com` é o único
           que pode declarar um nome em `acme.com`, e disso o DNS e o TLS já dão
           prova. Aceitar nome de um campo do pedido devolveria o ataque que este
           desenho existe para fechar: a tela do provedor, com a marca dele, no
@@ -96,7 +96,7 @@ spec:
         type: array
         items: {type: string}
         description: >
-          Os Kinds cujos documentos este agente pode receber. Mesmo vocabulário
+          Os Kinds cujas instâncias este agente pode receber. Mesmo vocabulário
           do `RemoteAgent.data_scope.kinds`, de propósito: é a mesma pergunta
           nas duas direções, e responder diferente de cada lado seria uma
           armadilha para quem lê.

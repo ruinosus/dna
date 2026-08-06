@@ -79,7 +79,7 @@ def test_o_nome_VAZIO_e_recusado():
 
 
 def test_o_schema_e_FECHADO():
-    """Um campo a mais num documento que a tela de autorização LÊ é a forma mais
+    """Um campo a mais numa instância que a tela de autorização LÊ é a forma mais
     silenciosa de alguém acrescentar significado que ninguém revisou."""
     assert _erros(_spec(trusted=True))
     assert _erros(_spec(verified=True))
@@ -88,7 +88,7 @@ def test_o_schema_e_FECHADO():
 def test_NAO_ha_campo_de_permissao():
     """Este Kind NOMEIA, não autoriza. Quem autoriza é o `AgentGrant`.
 
-    São documentos separados de propósito: cadastrar um agente no catálogo não
+    São instâncias separados de propósito: cadastrar um agente no catálogo não
     pode ser um caminho para conceder acesso a ele — e a ausência destes campos
     é o que garante isso, não a boa intenção de quem escreve o portal.
     """

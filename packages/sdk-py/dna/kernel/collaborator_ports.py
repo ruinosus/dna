@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 if TYPE_CHECKING:  # pragma: no cover — typing-only, no runtime import cost
     import asyncio
 
-    from dna.kernel.document import Document
+    from dna.kernel.instance import Instance
     from dna.kernel.boot.cache import KernelCache
     from dna.kernel.protocols import (
         CachePort,
@@ -102,7 +102,7 @@ class DocStore(Protocol):
     tenant: str | None
     _main_loop: "asyncio.AbstractEventLoop | None"
 
-    def _parse_doc(self, raw: dict[str, Any], origin: str = "local") -> "Document": ...
+    def _parse_doc(self, raw: dict[str, Any], origin: str = "local") -> "Instance": ...
 
     async def _granular_doc_cached(
         self, key: tuple[str, str, str, str]
@@ -138,7 +138,7 @@ class WriteOps(Protocol):
     materialized composition back). Future write-side collaborators (Phase 2+
     ``WritePipeline``) compose this role rather than re-holding the whole kernel."""
 
-    async def write_document(
+    async def write_instance(
         self,
         scope: str,
         kind: str,
@@ -189,11 +189,11 @@ class InstanceBuildCtx(Protocol):
 @runtime_checkable
 class LayerObserverCtx(Protocol):
     """The Phase-17 reverse-dependency observer graph used for cross-scope
-    surgical invalidation. Populated by composition_resolver.resolve_document;
+    surgical invalidation. Populated by composition_resolver.resolve_instance;
     drained by InvalidationController.invalidate_internal.
 
     ``_layer_observers: dict`` is a LAZY member (created on first
-    ``resolve_document``, read via ``getattr(k, "_layer_observers", None)``), so
+    ``resolve_instance``, read via ``getattr(k, "_layer_observers", None)``), so
     it is NOT a required Protocol attribute — a fresh kernel lacks it. Only the
     LRU bound below is always present (class constant)."""
 
@@ -210,7 +210,7 @@ class InvalidationHost(Protocol):
     Required (always present): the four below. The controller ALSO touches three
     LAZY members — ``_write_observers``, ``_holders``, ``_layer_observers`` —
     each read defensively via ``getattr(k, name, default)`` (they are created on
-    first ``on_write`` / ``register_holder`` / ``resolve_document``). Because the
+    first ``on_write`` / ``register_holder`` / ``resolve_instance``). Because the
     getattr-with-default tolerates their absence, they are intentionally NOT
     required Protocol attributes."""
 
@@ -259,7 +259,7 @@ class CompositionResolverHost(
 
 @runtime_checkable
 class BundleIOHost(KindLookup, DocStore, Protocol):
-    """bundle_io — bundle-entry + document (de)serialization I/O."""
+    """bundle_io — bundle-entry + instance (de)serialization I/O."""
 
 
 @runtime_checkable

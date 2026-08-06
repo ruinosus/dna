@@ -1,7 +1,7 @@
-"""Walking the DERIVED reference graph — ``dna_edges``, one document at a time.
+"""Walking the DERIVED reference graph — ``dna_edges``, one instance at a time.
 
 The companion of :mod:`dna.kernel.query.references`: that module says what a
-Kind DECLARES (``x-dna-ref``), this one answers what the documents actually
+Kind DECLARES (``x-dna-ref``), this one answers what the instances actually
 say to each other. The rows come from the write path — the same lookups
 ``WritePipeline._resolve_references`` performs to validate a reference also
 record which Kind it resolved to — so nothing here derives, guesses or parses a
@@ -13,7 +13,7 @@ ceiling, the refusal to answer at all on a store that keeps no edges, and the
 vocabulary the face renders — those belong where the registry lives.
 
 **The refusal that matters most.** A store without an edge table does not
-return an empty list. ``[]`` reads as "nothing points at this document", which
+return an empty list. ``[]`` reads as "nothing points at this instance", which
 is a claim only a store that actually records edges may make; the filesystem
 adapter has neither a transaction to write edges in nor a table to write them
 to, so the answer is :class:`GraphUnsupported` and the face says so. Serving a
@@ -106,7 +106,7 @@ async def traverse(
     direction: str = "in",
     depth: int | None = None,
 ) -> GraphResult:
-    """Walk ``source``'s edge graph from one document.
+    """Walk ``source``'s edge graph from one instance.
 
     ``direction``: ``in`` (what points at this — the product question),
     ``out`` (what this points at), ``both``.

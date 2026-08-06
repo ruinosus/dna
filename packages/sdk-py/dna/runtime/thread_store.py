@@ -31,7 +31,7 @@ faltava não era armazenamento — era o **contrato com nome**.
 
 2. **Zero dupla escrita.** A implementação de transcript é uma **projeção de
    LEITURA** sobre o que o framework já grava (:mod:`dna.runtime.adapters.
-   langgraph_threads`). Gravar o transcript uma segunda vez — em documento, em
+   langgraph_threads`). Gravar o transcript uma segunda vez — em instância, em
    tabela própria — pagaria custo por turno e criaria dois donos da verdade.
    O que o host grava é só o **índice**: dono, título, contagem, de qual
    copiloto/surface a conversa nasceu.
@@ -69,7 +69,7 @@ atravessar um processo (um arquivo, um corpo HTTP). Sem o codec, cada host
 inventaria a sua serialização do mesmo envelope — que é exatamente a divergência
 silenciosa que este módulo existe para acabar.
 
-## Retenção: a política é do documento, a conexão é do host
+## Retenção: a política é da instância, a conexão é do host
 
 O Kind Copilot declara ``persistence.conversation.retention.max_age_days``;
 :func:`retention_cutoff` transforma isso no instante de corte. O que faltava era
@@ -184,7 +184,7 @@ class ThreadRetention:
 
     Declarar é o que a porta faz; **apagar é de quem tem a conexão**. O DNA não
     roda o expurgo por você — ele carrega o número até quem roda, para que a
-    política viva no documento e não no crontab de alguém.
+    política viva na instância e não no crontab de alguém.
 
     ``max_age_days`` ausente = guardar indefinidamente (o comportamento de hoje,
     que continua sendo o default de quem não declara nada).
@@ -524,7 +524,7 @@ class ThreadPurgePort(Protocol):
         """As conversas com ``updated_at`` anterior a ``cutoff``, mais antigas
         primeiro, no máximo ``limit``.
 
-        O filtro ``copilot`` não é enfeite: a retenção é declarada no documento
+        O filtro ``copilot`` não é enfeite: a retenção é declarada na instância
         do **Copilot**, então uma varredura sem esse recorte aplicaria a
         política de um copiloto às conversas de outro. ``None`` = todos, e só é
         legítimo quando o host sabe que a política é única.

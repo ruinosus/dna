@@ -1,11 +1,11 @@
 """Meta-kind machinery: DeclarativeKindPort synthesized from TypedKindDefinition.
 
-A KindDefinition document declaratively describes a new kind (schema, storage,
+A KindDefinition instance declaratively describes a new kind (schema, storage,
 prompt flags, dep_filters). The kernel's 2-phase loader parses these first
 and synthesizes a DeclarativeKindPort per definition via
 ``DeclarativeKindPort.from_typed(typed_def)``. These synthetic ports are
 registered on the kernel and then the second phase parses every other
-document against the now-expanded kind registry.
+instance against the now-expanded kind registry.
 """
 from __future__ import annotations
 
@@ -409,7 +409,7 @@ class DeclarativeKindPort:
                     # Linear-time engine when available (decision C): a
                     # spec_default is checked against the SAME authored
                     # subschema — including its `pattern` — that will validate
-                    # every document, so it must run on the same engine.
+                    # every instance, so it must run on the same engine.
                     from dna.kernel.kinds.regex_engine import validate_instance
 
                     validate_instance(value, subschema)
@@ -682,7 +682,7 @@ class DeclarativeKindPort:
         return None
 
     def layout_names(self) -> list[str]:
-        """The prompt layouts documents of this Kind may name (descriptor
+        """The prompt layouts instances of this Kind may name (descriptor
         ``layout_names``). Empty is KindBase's default — a Kind that declares
         none has no layouts, which is what ``UnknownLayout`` reports."""
         return list(self._layout_names)

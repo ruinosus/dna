@@ -101,7 +101,7 @@ spec:
         default: none
         description: Definitions access level granted by the tier — the
           read-vs-write refinement of the `definitions` feature family, sibling
-          of memory_mode/sdlc_mode. Only the GENERIC document tools consult it,
+          of memory_mode/sdlc_mode. Only the GENERIC instance tools consult it,
           and only on a WRITE — a plan that omits it grants none, so writing an
           Agent/Soul/Tool/ModelProfile through the generic tool is refused until
           the operator declares write here. Reads keep riding the coarse
@@ -115,7 +115,7 @@ spec:
         default: none
         description: Emit access level granted by the tier — the same
           read-vs-write refinement for the `emit` feature family. Same rule as
-          definitions_mode - consulted by the generic document tools on a write,
+          definitions_mode - consulted by the generic instance tools on a write,
           and omitting it grants none.
       overage_per_1k_usd:
         type:

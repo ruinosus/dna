@@ -28,7 +28,7 @@
 #
 # Equivalence with the extinct class — identity, every flag, StudioUIMetadata,
 # storage, dep_filters, deep schema, and summary/describe/canonical_digest over
-# REAL documents from this repo's board — is frozen in
+# REAL instances from this repo's board — is frozen in
 # tests/test_descriptor_pattern_equivalence.py.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
@@ -198,7 +198,7 @@ spec:
       sprint_ref:
         type: string
         description: The Sprint this Story is committed to — the Sprint
-          document's NAME, which is also its sprint_id (e.g. '2026-Q2-S2').
+          instance's NAME, which is also its sprint_id (e.g. '2026-Q2-S2').
           DECLARED (i-040), so the write path resolves it instead of trusting
           a label. The value SHAPE did not change on 2026-08-06; a `Sprint`
           Kind simply started existing for the identifier to name.

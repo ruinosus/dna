@@ -45,7 +45,7 @@ _TRAITS: dict[str, str] = {}
 
 
 def register_trait(name: str, description: str) -> None:
-    """Document a trait so ``dna kind traits`` can list it.
+    """Instance a trait so ``dna kind traits`` can list it.
 
     Idempotent; a later call replaces the description. Registration is
     DOCUMENTATION — nothing checks a declared trait against this registry, by

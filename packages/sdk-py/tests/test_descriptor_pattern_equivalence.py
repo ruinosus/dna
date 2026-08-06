@@ -23,13 +23,13 @@ class-only-for-no-reason (their only overrides are ``schema`` / ``summary`` /
 GOLDENS: ``tests/goldens/descriptor_pattern/<Kind>.golden.json``, captured
 from the LIVE classes at the parent of the conversion commit, through the real
 funnel (``Kernel().load(Extension())`` → ``kind_port_for``). Cases run on REAL
-repository documents (``.dna/dna/{stories,plans,references}``) plus an
-empty-spec probe; Comment has no document anywhere in the repo, so its cases
+repository instances (``.dna/dna/{stories,plans,references}``) plus an
+empty-spec probe; Comment has no instance anywhere in the repo, so its cases
 are fixtures. Each case pins ``summary`` / ``describe`` / ``get_default_agent_name``
 / ``get_layer_policies`` / ``canonical_digest`` / ``parse`` round-trip.
 
 **The canonical digest is the load-bearing assertion.** If it moved, stored
-documents would change identity and this would be a migration, not a
+instances would change identity and this would be a migration, not a
 refactor. It does not move: ``DeclarativeKindPort`` shares ``KindBase``'s
 ``_canonical_spec`` / ``canonical_digest`` function objects verbatim, and none
 of the four descriptors declares ``volatile_spec_fields``.
@@ -40,7 +40,7 @@ direction the earlier descriptor batches already established:
   - **parse validates.** The classes were pass-through
     (``validate_on_parse = False``); the descriptor port validates ``spec``
     against the schema. ``test_every_real_document_still_validates`` walks
-    every Story/Plan/Reference document in this repo's own board and proves
+    every Story/Plan/Reference instance in this repo's own board and proves
     none of them starts failing. (An invalid doc would not crash a load
     either — the kernel turns it into ``typed=None`` + a ``parse_error`` event.)
   - **``preview()`` appears.** The classes had none, so consumers fell back to
@@ -165,7 +165,7 @@ def test_flags_match_golden(ports, kind):
 @pytest.mark.parametrize("kind", ALL)
 def test_volatile_spec_fields_are_kindbase_defaults(ports, kind):
     """The canonical-digest contract: no descriptor widens the volatile set,
-    so the digest of a stored document cannot move."""
+    so the digest of a stored instance cannot move."""
     p = ports[kind]
     assert sorted(p.VOLATILE_SPEC_FIELDS) == _golden(kind)["flags"]["volatile_spec_fields"]
     assert p.VOLATILE_SPEC_FIELDS == KindBase.VOLATILE_SPEC_FIELDS
@@ -222,7 +222,7 @@ def test_prompt_template_unchanged(ports, kind):
     assert ports[kind].prompt_template() == _golden(kind)["prompt_template"]
 
 
-# --- per-document surface ---------------------------------------------------
+# --- per-instance surface ---------------------------------------------------
 
 def _cases(kind: str):
     return [(c["label"], c) for c in _golden(kind)["cases"]]
@@ -254,13 +254,13 @@ def test_default_agent_and_layer_policies_match_golden(ports, kind):
 @pytest.mark.parametrize("kind", ALL)
 def test_canonical_digest_is_unmoved(ports, kind):
     """THE assertion that separates a refactor from a migration: the identity
-    hash of a real stored document is bit-identical to the class's."""
+    hash of a real stored instance is bit-identical to the class's."""
     p = ports[kind]
     for label, case in _cases(kind):
         got = p.canonical_digest(_case_doc(kind, case))
         assert got == case["canonical_digest"], (
             f"{kind} :: {label} — canonical digest MOVED "
-            f"({case['canonical_digest']} → {got}). Stored documents would "
+            f"({case['canonical_digest']} → {got}). Stored instances would "
             f"change identity; this would be a migration, not a refactor."
         )
 
@@ -271,7 +271,7 @@ def test_summary_on_a_bare_dict_is_the_documented_port_delta(ports, kind):
     wrote ``doc.spec if hasattr(doc, "spec") else doc``, i.e. they treated a
     bare dict AS the spec. The port reads ``getattr(doc, "spec", None) or {}``
     and projects the declared defaults instead. Every real call site
-    (``nav.py``, ``navigator.py``, ``compose/resolver.py``) passes a Document,
+    (``nav.py``, ``navigator.py``, ``compose/resolver.py``) passes an Instance,
     so nothing in the system takes this path — pinned, not hidden. Same
     delta the earlier descriptor batches pinned."""
     empty = next(c for _, c in _cases(kind) if c["spec"] == {})
@@ -307,7 +307,7 @@ def test_the_empty_spec_probe_is_where_parse_starts_biting(ports, kind):
     """The classes accepted an empty spec (pass-through); the port rejects it
     because every one of the four declares ``required``. Pinned as the exact
     boundary of the parse delta — and ``test_every_real_document_still_validates``
-    proves no document in this repo's board is on the wrong side of it."""
+    proves no instance in this repo's board is on the wrong side of it."""
     probe = next(c for _, c in _cases(kind) if not c["spec"])
     assert probe["parse_roundtrip"] is True  # what the class did
     with pytest.raises(ValueError, match="is a required property"):
@@ -345,13 +345,13 @@ _REAL_DOC_DIRS = {
 
 @pytest.mark.parametrize("kind", sorted(_REAL_DOC_DIRS))
 def test_every_real_document_still_validates(ports, kind):
-    """Because parse now validates, a single non-conforming document in this
+    """Because parse now validates, a single non-conforming instance in this
     repo's own board would start loading untyped. Walk them all."""
     directory = _REAL_DOC_DIRS[kind]
     if not directory.is_dir():
         pytest.skip(f"{directory} not present in this checkout")
     paths = sorted(directory.glob("*.yaml"))
-    assert paths, f"no {kind} documents under {directory}"
+    assert paths, f"no {kind} instances under {directory}"
     for path in paths:
         raw = yaml.safe_load(path.read_text())
         if not isinstance(raw, dict) or raw.get("kind") != kind:

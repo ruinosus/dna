@@ -43,7 +43,7 @@ def _write_story(scope_dir: Path, slug: str, *, status: str, feature: str = "f-f
     """Write a minimal Story YAML at scope_dir/stories/<slug>.yaml.
 
     The filesystem source's load_all walks the directory tree and
-    treats each YAML file as a Document (no bundle/marker required
+    treats each YAML file as an Instance (no bundle/marker required
     for simple Kinds).
     """
     stories_dir = scope_dir / "stories"

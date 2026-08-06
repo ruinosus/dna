@@ -299,7 +299,7 @@ class GenomeKind(KindBase):
         "dependencies": {"widget": "readonly", "label": "External dependencies", "order": 90},
     }
     docs = (
-        "A Genome is the scope-root identity document (Phase 16). It "
+        "A Genome is the scope-root identity instance (Phase 16). It "
         "declares catalog identity (owner, owner_tenant, repository, "
         "visibility), versioning (version, changelog_url, deprecated), "
         "runtime defaults (default_agent, default_llm, budget, tags), and "
@@ -969,7 +969,7 @@ class AgentWriter(WriterPort):
         # self-contained in ANY source. Previously the writer left body="" and
         # never wrote instruction.md, assuming the fragment pre-existed — which
         # silently zeroed the instruction when writing to a fresh bundle (the
-        # i-061 root). save_document persists whatever the writer emits in ONE
+        # i-061 root). save_instance persists whatever the writer emits in ONE
         # transaction, so emitting it here makes the doc+fragment atomic for
         # EVERY write path (CLI, kinds-api PUT, direct). Source: the carried
         # source_files entry, else the resolved inline instruction.

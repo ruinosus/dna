@@ -1,11 +1,11 @@
 """Author-time validation of an AUTHORED JSON Schema (i-080, item 4).
 
-A ``KindDefinition`` carries the JSON Schema every document of that Kind is
+A ``KindDefinition`` carries the JSON Schema every instance of that Kind is
 validated against. Until this module the schema was only checked to be a *dict*
 (``models.KindDefinitionSpec.from_raw``); ``Draft202012Validator.check_schema``
 ran exclusively on DNA's own descriptor meta-schema (``kinds/schema.py``). The
 consequence was a silent deferral: a schema that is not a schema was stored
-happily and then failed **per document**, at parse time, through the fail-soft
+happily and then failed **per instance**, at parse time, through the fail-soft
 ``parse_error`` channel — a warning in a log, far from the person who wrote it.
 
 Three checks run here, each on evidence rather than folklore:
@@ -323,7 +323,7 @@ def _check_ref(value: Any, where: str) -> None:
     raise SchemaGuardError(
         f"$ref at {where} points outside this schema ({value!r}). Only local "
         f"fragments (\"#/$defs/...\") are allowed: nothing resolves a remote "
-        f"reference at validation time, so every document of this Kind would "
+        f"reference at validation time, so every instance of this Kind would "
         f"fail with an error the write path does not even recognise as a "
         f"validation failure — and a resolver added later would turn the field "
         f"into an outbound-request surface. Inline the definition under "

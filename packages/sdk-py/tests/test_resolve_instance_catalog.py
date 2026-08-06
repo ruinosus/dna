@@ -1,4 +1,4 @@
-"""Phase 3b ch4 (i-112) — ``resolve_document`` injects the Catalog tier.
+"""Phase 3b ch4 (i-112) — ``resolve_instance`` injects the Catalog tier.
 
 The single-doc resolver (the one ``build_prompt`` rides on) splices the
 tenant's Catalog scopes into the resolution chain IMMEDIATELY AFTER the local
@@ -104,7 +104,7 @@ async def test_local_wins_over_catalog_and_base():
     src.docs[("_lib", "Soul", "x", "")] = kind_doc("_lib", "Soul", "x", {"from": "base"})
     k = make_kernel(src, catalog_scopes=[("pkg-a", None)])
 
-    res = await k.resolve_document("proj", "Soul", "x")
+    res = await k.resolve_instance("proj", "Soul", "x")
     assert res.doc is not None
     assert res.doc["spec"]["from"] == "local"
     assert res.is_inherited is False
@@ -124,7 +124,7 @@ async def test_catalog_wins_over_base_when_no_local():
     src.docs[("_lib", "Soul", "x", "")] = kind_doc("_lib", "Soul", "x", {"from": "base"})
     k = make_kernel(src, catalog_scopes=[("pkg-a", None)])
 
-    res = await k.resolve_document("proj", "Soul", "x")
+    res = await k.resolve_instance("proj", "Soul", "x")
     assert res.doc is not None
     assert res.doc["spec"]["from"] == "catalog"
     assert res.is_inherited is True  # primary scope (pkg-a) != requesting scope
@@ -140,7 +140,7 @@ async def test_catalog_inserted_between_local_and_parent_in_provenance():
     src.docs[("pkg-a", "Soul", "x", "")] = kind_doc("pkg-a", "Soul", "x", {"from": "catalog"})
     k = make_kernel(src, catalog_scopes=[("pkg-a", None)])
 
-    res = await k.resolve_document("proj", "Soul", "x")
+    res = await k.resolve_instance("proj", "Soul", "x")
     scopes = [s.scope for s in res.provenance.steps]
     assert scopes.index("proj") < scopes.index("pkg-a") < scopes.index("_lib")
 
@@ -160,7 +160,7 @@ async def test_two_catalog_scopes_first_wins_and_logs(caplog):
     k = make_kernel(src, catalog_scopes=[("pkg-a", None), ("pkg-b", None)])
 
     with caplog.at_level(logging.INFO):
-        res = await k.resolve_document("proj", "Soul", "x")
+        res = await k.resolve_instance("proj", "Soul", "x")
     assert res.doc["spec"]["from"] == "pkg-a"  # first sorted catalog scope wins
     assert res.provenance.effective_layer.scope == "pkg-a"
     # ≥2 catalog layers contributed the same (kind,name) → an INFO surface.
@@ -186,7 +186,7 @@ async def test_no_catalog_identical_to_today():
     )
     k = make_kernel(src, catalog_scopes=[])
 
-    res = await k.resolve_document("child", "Soul", "shared")
+    res = await k.resolve_instance("child", "Soul", "shared")
     assert res.doc is not None
     assert res.doc["spec"]["from"] == "platform"
     assert res.is_inherited is True
@@ -209,7 +209,7 @@ async def test_bootstrap_kind_no_catalog_injection():
     src.docs[("pkg-a", "Genome", "proj", "")] = package_doc("pkg-a")
     k = make_kernel(src, catalog_scopes=[("pkg-a", None)])
 
-    res = await k.resolve_document("proj", "Genome", "proj")
+    res = await k.resolve_instance("proj", "Genome", "proj")
     assert res.doc is not None
     assert len(res.provenance.steps) == 1  # local-only, no catalog/parent
     assert res.provenance.steps[0].scope == "proj"
@@ -231,7 +231,7 @@ async def test_disabled_kind_no_catalog_injection():
     src.docs[("_lib", "Story", "S1", "")] = kind_doc("_lib", "Story", "S1", {"from": "base"})
     k = make_kernel(src, catalog_scopes=[("pkg-a", None)])
 
-    res = await k.resolve_document("proj", "Story", "S1")
+    res = await k.resolve_instance("proj", "Story", "S1")
     # disabled ⇒ neither catalog nor parent consulted → not found locally.
     assert res.doc is None
     assert res.is_inherited is False
@@ -251,7 +251,7 @@ async def test_catalog_layer_registers_observer():
     src.docs[("pkg-a", "Soul", "x", "")] = kind_doc("pkg-a", "Soul", "x", {"from": "catalog"})
     k = make_kernel(src, catalog_scopes=[("pkg-a", None)])
 
-    await k.resolve_document("proj", "Soul", "x", tenant="acme")
+    await k.resolve_instance("proj", "Soul", "x", tenant="acme")
     observers = getattr(k, "_layer_observers", {})
     cat_key = ("pkg-a", "Soul", "x", None)
     assert cat_key in observers
@@ -274,6 +274,6 @@ async def test_tenant_isolation_empty_catalog():
     # innovec: empty catalog
     k = make_kernel(src, catalog_scopes=[])
 
-    res = await k.resolve_document("proj", "Soul", "x", tenant="innovec")
+    res = await k.resolve_instance("proj", "Soul", "x", tenant="innovec")
     assert res.doc["spec"]["from"] == "base"  # catalog never consulted
     assert res.provenance.effective_layer.scope == "_lib"

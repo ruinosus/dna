@@ -32,11 +32,11 @@ class FakeSource:
         self.calls.append(f"load_layer:{scope}:{layer_id}:{layer_value}")
         return []
 
-    def save_document(self, scope, kind, name, raw):
+    def save_instance(self, scope, kind, name, raw):
         self.calls.append(f"save:{scope}:{kind}:{name}")
         return "1"
 
-    def delete_document(self, scope, kind, name):
+    def delete_instance(self, scope, kind, name):
         self.calls.append(f"delete:{scope}:{kind}:{name}")
 
     def publish(self, scope, kind, name):
@@ -93,12 +93,12 @@ class TestAsyncSourceAdapter:
 
     @pytest.mark.asyncio
     async def test_save_document(self, adapter):
-        version = await adapter.save_document("s", "Skill", "s1", {"kind": "Skill"})
+        version = await adapter.save_instance("s", "Skill", "s1", {"kind": "Skill"})
         assert version == "1"
 
     @pytest.mark.asyncio
     async def test_delete_document(self, adapter):
-        await adapter.delete_document("s", "Skill", "s1")
+        await adapter.delete_instance("s", "Skill", "s1")
         assert "delete:s:Skill:s1" in adapter._source.calls
 
     @pytest.mark.asyncio

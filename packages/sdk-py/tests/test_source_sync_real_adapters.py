@@ -45,7 +45,7 @@ async def _sqlite_source(db_path, docs: list[dict], scope: str) -> SqlAlchemySou
     src = SqlAlchemySource(f"sqlite+aiosqlite:///{db_path}")
     await src.connect()
     for d in docs:
-        await src.save_document(scope, d["kind"], d["metadata"]["name"], d)
+        await src.save_instance(scope, d["kind"], d["metadata"]["name"], d)
         await src.publish(scope, d["kind"], d["metadata"]["name"])
     return src
 
@@ -126,7 +126,7 @@ def test_fs_diff_scope_missing_in_other_is_all_added(tmp_path):
 
 def test_sqlite_diff_detects_base_divergence(tmp_path):
     """Same repro against the sqlite SQL adapter — its load_layer reads
-    the layer_documents table (overlay rows only), so pre-fix both sides
+    the layer_instances table (overlay rows only), so pre-fix both sides
     digested {} too."""
     async def _run():
         a = await _sqlite_source(

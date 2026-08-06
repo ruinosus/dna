@@ -181,7 +181,7 @@ async def test_typed_ctx_drives_the_sdlc_bitemporal_guard():
     )
 
     class _FakeKernel:
-        async def get_document(self, scope, kind, name, tenant=None):
+        async def get_instance(self, scope, kind, name, tenant=None):
             return {"spec": {"valid_to": "2026-01-01T00:00:00Z",
                              "superseded_by_memory": "rem-x"}}
 

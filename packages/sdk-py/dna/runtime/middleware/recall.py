@@ -309,7 +309,7 @@ def cues(
 def _chave_de(memoria: Any) -> str:
     """A identidade de uma memória para efeito de histerese.
 
-    Nome do documento quando há; o texto como último recurso — duas memórias com
+    Nome da instância quando há; o texto como último recurso — duas memórias com
     o mesmo texto são a mesma para quem lê o prompt.
     """
     if isinstance(memoria, dict):

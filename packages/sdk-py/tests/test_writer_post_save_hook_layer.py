@@ -26,7 +26,7 @@ def test_hook_context_layer_defaults_to_none():
 
 
 def test_post_save_hook_receives_layer_after_write(tmp_path):
-    """End-to-end: Kernel.write_document with layer → subscriber sees it."""
+    """End-to-end: Kernel.write_instance with layer → subscriber sees it."""
     import asyncio
     from dna.kernel import Kernel
     from dna.adapters.filesystem import FilesystemCache
@@ -48,7 +48,7 @@ def test_post_save_hook_receives_layer_after_write(tmp_path):
         "metadata": {"name": "x"},
         "spec": {},
     }
-    asyncio.run(k.write_document("s", "Agent", "x", raw, layer=("tenant", "T1")))
+    asyncio.run(k.write_instance("s", "Agent", "x", raw, layer=("tenant", "T1")))
 
     assert len(captured) == 1
     assert captured[0].layer == ("tenant", "T1")
@@ -76,7 +76,7 @@ def test_post_save_hook_layer_none_when_base_write(tmp_path):
         "metadata": {"name": "x"},
         "spec": {},
     }
-    asyncio.run(k.write_document("s", "Agent", "x", raw))  # no layer
+    asyncio.run(k.write_instance("s", "Agent", "x", raw))  # no layer
 
     assert len(captured) == 1
     assert captured[0].layer is None

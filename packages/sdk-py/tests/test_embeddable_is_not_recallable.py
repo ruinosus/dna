@@ -55,7 +55,7 @@ def test_engram_cue_and_index_agree():
     """The cue side embeds ENGRAM_TEXT_FIELDS; the index side embeds ``embed:``.
 
     They were (area, title, summary, body) and (summary, body): recall built its
-    query vector from four planes and compared it against a document vector that
+    query vector from four planes and compared it against an instance vector that
     had never seen two of them. Every cosine was computed between two different
     notions of what the memory says."""
     k = Kernel.auto()

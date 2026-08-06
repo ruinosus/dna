@@ -2,8 +2,8 @@
 if this breaks during an extraction, the extraction changed observable behavior.
 
 Block 2 of the kernel-decomposition spec (2026-07-08-kernel-decomposition-design)
-= the read/resolve surface (``query`` / ``count`` / ``resolve_document`` /
-``composition_summary`` / ``personalize_document``). Most logic already lives in
+= the read/resolve surface (``query`` / ``count`` / ``resolve_instance`` /
+``composition_summary`` / ``personalize_instance``). Most logic already lives in
 the ``composition_resolver`` / ``query_engine`` collaborators; Fase 5 moves
 ``composition_summary`` in and keeps the kernel facade thin. This suite pins the
 OBSERVABLE resolution behavior at the kernel surface so those moves are provable.
@@ -17,9 +17,9 @@ Already covered elsewhere (referenced, NOT duplicated):
   - ``test_composition_resolver_collab``→ collaborator wiring + rule defaults.
 
 Genuine GAPS this suite closes:
-  1. ``ResolvedDocument.contributions_by_field`` — the field-level provenance
+  1. ``ResolvedInstance.contributions_by_field`` — the field-level provenance
      (``spec.X ← scope``) is POPULATED by the resolver but asserted by NO test
-     at the ``kernel.resolve_document`` surface. Pinned here end-to-end.
+     at the ``kernel.resolve_instance`` surface. Pinned here end-to-end.
   2. A single cohesive golden that crosses inheritance + tenant overlay +
      field-level merge in one resolve, so a reorder of the merge pipeline breaks
      loudly.
@@ -99,7 +99,7 @@ async def test_override_full_local_wins_and_flags_not_inherited():
     src.docs[("_lib", "Widget", "w", "")] = _doc("_lib", "Widget", "w", {"from": "base"})
     k = _kernel(src)
 
-    res = await k.resolve_document("child", "Widget", "w")
+    res = await k.resolve_instance("child", "Widget", "w")
     assert res.doc["spec"]["from"] == "local"
     assert res.is_inherited is False
     assert res.provenance.effective_layer.scope == "child"
@@ -114,7 +114,7 @@ async def test_override_full_inherited_whole_when_no_local():
     src.docs[("_lib", "Widget", "w", "")] = _doc("_lib", "Widget", "w", {"from": "base"})
     k = _kernel(src)
 
-    res = await k.resolve_document("child", "Widget", "w")
+    res = await k.resolve_instance("child", "Widget", "w")
     assert res.doc["spec"]["from"] == "base"
     assert res.is_inherited is True
     assert res.provenance.effective_layer.scope == "_lib"
@@ -124,9 +124,9 @@ async def test_override_full_inherited_whole_when_no_local():
 
 @pytest.mark.asyncio
 async def test_field_level_merge_surfaces_contributions_by_field():
-    """With a LayerPolicy declaring merge_strategy=field_level, resolve_document
+    """With a LayerPolicy declaring merge_strategy=field_level, resolve_instance
     deep-merges specs across the inheritance chain AND reports which layer
-    contributed each field via ResolvedDocument.contributions_by_field. No
+    contributed each field via ResolvedInstance.contributions_by_field. No
     existing test asserts this at the kernel surface."""
     src = _MockSource()
     src.docs[("child", "Genome", "child", "")] = _pkg("child")  # → _lib
@@ -138,7 +138,7 @@ async def test_field_level_merge_surfaces_contributions_by_field():
     )
     k = _kernel(src)
 
-    res = await k.resolve_document("child", "Widget", "w")
+    res = await k.resolve_instance("child", "Widget", "w")
     assert res.doc["spec"] == {"color": "blue", "size": "large"}
     # per-field provenance: local field ← child, inherited field ← _lib
     assert res.contributions_by_field == {
@@ -167,7 +167,7 @@ async def test_tenant_overlay_field_level_merge_end_to_end():
     )
     k = _kernel(src)
 
-    res = await k.resolve_document("child", "Widget", "w", tenant="acme")
+    res = await k.resolve_instance("child", "Widget", "w", tenant="acme")
     assert res.doc["spec"]["color"] == "acme-blue"   # overlay wins the field
     assert res.doc["spec"]["size"] == "M"            # base fills the rest
     assert res.contributions_by_field["spec.color"] == "child"

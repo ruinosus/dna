@@ -3,7 +3,7 @@ the Kernel god-object (kernel-decompose-continue).
 
 Behavior-preserving: the LOCKED / RESTRICTED / OPEN enforcement (Phase 16) moves
 verbatim; the kernel keeps ``_check_layer_policy`` / ``_check_layer_policy_async``
-/ ``_enforce_layer_policy_with_mi`` as thin delegators (only ``write_document``
+/ ``_enforce_layer_policy_with_mi`` as thin delegators (only ``write_instance``
 calls the async one internally; no external caller). Holds a back-ref to the
 kernel for the accessors it needs (base-MI cache, non-overlayable set, alias,
 Kind-port lookup).
@@ -11,7 +11,7 @@ Kind-port lookup).
 Also home to the per-FIELD allowlist gate — ``KindPort.OVERLAYABLE_FIELDS``.
 That one is deliberately WRITE-PATH ONLY (see
 ``non_overlayable_changes`` and ``DefaultLayerResolver.__init__``): it
-constrains what a layer may AUTHOR through the runtime, not how documents
+constrains what a layer may AUTHOR through the runtime, not how instances
 already stored are composed.
 """
 from __future__ import annotations
@@ -28,7 +28,7 @@ _MISSING = object()
 
 # ``timeline`` is append-only across overlays REGARDLESS of policy (ADR
 # 2026-05-10): the merge port concatenates a layer's events even onto a LOCKED
-# document. Refusing the write that records them would make the field
+# instance. Refusing the write that records them would make the field
 # allowlist the one rule in the system able to break that contract, so it is
 # exempt — a Kind author never has to remember to list it.
 _ALLOWLIST_EXEMPT_KEYS = frozenset({"timeline"})
@@ -132,7 +132,7 @@ class LayerPolicyEnforcer:
         reason it was refused for:
 
         1. the structurally non-overlayable Kind set (derived from
-           ``KindPort.is_overlayable``) — independent of any document;
+           ``KindPort.is_overlayable``) — independent of any instance;
         2. the per-layer LayerPolicy verdict (LOCKED / RESTRICTED / OPEN)
            resolved from the scope's LayerPolicy docs — what the OPERATOR
            declared;
@@ -207,7 +207,7 @@ class LayerPolicyEnforcer:
             if existing is None:
                 raise LayerPolicyViolationError(
                     f"{alias} in layer '{layer_id}' is RESTRICTED — "
-                    f"cannot add new document '{name}' not present in base"
+                    f"cannot add new instance '{name}' not present in base"
                 )
             new_keys = set((raw.get("spec") or {}).keys())
             added = new_keys - set(_base_spec(existing))
@@ -268,7 +268,7 @@ class LayerPolicyEnforcer:
 
 
 def _base_spec(doc) -> dict:
-    """The base document's raw top-level spec mapping, or ``{}``.
+    """The base instance's raw top-level spec mapping, or ``{}``.
 
     Prefers ``doc.raw['spec']`` (the authored dict) over ``doc.spec`` (which
     may be a typed model on some Kinds) — the same preference the RESTRICTED

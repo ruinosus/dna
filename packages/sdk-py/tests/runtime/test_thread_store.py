@@ -678,7 +678,7 @@ async def test_dry_run_seleciona_e_reporta_sem_apagar():
 
 @pytest.mark.asyncio
 async def test_a_varredura_e_recortada_pelo_copiloto_que_declarou_a_politica():
-    """A retenção mora no documento do Copilot — varrer sem esse recorte
+    """A retenção mora na instância do Copilot — varrer sem esse recorte
     aplicaria a política de um copiloto às conversas de outro."""
     porta = _PortaEspia(
         [

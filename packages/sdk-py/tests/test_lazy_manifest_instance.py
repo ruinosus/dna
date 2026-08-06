@@ -9,7 +9,7 @@ Three test classes:
     one()/all() shims — s-blessed-query-surface) delegate to kernel without forcing
     full materialization.
   - **Back-compat**: eager mode (lazy=False) behavior unchanged; the
-    documents property still works; access in lazy mode warns +
+    instances property still works; access in lazy mode warns +
     materializes.
 """
 from __future__ import annotations
@@ -19,19 +19,19 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from dna.kernel.document import Document
+from dna.kernel.instance import Instance
 from dna.kernel.manifest import ManifestInstance
 
 
-def _doc(kind: str, name: str, **spec) -> Document:
-    """Build a Document with minimum required shape."""
+def _doc(kind: str, name: str, **spec) -> Instance:
+    """Build an Instance with minimum required shape."""
     raw = {
         "apiVersion": "github.com/ruinosus/dna/test/v1",
         "kind": kind,
         "metadata": {"name": name},
         "spec": spec,
     }
-    return Document.from_raw(raw)
+    return Instance.from_raw(raw)
 
 
 def _bootstrap_docs():
@@ -52,28 +52,28 @@ class TestConstruction:
         """Without lazy=True, behaves exactly as before."""
         mi = ManifestInstance(
             scope="demo",
-            documents=[_doc("Story", "s-a")],
+            instances=[_doc("Story", "s-a")],
             kinds={},
         )
         assert mi._lazy is False
         assert mi._lazy_full_loaded is True
-        # documents accessible without warning
+        # instances accessible without warning
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            docs = mi.documents
+            docs = mi.instances
         assert len(docs) == 1
 
     def test_lazy_mode_keeps_only_bootstrap(self):
         mi = ManifestInstance(
             scope="demo",
-            documents=_bootstrap_docs(),
+            instances=_bootstrap_docs(),
             kinds={},
             lazy=True,
         )
         assert mi._lazy is True
         assert mi._lazy_full_loaded is False
         # Bootstrap visible via internal access
-        assert len(mi._documents) == 3
+        assert len(mi._instances) == 3
 
 
 # ---------------------------------------------------------------------------
@@ -87,10 +87,10 @@ class TestLazyAccess:
         """Bootstrap kinds are served from the in-memory list — no
         kernel call."""
         kernel = MagicMock()
-        kernel.get_document = MagicMock(side_effect=AssertionError("should not be called"))
+        kernel.get_instance = MagicMock(side_effect=AssertionError("should not be called"))
         mi = ManifestInstance(
             scope="demo",
-            documents=_bootstrap_docs(),
+            instances=_bootstrap_docs(),
             kinds={},
             kernel=kernel,
             lazy=True,
@@ -105,7 +105,7 @@ class TestLazyAccess:
         kernel.query = MagicMock(side_effect=AssertionError("should not be called"))
         mi = ManifestInstance(
             scope="demo",
-            documents=_bootstrap_docs(),
+            instances=_bootstrap_docs(),
             kinds={},
             kernel=kernel,
             lazy=True,
@@ -116,13 +116,13 @@ class TestLazyAccess:
 
     @pytest.mark.asyncio
     async def test_one_non_bootstrap_delegates_to_kernel_get(self):
-        """Non-bootstrap kind: lazy MI delegates to kernel.get_document_sync.
+        """Non-bootstrap kind: lazy MI delegates to kernel.get_instance_sync.
 
         s-miholder-transient / F8.7: lazy ``one()`` routes through the
-        sync wrapper ``kernel.get_document_sync`` (loop-safe) which
-        returns an already-parsed Document — not raw + _parse_doc.
+        sync wrapper ``kernel.get_instance_sync`` (loop-safe) which
+        returns an already-parsed Instance — not raw + _parse_doc.
         """
-        target_doc = Document.from_raw({
+        target_doc = Instance.from_raw({
             "apiVersion": "github.com/ruinosus/dna/test/v1",
             "kind": "Story",
             "metadata": {"name": "s-foo"},
@@ -136,11 +136,11 @@ class TestLazyAccess:
             return target_doc
 
         kernel = MagicMock()
-        kernel.get_document_sync = _get_document_sync
+        kernel.get_instance_sync = _get_document_sync
 
         mi = ManifestInstance(
             scope="demo",
-            documents=_bootstrap_docs(),
+            instances=_bootstrap_docs(),
             kinds={},
             kernel=kernel,
             lazy=True,
@@ -159,7 +159,7 @@ class TestLazyAccess:
         ]
 
         def _query_list_sync(scope, kind, **kwargs):
-            return [Document.from_raw(r) for r in rows]
+            return [Instance.from_raw(r) for r in rows]
 
         kernel = MagicMock()
         # Story s-miholder-transient: mi._lazy_load_kind now uses
@@ -169,7 +169,7 @@ class TestLazyAccess:
 
         mi = ManifestInstance(
             scope="demo",
-            documents=_bootstrap_docs(),
+            instances=_bootstrap_docs(),
             kinds={},
             kernel=kernel,
             lazy=True,
@@ -185,7 +185,7 @@ class TestLazyAccess:
 
         def _query_list_sync(scope, kind, **kwargs):
             call_count["n"] += 1
-            return [Document.from_raw({
+            return [Instance.from_raw({
                 "apiVersion": "github.com/ruinosus/dna/test/v1", "kind": "Story",
                 "metadata": {"name": "s-a"}, "spec": {},
             })]
@@ -195,7 +195,7 @@ class TestLazyAccess:
 
         mi = ManifestInstance(
             scope="demo",
-            documents=_bootstrap_docs(),
+            instances=_bootstrap_docs(),
             kinds={},
             kernel=kernel,
             lazy=True,
@@ -211,11 +211,11 @@ class TestLazyAccess:
             return None
 
         kernel = MagicMock()
-        kernel.get_document_sync = _get_document_sync
+        kernel.get_instance_sync = _get_document_sync
 
         mi = ManifestInstance(
             scope="demo",
-            documents=_bootstrap_docs(),
+            instances=_bootstrap_docs(),
             kinds={},
             kernel=kernel,
             lazy=True,
@@ -230,10 +230,10 @@ class TestLazyAccess:
 
 class TestBackCompat:
     def test_accessing_documents_in_lazy_warns(self):
-        """The .documents property in lazy mode emits DeprecationWarning
+        """The .instances property in lazy mode emits DeprecationWarning
         + forces full load via source.load_all.
 
-        Sync test on purpose: the ``.documents`` property is synchronous
+        Sync test on purpose: the ``.instances`` property is synchronous
         and drives ``_materialize_full`` via ``_run_sync_helper``. Under
         the s-mi-class-death contract, that helper raises if called from
         inside a running event loop with no cross-thread dispatch loop.
@@ -250,11 +250,11 @@ class TestBackCompat:
         kernel = MagicMock()
         kernel._readers = []
         kernel._main_loop = None  # _run_sync_helper falls to asyncio.run (Case 3)
-        kernel._parse_doc = lambda raw, origin="local": Document.from_raw(raw)
+        kernel._parse_doc = lambda raw, origin="local": Instance.from_raw(raw)
 
         mi = ManifestInstance(
             scope="demo",
-            documents=_bootstrap_docs(),
+            instances=_bootstrap_docs(),
             kinds={},
             source=source,
             kernel=kernel,
@@ -262,7 +262,7 @@ class TestBackCompat:
         )
         with warnings.catch_warnings(record=True) as w:
             warnings.simplefilter("always")
-            docs = mi.documents
+            docs = mi.instances
             # First access materializes + warns
             assert any(
                 "lazy mode" in str(x.message) for x in w
@@ -274,7 +274,7 @@ class TestBackCompat:
         assert "s-loaded" in names  # loaded via load_all
 
     def test_subsequent_documents_access_no_warning(self):
-        """After materialization, subsequent .documents access is silent.
+        """After materialization, subsequent .instances access is silent.
 
         Sync test on purpose — see test_accessing_documents_in_lazy_warns."""
         async def _load_all(scope, readers=None):
@@ -285,11 +285,11 @@ class TestBackCompat:
         kernel = MagicMock()
         kernel._readers = []
         kernel._main_loop = None  # _run_sync_helper falls to asyncio.run (Case 3)
-        kernel._parse_doc = lambda raw, origin="local": Document.from_raw(raw)
+        kernel._parse_doc = lambda raw, origin="local": Instance.from_raw(raw)
 
         mi = ManifestInstance(
             scope="demo",
-            documents=_bootstrap_docs(),
+            instances=_bootstrap_docs(),
             kinds={},
             source=source,
             kernel=kernel,
@@ -298,12 +298,12 @@ class TestBackCompat:
         # First access (warns + loads)
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            _ = mi.documents
+            _ = mi.instances
 
         # Second access — silent
         with warnings.catch_warnings():
             warnings.simplefilter("error")
-            _ = mi.documents
+            _ = mi.instances
 
 
 # ---------------------------------------------------------------------------
@@ -324,11 +324,11 @@ class TestAllWhere:
         kernel = MagicMock()
         kernel._readers = []
         kernel._main_loop = None  # _run_sync_helper falls to asyncio.run (Case 3)
-        kernel._parse_doc = lambda raw, origin="local": Document.from_raw(raw)
+        kernel._parse_doc = lambda raw, origin="local": Instance.from_raw(raw)
 
         mi = ManifestInstance(
             scope="demo",
-            documents=_bootstrap_docs(),
+            instances=_bootstrap_docs(),
             kinds={},
             source=source,
             kernel=kernel,

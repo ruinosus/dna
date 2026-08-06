@@ -1,6 +1,6 @@
 """TestkitExtension — first-class TEST artifacts for the SDLC.
 
-Registers TWO artifact KindPorts (not work-items — a test script is a document,
+Registers TWO artifact KindPorts (not work-items — a test script is an instance,
 like a Spec/HtmlArtifact, produced BY a work item and verifying it):
 
   - TestGuide (testkit-test-guide) — a declarative test SCRIPT: an ordered list
@@ -206,7 +206,7 @@ class TestRunKind(KindBase):
         "a Story drives the derived journey's ``verify`` phase."
     )
     # ``guide_ref`` is the first relation here the kernel actually RESOLVES:
-    # the value is a TestGuide document's name, so it validates on write and
+    # the value is a TestGuide instance's name, so it validates on write and
     # produces an edge. It used to be an INFERRED edge — drawn by a field-name
     # guess, enforced by nothing, and true only by luck.
     #

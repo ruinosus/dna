@@ -206,12 +206,12 @@ async def pg_setup():
     src = SqlAlchemySource(sa_url, schema=schema)
     await src.connect()
 
-    # Seed a Module so `save_document` round-trips.
+    # Seed a Module so `save_instance` round-trips.
     module_raw = {
         "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Genome",
         "metadata": {"name": "evbus-test"}, "spec": {"default_agent": "bot"},
     }
-    await src.save_document("evbus-test", "Genome", "evbus-test", module_raw)
+    await src.save_instance("evbus-test", "Genome", "evbus-test", module_raw)
 
     yield {"dsn": dsn, "schema": schema, "source": src}
 
@@ -232,7 +232,7 @@ class TestPostgresEventBus:
         from dna.kernel import Kernel
         from dna.adapters.postgres.eventbus import PostgresEventBus
 
-        # The seed (save_document above) already produced 1 outbox row.
+        # The seed (save_instance above) already produced 1 outbox row.
         kernel = Kernel()
         # Stub holder + counter to detect spurious invalidations.
         h = _StubHolder("evbus-test")
@@ -267,7 +267,7 @@ class TestPostgresEventBus:
                 "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Agent",
                 "metadata": {"name": "live-bot"}, "spec": {},
             }
-            await pg_setup["source"].save_document(
+            await pg_setup["source"].save_instance(
                 "evbus-test", "Agent", "live-bot", agent_raw,
             )
 
@@ -302,7 +302,7 @@ class TestPostgresEventBus:
                 "apiVersion": "github.com/ruinosus/dna/evidence/v1", "kind": "Evidence",
                 "metadata": {"name": "ev-1"}, "spec": {"type": "test"},
             }
-            await pg_setup["source"].save_document(
+            await pg_setup["source"].save_instance(
                 "evbus-test", "Evidence", "ev-1", evid_raw,
             )
 
@@ -316,7 +316,7 @@ class TestPostgresEventBus:
                 "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Agent",
                 "metadata": {"name": "after-evidence"}, "spec": {},
             }
-            await pg_setup["source"].save_document(
+            await pg_setup["source"].save_instance(
                 "evbus-test", "Agent", "after-evidence", agent_raw,
             )
             for _ in range(20):
@@ -370,7 +370,7 @@ class TestPostgresEventBus:
                     "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Agent",
                     "metadata": {"name": f"replay-{i}"}, "spec": {"i": i},
                 }
-                await pg_setup["source"].save_document(
+                await pg_setup["source"].save_instance(
                     "evbus-test", "Agent", f"replay-{i}", raw,
                 )
 
@@ -415,7 +415,7 @@ class TestPostgresEventBus:
                 "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Agent",
                 "metadata": {"name": "tls-shaped-dsn"}, "spec": {},
             }
-            await pg_setup["source"].save_document(
+            await pg_setup["source"].save_instance(
                 "evbus-test", "Agent", "tls-shaped-dsn", agent_raw,
             )
 

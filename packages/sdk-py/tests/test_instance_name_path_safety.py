@@ -1,13 +1,13 @@
-"""A document name is a PATH COMPONENT — the kernel refuses one that escapes.
+"""An instance name is a PATH COMPONENT — the kernel refuses one that escapes.
 
-A document reaches the filesystem adapter as ``<scope>/<container>/<name>/…``
+An instance reaches the filesystem adapter as ``<scope>/<container>/<name>/…``
 or ``<container>/<name>.yaml``. Nothing on the kernel write path validated
 ``name``, so a caller-supplied ``"../../../../ESCAPED"`` was accepted and wrote
 a file ABOVE the store root — measured on a tenant-facing route, but the route
 was never the bug: ``create_story`` and every other application-layer writer
 take a raw caller ``name`` exactly the same way.
 
-The guard therefore lives at ``Kernel.write_document`` / ``Kernel.delete_document``
+The guard therefore lives at ``Kernel.write_instance`` / ``Kernel.delete_instance``
 — the documented facades that already own ``invalidate_mode`` validation, the
 retired-Kind block and the tenant-slug check — so every door inherits it.
 
@@ -38,17 +38,17 @@ import pytest
 from dna.kernel.errors import (
     MAX_PATH_COMPONENT_BYTES,
     InvalidBundleEntry,
-    InvalidDocumentName,
+    InvalidInstanceName,
     InvalidScopeName,
     KernelRefusal,
-    validate_document_name,
+    validate_instance_name,
     validate_scope_name,
 )
 
 # ── the corpus ───────────────────────────────────────────────────────────────
 #
 # Names that MUST be refused. Each one either escapes the container
-# (``..``/``/``/``\``), addresses a directory instead of naming a document
+# (``..``/``/``/``\``), addresses a directory instead of naming an instance
 # (``.``, ``..``, empty), truncates a C path string (NUL), or has no chance of
 # becoming a filesystem component at all (over-long).
 UNSAFE_NAMES = [
@@ -106,14 +106,14 @@ REAL_SCOPES = [
 
 # ── the error vocabulary ─────────────────────────────────────────────────────
 
-@pytest.mark.parametrize("cls", [InvalidDocumentName, InvalidScopeName])
+@pytest.mark.parametrize("cls", [InvalidInstanceName, InvalidScopeName])
 def test_the_refusal_shares_the_kernel_marker_base(cls):
     """A face catches ONE type (``KernelRefusal``) and relays every deliberate
     refusal — the guard must not re-open that hole."""
     assert issubclass(cls, KernelRefusal)
 
 
-@pytest.mark.parametrize("cls", [InvalidDocumentName, InvalidScopeName])
+@pytest.mark.parametrize("cls", [InvalidInstanceName, InvalidScopeName])
 def test_the_refusal_is_also_a_valueerror(cls):
     """Belt and braces for a SECURITY refusal: a face that predates
     ``KernelRefusal`` and still catches ``(ValueError, LookupError,
@@ -125,13 +125,13 @@ def test_the_refusal_is_also_a_valueerror(cls):
 
 @pytest.mark.parametrize("name", UNSAFE_NAMES)
 def test_validate_document_name_refuses_an_unsafe_component(name):
-    with pytest.raises(InvalidDocumentName):
-        validate_document_name(name)
+    with pytest.raises(InvalidInstanceName):
+        validate_instance_name(name)
 
 
 @pytest.mark.parametrize("name", REAL_NAMES)
 def test_validate_document_name_accepts_every_real_name(name):
-    validate_document_name(name)  # must not raise
+    validate_instance_name(name)  # must not raise
 
 
 @pytest.mark.parametrize("name", UNSAFE_NAMES)
@@ -148,8 +148,8 @@ def test_validate_scope_name_accepts_every_real_scope(scope):
 def test_the_refusal_names_the_offending_value_and_the_reason():
     """Didactic failure: the message must say WHICH name and WHY, or the
     author of a legitimately-refused name has nothing to act on."""
-    with pytest.raises(InvalidDocumentName) as exc:
-        validate_document_name("../escape")
+    with pytest.raises(InvalidInstanceName) as exc:
+        validate_instance_name("../escape")
     msg = str(exc.value)
     assert "../escape" in msg
     assert "path component" in msg
@@ -158,8 +158,8 @@ def test_the_refusal_names_the_offending_value_and_the_reason():
 def test_a_non_string_name_is_refused():
     """Defence in depth — a caller handing the kernel a Path or None must not
     reach ``Path.__truediv__`` and produce a surprise."""
-    with pytest.raises(InvalidDocumentName):
-        validate_document_name(None)  # type: ignore[arg-type]
+    with pytest.raises(InvalidInstanceName):
+        validate_instance_name(None)  # type: ignore[arg-type]
 
 
 # ── the kernel facade ────────────────────────────────────────────────────────
@@ -171,12 +171,12 @@ class _RecordingWritable:
         self.saves: list[tuple] = []
         self.deletes: list[tuple] = []
 
-    async def save_document(self, scope, kind, name, raw, author=None, *,
+    async def save_instance(self, scope, kind, name, raw, author=None, *,
                             tenant=None, layer=None, **kw):
         self.saves.append((scope, kind, name))
         return "v1"
 
-    async def delete_document(self, scope, kind, name, *, tenant=None,
+    async def delete_instance(self, scope, kind, name, *, tenant=None,
                               layer=None, **kw):
         self.deletes.append((scope, kind, name))
 
@@ -249,8 +249,8 @@ def _raw(name: str) -> dict:
 @pytest.mark.parametrize("name", UNSAFE_NAMES)
 def test_write_document_refuses_an_unsafe_name_before_the_adapter(name):
     k, src = _kernel_with_recorder()
-    with pytest.raises(InvalidDocumentName):
-        asyncio.run(k.write_document("test-mod", "Agent", name, _raw(name)))
+    with pytest.raises(InvalidInstanceName):
+        asyncio.run(k.write_instance("test-mod", "Agent", name, _raw(name)))
     assert src.saves == [], "the adapter must never see an unsafe name"
 
 
@@ -259,8 +259,8 @@ def test_delete_document_refuses_an_unsafe_name_before_the_adapter(name):
     """A traversal DELETE is the worse half of the same bug — the filesystem
     adapter ``unlink``s / ``rmtree``s ``parent / name``."""
     k, src = _kernel_with_recorder()
-    with pytest.raises(InvalidDocumentName):
-        asyncio.run(k.delete_document("test-mod", "Agent", name))
+    with pytest.raises(InvalidInstanceName):
+        asyncio.run(k.delete_instance("test-mod", "Agent", name))
     assert src.deletes == [], "the adapter must never see an unsafe name"
 
 
@@ -268,14 +268,14 @@ def test_delete_document_refuses_an_unsafe_name_before_the_adapter(name):
 def test_write_document_refuses_an_unsafe_scope_before_the_adapter(scope):
     k, src = _kernel_with_recorder()
     with pytest.raises(InvalidScopeName):
-        asyncio.run(k.write_document(scope, "Agent", "bot", _raw("bot")))
+        asyncio.run(k.write_instance(scope, "Agent", "bot", _raw("bot")))
     assert src.saves == []
 
 
 def test_write_document_still_accepts_a_real_name_and_scope():
     """The guard must not become the bug: the ordinary write is untouched."""
     k, src = _kernel_with_recorder()
-    version = asyncio.run(k.write_document(
+    version = asyncio.run(k.write_instance(
         "dna-development", "Agent", "t-1a2b3c.node.internal--Overlay",
         _raw("t-1a2b3c.node.internal--Overlay"),
     ))
@@ -290,8 +290,8 @@ def test_write_document_documents_the_refusal():
     the contract is a guard callers write around."""
     from dna.kernel import Kernel
 
-    doc = Kernel.write_document.__doc__ or ""
-    assert "InvalidDocumentName" in doc
+    doc = Kernel.write_instance.__doc__ or ""
+    assert "InvalidInstanceName" in doc
     assert "InvalidScopeName" in doc
 
 
@@ -319,8 +319,8 @@ async def test_no_file_escapes_the_store_root(tmp_path):
     k.source(FilesystemWritableSource(str(store), kernel=k))
 
     evil = "../../../../ESCAPED"
-    with pytest.raises(InvalidDocumentName):
-        await k.write_document("test-mod", "Agent", evil, {
+    with pytest.raises(InvalidInstanceName):
+        await k.write_instance("test-mod", "Agent", evil, {
             "apiVersion": "helix.dna.dev/v1", "kind": "Agent",
             "metadata": {"name": evil}, "spec": {"model": "gpt-4o"},
         })
@@ -346,7 +346,7 @@ async def test_the_same_write_with_a_safe_name_still_lands_inside(tmp_path):
     k.load(HelixExtension())
     k.source(FilesystemWritableSource(str(store), kernel=k))
 
-    await k.write_document("test-mod", "Agent", "t-1a2b3c.node.internal--Overlay", {
+    await k.write_instance("test-mod", "Agent", "t-1a2b3c.node.internal--Overlay", {
         "apiVersion": "helix.dna.dev/v1", "kind": "Agent",
         "metadata": {"name": "t-1a2b3c.node.internal--Overlay"},
         "spec": {"model": "gpt-4o"},
@@ -359,7 +359,7 @@ async def test_the_same_write_with_a_safe_name_still_lands_inside(tmp_path):
 
 # ── the SECOND write door: bundle entries ───────────────────────────────────
 #
-# ``write_document`` is not the only kernel method that takes a caller name
+# ``write_instance`` is not the only kernel method that takes a caller name
 # into a path. ``write_bundle_entry_async`` does too, and it is live on
 # ``PUT /v1/definitions/{kind}/{name}/entries/{entry:path}`` with ``name`` as a
 # raw URL path parameter. The filesystem adapter DOES guard ``entry`` — but
@@ -384,7 +384,7 @@ async def test_no_bundle_entry_escapes_the_store_root(tmp_path):
     k, store = _fs_kernel(tmp_path)
     before = {p for p in tmp_path.rglob("*")}
 
-    with pytest.raises(InvalidDocumentName):
+    with pytest.raises(InvalidInstanceName):
         await k.write_bundle_entry_async(
             "test-mod", "Agent", "../../../../ESCAPED", "AGENT.md", "pwned",
         )
@@ -405,11 +405,11 @@ async def test_bundle_entry_write_refuses_an_unsafe_scope(tmp_path):
 @pytest.mark.asyncio
 async def test_bundle_entry_delete_refuses_an_unsafe_name(tmp_path):
     k, _ = _fs_kernel(tmp_path)
-    with pytest.raises(InvalidDocumentName):
+    with pytest.raises(InvalidInstanceName):
         await k.delete_bundle_entry_async(
             "test-mod", "Agent", "../../../../ESCAPED", "AGENT.md",
         )
-    with pytest.raises(InvalidDocumentName):
+    with pytest.raises(InvalidInstanceName):
         k.delete_bundle_entry(
             "test-mod", "Agent", "../../../../ESCAPED", "AGENT.md",
         )
@@ -480,9 +480,9 @@ def _escape_fixture(tmp_path):
 async def test_no_bundle_entry_read_escapes_the_store_root(tmp_path):
     k, _store, secret, evil = _escape_fixture(tmp_path)
 
-    with pytest.raises(InvalidDocumentName):
+    with pytest.raises(InvalidInstanceName):
         k.fetch_bundle_entry("test-mod", "Agent", evil, "AGENT.md")
-    with pytest.raises(InvalidDocumentName):
+    with pytest.raises(InvalidInstanceName):
         await k.fetch_bundle_entry_async("test-mod", "Agent", evil, "AGENT.md")
 
     # The refusal is not the proof — the bytes staying unread are. Before the
@@ -496,9 +496,9 @@ async def test_no_bundle_listing_escapes_the_store_root(tmp_path):
     every file under an arbitrary directory outside the store."""
     k, _store, _secret, evil = _escape_fixture(tmp_path)
 
-    with pytest.raises(InvalidDocumentName):
+    with pytest.raises(InvalidInstanceName):
         k.list_bundle_entries("test-mod", "Agent", evil)
-    with pytest.raises(InvalidDocumentName):
+    with pytest.raises(InvalidInstanceName):
         await k.list_bundle_entries_async("test-mod", "Agent", evil)
 
 
@@ -556,7 +556,7 @@ def test_the_bundle_read_facades_document_the_refusal():
 
     for method in (Kernel.fetch_bundle_entry, Kernel.list_bundle_entries):
         doc = method.__doc__ or ""
-        assert "InvalidDocumentName" in doc, method.__name__
+        assert "InvalidInstanceName" in doc, method.__name__
         assert "InvalidScopeName" in doc, method.__name__
 
 
@@ -564,13 +564,13 @@ def test_the_bundle_read_facades_document_the_refusal():
 #
 # Neither writes bytes, which is why the first wave left them alone. Both
 # nonetheless take the caller's ``name`` into a path:
-#   - ``preview_document`` → ``_target_locator`` → ``_target_exists`` runs a
+#   - ``preview_instance`` → ``_target_locator`` → ``_target_exists`` runs a
 #     REAL ``Path.exists()`` at ``<base_dir>/<scope>/<container>/<name>``, and
 #     returns a ``target`` the caller renders.
-#   - ``serialize_document`` returns ``relativePath`` values BUILT from
+#   - ``serialize_instance`` returns ``relativePath`` values BUILT from
 #     ``name``; the payload exists so a caller can write those paths out.
 # Preview is the dry run of the write, so it refuses what the write refuses —
-# otherwise it advertises a target ``write_document`` would reject.
+# otherwise it advertises a target ``write_instance`` would reject.
 
 @pytest.mark.asyncio
 async def test_preview_document_refuses_a_traversing_name(tmp_path):
@@ -578,13 +578,13 @@ async def test_preview_document_refuses_a_traversing_name(tmp_path):
     raw = {"apiVersion": "helix.dna.dev/v1", "kind": "Agent",
            "metadata": {"name": "x"}, "spec": {"model": "gpt-4o"}}
 
-    with pytest.raises(InvalidDocumentName):
-        await k.preview_document("test-mod", "Agent", "../../../../ESCAPED", raw)
+    with pytest.raises(InvalidInstanceName):
+        await k.preview_instance("test-mod", "Agent", "../../../../ESCAPED", raw)
     with pytest.raises(InvalidScopeName):
-        await k.preview_document("../../evil", "Agent", "a-agent", raw)
+        await k.preview_instance("../../evil", "Agent", "a-agent", raw)
 
     # The control: the ordinary preview still resolves, and inside the store.
-    result = await k.preview_document("test-mod", "Agent", "a-agent", raw)
+    result = await k.preview_instance("test-mod", "Agent", "a-agent", raw)
     assert store in Path(result.target).parents
 
 
@@ -593,12 +593,12 @@ def test_serialize_document_refuses_a_traversing_name(tmp_path):
     raw = {"apiVersion": "helix.dna.dev/v1", "kind": "Agent",
            "metadata": {"name": "x"}, "spec": {"model": "gpt-4o"}}
 
-    with pytest.raises(InvalidDocumentName):
-        k.serialize_document("test-mod", "Agent", "../../../../ESCAPED", raw)
+    with pytest.raises(InvalidInstanceName):
+        k.serialize_instance("test-mod", "Agent", "../../../../ESCAPED", raw)
     with pytest.raises(InvalidScopeName):
-        k.serialize_document("../../evil", "Agent", "a-agent", raw)
+        k.serialize_instance("../../evil", "Agent", "a-agent", raw)
 
-    files = k.serialize_document("test-mod", "Agent", "a-agent", raw)["files"]
+    files = k.serialize_instance("test-mod", "Agent", "a-agent", raw)["files"]
     assert files, "the control must still serialize"
     assert all(".." not in f["relativePath"] for f in files)
 
@@ -612,13 +612,13 @@ def test_serialize_document_refuses_a_traversing_CONTENT_derived_path(tmp_path):
     proven safe. It could not fail on the property it names.
 
     And the property did not hold. The other half of every ``relativePath``
-    comes from the document's own ``spec`` — ``root_files``, ``source_files``,
+    comes from the instance's own ``spec`` — ``root_files``, ``source_files``,
     ``scripts|references|assets``, ``extras``, ``instruction_file`` — so with an
     Agent carrying ``root_files`` this returned
     ``['agents/a-agent/AGENT.md', 'agents/a-agent/../../../etc/cron.d/pwn']``:
     a traversing path handed back to a caller whose entire job is to write it.
     The escape had moved one frame up the stack, which is exactly what
-    ``serialize_document``'s docstring claimed to have closed.
+    ``serialize_instance``'s docstring claimed to have closed.
 
     Exercised with a raw that ACTUALLY carries entries, and the property is now
     enforced rather than asserted."""
@@ -629,17 +629,17 @@ def test_serialize_document_refuses_a_traversing_CONTENT_derived_path(tmp_path):
                         "root_files": {"../../../etc/cron.d/pwn": "pwned"}}}
 
     with pytest.raises(InvalidBundleEntry):
-        k.serialize_document("test-mod", "Agent", "a-agent", hostile)
+        k.serialize_instance("test-mod", "Agent", "a-agent", hostile)
 
     # The control, and it is the one that makes the assertion non-vacuous: a
     # raw that carries real content-derived entries still serializes, and every
-    # path it hands back stays inside the document's own directory.
+    # path it hands back stays inside the instance's own directory.
     benign = {"apiVersion": "helix.dna.dev/v1", "kind": "Agent",
               "metadata": {"name": "x"},
               "spec": {"model": "gpt-4o",
                        "root_files": {"skills/foo/SKILL.md": "legit"},
                        "scripts": {"run.py": "print(1)"}}}
-    files = k.serialize_document("test-mod", "Agent", "a-agent", benign)["files"]
+    files = k.serialize_instance("test-mod", "Agent", "a-agent", benign)["files"]
     rels = [f["relativePath"] for f in files]
     assert any(r.endswith("skills/foo/SKILL.md") for r in rels), rels
     assert any(r.endswith("scripts/run.py") for r in rels), rels

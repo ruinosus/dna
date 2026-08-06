@@ -1,15 +1,15 @@
 """The optimistic-concurrency token — one definition, both layers.
 
 ``spec_etag`` was written for the generic write use-case
-(:mod:`dna.application.documents`), where it guards a read-modify-write in
+(:mod:`dna.application.instances`), where it guards a read-modify-write in
 APPLICATION code. i-083 needed the same guarantee one layer down, on
-``kernel.write_document``, so that the adapter — not a cache — decides whether
-the document moved. Adapters may import ``dna.kernel.*`` and nothing above it,
-so the function lives here and ``dna.application.documents`` re-exports it.
+``kernel.write_instance``, so that the adapter — not a cache — decides whether
+the instance moved. Adapters may import ``dna.kernel.*`` and nothing above it,
+so the function lives here and ``dna.application.instances`` re-exports it.
 
 **ONE definition is the point, not tidiness.** The token
-:func:`~dna.application.documents.get_document_impl` hands a caller is the token
-``kernel.write_document`` checks; two hashes of the same bytes that disagreed by
+:func:`~dna.application.instances.get_instance_impl` hands a caller is the token
+``kernel.write_instance`` checks; two hashes of the same bytes that disagreed by
 a sort order or a separator would refuse every honest write while letting a
 stale one through, and the failure would look like flakiness rather than a bug.
 """
@@ -23,12 +23,12 @@ __all__ = ["spec_etag", "check_if_match"]
 
 
 def spec_etag(spec: Any) -> str:
-    """A content fingerprint of a document ``spec`` — the optimistic-concurrency
-    token ``get_document`` returns and ``write_document`` checks (``if_match``).
+    """A content fingerprint of an instance ``spec`` — the optimistic-concurrency
+    token ``get_instance`` returns and ``write_instance`` checks (``if_match``).
 
-    Deliberately NOT the adapter's version id: ``kernel.write_document`` returns
-    one, but nothing on the READ path exposes it (``get_document`` yields the raw
-    document and nothing else), and version support is per-adapter — the
+    Deliberately NOT the adapter's version id: ``kernel.write_instance`` returns
+    one, but nothing on the READ path exposes it (``get_instance`` yields the raw
+    instance and nothing else), and version support is per-adapter — the
     filesystem source has none, and answers ``"1"`` to every write. A hash of the
     content the tool actually writes is available on every adapter, is derivable
     by the caller from the very read it already made, and answers the only
@@ -58,20 +58,20 @@ def check_if_match(
     stored: Any, if_match: str, *, scope: str, kind: str, name: str,
     tenant: str | None = None,
 ) -> None:
-    """Raise :class:`~dna.kernel.errors.StaleDocumentWrite` unless ``stored`` —
-    the document AS THE STORE HOLDS IT — still hashes to ``if_match``.
+    """Raise :class:`~dna.kernel.errors.StaleInstanceWrite` unless ``stored`` —
+    the instance AS THE STORE HOLDS IT — still hashes to ``if_match``.
 
     Shared by every adapter that declares the ``if_match`` write kwarg. One
     implementation because the two halves that would drift are the ones that
-    matter: the *absent document* verdict (a delete between the read and the
+    matter: the *absent instance* verdict (a delete between the read and the
     write is a stale write, not a create — see below), and the wording of the
     refusal, which is the only thing telling a caller that the remedy is to
     re-read rather than to retry the same bytes.
 
     ``stored is None`` is a REFUSAL, not a pass-through create. ``if_match``
-    asserts "I am updating the document I read"; a document that vanished
+    asserts "I am updating the instance I read"; an instance that vanished
     between the read and the write did not satisfy that assertion, and turning
-    the update into a create would resurrect a document somebody deleted, with
+    the update into a create would resurrect an instance somebody deleted, with
     the deleter's change lost — the same lost update by a different route.
     """
     if stored is not None:
@@ -89,11 +89,11 @@ def check_if_match(
             f"your read and this write"
         )
 
-    from dna.kernel.errors import StaleDocumentWrite
+    from dna.kernel.errors import StaleInstanceWrite
 
     where = f"scope {scope!r}" + (f" (tenant={tenant!r})" if tenant else "")
-    raise StaleDocumentWrite(
+    raise StaleInstanceWrite(
         f"{kind} {name!r} in {where} {detail} — refusing so your update does "
-        f"not overwrite somebody else's. Re-read the document and re-apply "
+        f"not overwrite somebody else's. Re-read the instance and re-apply "
         f"your change to the fresh etag."
     )

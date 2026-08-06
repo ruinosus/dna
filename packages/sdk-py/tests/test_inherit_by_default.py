@@ -70,7 +70,7 @@ def test_child_inherits_arbitrary_kind_but_not_ledger(tmp_path: Path):
     async def _run():
         k = _make_kernel(tmp_path)
         # A Kind that was NEVER in the old allowlist, written only to _lib.
-        await k.write_document(
+        await k.write_instance(
             "_lib", "Skill", "shared-skill",
             {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Skill",
              "metadata": {"name": "shared-skill"}, "spec": {"body": "x"}},
@@ -80,7 +80,7 @@ def test_child_inherits_arbitrary_kind_but_not_ledger(tmp_path: Path):
         # real api_version genuinely IS github.com/ruinosus/dna/v1
         # (s-engram-rename) — write-path validation (i-008) now applies, so
         # the spec must satisfy the schema's required fields.
-        await k.write_document(
+        await k.write_instance(
             "_lib", "Engram", "platform-lesson",
             {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Engram",
              "metadata": {"name": "platform-lesson"},
@@ -129,14 +129,14 @@ def test_epic_does_not_inherit_like_its_siblings(tmp_path: Path):
         ) == ("disabled", "override_full", "field_level")
 
         # ── end-to-end: neither leaks out of `_lib` ──
-        await k.write_document(
+        await k.write_instance(
             "_lib", "Epic", "lib-epic",
             {"apiVersion": "github.com/ruinosus/dna/sdlc/v1", "kind": "Epic",
              "metadata": {"name": "lib-epic"},
              "spec": {"status": "planning", "summary": "platform-only epic"}},
             tenant=None,
         )
-        await k.write_document(
+        await k.write_instance(
             "_lib", "Feature", "lib-feature",
             {"apiVersion": "github.com/ruinosus/dna/sdlc/v1", "kind": "Feature",
              "metadata": {"name": "lib-feature"},
@@ -165,6 +165,6 @@ def test_inheritance_failsoft_when_platform_absent(tmp_path: Path):
         # Querying an inheritable Kind must not raise even though _lib is absent.
         rows = [r async for r in k.query("scope", "Skill")]
         assert rows == []
-        assert await k.get_document("scope", "Skill", "nope") is None
+        assert await k.get_instance("scope", "Skill", "nope") is None
 
     asyncio.run(_run())

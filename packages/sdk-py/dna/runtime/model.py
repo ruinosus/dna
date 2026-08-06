@@ -65,7 +65,7 @@ def deployment_for(model: str) -> str:
 
     ## A separação que isto torna explícita
 
-    O documento do agente declara ``model: gpt-5-mini`` — uma **coordenada
+    A instância do agente declara ``model: gpt-5-mini`` — uma **coordenada
     portátil**, parte da definição, versionada com ela e igual em todo ambiente.
     Qual *deployment* atende essa coordenada é fato do **ambiente**: o mesmo
     agente roda contra um recurso que tem ``gpt-5-mini`` e outro que só tem

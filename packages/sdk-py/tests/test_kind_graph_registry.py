@@ -120,7 +120,7 @@ class TestEveryPairPairs:
     def test_the_registry_has_no_inverse_gap(self, ports):
         """Dor 1, as an assertion. A declared ``inverse_of`` whose other half
         is missing, points elsewhere, or names a different relation is an
-        authoring error the registry can prove WITHOUT reading a document."""
+        authoring error the registry can prove WITHOUT reading an instance."""
         gaps = inverse_gaps({
             str(getattr(p, "kind", "")): relations_of(p) for p in ports
             if getattr(p, "kind", None)

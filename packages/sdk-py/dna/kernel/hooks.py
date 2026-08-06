@@ -19,7 +19,7 @@ Design rationale — dual channel over "make everything async":
   - Async consumers want to `await` directly (event bus publish, HTTP, DB)
     without the `asyncio.create_task` workaround that drops errors and has
     no backpressure.
-  - Callers of `emit_async` (write_document, delete_document — already async)
+  - Callers of `emit_async` (write_instance, delete_instance — already async)
     see both channels fire; sync listeners still run, async ones are awaited.
   - Callers of `emit` (sync code paths) run only sync listeners. Registering
     an async listener for a hook only fired from sync emit used to be an
@@ -56,12 +56,12 @@ the previous listener (extensions may be re-loaded onto a shared registry).
 Hook points (the ``HookName`` vocabulary, s-dna-typed-hook-names):
   - pre_build_prompt:  middleware — before prompt rendering, can modify context
   - post_build_prompt: called after prompt rendering, receives final prompt
-  - pre_save:          called before document save, can reject (veto channel;
-                       emitted by kernel.write_document with PreSaveContext)
-  - post_save:         called after document save  [fires via emit_async]
-  - post_delete:       called after document delete [fires via emit_async]
+  - pre_save:          called before instance save, can reject (veto channel;
+                       emitted by kernel.write_instance with PreSaveContext)
+  - post_save:         called after instance save  [fires via emit_async]
+  - post_delete:       called after instance delete [fires via emit_async]
   - kinddef_conflict:  a KindDefinition collides with an existing Kind
-  - parse_error:       a document failed Kind-model validation at scan time
+  - parse_error:       an instance failed Kind-model validation at scan time
   - extension_error:   an Extension.register() raised during kernel.load
 
 Names are typed (``HookName`` Literal) but NOT enforced: registering or
@@ -130,11 +130,11 @@ class HookContext:
 class PreSaveContext:
     """Typed context for the ``pre_save`` veto hook.
 
-    Handed to every veto listener BEFORE the document reaches the source
+    Handed to every veto listener BEFORE the instance reaches the source
     adapter. ``raw`` is the live payload — listeners may mutate it in place
     (the write persists the mutated dict). ``kernel`` is the kernel the
     write is flowing through (tenant-bound copy when applicable) so guards
-    can do reads (``get_document``, ``model_profile``, ...) without module
+    can do reads (``get_instance``, ``model_profile``, ...) without module
     globals. Raising from a listener vetoes the write.
     """
     scope: str
@@ -307,7 +307,7 @@ class HookRegistry:
     async def emit_async(self, hook: str, ctx: HookContext) -> None:
         """Async emit. Runs sync listeners inline, then awaits each async listener.
 
-        Use from async call sites (kernel.write_document, kernel.delete_document).
+        Use from async call sites (kernel.write_instance, kernel.delete_instance).
         Errors in any listener are logged and do NOT prevent other listeners
         from running.
         """

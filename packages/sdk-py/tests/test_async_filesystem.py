@@ -46,7 +46,7 @@ async def test_writable_save_and_load(fs_dir):
     k.load(HelixExtension())
     source = FilesystemWritableSource(str(fs_dir), kernel=k)
     new_doc = {"kind": "Agent", "name": "new-agent", "spec": {"model": "gpt-4o"}}
-    await source.save_document("test-mod", "Agent", "new-agent", new_doc)
+    await source.save_instance("test-mod", "Agent", "new-agent", new_doc)
     docs = await source.load_all("test-mod")
     names = {d.get("name") for d in docs}
     assert "new-agent" in names

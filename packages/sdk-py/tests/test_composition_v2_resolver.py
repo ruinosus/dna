@@ -131,7 +131,7 @@ async def test_bootstrap_kind_no_inheritance():
     src.docs[("scope-a", "Genome", "scope-a", "")] = package_doc("scope-a")
     k = make_kernel_with_mock(src)
 
-    res = await k.resolve_document("scope-a", "Genome", "scope-a")
+    res = await k.resolve_instance("scope-a", "Genome", "scope-a")
     assert res.doc is not None
     assert res.is_inherited is False
     assert len(res.provenance.steps) == 1
@@ -153,7 +153,7 @@ async def test_depth_0_local_only():
     )
     k = make_kernel_with_mock(src)
 
-    res = await k.resolve_document("_lib", "LottieAsset", "X")
+    res = await k.resolve_instance("_lib", "LottieAsset", "X")
     assert res.doc is not None
     assert res.is_inherited is False
     assert res.provenance.effective_layer.scope == "_lib"
@@ -174,7 +174,7 @@ async def test_depth_1_v1_fallback():
     )
     k = make_kernel_with_mock(src)
 
-    res = await k.resolve_document("child", "LottieAsset", "shared")
+    res = await k.resolve_instance("child", "LottieAsset", "shared")
     assert res.doc is not None
     assert res.is_inherited is True
     assert res.provenance.effective_layer.scope == "_lib"
@@ -197,7 +197,7 @@ async def test_depth_2_transitive_walk():
     )
     k = make_kernel_with_mock(src)
 
-    res = await k.resolve_document("child", "LottieAsset", "root-only")
+    res = await k.resolve_instance("child", "LottieAsset", "root-only")
     assert res.doc is not None
     assert res.is_inherited is True
     assert res.provenance.effective_layer.scope == "_lib"
@@ -221,7 +221,7 @@ async def test_depth_2_mid_layer_wins():
     )
     k = make_kernel_with_mock(src)
 
-    res = await k.resolve_document("child", "LottieAsset", "shared")
+    res = await k.resolve_instance("child", "LottieAsset", "shared")
     assert res.is_inherited is True
     assert res.provenance.effective_layer.scope == "mid"
     assert res.doc["spec"]["variant"] == "from-mid"
@@ -245,7 +245,7 @@ async def test_local_override_wins():
     )
     k = make_kernel_with_mock(src)
 
-    res = await k.resolve_document("child", "LottieAsset", "X")
+    res = await k.resolve_instance("child", "LottieAsset", "X")
     assert res.is_inherited is False
     assert res.provenance.effective_layer.scope == "child"
     assert res.doc["spec"]["variant"] == "local-version"
@@ -332,7 +332,7 @@ async def test_scope_inheritance_disabled_for_kind():
     )
     k = make_kernel_with_mock(src)
 
-    res = await k.resolve_document("child", "Story", "S1")
+    res = await k.resolve_instance("child", "Story", "S1")
     assert res.doc is None  # not found locally + skipped parent
     assert res.is_inherited is False
 
@@ -351,7 +351,7 @@ async def test_cycle_detection_terminates():
     src.docs[("a", "LottieAsset", "X", "")] = kind_doc("a", "LottieAsset", "X", {})
     k = make_kernel_with_mock(src)
 
-    res = await k.resolve_document("a", "LottieAsset", "X")
+    res = await k.resolve_instance("a", "LottieAsset", "X")
     assert res.doc is not None
     # chain should visit a + b (no infinite loop)
     scopes_in_chain = {s.scope for s in res.provenance.steps}
@@ -377,7 +377,7 @@ async def test_tenant_overlay_wins_over_base():
     )
     k = make_kernel_with_mock(src)
 
-    res = await k.resolve_document("child", "LottieAsset", "X", tenant="acme")
+    res = await k.resolve_instance("child", "LottieAsset", "X", tenant="acme")
     assert res.doc is not None
     assert res.doc["spec"]["variant"] == "acme-overlay"
     assert res.is_inherited is False
@@ -391,7 +391,7 @@ async def test_tenant_overlay_wins_over_base():
 
 @pytest.mark.asyncio
 async def test_provenance_serializes_for_json_api():
-    """ResolvedDocument.serialize() must produce a JSON-clean dict."""
+    """ResolvedInstance.serialize() must produce a JSON-clean dict."""
     src = MockSource()
     src.docs[("child", "Genome", "child", "")] = package_doc("child")
     src.docs[("_lib", "LottieAsset", "X", "")] = kind_doc(
@@ -399,7 +399,7 @@ async def test_provenance_serializes_for_json_api():
     )
     k = make_kernel_with_mock(src)
 
-    res = await k.resolve_document("child", "LottieAsset", "X")
+    res = await k.resolve_instance("child", "LottieAsset", "X")
     obj = res.serialize()
     assert obj["doc"] is not None
     assert obj["is_inherited"] is True
@@ -420,7 +420,7 @@ async def test_observers_register_on_parent_consult():
         "_lib", "LottieAsset", "X", {"v": 1},
     )
     k = make_kernel_with_mock(src)
-    await k.resolve_document("child", "LottieAsset", "X", tenant="acme")
+    await k.resolve_instance("child", "LottieAsset", "X", tenant="acme")
     observers = getattr(k, "_layer_observers", {})
     parent_key = ("_lib", "LottieAsset", "X", None)
     assert parent_key in observers
@@ -435,7 +435,7 @@ async def test_observers_invalidate_drops_child_cache():
         "_lib", "LottieAsset", "X", {"v": 1},
     )
     k = make_kernel_with_mock(src)
-    await k.resolve_document("child", "LottieAsset", "X", tenant="acme")
+    await k.resolve_instance("child", "LottieAsset", "X", tenant="acme")
     granular = getattr(k._kcache, "_doc_cache", {})
     assert ("child", "LottieAsset", "X", "acme") in granular
 

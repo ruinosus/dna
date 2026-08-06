@@ -25,11 +25,11 @@ files with diverging semantics:
      ``validate()`` delegates to ``validate_refs``.
 
   4. **CompositionResolver** — the Composition-V2 chain-resolution
-     engine (``resolve_document`` / ``personalize_document`` — cross-
+     engine (``resolve_instance`` / ``personalize_instance`` — cross-
      scope inheritance + tenant overlay + Catalog tier + merge).
 
 Pure resolution TYPES + merge functions (ResolutionLayer,
-ResolvedDocument, merge_override_full, merge_field_level, the
+ResolvedInstance, merge_override_full, merge_field_level, the
 inheritance constants) stay in ``kernel/resolver.py`` — data shapes
 with no engine dependency, imported by both this module and callers
 that only need the types.
@@ -54,7 +54,7 @@ from dna.kernel.protocols import CompositionResult
 
 if TYPE_CHECKING:  # pragma: no cover
     from dna.kernel.collaborator_ports import CompositionResolverHost
-    from dna.kernel.document import Document
+    from dna.kernel.instance import Instance
     from dna.kernel.manifest import ManifestInstance
     from dna.kernel.protocols import KindPort
 
@@ -123,7 +123,7 @@ def profile_for_orchestrator(
 
 
 def validate_refs(
-    docs: Iterable["Document"],
+    docs: Iterable["Instance"],
     doc_index: Container[tuple[str, str]],
     kinds: Mapping[tuple[str, str], "KindPort"],
     registry: KindRegistry,
@@ -216,11 +216,11 @@ class CompositionEngine:
         (they resolve lazily via the kernel record plane at read time).
         """
         host = self._host
-        doc_index = {(d.kind, d.name) for d in host.documents}
-        return validate_refs(host.documents, doc_index, host._kinds, self._registry)
+        doc_index = {(d.kind, d.name) for d in host.instances}
+        return validate_refs(host.instances, doc_index, host._kinds, self._registry)
 
-    def iter_doc_deps(self, doc: "Document") -> list[dict[str, Any]]:
-        """Iterate a document's declared dep_filters dynamically.
+    def iter_doc_deps(self, doc: "Instance") -> list[dict[str, Any]]:
+        """Iterate an instance's declared dep_filters dynamically.
 
         Equivalent to ``mi.iter_doc_deps(doc)``.
 
@@ -273,15 +273,15 @@ class CompositionEngine:
 
         Equivalent to ``mi.dependency_tree()``.
         """
-        from dna.kernel.document import Document as Doc
+        from dna.kernel.instance import Instance as Doc
 
         doc_index: dict[tuple[str, str], Doc] = {}
-        for d in self._host.documents:
+        for d in self._host.instances:
             doc_index[(d.kind, d.name)] = d
 
         tree: dict[str, Any] = {}
 
-        for doc in self._host.documents:
+        for doc in self._host.instances:
             kp = self._host._kinds.get((doc.api_version, doc.kind))
             if not kp:
                 continue
@@ -343,8 +343,8 @@ class CompositionResolver:
     """Composition-V2: resolve a doc through the scope/tenant chain.
 
     Extracted from the Kernel god-object (kernel-decompose-continue);
-    the kernel keeps the public three (``resolve_document`` /
-    ``composition_summary`` / ``personalize_document``) plus the two
+    the kernel keeps the public three (``resolve_instance`` /
+    ``composition_summary`` / ``personalize_instance``) plus the two
     internal helpers as thin delegators. Holds a back-ref to the kernel
     for the accessors it needs (granular cache, source, query, write,
     storage, ``_layer_observers`` — the reverse-dep graph stays kernel
@@ -448,17 +448,17 @@ class CompositionResolver:
         # VoiceEpisode, Story must read tenant=X correctly).
         return ("disabled", "override_full", "field_level")
 
-    async def resolve_document(
+    async def resolve_instance(
         self, scope: str, kind: str, name: str, *, tenant: str | None = None,
     ):
         """Resolve a doc through the composition chain (Phase 17). Returns a
-        ResolvedDocument with merged doc + full provenance. Bootstrap Kinds
+        ResolvedInstance with merged doc + full provenance. Bootstrap Kinds
         bypass inheritance (local-only)."""
         from dna.kernel.query.resolver import (
             BOOTSTRAP_KINDS,
             ResolutionLayer,
             ResolutionPath,
-            ResolvedDocument,
+            ResolvedInstance,
             merge_field_level,
             merge_override_full,
         )
@@ -471,7 +471,7 @@ class CompositionResolver:
                 scope=scope, tenant=tenant, found=raw is not None,
                 contributed=raw is not None,
             )
-            return ResolvedDocument(
+            return ResolvedInstance(
                 doc=raw,
                 provenance=ResolutionPath(steps=[layer]),
                 is_inherited=False,
@@ -508,7 +508,7 @@ class CompositionResolver:
                 # _catalog_scopes itself warns on compute failure; this catches
                 # anything past it (debug: resolve hot path).
                 logger.debug(
-                    "resolve_document: catalog splice skipped for scope=%r "
+                    "resolve_instance: catalog splice skipped for scope=%r "
                     "tenant=%r: %s", scope, tenant, e,
                 )
                 catalog_scopes = []
@@ -547,9 +547,9 @@ class CompositionResolver:
                 # source (e.g. a `_lib` library scope absent in a bare
                 # checkout). Treat it as "no contribution at this layer" —
                 # the same fail-soft the instance builder applies — instead of
-                # crashing the whole resolve. (Matches TS resolveDocument.)
+                # crashing the whole resolve. (Matches TS resolveInstance.)
                 logger.debug(
-                    "resolve_document: layer scope %r missing for %s/%s: %s",
+                    "resolve_instance: layer scope %r missing for %s/%s: %s",
                     layer_scope, kind, name, e,
                 )
                 raw = None
@@ -607,7 +607,7 @@ class CompositionResolver:
         provenance = ResolutionPath(steps=steps_with_contributed)
         is_inherited = bool(primary is not None and primary.scope != scope)
 
-        return ResolvedDocument(
+        return ResolvedInstance(
             doc=merged_doc,
             provenance=provenance,
             is_inherited=is_inherited,
@@ -618,7 +618,7 @@ class CompositionResolver:
     # single wired implementation (routes/docs.py → holder.kernel.composition_summary).
     # The former duplicate here was dead code; removed (i-116).
 
-    async def personalize_document(
+    async def personalize_instance(
         self, target_scope: str, kind: str, name: str, *,
         tenant: str | None = None, overwrite: bool = False,
     ):
@@ -631,7 +631,7 @@ class CompositionResolver:
         if kind in BOOTSTRAP_KINDS:
             raise ValueError(f"Kind {kind!r} is bootstrap and cannot be personalized.")
 
-        resolved = await self.resolve_document(target_scope, kind, name, tenant=tenant)
+        resolved = await self.resolve_instance(target_scope, kind, name, tenant=tenant)
         if resolved.doc is None:
             raise ValueError(
                 f"{kind}/{name} not found in any scope via composition "
@@ -665,7 +665,7 @@ class CompositionResolver:
             "metadata": {**(resolved.doc.get("metadata") or {}), "name": name},
             "spec": dict(resolved.doc.get("spec") or {}),
         }
-        await k.write_document(target_scope, kind, name, cloned_raw, tenant=tenant)
+        await k.write_instance(target_scope, kind, name, cloned_raw, tenant=tenant)
 
         # Clone bundle entries (binary payload) when the Kind is bundle-based.
         sd = k.storage_for_kind(kind, scope=target_scope)
@@ -681,7 +681,7 @@ class CompositionResolver:
                     if not entries:
                         entries = await loader(source_scope, kind, name, "")
                     for entry_path, payload in (entries or {}).items():
-                        # Skip the marker — write_document already wrote it.
+                        # Skip the marker — write_instance already wrote it.
                         if entry_path == sd.marker:
                             continue
                         if isinstance(payload, (bytes, bytearray)):
@@ -700,13 +700,13 @@ class CompositionResolver:
                             # best-effort enhancement, but a dropped payload
                             # is a visible gap, so it logs loud.
                             logger.warning(
-                                "personalize_document: bundle entry clone "
+                                "personalize_instance: bundle entry clone "
                                 "failed for %s/%s entry=%r: %s",
                                 kind, name, entry_path, e,
                             )
 
         # Return fresh resolution (now local).
-        return await self.resolve_document(target_scope, kind, name, tenant=tenant)
+        return await self.resolve_instance(target_scope, kind, name, tenant=tenant)
 
 
 __all__ = [

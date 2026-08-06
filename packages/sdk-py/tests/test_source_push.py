@@ -1,6 +1,6 @@
 """s-sync-s5 — kernel.push_scope: reconcile a target source to match the
 current (source-of-truth) for a scope. Minimal diff (s4) → write added/changed
-via save_document (the s3 atomic net) → optional prune. Idempotent.
+via save_instance (the s3 atomic net) → optional prune. Idempotent.
 """
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ class _ToSource(CoreSourceStub):
     async def _load_bundle_entries(self, scope, kind, name, tenant):
         return {}
 
-    async def save_document(self, scope, kind, name, raw, author=None, *, tenant=None, layer=None):
+    async def save_instance(self, scope, kind, name, raw, author=None, *, tenant=None, layer=None):
         # strip transport like the real net would
         spec = dict(raw.get("spec") or {})
         spec.pop("source_files", None)
@@ -54,7 +54,7 @@ class _ToSource(CoreSourceStub):
         self.writes.append((kind, name))
         return "v1"
 
-    async def delete_document(self, scope, kind, name, *, tenant=None, layer=None):
+    async def delete_instance(self, scope, kind, name, *, tenant=None, layer=None):
         self._by_name.pop(name, None)
         self.deletes.append((kind, name))
 

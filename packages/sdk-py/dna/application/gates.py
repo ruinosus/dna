@@ -26,7 +26,7 @@ them because their evidence does not exist off the workstation:
 
 **Escapes are registered, not silent.** ``--allow-no-tests`` said "use only for
 registered exceptions" and then recorded nothing. Here, exercising an escape
-requires a reason, and the reason lands on the document's timeline as an
+requires a reason, and the reason lands on the instance's timeline as an
 ``exception`` event. An escape hatch you can audit is a hatch; one you cannot is
 a hole.
 """

@@ -20,8 +20,8 @@ Contract after i-195:
    extension/builtin ports over per-scope declarative ones
    deterministically, and warn once per ambiguous name.
 3. ``port_for``/``kind_plane``/``kind_port_for`` accept an optional
-   ``api_version`` for exact resolution; ``write_document`` resolves the
-   plane from the raw doc's ``apiVersion``; ``delete_document`` accepts
+   ``api_version`` for exact resolution; ``write_instance`` resolves the
+   plane from the raw doc's ``apiVersion``; ``delete_instance`` accepts
    an explicit ``api_version=`` kwarg.
 """
 import pytest
@@ -181,7 +181,7 @@ async def test_write_record_family_skips_scope_invalidate_despite_collision():
     first-matches the composition family."""
     k, _src, holder = _wire_reference_pair()
     cached = k._kcache._base["scope-x"]
-    await k.write_document(
+    await k.write_instance(
         "scope-x", "Reference", "r-1",
         _raw("sdlclike.test/v1", "Reference", "r-1"),
     )
@@ -192,7 +192,7 @@ async def test_write_record_family_skips_scope_invalidate_despite_collision():
 @pytest.mark.asyncio
 async def test_write_composition_family_still_scope_invalidates():
     k, _src, holder = _wire_reference_pair()
-    await k.write_document(
+    await k.write_instance(
         "scope-x", "Reference", "r-2",
         _raw("researchlike.test/v1", "Reference", "r-2"),
     )
@@ -203,11 +203,11 @@ async def test_write_composition_family_still_scope_invalidates():
 @pytest.mark.asyncio
 async def test_delete_with_api_version_demotes_record_plane():
     k, _src, holder = _wire_reference_pair()
-    await k.write_document(
+    await k.write_instance(
         "scope-x", "Reference", "r-3",
         _raw("sdlclike.test/v1", "Reference", "r-3"),
     )
-    await k.delete_document(
+    await k.delete_instance(
         "scope-x", "Reference", "r-3", api_version="sdlclike.test/v1",
     )
     assert not holder.reload.called and not holder.reload_async.called

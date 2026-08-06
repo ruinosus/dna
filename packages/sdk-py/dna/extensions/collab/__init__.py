@@ -1,6 +1,6 @@
 """CollabExtension — collaboration primitives (Comment Kind).
 
-Comments can be attached to any target document via `target_ref`.
+Comments can be attached to any target instance via `target_ref`.
 They enable audit trails, discussions, and status-change history.
 
 The Comment Kind itself is a descriptor: the hand-written ``CommentKind``

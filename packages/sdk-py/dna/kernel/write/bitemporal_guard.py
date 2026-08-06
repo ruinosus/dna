@@ -5,7 +5,7 @@ cognitive autopilot (decay / cue / allocation hooks) re-write a Engram by
 name via read-modify-write and don't carry ``valid_to`` — without this guard a
 superseded episodic silently returns to recall (resurrection).
 
-The guard is the single chokepoint: ``kernel.write_document`` calls it for every
+The guard is the single chokepoint: ``kernel.write_instance`` calls it for every
 Engram write. If the EXISTING persisted doc is invalidated (``valid_to``
 set) and the incoming write lacks it, the incoming spec inherits
 ``valid_to`` + ``superseded_by_memory``. Pure + mutating-in-place on the incoming

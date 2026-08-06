@@ -148,7 +148,7 @@ async def test_workspace_docs_write_and_read_back(tmp_path):
             "created_at": "2026-07-15T00:00:00+00:00",
         },
     }
-    await k.write_document("_lib", "Workspace", "ws-abc123", ws)
+    await k.write_instance("_lib", "Workspace", "ws-abc123", ws)
 
     mem = {
         "apiVersion": "github.com/ruinosus/dna/tenant/v1",
@@ -162,13 +162,13 @@ async def test_workspace_docs_write_and_read_back(tmp_path):
             "status": "active",
         },
     }
-    await k.write_document("_lib", "WorkspaceMembership", "ws-abc123--founder", mem)
+    await k.write_instance("_lib", "WorkspaceMembership", "ws-abc123--founder", mem)
 
-    got_ws = await k.get_document("_lib", "Workspace", "ws-abc123")
+    got_ws = await k.get_instance("_lib", "Workspace", "ws-abc123")
     assert got_ws is not None
     assert (got_ws.spec if hasattr(got_ws, "spec") else got_ws["spec"])["name"] == "Barnabé Labs"
 
-    got_mem = await k.get_document("_lib", "WorkspaceMembership", "ws-abc123--founder")
+    got_mem = await k.get_instance("_lib", "WorkspaceMembership", "ws-abc123--founder")
     assert got_mem is not None
     spec = got_mem.spec if hasattr(got_mem, "spec") else got_mem["spec"]
     assert spec["role"] == "owner"

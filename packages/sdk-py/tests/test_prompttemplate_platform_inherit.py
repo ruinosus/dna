@@ -51,7 +51,7 @@ def test_child_scope_resolves_platform_prompttemplate(tmp_path: Path):
     async def _run():
         k = _make_kernel(tmp_path)
         # PromptTemplate lives ONLY in _lib.
-        await k.write_document(
+        await k.write_instance(
             "_lib", "PromptTemplate", "shared-prompt",
             {
                 "apiVersion": "github.com/ruinosus/dna/v1",

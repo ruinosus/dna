@@ -52,16 +52,16 @@ def build_evidence(
     notes: str | None = None,
     suite: str | None = None,
 ) -> dict[str, Any]:
-    """Build an Evidence Kind document dict.
+    """Build an Evidence Kind instance dict.
 
     Parameters
     ----------
     event_type:
         One of the allowed event_type enum values (e.g. ``eval_run_completed``).
     document_ref:
-        Reference to the document that triggered the event (e.g. ``eval-evalrun/my-run``).
+        Reference to the instance that triggered the event (e.g. ``eval-evalrun/my-run``).
     content:
-        The content to hash — typically the document spec or a serializable snapshot.
+        The content to hash — typically the instance spec or a serializable snapshot.
     author:
         Who (or what) captured the evidence.  Defaults to ``"system"``.
     notes:
@@ -170,7 +170,7 @@ def make_evidence_capture_handler(kernel: Any):
             # skip_hooks=True prevents the Evidence write from re-triggering
             # post_save → infinite recursion. Source persists via the registered
             # WriterPort — works for FS, Postgres, SQLite, or any backend.
-            await kernel.write_document(
+            await kernel.write_instance(
                 scope, "Evidence", evidence_name, raw_evidence,
                 skip_hooks=True,
             )

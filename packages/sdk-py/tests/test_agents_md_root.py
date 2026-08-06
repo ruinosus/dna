@@ -1,7 +1,7 @@
 """The repo's front door is a live agents.md/v1 instance (s-dna-agent-ready).
 
 ``AGENTS.md`` at the repository root is the agent-agnostic onboarding doc
-AND a document the SDK itself parses — dogfooding market fidelity at the
+AND an instance the SDK itself parses — dogfooding market fidelity at the
 entry point. Every test here runs against the REAL root file (never a
 copy): the reader is exercised directly on the repo root, and the full
 scan → typed → composition → write-round-trip pipeline runs through a
@@ -62,10 +62,10 @@ class TestKernelPipeline:
     def test_scan_yields_a_typed_agents_md_document(self, dogfood):
         _, mi = dogfood
         doc = next(
-            (d for d in mi.documents if d.kind == "AgentDefinition" and d.name == SCOPE),
+            (d for d in mi.instances if d.kind == "AgentDefinition" and d.name == SCOPE),
             None,
         )
-        assert doc is not None, "scope-root AGENTS.md must scan as a document"
+        assert doc is not None, "scope-root AGENTS.md must scan as an instance"
         assert doc.raw.get("apiVersion") == "agents.md/v1"
         assert doc.typed is not None, "root AGENTS.md must type-validate"
         content = doc.spec.get("content", "")
@@ -84,7 +84,7 @@ class TestKernelPipeline:
         """Market fidelity at the front door: the writer re-emits the root
         AGENTS.md byte-identical (no frontmatter is ever invented)."""
         k, mi = dogfood
-        doc = next(d for d in mi.documents if d.kind == "AgentDefinition" and d.name == SCOPE)
-        payload = k.serialize_document(SCOPE, doc.kind, doc.name, doc.raw)
+        doc = next(d for d in mi.instances if d.kind == "AgentDefinition" and d.name == SCOPE)
+        payload = k.serialize_instance(SCOPE, doc.kind, doc.name, doc.raw)
         files = {f["relativePath"]: f["content"] for f in payload["files"]}
         assert files["AGENTS.md"].encode("utf-8") == AGENTS_MD.read_bytes()

@@ -33,7 +33,7 @@
 # ── O que este Kind NUNCA carrega ────────────────────────────────────────────
 #
 # Credencial, e permissão. Ele NOMEIA — não autoriza. Quem autoriza é o
-# `AgentGrant`, e são documentos separados de propósito: cadastrar um agente no
+# `AgentGrant`, e são instâncias separados de propósito: cadastrar um agente no
 # catálogo não pode ser um caminho para conceder acesso a ele.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
@@ -75,7 +75,7 @@ spec:
         minLength: 1
         description: >
           O nome legível — DIGITADO por alguém deste workspace, e a tela diz
-          isso. Não é equivalente ao nome de um documento CIMD, e apresentá-lo
+          isso. Não é equivalente ao nome de uma instância CIMD, e apresentá-lo
           como se fosse seria pior que mostrar o id cru: o id avisa que você não
           sabe quem é; um nome sem procedência não avisa nada.
       registered_by:

@@ -10,7 +10,7 @@ import pytest
 from pathlib import Path
 
 from dna.kernel import Kernel
-from dna.kernel.document import Document
+from dna.kernel.instance import Instance
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import ReaderPort, ResolveError, StorageDescriptor
 from dna.adapters.filesystem import FilesystemSource
@@ -58,7 +58,7 @@ class TestFilesystemErrors:
 
     @pytest.mark.asyncio
     async def test_yaml_without_kind_skipped(self, tmp_path):
-        """A YAML file without 'kind' is ignored (not a manifest document)."""
+        """A YAML file without 'kind' is ignored (not a manifest instance)."""
         scope_dir = tmp_path / "noking"
         scope_dir.mkdir()
         (scope_dir / "config.yaml").write_text("database: postgres\nport: 5432")
@@ -113,7 +113,7 @@ class TestFilesystemErrors:
 
 class TestKernelParseErrors:
     def test_parse_error_falls_back_to_raw(self, caplog):
-        """If KindPort.parse() raises, Document still created with typed=None."""
+        """If KindPort.parse() raises, Instance still created with typed=None."""
 
         class BadKind(KindBase):
             api_version = "bad/v1"
@@ -137,7 +137,7 @@ class TestKernelParseErrors:
         assert any("parse boom" in r.message for r in caplog.records)
 
     def test_unknown_kind_creates_untyped_doc(self):
-        """Documents with unregistered kinds are created with typed=None."""
+        """Instances with unregistered kinds are created with typed=None."""
         k = Kernel()
         raw = {"apiVersion": "unknown/v1", "kind": "Mystery", "metadata": {"name": "m"}, "spec": {}}
         doc = k._parse_doc(raw, origin="local")
@@ -218,7 +218,7 @@ class TestMIErrors:
 
     def test_one_missing_returns_none(self):
         mi = Kernel.quick("open-swe", base_dir=str(BASE_DIR))
-        assert next((d for d in mi.documents if d.kind == "Genome" and d.name == "ghost"), None) is None
+        assert next((d for d in mi.instances if d.kind == "Genome" and d.name == "ghost"), None) is None
 
     def test_ref_empty_string(self):
         mi = Kernel.quick("open-swe", base_dir=str(BASE_DIR))
@@ -251,12 +251,12 @@ class TestMIErrors:
             def summary(self, doc): return None
             def prompt_template(self): return None
 
-        doc = Document.from_raw({
+        doc = Instance.from_raw({
             "apiVersion": "w/v1", "kind": "Weird",
             "metadata": {"name": "w1"}, "spec": {"refs": ["something"]},
         })
         kinds = {("w/v1", "Weird"): WeirdKind()}
-        mi = ManifestInstance(scope="test", documents=[doc], kinds=kinds)
+        mi = ManifestInstance(scope="test", instances=[doc], kinds=kinds)
         cr = mi.composition_result
         # Should produce a warning, not crash
         assert any("nonexistent-alias" in w for w in cr.warnings)

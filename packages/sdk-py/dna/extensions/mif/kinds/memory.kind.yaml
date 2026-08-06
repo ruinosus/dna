@@ -31,7 +31,7 @@
 #   3. `relationships[].type` is an OPEN kebab-case token (custom `ns:type`
 #      namespacing is explicitly allowed, §8.3) — NOT a closed enum. The
 #      draft's enum also had 4 of 9 "core" values wrong (`related-to` for
-#      `relates-to`, `caused-by`/`documents`/`references` that don't exist in
+#      `relates-to`, `caused-by`/`instances`/`references` that don't exist in
 #      the spec at all, missing `uses`/`created-by`/`mentioned-in`). Kept as
 #      a plain string; the 9 recommended core types are documented in prose
 #      per Appendix B instead of enforced, matching the spec's own

@@ -111,7 +111,7 @@ async def _kernel(tmp_path) -> Kernel:
 @pytest.mark.asyncio
 async def test_intel_source_tenanted_round_trip(tmp_path):
     k = await _kernel(tmp_path)
-    await k.write_document(
+    await k.write_instance(
         "portfolio", "IntelSource", "copiloto-medico",
         {
             "apiVersion": "github.com/ruinosus/dna/intel/v1",
@@ -140,7 +140,7 @@ async def test_intel_source_tenanted_round_trip(tmp_path):
 @pytest.mark.asyncio
 async def test_intel_insight_tenanted_round_trip(tmp_path):
     k = await _kernel(tmp_path)
-    await k.write_document(
+    await k.write_instance(
         "portfolio", "IntelInsight", "new-cfr-rule",
         {
             "apiVersion": "github.com/ruinosus/dna/intel/v1",

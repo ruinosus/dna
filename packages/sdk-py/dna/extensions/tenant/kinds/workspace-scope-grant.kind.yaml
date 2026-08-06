@@ -58,7 +58,7 @@ spec:
         type: string
         minLength: 1
         description: The single scope name this row grants. One scope per row on
-          purpose - granting and revoking are then one document each, so an audit
+          purpose - granting and revoking are then one instance each, so an audit
           reads as a list of facts rather than a diff inside a list.
       status:
         type: string

@@ -13,7 +13,7 @@ alvo, e parseia o retorno pelo `format` que o ALVO declarou.
 
 Os transportes são INJETADOS (`run_local`, `call_remote`). Não é adorno de
 testabilidade: é o que faz a face A2A ser aditiva. Um alvo que era local passa a
-remoto trocando o documento, e nem o supervisor nem este módulo mudam.
+remoto trocando a instância, e nem o supervisor nem este módulo mudam.
 
 ── Recusa nomeada, nunca silêncio ───────────────────────────────────────────
 
@@ -86,7 +86,7 @@ async def delegate(
     delegator: str,
     target_name: str,
     request: str,
-    documents: Iterable[Mapping[str, Any]],
+    instances: Iterable[Mapping[str, Any]],
     run_local: Callable[[str, str], Awaitable[str]],
     call_remote: Callable[[DelegationTarget, str], Awaitable[str]],
     enqueue: Callable[[DelegationTarget, str], Awaitable[str]] | None = None,
@@ -118,7 +118,7 @@ async def delegate(
     enfileirar sem autorização seria pior que rodar sem autorização, porque fica
     gravado e roda depois, quando ninguém está olhando.
     """
-    roster = {t.name: t for t in targets_for(delegator, documents)}
+    roster = {t.name: t for t in targets_for(delegator, instances)}
     target = roster.get(target_name)
     if target is None:
         raise DelegationRefused(

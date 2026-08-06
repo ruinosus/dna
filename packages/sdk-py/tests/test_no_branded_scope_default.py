@@ -57,7 +57,7 @@ async def _kernel(tmp_path, *scopes: str) -> Kernel:
 
 
 async def _seed_source(k: Kernel, scope: str, tenant: str, name: str = "src-1") -> None:
-    await k.write_document(
+    await k.write_instance(
         scope, "IntelSource", name,
         {
             "apiVersion": "github.com/ruinosus/dna/intel/v1",

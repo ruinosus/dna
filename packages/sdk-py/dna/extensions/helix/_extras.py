@@ -568,7 +568,7 @@ class UserProfileKind(KindBase):
 #
 # Storage: yaml ``canvases/<name>.yaml``. Spec carries the tldraw store
 # (JSON snapshot) + title + summary. Embeddings extract text shapes for
-# semantic recall via search_documents("aquele canvas sobre X").
+# semantic recall via search_instances("aquele canvas sobre X").
 
 
 class CanvasKind(KindBase):

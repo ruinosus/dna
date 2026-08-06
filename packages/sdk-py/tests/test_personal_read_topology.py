@@ -163,13 +163,13 @@ async def sql_kernel_with_big_base(tmp_path: Path):
     src = await source_from_url(f"sqlite:///{tmp_path}/dna.db", kernel=kernel)
     kernel.source(src)
     for i in range(510):
-        await src.save_document(
+        await src.save_instance(
             BASE, "Engram", f"base-{i:04d}",
             {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Engram",
              "metadata": {"name": f"base-{i:04d}"},
              "spec": _engram_spec(i, f"routine board note {i}")},
         )
-    await src.save_document(
+    await src.save_instance(
         BASE, "Engram", "mem-founder",
         {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Engram",
          "metadata": {"name": "mem-founder"},
@@ -230,14 +230,14 @@ async def test_fs_fallback_union_keeps_the_personal_overlay_row(tmp_path):
     kernel = Kernel.auto()
     kernel.source(FilesystemWritableSource(base_dir=str(src_dir)))
     for i in range(30):
-        await kernel.write_document(
+        await kernel.write_instance(
             BASE, "Engram", f"base-{i:02d}",
             {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Engram",
              "metadata": {"name": f"base-{i:02d}"},
              "spec": _engram_spec(i, f"fs base note {i}")},
         )
     personal_kernel = kernel.with_tenant(PERSONAL, allow_personal=True)
-    await personal_kernel.write_document(
+    await personal_kernel.write_instance(
         BASE, "Engram", "mem-fs-personal",
         {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Engram",
          "metadata": {"name": "mem-fs-personal"},

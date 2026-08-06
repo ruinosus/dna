@@ -1,20 +1,20 @@
-"""Resolving a document's declared relations — ONCE, for TWO readers.
+"""Resolving an instance's declared relations — ONCE, for TWO readers.
 
 The companion of :mod:`dna.kernel.kinds.relations`, which says what a Kind
-DECLARES. This module takes those declarations and one document, does the
+DECLARES. This module takes those declarations and one instance, does the
 reads, and hands back three things at once: the problems a validator vetoes
 on, the edges a producer persists, and — free of charge — whether the target
-document names this one back.
+instance names this one back.
 
 **Why one function and not three.** A second mechanism that re-derives edges
 from the same declaration is a second mechanism that can DISAGREE with the
 first. One pass, one set of reads, three consumers: the edge is then the
 validator's own finding, by construction, and the reciprocity report is a
-field read off a document the validator already had in its hand.
+field read off an instance the validator already had in its hand.
 
 That "already in hand" is the whole economics of this module and it is worth
 stating plainly, because it is what made the reciprocity report affordable:
-the existence check has always materialized the target document and then
+the existence check has always materialized the target instance and then
 thrown it away, keeping only ``is not None``. It kept doing one read; it
 stopped discarding what the read returned.
 
@@ -25,7 +25,7 @@ the declaration is now a first-class ``spec.relations`` block; that module's
 docstring answers this one's old argument rather than deleting it.
 
 **What this module resolves, and what it deliberately does not.** Only a
-relation the kernel can FOLLOW: concrete target Kind(s), addressed by document
+relation the kernel can FOLLOW: concrete target Kind(s), addressed by instance
 name (``Relation.resolved``). A relation addressed by a target spec field
 (``by: workspace_id``) or carrying its Kind in the value (``to: "*"``) is a
 real, declared relation that this runtime does not resolve — it produces no
@@ -55,18 +55,18 @@ class ResolvedEdge:
     """ONE relation value, after the write path already looked its target up.
 
     This is the fact the validator used to compute and throw away: it
-    materialized the target document, checked ``is not None``, and dropped both
-    the document AND — for a polymorphic relation — WHICH declared target
+    materialized the target instance, checked ``is not None``, and dropped both
+    the instance AND — for a polymorphic relation — WHICH declared target
     matched. An edge therefore costs no extra read; it costs not discarding.
 
     ``to_kind`` is ``None`` for a DANGLING relation (declared, written, and
     resolving to nothing). That is a state worth recording, not a row worth
-    skipping: with ``DNA_REF_VALIDATION=warn`` — the default — such a document
+    skipping: with ``DNA_REF_VALIDATION=warn`` — the default — such an instance
     persists, and a graph that quietly omitted the broken half would read as
     healthier than the data is.
 
     ``to_scope`` is the scope the target resolved IN, which is not always the
-    writer's: ``Kernel.get_document`` falls back to parent scopes for
+    writer's: ``Kernel.get_instance`` falls back to parent scopes for
     inheritable Kinds. ``None`` means "resolved, but through the inheritance
     chain, and this producer did not record which parent" — never "the same
     scope". Claiming an intra-scope relation that does not exist is exactly the
@@ -77,7 +77,7 @@ class ResolvedEdge:
     declared inverse" / "it does not"; ``None`` is "the question does not
     apply" — the relation declares no ``inverse_of``, or nothing resolved to
     ask. Collapsing ``None`` into ``False`` would make every relation without
-    an inverse look like a broken pair, which is a report accusing documents of
+    an inverse look like a broken pair, which is a report accusing instances of
     a silence that was its own.
     """
 
@@ -109,7 +109,7 @@ async def resolve_relations(
     port_for: Any = None,
     local_getter: Any = None,
 ) -> tuple[list[ResolvedEdge], list[str], list[str], bool]:
-    """Resolve every RESOLVABLE relation this document declares.
+    """Resolve every RESOLVABLE relation this instance declares.
 
     Returns ``(edges, problems, discords, complete)``:
 
@@ -118,12 +118,12 @@ async def resolve_relations(
     * ``problems`` — the human-readable complaint per unresolved value. This is
       what the validator vetoes or logs on.
     * ``discords`` — the human-readable note per value whose target does NOT
-      name this document back through the declared ``inverse_of``. NEVER a
+      name this instance back through the declared ``inverse_of``. NEVER a
       veto, in any mode: see ``dna.kernel.kinds.relations`` for why imposing
       deadlocks and deriving cascades. Kept separate from ``problems`` so a
       caller cannot accidentally promote a report into a refusal by joining
       two lists.
-    * ``complete`` — False when a document READ raised part-way through. The
+    * ``complete`` — False when an instance READ raised part-way through. The
       validator has always treated that as "say nothing" (infrastructure
       trouble must never become an authoring accusation), and the producer must
       treat it as "write nothing": a PARTIAL edge set stored as if it were
@@ -132,7 +132,7 @@ async def resolve_relations(
 
     Injected collaborators, so this module stays free of kernel imports:
 
-    * ``getter(scope, kind, name, tenant=...)`` — the document read.
+    * ``getter(scope, kind, name, tenant=...)`` — the instance read.
     * ``port_for(kind)`` — narrows a polymorphic declaration to the targets the
       registry actually knows. Optional; without it every declared target is
       probed.
@@ -217,7 +217,7 @@ async def resolve_relations(
             elif reciprocal is False:
                 discords.append(
                     f"spec.{rel.name} → `{value}`: {matched} `{value}` does "
-                    f"not name this document back in its `{rel.inverse_of}`"
+                    f"not name this instance back in its `{rel.inverse_of}`"
                 )
 
     return edges, problems, discords, True
@@ -227,7 +227,7 @@ def _spec_of(doc: Any) -> Any:
     """The ``spec`` mapping of whatever the getter returned.
 
     The getter's contract is loose on purpose — it may hand back a raw dict or
-    a parsed document object, and both happen in this repo. Reading through
+    a parsed instance object, and both happen in this repo. Reading through
     both here keeps that looseness from becoming a reciprocity report that is
     silently always ``False`` on one of the two shapes, which is the way a
     free check turns into a false accusation."""

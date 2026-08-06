@@ -1,6 +1,6 @@
 """KindDefinitionExtension — the built-in meta-kind extension.
 
-Ships the ``KindDefinition`` kind itself. KindDefinition documents live
+Ships the ``KindDefinition`` kind itself. KindDefinition instances live
 under ``.dna/<scope>/kinds/<name>/KIND.yaml`` (bundle layout so future
 per-kind DOCS.md files can live next to the definition). The kernel's
 2-phase loader parses these first, then synthesizes a DeclarativeKindPort
@@ -43,10 +43,10 @@ class KindDefinitionKind(KindBase):
     docs = (
         "A KindDefinition declaratively defines a brand-new kind without "
         "writing Python code. Its spec carries the target apiVersion, kind "
-        "name, alias, JSON Schema for the document spec, storage layout, "
+        "name, alias, JSON Schema for the instance spec, storage layout, "
         "and prompt flags. The kernel's 2-phase loader parses KindDefinitions "
         "first, synthesizes a DeclarativeKindPort for each, then parses the "
-        "rest of the manifest so regular documents can reference the newly "
+        "rest of the manifest so regular instances can reference the newly "
         "registered kind."
     )
 
@@ -106,7 +106,7 @@ class KindDefinitionReader(ReaderPort):
 
     A tiny dedicated reader keeps KIND.yaml as *plain YAML* (not
     frontmatter+body) so authors can write a normal Kubernetes-style
-    apiVersion/kind/metadata/spec document.
+    apiVersion/kind/metadata/spec instance.
     """
 
     _marker = "KIND.yaml"

@@ -35,7 +35,7 @@ lands before the shape check. This guard keeps only what is Automation's
 own: the heal and the semantics JSON Schema cannot express.
 
 A raise from the guard vetoes the write (nothing is persisted). The hook
-fires for EVERY ``kernel.write_document`` regardless of ``skip_hooks`` —
+fires for EVERY ``kernel.write_instance`` regardless of ``skip_hooks`` —
 it is an integrity gate, not a notification. 1:1 parity with
 ``src/extensions/automation/write-guards.ts``.
 """

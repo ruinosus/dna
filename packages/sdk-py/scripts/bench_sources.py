@@ -4,7 +4,7 @@ Ported from the i-216 spike bench (s-sqlalchemy-source-production); the
 raw-adapter comparison rows retired with the raw adapters
 (s-retire-raw-sql-adapters). Reproducible method (no magic): per dialect,
 
-  1. save_document × N   (insert version + auto-publish + eventbus)  [write]
+  1. save_instance × N   (insert version + auto-publish + eventbus)  [write]
   2. load_all × R        (full scope view)                           [read]
   3. query × Q           (pushdown: numeric gt + order_by + limit)
 
@@ -57,7 +57,7 @@ async def _bench(label: str, source) -> dict:
     t0 = time.perf_counter()
     for i in range(N_DOCS):
         raw = _doc(i)
-        await source.save_document(scope, "Story", raw["metadata"]["name"], raw)
+        await source.save_instance(scope, "Story", raw["metadata"]["name"], raw)
         await source.publish(scope, "Story", raw["metadata"]["name"])
     t_save = time.perf_counter() - t0
 

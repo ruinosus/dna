@@ -131,7 +131,7 @@ def test_a_property_literally_named_pattern_is_still_not_a_keyword():
 
 def test_validate_instance_matches_jsonschema_semantics():
     """``pattern`` is an unanchored SEARCH in JSON Schema. If the RE2 path used
-    ``fullmatch`` it would silently reject documents the stock validator accepts."""
+    ``fullmatch`` it would silently reject instances the stock validator accepts."""
     schema = {"type": "object", "properties": {"x": {"type": "string", "pattern": "b+"}}}
     R.validate_instance({"x": "aaabbbccc"}, schema)  # substring match: valid
     with pytest.raises(Exception):  # noqa: B017 — ValidationError

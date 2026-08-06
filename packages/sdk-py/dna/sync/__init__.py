@@ -1,5 +1,5 @@
 # python/dna/sync/__init__.py
-"""Content hashing for manifest documents.
+"""Content hashing for manifest instances.
 
 Formerly also hosted a bi-directional SyncEngine (engine/diff/snapshot/apply);
 it was removed as dead scaffolding — no `dna sync` command ever shipped and the

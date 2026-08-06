@@ -4,7 +4,7 @@ the Kernel god-object (kernel-decompose-continue).
 This is the cache-invalidation *logic* (write-observer fan-out, the per-event
 invalidate, the real `_invalidate_internal` work, and the `batch_writes`
 coalescing context manager). The kernel RETAINS the write-mediation core
-(write_document / delete_document) — invalidation is the cache-coherence concern
+(write_instance / delete_instance) — invalidation is the cache-coherence concern
 that hangs off it.
 
 STATELESS by design: the controller holds only a back-ref to the kernel. All
@@ -115,7 +115,7 @@ class InvalidationController:
             k._kcache.base_drop(scope)
 
         # 2b. Cross-scope surgical invalidation via the reverse-dep observer
-        # graph (Phase 17) — populated in resolve_document.
+        # graph (Phase 17) — populated in resolve_instance.
         observers = getattr(k, "_layer_observers", None)
         if observers is not None:
             parent_key = (scope, kind, name, tenant)

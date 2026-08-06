@@ -238,7 +238,7 @@ class SkillWriter(WriterPort):
         """Return the full file list the writer would emit to disk.
 
         Mirrors typescript/src/extensions/agentskills.ts SkillWriter.serialize
-        so `kernel.serialize_document` picks this up and emits bundle extras
+        so `kernel.serialize_instance` picks this up and emits bundle extras
         (scripts/, references/, assets/, extras, root_files) — not just the
         primary SKILL.md. See Plan B2 follow-up on http-virtual-fs.ts.
         """

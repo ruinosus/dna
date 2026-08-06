@@ -1,4 +1,4 @@
-"""document edges — the DERIVED reference graph, with a producer this time
+"""instance edges — the DERIVED reference graph, with a producer this time
 
 Revision ID: 0006_document_edges
 Revises: 0005_approval_trail
@@ -15,7 +15,7 @@ suite fails if the table exists and the write path does not fill it.
 
 **Both dialects, unlike 0002/0004/0005.** Those are control-plane tables and a
 single-process self-host does not have the question they answer. This one is
-document data derived from document data: a SQLite self-host asks "what points
+instance data derived from instance data: a SQLite self-host asks "what points
 at this?" exactly as a hosted Postgres does, and the traversal is one recursive
 CTE in standard SQL that runs unchanged on both.
 
@@ -25,12 +25,12 @@ field out, so two fields pointing at one target collided and the graph lost the
 "by which field" a relations view renders); ``to_kind`` is NULLABLE because a
 dangling reference is a row worth keeping, not a row worth hiding; ``to_scope``
 is separate because a reference can resolve in a PARENT scope; ``from_version``
-records which version of the document the edges were derived from, so drift is
+records which version of the instance the edges were derived from, so drift is
 detectable on the paths that are not atomic (backfill, an adapter without the
 kwarg).
 
 **No foreign keys.** A Kind is not a table, and ``to_name`` deliberately may
-name a document that does not exist — that case is the one the table is most
+name an instance that does not exist — that case is the one the table is most
 useful for.
 
 ⚠️ **The legacy bridge still drops the old table, and the ORDER matters.**

@@ -33,7 +33,7 @@ spec:
   traits: [sdlc.observation, sdlc.filed, sdlc.dated-create-only]
   # SDLC primitives are project-level, not per-tenant.
   tenant_scope: global
-  # Record plane — pure typed document: cacheless writes, never composes
+  # Record plane — pure typed instance: cacheless writes, never composes
   # into agent prompts.
   plane: record
   prompt_target: false

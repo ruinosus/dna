@@ -61,7 +61,7 @@ def test_audit_kind_round_trip_through_kernel(tmp_path: Path):
             },
         }
         # AuditLog is TENANTED — need a tenant on write.
-        await k.write_document(
+        await k.write_instance(
             "scope", "AuditLog", "audit-test-123", audit_doc, tenant="acme",
         )
 

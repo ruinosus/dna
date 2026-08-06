@@ -170,7 +170,7 @@ def test_ha_TETO_de_fatos_por_turno():
 
 def test_o_digest_do_board_e_TITULO_e_resultado_nao_o_yaml():
     """⚠️ O fato durável de uma história entregue é o que ela MUDOU, não o
-    registro do processo. O documento inteiro faria o extrator achar fatos
+    registro do processo. A instância inteira faria o extrator achar fatos
     sobre o board, não sobre o trabalho."""
     from dna.memory.ingestion import sdlc_digest
 

@@ -75,7 +75,7 @@ def _client_para(target: DelegationTarget, url: str, http: Any):
     """O `Client` oficial, apontado a `url`.
 
     Um Card MÍNIMO — só a interface que vamos usar — em vez de buscar o Card
-    remoto na hora: o documento `RemoteAgent` JÁ é o Card ingerido e aprovado
+    remoto na hora: a instância `RemoteAgent` JÁ é o Card ingerido e aprovado
     por um humano (`a2a_ingest`), e ir buscá-lo de novo trocaria a verdade
     APROVADA pela verdade corrente do terceiro, sem que ninguém aprovasse a
     troca.

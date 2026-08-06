@@ -39,7 +39,7 @@ spec:
     Copilot docs under one identity (title/description/icon), carries the
     plan entitlement (``requires_plan`` — enforced by the serving runtime,
     never by the kernel) and the console renders ``/app/<name>`` from this
-    document alone. ``copilots`` is a declared RELATION to ``Copilot`` — the
+    instance alone. ``copilots`` is a declared RELATION to ``Copilot`` — the
     write validates existence and pickers come for free (i-040).
   relations:
     copilots:

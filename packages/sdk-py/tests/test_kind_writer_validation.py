@@ -1,8 +1,8 @@
-"""Kind-Writer contract validation at ``Kernel.write_document`` (Task 2 of
+"""Kind-Writer contract validation at ``Kernel.write_instance`` (Task 2 of
 the Kind-Writer pilot, feat/kind-writer-pilot).
 
 A Agent that declares ``writes_kind`` is a "Kind-Writer" — it emits a
-structured document of the target Kind. The contract is validated at write
+structured instance of the target Kind. The contract is validated at write
 time (fail early) rather than at runtime:
 
 - ``writes_kind`` must point at a Kind that HAS a schema (registered KindPort
@@ -54,7 +54,7 @@ async def test_writes_kind_unknown_or_schemaless_raises():
     k = _kernel()
     raw = _ua_raw({"writes_kind": "NoSuchKind", "creative_slots": ["x"]})
     with pytest.raises(ValueError) as exc:
-        await k.write_document("scope-x", "Agent", "kw-smoke", raw)
+        await k.write_instance("scope-x", "Agent", "kw-smoke", raw)
     assert "schema" in str(exc.value).lower()
 
 
@@ -68,7 +68,7 @@ async def test_creative_slot_not_a_property_raises():
         "system_slots": {"insight": "input.x", "confidence": "input.y"},
     })
     with pytest.raises(ValueError) as exc:
-        await k.write_document("scope-x", "Agent", "kw-smoke", raw)
+        await k.write_instance("scope-x", "Agent", "kw-smoke", raw)
     assert "not_a_real_field" in str(exc.value)
 
 
@@ -84,7 +84,7 @@ async def test_required_field_unmapped_raises():
         "system_slots": {"insight": "input.x", "confidence": "input.y"},
     })
     with pytest.raises(ValueError) as exc:
-        await k.write_document("scope-x", "Agent", "kw-smoke", raw)
+        await k.write_instance("scope-x", "Agent", "kw-smoke", raw)
     msg = str(exc.value).lower()
     assert "unmapped" in msg
     assert "verdict" in msg
@@ -103,7 +103,7 @@ async def test_valid_kind_writer_does_not_raise():
     })
     # Must NOT raise the Kind-Writer ValueError. Other downstream errors are
     # unrelated; the contract validation is what we assert here.
-    await k.write_document("scope-x", "Agent", "kw-smoke", raw)
+    await k.write_instance("scope-x", "Agent", "kw-smoke", raw)
 
 
 @pytest.mark.asyncio
@@ -111,4 +111,4 @@ async def test_non_kind_writer_ua_untouched():
     """A plain Agent (no writes_kind) skips the validation entirely."""
     k = _kernel()
     raw = _ua_raw({})  # no writes_kind
-    await k.write_document("scope-x", "Agent", "kw-smoke", raw)
+    await k.write_instance("scope-x", "Agent", "kw-smoke", raw)

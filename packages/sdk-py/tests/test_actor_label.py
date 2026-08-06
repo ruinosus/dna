@@ -10,7 +10,7 @@ and no durable subject (the membership it matches may be email-bound), and an
 ``oid``-only read yields ``None`` for exactly those callers. Email-first is not
 a preference: it is the order this repo already settled on for the same
 question (``invite_member_impl`` records ``invited_by`` that way, and the MCP
-face's ``actor_from_context`` documents why — a human reading a record wants a
+face's ``actor_from_context`` instances why — a human reading a record wants a
 person, not a subject id).
 """
 from __future__ import annotations

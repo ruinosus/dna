@@ -3,10 +3,10 @@ kind: Agent
 metadata:
   name: conv
   description: The delegation TARGET `super-agent` reaches — never mounted by
-    any Copilot itself; it only needs to exist as a document in scope for
+    any Copilot itself; it only needs to exist as an instance in scope for
     `targets_for` to find it.
 spec:
-  instruction: You convert documents on request.
+  instruction: You convert instances on request.
   model: gpt-5-mini
   # RESTRICTED: only these two of the federation's four allowed_tools reach
   # this target's sub-run — the negative side of the allowlist property
@@ -20,4 +20,4 @@ spec:
     agents:
     - super-agent
     format: text
-    use_when: quando precisar converter um documento
+    use_when: quando precisar converter uma instância

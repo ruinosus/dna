@@ -20,7 +20,7 @@ drift detector.
 
 [dialect] The two dialects' schemas are genuinely disjoint — different
 table names (``dna_``-prefixed vs bare), different primary keys
-(``documents`` includes ``tenant`` on pg, not on sqlite — i-092), and pg
+(``instances`` includes ``tenant`` on pg, not on sqlite — i-092), and pg
 has two tables sqlite does not (the Phase 15.1 eventbus). ``build_metadata``
 branches on ``is_pg`` exactly as the retired ``_build_tables`` did.
 """
@@ -47,10 +47,10 @@ import sqlalchemy as sa
 # exists to catch — is still reported.
 UNMANAGED_INDEXES: frozenset[str] = frozenset({
     # Postgres — hot-field expression indices, partial on `content ? 'spec'`.
-    "dna_docs_status_idx",
-    "dna_docs_feature_idx",
-    "dna_docs_updated_at_idx",
-    "dna_docs_spec_gin_idx",
+    "dna_insts_status_idx",
+    "dna_insts_feature_idx",
+    "dna_insts_updated_at_idx",
+    "dna_insts_spec_gin_idx",
     # Postgres — partial indexes on `semver IS NOT NULL` / `kind = 'Genome'`.
     "dna_versions_semver_unique",
     "dna_versions_package_lookup",
@@ -143,17 +143,17 @@ class Tables:
     """The tables ``SqlAlchemySource`` binds to, plus their shared MetaData."""
 
     metadata: sa.MetaData
-    documents: sa.Table
+    instances: sa.Table
     versions: sa.Table
     bundle_entries: sa.Table
-    layer_documents: sa.Table
+    layer_instances: sa.Table
     #: The derived reference graph (spec-grafo-1) — both dialects.
     edges: sa.Table
     # [dialect] pg-only (Phase 15.1 eventbus); None on sqlite.
     outbox: sa.Table | None
     versions_seq: sa.Table | None
     # [dialect] pg-only CONTROL-PLANE table. Not bound by SqlAlchemySource --
-    # nothing in the document path reads or writes it. It lives in this model
+    # nothing in the instance path reads or writes it. It lives in this model
     # anyway because the model is what autogenerate compares against: a table
     # created by a revision but absent here would be reported as a table to
     # DROP on every run (see FOREIGN_TABLES for the other way out, taken by
@@ -161,7 +161,7 @@ class Tables:
     # by the MCP metering store (``dna_cli._mcp_quota.PostgresQuotaStore``).
     quota_counters: sa.Table | None = None
     # [dialect] pg-only CONTROL-PLANE tables, same reasoning as
-    # quota_counters: nothing in the document path touches them, but the model
+    # quota_counters: nothing in the instance path touches them, but the model
     # is what autogenerate compares against. Written by the span processor in
     # ``dna.runtime.telemetry``; read by the portal's console.
     turn: sa.Table | None = None
@@ -181,7 +181,7 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
     # [dialect] pg tables are dna_-prefixed; sqlite's are bare.
     p = "dna_" if is_pg else ""
 
-    # [dialect] tenant: pg is NOT NULL DEFAULT '' and part of the documents
+    # [dialect] tenant: pg is NOT NULL DEFAULT '' and part of the instances
     # PK; sqlite left it nullable and outside the PK (i-092 lives here).
     doc_tenant = (
         sa.Column("tenant", sa.Text, nullable=False,
@@ -189,8 +189,8 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         if is_pg else
         sa.Column("tenant", sa.Text, nullable=True)
     )
-    documents = sa.Table(
-        f"{p}documents", md,
+    instances = sa.Table(
+        f"{p}instances", md,
         sa.Column("scope", sa.Text, primary_key=True, nullable=False),
         sa.Column("kind", sa.Text, primary_key=True, nullable=False),
         # A Kind's identity is (apiVersion, kind) — that is the registry key,
@@ -200,7 +200,7 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         # overwrote and a delete silently reached into the other Kind's rows.
         # In the PK on both dialects (revision 0003_api_version_identity).
         # ``''`` is not a default apiVersion: it is the recorded fact that the
-        # stored document declares none (see the revision's backfill).
+        # stored instance declares none (see the revision's backfill).
         sa.Column("api_version", sa.Text, primary_key=True, nullable=False,
                   server_default=sa.text("''")),
         sa.Column("name", sa.Text, primary_key=True, nullable=False),
@@ -225,7 +225,7 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
                   nullable=not is_pg),
         sa.Column("scope", sa.Text, nullable=False),
         sa.Column("kind", sa.Text, nullable=False),
-        # Same identity widening as `documents`. `versions` has no business
+        # Same identity widening as `instances`. `versions` has no business
         # primary key (``id`` is a surrogate), so the column carries its weight
         # through the indexes below and the semver uniqueness index.
         sa.Column("api_version", sa.Text, nullable=False,
@@ -261,7 +261,7 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
     bundle_cols: list[sa.Column] = [
         sa.Column("scope", sa.Text, primary_key=True, nullable=False),
         sa.Column("kind", sa.Text, primary_key=True, nullable=False),
-        # A bundle entry belongs to a document, hence to that document's Kind:
+        # A bundle entry belongs to an instance, hence to that instance's Kind:
         # without this the two `Deal`s' entries collide on one row.
         sa.Column("api_version", sa.Text, primary_key=True, nullable=False,
                   server_default=sa.text("''")),
@@ -286,39 +286,39 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
     )
 
     # The DERIVED reference graph (spec-grafo-1, revision 0006). One row per
-    # declared ``x-dna-ref`` VALUE of one document — written by the write path
-    # inside the same transaction as the document itself, never by a scanner
+    # declared ``x-dna-ref`` VALUE of one instance — written by the write path
+    # inside the same transaction as the instance itself, never by a scanner
     # and never by guessing at slugs.
     #
     # Present on BOTH dialects, unlike the pg-only control-plane tables: this
-    # is document data derived from document data, and a SQLite self-host asks
+    # is instance data derived from instance data, and a SQLite self-host asks
     # "what points at this?" exactly as a hosted Postgres does. The traversal
     # is a recursive CTE in standard SQL, identical on both.
     #
     # Four decisions the DDL retired in i-039 did not have:
     #
     # 1. ``source_field`` AND ``ordinal`` are IN the primary key. Without the
-    #    field, two fields of one document pointing at the same target collide
+    #    field, two fields of one instance pointing at the same target collide
     #    and the graph loses "by which field" — which is precisely what a
     #    relations view renders. Without the ordinal, ``Epic.features[3]``
     #    cannot be told from ``[0]``, and the order of an array is the author's
     #    data.
     # 2. ``to_kind`` NULL means DANGLING, not absent. With
-    #    ``DNA_REF_VALIDATION=warn`` (the default) a document with an
+    #    ``DNA_REF_VALIDATION=warn`` (the default) an instance with an
     #    unresolvable reference persists; dropping that row would render a
     #    tidier graph than the data deserves. The dangling rows are the most
     #    valuable content of this table — they are the list of what is broken.
-    # 3. ``to_scope`` is separate from ``scope`` because ``get_document`` falls
+    # 3. ``to_scope`` is separate from ``scope`` because ``get_instance`` falls
     #    back to parent scopes: a reference may resolve in a DIFFERENT scope,
     #    and recording that as an intra-scope relation would assert a link that
     #    does not exist. NULL = resolved through the inheritance chain, parent
     #    not recorded.
-    # 4. ``from_version`` is the document version the edges were derived from —
+    # 4. ``from_version`` is the instance version the edges were derived from —
     #    the drift detector for the non-atomic paths (backfill, an adapter
     #    without the kwarg) and the anchor a future as-of traversal needs.
     #
     # No foreign keys: a Kind is not a table, and ``to_name`` deliberately may
-    # name a document that does not exist.
+    # name an instance that does not exist.
     edge_cols: list[sa.Column] = [
         sa.Column("scope", sa.Text, primary_key=True, nullable=False),
         sa.Column("tenant", sa.Text, primary_key=True, nullable=False,
@@ -341,7 +341,7 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
     edge_cols.append(
         # [dialect] pg gets a real timestamp with the server clock as default;
         # sqlite keeps the ISO-8601 TEXT the rest of its tables use
-        # (``documents.updated_at``), written by the adapter's own ``_now()``.
+        # (``instances.updated_at``), written by the adapter's own ``_now()``.
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False,
                   server_default=sa.text("now()"))
         if is_pg else
@@ -352,13 +352,13 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         # The two directions the traversal walks. "out" is served by the PK
         # prefix as well, but naming it keeps the pair symmetric and survives a
         # future key change; "in" has no other index that could serve it, and
-        # without it "what points at this document?" is a full scan.
+        # without it "what points at this instance?" is a full scan.
         sa.Index(f"{p}edges_out_idx", "scope", "tenant", "from_kind", "from_name"),
         sa.Index(f"{p}edges_in_idx", "scope", "tenant", "to_kind", "to_name"),
     )
 
-    layer_documents = sa.Table(
-        f"{p}layer_documents", md,
+    layer_instances = sa.Table(
+        f"{p}layer_instances", md,
         sa.Column("scope", sa.Text, primary_key=True, nullable=False),
         sa.Column("layer_id", sa.Text, primary_key=True, nullable=False),
         sa.Column("layer_value", sa.Text, primary_key=True, nullable=False),
@@ -505,8 +505,8 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         )
 
     return Tables(
-        metadata=md, documents=documents, versions=versions,
-        bundle_entries=bundle_entries, layer_documents=layer_documents,
+        metadata=md, instances=instances, versions=versions,
+        bundle_entries=bundle_entries, layer_instances=layer_instances,
         edges=edges,
         outbox=outbox, versions_seq=versions_seq,
         quota_counters=quota_counters, turn=turn, turn_step=turn_step,

@@ -1,16 +1,16 @@
 """A LAZY boot must confer the same Kind registry an eager one does.
 
 ``instance_async(scope, lazy=True)`` exists to skip the full ``load_all``
-materialization of a scope's documents — the MI delegates ``all``/``one`` to
-``kernel.query`` instead of holding parsed documents. That is a trade about
-DOCUMENTS. It was silently also a trade about KINDS: the lazy branch loaded the
-bootstrap documents (``load_bootstrap_docs`` — ``KindDefinition`` first, by
+materialization of a scope's instances — the MI delegates ``all``/``one`` to
+``kernel.query`` instead of holding parsed instances. That is a trade about
+INSTANCES. It was silently also a trade about KINDS: the lazy branch loaded the
+bootstrap instances (``load_bootstrap_docs`` — ``KindDefinition`` first, by
 declared priority) and parsed them, but never ran the registration pass, so no
 store-declared ``KindDefinition`` ever produced a port.
 
 Everything that reads the registry therefore answered "that Kind does not
-exist" on a lazily-booted kernel — including the generic document use-cases in
-``dna.application.documents``, which resolve their target through
+exist" on a lazily-booted kernel — including the generic instance use-cases in
+``dna.application.instances``, which resolve their target through
 ``ports_in_scope``. Registration is what confers **schema validation** and
 **storage routing**, so this is not a cosmetic difference between two boot
 modes: on a lazy boot an approved Kind governs nothing.
@@ -19,7 +19,7 @@ What this file pins:
 
 * the registry a lazy boot leaves behind is the one an eager boot leaves behind
   (the port, its apiVersion, its schema, its declared container);
-* and it is EFFECTIVE — a violating document is vetoed and a conforming one is
+* and it is EFFECTIVE — a violating instance is vetoed and a conforming one is
   routed into the declared container, measured on disk;
 * the approval gate is untouched: an unapproved ``KindDefinition`` is still not
   registered by a lazy boot (registration is the gate; a lazy boot that
@@ -29,8 +29,8 @@ What this file pins:
 
 The lazy path deliberately does NOT run the declarative-kind rescan the eager
 path runs after registration (``_rescan_after_kinddef_register_async``): that
-rescan re-reads every document in the scope, which is precisely the cost lazy
-exists to avoid, and a lazy MI holds no document list for it to enrich. What it
+rescan re-reads every instance in the scope, which is precisely the cost lazy
+exists to avoid, and a lazy MI holds no instance list for it to enrich. What it
 does need is the READER side effect of registration, which the registration
 pass itself installs on the kernel.
 """
@@ -99,7 +99,7 @@ def _kinddef(
 
 
 #: The SECOND door onto the same registry: ``custom_kinds`` on the scope's root
-#: document. Same store, same approval gate, same scope binding — and a lazy
+#: instance. Same store, same approval gate, same scope binding — and a lazy
 #: boot that wired only the ``KindDefinition`` door would leave half the
 #: mechanism dark. Declared in pairs (one approved, one not) so the gate is
 #: measured on this door too and not merely assumed to be shared.
@@ -219,10 +219,10 @@ async def test_a_lazily_booted_kind_validates_and_routes(tmp_path):
     await k.instance_async(_A, lazy=True)
 
     with pytest.raises(SpecValidationError) as vetoed:
-        await k.write_document(_A, "Widget", "bad", _doc("Widget", "bad", {"nope": 1}))
+        await k.write_instance(_A, "Widget", "bad", _doc("Widget", "bad", {"nope": 1}))
     assert "schema validation failed" in str(vetoed.value), str(vetoed.value)
 
-    await k.write_document(_A, "Widget", "ok", _doc("Widget", "ok", {"title": "fine"}))
+    await k.write_instance(_A, "Widget", "ok", _doc("Widget", "ok", {"title": "fine"}))
     assert (base / _A / "widgets" / "ok.yaml").exists(), sorted(
         p.relative_to(base) for p in (base / _A).rglob("*.yaml")
     )
@@ -232,7 +232,7 @@ async def test_a_lazily_booted_kind_validates_and_routes(tmp_path):
 async def test_the_generic_document_use_cases_resolve_it_after_a_lazy_boot(
     tmp_path,
 ):
-    """The consumer that motivated this: ``dna.application.documents`` resolves
+    """The consumer that motivated this: ``dna.application.instances`` resolves
     its target through ``ports_in_scope``, which reads the same registry. This
     is the SDK-side twin of what the MCP generic tools do — no ``dna_cli``
     import, per the package boundary."""
@@ -248,22 +248,22 @@ async def test_the_generic_document_use_cases_resolve_it_after_a_lazy_boot(
 
 @pytest.mark.asyncio
 async def test_a_lazy_boot_wires_the_other_registry_door_too(tmp_path):
-    """``custom_kinds`` on the scope's root document is the second store-loaded
+    """``custom_kinds`` on the scope's root instance is the second store-loaded
     door onto the registry, and it needs no new file — whoever may write the
-    root document declares Kinds through it. A lazy boot that wired only the
+    root instance declares Kinds through it. A lazy boot that wired only the
     ``KindDefinition`` door would leave a Kind declared this way invisible for
     exactly the same reason, so it is asserted rather than inferred from
     "they share a funnel" (they do not — they are two methods).
 
     The unapproved half of the pair is the control: the gate on this door is
-    PER ENTRY, so one root document can carry both, and a lazy boot that
+    PER ENTRY, so one root instance can carry both, and a lazy boot that
     registered the whole list would repeal it."""
     base = _base_with(tmp_path)
     k = _kernel(base)
     await k.instance_async(_A, lazy=True)
 
     assert k.kind_port_for("Gadget", scope=_A) is not None, (
-        "a custom_kinds entry declared by the scope's root document and "
+        "a custom_kinds entry declared by the scope's root instance and "
         "approved is not registered by a lazy boot"
     )
     assert k.kind_port_for("Gizmo", scope=_A) is None, (
@@ -282,7 +282,7 @@ async def test_a_lazy_boot_does_not_register_an_unapproved_kind(tmp_path):
     why it is asserted rather than assumed.
 
     The control is the same fixture with ``spec.approved_by`` removed: the
-    document is there, it parses, and it still confers nothing."""
+    instance is there, it parses, and it still confers nothing."""
     base = _base_with(tmp_path, approved=False)
     k = _kernel(base)
     await k.instance_async(_A, lazy=True)
@@ -292,7 +292,7 @@ async def test_a_lazy_boot_does_not_register_an_unapproved_kind(tmp_path):
         "absence of registration, so this is the gate being repealed"
     )
     # …and the consequence, not just the symptom: nothing validates the write.
-    await k.write_document(_A, "Widget", "bad", _doc("Widget", "bad", {"nope": 1}))
+    await k.write_instance(_A, "Widget", "bad", _doc("Widget", "bad", {"nope": 1}))
     assert not (base / _A / "widgets" / "bad.yaml").exists()
 
 
@@ -314,5 +314,5 @@ async def test_a_lazily_booted_kind_still_binds_only_to_its_own_scope(tmp_path):
     )
     # The consequence in B: an unknown Kind, so no foreign schema governs it
     # and no foreign container routes it.
-    await k.write_document(_B, "Widget", "b1", _doc("Widget", "b1", {"nope": 1}))
+    await k.write_instance(_B, "Widget", "b1", _doc("Widget", "b1", {"nope": 1}))
     assert not (base / _B / "widgets" / "b1.yaml").exists()

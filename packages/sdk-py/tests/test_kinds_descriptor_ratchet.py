@@ -53,9 +53,9 @@ STILL_CLASS_ALLOWLIST = frozenset({
     # (2026-06-11; Finding also left _EMBED_LEGACY via embed:).
     # eval-evolve-experiment + eval-evolve-run: migrated to descriptors in
     # expr batch B (plan 2026-06-11-descriptor-expressiveness, Chunk 4). The
-    # lote-3 "parse retorna Document" / "summary computado" blockers are now
+    # lote-3 "parse retorna Instance" / "summary computado" blockers are now
     # expressible: the descriptor port's schema-validating parse(raw) is
-    # canonical (kernel wraps raw→Document) and the D2 summary vocabulary
+    # canonical (kernel wraps raw→Instance) and the D2 summary vocabulary
     # (format placeholder_defaults + {path: applied_change.action}) reproduces
     # the deleted summaries 1:1.
     "sdlc-agent-session",  # Tier-2 (lote-3 skip): summary computado

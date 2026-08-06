@@ -15,7 +15,7 @@ Reports surfaced:
 
 Each report queries ONE specific Kind (EvalRun, Finding, Evidence) —
 big perf win vs the legacy ``self._mi.all("X")`` walk that traversed
-the full mi.documents list.
+the full mi.instances list.
 
 Parity contract: produces byte-identical output to the legacy
 ReportBuilder / LockManager methods for the same scope.
@@ -176,10 +176,10 @@ async def evidence_manifest_async(
     md = _frontmatter("evidence_manifest", scope)
     md += "# Evidence Manifest\n\n"
     if not evidence:
-        md += "_No evidence documents found._\n"
+        md += "_No evidence instances found._\n"
         return md
 
-    md += "| Event Type | Document Ref | SHA-256 | Captured At |\n"
+    md += "| Event Type | Instance Ref | SHA-256 | Captured At |\n"
     md += "|------------|-------------|---------|-------------|\n"
     for e in evidence:
         spec = e.get("spec") or {}
@@ -244,13 +244,13 @@ async def generate_lock_async(
 ) -> Lockfile:
     """Lockfile snapshot of every doc in scope, sorted by (kind, name).
 
-    Replaces ``LockManager.generate`` which walks ``self._host.documents``.
+    Replaces ``LockManager.generate`` which walks ``self._host.instances``.
     We iterate every Kind registered on the kernel + every reader-detected
-    kind in list_documents (covers bundle-override kinds).
+    kind in list_instances (covers bundle-override kinds).
     """
     # Collect ALL docs across all kinds present in scope.
     all_kinds_in_scope: set[str] = set()
-    refs = await kernel.list_documents(scope, kind=None, tenant=tenant)
+    refs = await kernel.list_instances(scope, kind=None, tenant=tenant)
     for k, _n in refs:
         all_kinds_in_scope.add(k)
     # Plus all registered kinds (in case some have docs the L1 doesn't
@@ -272,7 +272,7 @@ async def generate_lock_async(
                 path="",
                 sha256=sha,
             ))
-    return Lockfile(scope=scope, documents=entries)
+    return Lockfile(scope=scope, instances=entries)
 
 
 __all__ = [

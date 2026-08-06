@@ -187,7 +187,7 @@ class SourceSync:
             )
             if raw is None:
                 continue
-            # Carry non-marker bundle entries so the target's save_document net
+            # Carry non-marker bundle entries so the target's save_instance net
             # re-persists them atomically (the s-sync-s3 fix).
             sd = k.storage_for_kind(kind, scope=scope)
             if (
@@ -203,7 +203,7 @@ class SourceSync:
                 }
                 if src_files:
                     raw.setdefault("spec", {})["source_files"] = src_files
-            await to_source.save_document(scope, kind, name, raw, tenant=tenant)
+            await to_source.save_instance(scope, kind, name, raw, tenant=tenant)
             if callable(publish):
                 if tenant is not None and publish_takes_tenant:
                     await publish(scope, kind, name, tenant=tenant)
@@ -213,7 +213,7 @@ class SourceSync:
 
         if prune:
             for kind, name in diff["removed"]:
-                await to_source.delete_document(scope, kind, name, tenant=tenant)
+                await to_source.delete_instance(scope, kind, name, tenant=tenant)
                 applied.append(("delete", kind, name))
 
         return {**diff, "applied": applied}

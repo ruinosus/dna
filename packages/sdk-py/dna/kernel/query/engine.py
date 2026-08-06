@@ -1,11 +1,11 @@
-"""QueryEngine — the kernel's read surface (query push-down + get_document +
+"""QueryEngine — the kernel's read surface (query push-down + get_instance +
 the two sync wrappers), extracted from the Kernel god-object
 (kernel-decompose-continue).
 
 Behavior-preserving: ``query`` (Marco-A push-down with tenant binding, origin
-filter, and scope-inheritance chain), ``get_document`` (cached read-one with V1
-parent fallback), ``query_list_sync`` / ``get_document_sync`` (sync wrappers that
-parse ``Document`` objects) move verbatim; the kernel keeps all four as thin
+filter, and scope-inheritance chain), ``get_instance`` (cached read-one with V1
+parent fallback), ``query_list_sync`` / ``get_instance_sync`` (sync wrappers that
+parse ``Instance`` objects) move verbatim; the kernel keeps all four as thin
 delegators (they're heavily used — Studio list views, CLI, workers, agent
 routes — all unchanged). A STATELESS back-ref collaborator: it reads per-kernel
 state (``tenant``, ``_source``, ``_main_loop``, the granular cache, the
@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover
     from dna.kernel.collaborator_ports import QueryEngineHost
-    from dna.kernel.document import Document
+    from dna.kernel.instance import Instance
 
 # F2 D2 — shape returned by ``count()``:
 # ``{"total": int, "groups": list[{"key": Any, "count": int}] | None}``.
@@ -53,7 +53,7 @@ class QueryEngine:
           - Tenant binding auto-stamp: quando ``Kernel.tenant`` é setado
             (multi-tenant binding via ``Kernel(tenant=...)``) e ``tenant``
             kwarg é None, usa o tenant binding. ``tenant`` explícito
-            overrides (Stripe Connect pattern, igual ao write_document).
+            overrides (Stripe Connect pattern, igual ao write_instance).
           - Assertion de source registrado.
           - Cross-scope ``scopes=`` (F2.4): itera os scopes com queries
             LOCAIS (``origin="local"``, sem chain de herança/catalog) e
@@ -309,7 +309,7 @@ class QueryEngine:
             ]
         return {"total": total, "groups": groups}
 
-    async def get_document(
+    async def get_instance(
         self, scope: str, kind: str, name: str, *,
         tenant: str | None = None,
     ) -> dict[str, Any] | None:
@@ -317,7 +317,7 @@ class QueryEngine:
 
         Custo ~5ms PG / ~3ms SQLite / ~20ms FS. LRU cache bounded em
         2000 entries com TTL 60s. Cache invalidado per-doc pelo
-        kernel.write_document.
+        kernel.write_instance.
 
         Scope-level inheritance (Story s-platform-agent-fallback,
         2026-05-28): kinds em ``_INHERITABLE_KINDS`` herdam de
@@ -348,7 +348,7 @@ class QueryEngine:
                 # fail-soft: an unreadable chain degrades to the V1
                 # single-hop parent — logged at debug (hot path).
                 logger.debug(
-                    "get_document: resolution chain failed for %r "
+                    "get_instance: resolution chain failed for %r "
                     "(falling back to %r): %s",
                     scope, k._INHERIT_PARENT_SCOPE, e,
                 )
@@ -366,7 +366,7 @@ class QueryEngine:
                     # fail-soft: missing parent scope → no inherited doc, not
                     # an error (see comment above) — logged at debug (hot path).
                     logger.debug(
-                        "get_document: parent fallback failed for %r: %s",
+                        "get_instance: parent fallback failed for %r: %s",
                         fallback_key, e,
                     )
                     continue
@@ -379,9 +379,9 @@ class QueryEngine:
         self, scope: str, kind: str, *,
         filter: dict | None = None,
         tenant: str | None = None,
-    ) -> list["Document"]:
+    ) -> list["Instance"]:
         """Sync wrapper around ``self.query(scope, kind)`` returning a list
-        of parsed ``Document`` objects (drop-in for ``mi.all(kind)``).
+        of parsed ``Instance`` objects (drop-in for ``mi.all(kind)``).
 
         f-mi-class-extinction (s-tools-mi-kill, 2026-05-14): for sync
         callers (LangGraph tool executors, CLI, worker bootstrap) that
@@ -389,7 +389,7 @@ class QueryEngine:
         event-loop binding is honored (via ``self._main_loop`` when
         registered) or a fresh loop is spun up otherwise.
 
-        Returns parsed ``Document`` objects (with ``.kind``, ``.name``,
+        Returns parsed ``Instance`` objects (with ``.kind``, ``.name``,
         ``.spec``, ``.metadata``) for back-compat with code that
         iterates the result like ``for d in mi.all(...): d.spec``.
 
@@ -398,11 +398,11 @@ class QueryEngine:
         ``kernel.query`` natively returns.
         """
         from dna.kernel import _run_sync_helper
-        from dna.kernel.document import Document
+        from dna.kernel.instance import Instance
         k = self._k
 
-        async def _collect() -> list[Document]:
-            out: list[Document] = []
+        async def _collect() -> list[Instance]:
+            out: list[Instance] = []
             async for raw in self.query(
                 scope, kind, filter=filter, tenant=tenant,
             ):
@@ -417,19 +417,19 @@ class QueryEngine:
             coro.close()
             raise
 
-    def get_document_sync(
+    def get_instance_sync(
         self, scope: str, kind: str, name: str, *,
         tenant: str | None = None,
-    ) -> "Document | None":
-        """Sync wrapper around ``self.get_document`` returning a parsed
-        ``Document`` (drop-in for ``mi.one(kind, name)``).
+    ) -> "Instance | None":
+        """Sync wrapper around ``self.get_instance`` returning a parsed
+        ``Instance`` (drop-in for ``mi.one(kind, name)``).
         """
         from dna.kernel import _run_sync_helper
-        from dna.kernel.document import Document
+        from dna.kernel.instance import Instance
         k = self._k
 
-        async def _g() -> Document | None:
-            raw = await self.get_document(scope, kind, name, tenant=tenant)
+        async def _g() -> Instance | None:
+            raw = await self.get_instance(scope, kind, name, tenant=tenant)
             if raw is None:
                 return None
             return k._parse_doc(raw, origin="local")

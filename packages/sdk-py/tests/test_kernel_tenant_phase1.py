@@ -96,7 +96,7 @@ def test_back_compat_layer_tenant_emits_deprecation_warning(tmp_path: Path):
     }
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-        asyncio.run(k.write_document(
+        asyncio.run(k.write_instance(
             "scope", "Agent", "old-style", raw,
             layer=("tenant", "beta"),
         ))
@@ -117,10 +117,10 @@ def test_back_compat_writes_to_same_layer_path(tmp_path: Path):
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", DeprecationWarning)
-        asyncio.run(k.write_document(
+        asyncio.run(k.write_instance(
             "scope", "Agent", "a", spec_a, layer=("tenant", "shared"),
         ))
-    asyncio.run(k.write_document(
+    asyncio.run(k.write_instance(
         "scope", "Agent", "b", spec_b, tenant="shared",
     ))
 
@@ -147,11 +147,11 @@ def test_explicit_tenanted_kind_requires_tenant(tmp_path: Path):
         "metadata": {"name": "x"}, "spec": {"instruction": "y"},
     }
     with pytest.raises(TenantRequired):
-        asyncio.run(k.write_document("scope", "Agent", "x", raw))
+        asyncio.run(k.write_instance("scope", "Agent", "x", raw))
 
     # With tenant bound, write succeeds
     k_bound = k.with_tenant("acme")
-    asyncio.run(k_bound.write_document("scope", "Agent", "x", raw))
+    asyncio.run(k_bound.write_instance("scope", "Agent", "x", raw))
 
 
 def test_explicit_global_kind_rejects_tenant(tmp_path: Path):
@@ -166,7 +166,7 @@ def test_explicit_global_kind_rejects_tenant(tmp_path: Path):
     }
     k_bound = k.with_tenant("acme")
     with pytest.raises(TenantNotAllowed):
-        asyncio.run(k_bound.write_document("scope", "Agent", "x", raw))
+        asyncio.run(k_bound.write_instance("scope", "Agent", "x", raw))
 
 
 def test_undeclared_kind_is_permissive(tmp_path: Path):
@@ -178,7 +178,7 @@ def test_undeclared_kind_is_permissive(tmp_path: Path):
         "metadata": {"name": "permissive"}, "spec": {"instruction": "x"},
     }
     # Both should succeed
-    asyncio.run(k.write_document("scope", "Agent", "permissive", raw))
-    asyncio.run(k.with_tenant("acme").write_document(
+    asyncio.run(k.write_instance("scope", "Agent", "permissive", raw))
+    asyncio.run(k.with_tenant("acme").write_instance(
         "scope", "Agent", "with-tenant", raw,
     ))

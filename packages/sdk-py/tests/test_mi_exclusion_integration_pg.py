@@ -70,7 +70,7 @@ async def test_dna_development_mi_materializes_composition_only(tmp_path):
         t0 = time.perf_counter()
         mi = await k.instance_async(SCOPE, lazy=False)
         elapsed = time.perf_counter() - t0
-        n_docs = len(mi.documents)
+        n_docs = len(mi.instances)
         print(
             f"\n[F2.5 Task 3] {SCOPE}: MI materialized {n_docs} docs in "
             f"{elapsed:.3f}s; records in source (probe {RECORD_KINDS_PROBE}): "
@@ -87,7 +87,7 @@ async def test_dna_development_mi_materializes_composition_only(tmp_path):
             f"({total_records_probed} vs {n_docs})"
         )
         record_kinds_in_mi = {
-            d.kind for d in mi.documents if k.kind_plane(d.kind) == "record"
+            d.kind for d in mi.instances if k.kind_plane(d.kind) == "record"
         }
         assert record_kinds_in_mi == set(), (
             f"record kinds leaked into the MI: {record_kinds_in_mi}"

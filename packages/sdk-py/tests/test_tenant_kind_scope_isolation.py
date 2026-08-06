@@ -1,7 +1,7 @@
 """i-081 — a store-loaded Kind applies ONLY to the scope whose store declared it.
 
 The hole this locks shut: ``load_bootstrap_docs`` decides which
-``KindDefinition`` documents are LOADED (by scope), and NOTHING decided which
+``KindDefinition`` instances are LOADED (by scope), and NOTHING decided which
 scope a loaded Kind APPLIES to. The registry key was ``(api_version, kind)``,
 with no scope in it, so the first scope to be composed in a process registered
 its Kind for the WHOLE process. One long-lived kernel serves every scope
@@ -12,7 +12,7 @@ served A.
 It was never cosmetic. Registration is what confers **schema enforcement** and
 **storage routing**, so a Kind leaking into scope B changed B's behaviour:
 
-* a document of A's Kind, written into B, was validated against A's schema;
+* an instance of A's Kind, written into B, was validated against A's schema;
 * and stored in the container A declared;
 * while a genuinely unknown Kind written into B was accepted and stored at the
   scope root — the control that proves the difference is registration.
@@ -62,7 +62,7 @@ def _clear_process_wide_warn_caches():
 
 def _kinddef(*, namespace: str, kind: str, alias: str, container: str) -> dict:
     """A per-scope ``KindDefinition``, with a schema that REQUIRES ``title`` —
-    so "was this document validated against somebody else's Kind?" has a
+    so "was this instance validated against somebody else's Kind?" has a
     yes/no answer.
 
     APPROVED: an unapproved store-loaded Kind never registers at all, so every
@@ -156,26 +156,26 @@ async def test_another_scopes_schema_does_not_validate_this_scopes_write(
     invalid_for_a = _doc("acme.example", "Widget", "w1", {"nope": 1})
     # In A this is a violation (title required, additionalProperties false).
     with pytest.raises(SpecValidationError):
-        await k.write_document(_A, "Widget", "w1", dict(invalid_for_a))
+        await k.write_instance(_A, "Widget", "w1", dict(invalid_for_a))
     # In B it is just an unknown Kind — no foreign schema governs it.
-    await k.write_document(_B, "Widget", "w1", dict(invalid_for_a))
+    await k.write_instance(_B, "Widget", "w1", dict(invalid_for_a))
 
 
 @pytest.mark.asyncio
 async def test_another_scopes_container_does_not_route_this_scopes_write(
     two_scopes,
 ):
-    """[7]: the document must not land in the container A declared."""
+    """[7]: the instance must not land in the container A declared."""
     k, base = two_scopes
     await k.instance_async(_A)
     await k.instance_async(_B)
 
-    await k.write_document(
+    await k.write_instance(
         _B, "Widget", "w1", _doc("acme.example", "Widget", "w1", {"nope": 1}),
     )
     assert not (base / _B / "widgets" / "w1.yaml").exists()
 
-    await k.write_document(
+    await k.write_instance(
         _A, "Widget", "wa", _doc("acme.example", "Widget", "wa", {"title": "ok"}),
     )
     assert (base / _A / "widgets" / "wa.yaml").exists()
@@ -188,12 +188,12 @@ async def test_the_owning_scope_keeps_full_behaviour(two_scopes):
     await k.instance_async(_B)  # B first — the leak direction is symmetric
     await k.instance_async(_A)
 
-    await k.write_document(
+    await k.write_instance(
         _A, "Widget", "wa", _doc("acme.example", "Widget", "wa", {"title": "ok"}),
     )
     assert (base / _A / "widgets" / "wa.yaml").exists()
     with pytest.raises(SpecValidationError):
-        await k.write_document(
+        await k.write_instance(
             _A, "Widget", "bad", _doc("acme.example", "Widget", "bad", {"nope": 1}),
         )
 
@@ -255,11 +255,11 @@ async def test_a_bare_name_resolves_within_the_callers_own_scope(
 async def test_the_generic_document_surface_resolves_within_the_scope(
     two_scopes_same_kind_name,
 ):
-    """``resolve_kind_port`` is the ONE resolution the generic document
+    """``resolve_kind_port`` is the ONE resolution the generic instance
     use-cases go through, and it refuses an ambiguous bare name rather than
     guessing. Two workspaces each declaring ``Widget`` used to make it refuse
     BOTH of them — for a name neither shares."""
-    from dna.application.documents import AmbiguousKindError, resolve_kind_port
+    from dna.application.instances import AmbiguousKindError, resolve_kind_port
 
     k, _base = two_scopes_same_kind_name
     await k.instance_async(_A)
@@ -280,7 +280,7 @@ async def test_the_generic_document_surface_resolves_within_the_scope(
 async def test_the_kind_catalog_of_a_scope_lists_only_its_own_kinds(two_scopes):
     """``list_kinds`` answers "what can I act on HERE" — another workspace's
     Kind is not actionable here and must not be advertised."""
-    from dna.application.documents import list_kinds_impl
+    from dna.application.instances import list_kinds_impl
     from dna.application.live import LiveDna
 
     k, _base = two_scopes

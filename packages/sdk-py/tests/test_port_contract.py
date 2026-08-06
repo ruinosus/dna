@@ -149,10 +149,10 @@ async def source_with_kernel(request) -> AsyncIterator[tuple[Any, Any]]:
 async def _seed_module(src: Any, scope: str) -> None:
     """Insert a minimal ``Module`` so the scope exists for the test.
 
-    Uses ``save_document`` + ``publish`` to bypass the
+    Uses ``save_instance`` + ``publish`` to bypass the
     draft/published distinction the SQL adapters maintain (FS publish
     is a no-op; SQL publish promotes a draft row from ``versions``
-    into ``documents``). All adapters expose both methods on the
+    into ``instances``). All adapters expose both methods on the
     WritableSourcePort.
     """
     raw = {
@@ -161,7 +161,7 @@ async def _seed_module(src: Any, scope: str) -> None:
         "metadata": {"name": scope},
         "spec": {"owner": "port-contract-test"},
     }
-    await src.save_document(scope, "Genome", scope, raw)
+    await src.save_instance(scope, "Genome", scope, raw)
     if hasattr(src, "publish"):
         await src.publish(scope, "Genome", scope)
 
@@ -244,13 +244,13 @@ async def test_skill_bundle_round_trip(source_with_kernel):
             "instruction": "do the thing",
         },
     }
-    await k.write_document("contract-test", "Skill", "contract-skill", raw)
+    await k.write_instance("contract-test", "Skill", "contract-skill", raw)
     if hasattr(src, "publish"):
         await src.publish("contract-test", "Skill", "contract-skill")
 
     # Re-read via fresh mi (forces reload from source, not in-memory cache)
     mi = await k.instance_async("contract-test")
-    skills = list([d for d in mi.documents if d.kind == "Skill"])
+    skills = list([d for d in mi.instances if d.kind == "Skill"])
     assert len(skills) == 1
     sk = skills[0]
     assert sk.name == "contract-skill"
@@ -273,7 +273,7 @@ async def test_fetch_bundle_entry_hit(source_with_kernel):
             "instruction": "marker bytes",
         },
     }
-    await k.write_document("contract-test", "Skill", "fetch-test", raw)
+    await k.write_instance("contract-test", "Skill", "fetch-test", raw)
     if hasattr(src, "publish"):
         await src.publish("contract-test", "Skill", "fetch-test")
 
@@ -297,7 +297,7 @@ async def test_write_bundle_entry_text_and_binary_round_trip(source_with_kernel)
         "metadata": {"name": "rt-test"},
         "spec": {"name": "rt-test", "description": "round-trip", "instruction": "x"},
     }
-    await k.write_document("contract-test", "Skill", "rt-test", raw)
+    await k.write_instance("contract-test", "Skill", "rt-test", raw)
     if hasattr(src, "publish"):
         await src.publish("contract-test", "Skill", "rt-test")
 
@@ -334,7 +334,7 @@ async def test_fetch_bundle_entry_miss_raises_filenotfound(source_with_kernel):
             "instruction": "x",
         },
     }
-    await k.write_document("contract-test", "Skill", "miss-test", raw)
+    await k.write_instance("contract-test", "Skill", "miss-test", raw)
     if hasattr(src, "publish"):
         await src.publish("contract-test", "Skill", "miss-test")
 
@@ -373,7 +373,7 @@ async def test_fetch_bundle_entry_kind_disambiguation(source_with_kernel):
             "instruction": "skill-bytes-marker",
         },
     }
-    await k.write_document("contract-test", "Skill", "shared-name", skill_raw)
+    await k.write_instance("contract-test", "Skill", "shared-name", skill_raw)
     if hasattr(src, "publish"):
         await src.publish("contract-test", "Skill", "shared-name")
 

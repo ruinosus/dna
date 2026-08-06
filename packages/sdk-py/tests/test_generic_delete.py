@@ -1,6 +1,6 @@
 """Item 2 — the faces could create and update every Kind, and delete nothing.
 
-``kernel.delete_document`` has always existed; ``dna doc delete`` and four narrow
+``kernel.delete_instance`` has always existed; ``dna doc delete`` and four narrow
 REST routes use it. The MCP face had NO delete at all, so the only way to undo a
 mistaken generic write was a human with database access.
 
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import pytest
 
-from dna.application import documents as D
+from dna.application import instances as D
 from dna.application.live import LiveDna
 from dna.kernel import Kernel
 
@@ -98,10 +98,10 @@ class _Kernel:
     def kinds_with_trait(self, trait):
         return self._real.kinds_with_trait(trait)
 
-    async def get_document(self, scope, kind, name, *, tenant=None):
+    async def get_instance(self, scope, kind, name, *, tenant=None):
         return self.docs.get((scope, kind, name, tenant))
 
-    async def delete_document(self, scope, kind, name, **kw):
+    async def delete_instance(self, scope, kind, name, **kw):
         self.deleted.append((scope, kind, name, kw))
         self.docs.pop((scope, kind, name, kw.get("tenant")), None)
 
@@ -146,7 +146,7 @@ def _story_doc():
 @pytest.mark.asyncio
 async def test_delete_removes_and_pins_the_kind():
     k = _Kernel(Kernel.auto(), {(_SCOPE, "Story", "s-x"): _story_doc()})
-    out = await D.delete_document_impl(
+    out = await D.delete_instance_impl(
         _live(k), kind="Story", name="s-x", api_version=_STORY_AV)
     assert out["deleted"] is True
     scope, kind, name, kwargs = k.deleted[0]
@@ -166,7 +166,7 @@ async def test_deleting_a_refused_kind_raises_and_writes_nothing():
         },
     })
     with pytest.raises(D.DeleteRefused, match="APPEND-ONLY"):
-        await D.delete_document_impl(
+        await D.delete_instance_impl(
             _live(k), kind="AuditLog", name="a-1",
             api_version="github.com/ruinosus/dna/audit/v1")
     assert k.deleted == []
@@ -177,8 +177,8 @@ async def test_deleting_an_absent_document_is_an_error_not_a_quiet_success():
     """Reporting success for a delete that did nothing is how a caller convinces
     itself something is gone."""
     k = _Kernel(Kernel.auto())
-    with pytest.raises(D.UnknownDocumentError, match="nothing to delete"):
-        await D.delete_document_impl(
+    with pytest.raises(D.UnknownInstanceError, match="nothing to delete"):
+        await D.delete_instance_impl(
             _live(k), kind="Story", name="s-nope", api_version=_STORY_AV)
     assert k.deleted == []
 
@@ -186,10 +186,10 @@ async def test_deleting_an_absent_document_is_an_error_not_a_quiet_success():
 @pytest.mark.asyncio
 async def test_if_match_refuses_a_stale_delete_and_deletes_nothing():
     """A write that races loses one edit; a delete that races destroys a
-    document its author never saw."""
+    instance its author never saw."""
     k = _Kernel(Kernel.auto(), {(_SCOPE, "Story", "s-x"): _story_doc()})
     with pytest.raises(D.ConcurrentWriteError, match="changed since you read it"):
-        await D.delete_document_impl(
+        await D.delete_instance_impl(
             _live(k), kind="Story", name="s-x", api_version=_STORY_AV,
             if_match="sha256:stale")
     assert k.deleted == []
@@ -200,6 +200,6 @@ async def test_a_matching_if_match_goes_through():
     doc = _story_doc()
     k = _Kernel(Kernel.auto(), {(_SCOPE, "Story", "s-x"): doc})
     etag = D.spec_etag(doc["spec"])
-    out = await D.delete_document_impl(
+    out = await D.delete_instance_impl(
         _live(k), kind="Story", name="s-x", api_version=_STORY_AV, if_match=etag)
     assert out["deleted"] is True

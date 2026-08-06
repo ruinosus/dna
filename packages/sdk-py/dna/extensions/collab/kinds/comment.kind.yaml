@@ -1,4 +1,4 @@
-# Comment — a remark or status change attached to ANY document via target_ref.
+# Comment — a remark or status change attached to ANY instance via target_ref.
 #
 # s-descriptor-conversion-pattern: replaces CommentKind, the simplest of the
 # 23 class-only Kinds (58 lines) and the only one whose extension had no
@@ -54,7 +54,7 @@ spec:
         # lets the schema graph classify this as a known-undeclarable
         # reference instead of guessing from the field name and reporting a
         # gap. It replaces a hand-kept table row in `kind_graph`.
-        description: Kind:name of the target document
+        description: Kind:name of the target instance
       author:
         type: string
       body:

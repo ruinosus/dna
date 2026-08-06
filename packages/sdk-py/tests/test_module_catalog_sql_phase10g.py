@@ -65,10 +65,10 @@ def sqlite_src(tmp_path):
 
 
 def test_sqlite_publish_then_list_returns_in_order(sqlite_src):
-    asyncio.run(sqlite_src.save_document(
+    asyncio.run(sqlite_src.save_instance(
         "demo", "Genome", "demo", _package("demo", "1.0.0"), tenant="acme",
     ))
-    asyncio.run(sqlite_src.save_document(
+    asyncio.run(sqlite_src.save_instance(
         "demo", "Genome", "demo", _package("demo", "1.1.0"), tenant="acme",
     ))
     versions = asyncio.run(sqlite_src.list_module_versions("demo", tenant="acme"))
@@ -79,17 +79,17 @@ def test_sqlite_publish_then_list_returns_in_order(sqlite_src):
 def test_sqlite_republish_same_version_raises(sqlite_src):
     from dna.kernel.protocols import VersionAlreadyPublished
 
-    asyncio.run(sqlite_src.save_document(
+    asyncio.run(sqlite_src.save_instance(
         "demo", "Genome", "demo", _package("demo", "1.0.0"), tenant="acme",
     ))
     with pytest.raises(VersionAlreadyPublished, match="1.0.0"):
-        asyncio.run(sqlite_src.save_document(
+        asyncio.run(sqlite_src.save_instance(
             "demo", "Genome", "demo", _package("demo", "1.0.0"), tenant="acme",
         ))
 
 
 def test_sqlite_get_module_version_round_trip(sqlite_src):
-    asyncio.run(sqlite_src.save_document(
+    asyncio.run(sqlite_src.save_instance(
         "demo", "Genome", "demo", _package("demo", "1.4.2"), tenant="acme",
     ))
     raw = asyncio.run(sqlite_src.get_module_version("demo", "1.4.2", tenant="acme"))
@@ -104,7 +104,7 @@ def test_sqlite_get_missing_returns_none(sqlite_src):
 
 
 def test_sqlite_deprecate_flips_flag_and_persists_message(sqlite_src):
-    asyncio.run(sqlite_src.save_document(
+    asyncio.run(sqlite_src.save_instance(
         "demo", "Genome", "demo", _package("demo", "1.0.0"), tenant="acme",
     ))
     ok = asyncio.run(sqlite_src.deprecate_module_version(
@@ -130,7 +130,7 @@ def test_sqlite_unversioned_module_does_not_appear_in_versions(sqlite_src):
     explicitly with WHERE semver IS NOT NULL."""
     raw = _package("demo", "1.0.0")
     raw["spec"]["version"] = None
-    asyncio.run(sqlite_src.save_document(
+    asyncio.run(sqlite_src.save_instance(
         "demo", "Genome", "demo", raw, tenant="acme",
     ))
     versions = asyncio.run(sqlite_src.list_module_versions("demo", tenant="acme"))
@@ -139,10 +139,10 @@ def test_sqlite_unversioned_module_does_not_appear_in_versions(sqlite_src):
 
 def test_sqlite_tenant_isolation_in_versions(sqlite_src):
     """acme's 1.0.0 must not appear in globex's version listing."""
-    asyncio.run(sqlite_src.save_document(
+    asyncio.run(sqlite_src.save_instance(
         "demo", "Genome", "demo", _package("demo", "1.0.0", "acme"), tenant="acme",
     ))
-    asyncio.run(sqlite_src.save_document(
+    asyncio.run(sqlite_src.save_instance(
         "demo", "Genome", "demo", _package("demo", "2.0.0", "globex"), tenant="globex",
     ))
     acme_versions = asyncio.run(sqlite_src.list_module_versions("demo", tenant="acme"))

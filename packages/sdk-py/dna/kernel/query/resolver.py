@@ -1,7 +1,7 @@
 """Composition V2 — pure resolution types + merge utilities
 (Phase 17, Story s-comp-f2-resolver).
 
-This module defines the data shapes returned by ``kernel.resolve_document``
+This module defines the data shapes returned by ``kernel.resolve_instance``
 plus pure merge utilities — no engine dependency. The engine itself (and
 every other composition concern: CompositionProfile wiring, the shared
 ref-validation core, the ``mi.composition`` namespace) lives in the
@@ -28,7 +28,7 @@ Architectural model (summary):
                             individual fields (and provenance tracks
                             which layer set each field)
 
-  Returns ``ResolvedDocument`` carrying:
+  Returns ``ResolvedInstance`` carrying:
     - the merged ``doc`` dict (None if no layer found)
     - ``provenance`` = full resolution path (which layers tried, hit/miss)
     - ``is_inherited`` (derived — true iff effective_layer.scope != S)
@@ -167,15 +167,15 @@ class ResolutionPath:
 
 
 @dataclass
-class ResolvedDocument:
-    """Result of ``kernel.resolve_document`` — the doc plus full
+class ResolvedInstance:
+    """Result of ``kernel.resolve_instance`` — the doc plus full
     provenance.
 
     Studio renders banner/badge directly from ``provenance`` and
     ``is_inherited`` — no client-side detection logic needed.
     """
     doc: dict[str, Any] | None
-    """The merged document (or None if not found in any layer)."""
+    """The merged instance (or None if not found in any layer)."""
 
     provenance: ResolutionPath
     """Full ordered resolution path. Includes layers consulted but
@@ -248,7 +248,7 @@ def _merge_spec_subtree(
     a leaf and is recorded at the container path.
 
     Values are deep-copied into the merged doc so the result never
-    aliases the (cached) raw layer documents.
+    aliases the (cached) raw layer instances.
     """
     for k, v in src.items():
         path = f"{prefix}.{k}"

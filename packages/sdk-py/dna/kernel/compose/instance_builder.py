@@ -19,7 +19,7 @@ from dna.kernel.protocols import CacheItem, ResolveError
 
 if TYPE_CHECKING:  # pragma: no cover
     from dna.kernel.collaborator_ports import InstanceBuilderHost
-    from dna.kernel.document import Document
+    from dna.kernel.instance import Instance
     from dna.kernel.manifest import ManifestInstance
 
 logger = logging.getLogger(__name__)
@@ -171,7 +171,7 @@ class InstanceBuilder:
             all_raws = resolver.resolve(all_raws, layers, _DirectSource(), scope, policies)
 
         # ── Phase 1: parse + register KindDefinitions ──
-        # i-081: these documents came from THIS scope's store, and the Kinds
+        # i-081: these instances came from THIS scope's store, and the Kinds
         # they declare govern this scope and no other.
         added_readers = k._register_kind_definitions(all_raws, scope=scope)
 
@@ -192,17 +192,17 @@ class InstanceBuilder:
         # i-081: from here on the MI is built against the Kinds that GOVERN this
         # scope — the globals plus the ones this scope's own store declared.
         # Another scope's store-loaded Kind is not in this map, so it cannot
-        # route this scope's storage, validate its documents or compose into
+        # route this scope's storage, validate its instances or compose into
         # its prompts.
         _scoped_kinds = k.kinds_for_scope(scope)
-        documents: list[Document] = []
+        instances: list[Instance] = []
         _resolve_errors: list[str] = resolve_errors or []
         for raw in all_raws:
             # two-planes F2.5 (spec §F2.5): plane="record" Kinds never enter
             # the MI materialization — the MI is O(composição). Filter BEFORE
             # _parse_doc (the parse is the dominant cost, not the load_all
             # I/O). Record reads go through the kernel record plane
-            # (mi.all/one delegation, kernel.query/get_document).
+            # (mi.all/one delegation, kernel.query/get_instance).
             # Exact (apiVersion, kind) lookup first; on miss fall back to
             # kind_plane (by NAME) — real datasets hold legacy apiVersion
             # variants (e.g. github.com/ruinosus/dna/cognitive/v1 Engram) that would
@@ -225,13 +225,13 @@ class InstanceBuilder:
             origin = raw.pop("_origin", "local") if "_origin" in raw else "local"
             doc = k._parse_doc(raw, origin=origin)
             if doc:
-                documents.append(doc)
+                instances.append(doc)
 
         # F2.5 review C2 — stamp the request tenant on the EAGER MI too,
         # mirroring the lazy path in ``instance_async`` (kernel binding
         # first, then layers["tenant"]); the ``__base__`` sentinel means
         # no-overlay → no stamp. Without this the record-delegation
-        # branches (mi.all/one → kernel.query/get_document with
+        # branches (mi.all/one → kernel.query/get_instance with
         # ``getattr(mi, "_tenant", None)``) read tenant=None and
         # tenant-overlay records go invisible for tenanted requests.
         effective_tenant = k.tenant
@@ -242,7 +242,7 @@ class InstanceBuilder:
 
         mi = ManifestInstance(
             scope=scope,
-            documents=documents,
+            instances=instances,
             kinds=_scoped_kinds,
             source=k._source,
             resolve_errors=_resolve_errors,
@@ -270,12 +270,12 @@ class InstanceBuilder:
 
     async def _parent_scopes(self, scope: str) -> list[str]:
         """The DECLARED ancestors of ``scope``, nearest first — the same walk
-        the documents take (``compute_resolution_chain``), fail-soft to the V1
+        the instances take (``compute_resolution_chain``), fail-soft to the V1
         single ``_lib`` hop when the chain cannot be read.
 
-        Factored out because i-096 needs the identical answer the document
+        Factored out because i-096 needs the identical answer the instance
         merge below already computes: one chain, one meaning of "parent", or
-        documents and Kinds inherit along two different graphs."""
+        instances and Kinds inherit along two different graphs."""
         k = self._k
         if scope == k._INHERIT_PARENT_SCOPE:
             return []
@@ -300,27 +300,27 @@ class InstanceBuilder:
         """i-096 — register the Kinds ``scope``'s DECLARED ANCESTORS declare, so
         the child scope can read *and write* them. Returns the rescan gate.
 
-        The asymmetry this closes. Documents already flow down the declared
+        The asymmetry this closes. Instances already flow down the declared
         chain (``compute_resolution_chain``, the merge in ``instance_async``
         below), but the KINDS did not: ``KindDefinition`` is a BOOTSTRAP Kind,
         so a base-scope descriptor was loaded and registered **bound to the base
         scope only** (i-081's ``__scopes__``). In a child scope the Kind then
         did not exist — ``kinds_for(scope)`` filtered it out — so
-        ``GET /v1/kinds/<K>/documents?tenant=<ws>`` 404'd and a write was refused
-        with *"Kind 'K' is not registered on this source"*, while documents of
+        ``GET /v1/kinds/<K>/instances?tenant=<ws>`` 404'd and a write was refused
+        with *"Kind 'K' is not registered on this source"*, while instances of
         that very Kind listed fine through the child. Every PRODUCT Kind
         therefore had to become an extension (code + release) instead of a
-        document, which is the declarative-Kind promise inverted.
+        instance, which is the declarative-Kind promise inverted.
 
         **What this is NOT (the i-081 guard-rail).** Inheritance descends the
         DECLARED chain and nothing else. A sibling scope — one that merely
         exists in the same store, or that shares the same parent — is on no
-        chain of this scope, so its documents are never even read here. The
+        chain of this scope, so its instances are never even read here. The
         widening is per (child scope, ancestor descriptor); it is not a
         relaxation of ``applies_to``, which still answers from ``__scopes__``
         alone, so every other filter i-081 installed keeps its exact shape.
 
-        **Precedence is local-wins**, the same as the documents': this pass runs
+        **Precedence is local-wins**, the same as the instances': this pass runs
         AFTER the scope's own Phase 1, and ``inherited_from=`` makes the funnel
         never replace an already-registered descriptor. A nearer ancestor also
         beats a farther one for the same reason — ``parents`` is nearest-first,
@@ -346,13 +346,13 @@ class InstanceBuilder:
             try:
                 parent_bootstrap = await k._source.load_bootstrap_docs(parent)
             except Exception as e:  # noqa: BLE001
-                # DEBUG, unlike the document merge's WARNING for the same
+                # DEBUG, unlike the instance merge's WARNING for the same
                 # ancestor: this pass runs on the TTL'd ``ensure_kinds`` refresh
                 # for EVERY scope, and its commonest miss is the V1 ``_lib``
                 # tail every chain ends at, which most deployments never
                 # materialize as a real scope. A line per scope per window for
                 # an expected absence is noise that buries the real ones. The
-                # document merge below still logs loud for a parent that holds
+                # instance merge below still logs loud for a parent that holds
                 # content and cannot be read.
                 logger.debug(
                     "instance build: ancestor scope %r bootstrap load failed — "
@@ -397,7 +397,7 @@ class InstanceBuilder:
         into layers; ``lazy`` opts into bootstrap-only MI (mi.all/one delegate
         to kernel.query). Default honors DNA_LAZY_MI.
 
-        ``lazy`` trades away the DOCUMENT materialization, never the Kind
+        ``lazy`` trades away the INSTANCE materialization, never the Kind
         registry: both branches run Phase 1 (register the Kinds this scope's
         store declares) so a lazily-booted kernel enforces the same schemas and
         routes to the same containers an eagerly-booted one does."""
@@ -485,17 +485,17 @@ class InstanceBuilder:
             # this. ``BOOTSTRAP_KIND_NAMES`` puts ``KindDefinition`` first
             # precisely so a scope's own declared Kinds are registered before
             # anything parses against them; this branch was loading those
-            # documents and parsing them while never running the registration
+            # instances and parsing them while never running the registration
             # pass, so no store-declared Kind ever reached the registry. Since
             # registration is what confers schema validation and storage
             # routing, on a lazy boot an APPROVED Kind governed nothing and
             # every registry consumer — the write pipeline, the generic
-            # document use-cases, the MI's own kinds map two lines below —
+            # instance use-cases, the MI's own kinds map two lines below —
             # answered "that Kind is not registered on this source".
             #
-            # ``lazy`` is a trade about DOCUMENTS (the MI holds bootstrap only
+            # ``lazy`` is a trade about INSTANCES (the MI holds bootstrap only
             # and delegates ``all``/``one`` to ``kernel.query``), not about
-            # KINDS. The documents this pass reads are already in hand, so the
+            # KINDS. The instances this pass reads are already in hand, so the
             # cost is a parse over the bootstrap slice and nothing else.
             #
             # ``scope=`` binds the resulting Kinds to the scope whose store
@@ -506,22 +506,22 @@ class InstanceBuilder:
             # What is deliberately NOT done: the declarative-kind RESCAN the
             # eager path runs when registration added a bundle reader
             # (``_rescan_after_kinddef_register_async``). That rescan re-reads
-            # every document in the scope to enrich a document list a lazy MI
+            # every instance in the scope to enrich an instance list a lazy MI
             # does not hold — it is exactly the cost ``lazy`` exists to avoid,
             # and the reader it would use was installed on the kernel by the
             # registration call itself, so the on-demand reads a lazy MI
-            # delegates to ``kernel.query`` pick those documents up anyway.
+            # delegates to ``kernel.query`` pick those instances up anyway.
             k._register_kind_definitions(bootstrap_docs, scope=scope)
             # i-096 — and the Kinds the DECLARED ANCESTORS declare, AFTER the
             # local pass so a local declaration wins. This branch is the one
             # ``LiveDna.ensure_kinds`` drives, so it is the branch the REST/MCP
-            # document routes resolve their Kind against: without it, the
+            # instance routes resolve their Kind against: without it, the
             # inheritance would exist only on the eager path and a workspace
             # would see the base's Kinds or not depending on which surface it
             # arrived through.
             await self._register_inherited_kind_definitions(scope)
             # The second door onto the same registry (``custom_kinds`` on the
-            # scope's root document, same approval gate) — wired here too, or
+            # scope's root instance, same approval gate) — wired here too, or
             # "lazy and eager agree on the registry" would hold for one door
             # and not the other.
             lazy_root_raw = next(
@@ -535,14 +535,14 @@ class InstanceBuilder:
             )
             if lazy_root_raw:
                 k._register_custom_kinds(lazy_root_raw, scope=scope)
-            parsed_bootstrap: list[Document] = []
+            parsed_bootstrap: list[Instance] = []
             for raw in bootstrap_docs:
                 doc = k._parse_doc(raw, origin="local")
                 if doc:
                     parsed_bootstrap.append(doc)
             mi = ManifestInstance(
                 scope=scope,
-                documents=parsed_bootstrap,
+                instances=parsed_bootstrap,
                 kinds=k.kinds_for_scope(scope),
                 source=k._source,
                 resolve_errors=resolve_errors,

@@ -1,4 +1,4 @@
-"""write_document blocks per-tenant overlays of _lib Agents.
+"""write_instance blocks per-tenant overlays of _lib Agents.
 
 The `_lib` scope is the shared agent baseline (jarvis + the 12 transversais).
 A per-tenant overlay silently FORKS the persona and shadows the base for that
@@ -40,7 +40,7 @@ def _ua_raw() -> dict:
 async def test_platform_agent_tenant_fork_is_blocked():
     k = _kernel()
     with pytest.raises(TenantNotAllowed, match="_lib agent"):
-        await k.write_document(
+        await k.write_instance(
             "_lib", "Agent", "jarvis", _ua_raw(), tenant="acme",
         )
 
@@ -49,7 +49,7 @@ async def test_platform_agent_tenant_fork_is_blocked():
 async def test_platform_agent_base_write_is_allowed():
     k = _kernel()
     # No tenant → base write of a _lib agent is the canonical path.
-    await k.write_document("_lib", "Agent", "jarvis", _ua_raw())
+    await k.write_instance("_lib", "Agent", "jarvis", _ua_raw())
 
 
 @pytest.mark.asyncio
@@ -57,6 +57,6 @@ async def test_non_platform_scope_agent_tenant_overlay_is_allowed():
     k = _kernel()
     # A normal scope's agent CAN have a tenant overlay — the guard is
     # _lib-specific, not a blanket ban on tenanted agents.
-    await k.write_document(
+    await k.write_instance(
         "acme-app", "Agent", "helper", _ua_raw(), tenant="acme",
     )

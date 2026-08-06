@@ -4,7 +4,7 @@
 The MER exists because two HAND-WRITTEN snapshots were published and both
 aged out inside a day: a table was removed, a control table swapped, a quota
 counter added, and the plan moved from workspace to account, while the
-documents went on asserting the old shape. That is the failure mode an audit
+instances went on asserting the old shape. That is the failure mode an audit
 spent a day removing from this repo — a declaration shipped, reality diverging
 in silence.
 

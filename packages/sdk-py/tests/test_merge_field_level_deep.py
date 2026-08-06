@@ -159,7 +159,7 @@ def test_empty_dict_contribution_is_recorded_at_its_container_path():
 
 def test_merged_doc_does_not_alias_the_input_layer_docs():
     """Mutating the merged result must never write through into the raw
-    layer documents (which come from the kernel's granular cache)."""
+    layer instances (which come from the kernel's granular cache)."""
     lib_raw = _doc({"config": {"model": "gpt-5"}, "tools": ["search"]})
     merged, _, _ = merge_field_level([(_layer("_lib"), lib_raw)])
     merged["spec"]["config"]["model"] = "tampered"

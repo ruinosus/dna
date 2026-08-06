@@ -16,7 +16,7 @@ Schema reality (verified against the Alembic baseline revision,
 and ``dna/adapters/search/pgvector_migrations.py`` — READ THOSE FILES, don't
 trust a summary):
 
-  * ``dna_documents``       — PK ``(scope, kind, name, tenant)``. ``kind`` is
+  * ``dna_instances``       — PK ``(scope, kind, name, tenant)``. ``kind`` is
     a real column; ``content`` is TEXT holding a JSON envelope
     (``json.dumps``/``json.loads`` — NOT YAML), so rewriting ``kind`` +
     ``apiVersion`` is pure SQL, no parse/re-serialize round trip needed
@@ -25,15 +25,15 @@ trust a summary):
     participates in a **partial** UNIQUE index
     (``scope, kind, name, tenant, semver``) that applies *only when semver
     IS NOT NULL* — and only ``Genome``/module docs ever set semver
-    (``SqlAlchemySource.save_document``: ``if kind == "Genome": spec_version
+    (``SqlAlchemySource.save_instance``: ``if kind == "Genome": spec_version
     = …``). A memory Kind's version rows are practically collision-free, but
     the pre-flight checks the partial-unique case anyway rather than assume.
-  * ``dna_layer_documents``  — PK ``(scope, layer_id, layer_value, kind,
-    name)``. Tenant overlays are routed through ``dna_documents.tenant``
-    instead (``save_layer_document``: ``layer_id == "tenant"`` redirects to
-    ``save_document``), so this table normally only carries non-tenant
+  * ``dna_layer_instances``  — PK ``(scope, layer_id, layer_value, kind,
+    name)``. Tenant overlays are routed through ``dna_instances.tenant``
+    instead (``save_layer_instance``: ``layer_id == "tenant"`` redirects to
+    ``save_instance``), so this table normally only carries non-tenant
     layers — but the schema itself still keys on ``kind``, so it is treated
-    generically like ``dna_documents``.
+    generically like ``dna_instances``.
   * ``dna_bundle_entries``   — PK ``(scope, kind, name, entry_path,
     tenant)``. ``content`` here is a raw bundle file body (markdown/YAML
     text or bytes), NOT a JSON envelope — there is no ``apiVersion`` signal
@@ -52,7 +52,7 @@ trust a summary):
     rewrite-vs-leave-alone call.
 
 **Discrepancy vs the story's schema summary**: the story states
-``dna_documents``' PK is ``(scope, kind, name)``. As of migration version 3
+``dna_instances``' PK is ``(scope, kind, name)``. As of migration version 3
 (Phase 8a, "tenant first-class column") the PK is
 ``(scope, kind, name, tenant)`` — ``tenant`` was added to the PK, not just
 the table. The same is true of ``dna_bundle_entries``' PK. This module's
@@ -134,7 +134,7 @@ _VALID_SCHEMA_IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
 # Argument for "leave immutable": dna_outbox is an event LOG, not a live
 # identity surface. Nothing resolves Kind identity through it — Kind
 # resolution is the kernel's exact (apiVersion, kind) tuple lookup over
-# dna_documents-sourced instances (kernel/manifest.py:686); dna_outbox rows
+# dna_instances-sourced instances (kernel/manifest.py:686); dna_outbox rows
 # are read by the eventbus (PostgresEventBus / pg_notify subscribers) purely
 # to invalidate caches and checkpoint dna_versions_seq, keyed by
 # (scope, tenant, id) — never by kind. Rewriting old rows would misrepresent
@@ -259,7 +259,7 @@ async def _table_exists(conn: Any, schema: str, table: str) -> bool:
 async def _preflight_content_table(
     conn: Any, schema: str, table: str, key_cols: tuple[str, ...],
 ) -> TableReport:
-    """``dna_documents`` / ``dna_layer_documents`` shape: a JSON ``content``
+    """``dna_instances`` / ``dna_layer_instances`` shape: a JSON ``content``
     envelope + a denormalized ``kind`` column. Collision key = ``key_cols``
     (the PK minus ``kind``)."""
     report = TableReport(table=table)
@@ -388,7 +388,7 @@ async def _apply_content_table(
     is False for ``dna_versions``, which has no ``updated_at`` column at all
     (only ``created_at`` — an immutable historical timestamp this migration
     must NOT touch, since it did not create a new version, it corrected the
-    identity of an existing one). ``dna_documents``/``dna_layer_documents``
+    identity of an existing one). ``dna_instances``/``dna_layer_instances``
     both have a real ``updated_at TEXT`` column (same ISO-8601 convention
     ``SqlAlchemySource`` writes); a consumer that treats it as a staleness
     signal must see this rewrite, so it is bumped here too."""
@@ -439,12 +439,12 @@ async def migrate_postgres(
     try:
         report = PgMigrationReport(schema=schema)
 
-        report.tables["dna_documents"] = await _preflight_content_table(
-            conn, schema, "dna_documents", ("scope", "name", "tenant"),
+        report.tables["dna_instances"] = await _preflight_content_table(
+            conn, schema, "dna_instances", ("scope", "name", "tenant"),
         )
         report.tables["dna_versions"] = await _preflight_versions(conn, schema)
-        report.tables["dna_layer_documents"] = await _preflight_content_table(
-            conn, schema, "dna_layer_documents",
+        report.tables["dna_layer_instances"] = await _preflight_content_table(
+            conn, schema, "dna_layer_instances",
             ("scope", "layer_id", "layer_value", "name"),
         )
         report.tables["dna_bundle_entries"] = await _preflight_kind_only_table(
@@ -467,7 +467,7 @@ async def migrate_postgres(
                 for table, tr in report.tables.items():
                     if tr.skipped_missing_table or tr.candidates == 0:
                         continue
-                    if table in ("dna_documents", "dna_layer_documents"):
+                    if table in ("dna_instances", "dna_layer_instances"):
                         await _apply_content_table(conn, schema, table)
                     elif table == "dna_versions":
                         await _apply_content_table(conn, schema, table, touch_updated_at=False)

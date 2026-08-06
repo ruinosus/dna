@@ -4,8 +4,8 @@ A schema migration that only ever runs on a fresh bootstrap is untested where
 it matters. These build a database at the PREVIOUS revision, fill it with the
 shape a running deployment has — several Kinds, tenant overlays, published
 semver releases, version history, bundle entries (text and binary), and the
-awkward rows: a document that declares no apiVersion, a bundle entry whose
-document is gone — then migrate it and prove nothing was lost or misattributed.
+awkward rows: an instance that declares no apiVersion, a bundle entry whose
+instance is gone — then migrate it and prove nothing was lost or misattributed.
 
 They also prove the refusal: where a row's Kind is genuinely undecidable, the
 migration fails with the list instead of picking, and the transaction leaves
@@ -131,7 +131,7 @@ def db_factory(request, tmp_path):
 # ---------------------------------------------------------------------------
 
 #: (scope, kind, apiVersion-in-content, name, tenant). ``None`` for the
-#: apiVersion means the stored document declares none — the row the founder's
+#: apiVersion means the stored instance declares none — the row the founder's
 #: question is about.
 _DOCS: list[tuple[str, str, str | None, str, str]] = [
     ("acme", "Genome", CORE, "acme", ""),
@@ -144,7 +144,7 @@ _DOCS: list[tuple[str, str, str | None, str, str]] = [
     ("acme", "LayerPolicy", POLICY, "default", ""),
     ("acme", "Engram", MEM, "e-recall-1", ""),
     ("acme", "Engram", MEM, "e-recall-2", "tenant-one"),
-    # The undecidable-adjacent case in its BENIGN form: a document declaring no
+    # The undecidable-adjacent case in its BENIGN form: an instance declaring no
     # apiVersion whose Kind name is used by exactly one apiVersion elsewhere.
     # Nothing is inferred for it — it records ''.
     ("acme", "Story", None, "s-legacy", ""),
@@ -159,11 +159,11 @@ _ENTRIES: list[tuple[str, str, str, str, str, Any]] = [
     ("acme", "Agent", "planner", "tenant-one", "SKILL.md", "# forked"),
     ("acme", "Story", "s-alpha", "", "notes.md", "notes"),
     # Owner published under CORE, archived under MOVED_FROM — the published
-    # document is the one that must win.
+    # instance is the one that must win.
     ("acme", "Card", "c-moved", "", "front.md", "moved"),
     # No published row at all: the newest archived version is the only owner.
     ("acme", "Card", "c-unpublished", "", "front.md", "unpublished"),
-    # ORPHAN: no documents row and no versions row owns this. Nothing is left
+    # ORPHAN: no instances row and no versions row owns this. Nothing is left
     # to inherit from, so it keeps ''.
     ("acme", "Deck", "gone", "", "leftover.md", "orphan"),
 ]
@@ -185,9 +185,9 @@ def _stored_tenant(db: _Db, tenant: str) -> str | None:
 
 
 def _seeded_docs(db: _Db) -> list[tuple[str, str, str | None, str, str]]:
-    """The ``documents`` rows this dialect can actually hold.
+    """The ``instances`` rows this dialect can actually hold.
 
-    [dialect] i-092: the SQLite ``documents`` primary key does not include
+    [dialect] i-092: the SQLite ``instances`` primary key does not include
     ``tenant``, so a tenant overlay cannot sit beside its base row there. That
     is pre-existing schema debt this revision deliberately does NOT change —
     widening the key with ``api_version`` is one change, and quietly fixing a
@@ -200,7 +200,7 @@ def _seeded_docs(db: _Db) -> list[tuple[str, str, str | None, str, str]]:
 
 
 async def _seed(db: _Db) -> None:
-    docs, vers, entries = (db.table("documents"), db.table("versions"),
+    docs, vers, entries = (db.table("instances"), db.table("versions"),
                            db.table("bundle_entries"))
     seeded = _seeded_docs(db)
     for scope, kind, api_version, name, tenant in _DOCS:
@@ -215,7 +215,7 @@ async def _seed(db: _Db) -> None:
                  # writes: '' on pg (NOT NULL DEFAULT ''), NULL on sqlite.
                  "t": _stored_tenant(db, tenant)},
             )
-        # Three archived versions each — the shape a document that has been
+        # Three archived versions each — the shape an instance that has been
         # edited a few times really has.
         for v in (1, 2, 3):
             await db.exec(
@@ -228,10 +228,10 @@ async def _seed(db: _Db) -> None:
                  "sv": f"1.0.{v}" if kind == "Genome" else None},
                 binds=[sa.bindparam("d", type_=sa.Boolean)],
             )
-    # A document whose apiVersion CHANGED over its history: the published row
+    # An instance whose apiVersion CHANGED over its history: the published row
     # says CORE, the archived versions still say the old namespace. The two
     # backfill sources for a bundle entry therefore disagree, which is the only
-    # way to prove the published document wins — with identical values either
+    # way to prove the published instance wins — with identical values either
     # path would look right.
     await db.exec(
         f"INSERT INTO {docs} (scope, kind, name, content, version, updated_at, "
@@ -246,7 +246,7 @@ async def _seed(db: _Db) -> None:
          "t": _stored_tenant(db, "")},
         binds=[sa.bindparam("d", type_=sa.Boolean)],
     )
-    # A document with version history but no published row — the entry has
+    # An instance with version history but no published row — the entry has
     # nothing to inherit from except the newest archived version.
     await db.exec(
         f"INSERT INTO {vers} (scope, kind, name, content, version, is_draft, "
@@ -288,7 +288,7 @@ async def test_migration_preserves_every_row_and_attributes_it_correctly(
     db, cleanup = await db_factory()
     try:
         await _seed(db)
-        tables = ("documents", "versions", "bundle_entries")
+        tables = ("instances", "versions", "bundle_entries")
         before = {t: await db.count(t) for t in tables}
 
         await db.upgrade_to_head()
@@ -302,8 +302,8 @@ async def test_migration_preserves_every_row_and_attributes_it_correctly(
             "collided"
         )
 
-        # Every documents/versions row carries EXACTLY what its own content says.
-        for table in ("documents", "versions"):
+        # Every instances/versions row carries EXACTLY what its own content says.
+        for table in ("instances", "versions"):
             for scope, kind, name, tenant, api_version, content in await db.rows(
                 f"SELECT scope, kind, name, COALESCE(tenant, ''), api_version, "
                 f"content FROM {db.table(table)}"
@@ -312,17 +312,17 @@ async def test_migration_preserves_every_row_and_attributes_it_correctly(
                 assert api_version == declared, (
                     f"{table} row (scope={scope} kind={kind} name={name} "
                     f"tenant={tenant}) was attributed {api_version!r} but its "
-                    f"document declares {declared!r}"
+                    f"instance declares {declared!r}"
                 )
 
-        # The document that declares nothing keeps '' — not the apiVersion of
+        # The instance that declares nothing keeps '' — not the apiVersion of
         # the other Story rows. Nothing was inferred for it.
         assert await db.rows(
-            f"SELECT api_version FROM {db.table('documents')} "
+            f"SELECT api_version FROM {db.table('instances')} "
             "WHERE name = 's-legacy'"
         ) == [("",)]
 
-        # Bundle entries inherited their document's apiVersion...
+        # Bundle entries inherited their instance's apiVersion...
         owned = dict(await db.rows(
             f"SELECT entry_path || '@' || tenant, api_version "
             f"FROM {db.table('bundle_entries')} WHERE kind = 'Agent'"
@@ -333,7 +333,7 @@ async def test_migration_preserves_every_row_and_attributes_it_correctly(
             f"SELECT api_version FROM {db.table('bundle_entries')} "
             "WHERE kind = 'Story'"
         ) == [(SDLC,)]
-        # The published document wins over the archived versions...
+        # The published instance wins over the archived versions...
         assert await db.rows(
             f"SELECT api_version FROM {db.table('bundle_entries')} "
             "WHERE name = 'c-moved'"
@@ -343,7 +343,7 @@ async def test_migration_preserves_every_row_and_attributes_it_correctly(
             f"SELECT api_version FROM {db.table('bundle_entries')} "
             "WHERE name = 'c-unpublished'"
         ) == [(POLICY,)]
-        # ...and the orphan, with no document to inherit from, kept ''.
+        # ...and the orphan, with no instance to inherit from, kept ''.
         assert await db.rows(
             f"SELECT api_version FROM {db.table('bundle_entries')} "
             "WHERE kind = 'Deck'"
@@ -352,7 +352,7 @@ async def test_migration_preserves_every_row_and_attributes_it_correctly(
         # Content itself is byte-identical — the migration touched keys, not data.
         for scope, kind, api_version, name, tenant in _seeded_docs(db):
             stored = await db.rows(
-                f"SELECT content FROM {db.table('documents')} WHERE scope = :s "
+                f"SELECT content FROM {db.table('instances')} WHERE scope = :s "
                 "AND kind = :k AND name = :n AND COALESCE(tenant, '') = :t",
                 {"s": scope, "k": kind, "n": name, "t": tenant},
             )
@@ -365,7 +365,7 @@ async def test_migration_preserves_every_row_and_attributes_it_correctly(
 
 @pytest.mark.asyncio
 async def test_the_adapter_reads_a_migrated_database_back(db_factory):
-    """After the migration the running adapter serves the same documents."""
+    """After the migration the running adapter serves the same instances."""
     from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
     db, cleanup = await db_factory()
@@ -384,7 +384,7 @@ async def test_the_adapter_reads_a_migrated_database_back(db_factory):
                  for d in docs}
         assert ("Story", "s-alpha") in found
         assert ("Story", "s-legacy") in found, (
-            "the document that declares no apiVersion stopped being visible"
+            "the instance that declares no apiVersion stopped being visible"
         )
         # Bare reads answer exactly as they did before the column existed.
         one = await src.load_one("acme", "Agent", "planner")
@@ -403,7 +403,7 @@ async def test_the_adapter_reads_a_migrated_database_back(db_factory):
         cat = await src.list_module_versions("acme")
         assert [e["version"] for e in cat] == ["1.0.1", "1.0.2", "1.0.3"]
         # And a NEW write lands next to the migrated rows without disturbing them.
-        await src.save_document("acme", "Story", "s-alpha", {
+        await src.save_instance("acme", "Story", "s-alpha", {
             "apiVersion": SDLC, "kind": "Story",
             "metadata": {"name": "s-alpha"}, "spec": {"title": "edited"},
         })
@@ -427,7 +427,7 @@ async def test_an_undecidable_row_refuses_the_migration_with_the_list(db_factory
     """
     db, cleanup = await db_factory()
     try:
-        docs = db.table("documents")
+        docs = db.table("instances")
         for api_version, name in (("a.example/v1", "d-1"),
                                   ("b.example/v1", "d-2"),
                                   (None, "d-3")):
@@ -437,7 +437,7 @@ async def test_an_undecidable_row_refuses_the_migration_with_the_list(db_factory
                 "'2026-01-01', '')",
                 {"n": name, "c": _content("Deal", api_version, name)},
             )
-        before = await db.count("documents")
+        before = await db.count("instances")
 
         with pytest.raises(RuntimeError) as exc:
             await db.upgrade_to_head()
@@ -452,7 +452,7 @@ async def test_an_undecidable_row_refuses_the_migration_with_the_list(db_factory
 
         # The transaction rolled back: the database is exactly as it was, still
         # on the previous revision, still serving.
-        assert await db.count("documents") == before
+        assert await db.count("instances") == before
         prefix = f"{db.schema}." if db.schema else ""
         revision = await db.rows(f"SELECT version_num FROM {prefix}alembic_version")
         assert revision == [(PREVIOUS_REVISION,)], (
@@ -547,14 +547,14 @@ async def test_a_writer_that_predates_the_column_still_produces_readable_rows(
         await db.upgrade_to_head()
         # Verbatim the INSERT the pre-0003 adapter emitted.
         await db.exec(
-            f"INSERT INTO {db.table('documents')} (scope, kind, name, content, "
+            f"INSERT INTO {db.table('instances')} (scope, kind, name, content, "
             "version, updated_at, tenant) "
             "VALUES ('acme', 'Story', 's-old', :c, 1, '2026-01-01', :t)",
             {"c": _content("Story", SDLC, "s-old"),
              "t": _stored_tenant(db, "")},
         )
         assert await db.rows(
-            f"SELECT api_version FROM {db.table('documents')}"
+            f"SELECT api_version FROM {db.table('instances')}"
         ) == [("",)]
 
         src = SqlAlchemySource(
@@ -577,12 +577,12 @@ async def test_an_undeclared_row_is_not_inferred_from_its_neighbours(db_factory)
 
     The temptation is to say "every other Story here is sdlc/v1, so this one is
     too". That is the same guess the refusal exists to prevent, one instance
-    smaller, and the document itself says nothing. ``''`` is a fact about the
+    smaller, and the instance itself says nothing. ``''`` is a fact about the
     row; the neighbour's apiVersion would be a story about it.
     """
     db, cleanup = await db_factory()
     try:
-        docs = db.table("documents")
+        docs = db.table("instances")
         for api_version, name in ((SDLC, "s-one"), (None, "s-two")):
             await db.exec(
                 f"INSERT INTO {docs} (scope, kind, name, content, version, "

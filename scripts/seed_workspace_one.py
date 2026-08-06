@@ -9,7 +9,7 @@ is re-declaring the ONE pre-existing workspace whose rows predate the write path
 
 That workspace's id is the GUID below. It is that value because the founder's
 live rows were already physically keyed by his Azure tenant id in the
-``dna_documents.tenant`` column, so adopting it as the workspace id meant no data
+``dna_instances.tenant`` column, so adopting it as the workspace id meant no data
 move. Post-D5 that is **historical trivia, not a rule**: the ``tid`` is a fact of
 authentication and nothing in the runtime derives, compares or validates a
 workspace id against one. The GUID below is simply this workspace's id.
@@ -66,7 +66,7 @@ creation, but workspace #1 predates that field and has none. Re-running this
 seed writes it — the backfill is one idempotent re-run of the script that
 already OWNS this workspace's declaration, using the ``tid`` knob it already
 had. No new script, no migration, no schema change (Kind docs are rows in a
-generic ``dna_documents`` table — the physical schema is untouched).
+generic ``dna_instances`` table — the physical schema is untouched).
 
 Why data and not a code fallback: a "workspace with no account_id ⇒ the account
 IS the workspace_id" rule in the resolver would be the per-workspace plan model
@@ -93,7 +93,7 @@ from dna.tenancy import PROVIDER_ACCOUNT_NAMESPACES, namespaced_account_id
 TENANT_API = "github.com/ruinosus/dna/tenant/v1"
 LIB_SCOPE = "_lib"  # GLOBAL Kinds live here (tenant column empty).
 
-# Workspace #1's id — the value already in dna_documents.tenant for all 19 of the
+# Workspace #1's id — the value already in dna_instances.tenant for all 19 of the
 # founder's rows (it was his Azure tenant id, which is how it came to be this
 # string; post-D5 it is just this workspace's opaque id).
 DEFAULT_WORKSPACE_ID = "c5b891f7-65c2-4417-a5af-22cab24dc1d5"
@@ -204,7 +204,7 @@ async def seed(
     account_id: str | None = ACCOUNT_ID,
     created_at: str | None = None,
 ) -> tuple[str, str]:
-    """Write workspace #1 + its owner grant through ``kernel.write_document``
+    """Write workspace #1 + its owner grant through ``kernel.write_instance``
     (schema validation + cache invalidation fire, the same funnel every writer
     uses). GLOBAL → written into ``_lib`` with no tenant binding. Idempotent.
 
@@ -213,12 +213,12 @@ async def seed(
     now = created_at or datetime.now(timezone.utc).isoformat()
 
     ws = workspace_doc(workspace_id, name, founder_email, now, account_id)
-    await kernel.write_document(
+    await kernel.write_instance(
         LIB_SCOPE, "Workspace", ws["metadata"]["name"], ws
     )
 
     mem = owner_membership_doc(workspace_id, founder_email, founder_tid, now)
-    await kernel.write_document(
+    await kernel.write_instance(
         LIB_SCOPE, "WorkspaceMembership", mem["metadata"]["name"], mem
     )
     return ws["metadata"]["name"], mem["metadata"]["name"]

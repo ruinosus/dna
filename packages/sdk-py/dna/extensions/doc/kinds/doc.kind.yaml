@@ -18,7 +18,7 @@
 #     diagrams) that have no DNA equivalent;
 #   - ``spec.assets`` (sibling sub-markdown/drawio files lifted into the
 #     spec) — a UI rendering concern; sibling files still live in the
-#     bundle directory, they are just not aggregated into the document;
+#     bundle directory, they are just not aggregated into the instance;
 #   - the ``featured`` landing-page curation flag, the "blank Doc" template
 #     scaffold, and the widget-hint ``ui_schema`` bag — upstream product
 #     UX; hosts can derive forms from the JSON Schema below.

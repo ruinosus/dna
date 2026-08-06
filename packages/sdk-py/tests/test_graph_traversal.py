@@ -15,7 +15,7 @@ guards is a single line somebody can forget:
   easy line to leave out.
 
 Each has a test that fails if the line is removed. The tenant one writes two
-tenants holding documents with the SAME names, because a leak is invisible when
+tenants holding instances with the SAME names, because a leak is invisible when
 the names differ.
 """
 from __future__ import annotations
@@ -46,7 +46,7 @@ def _doc(kind: str, name: str, **spec: Any) -> dict[str, Any]:
 def _portfolio(kind: str, name: str, **spec: Any) -> dict[str, Any]:
     """The portfolio Kinds — the only TENANTED ones that declare references.
 
-    The apiVersion is stated exactly, not approximated: a document whose
+    The apiVersion is stated exactly, not approximated: an instance whose
     apiVersion resolves to no registered port produces no edges at all (the
     write path cannot read a declaration it cannot find), so a wrong value here
     would make a cross-tenant leak test pass by finding nothing anywhere.
@@ -86,14 +86,14 @@ async def store(request):
 
 async def _chain(kernel) -> None:
     """``Task/t-1 → Story/s-x → Feature/f-y → Epic/e-1`` — three hops."""
-    await kernel.write_document(SCOPE, "Epic", "e-1", _doc("Epic", "e-1"))
-    await kernel.write_document(
+    await kernel.write_instance(SCOPE, "Epic", "e-1", _doc("Epic", "e-1"))
+    await kernel.write_instance(
         SCOPE, "Feature", "f-y", _doc("Feature", "f-y", epic="e-1"),
     )
-    await kernel.write_document(
+    await kernel.write_instance(
         SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
     )
-    await kernel.write_document(
+    await kernel.write_instance(
         SCOPE, "Task", "t-1", _doc("Task", "t-1", story_ref="s-x"),
     )
 
@@ -164,9 +164,9 @@ class TestTheThreeRefusals:
         The edges are written through the adapter's own ``replace_edges``
         rather than by two tenanted kernel writes, and that is a deliberate
         acknowledgement of a PRE-EXISTING limitation, not a shortcut around
-        this feature: on SQLite the ``documents`` primary key does not include
+        this feature: on SQLite the ``instances`` primary key does not include
         ``tenant`` (i-092, carried as a strict xfail in the conformance
-        matrix), so two tenants CANNOT hold the same document name in that
+        matrix), so two tenants CANNOT hold the same instance name in that
         store at all — the second write overwrites the first. The edge table's
         key does include ``tenant``, which is exactly what this test is about.
         """
@@ -213,9 +213,9 @@ class TestTheThreeRefusals:
         # references — the first write would resolve to nothing and the edge
         # would be dangling, which is a different test than this one.
         for n in ("s-a", "s-b", "s-c"):
-            await kernel.write_document(SCOPE, "Story", n, _doc("Story", n))
+            await kernel.write_instance(SCOPE, "Story", n, _doc("Story", n))
         for src_name, dst in (("s-a", "s-b"), ("s-b", "s-c"), ("s-c", "s-a")):
-            await kernel.write_document(
+            await kernel.write_instance(
                 SCOPE, "Story", src_name,
                 _doc("Story", src_name, dependencies=[dst]),
             )
@@ -228,10 +228,10 @@ class TestTheThreeRefusals:
 
     @pytest.mark.anyio
     async def test_a_self_loop_terminates(self, store):
-        """The tightest cycle there is: a document depending on itself."""
+        """The tightest cycle there is: an instance depending on itself."""
         kernel, _ = store
-        await kernel.write_document(SCOPE, "Story", "s-a", _doc("Story", "s-a"))
-        await kernel.write_document(
+        await kernel.write_instance(SCOPE, "Story", "s-a", _doc("Story", "s-a"))
+        await kernel.write_instance(
             SCOPE, "Story", "s-a", _doc("Story", "s-a", dependencies=["s-a"]),
         )
         result = await kernel.graph_refs(
@@ -268,7 +268,7 @@ class TestDanglingEdges:
         """It is reported — it is the list of what is broken — and the walk
         does not continue through a target that does not exist."""
         kernel, _ = store
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-ghost"),
         )
         result = await kernel.graph_refs(
@@ -286,7 +286,7 @@ class TestUnsupportedIsNotEmpty:
     ):
         """⚠️ The refusal that matters most.
 
-        ``[]`` reads as "nothing points at this document" — a claim only a
+        ``[]`` reads as "nothing points at this instance" — a claim only a
         store that actually records edges may make. The filesystem adapter has
         neither a transaction to write edges in nor a table to write them to,
         so it says so.

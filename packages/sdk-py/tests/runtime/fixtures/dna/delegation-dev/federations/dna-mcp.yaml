@@ -17,5 +17,5 @@ spec:
   - list_kinds
   - list_my_kinds
   - author_kind
-  - update_document_draft
+  - update_instance_draft
   propagate_tenant: false

@@ -20,7 +20,7 @@ over: SqlAlchemySource[postgres] PASSES bundle_entry_round_trip.
 
 Known, tracked divergences (documented — not silently green):
   - sqlalchemy-sqlite × tenant_overlay_shadows_base → strict xfail: the
-    adapter binds to the EXISTING SQLite schema, whose documents PK lacks
+    adapter binds to the EXISTING SQLite schema, whose instances PK lacks
     tenant — the i-092 schema debt (the pg dialect passes: same logic,
     tenant-aware PK).
 """
@@ -209,7 +209,7 @@ _FACTORIES: dict[str, Any] = {
 _KNOWN = {
     ("sqlalchemy-sqlite", "tenant_overlay_shadows_base"): pytest.mark.xfail(
         reason="i-092 (inherited schema debt, not a Core limitation): the "
-               "SQLite documents PK is (scope, kind, name) without tenant — "
+               "SQLite instances PK is (scope, kind, name) without tenant — "
                "an overlay publish clobbers the base row. The pg dialect "
                "passes with the same logic (tenant-aware PK).",
         strict=True,

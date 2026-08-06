@@ -13,7 +13,7 @@ and a list of `rules` that the Agent template renders inline.
 `guardrails.ai` runtime validator library. It is inspired by the tripwire /
 input-output guardrail pattern from the OpenAI Agents SDK
 (https://openai.github.io/openai-agents-python/guardrails/) but implemented
-natively as a composable document kind. No external runtime is required;
+natively as a composable instance kind. No external runtime is required;
 enforcement is purely prompt-level.
 
 **Composition:** referenced by Agents via `dep_filters.guardrails`

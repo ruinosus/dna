@@ -3,8 +3,8 @@
 Before this guard ``spec.schema`` was only checked to be a dict
 (``models.KindDefinitionSpec.from_raw``); ``Draft202012Validator.check_schema``
 ran only on DNA's OWN descriptor meta-schema (``kinds/schema.py``). A tenant
-could therefore store a schema that is not a schema, and every document of that
-Kind failed later, per document, through the fail-soft ``parse_error`` channel —
+could therefore store a schema that is not a schema, and every instance of that
+Kind failed later, per instance, through the fail-soft ``parse_error`` channel —
 a warning far from the author.
 
 Two further hazards are covered here, both MEASURED rather than assumed (the
@@ -296,7 +296,7 @@ def test_from_raw_accepts_a_sane_authored_schema():
 
 
 def test_a_bad_authored_schema_only_warns_on_the_per_scope_funnel():
-    """A tenant document never takes the boot down — the funnel's existing
+    """A tenant instance never takes the boot down — the funnel's existing
     contract, unchanged by the guard."""
     from dna.kernel import Kernel
 

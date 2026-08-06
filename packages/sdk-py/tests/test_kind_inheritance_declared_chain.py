@@ -1,20 +1,20 @@
 """i-096 — a Kind declared in the BASE scope governs the scopes that DECLARE it
 as parent, and only those.
 
-The asymmetry this file closes. i-058 made DOCUMENTS flow down the declared
+The asymmetry this file closes. i-058 made INSTANCES flow down the declared
 ``Genome.spec.parent_scope`` chain (``compute_resolution_chain``); the KINDS did
 not follow. ``KindDefinition`` is a BOOTSTRAP Kind, so a descriptor seeded in
 the host-curated base registered a port bound (i-081 ``__scopes__``) to the base
 scope alone. In a child workspace scope the Kind then did not exist:
 
-* ``GET /v1/kinds/<K>/documents`` answered 200 without a tenant and
+* ``GET /v1/kinds/<K>/instances`` answered 200 without a tenant and
   ``Kind '<K>' is not registered on this source`` with one;
 * the Kind was absent from the tenant's registry ENUMERATION;
 * and a write of that Kind into the workspace was refused —
 
-while documents of that same Kind, written in the base, listed fine through the
+while instances of that same Kind, written in the base, listed fine through the
 child. Measured live on 06/08/2026 (``McpServer``, ``CopilotBlueprint``): every
-PRODUCT Kind had to become an extension (code + release) instead of a document,
+PRODUCT Kind had to become an extension (code + release) instead of an instance,
 which is the declarative-Kind promise inverted.
 
 The two halves this file must prove together, because either alone is a wrong
@@ -40,7 +40,7 @@ import pytest
 import yaml
 
 from dna.adapters.filesystem.writable import FilesystemWritableSource
-from dna.application.documents import (
+from dna.application.instances import (
     UnknownKindError,
     list_kinds_impl,
     resolve_kind_port,
@@ -92,7 +92,7 @@ def _kinddef(
     schema: dict | None = None,
 ) -> dict:
     """An APPROVED per-scope ``KindDefinition`` whose schema REQUIRES ``title``
-    — so "was this document validated against a Kind at all?" has a yes/no
+    — so "was this instance validated against a Kind at all?" has a yes/no
     answer, and "against WHOSE Kind?" has one too (the container differs)."""
     return {
         "apiVersion": "github.com/ruinosus/dna/core/v1",
@@ -194,7 +194,7 @@ async def test_base_kind_is_registered_for_the_child_scope(scopes):
 
 @pytest.mark.asyncio
 async def test_base_kind_is_registered_on_a_lazy_boot_too(scopes):
-    """``LiveDna.ensure_kinds`` — the seam every REST/MCP document route goes
+    """``LiveDna.ensure_kinds`` — the seam every REST/MCP instance route goes
     through — drives ``instance_async(lazy=True)``. Inheritance that existed
     only on the eager path would leave the workspace seeing the base's Kinds or
     not depending on which surface it arrived through."""
@@ -217,7 +217,7 @@ async def test_the_child_enumerates_the_inherited_kind(scopes):
 
 @pytest.mark.asyncio
 async def test_the_generic_document_surface_resolves_the_inherited_kind(scopes):
-    """``resolve_kind_port`` is the ONE resolution every generic document
+    """``resolve_kind_port`` is the ONE resolution every generic instance
     use-case goes through — it is what raised ``Kind 'McpServer' is not
     registered on this source`` for a tenant and 200'd without one."""
     k, _base = scopes
@@ -238,17 +238,17 @@ async def test_the_inherited_kind_is_writable_from_the_child(scopes):
     k, base = scopes
     await k.instance_async(_WS)
 
-    await k.write_document(
+    await k.write_instance(
         _WS, "McpServer", "gh",
         _doc("dna.cloud", "McpServer", "gh", {"title": "GitHub"}),
     )
     assert (base / _WS / "mcp-servers" / "gh.yaml").exists()
-    # the child's document did NOT land in the base scope
+    # the child's instance did NOT land in the base scope
     assert not (base / _BASE / "mcp-servers" / "gh.yaml").exists()
 
     # schema enforcement travelled with the Kind
     with pytest.raises(SpecValidationError):
-        await k.write_document(
+        await k.write_instance(
             _WS, "McpServer", "bad",
             _doc("dna.cloud", "McpServer", "bad", {"nope": 1}),
         )
@@ -257,7 +257,7 @@ async def test_the_inherited_kind_is_writable_from_the_child(scopes):
 @pytest.mark.asyncio
 async def test_inheritance_is_transitive(scopes):
     """ws → base is one hop; grandchild → ws → base is the chain. The Kinds
-    walk the same transitive chain the documents do, or "declare a parent" would
+    walk the same transitive chain the instances do, or "declare a parent" would
     mean two different things one level down."""
     k, _base = scopes
     await k.instance_async(_GRANDCHILD)
@@ -309,7 +309,7 @@ def divergent_scopes(tmp_path: Path):
 async def test_a_local_declaration_wins_over_the_inherited_one(
     divergent_scopes, lazy: bool,
 ):
-    """Local-wins, the precedence the DOCUMENTS already have
+    """Local-wins, the precedence the INSTANCES already have
     (``compute_resolution_chain``). A child that declares its own descriptor for
     the same Kind is governed by ITS descriptor: its schema validates, its
     container routes.
@@ -318,7 +318,7 @@ async def test_a_local_declaration_wins_over_the_inherited_one(
     descriptor is re-registered once more inside ``build``, so local-wins would
     survive there even if the ancestor pass replaced the port; the LAZY path has
     no such second pass, and it is the path ``LiveDna.ensure_kinds`` — and
-    therefore every REST/MCP document route — actually takes. Only the lazy
+    therefore every REST/MCP instance route — actually takes. Only the lazy
     parameter kills the mutant of dropping the funnel's never-replace guard.
 
     Scope of the claim: the registry holds ONE port per ``(apiVersion, kind)``,
@@ -332,14 +332,14 @@ async def test_a_local_declaration_wins_over_the_inherited_one(
 
     # the CHILD's storage routing, and the CHILD's schema
     assert k.storage_for_kind("McpServer", scope=_WS).container == "ws-mcp-servers"
-    await k.write_document(
+    await k.write_instance(
         _WS, "McpServer", "own",
         _doc("dna.cloud", "McpServer", "own", {"headline": "mine"}),
     )
     assert (base / _WS / "ws-mcp-servers" / "own.yaml").exists()
     assert not (base / _WS / "base-mcp-servers" / "own.yaml").exists()
     with pytest.raises(SpecValidationError):
-        await k.write_document(
+        await k.write_instance(
             _WS, "McpServer", "nope",
             _doc("dna.cloud", "McpServer", "nope", {"title": "base shape"}),
         )
@@ -369,7 +369,7 @@ async def test_a_sibling_scopes_kind_stays_invisible(scopes):
 async def test_a_sibling_kind_is_neither_enumerated_nor_effective(scopes):
     """The same guard-rail measured where it BITES rather than where it reads:
     a sibling's Kind must not appear in the child's catalogue, must not validate
-    the child's documents, and must not route the child's storage.
+    the child's instances, and must not route the child's storage.
 
     Without these, "invisible" could be true only of the lookup surface while
     the behaviour-conferring paths leaked — which is exactly the shape of the
@@ -391,7 +391,7 @@ async def test_a_sibling_kind_is_neither_enumerated_nor_effective(scopes):
     assert "McpServer" in kinds_ws and "McpServer" in kinds_sib
 
     # not schema-enforcing in the child: an unknown Kind is accepted unvalidated
-    await k.write_document(
+    await k.write_instance(
         _WS, "SiblingSecret", "s1",
         _doc("sibling.example", "SiblingSecret", "s1", {"nope": 1}),
     )
@@ -399,7 +399,7 @@ async def test_a_sibling_kind_is_neither_enumerated_nor_effective(scopes):
     assert not (base / _WS / "secrets" / "s1.yaml").exists()
     # while in its OWNER the same spec is refused
     with pytest.raises(SpecValidationError):
-        await k.write_document(
+        await k.write_instance(
             _SIBLING, "SiblingSecret", "s2",
             _doc("sibling.example", "SiblingSecret", "s2", {"nope": 1}),
         )

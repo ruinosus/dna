@@ -119,7 +119,7 @@ async def live_pg():
         ("LayerPolicy", "tenant-default", LAYER_POLICY_RAW),
         ("Agent", "brad", AGENT_BRAD_RAW),
     ]:
-        await source.save_document(_SCOPE, kind, name, raw)
+        await source.save_instance(_SCOPE, kind, name, raw)
         await source.publish(_SCOPE, kind, name)
 
     kernel = _make_kernel(source)

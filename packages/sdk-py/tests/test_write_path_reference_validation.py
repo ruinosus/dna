@@ -3,7 +3,7 @@ f-modelagem-das-relacoes).
 
 The unit tests in ``test_relations.py`` pin how a relation is READ. These pin
 what the write path DOES with it, against a source that really stores
-documents — a source that answers "no" to every read would make a
+instances — a source that answers "no" to every read would make a
 dangling-reference test pass for entirely the wrong reason.
 
 Pinned contract, each clause a deliberate refusal to break something:
@@ -44,7 +44,7 @@ _SDLC_API = "github.com/ruinosus/dna/sdlc/v1"
 class _StatefulSource(_FakeWritableSource):
     """The suite's conformant fake source, taught to REMEMBER what it stored.
 
-    ``load_one`` is the read the kernel's ``get_document`` ultimately reaches;
+    ``load_one`` is the read the kernel's ``get_instance`` ultimately reaches;
     the stock fake returns None for everything, which would make a
     dangling-reference test pass for entirely the wrong reason. ``reads``
     counts those lookups — that counter is how the "no declaration → no cost"
@@ -56,18 +56,18 @@ class _StatefulSource(_FakeWritableSource):
         self.docs: dict[tuple[str, str, str], dict] = {}
         self.reads: list[tuple[str, str, str]] = []
 
-    async def save_document(
+    async def save_instance(
         self, scope, kind, name, raw, author=None, *, tenant=None, layer=None,
     ) -> str:
-        version = await super().save_document(
+        version = await super().save_instance(
             scope, kind, name, raw, author, tenant=tenant, layer=layer,
         )
         self.docs[(scope, kind, name)] = raw
         return version
 
-    async def delete_document(self, scope, kind, name, *, tenant=None, layer=None):
+    async def delete_instance(self, scope, kind, name, *, tenant=None, layer=None):
         self.docs.pop((scope, kind, name), None)
-        return await super().delete_document(
+        return await super().delete_instance(
             scope, kind, name, tenant=tenant, layer=layer,
         )
 
@@ -124,7 +124,7 @@ class TestEnforce:
     ):
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
         with pytest.raises(SpecValidationError) as exc:
-            await kernel.write_document(
+            await kernel.write_instance(
                 "proj", "Story", "s-1",
                 _story("s-1", _base_spec(feature="f-does-not-exist")),
             )
@@ -139,7 +139,7 @@ class TestEnforce:
         """A forward reference is an ordering problem, not a permanent one."""
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
         source.seed("proj", "Feature", "f-real")
-        await kernel.write_document(
+        await kernel.write_instance(
             "proj", "Story", "s-1", _story("s-1", _base_spec(feature="f-real")),
         )
         assert ("proj", "Story", "s-1") in source.docs
@@ -149,7 +149,7 @@ class TestEnforce:
         self, kernel, source, monkeypatch,
     ):
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
-        await kernel.write_document(
+        await kernel.write_instance(
             "proj", "Story", "s-1", _story("s-1", _base_spec()),
         )
         assert ("proj", "Story", "s-1") in source.docs
@@ -161,7 +161,7 @@ class TestEnforce:
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
         source.seed("proj", "Story", "s-ok")
         with pytest.raises(SpecValidationError) as exc:
-            await kernel.write_document(
+            await kernel.write_instance(
                 "proj", "Story", "s-1",
                 _story("s-1", _base_spec(dependencies=["s-ok", "s-missing"])),
             )
@@ -184,7 +184,7 @@ class TestWarnIsTheDefault:
         operator still sees the problem.
         """
         with caplog.at_level(logging.WARNING, logger="dna.kernel"):
-            await kernel.write_document(
+            await kernel.write_instance(
                 "proj", "Story", "s-1",
                 _story("s-1", _base_spec(feature="f-missing")),
             )
@@ -204,7 +204,7 @@ class TestWarnIsTheDefault:
         """
         monkeypatch.setenv("DNA_REF_VALIDATION", "off")
         source.reads.clear()
-        await kernel.write_document(
+        await kernel.write_instance(
             "proj", "Story", "s-1", _story("s-1", _base_spec(feature="f-missing")),
         )
         assert ("proj", "Story", "s-1") in source.docs
@@ -218,7 +218,7 @@ class TestWarnIsTheDefault:
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
         source.seed("proj", "Feature", "f-real")
         source.reads.clear()
-        await kernel.write_document(
+        await kernel.write_instance(
             "proj", "Story", "s-1", _story("s-1", _base_spec(feature="f-real")),
         )
         assert ("proj", "Feature", "f-real") in source.reads
@@ -258,7 +258,7 @@ class TestUndeclaredKindsAreUntouched:
         Proven differentially: the same write is performed with reference
         validation ``off`` and then ``enforce``, and the source reads must be
         IDENTICAL. An absolute "zero reads" assertion would be wrong — the
-        write path legitimately reads the document itself and the scope's
+        write path legitimately reads the instance itself and the scope's
         Genome — and would hide the only number that matters here, which is
         the DELTA this feature introduces.
         """
@@ -270,7 +270,7 @@ class TestUndeclaredKindsAreUntouched:
             src = _StatefulSource()
             k = Kernel.auto()
             k.source(src)
-            await k.write_document("proj", "Engram", "rem-1", self._engram("rem-1"))
+            await k.write_instance("proj", "Engram", "rem-1", self._engram("rem-1"))
             return list(src.reads)
 
         baseline = await reads_under("off")
@@ -288,10 +288,10 @@ class TestUndeclaredKindsAreUntouched:
 class TestReciprocityIsReportedNeverImposed:
     """``Feature.stories`` and ``Story.feature`` declare each other as inverses.
 
-    Both halves are STORED, in two documents, written by two writes — which is
+    Both halves are STORED, in two instances, written by two writes — which is
     why they can disagree, and why the promise here is a REPORT. The three
     promises available were: impose (deadlocks — neither half of a pair can be
-    written first), derive (a cascade write into a document the author never
+    written first), derive (a cascade write into an instance the author never
     touched), report (free, because the existence check already loaded the
     target). These tests pin the third and, more importantly, pin that it is
     NOT one of the other two.
@@ -310,16 +310,16 @@ class TestReciprocityIsReportedNeverImposed:
     async def test_a_one_sided_pair_is_logged(self, kernel, source, caplog):
         source.docs[("proj", "Feature", "f-1")] = self._feature("f-1")
         with caplog.at_level(logging.WARNING, logger="dna.kernel"):
-            await kernel.write_document(
+            await kernel.write_instance(
                 "proj", "Story", "s-1", _story("s-1", _base_spec(feature="f-1")),
             )
-        assert "does not name this document back" in caplog.text
+        assert "does not name this instance back" in caplog.text
         assert "stories" in caplog.text
 
     @pytest.mark.anyio
     async def test_a_one_sided_pair_still_PERSISTS(self, kernel, source):
         source.docs[("proj", "Feature", "f-1")] = self._feature("f-1")
-        await kernel.write_document(
+        await kernel.write_instance(
             "proj", "Story", "s-1", _story("s-1", _base_spec(feature="f-1")),
         )
         assert ("proj", "Story", "s-1") in source.docs
@@ -335,7 +335,7 @@ class TestReciprocityIsReportedNeverImposed:
         Story that does not exist yet."""
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
         source.docs[("proj", "Feature", "f-1")] = self._feature("f-1")
-        await kernel.write_document(
+        await kernel.write_instance(
             "proj", "Story", "s-1", _story("s-1", _base_spec(feature="f-1")),
         )
         assert ("proj", "Story", "s-1") in source.docs
@@ -347,22 +347,22 @@ class TestReciprocityIsReportedNeverImposed:
         """The counterpart that proves the test above measures something."""
         source.docs[("proj", "Feature", "f-1")] = self._feature("f-1", ["s-1"])
         with caplog.at_level(logging.WARNING, logger="dna.kernel"):
-            await kernel.write_document(
+            await kernel.write_instance(
                 "proj", "Story", "s-1", _story("s-1", _base_spec(feature="f-1")),
             )
-        assert "does not name this document back" not in caplog.text
+        assert "does not name this instance back" not in caplog.text
 
     @pytest.mark.anyio
     async def test_the_kernel_NEVER_writes_the_other_half(
         self, kernel, source, monkeypatch,
     ):
-        """Deriving the missing side would mean the kernel mutating a document
+        """Deriving the missing side would mean the kernel mutating an instance
         the author did not touch, inside somebody else's version and etag. The
         Feature must come back untouched, and no save may have been issued for
         it."""
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
         source.docs[("proj", "Feature", "f-1")] = self._feature("f-1")
-        await kernel.write_document(
+        await kernel.write_instance(
             "proj", "Story", "s-1", _story("s-1", _base_spec(feature="f-1")),
         )
         assert source.docs[("proj", "Feature", "f-1")]["spec"]["stories"] == []
@@ -420,7 +420,7 @@ class TestKeyAddressedRelationsAreNotFollowed:
         self, kernel, source, monkeypatch,
     ):
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
-        await kernel.write_document(
+        await kernel.write_instance(
             "proj", "Project", "p-1", self._project("p-1", "ws-nobody-has"),
             tenant="acme",
         )
@@ -434,7 +434,7 @@ class TestKeyAddressedRelationsAreNotFollowed:
         ask". A lookup that happened would be a resolution rule in waiting."""
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
         source.reads.clear()
-        await kernel.write_document(
+        await kernel.write_instance(
             "proj", "Project", "p-1", self._project("p-1", "ws-1"),
             tenant="acme",
         )

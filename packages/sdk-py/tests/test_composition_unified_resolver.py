@@ -15,7 +15,7 @@ from types import SimpleNamespace
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.document import Document
+from dna.kernel.instance import Instance
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.query.nav import (
     scope_inventory_async,
@@ -92,14 +92,14 @@ def _nav_kernel_over(k: Kernel, raws: list[dict]) -> SimpleNamespace:
 
     def _parse(raw, origin="local"):
         meta = raw.get("metadata", {}) or {}
-        return Document(
+        return Instance(
             api_version=raw.get("apiVersion", "v1"), kind=raw["kind"],
             name=meta.get("name", ""), metadata=meta,
             spec=raw.get("spec", {}) or {},
         )
 
     return SimpleNamespace(
-        query=_query, list_documents=_list, _parse_doc=_parse,
+        query=_query, list_instances=_list, _parse_doc=_parse,
         _kinds=k._kinds,
     )
 
@@ -148,7 +148,7 @@ async def test_inventory_classification_uses_the_same_resolver():
         _raw("ConsumerLike", "c-1", by_alias="t-1", by_legacy="t-1"),
     ]
     inv = await scope_inventory_async(_nav_kernel_over(k, raws), "scope-x")
-    (consumer,) = inv["kinds"]["ConsumerLike"]["documents"]
+    (consumer,) = inv["kinds"]["ConsumerLike"]["instances"]
     assert consumer["refs_confidence"]["by_alias"] == "EXTRACTED"
     assert consumer["refs_confidence"]["by_legacy"] == "EXTRACTED", (
         "kind= legado deve classificar igual ao alias (mesmo resolvedor): "

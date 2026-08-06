@@ -4,13 +4,13 @@ The product thesis ("a tenant declares only its difference and inherits the
 rest") had a bootstrap hole: a Model-B workspace scope (``tenant-ws-<id>``) is
 born EMPTY, and the transitive ``Genome.spec.parent_scope`` chain — the ONE
 inheritance mechanism (``compute_resolution_chain``) — was honored by
-``kernel.query`` and ``resolve_document`` but NOT by the two readers the
+``kernel.query`` and ``resolve_instance`` but NOT by the two readers the
 product surfaces actually use:
 
 * the EAGER ManifestInstance materialization (``instance_builder``), which
   serves ``list_agents_impl`` (the AgentBrowser) and ``compose_prompt_impl``
   (the copilot) — it merged only the FIXED single ``_lib`` hop;
-* ``kernel.get_document`` (``get_skill`` / ``get_template``) — same fixed hop.
+* ``kernel.get_instance`` (``get_skill`` / ``get_template``) — same fixed hop.
 
 i-058 routes BOTH through the existing chain. These tests state the resulting
 SYSTEM properties, not the mechanism:
@@ -123,7 +123,7 @@ def _live(kernel: Kernel) -> LiveDna:
 
 def _agent_docs(mi: Any) -> dict[str, str]:
     return {d.name: (d.spec.get("instruction") or "")
-            for d in mi.documents if d.kind == "Agent"}
+            for d in mi.instances if d.kind == "Agent"}
 
 
 # ── 1. inheritance flows to every definition surface ────────────────────────
@@ -152,7 +152,7 @@ async def test_compose_composes_the_inherited_agent(kernel: Kernel) -> None:
 async def test_get_document_walks_the_declared_chain(kernel: Kernel) -> None:
     """The get_skill/get_template read path resolves a base doc through the
     declared chain (it used to probe only the fixed ``_lib`` hop)."""
-    raw = await kernel.get_document(_WS, "Skill", "shared-skill")
+    raw = await kernel.get_instance(_WS, "Skill", "shared-skill")
     assert raw is not None
     assert raw["spec"]["instruction"] == "shared how-to"
 
@@ -205,7 +205,7 @@ async def test_no_declared_parent_means_no_base_definitions(
     assert "assistant" not in names
     assert "lib-agent" in names  # the V1 hop, unchanged
 
-    assert await kernel.get_document(_WS_PLAIN, "Skill", "shared-skill") is None
+    assert await kernel.get_instance(_WS_PLAIN, "Skill", "shared-skill") is None
 
     rows = [r async for r in kernel.query(_WS_PLAIN, "Agent")]
     assert "assistant" not in {(r.get("metadata") or {}).get("name") for r in rows}
@@ -232,7 +232,7 @@ async def test_local_override_wins_over_the_base(kernel: Kernel) -> None:
     """The overlay thesis: an identically-named local doc REPLACES the
     inherited one — on the listing (no duplicate), on compose, on get."""
     mi = await kernel.instance_async(_WS_OVERRIDE, lazy=False)
-    assistants = [d for d in mi.documents
+    assistants = [d for d in mi.instances
                   if d.kind == "Agent" and d.name == "assistant"]
     assert len(assistants) == 1
     assert assistants[0].spec["instruction"].startswith("Workspace override")
@@ -241,7 +241,7 @@ async def test_local_override_wins_over_the_base(kernel: Kernel) -> None:
     assert "Workspace override: speak Portuguese." in out["prompt"]
     assert "Base instruction" not in out["prompt"]
 
-    raw = await kernel.get_document(_WS_OVERRIDE, "Agent", "assistant")
+    raw = await kernel.get_instance(_WS_OVERRIDE, "Agent", "assistant")
     assert raw["spec"]["instruction"].startswith("Workspace override")
 
 
@@ -255,17 +255,17 @@ async def test_memory_and_board_do_not_flow_through_the_chain(
     """The base is CURATED CONTENT, not shared state. Through the very same
     chain that delivers the Agent (the in-test anti-vacuity control), the
     base's Engram (memory) and Story (board) must NOT surface in the
-    workspace — on the MI, on query, on get_document."""
+    workspace — on the MI, on query, on get_instance."""
     mi = await kernel.instance_async(_WS, lazy=False)
     assert "assistant" in _agent_docs(mi)  # the chain IS live for definitions
-    kinds_present = {(d.kind, d.name) for d in mi.documents}
+    kinds_present = {(d.kind, d.name) for d in mi.instances}
     assert ("Engram", "base-memory") not in kinds_present
     assert ("Story", "base-story") not in kinds_present
     # Scope IDENTITY/POLICY never crosses the chain either: the only Genome
     # in the workspace MI is the workspace's own. (Engram/Story are ALSO
     # blocked by the record-plane filter — this is the assertion that keeps
     # the non-inheritable gate itself honest for composition-plane Kinds.)
-    genomes = {d.name for d in mi.documents if d.kind == "Genome"}
+    genomes = {d.name for d in mi.instances if d.kind == "Genome"}
     assert genomes == {_WS}
 
     engrams = [r async for r in kernel.query(_WS, "Engram")]
@@ -273,8 +273,8 @@ async def test_memory_and_board_do_not_flow_through_the_chain(
     assert engrams == []
     assert stories == []
 
-    assert await kernel.get_document(_WS, "Engram", "base-memory") is None
-    assert await kernel.get_document(_WS, "Story", "base-story") is None
+    assert await kernel.get_instance(_WS, "Engram", "base-memory") is None
+    assert await kernel.get_instance(_WS, "Story", "base-story") is None
 
 
 # ── 5. the documented cache-staleness boundary, pinned ──────────────────────
@@ -296,7 +296,7 @@ async def test_parent_write_visibility_boundary(kernel: Kernel) -> None:
     cached_before = await kernel._base_instance_cached_async(_WS)
     assert "late-agent" not in _agent_docs(cached_before)
 
-    await kernel.write_document(
+    await kernel.write_instance(
         _BASE, "Agent", "late-agent",
         _doc("Agent", "late-agent", {"instruction": "arrived after boot"}),
         invalidate_mode="doc",

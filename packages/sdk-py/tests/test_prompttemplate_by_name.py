@@ -22,7 +22,7 @@ def _host(docs):
     async def all_async(kind, **kw):
         return [d for d in docs if d.kind == kind]
 
-    return SimpleNamespace(documents=docs, _kinds={}, _kernel=None,
+    return SimpleNamespace(instances=docs, _kinds={}, _kernel=None,
                            all_async=all_async)
 
 

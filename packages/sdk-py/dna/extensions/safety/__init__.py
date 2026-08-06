@@ -1,6 +1,6 @@
 """SafetyPolicyExtension — SafetyPolicy kind (declarative input/output safety enforcement).
 
-SafetyPolicy documents declare enforcement rules in YAML. The runtime applies
+SafetyPolicy instances declare enforcement rules in YAML. The runtime applies
 them as a tiered pipeline on both input (prompt context) and output (LLM
 response). Tier 1 (regex) is built-in; heavier tiers are opt-in via extras.
 

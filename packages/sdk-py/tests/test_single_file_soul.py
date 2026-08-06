@@ -97,7 +97,7 @@ class TestSingleFileComposes:
         # single-file soul: SOUL.md only, no soul.json.
         (root / "souls" / "s1" / "SOUL.md").write_text("# S1\n\nWarm and precise voice.")
         mi = Kernel.quick(scope, base_dir=str(tmp_path))
-        _ = mi.documents
+        _ = mi.instances
         prompt = mi.build_prompt(agent="a1")
         assert "Warm and precise voice." in prompt
 

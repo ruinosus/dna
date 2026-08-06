@@ -97,7 +97,7 @@ async def test_seed_is_idempotent(tmp_path):
     k = _kernel(tmp_path)
 
     async def counts():
-        docs = await k.list_documents("_lib")
+        docs = await k.list_instances("_lib")
         ws = [n for (kind, n) in docs if kind == "Workspace"]
         mem = [n for (kind, n) in docs if kind == "WorkspaceMembership"]
         return ws, mem
@@ -130,7 +130,7 @@ async def test_seeded_workspace_id_equals_its_doc_key(tmp_path):
     tid = "c5b891f7-65c2-4417-a5af-22cab24dc1d5"
     ws_name, _ = await seed_mod.seed(k, workspace_id=tid, founder_email="f@x.com")
     assert ws_name == tid
-    got = await k.get_document("_lib", "Workspace", tid)
+    got = await k.get_instance("_lib", "Workspace", tid)
     assert got is not None
     spec = got.spec if hasattr(got, "spec") else got["spec"]
     assert spec["workspace_id"] == tid

@@ -28,18 +28,18 @@ def pop_source_files_as_entries(
     The caller (a writer) prepends its primary marker (PROMPT.md /
     README.md / etc.) to this list. The adapter then writes each entry
     to the appropriate column via the BundleHandle's write_text /
-    write_bytes — see PostgresWritableSource.save_document for the
+    write_bytes — see PostgresWritableSource.save_instance for the
     persistence side.
 
     EVERY KEY IS VALIDATED HERE, and this is the layer that closes the SQL
     lane. The obvious place to guard a content-derived entry is the handle
     (``FilesystemBundleHandle._entry_path``) or ``DictBundleHandle._validate``,
     and for the filesystem lane that is true. It is NOT true for the SQL lane:
-    ``SqlAlchemySource.save_document`` calls this function to pop
+    ``SqlAlchemySource.save_instance`` calls this function to pop
     ``spec.source_files`` BEFORE any writer runs and merges the returned keys
     straight into its ``bundle_text`` / ``bundle_bin`` dicts — no handle is
     ever constructed for them, so no handle can refuse them. Measured before
-    this check existed: ``save_document`` on a SQLite-backed source returned
+    this check existed: ``save_instance`` on a SQLite-backed source returned
     ``version='1'`` and the ``bundle_entries`` table held the rows
     ``'../../../../etc/cron.d/pwn'`` and ``'/tmp/dna-ABSOLUTE-STORED.md'``
     verbatim. That directly contradicts the property the previous wave claimed

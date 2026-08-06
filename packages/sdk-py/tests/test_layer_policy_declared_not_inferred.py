@@ -19,7 +19,7 @@ These tests pin the repaired contract as properties of the system:
 * **Opting out stays quiet.** A scope with no policies at all is not running
   a policy regime — no warning storm for the default OPEN.
 * **A policy key that can never match anything warns at build time** (the
-  instance builder's typo detector) — even if no document of the mistyped
+  instance builder's typo detector) — even if no instance of the mistyped
   Kind appears in the overlay batch.
 
 Unit-level against the resolver plus one end-to-end proof through

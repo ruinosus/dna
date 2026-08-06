@@ -1,6 +1,6 @@
 """hello-genome — the minimal DNA example (Python).
 
-Loads the scope in ./.dna, lists every document by (apiVersion, kind, name),
+Loads the scope in ./.dna, lists every instance by (apiVersion, kind, name),
 shows typed access to a real marketplace Skill, and composes the agent's
 system prompt.
 
@@ -17,12 +17,12 @@ base = Path(__file__).resolve().parent / ".dna"
 mi = Kernel.quick("hello-genome", base_dir=str(base))
 
 print(f"scope: {mi.scope}")
-for d in mi.documents:
+for d in mi.instances:
     print(f"  {d.api_version:32s} {d.kind:8s} {d.name}")
 
 # Typed access — the Skill is a REAL marketplace bundle, consumed
 # byte-faithful under its owner's namespace (agentskills.io/v1).
-skill = next(d for d in mi.documents if d.kind == "Skill")
+skill = next(d for d in mi.instances if d.kind == "Skill")
 print(f"\ntyped skill: {skill.typed.metadata.name}")
 print(f"  {skill.typed.metadata.description[:72]}...")
 

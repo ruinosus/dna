@@ -111,7 +111,7 @@ async def test_tool_com_input_schema_invalido_e_vetado(live, schema):
     from dna.kernel.kinds.schema_guard import SchemaGuardError
 
     with pytest.raises(SchemaGuardError) as exc:
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _SCOPE, "Tool", "minha-tool",
             {
                 "apiVersion": "github.com/ruinosus/dna/helix/v1",
@@ -126,7 +126,7 @@ async def test_tool_com_input_schema_invalido_e_vetado(live, schema):
 
 @pytest.mark.asyncio
 async def test_tool_com_schemas_validos_grava(live):
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         _SCOPE, "Tool", "tool-ok",
         {
             "apiVersion": "github.com/ruinosus/dna/helix/v1",

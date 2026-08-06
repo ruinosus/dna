@@ -44,9 +44,9 @@ TOOL_NAME = "delegate_to"
 
 
 def _roster(
-    delegator: str, documents: Iterable[Mapping[str, Any]]
+    delegator: str, instances: Iterable[Mapping[str, Any]]
 ) -> list[DelegationTarget]:
-    return targets_for(delegator, list(documents))
+    return targets_for(delegator, list(instances))
 
 
 def _tool_description(targets: list[DelegationTarget]) -> str:
@@ -70,7 +70,7 @@ def _tool_description(targets: list[DelegationTarget]) -> str:
 def make_delegate_tool(
     *,
     delegator: str,
-    documents: Iterable[Mapping[str, Any]],
+    instances: Iterable[Mapping[str, Any]],
     run_local: Callable[[str, str], Awaitable[str]],
     call_remote: Callable[..., Awaitable[str]],
     credential_for: Callable[[str], str | None] | None = None,
@@ -78,7 +78,7 @@ def make_delegate_tool(
 ) -> Any:
     """Build the ``delegate_to`` ``StructuredTool`` for ``delegator``.
 
-    ``documents`` is the raw scope snapshot (mappings with ``kind`` /
+    ``instances`` is the raw scope snapshot (mappings with ``kind`` /
     ``metadata`` / ``spec``) — the same shape
     ``dna.application.delegation.targets_for`` already reads. The roster is
     re-derived from it, never a hand-kept list of names: once here (for the
@@ -104,7 +104,7 @@ def make_delegate_tool(
     from langchain_core.tools import StructuredTool
     from pydantic import BaseModel, Field
 
-    documents = list(documents)
+    instances = list(instances)
 
     class _DelegateToArgs(BaseModel):
         target: str = Field(..., description="The name of the subagent to delegate to.")
@@ -129,7 +129,7 @@ def make_delegate_tool(
                 delegator=delegator,
                 target_name=target,
                 request=task,
-                documents=documents,
+                instances=instances,
                 run_local=run_local,
                 call_remote=effective_call_remote,
                 enqueue=enqueue,
@@ -149,7 +149,7 @@ def make_delegate_tool(
             #
             # Narrar sucesso sobre trabalho pendente é o pior modo de falha
             # desta feature: o usuário vai embora acreditando que existe um
-            # documento que ainda não existe.
+            # instância que ainda não existe.
             return (
                 f"accepted: {outcome['target']} is working on this in the "
                 f"background (run {outcome['run_id']}). Tell the user you have "
@@ -157,7 +157,7 @@ def make_delegate_tool(
             )
         return str(outcome["result"])
 
-    description = _tool_description(_roster(delegator, documents))
+    description = _tool_description(_roster(delegator, instances))
     return StructuredTool.from_function(
         coroutine=_delegate_to,
         name=TOOL_NAME,

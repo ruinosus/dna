@@ -151,7 +151,7 @@ def test_hand_rolled_didactic_message_still_wins():
 
 def test_volatile_stamp_fields_stay_accepted():
     """Write-stamped volatile spec fields (KindBase.VOLATILE_SPEC_FIELDS)
-    must not fail a reload of a stamped document."""
+    must not fail a reload of a stamped instance."""
     raw = _minimal_valid()
     raw["spec"]["updated_at"] = "2026-07-08T00:00:00"
     raw["spec"]["created_at"] = "2026-07-08T00:00:00"

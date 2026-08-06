@@ -1,6 +1,6 @@
-"""``RemoteAgent`` — o Agent Card do A2A como documento.
+"""``RemoteAgent`` — o Agent Card do A2A como instância.
 
-O protocolo A2A não é um Kind (transporte não é documento). O Agent CARD é: um
+O protocolo A2A não é um Kind (transporte não é instância). O Agent CARD é: um
 descritor versionado de identidade e capacidade. Este Kind é ele.
 
 Quatro propriedades carregam o desenho, e cada uma é pinada porque cada uma é
@@ -10,8 +10,8 @@ fácil de perder num edit que parece inofensivo:
    de exfiltração — o DNA manda dado do workspace para uma URL que o tenant
    escolheu. Um escopo implícito significa "tudo".
 2. **O schema é FECHADO.** ``additionalProperties: false`` impede que uma
-   credencial (um bearer, um api_key) seja anexada ao documento. O
-   ``securitySchemes`` diz COMO autenticar; a credencial em si nunca é documento.
+   credencial (um bearer, um api_key) seja anexada à instância. O
+   ``securitySchemes`` diz COMO autenticar; a credencial em si nunca é instância.
 3. **``delegation_target_for`` é o campo COMPARTILHADO com ``Agent``** — é o que
    permite ao roster (Task 2) atravessar os dois Kinds sem enumerá-los.
 4. **``signature_state`` é tri-estado.** Ausência de verificação fica LEGÍVEL
@@ -122,10 +122,10 @@ def test_the_a2a_required_fields_are_required(port, missing):
     "smuggled", ["bearer", "api_key", "token", "credential", "password"]
 )
 def test_no_credential_can_be_smuggled_into_the_document(port, smuggled):
-    """``securitySchemes`` diz COMO autenticar; a credencial nunca é documento.
+    """``securitySchemes`` diz COMO autenticar; a credencial nunca é instância.
 
-    Ponha ``additionalProperties: true`` e isto morre — e o documento passaria a
-    carregar o próprio acesso, então quem alcançasse o documento alcançaria o
+    Ponha ``additionalProperties: true`` e isto morre — e a instância passaria a
+    carregar o próprio acesso, então quem alcançasse a instância alcançaria o
     endpoint com ele. O mesmo motivo pelo qual o ``SourceArtifact`` é fechado."""
     assert _validate(port, _spec(**{smuggled: "sk-live-abc123"})) is not None
 

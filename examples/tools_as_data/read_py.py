@@ -5,9 +5,9 @@
 
 Prints the agent-facing surface ({description, parameters}) as canonical JSON.
 Run alongside `read_ts.ts` (the TypeScript twin) and diff the output: both
-read the SAME Tool document (tools-demo/tools/generate-artifact.yaml) through
+read the SAME Tool instance (tools-demo/tools/generate-artifact.yaml) through
 the byte-identical `Tool` Kind descriptor and produce byte-identical surfaces
-— the governed Tool surface, read straight from the document.
+— the governed Tool surface, read straight from the instance.
 """
 from __future__ import annotations
 

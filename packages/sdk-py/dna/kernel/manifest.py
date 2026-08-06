@@ -1,4 +1,4 @@
-"""ManifestInstance v3 — public API for querying manifest documents.
+"""ManifestInstance v3 — public API for querying manifest instances.
 
 Provides query (all/one/root), navigation (get/describe/list_kinds/summary),
 prompt building (build_prompt with template cascade), and layer resolution.
@@ -18,7 +18,7 @@ import logging
 from functools import cached_property
 from typing import Any, TYPE_CHECKING
 
-from dna.kernel.document import Document
+from dna.kernel.instance import Instance
 from dna.kernel.preview import PreviewBlock
 from dna.kernel.protocols import (
     BOOTSTRAP_KIND_NAMES,
@@ -46,11 +46,11 @@ class ManifestInstance:
     (Genome + KindDefinition + LayerPolicy + UA index ~30 docs)
     instead of the full scope (often 1500+). In lazy mode:
 
-      - ``one(kind, name)``  → delegates to ``kernel.get_document``
+      - ``one(kind, name)``  → delegates to ``kernel.get_instance``
                                 (L2 cached, ~5ms).
       - ``all(kind)``        → delegates to ``kernel.query``
                                 (~10ms indexed).
-      - ``documents``        → triggers ``_ensure_loaded()`` which
+      - ``instances``        → triggers ``_ensure_loaded()`` which
                                 materializes the full scope. Emits a
                                 DeprecationWarning when called in lazy
                                 mode — callers should use one/all or
@@ -68,7 +68,7 @@ class ManifestInstance:
     back-compat for tests, agent paths, and external callers.
     """
 
-    # Bootstrap kinds — always eager-loaded in the documents list.
+    # Bootstrap kinds — always eager-loaded in the instances list.
     # These are needed by mi.root, mi.kind_for, and the prompt builder
     # before any lazy lookup happens.
     # The ONE definition lives in ``dna.kernel.protocols.BOOTSTRAP_KIND_NAMES``
@@ -82,7 +82,7 @@ class ManifestInstance:
     def __init__(
         self,
         scope: str,
-        documents: list[Document],
+        instances: list[Instance],
         kinds: dict[tuple[str, str], KindPort],
         source: SourcePort | None = None,
         resolve_errors: list[str] | None = None,
@@ -91,7 +91,7 @@ class ManifestInstance:
         lazy: bool = False,
     ) -> None:
         self.scope = scope
-        self._documents = documents
+        self._instances = instances
         self._kinds = kinds
         self._source = source
         self._kernel = kernel
@@ -100,7 +100,7 @@ class ManifestInstance:
         # Lazy state
         self._lazy = lazy
         self._lazy_full_loaded = not lazy
-        self._lazy_kind_cache: dict[str, list[Document]] = {}
+        self._lazy_kind_cache: dict[str, list[Instance]] = {}
 
         # Lazy namespace caches
         self._prompt_builder: PromptBuilder | None = None
@@ -110,7 +110,7 @@ class ManifestInstance:
         self._report_builder: ReportBuilder | None = None
 
     @property
-    def documents(self) -> list[Document]:
+    def instances(self) -> list[Instance]:
         """Materialized list of all docs. In lazy mode, accessing this
         triggers a full load (the only way to honor list semantics).
         Prefer ``one(kind, name)`` or ``all(kind)`` which stay lazy.
@@ -121,23 +121,23 @@ class ManifestInstance:
         if self._lazy and not self._lazy_full_loaded:
             import warnings
             warnings.warn(
-                f"ManifestInstance.documents accessed in lazy mode for "
+                f"ManifestInstance.instances accessed in lazy mode for "
                 f"scope={self.scope!r} — forcing full scope load. "
                 f"Prefer `await kernel.query(scope, kind)` / "
-                f"`await kernel.get_document(scope, kind, name)` which "
+                f"`await kernel.get_instance(scope, kind, name)` which "
                 f"stay lazy and indexed. To force eager loading at "
                 f"construct time, pass lazy=False to "
                 f"Kernel.instance_async.",
                 DeprecationWarning, stacklevel=2,
             )
             self._materialize_full()
-        return self._documents
+        return self._instances
 
-    @documents.setter
-    def documents(self, value: list[Document]) -> None:
-        """Allow internal code to replace the documents list (used by
+    @instances.setter
+    def instances(self, value: list[Instance]) -> None:
+        """Allow internal code to replace the instances list (used by
         ``apply_hooks`` and ``_materialize_full``)."""
-        self._documents = value
+        self._instances = value
         self._lazy_full_loaded = True
 
     def _materialize_full(self) -> None:
@@ -177,20 +177,20 @@ class ManifestInstance:
             _load(), loop=getattr(self._kernel, "_main_loop", None),
         )
 
-        # Parse raw docs into Documents — reuse the kernel's parsing.
-        # Parse raw → Document via the kernel's own parser (preserves
+        # Parse raw docs into Instances — reuse the kernel's parsing.
+        # Parse raw → Instance via the kernel's own parser (preserves
         # typed dispatch + hook emission for parse_error).
         _parse = getattr(self._kernel, "_parse_doc", None)
         parsed = [_parse(r) for r in raw_docs] if _parse else []
         # Keep bootstrap docs from constructor (they may have come
         # from a different code path), merge with newly-loaded ones,
         # deduping by (kind, name).
-        existing_keys = {(d.kind, d.name) for d in self._documents}
-        merged = list(self._documents)
+        existing_keys = {(d.kind, d.name) for d in self._instances}
+        merged = list(self._instances)
         for d in parsed:
             if (d.kind, d.name) not in existing_keys:
                 merged.append(d)
-        self._documents = merged
+        self._instances = merged
         self._lazy_full_loaded = True
 
     # -- Namespace properties --------------------------------------------------
@@ -247,7 +247,7 @@ class ManifestInstance:
 
     def _is_record_kind(self, kind: str) -> bool:
         """two-planes F2.5 — records nunca vêm da materialização; a MI
-        delega leituras de plane="record" pro kernel (query/get_document),
+        delega leituras de plane="record" pro kernel (query/get_instance),
         então leitores não-migrados continuam corretos (o ratchet os
         encolhe por perf). Kernels sem ``kind_plane`` (mocks/embedders
         legados) caem no caminho legado (composition)."""
@@ -258,36 +258,36 @@ class ManifestInstance:
             return False
         return plane_fn(kind) == "record"
 
-    def all(self, kind: str) -> list[Document]:
+    def all(self, kind: str) -> list[Instance]:
         """Return all docs of ``kind`` — DEPRECATED, will be removed in 1.0.
 
         s-blessed-query-surface: the blessed query surface is
-        ``mi.documents`` (in-memory, filter by ``d.kind``) plus
+        ``mi.instances`` (in-memory, filter by ``d.kind``) plus
         ``kernel.query(scope, kind)`` for indexed / record-plane reads.
         This method survives as a warning shim until 1.0.
         """
         import warnings
         warnings.warn(
             "ManifestInstance.all() is deprecated and will be removed in "
-            "1.0 — filter mi.documents (e.g. `[d for d in mi.documents "
+            "1.0 — filter mi.instances (e.g. `[d for d in mi.instances "
             "if d.kind == kind]`) or use `await kernel.query(scope, kind)` "
             "for indexed/record-plane reads.",
             DeprecationWarning, stacklevel=2,
         )
         return self._all(kind)
 
-    def _all(self, kind: str) -> list[Document]:
+    def _all(self, kind: str) -> list[Instance]:
         """Internal, non-warning twin of :py:meth:`all` — used by the
         SDK's own collaborators (``apply_hooks``, ``ReportBuilder``,
         ``get``). External callers use the blessed surface
-        (``mi.documents`` / ``kernel.query``); see ``all()``.
+        (``mi.instances`` / ``kernel.query``); see ``all()``.
 
         Lazy mode: when the kind isn't already materialized (bootstrap
         kinds are always present), delegate to ``kernel.query`` and
         cache. Cached entries are dropped by ``apply_hooks`` /
         ``_materialize_full``.
 
-        Eager mode: walks ``self.documents`` (back-compat, O(N)).
+        Eager mode: walks ``self.instances`` (back-compat, O(N)).
         """
         # two-planes F2.5 — plane="record" reads ALWAYS delegate to the
         # kernel record plane (never the materialization, which excludes
@@ -300,9 +300,9 @@ class ManifestInstance:
                 self.scope, kind, tenant=getattr(self, "_tenant", None),
             )
         if self._lazy and not self._lazy_full_loaded:
-            # Bootstrap kinds live in self._documents from boot.
+            # Bootstrap kinds live in self._instances from boot.
             if kind in self._BOOTSTRAP_KINDS:
-                return [d for d in self._documents if d.kind == kind]
+                return [d for d in self._instances if d.kind == kind]
             # Cached?
             cached = self._lazy_kind_cache.get(kind)
             if cached is not None:
@@ -311,20 +311,20 @@ class ManifestInstance:
             docs = self._lazy_load_kind(kind)
             self._lazy_kind_cache[kind] = docs
             return docs
-        return [d for d in self._documents if d.kind == kind]
+        return [d for d in self._instances if d.kind == kind]
 
-    async def all_async(self, kind: str, *, tenant: str | None = None) -> list[Document]:
+    async def all_async(self, kind: str, *, tenant: str | None = None) -> list[Instance]:
         """Async-native variant of ``all()`` — bridge for callers
         migrating to ``await kernel.query(scope, kind)``.
 
         f-mi-class-extinction (Story s-mi-async-bridge, 2026-05-14):
         new API that callers should target during the MI sweep. Returns
-        the same list[Document] shape as sync ``all()`` but uses
+        the same list[Instance] shape as sync ``all()`` but uses
         ``await kernel.query`` end-to-end — no thread, no asyncio.run,
         no loop-mismatch with asyncpg pools.
 
         Bootstrap kinds (Genome, KindDefinition, LayerPolicy) are
-        served from the in-memory ``self._documents`` (no query).
+        served from the in-memory ``self._instances`` (no query).
         Lazy-cached kinds (already materialized by a previous call)
         are served from ``self._lazy_kind_cache``.
 
@@ -352,9 +352,9 @@ class ManifestInstance:
             if _parse is None:
                 return []
             return [d for d in (_parse(r) for r in raw_rows) if d is not None]
-        # Bootstrap kinds — already in self._documents from boot.
+        # Bootstrap kinds — already in self._instances from boot.
         if kind in self._BOOTSTRAP_KINDS:
-            return [d for d in self._documents if d.kind == kind]
+            return [d for d in self._instances if d.kind == kind]
         # Eager-loaded MI — walk in-memory list ONLY if the requested
         # tenant matches this MI's resolved tenant. The eager MI was
         # built with one layer context (``self._tenant``); cross-tenant
@@ -367,7 +367,7 @@ class ManifestInstance:
         if not self._lazy:
             mi_tenant = getattr(self, "_tenant", None)
             if tenant is None or tenant == mi_tenant:
-                return [d for d in self._documents if d.kind == kind]
+                return [d for d in self._instances if d.kind == kind]
             # Fall through to kernel.query with the requested tenant.
             # Skip lazy_kind_cache (keyed by kind only — would alias
             # results across tenants in cross-tenant reads).
@@ -402,7 +402,7 @@ class ManifestInstance:
             self._lazy_kind_cache[kind] = docs
         return docs
 
-    def _lazy_load_kind(self, kind: str) -> list[Document]:
+    def _lazy_load_kind(self, kind: str) -> list[Instance]:
         """Load docs of a single kind via kernel.query_list_sync.
 
         Story s-miholder-transient (2026-05-14): replaces the prior
@@ -429,37 +429,37 @@ class ManifestInstance:
             )
             return []
 
-    def all_where(self, predicate) -> list[Document]:
-        """Return all documents whose registered KindPort satisfies a
+    def all_where(self, predicate) -> list[Instance]:
+        """Return all instances whose registered KindPort satisfies a
         predicate. Forces full materialization in lazy mode (cross-kind
         walk requires the whole scope).
         """
         if self._lazy and not self._lazy_full_loaded:
             self._materialize_full()
         result = []
-        for d in self._documents:
+        for d in self._instances:
             kp = self._kinds.get((d.api_version, d.kind))
             if kp and predicate(kp):
                 result.append(d)
         return result
 
-    async def one_async(self, kind: str, name: str, *, tenant: str | None = None) -> Document | None:
+    async def one_async(self, kind: str, name: str, *, tenant: str | None = None) -> Instance | None:
         """Async-native variant of ``one()`` — bridge for callers
-        migrating to ``await kernel.get_document(scope, kind, name)``.
+        migrating to ``await kernel.get_instance(scope, kind, name)``.
 
         f-mi-class-extinction (Story s-mi-async-bridge, 2026-05-14):
         new API that callers should target during the MI sweep. Same
         return shape as sync ``one()``. Bootstrap kinds + lazy-cached
         kinds short-circuit; otherwise delegates to
-        ``await kernel.get_document`` (L2 cached).
+        ``await kernel.get_instance`` (L2 cached).
         """
         # two-planes F2.5 — record kinds delegate straight to
-        # kernel.get_document; never served from the materialization.
+        # kernel.get_instance; never served from the materialization.
         if self._is_record_kind(kind):
             effective_tenant = (
                 tenant if tenant is not None else getattr(self, "_tenant", None)
             )
-            raw = await self._kernel.get_document(
+            raw = await self._kernel.get_instance(
                 self.scope, kind, name, tenant=effective_tenant,
             )
             if raw is None:
@@ -471,7 +471,7 @@ class ManifestInstance:
         # for one tenant context only).
         mi_tenant = getattr(self, "_tenant", None)
         if tenant is None or tenant == mi_tenant:
-            for d in self._documents:
+            for d in self._instances:
                 if d.kind == kind and d.name == name:
                     return d
             # Lazy-cache fast-path (same tenant context).
@@ -481,7 +481,7 @@ class ManifestInstance:
                     if d.name == name:
                         return d
                 # s-platform-resources-inherit (2026-05-28): igual mi.one
-                # — fall through pra kernel.get_document quando o Kind é
+                # — fall through pra kernel.get_instance quando o Kind é
                 # inheritable e o scope local não é o parent. Sem isso,
                 # lazy_kind_cache=[] mata o fallback.
                 inheritable = getattr(self._kernel, "_INHERITABLE_KINDS", frozenset())
@@ -491,7 +491,7 @@ class ManifestInstance:
             # Eager-mode MI: full walk already done; not found.
             if not self._lazy:
                 return None
-        # Cross-tenant read OR lazy-mode uncached: kernel.get_document.
+        # Cross-tenant read OR lazy-mode uncached: kernel.get_instance.
         # Story s-resolve-layers-direct: tenant kwarg wins over
         # self._tenant (MI construction context). Lets callers ask
         # ``await holder.mi.one_async("X", "y", tenant="acme")`` instead
@@ -499,7 +499,7 @@ class ManifestInstance:
         if self._kernel is None:
             return None
         effective_tenant = tenant if tenant is not None else getattr(self, "_tenant", None)
-        raw = await self._kernel.get_document(
+        raw = await self._kernel.get_instance(
             self.scope, kind, name, tenant=effective_tenant,
         )
         if raw is None:
@@ -507,49 +507,49 @@ class ManifestInstance:
         _parse = getattr(self._kernel, "_parse_doc", None)
         return _parse(raw) if _parse else None
 
-    def one(self, kind: str, name: str) -> Document | None:
+    def one(self, kind: str, name: str) -> Instance | None:
         """Lookup single doc by (kind, name) — DEPRECATED, will be
         removed in 1.0.
 
         s-blessed-query-surface: the blessed query surface is
-        ``mi.documents`` (in-memory, search by ``d.kind``/``d.name``)
-        plus ``kernel.get_document(scope, kind, name)`` for indexed /
+        ``mi.instances`` (in-memory, search by ``d.kind``/``d.name``)
+        plus ``kernel.get_instance(scope, kind, name)`` for indexed /
         record-plane reads. This method survives as a warning shim
         until 1.0.
         """
         import warnings
         warnings.warn(
             "ManifestInstance.one() is deprecated and will be removed in "
-            "1.0 — search mi.documents (e.g. `next((d for d in "
-            "mi.documents if d.kind == kind and d.name == name), None)`) "
-            "or use `await kernel.get_document(scope, kind, name)` for "
+            "1.0 — search mi.instances (e.g. `next((d for d in "
+            "mi.instances if d.kind == kind and d.name == name), None)`) "
+            "or use `await kernel.get_instance(scope, kind, name)` for "
             "indexed/record-plane reads.",
             DeprecationWarning, stacklevel=2,
         )
         return self._one(kind, name)
 
-    def _one(self, kind: str, name: str) -> Document | None:
+    def _one(self, kind: str, name: str) -> Instance | None:
         """Internal, non-warning twin of :py:meth:`one` — used by the
         SDK's own collaborators (``read_spec``/``read_metadata``).
-        External callers use the blessed surface (``mi.documents`` /
-        ``kernel.get_document``); see ``one()``.
+        External callers use the blessed surface (``mi.instances`` /
+        ``kernel.get_instance``); see ``one()``.
 
         Lazy mode: hits bootstrap docs first (in-memory), then delegates
-        to ``kernel.get_document`` (L2-cached, ~5ms) — never forces
+        to ``kernel.get_instance`` (L2-cached, ~5ms) — never forces
         full materialization.
 
-        Eager mode: walks ``self._documents`` (back-compat).
+        Eager mode: walks ``self._instances`` (back-compat).
         """
         # two-planes F2.5 — record reads delegate to the kernel record
         # plane (see ``all`` — same contract: sync-on-loop RAISES, no
-        # eager fallback; migrate to `await kernel.get_document`).
+        # eager fallback; migrate to `await kernel.get_instance`).
         if self._is_record_kind(kind):
-            return self._kernel.get_document_sync(
+            return self._kernel.get_instance_sync(
                 self.scope, kind, name, tenant=getattr(self, "_tenant", None),
             )
         if self._lazy and not self._lazy_full_loaded:
             # Bootstrap fast-path.
-            for d in self._documents:
+            for d in self._instances:
                 if d.kind == kind and d.name == name:
                     return d
             # Per-kind cache fast-path (already-materialized kind).
@@ -559,7 +559,7 @@ class ManifestInstance:
                     if d.name == name:
                         return d
                 # s-platform-resources-inherit (2026-05-28): NÃO retornar
-                # None aqui — fall through pro kernel.get_document_sync que
+                # None aqui — fall through pro kernel.get_instance_sync que
                 # honra `_INHERITABLE_KINDS`. Bug pré-fix: scope local
                 # tinha lazy_kind_cache[LottieAsset]=[] (vazio) → mi.one
                 # retornava None sem nunca tentar parent scope inheritance.
@@ -572,7 +572,7 @@ class ManifestInstance:
                 return None
 
             tenant = getattr(self, "_tenant", None)
-            # F8.7 cleanup — route through kernel.get_document_sync so
+            # F8.7 cleanup — route through kernel.get_instance_sync so
             # we honor the registered main loop. The previous direct
             # ``asyncio.run`` here created a fresh loop per call; the
             # asyncpg pool is loop-bound, so reads from this fresh loop
@@ -580,16 +580,16 @@ class ManifestInstance:
             # in the middle of operation") on every insights ask /
             # narrative add-decision invocation. Issue was the same
             # `_run_sync_helper` already calls out — just was bypassed
-            # in this path. Returns the parsed Document, but callers
-            # of mi.one expect Document (with .kind/.spec) so it's a
+            # in this path. Returns the parsed Instance, but callers
+            # of mi.one expect Instance (with .kind/.spec) so it's a
             # drop-in replacement.
-            getter = getattr(self._kernel, "get_document_sync", None)
+            getter = getattr(self._kernel, "get_instance_sync", None)
             if getter is not None:
                 return getter(self.scope, kind, name, tenant=tenant)
-            # Legacy fallback (kernels without get_document_sync).
+            # Legacy fallback (kernels without get_instance_sync).
             import asyncio
             async def _g():
-                return await self._kernel.get_document(
+                return await self._kernel.get_instance(
                     self.scope, kind, name, tenant=tenant,
                 )
             try:
@@ -607,29 +607,29 @@ class ManifestInstance:
                 return None
             return _parse(raw)
 
-        # Eager mode: walk self._documents.
+        # Eager mode: walk self._instances.
         # NB: inheritance fallback (s-platform-resources-inherit, 2026-05-28)
-        # NÃO acontece aqui — `mi.one` é sync e chamar `get_document_sync`
+        # NÃO acontece aqui — `mi.one` é sync e chamar `get_instance_sync`
         # do dentro de um event loop quebra. Async callers DEVEM usar
-        # `mi.one_async`, que desce pro `kernel.get_document` + inheritance.
+        # `mi.one_async`, que desce pro `kernel.get_instance` + inheritance.
         # Caller sync: aceita que docs herdados sumam no eager mode.
-        for d in self._documents:
+        for d in self._instances:
             if d.kind == kind and d.name == name:
                 return d
         return None
 
     def read_spec(self, kind: str, name: str, field: str, *, default: Any = None) -> Any:
-        """Read a single field from ``document.spec``."""
+        """Read a single field from ``instance.spec``."""
         doc = self._one(kind, name)
         if doc is None:
-            raise KeyError(f"{kind}/{name}: document not found in manifest")
+            raise KeyError(f"{kind}/{name}: instance not found in manifest")
         return doc.spec.get(field, default)
 
     def read_metadata(self, kind: str, name: str, field: str, *, default: Any = None) -> Any:
-        """Same contract as ``read_spec`` but reads from ``document.metadata``."""
+        """Same contract as ``read_spec`` but reads from ``instance.metadata``."""
         doc = self._one(kind, name)
         if doc is None:
-            raise KeyError(f"{kind}/{name}: document not found in manifest")
+            raise KeyError(f"{kind}/{name}: instance not found in manifest")
         return doc.metadata.get(field, default)
 
     def read_spec_list(self, kind: str, name: str, field: str) -> list:
@@ -644,19 +644,19 @@ class ManifestInstance:
         return val
 
     @cached_property
-    def root(self) -> Document | None:
-        """The manifest's root document (the Genome), or None when the
+    def root(self) -> Instance | None:
+        """The manifest's root instance (the Genome), or None when the
         scope has no doc whose KindPort is marked ``is_root``."""
         # Phase 16 — Genome is the canonical root Kind. ModuleKind
         # class is gone; legacy ``kind: Module`` docs no longer parse.
-        for d in self.documents:
+        for d in self.instances:
             kp = self._kinds.get((d.api_version, d.kind))
             if kp and kp.is_root:
                 return d
         return None
 
-    def default_agent(self) -> Document | None:
-        """The agent Document the root Genome names as its default
+    def default_agent(self) -> Instance | None:
+        """The agent Instance the root Genome names as its default
         (``spec.default_agent`` via the root KindPort), or None when
         there is no root or no such agent."""
         root = self.root
@@ -681,8 +681,8 @@ class ManifestInstance:
 
     def list_kinds(self) -> list[str]:
         """Sorted list of the distinct Kind names present in this
-        manifest's loaded documents."""
-        return sorted(set(d.kind for d in self.documents))
+        manifest's loaded instances."""
+        return sorted(set(d.kind for d in self.instances))
 
     def render_doc(self, kind: str, name: str) -> list[PreviewBlock]:
         """Polymorphic per-kind preview."""
@@ -716,26 +716,26 @@ class ManifestInstance:
         return None
 
     def iter_doc_deps(self, doc: Any) -> list[dict[str, Any]]:
-        """Iterate a document's declared dep_filters dynamically."""
+        """Iterate an instance's declared dep_filters dynamically."""
         return self.composition.iter_doc_deps(doc)
 
     def get(self, kind: str | None = None) -> list[dict[str, Any]]:
-        """List documents as light ``{kind, name, apiVersion}`` dicts —
-        all of them, or only those of ``kind``. For full Documents use
-        ``documents`` / ``all()`` instead."""
-        docs = self.documents if kind is None else self._all(kind)
+        """List instances as light ``{kind, name, apiVersion}`` dicts —
+        all of them, or only those of ``kind``. For full Instances use
+        ``instances`` / ``all()`` instead."""
+        docs = self.instances if kind is None else self._all(kind)
         return [
             {"kind": d.kind, "name": d.name, "apiVersion": d.api_version}
             for d in docs
         ]
 
     def describe(self, kind: str, name: str) -> str:
-        """Human-readable description of one document (metadata, spec
+        """Human-readable description of one instance (metadata, spec
         highlights, relationships) — delegates to the Navigator."""
         return self.nav.describe(kind, name)
 
     def summary(self) -> str:
-        """Plain-text overview of the manifest (scope + the documents
+        """Plain-text overview of the manifest (scope + the instances
         loaded, grouped by kind) — delegates to the Navigator."""
         return self.nav.summary()
 
@@ -744,7 +744,7 @@ class ManifestInstance:
         return self.nav.inventory()
 
     def dependency_tree(self) -> dict[str, Any]:
-        """Build a dependency tree for every document that has dep_filters."""
+        """Build a dependency tree for every instance that has dep_filters."""
         return self.composition.dependency_tree()
 
     # -- Ref resolution -------------------------------------------------------
@@ -883,26 +883,26 @@ class ManifestInstance:
 
     def _build_context(
         self,
-        agent_doc: Document,
+        agent_doc: Instance,
         extra: dict[str, Any] | None,
         enabled_slots: dict[str, list[str]] | None = None,
     ) -> dict[str, Any]:
         """Compatibility shim — delegates to PromptBuilder._build_context()."""
         return self.prompt._build_context(agent_doc, extra, enabled_slots)
 
-    def find_agent(self, name: str) -> Document | None:
-        """Find the best prompt-target document matching *name*.
+    def find_agent(self, name: str) -> Instance | None:
+        """Find the best prompt-target instance matching *name*.
 
         Considers prompt_target_priority when multiple kinds match.
         Public API — use this instead of _find_agent().
         """
         return self._find_agent(name)
 
-    def _find_agent(self, name: str) -> Document | None:
+    def _find_agent(self, name: str) -> Instance | None:
         """Internal — kept for backwards compat."""
-        best: Document | None = None
+        best: Instance | None = None
         best_priority = -1
-        for d in self.documents:
+        for d in self.instances:
             kp = self._kinds.get((d.api_version, d.kind))
             if kp and kp.is_prompt_target and d.name == name:
                 priority = getattr(kp, "prompt_target_priority", 0)
@@ -962,7 +962,7 @@ class ManifestInstance:
     # -- Declarative Hooks ----------------------------------------------------
 
     def apply_hooks(self) -> None:
-        """Auto-register Hook documents on the kernel's HookRegistry."""
+        """Auto-register Hook instances on the kernel's HookRegistry."""
         if not self._kernel or not hasattr(self._kernel, "hooks"):
             return
 
@@ -1063,5 +1063,5 @@ class ManifestInstance:
     # -- Lock (delegates to LockManager) ---------------------------------------
 
     def generate_lock(self) -> "Lockfile":
-        """Generate lockfile with SHA256 per document."""
+        """Generate lockfile with SHA256 per instance."""
         return self.lock.generate()

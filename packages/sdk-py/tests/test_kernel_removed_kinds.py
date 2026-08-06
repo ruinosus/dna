@@ -36,7 +36,7 @@ async def test_write_oracle_verdict_raises_kind_retired():
         "spec": {"oracle": "tactical"},
     }
     with pytest.raises(KindRetiredError) as exc:
-        await k.write_document("scope-x", "OracleVerdict", "verdict-smoke", raw)
+        await k.write_instance("scope-x", "OracleVerdict", "verdict-smoke", raw)
     assert "OracleVerdict" in str(exc.value)
     assert "_REMOVED_KINDS" in str(exc.value)
 
@@ -51,7 +51,7 @@ async def test_write_oracle_kind_raises_kind_retired():
         "spec": {},
     }
     with pytest.raises(KindRetiredError):
-        await k.write_document("scope-x", "Oracle", "tactical", raw)
+        await k.write_instance("scope-x", "Oracle", "tactical", raw)
 
 
 def test_removed_kinds_set_is_frozenset():
@@ -74,7 +74,7 @@ async def test_live_kind_still_writable():
     # Should NOT raise KindRetiredError. (Other errors may fire — we
     # don't care here; just asserting the retirement guard skips this.)
     try:
-        await k.write_document("scope-x", "Engram", "rem-smoke", raw)
+        await k.write_instance("scope-x", "Engram", "rem-smoke", raw)
     except KindRetiredError:
         pytest.fail("Engram is live; must not trip _REMOVED_KINDS guard")
     except Exception:

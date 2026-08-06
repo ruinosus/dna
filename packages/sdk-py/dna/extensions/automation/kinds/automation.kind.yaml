@@ -192,7 +192,7 @@ spec:
       result_kind:
         type: string
         description: Kind the automation output should be persisted as
-          (e.g. Research, Doc) when the runner produces a document.
+          (e.g. Research, Doc) when the runner produces an instance.
       result_spec_template:
         type: object
         additionalProperties: true
@@ -240,7 +240,7 @@ spec:
           max_fan_out:
             type: integer
             minimum: 1
-            description: Cap on documents one fire may produce.
+            description: Cap on instances one fire may produce.
           idempotency_key:
             type: string
             description: Template, e.g. '{scope}:{utc_date}'. A 2nd fire

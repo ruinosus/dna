@@ -62,7 +62,7 @@ TRAIT_DATED_CREATE_ONLY = "sdlc.dated-create-only"
 #: The KERNEL-LESS fallback memberships — what each family was before the trait.
 #:
 #: A handful of callers are pure by design (``dna_cli._digest.build_digest``
-#: takes documents and a window, not a kernel) and a few take a narrow duck-typed
+#: takes instances and a window, not a kernel) and a few take a narrow duck-typed
 #: kernel. They get this, which is the PRE-TRAIT behavior verbatim, so nothing
 #: they could do before stops working.
 #:
@@ -92,7 +92,7 @@ def _with_trait(kernel: Any, trait: str) -> frozenset[str]:
 
     Not defensiveness for its own sake: the SDK's write core is routinely handed
     a narrow duck-typed kernel (a test double, an adapter shim) that implements
-    only ``get_document`` / ``write_document`` / ``query``. Such a caller gets
+    only ``get_instance`` / ``write_instance`` / ``query``. Such a caller gets
     the documented static fallback rather than an ``AttributeError`` from a
     module it never asked about — and the fallbacks are the pre-trait behavior
     exactly, so nothing it could do before stops working."""

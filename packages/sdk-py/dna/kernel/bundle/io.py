@@ -1,8 +1,8 @@
-"""BundleIO — the kernel's bundle-entry + document serialization I/O, extracted
+"""BundleIO — the kernel's bundle-entry + instance serialization I/O, extracted
 from the Kernel god-object (kernel-decompose-continue).
 
 Behavior-preserving: ``fetch_bundle_entry`` / ``fetch_bundle_entry_async`` /
-``write_bundle_entry_async`` / ``serialize_document`` move verbatim; the kernel
+``write_bundle_entry_async`` / ``serialize_instance`` move verbatim; the kernel
 keeps all four as thin public delegators (70+ external callers — extensions,
 adapters, tools, tests — are unchanged). Holds a back-ref to the kernel for the
 accessors it needs (source, storage_for_kind, writers, generic-RW ensure).
@@ -17,7 +17,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 class BundleIO:
-    """Source-agnostic bundle-entry read/write + document→files serialization."""
+    """Source-agnostic bundle-entry read/write + instance→files serialization."""
 
     def __init__(self, kernel: "BundleIOHost") -> None:
         self._k = kernel
@@ -224,7 +224,7 @@ class BundleIO:
         return result
 
     def serialize(self, scope: str, kind: str, name: str, raw: dict) -> dict:
-        """Serialize a document to files without writing. Returns
+        """Serialize an instance to files without writing. Returns
         ``{"files": [{"relativePath": str, "content": str}]}``."""
         k = self._k
         k._ensure_generic_readers_writers()

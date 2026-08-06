@@ -1,12 +1,12 @@
 """HttpResolver — ResolverPort for http:/https: URIs.
 
-Fetches manifest documents from HTTP endpoints. Supports two modes:
+Fetches manifest instances from HTTP endpoints. Supports two modes:
 
 1. **Index mode** (default): GET {uri}/index.json → list of {kind, name, path}.
    Each item is fetched individually: GET {uri}/{path} → raw dict.
 
 2. **Bundle mode** (?bundle=true): GET {uri} → list of raw dicts directly.
-   Server returns all documents in a single JSON array.
+   Server returns all instances in a single JSON array.
 
 Example dependency:
     dependencies:
@@ -52,7 +52,7 @@ class HttpResolver:
         return f"http-{safe}"[:120]
 
     async def resolve(self, uri: str, dep: dict[str, Any]) -> list[ResolvedItem]:
-        """Fetch documents from an HTTP endpoint.
+        """Fetch instances from an HTTP endpoint.
 
         Tries index mode first (GET {uri}/index.json), then bundle mode
         (GET {uri} expecting JSON array) as fallback.
@@ -108,9 +108,9 @@ class HttpResolver:
         ``name`` COMES FROM REMOTE JSON — ``entry["name"]`` in index mode,
         ``raw["metadata"]["name"]`` in bundle mode — and it becomes a directory
         name on this machine, so it is a PATH COMPONENT and is validated as one
-        (``validate_document_name``: no ``/``, ``\\`` or NUL, not ``.``/``..``,
+        (``validate_instance_name``: no ``/``, ``\\`` or NUL, not ``.``/``..``,
         ≤200 bytes; no charset — dots and hyphens stay legal, because real
-        document names carry them).
+        instance names carry them).
 
         A sweep once recorded this site as "escapes a directory that holds
         nothing", and that verdict was wrong. Reproduced: a remote ``name`` of
@@ -137,9 +137,9 @@ class HttpResolver:
         import tempfile
         from pathlib import Path
 
-        from dna.kernel.errors import PathEscapesStoreRoot, validate_document_name
+        from dna.kernel.errors import PathEscapesStoreRoot, validate_instance_name
 
-        validate_document_name(name)
+        validate_instance_name(name)
         root = Path(tempfile.mkdtemp()).resolve()
         tmp = root / name
         if tmp.resolve().parent != root:
@@ -168,7 +168,7 @@ class HttpResolver:
             if requested and not self._matches_request(kind, name, requested):
                 continue
 
-            # Fetch individual document
+            # Fetch individual instance
             try:
                 raw = self._fetch_json(f"{base_url}/{path}")
             except ResolveError:
@@ -221,7 +221,7 @@ class HttpResolver:
 
     @staticmethod
     def _matches_request(kind: str, name: str, requested: dict[str, list[str]]) -> bool:
-        """Check if a document matches the requested items filter."""
+        """Check if an instance matches the requested items filter."""
         if kind not in requested:
             return False
         names = requested[kind]

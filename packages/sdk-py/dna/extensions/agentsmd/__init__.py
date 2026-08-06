@@ -144,7 +144,7 @@ class AgentDefinitionWriter(WriterPort):
         """Return the full file list the writer would emit to disk.
 
         Mirrors typescript/src/extensions/agentsmd.ts — keeps
-        ``kernel.serialize_document`` on the WRITER path so authored
+        ``kernel.serialize_instance`` on the WRITER path so authored
         frontmatter survives (the generic STANDALONE branch emits the body
         field only, silently dropping authored metadata). Upstreamed from
         the DNA F3 market-fidelity surgery (s-dna-rw-roundtrip-suite)."""

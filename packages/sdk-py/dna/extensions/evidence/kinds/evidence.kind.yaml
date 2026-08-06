@@ -73,8 +73,8 @@ spec:
       document_ref:
         type: string
         description: >-
-          `Kind:name` of the document whose save triggered this event — the
-          canonical Kind name and the document name, colon-joined. MEASURED,
+          `Kind:name` of the instance whose save triggered this event — the
+          canonical Kind name and the instance name, colon-joined. MEASURED,
           not inferred — the one runtime producer is the kernel evidence
           `post_save` handler (`dna/kernel/write/evidence.py`), which writes
           `f"{kind}:{name}"` straight from the HookContext, and the deleted
@@ -83,7 +83,7 @@ spec:
           (`Story/s-x`, `eval-evalrun/my-run`) and the older builder docstring
           are inert inputs to a pass-through parameter and are NOT the format.
           Nothing dereferences it today. Declared as a relation with `to: '*'`
-          rather than with a named target: a named one resolves a bare document
+          rather than with a named target: a named one resolves a bare instance
           NAME, and this is the same composite as `Comment.target_ref` — it
           needs parsing, not a lookup. Absent on the gaia event shape, which
           carries source_kind/source_name instead.
@@ -114,6 +114,6 @@ spec:
     text_color: '#fff'
   ascii_icon: 📜
   display_label: Evidence
-  docs: An Evidence document is an immutable audit event record. Captures the event
+  docs: An Evidence instance is an immutable audit event record. Captures the event
     type, SHA-256 hash of the referenced content, timestamp, author, and optional
     snapshot. Used by the GAIA report pipeline to provide a verifiable audit trail.

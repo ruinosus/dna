@@ -1,7 +1,7 @@
 """RecognizerExtension — Recognizer kind (Presidio ad-hoc recognizer).
 
-Declares PII detection patterns as manifest documents. Recognizers are
-referenced by SafetyPolicy documents via dep_filters and exported to
+Declares PII detection patterns as manifest instances. Recognizers are
+referenced by SafetyPolicy instances via dep_filters and exported to
 LiteLLM/Presidio at runtime.
 
 Storage layout::
@@ -83,7 +83,7 @@ class RecognizerKind(KindBase):
     docs = (
         "A Recognizer is a Presidio ad-hoc recognizer that detects PII "
         "entities using regex patterns or deny lists. Recognizers are "
-        "referenced by SafetyPolicy documents and exported to "
+        "referenced by SafetyPolicy instances and exported to "
         "LiteLLM/Presidio at runtime."
     )
 

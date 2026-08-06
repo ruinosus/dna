@@ -75,7 +75,7 @@ spec:
         - string
         - 'null'
         description: The IntelSource name this insight came from. DECLARED
-          (i-040) — the engine already stamps the source DOCUMENT NAME here,
+          (i-040) — the engine already stamps the source INSTANCE NAME here,
           which is exactly what a name-addressed relation resolves by, so the
           declaration types a relation that was already true instead of asking any producer
           to write differently. Null/absent stays legal — an optional reference

@@ -47,7 +47,7 @@ class KernelRefusal(Exception):
     """
 
 
-class DocumentNameTaken(KernelRefusal, FileExistsError):
+class InstanceNameTaken(KernelRefusal, FileExistsError):
     """An ``if_absent`` write lost the race: the name was already taken.
 
     The ATOMIC half of "create is never an update". ``refuse_if_exists`` closed
@@ -57,7 +57,7 @@ class DocumentNameTaken(KernelRefusal, FileExistsError):
     unique-name constraint to lean on. It does now: both shipped adapters can
     claim a name atomically (a composite primary key on the SQL side,
     ``O_CREAT|O_EXCL`` / ``mkdir`` on the filesystem), so an ``if_absent`` write
-    either creates the document or raises this — never overwrites.
+    either creates the instance or raises this — never overwrites.
 
     A ``KernelRefusal`` so every face relays it as an honest denial, and a
     ``FileExistsError`` so a caller allocating a name (``create_issue``) can
@@ -65,17 +65,17 @@ class DocumentNameTaken(KernelRefusal, FileExistsError):
     """
 
 
-class StaleDocumentWrite(KernelRefusal, ValueError):
-    """An ``if_match`` write lost the race: the stored document is no longer the
+class StaleInstanceWrite(KernelRefusal, ValueError):
+    """An ``if_match`` write lost the race: the stored instance is no longer the
     one the caller read, so the write would have been a LOST UPDATE.
 
-    The UPDATE half of what :class:`DocumentNameTaken` is for creates.
+    The UPDATE half of what :class:`InstanceNameTaken` is for creates.
     ``if_absent`` answers "this create must not become an update"; this answers
     "this update must not become somebody else's erasure". Both are arbitrated
     by the adapter against the STORE, which is the only thing that makes either
     of them true: a read-modify-write guarded in application code re-reads
     through the very cache that made the read stale (i-083 — a reviewer's 60s
-    granular document cache on one replica, an author's edit on another), and
+    granular instance cache on one replica, an author's edit on another), and
     so compares a stale value against itself and agrees.
 
     The token is the ``spec`` content digest :func:`dna.kernel.etag.spec_etag`
@@ -85,15 +85,15 @@ class StaleDocumentWrite(KernelRefusal, ValueError):
     A ``KernelRefusal`` so every face relays it as an honest denial rather than
     a 500, and a ``ValueError`` so the doors that already map write-path vetoes
     to a client refusal surface it with no new wiring. The remedy is always the
-    same and the message says it: re-read the document and re-apply the change
+    same and the message says it: re-read the instance and re-apply the change
     to the fresh etag.
     """
 
 
-class InvalidDocumentName(KernelRefusal, ValueError):
-    """A document ``name`` is not a single, safe path component.
+class InvalidInstanceName(KernelRefusal, ValueError):
+    """An instance ``name`` is not a single, safe path component.
 
-    A document reaches a source adapter as a PATH COMPONENT — it is stored at
+    An instance reaches a source adapter as a PATH COMPONENT — it is stored at
     ``<scope>/<container>/<name>/…`` or ``<container>/<name>.yaml`` — and
     nothing on the kernel write path used to say so. A caller-supplied
     ``"../../../../ESCAPED"`` was accepted end to end and wrote a file two
@@ -107,7 +107,7 @@ class InvalidDocumentName(KernelRefusal, ValueError):
     identifier". No charset is imposed, because legitimate names in the wild
     include ``s-foo-bar``, ``i-065-layerpolicy-missing``,
     ``ws-1a2b3c.dna.local`` and ``ws-1a2b3c.dna.local--Contrato`` — ``.``,
-    ``-`` and ``--`` are all legal. See :func:`validate_document_name`.
+    ``-`` and ``--`` are all legal. See :func:`validate_instance_name`.
 
     A ``KernelRefusal`` so every face relays it as an honest denial, and ALSO a
     ``ValueError`` — deliberately, for a security refusal — so a face that
@@ -120,7 +120,7 @@ class InvalidDocumentName(KernelRefusal, ValueError):
 class InvalidScopeName(KernelRefusal, ValueError):
     """A ``scope`` is not a single, safe path component.
 
-    The twin of :class:`InvalidDocumentName`, and for the same reason: the
+    The twin of :class:`InvalidInstanceName`, and for the same reason: the
     filesystem adapter builds ``base_dir / scope`` (and
     ``base_dir / "tenants" / <t> / "scopes" / scope``) with no validation at
     all, and ``scope`` IS caller-supplied on the generic write door whenever
@@ -148,13 +148,13 @@ class InvalidBundleEntry(KernelRefusal, ValueError):
 
     The hole this closes was NOT a caller passing a crafted ``entry`` to a
     bundle-entry door — ``606812c`` guarded those. It was that a bundle entry
-    path is ALSO derived from document CONTENT. ``spec.source_files``,
+    path is ALSO derived from instance CONTENT. ``spec.source_files``,
     ``spec.root_files``, ``spec.scripts|references|assets``, ``spec.extras`` and
     ``spec.instruction_file`` are all turned into ``relativePath`` values by the
     registered writers, and ``spec`` is copied verbatim from the caller by
     ``apply_definition_impl`` and taken as an untyped body by
     ``PUT /v1/definitions/{kind}/{name}``. Measured at HEAD through
-    ``Kernel.write_document`` on the default ``Agent`` Kind: each of those five
+    ``Kernel.write_instance`` on the default ``Agent`` Kind: each of those five
     fields wrote a file OUTSIDE the store root, on the base lane and on the
     tenant lane alike, and an ABSOLUTE entry wrote to an arbitrary absolute path
     (``pathlib`` joins discard the anchor when the right operand is absolute).
@@ -186,14 +186,14 @@ class PathEscapesStoreRoot(KernelRefusal, ValueError):
     """A path a store adapter built from caller-supplied segments resolved
     OUTSIDE that adapter's base directory.
 
-    The SECOND layer, deliberately redundant with :class:`InvalidDocumentName`
+    The SECOND layer, deliberately redundant with :class:`InvalidInstanceName`
     / :class:`InvalidScopeName`. Those guard the kernel facade — the primary
     seam, because it is the door every writer and reader goes through and it
     can name WHICH input was wrong. This one guards the filesystem adapter
     itself, which builds ``<base>/<scope>/<container>/<name>/<…>`` and until now
     trusted every segment it was handed. The kernel guard cannot help a caller
     that does not go through the kernel, and there already is one
-    (``dna.kernel.source.sync`` calls ``save_document`` directly — benignly
+    (``dna.kernel.source.sync`` calls ``save_instance`` directly — benignly
     today, since its names come from the source being copied rather than from a
     request), plus the public conformance kit, which drives adapters on purpose.
 
@@ -215,22 +215,22 @@ class RevokedKindWrite(KernelRefusal, ValueError):
     The third state of the registration gate, and the reason it had to BE a
     state rather than the absence of approval. Approval is what confers schema
     validation and storage routing, so withdrawing it looks like it should
-    simply un-register the Kind — but an unregistered Kind's documents are
+    simply un-register the Kind — but an unregistered Kind's instances are
     accepted with NO validation at all (measured), so un-registering LOOSENS the
     gate instead of closing it. A revoked Kind therefore stays registered,
-    marked, and refuses new documents outright:
+    marked, and refuses new instances outright:
 
-        state            existing documents      new documents
+        state            existing instances      new instances
         ---------------- ---------------------- ---------------------------
         never approved   —                       accepted WITHOUT validation
         approved         valid, routed           validated against the schema
         revoked          INVALID                 REFUSED
 
-    Refused, not "vetoed for its shape": a CONFORMING document is refused too,
+    Refused, not "vetoed for its shape": a CONFORMING instance is refused too,
     because what was withdrawn is the Kind, not a schema. That is also why this
     is its own type and not a
     :class:`~dna.kernel.protocols.SpecValidationError` — a caller told its
-    document failed validation would go and fix the document, and no document
+    instance failed validation would go and fix the instance, and no instance
     passes.
 
     Deliberately NOT governed by ``DNA_WRITE_VALIDATION``. That knob trades
@@ -238,12 +238,12 @@ class RevokedKindWrite(KernelRefusal, ValueError):
     workspace's decision about its own Kind, and an environment variable must
     not be able to overrule it.
 
-    Existing documents are untouched — never deleted, never unreadable. They
+    Existing instances are untouched — never deleted, never unreadable. They
     read back MARKED invalid (``status.valid == false``), because erasing them
     or refusing the read would destroy the ability to audit what existed, and
     the data did nothing wrong: the workspace changed its mind. Reversible in
     one act — approving again restores validity, since validity follows the
-    Kind's CURRENT state and is never a stamp on the document.
+    Kind's CURRENT state and is never a stamp on the instance.
 
     A ``KernelRefusal`` so every face relays it as an honest denial, and a
     ``ValueError`` so a face that predates the marker base and still catches
@@ -284,7 +284,7 @@ def _path_component_fault(value: object) -> str | None:
         if char in value:
             return f"contains {label}"
     if value in (".", ".."):
-        return "addresses a directory instead of naming a document"
+        return "addresses a directory instead of naming an instance"
     size = len(value.encode("utf-8", "surrogatepass"))
     if size > MAX_PATH_COMPONENT_BYTES:
         return f"is {size} bytes (max {MAX_PATH_COMPONENT_BYTES})"
@@ -300,20 +300,20 @@ _COMPONENT_RULE = (
 )
 
 
-def validate_document_name(name: object) -> None:
-    """Raise :class:`InvalidDocumentName` unless ``name`` is a safe component.
+def validate_instance_name(name: object) -> None:
+    """Raise :class:`InvalidInstanceName` unless ``name`` is a safe component.
 
-    Called by ``Kernel.write_document`` / ``Kernel.delete_document`` before any
+    Called by ``Kernel.write_instance`` / ``Kernel.delete_instance`` before any
     adapter is touched, so every writer — the SDLC verbs, the generic MCP write
     tool, the REST routes, an extension — inherits it without knowing it exists.
     """
     fault = _path_component_fault(name)
     if fault is not None:
-        raise InvalidDocumentName(
-            f"document name {name!r} {fault} — a document name must be "
+        raise InvalidInstanceName(
+            f"instance name {name!r} {fault} — an instance name must be "
             f"{_COMPONENT_RULE}. It is written to disk as a path component "
             f"(<scope>/<container>/<name>), so a name that traverses would "
-            f"place the document outside the store."
+            f"place the instance outside the store."
         )
 
 
@@ -324,8 +324,8 @@ def validate_scope_name(scope: object) -> None:
     the WRITE and BUNDLE facades refuse ``scope=""``, ``"."`` and ``"a/b"``
     through this validator, but the READ path never calls it — reads are held to
     CONTAINMENT only (``FilesystemSource._contained``), which fires on a genuine
-    escape and lets those three through. So ``list_documents(scope="a/b")``
-    works today while ``write_document(scope="a/b")`` refuses. Deliberate and
+    escape and lets those three through. So ``list_instances(scope="a/b")``
+    works today while ``write_instance(scope="a/b")`` refuses. Deliberate and
     measured, not overlooked: 12 on-disk scopes exist across both repos and not
     one contains a slash, so nothing real depends on either behaviour, and
     tightening the read path would be a change in what a scope IS rather than a
@@ -409,7 +409,7 @@ def validate_bundle_entry(entry: object, *, where: str = "bundle entry") -> None
 
     Called by ``FilesystemBundleHandle`` on EVERY method that builds a path from
     an entry, by ``write_entries_to_handle`` before any writer's output reaches
-    a handle, and by ``Kernel.serialize_document`` on every ``relativePath`` it
+    a handle, and by ``Kernel.serialize_instance`` on every ``relativePath`` it
     hands back. The handle is the closing layer — it is the one door every
     writer must pass — and the other two are the named, early ones that can say
     WHICH field was wrong.
@@ -468,7 +468,7 @@ class ExtensionLoadError(KernelRegistrationError):
 
 class AgentNotFound(LookupError):
     """``build_prompt(agent=X)`` was asked for an agent that no prompt-target
-    document in the loaded manifest declares (missing, renamed, or unparseable).
+    instance in the loaded manifest declares (missing, renamed, or unparseable).
 
     Fail-loud contract (s-dx-build-prompt-fail-loud): the builder used to
     RETURN the string ``"Agent 'X' not found"`` instead of raising — which
@@ -515,7 +515,7 @@ class UnknownLayout(ValueError):
 
 class ToolNotFound(LookupError):
     """``load_tools(scope)[name]`` was asked for a Tool that no ``Tool``
-    document in the scope declares (missing, renamed, or in another scope).
+    instance in the scope declares (missing, renamed, or in another scope).
 
     Fail-loud contract (s-load-tools-helper), the twin of
     :class:`AgentNotFound`: the agent-facing tool surface is data, so a miss

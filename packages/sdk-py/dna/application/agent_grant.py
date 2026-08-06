@@ -1,6 +1,6 @@
 """A regra de concessão — pura, e pequena de propósito.
 
-Quem lê e escreve o documento ``AgentGrant`` é o HOST (a porta A2A, no
+Quem lê e escreve a instância ``AgentGrant`` é o HOST (a porta A2A, no
 deployment). O que mora aqui é a DECISÃO, e ela é minúscula: uma regra de
 autorização que precisa de banco para ser exercitada é uma regra que ninguém
 testa nos casos difíceis — e num portão os casos difíceis são exatamente os que
@@ -13,7 +13,7 @@ fecha, malformado fecha, desconhecido fecha.
 
 Não há lista de negados a manter — há uma lista de UM permitido, e o resto é o
 resto. Um portão escrito ao contrário (que nega o que conhece) abre para tudo
-que ele NÃO conhece: um estado novo acrescentado ao Kind depois, um documento de
+que ele NÃO conhece: um estado novo acrescentado ao Kind depois, uma instância de
 versão futura, um campo corrompido. E abre em silêncio, que é o pior jeito.
 
 ## A separação que é a regra inteira
@@ -87,10 +87,10 @@ def pending_grant(
     requested_scope: Iterable[str] = (),
     client_name: str | None = None,
 ) -> dict[str, Any]:
-    """O documento de um pedido recém-chegado — INERTE.
+    """A instância de um pedido recém-chegado — INERTE.
 
     ``requested_scope`` é ordenado e desduplicado para que o mesmo pedido produza
-    o mesmo documento: um documento que varia sem o fato variar polui o
+    o mesma instância: uma instância que varia sem o fato variar polui o
     histórico, e histórico é metade do que a auditoria vende.
 
     Sem escopo declarado, ``requested_scope_kinds`` fica vazio e a tela não
@@ -106,13 +106,13 @@ def pending_grant(
 
     ⚠️ **A ancoragem é responsabilidade de quem CHAMA**, e esta função não tem
     como verificá-la: ela recebe uma string. O contrato, escrito no Kind, é que
-    o host só passa um nome que veio de um documento CIMD servido pela própria
+    o host só passa um nome que veio de uma instância CIMD servido pela própria
     origem do ``client_id``. Passar aqui um nome vindo do corpo do pedido
     devolveria inteiro o ataque que o desenho fecha — e passaria por este
     código sem tropeçar em nada.
 
     Vazio e só-espaço viram AUSÊNCIA em vez de virarem um campo em branco: um
-    nome vazio no documento faria a tela desenhar uma linha muda no lugar do
+    nome vazio na instância faria a tela desenhar uma linha muda no lugar do
     ``client_id``, que é pior que os dois estados honestos.
     """
     doc: dict[str, Any] = {

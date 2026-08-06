@@ -2,7 +2,7 @@
 """Seed the DNA Cloud portfolio-console demo data (tenant ``demo``).
 
 Mirrors how the intel ``IntelSource`` was seeded at ``.dna/tenants/demo/…``:
-writes each portfolio doc through ``kernel.write_document`` (so schema
+writes each portfolio doc through ``kernel.write_instance`` (so schema
 validation + cache invalidation fire, the same funnel every writer uses), bound
 to tenant ``demo`` so the FS source routes them into the tenant overlay layout
 ``.dna/tenants/demo/scopes/dna/<container>/``. Those YAMLs are
@@ -96,7 +96,7 @@ async def _run() -> None:
     kernel = live.kernel
 
     async def write(doc: dict) -> None:
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, doc["kind"], doc["metadata"]["name"], doc, tenant=TENANT,
         )
         print(f"  seeded {doc['kind']}/{doc['metadata']['name']}")

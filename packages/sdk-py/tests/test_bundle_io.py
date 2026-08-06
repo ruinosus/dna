@@ -47,7 +47,7 @@ def test_kernel_delegators_point_at_bundleio():
     k = _kernel()
     assert isinstance(k._bundleio, BundleIO)
     # The public kernel methods delegate to the same collaborator.
-    out_kernel = k.serialize_document(
+    out_kernel = k.serialize_instance(
         "s", "Agent", "bot",
         {"kind": "Agent", "metadata": {"name": "bot"}, "spec": {"model": "x"}},
     )

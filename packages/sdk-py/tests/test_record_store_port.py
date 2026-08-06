@@ -4,7 +4,7 @@ Historia: F2 D2 (s-f2-recordstore-port) declarou um ``RecordStorePort``
 que era uma cópia quase literal do contrato writable ("FORMALIZA o
 contrato que os sources writáveis já satisfazem"). O
 s-sourceport-contract-cleanup unificou os dois: ``WritableSourcePort`` É
-o contrato único (put=save_document, delete=delete_document, query,
+o contrato único (put=save_instance, delete=delete_instance, query,
 count; ``search`` vive no RecordSearchProvider registrado no kernel).
 ``RecordStorePort`` virou alias deprecado.
 
@@ -41,7 +41,7 @@ _ADAPTERS = [
     FilesystemWritableSource,
     CompositeFilesystemSource,
 ]
-_PORT_METHODS = ["save_document", "delete_document", "query", "count"]
+_PORT_METHODS = ["save_instance", "delete_instance", "query", "count"]
 
 
 def _make(cls, tmp_path):
@@ -85,8 +85,8 @@ def test_runtime_checkable_rejects_non_conforming():
         async def close(self): ...
         async def list_doc_refs(self, *a, **kw): ...
         async def load_one(self, *a, **kw): ...
-        async def save_document(self, *a, **kw): ...
-        async def delete_document(self, *a, **kw): ...
+        async def save_instance(self, *a, **kw): ...
+        async def delete_instance(self, *a, **kw): ...
         async def save_manifest(self, *a, **kw): ...
         async def list_versions(self, *a, **kw): ...
         async def get_version(self, *a, **kw): ...
@@ -132,11 +132,11 @@ def test_adapter_signature_matches_port(cls, method, tmp_path):
 
     expected = _params(getattr(WritableSourcePort, method))
     actual = _params(getattr(cls, method))
-    if method in ("save_document", "delete_document"):
+    if method in ("save_instance", "delete_instance"):
         caps = source_capabilities(_make(cls, tmp_path))
         vocabulary, declared = (
             (SAVE_OPTIONAL_KWARGS, caps.write_kwargs)
-            if method == "save_document"
+            if method == "save_instance"
             else (DELETE_OPTIONAL_KWARGS, caps.delete_kwargs)
         )
         opted_out = vocabulary - declared
@@ -159,9 +159,9 @@ def test_read_half_signatures_come_from_source_port():
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("cls", _ADAPTERS, ids=lambda c: c.__name__)
-@pytest.mark.parametrize("method", ["save_document", "delete_document", "count"])
+@pytest.mark.parametrize("method", ["save_instance", "delete_instance", "count"])
 def test_adapter_method_is_coroutine(cls, method):
-    """`save_document`, `delete_document` and `count` must be plain coroutine
+    """`save_instance`, `delete_instance` and `count` must be plain coroutine
     functions (``async def``, not async generators)."""
     fn = getattr(cls, method)
     assert inspect.iscoroutinefunction(fn), (
@@ -191,7 +191,7 @@ def test_port_query_options_are_keyword_only():
     for opt in ("filter", "group_by", "tenant"):
         assert cp[opt].kind == inspect.Parameter.KEYWORD_ONLY
         assert cp[opt].default is None
-    sp = inspect.signature(WritableSourcePort.save_document).parameters
+    sp = inspect.signature(WritableSourcePort.save_instance).parameters
     assert sp["write_class"].kind == inspect.Parameter.KEYWORD_ONLY
     assert sp["write_class"].default == "substantive"
 

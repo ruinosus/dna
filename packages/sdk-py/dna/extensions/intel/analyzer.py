@@ -28,7 +28,7 @@ Two analyzers ship:
   - :class:`LLMAnalyzer` — a REAL LLM research pass that works for ANY source.
     It gathers the source's CONTEXT per its ``type`` (``repo`` → README + key
     docs read from the local ``uri``; ``scope`` → the scope's docs handed in via
-    ``context['documents']`` by the kernel-bound engine; ``external`` → the
+    ``context['instances']`` by the kernel-bound engine; ``external`` → the
     ``uri`` as a hint), folds in the PIRs, prompts the model for candidate
     insights as JSON, and parses + validates them robustly (bad/absent JSON →
     empty list + a logged warning, NEVER a crash). It mirrors how the DNA safety
@@ -314,7 +314,7 @@ class SeedAnalyzer:
 # ── context gathering — turn an IntelSource into research material ─────────
 
 # Bounds so a big repo/scope can't blow the prompt (and the token bill) up.
-_MAX_DOC_CHARS = 4000        # per document
+_MAX_DOC_CHARS = 4000        # per instance
 _MAX_TOTAL_CHARS = 12000     # across all gathered material
 _MAX_REPO_DOCS = 6           # extra docs/specs beyond the README
 _README_CANDIDATES = ("README.md", "README.rst", "README.txt", "readme.md")
@@ -366,10 +366,10 @@ def _repo_material(uri: str | None) -> list[tuple[str, str]]:
 
 def _scope_material(context: dict[str, Any]) -> list[tuple[str, str]]:
     """For a ``type: scope`` source: the target scope's docs, pre-fetched by the
-    kernel-bound engine into ``context['documents']`` (a list of ``{title/name,
+    kernel-bound engine into ``context['instances']`` (a list of ``{title/name,
     text}``). The analyzer is pure — it has no kernel — so the engine (which
     owns kernel I/O) hands the docs in via context; here we just fold them in."""
-    docs = context.get("documents")
+    docs = context.get("instances")
     if not isinstance(docs, list):
         return []
     chunks: list[tuple[str, str]] = []

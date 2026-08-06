@@ -451,7 +451,7 @@ class FeatureKind(KindBase):
         "stories": {
             "to": "Story", "cardinality": "many", "inverse_of": "feature",
         },
-        # Points at a Sprint by DOCUMENT NAME, which for a Sprint is also its
+        # Points at a Sprint by INSTANCE NAME, which for a Sprint is also its
         # sprint_id — the Kind is deliberately named by its id, so `by: name`
         # is the truth here and not a convenience.
         "sprint_ref": {"to": "Sprint", "cardinality": "one"},
@@ -546,13 +546,13 @@ class FeatureKind(KindBase):
                 "created_at": {"type": "string", "format": "date-time"},
                 "updated_at": {"type": "string", "format": "date-time"},
                 # Declared (i-040) since 2026-08-06: the identifier this has
-                # always carried IS a Sprint document's name. See
+                # always carried IS a Sprint instance's name. See
                 # kinds/sprint.kind.yaml for what the Kind deliberately omits.
                 "sprint_ref": {
                     "type": "string",
                     "description": (
                         "The Sprint this Feature is committed to — the "
-                        "Sprint document's NAME, which is also its "
+                        "Sprint instance's NAME, which is also its "
                         "sprint_id (e.g. '2026-Q2-S2')."
                     ),
                 },
@@ -612,7 +612,7 @@ class FeatureKind(KindBase):
 #
 # Equivalence with the extinct class — identity, flags, StudioUIMetadata,
 # storage, dep_filters, deep schema, summary/describe/canonical_digest over
-# REAL board documents — is frozen in
+# REAL board instances — is frozen in
 # tests/test_descriptor_pattern_equivalence.py (goldens under
 # tests/goldens/descriptor_pattern/Story.golden.json).
 
@@ -776,7 +776,7 @@ ARTIFACT_STATUSES = ("draft", "proposed", "accepted", "deprecated", "superseded"
 #   VALID. Terminal, neutral, deliberately reversible (``propose``/``accept``
 #   un-shelve it). `deprecated` could not carry this and must not be stretched
 #   to: it means the design no longer applies, which is a different fact about
-#   a different document. The reason is the payload — a shelving whose WHY
+#   a different instance. The reason is the payload — a shelving whose WHY
 #   lives outside the doc is a decision nobody can revisit.
 SPEC_STATUSES = ARTIFACT_STATUSES + ("executed", "shelved")
 
@@ -790,14 +790,14 @@ SPEC_TERMINAL_STATUSES = frozenset(SPEC_STATUSES) - SPEC_OPEN_STATUSES
 #:
 #: Only the NEW targets are constrained. The pre-existing transitions
 #: (propose/accept/deprecate/supersede) stay unguarded exactly as they were —
-#: a rule applied retroactively would fail documents that were legal when
+#: a rule applied retroactively would fail instances that were legal when
 #: written, which is the one thing an additive change may not do.
 SPEC_TRANSITIONS: dict[str, frozenset[str]] = {
     # A design can ship without a formal `accept` — that happens, and refusing
     # it would only teach people to lie about the status. What cannot have
     # shipped is a design declared obsolete or replaced: in `superseded` it was
     # the REPLACEMENT that got built, and marking this one executed hides which
-    # document the code actually follows.
+    # instance the code actually follows.
     "executed": frozenset({"draft", "proposed", "accepted", "shelved"}),
     # Shelving is a decision about work NOT YET DONE. `executed` is already
     # done, `deprecated`/`superseded` are already dead — none of the three is a
@@ -818,7 +818,7 @@ def validate_spec_transition(current: str | None, target: str) -> None:
 
     Unconstrained targets (the four pre-existing ones) always pass, and a
     ``current`` of ``None`` always passes: a legacy Spec with no ``status`` is
-    a document written before this rule and is not retroactively illegal."""
+    an instance written before this rule and is not retroactively illegal."""
     allowed = SPEC_TRANSITIONS.get(target)
     if allowed is None or current is None or current in allowed:
         return
@@ -848,7 +848,7 @@ def spec_board_bucket(status: str | None) -> str:
 
 
 # Spec.phase — Superpowers/Spec-Kit phase progression. Orthogonal to
-# `status`: status is the document's lifecycle (draft → accepted →
+# `status`: status is the instance's lifecycle (draft → accepted →
 # superseded), phase is the SDLC's perspective on the spec (where the
 # work driven by this spec lives in the SDLC).
 SPEC_PHASES = ("brainstorm", "spec", "plan_ready", "implementing", "done")
@@ -1711,7 +1711,7 @@ JOURNEY_METHODOLOGIES = (
 # a verification loop, a deep-sleep orphan scan) that does not exist in this
 # distribution — it arrived as residue of an unrelated extraction. Kinds
 # whose only purpose was to hold that family's output have no future; the
-# documents a PERSON writes (Postmortem, Retrospective, RiskRegister) and
+# instances a PERSON writes (Postmortem, Retrospective, RiskRegister) and
 # CognitivePolicy (read in production by registry_accessor.py) stay.
 
 
@@ -1822,7 +1822,7 @@ def _workitem_common_schema() -> dict[str, Any]:
 #
 # s-dx-html-artifact-kind. A bundle Kind whose primary marker (ARTIFACT.html)
 # holds the raw HTML **verbatim** (byte-faithful round-trip — no frontmatter
-# injection that would corrupt the document), plus an optional artifact.json
+# injection that would corrupt the instance), plus an optional artifact.json
 # companion carrying structured metadata (title, description, source,
 # created_at) — mirrors the Soul bundle (SOUL.md + soul.json). Linked to a
 # work item via ``spec.produces[]`` / ``spec.html_artifacts[]`` so the

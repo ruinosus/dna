@@ -60,7 +60,7 @@ class EvidencePolicyKind(KindBase):
     flatten_in_context = False
     docs = (
         "An EvidencePolicy controls which event types are automatically "
-        "captured as Evidence documents. Declares the list of event types "
+        "captured as Evidence instances. Declares the list of event types "
         "to watch, whether auto-capture is enabled, and retention period."
     )
 

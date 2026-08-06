@@ -566,7 +566,7 @@ def engram_doc_name(mif_id: str) -> str:
     MIF id, exactly like :func:`mif_doc_name` keys the passthrough copy.
 
     NOT a summary slug: two distinct MIF docs can derive the same summary (both
-    untitled, or simply sharing a title), and ``write_document`` is a full
+    untitled, or simply sharing a title), and ``write_instance`` is a full
     replace at a name — so a summary-keyed projection silently overwrote an
     unrelated, previously-imported memory. The id is the identity (§6); the
     projection must be named off it."""

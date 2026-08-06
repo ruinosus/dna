@@ -5,7 +5,7 @@ depend on it: two workspaces may each declare a ``Deal`` under their own
 namespace, which is what namespacing the apiVersion is FOR. The SQL adapter's
 tables, however, keyed rows on ``(scope, kind, name)`` alone — so two Kinds
 sharing a name in one scope were indistinguishable to it on SAVE as well as on
-DELETE, and ``delete_document``'s ``api_version`` kwarg had nowhere to go.
+DELETE, and ``delete_instance``'s ``api_version`` kwarg had nowhere to go.
 
 This is the scenario that motivates the column, end to end: two Kinds with the
 same name, in one scope, saved / read back / updated / deleted independently
@@ -109,9 +109,9 @@ def _by_api_version(docs: list[dict]) -> dict[str, dict]:
 
 @pytest.mark.asyncio
 async def test_two_kinds_one_name_save_independently(source) -> None:
-    """A save under NS_B must not overwrite the NS_A document of the same name."""
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
+    """A save under NS_B must not overwrite the NS_A instance of the same name."""
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
 
     docs = _by_api_version(await source.load_all(SCOPE))
     assert set(docs) == {NS_A, NS_B}, (
@@ -124,9 +124,9 @@ async def test_two_kinds_one_name_save_independently(source) -> None:
 
 @pytest.mark.asyncio
 async def test_load_one_resolves_the_exact_kind(source) -> None:
-    """``load_one(api_version=...)`` must return THAT Kind's document."""
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
+    """``load_one(api_version=...)`` must return THAT Kind's instance."""
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
 
     a = await source.load_one(SCOPE, "Deal", "d-1", api_version=NS_A)
     b = await source.load_one(SCOPE, "Deal", "d-1", api_version=NS_B)
@@ -137,24 +137,24 @@ async def test_load_one_resolves_the_exact_kind(source) -> None:
         SCOPE, "Deal", "d-1", api_version="nobody.example/v1",
     )
     assert missing is None, (
-        "load_one pinned to an unregistered apiVersion returned a document — "
+        "load_one pinned to an unregistered apiVersion returned an instance — "
         "the pin is not being applied"
     )
 
 
 @pytest.mark.asyncio
 async def test_update_does_not_cross_talk(source) -> None:
-    """Updating one Kind's document leaves the other's content AND version alone."""
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme v1"))
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex v1"))
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme v2"))
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme v3"))
+    """Updating one Kind's instance leaves the other's content AND version alone."""
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme v1"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex v1"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme v2"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme v3"))
 
     a = await source.load_one(SCOPE, "Deal", "d-1", api_version=NS_A)
     b = await source.load_one(SCOPE, "Deal", "d-1", api_version=NS_B)
     assert a["spec"]["title"] == "acme v3"
     assert b["spec"]["title"] == "globex v1", (
-        "the NS_B document changed when only NS_A was written"
+        "the NS_B instance changed when only NS_A was written"
     )
 
     # Version histories are per-Kind: three writes for A, one for B.
@@ -170,10 +170,10 @@ async def test_update_does_not_cross_talk(source) -> None:
 @pytest.mark.asyncio
 async def test_delete_by_api_version_leaves_the_other_kind(source) -> None:
     """The delete the port already carries must hit exactly one Kind."""
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
 
-    await source.delete_document(SCOPE, "Deal", "d-1", api_version=NS_A)
+    await source.delete_instance(SCOPE, "Deal", "d-1", api_version=NS_A)
 
     docs = _by_api_version(await source.load_all(SCOPE))
     assert set(docs) == {NS_B}, (
@@ -184,16 +184,16 @@ async def test_delete_by_api_version_leaves_the_other_kind(source) -> None:
     assert await source.load_one(SCOPE, "Deal", "d-1", api_version=NS_B) is not None
 
     # And the second delete still works on the survivor.
-    await source.delete_document(SCOPE, "Deal", "d-1", api_version=NS_B)
+    await source.delete_instance(SCOPE, "Deal", "d-1", api_version=NS_B)
     assert _by_api_version(await source.load_all(SCOPE)) == {}
 
 
 @pytest.mark.asyncio
 async def test_delete_of_an_absent_api_version_is_not_found(source) -> None:
     """A pinned delete that matches nothing must raise, not silently succeed."""
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
     with pytest.raises(ValueError, match="not_found"):
-        await source.delete_document(
+        await source.delete_instance(
             SCOPE, "Deal", "d-1", api_version="nobody.example/v1",
         )
     assert await source.load_one(SCOPE, "Deal", "d-1", api_version=NS_A) is not None
@@ -208,11 +208,11 @@ async def test_bare_delete_refuses_when_the_name_is_ambiguous(source) -> None:
     delete would have to pick one (a delete that misses) or take both (a delete
     that over-reaches). Neither is defensible; the caller is told to say which.
     """
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
 
     with pytest.raises(ValueError, match="ambiguous"):
-        await source.delete_document(SCOPE, "Deal", "d-1")
+        await source.delete_instance(SCOPE, "Deal", "d-1")
 
     # Nothing was deleted by the refusal.
     assert set(_by_api_version(await source.load_all(SCOPE))) == {NS_A, NS_B}
@@ -221,16 +221,16 @@ async def test_bare_delete_refuses_when_the_name_is_ambiguous(source) -> None:
 @pytest.mark.asyncio
 async def test_bare_delete_still_works_for_a_single_kind(source) -> None:
     """All 76 shipped Kinds are unique by name in their scope — unchanged."""
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
-    await source.delete_document(SCOPE, "Deal", "d-1")
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
+    await source.delete_instance(SCOPE, "Deal", "d-1")
     assert _by_api_version(await source.load_all(SCOPE)) == {}
 
 
 @pytest.mark.asyncio
 async def test_bundle_entries_do_not_cross_talk(source) -> None:
-    """Bundle entries belong to a document, hence to that document's Kind."""
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
+    """Bundle entries belong to an instance, hence to that instance's Kind."""
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
 
     await source.write_bundle_entry(
         SCOPE, "Deal", "d-1", "notes.md", "acme notes", api_version=NS_A,
@@ -252,7 +252,7 @@ async def test_bundle_entries_do_not_cross_talk(source) -> None:
     )
 
     # Deleting one Kind takes its entries and only its entries.
-    await source.delete_document(SCOPE, "Deal", "d-1", api_version=NS_A)
+    await source.delete_instance(SCOPE, "Deal", "d-1", api_version=NS_A)
     assert await source.fetch_bundle_entry(
         SCOPE, "Deal", "d-1", "notes.md", api_version=NS_B,
     ) == b"globex notes"
@@ -265,20 +265,20 @@ async def test_bundle_entries_do_not_cross_talk(source) -> None:
 @pytest.mark.asyncio
 async def test_drafts_are_per_kind(source) -> None:
     """``load_drafts`` must not collapse two Kinds' drafts into one row."""
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
     drafts = [d for d in await source.load_drafts(SCOPE) if d["kind"] == "Deal"]
     assert len(drafts) == 2, (
         f"load_drafts returned {len(drafts)} Deal draft(s), expected 2 — the "
-        "two Kinds are being grouped as one document"
+        "two Kinds are being grouped as one instance"
     )
 
 
 @pytest.mark.asyncio
 async def test_publish_promotes_only_its_own_kind(source) -> None:
     """Publishing one Kind's draft must not republish the other's content."""
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
-    await source.save_document(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_A, "d-1", "acme deal"))
+    await source.save_instance(SCOPE, "Deal", "d-1", _deal(NS_B, "d-1", "globex deal"))
     await source.publish(SCOPE, "Deal", "d-1", api_version=NS_A)
 
     a = await source.load_one(SCOPE, "Deal", "d-1", api_version=NS_A)
@@ -291,7 +291,7 @@ async def test_publish_promotes_only_its_own_kind(source) -> None:
 async def test_every_registered_kind_still_resolves_by_bare_name(source) -> None:
     """All shipped Kinds keep resolving identically — proven, not asserted.
 
-    Every Kind the kernel registers gets a document written through the adapter
+    Every Kind the kernel registers gets an instance written through the adapter
     and read back by BARE name through each keyed read path. Widening the key is
     only safe if it changes nothing for a store where each name belongs to one
     Kind, which is every one of these: the registry has no two Kinds sharing a
@@ -314,7 +314,7 @@ async def test_every_registered_kind_still_resolves_by_bare_name(source) -> None
             "apiVersion": api_version, "kind": kind,
             "metadata": {"name": f"n-{kind}"}, "spec": {"title": kind},
         }
-        await source.save_document(SCOPE, kind, f"n-{kind}", raw)
+        await source.save_instance(SCOPE, kind, f"n-{kind}", raw)
 
     for kind, api_version in kinds:
         name = f"n-{kind}"
@@ -334,7 +334,7 @@ async def test_every_registered_kind_still_resolves_by_bare_name(source) -> None
     assert loaded == {k for k, _ in kinds}
 
     for kind, _ in kinds:  # and every one deletes by bare name, as before
-        await source.delete_document(SCOPE, kind, f"n-{kind}")
+        await source.delete_instance(SCOPE, kind, f"n-{kind}")
     assert await source.load_all(SCOPE) == []
 
 
@@ -345,7 +345,7 @@ async def test_existing_kinds_resolve_identically_without_a_pin(source) -> None:
         "apiVersion": "github.com/ruinosus/dna/sdlc/v1", "kind": "Story",
         "metadata": {"name": "s-alpha"}, "spec": {"title": "alpha", "priority": 1},
     }
-    await source.save_document(SCOPE, "Story", "s-alpha", doc)
+    await source.save_instance(SCOPE, "Story", "s-alpha", doc)
 
     assert (await source.load_one(SCOPE, "Story", "s-alpha"))["spec"]["title"] == "alpha"
     assert ("Story", "s-alpha") in await source.list_doc_refs(SCOPE)

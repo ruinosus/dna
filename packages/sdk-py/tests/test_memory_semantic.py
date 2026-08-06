@@ -46,8 +46,8 @@ def test_cosine_similarity_basics():
 
 
 def test_cosine_over_fake_embeddings_tracks_token_overlap():
-    a = fake_embed_one("mutating documents safely")
-    b = fake_embed_one("deep copy before mutating documents")
+    a = fake_embed_one("mutating instances safely")
+    b = fake_embed_one("deep copy before mutating instances")
     c = fake_embed_one("banana tropical smoothie")
     assert cosine_similarity(a, b) > cosine_similarity(a, c)
     assert cosine_similarity(a, c) == 0.0  # zero token overlap → orthogonal
@@ -81,7 +81,7 @@ def test_engram_text_uses_semantic_fields_only():
 def _target() -> EngramRef:
     return EngramRef("rem-target", {
         "area": "Feature/kernel",
-        "summary": "deep-copy before mutating documents",
+        "summary": "deep-copy before mutating instances",
         "created_at": "2026-07-01T00:00:00+00:00",
     })
 
@@ -105,7 +105,7 @@ def test_paraphrase_found_only_with_semantic_scores():
     """The story's core gate: the cue-match paths (area overlap / phrase-in-
     summary) score the paraphrase below ``direct_threshold``; the embedding
     cosine blended by Path 3 lifts it over."""
-    query = "mutating documents safely"  # paraphrase: not a substring, not a token-subset
+    query = "mutating instances safely"  # paraphrase: not a substring, not a token-subset
     engrams = [_target(), _decoy()]
 
     without = ecphory_rank(engrams, query, None, now=NOW)
@@ -121,7 +121,7 @@ def test_fuse_semantic_recall_promotes_and_annotates():
     """Fusion promotes the semantically-close memory over a lexically-boosted
     decoy, keeps every candidate (below-threshold ones ride their recall rank),
     and annotates hits with both ranks + the cosine."""
-    query = "mutating documents safely"
+    query = "mutating instances safely"
     engrams = [_target(), _decoy()]
     sem = _fake_semantic_scores(query, engrams)
     hits = [  # the existing recall ranking: decoy first
@@ -189,7 +189,7 @@ async def _seed_flip_scenario(kernel) -> None:
     from dna.memory import remember
 
     await remember(kernel, "demo", **_ll(
-        "rem-target", "Feature/kernel", "deep-copy before mutating documents", "wistful"))
+        "rem-target", "Feature/kernel", "deep-copy before mutating instances", "wistful"))
     await remember(kernel, "demo", **_ll(
         "rem-decoy", "Feature/ops", "safely archive old reports nightly", "surprise"))
     await remember(kernel, "demo", **_ll(
@@ -204,7 +204,7 @@ async def test_recall_semantic_auto_flips_paraphrase_to_top(kernel_with_provider
 
     kernel = kernel_with_provider
     await _seed_flip_scenario(kernel)
-    query = "mutating documents safely"
+    query = "mutating instances safely"
 
     off = await recall(kernel, "demo", query, k=2, reconsolidate=False,
                        semantic=False, now=NOW)
@@ -231,14 +231,14 @@ async def test_recall_no_provider_golden_unchanged(kernel_fs):
     kernel = kernel_fs
     await remember(kernel, "demo", **_ll(
         "rem-cache", "Feature/kernel",
-        "always deep-copy the cache before mutating kernel documents", "regret"))
+        "always deep-copy the cache before mutating kernel instances", "regret"))
     await remember(kernel, "demo", **_ll(
         "rem-banana", "Feature/food", "banana tropical yellow fruit smoothie recipe", "triumph"))
     await remember(kernel, "demo", **_ll(
         "rem-search", "Feature/search",
         "hybrid search fusion mutating rank lists deterministically", "surprise"))
 
-    res = await recall(kernel, "demo", "mutating documents", k=5,
+    res = await recall(kernel, "demo", "mutating instances", k=5,
                        reconsolidate=False, now=NOW)
     assert res["degraded"] is True and res["semantic"] is False
     golden = [("rem-cache", 1.3), ("rem-search", 0.75)]  # pre-story capture
@@ -255,9 +255,9 @@ async def test_recall_semantic_forced_without_provider(kernel_fs):
 
     kernel = kernel_fs
     await remember(kernel, "demo", **_ll(
-        "rem-target", "Feature/kernel", "deep-copy before mutating documents"))
+        "rem-target", "Feature/kernel", "deep-copy before mutating instances"))
 
-    res = await recall(kernel, "demo", "mutating documents", k=3,
+    res = await recall(kernel, "demo", "mutating instances", k=3,
                        reconsolidate=False, semantic=True, now=NOW)
     assert res["semantic"] is True
     assert res["hits"] and res["hits"][0]["name"] == "rem-target"
@@ -282,7 +282,7 @@ async def test_recall_semantic_fail_soft_on_embed_error(kernel_with_provider):
             raise RuntimeError("embedder down")
 
     kernel.embedding_provider(_Boom())
-    res = await recall(kernel, "demo", "mutating documents safely", k=2,
+    res = await recall(kernel, "demo", "mutating instances safely", k=2,
                        reconsolidate=False, semantic=True, now=NOW)
     assert res["semantic"] is False
     # the broken embedder also degrades the provider's dense search → lexical
@@ -302,7 +302,7 @@ async def test_backfill_index_makes_pre_provider_memories_recallable(tmp_path, k
     kernel = kernel_fs
     # No provider yet — remember writes the doc but cannot index it.
     out = await remember(kernel, "demo", **_ll(
-        "rem-old", "Feature/kernel", "deep-copy before mutating documents"))
+        "rem-old", "Feature/kernel", "deep-copy before mutating instances"))
     assert out["indexed"] is False
 
     prov = SqliteVecRecordSearchProvider(kernel, db_path=str(tmp_path / "bf.db"))
@@ -311,7 +311,7 @@ async def test_backfill_index_makes_pre_provider_memories_recallable(tmp_path, k
         assert await backfill_index(kernel, "demo") == 1
         assert await backfill_index(kernel, "demo") == 0  # idempotent — no re-embed
 
-        res = await recall(kernel, "demo", "mutating documents safely", k=3,
+        res = await recall(kernel, "demo", "mutating instances safely", k=3,
                            reconsolidate=False, now=NOW)
         assert res["degraded"] is False and res["semantic"] is True
         assert res["hits"][0]["name"] == "rem-old"

@@ -102,7 +102,7 @@ spec:
           type: string
         description: IntelSource names the intelligence layer observes for this
           project (the sources feeding its insight stream). DECLARED (i-040) —
-          every item resolves by DOCUMENT NAME, the same key `org_ref` and
+          every item resolves by INSTANCE NAME, the same key `org_ref` and
           `repo_refs` above already use.
       visibility:
         type: string

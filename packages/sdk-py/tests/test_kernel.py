@@ -79,14 +79,14 @@ class TestFlatten:
 
 class TestMI:
     def test_all_skills(self, mi):
-        assert len([d for d in mi.documents if d.kind == "Skill"]) == 6
+        assert len([d for d in mi.instances if d.kind == "Skill"]) == 6
 
     def test_one(self, mi):
-        doc = next((d for d in mi.documents if d.kind == "Agent" and d.name == "swe-agent"), None)
+        doc = next((d for d in mi.instances if d.kind == "Agent" and d.name == "swe-agent"), None)
         assert doc is not None and doc.kind == "Agent"
 
     def test_one_missing(self, mi):
-        assert next((d for d in mi.documents if d.kind == "Skill" and d.name == "nope"), None) is None
+        assert next((d for d in mi.instances if d.kind == "Skill" and d.name == "nope"), None) is None
 
     def test_root_is_module(self, mi):
         assert mi.root is not None and mi.root.kind == "Genome"
@@ -109,10 +109,10 @@ class TestLayers:
 
     def test_resolve_nonexistent(self, mi):
         resolved = mi.resolve(layers={"tenant": "nope"})
-        assert len(resolved.documents) == len(mi.documents)
+        assert len(resolved.instances) == len(mi.instances)
 
     def test_resolve_no_source(self):
-        mi = ManifestInstance(scope="x", documents=[], kinds={})
+        mi = ManifestInstance(scope="x", instances=[], kinds={})
         assert mi.resolve(layers={"a": "b"}) is mi
 
 
@@ -191,12 +191,12 @@ class TestComposition:
         assert not any(".tools=" in m for m in cr.missing)
 
     def test_detects_missing_soul(self, mi):
-        from dna.kernel.document import Document
-        bad = Document.from_raw({
+        from dna.kernel.instance import Instance
+        bad = Instance.from_raw({
             "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Agent",
             "metadata": {"name": "bad"}, "spec": {"soul": "ghost"},
         })
-        mi.documents.append(bad)
+        mi.instances.append(bad)
         if "composition_result" in mi.__dict__:
             del mi.__dict__["composition_result"]
         cr = mi.composition_result
@@ -204,12 +204,12 @@ class TestComposition:
         assert any("ghost" in m for m in cr.missing)
 
     def test_detects_missing_skill(self, mi):
-        from dna.kernel.document import Document
-        bad = Document.from_raw({
+        from dna.kernel.instance import Instance
+        bad = Instance.from_raw({
             "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Agent",
             "metadata": {"name": "bad2"}, "spec": {"skills": ["fake"]},
         })
-        mi.documents.append(bad)
+        mi.instances.append(bad)
         if "composition_result" in mi.__dict__:
             del mi.__dict__["composition_result"]
         cr = mi.composition_result
@@ -271,7 +271,7 @@ class TestCustomKinds:
         # the same approval gate as a KindDefinition. Without it, the entry
         # would be gate-refused and never reach ``k._kinds``, so the assertions
         # below would simply FAIL rather than checking anything — this comment
-        # documents why the fixture carries it, not a passing test to guard.
+        # instances why the fixture carries it, not a passing test to guard.
         manifest = {
             "spec": {
                 "custom_kinds": [
@@ -289,7 +289,7 @@ class TestCustomKinds:
     def test_custom_kind_queryable(self):
         """Custom kinds appear in mi.all() and mi.get()."""
         from dna.kernel import Kernel
-        from dna.kernel.document import Document
+        from dna.kernel.instance import Instance
         from dna.kernel.manifest import ManifestInstance
 
         k = Kernel()
@@ -301,11 +301,11 @@ class TestCustomKinds:
                                                "approved_by": "approver@example.com"}]}}
         k._register_custom_kinds(manifest)
 
-        doc = Document.from_raw({"apiVersion": "x/v1", "kind": "Pipeline", "metadata": {"name": "etl"}, "spec": {"stages": 3}})
-        mi = ManifestInstance(scope="test", documents=[doc], kinds=k._kinds)
+        doc = Instance.from_raw({"apiVersion": "x/v1", "kind": "Pipeline", "metadata": {"name": "etl"}, "spec": {"stages": 3}})
+        mi = ManifestInstance(scope="test", instances=[doc], kinds=k._kinds)
 
-        assert len([d for d in mi.documents if d.kind == "Pipeline"]) == 1
-        assert next((d for d in mi.documents if d.kind == "Pipeline" and d.name == "etl"), None) is not None
+        assert len([d for d in mi.instances if d.kind == "Pipeline"]) == 1
+        assert next((d for d in mi.instances if d.kind == "Pipeline" and d.name == "etl"), None) is not None
         assert "Pipeline" in mi.list_kinds()
 
 
@@ -315,22 +315,22 @@ class TestLockfile:
     def test_generate_lock_has_sha(self, mi):
         lock = mi.generate_lock()
         assert lock.scope == "open-swe"
-        # 19 → 18: the lock iterates the COMPOSITION plane (mi.documents).
+        # 19 → 18: the lock iterates the COMPOSITION plane (mi.instances).
         # Tool migrated to the RECORD plane (s-tool-kind-descriptor), so the
         # fixture's github-search Tool doc — like any record (Story, EvalRun)
         # — is no longer a composition input and drops out of the lock. It
         # remains fully readable via mi.all("Tool") / mi.one("Tool", …).
-        assert len(lock.documents) == 18
-        for entry in lock.documents:
+        assert len(lock.instances) == 18
+        for entry in lock.instances:
             assert len(entry.sha256) == 64  # SHA256 hex
 
     def test_sha_changes_on_content_change(self, mi):
         lock1 = mi.generate_lock()
-        swe_sha = next(e.sha256 for e in lock1.documents if e.name == "swe-agent" and e.kind == "Agent")
+        swe_sha = next(e.sha256 for e in lock1.instances if e.name == "swe-agent" and e.kind == "Agent")
         assert swe_sha  # Not empty
 
 
-# ── Document origin chain ──
+# ── Instance origin chain ──
 
 class TestOriginChain:
     def test_local_docs_have_local_origin(self, mi):
@@ -340,7 +340,7 @@ class TestOriginChain:
     def test_bundle_docs_have_local_origin(self, mi):
         """open-swe ships its soul as a local bundle (no external deps),
         so every doc — including the soul — carries the 'local' origin."""
-        swe_soul = next((d for d in mi.documents if d.kind == "Soul" and d.name == "swe-soul"), None)
+        swe_soul = next((d for d in mi.instances if d.kind == "Soul" and d.name == "swe-soul"), None)
         assert swe_soul is not None
         assert swe_soul.origin == "local"
 
@@ -348,8 +348,8 @@ class TestOriginChain:
         """Every lockfile entry records its origin; open-swe is fully
         self-contained so all entries are 'local'."""
         lock = mi.generate_lock()
-        assert len(lock.documents) > 0
-        for entry in lock.documents:
+        assert len(lock.instances) > 0
+        for entry in lock.instances:
             assert entry.origin == "local"
 
 
@@ -398,7 +398,7 @@ class TestBuildPromptFilters:
     def test_enabled_skills_filters(self, mi):
         full = mi.build_prompt(agent="swe-agent")
         # Get first skill name from swe-agent's agent spec
-        swe = next((d for d in mi.documents if d.kind == "Agent" and d.name == "swe-agent"), None)
+        swe = next((d for d in mi.instances if d.kind == "Agent" and d.name == "swe-agent"), None)
         skills = swe.spec.get("skills", [])
         if skills:
             filtered = mi.build_prompt(agent="swe-agent", enabled_skills=[skills[0]])

@@ -111,10 +111,10 @@ def test_undeclared_adapter_falls_back_to_derivation_with_warning():
         async def load_all(self, scope, readers=None):
             return []
 
-        async def save_document(self, scope, kind, name, raw, author=None):
+        async def save_instance(self, scope, kind, name, raw, author=None):
             return "1"
 
-        async def delete_document(self, scope, kind, name):
+        async def delete_instance(self, scope, kind, name):
             return None
 
     with pytest.warns(DeprecationWarning, match="does not declare SourceCapabilities"):

@@ -1,6 +1,6 @@
 """``SourceArtifact`` — the record that makes "projection" a checkable claim.
 
-The DNA Cloud assistant turns a file into typed documents. Those documents are
+The DNA Cloud assistant turns a file into typed instances. Those instances are
 a projection: lossy and interpreted. This Kind is what stops "derived from"
 being an assertion nobody can test.
 
@@ -13,9 +13,9 @@ to lose in a later edit that looks harmless:
    not 64 hex characters is refused rather than stored.
 
 2. **The edge points FROM the artifact TO its derivations.** One upload
-   commonly yields many documents; the fact "these came from one file" must be
+   commonly yields many instances; the fact "these came from one file" must be
    expressible once. The reverse shape (a ``source_ref`` field on each derived
-   document) would also force the agent to add that field to every schema it
+   instance) would also force the agent to add that field to every schema it
    authors, and leave Kinds nobody authored unable to participate at all.
 
 3. **The schema is closed.** ``additionalProperties: false`` means a caller
@@ -100,10 +100,10 @@ def test_a_sha256_that_is_not_one_is_refused(port):
 
 
 def test_the_derivations_hang_off_the_artifact(port):
-    """One upload, many documents — stated once, on the artifact.
+    """One upload, many instances — stated once, on the artifact.
 
     This is the direction choice. Move the edge to a ``source_ref`` on each
-    derived document and this dies, along with the ability of any Kind the
+    derived instance and this dies, along with the ability of any Kind the
     agent did not author to participate at all."""
     assert (
         _validate(
@@ -131,7 +131,7 @@ def test_no_credential_can_be_smuggled_in_beside_the_uri(port, smuggled):
     """The descriptor says ``uri`` is an identity and never a credential. A
     CLOSED schema is what keeps that from being only a comment.
 
-    Set ``additionalProperties: true`` and this dies — and the document would
-    then be able to carry its own access, so anyone the document reaches would
+    Set ``additionalProperties: true`` and this dies — and the instance would
+    then be able to carry its own access, so anyone the instance reaches would
     reach the original file with it."""
     assert _validate(port, _spec(**{smuggled: "sv=2024&sig=abc"})) is not None

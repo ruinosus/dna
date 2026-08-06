@@ -2,16 +2,16 @@
 
 THE SECOND LAYER, and tested at the adapter ON PURPOSE — every test here calls
 ``FilesystemWritableSource`` / ``FilesystemSource`` methods DIRECTLY, never
-``Kernel.write_document`` / ``Kernel.fetch_bundle_entry``. A test that went
+``Kernel.write_instance`` / ``Kernel.fetch_bundle_entry``. A test that went
 through the kernel would only re-prove the kernel guard
-(``validate_document_name`` / ``validate_scope_name``, see
+(``validate_instance_name`` / ``validate_scope_name``, see
 ``test_document_name_path_safety.py``) and would pass whether or not this layer
 existed at all.
 
 Why two layers, since the kernel guard already refuses the same names: the
 kernel guard is the primary seam and the one that can say WHICH input was
 wrong, but the adapter is reachable without it. ``dna.kernel.source.sync``
-calls ``save_document`` directly today (benignly — its names come from the
+calls ``save_instance`` directly today (benignly — its names come from the
 source being copied, not from a request), the public conformance kit drives
 adapters on purpose, and a path-building adapter that trusts its inputs is one
 refactor away from re-opening the hole the write guard closed. The redundancy
@@ -118,7 +118,7 @@ def test_save_document_refuses_a_name_that_leaves_the_store(tmp_path):
     before = {p for p in tmp_path.rglob("*")}
 
     with pytest.raises(PathEscapesStoreRoot):
-        asyncio.run(src.save_document(
+        asyncio.run(src.save_instance(
             "test-mod", "Agent", ESCAPING_NAME, _raw(ESCAPING_NAME),
         ))
 
@@ -131,7 +131,7 @@ def test_save_document_refuses_a_scope_that_leaves_the_store(tmp_path):
     _assert_escapes((store / ESCAPING_SCOPE).resolve(), store)
 
     with pytest.raises(PathEscapesStoreRoot):
-        asyncio.run(src.save_document(
+        asyncio.run(src.save_instance(
             ESCAPING_SCOPE, "Agent", "a-agent", _raw("a-agent"),
         ))
     _nothing_outside(store, tmp_path)
@@ -145,7 +145,7 @@ def test_delete_document_refuses_a_name_that_leaves_the_store(tmp_path):
     (victim / "keep.txt").write_text("still here")
 
     with pytest.raises(PathEscapesStoreRoot):
-        asyncio.run(src.delete_document("test-mod", "Agent", ESCAPING_NAME))
+        asyncio.run(src.delete_instance("test-mod", "Agent", ESCAPING_NAME))
 
     assert (victim / "keep.txt").is_file(), "the adapter deleted outside the store"
 
@@ -200,7 +200,7 @@ def test_list_bundle_entries_refuses_a_name_that_leaves_the_store(tmp_path):
 
 def test_load_all_refuses_a_scope_that_leaves_the_store(tmp_path):
     """``scope`` is the read-path sibling: it reaches ``base_dir / scope`` on
-    EVERY read facade (``instance``, ``list_documents``, ``get_document``,
+    EVERY read facade (``instance``, ``list_instances``, ``get_instance``,
     ``query`` …), which is why it is guarded here — one adapter-level check
     rather than a validator sprinkled over a dozen kernel read doors, and it
     covers the read door somebody adds tomorrow."""
@@ -253,7 +253,7 @@ def test_the_ordinary_write_read_delete_round_trip_still_works(tmp_path):
     src, store = _writable(tmp_path)
     name = "t-1a2b3c.node.internal--Overlay"
 
-    asyncio.run(src.save_document("test-mod", "Agent", name, _raw(name)))
+    asyncio.run(src.save_instance("test-mod", "Agent", name, _raw(name)))
     written = [p for p in store.rglob("*") if p.is_file()]
     assert written, "the safe write must still land"
     assert all(store in p.parents for p in written)
@@ -268,7 +268,7 @@ def test_the_ordinary_write_read_delete_round_trip_still_works(tmp_path):
     docs = asyncio.run(src.load_all("test-mod", readers=src._effective_readers()))
     assert any(d.get("metadata", {}).get("name") == name for d in docs)
 
-    asyncio.run(src.delete_document("test-mod", "Agent", name))
+    asyncio.run(src.delete_instance("test-mod", "Agent", name))
     assert not (store / "test-mod" / "agents" / name).exists()
 
 
@@ -286,7 +286,7 @@ def test_a_tenant_scoped_write_is_still_contained(tmp_path):
     """The tenant layout adds three segments before the scope; the containment
     check must not mistake it for an escape."""
     src, store = _writable(tmp_path)
-    asyncio.run(src.save_document(
+    asyncio.run(src.save_instance(
         "test-mod", "Agent", "a-agent", _raw("a-agent"), tenant="t-1a2b3c",
     ))
     written = [p for p in store.rglob("*") if p.is_file()]

@@ -168,7 +168,7 @@ async def _case_remember_enriches_and_recall_finds(kernel: Any) -> None:
     """remember→recall roundtrip + deterministic enrichment. Enrichment never
     overwrites caller-provided values (stamp-if-absent contract)."""
     await _seed(kernel)
-    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "Engram", "rem-memory")
+    got = await kernel.get_instance(MEMORY_FIXTURE_SCOPE, "Engram", "rem-memory")
     spec = got["spec"]
     assert spec.get("memory_type") in ("episodic", "semantic", "procedural"), (
         f"remember must classify memory_type, got {spec.get('memory_type')!r}"
@@ -191,7 +191,7 @@ async def _case_remember_enriches_and_recall_finds(kernel: Any) -> None:
         "encoding_context": {"area": "Custom/area", "time_of_day": "night"},
     }
     await remember(kernel, MEMORY_FIXTURE_SCOPE, name="rem-custom", spec=custom, now=KIT_NOW)
-    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "Engram", "rem-custom")
+    got = await kernel.get_instance(MEMORY_FIXTURE_SCOPE, "Engram", "rem-custom")
     assert got["spec"]["memory_type"] == "procedural"
     assert got["spec"]["encoding_context"]["area"] == "Custom/area"
 
@@ -284,7 +284,7 @@ async def _case_forget_is_bitemporal_and_idempotent(kernel: Any) -> None:
                        superseded_by="rem-new", now=KIT_NOW)
     assert out["valid_to"] and out["already_forgotten"] is False
 
-    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "Engram", "rem-memory")
+    got = await kernel.get_instance(MEMORY_FIXTURE_SCOPE, "Engram", "rem-memory")
     assert got is not None, "forget must NEVER hard-delete (auditable, revivable)"
     assert got["spec"]["valid_to"] == out["valid_to"]
     assert got["spec"]["superseded_by_memory"] == "rem-new"
@@ -309,7 +309,7 @@ async def _case_reconsolidation_reinforces_surfaced(kernel: Any) -> None:
     await _seed(kernel)
     await recall(kernel, MEMORY_FIXTURE_SCOPE, _MEMORY_QUERY,
                  k=1, actor="memory-conformance-kit", now=KIT_NOW)
-    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "Engram", "rem-memory")
+    got = await kernel.get_instance(MEMORY_FIXTURE_SCOPE, "Engram", "rem-memory")
     spec = got["spec"]
     assert spec["surface_count"] == 1
     assert len(spec["cues_history"]) == 1
@@ -339,12 +339,12 @@ async def _case_consolidate_reports_then_archives_idempotently(kernel: Any) -> N
     assert "rem-banana" in stale_names, f"aged memory must be stale, got {stale_names}"
     assert "rem-memory" not in stale_names and "rem-fusion" not in stale_names
     assert report["archived"] == 0, "report-only must not archive"
-    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "Engram", "rem-banana")
+    got = await kernel.get_instance(MEMORY_FIXTURE_SCOPE, "Engram", "rem-banana")
     assert not got["spec"].get("valid_to"), "report-only must not touch valid_to"
 
     report2 = await consolidate(kernel, MEMORY_FIXTURE_SCOPE, apply=True, now=later)
     assert report2["archived"] == len(report2["stale"]) >= 1
-    got = await kernel.get_document(MEMORY_FIXTURE_SCOPE, "Engram", "rem-banana")
+    got = await kernel.get_instance(MEMORY_FIXTURE_SCOPE, "Engram", "rem-banana")
     assert got is not None and got["spec"].get("valid_to"), (
         "apply must soft-forget (valid_to), never delete"
     )
@@ -446,7 +446,7 @@ async def _case_interchange_round_trip(kernel: Any) -> None:
     SCOPE — read before trusting a green here: this exercises the PURE
     projection (``to_mif``/``from_mif``), which is the level an adapter author
     runs the kit at. It does NOT cover the CLI's file-reading or
-    document-naming layers; both blockers found reviewing ``dna memory
+    instance-naming layers; both blockers found reviewing ``dna memory
     import`` lived there, not here, and are covered by the CLI's own tests. A
     green case means the projection is faithful, not that the CLI is proven.
     """
@@ -485,7 +485,7 @@ async def _case_interchange_round_trip(kernel: Any) -> None:
 
     # 2. the vault carries what MIF has no place for. Checked against the
     #    DECLARED fields above, so this loop cannot be defeated by shrinking
-    #    _VAULT_FIELDS itself — it only documents which fields take that route.
+    #    _VAULT_FIELDS itself — it only instances which fields take that route.
     for field in _VAULT_FIELDS:
         if field in spec:
             assert back[field] == spec[field], (
@@ -626,7 +626,7 @@ def _paraphrase_engrams() -> list[EngramRef]:
     return [
         EngramRef("rem-target", {
             "area": "Feature/kernel",
-            "summary": "deep-copy before mutating documents",
+            "summary": "deep-copy before mutating instances",
             "created_at": _CREATED_AT,
         }),
         EngramRef("rem-decoy", {
@@ -637,7 +637,7 @@ def _paraphrase_engrams() -> list[EngramRef]:
     ]
 
 
-_PARAPHRASE_QUERY = "mutating documents safely"
+_PARAPHRASE_QUERY = "mutating instances safely"
 
 
 async def _scoring_cosine_tracks_similarity(embed: EmbedFn) -> None:
@@ -645,8 +645,8 @@ async def _scoring_cosine_tracks_similarity(embed: EmbedFn) -> None:
     maximally similar; a paraphrase is closer than unrelated text. RELATIVE
     assertions only — they hold for the fake floor and any real model."""
     texts = [
-        "deep copy before mutating documents",
-        "mutating documents safely",
+        "deep copy before mutating instances",
+        "mutating instances safely",
         "banana tropical smoothie breakfast",
     ]
     vecs = await embed(texts)

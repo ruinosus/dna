@@ -1,6 +1,6 @@
-# RemoteAgent — o Agent Card do A2A, como documento.
+# RemoteAgent — o Agent Card do A2A, como instância.
 #
-# O protocolo A2A não é um Kind: transporte não é documento. O Agent Card é —
+# O protocolo A2A não é um Kind: transporte não é instância. O Agent Card é —
 # um descritor versionado de identidade e capacidade, publicado pelo servidor
 # A2A em `/.well-known/agent-card.json`. Isto é ele, com os nomes em snake_case
 # (a convenção do kernel) e o mapeamento para o JSON do A2A anotado campo a
@@ -15,7 +15,7 @@
 # false` não sabe expressar "estes campos OU aqueles".
 #
 # O que UNE os dois é `delegation_target_for`, e é de propósito: o roster de
-# alvos é DERIVADO ("todo documento que declara o bloco e cuja allowlist me
+# alvos é DERIVADO ("toda instância que declara o bloco e cuja allowlist me
 # inclui"), atravessando os dois Kinds. Um terceiro tipo de alvo, depois, entra
 # sem tocar em quem delega.
 #
@@ -125,7 +125,7 @@ spec:
         description: >
           A2A `securitySchemes` (forma do OpenAPI 3). Diz COMO autenticar. A
           credencial em si NUNCA vive aqui — o schema é fechado justamente
-          para que um bearer não possa ser anexado ao documento. Quem guarda a
+          para que um bearer não possa ser anexado à instância. Quem guarda a
           credencial é o deployment, por remoto, e ela nunca é o token do
           usuário.
         additionalProperties: true
@@ -149,7 +149,7 @@ spec:
         type: string
         enum: [unsigned, present_unverified, verified]
         description: >
-          Tri-estado DE PROPÓSITO: um documento que não foi verificado tem de
+          Tri-estado DE PROPÓSITO: uma instância que não foi verificado tem de
           ser legível como tal. `unsigned` = o Card não trouxe assinatura;
           `present_unverified` = trouxe e não checamos; `verified` = checamos
           (não alcançável nesta versão). Um booleano `signed` faria "não
@@ -166,7 +166,7 @@ spec:
           kinds:
             type: array
             description: >
-              Nomes de Kind cujos documentos podem ser delegados a este
+              Nomes de Kind cujas instâncias podem ser delegados a este
               remoto. Lista vazia = nada pode, o que é um estado honesto
               (registrado, sem permissão) e não um erro.
             items: {type: string}

@@ -40,7 +40,7 @@ _TARGET_FACT = (
 _PARAPHRASE = "database platform switch for payments"
 
 #: Unrelated memories so "in the top-3" is a real bar. With only a handful of
-#: documents everything is in the top-3 and the test proves nothing.
+#: instances everything is in the top-3 and the test proves nothing.
 _DISTRACTORS = [
     "Coffee is brewed with a V60 pour-over every morning.",
     "The office moved to a new building near the harbour.",

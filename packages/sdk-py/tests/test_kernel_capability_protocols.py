@@ -52,10 +52,10 @@ class TestWriteKwargSupport:
 
     def test_legacy_adapter_without_tenant_kwarg(self):
         class LegacySource:
-            async def save_document(self, scope, kind, name, raw, *, layer=None):
+            async def save_instance(self, scope, kind, name, raw, *, layer=None):
                 return "1"
 
-            async def delete_document(self, scope, kind, name, *, layer=None):
+            async def delete_instance(self, scope, kind, name, *, layer=None):
                 return None
 
         ws = write_kwarg_support(LegacySource())

@@ -131,7 +131,7 @@ async def _seed_package(src: Any, scope: str) -> None:
         "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Genome",
         "metadata": {"name": scope}, "spec": {"owner": "conformance"},
     }
-    await src.save_document(scope, "Genome", scope, raw)
+    await src.save_instance(scope, "Genome", scope, raw)
     if hasattr(src, "publish"):
         await src.publish(scope, "Genome", scope)
 
@@ -139,14 +139,14 @@ async def _seed_package(src: Any, scope: str) -> None:
 async def _seed_doc(src: Any, scope: str, name: str, spec: dict, *, tenant: str | None = None) -> None:
     """Seed a published doc with an arbitrary spec (open kind → no schema friction).
 
-    Writes via the raw adapter API (save_document + publish) so the matrix
+    Writes via the raw adapter API (save_instance + publish) so the matrix
     exercises storage/query, not the kernel's write-time schema validation.
     """
     raw = {
         "apiVersion": "github.com/ruinosus/dna/sdlc/v1", "kind": "Story",
         "metadata": {"name": name}, "spec": {"title": name, **spec},
     }
-    await src.save_document(scope, "Story", name, raw, tenant=tenant)
+    await src.save_instance(scope, "Story", name, raw, tenant=tenant)
     if hasattr(src, "publish"):
         # SqlAlchemySource.publish() is tenant-aware (it selects which
         # tenant's draft to promote) — pass the tenant so an overlay draft is
@@ -208,13 +208,13 @@ async def test_query_order_and_limit_parity(adapter):
 @pytest.mark.asyncio
 async def test_tenant_overlay_shadows_base(adapter, request):
     # i-092 — schema debt inherited by the sqlite dialect: the sqlite
-    # documents PK is (scope, kind, name) WITHOUT tenant, so the acme-overlay
+    # instances PK is (scope, kind, name) WITHOUT tenant, so the acme-overlay
     # publish clobbers the base row → query(tenant=None) returns the overlay.
     # FS (no-op publish) + PG (tenant-aware PK) shadow correctly. xfail the
     # sqlite dialect until i-092 is fixed (documented, CI-visible).
     if request.node.callspec.id == "sqlite":
         request.node.add_marker(pytest.mark.xfail(
-            reason="i-092: sqlite documents PK lacks tenant — overlay clobbers base.",
+            reason="i-092: sqlite instances PK lacks tenant — overlay clobbers base.",
             strict=True,
         ))
     src, k = adapter
@@ -245,7 +245,7 @@ async def test_bundle_entry_tenant_isolation(adapter, request):
     # Seed the parent Skill doc per tenant first — bundle entries belong to a
     # doc (the SQL adapters store them in a sibling table keyed on the same doc).
     for t in ("acme", "globex"):
-        await src.save_document(
+        await src.save_instance(
             "conf-test", "Skill", "greeter",
             {"apiVersion": "agentskills.io/v1", "kind": "Skill",
              "metadata": {"name": "greeter"}, "spec": {"instruction": t}},

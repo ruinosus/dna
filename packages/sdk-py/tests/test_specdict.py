@@ -1,10 +1,10 @@
-"""Tests for SpecDict and Document unified access."""
+"""Tests for SpecDict and Instance unified access."""
 from __future__ import annotations
 
 import dataclasses
 import pytest
 
-from dna.kernel.document import Document, SpecDict
+from dna.kernel.instance import Instance, SpecDict
 
 
 class TestSpecDict:
@@ -50,10 +50,10 @@ class TestSpecDict:
 
 
 class TestDocumentSpecDict:
-    """Document.spec and .metadata always return SpecDict."""
+    """Instance.spec and .metadata always return SpecDict."""
 
     def test_spec_from_raw_dict(self):
-        doc = Document.from_raw({
+        doc = Instance.from_raw({
             "apiVersion": "github.com/ruinosus/dna/v1",
             "kind": "Agent",
             "metadata": {"name": "brad", "description": "test agent"},
@@ -64,7 +64,7 @@ class TestDocumentSpecDict:
         assert doc.spec.soul == "brad"
 
     def test_metadata_from_raw_dict(self):
-        doc = Document.from_raw({
+        doc = Instance.from_raw({
             "apiVersion": "github.com/ruinosus/dna/v1",
             "kind": "Agent",
             "metadata": {"name": "brad", "description": "test agent"},
@@ -83,7 +83,7 @@ class TestDocumentSpecDict:
             "spec": {"instruction": "Be helpful", "soul": "brad", "skills": ["greet"]},
         }
         typed = TypedAgent.from_raw(raw)
-        doc = Document.from_raw(raw, typed=typed)
+        doc = Instance.from_raw(raw, typed=typed)
 
         assert isinstance(doc.spec, SpecDict)
         assert doc.spec.instruction == "Be helpful"
@@ -99,7 +99,7 @@ class TestDocumentSpecDict:
             "spec": {"instruction": "x"},
         }
         typed = TypedAgent.from_raw(raw)
-        doc = Document.from_raw(raw, typed=typed)
+        doc = Instance.from_raw(raw, typed=typed)
 
         assert isinstance(doc.metadata, SpecDict)
         assert doc.metadata.description == "A helpful agent"
@@ -114,7 +114,7 @@ class TestDocumentSpecDict:
             "spec": {"instruction": "Greet users", "scripts": {"hello.py": "print('hi')"}},
         }
         typed = TypedSkill.from_raw(raw)
-        doc = Document.from_raw(raw, typed=typed)
+        doc = Instance.from_raw(raw, typed=typed)
 
         assert isinstance(doc.spec, SpecDict)
         # scripts stays as dict (filename → content) through typed model
@@ -123,21 +123,21 @@ class TestDocumentSpecDict:
 
     def test_spec_cached(self):
         """Spec should return the same object on repeated access."""
-        doc = Document.from_raw({
+        doc = Instance.from_raw({
             "apiVersion": "v1", "kind": "Test",
             "metadata": {"name": "t"}, "spec": {"a": 1},
         })
         assert doc.spec is doc.spec
 
     def test_spec_missing_returns_empty_specdict(self):
-        doc = Document.from_raw({"apiVersion": "v1", "kind": "X", "metadata": {"name": "t"}})
+        doc = Instance.from_raw({"apiVersion": "v1", "kind": "X", "metadata": {"name": "t"}})
         assert isinstance(doc.spec, SpecDict)
         assert dict(doc.spec) == {}
 
     def test_deepcopy_preserves_spec(self):
         """deepcopy works correctly with cached_property + __slots__."""
         import copy
-        doc = Document.from_raw({
+        doc = Instance.from_raw({
             "apiVersion": "v1", "kind": "Test",
             "metadata": {"name": "t"}, "spec": {"a": 1},
         })
@@ -156,7 +156,7 @@ class TestDocumentSpecDict:
             "spec": {"instruction": "x"},
         }
         typed = TypedAgent.from_raw(raw)
-        doc = Document.from_raw(raw, typed=typed)
+        doc = Instance.from_raw(raw, typed=typed)
 
         assert doc.typed is typed
         assert hasattr(doc.typed.spec, "instruction")

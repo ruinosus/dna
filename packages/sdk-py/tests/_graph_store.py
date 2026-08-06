@@ -12,8 +12,8 @@ database still runs the SQLite half instead of silently running nothing.
 Three things only Postgres can falsify, which is why the second half matters:
 ``jsonb_exists`` (the backfill's GIN-served key-existence predicate, which has
 no SQLite equivalent), the ``||`` concatenation and ``CASE`` inside a recursive
-CTE, and the fact that ``documents`` there keys on ``tenant`` — so two tenants
-really can hold the same document name (i-092 makes that impossible on SQLite).
+CTE, and the fact that ``instances`` there keys on ``tenant`` — so two tenants
+really can hold the same instance name (i-092 makes that impossible on SQLite).
 """
 from __future__ import annotations
 

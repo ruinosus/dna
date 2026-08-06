@@ -125,7 +125,7 @@ async def _kernel(tmp_path) -> Kernel:
 @pytest.mark.asyncio
 async def test_project_tenanted_round_trip(tmp_path):
     k = await _kernel(tmp_path)
-    await k.write_document(
+    await k.write_instance(
         "acme-development", "Project", "copiloto-medico",
         {
             "apiVersion": "github.com/ruinosus/dna/portfolio/v1",
@@ -155,7 +155,7 @@ async def test_project_tenanted_round_trip(tmp_path):
 @pytest.mark.asyncio
 async def test_membership_tenanted_round_trip(tmp_path):
     k = await _kernel(tmp_path)
-    await k.write_document(
+    await k.write_instance(
         "acme-development", "Membership", "barna-at-acme",
         {
             "apiVersion": "github.com/ruinosus/dna/portfolio/v1",

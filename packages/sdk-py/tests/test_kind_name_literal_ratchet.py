@@ -36,7 +36,7 @@ ALLOWLIST: dict[str, str] = {
         "IRREDUCIBLE. These three Kinds are what the kernel must load in order "
         "to learn what any Kind is: a Genome declares the scope, a "
         "KindDefinition declares a Kind, a LayerPolicy declares who may write "
-        "one. Deriving them from a trait would require reading a document whose "
+        "one. Deriving them from a trait would require reading an instance whose "
         "Kind is not registered yet. The ORDER is load-bearing too. This is now "
         "the ONE definition — kernel/__init__.py, kernel/manifest.py and "
         "kernel/query/resolver.py import it rather than repeating it, which is "
@@ -61,7 +61,7 @@ ALLOWLIST: dict[str, str] = {
     ),
     "application/sdlc_family.py::FALLBACK_FAMILIES[TRAIT_WORK_ITEM]": (
         "FALLBACK, and the ONE place they live. Some consumers are pure by "
-        "design (`_digest.build_digest` takes documents and a window, not a "
+        "design (`_digest.build_digest` takes instances and a window, not a "
         "kernel) and some take a narrow duck-typed kernel. Every entry is "
         "asserted equal to the live derivation by "
         "`test_sdlc_family_is_declarative` — a fallback nobody checks is just "

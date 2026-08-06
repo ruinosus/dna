@@ -13,9 +13,9 @@ straight from the registered Kind's own ``StorageDescriptor`` — the same
 classes ``kernel._ensure_generic_readers_writers()`` wires in for every
 bundle-storage descriptor Kind at boot (test_generic_rw.py is the existing
 precedent for this pattern). This Kind is ``plane: record`` by design (task
-requirement), so it deliberately never enters ``ManifestInstance.documents``
+requirement), so it deliberately never enters ``ManifestInstance.instances``
 (the F2.5 two-planes split — record Kinds go through
-``kernel.query``/``get_document`` instead); exercising the Reader/Writer
+``kernel.query``/``get_instance`` instead); exercising the Reader/Writer
 directly is the most direct proof of the parse/schema/serialize behavior
 without wrestling with the query-pushdown source's lazy reader-list wiring
 (a pre-existing kernel/adapter nuance, out of scope here).

@@ -6,7 +6,7 @@ Proves the two properties the catalog + BYO product rests on, using DNA's
 REAL composition/overlay APIs (no new machinery):
 
 1. **Inheritance (the on-ramp).** A tenant scope that ships no agents of its
-   own INHERITS the shared ``_lib`` catalog agent — ``resolve_document`` walks
+   own INHERITS the shared ``_lib`` catalog agent — ``resolve_instance`` walks
    to ``_lib`` and marks the result ``is_inherited``.
 
 2. **BYO overlay (the moat).** A tenant AUTHORS its own version of a base
@@ -110,7 +110,7 @@ class TestCatalogInheritance:
         )
         k = _make_kernel_with_mock(src)
 
-        res = await k.resolve_document("acme-corp", "Agent", "assistant")
+        res = await k.resolve_instance("acme-corp", "Agent", "assistant")
 
         assert res.doc is not None
         assert res.is_inherited is True
@@ -140,11 +140,11 @@ class TestByoTenantOverlay:
         )
         k = _make_kernel_with_mock(src)
 
-        res_acme = await k.resolve_document(
+        res_acme = await k.resolve_instance(
             "dna-cloud", "Agent", "assistant", tenant="acme",
         )
-        res_base = await k.resolve_document("dna-cloud", "Agent", "assistant")
-        res_globex = await k.resolve_document(
+        res_base = await k.resolve_instance("dna-cloud", "Agent", "assistant")
+        res_globex = await k.resolve_instance(
             "dna-cloud", "Agent", "assistant", tenant="globex",
         )
 

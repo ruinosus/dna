@@ -1,4 +1,4 @@
-"""Document — unified wrapper for all manifest documents."""
+"""Instance — unified wrapper for all manifest instances."""
 from __future__ import annotations
 
 import dataclasses
@@ -46,29 +46,29 @@ def _to_spec_dict(obj: Any, fallback: dict[str, Any]) -> SpecDict:
     return SpecDict(fallback)
 
 
-# v1.0 — Document[SpecT] generic typing.
+# v1.0 — Instance[SpecT] generic typing.
 #
-# `Document` becomes `Generic[SpecT]` so consumers can type spec
+# `Instance` becomes `Generic[SpecT]` so consumers can type spec
 # access at the call site without a runtime cost:
 #
 #     spec: PageIndexSpec = doc.spec  # type-checker validated when
-#                                     # `doc: Document[PageIndexSpec]`
+#                                     # `doc: Instance[PageIndexSpec]`
 #
-# Bare `Document` continues working — Python typing defaults the
+# Bare `Instance` continues working — Python typing defaults the
 # unbound type variable to `Any`, matching pre-generic behavior. This
-# is purely additive: existing code that uses `Document` without
+# is purely additive: existing code that uses `Instance` without
 # brackets sees no signature change.
 SpecT = TypeVar("SpecT", default=SpecDict)
-"""Spec type for `Document[SpecT]`. Default = `SpecDict` so bare
-`Document` keeps the existing dict-with-attribute-access shape."""
+"""Spec type for `Instance[SpecT]`. Default = `SpecDict` so bare
+`Instance` keeps the existing dict-with-attribute-access shape."""
 
 
-class Document(Generic[SpecT]):
+class Instance(Generic[SpecT]):
     """Universal wrapper. Works for parsed BaseKind AND raw dict.
 
     `doc.spec` and `doc.metadata` always return `SpecDict` at runtime
     — a dict subclass with attribute access. When typed via
-    `Document[MySpec]`, the type checker treats `doc.spec` as `MySpec`,
+    `Instance[MySpec]`, the type checker treats `doc.spec` as `MySpec`,
     enabling autocomplete + typo detection at edit time without a
     runtime cast.
 
@@ -128,8 +128,8 @@ class Document(Generic[SpecT]):
 
         Never authored and never stored (the write path strips it): the kernel
         computes it at read time from the Kind's current state. Today it says
-        exactly one thing — that this document's Kind was REVOKED, so the
-        document is no longer valid (i-085). See :mod:`dna.kernel.validity`."""
+        exactly one thing — that this instance's Kind was REVOKED, so the
+        instance is no longer valid (i-085). See :mod:`dna.kernel.validity`."""
         from dna.kernel.validity import STATUS_KEY
 
         value = self.raw.get(STATUS_KEY)
@@ -137,29 +137,29 @@ class Document(Generic[SpecT]):
 
     @property
     def is_valid(self) -> bool:
-        """Whether the kernel has anything AGAINST this document.
+        """Whether the kernel has anything AGAINST this instance.
 
         ``True`` is "nothing to report", not "verified" — absence of a status is
-        the ordinary case for every document of every Kind. It goes ``False``
+        the ordinary case for every instance of every Kind. It goes ``False``
         when the Kind has been revoked, and back to ``True`` the moment it is
         approved again, because validity follows the Kind's CURRENT state and
-        is never a stamp on the document."""
+        is never a stamp on the instance."""
         status = self.status
         return not (status is not None and status.get("valid") is False)
 
     @classmethod
-    def from_raw(cls, raw: dict[str, Any], typed: Any | None = None) -> Document[Any]:
-        """Create a Document from a raw dict.
+    def from_raw(cls, raw: dict[str, Any], typed: Any | None = None) -> Instance[Any]:
+        """Create an Instance from a raw dict.
 
-        Returns `Document[Any]` because the spec type is determined at
+        Returns `Instance[Any]` because the spec type is determined at
         the call site by the consumer's annotation; the factory itself
         cannot infer it. Consumers using typed access:
-            doc: Document[PageIndexSpec] = Document.from_raw(raw)
+            doc: Instance[PageIndexSpec] = Instance.from_raw(raw)
         get the right type via the annotation.
         """
         metadata = raw.get("metadata", {}) or {}
         return cast(
-            "Document[Any]",
+            "Instance[Any]",
             cls(
                 api_version=raw.get("apiVersion", ""),
                 kind=raw.get("kind", ""),
@@ -172,7 +172,7 @@ class Document(Generic[SpecT]):
         )
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Document):
+        if not isinstance(other, Instance):
             return NotImplemented
         return (self.api_version, self.kind, self.name) == (
             other.api_version, other.kind, other.name
@@ -182,4 +182,4 @@ class Document(Generic[SpecT]):
         return hash((self.api_version, self.kind, self.name))
 
     def __repr__(self) -> str:
-        return f"Document({self.api_version}/{self.kind}: {self.name})"
+        return f"Instance({self.api_version}/{self.kind}: {self.name})"

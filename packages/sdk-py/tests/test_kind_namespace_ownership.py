@@ -134,12 +134,12 @@ def test_kind_namespace_is_registered_global_and_not_self_servable():
     assert port is not None
     assert port.alias == "tenant-kind-namespace"
     assert str(getattr(port.scope, "value", port.scope)) == "global"
-    # is_overlayable=False → BOOTSTRAP: the generic write-any-document path
+    # is_overlayable=False → BOOTSTRAP: the generic write-any-instance path
     # refuses it and no layer may fork it. Claiming a namespace is an
     # operator act, not something a workspace grants itself.
     assert port.is_overlayable is False
     assert "KindNamespace" in k._NON_OVERLAYABLE_KINDS
-    from dna.application.documents import is_bootstrap_kind
+    from dna.application.instances import is_bootstrap_kind
     assert is_bootstrap_kind(port)
 
 
@@ -386,23 +386,23 @@ async def test_each_workspaces_documents_validate_against_its_own_schema(
     await k.instance_async("acme-scope")
     await k.instance_async("globex-scope")
 
-    await k.write_document("acme-scope", "Deal", "d-1", {
+    await k.write_instance("acme-scope", "Deal", "d-1", {
         "apiVersion": "acme.example/v1", "kind": "Deal",
         "metadata": {"name": "d-1"}, "spec": {"title": "T", "amount": 10},
     })
-    await k.write_document("globex-scope", "Deal", "d-1", {
+    await k.write_instance("globex-scope", "Deal", "d-1", {
         "apiVersion": "globex.example/v1", "kind": "Deal",
         "metadata": {"name": "d-1"}, "spec": {"title": "T", "stage": "won"},
     })
-    # acme's document shape is INVALID for globex's Kind and vice versa —
+    # acme's instance shape is INVALID for globex's Kind and vice versa —
     # which is the proof the two are not one Kind wearing two names.
     with pytest.raises(SpecValidationError):
-        await k.write_document("globex-scope", "Deal", "d-2", {
+        await k.write_instance("globex-scope", "Deal", "d-2", {
             "apiVersion": "globex.example/v1", "kind": "Deal",
             "metadata": {"name": "d-2"}, "spec": {"title": "T", "amount": 10},
         })
     with pytest.raises(SpecValidationError):
-        await k.write_document("acme-scope", "Deal", "d-2", {
+        await k.write_instance("acme-scope", "Deal", "d-2", {
             "apiVersion": "acme.example/v1", "kind": "Deal",
             "metadata": {"name": "d-2"}, "spec": {"title": "T", "stage": "won"},
         })
@@ -414,7 +414,7 @@ async def test_a_workspace_may_add_a_kind_in_its_own_namespace(
 ):
     k = two_workspaces
     await k.instance_async("acme-scope")
-    await k.write_document(
+    await k.write_instance(
         "acme-scope", "KindDefinition", "acme-lead",
         _kinddef_raw("acme.example/v1", "Lead", "acme-lead",
                      {"type": "object"}, container="acme-leads"),
@@ -426,7 +426,7 @@ async def test_a_workspace_may_not_hijack_a_system_kind(two_workspaces: Kernel):
     k = two_workspaces
     await k.instance_async("acme-scope")
     with pytest.raises(NamespaceOwnershipError) as e:
-        await k.write_document(
+        await k.write_instance(
             "acme-scope", "KindDefinition", "evil",
             _kinddef_raw("github.com/ruinosus/dna/helix/v1", "Agent",
                          "acme-agent", {"type": "object"}),
@@ -442,7 +442,7 @@ async def test_a_workspace_may_not_declare_in_the_other_workspaces_namespace(
     k = two_workspaces
     await k.instance_async("acme-scope")
     with pytest.raises(NamespaceOwnershipError) as e:
-        await k.write_document(
+        await k.write_instance(
             "acme-scope", "KindDefinition", "poach",
             _kinddef_raw("globex.example/v1", "Lead", "globex-lead",
                          {"type": "object"}, container="globex-leads"),
@@ -458,7 +458,7 @@ async def test_a_workspace_may_not_declare_in_an_unclaimed_namespace(
     k = two_workspaces
     await k.instance_async("acme-scope")
     with pytest.raises(NamespaceOwnershipError) as e:
-        await k.write_document(
+        await k.write_instance(
             "acme-scope", "KindDefinition", "squat",
             _kinddef_raw("unclaimed.example/v1", "Lead", "unclaimed-lead",
                          {"type": "object"}, container="unclaimed-leads"),
@@ -474,19 +474,19 @@ async def test_each_workspaces_documents_land_in_their_own_container(
     resolved by the bare Kind name.
 
     Found while proving the scenario above: both workspaces' ``Deal``
-    documents were written into ``<scope>/acme-deals/``, because the write path
+    instances were written into ``<scope>/acme-deals/``, because the write path
     asked for the container by name (``storage_for_kind("Deal")``) and the bare
     lookup resolves ONE of the two ports. The scopes differ, so nothing was
-    overwritten — but every globex document sat in a directory belonging to
+    overwritten — but every globex instance sat in a directory belonging to
     acme's Kind, where the container→Kind index says it is an acme Deal."""
     k = two_workspaces
     await k.instance_async("acme-scope")
     await k.instance_async("globex-scope")
-    await k.write_document("acme-scope", "Deal", "d-1", {
+    await k.write_instance("acme-scope", "Deal", "d-1", {
         "apiVersion": "acme.example/v1", "kind": "Deal",
         "metadata": {"name": "d-1"}, "spec": {"title": "T", "amount": 10},
     })
-    await k.write_document("globex-scope", "Deal", "d-1", {
+    await k.write_instance("globex-scope", "Deal", "d-1", {
         "apiVersion": "globex.example/v1", "kind": "Deal",
         "metadata": {"name": "d-1"}, "spec": {"title": "T", "stage": "won"},
     })

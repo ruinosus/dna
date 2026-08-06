@@ -131,13 +131,13 @@ def _parse_frontmatter(
 
     When ``strict=False`` (default — back-compat): invalid YAML emits a
     ``FrontmatterParseWarning`` and returns ``({}, text_body)`` so the rest
-    of the load completes. Documents whose marker is broken end up with an
+    of the load completes. Instances whose marker is broken end up with an
     anemic spec.
 
     When ``strict=True``: invalid YAML raises ``FrontmatterParseError``
     instead. Used by adapters that hold a canonical-spec fallback
     (e.g. SqlAlchemySource ships the parsed-at-write-time ``content``
-    in ``dna_documents``). The adapter catches and uses the fallback,
+    in ``dna_instances``). The adapter catches and uses the fallback,
     avoiding silent spec-wipe on a corrupted marker.
     """
     # D-C root cause (2026-05-19): the previous regex ``^---\n(.*?)---\n?``
@@ -148,7 +148,7 @@ def _parse_frontmatter(
     # scalar / unexpected end of stream" parse error every time the
     # bundle was read. The new pattern requires the closing ``---`` to
     # be the only content on its own line (newline before AND after) —
-    # matches YAML's spec for document separators and ignores in-body
+    # matches YAML's spec for instance separators and ignores in-body
     # horizontal rules.
     match = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
     if not match:
@@ -262,7 +262,7 @@ class GenericBundleReader(ReaderPort):
     ``strict_parse``: when True, propagates ``FrontmatterParseError`` on
     invalid YAML instead of silently returning a spec built only from the
     body. Adapters that hold a canonical-spec fallback (SqlAlchemySource via
-    ``dna_documents.content``) opt in so corrupt markers no longer wipe
+    ``dna_instances.content``) opt in so corrupt markers no longer wipe
     spec. Default False keeps the legacy warning-and-degraded-spec path.
     """
 

@@ -141,7 +141,7 @@ class TestGuardrailSchemaEnum:
 # ---------------------------------------------------------------------------
 
 class TestGuardrailValidateDocument:
-    """i-validation-shallow (axis 2): ``kernel.validate_document`` — the SAME
+    """i-validation-shallow (axis 2): ``kernel.validate_instance`` — the SAME
     check ``dna doc apply --dry-run`` runs — rejects an enum-violating spec
     BEFORE the write path. Previously validation only fired on the real write."""
 
@@ -156,7 +156,7 @@ class TestGuardrailValidateDocument:
             "metadata": {"name": "bad"}, "spec": {"rules": ["x"], "severity": "critical"},
         }
         with pytest.raises(SpecValidationError):
-            k.validate_document("s", "Guardrail", "bad", raw)
+            k.validate_instance("s", "Guardrail", "bad", raw)
 
     def test_validate_document_accepts_valid(self):
         k = self._kernel()
@@ -165,7 +165,7 @@ class TestGuardrailValidateDocument:
             "metadata": {"name": "ok"}, "spec": {"rules": ["x"], "severity": "hard", "scope": "output"},
         }
         # no raise
-        k.validate_document("s", "Guardrail", "ok", raw)
+        k.validate_instance("s", "Guardrail", "ok", raw)
 
 
 # ---------------------------------------------------------------------------

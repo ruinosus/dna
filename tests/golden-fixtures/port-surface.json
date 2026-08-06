@@ -2,7 +2,7 @@
   "$comment": "s-dna-port-surface-parity → golden surface lock. THE public surface manifest of the Python SDK: each port lists the members of its real typing.Protocol; ManifestInstance/Kernel list the blessed vs deprecated read surface plus the EXACT public_surface. Adding, removing or renaming any tracked member without editing this file turns the suite red — public-surface changes are conscious decisions, never drift. Executors: packages/sdk-py/tests/test_port_surface_golden.py (introspects the real typing.Protocol members), test_blessed_query_surface.py and test_hook_names.py. History: this was a shared Py↔TS manifest with a {py, ts} pair per member; the TypeScript SDK was frozen (tag sdk-ts-final) and the `ts` half was dropped — the Python surface lock, which is what it always really enforced, stays.",
   "ports": {
     "SourcePort": {
-      "doc": "WHERE — load documents from storage. Py: dna/kernel/protocols.py · TS: src/kernel/protocols.ts",
+      "doc": "WHERE — load instances from storage. Py: dna/kernel/protocols.py · TS: src/kernel/protocols.ts",
       "members": [
         {
           "py": "supports_readers"
@@ -42,10 +42,10 @@
       "doc": "SourcePort + write/versioning half. OWN members only (inherited SourcePort members are tracked above).",
       "members": [
         {
-          "py": "save_document"
+          "py": "save_instance"
         },
         {
-          "py": "delete_document"
+          "py": "delete_instance"
         },
         {
           "py": "list_versions"
@@ -379,7 +379,7 @@
         },
         {
           "py": "api_version_identity",
-          "note": "The row key carries the Kind's own identity (scope, kind, apiVersion, name), so two Kinds sharing a name coexist and load_one/delete_document can be pinned to one of them. An adapter whose identity is registry-mediated — the filesystem path's container — declares False."
+          "note": "The row key carries the Kind's own identity (scope, kind, apiVersion, name), so two Kinds sharing a name coexist and load_one/delete_instance can be pinned to one of them. An adapter whose identity is registry-mediated — the filesystem path's container — declares False."
         },
         {
           "py": "as_of_reads",
@@ -387,7 +387,7 @@
         },
         {
           "py": "edge_graph",
-          "note": "The store keeps the DERIVED reference graph (declared-relation edges) and can walk it (traverse_edges). Separate from the 'edges' write kwarg, and asked BEFORE the read for the same reason as_of_reads is: an adapter that records no edges must make the face answer 'unsupported', never an empty list. An empty list reads as 'nothing points at this document' — a claim only a store that actually keeps edges may make."
+          "note": "The store keeps the DERIVED reference graph (declared-relation edges) and can walk it (traverse_edges). Separate from the 'edges' write kwarg, and asked BEFORE the read for the same reason as_of_reads is: an adapter that records no edges must make the face answer 'unsupported', never an empty list. An empty list reads as 'nothing points at this instance' — a claim only a store that actually keeps edges may make."
         }
       ]
     },
@@ -426,7 +426,7 @@
     "ManifestInstance": {
       "blessed": [
         {
-          "py": "documents",
+          "py": "instances",
           "note": "canonical in-memory read — filter/find by d.kind / d.name; what QUICK-START, READMEs and examples teach"
         },
         {
@@ -460,12 +460,12 @@
       "deprecated": [
         {
           "py": "all",
-          "replacement": "mi.documents (filter by d.kind) or kernel.query(scope, kind)",
+          "replacement": "mi.instances (filter by d.kind) or kernel.query(scope, kind)",
           "removal": "1.0"
         },
         {
           "py": "one",
-          "replacement": "mi.documents (find by d.kind + d.name); Py also kernel.get_document(scope, kind, name), TS kernel.query with a filter",
+          "replacement": "mi.instances (find by d.kind + d.name); Py also kernel.get_instance(scope, kind, name), TS kernel.query with a filter",
           "removal": "1.0"
         }
       ],
@@ -482,7 +482,7 @@
         "default_agent",
         "dependency_tree",
         "describe",
-        "documents",
+        "instances",
         "explain_prompt",
         "explain_prompt_async",
         "find_agent",
@@ -533,13 +533,13 @@
           "note": "aggregation twin of query"
         },
         {
-          "py": "get_document"
+          "py": "get_instance"
         },
         {
           "py": "query_list_sync"
         },
         {
-          "py": "get_document_sync"
+          "py": "get_instance_sync"
         }
       ],
       "deprecated": []

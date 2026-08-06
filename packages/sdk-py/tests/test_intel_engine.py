@@ -64,7 +64,7 @@ async def _seed_source(k: Kernel, name: str = "copiloto-medico", **spec_over) ->
         "muted": False,
     }
     spec.update(spec_over)
-    await k.write_document(
+    await k.write_instance(
         _SCOPE, "IntelSource", name,
         {
             "apiVersion": "github.com/ruinosus/dna/intel/v1",
@@ -175,7 +175,7 @@ async def test_set_insight_state_transitions(tmp_path):
         k, name, "actioned", scope=_SCOPE, tenant=_TENANT,
     )
     assert out["state"] == "actioned"
-    doc = await k.get_document(_SCOPE, "IntelInsight", name, tenant=_TENANT)
+    doc = await k.get_instance(_SCOPE, "IntelInsight", name, tenant=_TENANT)
     assert doc["spec"]["state"] == "actioned"
 
     # invalid state rejected

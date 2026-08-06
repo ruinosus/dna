@@ -1,7 +1,7 @@
 """Guardrail-owned write-path guard: the **live spec-kit constitution**.
 
 Layer 3 of the Spec Kit adoption (ADR ``ADR-spec-kit-adoption`` §5) makes the
-constitution a *live* Guardrail — enforced at ``write_document`` time,
+constitution a *live* Guardrail — enforced at ``write_instance`` time,
 overridable per scope/tenant with **no redeploy**. ``dna specify
 install-templates`` (and ``dna specify import``) map ``constitution.md`` to a
 ``Guardrail`` named ``speckit-constitution`` carrying a ``severity``. This guard
@@ -109,7 +109,7 @@ async def spec_kit_constitution_guard(ctx: "PreSaveContext") -> None:
     if kernel is None:
         return
     try:
-        con = await kernel.get_document(
+        con = await kernel.get_instance(
             ctx.scope, "Guardrail", _CONSTITUTION_NAME, tenant=ctx.tenant
         )
     except Exception as exc:  # noqa: BLE001 — governance must never be an outage.

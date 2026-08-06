@@ -95,7 +95,7 @@ class TestFilesystemGranular:
 # ─── SQLite adapter ────────────────────────────────────────────────────
 
 class TestSqliteGranular:
-    """SqlAlchemySource[sqlite] é writable diretamente (save_document) —
+    """SqlAlchemySource[sqlite] é writable diretamente (save_instance) —
     mesma superfície nas duas dialetos."""
 
     @pytest.mark.asyncio
@@ -103,16 +103,16 @@ class TestSqliteGranular:
         db_path = tmp_path / "test.db"
         src = SqlAlchemySource(f"sqlite+aiosqlite:///{db_path}")
         await src.connect()
-        # save_document auto-publishes (save is the publish point); the
+        # save_instance auto-publishes (save is the publish point); the
         # explicit publish below is a harmless no-op re-promotion.
-        await src.save_document("scope-x", "Story", "s-1", {
+        await src.save_instance("scope-x", "Story", "s-1", {
             "apiVersion": "github.com/ruinosus/dna/sdlc/v1",
             "kind": "Story",
             "metadata": {"name": "s-1"},
             "spec": {"title": "first"},
         })
         await src.publish("scope-x", "Story", "s-1")
-        await src.save_document("scope-x", "Feature", "f-1", {
+        await src.save_instance("scope-x", "Feature", "f-1", {
             "apiVersion": "github.com/ruinosus/dna/sdlc/v1",
             "kind": "Feature",
             "metadata": {"name": "f-1"},
@@ -138,7 +138,7 @@ class TestSqliteGranular:
             "metadata": {"name": "s-rt"},
             "spec": {"title": "round-trip"},
         }
-        await src.save_document("scope-y", "Story", "s-rt", raw)
+        await src.save_instance("scope-y", "Story", "s-rt", raw)
         await src.publish("scope-y", "Story", "s-rt")
 
         doc = await src.load_one("scope-y", "Story", "s-rt")
@@ -166,7 +166,7 @@ class TestPostgresGranular:
         src = SqlAlchemySource(sa_url)
         await src.connect()
         try:
-            await src.save_document(scope, "Story", "s-1", {
+            await src.save_instance(scope, "Story", "s-1", {
                 "apiVersion": "github.com/ruinosus/dna/sdlc/v1",
                 "kind": "Story",
                 "metadata": {"name": "s-1"},
@@ -176,7 +176,7 @@ class TestPostgresGranular:
             assert ("Story", "s-1") in refs
         finally:
             try:
-                await src.delete_document(scope, "Story", "s-1")
+                await src.delete_instance(scope, "Story", "s-1")
             except Exception:  # noqa: BLE001
                 pass
             await src.close()
@@ -196,7 +196,7 @@ class TestPostgresGranular:
                 "metadata": {"name": "s-pg-rt"},
                 "spec": {"title": "round-trip-pg"},
             }
-            await src.save_document(scope, "Story", "s-pg-rt", raw)
+            await src.save_instance(scope, "Story", "s-pg-rt", raw)
             doc = await src.load_one(scope, "Story", "s-pg-rt")
             assert doc is not None
             assert doc["spec"]["title"] == "round-trip-pg"
@@ -205,7 +205,7 @@ class TestPostgresGranular:
             assert missing is None
         finally:
             try:
-                await src.delete_document(scope, "Story", "s-pg-rt")
+                await src.delete_instance(scope, "Story", "s-pg-rt")
             except Exception:  # noqa: BLE001
                 pass
             await src.close()

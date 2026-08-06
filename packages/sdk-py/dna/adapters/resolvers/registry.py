@@ -1,6 +1,6 @@
 """RegistryResolver — ResolverPort for registry: URIs.
 
-Fetches manifest documents from an DNA Registry server. The registry URL
+Fetches manifest instances from an DNA Registry server. The registry URL
 is read from the DNA_REGISTRY_URL environment variable.
 
 Example dependency:

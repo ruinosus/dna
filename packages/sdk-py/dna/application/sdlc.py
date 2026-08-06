@@ -17,7 +17,7 @@ Two layers, mirroring the rest of :mod:`dna.application`:
 * **async kernel-level cores** — :func:`create_story` / :func:`create_issue` /
   :func:`create_feature` / :func:`set_status` / :func:`add_comment`. Each takes a
   bare ``kernel`` + ``scope`` (like ``dna.memory.remember``) and routes the write
-  through ``kernel.write_document`` (so cache invalidation, hooks + validation
+  through ``kernel.write_instance`` (so cache invalidation, hooks + validation
   fire) — into the caller's tenant overlay via ``kernel.with_tenant(tenant)`` when
   ``tenant`` is set (the MCP auth bridge injects it), or the base board otherwise.
 
@@ -44,7 +44,7 @@ from dna.application.gates import (
     refuse_without_exit_criteria,
 )
 from dna.application.live import LiveDna
-from dna.kernel.errors import DocumentNameTaken
+from dna.kernel.errors import InstanceNameTaken
 from dna.application.sdlc_family import (
     dated_spec_fields,
     status_enum_for,
@@ -71,7 +71,7 @@ VALID_ISSUE_TYPE = ("bug", "enhancement", "question", "task")
 VALID_ISSUE_SEVERITY = ("low", "medium", "high", "critical")
 VALID_PRIORITIES = ("highest", "high", "medium", "low", "lowest")
 
-# The spec fields a READ surface dates, sorts or filters a board document by —
+# The spec fields a READ surface dates, sorts or filters a board instance by —
 # the contract every write path owes the readers, per Kind.
 #
 # It exists because the reverse held for Issue and nobody noticed (i-078):
@@ -82,7 +82,7 @@ VALID_PRIORITIES = ("highest", "high", "medium", "low", "lowest")
 # in the schema and the reader but in no writer is invisible until someone
 # spends a session bisecting a digest.
 #
-# This is not documentation. ``_digest.build_digest`` reads a document's date
+# This is not documentation. ``_digest.build_digest`` reads an instance's date
 # THROUGH this mapping, and two guard suites hold every write path to it:
 # ``packages/sdk-py/tests/test_dated_spec_fields.py`` (the pure builders below)
 # and ``packages/cli/tests/test_dated_spec_fields_cli.py`` (every
@@ -96,7 +96,7 @@ VALID_PRIORITIES = ("highest", "high", "medium", "low", "lowest")
 #     ``dna_cli.sdlc.narrative`` (recency sort, after ``closed_at`` /
 #     ``updated_at``).
 #   * ``updated_at`` — ``dna_cli.sdlc.narrative`` recency sort; the board's
-#     "last touched" everywhere a document has not closed yet.
+#     "last touched" everywhere an instance has not closed yet.
 #
 # Read-dated Kinds whose writers live OUTSIDE this core are deliberately absent
 # and were audited clean at i-078: ``Engram`` (``created_at``, stamped by
@@ -153,14 +153,14 @@ _WRITABLE_KINDS: frozenset[str] = frozenset(_STATUS_ENUMS)
 class DocumentExists(ValueError):
     """A ``create_*`` verb was pointed at a name that is already taken.
 
-    ``kernel.write_document`` is an UPSERT keyed on the document name, so a
+    ``kernel.write_instance`` is an UPSERT keyed on the instance name, so a
     create with no existence check is a silent destroyer: an agent guessing a
     name (or retrying, or working from a stale board) replaced the live
-    document's status, timeline, acceptance_criteria and definition_of_done and
+    instance's status, timeline, acceptance_criteria and definition_of_done and
     got a success back. "Create" is the one verb that must never be an update.
 
-    The message NAMES the existing document and its current status, and points at
-    the verbs that DO update (``set_status`` / ``comment`` / ``write_document``) —
+    The message NAMES the existing instance and its current status, and points at
+    the verbs that DO update (``set_status`` / ``comment`` / ``write_instance``) —
     a refusal that does not say what to do instead just buys another guess."""
 
 
@@ -184,9 +184,9 @@ def build_raw(
     kind: str, name: str, spec: dict[str, Any], *,
     existing: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """The kernel document envelope for a board write (apiVersion + metadata).
+    """The kernel instance envelope for a board write (apiVersion + metadata).
 
-    ``existing`` is the document being UPDATED, when there is one. Pass it and
+    ``existing`` is the instance being UPDATED, when there is one. Pass it and
     the envelope is carried forward instead of rebuilt:
 
     * ``metadata`` keeps every key it had (``labels``, ``description``,
@@ -194,9 +194,9 @@ def build_raw(
       ``name`` re-asserted. Without this, ``set_status`` and ``comment`` — the
       two verbs that load-modify-write — replaced the whole mapping with
       ``{"name": name}``, so a single status transition silently deleted every
-      other metadata key the document carried.
-    * ``apiVersion`` keeps the document's own. Forcing :data:`SDLC_API_VERSION`
-      re-homed any board document living under a different apiVersion (a
+      other metadata key the instance carried.
+    * ``apiVersion`` keeps the instance's own. Forcing :data:`SDLC_API_VERSION`
+      re-homed any board instance living under a different apiVersion (a
       tenant-authored work-item Kind, a federated import) onto DNA's, which is
       not a status change — it is a change of owner.
 
@@ -259,7 +259,7 @@ def earliest_timeline_at(spec: dict[str, Any]) -> str | None:
 
     The honest stand-in for a ``created_at`` that was never written (i-078).
     Every board write path appends a ``status_change`` event as the FIRST thing
-    it does, so the earliest ``at`` is the moment the document entered the
+    it does, so the earliest ``at`` is the moment the instance entered the
     board — recorded by the writer itself, not inferred after the fact. Pure:
     the caller decides what to do when it returns ``None``.
 
@@ -272,17 +272,17 @@ def earliest_timeline_at(spec: dict[str, Any]) -> str | None:
 
 def latest_timeline_at(spec: dict[str, Any]) -> str | None:
     """The ``at`` of the most recent timeline event — the honest stand-in for a
-    missing ``updated_at`` (the last time the document demonstrably moved)."""
+    missing ``updated_at`` (the last time the instance demonstrably moved)."""
     stamps = _timeline_stamps(spec)
     return max(stamps) if stamps else None
 
 
 def backfill_created_at(spec: dict[str, Any]) -> bool:
-    """Self-heal a legacy document's missing ``created_at`` in place, from its
+    """Self-heal a legacy instance's missing ``created_at`` in place, from its
     own timeline. Returns True when it stamped something.
 
     Called on every load-modify-write (``set_status`` / ``add_comment``) so a
-    document filed before the i-078 fix repairs itself the next time anybody
+    instance filed before the i-078 fix repairs itself the next time anybody
     touches it. It NEVER falls back to "now": that would date a months-old
     Issue as filed today and pollute every future digest window — the exact
     dishonesty the backfill exists to avoid. No timeline, no stamp."""
@@ -299,26 +299,26 @@ def plan_date_repair(
     kind: str, spec: dict[str, Any], *,
     git_added_at: str | None = None, git_touched_at: str | None = None,
 ) -> tuple[dict[str, str], str]:
-    """Decide the honest repair for one already-written document.
+    """Decide the honest repair for one already-written instance.
 
     Returns ``(fields_to_stamp, provenance)``; ``fields_to_stamp`` is empty
-    unless the document is genuinely missing something :data:`DATED_SPEC_FIELDS`
+    unless the instance is genuinely missing something :data:`DATED_SPEC_FIELDS`
     declares for its Kind. Pure — the caller supplies the git signals and does
     the writing (``dna sdlc backfill-dates``).
 
     The date is taken from the closest available witness to the event:
 
-    1. ``timeline`` — the document's OWN record, appended by the create path at
+    1. ``timeline`` — the instance's OWN record, appended by the create path at
        create time. Nothing is closer.
     2. ``git_added_at`` — the commit that ADDED the file to the board. An
        external witness, typically the same day, and verifiable by anyone with
        the repo.
-    3. nothing → provenance ``undatable``, and the document is left alone.
+    3. nothing → provenance ``undatable``, and the instance is left alone.
 
     ``now`` is deliberately NOT on that list. Stamping today's date on 51
     Issues would make them all look filed today, put them all in the current
     digest window, and hide them from every window they actually belong to —
-    a louder version of the bug this repairs (i-078). An undated document that
+    a louder version of the bug this repairs (i-078). An undated instance that
     says so is honest; a confidently wrong date is not.
     """
     declared = DATED_SPEC_FIELDS.get(kind, ())
@@ -337,7 +337,7 @@ def plan_date_repair(
     if "created_at" in missing:
         fields["created_at"] = created
     if "updated_at" in missing:
-        # The last movement the document can prove; a document that never moved
+        # The last movement the instance can prove; an instance that never moved
         # was last updated when it was created.
         fields["updated_at"] = latest_timeline_at(spec) or git_touched_at or created
     return fields, provenance
@@ -346,19 +346,19 @@ def plan_date_repair(
 async def existing_or_none(
     kernel: Any, scope: str, kind: str, name: str,
 ) -> dict[str, Any] | None:
-    """``kernel.get_document`` treating an ABSENT SCOPE as an absent document.
+    """``kernel.get_instance`` treating an ABSENT SCOPE as an absent instance.
 
     A create is very often the FIRST write into a scope — a brand-new
     per-workspace board under Model B — and a source may signal "this scope holds
     nothing yet" by raising rather than returning ``None`` (the filesystem adapter
     raises ``FileNotFoundError`` for a directory that does not exist). An empty
-    scope contains nothing to overwrite, so that is an absent document.
+    scope contains nothing to overwrite, so that is an absent instance.
 
     ``FileNotFoundError`` ONLY: every other read failure propagates. Treating a
     transient read error as "nothing there" would hand the overwrite hole straight
     back — one flaky read would license the destruction the check exists to stop."""
     try:
-        return await kernel.get_document(scope, kind, name)
+        return await kernel.get_instance(scope, kind, name)
     except FileNotFoundError:
         return None
 
@@ -369,12 +369,12 @@ async def refuse_if_exists(
     """Raise :class:`DocumentExists` when ``(scope, kind, name)`` is already taken.
 
     The one existence check every ``create_*`` core runs before it writes. It uses
-    ``kernel.get_document`` — the same read the update verbs use — so a document
-    the caller could read is a document the create refuses to bury.
+    ``kernel.get_instance`` — the same read the update verbs use — so an instance
+    the caller could read is an instance the create refuses to bury.
 
     ``overwrite=True`` skips it. That door exists because a backfill / migration
     genuinely means "replace this", and refusing outright would only push such a
-    caller into hand-rolling ``kernel.write_document`` — which is how a document
+    caller into hand-rolling ``kernel.write_instance`` — which is how an instance
     ends up with no timeline at all. It is off by default and no MCP tool exposes
     it: over the wire, the update verbs cover every legitimate case.
 
@@ -382,7 +382,7 @@ async def refuse_if_exists(
     the kernel has no unique-name constraint to lean on, and inventing a lock here
     would be a distributed-systems claim this function cannot honour. What it does
     remove is the entire class of NON-concurrent overwrites — the guessed name, the
-    retry, the stale board — which is what actually destroyed documents."""
+    retry, the stale board — which is what actually destroyed instances."""
     if overwrite:
         return
     existing = await existing_or_none(kernel, scope, kind, name)
@@ -397,7 +397,7 @@ async def refuse_if_exists(
         + (f" — {title!r}" if title else "")
         + ". Refusing to create over it: that would replace its status, timeline "
           "and exit criteria. To CHANGE it use set_status (status), comment "
-          "(narration) or write_document (any field, merged); to file something "
+          "(narration) or write_instance (any field, merged); to file something "
           "new, pick a name that is free."
     )
 
@@ -479,7 +479,7 @@ async def issue_number_is_free(kernel: Any, scope: str, number: int) -> bool:
     """Is ``i-NNN`` unclaimed *right now*, by ANY slug? (probe-then-write path)
 
     The number-keyed counterpart of :func:`existing_or_none`. The probe #242
-    installed asked ``get_document("i-NNN-<our slug>")``, which answers a
+    installed asked ``get_instance("i-NNN-<our slug>")``, which answers a
     question nobody was asking: the collision that actually happens is a
     DIFFERENT slug on the same number, and that probe returns ``None`` for it
     every time.
@@ -652,7 +652,7 @@ def build_feature_spec(
     return spec
 
 
-# ── async kernel-level cores (the write goes through kernel.write_document) ──
+# ── async kernel-level cores (the write goes through kernel.write_instance) ──
 #
 # The SDLC board Kinds (Story / Issue / Feature) are TenantScope.GLOBAL — the
 # board is a PROJECT-level artifact, not per-tenant data (SdlcExtension:
@@ -676,7 +676,7 @@ async def create_story(
     allow_no_ac_dod: bool = False,
 ) -> dict[str, Any]:
     """Create a Story doc — the shared core behind ``dna sdlc story create`` + the
-    MCP ``create_story`` tool. Routes through ``kernel.write_document`` (hooks +
+    MCP ``create_story`` tool. Routes through ``kernel.write_instance`` (hooks +
     cache fire) into the resolved (per-workspace) ``scope``.
 
     Refuses an existing ``name`` (:func:`refuse_if_exists`) — a create is never
@@ -687,7 +687,7 @@ async def create_story(
     # Existence first: when a caller both reuses a taken name AND omits its
     # exit criteria, "that name is already s-one, status in-progress" is the
     # more specific, more actionable fact — and it is the refusal that protects
-    # a live document.
+    # a live instance.
     await refuse_if_exists(kernel, scope, "Story", name, overwrite=overwrite)
     if kind_is_gated(kernel, "Story", GATE_EXIT_CRITERIA):
         refuse_without_exit_criteria(
@@ -705,7 +705,7 @@ async def create_story(
         now=ni, actor=actor, source=source,
     )
     raw = build_raw("Story", name, spec)
-    await kernel.write_document(scope, "Story", name, raw, invalidate_mode="doc")
+    await kernel.write_instance(scope, "Story", name, raw, invalidate_mode="doc")
     return {"kind": "Story", "name": name, "status": status, "feature": feature}
 
 
@@ -731,7 +731,7 @@ async def create_issue(
     or a lock in the kernel's write path".
 
     It has one now. The write is an ATOMIC CREATE (``if_absent=True``): it claims
-    the name or raises ``DocumentNameTaken``, arbitrated by the SQL adapter's
+    the name or raises ``InstanceNameTaken``, arbitrated by the SQL adapter's
     composite primary key or the filesystem's ``O_CREAT|O_EXCL`` / ``mkdir``. So
     the loop no longer *probes and hopes* — it tries to WRITE, and a loser
     simply takes the next number. Two concurrent creates now produce two Issues,
@@ -783,7 +783,7 @@ async def create_issue(
 
     if overwrite:
         name = f"i-{n:03d}-{slug}"
-        await kernel.write_document(
+        await kernel.write_instance(
             scope, "Issue", name, build_raw("Issue", name, spec),
             invalidate_mode="doc",
         )
@@ -798,7 +798,7 @@ async def create_issue(
         raw = build_raw("Issue", name, spec)
         if atomic:
             try:
-                await kernel.write_document(
+                await kernel.write_instance(
                     scope, "Issue", name, raw, invalidate_mode="doc",
                     if_absent=True,
                 )
@@ -815,10 +815,10 @@ async def create_issue(
                     "falling back to probe-then-write (the concurrent race "
                     "documented in #242 remains open on this adapter)"
                 )
-            except DocumentNameTaken:
+            except InstanceNameTaken:
                 continue  # somebody else took it between our read and our write
         if await issue_number_is_free(kernel, scope, candidate_n):
-            await kernel.write_document(
+            await kernel.write_instance(
                 scope, "Issue", name, raw, invalidate_mode="doc")
             return {"kind": "Issue", "name": name, "type": issue_type,
                     "severity": severity}
@@ -849,7 +849,7 @@ async def create_feature(
         now=ni, actor=actor, source=source,
     )
     raw = build_raw("Feature", name, spec)
-    await kernel.write_document(scope, "Feature", name, raw, invalidate_mode="doc")
+    await kernel.write_instance(scope, "Feature", name, raw, invalidate_mode="doc")
     return {"kind": "Feature", "name": name, "status": status}
 
 
@@ -889,7 +889,7 @@ async def set_status(
         kind, status, valid=valid,
         writable=transitionable_kinds(kernel) if valid is None else None,
     )
-    existing = await kernel.get_document(scope, kind, name)
+    existing = await kernel.get_instance(scope, kind, name)
     if existing is None:
         raise LookupError(f"{kind} {name!r} not found in scope {scope!r}")
     spec = dict(existing.get("spec") or {}) if isinstance(existing, dict) else {}
@@ -938,7 +938,7 @@ async def set_status(
         extra["commit_ref"] = commit_ref
     append_event(spec, "status_change", now=ni, actor=actor, source=source, **extra)
     raw = build_raw(kind, name, spec, existing=existing)
-    await kernel.write_document(scope, kind, name, raw, invalidate_mode="doc")
+    await kernel.write_instance(scope, kind, name, raw, invalidate_mode="doc")
     out: dict[str, Any] = {"kind": kind, "name": name, "from": prev, "to": status}
     if warnings:
         out["warnings"] = warnings
@@ -970,7 +970,7 @@ async def add_comment(
     et = event_type or ("decision" if looks_like_decision(body) else "comment")
     if et not in ("comment", "decision"):
         raise InvalidTransition(f"{et!r} is not a valid comment type (comment/decision)")
-    existing = await kernel.get_document(scope, kind, name)
+    existing = await kernel.get_instance(scope, kind, name)
     if existing is None:
         raise LookupError(f"{kind} {name!r} not found in scope {scope!r}")
     spec = dict(existing.get("spec") or {}) if isinstance(existing, dict) else {}
@@ -979,7 +979,7 @@ async def add_comment(
     append_event(spec, et, summary=body, now=ni, actor=actor, source=source)
     spec["updated_at"] = ni
     raw = build_raw(kind, name, spec, existing=existing)
-    await kernel.write_document(scope, kind, name, raw, invalidate_mode="doc")
+    await kernel.write_instance(scope, kind, name, raw, invalidate_mode="doc")
     return {"kind": kind, "name": name, "event_type": et}
 
 

@@ -12,7 +12,7 @@ spike:
     on local writes + kernel wiring);
   - FrontmatterParseWarning net (corrupt marker → canonical row);
   - kind-agnostic ``spec.source_files`` net;
-  - auto-publish (save_document is the publish point);
+  - auto-publish (save_instance is the publish point);
   - Genome catalog + layer/tenant surfaces;
   - preserve-binary bundle semantics on the pg dialect.
 """
@@ -121,10 +121,10 @@ def test_cross_process_invalidation_flag_follows_dialect():
 
 @pytest.mark.asyncio
 async def test_save_document_auto_publishes(sa_sqlite):
-    """save_document is the publish point (raw-PG contract) —
-    kernel.write_document never calls publish(), so the doc must be
+    """save_instance is the publish point (raw-PG contract) —
+    kernel.write_instance never calls publish(), so the doc must be
     visible in load_all right after save."""
-    await sa_sqlite.save_document(
+    await sa_sqlite.save_instance(
         "auto-pub", "Story", "s-auto", _story("s-auto"),
     )
     docs = await sa_sqlite.load_all("auto-pub", None)
@@ -148,19 +148,19 @@ async def test_view_cache_memoizes_and_local_writes_invalidate(sa_sqlite):
 
     sa_sqlite._load_view_uncached = counting
 
-    await sa_sqlite.save_document("memo", "Story", "s-1", _story("s-1"))
+    await sa_sqlite.save_instance("memo", "Story", "s-1", _story("s-1"))
     assert await sa_sqlite.load_all("memo", None)
     assert await sa_sqlite.load_all("memo", None)
     assert calls["n"] == 1, "second load_all must be a cache hit"
 
     # A local write through THIS source invalidates the scope's views.
-    await sa_sqlite.save_document("memo", "Story", "s-2", _story("s-2"))
+    await sa_sqlite.save_instance("memo", "Story", "s-2", _story("s-2"))
     docs = await sa_sqlite.load_all("memo", None)
     assert {d["metadata"]["name"] for d in docs} == {"s-1", "s-2"}
     assert calls["n"] == 2
 
-    # delete_document invalidates too.
-    await sa_sqlite.delete_document("memo", "Story", "s-1")
+    # delete_instance invalidates too.
+    await sa_sqlite.delete_instance("memo", "Story", "s-1")
     docs = await sa_sqlite.load_all("memo", None)
     assert {d["metadata"]["name"] for d in docs} == {"s-2"}
     assert calls["n"] == 3
@@ -170,7 +170,7 @@ async def test_view_cache_memoizes_and_local_writes_invalidate(sa_sqlite):
 async def test_view_cache_returns_deep_copies(sa_sqlite):
     """Callers may mutate returned rows (kinds-api stamps inherited_from)
     without corrupting the cache."""
-    await sa_sqlite.save_document("deep", "Story", "s-x", _story("s-x"))
+    await sa_sqlite.save_instance("deep", "Story", "s-x", _story("s-x"))
     first = await sa_sqlite.load_all("deep", None)
     first[0]["spec"]["title"] = "MUTATED"
     second = await sa_sqlite.load_all("deep", None)
@@ -187,7 +187,7 @@ async def test_attach_kernel_wires_view_invalidation(sa_sqlite):
     kernel = Kernel.auto(source=sa_sqlite)
     assert sa_sqlite._view_invalidation_wired is True
 
-    await sa_sqlite.save_document("wired", "Story", "s-a", _story("s-a"))
+    await sa_sqlite.save_instance("wired", "Story", "s-a", _story("s-a"))
     assert await sa_sqlite.load_all("wired", None)
     assert ("wired", "") in sa_sqlite._view_cache
 
@@ -232,7 +232,7 @@ async def test_frontmatter_net_falls_back_to_canonical_row(sa_sqlite):
     from dna.kernel.source.generic_rw import FrontmatterParseWarning
 
     raw = _story("s-fm", description="precious spec field")
-    await sa_sqlite.save_document("fmnet", "Story", "s-fm", raw)
+    await sa_sqlite.save_instance("fmnet", "Story", "s-fm", raw)
     await sa_sqlite.write_bundle_entry(
         "fmnet", "Story", "s-fm", "STORY.md", "---\n:bad yaml\n---\nbody",
         kind="Story",
@@ -266,7 +266,7 @@ async def test_source_files_net_persists_entries_and_depollutes_spec(sa_sqlite):
     raw["spec"]["source_files"] = {
         "notes.txt": "olá net", "blob.bin": b"\x00\x01\xff",
     }
-    await sa_sqlite.save_document("netscope", "Story", "s-net", raw)
+    await sa_sqlite.save_instance("netscope", "Story", "s-net", raw)
 
     txt = await sa_sqlite.fetch_bundle_entry(
         "netscope", "Story", "s-net", "notes.txt", kind="Story",
@@ -300,12 +300,12 @@ async def test_genome_catalog_surface(sa_sqlite):
     from dna.kernel.protocols import VersionAlreadyPublished
 
     scope = "sa-catalog"
-    await sa_sqlite.save_document(scope, "Genome", scope, _genome(scope, "0.1.0"))
-    await sa_sqlite.save_document(scope, "Genome", scope, _genome(scope, "0.2.0"))
+    await sa_sqlite.save_instance(scope, "Genome", scope, _genome(scope, "0.1.0"))
+    await sa_sqlite.save_instance(scope, "Genome", scope, _genome(scope, "0.2.0"))
 
     # Immutable releases: same semver twice → typed exception.
     with pytest.raises(VersionAlreadyPublished):
-        await sa_sqlite.save_document(scope, "Genome", scope, _genome(scope, "0.2.0"))
+        await sa_sqlite.save_instance(scope, "Genome", scope, _genome(scope, "0.2.0"))
 
     versions = await sa_sqlite.list_module_versions(scope)
     assert [v["version"] for v in versions] == ["0.1.0", "0.2.0"]
@@ -315,7 +315,7 @@ async def test_genome_catalog_surface(sa_sqlite):
     assert frozen["spec"]["version"] == "0.1.0"
     assert await sa_sqlite.get_module_version(scope, "9.9.9") is None
 
-    # Deprecate the LATEST → archived row flips AND the documents pointer
+    # Deprecate the LATEST → archived row flips AND the instances pointer
     # mirrors (it currently points at 0.2.0).
     assert await sa_sqlite.deprecate_module_version(
         scope, "0.2.0", message="use 0.3",
@@ -337,16 +337,16 @@ async def test_genome_catalog_surface(sa_sqlite):
 @pytest.mark.asyncio
 async def test_layer_documents_round_trip_and_listing(sa_sqlite):
     scope = "sa-layers"
-    await sa_sqlite.save_document(scope, "Story", "s-base", _story("s-base"))
+    await sa_sqlite.save_instance(scope, "Story", "s-base", _story("s-base"))
 
-    await sa_sqlite.save_layer_document(
+    await sa_sqlite.save_layer_instance(
         scope, "env", "prod", "Story", "s-base", _story("s-base", env="prod"),
     )
     overlay = await sa_sqlite.load_layer(scope, "env", "prod")
     assert overlay[0]["spec"]["env"] == "prod"
 
-    # Tenant overlays observed in documents.tenant also surface.
-    await sa_sqlite.save_document(
+    # Tenant overlays observed in instances.tenant also surface.
+    await sa_sqlite.save_instance(
         scope, "Story", "s-t", _story("s-t"), tenant="acme",
     )
     layers = await sa_sqlite.list_layers(scope)
@@ -355,7 +355,7 @@ async def test_layer_documents_round_trip_and_listing(sa_sqlite):
     assert await sa_sqlite.list_tenants(scope) == ["acme"]
     assert await sa_sqlite.list_tenants() == ["acme"]
 
-    await sa_sqlite.delete_layer_document(scope, "env", "prod", "Story", "s-base")
+    await sa_sqlite.delete_layer_instance(scope, "env", "prod", "Story", "s-base")
     assert await sa_sqlite.load_layer(scope, "env", "prod") == []
 
 
@@ -402,7 +402,7 @@ async def sa_pg():
 @pgmark
 @pytest.mark.asyncio
 async def test_pg_write_emits_outbox_seq_and_notify_with_raw_parity(sa_pg):
-    """save_document on the pg dialect appends dna_outbox + checkpoints
+    """save_instance on the pg dialect appends dna_outbox + checkpoints
     dna_versions_seq + fires pg_notify — and the received payload is
     byte-identical to what the raw adapter's builder produces."""
     import asyncpg
@@ -430,7 +430,7 @@ async def test_pg_write_emits_outbox_seq_and_notify_with_raw_parity(sa_pg):
 
     await listener.add_listener(KERNEL_EVENTBUS_CHANNEL, _on_notify)
     try:
-        await src.save_document(
+        await src.save_instance(
             "evb-sa", "Story", "s-ev", _story("s-ev"), author="sa-tester",
             write_class="substantive",
         )
@@ -471,8 +471,8 @@ async def test_pg_delete_emits_delete_event_and_failed_write_emits_nothing(sa_pg
     import asyncpg
 
     src, dsn, schema = sa_pg["src"], sa_pg["dsn"], sa_pg["schema"]
-    await src.save_document("evb-sa2", "Genome", "evb-sa2", _genome("evb-sa2", "1.0.0"))
-    await src.delete_document("evb-sa2", "Genome", "evb-sa2")
+    await src.save_instance("evb-sa2", "Genome", "evb-sa2", _genome("evb-sa2", "1.0.0"))
+    await src.delete_instance("evb-sa2", "Genome", "evb-sa2")
 
     check = await asyncpg.connect(dsn)
     try:
@@ -486,9 +486,9 @@ async def test_pg_delete_emits_delete_event_and_failed_write_emits_nothing(sa_pg
         # A vetoed write (duplicate semver) rolls back atomically — no
         # phantom event survives the failed transaction.
         from dna.kernel.protocols import VersionAlreadyPublished
-        await src.save_document("evb-sa2", "Genome", "evb-sa2", _genome("evb-sa2", "2.0.0"))
+        await src.save_instance("evb-sa2", "Genome", "evb-sa2", _genome("evb-sa2", "2.0.0"))
         with pytest.raises(VersionAlreadyPublished):
-            await src.save_document(
+            await src.save_instance(
                 "evb-sa2", "Genome", "evb-sa2", _genome("evb-sa2", "2.0.0"),
             )
         n = await check.fetchval(f"SELECT count(*) FROM {schema}.dna_outbox")
@@ -512,14 +512,14 @@ async def test_pg_save_preserves_binary_bundle_entries(sa_pg):
         "metadata": {"name": "bin-keeper"},
         "spec": {"name": "bin-keeper", "description": "v1", "instruction": "x"},
     }
-    await src.save_document("evb-sa3", "Skill", "bin-keeper", raw)
+    await src.save_instance("evb-sa3", "Skill", "bin-keeper", raw)
     await src.write_bundle_entry(
         "evb-sa3", "Skill", "bin-keeper", "output.png", b"\x89PNG-fake",
         kind="Skill",
     )
 
     raw2 = dict(raw, spec={**raw["spec"], "description": "v2 edited"})
-    await src.save_document("evb-sa3", "Skill", "bin-keeper", raw2)
+    await src.save_instance("evb-sa3", "Skill", "bin-keeper", raw2)
 
     blob = await src.fetch_bundle_entry(
         "evb-sa3", "Skill", "bin-keeper", "output.png", kind="Skill",
@@ -535,10 +535,10 @@ async def test_non_tenant_layer_writes_rejected(sa_sqlite):
     raw = {"apiVersion": "x/v1", "kind": "Agent",
            "metadata": {"name": "a"}, "spec": {}}
     with pytest.raises(NotImplementedError):
-        await sa_sqlite.save_document(
+        await sa_sqlite.save_instance(
             "m", "Agent", "a", raw, layer=("region", "emea"),
         )
     with pytest.raises(NotImplementedError):
-        await sa_sqlite.delete_document(
+        await sa_sqlite.delete_instance(
             "m", "Agent", "a", layer=("region", "emea"),
         )

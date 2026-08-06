@@ -3,7 +3,7 @@
 Story s-build-prompt-lazy (Feature f-mi-class-extinction, Big-Bang C).
 
 The legacy ``PromptBuilder._build_context_async`` walks every doc in
-``self._host.documents`` (which materialized the entire scope) to
+``self._host.instances`` (which materialized the entire scope) to
 populate the Mustache context. That worked but scaled O(scope_size)
 on every prompt build — and was the principal RSS leak driver.
 
@@ -32,7 +32,7 @@ from typing import Any
 
 from dna.kernel.kinds.registry import kinds_in_scope
 from dna.kernel._text import strip_prompt_block
-from dna.kernel.document import Document
+from dna.kernel.instance import Instance
 
 
 # {{#section}} or {{^section}} — captures alias being iterated.
@@ -63,7 +63,7 @@ def _referenced_scalars(template: str) -> set[str]:
     return out
 
 
-def _get_description(doc: Document) -> str:
+def _get_description(doc: Instance) -> str:
     """Match PromptBuilder._get_description shape (top-line of body or spec)."""
     desc = doc.metadata.get("description") if doc.metadata else None
     if isinstance(desc, str) and desc:
@@ -74,7 +74,7 @@ def _get_description(doc: Document) -> str:
 
 
 async def _entry_from_doc(
-    doc: Document, *, ref_resolver,
+    doc: Instance, *, ref_resolver,
 ) -> dict[str, Any]:
     """Build the Mustache section entry for one doc.
 
@@ -143,21 +143,21 @@ async def build_prompt_async(
     """Lazy prompt build — bounded fetches per Mustache section.
 
     Algorithm:
-      1. Fetch agent doc + root Genome via kernel.get_document.
+      1. Fetch agent doc + root Genome via kernel.get_instance.
       2. Resolve the template (agent override → Kind default → fallback).
       3. Parse template for ``{{#alias}}`` sections and ``{{{scalar}}}``
          refs; combine with agent's dep_filters to know which Kinds to
          fetch.
       4. For each referenced alias, ``kernel.query(scope, kind)``
          (filtered by name if dep_filters declares). For flatten_in_context
-         kinds referenced by agent.spec by name, targeted get_document.
+         kinds referenced by agent.spec by name, targeted get_instance.
       5. Apply hooks (pre_build_prompt middleware, post_build_prompt event).
       6. Render Mustache.
 
     Returns a string. Tenant kwarg flows through every query.
     """
     # --- 1. Fetch agent doc -----------------------------------------------
-    agent_raw = await kernel.get_document(scope, "Agent", agent_name, tenant=tenant)
+    agent_raw = await kernel.get_instance(scope, "Agent", agent_name, tenant=tenant)
     if agent_raw is None:
         # Fail loud (s-dx-build-prompt-fail-loud): parity with the MI-level
         # PromptBuilder — a missing agent raises rather than returning a
@@ -170,13 +170,13 @@ async def build_prompt_async(
     agent_kp = kinds_in_scope(kernel, scope).get((agent_doc.api_version, agent_doc.kind))
 
     # --- 2. Fetch root Genome --------------------------------------------
-    root_doc: Document | None = None
+    root_doc: Instance | None = None
     # Genome is the canonical root kind (post-Phase-16). Iterate scopes:
     # there's typically exactly one Genome doc per scope.
-    pkg_refs = await kernel.list_documents(scope, kind="Genome", tenant=tenant)
+    pkg_refs = await kernel.list_instances(scope, kind="Genome", tenant=tenant)
     if pkg_refs:
         _kind, pkg_name = pkg_refs[0]
-        pkg_raw = await kernel.get_document(scope, "Genome", pkg_name, tenant=tenant)
+        pkg_raw = await kernel.get_instance(scope, "Genome", pkg_name, tenant=tenant)
         if pkg_raw is not None:
             root_doc = kernel._parse_doc(pkg_raw, origin="local")
 
@@ -273,7 +273,7 @@ async def build_prompt_async(
         if declared_names:
             # Targeted fetches.
             for name in declared_names:
-                raw = await kernel.get_document(scope, kp.kind, name, tenant=tenant)
+                raw = await kernel.get_instance(scope, kp.kind, name, tenant=tenant)
                 if raw is None:
                     continue
                 doc = kernel._parse_doc(raw, origin="local")
@@ -344,7 +344,7 @@ async def build_prompt_async(
     return prompt.rstrip("\n")
 
 
-def _render(template: str | None, ctx: dict[str, Any], agent_doc: Document) -> str:
+def _render(template: str | None, ctx: dict[str, Any], agent_doc: Instance) -> str:
     """Mustache render. Falls back to agent.instruction when no template."""
     if not template:
         return ctx.get("agent", {}).get("instruction", "")

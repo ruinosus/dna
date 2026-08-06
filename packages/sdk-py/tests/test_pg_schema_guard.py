@@ -34,7 +34,7 @@ def test_sqlite_dialect_ignores_schema_but_still_validates():
 
 
 @pytest.mark.parametrize("bad", [
-    "public; DROP TABLE dna_documents",
+    "public; DROP TABLE dna_instances",
     "a b",                  # space
     "a-b",                  # hyphen
     'a"b',                  # quote
@@ -42,7 +42,7 @@ def test_sqlite_dialect_ignores_schema_but_still_validates():
     "1schema",              # leading digit
     "",                     # empty
     "schema--",             # comment-ish
-    "dna.documents",        # dotted
+    "dna.instances",        # dotted
 ])
 def test_invalid_schema_identifiers_rejected(bad):
     with pytest.raises(ValueError):

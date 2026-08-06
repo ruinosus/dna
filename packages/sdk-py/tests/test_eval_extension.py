@@ -102,7 +102,7 @@ def _case_raw(spec: dict, name: str = "c1") -> dict:
 
 def test_case_parse_valid(ports):
     # DeclarativeKindPort.parse is a schema-validating pass-through: it
-    # returns the validated raw (the kernel wraps raw → Document).
+    # returns the validated raw (the kernel wraps raw → Instance).
     raw = ports["EvalCase"].parse(_case_raw({
         "description": "greeting present",
         "target": {"type": "prompt", "agent": "greeter"},
@@ -146,7 +146,7 @@ def test_run_parse_requires_counts_and_results(ports):
 def test_baseline_summary_projection(ports):
     from types import SimpleNamespace
 
-    # summary() projects a doc OBJECT's spec (bare dicts are not Documents)
+    # summary() projects a doc OBJECT's spec (bare dicts are not Instances)
     doc = SimpleNamespace(spec={"suite": "s1", "run_name": "run-s1-1"})
     summary = ports["EvalBaseline"].summary(doc) or {}
     assert summary.get("suite") == "s1"

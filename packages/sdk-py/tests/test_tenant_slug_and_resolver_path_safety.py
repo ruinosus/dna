@@ -2,7 +2,7 @@
 
 The property this family defends: caller-supplied and content-supplied strings
 reach the filesystem as PATH COMPONENTS, and the rule is always "cannot
-escape", never a charset. ``606812c`` closed the document-name doors,
+escape", never a charset. ``606812c`` closed the instance-name doors,
 ``887e858`` the read half, ``d962aa3`` bundle entries. Two doors were left.
 
 1. ``tenant`` — ``dna.kernel.lock.module._lock_path`` builds
@@ -256,7 +256,7 @@ def test_the_http_resolver_refuses_an_absolute_remote_name(monkeypatch, tmp_path
 
 def test_the_http_resolver_still_stages_an_ordinary_remote_item(monkeypatch,
                                                                 tmp_path):
-    """The CONTROL. Dots and hyphens stay legal — real document names carry
+    """The CONTROL. Dots and hyphens stay legal — real instance names carry
     them."""
     from dna.adapters.resolvers.http import HttpResolver
 

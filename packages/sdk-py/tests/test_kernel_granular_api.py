@@ -1,4 +1,4 @@
-"""Tests for kernel.list_documents + kernel.get_document — L2.
+"""Tests for kernel.list_instances + kernel.get_instance — L2.
 
 Story s-kernel-granular-api (f-source-granular-access).
 
@@ -44,7 +44,7 @@ class TestListDocuments:
         k, src = _make_kernel_with_mock_source(
             refs=[("Story", "s-1"), ("Feature", "f-1")],
         )
-        result = await k.list_documents("scope-x")
+        result = await k.list_instances("scope-x")
         assert result == [("Story", "s-1"), ("Feature", "f-1")]
         src.list_doc_refs.assert_called_once_with(
             "scope-x", kind=None, tenant=None,
@@ -55,7 +55,7 @@ class TestListDocuments:
         k, src = _make_kernel_with_mock_source(
             refs=[("Story", "s-1")],
         )
-        await k.list_documents("scope-x", kind="Story")
+        await k.list_instances("scope-x", kind="Story")
         src.list_doc_refs.assert_called_once_with(
             "scope-x", kind="Story", tenant=None,
         )
@@ -65,8 +65,8 @@ class TestListDocuments:
         k, src = _make_kernel_with_mock_source(
             refs=[("Story", "s-1")],
         )
-        await k.list_documents("scope-x")
-        await k.list_documents("scope-x")
+        await k.list_instances("scope-x")
+        await k.list_instances("scope-x")
         # 1 call only — second was cache hit
         assert src.list_doc_refs.call_count == 1
 
@@ -87,9 +87,9 @@ class TestListDocuments:
         k.source(src)
 
         results = await asyncio.gather(
-            k.list_documents("scope-y"),
-            k.list_documents("scope-y"),
-            k.list_documents("scope-y"),
+            k.list_instances("scope-y"),
+            k.list_instances("scope-y"),
+            k.list_instances("scope-y"),
         )
         assert all(r == [("Story", "s-1")] for r in results)
         assert call_count["n"] == 1, (
@@ -110,7 +110,7 @@ class TestListDocuments:
 
         k = Kernel()
         k.source(src)
-        result = await k.list_documents("scope-z")
+        result = await k.list_instances("scope-z")
         assert ("Story", "s-old") in result
         assert ("Feature", "f-old") in result
 
@@ -119,7 +119,7 @@ class TestGetDocument:
     @pytest.mark.asyncio
     async def test_delegates_to_source_load_one(self):
         k, src = _make_kernel_with_mock_source()
-        doc = await k.get_document("scope-x", "Story", "s-1")
+        doc = await k.get_instance("scope-x", "Story", "s-1")
         assert doc is not None
         assert doc["kind"] == "Story"
         src.load_one.assert_called_once()
@@ -127,8 +127,8 @@ class TestGetDocument:
     @pytest.mark.asyncio
     async def test_cache_hit_skips_source(self):
         k, src = _make_kernel_with_mock_source()
-        await k.get_document("scope-x", "Story", "s-1")
-        await k.get_document("scope-x", "Story", "s-1")
+        await k.get_instance("scope-x", "Story", "s-1")
+        await k.get_instance("scope-x", "Story", "s-1")
         assert src.load_one.call_count == 1
 
     @pytest.mark.asyncio
@@ -136,7 +136,7 @@ class TestGetDocument:
         async def loader(scope, kind, name, **_):
             return None
         k, _src = _make_kernel_with_mock_source(doc_loader=loader)
-        result = await k.get_document("scope-x", "Story", "missing")
+        result = await k.get_instance("scope-x", "Story", "missing")
         assert result is None
 
     @pytest.mark.asyncio
@@ -150,7 +150,7 @@ class TestGetDocument:
         ])
         k = Kernel()
         k.source(src)
-        doc = await k.get_document("scope-x", "Story", "s-1")
+        doc = await k.get_instance("scope-x", "Story", "s-1")
         assert doc is not None
         assert doc["spec"]["x"] == 1
 
@@ -158,11 +158,11 @@ class TestGetDocument:
 class TestInvalidation:
     @pytest.mark.asyncio
     async def test_doc_specific_invalidate(self):
-        """write_document invalidates the exact (scope, kind, name) key
+        """write_instance invalidates the exact (scope, kind, name) key
         in doc cache + drops list cache entries for that kind."""
         k, src = _make_kernel_with_mock_source()
-        await k.list_documents("scope-x")
-        await k.get_document("scope-x", "Story", "s-1")
+        await k.list_instances("scope-x")
+        await k.get_instance("scope-x", "Story", "s-1")
         assert src.list_doc_refs.call_count == 1
         assert src.load_one.call_count == 1
 
@@ -170,28 +170,28 @@ class TestInvalidation:
         k._invalidate_granular_cache("scope-x", kind="Story", name="s-1")
 
         # Doc fetch should hit source again
-        await k.get_document("scope-x", "Story", "s-1")
+        await k.get_instance("scope-x", "Story", "s-1")
         assert src.load_one.call_count == 2
         # List should also refetch (kind affects list)
-        await k.list_documents("scope-x")
+        await k.list_instances("scope-x")
         assert src.list_doc_refs.call_count == 2
 
     @pytest.mark.asyncio
     async def test_scope_wide_invalidate(self):
         """Invalidate without kind drops everything for the scope."""
         k, src = _make_kernel_with_mock_source()
-        await k.list_documents("scope-x")
-        await k.list_documents("scope-y")  # different scope unaffected
-        await k.get_document("scope-x", "Story", "s-1")
+        await k.list_instances("scope-x")
+        await k.list_instances("scope-y")  # different scope unaffected
+        await k.get_instance("scope-x", "Story", "s-1")
 
         k._invalidate_granular_cache("scope-x")  # scope-wide
 
         # scope-x doc cache cleared
-        await k.get_document("scope-x", "Story", "s-1")
+        await k.get_instance("scope-x", "Story", "s-1")
         assert src.load_one.call_count == 2
         # scope-x list cache cleared
-        await k.list_documents("scope-x")
+        await k.list_instances("scope-x")
         assert src.list_doc_refs.call_count == 3  # 2 sx + 1 sy
         # scope-y list cache still hot
-        await k.list_documents("scope-y")
+        await k.list_instances("scope-y")
         assert src.list_doc_refs.call_count == 3

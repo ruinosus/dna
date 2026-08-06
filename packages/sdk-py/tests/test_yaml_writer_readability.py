@@ -25,7 +25,7 @@ from dna.kernel import Kernel
 _SCOPE = "test-yaml"
 # Accented text + an arrow + enough length to cross the default width=80.
 _BODY = (
-    "Inventariar as superfícies de query (mi.documents vs kernel.query) nos 2 "
+    "Inventariar as superfícies de query (mi.instances vs kernel.query) nos 2 "
     "SDKs; decidir o conjunto blessed pré-1.0 → deprecations com guidance clara."
 )
 _MULTILINE = "Primeira linha com acentuação é í ã.\nSegunda linha → com seta.\nTerceira."
@@ -53,7 +53,7 @@ async def test_unicode_is_written_verbatim_not_escaped(source) -> None:
     """Accents and arrows survive as themselves — no \\xE9 / \\u2192 escapes."""
     raw = {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Story",
            "metadata": {"name": "s-acentos"}, "spec": {"body": _BODY}}
-    await source.save_document(_SCOPE, "Story", "s-acentos", raw)
+    await source.save_instance(_SCOPE, "Story", "s-acentos", raw)
     text = _written_text(source, "s-acentos")
 
     assert "superfícies" in text and "→" in text
@@ -66,7 +66,7 @@ async def test_long_lines_are_not_split_with_backslash_continuations(source) -> 
     unreadable (a trailing backslash plus a leading ``\\ `` on the next line)."""
     raw = {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Story",
            "metadata": {"name": "s-longa"}, "spec": {"body": _BODY}}
-    await source.save_document(_SCOPE, "Story", "s-longa", raw)
+    await source.save_instance(_SCOPE, "Story", "s-longa", raw)
     text = _written_text(source, "s-longa")
 
     assert not any(line.rstrip().endswith("\\") for line in text.splitlines())
@@ -78,7 +78,7 @@ async def test_multiline_uses_block_literal_and_round_trips(source) -> None:
     back to exactly what was written."""
     raw = {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Story",
            "metadata": {"name": "s-multi"}, "spec": {"body": _MULTILINE}}
-    await source.save_document(_SCOPE, "Story", "s-multi", raw)
+    await source.save_instance(_SCOPE, "Story", "s-multi", raw)
     text = _written_text(source, "s-multi")
 
     assert "|" in text.split("body:")[1].splitlines()[0]

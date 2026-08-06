@@ -2,7 +2,7 @@
 
 This module answers *one* question: given the registered Kinds, what does the
 model say about how they relate? It is a projection of the REGISTRY, not of
-stored data — no document is read, nothing is written, and the answer is
+stored data — no instance is read, nothing is written, and the answer is
 identical for every caller of a given scope.
 
 Why it lives in the kernel
@@ -61,7 +61,7 @@ Two tiers, and the ranking is still the point
 ---------------------------------------------
 1. ``declared`` — ``spec.relations``. Carries its own ``enforced`` flag: TRUE
    when the kernel resolves the relation at write time (concrete target,
-   addressed by document name), FALSE when the relation is declared but
+   addressed by instance name), FALSE when the relation is declared but
    addressed by a key this runtime does not follow.
 2. ``composition`` — ``dep_filters`` names the target Kind. A real
    declaration, but it exists to drive prompt composition and is never checked
@@ -135,7 +135,7 @@ COVERAGE_LIMITS: tuple[dict[str, str], ...] = (
         "code": "schema_not_data",
         "detail": (
             "These edges say which Kinds MAY point at which, through which "
-            "relation. They say nothing about which DOCUMENTS point at which — "
+            "relation. They say nothing about which INSTANCES point at which — "
             "that is a different graph, derived at write time, and this "
             "projection does not serve it."
         ),
@@ -183,7 +183,7 @@ COVERAGE_LIMITS: tuple[dict[str, str], ...] = (
     {
         "code": "inverse_is_declaration_only",
         "detail": (
-            "`inverse` rows compare two DECLARATIONS, not two documents. A "
+            "`inverse` rows compare two DECLARATIONS, not two instances. A "
             "sound pair here does not mean any stored Feature and Story agree "
             "— instance reciprocity is checked at write time and REPORTED "
             "there, never enforced."
@@ -352,7 +352,7 @@ def build_edges(kinds: list[dict]) -> tuple[list[dict], list[dict]]:
     # -- the inverse pairs, across Kinds ---------------------------------------
     # Computed once over the whole registry rather than per-Kind: a pair is a
     # property of TWO declarations, so no single Kind's pass can see it. This
-    # is dor 1's enforced half — it reads no documents and cannot deadlock.
+    # is dor 1's enforced half — it reads no instances and cannot deadlock.
     for gap in inverse_gaps({k["kind"]: k["relations"] for k in kinds}):
         unresolved.append({
             "source": gap["kind"], "field": gap["relation"],

@@ -61,7 +61,7 @@ def test_a_target_that_accepts_someone_else_refuses_us():
 
 
 def _agent_doc(name, accepts, **extra):
-    """Um documento `Agent` que declara o bloco de delegação."""
+    """Uma instância `Agent` que declara o bloco de delegação."""
     spec = {"instruction": "…", "delegation_target_for": {"agents": accepts, **extra}}
     return {"kind": "Agent", "metadata": {"name": name}, "spec": spec}
 

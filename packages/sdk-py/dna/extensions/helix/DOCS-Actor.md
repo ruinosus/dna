@@ -14,7 +14,7 @@ agents that fulfill that role. Canonical api version:
 **Composition.** Actors are referenced by UseCases (as `primary_actor` and
 `supporting_actors`) and by Agents through `dep_filters.actors`.
 Actors are NOT prompt targets on their own — they are structural metadata
-that lets manifests document and wire the cast of characters around an
+that lets manifests instance and wire the cast of characters around an
 agent without embedding role descriptions in prompts.
 
 **Storage.** Flat YAML file at `actors/<name>.yaml`.

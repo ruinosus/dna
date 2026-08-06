@@ -54,12 +54,12 @@ async def _kernel(tmp_path) -> Kernel:
     src.attach_kernel(k)
     # Tiers live in the _lib scope (tiers/<tier_id>.yaml) — kernel.tier
     # queries _lib directly regardless of caller scope.
-    await k.write_document(
+    await k.write_instance(
         "_lib", "PricingPlan", "free",
         _tier("free", display_name="Free", price=0, calls_per_day=100,
               memory_mode="read", aliases=["starter"]),
     )
-    await k.write_document(
+    await k.write_instance(
         "_lib", "PricingPlan", "pro",
         _tier("pro", display_name="Pro", price=29, calls_per_day=10000,
               memory_mode="write"),
@@ -141,7 +141,7 @@ async def test_tier_cap_is_data_not_code(tmp_path):
     k = await _kernel(tmp_path)
     assert (await k.tier("free"))["spec"]["calls_per_day"] == 100
     # Edit the Free plan's daily quota — a file edit, no redeploy.
-    await k.write_document(
+    await k.write_instance(
         "_lib", "PricingPlan", "free",
         _tier("free", display_name="Free", price=0, calls_per_day=250,
               memory_mode="read", aliases=["starter"]),

@@ -38,6 +38,6 @@ def test_invalidation_is_o_dependents_and_evicts_observer():
 
 
 def test_layer_observers_is_lru_bounded():
-    # The cap constant exists and is finite (the LRU backstop in resolve_document).
+    # The cap constant exists and is finite (the LRU backstop in resolve_instance).
     assert isinstance(Kernel._LAYER_OBSERVERS_MAX, int)
     assert Kernel._LAYER_OBSERVERS_MAX > 0

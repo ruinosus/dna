@@ -1,6 +1,6 @@
 """HelixResolver — ResolverPort for helix: URIs.
 
-Fetches manifest documents from the Helix platform APIs.
+Fetches manifest instances from the Helix platform APIs.
 
 Example dependency:
     dependencies:

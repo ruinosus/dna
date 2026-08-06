@@ -11,11 +11,11 @@ from typing import TYPE_CHECKING, Any, Callable, overload
 if TYPE_CHECKING:  # typed hook-name vocabulary (s-dna-typed-hook-names)
     from dna.kernel.hooks import HookName
 
-from dna.kernel.document import Document
+from dna.kernel.instance import Instance
 from dna.kernel.errors import (
     ExtensionLoadError, KernelRefusal, KindRegistrationError,
     ReaderRegistrationError, WriterRegistrationError,
-    validate_bundle_entry, validate_document_name, validate_scope_name,
+    validate_bundle_entry, validate_instance_name, validate_scope_name,
 )
 from dna.kernel.kinds.registry import (
     # _load_kind_docs moved into the KindRegistry module with the registration
@@ -41,26 +41,26 @@ logger = logging.getLogger(__name__)
 
 
 class NotWritableError(RuntimeError, KernelRefusal):
-    """Raised when write_document / delete_document is called but no
+    """Raised when write_instance / delete_instance is called but no
     WritableSourcePort is registered on the Kernel."""
 
 
 class KindRetiredError(ValueError, KernelRefusal):
-    """Raised when write_document targets a Kind listed in
+    """Raised when write_instance targets a Kind listed in
     ``Kernel._REMOVED_KINDS``. Reads of legacy docs still succeed
-    (parsed as untyped Document), but new writes are blocked so the
+    (parsed as untyped Instance), but new writes are blocked so the
     catalog doesn't accrue more orphans of a retired Kind."""
 
 
 @dataclass(frozen=True)
 class PreviewResult:
-    """Return value of Kernel.preview_document().
+    """Return value of Kernel.preview_instance().
 
     target: Path for filesystem sources, synthetic URL for others
         (e.g. "sqlite://<scope>/<kind>/<name>").
     files: list of {"relativePath": str, "content": str} — the exact
         bytes that would be written.
-    exists_already: True iff the target document is already present
+    exists_already: True iff the target instance is already present
         on disk / in the adapter. UIs use this to render "create" vs
         "overwrite" affordances. Optimistic concurrency (if_match) is
         deferred per 2026-04-04-kernel-write-path-design Out-of-Scope.
@@ -221,7 +221,7 @@ class Kernel:
         from dna.kernel.compose.layer_policy import LayerPolicyEnforcer
         self._layerpol = LayerPolicyEnforcer(self)
 
-        # s-kernel-decompose-god-object — bundle-entry + document serialization
+        # s-kernel-decompose-god-object — bundle-entry + instance serialization
         # I/O extracted to a collaborator (kernel-decompose-continue).
         from dna.kernel.bundle.io import BundleIO
         self._bundleio = BundleIO(self)
@@ -238,15 +238,15 @@ class Kernel:
         # fan-out + invalidate + batch coalescing) extracted to a STATELESS
         # collaborator (kernel-decompose-continue); all batch/observer/holder
         # state stays on the kernel (preserves with_tenant shallow-copy). The
-        # kernel keeps write_document/delete_document (its mediation core).
+        # kernel keeps write_instance/delete_instance (its mediation core).
         from dna.kernel.boot.invalidation import InvalidationController
         self._invctl = InvalidationController(self)
 
-        # s-kernel-decomp-f2-writepipeline — the fat document write/delete
+        # s-kernel-decomp-f2-writepipeline — the fat instance write/delete
         # execution (tenant resolution, capability-gated adapter kwargs, the
         # pre_save veto gate, save/delete persistence, and the three-tier
         # invalidation fan-out) extracted to a STATELESS back-ref collaborator.
-        # The kernel keeps write_document/delete_document as thin facades (mode
+        # The kernel keeps write_instance/delete_instance as thin facades (mode
         # validation, _REMOVED_KINDS block, record-plane demotion, OTel span).
         # It receives the narrow ``WriteHost`` Protocol — the kernel satisfies
         # it structurally; all side effects route THROUGH the host.
@@ -309,7 +309,7 @@ class Kernel:
         self._sync = SourceSync(self)
 
         # s-kernel-decompose-god-object — the read surface (query push-down +
-        # get_document + the two sync wrappers) extracted to a STATELESS back-ref
+        # get_instance + the two sync wrappers) extracted to a STATELESS back-ref
         # collaborator (kernel-decompose-continue). It reads ``tenant`` for the
         # query tenant auto-stamp, so ``with_tenant`` rebinds it to the copy.
         from dna.kernel.query.engine import QueryEngine
@@ -338,7 +338,7 @@ class Kernel:
         # Phase 3b ch1 (i-112) — the Catalog tier scope set, cached per tenant.
         # ``tenant → (stamped_at_monotonic, scopes)``. TTL = _GRANULAR_DOC_TTL
         # (60s) as a backstop; the authoritative refresh is the explicit
-        # invalidation on Genome writes (write_document) + the install path
+        # invalidation on Genome writes (write_instance) + the install path
         # (routes/catalog.py writes the lockfile directly). Shared across
         # ``with_tenant`` shallow copies (keys carry the tenant — safe, like
         # the granular cache).
@@ -456,7 +456,7 @@ class Kernel:
         The scoped counterpart of the ``_kinds`` property. A store-loaded Kind
         governs one scope (i-081), so anything that decides behaviour FOR a
         scope — the kinds map a ``ManifestInstance`` is built with, the digest
-        of a scope's documents — reads this instead of ``_kinds``."""
+        of a scope's instances — reads this instead of ``_kinds``."""
         return self._kindreg.kinds_for(scope)
 
     def _kind_port_for(
@@ -484,12 +484,12 @@ class Kernel:
         """
         return self._kindreg.port_for(kind, api_version=api_version, scope=scope)
 
-    def validate_document(
+    def validate_instance(
         self, scope: str, kind: str, name: str, raw: dict,
         *, api_version: str | None = None,
     ) -> None:
         """Validate ``raw['spec']`` against the Kind's declared JSON Schema —
-        the SAME check ``write_document`` enforces on the write path, exposed as
+        the SAME check ``write_instance`` enforces on the write path, exposed as
         a public pre-flight so read-only callers (``dna doc apply --dry-run``)
         catch a schema-violating doc BEFORE the write (i-validation-shallow).
 
@@ -656,7 +656,7 @@ class Kernel:
         self.hooks.on_veto(hook, fn, priority=priority, key=key)
 
     def source(self, source: SourcePort) -> None:
-        """Register THE SourcePort — where manifest documents live
+        """Register THE SourcePort — where manifest instances live
         (filesystem, SQLite, Postgres...). One per kernel; registering
         again replaces it.
 
@@ -698,8 +698,8 @@ class Kernel:
                 )
 
     def on_write(self, callback) -> None:
-        """Register a callback invoked after each successful write_document
-        or delete_document. Callback signature:
+        """Register a callback invoked after each successful write_instance
+        or delete_instance. Callback signature:
             callback(scope: str, kind: str, name: str, op: Literal["write", "delete"]) -> None
 
         Used by long-lived holders (e.g., MIHolder) to invalidate their own
@@ -730,7 +730,7 @@ class Kernel:
         block, fan-out is suppressed — the batch's exit handler fires
         ONE invalidate per touched scope which itself fans out via
         `_invalidate_internal` → `_fire_write_observers`. Prevents the
-        write_document → invalidate → observers → reload chain from
+        write_instance → invalidate → observers → reload chain from
         triggering on every single batched write.
 
         ``tenant`` (s-build-graph-tenant-aware, 2026-05-13): identifies
@@ -795,8 +795,8 @@ class Kernel:
 
         Usage:
             with kernel.batch_writes():
-                kernel.write_document(scope, k, n, raw1)
-                kernel.write_document(scope, k, n, raw2)
+                kernel.write_instance(scope, k, n, raw1)
+                kernel.write_instance(scope, k, n, raw2)
                 ...
             # → exit fires one invalidate per touched scope
 
@@ -862,7 +862,7 @@ class Kernel:
     # picks up the new ports / package metadata / layer policies. Every
     # other Kind write (Engram, VoiceEpisode, Story, Narrative,
     # etc) only changes user data and shouldn't drop the base cache —
-    # those reads go through ``kernel.get_document`` / ``kernel.query``
+    # those reads go through ``kernel.get_instance`` / ``kernel.query``
     # which have their own granular L2 cache.
     #
     # s-invalidate-granular (2026-05-27): previously ALL writes dropped
@@ -936,7 +936,7 @@ class Kernel:
     def _target_locator(
         self, scope: str, kind: str, name: str, *, api_version: str | None = None,
     ) -> "str | Path":
-        """Stable human-readable locator for a document.
+        """Stable human-readable locator for an instance.
 
         - Filesystem sources → absolute Path under <base_dir>/<scope>/<kind_dir>/<name>.
           Subdir resolution consults the kind's registered StorageDescriptor
@@ -1016,11 +1016,11 @@ class Kernel:
 
         ``Kernel.instance`` is sync in this codebase, so this helper is sync.
 
-        TODO(phase-2a.0-follow-up): stale cache risk — a base ``write_document``
+        TODO(phase-2a.0-follow-up): stale cache risk — a base ``write_instance``
         that mutates ``Module.spec.layers`` (or adds a RESTRICTED doc to base)
         is invisible to subsequent layer writes until the kernel is rebuilt.
-        Safe fix: ``self._kcache.base_drop(scope)`` inside ``write_document`` /
-        ``delete_document`` when ``layer is None`` and the kind/name pair
+        Safe fix: ``self._kcache.base_drop(scope)`` inside ``write_instance`` /
+        ``delete_instance`` when ``layer is None`` and the kind/name pair
         indicates a base-manifest change. Not a blocker because Studio restart
         reloads the kernel; long-lived production processes will want this fix.
         """
@@ -1046,7 +1046,7 @@ class Kernel:
         see that docstring for policy mode details.
 
         Delegates to ``self._layerpol`` (LayerPolicyEnforcer;
-        s-kernel-decompose-god-object). Called by ``write_document`` and,
+        s-kernel-decompose-god-object). Called by ``write_instance`` and,
         via ``_check_entry_layer_policy`` → ``write_bundle_entry_impl``, by
         the bundle-entry fork path (s-strain-bundle-fork B1).
         """
@@ -1057,7 +1057,7 @@ class Kernel:
     ) -> None:
         """Sync entry point for the layer-write policy check (LOCKED/RESTRICTED/
         OPEN). Delegates to ``self._layerpol`` (s-kernel-decompose-god-object).
-        The async ``write_document`` path uses ``_check_layer_policy_async``."""
+        The async ``write_instance`` path uses ``_check_layer_policy_async``."""
         return self._layerpol.check(scope, kind, name, raw, layer)
 
     async def _base_instance_cached_async(self, scope: str):
@@ -1090,7 +1090,7 @@ class Kernel:
     # 2026-06-06). `_lib` é o PADRÃO/stdlib declarativo; cada scope/tenant é
     # uma subclasse que só sobrescreve o que quiser (`class B(A)`, override local
     # ganha). Kinds herdam de `_INHERIT_PARENT_SCOPE` transparentemente em
-    # `kernel.query` / `kernel.get_document` — EXCETO os Kinds intrinsecamente
+    # `kernel.query` / `kernel.get_instance` — EXCETO os Kinds intrinsecamente
     # per-scope abaixo, que NUNCA herdam (senão todo scope veria as Stories do
     # _lib, etc).
     #
@@ -1117,7 +1117,7 @@ class Kernel:
     _INHERIT_PARENT_SCOPE = DEFAULT_BASE_SCOPE
 
     # Phase 1B (2026-05-15): Kinds retired by past refactors. Writes are
-    # rejected at the kernel.write_document boundary; existing docs (if any
+    # rejected at the kernel.write_instance boundary; existing docs (if any
     # survived past migrations) are still readable but produce typed=None
     # via the graceful _parse_doc fallback. To re-enable a Kind, remove it
     # here AND re-register a KindPort in an extension.
@@ -1186,7 +1186,7 @@ class Kernel:
         "RecallPolicy", "DecayPolicy", "MemoryPolicy", "AllocationPolicy",
         "PaginationPolicy", "EngramStrengthPolicy", "EmbeddingProfile",
         "AffectPalette",
-        # Existiu SÓ na 0.62 (um release, zero documentos no mundo) e foi
+        # Existiu SÓ na 0.62 (um release, zero instâncias no mundo) e foi
         # dobrado em Copilot.spec.surfaces[] na 0.63 — a crítica de nome do
         # founder pegou a colisão (Copilot.workflow + WorkflowEvent + a
         # indústria usando "flow" para orquestração/DAG) antes do primeiro doc.
@@ -1201,7 +1201,7 @@ class Kernel:
             "cada surface declara o contrato de uma tela co-editada — "
             "state_key, tool_name, canvas_keys, blocked_persist_tools, "
             "guidance_template. Escreva o doc Copilot do copiloto que serve a "
-            "tela; não há documentos CopilotFlow legados (o Kind viveu um "
+            "tela; não há instâncias CopilotFlow legados (o Kind viveu um "
             "release, 0.62, sem nenhum doc)."
         ),
         "OracleVerdict": "migrated to StatusReport (refactor 2026-05-11)",
@@ -1321,7 +1321,7 @@ class Kernel:
             LayerPolicyViolationError=LayerPolicyViolationError,
         )
 
-    async def preview_document(
+    async def preview_instance(
         self, scope: str, kind: str, name: str, raw: dict,
     ) -> PreviewResult:
         """Pure preview — returns target, serialized files, exists_already.
@@ -1330,13 +1330,13 @@ class Kernel:
         "create" vs "overwrite" affordances — but it is a real ``Path.exists()``
         probe at ``<base_dir>/<scope>/<container>/<name>``, so an unguarded
         traversing name would answer "does this arbitrary path exist?" and
-        would render a ``target`` outside the store that ``write_document``
+        would render a ``target`` outside the store that ``write_instance``
         would then refuse. Preview is the dry run of the write; it refuses what
-        the write refuses (``InvalidDocumentName`` / ``InvalidScopeName``).
+        the write refuses (``InvalidInstanceName`` / ``InvalidScopeName``).
         """
         validate_scope_name(scope)
-        validate_document_name(name)
-        payload = self.serialize_document(scope, kind, name, raw)
+        validate_instance_name(name)
+        payload = self.serialize_instance(scope, kind, name, raw)
         _api_version = raw.get("apiVersion") if isinstance(raw, dict) else None
         target = self._target_locator(scope, kind, name, api_version=_api_version)
         exists_already = await self._target_exists(
@@ -1358,7 +1358,7 @@ class Kernel:
             )
         return self._source
 
-    async def write_document(
+    async def write_instance(
         self, scope: str, kind: str, name: str, raw: dict,
         author: str | None = None,
         skip_hooks: bool = False,
@@ -1370,27 +1370,27 @@ class Kernel:
         if_absent: bool = False,
         if_match: str | None = None,
     ) -> str | None:
-        """Persist a document through the registered WritableSourcePort.
+        """Persist an instance through the registered WritableSourcePort.
 
         ``if_absent=True`` requests an ATOMIC CREATE: the write claims the name
-        or raises :class:`dna.kernel.errors.DocumentNameTaken`. Requires an
+        or raises :class:`dna.kernel.errors.InstanceNameTaken`. Requires an
         adapter that declares the ``if_absent`` write kwarg; one that does not
         gets a :class:`NotImplementedError` rather than a silently ordinary
         upsert, because a caller asking for the guarantee must not be told it
         got one it did not.
 
         ``if_match`` requests a GUARDED UPDATE (i-083), held to that same
-        standard: the write proceeds only if the STORED document's ``spec``
+        standard: the write proceeds only if the STORED instance's ``spec``
         still hashes to the token (:func:`dna.kernel.etag.spec_etag` — the same
-        ``etag`` :func:`~dna.application.documents.get_document_impl` hands
-        back), else :class:`dna.kernel.errors.StaleDocumentWrite`, and nothing is
+        ``etag`` :func:`~dna.application.instances.get_instance_impl` hands
+        back), else :class:`dna.kernel.errors.StaleInstanceWrite`, and nothing is
         written. An adapter that does not declare the kwarg gets a
         :class:`NotImplementedError`, never an unguarded upsert. Combining it
         with ``if_absent`` is a ``ValueError`` — the two assert opposite things.
 
         It lives HERE rather than in the read-modify-write callers that want it,
         and the reason is what the guard must compare against. Those callers read
-        through :meth:`get_document`, served by a 60-second granular cache that
+        through :meth:`get_instance`, served by a 60-second granular cache that
         only the WRITING replica invalidates — so a reviewer's read on replica B
         still answers v1 after an author's edit on replica A, and an
         application-level "re-read and compare" fetches v1 from that same cache,
@@ -1403,7 +1403,7 @@ class Kernel:
         owns the guardrails — ``invalidate_mode`` validation, the
         ``_REMOVED_KINDS`` block, the record-plane ``scope→doc`` demotion
         (two-planes F1, resolved from the doc's own apiVersion — i-195), and the
-        OTel ``kernel.write_document`` span. The FAT execution (tenant resolve,
+        OTel ``kernel.write_instance`` span. The FAT execution (tenant resolve,
         capability-gated adapter kwargs, layer-policy check, the ``pre_save``
         veto gate, persist, and the ordered invalidation fan-out) lives in
         ``WritePipeline.write`` — see its docstring for the full write contract
@@ -1418,14 +1418,14 @@ class Kernel:
             TenantRequired — TENANTED kind without a tenant.
             TenantNotAllowed — GLOBAL kind with a tenant.
             InvalidTenantSlug — tenant has invalid characters or is reserved.
-            InvalidDocumentName — name is not a single, safe path component.
+            InvalidInstanceName — name is not a single, safe path component.
             InvalidScopeName — scope is not a single, safe path component.
             LayerPolicyViolationError — declared policy forbids the write.
             ValueError — invalidate_mode not in {scope, doc, none}; or
                 if_absent and if_match passed together.
             KindRetiredError — Kind is in _REMOVED_KINDS (writes blocked).
-            DocumentNameTaken — if_absent lost the race (the name is taken).
-            StaleDocumentWrite — if_match lost the race (the document moved).
+            InstanceNameTaken — if_absent lost the race (the name is taken).
+            StaleInstanceWrite — if_match lost the race (the instance moved).
         """
         # Path-component safety, FIRST — before the OTel span, the Kind lookup
         # and any adapter contact. ``name`` and ``scope`` both reach a source
@@ -1445,7 +1445,7 @@ class Kernel:
         # unregistered kind resolves to None — the caller's string is never
         # joined onto a path.
         validate_scope_name(scope)
-        validate_document_name(name)
+        validate_instance_name(name)
         if invalidate_mode not in ("scope", "doc", "none"):
             raise ValueError(
                 f"invalidate_mode must be 'scope', 'doc', or 'none'; "
@@ -1474,7 +1474,7 @@ class Kernel:
         ) == "record":
             invalidate_mode = "doc"
         # B6 OTel span (2026-05-16) — every write through the kernel
-        # gets a ``kernel.write_document`` span with dna.{scope,kind,
+        # gets a ``kernel.write_instance`` span with dna.{scope,kind,
         # name,tenant,invalidate_mode} attrs. The SDK doesn't depend
         # on OTel (kept slim); the import is guarded so callers without
         # opentelemetry installed still work — span context becomes a
@@ -1483,7 +1483,7 @@ class Kernel:
             from opentelemetry import trace as _otel_trace  # noqa: PLC0415
             _tracer = _otel_trace.get_tracer("dna.kernel")
             _span_cm = _tracer.start_as_current_span(
-                "kernel.write_document",
+                "kernel.write_instance",
                 attributes={
                     "dna.scope": scope,
                     "dna.kind": kind,
@@ -1497,12 +1497,12 @@ class Kernel:
             # fail-soft: OTel is optional telemetry — a broken tracer must
             # never block a write. Debug (not warning): fires per write when
             # OTel is absent, which is the normal non-instrumented case.
-            logger.debug("write_document: OTel span unavailable: %s", e)
+            logger.debug("write_instance: OTel span unavailable: %s", e)
             from contextlib import nullcontext as _nullcontext  # noqa: PLC0415
             _span_cm = _nullcontext()
 
         with _span_cm:
-            return await self._write_document_inner(
+            return await self._write_instance_inner(
                 scope, kind, name, raw,
                 author=author, skip_hooks=skip_hooks,
                 tenant=tenant, layer=layer,
@@ -1512,7 +1512,7 @@ class Kernel:
                 if_match=if_match,
             )
 
-    async def _write_document_inner(
+    async def _write_instance_inner(
         self, scope: str, kind: str, name: str, raw: dict,
         author: str | None,
         skip_hooks: bool,
@@ -1524,8 +1524,8 @@ class Kernel:
         if_absent: bool = False,
         if_match: str | None = None,
     ) -> str | None:
-        """Real write_document body — thin delegator to ``WritePipeline.write``
-        (Fase 2, s-kernel-decomp-f2-writepipeline). The outer ``write_document``
+        """Real write_instance body — thin delegator to ``WritePipeline.write``
+        (Fase 2, s-kernel-decomp-f2-writepipeline). The outer ``write_instance``
         wrapper owns the OTel span + mode validation + record-plane demotion;
         the fat execution (tenant resolve, capability kwargs, pre_save veto,
         persist, the ordered invalidation fan-out) lives in the pipeline. Kept
@@ -1540,7 +1540,7 @@ class Kernel:
             if_match=if_match,
         )
 
-    async def delete_document(
+    async def delete_instance(
         self, scope: str, kind: str, name: str,
         author: str | None = None,
         skip_hooks: bool = False,
@@ -1550,26 +1550,26 @@ class Kernel:
         invalidate_mode: str = "scope",
         api_version: str | None = None,
     ) -> None:
-        """Delete a document through the registered WritableSourcePort.
+        """Delete an instance through the registered WritableSourcePort.
 
-        Tenant resolution mirrors ``write_document``. See its docstring
+        Tenant resolution mirrors ``write_instance``. See its docstring
         for the full contract — ``invalidate_mode`` also follows the same
         semantics (scope | doc | none, default scope).
 
-        Raises ``InvalidDocumentName`` / ``InvalidScopeName`` on the same
-        path-component rule as ``write_document``, and for a sharper reason:
+        Raises ``InvalidInstanceName`` / ``InvalidScopeName`` on the same
+        path-component rule as ``write_instance``, and for a sharper reason:
         the filesystem adapter ``unlink``s — or ``rmtree``s, for a bundle —
         ``<scope_dir>/<container>/<name>``, so a traversing name here removes
         a file outside the store instead of merely creating one.
         """
         validate_scope_name(scope)
-        validate_document_name(name)
+        validate_instance_name(name)
         if invalidate_mode not in ("scope", "doc", "none"):
             raise ValueError(
                 f"invalidate_mode must be 'scope', 'doc', or 'none'; "
                 f"got {invalidate_mode!r}"
             )
-        # Two-planes F1 — see write_document. i-195: deletes have no raw
+        # Two-planes F1 — see write_instance. i-195: deletes have no raw
         # doc, so callers that know the family pass api_version= (bare
         # falls back to the deterministic first-match — conservative:
         # over-invalidates, never under-invalidates).
@@ -1907,8 +1907,8 @@ class Kernel:
         share a bare name — two workspaces each declaring ``Deal`` in their own
         namespace is the whole point of namespacing — and the bare lookup then
         picks ONE of them, which on a storage path means one workspace's
-        documents are written into the directory of the other's Kind. Every
-        caller holding the document (which carries its own apiVersion) should
+        instances are written into the directory of the other's Kind. Every
+        caller holding the instance (which carries its own apiVersion) should
         pass it."""
         return self._kindreg.container_for(
             kind_name, api_version=api_version, scope=scope,
@@ -1920,7 +1920,7 @@ class Kernel:
     ) -> "StorageDescriptor | None":
         """Return the StorageDescriptor for a kind, or None. Delegates to
         ``self._kindreg``. See :meth:`container_for_kind` for why a caller with
-        the document in hand must pass ``api_version`` — and ``scope``, since a
+        the instance in hand must pass ``api_version`` — and ``scope``, since a
         store-loaded Kind routes storage only for its own scope (i-081)."""
         return self._kindreg.storage_for(
             kind_name, api_version=api_version, scope=scope,
@@ -1956,7 +1956,7 @@ class Kernel:
             implement bundle entry fetch (acceptable until SQL adapters
             ship the method).
           - ``FileNotFoundError`` if the bundle or entry is absent.
-          - ``InvalidDocumentName`` — name is not a single, safe path component.
+          - ``InvalidInstanceName`` — name is not a single, safe path component.
           - ``InvalidScopeName`` — scope is not a single, safe path component.
 
         Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
@@ -1969,7 +1969,7 @@ class Kernel:
         # still passes. Measured before the guard: a real read of a file two
         # levels ABOVE the store root, and a listing of everything beside it.
         validate_scope_name(scope)
-        validate_document_name(name)
+        validate_instance_name(name)
         return self._bundleio.fetch_sync(scope, kind, name, entry, tenant=tenant)
 
     async def fetch_bundle_entry_async(
@@ -1984,7 +1984,7 @@ class Kernel:
         """Async variant of `fetch_bundle_entry`. Delegates to
         ``self._bundleio`` (s-kernel-decompose-god-object)."""
         validate_scope_name(scope)
-        validate_document_name(name)
+        validate_instance_name(name)
         return await self._bundleio.fetch_async(scope, kind, name, entry, tenant=tenant)
 
     async def write_bundle_entry_async(
@@ -2005,10 +2005,10 @@ class Kernel:
         to know the backing store.
 
         The bundle entry write happens AFTER the parent doc exists
-        (caller must have done ``write_document`` first). The doc
+        (caller must have done ``write_instance`` first). The doc
         owns the tenant identity — passing the same ``tenant`` here
         keeps the bundle row's tenant column aligned with the
-        ``dna_documents`` row, so subsequent ``delete_document``
+        ``dna_instances`` row, so subsequent ``delete_instance``
         sees and cleans both atomically.
 
         Bug-of-record: 2026-05-21 — multiple tools were doing
@@ -2035,7 +2035,7 @@ class Kernel:
         # to that guard: it is a path INSIDE the bundle and legitimately
         # contains ``/``.
         validate_scope_name(scope)
-        validate_document_name(name)
+        validate_instance_name(name)
         await self._bundleio.write_async(scope, kind, name, entry, content, tenant=tenant)
 
     def list_bundle_entries(
@@ -2060,7 +2060,7 @@ class Kernel:
           - ``ValueError`` if the kind is not registered.
           - ``NotImplementedError`` if the source adapter doesn't
             implement ``BundleEntryReadable.list_bundle_entries``.
-          - ``InvalidDocumentName`` — name is not a single, safe path component.
+          - ``InvalidInstanceName`` — name is not a single, safe path component.
           - ``InvalidScopeName`` — scope is not a single, safe path component.
 
         Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
@@ -2069,7 +2069,7 @@ class Kernel:
         # name enumerated every file under an arbitrary directory outside the
         # store. A smaller leak than a read, and still a leak.
         validate_scope_name(scope)
-        validate_document_name(name)
+        validate_instance_name(name)
         return self._bundleio.list_sync(
             scope, kind, name, tenant=tenant, only_tenant=only_tenant,
         )
@@ -2086,7 +2086,7 @@ class Kernel:
         """Async variant of `list_bundle_entries`. Delegates to
         ``self._bundleio`` (s-kernel-decompose-god-object)."""
         validate_scope_name(scope)
-        validate_document_name(name)
+        validate_instance_name(name)
         return await self._bundleio.list_async(
             scope, kind, name, tenant=tenant, only_tenant=only_tenant,
         )
@@ -2115,7 +2115,7 @@ class Kernel:
         Delegates to ``self._bundleio`` (s-kernel-decompose-god-object).
         """
         validate_scope_name(scope)
-        validate_document_name(name)
+        validate_instance_name(name)
         return self._bundleio.delete_sync(scope, kind, name, entry, tenant=tenant)
 
     async def delete_bundle_entry_async(
@@ -2130,7 +2130,7 @@ class Kernel:
         """Async variant of `delete_bundle_entry`. Delegates to
         ``self._bundleio`` (s-kernel-decompose-god-object)."""
         validate_scope_name(scope)
-        validate_document_name(name)
+        validate_instance_name(name)
         return await self._bundleio.delete_async(scope, kind, name, entry, tenant=tenant)
 
     async def digest_manifest(
@@ -2180,7 +2180,7 @@ class Kernel:
 
         Computes the minimal diff (s-sync-s4) and applies it: each added/changed
         doc is read from the current source (resolved doc + its bundle entries)
-        and written to ``to_source`` via ``save_document`` — so the s-sync-s3
+        and written to ``to_source`` via ``save_instance`` — so the s-sync-s3
         atomic net persists doc + bundle entries together. ``prune`` deletes docs
         that exist only in ``to_source``. ``include`` (e.g. authored-only)
         narrows the set. ``dry_run`` returns the diff without writing.
@@ -2203,11 +2203,11 @@ class Kernel:
         Delegates to ``self._kindreg`` (None for empty/unregistered)."""
         return self._kindreg.by_container(container, scope=scope)
 
-    def serialize_document(self, scope: str, kind: str, name: str, raw: dict) -> dict:
-        """Serialize a document to files without writing. Delegates to
+    def serialize_instance(self, scope: str, kind: str, name: str, raw: dict) -> dict:
+        """Serialize an instance to files without writing. Delegates to
         ``self._bundleio`` (s-kernel-decompose-god-object).
 
-        Raises ``InvalidDocumentName`` / ``InvalidScopeName``: it writes no
+        Raises ``InvalidInstanceName`` / ``InvalidScopeName``: it writes no
         bytes itself, but every ``relativePath`` it returns is BUILT from
         ``name`` (``<container>/<name>.yaml``, ``<container>/<name>/<entry>``),
         and the whole point of the payload is that a caller writes those paths
@@ -2216,16 +2216,16 @@ class Kernel:
 
         Which is what it did. Guarding ``scope`` and ``name`` made the CLAIM
         above true only for the half of the path they build: the ``<entry>``
-        half comes from document CONTENT, and with an Agent or Skill carrying
+        half comes from instance CONTENT, and with an Agent or Skill carrying
         ``root_files`` this returned
         ``['skills/x/SKILL.md', 'skills/x/../../../etc/cron.d/pwn']`` — a
         traversing ``relativePath``, handed to a caller whose job is to write
         it. The property is now enforced rather than asserted: every returned
         entry path is validated (``InvalidBundleEntry``), so the payload cannot
-        describe a file outside the document's own directory.
+        describe a file outside the instance's own directory.
         """
         validate_scope_name(scope)
-        validate_document_name(name)
+        validate_instance_name(name)
         result = self._bundleio.serialize(scope, kind, name, raw)
         for f in result.get("files") or []:
             validate_bundle_entry(
@@ -2269,7 +2269,7 @@ class Kernel:
     # granulares do SourcePort (L1) com LRU cache bounded + single-
     # flight lock pra eliminar races concorrentes.
 
-    async def list_documents(
+    async def list_instances(
         self, scope: str, *, kind: str | None = None,
         tenant: str | None = None,
     ) -> list[tuple[str, str]]:
@@ -2279,7 +2279,7 @@ class Kernel:
         ~30ms FS (este último cai no fallback load_all).
 
         Cache: per (scope, kind, tenant) com TTL 30s. Invalidado pelo
-        kernel.write_document via _invalidate_granular_cache. Single-
+        kernel.write_instance via _invalidate_granular_cache. Single-
         flight via lock — N requests concorrentes na mesma key
         compartilham a fetch.
         """
@@ -2287,7 +2287,7 @@ class Kernel:
         key = (scope, kind or "", tenant or "")
         return await self._granular_list_cached(key)
 
-    async def get_document(
+    async def get_instance(
         self, scope: str, kind: str, name: str, *,
         tenant: str | None = None,
     ) -> dict[str, Any] | None:
@@ -2296,26 +2296,26 @@ class Kernel:
         bounded 2000/TTL 60s + V1 ``_INHERITABLE_KINDS`` parent fallback vivem
         lá; a API pública (Studio reads, agent routes, deps) é intacta.
 
-        i-085 — a document whose Kind was REVOKED comes back MARKED
+        i-085 — an instance whose Kind was REVOKED comes back MARKED
         (``status.valid == false``), never as an error and never missing. The
-        document did nothing wrong; the workspace changed its mind about the
+        instance did nothing wrong; the workspace changed its mind about the
         Kind, and refusing the read would destroy the ability to audit what
         existed. See :func:`~dna.kernel.validity.mark_invalid`."""
-        raw = await self._query.get_document(scope, kind, name, tenant=tenant)
+        raw = await self._query.get_instance(scope, kind, name, tenant=tenant)
         return self._mark_validity(scope, raw)
 
-    async def get_document_local(
+    async def get_instance_local(
         self, scope: str, kind: str, name: str, *,
         tenant: str | None = None,
     ) -> dict[str, Any] | None:
-        """``get_document`` WITHOUT the parent-scope fallback — this scope only.
+        """``get_instance`` WITHOUT the parent-scope fallback — this scope only.
 
-        It is the same read ``get_document`` performs FIRST, so calling it
+        It is the same read ``get_instance`` performs FIRST, so calling it
         straight after one is served by the granular cache rather than by a
         second trip to the store.
 
-        It exists to answer a question ``get_document`` deliberately hides: a
-        document came back, but from WHERE? Scope inheritance is the DEFAULT
+        It exists to answer a question ``get_instance`` deliberately hides: a
+        instance came back, but from WHERE? Scope inheritance is the DEFAULT
         (``_DenylistInheritable``), so a declared reference can legitimately
         resolve in a parent scope, and the edge producer must be able to tell
         an intra-scope relation from an inherited one. Recording every hit as
@@ -2332,7 +2332,7 @@ class Kernel:
         direction: str = "in",
         depth: int | None = None,
     ):
-        """"What points at this document?" — the derived reference graph.
+        """"What points at this instance?" — the derived reference graph.
 
         Thin facade over :func:`dna.kernel.query.graph.traverse`; the policy
         (depth ceiling, the ``unsupported`` refusal, the stop reason) lives
@@ -2352,11 +2352,11 @@ class Kernel:
     # 2026-05-28) — declarative cross-scope + tenant overlay resolution
     # with provenance.
     #
-    # ``resolve_document`` will eventually SUPERSEDE ``get_document``
+    # ``resolve_instance`` will eventually SUPERSEDE ``get_instance``
     # for inherited Kinds — V2 strips the ad-hoc ``_INHERITABLE_KINDS``
     # fallback and routes every read through the resolver chain.
     # During the transition (F2 → F10) both coexist; old callers keep
-    # working via ``get_document`` which falls back to the V1 fixed
+    # working via ``get_instance`` which falls back to the V1 fixed
     # parent scope.
     # ────────────────────────────────────────────────────────────────
 
@@ -2398,13 +2398,13 @@ class Kernel:
         """
         return await self._composition.get_composition_rule(scope, kind)
 
-    async def resolve_document(
+    async def resolve_instance(
         self, scope: str, kind: str, name: str, *,
         tenant: str | None = None,
     ):
         """Resolve a doc through the composition chain — Phase 17 primitive.
 
-        Returns ``ResolvedDocument`` with merged doc + full provenance.
+        Returns ``ResolvedInstance`` with merged doc + full provenance.
 
         Bootstrap Kinds (Genome, LayerPolicy, KindDefinition) bypass
         inheritance entirely — read local-only, single-layer provenance.
@@ -2416,13 +2416,13 @@ class Kernel:
              (scope, None)] otherwise).
           3. For each chain layer, query source via cache.
           4. Apply merge strategy (``override_full`` or ``field_level``).
-          5. Build ResolvedDocument with provenance + is_inherited.
+          5. Build ResolvedInstance with provenance + is_inherited.
 
         Cache: layer-level via ``_granular_doc_cached`` (same TTL/bound
-        as ``get_document``). Resolution chain itself is recomputed each
+        as ``get_instance``). Resolution chain itself is recomputed each
         call (cheap — Genome walk).
         """
-        return await self._composition.resolve_document(
+        return await self._composition.resolve_instance(
             scope, kind, name, tenant=tenant,
         )
 
@@ -2507,7 +2507,7 @@ class Kernel:
             "resources": resources,
         }
 
-    async def personalize_document(
+    async def personalize_instance(
         self, target_scope: str, kind: str, name: str, *,
         tenant: str | None = None,
         overwrite: bool = False,
@@ -2528,13 +2528,13 @@ class Kernel:
                 already has a local doc with this name.
 
         Returns:
-            ``ResolvedDocument`` of the freshly written local copy.
+            ``ResolvedInstance`` of the freshly written local copy.
 
         Raises:
             ValueError: doc isn't inherited / target already exists
                 (without overwrite=True).
         """
-        return await self._composition.personalize_document(
+        return await self._composition.personalize_instance(
             target_scope, kind, name, tenant=tenant, overwrite=overwrite,
         )
 
@@ -2670,21 +2670,21 @@ class Kernel:
         self, scope: str, kind: str, *,
         filter: dict | None = None,
         tenant: str | None = None,
-    ) -> list[Document]:
-        """Sync wrapper around ``query`` returning parsed ``Document`` objects
+    ) -> list[Instance]:
+        """Sync wrapper around ``query`` returning parsed ``Instance`` objects
         (drop-in for ``mi.all(kind)``). Delegado ao ``self._query``
         (s-kernel-decompose-god-object); ``_run_sync_helper`` + main-loop
         binding vivem lá. API intacta (CLI, workers, tool executors)."""
         return self._query.query_list_sync(scope, kind, filter=filter, tenant=tenant)
 
-    def get_document_sync(
+    def get_instance_sync(
         self, scope: str, kind: str, name: str, *,
         tenant: str | None = None,
-    ) -> Document | None:
-        """Sync wrapper around ``get_document`` returning a parsed ``Document``
+    ) -> Instance | None:
+        """Sync wrapper around ``get_instance`` returning a parsed ``Instance``
         (drop-in for ``mi.one(kind, name)``). Delegado ao ``self._query``
         (s-kernel-decompose-god-object). API intacta."""
-        return self._query.get_document_sync(scope, kind, name, tenant=tenant)
+        return self._query.get_instance_sync(scope, kind, name, tenant=tenant)
 
     # ─── Internal: LRU + single-flight ──────────────────────────────
 
@@ -2709,7 +2709,7 @@ class Kernel:
             list_method = getattr(source, "list_doc_refs", None)
             if list_method is not None:
                 return await list_method(scope, kind=kind_arg, tenant=tenant_arg)
-            # Legacy adapter — fall back to mi.documents projection
+            # Legacy adapter — fall back to mi.instances projection
             docs = await source.load_all(scope, readers=self._readers)
             value = []
             for d in docs:
@@ -2754,7 +2754,7 @@ class Kernel:
         self, scope: str, kind: str | None = None, name: str | None = None,
     ) -> None:
         """Delegate to ``self._kcache.invalidate_granular`` (kept as a thin
-        wrapper so write_document/delete_document call sites are unchanged)."""
+        wrapper so write_instance/delete_instance call sites are unchanged)."""
         self._kcache.invalidate_granular(scope, kind, name)
 
     # ─── End L2 granular API ───────────────────────────────────────
@@ -2836,8 +2836,8 @@ class Kernel:
         iff a NEW BUNDLE reader was added (the rescan gate).
 
         ``scope`` binds the resulting Kinds to the scope whose store the
-        documents came from (i-081); ``inherited_from`` names the ANCESTOR
-        scope those documents came from when the pass is widening a declared
+        instances came from (i-081); ``inherited_from`` names the ANCESTOR
+        scope those instances came from when the pass is widening a declared
         chain downwards, which makes it never-replacing (i-096)."""
         return self._kindreg.register_kind_definitions(
             all_raws, scope=scope, inherited_from=inherited_from,
@@ -2873,7 +2873,7 @@ class Kernel:
         design had to settle, and the answers are in the code rather than only
         in prose because both are reversible by accident:
 
-        **A read returns the DOCUMENT, marked.** Not an error, not ``None``, not
+        **A read returns the INSTANCE, marked.** Not an error, not ``None``, not
         a deletion. Erasing or refusing the read would destroy the ability to
         audit what existed, and the data did nothing wrong — the workspace
         changed its mind about the Kind. Reversible in one act, because the mark
@@ -2894,9 +2894,9 @@ class Kernel:
 
         The consequence, stated plainly: **every listing surface has to learn to
         render the mark**, and one that does not will show a revoked Kind's
-        documents as though nothing happened. That failure mode is the status
+        instances as though nothing happened. That failure mode is the status
         quo — less alarming than the truth, never less data — whereas the
-        alternative would have made revocation into a way to hide documents
+        alternative would have made revocation into a way to hide instances
         without deleting them. Given a choice between a surface that
         under-reports and a mechanism that can be used to disappear data,
         this takes the first.
@@ -2915,7 +2915,7 @@ class Kernel:
             return raw
         return mark_invalid(raw, revoked_kind_status(kn, av))
 
-    def _parse_doc(self, raw: dict[str, Any], origin: str = "local") -> Document:
+    def _parse_doc(self, raw: dict[str, Any], origin: str = "local") -> Instance:
         av = raw.get("apiVersion", "")
         kn = raw.get("kind", "")
         name = (raw.get("metadata") or {}).get("name", "")
@@ -2923,8 +2923,8 @@ class Kernel:
         typed = None
         if kind_port:
             # i-085 — the SAME mark the raw-dict reads carry, so the three read
-            # shapes (raw dict, Document, ResolvedDocument) cannot disagree
-            # about whether a document is valid. Applied before ``from_raw`` so
+            # shapes (raw dict, Instance, ResolvedInstance) cannot disagree
+            # about whether an instance is valid. Applied before ``from_raw`` so
             # it rides in ``doc.raw`` and reads back through ``doc.status``.
             from dna.kernel.kinds.registry import port_revoked
             from dna.kernel.validity import mark_invalid, revoked_kind_status
@@ -2943,7 +2943,7 @@ class Kernel:
                         kind=kn, name=name,
                         data={"error": str(e), "apiVersion": av, "raw": raw},
                     ))
-        doc = Document.from_raw(raw, typed=typed)
+        doc = Instance.from_raw(raw, typed=typed)
         doc.origin = origin
         return doc
 

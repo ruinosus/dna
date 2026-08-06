@@ -1,5 +1,5 @@
 """A bundle ENTRY is a relative path inside its bundle — and it is built from
-document CONTENT, which is why guarding ``name`` and ``scope`` was not enough.
+instance CONTENT, which is why guarding ``name`` and ``scope`` was not enough.
 
 ``606812c`` / ``887e858`` closed ``name`` and ``scope`` on both the write and
 the read half. The class was still open: a bundle ``entry`` reaches the
@@ -11,7 +11,7 @@ convention shared by Agent, Skill, Tenant and TenantMembership),
 ``spec`` verbatim into ``raw`` and ``PUT /v1/definitions/{kind}/{name}`` takes
 it as an untyped body, so every one of those is caller input.
 
-Measured at HEAD, through ``Kernel.write_document`` on the default ``Agent``
+Measured at HEAD, through ``Kernel.write_instance`` on the default ``Agent``
 Kind (not through the handle in isolation): each field wrote a real file
 OUTSIDE the store root — on the base lane and the tenant lane alike — and an
 ABSOLUTE entry wrote to an arbitrary absolute path, because a ``pathlib`` join
@@ -24,8 +24,8 @@ writer must pass — not at each writer. Eight in-repo writers call
 ``bundle.write_text(f["relativePath"], …)`` directly rather than the shared
 ``write_entries_to_handle`` sink, so guarding the sink alone would have
 repeated the exact enumeration mistake that caused the miss. The sink and
-``serialize_document`` are guarded TOO, as the early, named layer that can say
-which field was wrong — same two-layer shape as ``validate_document_name`` +
+``serialize_instance`` are guarded TOO, as the early, named layer that can say
+which field was wrong — same two-layer shape as ``validate_instance_name`` +
 ``FilesystemSource._contained``, and for the same reason. Neither is dead code.
 
 THE RULE IS MEASURED. 492 distinct real bundle entry paths across both repos'
@@ -248,7 +248,7 @@ def test_a_symlinked_FILE_entry_is_allowed_on_purpose_ON_READ(tmp_path):
     own root ``AGENTS.md`` is symlinked INTO a scope
     (``tests/test_agents_md_root.py``) and read through this handle. Resolving
     the leaf on reads broke that test — the adapter logged 'Reader error …
-    outside the bundle root' and the document silently vanished from the scan.
+    outside the bundle root' and the instance silently vanished from the scan.
 
     The distinction is not arbitrary: a symlinked FILE moves exactly one file
     and is a deliberate act by whoever owns the bundle dir; a symlinked
@@ -340,7 +340,7 @@ def test_the_in_memory_handle_holds_the_same_rule(tmp_path):
         handle.write_bytes("/etc/cron.d/pwn", b"pwned")
 
 
-# ── layer 1: through Kernel.write_document, the way it was found ─────────────
+# ── layer 1: through Kernel.write_instance, the way it was found ─────────────
 
 def _fs_kernel(tmp_path):
     from dna.adapters.filesystem.writable import FilesystemWritableSource
@@ -408,7 +408,7 @@ async def test_no_content_derived_entry_escapes_the_store_root(
     before = {p for p in tmp_path.rglob("*")}
 
     with pytest.raises(KernelRefusal):
-        await k.write_document(
+        await k.write_instance(
             "test-mod", "Agent", "innocent", _agent({"model": "gpt-4o", **spec}),
         )
 
@@ -428,7 +428,7 @@ async def test_an_absolute_content_derived_entry_writes_nowhere(tmp_path):
     target.parent.mkdir(parents=True)
 
     with pytest.raises(KernelRefusal):
-        await k.write_document(
+        await k.write_instance(
             "test-mod", "Agent", "innocent",
             _agent({"model": "gpt-4o", "root_files": {str(target): "pwned"}}),
         )
@@ -442,7 +442,7 @@ async def test_the_tenant_lane_is_closed_too(tmp_path):
     Measured; a 4-deep traversal here would be absorbed and prove nothing."""
     k, store = _fs_kernel(tmp_path)
     with pytest.raises(KernelRefusal):
-        await k.write_document(
+        await k.write_instance(
             "test-mod", "Agent", "innocent",
             _agent({"model": "gpt-4o",
                     "root_files": {"../" * 7 + "TENANT_ESCAPED.md": "pwned"}}),
@@ -458,7 +458,7 @@ async def test_the_ordinary_bundle_write_still_round_trips(tmp_path):
     """THE CONTROL, and the one that decides whether the rule is right: real
     bundles carry nested subdirectories and dotted filenames everywhere."""
     k, store = _fs_kernel(tmp_path)
-    version = await k.write_document(
+    version = await k.write_instance(
         "test-mod", "Agent", "innocent",
         _agent({
             "model": "gpt-4o",
@@ -483,7 +483,7 @@ async def test_the_ordinary_bundle_write_still_round_trips(tmp_path):
 async def test_the_refusal_names_the_entry_so_the_caller_can_fix_it(tmp_path):
     k, _ = _fs_kernel(tmp_path)
     with pytest.raises(InvalidBundleEntry, match="ESCAPED"):
-        await k.write_document(
+        await k.write_instance(
             "test-mod", "Agent", "innocent",
             _agent({"model": "gpt-4o",
                     "root_files": {"../../../../ESCAPED.md": "pwned"}}),
@@ -541,7 +541,7 @@ def test_pop_source_files_as_entries_is_kind_agnostic_and_therefore_shared():
 def test_pop_source_files_as_entries_refuses_a_traversing_key(bad):
     """The SQL lane never reaches a handle — so the guard must be HERE.
 
-    ``SqlAlchemySource.save_document`` calls this helper to pop
+    ``SqlAlchemySource.save_instance`` calls this helper to pop
     ``spec.source_files`` BEFORE any writer runs and merges the keys straight
     into its ``bundle_text``/``bundle_bin`` dicts. No ``DictBundleHandle`` is
     ever constructed for them, so ``DictBundleHandle._validate`` — which the
@@ -568,7 +568,7 @@ def test_the_sql_lane_does_not_STORE_a_traversing_source_files_key(tmp_path):
     the escape from being STORED" — asserted against the STORED ROW.
 
     Measured before the fix, on a SQLite-backed ``SqlAlchemySource``:
-    ``save_document`` returned ``version='1'`` and the ``bundle_entries`` table
+    ``save_instance`` returned ``version='1'`` and the ``bundle_entries`` table
     held ``'../../../../etc/cron.d/pwn'`` and ``'/tmp/dna-ABSOLUTE-STORED.md'``
     verbatim. A stored row is the same escape DEFERRED — ``dna_bundle_entries``
     is what materialises a bundle onto a filesystem later.
@@ -591,7 +591,7 @@ def test_the_sql_lane_does_not_STORE_a_traversing_source_files_key(tmp_path):
                 traversing: "pwned", absolute: "pwned", "scripts/ok.py": "x",
             }})
             with pytest.raises(KernelRefusal):
-                await src.save_document("test-mod", "Agent", "innocent", raw)
+                await src.save_instance("test-mod", "Agent", "innocent", raw)
 
             b = src.bundle_entries
             async with src._engine.begin() as conn:
@@ -602,7 +602,7 @@ def test_the_sql_lane_does_not_STORE_a_traversing_source_files_key(tmp_path):
             ok = _agent({"model": "gpt-4o", "source_files": {
                 "scripts/run.py": "x", "skills/foo/SKILL.md": "y",
             }})
-            await src.save_document("test-mod", "Agent", "wholesome", ok)
+            await src.save_instance("test-mod", "Agent", "wholesome", ok)
             async with src._engine.begin() as conn:
                 rows2 = (await conn.execute(
                     sa.select(b.c.entry_path).where(b.c.name == "wholesome")
@@ -720,10 +720,10 @@ def test_the_adapter_read_door_follows_a_symlinked_leaf_like_the_handle(tmp_path
         "AGENTS.md") == "# the real root AGENTS.md"
 
 
-# ── serialize_document: the escape must not move one frame up the stack ──────
+# ── serialize_instance: the escape must not move one frame up the stack ──────
 
 def test_serialize_document_never_hands_back_a_traversing_relative_path(tmp_path):
-    """``serialize_document`` writes no bytes, but the WHOLE POINT of its
+    """``serialize_instance`` writes no bytes, but the WHOLE POINT of its
     payload is that a caller writes those ``relativePath`` values out. Before
     the fix a Skill carrying ``root_files`` came back as
     ``['skills/x/SKILL.md', 'skills/x/../../../etc/cron.d/pwn']`` — the escape
@@ -737,7 +737,7 @@ def test_serialize_document_never_hands_back_a_traversing_relative_path(tmp_path
                   "root_files": {"../../../etc/cron.d/pwn": "pwned"}})
 
     with pytest.raises(InvalidBundleEntry):
-        k.serialize_document("test-mod", "Agent", "innocent", raw)
+        k.serialize_instance("test-mod", "Agent", "innocent", raw)
     del tmp_path
 
 
@@ -748,7 +748,7 @@ def test_serialize_document_still_serializes_a_legitimate_bundle(tmp_path):
     k = Kernel()
     k.load(HelixExtension())
     raw = _agent({"model": "gpt-4o", "root_files": {"skills/foo/SKILL.md": "x"}})
-    files = k.serialize_document("test-mod", "Agent", "innocent", raw)["files"]
+    files = k.serialize_instance("test-mod", "Agent", "innocent", raw)["files"]
 
     assert files, "the control must still serialize"
     rels = [f["relativePath"] for f in files]

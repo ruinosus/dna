@@ -29,7 +29,7 @@ def test_write_to_base_when_layer_none(tmp_path):
         "metadata": {"name": "x"},
         "spec": {},
     }
-    asyncio.run(k.write_document("s", "Agent", "x", raw))
+    asyncio.run(k.write_instance("s", "Agent", "x", raw))
     # Agent serializes to a bundle: <scope>/agents/x/AGENT.md.
     # Doc landed somewhere in base scope, NOT under any layers/ and NOT
     # under tenants/.
@@ -51,7 +51,7 @@ def test_write_to_tenant_layer(tmp_path):
         "metadata": {"name": "x"},
         "spec": {},
     }
-    asyncio.run(k.write_document("s", "Agent", "x", raw, layer=("tenant", "T1")))
+    asyncio.run(k.write_instance("s", "Agent", "x", raw, layer=("tenant", "T1")))
     tenant_dir = tmp_path / "tenants" / "T1" / "scopes" / "s"
     assert tenant_dir.exists()
     assert (tenant_dir / "agents" / "x" / "AGENT.md").is_file()
@@ -76,8 +76,8 @@ def test_two_tenants_isolated(tmp_path):
         "metadata": {"name": "x"},
         "spec": {"instruction": "T2 view"},
     }
-    asyncio.run(k.write_document("s", "Agent", "x", raw_t1, layer=("tenant", "T1")))
-    asyncio.run(k.write_document("s", "Agent", "x", raw_t2, layer=("tenant", "T2")))
+    asyncio.run(k.write_instance("s", "Agent", "x", raw_t1, layer=("tenant", "T1")))
+    asyncio.run(k.write_instance("s", "Agent", "x", raw_t2, layer=("tenant", "T2")))
     t1_files = list((tmp_path / "tenants" / "T1" / "scopes" / "s").rglob("AGENT.md"))
     t2_files = list((tmp_path / "tenants" / "T2" / "scopes" / "s").rglob("AGENT.md"))
     assert len(t1_files) >= 1
@@ -96,10 +96,10 @@ def test_delete_from_tenant_layer(tmp_path):
         "metadata": {"name": "x"},
         "spec": {},
     }
-    asyncio.run(k.write_document("s", "Agent", "x", raw, layer=("tenant", "T1")))
+    asyncio.run(k.write_instance("s", "Agent", "x", raw, layer=("tenant", "T1")))
     tenant_dir = tmp_path / "tenants" / "T1" / "scopes" / "s"
     assert any(tenant_dir.rglob("AGENT.md"))
-    asyncio.run(k.delete_document("s", "Agent", "x", layer=("tenant", "T1")))
+    asyncio.run(k.delete_instance("s", "Agent", "x", layer=("tenant", "T1")))
     assert not any(tenant_dir.rglob("AGENT.md"))
 
 
@@ -113,7 +113,7 @@ def test_path_traversal_rejected_in_layer_id(tmp_path):
         "spec": {},
     }
     with pytest.raises(ValueError, match="Invalid layer segment"):
-        asyncio.run(k.write_document("s", "Agent", "x", raw, layer=("../up", "val")))
+        asyncio.run(k.write_instance("s", "Agent", "x", raw, layer=("../up", "val")))
 
 
 def test_path_traversal_rejected_in_layer_value(tmp_path):
@@ -148,7 +148,7 @@ def test_path_traversal_rejected_in_layer_value(tmp_path):
     }
     before = {p for p in tmp_path.rglob("*") if p.is_file()}
     with pytest.raises(InvalidTenantSlug, match="cannot escape") as exc:
-        asyncio.run(k.write_document("s", "Agent", "x", raw, layer=("tenant", "../evil")))
+        asyncio.run(k.write_instance("s", "Agent", "x", raw, layer=("tenant", "../evil")))
     assert isinstance(exc.value, KernelRefusal)
     assert isinstance(exc.value, ValueError)
     # The property, asserted on the FILESYSTEM rather than on the exception:
@@ -167,4 +167,4 @@ def test_path_traversal_rejected_slashes(tmp_path):
         "spec": {},
     }
     with pytest.raises(ValueError, match="Invalid layer segment"):
-        asyncio.run(k.write_document("s", "Agent", "x", raw, layer=("a/b", "c")))
+        asyncio.run(k.write_instance("s", "Agent", "x", raw, layer=("a/b", "c")))

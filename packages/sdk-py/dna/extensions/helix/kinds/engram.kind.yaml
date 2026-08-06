@@ -160,7 +160,7 @@ spec:
         # of every candidate, so the next omission fails loudly.
         # Heterogeneous on purpose: an entry is EITHER a `Kind/name` pointer
         # (`Story/s-z`) or a bare local id from the surrounding manifest
-        # (`rem-x`, `verdict-y`). Neither is a document NAME on its own, so
+        # (`rem-x`, `verdict-y`). Neither is an instance NAME on its own, so
         description: Concrete refs (rem-X, verdict-Y, Story/s-Z) that back the affect
           choice. Required for high-stakes affects so the LLM's claim is auditable
           against actual artifacts in the manifest.
@@ -334,7 +334,7 @@ spec:
           normal trains its reader to ignore it, including the time it is
           right. This is the same rule the verb's faces announce
           (`dna.memory.contradiction.WHEN_TO_CLAIM`), restated for the OTHER
-          door — a raw `write_document` on an Engram, which reads this schema
+          door — a raw `write_instance` on an Engram, which reads this schema
           and never sees a tool description.
         items:
           type: object

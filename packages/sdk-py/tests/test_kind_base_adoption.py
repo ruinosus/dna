@@ -53,7 +53,7 @@ _PRE_KINDBASE_ALLOWLIST: set[tuple[str, str]] = set()
 # v1.0 ships with 100% KindBase adoption. Adding entries here would
 # regress the migration — don't unless a deliberate decision is made
 # (e.g. an extension intentionally implements KindPort directly to
-# avoid the inheritance cost). Document the rationale in the PR.
+# avoid the inheritance cost). Instance the rationale in the PR.
 
 
 def _all_registered_kind_keys() -> set[tuple[str, str]]:

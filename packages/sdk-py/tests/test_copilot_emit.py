@@ -1546,7 +1546,7 @@ def test_copilot_ctx_unions_agent_level_confirmation(tmp_path):
         "  instruction: Proponha um campo por vez.\n"
         "  description: Copiloto de intake com gate humano.\n"
         "  tools_requiring_confirmation:\n"
-        "  - update_document_draft\n"
+        "  - update_instance_draft\n"
         "  mcp_servers:\n"
         "  - ref: dna-mcp\n"
         "    allowed_tools: [recall]\n"
@@ -1562,7 +1562,7 @@ def test_copilot_ctx_unions_agent_level_confirmation(tmp_path):
     )
     mi2 = Kernel.quick(_SCOPE, base_dir=str(dst))
     ctx = build_copilot_context(mi2, "confirming-copilot", model="azure/gpt-4o")
-    assert "update_document_draft" in ctx.tools_requiring_confirmation
+    assert "update_instance_draft" in ctx.tools_requiring_confirmation
     # E o memory-copilot continua com o conjunto derivado dos Tool docs —
     # a união não substitui o vocabulário antigo.
     mi3 = Kernel.quick(_SCOPE, base_dir=_BASE)

@@ -5,11 +5,11 @@ stays. This is a SEPARATE entry point with its own authorization: it writes
 exactly one Kind (``KindDefinition``), always WITHOUT an approval marker, always
 into the caller's own namespace.
 
-What it writes is a real document — auditable, listable, diffable — that the
+What it writes is a real instance — auditable, listable, diffable — that the
 registry refuses to take until someone approves it (see the approval gate in
 ``dna/kernel/kinds/registry.py``). Absence of registration IS absence of effect:
-an unregistered Kind neither validates documents nor routes the storage of its
-documents.
+an unregistered Kind neither validates instances nor routes the storage of its
+instances.
 
 **The apiVersion is BUILT here, not passed through.**
 :func:`~dna.application.namespace_assignment.assign_namespace` returns an
@@ -51,9 +51,9 @@ __all__ = [
 _KIND = "KindDefinition"
 _API_VERSION = "github.com/ruinosus/dna/core/v1"
 
-#: The separator between a namespace and a Kind name in the document's NAME.
+#: The separator between a namespace and a Kind name in the instance's NAME.
 #: The name has to carry the namespace: two workspaces may both author
-#: ``Contrato``, and the pair is what keeps their documents apart in a scope
+#: ``Contrato``, and the pair is what keeps their instances apart in a scope
 #: (the registry key is ``(api_version, kind)`` for the same reason).
 _NAME_SEP = "--"
 
@@ -63,7 +63,7 @@ class AuthoredKindNotFound(LookupError):
 
     Its own exception because the face must map it to **404** and never to the
     400 every other refusal here carries: an approval door that quietly CREATED
-    the document it was asked to approve would be an authoring door with an
+    the instance it was asked to approve would be an authoring door with an
     approval marker on it — precisely the thing that must not exist."""
 
 
@@ -91,7 +91,7 @@ class NamespaceRegistryUnreadable(RuntimeError):
 #: An ALLOW-list, not a deny-list of the characters we happened to think of.
 #:
 #: ``kind`` is the ONLY field of the request body that reaches a PATH. The
-#: document name is ``<namespace>--<kind>``, and on a filesystem-backed source
+#: instance name is ``<namespace>--<kind>``, and on a filesystem-backed source
 #: that name becomes a DIRECTORY (``<scope>/kinds/<name>/KIND.yaml``). Left
 #: unvalidated it is a create-directories-anywhere + write-a-``KIND.yaml``
 #: primitive OUTSIDE the store root (measured: six ``../`` segments land two
@@ -154,14 +154,14 @@ def _alias_owner(namespace: str) -> str:
     )
 
 
-def kind_document_name(namespace: str, kind: str) -> str:
-    """The document name an authored Kind is stored under.
+def kind_instance_name(namespace: str, kind: str) -> str:
+    """The instance name an authored Kind is stored under.
 
     Module-private in practice, and deliberately NOT in ``__all__``. It was
     exported on the rationale that approval — a separate act by a different
-    actor — would address the document by name; that rationale was never true.
-    :func:`approve_kind_impl` reaches the document through
-    :func:`_authored_document_name`, a SEARCH over the caller's own namespaces,
+    actor — would address the instance by name; that rationale was never true.
+    :func:`approve_kind_impl` reaches the instance through
+    :func:`_authored_instance_name`, a SEARCH over the caller's own namespaces,
     because the approval URL carries only the Kind half and the namespace half
     is what the caller must be shown to own. One caller (:func:`author_kind_impl`,
     which mints the name) is not an API."""
@@ -195,7 +195,7 @@ async def author_kind_impl(
 ) -> dict[str, Any]:
     """Write a tenant Kind, unapproved. It has no effect until approved.
 
-    ``presentation`` (optional) declares how the Kind's documents READ — the
+    ``presentation`` (optional) declares how the Kind's instances READ — the
     ordered fields, their human labels, their semantic roles. It is the SAME
     block a builtin descriptor declares, validated by the SAME normalizer
     (``dna.kernel.kinds.presentation``), which is the whole point: a
@@ -207,21 +207,21 @@ async def author_kind_impl(
     ``actor`` is the PROPOSER — the verified identity of the caller, resolved by
     the face from the token and NEVER read from the request body. It is stamped
     here, at the moment of the proposal, because it cannot be back-filled later:
-    a document that never recorded who proposed it has lost that fact for good.
+    an instance that never recorded who proposed it has lost that fact for good.
 
     **This is also the EDIT path**, and the spec below is rebuilt from scratch
-    and PERSISTED (``write_document`` does not merge), so what an edit does to
+    and PERSISTED (``write_instance`` does not merge), so what an edit does to
     each audit field is decided by what this function carries forward:
 
-    * ``created_at`` — the BIRTH of the document, carried forward. Only a
-      document that does not exist yet gets ``now``. The schema calls it "when
-      the document was created" and an unconditional re-stamp made that false
+    * ``created_at`` — the BIRTH of the instance, carried forward. Only a
+      instance that does not exist yet gets ``now``. The schema calls it "when
+      the instance was created" and an unconditional re-stamp made that false
       from the first edit onward.
     * ``proposed_by``/``proposed_at`` — the CURRENT proposal, re-stamped every
       time. They answer "who proposed the shape that is pending or approved
       right now", and after an edit that is the editor, not whoever went first.
       The original proposer stays recoverable through the kernel's version
-      history; the live document answers the live question.
+      history; the live instance answers the live question.
     * ``approved_by``/``approved_at`` — dropped, by never being written. An edit
       changes the shape a human approved, so the approval no longer applies to
       it and the Kind loses its effect until the new shape is approved.
@@ -253,7 +253,7 @@ async def author_kind_impl(
     try:
         declared_presentation = normalize_presentation(presentation)
     except ValueError as exc:
-        # Re-raised with the field named: the caller sent a document of their
+        # Re-raised with the field named: the caller sent an instance of their
         # own and has to be told which key of it the door refused.
         raise ValueError(f"presentation — {exc}") from None
     proposed_by = (actor or "").strip() or None
@@ -261,25 +261,25 @@ async def author_kind_impl(
     from dna.kernel.kinds.registry import generate_alias
 
     namespace = await assign_namespace(live.kernel, tenant, now=now)
-    name = kind_document_name(namespace, kind)
+    name = kind_instance_name(namespace, kind)
     scope = live.default_scope(tenant)
-    # The ONE thing read back off an existing document. Not a merge — a merge
+    # The ONE thing read back off an existing instance. Not a merge — a merge
     # would carry `approved_by` forward too, and an edit must withdraw the
-    # approval it invalidated. A missing document reads as None here (the
+    # approval it invalidated. A missing instance reads as None here (the
     # ordinary first-author case), so `created_at` falls back to `now`.
     #
     # NOT a plain local existence check, and the difference is accepted here
-    # EXPLICITLY rather than left for the next reader to discover. `get_document`
+    # EXPLICITLY rather than left for the next reader to discover. `get_instance`
     # answers through a bounded cache (2000 entries / 60s TTL) and through the
-    # parent-scope inheritance fallback, so "there is no document" is really
-    # "no document is VISIBLE from here right now". Two consequences, both
+    # parent-scope inheritance fallback, so "there is no instance" is really
+    # "no instance is VISIBLE from here right now". Two consequences, both
     # measured and both narrow:
     #
     #   * a stale birth date needs an out-of-band deletion INSIDE the TTL. It
     #     cannot be reached through any API path: the generic delete refuses
     #     BOOTSTRAP Kinds and `KindDefinition` is one of them, so nothing a
-    #     caller can invoke removes the document that seeds `born_at`.
-    #   * a same-named document in the PARENT scope would be read instead — and
+    #     caller can invoke removes the instance that seeds `born_at`.
+    #   * a same-named instance in the PARENT scope would be read instead — and
     #     writing one there requires owning the same namespace in that scope,
     #     i.e. being the same workspace. It carries forward its own birth date,
     #     which is the honest answer for a Kind the workspace is re-authoring
@@ -287,14 +287,14 @@ async def author_kind_impl(
     #
     # A fresh read (cache bypass, local-only) would be the exact measurement,
     # but it costs a store round-trip on every author call to close a window
-    # only an operator with shell access can open on their own documents.
-    existing = await live.kernel.get_document(scope, _KIND, name)
+    # only an operator with shell access can open on their own instances.
+    existing = await live.kernel.get_instance(scope, _KIND, name)
     prior = existing.get("spec") if isinstance(existing, dict) else None
     born_at = prior.get("created_at") if isinstance(prior, dict) else None
     # i-085 — the REVOCATION is carried forward, unlike the approval. The
     # symmetry is tempting and it is the loosening trap in a second door: this
     # function rebuilds the spec from scratch and PERSISTS it, so a dropped
-    # ``revoked_by`` would land the Kind in *never approved*, where documents
+    # ``revoked_by`` would land the Kind in *never approved*, where instances
     # are accepted with NO validation at all. An edit withdraws the approval it
     # invalidated; it cannot grant itself the effect of an un-revocation, and
     # only the approval door can undo one.
@@ -318,13 +318,13 @@ async def author_kind_impl(
             "origin": namespace,
             "schema": schema,
             "traits": list(traits or []),
-            # How documents of this Kind READ. Stored as a KEY-IF-PRESENT, like
+            # How instances of this Kind READ. Stored as a KEY-IF-PRESENT, like
             # the revocation pair below and for the same mechanical reason: the
             # port's derived schema is permissive here, but "declared nothing"
             # and "declared an empty reading" are different facts and a stored
             # null would flatten them. Stored in the DECLARATION shape, never
             # the wire one — the wire form carries `label`/`icon`, which are
-            # this document's own separate fields and must not be duplicated
+            # this instance's own separate fields and must not be duplicated
             # into a nested copy that can drift from them.
             **(
                 {"presentation": declared_presentation.to_declaration()}
@@ -346,7 +346,7 @@ async def author_kind_impl(
             # no-op — which is the harmless direction.
             #
             # CARRIED FORWARD on an edit (`born_at`), never re-stamped: this is
-            # the document's birth, and the schema says so in those words.
+            # the instance's birth, and the schema says so in those words.
             "created_at": born_at or now,
             # WHO proposed, and WHEN — the first half of the audit. The value is
             # the face's VERIFIED identity for this request, passed in as
@@ -357,7 +357,7 @@ async def author_kind_impl(
             # is the point: these two answer "who proposed the shape that is
             # pending or approved RIGHT NOW", which after an edit is the editor.
             # The first proposer is not lost — the kernel keeps the version
-            # history — but the live document answers the live question.
+            # history — but the live instance answers the live question.
             "proposed_by": proposed_by,
             "proposed_at": now if proposed_by else None,
             # Deliberately absent: approved_by / approved_at. This path CANNOT
@@ -368,12 +368,12 @@ async def author_kind_impl(
             # there is no key an author can smuggle through.
             #
             # `revoked_by`/`revoked_at` are NOT in that group — see `was_revoked`
-            # above. They are carried forward from the stored document (and, by
+            # above. They are carried forward from the stored instance (and, by
             # being spread LAST, cannot be supplied by the caller either).
             **was_revoked,
         },
     }
-    version = await live.kernel.write_document(scope, _KIND, name, raw)
+    version = await live.kernel.write_instance(scope, _KIND, name, raw)
     return {
         "namespace": namespace, "kind": kind, "name": name,
         "approved": False, "proposed_by": proposed_by, "version": version,
@@ -391,7 +391,7 @@ async def _owns(live: Any, tenant: str) -> Any:
     SAME resolver (:func:`~dna.kernel.kinds.namespaces.owner_of`) the write-path
     gate decides with. PARITY WITH THE GATE is the entire reason, and it is not
     a coverage argument: ``owner_of``'s prefix walk is inert on this path,
-    because a document name cannot contain ``/`` and so a sub-namespace claim
+    because an instance name cannot contain ``/`` and so a sub-namespace claim
     can never appear as the namespace half of one. What using it buys is that
     ownership cannot mean one thing to the gate that decides the WRITE and
     another to the doors that decide who may approve and who may see — including
@@ -429,10 +429,10 @@ async def _owns(live: Any, tenant: str) -> Any:
 #: was refused, never which of the two facts caused it.
 _NOT_FOUND_TAIL = {
     "approve": (
-        "— approval acts on a document that already exists, and creates none"
+        "— approval acts on an instance that already exists, and creates none"
     ),
     "revoke": (
-        "— revocation acts on a document that already exists, and creates none"
+        "— revocation acts on an instance that already exists, and creates none"
     ),
     "read": (
         "— an authored Kind is readable by the workspace that authored it, and "
@@ -441,15 +441,15 @@ _NOT_FOUND_TAIL = {
 }
 
 
-async def _authored_document_name(
+async def _authored_instance_name(
     live: Any, *, scope: str, kind: str, tenant: str | None,
     allow_unattributed: bool,
     verb: str = "approve",
 ) -> tuple[str, str]:
-    """Find the CALLER's authored document for ``kind`` in ``scope`` →
+    """Find the CALLER's authored instance for ``kind`` in ``scope`` →
     ``(name, namespace)``.
 
-    Addresses the document by SEARCH, not by re-deriving the namespace. Calling
+    Addresses the instance by SEARCH, not by re-deriving the namespace. Calling
     :func:`assign_namespace` here would read better and be wrong twice over: it
     MINTS on absence, so approving a Kind nobody authored would leave a namespace
     claim behind as a side effect of a refusal; and a workspace may own several
@@ -467,7 +467,7 @@ async def _authored_document_name(
     ``base_scope``, so sharing is the default configuration and not an exotic
     one. The Kind half of the name is all the approval URL carries, so an
     unfiltered search lets workspace A approve the ``…--Contrato`` that belongs
-    to B: one match, no refusal, and effect conferred on a document A never
+    to B: one match, no refusal, and effect conferred on an instance A never
     wrote. Nothing downstream catches it — the approval write passes no
     ``tenant=`` (``KindDefinition`` is non-overlayable), so the namespace gate
     attributes it to the SCOPE's owner rather than to the caller. Filtering here,
@@ -484,7 +484,7 @@ async def _authored_document_name(
     through on purpose (``allow_unattributed=True``), because ``--auth none``
     self-host and an explicit operator ``scope=`` call resolve no workspace, and
     a filter that demanded ownership would answer every self-hoster "not found"
-    for a document sitting in their own store — the same hinge
+    for an instance sitting in their own store — the same hinge
     :class:`~dna.kernel.write.namespace_gate.NamespaceOwnershipGate` uses for an
     unattributed write and :func:`_authored_kind_visibility` uses for the
     listing, resting on the same standing invariant that a hosted face never
@@ -515,7 +515,7 @@ async def _authored_document_name(
     if not attributed and not allow_unattributed:
         # The precondition, ENFORCED. The caller said this act needs an owner;
         # searching the shared scope unfiltered would answer it with whichever
-        # workspace's document happens to carry the Kind name.
+        # workspace's instance happens to carry the Kind name.
         raise ValueError(
             f"a workspace is required to address the authored Kind {kind!r}: "
             f"this act is filtered to the namespaces the CALLER owns, and an "
@@ -548,7 +548,7 @@ async def _authored_document_name(
         raise ValueError(
             f"Kind {kind!r} is declared under {len(matches)} {owned} "
             f"({', '.join(sorted(n for _, n in matches))}) — address it "
-            f"by document name, not by Kind name"
+            f"by instance name, not by Kind name"
         )
     return matches[0]
 
@@ -572,11 +572,11 @@ async def approve_kind_impl(
     this function must never do is let one act wear the other's name.
 
     ``tenant`` is not decoration on the lookup: it is what scopes the search to
-    the caller's OWN namespaces (see :func:`_authored_document_name`). A scope is
+    the caller's OWN namespaces (see :func:`_authored_instance_name`). A scope is
     shared by default, and the approval URL carries only the Kind half of the
-    document name.
+    instance name.
 
-    Raises :class:`AuthoredKindNotFound` (→ 404) when no document the CALLER
+    Raises :class:`AuthoredKindNotFound` (→ 404) when no instance the CALLER
     owns exists under that Kind name — including when a neighbour's does — and
     ``ValueError`` (→ 400) for a missing tenant/actor or a malformed Kind name.
     Idempotent in shape but not in fact: a second approval re-stamps the
@@ -588,18 +588,18 @@ async def approve_kind_impl(
     one that restores an effect the edit removed.
 
     **The write is GUARDED** (i-083). This is a read-modify-write — it reads the
-    document, merges two keys and persists ``{**raw, "spec": spec}`` — so
+    instance, merges two keys and persists ``{**raw, "spec": spec}`` — so
     everything it did not read, it overwrites. Unguarded, that lost an edit for
     real: the reviewer opens the Kind on replica B (warming B's 60-second
-    document cache with v1), the author edits to v2 on replica A (invalidating
+    instance cache with v1), the author edits to v2 on replica A (invalidating
     only A), and the approval on B reads v1 from cache, stamps the approver onto
     it and writes it back. The edit is gone AND v1 is now marked approved — the
     shape a human signed is not the shape in effect, which is the one thing this
     act exists to make true.
 
     So the read's ``etag`` rides along as ``if_match`` and the kernel refuses the
-    write if the stored document moved
-    (:class:`~dna.kernel.errors.StaleDocumentWrite` → 409). Note where the guard
+    write if the stored instance moved
+    (:class:`~dna.kernel.errors.StaleInstanceWrite` → 409). Note where the guard
     is evaluated: at the ADAPTER, against the store. Re-reading and comparing
     HERE would go through the same stale cache and match v1 against v1.
 
@@ -622,7 +622,7 @@ async def approve_kind_impl(
     served the approval**, and only that one. Sibling replicas hold their own
     registries and are closed by the second mechanism —
     :meth:`~dna.application.live.LiveDna.ensure_kinds`, the TTL'd refresh the
-    document routes go through — which bounds their lag at
+    instance routes go through — which bounds their lag at
     :data:`~dna.application.live.KIND_REFRESH_TTL_DEFAULT` seconds rather than
     leaving it indeterminate.
     """
@@ -637,22 +637,22 @@ async def approve_kind_impl(
         )
 
     scope = live.default_scope(tenant)
-    name, namespace = await _authored_document_name(
+    name, namespace = await _authored_instance_name(
         live, scope=scope, kind=kind, tenant=tenant, allow_unattributed=False,
     )
-    raw = await live.kernel.get_document(scope, _KIND, name)
+    raw = await live.kernel.get_instance(scope, _KIND, name)
     if not isinstance(raw, dict) or not raw:
         # The query above found the name, so this is a store that lost the
-        # document between two reads — not a caller error, but still a 404's
+        # instance between two reads — not a caller error, but still a 404's
         # worth of "there is nothing here to approve".
         raise AuthoredKindNotFound(
             f"the authored Kind {kind!r} ({name!r}) is listed in scope {scope!r} "
-            f"but its document could not be read"
+            f"but its instance could not be read"
         )
 
     spec = dict(raw.get("spec") or {})
     # The token for the write below, taken from the spec AS READ — before the
-    # merges, because what it has to identify is the document this approval
+    # merges, because what it has to identify is the instance this approval
     # is based on, not the one it is about to produce.
     read_etag = spec_etag(spec)
     # MERGE, unlike the authoring door — and deliberately: this preserves the
@@ -675,11 +675,11 @@ async def approve_kind_impl(
     # reads both the same way.
     spec.pop("revoked_by", None)
     spec.pop("revoked_at", None)
-    version = await live.kernel.write_document(
+    version = await live.kernel.write_instance(
         scope, _KIND, name, {**raw, "spec": spec},
         # i-083 — see the docstring. Everything this write does not carry it
-        # overwrites, so it must not land on a document that moved since the
-        # read above. Refused (StaleDocumentWrite) rather than clobbering.
+        # overwrites, so it must not land on an instance that moved since the
+        # read above. Refused (StaleInstanceWrite) rather than clobbering.
         if_match=read_etag,
     )
     # i-090 — CONFER THE EFFECT, in the act. See the docstring's closing
@@ -709,31 +709,31 @@ async def revoke_kind_impl(
 
     The counterpart of :func:`approve_kind_impl`, and deliberately not its
     inverse. Un-approving would return the Kind to *never approved*, and a Kind
-    that never registered is the PERMISSIVE state: its documents are accepted
+    that never registered is the PERMISSIVE state: its instances are accepted
     with no validation at all. So revoking by clearing the approval would switch
     the gate off rather than close it. Revoked is a THIRD state, recorded as its
     own fact:
 
-        state            existing documents      new documents
+        state            existing instances      new instances
         ---------------- ---------------------- ---------------------------
         never approved   —                       accepted WITHOUT validation
         approved         valid, routed           validated against the schema
         revoked          INVALID                 REFUSED
 
-    What it does to documents that already exist: nothing. They are not deleted
-    and not made unreadable — a read returns THE DOCUMENT, marked invalid
+    What it does to instances that already exist: nothing. They are not deleted
+    and not made unreadable — a read returns THE INSTANCE, marked invalid
     (``status.valid == false``). Erasing them or refusing the read would destroy
     the ability to audit what existed, and the data did nothing wrong; the
     workspace changed its mind. In a LISTING they appear, marked, and never
     vanish, so revocation cannot be used to hide data without deleting it.
 
     **Reversible in one act.** Validity follows the Kind's CURRENT state, never
-    a stamp on the document, so :func:`approve_kind_impl` clears the markers this
-    sets and every existing document is valid again with nothing to migrate.
+    a stamp on the instance, so :func:`approve_kind_impl` clears the markers this
+    sets and every existing instance is valid again with nothing to migrate.
 
     ``approved_by`` is deliberately LEFT STANDING. Revoking is a third act, not
     an erasure of the second, and a record saying only "revoked by X" has lost
-    the fact that somebody approved this Kind and it governed real documents for
+    the fact that somebody approved this Kind and it governed real instances for
     a while.
 
     ``actor`` is the REVOKER — the face's verified identity for THIS request,
@@ -746,8 +746,8 @@ async def revoke_kind_impl(
     did not read it overwrites. Unguarded, a revocation issued from a replica
     holding a stale cache would resurrect the shape that replica last saw AND
     mark it revoked. The read's ``etag`` rides along as ``if_match`` and the
-    kernel refuses the write if the stored document moved
-    (:class:`~dna.kernel.errors.StaleDocumentWrite` → 409); the remedy is one
+    kernel refuses the write if the stored instance moved
+    (:class:`~dna.kernel.errors.StaleInstanceWrite` → 409); the remedy is one
     step — re-read and revoke again.
 
     Idempotent in shape but not in fact: a second revocation re-stamps the
@@ -756,14 +756,14 @@ async def revoke_kind_impl(
     **The door closes synchronously (i-090), and this is the dangerous half.**
     The revoked mark reaches the port only through a Manifest Instance build,
     and nothing used to schedule one — so a revocation landed in the store and
-    the Kind went on accepting documents until some unrelated call rebuilt that
+    the Kind went on accepting instances until some unrelated call rebuilt that
     scope, on each replica independently. Slow to TIGHTEN is the failure mode
     i-085 exists to prevent, so this function ends by calling
     :meth:`~dna.application.live.LiveDna.refresh_kinds`. As with approval that
     closes the serving replica only; the siblings are bounded by
     :meth:`~dna.application.live.LiveDna.ensure_kinds`' window.
 
-    Raises :class:`AuthoredKindNotFound` (→ 404) when no document the CALLER
+    Raises :class:`AuthoredKindNotFound` (→ 404) when no instance the CALLER
     owns exists under that Kind name, and ``ValueError`` (→ 400) for a missing
     tenant/actor or a malformed Kind name.
     """
@@ -774,20 +774,20 @@ async def revoke_kind_impl(
     if not actor:
         raise ValueError(
             "revocation records a verified identity and this request carries "
-            "none — withdrawing a Kind marks every existing document of it "
+            "none — withdrawing a Kind marks every existing instance of it "
             "invalid, and an act nobody signed cannot be audited"
         )
 
     scope = live.default_scope(tenant)
-    name, namespace = await _authored_document_name(
+    name, namespace = await _authored_instance_name(
         live, scope=scope, kind=kind, tenant=tenant, allow_unattributed=False,
         verb="revoke",
     )
-    raw = await live.kernel.get_document(scope, _KIND, name)
+    raw = await live.kernel.get_instance(scope, _KIND, name)
     if not isinstance(raw, dict) or not raw:
         raise AuthoredKindNotFound(
             f"the authored Kind {kind!r} ({name!r}) is listed in scope {scope!r} "
-            f"but its document could not be read"
+            f"but its instance could not be read"
         )
 
     spec = dict(raw.get("spec") or {})
@@ -797,13 +797,13 @@ async def revoke_kind_impl(
     # not overwrite either.
     spec["revoked_by"] = actor
     spec["revoked_at"] = now
-    version = await live.kernel.write_document(
+    version = await live.kernel.write_instance(
         scope, _KIND, name, {**raw, "spec": spec},
         if_match=read_etag,
     )
     # i-090 — CLOSE THE DOOR, in the act, and this is the half that matters
     # most: a revocation that takes effect "eventually" keeps accepting
-    # documents of a Kind the workspace has just withdrawn.
+    # instances of a Kind the workspace has just withdrawn.
     await live.refresh_kinds(scope)
     return {
         "revoked": True,
@@ -878,7 +878,7 @@ def authored_kind_presentation(spec: dict[str, Any]) -> dict[str, Any] | None:
     would leave every tenant Kind second-class and the feature serving nobody
     but its author. The block a tenant writes is the same block a builtin
     descriptor writes, through the same validator, into the same wire envelope
-    — composed here with the document's own ``display_label``/``ascii_icon``
+    — composed here with the instance's own ``display_label``/``ascii_icon``
     exactly as a registered port composes its own.
 
     It belongs beside ``schema`` and ``traits`` on the review surfaces for the
@@ -887,7 +887,7 @@ def authored_kind_presentation(spec: dict[str, Any]) -> dict[str, Any] | None:
     the moment it exists.
 
     A stored declaration that no longer normalizes reads as ``None``. The audit
-    view must keep answering — a document written before a validation tightened
+    view must keep answering — an instance written before a validation tightened
     is a Kind whose presentation cannot be read, which is precisely what
     ``None`` says, and a strictly better answer than a 500 on the screen a
     reviewer uses to decide whether the Kind takes effect at all."""
@@ -909,11 +909,11 @@ def authored_kind_presentation(spec: dict[str, Any]) -> dict[str, Any] | None:
 
 def _authored_kind_summary(name: Any, spec: dict[str, Any]) -> dict[str, Any]:
     """The audit projection of one ``KindDefinition`` — ONE function, because
-    the listing and the single-Kind read describe the same document.
+    the listing and the single-Kind read describe the same instance.
 
     Two projections would be two vocabularies for one thing, and the drift
     lands on the reviewer: a field renamed in the roster but not in the detail
-    (or given a different null convention) reads as two different documents.
+    (or given a different null convention) reads as two different instances.
     The detail route adds ``schema``/``traits`` ON TOP of this — it does not
     re-derive any field this returns."""
     approved_by = str(spec.get("approved_by") or "").strip()
@@ -925,7 +925,7 @@ def _authored_kind_summary(name: Any, spec: dict[str, Any]) -> dict[str, Any]:
         "namespace": spec.get("origin"),
         # i-085 — the STATE, because the boolean below cannot carry three
         # values and the two it collapses behave in OPPOSITE ways: a Kind that
-        # was never approved accepts documents unvalidated, a revoked one
+        # was never approved accepts instances unvalidated, a revoked one
         # refuses them and marks the existing ones invalid. A reviewer reading
         # ``approved: false`` on both rows would be reading the same word for
         # the loosest and the tightest states in the system.
@@ -936,7 +936,7 @@ def _authored_kind_summary(name: Any, spec: dict[str, Any]) -> dict[str, Any]:
         "approved": bool(approved_by) and not revoked_by,
         # BOTH actors — a reviewer reading this is deciding whether to confer
         # effect, and "who proposed this" is the first thing that decision
-        # needs. `proposed_by` is null for every document authored before the
+        # needs. `proposed_by` is null for every instance authored before the
         # field existed, and for a door that could not identify its caller; null
         # is the honest answer in both cases and is not the same fact as "the
         # two actors coincide".
@@ -944,7 +944,7 @@ def _authored_kind_summary(name: Any, spec: dict[str, Any]) -> dict[str, Any]:
         "proposed_at": spec.get("proposed_at"),
         "approved_by": approved_by or None,
         "approved_at": spec.get("approved_at"),
-        # The third act, projected beside the other two. Null on every document
+        # The third act, projected beside the other two. Null on every instance
         # that was never revoked — the honest answer, and not the same fact as
         # "revoked by nobody".
         "revoked_by": revoked_by or None,
@@ -956,11 +956,11 @@ def _authored_kind_summary(name: Any, spec: dict[str, Any]) -> dict[str, Any]:
 async def list_authored_kinds_impl(
     live: Any, *, tenant: str | None = None, scope: str | None = None,
 ) -> dict[str, Any]:
-    """The ``KindDefinition`` documents in the caller's scope that the CALLER
+    """The ``KindDefinition`` instances in the caller's scope that the CALLER
     may see, with their approval state — the audit surface the authoring door
     exists to produce.
 
-    Reads DOCUMENTS, not the registry: an unapproved Kind is precisely the one
+    Reads INSTANCES, not the registry: an unapproved Kind is precisely the one
     the registry does not have, so a registry-backed listing would show every
     Kind except the ones a reviewer needs to see.
 
@@ -1014,12 +1014,12 @@ async def get_authored_kind_impl(
 
     The shape is the listing's own (:func:`_authored_kind_summary`), literally
     the same projection function, plus the two stored fields it omits. Nothing
-    is synthesized: ``schema`` and ``traits`` are read off the document exactly
-    as :func:`author_kind_impl` wrote them, and a document authored before
+    is synthesized: ``schema`` and ``traits`` are read off the instance exactly
+    as :func:`author_kind_impl` wrote them, and an instance authored before
     ``traits`` existed reads back ``[]`` rather than a guess.
 
     **Strictly more data than the listing, so at least as tight a filter.**
-    Ownership is resolved by :func:`_authored_document_name` — the same
+    Ownership is resolved by :func:`_authored_instance_name` — the same
     ``owner_of`` walk over the same ``KindNamespace`` claims that
     :class:`~dna.kernel.write.namespace_gate.NamespaceOwnershipGate` decides
     WRITES with — and a Kind the caller does not own is dropped, so a stranger's
@@ -1029,7 +1029,7 @@ async def get_authored_kind_impl(
     are authoring, and this door would answer that probe with their data model.
 
     An unattributed request (no resolved tenant) is NOT filtered, for the same
-    reason the listing's is not — see :func:`_authored_document_name`.
+    reason the listing's is not — see :func:`_authored_instance_name`.
 
     Raises ``ValueError`` (→ 400) for a Kind name that is not a CamelCase
     identifier — ``kind`` arrives from the URL PATH and the guard is the shared
@@ -1037,44 +1037,44 @@ async def get_authored_kind_impl(
     under two of its own namespaces; :class:`AuthoredKindNotFound` (→ 404);
     :class:`NamespaceRegistryUnreadable` (→ 503) and ``NamespaceOwnershipError``
     (→ 403) when ownership cannot be decided. None of them degrades to answering
-    with the document.
+    with the instance.
     """
     kind = _checked_kind_name(kind, verb="read")
     sc = scope or live.default_scope(tenant)
-    name, _namespace = await _authored_document_name(
+    name, _namespace = await _authored_instance_name(
         live, scope=sc, kind=kind, tenant=tenant, verb="read",
         # The read is the door that WANTS the unfiltered lane when nothing
         # resolves: an operator ``scope=`` call and a self-host have no
-        # workspace, and answering them "not found" for their own document
+        # workspace, and answering them "not found" for their own instance
         # would be a filter with nobody to filter for. Stated here rather than
         # inherited from a default — the sibling door's answer is the opposite.
         allow_unattributed=True,
     )
-    raw = await live.kernel.get_document(sc, _KIND, name)
+    raw = await live.kernel.get_instance(sc, _KIND, name)
     if not isinstance(raw, dict) or not raw:
         # The query above found the name, so this is a store that lost the
-        # document between two reads. Same verdict the approval door gives for
+        # instance between two reads. Same verdict the approval door gives for
         # the same race: there is nothing here to read.
         raise AuthoredKindNotFound(
             f"the authored Kind {kind!r} ({name!r}) is listed in scope {sc!r} "
-            f"but its document could not be read"
+            f"but its instance could not be read"
         )
     spec = raw.get("spec") or {}
     schema = spec.get("schema")
     return {
         **_authored_kind_summary(name, spec),
-        # The point of the route. ``None`` rather than ``{}`` for a document
+        # The point of the route. ``None`` rather than ``{}`` for an instance
         # that stored no schema (or stored a non-object where one belongs):
         # "there is no schema here" and "the schema is the empty object" are
         # different facts, and a reviewer must not be shown the second when the
         # first is true.
         "schema": schema if isinstance(schema, dict) else None,
         # Stored as a list by the authoring door and read back as one. Absent on
-        # a document that predates the field — ``[]`` is what the authoring door
-        # itself writes for "no traits", so it is the document's own vocabulary
+        # an instance that predates the field — ``[]`` is what the authoring door
+        # itself writes for "no traits", so it is the instance's own vocabulary
         # for the fact, not an invention of this projection.
         "traits": [str(t) for t in (spec.get("traits") or [])],
-        # The third thing that would take effect. ``schema`` says what documents
+        # The third thing that would take effect. ``schema`` says what instances
         # of this Kind may CONTAIN; this says how they will READ — which fields
         # a person sees, in what order, under what names — on every surface the
         # workspace has. A reviewer deciding whether to confer effect is

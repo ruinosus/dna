@@ -8,10 +8,10 @@ before the LayerPolicy check** so one boundary governs both — which is where t
 founder asked for it, and the only place where the writer's identity, the target
 namespace and the registry are all in hand at once.
 
-**What it gates.** A write of a ``KindDefinition`` document, and nothing else.
+**What it gates.** A write of a ``KindDefinition`` instance, and nothing else.
 Declaring a Kind is what CLAIMS a namespace; USING one is not. A workspace
 writing a ``Story`` under ``…/sdlc/v1`` is ordinary traffic and stays
-ungated — gating it would mean no workspace could write any document of any
+ungated — gating it would mean no workspace could write any instance of any
 Kind DNA ships.
 
 **Who the writer is.** The workspace the write is attributed to, resolved from
@@ -38,7 +38,7 @@ user** — ``tenant=None`` means "write the shared base", not "write as nobody".
 **An unclaimed namespace is REFUSED for an attributed writer.** Letting the
 first writer squat would be a land-grab race with no audit trail, on a decision
 (who owns a name) whose whole point is that it is recorded. Claiming is one
-document.
+instance.
 
 **A read failure is a refusal, not a shrug.** If the claim registry cannot be
 read we cannot tell an owner from a stranger, and the only safe answer to "may
@@ -137,7 +137,7 @@ class NamespaceOwnershipGate:
                 f"workspace {writer!r} may not declare Kinds under apiVersion "
                 f"{target!r}: nothing claims the namespace {namespace!r}. "
                 f"Namespaces are claimed, not taken — write a KindNamespace "
-                f"document (namespace: {namespace!r}, owner: {writer!r}) "
+                f"instance (namespace: {namespace!r}, owner: {writer!r}) "
                 f"first. Refusing an unclaimed namespace keeps 'who owns this "
                 f"name' a recorded decision instead of a race between writers."
             )
@@ -153,7 +153,7 @@ class NamespaceOwnershipGate:
 
     async def _scope_owner(self, scope: str) -> str | None:
         """The workspace a scope declares itself published by —
-        ``Genome.spec.owner_tenant`` on the scope's root document.
+        ``Genome.spec.owner_tenant`` on the scope's root instance.
 
         Fail-soft to ``None`` (logged at debug): an unreadable base instance
         means the write is unattributed, which is the same verdict as a scope

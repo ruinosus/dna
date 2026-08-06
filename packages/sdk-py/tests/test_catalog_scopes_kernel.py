@@ -106,7 +106,7 @@ def test_write_package_invalidates_cache(tmp_path):
     })
     asyncio.run(k._catalog_scopes("acme"))
     n = calls["query"]
-    # Explicit invalidation (what write_document(kind=Genome) calls).
+    # Explicit invalidation (what write_instance(kind=Genome) calls).
     k._invalidate_catalog_cache()
     asyncio.run(k._catalog_scopes("acme"))
     assert calls["query"] > n  # cache was dropped → re-read

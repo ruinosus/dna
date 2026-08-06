@@ -1,7 +1,7 @@
 """
 Resource -- a concrete instance of a Kind.
 
-Replaces Document with added self-awareness: a Resource knows its own
+Replaces Instance with added self-awareness: a Resource knows its own
 dependencies via kind_ref.
 
 1:1 parity with TypeScript kernel/resource.ts.
@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from typing import Any, Protocol, runtime_checkable
 
-from .document import SpecDict, _to_spec_dict
+from .instance import SpecDict, _to_spec_dict
 
 
 @runtime_checkable
@@ -32,7 +32,7 @@ class ResourceDep:
 
 
 class Resource:
-    """Self-aware document wrapper that knows its own dependencies."""
+    """Self-aware instance wrapper that knows its own dependencies."""
 
     __slots__ = (
         "api_version",

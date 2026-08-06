@@ -8,7 +8,7 @@ here is a pure function of its inputs.
 
 This is the OUT direction of A2A: the Agent Card is what lets *another* system
 delegate work *to* us. (The IN direction — fetching a third party's Card into
-a ``RemoteAgent`` document — is ``dna.application.a2a_ingest``.) The module
+a ``RemoteAgent`` instance — is ``dna.application.a2a_ingest``.) The module
 only PROJECTS the Card; who serves it and at which path is a deployment
 decision (``/.well-known/`` is a domain-root convention, and the root isn't
 the SDK's to own — see the plan's premise §9.3).
@@ -16,12 +16,12 @@ the SDK's to own — see the plan's premise §9.3).
 ── The shape ──────────────────────────────────────────────────────────────
 
 The A2A Card is camelCase JSON — the opposite convention from the DNA Kind
-(snake_case), because the Kind IS a DNA document and the Card IS an A2A wire
+(snake_case), because the Kind IS a DNA instance and the Card IS an A2A wire
 artifact. Translating field names at the boundary, not before, keeps each side
 speaking its own idiom.
 
 ``skills`` is DERIVED from the caller-supplied ``tools``, never a parallel
-list kept on the ``Agent`` document — a hand-maintained list goes stale in
+list kept on the ``Agent`` instance — a hand-maintained list goes stale in
 silence, the failure mode this project has already paid for more than once.
 The tool NAMES are the only input; there is no tool registry lookup here (the
 caller resolves ``spec.tools`` → real Tool docs upstream and passes the
@@ -44,7 +44,7 @@ from typing import Any, Iterable, Mapping
 __all__ = ["agent_card_for"]
 
 #: A2A `version` this SDK stamps on a Card it projects — the DNA `Agent` Kind
-#: carries no version-of-self field (it is versioned as a DOCUMENT, not as an
+#: carries no version-of-self field (it is versioned as a INSTANCE, not as an
 #: API), so there is nothing truthful to read here yet. Fixed until the Kind
 #: grows one.
 _CARD_VERSION = "0.1.0"
@@ -122,7 +122,7 @@ def agent_card_for(
     streaming: bool = False,
     data_scope_kinds: Iterable[str] | None = None,
 ) -> dict[str, Any]:
-    """Project a DNA ``Agent`` document into an A2A 1.0 Agent Card (dict, JSON-ready).
+    """Project a DNA ``Agent`` instance into an A2A 1.0 Agent Card (dict, JSON-ready).
 
     ``tools`` is the resolved list of tool names the agent exposes (the
     caller's job — this function does not look anything up); ``skills`` is

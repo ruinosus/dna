@@ -16,7 +16,7 @@ Three pieces:
   to :func:`run_suite` — the same declare-here/execute-in-the-host
   split as Automation runners.
 - :func:`run_suite` — executes a suite and returns the raw ``EvalRun``
-  document (the caller persists it via ``kernel.write_document``).
+  instance (the caller persists it via ``kernel.write_instance``).
 - :func:`compare` — diffs a run against a baseline run: regressions /
   improvements / unchanged / added / removed. ``has_regressions`` is
   the bit a user's CI gates on.
@@ -152,8 +152,8 @@ def run_suite(
     run_name: str | None = None,
 ) -> dict[str, Any]:
     """Execute ``suite_name`` in ``scope`` and return the raw ``EvalRun``
-    document (envelope included; NOT persisted — the caller decides, e.g.
-    ``dna eval run --save`` writes it via ``kernel.write_document``).
+    instance (envelope included; NOT persisted — the caller decides, e.g.
+    ``dna eval run --save`` writes it via ``kernel.write_instance``).
 
     ``targets`` extends/overrides the built-in target registry
     (``{"prompt": PromptCompositionTarget()}``) — the LLM extension
@@ -162,10 +162,10 @@ def run_suite(
     """
     registry: dict[str, EvalTargetPort] = {**_BUILTIN_TARGETS, **(targets or {})}
     # Eval Kinds are record-plane: read them through the kernel's query
-    # surface (query_list_sync/get_document_sync — the mi.all/mi.one
-    # replacements), not mi.documents (which carries composition docs).
+    # surface (query_list_sync/get_instance_sync — the mi.all/mi.one
+    # replacements), not mi.instances (which carries composition docs).
 
-    suite_doc = kernel.get_document_sync(scope, "EvalSuite", suite_name)
+    suite_doc = kernel.get_instance_sync(scope, "EvalSuite", suite_name)
     if suite_doc is None:
         raise ValueError(f"EvalSuite {suite_name!r} not found in scope {scope!r}")
     suite = _spec(suite_doc)

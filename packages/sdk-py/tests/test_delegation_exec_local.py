@@ -56,7 +56,7 @@ def test_a_local_delegation_runs_and_returns():
         delegator="supervisor",
         target_name="conv",
         request="converta isto",
-        documents=_docs(),
+        instances=_docs(),
     )
     assert "feito por conv" in out["result"]
     assert out["target"] == "conv"
@@ -70,7 +70,7 @@ def test_an_unlisted_target_is_REFUSED_by_name():
             delegator="supervisor",
             target_name="conv",
             request="x",
-            documents=_docs(team=()),
+            instances=_docs(team=()),
         )
     assert "conv" in str(exc.value)
 
@@ -81,7 +81,7 @@ def test_a_target_that_does_not_accept_us_is_REFUSED():
             delegator="supervisor",
             target_name="conv",
             request="x",
-            documents=_docs(accepts=("jarvis",)),
+            instances=_docs(accepts=("jarvis",)),
         )
 
 
@@ -91,7 +91,7 @@ def test_an_unknown_target_is_REFUSED_not_silently_skipped():
             delegator="supervisor",
             target_name="nao-existe",
             request="x",
-            documents=_docs(),
+            instances=_docs(),
         )
 
 
@@ -99,7 +99,7 @@ def test_the_local_path_never_calls_the_remote_transport():
     """Pinado porque o inverso — um alvo local vazando pela rede — seria
     exfiltração silenciosa. O dublê remoto do módulo levanta se tocado."""
     out = _run(
-        delegator="supervisor", target_name="conv", request="x", documents=_docs()
+        delegator="supervisor", target_name="conv", request="x", instances=_docs()
     )
     assert out["transport"] == "local"
 

@@ -1,10 +1,10 @@
-"""Document preview API.
+"""Instance preview API.
 
 The Studio's "preview" pane consumes structured ``PreviewBlock``s instead
 of raw markdown so each kind can render however makes sense (markdown,
 code, tabular fields). The polymorphism lives inside each KindPort
 (``KindPort.preview``); this module is only the type definition,
-generic fallback, and a cross-document consumer scan.
+generic fallback, and a cross-instance consumer scan.
 """
 from __future__ import annotations
 
@@ -22,9 +22,9 @@ PreviewBlockKind = Literal["markdown", "code", "fields", "empty"]
 
 @dataclass
 class PreviewBlock:
-    """A single renderable section of a document preview.
+    """A single renderable section of an instance preview.
 
-    Documents can produce multiple blocks (e.g. a Soul has SOUL.md +
+    Instances can produce multiple blocks (e.g. a Soul has SOUL.md +
     STYLE.md + soul.json), which the Studio renders stacked.
 
     ``kind`` is the renderer hint:
@@ -67,7 +67,7 @@ def find_consumers(
     instance: "ManifestInstance",
     target: dict[str, str],
 ) -> list[dict[str, str]]:
-    """Walk every document in the manifest and return those that
+    """Walk every instance in the manifest and return those that
     reference the given target via a ``KindPort.dep_filters()``
     declaration.
 
@@ -84,7 +84,7 @@ def find_consumers(
     out: list[dict[str, str]] = []
     seen: set[str] = set()
     iter_fn = getattr(instance, "iter_doc_deps", None)
-    for doc in instance.documents:
+    for doc in instance.instances:
         if doc.kind == target_kind and doc.name == target_name:
             continue
         deps: list[dict[str, Any]] = []

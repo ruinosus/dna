@@ -18,7 +18,7 @@ import pytest
 
 from dna.application import sdlc as S
 from dna.kernel import Kernel
-from dna.kernel.errors import DocumentNameTaken
+from dna.kernel.errors import InstanceNameTaken
 
 _SCOPE = "probe"
 
@@ -48,36 +48,36 @@ def _raw(kind: str, name: str, marker: str) -> dict:
 
 @pytest.mark.asyncio
 async def test_if_absent_creates_when_the_name_is_free(kernel):
-    await kernel.write_document(
+    await kernel.write_instance(
         _SCOPE, "Issue", "i-001-x", _raw("Issue", "i-001-x", "first"),
         if_absent=True, invalidate_mode="doc")
-    doc = await kernel.get_document(_SCOPE, "Issue", "i-001-x")
+    doc = await kernel.get_instance(_SCOPE, "Issue", "i-001-x")
     assert doc["spec"]["title"] == "first"
 
 
 @pytest.mark.asyncio
 async def test_if_absent_refuses_a_taken_name_and_leaves_it_alone(kernel):
-    await kernel.write_document(
+    await kernel.write_instance(
         _SCOPE, "Issue", "i-001-x", _raw("Issue", "i-001-x", "the real one"),
         if_absent=True, invalidate_mode="doc")
-    with pytest.raises(DocumentNameTaken, match="already exists"):
-        await kernel.write_document(
+    with pytest.raises(InstanceNameTaken, match="already exists"):
+        await kernel.write_instance(
             _SCOPE, "Issue", "i-001-x", _raw("Issue", "i-001-x", "a guess"),
             if_absent=True, invalidate_mode="doc")
-    doc = await kernel.get_document(_SCOPE, "Issue", "i-001-x")
+    doc = await kernel.get_instance(_SCOPE, "Issue", "i-001-x")
     assert doc["spec"]["title"] == "the real one", "the refusal must not write"
 
 
 @pytest.mark.asyncio
 async def test_a_plain_write_is_still_an_upsert(kernel):
     """``if_absent`` is opt-in: nothing that worked before changes."""
-    await kernel.write_document(
+    await kernel.write_instance(
         _SCOPE, "Issue", "i-001-x", _raw("Issue", "i-001-x", "one"),
         invalidate_mode="doc")
-    await kernel.write_document(
+    await kernel.write_instance(
         _SCOPE, "Issue", "i-001-x", _raw("Issue", "i-001-x", "two"),
         invalidate_mode="doc")
-    doc = await kernel.get_document(_SCOPE, "Issue", "i-001-x")
+    doc = await kernel.get_instance(_SCOPE, "Issue", "i-001-x")
     assert doc["spec"]["title"] == "two"
 
 
@@ -100,7 +100,7 @@ async def test_an_adapter_without_the_kwarg_refuses_rather_than_degrades(
         lambda src: dataclasses.replace(real(src), if_absent=False),
     )
     with pytest.raises(NotImplementedError, match="if_absent"):
-        await kernel.write_document(
+        await kernel.write_instance(
             _SCOPE, "Issue", "i-x", _raw("Issue", "i-x", "x"), if_absent=True)
 
 
@@ -121,7 +121,7 @@ async def test_concurrent_create_issue_calls_produce_two_issues(kernel):
     names = [r["name"] for r in results]
     assert len(set(names)) == len(names), f"a name was reused: {names}"
     for name in names:
-        assert await kernel.get_document(_SCOPE, "Issue", name) is not None
+        assert await kernel.get_instance(_SCOPE, "Issue", name) is not None
 
 
 @pytest.mark.asyncio
@@ -136,10 +136,10 @@ async def test_create_issue_still_numbers_sequentially(kernel):
 async def test_create_issue_steps_past_a_name_the_enumeration_missed(kernel):
     """A pre-existing ``i-001`` the enumeration cannot see (a lagging replica,
     a hand-placed file) must not be overwritten."""
-    await kernel.write_document(
+    await kernel.write_instance(
         _SCOPE, "Issue", "i-001-mine", _raw("Issue", "i-001-mine", "mine"),
         invalidate_mode="doc")
     out = await S.create_issue(kernel, _SCOPE, "mine", description="a guess")
     assert out["name"] != "i-001-mine"
-    kept = await kernel.get_document(_SCOPE, "Issue", "i-001-mine")
+    kept = await kernel.get_instance(_SCOPE, "Issue", "i-001-mine")
     assert kept["spec"]["title"] == "mine"

@@ -8,7 +8,7 @@ where a lazier implementation would still pass it.
 Why the criterion needs a real store: memory tests in this repo run over
 ``FilesystemWritableSource``, which declares ``versions=True`` and keeps NO
 history (``list_versions`` → ``[]``). A belief state cannot be reconstructed from
-a store that keeps one row per document, so these tests use ``SqlAlchemySource``
+a store that keeps one row per instance, so these tests use ``SqlAlchemySource``
 over sqlite — the same adapter production runs on postgres, same code path, no
 postgres required.
 
@@ -162,7 +162,7 @@ async def test_now_is_not_as_of(kernel):
 async def test_as_of_returns_the_spec_as_recorded_not_todays(kernel):
     """A corrected memory answers with its OLD text, not the corrected one.
 
-    Filtering by timestamp while still loading the CURRENT document would pass
+    Filtering by timestamp while still loading the CURRENT instance would pass
     the supersession criterion (the doc drops out on ``valid_to``) and fail
     here — the doc is live at both instants and only its CONTENT moved.
     """

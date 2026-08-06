@@ -2,7 +2,7 @@
 
 The 2026-07-21 anatomy audit found ``_mustache_render`` doing
 ``chevron.render(chevron.render(t, ctx), ctx)`` — the second pass re-rendered
-EVERYTHING the first pass inserted. Any document content containing ``{{``
+EVERYTHING the first pass inserted. Any instance content containing ``{{``
 executed as template inside the final prompt: template injection when a
 Skill/Soul/tenant overlay is third-party input, and silent data loss for
 honest literal ``{{`` (chevron erases unknown tags).
@@ -13,9 +13,9 @@ agent's own instruction work (the open-swe scope interpolates
 ``test_hook_kind``/``test_safety_input`` suites rely on the same mechanism).
 So the repaired contract is a TRUST BOUNDARY, pinned here as properties:
 
-* **The agent document is the template author.** Refs inside its
+* **The agent instance is the template author.** Refs inside its
   instruction keep resolving — the feature the second pass exists for.
-* **Every other document's content is data.** A literal ``{{`` in a Skill
+* **Every other instance's content is data.** A literal ``{{`` in a Skill
   body reaches the final prompt byte-identical — never executed, never
   erased.
 * **Data stays data even when routed through the agent's refs** — an
@@ -133,7 +133,7 @@ def _mk_scope(tmp_path: Path, scope: str = "inj-scope") -> None:
 def mi(tmp_path):
     _mk_scope(tmp_path)
     m = Kernel.quick("inj-scope", base_dir=str(tmp_path))
-    _ = m.documents
+    _ = m.instances
     return m
 
 

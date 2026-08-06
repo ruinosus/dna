@@ -24,7 +24,7 @@ the environment: temp dirs, DB schemas, kernel wiring
 READ-ONLY sources — pre-seeding the canonical fixture (see
 :func:`fixture_docs`) into the backing store under :data:`FIXTURE_SCOPE`.
 Writable sources are seeded by the kit itself through their own write
-surface (``save_document`` + ``publish``), which is part of what's being
+surface (``save_instance`` + ``publish``), which is part of what's being
 tested.
 
 Cases raise :class:`CaseNotApplicable` (a ``unittest.SkipTest`` subclass,
@@ -112,8 +112,8 @@ class _Ctx:
 
     @property
     def writable(self) -> bool:
-        return callable(getattr(self.source, "save_document", None)) and \
-            callable(getattr(self.source, "delete_document", None))
+        return callable(getattr(self.source, "save_instance", None)) and \
+            callable(getattr(self.source, "delete_instance", None))
 
     async def publish(self, kind: str, name: str, *, tenant: str | None = None) -> None:
         """Publish if the adapter has a draft stage (write-through
@@ -136,7 +136,7 @@ class _Ctx:
         if self.writable:
             for raw in fixture_docs():
                 kind, name = raw["kind"], _doc_name(raw)
-                await _aw(self.source.save_document(FIXTURE_SCOPE, kind, name, raw))
+                await _aw(self.source.save_instance(FIXTURE_SCOPE, kind, name, raw))
                 await self.publish(kind, name)
             return
         loaded = await _aw(self.source.load_all(FIXTURE_SCOPE, None))
@@ -146,7 +146,7 @@ class _Ctx:
             f"read-only source factory must pre-seed fixture_docs() under "
             f"scope {FIXTURE_SCOPE!r} in the adapter's native storage — "
             f"missing: {sorted(missing)}. (Writable adapters are seeded by "
-            f"the kit through save_document; read-only ones can't be.)"
+            f"the kit through save_instance; read-only ones can't be.)"
         )
 
 
@@ -325,11 +325,11 @@ async def _case_save_then_visible(ctx: _Ctx) -> None:
         "metadata": {"name": "s-kit-new"},
         "spec": {"title": "s-kit-new", "priority": 7},
     }
-    version = await _aw(ctx.source.save_document(
+    version = await _aw(ctx.source.save_instance(
         FIXTURE_SCOPE, "Story", "s-kit-new", raw,
     ))
     assert isinstance(version, str) and version, (
-        f"save_document must return a non-empty version id str, got {version!r}"
+        f"save_instance must return a non-empty version id str, got {version!r}"
     )
     await ctx.publish("Story", "s-kit-new")
     docs = await _aw(ctx.source.load_all(FIXTURE_SCOPE, None))
@@ -345,8 +345,8 @@ async def _case_if_absent_is_an_atomic_create(ctx: _Ctx) -> None:
     what ``create_issue`` leans on to stop two concurrent files landing on one
     name: an adapter that declares ``if_absent`` and then upserts anyway would
     hand back a promise it does not keep, silently, on exactly the path that
-    destroys a document."""
-    from dna.kernel.errors import DocumentNameTaken
+    destroys an instance."""
+    from dna.kernel.errors import InstanceNameTaken
 
     await ctx.seed_fixture()
     raw = {
@@ -354,33 +354,33 @@ async def _case_if_absent_is_an_atomic_create(ctx: _Ctx) -> None:
         "metadata": {"name": "s-kit-claim"},
         "spec": {"title": "the real one", "priority": 0},
     }
-    await _aw(ctx.source.save_document(
+    await _aw(ctx.source.save_instance(
         FIXTURE_SCOPE, "Story", "s-kit-claim", raw, if_absent=True))
     await ctx.publish("Story", "s-kit-claim")
     intruder = {**raw, "spec": {"title": "a guess", "priority": 0}}
     try:
-        await _aw(ctx.source.save_document(
+        await _aw(ctx.source.save_instance(
             FIXTURE_SCOPE, "Story", "s-kit-claim", intruder, if_absent=True))
-    except DocumentNameTaken:
+    except InstanceNameTaken:
         pass
     else:  # pragma: no cover — the failure being tested
         raise AssertionError(
-            "if_absent save over a taken name did NOT raise DocumentNameTaken — "
+            "if_absent save over a taken name did NOT raise InstanceNameTaken — "
             "the adapter declares an atomic create it does not perform"
         )
     docs = await _aw(ctx.source.load_all(FIXTURE_SCOPE, None))
     kept = [d for d in docs if _doc_name(d) == "s-kit-claim"]
-    assert kept, "the claimed document vanished"
+    assert kept, "the claimed instance vanished"
     spec = kept[0].get("spec") if isinstance(kept[0], dict) else {}
     assert (spec or {}).get("title") == "the real one", (
-        "the refused if_absent write overwrote the document it was refusing to "
+        "the refused if_absent write overwrote the instance it was refusing to "
         "replace"
     )
 
 
 async def _case_if_match_refuses_a_stale_update(ctx: _Ctx) -> None:
-    """An ``if_match`` save UPDATES the document the caller read, or raises — it
-    never lands on a document that moved underneath (i-083).
+    """An ``if_match`` save UPDATES the instance the caller read, or raises — it
+    never lands on an instance that moved underneath (i-083).
 
     A conformance case and not an adapter test for the same reason ``if_absent``
     is one: the guarantee is what ``approve_kind_impl`` leans on so an approval
@@ -393,7 +393,7 @@ async def _case_if_match_refuses_a_stale_update(ctx: _Ctx) -> None:
     everything would satisfy the first assertion alone), and the refused write
     must have changed NOTHING (an adapter that raised after writing would too).
     """
-    from dna.kernel.errors import StaleDocumentWrite
+    from dna.kernel.errors import StaleInstanceWrite
     from dna.kernel.etag import spec_etag
 
     await ctx.seed_fixture()
@@ -402,14 +402,14 @@ async def _case_if_match_refuses_a_stale_update(ctx: _Ctx) -> None:
         "metadata": {"name": "s-kit-guard"},
         "spec": {"title": "as read", "priority": 0},
     }
-    await _aw(ctx.source.save_document(
+    await _aw(ctx.source.save_instance(
         FIXTURE_SCOPE, "Story", "s-kit-guard", raw))
     await ctx.publish("Story", "s-kit-guard")
     token = spec_etag(raw["spec"])
 
     # 1. the token still matches → the update goes through.
     moved = {**raw, "spec": {"title": "second writer", "priority": 1}}
-    await _aw(ctx.source.save_document(
+    await _aw(ctx.source.save_instance(
         FIXTURE_SCOPE, "Story", "s-kit-guard", moved, if_match=token))
     await ctx.publish("Story", "s-kit-guard")
 
@@ -417,31 +417,31 @@ async def _case_if_match_refuses_a_stale_update(ctx: _Ctx) -> None:
     #    caller still holding the first read is about to erase writer two.
     stale = {**raw, "spec": {"title": "the lost update", "priority": 2}}
     try:
-        await _aw(ctx.source.save_document(
+        await _aw(ctx.source.save_instance(
             FIXTURE_SCOPE, "Story", "s-kit-guard", stale, if_match=token))
-    except StaleDocumentWrite:
+    except StaleInstanceWrite:
         pass
     else:  # pragma: no cover — the failure being tested
         raise AssertionError(
             "if_match save against a stale token did NOT raise "
-            "StaleDocumentWrite — the adapter declares a guarded update it "
+            "StaleInstanceWrite — the adapter declares a guarded update it "
             "does not perform"
         )
 
     # 3. the refused write wrote nothing.
     docs = await _aw(ctx.source.load_all(FIXTURE_SCOPE, None))
     kept = [d for d in docs if _doc_name(d) == "s-kit-guard"]
-    assert kept, "the guarded document vanished"
+    assert kept, "the guarded instance vanished"
     spec = (kept[0].get("spec") if isinstance(kept[0], dict) else {}) or {}
     assert spec.get("title") == "second writer", (
-        "the refused if_match write overwrote the document it was refusing to "
+        "the refused if_match write overwrote the instance it was refusing to "
         f"replace (title is {spec.get('title')!r})"
     )
 
 
 async def _case_delete_removes(ctx: _Ctx) -> None:
     await ctx.seed_fixture()
-    await _aw(ctx.source.delete_document(FIXTURE_SCOPE, "Story", "s-alpha"))
+    await _aw(ctx.source.delete_instance(FIXTURE_SCOPE, "Story", "s-alpha"))
     docs = await _aw(ctx.source.load_all(FIXTURE_SCOPE, None))
     assert "s-alpha" not in {_doc_name(d) for d in docs}, (
         "deleted doc still visible in load_all"
@@ -449,7 +449,7 @@ async def _case_delete_removes(ctx: _Ctx) -> None:
 
 
 async def _case_delete_by_api_version_removes(ctx: _Ctx) -> None:
-    """A delete that PINS the Kind must still remove the document (i-081).
+    """A delete that PINS the Kind must still remove the instance (i-081).
 
     ``api_version`` exists so a delete routes to the exact Kind rather than to
     whichever port a bare NAME resolves to — two workspaces may each declare a
@@ -458,19 +458,19 @@ async def _case_delete_by_api_version_removes(ctx: _Ctx) -> None:
     caller is told succeeded, which is why this is a conformance case and not a
     filesystem test."""
     await ctx.seed_fixture()
-    await _aw(ctx.source.delete_document(
+    await _aw(ctx.source.delete_instance(
         FIXTURE_SCOPE, "Story", "s-alpha",
         api_version="github.com/ruinosus/dna/sdlc/v1",
     ))
     docs = await _aw(ctx.source.load_all(FIXTURE_SCOPE, None))
     assert "s-alpha" not in {_doc_name(d) for d in docs}, (
-        "delete_document(api_version=...) left the document in place — a "
+        "delete_instance(api_version=...) left the instance in place — a "
         "delete that misses and reports success"
     )
 
 
 async def _case_two_kinds_one_name_stay_apart(ctx: _Ctx) -> None:
-    """Two Kinds sharing a NAME are two documents, not one.
+    """Two Kinds sharing a NAME are two instances, not one.
 
     A Kind is identified by ``(apiVersion, kind)``: two workspaces may each
     declare a ``Deal`` under their own namespace, and a store that declares
@@ -494,9 +494,9 @@ async def _case_two_kinds_one_name_stay_apart(ctx: _Ctx) -> None:
             "metadata": {"name": "d-kit"}, "spec": {"title": title},
         }
 
-    await _aw(ctx.source.save_document(
+    await _aw(ctx.source.save_instance(
         FIXTURE_SCOPE, "Deal", "d-kit", deal(ns_a, "the A one")))
-    await _aw(ctx.source.save_document(
+    await _aw(ctx.source.save_instance(
         FIXTURE_SCOPE, "Deal", "d-kit", deal(ns_b, "the B one")))
 
     docs = await _aw(ctx.source.load_all(FIXTURE_SCOPE))
@@ -510,10 +510,10 @@ async def _case_two_kinds_one_name_stay_apart(ctx: _Ctx) -> None:
     one = await _aw(ctx.source.load_one(
         FIXTURE_SCOPE, "Deal", "d-kit", api_version=ns_a))
     assert one is not None and one["spec"]["title"] == "the A one", (
-        "load_one pinned to one apiVersion did not return that Kind's document"
+        "load_one pinned to one apiVersion did not return that Kind's instance"
     )
 
-    await _aw(ctx.source.delete_document(
+    await _aw(ctx.source.delete_instance(
         FIXTURE_SCOPE, "Deal", "d-kit", api_version=ns_a))
     docs = await _aw(ctx.source.load_all(FIXTURE_SCOPE))
     survivors = {d["apiVersion"] for d in docs if d.get("kind") == "Deal"}
@@ -524,24 +524,24 @@ async def _case_two_kinds_one_name_stay_apart(ctx: _Ctx) -> None:
 
 
 async def _case_delete_missing_raises_not_found(ctx: _Ctx) -> None:
-    """Deleting an absent document raises ``ValueError('not_found')``.
+    """Deleting an absent instance raises ``ValueError('not_found')``.
 
     Two shipped call sites map exactly this to a 404 (the REST memory delete and
     the member revoke). It was asserted by neither adapter's tests, so an
     adapter that returned quietly would have turned a 404 into a 200."""
     await ctx.seed_fixture()
     try:
-        await _aw(ctx.source.delete_document(
+        await _aw(ctx.source.delete_instance(
             FIXTURE_SCOPE, "Story", "s-does-not-exist"))
     except ValueError as exc:
         assert "not_found" in str(exc), (
-            f"delete of an absent document raised {exc!r}; callers map the "
+            f"delete of an absent instance raised {exc!r}; callers map the "
             f"literal 'not_found' to a 404"
         )
     else:  # pragma: no cover — the failure being tested
         raise AssertionError(
-            "delete of an absent document returned quietly — a caller mapping "
-            "'not_found' to a 404 will answer 200 for a document that is not "
+            "delete of an absent instance returned quietly — a caller mapping "
+            "'not_found' to a 404 will answer 200 for an instance that is not "
             "there"
         )
 
@@ -558,12 +558,12 @@ async def _case_declared_write_kwargs_accepted(ctx: _Ctx) -> None:
         # atomic behaviour has its own case above.
         "if_absent": False,
         # ``None``, for that same reason and one more: any other value IS the
-        # guard, and the document below does not exist yet — so a real token
+        # guard, and the instance below does not exist yet — so a real token
         # would be refused as stale and this case would report an accepted
         # kwarg as a rejected one. The behaviour has its own case below.
         "if_match": None,
         # ``None`` = "the kernel has nothing trustworthy to say about this
-        # document's references", which every adopting adapter must accept and
+        # instance's references", which every adopting adapter must accept and
         # treat as leave-the-stored-edges-alone. What the edges DO once passed
         # is the producer's own suite, not a kwarg-acceptance case.
         "edges": None,
@@ -575,24 +575,24 @@ async def _case_declared_write_kwargs_accepted(ctx: _Ctx) -> None:
         "spec": {"title": "s-kit-kwargs", "priority": 0},
     }
     try:
-        await _aw(ctx.source.save_document(
+        await _aw(ctx.source.save_instance(
             FIXTURE_SCOPE, "Story", "s-kit-kwargs", raw, **save_kwargs,
         ))
     except TypeError as e:  # pragma: no cover — the failure being tested
         raise AssertionError(
-            f"save_document rejected DECLARED write_kwargs "
+            f"save_instance rejected DECLARED write_kwargs "
             f"{sorted(ctx.caps.write_kwargs)}: {e}"
         ) from e
     # promote the draft first — drafting adapters only delete published docs
     await ctx.publish("Story", "s-kit-kwargs")
     delete_kwargs = {k: values[k] for k in ctx.caps.delete_kwargs}
     try:
-        await _aw(ctx.source.delete_document(
+        await _aw(ctx.source.delete_instance(
             FIXTURE_SCOPE, "Story", "s-kit-kwargs", **delete_kwargs,
         ))
     except TypeError as e:  # pragma: no cover
         raise AssertionError(
-            f"delete_document rejected DECLARED delete_kwargs "
+            f"delete_instance rejected DECLARED delete_kwargs "
             f"{sorted(ctx.caps.delete_kwargs)}: {e}"
         ) from e
 
@@ -615,7 +615,7 @@ async def _case_drafts_lifecycle(ctx: _Ctx) -> None:
         "metadata": {"name": "s-kit-draft"},
         "spec": {"title": "s-kit-draft", "priority": 2},
     }
-    await _aw(ctx.source.save_document(FIXTURE_SCOPE, "Story", "s-kit-draft", raw))
+    await _aw(ctx.source.save_instance(FIXTURE_SCOPE, "Story", "s-kit-draft", raw))
     drafts = await _aw(ctx.source.load_drafts(FIXTURE_SCOPE))
     published = await _aw(ctx.source.load_all(FIXTURE_SCOPE, None))
     staged = {_doc_name(d) for d in drafts} | {_doc_name(d) for d in published}
@@ -641,7 +641,7 @@ async def _case_versions_surface(ctx: _Ctx) -> None:
             "metadata": {"name": "s-kit-ver"},
             "spec": {"title": title, "priority": 3},
         }
-        await _aw(ctx.source.save_document(FIXTURE_SCOPE, "Story", "s-kit-ver", raw))
+        await _aw(ctx.source.save_instance(FIXTURE_SCOPE, "Story", "s-kit-ver", raw))
         await ctx.publish("Story", "s-kit-ver")
     versions = await _aw(ctx.source.list_versions(FIXTURE_SCOPE, "Story", "s-kit-ver"))
     assert isinstance(versions, list), (
@@ -683,7 +683,7 @@ async def _case_tenant_overlay_shadows_base(ctx: _Ctx) -> None:
             "metadata": {"name": "s-kit-over"},
             "spec": {"title": "s-kit-over", "layer": layer},
         }
-        await _aw(ctx.source.save_document(
+        await _aw(ctx.source.save_instance(
             FIXTURE_SCOPE, "Story", "s-kit-over", raw, tenant=tenant,
         ))
         await ctx.publish("Story", "s-kit-over", tenant=tenant)
@@ -711,7 +711,7 @@ async def _case_bundle_entry_round_trip(ctx: _Ctx) -> None:
             "spec": {"name": "kit-bundle", "description": "kit",
                      "instruction": "x"},
         }
-        await _aw(ctx.source.save_document(FIXTURE_SCOPE, "Skill", "kit-bundle", raw))
+        await _aw(ctx.source.save_instance(FIXTURE_SCOPE, "Skill", "kit-bundle", raw))
         await ctx.publish("Skill", "kit-bundle")
     await _aw(ctx.source.write_bundle_entry(
         FIXTURE_SCOPE, "Skill", "kit-bundle", "notes.txt", "olá — kit",

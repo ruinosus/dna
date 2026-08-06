@@ -56,7 +56,7 @@ class TestHookKind:
         )
 
         mi = Kernel.quick("test", base_dir=str(tmp_path / ".dna"))
-        hook_docs = [d for d in mi.documents if d.kind == "Hook"]
+        hook_docs = [d for d in mi.instances if d.kind == "Hook"]
         assert len(hook_docs) == 1
         assert hook_docs[0].name == "inject-env"
 
@@ -101,7 +101,7 @@ class TestHookKind:
         )
 
         mi = Kernel.quick("test", base_dir=str(tmp_path / ".dna"))
-        hook_docs = [d for d in mi.documents if d.kind == "Hook"]
+        hook_docs = [d for d in mi.instances if d.kind == "Hook"]
         assert len(hook_docs) == 1
         doc = hook_docs[0]
         assert doc.spec.get("target") == "post_build_prompt"
@@ -109,7 +109,7 @@ class TestHookKind:
         assert doc.spec.get("action") == "log"
 
     def test_hook_multiple_inject(self, tmp_path):
-        """Multiple hook documents are all loaded."""
+        """Multiple hook instances are all loaded."""
         dna = tmp_path / ".dna" / "test"
         dna.mkdir(parents=True)
         (dna / "manifest.yaml").write_text(
@@ -140,7 +140,7 @@ class TestHookKind:
             )
 
         mi = Kernel.quick("test", base_dir=str(tmp_path / ".dna"))
-        hook_docs = [d for d in mi.documents if d.kind == "Hook"]
+        hook_docs = [d for d in mi.instances if d.kind == "Hook"]
         assert len(hook_docs) == 2
 
         mi.apply_hooks()

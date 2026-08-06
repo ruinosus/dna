@@ -1,5 +1,5 @@
 """Tests for the kernel-level preview API: generic_spec_dump fallback +
-cross-document find_consumers scan. Per-extension preview() tests live
+cross-instance find_consumers scan. Per-extension preview() tests live
 alongside their extension files (test_extensions_preview.py).
 """
 from __future__ import annotations
@@ -46,16 +46,16 @@ _MOCK_DEP_FIELDS: dict[str, dict[str, str]] = {
 
 class FakeInstance:
     def __init__(self, docs: list[FakeDoc]) -> None:
-        self.documents = docs
+        self.instances = docs
 
     def one(self, kind: str, name: str) -> Any:
-        for d in self.documents:
+        for d in self.instances:
             if d.kind == kind and d.name == name:
                 return d
         return None
 
     def all(self, kind: str) -> list:
-        return [d for d in self.documents if d.kind == kind]
+        return [d for d in self.instances if d.kind == kind]
 
     def iter_doc_deps(self, doc: Any) -> list[dict[str, Any]]:
         field_map = _MOCK_DEP_FIELDS.get(doc.kind, {})

@@ -124,28 +124,28 @@ def _refusal(name: str) -> type:
     raise AssertionError(f"{name!r} is in no kernel error module")
 
 
-#: Everything the kernel's write/read facades document themselves as raising
+#: Everything the kernel's write/read facades instance themselves as raising
 #: when they deliberately say no — the set a face must be able to relay.
 #: Kept complete by ``test_every_refusal_is_enumerated`` below, so dropping an
 #: entry is a failure rather than a silently smaller parametrization.
 _WRITE_REFUSALS = (
     "LayerPolicyViolationError", "SpecValidationError", "TenantNotAllowed",
     "TenantRequired", "InvalidTenantSlug", "VersionAlreadyPublished",
-    # dna.kernel.errors — the name/path-safety family. ``InvalidDocumentName``
-    # and ``InvalidScopeName`` guard ``write_document`` / ``delete_document`` /
-    # the four bundle-entry doors / ``preview_document`` / ``serialize_document``;
+    # dna.kernel.errors — the name/path-safety family. ``InvalidInstanceName``
+    # and ``InvalidScopeName`` guard ``write_instance`` / ``delete_instance`` /
+    # the four bundle-entry doors / ``preview_instance`` / ``serialize_instance``;
     # ``PathEscapesStoreRoot`` is the filesystem adapter's own second layer;
     # ``InvalidBundleEntry`` closes the third door of the same family — a
     # bundle ENTRY, which is a relative PATH rather than a component, and which
-    # writers derive from document CONTENT (``spec.source_files`` et al);
-    # ``DocumentNameTaken`` is the atomic ``if_absent`` claim losing the race,
-    # and ``StaleDocumentWrite`` (i-083) is its UPDATE counterpart — a guarded
-    # ``if_match`` write refusing to land on a document that moved since the
+    # writers derive from instance CONTENT (``spec.source_files`` et al);
+    # ``InstanceNameTaken`` is the atomic ``if_absent`` claim losing the race,
+    # and ``StaleInstanceWrite`` (i-083) is its UPDATE counterpart — a guarded
+    # ``if_match`` write refusing to land on an instance that moved since the
     # caller read it. Both are adjudicated by the ADAPTER against the store, and
     # both have to reach the caller as a denial rather than a 500 because their
     # remedies differ and only the refusal can say which: take another name, or
     # re-read and re-apply to the fresh etag.
-    "DocumentNameTaken", "StaleDocumentWrite", "InvalidDocumentName",
+    "InstanceNameTaken", "StaleInstanceWrite", "InvalidInstanceName",
     "InvalidScopeName", "PathEscapesStoreRoot", "InvalidBundleEntry",
     # dna.kernel.kinds.namespaces — a write declaring a Kind in a namespace its
     # author does not own. It IS a refusal and always was (a subclass of
@@ -157,9 +157,9 @@ _WRITE_REFUSALS = (
     # refusal in the strictest sense of this file: the kernel DECIDED, on a
     # workspace's own instruction, and the caller can act on it — but only if it
     # arrives with its reason intact. Told "validation failed" instead, an author
-    # would edit a document that no edit can save; told nothing, they would
+    # would edit an instance that no edit can save; told nothing, they would
     # retry forever. It also carries the one piece of reassurance the moment
-    # needs: existing documents were not deleted.
+    # needs: existing instances were not deleted.
     "RevokedKindWrite",
 )
 
@@ -191,12 +191,12 @@ def test_the_historical_bases_are_kept():
     # The path-safety family carries a SECOND base on purpose: a face that
     # predates the marker base and still catches ``(ValueError, LookupError,
     # PermissionError)`` must report a security refusal, not mask it as a 500.
-    for name in ("InvalidDocumentName", "InvalidScopeName",
+    for name in ("InvalidInstanceName", "InvalidScopeName",
                  "PathEscapesStoreRoot", "InvalidBundleEntry"):
         assert issubclass(_refusal(name), ValueError), name
-    # ``DocumentNameTaken`` is a ``FileExistsError`` so a caller allocating a
+    # ``InstanceNameTaken`` is a ``FileExistsError`` so a caller allocating a
     # name (``create_issue``) can catch the standard exception and try the next.
-    assert issubclass(E.DocumentNameTaken, FileExistsError)
+    assert issubclass(E.InstanceNameTaken, FileExistsError)
 
 
 def test_one_except_clause_catches_every_write_refusal():
@@ -237,7 +237,7 @@ _NOT_REFUSALS = {
     # miss narrowly; giving them the refusal base would make every face report
     # a typo'd agent name as a policy denial.
     "AgentNotFound", "ToolNotFound",
-    # A typo'd `layout:` — an authoring error in the document, surfaced loudly
+    # A typo'd `layout:` — an authoring error in the instance, surfaced loudly
     # so it cannot silently fall through to the Kind default.
     "UnknownLayout",
     # ── newly in scope once the module list became DERIVED ────────────────
@@ -249,7 +249,7 @@ _NOT_REFUSALS = {
     # catches them; a bad hook name and a malformed frontmatter block are
     # surfaced so an author fixes them while loading continues.
     "UnknownHookNameWarning", "FrontmatterParseWarning",
-    # A CORRUPT DOCUMENT on the read path, opt-in via ``strict=True``. The
+    # A CORRUPT INSTANCE on the read path, opt-in via ``strict=True``. The
     # SQL source catches it and falls back to the canonical row — a recovery
     # signal between an adapter and itself, not a verdict for a client.
     "FrontmatterParseError",
@@ -270,7 +270,7 @@ _NOT_REFUSALS = {
     # A CAPABILITY statement about the DEPLOYMENT, not a verdict on the
     # request: the active source keeps no derived reference graph, so there is
     # no answer to give. It is an exception rather than an empty list on
-    # purpose — ``[]`` reads as "nothing points at this document", a claim only
+    # purpose — ``[]`` reads as "nothing points at this instance", a claim only
     # a store that records edges may make — but relaying it as a refusal would
     # tell the caller they were denied something they might appeal. The faces
     # map it to 501, and the caller's remedy is a different adapter, not a

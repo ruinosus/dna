@@ -67,10 +67,10 @@ def _serialize_f32(vector: Iterable[float]) -> bytes:
 
 
 def document_text(raw: dict[str, Any]) -> str:
-    """Derive the searchable text blob for a raw document.
+    """Derive the searchable text blob for a raw instance.
 
     Walks the doc's ``spec`` (and top-level ``metadata.name``) collecting every
-    STRING value, in document order — the same "string values only" discipline
+    STRING value, in instance order — the same "string values only" discipline
     the kernel's lexical fallback uses, so dense/lexical see the same corpus.
     Callers may override by passing an explicit ``text`` to ``index``.
     """

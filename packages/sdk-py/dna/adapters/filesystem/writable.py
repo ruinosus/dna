@@ -54,7 +54,7 @@ _YAML_WIDTH = 4096
 
 
 def _dump_yaml(data: Any, *, sort_keys: bool = False) -> str:
-    """Serialize a document to readable YAML — unicode verbatim, no ``\\``
+    """Serialize an instance to readable YAML — unicode verbatim, no ``\\``
     continuations, block literals for multi-line strings."""
     return yaml.dump(
         data, Dumper=_BlockLiteralDumper,
@@ -194,10 +194,10 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         each declare a ``Deal`` in their own namespace — that is what
         namespacing the apiVersion is FOR — and a bare-name lookup then routes
         both to whichever port the registry resolves, so one workspace's
-        documents land in the directory belonging to the other's Kind. The save
-        path holds the document and therefore its apiVersion, so it passes it;
+        instances land in the directory belonging to the other's Kind. The save
+        path holds the instance and therefore its apiVersion, so it passes it;
         ``None`` keeps the old bare behaviour for callers that genuinely have
-        no document in hand.
+        no instance in hand.
 
         ``scope`` narrows the registry to the Kinds that GOVERN this scope
         (i-081). Without it a Kind another scope declared still routed this
@@ -210,7 +210,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
             raise RuntimeError(
                 "FilesystemWritableSource has no kernel bound — pass "
                 "kernel= at construction or call set_kernel(k) before "
-                "save_document/delete_document."
+                "save_instance/delete_instance."
             )
         sd = self._kernel.storage_for_kind(
             kind, api_version=api_version, scope=scope,
@@ -272,7 +272,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         layer_id, layer_value = residual_layer
         return self._contained(scope_dir / "overlays" / layer_id / layer_value)
 
-    async def save_document(
+    async def save_instance(
         self, scope: str, kind: str, name: str, raw: dict,
         author: str | None = None,
         *,
@@ -292,7 +292,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         _validate_layer_segments(layer)
         _validate_tenant_path(tenant)
         if if_match is not None:
-            # i-083 — the GUARDED update. Read the document back FROM DISK and
+            # i-083 — the GUARDED update. Read the instance back FROM DISK and
             # refuse if it is no longer the one the caller read.
             #
             # Through ``load_one`` deliberately: it is the adapter's own read
@@ -331,7 +331,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
                 ),
                 if_match, scope=scope, kind=kind, name=name, tenant=tenant,
             )
-        # i-080: route by the DOCUMENT's own apiVersion, not by the bare Kind
+        # i-080: route by the INSTANCE's own apiVersion, not by the bare Kind
         # name — two workspaces may each own a Kind called `Deal`.
         subdir = self._subdir_for(
             kind, api_version=raw.get("apiVersion"), scope=scope,
@@ -350,7 +350,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         # the harness can surface 409 version_already_published.
         is_root = self._kind_is_root(kind, scope=scope)
         if is_root and if_absent:
-            # A root Kind's document IS the scope's manifest, written through a
+            # A root Kind's instance IS the scope's manifest, written through a
             # versioned/mirrored path with its own already-published refusal.
             # Rather than bolt a second, subtly different claim onto it, refuse
             # the combination by name: silently ignoring `if_absent` would hand
@@ -395,7 +395,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         for w in self._writers:
             if w.can_write(raw):
                 # ``name`` is a PATH COMPONENT here — the second layer under
-                # the kernel's ``validate_document_name``. See
+                # the kernel's ``validate_instance_name``. See
                 # ``FilesystemSource._contained``: neither layer is redundant.
                 if subdir:
                     dest = self._contained(scope_dir / subdir / name)
@@ -403,7 +403,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
                     dest = self._contained(scope_dir / name)
                 if if_absent:
                     # ``mkdir`` without ``exist_ok`` is the atomic claim for a
-                    # bundle: the directory IS the document's identity, and the
+                    # bundle: the directory IS the instance's identity, and the
                     # syscall either creates it or fails. Claiming it before the
                     # writer runs means two concurrent creates cannot both
                     # believe the name was free.
@@ -431,12 +431,12 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
 
     @staticmethod
     def _taken(scope: str, kind: str, name: str) -> Exception:
-        from dna.kernel.errors import DocumentNameTaken
+        from dna.kernel.errors import InstanceNameTaken
 
-        return DocumentNameTaken(
+        return InstanceNameTaken(
             f"{kind} {name!r} already exists in scope {scope!r} — an if_absent "
             f"write refuses to replace it. Pick a free name, or use an update "
-            f"verb if you meant to change the document that is there."
+            f"verb if you meant to change the instance that is there."
         )
 
     def _claim_file(
@@ -453,7 +453,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         except BaseException:
             # The claim succeeded and the write did not: leaving a zero-byte
             # file would make the name permanently unusable by a later create
-            # AND parse as an empty document. Release it.
+            # AND parse as an empty instance. Release it.
             path.unlink(missing_ok=True)
             raise
 
@@ -462,7 +462,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
     ) -> None:
         """Create the bundle directory, or raise if it already exists.
 
-        Also refuses when a SINGLE-FILE document of the same name is already
+        Also refuses when a SINGLE-FILE instance of the same name is already
         there (``<name>.yaml`` / ``<name>.md``): the loader would find it, so it
         holds the name even though this Kind stores bundles."""
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -478,7 +478,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         """True iff the registered KindPort for ``kind`` is a "root-shaped"
         single-file Kind (Module, Genome).
 
-        Used by save_document to redirect root-kind writes to the
+        Used by save_instance to redirect root-kind writes to the
         canonical ``<storage.marker>`` filename (Phase 9c). Phase 16:
         treats both ``is_root=True`` AND ``StoragePattern.ROOT`` as
         triggers, so legacy Module writes (now ``is_root=False`` after
@@ -501,24 +501,24 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
             return False
         return False
 
-    async def delete_document(
+    async def delete_instance(
         self, scope: str, kind: str, name: str,
         *,
         tenant: str | None = None,
         layer: tuple[str, str] | None = None,
         api_version: str | None = None,
     ) -> None:
-        # Phase 2b: tenant routes to dedicated layout (see save_document).
+        # Phase 2b: tenant routes to dedicated layout (see save_instance).
         _validate_layer_segments(layer)
         _validate_tenant_path(tenant)
-        # i-080's residual, now closed: a DELETE carries no document, so this
+        # i-080's residual, now closed: a DELETE carries no instance, so this
         # was a BARE-name lookup. Two workspaces may each declare a `Deal` under
         # their own namespace — that is what namespacing is for — and the bare
         # lookup routed both to whichever port the registry resolved, so a
         # delete could look inside the other Kind's container and find nothing.
         # The caller was then told the delete succeeded. ``api_version`` now
-        # resolves the Kind exactly, mirroring ``save_document`` (which has
-        # always had it, because it holds the document). ``None`` keeps the old
+        # resolves the Kind exactly, mirroring ``save_instance`` (which has
+        # always had it, because it holds the instance). ``None`` keeps the old
         # bare behaviour for a caller that genuinely does not know.
         subdir = self._subdir_for(kind, api_version=api_version, scope=scope)
         scope_dir = self._target_dir(scope, layer, tenant=tenant)
@@ -610,10 +610,10 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
             query_pushdown=True,
             tenant_layer_writes=True,
             # ⚠️ MINUS ``edges``: the filesystem store has no transaction to
-            # write a document and its derived relations together, and no table
+            # write an instance and its derived relations together, and no table
             # to write them TO. Declaring the kwarg would make the kernel hand
             # over edges this adapter would silently drop — and a graph face
-            # would then read the resulting nothing as "this document has no
+            # would then read the resulting nothing as "this instance has no
             # relations". It answers ``unsupported`` instead (see
             # ``SourceCapabilities.edge_graph``).
             write_kwargs=SAVE_OPTIONAL_KWARGS - {"edges"},
@@ -635,7 +635,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
 
         Phase 5 — supports the ``dna tenant list`` CLI and the future
         ``GET /tenants`` HTTP endpoint. Optional ``scope`` filters to
-        tenants that have at least one document in that scope.
+        tenants that have at least one instance in that scope.
 
         ``_legacy`` is excluded — it's the migration sink, not a real
         tenant. Returns an empty list when ``tenants/`` doesn't exist.

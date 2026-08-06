@@ -3,7 +3,7 @@
 Story `s-tenant-lifecycle-phase-a-kind-crud` (2026-05-25).
 
 Pre-existing state of tenants in the codebase was half-baked:
-  * dna_documents.tenant column persists per-doc tenant binding.
+  * dna_instances.tenant column persists per-doc tenant binding.
   * /tenants GET listed observed tenants from that column.
   * TenantSwitcher in Studio let users pick between allowed tenants.
 
@@ -102,7 +102,7 @@ class TenantKind(KindBase):
     flatten_in_context = False
     docs = (
         "A Tenant is the identity of an organization/team/individual that "
-        "owns scopes and the documents within them. Stored as bundle "
+        "owns scopes and the instances within them. Stored as bundle "
         "(TENANT.md frontmatter = spec) under the special `_lib` scope. "
         "Slug rules match the runtime tenant claim format ([a-z0-9-]{1,253}). "
         "Created by platform admins via POST /tenants. Suspended via PATCH; "
@@ -122,7 +122,7 @@ class TenantKind(KindBase):
                     "pattern": r"^[a-z0-9-]{1,253}$",
                     "description": (
                         "Tenant identity. Used as the value of "
-                        "dna_documents.tenant for every doc owned by this "
+                        "dna_instances.tenant for every doc owned by this "
                         "tenant. Must match the runtime tenant claim format."
                     ),
                 },
@@ -271,7 +271,7 @@ class TenantWriter(WriterPort):
             f"**Status:** {status} · **Plan:** {plan}\n\n"
             f"Owner: `{clean_spec.get('owner_email', '?')}` · "
             f"Created: `{clean_spec.get('created_at', '?')}`\n\n"
-            f"All DNA documents that carry `dna_documents.tenant = {slug!r}` "
+            f"All DNA instances that carry `dna_instances.tenant = {slug!r}` "
             f"belong to this Tenant. Lifecycle managed by platform admins via "
             f"`POST /tenants`, `PATCH /tenants/{{slug}}`, `DELETE /tenants/{{slug}}`."
         )

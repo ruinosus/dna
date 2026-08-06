@@ -8,9 +8,9 @@
 # THE NAMESPACE IS A CLAIMED, OWNED NAME — NOT THE WORKSPACE ID. The obvious
 # shortcut is to put the workspace id in the apiVersion
 # (`tenant.ws-3f9a.../v1`): collision-free, no infrastructure. It is refused on
-# purpose. The apiVersion PARTICIPATES IN THE IDENTITY of every document, so
+# purpose. The apiVersion PARTICIPATES IN THE IDENTITY of every instance, so
 # baking a database identifier into it means renaming, migrating or
-# consolidating a workspace changes the identity of every document it owns.
+# consolidating a workspace changes the identity of every instance it owns.
 # Identity churn is cheap now and catastrophic later. A namespace is what every
 # API versioning scheme already uses: the organisation's NAME (`acme.example`),
 # not its row id — and this Kind is the registry that says which workspace holds
@@ -39,7 +39,7 @@
 # workspace declared would lock its own owner out of the second.
 #
 # A CLAIM IS NOT SELF-SERVABLE. `is_overlayable: false` makes this a BOOTSTRAP
-# Kind: the generic write-any-document path refuses it (it declares what a
+# Kind: the generic write-any-instance path refuses it (it declares what a
 # namespace IS, not content within one) and no layer may fork it. Claiming is an
 # operator/provisioning act, like minting a workspace id.
 #
@@ -89,7 +89,7 @@ spec:
         type: string
         format: date-time
         description: When the namespace was claimed (ISO 8601). The audit trail
-          is the reason a claim is a document rather than a config entry.
+          is the reason a claim is an instance rather than a config entry.
       notes:
         type:
         - string
@@ -123,7 +123,7 @@ spec:
   docs: A KindNamespace records that a workspace owns an apiVersion namespace —
     the claim the write path checks before letting anyone declare a Kind in it.
     The namespace is a claimed NAME (`acme.example`), never the workspace id,
-    because the apiVersion participates in every document's identity and a
+    because the apiVersion participates in every instance's identity and a
     database id baked into it would make renaming a workspace rewrite the
     identity of everything it owns. Claims are prefixes and the most specific
     one wins; a namespace already occupied by a Kind registered from code is

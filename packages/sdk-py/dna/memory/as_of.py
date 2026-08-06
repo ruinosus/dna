@@ -23,7 +23,7 @@ Three honesty rules, each of which the alternative would quietly violate:
 
 1. **A store that cannot answer must refuse, not approximate.** The filesystem
    adapter declares ``versions=True`` and keeps no history at all
-   (``list_versions`` → ``[]``). Serving the current document under a past
+   (``list_versions`` → ``[]``). Serving the current instance under a past
    timestamp would be a fabricated answer wearing a real one's clothes, so
    :func:`resolve_as_of` raises :class:`AsOfUnsupported` instead. The capability
    is askable up front via :func:`store_supports_as_of`.
@@ -71,7 +71,7 @@ class AsOfUnsupported(RuntimeError):
 
 
 class AsOfTruncated(LookupError):
-    """History for THIS document was pruned past ``as_of`` — the store cannot know.
+    """History for THIS instance was pruned past ``as_of`` — the store cannot know.
 
     The sibling of :class:`AsOfUnsupported`, one granularity down: that one says
     *this deployment never retains history*, this one says *it does, and the
@@ -79,21 +79,21 @@ class AsOfTruncated(LookupError):
     3 versions precisely because autopilot rewrites the same memory thousands of
     times). Both are refusals; neither may degrade into today's state.
 
-    It exists for the surfaces that resolve ONE document, where the list
+    It exists for the surfaces that resolve ONE instance, where the list
     surfaces' answer — collect the names into ``as_of_truncated`` beside the
-    hits — has nowhere to live: a single-document read either hands back a
+    hits — has nowhere to live: a single-instance read either hands back a
     belief state or says it cannot. ``LookupError`` and not ``RuntimeError`` so
     the "nothing came back" family stays one family, and the *reason* is what
-    distinguishes it: a plain ``LookupError`` means the document DID NOT EXIST
+    distinguishes it: a plain ``LookupError`` means the instance DID NOT EXIST
     yet at ``as_of``, which is an ANSWER. Collapsing the two would let a caller
-    read "there was no such document" out of "there is no such record" — the one
+    read "there was no such instance" out of "there is no such record" — the one
     mistake a history read must never make (see :class:`AsOfResolution`).
     """
 
 
 @dataclass(frozen=True)
 class AsOfResolution:
-    """One document, resolved at a transaction instant.
+    """One instance, resolved at a transaction instant.
 
     ``raw`` is ``None`` in two very different situations, and ``truncated`` is
     what tells them apart:
@@ -102,7 +102,7 @@ class AsOfResolution:
     ``raw``          ``truncated``  meaning
     ===============  ==========  ==================================================
     envelope         ``False``   this is what the store believed at ``as_of``
-    ``None``         ``False``   the document DID NOT EXIST yet — an answer
+    ``None``         ``False``   the instance DID NOT EXIST yet — an answer
     ``None``         ``True``    history was pruned past ``as_of`` — a refusal
     ===============  ==========  ==================================================
     """
@@ -178,13 +178,13 @@ async def resolve_as_of(
     tenant: str | None = None,
     api_version: str | None = None,
 ) -> AsOfResolution:
-    """Resolve ONE document as the store recorded it at or before ``as_of``.
+    """Resolve ONE instance as the store recorded it at or before ``as_of``.
 
     ``as_of`` must already be normalized (:func:`normalize_as_of`). Raises
     :class:`AsOfUnsupported` when the store keeps no history — see rule 1 in the
     module docstring.
 
-    Deliberately bypasses the kernel's 60s document cache: that cache is keyed on
+    Deliberately bypasses the kernel's 60s instance cache: that cache is keyed on
     ``(scope, kind, name, tenant)`` with no time axis, so routing an as-of read
     through it would either serve the present as the past or poison the present
     with the past.

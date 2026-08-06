@@ -94,7 +94,7 @@ _LEGACY_BRIDGES: dict[tuple[str, int], _Bridge] = {
 #: Table the ladder creates at version 1 and never drops. If the control
 #: table claims a version but this is missing, the control table is lying
 #: about the database and no DDL may be applied on its word.
-_LADDER_SENTINEL = {"postgresql": "dna_documents", "sqlite": "documents"}
+_LADDER_SENTINEL = {"postgresql": "dna_instances", "sqlite": "instances"}
 
 _SCRIPT_LOCATION = Path(__file__).parent / "alembic"
 

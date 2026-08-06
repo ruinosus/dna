@@ -41,7 +41,7 @@ def surface() -> dict:
 
 
 def _mi() -> ManifestInstance:
-    return ManifestInstance(scope="t", documents=[], kinds={})
+    return ManifestInstance(scope="t", instances=[], kinds={})
 
 
 # ---------------------------------------------------------------------------
@@ -99,7 +99,7 @@ def test_mi_all_warns_with_replacement():
     msgs = [str(x.message) for x in w if issubclass(x.category, DeprecationWarning)]
     assert msgs, "mi.all() must emit DeprecationWarning"
     assert any(
-        "will be removed in 1.0" in m and "mi.documents" in m and "kernel.query" in m
+        "will be removed in 1.0" in m and "mi.instances" in m and "kernel.query" in m
         for m in msgs
     ), f"mi.all() warning must name the blessed replacement; got {msgs}"
 
@@ -112,8 +112,8 @@ def test_mi_one_warns_with_replacement():
     assert msgs, "mi.one() must emit DeprecationWarning"
     assert any(
         "will be removed in 1.0" in m
-        and "mi.documents" in m
-        and "kernel.get_document" in m
+        and "mi.instances" in m
+        and "kernel.get_instance" in m
         for m in msgs
     ), f"mi.one() warning must name the blessed replacement; got {msgs}"
 
@@ -123,7 +123,7 @@ def test_blessed_surface_is_silent():
     mi = _mi()
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
-        _ = mi.documents
+        _ = mi.instances
         _ = mi.root
         _ = mi.default_agent()
         _ = mi.find_agent("nope")

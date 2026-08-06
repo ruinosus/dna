@@ -44,7 +44,7 @@ spec:
         description: Name of the EvalSuite this baseline belongs to.
       run_name:
         type: string
-        description: Name of the pinned EvalRun document.
+        description: Name of the pinned EvalRun instance.
       pinned_at:
         type: string
         format: date-time

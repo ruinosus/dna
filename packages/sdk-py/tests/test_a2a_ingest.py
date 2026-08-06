@@ -1,6 +1,6 @@
 """Entrada: um Agent Card de terceiro vira um `RemoteAgent` INERTE.
 
-Registrar um agente passa a ser escrever um documento — sem deploy, sem edição
+Registrar um agente passa a ser escrever uma instância — sem deploy, sem edição
 de código. E inerte é a palavra que carrega o desenho: um remoto só é delegável
 depois que um humano aprova, pelo mesmo funil dos Kinds autorados. Sem isso,
 "buscar um Card" seria "conceder acesso a dado do workspace" numa chamada HTTP.

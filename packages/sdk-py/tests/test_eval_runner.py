@@ -154,14 +154,14 @@ def test_run_suite_statuses_and_counts(kernel):
 
 def test_run_doc_is_schema_valid_and_persists(kernel):
     """The runner's output validates against the EvalRun descriptor schema
-    and round-trips through write_document → query."""
+    and round-trips through write_instance → query."""
     raw = run_suite(kernel, _SCOPE, "main", run_name="run-main-pinned")
     port = kernel._kinds[(_API, "EvalRun")]
     validated = port.parse(raw)  # schema-validating parse — raises on drift
     assert validated["spec"]["total"] == 3
 
     import asyncio
-    asyncio.run(kernel.write_document(_SCOPE, "EvalRun", "run-main-pinned", raw))
+    asyncio.run(kernel.write_instance(_SCOPE, "EvalRun", "run-main-pinned", raw))
     rows = kernel.query_list_sync(_SCOPE, "EvalRun")
     assert any(getattr(r, "name", None) == "run-main-pinned" for r in rows)
 

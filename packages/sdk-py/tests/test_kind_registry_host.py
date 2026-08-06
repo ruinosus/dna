@@ -104,5 +104,5 @@ def test_kernel_satisfies_registry_host():
 def test_fake_is_a_slice_not_the_kernel():
     host = _registry_host_fake()
     assert not isinstance(host, Kernel)
-    for god in ("load", "write_document", "search", "kind", "_kindreg", "query"):
+    for god in ("load", "write_instance", "search", "kind", "_kindreg", "query"):
         assert not hasattr(host, god), f"slice leaked kernel member {god!r}"

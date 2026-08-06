@@ -99,7 +99,7 @@ def test_build_issue_spec_accepts_a_title():
 def test_build_issue_spec_omits_title_when_none_is_given():
     """No fabricated title: the Issue schema does not require one and every
     read surface already falls back to the description (``_digest._title``).
-    Synthesizing ``description[:80]`` into the document would just duplicate
+    Synthesizing ``description[:80]`` into the instance would just duplicate
     the description on disk under a second key."""
     spec = build_issue_spec(
         description="no title supplied", now=_NOW, actor="mcp", source="mcp",
@@ -107,7 +107,7 @@ def test_build_issue_spec_omits_title_when_none_is_given():
     assert "title" not in spec
 
 
-# ── the honest repair for documents already on disk ─────────────────────────
+# ── the honest repair for instances already on disk ─────────────────────────
 
 
 def test_earliest_timeline_at_takes_the_minimum_not_the_first_element():
@@ -130,7 +130,7 @@ def test_backfill_uses_the_first_timeline_event():
 
 
 def test_backfill_never_invents_now_when_the_timeline_is_empty():
-    """The whole point: a document with no recorded history stays undated
+    """The whole point: an instance with no recorded history stays undated
     rather than claiming it was filed today."""
     spec = {"status": "open"}
     assert backfill_created_at(spec) is False
@@ -153,12 +153,12 @@ def test_set_status_self_heals_a_legacy_doc_from_its_own_timeline():
     written: dict = {}
 
     class _Kernel:
-        async def get_document(self, scope, kind, name):
+        async def get_instance(self, scope, kind, name):
             return {"spec": {"status": "open", "timeline": [
                 {"at": filed_at, "type": "status_change", "to": "open"},
             ]}}
 
-        async def write_document(self, scope, kind, name, raw, **_):
+        async def write_instance(self, scope, kind, name, raw, **_):
             written["raw"] = raw
 
     asyncio.run(set_status(_Kernel(), "sc", "Issue", "i-001-legacy", "triaged"))
@@ -169,9 +169,9 @@ def test_set_status_self_heals_a_legacy_doc_from_its_own_timeline():
 
 # ── the bulk repair planner (`dna sdlc backfill-dates`) ─────────────────────
 #
-# Deciding the honest value for a document that never recorded when it was
+# Deciding the honest value for an instance that never recorded when it was
 # created. Ranked by how close the signal sits to the event it dates:
-#   1. the document's own timeline — written BY the create path, at create time
+#   1. the instance's own timeline — written BY the create path, at create time
 #   2. the git commit that ADDED the file — an external witness, same day-ish
 #   3. nothing — leave it undated and SAY SO
 # "Now" is not on the list: it would date every legacy Issue as filed today and
@@ -241,7 +241,7 @@ def test_backfilled_stamps_do_not_change_the_documents_canonical_digest():
     """The founder needs this stated, not assumed: ``created_at`` /
     ``updated_at`` are in ``KindBase.VOLATILE_SPEC_FIELDS``, so the Kind-aware
     ``canonical_digest`` — the identity source-sync diffs on — is computed over
-    a spec with both stripped. Backfilling them leaves every document's
+    a spec with both stripped. Backfilling them leaves every instance's
     canonical identity byte-identical; the FS↔Postgres sync sees no drift."""
     from dna.extensions.sdlc import IssueKind
 

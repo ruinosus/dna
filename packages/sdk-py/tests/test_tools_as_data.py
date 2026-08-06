@@ -7,10 +7,10 @@ Three things this pins:
    ``ToolLibrary`` maps a tool name to its ``ToolSurface`` ({description,
    parameters}); a miss raises the typed :class:`dna.ToolNotFound`.
 
-2. **The cross-language dogfood** (the point): the SAME Tool document read via
+2. **The cross-language dogfood** (the point): the SAME Tool instance read via
    Python ``load_tools`` produces the surface committed in
    ``examples/tools_as_data/expected-surface.json`` — the identical oracle the
-   TypeScript twin (``tools-as-data.test.ts``) asserts against. One document,
+   TypeScript twin (``tools-as-data.test.ts``) asserts against. One instance,
    one byte-identical ``Tool`` Kind descriptor, two runtimes.
 
 3. **Tenant overridability** (the SaaS hook): a tenant overlay of a Tool's
@@ -72,7 +72,7 @@ class TestToolLibrary:
 def test_python_surface_matches_shared_oracle(tools) -> None:
     """The Python-projected surface equals the committed oracle that the
     TypeScript twin also asserts against — proving both runtimes read the
-    SAME Tool document into the SAME agent-facing surface."""
+    SAME Tool instance into the SAME agent-facing surface."""
     surface = tools["generate-artifact"]
     actual = {"description": surface.description, "parameters": surface.parameters}
     expected = json.loads(_EXPECTED.read_text(encoding="utf-8"))

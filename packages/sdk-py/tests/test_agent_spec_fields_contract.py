@@ -85,7 +85,7 @@ def test_every_passthrough_field_round_trips():
         # f-meus-copilotos (2026-08-05) — os dois campos que o funil de
         # copilotos do dna-cloud gravava e o dataclass não falava.
         "description": "Copiloto de intake de contratos",
-        "tools_requiring_confirmation": ["update_document_draft"],
+        "tools_requiring_confirmation": ["update_instance_draft"],
         # Phase 14w / 15.x follow-ups + s-ua-agent-contract-fields.
         "prompt_format": "json",
         "max_turns": 25,

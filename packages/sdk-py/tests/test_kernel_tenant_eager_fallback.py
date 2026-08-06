@@ -5,7 +5,7 @@ Eager-loaded MI silently dropped the ``tenant`` kwarg on read APIs
 when overlay storage had rows. Symptom: harness `/eval/summary` saw
 zero EvalRuns despite Postgres holding N at `tenant=dev-tenant`.
 
-Fix: eager MI falls back to ``kernel.query`` / ``kernel.get_document``
+Fix: eager MI falls back to ``kernel.query`` / ``kernel.get_instance``
 when the requested ``tenant`` differs from this MI's resolved tenant
 (`self._tenant`). The fallback path also bypasses ``_lazy_kind_cache``
 because it's keyed by ``kind`` only — two tenants would alias.
@@ -55,7 +55,7 @@ async def _write_agent(
         "metadata": {"name": name},
         "spec": {"description": "d", "instruction": instruction},
     }
-    await k.write_document("scope", "Agent", name, raw, tenant=tenant)
+    await k.write_instance("scope", "Agent", name, raw, tenant=tenant)
 
 
 def test_all_async_cross_tenant_reads_overlay_from_eager_mi(tmp_path: Path):
@@ -113,7 +113,7 @@ def test_one_async_cross_tenant_lookup_from_eager_mi(tmp_path: Path):
         # tenant="acme" → overlay doc returned.
         doc = await mi.one_async("Agent", "shared", tenant="acme")
         assert doc is not None, (
-            "eager MI must fall back to kernel.get_document for cross-tenant "
+            "eager MI must fall back to kernel.get_instance for cross-tenant "
             "one_async lookups"
         )
         assert doc.name == "shared"
@@ -129,7 +129,7 @@ def test_eager_same_tenant_keeps_in_memory_fast_path(tmp_path: Path):
         await _write_agent(k, "b", tenant=None)
 
         mi = await k.instance_async("scope", lazy=False)
-        # tenant=None matches MI._tenant=None → walk self._documents only.
+        # tenant=None matches MI._tenant=None → walk self._instances only.
         docs = await mi.all_async("Agent", tenant=None)
         names = {d.name for d in docs}
         assert names >= {"a", "b"}

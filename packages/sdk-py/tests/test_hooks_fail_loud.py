@@ -90,7 +90,7 @@ def test_emit_strict_is_noop_without_async_listeners():
 async def test_build_prompt_async_reaches_async_post_build_prompt_listener():
     """The kernel's async build path fires emit_async — an async
     post_build_prompt listener is awaited, not silently skipped."""
-    from dna.kernel.document import Document
+    from dna.kernel.instance import Instance
     from dna.kernel.prompt.engine import build_prompt_async
 
     agent_raw = {
@@ -114,7 +114,7 @@ async def test_build_prompt_async_reaches_async_post_build_prompt_listener():
 
     def _parse(raw, origin="local"):
         meta = raw.get("metadata", {}) or {}
-        return Document(
+        return Instance(
             api_version=raw.get("apiVersion", "v1"), kind=raw["kind"],
             name=meta.get("name", ""), metadata=meta,
             spec=raw.get("spec", {}) or {},
@@ -134,8 +134,8 @@ async def test_build_prompt_async_reaches_async_post_build_prompt_listener():
 
     kernel = SimpleNamespace(
         query=_query,
-        get_document=_get,
-        list_documents=_list,
+        get_instance=_get,
+        list_instances=_list,
         _parse_doc=_parse,
         _kinds={("v1", "Agent"): kp},
         _source=SimpleNamespace(resolve_ref=_resolve_ref),

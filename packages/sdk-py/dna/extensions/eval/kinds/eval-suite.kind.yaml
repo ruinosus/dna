@@ -83,7 +83,7 @@ spec:
     text_color: '#fff'
   ascii_icon: 📋
   display_label: Eval Suites
-  docs: An EvalSuite groups EvalCase documents and configures how the
+  docs: An EvalSuite groups EvalCase instances and configures how the
     local runner executes them — the case list (empty = all cases in the
     scope), a default target the cases inherit, and stop_on_fail. Run it
     with `dna eval run <suite>`; each execution can be persisted as an
