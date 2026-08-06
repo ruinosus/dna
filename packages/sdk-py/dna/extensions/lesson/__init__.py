@@ -41,6 +41,34 @@ from dna.kernel.source.generic_rw import MarkdownBundleReader
 
 
 class LessonKind(KindBase):
+    # ---- Island, and it stays one (i-119 group C, 06/08/2026) -------------
+    # i-119 filed `skill` / `subject` as fields that "nomeiam Skill". Neither
+    # does, and the schema below is the evidence:
+    #
+    # * `skill` is a CLOSED ENUM of seven PT-BR pedagogical verbs
+    #   (reconhecer / identificar / parear / repetir / associar / contar /
+    #   ordenar). A DNA `Skill` is `agentskills.io/v1` — a bundle with a
+    #   SKILL.md, composed into an agent's prompt. `reconhecer` is not one and
+    #   could never be authored as one. Controlled vocabulary, not a pointer.
+    # * `subject` is a concept-GROUP slug (`cores-basicas`,
+    #   `animais-conhecidos`), free text that `start_lesson(subject)` matches
+    #   against the catalog. It names no instance of anything.
+    #
+    # The one field that IS reference-shaped is `target_concepts`, and it is
+    # deliberately left undeclared: its own description says the slugs match
+    # `Pictogram.spec.concept`, and **`Pictogram` is not a Kind in this
+    # package** — it appears in exactly two prose comments and in no registry
+    # (measured: 84 registered Kinds, none of them Pictogram). `kind_graph`
+    # classes a relation pointing at an unregistered Kind under
+    # `DECLARED_ORIGINS`: "a DECLARATION the model cannot honour — an authoring
+    # error somebody must fix". Declaring it would therefore not add a weak
+    # edge; it would add a permanent false alarm to the very list this issue is
+    # trying to empty. The trigger that flips it: the day a host registers
+    # Pictogram in a scope this package can see, `target_concepts` becomes
+    # `{to: Pictogram, cardinality: many, by: concept}` and `steps[].
+    # expected_concept` becomes its nested twin — which needs the OTHER gap
+    # closed first (a relation is named by a FIRST-LEVEL spec field;
+    # `kind_graph`'s own `top_level_properties_only` coverage limit says so).
     api_version = _API_VERSION
     kind = "Lesson"
     alias = "lesson-lesson"

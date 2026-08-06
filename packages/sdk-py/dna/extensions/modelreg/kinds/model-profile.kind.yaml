@@ -40,6 +40,17 @@ spec:
     container: model-profiles
   # This instance's own key — `kernel.model_profile()` matches on this field
   # first, and the doc name should equal it.
+  #
+  # i-119 group C asked to CONFIRM this Kind as group A (legitimate island).
+  # Confirmed, 06/08/2026, field by field: `model_id` is `self` (declared
+  # right here); `provider` / `family` are vocabulary — `openai`, `azure`,
+  # `gpt-realtime` name no instance and never will; `aliases[]` are alternate
+  # keys for THIS profile, so pointing them anywhere would be a self-loop;
+  # `modalities` is an open token list. What POINTS at a ModelProfile is
+  # `Genome.default_llm`, declared over there as `to: ModelProfile, by:
+  # model_id` in this same slice — so this Kind left the island count without
+  # a single declaration landing ON it, which is what a legitimate island
+  # looks like once the other side is honest.
   identifiers:
     model_id:
       role: self

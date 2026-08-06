@@ -24,6 +24,32 @@ from dna.extensions.helix import _schema_from_model
 
 
 class KindDefinitionKind(KindBase):
+    # ---- Island, and a LEGITIMATE one — confirmed (i-119 group C) ---------
+    # 06/08/2026. i-119 listed this as "probably group A — confirm", and the
+    # confirmation is field by field rather than by feel:
+    #
+    # * `target_kind` / `target_api_version` / `alias` name the Kind this
+    #   instance DEFINES. That is its own subject, not a pointer at a second
+    #   instance — the `role: self` argument, one level up: a KindDefinition
+    #   pointing at "the Kind it is" would be a self-loop that says nothing.
+    #   (No `undeclared` gap row asks about them either: `_kind` is not one of
+    #   `kind_graph`'s REF_SUFFIXES.)
+    # * `dep_filters`, `relations`, `identifiers`, `traits`, `presentation`
+    #   are DECLARATIONS ABOUT the defined Kind, carried as data. The Kind
+    #   names inside them are the schema of a Kind that does not exist yet —
+    #   resolving them against instances would be a category error, and
+    #   `kind_graph` already reads them from the SYNTHESIZED port, which is the
+    #   right place.
+    # * `storage` / `schema` / the prompt flags point at nothing at all.
+    #
+    # This is also the Kind the whole "a Kind IS an instance" argument leans
+    # on, and it is worth writing down where that argument stops: it is true
+    # (a KindDefinition really is a row in `dna_instances`) and it does NOT
+    # make `to: KindDefinition` a way to say "points at a Kind" — measured,
+    # 37 of 84 registered Kinds have no KindDefinition anywhere, and the 47
+    # that do have it as package data rather than as a stored row. The long
+    # version, with the numbers, is in `automation.kind.yaml` beside
+    # `result_kind`, which is the field that needed the answer.
     api_version = TypedKindDefinition.API_VERSION
     kind = TypedKindDefinition.KIND
     alias = "kinddef-kinddefinition"
