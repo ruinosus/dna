@@ -49,6 +49,8 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any
 
+from dna.kernel.errors import CapabilityRefusal
+
 __all__ = [
     "AsOfResolution",
     "AsOfTruncated",
@@ -59,7 +61,7 @@ __all__ = [
 ]
 
 
-class AsOfUnsupported(RuntimeError):
+class AsOfUnsupported(CapabilityRefusal, RuntimeError):
     """The store cannot answer a transaction-time read.
 
     Raised rather than degraded. A caller that asked "what did you believe at
@@ -67,10 +69,15 @@ class AsOfUnsupported(RuntimeError):
     past it has no basis for — worse than not offering the read at all. The same
     reasoning the write path applies to ``if_absent``: refuse rather than
     degrade.
+
+    A :class:`~dna.kernel.errors.CapabilityRefusal`: what is missing is a
+    capability of the ADAPTER, so the remedy is a different deployment and never
+    a different request. Still a ``RuntimeError`` — additive, so nothing that
+    caught it before sees a change.
     """
 
 
-class AsOfTruncated(LookupError):
+class AsOfTruncated(CapabilityRefusal, LookupError):
     """History for THIS instance was pruned past ``as_of`` — the store cannot know.
 
     The sibling of :class:`AsOfUnsupported`, one granularity down: that one says
@@ -88,6 +95,14 @@ class AsOfTruncated(LookupError):
     yet at ``as_of``, which is an ANSWER. Collapsing the two would let a caller
     read "there was no such instance" out of "there is no such record" — the one
     mistake a history read must never make (see :class:`AsOfResolution`).
+
+    Also a :class:`~dna.kernel.errors.CapabilityRefusal`, and that second base
+    is what keeps the distinction above ALIVE across a face. Being a
+    ``LookupError`` is precisely why this one already fell inside tuples the
+    faces caught — and being caught as a bare ``LookupError`` is exactly how it
+    would be relayed as *"it did not exist yet"*, the collapse this class was
+    created to prevent. The marker base lets a face catch it BEFORE the plain
+    ``LookupError`` arm and name it.
     """
 
 

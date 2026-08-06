@@ -47,15 +47,21 @@ must be classified at all" belongs to
 ``sdk-py/tests/test_kernel_refusal_base.py``, and this is its cross-face
 sibling, not its replacement.
 
-THE FIX THIS GUARD IS STANDING IN FOR. ``KernelRefusal`` made the verdict-shaped
-refusals derivable with one ``except``. The capability-shaped ones
-(``dna_cli._mcp_refusals``) have no such base — they inherit from
-``RuntimeError`` / ``NotImplementedError`` / ``LookupError`` and scatter across
-the builtin hierarchy — so the face holds a hand-written tuple, and a
-hand-written tuple is exactly what this file distrusts. A ``CapabilityRefusal``
-marker base in ``dna.kernel.errors``, sibling to ``KernelRefusal``, would
-collapse that tuple to one name. Until then the tuple is held current by THIS,
-not by memory.
+THE FIX THIS GUARD WAS STANDING IN FOR, AND WHAT IT GUARDS NOW. ``KernelRefusal``
+made the verdict-shaped refusals derivable with one ``except``. The
+capability-shaped ones had no such base — they inherit from ``RuntimeError`` /
+``NotImplementedError`` / ``LookupError`` and scatter across the builtin
+hierarchy — so ``dna_cli._mcp_refusals`` held a hand-written tuple of four, and
+a hand-written tuple is exactly what this file distrusts. That tuple is now ONE
+name: ``dna.kernel.errors.CapabilityRefusal``, sibling to ``KernelRefusal``,
+which the four inherit additively.
+
+Which MOVES this guard's job rather than ending it. The face can no longer go
+stale by forgetting to widen a tuple; it can go stale one level up, if a new
+capability refusal is declared without the base. So
+``test_every_rest_capability_refusal_carries_the_marker_base`` walks from the
+same REST source as everything else here and requires the base of whatever REST
+answers 501/410 with. Same derivation, same direction, one rung higher.
 """
 from __future__ import annotations
 
@@ -384,3 +390,36 @@ def test_the_capability_refusals_tuple_is_relayed_by_the_face():
         if not any(issubclass(cls, base) for base in translations)
     ]
     assert not missing, f"declared in CAPABILITY_REFUSALS, relayed by nothing: {missing}"
+
+
+@pytest.mark.parametrize("name", sorted(_rest_capability_refusals()))
+def test_every_rest_capability_refusal_carries_the_marker_base(name):
+    """The guard that lets the face stop enumerating — derived from REST's own AST.
+
+    ``CAPABILITY_REFUSALS`` is ONE name now
+    (``dna.kernel.errors.CapabilityRefusal``) instead of the four it started as,
+    and a collapse like that is only safe if something keeps the base COMPLETE.
+    This is that something, and it deliberately walks from the same place the
+    tests above do: whatever REST answers **501/410** with — its own signature
+    for *this deployment cannot* — must carry the marker base, or the MCP face's
+    single ``except`` silently stops covering it.
+
+    Note what this refuses to be: a list of type names. A fifth refusal mapped
+    to 501 tomorrow is in scope the moment somebody writes the route, and it is
+    red HERE — at the declaration — rather than in a client's log.
+    """
+    from dna.kernel.errors import CapabilityRefusal
+
+    index = _exception_index()
+    cls = index[name]
+    if _rest_local(cls):
+        pytest.skip(f"{name} is declared in the REST face itself")
+
+    assert issubclass(cls, CapabilityRefusal), (
+        f"REST answers {name} with HTTP "
+        f"{sorted(_rest_capability_refusals()[name])} — 'this deployment cannot "
+        f"answer that' — but {name} does not inherit CapabilityRefusal. The MCP "
+        "face catches that ONE base, so this refusal reaches an agent as a "
+        "masked failure. Give it the base (additively, keeping its builtin one) "
+        "rather than re-growing a per-face list."
+    )

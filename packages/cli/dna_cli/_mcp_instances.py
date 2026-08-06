@@ -9,7 +9,8 @@ so a Kind that exists is a Kind an agent can use:
 
     list_kinds      — the catalog: what can I act on in this scope?
     list_instances  — the instances of one Kind
-    get_instance    — one instance, verbatim
+    get_instance    — one instance, verbatim (and ``as_of``: as it was believed)
+    graph_refs      — what points at this instance (the derived edge graph)
     write_instance  — create/update one instance
 
 This module is a THIN adapter, exactly like the rest of the face. The behavior
@@ -205,7 +206,7 @@ def register_instance_tools(
     @server.tool(run_in_thread=False)
     async def get_instance(
         kind: str, name: str, scope: str | None = None,
-        api_version: str | None = None,
+        api_version: str | None = None, as_of: str | None = None,
     ) -> dict[str, Any]:
         """Read one instance verbatim (``apiVersion`` / ``kind`` / ``metadata``
         / ``spec``), as your layer sees it — the per-tenant overlay wins over the
@@ -214,16 +215,134 @@ def register_instance_tools(
 
         The result also carries an ``etag``: pass it to ``write_instance`` as
         ``if_match`` and your update is refused rather than silently overwriting a
-        change somebody made in between."""
+        change somebody made in between.
+
+        ``as_of`` (ISO-8601 instant) reads the BELIEF STATE — the instance as this
+        store RECORDED it at or before that moment (transaction time), instead of
+        as it stands now. "What did this Issue say yesterday at 14:00?" is a
+        question the live read cannot answer and must not appear to. The answer
+        carries ``as_of``, ``as_of_version`` and ``as_of_recorded_at`` beside the
+        instance, so a historical read is never mistakable for a live one.
+
+        ⚠️ **It refuses rather than approximates, and the refusals are distinct
+        on purpose** — collapsing any two of them re-creates i-106, where this
+        parameter was ACCEPTED and IGNORED on the REST route and a caller was
+        handed today's instance under yesterday's timestamp with nothing in the
+        response to say so:
+
+        * ``AsOfUnsupported`` — this deployment's store keeps no version history
+          at all (the filesystem source declares ``versions=True`` and retains
+          nothing). Never today's state under a past stamp.
+        * ``AsOfTruncated`` — the instance HAS history, but none reaching back
+          that far; those versions were pruned. Never "it did not exist", which
+          is a claim only a store that kept the record may make.
+        * a plain "no such instance …at <instant>" — it did not exist yet. That
+          one is an ANSWER, and is deliberately worded so you can tell it from
+          the refusal above.
+        * a bad instant is refused as ``ValueError`` BEFORE the store's
+          capability is consulted: a typo is the caller's, not the deployment's.
+
+        Same four outcomes, same wording, as ``GET /v1/kinds/{kind}/instances/
+        {name}?as_of=`` (there: 501 / 410 / 404 / 422)."""
         port, tenant = await _guard_for(
             kind, api_version, scope=scope, family_op="read")
+        # ``CAPABILITY_REFUSALS`` (= ``dna.kernel.errors.CapabilityRefusal``) is
+        # caught FIRST and by name, and the order is load-bearing rather than
+        # tidy: ``AsOfTruncated`` IS a ``LookupError``, so the arm below would
+        # swallow it and relay "history was pruned" in the same shape as "no such
+        # instance" — the single collapse an as-of read may never make.
+        from dna_cli._mcp_refusals import CAPABILITY_REFUSALS  # noqa: PLC0415
+
         try:
             return await D.get_instance_impl(
                 await live(), kind=port.kind, api_version=port.api_version,
-                name=name, scope=scope, tenant=tenant,
+                name=name, scope=scope, tenant=tenant, as_of=as_of,
             )
+        except CAPABILITY_REFUSALS as exc:
+            raise ToolError(f"{type(exc).__name__}: {exc}") from None
         except LookupError as exc:
             raise ToolError(str(exc)) from None
+        except ValueError as exc:
+            # A non-ISO-8601 ``as_of``. Named, because "your timestamp is not a
+            # timestamp" and "this store cannot read the past" have different
+            # remedies and only the message can carry which.
+            raise ToolError(f"{type(exc).__name__}: {exc}") from None
+
+    @server.tool(run_in_thread=False)
+    async def graph_refs(
+        kind: str, name: str, scope: str | None = None,
+        api_version: str | None = None,
+        direction: str = "in", depth: int = 1,
+    ) -> dict[str, Any]:
+        """"What points at this instance?" — walk the DERIVED reference graph.
+
+        The Kind catalog has always been able to say ``Story.feature → Feature``
+        exists as a RULE. This answers the other question: THESE Stories point at
+        THIS Feature — read from the edges the write path itself produced while
+        validating references. Nothing here derives, guesses or reads slugs.
+
+        * ``direction`` — ``in`` (the default, and the product question: what
+          points AT this), ``out`` (what this points at), ``both``.
+        * ``depth`` — how many hops. Clamped by the deployment's ceiling
+          (``DNA_GRAPH_MAX_DEPTH``); a walk without a ceiling is an incident
+          waiting for the first cyclic board, since ``Spec.supersedes`` and
+          ``Story.dependencies`` are self-referential by design.
+
+        Three fields travel with the answer and none is decoration — each exists
+        so a caller cannot read the wrong thing out of a short list:
+
+        * ``resolved`` per edge — ``false`` is a DANGLING reference (declared,
+          written, resolving to nothing). Listed, never filtered: hiding the
+          broken half would render the graph healthier than the data is.
+        * ``stop`` — ``complete`` / ``depth_reached`` / ``truncated``. A caller
+          that cannot tell "this is everything" from "this is where I stopped"
+          will render the second as the first.
+        * ``graph_producer`` — ``warn`` / ``enforce`` / ``off``. With the producer
+          off no edges are made at all; that is a defensible operational choice,
+          and a screen rendering the resulting emptiness as "no relations" is not.
+
+        ⚠️ **A store that keeps no edge graph is REFUSED (``GraphUnsupported``),
+        never answered with an empty list.** ``[]`` reads as *nothing points at
+        this instance*, and that is a claim only a store that actually records
+        edges may make. Same refusal the REST face answers **501** with.
+
+        Only the ENFORCED relations appear: the ones ``spec.relations`` declares
+        with a concrete target addressed by instance name, which is all the write
+        path resolves. Calling this "the relations" would claim a completeness the
+        producer does not have.
+
+        (Unrelated to the ``ms_*`` Microsoft Graph tools — same English word, two
+        different graphs, and they never meet.)"""
+        # SAME SHAPE AS THE OTHER TWO FACES, deliberately and to the parameter:
+        # ``GET /v1/kinds/{kind}/instances/{name}/refs`` and ``dna graph refs``
+        # both take (kind, name) as the ADDRESS plus ``direction`` + ``depth`` as
+        # the question, and all three go through ``graph_refs_impl`` →
+        # ``Kernel.graph_refs`` → ``dna.kernel.query.graph.traverse``. Three faces
+        # with three shapes of one verb is the debt this tool exists NOT to
+        # create; ``sdk-py/tests/test_graph_telemetry.py::TestGatilho1Expressividade``
+        # holds the count and goes red if a fourth, COMPOSING parameter appears
+        # here or anywhere else on the path.
+        port, tenant = await _guard_for(
+            kind, api_version, scope=scope, family_op="read")
+        from dna_cli._mcp_refusals import CAPABILITY_REFUSALS  # noqa: PLC0415
+
+        if depth < 1:
+            # Mirrors the REST route's ``ge=1`` (a 422 there). The kernel would
+            # CLAMP it to 1 instead — fine for a CLI flag, wrong for a caller
+            # that will read the returned ``depth`` as the one it asked for.
+            raise ToolError(f"depth must be at least 1 (got {depth})")
+        try:
+            return await D.graph_refs_impl(
+                await live(), kind=port.kind, api_version=port.api_version,
+                name=name, scope=scope, tenant=tenant,
+                direction=direction, depth=depth,
+            )
+        except CAPABILITY_REFUSALS as exc:
+            # ``GraphUnsupported`` above all — see the warning in the docstring.
+            raise ToolError(f"{type(exc).__name__}: {exc}") from None
+        except (LookupError, ValueError) as exc:
+            # An unknown Kind, or a direction that is not one of the three.
+            raise ToolError(f"{type(exc).__name__}: {exc}") from None
 
     @server.tool(run_in_thread=False)
     async def resolve_instance(
@@ -375,5 +494,5 @@ def register_instance_tools(
 
     return [
         "list_kinds", "list_instances", "get_instance", "resolve_instance",
-        "write_instance", "delete_instance",
+        "graph_refs", "write_instance", "delete_instance",
     ]

@@ -68,7 +68,7 @@ unrestricted, exactly like `remember`.
 
 **Instances** — every registered Kind, generically:
 
-The tools above each name one Kind. These four name none — they loop over the
+The tools above each name one Kind. These name none — they loop over the
 **Kind registry at call time**, so a Kind that exists is a Kind an agent can use,
 with no hand-written tool for it. That matters because most Kinds have none: of
 the Kinds a stock kernel registers, only a handful are covered above, and most
@@ -80,8 +80,26 @@ are declared purely by a `*.kind.yaml` descriptor.
   under, and `writable` + `write_refusal`.
 - `list_instances(kind, scope?, api_version?, limit?, offset?)` — the instances
   of one Kind (paged, with an honest `has_more`).
-- `get_instance(kind, name, scope?, api_version?)` — one instance verbatim, as
-  your layer sees it (the per-tenant overlay wins, live).
+- `get_instance(kind, name, scope?, api_version?, as_of?)` — one instance
+  verbatim, as your layer sees it (the per-tenant overlay wins, live).
+  `as_of` (an ISO-8601 instant) reads the **belief state** instead: the instance
+  as this store *recorded* it at that moment, with `as_of` / `as_of_version` /
+  `as_of_recorded_at` beside it so a historical read is never mistaken for a
+  live one. It **refuses rather than approximates** — `AsOfUnsupported` when the
+  store keeps no version history, `AsOfTruncated` when this instance's history
+  was pruned past the instant — because today's spec under a past timestamp is a
+  fabricated answer wearing a real one's clothes (i-106).
+- `graph_refs(kind, name, scope?, api_version?, direction?, depth?)` — **what
+  points at this instance**, read from the derived reference graph the write path
+  produces while validating references. `direction`: `in` (the default and the
+  product question), `out`, `both`; `depth` is clamped by `DNA_GRAPH_MAX_DEPTH`.
+  Each edge carries `resolved` (`false` = a dangling reference, listed and never
+  filtered) and the answer carries `stop` and `graph_producer`, so a short list
+  can be told apart from a truncated walk or a producer that is switched off.
+  A store that keeps no edge graph is **refused** (`GraphUnsupported`), never
+  answered with `[]` — an empty list reads as *nothing points at this instance*,
+  a claim only a store that records edges may make. Same walk as
+  `GET /v1/kinds/{kind}/instances/{name}/refs` and `dna graph refs`.
 - `write_instance(kind, name, spec, scope?, api_version?)` — create/update one
   instance. The `apiVersion`/`kind`/`metadata` envelope is built from the
   **registered Kind**, so a caller cannot write into another Kind's namespace.

@@ -682,13 +682,19 @@ def build_server(
     # ``dna_cli._mcp_refusals.CAPABILITY_REFUSALS`` is spliced in because those
     # are the refusals ``KernelRefusal`` does NOT reach. They are not verdicts
     # about the REQUEST — they are the deployment saying "this store cannot
-    # answer that at all" — so no kernel marker base covers them, and they
-    # inherit from ``RuntimeError`` / ``NotImplementedError`` / ``LookupError``.
-    # The ports catalogue states all four as CONTRACT and the REST face maps all
-    # four; this face translated only the one ``_mcp_instances`` catches inline,
-    # so ``recall(as_of=…)`` against a store with no version history reached the
-    # client as FastMCP's ``Error calling tool 'recall'`` — the type name gone,
-    # and under ``mask_error_details`` the reason gone too.
+    # answer that at all", so the caller's remedy is a different adapter and
+    # never a different call. The ports catalogue states them as CONTRACT and the
+    # REST face maps them; this face translated only the one ``_mcp_instances``
+    # caught inline, so ``recall(as_of=…)`` against a store with no version
+    # history reached the client as FastMCP's ``Error calling tool 'recall'`` —
+    # the type name gone, and under ``mask_error_details`` the reason gone too.
+    #
+    # It is ONE name now (``dna.kernel.errors.CapabilityRefusal``), not the
+    # hand-written four it started as: the members inherit from ``RuntimeError``
+    # / ``NotImplementedError`` / ``LookupError`` and no ``except`` reached them
+    # as a family until that marker base existed. Splicing a family, not a list,
+    # is what makes a refusal declared upstream tomorrow honest on this face
+    # today.
     _REFUSALS: tuple[type[BaseException], ...] = (
         KernelRefusal, InvalidTransition, InstanceExists,
         *CAPABILITY_REFUSALS,
@@ -1570,13 +1576,18 @@ def build_server(
 
     # -- instances (GENERIC, registry-driven — every Kind, not a hand-written list)
     #
-    # The tools above name ONE Kind each. These four name none: they loop over
+    # The tools above name ONE Kind each. These name none: they loop over
     # the Kind registry at call time, so the 76 registered Kinds (49 of them
     # record-plane, most declared purely by a `*.kind.yaml` descriptor) stop
     # being invisible to an agent just because nobody hand-wrote tools for them.
     # Same `_guard` seam as everything else — with the metered family DERIVED
     # from the target Kind, so a generic tool can never be the cheap door into a
     # family the caller's tier gates (see `dna_cli._mcp_instances`).
+    #
+    # `graph_refs` is here rather than in a module of its own for the same
+    # reason: "what points at THIS instance" is addressed by (kind, name) and
+    # metered against the target Kind's family exactly like `get_instance`, so
+    # it shares the one seam instead of growing a second.
     from dna_cli._mcp_instances import register_instance_tools
 
     register_instance_tools(

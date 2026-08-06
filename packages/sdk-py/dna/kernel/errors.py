@@ -47,6 +47,67 @@ class KernelRefusal(Exception):
     """
 
 
+class CapabilityRefusal(Exception):
+    """Marker base for *the STORE wired into this deployment cannot answer that*.
+
+    Sibling of :class:`KernelRefusal`, and the distinction between the two is
+    the reason there are two. ``KernelRefusal`` is a **verdict about the
+    request**: policy looked at what you asked for and said no, so the remedy is
+    a different request (fix the instance, take another name, obtain the grant).
+    This one is not about the request at all — it was well formed and the caller
+    was entitled to it. What is missing is a capability of the ADAPTER, and the
+    remedy is a different deployment, never a different call. Relaying one as
+    the other sends the caller hunting for an entitlement they already have.
+
+    Every member exists to refuse a **confident lie**, because in each case the
+    plausible fallback is an answer no store in that state may give:
+
+    ==============================  =========  ================================
+    refusal                         REST       the lie it exists to refuse
+    ==============================  =========  ================================
+    ``AsOfUnsupported``             **501**    today's instance under a past
+                                               timestamp
+    ``AsOfTruncated``               **410**    a bare ``LookupError`` — *"it did
+                                               not exist yet"* is a different
+                                               statement from *"I no longer hold
+                                               the record"*
+    ``GraphUnsupported``            **501**    ``[]`` — reads as *nothing points
+                                               at this instance*
+    ``InstanceIdLookupUnsupported`` **501**    an empty result set
+    ==============================  =========  ================================
+
+    **Why a base and not a tuple.** There was a tuple:
+    ``dna_cli._mcp_refusals.CAPABILITY_REFUSALS`` listed the four by hand and
+    said so in its own docstring, because the four inherit from
+    ``RuntimeError`` / ``NotImplementedError`` / ``LookupError`` and scatter
+    across the builtin hierarchy — no ``except`` reached them as a family, and
+    only the one that happened to be a ``LookupError`` fell inside a tuple the
+    MCP face already caught. So ``recall(as_of=…)`` against a store with no
+    version history reached the client as FastMCP's ``Error calling tool
+    'recall'``: the documented refusal, delivered in the shape of a crash. This
+    house has measured what per-face enumeration costs — it is the same defect
+    ``KernelRefusal`` was created to end, one category over. A face catches one
+    name now, and a capability refusal declared tomorrow is relayed by every
+    face written today.
+
+    **Additive, never a re-parenting.** Each member keeps the builtin base it
+    always had (``RuntimeError`` for the two "this adapter cannot",
+    ``LookupError`` for the pruned history, ``NotImplementedError`` for the id
+    lane), so ``except LookupError`` around an as-of read keeps behaving exactly
+    as it did. Guarded by ``packages/sdk-py/tests/test_capability_refusal_base.py``
+    (the family, its bases, and the fact that the two marker bases stay
+    disjoint) and by ``packages/cli/tests/test_face_refusal_parity.py``, which
+    derives from the REST face's own source that anything it answers 501/410
+    carries this base.
+
+    ⚠️ **Not a ``KernelRefusal``, and the ratchet says so on purpose.**
+    ``tests/test_kernel_refusal_base.py`` lists ``GraphUnsupported`` and
+    ``InstanceIdLookupUnsupported`` under ``_NOT_REFUSALS`` with a paragraph
+    each explaining that they are statements about the deployment. That
+    classification does not change here; it acquires a name.
+    """
+
+
 class InstanceNameTaken(KernelRefusal, FileExistsError):
     """An ``if_absent`` write lost the race: the name was already taken.
 
@@ -488,7 +549,7 @@ class AgentNotFound(LookupError):
         super().__init__(f"Agent '{agent}' not found")
 
 
-class InstanceIdLookupUnsupported(NotImplementedError):
+class InstanceIdLookupUnsupported(CapabilityRefusal, NotImplementedError):
     """The wired source cannot resolve a ``metadata.id`` prefix (i-114).
 
     Raised rather than answering with an empty list, for the same reason
@@ -496,6 +557,9 @@ class InstanceIdLookupUnsupported(NotImplementedError):
     configured: "this adapter cannot answer" and "no instance has that id" are
     different facts, and a caller handed silence for the first will read it as
     the second.
+
+    A :class:`CapabilityRefusal` so every face relays it by name, and still a
+    ``NotImplementedError`` so nothing that caught it the old way changes.
     """
 
 

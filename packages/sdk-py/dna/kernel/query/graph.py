@@ -88,6 +88,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Iterable, Mapping
 
+from dna.kernel.errors import CapabilityRefusal
+
 #: Default walk depth. ONE, on purpose: ``Spec.supersedes → Spec`` and
 #: ``Story.dependencies → Story`` are self-referential by design, so an
 #: unbounded default would be an incident waiting for the first cyclic board.
@@ -221,12 +223,18 @@ def _emit_traversal(
     )
 
 
-class GraphUnsupported(RuntimeError):
+class GraphUnsupported(CapabilityRefusal, RuntimeError):
     """The active source keeps no derived edge graph, so there is no answer.
 
     Deliberately an exception and not an empty result: see the module
     docstring. The faces translate it into an explicit ``unsupported``
     capability, never into a list.
+
+    A :class:`~dna.kernel.errors.CapabilityRefusal` — the marker base for *the
+    store wired into this deployment cannot answer that at all*, which is
+    precisely what this says and is NOT a verdict on the caller's request.
+    Still a ``RuntimeError``, so every ``except`` written before the base
+    existed behaves exactly as it did.
     """
 
 

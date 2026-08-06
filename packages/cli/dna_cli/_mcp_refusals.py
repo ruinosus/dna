@@ -7,63 +7,48 @@ declared upstream tomorrow is relayed by a face written today. That base exists
 precisely because the alternative — each face enumerating the types it will
 translate — had already been wrong once (see ``tests/test_mcp_write_refusals``).
 
-**These are the other kind, and no base reaches them.** A capability refusal is
-not a verdict about the caller: the request was well formed, the caller was
-entitled to it, and the STORE WIRED INTO THIS DEPLOYMENT cannot produce the
-answer. The ports catalogue (``docs/reference/ports/capabilities.md``) states
-each one as contract, because the alternative in every case is a confident empty
-answer that reads as a fact:
+**These are the other kind.** A capability refusal is not a verdict about the
+caller: the request was well formed, the caller was entitled to it, and the
+STORE WIRED INTO THIS DEPLOYMENT cannot produce the answer. The ports catalogue
+(``docs/reference/ports/capabilities.md``) states each one as contract, because
+the alternative in every case is a confident empty answer that reads as a fact:
+``[]`` for *nothing points at this instance*, today's spec under a past
+timestamp, a bare ``LookupError`` for *it did not exist yet*.
 
-===============================  ============  ==================================
-refusal                          REST          the lie it exists to refuse
-===============================  ============  ==================================
-``AsOfUnsupported``              **501**       today's instance under a past stamp
-``AsOfTruncated``                **410**       ``LookupError`` — *"it did not exist
-                                               yet"* is a different answer from
-                                               *"I no longer hold the record"*
-``GraphUnsupported``             **501**       ``[]`` — reads as *nothing points
-                                               at this instance*
-``InstanceIdLookupUnsupported``  **501**       an empty result set
-===============================  ============  ==================================
+⚠️ **THIS FILE USED TO BE AN ENUMERATION, AND SAID SO.** It listed the four by
+hand — ``AsOfUnsupported`` / ``AsOfTruncated`` / ``GraphUnsupported`` /
+``InstanceIdLookupUnsupported`` — because they inherit from ``RuntimeError`` /
+``NotImplementedError`` / ``LookupError`` and scattered across the builtin
+hierarchy, so no ``except`` reached them as a family. Its own docstring named
+the derivation that was missing: a ``CapabilityRefusal`` marker base in
+``dna.kernel.errors``, sibling to ``KernelRefusal``.
 
-They inherit from ``RuntimeError`` / ``NotImplementedError`` / ``LookupError``,
-so they scatter across the builtin hierarchy and only ``AsOfTruncated`` fell
-inside a tuple this face already caught. The REST face maps all four; the MCP
-face translated one (``_mcp_instances`` catches ``InstanceIdLookupUnsupported``
-inline). So ``recall(as_of=…)`` against a store with no version history — the
-filesystem adapter, which declares ``versions=True`` and retains nothing —
-reached the client as FastMCP's masked ``Error calling tool 'recall'``: the
-documented refusal, delivered in the shape of a crash.
+**That base now exists**, so this tuple is ONE name and holds no list to go
+stale. A capability refusal declared tomorrow — anywhere, in any module — is
+relayed by every face that already catches this, on the day it is declared.
+The tuple form survives only because the call sites splice it (``*``) and read
+as a family; it is not a list of anything.
 
-⚠️ **This tuple is an ENUMERATION, and this house has measured what enumerations
-cost.** It is written here rather than derived because the derivation it wants
-does not exist yet: a ``CapabilityRefusal`` marker base in ``dna.kernel.errors``,
-sibling to ``KernelRefusal``, that ``AsOfUnsupported`` and friends inherit. With
-that base this file collapses to one name and a new capability refusal is
-honest on both faces on the day it is declared. Until then the staleness is held
-off by a GUARD rather than by memory: ``tests/test_face_refusal_parity.py``
-derives the REST face's refusal map from its own source and fails when the MCP
-face cannot translate something REST maps. A name missing here is red, not
-quietly absent.
+The guards that keep the collapse honest, both DERIVED rather than written:
+
+* ``packages/cli/tests/test_face_refusal_parity.py`` reads the REST face's own
+  AST and requires that anything REST answers **501/410** — its own signature
+  for *this deployment cannot* — both carries the marker base and is named by an
+  MCP handler. A fifth refusal that forgets the base is red there.
+* ``packages/sdk-py/tests/test_capability_refusal_base.py`` walks ``dna`` for
+  the family, pins that each member keeps its historical builtin base
+  (additive, never a re-parenting) and that the two marker bases stay disjoint.
 """
 from __future__ import annotations
 
-from dna.kernel.errors import InstanceIdLookupUnsupported
-from dna.kernel.query.graph import GraphUnsupported
-from dna.memory.as_of import AsOfTruncated, AsOfUnsupported
+from dna.kernel.errors import CapabilityRefusal
 
 __all__ = ["CAPABILITY_REFUSALS"]
 
 #: Every capability refusal, as ONE tuple, for any face that relays refusals.
 #:
-#: ``AsOfTruncated`` is a ``LookupError`` and was therefore already caught by
-#: the tuples that list ``LookupError``. It is named anyway: a reader checking
-#: whether this face honours the catalogue must be able to find all four here,
-#: and "covered by inheritance from an unrelated entry" is not something anyone
-#: verifies twice.
-CAPABILITY_REFUSALS: tuple[type[BaseException], ...] = (
-    AsOfUnsupported,
-    AsOfTruncated,
-    GraphUnsupported,
-    InstanceIdLookupUnsupported,
-)
+#: One entry, and that is the whole point — see the module docstring. Written as
+#: a tuple rather than a bare class because the call sites splice it into their
+#: own refusal tuples (``*CAPABILITY_REFUSALS``) and because the shape must
+#: survive the day a second marker base is genuinely needed.
+CAPABILITY_REFUSALS: tuple[type[BaseException], ...] = (CapabilityRefusal,)

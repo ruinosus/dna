@@ -20,6 +20,15 @@ is the deployment saying it cannot answer at all, and the four inherit from
 ``RuntimeError`` / ``NotImplementedError`` / ``LookupError``, so only
 ``AsOfTruncated`` fell inside a tuple this face already caught.
 
+The first fix was a hand-written tuple of four in ``dna_cli._mcp_refusals``,
+which said in its own docstring that it was an enumeration and named the
+derivation it was missing. That derivation now exists —
+``dna.kernel.errors.CapabilityRefusal``, sibling to ``KernelRefusal``, which all
+four inherit additively — so the face catches ONE name. The consequence for this
+file is in ``_capability_refusals`` below: the leaves have to be walked out of
+``dna`` rather than read off the tuple, or the parametrization silently shrinks
+to a single case that tests the base and nothing else.
+
 **Everything here goes THROUGH THE TOOL.** That is not ceremony. The bug WAS the
 boundary: ``dna.memory.verbs.recall`` raised the right exception, from the right
 place, with the right sentence, and every unit test of it was green — the loss
@@ -176,24 +185,70 @@ def test_masking_really_does_erase_an_unmapped_exception(dna_dir, monkeypatch):
 
 
 def _capability_refusals():
-    from dna_cli._mcp_refusals import CAPABILITY_REFUSALS
+    """Every CONCRETE capability refusal, walked out of ``dna``.
 
-    return [cls("this deployment cannot answer that") for cls in CAPABILITY_REFUSALS]
+    ⚠️ This used to read ``CAPABILITY_REFUSALS`` directly, and could not any
+    more: that tuple was four hand-written names and is now the single marker
+    base ``dna.kernel.errors.CapabilityRefusal``. Parametrizing over the tuple
+    would leave exactly ONE case — the base itself — and would look green while
+    testing none of the refusals a caller can actually receive. A collapse in the
+    production code that quietly shrinks a parametrization is the failure mode
+    this suite's siblings are full of warnings about.
+
+    So the leaves are DERIVED: walk ``dna`` (importing is what makes
+    ``__subclasses__`` see them), then descend from the base. A fifth refusal
+    gains a case here on the day it is declared, and nobody edits this file.
+    """
+    import importlib
+    import pkgutil
+    import warnings
+
+    import dna
+    from dna.kernel.errors import CapabilityRefusal
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        for info in pkgutil.walk_packages(dna.__path__, "dna."):
+            try:
+                importlib.import_module(info.name)
+            except Exception:  # noqa: BLE001 — an optional extra is absent
+                continue
+
+    found: dict[str, type] = {}
+    stack = [CapabilityRefusal]
+    while stack:
+        for sub in stack.pop().__subclasses__():
+            if sub.__name__ not in found:
+                found[sub.__name__] = sub
+                stack.append(sub)
+    return [cls("this deployment cannot answer that")
+            for _, cls in sorted(found.items())]
+
+
+def test_the_derivation_found_the_family():
+    """The blindness check for the parametrization above.
+
+    A walk that resolved nothing would collapse the suite to zero cases and
+    still report green — the shape of every guard this house has lost.
+    """
+    names = {type(e).__name__ for e in _capability_refusals()}
+    assert {"AsOfUnsupported", "AsOfTruncated", "GraphUnsupported",
+            "InstanceIdLookupUnsupported"} <= names, names
 
 
 @pytest.mark.parametrize("exc", _capability_refusals(), ids=lambda e: type(e).__name__)
 def test_every_capability_refusal_is_relayed_by_name(dna_dir, monkeypatch, exc):
-    """Not one of the four may reach the client unnamed.
+    """Not one of them may reach the client unnamed.
 
-    Injected at the use-case seam because three of the four need a store this
+    Injected at the use-case seam because most of them need a store this
     deployment does not have (no edge graph / no id search / pruned history) —
     provoking them for real would prove the ADAPTER's honesty, and what is under
     test here is the FACE's. ``AsOfUnsupported`` is covered without any injection
     by the end-to-end case above, which is what keeps this parametrization from
     being a test of its own fixture.
 
-    The list is imported, not written here: a name added to
-    ``CAPABILITY_REFUSALS`` gains a case, and one deleted loses one, without
+    The family is derived, not written here: a capability refusal declared
+    anywhere under ``dna`` gains a case, and one deleted loses one, without
     anyone editing this file.
     """
     pytest.importorskip("fastmcp")

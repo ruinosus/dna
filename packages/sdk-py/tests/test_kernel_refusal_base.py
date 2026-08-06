@@ -277,6 +277,17 @@ _NOT_REFUSALS = {
     # appeal — an arithmetic fact about the prompt, raised on the read/compose
     # path where there is no write to refuse.
     "PromptBudgetExceededError",
+    # ── the OTHER marker base, and why it is a second one ─────────────────
+    # ``CapabilityRefusal`` collects "the store wired into this deployment
+    # cannot answer that at all" — the two entries immediately below, plus
+    # ``AsOfUnsupported``/``AsOfTruncated`` over in ``dna.memory``. It is
+    # deliberately NOT a ``KernelRefusal`` and the two bases stay disjoint,
+    # because that is the whole distinction: ``KernelRefusal`` is a verdict about
+    # the REQUEST (remedy: a different request), a capability refusal is a fact
+    # about the DEPLOYMENT (remedy: a different adapter). A face relaying one as
+    # the other sends a caller hunting for an entitlement they already have.
+    # The family has its own guard: ``tests/test_capability_refusal_base.py``.
+    "CapabilityRefusal",
     # A CAPABILITY statement about the DEPLOYMENT, not a verdict on the
     # request: the active source keeps no derived reference graph, so there is
     # no answer to give. It is an exception rather than an empty list on
