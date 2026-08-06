@@ -317,6 +317,15 @@ _NOT_REFUSALS = {
     # DEPLOYMENT. Raised rather than answered with ``[]`` — an empty list reads
     # as "no instance has that id" — but it is not a denial anyone may appeal.
     "InstanceIdLookupUnsupported",
+    # ── the world-time lane (spec-topologia fatia 3) ──────────────────────
+    # The third of the same family: this deployment's store keeps no WORLD-time
+    # column, so it cannot say whether a fact was true at an instant. A fact
+    # about the DEPLOYMENT — and one that is dialect-deep rather than
+    # adapter-deep, since ``SqlAlchemySource`` has the column on Postgres and
+    # not on SQLite. Raised rather than answered with the unfiltered instance,
+    # which would assert "yes, it was true then" on no evidence at all; but not
+    # a denial anyone may appeal, so not a ``KernelRefusal``.
+    "ValidTimeUnsupported",
     # A LOOKUP MISS, exactly like ``AgentNotFound`` above: no instance carries
     # that id. Nothing was withheld.
     "UnknownInstanceId",

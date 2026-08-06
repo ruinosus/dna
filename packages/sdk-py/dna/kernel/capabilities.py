@@ -310,6 +310,27 @@ class SourceCapabilities:
     # never an empty list. An empty list reads as "nothing points at this
     # instance" — a claim only a store that actually keeps edges may make.
     edge_graph: bool = False
+    # The store keeps WORLD time as a COLUMN (``dna_instances.valid_at``, a
+    # ``tstzrange``): it can be asked "was this instance true at T?"
+    # (``load_one_valid_at``) and it REFUSES two overlapping validity periods
+    # for one instance instead of letting the application hope.
+    #
+    # Not folded into ``as_of_reads``, and the separation is the whole point:
+    # that flag is TRANSACTION time (*what did you believe at T*, from
+    # ``dna_versions.created_at``), this one is WORLD time (*when was it
+    # true*). A store can have either without the other, and collapsing them
+    # is the classic bitemporal mistake — a note written today about last year
+    # is valid last year and believed today.
+    #
+    # ⚠️ The ONLY flag here whose value depends on the DIALECT rather than on
+    # the adapter CLASS. ``SqlAlchemySource`` serves Postgres and SQLite from
+    # one class, and SQLite has no range type, no GiST and no ``EXCLUDE``
+    # constraint — so the same class declares True on one binding and False on
+    # the other. Both the declaration and :func:`derive_capabilities` read the
+    # instance attribute ``supports_valid_time`` for exactly that reason: a
+    # reflection oracle that only looked for the METHOD would report True on
+    # SQLite, where the method exists and refuses.
+    valid_time: bool = False
 
     @property
     def granular(self) -> bool:
@@ -422,6 +443,19 @@ def derive_capabilities(source: object, *, label: str) -> SourceCapabilities:
         granular_one=_has_method(source, "load_one"),
         as_of_reads=_has_method(source, "load_one_as_of"),
         edge_graph=_has_method(source, "traverse_edges"),
+        # The one flag reflection cannot get from the CLASS. ``SqlAlchemySource``
+        # defines ``load_one_valid_at`` on both dialects — on SQLite it exists
+        # and refuses — so probing for the method would derive ``True`` for a
+        # binding that has no column, and the oracle would then certify a
+        # declaration that lies. The adapter answers for its own binding via
+        # ``supports_valid_time`` (the precedent is
+        # ``supports_cross_process_invalidation``, pg-only for the same reason
+        # and set the same way), and the method check stays as the second half
+        # so an attribute alone cannot declare a capability nothing implements.
+        valid_time=(
+            bool(getattr(source, "supports_valid_time", False))
+            and _has_method(source, "load_one_valid_at")
+        ),
         query_pushdown=_has_own_query(source),
         tenant_layer_writes=("tenant" in write_kwargs and "layer" in write_kwargs),
         write_kwargs=write_kwargs,

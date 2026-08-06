@@ -705,6 +705,7 @@ erDiagram
         INTEGER version
         TEXT updated_at
         TEXT tenant PK
+        TSTZRANGE valid_at
     }
     dna_layer_instances {
         TEXT scope PK
@@ -874,6 +875,7 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | `version` | `INTEGER` |  |  |
 | `updated_at` | `TEXT` |  |  |
 | `tenant` | `TEXT` | PK |  |
+| `valid_at` | `TSTZRANGE` |  |  |
 
 #### `dna_layer_instances`
 

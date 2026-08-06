@@ -373,10 +373,20 @@ def capabilities(self) -> SourceCapabilities:
         granular_list=True, granular_one=True,
         query_pushdown=True, tenant_layer_writes=True,
         api_version_identity=True, as_of_reads=False, edge_graph=False,
+        valid_time=False,
         write_kwargs=frozenset({"tenant", "layer", "if_absent"}),
         delete_kwargs=frozenset({"tenant"}),
     )
 ```
+
+⚠️ `valid_time` is the one flag whose value may depend on the **binding**
+rather than on the class. `SqlAlchemySource` serves Postgres and SQLite from
+one class, and only Postgres has the `tstzrange` column plus the `EXCLUDE`
+constraint that makes overlapping validity periods impossible — so it declares
+`valid_time=self._is_pg` and sets an instance attribute
+(`supports_valid_time`) that the reflection oracle reads. Probing for the
+*method* would derive `True` on SQLite, where `load_one_valid_at` exists and
+refuses, and the oracle would then certify a declaration that lies.
 
 Declare conservatively. An undeclared capability means a feature is off; an
 over-declared one means the kernel hands you work you will silently drop, and
@@ -413,6 +423,7 @@ discovered during it.
 | `as_of_reads=False` | `AsOfUnsupported` → REST **501** | today's instance under a past timestamp |
 | history pruned | `AsOfTruncated` → REST **410** | `LookupError` — *"it did not exist yet"* is a different answer from *"I no longer hold the record"* |
 | no `find_instances_by_id_prefix` | `InstanceIdLookupUnsupported` → REST **501** | an empty result set |
+| `valid_time=False` | `ValidTimeUnsupported` → REST **501** | the instance unfiltered — which asserts *"yes, it was true then"* |
 | `edges` not in `write_kwargs` | the kernel never hands you edges | your adapter silently dropping them |
 
 Neither `GraphUnsupported` nor `InstanceIdLookupUnsupported` is a

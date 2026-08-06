@@ -290,3 +290,82 @@ async def test_cross_process_invalidation_capability(adapter, request):
     assert getattr(src, "supports_cross_process_invalidation", False), (
         f"{type(src).__name__} has no cross-process write-invalidation channel"
     )
+
+
+# ---------------------------------------------------------------------------
+# 5. World time — the axis only ONE dialect has (spec-topologia fatia 3).
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_world_time_axis_capability(adapter, request):
+    """Postgres keeps the validity window as a ``tstzrange`` column with an
+    ``EXCLUDE USING gist (id WITH =, valid_at WITH &&)``, so it can be ASKED
+    whether a fact was true at an instant and can REFUSE two overlapping
+    validity periods for one instance (revision 0010). FS and SQLite cannot:
+    SQLite has no range type, no GiST and no ``EXCLUDE``; the filesystem has no
+    column at all.
+
+    ⚠️ This is the first dimension in this matrix where the gap is a property
+    of the **dialect** rather than of the adapter class — ``SqlAlchemySource``
+    is one class and answers differently on its two bindings. That is precisely
+    why ``SourceCapabilities.valid_time`` had to be probeable BEFORE the read
+    instead of inferred from the type.
+
+    xfail **strict** for the backends that lack it, and strict is the point:
+    the day one of them grows the axis, this goes green and forces the
+    declaration to be updated with it. The gap is documented and CI-visible
+    rather than remembered.
+    """
+    src, _ = adapter
+    adapter_id = request.node.callspec.id  # "filesystem" | "sqlite" | "postgres"
+    if adapter_id != "postgres":
+        request.node.add_marker(
+            pytest.mark.xfail(
+                reason="spec-topologia fatia 3: world time is a tstzrange column "
+                "plus an EXCLUDE constraint, and neither exists outside Postgres. "
+                "These adapters declare valid_time=False and load_one_valid_at "
+                "raises ValidTimeUnsupported (501) rather than returning the "
+                "instance unfiltered.",
+                strict=True,
+            )
+        )
+    from dna.kernel.capabilities import source_capabilities
+
+    assert source_capabilities(src).valid_time, (
+        f"{type(src).__name__} cannot answer a world-time read"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_store_without_world_time_REFUSES_rather_than_answering(adapter, request):
+    """The other half, and the half that must hold on EVERY adapter: whatever
+    ``valid_time`` says, asking anyway may never produce a confident answer.
+
+    No xfail here on purpose — this is not a gap, it is the contract. A store
+    with the column answers; a store without it raises
+    :class:`~dna.kernel.valid_time.ValidTimeUnsupported`. What no adapter may
+    do is the third thing: hand back the instance unfiltered (asserting it was
+    true then) or ``None`` (asserting it was not), on no evidence.
+
+    ⚠️ The assertion crosses the PORT with a real call rather than reading a
+    flag — a capability that is declared but whose door does nothing is the
+    defect this house has already paid for three times.
+    """
+    from dna.kernel.capabilities import source_capabilities
+    from dna.kernel.valid_time import ValidTimeUnsupported
+
+    src, _ = adapter
+    await _seed_doc(src, "conf-test", "s-when", {"priority": 1})
+    call = getattr(src, "load_one_valid_at", None)
+    if not source_capabilities(src).valid_time:
+        if call is None:
+            return  # no method at all — the kernel never routes a read here
+        with pytest.raises(ValidTimeUnsupported):
+            await call("conf-test", "Story", "s-when",
+                       valid_at="2026-01-01T00:00:00+00:00")
+        return
+    assert call is not None, "declared valid_time=True with no door to it"
+    # Declared true ⇒ an instance that names no window is true at ANY instant,
+    # which is what the unbounded default means.
+    assert await call("conf-test", "Story", "s-when",
+                      valid_at="1999-01-01T00:00:00+00:00") is not None

@@ -27,6 +27,7 @@ branches on ``is_pg`` exactly as the retired ``_build_tables`` did.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import sqlalchemy as sa
 
@@ -189,6 +190,65 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         if is_pg else
         sa.Column("tenant", sa.Text, nullable=True)
     )
+    # [dialect] pg-only — WORLD time as a column (revision 0010). SQLite has no
+    # range type, no GiST and no EXCLUDE constraint, and there is no honest
+    # partial version: two scalar TEXT columns would carry the endpoints and
+    # NOT the invariant (no two validity periods for one instance may overlap),
+    # which is the half worth having. So the sqlite dialect does not get the
+    # column at all and declares ``valid_time=False`` — the same shape as the
+    # pg-only eventbus tables below, and the reason
+    # ``SourceCapabilities.valid_time`` is per-BINDING rather than per-class.
+    valid_time_args: list[Any] = []
+    if is_pg:
+        from sqlalchemy.dialects.postgresql import TSTZRANGE, ExcludeConstraint
+        valid_time_args = [
+            # ONE range column, not two timestamps, and PG18 is why: its
+            # temporal keys are ``PRIMARY KEY (id, valid_at WITHOUT OVERLAPS)``
+            # and the docs require that column to be *"a range or multirange
+            # type"*. A pair of scalars could not be adopted by the engine
+            # without rewriting the table; this shape is adopted by swapping
+            # the constraint below for the key and touching no data.
+            #
+            # NOT NULL with an unbounded default, rather than nullable. NULL
+            # would mean "declares no window", which is real information — but
+            # an exclusion constraint SKIPS any row with a NULL operand, so a
+            # nullable column would leave the constraint enforcing nothing on
+            # the 400 of 414 instances (measured 06/08/2026) that say nothing
+            # about world time. A guard that ships green over every row in the
+            # table is the failure mode this house has already paid for. The
+            # unbounded window is not an invention either: it is exactly what
+            # ``dna.memory.decay.currently_valid`` has always meant by an unset
+            # ``valid_to``, stated in the schema instead of re-derived in
+            # Python. ``ValidWindow.bounded`` is how a reader still tells "said
+            # nothing" from "said always".
+            sa.Column(
+                "valid_at",
+                TSTZRANGE,
+                nullable=False,
+                server_default=sa.text(
+                    "tstzrange('-infinity'::timestamptz, "
+                    "'infinity'::timestamptz, '[)')"
+                ),
+            ),
+            # The invariant, stated where it can be enforced: ONE instance has
+            # at most ONE state true at any world instant. ``id`` and not the
+            # natural key, because identity is what a validity period belongs
+            # to and a rename must not split the history (i-114). Rows with a
+            # NULL ``id`` are skipped by the constraint — correctly: a row with
+            # no identity cannot conflict with another row's identity.
+            #
+            # ⚠️ Needs ``btree_gist`` for the ``=`` half over a TEXT id (GiST
+            # speaks ranges natively and nothing else). Confirmed on the Azure
+            # Flexible Server allowlist — 1.7 on PG16, no
+            # ``shared_preload_libraries`` — and the revision CREATEs it.
+            ExcludeConstraint(
+                (sa.literal_column("id"), "="),
+                (sa.literal_column("valid_at"), "&&"),
+                name=f"{p}instances_valid_at_excl",
+                using="gist",
+            ),
+        ]
+
     instances = sa.Table(
         f"{p}instances", md,
         sa.Column("scope", sa.Text, primary_key=True, nullable=False),
@@ -232,6 +292,7 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         # a store this size. When an instance count makes that false, the fix
         # is a second index with the operator class, not a redesign.
         sa.Index(f"{p}instances_id_idx", "tenant", "id"),
+        *valid_time_args,
     )
 
     versions = sa.Table(

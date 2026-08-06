@@ -388,6 +388,10 @@
         {
           "py": "edge_graph",
           "note": "The store keeps the DERIVED reference graph (declared-relation edges) and can walk it (traverse_edges). Separate from the 'edges' write kwarg, and asked BEFORE the read for the same reason as_of_reads is: an adapter that records no edges must make the face answer 'unsupported', never an empty list. An empty list reads as 'nothing points at this instance' — a claim only a store that actually keeps edges may make."
+        },
+        {
+          "py": "valid_time",
+          "note": "The store keeps WORLD time as a COLUMN (dna_instances.valid_at, a tstzrange) and can be asked 'was this true at T?' (load_one_valid_at), refusing two overlapping validity periods for one instance. NOT the same axis as as_of_reads: that one is TRANSACTION time (what the store believed), this one is WORLD time (when the fact was true), and a store can have either without the other — collapsing them is the classic bitemporal mistake. The ONLY flag whose value depends on the BINDING rather than the class: SqlAlchemySource declares True on Postgres and False on SQLite, which has no range type, no GiST and no EXCLUDE constraint (spec-topologia-do-grafo fatia 3)."
         }
       ]
     },

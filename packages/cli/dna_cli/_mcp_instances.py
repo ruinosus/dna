@@ -207,6 +207,7 @@ def register_instance_tools(
     async def get_instance(
         kind: str, name: str, scope: str | None = None,
         api_version: str | None = None, as_of: str | None = None,
+        valid_at: str | None = None,
     ) -> dict[str, Any]:
         """Read one instance verbatim (``apiVersion`` / ``kind`` / ``metadata``
         / ``spec``), as your layer sees it — the per-tenant overlay wins over the
@@ -243,7 +244,27 @@ def register_instance_tools(
           capability is consulted: a typo is the caller's, not the deployment's.
 
         Same four outcomes, same wording, as ``GET /v1/kinds/{kind}/instances/
-        {name}?as_of=`` (there: 501 / 410 / 404 / 422)."""
+        {name}?as_of=`` (there: 501 / 410 / 404 / 422).
+
+        ``valid_at`` (ISO-8601 instant) reads the OTHER time axis — **world
+        time**: *was the fact this instance states TRUE at that moment?*, from
+        ``dna_instances.valid_at``. Two parameters and not one, because they
+        answer different questions and the difference is the point: a note
+        written today about last year is **valid** last year and **believed**
+        today, so ``valid_at=<last year>`` finds it and ``as_of=<last year>``
+        does not. "Which memories did we hold as true last March" is a
+        ``valid_at`` question; "what did this Issue SAY last March" is an
+        ``as_of`` one.
+
+        * outside the window → *"no X named … was valid at …"*, which is an
+          ANSWER: the instance exists and was not true then.
+        * a deployment whose store keeps no world-time column (SQLite, the
+          filesystem) → ``ValidTimeUnsupported``, never the instance unfiltered.
+        * ``as_of`` and ``valid_at`` **together** → ``ValueError``. The true
+          bitemporal intersection needs the validity window on the version rows
+          and ``dna_versions`` has none; answering one axis while the caller
+          asked for both is the silent wrong answer this whole family of
+          parameters exists to refuse."""
         port, tenant = await _guard_for(
             kind, api_version, scope=scope, family_op="read")
         # ``CAPABILITY_REFUSALS`` (= ``dna.kernel.errors.CapabilityRefusal``) is
@@ -257,6 +278,7 @@ def register_instance_tools(
             return await D.get_instance_impl(
                 await live(), kind=port.kind, api_version=port.api_version,
                 name=name, scope=scope, tenant=tenant, as_of=as_of,
+                valid_at=valid_at,
             )
         except CAPABILITY_REFUSALS as exc:
             raise ToolError(f"{type(exc).__name__}: {exc}") from None

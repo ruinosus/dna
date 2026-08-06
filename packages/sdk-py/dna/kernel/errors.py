@@ -74,7 +74,17 @@ class CapabilityRefusal(Exception):
     ``GraphUnsupported``            **501**    ``[]`` — reads as *nothing points
                                                at this instance*
     ``InstanceIdLookupUnsupported`` **501**    an empty result set
+    ``ValidTimeUnsupported``        **501**    the instance UNFILTERED — which
+                                               asserts *"yes, it was true
+                                               then"* from a store with no
+                                               world-time column
     ==============================  =========  ================================
+
+    ⚠️ ``AsOfUnsupported`` and ``ValidTimeUnsupported`` are two axes, not two
+    spellings: the first is TRANSACTION time (*what did you believe at T*), the
+    second is WORLD time (*when was it true*). A deployment can have either
+    without the other, and the SQLite binding of ``SqlAlchemySource`` is exactly
+    that case — full version history, no validity column.
 
     **Why a base and not a tuple.** There was a tuple:
     ``dna_cli._mcp_refusals.CAPABILITY_REFUSALS`` listed the four by hand and

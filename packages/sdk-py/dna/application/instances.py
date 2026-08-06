@@ -685,6 +685,7 @@ async def get_instance_impl(
     live: LiveDna, *, kind: str, name: str, scope: str | None = None,
     tenant: str | None = None, api_version: str | None = None,
     as_of: str | None = None,
+    valid_at: str | None = None,
 ) -> dict[str, Any]:
     """Read one instance verbatim, as the caller's layer sees it.
 
@@ -710,6 +711,33 @@ async def get_instance_impl(
       ``as_of`` those two ARE the same statement (nothing was there), while
       "pruned" is not, and only the pruned case gets its own type.
 
+    **``valid_at`` (ISO-8601) reads the OTHER axis** — WORLD time: *was the fact
+    this instance states TRUE at that instant?*, from ``dna_instances.valid_at``
+    (a ``tstzrange``, revision 0010). It is a different question from ``as_of``
+    and the two are separate parameters for that reason alone: a note written
+    today about last year is **valid** last year and **believed** today, so
+    ``valid_at=<last year>`` finds it and ``as_of=<last year>`` must not.
+    Confusing the two is the classic bitemporal mistake, and a single parameter
+    serving both would make it unavoidable.
+
+    Three outcomes, and the middle one is the whole reason this is a parameter:
+
+    * inside the window → the instance, plus ``valid_at`` echoed so a world-time
+      read is never mistaken for a live one;
+    * outside it → ``LookupError``, an ANSWER — the instance exists and was not
+      true then;
+    * a store with no world-time column →
+      :class:`~dna.kernel.valid_time.ValidTimeUnsupported` (501). Never the
+      instance unfiltered, which would assert *"yes, it was true then"* on no
+      evidence at all.
+
+    ⚠️ ``as_of`` and ``valid_at`` together are REFUSED as a ``ValueError``, and
+    that is a named gap rather than an oversight. The genuine bitemporal read —
+    *what did this store believe at T1 about what was true at T2* — needs the
+    validity window on the VERSION rows, and ``dna_versions`` does not carry
+    one. Serving whichever axis happened to be checked first would answer a
+    question nobody asked, in the shape of one they did.
+
     ``etag`` is computed over whatever spec is returned, so a follow-up write
     carrying a historical etag as ``if_match`` refuses as stale instead of
     quietly rewinding the instance.
@@ -721,6 +749,11 @@ async def get_instance_impl(
 
     sc = scope or live.default_scope(tenant)
     port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
+    if valid_at is not None:
+        return await _get_instance_valid_at(
+            live, scope=sc, port=port, name=name, tenant=tenant,
+            valid_at=valid_at, as_of=as_of,
+        )
     if as_of is None:
         raw = await live.kernel.get_instance(sc, port.kind, name, tenant=tenant)
         if raw is None:
@@ -769,6 +802,70 @@ async def get_instance_impl(
         "as_of": as_of_iso,
         "as_of_version": res.version,
         "as_of_recorded_at": res.recorded_at,
+    }
+
+
+async def _get_instance_valid_at(
+    live: LiveDna, *, scope: str, port: Any, name: str,
+    tenant: str | None, valid_at: str, as_of: str | None,
+) -> dict[str, Any]:
+    """The WORLD-time branch of :func:`get_instance_impl`.
+
+    Its own function rather than another arm inside the caller, because the two
+    axes share nothing but the address they resolve: different column, different
+    adapter method, different refusal, different echoed fields. Interleaving
+    them is how a later edit ends up applying one filter and reporting the
+    other.
+    """
+    from dna.kernel.valid_time import (
+        ValidTimeUnsupported, normalize_valid_at, store_supports_valid_time,
+    )
+
+    if as_of is not None:
+        # BEFORE the capability check, and before the store is touched: this is
+        # a statement about what this face implements, not about the deployment,
+        # so it must not arrive dressed as a 501 the caller could fix by
+        # switching adapters.
+        raise ValueError(
+            "as_of and valid_at ask about DIFFERENT time axes and cannot be "
+            "combined on this read: as_of is transaction time (what this store "
+            "believed at T, from dna_versions), valid_at is world time (when the "
+            "fact was true, from dna_instances.valid_at). The bitemporal "
+            "intersection would need the validity window on the version rows, "
+            "which dna_versions does not carry. Ask one axis at a time."
+        )
+    # ValueError on a typo, BEFORE the capability is consulted — a bad instant
+    # is the caller's mistake and has a different remedy from a store that
+    # cannot answer at all.
+    instant = normalize_valid_at(valid_at)
+    if not store_supports_valid_time(live.kernel):
+        raise ValidTimeUnsupported(
+            f"get_instance(valid_at=...) needs a store that keeps the validity "
+            f"window as a column (dna_instances.valid_at); this deployment's "
+            f"source does not. Refusing rather than returning {port.kind} "
+            f"{name!r} unfiltered, which would assert it was true at "
+            f"{instant.isoformat()} on no evidence."
+        )
+    raw = await live.kernel._source.load_one_valid_at(
+        scope, port.kind, name,
+        valid_at=instant, tenant=tenant, api_version=port.api_version,
+    )
+    if raw is None:
+        # An ANSWER, not a refusal, and worded so the two cannot be confused:
+        # the store HAS the column, looked, and the window does not contain the
+        # instant. ``ValidTimeUnsupported`` above is the other statement.
+        raise LookupError(
+            f"no {port.kind} named {name!r} in scope {scope!r} was valid at "
+            f"{instant.isoformat()} — either it does not exist, or its declared "
+            f"validity window does not contain that instant."
+        )
+    return {
+        "scope": scope, "kind": port.kind, "api_version": port.api_version,
+        "name": name, "instance": raw,
+        "etag": spec_etag(raw.get("spec") if isinstance(raw, dict) else None),
+        # Echoed for the same reason ``as_of`` is: a caller that only looks at
+        # ``instance`` must still be able to tell this from a live read.
+        "valid_at": instant.isoformat(),
     }
 
 

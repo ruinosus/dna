@@ -293,6 +293,14 @@ class SqlAlchemySource(WritableSourcePort):
             _PgOutboxEmitter(self) if self._is_pg else _NullEventEmitter()
         )
         self.supports_cross_process_invalidation = self._is_pg
+        # [dialect] WORLD time is a pg-only column (revision 0010): sqlite has
+        # no range type, no GiST and no EXCLUDE constraint, so it gets neither
+        # the column nor the invariant. Declared as an ATTRIBUTE, not derived
+        # from the method, because ``load_one_valid_at`` is defined on this
+        # class for BOTH dialects (on sqlite it refuses) — a reflection oracle
+        # that probed the method would certify a declaration that lies. Same
+        # shape, same reason, as ``supports_cross_process_invalidation`` above.
+        self.supports_valid_time = self._is_pg
 
     # ------------------------------------------------------------------
     # Table metadata — the ONE model, shared with Alembic autogenerate
@@ -1275,6 +1283,21 @@ class SqlAlchemySource(WritableSourcePort):
         # by another route, and two identities is strictly worse than none.
         from dna.kernel.identity import instance_id_of
         instance_id = instance_id_of(raw)
+        # [dialect] WORLD time — the same PROJECTION discipline as ``id`` one
+        # line up, applied to the other axis. ``spec.valid_from`` /
+        # ``spec.valid_to`` are the authored fact and stay authoritative; the
+        # column is derived from them on EVERY save, so there is no second way
+        # to set it and no way for the two to disagree.
+        #
+        # ⭐ This is why the column is not a capability without a door: nothing
+        # new has to learn to write it. ``dna.memory.remember`` already seeds
+        # ``valid_from`` and ``dna.memory.forget`` already writes ``valid_to``
+        # — both reachable from the MCP face, the CLI and a raw
+        # ``write_instance`` on any Kind that carries the fields — and every
+        # one of those writes lands here. Measured on the founder's store
+        # (06/08/2026): 14 instances already carry a lower bound and 2 a closed
+        # upper bound, so the column is populated by the first save of each.
+        valid_at = self._valid_at_values(raw)
         d, v = self.instances, self.versions
         doc_tenant = self._doc_tenant(tenant)
         # The write HOLDS the instance, so it always knows the exact Kind —
@@ -1325,6 +1348,14 @@ class SqlAlchemySource(WritableSourcePort):
                     scope=scope, kind=kind, api_version=api_version, name=name,
                     content=content, id=instance_id,
                     version=0, updated_at=_now(), tenant=doc_tenant,
+                    # The placeholder carries the REAL window, not the default.
+                    # An ``if_absent`` claim that inserted the unbounded default
+                    # and left the final upsert to correct it would, for the
+                    # duration of this transaction, assert a validity period the
+                    # instance never declared — and the EXCLUDE constraint judges
+                    # rows as they are INSERTED, so a claim under the wrong window
+                    # can be refused for overlapping something it does not.
+                    **valid_at,
                 ).on_conflict_do_nothing(
                     index_elements=self._doc_conflict_cols(),
                 )
@@ -1386,6 +1417,7 @@ class SqlAlchemySource(WritableSourcePort):
                 scope=scope, kind=kind, api_version=api_version, name=name,
                 content=content, id=instance_id,
                 version=next_version, updated_at=_now(), tenant=doc_tenant,
+                **valid_at,
             )
             await conn.execute(ins.on_conflict_do_update(
                 index_elements=self._doc_conflict_cols(),
@@ -1393,6 +1425,18 @@ class SqlAlchemySource(WritableSourcePort):
                     "content": ins.excluded.content,
                     "version": ins.excluded.version,
                     "updated_at": ins.excluded.updated_at,
+                    # Plain assignment, NOT the COALESCE the id gets below, and
+                    # the asymmetry is the point. An id is minted once and never
+                    # changes, so a write that omits it is a caller that does not
+                    # know it, and keeping the stored value is the only
+                    # non-destructive reading. A validity window is the OPPOSITE:
+                    # it is re-derived from ``spec`` on every save, so an
+                    # instance whose ``valid_to`` was cleared by an authored edit
+                    # must see the column reopen. COALESCE here would make
+                    # ``forget`` permanent and un-undoable at the column level
+                    # while the JSON said otherwise — two sources of truth for
+                    # one fact, disagreeing silently.
+                    **({"valid_at": ins.excluded.valid_at} if valid_at else {}),
                     # COALESCE and not a plain assignment: a write that arrives
                     # WITHOUT an id (a caller below the kernel, a legacy path,
                     # an adapter test) must not erase the identity the row
@@ -2162,6 +2206,97 @@ class SqlAlchemySource(WritableSourcePort):
                 }
         return {"raw": None, "version": None, "recorded_at": None, "truncated": False}
 
+    # ------------------------------------------------------------------
+    # WORLD time — the OTHER axis (revision 0010, spec-topologia fatia 3)
+    # ------------------------------------------------------------------
+
+    def _valid_at_values(self, raw: object) -> dict[str, Any]:
+        """``{"valid_at": Range(...)}`` on pg, ``{}`` on sqlite.
+
+        A dict rather than a value so the sqlite path emits no column at all:
+        there IS no ``valid_at`` on that dialect (see ``schema.py``), and
+        passing ``None`` for it would be a different statement — "the column
+        exists and this row declines to fill it".
+
+        The window itself comes from :func:`dna.kernel.valid_time.valid_window_of`
+        — the SAME function revision 0010's backfill mirrors in SQL. If the two
+        ever disagreed, the column would mean one thing on rows written before
+        the migration and another on rows written after, and nobody would find
+        out, because both readings are plausible.
+        """
+        if not self._is_pg:
+            return {}
+        from sqlalchemy.dialects.postgresql import Range
+
+        from dna.kernel.valid_time import valid_window_of
+        w = valid_window_of(raw)
+        # ``Range(None, None)`` is UNBOUNDED on both ends, not empty — the same
+        # ``(-infinity, infinity)`` the column defaults to. An instance that
+        # says nothing about world time is true for all of it, which is exactly
+        # what ``dna.memory.decay.currently_valid`` has always meant.
+        return {"valid_at": Range(w.lower, w.upper, bounds="[)")}
+
+    async def load_one_valid_at(
+        self, scope: str, kind: str, name: str, *,
+        valid_at: Any,
+        tenant: str | None = None,
+        api_version: str | None = None,
+    ) -> dict[str, Any] | None:
+        """WORLD-time read — the instance IF the fact it states was true at ``valid_at``.
+
+        The mirror of :meth:`load_one_as_of`, one axis over, and the pair is
+        only useful because they are separate. ``as_of`` asks *what did this
+        store BELIEVE at T* and reads ``dna_versions.created_at``. This asks
+        *was this TRUE at T* and reads ``dna_instances.valid_at``. A note
+        written today about last year is found by this read at last year and
+        must not be found by that one.
+
+        Returns the same shape as :meth:`load_one` (the envelope dict) or
+        ``None`` — and ``None`` here is an ANSWER, not a refusal: the instance
+        exists and its declared window does not contain that instant. The
+        refusal is :class:`~dna.kernel.valid_time.ValidTimeUnsupported`, raised
+        below when this binding has no column, because a store without the
+        column filtering nothing and returning the row would be answering *"yes,
+        it was true then"* on no evidence whatsoever.
+
+        The predicate is ``valid_at @> :instant`` — evaluated by the GiST index
+        the EXCLUDE constraint already maintains, so the world-time filter costs
+        nothing extra to keep. Half-open ``[from, to)``: an instance whose
+        window ends at T is NOT current at T, which is what lets a supersession
+        chain hand off cleanly.
+        """
+        if not self._is_pg:
+            from dna.kernel.valid_time import ValidTimeUnsupported
+            raise ValidTimeUnsupported(
+                f"world-time reads need a store that keeps the validity window "
+                f"as a column; this deployment's source is bound to "
+                f"{self._engine.dialect.name!r}, which has no range type, no "
+                f"GiST and no EXCLUDE constraint, so revision 0010 does not "
+                f"create the column there. Refusing rather than returning "
+                f"{kind} {name!r} unfiltered, which would assert it was true at "
+                f"an instant this store cannot check."
+            )
+        from dna.kernel.valid_time import normalize_valid_at
+        instant = normalize_valid_at(valid_at)
+        d = self.instances
+        # Overlay first, base second — the same precedence ``_load_one_on`` and
+        # ``load_one_as_of`` use, so a world-time read resolves the tenant lane
+        # a live read would have.
+        tenant_candidates: list[str | None] = [tenant, None] if tenant else [None]
+        async with self._engine.connect() as conn:
+            for t in tenant_candidates:
+                row = (await conn.execute(
+                    sa.select(d.c.content).where(
+                        d.c.scope == scope, d.c.kind == kind, d.c.name == name,
+                        *self._api_version_where(d.c.api_version, api_version),
+                        self._tenant_where(d.c.tenant, t),
+                        d.c.valid_at.contains(instant),
+                    ).limit(1)
+                )).first()
+                if row is not None:
+                    return json.loads(row.content)
+        return None
+
     async def load_drafts(self, scope: str) -> list[dict]:
         v = self.versions
         # Grouped by (kind, apiVersion, name): two Kinds sharing a name keep
@@ -2496,4 +2631,11 @@ class SqlAlchemySource(WritableSourcePort):
             # `traverse_edges`. Both halves, or the face would be entitled to
             # serve an empty list it cannot back.
             edge_graph=True,
+            # [dialect] the ONE capability that differs between this class's two
+            # bindings. Postgres has ``dna_instances.valid_at`` (a ``tstzrange``)
+            # plus the EXCLUDE constraint that makes overlapping validity
+            # periods impossible; SQLite has no range type, no GiST and no
+            # EXCLUDE, so revision 0010 does not create the column there and
+            # ``load_one_valid_at`` refuses instead of filtering nothing.
+            valid_time=self.supports_valid_time,
         )
