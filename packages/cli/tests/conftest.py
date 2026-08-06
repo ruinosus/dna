@@ -198,7 +198,27 @@ class FakeKernel:
     async def get_document(self, scope, kind, name):
         return self._store.get((scope, kind, name))
 
-    async def write_document(self, scope, kind, name, raw, **_):
+    async def query(self, scope, kind, *, projection=None, **_):
+        """The enumeration the ``dna.application.sdlc`` cores read before writing.
+
+        Honors ``projection=["name"]`` because the real kernel does, and a
+        projected row comes back FLAT (``{"name": …}``) with no ``metadata``
+        envelope. A double that always returned the full raw would let a caller
+        read ``row["metadata"]["name"]`` and pass against a shape production
+        never sends."""
+        for (sc, kd, nm), raw in list(self._store.items()):
+            if sc == scope and kd == kind:
+                yield {"name": nm} if projection == ["name"] else raw
+
+    async def write_document(self, scope, kind, name, raw, *, if_absent=False, **_):
+        # ``if_absent`` is the ATOMIC CREATE the create cores rely on; a double
+        # that accepted the kwarg and ignored it would report a guarantee the
+        # command does not have.
+        if if_absent and (scope, kind, name) in self._store:
+            from dna.kernel.errors import DocumentNameTaken
+
+            raise DocumentNameTaken(
+                f"{kind} {name!r} already exists in scope {scope!r}")
         self._store[(scope, kind, name)] = raw
         return "v1"
 

@@ -1,0 +1,41 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  name: i-097-id-de-issue-e-o-numero-mas-a-trava-e-o-nome
+spec:
+  title: O id de uma Issue é o NÚMERO; tudo que o write path tranca é o NOME
+  description: |-
+    MEDIDO no board dna-cloud em 05/08/2026: 13 Issues compartilhando 4 números (i-094 ×4, i-095 ×2, i-096 ×2, i-097 ×5). Cada uma foi escrita por um write que se comportou EXATAMENTE como promete.
+
+    A causa não é um bug de implementação, é o modelo de nome. O nome do documento é 'i-NNN-<slug>'. O claim atômico (write_document if_absent=True, PR #242 + o claim), a chave primária do adapter SQL e o O_EXCL/mkdir do filesystem trancam o NOME. 'i-095-egress-por-plano-copiada-em-duas-apps' e 'i-095-terraform-fases-2-4-decisao' são DOIS nomes. Os dois writes vencem, e estão certos em vencer. O número — que é o id que humanos e agentes usam — não é chave de nada.
+
+    E filtrar o candidato contra a enumeração não resolve: o candidato é max(NNN)+1 calculado DAQUELA MESMA lista, então é livre por construção. Tentei exatamente isso primeiro; o teste escrito para provar a correção continuou verde com a linha apagada. Está registrado como teste em test_sdlc_create_refuses_overwrite.py para que ninguém tente de novo.
+
+    O amplificador que tornou isso rotina: agents em WORKTREES GIT PARALELAS. Duas cópias de trabalho são dois filesystems — nenhum lock, O_EXCL ou PK atravessa as duas — e como os nomes de arquivo diferem, o git merge junta as duas SEM conflito. A colisão só é observável na árvore merjada.
+
+    SEVERIDADE: não é corrupção. O CLI resolve por nome completo, então 'issue comment i-095' responde not found em vez de escrever no item errado. O dano é o número deixar de identificar: 'fix(i-096)' aparece em commits de DUAS issues distintas no dna-cloud.
+
+    O QUE JÁ FOI FEITO nesta branch (fix/sdlc-id-collision):
+    - duplicate_issue_numbers(names) — detecção pura, para rodar no CI sobre a ÁRVORE MERJADA, o único lugar onde os dois escritores se encontram.
+    - 'dna sdlc issue file' passou a DELEGAR ao core create_issue. Ele computava max+1 e chamava write_document pelado: sem probe (#242) e sem claim atômico — a face que mais file Issue era a única sem nenhuma das proteções. Agora avisa em stderr quando o board já tem ids duplicados.
+    - o probe do fallback (adapter sem if_absent) passou a perguntar pelo NÚMERO (issue_number_is_free) em vez do nome completo, que era uma pergunta que ninguém fazia.
+    - 'issue import' (bridge GitHub) ganhou o claim atômico que não tinha.
+    - test_sdlc_create_refuses_overwrite.py: o _HidingKernel NÃO escondia nada — filtrava row['metadata']['name'], e create_issue empurra projection=['name'], cujo row volta PLANO. Todo teste construído sobre ele era verde pelo motivo errado. Corrigido, e o teste que dependia dele passou a afirmar o que é verdade.
+
+    O QUE FALTA — DECISÃO DE MODELO DE DADOS, não conserto:
+    (a) o nome do doc passa a ser só 'i-NNN' e o slug vira spec.title. Um só caminho de arquivo: if_absent vira uma trava REAL de número, e duas worktrees geram um CONFLITO de merge de verdade. Fecha os dois casos. Custo: renomeia o esquema inteiro de nomes, e números já publicados em PR/commit/docs não podem ser tocados.
+    (b) um Kind alocador/sequência com chave no número.
+    (c) não mudar nada e viver com detecção no CI (o que o dna-cloud fez, com baseline dos 13).
+
+    Até (a) ou (b), o CI é a guarda.
+  type: bug
+  severity: medium
+  status: open
+  created_at: '2026-08-06T02:33:46+00:00'
+  updated_at: '2026-08-06T02:33:46+00:00'
+  timeline:
+  - at: '2026-08-06T02:33:46+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

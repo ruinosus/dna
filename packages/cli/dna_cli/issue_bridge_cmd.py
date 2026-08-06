@@ -40,6 +40,9 @@ from typing import Any
 
 import click
 
+from dna.application.sdlc import next_issue_number as _core_next_issue_number
+from dna.kernel.errors import DocumentNameTaken
+
 from dna_cli import _github_bridge as gb
 from dna_cli._ctx import fail, open_session
 from dna_cli.pr_cmd import _anchor_source_to_repo_root
@@ -49,6 +52,7 @@ from dna_cli.sdlc_cmd import (
     _next_issue_number,
     _now_iso,
     _scope_option,
+    _warn_duplicate_issue_numbers,
     issue_group,
 )
 
@@ -230,7 +234,9 @@ def cmd_issue_import(ref: str, repo: str | None, scope: str) -> None:
     )
 
     with open_session(scope) as s:
+        names: list[str] = []
         for existing in s.query_list("Issue"):
+            names.append(existing.name)
             espec = existing.spec if isinstance(existing.spec, dict) else {}
             if espec.get("github_number") == number:
                 click.secho(
@@ -238,9 +244,31 @@ def cmd_issue_import(ref: str, repo: str | None, scope: str) -> None:
                     f"— nada a fazer.", fg="yellow",
                 )
                 return
-        name = f"i-{_next_issue_number(scope):03d}-gh{number}-{gb.slug_from_title(spec['title'])}"
-        raw = _build_raw("Issue", name, spec)
-        s.run(s.kernel.write_document(scope, "Issue", name, raw))
+        _warn_duplicate_issue_numbers(names)
+        # The name is claimed ATOMICALLY (`if_absent`), like `create_issue`
+        # does — this path cannot delegate to it (the spec comes from GitHub,
+        # not from `build_issue_spec`), and it used to write bare, so a name
+        # guessed twice was an overwrite. It claims the NAME, not the number:
+        # see `duplicate_issue_numbers` for why nothing here can do better.
+        start = _core_next_issue_number(names)
+        slug = f"gh{number}-{gb.slug_from_title(spec['title'])}"
+        name = ""
+        for candidate in range(start, start + 1000):
+            name = f"i-{candidate:03d}-{slug}"
+            raw = _build_raw("Issue", name, spec)
+            try:
+                s.run(s.kernel.write_document(
+                    scope, "Issue", name, raw, if_absent=True))
+                break
+            except NotImplementedError:
+                s.run(s.kernel.write_document(scope, "Issue", name, raw))
+                break
+            except DocumentNameTaken:
+                continue
+        else:  # pragma: no cover — 1000 consecutive taken names
+            raise fail(
+                f"nenhum nome livre para Issue a partir de "
+                f"i-{start:03d} no scope {scope!r}")
 
     click.secho(
         f"IMPORTED {repo_full}#{number} → Issue/{name} "

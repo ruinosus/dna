@@ -64,6 +64,8 @@ from dna.application.sdlc import (  # noqa: E402, F401 — enums re-exported for
     append_event as _core_append_event,
     build_issue_spec as _core_build_issue_spec,
     build_raw as _core_build_raw,
+    create_issue as _core_create_issue,
+    duplicate_issue_numbers as _core_duplicate_issue_numbers,
     next_issue_number as _core_next_issue_number,
 )
 
@@ -1970,6 +1972,34 @@ def _next_issue_number(scope: str) -> int:
     return _core_next_issue_number(existing)
 
 
+def _warn_duplicate_issue_numbers(names: list[str]) -> None:
+    """Say out loud that the board already has ids claimed twice.
+
+    The allocator cannot PREVENT this — two agents in two git worktrees are two
+    filesystems, they pick the same ``max+1``, and because the slugs differ git
+    merges both without a conflict (dna-cloud, 05/08/2026: 13 Issues on 4
+    numbers). Detection is the only move available, and this is the cheapest
+    place to spend it: filing an Issue already reads every Issue name, and the
+    person running it is the person doing board work. CI should check the same
+    thing on the merged tree — that is where the two trees actually meet."""
+    dupes = _core_duplicate_issue_numbers(names)
+    if not dupes:
+        return
+    click.secho(
+        f"⚠️  {len(dupes)} id(s) de Issue reivindicado(s) por mais de um "
+        f"documento — o número deixou de identificar:", fg="yellow", err=True,
+    )
+    for number, colliding in dupes.items():
+        click.secho(f"    i-{number:03d}: {', '.join(colliding)}", fg="yellow", err=True)
+    click.secho(
+        "    Causa: `issue file` numera por max(NNN)+1 lido da fonte; worktrees "
+        "paralelas leem o mesmo estado e o merge não conflita (nomes diferentes).\n"
+        "    O CLI resolve por nome COMPLETO, então nada foi sobrescrito — mas "
+        "abreviar o id não funciona. Renumere o mais novo, ou registre a exceção.",
+        fg="yellow", err=True,
+    )
+
+
 @sdlc.group("feature")
 def feature_group() -> None:
     """Feature-level operations."""
@@ -2492,25 +2522,25 @@ def cmd_issue_file(
     scope: str,
 ) -> None:
     """File a new Issue with auto-incremented i-NNN-<slug> name."""
-    n = _next_issue_number(scope)
-    name = f"i-{n:03d}-{slug}"
-    # ONE builder for both faces (i-078). This command used to hand-assemble a
-    # spec that looked identical to `build_issue_spec`'s and diverged from it
-    # in the one field that mattered: neither stamped `created_at`, so fixing
-    # only the MCP tool would have left the CLI filing Issues the digest can
-    # never see. The shared core is the write path now.
-    spec = _core_build_issue_spec(
-        description=description, issue_type=issue_type, severity=severity,
-        status="open", title=title, owner=owner,
-        related_feature=related_feature, related_finding=related_finding,
-        now=_now_iso(), actor=_cli_actor(), source="cli",
-    )
-
-    raw = _build_raw("Issue", name, spec)
+    # ONE builder for both faces (i-078) becomes ONE WRITE PATH for both faces.
+    # This command used to compute `max(NNN)+1` itself and then call
+    # `write_document` bare — so the CLI, which is how nearly every Issue is
+    # actually filed, was the one face carrying NONE of the protections
+    # `create_issue` had accumulated: no existence probe (#242) and no
+    # `if_absent` atomic claim, i.e. a name guessed twice was an overwrite.
+    # Delegating means the next fix to the allocator reaches the CLI by
+    # existing, instead of by being ported.
     with open_session(scope) as s:
-        s.run(s.kernel.write_document(scope, "Issue", name, raw))
+        _warn_duplicate_issue_numbers([i.name for i in s.query_list("Issue")])
+        out = s.run(_core_create_issue(
+            s.kernel, scope, slug, description=description,
+            issue_type=issue_type, severity=severity, status="open",
+            title=title, owner=owner, related_feature=related_feature,
+            related_finding=related_finding,
+            actor=_cli_actor(), source="cli",
+        ))
     click.secho(
-        f"FILED Issue/{name} ({issue_type}/{severity})",
+        f"FILED Issue/{out['name']} ({issue_type}/{severity})",
         fg="yellow",
     )
 
