@@ -92,12 +92,10 @@
       },
       "spec_ref": {
         "type": "string",
-        "description": "Name of the Spec this plan implements.",
-        "x-dna-ref": "Spec"
+        "description": "Name of the Spec this plan implements."
       },
       "epic": {
-        "type": "string",
-        "x-dna-ref": "Epic"
+        "type": "string"
       },
       "authors": {
         "type": "array",

@@ -90,10 +90,14 @@ spec:
         description: >-
           The assigned PricingPlan's id, e.g. free, pro, enterprise. Resolved to
           caps via kernel.tier(tier_id) — never a literal in code. This IS a
-          reference, and it is deliberately NOT declared with `x-dna-ref` — the
+          reference, and it is deliberately NOT declared as a relation — the
           resolver matches `PricingPlan.spec.tier_id` first and
           `PricingPlan.spec.aliases[]` second, in the `_lib` scope, and NEVER
-          the document name, while `x-dna-ref` resolves by document name only.
+          the document name, while the kernel resolves by document name only.
+          `by: tier_id` would DESCRIBE the addressing without resolving
+          it, which is legal — but it would describe only HALF the live
+          rule (the alias fallback has nowhere to go), and a partial
+          description of a live rule is the thing to avoid.
           Declaring it would install a SECOND resolution rule that can disagree
           with the live one (an alias-keyed binding is valid data the write path
           would then veto). It is a keyed reference, the same shape as

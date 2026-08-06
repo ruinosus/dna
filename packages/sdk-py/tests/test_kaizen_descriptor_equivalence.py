@@ -49,10 +49,14 @@ GOLDEN_SCHEMA = {
         },
         "work_item": {
             "type": "string",
-            # Re-frozen 2026-08-06: `x-dna-ref-composite` added. The class this
-            # golden was captured from had no such annotation because the
-            # keyword did not exist; the VALUE contract is untouched.
-            "x-dna-ref-composite": "Kind/slug",
+            # Re-frozen 2026-08-06 twice, and the second time UNDID the first.
+            # `x-dna-ref-composite: Kind/slug` was added here in the morning and
+            # is gone by the afternoon: the declaration moved out of the JSON
+            # Schema entirely and into `spec.relations` (see
+            # kinds/kaizen.kind.yaml, where the form is normalized to
+            # `Kind/name` — a document's slug IS its name). The golden is
+            # therefore back to the shape the ORIGINAL class produced, and the
+            # VALUE contract never moved at all.
             "description": "Kind/slug of the work item where this was observed (polymorphic — Story/Spike/Issue).",
         },
         "issue": {

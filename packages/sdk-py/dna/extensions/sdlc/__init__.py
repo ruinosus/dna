@@ -322,6 +322,18 @@ class EpicKind(KindBase):
         "dated release; otherwise it's a pure aggregation umbrella. "
         "status moves through planning → in-progress → done."
     )
+    # An Epic's half of the Epic⇄Feature pair. ``inverse_of`` is what makes the
+    # two declarations ONE relation instead of two that happen to face each
+    # other; ``FeatureKind.relations["epic"]`` carries the other half, and the
+    # registry lint fails if either side goes missing.
+    relations = {
+        "features": {
+            "to": "Feature", "cardinality": "many", "inverse_of": "epic",
+        },
+        "produces": {
+            "to": "*", "cardinality": "many", "by": "{kind, name}",
+        },
+    }
 
     def dep_filters(self) -> dict[str, str]:
         return {"features": "sdlc-feature"}
@@ -351,7 +363,6 @@ class EpicKind(KindBase):
                 },
                 "features": {
                     "type": "array", "items": {"type": "string"},
-                    "x-dna-ref": "Feature",
                 },
                 "closed_at": {"type": "string", "format": "date-time"},
                 "cancelled_reason": {"type": "string"},
@@ -429,6 +440,25 @@ class FeatureKind(KindBase):
         "Its status reflects the development pipeline: discovery → "
         "in-development → done."
     )
+    # The Feature sits between BOTH pairs the model has, and carries one half
+    # of each: ``epic`` answers ``EpicKind.relations["features"]``, ``stories``
+    # answers ``StoryKind``'s ``feature`` (declared in kinds/story.kind.yaml).
+    # Two pairs, four declarations, and now each one names its partner.
+    relations = {
+        "epic": {
+            "to": "Epic", "cardinality": "one", "inverse_of": "features",
+        },
+        "stories": {
+            "to": "Story", "cardinality": "many", "inverse_of": "feature",
+        },
+        # Points at a Sprint by DOCUMENT NAME, which for a Sprint is also its
+        # sprint_id — the Kind is deliberately named by its id, so `by: name`
+        # is the truth here and not a convenience.
+        "sprint_ref": {"to": "Sprint", "cardinality": "one"},
+        "produces": {
+            "to": "*", "cardinality": "many", "by": "{kind, name}",
+        },
+    }
 
     def dep_filters(self) -> dict[str, str]:
         return {
@@ -485,11 +515,9 @@ class FeatureKind(KindBase):
                 "status": {"type": "string", "enum": list(FEATURE_STATUSES)},
                 "epic": {
                     "type": "string", "description": "Parent Epic name",
-                    "x-dna-ref": "Epic",
                 },
                 "stories": {
                     "type": "array", "items": {"type": "string"},
-                    "x-dna-ref": "Story",
                 },
                 "use_cases": {"type": "array", "items": {"type": "string"}},
                 "owner": {"type": "string", "description": "Actor name"},
@@ -527,7 +555,6 @@ class FeatureKind(KindBase):
                         "Sprint document's NAME, which is also its "
                         "sprint_id (e.g. '2026-Q2-S2')."
                     ),
-                    "x-dna-ref": "Sprint",
                 },
                 "time_tracking": {
                     "type": "object",
@@ -625,6 +652,11 @@ class IssueKind(KindBase):
         "Optional links to a parent Feature (work it belongs to) and a "
         "related Finding (eval-detected origin)."
     )
+    relations = {
+        "produces": {
+            "to": "*", "cardinality": "many", "by": "{kind, name}",
+        },
+    }
 
     def dep_filters(self) -> dict[str, str]:
         return {
@@ -864,6 +896,16 @@ class SpecKind(KindBase):
         "(M:N), NOT via Spec.feature — the axis flip preserves "
         "Jira/Confluence semantics."
     )
+    # No ``inverse_of`` anywhere here, deliberately. ``Story.spec_refs`` points
+    # at Spec and Spec carries no ``stories`` field — declaring an inverse
+    # would be INVENTING a pair rather than recording one, and the registry
+    # lint would (correctly) call it a gap on the very first load. Same for
+    # ``supersedes``: it is self-referential and one-directional; a Spec does
+    # not carry "superseded_by".
+    relations = {
+        "epic": {"to": "Epic", "cardinality": "one"},
+        "supersedes": {"to": "Spec", "cardinality": "one"},
+    }
 
     def dep_filters(self) -> dict[str, str]:
         return {
@@ -963,13 +1005,12 @@ class SpecKind(KindBase):
                         "at runtime."
                     ),
                 },
-                "epic": {"type": "string", "x-dna-ref": "Epic"},
+                "epic": {"type": "string"},
                 "authors": {"type": "array", "items": {"type": "string"}},
                 "tags": {"type": "array", "items": {"type": "string"}},
                 "supersedes": {
                     "type": "string",
                     "description": "Name of the prior Spec this one replaces.",
-                    "x-dna-ref": "Spec",
                 },
                 "summary": {
                     "type": "string",
@@ -1040,12 +1081,18 @@ class AgentSessionKind(KindBase):
         "adapters. Schema is the LCD (lowest-common-denominator) of "
         "the major tools' export formats."
     )
+    relations = {
+        "produced_artifacts": {
+            "to": "*", "cardinality": "many", "by": "{kind, name}",
+        },
+    }
 
     def dep_filters(self) -> dict[str, str]:
         return {
             "participants": "helix-actor",
-            # produced_artifacts is array of {kind, name} — composite ref
-            # not modelable as a flat dep_filter; resolved at render time.
+            # produced_artifacts is a relation, not a dep_filter: its target
+            # Kind travels in the VALUE (`to: "*"`), which a flat alias map
+            # cannot say. See ``relations`` above.
         }
 
     def schema(self) -> dict[str, Any]:
@@ -1203,6 +1250,11 @@ class BugKind(KindBase):
         "sev1-sev5 outage analysis) e Issue umbrella (enhancement/"
         "question/other)."
     )
+    relations = {
+        "produces": {
+            "to": "*", "cardinality": "many", "by": "{kind, name}",
+        },
+    }
 
     def dep_filters(self) -> dict[str, str]:
         return {
@@ -1275,6 +1327,12 @@ class TaskKind(KindBase):
         "A Task is a granular work item (horas-dias) typically as "
         "sub-item of a Story. For multi-day deliverables use Story."
     )
+    relations = {
+        "story_ref": {"to": "Story", "cardinality": "one"},
+        "produces": {
+            "to": "*", "cardinality": "many", "by": "{kind, name}",
+        },
+    }
 
     def dep_filters(self) -> dict[str, str]:
         return {
@@ -1290,7 +1348,7 @@ class TaskKind(KindBase):
                 "title": {"type": "string"},
                 "description": {"type": "string"},
                 "status": {"type": "string", "enum": list(TASK_STATUSES)},
-                "story_ref": {"type": "string", "x-dna-ref": "Story"},
+                "story_ref": {"type": "string"},
                 "owner": {"type": "string"},
                 "estimate_hours": {"type": "number", "minimum": 0},
                 "logged_hours": {"type": "number", "minimum": 0},
@@ -1342,6 +1400,11 @@ class SpikeKind(KindBase):
         "→ Story or ADR). Distinct from Story (work to ship) e "
         "ADR (decision já tomada)."
     )
+    relations = {
+        "produces": {
+            "to": "*", "cardinality": "many", "by": "{kind, name}",
+        },
+    }
 
     def dep_filters(self) -> dict[str, str]:
         return {

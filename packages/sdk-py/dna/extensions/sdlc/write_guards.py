@@ -67,7 +67,7 @@ async def sprint_identity_guard(ctx: PreSaveContext) -> None:
     """A Sprint's ``spec.sprint_id`` MUST equal its document name.
 
     ``Story.sprint_ref`` / ``Feature.sprint_ref`` are declared references
-    (``x-dna-ref: Sprint``), and a declared reference resolves by DOCUMENT
+    (``relations.sprint_ref.to: Sprint``), and a relation resolves by DOCUMENT
     NAME. ``sprint_id`` restates that name inside the spec so it is queryable
     and projectable — which means the two can disagree, and the day they do the
     Kind has two identities: one the graph resolves by and one every human

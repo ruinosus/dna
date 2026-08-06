@@ -2263,7 +2263,7 @@
         "type": "object"
       },
       "GraphRefsResponse": {
-        "description": "``GET /v1/kinds/{kind}/documents/{name}/refs`` — the DATA graph.\n\n``stop`` says WHY the walk ended (``complete`` / ``depth_reached`` /\n``truncated``), because a caller that cannot tell \"this is everything\" from\n\"this is where I stopped\" will render the second as the first.\n\n``graph_producer`` reports the producer's mode (``warn`` / ``enforce`` /\n``off``). With it ``off`` the write path performs no reference lookups, so\nno edges are produced — defensible operationally, and NOT the same as \"this\ndocument has no relations\". A store that keeps no edge graph at all answers\n501, never an empty list.\n\n⚠️ These are the DECLARED relations (``x-dna-ref``) only. The schema graph\nalso carries composition and name-convention edges that were never checked\nagainst data; calling this \"the relations\" would claim a completeness the\nproducer does not have.",
+        "description": "``GET /v1/kinds/{kind}/documents/{name}/refs`` — the DATA graph.\n\n``stop`` says WHY the walk ended (``complete`` / ``depth_reached`` /\n``truncated``), because a caller that cannot tell \"this is everything\" from\n\"this is where I stopped\" will render the second as the first.\n\n``graph_producer`` reports the producer's mode (``warn`` / ``enforce`` /\n``off``). With it ``off`` the write path performs no reference lookups, so\nno edges are produced — defensible operationally, and NOT the same as \"this\ndocument has no relations\". A store that keeps no edge graph at all answers\n501, never an empty list.\n\n⚠️ These are the ENFORCED relations only — the ones ``spec.relations``\ndeclares with a concrete target addressed by document name, which is the\nonly kind the write path resolves. The schema graph also carries relations\naddressed by a domain key or carrying their Kind in the value, plus\ncomposition edges from ``dep_filters``, none of which is ever checked\nagainst data; calling this \"the relations\" would claim a completeness the\nproducer does not have.",
         "properties": {
           "api_version": {
             "title": "Api Version",
@@ -2791,7 +2791,7 @@
         "type": "object"
       },
       "KindGraphCoverage": {
-        "description": "What the graph covers — the numbers a screen must qualify itself with.\n\nThis block exists so that no consumer can honestly render the edge list as\n\"all the relations\". On the 06/08/2026 measurement the model carried 109\nschema edges of which **16** were declared; the rest was composition (66)\nor name inference (27), plus 23 reference-shaped fields left unresolved\nand 16 known-undeclarable ones. Every field here is derived from the\ncollections it counts.",
+        "description": "What the graph covers — the numbers a screen must qualify itself with.\n\nThis block exists so that no consumer can honestly render the edge list as\n\"all the relations\". On the 06/08/2026 measurement, AFTER the relations\nbecame first-class, the model carried 97 schema edges: 47 declared and 50\nfrom composition, of which **21** are actually enforced on write. Every\nfield here is derived from the collections it counts.",
         "properties": {
           "composition": {
             "default": 0,
@@ -2814,20 +2814,18 @@
             "title": "Edges",
             "type": "integer"
           },
-          "enforced_tiers": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Enforced Tiers",
-            "type": "array"
-          },
-          "inferred": {
+          "enforced": {
             "default": 0,
-            "title": "Inferred",
+            "title": "Enforced",
             "type": "integer"
           },
           "kinds": {
             "title": "Kinds",
+            "type": "integer"
+          },
+          "kinds_with_relations": {
+            "default": 0,
+            "title": "Kinds With Relations",
             "type": "integer"
           },
           "limits": {
@@ -2836,16 +2834,6 @@
             },
             "title": "Limits",
             "type": "array"
-          },
-          "suppressed": {
-            "default": 0,
-            "title": "Suppressed",
-            "type": "integer"
-          },
-          "undeclarable": {
-            "default": 0,
-            "title": "Undeclarable",
-            "type": "integer"
           },
           "unresolved": {
             "default": 0,
@@ -2868,8 +2856,13 @@
         "type": "object"
       },
       "KindGraphEdge": {
-        "description": "One SCHEMA edge: Kind ``from_kind`` may point at ``to_kind`` through\n``field``.\n\n``tier`` ranks how much the edge is worth — ``declared`` (``x-dna-ref``,\nthe ONLY tier the kernel resolves at write time), ``composition``\n(``dep_filters``: a real declaration that drives prompt composition and is\nnever checked against stored data), ``inferred`` (the field NAME resolves\nto exactly one registered Kind — a convention, not a contract). A renderer\nthat draws the three alike is asserting a confidence the model does not\nhave; ``coverage.enforced_tiers`` names the ones it does.\n\n``to_kind`` is ALWAYS a registered Kind: a declaration naming a Kind\nnobody registers is a gap, not an edge, and comes back under\n``unresolved``.",
+        "description": "One SCHEMA edge: Kind ``from_kind`` points at ``to_kind`` through the\nrelation ``field``.\n\n``tier`` says where the edge comes from — ``declared`` (``spec.relations``,\nthe Kind's own statement about what it points at) or ``composition``\n(``dep_filters``: a real declaration that drives prompt composition and is\nnever checked against stored data).\n\n⚠️ ``enforced`` is the flag that matters, and it is NOT the same as\n``tier == \"declared\"``. The kernel resolves a relation at write time only\nwhen it has a concrete target Kind AND is addressed by document name\n(``by == \"name\"``). A relation addressed by a spec field of the target\n(``by: workspace_id``) or carrying its Kind in the value (``to: \"*\"``) is\nfully declared and deliberately not resolved. A renderer that draws\nenforced and unenforced edges alike is asserting a confidence the model\ndoes not have.\n\n``to_kind`` is a registered Kind, or ``*`` when the target Kind travels\ninside the VALUE. A declaration naming a Kind nobody registers is a gap,\nnot an edge, and comes back under ``unresolved``.",
         "properties": {
+          "by": {
+            "default": "name",
+            "title": "By",
+            "type": "string"
+          },
           "cardinality": {
             "default": "one",
             "enum": [
@@ -2879,6 +2872,11 @@
             "title": "Cardinality",
             "type": "string"
           },
+          "enforced": {
+            "default": false,
+            "title": "Enforced",
+            "type": "boolean"
+          },
           "field": {
             "title": "Field",
             "type": "string"
@@ -2886,6 +2884,17 @@
           "from_kind": {
             "title": "From Kind",
             "type": "string"
+          },
+          "inverse_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inverse Of"
           },
           "polymorphic": {
             "default": false,
@@ -2895,8 +2904,7 @@
           "tier": {
             "enum": [
               "declared",
-              "composition",
-              "inferred"
+              "composition"
             ],
             "title": "Tier",
             "type": "string"
@@ -2935,7 +2943,7 @@
         "type": "object"
       },
       "KindGraphNode": {
-        "description": "One registered Kind as a node. Identity only — the descriptor\n(``schema``/``ui_schema``) stays behind ``GET /v1/kinds/registry/{kind}``,\nbecause a graph that inlined 76 JSON Schemas would be a download, not a\ngraph.",
+        "description": "One registered Kind as a node. Identity only — the descriptor\n(``schema``/``ui_schema``) stays behind ``GET /v1/kinds/registry/{kind}``,\nbecause a graph that inlined 84 JSON Schemas would be a download, not a\ngraph.",
         "properties": {
           "alias": {
             "default": "",
@@ -2964,7 +2972,7 @@
         "type": "object"
       },
       "KindGraphResponse": {
-        "description": "``GET /v1/graph/kinds`` — the whole SCHEMA graph in one call.\n\nSCHEMA, not data: these edges say which Kinds MAY point at which. Which\nDOCUMENTS actually point at which is a different graph, derived at write\ntime, and this route does not answer it — ``coverage.limits`` carries that\nstatement on the wire so it travels with the answer instead of living in a\ndoc page a caller may never read.",
+        "description": "``GET /v1/graph/kinds`` — the whole SCHEMA graph in one call.\n\nSCHEMA, not data: these edges say which Kinds MAY point at which. Which\nDOCUMENTS actually point at which is a different graph, derived at write\ntime, and this route does not answer it — ``coverage.limits`` carries that\nstatement on the wire so it travels with the answer instead of living in a\ndoc page a caller may never read.\n\nThe ``undeclarable`` list this envelope used to carry is GONE, and its\nabsence is the feature: those rows were real references the annotation\ncould not express, and the declaration expresses them now. They are edges,\nwith ``enforced: false`` saying exactly how far the runtime goes.",
         "properties": {
           "coverage": {
             "$ref": "#/components/schemas/KindGraphCoverage"
@@ -2994,13 +3002,6 @@
             ],
             "title": "Scope"
           },
-          "undeclarable": {
-            "items": {
-              "$ref": "#/components/schemas/KindGraphUndeclarable"
-            },
-            "title": "Undeclarable",
-            "type": "array"
-          },
           "unresolved": {
             "items": {
               "$ref": "#/components/schemas/KindGraphUnresolved"
@@ -3015,38 +3016,20 @@
         "title": "KindGraphResponse",
         "type": "object"
       },
-      "KindGraphUndeclarable": {
-        "description": "A REAL reference that ``x-dna-ref`` deliberately does not declare.\n\nThe annotation resolves a target by document NAME; these fields are keyed\nby something else, so declaring them would produce false write-time\nviolations on perfectly valid data. They are named here rather than\nsilently missing, because a graph that hides them implies a completeness\nthe model does not have. Two families:\n\n* **keyed** — an opaque id, a role id, a tier id. ``target`` names the Kind\n  it really points at. Still hand-kept in the SDK, and the targets are\n  resolved against the live registry by a test, because this table once\n  went on naming ``Tier`` for a release after the Kind became\n  ``PricingPlan``. Concrete backlog for a future ``x-dna-ref-key``\n  (i-040 follow-up).\n* **composite** — the value carries its own Kind (``Story:s-thing``,\n  ``Narrative/X``, ``{\"kind\": …, \"name\": …}``), so ``target`` is ``any``:\n  there is no one Kind to name. DERIVED from the schema, never enumerated —\n  either the field declares ``x-dna-ref-composite`` or its object shape\n  requires ``kind`` + ``name``.",
-        "properties": {
-          "field": {
-            "title": "Field",
-            "type": "string"
-          },
-          "kind": {
-            "title": "Kind",
-            "type": "string"
-          },
-          "reason": {
-            "title": "Reason",
-            "type": "string"
-          },
-          "target": {
-            "title": "Target",
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind",
-          "field",
-          "target",
-          "reason"
-        ],
-        "title": "KindGraphUndeclarable",
-        "type": "object"
-      },
       "KindGraphUnresolved": {
-        "description": "A field that clearly points at SOMETHING the model cannot name — a\n``x-dna-ref`` naming an unregistered Kind, a ``dep_filters`` alias nobody\nclaims, or a reference-shaped field name matching no Kind.\n\nReturned, not dropped: this list is the honest measure of what the model\nstill cannot express, and it shrinks when references get declared — never\nwhen the projection gets cleverer.\n\n``origin`` says WHICH of the three it is, and it is what makes the list\nusable. ``declared`` and ``composition`` are DECLARATIONS the model cannot\nhonour — somebody wrote a target and it does not resolve, which is an\nauthoring error to fix. ``shape-inferred`` is this projection guessing from\na field NAME, and is usually not a reference at all: an OAuth\n``client_id``, a Stripe customer id, an IdP subject. On the 06/08/2026\nmeasurement **every** row was ``shape-inferred``, and a screen with only\n``reason`` to go on presented all of them as broken declarations — false\nfor all of them, and the way a real one would have arrived invisible.\n``coverage.declared_origins`` names the origins worth alarm, so a consumer\nDERIVES the ranking instead of hard-coding it, and never has to translate\n``reason`` — which stays English prose for whoever reads the raw answer.",
+        "description": "Something the model cannot honour, or a field nobody has declared.\n\nReturned, not dropped: this list is the honest measure of what the model\nstill cannot express, and it shrinks when relations get declared — never\nwhen the projection gets cleverer.\n\n``origin`` says which it is, and it is what makes the list usable:\n\n* ``declared`` — a relation's ``to`` names a Kind no registry provides;\n* ``composition`` — a ``dep_filters`` alias no Kind claims;\n* ``inverse`` — a declared ``inverse_of`` does not PAIR: the target\n  declares no such relation, or it points elsewhere, or it names a\n  different inverse. Two Kinds claiming to be halves of one relation while\n  disagreeing about it — which nothing could say before;\n* ``undeclared`` — the field NAME looks like a reference\n  (``_id``/``_ref``/``_refs``) and no relation declares it. Often not a\n  reference at all: an OAuth ``client_id``, a Stripe customer id, an IdP\n  subject. This projection no longer guesses a TARGET, so the row states\n  only what it can see: somebody should look.\n\nThe first three are CLAIMS somebody made; the fourth is an invitation.\n``coverage.declared_origins`` names the ones worth alarm, so a consumer\nDERIVES the ranking instead of hard-coding it, and never has to translate\n``reason`` — which stays English prose for whoever reads the raw answer.",
         "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
           "field": {
             "title": "Field",
             "type": "string"
@@ -3059,7 +3042,8 @@
             "enum": [
               "declared",
               "composition",
-              "shape-inferred"
+              "inverse",
+              "undeclared"
             ],
             "title": "Origin",
             "type": "string"
@@ -6593,7 +6577,7 @@
     },
     "/v1/graph/kinds": {
       "get": {
-        "description": "The SCHEMA graph of the registered Kinds — which Kind may point at\nwhich, through which field, in ONE call.\n\nReplaces \"read every Kind's descriptor and derive the graph in the\nclient\", which cost one request per Kind and got slower as a workspace\ngrew. Same projection that generates ``docs/reference/data-model.md``:\nthe tiering, the ``x-dna-ref`` reading (the SAME one the write path\nvalidates with) and the gap tables live in the SDK, so the page and\nthis route cannot disagree about what the model says.\n\n**SCHEMA, not data.** The edges say which Kinds MAY reference which.\nWhich DOCUMENTS reference which is a different graph and this route\ndoes not answer it — ``coverage.limits`` says so on the wire.\n\n``tenant`` resolves the scope the way the registry route does\n(``live.default_scope``); an explicit ``scope`` still wins. No 404:\na scope with no Kinds is an empty graph with a coverage block that\nsays ``kinds: 0``, which is an answer — conflating it with \"no such\nscope\" would make a screen say *error* where it should say *nothing\nregistered yet*.",
+        "description": "The SCHEMA graph of the registered Kinds — which Kind may point at\nwhich, through which field, in ONE call.\n\nReplaces \"read every Kind's descriptor and derive the graph in the\nclient\", which cost one request per Kind and got slower as a workspace\ngrew. Same projection that generates ``docs/reference/data-model.md``:\nthe tiering, the ``spec.relations`` reading (the SAME one the write path\nvalidates with) and the gap tables live in the SDK, so the page and\nthis route cannot disagree about what the model says.\n\n**SCHEMA, not data.** The edges say which Kinds MAY reference which.\nWhich DOCUMENTS reference which is a different graph and this route\ndoes not answer it — ``coverage.limits`` says so on the wire.\n\n``tenant`` resolves the scope the way the registry route does\n(``live.default_scope``); an explicit ``scope`` still wins. No 404:\na scope with no Kinds is an empty graph with a coverage block that\nsays ``kinds: 0``, which is an answer — conflating it with \"no such\nscope\" would make a screen say *error* where it should say *nothing\nregistered yet*.",
         "operationId": "kind_graph_v1_graph_kinds_get",
         "parameters": [
           {

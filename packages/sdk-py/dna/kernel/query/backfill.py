@@ -62,19 +62,26 @@ class BackfillReport:
 
 
 def declared_pairs(kernel: Any) -> list[tuple[str, str]]:
-    """Every ``(Kind, field)`` the registry declares an ``x-dna-ref`` on.
+    """Every ``(Kind, field)`` the registry declares a RESOLVABLE relation on.
 
     DERIVED from the registry, never enumerated by hand: a hand-kept list is
     how a guard goes green while going blind, and the whole point of this
     degree is that the graph is made of declarations rather than of opinions.
+
+    Filtered to ``Relation.resolved`` for the same reason the write path is:
+    a relation addressed by a target spec field or carrying its Kind in the
+    value produces no edge on write, so scanning for its documents here would
+    read a column nothing would ever fill.
     """
-    from dna.kernel.query.references import declared_references
+    from dna.kernel.kinds.relations import relations_of
 
     pairs: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()
     for kind, port in sorted(_registry_items(kernel)):
-        for ref in declared_references(port):
-            key = (kind, ref.field)
+        for name, rel in sorted(relations_of(port).items()):
+            if not rel.resolved:
+                continue
+            key = (kind, name)
             if key in seen:
                 continue
             seen.add(key)
@@ -115,7 +122,7 @@ async def backfill_edges(
     everything and writes nothing — the same reads, so the numbers it reports
     are the numbers a real run would produce.
     """
-    from dna.kernel.query.references import resolve_declared_edges
+    from dna.kernel.query.references import resolve_relations
 
     source = kernel._source
     if source is None:
@@ -152,9 +159,9 @@ async def backfill_edges(
         port = kernel.kind_port_for(
             kind, api_version=api_version or None, scope=doc_scope,
         )
-        edges, _problems, complete = await resolve_declared_edges(
+        edges, _problems, _discords, complete = await resolve_relations(
             port, row["raw"],
-            scope=doc_scope, tenant=tenant or None,
+            scope=doc_scope, name=name, tenant=tenant or None,
             getter=kernel.get_document,
             port_for=kernel.kind_port_for,
             local_getter=getattr(kernel, "get_document_local", None),

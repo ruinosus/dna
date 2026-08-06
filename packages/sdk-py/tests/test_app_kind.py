@@ -38,14 +38,20 @@ def test_app_minimo_valida_e_carrega():
 
 
 def test_app_declara_a_referencia_aos_copilotos():
-    """`copilots[]` carrega x-dna-ref: Copilot — o picker do wizard e a
-    validação de existência no write nascem DESTA anotação (i-040)."""
+    """`copilots` é uma RELAÇÃO declarada — o picker do wizard e a validação de
+    existência no write nascem DELA (i-040, f-modelagem-das-relacoes).
+
+    A declaração saiu de dentro da propriedade do JSON Schema e virou bloco
+    próprio: o schema guarda os DADOS, `relations` guarda o modelo. O nome da
+    relação continua sendo o campo, então nenhum documento de App mudou."""
     from dna.kernel.source.descriptor_loader import load_descriptors
 
     raws = load_descriptors("dna.extensions.helix")
     app = next(r for r in raws if r["metadata"]["name"] == "app")
-    campo = app["spec"]["schema"]["properties"]["copilots"]
-    assert campo["x-dna-ref"] == "Copilot"
+    assert app["spec"]["relations"]["copilots"] == {
+        "to": "Copilot", "cardinality": "many",
+    }
+    assert "x-dna-ref" not in app["spec"]["schema"]["properties"]["copilots"]
     assert app["spec"]["schema"]["properties"]["requires_plan"]["enum"] == ["free", "pro"]
 
 

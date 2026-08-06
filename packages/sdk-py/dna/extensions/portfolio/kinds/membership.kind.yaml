@@ -33,6 +33,14 @@ spec:
   storage:
     type: yaml
     container: memberships
+  relations:
+    role:
+      to: Role
+      cardinality: one
+      by: role_id
+    scope_ref:
+      to: [Organization, Project]
+      cardinality: one
   schema:
     type: object
     additionalProperties: false
@@ -56,9 +64,6 @@ spec:
         type: string
         description: The Organization or Project name this grant applies to (paired
           with scope_type).
-        x-dna-ref:
-        - Organization
-        - Project
       role:
         type: string
         enum:

@@ -3,7 +3,7 @@
 The producer writes an edge every time a document is saved, inside the save's
 own transaction. Everything written BEFORE the producer existed therefore has
 no edges, and this is the command that fixes that — explicitly, from the same
-``x-dna-ref`` declaration the producer reads, never from a scan that guesses at
+``spec.relations`` declaration the producer reads, never from a scan that guesses at
 slug prefixes (the mechanism i-039 refused, and the reason ``dna_edges`` was
 dropped the first time).
 
@@ -21,7 +21,7 @@ import click
 from dna_cli._ctx import fail, open_session, print_json
 
 
-@click.group("graph", help="The derived reference graph (x-dna-ref edges).")
+@click.group("graph", help="The derived reference graph (declared relations).")
 def graph() -> None:
     """Group root."""
 

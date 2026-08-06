@@ -342,46 +342,93 @@ SpecDict still works for both attribute and key access.
 | Field-level validation matters at parse time | Validation happens via JSON Schema only |
 | Sub-fields have their own types | Sub-fields are loose dicts |
 
-## Step 9 — Optional: declare references to other Kinds
+## Step 9 — Optional: declare what this Kind points at
 
-If a spec field holds the *name of another document*, say so. Annotate the
-field with `x-dna-ref` and the kernel stops treating it as an anonymous
-string:
+If a spec field holds the *name of another document*, say so — in
+`spec.relations`, next to the schema rather than inside it. **The schema keeps
+the data; relations keep the model.**
 
 ```yaml
 spec:
+  relations:
+    feature:
+      to: Feature
+      cardinality: one
+      inverse_of: stories          # the relation on Feature that is our other half
+    spec_refs:
+      to: Spec
+      cardinality: many
+    scope_ref:
+      to: [Organization, Project]  # polymorphic → any one of them
+      cardinality: one
+    produces:
+      to: '*'                      # the target Kind travels in the VALUE
+      cardinality: many
+      by: '{kind, name}'
+    workspace_id:
+      to: Workspace
+      cardinality: one
+      by: workspace_id             # addressed by a spec field of the TARGET
   schema:
     properties:
-      feature:
-        type: string
-        x-dna-ref: Feature              # one target
-      spec_refs:
+      feature: {type: string}
+      spec_refs: {type: array, items: {type: string}}
+      scope_ref: {type: string}
+      produces:
         type: array
-        items: {type: string}
-        x-dna-ref: Spec                 # array → every item is a reference
-      scope_ref:
-        type: string
-        x-dna-ref: [Organization, Project]   # polymorphic → any one of them
+        items:
+          type: object
+          required: [kind, name]
+          properties: {kind: {type: string}, name: {type: string}}
+      workspace_id: {type: string}
 ```
 
-The same annotation works from a `KindPort.schema()` written in Python — it
-is an ordinary JSON Schema keyword, and the `x-` prefix is the reserved
-extension convention, so validators ignore it.
+**A relation's NAME is the spec field that holds its value.** That is what
+keeps the declaration and the data together, and it is why moving the
+declaration here changed no document.
 
-**What it buys you.** At write time the kernel resolves each reference by
-document name in the same scope and tenant. A reference to something that
-does not exist is reported against the field that carries it, rather than
-surfacing much later as an empty lookup somewhere else.
+The same block works from a Python `KindBase` subclass — write it as a plain
+`relations = {...}` class attribute; the kernel normalizes it through the same
+validator.
 
-**What it costs.** One document read per populated reference (roughly 5 ms on
-Postgres, 20 ms on the filesystem source, LRU-cached). A Kind that declares
-no `x-dna-ref` performs no extra reads at all.
+### The four keys
+
+| Key | Meaning |
+|---|---|
+| `to` | A Kind NAME, a LIST of them (polymorphic — any one may match), or `*` when the target Kind travels in the value. |
+| `cardinality` | `one` or `many`. **Required** — it is deliberately not read off `type: array`, because a default taken from the JSON Schema would be a guess wearing a declaration's clothes. A contradiction between the two is refused at load. |
+| `inverse_of` | The relation NAME on the target Kind that is this one's other half. |
+| `by` | How the value ADDRESSES the target. Defaults to `name`. |
+
+### What the kernel actually follows
+
+Exactly one addressing: a concrete `to` with `by: name`. That relation is
+resolved at write time — the target must exist in the same scope and tenant —
+and the same read produces the document edge.
+
+Everything else is **declared and not resolved**, on purpose:
+
+* `by: <a spec field of the target>` says the value matches (say)
+  `Workspace.spec.workspace_id` rather than its name. Resolving that needs an
+  index the store does not have, and a second resolution rule beside a live
+  one can veto data the live one accepts.
+* `to: '*'` means the value carries its own Kind (`Story/s-thing`,
+  `{"kind": …, "name": …}`), so there is no target to look up — `by` says which
+  composite form to parse.
+
+Both are real relations, listed in the schema graph with `enforced: false`.
+Saying "this points at a Workspace, keyed by workspace_id" is worth more than
+saying nothing, and costs nothing that could be wrong.
+
+**What it costs.** One document read per populated, resolvable relation
+(roughly 5 ms on Postgres, 20 ms on the filesystem source, LRU-cached). A Kind
+with no resolvable relation performs no extra reads at all.
 
 **Mode** — `DNA_REF_VALIDATION`:
 
 | Value | Behaviour |
 |---|---|
-| `warn` *(default)* | Logs the unresolved reference and persists anyway. |
+| `warn` *(default)* | Logs the unresolved relation and persists anyway. |
 | `enforce` | Vetoes the write with `SpecValidationError`. |
 | `off` | Skips the check; no reads. |
 
@@ -393,17 +440,31 @@ reference that never will. `warn` surfaces both without breaking a bootstrap
 that works today; turn on `enforce` in CI, or once a scope's data is known to
 be complete.
 
-!!! note "Declared by name, not by arbitrary key"
+### `inverse_of` — what it promises, and what it does not
 
-    Resolution is by *document name*. A field that points at another Kind
-    through some other identifier — an opaque generated id, a slug that is not
-    the document name — cannot be declared this way yet, and is deliberately
-    left undeclared rather than declared wrongly.
+Declare it when the *other* Kind carries the other half. `Feature.stories`
+declares `inverse_of: feature`, and `Story.feature` declares
+`inverse_of: stories`.
 
-`x-dna-ref` is separate from `dep_filters`, which looks similar but drives
-*prompt composition*: which documents get folded into an agent's context.
-Where a field carries both, they must name the same Kind — a test enforces
-that they cannot drift apart.
+**The DECLARATION is enforced.** At load, the target must declare a relation
+by that name, it must point back here, and it must name this one as ITS
+inverse. That check reads no documents, so it cannot deadlock and costs
+nothing; a broken pair shows up in the schema graph as an `unresolved` row with
+`origin: inverse`.
+
+**The DATA is only reported.** When the target document does not name this one
+back, the write logs it — in every mode, including `enforce` — and persists.
+It is never imposed and never derived, for two measured reasons: imposing
+deadlocks (neither half of a pair can be written first) and deriving means the
+kernel writing a document the author never touched, inside somebody else's
+version and etag.
+
+!!! note "Not the same thing as `dep_filters`"
+
+    `dep_filters` looks similar and drives *prompt composition*: which
+    documents get folded into an agent's context. A missing optional Skill is
+    legitimately filtered out there rather than being an error, so the two stay
+    separate. Where a field carries both, they must name the same Kind.
 
 ## Common pitfalls
 

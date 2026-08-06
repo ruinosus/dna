@@ -38,6 +38,20 @@ spec:
   storage:
     type: yaml
     container: projects
+  relations:
+    intel_source_refs:
+      to: IntelSource
+      cardinality: many
+    org_ref:
+      to: Organization
+      cardinality: one
+    repo_refs:
+      to: Repo
+      cardinality: many
+    workspace_id:
+      to: Workspace
+      cardinality: one
+      by: workspace_id
   schema:
     type: object
     additionalProperties: false
@@ -70,14 +84,12 @@ spec:
         - 'null'
         description: The Organization (name) this project belongs to. Null while
           unassigned.
-        x-dna-ref: Organization
       repo_refs:
         type: array
         items:
           type: string
         description: Repo names attached to this project (the N—N edge — a repo may
           appear on multiple projects). The edge lives on the Project side only.
-        x-dna-ref: Repo
       board_scope:
         type:
         - string
@@ -92,7 +104,6 @@ spec:
           project (the sources feeding its insight stream). DECLARED (i-040) —
           every item resolves by DOCUMENT NAME, the same key `org_ref` and
           `repo_refs` above already use.
-        x-dna-ref: IntelSource
       visibility:
         type: string
         enum:

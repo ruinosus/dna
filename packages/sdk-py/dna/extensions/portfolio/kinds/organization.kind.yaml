@@ -33,6 +33,11 @@ spec:
   storage:
     type: yaml
     container: organizations
+  relations:
+    plan_ref:
+      to: PricingPlan
+      cardinality: one
+      by: tier_id
   schema:
     type: object
     additionalProperties: false

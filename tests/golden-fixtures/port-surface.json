@@ -387,7 +387,7 @@
         },
         {
           "py": "edge_graph",
-          "note": "The store keeps the DERIVED reference graph (x-dna-ref edges) and can walk it (traverse_edges). Separate from the 'edges' write kwarg, and asked BEFORE the read for the same reason as_of_reads is: an adapter that records no edges must make the face answer 'unsupported', never an empty list. An empty list reads as 'nothing points at this document' — a claim only a store that actually keeps edges may make."
+          "note": "The store keeps the DERIVED reference graph (declared-relation edges) and can walk it (traverse_edges). Separate from the 'edges' write kwarg, and asked BEFORE the read for the same reason as_of_reads is: an adapter that records no edges must make the face answer 'unsupported', never an empty list. An empty list reads as 'nothing points at this document' — a claim only a store that actually keeps edges may make."
         }
       ]
     },

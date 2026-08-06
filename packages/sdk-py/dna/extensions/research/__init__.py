@@ -155,6 +155,17 @@ class ResearchKind(KindBase):
         "external source; use Research to consolidate multiple "
         "References into a position with recommendations."
     )
+    # `cited_by` carries `<Kind>/<name>` — the target Kind travels in the
+    # VALUE, which is what `to: "*"` says. `references` is NOT here: it
+    # holds Reference doc names, and Reference is the one Kind name still
+    # on the collision allowlist (research/v1 AND sdlc/v1), so a bare-name
+    # target would be ambiguous. Declaring it is i-110's work, not this
+    # slice's — and the gap list now says so out loud.
+    relations = {
+        "cited_by": {
+            "to": "*", "cardinality": "many", "by": "Kind/name",
+        },
+    }
 
     def schema(self) -> dict[str, Any] | None:
         return {
@@ -259,7 +270,6 @@ class ResearchKind(KindBase):
                     "default": [],
                     # Composite: `dna sdlc cite` writes `<Kind>/<name>`, so the
                     # value carries its own Kind and any Kind can cite.
-                    "x-dna-ref-composite": "Kind/name",
                     "description": (
                         "Kind/name of docs that cite this Research as a "
                         "grounding source. Auto-maintained by `dna sdlc "

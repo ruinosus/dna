@@ -115,13 +115,13 @@ A AgentSession captures a developer↔AI coding conversation as a versioned proj
 - **apiVersion:** `github.com/ruinosus/dna/v1`
 - **Plane:** record
 
-An App is the NAMED composition of copilots (record plane) — the installable/sellable unit of the spec-app-como-composicao decisions (2026-08-05). A kit is the PACKAGE (how a flow ships); an App is the INSTANCE (how it is used, navigated and charged). It groups existing Copilot docs under one identity (title/description/icon), carries the plan entitlement (``requires_plan`` — enforced by the serving runtime, never by the kernel) and the console renders ``/app/<name>`` from this document alone. ``copilots[]`` carries ``x-dna-ref: Copilot`` — the write validates existence and pickers come for free (i-040).
+An App is the NAMED composition of copilots (record plane) — the installable/sellable unit of the spec-app-como-composicao decisions (2026-08-05). A kit is the PACKAGE (how a flow ships); an App is the INSTANCE (how it is used, navigated and charged). It groups existing Copilot docs under one identity (title/description/icon), carries the plan entitlement (``requires_plan`` — enforced by the serving runtime, never by the kernel) and the console renders ``/app/<name>`` from this document alone. ``copilots`` is a declared RELATION to ``Copilot`` — the write validates existence and pickers come for free (i-040).
 
 **Spec fields**
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `copilots` | array | yes | Os copilotos que COMPÕEM este App, por nome de doc — cada um traz seus fluxos (surfaces) para debaixo desta identidade. A referência é validada na gravação (x-dna-ref). |
+| `copilots` | array | yes | Os copilotos que COMPÕEM este App, por nome de doc — cada um traz seus fluxos (surfaces) para debaixo desta identidade. A referência é validada na gravação (`spec.relations`). |
 | `description` | string |  | Uma linha do que este App faz, na voz do produto. |
 | `icon` | string |  | Marca curta (1–2 caracteres ou emoji) para o card e a navegação. Vazio = a inicial do title. |
 | `nav_order` | integer |  | Ordem relativa na navegação do console (menor primeiro). Ausente = ordem alfabética. |
@@ -798,7 +798,7 @@ An Evidence document is an immutable audit event record. Captures the event type
 | `author` | string |  |  |
 | `captured_at` | string |  |  |
 | `created_at` | string |  |  |
-| `document_ref` | string |  | `Kind:name` of the document whose save triggered this event — the canonical Kind name and the document name, colon-joined. MEASURED, not inferred — the one runtime producer is the kernel evidence `post_save` handler (`dna/kernel/write/evidence.py`), which writes `f"{kind}:{name}"` straight from the HookContext, and the deleted TypeScript twin wrote the identical form (its test asserted `EvalRun:run1`). The slash-shaped values in some Python test fixtures (`Story/s-x`, `eval-evalrun/my-run`) and the older builder docstring are inert inputs to a pass-through parameter and are NOT the format. Nothing dereferences it today. NOT declarable with `x-dna-ref`, which resolves a bare document NAME — this is the same composite as `Comment.target_ref` and needs parsing, not a lookup. Absent on the gaia event shape, which carries source_kind/source_name instead. |
+| `document_ref` | string |  | `Kind:name` of the document whose save triggered this event — the canonical Kind name and the document name, colon-joined. MEASURED, not inferred — the one runtime producer is the kernel evidence `post_save` handler (`dna/kernel/write/evidence.py`), which writes `f"{kind}:{name}"` straight from the HookContext, and the deleted TypeScript twin wrote the identical form (its test asserted `EvalRun:run1`). The slash-shaped values in some Python test fixtures (`Story/s-x`, `eval-evalrun/my-run`) and the older builder docstring are inert inputs to a pass-through parameter and are NOT the format. Nothing dereferences it today. Declared as a relation with `to: '*'` rather than with a named target: a named one resolves a bare document NAME, and this is the same composite as `Comment.target_ref` — it needs parsing, not a lookup. Absent on the gaia event shape, which carries source_kind/source_name instead. |
 | `event_type` | string | yes | Um de: `document_created`, `document_modified`, `document_deleted`, `eval_run_completed`, `baseline_pinned`, `finding_created`, `finding_status_changed`, `custom`, `gaia.assessment.started`, `gaia.assessment.completed`, `gaia.assessment.failed`, `gaia.pillar.completed`, `gaia.pillar.threshold_breach`, `gaia.report.issued`. |
 | `notes` | string |  |  |
 | `payload` | object |  |  |
@@ -935,7 +935,7 @@ An IntelInsight is the dissemination unit of the intelligence layer — a ranked
 | `fact` | string | yes | What happened / the cited fact. |
 | `pirs` | array |  | Which Priority Intelligence Requirements this insight matches. |
 | `score` | number | yes | Actionability score (0..1). The ranker sets this; the digest suppresses insights scoring below the source's threshold. |
-| `source_ref` | string \| null |  | The IntelSource name this insight came from. DECLARED (i-040) — the engine already stamps the source DOCUMENT NAME here, which is exactly what `x-dna-ref` resolves by, so the declaration types a relation that was already true instead of asking any producer to write differently. Null/absent stays legal — an optional reference that is simply unset is not a dangling one. |
+| `source_ref` | string \| null |  | The IntelSource name this insight came from. DECLARED (i-040) — the engine already stamps the source DOCUMENT NAME here, which is exactly what a name-addressed relation resolves by, so the declaration types a relation that was already true instead of asking any producer to write differently. Null/absent stays legal — an optional reference that is simply unset is not a dangling one. |
 | `state` | string | yes | The feedback disposition — the reader's response to the insight. Um de: `new`, `actioned`, `dismissed`, `snoozed`. |
 | `title` | string | yes | The insight headline. |
 | `why` | string \| null |  | Why it matters to this source. |
@@ -1288,7 +1288,7 @@ An AccountPlan maps one DNA Cloud BILLING ACCOUNT to its current Tier as GLOBAL 
 | `status` | string |  | The billing status of the assignment, e.g. active / past_due / canceled. |
 | `stripe_customer_id` | string |  | The Stripe customer id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
 | `stripe_subscription_id` | string |  | The Stripe subscription id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
-| `tier_id` | string | yes | The assigned PricingPlan's id, e.g. free, pro, enterprise. Resolved to caps via kernel.tier(tier_id) — never a literal in code. This IS a reference, and it is deliberately NOT declared with `x-dna-ref` — the resolver matches `PricingPlan.spec.tier_id` first and `PricingPlan.spec.aliases[]` second, in the `_lib` scope, and NEVER the document name, while `x-dna-ref` resolves by document name only. Declaring it would install a SECOND resolution rule that can disagree with the live one (an alias-keyed binding is valid data the write path would then veto). It is a keyed reference, the same shape as `Organization.plan_ref`. NOTE the Kind was called `Tier` until the metering rename (dna 0.29.0); this description named the dead Kind until 2026-08-06. |
+| `tier_id` | string | yes | The assigned PricingPlan's id, e.g. free, pro, enterprise. Resolved to caps via kernel.tier(tier_id) — never a literal in code. This IS a reference, and it is deliberately NOT declared as a relation — the resolver matches `PricingPlan.spec.tier_id` first and `PricingPlan.spec.aliases[]` second, in the `_lib` scope, and NEVER the document name, while the kernel resolves by document name only. `by: tier_id` would DESCRIBE the addressing without resolving it, which is legal — but it would describe only HALF the live rule (the alias fallback has nowhere to go), and a partial description of a live rule is the thing to avoid. Declaring it would install a SECOND resolution rule that can disagree with the live one (an alias-keyed binding is valid data the write path would then veto). It is a keyed reference, the same shape as `Organization.plan_ref`. NOTE the Kind was called `Tier` until the metering rename (dna 0.29.0); this description named the dead Kind until 2026-08-06. |
 | `updated_at` | string |  | When dna-cloud last wrote this assignment (ISO 8601). |
 
 ## Postmortem

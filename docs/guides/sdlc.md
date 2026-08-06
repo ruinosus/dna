@@ -197,7 +197,7 @@ could group a board by `2026-Q2-S2` and learn nothing else about it, and a typo
 produced a second, silent sprint.
 
 `Sprint` is now a Kind, and `sprint_ref` is a **declared reference**
-(`x-dna-ref`) the kernel resolves at write time. The document NAME is the key —
+(`spec.relations`) the kernel resolves at write time. The document NAME is the key —
 so the identifier your board already carries is the name you give the document:
 
 ```yaml

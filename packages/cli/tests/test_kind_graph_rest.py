@@ -10,18 +10,23 @@ memory. The registry already held the whole answer.
 What this module pins:
 
 * the graph arrives WHOLE — nodes, edges, gaps — in a single 200, and its
-  declared edges are the ones ``x-dna-ref`` declares (the same reading the
+  declared edges are the ones ``spec.relations`` declares (the same reading the
   write path validates with, asserted against the registry, not re-typed);
 * **the answer qualifies itself.** ``coverage`` carries the per-tier counts,
-  the tiers the runtime enforces, and the ``limits`` that say what the graph
-  structurally cannot see. This is the assertion that keeps a screen from
-  rendering the edge list as "all the relations" — 16 of the model's 109
-  schema edges are declared, and the wire has to say so;
+  how many edges the runtime actually ENFORCES, and the ``limits`` that say
+  what the graph structurally cannot see. This is the assertion that keeps a
+  screen from rendering the edge list as "all the relations";
+* **``declared`` and ``enforced`` are different numbers, and the wire says
+  which is which.** A relation addressed by a domain key (``by:
+  workspace_id``) or carrying its Kind in the value (``to: "*"``) is fully
+  declared and deliberately not resolved by the kernel; the per-edge
+  ``enforced`` flag is what stops a screen promoting one into the other;
 * **the gaps rank themselves.** Every ``unresolved`` row carries an ``origin``
-  saying which pass produced it, so a screen separates a broken DECLARATION
-  from this projection guessing at a field name — without reading English
-  prose off a backend. That was i-104: 25 rows, all of one origin, presented
-  as 25 broken declarations because ``reason`` was the only thing to go on;
+  saying which pass produced it, so a screen separates a broken DECLARATION —
+  including an ``inverse`` that does not pair — from a field nobody has
+  declared, without reading English prose off a backend. That was i-104: 25
+  rows, all of one origin, presented as 25 broken declarations because
+  ``reason`` was the only thing to go on;
 * it is SCHEMA, never data: no document read, and the envelope says which
   graph it is;
 * ``tenant`` resolves the scope like the registry route, an unknown scope is
@@ -83,7 +88,8 @@ def test_the_whole_graph_comes_back_in_one_call(graph):
     # unregistered Kind is a gap (``unresolved``), never a node nobody has.
     for edge in graph["edges"]:
         assert edge["from_kind"] in kinds
-        assert edge["to_kind"] in kinds
+        # ``*`` is the one non-Kind target: the value names its own Kind.
+        assert edge["to_kind"] in kinds or edge["to_kind"] == "*"
 
 
 def test_the_declared_spine_of_the_board_is_present_and_marked_declared(graph):
@@ -133,28 +139,37 @@ def test_coverage_counts_are_derived_from_what_was_returned(graph):
     assert cov["kinds"] == len(graph["kinds"])
     assert cov["edges"] == len(graph["edges"])
     assert cov["unresolved"] == len(graph["unresolved"])
-    assert cov["undeclarable"] == len(graph["undeclarable"])
-    assert cov["declared"] + cov["composition"] + cov["inferred"] == cov["edges"]
-    for tier in ("declared", "composition", "inferred"):
+    assert cov["declared"] + cov["composition"] == cov["edges"]
+    for tier in ("declared", "composition"):
         assert cov[tier] == len([e for e in graph["edges"] if e["tier"] == tier])
+    assert cov["enforced"] == len([e for e in graph["edges"] if e["enforced"]])
+    assert cov["kinds_with_relations"] == len(
+        {e["from_kind"] for e in graph["edges"] if e["tier"] == "declared"}
+    )
     assert sum(cov["unresolved_by_origin"].values()) == cov["unresolved"]
     for origin, count in cov["unresolved_by_origin"].items():
         assert count == len([u for u in graph["unresolved"]
                              if u["origin"] == origin])
 
 
-def test_the_answer_says_only_the_declared_tier_is_enforced(graph):
-    """The measurement that forced this block: the model's schema edges are
-    mostly NOT enforced (composition + inference outnumber declaration by
-    several times). A response that did not say so would let a screen assert a
-    completeness this repo does not have."""
+def test_declared_is_not_the_same_as_enforced_and_the_wire_says_so(graph):
+    """The measurement that forced this block: most of the model's schema edges
+    are NOT resolved at write time — composition edges never are, and a
+    relation addressed by a domain key is declared without being followed. A
+    response that did not distinguish the two would let a screen tell somebody
+    their ``by: workspace_id`` relation is validated. It is not."""
     cov = graph["coverage"]
-    assert cov["enforced_tiers"] == ["declared"]
-    assert cov["declared"] < cov["edges"], (
-        "the enforced tier now covers the whole model — if that is genuinely "
-        "true this assertion should be retired deliberately, not silently"
+    assert cov["enforced"] < cov["declared"] < cov["edges"], (
+        "declared and enforced have collapsed into one number — if that is "
+        "genuinely true this assertion should be retired deliberately, not "
+        "silently"
     )
-    assert cov["composition"] or cov["inferred"]
+    unenforced = [
+        e for e in graph["edges"]
+        if e["tier"] == "declared" and not e["enforced"]
+    ]
+    assert unenforced, "no declared-but-unfollowed relation survived"
+    assert all(e["by"] != "name" or e["to_kind"] == "*" for e in unenforced)
 
 
 def test_the_limits_travel_on_the_wire(graph):
@@ -163,31 +178,35 @@ def test_the_limits_travel_on_the_wire(graph):
     the SCHEMA graph and not the data graph."""
     limits = {limit["code"]: limit["detail"] for limit in graph["coverage"]["limits"]}
     assert "schema_not_data" in limits
-    assert "declared_tier_only_enforced" in limits
+    assert "enforced_is_per_edge" in limits
     assert "top_level_properties_only" in limits
-    assert "keyed_references_undeclarable" in limits
     assert "unresolved_is_not_all_broken" in limits
+    assert "inverse_is_declaration_only" in limits
     for code, detail in limits.items():
         assert detail.strip(), f"limit {code} states no reason"
 
 
 def test_the_gaps_come_back_named_not_dropped(graph):
-    """A graph whose gaps are dropped renders as complete. The two lists that
-    keep it honest: fields that point at something unnameable, and real
-    references ``x-dna-ref`` cannot declare because they are keyed by an id."""
+    """A graph whose gaps are dropped renders as complete. What keeps it honest
+    is the ``unresolved`` list — and every row still carries a reason a human
+    can read, next to the ``origin`` a screen switches on."""
     assert graph["unresolved"], "no unresolved fields — the gap list went blind"
-    undeclarable = {(u["kind"], u["field"]) for u in graph["undeclarable"]}
-    assert ("Comment", "target_ref") in undeclarable
-    for row in graph["undeclarable"]:
-        assert row["target"] and row["reason"]
+    for row in graph["unresolved"]:
+        assert row["origin"] and row["reason"]
 
 
-def test_a_keyed_reference_is_never_also_an_edge(graph):
+def test_a_key_addressed_reference_IS_an_edge_and_says_it_is_not_enforced(graph):
     """``Comment.target_ref`` really points at a document — by a composite
-    ``Kind:name`` string. It is stated as undeclarable, and MUST NOT also be
-    drawn: an edge here would be one the write path cannot enforce."""
-    assert not [e for e in graph["edges"]
-                if e["from_kind"] == "Comment" and e["field"] == "target_ref"]
+    ``Kind:name`` string. It used to be filtered OUT of the edges into an
+    "undeclarable" bucket, which is how eight ``produces`` fields ended up
+    described as inexpressible when they were merely undeclared. It is an edge
+    now, and ``enforced: false`` is what keeps that from over-claiming."""
+    drawn = [e for e in graph["edges"]
+             if e["from_kind"] == "Comment" and e["field"] == "target_ref"]
+    assert len(drawn) == 1
+    assert drawn[0]["to_kind"] == "*"
+    assert drawn[0]["by"] == "Kind:name"
+    assert drawn[0]["enforced"] is False
 
 
 # --- i-104: the gap list ranks itself, through the door ----------------------
@@ -198,16 +217,21 @@ def test_every_gap_arrives_with_a_machine_readable_origin(graph):
     half it CAN switch on, and no row may arrive without one."""
     assert graph["unresolved"]
     for row in graph["unresolved"]:
-        assert row["origin"] in {"declared", "composition", "shape-inferred"}, row
+        assert row["origin"] in {
+            "declared", "composition", "inverse", "undeclared",
+        }, row
         assert row["reason"], row
+        # Present on every row, ``null`` where there is no sub-code — a stable
+        # key set is what lets a consumer type the shape once.
+        assert "code" in row, row
 
 
 def test_the_wire_names_which_origins_deserve_alarm(graph):
     """Derived, like ``enforced_tiers`` — a screen must not re-type the
     ranking, and the answer must be able to grow without a client release."""
     cov = graph["coverage"]
-    assert cov["declared_origins"] == ["declared", "composition"]
-    assert "shape-inferred" not in cov["declared_origins"]
+    assert cov["declared_origins"] == ["declared", "composition", "inverse"]
+    assert "undeclared" not in cov["declared_origins"]
     assert set(cov["declared_origins"]) <= set(cov["unresolved_by_origin"])
 
 
@@ -225,33 +249,35 @@ def test_a_screen_can_separate_the_noise_from_the_alarms_without_prose(graph):
     assert alarms == [], f"a DECLARED reference is dangling: {alarms}"
 
 
-def test_a_composite_pointer_is_a_known_reference_not_a_gap(graph):
+def test_the_composite_family_arrives_together_and_never_as_a_gap(graph):
     """The misclassification i-104 measured: ``Engram.source_refs`` and
     ``SourceArtifact.derived_refs`` carry ``Kind``+``name`` exactly like
     ``Comment.target_ref``, which the runtime already classified right. All
-    three are one family, and they arrive together now — the two that were
-    filed as gaps are gone from that list."""
+    three are one family, they arrive together, and none of them is a gap."""
     gaps = {(u["kind"], u["field"]) for u in graph["unresolved"]}
-    known = {(u["kind"], u["field"]): u for u in graph["undeclarable"]}
+    drawn = {(e["from_kind"], e["field"]): e for e in graph["edges"]}
     for pair in [("Comment", "target_ref"), ("Engram", "source_refs"),
                  ("SourceArtifact", "derived_refs")]:
-        assert pair in known, f"{pair} is not classified as undeclarable"
-        assert pair not in gaps, f"{pair} is BOTH a gap and a known reference"
-        assert known[pair]["target"] == "any", (
+        assert pair in drawn, f"{pair} is not declared as a relation"
+        assert pair not in gaps, f"{pair} is BOTH a gap and a declared relation"
+        assert drawn[pair]["to_kind"] == "*", (
             "a composite pointer names no single target Kind"
         )
 
 
-def test_the_undeclarable_table_never_cites_a_kind_the_registry_lacks(graph):
+def test_no_declaration_cites_a_kind_the_registry_lacks(graph):
     """``Organization.plan_ref -> Tier`` survived the metering rename that made
     it ``PricingPlan``, and ``/v1/kinds/registry/Tier`` answered 404 while this
-    route kept citing it. Through the door, both sides of that contradiction
-    are visible at once — which is why the assertion belongs here."""
+    route kept citing it. The citation moved from a hand table in the SDK onto
+    the Kind, so the mutant moved with it — and through the door, both sides of
+    the contradiction are still visible at once."""
     kinds = {k["kind"] for k in graph["kinds"]}
-    dead = [f"{u['kind']}.{u['field']} -> {u['target']}"
-            for u in graph["undeclarable"]
-            if u["target"] != "any" and u["target"] not in kinds]
-    assert dead == [], f"undeclarable cites Kinds this scope does not serve: {dead}"
+    dead = [f"{e['from_kind']}.{e['field']} -> {e['to_kind']}"
+            for e in graph["edges"]
+            if e["to_kind"] != "*" and e["to_kind"] not in kinds]
+    assert dead == [], f"an edge cites Kinds this scope does not serve: {dead}"
+    claims = [u for u in graph["unresolved"] if u["origin"] != "undeclared"]
+    assert claims == [], f"declarations this scope cannot honour: {claims}"
 
 
 # --- scope, lanes, and what an empty answer means ----------------------------

@@ -148,55 +148,69 @@ Kind** — the DNA Cloud portal was making N of them, four at a time, on every
 render of its Kind catalogue, to rebuild in memory a graph the registry already
 held whole. This is the same projection that generates
 [the data model page](../reference/data-model.md), served as JSON:
-`dna.kernel.query.kind_graph`, reading `x-dna-ref` through the **same**
+`dna.kernel.query.kind_graph`, reading `spec.relations` through the **same**
 function the write path validates with.
 
-The response carries `kinds` (nodes), `edges`
-(`from_kind` / `field` / `to_kind` / `cardinality` / `tier` / `polymorphic`),
-two gap lists — `unresolved` and `undeclarable` — and a `coverage` block.
+The response carries `kinds` (nodes), `edges` (`from_kind` / `field` /
+`to_kind` / `cardinality` / `tier` / `polymorphic` / `by` / `enforced` /
+`inverse_of`), the gap list `unresolved`, and a `coverage` block.
 
-**Read the coverage block; it is not decoration.** Edges come in three tiers
-and only one of them is enforced:
+**`tier` is where the edge came from; `enforced` is what the runtime does about
+it. They are not the same set, and conflating them is the mistake this wire
+shape exists to prevent.**
 
-| tier | where it comes from | enforced? |
-| --- | --- | --- |
-| `declared` | the field carries `x-dna-ref` | **yes** — the kernel resolves it at write time |
-| `composition` | `dep_filters` names the target Kind | no — it drives prompt composition and is never checked against stored data |
-| `inferred` | the field NAME resolves to exactly one registered Kind | no — a convention, not a contract |
+| tier | where it comes from |
+| --- | --- |
+| `declared` | the Kind's `spec.relations` says so |
+| `composition` | `dep_filters` names the target Kind — it drives prompt composition and is never checked against stored data |
 
-On the 06/08/2026 measurement the model carried **109 schema edges, of which 16
-were declared**. A screen rendering the edge list as "the relations" would be
+`enforced: true` needs BOTH a concrete target Kind and `by: "name"`
+addressing — that is the only relation the kernel resolves at write time. A
+relation addressed by a spec field of the target (`by: "workspace_id"`,
+`"role_id"`, `"tier_id"`) or carrying its Kind in the value (`to_kind: "*"`,
+with `by` naming the composite form) is fully DECLARED and deliberately not
+followed: resolving by key needs an index the store does not have, and a second
+resolution rule beside a live one can veto data the live one accepts.
+
+On the 06/08/2026 measurement the model carried **97 schema edges, of which 21
+are enforced**. A screen rendering the edge list as "the relations" would be
 asserting a completeness nothing here has — so the qualifier ships **on the
-wire**: `coverage.enforced_tiers` names the tiers the runtime stands behind,
-and `coverage.limits` names what the graph structurally cannot see (references
-nested below the first level of `properties`, references keyed by an id rather
-than a document name, and — first among them — that these edges are **schema,
-not data**: which Kinds MAY reference which, never which documents do).
+wire**: `coverage.enforced` counts what the runtime stands behind, and
+`coverage.limits` names what the graph structurally cannot see (relations
+nested below the first level of `properties`, the per-edge meaning of
+`enforced`, and — first among them — that these edges are **schema, not
+data**: which Kinds MAY reference which, never which documents do).
 
 **And read `unresolved[].origin`, not `unresolved[].reason`.** The gap list
-holds two different things. `declared` and `composition` rows are declarations
-the model cannot honour — somebody wrote a target and it does not resolve, and
-that is an authoring error worth alarm. `shape-inferred` rows are the
-projection guessing from a field NAME (`_id` / `_ref` / `_refs`) and are
-usually not references at all: `AgentCatalogEntry.client_id` is an OAuth client
-id, `PlanBinding.stripe_customer_id` is a Stripe id, `UserProfile.user_id` is
-an IdP subject — no Kind should exist for any of them. On the 06/08/2026
-measurement **every one of the 23 rows was `shape-inferred`**, and a screen with
-only `reason` to go on presented all of them as broken declarations, which is
-how a real broken one would arrive invisible. `coverage.declared_origins` names
-the origins that deserve alarm and `coverage.unresolved_by_origin` gives the
-split, so a consumer derives the ranking rather than parsing English out of
-`reason` — which stays exactly as it is, for whoever reads the raw answer.
+holds two different things. `declared`, `composition` and `inverse` rows are
+declarations the model cannot honour — somebody wrote a target, an alias or an
+inverse and it does not resolve, which is an authoring error worth alarm. An
+`inverse` row is the sharpest of them: two Kinds each claiming to be half of
+one relation while disagreeing about it, which nothing could say before
+relations were first-class; `code` carries the machine-readable reason
+(`inverse_missing` / `inverse_target` / `inverse_not_mutual`).
 
-`undeclarable[]` has two families of its own, told apart by `target`. A
-**keyed** reference names the Kind it really points at (`Organization.plan_ref`
-→ `PricingPlan`, by `tier_id`). A **composite** one answers `any`, because the
-value carries its own Kind (`Comment.target_ref` is `"Story:s-thing"`,
-`Engram.source_refs` holds `Narrative/X`, `Story.produces` holds
-`{"kind": …, "name": …}`) and there is no single target to name. That family is
-derived from the schemas — a field either declares `x-dna-ref-composite` or its
-object shape requires `kind` + `name` — so a new one classifies itself instead
-of waiting for somebody to remember a table.
+`undeclared` rows are the other thing: a field whose NAME looks like a
+reference (`_id` / `_ref` / `_refs`) and which nothing declares. Usually not
+references at all — `AgentCatalogEntry.client_id` is an OAuth client id,
+`PlanBinding.stripe_customer_id` is a Stripe id, `UserProfile.user_id` is an
+IdP subject, and no Kind should exist for any of them. This projection no
+longer guesses a TARGET for them, so the row states only what it can see.
+`coverage.declared_origins` names the origins that deserve alarm and
+`coverage.unresolved_by_origin` gives the split, so a consumer derives the
+ranking rather than parsing English out of `reason` — which stays exactly as it
+is, for whoever reads the raw answer.
+
+!!! note "The `undeclarable` list is gone, and that is the feature"
+
+    It used to carry the references the annotation could not express — keyed
+    ones (`Organization.plan_ref` → `PricingPlan`, by `tier_id`) and composite
+    ones (`Comment.target_ref` is `"Story:s-thing"`, `Story.produces` holds
+    `{"kind": …, "name": …}`). Every one of them is a declared relation now,
+    drawn as an edge, with `by` saying how the value addresses its target and
+    `enforced: false` saying how far the runtime goes. A bucket named for what
+    the model could not say was a bucket that grew whenever the model got a new
+    blind spot.
 
 A scope with nothing registered answers `200` with an empty graph, not `404`:
 "exists and holds nothing" is an answer, and conflating it with "no such scope"

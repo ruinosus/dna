@@ -6,10 +6,10 @@
 # them as reference-shaped-and-unresolvable and every consumer got a bare label
 # it could group by and nothing else. Founder decision (2026-08-06): the name
 # was not the lie — the ABSENCE was. Sprint becomes a Kind, and the two fields
-# become declared references (`x-dna-ref: Sprint`).
+# become declared relations (`to: Sprint`).
 #
 # THE DOC NAME IS THE KEY, and that is what makes this compatible.
-# `x-dna-ref` resolves a target by DOCUMENT NAME, so the doc name IS the
+# A `by: name` relation resolves a target by DOCUMENT NAME, so the doc name IS the
 # identifier the two fields already carry: a Story holding
 # `sprint_ref: 2026-Q2-S2` resolves the moment a Sprint document NAMED
 # `2026-Q2-S2` exists. `sprint_id` restates it inside the spec for the same

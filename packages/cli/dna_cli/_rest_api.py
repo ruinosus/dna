@@ -1707,7 +1707,7 @@ def build_app(
         Replaces "read every Kind's descriptor and derive the graph in the
         client", which cost one request per Kind and got slower as a workspace
         grew. Same projection that generates ``docs/reference/data-model.md``:
-        the tiering, the ``x-dna-ref`` reading (the SAME one the write path
+        the tiering, the ``spec.relations`` reading (the SAME one the write path
         validates with) and the gap tables live in the SDK, so the page and
         this route cannot disagree about what the model says.
 

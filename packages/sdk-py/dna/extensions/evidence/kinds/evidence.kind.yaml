@@ -35,6 +35,11 @@ spec:
   storage:
     type: yaml
     container: evidence
+  relations:
+    document_ref:
+      to: '*'
+      cardinality: one
+      by: 'Kind:name'
   schema:
     type: object
     required:
@@ -67,7 +72,6 @@ spec:
         type: string
       document_ref:
         type: string
-        x-dna-ref-composite: 'Kind:name'
         description: >-
           `Kind:name` of the document whose save triggered this event — the
           canonical Kind name and the document name, colon-joined. MEASURED,
@@ -78,10 +82,11 @@ spec:
           `EvalRun:run1`). The slash-shaped values in some Python test fixtures
           (`Story/s-x`, `eval-evalrun/my-run`) and the older builder docstring
           are inert inputs to a pass-through parameter and are NOT the format.
-          Nothing dereferences it today. NOT declarable with `x-dna-ref`, which
-          resolves a bare document NAME — this is the same composite as
-          `Comment.target_ref` and needs parsing, not a lookup. Absent on the
-          gaia event shape, which carries source_kind/source_name instead.
+          Nothing dereferences it today. Declared as a relation with `to: '*'`
+          rather than with a named target: a named one resolves a bare document
+          NAME, and this is the same composite as `Comment.target_ref` — it
+          needs parsing, not a lookup. Absent on the gaia event shape, which
+          carries source_kind/source_name instead.
       snapshot:
         type: object
         additionalProperties: true

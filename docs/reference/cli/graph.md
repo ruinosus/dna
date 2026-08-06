@@ -1,6 +1,6 @@
 # `dna graph`
 
-The derived reference graph (x-dna-ref edges).
+The derived reference graph (declared relations).
 
 !!! info "Generated from the command definitions"
 

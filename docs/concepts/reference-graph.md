@@ -1,14 +1,14 @@
 # The reference graph — what points at this document?
 
-A Kind can declare that one of its fields names another document:
+A Kind declares what it points at, as a thing of its own:
 
 ```yaml
 spec:
-  schema:
-    properties:
-      feature:
-        type: string
-        x-dna-ref: Feature        # this string names a Feature
+  relations:
+    feature:
+      to: Feature                 # this field names a Feature
+      cardinality: one
+      inverse_of: stories         # and Feature.stories is the other half
 ```
 
 That declaration has been enforced on write for a while: save a `Story` whose
@@ -33,11 +33,18 @@ So the producer is not a second mechanism that scans documents and derives
 relationships. It is the *same* pass, keeping its result:
 
 ```
-resolve_declared_edges(...) -> (edges, problems, complete)
-                                  │        │        └── a read failed part-way
-                                  │        └── what the validator vetoes on
-                                  └── what the edge table stores
+resolve_relations(...) -> (edges, problems, discords, complete)
+                             │        │         │         └── a read failed part-way
+                             │        │         └── the inverse the target does not return
+                             │        └── what the validator vetoes on
+                             └── what the edge table stores
 ```
+
+`discords` rides along for the same reason `edges` does: the target document is
+already in hand, so asking "does it name me back through the declared
+`inverse_of`?" costs nothing. It is REPORTED and never enforced — imposing a
+reciprocal pair deadlocks (neither half can be written first) and deriving one
+means the kernel writing a document the author never touched.
 
 One pass, one set of reads, two consumers. That matters for a reason beyond
 cost: an edge derived separately from the check could **disagree** with the
@@ -161,7 +168,7 @@ than showing a confident nothing.
   edges (`dep_filters`, never checked against data) and name-convention
   guesses. Calling this "the relations" would claim a completeness the producer
   does not have — which is why every surface qualifies it as *declared
-  relations (`x-dna-ref`)*.
+  relations (`spec.relations`, addressed by document name)*.
 - **Top-level fields only.** `references_from_schema` reads
   `schema["properties"]` and does not recurse into `items`, sub-objects,
   `$ref` or `oneOf`. A reference at `spec.foo.bar` is invisible, and stays so.
@@ -170,7 +177,7 @@ than showing a confident nothing.
 
 ## See also
 
-- [Kinds — identity and composition](kinds.md) — where `x-dna-ref` is declared.
+- [Kinds — identity and composition](kinds.md) — where `spec.relations` is declared.
 - [Tenancy and layers](tenancy-layers.md) — why `to_scope` can differ from the
   scope you asked from.
 - `dna graph --help` — `backfill` and `refs`.

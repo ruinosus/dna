@@ -142,8 +142,7 @@
       },
       "feature": {
         "type": "string",
-        "description": "Parent Feature name",
-        "x-dna-ref": "Feature"
+        "description": "Parent Feature name"
       },
       "owner": {
         "type": "string",
@@ -190,16 +189,14 @@
         "items": {
           "type": "string"
         },
-        "description": "Other Story names that must land first",
-        "x-dna-ref": "Story"
+        "description": "Other Story names that must land first"
       },
       "spec_refs": {
         "type": "array",
         "items": {
           "type": "string"
         },
-        "description": "Spec docs (kind=Spec) this Story implements. M:N linkage between the planning axis (Story) and the design axis (Spec) — Jira/Confluence-shaped.",
-        "x-dna-ref": "Spec"
+        "description": "Spec docs (kind=Spec) this Story implements. M:N linkage between the planning axis (Story) and the design axis (Spec) — Jira/Confluence-shaped."
       },
       "closed_at": {
         "type": "string",
@@ -259,8 +256,7 @@
       },
       "sprint_ref": {
         "type": "string",
-        "description": "The Sprint this Story is committed to — the Sprint document's NAME, which is also its sprint_id (e.g. '2026-Q2-S2'). DECLARED (i-040), so the write path resolves it instead of trusting a label. The value SHAPE did not change on 2026-08-06; a `Sprint` Kind simply started existing for the identifier to name.",
-        "x-dna-ref": "Sprint"
+        "description": "The Sprint this Story is committed to — the Sprint document's NAME, which is also its sprint_id (e.g. '2026-Q2-S2'). DECLARED (i-040), so the write path resolves it instead of trusting a label. The value SHAPE did not change on 2026-08-06; a `Sprint` Kind simply started existing for the identifier to name."
       },
       "time_tracking": {
         "type": "object",

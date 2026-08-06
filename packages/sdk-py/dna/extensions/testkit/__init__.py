@@ -96,6 +96,13 @@ class TestGuideKind(KindBase):
         "chat or a generic HtmlArtifact. Links to its Story via ``verifies`` (and "
         "the Story's ``produces[]``)."
     )
+    # `verifies` holds `Kind/name`, so a guide can verify a Story and a
+    # Spec in the same list — the target Kind travels in the value.
+    relations = {
+        "verifies": {
+            "to": "*", "cardinality": "many", "by": "Kind/name",
+        },
+    }
 
     def schema(self) -> dict[str, Any] | None:
         return {
@@ -132,7 +139,6 @@ class TestGuideKind(KindBase):
                     "default": [],
                     # Composite: each entry carries its own Kind, so a guide can
                     # verify a Story and a Spec in the same list.
-                    "x-dna-ref-composite": "Kind/name",
                     "description": "Work items this guide verifies, as 'Kind/name' refs (e.g. 'Story/s-x').",
                 },
                 "prerequisites": {
@@ -199,6 +205,22 @@ class TestRunKind(KindBase):
         "timeline (surfaces in FOCUS); a passing run whose ``verifies`` points at "
         "a Story drives the derived journey's ``verify`` phase."
     )
+    # ``guide_ref`` is the first relation here the kernel actually RESOLVES:
+    # the value is a TestGuide document's name, so it validates on write and
+    # produces an edge. It used to be an INFERRED edge — drawn by a field-name
+    # guess, enforced by nothing, and true only by luck.
+    #
+    # ``evidence`` is heterogeneous: an entry is either a ``Kind/name`` pointer
+    # or a plain URL. ``to: "*"`` is the honest declaration AND the safe one —
+    # the kernel does not resolve it, so a URL cannot be refused as a dangling
+    # reference. The old annotation could not say this without vetoing valid
+    # data, which is exactly why the field went undeclared.
+    relations = {
+        "guide_ref": {"to": "TestGuide", "cardinality": "one"},
+        "evidence": {
+            "to": "*", "cardinality": "many", "by": "Kind/name",
+        },
+    }
 
     def schema(self) -> dict[str, Any] | None:
         return {
@@ -242,9 +264,8 @@ class TestRunKind(KindBase):
                     "items": {"type": "string"},
                     "default": [],
                     # Composite AND heterogeneous: an entry is either a
-                    # `Kind/name` pointer or a plain URL. `x-dna-ref` would
+                    # `Kind/name` pointer or a plain URL. A named target would
                     # veto every URL, which is valid data here.
-                    "x-dna-ref-composite": "Kind/name",
                     "description": "Refs/links backing the outcome, e.g. ['HtmlArtifact/ha-x', urls].",
                 },
                 "screenshots": {

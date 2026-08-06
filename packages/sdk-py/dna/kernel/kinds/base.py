@@ -181,6 +181,23 @@ class KindBase:
     # reading and a surface falls back to its own generic renderer, which is
     # not the same fact as declaring an empty one.
     presentation: Any = None
+    # ---- Relations (what this Kind POINTS AT) ------------------------
+    # ``{relation name: Relation}``, where a relation's NAME is the spec field
+    # holding its value. Declared here, on the Kind, rather than as an
+    # annotation inside a property of ``schema()`` — see
+    # ``dna.kernel.kinds.relations`` for the four keys and, more importantly,
+    # for what ``inverse_of`` does and does not promise. Same attribute name as
+    # ``KindDefinitionSpec.relations`` / ``DeclarativeKindPort.relations``, so
+    # ``relations_of`` reads a hand-written Kind and a YAML-declared one
+    # through ONE getattr. A class may write the plain authoring mapping
+    # (``{"stories": {"to": "Story", "cardinality": "many"}}``);
+    # ``relations_of`` normalizes it, and the registry lint checks it against
+    # ``schema()`` the way ``from_raw`` checks a descriptor's.
+    #
+    # Empty and absent are the same statement here (unlike ``presentation``,
+    # where "declares no reading" and "declares an empty reading" differ): a
+    # Kind with no relations points at exactly the same nothing either way.
+    relations: Any = None
     # Explicit backend-visibility override; None → the storage-pattern
     # default (see protocols.resolve_visible_in_backend).
     visible_in_backend: bool | None = None

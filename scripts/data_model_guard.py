@@ -83,7 +83,7 @@ def check() -> int:
 
     print(
         "data_model_guard: the committed data model is STALE. The Kinds, "
-        "their `x-dna-ref` declarations, or the physical tables changed and "
+        "their `spec.relations` declarations, or the physical tables changed and "
         "docs/reference/data-model.md was not regenerated.\n\n"
         "  fix: python3 scripts/gen_data_model_docs.py && git add "
         "docs/reference/data-model.md\n\n"
