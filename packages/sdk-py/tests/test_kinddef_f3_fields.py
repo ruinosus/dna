@@ -52,7 +52,12 @@ def test_f3_fields_defaults():
     raw = {**RAW_FULL, "spec": {k: v for k, v in RAW_FULL["spec"].items()
                                 if k in ("target_api_version", "target_kind", "alias", "origin", "storage", "schema")}}
     s = TypedKindDefinition.from_raw(raw).spec
-    assert s.plane == "composition"        # default = comportamento de hoje
+    # ⚠️ i-123 (07/08/2026) — este default era `composition`, e a linha aqui
+    # dizia "default = comportamento de hoje". Hoje é outro: por decisão do
+    # fundador, com o 48-em-49 na tela, um descritor que não declara `plane`
+    # nasce `record`. `tests/test_plane_default.py` guarda a decisão inteira,
+    # inclusive a ressalva dos sinais de composição.
+    assert s.plane == "record"
     assert s.tenant_scope == "tenanted"
     assert s.summary is None
     assert s.embed is None
@@ -107,7 +112,7 @@ def test_port_summary_projects_declared_fields():
 
 def test_port_f3_defaults_preserve_today():
     port = DeclarativeKindPort.from_typed(TypedKindDefinition.from_raw(_minimal_raw()))
-    assert port.plane == "composition"
+    assert port.plane == "record"  # i-123 — ver test_f3_fields_defaults
     assert port.summary(SimpleNamespace(spec={"status": "x"})) is None
     assert port.embed_fields is None
     assert port.is_runtime_artifact is False

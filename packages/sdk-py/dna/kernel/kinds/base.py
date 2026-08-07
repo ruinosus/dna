@@ -37,7 +37,73 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from typing import Any
+
+# ── os SINAIS de composição, declarados UMA vez ──────────────────────────────
+#
+# Os quatro atributos que tornam um Kind incompatível com ``plane="record"``.
+# Eles são lidos por DOIS leitores que falam vocabulários diferentes:
+#
+#   * ``KindRegistry._lint_plane`` lê o PORT (``kp.is_prompt_target``), e RECUSA
+#     o registro quando um deles convive com ``plane='record'``;
+#   * :func:`default_plane` lê o DESCRITOR cru (``raw["prompt_target"]``), e
+#     escolhe o default quando o autor não declarou plane nenhum.
+#
+# Estar aqui, num mapa ``atributo do port → chave do descritor``, é o que impede
+# os dois de divergirem — e a divergência tem uma forma concreta e ruim: um
+# quinto sinal adicionado só ao lint faria o default produzir ``record`` para um
+# descritor que o lint recusa em seguida, ou seja, um Kind autorado que NÃO
+# REGISTRA, com a mensagem de erro apontando para um campo que o autor não
+# escreveu. ``tests/test_plane_default.py`` guarda os dois lados deste mapa.
+# A ORDEM é a que ``_lint_plane`` já usava, porque ela sai na mensagem de erro.
+COMPOSITION_SIGNALS: dict[str, str] = {
+    "is_prompt_target": "prompt_target",
+    "flatten_in_context": "flatten_in_context",
+    "is_schema_affecting": "is_schema_affecting",
+    "is_root": "is_root",
+}
+
+
+def default_plane(raw: Mapping[str, Any]) -> str:
+    """O plano de um descritor de Kind que NÃO declarou um — ``record``.
+
+    ⭐ **A decisão do fundador (i-123, 07/08/2026), e o número que a sustenta:**
+    dos 47 descritores que este SDK publica, 47 declaram ``plane`` — 46
+    ``record`` e um (``Comment``) ``composition``; os dois KindDefinition
+    escritos à mão no dna-cloud declaram ``record``. **Quando o autor PODE
+    escolher, escolheu ``record`` 48 vezes em 49.** O único conjunto que ficava
+    em ``composition`` era o dos Kinds autorados por tenant — e não por escolha,
+    por ausência de um jeito de dizer, já que ``author_kind`` só ganhou o campo
+    em 06/08. O default estava servindo à minoria de 2%.
+
+    E ``composition`` não é o lado neutro do default: um Kind ali paga duas
+    contas medidas no código — cada gravação de UMA instância dispara
+    ``invalidate_mode='scope'`` (que não só descarta, RECONSTRÓI), e a instância
+    entra na materialização da ``ManifestInstance`` a cada build de escopo,
+    passando pelo ``_parse_doc`` que o próprio arquivo chama de *"the dominant
+    cost"*. Um Kind que não compõe prompt nenhum pagava as duas por nada.
+
+    ⚠️ **O default olha os sinais antes de responder, e isso não é derivar o
+    plano.** :data:`COMPOSITION_SIGNALS` lista os quatro atributos que
+    ``KindRegistry._lint_plane`` RECUSA ao lado de ``record``. Um descritor que
+    carrega um deles e não declara plane existia e registrava antes desta
+    mudança; um default cego de ``record`` o tornaria irregistrável — a troca do
+    default quebraria um Kind que ninguém tocou, com um erro sobre um campo que
+    o autor nunca escreveu. Então o default é ``record`` EXCETO quando o próprio
+    descritor já disse que compõe. Continua valendo que um plano DECLARADO nunca
+    é derivado: esta função só responde quando ninguém declarou nada.
+
+    ⚠️ **Não vale para os Kinds escritos como CLASSE.** ``KindBase.plane``
+    segue ``composition`` (logo abaixo) porque ~26 Kinds internos dependem
+    daquele default e a decisão do i-123 foi sobre o Kind de tenant, que sempre
+    chega por descritor. Trocar aquele é outra decisão, com outro número.
+    """
+    return (
+        "composition"
+        if any(raw.get(key) for key in COMPOSITION_SIGNALS.values())
+        else "record"
+    )
 
 
 class KindBase:

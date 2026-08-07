@@ -39,6 +39,7 @@ import os
 from pathlib import Path  # noqa: F401 — kept for parity with prior inline imports
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
+from dna.kernel.invalidation_cost import emit_write, invalidation_logging_enabled
 from dna.kernel.validity import strip_derived_status
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -864,6 +865,14 @@ class WritePipeline:
                 scope=scope, tenant=effective_tenant or "",
                 kind=kind, name=name, op="write",
             )
+        # i-123 — o CONTADOR do gatilho 2. Desligado, a única linha a mais no
+        # caminho quente é uma comparação de nível; nada é formatado.
+        if invalidation_logging_enabled():
+            emit_write(
+                kind=kind, port=_kind_port,
+                plane=getattr(_kind_port, "plane", "composition"),
+                mode=invalidate_mode, op="write", tenant=effective_tenant,
+            )
         host._fire_write_observers(
             scope, kind, name, "write", tenant=effective_tenant or "",
         )
@@ -901,15 +910,34 @@ class WritePipeline:
         this one method — see :mod:`dna.kernel.write.target_delete` for the
         count, and for why the sixth (source-to-source ``sync``) is deliberately
         below it.
+
+        ⚠️ **And the chokepoint for ``record.invalidate-only``** (i-130), for
+        the same reason one question earlier: whether an instance of this KIND
+        may be removed at all. See :mod:`dna.kernel.write.hard_delete` — it runs
+        first because it is a registry lookup that touches no store, and because
+        a Kind that may not be deleted must not have its referrers walked to
+        find that out.
         """
         host = self._host
         src = host._require_writable_source()
+        # ── the KIND gate ─────────────────────────────────────────────────
+        # An Engram promises in its own descriptor that it is never
+        # hard-deleted. Enforced here so the promise holds at every door rather
+        # than at whichever one somebody guarded.
+        from dna.kernel.errors import DeleteRefused
+        from dna.kernel.write.hard_delete import hard_delete_refusal
+
+        kind_refusal = hard_delete_refusal(
+            host.kind_port_for(kind, api_version=api_version, scope=scope)
+        )
+        if kind_refusal is not None:
+            raise DeleteRefused(kind_refusal)
         # Resolve tenant + validate against KindPort.scope (back-compat for
         # layer=("tenant", X) → tenant=X with DeprecationWarning)
         effective_tenant, residual_layer = self._resolve_tenant_arg(
             kind, tenant, layer, api_version=api_version, scope=scope,
         )
-        # ── the gate ──────────────────────────────────────────────────────
+        # ── the GRAPH gate ────────────────────────────────────────────────
         # Raises TargetDeleteRestricted before ANYTHING is removed. Returns []
         # — touching no store at all — whenever no registered relation declares
         # a policy naming this Kind, which is every delete in this registry
@@ -923,6 +951,20 @@ class WritePipeline:
             src, registry_relations(host.kind_ports()),
             scope, kind, name, tenant=effective_tenant,
         )
+        # The KIND gate again, over the PLAN — a ``delete_source`` cascade is a
+        # hard delete too, and it reaches ``_persist_delete`` directly. Asked
+        # before the first removal, so a plan that touches an invalidate-only
+        # record is refused whole rather than half-executed. Free today (no
+        # relation declares ``delete_source`` at all, so the plan is empty), and
+        # the point is that it stays free when one does.
+        for cascade_kind, cascade_name in cascade:
+            cascade_refusal = hard_delete_refusal(
+                host.kind_port_for(cascade_kind, scope=scope))
+            if cascade_refusal is not None:
+                raise DeleteRefused(
+                    f"deleting {kind}/{name} would cascade into "
+                    f"{cascade_kind}/{cascade_name}, and {cascade_refusal}"
+                )
         for cascade_kind, cascade_name in cascade:
             # api_version is NOT passed: the edge carries a bare Kind name, and
             # i-195 makes a Kind name globally unique by an ENFORCED registry
@@ -996,6 +1038,19 @@ class WritePipeline:
             host.invalidate(
                 scope=scope, tenant=effective_tenant or "",
                 kind=kind, name=name, op="delete",
+            )
+        # i-123 — o mesmo contador da escrita. O delete resolve o port SÓ aqui,
+        # e só com o funil ligado: ele é o único consumidor dele neste corpo, e
+        # uma resolução a mais por delete no caminho desligado seria custo por
+        # nada. Desligado, a única linha a mais é a comparação de nível.
+        if invalidation_logging_enabled():
+            _deleted_port = host.kind_port_for(
+                kind, api_version=api_version, scope=scope,
+            )
+            emit_write(
+                kind=kind, port=_deleted_port,
+                plane=getattr(_deleted_port, "plane", "composition"),
+                mode=invalidate_mode, op="delete", tenant=effective_tenant,
             )
         host._fire_write_observers(
             scope, kind, name, "delete", tenant=effective_tenant or "",

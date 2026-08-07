@@ -175,6 +175,18 @@ _WRITE_REFUSALS = (
     # already have, while the policy that actually stopped them travels in the
     # data and would follow them to any store.
     "TargetDeleteRestricted",
+    # dna.kernel.errors — a delete refused because the KIND may not be removed
+    # that way (i-130). It was declared in ``dna.application.instances`` and
+    # consulted by exactly one caller, the generic MCP delete; it moved here
+    # when ``record.invalidate-only`` made the rule a promise about the ROW
+    # rather than about a tool, enforced at the ``WritePipeline.delete``
+    # chokepoint every door crosses. A ``KernelRefusal`` for the same reason
+    # ``TargetDeleteRestricted`` one row up is one: the store could have removed
+    # the row and the caller was entitled to ask, so the remedy is a different
+    # REQUEST (``forget``, which stamps ``valid_to`` and keeps the instance) and
+    # never a different deployment. It keeps ``PermissionError``, the base it
+    # was born with, so every face that already relayed it keeps doing so.
+    "DeleteRefused",
 )
 
 #: The two that live on ``dna.kernel`` itself.
@@ -211,6 +223,12 @@ def test_the_historical_bases_are_kept():
     # ``InstanceNameTaken`` is a ``FileExistsError`` so a caller allocating a
     # name (``create_issue``) can catch the standard exception and try the next.
     assert issubclass(E.InstanceNameTaken, FileExistsError)
+    # ``DeleteRefused`` kept the ``PermissionError`` it carried while it lived
+    # in ``dna.application.instances`` (i-130). Every face already maps a
+    # PermissionError to an honest client denial, and the MCP delete tool
+    # catches it by name — a re-parenting would have made a refusal that had
+    # worked for months start arriving as a crash.
+    assert issubclass(E.DeleteRefused, PermissionError)
 
 
 def test_one_except_clause_catches_every_write_refusal():

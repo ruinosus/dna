@@ -107,6 +107,69 @@ and cross-kind references. Convention: `<owner>-<kind>` (e.g.,
 | `prompt_target_priority` | When Agent "brad" and Soul "brad" both exist, the higher priority wins. Agent=10 beats Soul=1. |
 | `flatten_in_context` | Soul's `soul_content` is flattened into the Mustache context so templates can use `{{soul_content}}`. |
 
+### The plane: `record` or `composition`
+
+```python
+    plane = "record"   # or "composition"
+```
+
+A Kind declares which **storage/cache plane** it lives on, and the choice is
+not cosmetic — it decides what every write of that Kind costs.
+
+| plane | what it means | what a write costs |
+|---|---|---|
+| `composition` | the Kind takes part in agent composition — its instances are parsed into the `ManifestInstance` and can reach a prompt | the write drops the **whole scope's** cache; the next read of that scope rebuilds it |
+| `record` | the Kind is a pure typed instance — stored, queried, read back, never composed | the write drops **only that instance's** entry — O(1) |
+
+A `record` Kind cannot carry a composition signal (`prompt_target`,
+`flatten_in_context`, `is_schema_affecting`, or a ROOT storage pattern);
+declaring both fails registration loudly rather than mis-routing writes.
+
+**The default for a Kind authored from a descriptor is `record`.** It changed
+from `composition` in August 2026, on a measurement: of the 47 Kind descriptors
+this SDK ships, 46 declare `record` and one declares `composition` — when an
+author could choose, they chose `record` 48 times out of 49. The old default was
+serving the 2% and charging the other 98% a scope-wide cache drop on every
+write. A Kind that genuinely composes says so, and saying so is one line.
+
+The two facts a reader usually wants next:
+
+* **`plane` is explicit, never derived.** The default answers only when nobody
+  declared anything; a declared value is always honoured. And even the default
+  looks at the composition signals first, so a descriptor that already says it
+  composes is never demoted into a plane its own declarations contradict.
+* **Kinds written as a Python class still default to `composition`** — the
+  measurement above was about descriptors, and `KindBase` was left alone.
+  Declare `plane` on the class if you want the cheap plane.
+
+#### Measuring what the expensive plane costs
+
+Knowing the shape is not knowing the number, so the cost is instrumented.
+`DNA_INVALIDATION_TELEMETRY=on`, set on the service that *writes*, emits one
+line per write, one per scope invalidation and one per `ManifestInstance`
+rebuild; **`dna invalidation`** reads them back:
+
+```bash
+az containerapp logs show -n ca-dna-api-… --tail 5000 | dna invalidation stats --gate
+dna invalidation stats /tmp/api.log
+```
+
+It prints the p95 of the scope rebuild, how often the expensive drawer is
+opened, and whether either crossed its threshold. Two things worth knowing
+before you read the output:
+
+* the **fan-out** of an invalidation is nearly free on its own — holders reload
+  lazily. The cost lands on the *next* build of that scope, which is why the
+  report measures the rebuild and says so in the output rather than letting a
+  small fan-out number read as "this is cheap";
+* **zero lines is not "nothing fired"** — the command says, in those words, that
+  nothing was measured.
+
+The measured shape, for calibration: a scope rebuild is **linear in the number
+of instances in the scope**, and a scope of composition-plane instances costs
+roughly **5×** the same scope on the record plane (~170 ms vs ~35 ms for 10,000
+instances, on Postgres and on SQLite alike).
+
 ### Dependency Filters
 
 ```python

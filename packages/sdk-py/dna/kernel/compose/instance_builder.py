@@ -15,6 +15,11 @@ import logging
 import os
 from typing import TYPE_CHECKING, Any
 
+from dna.kernel.invalidation_cost import (
+    emit_rebuild,
+    invalidation_logging_enabled,
+    now,
+)
 from dna.kernel.protocols import CacheItem, ResolveError
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -44,10 +49,23 @@ class InstanceBuilder:
     ) -> "ManifestInstance":
         """Build a ManifestInstance from pre-loaded data. Pure computation, no
         I/O. ``skip_async_rescan`` suppresses the sync rescan when an async
-        caller (instance_async) will run it itself."""
+        caller (instance_async) will run it itself.
+
+        i-123 — ⭐ **é AQUI que o custo da invalidação de escopo aparece.** Uma
+        escrita com ``invalidate_mode="scope"`` derruba o cache base e não gasta
+        quase nada fazendo isso; o que ela realmente faz é obrigar este método a
+        rodar de novo na próxima leitura daquele escopo. O evento ``rebuild``
+        emitido no fim carrega ``docs`` e ``ms`` na MESMA linha porque é a
+        regressão de um contra o outro que responde à pergunta do fundador — se
+        o custo é O(tamanho do escopo).
+        """
         from dna.kernel import _run_sync_helper
         from dna.kernel.manifest import ManifestInstance
         k = self._k
+        # Desligado: uma comparação de nível, e o relógio fica intocado.
+        observing = invalidation_logging_enabled()
+        started = now() if observing else 0.0
+        skipped_by_plane = 0
         k._ensure_generic_readers_writers()
 
         # Register custom kinds from the manifest root doc (is_root).
@@ -221,6 +239,10 @@ class InstanceBuilder:
                 else k.kind_plane(raw.get("kind", ""), scope=scope)
             )
             if plane == "record":
+                # i-123 — o que o plano ``record`` POUPA, contado. Um ``+= 1``
+                # de inteiro é o custo desta linha ligada ou desligada; medir
+                # isto atrás do gate exigiria repetir a condição do filtro.
+                skipped_by_plane += 1
                 continue
             origin = raw.pop("_origin", "local") if "_origin" in raw else "local"
             doc = k._parse_doc(raw, origin=origin)
@@ -251,6 +273,14 @@ class InstanceBuilder:
         )
         if effective_tenant:
             mi._tenant = effective_tenant
+        if observing:
+            emit_rebuild(
+                # ``all_raws``, e não ``raw_docs``: é o conjunto que este build
+                # de fato percorreu (fontes + deps + camadas + rescan), que é o
+                # denominador honesto do "é O(tamanho do escopo)?".
+                docs=len(all_raws), materialized=len(instances),
+                skipped=skipped_by_plane, ms=(now() - started) * 1000.0,
+            )
         return mi
 
     def _merge_rescan_extras(self, all_raws: list[dict], extra: list[dict]) -> None:

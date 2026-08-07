@@ -28,6 +28,7 @@ from dna_cli import (
     init_cmd,
     install_cmd,
     intel_cmd,
+    invalidation_cmd,
     kind_cmd,
     mcp_cmd,
     memory_cmd,
@@ -90,6 +91,9 @@ main.add_command(recall_cmd.search)
 main.add_command(memory_cmd.memory)
 main.add_command(genome_cmd.genome)
 main.add_command(graph_cmd.graph)
+# Ao lado de `graph`, e pelo mesmo motivo: é um funil de telemetria com um
+# gatilho nomeado atrás, não a CRUD de nada (i-123).
+main.add_command(invalidation_cmd.invalidation)
 main.add_command(definition_cmd.definition)
 # Importing testkit_cmd registers `sdlc test-guide` + `sdlc test-run` on the
 # sdlc group via its decorators (TESTS as first-class SDLC).

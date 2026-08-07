@@ -323,6 +323,36 @@ class RevokedKindWrite(KernelRefusal, ValueError):
     """
 
 
+class DeleteRefused(KernelRefusal, PermissionError):
+    """A delete was refused because the KIND may not be removed that way.
+
+    A verdict about the REQUEST — the remedy is a different request, never a
+    different deployment — so a :class:`KernelRefusal` and emphatically not a
+    :class:`CapabilityRefusal`: the store could have removed the row, and that
+    is exactly the problem. It keeps ``PermissionError``, the base it was born
+    with in ``dna.application.instances``, where every face already maps it to
+    an honest client denial.
+
+    It MOVED here (i-130) rather than being declared here, and the move is half
+    the fix. Two refusal categories already lived on the application side and
+    were consulted by exactly ONE caller — the generic MCP delete — while the
+    REST memory delete, the CLI and the internal callers went straight to
+    :meth:`dna.kernel.Kernel.delete_instance` and never asked. That is adequate
+    for a rule about a TOOL (*"never deletable through a generic tool"*, which
+    is what ``record.append-only`` says, with the purpose-built path left open).
+    It is not adequate for a rule about the DATA: an Engram promises in its own
+    descriptor that it is *never hard-deleted*, and a promise about the row has
+    to hold at the one place every door crosses — otherwise it is a promise
+    about whichever door somebody happened to guard.
+
+    So the type lives beside :class:`TargetDeleteRestricted`, the other refusal
+    on the delete path, and is raised from the same chokepoint
+    (``WritePipeline.delete``). ``dna.application.instances`` re-exports the
+    name, so ``D.DeleteRefused`` and ``from dna.application import
+    DeleteRefused`` keep resolving to this class.
+    """
+
+
 class TargetDeleteRestricted(KernelRefusal, ValueError):
     """A delete was refused because something still points at the instance, and
     the relation that points at it declares ``on_target_delete: restrict``.

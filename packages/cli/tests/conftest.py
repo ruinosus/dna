@@ -10,6 +10,15 @@ Tests scope:
 """
 from __future__ import annotations
 
+# ── i-138: a suíte tem de testar ESTE checkout ─────────────────────────────
+# O venv é compartilhado; quem rodou `uv pip install -e .` por último reaponta
+# o editable. Sem isto, um verde pode ser sobre a árvore de outro agent — e o
+# verde é idêntico ao honesto. Roda no import do conftest, antes de coletar.
+from _tree_guard import assert_same_checkout  # noqa: E402
+
+assert_same_checkout()
+
+
 import contextlib
 import os
 import socket
