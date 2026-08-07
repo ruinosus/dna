@@ -14,6 +14,17 @@ literal in code**) it meters every MCP tool call against three limits:
       the counter the overage job bills from (``SUM(calls) - included``) can
       never carry calls the customer was refused.
 
+And one thing that is deliberately NOT a limit in that sense:
+
+    * **the margin breaker** — a COST-PROTECTION CUTOUT the operator arms on a
+      plan (:func:`enforce_margin_breaker`, i-134). The three limits above are
+      what a plan SELLS; this is a fuse that stops one account costing the
+      operator more than it can absorb while the right sold axis does not exist
+      yet. It never goes on a price page, it counts nothing of its own, and it
+      is OFF unless a plan declares it. Read the block comment above
+      :func:`enforce_margin_breaker` before touching it — the distinction is
+      the point, and it is the thing most easily lost.
+
 The counting is behind a small **port** (:class:`QuotaStore`) with two impls:
 
     * :class:`InProcQuotaStore` — dicts in the server process. The right
@@ -61,6 +72,36 @@ class FeatureNotInPlanError(PermissionError):
 
     Raised by :func:`enforce_quota` when the tier's ``feature_families`` does not
     include the called tool's family. The message names the tier and the family."""
+
+
+class MarginBreakerTripped(OverQuotaError):
+    """The operator's COST-PROTECTION CUTOUT is open for this tenant (429).
+
+    ⚠️ **This is not a plan allowance and it is not a pricing axis.** Read the
+    long-form reasoning on :func:`enforce_margin_breaker`; the short version is
+    that a sold limit is a PROMISE to the customer and this is a FUSE for the
+    operator, and confusing the two would put a number on a price list that
+    nobody agreed to sell.
+
+    Subclasses :class:`OverQuotaError` deliberately, and the choice is the
+    defence rather than a convenience. Every face that relays plan denials
+    already enumerates ``OverQuotaError`` by name (the MCP ``_guard``, the REST
+    ``_plan_gate``, DNA Cloud's A2A door), and this house has measured twice
+    what a hand-written enumeration costs when a new refusal type is declared
+    beside it: the refusal escapes as an unexplained 500 on whichever face
+    nobody remembered. Inheriting means this refusal is relayed correctly by
+    every face written BEFORE it existed — 429 on REST, a ToolError naming the
+    reason on MCP — with no enumeration to widen.
+
+    (Not a ``dna.kernel.errors.KernelRefusal`` and not a ``CapabilityRefusal``:
+    both are the KERNEL's vocabulary — a verdict the kernel reached about a
+    write, or a statement about what the wired STORE can do — and the kernel
+    adjudicates no plan. The derived guard that pins the kernel bases
+    (``test_face_refusal_parity``'s
+    ``test_every_rest_capability_refusal_carries_the_marker_base``) keys on the
+    REST statuses 501/410, which is exactly where a margin cutout does not
+    land. The quota module's own family is the right one, and
+    ``tests/test_quota_refusals_reach_both_faces.py`` is its derived guard.)"""
 
 
 class MemoryModeError(PermissionError):
@@ -283,6 +324,27 @@ class QuotaStore(Protocol):
         mid-day owns a bucket per tier; the bill is for the tenant."""
         ...
 
+    def calls_in_window(self, tenant: str, days: int) -> int:
+        """Total calls ``tenant`` made over the last ``days`` UTC days,
+        today INCLUDED — the read the margin breaker decides on.
+
+        Deliberately the SAME rows :meth:`calls_on` reads, aggregated over a
+        wider horizon rather than counted into a second place. A separate
+        counter for the breaker would be a second version of the truth that
+        can drift from the billed one, and drift in the direction that matters
+        (undercount) is a breaker that does not trip. There is one counter;
+        this is a different question asked of it.
+
+        Summed across tiers for the same reason :meth:`calls_on` is: the
+        exposure belongs to the tenant, and a tenant that changed plan
+        mid-window owns a bucket per tier.
+
+        ``days <= 0`` yields ``0`` (an empty horizon counts nothing). A store
+        that cannot answer must RAISE, never return ``0`` — zero reads as
+        "well under the ceiling", which is the confident lie the breaker's
+        fail-safe (:class:`MarginBreakerUnreadable`) exists to refuse."""
+        ...
+
 
 class InProcQuotaStore:
     """Default in-process :class:`QuotaStore` — a dict counter + a per-key window.
@@ -309,6 +371,21 @@ class InProcQuotaStore:
         """A ``date`` in the same ``YYYY-DDD`` shape ``_today`` produces."""
         return f"{day.year:04d}-{day.timetuple().tm_yday:03d}"
 
+    @staticmethod
+    def _label_day(label: str) -> _dt.date | None:
+        """A ``YYYY-DDD`` bucket label back to the ``date`` it names.
+
+        The window read needs ORDER over buckets, and the label's lexical
+        order is not it: ``'2026-365' < '2027-001'`` holds, but only by
+        accident of the year prefix — compare two labels as strings inside a
+        window that straddles New Year's Eve and a 30-day horizon silently
+        becomes a 365-day one. Parsing to a real date is the only comparison
+        that is right in December."""
+        try:
+            return _dt.datetime.strptime(label, "%Y-%j").date()
+        except ValueError:
+            return None
+
     def reset(self) -> None:
         """Drop every counter — the supported way to isolate tests.
 
@@ -330,6 +407,32 @@ class InProcQuotaStore:
             for (bucket_day, key), count in self._day_counts.items()
             if bucket_day == label and split_quota_key(key)[0] == tenant
         )
+
+    def calls_in_window(self, tenant: str, days: int) -> int:
+        """In-process twin of the breaker read (see :class:`QuotaStore`).
+
+        ⚠️ Carries this store's standing caveat, and it BITES HARDER here than
+        on the daily axis. The dicts are per-process and reset on restart, so
+        the window this answers is "what THIS replica has seen since it
+        started" — never the tenant's real 30 days. On the daily cap that
+        means N replicas grant ~N x the cap; on a breaker it means the fuse
+        may never blow at all, because no single process ever accumulates the
+        history. The in-process store stays the right default for a local
+        ``dna mcp serve`` (which has no plan, so no breaker), and a hosted
+        deployment that declares a ceiling must run the durable store — the
+        warning in :func:`store_from_env` already says so for billing, and the
+        breaker raises the stakes rather than changing the rule."""
+        if days <= 0:
+            return 0
+        cutoff = _dt.datetime.now(_dt.UTC).date() - _dt.timedelta(days=days - 1)
+        total = 0
+        for (bucket_day, key), count in self._day_counts.items():
+            bucket = self._label_day(bucket_day)
+            if bucket is None or bucket < cutoff:
+                continue
+            if split_quota_key(key)[0] == tenant:
+                total += count
+        return total
 
     def incr_day(self, key: str) -> int:
         bucket = (self._today(), key)
@@ -672,6 +775,42 @@ class PostgresQuotaStore:
             ).first()
         return int(row[0]) if row else 0
 
+    def calls_in_window(self, tenant: str, days: int) -> int:
+        """Durable calls ``tenant`` made over the last ``days`` UTC days.
+
+        The margin breaker's read (see :class:`QuotaStore`). One aggregate
+        over the SAME rows :meth:`calls_on` bills from — no second counter, so
+        the fuse and the invoice can never disagree about what was served.
+
+        The horizon is a ROLLING window anchored on today, not the calendar
+        month, and that is the safer of the two: a calendar period resets at
+        midnight on the 1st, so a runaway spanning the 31st and the 1st gets
+        two full ceilings inside 48 hours. A rolling window has no such seam.
+
+        A failure PROPAGATES. Returning ``0`` on an unreachable table would
+        read as "well under the ceiling" and serve the call — the fail-open
+        :class:`MarginBreakerUnreadable` exists to refuse.
+
+        NOTE the shape of the read: the counter's primary key is
+        ``(day, tenant, tier)``, so a tenant-equality + day-range predicate
+        scans the range rather than seeking one row. That is one aggregate per
+        metered call over at most ``days`` x tenants rows, against the same
+        pooled connection the counter already uses. It is deliberately NOT
+        cached in-process: a cache is stale in the direction that undercounts,
+        and a breaker that undercounts does not trip."""
+        import sqlalchemy as sa
+
+        if days <= 0:
+            return 0
+        stmt = sa.text(
+            f"SELECT COALESCE(SUM(calls), 0) FROM {self._qualified} "
+            "WHERE tenant = :tenant AND day >= :since"
+        )
+        since = self._today() - _dt.timedelta(days=days - 1)
+        with self._get_engine().connect() as conn:
+            row = conn.execute(stmt, {"tenant": tenant, "since": since}).first()
+        return int(row[0]) if row else 0
+
     def close(self) -> None:
         """Dispose the connection pool (tests / shutdown)."""
         if self._engine is not None:
@@ -763,6 +902,225 @@ class TierRegistryUnavailableError(RuntimeError):
     "service unavailable", never to a plan denial."""
 
 
+class MarginBreakerUnreadable(TierRegistryUnavailableError):
+    """The plan declared a cost-protection cutout and the counter it reads
+    cannot be reached — so the call is REFUSED, never served on the assumption
+    that the cutout is closed (503 semantics).
+
+    The fail-SAFE half of :func:`enforce_margin_breaker`, and it follows the
+    precedent set immediately above: under ``DNA_QUOTA_REQUIRE_TIERS`` a Tier
+    registry the enforcer cannot read PROPAGATES, so the metered call fails
+    instead of the billing. A breaker degrades the same way or not at all —
+    **a breaker that cannot tell whether it is tripped and lets the call
+    through is indistinguishable from no breaker**, which is exactly the defect
+    i-134 measured.
+
+    It needs no environment flag to opt in, because THE OPT-IN IS THE FIELD: a
+    plan that never declared ``margin_breaker_calls_per_window`` never reaches
+    this code, so an OSS / self-host source (empty caps) and every plan written
+    before the cutout existed are structurally out of its reach. A deployment
+    that DID declare a ceiling has said it wants the fuse; serving uncapped
+    because a SELECT failed would be the fail-open this class exists to refuse.
+
+    Subclasses :class:`TierRegistryUnavailableError` for the same reason
+    :class:`MarginBreakerTripped` subclasses :class:`OverQuotaError`: both
+    faces already map that type to 503, and the parent's own docstring states
+    the semantics this needs verbatim — *the caller did nothing wrong, the
+    deployment is broken*. Inheriting relays it correctly on faces written
+    before it existed, with no enumeration to widen."""
+
+
+# ── the MARGIN BREAKER (i-134) — a fuse for the operator, never a product ──
+#
+# ⭐ READ THIS BEFORE TOUCHING ANYTHING BELOW. The distinction it draws is the
+# whole reason this code exists, and it is the thing most likely to be lost:
+#
+#     a SOLD LIMIT is a PROMISE to the customer — it belongs on the price
+#     page, in the contract, in what the buyer expects to receive;
+#     a BREAKER is what stops the house burning down while the right sold
+#     limit does not exist yet.
+#
+# So: this cap is NOT a pricing axis, it must NOT appear on a plan table, and
+# nobody reading this file tomorrow should be able to conclude "ah, we sell
+# calls per month". The pricing decision (i-112) belongs to the founder and has
+# not been made. This is the fuse that keeps the question open.
+#
+# WHY IT IS DENOMINATED IN CALLS AND NOT IN TOKENS — measured 07/08/2026, and
+# the measurement is the design:
+#
+#   * the money is spent by MODEL INFERENCE, and the only place a token count
+#     exists in this codebase is `dna.runtime.telemetry.TurnRecorder`, which
+#     reads OpenInference LLM spans at the END of a turn, inside the copilot
+#     PROCESS, and hands the total to a host-supplied sink;
+#   * `enforce_plan` — this module, the one gate both faces and the A2A door
+#     run — is a DIFFERENT process metering a DIFFERENT event (one tool call,
+#     not one turn) and receives no token count of any kind. There is no
+#     wiring, and the only feed that could be built is the `dna_turn` one that
+#     the pricing research already disqualified: it drops under pressure
+#     (`QUEUE_MAX`), swallows its own exceptions by design, records nothing
+#     without a pool, and vanishes by CASCADE with the thread.
+#
+# For an INVOICE, undercounting loses money. For a BREAKER, undercounting means
+# it never trips — and a breaker that does not trip is indistinguishable from
+# no breaker. So the fuse is NOT built on a source with holes; it is built on
+# the one meter this house constructed to decide with (`dna_quota_counters`),
+# and it bounds the WORST-CASE cost by bounding the number of served calls,
+# which is the only quantity the gate can count exactly.
+#
+# The operator therefore derives the NUMBER from dollars — worst-case cost per
+# call x ceiling <= what the account can be allowed to cost — and writes it on
+# the plan. The unit is calls because that is what can be counted honestly; the
+# intent is dollars, and the name says so.
+#
+# ⚠️ WHAT THIS FUSE DOES NOT COVER, named rather than left to be rediscovered.
+# It is keyed on the METERING TENANT, which is the workspace — the same key the
+# daily cap and the bill already use. A billing ACCOUNT that owns N workspaces
+# therefore gets N fuses, so account-level exposure is still multiplied by
+# however many workspaces it can create. Closing that is the OTHER half of
+# i-134 and it lives in dna-cloud, not here: `POST /api/workspaces` has no plan
+# gate at all, and `max_tenants` — declared on the `PricingPlan` Kind since the
+# Kind was written — still has NO READER anywhere. Two named, unbuilt things;
+# neither is this change, and neither is a reason to key the fuse on an
+# identity this gate would have to go looking for.
+
+#: The cutout, in calls over the window. ``None`` / absent = NO BREAKER, which
+#: is the default and keeps every existing plan (and every OSS self-host, whose
+#: caps are empty) behaving exactly as before. Declaring it is the opt-in.
+MARGIN_BREAKER_CAP_FIELD = "margin_breaker_calls_per_window"
+
+#: The rolling horizon in days. Rolling, not calendar: a calendar period resets
+#: at midnight on the 1st, so a runaway straddling the 31st and the 1st would
+#: get two full ceilings inside 48 hours.
+MARGIN_BREAKER_WINDOW_FIELD = "margin_breaker_window_days"
+
+#: Used when a plan declares a ceiling but no horizon. 30 days is the period the
+#: bill accrues in, which is the horizon the exposure is measured over.
+DEFAULT_MARGIN_BREAKER_WINDOW_DAYS = 30
+
+
+def margin_breaker_window_days(caps: dict[str, Any]) -> int:
+    """The breaker's horizon for these caps, in days.
+
+    READ from the plan (never a literal at the call site — the same contract
+    ``calls_per_day`` has); a plan that declares a ceiling and no horizon gets
+    :data:`DEFAULT_MARGIN_BREAKER_WINDOW_DAYS`. A non-positive or unparseable
+    value also falls back rather than silently disabling the fuse: ``days <= 0``
+    makes the window read count nothing, which is a breaker that never trips —
+    exactly the failure mode this whole module is about."""
+    raw = caps.get(MARGIN_BREAKER_WINDOW_FIELD)
+    try:
+        days = int(raw)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return DEFAULT_MARGIN_BREAKER_WINDOW_DAYS
+    return days if days > 0 else DEFAULT_MARGIN_BREAKER_WINDOW_DAYS
+
+
+def enforce_margin_breaker(
+    *,
+    caps: dict[str, Any],
+    tenant: str | None,
+    tier: str,
+    store: QuotaStore,
+) -> None:
+    """Refuse this call when the operator's COST-PROTECTION CUTOUT is open.
+
+    Not a plan allowance — read the block comment above this function before
+    changing anything here, including the message.
+
+    **What it decides on.** ``store.calls_in_window(tenant, days)``: the sum of
+    the SAME durable counters the daily cap advances and the overage job bills
+    from, over a rolling window. No second counter, no telemetry, no estimate.
+    An estimated breaker refuses honest customers by arithmetic nobody agreed
+    to, which is worse than none.
+
+    **Where it sits, and why.** After the feature-family gate and BEFORE the
+    rate window and the daily counter. That ordering is load-bearing in both
+    directions:
+
+    * before the daily counter, because :meth:`QuotaStore.try_incr_day` is the
+      billed one and i-050 says a refused call must never reach it. Checking
+      the fuse after the increment would bill a call the fuse then refused;
+    * before the rate window, because ``note_call`` records what the tenant
+      SPENT (i-055) and a refused call must not extend a window it never used.
+
+    It counts NOTHING itself — it is a read — so a refusal here leaves both
+    counters exactly as they were, and the honesty guarantees of i-050 and
+    i-055 are inherited rather than re-argued.
+
+    **The residual, stated rather than hidden.** The check is a READ, and the
+    increment it will be measured by happens after it (the daily counter,
+    further down :func:`enforce_quota`), so N calls in flight can each observe
+    the same sub-ceiling total and all be admitted: the fuse can overshoot by
+    roughly the in-flight concurrency. The error is in the direction of serving
+    a handful of extra
+    calls out of a ceiling in the tens of thousands, never of refusing a tenant
+    who is under it — which is the right way round for a cutout whose purpose
+    is to stop a runaway, and the wrong way round would be a false refusal.
+
+    **Fail-SAFE, not fail-open.** If the store cannot answer — it raises, or it
+    is an older/foreign :class:`QuotaStore` with no window read at all — the
+    call is REFUSED with :class:`MarginBreakerUnreadable`. Precedent:
+    ``DNA_QUOTA_REQUIRE_TIERS``, which propagates a registry failure "so the
+    metered call fails instead of the billing". A missing method is treated
+    exactly like a failing one on purpose: a host that injects its own store
+    would otherwise disable the fuse in silence, which is the same outcome as
+    deleting it.
+
+    Empty ``caps`` (OSS / self-host) and any plan that does not declare the
+    ceiling never reach any of this."""
+    declared = caps.get(MARGIN_BREAKER_CAP_FIELD)
+    if declared is None:
+        return  # no cutout declared — the default, and the OSS path.
+    try:
+        cap = int(declared)
+    except (TypeError, ValueError):
+        # An unreadable ceiling is not "no ceiling". Somebody typed a number
+        # into a plan and meant a fuse; falling through would serve uncapped
+        # on a typo, which is the fail-open this whole gate refuses. The
+        # message names the value so the fix is a one-line plan edit.
+        raise MarginBreakerUnreadable(
+            f"tier {tier!r} declares a cost-protection cutout "
+            f"({MARGIN_BREAKER_CAP_FIELD}={declared!r}) that is not a number, "
+            f"so the ceiling is UNKNOWN — refusing this call instead of "
+            f"serving it uncapped. Fix the value on the plan."
+        ) from None
+    days = margin_breaker_window_days(caps)
+    key_tenant = tenant or "-"
+
+    read = getattr(store, "calls_in_window", None)
+    if read is None:
+        raise MarginBreakerUnreadable(
+            f"tier {tier!r} declares a cost-protection cutout "
+            f"({MARGIN_BREAKER_CAP_FIELD}={cap}), but the quota store wired "
+            f"into this process ({type(store).__name__}) cannot report usage "
+            f"over a window — so whether the cutout is open is UNKNOWN, and "
+            f"this call is refused rather than served on the assumption that "
+            f"it is closed."
+        )
+    try:
+        used = int(read(key_tenant, days))
+    except Exception as exc:  # noqa: BLE001 — a fuse that cannot read must open.
+        raise MarginBreakerUnreadable(
+            f"tier {tier!r} declares a cost-protection cutout "
+            f"({MARGIN_BREAKER_CAP_FIELD}={cap} per {days}d) and the usage "
+            f"counter could not be read, so whether the cutout is open is "
+            f"UNKNOWN — refusing this call instead of serving it uncapped "
+            f"(counter read failed: {exc})"
+        ) from None
+
+    if used >= cap:
+        raise MarginBreakerTripped(
+            f"cost-protection cutout OPEN for {key_tenant!r}: "
+            f"{used} metered calls in the last {days} days, at or past the "
+            f"operator's protection ceiling of {cap}. This ceiling is NOT part "
+            f"of what the plan sells and is not a usage allowance — it is a "
+            f"fuse the operator sets to bound what a single account can cost, "
+            f"and it opened. Nothing was counted for this refused call. Ask "
+            f"the operator to raise the ceiling for this account, or wait for "
+            f"the window to roll."
+        )
+
+
 # ── the enforcer (caps come from the Tier spec — zero literals) ─────────────
 
 
@@ -781,6 +1139,11 @@ def enforce_quota(
 
     1. **family gate** — if ``caps['feature_families']`` is a non-empty list and
        ``family`` is not in it → :class:`FeatureNotInPlanError`.
+    1b. **margin breaker** — if ``caps['margin_breaker_calls_per_window']`` is
+       set, refuse once the tenant's rolling-window usage reaches it
+       (:func:`enforce_margin_breaker`). A COST CUTOUT for the operator, not a
+       sold limit; it counts nothing itself and runs before anything is
+       counted, so a refusal here leaves both counters untouched.
     2. **rate** — if ``caps['rate_per_sec']`` is set, admit the call only while
        the 1-second window is under the cap, and record it ONLY if admitted; at
        the cap → :class:`OverQuotaError` and the denied call does not extend the
@@ -803,6 +1166,14 @@ def enforce_quota(
             f"tier {tier!r} does not include the {family!r} tool family "
             f"(unlocked families: {families}) — upgrade the plan to use it."
         )
+
+    # 1b. the MARGIN BREAKER (i-134). A cost-protection cutout for the
+    # OPERATOR — not a sold limit, not a pricing axis, never a price-page
+    # number. It runs here, before the rate window and before the daily
+    # counter, because both of those RECORD something (i-055 / i-050) and a
+    # call this fuse refuses must leave no trace in either. It records nothing
+    # itself: it reads the counters the daily cap already writes.
+    enforce_margin_breaker(caps=caps, tenant=tenant, tier=tier, store=store)
 
     key = quota_key(tenant, tier)
 
@@ -969,16 +1340,20 @@ async def enforce_plan(
        ``memory_mode``/``sdlc_mode`` (a denied write costs no quota), and
        ``family_op`` against ``<family>_mode`` for a GENERIC instance call whose
        family was derived from the target Kind (:func:`enforce_family_mode`),
-    4. :func:`enforce_quota` — family gate, rate window, daily cap (the i-050
-       honesty lives there: a denied call is never counted).
+    4. :func:`enforce_quota` — family gate, the margin breaker (i-134 — the
+       operator's cost cutout, not a sold limit), rate window, daily cap (the
+       i-050 honesty lives there: a denied call is never counted).
 
     ``quota_tenant`` overrides the METERING key only (the personal-memory case:
     tenancy resolves no workspace but usage meters per ``personal:<oid>``
     partition). Raises the quota exception family
     (:class:`FeatureNotInPlanError` / :class:`MemoryModeError` /
     :class:`SdlcModeError` / :class:`InstanceModeError` /
-    :class:`OverQuotaError`) or
-    :class:`TierRegistryUnavailableError`; each face maps them to its transport.
+    :class:`OverQuotaError`, whose subclass :class:`MarginBreakerTripped` is the
+    cost cutout) or :class:`TierRegistryUnavailableError` (whose subclass
+    :class:`MarginBreakerUnreadable` is the cutout's fail-safe); each face maps
+    them to its transport, and the two new ones ride the parents' mappings on
+    purpose so no face has to widen an enumeration to relay them.
     Returns the resolved tier id (observability / tests).
 
     The OSS invariant is the CALLER's job, exactly as before: a face only calls

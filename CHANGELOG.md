@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Correções
 
+- **A face REST voltava 500 onde a MCP volta 403** — o `_plan_gate` nunca
+  nomeava `InstanceModeError`, que é exatamente a recusa que o write genérico
+  produz quando o plano omite `definitions_mode`/`emit_mode`. A enumeração à
+  mão de tipos numa face é o defeito que esta casa já catalogou; a correção de
+  verdade é a guarda DERIVADA (`test_quota_refusals_reach_both_faces.py`), que
+  lê as exceções do `_mcp_quota` e o AST das duas faces e falha quando uma
+  recusa do núcleo compartilhado não é relaiada por alguma delas. Ela achou
+  esta na primeira execução.
+
 - **A aresta para de dizer `resolved: true` depois que o alvo é apagado**
   (i-131 do board dna-cloud). A travessia derivava `resolved` de
   `to_kind IS NOT NULL` — um fato do instante da **escrita** ("a referência
@@ -113,6 +122,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   verificado → tenant) é o trabalho que remove.
 
 ### ✨ Novidades
+
+- **Disjuntor de margem no caminho de quota — um FUSÍVEL do operador, e não um
+  eixo de venda** (i-134 do board dna-cloud). `calls_per_day` limita
+  **frequência**, não custo: o Pro admite ~300 mil chamadas/mês, o que ao preço
+  de token lido da Azure Retail Prices API comporta **US$ 6.000 a 19.500/mês**
+  contra **US$ 27,86** de receita líquida — 215× a 700×, sem fraude nenhuma.
+  `PricingPlan` ganha `margin_breaker_calls_per_window` (+
+  `margin_breaker_window_days`, janela ROLANTE de 30 dias por omissão) e
+  `enforce_quota` recusa a chamada quando o teto é alcançado.
+  ⚠️ **Não é limite vendido**: um limite vendido é promessa ao cliente, isto é
+  o que impede a casa de quebrar enquanto o eixo certo de preço não existe — o
+  campo está **ausente do `summary`** do Kind (a projeção que o portal mostra),
+  a recusa diz em letras que não é franquia, e nenhum número foi definido
+  (`null` por padrão; os valores são decisão do fundador, i-112).
+  **Denominado em CHAMADAS porque tokens não chegam ao gate** — medido: a única
+  contagem de token do repo é a do `dna.runtime.telemetry`, que lê spans no fim
+  do turno, noutro processo, e o `enforce_plan` mede outro evento; a única fonte
+  ligável seria o `dna_turn`, que descarta sob pressão. Numa fatura, subcontar
+  perde dinheiro; num disjuntor, subcontar é **não disparar**. Lê o MESMO
+  contador `dna_quota_counters` da cobrança (sem segunda verdade), roda **antes**
+  do contador diário e da janela de rajada (recusa não deixa rastro em nenhum —
+  i-050/i-055 herdados), e é **fail-safe**: contador ilegível → 503, nunca uma
+  chamada servida por otimismo (o precedente do `DNA_QUOTA_REQUIRE_TIERS`).
+  Desligado a menos que um plano o declare, então OSS/self-host não muda.
 
 - **`GET /v1/graph/kinds` — o grafo de SCHEMA numa chamada**
   (`s-graph-kinds-route`, fatia 1 do degrau 1 do grafo). A pergunta de
