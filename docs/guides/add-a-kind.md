@@ -55,7 +55,7 @@ The flags worth knowing:
 
 ⚠️ **`cardinality` has to be written down.** It states your *model's*
 multiplicity, not whether the JSON happens to be an array, so it is never read
-off the field's type — the same rule that made [`spec.relations`](#step-9--optional-declare-what-this-kind-points-at)
+off the field's type — the same rule that made [`spec.relations`](#step-9-optional-declare-what-this-kind-points-at)
 refuse to infer it.
 
 ⚠️ **Authoring reads the `KindNamespace` claim registry before it mints**, so a

@@ -104,10 +104,11 @@ Examples:
   dna new kind Contrato --dry-run
 
 
---field is NAME[:TYPE][!][=DESCRIPTION]; `!` marks it required and the type
-defaults to string. --relation is FIELD=KIND:CARDINALITY, or the full form
-FIELD={to: Contrato, cardinality: many, inverse_of: apolice} whose keys are the
-declaration's own. A relation whose field you did not declare gets one.
+--field is `NAME[:TYPE][!][=DESCRIPTION]`; the trailing `!` marks it required
+and the type defaults to string. --relation is `FIELD=KIND:CARDINALITY`, or the
+full form `FIELD={to: Contrato, cardinality: many, inverse_of: apolice}` whose
+keys are the declaration's own. A relation whose field you did not declare gets
+one.
 
 
 ``traits`` (optional) declares WHAT YOUR KIND IS — the roles it takes part
@@ -247,7 +248,7 @@ dna new kind [OPTIONS] KIND_NAME
 | --- | --- |
 | `--description`, `-d` | What this Kind IS, in one line — becomes the schema's own `description`. |
 | `--dry-run` | Print the plan and write nothing. |
-| `--field`, `-f` | NAME[:TYPE][!][=DESCRIPTION]. Repeatable; order is kept. |
+| `--field`, `-f` | `NAME[:TYPE][!][=DESCRIPTION]`. Repeatable; order is kept. |
 | `--force` | Re-author an existing Kind. The declaration is REBUILT, not merged: a field you do not pass again is gone. The edit also drops the approval. |
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable output. |

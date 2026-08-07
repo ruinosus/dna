@@ -498,10 +498,11 @@ Examples:
   dna new kind Contrato --dry-run
 
 \b
---field is NAME[:TYPE][!][=DESCRIPTION]; `!` marks it required and the type
-defaults to string. --relation is FIELD=KIND:CARDINALITY, or the full form
-FIELD={to: Contrato, cardinality: many, inverse_of: apolice} whose keys are the
-declaration's own. A relation whose field you did not declare gets one.
+--field is `NAME[:TYPE][!][=DESCRIPTION]`; the trailing `!` marks it required
+and the type defaults to string. --relation is `FIELD=KIND:CARDINALITY`, or the
+full form `FIELD={to: Contrato, cardinality: many, inverse_of: apolice}` whose
+keys are the declaration's own. A relation whose field you did not declare gets
+one.
 
 {{trait-vocabulary}}
 """
@@ -539,7 +540,12 @@ def _kind_help() -> str:
               help="What this Kind IS, in one line — becomes the schema's "
                    "own `description`.")
 @click.option("--field", "-f", "fields", multiple=True,
-              help="NAME[:TYPE][!][=DESCRIPTION]. Repeatable; order is kept.")
+              # ⚠️ Backticked, and not for looks: `gen_cli_docs` copies this
+              # string into `docs/reference/cli/new.md`, where mkdocs-autorefs
+              # reads a bare `[!]` as a cross-reference to a target named `!`
+              # and the strict docs build ABORTS on the miss. A code span is
+              # skipped. Same reason the `--relation` grammar below is fenced.
+              help="`NAME[:TYPE][!][=DESCRIPTION]`. Repeatable; order is kept.")
 @click.option("--trait", "traits", multiple=True,
               help="A role this Kind takes part in. Repeatable, OPTIONAL, and "
                    "never required — the vocabulary is in this help, and in "
