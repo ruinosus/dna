@@ -27,6 +27,7 @@ These pages are **generated from the Click command definitions** by
 | [`dna install`](install.md) | Install bundles/Kinds from a repository into the local source. |
 | [`dna instance`](instance.md) | List, show, create, edit, delete instances. |
 | [`dna intel`](intel.md) | Portfolio intelligence — run passes, inspect sources + insights. |
+| [`dna invalidation`](invalidation.md) | O custo da invalidação de cache (i-123), lido do log. |
 | [`dna mcp`](mcp.md) | Expose the live DNA (definitions + SDLC + memory) over MCP. |
 | [`dna memory`](memory.md) | Declarative memory over existing Kinds (remember/recall/forget/consolidate). |
 | [`dna new`](new.md) | Scaffold a valid Kind skeleton into a scope (agent \| soul \| guardrail \| tool). |

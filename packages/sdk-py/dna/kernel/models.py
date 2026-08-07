@@ -1001,8 +1001,20 @@ class KindDefinitionSpec:
     # declarative descriptor so builtin record Kinds can be expressed as
     # `.kind.yaml` package data. Defaults preserve today's behavior.
     #
-    # ``plane``: "composition" | "record" — mirrors KindBase.plane.
-    plane: str = "composition"
+    # ``plane``: "composition" | "record".
+    #
+    # ⚠️ NÃO espelha mais ``KindBase.plane`` — i-123 separou os dois. O default
+    # do DESCRITOR é ``record`` (a decisão do fundador, com o 48-em-49 escrito
+    # em :func:`~dna.kernel.kinds.base.default_plane`); o da CLASSE segue
+    # ``composition``, porque ~26 Kinds internos dependem dele e a decisão foi
+    # sobre o Kind de tenant, que sempre chega por descritor.
+    #
+    # Este literal é o default de um ``KindDefinitionSpec`` construído à mão, o
+    # que nenhum caminho de produção faz — ``from_raw`` é o único construtor, e
+    # lá o default é ``default_plane(raw)``, que olha os sinais de composição
+    # antes de responder. Fica igual a ele no caso comum (descritor sem sinal)
+    # para que os dois não digam coisas diferentes sobre a mesma pergunta.
+    plane: str = "record"
     # ``tenant_scope``: "tenanted" | "global" — mirrors TenantScope.
     # Default "tenanted" matches the documented TenantScope default, BUT the
     # port only sets ``scope`` when explicitly declared (see
@@ -1194,7 +1206,19 @@ class KindDefinitionSpec:
         except ValueError as e:
             raise ValueError(f"KindDefinition spec.schema {e}") from e
         # ---- F3 fields (spec D2) ----------------------------------------
-        plane = raw.get("plane", "composition")
+        # i-123 — o default do descritor é ``record``, e ele é COMPUTADO em
+        # ``default_plane`` em vez de ser um literal aqui: a razão (48 de 49) e
+        # a ressalva (os quatro sinais de composição) moram juntas com a lista
+        # de sinais que o lint do registry usa, e não em dois arquivos.
+        #
+        # ``raw.get("plane")`` e não ``raw.get("plane", ...)``: um ``plane:
+        # null`` explícito conta como NÃO DECLARADO, que é o que ele é — e o
+        # `author_kind` grava a chave só quando declarada, justamente para que
+        # "escolheu" e "nunca foi perguntado" continuem distinguíveis no dado.
+        from dna.kernel.kinds.base import default_plane
+
+        declared_plane = raw.get("plane")
+        plane = default_plane(raw) if declared_plane is None else declared_plane
         if plane not in ("composition", "record"):
             raise ValueError(
                 f"KindDefinition spec.plane must be 'composition' or 'record', got {plane!r}"

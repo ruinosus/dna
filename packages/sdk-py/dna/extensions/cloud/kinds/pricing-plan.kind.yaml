@@ -8,6 +8,14 @@
 # rate_per_sec / max_tenants from THIS registry via kernel.tier(id_or_alias); a
 # cap literal in code is a bug.
 #
+# ⚠️ ONE FIELD HERE IS NOT A CAP THE PLAN SELLS.
+# `margin_breaker_calls_per_window` (+ its `margin_breaker_window_days`) is a
+# COST-PROTECTION CUTOUT the operator arms — a fuse, not a promise (i-134). It
+# is deliberately ABSENT from `summary` below, which is what the portal renders
+# for a plan: a sold limit belongs on a price page and a fuse does not, and
+# putting this one there would announce a number nobody agreed to sell while
+# the actual pricing decision (i-112) is still the founder's to make.
+#
 # Tiers live in the `_lib` scope (`tiers/<tier_id>.yaml`) — Tier is GLOBAL (base
 # only, no per-tenant override) and NOT inheritable; kernel.tier() queries `_lib`
 # directly regardless of the caller's scope.
@@ -124,6 +132,38 @@ spec:
           read-vs-write refinement for the `emit` feature family. Same rule as
           definitions_mode - consulted by the generic instance tools on a write,
           and omitting it grants none.
+      margin_breaker_calls_per_window:
+        type:
+        - integer
+        - 'null'
+        default: null
+        description: >-
+          ⚠️ COST-PROTECTION CUTOUT — NOT a sold limit, NOT a pricing axis, and
+          it must never appear on a price page or in a plan comparison. The
+          caps above are what the plan SELLS (a promise to the customer); this
+          is a fuse the OPERATOR arms so that one account cannot cost more than
+          the business can absorb while the right sold axis does not exist yet
+          (i-134). Reached, the metered call is REFUSED with a message that
+          says so in as many words. Null/absent = no fuse, which is the default
+          and leaves every plan behaving exactly as before. Denominated in
+          CALLS because that is the only quantity the gate can count exactly —
+          the token count lives in turn telemetry, in another process, and
+          telemetry that drops under pressure would be a fuse that never blows.
+          The operator derives the NUMBER from dollars (worst-case cost per
+          call x ceiling <= what an account may be allowed to cost); the unit
+          is calls, the intent is margin.
+      margin_breaker_window_days:
+        type:
+        - integer
+        - 'null'
+        default: null
+        description: >-
+          Rolling horizon of margin_breaker_calls_per_window, in days
+          (default 30 when absent). ROLLING, not calendar: a calendar period
+          resets at midnight on the 1st, so a runaway straddling the 31st and
+          the 1st would get two full ceilings inside 48 hours. Meaningless on
+          its own — with no ceiling declared there is no fuse to give a
+          horizon to.
       overage_per_1k_usd:
         type:
         - number

@@ -957,6 +957,13 @@ def build_app(
     from dna_cli._mcp_auth import tier_from_token
     from dna_cli._mcp_quota import (
         FeatureNotInPlanError,
+        # ⚠️ REST reaches this one through `_gate_kind_write`'s `family_op`,
+        # exactly as MCP does — and it was simply never named here, so a plan
+        # that omits `definitions_mode` refused a REST generic write with a
+        # 500 instead of the 403 whose message names the missing cap. Found by
+        # `tests/test_quota_refusals_reach_both_faces.py`, which is the actual
+        # fix: this hand-written tuple can no longer go stale in silence.
+        InstanceModeError,
         MemoryModeError,
         OverQuotaError,
         SdlcModeError,
@@ -980,8 +987,10 @@ def build_app(
     ) -> None:
         """Enforce the caller's plan on ONE write — the REST twin of the MCP
         ``_guard``'s metered branch. Maps the shared core's exceptions to HTTP:
-        403 (mode/family — the plan does not include it), 429 (rate/daily cap),
-        503 (Tier registry unavailable under the fail-closed flag)."""
+        403 (mode/family — the plan does not include it), 429 (rate/daily cap,
+        and the operator's margin breaker, which subclasses it), 503 (Tier
+        registry unavailable under the fail-closed flag, and the breaker's own
+        fail-safe when its counter cannot be read)."""
         if auth == "none":
             return  # local / OSS self-host: the plan gate does not exist.
         if auth == "token" and tenant is None and quota_tenant is None:
@@ -1010,9 +1019,13 @@ def build_app(
             )
         except TierRegistryUnavailableError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from None
-        except (FeatureNotInPlanError, MemoryModeError, SdlcModeError) as exc:
+        except (FeatureNotInPlanError, MemoryModeError, SdlcModeError,
+                InstanceModeError) as exc:
             raise HTTPException(status_code=403, detail=str(exc)) from None
         except OverQuotaError as exc:
+            # Includes `MarginBreakerTripped` (i-134), which subclasses this on
+            # purpose so the operator's cost cutout is relayed by a mapping
+            # written years before it — 429, with the refusal's own sentence.
             raise HTTPException(status_code=429, detail=str(exc)) from None
 
     async def _gate_kind_write(

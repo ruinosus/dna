@@ -19,6 +19,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Correções
 
+- **A face REST voltava 500 onde a MCP volta 403** — o `_plan_gate` nunca
+  nomeava `InstanceModeError`, que é exatamente a recusa que o write genérico
+  produz quando o plano omite `definitions_mode`/`emit_mode`. A enumeração à
+  mão de tipos numa face é o defeito que esta casa já catalogou; a correção de
+  verdade é a guarda DERIVADA (`test_quota_refusals_reach_both_faces.py`), que
+  lê as exceções do `_mcp_quota` e o AST das duas faces e falha quando uma
+  recusa do núcleo compartilhado não é relaiada por alguma delas. Ela achou
+  esta na primeira execução.
+
 - **A aresta para de dizer `resolved: true` depois que o alvo é apagado**
   (i-131 do board dna-cloud). A travessia derivava `resolved` de
   `to_kind IS NOT NULL` — um fato do instante da **escrita** ("a referência
@@ -112,7 +121,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   confiança deliberada e documentada, que o `TODO(hosted)` (ponte token
   verificado → tenant) é o trabalho que remove.
 
+### ⚠️ Mudança de comportamento
+
+- **O default de `plane` de um Kind vindo de DESCRITOR passa a ser `record`**
+  (i-123 do board dna-cloud, decisão do fundador em 07/08/2026). Era
+  `composition`, e a medição que virou a decisão é curta: dos **47** descritores
+  que este SDK publica, **47 declaram `plane`** — 46 `record`, um (`Comment`)
+  `composition`; os dois `KindDefinition` escritos à mão no dna-cloud declaram
+  `record`. **Quando o autor PODE escolher, escolheu `record` 48 vezes em 49.**
+  O único conjunto que ficava em `composition` era o dos Kinds autorados por
+  tenant, e não por escolha: por ausência de um jeito de dizer, já que
+  `author_kind` só ganhou o campo em 06/08. O default servia à minoria de 2% e
+  cobrava dos 98% duas contas medidas — a invalidação de escopo por gravação e a
+  materialização na `ManifestInstance`.
+
+  **Quem NÃO muda:** os 47 descritores do pacote (todos declaram — e agora um
+  teste derivado dos arquivos garante que o próximo também declare); os Kinds
+  escritos como classe (`KindBase.plane` segue `composition`); e qualquer
+  descritor que declare `plane` explicitamente.
+
+  **Quem muda:** um descritor que não declara `plane` — na prática, o Kind
+  autorado por tenant. E o default **olha os quatro sinais de composição antes
+  de responder** (`prompt_target`, `flatten_in_context`, `is_schema_affecting`,
+  `is_root`): um descritor que já diz que compõe continua `composition`, porque
+  um default cego de `record` o tornaria irregistrável pelo lint do registry.
+
+  ⚠️ **A consequência de leitura, e é real:** instâncias no plano `record` são
+  excluídas da materialização da `ManifestInstance` de propósito — `mi.instances`
+  deixa de contê-las. `mi._all(kind)`, `mi.get(kind, name)`, `kernel.query` e
+  `kernel.get_instance` continuam funcionando, que é como as 46 Kinds `record`
+  do SDK sempre foram lidas. Código que lia um Kind de tenant iterando
+  `mi.instances` precisa passar por uma dessas.
+
+  ⚠️ **Isto NÃO conserta a gaveta cara** — tira o dado errado de dentro dela. Se
+  `composition` aguenta o volume real é outra pergunta, e agora ela tem número:
+  ver `dna invalidation stats` abaixo.
+
 ### ✨ Novidades
+
+- **Disjuntor de margem no caminho de quota — um FUSÍVEL do operador, e não um
+  eixo de venda** (i-134 do board dna-cloud). `calls_per_day` limita
+  **frequência**, não custo: o Pro admite ~300 mil chamadas/mês, o que ao preço
+  de token lido da Azure Retail Prices API comporta **US$ 6.000 a 19.500/mês**
+  contra **US$ 27,86** de receita líquida — 215× a 700×, sem fraude nenhuma.
+  `PricingPlan` ganha `margin_breaker_calls_per_window` (+
+  `margin_breaker_window_days`, janela ROLANTE de 30 dias por omissão) e
+  `enforce_quota` recusa a chamada quando o teto é alcançado.
+  ⚠️ **Não é limite vendido**: um limite vendido é promessa ao cliente, isto é
+  o que impede a casa de quebrar enquanto o eixo certo de preço não existe — o
+  campo está **ausente do `summary`** do Kind (a projeção que o portal mostra),
+  a recusa diz em letras que não é franquia, e nenhum número foi definido
+  (`null` por padrão; os valores são decisão do fundador, i-112).
+  **Denominado em CHAMADAS porque tokens não chegam ao gate** — medido: a única
+  contagem de token do repo é a do `dna.runtime.telemetry`, que lê spans no fim
+  do turno, noutro processo, e o `enforce_plan` mede outro evento; a única fonte
+  ligável seria o `dna_turn`, que descarta sob pressão. Numa fatura, subcontar
+  perde dinheiro; num disjuntor, subcontar é **não disparar**. Lê o MESMO
+  contador `dna_quota_counters` da cobrança (sem segunda verdade), roda **antes**
+  do contador diário e da janela de rajada (recusa não deixa rastro em nenhum —
+  i-050/i-055 herdados), e é **fail-safe**: contador ilegível → 503, nunca uma
+  chamada servida por otimismo (o precedente do `DNA_QUOTA_REQUIRE_TIERS`).
+  Desligado a menos que um plano o declare, então OSS/self-host não muda.
+- **`dna invalidation stats` — quanto a invalidação de cache CUSTA, medido**
+  (i-123, fatia 2). O desenho da invalidação tinha a forma certa — três níveis,
+  o barato automático para `record`, e até uma válvula de lote
+  (`kernel.batch_writes()`) — mas **ninguém tinha medido**. `DNA_INVALIDATION_TELEMETRY=on`,
+  no serviço que GRAVA, emite uma linha por escrita, uma por invalidação de
+  escopo e uma por rebuild de `ManifestInstance`; o comando lê de STDIN
+  (`az containerapp logs show … | dna invalidation stats --gate`) e imprime o
+  `p95` do rebuild, a fração das escritas que derruba um escopo, e o veredicto
+  de cada gatilho. Custo ZERO desligado (uma comparação de nível; o relógio não
+  é lido — provado pelo negativo no teste), rótulos de cardinalidade fechada, e
+  **nome de Kind de tenant nunca sai no log** (vira o token `~tenant`).
+
+  Os números que a instrumentação já produziu, em Postgres real e em SQLite: o
+  rebuild de escopo é **linear no número de instâncias**, e um escopo de
+  instâncias `composition` custa **~5×** o mesmo escopo em `record` (~170 ms vs
+  ~35 ms para 10.000 instâncias). O fan-out da invalidação em si é **~0,1 ms** —
+  e ler SÓ esse número diria que a gaveta cara é barata, que é exatamente o erro
+  que o relatório carrega escrito dentro dele.
 
 - **`GET /v1/graph/kinds` — o grafo de SCHEMA numa chamada**
   (`s-graph-kinds-route`, fatia 1 do degrau 1 do grafo). A pergunta de
