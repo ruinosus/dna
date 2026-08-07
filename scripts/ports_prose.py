@@ -233,6 +233,29 @@ discovered during it.
 | `key_lookup=False` | `KeyLookupUnsupported` → REST **501**, and the write path records the edge with reason `unsupported` | `None` — which reads as *"no instance carries that key"* |
 | `edges` not in `write_kwargs` | the kernel never hands you edges | your adapter silently dropping them |
 
+The **`as_of` traversal** (`spec-topologia-do-grafo` fatia 4) reads that table
+twice, and the reason is worth stating because the obvious reading was wrong.
+*"The graph as it was at T"* is **not** `dna_edges` filtered by `from_version`:
+that table is deleted and re-inserted on every write, so — measured on the
+dna-cloud database, 07/08/2026 — **0 of 33 rows carry a `from_version` older
+than their instance's current version**, and a stale row cannot exist. The edge
+table has no history *by construction*. The walk therefore RE-DERIVES from
+`dna_versions.content`, which means it needs `as_of_reads` (plus
+`load_kind_as_of` for `direction=in`) and refuses without them. `AsOfTruncated`
+→ **410** applies to the ANCHOR; a node the walk merely *reaches* and cannot
+read that far back is named in `as_of_truncated` beside the edges, because
+dropping it would let a reader conclude *"nothing pointed at this"* out of *"we
+cannot know what these said"*.
+
+⚠️ One limit no flag can express, stated because it is invisible from the
+answer: `delete_instance` removes an instance's `dna_versions` rows, so an
+instance alive at T and deleted since leaves no history to read. Walking `out`,
+the delete's own `to_deleted_at` stamp on the SURVIVING incoming edges rescues
+it — the target existed at T, only its content is unknowable, and that lands in
+`as_of_truncated`. Walking `in` there is no witness at all, because the delete
+takes the deleted instance's *outgoing* edges with it. That blind spot is pinned
+by test rather than papered over.
+
 Neither `GraphUnsupported` nor `InstanceIdLookupUnsupported` is a
 `KernelRefusal`, and the distinction is deliberate: a refusal is a verdict on
 *the request*, which the caller might appeal. These are statements about *the
