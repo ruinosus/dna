@@ -89,6 +89,7 @@ nav:
       - How to install bundles from a repository: guides/installing-scopes.md
       - How to add a Kind: guides/add-a-kind.md
       - How to read instance data: guides/read-instance-data.md
+      - How to rename an instance: guides/renaming-an-instance.md
       - How to write a source adapter: guides/write-a-source-adapter.md
       - How to write a Reader/Writer: guides/readers-and-writers.md
       - How to use semantic recall & memory: guides/semantic-recall.md

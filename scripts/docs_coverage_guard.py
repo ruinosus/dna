@@ -77,9 +77,7 @@ ALLOWLIST: dict[str, str] = {
     # search/memory guide and the SDLC guide.
     # -- SDLC dogfooding machinery (record plane, long tail) -----------------
     "kind:AgentSession": _SDLC_MACHINERY,
-    "kind:AuditLog": _SDLC_MACHINERY,
     "kind:Changelog": _SDLC_MACHINERY,
-    "kind:CognitivePolicy": _SDLC_MACHINERY,
     "kind:Narrative": _SDLC_MACHINERY,
     "kind:Postmortem": _SDLC_MACHINERY,
     "kind:Retrospective": _SDLC_MACHINERY,
