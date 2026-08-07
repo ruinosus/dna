@@ -769,3 +769,44 @@ def test_o_schema_nao_exige_nenhuma_resposta_do_template() -> None:
         "particular copier.yml written twice"
     )
     assert "pode_dormir" not in layer["required"]
+
+
+def test_o_que_upsert_grava_continua_cabendo_no_schema_da_Solution() -> None:
+    """A trava do AC 2 de `Story/s-kinds-a-conta-declarada`, no lugar onde ela
+    é decidida — o CONSUMIDOR.
+
+    `Spec/spec-app-e-o-servico` pede que `services[]` deixe de existir como
+    campo, com o argumento de que `Solution` tem 0 instâncias e portanto mexer
+    nele custa zero. A contagem está certa; a conclusão não segue dela, e este
+    teste é a medição:
+
+    * o schema é `additionalProperties: false` com `required: [title,
+      services]`, então remover a propriedade não a torna opcional — torna
+      TODA gravação de `Solution` inválida;
+    * `upsert_solution` escreve `spec["services"]` em todo caminho, e é o
+      único caminho por onde `dna solution new` / `update` gravam.
+
+    Logo `dna solution` inteiro para de funcionar no commit que remove o campo,
+    e este teste é o que diz isso em voz alta em vez de deixar o CI descobrir
+    de lado. O que `App.service_name` acrescenta é a JUNÇÃO com o mesmo eixo,
+    não um novo endereço para as respostas do Copier — que não têm outra casa.
+    """
+    import jsonschema
+    from dna.kernel import Kernel
+
+    port = Kernel.auto()._kinds[("github.com/ruinosus/dna/v1", "Solution")]
+    layer = solution_kind.Layer(
+        name="mcp",
+        answers_file=".copier-answers.mcp.yml",
+        template_src="gh:ruinosus/dna",
+        template_ref="v0.74.0",
+        answers={"identity": "workos", "graph_obo": True},
+        pode_dormir=False,
+    )
+    spec = {"title": "dna-cloud", "services": [layer.to_spec()]}
+
+    jsonschema.validate(spec, port.schema())
+    assert "services" in port.schema()["required"]
+    assert port.schema()["additionalProperties"] is False
+    # e o que o registro guarda e o `App` não tem onde guardar:
+    assert set(layer.to_spec()) >= {"answers", "answers_file", "template"}

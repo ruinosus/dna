@@ -41,6 +41,66 @@
 # enforced byte-identity (tests/test_descriptor_hash_parity.py) were BOTH
 # removed when the TypeScript SDK was frozen (commit 341e517). Nothing
 # mirrors this file and no test enforces byte-identity.
+#
+# ── 07/08/2026: a cadeia deixa de terminar no vazio — `runs_in` e o rendimento
+#
+# `Spec/spec-app-e-o-servico` mediu que este Kind não tinha relação de SAÍDA
+# nenhuma: `Solution → App → Copilot` era declarada e parava aqui, e um
+# copiloto não dizia em que processo roda. `runs_in → App` é essa ponta, e
+# `value_per_outcome` é o par de `App.can_sleep`: o App declara o CUSTO, o
+# Copilot declara o RENDIMENTO. Sem os dois lados há contagem de turnos, não
+# ROI.
+#
+# ⚠️ `runs_in` nasce OPCIONAL, e a decisão é da spec, com o número na tela: há
+# 7 `Copilot` vivos e 2 `App`; cinco copilotos não estão em App nenhum e
+# funcionam. Obrigatório invalidaria os cinco no dia da migração. Vira
+# obrigatório no dia em que a contagem de órfãos chegar a zero — e uma guarda
+# derivada é o que torna esse dia visível em vez de esquecido.
+#
+# ── ⭐ Por que `runs_in` NÃO declara `inverse_of: copilots` ────────────────────
+#
+# A pergunta foi feita com `dna/kernel/kinds/relations.py` aberto, porque a
+# resposta não é de gosto: `inverse_of` são DUAS promessas, e as duas foram
+# medidas contra este par antes de recusá-lo.
+#
+#   1. A DECLARAÇÃO é IMPOSTA (`inverse_gaps`, carregamento do registro):
+#      declarar `runs_in.inverse_of: copilots` OBRIGA `App.copilots` a declarar
+#      `inverse_of: runs_in` de volta. Não é uma anotação local — é uma edição
+#      no outro Kind.
+#   2. O DADO é apenas REPORTADO (`WritePipeline`, em TODO modo, inclusive
+#      `enforce`): quando o alvo não nomeia de volta, isso é logado e nunca
+#      veta.
+#
+# A promessa 2 é o que `inverse_of` COMPRA aqui — traversal reverso já é de
+# graça no `dna_edges` (o próprio módulo diz que o argumento de travessia é
+# "genuinely worthless here"). Ela só vale quando os dois campos são DUAS
+# METADES ARMAZENADAS DE UM MESMO FATO, que podem discordar. E não são:
+#
+#   • `App.copilots` é COMPOSIÇÃO — quais copilotos são vendidos e navegados
+#     sob uma identidade, o que a rota `/app/<name>` renderiza. É `required`,
+#     `minItems: 1`.
+#   • `runs_in` é EXECUÇÃO — qual PROCESSO serve este copiloto.
+#
+# No dna-cloud, medido em 07/08/2026: UM deployment (`copilot`, um dos três que
+# saem de `apps/copilot/`) serve os sete copilotos, enquanto o console os
+# agrupa em duas identidades de App. Declarar as duas relações como inversas
+# afirmaria composição == deployment, e nenhum dos dois lados da topologia real
+# satisfaria a afirmação — nem "sete copilotos num App só" (que quebra o
+# agrupamento do console), nem "dois Apps com um processo cada" (que não
+# existe). O mesmo 1:N que separa `App.service_name` de `metadata.name` separa
+# estas duas relações.
+#
+# E há o custo de curto prazo, que sozinho já bastava: com `runs_in` opcional e
+# ainda não preenchido, o relatório de reciprocidade dispararia em 100% das
+# gravações de App a partir do primeiro dia. `inverse_of` não sabe distinguir
+# "as duas metades discordam" de "a segunda metade ainda não foi escrita" — e
+# um relatório que fala sempre é um relatório que se aprende a ignorar, o que
+# custaria justamente a promessa 2 no dia em que ela tivesse algo a dizer.
+#
+# A contagem de órfãos é o que a spec quer, e ela é OUTRO mecanismo: uma guarda
+# derivada que CONTA copilotos sem `runs_in`. Ela responde "quantos faltam",
+# que é a pergunta; `inverse_of` responderia "estes dois se contradizem", que
+# não é.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:
@@ -57,6 +117,10 @@ spec:
   storage:
     type: yaml
     container: copilots
+  relations:
+    runs_in:
+      to: App
+      cardinality: one
   schema:
     type: object
     additionalProperties: false
@@ -847,6 +911,58 @@ spec:
               redis:
                 type: string
                 description: Redis requirement (e.g. required).
+      runs_in:
+        type: string
+        description: >-
+          The App whose SERVICE PROCESS serves this copilot, by
+          instance name — the outgoing end of `Solution → App → Copilot`,
+          which until now terminated here. The reference is validated on
+          write (`spec.relations`), so a picker comes for free. OPTIONAL, and
+          measured so: 7 live Copilots against 2 Apps, five of them in no App
+          at all and serving. Absent is therefore not an error, it is an
+          ORPHAN — a copilot whose running process is undeclared — and the
+          count of orphans is what a derived guard reports. This field
+          declares EXECUTION, never composition: `App.copilots` says which
+          copilots are sold and navigated under one identity, and one process
+          legitimately serves copilots belonging to several such identities.
+          That is why it declares no `inverse_of` — see the header.
+      value_per_outcome:
+        type: object
+        additionalProperties: false
+        description: >-
+          What ONE successful outcome of this copilot is worth — the reference
+          value used to turn turns into ROI. ⭐ This is the only number in the
+          whole chain that CANNOT be measured: the cost side is exact (tokens
+          are metered, `App.can_sleep` prices the replica) and the turn count
+          is exact, but what a human WOULD have spent doing this by hand exists
+          nowhere in any telemetry. It has to be DECLARED, by someone who knows
+          the business — and without it there is counting, never ROI. Optional
+          for that reason, and absent means exactly "nobody has stated what an
+          outcome is worth", which is a finding rather than a zero: presuming
+          zero would render every copilot in the fleet as pure cost.
+        properties:
+          human_minutes:
+            type: number
+            minimum: 0
+            description: How long the same outcome takes a human, in minutes.
+              The DECLARED estimate of whoever knows the work, never a
+              measurement — no clock in this system times the manual path,
+              which is the whole reason this object exists.
+          hourly_cost:
+            type: number
+            minimum: 0
+            description: The fully loaded hourly cost of that human, in
+              `currency`. Kept apart from `human_minutes` on purpose - the
+              duration is a fact about the WORK and the rate is a fact about
+              the ORGANISATION, they change for unrelated reasons, and a
+              single pre-multiplied "value" field would make it impossible to
+              say which of the two moved.
+          currency:
+            type: string
+            description: The ISO-4217 code `hourly_cost` is stated in (e.g.
+              USD, BRL). Declared and never defaulted - a rate whose currency
+              is assumed is a rate that is wrong by a factor of five in the
+              first fleet that mixes two.
   ui:
     mode: build
     label:
@@ -953,3 +1069,12 @@ spec:
     Copilot never re-declares them. One instance emits a servable backend
     (Agno today), the single evolution point DNA Cloud's copilots consume.
     Stored as ``copilots/<name>.yaml`` — marketplace-shareable as a bundle.
+    Since ``spec-app-e-o-servico`` (2026-08-07) it also declares where it RUNS
+    and what it is WORTH — ``runs_in`` is an OPTIONAL relation to the ``App``
+    whose service process serves it (execution, not composition — hence no
+    ``inverse_of``; see the descriptor header), and ``value_per_outcome``
+    ({human_minutes, hourly_cost, currency}) is the declared worth of one
+    successful outcome. That last one is the single number in the chain that
+    cannot be measured — the manual path is timed by no telemetry — so it must
+    come from someone who knows the business. It is the counterpart of
+    ``App.can_sleep`` — the App declares the cost, the Copilot the yield.

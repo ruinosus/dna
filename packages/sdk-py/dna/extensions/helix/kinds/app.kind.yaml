@@ -15,6 +15,75 @@
 #
 # tenant_scope intencionalmente NÃO declarado — permissivo (base + overlay
 # por tenant), espelhando Copilot/Tool: um workspace escreve os SEUS Apps.
+#
+# ── ⭐ 07/08/2026: o App passa a SER o serviço (`Spec/spec-app-e-o-servico`) ───
+#
+# Até aqui o App era só a face vendável: título, ícone, `requires_plan`, e a
+# lista de copilotos que ele agrupa numa rota. O PROCESSO que serve esses
+# copilotos — o diretório `apps/<svc>/`, o Dockerfile, a porta, a réplica —
+# não estava declarado em lugar nenhum que o App alcançasse. Quatro campos
+# fecham isso, e os quatro são o vocabulário do template de referência
+# (`templates/app-container/copier.yml`), lido antes de escrever: `service_name`,
+# `python_module` e `can_sleep` são, VERBATIM, três das perguntas que aquele
+# template faz, e `port` é a forma curta da quarta (`container_port` — o
+# prefixo diz "container" porque lá ele desambigua da porta do ingress; aqui
+# não há segunda porta para desambiguar).
+#
+# ⚠️ E `can_sleep` é o que paga a mudança sozinho — ver a description do campo.
+#
+# ── ⚠️ CÓDIGO e DEPLOYMENT são 1:N, e isso é medido, não previsto ─────────────
+#
+# A leitura fácil — "um App, um diretório, um serviço" — está errada para 8 dos
+# 9 serviços que esta casa roda hoje. Medido no `azure.yaml` e no
+# `docker-compose.dev.yml` do dna-cloud em 07/08/2026: **9 serviços
+# implantáveis sobre 4 diretórios `apps/`**.
+#
+#     apps/web/     → 1 serviço:  web
+#     apps/mcp/     → 3 serviços: mcp, mcp-entra, mcp-ws
+#     apps/api/     → 2 serviços: api, rest-user
+#     apps/copilot/ → 3 serviços: copilot, worker, a2a
+#
+# `mcp`, `mcp-entra` e `mcp-ws` são as PORTAS DE IDENTIDADE — uma autoridade
+# por porta (broker WorkOS numa, Entra delegado nas outras). MESMA imagem,
+# deployments distintos, variáveis distintas, e potencialmente `can_sleep`
+# distinto. Daí a cardinalidade que os campos abaixo declaram:
+#
+#   • `service_name` e `python_module` são fatos sobre o CÓDIGO. Vários Apps
+#     legitimamente compartilham os dois. `service_name` NÃO é a identidade do
+#     App.
+#   • `metadata.name` da instância É a identidade — o deployment (`mcp-entra`).
+#   • `port` e `can_sleep` são fatos sobre O DEPLOYMENT, por App e nunca por
+#     diretório: dois Apps sobre a mesma imagem podem responder diferente à
+#     pergunta de custo, e um esquema que os prendesse ao diretório escolheria
+#     por eles a resposta errada em pelo menos um dos dois.
+#
+# Isto não inventa desenho: o `azure.yaml` já pratica exatamente isso — a chave
+# do serviço é o deployment e `docker.path` aponta o Dockerfile, com vários
+# serviços apontando o MESMO. O que os campos acrescentam é DIZER, em vez de
+# praticar em silêncio.
+#
+# ⚠️ E o template de referência ainda não sabe disso: ele renderiza
+# `apps/{{ service_name }}/` e emite `project: ./apps/{{ service_name }}` no
+# fragmento do azd — 1:1 na árvore, apesar de o próprio `copier.yml` dizer que
+# "N services can share one image" via `image_name`. Gerar `mcp-entra` por ali
+# hoje criaria um `apps/mcp-entra/` em vez de reusar `apps/mcp/`. É uma ponta
+# do template, não deste Kind, e está registrada aqui porque é onde alguém vai
+# procurar quando as duas leituras divergirem.
+#
+# Os quatro nascem OPCIONAIS, e isso é medido, não cortesia: há 2 instâncias de
+# `App` vivas e nenhuma delas respondeu essas perguntas. Um `required` as
+# tornaria inválidas no dia da migração, o que é a forma de erro que esta casa
+# mais caro paga — a declaração passa a recusar exatamente o dado que ela
+# existe para descrever. Elas são preenchidas à mão, e a ausência continua
+# sendo um fato reportável ("este App não diz em que serviço roda"), nunca um
+# default presumido.
+#
+# ⛔ O que NÃO entrou, e por quê: as RESPOSTAS do Copier (`answers`,
+# `answers_file`, `template.src/ref`). Elas continuam na `Solution`, que é o
+# registro que SOBREVIVE ao answers file — um fato medido na fatia 3 de
+# `spec-solucao-como-template`. Duplicá-las aqui seria a segunda fonte de
+# verdade que o próprio `solution.kind.yaml` recusa para `images[]`, pelo mesmo
+# motivo: as duas divergem no primeiro update que só toca uma.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:
@@ -41,6 +110,22 @@ spec:
     never by the kernel) and the console renders ``/app/<name>`` from this
     instance alone. ``copilots`` is a declared RELATION to ``Copilot`` — the
     write validates existence and pickers come for free (i-040).
+    Since ``spec-app-e-o-servico`` (2026-08-07) an App is also THE SERVICE
+    that runs it — one deployment, identified by ``metadata.name``. Two of the
+    four new fields describe the CODE and are shared by sibling Apps
+    (``service_name``, the ``apps/<name>/`` directory — the same axis
+    ``Solution.services[].name`` addresses — and ``python_module``); two
+    describe the DEPLOYMENT and are per App (``port``, the in-container
+    ``targetPort``, and ``can_sleep``). Code to deployment is 1:N, measured:
+    dna-cloud runs 9 deployable services over 4 ``apps/`` directories, and
+    ``apps/mcp/`` alone serves ``mcp``/``mcp-entra``/``mcp-ws`` — same image,
+    same port, different identity authority. All four optional, because the 2
+    live Apps predate them. ``can_sleep`` is the one that pays for the change: a
+    container app that cannot sleep carries a fixed replica at ~US$ 90/month
+    forever (measured — the dna-cloud ``copilot`` service was US$ 94,43 of a
+    US$ 230,29 bill), and until now no declaration anywhere answered that
+    question. Absent is never a presumed ``true``: it means the cost question
+    was never asked, which is a finding to report.
   relations:
     copilots:
       to: Copilot
@@ -80,6 +165,79 @@ spec:
         minimum: 0
         description: Ordem relativa na navegação do console (menor
           primeiro). Ausente = ordem alfabética.
+      service_name:
+        type: string
+        pattern: "^[a-z][a-z0-9-]*$"
+        description: >-
+          O diretório do CÓDIGO que este App executa — `apps/<service_name>/`,
+          com o Dockerfile e o `src/`. ⚠️ NÃO é a identidade deste App e NÃO é
+          1:1 com ele: vários Apps compartilham legitimamente um
+          `service_name`, porque compartilham a IMAGEM. Medido no dna-cloud em
+          07/08/2026 — 9 serviços implantáveis sobre 4 diretórios `apps/`, e
+          `apps/mcp/` sozinho serve `mcp`, `mcp-entra` e `mcp-ws`, as três
+          portas de identidade (mesma imagem, autoridades diferentes). Quem
+          identifica o deployment é o `metadata.name` da instância; este campo
+          diz apenas de qual código ele nasce, e é o mesmo eixo que
+          `Solution.services[].name` (a camada de answers) endereça. O padrão é
+          o do validador do template (`templates/app-container/copier.yml`),
+          copiado para que a recusa aconteça na declaração e não no `azd up`.
+          Ausente significa que este App ainda não diz de que código roda — um
+          fato a reportar, nunca um nome a adivinhar a partir do
+          `metadata.name`, que para 8 dos 9 serviços acima daria o nome errado.
+      python_module:
+        type: string
+        pattern: "^[a-z_][a-z0-9_]*$"
+        description: >-
+          O pacote Python sob `src/` que este App importa — a resposta
+          `python_module` do template. Um identificador Python (minúsculas,
+          dígitos, underscore). Fato sobre o CÓDIGO, como `service_name`, e
+          portanto igual entre os Apps que compartilham o diretório: os três
+          Apps de `apps/mcp/` importam o mesmo módulo e diferem só no ambiente.
+          Não é derivável de `service_name` por substituição de traço por
+          underscore sem adivinhar, porque o template pergunta as duas coisas
+          separadamente e um repo real pode responder diferente.
+      port:
+        type: integer
+        minimum: 1
+        maximum: 65535
+        description: >-
+          A porta que o processo escuta DENTRO do contêiner — o `targetPort` do
+          Container App, o `container_port` do template. ⚠️ NÃO é a porta
+          publicada no host. Medido no dna-cloud em 07/08/2026
+          (`infra/bicep/containerapps.bicep`): `mcp`, `rest`, `copilot` e `a2a`
+          escutam todos em 8080, e só o portal difere (3000, Next.js). As
+          portas 8100 / 8102 / 8090 / 8091 / 8182 que aparecem no
+          `docker-compose.dev.yml` são MAPEAMENTO DE HOST para o dev local, e
+          declarar uma delas aqui geraria um `targetPort` apontando para onde
+          nada escuta. O que distingue `mcp` de `mcp-entra` não é a porta — é o
+          ENV (a autoridade de identidade), com a mesma imagem e a mesma porta;
+          é mais uma razão para a identidade do App ser o `metadata.name`, já
+          que `service_name` e `port` colidem entre Apps irmãos por desenho.
+          Declarada e não presumida porque o default de um framework não é um
+          compromisso — o `dna.runtime` serve numa porta, o `dna api serve` em
+          outra, e quem lê a frota precisa saber qual sem abrir o Dockerfile.
+      can_sleep:
+        type: boolean
+        description: >-
+          Este App pode escalar a zero. Fato sobre o DEPLOYMENT e nunca sobre
+          o diretório — dois Apps sobre a MESMA imagem podem responder
+          diferente, e é por isso que a pergunta mora aqui e não em
+          `service_name`. ⭐ É o campo que paga esta mudança
+          sozinho, e o motivo é dinheiro medido: um container app que NÃO dorme
+          carrega uma réplica fixa e custa ~US$ 90/mês, recorrente, para
+          sempre. Medição de 31/07/2026 no dna-cloud - o serviço `copilot`, com
+          `minReplicas: 1`, era US$ 94,43 de uma fatura de US$ 230,29; sozinho,
+          a MAIOR linha da conta, num ambiente que a documentação descrevia
+          como "scale-to-zero, ocioso não cobra". O `CLAUDE.md` do dna-cloud
+          tem um portão escrito com esse número - "antes de propor um container
+          app, a pergunta é: ele pode dormir?" - e até aqui NADA na declaração
+          respondia essa pergunta - a resposta vivia só na cabeça de quem gerou
+          o serviço, e um App novo continuava parecendo grátis. Este campo é
+          onde a pergunta do portão passa a ter onde ser respondida, ANTES de
+          alguém provisionar. Ausente significa que este App NUNCA respondeu a
+          pergunta de custo, e isso é um achado a reportar - jamais um `true`
+          presumido - porque presumir o lado barato esconde exatamente a
+          réplica que ninguém decidiu.
   display_label: App
   ascii_icon: "▦"
   presentation:
