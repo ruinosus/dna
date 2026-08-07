@@ -73,7 +73,13 @@ FALLBACK_FAMILIES: dict[str, tuple[str, ...]] = {
     TRAIT_WORK_ITEM: (
         "Bug", "Epic", "Feature", "Initiative", "Issue", "Spike", "Story", "Task",
     ),
-    TRAIT_DECISION: ("ADR",),
+    # ADR + Spec (i-121). The second name is not a widening of the family — it
+    # is the family naming a member it always had: Spec carries ADR's status
+    # arc, ADR's supersession, ADR's no-owner shape and (measured over the
+    # stored instances) ADR's timeline/cited_by profile rather than Plan's.
+    # ``test_fallback_families_equal_what_the_kinds_declare`` is what made this
+    # line MOVE instead of rot, which is the whole reason it exists.
+    TRAIT_DECISION: ("ADR", "Spec"),
     TRAIT_OBSERVATION: ("Kaizen",),
     TRAIT_ROLLUP: ("Epic", "Feature", "Initiative"),
     TRAIT_FILED: ("Bug", "Issue", "Kaizen"),

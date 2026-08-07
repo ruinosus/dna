@@ -39,6 +39,7 @@ from dna.kernel.etag import spec_etag
 from dna.kernel.kinds.approval import approval_state
 
 __all__ = [
+    "TRAIT_ASK_SLOT",
     "AuthoredKindNotFound",
     "NamespaceRegistryUnreadable",
     "approve_kind_impl",
@@ -47,6 +48,8 @@ __all__ = [
     "get_authored_kind_impl",
     "list_authored_kinds_impl",
     "revoke_kind_impl",
+    "splice_trait_ask",
+    "trait_ask",
 ]
 
 _KIND = "KindDefinition"
@@ -198,6 +201,118 @@ _PLURAL = "s"
 #: ``contrato``/``id``, ``contratoBase`` → ``contrato``/``Base``. Underscores
 #: and camel humps, nothing else.
 _WORDS_RE = re.compile(r"[A-Za-z0-9]+")
+
+
+# ── the ASK for ``traits`` — projected, never written out ────────────────────
+#
+# ⭐ The measurement this exists to answer (spec-kind-taxonomia-o-que-eu-sou
+# §2.1): of 47 Kind descriptors, **47 declare ``plane`` and 8 declare
+# ``traits``**. Same file, same author, same mechanism, 100% against 17%. The
+# difference is not the mechanism — it is that ``plane`` is ASKED for and
+# ``traits`` was not. In this very door, ``presentation`` had ~25 lines with its
+# closed vocabulary enumerated and ``traits`` had ONE line with no vocabulary at
+# all. **Coverage follows the ask, not the capability.**
+#
+# So the ask is levelled up. And it is PROJECTED from
+# :func:`~dna.kernel.kinds.traits.describe_traits` rather than written out,
+# which is the whole reason that function exists: a hand-written list is right
+# on the day it is written and wrong on the day the next trait is registered,
+# and nothing would fail in between — the vocabulary would simply stop being
+# offered, silently, which is exactly how ``traits`` got to 17% the first time.
+
+#: The token a door's docstring leaves where the vocabulary goes.
+#:
+#: A SLOT rather than an f-string, and the difference is load-bearing: an
+#: f-string resolves once, when THIS module is imported, and the trait registry
+#: is open — a name registered later would never reach an ask that had already
+#: been baked. The slot lets each door fill its own copy at the latest moment it
+#: can, which for a tool door is when the server is built.
+TRAIT_ASK_SLOT = "{{trait-vocabulary}}"
+
+#: The prose half. Deliberately in code and not in a ``PromptTemplate``: this is
+#: tool PROTOCOL — it tells the caller what the ``traits`` argument accepts —
+#: and a tenant overlay that rewrote it would change what the door DOES, not
+#: what an agent says. The half that IS data is the vocabulary, and that half is
+#: read from the registry on every call.
+#:
+#: ⚠️ §8.4 of the spec is the sentence in the last paragraph, and it is not
+#: decoration: **asking is not requiring.** A Kind that declares no trait must
+#: still be born, so the ask has to say so IN the ask — otherwise the next
+#: reader closes the gap by making the field mandatory, and a field everyone
+#: must fill is a field everyone fills with anything.
+_TRAIT_ASK = """\
+``traits`` (optional) declares WHAT YOUR KIND IS — the roles it takes part
+in. It is the other axis from ``relations``: relations say what your Kind
+POINTS AT, traits say what it *is*. A Kind that declares neither is findable
+by name and answers no question about itself.
+
+A trait is not a label. Declaring one opts your Kind into everything that
+reads that role — a digest, a gallery, a board lane, a refusal — and a trait
+that CARRIES brings its fields and its relations with it, so you declare
+them once here instead of restating them in ``schema``. The vocabulary is
+OPEN; this is what is registered on THIS server right now, and ``[carries
+...]`` is what comes with the name:
+
+{vocabulary}
+
+Declaring nothing is a legitimate answer and is never refused: a Kind that
+takes part in none of these roles is a statement, not a gap. What is not an
+answer is reaching for the nearest name — a role declared and not exercised
+is worse than one absent, because it also LOOKS like a declaration."""
+
+
+def trait_ask(*, vocabulary_indent: str = "    ", width: int = 68) -> str:
+    """The ``traits`` paragraph a door shows its author, vocabulary and all.
+
+    Derived, on every call, from the LIVE trait registry. The mutant that proves
+    it: delete a trait from the registry and this text loses it. A version of
+    this function with the thirteen core names typed into it would pass every
+    test written the day it was typed.
+
+    Returns the block UNINDENTED — :func:`splice_trait_ask` is what fits it to a
+    particular docstring, because only the caller knows how deep its own is.
+    """
+    from dna.kernel.kinds.traits import describe_traits
+
+    return _TRAIT_ASK.format(
+        vocabulary=describe_traits(indent=vocabulary_indent, width=width),
+    )
+
+
+def splice_trait_ask(doc: str | None) -> str:
+    """Fill :data:`TRAIT_ASK_SLOT` in ``doc`` with :func:`trait_ask`.
+
+    The indentation is READ OFF the slot's own line, never passed in, and that
+    is not tidiness — a parameter here would be wrong on half the interpreters
+    this package supports. **Python 3.13 dedents docstrings in the compiler**
+    (gh-81283) and 3.12 does not, while ``requires-python`` is ``>=3.12,<3.14``:
+    the same nested ``def`` hands this function a body indented by eight spaces
+    on one and by zero on the other. A caller passing the indentation it can see
+    in its own source would produce a correctly formatted ask on 3.12 and a
+    ragged one on 3.13, and nothing would fail — the tool would just read badly
+    to the agent, which is the only reader that matters and the one that cannot
+    file a bug.
+
+    **Raises ``ValueError`` when the slot is absent**, and that refusal is the
+    guard, not a nicety. The failure this door is exposed to is not a crash: it
+    is a docstring somebody rewrote without the slot, which would ship a tool
+    whose ask silently went back to one line. A splice that cannot find its slot
+    has to say so where a test sees it, rather than degrade into the exact
+    defect the slot exists to prevent.
+    """
+    if not doc or TRAIT_ASK_SLOT not in doc:
+        raise ValueError(
+            f"the docstring has no {TRAIT_ASK_SLOT} slot to project the trait "
+            f"vocabulary into — a door that stops asking for `traits` is how "
+            f"the field reached 17% coverage the first time"
+        )
+    slot_line = next(line for line in doc.splitlines() if TRAIT_ASK_SLOT in line)
+    indent = slot_line[: len(slot_line) - len(slot_line.lstrip())]
+    lines = trait_ask().splitlines()
+    block = "\n".join(
+        [lines[0]] + [(indent + line if line else "") for line in lines[1:]]
+    )
+    return doc.replace(TRAIT_ASK_SLOT, block)
 
 
 def derive_relation_candidates(
@@ -366,6 +481,8 @@ async def author_kind_impl(
     ``plane`` (optional) is ``composition`` or ``record``. Stored only when
     DECLARED — see :func:`_checked_plane` for why the default is deliberately
     not written down here.
+
+    {{trait-vocabulary}}
 
     ``presentation`` (optional) declares how the Kind's instances READ — the
     ordered fields, their human labels, their semantic roles. It is the SAME
@@ -611,6 +728,22 @@ async def author_kind_impl(
         **({"suggested_relations": suggested} if suggested else {}),
         **({"suggestion": _suggestion_line(kind, suggested)} if suggested else {}),
     }
+
+
+# The core's own ask, filled at IMPORT of this module — which is after the
+# kernel package has been imported (this module imports from it above), so
+# ``CORE_TRAITS`` and the proposed vocabulary are both in the registry. An
+# extension registering a trait later is not reflected here, and that is the
+# accepted limit of a docstring on the CORE: the tool door
+# (``dna_cli._mcp_kinds``) splices its OWN copy when the server is built, and
+# that is the surface an author actually reads.
+#
+# Guarded on truthiness rather than spliced unconditionally: ``python -OO``
+# strips every docstring, and a door that refused to import under ``-OO``
+# because it had no prose to decorate would be a worse trade than an ask that
+# is absent exactly where all prose is absent.
+if author_kind_impl.__doc__:
+    author_kind_impl.__doc__ = splice_trait_ask(author_kind_impl.__doc__)
 
 
 def _suggestion_line(kind: str, suggested: list[dict[str, Any]]) -> str:

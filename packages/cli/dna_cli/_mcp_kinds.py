@@ -69,6 +69,7 @@ from dna.application.kind_authoring import (
     author_kind_impl,
     get_authored_kind_impl,
     list_authored_kinds_impl,
+    splice_trait_ask,
 )
 from dna.kernel.errors import KernelRefusal
 
@@ -106,6 +107,34 @@ AUTHORING_REFUSALS: tuple[type[BaseException], ...] = (
 #: family_op=…)`` → the resolved workspace (or None). Raises ``ToolError`` on
 #: denial.
 GuardFn = Callable[..., Awaitable[Any]]
+
+
+def _asks_for_traits(fn: Any) -> Any:
+    """Project the LIVE trait vocabulary into a tool's docstring.
+
+    Applied BELOW ``@server.tool`` so it runs FIRST — FastMCP reads the
+    description off ``__doc__`` at decoration time, so a docstring mutated after
+    the decorator would reach nobody. The mounted tool is what an agent reads;
+    this is the difference between the ask existing and the ask being asked.
+
+    Why here and not an f-string in the docstring itself: the vocabulary is
+    resolved when the SERVER is built, which is later than this module's import
+    and is the last moment before the tool is advertised — so a name registered
+    by anything the server pulled in on the way up is in the ask.
+
+    ⚠️ **What it is NOT is post-boot**, and the limit is worth naming because
+    the ``[carries …]`` annotation is where it shows. ``build_server`` builds the
+    live kernel LAZILY, on the first tool call, and an extension attaches what
+    its traits carry from ``register(kernel)`` — so at this moment
+    ``sdlc.work-item`` reads ``[carries implies sdlc.dated]`` and not yet
+    ``[carries fields; relations; …]``. Every NAME and every DESCRIPTION is
+    present and correct (the description of that trait says in words what it
+    carries), and closing the gap would mean booting a kernel to build a tool
+    list — a cost paid on every server start to sharpen one bracket. Named here
+    rather than fixed, so the next reader knows which it is.
+    """
+    fn.__doc__ = splice_trait_ask(fn.__doc__)
+    return fn
 
 
 def register_kind_tools(
@@ -213,6 +242,7 @@ def register_kind_tools(
         )
 
     @server.tool(run_in_thread=False, app=kind_draft_card_app)
+    @_asks_for_traits
     async def author_kind(
         kind: str, schema: dict[str, Any], traits: list[str] | None = None,
         presentation: dict[str, Any] | list[str] | None = None,
@@ -226,7 +256,8 @@ def register_kind_tools(
         letters or digits: ``Contrato``, ``ApoliceDeSeguro``). It becomes part of
         the instance's path, so anything else is refused, by name.
         ``schema`` is a JSON Schema object describing the Kind's ``spec``.
-        ``traits`` (optional) are the behavioural traits the Kind opts into.
+
+        {{trait-vocabulary}}
 
         ``relations`` (optional) declares what your Kind POINTS AT. Declare them
         and your Kind joins the graph; omit them and it is an island — findable

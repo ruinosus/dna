@@ -874,7 +874,46 @@ class SpecKind(KindBase):
     scope = TenantScope.GLOBAL  # SDLC primitives are project-level, not per-tenant
     kind = "Spec"
     alias = "sdlc-spec"
-    traits = frozenset({"sdlc.dated"})
+    # i-121 — Spec used to declare only ``sdlc.dated``, which dates it and says
+    # nothing about WHAT IT IS. Every consumer that asks the registry "what kind
+    # of thing is this?" therefore had no answer for the Kind this product is
+    # named after: the portal's board lanes derive from ``sdlc.rollup`` /
+    # ``sdlc.decision`` / ``sdlc.work-item``, so every Spec landed in the honest
+    # but empty fourth lane, "no classification".
+    #
+    # ⭐ MEASURED before declared, from the descriptor and from the USE — never
+    # from the name, which would have argued either way ("spec" reads like a
+    # plan; "Spec" is filed next to ADR):
+    #
+    #   descriptor  · statuses are ``ARTIFACT_STATUSES`` — ADR's four, widened at
+    #                 both terminal ends. The Kind's own ``docs`` say "status is
+    #                 ADR-style" in those words.
+    #               · ``supersedes: {to: Spec}`` — replaced, not edited, which is
+    #                 the supersession idiom ADR carries and no work item has.
+    #               · NO owner and NO assignee. ``authors[]``, as ADR has
+    #                 ``deciders[]``.
+    #               · every terminal state owes a WHY (``shelve_reason``,
+    #                 ``deprecation_reason``, ``execution_summary``) — the payload
+    #                 of a decision, not of a task.
+    #               · ``plane: record``, bundle storage with a markdown body:
+    #                 byte for byte ADR's shape.
+    #   use (06/08) · over the 18 stored Specs and 11 stored ADRs of the `dna` and
+    #                 `dna-cloud` scopes: ``timeline`` 17/18 Spec and 11/11 ADR,
+    #                 against **0/162 Plan**; ``cited_by`` 12/18 and 5/11, against
+    #                 0/162. Spec is stored like a decision, not like a plan.
+    #
+    # The one line of the trait's description that argues against —
+    # *"does not progress"* — is answered by the same measurement rather than by
+    # argument: ``phase`` (brainstorm → done) is the field that would be progress,
+    # and **0 of the 18 stored Specs carry it**. It is a declared field nobody
+    # writes; the arc that IS written is the ratification one.
+    #
+    # NOT a new name, deliberately. Vocabulary is the founder's (i-128 has four
+    # proposals waiting), and a ``sdlc.design-artifact`` invented here would also
+    # have missed i-121's point: the lanes read the three names above, so a
+    # fourth would leave every Spec exactly where it was, in the empty lane, with
+    # a trait declared to prove we had looked.
+    traits = frozenset({"sdlc.decision", "sdlc.dated"})
     model = dict
     origin = "github.com/ruinosus/dna/sdlc"
     storage = StorageDescriptor.bundle("specs", "SPEC.md", body_field="body")

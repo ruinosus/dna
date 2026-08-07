@@ -699,3 +699,47 @@ def test_kind_aprovado_nao_se_revoga_pelo_modelo(mcp_client, monkeypatch):
         mcp_client.call_tool("revoke_kind", {"kind": "AprovadoIntocavel"})
     msg = str(ei.value)
     assert "APPROVED" in msg and "human decision" in msg
+
+
+# ── the ASK, at the door the agent actually reads (slice 4, §8.1(2)) ─────────
+#
+# The core's own guard lives in ``sdk-py/tests/test_kind_authoring_trait_ask.py``
+# and pins that the ask DERIVES. These two pin the other half, which no unit test
+# of the core can reach: that the projection crosses THIS door. It is the
+# ``guard existe, porta não chama`` defect aimed at prose — a vocabulary
+# projected into a docstring nothing splices reaches the same nobody a
+# hand-written list would.
+
+
+def test_the_advertised_tool_ASKS_for_traits_with_the_live_vocabulary(mcp_client):
+    """What the model receives is the tool DESCRIPTION, and that is the only
+    reader this ask has. So the assertion is on the ADVERTISED description — not
+    on ``author_kind.__doc__``, which is a different string on a decorated
+    function and would let a broken splice pass.
+
+    Enumerated from the registry rather than spot-checked: three hand-picked
+    names would also pass against a hand-written list of those three, which is
+    the implementation this has to be able to fail."""
+    from dna.kernel.kinds.traits import known_traits
+
+    tool = next(t for t in mcp_client.list_tools() if t.name == "author_kind")
+    description = tool.description or ""
+    assert "``traits`` (optional) declares WHAT YOUR KIND IS" in description
+    missing = [name for name in known_traits() if name not in description]
+    assert not missing, missing
+    # the slot never survives to the wire — a tool advertising `{{...}}` is a
+    # splice that silently did not happen
+    assert "{{trait-vocabulary}}" not in description
+
+
+def test_asking_is_not_requiring_at_the_door(mcp_client):
+    """§8.4, measured on the door rather than read in a docstring: a Kind that
+    declares no trait is still born, and lands with an empty ``traits`` rather
+    than a guess. The whole slice fails if this one does — an ask that refuses
+    is not an ask."""
+    r = mcp_client.call_tool("author_kind", {
+        "kind": "SemPapelDeclarado",
+        "schema": {"type": "object", "properties": {"x": {"type": "string"}}},
+    })
+    assert r["approved"] is False
+    assert mcp_client.stored_spec(r["name"])["traits"] == []

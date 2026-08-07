@@ -76,6 +76,15 @@ ALLOWLIST: dict[str, str] = {
     "application/sdlc_family.py::FALLBACK_FAMILIES[TRAIT_JOURNEY_DERIVED]": (
         "FALLBACK. One row of the same table as TRAIT_WORK_ITEM above: the kernel-less answer for a pure consumer, asserted equal to the live derivation by `test_sdlc_family_is_declarative`."
     ),
+    "application/sdlc_family.py::FALLBACK_FAMILIES[TRAIT_DECISION]": (
+        "FALLBACK. One row of the same table as TRAIT_WORK_ITEM above, asserted "
+        "equal to the live derivation by `test_sdlc_family_is_declarative`. "
+        "It became VISIBLE to this ratchet only on 07/08/2026, when Spec joined "
+        "ADR in the decision family (i-121) — a one-name tuple is not a set, so "
+        "the row sat here unlisted for as long as the family had a single "
+        "member. Worth reading as a property of the scanner rather than a new "
+        "shortcut: this ratchet sees a list the moment it becomes one."
+    ),
     "memory/verbs.py::MEMORY_KINDS": (
         "FALLBACK. The live answer is the `memory.recallable` trait "
         "(`recallable_kinds(kernel)`); this constant is public API and answers "

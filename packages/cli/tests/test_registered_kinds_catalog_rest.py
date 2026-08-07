@@ -128,3 +128,36 @@ def test_plan_filtering_is_absent_on_this_face_and_says_so(dna_dir):
         body = c.get("/v1/kinds/registry").json()
         assert body["filtered_by_plan"] is False
         assert body["filtered_out"] == 0
+
+
+# ── i-121: o Kind Spec dizia a data e não dizia o que É ──────────────────────
+
+
+def test_every_sdlc_artifact_row_answers_WHAT_KIND_OF_THING_IT_IS(dna_dir):
+    """i-121, na porta que o defeito atravessou.
+
+    As raias do board do portal derivam desta rota: ``lib/source/board-category.ts``
+    lê ``traits`` de cada linha e classifica por ``sdlc.rollup`` / ``sdlc.decision``
+    / ``sdlc.work-item``. ``Spec`` declarava só ``sdlc.dated`` — data, não
+    natureza — então TODA spec caía na quarta raia, "sem classificação". Honesto
+    e vazio: a lacuna era do vocabulário do SDK, não da tela.
+
+    A asserção é DERIVADA do vocabulário do SDK (``sdlc_family``), não de uma
+    lista escrita aqui, porque é exatamente a derivação que o portal faz — e
+    ``Spec`` está no parametrize junto de ``ADR`` e dos work items justamente
+    para que a guarda continue medindo a família e não um nome.
+    """
+    from dna.application import sdlc_family as F
+
+    classifying = {F.TRAIT_ROLLUP, F.TRAIT_DECISION, F.TRAIT_WORK_ITEM}
+    with _client(dna_dir) as c:
+        rows = {k["kind"]: k for k in c.get("/v1/kinds/registry").json()["kinds"]}
+    for kind in ("Spec", "ADR", "Story", "Feature"):
+        declared = set(rows[kind]["traits"])
+        assert declared & classifying, (
+            f"{kind} atravessa a rota sem declarar o que é: {sorted(declared)}"
+        )
+    # E a classificação de Spec é a MESMA de ADR — as duas são decisão
+    # registrada. Se um dia divergirem, é uma decisão, não um descuido.
+    assert F.TRAIT_DECISION in set(rows["Spec"]["traits"])
+    assert F.TRAIT_DECISION in set(rows["ADR"]["traits"])
