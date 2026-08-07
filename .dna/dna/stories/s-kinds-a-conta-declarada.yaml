@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: pdcxhd3ahfcb
+  name: s-kinds-a-conta-declarada
+spec:
+  title: 'Os três descritores: App é o serviço, Copilot declara rendimento'
+  description: App absorve o serviço (service_name, python_module, port, can_sleep); Solution perde services[] (derivado de apps[]); Copilot ganha runs_in (opcional) e value_per_outcome.
+  status: todo
+  feature: f-conta-do-copiloto
+  priority: highest
+  acceptance_criteria:
+  - Dado o Kind App, quando eu leio o descritor, então ele declara service_name, python_module, port e can_sleep, com can_sleep documentando o custo de ~US$90/mes de quem nao dorme
+  - Dado o Kind Solution, quando eu leio o descritor, entao services[] nao existe mais como campo e apps[] e a unica lista
+  - Dado o Kind Copilot, quando eu leio o descritor, entao runs_in aponta para App como relacao OPCIONAL e value_per_outcome declara human_minutes + hourly_cost + currency
+  - Dado um Copilot sem runs_in, quando a guarda de orfaos roda, entao ela REPORTA a contagem sem falhar o build
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: os tres .kind.yaml atualizados, com o porque escrito no cabecalho de cada um'
+  - 'Tests: round-trip de escrita/leitura para os campos novos; a guarda de orfaos com auto-teste que prova que ela enxerga um orfao plantado'
+  - 'Docs: scripts/regen-derived.sh rodado por inteiro (seis geradores)'
+  - 'CI: sdk-py + cli + postgres verdes'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-07T17:41:27+00:00'
+  updated_at: '2026-08-07T17:41:27+00:00'
+  timeline:
+  - at: '2026-08-07T17:41:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

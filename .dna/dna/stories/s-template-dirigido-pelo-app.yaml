@@ -1,0 +1,30 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: lv2dmahy5ngf
+  name: s-template-dirigido-pelo-app
+spec:
+  title: O template e o CLI passam a falar App, nao service
+  description: templates/app-container e dna solution deixam de escrever services[] e passam a escrever/ler um App. A fiacao gerada e a que o App declara.
+  status: todo
+  feature: f-conta-do-copiloto
+  priority: high
+  acceptance_criteria:
+  - Dado um App declarado, quando eu rodo a geracao, entao apps/<service_name>/ nasce com Dockerfile, pyproject, src, tests e os tres fragmentos de fiacao
+  - Dado o comando de solucao, quando ele grava, entao ele cria/atualiza instancias de App e NUNCA escreve Solution.services[]
+  - Dado um App com can_sleep false, quando a geracao roda, entao o fragmento de bicep reflete minReplicas 1 e o custo aparece na saida do comando
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: copier.yml e os .jinja alinhados aos campos do App; solution_cmd/solution_kind sem services[]'
+  - 'Tests: geracao ponta a ponta num tmpdir, com assercao sobre os tres fragmentos'
+  - 'Docs: o README do template'
+  - 'CI: cli verde'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-07T17:41:57+00:00'
+  updated_at: '2026-08-07T17:41:57+00:00'
+  timeline:
+  - at: '2026-08-07T17:41:57+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

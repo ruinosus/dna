@@ -1,0 +1,30 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: 2mwovrk5ifys
+  name: s-turno-tem-desfecho
+spec:
+  title: O turno ganha desfecho — e o turno que falha para de sair de graca
+  description: 'Migration 0012: dna_turn.outcome (resolved/escalated/abandoned). E o conserto do vies: 8 de 9 turnos com erro nao gravam tokens.'
+  status: todo
+  feature: f-conta-do-copiloto
+  priority: highest
+  acceptance_criteria:
+  - Dado um turno que estoura excecao, quando ele e gravado, entao input_tokens e output_tokens refletem o que foi consumido ate a falha (hoje 8 de 9 gravam zero)
+  - Dado um turno concluido, quando o runtime o fecha, entao outcome e um de resolved/escalated/abandoned, e vazio significa DESCONHECIDO, nunca resolved
+  - Dada a migration 0012, quando ela roda sobre um banco com dados, entao os turnos existentes ficam com outcome vazio e nenhum e presumido resolvido
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: migration 0012 (forward-only, pg-only como as irmas) + o seam de escrita em runtime/telemetry.py'
+  - 'Tests: teste que prova que o caminho de ERRO grava tokens; teste que prova que vazio nao vira resolved em lugar nenhum'
+  - 'Docs: a coluna documentada onde as irmas estao'
+  - 'CI: postgres verde (a migration roda la)'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-07T17:41:29+00:00'
+  updated_at: '2026-08-07T17:41:29+00:00'
+  timeline:
+  - at: '2026-08-07T17:41:29+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

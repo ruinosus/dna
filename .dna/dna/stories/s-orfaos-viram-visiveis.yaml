@@ -1,0 +1,30 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: oqs33vnbmlez
+  name: s-orfaos-viram-visiveis
+spec:
+  title: 'A guarda de orfaos: 5 copilotos sem App, e o dia em que runs_in vira obrigatorio'
+  description: runs_in nasce opcional. Uma guarda derivada reporta quantos Copilot estao sem App e quantas arestas App->Copilot penduram (hoje 2 de 4).
+  status: todo
+  feature: f-conta-do-copiloto
+  priority: medium
+  acceptance_criteria:
+  - Dado o estado atual, quando a guarda roda, entao ela reporta a contagem de copilotos orfaos e de arestas penduradas, sem falhar
+  - Dado um universo vazio, quando a guarda roda, entao ela FALHA — universo vazio nao e tudo certo
+  - Dado que a contagem de orfaos chegue a zero, quando a guarda roda, entao ela avisa que runs_in pode virar obrigatorio
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: a guarda derivada, nunca enumerada'
+  - 'Tests: auto-teste que planta um orfao e prova que a guarda o enxerga'
+  - 'Docs: o porque no cabecalho, com as contagens medidas em 07/08'
+  - 'CI: ligada ao lint'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-07T17:42:03+00:00'
+  updated_at: '2026-08-07T17:42:03+00:00'
+  timeline:
+  - at: '2026-08-07T17:42:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

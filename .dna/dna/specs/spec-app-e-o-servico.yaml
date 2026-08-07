@@ -1,0 +1,115 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Spec
+metadata:
+  id: 6a7cpymkin77
+  name: spec-app-e-o-servico
+spec:
+  title: App é o serviço — uma cadeia, não dois eixos
+  date: '2026-08-07T17:40:03+00:00'
+  status: accepted
+  description: Solution.services[] e Solution.apps[] nunca se tocam; App vira a unidade que tem Dockerfile, porta, fiação e pode_dormir. Copilot ganha runs_in.
+  body: |-
+    # App é o serviço — uma cadeia, não dois eixos
+
+    Aprovado pelo founder em 07/08/2026 ("tudo aprovado no nível MÁXIMO"), depois de
+    uma medição lado a lado do que os três Kinds produzem hoje.
+
+    ## O problema, medido
+
+    Os três Kinds existem e a hierarquia `Solution → App → Copilot` já está
+    declarada por relações de primeira classe. O que não fecha é **o que cada um
+    produz**:
+
+    | Kind | produz | quando | linhas | vivos |
+    |---|---|---|---:|---:|
+    | `Solution` | arquivos: `apps/<svc>/{Dockerfile,pyproject,src,tests}` + 3 fragmentos de fiação | build, uma vez | 286 | 0 |
+    | `App` | tela e recusa: rota `/app/[name]`, menu, `requires_plan` | request | 98 | 2 |
+    | `Copilot` | comportamento: endpoint, prompt, tools MCP, thread | runtime | 955 | 7 |
+
+    ⚠️ **O `Solution` tem DOIS eixos que nunca se tocam.** `services[]` é uma lista
+    de strings que vira código; `apps[]` é uma relação que vira tela. Não há campo,
+    relação nem convenção de nome que case os dois — o serviço gerado não sabe de
+    App nenhum, e o App não sabe de serviço nenhum.
+
+    E o `Copilot` **não tem relação de saída nenhuma**: a cadeia termina no vazio, e
+    um copiloto não declara em que processo roda.
+
+    ## A decisão
+
+    **`App` É o serviço.** Não um rótulo comercial sobre copilotos — a unidade que
+    tem Dockerfile, porta, fiação e conta no fim do mês.
+
+    | Kind | hoje | fica |
+    |---|---|---|
+    | `Solution` | `services[]` (strings) **e** `apps[]` (relação) | só `apps[]`; `services` vira **derivado**, não campo |
+    | `App` | 6 campos, 3 de apresentação + o portão de plano | ganha `service_name`, `python_module`, `porta` e **`pode_dormir`** |
+    | `Copilot` | nenhuma relação de saída | `runs_in → App` |
+
+    ## ⭐ O campo que sozinho paga a mudança: `pode_dormir`
+
+    O `CLAUDE.md` do dna-cloud tem um portão escrito com dinheiro: *"antes de propor
+    um container app, a pergunta é: ele pode dormir?"* — porque um que não dorme
+    custa **~US$ 90/mês recorrente**, medido (o `copilot` com `minReplicas: 1` era
+    US$ 94,43 de US$ 230,29 numa fatura).
+
+    **Hoje nada na declaração responde isso.** O template gera um serviço e a
+    resposta vive só na cabeça de quem gerou. Com `App = serviço`, `pode_dormir` é
+    campo do Kind, o custo entra na declaração, e a pergunta do portão passa a ter
+    onde ser respondida — antes de alguém provisionar.
+
+    ## A decisão de desenho dentro da proposta, e ela é real
+
+    Há **7 `Copilot` vivos e 2 `App`**. Cinco copilotos não estão em App nenhum e
+    funcionam.
+
+    - `runs_in` **obrigatório** → cinco instâncias reais ficam inválidas no dia da
+      migração;
+    - `runs_in` **opcional** → a cadeia continua podendo terminar no vazio, que é
+      exatamente o que a mudança quer consertar.
+
+    **Decisão tomada (reversível, e o founder pode derrubar):** `runs_in` nasce
+    **opcional**, e uma guarda derivada REPORTA os órfãos. Vira obrigatório no dia
+    em que a contagem de órfãos chegar a zero — e a guarda é o que torna esse dia
+    visível em vez de esquecido. É a mesma disciplina de `guard-app-wiring`: o
+    mecanismo que impede que "faltando" pareça "pronto".
+
+    ## As 2 arestas penduradas
+
+    Hoje o `App` aponta copilotos por **nome de instância** e, das 4 referências
+    declaradas, **2 não resolvem** — silenciosamente (`dna_edges` mostra
+    `App|copilots||2`). Com a relação imposta nos dois sentidos isso passa a acusar.
+    É ganho, e quebra duas instâncias que hoje "funcionam".
+
+    ## Custo por Kind, e a ordem que ele impõe
+
+    - `Solution` tem **0 instâncias** — mexer nele hoje custa **zero**, e cada dia
+      que passa custa mais. Faça primeiro.
+    - `App` tem 2 — os campos novos entram opcionais e são preenchidos à mão.
+    - `Copilot` tem 7 e 955 linhas — acrescentar `runs_in` é aditivo e barato.
+      ⚠️ **Redistribuir os 13 blocos dele entre App e Copilot NÃO está nesta spec** e
+      não deve entrar por tabela: é outra conversa, com outro custo.
+
+    ## A fiação, e por que ela fecha um defeito conhecido
+
+    `templates/app-container` já emite `wiring/compose.fragment.yml`,
+    `wiring/azure.service.yaml` e `wiring/containerapp.bicep`. Esses três são
+    exatamente os lugares onde a porta A2A passou **três dias em produção sem
+    existir** (31/07 no compose, 03/08 no `azure.yaml`), com todo o código no lugar.
+
+    Com `App = serviço`, quem declara o App declara a fiação — e a
+    `guard-app-wiring` do dna-cloud deixa de ser rede de segurança para virar
+    verificação de que a derivação está correta.
+
+    ## Fora de escopo, explicitamente
+
+    - redistribuir os 13 blocos do `Copilot`;
+    - tornar `runs_in` obrigatório (é o dia seguinte, com os órfãos em zero);
+    - qualquer mudança de pricing ou de infra provisionada (decisão do founder).
+  created_at: '2026-08-07T17:40:03+00:00'
+  updated_at: '2026-08-07T17:40:03+00:00'
+  timeline:
+  - at: '2026-08-07T17:40:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: accepted

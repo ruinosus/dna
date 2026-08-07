@@ -1,0 +1,121 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Spec
+metadata:
+  id: sttzk4xaxjca
+  name: spec-rendimento-do-copiloto
+spec:
+  title: O rendimento do copiloto — de contagem para ROI
+  date: '2026-08-07T17:40:05+00:00'
+  status: accepted
+  description: O custo já é exato (tokens x modelo); o rendimento é zero. Falta desfecho por turno e um valor de referência declarado no Kind. E 8 de 9 turnos com erro não gravam tokens.
+  body: |-
+    # O rendimento do copiloto — de contagem para ROI
+
+    Aprovado pelo founder em 07/08/2026 ("tudo aprovado no nível MÁXIMO"), a partir
+    da pergunta: *"eu sei o que um copilot faz e quanto ele pode render? nível de
+    negócio, como seria essa medição? tem alguma técnica?"*
+
+    ## A assimetria, medida no Postgres local em 07/08/2026
+
+    Três tabelas de telemetria existem e nenhuma é lida para negócio:
+
+    - `dna_turn` — agente, modelo, `input_tokens`, `output_tokens`, `duration_ms`,
+      `status`, `error`, `thread_id`, `workspace`
+    - `dna_turn_step` — cada passo: ferramenta, duração, status
+    - `dna_approval` — ferramenta, `decision`, `arguments` **vs** `edited_args`,
+      `requested_at` → `decided_at`
+
+    Com 85 turnos gravados:
+
+    ```
+    supervisor-copilot   76 turnos   430.172 tokens   4,7s médio   9 erros (11,8%)
+    assistente            8 turnos    70.857 tokens   8,6s médio   0 erros
+    3,2 passos por turno · HITL: 20 approve · 3 edit · 0 reject
+    ```
+
+    ⭐ **O custo já é exato** — tokens × modelo dá o gasto por turno, por agente,
+    por workspace. Nada falta.
+
+    ⛔ **O rendimento é zero.** Nada nessas tabelas diz se o turno *conseguiu*
+    alguma coisa. `status = 'ok'` significa "não estourou exceção", não "resolveu".
+
+    ## ⚠️ E há um viés que inclina a conta a favor do agente
+
+    **8 dos 9 turnos com erro não gravaram tokens.** O turno que falhou custou
+    dinheiro e não entra na conta. Qualquer ROI calculado hoje **subestima o custo**
+    — e subestima justamente nos casos ruins, que é onde a medição mais importa.
+
+    Isto é defeito de telemetria, não de desenho, e se conserta sozinho: gravar os
+    tokens no caminho de erro.
+
+    ## A técnica, com os nomes que o mercado usa
+
+    ROI de agente não se mede olhando o agente. Mede-se **contando o trabalho que
+    ele terminou sozinho e multiplicando pelo custo de um humano fazer o mesmo**.
+
+    | técnica | o que mede | o que exige | rigor |
+    |---|---|---|---|
+    | **contenção / deflection** | % de tarefas concluídas sem escalar | definição de "concluída" + sinal de escalada | proxy |
+    | **redução de AHT** | mesmo trabalho, com e sem o agente | uma linha de base | proxy melhor |
+    | **holdout / A/B** | diferença causal numa métrica de negócio | metade dos usuários sem o agente | prova |
+
+    ⚠️ **A maioria das empresas faz a primeira e chama de ROI.** É um proxy
+    defensável, não uma prova — e a diferença precisa estar escrita onde o número
+    aparece, não só aqui.
+
+    ## O sinal que já temos e ninguém lê
+
+    O `dna_approval` é, por acidente, o sinal de valor mais barato que existe:
+
+    - **20 approve · 3 edit · 0 reject** = 87% aceito sem o humano tocar. Isso é
+      **taxa de aceitação** — se alguém aprovou sem editar, o agente fez o trabalho
+      certo.
+    - O `edit` é o mais valioso dos três: a diferença entre `arguments` e
+      `edited_args` é **literalmente o quanto o agente errou**, medido por um humano,
+      em produção. Está gravado e nunca foi consultado.
+
+    ⚠️ Ressalva que vai junto do número: 23 aprovações num banco de dev não são
+    sinal de produção. O que está provado é a **mecânica**, não a taxa.
+
+    ## O que falta, e é pequeno
+
+    **1. Um desfecho por turno** — `resolveu` / `escalou` / `abandonou`. Hoje
+    `status` só distingue exceção. É uma coluna e um seam de escrita, não um
+    subsistema.
+
+    **2. Um valor de referência declarado no Kind `Copilot`** — quanto vale, em
+    minutos de humano, um desfecho resolvido daquele copiloto.
+
+    ⭐ **Este é o único número que não dá para medir.** Tem de ser declarado por
+    quem conhece o negócio. Sem ele não existe ROI — existe contagem.
+
+    ## A simetria que fecha o desenho
+
+    Esta spec é o par de `spec-app-e-o-servico`:
+
+    - o **`App`** declara **`pode_dormir`** → o **custo**;
+    - o **`Copilot`** declara **quanto vale um desfecho** → o **rendimento**.
+
+    Os dois lados da conta, cada um no Kind que os produz. Hoje nenhum dos dois está
+    declarado, e é por isso que nem custo nem retorno saem de uma consulta.
+
+    ## Honestidade de dado, que aqui não é detalhe
+
+    O `CLAUDE.md` do dna-cloud é categórico: **indisponível ≠ zero fabricado**.
+    Um ROI sem valor de referência declarado deve aparecer como **não calculável**,
+    nunca como zero e nunca como estimativa inventada. E todo número derivado de
+    proxy (contenção, aceitação) carrega o rótulo do que ele é.
+
+    ## Fora de escopo
+
+    - pricing, cobrança, qualquer coisa que toque Stripe (decisão do founder);
+    - holdout/A-B — precisa de volume que não existe;
+    - inferir o valor de referência a partir do uso. **Ele é declarado, ponto.**
+  created_at: '2026-08-07T17:40:05+00:00'
+  updated_at: '2026-08-07T17:40:05+00:00'
+  timeline:
+  - at: '2026-08-07T17:40:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: accepted
