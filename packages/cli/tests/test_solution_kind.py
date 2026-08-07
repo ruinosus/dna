@@ -1258,7 +1258,15 @@ def test_o_que_upsert_grava_continua_cabendo_no_schema_da_Solution() -> None:
     spec = {"title": "dna-cloud", "services": [layer.to_spec()]}
 
     jsonschema.validate(spec, port.schema())
-    assert "services" in port.schema()["required"]
+    # ⚠️ 07/08/2026, `Spec/spec-campo-opcional-por-evidencia`: `services` saiu
+    # do `required` — o dna-cloud nunca foi gerado por template, e o
+    # `required` transformava "este repo não tem procedência de render" em
+    # "falta um campo". O que este teste sempre mediu continua de pé: a
+    # propriedade tem de EXISTIR, porque `upsert_solution` grava nela sob
+    # `additionalProperties: false`. Opcional foi o que a evidência comprou;
+    # REMOVER a propriedade segue quebrando `dna solution` inteiro.
+    assert "services" in port.schema()["properties"]
+    assert port.schema()["required"] == ["title"]
     assert port.schema()["additionalProperties"] is False
     # e o que o registro guarda e o `App` não tem onde guardar:
     assert set(layer.to_spec()) >= {"answers", "answers_file", "template"}
