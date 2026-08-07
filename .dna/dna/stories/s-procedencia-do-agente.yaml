@@ -6,7 +6,7 @@ metadata:
 spec:
   title: Procedência de agente — o blueprint persiste e o copiloto diz quem o criou
   description: 'O codigo gerado guarda de onde veio (services[].answers, template.ref). O agente gerado nao: 0 CopilotBlueprint gravados, 0 arestas saindo de Copilot.'
-  status: todo
+  status: in-progress
   feature: f-a-fabrica
   priority: highest
   acceptance_criteria:
@@ -22,10 +22,65 @@ spec:
   - 'CI: verdes'
   definition_of_done_source: cli-create
   created_at: '2026-08-07T21:48:49+00:00'
-  updated_at: '2026-08-07T21:48:49+00:00'
+  updated_at: '2026-08-07T22:23:31+00:00'
   timeline:
   - at: '2026-08-07T21:48:49+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-08-07T21:59:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-07T22:23:31+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      ⭐ A MEDIÇÃO QUE DECIDIU A STORY — a derivação inversa PERDE resposta, e o registro que a socorre JÁ EXISTIA.
+
+      A story mandou medir antes de construir: `derive.ts` (dna-cloud), o inverso de `materialize.ts`, reconstrói as RESPOSTAS ou só o RESULTADO? Rodado o código REAL dos dois lados (os arquivos copiados verbatim, só os quatro imports de rede/registro dublados — e nenhuma das funções exercidas os toca), com o schema de um Kind alvo na mão:
+
+          respondido no formulário       derive devolveu   o registro guardou
+          voz_ativa: false               false             false
+          voz_id: "marin"                ""                "marin"
+          voz_estilo: "concisa, ..."     ""                "concisa, ..."
+          voz_identidade: "Você é ..."   ""                "Você é ..."
+          voz_limite_segundos: 600       null              600
+          limite_por_usuario: true       false             true
+
+      CINCO respostas perdidas, por DUAS condições, e nenhuma delas é bug da derivação. `buildDocs` não escreve bloco `interaction.voice` nenhum com `voz_ativa: false` (presença-liga, i-097), e apaga `policies.quotas.per_user` quando não há teto que ele qualifique ("per_user qualifica um teto — sozinho ele não significa nada", materialize.ts:556). A derivação reconstrói fielmente O QUE SOBREVIVEU À MATERIALIZAÇÃO — que não é o que a pessoa respondeu. No CONTROLE (voz ligada, tetos declarados) o round-trip é EXATO: a perda é da condição, nunca da derivação.
+
+      É o argumento que criou `Solution.services[].answers`, inteiro, aplicado ao outro lado: uma resposta atrás de um `when:` some do resultado, e só um registro verbatim a socorre. A i-088 estava certa PARA O CASO DELA (a aba Configuração precisa mostrar o estado dos docs, e para isso o inverso basta) e incompleta para este.
+
+      ⚠️ O QUE A SPEC AFIRMOU E O CÓDIGO DESMENTIU — duas coisas, e as duas mudaram o escopo.
+
+      1. `spec-a-fabrica` diz "o CopilotBlueprint NÃO persiste (i-088)". PERSISTE desde as 14h06 de 07/08/2026: a i-137 do dna-cloud fez de `materializeCopilot` uma TERCEIRA escrita (Agent -> Copilot -> CopilotBlueprint, nessa ordem, para o `spec.nome` só apontar depois do alvo existir). A spec foi escrita às 21h48 do MESMO DIA, contando linhas num Postgres de dev onde ninguém criou copiloto no intervalo. "Zero instâncias" é fato sobre o banco; "não persiste" é afirmação sobre o código, e as duas divergiram por sete horas. A metade ANSWERS da lacuna estava ENTREGUE antes desta story começar, e mora no dna-cloud, que é onde mora o Kind do formulário.
+
+      2. "ZERO arestas saindo de Copilot" também era o `dna_edges` vazio, não o registro: `runs_in -> App` já estava DECLARADA neste descritor desde a mesma manhã (spec-app-e-o-servico), e nenhum copiloto preencheu o campo opcional. O que faltava mesmo era outra pergunta: `runs_in` responde ONDE RODA, e nada respondia DE ONDE VEIO.
+
+      O QUE FOI CONSTRUÍDO, então — só o que sobrou depois de medir:
+
+      * `Copilot.relations.created_by -> Copilot`, REFLEXIVA. O alvo é o próprio Kind de propósito: a fábrica é feita do próprio material, e o `copiloto-criador` é um Copilot cujo trabalho é produzir Copilots. Sendo `by: name`, sai `resolved=True` E `enforced=True` — desenha aresta de verdade.
+      * `dna copilot provenance` (+ `dna_cli/copilot_provenance.py`), a ausência REPORTADA no molde de `unanswered_cost_question`: quatro estados que não colapsam (respondido / não-respondido / DANGLING / ciclo) e o lado ruidoso na falha — store ilegível reporta TODOS como não-respondidos e não imprime total nenhum.
+
+      A PROFUNDIDADE DA CADEIA: a aresta BASTOU. `dna graph refs Copilot <nome> --direction out --depth N` já caminhava — faltava a aresta para caminhar. Provado com store real (SQLite e Postgres, o segundo por gate de DATABASE_URL): avo -> pai -> neto devolve {(pai,1),(avo,2)}, e `--direction in` responde "o que este criou" sem nenhum campo `creates[]` no criador (que, se existisse, obrigaria a reescrever o `copiloto-criador` a cada copiloto produzido). O relatório também dá a profundidade, e isso NÃO é um segundo mecanismo: a declaração é uma só, e num scope de FS (`GraphUnsupported`) o grafo derivado não existe — a cadeia ficaria sem resposta justamente onde a story pediu que houvesse uma.
+
+      A RECUSA MEDIDA, e ela tem teste: apontar para o `CopilotBlueprint` morre em duas frentes — é Kind do dna-cloud (a fronteira open-core atravessada de trás para frente) e seria redundante mesmo lá, porque a i-137 grava o registro com `metadata.name` IGUAL ao do Copilot. A saída `to: '*'` + `by: "Kind/name"` é ACEITA pelo normalizador e não serve: `carries_kind` implica `resolved: False`, ou seja ZERO arestas — verificado revertendo, e os 6 testes de aresta ficam vermelhos. Gatilho escrito no descritor: se o dna-cloud passar a nomear o registro diferente do copiloto, o ponteiro explícito passa a ser necessário.
+
+      MUTANTES MORTOS, cada um verificado revertendo o código: (1) colapsar `dangling` em `unanswered` -> 1 vermelho; (2) tirar a detecção de ciclo -> o teste PENDURA (a pior forma de um relatório errar); (3) store ilegível reportando "legível" -> 1; (4) string vazia contando como resposta -> 1; (5) profundidade parando no primeiro elo -> 2; (6) remover a relação do descritor mantendo o campo do schema -> 6; (7) trocar por `to: '*'` composto -> 6.
+
+      VERIFICAÇÃO: sdk-py 5842 passed / cli 2020 passed (invocações separadas, PYTHONPATH fixado NESTE checkout — verificado pelo próprio regen). Os 5 vermelhos que sobram (1 em test_campos_opcionais_por_evidencia.py, 4 em test_solution_kind.py) foram confirmados PRÉ-EXISTENTES rodando a suíte com `git stash` sobre o main limpo: são os arquivos do PR #354, que está aberto e é o conserto em voo. `./scripts/regen-derived.sh` INTEIRO (os seis, incluindo o `bun run gen`) — mexeu em `docs/reference/{cli/copilot.md,data-model.md,kinds/record.md}`, e o modelo de dados passou de 154 para 155 arestas com `Copilot }o--|| Copilot : "created_by"` no diagrama. `brand_guard`, `data_model_guard`, `docs_coverage_guard` limpos; `bun test` 17/17 e `typecheck` no client-ts.
+
+      PONTA COM DONO, no dna-cloud: nada ESCREVE `created_by` ainda. `materializeCopilot` teria de carimbá-lo com o copiloto que compôs o blueprint, e o carimbo tem a mesma regra do `criado_por` da i-137 (atravessa verbatim na edição, nasce vazio para quem é anterior ao campo). Enquanto ninguém escrever, `dna copilot provenance` reporta todo mundo como NÃO-RESPONDIDO — que é a resposta honesta, e é o ponto.
+
+      UMA PONTA QUE A MEDIÇÃO ABRIU E ESTA STORY NÃO FECHA: no `modo: conversa`, `confirmar_gravacoes` e `chips_por_etapa` respondidos como `true` viram `false` — e viram `false` NO REGISTRO TAMBÉM, porque `normalizeBlueprint` os canoniza ANTES de `blueprintRecord` projetar. Não é a mesma classe do resto (a supressão é do normalizador, não da materialização), mas é a mesma pergunta: o registro guarda o que a pessoa respondeu ou o que o sistema aceitou? Vale uma ficha no board do dna-cloud.
+    commit_ref: 4a32b7b5cdb1ef1f027ab13c193009e98c22ca6e
+  produces:
+  - kind: Plan
+    name: plan-s-procedencia-do-agente
+    role: implementation
+    at: '2026-08-07T21:59:42+00:00'
