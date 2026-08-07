@@ -10,19 +10,51 @@ spec:
   feature: f-a-fabrica
   priority: highest
   acceptance_criteria:
-  - Dado um copiloto com a tool nova, quando ele pergunta 'ja existe algo parecido com isto?', entao ele recebe resultado por SIMILARIDADE, nao por enumeracao
-  - Dado que a busca combina lexical e vetorial, quando ela responde, entao usa o rrf que ja existe — nao uma fusao escrita a mao
-  - Dado um ambiente sem provider de embedding, quando a tool e chamada, entao ela degrada de forma HONESTA e diz o que perdeu — nunca devolve vazio como se nao houvesse resultado
-  - Dada a busca, quando ela roda para um tenant, entao ela respeita o escopo do tenant como as outras portas
+  - text: Dado um copiloto com a tool nova, quando ele pergunta 'ja existe algo parecido com isto?', entao ele recebe resultado por SIMILARIDADE, nao por enumeracao
+    done: true
+    done_at: '2026-08-07T22:27:39+00:00'
+    done_by: claude-code
+    evidence: 'PR #356 — search_instances(kind, query, ...) roteia por kernel.search(); test_it_searches_through_the_real_engine_and_the_ranks_prove_rrf_ran (SqliteVec real, rank_dense+rank_lexical presentes) prova que a resposta vem de similaridade e nao de enumeracao.'
+  - text: Dado que a busca combina lexical e vetorial, quando ela responde, entao usa o rrf que ja existe — nao uma fusao escrita a mao
+    done: true
+    done_at: '2026-08-07T22:27:57+00:00'
+    done_by: claude-code
+    evidence: 'PR #356 — zero linhas de fusao/ranking/embedding escritas; o RRF e o rrf.reciprocal_rank_fusion que pgvector e sqlite_vec ja compartilham, alcancado so por kernel.search(). test_the_door_imports_nothing_from_the_search_adapters le o AST e falha se a porta importar dna.adapters.search.*; test_the_hits_come_back_in_the_engines_own_ranking falha se ela reordenar.'
+  - text: Dado um ambiente sem provider de embedding, quando a tool e chamada, entao ela degrada de forma HONESTA e diz o que perdeu — nunca devolve vazio como se nao houvesse resultado
+    done: true
+    done_at: '2026-08-07T22:28:08+00:00'
+    done_by: claude-code
+    evidence: 'PR #356 — envelope com mode (hybrid|lexical) + degraded + degraded_reason (no_search_provider / search_provider_error / index_refresh_failed) + notice em prosa que termina dizendo o que a lista vazia NAO pode ser lida como. test_the_two_empties_are_different_answers: mesmo Kind, scope e query, hits==[] nos dois, e searched != could_not, com asserções em VALORES do payload. Mutacao: colapsar as duas degradacoes num booleano derruba 3 testes.'
+  - text: Dada a busca, quando ela roda para um tenant, entao ela respeita o escopo do tenant como as outras portas
+    done: true
+    done_at: '2026-08-07T22:28:17+00:00'
+    done_by: claude-code
+    evidence: 'PR #356 — test_one_tenant_never_finds_another_tenants_instance: dois tenants escritos e indexados de VERDADE contra o SqliteVecRecordSearchProvider real (o filtro de overlay mora dentro dele; um duble passaria enquanto a porta vazasse). O caminho degradado tem teste proprio porque varre por kernel.query. Na face MCP o tenant vem do _guard_for, provado por test_the_guards_tenant_is_what_reaches_the_core. Mutacao: soltar o tenant derruba 3 testes.'
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: a tool sobre os adapters QUE JA EXISTEM — reimplementar a busca esta proibido'
-  - 'Tests: o caso degradado provando que vazio-por-falta-de-provider nao se confunde com vazio-por-nao-ter-resultado'
-  - 'Docs: a tool documentada onde as outras 11 estao'
-  - 'CI: verdes'
+  - text: 'Code: a tool sobre os adapters QUE JA EXISTEM — reimplementar a busca esta proibido'
+    done: true
+    done_at: '2026-08-07T22:27:57+00:00'
+    done_by: claude-code
+    evidence: 'PR #356 — zero linhas de fusao/ranking/embedding escritas; o RRF e o rrf.reciprocal_rank_fusion que pgvector e sqlite_vec ja compartilham, alcancado so por kernel.search(). test_the_door_imports_nothing_from_the_search_adapters le o AST e falha se a porta importar dna.adapters.search.*; test_the_hits_come_back_in_the_engines_own_ranking falha se ela reordenar.'
+  - text: 'Tests: o caso degradado provando que vazio-por-falta-de-provider nao se confunde com vazio-por-nao-ter-resultado'
+    done: true
+    done_at: '2026-08-07T22:28:08+00:00'
+    done_by: claude-code
+    evidence: 'PR #356 — envelope com mode (hybrid|lexical) + degraded + degraded_reason (no_search_provider / search_provider_error / index_refresh_failed) + notice em prosa que termina dizendo o que a lista vazia NAO pode ser lida como. test_the_two_empties_are_different_answers: mesmo Kind, scope e query, hits==[] nos dois, e searched != could_not, com asserções em VALORES do payload. Mutacao: colapsar as duas degradacoes num booleano derruba 3 testes.'
+  - text: 'Docs: a tool documentada onde as outras 11 estao'
+    done: true
+    done_at: '2026-08-07T22:28:27+00:00'
+    done_by: claude-code
+    evidence: 'PR #356 — docs/guides/mcp-server.md, na secao ''Instances'', imediatamente apos list_instances: assinatura, o porque (list_instances responde ''o que existe'', esta responde ''ja existe algo assim?''), a tabela de leitura de mode/degraded com a coluna ''pode concluir que nao existe nada parecido?'', e o notice.'
+  - text: 'CI: verdes'
+    done: true
+    done_at: '2026-08-07T22:36:15+00:00'
+    done_by: claude-code
+    evidence: 'PR #356 — 13/13 checks verdes: brand-guard, commit-emails, gitleaks, docs-build, docs-links, client-ts, client-py 3.12+3.13, sdk-py 3.12+3.13, cli 3.12+3.13, postgres. Local rebaseado: sdk-py 5845 passed / cli 2028 passed, zero falhas, e os SEIS geradores de regen-derived.sh sem drift.'
   definition_of_done_source: cli-create
   created_at: '2026-08-07T21:48:52+00:00'
-  updated_at: '2026-08-07T22:16:29+00:00'
+  updated_at: '2026-08-07T22:36:15+00:00'
   timeline:
   - at: '2026-08-07T21:48:52+00:00'
     actor: claude-code
@@ -45,3 +77,51 @@ spec:
     source: cli
     from: todo
     to: review
+  - at: '2026-08-07T22:27:47+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: 'PR #356 — search_instances(kind, query, ...) roteia por kernel.search(); test_it_searches_through_the_real_engine_and_the_ranks_prove_rrf_ran (SqliteVec real, rank_dense+rank_lexical presentes) prova que a resposta vem de similaridade e nao de enumeracao.'
+    by: claude-code
+  - at: '2026-08-07T22:27:59+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 1
+    evidence: 'PR #356 — zero linhas de fusao/ranking/embedding escritas; o RRF e o rrf.reciprocal_rank_fusion que pgvector e sqlite_vec ja compartilham, alcancado so por kernel.search(). test_the_door_imports_nothing_from_the_search_adapters le o AST e falha se a porta importar dna.adapters.search.*; test_the_hits_come_back_in_the_engines_own_ranking falha se ela reordenar.'
+    by: claude-code
+  - at: '2026-08-07T22:28:09+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 1
+    evidence: 'PR #356 — envelope com mode (hybrid|lexical) + degraded + degraded_reason (no_search_provider / search_provider_error / index_refresh_failed) + notice em prosa que termina dizendo o que a lista vazia NAO pode ser lida como. test_the_two_empties_are_different_answers: mesmo Kind, scope e query, hits==[] nos dois, e searched != could_not, com asserções em VALORES do payload. Mutacao: colapsar as duas degradacoes num booleano derruba 3 testes.'
+    by: claude-code
+  - at: '2026-08-07T22:28:19+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 1
+    marked_dod: 0
+    evidence: 'PR #356 — test_one_tenant_never_finds_another_tenants_instance: dois tenants escritos e indexados de VERDADE contra o SqliteVecRecordSearchProvider real (o filtro de overlay mora dentro dele; um duble passaria enquanto a porta vazasse). O caminho degradado tem teste proprio porque varre por kernel.query. Na face MCP o tenant vem do _guard_for, provado por test_the_guards_tenant_is_what_reaches_the_core. Mutacao: soltar o tenant derruba 3 testes.'
+    by: claude-code
+  - at: '2026-08-07T22:28:28+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 0
+    marked_dod: 1
+    evidence: 'PR #356 — docs/guides/mcp-server.md, na secao ''Instances'', imediatamente apos list_instances: assinatura, o porque (list_instances responde ''o que existe'', esta responde ''ja existe algo assim?''), a tabela de leitura de mode/degraded com a coluna ''pode concluir que nao existe nada parecido?'', e o notice.'
+    by: claude-code
+  - at: '2026-08-07T22:36:16+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 0
+    marked_dod: 1
+    evidence: 'PR #356 — 13/13 checks verdes: brand-guard, commit-emails, gitleaks, docs-build, docs-links, client-ts, client-py 3.12+3.13, sdk-py 3.12+3.13, cli 3.12+3.13, postgres. Local rebaseado: sdk-py 5845 passed / cli 2028 passed, zero falhas, e os SEIS geradores de regen-derived.sh sem drift.'
+    by: claude-code
