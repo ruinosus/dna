@@ -400,6 +400,7 @@ def build_app(
         compose_prompt_impl,
         create_project_impl,
         forget_impl,
+        revive_impl,
         register_artifact_impl,
         get_instance_impl,
         resolve_instance_impl,
@@ -2832,6 +2833,72 @@ def build_app(
                 detail=(
                     f"memory {name!r} not found in tenant {tenant!r}'s memory "
                     f"(scope {scope or 'default'!r}) — nothing to forget. If it "
+                    f"is one of YOUR personal memories it lives in another "
+                    f"partition and is not reachable from this workspace lane."
+                ),
+            )
+        return out
+
+    @app.post("/v1/memories/{name}/revive", dependencies=guarded,
+              response_model=m.ReviveMemoryResponse)
+    async def revive_memory(
+        request: Request,
+        name: str,
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Bring a forgotten memory BACK into force — the way back from
+        ``POST /v1/memories/{name}/forget``, and the third word of the promise
+        ``forget`` has made since it existed (*auditable, point-in-time
+        reconstructable, **revivable***). Until i-139 nothing revived: a grep
+        for ``unforget|restore|revive|undelete|recover`` across the SDK returned
+        zero, so "revivable" named a capability with nothing behind it — the
+        same shape as i-130's *"never hard-deletes"*, in the same docstring.
+
+        **Not an undo.** The closed interval is filed VERBATIM into the
+        append-only ``spec.revivals`` — ``{valid_to, revived_at, superseded_by?,
+        revived_by?}`` — and the current window reopens. The forgetting is not
+        unsaid; it is dated. The response hands that interval back, so the
+        caller holds the exact window the memory spent retired.
+
+        **There is NO request body, and that is the point.** WHO revived it
+        (``revived_by``) is resolved SERVER-SIDE from the verified request, by
+        the same ``_actor_from_state`` every other audit field on this face
+        uses — attribution a caller can forge is not attribution. An unnamed
+        caller gets this face's honest sentinel (``rest:local`` for the
+        credential-free lane, ``rest:unidentified`` for verified-but-nameless)
+        rather than a null dressed up as an audit trail.
+
+        **Idempotent, and cheaper than idempotent.** A memory already in force
+        answers 200 with ``outcome: "already_in_force"`` and performs **no write
+        at all** — a no-op that still wrote would add a version to
+        ``dna_versions`` for an event that did not happen, which is the audit
+        trail lying quietly. Nothing is appended and nothing already filed is
+        touched: the date a memory was forgotten IS the audit, and a retry is
+        not an event.
+
+        ⚠️ **Which axis answers afterwards.** ``recall(as_of=T)`` for a ``T``
+        inside a gap this memory spent retired answers from the TRANSACTION
+        axis — what this store BELIEVED then — not the world-time axis.
+        ``dna_instances`` holds one row per instance, so ``valid_at`` knows only
+        the CURRENT window; the gaps live in ``spec.revivals``, exactly and in
+        the present, but are not queryable as world time. Founder decision on
+        i-139, measured against a table rewrite.
+
+        404 for a name this layer does not hold, most often the PARTITION rather
+        than the name. PLAN-GATED (i-042), ``memory`` family,
+        ``memory_op='write'`` — reopening a window is a write."""
+        await _plan_gate(request, tenant=tenant, family="memory", memory_op="write")
+        out = await revive_impl(
+            await _live(), name, scope, tenant=tenant,
+            revived_by=_actor_from_state(request),
+        )
+        if out.get("outcome") == "not_found":
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"memory {name!r} not found in tenant {tenant!r}'s memory "
+                    f"(scope {scope or 'default'!r}) — nothing to revive. If it "
                     f"is one of YOUR personal memories it lives in another "
                     f"partition and is not reachable from this workspace lane."
                 ),

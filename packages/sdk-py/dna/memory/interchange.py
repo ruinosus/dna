@@ -122,6 +122,14 @@ _VAULT_FIELDS: tuple[str, ...] = (
     # dropping it on export would export a memory that can no longer be checked
     # against anything — the round trip would return prose and call it whole.
     "claims",
+    # i-139, and the same argument one axis over. MIF's ``temporal`` carries a
+    # SINGLE validity window (``validFrom``/``validUntil``), so it can express
+    # the current one and has nowhere to put the periods a memory already spent
+    # retired and came back from. Dropping them on export would hand over a
+    # memory whose descriptor still promises "auditable" with the audit removed
+    # — and silently, because the one window MIF does understand would be right
+    # there, making the export look complete.
+    "revivals",
 )
 
 #: Default affect + reason stamped on a projected Engram when the source MIF

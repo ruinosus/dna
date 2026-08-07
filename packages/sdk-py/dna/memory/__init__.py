@@ -105,6 +105,7 @@ from dna.memory.personal import (
 )
 from dna.memory.verbs import (
     MEMORY_KINDS,
+    REVIVALS_FIELD,
     TRAIT_RECALLABLE,
     recallable_kinds,
     backfill_index,
@@ -113,16 +114,19 @@ from dna.memory.verbs import (
     forget,
     recall,
     remember,
+    revive,
 )
 
 __all__ = [
     # verbs
     "MEMORY_KINDS",
+    "REVIVALS_FIELD",
     "TRAIT_RECALLABLE",
     "recallable_kinds",
     "remember",
     "recall",
     "forget",
+    "revive",
     "consolidate",
     "backfill_index",
     # contradiction detection (degrau 2 de f-poder-de-grafo)

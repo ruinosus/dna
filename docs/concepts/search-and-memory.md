@@ -145,6 +145,23 @@ flowchart LR
   memory, retire the old one naming it — leaves a trail from the retired
   thought to the one that replaced it. Only the caller knows which of the two
   happened, so nothing infers it.
+- **`revive`** is the way BACK, and until i-139 it did not exist: `forget` had
+  promised *"revivable"* in its own docstring since the day it was written, and
+  a grep for `unforget|restore|revive|undelete|recover` across the SDK returned
+  **zero**. It reopens the current validity window and files the closed interval,
+  verbatim, into the append-only `spec.revivals` —
+  `{valid_to, revived_at, superseded_by?, revived_by?}`. Not an undo: the
+  forgetting is not unsaid, it is dated. Idempotent, and a no-op performs no
+  write at all, so `dna_versions` never records a revival that did not happen.
+
+  `revive` is also the ONE thing that may lift an invalidation. The i-046 guard
+  (`dna.kernel.write.bitemporal_guard`) restores a dropped `valid_to` on every
+  Engram write, because maintenance paths re-write a memory by name without
+  carrying it. Its exemption is derived from the payload, never from the
+  caller: a write may lift the bound only if it quotes that exact `valid_to`
+  inside `revivals`. What the guard protects is not the presence of a field —
+  it is that an invalidation is never dropped on the floor, and archiving it is
+  not dropping it.
 - **`consolidate`** is a deterministic decay pass: recompute retention,
   report — or with `--apply`, soft-forget — memories that have gone stale.
   `--dry-run` previews the whole pass with zero effect: one action per memory
@@ -206,6 +223,34 @@ Two refusals keep the answer honest, both deliberate:
 
 An `as_of` recall also does **not** reconsolidate: a read of the past that writes
 into the present is a contradiction.
+
+### ⚠️ A revived memory's past: which clock answers
+
+A memory that was forgotten and then **revived** has spent a period out of
+force, and the two clocks do not cover that period equally. Read this before
+concluding anything about a revived memory's history.
+
+- **The gaps are recorded exactly** — every completed forget→revive cycle leaves
+  a `{valid_to, revived_at, superseded_by?, revived_by?}` entry in
+  `spec.revivals`, append-only. Reading them is a plain read of the instance, in
+  the present, and nothing is approximate about them.
+- **But the WORLD-time axis does not know them.** `dna_instances` holds one row
+  per instance (`PRIMARY KEY (scope, kind, api_version, name, tenant)`), so its
+  `valid_at` column carries only the **current** window — even though the
+  `EXCLUDE USING gist (id WITH =, valid_at WITH &&)` beside it would happily
+  hold many disjoint ones. The constraint permits the second row; the primary
+  key forbids it.
+- **So `recall(as_of=T)` for a `T` inside a past gap answers on TRANSACTION
+  time** — what this store *believed* at that instant, which during the gap was
+  "retired" — and not on world time. It is not wrong, and it is not the question
+  a world-time reader is asking. Ask `spec.revivals` for that.
+
+This is a **founder decision (i-139, 07/08/2026)**, taken with the number on
+screen and not an oversight: buying the world-time query means rewriting the
+table plus a new cardinality for every read and write, measured against 14
+memories (2 retired, 0 superseded). The trigger that would reopen it is written
+on the issue — the day somebody actually needs *"was this true in the world at
+T?"* for a `T` a memory spent retired.
 
 ## Contradiction — memories that disagree, presented rather than overwritten
 

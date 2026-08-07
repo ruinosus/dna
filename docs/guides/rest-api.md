@@ -48,10 +48,19 @@ overlay only — never another tenant's data):
   REPLACED this one — what an edit sends, and what a later reader follows.
   Idempotent: re-forgetting keeps the original `valid_to` and answers
   `outcome: "already_forgotten"`, so a half-finished edit is safe to retry.
+- `POST /v1/memories/{name}/revive` — the way **back** (i-139): reopens the
+  current window and files the closed interval into the append-only
+  `spec.revivals`, returning the interval it just closed. No request body —
+  `revived_by` is resolved server-side from the verified request, because
+  attribution a caller can forge is not attribution. Idempotent, and a no-op
+  writes nothing at all. ⚠️ Afterwards, `recall(as_of=T)` for a `T` inside a
+  past gap answers on **transaction** time, not world time — see
+  [the revived-memory note](../concepts/search-and-memory.md#a-revived-memorys-past-which-clock-answers).
 - `DELETE /v1/memories/{name}` — **refused, 403** (i-130). An `Engram` declares
   `record.invalidate-only`; a hard delete would take the version history with
   it and break the auditable / point-in-time reconstructable / revivable
-  guarantee the Kind's own descriptor states. The refusal names the route above.
+  guarantee the Kind's own descriptor states — all three of which now have a
+  function behind them. The refusal names the forget route above.
 
 The definitions + search endpoints call the **same** `*_impl` functions the MCP
 server uses — one core, two faces, zero duplicated logic.
