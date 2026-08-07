@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  id: spcyl3uqrcgv
+  name: plan-s-procedencia-do-agente
+spec:
+  title: 'Plano: s-procedencia-do-agente'
+  date: '2026-08-07'
+  status: accepted
+  story_ref: s-procedencia-do-agente
+  journey_phase: plan
+  body: 'MEDIR primeiro: a derivacao inversa (dna-cloud lib/copilots/derive.ts) reconstroi as RESPOSTAS ou so o RESULTADO? Rodar materialize -> derive com o codigo real. Depois: se perde, a persistencia se justifica (e a i-137 do dna-cloud ja a entregou hoje) e sobra a ARESTA declarada saindo de Copilot + a ausencia reportada + a profundidade da cadeia.'
+  created_at: '2026-08-07T21:59:37+00:00'
+  updated_at: '2026-08-07T21:59:37+00:00'

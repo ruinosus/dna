@@ -66,7 +66,7 @@ than either:
 
 `*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the instance name.
 
-**154 edges: 110 declared, 44 composition-only — of which 37 are ENFORCED at write time.** 39 of 85 Kinds declare at least one relation, and 2 fields are listed below as gaps.
+**155 edges: 111 declared, 44 composition-only — of which 38 are ENFORCED at write time.** 39 of 85 Kinds declare at least one relation, and 2 fields are listed below as gaps.
 
 !!! warning "Declared is not enforced"
 
@@ -155,7 +155,7 @@ erDiagram
     MCPFederation }o..|| Role : "min_role_write [role_id]"
 ```
 
-#### `helix` — declared (11 edges)
+#### `helix` — declared (12 edges)
 
 ```mermaid
 erDiagram
@@ -172,6 +172,7 @@ erDiagram
     Solution
     Workspace
     App }o--}o Copilot : "copilots"
+    Copilot }o--|| Copilot : "created_by"
     Copilot }o--|| App : "runs_in"
     Engram }o..}o ANY_KIND : "affect_evidence_refs [Kind/name] *"
     Engram }o..|| Epic : "area [Kind/name] *"
@@ -445,6 +446,7 @@ the runtime does not follow it — read `By` for why.
 | `App` | `copilots` | `Copilot` | many | `name` | yes |  |  |
 | `Bug` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `Comment` | `target_ref` *(poly)* | `*` | one | `Kind:name` |  |  |  |
+| `Copilot` | `created_by` | `Copilot` | one | `name` | yes |  |  |
 | `Copilot` | `runs_in` | `App` | one | `name` | yes |  |  |
 | `Engram` | `affect_evidence_refs` *(poly)* | `*` | many | `Kind/name` |  |  |  |
 | `Engram` | `area` *(poly)* | `Epic` | one | `Kind/name` |  |  | yes |

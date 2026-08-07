@@ -33,3 +33,25 @@ dna copilot install [OPTIONS] PATH
 | `--json` | Saída legível por máquina. |
 | `--scope` | Scope de destino (default: env / sole scope). |
 
+## `dna copilot provenance`
+
+De onde veio cada copiloto — e quem ainda não disse.
+
+``Copilot.created_by`` é a relação reflexiva que a `s-procedencia-do-agente`
+instalou: quem cria um copiloto é um copiloto. Ela é OPCIONAL, e a ausência
+dela é **não-respondida**, jamais "escrito à mão" — presumir seria fabricar
+um passado para os copilotos que nasceram antes do campo existir.
+
+```text
+dna copilot provenance [OPTIONS]
+```
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--json` | Saída legível por máquina. |
+| `--scope` | Scope a ler (default: env / sole scope). |
+| `--tenant` | Ler os copilotos deste tenant. |
+

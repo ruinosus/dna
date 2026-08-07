@@ -87,6 +87,7 @@ def copilot() -> None:
       dna copilot install copilot-kits/contrato-intake --scope meu-escopo
       dna copilot install <dir> --dry-run     # lista o plano, escreve nada
       dna copilot install <dir> --approve     # o operador aprova o Kind no ato
+      dna copilot provenance                  # quem veio de onde — e quem não diz
     """
 
 
@@ -162,3 +163,60 @@ def install(path, scope, approve, dry_run, as_json) -> None:
             "operador aprovar no ato (self-host).",
             fg="yellow",
         )
+
+
+@copilot.command("provenance")
+@click.option("--scope", default=None, help="Scope a ler (default: env / sole scope).")
+@click.option("--tenant", default=None, help="Ler os copilotos deste tenant.")
+@click.option("--json", "as_json", is_flag=True, help="Saída legível por máquina.")
+def provenance(scope, tenant, as_json) -> None:
+    """De onde veio cada copiloto — e quem ainda não disse.
+
+    ``Copilot.created_by`` é a relação reflexiva que a `s-procedencia-do-agente`
+    instalou: quem cria um copiloto é um copiloto. Ela é OPCIONAL, e a ausência
+    dela é **não-respondida**, jamais "escrito à mão" — presumir seria fabricar
+    um passado para os copilotos que nasceram antes do campo existir.
+    """
+    from dna_cli.copilot_provenance import provenance_report
+
+    rel = provenance_report(scope=scope, tenant=tenant)
+    if as_json:
+        print_json(dict(rel))
+        return
+
+    if not rel["store_readable"]:
+        # NUNCA "tudo respondido": a diferença entre "ninguém tem procedência"
+        # e "não consegui perguntar" é a diferença entre um achado e um silêncio.
+        click.secho(
+            "⚠  o store não pôde ser lido — nada aqui é uma resposta sobre os "
+            "copilotos, e nenhum deles foi contado como respondido.",
+            fg="red",
+        )
+        return
+    if rel.total == 0:
+        click.echo("nenhum Copilot neste scope (nada a reportar, e nada afirmado).")
+        return
+
+    for nome in rel["answered"]:
+        click.echo(f"  ✓ {nome}  (cadeia: {rel['depths'][nome]})")
+    for nome in rel["dangling"]:
+        # Dono diferente do `unanswered` logo abaixo, e por isso linha própria:
+        # aqui alguém ESCREVEU um nome que não existe (ou o alvo foi apagado).
+        click.secho(f"  ⚠ {nome}  — o criador declarado não existe", fg="yellow")
+    for nome in rel["unanswered"]:
+        click.echo(f"  · {nome}  — não-respondido")
+    for nome in rel["cycles"]:
+        click.secho(
+            f"  ✖ {nome}  — a cadeia volta a si mesma (topologia impossível)",
+            fg="red",
+        )
+
+    click.echo(
+        f"\n{len(rel['answered'])}/{rel.total} com procedência declarada"
+        f" · {len(rel['unanswered'])} não-respondido(s)"
+        f" · {len(rel['dangling'])} pendurado(s)"
+    )
+    click.echo(
+        "a cadeia inteira, elo a elo: "
+        "dna graph refs Copilot <nome> --direction out --depth 5"
+    )
