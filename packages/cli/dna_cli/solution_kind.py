@@ -55,10 +55,12 @@ than the spec that preceded it, deliberately:
   ``template{src,ref}`` and ``answers``. That is the **provenance of the
   render**: which template, at which ref, answering what. ``required: [title,
   services]`` stays, and ``dna solution`` does not break.
-* **Only the cost commitment moves.** ``pode_dormir`` leaves ``services[]`` and
-  becomes ``App.can_sleep``, because *the invoice is per deployment and the App
-  IS the deployment.* One fact, one house — the failure a second house creates
-  is two answers to "does this sleep?" that disagree.
+* **Only the cost commitment moved.** ``pode_dormir`` is gone from
+  ``services[]`` and the fact is ``App.can_sleep``, because *the invoice is per
+  deployment and the App IS the deployment.* One fact, one house — the failure a
+  second house creates is two answers to "does this sleep?" that disagree. The
+  Copier answer that produced it is still in ``answers``, verbatim; what ended
+  was the PROMOTION of it.
 * ``services[].name`` and ``apps[]`` carry the same set of names — and
   **``apps[]`` is the join the kernel can enforce.** ⚠️ Measured in #351:
   ``relation_values`` reads ``spec.get(rel.name)`` at the TOP LEVEL, always, so
@@ -80,9 +82,14 @@ That is off the table, and the reason is the paragraph at the top of this file:
 ``answers`` is the ONLY place a ``when:``-erased answer survives, and it stays
 exactly where it is. Nothing about the fatia-3 rescue changes.
 
-The App descriptor is `Story/s-kinds-a-conta-declarada`'s to move. Until it
-has, the cost stays in ``services[].pode_dormir`` and every run says so out
-loud. Never silently — see :func:`app_kind_absent_fields`.
+⭐ The descriptor landed (#351), so :func:`app_is_the_deployment` is normally
+True and the App IS written. The predicate stays anyway, and it is not
+ceremony: ``dna-cli`` and ``dna-sdk`` are SEPARATE wheels with independent
+floors, so a user can perfectly well install a CLI newer than the SDK that
+carries the descriptors. In that install the write would be refused by schema —
+``App`` declares ``additionalProperties: false`` — and the predicate is what
+turns that into a named sentence instead of a traceback. See
+:func:`app_kind_absent_fields`.
 """
 from __future__ import annotations
 
@@ -95,22 +102,38 @@ SOLUTION_KIND = "Solution"
 APP_KIND = "App"
 SOLUTION_API_VERSION = "github.com/ruinosus/dna/v1"
 
-#: ⭐ The `App` fields a layer writes — the service's IDENTITY, and nothing else.
-#: Promoted out of the free answers map because a reader of the FLEET has to
-#: answer "which port? which module? which of these never sleeps?" without
-#: knowing that THIS template spelled the questions the way it did.
+#: The Kind that OWNS the cost commitment since ``spec-app-e-o-servico``
+#: (07/08/2026). It used to live here, promoted out of ``answers`` into
+#: ``services[].pode_dormir``, and that promotion was right only while there
+#: was nowhere else for it: an entry in ``services[]`` is one per DEPLOYMENT
+#: (*"nove serviços sobre quatro imagens são nove entradas aqui"*), an ``App``
+#: is now the deployment, and one fact in two places is two names for one fact.
+#: So this record keeps the PROVENANCE OF THE RENDER — the Copier answer stays
+#: verbatim inside ``answers`` — and the COMMITMENT is read off the ``App``.
+#:
+#: ⚠️ An ALIAS of :data:`APP_KIND`, never a second literal. It reads as the
+#: cost's owner at the call sites that ask about cost, and the two can never
+#: drift apart into two Kinds.
+COST_KIND = APP_KIND
+
+#: The field on :data:`COST_KIND` that answers it.
+COST_FIELD = "can_sleep"
+
+#: ⭐ The `App` fields this command writes — the service's IDENTITY, and nothing
+#: else. Spelled EXACTLY as the reference template's questions spell them, which
+#: is the whole point: an App declared and a tree rendered are two views of one
+#: fact, so the projection is a copy under the same names rather than a mapping
+#: somebody has to remember.
 #:
 #: ⚠️ FOUR, not seven. ``answers_file``, ``template`` and ``answers`` stay in
 #: ``Solution.services[]`` — they are the provenance of the RENDER, and
 #: ``answers`` in particular is the only place a ``when:``-erased answer
-#: survives. Founder decision 07/08/2026: the ledger does not move; only the
-#: cost commitment does, because the invoice is per deployment and the App is
-#: the deployment.
+#: survives. Founder decision 07/08/2026: the ledger does not move.
 APP_SERVICE_FIELDS: tuple[str, ...] = (
     "service_name",
     "python_module",
     "port",
-    "can_sleep",
+    COST_FIELD,
 )
 
 #: What a fixed replica costs, measured: the dna-cloud copilot with
@@ -119,50 +142,65 @@ APP_SERVICE_FIELDS: tuple[str, ...] = (
 #: that mentions it, so the number cannot drift between them.
 NO_SLEEP_USD_PER_MONTH = 90
 
-#: The answer this house's reference template uses for the cost commitment.
-#: A GUESS, and a loud one: when it is absent from a layer's answers nothing is
-#: presumed — ``pode_dormir`` is left unwritten and reported as unanswered on
-#: every run. A silent ``False`` here would be the cheap side of a ~US$ 90/month
-#: decision, invented by a default.
-DEFAULT_SLEEP_ANSWER = "can_sleep"
-
 
 class SolutionRecordError(Exception):
     """A refusal from the record side, translated by the caller."""
 
 
+def _is_typed_answer(field: str, value: Any) -> bool:
+    """Whether a Copier answer is the TYPE the `App` field declares.
+
+    ⚠️ Type-checked, not truth-checked, and the two differ exactly where it
+    matters: ``can_sleep: False`` and ``port: 0`` are falsy and are ANSWERS.
+    A `if value:` here would drop the expensive half of the cost question —
+    the one that costs ~US$ 90/month — and the App would come out looking
+    unanswered, which is the failure the whole field exists to prevent.
+
+    ``bool`` is excluded from the integer case on purpose: in Python
+    ``isinstance(True, int)`` is True, so ``port: true`` would otherwise be
+    written as a port.
+    """
+    if field == COST_FIELD:
+        return isinstance(value, bool)
+    if field == "port":
+        return isinstance(value, int) and not isinstance(value, bool)
+    return isinstance(value, str) and bool(value)
+
+
 @dataclass(frozen=True)
 class Layer:
-    """One answers file, as the ``Solution`` stores it."""
+    """One answers file, as the ``Solution`` stores it.
+
+    ⚠️ No ``pode_dormir``. The cost commitment moved to ``App.can_sleep``
+    (:data:`COST_KIND` / :data:`COST_FIELD`) — see the module constants. What
+    the template answered is not lost: it is in :attr:`answers`, under whatever
+    key that template used, which is all this record ever claimed to hold.
+    """
 
     name: str
     answers_file: str
     template_src: str
     template_ref: str | None
     answers: dict[str, Any]
-    pode_dormir: bool | None
 
-    def to_spec(self, *, cost_on_app: bool = False) -> dict[str, Any]:
+    def to_spec(self) -> dict[str, Any]:
         """The layer as ``Solution.services[]`` holds it — the render provenance.
 
-        ``cost_on_app`` is the ONE thing that moved: once the `App` descriptor
-        can hold ``can_sleep``, the cost commitment lives there and is not
-        written here as well. Two houses for one fact is two answers to "does
-        this sleep?" that can disagree, and the one that disagrees is always
-        found by the invoice.
+        ⚠️ No cost field, in either direction. It is not conditionally omitted
+        here; it simply does not live here any more, and the Copier answer that
+        produced it is still in :attr:`answers` verbatim. A ``pode_dormir``
+        written beside the App's ``can_sleep`` would be the second house that
+        `spec-app-e-o-servico` removed.
         """
         template: dict[str, Any] = {"src": self.template_src}
         if self.template_ref:
             template["ref"] = self.template_ref
-        entry: dict[str, Any] = {
+        return {
             "name": self.name,
             "answers_file": self.answers_file,
             "template": template,
             "answers": dict(self.answers),
         }
-        if self.pode_dormir is not None and not cost_on_app:
-            entry["pode_dormir"] = self.pode_dormir
-        return entry
 
     def to_app_spec(self, *, existing: dict[str, Any] | None = None) -> dict[str, Any]:
         """The service's IDENTITY, as the ``App`` that IS this deployment.
@@ -185,14 +223,22 @@ class Layer:
         """
         spec: dict[str, Any] = dict(existing or {})
         spec["service_name"] = self.name
-        if self.pode_dormir is not None:
-            spec["can_sleep"] = self.pode_dormir
-        module = self.answers.get("python_module")
-        if isinstance(module, str) and module:
-            spec["python_module"] = module
-        port = self.answers.get("port")
-        if isinstance(port, int) and not isinstance(port, bool):
-            spec["port"] = port
+
+        # ⭐ Copied under the SAME names the template asked them under. That is
+        # what replaced the old `--sleep-answer` knob: there is no key to name
+        # any more, because the questions and the App's fields are one
+        # vocabulary (`copier.yml` says so, and a test asserts it). A template
+        # that spells them differently simply answers nothing here — and the
+        # cost question then reports the service as unanswered, which is the
+        # loud side and the correct one.
+        for field in APP_SERVICE_FIELDS:
+            if field == "service_name":
+                continue
+            value = self.answers.get(field)
+            if not _is_typed_answer(field, value):
+                continue
+            spec[field] = value
+
         if not spec.get("title"):
             described = self.answers.get("description")
             spec["title"] = described if isinstance(described, str) and described else self.name
@@ -221,7 +267,6 @@ def layer_from_answers_file(
     destination: Path,
     answers_relpath: Path,
     *,
-    sleep_answer: str = DEFAULT_SLEEP_ANSWER,
     service: str | None = None,
 ) -> Layer:
     """Read one answers file off disk into the shape the Kind stores."""
@@ -237,14 +282,12 @@ def layer_from_answers_file(
             "but never updated, and a Solution that claimed otherwise would be "
             "the wrong kind of record."
         )
-    sleeps = answers.get(sleep_answer)
     return Layer(
         name=service or service_name_of(answers_relpath),
         answers_file=str(answers_relpath),
         template_src=str(src),
         template_ref=raw.get("_commit"),
         answers=answers,
-        pode_dormir=bool(sleeps) if isinstance(sleeps, bool) else None,
     )
 
 
@@ -262,13 +305,17 @@ def app_kind_absent_fields() -> tuple[str, ...]:
         Additional properties are not allowed ('can_sleep', 'port',
         'python_module', 'service_name' were unexpected)
 
-    The descriptor is `Story/s-kinds-a-conta-declarada`'s to move; this command
-    is `Story/s-template-dirigido-pelo-app`'s. Until it lands, the cost stays
-    in ``services[].pode_dormir`` and every run SAYS SO — see
-    :func:`dna_cli.solution_cmd._echo_report`. That is the difference between a
-    bridge and a fallback: a fallback goes quiet, and a value that renders the
-    same whether it is in the right house or the wrong one is the failure this
-    house pays most for.
+    ⭐ #351 landed, so this is normally empty. It is NOT dead code, and the
+    reason is packaging: ``dna-cli`` and ``dna-sdk`` are separate wheels with
+    independent version floors, so an install can carry a CLI that knows about
+    these fields and an SDK whose descriptors do not. In that install writing
+    the App is a refused write, and this is what turns it into a named sentence
+    (see :func:`dna_cli.solution_cmd._echo_report`) instead of a traceback in
+    the middle of a scaffold.
+
+    That is the difference between a bridge and a fallback: a fallback goes
+    quiet, and a value that renders the same whether it reached the right house
+    or none at all is the failure this house pays most for.
     """
     from dna.kernel import Kernel  # noqa: PLC0415 — the kernel is lazy
 
@@ -295,45 +342,16 @@ def app_is_the_deployment() -> bool:
 def read_solution(name: str, *, scope: str | None = None) -> dict[str, Any] | None:
     """The recorded ``Solution`` spec, or ``None`` when it does not exist.
 
-    ``services`` is a stored field and stays one — the render provenance lives
-    here. What is joined in on read is the ONE fact that moved houses: each
-    layer's ``pode_dormir`` is filled from the `App` its ``name`` points at.
-
-    ⭐ Joined here rather than at each call site so ``recorded_layer``,
-    ``recorded_answers_of`` and ``unanswered_cost_question`` keep reading ONE
-    shape. A reader that had to know which house the cost was in would be a
-    reader that gets it wrong on the run after the descriptor moves.
+    Returned verbatim. There is nothing to join in: the cost commitment lives
+    on the ``App`` and :func:`unanswered_cost_question` reads it there, so
+    copying it back into a layer on the way out would rebuild the second house
+    inside the reader — the same fact, twice, free to disagree.
     """
     from dna_cli._ctx import open_session  # noqa: PLC0415 — the kernel is lazy
 
     with open_session(scope) as session:
         doc = session.get_doc(SOLUTION_KIND, name)
-        if doc is None:
-            return None
-        return _with_cost_joined(session, dict(doc.spec or {}))
-
-
-def _with_cost_joined(session: Any, spec: dict[str, Any]) -> dict[str, Any]:
-    """Fill each layer's ``pode_dormir`` from its `App`, when the App holds it.
-
-    ⚠️ The App WINS when it has an answer, and that is the point of moving the
-    fact: a stale ``pode_dormir`` left in an old ``services[]`` entry must not
-    outvote the house that now owns it. When the App has no answer the stored
-    value stands — which is what a record written before the move looks like,
-    and it is still true.
-    """
-    if not app_is_the_deployment():
-        return spec
-    layers = [dict(e) for e in (spec.get("services") or []) if isinstance(e, dict)]
-    for entry in layers:
-        app_doc = session.get_doc(APP_KIND, entry.get("name"))
-        sleeps = dict(app_doc.spec or {}).get("can_sleep") if app_doc else None
-        if isinstance(sleeps, bool):
-            entry["pode_dormir"] = sleeps
-    if layers:
-        spec = dict(spec)
-        spec["services"] = layers
-    return spec
+        return dict(doc.spec or {}) if doc is not None else None
 
 
 def recorded_layer(spec: dict[str, Any] | None, service: str) -> dict[str, Any] | None:
@@ -470,7 +488,7 @@ def upsert_solution(
     """
     from dna_cli._ctx import open_session  # noqa: PLC0415
 
-    cost_on_app = app_is_the_deployment()
+    app_ready = app_is_the_deployment()
 
     with open_session(scope) as session:
         # ⭐ The App goes FIRST, and the order is load-bearing — MORE so now that
@@ -484,7 +502,7 @@ def upsert_solution(
         # ⚠️ Do not "tidy" this into one loop after the Solution write. The
         # dangling pointer it would create is exactly what `enforced` exists to
         # veto, and the veto is correct.
-        if cost_on_app:
+        if app_ready:
             for layer in layers:
                 app_doc = session.get_doc(APP_KIND, layer.name)
                 app_spec = layer.to_app_spec(
@@ -517,7 +535,7 @@ def upsert_solution(
         ]
         by_name = {entry.get("name"): index for index, entry in enumerate(services)}
         for layer in layers:
-            entry = layer.to_spec(cost_on_app=cost_on_app)
+            entry = layer.to_spec()
             index = by_name.get(layer.name)
             if index is None:
                 by_name[layer.name] = len(services)
@@ -548,7 +566,7 @@ def upsert_solution(
         # `App.requires_plan`, which is optional. An App without one is a
         # container that runs and is not sold — `worker` is exactly that.
         #
-        # ⚠️ Gated on `cost_on_app`, and MEASURED rather than assumed. `apps` is
+        # ⚠️ Gated on `app_ready`, and MEASURED rather than assumed. `apps` is
         # enforced, so naming an App this run did not write is a dangling
         # pointer — with DNA_REF_VALIDATION=warn the kernel says so and persists
         # it anyway, and under `enforce` it refuses the whole record::
@@ -556,10 +574,10 @@ def upsert_solution(
         #     write vetoed for board/Solution/s: unresolved relation(s):
         #     spec.apps → `api` (no App named `api` in scope `board`)
         #
-        # So while the descriptor cannot hold the identity, `apps` is left
-        # alone — populating a relation whose targets do not exist is not a
+        # So while the installed descriptor cannot hold the identity, `apps` is
+        # left alone — populating a relation whose targets do not exist is not a
         # half-migration, it is a broken record.
-        if cost_on_app:
+        if app_ready:
             declared = list(spec.get("apps") or [])
             for entry in services:
                 service = entry.get("name")
@@ -591,23 +609,60 @@ def upsert_solution(
         session.run(
             session.kernel.write_instance(session.scope, SOLUTION_KIND, name, raw)
         )
-        # The caller reports on layers, and the cost may now live on the App —
-        # so hand back the JOINED view, not the stored spec. Returning the
-        # stored one would make `unanswered_cost_question` report every layer as
-        # never having answered, on the very run that answered.
-        return _with_cost_joined(session, spec)
+        return spec
 
 
-def unanswered_cost_question(spec: dict[str, Any] | None) -> list[str]:
-    """Layers that never said whether they may sleep.
+def unanswered_cost_question(
+    spec: dict[str, Any] | None, *, scope: str | None = None
+) -> list[str]:
+    """Services whose ``App`` never said whether they may sleep.
+
+    Reads :data:`COST_FIELD` off the ``App`` named by each ``services[].name``
+    — the two are the same string, because an entry here is one per DEPLOYMENT
+    and an ``App`` is the deployment. Before ``spec-app-e-o-servico`` this read
+    ``services[].pode_dormir``; the question is the same and the owner moved.
+
+    ⚠️ **Absent is UNANSWERED, and absent is never ``False``.** Three states
+    collapse into "unanswered" and none of them into "may not sleep":
+
+    * no ``App`` by that name — the deployment has no declaration at all;
+    * an ``App`` that omits ``can_sleep`` — nobody was asked;
+    * ``can_sleep: null``.
+
+    ``can_sleep: False`` is an ANSWER, and an expensive one (a fixed replica,
+    ~US$ 90/month, forever). Reporting it as unanswered would be as wrong as
+    presuming it: the first cries wolf, the second hides the replica nobody
+    decided. That distinction is the whole point of this function and is the
+    thing that had to survive the move between Kinds.
 
     Reported rather than refused, and on every run rather than once — the same
     shape as ``divergent_answers``, and for the same reason: a finding that
     speaks only at the moment it appears is a finding that goes quiet while the
     condition stays true.
+
+    A store that cannot be read is not silently "all answered": the read is
+    attempted once, and a failure leaves every service reported as unanswered,
+    which is the loud side.
     """
-    out: list[str] = []
-    for entry in (spec or {}).get("services") or []:
-        if isinstance(entry, dict) and entry.get("pode_dormir") is None:
-            out.append(str(entry.get("name")))
-    return sorted(out)
+    from dna_cli._ctx import open_session  # noqa: PLC0415 — the kernel is lazy
+
+    names = [
+        str(entry.get("name"))
+        for entry in (spec or {}).get("services") or []
+        if isinstance(entry, dict) and entry.get("name")
+    ]
+    if not names:
+        return []
+
+    answered: set[str] = set()
+    try:
+        with open_session(scope) as session:
+            for name in names:
+                doc = session.get_doc(COST_KIND, name)
+                if doc is not None and isinstance(
+                    (doc.spec or {}).get(COST_FIELD), bool
+                ):
+                    answered.add(name)
+    except Exception:  # noqa: BLE001 — unreadable store reports the loud side
+        return sorted(set(names))
+    return sorted(set(names) - answered)

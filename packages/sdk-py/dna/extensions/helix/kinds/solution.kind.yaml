@@ -25,8 +25,8 @@
 #      desaparece; e um REGISTRO QUE SOBREVIVE AO ANSWERS FILE é o único lugar
 #      onde tal valor pode sobreviver."
 #
-# Este Kind é aquele registro. Daí duas regras de forma, as duas com defeito
-# medido do outro lado:
+# Este Kind é aquele registro. Daí a regra de forma, com defeito medido do
+# outro lado:
 #
 #   1. `services[].answers` é um MAPA LIVRE (`additionalProperties: true`,
 #      `required: []`). Nenhuma chave é exigida — a lição literal acima — e
@@ -35,10 +35,11 @@
 #      escrever o `templates/app-container/copier.yml` em outro arquivo: o
 #      segundo template da casa não caberia, e o Kind viraria uma cópia
 #      desatualizada de um deles.
-#   2. `pode_dormir` é o oposto, e a exceção é declarada de propósito — ver a
-#      description do campo. É o único fato que este Kind promove para fora do
-#      mapa livre, porque é o único que um leitor precisa responder SEM saber
-#      qual template rodou.
+#
+# ⚠️ Havia uma regra 2, e ela FOI RETIRADA em 07/08/2026: `pode_dormir`, o
+# único fato que este Kind promovia para fora do mapa livre. Ver a seção da
+# conta de custo, abaixo — a exceção era certa enquanto não havia outra casa
+# para ela, e deixou de ser no dia em que passou a haver.
 #
 # ── plane: record — MEDIDO, não escolhido por gosto ───────────────────────────
 #
@@ -121,6 +122,85 @@
 #   • A árvore renderizada, os conflitos, o estado do git. São fatos sobre uma
 #     CÓPIA DE TRABALHO num momento, não uma declaração. Quem os reporta é o
 #     `RunReport` do `dna solution`, por execução.
+#
+# ── ⚠️ 07/08/2026: `services[]` FICA; `pode_dormir` SAI (`spec-app-e-o-servico`,
+#    AC 2 reescrito pelo founder com os números na tela) ───────────────────────
+#
+# A spec pedia que `services[]` deixasse de existir, alegando *"0 instâncias,
+# custa zero"*. A contagem de instâncias está certa e a conclusão não segue
+# dela — o custo não é de migração, é de CAPACIDADE:
+#
+#   • `services[]` não é *"uma lista de strings que vira código"*. É uma lista
+#     de OBJETOS `{name, answers_file, template, answers}`, o registro que
+#     SOBREVIVE ao answers file — a única razão pela qual uma resposta apagada
+#     por um `when:` volta como o que o humano respondeu em vez do default do
+#     template. As "strings que viram código" da tabela da spec são o TEMPLATE
+#     (`templates/app-container`, 286 linhas), não este descritor.
+#   • o schema é `additionalProperties: false` com `required: [title,
+#     services]`: tirar a propriedade não a torna opcional, torna TODA gravação
+#     de `Solution` inválida. `dna solution new` / `update` param por completo.
+#   • e não há para onde mover — os quatro campos que o `App` ganhou são
+#     TOPOLOGIA; `answers` / `answers_file` / `template` são RESPOSTAS, e não
+#     têm casa lá.
+#
+# Decisão do founder: a remoção total está CANCELADA, e uma coisa muda de casa.
+#
+# ── ⭐ `pode_dormir` sai daqui, e vira `App.can_sleep`. Um fato, uma casa ──────
+#
+# A leitura que quase escapou: `services[]` é UMA ENTRADA POR DEPLOYMENT, não
+# por diretório. Está escrito no próprio campo — *"nove serviços sobre quatro
+# imagens são NOVE ENTRADAS aqui, quatro `template.src` distintos"* — e é a
+# mesma granularidade do `App`, que desde esta spec É o deployment. Nove e
+# nove.
+#
+# Então manter a pergunta de custo nos dois lugares seria dois NOMES para UM
+# fato, que é o padrão que esta casa já pagou caro. A fatura é por deployment,
+# o `App` é o deployment, e portanto:
+#
+#   • `services[]` guarda a PROCEDÊNCIA DO RENDER — de qual template, em qual
+#     ref, com quais respostas. A resposta `can_sleep` do Copier continua aqui,
+#     verbatim, dentro do mapa livre `answers`, como qualquer outra: o que
+#     acabou foi a PROMOÇÃO dela a campo próprio, não o registro dela.
+#   • `App.can_sleep` guarda o COMPROMISSO DE CUSTO, e é a única resposta que
+#     alguém consulta antes de provisionar.
+#
+# ⚠️ E a semântica que tinha de sobreviver à mudança de casa sobreviveu, porque
+# é ela que impede o defeito: AUSENTE significa "nunca respondeu", JAMAIS um
+# `false` presumido. `unanswered_cost_question` passou a ler `App.can_sleep` e
+# continua reportando a cada execução — presumir o lado barato é como uma
+# réplica fixa de ~US$ 90/mês entra na frota sem ninguém decidir.
+#
+# Migração: ZERO. `Solution` tem 0 instâncias, e é exatamente por isso que dava
+# para fazer agora e não daqui a um mês.
+#
+# ── ⭐ A chave entre as duas listas já existia, e ninguém a tinha declarado ────
+#
+# `services[].name` é *"o que o azd chama de serviço"* — a MESMA string que o
+# `metadata.name` do `App`. É a junção que a spec dizia não existir.
+#
+# ⛔ E ela NÃO é declarável como relação a partir de `services[].name`. Não é
+# escolha: `kind_graph` já nomeia a limitação (`top_level_properties_only`) —
+# *"uma relação é nomeada por um campo de PRIMEIRO NÍVEL do spec; um ponteiro
+# aninhado sob `spec.foo.bar`, dentro de `items`, ou atrás de
+# `$ref`/`oneOf`/`anyOf` não pode ser declarado como relação hoje"*. E `by:`
+# não resolve isto: `by:` diz onde o valor CASA NO ALVO (o `metadata.name` do
+# alvo, ou um campo do spec dele), nunca onde ele é LIDO NA ORIGEM —
+# `relation_values` faz `spec.get(<nome da relação>)`, primeiro nível, sempre.
+#
+# ⚠️ Medido antes de recusar, porque a forma do defeito importa mais que a
+# recusa. Declarar `relations: {services: {to: App, cardinality: many}}` hoje:
+#
+#     schema_contradictions(...)  → NADA (verde: `services` existe e é array)
+#     Relation.resolved / enforced → True / True   (diz que VETA a escrita)
+#     relation_values(...)         → []            (lê ZERO, resolve ZERO)
+#
+# Uma declaração que passa no lint, se anuncia como imposta, e não faz nada —
+# a forma de erro exata que esta casa mais caro paga. Por isso não foi forçada.
+#
+# Quem carrega a relação com o `App` é **`apps[]`**, que é de primeiro nível,
+# `by: name`, resolvida e IMPOSTA — e que, com `App` = deployment, denota o
+# mesmo conjunto que `services[].name`. A junção existe e é declarada; o que
+# não existe é um segundo lugar para declará-la.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:
@@ -150,11 +230,20 @@ spec:
     recorded here reach the generated tree instead of staying behind in
     silence. One entry in `services[]` per answers file — one template
     overlaid N times is the design, not one template of the whole repo. The
-    per-service `answers` map is deliberately free-form (the vocabulary
-    belongs to the TEMPLATE); `pode_dormir` is the one fact promoted out of
-    it, because a cost commitment must be readable across the fleet without
-    knowing which template asked. `apps` is a declared RELATION to `App` — the
-    sellable unit this solution's code delivers, never one it creates.
+    per-service `answers` map is deliberately free-form — the vocabulary
+    belongs to the TEMPLATE, and nothing is promoted out of it.
+    Since `spec-app-e-o-servico` (2026-08-07) this record holds the
+    PROVENANCE OF THE RENDER and nothing else. `pode_dormir` was the one fact
+    it used to promote, and it moved to `App.can_sleep`, because `services[]`
+    is one entry per DEPLOYMENT and an `App` now IS the deployment — the same
+    granularity, and the bill is per deployment. The Copier answer itself
+    stays here verbatim inside `answers`; what ended was its promotion to a
+    field of its own. `services[].name` is the azd service name, which is
+    string-for-string the `App`'s `metadata.name` — the key between the two
+    lists. That relation cannot be declared from inside `items` (the kernel
+    names a relation by a FIRST-LEVEL spec field), so the declared, enforced
+    relation to `App` is `apps` — which, with App = deployment, denotes the
+    same set.
   relations:
     apps:
       to: App
@@ -190,8 +279,18 @@ spec:
           properties:
             name:
               type: string
-              description: O nome do serviço — o que `dna solution update
-                --service <name>` recebe, e o que o azd chama de serviço.
+              description: >-
+                O nome do serviço — o que `dna solution update --service
+                <name>` recebe, e o que o azd chama de serviço. ⭐ É, string
+                por string, o `metadata.name` do `App` correspondente: uma
+                entrada aqui é um DEPLOYMENT, e desde `spec-app-e-o-servico` o
+                `App` É o deployment. Nove serviços gerados são nove entradas
+                aqui e nove `App`s, e a chave entre as duas listas é este
+                campo. ⚠️ A relação NÃO é declarável a partir daqui — o kernel
+                nomeia uma relação por um campo de PRIMEIRO NÍVEL do spec
+                (`kind_graph`, código `top_level_properties_only`), e um
+                ponteiro dentro de `items` é invisível para ele. Quem carrega
+                a relação imposta com o `App` é `apps[]`, no primeiro nível.
             answers_file:
               type: string
               description: O caminho do `.copier-answers.<name>.yml` RELATIVO
@@ -228,29 +327,20 @@ spec:
                 caso que este registro existe para socorrer). Copier já filtra
                 o próprio bookkeeping (`_src_path`, `_commit`) para os campos
                 `template` acima; ele não se repete aqui.
-            pode_dormir:
-              type: boolean
-              description: Este app pode escalar a zero. É o ÚNICO fato
-                promovido para fora de `answers`, e a razão é que ele não é um
-                detalhe de render - é um COMPROMISSO DE CUSTO. Um app que não
-                dorme custa uma réplica fixa, ~US$ 90/mês, para sempre (o
-                portão de custo do CLAUDE.md do dna-cloud, que já custou essa
-                conta uma vez). Promovido porque quem soma a frota precisa
-                responder "quantos não dormem?" SEM saber que este template
-                chamou a pergunta de `can_sleep` e o próximo vai chamar de
-                outra coisa. Ausente significa que esta camada NUNCA respondeu
-                a pergunta de custo - e isso é um achado reportado a cada
-                execução, nunca um `false` presumido — presumir o lado barato
-                esconderia justamente a réplica que ninguém decidiu.
       apps:
         type: array
         items:
           type: string
-        description: Os `App`s que esta solução ENTREGA, por nome de instância
-          — a unidade vendável, que continua sendo do `App` e do runtime que a
-          serve. Referência validada na gravação (`spec.relations`). Vazio é o
-          caso comum e não é uma lacuna - o próprio dna-cloud gera nove
-          serviços e nenhum `App`.
+        description: >-
+          Os `App`s que esta solução ENTREGA, por nome de instância.
+          Referência validada na gravação (`spec.relations`), e — desde
+          `spec-app-e-o-servico` — a ÚNICA relação declarada que liga este
+          registro ao `App`. Como o `App` agora É o serviço, esta lista e o
+          conjunto de `services[].name` denotam as MESMAS coisas: nove
+          serviços gerados são nove `App`s. Vazio significa que os `App`s
+          ainda não foram declarados, não que não existam — e a nota antiga
+          "o dna-cloud gera nove serviços e nenhum App" descrevia o modelo
+          anterior, em que `App` era só o agrupamento vendável do console.
       criado_por:
         type:
         - string

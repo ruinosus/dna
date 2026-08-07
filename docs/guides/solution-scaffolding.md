@@ -331,38 +331,52 @@ about is simply ignored by Copier, so keeping it costs nothing.
 |---|---|
 | `template.src` + `template.ref` — a **pointer** | any rendered file, any template body |
 | `answers` — free-form, the template's own vocabulary | a typed mirror of the template's questions |
-| the cost commitment — on the `App`, once it can hold it | `requires_plan` and anything else that would *look* enforced and not be |
-| `apps` — which `App`s the solution delivers | the conflicts, the git state, the working copy |
+| `apps` — every `App` the solution deploys, the complete set | the **cost commitment** — it lives on `App.can_sleep` |
+| | `requires_plan` and anything else that would *look* enforced and not be |
+| | the conflicts, the git state, the working copy |
 
 `answers` requires no key and types none, for the reason §2 gives: a gated
 answer legitimately disappears, and typing the questions would make the Kind one
 particular `copier.yml` written twice — the second template would not fit.
 
-### The cost question, as a field
+### The cost question — asked here, answered on the `App`
 
 An app that cannot scale to zero costs a fixed replica — **~US$ 90 a month,
-forever**. The cost commitment is the one fact promoted out of `answers`, so
-that *"how many of our services never sleep?"* is answerable across the fleet
-without knowing that this template spelled it `can_sleep` and the next one
-spells it something else. It is read as `pode_dormir` on a layer and written to
-`App.can_sleep` once the descriptor can hold it — one fact, one house, as the
-next section explains.
+forever**.
 
-Nothing is presumed. When the answer is absent the field is left unwritten and
-said out loud, on **every** run:
+⚠️ **This changed on 07/08/2026** (`spec-app-e-o-servico`). The commitment used
+to be `services[].pode_dormir`, promoted out of `answers` because nothing else
+could hold it. Now the `App` **is** the deployment, and an entry in `services[]`
+is one per deployment — the same granularity, nine and nine. One fact in two
+places is two names for one fact, so:
+
+* `Solution.services[]` keeps the **provenance of the render** — which template,
+  which ref, which answers. The template's own `can_sleep` answer is still here,
+  verbatim, inside `answers`, like every other answer. What ended was its
+  promotion to a field of its own.
+* **`App.can_sleep`** holds the **commitment**, authored on the App named by
+  `services[].name` — the same string.
+
+Nothing is presumed, and that is the part that had to survive the move. A
+service whose `App` has no `can_sleep` — or no `App` at all — is reported on
+**every** run:
 
 ```
-⚠ 1 recorded layer(s) never said whether they may sleep:
+⚠ 1 recorded service(s) have no App saying whether they may sleep:
     api
 ```
 
-`--sleep-answer KEY` names the question when your template calls it something
-else; `--strict` turns the finding into exit 3.
+⚠️ **Absent is never `false`.** `can_sleep: false` is an *answer*, and an
+expensive one; absent means nobody was asked. Collapsing the two is exactly how
+a fixed replica enters the fleet with nobody deciding it. `--strict` turns the
+finding into exit 3.
 
-### ⭐ Two halves — the ledger stays, the cost moves house
+`--sleep-answer KEY` is **gone**: it named the answer key to lift out of the
+template's answers, and there is no longer anything to lift.
 
-Founder decision, 07/08/2026, with the numbers on screen. A recorded run writes
-**both halves**, and the line between them is *one fact, one house*:
+### ⭐ Both halves, in one write
+
+A recorded run writes the **two halves** of a deployment, joined by name:
 
 | the fact | where it lives | why |
 |---|---|---|
@@ -370,35 +384,29 @@ Founder decision, 07/08/2026, with the numbers on screen. A recorded run writes
 | `service_name`, `python_module`, `port`, `can_sleep` | the `App` | the **identity of the deployment** — readable across the fleet without opening a repo |
 | the join | `Solution.apps[]` — the COMPLETE set, the same names as `services[].name` | the only level at which a relation can be **declared** |
 
-`Solution.services[]` **stays a stored field**, and `required: [title,
-services]` stays with it. `dna solution` does not break.
+The four App fields are copied under **the same names the template asked them
+under** — which is why `copier.yml` spells its questions `service_name`,
+`python_module`, `port` and `can_sleep`. One vocabulary, so the projection is a
+copy rather than a mapping somebody has to remember.
 
-⭐ **Only the cost commitment changes house.** `pode_dormir` leaves
-`services[]` and becomes `App.can_sleep`, because *the invoice is per
-deployment and the App is the deployment*. It is written in one house or the
-other, never both — two houses for one fact is two answers to "does this
-sleep?" that can disagree, and the one that disagrees is found by the invoice.
+⚠️ **Order matters, and it is not cosmetic.** The `App` is written **before**
+the `Solution`: `apps` is an *enforced* relation, so a Solution naming an App
+that does not exist yet is a refused write under `DNA_REF_VALIDATION=enforce`,
+and the whole record fails.
 
-⚠️ **The ledger does not move, and that matters.** `answers` is the only place
-a `when:`-erased answer survives (§2). An earlier reading had the whole ledger
-moving onto the `App`; it was decided against, and nothing about that rescue
-changes.
-
-**While the `App` descriptor has not moved**
-(`Story/s-kinds-a-conta-declarada`), the cost stays in
-`services[].pode_dormir` — and every run says so:
+**If the installed `App` descriptor cannot hold those fields**, no App is
+written, `apps` is left alone — populating an enforced relation whose targets do
+not exist is a broken record, not half a migration — and the run says so:
 
 ```
-⚠ The cost commitment stayed in `Solution.services[].pode_dormir` —
-  no `App` was written.
+⚠ NO `App` was written, so nothing declares whether these services may sleep.
   The installed `App` descriptor cannot hold: service_name, python_module, …
 ```
 
-That announcement is the difference between a bridge and a fallback. `App`
-declares `additionalProperties: false`, so writing an unknown field is a
-*refused* write, not a tolerated extra — measured. `dna solution` asks the live
-descriptor on every run, so the behaviour changes by itself the day the
-descriptor does, and nothing here needs re-running afterwards.
+Since #351 landed that is normally unreachable. It is kept because `dna-cli` and
+`dna-sdk` are **separate wheels with independent floors**: a CLI newer than its
+SDK is a real install, and this is what turns it into a sentence instead of a
+traceback in the middle of a scaffold.
 
 ### ⚠️ Why the join is `apps[]`, and not `services[].name`
 

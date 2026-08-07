@@ -6,7 +6,7 @@ metadata:
 spec:
   title: O template e o CLI passam a falar App, nao service
   description: templates/app-container e dna solution deixam de escrever services[] e passam a escrever/ler um App. A fiacao gerada e a que o App declara.
-  status: todo
+  status: in-progress
   feature: f-conta-do-copiloto
   priority: high
   acceptance_criteria:
@@ -21,10 +21,44 @@ spec:
   - 'CI: cli verde'
   definition_of_done_source: cli-create
   created_at: '2026-08-07T17:41:57+00:00'
-  updated_at: '2026-08-07T17:41:57+00:00'
+  updated_at: '2026-08-07T18:48:17+00:00'
   timeline:
   - at: '2026-08-07T17:41:57+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-08-07T17:43:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-07T18:48:17+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      AC 2 REESCRITO (07/08/2026), depois da decisão do founder sobre quem é dono do custo.
+
+      O AC dizia: "o comando de solução, quando grava, cria/atualiza instâncias de App e NUNCA
+      escreve Solution.services[]". Está CANCELADO — nasceu da premissa errada de que services[]
+      era uma lista de strings descartável.
+
+      Passa a ser: o comando escreve AS DUAS METADES —
+        - o ledger em Solution.services[] (name, answers_file, template{src,ref}, answers),
+          exatamente como hoje, porque ele é o único lugar onde uma resposta apagada por `when:`
+          sobrevive (a correção medida da fatia 3, ~770 linhas de teste atrás dela);
+        - a instância de App com os quatro campos de identidade (service_name, python_module,
+          port, can_sleep);
+        - e services[].name casa com o metadata.name do App — a chave que já existia.
+
+      `pode_dormir` deixa de ser gravado em services[] e passa a ser gravado como App.can_sleep.
+
+      ACHADO QUE ENTRA NA STORY IRMÃ (s-kinds-a-conta-declarada): App hoje exige `copilots` com
+      minItems: 1, e um serviço gerado não tem copiloto nenhum. Enquanto isso valer, App = serviço
+      NÃO FECHA. `copilots` vira opcional, pela mesma razão que runs_in nasceu opcional: lista
+      vazia é estado legítimo. O `worker` do dna-cloud escala por KEDA e não serve copiloto nenhum
+      — é a prova viva.
+    commit_ref: 89ba92c49d068f0258c9dc171d5183b796c37b82
+  plan_skip_reason: plano está na spec accepted (spec-app-e-o-servico / spec-rendimento-do-copiloto), com AC e DoD já declarados na story

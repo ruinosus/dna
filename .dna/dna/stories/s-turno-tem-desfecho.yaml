@@ -6,7 +6,7 @@ metadata:
 spec:
   title: O turno ganha desfecho — e o turno que falha para de sair de graca
   description: 'Migration 0012: dna_turn.outcome (resolved/escalated/abandoned). E o conserto do vies: 8 de 9 turnos com erro nao gravam tokens.'
-  status: todo
+  status: in-progress
   feature: f-conta-do-copiloto
   priority: highest
   acceptance_criteria:
@@ -21,10 +21,56 @@ spec:
   - 'CI: postgres verde (a migration roda la)'
   definition_of_done_source: cli-create
   created_at: '2026-08-07T17:41:29+00:00'
-  updated_at: '2026-08-07T17:41:29+00:00'
+  updated_at: '2026-08-07T18:33:20+00:00'
   timeline:
   - at: '2026-08-07T17:41:29+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-08-07T17:43:23+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-07T18:33:20+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      CORREÇÃO MEDIDA (07/08/2026) — a premissa do viés estava errada, e o que apareceu no lugar é melhor.
+
+      ERRADO: "8 dos 9 turnos com erro não gravam os tokens que consumiram; o custo real é subestimado". A conclusão não segue da contagem. Medido linha a linha:
+
+        7 turnos: modelo VAZIO, 7 a 141 ms — morreram ANTES de qualquer chamada ao modelo
+                  (401 no carregamento das tools, CancelledError). Zero é a medição CERTA.
+        1 turno:  gpt-5.4, 5.662 tokens de entrada, 20 s, morreu de DiskFull — PROVA que o
+                  caminho de erro JÁ acumulava e já sobrevivia à exceção.
+        1 turno:  gpt-5-mini, 4 s, zero tokens — o ÚNICO caso real de medição perdida.
+
+      Ou seja: 8 dos 9 zeros estão certos. Havia UM caso, e ele não é recuperável — o
+      openinference monta os contadores com _token_counts(run.outputs), e numa run que errou
+      run.outputs é None: sai o nome do modelo (carimbado na largada, no extra) e nenhum
+      contador. O provedor cobrou o prompt; o span não sabe quanto. Recontar seria estimar.
+
+      O DEFEITO REAL É DE LEITURA, NÃO DE ESCRITA: o zero é ambíguo. "Não houve chamada, conta
+      fechada" e "houve chamada e o uso é ilegível" se parecem no banco. A correção entregue é
+      `tokens_partial`, que separa os dois — não "gravar os tokens no caminho de erro", porque
+      não há o que gravar.
+
+      E O VIÉS DE VERDADE É OUTRO, MAIOR: `status='ok'` vale para 89% dos 85 turnos, e lê-lo
+      como "resolveu" infla a conta muito mais do que qualquer token perdido. É exatamente o
+      que `outcome` conserta — a spec acertou o remédio pelo diagnóstico errado.
+
+      DOIS BUGS REAIS apareceram ao medir, ambos de tokens genuinamente consumidos e descartados:
+      um span raiz que fosse ele mesmo de kind LLM/TOOL somava e NUNCA fechava (o turno inteiro
+      sumia — os ramos faziam return antes do teste de raiz); e um span atrasado ressuscitava a
+      trace como Turn fantasma preso em _abertos para sempre, vazamento do tamanho do número de
+      traces já vistas.
+
+      LIÇÃO PARA A PRÓXIMA MEDIÇÃO: a contagem estava certa (8 de 9) e a leitura dela estava
+      errada. Um agregado por status não distingue "não mediu" de "mediu zero" — a coluna que
+      respondia era `model`, e ela estava na mesma consulta.
+    commit_ref: 89ba92c49d068f0258c9dc171d5183b796c37b82
+  plan_skip_reason: plano está na spec accepted (spec-app-e-o-servico / spec-rendimento-do-copiloto), com AC e DoD já declarados na story

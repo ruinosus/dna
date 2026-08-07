@@ -6,7 +6,7 @@ metadata:
 spec:
   title: 'Os três descritores: App é o serviço, Copilot declara rendimento'
   description: App absorve o serviço (service_name, python_module, port, can_sleep); Solution perde services[] (derivado de apps[]); Copilot ganha runs_in (opcional) e value_per_outcome.
-  status: todo
+  status: in-progress
   feature: f-conta-do-copiloto
   priority: highest
   acceptance_criteria:
@@ -22,10 +22,39 @@ spec:
   - 'CI: sdk-py + cli + postgres verdes'
   definition_of_done_source: cli-create
   created_at: '2026-08-07T17:41:27+00:00'
-  updated_at: '2026-08-07T17:41:27+00:00'
+  updated_at: '2026-08-07T18:18:23+00:00'
   timeline:
   - at: '2026-08-07T17:41:27+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-08-07T17:43:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-07T18:18:23+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      CORREÇÃO MEDIDA (07/08/2026) — a spec estava errada em dois pontos, e o achado que apareceu no lugar é melhor.
+
+      ERRADO 1: "services[] é uma lista de strings que vira código". Não é. É {name, answers_file, template{src,ref}, answers, pode_dormir} — o registro que SOBREVIVE ao answers file do Copier. As "strings que viram código" são o TEMPLATE (templates/app-container), não o descritor.
+
+      ERRADO 2, e é o pior: "hoje nada na declaração responde se ele dorme". FALSO. services[].pode_dormir existe, é o ÚNICO fato promovido para fora de answers, e está documentado com os ~US$90/mês e com a regra de que ausente significa NUNCA RESPONDEU, nunca um false presumido.
+
+      O ACHADO QUE APARECEU NO LUGAR, e ele é melhor que a spec original: services[] é uma entrada POR DEPLOYMENT (o descritor diz "nove serviços sobre quatro imagens são nove entradas aqui"). Então services[] e apps[] não são dois eixos paralelos — são DUAS LISTAS DAS MESMAS NOVE COISAS, sem chave declarada entre elas. E a chave já existe: services[].name é "o que o azd chama de serviço", a mesma string que o metadata.name do App.
+
+      DECISÃO DO FOUNDER (07/08/2026, com os números na tela): o App é o dono do fato de custo.
+        - pode_dormir SAI de services[]; fica só App.can_sleep. A fatura é por deployment, e o App É o deployment.
+        - services[].name vira relação declarada para App (mecanismo by:, PR #334).
+        - services[] NÃO é removido — fica com name, answers_file, template, answers. required:[title,services] continua e dna solution não quebra (medido: 771 linhas de teste, 2 goldens, upsert_solution escreve em todo caminho).
+        - o consumidor unanswered_cost_question passa a ler App.can_sleep, preservando "ausente ≠ false".
+        - migração: ZERO. Solution tem 0 instâncias, e é só por isso que dá para fazer agora.
+
+      O AC 2 original ("services[] deixa de existir") está CANCELADO e substituído pelo acima.
+    commit_ref: 89ba92c49d068f0258c9dc171d5183b796c37b82
+  plan_skip_reason: plano está na spec accepted (spec-app-e-o-servico / spec-rendimento-do-copiloto), com AC e DoD já declarados na story

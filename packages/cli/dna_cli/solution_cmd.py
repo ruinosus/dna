@@ -218,9 +218,10 @@ class RunReport:
     #: moment somebody decides. Read from the answers file, so it is reported
     #: with or without `--solution`: the bill does not wait for a record.
     no_sleep: list[str] = field(default_factory=list)
-    #: The `App` fields the live descriptor cannot hold yet. Non-empty means no
-    #: `App` was written and the cost commitment stayed in
-    #: `Solution.services[].pode_dormir` — reported, never silent.
+    #: The `App` fields the installed descriptor cannot hold. Non-empty means no
+    #: `App` was written and nothing declares the cost — reported, never silent.
+    #: Normally empty since #351; it fires on a `dna-cli` newer than its
+    #: `dna-sdk`, which separate wheels make perfectly possible.
     app_kind_missing_fields: list[str] = field(default_factory=list)
 
     #: The command line that would take every default this run left behind.
@@ -695,24 +696,24 @@ def _echo_report(report: RunReport) -> None:
     if report.app_kind_missing_fields:
         click.echo("")
         click.echo(
-            "⚠ The cost commitment stayed in `Solution.services[].pode_dormir` — "
-            "no `App` was written."
+            "⚠ NO `App` was written, so nothing declares whether these services "
+            "may sleep."
         )
         click.echo(
             "  The installed `App` descriptor cannot hold: "
             + ", ".join(report.app_kind_missing_fields)
         )
         click.echo(
-            "  The invoice is per DEPLOYMENT and the App IS the deployment, so\n"
-            "  `can_sleep` belongs there — one fact, one house. `App` declares\n"
-            "  `additionalProperties: false`, so writing it today is a REFUSED write,\n"
-            "  not a tolerated extra; this run left the value where it was and says so,\n"
-            "  rather than leaving you to find out from a schema error later.\n"
-            "  ⚠️ The LEDGER is not part of this move: `answers_file`, `template` and\n"
-            "     `answers` stay in services[] by decision — that is the provenance of\n"
-            "     the render, and where a `when:`-erased answer survives.\n"
-            "  Story/s-kinds-a-conta-declarada moves the descriptor; nothing here needs\n"
-            "  re-running afterwards — the next `dna solution record` writes the App."
+            "  `App` declares `additionalProperties: false`, so writing those fields\n"
+            "  against this descriptor is a REFUSED write, not a tolerated extra.\n"
+            "  ⭐ The usual cause is a VERSION SKEW: `dna-cli` and `dna-sdk` are\n"
+            "     separate wheels with independent floors, and this install has a CLI\n"
+            "     newer than the SDK whose descriptors it writes against.\n"
+            "     Raise the `dna-sdk` floor and re-run `dna solution record` — the\n"
+            "     answers file on disk is the input, so nothing was lost.\n"
+            "  ⚠️ The render's provenance WAS recorded: `answers_file`, `template` and\n"
+            "     `answers` are in services[] as always. What is missing is the cost\n"
+            "     commitment, and `dna solution record` is what fills it in later."
         )
 
     if report.restored_answers:
@@ -734,16 +735,16 @@ def _echo_report(report: RunReport) -> None:
     if report.unanswered_cost:
         click.echo("")
         click.echo(
-            f"⚠ {len(report.unanswered_cost)} recorded layer(s) never said "
-            "whether they may sleep:"
+            f"⚠ {len(report.unanswered_cost)} recorded service(s) have no App "
+            "saying whether they may sleep:"
         )
         for name in report.unanswered_cost:
             click.echo(f"    {name}")
         click.echo(
             "  An app that cannot scale to zero costs a fixed replica — ~US$ 90 a\n"
-            "  month, forever. Nothing here presumes the cheap side: the field is\n"
-            "  left unwritten and said out loud, on every run, until somebody\n"
-            "  answers it. Name the answer that carries it with --sleep-answer."
+            "  month, forever. Nothing here presumes the cheap side: absent is\n"
+            "  said out loud, on every run, until somebody answers it. Answer it\n"
+            "  by writing `can_sleep` on the App of the same name."
         )
 
     if report.template_untagged:
@@ -852,15 +853,14 @@ def _echo_report(report: RunReport) -> None:
 
 
 def _record_options(fn: Any) -> Any:
-    """The three options that turn a run into a recorded one."""
-    fn = click.option(
-        "--sleep-answer",
-        default=None,
-        metavar="KEY",
-        help="The answer that carries the cost commitment (default: can_sleep). "
-        "Absent from a layer's answers, nothing is presumed and the layer is "
-        "reported as never having answered it.",
-    )(fn)
+    """The two options that turn a run into a recorded one.
+
+    ``--sleep-answer`` was a third, and it is gone: it named the answer key
+    that carried the cost commitment into ``services[].pode_dormir``. The
+    commitment now lives on ``App.can_sleep``, authored on the App rather than
+    lifted out of a template's answers, so there is no key to name. The
+    template's answer is still recorded verbatim in ``answers``.
+    """
     fn = click.option(
         "--scope",
         "scope",
@@ -885,11 +885,7 @@ def _solution_kind() -> Any:
     return solution_kind
 
 
-def _sleep_key(sleep_answer: str | None) -> str:
-    return sleep_answer or _solution_kind().DEFAULT_SLEEP_ANSWER
-
-
-def _cost_of(answers: dict[str, Any], *, service: str, sleep_answer: str | None) -> list[str]:
+def _cost_of(answers: dict[str, Any], *, service: str) -> list[str]:
     """``[service]`` when this layer said it may NOT sleep, else ``[]``.
 
     Read straight off the answers — no kernel, no record, no scope — because
@@ -897,12 +893,18 @@ def _cost_of(answers: dict[str, Any], *, service: str, sleep_answer: str | None)
     somebody else's repo with no `.dna` anywhere still has to put the number on
     screen, since that run is exactly the moment the decision is being made.
 
+    ⚠️ The key is not configurable, and that is the point rather than a
+    shortcut: the template's questions and the `App`'s fields are ONE
+    vocabulary (`copier.yml`, asserted by test), so the answer that becomes
+    ``App.can_sleep`` is spelled ``can_sleep``. The old ``--sleep-answer`` knob
+    named the key to PROMOTE, and there is nothing to promote any more.
+
     ⚠️ Only an explicit ``False`` counts. An ABSENT answer is not a cheap
     answer; it is the layer never having answered, which
     :func:`dna_cli.solution_kind.unanswered_cost_question` reports separately
     and never presumes.
     """
-    return [service] if answers.get(_sleep_key(sleep_answer)) is False else []
+    return [service] if answers.get(_solution_kind().COST_FIELD) is False else []
 
 
 def _record_layer(
@@ -912,7 +914,6 @@ def _record_layer(
     *,
     solution_name: str,
     scope: str | None,
-    sleep_answer: str | None,
     service: str | None = None,
     extra_answers: dict[str, Any] | None = None,
 ) -> None:
@@ -927,7 +928,6 @@ def _record_layer(
         layer = sk.layer_from_answers_file(
             destination,
             answers_relpath,
-            sleep_answer=sleep_answer or sk.DEFAULT_SLEEP_ANSWER,
             service=service,
         )
         if extra_answers:
@@ -948,7 +948,7 @@ def _record_layer(
             "answers file on disk is the input, so nothing was lost."
         ) from exc
     report.solution = solution_name
-    report.unanswered_cost = sk.unanswered_cost_question(spec)
+    report.unanswered_cost = sk.unanswered_cost_question(spec, scope=scope)
     report.app_kind_missing_fields = list(sk.app_kind_absent_fields())
 
 
@@ -1003,7 +1003,7 @@ def solution() -> None:
     "--strict",
     is_flag=True,
     help=f"Exit {EXIT_FINDINGS} when the run has findings (missing inherited data, "
-    "a recorded layer with no cost answer).",
+    "a recorded service whose App never answered the cost question).",
 )
 @_record_options
 def new_(
@@ -1019,7 +1019,6 @@ def new_(
     strict: bool,
     solution_name: str | None,
     scope: str | None,
-    sleep_answer: str | None,
 ) -> None:
     """Render TEMPLATE into DESTINATION, recording the answers.
 
@@ -1095,7 +1094,6 @@ def new_(
             report.no_sleep = _cost_of(
                 recorded_answers(destination, written),
                 service=_solution_kind().service_name_of(written),
-                sleep_answer=sleep_answer,
             )
 
     if solution_name and not pretend:
@@ -1113,7 +1111,6 @@ def new_(
             written,
             solution_name=solution_name,
             scope=scope,
-            sleep_answer=sleep_answer,
         )
 
     if as_json:
@@ -1184,7 +1181,8 @@ def new_(
     "--strict",
     is_flag=True,
     help=f"Exit {EXIT_FINDINGS} when the run has findings (lost answers, conflicts, "
-    "defaults left behind, a recorded layer with no cost answer).",
+    "defaults left behind, a recorded service whose App never answered the "
+    "cost question).",
 )
 @_record_options
 def update(
@@ -1202,7 +1200,6 @@ def update(
     strict: bool,
     solution_name: str | None,
     scope: str | None,
-    sleep_answer: str | None,
 ) -> None:
     """Roll ONE app in DESTINATION forward to a newer template version.
 
@@ -1381,7 +1378,7 @@ def update(
     report.lost_answers = lost_answers(
         before=from_file, after=after, asked_for=set(overrides)
     )
-    report.no_sleep = _cost_of(after, service=layer_name, sleep_answer=sleep_answer)
+    report.no_sleep = _cost_of(after, service=layer_name)
     report.conflicted_paths = _conflicted_paths(destination)
     report.changed_paths = [p for _, p in _porcelain(destination)]
 
@@ -1392,7 +1389,6 @@ def update(
             answers_relpath,
             solution_name=solution_name,
             scope=scope,
-            sleep_answer=sleep_answer,
             service=layer_name,
             extra_answers=from_record,
         )
@@ -1496,18 +1492,12 @@ def list_(destination: Path, as_json: bool) -> None:
     "one out is refused with both sides named. Rarely needed; the recorded "
     "layers already fill it.",
 )
-@click.option(
-    "--sleep-answer",
-    default=None,
-    metavar="KEY",
-    help=f"The answer carrying the cost commitment (default: "
-    f"{'can_sleep'!r}).",
-)
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable report.")
 @click.option(
     "--strict",
     is_flag=True,
-    help=f"Exit {EXIT_FINDINGS} when a recorded layer never answered the cost "
+    help=f"Exit {EXIT_FINDINGS} when a recorded service has no App answering "
+    f"the cost "
     "question.",
 )
 def record(
@@ -1519,7 +1509,6 @@ def record(
     title: str | None,
     description: str | None,
     apps: tuple[str, ...],
-    sleep_answer: str | None,
     as_json: bool,
     strict: bool,
 ) -> None:
@@ -1533,9 +1522,10 @@ def record(
     sleep?" with a number that is wrong and looks right. `-a`/`-s` narrow it to
     one on purpose.
 
-    It stores no code and no template body — a `template.src` + `ref` pointer,
-    the answers verbatim, and the cost commitment. Rendering stays where it
-    was: the official Copier, on this machine.
+    It stores no code and no template body — a `template.src` + `ref` pointer
+    and the answers verbatim. The cost commitment is NOT stored here: it is
+    read off the `App` of the same name (`can_sleep`), and services whose App
+    has not answered are reported on every run.
     """
     destination = destination.resolve()
     sk = _solution_kind()
@@ -1563,7 +1553,6 @@ def record(
                 sk.layer_from_answers_file(
                     destination,
                     relpath,
-                    sleep_answer=sleep_answer or sk.DEFAULT_SLEEP_ANSWER,
                     service=service if (answers_file or service) else None,
                 )
             )
@@ -1583,8 +1572,17 @@ def record(
     except Exception as exc:  # noqa: BLE001
         raise SolutionError(f"recording Solution {solution_name!r} failed: {exc}") from exc
 
-    unanswered = sk.unanswered_cost_question(spec)
-    no_sleep = sorted(layer.name for layer in layers if layer.pode_dormir is False)
+    unanswered = sk.unanswered_cost_question(spec, scope=scope)
+    # ⚠️ Read from the ANSWERS, not from a `Layer` field: the cost commitment is
+    # no longer promoted onto the layer (it is `App.can_sleep` now), and the
+    # Copier answer that produced it stays in `answers` verbatim. `is False`,
+    # never `not …` — an ABSENT answer is unanswered, which `unanswered` above
+    # reports, and is not the same sentence as "this one costs a replica".
+    no_sleep = sorted(
+        layer.name
+        for layer in layers
+        if layer.answers.get(sk.COST_FIELD) is False
+    )
     missing_app_fields = list(sk.app_kind_absent_fields())
     if as_json:
         click.echo(
@@ -1610,13 +1608,13 @@ def record(
             f"({len(spec['services'])} total)"
         )
         for layer in layers:
-            sleeps = (
-                "?" if layer.pode_dormir is None else ("yes" if layer.pode_dormir else "NO")
-            )
+            # "sleeps" is deliberately NOT printed from the Copier answer any
+            # more. It is the App's fact now, and echoing a second reading of
+            # it here is how one fact grows two answers that can disagree. The
+            # unanswered list below is what says something about cost.
             click.echo(
                 f"    {layer.name}  ← {layer.answers_file}  "
-                f"(ref {layer.template_ref or '—'}, {len(layer.answers)} answers, "
-                f"sleeps: {sleeps})"
+                f"(ref {layer.template_ref or '—'}, {len(layer.answers)} answers)"
             )
         report = RunReport(
             action="record",
@@ -1631,7 +1629,8 @@ def record(
 
     if strict and unanswered:
         raise SolutionError(
-            "A recorded layer never answered the cost question, and --strict was "
+            "A recorded service has no App answering the cost question, and --strict "
+            "was "
             "given.",
             EXIT_FINDINGS,
         )

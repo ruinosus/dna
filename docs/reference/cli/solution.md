@@ -70,9 +70,8 @@ dna solution new [OPTIONS] TEMPLATE DESTINATION
 | `--json` | Machine-readable report. |
 | `--pretend` | Render nothing; report what would happen. |
 | `--scope` | The DNA scope holding the Solution instance. |
-| `--sleep-answer` | The answer that carries the cost commitment (default: can_sleep). Absent from a layer's answers, nothing is presumed and the layer is reported as never having answered it. |
 | `--solution` | Record this run in the Solution instance NAME — the declaration and the answers as governed data. It is what lets a `when:`-gated answer survive the update that erases it from the answers file. |
-| `--strict` | Exit 3 when the run has findings (missing inherited data, a recorded layer with no cost answer). |
+| `--strict` | Exit 3 when the run has findings (missing inherited data, a recorded service whose App never answered the cost question). |
 | `--vcs-ref` | Template ref to render (tag, branch or commit). Default: the latest tag. |
 | `-d`, `--data` | Answer a question without being asked. Repeatable. |
 
@@ -88,9 +87,10 @@ record that covered some of a repo's apps would answer "which of them may
 sleep?" with a number that is wrong and looks right. `-a`/`-s` narrow it to
 one on purpose.
 
-It stores no code and no template body — a `template.src` + `ref` pointer,
-the answers verbatim, and the cost commitment. Rendering stays where it
-was: the official Copier, on this machine.
+It stores no code and no template body — a `template.src` + `ref` pointer
+and the answers verbatim. The cost commitment is NOT stored here: it is
+read off the `App` of the same name (`can_sleep`), and services whose App
+has not answered are reported on every run.
 
 ```text
 dna solution record [OPTIONS] [DESTINATION]
@@ -111,9 +111,8 @@ dna solution record [OPTIONS] [DESTINATION]
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable report. |
 | `--scope` | The DNA scope holding the instance. |
-| `--sleep-answer` | The answer carrying the cost commitment (default: 'can_sleep'). |
 | `--solution` | The Solution instance to write. |
-| `--strict` | Exit 3 when a recorded layer never answered the cost question. |
+| `--strict` | Exit 3 when a recorded service has no App answering the cost question. |
 | `--title` | Human title (default: the name). |
 | `-a`, `--answers-file` | Record only this answers file. |
 | `-s`, `--service` | Record only this service. |
@@ -155,9 +154,8 @@ dna solution update [OPTIONS] [DESTINATION]
 | `--json` | Machine-readable report. |
 | `--pretend` | Change nothing; report what would happen. |
 | `--scope` | The DNA scope holding the Solution instance. |
-| `--sleep-answer` | The answer that carries the cost commitment (default: can_sleep). Absent from a layer's answers, nothing is presumed and the layer is reported as never having answered it. |
 | `--solution` | Record this run in the Solution instance NAME — the declaration and the answers as governed data. It is what lets a `when:`-gated answer survive the update that erases it from the answers file. |
-| `--strict` | Exit 3 when the run has findings (lost answers, conflicts, defaults left behind, a recorded layer with no cost answer). |
+| `--strict` | Exit 3 when the run has findings (lost answers, conflicts, defaults left behind, a recorded service whose App never answered the cost question). |
 | `--vcs-ref` | Update to this ref instead of the latest tag. |
 | `-a`, `--answers-file` | The answers file to update, relative to DESTINATION. |
 | `-d`, `--data` | Move an answer as part of this update. Repeatable. |
