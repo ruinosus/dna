@@ -410,6 +410,49 @@ export interface paths {
         patch: operations["set_insight_state_v1_insights__name__state_patch"];
         trace?: never;
     };
+    "/v1/instances/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Resolve Instance
+         * @description Expand a short ``metadata.id`` PREFIX to the one instance it names.
+         *
+         *     The id lane (i-114). The ``{kind}/{name}`` routes are the NAME lane and
+         *     stay exactly as they were: a name is the address a human authors and
+         *     reviews in a diff, and it is what a ``.dna/`` reference keeps. An id is
+         *     the identity underneath it — stable across a rename, and the value
+         *     ``dna_edges.to_id`` records beside every target name.
+         *
+         *     Resolution is by unique prefix, the way ``git`` expands a short commit
+         *     hash. Four to twelve characters; the response echoes the FULL id.
+         *
+         *     The status codes are the whole contract:
+         *
+         *     * **200** — exactly one instance matches.
+         *     * **409** — MORE THAN ONE matches, and this is the refusal the feature
+         *       exists for. Answering with the first match would be indistinguishable
+         *       from answering correctly: same shape, same 200, nothing in the body
+         *       to say a coin was flipped. The detail names the candidates so the
+         *       caller can lengthen the prefix.
+         *     * **404** — nothing matches.
+         *     * **422** — the prefix is shorter than four characters, or is not an
+         *       id at all. A one-character prefix is a typo, not a question, and
+         *       calling it "ambiguous" would hide that the query is the problem.
+         *     * **501** — this deployment's store cannot search by id.
+         */
+        get: operations["resolve_instance_v1_instances__id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/kinds": {
         parameters: {
             query?: never;
@@ -450,6 +493,29 @@ export interface paths {
          * @description Author a Kind for the calling workspace — a ``KindDefinition``
          *     instance written WITHOUT an approval marker, under the workspace's own
          *     assigned apiVersion namespace (minted on first use, then stable).
+         *
+         *     ``relations`` (optional) declares what the Kind POINTS AT — the
+         *     ``{field: {to, cardinality, inverse_of, by}}`` block
+         *     ``dna.kernel.kinds.relations`` defines, normalized by the same validator
+         *     a builtin descriptor goes through and checked against ``schema`` in the
+         *     same call. Without it a tenant-authored Kind could not declare a single
+         *     link, so every one of them was an island BY CONSTRUCTION — a product
+         *     that says "model your domain" and then refuses the half of a model that
+         *     is the edges. A malformed or self-contradicting declaration is a 400
+         *     naming the relation.
+         *
+         *     **Declaring a relation does not create an edge.** Relations are
+         *     resolved, validated and drawn only for REGISTERED Kinds, and
+         *     registration is what HUMAN approval turns on. An edit clears the
+         *     approval marker, so adding a relation to an already-approved Kind sends
+         *     it back to a person rather than past one. Nothing on this door can
+         *     confer effect, and that is the property to keep.
+         *
+         *     ``plane`` (optional) is ``composition`` or ``record``, stored only when
+         *     DECLARED: ``KindDefinitionSpec`` defaults it to ``composition``, and
+         *     whether that default is right for tenant Kinds is an open question with
+         *     a named owner — writing the default into every instance would settle it
+         *     silently and leave it unsettleable.
          *
          *     ``presentation`` (optional) declares how instances of this Kind READ —
          *     the ordered fields, their human labels, their semantic roles, and what
@@ -1596,12 +1662,24 @@ export interface components {
             name: string;
             /** Namespace */
             namespace: string;
+            /** Plane */
+            plane?: string | null;
             /** Proposed By */
             proposed_by?: string | null;
+            /** Relations */
+            relations?: {
+                [key: string]: unknown;
+            } | null;
             /** Schema */
             schema?: {
                 [key: string]: unknown;
             } | null;
+            /** Suggested Relations */
+            suggested_relations?: {
+                [key: string]: unknown;
+            }[] | null;
+            /** Suggestion */
+            suggestion?: string | null;
             /** Version */
             version?: string | null;
         };
@@ -1645,6 +1723,8 @@ export interface components {
             name?: string | null;
             /** Namespace */
             namespace?: string | null;
+            /** Plane */
+            plane?: string | null;
             /** Presentation */
             presentation?: {
                 [key: string]: unknown;
@@ -1653,6 +1733,10 @@ export interface components {
             proposed_at?: string | null;
             /** Proposed By */
             proposed_by?: string | null;
+            /** Relations */
+            relations?: {
+                [key: string]: unknown;
+            } | null;
             /** Revoked At */
             revoked_at?: string | null;
             /** Revoked By */
@@ -1868,10 +1952,16 @@ export interface components {
         Body_author_kind_v1_kinds_post: {
             /** Kind */
             kind: string;
+            /** Plane */
+            plane?: string | null;
             /** Presentation */
             presentation?: {
                 [key: string]: unknown;
             } | string[] | null;
+            /** Relations */
+            relations?: {
+                [key: string]: unknown;
+            } | null;
             /** Schema */
             schema: {
                 [key: string]: unknown;
@@ -2318,6 +2408,8 @@ export interface components {
             direction: string;
             /** Field */
             field: string;
+            /** From Api Version */
+            from_api_version?: string | null;
             /** From Kind */
             from_kind: string;
             /** From Name */
@@ -2328,6 +2420,12 @@ export interface components {
             ordinal: number;
             /** Resolved */
             resolved: boolean;
+            /** To Api Version */
+            to_api_version?: string | null;
+            /** To Deleted At */
+            to_deleted_at?: string | null;
+            /** To Id */
+            to_id?: string | null;
             /** To Kind */
             to_kind?: string | null;
             /** To Name */
@@ -3382,6 +3480,37 @@ export interface components {
             tenant?: string | null;
         };
         /**
+         * ResolveInstanceResponse
+         * @description ``GET /v1/instances/{id}`` — the ONE instance a short id names (i-114).
+         *
+         *     The id lane, kept separate from the ``{kind}/{name}`` lane on purpose. A
+         *     short name and a short id are both strings; a single door that accepted
+         *     "a name or maybe an id" would eventually answer a name query with an id
+         *     match, and nothing in the response would say so.
+         *
+         *     ``id`` echoes back the FULL id, not the prefix the caller sent — the
+         *     expansion is the answer, exactly as ``git rev-parse`` returns the whole
+         *     hash. A prefix matching more than one instance is a **409**, never a pick.
+         */
+        ResolveInstanceResponse: {
+            /** Api Version */
+            api_version: string;
+            /** Etag */
+            etag?: string | null;
+            /** Id */
+            id: string;
+            /** Instance */
+            instance: {
+                [key: string]: unknown;
+            };
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Scope */
+            scope: string;
+        };
+        /**
          * RevokeKindResponse
          * @description ``POST /v1/kinds/{kind}/revoke`` — the act that WITHDRAWS effect (i-085).
          *
@@ -4357,6 +4486,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["InsightStateResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_instance_v1_instances__id__get: {
+        parameters: {
+            query?: {
+                tenant?: string | null;
+                /** @description Narrow the search to one scope. Normally unnecessary — ids are unique across the store, and not needing to know the scope is most of what an id buys. */
+                scope?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResolveInstanceResponse"];
                 };
             };
             /** @description Validation Error */

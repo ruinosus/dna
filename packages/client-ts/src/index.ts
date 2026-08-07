@@ -535,6 +535,33 @@ export class DnaClient {
   }
 
   /**
+   * Resolve an instance by its short **id**, without knowing its Kind.
+   *
+   * The id (i-114) is 12 chars of `[a-z2-7]`, minted on write and carried in
+   * frontmatter as `x-dna-id`. It is prefix-resolvable: **four characters or
+   * more** is accepted, and an ambiguous prefix is REFUSED rather than
+   * arbitrated — two instances matching is a fact the caller needs, not a
+   * coin toss the server should make for them.
+   *
+   * This is the lookup that exists because the NAME is the authored address
+   * and the ID is the durable one. A name that moved leaves every authored
+   * reference pointing at the old one — that is why `dna rename` exists — but
+   * a machine-written edge carries the id and still resolves. This method is
+   * how a TS caller follows that half.
+   *
+   * ⚠️ Not every instance has one: rows written before the id was minted
+   * answer 404, which reads as "no instance with this id", never as "no
+   * instance". A store that cannot look up by id at all answers **501**.
+   */
+  async resolveInstance(id: string, opts?: { scope?: string }) {
+    return this.unwrap(
+      await this.raw.GET("/v1/instances/{id}", {
+        params: { path: { id }, query: { scope: opts?.scope } },
+      }),
+    );
+  }
+
+  /**
    * "What points at this instance?" — the derived reference graph.
    *
    * `direction: "in"` (the default, and the product question) returns the

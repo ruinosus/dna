@@ -66,7 +66,7 @@ than either:
 
 `*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the instance name.
 
-**145 edges: 101 declared, 44 composition-only — of which 34 are ENFORCED at write time.** 33 of 84 Kinds declare at least one relation, and 3 fields are listed below as gaps.
+**152 edges: 108 declared, 44 composition-only — of which 35 are ENFORCED at write time.** 37 of 84 Kinds declare at least one relation, and 2 fields are listed below as gaps.
 
 !!! warning "Declared is not enforced"
 
@@ -93,9 +93,11 @@ flowchart LR
     agentskills["agentskills (1 Kind)"]
     cloud["cloud (2 Kinds)"]
     eval["eval (4 Kinds)"]
+    federation["federation (1 Kind)"]
     guardrails["guardrails (1 Kind)"]
     helix["helix (14 Kinds)"]
     intel["intel (2 Kinds)"]
+    modelreg["modelreg (1 Kind)"]
     portfolio["portfolio (5 Kinds)"]
     presidio["presidio (1 Kind)"]
     research["research (1 Kind)"]
@@ -103,11 +105,14 @@ flowchart LR
     soulspec["soulspec (1 Kind)"]
     tenant["tenant (6 Kinds)"]
     testkit["testkit (2 Kinds)"]
+    federation -->|2| portfolio
     helix -->|2| agentskills
     helix -->|2| guardrails
+    helix -->|1| modelreg
     helix -->|1| presidio
     helix -->|3| sdlc
     helix -->|2| soulspec
+    helix -->|1| tenant
     portfolio -->|1| cloud
     portfolio -->|1| intel
     portfolio -->|1| tenant
@@ -140,21 +145,50 @@ erDiagram
     EvalSuite }o--}o EvalCase : "cases"
 ```
 
-#### `helix` (19 edges)
+#### `federation` (2 edges)
+
+```mermaid
+erDiagram
+    MCPFederation
+    Role
+    MCPFederation }o..|| Role : "min_role [role_id]"
+    MCPFederation }o..|| Role : "min_role_write [role_id]"
+```
+
+#### `helix` — declared (9 edges)
 
 ```mermaid
 erDiagram
     ANY_KIND
-    Actor
     Agent
     App
     Copilot
     Engram
     Epic
     Feature
+    Genome
+    ModelProfile
+    Roadmap
+    Workspace
+    App }o--}o Copilot : "copilots"
+    Engram }o..}o ANY_KIND : "affect_evidence_refs [Kind/name] *"
+    Engram }o..|| Epic : "area [Kind/name] *"
+    Engram }o..|| Feature : "area [Kind/name] *"
+    Engram }o..|| Roadmap : "area [Kind/name] *"
+    Engram }o..}o ANY_KIND : "source_refs [Kind/name] *"
+    Genome }o--|| Agent : "default_agent"
+    Genome }o..|| ModelProfile : "default_llm [model_id]"
+    Genome }o..|| Workspace : "owner_tenant [workspace_id]"
+```
+
+#### `helix` — composition (13 edges)
+
+```mermaid
+erDiagram
+    Actor
+    Agent
     Guardrail
     Recognizer
-    Roadmap
     SafetyPolicy
     Skill
     Soul
@@ -165,12 +199,6 @@ erDiagram
     Agent }o..}o Skill : "skills (dep)"
     Agent }o..|| Soul : "soul (dep)"
     Agent }o..}o Tool : "tools (dep)"
-    App }o--}o Copilot : "copilots"
-    Engram }o..}o ANY_KIND : "affect_evidence_refs [Kind/name] *"
-    Engram }o..|| Epic : "area [Kind/name] *"
-    Engram }o..|| Feature : "area [Kind/name] *"
-    Engram }o..|| Roadmap : "area [Kind/name] *"
-    Engram }o..}o ANY_KIND : "source_refs [Kind/name] *"
     SafetyPolicy }o..}o Recognizer : "recognizers (dep)"
     UseCase }o..}o Agent : "agents (dep)"
     UseCase }o..}o Guardrail : "guardrails (dep)"
@@ -342,16 +370,18 @@ erDiagram
     Task }o..|| Actor : "owner (dep)"
 ```
 
-#### `tenant` (4 edges)
+#### `tenant` (5 edges)
 
 ```mermaid
 erDiagram
+    KindNamespace
     Role
     Tenant
     TenantMembership
     Workspace
     WorkspaceMembership
     WorkspaceScopeGrant
+    KindNamespace }o..|| Workspace : "owner [workspace_id]"
     TenantMembership }o..|| Tenant : "tenant_slug [slug]"
     WorkspaceMembership }o..|| Role : "role [role_id]"
     WorkspaceMembership }o..|| Workspace : "workspace_id [workspace_id]"
@@ -393,7 +423,7 @@ erDiagram
     TestRun }o..}o Task : "verifies [Kind/name] *"
 ```
 
-Groups with fewer than 2 edges (listed, not drawn): `artifact`, `collab`, `evidence`, `intel`, `research`.
+Groups with fewer than 2 edges (listed, not drawn): `artifact`, `cloud`, `collab`, `evidence`, `intel`, `research`.
 
 ### Declared relations (`spec.relations`)
 
@@ -428,6 +458,9 @@ the runtime does not follow it — read `By` for why.
 | `Feature` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `Feature` | `sprint_ref` | `Sprint` | one | `name` | yes |  |  |
 | `Feature` | `stories` | `Story` | many | `name` | yes | `feature` |  |
+| `Genome` | `default_agent` | `Agent` | one | `name` | yes |  |  |
+| `Genome` | `default_llm` | `ModelProfile` | one | `model_id` |  |  | yes |
+| `Genome` | `owner_tenant` | `Workspace` | one | `workspace_id` |  |  | yes |
 | `Initiative` | `epics` | `Epic` | many | `name` | yes |  |  |
 | `Initiative` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `IntelInsight` | `source_ref` | `IntelSource` | one | `name` | yes |  |  |
@@ -440,12 +473,16 @@ the runtime does not follow it — read `By` for why.
 | `Kaizen` | `work_item` *(poly)* | `Spike` | one | `Kind/name` |  |  |  |
 | `Kaizen` | `work_item` *(poly)* | `Story` | one | `Kind/name` |  |  |  |
 | `Kaizen` | `work_item` *(poly)* | `Task` | one | `Kind/name` |  |  |  |
+| `KindNamespace` | `owner` | `Workspace` | one | `workspace_id` |  |  |  |
+| `MCPFederation` | `min_role` | `Role` | one | `role_id` |  |  | yes |
+| `MCPFederation` | `min_role_write` | `Role` | one | `role_id` |  |  | yes |
 | `Membership` | `role` | `Role` | one | `role_id` |  |  |  |
 | `Membership` | `scope_ref` *(poly)* | `Organization` | one | `name` | yes |  |  |
 | `Membership` | `scope_ref` *(poly)* | `Project` | one | `name` | yes |  |  |
 | `Organization` | `plan_ref` | `PricingPlan` | one | `tier_id` |  |  | yes |
 | `Plan` | `epic` | `Epic` | one | `name` | yes |  |  |
 | `Plan` | `spec_ref` | `Spec` | one | `name` | yes |  |  |
+| `PlanBinding` | `tier_id` | `PricingPlan` | one | `tier_id` |  |  |  |
 | `Project` | `intel_source_refs` | `IntelSource` | many | `name` | yes |  | yes |
 | `Project` | `org_ref` | `Organization` | one | `name` | yes |  |  |
 | `Project` | `repo_refs` | `Repo` | many | `name` | yes |  |  |
@@ -593,9 +630,8 @@ leave, with the reason recorded in the Kind and in
 | --- | --- | --- | --- |
 | `Initiative` | `theme_ref` | `undeclared` | reference-shaped field name, and neither a relation nor an identifier declares what it is |
 | `LayerPolicy` | `layer_id` | `undeclared` | reference-shaped field name, and neither a relation nor an identifier declares what it is |
-| `PlanBinding` | `tier_id` | `undeclared` | reference-shaped field name, and neither a relation nor an identifier declares what it is |
 
-### Fields that are NOT references (17)
+### Fields that are NOT references (19)
 
 The gap list above is short because these fields ANSWERED it. A
 reference-shaped name with no relation used to be an invitation with
@@ -612,7 +648,9 @@ stale against a Kind it no longer describes.
 | Kind | Field | Role | Minted by |
 | --- | --- | --- | --- |
 | `AgentCatalogEntry` | `client_id` | `external` | `oauth` |
+| `AgentCatalogEntry` | `registered_by` | `external` | `idp` |
 | `AgentGrant` | `client_id` | `external` | `oauth` |
+| `AgentGrant` | `subject` | `external` | `idp` |
 | `AgentSession` | `session_id` | `external` | `agent-tool` |
 | `AuditLog` | `request_id` | `external` | `http-request` |
 | `ModelProfile` | `model_id` | `self` | — |
@@ -629,12 +667,12 @@ stale against a Kind it no longer describes.
 | `Workspace` | `workspace_id` | `self` | — |
 | `WorkspaceMembership` | `identity_oid` | `external` | `entra` |
 
-### Kinds with no reference edge (27)
+### Kinds with no reference edge (22)
 
 Standalone instances — configuration, composition-plane behaviour, or
 record Kinds whose links are simply not modelled yet.
 
-`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `AuditLog`, `Automation`, `Canvas`, `Changelog`, `CognitivePolicy`, `Doc`, `EvidencePolicy`, `Genome`, `Hook`, `HtmlArtifact`, `KindDefinition`, `KindNamespace`, `LayerPolicy`, `Lesson`, `MCPFederation`, `Memory`, `ModelProfile`, `PlanBinding`, `PromptTemplate`, `RemoteAgent`, `Setting`, `Theme`, `UserProfile`, `UserRoleAssignment`
+`AgentCatalogEntry`, `AgentDefinition`, `AgentGrant`, `AuditLog`, `Automation`, `Canvas`, `Changelog`, `CognitivePolicy`, `Doc`, `EvidencePolicy`, `Hook`, `HtmlArtifact`, `KindDefinition`, `LayerPolicy`, `Lesson`, `Memory`, `PromptTemplate`, `RemoteAgent`, `Setting`, `Theme`, `UserProfile`, `UserRoleAssignment`
 
 ## Physical model — the real tables
 
@@ -694,6 +732,7 @@ erDiagram
         TEXT declared_to
         INTEGER from_version
         DATETIME updated_at
+        DATETIME to_deleted_at
     }
     dna_instances {
         TEXT scope PK
@@ -861,6 +900,7 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | `declared_to` | `TEXT` |  |  |
 | `from_version` | `INTEGER` |  |  |
 | `updated_at` | `DATETIME` |  |  |
+| `to_deleted_at` | `DATETIME` |  | yes |
 
 #### `dna_instances`
 
