@@ -898,8 +898,10 @@ def test_a_gravacao_escreve_as_DUAS_METADES_e_elas_casam_pelo_nome(
     assert app["port"] == 8080
     assert app["can_sleep"] is False
     assert "pode_dormir" not in entry, "one fact, one house"
-    # the join, by the key that already existed
+    # the join — declared on `apps`, which is the only level the kernel reads
     assert app_doc.name == entry["name"]
+    assert stored["apps"] == ["mcp"]
+    assert solution_kind.join_disagreements(stored) == ([], [])
     # …and the read path still answers the update path's question.
     assert layer_of("s", "mcp")["pode_dormir"] is False
 
@@ -910,24 +912,104 @@ def test_a_gravacao_escreve_as_DUAS_METADES_e_elas_casam_pelo_nome(
 def test_apps_e_uma_relacao_declarada_e_vazio_e_o_caso_comum(
     runner: CliRunner, template: Path, destination: Path, scope: str
 ) -> None:
-    """`apps` is optional, because the first real solution has none.
+    """`apps` is optional in the SCHEMA, and complete whenever it is written.
 
     Measured in the spec (§6-B): *"o dna-cloud gera 9 serviços e nenhum App"*.
     A `required: [apps]` would be an obligation the first example already
-    violates.
+    violates, so the field stays optional.
 
-    ⚠️ And it stays untouched by a scaffolding run even after the `App`
-    descriptor moves. `apps` is the operator's list of the SELLABLE Apps a
-    solution delivers (`--app`, which replaces it wholesale); the service↔App
-    join is `services[].name`, which the founder's decision made the declared
-    relation. Deriving `apps` from it as well would be the same fact in two
-    lists, disagreeing on the first run that only touched one.
+    ⭐ But once an `App` is a deployment, `apps` and the set of
+    `services[].name` denote the same things — and `apps` is the ONLY one the
+    kernel can enforce. Measured in #351: `relation_values` reads
+    `spec.get(rel.name)` at the top level, always, so a pointer inside
+    `services[].items` is not declarable as a relation — declaring one lints
+    green, reports `resolved/enforced = True/True` and resolves `[]`. An
+    incomplete `apps` would therefore be the system's one enforced relation
+    being incomplete on purpose.
+
+    So consistency is what is asserted, on both sides of the handover.
     """
     generate(runner, template, destination, service_name="api")
+    generate(runner, template, destination, service_name="web")
     result = runner.invoke(solution, ["record", str(destination), "--solution", "s"])
-
     assert result.exit_code == 0, result.output
-    assert "apps" not in solution_spec("s")
+
+    spec = solution_spec("s")
+    services = {entry["name"] for entry in spec["services"]}
+    assert services == {"api", "web"}
+    assert solution_kind.join_disagreements(spec) == ([], [])
+
+    if solution_kind.app_is_the_deployment():
+        assert set(spec["apps"]) == services, (
+            "an App IS a deployment — the only enforceable join has to name all of them"
+        )
+    else:
+        assert "apps" not in spec, (
+            "no App instance was written, and `apps` is an ENFORCED relation: "
+            "pointing at something that does not exist is the dangling reference "
+            "the veto exists for"
+        )
+
+
+def test_apps_e_services_que_discordam_sao_recusados_com_os_DOIS_lados(
+    runner: CliRunner, template: Path, destination: Path, scope: str
+) -> None:
+    """⭐ The mechanism that replaces "just don't populate it".
+
+    One fact in two lists is a real hazard — they disagree on the first run
+    that touches only one — and the lists cannot be collapsed: `apps` is the
+    only enforceable join, `services[]` is the only place the ledger fits. So
+    the answer is a check derived from both sides, run BEFORE the write, so an
+    inconsistent record is never stored at all.
+
+    It names both sides. A refusal that only said "they differ" would leave the
+    reader diffing two lists by eye, which is the step people skip.
+    """
+    generate(runner, template, destination, service_name="api")
+
+    result = runner.invoke(
+        solution,
+        ["record", str(destination), "--solution", "s", "--app", "algum-outro"],
+    )
+
+    assert result.exit_code == solution_cmd.EXIT_REFUSED
+    assert "api" in result.output, "the service left out of `apps` must be named"
+    assert "algum-outro" in result.output, "and the `apps` entry with no service"
+    assert solution_kind.read_solution("s") is None, (
+        "the guard runs before the write — an inconsistent record must never "
+        "reach storage"
+    )
+
+
+def test_a_guarda_da_junta_e_derivada_dos_dois_lados() -> None:
+    """Derived, never enumerated — the shape that survives a new service.
+
+    A hand-kept list of expected names would go stale the first time somebody
+    added a service, and would then report "consistent" about a set it no
+    longer covers. Asserted on the function directly, so the derivation itself
+    is what is under test.
+    """
+    consistent = {
+        "services": [{"name": "api"}, {"name": "web"}],
+        "apps": ["web", "api"],
+    }
+    assert solution_kind.join_disagreements(consistent) == ([], []), (
+        "order is not disagreement — these are sets of names"
+    )
+
+    drifted = {
+        "services": [{"name": "api"}, {"name": "worker"}],
+        "apps": ["api", "fantasma"],
+    }
+    assert solution_kind.join_disagreements(drifted) == (["worker"], ["fantasma"])
+
+    # ⚠️ Undeclared is not drifted. A record older than this guard, or one from a
+    # repo that delivers no App at all (§6-B: nine services, zero Apps), has no
+    # `apps` — and a guard that shouted at those would be a guard somebody turns
+    # off before it ever catches a real one.
+    undeclared = {"services": [{"name": "api"}]}
+    assert solution_kind.join_disagreements(undeclared) == ([], [])
+    assert solution_kind.join_disagreements({**undeclared, "apps": []}) == ([], [])
 
 
 def test_a_relacao_apps_aponta_para_App_por_nome_e_e_enforced() -> None:

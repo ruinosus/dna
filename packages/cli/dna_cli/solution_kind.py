@@ -59,13 +59,21 @@ than the spec that preceded it, deliberately:
   becomes ``App.can_sleep``, because *the invoice is per deployment and the App
   IS the deployment.* One fact, one house — the failure a second house creates
   is two answers to "does this sleep?" that disagree.
-* ``services[].name`` is the **declared relation** to that App. The key already
-  existed — it is "what azd calls a service", the same string as the App's
-  ``metadata.name``; nobody had declared it.
+* ``services[].name`` and ``apps[]`` carry the same set of names — and
+  **``apps[]`` is the join the kernel can enforce.** ⚠️ Measured in #351:
+  ``relation_values`` reads ``spec.get(rel.name)`` at the TOP LEVEL, always, so
+  a pointer inside ``services[].items`` cannot be a relation. Declaring one
+  there lints green, reports ``resolved/enforced = True/True`` and resolves
+  ``[]`` — a guard that announces it vetoes writes and reads nothing.
 
 So this module writes **both halves**: the ledger here, the four identity
 fields (``service_name``, ``python_module``, ``port``, ``can_sleep``) on the
-App, and the two joined by name.
+App, ``apps[]`` carrying the COMPLETE set, and
+:func:`join_disagreements` making sure the two lists never drift.
+
+⚠️ ``apps[]`` is not a "sellable subset". Sellability already has a house —
+``App.requires_plan``, which is optional; an App without one is a container that
+runs and is not sold, which is what ``worker`` is.
 
 ⚠️ An earlier reading of the spec had the whole ledger moving onto the App.
 That is off the table, and the reason is the paragraph at the top of this file:
@@ -363,6 +371,77 @@ def restored_keys(
     return sorted(k for k in recorded if k not in from_file)
 
 
+# ── the two lists, and the guard that keeps them one fact ────────────────────
+
+
+def join_disagreements(spec: dict[str, Any] | None) -> tuple[list[str], list[str]]:
+    """``(services with no App, apps with no service)`` — DERIVED from both.
+
+    ⭐ Why this exists at all. ``apps[]`` and the set of ``services[].name``
+    denote the same things once an `App` is a deployment, and they cannot be
+    collapsed into one list: ``apps`` is the only place a relation can be
+    DECLARED (``relation_values`` reads ``spec.get(rel.name)`` — top level,
+    always), and ``services[]`` is the only place the render ledger fits.
+
+    So the risk is real and stays real: one fact in two lists disagrees on the
+    first run that touches only one. The answer is a mechanism, not a retreat —
+    this check, derived from both sides rather than enumerated, run before every
+    write, naming BOTH sides when they part company. A guard that reported only
+    "they differ" would leave the reader diffing two lists by eye, which is the
+    step people skip.
+
+    ⚠️ An ABSENT (or empty) ``apps`` is not a disagreement — it is the join not
+    being declared, which the schema allows and §6-B measured as the common
+    case (*"o dna-cloud gera 9 serviços e nenhum App"*). Reporting every
+    service as missing there would make the guard fire loudest on the records
+    that are simply older than it, and a guard that cries wolf on the normal
+    case is a guard that gets switched off. Disagreement is about a list that
+    IS declared and does not cover the set.
+    """
+    spec = spec or {}
+    apps = list(spec.get("apps") or [])
+    if not apps:
+        return ([], [])
+    services = [
+        entry.get("name")
+        for entry in (spec.get("services") or [])
+        if isinstance(entry, dict) and entry.get("name")
+    ]
+    return (
+        sorted({s for s in services if s not in apps}),
+        sorted({a for a in apps if a not in services}),
+    )
+
+
+def _refuse_join_disagreement(name: str, spec: dict[str, Any]) -> None:
+    """Raise when ``apps[]`` and ``services[].name`` stop denoting one set."""
+    missing, orphaned = join_disagreements(spec)
+    if not missing and not orphaned:
+        return
+    lines = [
+        f"Solution {name!r} would be written with `apps` and `services[].name` "
+        "disagreeing, and they denote the same things — an App IS a deployment."
+    ]
+    if missing:
+        lines.append(
+            "  services with no entry in `apps`: " + ", ".join(missing)
+        )
+    if orphaned:
+        lines.append(
+            "  `apps` entries with no service: " + ", ".join(orphaned)
+        )
+    lines.append(
+        "  `apps` is the only join the kernel can enforce — a pointer inside\n"
+        "  `services[].items` is NOT declarable as a relation (`relation_values`\n"
+        "  reads the top level), so an incomplete `apps` is the enforced relation\n"
+        "  being incomplete on purpose.\n"
+        "  Sellability is not the reason to leave one out: that lives in\n"
+        "  `App.requires_plan`, and an App without one is a container that runs\n"
+        "  and is not sold."
+    )
+    raise SolutionRecordError("\n".join(lines))
+
+
 # ── writing the record ───────────────────────────────────────────────────────
 
 
@@ -394,11 +473,17 @@ def upsert_solution(
     cost_on_app = app_is_the_deployment()
 
     with open_session(scope) as session:
-        # ⭐ The App goes FIRST, and the order is load-bearing: `services[].name`
-        # is a declared relation to `App`, so under DNA_REF_VALIDATION=enforce a
-        # Solution naming an App that does not exist yet is a refused write.
-        # Writing the deployment before the record that points at it is the only
-        # order in which both halves land.
+        # ⭐ The App goes FIRST, and the order is load-bearing — MORE so now that
+        # `apps[]` is the enforced relation and is populated on every write.
+        # `apps` resolves `to: App` `by: name` with `enforced = True`, so under
+        # DNA_REF_VALIDATION=enforce a Solution naming an App that does not
+        # exist yet is a REFUSED write, and this whole record fails. Writing the
+        # deployment before the record that points at it is the only order in
+        # which both halves land.
+        #
+        # ⚠️ Do not "tidy" this into one loop after the Solution write. The
+        # dangling pointer it would create is exactly what `enforced` exists to
+        # veto, and the veto is correct.
         if cost_on_app:
             for layer in layers:
                 app_doc = session.get_doc(APP_KIND, layer.name)
@@ -446,15 +531,52 @@ def upsert_solution(
             spec["description"] = description
         if repo:
             spec["repo"] = repo
-        # ⚠️ `apps` is NOT touched here. It means "the sellable Apps this
-        # solution delivers" and is the operator's list (`--app`, which REPLACES
-        # it wholesale — a partial list read as complete is worse than none).
-        # The service↔App join is `services[].name`, which the founder's
-        # decision made the declared relation; deriving `apps` from it as well
-        # would be the same fact in two lists, disagreeing on the first run that
-        # only touched one.
+        # ⭐ `apps` is the COMPLETE set of this solution's deployments, and it is
+        # populated here — accumulated over every recorded layer, not just this
+        # run's, so a record written before this existed heals on the next
+        # `record` instead of staying half-declared.
+        #
+        # ⚠️ It is not a "sellable subset", and there is no second list. `apps`
+        # is the ONLY declarable join: `relation_values` reads
+        # `spec.get(rel.name)` at the TOP LEVEL, so a pointer inside
+        # `services[].items` cannot be a relation — measured in #351, and its
+        # failure mode is the worst kind: declaring it lints green, reports
+        # `resolved/enforced = True/True`, and resolves NOTHING. A guard that
+        # says it is enforced and reads zero.
+        #
+        # Sellability needs no list of its own: it already has a house in
+        # `App.requires_plan`, which is optional. An App without one is a
+        # container that runs and is not sold — `worker` is exactly that.
+        #
+        # ⚠️ Gated on `cost_on_app`, and MEASURED rather than assumed. `apps` is
+        # enforced, so naming an App this run did not write is a dangling
+        # pointer — with DNA_REF_VALIDATION=warn the kernel says so and persists
+        # it anyway, and under `enforce` it refuses the whole record::
+        #
+        #     write vetoed for board/Solution/s: unresolved relation(s):
+        #     spec.apps → `api` (no App named `api` in scope `board`)
+        #
+        # So while the descriptor cannot hold the identity, `apps` is left
+        # alone — populating a relation whose targets do not exist is not a
+        # half-migration, it is a broken record.
+        if cost_on_app:
+            declared = list(spec.get("apps") or [])
+            for entry in services:
+                service = entry.get("name")
+                if service and service not in declared:
+                    declared.append(service)
+            if declared:
+                spec["apps"] = declared
         if apps is not None:
             spec["apps"] = list(apps)
+
+        # ⭐ The guard that makes ONE fact in two lists safe. The lists cannot be
+        # collapsed — `apps` is the only enforceable relation and `services[]` is
+        # the only place the ledger fits — so what stops them disagreeing is a
+        # check, DERIVED from both, that names both sides. It runs before the
+        # write, so an inconsistent record is never stored in the first place.
+        if spec.get("apps"):
+            _refuse_join_disagreement(name, spec)
         if existing is None:
             spec["criado_em"] = datetime.now(timezone.utc).isoformat()
             if author:

@@ -1491,7 +1491,10 @@ def list_(destination: Path, as_json: bool) -> None:
     multiple=True,
     metavar="NAME",
     help="An App this solution delivers. Repeatable. REPLACES the recorded list "
-    "when given, because a partial list read as complete is worse than none.",
+    "when given — and must then name EVERY recorded service: `apps` is the only "
+    "join the kernel can enforce, and an App IS a deployment. A list that leaves "
+    "one out is refused with both sides named. Rarely needed; the recorded "
+    "layers already fill it.",
 )
 @click.option(
     "--sleep-answer",

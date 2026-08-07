@@ -368,7 +368,7 @@ Founder decision, 07/08/2026, with the numbers on screen. A recorded run writes
 |---|---|---|
 | `name`, `answers_file`, `template{src,ref}`, `answers` | `Solution.services[]` | the **provenance of the render** — which template, at which ref, answering what |
 | `service_name`, `python_module`, `port`, `can_sleep` | the `App` | the **identity of the deployment** — readable across the fleet without opening a repo |
-| the join | `services[].name` = the App's `metadata.name` | the key already existed (it is what azd calls a service); nobody had declared it |
+| the join | `Solution.apps[]` — the COMPLETE set, the same names as `services[].name` | the only level at which a relation can be **declared** |
 
 `Solution.services[]` **stays a stored field**, and `required: [title,
 services]` stays with it. `dna solution` does not break.
@@ -400,11 +400,46 @@ declares `additionalProperties: false`, so writing an unknown field is a
 descriptor on every run, so the behaviour changes by itself the day the
 descriptor does, and nothing here needs re-running afterwards.
 
-⚠️ `Solution.apps[]` is **not** touched by a scaffolding run. It is the
-operator's list of the sellable Apps a solution delivers (`--app`, which
-replaces it wholesale); the service↔App join is `services[].name`. Deriving
-`apps` from it as well would be the same fact in two lists, disagreeing on the
-first run that only touched one.
+### ⚠️ Why the join is `apps[]`, and not `services[].name`
+
+`services[].name` is the same string as the App's `metadata.name` — it is what
+azd calls a service — so it *looks* like the natural place to declare the
+relation. **It cannot be declared there.** `relation_values` reads
+`spec.get(rel.name)`: top level, always. A pointer inside `services[].items` is
+out of reach, and the kernel even names the rule — `top_level_properties_only`.
+
+The failure mode is the worst kind, and it was measured (#351): declaring
+`relations: {services: {to: App}}` **lints green**, reports
+`resolved / enforced = True / True` — announcing that it vetoes bad writes —
+and `relation_values` returns `[]`. It reads nothing, resolves nothing, vetoes
+nothing. A guard that says it is enforced and is not.
+
+So `apps[]` is the join, and therefore it must be **complete**: an `apps` that
+listed only some of the deployments would be the system's one enforceable
+relation left incomplete on purpose.
+
+**Sellability does not need a second list.** It already has a house:
+`App.requires_plan`, which is optional. An App without one is a container that
+runs and is not sold — `worker` is exactly that.
+
+Two lists for one fact would still drift, so that is prevented by a mechanism
+rather than by leaving one empty: every write checks that `services[].name` and
+`apps[]` denote the same set, **derived from both sides**, and refuses with
+both sides named:
+
+```
+Solution 's' would be written with `apps` and `services[].name` disagreeing,
+and they denote the same things — an App IS a deployment.
+  services with no entry in `apps`: api
+  `apps` entries with no service: algum-outro
+```
+
+An **absent** `apps` is not a disagreement — that is the join simply not being
+declared, which the schema allows and §6-B measured as the common case. While
+the `App` descriptor has not moved, no App instance is written, so `apps` is
+left alone: populating an *enforced* relation whose targets do not exist is not
+half a migration, it is a broken record (the kernel says so —
+`unresolved relation(s): spec.apps → 'api' (no App named 'api')`).
 
 ---
 
