@@ -851,6 +851,34 @@ export class DnaClient {
     );
   }
 
+  /**
+   * RETIRE a memory — the lane `deleteMemory` refuses and names.
+   *
+   * A memory is never hard-deleted (`record.invalidate-only`): this stamps
+   * `valid_to` so it drops out of default recall, and the row stays —
+   * auditable and point-in-time reconstructable. Idempotent: an already
+   * retired memory keeps its ORIGINAL `valid_to`, so a retry finishes an
+   * interrupted edit instead of rewriting when it stopped being true.
+   *
+   * `supersededBy` records WHICH memory replaces this one, and is what turns
+   * an edit into one intent instead of two unrelated writes. The portal edits
+   * by writing the new memory FIRST and retiring the old one with this
+   * pointer — write-first on purpose, so the bad outcome is TWO memories,
+   * never zero.
+   */
+  async forgetMemory(
+    name: string,
+    opts?: ScopeTenant & { supersededBy?: string },
+  ) {
+    const { supersededBy, ...query } = opts ?? {};
+    return this.unwrap(
+      await this.raw.POST("/v1/memories/{name}/forget", {
+        params: { path: { name }, query: this.q(query) },
+        body: supersededBy ? { superseded_by: supersededBy } : undefined,
+      }),
+    );
+  }
+
   // ── intel (reads) ─────────────────────────────────────────────────────────
 
   /** List the tenant's watched IntelSource docs (the Direction stage). */

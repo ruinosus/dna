@@ -119,6 +119,7 @@ _COVERED: dict[tuple[str, str], str] = {
     ("POST", "/v1/memories"): "remember_memory",
     ("POST", "/v1/memories/import"): "import_memories",
     ("DELETE", "/v1/memories/{name}"): "delete_memory",
+    ("POST", "/v1/memories/{name}/forget"): "forget_memory",
     ("PATCH", "/v1/insights/{name}/state"): "set_insight_state",
     ("POST", "/v1/artifacts"): "register_artifact",
     ("POST", "/v1/projects"): "create_project",
