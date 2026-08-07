@@ -33,6 +33,7 @@ from dna_cli import (
     memory_cmd,
     new_cmd,
     recall_cmd,
+    rename_cmd,
     research_cmd,
     scope_cmd,
     sdlc_cmd,
@@ -76,6 +77,10 @@ def main() -> None:
 
 main.add_command(kind_cmd.kind)
 main.add_command(instance_cmd.instance)
+# Top-level, beside `instance`, and not `dna instance rename`: it is not one
+# instance's CRUD. It reads the whole registry, writes every referrer, and its
+# deliverable is the diff — the same reason `graph` is a group of its own.
+main.add_command(rename_cmd.rename)
 main.add_command(scope_cmd.scope)
 main.add_command(docs_cmd.docs_)
 main.add_command(sdlc_cmd.sdlc)

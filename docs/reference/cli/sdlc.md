@@ -967,6 +967,7 @@ dna sdlc feature ship [OPTIONS] NAME
 | `--force` | Mark done even when children Stories aren't all done. |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
+| `--serves` | Que Spec esta entrega SERVE (repetível): `Spec/<nome>`, `<nome>`, ou `none` para afirmar que não serve nenhuma. Grava a citação bidirecional (references ↔ cited_by) — que é de onde a execução da Spec é DERIVADA (i-117). |
 | `--summary` | One-line description (lands on the timeline event). |
 
 ### `dna sdlc feature show`
@@ -1365,6 +1366,7 @@ dna sdlc issue resolve [OPTIONS] NAME
 | `--help` | Show this message and exit. |
 | `--resolution` | How was it resolved? |
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
+| `--serves` | Que Spec esta entrega SERVE (repetível): `Spec/<nome>`, `<nome>`, ou `none` para afirmar que não serve nenhuma. Grava a citação bidirecional (references ↔ cited_by) — que é de onde a execução da Spec é DERIVADA (i-117). |
 
 ### `dna sdlc issue start`
 
@@ -2749,6 +2751,7 @@ dna sdlc story done [OPTIONS] NAME
 | `--no-narrate` | Silencia o warn de narração. |
 | `--note` | Narra esta transição (appenda comment inline na MESMA chamada). |
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
+| `--serves` | Que Spec esta entrega SERVE (repetível): `Spec/<nome>`, `<nome>`, ou `none` para afirmar que não serve nenhuma. Grava a citação bidirecional (references ↔ cited_by) — que é de onde a execução da Spec é DERIVADA (i-117). |
 | `--summary` | One-line description of what shipped (lands on the timeline event). |
 
 ### `dna sdlc story groom`

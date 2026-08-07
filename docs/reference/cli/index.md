@@ -31,5 +31,6 @@ These pages are **generated from the Click command definitions** by
 | [`dna memory`](memory.md) | Declarative memory over existing Kinds (remember/recall/forget/consolidate). |
 | [`dna new`](new.md) | Scaffold a valid Kind skeleton into a scope (agent \| soul \| guardrail \| tool). |
 | [`dna recall`](recall.md) | Hybrid semantic search (dense + lexical + RRF) over the scope's records. |
+| [`dna rename`](rename.md) | Rename an instance and repoint the AUTHORED references to it. |
 | [`dna search`](search.md) | Alias of ``dna recall`` (neutral naming). |
 | [`dna specify`](specify.md) | Bidirectional GitHub Spec Kit ↔ DNA bridge (import / export). |
