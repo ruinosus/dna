@@ -838,17 +838,29 @@ def test_a_gravacao_cria_um_App_por_camada_e_nenhum_services(
 def test_apps_e_uma_relacao_declarada_e_vazio_e_o_caso_comum(
     runner: CliRunner, template: Path, destination: Path, scope: str
 ) -> None:
-    """`apps` is optional, because the first real solution has none.
+    """`apps` is optional — and what fills it is exactly what changes.
 
     Measured in the spec (§6-B): *"o dna-cloud gera 9 serviços e nenhum App"*.
     A `required: [apps]` would be an obligation the first example already
-    violates.
+    violates, and that stays true: nothing here CREATES an App while a
+    `Solution` still owns the layers.
+
+    ⭐ Once `App` IS the service, that sentence inverts — a recorded layer IS
+    an App, so `apps` is populated by construction and the §6-B measurement
+    becomes a statement about the old world. Both readings are asserted,
+    selected off the live descriptor, so the day the sibling story lands this
+    test says the new true thing instead of going red on the old one.
     """
     generate(runner, template, destination, service_name="api")
     result = runner.invoke(solution, ["record", str(destination), "--solution", "s"])
 
     assert result.exit_code == 0, result.output
-    assert "apps" not in solution_spec("s")
+    if solution_kind.app_is_the_service():
+        assert solution_spec("s")["apps"] == ["api"], (
+            "a recorded layer IS an App now — the solution has to say it delivers it"
+        )
+    else:
+        assert "apps" not in solution_spec("s")
 
 
 def test_a_relacao_apps_aponta_para_App_por_nome_e_e_enforced() -> None:
