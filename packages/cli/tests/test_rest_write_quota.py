@@ -260,8 +260,21 @@ def test_token_pro_write_allowed_and_counted(dna_dir):
 
 
 def test_token_delete_is_a_gated_write(dna_dir):
-    """DELETE is the write face of the memory surface (the MCP twin is
-    ``forget``): Free-blocked with the doc intact, Pro-allowed."""
+    """DELETE is still the write face of the memory surface, and the plan gate
+    still runs on it FIRST — which is the only half of this test i-130 left
+    standing, and the half it was always about.
+
+    It used to end on ``Pro → 200``. It cannot: a memory is never hard-deleted
+    (``record.invalidate-only``), so the Pro call now passes the gate and is
+    refused by the KERNEL. Both endings are 403, which is exactly why the two
+    REASONS are asserted apart — *"your plan does not include this"* and
+    *"nobody deletes a memory, call forget"* are different facts with different
+    remedies, and a test that only counted the status would read them as the
+    same event.
+
+    Mutant: move ``_plan_gate`` after the refusal in the route. The Free case
+    starts reporting INVALIDATE-ONLY, a Free caller never learns their plan is
+    the reason, and the first assertion below goes red."""
     _seed_tiers(dna_dir)
     seeded = _seed_memory(dna_dir, "victim memory for delete gate", tenant=_WS)
     name = seeded["name"]
@@ -270,6 +283,11 @@ def test_token_delete_is_a_gated_write(dna_dir):
         r = c.delete(f"/v1/memories/{name}",
                      params={"scope": _SCOPE, "tenant": _WS}, headers=_auth())
         assert r.status_code == 403
+        assert "INVALIDATE-ONLY" not in r.json()["detail"], (
+            "the PLAN gate stopped this one, and it has to say so — a Free "
+            "caller told 'memories are immortal' would never learn the reason "
+            "was their plan"
+        )
         # The memory survived the refused delete.
         r = c.get("/v1/memories", params={"scope": _SCOPE, "tenant": _WS},
                   headers=_auth())
@@ -278,7 +296,15 @@ def test_token_delete_is_a_gated_write(dna_dir):
     with _token_client(dna_dir, store) as c:
         r = c.delete(f"/v1/memories/{name}",
                      params={"scope": _SCOPE, "tenant": _WS}, headers=_auth())
-        assert r.status_code == 200, r.text
+        assert r.status_code == 403, r.text
+        assert "INVALIDATE-ONLY" in r.json()["detail"], (
+            "Pro PASSES the plan gate — and then meets the Kind rule, which is "
+            "the same for every plan"
+        )
+        assert "forget" in r.json()["detail"]
+        r = c.get("/v1/memories", params={"scope": _SCOPE, "tenant": _WS},
+                  headers=_auth())
+        assert name in [m["name"] for m in r.json()["memories"]]
 
 
 def test_daily_cap_counts_writes_and_refuses_above_without_counting(dna_dir):

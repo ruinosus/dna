@@ -50,6 +50,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from dna.application.live import LiveDna
+from dna.kernel.errors import DeleteRefused
 from dna.kernel.etag import spec_etag
 from dna.kernel.kinds.registry import ports_in_scope
 from dna.memory.verbs import MEMORY_KINDS
@@ -242,12 +243,19 @@ def bootstrap_write_refusal(port: Any) -> str:
 TRAIT_APPEND_ONLY = "record.append-only"
 
 
-class DeleteRefused(PermissionError):
-    """A generic delete targeted a Kind that must not be deleted this way.
-
-    A ``PermissionError`` for the same reason :class:`BootstrapKindWriteRefused`
-    is: it is a policy refusal, not a bug and not a quota denial, and every face
-    already maps it to an honest client-facing denial."""
+# ``DeleteRefused`` — a delete targeted a Kind that must not be deleted this
+# way — used to be DECLARED right here and is now imported from
+# ``dna.kernel.errors`` (i-130) and re-exported through ``__all__``, so
+# ``D.DeleteRefused`` and ``from dna.application import DeleteRefused`` keep
+# resolving to the same class.
+#
+# It moved because the refusal stopped being a rule about this TOOL.
+# ``record.invalidate-only`` is enforced at the kernel chokepoint every door
+# crosses, and one verdict must not reach the caller as two exception types
+# depending on which door asked. The class kept its ``PermissionError`` base
+# (additive, never a re-parenting) and gained ``KernelRefusal`` — the family
+# for a verdict about the REQUEST, which is exactly what this is: the store
+# could have removed the row, and policy said no.
 
 
 def _port_traits(port: Any) -> frozenset[str]:
@@ -268,10 +276,10 @@ def is_append_only_kind(port: Any) -> bool:
 def delete_refusal(port: Any) -> str | None:
     """Why a generic DELETE of ``port``'s Kind is refused, or ``None``.
 
-    Two categories, and both refusals are DERIVED (from ``is_overlayable`` and
-    from a declared trait) rather than from a list of Kind names, so a Kind that
-    arrives later — including one a tenant declares in a ``.kind.yaml`` — is
-    covered on arrival rather than the next time somebody remembers.
+    Three categories, and every one of them is DERIVED (from ``is_overlayable``
+    and from a declared trait) rather than from a list of Kind names, so a Kind
+    that arrives later — including one a tenant declares in a ``.kind.yaml`` —
+    is covered on arrival rather than the next time somebody remembers.
 
     **1. Bootstrap Kinds** — Genome, LayerPolicy, KindDefinition. The generic
     write already refuses these because they declare what the scope IS. Delete
@@ -285,10 +293,21 @@ def delete_refusal(port: Any) -> str | None:
     what proves what happened. Deleting it is the first move of anyone with
     something to hide, and there is no "write a better one" for a fact.
 
-    Everything else is deletable, and deliberately so: a memory, a Story, a
-    Skill, a tenant's own instance are all things whose owner may legitimately
-    want gone, and a delete they cannot perform is a delete they will perform by
-    hand against the database."""
+    **3. Invalidate-only records** — the Engram (i-130). Reported here so
+    ``list_kinds`` says ``deletable: false`` with the reason BEFORE anybody
+    tries, and refused here so the generic tool never reaches the store. Unlike
+    the first two it is not enforced ONLY here: it is a promise about the row
+    rather than a rule about this tool, so the kernel refuses it at the
+    chokepoint every door crosses (:mod:`dna.kernel.write.hard_delete`). This
+    call is the early, catalogued half of the same verdict — same trait, same
+    message, same exception type.
+
+    ⚠️ This line said "everything else is deletable" and then measured itself
+    wrong: the sentence was true of a memory too, and a memory promises the
+    opposite in its own descriptor. Everything else really is deletable, and
+    deliberately so — a Story, a Skill, a tenant's own instance are all things
+    whose owner may legitimately want gone, and a delete they cannot perform is
+    a delete they will perform by hand against the database."""
     if port is None:
         return None
     if is_bootstrap_kind(port):
@@ -310,7 +329,9 @@ def delete_refusal(port: Any) -> str | None:
             f"something to hide, and unlike a bad write there is no better "
             f"version to replace it with. Supersede it with a new record."
         )
-    return None
+    from dna.kernel.write.hard_delete import hard_delete_refusal
+
+    return hard_delete_refusal(port)
 
 
 # ── the metering family, derived from the Kind ──────────────────────────────

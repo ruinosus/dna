@@ -124,7 +124,14 @@ flowchart LR
   search plane uses — so a memory phrased differently from the cue still
   surfaces. Auto by default (`--semantic/--no-semantic`); with no provider
   the ranking is exactly the base one, offline-first.
-- **`forget`** *demotes*, never deletes (see bi-temporality below).
+- **`forget`** *demotes*, never deletes (see bi-temporality below) — and it is
+  the **only** way to retire a memory. An `Engram` declares
+  `record.invalidate-only`, so a hard delete is refused at the kernel and
+  therefore at every door (the generic `delete_instance` tool,
+  `DELETE /v1/memories/{name}`, the CLI), with the refusal naming `forget`.
+  That refusal is what makes the bi-temporal guarantee below true rather than
+  merely intended: until i-130 a generic delete removed the row *and its
+  version history*, leaving an `as_of` read nothing to reconstruct from.
 - **`consolidate`** is a deterministic decay pass: recompute retention,
   report — or with `--apply`, soft-forget — memories that have gone stale.
   `--dry-run` previews the whole pass with zero effect: one action per memory

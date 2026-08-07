@@ -508,16 +508,21 @@ def register_instance_tools(
         matters more here than on a write: a write that races loses one edit, a
         delete that races destroys an instance its author never saw.
 
-        Two Kinds of thing are NEVER deletable here, and ``list_kinds`` reports
-        both per Kind (``deletable`` / ``delete_refusal``) so you can see it
-        before you try:
+        Three Kinds of thing are NEVER deletable here, and ``list_kinds``
+        reports all three per Kind (``deletable`` / ``delete_refusal``) so you
+        can see it before you try:
 
         * BOOTSTRAP Kinds (Genome / LayerPolicy / KindDefinition) — deleting one
           is worse than writing a bad one, because a bad Genome is fixed by
           writing a better Genome while deleting a KindDefinition orphans every
           instance of that Kind with nothing left to name them;
         * APPEND-ONLY records (AuditLog / Evidence / WorkflowEvent) — the record
-          is the evidence of what happened; supersede it, never delete it.
+          is the evidence of what happened; supersede it, never delete it;
+        * INVALIDATE-ONLY records (Engram) — a memory is retired by stamping the
+          end of its world-time validity, never by removing the row, so it stays
+          auditable and revivable. Call ``forget`` instead: it drops the memory
+          out of recall and leaves the instance in place. This one is refused by
+          the KERNEL rather than by this tool, so no door hard-deletes it.
 
         An instance that is not there is an ERROR, not a quiet success: reporting
         success for a delete that did nothing is how a caller convinces itself
