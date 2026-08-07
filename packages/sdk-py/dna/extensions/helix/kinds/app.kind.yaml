@@ -48,14 +48,13 @@
 # deployments distintos, variáveis distintas, e potencialmente `can_sleep`
 # distinto. Daí a cardinalidade que os campos abaixo declaram:
 #
-#   • `service_name` e `python_module` são fatos sobre o CÓDIGO. Vários Apps
-#     legitimamente compartilham os dois. `service_name` NÃO é a identidade do
-#     App.
+#   • `service_name` é um fato sobre o CÓDIGO. Vários Apps legitimamente
+#     compartilham um. `service_name` NÃO é a identidade do App.
 #   • `metadata.name` da instância É a identidade — o deployment (`mcp-entra`).
-#   • `port` e `can_sleep` são fatos sobre O DEPLOYMENT, por App e nunca por
-#     diretório: dois Apps sobre a mesma imagem podem responder diferente à
-#     pergunta de custo, e um esquema que os prendesse ao diretório escolheria
-#     por eles a resposta errada em pelo menos um dos dois.
+#   • `port`, `ingress` e `can_sleep` são fatos sobre O DEPLOYMENT, por App e
+#     nunca por diretório: dois Apps sobre a mesma imagem podem responder
+#     diferente à pergunta de custo, e um esquema que os prendesse ao diretório
+#     escolheria por eles a resposta errada em pelo menos um dos dois.
 #
 # Isto não inventa desenho: o `azure.yaml` já pratica exatamente isso — a chave
 # do serviço é o deployment e `docker.path` aponta o Dockerfile, com vários
@@ -70,7 +69,7 @@
 # do template, não deste Kind, e está registrada aqui porque é onde alguém vai
 # procurar quando as duas leituras divergirem.
 #
-# Os quatro nascem OPCIONAIS, e isso é medido, não cortesia: há 2 instâncias de
+# Eles nascem OPCIONAIS, e isso é medido, não cortesia: há 2 instâncias de
 # `App` vivas e nenhuma delas respondeu essas perguntas. Um `required` as
 # tornaria inválidas no dia da migração, o que é a forma de erro que esta casa
 # mais caro paga — a declaração passa a recusar exatamente o dado que ela
@@ -97,6 +96,124 @@
 # contêiner existe antes do que vive dentro dele. É a mesma razão pela qual
 # `runs_in` nasceu opcional do lado do `Copilot`: nos dois casos o vínculo é
 # real e chega DEPOIS da coisa que o carrega.
+#
+# ── ⭐ 07/08/2026: A RÉGUA — o que é FIAÇÃO mora aqui; o que é RENDER mora no
+#    `answers` (`Spec/spec-campo-opcional-por-evidencia`) ────────────────────
+#
+# A pergunta que decide em que Kind um campo de stack entra, e ela é mecânica:
+#
+#   ⭐ **O `App` carrega o que a FIAÇÃO precisa. O `Solution.services[].answers`
+#     carrega o que o TEMPLATE precisa.**
+#
+# O teste, reproduzível: cada campo do `templates/app-container/copier.yml`
+# aparece em algum dos TRÊS fragmentos de fiação (`wiring/compose.fragment.yml`,
+# `wiring/azure.service.yaml`, `wiring/containerapp.bicep`)? Medido em
+# 07/08/2026, e a coluna "fiação" é a que decide:
+#
+#     campo            fiação  código   veredito
+#     service_name          3       7   fato de deployment
+#     container_port        2       3   fato de deployment
+#     identity              2       3   fato de deployment
+#     env_prefix            2       2   fato de deployment
+#     ingress               1       0   fato de deployment
+#     can_sleep             1       0   fato de deployment
+#     max_replicas          1       0   fato de deployment
+#     graph_obo             1       2   fato de deployment
+#     python_module         0       4   ← SÓ RESPOSTA DE RENDER
+#     description           0       3   ← só resposta de render
+#     dna_floor/ceiling     0       1   ← só resposta de render
+#
+# Um campo com ZERO usos na fiação não descreve o deployment: ele só diz ao
+# template o que escrever no disco uma vez. Ele não tem o que fazer aqui.
+#
+# ⚠️ **`python_module` SAIU deste Kind por esta régua**, em 07/08/2026. Ele
+# nomeia o diretório que o template Python cria sob `src/` e não aparece em uma
+# única linha de fiação. Desceu para `Solution.services[].answers`, onde o
+# vocabulário do template já mora livre e verbatim
+# (`additionalProperties: true`, nenhuma chave obrigatória — exatamente para
+# isto).
+#
+# ⭐ E o ganho é maior que a arrumação, porque some uma LACUNA em vez de ser
+# tolerada: o `portal` do dna-cloud é **Next.js**, e agora ele cabe **sem
+# exceção nenhuma** — não responde uma pergunta que o Kind deixou de fazer.
+# A primeira versão desta story ia torná-lo opcional e declarar "não se aplica"
+# para o `portal`; era tratar sintoma. O campo não estava faltando, estava na
+# CASA ERRADA. Pela mesma régua, um template Node perguntaria `package_name` e
+# um Go perguntaria `module_path`, e este Kind não muda nem uma linha — que é o
+# teste de que a régua é a certa.
+#
+# ── ⭐ Um campo vira opcional por EVIDÊNCIA, e quem cobra é o relatório ───────
+#
+# `Spec/spec-campo-opcional-por-evidencia`, decidida pelo founder depois de o
+# dogfood do dna-cloud (`ruinosus/dna-cloud#370`) medir os nove serviços reais.
+# **O schema impede besteira; a completude é um relatório.** E a regra que
+# impede a segunda metade de virar frouxidão:
+#
+#   ⭐ Um campo vira opcional quando a REALIDADE apresenta um caso legítimo,
+#     NUNCA por conveniência. É o dogfood que produz essa evidência.
+#
+# Aplicada, com a evidência escrita na `description` de cada campo — sem ela um
+# `optional` é convite para alguém "arrumar" de volta, ou para o próximo campo
+# virar opcional sem evidência nenhuma:
+#
+#     port          opcional    ← o `worker` não atende: `ingress: none`
+#     service_name  INALTERADO  ← 3 usos na fiação, e saiu limpo nos NOVE
+#     can_sleep     opcional    ← é o modelo que os outros copiam
+#
+# ⚠️ Medido antes de editar, e o resultado contraria a spec: estes JÁ eram
+# opcionais quando a story abriu — `required: [title]` desde
+# `spec-app-e-o-servico`, por uma razão diferente e igualmente medida (as 2
+# instâncias de `App` vivas são anteriores aos campos). A spec pedia uma
+# mudança de `required` que já estava feita, e ela própria registra que "os
+# nove Apps passam contra o descritor; só a `Solution` fica". O que faltava
+# neste arquivo era a EVIDÊNCIA escrita, não a opcionalidade.
+#
+# ── ⭐ "Não se aplica" tem de ser DECLARÁVEL — e aqui ele é um FATO, não um
+#    mecanismo (medido antes de construir) ────────────────────────────────────
+#
+# A condição da spec continua valendo: um campo vazio significa duas coisas
+# OPOSTAS — *a pergunta não se aplica* e *ninguém respondeu* — e um relatório
+# que não as separa fala de tudo. Um relatório que fala de tudo ninguém lê, e
+# aí ele é PIOR que a recusa, porque dá a sensação de que alguém está olhando.
+#
+# ⚠️ O que mudou é o TAMANHO do problema, e a medição é o que decidiu o
+# desenho. Com `python_module` fora deste Kind, restou **UM** caso em nove
+# serviços: o `worker` sem `port`. Um caso não paga um mecanismo genérico.
+#
+# A primeira versão desta story construiu esse mecanismo — um campo irmão
+# `not_applicable: [<campo>]` com `enum` e a contradição recusada por `allOf`.
+# Ele funcionava, e foi RETIRADO por não ter mais o que fazer. Fica o registro
+# do que a busca achou, porque isso não se refaz de graça: no kernel NÃO havia
+# convenção nenhuma para reusar (`grep -rn "applicable|absent|unanswered"` em
+# `dna/kernel/` não devolve mecanismo; nenhum dos treze `CORE_TRAITS` descreve
+# isto), e fora existe prior art com a mesma FORMA — o `dataAbsentReason` do
+# HL7 FHIR, uma estrutura IRMÃ que registra por que o valor falta, separando
+# `not-applicable` de `not-asked` (`gh api "search/code?q=dataAbsentReason"`:
+# FluxNotes, eRP-FD, hyper-medic). Se um segundo caso aparecer, é essa a forma
+# a adotar — e a razão de NÃO ser uma sentinela no próprio campo continua de
+# pé: `null` já está ocupado com o significado CONTRÁRIO, porque
+# `unanswered_cost_question` lista `can_sleep: null` entre os estados que conta
+# como "não respondeu".
+#
+# ⭐ O que entrou no lugar é melhor que o mecanismo, e por uma razão de
+# modelagem: **o `worker` não é "um App cuja porta não se aplica" — é um App
+# que NÃO ATENDE.** Esse é o fato; a porta ausente é CONSEQUÊNCIA dele. O campo
+# `ingress` diz o fato (e `ingress` tem 1 uso na fiação, então ele mora aqui
+# pela régua acima), e `ingress: none` responde a pergunta da porta sem que
+# ninguém precise adivinhar. Continua sendo uma RESPOSTA DECLARADA — não uma
+# inferência pelo formato, que é justamente do que esta decisão está saindo:
+# um humano escreve `ingress: none`, e "sem porta" segue disso por definição,
+# porque `port` É o `targetPort` do ingress.
+#
+# ⚠️ E é IMPOSTO, senão seria decoração: o `allOf` no fim do schema recusa
+# `ingress: none` junto com um `port`. "Não atende" e "atende na 8080" não
+# podem ser ambas verdade.
+#
+# ⚠️ Ponta do TEMPLATE, registrada aqui porque é onde alguém vai procurar: o
+# `copier.yml` pergunta `ingress` com `choices: [internal, external]` e **não
+# tem o valor `none`** — ele emite sempre um bloco de ingress com `targetPort`.
+# Ou seja, o `worker` do dna-cloud NÃO é representável pelo template hoje. O
+# Kind representa; o template ainda não. É uma ponta dele, não deste arquivo.
 #
 # ⛔ O que NÃO entrou, e por quê: as RESPOSTAS do Copier (`answers`,
 # `answers_file`, `template.src/ref`). Elas continuam na `Solution`, que é o
@@ -137,21 +254,40 @@ spec:
     shopfront OVER copilots; it is the container now, and a container exists
     before what lives inside it.
     Since ``spec-app-e-o-servico`` (2026-08-07) an App is also THE SERVICE
-    that runs it — one deployment, identified by ``metadata.name``. Two of the
-    four new fields describe the CODE and are shared by sibling Apps
+    that runs it — one deployment, identified by ``metadata.name``. One of
+    those fields describes the CODE and is shared by sibling Apps
     (``service_name``, the ``apps/<name>/`` directory — the same axis
-    ``Solution.services[].name`` addresses — and ``python_module``); two
-    describe the DEPLOYMENT and are per App (``port``, the in-container
-    ``targetPort``, and ``can_sleep``). Code to deployment is 1:N, measured:
+    ``Solution.services[].name`` addresses); the others describe the
+    DEPLOYMENT and are per App (``port``, the in-container ``targetPort``,
+    ``ingress`` and ``can_sleep``). Code to deployment is 1:N, measured:
     dna-cloud runs 9 deployable services over 4 ``apps/`` directories, and
     ``apps/mcp/`` alone serves ``mcp``/``mcp-entra``/``mcp-ws`` — same image,
-    same port, different identity authority. All four optional, because the 2
+    same port, different identity authority. All optional, because the 2
     live Apps predate them. ``can_sleep`` is the one that pays for the change: a
     container app that cannot sleep carries a fixed replica at ~US$ 90/month
     forever (measured — the dna-cloud ``copilot`` service was US$ 94,43 of a
     US$ 230,29 bill), and until now no declaration anywhere answered that
     question. Absent is never a presumed ``true``: it means the cost question
     was never asked, which is a finding to report.
+    ``spec-campo-opcional-por-evidencia`` (2026-08-07) added the RULER that
+    decides which Kind a stack field belongs to, and it is mechanical: the App
+    carries what the WIRING needs; ``Solution.services[].answers`` carries what
+    the TEMPLATE needs. Measured against the three wiring fragments of
+    ``templates/app-container``, ``python_module`` appears in ZERO of them (and
+    in 4 code files), so it was REMOVED from this Kind and lives in ``answers``
+    with the rest of the template vocabulary — which is what makes dna-cloud's
+    Next.js ``portal`` fit with no exception at all, and what lets a Node
+    template ask ``package_name`` without this Kind changing a line.
+    By the same measurement ``ingress`` (1 wiring use) belongs here, and it is
+    what makes an absent ``port`` an ANSWER rather than a gap: dna-cloud's
+    ``worker`` is not "an App whose port does not apply", it is an App that
+    does not serve — ``ingress: none``, from which no port follows by
+    definition. Declaring both is a contradiction and is refused at write time.
+    A generic "not applicable" mechanism was built first and then removed: once
+    ``python_module`` left, exactly ONE case remained across nine services, and
+    one case does not pay for a mechanism. The same spec also made a field
+    loosen only when REALITY presents a legitimate case, never for convenience,
+    with the evidence written in that field's ``description``.
   relations:
     copilots:
       to: Copilot
@@ -217,18 +353,40 @@ spec:
           Ausente significa que este App ainda não diz de que código roda — um
           fato a reportar, nunca um nome a adivinhar a partir do
           `metadata.name`, que para 8 dos 9 serviços acima daria o nome errado.
-      python_module:
+          ⭐ EVIDÊNCIA (`spec-campo-opcional-por-evidencia`, 07/08/2026): este
+          campo foi o único que o dogfood NÃO afrouxou, e é um fato de
+          DEPLOYMENT pela régua do cabeçalho — 3 usos na fiação, o maior de
+          todos. Ele saiu limpo nos NOVE serviços do dna-cloud: todo deployment
+          real nasceu de um diretório `apps/<nome>/`, e nada na medição indica
+          que possa faltar nem que possa "não se aplicar". Ele segue opcional
+          pela razão de `spec-app-e-o-servico` (as 2 instâncias de `App` vivas
+          são anteriores ao campo), não por evidência nova.
+      # ⛔ `python_module` NÃO mora aqui — retirado em 07/08/2026 pela régua
+      # fiação-vs-render do cabeçalho: ZERO usos nos três fragmentos de fiação,
+      # 4 no código gerado. Ele é resposta de RENDER, e vive em
+      # `Solution.services[].answers`, verbatim, com o resto do vocabulário do
+      # template. É o que faz o `portal` (Next.js) caber sem exceção nenhuma.
+      ingress:
         type: string
-        pattern: "^[a-z_][a-z0-9_]*$"
+        enum: [external, internal, none]
         description: >-
-          O pacote Python sob `src/` que este App importa — a resposta
-          `python_module` do template. Um identificador Python (minúsculas,
-          dígitos, underscore). Fato sobre o CÓDIGO, como `service_name`, e
-          portanto igual entre os Apps que compartilham o diretório: os três
-          Apps de `apps/mcp/` importam o mesmo módulo e diferem só no ambiente.
-          Não é derivável de `service_name` por substituição de traço por
-          underscore sem adivinhar, porque o template pergunta as duas coisas
-          separadamente e um repo real pode responder diferente.
+          Quem alcança este App. `external` = de fora do ambiente; `internal` =
+          só de dentro dele; `none` = **não atende ninguém**. Fato sobre o
+          DEPLOYMENT (1 uso na fiação, 0 no código gerado), e por isso mora
+          aqui e não no `answers`.
+          ⭐ `none` é o que torna a porta ausente uma RESPOSTA e não uma
+          lacuna, e é a evidência do `worker` do dna-cloud: ele escala por KEDA
+          sobre a fila e não serve ninguém. O fato é que ele NÃO ATENDE; a
+          porta ausente é CONSEQUÊNCIA disso, por definição, já que `port` É o
+          `targetPort` do ingress. Declarar aqui é uma resposta de humano — não
+          a inferência pelo formato de que esta decisão está saindo.
+          ⛔ `ingress: none` COM um `port` é contradição, e é recusado na
+          gravação (`allOf` abaixo).
+          ⚠️ Ponta do template, não deste Kind: o `copier.yml` oferece só
+          `internal|external` e emite sempre um bloco de ingress com
+          `targetPort` — o `worker` não é gerável por ele hoje.
+          Ausente significa que ninguém disse quem alcança este App; é um fato
+          a reportar, nunca um `internal` presumido.
       port:
         type: integer
         minimum: 1
@@ -249,6 +407,18 @@ spec:
           Declarada e não presumida porque o default de um framework não é um
           compromisso — o `dna.runtime` serve numa porta, o `dna api serve` em
           outra, e quem lê a frota precisa saber qual sem abrir o Dockerfile.
+          ⭐ EVIDÊNCIA para ser OPCIONAL (`spec-campo-opcional-por-evidencia`,
+          07/08/2026): o `worker` do dna-cloud NÃO ATENDE, de propósito — ele
+          escala por KEDA sobre a fila. "Uma porta que ninguém chama é só uma
+          porta aberta": declarar uma aqui não descreveria o worker, abriria
+          superfície que ele foi desenhado para não ter. Medido no dogfood dos
+          nove serviços reais (`ruinosus/dna-cloud#370`).
+          ⚠️ E a ausência SOZINHA não basta, porque diz duas coisas opostas.
+          Quem a desambigua é `ingress`, e não um mecanismo genérico: o
+          `worker` declara `ingress: none`, e aí não ter porta é RESPOSTA — a
+          contradição de declarar as duas coisas é recusada na gravação. Um App
+          com `ingress: external` e sem `port` é o outro caso, e esse segue
+          cobrado pelo relatório, toda execução.
       can_sleep:
         type: boolean
         description: >-
@@ -271,6 +441,28 @@ spec:
           pergunta de custo, e isso é um achado a reportar - jamais um `true`
           presumido - porque presumir o lado barato esconde exatamente a
           réplica que ninguém decidiu.
+    allOf:
+      # ⚠️ "Não atende" é uma RESPOSTA, e ela tem de ser IMPOSTA — senão
+      # `ingress: none` seria decoração: daria para declarar que o App não
+      # atende E dizer em que porta ele atende, no mesmo doc, e o relatório
+      # teria de escolher em qual das duas afirmações acreditar.
+      #
+      # Esta é a ÚNICA cláusula, e isso é medido, não economia: depois que
+      # `python_module` saiu do Kind pela régua fiação-vs-render, restou UM
+      # caso de "a pergunta não se aplica" em nove serviços — o `worker` sem
+      # porta. Um caso não paga um mecanismo genérico de "não se aplica", e
+      # paga muito bem o campo de domínio que nomeia o FATO (`ingress`) do qual
+      # a porta ausente é consequência. Ver o cabeçalho.
+      #
+      # Draft 2020-12 (`kernel/kinds/schema.py` valida com
+      # `Draft202012Validator`), então `if`/`then` estão disponíveis — nada
+      # aqui depende de extensão nossa.
+      - if:
+          properties:
+            ingress: {const: none}
+          required: [ingress]
+        then:
+          not: {required: [port]}
   display_label: App
   ascii_icon: "▦"
   presentation:

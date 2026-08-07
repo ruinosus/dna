@@ -62,21 +62,24 @@ def _copilot(**extra) -> dict:
     }
 
 
-# ── App: os quatro campos do serviço ─────────────────────────────────────────
+# ── App: os campos do serviço ────────────────────────────────────────────────
 
 
 @pytest.mark.asyncio
-async def test_app_grava_e_rele_os_quatro_campos_do_servico(kernel):
+async def test_app_grava_e_rele_os_campos_do_servico(kernel):
     """Round-trip pela porta. `additionalProperties: false` no schema do App
     significa que este teste NÃO passaria com os campos ausentes: a escrita
-    seria recusada antes de haver o que reler."""
+    seria recusada antes de haver o que reler.
+
+    ⚠️ `python_module` saiu daqui em 07/08/2026 (`spec-campo-opcional-por-
+    evidencia`): ele tem ZERO usos na fiação do template, é resposta de RENDER,
+    e mora em `Solution.services[].answers`."""
     await kernel.write_instance(
         "frota", "App", "mcp-entra",
-        _app(service_name="mcp", python_module="dna_mcp", port=8080, can_sleep=True),
+        _app(service_name="mcp", port=8080, can_sleep=True),
     )
     lido = (await kernel.get_instance("frota", "App", "mcp-entra"))["spec"]
     assert lido["service_name"] == "mcp"
-    assert lido["python_module"] == "dna_mcp"
     assert lido["port"] == 8080
     assert lido["can_sleep"] is True
 
@@ -124,8 +127,11 @@ def test_os_quatro_campos_do_servico_sao_opcionais():
     app = _helix_descriptor("app")
     assert app["spec"]["schema"]["required"] == ["title"]
     assert "minItems" not in app["spec"]["schema"]["properties"]["copilots"]
-    for campo in ("service_name", "python_module", "port", "can_sleep"):
+    for campo in ("service_name", "port", "can_sleep", "ingress"):
         assert campo in app["spec"]["schema"]["properties"]
+    # e `python_module` NÃO é mais um deles — ver
+    # `test_campos_opcionais_por_evidencia.py`.
+    assert "python_module" not in app["spec"]["schema"]["properties"]
 
 
 @pytest.mark.asyncio
@@ -143,7 +149,6 @@ async def test_o_app_do_servico_gerado_grava_sem_copiloto_nenhum(kernel):
         "spec": {
             "title": "worker",
             "service_name": "copilot",
-            "python_module": "dna_copilot",
             "port": 8080,
             "can_sleep": True,
         },
@@ -154,9 +159,9 @@ async def test_o_app_do_servico_gerado_grava_sem_copiloto_nenhum(kernel):
     assert lido["can_sleep"] is True
 
 
-def test_service_name_e_python_module_recusam_valor_fora_do_padrao():
-    """A asserção que prova que o `pattern` é VIVO e não decoração: sem ele os
-    dois casos abaixo passariam, e o erro só apareceria no `azd up`."""
+def test_service_name_recusa_valor_fora_do_padrao():
+    """A asserção que prova que o `pattern` é VIVO e não decoração: sem ele o
+    caso abaixo passaria, e o erro só apareceria no `azd up`."""
     import jsonschema
 
     schema = _helix_descriptor("app")["spec"]["schema"]
@@ -164,12 +169,9 @@ def test_service_name_e_python_module_recusam_valor_fora_do_padrao():
 
     with pytest.raises(jsonschema.ValidationError):
         jsonschema.validate({**base, "service_name": "MCP Entra"}, schema)
-    with pytest.raises(jsonschema.ValidationError):
-        jsonschema.validate({**base, "python_module": "dna-mcp"}, schema)
     # e o valor legítimo continua passando — senão o teste acima mediria só
     # que o schema recusa tudo.
-    jsonschema.validate({**base, "service_name": "mcp-entra",
-                         "python_module": "dna_mcp"}, schema)
+    jsonschema.validate({**base, "service_name": "mcp-entra"}, schema)
 
 
 def test_can_sleep_documenta_a_conta_de_90_dolares():

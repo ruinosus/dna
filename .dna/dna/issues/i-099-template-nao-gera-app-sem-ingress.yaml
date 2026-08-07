@@ -1,0 +1,86 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: 2m3lrxgppom5
+  name: i-099-template-nao-gera-app-sem-ingress
+spec:
+  title: 'O template não gera um App com ingress: none — declarável e não gerável'
+  description: |-
+    O Kind `App` aceita `ingress: none` (um App que NÃO ATENDE — o nosso `worker` é um) desde o
+    PR #355. O template `app-container` não. Resultado: um App declarável que o template não
+    consegue produzir.
+
+    MEDIDO em 07/08/2026 pelo agente do #355, que recusou fazer junto — e a razão de recusar é
+    melhor que o conflito: o próprio `copier.yml` do #353 escreve que "the question names are the
+    App Kind's FIELD names, deliberately — a declared App and a rendered tree are two views of one
+    fact rather than two vocabularies". `ingress: none` É essa tese. Fechar a assimetria é
+    literalmente "o template passa a falar App", que é o título do #353.
+
+    ## Já especificado — ~6 linhas sobre o #353 merjado
+
+    1. `copier.yml`: `choices: ["internal", "external", "none"]`
+    2. `copier.yml`: gate `port` com `when: "{{ ingress != 'none' }}"` — mesmo padrão do `graph_obo`
+    3. `wiring/containerapp.bicep.jinja`: envolver o bloco `ingress: { ... }` em `{%- if ingress != 'none' %}`
+    4. `wiring/compose.fragment.yml.jinja`: idem para `ports:` e `_PORT`
+
+    ## ⚠️ Duas coisas para quem pegar
+
+    - O item 2 cria um NOVO answer gated, e o próprio `copier.yml` documenta que gated answer é
+      apagado e volta como DEFAULT, não como o que o humano respondeu. É aceitável porque
+      `Solution.services[].answers` existe justamente para sobreviver a isso — mas tem de ser
+      DITO, não descoberto.
+    - Os goldens NÃO mudam: o default segue `internal`, então nenhum dos três casos existentes
+      renderiza diferente. A mudança é aditiva e invisível — o que a torna barata.
+
+    ## Por que isso não pode ficar em silêncio
+
+    "Declarável mas não gerável" é a classe de assimetria que fica anos. Está escrita no
+    `app.kind.yaml` como ponta, e agora aqui com o gatilho: quem gerar um serviço que não atende
+    descobre na hora.
+  type: task
+  severity: medium
+  status: open
+  created_at: '2026-08-07T21:13:10+00:00'
+  updated_at: '2026-08-07T21:13:10+00:00'
+  timeline:
+  - at: '2026-08-07T21:13:10+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-08-07T21:13:12+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      O Kind `App` aceita `ingress: none` (um App que NÃO ATENDE — o nosso `worker` é um) desde o
+      PR #355. O template `app-container` não. Resultado: um App declarável que o template não
+      consegue produzir.
+
+      MEDIDO em 07/08/2026 pelo agente do #355, que recusou fazer junto — e a razão de recusar é
+      melhor que o conflito: o próprio `copier.yml` do #353 escreve que "the question names are the
+      App Kind's FIELD names, deliberately — a declared App and a rendered tree are two views of one
+      fact rather than two vocabularies". `ingress: none` É essa tese. Fechar a assimetria é
+      literalmente "o template passa a falar App", que é o título do #353.
+
+      ## Já especificado — ~6 linhas sobre o #353 merjado
+
+      1. `copier.yml`: `choices: ["internal", "external", "none"]`
+      2. `copier.yml`: gate `port` com `when: "{{ ingress != 'none' }}"` — mesmo padrão do `graph_obo`
+      3. `wiring/containerapp.bicep.jinja`: envolver o bloco `ingress: { ... }` em `{%- if ingress != 'none' %}`
+      4. `wiring/compose.fragment.yml.jinja`: idem para `ports:` e `_PORT`
+
+      ## ⚠️ Duas coisas para quem pegar
+
+      - O item 2 cria um NOVO answer gated, e o próprio `copier.yml` documenta que gated answer é
+        apagado e volta como DEFAULT, não como o que o humano respondeu. É aceitável porque
+        `Solution.services[].answers` existe justamente para sobreviver a isso — mas tem de ser
+        DITO, não descoberto.
+      - Os goldens NÃO mudam: o default segue `internal`, então nenhum dos três casos existentes
+        renderiza diferente. A mudança é aditiva e invisível — o que a torna barata.
+
+      ## Por que isso não pode ficar em silêncio
+
+      "Declarável mas não gerável" é a classe de assimetria que fica anos. Está escrita no
+      `app.kind.yaml` como ponta, e agora aqui com o gatilho: quem gerar um serviço que não atende
+      descobre na hora.
