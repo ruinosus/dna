@@ -69,9 +69,15 @@ def declared_pairs(kernel: Any) -> list[tuple[str, str]]:
     degree is that the graph is made of declarations rather than of opinions.
 
     Filtered to ``Relation.resolved`` for the same reason the write path is:
-    a relation addressed by a target spec field or carrying its Kind in the
-    value produces no edge on write, so scanning for its instances here would
-    read a column nothing would ever fill.
+    a relation whose value carries its own Kind produces no edge on write, so
+    scanning for its instances here would fill a column nothing reads.
+
+    ⚠️ That filter GREW in fatia 5 without a line of this function changing,
+    and the growth is exactly what deriving buys over enumerating: ``resolved``
+    now admits ``by: <key>`` relations, so their (Kind, field) pairs enrol
+    themselves here and the backfill reaches instances written before the
+    resolver existed. A hand-kept list would have gone on scanning the old
+    pairs while reporting success.
     """
     from dna.kernel.kinds.relations import relations_of
 
@@ -165,6 +171,12 @@ async def backfill_edges(
             getter=kernel.get_instance,
             port_for=kernel.kind_port_for,
             local_getter=getattr(kernel, "get_instance_local", None),
+            # Without this the backfill would resolve the by-NAME half of an
+            # instance and record every `by: <key>` value as ``unsupported`` —
+            # a graph that is complete for one addressing and blank for the
+            # other, which is worse than not backfilling at all because it
+            # LOOKS finished.
+            key_getter=getattr(kernel, "find_instance_by_key", None),
         )
         if not complete:
             # Same refusal as the write path: a partial edge set stored as

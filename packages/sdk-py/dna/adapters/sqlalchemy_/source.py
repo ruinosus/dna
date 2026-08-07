@@ -107,6 +107,14 @@ _PG_NUMERIC_RE = r"^-?[0-9]+(\.[0-9]+)?$"
 # trusted-config-only, never request input.
 _VALID_SCHEMA_IDENT = re.compile(r"^[a-z_][a-z0-9_]*$")
 
+#: A relation's ``by: <key>`` reaches a JSON PATH on the SQLite leg
+#: (``$.spec.<key>``), which is string-built and cannot be a bind parameter.
+#: ``normalize_relations`` already refuses anything but an identifier when the
+#: Kind LOADS — this is the same rule restated at the door that actually builds
+#: the expression, because a guard that only runs at the far door is one an
+#: unusual caller walks around, and this method is public on the adapter.
+_SPEC_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
 #: ``bundle_entries`` PK — identical on both dialects (revision 0003 added
 #: ``api_version``; a bundle entry belongs to an instance, hence to its Kind).
 _BUNDLE_CONFLICT_COLS = [
@@ -301,6 +309,20 @@ class SqlAlchemySource(WritableSourcePort):
         # that probed the method would certify a declaration that lies. Same
         # shape, same reason, as ``supports_cross_process_invalidation`` above.
         self.supports_valid_time = self._is_pg
+        # [dialect] BOTH bindings can find an instance by a spec KEY; only
+        # Postgres does it through an index. ``dna_insts_spec_gin_idx`` (baseline
+        # revision 0001, a GIN over ``content::jsonb->'spec'``) serves the
+        # containment operator for ANY key — which is why fatia 5 needed no
+        # migration and why the "expression index per (Kind, key)" it budgeted
+        # for was never built: one generic index beats N per-key ones, and it
+        # was already there. Measured 07/08/2026 at 200 000 instances: 1,8 ms
+        # index-served against 15,0 ms scanned.
+        #
+        # SQLite has neither GIN nor ``@>``; its lookup is ``json_extract``
+        # filtered by (scope, kind), which is a scan of that Kind's rows. Same
+        # answer, different cost, and the flag is where the difference is
+        # stated instead of discovered.
+        self.supports_indexed_key_lookup = self._is_pg
 
     # ------------------------------------------------------------------
     # Table metadata — the ONE model, shared with Alembic autogenerate
@@ -831,6 +853,95 @@ class SqlAlchemySource(WritableSourcePort):
             )
             for r in rows
         ]
+
+    async def find_instances_by_spec_key(
+        self, scope: str, kind: str, key: str, value: str, *,
+        tenant: str | None = None, limit: int = 2,
+    ) -> "list[dict[str, Any]]":
+        """Candidates of ``kind`` whose ``spec[key]`` is exactly ``value``.
+
+        Candidates only — this method does NOT decide, and ``limit=2`` is why:
+        two is all it takes to know the answer is "more than one", which is a
+        refusal (``AmbiguousInstanceKey``) rather than a row. Arbitration lives
+        in ``dna.kernel.query.references``, once, for every store — the same
+        split as :meth:`find_instances_by_id_prefix` /
+        ``resolve_unique_prefix``, and for the same reason: two stores that
+        each broke the tie their own way would disagree exactly when it
+        mattered.
+
+        **[dialect] Two predicates, and both of them earn their place.**
+
+        * ``content::jsonb->'spec' @> '{"<key>": "<value>"}'`` is the INDEXED
+          one — it is what ``dna_insts_spec_gin_idx`` can serve, since GIN with
+          the default ``jsonb_ops`` opclass answers containment. The partial
+          predicate ``content::jsonb ? 'spec'`` is restated because the index is
+          partial ON it and Postgres will not use a partial index it cannot
+          prove the query implies.
+        * ``content::jsonb->'spec'->>'<key>' = '<value>'`` is the EXACT one.
+          Containment alone is not equality: ``{"k": ["v", "w"]} @> {"k": "v"}``
+          is a jsonb rule about arrays, and a relation declared ``cardinality:
+          one`` that matched an array element would be resolution by accident.
+          ``->>`` renders an array as its JSON text, so the recheck rejects it.
+
+        The AND of the two is "the key holds exactly this string", with the
+        first supplying the index and the second supplying the semantics. On
+        SQLite there is no containment operator and no GIN, so ``json_extract``
+        carries both jobs and the query is a scan of that Kind's rows —
+        declared as ``key_lookup_indexed=False`` rather than left to be
+        discovered.
+
+        ``key`` is interpolated into a JSON path on the SQLite leg, so it is
+        re-validated HERE even though ``normalize_relations`` already refused
+        anything but an identifier at load time. A guard that only runs at the
+        far door is one an unusual caller walks around — and this door is
+        reachable from any adapter user, not only from a declared relation.
+        """
+        if not _SPEC_KEY_RE.match(key or ""):
+            raise ValueError(
+                f"spec key {key!r} is not an identifier — a relation's `by` is "
+                "a field NAME, and this one reaches a JSON path expression"
+            )
+        d = self.instances
+        match: list[Any] = [d.c.scope == scope, d.c.kind == kind]
+        if self._is_pg:
+            from sqlalchemy.dialects.postgresql import JSONB  # noqa: PLC0415
+            spec = sa.cast(d.c.content, JSONB)["spec"]
+            match.append(sa.func.jsonb_exists(sa.cast(d.c.content, JSONB), "spec"))
+            match.append(spec.contains(sa.cast(
+                sa.literal(json.dumps({key: value})), JSONB,
+            )))
+            match.append(spec[key].astext == value)
+        else:
+            match.append(sa.func.json_extract(
+                d.c.content, f"$.spec.{key}",
+            ) == value)
+        # Overlay THEN base, the same two-step :meth:`_load_one_on` walks — and
+        # the layers are queried SEPARATELY on purpose. A tenant instance that
+        # carries the same key as the base one it forks is not ambiguity, it is
+        # what an overlay IS; asked in one query the two would come back as two
+        # candidates and the resolver would refuse a perfectly ordinary fork.
+        tenant_candidates: list[str | None] = [tenant, None] if tenant else [None]
+        async with self._engine.connect() as conn:
+            for t in tenant_candidates:
+                rows = (await conn.execute(
+                    sa.select(
+                        d.c.scope, d.c.kind, d.c.api_version, d.c.name,
+                        d.c.tenant, d.c.content,
+                    ).where(
+                        *match, self._tenant_where(d.c.tenant, t),
+                    ).order_by(d.c.name).limit(max(1, limit))
+                )).all()
+                if rows:
+                    return [
+                        {
+                            "scope": r.scope, "kind": r.kind,
+                            "api_version": r.api_version or "", "name": r.name,
+                            "tenant": r.tenant or "",
+                            "raw": json.loads(r.content),
+                        }
+                        for r in rows
+                    ]
+        return []
 
     async def load_one(
         self, scope: str, kind: str, name: str, *,
@@ -1517,7 +1628,15 @@ class SqlAlchemySource(WritableSourcePort):
                 "ordinal": edge.ordinal,
                 "to_scope": edge.to_scope,
                 "to_kind": edge.to_kind,
-                "to_name": edge.value,
+                # The RESOLVED target's own name, falling back to the value the
+                # author wrote. The two are the same string for a by-NAME
+                # relation and different for a ``by: <key>`` one — and this
+                # column is what the reverse index ``(scope, tenant, to_kind,
+                # to_name)`` is built on, so writing the KEY here would add a
+                # row no backlink query could ever find. The fallback carries
+                # the dangling case honestly: nothing resolved, so what we
+                # record is what we were pointed at.
+                "to_name": getattr(edge, "to_name", None) or edge.value,
                 # i-114 — name AND id, the ``ownerReferences`` pair. ``getattr``
                 # because ``ResolvedEdge`` is also constructed by the backfill
                 # and by tests that predate the field; an edge producer that
@@ -2707,4 +2826,7 @@ class SqlAlchemySource(WritableSourcePort):
             # EXCLUDE, so revision 0010 does not create the column there and
             # ``load_one_valid_at`` refuses instead of filtering nothing.
             valid_time=self.supports_valid_time,
+            # Both bindings answer; only one of them answers through an index.
+            key_lookup=True,
+            key_lookup_indexed=self.supports_indexed_key_lookup,
         )

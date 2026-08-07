@@ -331,6 +331,37 @@ class SourceCapabilities:
     # reflection oracle that only looked for the METHOD would report True on
     # SQLite, where the method exists and refuses.
     valid_time: bool = False
+    # The store can answer "which instance of Kind K has ``spec[key] == v``"
+    # (``find_instances_by_spec_key``) — what a relation declared
+    # ``by: workspace_id`` needs in order to be FOLLOWED rather than merely
+    # declared (fatia 5 of ``spec-topologia-do-grafo``).
+    #
+    # Asked BEFORE the read, like ``edge_graph`` and ``as_of_reads`` and for
+    # the same reason: an adapter that cannot look up by key must make the
+    # caller hear ``KeyLookupUnsupported``, never ``None``. ``None`` reads as
+    # "no instance carries that key" — an accusation against data nobody
+    # examined.
+    key_lookup: bool = False
+    # …and it does so through an INDEX rather than by scanning every instance
+    # of the Kind.
+    #
+    # ⚠️ The second flag whose value depends on the BINDING rather than on the
+    # adapter class (``valid_time`` was the first, and this one is set the same
+    # way, from ``supports_indexed_key_lookup``). Postgres has carried
+    # ``dna_insts_spec_gin_idx`` — a GIN over ``(content::jsonb->'spec')``,
+    # generic over the key — since baseline revision 0001, and it serves a
+    # containment lookup at 200 000 instances in 1,8 ms against 15 ms scanned.
+    # SQLite has no such index and no containment operator, and the filesystem
+    # has no index at all: both answer by walking the Kind's instances, and
+    # both say so here rather than letting an operator discover it as a
+    # mysterious slowdown on the write path.
+    #
+    # Deliberately NOT folded into ``key_lookup``. "Cannot answer" and "answers
+    # the slow way" require different decisions from a reader — the first
+    # changes what a face may claim, the second changes what a deployment may
+    # be asked to hold — and collapsing them would leave the honest O(N) with
+    # no way to be honest.
+    key_lookup_indexed: bool = False
 
     @property
     def granular(self) -> bool:
@@ -455,6 +486,17 @@ def derive_capabilities(source: object, *, label: str) -> SourceCapabilities:
         valid_time=(
             bool(getattr(source, "supports_valid_time", False))
             and _has_method(source, "load_one_valid_at")
+        ),
+        key_lookup=_has_method(source, "find_instances_by_spec_key"),
+        # The ``valid_time`` shape exactly: the METHOD is on the class for both
+        # bindings, so probing for it would derive True on SQLite — where it
+        # exists and scans — and the oracle would then certify a declaration
+        # that lies about cost. The adapter answers for its own binding, and
+        # the method check stays as the second half so an attribute alone
+        # cannot declare a capability nothing implements.
+        key_lookup_indexed=(
+            bool(getattr(source, "supports_indexed_key_lookup", False))
+            and _has_method(source, "find_instances_by_spec_key")
         ),
         query_pushdown=_has_own_query(source),
         tenant_layer_writes=("tenant" in write_kwargs and "layer" in write_kwargs),

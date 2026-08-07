@@ -2365,6 +2365,97 @@ class Kernel:
         candidates = await finder(prefix, scope=scope, tenant=tenant)
         return resolve_unique_prefix(prefix, list(candidates))
 
+    async def find_instance_by_key(
+        self, scope: str, kind: str, key: str, value: str, *,
+        tenant: str | None = None,
+    ) -> "tuple[dict[str, Any], str] | None":
+        """The ONE instance of ``kind`` whose ``spec[key]`` is ``value``, and
+        the scope it was found in — or ``None`` (fatia 5).
+
+        What a relation declared ``by: workspace_id`` needs in order to be
+        FOLLOWED. The store finds candidates; this method never picks among
+        them, exactly as :meth:`resolve_instance_id` never picks among prefix
+        matches, and for the same reason: a lookup that silently resolved to
+        the wrong instance reads exactly like one that resolved to the right
+        one.
+
+        **It walks the SAME scope chain ``get_instance`` walks**, and that is
+        not a nicety. Three of the five Kinds addressed by key in this registry
+        — ``PricingPlan``, ``ModelProfile``, ``Role`` — are registry Kinds read
+        from every scope by inheritance. A by-key resolver that looked only in
+        the writer's own scope would call every one of those references
+        dangling, and the graph would fill up with breakage it had invented
+        itself. Two addressings of one relation must not disagree about WHERE
+        to look; they differ only in WHAT to match.
+
+        Raises ``AmbiguousInstanceKey`` when two instances in one layer carry
+        the key, and ``KeyLookupUnsupported`` when the wired source cannot ask
+        at all. Deliberately ``None`` for neither: "I cannot look", "two
+        answers" and "no such instance" are three different facts, and only the
+        third is the one ``None`` states.
+        """
+        from dna.kernel.errors import (  # noqa: PLC0415
+            AmbiguousInstanceKey,
+            KeyLookupUnsupported,
+        )
+        from dna.kernel.capabilities import source_capabilities  # noqa: PLC0415
+        assert self._source, "No source registered."
+        finder = getattr(self._source, "find_instances_by_spec_key", None)
+        if not callable(finder) or not source_capabilities(
+            self._source,
+        ).key_lookup:
+            raise KeyLookupUnsupported(
+                f"{type(self._source).__name__} cannot look instances up by a "
+                f"spec key — it does not implement find_instances_by_spec_key. "
+                f"A relation declared `by: {key}` is therefore declared and "
+                f"not followed on this deployment; read by (kind, name) "
+                f"instead, or run against an adapter that does."
+            )
+        # The writer's own scope first, then the inheritance chain — the order
+        # ``QueryEngine.get_instance`` walks, for its reason: a local instance
+        # always beats an inherited one, and a nearer parent beats a farther.
+        chain: list[str] = [scope]
+        if kind in self._INHERITABLE_KINDS:
+            try:
+                for parent, _t in await self._compute_resolution_chain(scope, None):
+                    if parent not in chain:
+                        chain.append(parent)
+            except Exception as e:  # noqa: BLE001 — fail-soft to the V1 single
+                # hop, exactly as get_instance does: an unreadable chain must
+                # not turn a resolvable reference into a dangling one.
+                logger.debug(
+                    "find_instance_by_key: resolution chain failed for %r "
+                    "(falling back to %r): %s",
+                    scope, self._INHERIT_PARENT_SCOPE, e,
+                )
+                if self._INHERIT_PARENT_SCOPE not in chain:
+                    chain.append(self._INHERIT_PARENT_SCOPE)
+        for hop in chain:
+            try:
+                candidates = list(await finder(
+                    hop, kind, key, value, tenant=tenant, limit=2,
+                ))
+            except AmbiguousInstanceKey:
+                raise
+            except Exception as e:  # noqa: BLE001 — a missing parent scope is
+                # "no inherited instance", not an error: the same fail-soft the
+                # parent fallback in ``get_instance`` applies.
+                logger.debug(
+                    "find_instance_by_key: hop %r failed for %s.%s=%r: %s",
+                    hop, kind, key, value, e,
+                )
+                continue
+            if len(candidates) > 1:
+                # The refusal, and the whole reason ``limit=2`` is not
+                # ``limit=1``: stopping at the first match would turn
+                # "ambiguous" into "resolved", which is the one outcome this
+                # path exists to make impossible.
+                raise AmbiguousInstanceKey(kind, key, value, matches=candidates)
+            if candidates:
+                raw = candidates[0].get("raw")
+                return (raw if isinstance(raw, dict) else {}), hop
+        return None
+
     async def graph_refs(
         self, scope: str, kind: str, name: str, *,
         tenant: str | None = None,

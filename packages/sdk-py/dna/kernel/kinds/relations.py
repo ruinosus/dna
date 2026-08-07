@@ -94,15 +94,31 @@ The five keys, and nothing else
       object). This is a statement about the ADDRESS, and it is deliberately
       independent of ``to`` — see below.
 
-    ⚠️ **A non-``name`` ``by`` installs NO resolution rule.** It says how the
-    address is written; it does not teach the kernel to follow it. That
-    restraint is deliberate and was bought with a measured mistake: the
-    ``PricingPlan`` lookup already resolves by ``spec.tier_id`` and THEN by
-    ``spec.aliases[]`` (``kernel.tier()``), so a declaration that resolved by
-    ``tier_id`` alone would be a SECOND resolution rule, free to veto data the
-    live one accepts. Resolving by key also needs an expression index the
-    store does not have. Declaring the addressing costs nothing and can lie to
-    nobody; resolving it is a separate slice with a separate cost.
+    ⚠️ **A ``by: <key>`` is FOLLOWED and never VETOED** (fatia 5 of
+    ``spec-topologia-do-grafo``). It used to install no resolution rule at
+    all — the address was declared and nothing read it — and that restraint
+    rested on two reasons of very different durability:
+
+    * *"resolving by key needs an expression index the store does not have"*.
+      **Wrong, and measured wrong on 07/08/2026.** The index has been in the
+      baseline schema since revision 0001: ``dna_insts_spec_gin_idx``, a GIN
+      over ``(content::jsonb->'spec')``, which is generic over the KEY rather
+      than one index per key. At 200 000 instances a
+      ``spec @> '{"workspace_id": …}'`` lookup is served by it in **1,8 ms**
+      against **15 ms** for the scan. Nobody had looked.
+    * *"a second resolution rule, free to veto data the live one accepts"*.
+      **Right, and still right.** ``kernel.tier()`` resolves a ``PricingPlan``
+      by ``spec.tier_id`` and THEN by ``spec.aliases[]``; a key resolver that
+      only knows the first would call a live, working reference dangling. So
+      this half is answered by REFUSING THE VETO, not by matching the alias
+      list: a ``by: <key>`` value that resolves to nothing is REPORTED and
+      persisted as a dangling edge, in every mode including
+      ``DNA_REF_VALIDATION=enforce``. It is the same trade ``inverse_of``
+      makes, for the same reason — see :attr:`enforced`.
+
+    A COMPOSITE ``by`` still installs no resolution: the value carries its own
+    Kind and this runtime does not parse it. That is :attr:`carries_kind`, and
+    it is the only addressing left that :attr:`resolved` excludes.
 
 ``on_target_delete``
     What happens to THIS relation when the instance it points at is deleted —
@@ -151,9 +167,13 @@ that already exist.
 
 ⚠️ **``restrict`` and ``delete_source`` are refused on an UNRESOLVED relation.**
 Only a :attr:`Relation.resolved` relation produces an edge, and the enforcement
-reads edges — so an enforcing policy on a relation addressed by a composite
-form or by a target field is a promise with no mechanism behind it. This is the
+reads edges — so an enforcing policy on a relation whose value carries its own
+Kind (a composite ``by``) is a promise with no mechanism behind it. This is the
 same refusal, for the same reason, as ``inverse_of`` on a ``to: "*"`` relation.
+The set this refuses shrank in fatia 5: a ``by: <key>`` relation now produces
+edges, so it may now declare an enforcing policy. The condition did not change
+— it was always "does this produce an edge?", and it is spelled ONCE, in
+:func:`_is_resolved`, so the guard and the property cannot drift apart.
 ``allow`` stays legal there, and declaring it is the POINT: an ``AuditLog``
 whose target is deleted must keep pointing at it — that is what an audit log is
 for — and saying ``on_target_delete: allow`` turns a dangling reference from an
@@ -406,6 +426,18 @@ _RELATION_KEYS = frozenset(
 _NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
+def _is_resolved(to: tuple[str, ...], by: str) -> bool:
+    """Does this ``(to, by)`` pair produce an EDGE? — the one definition.
+
+    A free function and not only a property because :func:`_relation` has to
+    ask the question while validating ``on_target_delete``, at a point where no
+    :class:`Relation` exists yet. That call site used to re-spell the condition
+    inline with a comment admitting the risk (*"same condition, one definition
+    away"*); fatia 5 changed the condition, which is precisely the event an
+    inline copy is wrong for."""
+    return bool(to) and by not in COMPOSITE_FORMS
+
+
 @dataclass(frozen=True)
 class Relation:
     """ONE declared relation. Frozen: the normalized declaration is shared by
@@ -469,6 +501,30 @@ class Relation:
         return not self.to
 
     @property
+    def by_name(self) -> bool:
+        """The value IS the target instance's ``metadata.name``.
+
+        A fact about the ADDRESS, and the one a RENAME depends on: renaming an
+        instance rewrites the values that spell its name and must leave every
+        other addressing alone. Before fatia 5 ``resolved`` answered this
+        question by coincidence, because by-name was the only addressing the
+        kernel followed. It is no longer, and ``dna rename`` asking the wrong
+        one would rewrite ``Project.workspace_id`` — a KEY that has nothing to
+        do with the name — into the new name. Hence a property that says what
+        it means."""
+        return bool(self.to) and self.by == BY_NAME
+
+    @property
+    def by_key(self) -> bool:
+        """The value addresses the target through one of the TARGET's own spec
+        fields (``by: workspace_id``) rather than through its ``metadata.name``.
+
+        Followed since fatia 5 of ``spec-topologia-do-grafo``, and followed
+        WITHOUT the veto :attr:`enforced` carries — see the module docstring's
+        ``by`` entry for why those two are separate decisions."""
+        return bool(self.to) and self.by != BY_NAME and not self.carries_kind
+
+    @property
     def polymorphic(self) -> bool:
         """More than one possible target — several declared, or unconstrained."""
         return len(self.to) > 1 or self.open_target
@@ -479,15 +535,41 @@ class Relation:
 
     @property
     def resolved(self) -> bool:
-        """True when the KERNEL resolves this relation — and therefore
-        validates it on write and produces edges from it.
+        """True when the KERNEL FOLLOWS this relation — reads the target, and
+        therefore produces edges from it.
 
-        Exactly one addressing qualifies: concrete target Kind(s), addressed by
-        instance name. Everything else is declared and reported. A reader that
-        wants "what does the runtime actually check?" asks THIS rather than
-        re-deriving the condition, so the answer cannot drift between the write
-        path, the graph and a screen."""
-        return bool(self.to) and self.by == BY_NAME
+        Two addressings qualify, both requiring concrete target Kind(s): by
+        instance ``name`` (the default) and, since fatia 5, by a spec KEY of
+        the target. What no longer qualifies is a value that carries its own
+        Kind (:attr:`carries_kind`), which this runtime still does not parse.
+
+        ⚠️ **"Followed" is not "enforced".** This property used to mean both,
+        because for by-name they coincide. They no longer do, and a caller that
+        wants "can an unresolvable value here VETO a write?" must ask
+        :attr:`enforced` — asking this one would refuse writes the live
+        ``PricingPlan``/``ModelProfile`` alias lookups accept."""
+        return _is_resolved(self.to, self.by)
+
+    @property
+    def enforced(self) -> bool:
+        """True when an unresolvable value VETOES the write under
+        ``DNA_REF_VALIDATION=enforce``.
+
+        Strictly narrower than :attr:`resolved`, and the gap is exactly the
+        ``by: <key>`` relations. The kernel resolves them and draws their edges;
+        it does not get to refuse a write over them, because the alias-tolerant
+        lookups (``kernel.tier()``, ``kernel.model_profile()``) accept values
+        this resolver cannot see, and a veto built on a strictly poorer reading
+        would reject data the runtime itself honors.
+
+        The same shape as ``inverse_of``: the strongest promise that costs
+        nobody a write they should be allowed to make.
+
+        Equal to :attr:`by_name` today, and NOT an alias of it. They answer
+        different questions — "does a miss veto?" and "is the value a name?" —
+        and the day a by-key relation earns a veto, exactly one of them
+        changes."""
+        return self.by_name
 
     def to_declaration(self) -> dict[str, Any]:
         """The AUTHORING shape — what an instance stores back in
@@ -525,6 +607,14 @@ class Relation:
             "inverse_of": self.inverse_of,
             "by": self.by,
             "resolved": self.resolved,
+            # BOTH, because fatia 5 split what used to be one fact: `resolved`
+            # is "the kernel reads the target and draws the edge", `enforced`
+            # is "an unresolvable value refuses the write". A consumer that
+            # re-derived the second from the first would report every
+            # `by: <key>` relation as enforcing, which is the exact promise
+            # this slice refused to make.
+            "enforced": self.enforced,
+            "by_key": self.by_key,
             # BOTH, for the reason `carries_kind`/`open_target` are both here:
             # the effective policy is what will happen, the declared one is
             # whether anybody said so, and a consumer that has to re-derive
@@ -667,12 +757,11 @@ def _relation(name: Any, raw: Any) -> Relation:
                 "so the word could only ever behave as `restrict`"
             )
         on_target_delete = on_target_delete.strip()
-        # `resolved`, computed from what we have rather than read off a
-        # Relation that does not exist yet — same condition, one definition
-        # away, and the guard below pins the two together.
+        # `resolved`, through the SAME function the property reads — see
+        # `_is_resolved` for why this is not spelled inline anymore.
         if (
             on_target_delete in ON_TARGET_DELETE_ENFORCING
-            and not (bool(to) and by == BY_NAME)
+            and not _is_resolved(to, by)
         ):
             raise ValueError(
                 f"relations[{name!r}] declares "

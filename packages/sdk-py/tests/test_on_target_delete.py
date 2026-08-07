@@ -260,12 +260,30 @@ class TestAPolicyNeedsAMechanism:
             )
 
     @pytest.mark.parametrize("policy", sorted(ON_TARGET_DELETE_ENFORCING))
-    def test_enforcing_on_a_target_spec_field_is_refused(self, policy):
-        with pytest.raises(ValueError, match="does not resolve"):
-            normalize_relations(
-                {"a": {"to": "OtdAnchor", "cardinality": "one",
-                       "by": "workspace_id", "on_target_delete": policy}},
-            )
+    def test_enforcing_on_a_target_spec_field_is_now_ACCEPTED(self, policy):
+        """⚠️ This test asserted the OPPOSITE until fatia 5, and the flip is
+        the mechanism arriving rather than the rule relaxing.
+
+        The refusal's stated reason was always *"enforcement reads the derived
+        edge graph and only a resolved relation produces edges"*. A
+        ``by: <key>`` relation now produces edges, so the reason stopped
+        applying to it — and the condition, which lives in ONE function
+        (``_is_resolved``), moved with the mechanism instead of being restated
+        somewhere. The composite cases above did NOT move, because nothing
+        parses their values yet: that is what makes this a narrowing of the
+        refusal rather than an abandonment of it."""
+        rel = normalize_relations(
+            {"a": {"to": "OtdAnchor", "cardinality": "one",
+                   "by": "workspace_id", "on_target_delete": policy}},
+        )["a"]
+        assert rel.on_target_delete == policy
+        assert rel.enforces_on_target_delete is True
+        assert rel.resolved is True
+        # …and STILL not enforced on the WRITE path. The two policies are
+        # independent: a delete refusal reads edges that already exist, while a
+        # write veto would need a resolution rule as complete as the live
+        # alias-tolerant lookup's — which this is not.
+        assert rel.enforced is False
 
     def test_allow_IS_legal_on_an_unresolved_relation(self):
         """The AuditLog shape exactly: a composite pointer that must keep

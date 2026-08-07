@@ -202,6 +202,56 @@ async def _case_capabilities_honest(ctx: _Ctx) -> None:
     )
 
 
+async def _case_find_by_spec_key(ctx: _Ctx) -> None:
+    """``find_instances_by_spec_key`` — CANDIDATES, exact, never a decision.
+
+    Three properties, and the third is the one an adapter gets wrong:
+
+    1. a hit comes back with the instance under ``raw``;
+    2. a value nobody carries comes back EMPTY — the honest zero, which the
+       kernel turns into a dangling edge rather than into silence;
+    3. ⚠️ **the match is exact scalar equality, never containment or
+       coercion.** The fixture's stories carry ``priority`` as a NUMBER, so
+       asking for the string ``"1"`` must miss. A store that coerced would
+       resolve a relation to an instance that does not carry the value —
+       resolution by accident, which is worse than no resolution because it is
+       invisible in the diff and on the screen.
+
+    ``limit`` is a ceiling on how much AMBIGUITY is worth reporting, not a page
+    size: the caller only needs enough matches to know there is more than one.
+    """
+    await ctx.seed_fixture()
+    finder = getattr(ctx.source, "find_instances_by_spec_key", None)
+    assert callable(finder), (
+        "capabilities() declares key_lookup=True but the adapter implements "
+        "no find_instances_by_spec_key"
+    )
+    hit = list(await _aw(
+        finder(FIXTURE_SCOPE, "Story", "title", "s-bravo", limit=2),
+    ))
+    names = [r.get("name") for r in hit]
+    assert names == ["s-bravo"], (
+        f"exact key lookup returned {names!r}, expected ['s-bravo']"
+    )
+    assert _doc_name(hit[0].get("raw") or {}) == "s-bravo", (
+        "the candidate must carry the instance under `raw` — the kernel reads "
+        "metadata.name off it to record WHICH instance the edge points at, and "
+        "without it every by-key edge would be written pointing at nothing"
+    )
+    miss = list(await _aw(
+        finder(FIXTURE_SCOPE, "Story", "title", "nobody-carries-this", limit=2),
+    ))
+    assert miss == [], f"a value nobody carries must return [], got {miss!r}"
+    coerced = list(await _aw(
+        finder(FIXTURE_SCOPE, "Story", "priority", "1", limit=2),
+    ))
+    assert coerced == [], (
+        "the string '1' matched an instance whose priority is the NUMBER 1 — "
+        "a coercing lookup resolves relations to instances that do not carry "
+        "the value, and does it silently"
+    )
+
+
 async def _case_load_bootstrap_docs(ctx: _Ctx) -> None:
     await ctx.seed_fixture()
     docs = await _aw(ctx.source.load_bootstrap_docs(FIXTURE_SCOPE))
@@ -794,6 +844,8 @@ _CASES: list[tuple[str, str, Callable[[_Ctx], Any], Callable[[_Ctx], bool]]] = [
      _case_list_doc_refs, lambda c: c.caps.granular_list),
     ("load_one_hit_and_miss", "capabilities.granular_one",
      _case_load_one, lambda c: c.caps.granular_one),
+    ("find_by_spec_key_is_exact_and_undecided", "capabilities.key_lookup",
+     _case_find_by_spec_key, lambda c: c.caps.key_lookup),
     ("query_numeric_gt_order_limit", "capabilities.query_pushdown",
      _case_query_pushdown, lambda c: c.caps.query_pushdown),
     ("count_total", "capabilities.query_pushdown",

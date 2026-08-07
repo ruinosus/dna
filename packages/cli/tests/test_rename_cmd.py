@@ -577,12 +577,12 @@ def test_the_sibling_scope_reference_is_still_there_and_still_dangling(
 def test_referring_relations_is_derived_and_excludes_the_unresolvable():
     """Both conditions, because dropping either is a silent behaviour change.
 
-    ``Story.feature`` names Feature and is resolvable → in. ``Story.spec_refs``
-    names Spec, not Feature → out (a relation is not "any relation on a Kind
-    that has one"). ``Story.produces`` is ``to: '*'`` — declared, real, and NOT
-    resolved by the kernel — so it is out too: the command cannot know that
-    such a value addresses this instance rather than something that merely
-    looks like it.
+    ``Story.feature`` names Feature and is addressed BY NAME → in.
+    ``Story.spec_refs`` names Spec, not Feature → out (a relation is not "any
+    relation on a Kind that has one"). ``Story.produces`` is ``to: '*'`` —
+    declared, real, and its value carries its own Kind — so it is out too: the
+    command cannot know that such a value addresses this instance rather than
+    something that merely looks like it.
     """
     from dna.kernel import Kernel
 
@@ -594,8 +594,53 @@ def test_referring_relations_is_derived_and_excludes_the_unresolvable():
     assert ("Epic", "features") in pairs
     assert ("Story", "spec_refs") not in pairs
     assert not any(name == "produces" for _, name in pairs)
-    # And every pair it DID return is resolvable + actually names Feature.
+    # And every pair it DID return spells a NAME + actually names Feature.
     for kind, rel in referring_relations(kernel, "Feature"):
-        assert rel.resolved
+        assert rel.by_name
         assert "Feature" in rel.to
         assert isinstance(kind, str)
+
+
+def test_a_key_addressed_relation_is_NEVER_a_rename_candidate():
+    """⚠️ The regression fatia 5 would have shipped, in one assertion.
+
+    ``referring_relations`` filtered on ``rel.resolved``. That predicate meant
+    "addressed by name" ONLY because by-name was the one addressing the kernel
+    followed; fatia 5 widened it to include ``by: <key>``, and a rename driven
+    by the widened predicate would rewrite ``Project.workspace_id`` — a KEY —
+    into the new instance name. Silently, and in the one command whose whole
+    job is to be exhaustive about references.
+
+    It walks EVERY key-addressed target in the registry rather than picking
+    one: the defect is a property of the PREDICATE, so a single example would
+    leave the rest to a future reader's luck.
+    """
+    from dna.kernel import Kernel
+    from dna.kernel.kinds.relations import relations_of
+
+    from dna_cli.rename_cmd import referring_relations
+
+    kernel = Kernel.auto()
+    by_key: dict[str, set[str]] = {}
+    for port in kernel.kind_ports():
+        for rel in relations_of(port).values():
+            if rel.by_key:
+                for target in rel.to:
+                    by_key.setdefault(target, set()).add(
+                        f"{getattr(port, 'kind', '?')}.{rel.name}",
+                    )
+    assert by_key, (
+        "no relation declares `by: <key>` any more — this guard has gone blind "
+        "and would pass whatever the predicate did"
+    )
+    for target, declarations in sorted(by_key.items()):
+        candidates = {
+            f"{kind}.{rel.name}"
+            for kind, rel in referring_relations(kernel, target)
+        }
+        overlap = candidates & declarations
+        assert not overlap, (
+            f"renaming a {target} would rewrite {sorted(overlap)} — those "
+            f"fields hold a spec KEY, not the name being changed, so the "
+            f"rewrite corrupts the very field it touches"
+        )

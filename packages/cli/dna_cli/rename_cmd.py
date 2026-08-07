@@ -66,7 +66,7 @@ So the set is derived from the DECLARATIONS, the same way ``dna graph
 backfill`` derives its work:
 
 1. walk the in-memory Kind registry for every ``(source Kind, relation)`` whose
-   ``rel.to`` names the Kind being renamed and whose ``rel.resolved`` is true —
+   ``rel.to`` names the Kind being renamed and whose ``rel.by_name`` is true —
    pure, no I/O, the same shape as
    :func:`dna.kernel.write.target_delete.enforcers_for`;
 2. for each such pair, enumerate the candidate instances — through
@@ -196,9 +196,20 @@ def referring_relations(kernel: Any, target_kind: str) -> list[tuple[str, Any]]:
     ``target_kind`` by instance name.
 
     Two conditions, and the second is the one that is easy to lose: the
-    relation has to be one the kernel RESOLVES (``rel.resolved`` — concrete
-    targets, addressed ``by: name``), AND it has to name ``target_kind`` among
-    its targets. A ``Story.feature`` says nothing about renaming an ``Epic``.
+    relation has to address its target BY NAME (``rel.by_name`` — concrete
+    targets, and the value IS the name), AND it has to name ``target_kind``
+    among its targets. A ``Story.feature`` says nothing about renaming an
+    ``Epic``.
+
+    ⚠️ **``rel.by_name``, deliberately NOT ``rel.resolved``.** Those two were
+    one predicate until fatia 5 taught the kernel to follow ``by: <key>``, and
+    this is exactly the call site where the difference bites. A rename rewrites
+    the values that SPELL the old name; ``Project.workspace_id`` holds a key
+    that has nothing to do with any name. Asking "does the kernel resolve
+    this?" instead of "is this value a name?" would rewrite thirteen relations'
+    worth of keys into instance names — silently, in the one command whose job
+    is to be exhaustive. Guarded by
+    ``packages/cli/tests/test_rename_leaves_keys_alone.py``.
 
     Derived from the live registry on every call, never cached and never
     enumerated by hand, for the reason
@@ -206,10 +217,10 @@ def referring_relations(kernel: Any, target_kind: str) -> list[tuple[str, Any]]:
     registered at RUNTIME (``author_kind``), so a cache here would rewrite
     yesterday's model.
 
-    An unresolved relation (``by: workspace_id``, ``to: "*"``) is deliberately
-    out. The kernel does not follow it, so this command cannot know that its
-    value addresses this instance rather than something that merely looks like
-    it — and guessing is the whole family of defect being avoided.
+    A relation this command cannot read as a name (``by: workspace_id``,
+    ``to: "*"``, a composite form) is deliberately out. Its value does not
+    spell the name being changed, so rewriting it would corrupt the very field
+    it touched.
     """
     from dna.kernel.kinds.relations import relations_of
 
@@ -220,7 +231,7 @@ def referring_relations(kernel: Any, target_kind: str) -> list[tuple[str, Any]]:
         if not isinstance(source_kind, str):
             continue
         for rel in relations_of(port).values():
-            if not rel.resolved or target_kind not in rel.to:
+            if not rel.by_name or target_kind not in rel.to:
                 continue
             key = (source_kind, rel.name)
             if key in seen:

@@ -612,6 +612,16 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
             # ``SourceCapabilities.edge_graph``).
             write_kwargs=SAVE_OPTIONAL_KWARGS - {"edges"},
             delete_kwargs=DELETE_OPTIONAL_KWARGS,
+            # ⚠️ It ANSWERS, and it SCANS to answer.
+            # ``find_instances_by_spec_key`` projects from ``load_all`` because
+            # a directory tree has no index — so ``key_lookup`` is True (a
+            # ``by: <key>`` relation IS followed here) and
+            # ``key_lookup_indexed`` is False (it costs a walk of the scope).
+            # Two flags, because "cannot answer" and "answers the slow way"
+            # are decisions for two different readers, and only the second one
+            # is what `file://` has.
+            key_lookup=True,
+            key_lookup_indexed=False,
         )
 
     async def list_layer_values(self, scope: str, layer_key: str) -> list[str]:

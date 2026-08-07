@@ -391,7 +391,15 @@
         },
         {
           "py": "valid_time",
-          "note": "The store keeps WORLD time as a COLUMN (dna_instances.valid_at, a tstzrange) and can be asked 'was this true at T?' (load_one_valid_at), refusing two overlapping validity periods for one instance. NOT the same axis as as_of_reads: that one is TRANSACTION time (what the store believed), this one is WORLD time (when the fact was true), and a store can have either without the other — collapsing them is the classic bitemporal mistake. The ONLY flag whose value depends on the BINDING rather than the class: SqlAlchemySource declares True on Postgres and False on SQLite, which has no range type, no GiST and no EXCLUDE constraint (spec-topologia-do-grafo fatia 3)."
+          "note": "The store keeps WORLD time as a COLUMN (dna_instances.valid_at, a tstzrange) and can be asked 'was this true at T?' (load_one_valid_at), refusing two overlapping validity periods for one instance. NOT the same axis as as_of_reads: that one is TRANSACTION time (what the store believed), this one is WORLD time (when the fact was true), and a store can have either without the other — collapsing them is the classic bitemporal mistake. The FIRST flag whose value depends on the BINDING rather than the class: SqlAlchemySource declares True on Postgres and False on SQLite, which has no range type, no GiST and no EXCLUDE constraint (spec-topologia-do-grafo fatia 3)."
+        },
+        {
+          "py": "key_lookup",
+          "note": "The store can answer 'which instance of Kind K carries spec[key] == v' (find_instances_by_spec_key) — what a relation declared `by: workspace_id` needs in order to be FOLLOWED rather than merely declared (spec-topologia-do-grafo fatia 5). Asked BEFORE the read, like edge_graph and as_of_reads and for their reason: an adapter that cannot look up by key must make the caller hear KeyLookupUnsupported, never None. None reads as 'no instance carries that key' — an accusation against data nobody examined."
+        },
+        {
+          "py": "key_lookup_indexed",
+          "note": "…and it does so through an INDEX rather than by scanning the Kind's instances. The SECOND flag whose value depends on the BINDING rather than the class, and set the same way valid_time is. Postgres has carried dna_insts_spec_gin_idx — a GIN over (content::jsonb->'spec'), generic over the KEY — since baseline revision 0001: measured 07/08/2026 at 200k instances, 1.8ms index-served against 15ms scanned, which is why fatia 5 needed no migration at all. SQLite has no GIN and no containment operator; the filesystem has no index whatsoever. Both answer by walking, and both say so HERE rather than letting an operator discover it as a mysterious write-path slowdown. Deliberately NOT folded into key_lookup: 'cannot answer' and 'answers the slow way' are decisions for two different readers."
         }
       ]
     },

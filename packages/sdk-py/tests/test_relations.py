@@ -161,16 +161,55 @@ class TestResolvedIsTheRuntimePromise:
         assert rel.resolved is True
         assert rel.polymorphic is True
 
-    def test_a_key_addressed_relation_is_declared_but_NOT_resolved(self):
-        """The whole `by:` design in one assertion: declaring the addressing
-        must not install a resolution rule. If this ever flips to True, the
-        write path starts reading a key nothing indexes and vetoing data the
-        live lookup accepts."""
+    def test_a_key_addressed_relation_is_FOLLOWED_and_never_ENFORCED(self):
+        """Fatia 5 in one assertion, and it is deliberately TWO facts.
+
+        The previous version of this test asserted ``resolved is False`` and
+        warned that flipping it would make the write path *"read a key nothing
+        indexes and veto data the live lookup accepts"*. Both halves of that
+        warning were ANSWERED rather than overruled: the index turned out to
+        already exist (``dna_insts_spec_gin_idx``, baseline revision 0001), and
+        the veto is refused — which is what ``enforced is False`` pins here.
+
+        If ``enforced`` ever flips to True, a ``PlanBinding.tier_id: pro`` —
+        a value ``kernel.tier()`` resolves through ``spec.aliases[]`` — starts
+        refusing writes the runtime itself honors.
+        """
         rel = normalize_relations({
             "workspace_id": _rel(to="Workspace", by="workspace_id"),
         })["workspace_id"]
         assert rel.by == "workspace_id"
-        assert rel.resolved is False
+        assert rel.by_key is True
+        assert rel.by_name is False
+        assert rel.resolved is True, "the kernel FOLLOWS a by-key relation"
+        assert rel.enforced is False, (
+            "a by-key miss must never veto a write — the alias-tolerant live "
+            "lookups accept addresses this resolver cannot see"
+        )
+
+    def test_by_name_and_enforced_are_two_questions_that_happen_to_agree(self):
+        """⚠️ The pair that a rename and a veto each ask, separately.
+
+        They return the same answer for every declaration that exists today,
+        which is exactly what makes collapsing them tempting and what makes
+        collapsing them dangerous: ``dna rename`` asks "is this value a NAME?"
+        and the validator asks "does a miss REFUSE?". Fatia 5 already split
+        ``resolved`` off from both. The day a by-key relation earns a veto,
+        precisely one of these two flips — and if the code had one property
+        doing both jobs, the rename would start rewriting keys."""
+        by_name = normalize_relations({"r": _rel()})["r"]
+        by_key = normalize_relations({
+            "k": _rel(to="Workspace", by="workspace_id"),
+        })["k"]
+        composite = normalize_relations({
+            "c": _rel(to=ANY_TARGET, cardinality="many", by="Kind:name"),
+        })["c"]
+        assert (by_name.by_name, by_name.enforced, by_name.resolved) == (
+            True, True, True)
+        assert (by_key.by_name, by_key.enforced, by_key.resolved) == (
+            False, False, True)
+        assert (composite.by_name, composite.enforced, composite.resolved) == (
+            False, False, False)
 
     def test_a_star_relation_is_declared_but_NOT_resolved(self):
         rel = normalize_relations({

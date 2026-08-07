@@ -95,24 +95,34 @@ class TestGenomeFinallyPointsSomewhere:
             ("owner_tenant", "Workspace", "workspace_id"),
         ],
     )
-    def test_the_key_addressed_ones_declare_the_key_and_stay_unresolved(
+    def test_the_key_addressed_ones_are_followed_and_never_enforced(
         self, kernel, field, target, by,
     ):
-        """``by:`` is load-bearing, and ``by: name`` here would be a REGRESSION.
+        """``by:`` is load-bearing, and ``by: name`` here is still a REGRESSION.
 
-        Both targets are looked up by a spec key, not by doc name, and both
-        live in ``_lib`` rather than in the writer's scope
+        Both targets are looked up by a spec key rather than by instance name,
+        and both live in ``_lib`` rather than in the writer's scope
         (``kernel.model_profile()`` says so for one; ``Workspace`` is GLOBAL
-        for the other). A ``by: name`` declaration would install a second
-        resolution rule free to veto a Genome the live lookup accepts — the
-        ``PricingPlan.tier_id`` mistake this house already paid for once.
+        for the other). Fatia 5 changed none of that — what it changed is that
+        the kernel now FOLLOWS the key instead of only naming it.
+
+        ⚠️ ``enforced is False`` is what carries this test's original intent
+        forward. What it protected was a *veto* on an address the live lookup
+        resolves more generously (``model_profile()`` falls through to
+        ``spec.aliases[]``), and that is answered by refusing the veto — never
+        by refusing to look.
         """
         rel = relations_of(kernel.kind_port_for("Genome"))[field]
         assert rel.to == (target,)
         assert rel.by == by
-        assert rel.resolved is False, (
-            f"Genome.{field} became resolvable — the kernel would now veto on "
-            f"an address it does not actually follow"
+        assert rel.by_name is False, (
+            f"Genome.{field} would resolve by NAME — right by a coincidence of "
+            f"the filesystem, and wrong the day the two diverge"
+        )
+        assert rel.resolved is True
+        assert rel.enforced is False, (
+            f"Genome.{field} started vetoing — the kernel would now refuse a "
+            f"value ``model_profile()``/``tier()`` accept through aliases"
         )
 
 
@@ -129,7 +139,12 @@ class TestTheRoleLadderIsDataAndTheModelSaysSo:
         assert rel.to == ("Role",)
         assert rel.cardinality == "one"
         assert rel.by == "role_id"
-        assert rel.resolved is False
+        # Followed since fatia 5, never enforced — the address is honest
+        # BECAUSE the name only *should* equal the key, and the resolver is
+        # allowed to look for the key without being allowed to refuse over it.
+        assert rel.by_name is False
+        assert rel.resolved is True
+        assert rel.enforced is False
 
     def test_it_matches_the_membership_precedent_exactly(self, kernel):
         """Two Kinds, two mechanisms (a Python class and a descriptor), one
@@ -420,18 +435,38 @@ class TestTheEdgeIsBorn:
         assert rows[0]["to_name"] == "swe-agent"
 
     @pytest.mark.anyio
-    async def test_the_key_addressed_fields_produce_no_edge_and_no_veto(
+    async def test_the_key_addressed_fields_produce_a_DANGLING_edge_and_no_veto(
         self, store,
     ):
-        """``by: model_id`` / ``by: workspace_id`` are DECLARATIONS, not
-        resolution. A write naming a profile that does not exist must persist
-        untouched — the restraint the ``PricingPlan`` lesson bought."""
+        """⚠️ The half of this test that MUST NOT change, and the half that did.
+
+        It used to assert "no edge and no veto". Fatia 5 keeps the second half
+        exactly — a write naming a profile that does not exist still persists
+        untouched, which is the restraint the ``PricingPlan`` lesson bought —
+        and inverts the first: the relation is now followed, so the graph
+        RECORDS that it points at nothing.
+
+        A dangling row is the honest output here, not a failure to resolve.
+        The row is the list of what is broken; omitting it would render a
+        healthier graph than the data deserves, which is the reason
+        ``to_kind`` is nullable in the first place."""
         k, src = store
         await k.write_instance(
             SCOPE, "Genome", "g2",
             _genome("g2", default_llm="azure/gpt-4o", owner_tenant="ws-nope"),
         )
+        # The write PERSISTED — this is the assertion the slice may never break.
         assert await k.get_instance(SCOPE, "Genome", "g2") is not None
-        fields = {r["source_field"] for r in await _edges(src)}
-        assert "default_llm" not in fields
-        assert "owner_tenant" not in fields
+        rows = {r["source_field"]: r for r in await _edges(src)}
+        for field, value in (
+            ("default_llm", "azure/gpt-4o"), ("owner_tenant", "ws-nope"),
+        ):
+            assert field in rows, (
+                f"Genome.{field} is a followed relation and produced no row — "
+                f"an unwritten edge and a resolved one look identical to every "
+                f"reader of this table"
+            )
+            assert rows[field]["to_kind"] is None, "nothing resolved: dangling"
+            # What we were POINTED at, since nothing was found — the key, not a
+            # name we would have had to invent.
+            assert rows[field]["to_name"] == value

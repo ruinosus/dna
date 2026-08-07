@@ -341,6 +341,21 @@ _NOT_REFUSALS = {
     # A MALFORMED query — fewer than four characters, or characters outside
     # the id alphabet. The caller's input is not yet a question.
     "PrefixTooShort",
+    # ── the spec-KEY lane (spec-topologia fatia 5) ────────────────────────
+    # The fourth member of the capability family: this deployment's store
+    # cannot find an instance by a spec key, so a relation declared
+    # ``by: workspace_id`` is declared and not followed here. A fact about the
+    # DEPLOYMENT, raised rather than answered with ``None`` — ``None`` reads as
+    # "no instance carries that key", an accusation against data nobody
+    # examined. Not a denial anyone may appeal, so not a ``KernelRefusal``.
+    "KeyLookupUnsupported",
+    # The twin of ``AmbiguousInstanceId`` a few rows up, and classified by its
+    # argument: two instances carry the key, so there is no single answer to
+    # give. A fact about the QUESTION, not a verdict about the caller — and the
+    # remedy lives in the DATA (one of the two has to stop claiming the key),
+    # never in permission. It is not a ``CapabilityRefusal`` either: the store
+    # answered perfectly well, and what it answered was "two".
+    "AmbiguousInstanceKey",
 }
 
 

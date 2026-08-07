@@ -375,6 +375,16 @@ class CompositeFilesystemSource(WritableSourcePort):
             # ``SourceCapabilities.edge_graph``).
             write_kwargs=SAVE_OPTIONAL_KWARGS - {"edges"},
             delete_kwargs=DELETE_OPTIONAL_KWARGS,
+            # ⚠️ FALSE here while the flat filesystem declares True, and the
+            # difference is real rather than an oversight: this router does not
+            # subclass ``FilesystemSource`` and implements no
+            # ``find_instances_by_spec_key``, so a ``by: <key>`` relation comes
+            # back ``unsupported`` on it. That is the honest answer, and
+            # emphatically not the ``None`` that would read as "no instance
+            # carries that key". Same shape as ``find_instances_by_id_prefix``,
+            # which it also does not have.
+            key_lookup=False,
+            key_lookup_indexed=False,
         )
 
     async def list_layer_values(self, scope: str, layer_key: str) -> list[str]:

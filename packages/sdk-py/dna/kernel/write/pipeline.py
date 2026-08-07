@@ -359,18 +359,23 @@ class WritePipeline:
             # parent. A cache hit in practice (``get_instance`` just loaded the
             # very same key), and simply absent on a reduced host.
             local_getter=getattr(host, "get_instance_local", None),
+            # The by-KEY read (fatia 5). Same duck-type, same consequence when
+            # absent: no `by: <key>` relation resolves and every one records
+            # the reason ``unsupported`` — never ``missing``, which would
+            # accuse the data of a gap that belongs to the host.
+            key_getter=getattr(host, "find_instance_by_key", None),
         )
 
         if discords:
-            # Reported BEFORE the veto branch on purpose: a write that is about
-            # to be refused for a dangling relation may ALSO have a one-sided
-            # pair, and the author should hear both rather than discover the
-            # second one only after fixing the first.
+            # Reported BEFORE the veto branch on purpose: a write about to be
+            # refused for a dangling by-NAME relation may ALSO have a one-sided
+            # pair or an unresolved `by: <key>`, and the author should hear
+            # every one rather than discover the next only after fixing the
+            # first. Each note carries its OWN reason for not being a veto —
+            # they are different reasons, and one summary line covering both
+            # would have to be vague enough to explain neither.
             logger.warning(
-                "%s/%s/%s: declared inverse not reciprocated: %s "
-                "(reported, never enforced — the other half is a separate "
-                "write, and refusing here would make a pair unwritable in "
-                "either order)",
+                "%s/%s/%s: relation(s) reported and not enforced: %s",
                 scope, kind, name, "; ".join(discords),
             )
 

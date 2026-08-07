@@ -246,14 +246,22 @@ class KindGraphEdge(BaseModel):
     (``dep_filters``: a real declaration that drives prompt composition and is
     never checked against stored data).
 
-    ⚠️ ``enforced`` is the flag that matters, and it is NOT the same as
-    ``tier == "declared"``. The kernel resolves a relation at write time only
-    when it has a concrete target Kind AND is addressed by instance name
-    (``by == "name"``). A relation addressed by a spec field of the target
-    (``by: workspace_id``) or carrying its Kind in the value (``to: "*"``) is
-    fully declared and deliberately not resolved. A renderer that draws
-    enforced and unenforced edges alike is asserting a confidence the model
-    does not have.
+    ⚠️ ``followed`` and ``enforced`` are TWO flags, and neither is the same as
+    ``tier == "declared"``. They were one field until fatia 5 of
+    ``spec-topologia-do-grafo`` taught the kernel to resolve a spec-KEY
+    address, which split what used to coincide:
+
+    * ``followed`` — the kernel reads the target and this edge exists as data.
+      True for ``by: name`` and for ``by: <key>``.
+    * ``enforced`` — an unresolvable value REFUSES the write. True only for
+      ``by: name``, because the by-key resolver is deliberately poorer than the
+      live alias-tolerant lookups and may not veto what they accept.
+
+    A relation whose value carries its own Kind (``to: "*"`` with a composite
+    ``by``) is fully declared and neither followed nor enforced. A renderer
+    that draws all edges alike asserts a confidence the model does not have;
+    one that reads only ``enforced`` calls thirteen real, edge-producing
+    relations unchecked.
 
     ``to_kind`` is a registered Kind, or ``*`` when the target Kind travels
     inside the VALUE. A declaration naming a Kind nobody registers is a gap,
@@ -272,13 +280,26 @@ class KindGraphEdge(BaseModel):
     #: target is chosen per value.
     polymorphic: bool = False
     #: How the VALUE addresses the target: ``name`` (the target instance's
-    #: name — the only addressing the kernel resolves), a spec FIELD of the
-    #: target (``workspace_id``, ``role_id``, ``tier_id``), or a composite form
-    #: (``Kind:name``, ``Kind/name``, ``{kind, name}``) when ``to_kind`` is ``*``.
+    #: name), a spec FIELD of the target (``workspace_id``, ``role_id``,
+    #: ``tier_id``), or a composite form (``Kind:name``, ``Kind/name``,
+    #: ``{kind, name}``) when ``to_kind`` is ``*``.
     by: str = "name"
-    #: Does the kernel resolve this relation at write time — validating the
-    #: target exists and producing a data edge? Derived from the declaration,
-    #: never from the tier.
+    #: Does the kernel FOLLOW this relation at write time — read the target and
+    #: produce a data edge? True for ``by: name`` and, since fatia 5 of
+    #: ``spec-topologia-do-grafo``, for a spec-KEY address too. False only when
+    #: the value carries its own Kind, which nothing parses yet.
+    #:
+    #: ⚠️ Declared here BECAUSE the key is new. A ``response_model`` drops what
+    #: it does not name, in silence — the renderer would go on reading
+    #: ``enforced`` alone and drawing every by-key relation as unchecked while
+    #: its edges sat in ``dna_edges``. Guarded in ``test_mcp_graph_refs.py``.
+    followed: bool = False
+    #: Does an unresolvable value REFUSE the write? Strictly narrower than
+    #: ``followed``, and the gap IS the ``by: <key>`` relations: the kernel
+    #: resolves them and draws their edges, and deliberately does not veto over
+    #: them, because the live alias-tolerant lookups (``kernel.tier()``,
+    #: ``kernel.model_profile()``) accept addresses this resolver cannot see.
+    #: Derived from the declaration, never from the tier.
     enforced: bool = False
     #: The relation on ``to_kind`` that is this one's other half, when the pair
     #: is declared. ``null`` for the many relations that point one way. The

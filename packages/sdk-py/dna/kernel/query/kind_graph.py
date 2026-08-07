@@ -321,7 +321,16 @@ def build_edges(kinds: list[dict]) -> tuple[list[dict], list[dict]]:
                     "source": source, "field": name, "target": target,
                     "cardinality": rel.cardinality,
                     "tier": "declared", "polymorphic": rel.polymorphic,
-                    "by": rel.by, "enforced": rel.resolved,
+                    # Two facts, and they were ONE field until fatia 5 split
+                    # them. ``enforced`` now reads the property that actually
+                    # means "an unresolvable value refuses the write";
+                    # ``followed`` is the wider one — "the kernel reads the
+                    # target and draws this edge". A ``by: <key>`` relation is
+                    # followed and NOT enforced, and a schema graph showing
+                    # only the first would report the relation as unchecked
+                    # while its edges sit in the table.
+                    "by": rel.by, "enforced": rel.enforced,
+                    "followed": rel.resolved,
                     "inverse_of": rel.inverse_of,
                 })
 

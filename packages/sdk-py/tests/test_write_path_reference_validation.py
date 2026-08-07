@@ -55,6 +55,7 @@ class _StatefulSource(_FakeWritableSource):
         super().__init__()
         self.docs: dict[tuple[str, str, str], dict] = {}
         self.reads: list[tuple[str, str, str]] = []
+        self.key_reads: list[tuple[str, str, str, str]] = []
 
     async def save_instance(
         self, scope, kind, name, raw, author=None, *, tenant=None, layer=None,
@@ -80,6 +81,34 @@ class _StatefulSource(_FakeWritableSource):
     async def load_one(self, scope, kind, name, *, readers=None, tenant=None):
         self.reads.append((scope, kind, name))
         return self.docs.get((scope, kind, name))
+
+    async def find_instances_by_spec_key(
+        self, scope, kind, key, value, *, tenant=None, limit=2,
+    ):
+        """The by-KEY read (fatia 5), over the same in-memory ``docs``.
+
+        It is on this double for the reason ``load_one`` is, and the reason is
+        sharper here: WITHOUT it every by-key assertion in this file passes
+        because ``Kernel.find_instance_by_key`` refuses on an adapter that
+        cannot answer — the store's incapacity standing in for the kernel's
+        restraint, green either way, checking nothing. ``key_reads`` counts the
+        lookups so "it looked" and "it did not veto" stay two separate claims.
+        """
+        self.key_reads.append((scope, kind, key, value))
+        out = []
+        for (s, k, n), raw in sorted(self.docs.items()):
+            if s != scope or k != kind:
+                continue
+            if (raw.get("spec") or {}).get(key) != value:
+                continue
+            out.append({
+                "scope": s, "kind": k,
+                "api_version": raw.get("apiVersion", "") or "",
+                "name": n, "tenant": tenant or "", "raw": raw,
+            })
+            if len(out) >= max(1, limit):
+                break
+        return out
 
 
 def _story(name: str, spec: dict) -> dict:
@@ -395,15 +424,23 @@ class TestReciprocityIsReportedNeverImposed:
 # --- a relation the kernel does NOT resolve stays unresolved -------------------
 
 
-class TestKeyAddressedRelationsAreNotFollowed:
+class TestKeyAddressedRelationsAreFollowedAndNeverVeto:
     """``Project.workspace_id`` declares ``to: Workspace, by: workspace_id``.
 
-    Declaring the addressing must install NO resolution rule. Resolving by key
-    needs an expression index the store does not have, and — measured — a
-    second rule beside a live one can veto data the live one accepts
-    (``kernel.tier()`` resolves a PricingPlan by ``tier_id`` and THEN by
-    ``aliases[]``; a declaration honouring only the first would refuse a valid
-    alias). These tests are what stops that arriving by accident.
+    This class used to be called ``…AreNotFollowed`` and asserted that the
+    write path never even LOOKED. Fatia 5 split the two halves of that claim
+    and kept only one of them:
+
+    * *"resolving by key needs an expression index the store does not have"* —
+      **false, and measured false**: ``dna_insts_spec_gin_idx`` has been in the
+      baseline schema since revision 0001. So the kernel looks.
+    * *"a second rule beside a live one can veto data the live one accepts"* —
+      **true, and still true**: ``kernel.tier()`` resolves a PricingPlan by
+      ``tier_id`` and THEN by ``aliases[]``, so a resolver knowing only the
+      first would refuse a valid alias. So the kernel does not veto.
+
+    What these tests now stop from arriving by accident is the VETO, which is
+    the half that was ever dangerous.
     """
 
     @staticmethod
@@ -427,17 +464,40 @@ class TestKeyAddressedRelationsAreNotFollowed:
         assert ("proj", "Project", "p-1") in source.docs
 
     @pytest.mark.anyio
-    async def test_enforce_does_not_even_LOOK_the_target_up(
+    async def test_enforce_LOOKS_the_target_up_by_key_and_still_does_not_veto(
         self, kernel, source, monkeypatch,
     ):
-        """The sharper assertion: not "it did not refuse" but "it did not
-        ask". A lookup that happened would be a resolution rule in waiting."""
+        """⚠️ The inversion, and the two assertions have to stay SEPARATE.
+
+        The previous version asserted "it did not ask", on the reasoning that a
+        lookup was a resolution rule in waiting. It is a resolution rule that
+        arrived — and the danger was never the lookup, it was ACTING on the
+        answer by refusing a write.
+
+        Asserting only "it did not veto" would now be satisfied by a kernel
+        that never looked at all, which is exactly how this test would have
+        gone green-and-blind when the double did not implement
+        ``find_instances_by_spec_key``. So: it looked, BY THE KEY, and the
+        write survived anyway.
+        """
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
         source.reads.clear()
+        source.key_reads.clear()
         await kernel.write_instance(
-            "proj", "Project", "p-1", self._project("p-1", "ws-1"),
+            "proj", "Project", "p-1", self._project("p-1", "ws-nobody-has"),
             tenant="acme",
         )
+        assert ("proj", "Project", "p-1") in source.docs, (
+            "a by-key miss vetoed the write — the alias-tolerant live lookups "
+            "accept addresses this resolver cannot see"
+        )
+        assert [r for r in source.key_reads if r[1] == "Workspace"], (
+            "the write path never looked the Workspace up by key, so the "
+            "'did not veto' assertion above proves nothing"
+        )
+        # …and it asked by the KEY, never by the name. A by-name probe would be
+        # the second resolution rule, right by coincidence wherever a Workspace
+        # file happens to be named after its id.
         assert [r for r in source.reads if r[1] == "Workspace"] == []
 
 
@@ -493,18 +553,43 @@ class TestTheAliasSurvivesTheNewPlanBindingDeclaration:
         assert ("_lib", "PlanBinding", "acct-1") in source.docs
 
     @pytest.mark.anyio
-    async def test_the_write_path_does_not_even_LOOK_a_PricingPlan_up(
+    async def test_the_alias_binding_is_LOOKED_UP_missed_and_still_persisted(
         self, kernel, source, monkeypatch,
     ):
-        """Not "it did not refuse" but "it did not ask" — a lookup that
-        happened would be the second resolution rule already half-installed,
-        waiting for somebody to act on its answer."""
+        """⭐ The single most important assertion of fatia 5.
+
+        ``pro-annual`` is a real, live, resolvable address: ``kernel.tier()``
+        reaches that PricingPlan through ``spec.aliases[]``. The by-key
+        resolver knows only ``spec.tier_id`` and therefore MISSES it — and that
+        miss must cost the author nothing. This is the whole reason
+        ``Relation.enforced`` is narrower than ``Relation.resolved``.
+
+        Three claims, deliberately not two: it looked (else the rest proves
+        nothing), it missed (else the miss is not being exercised), and the
+        write landed anyway.
+        """
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        source.docs[("_lib", "PricingPlan", "plan-pro")] = {
+            "apiVersion": self._PRICING, "kind": "PricingPlan",
+            "metadata": {"name": "plan-pro"},
+            "spec": {"tier_id": "pro", "aliases": ["pro-annual"]},
+        }
         source.reads.clear()
+        source.key_reads.clear()
         await kernel.write_instance(
-            "_lib", "PlanBinding", "acct-2",
-            self._binding("acct-2", "tier-nobody-has"),
+            "_lib", "PlanBinding", "acct-2", self._binding("acct-2", "pro-annual"),
         )
+        assert [r for r in source.key_reads if r[1] == "PricingPlan"], (
+            "the write path never looked — so nothing below is being tested"
+        )
+        assert ("_lib", "PlanBinding", "acct-2") in source.docs, (
+            "a binding keyed on a live ALIAS was refused: the write path grew "
+            "an opinion the live resolver does not share, which is the exact "
+            "second-resolution-rule failure this Kind spent months avoiding"
+        )
+        # It never fell back to a name probe either. That fallback is how a
+        # poorer resolver hides: it would resolve `pro-annual` iff somebody
+        # happened to name the instance after the alias.
         assert [r for r in source.reads if r[1] == "PricingPlan"] == []
 
 
@@ -560,16 +645,51 @@ class TestTheKindNamespaceOwnerIsAddressedByWorkspaceId:
         assert ("_lib", "KindNamespace", "acme-example") in source.docs
 
     @pytest.mark.anyio
-    async def test_the_write_path_does_not_even_LOOK_a_Workspace_up(
+    async def test_the_write_path_asks_by_KEY_and_only_by_key(
         self, kernel, source, monkeypatch,
     ):
+        """The coincidence trap, now measured from BOTH sides.
+
+        The Workspace is seeded under an instance name that is deliberately not
+        its ``workspace_id``, so a by-NAME probe can only ever miss. Two
+        assertions: the key lookup happened (the relation is followed), and no
+        name lookup happened (the mutant that drops ``by: workspace_id`` puts
+        one there, and it would be right only where the file happens to be
+        named after the id).
+        """
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        source.docs[("_lib", "Workspace", "barnabe-labs")] = {
+            "apiVersion": self._TENANT, "kind": "Workspace",
+            "metadata": {"name": "barnabe-labs"},
+            "spec": {"workspace_id": "ws-3f9a", "name": "Barnabé Labs",
+                     "created_by": "a@b.c", "created_at": "2026-08-06T00:00:00Z"},
+        }
         source.reads.clear()
+        source.key_reads.clear()
         await kernel.write_instance(
             "_lib", "KindNamespace", "beta-example",
-            self._claim("beta-example", "ws-nobody-has"),
+            self._claim("beta-example", "ws-3f9a"),
         )
-        assert [r for r in source.reads if r[1] == "Workspace"] == []
+        assert ("_lib", "Workspace", "workspace_id", "ws-3f9a") in source.key_reads
+        assert [r for r in source.reads if r[1] == "Workspace"] == [], (
+            "the write path probed a Workspace by NAME — the resolution rule "
+            "that is right by coincidence and wrong the first time somebody "
+            "names a Workspace file anything but its id"
+        )
+
+    @pytest.mark.anyio
+    async def test_a_claim_owned_by_NOBODY_is_still_not_vetoed(
+        self, kernel, source, monkeypatch,
+    ):
+        """No Workspace carries this id. The claim still lands, under
+        ``enforce``, and the graph records the break — which is the split
+        between ``resolved`` and ``enforced`` doing its job."""
+        monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
+        await kernel.write_instance(
+            "_lib", "KindNamespace", "gamma-example",
+            self._claim("gamma-example", "ws-nobody-has"),
+        )
+        assert ("_lib", "KindNamespace", "gamma-example") in source.docs
 
 
 class TestTheNewlyDeclaredReferencesGoThroughTheDoor:
@@ -699,16 +819,22 @@ class TestTheNewlyDeclaredReferencesGoThroughTheDoor:
         assert "EvalSuite" in str(exc.value)
 
     @pytest.mark.anyio
-    async def test_tenant_slug_is_declared_and_still_not_followed(
+    async def test_tenant_slug_is_followed_BY_SLUG_and_never_by_name(
         self, kernel, source, monkeypatch,
     ):
         """``TenantMembership.tenant_slug`` says ``by: slug`` — the target's
         REQUIRED spec field, not its ``metadata.name`` (which the reader sets
         from the bundle directory). The two agree today by filesystem
-        convention; if this ever starts resolving, the write path has begun
-        following a coincidence."""
+        convention, and following the NAME would be following that
+        coincidence.
+
+        Fatia 5 made the slug itself followable, so the assertion moved from
+        "nothing was read" to "the SLUG was read and the name was not" — which
+        is the claim that was always meant, and the one the old wording could
+        not distinguish from doing nothing at all."""
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
         source.reads.clear()
+        source.key_reads.clear()
         await kernel.write_instance(
             "proj", "TenantMembership", "acme--a-example-com",
             {
@@ -724,4 +850,5 @@ class TestTheNewlyDeclaredReferencesGoThroughTheDoor:
             },
         )
         assert ("proj", "TenantMembership", "acme--a-example-com") in source.docs
+        assert ("proj", "Tenant", "slug", "no-such-tenant") in source.key_reads
         assert [r for r in source.reads if r[1] == "Tenant"] == []

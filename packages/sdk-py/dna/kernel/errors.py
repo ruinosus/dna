@@ -611,6 +611,73 @@ class InstanceIdLookupUnsupported(CapabilityRefusal, NotImplementedError):
     """
 
 
+class KeyLookupUnsupported(CapabilityRefusal, NotImplementedError):
+    """The wired source cannot find instances by a spec KEY (fatia 5).
+
+    The sibling of :class:`InstanceIdLookupUnsupported`, and it exists for the
+    identical reason: ``None`` from a store that never looked reads exactly
+    like ``None`` from a store that looked and found nothing. A relation
+    declared ``by: workspace_id`` would then be reported as dangling on every
+    deployment whose adapter simply cannot ask the question — an accusation
+    against data that may be perfectly sound.
+
+    ⚠️ The write path CATCHES this rather than propagating it, and records the
+    edge with reason ``unsupported``. That is deliberate: a capability the
+    store lacks must never fail a write that did nothing wrong. It propagates
+    to whoever asks ``Kernel.find_instance_by_key`` directly, where the caller
+    wanted an answer and silence would be the lie.
+    """
+
+
+class AmbiguousInstanceKey(LookupError):
+    """Two or more instances of one Kind carry the same spec key value.
+
+    A refusal and never a choice, and for a stronger reason than its twin
+    :class:`~dna.kernel.identity.AmbiguousInstanceId`: nothing in the schema
+    makes a spec key unique, and fatia 5 does not make it unique either. A
+    UNIQUE index would refuse a tenant overlay that legitimately carries the
+    same key as the base instance it forks. So ambiguity is not a corrupt state
+    to be prevented at write time — it is a LEGAL state the read has to refuse
+    to guess about. Picking the first row would be indistinguishable from
+    picking the right one, in the diff and on the screen.
+
+    ⚠️ **NEITHER marker base, and the twin is the reason.** It is not a
+    :class:`CapabilityRefusal` — the store answered perfectly well, and what it
+    answered was "two". It is not a :class:`KernelRefusal` either, on exactly
+    the argument ``AmbiguousInstanceId`` is classified by: a refusal marks a
+    verdict about the CALLER, who asked for something policy will not give.
+    This is a fact about the QUESTION — two instances match, so there is no
+    single answer — and the remedy is in the data rather than in permission.
+    Relayed as a denial it would send somebody hunting for an entitlement they
+    already have. ``tests/test_kernel_refusal_base.py`` holds that decision.
+
+    ``LookupError`` because that is what a lookup with no single answer is, and
+    what the sibling already is.
+    """
+
+    def __init__(
+        self, kind: str, key: str, value: str,
+        *, matches: "list[Any] | None" = None,
+    ) -> None:
+        self.kind = kind
+        self.key = key
+        self.value = value
+        #: The candidates, because the remedy IS the list — the same reasoning
+        #: that makes ``TargetDeleteRestricted`` record its referrers instead
+        #: of counting them.
+        self.matches: list[Any] = list(matches or [])
+        shown = ", ".join(
+            str((m or {}).get("name") or "?")
+            for m in self.matches[:8] if isinstance(m, dict)
+        )
+        super().__init__(
+            f"{len(self.matches) or 2} {kind} instances carry "
+            f"{key}={value!r} — refusing to guess which one a relation "
+            f"addressed `by: {key}` means"
+            + (f" ({shown})" if shown else "")
+        )
+
+
 class UnknownLayout(ValueError):
     """``build_prompt`` hit an Agent whose ``layout:`` names a preset the
     Kind does not offer (s-dx-named-layouts).
