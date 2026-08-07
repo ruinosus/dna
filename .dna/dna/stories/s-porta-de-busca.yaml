@@ -6,7 +6,7 @@ metadata:
 spec:
   title: A porta de busca — pgvector e rrf existem e nenhuma tool os expoe
   description: adapters/search/{pgvector,sqlite_vec,rrf}.py + embedding/onnx.py estao no ar. As 11 tools de um copiloto nao incluem busca. Um criador so tem list_kinds, que e enumeracao.
-  status: todo
+  status: review
   feature: f-a-fabrica
   priority: highest
   acceptance_criteria:
@@ -22,10 +22,26 @@ spec:
   - 'CI: verdes'
   definition_of_done_source: cli-create
   created_at: '2026-08-07T21:48:52+00:00'
-  updated_at: '2026-08-07T21:48:52+00:00'
+  updated_at: '2026-08-07T22:16:29+00:00'
   timeline:
   - at: '2026-08-07T21:48:52+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-08-07T22:16:18+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'review sem PR aberto (--no-pr): PR #356 aberta em feat/s-porta-de-busca; este write roda no worktree main porque o board YAML mora em main (regra da casa), onde o guard nao ve a branch.'
+  - at: '2026-08-07T22:16:22+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'search_instances entregue como COLA sobre kernel.search(): a porta faltava, o motor nao. Degradacao honesta com degraded_reason (no_search_provider / search_provider_error / index_refresh_failed) + notice em prosa, provada por test_the_two_empties_are_different_answers. Escopo de tenant provado contra o SqliteVecRecordSearchProvider REAL com dois tenants, e o caminho degradado tem teste proprio. Mutacao verificada nos dois pontos.'
+  - at: '2026-08-07T22:16:29+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: review
