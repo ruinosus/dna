@@ -6,23 +6,47 @@ metadata:
 spec:
   title: Os três campos que a realidade recusou — opcionais, com 'não se aplica' declarável
   description: 'python_module, port e Solution.services viram opcionais (evidencia: portal, worker, o dna-cloud inteiro). service_name FICA obrigatorio — saiu limpo nos nove.'
-  status: todo
+  status: done
   feature: f-conta-do-copiloto
   priority: highest
   acceptance_criteria:
-  - Dado o Kind App, quando eu leio o descritor, entao python_module e port sao opcionais e service_name CONTINUA obrigatorio, com a evidencia de cada um escrita no description
-  - Dado o Kind Solution, quando eu leio o descritor, entao services e opcional e required e [title]
-  - Dado um campo que nao se aplica, quando eu declaro, entao existe forma de dizer NAO SE APLICA — resposta declarada, nunca vazio adivinhado
-  - Dado o dogfood do dna-cloud, quando ele aplica, entao os 9 Apps E a Solution passam
+  - text: Dado o Kind App, quando eu leio o descritor, entao python_module e port sao opcionais e service_name CONTINUA obrigatorio, com a evidencia de cada um escrita no description
+    done: true
+    done_at: '2026-08-07T21:11:38+00:00'
+    done_by: story-done-auto
+  - text: Dado o Kind Solution, quando eu leio o descritor, entao services e opcional e required e [title]
+    done: true
+    done_at: '2026-08-07T21:11:38+00:00'
+    done_by: story-done-auto
+  - text: Dado um campo que nao se aplica, quando eu declaro, entao existe forma de dizer NAO SE APLICA — resposta declarada, nunca vazio adivinhado
+    done: true
+    done_at: '2026-08-07T21:11:38+00:00'
+    done_by: story-done-auto
+  - text: Dado o dogfood do dna-cloud, quando ele aplica, entao os 9 Apps E a Solution passam
+    done: true
+    done_at: '2026-08-07T21:11:38+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: os dois descritores, com a regra da evidencia no cabecalho'
-  - 'Tests: um teste por campo provando que o caso real (portal, worker, dna-cloud) passa; e que service_name ausente ainda e RECUSADO'
-  - 'Docs: regen-derived.sh inteiro'
-  - 'CI: sdk-py + cli + postgres verdes'
+  - text: 'Code: os dois descritores, com a regra da evidencia no cabecalho'
+    done: true
+    done_at: '2026-08-07T21:11:38+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: um teste por campo provando que o caso real (portal, worker, dna-cloud) passa; e que service_name ausente ainda e RECUSADO'
+    done: true
+    done_at: '2026-08-07T21:11:38+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: regen-derived.sh inteiro'
+    done: true
+    done_at: '2026-08-07T21:11:38+00:00'
+    done_by: story-done-auto
+  - text: 'CI: sdk-py + cli + postgres verdes'
+    done: true
+    done_at: '2026-08-07T21:11:38+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-07T20:14:38+00:00'
-  updated_at: '2026-08-07T20:41:42+00:00'
+  updated_at: '2026-08-07T21:12:06+00:00'
   timeline:
   - at: '2026-08-07T20:14:38+00:00'
     actor: claude-code
@@ -76,3 +100,12 @@ spec:
       hipótese alternativa é que o `worker` não é "um App cuja porta não se aplica" e sim UM APP QUE
       NÃO ATENDE — e aí o fato real é `ingress: false`, do qual "sem porta" é consequência.
     commit_ref: 486901a833ac4041785b503e56d16e2b24fe5912
+  - at: '2026-08-07T21:12:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: done
+    commit_ref: b592dc90764f57a31edd696e2aa6dc4df8e261c6
+    summary: 'Entregue e merjado (PR #355). O ''não se aplica'' genérico foi MEDIDO e recusado: com python_module descendo para answers sobrou UM caso em nove, e um mecanismo com um usuário não se paga. Entrou App.ingress enum [external,internal,none] — a granularidade vira ESTRUTURAL: ingress só responde a pergunta da porta e não tem como calar o can_sleep, nem por engano. ingress:none COM port é recusado na gravação. Duas correções minhas: service_name nunca foi obrigatório (apertar invalidaria as 2 instâncias vivas) e python_module/port já eram opcionais desde o #351. Busca registrada inclusive onde não achou: kernel não tem mecanismo; dataAbsentReason do FHIR fica como forma se aparecer caso para can_sleep/service_name.'
+  closed_at: '2026-08-07T21:11:38+00:00'
