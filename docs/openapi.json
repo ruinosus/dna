@@ -1381,6 +1381,24 @@
         "title": "Body_create_workspace_v1_workspaces_post",
         "type": "object"
       },
+      "Body_forget_memory_v1_memories__name__forget_post": {
+        "properties": {
+          "superseded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The memory that REPLACES this one, recorded on the tombstone as `spec.superseded_by_memory`. Send it when the retirement is part of an EDIT (write the new memory, then forget the old one naming it) — that is what turns two writes into one declared intent, and it is what a later reader follows to find where the thought went. Omit it for a plain retirement: the memory stopped being true and nothing took its place. NOT resolved — the name is recorded as declared, never checked against the store.",
+            "title": "Superseded By"
+          }
+        },
+        "title": "Body_forget_memory_v1_memories__name__forget_post",
+        "type": "object"
+      },
       "Body_provision_tenant_owner_v1_tenants__tid__provision_owner_post": {
         "properties": {
           "user": {
@@ -2049,6 +2067,7 @@
         "type": "object"
       },
       "DeleteMemoryResponse": {
+        "description": "⚠️ Since i-130 this model is never SERIALIZED — the route it belongs to\nrefuses (403) before it can return one. It stays declared because the route\nstays declared: removing it would drop the response schema from the OpenAPI\ncontract, and a route documented as returning nothing reads as a route that\nwas never meant to answer, which is the opposite of what happened.",
         "properties": {
           "deleted": {
             "title": "Deleted",
@@ -2075,6 +2094,46 @@
           "scope"
         ],
         "title": "DeleteMemoryResponse",
+        "type": "object"
+      },
+      "ForgetMemoryResponse": {
+        "description": "The outcome of ``POST /v1/memories/{name}/forget`` — the REST face of the\nmemory verb ``forget`` (i-136).\n\nEvery field is declared, on purpose and with a test behind it: a\n``response_model`` DISCARDS what it does not declare, in silence, so an\nundeclared ``superseded_by`` would leave the route echoing a pointer the\ncaller never receives.\n\n``outcome`` is the three-way ending ``forget_impl`` reports, and the reason\nthis is not a bare boolean: ``forgotten`` (it was live, now it is not) and\n``already_forgotten`` (idempotent — a retry of a half-finished edit lands\nhere, and it is a SUCCESS, not an error) are different facts. The third,\n``not_found``, never reaches this model — the route maps it to a 404,\nbecause \"there is no such memory in this layer\" is not an outcome of\nforgetting, it is a failure to find the thing to forget.",
+        "properties": {
+          "forgotten": {
+            "title": "Forgotten",
+            "type": "boolean"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "superseded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded By"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "forgotten",
+          "outcome"
+        ],
+        "title": "ForgetMemoryResponse",
         "type": "object"
       },
       "GenomeIdentity": {
@@ -8825,7 +8884,7 @@
     },
     "/v1/memories/{name}": {
       "delete": {
-        "description": "⚠️ **REFUSED (403) since i-130** — a memory is never hard-deleted.\n\nThis route called itself *\"the MCP twin (``forget``)\"* and was not one:\n``forget`` stamps ``valid_to`` and leaves the row in place, while this\nremoved the row and its ``dna_versions`` history with it (measured, both\ndialects: 3 versions → 0, and ``forget`` afterwards raised \"not found\").\nThe founder's decision on i-130 kept the descriptor's promise — the\nmemory is immortal — so the kernel now refuses the hard delete at the\nchokepoint every door crosses, and this route relays the refusal with\nthe way out in it rather than pretending to delete.\n\nIt stays a route, and returns 403 rather than 404/405, because all three\nalternatives lie in a different direction: removing it would 404 as\n*\"there is no such endpoint\"*, 405 would say the METHOD is wrong for the\ncollection, and both hide that there is a policy and a remedy. 403 with\nthe reason is the only answer a portal can act on.\n\nTenant isolation is unchanged and now holds a fortiori: nobody deletes\nany memory, base or overlay, their own or another tenant's.\n\nPLAN-GATED (i-042) still, and BEFORE the refusal: a refusal is not a\nreason to stop metering a write attempt on the memory surface.",
+        "description": "⚠️ **REFUSED (403) since i-130** — a memory is never hard-deleted.\n\nThis route called itself *\"the MCP twin (``forget``)\"* and was not one:\n``forget`` stamps ``valid_to`` and leaves the row in place, while this\nremoved the row and its ``dna_versions`` history with it (measured, both\ndialects: 3 versions → 0, and ``forget`` afterwards raised \"not found\").\nThe founder's decision on i-130 kept the descriptor's promise — the\nmemory is immortal — so the kernel now refuses the hard delete at the\nchokepoint every door crosses, and this route relays the refusal with\nthe way out in it rather than pretending to delete.\n\nIt stays a route, and returns 403 rather than 404/405, because all three\nalternatives lie in a different direction: removing it would 404 as\n*\"there is no such endpoint\"*, 405 would say the METHOD is wrong for the\ncollection, and both hide that there is a policy and a remedy. 403 with\nthe reason is the only answer a portal can act on.\n\nTenant isolation is unchanged and now holds a fortiori: nobody deletes\nany memory, base or overlay, their own or another tenant's.\n\nPLAN-GATED (i-042) still, and BEFORE the refusal: a refusal is not a\nreason to stop metering a write attempt on the memory surface.\n\nThe way out **in this lane** is ``POST /v1/memories/{name}/forget``\n(i-136), appended to the kernel's message by this route rather than\ncarried inside it: the kernel names the verb, the command and the tool,\nand it must not learn what an HTTP path looks like. Until that route\nexisted the refusal named a remedy the caller could not reach from here,\nwhich is a wall wearing a signpost.",
         "operationId": "delete_memory_v1_memories__name__delete",
         "parameters": [
           {
@@ -8909,6 +8968,103 @@
           }
         },
         "summary": "Delete Memory"
+      }
+    },
+    "/v1/memories/{name}/forget": {
+      "post": {
+        "description": "Retire ONE memory — the REST face of the memory verb ``forget``, and\nsince i-136 the ONLY way a portal retires a memory in this lane.\n\nA **bi-temporal demotion**, not a delete: it stamps ``valid_to``, the\nmemory drops out of ``recall`` and ``list_memories``, and the instance\nplus its whole version history stay exactly where they were — auditable,\nreadable at an earlier ``?as_of=``, revivable. That is the same verb\n``dna memory forget`` and the MCP ``forget`` tool call; this is the third\nface of one core (``dna.application.forget_impl``), never a fourth\nimplementation.\n\n**Why this route had to exist.** i-130 made ``DELETE /v1/memories/{name}``\nrefuse — correctly, the row is immortal — and the refusal named ``forget``.\nBut ``forget`` had no REST door, so the refusal named a remedy this lane\ncould not perform, and the DELETE it replaced was the ONLY retire\naffordance the portal had. Two flows broke, and the worse one broke\nquietly: the portal's memory EDIT is a replace (write the new, retire the\nold), so a refused second half left BOTH copies live and recall answering\nwith both. A door that refuses is only honest if the door it names is open.\n\n**Idempotent, which is what makes a retry safe.** Forgetting an already\nforgotten memory keeps the original ``valid_to`` and answers 200 with\n``outcome: \"already_forgotten\"`` — so a client whose first attempt died\nin flight can simply repeat it. Repeating it WITH ``superseded_by``\nrecords the pointer on the existing tombstone, which is exactly what a\nhalf-finished edit needs to finish.\n\n**404 only for a name this layer does not hold** (``outcome: not_found``\nfrom the core): most often the PARTITION rather than the name — a\npersonal Engram is invisible from the workspace lane. Reported as a 404\ninstead of a 200 that says nothing happened, because \"I could not find\nwhat you named\" is a different fact from \"I retired it\".\n\nPLAN-GATED (i-042), ``memory`` family, ``memory_op='write'`` — the same\naxes the MCP ``forget`` tool crosses, through the same shared gate. A\ndemotion is a write.",
+        "operationId": "forget_memory_v1_memories__name__forget_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_forget_memory_v1_memories__name__forget_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForgetMemoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Forget Memory"
       }
     },
     "/v1/orgs": {

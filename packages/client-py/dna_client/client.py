@@ -842,6 +842,35 @@ class DnaClient:
             "DELETE", f"/v1/memories/{name}", params={"scope": scope, "tenant": tenant},
         )
 
+    def forget_memory(
+        self,
+        name: str,
+        *,
+        superseded_by: str | None = None,
+        scope: str | None = None,
+        tenant: str | None = None,
+    ) -> JsonObject:
+        """RETIRE a memory — the lane ``delete_memory`` refuses and names.
+
+        A memory is never hard-deleted (``record.invalidate-only``): this stamps
+        ``valid_to`` so it drops out of default recall, and the row stays —
+        auditable and point-in-time reconstructable. Idempotent: an already
+        retired memory keeps its ORIGINAL ``valid_to``, so a retry finishes an
+        interrupted edit instead of rewriting when it stopped being true.
+
+        ``superseded_by`` records WHICH memory replaces this one, and is what
+        turns an edit into one intent instead of two unrelated writes. The
+        portal edits by writing the new memory first and retiring the old one
+        with this pointer — write-first on purpose, so the bad outcome is TWO
+        memories, never zero.
+        """
+        return self.request(
+            "POST",
+            f"/v1/memories/{name}/forget",
+            params={"scope": scope, "tenant": tenant},
+            json={"superseded_by": superseded_by} if superseded_by else None,
+        )
+
     # -- intel (reads) -------------------------------------------------------
 
     def list_sources(

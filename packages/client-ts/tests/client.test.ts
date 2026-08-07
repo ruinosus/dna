@@ -290,6 +290,7 @@ const COVERED: Record<string, string> = {
   "POST /v1/memories": "rememberMemory",
   "POST /v1/memories/import": "importMemories",
   "DELETE /v1/memories/{name}": "deleteMemory",
+  "POST /v1/memories/{name}/forget": "forgetMemory",
   "PATCH /v1/insights/{name}/state": "setInsightState",
   "POST /v1/artifacts": "registerArtifact",
   "POST /v1/projects": "createProject",

@@ -857,9 +857,41 @@ class RecallResponse(BaseModel):
 
 
 class DeleteMemoryResponse(BaseModel):
+    """⚠️ Since i-130 this model is never SERIALIZED — the route it belongs to
+    refuses (403) before it can return one. It stays declared because the route
+    stays declared: removing it would drop the response schema from the OpenAPI
+    contract, and a route documented as returning nothing reads as a route that
+    was never meant to answer, which is the opposite of what happened."""
+
     deleted: str
     scope: str
     tenant: str | None = None
+
+
+class ForgetMemoryResponse(BaseModel):
+    """The outcome of ``POST /v1/memories/{name}/forget`` — the REST face of the
+    memory verb ``forget`` (i-136).
+
+    Every field is declared, on purpose and with a test behind it: a
+    ``response_model`` DISCARDS what it does not declare, in silence, so an
+    undeclared ``superseded_by`` would leave the route echoing a pointer the
+    caller never receives.
+
+    ``outcome`` is the three-way ending ``forget_impl`` reports, and the reason
+    this is not a bare boolean: ``forgotten`` (it was live, now it is not) and
+    ``already_forgotten`` (idempotent — a retry of a half-finished edit lands
+    here, and it is a SUCCESS, not an error) are different facts. The third,
+    ``not_found``, never reaches this model — the route maps it to a 404,
+    because "there is no such memory in this layer" is not an outcome of
+    forgetting, it is a failure to find the thing to forget."""
+
+    kind: str
+    name: str
+    forgotten: bool
+    outcome: str
+    #: Echoed ONLY when the caller declared one, mirroring ``forget_impl``:
+    #: absent means "a plain retirement", never "superseded by nothing".
+    superseded_by: str | None = None
 
 
 # ── intel (sources / insights / metrics) ────────────────────────────────────

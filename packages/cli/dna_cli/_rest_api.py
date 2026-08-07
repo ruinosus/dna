@@ -182,9 +182,35 @@ _MAX_IMPORT_DOCS = _int_env("DNA_API_MAX_IMPORT_DOCS", 5000)
 # newest-first.
 
 
+#: The remedy in THIS lane, appended to the kernel's hard-delete refusal.
+#:
+#: ``dna.kernel.write.hard_delete`` names the verb, the CLI command, the MCP
+#: tool and the Python function — everything except an HTTP path, and rightly
+#: so: the kernel does not know a REST face exists, and a kernel message that
+#: named a route would be a layer inversion that goes stale the first time the
+#: route moves.
+#:
+#: But the caller reading a 403 here has none of those four doors — it has this
+#: one — and until i-136 there was no fifth. That gap IS i-136: a refusal that
+#: names a remedy the reader cannot perform sends them around the wall, and the
+#: way around this particular wall is ``psql``. So the lane appends its own
+#: door to the kernel's sentence, at the only layer that knows both.
+_FORGET_LANE_HINT = (
+    "In THIS (REST) lane that verb is `POST /v1/memories/{name}/forget`, with "
+    "an optional `superseded_by` naming the memory that replaces this one."
+)
+
+
 class MemoryNotFound(Exception):
     """The requested memory is not in the tenant's OWN overlay (so this tenant
-    cannot delete it) — mapped to HTTP 404 by the route."""
+    cannot delete it) — mapped to HTTP 404 by the route.
+
+    ⚠️ Unreachable through ``DELETE /v1/memories/{name}`` since i-130: the
+    kernel refuses the hard delete before any store lookup happens, so the
+    route answers 403 for a name that does not exist too. Kept because
+    ``delete_memory_impl`` still raises it and the refusal is a policy that
+    could be re-scoped; a 404 branch that stops being reachable is a fact about
+    the ORDER of two guards, not a dead branch to delete quietly."""
 
 
 async def delete_memory_impl(
@@ -373,6 +399,7 @@ def build_app(
         board_summary_impl,
         compose_prompt_impl,
         create_project_impl,
+        forget_impl,
         register_artifact_impl,
         get_instance_impl,
         resolve_instance_impl,
@@ -2719,14 +2746,97 @@ def build_app(
         any memory, base or overlay, their own or another tenant's.
 
         PLAN-GATED (i-042) still, and BEFORE the refusal: a refusal is not a
-        reason to stop metering a write attempt on the memory surface."""
+        reason to stop metering a write attempt on the memory surface.
+
+        The way out **in this lane** is ``POST /v1/memories/{name}/forget``
+        (i-136), appended to the kernel's message by this route rather than
+        carried inside it: the kernel names the verb, the command and the tool,
+        and it must not learn what an HTTP path looks like. Until that route
+        existed the refusal named a remedy the caller could not reach from here,
+        which is a wall wearing a signpost."""
         await _plan_gate(request, tenant=tenant, family="memory", memory_op="write")
         try:
             return await delete_memory_impl(await _live(), name, scope, tenant)
         except DeleteRefused as exc:
-            raise HTTPException(status_code=403, detail=str(exc)) from None
+            raise HTTPException(
+                status_code=403, detail=f"{exc} {_FORGET_LANE_HINT}",
+            ) from None
         except MemoryNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
+
+    @app.post("/v1/memories/{name}/forget", dependencies=guarded,
+              response_model=m.ForgetMemoryResponse)
+    async def forget_memory(
+        request: Request,
+        name: str,
+        superseded_by: str | None = Body(
+            default=None, embed=True,
+            description=(
+                "The memory that REPLACES this one, recorded on the tombstone "
+                "as `spec.superseded_by_memory`. Send it when the retirement is "
+                "part of an EDIT (write the new memory, then forget the old one "
+                "naming it) — that is what turns two writes into one declared "
+                "intent, and it is what a later reader follows to find where "
+                "the thought went. Omit it for a plain retirement: the memory "
+                "stopped being true and nothing took its place. NOT resolved — "
+                "the name is recorded as declared, never checked against the "
+                "store."
+            ),
+        ),
+        scope: str | None = Query(default=None),
+        tenant: str | None = Query(default=None),
+    ) -> dict[str, Any]:
+        """Retire ONE memory — the REST face of the memory verb ``forget``, and
+        since i-136 the ONLY way a portal retires a memory in this lane.
+
+        A **bi-temporal demotion**, not a delete: it stamps ``valid_to``, the
+        memory drops out of ``recall`` and ``list_memories``, and the instance
+        plus its whole version history stay exactly where they were — auditable,
+        readable at an earlier ``?as_of=``, revivable. That is the same verb
+        ``dna memory forget`` and the MCP ``forget`` tool call; this is the third
+        face of one core (``dna.application.forget_impl``), never a fourth
+        implementation.
+
+        **Why this route had to exist.** i-130 made ``DELETE /v1/memories/{name}``
+        refuse — correctly, the row is immortal — and the refusal named ``forget``.
+        But ``forget`` had no REST door, so the refusal named a remedy this lane
+        could not perform, and the DELETE it replaced was the ONLY retire
+        affordance the portal had. Two flows broke, and the worse one broke
+        quietly: the portal's memory EDIT is a replace (write the new, retire the
+        old), so a refused second half left BOTH copies live and recall answering
+        with both. A door that refuses is only honest if the door it names is open.
+
+        **Idempotent, which is what makes a retry safe.** Forgetting an already
+        forgotten memory keeps the original ``valid_to`` and answers 200 with
+        ``outcome: "already_forgotten"`` — so a client whose first attempt died
+        in flight can simply repeat it. Repeating it WITH ``superseded_by``
+        records the pointer on the existing tombstone, which is exactly what a
+        half-finished edit needs to finish.
+
+        **404 only for a name this layer does not hold** (``outcome: not_found``
+        from the core): most often the PARTITION rather than the name — a
+        personal Engram is invisible from the workspace lane. Reported as a 404
+        instead of a 200 that says nothing happened, because "I could not find
+        what you named" is a different fact from "I retired it".
+
+        PLAN-GATED (i-042), ``memory`` family, ``memory_op='write'`` — the same
+        axes the MCP ``forget`` tool crosses, through the same shared gate. A
+        demotion is a write."""
+        await _plan_gate(request, tenant=tenant, family="memory", memory_op="write")
+        out = await forget_impl(
+            await _live(), name, scope, tenant=tenant, superseded_by=superseded_by,
+        )
+        if out.get("outcome") == "not_found":
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    f"memory {name!r} not found in tenant {tenant!r}'s memory "
+                    f"(scope {scope or 'default'!r}) — nothing to forget. If it "
+                    f"is one of YOUR personal memories it lives in another "
+                    f"partition and is not reachable from this workspace lane."
+                ),
+            )
+        return out
 
     # -- intel (sources + insights + the feedback state transition) ----------
     # Thin delegates to dna.extensions.intel.engine — the portal's intelligence
