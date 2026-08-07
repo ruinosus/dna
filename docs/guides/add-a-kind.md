@@ -6,6 +6,67 @@ This is the **procedural** companion to [Kinds — the identity and
 composition model](../concepts/kinds.md) (which covers the conceptual
 model). Read this when you want to ship a new Kind in 30 minutes.
 
+## Before you read any of it: `dna new kind`
+
+**Most Kinds do not need this guide.** Of the 47 Kinds this SDK ships as
+descriptors, every one is plain data — no class, no extension, no
+entry-point — and the portal already renders any Kind generically. If your
+Kind is a record (a contract, a policy, an entry in a register), the whole
+job is one command:
+
+```console
+$ dna new kind Contrato -d "Um contrato assinado com um cliente" \
+    -f 'titulo:string!=O título do contrato' \
+    -f valor:number \
+    --relation 'cliente=Cliente:one'
+Authored Kind Contrato in scope loja as ws-78d1….dna.local--Contrato
+  apiVersion  ws-78d1….dna.local/v1
+  plane       record  (default — you declared none)
+  traits      (none declared)
+  approved    false — it validates nothing and routes nothing until a human approves it.
+```
+
+What that writes is a real, auditable `KindDefinition` instance — the same
+thing the MCP tool `author_kind` and `POST /v1/kinds` write, through the same
+function, with the same guards. **It is INERT.** An unapproved Kind is not
+registered, so it validates nothing and routes nothing until a human approves
+it; that is deliberate, and there is no CLI flag to skip it.
+
+Everything the command does not ask for, it derives: the apiVersion namespace
+(assigned to your workspace on first use, and stable afterwards), the alias,
+the storage container, and the `plane`. So the minimum is a name and one line
+saying what the Kind is:
+
+```console
+$ dna new kind Contrato -d "Um contrato assinado com um cliente"
+```
+
+The flags worth knowing:
+
+| flag | |
+|---|---|
+| `-f/--field` | `NAME[:TYPE][!][=DESCRIPTION]`, repeatable, order kept. `!` marks it required; the type defaults to `string` and is a JSON Schema type name, verbatim. |
+| `--relation` | `FIELD=KIND:CARDINALITY` (`cliente=Cliente:one`), or the full form `FIELD={to: Contrato, cardinality: many, inverse_of: apolice}` whose keys are the declaration's own. A relation whose field you did not declare gets one. |
+| `--trait` | A role your Kind takes part in — **optional, and never required**. `dna new kind --help` prints the live vocabulary; `dna kind traits` lists which Kinds declare what. |
+| `--plane` | `composition` or `record`. Omit it unless you know which you mean: undeclared is not the same fact as declaring the default, and it is stored as such. |
+| `--dry-run` | Prints the plan and the schema, writes nothing — including no namespace claim. |
+| `--force` | Re-authors an existing Kind. The declaration is **rebuilt, not merged**: a field you do not pass again is gone (the command names the ones it drops), and the edit drops the approval. |
+| `-w/--workspace` | The workspace authoring the Kind (default `$DNA_TENANT`). It owns the apiVersion namespace the Kind lands under, so there is no unowned one to write. |
+
+⚠️ **`cardinality` has to be written down.** It states your *model's*
+multiplicity, not whether the JSON happens to be an array, so it is never read
+off the field's type — the same rule that made [`spec.relations`](#step-9--optional-declare-what-this-kind-points-at)
+refuse to infer it.
+
+⚠️ **Authoring reads the `KindNamespace` claim registry before it mints**, so a
+store with no `_lib` scope refuses the first `dna new kind` with a message
+naming the fix (create `<base>/_lib/manifest.yaml` declaring a Genome with
+`scope: _lib`).
+
+**Read on from here only if your Kind needs behaviour** — a custom
+parse/compose step, a bundle marker file, a typed model. That is the path
+below, and it is the path in decline.
+
 ## Live references
 
 Every pattern here has a shipped implementation to read side-by-side:
