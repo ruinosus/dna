@@ -2394,6 +2394,172 @@ class SqlAlchemySource(WritableSourcePort):
                 }
         return {"raw": None, "version": None, "recorded_at": None, "truncated": False}
 
+    async def load_kind_as_of(
+        self, scope: str, kind: str, *,
+        as_of: str,
+        tenant: str | None = None,
+        api_version: str | None = None,
+    ) -> dict[str, Any]:
+        """Every instance of ONE Kind, as this store recorded them at ``as_of``.
+
+        The plural of :meth:`load_one_as_of`, and it exists for exactly one
+        caller: the ``as_of`` traversal walking ``in`` (``spec-topologia-do-grafo``
+        fatia 4). *"What pointed AT this instance at T"* cannot be answered from
+        ``dna_edges`` — that table is REPLACED on every write
+        (:meth:`_replace_edges`: delete-then-insert), so it holds today's edges
+        and only today's. Measured on the dna-cloud database, 07/08/2026: **0 of
+        33 rows carry a ``from_version`` older than their instance's current
+        version** — not because the graph is fresh, but because a stale row
+        cannot exist. The edge table has no history *by construction*, which is
+        why an as-of walk re-derives instead of filtering.
+
+        So the walk needs the SPECS the candidate authors held at T, and those
+        are on disk: ``dna_versions.content`` is the full envelope per write.
+        One query per Kind, ranked by ``row_number()``, rather than one
+        ``load_one_as_of`` per candidate instance.
+
+        Returns ``{"instances": [...], "truncated": [...]}``:
+
+        * ``instances`` — ``{name, api_version, tenant, version, recorded_at,
+          raw}`` for the newest version recorded at or before ``as_of``.
+        * ``truncated`` — ``{name, api_version}`` for instances that HAVE
+          history, none of it reaching back that far (their version 1 was
+          pruned). The same distinction :meth:`load_one_as_of` draws with its
+          ``truncated`` flag, kept plural: silently omitting them would let the
+          traversal report *"nothing of this Kind pointed at you"* out of *"we
+          cannot know what these ones said"*.
+
+        ⚠️ **An instance DELETED since ``as_of`` is invisible here, and this
+        store cannot know it existed.** :meth:`delete_instance` removes the
+        ``dna_versions`` rows along with the instance — delete is the most
+        complete pruning there is. That is a limit of the storage, stated
+        rather than papered over; the traversal's docstring repeats it because
+        a caller who does not know it would read a shorter graph as a smaller
+        one.
+
+        Tenant lanes resolve overlay-first, base-second — the same precedence
+        :meth:`load_one_as_of` and ``_load_one_on`` use, so a lane that answers
+        a live read answers this one.
+        """
+        v = self.versions
+        lanes: list[str | None] = [tenant, None] if tenant else [None]
+        found: dict[tuple[str, str], dict[str, Any]] = {}
+        blind: dict[tuple[str, str], dict[str, Any]] = {}
+        async with self._engine.connect() as conn:
+            for lane in lanes:
+                where = [
+                    v.c.scope == scope, v.c.kind == kind,
+                    *self._api_version_where(v.c.api_version, api_version),
+                    self._tenant_where(v.c.tenant, lane),
+                ]
+                # ``row_number()`` and not a correlated ``max(version)``
+                # subquery: an Engram rewritten 195 times (the churn champion
+                # in the dna-cloud database) would otherwise have all 195
+                # envelopes read out of the store to keep one. Window functions
+                # are standard SQL on both dialects — SQLite has had them since
+                # 3.25, which predates the minimum this adapter already needs
+                # for ``ON CONFLICT``.
+                ranked = sa.select(
+                    v.c.api_version, v.c.name, v.c.tenant,
+                    v.c.version, v.c.content, v.c.created_at,
+                    sa.func.row_number().over(
+                        partition_by=[v.c.api_version, v.c.name],
+                        order_by=v.c.version.desc(),
+                    ).label("rn"),
+                ).where(*where, v.c.created_at <= as_of).subquery()
+                rows = (await conn.execute(
+                    sa.select(ranked).where(ranked.c.rn == 1)
+                )).all()
+                for r in rows:
+                    key = (r.api_version or "", r.name)
+                    # Overlay first: the base lane must not overwrite a hit the
+                    # tenant lane already produced.
+                    found.setdefault(key, {
+                        "name": r.name,
+                        "api_version": r.api_version or "",
+                        "tenant": r.tenant or "",
+                        "version": int(r.version),
+                        "recorded_at": r.created_at,
+                        "raw": json.loads(r.content),
+                    })
+                # The blind half, in one grouped query: an instance whose OLDEST
+                # surviving version is not 1 has been pruned. It is only blind
+                # AT ``as_of`` if nothing of it reaches back that far, which is
+                # the subtraction below — a instance pruned down to v23..v25 is
+                # perfectly answerable for any instant v23 covers.
+                oldest = (await conn.execute(
+                    sa.select(
+                        v.c.api_version, v.c.name,
+                        sa.func.min(v.c.version).label("minv"),
+                    ).where(*where)
+                    .group_by(v.c.api_version, v.c.name)
+                    .having(sa.func.min(v.c.version) > 1)
+                )).all()
+                for r in oldest:
+                    key = (r.api_version or "", r.name)
+                    blind.setdefault(key, {
+                        "name": r.name, "api_version": r.api_version or "",
+                    })
+        for key in found:
+            blind.pop(key, None)
+        return {
+            "instances": list(found.values()),
+            "truncated": list(blind.values()),
+        }
+
+    async def deleted_targets(
+        self, scope: str, *, tenant: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Every edge target this store OBSERVED being deleted, and when (i-131).
+
+        The witness an ``as_of`` traversal needs for the one blind spot it
+        cannot see around otherwise. :meth:`delete_instance` removes the
+        target's ``dna_versions`` rows, so an instance alive at T and deleted
+        since leaves no history to read — and a historical walk that simply
+        found nothing would report ``resolved: false`` about a relation that
+        was perfectly fine at T. That is a confident, wrong answer, not an
+        imprecise one.
+
+        What the delete DOES leave is this: it stamps ``to_deleted_at`` on the
+        INCOMING edges and deliberately keeps them (see :meth:`delete_instance`
+        — *"they belong to OTHER instances, which still say what they said"*).
+        So the fact is on disk, produced by a write, and this method is the
+        only new read it needs.
+
+        ⚠️ The rescue therefore covers ``direction='out'`` and cannot cover
+        ``'in'``: the delete takes the deleted instance's OUTGOING edges with
+        it, so an AUTHOR deleted since T leaves no witness at all. That
+        asymmetry is the storage's, stated rather than papered over — see the
+        traversal's docstring, which pins it with a test.
+
+        The comparison against ``as_of`` is left to the caller and done in
+        Python: ``to_deleted_at`` is a real ``TIMESTAMPTZ`` on Postgres and ISO
+        text on SQLite, and the row count here is bounded by *edges whose
+        target was deleted* — 0 of 33 on the dna-cloud database today, so
+        reading them all costs nothing and buys one comparison rule instead of
+        two dialect-specific ones.
+        """
+        e = self.edges
+        async with self._engine.connect() as conn:
+            rows = (await conn.execute(
+                sa.select(e.c.to_kind, e.c.to_name, e.c.to_deleted_at)
+                .where(
+                    e.c.scope == scope, e.c.tenant == (tenant or ""),
+                    e.c.to_deleted_at.isnot(None),
+                ).distinct()
+            )).all()
+        return [
+            {
+                "to_kind": r.to_kind, "to_name": r.to_name,
+                "to_deleted_at": (
+                    r.to_deleted_at.isoformat()
+                    if hasattr(r.to_deleted_at, "isoformat")
+                    else r.to_deleted_at
+                ),
+            }
+            for r in rows
+        ]
+
     # ------------------------------------------------------------------
     # WORLD time — the OTHER axis (revision 0010, spec-topologia fatia 3)
     # ------------------------------------------------------------------

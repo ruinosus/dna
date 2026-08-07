@@ -86,6 +86,94 @@ ou "o primeiro parâmetro que COMPÕE". Isso é a assinatura deste módulo, não
 tráfego — e por isso vira uma GUARDA, em
 ``tests/test_graph_telemetry.py::TestGatilho1Expressividade``, que fica vermelha
 no dia em que uma segunda forma entrar. Ver :data:`TRIGGER_P95_MS`.
+
+## ⭐ ``as_of`` — o grafo COMO ELE ERA em T (fatia 4 de ``spec-topologia-do-grafo``)
+
+O quarto eixo da MESMA pergunta: *de onde* (``kind``/``name``), *para que lado*
+(``direction``), *até onde* (``depth``) e agora **quando** (``as_of``). Uma
+rota, uma forma, quatro coordenadas — ver :data:`TRAVERSAL_QUESTION_PARAMS`,
+onde o gatilho 1 foi CONTADO em vez de contornado.
+
+**A medição que decidiu o desenho, e ela derrubou a leitura óbvia.** A leitura
+óbvia era filtrar ``dna_edges`` por ``from_version``: a coluna existe desde a
+revisão 0006 e o comentário do schema já a chamava de *"the anchor a future
+as-of traversal needs"*. Medido no banco do dna-cloud em 07/08/2026:
+
+```
+arestas                                              33
+from_version = 0 (backfill, proveniência ignorada)    0
+from_version < versão atual da instância (STALE)      0   ← ⭐
+```
+
+**Zero.** Não porque o grafo esteja fresco, e sim porque uma linha stale **não
+pode existir**: ``_replace_edges`` APAGA e reinsere o conjunto inteiro a cada
+escrita, então ``from_version`` é sempre a versão de hoje. A tabela de arestas
+não tem história por CONSTRUÇÃO, e filtrá-la por tempo devolveria o presente
+com um carimbo do passado — exatamente a mentira confiante que ``as_of`` existe
+para recusar.
+
+O que ``from_version`` de fato é: a **testemunha da qual versão produziu estas
+arestas**. Ela não guarda o passado, ela DIZ de qual instante o presente fala —
+e é por isso que toda linha devolvida por uma travessia ``as_of`` também a
+carrega, valendo então a versão que a instância tinha **em T**.
+
+**Então a travessia ``as_of`` RE-DERIVA.** ``dna_versions.content`` guarda o
+envelope INTEIRO por escrita (não um diff, não um ponteiro) desde a revisão
+0001 — a mesma observação que fez o ``as_of`` de instância não precisar de
+coluna nova. Reconstrói-se o estado que o store acreditava em T e caminha-se
+sobre ele com a MESMA política: mesmo teto de profundidade, mesmo anti-ciclo,
+mesmo vocabulário de ``stop``. **Nenhuma migração**: 0012 chegou a ser cogitada
+e não existe, porque não há coluna nova a criar.
+
+**Procuramos antes de construir, e o resultado foi "quase nada, mas o desenho
+existe".** Nenhuma biblioteca Python faz travessia de grafo point-in-time sobre
+armazém relacional (`gh api search/repositories`, 07/08). O que existe é o
+DESENHO, em dois lugares independentes: o ``as-of`` do **Datomic/XTDB** — pegar
+o banco *como valor* num instante e rodar a consulta ORDINÁRIA contra ele — e a
+NEP-001 do Neo4j (``temporal.asOf.traverse``, 1★, referência de proposta). Os
+dois dizem a mesma coisa e é a que está implementada aqui: **o instante produz
+um estado, e a travessia sobre esse estado é a de sempre.** Roubamos o desenho;
+não havia pacote a adotar.
+
+### As recusas — e elas são metade da entrega
+
+* **store sem história → 501.** :class:`~dna.memory.as_of.AsOfUnsupported`. O
+  adapter de filesystem declara ``versions=True`` e não guarda nenhuma
+  (``list_versions`` → ``[]``). Devolver o grafo de HOJE sob um timestamp
+  passado, ou ``[]``, é a mentira que esta casa mais cara paga.
+* **história podada antes de ``as_of`` → 410.**
+  :class:`~dna.memory.as_of.AsOfTruncated`, quando a ÂNCORA tem história e
+  nenhuma alcança T. Medido: 8 de 431 instâncias com história têm a v1 podada
+  (1,9%), **todas Engram** — ``VERSION_CHURN_RETENTION`` retém 3 versões
+  porque o autopilot reescreve a mesma memória milhares de vezes. Não é
+  hipótese.
+* **a instância não existia em T → 404** (``LookupError``, e é uma RESPOSTA —
+  a mesma distinção que ``get_instance(as_of=…)`` já faz).
+* **um nó ALCANÇADO no meio da caminhada e podado NÃO derruba a travessia** —
+  ele entra em :attr:`GraphResult.as_of_truncated` pelo nome. Derrubar a
+  resposta inteira por um vizinho cego seria trocar um relatório útil por um
+  erro; omiti-lo em silêncio seria deixar o leitor concluir "ninguém apontava"
+  de "não dá para saber o que estes diziam". O vocabulário é o mesmo que as
+  superfícies de LISTA já usam (ver :class:`~dna.memory.as_of.AsOfTruncated`).
+
+### ⚠️ O limite honesto: quem foi APAGADO depois de T é invisível
+
+``delete_instance`` remove as linhas de ``dna_versions`` junto com a instância —
+delete é a poda mais completa que existe. Uma instância viva em T e apagada
+depois não deixa rastro para este eixo ler, e o store **não tem como saber que
+ela existiu**. Está fixado por teste (não descoberto depois), e dito aqui porque
+quem não souber vai ler um grafo mais curto como um grafo menor.
+
+### ⚠️ Os DOIS eixos continuam SEPARADOS
+
+``as_of`` é tempo de TRANSAÇÃO (``dna_versions.created_at`` — *no que o store
+acreditava em T*). ``valid_at`` é tempo de VALIDADE
+(``dna_instances.valid_at`` — *o que era verdade em T*). Esta travessia tem
+**um** eixo, e o segundo não entra por conveniência: a interseção bitemporal
+exigiria a janela de validade nas LINHAS DE VERSÃO, e ``dna_versions`` não a
+tem — a mesma lacuna nomeada que faz ``get_instance(as_of=…, valid_at=…)``
+juntos serem recusados com ``ValueError``. Uma guarda mede que a travessia
+declara um eixo só.
 """
 from __future__ import annotations
 
@@ -208,9 +296,23 @@ def tenant_bucket(tenant: str | None) -> str:
     return hashlib.blake2s(tenant.encode("utf-8"), digest_size=4).hexdigest()
 
 
+#: O eixo da travessia — ``live`` (a CTE sobre ``dna_edges``) ou ``as_of`` (a
+#: re-derivação sobre ``dna_versions``). Rótulo fechado, como todos os outros.
+#:
+#: ⚠️ Ele existe por uma razão que não é curiosidade: uma travessia ``as_of``
+#: re-deriva e é N+1 POR CONSTRUÇÃO, então ela é mais lenta que a CTE — e se as
+#: duas caírem no mesmo `p95`, o **gatilho 2 dispara por causa de uma feature
+#: que acabamos de enviar**, e alguém migra a topologia inteira lendo o número
+#: errado. :func:`traversal_stats` separa os dois: o veredicto do gatilho é
+#: calculado sobre ``live``, e ``as_of`` é reportado ao lado, com o seu próprio
+#: p95, para quem quiser otimizá-lo.
+_AXIS_LIVE = "live"
+_AXIS_AS_OF = "as_of"
+
+
 def _emit_traversal(
     *, kind: str, direction: str, depth: int, stop: str, edges: int,
-    ms: float, producer: str, tenant: str | None,
+    ms: float, producer: str, tenant: str | None, axis: str = _AXIS_LIVE,
 ) -> None:
     """Uma linha, marcada e em JSON. Só chamada com o funil ligado.
 
@@ -226,6 +328,7 @@ def _emit_traversal(
         "ms": round(ms, 1),
         "producer": producer,
         "tenant": tenant_bucket(tenant),
+        "axis": axis,
     }
     _TRAVERSAL_LOG.info(
         "%s%s", TRAVERSAL_MARK,
@@ -287,6 +390,16 @@ class GraphResult:
     stop: str = "complete"
     #: The producer's configured mode — see :func:`producer_mode`.
     graph_producer: str = "warn"
+    #: The transaction instant this walk answered for (normalized ISO-8601 UTC),
+    #: or ``None`` for a LIVE walk. Echoed rather than assumed: a caller holding
+    #: only ``edges`` must be able to tell a historical answer from a current
+    #: one, which is the same reason ``get_instance`` echoes its ``as_of``.
+    as_of: str | None = None
+    #: ``Kind/name`` for every node the walk REACHED and could not read at
+    #: ``as_of`` because its history was pruned that far back. Reported, never
+    #: dropped: omitting them lets a reader conclude "nothing pointed at this"
+    #: from "we cannot know what these said". Always empty on a live walk.
+    as_of_truncated: list[str] = field(default_factory=list)
 
     @property
     def dangling(self) -> list[dict[str, Any]]:
@@ -317,6 +430,38 @@ class GraphResult:
         return [e for e in self.edges if e.get("to_deleted_at")]
 
 
+@dataclass(frozen=True)
+class KindLens:
+    """The three registry questions an ``as_of`` walk has to ask.
+
+    An INJECTED COLLABORATOR, not a parameter of the question — the same shape
+    ``dna.kernel.query.references.resolve_relations`` already uses, and for the
+    same reason: this module stays free of kernel imports, and the answers stay
+    the kernel's so a second resolution rule cannot appear beside the first.
+    :class:`TestGatilho1Expressividade` counts it separately from the question
+    coordinates for exactly that reason.
+
+    Why re-derivation needs a registry at all: the edges of T come from the
+    SPECS of T, and knowing WHICH spec fields are relations is a declaration
+    (``spec.relations``), never a slug-shaped guess at a field name. That is
+    the same line ``dna.kernel.query.graph``'s live path holds by reading rows
+    a write produced.
+    """
+
+    #: ``(kind, *, api_version=None, scope=None) -> KindPort | None``.
+    port_for: Any
+    #: ``() -> Iterable[KindPort]`` — every registered Kind. Needed only by
+    #: ``direction="in"``: *who pointed at me* is answered by the Kinds that
+    #: DECLARE a relation to mine, which is a registry question.
+    ports: Any
+    #: ``async (kind, scope) -> list[str]`` — the scopes a live read would
+    #: probe, in order. Not a convenience: 3 of the 33 edges in the dna-cloud
+    #: database (9%) resolved through the parent-scope chain, so a historical
+    #: read pinned to one scope would report them DANGLING — a confident
+    #: ``resolved: false`` about a relation that was fine.
+    scope_chain: Any
+
+
 def _clamp_depth(depth: int | None) -> int:
     if depth is None:
         return DEFAULT_DEPTH
@@ -332,11 +477,20 @@ async def traverse(
     tenant: str | None = None,
     direction: str = "in",
     depth: int | None = None,
+    as_of: str | None = None,
+    kinds: "KindLens | None" = None,
 ) -> GraphResult:
     """Walk ``source``'s edge graph from one instance.
 
     ``direction``: ``in`` (what points at this — the product question),
     ``out`` (what this points at), ``both``.
+
+    ``as_of`` (normalized ISO-8601 UTC) answers the SAME question at a past
+    TRANSACTION instant — *the graph as it was in T* — by re-deriving it from
+    ``dna_versions`` rather than by filtering ``dna_edges``, which keeps no
+    history. See the module docstring for the measurement that decided that and
+    for the three refusals it brings; ``kinds`` is the registry lens the
+    re-derivation needs and is an injected collaborator, never a question.
 
     Raises :class:`GraphUnsupported` when the source declares no edge graph.
 
@@ -366,10 +520,18 @@ async def traverse(
     # de nível. Nenhum relógio é lido — `_clock` fica intocado abaixo.
     observing = traversal_logging_enabled()
     started = _clock() if observing else 0.0
-    rows = await source.traverse_edges(
-        scope, kind, name,
-        tenant=tenant, direction=direction, depth=effective,
-    )
+    blind: list[str] = []
+    if as_of is None:
+        rows = await source.traverse_edges(
+            scope, kind, name,
+            tenant=tenant, direction=direction, depth=effective,
+        )
+    else:
+        rows, blind = await _walk_as_of(
+            source, scope, kind, name,
+            tenant=tenant, direction=direction, depth=effective,
+            as_of=as_of, kinds=kinds,
+        )
     deepest = max((int(r.get("depth", 1)) for r in rows), default=0)
     stop = "depth_reached" if deepest >= effective else "complete"
     if len(rows) >= getattr(source, "MAX_TRAVERSAL_ROWS", 10**9):
@@ -385,12 +547,406 @@ async def traverse(
         _emit_traversal(
             kind=kind, direction=direction, depth=effective, stop=stop,
             edges=len(rows), ms=(_clock() - started) * 1000.0,
-            producer=producer, tenant=tenant,
+            producer=producer, tenant=tenant, axis=_AXIS_AS_OF if as_of else _AXIS_LIVE,
         )
     return GraphResult(
         edges=rows, direction=direction, depth=effective, stop=stop,
-        graph_producer=producer,
+        graph_producer=producer, as_of=as_of, as_of_truncated=blind,
     )
+
+
+# ── a travessia ``as_of``: o grafo RE-DERIVADO em T ─────────────────────────
+#
+# Privada, e por desenho: ``TestGatilho1Expressividade`` exige que exista UMA
+# travessia PÚBLICA no módulo de policy, porque "duas rotas de travessia de
+# forma diferente" é metade do gatilho 1. Isto não é uma segunda forma de
+# pergunta — é a MESMA pergunta com a coordenada de tempo, alcançável só por
+# ``traverse``, com o mesmo teto, o mesmo anti-ciclo e o mesmo vocabulário de
+# ``stop``. Uma função pública aqui seria a segunda porta; um helper privado
+# atrás da primeira não é.
+
+
+def _marker(kind: str | None, name: str) -> str:
+    """``>Kind/name>`` — o mesmo delimitador que a CTE usa.
+
+    Escrito aqui em Python e ali em SQL porque as duas travessias caminham
+    sobre estruturas diferentes; o TESTE que as mantém honestas não compara o
+    código, compara a RESPOSTA (``as_of`` no instante de agora tem de devolver
+    o mesmo grafo que a travessia viva).
+    """
+    return f">{kind or ''}/{name}>"
+
+
+async def _walk_as_of(
+    source: Any, scope: str, kind: str, name: str, *,
+    tenant: str | None, direction: str, depth: int,
+    as_of: str, kinds: "KindLens | None",
+) -> tuple[list[dict[str, Any]], list[str]]:
+    """O grafo como o store acreditava em ``as_of`` — re-derivado, não filtrado.
+
+    Devolve ``(rows, blind)`` com as MESMAS chaves que
+    ``SqlAlchemySource.traverse_edges`` produz, porque a face que as renderiza
+    é uma só e uma resposta histórica com outro formato seria uma segunda forma
+    de pergunta pela porta dos fundos.
+
+    Duas chaves valem uma nota, e as duas são sobre honestidade:
+
+    * ``from_version`` é a versão que a instância de origem tinha **em T**, não
+      a de hoje. É o que a coluna sempre quis dizer — *de qual versão estas
+      arestas foram derivadas* — só que agora derivada de uma versão do
+      passado.
+    * ``to_deleted_at`` é SEMPRE ``None`` numa linha ``as_of``, e isso é uma
+      afirmação, não uma omissão: um delete registrado DEPOIS de T não faz
+      parte do que o store acreditava em T. (O contrário — carimbar o delete de
+      hoje numa resposta sobre o passado — seria misturar dois instantes numa
+      linha só.)
+    """
+    from dna.kernel.identity import instance_id_of  # noqa: PLC0415
+    from dna.kernel.kinds.relations import (  # noqa: PLC0415
+        relation_values,
+        relations_of,
+    )
+    # ``_api_version_of`` é privado do módulo vizinho e importado assim de
+    # propósito: ele lê as DUAS formas que um getter devolve (dict cru ou
+    # instância parseada), e uma segunda leitura escrita aqui divergiria da
+    # dele exatamente no dia em que a forma mudasse — que é o defeito que o
+    # docstring dele descreve.
+    from dna.kernel.query.references import (  # noqa: PLC0415
+        _api_version_of,
+        resolve_relations,
+    )
+    from dna.memory.as_of import AsOfTruncated, AsOfUnsupported  # noqa: PLC0415
+
+    if not callable(getattr(source, "load_one_as_of", None)):
+        raise AsOfUnsupported(
+            f"an as_of traversal reads the SPECS this store recorded at that "
+            f"instant, so it needs version history with a transaction "
+            f"timestamp; {type(source).__name__} does not implement "
+            f"load_one_as_of. Refusing rather than walking TODAY's edge graph "
+            f"and presenting it as the graph at {as_of}."
+        )
+    if direction != "out" and not callable(
+        getattr(source, "load_kind_as_of", None)
+    ):
+        raise AsOfUnsupported(
+            f"'what pointed AT {kind}/{name} at {as_of}' has to read the "
+            f"candidate authors' specs as of that instant; "
+            f"{type(source).__name__} does not implement load_kind_as_of. "
+            f"direction='out' is answerable on this store; 'in' and 'both' are "
+            f"not, and [] would say nothing pointed at it."
+        )
+    if kinds is None:
+        # A wiring bug, not a capability and not a bad request: every face
+        # reaches this through ``Kernel.graph_refs``, which always supplies the
+        # lens. A ``ValueError`` here would surface as a 400 and accuse the
+        # caller of something the deployment did.
+        raise RuntimeError(
+            "traverse(as_of=...) re-derives the graph from the versions' "
+            "specs, and knowing WHICH spec fields are relations is a registry "
+            "question — pass kinds=KindLens(...). Guessing at field names is "
+            "the slug-shaped derivation this module refuses."
+        )
+
+    blind: set[str] = set()
+    #: ``(kind, name)`` → ``(scope it resolved in, the as-of row)``. One read
+    #: per node per walk: a diamond asks for the same target from four routes.
+    believed: dict[tuple[str, str], tuple[str | None, dict[str, Any] | None]] = {}
+    #: ``(kind, api_version)`` → the whole Kind at T, for the ``in`` direction.
+    per_kind: dict[tuple[str, str | None], dict[str, Any]] = {}
+
+    async def _believed(k: str, n: str) -> tuple[str | None, dict[str, Any] | None]:
+        key = (k, n)
+        if key in believed:
+            return believed[key]
+        try:
+            chain = list(await kinds.scope_chain(k, scope))
+        except Exception:  # noqa: BLE001 — fail-soft exactly like the live
+            # read's own chain lookup: an unreadable chain degrades to the
+            # scope we were asked about, never to an exception on a read.
+            chain = [scope]
+        hit: tuple[str | None, dict[str, Any] | None] = (None, None)
+        for sc in chain:
+            res = await source.load_one_as_of(
+                sc, k, n, as_of=as_of, tenant=tenant,
+            ) or {}
+            if res.get("raw") is not None:
+                hit = (sc, res)
+                break
+            if res.get("truncated"):
+                # Blind HERE stops the chain: "this scope's copy may have
+                # existed and we cannot read it" is not a licence to answer
+                # with the parent's copy, which a live read would never have
+                # reached.
+                blind.add(f"{k}/{n}")
+                break
+        believed[key] = hit
+        return hit
+
+    async def _getter(sc: str, k: str, n: str, *, tenant: str | None = None) -> Any:
+        _, res = await _believed(k, n)
+        return (res or {}).get("raw")
+
+    async def _local_getter(
+        sc: str, k: str, n: str, *, tenant: str | None = None,
+    ) -> Any:
+        found_in, res = await _believed(k, n)
+        return (res or {}).get("raw") if found_in == sc else None
+
+    def _port_for(target: str) -> Any:
+        return kinds.port_for(target, scope=scope)
+
+    #: ``(kind, name)`` → quando o alvo foi apagado. Carregado UMA vez, e só
+    #: quando alguma aresta de fato não resolveu — o caso raro paga, o comum não.
+    deletions: dict[tuple[str, str], str] | None = None
+
+    async def _deletions() -> dict[tuple[str, str], str]:
+        nonlocal deletions
+        if deletions is None:
+            reader = getattr(source, "deleted_targets", None)
+            rows = await reader(scope, tenant=tenant) if callable(reader) else []
+            deletions = {
+                (r["to_kind"], r["to_name"]): r["to_deleted_at"]
+                for r in rows
+                if r.get("to_kind") and r.get("to_deleted_at")
+            }
+        return deletions
+
+    async def _rescue_deleted(row: dict[str, Any]) -> None:
+        """A instância existia em T e foi APAGADA depois — o delete deixou prova.
+
+        Sem isto, uma aresta cujo alvo morreu depois de T volta ``resolved:
+        false``: o histórico da instância apagada foi embora com ela
+        (``delete_instance`` apaga as linhas de ``dna_versions``), então a
+        re-derivação não acha nada e conclui "não existia". **É a resposta
+        OPOSTA, com a mesma confiança** — em T aquilo estava perfeitamente vivo.
+
+        O que salva é um fato que uma ESCRITA produziu: o delete carimba
+        ``to_deleted_at`` nas arestas que apontavam para ele e as mantém de
+        propósito. Se o carimbo é POSTERIOR a ``as_of``, o alvo estava vivo em
+        T — e o que continua desconhecido é só o CONTEÚDO dele, que vira nome
+        em ``as_of_truncated``. ``to_id`` e ``to_api_version`` ficam ``None``,
+        que é o valor que este esquema já usa para "desconhecido"; preenchê-los
+        com o que o registro diz HOJE seria carimbar o presente de novo.
+        """
+        stamps = await _deletions()
+        for declared in row["declared_to"]:
+            stamp = stamps.get((declared, row["to_name"]))
+            # ISO-8601 UTC de largura fixa dos dois lados: comparar como texto É
+            # comparar cronologicamente, a mesma premissa de ``created_at``.
+            if stamp and stamp > as_of:
+                row["to_kind"] = declared
+                row["resolved"] = True
+                blind.add(f"{declared}/{row['to_name']}")
+                return
+
+    async def _kind_at(k: str, api_version: str | None) -> dict[str, Any]:
+        key = (k, api_version)
+        if key not in per_kind:
+            payload = await source.load_kind_as_of(
+                scope, k, as_of=as_of, tenant=tenant, api_version=api_version,
+            ) or {}
+            for gone in payload.get("truncated") or []:
+                blind.add(f"{k}/{gone.get('name')}")
+            per_kind[key] = payload
+        return per_kind[key]
+
+    async def _out_rows(
+        k: str, n: str, raw: Any, version: int, *, at_depth: int, path: str,
+    ) -> list[dict[str, Any]]:
+        port = kinds.port_for(
+            k, api_version=_api_version_of(raw), scope=scope,
+        )
+        if port is None:
+            return []
+        edges, _problems, _discords, complete = await resolve_relations(
+            port, raw, scope=scope, name=n, tenant=tenant,
+            getter=_getter, port_for=_port_for, local_getter=_local_getter,
+        )
+        if not complete:
+            # ``resolve_relations`` returns this when a read raised part-way.
+            # The write path's answer is "say nothing"; a TRAVERSAL's cannot
+            # be, because a short list renders as a small graph. Refuse the
+            # whole answer rather than serve a partial one that looks whole —
+            # the same rule the producer applies to a partial edge set.
+            raise RuntimeError(
+                f"the store failed part-way through re-deriving "
+                f"{k}/{n}'s relations at {as_of}; refusing a PARTIAL as-of "
+                f"graph, which would be indistinguishable from a small one."
+            )
+        rows = []
+        from_api = _api_version_of(raw) or ""
+        for e in edges:
+            closes = _marker(e.to_kind, e.value) in path
+            rows.append({
+                "direction": "out", "depth": at_depth,
+                "from_api_version": from_api,
+                "from_kind": k, "from_name": n,
+                "source_field": e.field, "ordinal": int(e.ordinal),
+                "to_scope": e.to_scope, "to_kind": e.to_kind,
+                "to_name": e.value,
+                "to_api_version": e.to_api_version,
+                "to_id": e.to_id,
+                "declared_to": tuple(e.declared),
+                # See the function docstring: a delete recorded after T is not
+                # part of the belief state at T.
+                "to_deleted_at": None,
+                "resolved": e.to_kind is not None,
+                "closes_cycle": closes,
+                "from_version": int(version or 0),
+            })
+        for row in rows:
+            if not row["resolved"]:
+                await _rescue_deleted(row)
+        return rows
+
+    async def _winner(rel: Any, value: str) -> str | None:
+        """WHICH declared target a polymorphic relation actually hit at T.
+
+        The same order ``resolve_relations`` probes in — first declared target
+        that resolves wins. Re-deriving the order here rather than assuming the
+        anchor's Kind is what keeps ``in`` and ``out`` from disagreeing about
+        one edge.
+        """
+        targets = [t for t in rel.to if _port_for(t) is not None] or list(rel.to)
+        for t in targets:
+            _, res = await _believed(t, value)
+            if (res or {}).get("raw") is not None:
+                return t
+        return None
+
+    async def _in_rows(
+        k: str, n: str, raw: Any, *, at_depth: int, path: str,
+        found_in: str | None,
+    ) -> list[dict[str, Any]]:
+        to_api = _api_version_of(raw)
+        to_id = instance_id_of(raw)
+        rows = []
+        seen_ports: set[tuple[str, str | None]] = set()
+        for port in kinds.ports() or []:
+            src_kind = getattr(port, "kind", None)
+            if not src_kind:
+                continue
+            src_api = getattr(port, "api_version", None)
+            if (src_kind, src_api) in seen_ports:
+                continue
+            seen_ports.add((src_kind, src_api))
+            candidates = [
+                rel for rel in relations_of(port).values()
+                if rel.resolved and k in rel.to
+            ]
+            if not candidates:
+                continue
+            payload = await _kind_at(src_kind, src_api)
+            for inst in payload.get("instances") or []:
+                spec = (inst.get("raw") or {}).get("spec")
+                for rel in candidates:
+                    values = relation_values(rel, spec)
+                    for ordinal, value in enumerate(values):
+                        if value != n:
+                            continue
+                        if len(rel.to) > 1 and await _winner(rel, value) != k:
+                            # A polymorphic relation whose value resolved to a
+                            # DIFFERENT declared Kind: the edge is real and it
+                            # is not ours.
+                            continue
+                        # ⚠️ O nó em que ESTA aresta chega, andando para
+                        # dentro, é o lado FROM — o autor — e não o alvo. A CTE
+                        # espelha o join inteiro quando ``direction='in'``
+                        # (``node_kind = from_kind``); usar o alvo aqui marcaria
+                        # ciclo já no primeiro salto, porque o alvo é o nó de
+                        # onde a caminhada partiu.
+                        closes = _marker(src_kind, inst.get("name")) in path
+                        rows.append({
+                            "direction": "in", "depth": at_depth,
+                            "from_api_version": inst.get("api_version") or "",
+                            "from_kind": src_kind,
+                            "from_name": inst.get("name"),
+                            "source_field": rel.name, "ordinal": int(ordinal),
+                            "to_scope": scope if found_in == scope else None,
+                            "to_kind": k, "to_name": n,
+                            "to_api_version": to_api,
+                            "to_id": to_id,
+                            "declared_to": tuple(rel.to),
+                            "to_deleted_at": None,
+                            "resolved": True,
+                            "closes_cycle": closes,
+                            "from_version": int(inst.get("version") or 0),
+                        })
+        return rows
+
+    anchor = await source.load_one_as_of(
+        scope, kind, name, as_of=as_of, tenant=tenant,
+    ) or {}
+    if anchor.get("truncated"):
+        raise AsOfTruncated(
+            f"{kind} {name!r} in scope {scope!r} HAS history, but none of it "
+            f"reaches back to {as_of} — the versions that old were pruned, so "
+            f"what pointed at it then is not knowable. This is NOT 'nothing "
+            f"pointed at it', and it is not 'the instance did not exist'."
+        )
+    if anchor.get("raw") is None:
+        raise LookupError(
+            f"no {kind} named {name!r} in scope {scope!r} at {as_of} — "
+            f"nothing was recorded under that name at or before that instant, "
+            f"so there is no graph around it to walk."
+        )
+    believed[(kind, name)] = (scope, anchor)
+
+    max_rows = getattr(source, "MAX_TRAVERSAL_ROWS", 10**9)
+    lanes = ("out", "in") if direction == "both" else (direction,)
+    merged: list[dict[str, Any]] = []
+    for lane in lanes:
+        # One dedup dict PER LANE, exactly like the adapter's ``both`` (which
+        # calls itself twice): the same edge legitimately appears once as an
+        # ``out`` of one node and once as an ``in`` of the other.
+        out: dict[tuple, dict[str, Any]] = {}
+        frontier = [(kind, name, _marker(kind, name))]
+        for level in range(1, depth + 1):
+            if not frontier or len(out) >= max_rows:
+                break
+            nxt: list[tuple[str, str, str]] = []
+            for node_kind, node_name, path in frontier:
+                found_in, res = await _believed(node_kind, node_name)
+                raw = (res or {}).get("raw")
+                if raw is None:
+                    continue
+                if lane == "out":
+                    rows = await _out_rows(
+                        node_kind, node_name, raw,
+                        int((res or {}).get("version") or 0),
+                        at_depth=level, path=path,
+                    )
+                else:
+                    rows = await _in_rows(
+                        node_kind, node_name, raw,
+                        at_depth=level, path=path, found_in=found_in,
+                    )
+                for row in rows:
+                    key = (row["from_api_version"], row["from_kind"],
+                           row["from_name"], row["source_field"],
+                           row["ordinal"])
+                    if key not in out:
+                        out[key] = row
+                    if len(out) >= max_rows:
+                        break
+                    if row["closes_cycle"]:
+                        # Emitted (a cycle in the data is information), never
+                        # expanded FROM — the CTE's rule, in Python.
+                        continue
+                    step = (
+                        (row["to_kind"], row["to_name"]) if lane == "out"
+                        else (row["from_kind"], row["from_name"])
+                    )
+                    if step[0] is None:
+                        # A dangling target has no Kind and therefore no rows
+                        # to walk into; the CTE's NULL join says the same.
+                        continue
+                    nxt.append((step[0], step[1], path + _marker(*step)[1:]))
+                if len(out) >= max_rows:
+                    break
+            frontier = nxt
+        merged.extend(out.values())
+    return merged, sorted(blind)
 
 
 # ── o LEITOR: das linhas para os dois veredictos ────────────────────────────
@@ -438,6 +994,18 @@ def traversal_stats(lines: Iterable[str]) -> dict[str, Any]:
     Não filtra nada em silêncio: ``ignored`` conta as linhas que não eram
     nossas e ``calls`` as que eram, para que um relatório feito sobre o arquivo
     errado se denuncie em vez de imprimir ``p95 = 0`` e um "não disparou".
+
+    ⚠️ **O veredicto do gatilho é calculado sobre as travessias VIVAS.** Uma
+    travessia ``as_of`` re-deriva o grafo das versões e é N+1 por construção —
+    mais lenta que a CTE por DESENHO, não por escala. Somá-las faria o gatilho
+    2 disparar por causa de uma feature que acabamos de enviar, e alguém
+    migraria a topologia inteira lendo o número errado. As ``as_of`` aparecem
+    em ``as_of`` com o seu próprio ``p95``, para quem quiser otimizá-las — o
+    que não é a mesma decisão.
+
+    ⚠️ Uma linha SEM ``axis`` (emitida antes deste campo existir) conta como
+    ``live``, que é o que ela era. O default fica aqui e não no emissor porque
+    é o LEITOR que encontra as linhas velhas.
     """
     calls: list[Mapping[str, Any]] = []
     ignored = 0
@@ -447,6 +1015,11 @@ def traversal_stats(lines: Iterable[str]) -> dict[str, Any]:
             ignored += 1
             continue
         calls.append(record)
+
+    historical = [r for r in calls if r.get("axis") == _AXIS_AS_OF]
+    calls = [r for r in calls if r.get("axis", _AXIS_LIVE) != _AXIS_AS_OF]
+    hist_deep = [float(r.get("ms", 0.0)) for r in historical
+                 if int(r.get("depth", 0) or 0) >= TRIGGER_DEPTH]
 
     total = len(calls)
     truncated = sum(1 for r in calls if r.get("stop") == "truncated")
@@ -487,6 +1060,20 @@ def traversal_stats(lines: Iterable[str]) -> dict[str, Any]:
     return {
         "calls": total,
         "ignored": ignored,
+        # Reportado ao lado, NUNCA somado — ver o docstring. ``calls`` acima é
+        # o das vivas, e é sobre elas que o veredicto abaixo é calculado.
+        "as_of": {
+            "calls": len(historical),
+            "p95_ms": percentile(
+                [float(r.get("ms", 0.0)) for r in historical], 0.95,
+            ),
+            "deep": {
+                "depth_min": TRIGGER_DEPTH,
+                "calls": len(hist_deep),
+                "p95_ms": percentile(hist_deep, 0.95),
+            },
+            "counts_toward_trigger": False,
+        },
         "by_depth": by_depth,
         "p95_ms": percentile([float(r.get("ms", 0.0)) for r in calls], 0.95),
         "deep": {

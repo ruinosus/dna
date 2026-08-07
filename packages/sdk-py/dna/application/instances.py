@@ -873,6 +873,7 @@ async def graph_refs_impl(
     live: LiveDna, *, kind: str, name: str, scope: str | None = None,
     tenant: str | None = None, api_version: str | None = None,
     direction: str = "in", depth: int | None = None,
+    as_of: str | None = None,
 ) -> dict[str, Any]:
     """"What points at this instance?" — the DERIVED reference graph.
 
@@ -901,18 +902,53 @@ async def graph_refs_impl(
     Raises :class:`~dna.kernel.query.graph.GraphUnsupported` on a store that
     keeps no edges — deliberately, rather than an empty list that would read as
     "nothing points at this instance".
+
+    **``as_of`` (ISO-8601) walks the graph AS IT WAS at that transaction
+    instant** — the fourth coordinate of the same question, and the same axis
+    :func:`get_instance_impl` already carries for one instance
+    (``dna_versions.created_at``: *what did this store BELIEVE at T*). It is
+    re-derived from the versions' specs rather than filtered out of
+    ``dna_edges``, because that table is replaced on every write and holds no
+    history — see ``dna.kernel.query.graph`` for the measurement.
+
+    Two fields travel with a historical answer, and neither is decoration:
+
+    * ``as_of`` echoed — a caller that only reads ``edges`` must still be able
+      to tell a past answer from a present one. Exactly why
+      :func:`get_instance_impl` echoes its own.
+    * ``as_of_truncated`` — ``Kind/name`` for every node the walk REACHED and
+      could not read that far back (history pruned). Reported, never dropped:
+      omitting them would let a reader conclude "nothing pointed at this" out
+      of "we cannot know what these said". The ANCHOR being unreadable is a
+      refusal instead (:class:`~dna.memory.as_of.AsOfTruncated`, 410), because
+      a single-anchor read either answers or says it cannot.
+
+    ⚠️ ``as_of`` and ``valid_at`` are DIFFERENT axes and this surface carries
+    only the first, for the same named reason ``get_instance(as_of=,
+    valid_at=)`` together is refused: the bitemporal intersection needs the
+    validity window on the VERSION rows, and ``dna_versions`` has none.
     """
     sc = scope or live.default_scope(tenant)
     port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
+    as_of_iso = None
+    if as_of is not None:
+        from dna.memory.as_of import normalize_as_of  # noqa: PLC0415
+
+        # ValueError on a non-ISO-8601 instant, BEFORE the store is touched —
+        # the same normalization ``get_instance_impl`` applies, so the two
+        # surfaces cannot disagree about what "2026-08-06" means.
+        as_of_iso = normalize_as_of(as_of)
     result = await live.kernel.graph_refs(
         sc, port.kind, name,
-        tenant=tenant, direction=direction, depth=depth,
+        tenant=tenant, direction=direction, depth=depth, as_of=as_of_iso,
     )
     return {
         "scope": sc, "kind": port.kind, "api_version": port.api_version,
         "name": name,
         "direction": result.direction, "depth": result.depth,
         "stop": result.stop, "graph_producer": result.graph_producer,
+        "as_of": result.as_of,
+        "as_of_truncated": list(result.as_of_truncated),
         "edges": [
             {
                 "depth": e["depth"], "direction": e["direction"],

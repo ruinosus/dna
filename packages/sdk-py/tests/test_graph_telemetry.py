@@ -317,10 +317,17 @@ class TestORotuloNaoIdentificaNinguem:
         assert "acme-corp-9" not in raw
         assert SCOPE not in raw
         line = g.parse_traversal_line(raw)
+        # ``axis`` entrou na fatia 4 (``live`` / ``as_of``) e é vocabulário
+        # FECHADO, como todos os outros rótulos aqui — ele diz QUAL travessia
+        # rodou, nunca sobre o quê. O ``==`` continua deliberado: um campo novo
+        # tem de passar por esta linha, porque é aqui que alguém percebe que
+        # acabou de pôr conteúdo de cliente num log de operador.
         assert set(line) == {
             "kind", "dir", "depth", "stop", "edges", "ms", "producer", "tenant",
+            "axis",
         }
         assert line["tenant"] == g.tenant_bucket("acme-corp-9")
+        assert line["axis"] == "live"
 
     def test_o_balde_agrupa_sem_nomear(self):
         """Sem balde nenhum o gatilho "no maior tenant real" não fecha; com o
@@ -438,11 +445,29 @@ class TestOGatilho2:
 
 
 #: A contagem que a spec registrou: **uma rota, zero parâmetros que compõem.**
-#: Estes três são os parâmetros de COORDENADA (de onde, para que lado, até onde)
-#: — nenhum deles compõe com outro para formar uma pergunta nova. Um quarto que
-#: filtre por Kind no caminho, aplique predicado sobre a aresta ou deixe o
-#: cliente escolher a projeção JÁ é uma linguagem de consulta em formação.
-TRAVERSAL_PARAMS = {"tenant", "direction", "depth"}
+#: Parâmetros de COORDENADA (de onde, para que lado, até onde, **quando**) —
+#: nenhum deles compõe com outro para formar uma pergunta nova. Um que filtre
+#: por Kind no caminho, aplique predicado sobre a aresta ou deixe o cliente
+#: escolher a projeção JÁ é uma linguagem de consulta em formação.
+#:
+#: ⭐ **``as_of`` entrou em 07/08/2026 (fatia 4) e o gatilho 1 foi CONTADO, não
+#: contornado.** O argumento fica escrito para o próximo leitor JULGAR em vez de
+#: herdar: ``as_of`` é a quarta COORDENADA da mesma pergunta, não um filtro
+#: sobre a resposta. A rota continua UMA, a forma continua fixa, e o que muda é
+#: o INSTANTE — as mesmas chaves, o mesmo ``stop``, o mesmo teto, o mesmo
+#: anti-ciclo. Nada nele compõe com ``direction`` ou ``depth`` para formar uma
+#: pergunta que a rota não fazia; ele diz QUANDO a rota está sendo feita. O
+#: sinal do gatilho segue o mesmo e segue sem disparar: o primeiro parâmetro que
+#: COMPÕE, ou uma segunda rota de travessia de forma diferente.
+TRAVERSAL_PARAMS = {"tenant", "direction", "depth", "as_of"}
+
+#: COLABORADORES injetados — não são a pergunta, são de QUEM a travessia
+#: pergunta. Contados numa lista própria e nunca somados aos de cima, porque a
+#: distinção é exatamente o que o gatilho mede: um colaborador a mais é
+#: acoplamento (revisável em code review), um parâmetro de PERGUNTA a mais é
+#: expressividade — que é o que inverte a recomendação da spec. Somá-los faria
+#: esta guarda perder o dente sem ninguém notar.
+TRAVERSAL_COLLABORATORS = {"kinds"}
 
 _GATILHO_1 = (
     "\n\n⚠️ GATILHO 1 de spec-topologia-do-grafo §10 — EXPRESSIVIDADE.\n"
@@ -469,11 +494,16 @@ class TestGatilho1Expressividade:
             n for n, p in inspect.signature(g.traverse).parameters.items()
             if p.kind is inspect.Parameter.KEYWORD_ONLY
         }
-        assert params == TRAVERSAL_PARAMS, _GATILHO_1
+        assert params == TRAVERSAL_PARAMS | TRAVERSAL_COLLABORATORS, _GATILHO_1
 
     def test_a_fachada_do_kernel_nao_compoe_nada_a_mais(self):
         """Um parâmetro que compõe tem de atravessar esta fachada para chegar
-        na CTE — contá-la fecha o caminho por cima."""
+        na CTE — contá-la fecha o caminho por cima.
+
+        O colaborador NÃO aparece aqui, e essa ausência é o teste: a fachada
+        CONSTRÓI a lente a partir do próprio kernel. Se ``kinds`` vazasse para
+        cá, um chamador de fora poderia escolher de qual registro a travessia
+        deriva o passado — que é composição, não coordenada."""
         params = {
             n for n, p in inspect.signature(Kernel.graph_refs).parameters.items()
             if p.kind is inspect.Parameter.KEYWORD_ONLY
@@ -495,9 +525,37 @@ class TestGatilho1Expressividade:
 
     def test_existe_UMA_travessia_no_kernel(self):
         """"Duas rotas de travessia de forma diferente" começa aqui: uma
-        segunda função de caminhada no módulo de policy é a segunda forma."""
+        segunda função de caminhada no módulo de policy é a segunda forma.
+
+        ⚠️ ``_walk_as_of`` é privada e não conta — e a razão está escrita para
+        ser contestada, não engolida: ela responde a MESMA pergunta com a
+        coordenada de tempo, só é alcançável por ``traverse``, e nenhuma face
+        pode chamá-la. Uma pública seria a segunda porta; um helper atrás da
+        primeira não é. O teste abaixo prende essa condição — se ela virar
+        pública, este teste fica vermelho citando a spec."""
         walkers = {
             n for n, fn in vars(g).items()
             if inspect.iscoroutinefunction(fn) and not n.startswith("_")
         }
         assert walkers == {"traverse"}, _GATILHO_1
+
+    def test_a_travessia_tem_UM_eixo_de_tempo(self):
+        """``as_of`` (transação) e ``valid_at`` (validade) são eixos DIFERENTES,
+        e esta travessia carrega um só.
+
+        Não é preguiça e não é acaso: a interseção bitemporal precisa da janela
+        de validade nas LINHAS DE VERSÃO, e ``dna_versions`` não a tem — a mesma
+        lacuna nomeada que faz ``get_instance(as_of=…, valid_at=…)`` juntos
+        serem recusados com ``ValueError``. Esta guarda fica vermelha no dia em
+        que alguém acrescentar o segundo eixo por conveniência, e o remédio
+        certo naquele dia é fechar a lacuna, não passar a guarda."""
+        for fn in (g.traverse, Kernel.graph_refs, graph_refs_impl):
+            params = set(inspect.signature(fn).parameters)
+            assert "as_of" in params, fn
+            assert "valid_at" not in params, (
+                f"{fn.__qualname__} ganhou um SEGUNDO eixo de tempo. "
+                "A interseção bitemporal precisa da janela de validade em "
+                "dna_versions, que não a tem — servir o eixo que por acaso "
+                "for checado primeiro responde uma pergunta que ninguém fez, "
+                "com a cara de uma que fizeram."
+            )

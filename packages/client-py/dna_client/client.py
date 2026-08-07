@@ -613,6 +613,7 @@ class DnaClient:
     def graph_refs(
         self, kind: str, name: str, *,
         direction: str = "in", depth: int = 1,
+        as_of: str | None = None,
         api_version: str | None = None, tenant: str | None = None,
     ) -> JsonObject:
         """"What points at this instance?" — the derived reference graph.
@@ -631,11 +632,24 @@ class DnaClient:
         ``truncated``) and ``graph_producer`` reports whether the producer is
         even on. A server whose store keeps no edge graph answers **501**, not
         an empty list — "nothing points at this" is a claim only a store that
-        records edges may make."""
+        records edges may make.
+
+        ``as_of`` (ISO-8601) returns **the graph AS IT WAS at that transaction
+        instant** — the fourth coordinate of the same question, and the same
+        axis :meth:`get_kind_instance` carries for one instance. The response
+        echoes ``as_of`` and lists ``as_of_truncated``: nodes the walk reached
+        and could not read that far back, because their history was pruned. Not
+        an error — the part of the past this store cannot know, named instead of
+        dropped.
+
+        Under ``as_of`` the server answers **501** when it retains no version
+        history and **410** when this instance's history was pruned past the
+        instant. Neither degrades into today's graph, and a **404** ("it did not
+        exist yet then") is an ANSWER rather than either of those."""
         return self._get(
             f"/v1/kinds/{kind}/instances/{name}/refs",
             tenant=tenant, api_version=api_version,
-            direction=direction, depth=depth,
+            direction=direction, depth=depth, as_of=as_of,
         )
 
     def write_kind_instance(

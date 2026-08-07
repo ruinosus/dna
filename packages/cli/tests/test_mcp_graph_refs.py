@@ -150,6 +150,20 @@ def _rest_refs(kind, name, params=None, **build):
         f"/v1/kinds/{kind}/instances/{name}/refs", params=params, **build)
 
 
+def _amanha() -> str:
+    """Um instante seguramente depois de tudo que a fixture escreveu.
+
+    Deliberadamente NÃO "agora": a fixture acabou de gravar e ``created_at`` tem
+    resolução de microssegundo, então "agora" é ambíguo por um fio — e um teste
+    de comparação que ficasse verde por não achar nada dos DOIS lados seria pior
+    que teste nenhum."""
+    from datetime import datetime, timedelta, timezone
+
+    from dna.memory.as_of import normalize_as_of
+
+    return normalize_as_of(datetime.now(timezone.utc) + timedelta(days=1))
+
+
 class TestTheTwoFacesAgree:
     """AC 1, and it is stated as a comparison because that is the only form
     that can catch a third shape of the same verb being invented here."""
@@ -200,6 +214,60 @@ class TestTheTwoFacesAgree:
             (e["from_kind"], e["from_name"], e["field"]) for e in mcp["edges"]
         ) == [("Story", "s-x", "feature"), ("Story", "s-z", "feature")]
         assert all(e["resolved"] is True for e in mcp["edges"])
+
+
+class TestTheTwoFacesAgreeAboutThePast:
+    """``as_of`` — the fourth coordinate — has to cross BOTH doors identically.
+
+    The measured reason this is not paranoia: this very axis reached the generic
+    REST route once before and was ACCEPTED AND IGNORED (i-106) — a caller
+    asking what an instance looked like yesterday got today's, under a 200, with
+    nothing in the response to say so. A parameter only one face honours is that
+    defect wearing the other face's clothes.
+    """
+
+    @pytest.mark.parametrize("direction", ["in", "out", "both"])
+    @pytest.mark.parametrize("depth", [1, 2, 3])
+    def test_o_grafo_historico_e_o_mesmo_nas_duas_faces(
+        self, sql_dir, direction, depth,
+    ):
+        instant = _amanha()
+        rest = _rest_refs("Story", "s-x", {
+            "direction": direction, "depth": depth, "as_of": instant,
+        }).json()
+        mcp = _mcp({
+            "kind": "Story", "name": "s-x",
+            "direction": direction, "depth": depth, "as_of": instant,
+        })
+        assert mcp == rest, f"{direction}/{depth}: as faces discordam do passado"
+        assert mcp["as_of"] == instant, (
+            "o instante não voltou ecoado — quem só olha `edges` não consegue "
+            "distinguir uma resposta histórica de uma atual"
+        )
+
+    def test_o_as_of_e_NORMALIZADO_igual_nas_duas(self, sql_dir):
+        """``2026-08-06`` e ``2026-08-06T00:00:00Z`` são o mesmo instante, e as
+        duas faces têm de concordar sobre isso — a normalização mora numa função
+        só (``normalize_as_of``) exatamente para não haver duas leituras de uma
+        palavra. (O instante é anterior à fixture, então as duas RECUSAM com
+        404; o que se compara aqui é a leitura do parâmetro.)"""
+        for escrito in ("2026-01-02", "2026-01-02T00:00:00Z",
+                        "2026-01-02T00:00:00+00:00"):
+            rest = _rest_refs("Story", "s-x", {"as_of": escrito})
+            msg = _mcp_refused({
+                "kind": "Story", "name": "s-x", "as_of": escrito})
+            assert rest.status_code == 404, escrito
+            assert "2026-01-02T00:00:00+00:00" in rest.json()["detail"], escrito
+            assert "2026-01-02T00:00:00+00:00" in msg, escrito
+
+    def test_uma_resposta_VIVA_diz_as_of_nulo_e_nao_omite_o_campo(self, sql_dir):
+        """Omitir o campo faria "esta resposta é do presente" e "esta face não
+        conhece o eixo" se lerem igual do lado do cliente."""
+        rest = _rest_refs("Story", "s-x").json()
+        mcp = _mcp({"kind": "Story", "name": "s-x"})
+        assert "as_of" in rest and rest["as_of"] is None
+        assert "as_of" in mcp and mcp["as_of"] is None
+        assert rest["as_of_truncated"] == mcp["as_of_truncated"] == []
 
 
 # ── the refusals ────────────────────────────────────────────────────────────
@@ -255,6 +323,81 @@ class TestTheRefusals:
         msg = _mcp_refused({"kind": "NaoExiste", "name": "x"})
         assert "NaoExiste" in msg, msg
         assert _rest_refs("NaoExiste", "x").status_code == 404
+
+    def test_um_as_of_que_nao_e_instante_e_recusado_nas_duas(self, sql_dir):
+        """"o seu timestamp não é um timestamp" tem remédio diferente de "esta
+        implantação não lê o passado", e só a mensagem carrega qual."""
+        msg = _mcp_refused({
+            "kind": "Feature", "name": "f-y", "as_of": "ontem de manhã"})
+        assert "ontem de manhã" in msg, msg
+        r = _rest_refs("Feature", "f-y", {"as_of": "ontem de manhã"})
+        assert r.status_code == 400, r.text
+
+    def test_404_para_um_instante_anterior_a_instancia_nas_duas(self, sql_dir):
+        """"não existia ainda" é uma RESPOSTA. O 410 do irmão é uma recusa, e o
+        que separa os dois é o fato inteiro — a única distinção que uma leitura
+        histórica não pode errar."""
+        antigo = "2020-01-01T00:00:00+00:00"
+        assert _rest_refs(
+            "Feature", "f-y", {"as_of": antigo}).status_code == 404
+        assert "2020-01-01" in _mcp_refused({
+            "kind": "Feature", "name": "f-y", "as_of": antigo})
+
+    def test_um_store_sem_historia_recusa_o_as_of_e_nao_devolve_hoje(
+        self, fs_dir,
+    ):
+        """⚠️ No filesystem a recusa que chega primeiro é a de ARESTAS, e isso é
+        certo: sem tabela de arestas não há grafo nenhum a responder, com ou sem
+        eixo de tempo. O que este teste prende é que o caminho ``as_of`` **não
+        abre uma porta nova** naquele adapter — não há forma de pedir o passado
+        e receber o presente.
+        """
+        msg = _mcp_refused(
+            {"kind": "Agent", "name": "concierge", "as_of": "2026-01-01"},
+            base_dir=str(fs_dir))
+        assert "GraphUnsupported" in msg, msg
+        r = _rest_refs(
+            "Agent", "concierge", {"as_of": "2026-01-01"},
+            base_dir=str(fs_dir))
+        assert r.status_code == 501, r.text
+
+    def test_410_a_historia_PODADA_nao_pode_sair_como_o_404_de_nao_existia(
+        self, sql_dir,
+    ):
+        """⚠️ A ordem dos ``except`` É o contrato, e é por isso que este teste
+        atravessa a porta em vez de chamar o impl.
+
+        ``AsOfTruncated`` **É um ``LookupError``** — de propósito, para que a
+        família "não veio nada" continue uma só. O preço é que um ``except
+        LookupError`` colocado antes dele o relata como *"não existia ainda"*,
+        que é o fato OPOSTO. Nenhuma inspeção de assinatura pega isso; só uma
+        chamada real, com a história de fato podada.
+        """
+        import sqlite3
+
+        caminho = sql_dir.split("///", 1)[1]
+        with sqlite3.connect(caminho) as conn:
+            # Poda: a instância continua com história, e nenhuma dela alcança
+            # 2020 — a forma que ``VERSION_CHURN_RETENTION`` produz num Engram.
+            # ⚠️ ``versions`` sem prefixo: as tabelas são ``dna_``-prefixadas no
+            # Postgres e nuas no SQLite (``schema.py``), e este atalho de
+            # fixture é a única linha da suíte que fala SQL cru.
+            conn.execute(
+                "UPDATE versions SET version = 42 WHERE name = 'f-y'")
+
+        r = _rest_refs("Feature", "f-y", {"as_of": "2020-01-01"})
+        assert r.status_code == 410, (
+            f"{r.status_code}: 'o registro daquela época foi podado' saiu como "
+            f"outra coisa — 404 seria o fato oposto, com a mesma cara"
+        )
+        assert "pruned" in r.json()["detail"]
+
+        msg = _mcp_refused({
+            "kind": "Feature", "name": "f-y", "as_of": "2020-01-01"})
+        assert "AsOfTruncated" in msg, (
+            f"{msg}: o NOME não viajou. Sem ele um agente lê 'não existia' e "
+            f"age sobre um grafo que nunca existiu"
+        )
 
     def test_depth_below_one_is_refused_rather_than_clamped(self, sql_dir):
         """REST answers 422 (``ge=1``); the kernel would CLAMP to 1.
@@ -329,3 +472,33 @@ def test_the_rest_model_declares_every_key_the_impl_produces(sql_dir):
             "pelo FastAPI, em silêncio — o cliente não distingue isso de "
             "'o campo não existe'."
         )
+
+
+@pytest.mark.parametrize("params", [
+    {},
+    {"as_of": "2099-01-01"},
+])
+def test_o_modelo_REST_declara_toda_chave_de_TOPO_que_o_impl_produz(
+    sql_dir, params,
+):
+    """⚠️ A metade que a guarda de cima NÃO cobria — e a fatia 4 escreve nela.
+
+    A guarda irmã compara as chaves de uma ARESTA. O envelope de topo passava
+    livre, e é exatamente onde ``as_of`` e ``as_of_truncated`` nasceram: uma
+    resposta histórica cujo ``as_of`` fosse descartado pelo ``response_model``
+    voltaria indistinguível de uma resposta do PRESENTE, sob um 200. É o i-106
+    de novo, um nível acima.
+
+    Os dois parâmetros rodam de propósito: o envelope vivo e o histórico têm de
+    declarar o MESMO conjunto de chaves, senão "o campo não veio" e "o campo não
+    se aplica" se leem igual.
+    """
+    from dna_cli._rest_models import GraphRefsResponse
+
+    corpo = _rest_refs("Story", "s-x", params).json()
+    declaradas = set(GraphRefsResponse.model_fields)
+    assert set(corpo) == declaradas, (
+        "o modelo REST e o impl discordam sobre as chaves do ENVELOPE.\n"
+        f"  só no impl:   {sorted(set(corpo) - declaradas)}\n"
+        f"  só no modelo: {sorted(declaradas - set(corpo))}"
+    )

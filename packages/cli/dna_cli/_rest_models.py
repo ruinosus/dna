@@ -1431,7 +1431,20 @@ class GraphRefsResponse(BaseModel):
     addressed by a domain key or carrying their Kind in the value, plus
     composition edges from ``dep_filters``, none of which is ever checked
     against data; calling this "the relations" would claim a completeness the
-    producer does not have."""
+    producer does not have.
+
+    ``as_of`` echoes the transaction instant this walk answered for, or is
+    ``null`` for a live one. ``as_of_truncated`` names every node the walk
+    REACHED and could not read that far back (``Kind/name``) — history pruned.
+    Both exist for the same reason ``stop`` does: a caller that cannot tell a
+    historical answer from a present one, or a short graph from a partly
+    unknowable one, will render the second as the first.
+
+    ⚠️ **Every key the impl produces is declared here**, and the guard that
+    keeps it that way is ``packages/cli/tests/test_mcp_graph_refs.py``. FastAPI
+    DISCARDS an undeclared key in silence, which a client cannot tell from "the
+    field does not exist" — measured on 06/08/2026, when this very route was
+    eating three of them."""
 
     scope: str
     kind: str
@@ -1441,6 +1454,8 @@ class GraphRefsResponse(BaseModel):
     depth: int
     stop: str
     graph_producer: str
+    as_of: str | None = None
+    as_of_truncated: list[str] = []
     edges: list[GraphRefEdge] = []
 
 

@@ -874,10 +874,21 @@ export interface paths {
          *     sem limite aqui é incidente de produção, não risco teórico. O valor é
          *     clampado ao teto do kernel (``DNA_GRAPH_MAX_DEPTH``).
          *
+         *     ``as_of`` (ISO-8601) devolve **o grafo como ele era naquele instante de
+         *     TRANSAÇÃO** — a quarta coordenada da mesma pergunta. Ele é re-derivado
+         *     das versões, não filtrado das arestas: ``dna_edges`` é substituída a
+         *     cada escrita e não guarda história nenhuma.
+         *
          *     **501, nunca lista vazia**, quando o adapter ativo não guarda arestas
          *     (o filesystem não tem transação nem tabela para guardá-las). ``[]``
          *     se lê como "nada aponta para esta instância", e essa é uma afirmação
-         *     que só um store que de fato registra arestas pode fazer.
+         *     que só um store que de fato registra arestas pode fazer. Também **501**
+         *     quando o store não retém história e o pedido tem ``as_of`` — o grafo de
+         *     hoje sob um carimbo do passado é a mesma mentira, mais confiante.
+         *
+         *     **410** quando a instância TEM história e nenhuma alcança ``as_of``: as
+         *     versões daquela época foram podadas, e "não dá para saber" não é 404.
+         *     **404** quando ela não existia ainda naquele instante — aí é resposta.
          */
         get: operations["graph_refs_v1_kinds__kind__instances__name__refs_get"];
         put?: never;
@@ -2454,10 +2465,30 @@ export interface components {
          *     composition edges from ``dep_filters``, none of which is ever checked
          *     against data; calling this "the relations" would claim a completeness the
          *     producer does not have.
+         *
+         *     ``as_of`` echoes the transaction instant this walk answered for, or is
+         *     ``null`` for a live one. ``as_of_truncated`` names every node the walk
+         *     REACHED and could not read that far back (``Kind/name``) — history pruned.
+         *     Both exist for the same reason ``stop`` does: a caller that cannot tell a
+         *     historical answer from a present one, or a short graph from a partly
+         *     unknowable one, will render the second as the first.
+         *
+         *     ⚠️ **Every key the impl produces is declared here**, and the guard that
+         *     keeps it that way is ``packages/cli/tests/test_mcp_graph_refs.py``. FastAPI
+         *     DISCARDS an undeclared key in silence, which a client cannot tell from "the
+         *     field does not exist" — measured on 06/08/2026, when this very route was
+         *     eating three of them.
          */
         GraphRefsResponse: {
             /** Api Version */
             api_version: string;
+            /** As Of */
+            as_of?: string | null;
+            /**
+             * As Of Truncated
+             * @default []
+             */
+            as_of_truncated: string[];
             /** Depth */
             depth: number;
             /** Direction */
@@ -4894,6 +4925,7 @@ export interface operations {
                 api_version?: string | null;
                 direction?: string;
                 depth?: number;
+                as_of?: string | null;
             };
             header?: {
                 authorization?: string | null;

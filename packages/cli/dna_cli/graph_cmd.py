@@ -86,30 +86,62 @@ def backfill(scope: str | None, dry_run: bool, as_json: bool) -> None:
               help="'in' = what points AT this instance (the product question).")
 @click.option("--depth", default=1, show_default=True,
               help="Walk further; clamped by DNA_GRAPH_MAX_DEPTH.")
+@click.option("--as-of", "as_of", default=None,
+              help="O grafo COMO ELE ERA nesse instante (ISO-8601, tempo de "
+                   "TRANSAÇÃO). Re-derivado das versões — não é o grafo de "
+                   "hoje filtrado.")
 @click.option("--json", "as_json", is_flag=True)
 def refs(
     kind_name: str, name: str, scope: str | None, tenant: str | None,
-    direction: str, depth: int, as_json: bool,
+    direction: str, depth: int, as_of: str | None, as_json: bool,
 ) -> None:
     """"What points at this instance?" — the same walk the REST face serves."""
     from dna.kernel.query.graph import GraphUnsupported
+    from dna.memory.as_of import (
+        AsOfTruncated,
+        AsOfUnsupported,
+        normalize_as_of,
+    )
 
     with open_session(scope) as s:
         try:
+            # Normalized HERE and not in the kernel, so ``--as-of 2026-08-01``
+            # means the same instant on this face as on the other two. A face
+            # formatting its own would be the second reading of one word.
+            instant = None if as_of is None else normalize_as_of(as_of)
             result = s.run(s.kernel.graph_refs(
                 s.scope, kind_name, name,
                 tenant=tenant, direction=direction, depth=depth,
+                as_of=instant,
             ))
-        except GraphUnsupported as exc:
+        except (GraphUnsupported, AsOfUnsupported, AsOfTruncated) as exc:
+            # The three refusals, BY NAME and never as an empty walk. The last
+            # one above all: "the record of that era was pruned" printed as "no
+            # edges recorded" is the confident lie this axis exists to refuse.
+            fail(f"{type(exc).__name__}: {exc}")
+            return
+        except (LookupError, ValueError) as exc:
+            # "It did not exist yet at that instant" (an ANSWER), or an
+            # ``--as-of`` that is not an ISO-8601 instant.
             fail(str(exc))
             return
     if as_json:
         print_json({
             "direction": result.direction, "depth": result.depth,
             "stop": result.stop, "graph_producer": result.graph_producer,
+            "as_of": result.as_of,
+            "as_of_truncated": list(result.as_of_truncated),
             "edges": result.edges,
         })
         return
+    if result.as_of_truncated:
+        # BEFORE the edges, deliberately: a reader who sees this first reads
+        # the list below as partial. After it, they have already read it whole.
+        click.echo(
+            f"⚠ {len(result.as_of_truncated)} nó(s) alcançado(s) cuja história "
+            f"não chega a {result.as_of} — o que eles diziam então não é "
+            f"sabível: {', '.join(result.as_of_truncated)}"
+        )
     if not result.edges:
         # Never a bare "none": the reader must be able to tell "nothing points
         # at it" from "the producer is off and nothing was ever recorded".

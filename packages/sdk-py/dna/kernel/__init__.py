@@ -2456,11 +2456,52 @@ class Kernel:
                 return (raw if isinstance(raw, dict) else {}), hop
         return None
 
+    async def _graph_scope_chain(self, kind: str, scope: str) -> list[str]:
+        """The scopes a LIVE read of ``kind`` would probe, in order.
+
+        Exists for the ``as_of`` traversal, which reads history through
+        ``load_one_as_of`` — a method pinned to one scope, unlike
+        ``get_instance``, whose parent-scope fallback is what lets a declared
+        reference resolve in a parent. Measured on the dna-cloud database:
+        **3 of 33 edges (9%) resolved that way**, so a historical read without
+        the chain would report them ``resolved: false`` — a confident, wrong
+        accusation about a relation that was fine.
+
+        DERIVED from the same two things ``query.engine.get_instance``
+        consults, rather than re-decided: the ``_INHERITABLE_KINDS``
+        membership and ``_compute_resolution_chain``. A second inheritance rule
+        beside the first is exactly what this codebase has paid to avoid.
+
+        ⚠️ :meth:`find_instance_by_key` (fatia 5, landed the same week) walks
+        the same chain INLINE, for the same stated reason. Two readers of one
+        rule is one more than the rule can afford, so the two should collapse
+        onto this method — deliberately, in a change of its own, with the
+        by-key suite watching. Named here rather than fixed silently: the two
+        arrived on parallel branches and neither author saw the other's.
+        """
+        if (
+            kind not in self._INHERITABLE_KINDS
+            or scope == self._INHERIT_PARENT_SCOPE
+        ):
+            return [scope]
+        try:
+            chain = await self._compute_resolution_chain(scope, None)
+        except Exception:  # noqa: BLE001 — fail-soft to the V1 single hop,
+            # exactly as the live read does (an unreadable chain must not turn
+            # a read into an outage).
+            chain = [(scope, None), (self._INHERIT_PARENT_SCOPE, None)]
+        ordered = [scope]
+        for parent, _t in chain:
+            if parent != scope and parent not in ordered:
+                ordered.append(parent)
+        return ordered
+
     async def graph_refs(
         self, scope: str, kind: str, name: str, *,
         tenant: str | None = None,
         direction: str = "in",
         depth: int | None = None,
+        as_of: str | None = None,
     ):
         """"What points at this instance?" — the derived reference graph.
 
@@ -2468,13 +2509,30 @@ class Kernel:
         (depth ceiling, the ``unsupported`` refusal, the stop reason) lives
         there. Raises ``GraphUnsupported`` on a source that keeps no edges —
         never an empty list, which would read as "nothing points at it".
+
+        ``as_of`` (normalized ISO-8601 UTC) asks the SAME question at a past
+        TRANSACTION instant. It is the fourth COORDINATE of one question — from
+        where, which way, how far, **when** — and not a filter that composes;
+        the graph module's docstring carries the measurement that decided how
+        it is answered (re-derivation from ``dna_versions``, because
+        ``dna_edges`` is REPLACED on every write and therefore keeps no
+        history at all). ``AsOfUnsupported`` on a store without version
+        history, ``AsOfTruncated`` when the anchor's history was pruned past
+        the instant, ``LookupError`` when it did not exist yet.
         """
-        from dna.kernel.query.graph import traverse  # noqa: PLC0415
+        from dna.kernel.query.graph import KindLens, traverse  # noqa: PLC0415
 
         assert self._source, "No source registered."
         return await traverse(
             self._source, scope, kind, name,
-            tenant=tenant, direction=direction, depth=depth,
+            tenant=tenant, direction=direction, depth=depth, as_of=as_of,
+            # Built only for the historical lane: the live CTE reads rows a
+            # write produced and needs no registry at all.
+            kinds=None if as_of is None else KindLens(
+                port_for=self.kind_port_for,
+                ports=self.kind_ports,
+                scope_chain=self._graph_scope_chain,
+            ),
         )
 
     # ────────────────────────────────────────────────────────────────

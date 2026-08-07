@@ -295,6 +295,7 @@ def register_instance_tools(
         kind: str, name: str, scope: str | None = None,
         api_version: str | None = None,
         direction: str = "in", depth: int = 1,
+        as_of: str | None = None,
     ) -> dict[str, Any]:
         """"What points at this instance?" — walk the DERIVED reference graph.
 
@@ -309,6 +310,19 @@ def register_instance_tools(
           (``DNA_GRAPH_MAX_DEPTH``); a walk without a ceiling is an incident
           waiting for the first cyclic board, since ``Spec.supersedes`` and
           ``Story.dependencies`` are self-referential by design.
+        * ``as_of`` (ISO-8601) — **the graph AS IT WAS at that instant**, not
+          today's graph filtered. The fourth coordinate of the same question:
+          from where, which way, how far, when. The answer echoes ``as_of``
+          back and lists ``as_of_truncated`` — the nodes it reached and could
+          not read that far back, because their history was pruned. That list
+          is not an error; it is the part of the past this store cannot know,
+          named instead of dropped.
+
+        ⚠️ Under ``as_of`` a store that keeps no version history REFUSES, and
+        so does an anchor whose history was pruned past the instant. Neither
+        degrades into today's graph or into ``[]``. An instance that did not
+        exist yet at that instant is a plain "not found", which is an ANSWER
+        and a different thing.
 
         Three fields travel with the answer and none is decoration — each exists
         so a caller cannot read the wrong thing out of a short list:
@@ -357,13 +371,19 @@ def register_instance_tools(
             return await D.graph_refs_impl(
                 await live(), kind=port.kind, api_version=port.api_version,
                 name=name, scope=scope, tenant=tenant,
-                direction=direction, depth=depth,
+                direction=direction, depth=depth, as_of=as_of,
             )
         except CAPABILITY_REFUSALS as exc:
             # ``GraphUnsupported`` above all — see the warning in the docstring.
+            # ⚠️ FIRST, and that ordering is the whole contract: ``AsOfTruncated``
+            # IS a ``LookupError``, so the arm below would relay "the record of
+            # that era is gone" as "it did not exist" — the one collapse the
+            # class was created to prevent. The marker base is what lets this
+            # arm name it without enumerating anything.
             raise ToolError(f"{type(exc).__name__}: {exc}") from None
         except (LookupError, ValueError) as exc:
-            # An unknown Kind, or a direction that is not one of the three.
+            # An unknown Kind, a direction that is not one of the three, or an
+            # ``as_of`` that is not an ISO-8601 instant.
             raise ToolError(f"{type(exc).__name__}: {exc}") from None
 
     @server.tool(run_in_thread=False)

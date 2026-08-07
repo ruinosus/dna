@@ -2402,11 +2402,30 @@
         "type": "object"
       },
       "GraphRefsResponse": {
-        "description": "``GET /v1/kinds/{kind}/instances/{name}/refs`` — the DATA graph.\n\n``stop`` says WHY the walk ended (``complete`` / ``depth_reached`` /\n``truncated``), because a caller that cannot tell \"this is everything\" from\n\"this is where I stopped\" will render the second as the first.\n\n``graph_producer`` reports the producer's mode (``warn`` / ``enforce`` /\n``off``). With it ``off`` the write path performs no reference lookups, so\nno edges are produced — defensible operationally, and NOT the same as \"this\ninstance has no relations\". A store that keeps no edge graph at all answers\n501, never an empty list.\n\n⚠️ These are the ENFORCED relations only — the ones ``spec.relations``\ndeclares with a concrete target addressed by instance name, which is the\nonly kind the write path resolves. The schema graph also carries relations\naddressed by a domain key or carrying their Kind in the value, plus\ncomposition edges from ``dep_filters``, none of which is ever checked\nagainst data; calling this \"the relations\" would claim a completeness the\nproducer does not have.",
+        "description": "``GET /v1/kinds/{kind}/instances/{name}/refs`` — the DATA graph.\n\n``stop`` says WHY the walk ended (``complete`` / ``depth_reached`` /\n``truncated``), because a caller that cannot tell \"this is everything\" from\n\"this is where I stopped\" will render the second as the first.\n\n``graph_producer`` reports the producer's mode (``warn`` / ``enforce`` /\n``off``). With it ``off`` the write path performs no reference lookups, so\nno edges are produced — defensible operationally, and NOT the same as \"this\ninstance has no relations\". A store that keeps no edge graph at all answers\n501, never an empty list.\n\n⚠️ These are the ENFORCED relations only — the ones ``spec.relations``\ndeclares with a concrete target addressed by instance name, which is the\nonly kind the write path resolves. The schema graph also carries relations\naddressed by a domain key or carrying their Kind in the value, plus\ncomposition edges from ``dep_filters``, none of which is ever checked\nagainst data; calling this \"the relations\" would claim a completeness the\nproducer does not have.\n\n``as_of`` echoes the transaction instant this walk answered for, or is\n``null`` for a live one. ``as_of_truncated`` names every node the walk\nREACHED and could not read that far back (``Kind/name``) — history pruned.\nBoth exist for the same reason ``stop`` does: a caller that cannot tell a\nhistorical answer from a present one, or a short graph from a partly\nunknowable one, will render the second as the first.\n\n⚠️ **Every key the impl produces is declared here**, and the guard that\nkeeps it that way is ``packages/cli/tests/test_mcp_graph_refs.py``. FastAPI\nDISCARDS an undeclared key in silence, which a client cannot tell from \"the\nfield does not exist\" — measured on 06/08/2026, when this very route was\neating three of them.",
         "properties": {
           "api_version": {
             "title": "Api Version",
             "type": "string"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "as_of_truncated": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "As Of Truncated",
+            "type": "array"
           },
           "depth": {
             "title": "Depth",
@@ -8130,7 +8149,7 @@
     },
     "/v1/kinds/{kind}/instances/{name}/refs": {
       "get": {
-        "description": "\"O que depende desta instância?\" — o grafo de DADO, com profundidade.\n\nA tela do Kind sempre soube dizer que ``Story.feature → Feature``\nexiste como REGRA, e nunca soube dizer que ESTAS 47 Stories apontam\npara ESTA Feature. Esta rota responde a segunda pergunta, lendo as\narestas que o próprio write path produziu ao validar as referências —\nnada aqui deriva, adivinha ou lê slug.\n\n``direction=in`` (o default, e a pergunta do produto) traz quem aponta\npara cá; ``out`` o que esta instância aponta; ``both`` a união.\n``depth`` é OBRIGATÓRIO ter teto: ``Spec.supersedes`` e\n``Story.dependencies`` são auto-referentes por desenho, e uma travessia\nsem limite aqui é incidente de produção, não risco teórico. O valor é\nclampado ao teto do kernel (``DNA_GRAPH_MAX_DEPTH``).\n\n**501, nunca lista vazia**, quando o adapter ativo não guarda arestas\n(o filesystem não tem transação nem tabela para guardá-las). ``[]``\nse lê como \"nada aponta para esta instância\", e essa é uma afirmação\nque só um store que de fato registra arestas pode fazer.",
+        "description": "\"O que depende desta instância?\" — o grafo de DADO, com profundidade.\n\nA tela do Kind sempre soube dizer que ``Story.feature → Feature``\nexiste como REGRA, e nunca soube dizer que ESTAS 47 Stories apontam\npara ESTA Feature. Esta rota responde a segunda pergunta, lendo as\narestas que o próprio write path produziu ao validar as referências —\nnada aqui deriva, adivinha ou lê slug.\n\n``direction=in`` (o default, e a pergunta do produto) traz quem aponta\npara cá; ``out`` o que esta instância aponta; ``both`` a união.\n``depth`` é OBRIGATÓRIO ter teto: ``Spec.supersedes`` e\n``Story.dependencies`` são auto-referentes por desenho, e uma travessia\nsem limite aqui é incidente de produção, não risco teórico. O valor é\nclampado ao teto do kernel (``DNA_GRAPH_MAX_DEPTH``).\n\n``as_of`` (ISO-8601) devolve **o grafo como ele era naquele instante de\nTRANSAÇÃO** — a quarta coordenada da mesma pergunta. Ele é re-derivado\ndas versões, não filtrado das arestas: ``dna_edges`` é substituída a\ncada escrita e não guarda história nenhuma.\n\n**501, nunca lista vazia**, quando o adapter ativo não guarda arestas\n(o filesystem não tem transação nem tabela para guardá-las). ``[]``\nse lê como \"nada aponta para esta instância\", e essa é uma afirmação\nque só um store que de fato registra arestas pode fazer. Também **501**\nquando o store não retém história e o pedido tem ``as_of`` — o grafo de\nhoje sob um carimbo do passado é a mesma mentira, mais confiante.\n\n**410** quando a instância TEM história e nenhuma alcança ``as_of``: as\nversões daquela época foram podadas, e \"não dá para saber\" não é 404.\n**404** quando ela não existia ainda naquele instante — aí é resposta.",
         "operationId": "graph_refs_v1_kinds__kind__instances__name__refs_get",
         "parameters": [
           {
@@ -8202,6 +8221,22 @@
               "minimum": 1,
               "title": "Depth",
               "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
             }
           },
           {

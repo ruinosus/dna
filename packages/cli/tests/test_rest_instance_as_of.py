@@ -281,15 +281,43 @@ def test_openapi_declares_as_of_on_this_route(fs_dir):
     assert "transaction time" in (as_of[0].get("description") or "")
 
 
-def test_the_sibling_routes_refuse_as_of_rather_than_ignoring_it(fs_dir):
-    """The LIST and the REFS routes do not answer in time — and now say so.
+def test_the_list_route_still_refuses_as_of_rather_than_ignoring_it(fs_dir):
+    """The LIST route does not answer in time — and says so.
 
-    Left as-is they would be the next i-106: same shape, same silence, found by
+    Left as-is it would be the next i-106: same shape, same silence, found by
     the same accident. Refusing is the honest state until somebody implements
-    the read; it is not a placeholder that renders as a feature."""
+    the read; it is not a placeholder that renders as a feature.
+
+    ⚠️ ``/refs`` was in this list until 07/08/2026 and now IMPLEMENTS the axis
+    (``spec-topologia-do-grafo`` fatia 4), so it moved to the test below. That
+    is the only honest way out of this list: a route leaves it by ANSWERING the
+    question, never by quietly accepting the parameter again."""
     with _client(base_dir=str(fs_dir)) as c:
-        for path in ("/v1/kinds/Agent/instances",
-                     "/v1/kinds/Agent/instances/concierge/refs"):
-            r = c.get(path, params={"as_of": "2026-08-05T14:00:00Z"})
-            assert r.status_code == 400, f"{path}: {r.text}"
-            assert "as_of" in r.text
+        r = c.get("/v1/kinds/Agent/instances",
+                  params={"as_of": "2026-08-05T14:00:00Z"})
+        assert r.status_code == 400, r.text
+        assert "as_of" in r.text
+
+
+def test_the_refs_route_HONOURS_as_of_and_publishes_it(fs_dir):
+    """A rota do grafo saiu da lista acima IMPLEMENTANDO o eixo — e as duas
+    metades disto são o teste.
+
+    O **501** prova que o parâmetro chegou ao kernel: no filesystem não há
+    grafo nenhum a responder, então a resposta é uma recusa nomeada e nunca um
+    200 com o presente, que é literalmente o defeito da i-106.
+
+    O **openapi** prova que ele é encontrável: a i-106 foi achada lendo
+    ``openapi.json`` e vendo ``as_of`` em duas rotas de memória e em mais
+    nenhuma. Implementado e não publicado é capacidade sem porta."""
+    with _client(base_dir=str(fs_dir)) as c:
+        r = c.get("/v1/kinds/Agent/instances/concierge/refs",
+                  params={"as_of": "2026-08-05T14:00:00Z"})
+        assert r.status_code == 501, r.text
+        schema = c.get("/openapi.json").json()
+    params = schema["paths"][
+        "/v1/kinds/{kind}/instances/{name}/refs"]["get"]["parameters"]
+    assert [p for p in params if p["name"] == "as_of"], (
+        "as_of está implementado na travessia e não publicado — uma feature "
+        "invisível, que é como a i-106 conseguiu existir por tanto tempo"
+    )

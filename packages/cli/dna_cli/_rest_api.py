@@ -2002,6 +2002,7 @@ def build_app(
         api_version: str | None = Query(default=None),
         direction: str = Query(default="in"),
         depth: int = Query(default=1, ge=1),
+        as_of: str | None = Query(default=None),
     ) -> dict[str, Any]:
         """"O que depende desta instância?" — o grafo de DADO, com profundidade.
 
@@ -2018,23 +2019,48 @@ def build_app(
         sem limite aqui é incidente de produção, não risco teórico. O valor é
         clampado ao teto do kernel (``DNA_GRAPH_MAX_DEPTH``).
 
+        ``as_of`` (ISO-8601) devolve **o grafo como ele era naquele instante de
+        TRANSAÇÃO** — a quarta coordenada da mesma pergunta. Ele é re-derivado
+        das versões, não filtrado das arestas: ``dna_edges`` é substituída a
+        cada escrita e não guarda história nenhuma.
+
         **501, nunca lista vazia**, quando o adapter ativo não guarda arestas
         (o filesystem não tem transação nem tabela para guardá-las). ``[]``
         se lê como "nada aponta para esta instância", e essa é uma afirmação
-        que só um store que de fato registra arestas pode fazer.
+        que só um store que de fato registra arestas pode fazer. Também **501**
+        quando o store não retém história e o pedido tem ``as_of`` — o grafo de
+        hoje sob um carimbo do passado é a mesma mentira, mais confiante.
+
+        **410** quando a instância TEM história e nenhuma alcança ``as_of``: as
+        versões daquela época foram podadas, e "não dá para saber" não é 404.
+        **404** quando ela não existia ainda naquele instante — aí é resposta.
         """
         from dna.kernel.query.graph import GraphUnsupported
+        from dna.memory.as_of import AsOfTruncated, AsOfUnsupported
 
         live = await _live()
         try:
             return await graph_refs_impl(
                 live, kind=kind, name=name, tenant=tenant,
                 api_version=api_version, direction=direction, depth=depth,
+                as_of=as_of,
             )
         except UnknownKindError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
         except GraphUnsupported as exc:
             raise HTTPException(status_code=501, detail=str(exc)) from None
+        except AsOfUnsupported as exc:
+            raise HTTPException(status_code=501, detail=str(exc)) from None
+        except AsOfTruncated as exc:
+            # 410 Gone, and it must NOT be the 404 the next arm gives: "the
+            # record of that era is gone" and "it did not exist yet" are
+            # opposite facts about the same silence, and a caller acting on the
+            # wrong one acts on a graph that never existed. ⚠️ BEFORE the bare
+            # ``LookupError`` arm — ``AsOfTruncated`` IS one, and being caught
+            # there is exactly how the distinction dies.
+            raise HTTPException(status_code=410, detail=str(exc)) from None
+        except LookupError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from None
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from None
 
