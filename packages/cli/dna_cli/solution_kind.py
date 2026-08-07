@@ -125,13 +125,29 @@ COST_FIELD = "can_sleep"
 #: fact, so the projection is a copy under the same names rather than a mapping
 #: somebody has to remember.
 #:
-#: ⚠️ FOUR, not seven. ``answers_file``, ``template`` and ``answers`` stay in
-#: ``Solution.services[]`` — they are the provenance of the RENDER, and
-#: ``answers`` in particular is the only place a ``when:``-erased answer
-#: survives. Founder decision 07/08/2026: the ledger does not move.
+#: ⭐ **THE RULER** (`Story/s-campos-opcionais-por-evidencia`, 07/08/2026):
+#: *the App carries what the WIRING needs; ``answers`` carries what the TEMPLATE
+#: needs.* Measured by asking every `copier.yml` question whether it appears in
+#: any of the three wiring fragments::
+#:
+#:     service_name   3 wiring uses   → deployment fact
+#:     port           2               → deployment fact
+#:     can_sleep      1               → deployment fact
+#:     python_module  0               → ONLY a render answer
+#:
+#: ⚠️ So ``python_module`` is NOT here, and it is not "optional" either — it
+#: left. It lives in ``services[].answers``, where the template's own vocabulary
+#: already lives (free map, no required key, exactly for this). That is what
+#: makes `portal` fit with NO exception at all: Next.js does not answer a
+#: question the Kind stopped asking, and one of the dogfood's three gaps
+#: disappears instead of being tolerated. It is also what keeps a Node or Go
+#: template from bloating the App with `package_name` / `module_path`.
+#:
+#: ⚠️ ``answers_file``, ``template`` and ``answers`` are not here either — the
+#: ledger is the provenance of the RENDER and stays in ``Solution.services[]``,
+#: where a ``when:``-erased answer survives. Founder decision 07/08/2026.
 APP_SERVICE_FIELDS: tuple[str, ...] = (
     "service_name",
-    "python_module",
     "port",
     COST_FIELD,
 )
@@ -324,6 +340,116 @@ def app_kind_absent_fields() -> tuple[str, ...]:
         return APP_SERVICE_FIELDS
     properties = (port.schema() or {}).get("properties") or {}
     return tuple(field for field in APP_SERVICE_FIELDS if field not in properties)
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐ THE SWAP POINT — "this question does not apply", and how it is spelled.
+#
+# Everything the codebase knows about it is BELOW, in two constants and one
+# reader. The report calls :func:`not_applicable_fields` and never inspects a
+# field name itself; the printed help interpolates the constants rather than
+# spelling them. So the form is swappable here and nowhere else.
+#
+# ⭐ AND IT WAS SWAPPED, on 07/08/2026 (#355), exactly as this block predicted.
+# The generic `not_applicable` map is GONE and was never built. The measurement
+# that killed it: once `python_module` moved to ``answers`` by the
+# wiring-vs-render ruler, ONE case was left — `worker` with no `port` — and one
+# case does not pay for a general mechanism. The real fact is that `worker`
+# **does not serve**; "no port" is the CONSEQUENCE.
+#
+# ⚠️ The replacement is not a new boolean: ``copier.yml`` ALREADY asks
+# ``ingress`` (`choices: [internal, external]`), so ``none`` is a third value
+# of a vocabulary that exists. ``ingress`` has 1 use in the wiring and 0 in
+# generated code, so it is an App field by the same ruler that expelled
+# ``python_module``. And ``ingress: none`` together with a ``port`` is REFUSED
+# at write time by the descriptor (`allOf`/`if`/`then`) — so this reader is not
+# hiding a question, it is declining to ask for something the schema forbids.
+#
+# ⭐ What the swap BOUGHT, and it is the argument this module made for
+# per-field granularity, now made structural instead of conventional: a
+# per-App `not_applicable` would have been a back door for silencing the COST
+# question, defended only by getting an enum right. Here that door does not
+# exist — :func:`not_applicable_fields` cannot return :data:`COST_FIELD` by any
+# input, because `ingress` answers one question and only one.
+#
+# ⚠️ ``can_sleep`` and ``service_name`` have NO way to say "does not apply",
+# and that is deliberate: measured, there is no case for either across the nine
+# services. If one appears, the form to adopt is NAMED AND NOT BUILT — FHIR's
+# `dataAbsentReason`, recorded in the descriptor. Do not invent one here.
+# ═══════════════════════════════════════════════════════════════════════════
+
+#: The `App` field that says what a deployment is reachable from — and, at
+#: :data:`INGRESS_NONE`, that it is not reachable at all.
+INGRESS_FIELD = "ingress"
+
+#: The value that means "this deployment does not serve". The dna-cloud
+#: `worker` is exactly this: it scales on KEDA and answers nobody, so asking it
+#: for a port is asking for a fact that does not exist — *"uma porta que
+#: ninguém chama é só uma porta aberta"*.
+INGRESS_NONE = "none"
+
+#: Which question each ``ingress`` value makes inapplicable. A MAP, so the
+#: relationship is data rather than a chain of ifs — and so the blast radius of
+#: any future value is visible in one place.
+#:
+#: ⚠️ It maps to ``port`` and can map to nothing else without somebody
+#: deliberately writing it here, which is what makes "ingress cannot silence
+#: the cost question" a property of the code instead of a promise about it.
+_INGRESS_SILENCES: dict[str, frozenset[str]] = {
+    INGRESS_NONE: frozenset({"port"}),
+}
+
+
+def not_applicable_fields(app_spec: dict[str, Any] | None) -> set[str]:
+    """The questions this `App`'s own declaration makes inapplicable.
+
+    ⭐ THE ONLY reader of the mechanism — see the block above. Callers ask for
+    a set of field names and never learn how it was decided, so the day the
+    form changes again, it changes here.
+
+    ``Spec/spec-campo-opcional-por-evidencia`` condition 1: an empty field means
+    two opposite things (*the question does not apply* and *nobody answered*),
+    and a report that does not separate them talks about everything. A report
+    that talks about everything nobody reads — and then it is WORSE than the
+    refusal it replaced, because it feels like somebody is looking.
+
+    ⚠️ Read, never written, by this module: ``ingress`` is the App descriptor's
+    field. Reading a descriptor that does not carry it yet is harmless and
+    self-healing — it answers "nothing declared", every field is reported, and
+    the day it lands the declarations start being honoured with no change here.
+    """
+    return set(_INGRESS_SILENCES.get((app_spec or {}).get(INGRESS_FIELD), frozenset()))
+
+
+def reportable_fields() -> tuple[str, ...]:
+    """The :data:`APP_SERVICE_FIELDS` the schema does NOT require — DERIVED.
+
+    ⭐ This is `Spec/spec-campo-opcional-por-evidencia` in one expression: *the
+    schema prevents nonsense, the report chases completeness.* Whatever the
+    descriptor marks `required` is the schema's business and can never be
+    missing; everything else in this set is expected-but-optional, which is
+    precisely what a report exists to chase.
+
+    Derived so the two can never drift: the day a field earns its optionality
+    on evidence (`port`, because `worker` has no ingress on purpose) it appears
+    here by itself, and a field that goes back to required disappears from the
+    report without anybody remembering to delete a line. A hand-kept list would
+    be the enumeration this house has been bitten by — a list that looks
+    authoritative and covers whatever it covered the day it was written.
+    """
+    from dna.kernel import Kernel  # noqa: PLC0415 — the kernel is lazy
+
+    port = Kernel.auto()._kinds.get((SOLUTION_API_VERSION, APP_KIND))
+    if port is None:
+        return ()
+    schema = port.schema() or {}
+    properties = set(schema.get("properties") or {})
+    required = set(schema.get("required") or [])
+    return tuple(
+        field
+        for field in APP_SERVICE_FIELDS
+        if field in properties and field not in required
+    )
 
 
 def app_is_the_deployment() -> bool:
@@ -615,25 +741,15 @@ def upsert_solution(
 def unanswered_cost_question(
     spec: dict[str, Any] | None, *, scope: str | None = None
 ) -> list[str]:
-    """Services whose ``App`` never said whether they may sleep.
+    """Deployments whose ``App`` never said whether they may sleep.
 
-    Reads :data:`COST_FIELD` off the ``App`` named by each ``services[].name``
-    — the two are the same string, because an entry here is one per DEPLOYMENT
-    and an ``App`` is the deployment. Before ``spec-app-e-o-servico`` this read
-    ``services[].pode_dormir``; the question is the same and the owner moved.
-
-    ⚠️ **Absent is UNANSWERED, and absent is never ``False``.** Three states
-    collapse into "unanswered" and none of them into "may not sleep":
-
-    * no ``App`` by that name — the deployment has no declaration at all;
-    * an ``App`` that omits ``can_sleep`` — nobody was asked;
-    * ``can_sleep: null``.
-
-    ``can_sleep: False`` is an ANSWER, and an expensive one (a fixed replica,
-    ~US$ 90/month, forever). Reporting it as unanswered would be as wrong as
-    presuming it: the first cries wolf, the second hides the replica nobody
-    decided. That distinction is the whole point of this function and is the
-    thing that had to survive the move between Kinds.
+    ⚠️ ONE of the three questions in :func:`declaration_gaps`, and it is a
+    NARROWER reading than the report: it cannot express *"there were no
+    deployments to look at"*, which comes back from here as an empty list and
+    reads like "all answered". Callers that decide anything — ``--strict``, the
+    printed report — must use :func:`declaration_gaps` and its
+    :attr:`DeclarationGaps.nothing_to_look_at`. This exists because the cost
+    question has an audience of its own.
 
     Reported rather than refused, and on every run rather than once — the same
     shape as ``divergent_answers``, and for the same reason: a finding that
@@ -644,25 +760,103 @@ def unanswered_cost_question(
     attempted once, and a failure leaves every service reported as unanswered,
     which is the loud side.
     """
+    return declaration_gaps(spec, scope=scope).gaps.get(COST_FIELD, [])
+
+
+@dataclass(frozen=True)
+class DeclarationGaps:
+    """What the fleet has not said yet — three questions, ONE report.
+
+    ``Story/s-relatorio-do-que-falta``. The questions are `can_sleep` (what
+    does this cost?), `python_module` and `port` — asked of every deployment,
+    answered on the `App`, and reported together because they are read by one
+    person at one moment.
+    """
+
+    #: The deployments looked at — ``apps[]``, which IS the set of deployments.
+    deployments: tuple[str, ...]
+    #: field name → the deployments that neither answered it nor said it does
+    #: not apply. Sorted, so output is stable.
+    gaps: dict[str, list[str]]
+    #: ⚠️ The store could not be read. Every deployment is then reported as
+    #: missing every field — the loud side — and this says WHY, so "unreadable"
+    #: never renders as "undeclared".
+    unreadable: bool = False
+
+    @property
+    def nothing_to_look_at(self) -> bool:
+        """⭐ No deployments at all — and this is a FINDING, not a pass.
+
+        ⚠️ Deliberately the OPPOSITE of :func:`join_disagreements`, where an
+        absent ``apps`` is not a disagreement. Do not "unify" them: they answer
+        different questions, and the answers legitimately differ.
+
+        * *"Do the two lists agree?"* — of an absent list there is no answer.
+          Reporting one would fire on every record older than the guard, and a
+          guard that cries wolf on the normal case gets switched off.
+        * *"Has anyone answered about cost?"* — of an empty set there IS an
+          answer: **nobody looked.** Returning "all answered" for zero
+          deployments is the green-by-vacuity that has blinded three guards in
+          this house already.
+        """
+        return not self.deployments
+
+    @property
+    def has_findings(self) -> bool:
+        return self.nothing_to_look_at or any(self.gaps.values())
+
+
+def declaration_gaps(
+    spec: dict[str, Any] | None, *, scope: str | None = None
+) -> DeclarationGaps:
+    """The three questions, asked of ``apps[]``.
+
+    ⭐ **The source is ``apps[]``, and that is the whole point.** It used to be
+    ``services[].name``, which meant a `Solution` with no ``services`` answered
+    *"everything is declared"* — measured, and exactly the vacuity
+    `Spec/spec-campo-opcional-por-evidencia` exists to close. ``apps`` is the
+    ENFORCED relation and is the set of deployments by definition: it exists in
+    a repo generated from a template and in one that never was, which is the
+    case that produced the finding (the dna-cloud has nine services and no
+    `.copier-answers` anywhere).
+
+    ⚠️ Absent is UNANSWERED, and absent is never ``False``. For ``can_sleep``
+    three states collapse into "unanswered" and none of them into "may not
+    sleep": no ``App`` by that name, an ``App`` that omits the field, or an
+    explicit ``null``. ``can_sleep: False`` is an ANSWER, and an expensive one
+    (a fixed replica, ~US$ 90/month, forever) — reporting it as unanswered
+    would cry wolf until nobody listens, and presuming it hides the replica
+    nobody decided.
+
+    A question the App's own declaration makes INAPPLICABLE is silenced for
+    that deployment only — see :func:`not_applicable_fields`. Today that is
+    ``ingress: none`` silencing ``port``, and nothing silences the cost.
+    """
     from dna_cli._ctx import open_session  # noqa: PLC0415 — the kernel is lazy
 
-    names = [
-        str(entry.get("name"))
-        for entry in (spec or {}).get("services") or []
-        if isinstance(entry, dict) and entry.get("name")
-    ]
-    if not names:
-        return []
+    deployments = tuple(
+        str(name) for name in ((spec or {}).get("apps") or []) if name
+    )
+    fields = reportable_fields()
+    if not deployments or not fields:
+        return DeclarationGaps(deployments=deployments, gaps={f: [] for f in fields})
 
-    answered: set[str] = set()
+    gaps: dict[str, list[str]] = {field: [] for field in fields}
     try:
         with open_session(scope) as session:
-            for name in names:
-                doc = session.get_doc(COST_KIND, name)
-                if doc is not None and isinstance(
-                    (doc.spec or {}).get(COST_FIELD), bool
-                ):
-                    answered.add(name)
-    except Exception:  # noqa: BLE001 — unreadable store reports the loud side
-        return sorted(set(names))
-    return sorted(set(names) - answered)
+            for name in sorted(set(deployments)):
+                doc = session.get_doc(APP_KIND, name)
+                app = dict(doc.spec or {}) if doc is not None else {}
+                exempt = not_applicable_fields(app)
+                for field in fields:
+                    if field in exempt:
+                        continue
+                    if app.get(field) is None:
+                        gaps[field].append(name)
+    except Exception:  # noqa: BLE001 — an unreadable store reports the loud side
+        return DeclarationGaps(
+            deployments=deployments,
+            gaps={field: sorted(set(deployments)) for field in fields},
+            unreadable=True,
+        )
+    return DeclarationGaps(deployments=deployments, gaps=gaps)

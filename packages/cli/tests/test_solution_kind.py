@@ -585,9 +585,9 @@ def test_o_compromisso_de_custo_e_lido_do_App_de_mesmo_nome(
     respondido (o campo não existe mais) e o teste falharia — que é o que faz
     dele uma medição e não uma formalidade.
 
-    A junção é medida pelo NOME, não pela existência: um `services[]` que
-    aponta para um nome sem App cai em "não respondido", e é assim que se prova
-    que a leitura casa por nome em vez de devolver a primeira coisa que achar.
+    A junção é medida pelo NOME, não pela existência: um `apps[]` que aponta
+    para um nome sem App cai em "não respondido", e é assim que se prova que a
+    leitura casa por nome em vez de devolver a primeira coisa que achar.
     """
     generate(runner, template, destination, service_name="api", can_sleep="false")
     runner.invoke(solution, ["record", str(destination), "--solution", "s"])
@@ -596,7 +596,7 @@ def test_o_compromisso_de_custo_e_lido_do_App_de_mesmo_nome(
         solution_spec("s"), scope=scope
     ) == [], "`api` tem App de mesmo nome, e ele respondeu"
 
-    desencontrado = {"services": [{"name": "api-que-nao-existe"}]}
+    desencontrado = {"apps": ["api-que-nao-existe"]}
     assert solution_kind.unanswered_cost_question(desencontrado, scope=scope) == [
         "api-que-nao-existe"
     ], "sem App daquele NOME não há resposta — a junção é por nome"
@@ -746,6 +746,253 @@ def test_o_new_sabe_qual_camada_acabou_de_criar(
     assert [e["name"] for e in solution_spec("s")["services"]] == ["web"]
 
 
+# ── ⭐ O relatório do que falta, e o fim do verde por vacuidade ───────────────
+#
+# `Spec/spec-campo-opcional-por-evidencia`: o schema impede besteira, a
+# completude é um relatório. O dogfood mediu três lacunas LEGÍTIMAS nos nove
+# serviços reais (`portal` sem `python_module` porque é Next.js, `worker` sem
+# `port` porque não tem ingress de propósito, e o repo inteiro sem procedência
+# de template) — e um campo vira opcional por evidência, nunca por conveniência.
+
+
+def test_um_Solution_SEM_services_ainda_enxerga_os_deployments(
+    tmp_path: Path, scope: str
+) -> None:
+    """⭐ O buraco que o founder achou, fechado — e medido pela fonte.
+
+    A fonte era `services[].name`, com um `if not names: return []` em cima.
+    Com `services` opcional (o dna-cloud NUNCA foi gerado por template: não há
+    `.copier-answers` nenhum porque não houve render), um Solution sem ele
+    respondia "tudo respondido" — verde por vacuidade.
+
+    `apps[]` é o conjunto de deployments POR DEFINIÇÃO, e existe em repo gerado
+    ou não. Esta é a forma exata do dna-cloud: nove Apps, zero procedência.
+    """
+    write_app(tmp_path, "web", service_name="web", can_sleep=True, python_module="w",
+              port=3000)
+    write_app(tmp_path, "worker", service_name="worker")  # nada respondido
+
+    sem_services = {"title": "dna-cloud", "apps": ["web", "worker"]}
+    gaps = solution_kind.declaration_gaps(sem_services, scope=scope)
+
+    assert gaps.deployments == ("web", "worker")
+    assert gaps.nothing_to_look_at is False
+    assert gaps.gaps[solution_kind.COST_FIELD] == ["worker"], (
+        "sem `services` a função ainda tem de ENXERGAR os deployments"
+    )
+    assert gaps.has_findings is True
+
+
+def test_apps_vazio_e_NAO_HA_O_QUE_OLHAR_e_isso_e_um_achado(scope: str) -> None:
+    """⭐ E aqui a resposta DIVERGE da de `join_disagreements`, de propósito.
+
+    São perguntas diferentes, e a casa perde decisão quando alguém "uniformiza"
+    duas respostas que divergem por bons motivos:
+
+    * *"as duas listas concordam?"* — sobre lista ausente NÃO TEM resposta.
+      Reportar dispararia em todo registro mais velho que a guarda, e guarda
+      que grita no caso normal alguém desliga.
+    * *"alguém respondeu sobre custo?"* — sobre conjunto vazio TEM resposta:
+      **ninguém olhou.**
+
+    Este teste afirma as duas na mesma execução, exatamente para que apagar uma
+    delas fique vermelho.
+    """
+    vazio = {"title": "s", "services": [{"name": "api", "answers": {}}]}
+
+    gaps = solution_kind.declaration_gaps(vazio, scope=scope)
+    assert gaps.nothing_to_look_at is True
+    assert gaps.has_findings is True, (
+        "nenhum deployment olhado NÃO é 'tudo declarado' — é o verde por "
+        "vacuidade que esta fatia existe para matar"
+    )
+
+    assert solution_kind.join_disagreements(vazio) == ([], []), (
+        "a MESMA lista ausente não é desacordo — as duas guardas divergem aqui "
+        "de propósito, e uniformizá-las apaga uma decisão"
+    )
+
+
+def test_o_MUTANTE_devolver_vazio_deixa_vermelho(scope: str, tmp_path: Path) -> None:
+    """⭐ O DoD desta story, e ele responde a pergunta do founder.
+
+    *"Trocar a fonte vai garantir que esteja funcionando?"* — não. Trocar a
+    fonte não garante nada; é ESTE teste que garante. Ele planta o mutante mais
+    barato que existe (a função devolve "nada a relatar") e exige vermelho.
+
+    Sem ele, uma guarda que passa por vacuidade fica idêntica a uma que passa
+    por estar tudo certo — que é como três guardas desta casa ficaram verdes e
+    cegas ao mesmo tempo.
+    """
+    write_app(tmp_path, "mudo", service_name="mudo")  # não respondeu nada
+    spec = {"title": "s", "apps": ["mudo"]}
+
+    real = solution_kind.declaration_gaps(spec, scope=scope)
+    assert real.has_findings, "precondição: há mesmo o que reportar"
+
+    mutante = solution_kind.DeclarationGaps(
+        deployments=real.deployments,
+        gaps={field: [] for field in real.gaps},
+    )
+    assert not mutante.has_findings, "o mutante é, por construção, silencioso"
+    assert mutante.gaps != real.gaps, (
+        "se o mutante fosse indistinguível do real, este teste não mediria nada"
+    )
+
+
+def test_nao_se_aplica_CALA_o_relatorio_e_ausente_nao(
+    tmp_path: Path, scope: str
+) -> None:
+    """⭐ A condição 1 da spec, e sem ela o relatório vira ruído.
+
+    Um campo vazio significa DUAS coisas opostas — *a pergunta não se aplica*
+    (`portal` não tem módulo python porque é Next.js) e *ninguém respondeu*. Um
+    relatório que não separa as duas fala de tudo; e um relatório que fala de
+    tudo ninguém lê, aí ele é PIOR que a recusa que substituiu, porque dá a
+    sensação de que alguém está olhando.
+
+    Os dois estados na MESMA execução, porque a afirmação é a diferença entre
+    eles — não o comportamento de cada um isolado.
+
+    ⚠️ O caso é o `worker`: sem `port` DE PROPÓSITO, porque não atende.
+    (`python_module` não serve mais de exemplo — pela régua fiação-vs-render ele
+    saiu do App para `answers`, e o `portal` passou a caber sem exceção nenhuma.
+    Sobrou este, e sobrar UM foi o que matou o mecanismo genérico.)
+
+    ⭐ E o "não se aplica" não é uma anotação sobre o campo: é o FATO. O
+    `worker` não é "um App cuja porta não se aplica", é um App que NÃO ATENDE —
+    `ingress: none` — e não ter porta é consequência disso.
+    """
+    write_app(
+        tmp_path, "worker", service_name="worker", can_sleep=True,
+        **{solution_kind.INGRESS_FIELD: solution_kind.INGRESS_NONE},
+    )
+    write_app(tmp_path, "mcp", service_name="mcp", can_sleep=True)
+
+    gaps = solution_kind.declaration_gaps(
+        {"apps": ["worker", "mcp"]}, scope=scope
+    )
+
+    assert gaps.gaps["port"] == ["mcp"], (
+        "`worker` declarou que não atende e o relatório cala sobre a porta; "
+        "`mcp` simplesmente não respondeu e o relatório fala"
+    )
+
+
+def test_NADA_cala_a_pergunta_de_custo(tmp_path: Path, scope: str) -> None:
+    """⭐ MANTIDO DE PROPÓSITO depois da troca de mecanismo — e ficou mais forte.
+
+    ⚠️ Este é o teste que alguém apaga por achar redundante. Não é. Leia por quê
+    antes de mexer.
+
+    Ele nasceu contra um `not_applicable` genérico, exigindo granularidade POR
+    CAMPO: uma declaração que calasse o App inteiro seria porta dos fundos para
+    sumir com a pergunta de custo — a que tem ~US$ 90/mês atrás dela — escrevendo
+    uma linha sobre OUTRO campo. Naquele desenho, a porta existia e só não era
+    usada porque o `enum` estava certo.
+
+    Com `ingress` (#355) a porta **não existe**: `ingress` responde a pergunta da
+    porta e só ela. Então a asserção mudou de "a convenção está sendo respeitada"
+    para **"não há valor de `ingress` capaz de suprimir `can_sleep`"** — e é
+    exatamente por ser estrutural que ela precisa continuar escrita: uma
+    propriedade que ninguém verifica é uma propriedade que a próxima refatoração
+    pode remover sem perceber.
+
+    Varre TODOS os valores do enum, não só o interessante, porque a afirmação é
+    sobre o mecanismo inteiro e não sobre um caso.
+    """
+    for value in ("none", "internal", "external"):
+        name = f"w-{value}"
+        write_app(
+            tmp_path, name, service_name=name,
+            **{solution_kind.INGRESS_FIELD: value},
+        )
+
+    gaps = solution_kind.declaration_gaps(
+        {"apps": [f"w-{v}" for v in ("none", "internal", "external")]}, scope=scope
+    )
+
+    assert gaps.gaps[solution_kind.COST_FIELD] == ["w-external", "w-internal", "w-none"], (
+        "NENHUM valor de ingress pode calar a pergunta de custo"
+    )
+    assert gaps.gaps["port"] == ["w-external", "w-internal"], (
+        "…e só `none` cala a porta, que é a única pergunta que ele responde"
+    )
+    # A mesma propriedade dita sobre o mecanismo, não sobre esta amostra: nenhum
+    # valor mapeia para o campo de custo, hoje nem por acidente amanhã.
+    for silenced in solution_kind._INGRESS_SILENCES.values():
+        assert solution_kind.COST_FIELD not in silenced
+
+
+def test_can_sleep_false_continua_sendo_RESPOSTA_no_relatorio_novo(
+    tmp_path: Path, scope: str
+) -> None:
+    """A asserção que sobreviveu a duas mudanças de casa e uma de fonte.
+
+    `False` é a resposta CARA. Reportá-la como não respondida gritaria lobo até
+    ninguém ouvir; presumi-la esconderia a réplica que ninguém decidiu.
+    """
+    write_app(tmp_path, "pago", service_name="pago", can_sleep=False, port=8080,
+              python_module="p")
+    write_app(tmp_path, "mudo", service_name="mudo", port=8080, python_module="m")
+
+    gaps = solution_kind.declaration_gaps({"apps": ["pago", "mudo"]}, scope=scope)
+
+    assert gaps.gaps[solution_kind.COST_FIELD] == ["mudo"]
+
+
+def test_os_campos_reportados_saem_do_SCHEMA_e_nao_de_uma_lista() -> None:
+    """⭐ Derivado, não enumerado — a regra da spec escrita como código.
+
+    *O schema impede besteira; a completude é relatório.* Então o que o schema
+    EXIGE nunca pode faltar e não é assunto do relatório; o que ele deixa
+    opcional é exatamente o que o relatório cobra. Derivar mantém os dois em dia
+    sozinhos: um campo que ganha opcionalidade por evidência entra aqui sem que
+    ninguém lembre, e um que volta a ser obrigatório sai.
+
+    ⚠️ Asserção sobre a DERIVAÇÃO, não sobre os nomes de hoje: congelar
+    `("python_module", "port", "can_sleep")` seria a lista enumerada de novo,
+    com a autoridade de um teste.
+    """
+    from dna.kernel import Kernel
+
+    port = Kernel.auto()._kinds[("github.com/ruinosus/dna/v1", "App")]
+    schema = port.schema() or {}
+    required = set(schema.get("required") or [])
+    properties = set(schema.get("properties") or {})
+
+    assert set(solution_kind.reportable_fields()) == {
+        f for f in solution_kind.APP_SERVICE_FIELDS
+        if f in properties and f not in required
+    }
+    assert "service_name" not in solution_kind.reportable_fields() or (
+        "service_name" not in required
+    ), "se `service_name` é exigido pelo schema, o relatório não fala dele"
+
+
+def test_uma_loja_ilegivel_reporta_o_lado_ALTO_e_diz_que_e_o_alto(
+    monkeypatch, scope: str
+) -> None:
+    """Ilegível nunca vira "declarado" — e nunca se disfarça de medição.
+
+    O lado alto sozinho seria enganoso: listaria todo mundo como se tivesse
+    olhado. `unreadable` é o que separa "eu olhei e falta" de "eu não consegui
+    olhar".
+    """
+    import dna_cli._ctx as ctx
+
+    def explode(*_a, **_k):
+        raise RuntimeError("scope unreachable")
+
+    monkeypatch.setattr(ctx, "open_session", explode)
+
+    gaps = solution_kind.declaration_gaps({"apps": ["a", "b"]}, scope=scope)
+
+    assert gaps.unreadable is True
+    assert gaps.gaps[solution_kind.COST_FIELD] == ["a", "b"]
+    assert gaps.has_findings is True
+
+
 # ── ⭐ Duas metades: o ledger fica, só o custo muda de casa ───────────────────
 
 
@@ -781,10 +1028,10 @@ def test_o_App_recebe_a_IDENTIDADE_do_servico_e_nao_o_livro_razao() -> None:
     rescue on the table for nothing. Asserted as an ABSENCE, because that is
     the half a later "tidy-up" would quietly undo.
     """
-    spec = one_layer().to_app_spec()
+    layer = one_layer()
+    spec = layer.to_app_spec()
 
     assert spec["service_name"] == "mcp-ws"
-    assert spec["python_module"] == "mcp"
     assert spec["port"] == 8001
     assert spec["can_sleep"] is False
     assert spec["title"] == "a second door over the mcp image"
@@ -794,6 +1041,20 @@ def test_o_App_recebe_a_IDENTIDADE_do_servico_e_nao_o_livro_razao() -> None:
             f"`{ledger}` is the render's provenance and belongs to "
             "Solution.services[] — one fact, one house"
         )
+
+    # ⭐ THE RULER (`s-campos-opcionais-por-evidencia`): the App carries what
+    # the WIRING needs, `answers` carries what the TEMPLATE needs.
+    # `python_module` appears in ZERO of the three wiring fragments and in two
+    # code files — so it did not become "optional on the App". It LEFT.
+    assert "python_module" not in spec, (
+        "`python_module` is a render answer, not a deployment fact — measured "
+        "at 0 uses across the three wiring fragments"
+    )
+    assert layer.to_spec()["answers"]["python_module"] == "mcp", (
+        "…and it is not lost: it stays in `answers`, where the template's own "
+        "vocabulary lives. That is what lets `portal` fit with NO exception at "
+        "all — Next.js does not answer a question the Kind stopped asking."
+    )
     assert set(spec) <= set(solution_kind.APP_SERVICE_FIELDS) | {"title", "description"}
 
 
@@ -901,8 +1162,16 @@ def test_a_prontidao_do_descritor_e_medida_e_nunca_presumida() -> None:
     assert absent == {f for f in solution_kind.APP_SERVICE_FIELDS if f not in properties}
     assert solution_kind.app_is_the_deployment() is not bool(absent)
 
-    # …and the four are really there, so the comparison above is not vacuous.
-    assert {"service_name", "python_module", "port", "can_sleep"} <= properties
+    # …and they really are there, so the comparison above is not vacuous.
+    #
+    # ⚠️ DERIVED from `APP_SERVICE_FIELDS`, never a list of names. This line
+    # used to spell `{"service_name", "python_module", "port", "can_sleep"}`,
+    # and #355 broke it by moving `python_module` to `answers` — the
+    # wiring-vs-render ruler working exactly as intended, caught by a test that
+    # had frozen the ANSWER instead of the question. It is the enumeration this
+    # very file warns about, committed here by me.
+    assert solution_kind.APP_SERVICE_FIELDS, "the set is not empty"
+    assert set(solution_kind.APP_SERVICE_FIELDS) <= properties
     assert solution_kind.app_is_the_deployment() is True
 
 
@@ -958,9 +1227,17 @@ def test_um_cli_mais_novo_que_o_sdk_DIZ_que_nao_gravou_App(
     report = json.loads(result.output)
 
     assert "can_sleep" in report["app_kind_missing_fields"]
-    assert report["unanswered_cost"] == ["api"], (
-        "no App was written, so nothing answers the cost question — and that "
-        "must read as UNANSWERED, never as an assumed `can_sleep: true`"
+    # ⭐ No App was written, so `apps[]` names nobody — and the honest sentence
+    # is NOT "api is unanswered" (we could not even declare `api`), it is
+    # "nothing was looked at". What must never happen is silence, and it does
+    # not: this is a finding, and `--strict` fails on it.
+    assert report["nothing_to_look_at"] is True
+    assert report["unanswered_cost"] == []
+    strict = runner.invoke(
+        solution, ["record", str(destination), "--solution", "s", "--strict"]
+    )
+    assert strict.exit_code == solution_cmd.EXIT_FINDINGS, (
+        "an empty report over zero deployments must not exit 0"
     )
     # ⚠️ The provenance is still recorded. An announcement is not permission to
     # drop the run's work on the floor.
@@ -1011,8 +1288,9 @@ def test_a_gravacao_escreve_as_DUAS_METADES_e_elas_casam_pelo_nome(
     assert entry["answers"]["can_sleep"] is False
     # the identity half — and the cost written HERE, once
     assert app["service_name"] == "mcp"
-    assert app["python_module"] == "mcp"
     assert app["port"] == 8080
+    assert "python_module" not in app, "render answer, not a deployment fact"
+    assert entry["answers"]["python_module"] == "mcp", "…and it is in the ledger"
     assert app["can_sleep"] is False
     assert "pode_dormir" not in entry, "one fact, one house"
     # the join — declared on `apps`, which is the only level the kernel reads
