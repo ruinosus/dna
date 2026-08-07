@@ -54,6 +54,7 @@ dna graph refs [OPTIONS] KIND_NAME NAME
 
 | Option | Description |
 | --- | --- |
+| `--as-of` | O grafo COMO ELE ERA nesse instante (ISO-8601, tempo de TRANSAÇÃO). Re-derivado das versões — não é o grafo de hoje filtrado. |
 | `--depth` | Walk further; clamped by DNA_GRAPH_MAX_DEPTH. _(default: `1`)_ |
 | `--direction` | 'in' = what points AT this instance (the product question). _(default: `in`)_ |
 | `--help` | Show this message and exit. |
