@@ -380,3 +380,160 @@ def test_the_rate_window_is_deliberately_not_durable(pg_schema):
         assert second.calls_on("acme") == 1
     finally:
         second.close()
+
+
+# ── the MARGIN BREAKER's read, on the store hosting actually runs (i-134) ───
+#
+# The breaker (``enforce_margin_breaker``) decides on ``calls_in_window``, and
+# it is durable-store-or-nothing for the same reason the daily cap is: the
+# in-process window only ever knows what THIS replica saw since it started, so
+# in a scaled deployment it would answer far below the truth — and a breaker
+# that undercounts does not trip, which is indistinguishable from no breaker.
+# These are the properties only a real database can demonstrate.
+
+
+def test_the_window_read_survives_a_brand_new_store_instance(pg_schema):
+    """The fuse's memory outlives the process that armed it.
+
+    Spends four calls, throws the store away, and asks a completely fresh one
+    for the window. If the window were per-process, a deploy would silently
+    re-arm the breaker for every tenant — the same refund defect the daily
+    counter closed, one axis over and with worse consequences: the daily one
+    hands back a day, this one hands back a month.
+    """
+    key = Q.quota_key("acme", "pro")
+    first = _store(pg_schema)
+    try:
+        for _ in range(4):
+            first.incr_day(key)
+    finally:
+        first.close()
+
+    second = _store(pg_schema)
+    try:
+        assert second.calls_in_window("acme", 30) == 4
+    finally:
+        second.close()
+
+
+def test_the_window_read_counts_the_SAME_rows_the_bill_is_computed_from(pg_schema):
+    """There is ONE counter. The fuse and the invoice ask different questions
+    of it and can therefore never disagree about what was served — which is why
+    no second table was added for the breaker."""
+    store = _store(pg_schema)
+    try:
+        for _ in range(3):
+            store.incr_day(Q.quota_key("acme", "pro"))
+        assert store.calls_on("acme") == 3
+        assert store.calls_in_window("acme", 30) == 3
+    finally:
+        store.close()
+
+
+def test_the_window_sums_across_days_and_tiers_but_not_across_tenants(pg_schema):
+    """Written straight into the counter for days that are not today, because
+    the property under test is the HORIZON and a test cannot wait a month.
+
+    Tiers sum (a tenant that changed plan mid-window owns a bucket per tier and
+    the exposure is the TENANT's); tenants do not (one account's runaway must
+    never open another's fuse); and the 30th day back is IN while the 31st is
+    OUT, which is the boundary an off-by-one would move.
+    """
+    import sqlalchemy as sa
+
+    _, schema = pg_schema
+    store = _store(pg_schema)
+    today = _dt.datetime.now(_dt.UTC).date()
+    rows = [
+        (today, "acme", "pro", 5),
+        (today - _dt.timedelta(days=10), "acme", "pro", 7),
+        (today - _dt.timedelta(days=10), "acme", "free", 2),   # tier switch
+        (today - _dt.timedelta(days=29), "acme", "pro", 1),    # last day IN
+        (today - _dt.timedelta(days=30), "acme", "pro", 900),  # first day OUT
+        (today, "globex", "pro", 400),                         # other tenant
+    ]
+    try:
+        with store._get_engine().begin() as conn:
+            for day, tenant, tier, calls in rows:
+                conn.execute(
+                    sa.text(
+                        f"INSERT INTO {schema}.dna_quota_counters "
+                        "(day, tenant, tier, calls) VALUES (:d, :t, :r, :c)"
+                    ),
+                    {"d": day, "t": tenant, "r": tier, "c": calls},
+                )
+        assert store.calls_in_window("acme", 30) == 15
+        assert store.calls_in_window("globex", 30) == 400
+        assert store.calls_in_window("nobody", 30) == 0
+    finally:
+        store.close()
+
+
+def test_a_narrower_window_sees_less(pg_schema):
+    """The horizon is a real parameter, not decoration — the assertion that
+    would catch a store ignoring ``days`` and always summing everything."""
+    import sqlalchemy as sa
+
+    _, schema = pg_schema
+    store = _store(pg_schema)
+    today = _dt.datetime.now(_dt.UTC).date()
+    try:
+        with store._get_engine().begin() as conn:
+            for offset, calls in ((0, 3), (6, 4), (20, 50)):
+                conn.execute(
+                    sa.text(
+                        f"INSERT INTO {schema}.dna_quota_counters "
+                        "(day, tenant, tier, calls) VALUES (:d, :t, :r, :c)"
+                    ),
+                    {"d": today - _dt.timedelta(days=offset), "t": "acme",
+                     "r": "pro", "c": calls},
+                )
+        assert store.calls_in_window("acme", 7) == 7
+        assert store.calls_in_window("acme", 30) == 57
+    finally:
+        store.close()
+
+
+def test_the_durable_breaker_refuses_at_the_plans_ceiling(pg_schema):
+    """End to end through ``enforce_quota`` against the real counter: the
+    ceiling is served, the next call opens the fuse, and the refusal never
+    reaches the billed counter (i-050 — the fuse runs before it)."""
+    caps = {
+        "feature_families": [],
+        "calls_per_day": 1000,
+        Q.MARGIN_BREAKER_CAP_FIELD: 3,
+    }
+    store = _store(pg_schema)
+    try:
+        for _ in range(3):
+            Q.enforce_quota(caps=caps, tenant="acme", tier="pro",
+                            family="memory", store=store)
+        with pytest.raises(Q.MarginBreakerTripped):
+            Q.enforce_quota(caps=caps, tenant="acme", tier="pro",
+                            family="memory", store=store)
+        assert store.calls_on("acme") == 3, "the refused call was billed"
+    finally:
+        store.close()
+
+
+def test_the_durable_breaker_stays_open_across_a_restart(pg_schema):
+    """A restart must not re-arm the fuse — the property the whole durability
+    argument is for. The in-process store fails this by construction, which is
+    why a hosted deployment that declares a ceiling has to run this one."""
+    caps = {"feature_families": [], "calls_per_day": 1000,
+            Q.MARGIN_BREAKER_CAP_FIELD: 2}
+    before = _store(pg_schema)
+    try:
+        for _ in range(2):
+            Q.enforce_quota(caps=caps, tenant="acme", tier="pro",
+                            family="memory", store=before)
+    finally:
+        before.close()
+
+    after = _store(pg_schema)  # restarted process, fresh pool
+    try:
+        with pytest.raises(Q.MarginBreakerTripped):
+            Q.enforce_quota(caps=caps, tenant="acme", tier="pro",
+                            family="memory", store=after)
+    finally:
+        after.close()
