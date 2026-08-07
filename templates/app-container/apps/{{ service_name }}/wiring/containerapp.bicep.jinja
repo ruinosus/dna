@@ -35,7 +35,7 @@ resource {{ service_name | replace('-', '') }}App 'Microsoft.App/containerApps@2
       activeRevisionsMode: 'Single'
       ingress: {
         external: {{ 'true' if ingress == 'external' else 'false' }} // {{ ingress | upper }}
-        targetPort: {{ container_port }}
+        targetPort: {{ port }}
         transport: 'auto'
         allowInsecure: false
       }
@@ -54,7 +54,7 @@ resource {{ service_name | replace('-', '') }}App 'Microsoft.App/containerApps@2
           resources: { cpu: json(containerCpu), memory: containerMemory }
           env: [
             { name: '{{ env_prefix }}_HOST', value: '0.0.0.0' }
-            { name: '{{ env_prefix }}_PORT', value: '{{ container_port }}' }
+            { name: '{{ env_prefix }}_PORT', value: '{{ port }}' }
             { name: '{{ env_prefix }}_AUTH', value: '{{ "config" if identity != "none" else "none" }}' }
 {%- if graph_obo | default(false) %}
             { name: '{{ env_prefix }}_GRAPH_OBO', value: 'true' }
@@ -63,9 +63,15 @@ resource {{ service_name | replace('-', '') }}App 'Microsoft.App/containerApps@2
           ]
         }
       ]
-      // can_sleep: {{ can_sleep }} — the cost gate, AS A FIELD.
+      // ⭐ can_sleep: {{ can_sleep }} — the cost gate, AS A FIELD of the App.
+      //
       // minReplicas 1 means this app never sleeps, and never-sleeping is a
-      // recurring monthly bill, not a one-off.
+      // RECURRING monthly bill, not a one-off: ~US$ 90/month, measured — the
+      // dna-cloud copilot with a fixed replica was US$ 94.43 of a US$ 230.29
+      // invoice, the single largest line on it.
+      //
+      // Per SERVICE, never per image: two doors over one image may answer
+      // differently, and this file is the one that says which of them pays.
       scale: { minReplicas: {{ 0 if can_sleep else 1 }}, maxReplicas: {{ max_replicas }} }
     }
   }

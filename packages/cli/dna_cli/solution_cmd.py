@@ -37,6 +37,13 @@ the list is a defect that was MEASURED before it was coded:
    (``0.0.0.post1.dev0+a54909c``). ``new`` warns; ``update`` refuses unless
    ``--allow-untagged``, because rolling a fleet forward from an unnamed HEAD
    is not a release.
+5. **⭐ It prints the COST when the app cannot sleep.** ``can_sleep: false``
+   renders ``minReplicas: 1``, and a fixed replica is ~US$ 90/month, recurring,
+   forever — measured. The dna-cloud gate says the question *"can it sleep?"*
+   must be answered **with the number on screen**, before anybody provisions;
+   generation is the moment that question is actually being answered, so this
+   is where the number goes. Printed from the answers file, so it appears with
+   or without ``--solution``: the bill does not wait for a record.
 
 And the refusal that has no flag
 ================================
@@ -87,6 +94,13 @@ EXIT_FINDINGS = 3
 EXIT_UNSAFE_TEMPLATE = 4
 
 ANSWERS_GLOB = ".copier-answers*.y*ml"
+
+# How Copier 9.17 spells a `validator:` refusal. It raises a PLAIN ValueError —
+# not a CopierError — so without this it reaches a user as a traceback with no
+# command name and no answer name anywhere near the top. Pinned by
+# tests/test_solution_cmd.py::test_um_validator_do_template_vira_recusa_legivel,
+# which drives a real validator rather than asserting the constant.
+_VALIDATION_PREFIX = "Validation error for question"
 
 # Keys Copier writes into the answers file about ITSELF. They are not answers,
 # and re-feeding them as `data=` would be feeding the template its own
@@ -198,6 +212,16 @@ class RunReport:
     #: is ~US$ 90/month, forever, so a layer with no answer here is a cost
     #: decision nobody made — reported on every run, never presumed.
     unanswered_cost: list[str] = field(default_factory=list)
+    #: ⭐ Layers this run rendered that answered `can_sleep: false`. They cost a
+    #: FIXED replica — ~US$ 90/month, recurring — and the whole reason the
+    #: question is in the template is so the number can be on screen at the
+    #: moment somebody decides. Read from the answers file, so it is reported
+    #: with or without `--solution`: the bill does not wait for a record.
+    no_sleep: list[str] = field(default_factory=list)
+    #: The `App` fields the live descriptor cannot hold yet. Non-empty means
+    #: this run recorded the layer in `Solution.services[]` — the shape
+    #: `Spec/spec-app-e-o-servico` retires — and said so.
+    app_kind_missing_fields: list[str] = field(default_factory=list)
 
     #: The command line that would take every default this run left behind.
     #: Printed rather than merely described, because it stays correct after
@@ -216,6 +240,14 @@ class RunReport:
         a divergent answer is a choice somebody made, an unanswered cost
         question is a choice nobody made. :attr:`restored_answers` is excluded
         for the opposite reason — a restore is the record WORKING.
+
+        :attr:`no_sleep` is excluded on the same test: `can_sleep: false` is a
+        cost somebody accepted, printed loudly so it stays accepted on purpose.
+        A `--strict` that failed on it could never be run by a fleet that
+        legitimately has one, which is how a gate gets switched off for good.
+        :attr:`app_kind_missing_fields` is excluded because it is a fact about
+        the installed descriptors, not about this run — failing every pipeline
+        until another story lands is not a finding, it is an outage.
         """
         return bool(
             self.moved_defaults
@@ -262,6 +294,8 @@ class RunReport:
             "solution": self.solution,
             "restored_answers": self.restored_answers,
             "unanswered_cost": self.unanswered_cost,
+            "no_sleep": self.no_sleep,
+            "app_kind_missing_fields": self.app_kind_missing_fields,
             "unreachable_wiring": [place for place, _ in UNREACHABLE_WIRING],
         }
 
@@ -639,6 +673,44 @@ def _echo_unreachable_note() -> None:
 
 
 def _echo_report(report: RunReport) -> None:
+    if report.no_sleep:
+        sk = _solution_kind()
+        click.echo("")
+        click.echo(
+            f"⭐ COST — {len(report.no_sleep)} app(s) answered `can_sleep: false`, "
+            "so the generated bicep says `minReplicas: 1`:"
+        )
+        for name in report.no_sleep:
+            click.echo(f"    {name}")
+        click.echo(
+            f"  A fixed replica is ~US$ {sk.NO_SLEEP_USD_PER_MONTH}/month, "
+            "RECURRING, forever — not a one-off.\n"
+            "  Measured: the dna-cloud copilot with minReplicas 1 was US$ 94.43 of a\n"
+            "  US$ 230.29 invoice, the largest single line on it.\n"
+            "  ⭐ Provisioning it is the founder's decision, with the number on screen —\n"
+            "     which is the whole reason `can_sleep` is a question and not a habit.\n"
+            "     Re-answer it with --data can_sleep=true if this app can in fact sleep."
+        )
+
+    if report.app_kind_missing_fields:
+        click.echo("")
+        click.echo(
+            "⚠ The layer was recorded in `Solution.services[]` — the shape "
+            "`App is the service` retires."
+        )
+        click.echo(
+            "  The installed `App` descriptor cannot hold: "
+            + ", ".join(report.app_kind_missing_fields)
+        )
+        click.echo(
+            "  `App` declares `additionalProperties: false`, so writing them today is a\n"
+            "  REFUSED write, not a tolerated extra. This run therefore used the old\n"
+            "  shape, and says so rather than leaving you to find out from a schema\n"
+            "  error later. Story/s-kinds-a-conta-declarada is what moves the\n"
+            "  descriptors; nothing here needs re-running afterwards — the next\n"
+            "  `dna solution record` writes the App."
+        )
+
     if report.restored_answers:
         click.echo("")
         click.echo(
@@ -809,6 +881,26 @@ def _solution_kind() -> Any:
     return solution_kind
 
 
+def _sleep_key(sleep_answer: str | None) -> str:
+    return sleep_answer or _solution_kind().DEFAULT_SLEEP_ANSWER
+
+
+def _cost_of(answers: dict[str, Any], *, service: str, sleep_answer: str | None) -> list[str]:
+    """``[service]`` when this layer said it may NOT sleep, else ``[]``.
+
+    Read straight off the answers — no kernel, no record, no scope — because
+    the bill does not wait for a `Solution` to exist. A `dna solution new` in
+    somebody else's repo with no `.dna` anywhere still has to put the number on
+    screen, since that run is exactly the moment the decision is being made.
+
+    ⚠️ Only an explicit ``False`` counts. An ABSENT answer is not a cheap
+    answer; it is the layer never having answered, which
+    :func:`dna_cli.solution_kind.unanswered_cost_question` reports separately
+    and never presumes.
+    """
+    return [service] if answers.get(_sleep_key(sleep_answer)) is False else []
+
+
 def _record_layer(
     report: RunReport,
     destination: Path,
@@ -853,6 +945,7 @@ def _record_layer(
         ) from exc
     report.solution = solution_name
     report.unanswered_cost = sk.unanswered_cost_question(spec)
+    report.app_kind_missing_fields = list(sk.app_kind_absent_fields())
 
 
 # ── the group ────────────────────────────────────────────────────────────────
@@ -989,6 +1082,17 @@ def new_(
     if not pretend:
         written = _answers_file_written(destination, answers_before)
         report.answers_file = str(written) if written else None
+        if written is not None:
+            # ⭐ The cost gate, at the moment the tree is created. Read from the
+            # answers file the run just wrote — not from `data`, which holds
+            # only what was passed on the command line and would stay silent
+            # about a `can_sleep: false` that came from `--answers-from` or from
+            # a template default.
+            report.no_sleep = _cost_of(
+                recorded_answers(destination, written),
+                service=_solution_kind().service_name_of(written),
+                sleep_answer=sleep_answer,
+            )
 
     if solution_name and not pretend:
         if written is None:
@@ -1273,6 +1377,7 @@ def update(
     report.lost_answers = lost_answers(
         before=from_file, after=after, asked_for=set(overrides)
     )
+    report.no_sleep = _cost_of(after, service=layer_name, sleep_answer=sleep_answer)
     report.conflicted_paths = _conflicted_paths(destination)
     report.changed_paths = [p for _, p in _porcelain(destination)]
 
@@ -1472,6 +1577,8 @@ def record(
         raise SolutionError(f"recording Solution {solution_name!r} failed: {exc}") from exc
 
     unanswered = sk.unanswered_cost_question(spec)
+    no_sleep = sorted(layer.name for layer in layers if layer.pode_dormir is False)
+    missing_app_fields = list(sk.app_kind_absent_fields())
     if as_json:
         click.echo(
             json.dumps(
@@ -1480,7 +1587,10 @@ def record(
                     "destination": str(destination),
                     "recorded": [layer.name for layer in layers],
                     "services": [entry.get("name") for entry in spec["services"]],
+                    "apps": list(spec.get("apps") or []),
                     "unanswered_cost": unanswered,
+                    "no_sleep": no_sleep,
+                    "app_kind_missing_fields": missing_app_fields,
                 },
                 indent=2,
                 sort_keys=True,
@@ -1507,6 +1617,8 @@ def record(
             template=layers[0].template_src,
             solution=solution_name,
             unanswered_cost=unanswered,
+            no_sleep=no_sleep,
+            app_kind_missing_fields=missing_app_fields,
         )
         _echo_report(report)
 
@@ -1612,6 +1724,20 @@ def _translate(exc: BaseException, destination: Path) -> BaseException:
             "`.copier-answers.yml` — which is the layout this command uses on "
             "purpose, one per app.\n"
             f"  Name it explicitly with -a/--service.{listing}"
+        )
+    if isinstance(exc, ValueError) and str(exc).startswith(_VALIDATION_PREFIX):
+        # A `validator:` in the template said no. Copier raises a plain
+        # ValueError for it, which reaches a user as a bare traceback — measured
+        # on the `owns_code` validator, and true of `service_name`'s since the
+        # day it was written. The message itself is the TEMPLATE AUTHOR's and is
+        # the most specific thing anyone has about this answer, so it is relayed
+        # verbatim and only framed.
+        return SolutionError(
+            f"{exc}\n"
+            "  That refusal comes from the template's own `validator:`, not from "
+            "`dna solution`.\n"
+            "  Fix the answer (-d KEY=VALUE) — there is nothing here to override "
+            "it with."
         )
     if isinstance(exc, errors.CopierError):
         return SolutionError(f"{type(exc).__name__}: {exc}")

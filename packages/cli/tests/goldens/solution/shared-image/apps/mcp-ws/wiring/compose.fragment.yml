@@ -1,4 +1,4 @@
-# mcp-entra, for local development.
+# mcp-ws, for local development.
 #
 # Reachable by the template, and consumed WITHOUT anyone editing a shared file:
 # the root compose file carries one `include:` entry per app, and Compose
@@ -7,18 +7,22 @@
 #
 #   # docker-compose.dev.yml
 #   include:
-#     - path: ./apps/mcp-entra/wiring/compose.fragment.yml
+#     - path: ./apps/mcp-ws/wiring/compose.fragment.yml
 #
-# The build context is this app's OWN directory — it owns the code.
+# ⭐ The build context is `apps/mcp`, NOT this directory:
+# mcp-ws is another deployment of an image that already exists, so
+# nothing under `apps/mcp/` was generated, and nothing there was
+# touched. What this service brings of its own is exactly what is below — its
+# name, its port and its knobs.
 
 services:
-  mcp-entra:
+  mcp-ws:
     build:
-      context: ./apps/mcp-entra
+      context: ./apps/mcp
       dockerfile: Dockerfile
     environment:
       DNA_MCP_HOST: "0.0.0.0"
-      DNA_MCP_PORT: "8000"
+      DNA_MCP_PORT: "8001"
       DNA_MCP_AUTH: "config"
     ports:
-      - "8000:8000"
+      - "8001:8001"

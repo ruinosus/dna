@@ -16,7 +16,7 @@ import os
 
 
 HOST = os.environ.get("{{ env_prefix }}_HOST", "0.0.0.0")
-PORT = int(os.environ.get("{{ env_prefix }}_PORT", "{{ container_port }}"))
+PORT = int(os.environ.get("{{ env_prefix }}_PORT", "{{ port }}"))
 
 # The NAME of the identity authority, decided at generation time. What it means
 # operationally — issuer, audience, JWKS — is configuration this process reads

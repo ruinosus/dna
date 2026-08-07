@@ -10,6 +10,7 @@
 # places wired and the seventh forgotten — and it is why the consuming repo
 # needs a wiring guard that fails when a service exists in `apps/` and not in
 # `azure.yaml`. `dna solution new` prints this in its closing note.
+#
 
 mcp-entra:
   project: ./apps/mcp-entra

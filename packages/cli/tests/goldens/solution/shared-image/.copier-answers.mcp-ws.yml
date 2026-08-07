@@ -1,18 +1,18 @@
-# This file records the ANSWERS that produced ./apps/api.
+# This file records the ANSWERS that produced ./apps/mcp-ws.
 # It is written by Copier and read by `dna solution update` — never edit it by
 # hand, and never delete it: without it the app can be regenerated but never
 # UPDATED, which is the whole point of generating it this way.
 _src_path: <TEMPLATE>
 can_sleep: true
-description: api — a DNA runtime face
+description: a second door over the mcp image
 dna_ceiling: '0.75'
 dna_floor: '0.74'
-env_prefix: DNA_API
+env_prefix: DNA_MCP
 identity: workos
-image_name: api
-ingress: internal
-max_replicas: 2
-owns_code: true
-port: 8080
-python_module: api
-service_name: api
+image_name: mcp
+ingress: external
+max_replicas: 3
+owns_code: false
+port: 8001
+python_module: mcp
+service_name: mcp-ws

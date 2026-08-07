@@ -74,6 +74,79 @@ such a file is missing Copier **warns and renders the inherited values as
 empty** rather than failing, so `dna solution` surfaces the warning as a named
 finding: generate the upper layer first.
 
+### ⭐ One code directory, N services — `owns_code`
+
+A service is not a directory. Measured in dna-cloud on 07/08/2026: **nine
+deployable services over four `apps/` directories.**
+
+| directory | services | why |
+|---|---|---|
+| `apps/web/` | `web` | |
+| `apps/mcp/` | `mcp`, `mcp-entra`, `mcp-ws` | one image, one identity authority per door |
+| `apps/api/` | `rest`, `rest-user` | one image, two auth lanes |
+| `apps/copilot/` | `copilot`, `worker`, `a2a` | |
+
+So **eight of the nine** are *another deployment of an image that already
+exists*, and for those, generating `Dockerfile` / `pyproject.toml` / `src/` /
+`tests/` would **overwrite production code** because somebody declared a new
+door. `owns_code` is the answer that says which case you are in:
+
+```bash
+# the door that owns the code
+dna solution new templates/app-container ./my-repo --defaults \
+    --data service_name=mcp
+
+# a second door over the SAME image — wiring only
+dna solution new templates/app-container ./my-repo --defaults \
+    --data service_name=mcp-ws --data image_name=mcp --data owns_code=false \
+    --data port=8001 --data can_sleep=true
+```
+
+The second run writes exactly three files:
+
+```
+apps/mcp-ws/wiring/compose.fragment.yml     build context → ./apps/mcp
+apps/mcp-ws/wiring/azure.service.yaml       project       → ./apps/mcp
+apps/mcp-ws/wiring/containerapp.bicep       its OWN port and minReplicas
+```
+
+Nothing under `apps/mcp/` is written or touched. The mechanism is Copier's, not
+ours: a file or directory whose rendered name is **empty** is skipped, so the
+code paths carry a `{% if owns_code %}` segment. Measured against copier 9.17.
+
+⚠️ **`port` and `can_sleep` are per SERVICE, never per image.** Two doors over
+one image legitimately disagree about both — they are `App` fields, and the
+answers file is per service, so each door's wiring carries its own. A template
+that derived them from the image would give a whole fleet one sleep answer,
+which is how a fixed replica gets into a bill with nobody choosing it.
+
+`owns_code: false` requires `image_name` to name *another* service. Otherwise
+the fragment's build context is its own empty directory: a tree that looks
+complete and cannot build. The template refuses it.
+
+### ⭐ The cost, on screen, at the moment it is decided
+
+`can_sleep: false` renders `minReplicas: 1`, and a fixed replica is
+**~US$ 90/month, recurring, forever** — measured: the dna-cloud copilot with a
+fixed replica was US$ 94,43 of a US$ 230,29 invoice, the largest single line on
+it. Every run that renders such an app prints it:
+
+```
+⭐ COST — 1 app(s) answered `can_sleep: false`, so the generated bicep says
+   `minReplicas: 1`:
+    worker
+  A fixed replica is ~US$ 90/month, RECURRING, forever — not a one-off.
+```
+
+It is printed from the **answers file**, so it appears with or without
+`--solution`: `dna solution` runs against repos with no `.dna` anywhere, and
+that is exactly the run where the person generating has least context about
+what a replica costs here.
+
+An **absent** answer is not a cheap answer. It produces no cost line and is
+reported separately as [an unanswered cost question](#the-cost-question-as-a-field);
+presuming `true` is the failure the field exists to prevent.
+
 ---
 
 ## Update
@@ -284,6 +357,42 @@ said out loud, on **every** run:
 `--sleep-answer KEY` names the question when your template calls it something
 else; `--strict` turns the finding into exit 3.
 
+### ⭐ Where the layer lives — `App` **is** the service
+
+`Spec/spec-app-e-o-servico` (07/08/2026): an `App` is not a commercial label
+over a pile of copilots. It **is the service** — the unit with a Dockerfile, a
+port, wiring and a bill at the end of the month. So the layer moves onto the
+`App`, and `Solution.services[]` becomes a **view** derived from the `App`
+instances `apps[]` points at, instead of a stored field.
+
+| the fact | where it lives |
+|---|---|
+| `service_name`, `python_module`, `port`, `can_sleep` | `App` — the service's identity, promoted out of `answers` |
+| `answers_file`, `template`, `answers` | `App` — the layer ledger, moved wholesale |
+| which apps a repo delivers | `Solution.apps[]` |
+| `Solution.services[]` | **derived**, never stored |
+
+⚠️ The spec described `services[]` as *"uma lista de strings"*. It never was —
+it is the ledger above, and the ledger is the **only place a `when:`-erased
+answer survives** (§2). It moves; it does not get dropped. An `App` that took
+the four identity fields and left the ledger behind would delete the measured
+fix on the way to a tidier schema.
+
+**While the descriptors have not moved** (`Story/s-kinds-a-conta-declarada`),
+the layer is still recorded in `Solution.services[]` — and every run says so:
+
+```
+⚠ The layer was recorded in `Solution.services[]` — the shape
+  `App is the service` retires.
+  The installed `App` descriptor cannot hold: service_name, python_module, …
+```
+
+That announcement is the difference between a bridge and a fallback. `App`
+declares `additionalProperties: false`, so writing an unknown field is a
+*refused* write, not a tolerated extra — measured. `dna solution` asks the live
+descriptor on every run, so the behaviour changes by itself the day the
+descriptor does, and nothing here needs re-running afterwards.
+
 ---
 
 ## The two places no template reaches
@@ -321,8 +430,22 @@ For the remaining two there are exactly two options and both cost:
 
 **So cover them from the other side:** a guard in the consuming repo that fails
 when a service exists under `apps/` and is missing from `azure.yaml` or the root
-bicep. The template makes five places impossible to forget; the guard makes the
-other two impossible to forget. Together that is the seven.
+bicep — `scripts/guard-app-wiring.mjs` in dna-cloud. The template makes five
+places impossible to forget; the guard makes the other two impossible to forget.
+Together that is the seven.
+
+⚠️ **Say the true version of this, and only the true version.** The template
+**emits a fragment**; it does not wire anything. Nothing in `dna solution`
+knows whether the fragment was ever pasted into `azure.yaml`, and a doc that
+implied otherwise would be worse than silence — because the failure it hides
+is *invisible by construction*. Measured, in this house: **the A2A door spent
+three days in production without existing**, with every line of code in place,
+because one entry was missing from `azure.yaml` (03/08/2026; the compose entry
+had gone missing the same way on 31/07). Nothing was broken. Nothing failed. It
+simply was not there.
+
+That is what the guard is for, and why it lives in the consuming repo rather
+than here: only the repo that owns `azure.yaml` can check `azure.yaml`.
 
 ---
 

@@ -1,3 +1,4 @@
+{%- set code_owner = service_name if owns_code else image_name -%}
 # ⛔ THE ONE THE TEMPLATE CANNOT PLACE.
 #
 # This is the `services:` entry `{{ service_name }}` needs in the ROOT
@@ -10,9 +11,17 @@
 # places wired and the seventh forgotten — and it is why the consuming repo
 # needs a wiring guard that fails when a service exists in `apps/` and not in
 # `azure.yaml`. `dna solution new` prints this in its closing note.
+#
+{%- if not owns_code %}
+# ⭐ `project` points at `./apps/{{ image_name }}`, not at this directory:
+# {{ service_name }} redeploys an image that already exists. N services over
+# one image is the normal case — the identity doors are three — and azd is
+# happy with N entries whose `project` is the same directory and whose names
+# differ.
+{%- endif %}
 
 {{ service_name }}:
-  project: ./apps/{{ service_name }}
+  project: ./apps/{{ code_owner }}
   language: docker
   host: containerapp
   docker:

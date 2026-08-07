@@ -8,6 +8,8 @@
 #   # docker-compose.dev.yml
 #   include:
 #     - path: ./apps/api/wiring/compose.fragment.yml
+#
+# The build context is this app's OWN directory — it owns the code.
 
 services:
   api:

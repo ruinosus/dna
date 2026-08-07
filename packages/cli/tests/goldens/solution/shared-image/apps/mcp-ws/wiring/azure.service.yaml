@@ -1,6 +1,6 @@
 # ⛔ THE ONE THE TEMPLATE CANNOT PLACE.
 #
-# This is the `services:` entry `api` needs in the ROOT
+# This is the `services:` entry `mcp-ws` needs in the ROOT
 # `azure.yaml`. It lives here because a template renders FILES, and the azd
 # JSON Schema fixes the root document's top-level keys — there is no `include`,
 # no glob, no fragment directory. So this file is a fragment nobody consumes
@@ -11,9 +11,14 @@
 # needs a wiring guard that fails when a service exists in `apps/` and not in
 # `azure.yaml`. `dna solution new` prints this in its closing note.
 #
+# ⭐ `project` points at `./apps/mcp`, not at this directory:
+# mcp-ws redeploys an image that already exists. N services over
+# one image is the normal case — the identity doors are three — and azd is
+# happy with N entries whose `project` is the same directory and whose names
+# differ.
 
-api:
-  project: ./apps/api
+mcp-ws:
+  project: ./apps/mcp
   language: docker
   host: containerapp
   docker:

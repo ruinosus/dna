@@ -664,6 +664,174 @@ def test_o_new_sabe_qual_camada_acabou_de_criar(
     assert [e["name"] for e in solution_spec("s")["services"]] == ["web"]
 
 
+# ── ⭐ App IS the service — and the handover to the descriptors ───────────────
+
+
+def test_a_camada_vira_um_App_com_os_campos_do_servico() -> None:
+    """⭐ `Spec/spec-app-e-o-servico`: an App IS the service.
+
+    Asserted on the projection rather than through a write, because the write
+    is refused until the descriptor moves (the test below measures that
+    refusal). What this pins is the CONTRACT the descriptor has to accept —
+    field by field, spelled the way `Story/s-kinds-a-conta-declarada` fixed
+    them.
+
+    ⚠️ And it pins the ledger too: `answers_file`, `template`, `answers`. The
+    spec described `Solution.services[]` as "uma lista de strings"; it never
+    was. It is the only place a `when:`-erased answer survives, and an App that
+    took the four identity fields and left it behind would move the service and
+    delete the measured fix on the way.
+    """
+    layer = solution_kind.Layer(
+        name="mcp-ws",
+        answers_file=".copier-answers.mcp-ws.yml",
+        template_src="/templates/app-container",
+        template_ref="v1.0.0",
+        answers={
+            "service_name": "mcp-ws",
+            "python_module": "mcp",
+            "port": 8001,
+            "can_sleep": False,
+            "description": "a second door over the mcp image",
+        },
+        pode_dormir=False,
+    )
+
+    spec = layer.to_app_spec()
+
+    assert spec["service_name"] == "mcp-ws"
+    assert spec["python_module"] == "mcp"
+    assert spec["port"] == 8001
+    assert spec["can_sleep"] is False
+    assert spec["title"] == "a second door over the mcp image"
+    assert spec["answers_file"] == ".copier-answers.mcp-ws.yml"
+    assert spec["template"] == {"src": "/templates/app-container", "ref": "v1.0.0"}
+    assert spec["answers"]["port"] == 8001
+    assert set(spec) <= set(solution_kind.APP_SERVICE_FIELDS) | {"title", "description"}
+
+
+def test_o_App_gerado_nunca_apaga_o_que_o_portal_escreveu() -> None:
+    """A scaffolding run must not delete an entitlement.
+
+    An `App` is also a portal record — its title, its icon, the plan that opens
+    it, the copilots it composes — and `dna solution` knows nothing about any of
+    that. A write that replaced the spec would cancel a paying App's
+    `requires_plan` because somebody re-rendered its Dockerfile, and would look
+    like a successful scaffold while doing it.
+    """
+    layer = solution_kind.Layer(
+        name="api", answers_file=".copier-answers.api.yml",
+        template_src="/t", template_ref=None,
+        answers={"python_module": "api", "port": 8080}, pode_dormir=True,
+    )
+
+    spec = layer.to_app_spec(
+        existing={
+            "title": "The Analyst",
+            "requires_plan": "pro",
+            "copilots": ["analista"],
+            "port": 9999,
+        }
+    )
+
+    assert spec["requires_plan"] == "pro"
+    assert spec["copilots"] == ["analista"]
+    assert spec["title"] == "The Analyst", "a human's title outranks a copier answer"
+    assert spec["port"] == 8080, "but the generated facts ARE refreshed"
+
+
+def test_a_prontidao_do_descritor_e_medida_e_nunca_presumida() -> None:
+    """⚠️ Asked of the live descriptor, so it cannot go stale.
+
+    `App` declares `additionalProperties: false`, so a field it does not know is
+    a REFUSED write, not a tolerated extra — measured 07/08/2026::
+
+        write vetoed for board/App/api: Additional properties are not allowed
+        ('can_sleep', 'port', 'python_module', 'service_name' were unexpected)
+
+    The predicate therefore reads the schema instead of carrying a flag
+    somebody has to remember to flip. The day
+    `Story/s-kinds-a-conta-declarada` lands, this test keeps passing and the
+    behaviour changes by itself — which is the only kind of handover that does
+    not depend on anyone noticing.
+    """
+    from dna.kernel import Kernel
+
+    port = Kernel.auto()._kinds[("github.com/ruinosus/dna/v1", "App")]
+    properties = set((port.schema() or {}).get("properties") or {})
+    absent = set(solution_kind.app_kind_absent_fields())
+
+    assert absent == {f for f in solution_kind.APP_SERVICE_FIELDS if f not in properties}
+    assert solution_kind.app_is_the_service() is not bool(
+        absent or solution_kind.solution_kind_still_requires_services()
+    )
+
+
+def test_enquanto_o_App_nao_aceita_o_servico_a_gravacao_DIZ_em_que_forma_gravou(
+    runner: CliRunner, template: Path, destination: Path, scope: str
+) -> None:
+    """⭐ A bridge announces itself; a fallback goes quiet.
+
+    Two stories share this migration: the descriptors are
+    `s-kinds-a-conta-declarada`'s, the command is `s-template-dirigido-pelo-app`'s.
+    While the first has not landed, a layer still lands in
+    `Solution.services[]` — and the run says so, names the fields the `App`
+    cannot hold, and names the story that moves them.
+
+    Without this line the old shape would be written in silence, which is the
+    exact failure this house has paid for repeatedly: a fallback renders
+    identically whether it was right or wrong.
+    """
+    if solution_kind.app_is_the_service():
+        pytest.skip("the descriptors landed — the bridge is gone, and so is its line")
+
+    generate(runner, template, destination, service_name="api")
+    result = runner.invoke(
+        solution, ["record", str(destination), "--solution", "s", "--json"]
+    )
+    report = json.loads(result.output)
+
+    assert "service_name" in report["app_kind_missing_fields"]
+    prose = runner.invoke(solution, ["record", str(destination), "--solution", "s"])
+    assert "s-kinds-a-conta-declarada" in prose.output
+    assert "Solution.services[]" in prose.output
+
+
+@pytest.mark.skipif(
+    not solution_kind.app_is_the_service(),
+    reason="waits for s-kinds-a-conta-declarada: App must declare "
+    "service_name/python_module/port/can_sleep + the layer ledger, and Solution "
+    "must stop requiring services[]",
+)
+def test_a_gravacao_cria_um_App_por_camada_e_nenhum_services(
+    runner: CliRunner, template: Path, destination: Path, scope: str
+) -> None:
+    """⭐ The story's acceptance criterion, through the REAL kernel.
+
+    Auto-enabling: the skip above reads the live descriptor, so the day the
+    sibling story lands this test starts running without anybody editing it.
+    Everything it asserts already has an implementation — what it is waiting on
+    is a schema that accepts the write.
+    """
+    generate(runner, template, destination, service_name="mcp", can_sleep="false")
+    result = runner.invoke(solution, ["record", str(destination), "--solution", "s"])
+    assert result.exit_code == 0, result.output
+
+    from dna_cli._ctx import open_session
+
+    with open_session(scope) as session:
+        stored = dict(session.get_doc("Solution", "s").spec or {})
+        app = dict(session.get_doc("App", "mcp").spec or {})
+
+    assert "services" not in stored, "services[] is derived now, never stored"
+    assert stored["apps"] == ["mcp"]
+    assert app["service_name"] == "mcp"
+    assert app["can_sleep"] is False
+    assert app["answers_file"] == ".copier-answers.mcp.yml"
+    # …and the derived VIEW still answers the questions the update path asks.
+    assert layer_of("s", "mcp")["pode_dormir"] is False
+
+
 # ── the relation to App ──────────────────────────────────────────────────────
 
 
