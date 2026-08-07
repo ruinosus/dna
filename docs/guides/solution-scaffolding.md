@@ -357,22 +357,88 @@ places is two names for one fact, so:
 * **`App.can_sleep`** holds the **commitment**, authored on the App named by
   `services[].name` — the same string.
 
-Nothing is presumed, and that is the part that had to survive the move. A
-service whose `App` has no `can_sleep` — or no `App` at all — is reported on
-**every** run:
-
-```
-⚠ 1 recorded service(s) have no App saying whether they may sleep:
-    api
-```
+Nothing is presumed, and that is the part that had to survive the move. It is
+now one of **three** questions in a single report — see below.
 
 ⚠️ **Absent is never `false`.** `can_sleep: false` is an *answer*, and an
 expensive one; absent means nobody was asked. Collapsing the two is exactly how
-a fixed replica enters the fleet with nobody deciding it. `--strict` turns the
-finding into exit 3.
+a fixed replica enters the fleet with nobody deciding it.
 
 `--sleep-answer KEY` is **gone**: it named the answer key to lift out of the
 template's answers, and there is no longer anything to lift.
+
+### ⭐ The report of what is missing
+
+`Spec/spec-campo-opcional-por-evidencia` (07/08/2026), after the dna-cloud
+dogfood measured the nine real services against the model: **six fitted whole,
+three had a gap, and none of the gaps was an error.**
+
+| gap | the reason, and it is a good one |
+|---|---|
+| `portal` with no `python_module` | it is **Next.js** — there is no python package to name |
+| `worker` with no `port` | it has no ingress, **on purpose** |
+| the whole solution with no provenance | the dna-cloud was **never generated from a template** |
+
+So: **the schema prevents nonsense, the report chases completeness.** A field
+becomes optional when *reality presents a legitimate case* — never because it
+is convenient — and what the schema stops requiring, the report starts asking:
+
+```
+⚠ 3 declaration(s) missing across the deployments:
+    can_sleep — a deployment that cannot scale to zero costs a FIXED REPLICA…
+        worker
+    python_module — which python package `apps/<dir>/src/` installs
+        mcp
+```
+
+The reported fields are **derived from the descriptor**, not listed here: what
+`App` marks `required` can never be missing and is the schema's business;
+everything else in the service identity is the report's. A field that earns its
+optionality on evidence joins the report by itself.
+
+#### "Does not apply" is a declared answer, and the report goes quiet
+
+An empty field means two opposite things — *the question does not apply*
+(`portal`) and *nobody answered* (`mcp`). A report that does not separate them
+talks about everything, and a report that talks about everything nobody reads;
+at that point it is **worse** than the refusal it replaced, because it feels
+like somebody is looking.
+
+Declare it on the `App` — per field, with the reason:
+
+```yaml
+not_applicable:
+  python_module: "Next.js — there is no python package"
+```
+
+A plain list of field names works too; the mapping is better, because the
+reason is exactly what the old refusal lost.
+
+#### ⚠️ Empty is a finding, not a pass
+
+The report reads **`apps[]`** — the enforced relation, which is the set of
+deployments by definition and exists whether or not the repo came from a
+template. It used to read `services[].name`, and that had a hole the founder
+found:
+
+```python
+if not names:        # ← a Solution with no services[]
+    return []        # ← "everything is declared"
+```
+
+With `services` optional that is **green by vacuity** — the class of defect
+that has blinded three guards in this house. So an empty `apps[]` reports
+**NOTHING TO LOOK AT**, loudly, and `--strict` exits 3 on it.
+
+⚠️ And note this **diverges** from `join_disagreements`, where an absent `apps`
+is *not* a disagreement. Both are right, because the questions differ:
+
+| question | of an absent/empty list |
+|---|---|
+| *"do the two lists agree?"* | no answer — and firing here would cry wolf on every record older than the guard |
+| *"has anyone answered about cost?"* | **yes: nobody looked** |
+
+Do not "unify" them. The divergence is the decision.
 
 ### ⭐ Both halves, in one write
 

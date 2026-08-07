@@ -208,10 +208,20 @@ class RunReport:
     #: from the file returns as the human's value instead of the template's
     #: default.
     restored_answers: list[str] = field(default_factory=list)
-    #: Recorded layers that never said whether they may sleep. A fixed replica
-    #: is ~US$ 90/month, forever, so a layer with no answer here is a cost
-    #: decision nobody made — reported on every run, never presumed.
+    #: Recorded deployments that never said whether they may sleep. A fixed
+    #: replica is ~US$ 90/month, forever, so a deployment with no answer here is
+    #: a cost decision nobody made — reported on every run, never presumed.
     unanswered_cost: list[str] = field(default_factory=list)
+    #: ⭐ The three questions in one report: field name → the deployments that
+    #: neither answered it nor declared it does not apply.
+    undeclared: dict[str, list[str]] = field(default_factory=dict)
+    #: ⚠️ `apps[]` named NO deployments, so nothing was looked at. A FINDING,
+    #: never a pass — see `DeclarationGaps.nothing_to_look_at`.
+    nothing_to_look_at: bool = False
+    #: The store could not be read, so everything above is the loud side rather
+    #: than a measurement. Said out loud so "unreadable" never reads as
+    #: "undeclared".
+    declarations_unreadable: bool = False
     #: ⭐ Layers this run rendered that answered `can_sleep: false`. They cost a
     #: FIXED replica — ~US$ 90/month, recurring — and the whole reason the
     #: question is in the template is so the number can be on screen at the
@@ -256,6 +266,11 @@ class RunReport:
             or self.missing_external_data
             or self.conflicted_paths
             or self.unanswered_cost
+            # ⭐ `nothing_to_look_at` is IN, and it is the whole point: a record
+            # whose `apps[]` is empty used to come back with every list empty
+            # and exit 0 — green by vacuity. "Nobody looked" is a finding.
+            or self.nothing_to_look_at
+            or any(self.undeclared.values())
         )
 
     def to_json(self) -> dict[str, Any]:
@@ -295,6 +310,9 @@ class RunReport:
             "solution": self.solution,
             "restored_answers": self.restored_answers,
             "unanswered_cost": self.unanswered_cost,
+            "undeclared": self.undeclared,
+            "nothing_to_look_at": self.nothing_to_look_at,
+            "declarations_unreadable": self.declarations_unreadable,
             "no_sleep": self.no_sleep,
             "app_kind_missing_fields": self.app_kind_missing_fields,
             "unreachable_wiring": [place for place, _ in UNREACHABLE_WIRING],
@@ -673,6 +691,53 @@ def _echo_unreachable_note() -> None:
     )
 
 
+#: What each reported field is FOR, in the voice of the person who has to
+#: answer it. Keyed by the App field; a field with no line here still gets
+#: reported (the list is derived from the schema, not from this map) — it just
+#: gets reported without a reason, which is the honest degradation.
+_WHY_IT_MATTERS: dict[str, str] = {
+    "can_sleep": (
+        "a deployment that cannot scale to zero costs a FIXED REPLICA — "
+        "~US$ 90 a month, forever"
+    ),
+    "python_module": "which python package `apps/<dir>/src/` installs",
+    "port": "the port the container listens on, and what the ingress targets",
+}
+
+
+def _echo_undeclared(report: RunReport) -> None:
+    """The three questions, in one block, in the order they cost money.
+
+    One block rather than three, because they are read by one person at one
+    moment — and the cost question goes first for the same reason it is the
+    only one with a number attached.
+    """
+    sk = _solution_kind()
+    click.echo("")
+    total = sum(len(names) for names in report.undeclared.values())
+    click.echo(f"⚠ {total} declaration(s) missing across the deployments:")
+    for field_name in sorted(
+        report.undeclared, key=lambda f: (f != sk.COST_FIELD, f)
+    ):
+        names = report.undeclared[field_name]
+        if not names:
+            continue
+        why = _WHY_IT_MATTERS.get(field_name)
+        click.echo(f"    {field_name}" + (f" — {why}" if why else ""))
+        for name in names:
+            click.echo(f"        {name}")
+    click.echo(
+        "  Nothing here is presumed: absent means NOBODY ANSWERED, and it is said\n"
+        "  on every run until somebody does. Answer by writing the field on the\n"
+        "  `App` of that name.\n"
+        "  ⭐ If the question genuinely does NOT APPLY — `portal` has no python\n"
+        f"     module because it is Next.js — declare that on the App\n"
+        f"     (`{sk.NOT_APPLICABLE_FIELD}`) and this report goes quiet about it.\n"
+        "     Absent and not-applicable are different answers, and keeping them\n"
+        "     apart is what stops this list becoming noise nobody reads."
+    )
+
+
 def _echo_report(report: RunReport) -> None:
     if report.no_sleep:
         sk = _solution_kind()
@@ -732,20 +797,32 @@ def _echo_report(report: RunReport) -> None:
             "  value is what was re-passed."
         )
 
-    if report.unanswered_cost:
+    if report.nothing_to_look_at:
+        click.echo("")
+        click.echo("⚠ NOTHING TO LOOK AT — this Solution names no deployments.")
+        click.echo(
+            "  `apps[]` is empty, so the report below asked nothing of nobody. That\n"
+            "  is a FINDING, not a pass: an empty set of deployments answering\n"
+            "  \"everything is declared\" is green by vacuity, and it is how a report\n"
+            "  goes quiet at exactly the moment there is nothing behind it.\n"
+            "  Record the layers (`dna solution record`), or say which Apps this\n"
+            "  solution delivers (`--app NAME`)."
+        )
+
+    if report.declarations_unreadable:
         click.echo("")
         click.echo(
-            f"⚠ {len(report.unanswered_cost)} recorded service(s) have no App "
-            "saying whether they may sleep:"
+            "⚠ The App store could not be READ, so everything below is the loud "
+            "side, not a measurement."
         )
-        for name in report.unanswered_cost:
-            click.echo(f"    {name}")
         click.echo(
-            "  An app that cannot scale to zero costs a fixed replica — ~US$ 90 a\n"
-            "  month, forever. Nothing here presumes the cheap side: absent is\n"
-            "  said out loud, on every run, until somebody answers it. Answer it\n"
-            "  by writing `can_sleep` on the App of the same name."
+            "  Every deployment is listed under every question because that is the\n"
+            "  safe direction — but none of it was actually checked. Fix the scope\n"
+            "  and re-run before trusting a single line of it."
         )
+
+    if any(report.undeclared.values()):
+        _echo_undeclared(report)
 
     if report.template_untagged:
         click.echo(
@@ -885,6 +962,20 @@ def _solution_kind() -> Any:
     return solution_kind
 
 
+def _fill_declaration_gaps(report: RunReport, gaps: Any) -> None:
+    """Copy the three questions onto the run report, in one place.
+
+    One helper rather than four assignments at each of the two call sites: a
+    caller that copied `gaps` and forgot `nothing_to_look_at` would produce
+    precisely the green-by-vacuity this slice exists to remove, and it would
+    look like a complete report while doing it.
+    """
+    report.undeclared = {f: list(names) for f, names in gaps.gaps.items()}
+    report.unanswered_cost = list(gaps.gaps.get(_solution_kind().COST_FIELD, []))
+    report.nothing_to_look_at = gaps.nothing_to_look_at
+    report.declarations_unreadable = gaps.unreadable
+
+
 def _cost_of(answers: dict[str, Any], *, service: str) -> list[str]:
     """``[service]`` when this layer said it may NOT sleep, else ``[]``.
 
@@ -948,7 +1039,7 @@ def _record_layer(
             "answers file on disk is the input, so nothing was lost."
         ) from exc
     report.solution = solution_name
-    report.unanswered_cost = sk.unanswered_cost_question(spec, scope=scope)
+    _fill_declaration_gaps(report, sk.declaration_gaps(spec, scope=scope))
     report.app_kind_missing_fields = list(sk.app_kind_absent_fields())
 
 
@@ -1572,7 +1663,8 @@ def record(
     except Exception as exc:  # noqa: BLE001
         raise SolutionError(f"recording Solution {solution_name!r} failed: {exc}") from exc
 
-    unanswered = sk.unanswered_cost_question(spec, scope=scope)
+    gaps = sk.declaration_gaps(spec, scope=scope)
+    unanswered = list(gaps.gaps.get(sk.COST_FIELD, []))
     # ⚠️ Read from the ANSWERS, not from a `Layer` field: the cost commitment is
     # no longer promoted onto the layer (it is `App.can_sleep` now), and the
     # Copier answer that produced it stays in `answers` verbatim. `is False`,
@@ -1591,9 +1683,19 @@ def record(
                     "solution": solution_name,
                     "destination": str(destination),
                     "recorded": [layer.name for layer in layers],
-                    "services": [entry.get("name") for entry in spec["services"]],
+                    # ⚠️ `.get`, not `[...]`: `services` is optional now
+                    # (`spec-campo-opcional-por-evidencia` — the dna-cloud was
+                    # never generated from a template, so it has none), and a
+                    # direct subscript here was a KeyError waiting for the first
+                    # repo that earned the exemption.
+                    "services": [
+                        entry.get("name") for entry in (spec.get("services") or [])
+                    ],
                     "apps": list(spec.get("apps") or []),
                     "unanswered_cost": unanswered,
+                    "undeclared": {f: list(n) for f, n in gaps.gaps.items()},
+                    "nothing_to_look_at": gaps.nothing_to_look_at,
+                    "declarations_unreadable": gaps.unreadable,
                     "no_sleep": no_sleep,
                     "app_kind_missing_fields": missing_app_fields,
                 },
@@ -1605,7 +1707,7 @@ def record(
     else:
         click.echo(
             f"Recorded {len(layers)} layer(s) in Solution {solution_name} "
-            f"({len(spec['services'])} total)"
+            f"({len(spec.get('services') or [])} total)"
         )
         for layer in layers:
             # "sleeps" is deliberately NOT printed from the Copier answer any
@@ -1621,17 +1723,20 @@ def record(
             destination=str(destination),
             template=layers[0].template_src,
             solution=solution_name,
-            unanswered_cost=unanswered,
             no_sleep=no_sleep,
             app_kind_missing_fields=missing_app_fields,
         )
+        _fill_declaration_gaps(report, gaps)
         _echo_report(report)
 
-    if strict and unanswered:
+    # ⭐ `gaps.has_findings`, never `unanswered` alone. `--strict` reading only
+    # the cost list would exit 0 on a Solution that named NO deployments —
+    # nothing to look at, nothing in any list, green. That is the vacuity
+    # `Story/s-relatorio-do-que-falta` exists to close, and `--strict` is the
+    # caller where it would have cost the most.
+    if strict and gaps.has_findings:
         raise SolutionError(
-            "A recorded service has no App answering the cost question, and --strict "
-            "was "
-            "given.",
+            "The report above named what is not declared, and --strict was given.",
             EXIT_FINDINGS,
         )
 
