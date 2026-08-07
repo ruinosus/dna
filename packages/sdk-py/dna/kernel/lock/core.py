@@ -1,4 +1,4 @@
-"""Lockfile v3 — single flat document list with origin tracking."""
+"""Lockfile v3 — single flat instance list with origin tracking."""
 from __future__ import annotations
 
 import hashlib
@@ -10,12 +10,12 @@ from typing import Any
 import yaml
 
 from dna._yaml import safe_load
-from dna.kernel.document import Document
+from dna.kernel.instance import Instance
 
 
 @dataclass
 class LockEntry:
-    """One document in the lockfile."""
+    """One instance in the lockfile."""
     name: str
     kind: str
     api_version: str
@@ -24,7 +24,7 @@ class LockEntry:
     sha256: str
 
     @classmethod
-    def from_document(cls, doc: Document, origin: str, path: str, sha256: str) -> LockEntry:
+    def from_instance(cls, doc: Instance, origin: str, path: str, sha256: str) -> LockEntry:
         return cls(
             name=doc.name, kind=doc.kind, api_version=doc.api_version,
             origin=origin, path=path, sha256=sha256,
@@ -35,7 +35,7 @@ class LockEntry:
 class Lockfile:
     """Complete lockfile v3."""
     scope: str = ""
-    documents: list[LockEntry] = field(default_factory=list)
+    instances: list[LockEntry] = field(default_factory=list)
     lock_version: int = 3
     generated_at: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -43,12 +43,12 @@ class Lockfile:
 
 
 def write_lockfile(lock: Lockfile, path: Path) -> None:
-    sorted_docs = sorted(lock.documents, key=lambda d: (d.kind, d.name))
+    sorted_docs = sorted(lock.instances, key=lambda d: (d.kind, d.name))
     data: dict[str, Any] = {
         "lockVersion": lock.lock_version,
         "generated_at": lock.generated_at,
         "scope": lock.scope,
-        "documents": [
+        "instances": [
             {
                 "name": d.name,
                 "kind": d.kind,
@@ -70,19 +70,19 @@ def read_lockfile(path: Path) -> Lockfile:
     if not path.exists():
         return Lockfile()
     data = safe_load(path.read_text())
-    if not data or "documents" not in data:
+    if not data or "instances" not in data:
         return Lockfile()
-    documents = [
+    instances = [
         LockEntry(
             name=d["name"], kind=d["kind"], api_version=d.get("apiVersion", ""),
             origin=d.get("origin", "local"), path=d.get("path", ""),
             sha256=d.get("sha256", ""),
         )
-        for d in data["documents"]
+        for d in data["instances"]
     ]
     return Lockfile(
         scope=data.get("scope", ""),
-        documents=documents,
+        instances=instances,
         lock_version=data.get("lockVersion", 3),
         generated_at=data.get("generated_at", ""),
     )
@@ -121,11 +121,11 @@ def verify_lock(mi: Any, lock_path: Path) -> VerifyResult:
 
     lock = read_lockfile(lock_path)
     lock_map: dict[tuple[str, str], str] = {
-        (e.kind, e.name): e.sha256 for e in lock.documents
+        (e.kind, e.name): e.sha256 for e in lock.instances
     }
 
     current_map: dict[tuple[str, str], str] = {}
-    for d in mi.documents:
+    for d in mi.instances:
         raw_json = json.dumps(d.raw, sort_keys=True, ensure_ascii=False)
         sha = hashlib.sha256(raw_json.encode()).hexdigest()
         current_map[(d.kind, d.name)] = sha

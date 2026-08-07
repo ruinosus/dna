@@ -64,7 +64,7 @@ scrutiny you would give a third-party dependency or plugin.
 
 **The defenses DNA provides:**
 
-- **Schema validation on the write path.** Every document is validated
+- **Schema validation on the write path.** Every instance is validated
   against its per-Kind JSON Schema before it is written or accepted. This is
   the first line of defense against malformed or hostile manifests — keep it
   on; do not disable validation to "make a manifest load."

@@ -63,7 +63,7 @@ because an extension that ships a Kind and its one consumer must not have to
 patch a core enum. Registration buys documentation, never a veto.
 
 Reads the LOCAL kernel registry — traits are a property of the registered
-Kinds, not of any scope's documents.
+Kinds, not of any scope's instances.
 
 ```text
 dna kind traits [OPTIONS]

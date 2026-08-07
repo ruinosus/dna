@@ -1,7 +1,7 @@
 # ms_files_search — the On-Behalf-Of Graph "files" group (ADR-mcp-obo §6, read-only).
 #
 # The AGENT-FACING surface (description + input_schema) of the built-in
-# ``ms_files_search`` MCP tool, expressed as a governed Tool document (record
+# ``ms_files_search`` MCP tool, expressed as a governed Tool instance (record
 # plane, alias ``helix-tool``). The built-in @server.tool reads its description
 # and parameters FROM this doc, so what the model sees is DATA — overlayable per
 # tenant like any Tool, not hardcoded in Python. Execution stays code (the OBO

@@ -6,7 +6,7 @@ in one workspace. One named from their email, one named ``…--workos-user-01kx�
 
 Nothing complained when it happened, because a wrong handle does not fail a
 write: it produces a DIFFERENT name, and a different name is a different
-document. The design's own promise — "an invite, a re-invite and the accept-bind
+instance. The design's own promise — "an invite, a re-invite and the accept-bind
 all converge on the ONE doc, never a duplicate" — stopped being true silently.
 
 The cost surfaced far from the cause. Revoking that person removed one grant
@@ -28,7 +28,7 @@ def test_an_email_composes_the_documented_key():
 
 def test_the_same_identity_always_converges_on_one_name():
     """The property the whole design rests on: invite, re-invite and
-    accept-bind must all address the SAME document."""
+    accept-bind must all address the SAME instance."""
     a = workspace_membership_name("ws-1", "alice@acme.com")
     b = workspace_membership_name("ws-1", "  ALICE@acme.com  ")
     assert a == b

@@ -69,7 +69,7 @@ def test_a_forma_com_kinds_aninhado_tambem_vale():
 
 
 def test_o_pedido_e_ORDENADO_e_sem_repeticao():
-    """Determinístico: o mesmo pedido produz o mesmo documento, e um documento
+    """Determinístico: o mesmo pedido produz o mesma instância, e uma instância
     que varia sem o fato variar polui o histórico."""
     assert requested_kinds(_msg(["Story", "Memory", "Story"])) == ["Memory", "Story"]
 

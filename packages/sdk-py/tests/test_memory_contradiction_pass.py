@@ -113,7 +113,7 @@ async def test_the_pass_never_resolves_a_contradiction_even_with_apply(kernel):
     await consolidate(kernel, SCOPE, apply=True)
 
     for name in ("rem-livro-pendente", "rem-livro-aprovado"):
-        doc = await kernel.get_document(SCOPE, "Engram", name)
+        doc = await kernel.get_instance(SCOPE, "Engram", name)
         assert not (doc["spec"].get("valid_to")), f"{name} was demoted by the pass"
         assert not doc["spec"].get("superseded_by_memory")
     # and both are still recallable — nothing was hidden.
@@ -291,11 +291,11 @@ async def test_remember_refuses_a_malformed_claim_and_writes_nothing(
     with pytest.raises(ValueError) as exc:
         await remember(kernel, SCOPE, name="rem-bad", spec=spec)
     assert needle in str(exc.value)
-    assert await kernel.get_document(SCOPE, "Engram", "rem-bad") is None
+    assert await kernel.get_instance(SCOPE, "Engram", "rem-bad") is None
 
 
 async def test_the_schema_refuses_the_same_claim_on_the_raw_write_door(kernel):
-    """Two doors, one contract. ``write_document`` bypasses the verb entirely,
+    """Two doors, one contract. ``write_instance`` bypasses the verb entirely,
     so the Engram schema has to say the same thing the validator says — a guard
     that only the convenience path calls is a guard the raw path walks past."""
     from dna.kernel.protocols import SpecValidationError
@@ -307,8 +307,8 @@ async def test_the_schema_refuses_the_same_claim_on_the_raw_write_door(kernel):
         "kind": "Engram", "metadata": {"name": "rem-raw"}, "spec": spec,
     }
     with pytest.raises(SpecValidationError):
-        await kernel.write_document(SCOPE, "Engram", "rem-raw", raw)
-    assert await kernel.get_document(SCOPE, "Engram", "rem-raw") is None
+        await kernel.write_instance(SCOPE, "Engram", "rem-raw", raw)
+    assert await kernel.get_instance(SCOPE, "Engram", "rem-raw") is None
 
 
 async def test_an_unknown_claim_field_is_refused_by_the_schema_too(kernel):
@@ -321,7 +321,7 @@ async def test_an_unknown_claim_field_is_refused_by_the_schema_too(kernel):
         "kind": "Engram", "metadata": {"name": "rem-raw-2"}, "spec": spec,
     }
     with pytest.raises(SpecValidationError):
-        await kernel.write_document(SCOPE, "Engram", "rem-raw-2", raw)
+        await kernel.write_instance(SCOPE, "Engram", "rem-raw-2", raw)
 
 
 async def test_a_valid_claim_round_trips_through_the_verb(kernel):
@@ -329,7 +329,7 @@ async def test_a_valid_claim_round_trips_through_the_verb(kernel):
         kernel, SCOPE, name="rem-ok",
         spec=_spec("uma memória com claim válido", "pending"),
     )
-    doc = await kernel.get_document(SCOPE, "Engram", "rem-ok")
+    doc = await kernel.get_instance(SCOPE, "Engram", "rem-ok")
     assert doc["spec"]["claims"] == [
         {"predicate": "approval", "object": "pending", "polarity": "asserts"}
     ]

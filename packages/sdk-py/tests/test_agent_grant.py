@@ -1,6 +1,6 @@
 """A decisão de conceder — pura, sem I/O, e por isso testável de verdade.
 
-Quem lê e escreve o documento é o HOST (a porta, no deployment). O que mora aqui
+Quem lê e escreve a instância é a HOST (a porta, no deployment). O que mora aqui
 é a REGRA, e ela é pequena de propósito: uma regra de autorização que precisa de
 banco para ser exercitada é uma regra que ninguém testa nos casos difíceis — e
 num portão os casos difíceis são exatamente os que importam.
@@ -34,7 +34,7 @@ def test_a_AUSENCIA_de_grant_nao_permite():
 
 
 def test_um_estado_DESCONHECIDO_nao_permite():
-    """Um documento de versão futura, ou corrompido, FECHA.
+    """Uma instância de versão futura, ou corrompido, FECHA.
 
     É a propriedade que carrega o módulo: a lista é de UM permitido, e o resto é
     o resto. Um portão escrito ao contrário — negar o que conhece — abriria para
@@ -74,7 +74,7 @@ def test_o_escopo_PEDIDO_e_registrado_mas_NAO_concedido():
 
 
 def test_o_escopo_pedido_e_ORDENADO_e_sem_repeticao():
-    """Determinístico: o mesmo pedido produz o mesmo documento. Um documento que
+    """Determinístico: o mesmo pedido produz o mesma instância. Uma instância que
     varia sem o fato variar polui o histórico — e histórico é metade do que a
     auditoria vende."""
     p = pending_grant(
@@ -119,7 +119,7 @@ def test_um_pedido_SEM_nome_nao_inventa_campo():
     Um `client_id` cru é ruim de ler e honesto; um nome fabricado é legível e
     falso, e numa tela de autorização a segunda coisa é pior. Gravar a chave com
     `None` faria a tela ter de distinguir "sem nome" de "nome nulo" — duas
-    formas da mesma ausência, e a segunda vaza para todo leitor do documento.
+    formas da mesma ausência, e a segunda vaza para todo leitor da instância.
     """
     p = pending_grant(client_id="c", subject="u")
     assert "client_name" not in p
@@ -136,7 +136,7 @@ def test_o_nome_ancorado_entra_no_documento():
 
 @pytest.mark.parametrize("branco", ["", "   ", "\n\t"])
 def test_nome_em_branco_vira_AUSENCIA_e_nao_campo_vazio(branco):
-    """Uma string vazia no documento faria a tela desenhar uma linha muda no
+    """Uma string vazia na instância faria a tela desenhar uma linha muda no
     lugar do `client_id` — pior que os dois estados honestos, porque não diz
     nem o nome nem quem é."""
     p = pending_grant(client_id="c", subject="u", client_name=branco)
@@ -144,8 +144,8 @@ def test_nome_em_branco_vira_AUSENCIA_e_nao_campo_vazio(branco):
 
 
 def test_o_nome_nao_altera_o_estado_nem_o_escopo():
-    """Nomear não é permitir. Um nome bonito não pode ser um caminho para um
-    documento nascer menos inerte do que nasceria sem ele."""
+    """Nomear não é permitir. Um nome bonito não pode ser um caminho para uma
+    instância nascer menos inerte do que nasceria sem ele."""
     com = pending_grant(client_id="c", subject="u", client_name="Acme")
     sem = pending_grant(client_id="c", subject="u")
     assert com["state"] == sem["state"] == "pending"

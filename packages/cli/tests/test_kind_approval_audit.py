@@ -1,6 +1,6 @@
 """Approval is the human act, and it is what gives the Kind effect.
 
-Authoring writes an INERT document (``test_kind_authoring_route.py``);
+Authoring writes an INERT instance (``test_kind_authoring_route.py``);
 this suite covers the second act — the one that confers effect — and the audit
 trail that makes it worth anything.
 
@@ -9,7 +9,7 @@ Three properties, each checked against the thing that would actually break:
 1. **approval confers effect** — the same Kind has NO port on a kernel booted
    fresh over the store before approval, and HAS one after. Asserting on a fresh
    kernel is the whole point: the registry is per-kernel and outlives the
-   ``instance_async`` of the process that wrote the document, so probing
+   ``instance_async`` of the process that wrote the instance, so probing
    registration in the writing process can be true for the wrong reason.
 2. **each act records its OWN verified actor** — the proposer is stamped at the
    authoring door from the identity that authored, the approver at the approval
@@ -18,7 +18,7 @@ Three properties, each checked against the thing that would actually break:
    a coincidence, it does not refuse it. What must never happen is one act
    wearing the other's name.
 3. **neither actor comes from the request body** — a caller-supplied
-   ``approved_by``/``proposed_by`` is dropped, verified on the STORED document.
+   ``approved_by``/``proposed_by`` is dropped, verified on the STORED instance.
 
 Auth is ``config`` with a fake verifier (the ``test_personal_memories_rest.py``
 shape): a bearer string is a key into a claims table, so two tokens are two
@@ -72,7 +72,7 @@ _SCHEMA = {
 #: blanket ban on the word "own" would forbid the true sentence.
 _OWNERSHIP_TELL = re.compile(
     r"not\s+yours|not\s+your\b|belongs\s+to|owned\s+by|"
-    r"(?:an|other|another|different)\s+workspace(?:'s)?\s+(?:kind|document|namespace)|"
+    r"(?:an|other|another|different)\s+workspace(?:'s)?\s+(?:kind|instance|namespace)|"
     r"someone\s+else|exists?\s+but|but\s+it\s+(?:is|does)|"
     r"forbidden|unauthori[sz]ed|not\s+authori[sz]ed|permission|access\s+denied",
     re.I,
@@ -180,7 +180,7 @@ def _registered_port(dna_dir, kind: str):
 
 def _stored_spec(dna_dir, name: str) -> dict:
     async def probe(live):
-        raw = await live.kernel.get_document(_SCOPE, "KindDefinition", name)
+        raw = await live.kernel.get_instance(_SCOPE, "KindDefinition", name)
         return dict((raw or {}).get("spec") or {})
 
     return _on_fresh_kernel(dna_dir, probe)
@@ -214,7 +214,7 @@ def test_approval_registers_the_kind_and_names_both_actors(dna_dir):
     with _client(dna_dir) as c:
         assert _author(c, "agent").status_code == 201
 
-        # Before approval: the Kind exists as a document and has NO effect.
+        # Before approval: the Kind exists as an instance and has NO effect.
         assert _registered_port(dna_dir, "Contrato") is None
 
         r = _approve(c, "human")
@@ -264,7 +264,7 @@ def test_a_solo_author_may_approve_their_own_proposal(dna_dir):
 
 def test_neither_actor_can_be_supplied_by_the_caller(dna_dir):
     """Attribution a caller can forge is not attribution. Verified on the
-    STORED document — a route that reported the truth while persisting the
+    STORED instance — a route that reported the truth while persisting the
     caller's string would hand the next reader a forged audit."""
     with _client(dna_dir) as c:
         r = _author(c, "agent", proposed_by="ceo@tenant.example",
@@ -285,13 +285,13 @@ def test_neither_actor_can_be_supplied_by_the_caller(dna_dir):
 #
 # Hot-editing an approved Kind is supported (a second ``POST /v1/kinds`` for a
 # name that already exists), and the authoring door rebuilds the spec field by
-# field and PERSISTS it — ``write_document`` does not merge. So an edit decides,
-# by omission, what happens to every audit field on the document. The semantics,
+# field and PERSISTS it — ``write_instance`` does not merge. So an edit decides,
+# by omission, what happens to every audit field on the instance. The semantics,
 # decided here and pinned below:
 #
-#   created_at   — the BIRTH of the document. Preserved across edits; only a
-#                  document that does not yet exist gets ``now``. The schema
-#                  says "when the document was created", and it must stay true.
+#   created_at   — the BIRTH of the instance. Preserved across edits; only a
+#                  instance that does not yet exist gets ``now``. The schema
+#                  says "when the instance was created", and it must stay true.
 #   proposed_by  — the CURRENT proposal. Re-stamped on every author call: it
 #                  answers "who proposed the shape that is pending or approved
 #                  right now", and after an edit that is the editor. The
@@ -320,7 +320,7 @@ def _edit_cycle(c, dna_dir, clock):
     edited = _author(c, "human", schema={"type": "object",
                                          "properties": {"valor": {"type": "number"}}})
     assert edited.status_code == 201, edited.text
-    assert edited.json()["name"] == name, "an edit must address the same document"
+    assert edited.json()["name"] == name, "an edit must address the same instance"
     return name, _stored_spec(dna_dir, name)
 
 
@@ -329,7 +329,7 @@ def test_an_edit_keeps_the_birth_date_restamps_the_proposer_and_drops_approval(
 ):
     """RED against the pre-fix code on the FIRST assertion: ``created_at`` came
     back ``2022-03-03…`` — the edit's clock — because the door stamped ``now``
-    unconditionally, which made the schema's "when the document was created"
+    unconditionally, which made the schema's "when the instance was created"
     false from the first edit onward."""
     with _client(dna_dir) as c:
         name, spec = _edit_cycle(c, dna_dir, clock)
@@ -380,19 +380,19 @@ def test_a_re_approval_after_an_edit_confers_effect_again(dna_dir, clock):
 def test_a_workspace_cannot_approve_another_workspaces_kind(dna_dir):
     """One scope, two workspaces, two namespaces — and approval must not cross.
 
-    The document name is ``<namespace>--<kind>``, and the approval door
+    The instance name is ``<namespace>--<kind>``, and the approval door
     addresses it by the Kind half alone. Without an ownership filter, workspace
     A asking to approve ``Contrato`` finds the ONLY ``…--Contrato`` in the
     scope — which is B's — and confers effect on it. Nothing downstream stops
     it: the approval write passes no ``tenant=``, so the namespace gate
     attributes it to the scope's own owner, not to the caller.
 
-    RED against the pre-fix code: this returned 200, B's stored document came
+    RED against the pre-fix code: this returned 200, B's stored instance came
     back carrying ``approved_by: human@tenant.example``, and a fresh kernel
     registered B's Kind — A having authored nothing at all."""
     with _client(dna_dir) as c:
         # B authors. A authors NOTHING — it has no Contrato of its own, so a
-        # 404 here cannot be a coincidence of finding the caller's own document.
+        # 404 here cannot be a coincidence of finding the caller's own instance.
         r = _author(c, "agent", tenant=_OTHER_WID)
         assert r.status_code == 201, r.text
         victims_document = r.json()["name"]
@@ -434,7 +434,7 @@ def test_a_stranger_gets_the_same_answer_as_a_nonexistent_kind(dna_dir):
     about what the caller LEARNS from being refused, and that is the second half
     of the same boundary: "it exists but is not yours" is a probe. A workspace
     that can tell the two refusals apart can enumerate what its neighbours are
-    authoring, one Kind name at a time, without ever reading a document — and it
+    authoring, one Kind name at a time, without ever reading an instance — and it
     needs no 403 to do it, one distinguishing word in a 404 body is enough.
 
     Until this test existed, NOTHING compared the approval door's two 404s. The
@@ -506,7 +506,7 @@ def _claim_namespace(dna_dir, *, namespace: str, owner: str,
     """Write ONE ``KindNamespace`` claim into the registry scope.
 
     ``name`` defaults to the namespace (the ordinary one-claim-per-namespace
-    shape); passing a different document name is how a SECOND, conflicting
+    shape); passing a different instance name is how a SECOND, conflicting
     claim for the same namespace is seeded — the doubly-claimed record
     ``owner_of`` refuses to resolve."""
     from dna.application.namespace_assignment import TENANT_API_VERSION
@@ -515,7 +515,7 @@ def _claim_namespace(dna_dir, *, namespace: str, owner: str,
     doc = name or namespace
 
     async def claim(live):
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             SYSTEM_SCOPE, "KindNamespace", doc,
             {"apiVersion": TENANT_API_VERSION, "kind": "KindNamespace",
              "metadata": {"name": doc},
@@ -536,17 +536,17 @@ def _seed_second_namespace(dna_dir, *, owner: str, namespace: str,
     says nothing constrains the count, and the proof-of-ownership flow is how a
     workspace gets a public one (``acme.example``) beside its assigned
     ``ws-….dna.local``. The door cannot author under the second (assignment
-    always answers the earliest ASSIGNED claim), so the second document is
+    always answers the earliest ASSIGNED claim), so the second instance is
     seeded through the kernel — the same call the authoring door itself makes.
 
     ``acme.example`` deliberately lacks the ``.dna.local`` suffix, so
     ``assign_namespace`` filters it out and authoring keeps landing under the
-    assigned namespace. Returns the seeded document's name."""
+    assigned namespace. Returns the seeded instance's name."""
     name = f"{namespace}--{kind}"
     _claim_namespace(dna_dir, namespace=namespace, owner=owner)
 
     async def seed(live):
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _SCOPE, "KindDefinition", name,
             {"apiVersion": "github.com/ruinosus/dna/core/v1",
              "kind": "KindDefinition", "metadata": {"name": name},
@@ -565,14 +565,14 @@ def _seed_second_namespace(dna_dir, *, owner: str, namespace: str,
 def test_one_kind_under_two_namespaces_the_caller_owns_is_an_ambiguity(dna_dir):
     """Refusing to pick a winner — and the refusal now MEANS "you own both".
 
-    Before the ownership filter this same 400 also fired when the two documents
+    Before the ownership filter this same 400 also fired when the two instances
     belonged to two DIFFERENT workspaces, which is not an ambiguity at all: one
     of them simply was not the caller's. The filter is what makes the message
     true, so this test pins the refusal in its only honest configuration — one
     workspace, two namespaces it owns, the same Kind declared under both."""
     seeded = _seed_second_namespace(dna_dir, owner=_WID, namespace="acme.example")
     assert _stored_spec(dna_dir, seeded).get("target_kind") == "Contrato", (
-        "the seeded second-namespace document did not land — without it there "
+        "the seeded second-namespace instance did not land — without it there "
         "is only one match and this test would assert an ambiguity that the "
         "code never had the chance to detect"
     )
@@ -583,18 +583,18 @@ def test_one_kind_under_two_namespaces_the_caller_owns_is_an_ambiguity(dna_dir):
         r = _approve(c, "human", tenant=_WID)
         assert r.status_code == 400, r.text
         detail = r.json()["detail"]
-        # Named, both of them — a reviewer resolves this by document name and
+        # Named, both of them — a reviewer resolves this by instance name and
         # cannot do that from a refusal that hides which two it means.
         assert "acme.example" in detail, detail
         assert assigned.json()["namespace"] in detail, detail
         # …and it must tell them WHAT to do. The instruction is the whole point
         # of refusing instead of guessing, and nothing pinned it: the verb
         # silently changed from "approve it" to "address it" when
-        # ``_authored_document_name`` became shared with the READ door — where
+        # ``_authored_instance_name`` became shared with the READ door — where
         # "approve it" would have been wrong advice. "address it" is the one
         # that is true on both doors, and it is pinned here as a literal so the
         # next caller cannot narrow it back without saying so.
-        assert "address it by document name, not by Kind name" in detail, detail
+        assert "address it by instance name, not by Kind name" in detail, detail
 
     for name in (seeded, assigned.json()["name"]):
         assert not _stored_spec(dna_dir, name).get("approved_by"), name
@@ -602,7 +602,7 @@ def test_one_kind_under_two_namespaces_the_caller_owns_is_an_ambiguity(dna_dir):
 
 
 def test_a_doubly_claimed_namespace_refuses_the_approval(dna_dir):
-    """The third control path out of ``_authored_document_name``, and the only
+    """The third control path out of ``_authored_instance_name``, and the only
     one that had no test — its two siblings (404 for a stranger's Kind, 400 for
     a Kind the caller declared twice) are both covered above.
 
@@ -640,14 +640,14 @@ def test_a_doubly_claimed_namespace_refuses_the_approval(dna_dir):
 
 # ── 5b. the shared lookup's precondition is structural, not documentary ────
 #
-# ``_authored_document_name`` is reached by two doors with OPPOSITE tenancy
+# ``_authored_instance_name`` is reached by two doors with OPPOSITE tenancy
 # preconditions: approval refuses a missing tenant before it calls, while the
 # read passes ``None`` straight through to the deliberately UNFILTERED lane
 # (the operator ``scope=`` call, the self-host). That difference used to live
 # in a docstring and in the ORDER the approval impl does its checks — which is
 # a promise, not a mechanism: a third caller that forgot it would get a search
 # across every workspace sharing the scope, silently, with the Kind half of a
-# document name as the only key.
+# instance name as the only key.
 
 
 def test_the_unfiltered_lane_must_be_asked_for_by_name(dna_dir):
@@ -662,7 +662,7 @@ def test_the_unfiltered_lane_must_be_asked_for_by_name(dna_dir):
 
     from dna.application import kind_authoring as K
 
-    param = inspect.signature(K._authored_document_name).parameters[
+    param = inspect.signature(K._authored_instance_name).parameters[
         "allow_unattributed"
     ]
     assert param.default is inspect.Parameter.empty, (
@@ -677,7 +677,7 @@ def test_the_filtered_lane_refuses_an_unattributed_call_rather_than_searching(
     dna_dir,
 ):
     """And the enforcement half — with the discriminator that makes it mean
-    something: the SAME call on the unfiltered lane finds the document. So the
+    something: the SAME call on the unfiltered lane finds the instance. So the
     refusal is the precondition firing, not an empty store."""
     from dna.application import kind_authoring as K
 
@@ -688,11 +688,11 @@ def test_the_filtered_lane_refuses_an_unattributed_call_rather_than_searching(
 
     async def probe(live):
         with pytest.raises(ValueError) as refused:
-            await K._authored_document_name(
+            await K._authored_instance_name(
                 live, scope=_SCOPE, kind="Contrato", tenant=None,
                 allow_unattributed=False,
             )
-        found, _namespace = await K._authored_document_name(
+        found, _namespace = await K._authored_instance_name(
             live, scope=_SCOPE, kind="Contrato", tenant=None,
             allow_unattributed=True,
         )
@@ -714,7 +714,7 @@ def test_the_filtered_lane_refuses_an_unattributed_call_rather_than_searching(
 
 
 def test_a_verified_anonymous_token_is_recorded_as_unidentified(dna_dir):
-    """``rest:unidentified`` — pinned as a LITERAL, on a stored document.
+    """``rest:unidentified`` — pinned as a LITERAL, on a stored instance.
 
     The label is a brand-new value that lands in a persisted audit field, and
     an audit field's values are a contract with every future reader of the
@@ -781,7 +781,7 @@ def test_approving_without_a_registry_scope_refuses_actionably(dna_dir):
 #     ``scope=`` call) resolves no tenant — filtering it would answer every
 #     self-hoster with an empty list. Same hinge ``NamespaceOwnershipGate`` uses
 #     for an unattributed write: no resolved tenant ⇒ not filtered.
-#   * NON-NAMESPACED documents. A name without ``--`` has no namespace half to
+#   * NON-NAMESPACED instances. A name without ``--`` has no namespace half to
 #     test at all — an operator-seeded ``KindDefinition`` is the ordinary case,
 #     and it is why the seed below lives in the caller's own scope.
 #
@@ -797,7 +797,7 @@ def test_approving_without_a_registry_scope_refuses_actionably(dna_dir):
 
 
 def _seed_unnamespaced_kind_document(dna_dir, *, name: str = "operatorseeded") -> str:
-    """A ``KindDefinition`` in the CALLER's scope whose document name carries no
+    """A ``KindDefinition`` in the CALLER's scope whose instance name carries no
     ``--`` — so there is no namespace half for the ownership test to read.
 
     Not an exotic shape: every ``KindDefinition`` that predates the authoring
@@ -805,7 +805,7 @@ def _seed_unnamespaced_kind_document(dna_dir, *, name: str = "operatorseeded") -
     that split the name unconditionally would drop the whole class."""
 
     async def seed(live):
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _SCOPE, "KindDefinition", name,
             {"apiVersion": "github.com/ruinosus/dna/core/v1",
              "kind": "KindDefinition", "metadata": {"name": name},
@@ -822,7 +822,7 @@ def _seed_unnamespaced_kind_document(dna_dir, *, name: str = "operatorseeded") -
 
 
 def test_the_listing_does_not_hand_a_workspace_its_neighbours_kinds(dna_dir):
-    """RED against the pre-filter code: A's listing carried B's document name,
+    """RED against the pre-filter code: A's listing carried B's instance name,
     B's namespace AND ``proposed_by: agent@tenant.example`` — the neighbour's
     identity string, which is the very fact the approval door's 404 withholds.
 
@@ -854,7 +854,7 @@ def test_the_listing_does_not_hand_a_workspace_its_neighbours_kinds(dna_dir):
     assert my_document in by_name, rows
     assert curated in by_name, (
         f"the non-namespaced Kind {curated!r} is not in the listing — the "
-        f"filter deleted a document with no namespace half to test: "
+        f"filter deleted an instance with no namespace half to test: "
         f"{sorted(by_name)}"
     )
 
@@ -901,8 +901,8 @@ def test_an_ambiguous_ownership_record_refuses_the_listing(dna_dir):
     is not acceptable, because it turns an unreadable authorization record into
     a grant.
 
-    The second claim needs its own DOCUMENT name: reusing the namespace as the
-    document name overwrites the first claim instead of contradicting it, and
+    The second claim needs its own INSTANCE name: reusing the namespace as the
+    instance name overwrites the first claim instead of contradicting it, and
     the listing then answers a perfectly well-formed 200 with the caller's row
     filtered out — a test that would have asserted the wrong mechanism."""
     with _client(dna_dir) as c:
@@ -968,7 +968,7 @@ def test_a_registry_read_error_that_is_not_a_missing_file_still_refuses(
 
 def test_approving_a_kind_that_was_never_authored_is_a_404(dna_dir):
     """The approval door confers effect; a door that silently created the
-    document it was asked to approve would be an authoring door with an
+    instance it was asked to approve would be an authoring door with an
     approval marker — exactly what must not exist.
 
     The detail is asserted, not just the status: before the route existed this
@@ -986,8 +986,8 @@ def test_an_approval_built_on_a_stale_read_is_a_409_and_writes_nothing(dna_dir):
     """i-083 — the door relays the lost-update refusal honestly.
 
     THE SCENARIO, one replica short of the real thing: a reviewer opens the
-    Kind (warming this app's 60-second granular document cache with v1), the
-    document is edited to v2 by somebody this app never hears from, and the
+    Kind (warming this app's 60-second granular instance cache with v1), the
+    instance is edited to v2 by somebody this app never hears from, and the
     reviewer approves off the read they already had. The write is refused at the
     adapter, and the route must say **409** — the request was well formed and it
     is the STATE that moved, so retrying the identical call is the wrong move and
@@ -999,7 +999,7 @@ def test_an_approval_built_on_a_stale_read_is_a_409_and_writes_nothing(dna_dir):
     invalidates its own caches and not this one's.
 
     Asserted beyond the status code, because a 409 alone would also be produced
-    by a door that refused every approval: the stored document must still carry
+    by a door that refused every approval: the stored instance must still carry
     the edit and must NOT carry an approver.
     """
     with _client(dna_dir, raise_server_exceptions=False) as c:
@@ -1049,7 +1049,7 @@ def test_an_approval_built_on_a_stale_read_is_a_409_and_writes_nothing(dna_dir):
 # conversational surface. The properties below are the ones a portal button
 # would be built on, checked the way the approval ones are: against a kernel
 # booted fresh over the store, because the registry is per-kernel and outlives
-# the ``instance_async`` of the process that wrote the document.
+# the ``instance_async`` of the process that wrote the instance.
 
 
 def _revoke(c, token, kind="Contrato", tenant=_WID, **body):
@@ -1062,7 +1062,7 @@ def test_revocation_withdraws_effect_without_forgetting_the_kind(dna_dir):
     """The one property a naive implementation gets backwards.
 
     Un-approving would return the Kind to *never approved*, and an unregistered
-    Kind is the PERMISSIVE state — its documents are accepted with no validation
+    Kind is the PERMISSIVE state — its instances are accepted with no validation
     at all. So the port must still be there after a revocation, and it must be
     MARKED. "No port" would look like a working undo and be a loosening."""
     with _client(dna_dir) as c:
@@ -1085,7 +1085,7 @@ def test_revocation_withdraws_effect_without_forgetting_the_kind(dna_dir):
     port = _registered_port(dna_dir, "Contrato")
     assert port is not None, (
         "a revoked Kind must stay REGISTERED — dropping it returns the Kind to "
-        "'never approved', where documents are accepted with no validation at "
+        "'never approved', where instances are accepted with no validation at "
         "all, so forgetting it would loosen the gate instead of closing it"
     )
     assert getattr(port, "__revoked__", False) is True
@@ -1122,7 +1122,7 @@ def test_approving_again_over_the_wire_restores_effect(dna_dir):
 
 
 def test_revoking_a_kind_nobody_authored_is_a_404_and_creates_nothing(dna_dir):
-    """A revocation door that CREATED the document it was asked to revoke would
+    """A revocation door that CREATED the instance it was asked to revoke would
     be an authoring door with a revocation marker on it."""
     with _client(dna_dir) as c:
         r = _revoke(c, "human", kind="Ghost")
@@ -1133,7 +1133,7 @@ def test_revoking_a_kind_nobody_authored_is_a_404_and_creates_nothing(dna_dir):
 def test_a_neighbours_kind_cannot_be_revoked(dna_dir):
     """Inherited from the approval door, deliberately: answering anything other
     than 404 would hand a stranger a probe for what its neighbours author — and
-    here the act itself would mark another workspace's documents invalid."""
+    here the act itself would mark another workspace's instances invalid."""
     with _client(dna_dir) as c:
         assert _author(c, "agent").status_code == 201
         assert _approve(c, "human").status_code == 200

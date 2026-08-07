@@ -218,7 +218,7 @@ the *context and identity* the process operates on.
 ### Layer 3 — DNA serves Spec Kit's constitution + templates (GOVERNANCE, no-deploy)
 
 `constitution.md` becomes a **Guardrail Kind** (live, overridable per
-scope/tenant, enforced at `write_document` time — governance without redeploy);
+scope/tenant, enforced at `write_instance` time — governance without redeploy);
 Spec Kit's `spec/plan/tasks` templates become **PromptTemplate/Skill** Kinds
 served over MCP. The `.specify/templates/overrides/` stack maps onto DNA's
 layer/override resolution. Governance stops being a file you hope people read
@@ -259,7 +259,7 @@ earns its place only after Layers 1–3 prove the mapping in both directions.
    research/data-model/contracts → Reference via `produces[]`; each `tasks.md`
    item → Story under the Feature; a `WorkflowEvent` per phase with
    `methodology_artifact` set to the `.specify/` path. Every write goes through
-   `kernel.write_document` (all guards fire).
+   `kernel.write_instance` (all guards fire).
 
 3. **Journey wiring**: no new code in `journey_derive.py` — the derived journey
    *already* lights `specify`/`plan`/`build` from the Spec/Plan/Story refs the
@@ -340,7 +340,7 @@ label on the Story; one Story per `tasks.md` item vs one per checkpoint-group.)*
 | Story | Est. | Notes |
 |---|---|---|
 | Ingester bridge command (`dna specify import`, dry-run + scan/validate reuse) | M | Sibling of `emit_cmd`/`backfill`; most logic reused. |
-| Artifact→Kind mapping executor (constitution/spec/plan/tasks + `produces[]`) | M | The core; `write_document` for every doc. |
+| Artifact→Kind mapping executor (constitution/spec/plan/tasks + `produces[]`) | M | The core; `write_instance` for every doc. |
 | Journey wiring + `spec-kit` `WorkflowEvent` overlay | S | Derived journey unchanged; add overlay + (fast-follow) gate profile. |
 | Docs: name Spec Kit as the supported spec-driven flow + compose story | S | Guide + onboarding + `RECOMMENDED-SKILLS.md`. |
 

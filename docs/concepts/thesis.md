@@ -25,7 +25,7 @@ spec and primer:
 
 ### 1. Identity
 
-1. Every document **MUST** be identified by the pair `(apiVersion, kind)`.
+1. Every instance **MUST** be identified by the pair `(apiVersion, kind)`.
 2. The `apiVersion` **MUST** be a namespace that identifies **who owns the
    schema** for that Kind — not merely a version counter.
 3. A Kind that DNA did not invent **MUST** be carried under its owner's
@@ -48,20 +48,20 @@ spec and primer:
 
 ### 3. Behavior is authored, not compiled
 
-7. A document's `spec` **MUST** be the authored intent — the desired
+7. An instance's `spec` **MUST** be the authored intent — the desired
    behavior — and nothing else. It is the part a human writes and reviews.
 8. Observed behavior — the composed system prompt, the resolved layer
    overlay, the runtime effect — **MUST** be **derived** by the runtime from
    the `spec` at read time. It **MUST NOT** be hand-written into the
-   document.
-9. Changing behavior **MUST** be expressible as an edit to a document.
+   instance.
+9. Changing behavior **MUST** be expressible as an edit to an instance.
    It **MUST NOT** require rebuilding or redeploying the software that runs
    the agent.
 
 ### 4. Validation and composition
 
-10. A document **MUST** validate against its Kind's schema on write. An
-    invalid document **MUST** be rejected at the boundary, not silently
+10. An instance **MUST** validate against its Kind's schema on write. An
+    invalid instance **MUST** be rejected at the boundary, not silently
     accepted.
 11. Composition (agent + soul + skills + guardrails → one system prompt)
     **MUST** happen on read, driven by the Kinds involved — never by
@@ -127,7 +127,7 @@ flowchart TB
     end
     subgraph dna ["DNA"]
         direction LR
-        B1["Kind descriptor + document spec<br/>(authored intent)"] --> B2["kernel<br/>composes on read"] --> B3["composed prompt<br/>(observed behavior)"]
+        B1["Kind descriptor + instance spec<br/>(authored intent)"] --> B2["kernel<br/>composes on read"] --> B3["composed prompt<br/>(observed behavior)"]
     end
     k8s ~~~ dna
 ```
@@ -136,7 +136,7 @@ flowchart TB
 
 DNA takes the second property literally.
 
-A DNA document's `spec` is **author intent** — the behavior you declare and
+A DNA instance's `spec` is **author intent** — the behavior you declare and
 review in git:
 
 ```yaml
@@ -150,7 +150,7 @@ spec:
   skills: [verification-before-completion]
 ```
 
-Nothing in that document is a *composed prompt*. It does not contain the
+Nothing in that instance is a *composed prompt*. It does not contain the
 soul's personality text, or the skill's instructions, or the final system
 message an LLM will see. Those are the **observed state** — and, exactly as
 with a CRD's `status`, they are **derived by the runtime**, never
@@ -186,7 +186,7 @@ Good docs say where a mental model stops helping:
 - **`status` is not a stored subresource.** DNA does not persist a `status`
   block. The observed state is the composition output and the resolved layer
   view — computed, returned, and thrown away, not written back into the
-  document. That is deliberate: the only durable truth is the authored
+  instance. That is deliberate: the only durable truth is the authored
   intent in git.
 - **Scope, not namespaces.** CRDs are `Namespaced` or `Cluster`-scoped. DNA
   has *scopes* (a directory of manifests) and an orthogonal *tenant*
@@ -204,7 +204,7 @@ agent behaves are data, not code.**
 
 Prompts, skill wiring, personas, guardrails, composition rules — in most
 systems these are strings and branches compiled into an application. In DNA
-they are versioned YAML/Markdown documents. The SDK validates them on write
+they are versioned YAML/Markdown instances. The SDK validates them on write
 (per-Kind JSON Schema) and composes them on read. The software that *runs*
 the agent never has to change for the agent's behavior to change.
 

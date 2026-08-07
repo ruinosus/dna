@@ -24,7 +24,7 @@ def _normalize_floats(obj):
 
 
 def document_hash(raw: dict) -> str:
-    """Compute SHA-256 of a document's raw dict.
+    """Compute SHA-256 of an instance's raw dict.
 
     Uses json.dumps with sort_keys=True, ensure_ascii=False.
     Normalizes whole-number floats to ints for TypeScript parity.

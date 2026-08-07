@@ -22,21 +22,21 @@ it. What is covered is:
 
 **The thread that ties them together is one string.** The apiVersion is MINTED
 by the MCP call (``<assigned-namespace>/v1``), PUBLISHED by the REST listing,
-and becomes the kernel registry's KEY. And the document ends up carrying one
+and becomes the kernel registry's KEY. And the instance ends up carrying one
 identity from each of the two acting faces: ``proposed_by`` is the MCP face's
-own actor, ``approved_by`` is the REST face's verified caller. A single document
+own actor, ``approved_by`` is the REST face's verified caller. A single instance
 that no one face could have written alone is what "the same artefact" means
 here.
 
 **The central assertion, and why it is the sharp one.** The brief asked for "a
-document of it can now be written and read back". That is a weak proof on its
-own: writing succeeds either way, because an unregistered Kind's documents are
+instance of it can now be written and read back". That is a weak proof on its
+own: writing succeeds either way, because an unregistered Kind's instances are
 simply accepted unvalidated. Registration is what confers **schema validation
 and storage routing**, so the decisive contrast is the same write before and
 after:
 
 ===================  ===========================================================
-before approval      a ``Contrato`` document that VIOLATES the declared schema
+before approval      a ``Contrato`` instance that VIOLATES the declared schema
                      is accepted, and lands unrouted at the root of the scope
 after approval       the byte-identical write is REFUSED
                      (``SpecValidationError``), and a conforming one is routed
@@ -49,7 +49,7 @@ use, would satisfy a return-value assertion and lie to the store.
 
 **Everything that asks "did this take effect?" runs on a FRESH kernel.** The
 registry is per-kernel and outlives the ``instance_async`` of the process that
-wrote the document, so probing effect in the writing process can be true for the
+wrote the instance, so probing effect in the writing process can be true for the
 wrong reason. :func:`_on_fresh_kernel` is the neighbouring suites' helper, kept
 identical on purpose.
 
@@ -57,14 +57,14 @@ identical on purpose.
 DELIVERY is that the agent reaches its new Kind through the same generic MCP
 tools it uses for every other one —
 :func:`test_the_kind_the_agent_authored_is_usable_by_the_agent_that_authored_it`
-discovers it in ``list_kinds``, writes a conforming document through
-``write_document`` into the container the Kind declares, and is refused a
+discovers it in ``list_kinds``, writes a conforming instance through
+``write_instance`` into the container the Kind declares, and is refused a
 violating one by the Kind's own schema.
 
 That last part did not work when this file was first written, and the reason is
 recorded because it is the kind of thing that regrows: the MCP server boots its
 kernel through a LAZY manifest instance, and the lazy path used to parse the
-bootstrap documents without ever running the registration pass over them — so
+bootstrap instances without ever running the registration pass over them — so
 NO per-scope declarative Kind was reachable from those tools. It was a boot-path
 gap and NOT the approval gate, which is what
 :func:`test_the_generic_mcp_document_face_does_not_discriminate_on_approval`
@@ -100,7 +100,7 @@ _SCOPE = "concierge"
 _WID = "ws-threefaces000000000001"
 
 #: The Kind the agent declares, and the shape it declares for it. ``required``
-#: is not decoration: without it a violating document is only violating by TYPE,
+#: is not decoration: without it a violating instance is only violating by TYPE,
 #: and the two halves of the central contrast want a violation that is
 #: unambiguous in the schema's own terms.
 _KIND = "Contrato"
@@ -110,7 +110,7 @@ _SCHEMA = {
     "required": ["titulo"],
 }
 
-#: A document of that Kind that the declared schema forbids — ``titulo`` is
+#: An instance of that Kind that the declared schema forbids — ``titulo`` is
 #: declared a string. Written with the SAME name on both sides of the approval
 #: so the contrast is one call repeated, not two calls compared.
 _VIOLATING = {"titulo": 12345}
@@ -121,7 +121,7 @@ _VIOLATING_DOC = "prova-de-forma"
 _CONFORMING = {"titulo": "Acordo de nivel de servico"}
 _CONFORMING_DOC = "prova-conforme"
 
-#: Where an approved ``Contrato``'s documents must land. The authoring door
+#: Where an approved ``Contrato``'s instances must land. The authoring door
 #: declares ``storage: {type: yaml, container: "<kind>s"}``, and the container is
 #: the storage-routing half of what registration confers — invisible in any
 #: return value, visible on disk.
@@ -266,7 +266,7 @@ def _written_document_file(dna_dir, before: set[pathlib.Path]) -> pathlib.Path:
     """The ONE file a write added under the scope, whatever the layout.
 
     Read off the filesystem rather than from a path this test builds, so the
-    assertions below say where the document LANDED and not where we assumed it
+    assertions below say where the instance LANDED and not where we assumed it
     would."""
     added = sorted(_scope_files(dna_dir) - before)
     assert len(added) == 1, f"expected exactly one new file, got {added}"
@@ -287,7 +287,7 @@ def test_the_kind_the_agent_authored_is_the_one_the_reviewers_api_serves(dna_dir
     about the schema, so a listing that agreed on the name while serving a
     different shape would be worse than no listing); and ``proposed_by`` names
     the MCP face's own actor, which is how we know the row describes the
-    document that face wrote rather than one this test's REST client authored on
+    instance that face wrote rather than one this test's REST client authored on
     the side."""
     from dna_cli._mcp_auth import UNIDENTIFIED_LOCAL_ACTOR
 
@@ -304,7 +304,7 @@ def test_the_kind_the_agent_authored_is_the_one_the_reviewers_api_serves(dna_dir
         assert detail.status_code == 200, detail.text
         body = detail.json()
 
-    # The same DOCUMENT — addressed by the name the MCP tool minted.
+    # The same INSTANCE — addressed by the name the MCP tool minted.
     assert row["name"] == authored["name"] == body["name"], (row, authored, body)
     # The same apiVersion — the string the MCP call minted, keyed by the registry
     # further down and published here.
@@ -328,11 +328,11 @@ def test_the_kind_the_agent_authored_is_the_one_the_reviewers_api_serves(dna_dir
 
 
 def test_the_approved_document_carries_one_identity_from_each_acting_face(dna_dir):
-    """The audit is the cross-face evidence: one document, two actors, neither
+    """The audit is the cross-face evidence: one instance, two actors, neither
     of which the other face could have produced.
 
     ``proposed_by`` is the MCP face's server-resolved actor and ``approved_by``
-    is the REST face's VERIFIED caller. A single document holding both is a
+    is the REST face's VERIFIED caller. A single instance holding both is a
     stronger statement than either face's own suite can make — each of those can
     only show that its own stamp is right."""
     from dna_cli._mcp_auth import UNIDENTIFIED_LOCAL_ACTOR
@@ -342,12 +342,12 @@ def test_the_approved_document_carries_one_identity_from_each_acting_face(dna_di
     assert approved.status_code == 200, approved.text
 
     async def probe(live):
-        raw = await live.kernel.get_document(
+        raw = await live.kernel.get_instance(
             _SCOPE, "KindDefinition", approved.json()["name"])
         return dict((raw or {}).get("spec") or {})
 
-    # On the STORED document, through a kernel that did not write it: a response
-    # body can be right about a document that is wrong.
+    # On the STORED instance, through a kernel that did not write it: a response
+    # body can be right about an instance that is wrong.
     spec = _on_fresh_kernel(dna_dir, probe)
     assert spec["proposed_by"] == UNIDENTIFIED_LOCAL_ACTOR, spec
     assert spec["approved_by"] == _HUMAN["email"], spec
@@ -361,12 +361,12 @@ def test_the_approved_document_carries_one_identity_from_each_acting_face(dna_di
 
 
 def _violating_document(api_version: str) -> dict:
-    """The one raw document both halves of the contrast write, byte for byte.
+    """The one raw instance both halves of the contrast write, byte for byte.
 
     ``api_version`` is the Kind's OWN — ``<assigned-namespace>/v1``, the string
     the MCP call minted. It has to be, and the first draft of this test learned
     it the hard way: the write pipeline resolves the port to validate against
-    from ``(kind, the document's own apiVersion, scope)``, so a document
+    from ``(kind, the instance's own apiVersion, scope)``, so an instance
     carrying any OTHER apiVersion resolves to no port and is never validated,
     approved or not. Written that way the "accepted before approval" half would
     have been true for the wrong reason — accepted because the apiVersion
@@ -387,15 +387,15 @@ def _probe_before(dna_dir, api_version: str):
     """What the kernel face can do with the Kind BEFORE a human approved it."""
 
     async def probe(live):
-        from dna.application.documents import UnknownKindError, write_document_impl
+        from dna.application.instances import UnknownKindError, write_instance_impl
 
         out: dict = {"port": live.kernel.kind_port_for(_KIND, scope=_SCOPE)}
-        # The generic SDK write door — the core the MCP ``write_document`` tool
+        # The generic SDK write door — the core the MCP ``write_instance`` tool
         # and the CLI both delegate to. It resolves the Kind through the
         # registry, so an unapproved Kind is not merely unvalidated here: it does
         # not exist.
         with pytest.raises(UnknownKindError) as unknown:
-            await write_document_impl(
+            await write_instance_impl(
                 live, kind=_KIND, name=_VIOLATING_DOC, spec=dict(_VIOLATING),
                 scope=_SCOPE,
             )
@@ -403,7 +403,7 @@ def _probe_before(dna_dir, api_version: str):
         # …and the kernel write itself, which is where "accepted unvalidated" is
         # literally true: no registered port ⇒ no schema to enforce, and no
         # storage descriptor to route by.
-        out["version"] = await live.kernel.write_document(
+        out["version"] = await live.kernel.write_instance(
             _SCOPE, _KIND, _VIOLATING_DOC, _violating_document(api_version),
         )
         return out
@@ -417,19 +417,19 @@ def _probe_after(dna_dir, api_version: str):
     async def probe(live):
         from dna.kernel.protocols import SpecValidationError
 
-        from dna.application.documents import get_document_impl, write_document_impl
+        from dna.application.instances import get_instance_impl, write_instance_impl
 
         out: dict = {"port": live.kernel.kind_port_for(_KIND, scope=_SCOPE)}
         with pytest.raises(SpecValidationError) as vetoed:
-            await live.kernel.write_document(
+            await live.kernel.write_instance(
                 _SCOPE, _KIND, _VIOLATING_DOC, _violating_document(api_version),
             )
         out["veto"] = str(vetoed.value)
-        out["written"] = await write_document_impl(
+        out["written"] = await write_instance_impl(
             live, kind=_KIND, name=_CONFORMING_DOC, spec=dict(_CONFORMING),
             scope=_SCOPE,
         )
-        out["read_back"] = await get_document_impl(
+        out["read_back"] = await get_instance_impl(
             live, kind=_KIND, name=_CONFORMING_DOC, scope=_SCOPE,
         )
         return out
@@ -448,7 +448,7 @@ def test_approval_is_what_gives_the_kind_schema_validation_and_storage_routing(
     the two probes; both run on kernels booted fresh over the same directory.
 
     The filesystem is asserted alongside the return values, because routing is
-    the half no return value can show: before approval the document lands
+    the half no return value can show: before approval the instance lands
     unrouted at the root of the scope (nothing declares where a ``Contrato``
     goes), and after approval a conforming one lands in the container the
     approved ``KindDefinition`` declares."""
@@ -461,7 +461,7 @@ def test_approval_is_what_gives_the_kind_schema_validation_and_storage_routing(
     assert before["port"] is None, before["port"]
     assert _KIND in before["generic_refusal"], before["generic_refusal"]
     assert "not registered" in before["generic_refusal"], before["generic_refusal"]
-    # Accepted — the adapter answered with a version for a document its own
+    # Accepted — the adapter answered with a version for an instance its own
     # declared schema forbids.
     assert before["version"] is not None, before
 
@@ -495,14 +495,14 @@ def test_approval_is_what_gives_the_kind_schema_validation_and_storage_routing(
     assert "schema validation failed" in after["veto"], after["veto"]
     assert "titulo" in after["veto"], after["veto"]
 
-    # …and the conforming document is written, routed, and read back — the
-    # brief's "a document of it can now be written and read back", wired.
+    # …and the conforming instance is written, routed, and read back — the
+    # brief's "an instance of it can now be written and read back", wired.
     assert after["written"]["api_version"] == api_version, after["written"]
-    assert after["read_back"]["document"]["spec"] == _CONFORMING, after["read_back"]
+    assert after["read_back"]["instance"]["spec"] == _CONFORMING, after["read_back"]
 
     routed = _written_document_file(dna_dir, midpoint)
     assert routed.parent.name == _CONTAINER, (
-        f"an approved Kind's document did not land in the container its own "
+        f"an approved Kind's instance did not land in the container its own "
         f"KindDefinition declares ({_CONTAINER!r}): {routed}"
     )
     assert routed.parent.parent == dna_dir / _SCOPE, routed
@@ -512,8 +512,8 @@ def test_approval_is_what_gives_the_kind_schema_validation_and_storage_routing(
 
 
 def _mcp_write(dna_dir, kind: str, name: str, spec: dict) -> dict:
-    """``write_document`` over MCP, unmasked — for the half that must SUCCEED."""
-    return _mcp(dna_dir, "write_document", {
+    """``write_instance`` over MCP, unmasked — for the half that must SUCCEED."""
+    return _mcp(dna_dir, "write_instance", {
         "kind": kind, "name": name, "spec": dict(spec), "scope": _SCOPE,
     })
 
@@ -521,7 +521,7 @@ def _mcp_write(dna_dir, kind: str, name: str, spec: dict) -> dict:
 def _mcp_generic_write_of(
     dna_dir, kind: str, name: str, spec: dict,
 ) -> tuple[str, str]:
-    """``write_document`` over MCP → ``(outcome, message)``, no masking."""
+    """``write_instance`` over MCP → ``(outcome, message)``, no masking."""
     from fastmcp.exceptions import ToolError
 
     try:
@@ -540,7 +540,7 @@ def test_the_kind_the_agent_authored_is_usable_by_the_agent_that_authored_it(
     storage routing. That is the mechanism; this is the DELIVERY. An agent
     authors a Kind over MCP, a human approves it, and the agent then reaches
     for it through the SAME generic tools it uses for every other Kind —
-    ``list_kinds`` to find it, ``write_document`` to use it. If those tools
+    ``list_kinds`` to find it, ``write_instance`` to use it. If those tools
     cannot see it, the feature has a working engine and no wheels.
 
     Three assertions, none of which stands in for another:
@@ -549,7 +549,7 @@ def test_the_kind_the_agent_authored_is_usable_by_the_agent_that_authored_it(
       an agent that cannot discover a Kind cannot use it, and a catalog entry
       under the wrong apiVersion would send every later exact-resolution call
       to nothing;
-    * a CONFORMING document is written and lands in the container the approved
+    * a CONFORMING instance is written and lands in the container the approved
       ``KindDefinition`` declares (read off the filesystem — routing is
       invisible in the response);
     * a VIOLATING one is REFUSED, by the schema. Acceptance alone would also be
@@ -575,13 +575,13 @@ def test_the_kind_the_agent_authored_is_usable_by_the_agent_that_authored_it(
 
     routed = _written_document_file(dna_dir, before)
     assert routed.parent.name == _CONTAINER, (
-        f"an MCP-written document of the approved Kind did not land in the "
+        f"an MCP-written instance of the approved Kind did not land in the "
         f"container its own KindDefinition declares ({_CONTAINER!r}): {routed}"
     )
 
     outcome, message = _mcp_generic_write_of(dna_dir, _KIND, _VIOLATING_DOC, _VIOLATING)
     assert outcome == "refused", (
-        "the generic MCP write accepted a document its Kind's own schema "
+        "the generic MCP write accepted an instance its Kind's own schema "
         "forbids — the tool resolved the Kind but nothing validated against it"
     )
     assert "schema validation failed" in message, message
@@ -598,7 +598,7 @@ def _seed_approved_kind_document(dna_dir, *, kind: str, namespace: str) -> str:
     name = f"{namespace}--{kind}"
 
     async def seed(live):
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _SCOPE, "KindDefinition", name,
             {"apiVersion": "github.com/ruinosus/dna/core/v1",
              "kind": "KindDefinition", "metadata": {"name": name},
@@ -618,7 +618,7 @@ def _seed_approved_kind_document(dna_dir, *, kind: str, namespace: str) -> str:
 
 
 def _mcp_generic_write(dna_dir, kind: str) -> tuple[str, str]:
-    """``write_document`` over MCP for ``kind`` → ``(outcome, message)``.
+    """``write_instance`` over MCP for ``kind`` → ``(outcome, message)``.
 
     The Kind name is MASKED out of the message so two answers about two
     different Kinds are comparable as strings — the comparison is about which
@@ -626,7 +626,7 @@ def _mcp_generic_write(dna_dir, kind: str) -> tuple[str, str]:
     from fastmcp.exceptions import ToolError
 
     try:
-        _mcp(dna_dir, "write_document", {
+        _mcp(dna_dir, "write_instance", {
             "kind": kind, "name": f"{kind.lower()}-1",
             "spec": dict(_CONFORMING), "scope": _SCOPE,
         })
@@ -638,7 +638,7 @@ def _mcp_generic_write(dna_dir, kind: str) -> tuple[str, str]:
 def test_the_generic_mcp_document_face_does_not_discriminate_on_approval(dna_dir):
     """A DISCRIMINATOR, not a bug pinned as behaviour — and it survived the fix.
 
-    When this was written the MCP face's generic ``write_document`` could not
+    When this was written the MCP face's generic ``write_instance`` could not
     use the approved tenant Kind, and the tempting conclusion — that the
     approval gate had not finished its job — was wrong: the lazy boot path
     registered no per-scope declarative Kind at all, including one an operator
@@ -659,14 +659,14 @@ def test_the_generic_mcp_document_face_does_not_discriminate_on_approval(dna_dir
 
     async def control(live):
         return (
-            await live.kernel.get_document(_SCOPE, "KindDefinition", seeded),
+            await live.kernel.get_instance(_SCOPE, "KindDefinition", seeded),
             live.kernel.kind_port_for("Curada", scope=_SCOPE),
         )
 
     # The control has to be real, or the comparison below is between one honest
     # answer and one about a Kind that was never there.
-    document, port = _on_fresh_kernel(dna_dir, control)
-    assert document, seeded
+    instance, port = _on_fresh_kernel(dna_dir, control)
+    assert instance, seeded
     assert port is not None, (
         "the operator-seeded approved Kind is not registered on a fresh kernel "
         "— it is not a usable control for what the MCP face should see"
@@ -691,7 +691,7 @@ def test_the_generic_mcp_document_face_does_not_discriminate_on_approval(dna_dir
     # Comparing only the label would let one be refused by the registry and the
     # other by, say, a quota gate while the test called them the same answer.
     assert approved_by_the_gate == approved_by_an_operator, (
-        f"the generic MCP document face treats a gate-approved Kind differently "
+        f"the generic MCP instance face treats a gate-approved Kind differently "
         f"from an operator-approved one — approval has acquired a meaning on a "
         f"face that has no approval gate:\n"
         f"  gate-approved:     {approved_by_the_gate}\n"

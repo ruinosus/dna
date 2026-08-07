@@ -1,6 +1,6 @@
 # `dna copilot`
 
-Copilot kits — fluxos completos instaláveis como documentos.
+Copilot kits — fluxos completos instaláveis como instâncias.
 
 !!! info "Generated from the command definitions"
 
@@ -10,7 +10,7 @@ Copilot kits — fluxos completos instaláveis como documentos.
 
 ## `dna copilot install`
 
-Instala um kit de copiloto: cada doc pelo ``kernel.write_document``,
+Instala um kit de copiloto: cada doc pelo ``kernel.write_instance``,
 com todos os guards da porta.
 
 ```text

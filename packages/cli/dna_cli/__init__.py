@@ -18,7 +18,7 @@ import click
 from dna_cli import (
     api_cmd,
     definition_cmd,
-    doc_cmd,
+    instance_cmd,
     docs_cmd,
     emit_cmd,
     eval_cmd,
@@ -33,6 +33,7 @@ from dna_cli import (
     memory_cmd,
     new_cmd,
     recall_cmd,
+    rename_cmd,
     research_cmd,
     scope_cmd,
     sdlc_cmd,
@@ -57,7 +58,7 @@ class _BannerGroup(click.Group):
 @click.group(
     cls=_BannerGroup,
     help=(
-        "DNA — declarative lifecycle + document CLI.\n\n"
+        "DNA — declarative lifecycle + instance CLI.\n\n"
         "Boots a local kernel via DNA_SOURCE_URL / DNA_BASE_DIR "
         "(filesystem source). Run `dna kind list` to start exploring, "
         "`dna sdlc --help` for the lifecycle verbs."
@@ -75,7 +76,11 @@ def main() -> None:
 
 
 main.add_command(kind_cmd.kind)
-main.add_command(doc_cmd.doc)
+main.add_command(instance_cmd.instance)
+# Top-level, beside `instance`, and not `dna instance rename`: it is not one
+# instance's CRUD. It reads the whole registry, writes every referrer, and its
+# deliverable is the diff — the same reason `graph` is a group of its own.
+main.add_command(rename_cmd.rename)
 main.add_command(scope_cmd.scope)
 main.add_command(docs_cmd.docs_)
 main.add_command(sdlc_cmd.sdlc)

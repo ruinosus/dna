@@ -34,7 +34,7 @@ from dna.application.namespace_assignment import (
 from dna.kernel.protocols import LayerPolicyViolationError  # noqa: F401  (re-exported for the face)
 from dna.kernel.query.kind_graph import build_kind_graph
 from dna.prompt_defaults import (
-    ORIGIN_DOCUMENT,
+    ORIGIN_INSTANCE,
     ORIGIN_RUNTIME_DEFAULT,
     prompt_default,
     prompt_defaults,
@@ -127,7 +127,7 @@ async def list_agents_impl(
     mi = await live.mi(scope, tenant)
     targets = _prompt_target_kinds(mi)
     agents: list[dict[str, Any]] = []
-    for d in mi.documents:
+    for d in mi.instances:
         if d.kind not in targets:
             continue
         meta = getattr(d, "metadata", None) or {}
@@ -147,7 +147,7 @@ def _tool_surface(row: dict[str, Any]) -> dict[str, Any]:
     the SAME projection ``dna.tools.ToolSurface`` performs (description =
     ``metadata.description``, parameters = ``spec.input_schema``). Read off the
     async-query row so no sync kernel roundtrip fires inside the event loop
-    (Tool is a record-plane Kind — it is NOT in ``mi.documents``)."""
+    (Tool is a record-plane Kind — it is NOT in ``mi.instances``)."""
     meta = row.get("metadata") or {}
     spec = row.get("spec") or {}
     return {
@@ -195,7 +195,7 @@ async def genome_view_impl(
     contents (ships) + the tenant LayerPolicy — composed live so nothing drifts.
 
     Definition-plane Kinds (Genome, Agent, MCPFederation, LayerPolicy) come from
-    ``mi.documents``; record-plane Kinds (Copilot, Tool) from ``kernel.query``.
+    ``mi.instances``; record-plane Kinds (Copilot, Tool) from ``kernel.query``.
     """
     mi = await live.mi(scope, tenant)
     sc = mi.scope
@@ -204,7 +204,7 @@ async def genome_view_impl(
     agents: list[str] = []
     federations: list[str] = []
     policies: dict[str, Any] = {}
-    for d in mi.documents:
+    for d in mi.instances:
         k = getattr(d, "kind", None)
         n = getattr(d, "name", None)
         if k == "Genome":
@@ -264,33 +264,33 @@ async def _doc_spec_for(
     live: LiveDna, mi: Any, kind: str, name: str, *, tenant: str | None = None,
 ) -> dict[str, Any] | None:
     """Return the spec dict for (kind, name) as ``mi`` sees it, or None if absent
-    — across BOTH document planes.
+    — across BOTH instance planes.
 
-    i-076: this used to walk ``mi.documents`` and stop there, which silently
+    i-076: this used to walk ``mi.instances`` and stop there, which silently
     404'd every RECORD-plane Kind (Tool, Copilot, and every SDLC/descriptor
     Kind). ``instance_builder`` deliberately drops ``plane="record"`` docs from
     the materialization — the MI is O(composition), and a record Kind never
     composes into a prompt, so parsing them into every instance would be pure
     waste. The definitions API inherited that exclusion as a bug:
     ``apply_definition_impl`` writes those Kinds happily (registry lookup +
-    ``write_document``, both plane-agnostic), so the surface was WRITE-ONLY for
+    ``write_instance``, both plane-agnostic), so the surface was WRITE-ONLY for
     them — an override a user could save and never read back.
 
     Widening the composed set would trade the correctness bug for a latency
     regression on every request, so the fix goes the other way. The definitions
     path knows exactly which ``(kind, name)`` it wants, so a record Kind gets a
-    TARGETED read — ``kernel.get_document``, keyed by (scope, kind, name, tenant)
+    TARGETED read — ``kernel.get_instance``, keyed by (scope, kind, name, tenant)
     and L2-cached — while the composition plane keeps its in-memory walk
     unchanged, with no extra roundtrip on either the hit or the miss path.
 
     The raw dict is read straight off the record plane rather than through
-    ``mi.one_async``: the caller wants a spec, not a validated ``Document``, so
+    ``mi.one_async``: the caller wants a spec, not a validated ``Instance``, so
     skipping the per-read ``_parse_doc`` saves ~1.5ms per record read.
 
     ``_doc_spec`` still does the shape-tolerant extraction for materialized docs
     — DRY with ``genome_view_impl``.
     """
-    for d in mi.documents:
+    for d in mi.instances:
         if getattr(d, "kind", None) == kind and getattr(d, "name", None) == name:
             return _doc_spec(d)
     plane_of = getattr(live.kernel, "kind_plane", None)
@@ -299,7 +299,7 @@ async def _doc_spec_for(
         # falling back to the record plane here would bypass layer resolution and
         # dress a materialization error up as a successful read.
         return None
-    raw = await live.kernel.get_document(mi.scope, kind, name, tenant=tenant)
+    raw = await live.kernel.get_instance(mi.scope, kind, name, tenant=tenant)
     if not isinstance(raw, dict):
         return None
     spec = raw.get("spec")
@@ -316,7 +316,7 @@ def _api_version_for_kind(live: LiveDna, kind: str) -> str:
 async def _tenant_layer_doc_exists(
     live: LiveDna, scope: str, tenant: str | None, kind: str, name: str,
 ) -> bool:
-    """Whether a TENANT-layer document exists for (scope, kind, name) — the
+    """Whether a TENANT-layer instance exists for (scope, kind, name) — the
     correct ``overridden`` signal: ``apply_definition_impl`` writes exactly this
     doc, ``revert_definition_impl`` deletes exactly this doc, so doc PRESENCE is
     the contract both ends agree on. A spec-value diff against base is the WRONG
@@ -328,7 +328,7 @@ async def _tenant_layer_doc_exists(
     rejected because they all bake in a tenant→base FALLBACK, so they read
     True even when NO tenant doc exists:
 
-    * ``kernel.get_document(scope, kind, name, tenant=tenant)`` /
+    * ``kernel.get_instance(scope, kind, name, tenant=tenant)`` /
       ``kernel.query(scope, kind, tenant=tenant)`` — both source adapters'
       tenant path (``FilesystemSource.load_one`` / the SQLAlchemy adapter's
       ``query``/``_load_view``) explicitly falls back to the BASE doc when the
@@ -337,14 +337,14 @@ async def _tenant_layer_doc_exists(
       falling back cross-scope for an inheritable Kind, it preserves the
       tenant while walking to a PARENT scope — a false positive for a tenant
       override authored elsewhere.
-    * ``resolve_document(...).is_inherited`` — ``primary.scope != scope``
+    * ``resolve_instance(...).is_inherited`` — ``primary.scope != scope``
       (cross-SCOPE only); a tenant with no override still resolves at THIS
       scope via its ``(scope, None)`` base layer, so it stays False either way
       (see ``test_dna_cloud_catalog_overlay.py``'s ``TestByoTenantOverlay``).
-    * ``resolve_document(...).provenance.steps[0].found`` — LOOKS like a
+    * ``resolve_instance(...).provenance.steps[0].found`` — LOOKS like a
       direct per-layer probe, but each layer is populated by
       ``kernel._granular_doc_cached`` → ``source.load_one``, i.e. the SAME
-      tenant→base-falling-back read as ``get_document`` above — the layer
+      tenant→base-falling-back read as ``get_instance`` above — the layer
       that's nominally "(scope, tenant)" still reports ``found=True`` off a
       pure-base doc.
 
@@ -450,11 +450,11 @@ async def read_definition_impl(
         "overlayable": kind_overlayable,
         "effective": effective if effective is not None else (base or {}),
         "base": base,
-        # Which rung the ``base`` came from. ``document`` for every read that
+        # Which rung the ``base`` came from. ``instance`` for every read that
         # already worked (so nothing existing changes shape meaningfully);
         # ``runtime-default`` says the editor is looking at code, not at a
         # stored doc, and saving will CREATE the first one.
-        "origin": ORIGIN_RUNTIME_DEFAULT if runtime_default else ORIGIN_DOCUMENT,
+        "origin": ORIGIN_RUNTIME_DEFAULT if runtime_default else ORIGIN_INSTANCE,
         "note": (
             runtime_default_note(name, scope, kind, runtime_default.module)
             if runtime_default else None
@@ -474,7 +474,7 @@ async def read_registered_kind_impl(
 
     O buraco que isto fecha (medido em 03/08/2026): nenhuma rota servia o
     schema de um Kind REGISTRADO — ``GET /v1/kinds`` lista só os AUTORADOS, e
-    ``/v1/definitions/{kind}/{name}`` exige um documento existente e devolve o
+    ``/v1/definitions/{kind}/{name}`` exige uma instância existente e devolve o
     ``ui_schema`` sem o schema. Resultado: todo formulário do portal copiava as
     constraints à mão (min/max, enums, required), e cada cópia é uma deriva
     esperando release. Com o descritor servido, o formulário DERIVA a validação
@@ -488,7 +488,7 @@ async def read_registered_kind_impl(
     same hinge as ``kind_port_for``.
 
     Raises ``ValueError`` for an unknown Kind (the face maps it to 404)."""
-    # i-094 — the i-090 rebuild trigger, same seam as the document routes
+    # i-094 — the i-090 rebuild trigger, same seam as the instance routes
     # (``resolve_kind_port_live``): without it, a freshly-approved Kind of a
     # tenant scope answered 404 HERE until some *other* route happened to
     # warm that scope — indeterminate per replica, and measured on 04/08
@@ -523,12 +523,12 @@ async def kind_graph_impl(
     every render, and paid more the bigger the workspace got. The registry
     already holds the whole answer; nothing but a door was missing.
 
-    Pure projection of the REGISTRY: no document is read, so this says which
+    Pure projection of the REGISTRY: no instance is read, so this says which
     Kinds MAY reference which — never which documents DO. The envelope says so
     itself (``coverage.limits``), because the difference is the whole honesty
     of the answer and a caller must not be able to lose it.
 
-    ``scope`` narrows the registry the same way the document routes do
+    ``scope`` narrows the registry the same way the instance routes do
     (i-081), and takes the same TTL'd rebuild (i-094) — a Kind a tenant just
     had approved belongs in its workspace's graph, not in the next replica's.
     """
@@ -549,10 +549,10 @@ async def apply_definition_impl(
     written back at its inherited value is not a change."""
     if not (tenant or "").strip():
         raise ValueError("tenant is required to write a definition override")
-    # i-090 — the REST document-write seam. Its sibling read
+    # i-090 — the REST instance-write seam. Its sibling read
     # (``read_definition_impl``) goes through ``live.mi`` and is fresh by
     # construction; this one resolves the Kind straight off the registry, so it
-    # takes the same TTL'd refresh the generic document tools take. Without it a
+    # takes the same TTL'd refresh the generic instance tools take. Without it a
     # replica that did not serve the approval writes an override against a Kind
     # whose registered shape (schema, storage routing, revoked mark) it has not
     # seen.
@@ -560,7 +560,7 @@ async def apply_definition_impl(
     api_version = _api_version_for_kind(live, kind)
     raw = {"apiVersion": api_version, "kind": kind,
            "metadata": {"name": name}, "spec": dict(spec or {})}
-    version = await live.kernel.write_document(
+    version = await live.kernel.write_instance(
         scope, kind, name, raw, tenant=tenant, invalidate_mode="doc")
     return {"kind": kind, "name": name, "version": version, "overridden": True}
 
@@ -572,14 +572,14 @@ async def revert_definition_impl(
     if not (tenant or "").strip():
         raise ValueError("tenant is required to revert a definition override")
     await live.ensure_kinds(scope)   # i-090, as in apply_definition_impl.
-    await live.kernel.delete_document(scope, kind, name, tenant=tenant)
+    await live.kernel.delete_instance(scope, kind, name, tenant=tenant)
     return {"kind": kind, "name": name, "overridden": False}
 
 
 # ── bundle entries: list/read/write/revert a bundle-file fork (plane B) ─────
 #
 # A bundle-pattern Kind (Skill, and any future bundle Kind) stores MULTIPLE
-# files per document (SKILL.md + scripts/…), not a single spec — plane A's
+# files per instance (SKILL.md + scripts/…), not a single spec — plane A's
 # apply/revert_definition_impl only ever touch the ONE spec doc, so they can't
 # fork an individual file. These four use-cases are the file-grained twin,
 # generic over ANY bundle Kind (routed by ``KindPort.storage.pattern``, never
@@ -602,7 +602,7 @@ async def _check_entry_layer_policy(
     live: LiveDna, scope: str, kind: str, name: str, tenant: str,
 ) -> None:
     """Route a bundle-entry fork through the SAME layer-policy gate
-    ``write_document`` runs for a spec override (``WritePipeline.write``,
+    ``write_instance`` runs for a spec override (``WritePipeline.write``,
     ``dna/kernel/write/pipeline.py`` — ``host._check_layer_policy_async(scope,
     kind, name, raw, policy_check_layer)``).
 
@@ -625,7 +625,7 @@ async def _check_entry_layer_policy(
 async def list_bundle_entries_impl(
     live: LiveDna, *, scope: str, tenant: str | None, kind: str, name: str,
 ) -> dict[str, Any]:
-    """List a bundle document's entry files (base ∪ tenant overlay), each
+    """List a bundle instance's entry files (base ∪ tenant overlay), each
     flagged ``overridden`` — whether the TENANT layer forked that specific
     file (mirrors ``_tenant_layer_doc_exists``'s doc-presence contract, but at
     file grain: presence in the tenant-only listing, not a content diff)."""
@@ -779,7 +779,7 @@ async def reconcile_forks_impl(
 # portal's ``Sourced<T>`` (``live``/``sample``/``unprovisioned`` are said
 # states, not errors):
 #
-#   origin="document"        an authored doc won (tenant overlay or scope base)
+#   origin="instance"        an authored doc won (tenant overlay or scope base)
 #   origin="runtime-default" no doc here; the SDK's built-in voice is what runs
 #
 # A name that is NEITHER authored NOR a known runtime default still raises —
@@ -825,7 +825,7 @@ async def list_templates_impl(
     count), tenant-aware. The Spec Kit templates ingested by
     ``dna specify install-templates`` surface here — servable to any client.
 
-    The listing INCLUDES the runtime defaults that no document overrides yet,
+    The listing INCLUDES the runtime defaults that no instance overrides yet,
     each marked ``origin="runtime-default"``. Without them the catalog answered
     "empty" for a deployment whose voices were all working — and a default you
     can only reach by already knowing its name is a capability with no door."""
@@ -844,7 +844,7 @@ async def list_templates_impl(
             "description": spec.get("description") or "",
             "variables_count": len(variables) if isinstance(variables, list) else 0,
             "tags": spec.get("tags") or [],
-            "origin": ORIGIN_DOCUMENT,
+            "origin": ORIGIN_INSTANCE,
         })
     for d in prompt_defaults():
         if d.name in authored:
@@ -868,12 +868,12 @@ async def get_template_impl(
     ``tenant`` set the per-workspace/tenant OVERLAY wins (no redeploy) — the
     Layer 3 governance payoff.
 
-    Always answers with an ``origin``. No authored document + a known runtime
+    Always answers with an ``origin``. No authored instance + a known runtime
     default is NOT an error (i-101): it is the normal state of a fresh scope,
     and the reply serves the body that actually runs, says where it comes from,
     and says how to override it."""
     sc = scope or live.base_scope
-    raw = await live.kernel.get_document(sc, "PromptTemplate", name, tenant=tenant)
+    raw = await live.kernel.get_instance(sc, "PromptTemplate", name, tenant=tenant)
     if raw is None:
         built_in = prompt_default(name)
         if built_in is None:
@@ -889,7 +889,7 @@ async def get_template_impl(
         "variables": spec.get("variables") or [],
         "description": spec.get("description") or "",
         "tags": spec.get("tags") or [],
-        "origin": ORIGIN_DOCUMENT,
+        "origin": ORIGIN_INSTANCE,
     }
 
 
@@ -917,7 +917,7 @@ async def list_skills_impl(
             "name": nome,
             "description": (meta.get("description") if isinstance(meta, dict) else "") or "",
             "tags": (meta.get("tags") if isinstance(meta, dict) else []) or [],
-            "origin": ORIGIN_DOCUMENT,
+            "origin": ORIGIN_INSTANCE,
         })
     for d in prompt_defaults(kind="Skill"):
         if d.name in authored:
@@ -941,7 +941,7 @@ async def get_skill_impl(
 
     Same origin contract as ``get_template_impl`` (see the third-rung note)."""
     sc = scope or live.base_scope
-    raw = await live.kernel.get_document(sc, "Skill", name, tenant=tenant)
+    raw = await live.kernel.get_instance(sc, "Skill", name, tenant=tenant)
     if raw is None:
         built_in = prompt_default(name, kind="Skill")
         if built_in is None:
@@ -964,7 +964,7 @@ async def get_skill_impl(
         "instruction": spec.get("instruction") or "",
         "description": (meta.get("description") if isinstance(meta, dict) else "") or "",
         "scripts": sorted((spec.get("scripts") or {}).keys()) if isinstance(spec.get("scripts"), dict) else [],
-        "origin": ORIGIN_DOCUMENT,
+        "origin": ORIGIN_INSTANCE,
     }
 
 
@@ -1057,7 +1057,7 @@ async def get_adr_impl(
     """Fetch one ADR (Architecture Decision Record) by name — the decision the
     board recorded, verbatim (context / decision / consequences / body)."""
     sc = scope or live.default_scope(tenant)
-    raw = await live.kernel.get_document(sc, "ADR", name, tenant=tenant)
+    raw = await live.kernel.get_instance(sc, "ADR", name, tenant=tenant)
     if raw is None:
         raise ValueError(f"ADR {name!r} not found in scope {sc!r}")
     spec = raw.get("spec") or {}
@@ -1457,7 +1457,7 @@ async def set_member_impl(
     write_kernel = live.kernel.with_tenant(tenant) if tenant else live.kernel
 
     # Preserve an existing grant's invite lifecycle (role change ≠ re-invite).
-    existing = await write_kernel.get_document(sc, "Membership", name, tenant=tenant)
+    existing = await write_kernel.get_instance(sc, "Membership", name, tenant=tenant)
     ex_spec = (existing or {}).get("spec") or {}
     now = datetime.now(timezone.utc).isoformat()
     spec = {
@@ -1474,7 +1474,7 @@ async def set_member_impl(
         "metadata": {"name": name},
         "spec": spec,
     }
-    await write_kernel.write_document(
+    await write_kernel.write_instance(
         sc, "Membership", name, raw, invalidate_mode="doc"
     )
     return {
@@ -1518,7 +1518,7 @@ async def remove_member_impl(
     name = _member_doc_name(user, "project", project_name)
     write_kernel = live.kernel.with_tenant(tenant) if tenant else live.kernel
     try:
-        await write_kernel.delete_document(
+        await write_kernel.delete_instance(
             sc, "Membership", name, invalidate_mode="doc"
         )
     except ValueError as exc:  # filesystem/pg source raises ValueError("not_found")
@@ -1621,7 +1621,7 @@ async def provision_tenant_owner_impl(
                 "invited_at": now,
             },
         }
-        await write_kernel.write_document(
+        await write_kernel.write_instance(
             sc, "Membership", name, raw, invalidate_mode="doc"
         )
         grants.append(
@@ -1762,7 +1762,7 @@ async def board_item_impl(
     kind: str | None = None,
 ) -> dict[str, Any]:
     """One board work-item's FULL doc by ``name`` — the console's item-detail
-    drawer. Reuses the SAME ``kernel.get_document`` doc-read primitive
+    drawer. Reuses the SAME ``kernel.get_instance`` doc-read primitive
     ``get_adr_impl`` uses (no new query logic): with an explicit ``kind`` it reads
     that one Kind; otherwise it probes the SDLC work-item Kinds
     (``sdlc_family.board_probe_order``) and returns the first match. Tenant-aware — a
@@ -1773,7 +1773,7 @@ async def board_item_impl(
 
     candidates = [kind] if kind else list(board_probe_order(live.kernel))
     for k in candidates:
-        raw = await live.kernel.get_document(scope, k, name, tenant=tenant)
+        raw = await live.kernel.get_instance(scope, k, name, tenant=tenant)
         if raw is not None:
             return _work_item_surface(k, name, scope, tenant, raw)
     raise BoardItemNotFound(
@@ -2056,10 +2056,10 @@ async def list_memories_impl(
     past timestamp.
 
     ⚠️ One honest limit, shared with recall: the candidate set comes from the
-    documents that exist NOW. A memory HARD-deleted since ``as_of`` cannot be
+    instances that exist NOW. A memory HARD-deleted since ``as_of`` cannot be
     resurrected by this read — ``forget`` is a bi-temporal demotion and never
     hard-deletes, so the memory lifecycle is covered; a manual
-    ``delete_document`` is not."""
+    ``delete_instance`` is not."""
     from dna.memory.as_of import (
         AsOfUnsupported, normalize_as_of, resolve_as_of, store_supports_as_of,
     )
@@ -2187,7 +2187,7 @@ async def forget_impl(
 # same scope kernel.account_plan() reads _lib-direct, and it HAS to be: an account
 # sits above every workspace it owns. The doc NAME equals the account_id so the
 # read matches on spec.account_id, and the write is a natural upsert
-# (write_document keys on name) → idempotent under Stripe's at-least-once
+# (write_instance keys on name) → idempotent under Stripe's at-least-once
 # retries. The account_id is opaque here — nothing parses or validates its shape.
 _ACCOUNT_PLAN_SCOPE = "_lib"
 _CLOUD_API = "github.com/ruinosus/dna/cloud/v1"
@@ -2252,7 +2252,7 @@ async def set_account_plan_impl(
         "spec": spec,
     }
     # GLOBAL kind → no tenant kwarg (a tenant on a GLOBAL write is rejected).
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         _ACCOUNT_PLAN_SCOPE, "PlanBinding", account_id, raw, invalidate_mode="doc"
     )
     return {
@@ -2272,7 +2272,7 @@ async def set_account_plan_impl(
 # boundary — it lives ABOVE any single workspace, exactly like TenantPlan, so
 # there is no `tenant` kwarg). The SECURITY decision (who may invite, which invite
 # a sign-in may bind) is the pure `dna.tenancy` policy — these impls only
-# authorize + persist through the SAME `kernel.write_document` funnel the seed uses.
+# authorize + persist through the SAME `kernel.write_instance` funnel the seed uses.
 
 # `_TENANT_API` — the apiVersion these records are declared under — is imported
 # at the top of this module; `namespace_assignment` holds the one definition.
@@ -2399,7 +2399,7 @@ async def invite_member_impl(
     _require_workspace_manage(actor, workspace_id, memberships, target_role=role)
 
     name = workspace_membership_name(workspace_id, email)
-    existing = await live.kernel.get_document(_WORKSPACE_SCOPE, "WorkspaceMembership", name)
+    existing = await live.kernel.get_instance(_WORKSPACE_SCOPE, "WorkspaceMembership", name)
     ex_spec = (existing or {}).get("spec") or {}
     now = datetime.now(timezone.utc).isoformat()
     # Preserve an already-bound member's identity + lifecycle (re-invite = role
@@ -2422,7 +2422,7 @@ async def invite_member_impl(
         "spec": spec,
     }
     # GLOBAL kind → no tenant kwarg (a tenant on a GLOBAL write is rejected).
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         _WORKSPACE_SCOPE, "WorkspaceMembership", name, raw, invalidate_mode="doc"
     )
     return {
@@ -2521,7 +2521,7 @@ async def accept_invites_impl(
             "metadata": {"name": name},
             "spec": spec,
         }
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _WORKSPACE_SCOPE, "WorkspaceMembership", name, raw, invalidate_mode="doc"
         )
         accepted.append({
@@ -2700,7 +2700,7 @@ async def provision_workspace_owner_impl(
     workspace_created = False
     if role == "owner" and not await _get_workspace_doc(live, workspace_id):
         now = datetime.now(timezone.utc).isoformat()
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _WORKSPACE_SCOPE, "Workspace", workspace_id,
             {
                 "apiVersion": _TENANT_API,
@@ -2786,7 +2786,7 @@ async def _get_workspace_doc(live: LiveDna, workspace_id: str) -> dict[str, Any]
     """Read one ``Workspace`` doc, tolerating a source that has never had a
     ``_lib`` scope (a brand-new install) — absent scope means 'no workspace'."""
     try:
-        return await live.kernel.get_document(
+        return await live.kernel.get_instance(
             _WORKSPACE_SCOPE, "Workspace", workspace_id
         )
     except (FileNotFoundError, ValueError):
@@ -2836,7 +2836,7 @@ async def ensure_workspace_scope_genome(
     compose_prompt / get_* / query) had "no rest to inherit". This writes the
     scope's Genome declaring ``parent_scope = live.workspace_definitions_base``
     so the EXISTING resolution chain (``compute_resolution_chain`` — the one
-    mechanism behind query, resolve_document, get_document and the eager MI)
+    mechanism behind query, resolve_instance, get_instance and the eager MI)
     delivers the host's curated definitions from the first request.
 
     Idempotent + intent-preserving, so it is safe on every create AND on every
@@ -2860,7 +2860,7 @@ async def ensure_workspace_scope_genome(
         return {"scope": scope, "parent_scope": None, "written": False}
 
     try:
-        existing = await live.kernel.get_document(scope, "Genome", scope)
+        existing = await live.kernel.get_instance(scope, "Genome", scope)
     except (FileNotFoundError, ValueError):
         existing = None
     spec = dict((existing or {}).get("spec") or {})
@@ -2871,7 +2871,7 @@ async def ensure_workspace_scope_genome(
     spec["parent_scope"] = base
     meta = dict((existing or {}).get("metadata") or {})
     meta["name"] = scope
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         scope, "Genome", scope,
         {
             "apiVersion": (existing or {}).get("apiVersion") or _DNA_API,
@@ -3073,7 +3073,7 @@ async def create_workspace_impl(
             "account_id": account_id,
         },
     }
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         _WORKSPACE_SCOPE, "Workspace", workspace_id, ws_raw, invalidate_mode="doc"
     )
 
@@ -3088,7 +3088,7 @@ async def create_workspace_impl(
         # re-open the bootstrap hole this feature closes — fail the creation
         # (the client retries and gets a fresh id), removing the litter.
         try:
-            await live.kernel.delete_document(
+            await live.kernel.delete_instance(
                 _WORKSPACE_SCOPE, "Workspace", workspace_id
             )
         except Exception:  # noqa: BLE001
@@ -3110,7 +3110,7 @@ async def create_workspace_impl(
         "accepted_at": now,
     }
     try:
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _WORKSPACE_SCOPE, "WorkspaceMembership", grant_name,
             {
                 "apiVersion": _TENANT_API,
@@ -3125,13 +3125,13 @@ async def create_workspace_impl(
         # litter. Best-effort — a failed rollback must not mask the real error.
         if definitions.get("written"):
             try:
-                await live.kernel.delete_document(
+                await live.kernel.delete_instance(
                     definitions["scope"], "Genome", definitions["scope"]
                 )
             except Exception:  # noqa: BLE001
                 pass
         try:
-            await live.kernel.delete_document(
+            await live.kernel.delete_instance(
                 _WORKSPACE_SCOPE, "Workspace", workspace_id
             )
         except Exception:  # noqa: BLE001
@@ -3318,7 +3318,7 @@ async def create_project_impl(
         "created_at": now,
     }
     write_kernel = live.kernel.with_tenant(workspace_id)
-    await write_kernel.write_document(
+    await write_kernel.write_instance(
         sc, "Project", name,
         {
             "apiVersion": _PORTFOLIO_API,
@@ -3384,7 +3384,7 @@ def actor_label(identity: Any) -> str | None:
 
     EMAIL first, then the durable subject. Not an arbitrary order: it is the one
     this repo already settled on (``invite_member_impl`` records ``invited_by``
-    the same way, and the MCP face's ``actor_from_context`` documents the
+    the same way, and the MCP face's ``actor_from_context`` instances the
     reasoning — what a human reading a record actually wants to see is a person,
     not a subject id).
 
@@ -3408,12 +3408,12 @@ def actor_label(identity: Any) -> str | None:
 
 _ARTIFACT_API = "github.com/ruinosus/dna/artifact/v1"
 
-#: The document name of a SourceArtifact IS its content address. Two uploads of
+#: The instance name of a SourceArtifact IS its content address. Two uploads of
 #: identical bytes are ONE artifact, and registering the same bytes twice is an
 #: idempotent no-op rather than a second row — which is the property that lets
 #: a caller retry an interrupted upload without leaving litter behind.
 def artifact_name(sha256: str) -> str:
-    """The document name for an artifact with this content address."""
+    """The instance name for an artifact with this content address."""
     return f"sha256-{(sha256 or '').strip().lower()}"
 
 
@@ -3436,7 +3436,7 @@ async def register_artifact_impl(
     half of ``SourceArtifact``.
 
     A narrow door on purpose. The obvious alternative was a generic
-    "write any document over REST" route, and it would have traded one concrete
+    "write any instance over REST" route, and it would have traded one concrete
     need for a wide surface with its own authorization, plan and validation
     decisions to defend. This route knows exactly one Kind and can therefore
     state exactly one rule.
@@ -3458,13 +3458,13 @@ async def register_artifact_impl(
     — for the same reason it is on ``create_project``: a caller-chosen scope is
     a cross-workspace write vector.
 
-    IDEMPOTENT by content address: the document name is ``sha256-<hex>``, so
+    IDEMPOTENT by content address: the instance name is ``sha256-<hex>``, so
     re-registering identical bytes updates the same row instead of creating a
     second artifact. A retried upload leaves no litter.
 
     ``uri`` is stored verbatim and is treated as an IDENTITY — where the bytes
     live, never how to reach them. Callers must not pass a signed URL: see the
-    Kind descriptor for why a document that carries its own access is the
+    Kind descriptor for why an instance that carries its own access is the
     failure this design exists to avoid.
     """
     from dna.tenancy import identity_from_token
@@ -3515,7 +3515,7 @@ async def register_artifact_impl(
     # Re-registering the SAME bytes must not erase what has already been read
     # out of them. Without this, an idempotent retry would silently blank the
     # projection it was supposed to leave alone.
-    existing = await live.kernel.get_document(
+    existing = await live.kernel.get_instance(
         sc, "SourceArtifact", name, tenant=ws
     )
     if isinstance(existing, dict):
@@ -3524,7 +3524,7 @@ async def register_artifact_impl(
             spec["derived_refs"] = prior
 
     write_kernel = live.kernel.with_tenant(ws)
-    await write_kernel.write_document(
+    await write_kernel.write_instance(
         sc, "SourceArtifact", name,
         {
             "apiVersion": _ARTIFACT_API,
@@ -3559,7 +3559,7 @@ async def revoke_workspace_member_impl(
     * a target holding no grant here is :class:`WorkspaceMemberNotFound` (404, a
       clear no-op — revoking a non-member is not an error to hide).
 
-    Revoking removes the grant outright (``kernel.delete_document`` — the
+    Revoking removes the grant outright (``kernel.delete_instance`` — the
     WorkspaceMembership status enum has no ``revoked`` state; a removed grant no
     longer authorizes, exactly like the portfolio ``remove_member_impl``). Works on
     a ``pending`` invite (rescind) or an ``active`` member. GLOBAL / ``_lib``-direct
@@ -3586,7 +3586,7 @@ async def revoke_workspace_member_impl(
 
     # Locate EVERY grant this person holds in THIS workspace.
     #
-    # Revoking used to find ONE row and delete ONE document, and both halves
+    # Revoking used to find ONE row and delete ONE instance, and both halves
     # were wrong once a person held more than one grant — which production does
     # today: the same human has an email-named grant and an account-id-named
     # one, both `owner`, both `active`.
@@ -3594,12 +3594,12 @@ async def revoke_workspace_member_impl(
     #   • Deleting one left the other, so "removed" removed nothing. The UI
     #     said it worked and the person kept getting in.
     #   • The name to delete was REBUILT from the row's `identity_email`, but a
-    #     grant whose document is named from an account id does not answer to
+    #     grant whose instance is named from an account id does not answer to
     #     that name — so the call deleted a DIFFERENT grant than the one it had
     #     decided on, and reported the intended one.
     #
     # So: match on either coordinate, collect all of them, and delete each by
-    # its OWN document name. Revoking is about a person, not a row.
+    # its OWN instance name. Revoking is about a person, not a row.
     target_spec: dict[str, Any] | None = None
     target_m: Any = None
     targets: list[tuple[str, dict[str, Any]]] = []
@@ -3665,7 +3665,7 @@ async def revoke_workspace_member_impl(
         )
 
     for name, _spec in targets:
-        await live.kernel.delete_document(
+        await live.kernel.delete_instance(
             _WORKSPACE_SCOPE, "WorkspaceMembership", name, invalidate_mode="doc"
         )
     return {
@@ -3707,10 +3707,10 @@ WORKSPACE_SCOPE_GRANT_KIND = "WorkspaceScopeGrant"
 
 
 def scope_grant_name(workspace_id: str, scope: str) -> str:
-    """The document name for one grant — ``<workspace_id>--<scope>``.
+    """The instance name for one grant — ``<workspace_id>--<scope>``.
 
     One row per (workspace, scope) pair, so granting and revoking are each ONE
-    document, and the name itself says what it grants."""
+    instance, and the name itself says what it grants."""
     return f"{workspace_id}--{scope}"
 
 
@@ -3808,7 +3808,7 @@ async def grant_workspace_scope_impl(
             "granted_at": stamp,
         },
     }
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         _WORKSPACE_SCOPE, WORKSPACE_SCOPE_GRANT_KIND, name, raw,
         invalidate_mode="doc",
     )
@@ -3823,7 +3823,7 @@ async def revoke_workspace_scope_impl(
     evidence that the access ever existed, which is the half of an audit trail
     that matters after an incident."""
     name = scope_grant_name((workspace_id or "").strip(), (scope or "").strip())
-    existing = await live.kernel.get_document(
+    existing = await live.kernel.get_instance(
         _WORKSPACE_SCOPE, WORKSPACE_SCOPE_GRANT_KIND, name,
     )
     if existing is None:
@@ -3836,7 +3836,7 @@ async def revoke_workspace_scope_impl(
     spec["revoked_at"] = (now or datetime.now(timezone.utc)).isoformat(
         timespec="seconds")
     raw = {**existing, "spec": spec}
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         _WORKSPACE_SCOPE, WORKSPACE_SCOPE_GRANT_KIND, name, raw,
         invalidate_mode="doc",
     )

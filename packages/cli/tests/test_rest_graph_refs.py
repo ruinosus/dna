@@ -1,4 +1,4 @@
-"""``GET /v1/kinds/{kind}/documents/{name}/refs`` — the graph, THROUGH the door.
+"""``GET /v1/kinds/{kind}/instances/{name}/refs`` — the graph, THROUGH the door.
 
 The kernel-side walk has its own suite in the SDK. This one exists because a
 guard that is only exercised in a unit test is a guard no door calls: the
@@ -10,7 +10,7 @@ Two lanes, deliberately:
 
 * the **filesystem** store, which records no edges at all and must therefore
   answer **501** — never ``{"edges": []}``, which reads as "nothing points at
-  this document" and is a claim only a store that keeps edges may make;
+  this instance" and is a claim only a store that keeps edges may make;
 * a **SQLite** store, where a real write produces a real edge and the walk
   returns it with the honesty fields (``resolved``, ``stop``,
   ``graph_producer``) attached.
@@ -50,7 +50,7 @@ def sql_dir(tmp_path, monkeypatch):
     """A SQLite store, seeded through the REAL write path.
 
     Seeded by the kernel rather than by inserting rows: an edge exists in this
-    product because somebody wrote a document, and a fixture that inserted the
+    product because somebody wrote an instance, and a fixture that inserted the
     row directly would let the route pass with no producer behind it — the
     exact failure that left the first edge table empty for fourteen months.
     """
@@ -87,8 +87,8 @@ def sql_dir(tmp_path, monkeypatch):
         await src.connect()
         k = Kernel.auto()
         k.source(src)
-        await k.write_document(_SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
-        await k.write_document(
+        await k.write_instance(_SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await k.write_instance(
             _SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
         )
         await src.close()
@@ -106,10 +106,10 @@ class TestTheUnsupportedRefusal:
         """⚠️ The refusal that matters most, at the wire.
 
         ``200 {"edges": []}`` would tell a client that nothing points at this
-        document. The filesystem adapter has no idea whether that is true.
+        instance. The filesystem adapter has no idea whether that is true.
         """
         with _client(base_dir=str(fs_dir)) as c:
-            r = c.get("/v1/kinds/Agent/documents/concierge/refs")
+            r = c.get("/v1/kinds/Agent/instances/concierge/refs")
         assert r.status_code == 501, r.text
         assert "not the same as" in r.text
 
@@ -117,7 +117,7 @@ class TestTheUnsupportedRefusal:
 class TestTheWalkThroughTheDoor:
     def test_what_points_at_this_document(self, sql_dir):
         with _client() as c:
-            r = c.get("/v1/kinds/Feature/documents/f-y/refs")
+            r = c.get("/v1/kinds/Feature/instances/f-y/refs")
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["direction"] == "in"
@@ -130,7 +130,7 @@ class TestTheWalkThroughTheDoor:
         screen cannot tell a complete answer from a truncated one, nor an empty
         graph from a producer that is switched off."""
         with _client() as c:
-            body = c.get("/v1/kinds/Feature/documents/f-y/refs").json()
+            body = c.get("/v1/kinds/Feature/instances/f-y/refs").json()
         assert body["stop"] in ("complete", "depth_reached", "truncated")
         assert body["graph_producer"] == "warn"
         assert body["edges"][0]["resolved"] is True
@@ -139,7 +139,7 @@ class TestTheWalkThroughTheDoor:
     def test_out_is_the_other_direction(self, sql_dir):
         with _client() as c:
             body = c.get(
-                "/v1/kinds/Story/documents/s-x/refs",
+                "/v1/kinds/Story/instances/s-x/refs",
                 params={"direction": "out"},
             ).json()
         assert [(e["to_kind"], e["to_name"]) for e in body["edges"]] == [
@@ -149,13 +149,13 @@ class TestTheWalkThroughTheDoor:
     def test_a_nonsense_direction_is_400_not_500(self, sql_dir):
         with _client() as c:
             r = c.get(
-                "/v1/kinds/Feature/documents/f-y/refs",
+                "/v1/kinds/Feature/instances/f-y/refs",
                 params={"direction": "sideways"},
             )
         assert r.status_code == 400, r.text
 
     def test_an_unknown_kind_is_404_naming_it(self, sql_dir):
         with _client() as c:
-            r = c.get("/v1/kinds/NaoExiste/documents/x/refs")
+            r = c.get("/v1/kinds/NaoExiste/instances/x/refs")
         assert r.status_code == 404, r.text
         assert "NaoExiste" in r.text

@@ -257,7 +257,7 @@ def worth_extracting(text: str | None, policy: IngestionPolicy | None = None) ->
 
 
 #: Os NOMES BEM CONHECIDOS dos templates que um workspace pode sobrescrever —
-#: documentos `PromptTemplate` (o Kind que já existia; ver a spec
+#: instâncias `PromptTemplate` (o Kind que já existia; ver a spec
 #: prompts-como-dados). Ausentes, valem os defaults abaixo, testados.
 EXTRACTION_TEMPLATE = "memory-extraction"
 RECONCILIATION_TEMPLATE = "memory-reconciliation"
@@ -711,7 +711,7 @@ def sdlc_digest(
     o mesmo formato de "transcript" que a extração de chat consome — o pipeline
     das duas etapas é UM, e a fonte é só de onde o texto veio.
 
-    ⚠️ Por que título + resultado, e não o documento inteiro: o fato durável de
+    ⚠️ Por que título + resultado, e não a instância inteira: o fato durável de
     uma história entregue é o que ELA MUDOU ("o billing agora usa Stripe
     metered"), não o registro do processo. Despejar o YAML inteiro faria o
     extrator achar fatos sobre o board, não sobre o trabalho.

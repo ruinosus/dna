@@ -32,6 +32,11 @@ spec:
   target_kind: WorkspaceMembership
   alias: tenant-workspace-membership
   origin: github.com/ruinosus/dna/tenant
+  # The crown-jewel authorization row: an ACTIVE grant is REQUIRED to touch
+  # a workspace, fail-closed otherwise. Subject (oid/email/tid) + scope
+  # (workspace_id) + level (role) + status — the shape the whole family has.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [tenancy.access-grant]
   tenant_scope: global
   plane: record
   prompt_target: false
@@ -49,6 +54,13 @@ spec:
       to: Workspace
       cardinality: one
       by: workspace_id
+  identifiers:
+    # The stable Entra `oid`, bound on first accepted sign-in — the durable key
+    # that post-bind re-auth uses instead of the mutable email. Minted by the
+    # identity provider; there is no DNA Kind behind it.
+    identity_oid:
+      role: external
+      system: entra
   schema:
     type: object
     additionalProperties: false

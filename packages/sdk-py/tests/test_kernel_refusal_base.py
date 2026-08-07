@@ -124,28 +124,28 @@ def _refusal(name: str) -> type:
     raise AssertionError(f"{name!r} is in no kernel error module")
 
 
-#: Everything the kernel's write/read facades document themselves as raising
+#: Everything the kernel's write/read facades instance themselves as raising
 #: when they deliberately say no — the set a face must be able to relay.
 #: Kept complete by ``test_every_refusal_is_enumerated`` below, so dropping an
 #: entry is a failure rather than a silently smaller parametrization.
 _WRITE_REFUSALS = (
     "LayerPolicyViolationError", "SpecValidationError", "TenantNotAllowed",
     "TenantRequired", "InvalidTenantSlug", "VersionAlreadyPublished",
-    # dna.kernel.errors — the name/path-safety family. ``InvalidDocumentName``
-    # and ``InvalidScopeName`` guard ``write_document`` / ``delete_document`` /
-    # the four bundle-entry doors / ``preview_document`` / ``serialize_document``;
+    # dna.kernel.errors — the name/path-safety family. ``InvalidInstanceName``
+    # and ``InvalidScopeName`` guard ``write_instance`` / ``delete_instance`` /
+    # the four bundle-entry doors / ``preview_instance`` / ``serialize_instance``;
     # ``PathEscapesStoreRoot`` is the filesystem adapter's own second layer;
     # ``InvalidBundleEntry`` closes the third door of the same family — a
     # bundle ENTRY, which is a relative PATH rather than a component, and which
-    # writers derive from document CONTENT (``spec.source_files`` et al);
-    # ``DocumentNameTaken`` is the atomic ``if_absent`` claim losing the race,
-    # and ``StaleDocumentWrite`` (i-083) is its UPDATE counterpart — a guarded
-    # ``if_match`` write refusing to land on a document that moved since the
+    # writers derive from instance CONTENT (``spec.source_files`` et al);
+    # ``InstanceNameTaken`` is the atomic ``if_absent`` claim losing the race,
+    # and ``StaleInstanceWrite`` (i-083) is its UPDATE counterpart — a guarded
+    # ``if_match`` write refusing to land on an instance that moved since the
     # caller read it. Both are adjudicated by the ADAPTER against the store, and
     # both have to reach the caller as a denial rather than a 500 because their
     # remedies differ and only the refusal can say which: take another name, or
     # re-read and re-apply to the fresh etag.
-    "DocumentNameTaken", "StaleDocumentWrite", "InvalidDocumentName",
+    "InstanceNameTaken", "StaleInstanceWrite", "InvalidInstanceName",
     "InvalidScopeName", "PathEscapesStoreRoot", "InvalidBundleEntry",
     # dna.kernel.kinds.namespaces — a write declaring a Kind in a namespace its
     # author does not own. It IS a refusal and always was (a subclass of
@@ -157,10 +157,24 @@ _WRITE_REFUSALS = (
     # refusal in the strictest sense of this file: the kernel DECIDED, on a
     # workspace's own instruction, and the caller can act on it — but only if it
     # arrives with its reason intact. Told "validation failed" instead, an author
-    # would edit a document that no edit can save; told nothing, they would
+    # would edit an instance that no edit can save; told nothing, they would
     # retry forever. It also carries the one piece of reassurance the moment
-    # needs: existing documents were not deleted.
+    # needs: existing instances were not deleted.
     "RevokedKindWrite",
+    # dna.kernel.errors — a DELETE refused because something still points at the
+    # instance and the relation that points at it declares
+    # ``on_target_delete: restrict`` (slice 2 of ``spec-topologia-do-grafo``).
+    # The FIRST refusal on the delete path, which until now had no veto gate at
+    # all: writes have ``pre_save``, deletes had nothing, and "deleting a
+    # Feature that 47 Stories point at is accepted in silence" is the measured
+    # gap it closes. A ``KernelRefusal`` and emphatically not a
+    # ``CapabilityRefusal``: the store could have removed the row and the caller
+    # was entitled to ask, so the remedy is a different REQUEST — delete or
+    # repoint the referrers — never a different deployment. Relayed as a
+    # capability refusal it would send an author hunting for an entitlement they
+    # already have, while the policy that actually stopped them travels in the
+    # data and would follow them to any store.
+    "TargetDeleteRestricted",
 )
 
 #: The two that live on ``dna.kernel`` itself.
@@ -191,12 +205,12 @@ def test_the_historical_bases_are_kept():
     # The path-safety family carries a SECOND base on purpose: a face that
     # predates the marker base and still catches ``(ValueError, LookupError,
     # PermissionError)`` must report a security refusal, not mask it as a 500.
-    for name in ("InvalidDocumentName", "InvalidScopeName",
+    for name in ("InvalidInstanceName", "InvalidScopeName",
                  "PathEscapesStoreRoot", "InvalidBundleEntry"):
         assert issubclass(_refusal(name), ValueError), name
-    # ``DocumentNameTaken`` is a ``FileExistsError`` so a caller allocating a
+    # ``InstanceNameTaken`` is a ``FileExistsError`` so a caller allocating a
     # name (``create_issue``) can catch the standard exception and try the next.
-    assert issubclass(E.DocumentNameTaken, FileExistsError)
+    assert issubclass(E.InstanceNameTaken, FileExistsError)
 
 
 def test_one_except_clause_catches_every_write_refusal():
@@ -237,7 +251,7 @@ _NOT_REFUSALS = {
     # miss narrowly; giving them the refusal base would make every face report
     # a typo'd agent name as a policy denial.
     "AgentNotFound", "ToolNotFound",
-    # A typo'd `layout:` — an authoring error in the document, surfaced loudly
+    # A typo'd `layout:` — an authoring error in the instance, surfaced loudly
     # so it cannot silently fall through to the Kind default.
     "UnknownLayout",
     # ── newly in scope once the module list became DERIVED ────────────────
@@ -249,7 +263,7 @@ _NOT_REFUSALS = {
     # catches them; a bad hook name and a malformed frontmatter block are
     # surfaced so an author fixes them while loading continues.
     "UnknownHookNameWarning", "FrontmatterParseWarning",
-    # A CORRUPT DOCUMENT on the read path, opt-in via ``strict=True``. The
+    # A CORRUPT INSTANCE on the read path, opt-in via ``strict=True``. The
     # SQL source catches it and falls back to the canonical row — a recovery
     # signal between an adapter and itself, not a verdict for a client.
     "FrontmatterParseError",
@@ -262,20 +276,86 @@ _NOT_REFUSALS = {
     # above (raise at boot for builtins, warn-and-skip per scope). It refuses
     # a descriptor, not somebody's write.
     "SchemaGuardError",
+    # AUTHOR-TIME trait composition: two traits declaring the same field
+    # differently, an `implies` cycle, a trait naming a fragment nobody
+    # registered, an obligation on a field that does not exist. Same family as
+    # SchemaGuardError and the registration errors above — it fires while the
+    # Kind registry is being assembled, and the person who can fix it is the
+    # one who wrote the descriptor, not the caller of a request. Refusing the
+    # CONFLICT rather than resolving it by precedence is the whole design
+    # (spec-kind-taxonomia-o-que-eu-sou §6.3), so this type will be raised more
+    # as the vocabulary grows — and it is still never somebody's write.
+    "TraitConflictError",
     # A COMPOSITION-time budget: the assembled instruction is larger than the
     # target model's own declared cap. Not a policy denial the caller may
     # appeal — an arithmetic fact about the prompt, raised on the read/compose
     # path where there is no write to refuse.
     "PromptBudgetExceededError",
+    # ── the OTHER marker base, and why it is a second one ─────────────────
+    # ``CapabilityRefusal`` collects "the store wired into this deployment
+    # cannot answer that at all" — the two entries immediately below, plus
+    # ``AsOfUnsupported``/``AsOfTruncated`` over in ``dna.memory``. It is
+    # deliberately NOT a ``KernelRefusal`` and the two bases stay disjoint,
+    # because that is the whole distinction: ``KernelRefusal`` is a verdict about
+    # the REQUEST (remedy: a different request), a capability refusal is a fact
+    # about the DEPLOYMENT (remedy: a different adapter). A face relaying one as
+    # the other sends a caller hunting for an entitlement they already have.
+    # The family has its own guard: ``tests/test_capability_refusal_base.py``.
+    "CapabilityRefusal",
     # A CAPABILITY statement about the DEPLOYMENT, not a verdict on the
     # request: the active source keeps no derived reference graph, so there is
     # no answer to give. It is an exception rather than an empty list on
-    # purpose — ``[]`` reads as "nothing points at this document", a claim only
+    # purpose — ``[]`` reads as "nothing points at this instance", a claim only
     # a store that records edges may make — but relaying it as a refusal would
     # tell the caller they were denied something they might appeal. The faces
     # map it to 501, and the caller's remedy is a different adapter, not a
     # different request.
     "GraphUnsupported",
+    # ── the instance-id lane (i-114) ──────────────────────────────────────
+    # The twin of ``GraphUnsupported`` one row up, and classified for the same
+    # reason: the wired source cannot search by id, which is a fact about the
+    # DEPLOYMENT. Raised rather than answered with ``[]`` — an empty list reads
+    # as "no instance has that id" — but it is not a denial anyone may appeal.
+    "InstanceIdLookupUnsupported",
+    # ── the world-time lane (spec-topologia fatia 3) ──────────────────────
+    # The third of the same family: this deployment's store keeps no WORLD-time
+    # column, so it cannot say whether a fact was true at an instant. A fact
+    # about the DEPLOYMENT — and one that is dialect-deep rather than
+    # adapter-deep, since ``SqlAlchemySource`` has the column on Postgres and
+    # not on SQLite. Raised rather than answered with the unfiltered instance,
+    # which would assert "yes, it was true then" on no evidence at all; but not
+    # a denial anyone may appeal, so not a ``KernelRefusal``.
+    "ValidTimeUnsupported",
+    # A LOOKUP MISS, exactly like ``AgentNotFound`` above: no instance carries
+    # that id. Nothing was withheld.
+    "UnknownInstanceId",
+    # The word "refusal" is in this one's own docstring, and it is STILL not a
+    # ``KernelRefusal`` — which is the distinction that base exists to keep
+    # sharp. ``KernelRefusal`` marks a verdict about the CALLER: they asked for
+    # something policy will not give, and every face relays it as such. An
+    # ambiguous prefix is a fact about the QUERY: two instances match, so there
+    # is no single answer to give. The remedy is more characters, not more
+    # permission, and reporting it as a denial would send the caller looking
+    # for an entitlement they already have.
+    "AmbiguousInstanceId",
+    # A MALFORMED query — fewer than four characters, or characters outside
+    # the id alphabet. The caller's input is not yet a question.
+    "PrefixTooShort",
+    # ── the spec-KEY lane (spec-topologia fatia 5) ────────────────────────
+    # The fourth member of the capability family: this deployment's store
+    # cannot find an instance by a spec key, so a relation declared
+    # ``by: workspace_id`` is declared and not followed here. A fact about the
+    # DEPLOYMENT, raised rather than answered with ``None`` — ``None`` reads as
+    # "no instance carries that key", an accusation against data nobody
+    # examined. Not a denial anyone may appeal, so not a ``KernelRefusal``.
+    "KeyLookupUnsupported",
+    # The twin of ``AmbiguousInstanceId`` a few rows up, and classified by its
+    # argument: two instances carry the key, so there is no single answer to
+    # give. A fact about the QUESTION, not a verdict about the caller — and the
+    # remedy lives in the DATA (one of the two has to stop claiming the key),
+    # never in permission. It is not a ``CapabilityRefusal`` either: the store
+    # answered perfectly well, and what it answered was "two".
+    "AmbiguousInstanceKey",
 }
 
 

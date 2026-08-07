@@ -19,6 +19,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Correções
 
+- **A aresta para de dizer `resolved: true` depois que o alvo é apagado**
+  (i-131 do board dna-cloud). A travessia derivava `resolved` de
+  `to_kind IS NOT NULL` — um fato do instante da **escrita** ("a referência
+  achou um alvo") servido como um fato do instante da **leitura** ("isto ainda
+  aponta para algo"). Apagada a instância alvo, a aresta continuava na
+  `dna_edges` e continuava dizendo que resolvia. Não era impreciso: era o
+  OPOSTO, com a mesma confiança, para quem perguntou exatamente para distinguir
+  os dois casos — a mesma família da i-104, a honestidade do que o grafo afirma
+  sobre si.
+  ⚠️ **O conserto não é apagar a aresta junto**: uma linha de auditoria sobre
+  uma instância apagada TEM que continuar apontando (decisão do founder sobre o
+  `AuditLog`, hoje com vocabulário próprio em `on_target_delete: allow`). O
+  delete passou a **carimbar** as arestas de entrada (`dna_edges.to_deleted_at`,
+  revisão `0011`) na MESMA transação que remove a linha — um `UPDATE` indexado,
+  medido em 0,032 ms no servidor sobre 10.000 arestas. A alternativa registrada
+  na issue (recalcular na leitura, com um `LEFT JOIN` em `dna_instances`) foi
+  medida e recusada: custa em TODA travessia em vez de uma vez por delete, e
+  sobretudo é uma **segunda regra de resolução** ao lado do fallback de scope
+  pai do `Kernel.get_instance` — na base de dev ela declararia quebrada 1 de 30
+  arestas resolvidas, que é a mentira oposta. `to_deleted_at` viaja na resposta
+  (`graph_refs`, `dna graph refs`) e `GraphResult.orphaned` separa a aresta que
+  NUNCA resolveu (erro de quem autorou) da que foi órfã por um delete.
 - **O grafo de schema diz se a referência foi DECLARADA ou só inferida pela
   forma do nome** (i-104 do board dna-cloud). `GET /v1/graph/kinds` devolvia as
   25 entradas de `unresolved[]` com uma única diferença entre elas: prosa em

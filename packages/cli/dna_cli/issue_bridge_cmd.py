@@ -41,7 +41,7 @@ from typing import Any
 import click
 
 from dna.application.sdlc import next_issue_number as _core_next_issue_number
-from dna.kernel.errors import DocumentNameTaken
+from dna.kernel.errors import InstanceNameTaken
 
 from dna_cli import _github_bridge as gb
 from dna_cli._ctx import fail, open_session
@@ -157,7 +157,7 @@ def cmd_issue_publish(
             summary=f"Publicada no GitHub: #{number}", github_url=url,
         )
         raw = _build_raw("Issue", name, spec)
-        s.run(s.kernel.write_document(scope, "Issue", name, raw))
+        s.run(s.kernel.write_instance(scope, "Issue", name, raw))
 
     click.secho(f"PUBLISHED Issue/{name} → {repo_full}#{number}", fg="green")
     click.echo(url)
@@ -263,13 +263,13 @@ def cmd_issue_import(ref: str, repo: str | None, scope: str) -> None:
             name = f"i-{candidate:03d}-{slug}"
             raw = _build_raw("Issue", name, spec)
             try:
-                s.run(s.kernel.write_document(
+                s.run(s.kernel.write_instance(
                     scope, "Issue", name, raw, if_absent=True))
                 break
             except NotImplementedError:
-                s.run(s.kernel.write_document(scope, "Issue", name, raw))
+                s.run(s.kernel.write_instance(scope, "Issue", name, raw))
                 break
-            except DocumentNameTaken:
+            except InstanceNameTaken:
                 continue
         else:  # pragma: no cover — 1000 consecutive taken names
             raise fail(
@@ -332,7 +332,7 @@ def cmd_issue_sync(name: str, repo: str | None, scope: str) -> None:
                 ),
             )
         raw = _build_raw("Issue", name, spec)
-        s.run(s.kernel.write_document(scope, "Issue", name, raw))
+        s.run(s.kernel.write_instance(scope, "Issue", name, raw))
 
     flip = f" ({prev_state} → {new_state})" if prev_state != new_state else ""
     click.secho(f"SYNCED Issue/{name} — GitHub #{number} is {new_state}{flip}",

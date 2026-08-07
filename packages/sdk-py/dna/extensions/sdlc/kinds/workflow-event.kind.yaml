@@ -42,14 +42,42 @@ spec:
     parent_ref: sdlc-spec|sdlc-plan|sdlc-story|sdlc-feature|sdlc-epic|sdlc-roadmap|sdlc-agent-session|sdlc-narrative
     transitioned_from: sdlc-workflow-event
   relations:
+    # Typed from the SAME set `dep_filters` above already names — and that is
+    # the point: while these said `to: '*'`, the relation CLAIMED both fields
+    # (`build_edges` skips a dep_filters edge for a field a relation claims),
+    # so the eight typed composition edges were suppressed in favour of one
+    # untyped edge to `*`. The Kind knew its targets in one declaration and
+    # denied them in the other; the graph believed the weaker one.
+    # Measured 06/08/2026: ref → Feature ×43, Plan ×3, Spec ×3;
+    # parent_ref → Feature ×49.
     parent_ref:
-      to: '*'
+      to: [AgentSession, Epic, Feature, Narrative, Plan, Roadmap, Spec, Story]
       cardinality: one
       by: 'Kind/name'
     ref:
-      to: '*'
+      to: [AgentSession, Epic, Feature, Narrative, Plan, Roadmap, Spec, Story]
       cardinality: one
       by: 'Kind/name'
+    # Addressed by NAME, not composite — `journey.py` writes
+    # `entry_spec["transitioned_from"] = prev_open.name`. Resolved and enforced
+    # on write, and safe: all 5 stored values resolve to an existing
+    # WorkflowEvent (measured 06/08/2026). It was in `dep_filters` only, so it
+    # was declared for prompt composition and checked by nothing.
+    transitioned_from:
+      to: WorkflowEvent
+      cardinality: one
+    # The two deprecated back-compat halves of `parent_ref` (i-144, ~1574
+    # historical entries). They hold a BARE name — the Kind is in the FIELD
+    # name, which is why they are `by: name` while `parent_ref` is composite;
+    # the repo's own back-compat fixture stores `feature_ref: "f-x"`,
+    # `epic_ref: "e-y"`. Deprecated is not undeclarable: while the field can be
+    # read, the model owes an answer for where it points.
+    feature_ref:
+      to: Feature
+      cardinality: one
+    epic_ref:
+      to: Epic
+      cardinality: one
   schema:
     type: object
     required:

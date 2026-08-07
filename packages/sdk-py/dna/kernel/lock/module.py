@@ -17,7 +17,7 @@ File shape (YAML, v5):
         resolved_sha256: "<sha256 of Genome.yaml>"
         installed_at: "2026-04-15T10:22:00Z"
 
-The existing scope-level `.dna.lock` (v3, document SHA tracking) is
+The existing scope-level `.dna.lock` (v3, instance SHA tracking) is
 preserved at its scope-level location — this v5 file is a separate
 per-tenant doc with a different top-level key set.
 """

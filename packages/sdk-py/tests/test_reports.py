@@ -1,22 +1,22 @@
 """Tests for ReportBuilder — eval_summary, findings_summary, evidence_manifest, compliance_matrix."""
-from dna.kernel.document import Document
-from dna.kernel.instance import ManifestInstance
+from dna.kernel.instance import Instance
+from dna.kernel.manifest import ManifestInstance
 from dna.kernel.reports import ReportBuilder
 
 
-def _make_mi(docs: list[Document]) -> ManifestInstance:
-    """Create a minimal ManifestInstance with the given documents."""
+def _make_mi(docs: list[Instance]) -> ManifestInstance:
+    """Create a minimal ManifestInstance with the given instances."""
     return ManifestInstance(
         scope="test-scope",
-        documents=docs,
+        instances=docs,
         kinds={},
     )
 
 
-def _eval_run(name: str, suite: str, passed: int, total: int, **extra) -> Document:
+def _eval_run(name: str, suite: str, passed: int, total: int, **extra) -> Instance:
     spec = {"suite": suite, "passed": passed, "total": total, "failed": total - passed}
     spec.update(extra)
-    return Document(
+    return Instance(
         api_version="github.com/ruinosus/dna/eval/v1",
         kind="EvalRun",
         name=name,
@@ -24,10 +24,10 @@ def _eval_run(name: str, suite: str, passed: int, total: int, **extra) -> Docume
     )
 
 
-def _finding(name: str, severity: str, title: str, **extra) -> Document:
+def _finding(name: str, severity: str, title: str, **extra) -> Instance:
     spec = {"title": title, "severity": severity, "source": "eval", "status": "open"}
     spec.update(extra)
-    return Document(
+    return Instance(
         api_version="github.com/ruinosus/dna/eval/v1",
         kind="Finding",
         name=name,
@@ -35,8 +35,8 @@ def _finding(name: str, severity: str, title: str, **extra) -> Document:
     )
 
 
-def _evidence(name: str, event_type: str, doc_ref: str, sha256: str, captured_at: str) -> Document:
-    return Document(
+def _evidence(name: str, event_type: str, doc_ref: str, sha256: str, captured_at: str) -> Instance:
+    return Instance(
         api_version="github.com/ruinosus/dna/evidence/v1",
         kind="Evidence",
         name=name,
@@ -165,7 +165,7 @@ class TestEvidenceManifest:
     def test_empty(self):
         mi = _make_mi([])
         report = mi.reports.evidence_manifest()
-        assert "No evidence documents found" in report
+        assert "No evidence instances found" in report
         assert "report: evidence_manifest" in report
 
     def test_with_docs(self):
@@ -188,7 +188,7 @@ class TestEvidenceManifest:
         mi = _make_mi(docs)
         report = mi.reports.evidence_manifest()
         assert "| Event Type |" in report
-        assert "| Document Ref |" in report
+        assert "| Instance Ref |" in report
 
 
 # ─── compliance_matrix ───────────────────────────────────────────────

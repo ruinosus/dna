@@ -1,8 +1,8 @@
 """An unapproved Kind never enters the registry — so it has no effect at all.
 
-Registration is what CONFERS behaviour: a registered Kind validates documents
+Registration is what CONFERS behaviour: a registered Kind validates instances
 against its schema and routes their storage; an unregistered one does neither
-(measured — an unknown Kind's documents are accepted unvalidated). So refusing
+(measured — an unknown Kind's instances are accepted unvalidated). So refusing
 registration is not a soft gate, it is the absence of effect.
 """
 from __future__ import annotations
@@ -63,7 +63,7 @@ async def _write_kinddef(
     """Author a ``KindDefinition`` into ``scope``'s store, approved or not.
 
     Same shape as the descriptors in ``test_kinddef.py``, written through the
-    real write path so the document reaches the registration funnel exactly as
+    real write path so the instance reaches the registration funnel exactly as
     an authored one would."""
     spec: dict[str, Any] = {
         "target_api_version": "example.com/v1",
@@ -80,7 +80,7 @@ async def _write_kinddef(
     if approved:
         spec["approved_by"] = "reviewer@example.com"
         spec["approved_at"] = "2026-07-25T12:00:00Z"
-    await k.write_document(
+    await k.write_instance(
         scope,
         "KindDefinition",
         kind.lower(),
@@ -141,7 +141,7 @@ def test_the_scopeless_funnel_is_not_exempt(caplog):
     test is the fence: it drives the scope-less funnel directly and asserts the
     unapproved Kind still does not register.
 
-    The raw document must be otherwise VALID (a real ``storage`` block, same
+    The raw instance must be otherwise VALID (a real ``storage`` block, same
     shape as ``_write_kinddef`` below) — if it isn't, ``TypedKindDefinition
     .from_raw`` dies in the parse branch before the gate is ever reached, and
     the outcome (``kind_port_for`` returns ``None``) is then true for the wrong
@@ -226,7 +226,7 @@ def _refusals(caplog, needle: str) -> list[str]:
 
 def test_the_refusal_is_warned_once_per_process_not_once_per_rebuild(caplog):
     """Ten rebuilds, one line. Every MI build re-runs this funnel over the same
-    documents, so an undeduped refusal scales with UPTIME rather than with
+    instances, so an undeduped refusal scales with UPTIME rather than with
     events — and the event here (a Kind waiting for approval) does not recur, it
     persists."""
     k = Kernel()
@@ -308,7 +308,7 @@ def test_both_doors_share_one_suppression(caplog):
 # ── The same gate on the OTHER store-loaded registration path ──
 #
 # ``Module.spec.custom_kinds`` is the second way a Kind arrives from a store:
-# whoever can write a scope's ROOT document declares Kinds there, and the
+# whoever can write a scope's ROOT instance declares Kinds there, and the
 # entries go through ``register_custom_kinds`` instead of the KindDefinition
 # funnel. Ungated, the feature's central claim ("não aprovado não tem efeito,
 # mecanicamente") would be false process-wide — the gate would only cover the
@@ -316,7 +316,7 @@ def test_both_doors_share_one_suppression(caplog):
 
 
 def _manifest(*entries: dict[str, Any]) -> dict[str, Any]:
-    """A root document declaring ``custom_kinds`` — the shape
+    """A root instance declaring ``custom_kinds`` — the shape
     ``instance_builder`` hands ``_register_custom_kinds`` on every build."""
     return {
         "apiVersion": "github.com/ruinosus/dna/v1",
@@ -345,7 +345,7 @@ def test_an_unapproved_custom_kind_entry_is_not_registered():
 
     assert ("myco.io/v1", "Pipeline") not in k._kinds, (
         "a custom_kinds entry is a Kind declaration loaded from a store — it "
-        "needs the same approval as a KindDefinition, or the root document is "
+        "needs the same approval as a KindDefinition, or the root instance is "
         "an ungated door onto the same registry"
     )
     assert k.kind_port_for("Pipeline", scope="test-scope") is None

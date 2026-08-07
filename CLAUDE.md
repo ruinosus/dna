@@ -5,6 +5,14 @@ truth for this repo: what DNA is, layout, build/test commands, conventions,
 and the `dna sdlc` work-tracking protocol. This file adds only what is
 specific to Claude Code; nothing here duplicates it.
 
+⭐ **The vocabulary is Kind / Instance, never "document"** — read
+[AGENTS.md § Vocabulary](AGENTS.md#-vocabulary--the-pair-is-kind--instance)
+before writing a symbol, a route, a table or a sentence. A Kind IS an
+instance (the `KindDefinition` rows live in `dna_instances` beside everything
+else), so "document" named two things one level apart and was retired in
+i-111. It survives only where the thing IS a document — an attachment, a
+`RESEARCH.md`, "documentation", or the verb.
+
 ## Claude Code specifics
 
 - **Skill `dna-sdlc-cli`** (`.claude/skills/dna-sdlc-cli/SKILL.md`) — the

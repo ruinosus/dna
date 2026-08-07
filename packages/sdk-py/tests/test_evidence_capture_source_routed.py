@@ -7,7 +7,7 @@ Before the fix: the handler called ``Path.write_text`` directly after
 Postgres/S3.
 
 After the fix: the handler is ``async def`` and calls
-``kernel.write_document(scope, "Evidence", name, raw, skip_hooks=True)``.
+``kernel.write_instance(scope, "Evidence", name, raw, skip_hooks=True)``.
 The Source persists via the registered WriterPort.
 """
 from __future__ import annotations
@@ -89,7 +89,7 @@ async def test_evidence_written_via_source_not_path(tmp_path):
         "metadata": {"name": "demo-agent"},
         "spec": {"model": "gpt-4o"},
     }
-    await k.write_document("test-scope", "Agent", "demo-agent", raw)
+    await k.write_instance("test-scope", "Agent", "demo-agent", raw)
 
     # The Evidence doc must now be readable via the kernel instance.
     # two-planes F2.5: Evidence is plane="record" — sync mi.all from the
@@ -97,7 +97,7 @@ async def test_evidence_written_via_source_not_path(tmp_path):
     mi = await k.instance_async("test-scope")
     evidence_docs = await mi.all_async("Evidence")
     assert len(evidence_docs) >= 1, (
-        "Expected at least one Evidence doc in the source after write_document; "
+        "Expected at least one Evidence doc in the source after write_instance; "
         "got none. The handler may still be writing via Path.write_text."
     )
 
@@ -116,7 +116,7 @@ async def test_evidence_not_written_to_stray_path(tmp_path):
         "metadata": {"name": "agent2"},
         "spec": {"model": "gpt-4o"},
     }
-    await k.write_document("test-scope", "Agent", "agent2", raw)
+    await k.write_instance("test-scope", "Agent", "agent2", raw)
 
     # The old leak wrote to <base_dir>/<scope>/evidence/*.yaml —
     # that directory must NOT exist (evidence is stored in 'evidence/'
@@ -150,7 +150,7 @@ async def test_capture_is_noop_without_evidence_extension(tmp_path):
         "spec": {"model": "gpt-4o"},
     }
     # Must complete without raising — no evidence handler is registered.
-    await k.write_document("test-scope", "Agent", "no-ext-agent", raw)
+    await k.write_instance("test-scope", "Agent", "no-ext-agent", raw)
 
     # No Evidence Kind is registered (extension absent) and nothing was
     # captured. The write above succeeding is the assertion of the no-op.
@@ -173,4 +173,4 @@ async def test_no_infinite_recursion_on_evidence_write(tmp_path):
         "spec": {"model": "gpt-4o"},
     }
     # Should complete without RecursionError
-    await k.write_document("test-scope", "Agent", "agent3", raw)
+    await k.write_instance("test-scope", "Agent", "agent3", raw)

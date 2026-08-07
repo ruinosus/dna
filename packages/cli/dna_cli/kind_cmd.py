@@ -104,7 +104,7 @@ def traits(as_json: bool, one: str | None) -> None:
     patch a core enum. Registration buys documentation, never a veto.
 
     Reads the LOCAL kernel registry — traits are a property of the registered
-    Kinds, not of any scope's documents.
+    Kinds, not of any scope's instances.
     """
     from dna.kernel import Kernel
     from dna.kernel.kinds.traits import known_traits, port_traits

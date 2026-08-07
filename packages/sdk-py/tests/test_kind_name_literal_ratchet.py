@@ -36,9 +36,9 @@ ALLOWLIST: dict[str, str] = {
         "IRREDUCIBLE. These three Kinds are what the kernel must load in order "
         "to learn what any Kind is: a Genome declares the scope, a "
         "KindDefinition declares a Kind, a LayerPolicy declares who may write "
-        "one. Deriving them from a trait would require reading a document whose "
+        "one. Deriving them from a trait would require reading an instance whose "
         "Kind is not registered yet. The ORDER is load-bearing too. This is now "
-        "the ONE definition — kernel/__init__.py, kernel/instance.py and "
+        "the ONE definition — kernel/__init__.py, kernel/manifest.py and "
         "kernel/query/resolver.py import it rather than repeating it, which is "
         "the drift the v1.3 Milestone->Epic rename actually caused."
     ),
@@ -61,7 +61,7 @@ ALLOWLIST: dict[str, str] = {
     ),
     "application/sdlc_family.py::FALLBACK_FAMILIES[TRAIT_WORK_ITEM]": (
         "FALLBACK, and the ONE place they live. Some consumers are pure by "
-        "design (`_digest.build_digest` takes documents and a window, not a "
+        "design (`_digest.build_digest` takes instances and a window, not a "
         "kernel) and some take a narrow duck-typed kernel. Every entry is "
         "asserted equal to the live derivation by "
         "`test_sdlc_family_is_declarative` — a fallback nobody checks is just "
@@ -75,6 +75,15 @@ ALLOWLIST: dict[str, str] = {
     ),
     "application/sdlc_family.py::FALLBACK_FAMILIES[TRAIT_JOURNEY_DERIVED]": (
         "FALLBACK. One row of the same table as TRAIT_WORK_ITEM above: the kernel-less answer for a pure consumer, asserted equal to the live derivation by `test_sdlc_family_is_declarative`."
+    ),
+    "application/sdlc_family.py::FALLBACK_FAMILIES[TRAIT_DECISION]": (
+        "FALLBACK. One row of the same table as TRAIT_WORK_ITEM above, asserted "
+        "equal to the live derivation by `test_sdlc_family_is_declarative`. "
+        "It became VISIBLE to this ratchet only on 07/08/2026, when Spec joined "
+        "ADR in the decision family (i-121) — a one-name tuple is not a set, so "
+        "the row sat here unlisted for as long as the family had a single "
+        "member. Worth reading as a property of the scanner rather than a new "
+        "shortcut: this ratchet sees a list the moment it becomes one."
     ),
     "memory/verbs.py::MEMORY_KINDS": (
         "FALLBACK. The live answer is the `memory.recallable` trait "

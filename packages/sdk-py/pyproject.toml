@@ -16,7 +16,7 @@ classifiers = [
 # Apps backend pinned >=3.12,<3.13) could not install the SDK under the old
 # 3.13-only floor — that floor was a convenience decision from PR #1 whose
 # single deliberate 3.13-ism is PEP 696 TypeVar(default=...) in
-# dna/kernel/document.py, now sourced from typing_extensions on <3.13
+# dna/kernel/instance.py, now sourced from typing_extensions on <3.13
 # (conditional dependency below; zero cost on 3.13+). Ecosystem library →
 # support N-1. The CI matrix {3.12, 3.13} keeps the floor from silently
 # regressing.
@@ -27,7 +27,7 @@ dependencies = [
     "aiofiles>=24.1",
     "jsonschema>=4.0",
     # PEP 696 TypeVar(default=...) landed in stdlib typing on 3.13; on 3.12
-    # dna/kernel/document.py imports it from typing_extensions (>=4.4 is the
+    # dna/kernel/instance.py imports it from typing_extensions (>=4.4 is the
     # first release with PEP 696). Env-markered so 3.13+ installs stay
     # zero-cost (s-py312-floor).
     "typing_extensions>=4.4; python_version < '3.13'",

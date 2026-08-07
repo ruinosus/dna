@@ -1,7 +1,7 @@
 """``dna_cli._mcp_kinds`` — the CONVERSATIONAL face of Kind authoring.
 
 A tenant declares its own Kind by talking to an agent. The agent calls
-``author_kind``; what lands is a real, auditable ``KindDefinition`` document
+``author_kind``; what lands is a real, auditable ``KindDefinition`` instance
 that is **inert** — the registry withholds registration until a human approves,
 and registration is what confers schema validation and storage routing. So the
 Kind an agent authors has no effect until a person says so, and that is the
@@ -39,17 +39,17 @@ delegates to ``approve_kind_impl``, the same function the REST approve route
 calls, so there is one implementation of the act and one audit shape.
 
 Why a dedicated module + dedicated tools instead of the generic
-``write_document``: the generic write refuses every BOOTSTRAP Kind
+``write_instance``: the generic write refuses every BOOTSTRAP Kind
 (``KindDefinition`` among them) by construction, and that refusal stays. A tool
-that can write any document must not be the tool that rewrites the frame every
-other document is validated against. This is a separate entry point with its own
+that can write any instance must not be the tool that rewrites the frame every
+other instance is validated against. This is a separate entry point with its own
 authorization — and it writes exactly one Kind, always without an approval
 marker, always into the caller's own assigned namespace.
 
 THIN, like the rest of the face: every behaviour lives in the shared core
 (``dna.application.kind_authoring``), which the REST face and the portal call
 through the same functions. Registered from ``_mcp_server.build_server`` the way
-``register_graph_tools`` / ``register_document_tools`` are — the ``guard`` seam
+``register_graph_tools`` / ``register_instance_tools`` are — the ``guard`` seam
 is injected, so this module never reaches into the server's closure.
 """
 from __future__ import annotations
@@ -69,6 +69,7 @@ from dna.application.kind_authoring import (
     author_kind_impl,
     get_authored_kind_impl,
     list_authored_kinds_impl,
+    splice_trait_ask,
 )
 from dna.kernel.errors import KernelRefusal
 
@@ -89,7 +90,7 @@ NO_REGISTRY: tuple[type[BaseException], ...] = (
 )
 
 #: Everything an authoring call may legitimately be REFUSED with, as one tuple —
-#: the same shape ``_mcp_documents.WRITE_REFUSALS`` has, and for the same reason.
+#: the same shape ``_mcp_instances.WRITE_REFUSALS`` has, and for the same reason.
 #: ``KernelRefusal`` is the kernel's marker base for a deliberate verdict (the
 #: namespace-ownership gate above all, plus the LayerPolicy veto, tenancy rules
 #: and a read-only source); the builtins carry the application-layer refusals
@@ -108,6 +109,34 @@ AUTHORING_REFUSALS: tuple[type[BaseException], ...] = (
 GuardFn = Callable[..., Awaitable[Any]]
 
 
+def _asks_for_traits(fn: Any) -> Any:
+    """Project the LIVE trait vocabulary into a tool's docstring.
+
+    Applied BELOW ``@server.tool`` so it runs FIRST — FastMCP reads the
+    description off ``__doc__`` at decoration time, so a docstring mutated after
+    the decorator would reach nobody. The mounted tool is what an agent reads;
+    this is the difference between the ask existing and the ask being asked.
+
+    Why here and not an f-string in the docstring itself: the vocabulary is
+    resolved when the SERVER is built, which is later than this module's import
+    and is the last moment before the tool is advertised — so a name registered
+    by anything the server pulled in on the way up is in the ask.
+
+    ⚠️ **What it is NOT is post-boot**, and the limit is worth naming because
+    the ``[carries …]`` annotation is where it shows. ``build_server`` builds the
+    live kernel LAZILY, on the first tool call, and an extension attaches what
+    its traits carry from ``register(kernel)`` — so at this moment
+    ``sdlc.work-item`` reads ``[carries implies sdlc.dated]`` and not yet
+    ``[carries fields; relations; …]``. Every NAME and every DESCRIPTION is
+    present and correct (the description of that trait says in words what it
+    carries), and closing the gap would mean booting a kernel to build a tool
+    list — a cost paid on every server start to sharpen one bracket. Named here
+    rather than fixed, so the next reader knows which it is.
+    """
+    fn.__doc__ = splice_trait_ask(fn.__doc__)
+    return fn
+
+
 def register_kind_tools(
     server: Any,
     *,
@@ -118,7 +147,7 @@ def register_kind_tools(
     ``approve_kind`` on ``server``.
 
     Returns their names. Nothing reads them today — ``build_server`` discards
-    the return, exactly as it does for ``register_document_tools`` — so the list
+    the return, exactly as it does for ``register_instance_tools`` — so the list
     is there for a caller that wants to report what it mounted, not because
     anything prints it.
     """
@@ -213,20 +242,61 @@ def register_kind_tools(
         )
 
     @server.tool(run_in_thread=False, app=kind_draft_card_app)
+    @_asks_for_traits
     async def author_kind(
         kind: str, schema: dict[str, Any], traits: list[str] | None = None,
         presentation: dict[str, Any] | list[str] | None = None,
+        relations: dict[str, Any] | None = None,
+        plane: str | None = None,
         tenant: str | None = None,
     ) -> dict[str, Any]:
-        """Author a Kind for your workspace — a typed document shape of your own.
+        """Author a Kind for your workspace — a typed instance shape of your own.
 
         ``kind`` is a **CamelCase identifier** (a capital letter then up to 63
         letters or digits: ``Contrato``, ``ApoliceDeSeguro``). It becomes part of
-        the document's path, so anything else is refused, by name.
+        the instance's path, so anything else is refused, by name.
         ``schema`` is a JSON Schema object describing the Kind's ``spec``.
-        ``traits`` (optional) are the behavioural traits the Kind opts into.
 
-        ``presentation`` (optional) says how documents of this Kind should
+        {{trait-vocabulary}}
+
+        ``relations`` (optional) declares what your Kind POINTS AT. Declare them
+        and your Kind joins the graph; omit them and it is an island — findable
+        by name and connected to nothing::
+
+            {"cliente":   {"to": "Cliente",  "cardinality": "one"},
+             "anexos":    {"to": "Artifact", "cardinality": "many"},
+             "contratos": {"to": "Contrato", "cardinality": "many",
+                           "inverse_of": "apolice"}}
+
+        The relation's KEY is the ``spec`` field that holds the value, so the
+        declaration and the data stay in one place. ``to`` is a Kind NAME, a
+        LIST of names when the relation may point at several, or ``"*"`` when
+        the model genuinely does not constrain the target. ``cardinality`` is
+        ``one`` or ``many`` and is REQUIRED — it states your MODEL's
+        multiplicity, not whether the JSON happens to be an array, and a
+        relation that contradicts its own schema field is refused here rather
+        than discovered by whoever reads the graph. ``inverse_of`` (optional)
+        names the relation on the TARGET Kind that is this one's other half;
+        ``by`` (optional) says how the value addresses the target when it is not
+        the target's name.
+
+        ⚠️ **Do not put references inside ``schema``.** ``x-dna-ref`` on a
+        property is the RETIRED mechanism: nothing reads it, so a link declared
+        that way points at nothing and looks like it points at something.
+        ``relations`` is where a link goes.
+
+        ``plane`` (optional) is ``composition`` or ``record``. ``composition``
+        means instances of this Kind compose into agent prompts; ``record``
+        means they are stored and read back and never composed. Omit it unless
+        you know which you mean — the difference is a cost, not a taste.
+
+        If you declare no relations and the schema's own field names or
+        descriptions name a Kind that exists, the answer carries
+        ``suggested_relations`` and a paste-ready ``suggestion``. It is a
+        suggestion: authoring nothing is a legitimate answer, and a Kind that
+        really points at nothing should say so by staying as it is.
+
+        ``presentation`` (optional) says how instances of this Kind should
         READ, so that every surface — a card in this chat, a screen in the
         portal — shows the same fields under the same names without anyone
         writing rendering code for your Kind. Declare it and your Kind is a
@@ -248,7 +318,7 @@ def register_kind_tools(
         MEANS, never how it should look. There is deliberately no way to
         declare a colour, a column, a width or a widget: how a status LOOKS is
         the surface's business, and a Kind that tried to say would be wrong on
-        the next surface that rendered it. ``name`` refers to the document's
+        the next surface that rendered it. ``name`` refers to the instance's
         own name; every other entry is a field of your ``spec``.
 
         **What you get back is INERT.** ``approved`` is always ``false``, and an
@@ -259,18 +329,18 @@ def register_kind_tools(
         Author the Kind, then tell the person you are working with that it is
         waiting for their approval — and do not go looking for a tool to do it.
 
-        The document records who proposed it, taken from your VERIFIED identity
+        The instance records who proposed it, taken from your VERIFIED identity
         on this connection. There is no argument for it; a proposer a caller can
         name is not a proposer.
 
         Calling it again for the same ``kind`` EDITS the declaration, and the
-        edit clears the approval marker on the document: ``list_my_kinds`` will
+        edit clears the approval marker on the instance: ``list_my_kinds`` will
         report it as ``approved: false`` again, and a human has to approve the
         new shape.
 
         **An edit does not take a Kind that is already in effect back out of
         effect.** Approval is checked when a Kind is LOADED, so one that was
-        already approved and loaded keeps validating documents against the shape
+        already approved and loaded keeps validating instances against the shape
         it was loaded with until the server restarts — which may be a while, and
         differs between servers. So after editing an approved Kind, expect
         ``approved: false`` and your new schema here while writes are still
@@ -296,7 +366,7 @@ def register_kind_tools(
             return await author_kind_impl(
                 await live(), kind=kind, schema=schema, tenant=tenant or "",
                 now=now_iso(), actor=actor_from_context(), traits=traits,
-                presentation=presentation,
+                presentation=presentation, relations=relations, plane=plane,
             )
         except NO_REGISTRY as exc:
             raise _no_registry(exc) from exc
@@ -311,7 +381,7 @@ def register_kind_tools(
         — name, target Kind + apiVersion, namespace, ``approved``, and BOTH
         actors (``proposed_by``/``proposed_at``, ``approved_by``/``approved_at``).
 
-        Reads DOCUMENTS, not the registry: an unapproved Kind is precisely the
+        Reads INSTANCES, not the registry: an unapproved Kind is precisely the
         one the registry does not have, so this is the only surface that shows a
         proposal still waiting for a human. ``approved: false`` means the Kind
         exists and has no effect yet.
@@ -338,7 +408,7 @@ def register_kind_tools(
     ) -> dict[str, Any]:
         """Show ONE authored Kind in full, so a human can decide about it — the
         summary ``list_my_kinds`` gives PLUS the **schema**, the traits and the
-        **presentation** (how documents of this Kind will read: which fields a
+        **presentation** (how instances of this Kind will read: which fields a
         person sees, in what order, under what names). The approval confers all
         three, so all three are here.
 
@@ -350,7 +420,7 @@ def register_kind_tools(
         it (a table with a JSON Schema in every row is unreadable).
 
         On a host that renders MCP Apps the result is a card showing the schema,
-        both actors, what the current state means for documents, and — when the
+        both actors, what the current state means for instances, and — when the
         Kind is not currently in effect — an **Approve** button for the person
         reading it to press. You cannot press it: the tool behind that button is
         declared app-only and is not in your tool list. Do not go looking for
@@ -405,7 +475,7 @@ def register_kind_tools(
         and neither wears the other's name — which is the whole point when the
         two are different people.
 
-        Approving a REVOKED Kind clears the revocation, and every document that
+        Approving a REVOKED Kind clears the revocation, and every instance that
         went invalid is valid again with nothing to migrate.
 
         Refused, in words: 'not found' when the workspace authored no such Kind
@@ -436,7 +506,7 @@ def register_kind_tools(
             # person who pressed the button: ``AuthoredKindNotFound`` (a
             # LookupError — no such Kind of yours, which is also the answer for
             # a neighbour's, so "it exists but is not yours" never becomes a
-            # probe) and ``StaleDocumentWrite`` (a ValueError, i-083 — the
+            # probe) and ``StaleInstanceWrite`` (a ValueError, i-083 — the
             # declaration moved between the card's read and this call, so the
             # approval was refused rather than stamped onto a shape nobody saw).
             # A separate arm per exception would only re-spell the same mapping.
@@ -456,12 +526,12 @@ def register_kind_tools(
           so a model may discard what a model proposed — the same gravity as
           authoring it.
         * Kind APPROVED → **refused here**. Withdrawing EFFECT invalidates the
-          documents that relied on it; that is a human decision, symmetrical
+          instances that relied on it; that is a human decision, symmetrical
           with approval (which is also human-only). Ask the person to revoke
           in the portal / review card.
 
         Revoked is a recorded third state, not an erasure: the declaration row
-        stays (audit), existing documents stay readable (marked invalid when
+        stays (audit), existing instances stay readable (marked invalid when
         the Kind was approved), and ``approve_kind`` reverses it in one act.
         Only YOUR workspace's Kinds answer — a neighbour's is 'not found'.
         """
@@ -475,7 +545,7 @@ def register_kind_tools(
             if atual.get("approved"):
                 raise ToolError(
                     f"Kind {kind!r} is APPROVED and in effect — withdrawing "
-                    f"effect invalidates the documents that rely on it, and "
+                    f"effect invalidates the instances that rely on it, and "
                     f"that is a human decision (like approval). Ask the "
                     f"workspace owner to revoke it in the portal."
                 )

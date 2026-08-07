@@ -42,10 +42,10 @@ class _Kernel:
             if raw.get("kind") == kind:
                 yield raw
 
-    async def get_document(self, scope, kind, name):
+    async def get_instance(self, scope, kind, name):
         return self.docs.get(name)
 
-    async def write_document(self, scope, kind, name, raw, **kw):
+    async def write_instance(self, scope, kind, name, raw, **kw):
         self.docs[name] = raw
 
 

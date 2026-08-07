@@ -77,7 +77,7 @@ def _patch(dna_dir, name: str, **spec_updates) -> None:
 
     Direct on-disk, deliberately: ``valid_to`` is not something a REST caller
     can set, and the point is that the MIF import path writes exactly this —
-    ``temporal.validUntil`` verbatim — so the fixture must produce the document
+    ``temporal.validUntil`` verbatim — so the fixture must produce the instance
     that path produces, not one the API happens to allow."""
     p = dna_dir / _SCOPE / "lessons-learned" / f"{name}.yaml"
     doc = yaml.safe_load(p.read_text())
@@ -89,8 +89,8 @@ def _patch(dna_dir, name: str, **spec_updates) -> None:
 def seeded(dna_dir):
     """Three memories, written then edited on disk BEFORE any read.
 
-    Order matters: the app caches documents for 60s, so a read taken before the
-    edit would serve the pre-edit document and the test would measure the cache
+    Order matters: the app caches instances for 60s, so a read taken before the
+    edit would serve the pre-edit instance and the test would measure the cache
     rather than the route. Seeding and asserting therefore use two separate
     clients.
 
@@ -146,7 +146,7 @@ def test_the_two_sibling_routes_give_one_answer(dna_dir, seeded):
     """The divergence as a user meets it: both routes, one app, one memory.
 
     ``/v1/memories/personal`` unions the caller's partition with the shared
-    base, so the SAME document is in scope for both — and before the fix it was
+    base, so the SAME instance is in scope for both — and before the fix it was
     present in one list and absent from the other on the same screen."""
     with _client(dna_dir) as c:
         workspace = c.get("/v1/memories")

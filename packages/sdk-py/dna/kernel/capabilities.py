@@ -23,9 +23,22 @@ Adding a new capability:
      the method signature.
   2. Replace any ``hasattr(adapter, "method")`` in the kernel/harness
      with ``isinstance(adapter, MyCapability)``.
-  3. Document the capability in `docs/PORT-CONTRACT.md`.
-  4. Cover it in ``python/tests/test_port_contract.py`` so adapters
-     either implement it or get explicitly skipped.
+  3. Add an entry to ``scripts/ports_prose.py`` — say when an adapter
+     author would implement it, what it lights up, and (the part that
+     matters) what the face answers when it is absent. The docs
+     generator FAILS until you do, which is deliberate: a capability
+     nobody can discover is one nobody will declare.
+  4. Cover it in ``packages/sdk-py/tests/test_port_contract.py`` and add
+     a case to ``dna/testing/source_conformance.py`` so adapters either
+     implement it or are explicitly skipped for not declaring it.
+
+Reader-facing docs: ``docs/reference/ports/capabilities.md`` (generated
+from this file) and ``docs/guides/write-a-source-adapter.md`` (narrative).
+
+⚠️ Steps 3 and 4 used to point at ``docs/PORT-CONTRACT.md`` and
+``python/tests/test_port_contract.py``. Neither path has existed for a
+long time — which is the exact failure this module's own capabilities
+exist to prevent, committed in a docstring instead of in a return value.
 """
 from __future__ import annotations
 
@@ -111,7 +124,7 @@ class BundleEntryWritable(Protocol):
     transaction.
 
     Tenant scoping: writes MUST honor the active tenant just like
-    the doc index — see ``WritableSourcePort.write_document``. A
+    the doc index — see ``WritableSourcePort.write_instance``. A
     mismatch produces orphan bundle rows that the delete path can't
     reach (bug observed 2026-05-21 with generate_image hardcoding
     ``tenant=''``).
@@ -151,17 +164,28 @@ class BundleEntryWritable(Protocol):
 class Versionable(Protocol):
     """Source adapter capability: per-Kind semver versioning.
 
-    Backs the catalog versioning flow (Phase 10): a Kind that's
-    ``Versionable`` supports ``get_version(scope, kind, name,
-    version_id)`` and ``list_versions(...)``. The harness REST
-    surface checks for this capability via ``isinstance`` to
-    decide whether to expose the ``/catalog/{owner}/{name}/versions``
-    endpoint (501 otherwise).
+    Backs the catalog versioning flow: an adapter that is ``Versionable``
+    supports ``get_version(scope, kind, name, version_id)`` and
+    ``list_versions(...)``.
 
-    The production adapters (FilesystemWritableSource and
-    SqlAlchemySource on both dialects) implement this. Custom adapters
-    that don't track per-doc versions can omit and the harness
-    will degrade gracefully with a 501 response.
+    The runtime gate is the DECLARED ``SourceCapabilities.versions`` flag,
+    not an ``isinstance`` against this Protocol — there is no such check
+    anywhere in the tree. Implement the Protocol for static typing and for
+    the reader; declare the flag for the kernel.
+
+    ⚠️ ``versions`` says version rows are READABLE and nothing more. The
+    filesystem adapter declares it while keeping no history at all
+    (``list_versions`` returns ``[]``), which is precisely why answering
+    "what did you believe at T?" had to become its OWN flag
+    (:attr:`SourceCapabilities.as_of_reads`) rather than riding on this
+    one. Do not widen this docstring's promise again: an earlier version
+    of it claimed an ``isinstance`` check and a
+    ``/catalog/{owner}/{name}/versions`` endpoint, and neither existed.
+
+    The production adapters (FilesystemWritableSource and SqlAlchemySource
+    on both dialects) implement this. An adapter that does not track
+    per-instance versions declares ``versions=False`` and the faces refuse
+    the version reads rather than inventing an answer.
     """
 
     async def get_version(
@@ -174,7 +198,7 @@ class Draftable(Protocol):
     """Source adapter capability: draft/publish lifecycle.
 
     A ``Draftable`` source keeps unpublished drafts (``load_drafts``)
-    and can promote a draft to the live document (``publish``). All 3
+    and can promote a draft to the live instance (``publish``). All 3
     production adapters implement this — the old ``capabilities()``
     dicts that reported ``drafts: False`` for the filesystem were
     lying; ``isinstance(src, Draftable)`` reports the truth.
@@ -189,7 +213,7 @@ class Draftable(Protocol):
 class Layered(Protocol):
     """Source adapter capability: layer (overlay) resolution.
 
-    A ``Layered`` source can resolve a document from a specific layer
+    A ``Layered`` source can resolve an instance from a specific layer
     via ``load_layer`` — the method the Composition Engine consults
     for overlay/inheritance reads. sqlite/postgres and the composite
     filesystem router implement it; the flat filesystem writable does
@@ -237,7 +261,7 @@ class SourceCapabilities:
     - ``tenant_layer_writes`` — writes accept BOTH first-class
       ``tenant`` and ``layer`` kwargs (the modern Phase-2 contract).
     - ``write_kwargs`` / ``delete_kwargs`` — exactly which optional
-      kwargs ``save_document`` / ``delete_document`` accept. Replaces
+      kwargs ``save_instance`` / ``delete_instance`` accept. Replaces
       the runtime ``inspect.signature`` probe in
       :func:`write_kwarg_support`.
     """
@@ -260,11 +284,11 @@ class SourceCapabilities:
     tenant_layer_writes: bool = False
     write_kwargs: frozenset[str] = frozenset()
     delete_kwargs: frozenset[str] = frozenset()
-    # The store keys a document on (scope, kind, apiVersion, name) — its OWN
+    # The store keys an instance on (scope, kind, apiVersion, name) — its OWN
     # identity, matching the registry's (api_version, kind). Adapters that
     # declare it can hold two Kinds sharing a name in one scope; adapters that
     # do not resolve identity some other way and cannot. The filesystem adapter
-    # is the second case on purpose: a document's path is `<container>/<name>`,
+    # is the second case on purpose: an instance's path is `<container>/<name>`,
     # and the container comes from the kernel's StorageDescriptor registry, so
     # two Kinds are distinct on disk only insofar as the registry gives them
     # distinct containers. That is a real difference in what the two stores
@@ -284,8 +308,60 @@ class SourceCapabilities:
     # and asked BEFORE the read for the same reason ``as_of_reads`` is: an
     # adapter that records no edges must make the face answer ``unsupported``,
     # never an empty list. An empty list reads as "nothing points at this
-    # document" — a claim only a store that actually keeps edges may make.
+    # instance" — a claim only a store that actually keeps edges may make.
     edge_graph: bool = False
+    # The store keeps WORLD time as a COLUMN (``dna_instances.valid_at``, a
+    # ``tstzrange``): it can be asked "was this instance true at T?"
+    # (``load_one_valid_at``) and it REFUSES two overlapping validity periods
+    # for one instance instead of letting the application hope.
+    #
+    # Not folded into ``as_of_reads``, and the separation is the whole point:
+    # that flag is TRANSACTION time (*what did you believe at T*, from
+    # ``dna_versions.created_at``), this one is WORLD time (*when was it
+    # true*). A store can have either without the other, and collapsing them
+    # is the classic bitemporal mistake — a note written today about last year
+    # is valid last year and believed today.
+    #
+    # ⚠️ The ONLY flag here whose value depends on the DIALECT rather than on
+    # the adapter CLASS. ``SqlAlchemySource`` serves Postgres and SQLite from
+    # one class, and SQLite has no range type, no GiST and no ``EXCLUDE``
+    # constraint — so the same class declares True on one binding and False on
+    # the other. Both the declaration and :func:`derive_capabilities` read the
+    # instance attribute ``supports_valid_time`` for exactly that reason: a
+    # reflection oracle that only looked for the METHOD would report True on
+    # SQLite, where the method exists and refuses.
+    valid_time: bool = False
+    # The store can answer "which instance of Kind K has ``spec[key] == v``"
+    # (``find_instances_by_spec_key``) — what a relation declared
+    # ``by: workspace_id`` needs in order to be FOLLOWED rather than merely
+    # declared (fatia 5 of ``spec-topologia-do-grafo``).
+    #
+    # Asked BEFORE the read, like ``edge_graph`` and ``as_of_reads`` and for
+    # the same reason: an adapter that cannot look up by key must make the
+    # caller hear ``KeyLookupUnsupported``, never ``None``. ``None`` reads as
+    # "no instance carries that key" — an accusation against data nobody
+    # examined.
+    key_lookup: bool = False
+    # …and it does so through an INDEX rather than by scanning every instance
+    # of the Kind.
+    #
+    # ⚠️ The second flag whose value depends on the BINDING rather than on the
+    # adapter class (``valid_time`` was the first, and this one is set the same
+    # way, from ``supports_indexed_key_lookup``). Postgres has carried
+    # ``dna_insts_spec_gin_idx`` — a GIN over ``(content::jsonb->'spec')``,
+    # generic over the key — since baseline revision 0001, and it serves a
+    # containment lookup at 200 000 instances in 1,8 ms against 15 ms scanned.
+    # SQLite has no such index and no containment operator, and the filesystem
+    # has no index at all: both answer by walking the Kind's instances, and
+    # both say so here rather than letting an operator discover it as a
+    # mysterious slowdown on the write path.
+    #
+    # Deliberately NOT folded into ``key_lookup``. "Cannot answer" and "answers
+    # the slow way" require different decisions from a reader — the first
+    # changes what a face may claim, the second changes what a deployment may
+    # be asked to hold — and collapsing them would leave the honest O(N) with
+    # no way to be honest.
+    key_lookup_indexed: bool = False
 
     @property
     def granular(self) -> bool:
@@ -298,23 +374,23 @@ class SourceCapabilities:
 # by the conformance test (an adapter can't declare a kwarg that isn't part
 # of the port contract).
 # ``if_absent`` (i-081): an ATOMIC create — the write claims the name or raises
-# ``DocumentNameTaken``. Both shipped adapters can do it (a composite primary key
+# ``InstanceNameTaken``. Both shipped adapters can do it (a composite primary key
 # on the SQL side, O_CREAT|O_EXCL / mkdir on the filesystem), which is what makes
 # "create is never an update" true under concurrency instead of only under
 # read-then-write. Optional, so an adapter that has not adopted it is unaffected
 # and the kernel simply never asks for the guarantee.
 # ``if_match`` (i-083): the UPDATE counterpart — the write proceeds only if the
 # stored ``spec`` still hashes to the token the caller read
-# (:func:`dna.kernel.etag.spec_etag`), else ``StaleDocumentWrite``. It is a
+# (:func:`dna.kernel.etag.spec_etag`), else ``StaleInstanceWrite``. It is a
 # SOURCE kwarg and not an application-layer check for one measured reason: the
 # read that a read-modify-write is built on may come from a cache, and a guard
 # that re-reads through that same cache compares a stale value against itself
 # and agrees. Only the adapter sees the store.
 # ``edges`` (spec-grafo-1): the declared references the write path ALREADY
 # resolved, handed to the adapter so it can persist them in the SAME
-# transaction as the document. It is a kwarg and not a second call for the one
+# transaction as the instance. It is a kwarg and not a second call for the one
 # property that matters — atomicity. A follow-up write would leave a window in
-# which the document exists and its relations do not, and the alternative
+# which the instance exists and its relations do not, and the alternative
 # (widening ``WriteHost`` to hand the pipeline a connection) is marked in
 # ``collaborator_ports.py`` as a code-review event. An adapter that has not
 # adopted it is never handed it, and the graph face reports ``unsupported``
@@ -324,7 +400,7 @@ SAVE_OPTIONAL_KWARGS = frozenset(
     {"author", "tenant", "layer", "write_class", "version_retention",
      "if_absent", "if_match", "edges"}
 )
-# ``api_version`` (i-081 / #244 follow-up): a DELETE carries no document, so
+# ``api_version`` (i-081 / #244 follow-up): a DELETE carries no instance, so
 # before this it had no apiVersion and routed by BARE Kind name. Two
 # workspaces may each declare a `Deal` in their own namespace — that is what
 # namespacing is FOR — and a bare lookup then resolves whichever port the
@@ -382,8 +458,8 @@ def derive_capabilities(source: object, *, label: str) -> SourceCapabilities:
     adapters that don't declare get this via the deprecated fallback in
     :func:`source_capabilities`. ``label`` is the adapter's display name.
     """
-    save_params = _probe_params(source, "save_document")
-    delete_params = _probe_params(source, "delete_document")
+    save_params = _probe_params(source, "save_instance")
+    delete_params = _probe_params(source, "delete_instance")
     write_kwargs = frozenset(SAVE_OPTIONAL_KWARGS & save_params)
     delete_kwargs = frozenset(DELETE_OPTIONAL_KWARGS & delete_params)
     return SourceCapabilities(
@@ -398,12 +474,36 @@ def derive_capabilities(source: object, *, label: str) -> SourceCapabilities:
         granular_one=_has_method(source, "load_one"),
         as_of_reads=_has_method(source, "load_one_as_of"),
         edge_graph=_has_method(source, "traverse_edges"),
+        # The one flag reflection cannot get from the CLASS. ``SqlAlchemySource``
+        # defines ``load_one_valid_at`` on both dialects — on SQLite it exists
+        # and refuses — so probing for the method would derive ``True`` for a
+        # binding that has no column, and the oracle would then certify a
+        # declaration that lies. The adapter answers for its own binding via
+        # ``supports_valid_time`` (the precedent is
+        # ``supports_cross_process_invalidation``, pg-only for the same reason
+        # and set the same way), and the method check stays as the second half
+        # so an attribute alone cannot declare a capability nothing implements.
+        valid_time=(
+            bool(getattr(source, "supports_valid_time", False))
+            and _has_method(source, "load_one_valid_at")
+        ),
+        key_lookup=_has_method(source, "find_instances_by_spec_key"),
+        # The ``valid_time`` shape exactly: the METHOD is on the class for both
+        # bindings, so probing for it would derive True on SQLite — where it
+        # exists and scans — and the oracle would then certify a declaration
+        # that lies about cost. The adapter answers for its own binding, and
+        # the method check stays as the second half so an attribute alone
+        # cannot declare a capability nothing implements.
+        key_lookup_indexed=(
+            bool(getattr(source, "supports_indexed_key_lookup", False))
+            and _has_method(source, "find_instances_by_spec_key")
+        ),
         query_pushdown=_has_own_query(source),
         tenant_layer_writes=("tenant" in write_kwargs and "layer" in write_kwargs),
         write_kwargs=write_kwargs,
         delete_kwargs=delete_kwargs,
         # Probed on the READ resolver, not on a write: an adapter that can be
-        # ASKED for one Kind's document by (kind, apiVersion, name) is one that
+        # ASKED for one Kind's instance by (kind, apiVersion, name) is one that
         # keys rows that way. A store whose identity is registry-mediated (the
         # filesystem's `<container>/<name>` path) has nothing to answer such a
         # question with, and so does not accept the argument.
@@ -495,25 +595,25 @@ class KernelAttachable(Protocol):
 
 @runtime_checkable
 class TenantAware(Protocol):
-    """Source adapter capability: ``save_document``/``delete_document`` accept a
+    """Source adapter capability: ``save_instance``/``delete_instance`` accept a
     first-class ``tenant`` kwarg (the modern WritableSourcePort write contract,
     Phase 2). All 3 production adapters satisfy it.
 
     NOTE: ``runtime_checkable`` ``isinstance`` only checks that the *methods*
     exist, NOT that they accept a ``tenant`` keyword — Protocols can't express a
-    kwarg-level capability. So this Protocol documents the contract + serves
+    kwarg-level capability. So this Protocol instances the contract + serves
     static checking, while the kernel's runtime branch that decides whether to
     pass ``tenant=`` uses :func:`write_kwarg_support` (a memoized signature
     probe) instead. Don't ``isinstance(src, TenantAware)`` to gate the tenant
-    kwarg — it would be True for any source with a ``save_document`` at all.
+    kwarg — it would be True for any source with a ``save_instance`` at all.
     """
 
-    async def save_document(
+    async def save_instance(
         self, scope: str, kind: str, name: str, raw: dict, *,
         tenant: str | None = ...,
     ) -> str: ...
 
-    async def delete_document(
+    async def delete_instance(
         self, scope: str, kind: str, name: str, *,
         tenant: str | None = ...,
     ) -> None: ...
@@ -528,7 +628,7 @@ class LayerAware(Protocol):
     for documentation + static typing.
     """
 
-    async def save_document(
+    async def save_instance(
         self, scope: str, kind: str, name: str, raw: dict, *,
         layer: tuple[str, str] | None = ...,
     ) -> str: ...
@@ -544,17 +644,17 @@ class WriteKwargSupport:
     per source, memoized via :func:`write_kwarg_support`, not on every write.
     """
 
-    author: bool          # save_document accepts `author`
-    tenant: bool          # save_document accepts `tenant`
-    layer_save: bool      # save_document accepts `layer`
-    layer_delete: bool    # delete_document accepts `layer`
-    tenant_delete: bool   # delete_document accepts `tenant`
-    api_version_delete: bool  # delete_document accepts `api_version` (i-081)
-    write_class: bool     # save_document accepts `write_class` (s-buswrite-class-substantive-cue)
-    version_retention: bool  # save_document accepts `version_retention` (s-version-prune-record-plane-churn)
-    if_absent: bool       # save_document accepts `if_absent` — an ATOMIC create (i-081)
-    if_match: bool        # save_document accepts `if_match` — a GUARDED update (i-083)
-    edges: bool           # save_document accepts `edges` — the derived graph (spec-grafo-1)
+    author: bool          # save_instance accepts `author`
+    tenant: bool          # save_instance accepts `tenant`
+    layer_save: bool      # save_instance accepts `layer`
+    layer_delete: bool    # delete_instance accepts `layer`
+    tenant_delete: bool   # delete_instance accepts `tenant`
+    api_version_delete: bool  # delete_instance accepts `api_version` (i-081)
+    write_class: bool     # save_instance accepts `write_class` (s-buswrite-class-substantive-cue)
+    version_retention: bool  # save_instance accepts `version_retention` (s-version-prune-record-plane-churn)
+    if_absent: bool       # save_instance accepts `if_absent` — an ATOMIC create (i-081)
+    if_match: bool        # save_instance accepts `if_match` — a GUARDED update (i-083)
+    edges: bool           # save_instance accepts `edges` — the derived graph (spec-grafo-1)
 
 
 _WRITE_KWARG_CACHE_ATTR = "_dna_write_kwarg_support"

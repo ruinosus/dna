@@ -26,6 +26,10 @@ spec:
   target_kind: EvalSuite
   alias: eval-eval-suite
   origin: github.com/ruinosus/dna/eval
+  # A suite is the SCRIPT, never the outcome: `cases`, a default `target` and
+  # `stop_on_fail` say what should run; what happened lands in an EvalRun.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [execution.declared]
   plane: record
   prompt_target: false
   flatten_in_context: false
@@ -35,6 +39,15 @@ spec:
     container: eval-suites
   dep_filters:
     cases: eval-eval-case
+  # The same reference as the `dep_filters` line above, PROMOTED: there it
+  # drives prompt composition and is never checked against stored data; here
+  # the kernel resolves it on write. Safe to enforce — zero EvalSuite instances
+  # are stored in any scope (measured 06/08/2026) — and it closes the family's
+  # spine: Suite → Case, Run → Suite, Baseline → Suite + Run.
+  relations:
+    cases:
+      to: EvalCase
+      cardinality: many
   schema:
     type: object
     additionalProperties: false
@@ -83,7 +96,7 @@ spec:
     text_color: '#fff'
   ascii_icon: 📋
   display_label: Eval Suites
-  docs: An EvalSuite groups EvalCase documents and configures how the
+  docs: An EvalSuite groups EvalCase instances and configures how the
     local runner executes them — the case list (empty = all cases in the
     scope), a default target the cases inherit, and stop_on_fail. Run it
     with `dna eval run <suite>`; each execution can be persisted as an

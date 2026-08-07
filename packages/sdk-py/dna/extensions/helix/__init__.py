@@ -283,6 +283,78 @@ class GenomeKind(KindBase):
         "tags",
     })
 
+    # ---- What a Genome POINTS AT (i-119 group C, 06/08/2026) --------------
+    # The scope root declared NOTHING until now, which for the Kind that IS the
+    # module's identity is the ADR hole again. Three of its five candidate
+    # fields turned out to be real references and three did not, and the split
+    # is the finding — see the block below the declaration.
+    #
+    # MEASURED before declaring, the way `adr.kind.yaml` demands. Across the 9
+    # Genome instances in this repo, `default_agent` is set on 8 and resolves
+    # to an Agent in the SAME scope on 7 (open-swe/swe-agent, support/triage,
+    # hello-genome/greeter, concierge/concierge, retrofit/helpdesk-agent,
+    # market-conformance/conductor, hosted-demo/concierge). The eighth,
+    # `examples/tools_as_data` → `builder`, points at nothing: that scope ships
+    # no `agents/` directory at all. That is a REAL broken pointer in a shipped
+    # example, and it is left broken on purpose — the declaration exists to
+    # surface it, and silently authoring an agent to make the number pretty is
+    # the "inventar aresta" this whole issue warns against. Default mode is
+    # `warn`, so it logs; nothing is vetoed.
+    relations = {
+        # RESOLVED: same scope, addressed by instance name — `get_default_agent_name`
+        # hands this straight to the agent lookup, which is the same address.
+        # Declared, drawn, honestly NOT resolved. `kernel.model_profile()` matches
+        # `spec.model_id` first and `spec.aliases[]` second, and profiles live in
+        # `_lib` regardless of the caller's scope — so a `by: name` declaration
+        # would install a second resolution rule, free to veto a Genome the live
+        # lookup accepts. This is the `PlanBinding.tier_id` decision applied
+        # rather than re-litigated: `by:` declares the ADDRESS without installing
+        # resolution.
+        "default_agent": {"to": "Agent", "cardinality": "one"},
+        "default_llm": {"to": "ModelProfile", "cardinality": "one", "by": "model_id"},
+        # The workspace that published this Genome — the exact value
+        # `namespace_gate._scope_owner` compares against the writing workspace,
+        # i.e. a `Workspace.spec.workspace_id`, not a name and not a slug.
+        # Precedent already in the registry: `Project.workspace_id` /
+        # `WorkspaceScopeGrant.workspace_id` declare `to: Workspace, by:
+        # workspace_id`. Unresolved for the same two reasons as `default_llm`:
+        # key addressing, and a target that lives in `_lib`.
+        "owner_tenant": {
+            "to": "Workspace", "cardinality": "one", "by": "workspace_id",
+        },
+    }
+    # ---- And the three that stay islands, with the reason each ------------
+    # i-119 named five candidates. Two of them are not references, and the
+    # third cannot be addressed by this vocabulary at all. Writing that down is
+    # the deliverable, not a smaller diff:
+    #
+    # `dependencies` — NOT a relation, and not "a Genome pointing at the
+    #   Genomes it depends on". Each entry is an OBJECT
+    #   `{source, items: [{kind, names}]}` whose `source` is an external package
+    #   coordinate (`github:anthropics/skills/skills@main`), not an instance
+    #   name in any scope. `relation_values` reads strings and would see zero of
+    #   them, so a declaration here would draw an edge that can never carry a
+    #   value. The Kind names inside `items[].kind` are the OTHER gap (see
+    #   `result_kind` on `automation.kind.yaml`): they name the Kind REGISTRY,
+    #   and they are nested two levels down besides.
+    #
+    # `parent_scope` — a real pointer at another Genome, and the ONE case in
+    #   this Kind that the relation vocabulary genuinely cannot express. The
+    #   target Genome lives in a DIFFERENT scope (`a` declares
+    #   `parent_scope: b`), and `resolve_relations` reads
+    #   `getter(scope, kind, value)` — the WRITER's scope, with a parent-scope
+    #   fallback that Genome opts out of (`scope_inheritable = False`). So
+    #   `by: name` would resolve against the wrong scope and dangle for 100% of
+    #   the instances that declare it. Declaring it would not be a weak
+    #   statement; it would be a false one. What is missing is a CROSS-SCOPE
+    #   address, which is a vocabulary decision and not a fill-in — filed as the
+    #   third gap on i-119 beside "points at a Kind" and "pointer split across
+    #   two fields".
+    #
+    # `owner` — free text (`helix-team`, `dna`). Not a workspace id (that is
+    #   `owner_tenant`, declared above), not reference-shaped, and nothing in
+    #   the kernel resolves it. Vocabulary, and an island by design.
+
     ui_schema = {
         "owner_tenant": {"widget": "readonly", "label": "Owner tenant", "help": "null = platform-owned (catalog item).", "order": 5},
         "visibility": {"widget": "select", "label": "Visibility", "options": ["public", "internal", "private"], "help": "Who can discover and install this Genome.", "order": 6},
@@ -299,7 +371,7 @@ class GenomeKind(KindBase):
         "dependencies": {"widget": "readonly", "label": "External dependencies", "order": 90},
     }
     docs = (
-        "A Genome is the scope-root identity document (Phase 16). It "
+        "A Genome is the scope-root identity instance (Phase 16). It "
         "declares catalog identity (owner, owner_tenant, repository, "
         "visibility), versioning (version, changelog_url, deprecated), "
         "runtime defaults (default_agent, default_llm, budget, tags), and "
@@ -384,6 +456,12 @@ class LayerPolicyKind(KindBase):
 
     api_version = "github.com/ruinosus/dna/policy/v1"
     kind = "LayerPolicy"
+    # `policies` + `composition_rules` are read by the overlay resolver to
+    # decide whether a layered write is allowed. Enforcement point, not
+    # prose — and note it is `is_overlayable = False` for the same reason a
+    # policy cannot be overridden by the thing it governs.
+    # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+    traits = frozenset({"governance.policy"})
     alias = "policy-layer-policy"  # s-kind-alias-convention-fix: <owner>-<kebab(kind)>; was "policy-layer" (reversed/truncated)
     is_schema_affecting = True
     is_overlayable = False
@@ -969,7 +1047,7 @@ class AgentWriter(WriterPort):
         # self-contained in ANY source. Previously the writer left body="" and
         # never wrote instruction.md, assuming the fragment pre-existed — which
         # silently zeroed the instruction when writing to a fresh bundle (the
-        # i-061 root). save_document persists whatever the writer emits in ONE
+        # i-061 root). save_instance persists whatever the writer emits in ONE
         # transaction, so emitting it here makes the doc+fragment atomic for
         # EVERY write path (CLI, kinds-api PUT, direct). Source: the carried
         # source_files entry, else the resolved inline instruction.

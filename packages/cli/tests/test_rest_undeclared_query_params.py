@@ -1,9 +1,9 @@
 """i-106 — a query param this face does not implement is REFUSED, never ignored.
 
 THE DEFECT, measured 06/08/2026 against the local runtime:
-``GET /v1/kinds/Issue/documents/i-087-...`` answered 200 with ``status:
+``GET /v1/kinds/Issue/instances/i-087-...`` answered 200 with ``status:
 resolved`` and 6 timeline events. The SAME call with
-``?as_of=2026-08-05T14:00:00Z`` answered **exactly the same** — on a document
+``?as_of=2026-08-05T14:00:00Z`` answered **exactly the same** — on an instance
 with 18 versions whose first was recorded at 13:19 on the 5th. At 14:00 that day
 it was neither resolved nor six events long. ``as_of`` was declared on
 ``/v1/memories`` and ``/v1/memories/search`` and nowhere else, and FastAPI drops

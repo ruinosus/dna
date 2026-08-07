@@ -88,9 +88,9 @@ async def src(request, tmp_path):
         s = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp_path / 'parity.db'}")
         await s.connect()
         for doc in SEED_DOCS:
-            # save_document auto-publishes — rows land in `documents`,
+            # save_instance auto-publishes — rows land in `instances`,
             # which is what query() reads.
-            await s.save_document(
+            await s.save_instance(
                 "parity", doc["kind"], doc["metadata"]["name"], doc,
             )
         yield s
@@ -133,15 +133,15 @@ async def src(request, tmp_path):
         s = SqlAlchemySource(sa_url)
         await s.connect()
         conn = await asyncpg.connect(PG_DSN)
-        await conn.execute("DELETE FROM dna_documents WHERE scope=$1", "parity")
+        await conn.execute("DELETE FROM dna_instances WHERE scope=$1", "parity")
         await conn.close()
         for doc in SEED_DOCS:
-            await s.save_document(
+            await s.save_instance(
                 "parity", doc["kind"], doc["metadata"]["name"], doc,
             )
         yield s
         conn = await asyncpg.connect(PG_DSN)
-        await conn.execute("DELETE FROM dna_documents WHERE scope=$1", "parity")
+        await conn.execute("DELETE FROM dna_instances WHERE scope=$1", "parity")
         await conn.close()
         await s.close()
         return

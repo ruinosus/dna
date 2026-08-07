@@ -1,4 +1,4 @@
-"""Tests for the Kernel write facade (write_document / delete_document / preview_document)."""
+"""Tests for the Kernel write facade (write_instance / delete_instance / preview_instance)."""
 from __future__ import annotations
 
 import asyncio
@@ -100,8 +100,8 @@ class StubNonFilesystemSource:
     async def resolve_ref(self, scope, ref): return ref
     async def load_layer(self, *a, **kw): return []
     async def close(self): return None
-    async def save_document(self, *a, **kw): return "v1"
-    async def delete_document(self, *a, **kw): return None
+    async def save_instance(self, *a, **kw): return "v1"
+    async def delete_instance(self, *a, **kw): return None
     async def save_manifest(self, *a, **kw): return "v1"
     async def list_versions(self, *a, **kw): return []
     async def get_version(self, *a, **kw): return {}
@@ -150,7 +150,7 @@ def test_target_exists_returns_true_when_fs_path_exists(tmp_path):
     # Write a doc first
     from dna.extensions.helix import HelixExtension
     k.load(HelixExtension())
-    asyncio.run(k.write_document("m", "Agent", "alice", _raw_agent()))
+    asyncio.run(k.write_instance("m", "Agent", "alice", _raw_agent()))
     # Note: for FilesystemWritableSource, Agent is saved as a
     # yaml file, not a bundle dir; _target_locator maps to the dir name.
     # So exists_already here reports the bundle DIR, which does not
@@ -207,7 +207,7 @@ def test_preview_document_no_disk_write(tmp_path):
     from dna.extensions.helix import HelixExtension
     k.load(HelixExtension())
 
-    pr = asyncio.run(k.preview_document("m", "Agent", "alice", _raw_agent()))
+    pr = asyncio.run(k.preview_instance("m", "Agent", "alice", _raw_agent()))
 
     assert isinstance(pr, PreviewResult)
     assert isinstance(pr.target, Path)
@@ -225,7 +225,7 @@ def test_preview_document_synthetic_url_for_non_filesystem_source():
 
     raw = {"apiVersion": "agentskills.io/v1", "kind": "Skill",
            "metadata": {"name": "x"}, "spec": {"instruction": "hi"}}
-    pr = asyncio.run(k.preview_document("m", "Skill", "x", raw))
+    pr = asyncio.run(k.preview_instance("m", "Skill", "x", raw))
 
     assert pr.target == "sqlite://m/Skill/x"
     assert pr.exists_already is False
@@ -237,7 +237,7 @@ def test_write_document_round_trip(tmp_path):
     from dna.extensions.helix import HelixExtension
     k.load(HelixExtension())
 
-    version = asyncio.run(k.write_document("m", "Agent", "alice", _raw_agent()))
+    version = asyncio.run(k.write_instance("m", "Agent", "alice", _raw_agent()))
     assert version == "1"
     assert (tmp_path / "m" / "agents" / "alice.yaml").is_file()
 
@@ -245,14 +245,14 @@ def test_write_document_round_trip(tmp_path):
 def test_write_document_no_source_raises():
     k = Kernel()
     with pytest.raises(NotWritableError, match="no source"):
-        asyncio.run(k.write_document("m", "Agent", "alice", _raw_agent()))
+        asyncio.run(k.write_instance("m", "Agent", "alice", _raw_agent()))
 
 
 def test_write_document_read_only_source_raises(tmp_path):
     k = Kernel()
     k.source(FilesystemSource(str(tmp_path)))     # read-only
     with pytest.raises(NotWritableError, match="does not implement WritableSourcePort"):
-        asyncio.run(k.write_document("m", "Agent", "alice", _raw_agent()))
+        asyncio.run(k.write_instance("m", "Agent", "alice", _raw_agent()))
 
 
 def test_write_document_last_write_wins(tmp_path):
@@ -261,8 +261,8 @@ def test_write_document_last_write_wins(tmp_path):
     from dna.extensions.helix import HelixExtension
     k.load(HelixExtension())
 
-    asyncio.run(k.write_document("m", "Agent", "alice", _raw_agent()))
-    asyncio.run(k.write_document("m", "Agent", "alice", _raw_agent()))  # no raise
+    asyncio.run(k.write_instance("m", "Agent", "alice", _raw_agent()))
+    asyncio.run(k.write_instance("m", "Agent", "alice", _raw_agent()))  # no raise
 
 
 def test_write_document_emits_post_save_hook(tmp_path):
@@ -274,7 +274,7 @@ def test_write_document_emits_post_save_hook(tmp_path):
     seen: list[tuple[str, str]] = []
     k.on("post_save", lambda ctx: seen.append((ctx.kind, ctx.name)))
 
-    asyncio.run(k.write_document("m", "Agent", "alice", _raw_agent()))
+    asyncio.run(k.write_instance("m", "Agent", "alice", _raw_agent()))
     assert seen == [("Agent", "alice")]
 
 
@@ -287,7 +287,7 @@ def test_write_document_skip_hooks_suppresses_emission(tmp_path):
     seen: list[tuple[str, str]] = []
     k.on("post_save", lambda ctx: seen.append((ctx.kind, ctx.name)))
 
-    asyncio.run(k.write_document(
+    asyncio.run(k.write_instance(
         "m", "Agent", "alice", _raw_agent(), skip_hooks=True,
     ))
     assert seen == []
@@ -299,11 +299,11 @@ def test_delete_document_round_trip(tmp_path):
     from dna.extensions.helix import HelixExtension
     k.load(HelixExtension())
 
-    asyncio.run(k.write_document("m", "Agent", "alice", _raw_agent()))
+    asyncio.run(k.write_instance("m", "Agent", "alice", _raw_agent()))
     target = tmp_path / "m" / "agents" / "alice.yaml"
     assert target.is_file()
 
-    asyncio.run(k.delete_document("m", "Agent", "alice"))
+    asyncio.run(k.delete_instance("m", "Agent", "alice"))
     assert not target.exists()
 
 
@@ -313,11 +313,11 @@ def test_delete_document_emits_post_delete_hook(tmp_path):
     from dna.extensions.helix import HelixExtension
     k.load(HelixExtension())
 
-    asyncio.run(k.write_document("m", "Agent", "alice", _raw_agent()))
+    asyncio.run(k.write_instance("m", "Agent", "alice", _raw_agent()))
 
     seen: list[tuple[str, str]] = []
     k.on("post_delete", lambda ctx: seen.append((ctx.kind, ctx.name)))
-    asyncio.run(k.delete_document("m", "Agent", "alice"))
+    asyncio.run(k.delete_instance("m", "Agent", "alice"))
     assert seen == [("Agent", "alice")]
 
 
@@ -327,11 +327,11 @@ def test_delete_document_skip_hooks_suppresses_emission(tmp_path):
     from dna.extensions.helix import HelixExtension
     k.load(HelixExtension())
 
-    asyncio.run(k.write_document("m", "Agent", "alice", _raw_agent()))
+    asyncio.run(k.write_instance("m", "Agent", "alice", _raw_agent()))
 
     seen: list[tuple[str, str]] = []
     k.on("post_delete", lambda ctx: seen.append((ctx.kind, ctx.name)))
-    asyncio.run(k.delete_document(
+    asyncio.run(k.delete_instance(
         "m", "Agent", "alice", skip_hooks=True,
     ))
     assert seen == []
@@ -365,7 +365,7 @@ def test_post_save_hook_context_puts_scope_top_level(tmp_path):
     captured: list = []
     k.on("post_save", lambda ctx: captured.append(ctx))
 
-    asyncio.run(k.write_document("my-mod", "Agent", "alice", _raw_agent()))
+    asyncio.run(k.write_instance("my-mod", "Agent", "alice", _raw_agent()))
 
     assert len(captured) == 1
     ctx = captured[0]
@@ -386,12 +386,12 @@ def test_post_delete_hook_context_puts_scope_top_level(tmp_path):
     k.load(HelixExtension())
     k.source(FilesystemWritableSource(str(tmp_path), kernel=k))
 
-    asyncio.run(k.write_document("my-mod", "Agent", "alice", _raw_agent()))
+    asyncio.run(k.write_instance("my-mod", "Agent", "alice", _raw_agent()))
 
     captured: list = []
     k.on("post_delete", lambda ctx: captured.append(ctx))
 
-    asyncio.run(k.delete_document("my-mod", "Agent", "alice"))
+    asyncio.run(k.delete_instance("my-mod", "Agent", "alice"))
 
     assert len(captured) == 1
     ctx = captured[0]

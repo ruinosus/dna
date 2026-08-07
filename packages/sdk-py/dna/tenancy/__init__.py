@@ -97,7 +97,7 @@ def workspace_membership_name(workspace_id: str, email: str) -> str:
     if "@" not in (email or ""):
         raise ValueError(
             f"workspace_membership_name expects an EMAIL, got {email!r}. The "
-            f"document name is the uniqueness key for a (workspace, identity) "
+            f"instance name is the uniqueness key for a (workspace, identity) "
             f"grant — a non-email handle does not fail, it mints a SECOND "
             f"grant for the same person and breaks revocation."
         )

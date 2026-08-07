@@ -18,7 +18,7 @@ This file holds the sdk-py half of the guard — everything provable with
 ``dna`` alone, no ``dna_cli``/``click`` import, because the ``sdk-py`` CI job
 (``.github/workflows/python.yml``) installs only ``-e ../sdk-py -e ".[dev]"``
 and cannot see the CLI package. The CLI half (the branded ``--scope`` option
-defaults across ``kind_cmd``/``doc_cmd``/``research_cmd``/``intel_cmd``, the
+defaults across ``kind_cmd``/``instance_cmd``/``research_cmd``/``intel_cmd``, the
 structural guard over every ``dna_cli`` command, and the end-to-end CLI
 regressions) lives in
 ``packages/cli/tests/test_no_branded_scope_default_cli.py``.
@@ -57,7 +57,7 @@ async def _kernel(tmp_path, *scopes: str) -> Kernel:
 
 
 async def _seed_source(k: Kernel, scope: str, tenant: str, name: str = "src-1") -> None:
-    await k.write_document(
+    await k.write_instance(
         scope, "IntelSource", name,
         {
             "apiVersion": "github.com/ruinosus/dna/intel/v1",

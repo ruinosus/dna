@@ -33,7 +33,7 @@
 # ── O que este Kind NUNCA carrega ────────────────────────────────────────────
 #
 # Credencial, e permissão. Ele NOMEIA — não autoriza. Quem autoriza é o
-# `AgentGrant`, e são documentos separados de propósito: cadastrar um agente no
+# `AgentGrant`, e são instâncias separados de propósito: cadastrar um agente no
 # catálogo não pode ser um caminho para conceder acesso a ele.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
@@ -53,6 +53,31 @@ spec:
   storage:
     type: yaml
     container: agent-catalog
+  identifiers:
+    # An OAuth client identifier, minted by the authorization server. The
+    # schema already refuses a URL-shaped one (that flavour resolves by CIMD,
+    # anchored on the publishing domain) — either way there is no DNA instance
+    # behind the value.
+    client_id:
+      role: external
+      system: oauth
+    # ⭐ DECLARED 06/08/2026 (i-119, founder decision 1). `registered_by` holds
+    # "o identificador DURÁVEL da pessoa" — its own description's words — which
+    # is the same value as `AgentGrant.subject`, `UserProfile.user_id` and
+    # `TenantMembership.user_id`: the IdP's `sub`. It is neither this
+    # instance's key (the entry is keyed by `client_id`) nor a pointer at any
+    # instance, and the trigger that would turn it into one is the group's:
+    # the day a person carries data of OUR OWN, `UserProfile` becomes the
+    # anchor and this becomes `to: UserProfile, by: user_id`.
+    # `idp`, not `oauth`, for the reason it matters HERE more than anywhere:
+    # this Kind holds both words at once — `client_id` is an app the
+    # authorization server minted, `registered_by` is a human the identity
+    # provider minted, and one word for both would model the person and the
+    # third-party app as one namespace on the very screen built to tell them
+    # apart.
+    registered_by:
+      role: external
+      system: idp
   schema:
     type: object
     additionalProperties: false
@@ -75,7 +100,7 @@ spec:
         minLength: 1
         description: >
           O nome legível — DIGITADO por alguém deste workspace, e a tela diz
-          isso. Não é equivalente ao nome de um documento CIMD, e apresentá-lo
+          isso. Não é equivalente ao nome de uma instância CIMD, e apresentá-lo
           como se fosse seria pior que mostrar o id cru: o id avisa que você não
           sabe quem é; um nome sem procedência não avisa nada.
       registered_by:

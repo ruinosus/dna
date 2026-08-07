@@ -1,9 +1,9 @@
-"""A2AExtension — o Agent Card do A2A como documento.
+"""A2AExtension — o Agent Card do A2A como instância.
 
 Registra um Kind de record, ``RemoteAgent``, a partir de um descritor.
 
 O A2A (Agent2Agent, governado pela Linux Foundation) padronizou exatamente a
-coisa que o DNA já trata como documento: um descritor auto-descritivo de
+coisa que o DNA já trata como instância: um descritor auto-descritivo de
 capacidade. Então falar A2A não pede modelo novo — pede um Kind para o Card que
 chega, e uma projeção para o Card que sai (``dna.emit.agent_card``).
 

@@ -13,9 +13,9 @@ is invisible unless it is asked for explicitly. Rather than pass
 this seam — the choice, and its fallback, are made once, here.
 
 **Safe is not negotiable.** These helpers always resolve a *safe* loader.
-Documents parsed by the runtime are author-supplied; a loader that can
+Instances parsed by the runtime are author-supplied; a loader that can
 construct arbitrary Python objects (``yaml.Loader``/``CLoader``/
-``FullLoader``) would turn a stored document into a code-execution path.
+``FullLoader``) would turn a stored instance into a code-execution path.
 
 **libyaml is optional.** The SDK is published as a pure-Python wheel and
 installs on machines where libyaml was never compiled in. There, ``import
@@ -48,7 +48,7 @@ __all__ = ["HAVE_LIBYAML", "SafeLoader", "safe_load", "safe_load_all"]
 def safe_load(stream: str | bytes | IO[str] | IO[bytes]) -> Any:
     """``yaml.safe_load`` on the fastest safe loader available.
 
-    Same contract as ``yaml.safe_load``: returns the single document (or
+    Same contract as ``yaml.safe_load``: returns the single instance (or
     ``None`` for an empty stream) and raises ``yaml.YAMLError`` on malformed
     input.
     """

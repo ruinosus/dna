@@ -140,7 +140,7 @@ class TestSafetyInputEnforcement:
         assert "529.982.247-25" in prompt
 
     def test_multiple_policies_applied(self, tmp_path):
-        """Multiple SafetyPolicy documents are all applied."""
+        """Multiple SafetyPolicy instances are all applied."""
         dna = tmp_path / ".dna" / "test"
         dna.mkdir(parents=True)
         (dna / "manifest.yaml").write_text(

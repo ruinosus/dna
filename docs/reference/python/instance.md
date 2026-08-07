@@ -1,14 +1,14 @@
-# Document &amp; ManifestInstance
+# Instance &amp; ManifestInstance
 
-`Document` is the universal wrapper for every manifest document —
+`Instance` is the universal wrapper for every manifest instance —
 `doc.kind`, `doc.name`, `doc.spec`, `doc.metadata`, `doc.typed`,
 `doc.origin`. `ManifestInstance` is the **blessed query surface**: the one
 documented read API (`all`, `one`, `root`, `default_agent`, `find_agent`,
 `build_prompt`, `resolve`) that the guides and examples teach.
 
-## Document
+## Instance
 
-::: dna.kernel.document.Document
+::: dna.kernel.instance.Instance
     options:
       show_root_heading: true
       show_source: false
@@ -17,7 +17,7 @@ documented read API (`all`, `one`, `root`, `default_agent`, `find_agent`,
 
 ## ManifestInstance
 
-::: dna.kernel.instance.ManifestInstance
+::: dna.kernel.manifest.ManifestInstance
     options:
       show_root_heading: true
       show_source: false

@@ -48,6 +48,6 @@ def test_install_real_anthropic_skill(tmp_path, monkeypatch):
     assert skill_md.exists()
 
     lock = yaml.safe_load((base / "market" / "installed.lock").read_text())
-    entry = {d["name"]: d for d in lock["documents"]}["pdf"]
+    entry = {d["name"]: d for d in lock["instances"]}["pdf"]
     assert entry["kind"] == "Skill"
     assert entry["origin"] == payload["origin"]

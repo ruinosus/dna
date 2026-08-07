@@ -1,13 +1,13 @@
 # AgentDefinition (AGENTS.md)
 
-AgentDefinition wraps a standalone `AGENTS.md` file as a first-class document
+AgentDefinition wraps a standalone `AGENTS.md` file as a first-class instance
 kind. `AGENTS.md` is an emerging community convention
 (https://agents.md) for giving coding agents repo-level instructions —
 similar in spirit to `README.md` but targeted at autonomous agents rather than
 human readers.
 
 The AgentsMdExtension scans for a top-level `AGENTS.md` in the manifest scope
-and exposes its content as a document. It is NOT a prompt target on its own;
+and exposes its content as an instance. It is NOT a prompt target on its own;
 it is context material that agents and tooling can surface when operating in
 that repository.
 

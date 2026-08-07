@@ -197,7 +197,7 @@ def cmd_test_guide_create(
 
     with open_session(scope) as s:
         raw = _build_testkit_raw("TestGuide", name, spec)
-        s.run(s.kernel.write_document(scope, "TestGuide", name, raw))
+        s.run(s.kernel.write_instance(scope, "TestGuide", name, raw))
     click.secho(f"CREATED TestGuide/{name} ({kind_of_test}, {len(steps)} steps) in {scope}", fg="green")
     if verifies_list:
         click.secho(f"  verifies: {', '.join(verifies_list)}", fg="cyan")
@@ -292,7 +292,7 @@ def cmd_test_run_record(
 
     with open_session(scope) as s:
         raw = _build_testkit_raw("TestRun", run_name, spec)
-        s.run(s.kernel.write_document(scope, "TestRun", run_name, raw))
+        s.run(s.kernel.write_instance(scope, "TestRun", run_name, raw))
     color = "green" if outcome == "pass" else ("red" if outcome == "fail" else "yellow")
     click.secho(f"RECORDED TestRun/{run_name} → {outcome} (guide {guide})", fg=color)
 
@@ -333,7 +333,7 @@ def _stamp_verified_stories(
                     summary=timeline_summary, **timeline_extra,
                 )
                 sp["updated_at"] = _now_iso()
-                s.run(s.kernel.write_document(scope, "Story", story_name, _build_story_raw(story_name, sp)))
+                s.run(s.kernel.write_instance(scope, "Story", story_name, _build_story_raw(story_name, sp)))
             click.secho(f"  → Story/{story_name}: produces + artifact_produced (FOCUS + verify)", fg="cyan")
         except Exception as e:  # noqa: BLE001 — stamping is best-effort
             click.secho(f"  ⚠ não consegui carimbar Story/{story_name}: {e}", fg="yellow", err=True)

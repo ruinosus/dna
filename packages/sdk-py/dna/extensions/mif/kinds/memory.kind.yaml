@@ -31,7 +31,7 @@
 #   3. `relationships[].type` is an OPEN kebab-case token (custom `ns:type`
 #      namespacing is explicitly allowed, §8.3) — NOT a closed enum. The
 #      draft's enum also had 4 of 9 "core" values wrong (`related-to` for
-#      `relates-to`, `caused-by`/`documents`/`references` that don't exist in
+#      `relates-to`, `caused-by`/`instances`/`references` that don't exist in
 #      the spec at all, missing `uses`/`created-by`/`mentioned-in`). Kept as
 #      a plain string; the 9 recommended core types are documented in prose
 #      per Appendix B instead of enforced, matching the spec's own
@@ -79,6 +79,51 @@
 # tenant_scope intentionally NOT declared (mirrors helix-engram, the closest
 # sibling — undeclared stays permissive; memory partitioning is a write-path
 # concern, not a Kind-level tenancy declaration).
+#
+# ── Two relation models in one repo, compared (i-119 group C, 06/08/2026) ────
+# i-119 filed this Kind as an island holding `relationships[]` — "MIF's own
+# relation format" — and observed that nobody had compared it with
+# `spec.relations`. Here is the comparison, and it ends in "declare nothing",
+# for a reason that is stronger than the usual ones.
+#
+#   axis            | DNA `spec.relations`          | MIF `relationships[]`
+#   ----------------|-------------------------------|------------------------
+#   lives on        | the KIND (schema level)       | the INSTANCE (data)
+#   who declares    | the Kind author, once         | each memory, per edge
+#   type vocabulary | closed: to/cardinality/       | open kebab-case tokens,
+#                   | inverse_of/by/on_target_delete| `ns:type` namespacing
+#   the target      | `metadata.name` in a scope    | a bundle-relative path
+#                   |                               | (`/semantic/policy.md`)
+#                   |                               | or a `urn:mif:` URN
+#   arity           | one per spec FIELD            | many rows, one field
+#   who resolves it | the kernel, on write          | a MIF reader
+#
+# They are not two answers to one question. `spec.relations` is a statement a
+# KIND makes about its fields; `relationships[]` is a statement an INSTANCE
+# makes about itself, in a foreign address space. Even the mechanics refuse:
+# `relationships` is an array of OBJECTS, so `relation_values` (which reads
+# strings) would see zero values, and the pointer is `relationships[].target`
+# — nested, which `kind_graph` publishes as the `top_level_properties_only`
+# coverage limit.
+#
+# The decisive argument is neither of those, though, and it is the one that
+# would still hold if both were fixed: **market fidelity**
+# (docs/concepts/market-fidelity.md — "the owner names the schema"). This
+# descriptor exists to store a FOREIGN document unchanged under its owner's
+# namespace. Draping DNA's relation model over `mif-spec.dev/v1 · Memory`
+# would be exactly the ownership grab the rule forbids, and it would break the
+# round-trip the Kind was written to guarantee. The native Kind is where DNA's
+# own model belongs: `Engram` (`helix/kinds/engram.kind.yaml`), whose
+# `source_refs` is the same idea in DNA's address space.
+#
+# `id` is deliberately NOT declared as `identifiers: {id: {role: self}}`
+# either. It is not reference-shaped (`kind_graph`'s REF_SUFFIXES are
+# `_refs/_ref/_oid/_ids/_id/_slug`; a bare `id` matches none), so there is no
+# `undeclared` gap row for it to ANSWER — and `spec.identifiers` exists to
+# answer gap rows, not to annotate for its own sake. Whether the MIF UUID even
+# equals this instance's DNA key is also unsettled: MIF names files `{id}.md`
+# while a DNA bundle is a per-doc directory with a fixed `MEMORY.md` marker
+# (the KNOWN OPEN ITEM above). `role: self` would be a guess.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:

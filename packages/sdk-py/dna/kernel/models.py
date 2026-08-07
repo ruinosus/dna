@@ -1,7 +1,7 @@
 """Typed models for each kind — used by KindPort.parse().
 
 Each Typed* class has .metadata (Metadata) and .spec (*Spec).
-Document delegates doc.metadata and doc.spec to these when available.
+Instance delegates doc.metadata and doc.spec to these when available.
 """
 from __future__ import annotations
 
@@ -191,7 +191,7 @@ class LayerPolicySpec:
     # written (``compose/layer_policy.py``) and against the keys of the
     # ``layers`` dict at compose time (``compose/instance_builder.py``), and it
     # is used verbatim as a filesystem path segment and as a
-    # ``dna_layer_documents`` primary-key column — plain TEXT, no foreign key,
+    # ``dna_layer_instances`` primary-key column — plain TEXT, no foreign key,
     # no CHECK, no enum type. There is no ``Layer`` Kind and never has been. The
     # ``["tenant", "branch", "region", "user"]`` list in
     # ``LayerPolicyKind.ui_schema`` is advisory only: nothing validates against
@@ -206,7 +206,7 @@ class LayerPolicySpec:
             "equality against the layer being composed or written — the "
             "`layer_id` half of the (layer_id, layer_value) overlay "
             "coordinate. No `Layer` Kind exists; the `_id` suffix names an "
-            "axis, not a document."
+            "axis, not an instance."
         )},
     )
     policies: dict[str, str] = field(default_factory=dict)
@@ -514,8 +514,8 @@ class AgentSpec:
     # + (later) MCP egress for it. None = text-only agent.
     voice_persona: VoicePersona | None = None
     # s-jarvis-cross-scope (2026-05-26) — list of scopes this agent's
-    # READ tools (recall_*, ecphore, search_documents, list_documents,
-    # show_document) may iterate. Writes still land in the agent's
+    # READ tools (recall_*, ecphore, search_instances, list_instances,
+    # show_instance) may iterate. Writes still land in the agent's
     # mounted scope — this only widens reads. ``["*"]`` means "every
     # scope the source exposes" (used by JARVIS as the user-level
     # personal assistant). Empty/None = legacy single-scope behavior.
@@ -959,10 +959,10 @@ class TypedSafetyPolicy:
 # ---------------------------------------------------------------------------
 # KindDefinition (github.com/ruinosus/dna/core/v1)
 #
-# Meta-kind: documents of this kind declaratively define *new* kinds. At
+# Meta-kind: instances of this kind declaratively define *new* kinds. At
 # kernel load time the kernel performs a 2-phase parse — KindDefinitions
 # are parsed first, then each is wrapped in a DeclarativeKindPort and
-# registered on the kernel. Regular documents are parsed in the second
+# registered on the kernel. Regular instances are parsed in the second
 # phase and can therefore reference these newly registered kinds.
 # ---------------------------------------------------------------------------
 
@@ -1088,6 +1088,14 @@ class KindDefinitionSpec:
     # relations is neither second-class nor a second code path — the precedent
     # ``presentation`` set. Replaces ``x-dna-ref`` / ``x-dna-ref-composite``.
     relations: Any = None
+    # ---- Identifiers (what this Kind points NOWHERE with) -----------------
+    # The other half of ``relations``, and the half that makes the gap list
+    # finite: a field whose NAME looks like a reference and which points at no
+    # instance can finally SAY so — ``role: self`` (this instance's own key) or
+    # ``role: external`` + ``system`` (minted outside DNA). Stored NORMALIZED,
+    # through the same validator a builtin descriptor goes through, so a
+    # tenant-authored Kind is neither second-class nor a second code path.
+    identifiers: Any = None
     # ---- Parity fields (i-081): what a CLASS could say and a descriptor could
     # not. Seven attributes existed only on ``KindBase``, so a YAML-declared
     # Kind was structurally second-class: it could not invalidate the schema
@@ -1118,7 +1126,7 @@ class KindDefinitionSpec:
     # ``version_retention``: how many version snapshots to keep for a
     # machine-churn Kind. None = the kernel's curated default.
     version_retention: int | None = None
-    # ``layout_names``: the prompt layouts this Kind's documents may name
+    # ``layout_names``: the prompt layouts this Kind's instances may name
     # (``UnknownLayout`` lists them). Empty = no layouts, today's default.
     layout_names: list[str] | None = None
     # ---- Approval (the registration gate) + the audit's other half ----------
@@ -1130,7 +1138,7 @@ class KindDefinitionSpec:
     # verified identity of ITS OWN act.
     #
     # ``proposed_by`` is stamped where the proposal happens (the authoring
-    # door), because it cannot be back-filled later onto a document that never
+    # door), because it cannot be back-filled later onto an instance that never
     # recorded one. It is NOT a gate: the registry reads the state, and two
     # fields naming the same identity is legal (see the schema's note —
     # coincidence is a fact the audit reports, not an error).
@@ -1138,7 +1146,7 @@ class KindDefinitionSpec:
     # ``revoked_by`` is i-085's third state, and it is a stored field for a
     # measured reason: clearing ``approved_by`` is indistinguishable from never
     # having approved, and never-approved means UNREGISTERED, which means
-    # documents are accepted with NO validation. Revoking must tighten, so the
+    # instances are accepted with NO validation. Revoking must tighten, so the
     # fact has to persist. It is deliberately NOT read directly anywhere —
     # ``approval_state`` is the one reader, so no future caller can check
     # ``approved_by`` alone and treat a revoked Kind as approved.
@@ -1171,7 +1179,7 @@ class KindDefinitionSpec:
             raise ValueError("KindDefinition spec.schema must be a dict (JSON Schema)")
         # i-080 item 4 — the authored schema is validated HERE, at author time.
         # "Is it a dict" was the only check, so a schema that is not a schema
-        # failed once PER DOCUMENT at parse time through the fail-soft
+        # failed once PER INSTANCE at parse time through the fail-soft
         # parse_error channel — a log line far from the author. The guard also
         # refuses a non-local ``$ref`` (nothing resolves it at validation time,
         # and the error it raises is NOT a ValidationError, so it escapes the
@@ -1247,10 +1255,10 @@ class KindDefinitionSpec:
             )
         # ``presentation`` — normalized THROUGH the shared validator, never
         # copied through. One reading of the declaration for a builtin
-        # descriptor and a tenant document alike; a second, laxer parse here
+        # descriptor and a tenant instance alike; a second, laxer parse here
         # would be exactly the drift this whole field exists to end. The error
         # is re-raised naming the field so a tenant reads which key of their
-        # own document is wrong.
+        # own instance is wrong.
         from dna.kernel.kinds.presentation import normalize_presentation
 
         try:
@@ -1290,6 +1298,30 @@ class KindDefinitionSpec:
             raise ValueError(
                 "KindDefinition spec.relations contradicts spec.schema: "
                 + "; ".join(contradictions)
+            )
+        # ``identifiers`` — the other half: fields that point NOWHERE and say
+        # so. Normalized through ITS shared validator, and checked here for the
+        # contradiction only this function can see, because it holds the schema
+        # AND the relations at once: a field declared as both a relation and an
+        # identifier is two mechanisms answering one question, which is the
+        # disease ``relations`` was written to cure.
+        from dna.kernel.kinds.identifiers import (
+            normalize_identifiers,
+            schema_contradictions as identifier_contradictions,
+        )
+
+        try:
+            identifiers = normalize_identifiers(raw.get("identifiers"))
+        except ValueError as e:
+            raise ValueError(f"KindDefinition spec.{e}") from e
+        id_problems = identifier_contradictions(
+            identifiers, relations, schema,
+            partial=bool(raw.get("schema_fragments") or raw.get("workitem_common")),
+        )
+        if id_problems:
+            raise ValueError(
+                "KindDefinition spec.identifiers contradicts the declaration: "
+                + "; ".join(id_problems)
             )
         layout_names = raw.get("layout_names")
         if layout_names is not None and (
@@ -1360,6 +1392,7 @@ class KindDefinitionSpec:
             presentation=presentation,
             overlayable_fields=overlayable_fields,
             relations=relations,
+            identifiers=identifiers,
             # Traits + class-parity fields (i-081)
             traits=traits or None,
             is_schema_affecting=bool(raw.get("is_schema_affecting", False)),

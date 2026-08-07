@@ -81,11 +81,11 @@ def _seed(dna_dir):
                     "status": "active",
                 },
             }
-            await live.kernel.write_document("_lib", "WorkspaceMembership", name, doc)
+            await live.kernel.write_instance("_lib", "WorkspaceMembership", name, doc)
 
         # A distinct agent in bob's own workspace scope — proves bob reads HIS
         # data, never the vendor's, on a scope-less default read.
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _OUTSIDE_SCOPE, "Agent", _BOB_AGENT,
             {
                 "apiVersion": "github.com/ruinosus/dna/v1",
@@ -316,7 +316,7 @@ def test_a_granted_workspace_is_refused_a_write_to_that_scope(
                 # A FULLY VALID story — exit criteria and all. Without the access
                 # axis this call succeeds and the row lands in the vendor's
                 # scope; the refusal has to come from the binder, not from the
-                # board core rejecting a malformed document for its own reasons.
+                # board core rejecting a malformed instance for its own reasons.
                 await client.call_tool("create_story", {
                     "name": _PLANTED,
                     "feature": "f-whatever",
@@ -333,10 +333,10 @@ def test_a_granted_workspace_is_refused_a_write_to_that_scope(
         asyncio.run(go(url))
 
     # ...and nothing was written. The denial is the point, but the ABSENCE of the
-    # document is the property — a refusal that still wrote would be worse.
+    # instance is the property — a refusal that still wrote would be worse.
     async def check():
         live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
-        assert await live.kernel.get_document(_SCOPE, "Story", _PLANTED) is None
+        assert await live.kernel.get_instance(_SCOPE, "Story", _PLANTED) is None
 
     asyncio.run(check())
 
@@ -356,7 +356,7 @@ def _plant_bob_project(dna_dir, monkeypatch, board_scope):
     async def go():
         live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
         sc = live.default_scope(_WS_OUTSIDE)
-        await live.kernel.with_tenant(_WS_OUTSIDE).write_document(
+        await live.kernel.with_tenant(_WS_OUTSIDE).write_instance(
             sc, "Project", "projeto-bob",
             {
                 "apiVersion": "github.com/ruinosus/dna/portfolio/v1",
@@ -403,7 +403,7 @@ def test_o_dono_escreve_no_board_do_proprio_projeto(dna_dir, http_server, monkey
 
     async def check():
         live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
-        assert await live.kernel.get_document(board, "Story", "story-do-dono") is not None
+        assert await live.kernel.get_instance(board, "Story", "story-do-dono") is not None
 
     asyncio.run(check())
 

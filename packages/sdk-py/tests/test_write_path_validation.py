@@ -1,10 +1,10 @@
 """Generic write-path spec↔schema validation (s-write-path-validation, i-008).
 
 The kernel used to validate Kind schemas only at SCAN/read (the fail-soft
-``parse_error`` channel) — ``write_document`` would happily persist a
+``parse_error`` channel) — ``write_instance`` would happily persist a
 shape-broken spec that exploded later, far from the author. Found live on
 the Automation work (#25), which patched it LOCALLY with a write guard;
-these tests pin the GENERALIZED mechanism: every ``write_document``
+these tests pin the GENERALIZED mechanism: every ``write_instance``
 validates the spec against the Kind's declared ``schema()``.
 
 Pinned contract:
@@ -78,7 +78,7 @@ async def test_invalid_spec_is_vetoed_and_not_persisted(kernel, source):
     bad = _valid_lesson("rem-bad")
     bad["spec"]["confidence_score"] = "faint"  # schema: type number (the i-008 class)
     with pytest.raises(SpecValidationError):
-        await kernel.write_document("s", "Engram", "rem-bad", bad)
+        await kernel.write_instance("s", "Engram", "rem-bad", bad)
     assert source.save_calls == [], "a vetoed write must not reach the adapter"
 
 
@@ -86,13 +86,13 @@ async def test_invalid_spec_is_vetoed_and_not_persisted(kernel, source):
 async def test_missing_required_field_is_vetoed(kernel, source):
     skeletal = _raw(_HELIX_API, "Engram", "rem-skel", {"summary": "no area"})
     with pytest.raises(SpecValidationError, match="'area' is a required property"):
-        await kernel.write_document("s", "Engram", "rem-skel", skeletal)
+        await kernel.write_instance("s", "Engram", "rem-skel", skeletal)
     assert source.save_calls == []
 
 
 @pytest.mark.asyncio
 async def test_valid_spec_persists(kernel, source):
-    await kernel.write_document("s", "Engram", "rem-ok", _valid_lesson("rem-ok"))
+    await kernel.write_instance("s", "Engram", "rem-ok", _valid_lesson("rem-ok"))
     assert len(source.save_calls) == 1
 
 
@@ -101,7 +101,7 @@ async def test_error_is_didactic(kernel):
     bad = _valid_lesson("rem-bad")
     bad["spec"]["confidence_score"] = "faint"
     with pytest.raises(SpecValidationError) as ei:
-        await kernel.write_document("s", "Engram", "rem-bad", bad)
+        await kernel.write_instance("s", "Engram", "rem-bad", bad)
     msg = str(ei.value)
     # The install #26 pattern: WHERE (field), WHAT (violation), HOW (kind show).
     assert "spec.confidence_score" in msg
@@ -115,7 +115,7 @@ async def test_veto_is_a_value_error_for_backcompat(kernel):
     # Pre_save guard convention: write-path vetoes read as ValueError.
     bad = _raw(_HELIX_API, "Engram", "x", {"summary": "no area"})
     with pytest.raises(ValueError):
-        await kernel.write_document("s", "Engram", "x", bad)
+        await kernel.write_instance("s", "Engram", "x", bad)
 
 
 # --- permissive paths ------------------------------------------------------------
@@ -124,7 +124,7 @@ async def test_veto_is_a_value_error_for_backcompat(kernel):
 @pytest.mark.asyncio
 async def test_kind_without_schema_passes(kernel, source):
     # Unknown Kind → no port → no schema → permissive (opt-in by data).
-    await kernel.write_document(
+    await kernel.write_instance(
         "s", "TotallyUnregisteredKind", "n",
         _raw("example.com/x/v1", "TotallyUnregisteredKind", "n",
              {"anything": ["goes", 1, None]}),
@@ -149,7 +149,7 @@ async def test_registered_schema_less_kind_passes(kernel, source):
             return raw
 
     kernel._kinds[(_NoSchemaPort.api_version, "NoSchema")] = _NoSchemaPort()
-    await kernel.write_document(
+    await kernel.write_instance(
         "s", "NoSchema", "n",
         _raw(_NoSchemaPort.api_version, "NoSchema", "n", {"free": "form"}),
     )
@@ -180,7 +180,7 @@ async def test_spec_defaults_fill_before_validation(kernel, source):
         },
     })
     assert port is not None
-    await kernel.write_document(
+    await kernel.write_instance(
         "s", "WpvDefaulted", "d",
         _raw("example.com/wpv/v1", "WpvDefaulted", "d", {}),  # mode comes from defaults
     )
@@ -195,7 +195,7 @@ async def test_warn_mode_persists_and_logs(kernel, source, monkeypatch, caplog):
     monkeypatch.setenv("DNA_WRITE_VALIDATION", "warn")
     bad = _raw(_HELIX_API, "Engram", "rem-warn", {"summary": "no area"})
     with caplog.at_level(logging.WARNING, logger="dna.kernel"):
-        await kernel.write_document("s", "Engram", "rem-warn", bad)
+        await kernel.write_instance("s", "Engram", "rem-warn", bad)
     assert len(source.save_calls) == 1
     assert any("schema validation failed" in r.message for r in caplog.records)
 
@@ -204,7 +204,7 @@ async def test_warn_mode_persists_and_logs(kernel, source, monkeypatch, caplog):
 async def test_off_mode_skips_validation(kernel, source, monkeypatch):
     monkeypatch.setenv("DNA_WRITE_VALIDATION", "off")
     bad = _raw(_HELIX_API, "Engram", "rem-off", {"summary": "no area"})
-    await kernel.write_document("s", "Engram", "rem-off", bad)
+    await kernel.write_instance("s", "Engram", "rem-off", bad)
     assert len(source.save_calls) == 1
 
 
@@ -213,7 +213,7 @@ async def test_unknown_mode_falls_back_to_enforce(kernel, monkeypatch):
     monkeypatch.setenv("DNA_WRITE_VALIDATION", "bananas")
     bad = _raw(_HELIX_API, "Engram", "rem-x", {"summary": "no area"})
     with pytest.raises(SpecValidationError):
-        await kernel.write_document("s", "Engram", "rem-x", bad)
+        await kernel.write_instance("s", "Engram", "rem-x", bad)
 
 
 # --- red→green: the real i-008 shapes ---------------------------------------------
@@ -225,7 +225,7 @@ async def test_i008_automation_shape_veto_now_generic(kernel, source):
     # this doc PERSISTED and exploded at scan. The guard fixed it locally;
     # the generic step now owns it (the guard no longer runs port.parse).
     with pytest.raises(SpecValidationError, match="'cron' is a required property"):
-        await kernel.write_document(
+        await kernel.write_instance(
             "s", "Automation", "no-cron",
             _raw(_AUTOMATION_API, "Automation", "no-cron",
                  {"on": {"type": "cron"},
@@ -242,7 +242,7 @@ async def test_automation_yaml11_heal_runs_before_generic_validation(kernel, sou
     raw = _raw(_AUTOMATION_API, "Automation", "healed",
                {True: {"type": "hook", "hook": "post_save"},
                 "runner": {"kind": "agent", "ref": "x"}})
-    await kernel.write_document("s", "Automation", "healed", raw)
+    await kernel.write_instance("s", "Automation", "healed", raw)
     assert "on" in raw["spec"] and True not in raw["spec"]
     assert len(source.save_calls) == 1
 
@@ -252,14 +252,14 @@ async def test_evalcase_wrong_checks_shape_vetoed(kernel, source):
     # EvalCase.checks must be a non-empty array — a dict (the classic
     # hand-authoring slip) used to persist and break the runner later.
     with pytest.raises(SpecValidationError, match="spec.checks"):
-        await kernel.write_document(
+        await kernel.write_instance(
             "s", "EvalCase", "bad-checks",
             _raw(_EVAL_API, "EvalCase", "bad-checks",
                  {"checks": {"type": "contains", "value": "x"}}),
         )
     assert source.save_calls == []
     with pytest.raises(SpecValidationError, match="spec.checks"):
-        await kernel.write_document(
+        await kernel.write_instance(
             "s", "EvalCase", "empty-checks",
             _raw(_EVAL_API, "EvalCase", "empty-checks", {"checks": []}),
         )
@@ -267,7 +267,7 @@ async def test_evalcase_wrong_checks_shape_vetoed(kernel, source):
 
 @pytest.mark.asyncio
 async def test_evalcase_valid_persists(kernel, source):
-    await kernel.write_document(
+    await kernel.write_instance(
         "s", "EvalCase", "ok",
         _raw(_EVAL_API, "EvalCase", "ok",
              {"checks": [{"type": "contains", "value": "hello"}]}),

@@ -55,7 +55,7 @@ dna scope list [OPTIONS]
 
 ## `dna scope tree`
 
-Inventory all documents in a scope, grouped by Kind.
+Inventory all instances in a scope, grouped by Kind.
 
 Migrated to dna-client (HTTP /scopes/{X}/tree) so it doesn't need
 DNA_SOURCE_URL set in the CLI's own env — the kinds-api already

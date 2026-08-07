@@ -23,7 +23,7 @@ def test_hello_genome_run_py() -> None:
     )
     assert res.returncode == 0, f"run.py failed:\n{res.stderr}"
     out = res.stdout
-    # 1. scope scan — every document identified by (apiVersion, kind, name)
+    # 1. scope scan — every instance identified by (apiVersion, kind, name)
     assert "scope: hello-genome" in out
     assert "github.com/ruinosus/dna/v1" in out
     assert "Genome" in out and "Agent" in out

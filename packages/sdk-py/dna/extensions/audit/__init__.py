@@ -3,7 +3,7 @@
 Registers 1 KindPort:
   - AuditLog (audit-auditlog) — immutable record of every role-gated
     HTTP endpoint invocation. Distinct from Evidence (github.com/ruinosus/dna/evidence),
-    which captures content-level events (document writes, eval runs)
+    which captures content-level events (instance writes, eval runs)
     via the EvidencePolicy → hook pipeline.
 
 Why a separate Kind?
@@ -61,6 +61,12 @@ class UserRoleAssignmentKind(KindBase):
     api_version = _API_VERSION
     kind = "UserRoleAssignment"
     alias = "audit-userroleassignment"
+    # "Roles list is the source of truth for require_role decorators" — its
+    # own docstring names the enforcement point, which is the test this
+    # trait applies. The doc name IS the user_id: subject, scope (the
+    # tenant) and level (roles), the family shape again.
+    # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+    traits = frozenset({"tenancy.access-grant"})
     model = dict
     origin = _ORIGIN
     storage = StorageDescriptor.yaml("user-roles")
@@ -82,6 +88,28 @@ class UserRoleAssignmentKind(KindBase):
         "truth for require_role decorators when Clerk webhook sync "
         "is enabled."
     )
+    # Reference-SHAPED and pointing at no instance. `self` rather than
+    # `external` even though the VALUE originates in the identity provider,
+    # because the tie-break is "is it THIS instance's key?" and the docstring
+    # answers it outright: "The doc name IS the user_id".
+    # `TenantMembership.user_id` holds the same flavour of value and is
+    # `external` — its doc name is `{tenant}--{email}`, so there the id names a
+    # subject rather than the row.
+    #
+    # ⭐ CONFIRMED as a DECISION on 06/08/2026 (i-119, founder decision 1): the
+    # person continues to come from the IdP, so this Kind is an island BY
+    # DESIGN and stops counting as an island-to-fix. `self` STAYS `self` and no
+    # `system` is added — `system` is forbidden beside `self` on purpose, and
+    # bolting one on to make this row "say where it came from" would be
+    # inventing a number, not answering a question. The tie-break already
+    # answered it: the value's minter is the IdP, and the CLASSIFICATION asks
+    # whether it is this instance's key, which it is.
+    # THE TRIGGER THAT INVERTS THE WHOLE GROUP: the day we must hang data of
+    # OUR OWN on a person the IdP does not have. Then `UserProfile` becomes the
+    # anchor and this becomes `to: UserProfile, by: user_id`.
+    identifiers = {
+        "user_id": {"role": "self"},
+    }
 
     def schema(self) -> dict[str, Any] | None:
         return {

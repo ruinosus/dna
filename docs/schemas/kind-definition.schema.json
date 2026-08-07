@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "kind-definition.schema.json",
   "title": "KindDefinition",
-  "description": "Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` package descriptors AND per-scope `kinds/<name>/KIND.yaml` documents (one format, one funnel). Canonical copy: docs/schemas/kind-definition.schema.json; a byte-identical runtime copy ships as sdk-py package data (dna/kernel/schemas/) and backs the validation in TypedKindDefinition.from_raw. Parity-critical: the Python hand-rolled validator (models.py KindDefinitionSpec.from_raw) must accept exactly what this schema accepts (guarded by packages/sdk-py/tests/test_kind_definition_schema.py). There is NO TypeScript twin — packages/ holds cli, client-py, client-ts and sdk-py, and neither a models.ts KindDefinitionSpecSchema nor a kind-definition-schema.test.ts exists anywhere in the tree. The claim that one guarded this file was stale; a false 'guarded by' sitting next to newly-added fields invites the next author to trust it. Editor autocomplete: put `# yaml-language-server: $schema=<path-to-this-file>` on the first line of a .kind.yaml.",
+  "description": "Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` package descriptors AND per-scope `kinds/<name>/KIND.yaml` instances (one format, one funnel). Canonical copy: docs/schemas/kind-definition.schema.json; a byte-identical runtime copy ships as sdk-py package data (dna/kernel/schemas/) and backs the validation in TypedKindDefinition.from_raw. Parity-critical: the Python hand-rolled validator (models.py KindDefinitionSpec.from_raw) must accept exactly what this schema accepts (guarded by packages/sdk-py/tests/test_kind_definition_schema.py). There is NO TypeScript twin — packages/ holds cli, client-py, client-ts and sdk-py, and neither a models.ts KindDefinitionSpecSchema nor a kind-definition-schema.test.ts exists anywhere in the tree. The claim that one guarded this file was stale; a false 'guarded by' sitting next to newly-added fields invites the next author to trust it. Editor autocomplete: put `# yaml-language-server: $schema=<path-to-this-file>` on the first line of a .kind.yaml.",
   "type": "object",
   "required": ["apiVersion", "kind", "metadata", "spec"],
   "properties": {
@@ -16,7 +16,7 @@
     "metadata": {
       "type": "object",
       "required": ["name"],
-      "description": "Standard document metadata. `name` is the doc name (kebab-case Kind name by convention). Extra keys are tolerated (adapters may stamp).",
+      "description": "Standard instance metadata. `name` is the doc name (kebab-case Kind name by convention). Extra keys are tolerated (adapters may stamp).",
       "properties": {
         "name": { "type": "string", "minLength": 1 },
         "description": { "type": "string" },
@@ -45,7 +45,7 @@
         "alias": {
           "type": "string",
           "minLength": 1,
-          "description": "Globally unique alias, convention `<owner>-<kebab(kind)>` (e.g. `sdlc-kaizen`). Used in dep_filters and templates. It is NOT how a relation names its target: `spec.relations[*].to` carries the bare Kind NAME, which is unambiguous by the enforced i-195 invariant and is what the document read takes. This line used to say aliases were for \"cross-kind refs — never bare Kind names\", which no implementation ever matched (i-110 item 2)."
+          "description": "Globally unique alias, convention `<owner>-<kebab(kind)>` (e.g. `sdlc-kaizen`). Used in dep_filters and templates. It is NOT how a relation names its target: `spec.relations[*].to` carries the bare Kind NAME, which is unambiguous by the enforced i-195 invariant and is what the instance read takes. This line used to say aliases were for \"cross-kind refs — never bare Kind names\", which no implementation ever matched (i-110 item 2)."
         },
         "origin": {
           "type": "string",
@@ -56,7 +56,7 @@
           "type": "object",
           "required": ["type"],
           "additionalProperties": false,
-          "description": "Where documents of this Kind live on disk (mirrors StorageDescriptor / storage_dict_to_descriptor).",
+          "description": "Where instances of this Kind live on disk (mirrors StorageDescriptor / storage_dict_to_descriptor).",
           "properties": {
             "type": {
               "enum": ["bundle", "yaml", "root", "standalone"],
@@ -111,7 +111,7 @@
                   { "type": "string", "minLength": 1 },
                   { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } }
                 ],
-                "description": "The target. A bare Kind NAME (`Story`) — never an alias, because `target_kind` is globally unique by the ENFORCED registry invariant i-195 and is what `get_document(scope, kind, name)` takes. A LIST is polymorphic: any one of them may match. `*` means the target Kind travels inside the VALUE, and then `by` must name the composite form."
+                "description": "WHICH Kinds this relation may point at. A bare Kind NAME (`Story`) — never an alias, because `target_kind` is globally unique by the ENFORCED registry invariant i-195 and is what `get_instance(scope, kind, name)` takes. A LIST is polymorphic: any one of them may match. `*` means the model does not CONSTRAIN the target — a Comment pins anything that exists — and is not the same statement as `by` (where the target Kind name is written). Reading those two as one question left 21 declared relations in this registry pointing at `*` and therefore untypable; a composite `by` may now declare its targets."
               },
               "cardinality": {
                 "enum": ["one", "many"],
@@ -120,16 +120,40 @@
               "inverse_of": {
                 "type": "string",
                 "minLength": 1,
-                "description": "The NAME of the relation on the target Kind that is this one's other half. The DECLARATION must pair (the target declares that relation, it points back here, and it names this one as ITS inverse) — enforced at load, because it reads no documents and cannot deadlock. Instance reciprocity — the target document naming this one back — is REPORTED at write, never imposed and never derived: imposing deadlocks (neither side can be written first) and deriving means the kernel mutating a document the author did not touch."
+                "description": "The NAME of the relation on the target Kind that is this one's other half. The DECLARATION must pair (the target declares that relation, it points back here, and it names this one as ITS inverse) — enforced at load, because it reads no instances and cannot deadlock. Instance reciprocity — the target instance naming this one back — is REPORTED at write, never imposed and never derived: imposing deadlocks (neither side can be written first) and deriving means the kernel mutating an instance the author did not touch."
               },
               "by": {
                 "type": "string",
                 "minLength": 1,
-                "description": "How the VALUE addresses the target. Default `name` — the target document's metadata.name, and the ONLY addressing the kernel resolves and therefore the only one it validates. A target spec FIELD (`by: workspace_id`) declares the addressing without installing a resolution rule: resolving by key needs an expression index the store does not have, and a second rule beside a live one can veto data the live one accepts (measured: PricingPlan resolves by tier_id and THEN by aliases[]). With `to: *` this must be one of the composite forms `Kind:name`, `Kind/name`, `{kind, name}`."
+                "description": "How the VALUE addresses the target. Default `name` — the target instance's metadata.name, and the ONLY addressing the kernel resolves and therefore the only one it validates. A target spec FIELD (`by: workspace_id`) declares the addressing without installing a resolution rule: resolving by key needs an expression index the store does not have, and a second rule beside a live one can veto data the live one accepts (measured: PricingPlan resolves by tier_id and THEN by aliases[]). A composite FORM (`Kind:name`, `Kind/name`, `{kind, name}`) says the target Kind name travels INSIDE the value; it is REQUIRED with `to: *` and ALLOWED beside a declared `to`, which is how a polymorphic pointer gets typed without teaching the kernel to parse it."
+              },
+              "on_target_delete": {
+                "enum": ["restrict", "delete_source", "allow"],
+                "description": "What happens to THIS relation when the instance it points at is deleted. Gel's `on target delete` menu, three of its four values (`deferred restrict` is absent: there is no transaction boundary here to defer the check to, so it could only behave as `restrict`). `restrict` refuses the delete of a target anything still points at; `delete_source` deletes the referring instance with it; `allow` lets the reference dangle. Undeclared means `allow`, which is what this runtime already DOES — measured, not chosen for safety: a `restrict` default would convert 33 resolved relations in this registry into new refusals in one commit. An explicit `allow` is therefore NOT redundant — it is the difference between nobody having considered the question and somebody having decided that a reference SHOULD outlive its target, which is exactly what an AuditLog is for. `restrict` and `delete_source` are REFUSED on a relation the kernel does not resolve (a composite `by`, or a target spec field): enforcement reads the derived edge graph, only a resolved relation produces edges, and a policy with no mechanism behind it is the same empty promise as an `inverse_of` on `to: *`."
               }
             }
           },
           "description": "What this Kind POINTS AT — first-class, so a relation is listable without walking properties, its cardinality is declared rather than inferred, and a reciprocal pair can say that it IS one. The relation's NAME is the spec field holding its value, which is what keeps the declaration and the data together and lets the read that VALIDATES a relation be the read that produces its edge. Normalized + enforced by dna.kernel.kinds.relations; exposed on the port as `relations`. Replaces the four mechanisms that answered this question before (`x-dna-ref`, `x-dna-ref-composite`, name-shape inference, and the denylist that existed to silence it). `dep_filters` is NOT one of them and stays separate — it drives prompt composition."
+        },
+        "identifiers": {
+          "type": ["object", "null"],
+          "additionalProperties": {
+            "type": "object",
+            "required": ["role"],
+            "additionalProperties": false,
+            "properties": {
+              "role": {
+                "enum": ["self", "external"],
+                "description": "`self` — the field holds THIS instance's own key; it names the instance rather than pointing at another one. `external` — the value is an identifier minted by a system OUTSIDE DNA (an OAuth client_id, a Stripe customer id, an IdP subject), so there is no Kind to point at and `system` says who mints it. Closed at two, for the reason `cardinality` has two words: a third role would be describing a validation rule, and the JSON Schema next door owns those."
+              },
+              "system": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Which authority mints the value — `stripe`, `oauth`, `entra`, `workos`. REQUIRED with `role: external` (that the value comes from somewhere else is already legible in the field name; WHICH somewhere is the part worth declaring) and REFUSED with `role: self` (an instance's own key is minted by this runtime, so naming an authority for it is a belief nothing can honour, and dropping it silently would leave that belief in the file). Free text on purpose: the set of systems a deployment integrates with is open, and a closed enum here would be this package deciding which SaaS a tenant may use."
+              }
+            }
+          },
+          "description": "Fields that point NOWHERE, and say so — the other half of `spec.relations`, and the half that makes the gap list finite. A field whose NAME looks like a reference (`sprint_id`, `stripe_customer_id`) but which points at no instance is reported by the schema graph as an `undeclared` gap; this block is how a Kind ANSWERS that — on itself, beside its schema, with a machine-readable reason. NOT the retired inference denylist: nothing is being suppressed (the gap row asserts no target, so there is no false claim to silence), and the declaration lives on the Kind rather than in a central table that can go stale against a Kind it no longer describes. Declaring the same field as BOTH a relation and an identifier is refused at load — one says it points somewhere, the other says it points nowhere. Normalized + enforced by dna.kernel.kinds.identifiers; exposed on the port as `identifiers`."
         },
         "is_root": {
           "type": "boolean",
@@ -139,7 +163,7 @@
         "prompt_target": {
           "type": "boolean",
           "default": false,
-          "description": "True if documents of this Kind compose into LLM prompts."
+          "description": "True if instances of this Kind compose into LLM prompts."
         },
         "flatten_in_context": {
           "type": "boolean",
@@ -154,7 +178,7 @@
         "plane": {
           "enum": ["composition", "record"],
           "default": "composition",
-          "description": "composition = participates in agent composition (writes invalidate scope caches) · record = pure typed document (cacheless writes, never composes into prompts; cannot carry composition signals — the plane lint rejects contradictions)."
+          "description": "composition = participates in agent composition (writes invalidate scope caches) · record = pure typed instance (cacheless writes, never composes into prompts; cannot carry composition signals — the plane lint rejects contradictions)."
         },
         "tenant_scope": {
           "enum": ["tenanted", "global"],
@@ -204,7 +228,7 @@
         "scope_inheritable": {
           "type": "boolean",
           "default": true,
-          "description": "Documents of this Kind inherit across scopes (false for per-scope ledgers + structural Kinds)."
+          "description": "Instances of this Kind inherit across scopes (false for per-scope ledgers + structural Kinds)."
         },
         "is_overlayable": {
           "type": "boolean",
@@ -280,7 +304,7 @@
           "properties": {
             "fields": {
               "type": "array",
-              "description": "The ORDERED fields a human reads. The order IS the declaration. `name` resolves to the document's envelope identity (metadata.name); every other entry resolves under `spec`.",
+              "description": "The ORDERED fields a human reads. The order IS the declaration. `name` resolves to the instance's envelope identity (metadata.name); every other entry resolves under `spec`.",
               "items": {
                 "anyOf": [
                   { "type": "string", "minLength": 1 },
@@ -289,11 +313,11 @@
                     "required": ["field"],
                     "additionalProperties": false,
                     "properties": {
-                      "field": { "type": "string", "minLength": 1, "description": "Spec field name, or `name` for the document's envelope identity." },
+                      "field": { "type": "string", "minLength": 1, "description": "Spec field name, or `name` for the instance's envelope identity." },
                       "label": { "type": "string", "minLength": 1, "description": "What a human calls this field. Omit to derive it from the field name (`spec_refs` -> `Spec refs`)." },
                       "role": {
                         "enum": ["identifier", "title", "subtitle", "status", "owner", "parent", "rank", "tag", "timestamp", "metric", "body"],
-                        "description": "What the VALUE means, never what to paint. identifier = the handle a human names this document by · title = the headline · subtitle = one line elaborating it · status = the document's own lifecycle state (OPEN value vocabulary — which is why no colour map belongs here) · owner = the responsible actor · parent = the document this belongs to · rank = relative importance among siblings · tag = free-form categorical labels · timestamp = a moment in time · metric = a measured quantity · body = long prose, not a cell. identifier/title/subtitle/status may each be declared at most once."
+                        "description": "What the VALUE means, never what to paint. identifier = the handle a human names this instance by · title = the headline · subtitle = one line elaborating it · status = the instance's own lifecycle state (OPEN value vocabulary — which is why no colour map belongs here) · owner = the responsible actor · parent = the instance this belongs to · rank = relative importance among siblings · tag = free-form categorical labels · timestamp = a moment in time · metric = a measured quantity · body = long prose, not a cell. identifier/title/subtitle/status may each be declared at most once."
                       }
                     }
                   }
@@ -322,7 +346,7 @@
         },
         "validate_on_parse": {
           "type": "boolean",
-          "description": "parse() validates spec against schema() and raises on a malformed document (the loader turns that into a parse_error event). A descriptor Kind with a declared schema already validates; declaring this keeps a class \u2192 descriptor migration lossless and makes the intent readable."
+          "description": "parse() validates spec against schema() and raises on a malformed instance (the loader turns that into a parse_error event). A descriptor Kind with a declared schema already validates; declaring this keeps a class \u2192 descriptor migration lossless and makes the intent readable."
         },
         "marker_shared_allowed": {
           "type": "boolean",
@@ -340,19 +364,19 @@
         "layout_names": {
           "type": ["array", "null"],
           "items": { "type": "string", "minLength": 1 },
-          "description": "The prompt layouts documents of this Kind may name; UnknownLayout lists them back to the author."
+          "description": "The prompt layouts instances of this Kind may name; UnknownLayout lists them back to the author."
         },
         "proposed_by": {
           "type": ["string", "null"],
-          "description": "Who PROPOSED this Kind — the verified identity at the authoring door, stamped THERE because a proposer cannot be back-filled onto a document that never recorded one. Tracks the CURRENT proposal: an edit (a second author call for an existing name) RE-STAMPS it to the editor, because the question this field answers is who proposed the shape that is pending or approved right now. The original proposer stays recoverable through the kernel's version history. Audit metadata only: the registration gate reads approved_by. It is legal for this to name the same identity as approved_by (a solo author who approves their own proposal is two credentials, and refusing on identity equality would block the commonest user for no security gain) — a coincidence the audit REPORTS, not an error. What must never happen is one act wearing the other's name: each field is stamped from the verified identity of ITS OWN act, never from the request body."
+          "description": "Who PROPOSED this Kind — the verified identity at the authoring door, stamped THERE because a proposer cannot be back-filled onto an instance that never recorded one. Tracks the CURRENT proposal: an edit (a second author call for an existing name) RE-STAMPS it to the editor, because the question this field answers is who proposed the shape that is pending or approved right now. The original proposer stays recoverable through the kernel's version history. Audit metadata only: the registration gate reads approved_by. It is legal for this to name the same identity as approved_by (a solo author who approves their own proposal is two credentials, and refusing on identity equality would block the commonest user for no security gain) — a coincidence the audit REPORTS, not an error. What must never happen is one act wearing the other's name: each field is stamped from the verified identity of ITS OWN act, never from the request body."
         },
         "proposed_at": {
           "type": ["string", "null"],
-          "description": "When the proposal recorded in proposed_by was made (ISO-8601). Equal to created_at on a FIRST author and later than it on every edit — created_at is the document's birth and is carried forward, while this pair moves with the current proposal. Audit metadata only."
+          "description": "When the proposal recorded in proposed_by was made (ISO-8601). Equal to created_at on a FIRST author and later than it on every edit — created_at is the instance's birth and is carried forward, while this pair moves with the current proposal. Audit metadata only."
         },
         "approved_by": {
           "type": ["string", "null"],
-          "description": "Who approved this Kind. A KindDefinition loaded from a STORE registers only once this names someone: registration is what confers schema enforcement and storage routing, so an unapproved Kind is parsed, logged and left inert — a document that is auditable, listable and diffable, and does nothing. Omit (null) while the Kind is authored but not yet approved."
+          "description": "Who approved this Kind. A KindDefinition loaded from a STORE registers only once this names someone: registration is what confers schema enforcement and storage routing, so an unapproved Kind is parsed, logged and left inert — an instance that is auditable, listable and diffable, and does nothing. Omit (null) while the Kind is authored but not yet approved."
         },
         "approved_at": {
           "type": ["string", "null"],
@@ -360,7 +384,7 @@
         },
         "revoked_by": {
           "type": ["string", "null"],
-          "description": "Who REVOKED this Kind — the THIRD state, and deliberately not the absence of the second. Clearing approved_by is indistinguishable from never having approved, and never-approved means UNREGISTERED, which means documents are accepted with no validation at all — so a revocation implemented as a plain un-approval loosens instead of tightening. The revoked fact is therefore persisted here; the Kind stays REGISTERED (being known is what stops revocation meaning 'accepts anything'); new documents of it are REFUSED; and existing ones read back MARKED invalid — never deleted, never an error, because the data did nothing wrong and the audit needs to see what existed. Reversible: approving again clears this pair and validity returns, because validity follows the Kind's CURRENT state and is never a stamp on the document. approved_by is deliberately left standing beside it — the audit must keep who conferred effect in the first place."
+          "description": "Who REVOKED this Kind — the THIRD state, and deliberately not the absence of the second. Clearing approved_by is indistinguishable from never having approved, and never-approved means UNREGISTERED, which means instances are accepted with no validation at all — so a revocation implemented as a plain un-approval loosens instead of tightening. The revoked fact is therefore persisted here; the Kind stays REGISTERED (being known is what stops revocation meaning 'accepts anything'); new instances of it are REFUSED; and existing ones read back MARKED invalid — never deleted, never an error, because the data did nothing wrong and the audit needs to see what existed. Reversible: approving again clears this pair and validity returns, because validity follows the Kind's CURRENT state and is never a stamp on the instance. approved_by is deliberately left standing beside it — the audit must keep who conferred effect in the first place."
         },
         "revoked_at": {
           "type": ["string", "null"],
@@ -368,11 +392,11 @@
         },
         "updated_at": {
           "type": "string",
-          "description": "Runtime-stamped volatile field (never authored) — allowed so write-stamped documents keep validating."
+          "description": "Runtime-stamped volatile field (never authored) — allowed so write-stamped instances keep validating."
         },
         "created_at": {
           "type": "string",
-          "description": "When the document was created (ISO-8601). VOLATILE means excluded from canonical_digest, NOT supplied by the runtime — nothing in the write path stamps it, so a document written without it comes back with no created_at at all. The Kind-authoring door therefore stamps it deliberately, and the audit view projects it. It means the BIRTH of the document and is PRESERVED across edits — the authoring door rebuilds the spec from scratch and persists it, so it carries the existing value forward and stamps `now` only when the document does not yet exist; 'when the document was created' has to stay true after the first edit. For when the pending shape was proposed, read proposed_at. A write-time stamp, if one ever lands, wins."
+          "description": "When the instance was created (ISO-8601). VOLATILE means excluded from canonical_digest, NOT supplied by the runtime — nothing in the write path stamps it, so an instance written without it comes back with no created_at at all. The Kind-authoring door therefore stamps it deliberately, and the audit view projects it. It means the BIRTH of the instance and is PRESERVED across edits — the authoring door rebuilds the spec from scratch and persists it, so it carries the existing value forward and stamps `now` only when the instance does not yet exist; 'when the instance was created' has to stay true after the first edit. For when the pending shape was proposed, read proposed_at. A write-time stamp, if one ever lands, wins."
         },
         "version": {
           "type": ["string", "integer"],

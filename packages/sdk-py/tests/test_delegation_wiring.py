@@ -217,14 +217,14 @@ class _FakeSubModelRequest:
 
 def _stub_federation_tools(monkeypatch):
     """The fixture's `dna-mcp` federation declares
-    `[list_kinds, list_my_kinds, author_kind, update_document_draft]` — stand
+    `[list_kinds, list_my_kinds, author_kind, update_instance_draft]` — stand
     in a fake MCP server that actually serves exactly those four, so the
     projected `allowed_tools` is what gets exercised, not a guess."""
 
     async def fake_load_mcp_tools(mcp_url, auth):
         return [
             _FakeSubTool(n)
-            for n in ("list_kinds", "list_my_kinds", "author_kind", "update_document_draft")
+            for n in ("list_kinds", "list_my_kinds", "author_kind", "update_instance_draft")
         ]
 
     monkeypatch.setattr(
@@ -298,7 +298,7 @@ def test_a_target_with_declared_tools_actually_reaches_them_in_the_sub_run(
 
     asyncio.run(run_local("wide-conv", "faça qualquer coisa"))
     names = asyncio.run(_tool_names_after_the_chain(captured["middleware"]))
-    assert names == {"list_kinds", "list_my_kinds", "author_kind", "update_document_draft"}
+    assert names == {"list_kinds", "list_my_kinds", "author_kind", "update_instance_draft"}
 
 
 def test_a_targets_own_allowed_tools_restriction_holds_in_the_sub_run(tmp_path, monkeypatch):
@@ -317,7 +317,7 @@ def test_a_targets_own_allowed_tools_restriction_holds_in_the_sub_run(tmp_path, 
     names = asyncio.run(_tool_names_after_the_chain(captured["middleware"]))
     assert names == {"list_kinds", "author_kind"}
     assert "list_my_kinds" not in names
-    assert "update_document_draft" not in names
+    assert "update_instance_draft" not in names
 
 
 def test_run_local_reuses_the_same_mcp_auth_hook_object_not_a_new_one(tmp_path, monkeypatch):
@@ -339,7 +339,7 @@ def test_run_local_reuses_the_same_mcp_auth_hook_object_not_a_new_one(tmp_path, 
 
 
 # ── the sub-run gets the HOST's tools and middleware ───────────────────────
-# The half the tests above cannot see: in the fixture `update_document_draft`
+# The half the tests above cannot see: in the fixture `update_instance_draft`
 # is an MCP tool, so the target's own federation serves it. In a real host it
 # is a LOCAL tool the host registers through `hooks.extensions["tools"]` —
 # and until this change the sub-run got NONE of those, nor any host
@@ -477,7 +477,7 @@ def test_uma_tool_local_de_LEITURA_nao_pede_aprovacao(tmp_path, monkeypatch):
 
     `extra_confirm` era "todo nome de tool local", e alimentava DUAS coisas: a
     allowlist e o portão humano. Enquanto as locais eram só escritas (os drafts
-    de memória e documento) as duas listas coincidiam — e a coincidência virou
+    de memória e instância) as duas listas coincidiam — e a coincidência virou
     regra sem ninguém decidir isso.
 
     Aí chegou `analyze_spreadsheet`, que só LÊ a planilha que o usuário acabou de

@@ -32,7 +32,7 @@ is idempotent (`--force` to overwrite), and the git hooks are wired.
 Pack content is validated with the same defenses as `dna install` (only
 registered Kinds, JSON-Schema-checked specs, slug-only names) and is only
 **projected** into tool directories — nothing is written to the `.dna/`
-source. To also track the pack's documents on the project board, combine
+source. To also track the pack's instances on the project board, combine
 the two channels at the same ref:
 
 ```console

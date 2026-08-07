@@ -204,7 +204,7 @@ def build_digest(
 
     ``kernel`` (optional) supplies the trait-derived bucket memberships — which
     Kinds are rollups, which are filed, which are decisions. This aggregator is
-    PURE by design (documents in, digest out), so a caller without one gets the
+    PURE by design (instances in, digest out), so a caller without one gets the
     documented pre-trait fallback; every real caller has a kernel and passes it.
 
     ``docs`` is a list of ``{"kind", "name", "spec"}`` dicts (record-plane +

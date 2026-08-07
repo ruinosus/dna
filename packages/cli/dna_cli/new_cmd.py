@@ -4,7 +4,7 @@ s-dx-new-scaffolding — authoring an agent or a soul used to mean remembering
 the envelope by hand (``apiVersion``/``kind``/``metadata``/``spec``), the
 right bundle marker (``AGENT.md`` vs ``SOUL.md``), and which spec fields are
 even allowed. ``dna new`` writes the correct skeleton for you — through
-``kernel.write_document`` (never a hand-rolled YAML dump), so every write
+``kernel.write_instance`` (never a hand-rolled YAML dump), so every write
 guard, schema check and reader/writer round-trip runs exactly as on any other
 write — leaving you with a valid doc whose only empty part is the prose you
 came to write.
@@ -50,7 +50,7 @@ def _exists(s, kind: str, name: str) -> bool:
 
 def _write(s, kind: str, name: str, raw: dict, *, force: bool, as_json: bool,
            summary: str) -> None:
-    """Shared write path: existence gate → kernel.write_document → report."""
+    """Shared write path: existence gate → kernel.write_instance → report."""
     if _exists(s, kind, name) and not force:
         if as_json:
             print_json({"created": False, "reason": "exists", "kind": kind,
@@ -61,7 +61,7 @@ def _write(s, kind: str, name: str, raw: dict, *, force: bool, as_json: bool,
             f"re-run with --force to overwrite"
         )
     try:
-        s.run(s.kernel.write_document(s.scope, kind, name, raw))
+        s.run(s.kernel.write_instance(s.scope, kind, name, raw))
     except Exception as e:  # noqa: BLE001
         raise fail(f"write failed: {e}") from e
     s.holder.reload()

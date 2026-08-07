@@ -1,14 +1,14 @@
-"""Backfilling the graph for documents that predate the producer.
+"""Backfilling the graph for instances that predate the producer.
 
-A document written before the producer existed has no edges, and the screen
+An instance written before the producer existed has no edges, and the screen
 must be able to tell "nothing points at this" from "nobody has written since
 Tuesday". The backfill is what makes the first statement true — derived from
 the SAME ``x-dna-ref`` declaration the producer reads, never from a scan that
 guesses at slug prefixes (the mechanism i-039 refused, and the reason the first
 ``dna_edges`` was dropped).
 
-The documents here are written with the producer DISABLED, which is how a
-pre-producer database is honestly simulated: rows in ``documents``, nothing in
+The instances here are written with the producer DISABLED, which is how a
+pre-producer database is honestly simulated: rows in ``instances``, nothing in
 ``edges``. If the backfill were secretly relying on the write path having been
 warm, these tests would catch it.
 """
@@ -68,16 +68,16 @@ async def _edge_count(src) -> int:
 
 
 async def _seed_without_edges(kernel, monkeypatch) -> None:
-    """Write documents with the producer OFF — a pre-producer database."""
+    """Write instances with the producer OFF — a pre-producer database."""
     monkeypatch.setenv("DNA_REF_VALIDATION", "off")
-    await kernel.write_document(SCOPE, "Epic", "e-1", _doc("Epic", "e-1"))
-    await kernel.write_document(
+    await kernel.write_instance(SCOPE, "Epic", "e-1", _doc("Epic", "e-1"))
+    await kernel.write_instance(
         SCOPE, "Feature", "f-y", _doc("Feature", "f-y", epic="e-1"),
     )
-    await kernel.write_document(
+    await kernel.write_instance(
         SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
     )
-    await kernel.write_document(
+    await kernel.write_instance(
         SCOPE, "Story", "s-ghost", _doc("Story", "s-ghost", feature="f-gone"),
     )
     monkeypatch.setenv("DNA_REF_VALIDATION", "warn")
@@ -97,7 +97,7 @@ class TestThePairsAreDerived:
         assert not [p for p in pairs if p[0] == "Engram"]
 
     def test_a_kernel_that_cannot_enumerate_kinds_raises(self):
-        """"0 pairs, 0 documents" would look like a successful run that filled
+        """"0 pairs, 0 instances" would look like a successful run that filled
         nothing — precisely the failure this whole degree is about."""
         from dna.kernel.query.backfill import declared_pairs
 
@@ -121,7 +121,7 @@ class TestTheBackfillFills:
 
         report = await backfill_edges(kernel, scope=SCOPE)
 
-        assert report.documents == 3          # Feature/f-y + the two Stories
+        assert report.instances == 3          # Feature/f-y + the two Stories
         assert report.edges == 3
         assert report.dangling == 1           # s-ghost → f-gone
         assert report.skipped == 0
@@ -145,13 +145,13 @@ class TestTheBackfillFills:
         dry = await backfill_edges(kernel, scope=SCOPE, dry_run=True)
         assert await _edge_count(src) == 0
         wet = await backfill_edges(kernel, scope=SCOPE)
-        assert (dry.documents, dry.edges, dry.dangling) == (
-            wet.documents, wet.edges, wet.dangling,
+        assert (dry.instances, dry.edges, dry.dangling) == (
+            wet.instances, wet.edges, wet.dangling,
         )
 
     @pytest.mark.anyio
     async def test_running_twice_changes_nothing(self, store, monkeypatch):
-        """Idempotent by construction — the same DELETE+INSERT per document
+        """Idempotent by construction — the same DELETE+INSERT per instance
         the producer uses."""
         from dna.kernel.query.backfill import backfill_edges
 
@@ -202,9 +202,9 @@ class TestIncompleteIsSaid:
         async def _boom(*a, **kw):
             raise RuntimeError("store unavailable")
 
-        monkeypatch.setattr(kernel, "get_document", _boom)
+        monkeypatch.setattr(kernel, "get_instance", _boom)
         report = await backfill_edges(kernel, scope=SCOPE)
-        assert report.documents == 0
+        assert report.instances == 0
         assert report.skipped == 3
         assert report.pending == {SCOPE}
         assert await _edge_count(src) == 0
@@ -228,14 +228,14 @@ class TestTheReaderAsksTheDeclaration:
     ):
         """The per-``(Kind, field)`` query is what makes the backfill
         affordable: on Postgres it is a JSONB key-existence predicate the
-        existing GIN index serves, so it visits the documents that HAVE the
-        field rather than every document in the database.
+        existing GIN index serves, so it visits the instances that HAVE the
+        field rather than every instance in the database.
         """
         kernel, src = store
         await _seed_without_edges(kernel, monkeypatch)
-        await kernel.write_document(SCOPE, "Story", "s-bare", _doc("Story", "s-bare"))
+        await kernel.write_instance(SCOPE, "Story", "s-bare", _doc("Story", "s-bare"))
 
-        rows = await src.list_documents_with_spec_field("Story", "feature")
+        rows = await src.list_instances_with_spec_field("Story", "feature")
         assert {r["name"] for r in rows} == {"s-x", "s-ghost"}
         assert "s-bare" not in {r["name"] for r in rows}
         # The identity travels whole — apiVersion included, because two

@@ -3,7 +3,7 @@
 The hole: the face enumerated the exception types it would translate, and the
 enumeration was wrong.
 
-* ``write_document`` caught ``(ValueError, LookupError, PermissionError)``. But
+* ``write_instance`` caught ``(ValueError, LookupError, PermissionError)``. But
   ``LayerPolicyViolationError`` / ``TenantNotAllowed`` / ``TenantRequired`` /
   ``InvalidTenantSlug`` are plain ``Exception`` and ``NotWritableError`` is a
   ``RuntimeError`` — so not one of them matched. The LayerPolicy veto is the
@@ -84,15 +84,15 @@ def _refused(server, tool, args) -> str:
 @pytest.mark.parametrize("exc", _refusals(), ids=lambda e: type(e).__name__)
 def test_write_document_relays_every_kernel_refusal(dna_dir, monkeypatch, exc):
     pytest.importorskip("fastmcp")
-    from dna.application import documents as D
+    from dna.application import instances as D
     from dna_cli import _mcp_server as M
 
     async def boom(*a, **kw):
         raise exc
 
-    monkeypatch.setattr(D, "write_document_impl", boom)
+    monkeypatch.setattr(D, "write_instance_impl", boom)
     server = M.build_server(scope=_SCOPE, base_dir=str(dna_dir))
-    msg = _refused(server, "write_document", {
+    msg = _refused(server, "write_instance", {
         "kind": "ModelProfile", "name": "x",
         "spec": {"model_id": "x", "provider": "y"}, "scope": _SCOPE})
     assert type(exc).__name__ in msg, msg   # the client learns WHICH refusal
@@ -105,14 +105,14 @@ def test_a_stale_if_match_is_an_honest_refusal_not_a_500(dna_dir):
     from dna_cli import _mcp_server as M
 
     server = M.build_server(scope=_SCOPE, base_dir=str(dna_dir))
-    _call(server, "write_document", {
+    _call(server, "write_instance", {
         "kind": "ModelProfile", "name": "m", "scope": _SCOPE,
         "spec": {"model_id": "m", "provider": "p"}})
-    msg = _refused(server, "write_document", {
+    msg = _refused(server, "write_instance", {
         "kind": "ModelProfile", "name": "m", "scope": _SCOPE,
         "spec": {"provider": "q"}, "if_match": "not-the-current-etag"})
     assert "ConcurrentWriteError" in msg
-    assert "get_document" in msg  # names the remedy
+    assert "get_instance" in msg  # names the remedy
 
 
 # ── the board write tools (which had no ``try`` at all) ─────────────────────
@@ -166,13 +166,13 @@ def test_a_create_over_an_existing_story_is_refused_by_name(dna_dir):
         "name": "s-mine", "feature": "f-other", "description": "a guess",
         "ac": ["Given X, when Y, then Z"], "dod": ["code+tests"],
         "scope": _SCOPE})
-    assert "DocumentExists" in msg
-    assert "s-mine" in msg          # names the existing document
+    assert "InstanceExists" in msg
+    assert "s-mine" in msg          # names the existing instance
     assert "set_status" in msg      # …and what to do instead
 
-    kept = _call(server, "get_document",
+    kept = _call(server, "get_instance",
                  {"kind": "Story", "name": "s-mine", "scope": _SCOPE})
-    spec = kept.structured_content["document"]["spec"]
+    spec = kept.structured_content["instance"]["spec"]
     assert spec["description"] == "the real one"
     assert spec["acceptance_criteria"] == ["Given A, when B, then C"]
 
@@ -188,7 +188,7 @@ def test_a_create_over_an_existing_feature_is_refused_by_name(dna_dir):
     msg = _refused(server, "create_feature", {
         "name": "f-mine", "title": "T2", "description": "a guess",
         "scope": _SCOPE})
-    assert "DocumentExists" in msg and "f-mine" in msg
+    assert "InstanceExists" in msg and "f-mine" in msg
 
 
 # ── the memory tools (which mapped nothing) ────────────────────────────────
@@ -240,3 +240,52 @@ def test_an_unexpected_error_is_not_dressed_up_as_a_refusal(dna_dir, monkeypatch
     msg = _refused(server, "create_story", {
         "name": "s-x", "feature": "f-x", "description": "d", "scope": _SCOPE})
     assert "ZeroDivisionError" not in msg or "refus" not in msg.lower()
+
+
+# ── the DELETE tool, which until now had no refusal to relay ────────────────
+
+
+def test_delete_instance_relays_the_on_target_delete_refusal(dna_dir, monkeypatch):
+    """``TargetDeleteRestricted`` (slice 2 of ``spec-topologia-do-grafo``) is
+    the first refusal the delete path can raise — writes had ``pre_save``,
+    deletes had nothing.
+
+    This is the whole point of the marker base, asserted rather than assumed:
+    the tool's ``except WRITE_REFUSALS`` was written before this refusal
+    existed, and it relays it anyway because the tuple names ``KernelRefusal``
+    rather than a list of types. If somebody ever narrows that tuple to an
+    enumeration, this goes red — which is the failure the enumeration caused
+    the first time."""
+    pytest.importorskip("fastmcp")
+    from dna.application import instances as D
+    from dna.kernel.errors import TargetDeleteRestricted
+    from dna_cli import _mcp_server as M
+
+    exc = TargetDeleteRestricted(
+        "refusing to delete Feature/f-x: 47 reference(s) declare "
+        "on_target_delete: restrict",
+        referrers=[{"kind": "Story", "name": "s-1", "relation": "feature"}],
+    )
+
+    async def boom(*a, **kw):
+        raise exc
+
+    monkeypatch.setattr(D, "delete_instance_impl", boom)
+    server = M.build_server(scope=_SCOPE, base_dir=str(dna_dir))
+    msg = _refused(server, "delete_instance", {
+        "kind": "ModelProfile",
+        "api_version": "github.com/ruinosus/dna/modelreg/v1",
+        "name": "x", "scope": _SCOPE})
+    assert "TargetDeleteRestricted" in msg, msg
+    assert "on_target_delete: restrict" in msg, msg
+
+
+def test_the_delete_refusal_is_inside_the_tuple_the_TOOL_catches(dna_dir):
+    """Derived from the face's own tuple, not retyped here. The test above
+    proves the relay end to end; this one names WHY it works, so a narrowing of
+    ``WRITE_REFUSALS`` fails with the reason on screen instead of as a mystery
+    in a FastMCP error string."""
+    from dna.kernel.errors import TargetDeleteRestricted
+    from dna_cli._mcp_instances import WRITE_REFUSALS
+
+    assert issubclass(TargetDeleteRestricted, WRITE_REFUSALS)

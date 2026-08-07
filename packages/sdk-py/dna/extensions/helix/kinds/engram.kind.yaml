@@ -59,14 +59,25 @@ spec:
     marker: LESSON_LEARNED.md
     body_field: body
   relations:
+    # OPEN BY DESIGN — the evidence backing an affect is whatever was in hand
+    # (a rem-id, a verdict, a Story, a URL). Not a list waiting to be written:
+    # a memory can be grounded in anything the runtime ever produced, and a
+    # closed `to` here would veto the next Kind that grounds one.
     affect_evidence_refs:
       to: '*'
       cardinality: many
       by: 'Kind/name'
+    # TYPED — the schema's own description names the three and nothing else
+    # has ever been written here ("Scoped target: Feature/X, Epic/Y, or
+    # Roadmap/Z"). `area` is what makes a memory SURFACE, so leaving it
+    # untyped meant nothing could ask "which Engrams fire on this Feature".
     area:
-      to: '*'
+      to: [Epic, Feature, Roadmap]
       cardinality: one
       by: 'Kind/name'
+    # OPEN BY DESIGN — a memory derives from whatever produced it (Narrative,
+    # WorkflowEvent, a Story, an AgentSession, a Kind that does not exist yet).
+    # Consolidation writes these from the artifacts it read; there is no set.
     source_refs:
       to: '*'
       cardinality: many
@@ -160,7 +171,7 @@ spec:
         # of every candidate, so the next omission fails loudly.
         # Heterogeneous on purpose: an entry is EITHER a `Kind/name` pointer
         # (`Story/s-z`) or a bare local id from the surrounding manifest
-        # (`rem-x`, `verdict-y`). Neither is a document NAME on its own, so
+        # (`rem-x`, `verdict-y`). Neither is an instance NAME on its own, so
         description: Concrete refs (rem-X, verdict-Y, Story/s-Z) that back the affect
           choice. Required for high-stakes affects so the LLM's claim is auditable
           against actual artifacts in the manifest.
@@ -334,7 +345,7 @@ spec:
           normal trains its reader to ignore it, including the time it is
           right. This is the same rule the verb's faces announce
           (`dna.memory.contradiction.WHEN_TO_CLAIM`), restated for the OTHER
-          door — a raw `write_document` on an Engram, which reads this schema
+          door — a raw `write_instance` on an Engram, which reads this schema
           and never sees a tool description.
         items:
           type: object

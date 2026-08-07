@@ -88,7 +88,7 @@ async def _seed_pro_plan(dna_dir) -> None:
     from dna_cli import _mcp_server as M
 
     live = await M.boot_live(base_dir=str(dna_dir))
-    await live.kernel.write_document("_lib", "PricingPlan", "pro", {
+    await live.kernel.write_instance("_lib", "PricingPlan", "pro", {
         "apiVersion": "github.com/ruinosus/dna/cloud/v1",
         "kind": "PricingPlan", "metadata": {"name": "pro"},
         "spec": {"tier_id": "pro", "display_name": "Pro", "price_usd_month": 29,
@@ -103,7 +103,7 @@ def _timeline(dna_dir, kind: str, name: str) -> list[dict]:
 
     async def go():
         live = await M.boot_live(base_dir=str(dna_dir))
-        doc = await live.kernel.get_document(_SCOPE, kind, name)
+        doc = await live.kernel.get_instance(_SCOPE, kind, name)
         return list((doc or {}).get("spec", {}).get("timeline") or [])
 
     return asyncio.run(go())
@@ -207,14 +207,14 @@ def test_a_token_with_no_identity_claim_says_so(dna_dir, http_server):
     with http_server(server) as url:
         asyncio.run(go(url))
 
-    from dna.application import documents as D
+    from dna.application import instances as D
 
     async def find():
         live = await M.boot_live(base_dir=str(dna_dir))
-        return await D.list_documents_impl(live, kind="Issue", scope=_SCOPE)
+        return await D.list_instances_impl(live, kind="Issue", scope=_SCOPE)
 
     listed = asyncio.run(find())
-    names = [d["name"] for d in listed["documents"] if d["name"].endswith("-anon")]
+    names = [d["name"] for d in listed["instances"] if d["name"].endswith("-anon")]
     assert names, listed
     events = _timeline(dna_dir, "Issue", names[0])
     assert [e["actor"] for e in events] == [UNIDENTIFIED_TOKEN_ACTOR]

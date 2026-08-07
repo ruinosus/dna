@@ -72,11 +72,11 @@ class PromptLibrary(Mapping[str, str]):
     # -- Introspection --------------------------------------------------------
 
     def names(self) -> list[str]:
-        """Names of every prompt-target document (Agent-like) in the scope,
+        """Names of every prompt-target instance (Agent-like) in the scope,
         sorted. Does NOT compose them — cheap enough to call for discovery."""
         seen: set[str] = set()
         kinds = getattr(self.mi, "_kinds", {})
-        for doc in getattr(self.mi, "documents", []):
+        for doc in getattr(self.mi, "instances", []):
             kp = kinds.get((doc.api_version, doc.kind))
             if kp is not None and getattr(kp, "is_prompt_target", False):
                 seen.add(doc.name)

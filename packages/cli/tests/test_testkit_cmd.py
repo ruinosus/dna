@@ -130,7 +130,7 @@ class _CapturingKernel:
     def __init__(self):
         self.written = []
 
-    def write_document(self, scope, kind, name, raw):
+    def write_instance(self, scope, kind, name, raw):
         self.written.append((scope, kind, name, raw))
         return None
 
@@ -151,7 +151,7 @@ class _StampSession:
         return _FakeDoc(name, dict(self._story_spec))
 
     def run(self, coro):
-        return coro  # write_document is sync in the fake → returns None
+        return coro  # write_instance is sync in the fake → returns None
 
 
 def test_stamp_verified_stories_appends_testguide_to_produces() -> None:

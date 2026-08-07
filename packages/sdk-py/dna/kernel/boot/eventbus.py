@@ -10,7 +10,7 @@ Design contract (see docs/superpowers/specs/2026-04-30-phase-15-1-kernel-eventbu
     * Producer side: the SQL source's postgres dialect (`SqlAlchemySource`)
       inserts into `dna_outbox` and fires
       `pg_notify('kernel_writes', payload)` atomically inside the
-      same transaction as every `save_document` / `delete_document` /
+      same transaction as every `save_instance` / `delete_instance` /
       `publish` data write.
 
     * Subscriber side (this file): `KernelEventBus.start(kernel)`
@@ -105,15 +105,15 @@ class KernelEvent:
     scope: str
     tenant: str
     """Empty string ('') is the documented sentinel for "base layer /
-    no tenant", mirroring the dna_documents convention."""
+    no tenant", mirroring the dna_instances convention."""
 
     kind: str
     name: str
     op: str
-    """Either 'write' (save_document or publish) or 'delete'."""
+    """Either 'write' (save_instance or publish) or 'delete'."""
 
     doc_version: int
-    """`dna_documents.version` after the write; `0` for op='delete'
+    """`dna_instances.version` after the write; `0` for op='delete'
     (sentinel — subscribers treat delete as drop-cache, no version
     comparison)."""
 

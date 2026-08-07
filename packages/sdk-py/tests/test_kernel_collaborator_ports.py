@@ -120,7 +120,7 @@ def _inheritance(**over):
 
 def _writeops(**over):
     base = dict(
-        write_document=_async_ret(None),
+        write_instance=_async_ret(None),
         write_bundle_entry_async=_async_ret(None),
     )
     base.update(over)
@@ -160,7 +160,7 @@ async def test_query_engine_runs_on_narrow_fake():
         **_inheritance(),
     )
     qe = QueryEngine(fake)  # type: ignore[arg-type]
-    got = await qe.get_document("myscope", "Agent", "n")
+    got = await qe.get_instance("myscope", "Agent", "n")
     assert got == canned
     assert isinstance(fake, QueryEngineHost)
 
@@ -288,7 +288,7 @@ def test_fake_is_a_slice_not_the_kernel():
     assert len(members) <= 26
     # It is NOT a Kernel and lacks the god-object surface a Kernel exposes.
     assert not isinstance(fake, Kernel)
-    for god in ("hooks", "_toolreg", "load", "write_document", "search", "auto"):
+    for god in ("hooks", "_toolreg", "load", "write_instance", "search", "auto"):
         assert not hasattr(fake, god), f"slice leaked kernel member {god!r}"
     # The Kernel, by contrast, carries all of them.
     k = Kernel.auto()
@@ -300,14 +300,14 @@ def test_fake_is_a_slice_not_the_kernel():
 async def test_missing_member_breaks_the_collaborator():
     """Negative control: drop a member the collaborator uses and it must raise
     AttributeError — proving the fake genuinely enforces the boundary."""
-    # query_engine.get_document asserts `k._source`; a fake without it breaks.
+    # query_engine.get_instance asserts `k._source`; a fake without it breaks.
     incomplete = _slice(
         **{k: v for k, v in _docstore().items() if k != "_source"},
         **_inheritance(),
     )
     qe = QueryEngine(incomplete)  # type: ignore[arg-type]
     with pytest.raises(AttributeError):
-        await qe.get_document("myscope", "Agent", "n")
+        await qe.get_instance("myscope", "Agent", "n")
 
 
 # --------------------------------------------------------------------------

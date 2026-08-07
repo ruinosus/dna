@@ -45,7 +45,7 @@ spec:
   surfaces:
   - name: contrato-intake
     state_key: document_draft
-    tool_name: update_document_draft
+    tool_name: update_instance_draft
     canvas_keys:
     - document_draft
     - document_kind

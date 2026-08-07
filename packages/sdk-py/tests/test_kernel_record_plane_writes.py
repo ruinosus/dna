@@ -50,7 +50,7 @@ def _raw(kind, name):
 async def test_record_write_default_mode_skips_scope_invalidate():
     k, _src, holder = _wire()
     cached = k._kcache._base["scope-x"]
-    await k.write_document("scope-x", "StoryLike", "s-1", _raw("StoryLike", "s-1"))
+    await k.write_instance("scope-x", "StoryLike", "s-1", _raw("StoryLike", "s-1"))
     # base instance cache NÃO foi dropado; holder NÃO recarregou
     assert k._kcache._base["scope-x"] is cached
     assert not holder.reload.called and not holder.reload_async.called
@@ -62,7 +62,7 @@ async def test_record_write_still_fires_observers_and_post_save():
     writes, saves = [], []
     k.on_write(lambda *a, **kw: writes.append(a))
     k.on("post_save", lambda ctx: saves.append(ctx))
-    await k.write_document("scope-x", "StoryLike", "s-2", _raw("StoryLike", "s-2"))
+    await k.write_instance("scope-x", "StoryLike", "s-2", _raw("StoryLike", "s-2"))
     assert len(writes) == 1  # SSE/EventBus contract preserved
     assert len(saves) == 1   # sidecars/hooks contract preserved
 
@@ -70,7 +70,7 @@ async def test_record_write_still_fires_observers_and_post_save():
 @pytest.mark.asyncio
 async def test_composition_write_unchanged():
     k, _src, holder = _wire()
-    await k.write_document("scope-x", "AgentLike", "a-1", _raw("AgentLike", "a-1"))
+    await k.write_instance("scope-x", "AgentLike", "a-1", _raw("AgentLike", "a-1"))
     assert "scope-x" not in k._kcache._base          # base dropado
     assert holder.reload_async.called or holder.reload.called
 
@@ -78,7 +78,7 @@ async def test_composition_write_unchanged():
 @pytest.mark.asyncio
 async def test_record_write_explicit_none_still_respected():
     k, _src, holder = _wire()
-    await k.write_document(
+    await k.write_instance(
         "scope-x", "StoryLike", "s-3", _raw("StoryLike", "s-3"),
         invalidate_mode="none",
     )
@@ -98,8 +98,8 @@ def test_kind_plane_helper():
 async def test_record_delete_skips_scope_invalidate():
     k, _src, holder = _wire()
     cached = k._kcache._base["scope-x"]
-    await k.write_document("scope-x", "StoryLike", "s-del", _raw("StoryLike", "s-del"))
-    await k.delete_document("scope-x", "StoryLike", "s-del")
+    await k.write_instance("scope-x", "StoryLike", "s-del", _raw("StoryLike", "s-del"))
+    await k.delete_instance("scope-x", "StoryLike", "s-del")
     assert k._kcache._base["scope-x"] is cached
     assert not holder.reload.called and not holder.reload_async.called
 
@@ -107,11 +107,11 @@ async def test_record_delete_skips_scope_invalidate():
 @pytest.mark.asyncio
 async def test_record_delete_still_fires_observers_and_post_delete():
     k, _src, _holder = _wire()
-    await k.write_document("scope-x", "StoryLike", "s-ev", _raw("StoryLike", "s-ev"))
+    await k.write_instance("scope-x", "StoryLike", "s-ev", _raw("StoryLike", "s-ev"))
     writes, dels = [], []
     k.on_write(lambda *a, **kw: writes.append(a))
     k.on("post_delete", lambda ctx: dels.append(ctx))
-    await k.delete_document("scope-x", "StoryLike", "s-ev")
+    await k.delete_instance("scope-x", "StoryLike", "s-ev")
     assert len(writes) == 1   # evento de delete no canal SSE/EventBus
     assert len(dels) == 1     # sidecar de delete (limpeza embed/edges) recebe
 
@@ -119,9 +119,9 @@ async def test_record_delete_still_fires_observers_and_post_delete():
 @pytest.mark.asyncio
 async def test_composition_delete_unchanged():
     k, _src, holder = _wire()
-    await k.write_document("scope-x", "AgentLike", "a-del", _raw("AgentLike", "a-del"))
+    await k.write_instance("scope-x", "AgentLike", "a-del", _raw("AgentLike", "a-del"))
     holder.reload.reset_mock(); holder.reload_async.reset_mock()
     k._kcache._base["scope-x"] = MagicMock(name="mi2")
-    await k.delete_document("scope-x", "AgentLike", "a-del")
+    await k.delete_instance("scope-x", "AgentLike", "a-del")
     assert "scope-x" not in k._kcache._base
     assert holder.reload_async.called or holder.reload.called

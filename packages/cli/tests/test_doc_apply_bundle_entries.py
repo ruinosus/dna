@@ -1,10 +1,10 @@
-"""Regression tests for i-061 — `dna doc apply` must persist sibling bundle
+"""Regression tests for i-061 — `dna instance apply` must persist sibling bundle
 entries (the `instruction_file` fragment, scripts/, references/) into the
 target source.
 
 The bug: applying an `instruction_file` Agent only wrote the doc index;
 the `instruction.md` fragment was never written as a bundle entry, so
-`resolve_document` re-resolved `instruction_file` from an empty bundle and
+`resolve_instance` re-resolved `instruction_file` from an empty bundle and
 zeroed the agent's instruction — silently turning a specialist into a generic
 assistant in EVERY use (chat/eval/voice).
 
@@ -21,8 +21,8 @@ import asyncio
 from contextlib import contextmanager
 from unittest.mock import AsyncMock, MagicMock
 
-from dna_cli import doc_cmd
-from dna_cli.doc_cmd import _apply_one, _load_apply_input
+from dna_cli import instance_cmd
+from dna_cli.instance_cmd import _apply_one, _load_apply_input
 
 
 def _bundle(tmp_path):
@@ -55,7 +55,7 @@ def test_single_marker_apply_collects_sibling_instruction_file(tmp_path):
 
 def _mock_session():
     kernel = MagicMock()
-    kernel.write_document = AsyncMock(return_value={"ok": True})
+    kernel.write_instance = AsyncMock(return_value={"ok": True})
     kernel.write_bundle_entry_async = AsyncMock(return_value=None)
     kernel.with_tenant.return_value = kernel
 
@@ -79,7 +79,7 @@ def _mock_session():
 def test_apply_one_persists_bundle_entries(monkeypatch):
     """_apply_one must write each source_files entry as a bundle entry AFTER
     the doc write, and NOT leave source_files bloating the stored spec."""
-    monkeypatch.setattr(doc_cmd, "_tenant_write_note", lambda t: (None, None))
+    monkeypatch.setattr(instance_cmd, "_tenant_write_note", lambda t: (None, None))
     s, kernel = _mock_session()
     raw = {
         "apiVersion": "github.com/ruinosus/dna/helix/v1",
@@ -96,8 +96,8 @@ def test_apply_one_persists_bundle_entries(monkeypatch):
                tenant=None, dry_run=False)
 
     # The doc was written WITHOUT source_files (no spec bloat).
-    assert kernel.write_document.await_count == 1
-    written_raw = kernel.write_document.await_args.args[3]
+    assert kernel.write_instance.await_count == 1
+    written_raw = kernel.write_instance.await_args.args[3]
     assert "source_files" not in (written_raw.get("spec") or {})
 
     # The instruction.md fragment was persisted as a bundle entry.
@@ -138,7 +138,7 @@ def test_single_marker_apply_collects_binary_sibling(tmp_path):
 
 def test_apply_one_persists_binary_bundle_entry(monkeypatch):
     """i-062 — _apply_one writes a binary source_file through as raw bytes."""
-    monkeypatch.setattr(doc_cmd, "_tenant_write_note", lambda t: (None, None))
+    monkeypatch.setattr(instance_cmd, "_tenant_write_note", lambda t: (None, None))
     s, kernel = _mock_session()
     png = b"\x89PNG\r\n\xff\x00"
     raw = {
@@ -164,7 +164,7 @@ def test_apply_one_persists_binary_bundle_entry(monkeypatch):
 
 def test_apply_one_without_source_files_writes_no_entries(monkeypatch):
     """A plain doc (no bundle) writes the doc only — no spurious entry writes."""
-    monkeypatch.setattr(doc_cmd, "_tenant_write_note", lambda t: (None, None))
+    monkeypatch.setattr(instance_cmd, "_tenant_write_note", lambda t: (None, None))
     s, kernel = _mock_session()
     raw = {
         "apiVersion": "github.com/ruinosus/dna/helix/v1",
@@ -175,5 +175,5 @@ def test_apply_one_without_source_files_writes_no_entries(monkeypatch):
 
     _apply_one(s, raw, path="x.yaml", doc_index=None, tenant=None, dry_run=False)
 
-    assert kernel.write_document.await_count == 1
+    assert kernel.write_instance.await_count == 1
     assert kernel.write_bundle_entry_async.await_count == 0

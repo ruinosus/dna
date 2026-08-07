@@ -50,7 +50,7 @@ def _seed_grant(dna_dir, ws, email, oid, role, status="active"):
     async def go():
         live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
         name = f"{ws}--{email.replace('@', '-at-').replace('.', '-')}"
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             "_lib", "WorkspaceMembership", name,
             {"apiVersion": "github.com/ruinosus/dna/tenant/v1", "kind": "WorkspaceMembership",
              "metadata": {"name": name},

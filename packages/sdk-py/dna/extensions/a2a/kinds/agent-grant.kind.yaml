@@ -25,7 +25,7 @@
 # Credencial. O schema é fechado justamente para que um token não possa ser
 # anexado a uma concessão — a mesma regra do `RemoteAgent` e do Agent Card.
 # Concessão diz QUEM pode e O QUÊ; o segredo com que ele se autentica é do
-# deployment, e nunca do documento.
+# deployment, e nunca da instância.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:
@@ -35,6 +35,11 @@ spec:
   target_kind: AgentGrant
   alias: a2a-agent-grant
   origin: github.com/ruinosus/dna/a2a
+  # `subject` + `scope_kinds` + `state` + `granted_at`/`revoked_at`: a grant
+  # to a remote agent rather than to a person, which is exactly why the
+  # trait is about the ROLE and not about who the subject is.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [tenancy.access-grant]
   tenant_scope: tenanted
   plane: record
   prompt_target: false
@@ -42,6 +47,39 @@ spec:
   storage:
     type: yaml
     container: agent-grants
+  identifiers:
+    # Read from the VERIFIED token, never from the request body. An OAuth
+    # client identifier minted by the authorization server — no DNA instance
+    # behind it.
+    client_id:
+      role: external
+      system: oauth
+    # ⭐ DECLARED 06/08/2026 (i-119, founder decision 1): THE PERSON CONTINUES
+    # TO COME FROM THE IdP. `subject` holds the same value as
+    # `UserProfile.user_id`, `UserRoleAssignment.user_id` and
+    # `TenantMembership.user_id` — the identity provider's DURABLE `sub`, which
+    # this field's own description already says out loud ("o identificador
+    # DURÁVEL dele, não o da sessão"). So `system: idp`, the same word the
+    # other three use, and deliberately NOT `oauth` like the `client_id` above:
+    # that one is an app minted by the authorization server, this one is a
+    # human minted by the identity provider, and a shared word would model them
+    # as one namespace.
+    #
+    # `external`, not `self`, by the documented tie-break — is it THIS
+    # instance's key? No: a grant is keyed by the (client_id, subject) PAIR, so
+    # `subject` names a subject rather than the row. Same call, same reason, as
+    # `TenantMembership.user_id`.
+    #
+    # ⚠️ NO Kind FOR THE PERSON, and this is a decision rather than a gap: one
+    # would duplicate the IdP's source of truth and pull personal data into our
+    # store. THE TRIGGER THAT INVERTS IT: the day we need to hang data of OUR
+    # OWN on a person that the IdP does not have. Then `UserProfile` becomes
+    # the anchor, `subject`/`user_id` become `to: UserProfile, by: user_id`,
+    # and "which grants did this person give?" becomes a TRAVERSAL instead of
+    # an equality of fields.
+    subject:
+      role: external
+      system: idp
   schema:
     type: object
     additionalProperties: false
@@ -66,8 +104,8 @@ spec:
 
           ⚠️ NÃO é auto-declarado. O host só grava aqui um nome que veio
           ANCORADO: o `client_id` é uma URL HTTPS (CIMD,
-          draft-ietf-oauth-client-id-metadata-document) e o nome foi lido do
-          documento servido naquela origem. Quem controla `acme.com` é o único
+          draft-ietf-oauth-client-id-metadata-instance) e o nome foi lido da
+          instância servido naquela origem. Quem controla `acme.com` é o único
           que pode declarar um nome em `acme.com`, e disso o DNS e o TLS já dão
           prova. Aceitar nome de um campo do pedido devolveria o ataque que este
           desenho existe para fechar: a tela do provedor, com a marca dele, no
@@ -96,7 +134,7 @@ spec:
         type: array
         items: {type: string}
         description: >
-          Os Kinds cujos documentos este agente pode receber. Mesmo vocabulário
+          Os Kinds cujas instâncias este agente pode receber. Mesmo vocabulário
           do `RemoteAgent.data_scope.kinds`, de propósito: é a mesma pergunta
           nas duas direções, e responder diferente de cada lado seria uma
           armadilha para quem lê.

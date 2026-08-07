@@ -14,7 +14,7 @@ usually lives buried in application code. Changing how the agent behaves means
 a code change and a redeploy, and every runtime (Claude, Cursor, LangGraph,
 your own app) needs its own copy.
 
-DNA turns all of that into plain YAML/Markdown documents you keep in your
+DNA turns all of that into plain YAML/Markdown instances you keep in your
 repo. You edit a file, and the change is live: the same definitions can be
 composed into a system prompt, served to Claude or Cursor over MCP, exposed
 as a REST API, or exported to a framework's native format. Skills from public
@@ -59,7 +59,7 @@ cd packages/sdk-py && uv sync
 uv run python ../../examples/hello-genome/run.py
 ```
 
-You'll see the documents in the scope and the agent's composed system prompt.
+You'll see the instances in the scope and the agent's composed system prompt.
 The same thing in Python:
 
 ```python
@@ -67,10 +67,10 @@ from dna import Kernel
 
 mi = Kernel.quick("hello-genome", base_dir="../../examples/hello-genome/.dna")
 
-for d in mi.documents:
+for d in mi.instances:
     print(d.api_version, d.kind, d.name)
 
-# The prompt is derived from the documents — edit the YAML, get new behavior.
+# The prompt is derived from the instances — edit the YAML, get new behavior.
 print(mi.build_prompt(agent="greeter"))
 ```
 
@@ -81,12 +81,12 @@ Walk through it step by step in
 
 **Serve your agents to Claude, Cursor, or any MCP client.**
 `dna mcp serve` exposes everything in your scope — agents composed live and
-per-tenant, tools, memory, the work board — over MCP. Edit a document, and the
+per-tenant, tools, memory, the work board — over MCP. Edit an instance, and the
 next call reflects it: no redeploy.
 → [The MCP server](https://ruinosus.github.io/dna/guides/mcp-server/)
 
 **Change an agent by editing a file, not shipping code.**
-Prompts, personas, guardrails and wiring are versioned documents, validated on
+Prompts, personas, guardrails and wiring are versioned instances, validated on
 write and composed on read. A behavior change is a diff you can review.
 → [Authoring agents](https://ruinosus.github.io/dna/guides/authoring-agents/)
 
@@ -94,7 +94,7 @@ write and composed on read. A behavior change is a diff you can review.
 `dna install github:anthropics/skills/skills/pdf` pulls real marketplace
 skills into your scope, validated as untrusted input with pinned provenance.
 `dna copilot install <kit>` installs an entire guided flow — domain Kind,
-agent, wizard — as documents, no code shipped.
+agent, wizard — as instances, no code shipped.
 → [Installing bundles](https://ruinosus.github.io/dna/guides/installing-scopes/)
 · [Copilot kits](https://ruinosus.github.io/dna/guides/copilot-kits/)
 
@@ -107,7 +107,7 @@ same-contract scale adapter.
 
 **Track your team's work as files in git.**
 `dna sdlc` runs a full lifecycle board (stories, features, issues, ADRs) as
-documents in your repo, and a git hook stamps every commit with the story it
+instances in your repo, and a git hook stamps every commit with the story it
 belongs to — tracing work back is a `git log` query. This repo tracks itself
 this way ([`.dna/dna/`](.dna/dna/)).
 → [The SDLC loop](https://ruinosus.github.io/dna/guides/sdlc/)
@@ -139,7 +139,7 @@ else is a client of them:
 import { DnaClient } from "dna-client";
 
 const dna = new DnaClient({ baseUrl: "http://127.0.0.1:8080" });
-const agents = await dna.listDocuments({ scope: "hello-genome", kind: "Agent" });
+const agents = await dna.listInstances({ scope: "hello-genome", kind: "Agent" });
 ```
 
 Agent-to-agent (A2A) is also covered: DNA mounts the official `a2a-sdk`

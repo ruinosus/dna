@@ -77,4 +77,4 @@ TypeScript it is an `Error` subclass with an `.agent` property.
 surface — querying other kinds, tenant overlays, writes — reach for the
 manifest instance directly (`prompts.mi`, or build your own with
 `Kernel.quick` / [`Kernel.from_config`](configuring-ports.md)) and use the
-[blessed query surface](read-document-data.md).
+[blessed query surface](read-instance-data.md).

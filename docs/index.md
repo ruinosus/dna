@@ -43,10 +43,10 @@ kinds of documentation, each with one job.
 - :material-wrench: **[Guides](guides/index.md)**
 
     Task-oriented. How to [add a Kind](guides/add-a-kind.md), [write a source
-    adapter](guides/write-a-source-adapter.md), [read document
-    data](guides/read-document-data.md), and more.
+    adapter](guides/write-a-source-adapter.md), [read instance
+    data](guides/read-instance-data.md), and more.
 
-- :material-file-document: **[Reference](reference/index.md)**
+- :material-file-instance: **[Reference](reference/index.md)**
 
     Information-oriented. The Python API, the CLI and the Kinds catalog —
     all generated from source.
@@ -58,9 +58,9 @@ kinds of documentation, each with one job.
 | Claim | Where it lives |
 |---|---|
 | **The owner names the schema.** Standards DNA didn't invent are consumed byte-faithful under their owners' `apiVersion`. | [Market fidelity](concepts/market-fidelity.md) |
-| **Behavior is data, not code.** Prompts, personas and wiring are versioned documents, validated on write and composed on read. | [The thesis](concepts/thesis.md) |
+| **Behavior is data, not code.** Prompts, personas and wiring are versioned instances, validated on write and composed on read. | [The thesis](concepts/thesis.md) |
 | **The kernel knows no Kinds.** A microkernel mediates five ports; extensions register Kinds onto it. | [Microkernel & ports](concepts/microkernel-ports.md) |
-| **Your git log is your SDLC.** This repo tracks its own lifecycle as DNA documents, stamped onto every commit. | [The SDLC loop](guides/sdlc.md) |
+| **Your git log is your SDLC.** This repo tracks its own lifecycle as DNA instances, stamped onto every commit. | [The SDLC loop](guides/sdlc.md) |
 | **Composes with Spec Kit, doesn't compete.** DNA names GitHub Spec Kit *the* supported spec-driven flow and sits beneath it — capturing a run's spec/plan/tasks + constitution as durable Kinds with memory, governance and board tracking. | [Spec Kit — the supported flow](guides/spec-kit.md) |
 
 ## Status

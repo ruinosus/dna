@@ -28,17 +28,17 @@ One registry per kernel, shared across ``with_tenant`` shallow copies — and
 across every SCOPE the process serves. Kinds registered from CODE (extension
 classes, builtin ``*.kind.yaml`` descriptors) are global: registered once at
 boot, they apply everywhere. Kinds loaded from a STORE (per-scope
-``KindDefinition`` documents, ``Module.spec.custom_kinds``) are **scope-bound**
+``KindDefinition`` instances, ``Module.spec.custom_kinds``) are **scope-bound**
 — see :func:`port_scopes` and the i-081 section below.
 
 i-081 — a store-loaded Kind applies only where it belongs
 ---------------------------------------------------------
-``load_bootstrap_docs`` decides which ``KindDefinition`` documents are LOADED
+``load_bootstrap_docs`` decides which ``KindDefinition`` instances are LOADED
 (by scope); nothing decided which scope a loaded Kind APPLIED to. The key here
 is ``(api_version, kind)`` and carries no scope, so the first scope composed in
 a process registered its Kind for the whole process. Registration is what
 confers **schema enforcement** and **storage routing**, so a leaked Kind changed
-another scope's behaviour: a document written there was validated against the
+another scope's behaviour: an instance written there was validated against the
 foreign schema and stored in the foreign container, while a genuinely unknown
 Kind was accepted and stored at the scope root.
 
@@ -68,21 +68,21 @@ i-096 — the binding DESCENDS a declared chain; it never goes sideways
 i-081 answered "which scope declared this Kind"; it did not answer "which
 scopes may that declaration reach". The two are the same only in a flat world,
 and DNA's is not: a scope declares ``Genome.spec.parent_scope`` and inherits its
-parent's DOCUMENTS transitively (``compute_resolution_chain``). The Kinds did
+parent's INSTANCES transitively (``compute_resolution_chain``). The Kinds did
 not follow, because ``KindDefinition`` is a BOOTSTRAP Kind and bootstrap Kinds
-never inherit as documents — so a base-scope descriptor stayed bound to the base
+never inherit as instances — so a base-scope descriptor stayed bound to the base
 alone, and in a child workspace the Kind simply did not exist: the registry
 enumeration omitted it, reads 404'd and writes were refused with *"not
-registered on this source"*, while documents of that very Kind listed fine
+registered on this source"*, while instances of that very Kind listed fine
 through the child. The product consequence was that every PRODUCT Kind had to
-become an extension (code + release) instead of a document — the declarative
+become an extension (code + release) instead of an instance — the declarative
 Kind promise inverted.
 
 The fix changes nothing here and everything one layer up:
 :func:`applies_to` still answers from ``__scopes__`` alone, and
 :meth:`KindRegistry.register_kind_definitions` gained ``inherited_from=`` — the
 INSTANCE BUILDER walks the declared chain and re-runs the funnel with the
-ancestor's bootstrap documents bound to the descendant scope, so the descendant
+ancestor's bootstrap instances bound to the descendant scope, so the descendant
 port is genuinely bound rather than exempted from a filter. Precedence is
 local-wins (the ancestor pass never replaces an already-registered descriptor),
 and the reach is exactly the declared chain: a SIBLING scope is on no chain, so
@@ -129,7 +129,7 @@ _GLOBAL_KINDDEF_CONFLICT_WARNED: set[tuple[str, str]] = set()
 # level the author will actually see, then stay quiet.
 #
 # (The parse-failure warning in the same funnel stays undeduped on purpose: a
-# malformed document is an anomaly someone must fix, not a designed resting
+# malformed instance is an anomaly someone must fix, not a designed resting
 # state. Same shape of line, different class of event.)
 #
 # Keyed like _AMBIGUOUS_LOOKUP_WARNED and for the same reason (i-080 item 5):
@@ -264,13 +264,31 @@ EXPLICIT_ALIAS_ALLOWLIST: frozenset[str] = frozenset({
 })
 
 # i-195 — kind names allowed to exist under MULTIPLE api_versions in the
-# extension/builtin funnel. SHRINK-ONLY ratchet: the Reference pair
-# (github.com/ruinosus/dna/research/v1 + github.com/ruinosus/dna/sdlc/v1) predates the guard and is scheduled to
-# be merged by the Reference-family unification follow-up; when that
-# lands, empty this set. NEVER add a name here — rename the new Kind
-# instead (the whole point of i-195 is that bare-name lookups become
-# ambiguous the moment two api_versions share a kind name).
-KIND_NAME_COLLISION_ALLOWLIST: frozenset[str] = frozenset({"Reference"})
+# extension/builtin funnel. SHRINK-ONLY ratchet, and it has now shrunk to
+# NOTHING (i-127, 06/08/2026).
+#
+# It held exactly one name, ``Reference``, for the pair
+# (github.com/ruinosus/dna/research/v1 + github.com/ruinosus/dna/sdlc/v1) that
+# predated the guard — and that pair no longer exists:
+# ``dna/extensions/research/__init__.py`` says in writing that it REUSES the
+# sdlc Kind rather than registering a second one, and a booted kernel serves 84
+# ports under 84 distinct names with a single ``Reference``. The permission was
+# open and nobody walked through it.
+#
+# ⚠️ Empty is not cosmetic here, and the difference is measurable at this exact
+# door: while the entry existed, ``k.kind()`` ACCEPTED a second Kind named
+# ``Reference`` under any api_version — the one hole through which bare-name
+# ambiguity could return with every other guard still green. Emptied, that
+# registration is REFUSED like any other name collision.
+#
+# The blast radius is not local: ``dna_edges.to_api_version`` tolerates NULL
+# (that tolerance is what let revision 0009 land without deleting older edges),
+# and every NULL row is disambiguated by exactly one thing — ``to_kind`` naming
+# a single Kind. See ``tests/test_edge_knows_target_api_version.py``.
+#
+# NEVER add a name here — rename the new Kind instead. The set exists now only
+# so the ratchet has something to stay empty.
+KIND_NAME_COLLISION_ALLOWLIST: frozenset[str] = frozenset()
 
 # i-081 item 16 — the alias namespace convention, ENFORCED for descriptors.
 #
@@ -289,8 +307,8 @@ KIND_NAME_COLLISION_ALLOWLIST: frozenset[str] = frozenset({"Reference"})
 #     one that arrives at runtime; a class Kind ships in the distribution and
 #     is reviewed.
 #   * NOTHING is renamed. The alias is a live wire format — dep_filters keys,
-#     Mustache variables, LayerPolicy documents on disk — so rewriting one
-#     breaks documents in the wild. The six builtin descriptors that predate
+#     Mustache variables, LayerPolicy instances on disk — so rewriting one
+#     breaks instances in the wild. The six builtin descriptors that predate
 #     the rule are allowlisted, exactly as they are.
 #
 # SHRINK-ONLY: never add an entry. A new descriptor names its alias after its
@@ -412,7 +430,7 @@ def port_scopes(port: "KindPort") -> "frozenset[str] | None":
 
 
 def applies_to(port: "KindPort", scope: str | None) -> bool:
-    """Whether ``port`` governs documents in ``scope``.
+    """Whether ``port`` governs instances in ``scope``.
 
     ``scope=None`` is *no scope context* — the caller is not acting on behalf of
     one scope (a catalogue listing, boot-time dep_filter validation), so nothing
@@ -430,7 +448,7 @@ def port_revoked(port: "KindPort | None") -> bool:
     The sibling of :func:`applies_to`, and read the same way: the registry is
     where a Kind's current state lives, so every path that already resolves a
     port is one call away from knowing. A revoked Kind is deliberately still IN
-    the registry — an unregistered Kind is the permissive one, whose documents
+    the registry — an unregistered Kind is the permissive one, whose instances
     are accepted with no validation at all, so dropping the port would make
     revocation loosen instead of tighten.
 
@@ -468,7 +486,7 @@ def ports_in_scope(kernel: Any, scope: str | None) -> list["KindPort"]:
     """The Kind PORTS ``scope`` sees — :func:`kinds_in_scope` as a list, with the
     long-standing ``kernel.kind_ports()`` duck-type as the fallback.
 
-    The generic document use-cases have always accepted anything exposing
+    The generic instance use-cases have always accepted anything exposing
     ``kind_ports()``; keeping that door open means a kernel-like that predates
     the scoped registry keeps working (unfiltered, as it always was) instead of
     failing on an attribute it was never asked for."""
@@ -491,7 +509,7 @@ def _deterministic_order(ports: "list[KindPort]") -> "list[KindPort]":
     Registration order is deliberately NOT a tiebreak. It is an accident of
     which scope loaded first, so between two TENANT ports it made the answer
     depend on traffic; the same two Kinds must resolve the same way in every
-    process, or a document validates against one tenant's schema on one node
+    process, or an instance validates against one tenant's schema on one node
     and another's on the next."""
     return sorted(
         ports,
@@ -622,12 +640,12 @@ class KindRegistry:
 
         * EXACT first (i-080): two workspaces may each own a Kind called
           ``Deal`` in their own namespace, and a bare lookup would send both to
-          whichever port resolves — writing one workspace's documents into the
+          whichever port resolves — writing one workspace's instances into the
           directory belonging to the other's Kind.
-        * FALLBACK second: real datasets hold documents whose ``apiVersion`` no
+        * FALLBACK second: real datasets hold instances whose ``apiVersion`` no
           longer matches any registered port (legacy variants such as the
           ``…/cognitive/v1`` Engram the MI builder already compensates for the
-          same way). Exact-only would give those documents NO container and
+          same way). Exact-only would give those instances NO container and
           silently relocate them to the scope root, which is a far worse
           outcome than the ambiguity the exact step is there to avoid."""
         if api_version is not None:
@@ -691,7 +709,7 @@ class KindRegistry:
         _warn_ambiguity_once(
             ("container", container, owners),
             "Ambiguous storage container %r: %d Kinds declare it (%s). "
-            "Resolving %r; their documents share one directory, so this is a "
+            "Resolving %r; their instances share one directory, so this is a "
             "STORAGE collision, not only a lookup one — give one of them a "
             "distinct container. (warned once per process per distinct set — "
             "i-080)",
@@ -955,8 +973,9 @@ class KindRegistry:
         # become ambiguous the moment two api_versions share a kind name
         # — the Reference pair shipped exactly that and silently resolved
         # first-match. New extension Kinds must pick a unique name; the
-        # legacy pair is allowlisted (shrink-only ratchet, emptied by the
-        # Reference-family merge). Collisions where the EXISTING port is
+        # allowlist that used to except the legacy pair is now EMPTY
+        # (i-127), so this loop runs for every name without exception.
+        # Collisions where the EXISTING port is
         # a per-scope declarative shadow (demo scopes' local Doc/EvalCase)
         # don't block the extension from claiming its canonical name.
         if k.kind not in KIND_NAME_COLLISION_ALLOWLIST:
@@ -981,10 +1000,31 @@ class KindRegistry:
         # (F3 spec D3) so the per-scope KindDefinition funnel
         # (register_kind_definitions) runs the SAME validation.
         self._lint_plane(k)
+        # The traits CARRY (spec-kind-taxonomia-o-que-eu-sou, slice 2). THIS is
+        # the door: every port — a hand-written extension class as much as a
+        # descriptor — passes through here, so a class Kind gets the trait's
+        # fields, relations and implied traits merged in exactly like a YAML
+        # one. Idempotent, so a descriptor port that already composed itself in
+        # its constructor is untouched.
+        #
+        # Conflict is refused HERE, at load, and the placement IS the design:
+        # ``TraitConflictError`` is a ``ValueError``, so a builtin descriptor
+        # takes the boot down (an authoring error, next to the author) while
+        # ``register_kind_definitions`` warn-skips a per-scope KindDefinition (a
+        # user instance never takes the process down) — the two error contracts
+        # this funnel already honours for every other malformed block.
+        from dna.kernel.kinds.traits import TraitConflictError, apply_traits
+
+        try:
+            apply_traits(k)
+        except TraitConflictError as e:
+            raise KindRegistrationError(
+                f"Kind {getattr(k, 'kind', type(k).__name__)!r}: {e}"
+            ) from e
         # i-081 item 16 — a descriptor's alias must carry its namespace owner.
         # Raised here so BOTH funnels behave as they already do: a builtin
         # descriptor fails the boot, a per-scope KindDefinition is caught by
-        # ``register_kind_definitions`` and warn-skipped (a user document never
+        # ``register_kind_definitions`` and warn-skipped (a user instance never
         # takes the process down).
         _alias_problem = alias_namespace_violation(k)
         if _alias_problem is not None:
@@ -1206,7 +1246,7 @@ class KindRegistry:
         """Phase 1 of 2-phase loading: parse KindDefinition docs + register
         synthetic DeclarativeKindPorts on the kernel.
 
-        The funnel routes on the document's STATE
+        The funnel routes on the instance's STATE
         (:func:`~dna.kernel.kinds.approval.approval_state`), because i-085 made
         it three states rather than a boolean:
 
@@ -1215,16 +1255,16 @@ class KindRegistry:
           acts by two actors, and this funnel is where the second one is
           enforced: registration is what confers schema enforcement and storage
           routing, so withholding it IS the absence of effect, with no second
-          gate to keep in sync. The Kind stays an inert document — auditable,
-          listable, diffable — and its documents are accepted UNVALIDATED.
+          gate to keep in sync. The Kind stays an inert instance — auditable,
+          listable, diffable — and its instances are accepted UNVALIDATED.
         * :data:`~dna.kernel.kinds.approval.APPROVED` — registered normally.
         * :data:`~dna.kernel.kinds.approval.REVOKED` — **registered, and marked
           revoked** (``port.__revoked__``). The counter-intuitive half, and the
           whole point of i-085: revoking must TIGHTEN. Dropping the port instead
-          would return the Kind to the UNAPPROVED row above, where documents are
+          would return the Kind to the UNAPPROVED row above, where instances are
           accepted with no validation at all — so un-registering is how
           revocation turns into "accepts anything". Being KNOWN is the
-          mechanism; the mark is what makes new documents refused
+          mechanism; the mark is what makes new instances refused
           (:class:`~dna.kernel.errors.RevokedKindWrite`) and existing ones read
           back marked invalid.
 
@@ -1241,29 +1281,29 @@ class KindRegistry:
         declarative one is skipped and a warning is emitted via the
         HookRegistry event ``kinddef_conflict``.
 
-        ``scope`` is the scope whose store these documents came from, and the
+        ``scope`` is the scope whose store these instances came from, and the
         ONLY scope the resulting Kinds will govern (i-081). ``None`` registers
         them globally — the pre-i-081 behaviour, kept for callers that own the
-        whole process (in-process tests that hand the funnel raw documents
+        whole process (in-process tests that hand the funnel raw instances
         directly); every path that loads from a store passes its scope.
 
-        i-096 — ``inherited_from``: the documents came from ``scope``'s DECLARED
+        i-096 — ``inherited_from``: the instances came from ``scope``'s DECLARED
         ANCESTOR of that name, not from ``scope``'s own store, and the Kinds
         they declare are being widened DOWN the chain so the child scope can
-        read AND write them (documents already inherit this way through
+        read AND write them (instances already inherit this way through
         ``compute_resolution_chain``; the Kinds did not, which is the defect).
         One thing changes, and it is a narrowing: an already-registered key is
         **never replaced**. The "different descriptor digest → swap the port in
         place" branch (i-080 item 3) is an EDIT by the scope that owns the Kind;
         an ancestor pass reaching it would let the base silently overwrite a
         child's own declaration — the opposite of the local-wins precedence the
-        document chain has. The ancestor pass therefore only ever WIDENS a port
+        instance chain has. The ancestor pass therefore only ever WIDENS a port
         it recognises (same digest) and otherwise steps aside.
 
         The guard-rail (i-081 must not reopen): this parameter does not decide
         WHICH scopes may reach a Kind — the caller does, by walking the declared
         chain and nothing else. A sibling scope is on no chain, so no sibling
-        document ever reaches this funnel bound to another scope.
+        instance ever reaches this funnel bound to another scope.
         """
         from dna.kernel.meta import DeclarativeKindPort
         from dna.kernel.models import TypedKindDefinition
@@ -1294,7 +1334,7 @@ class KindRegistry:
             state = approval_state(typed.spec)
             if state == UNAPPROVED:
                 # NOT an error: an authored-but-unapproved Kind is a legitimate
-                # state. It stays a document — auditable, listable, diffable —
+                # state. It stays an instance — auditable, listable, diffable —
                 # and simply never becomes real. Registration is what confers
                 # schema enforcement and storage routing, so withholding it IS
                 # the absence of effect; there is no second gate to keep in
@@ -1302,7 +1342,7 @@ class KindRegistry:
                 # this funnel: the author has to be able to find out why their
                 # Kind does nothing.
                 #
-                # This is the PERMISSIVE row of the table — documents of an
+                # This is the PERMISSIVE row of the table — instances of an
                 # unregistered Kind are accepted with no validation — which is
                 # exactly why REVOKED must not land here. See the docstring.
                 #
@@ -1447,7 +1487,7 @@ class KindRegistry:
             # is the surface every behaviour-conferring path already consults
             # (the write pipeline, storage routing, parsing, the kinds map an MI
             # is built with), so a revoked Kind is one attribute away for all of
-            # them and nobody has to remember to re-read a document field.
+            # them and nobody has to remember to re-read an instance field.
             port.__revoked__ = state == REVOKED
             # i-080 item 2: this used to be ``self._kinds[key] = port`` — a
             # direct write that bypassed ``register_kind()`` entirely, so the
@@ -1481,15 +1521,15 @@ class KindRegistry:
             registered_any = True
             if state == REVOKED:
                 # WARNING, not info, and undeduped: unlike "authored but not
-                # approved", a revoked Kind that still has documents in the
+                # approved", a revoked Kind that still has instances in the
                 # store is not a resting state somebody chose and forgot — it is
                 # a scope whose data has just been marked invalid, and the line
                 # is how an operator reading logs finds out that is why.
                 logger.warning(
                     "Registered declarative kind %s/%s (alias: %s) as REVOKED "
-                    "— new documents of it are refused and existing ones read "
+                    "— new instances of it are refused and existing ones read "
                     "back marked invalid. It stays registered deliberately: an "
-                    "unregistered Kind accepts documents unvalidated, so "
+                    "unregistered Kind accepts instances unvalidated, so "
                     "dropping it would loosen the gate instead of closing it. "
                     "Approving it again restores validity.",
                     key[0], key[1], typed.spec.alias,
@@ -1513,16 +1553,16 @@ class KindRegistry:
         Creates a minimal KindPort so mi.all("Pipeline") works.
 
         Store-loaded like ``KindDefinition``, so ``scope`` binds them the same
-        way (i-081) — the root document they come from belongs to one scope —
+        way (i-081) — the root instance they come from belongs to one scope —
         and so the SAME three-state gate applies
         (:func:`~dna.kernel.kinds.approval.approval_state`): unapproved entries
         are warn-skipped, approved ones register, and REVOKED ones register
         MARKED. This is the second door onto the same registry, and the one that
-        needs no new document: whoever may write a scope's root document
+        needs no new instance: whoever may write a scope's root instance
         declares Kinds here. Ungated, the claim that an unapproved Kind has no
         effect would be false process-wide, since an author could simply use
         this door instead — and, since i-085, so would the claim that a revoked
-        Kind refuses new documents.
+        Kind refuses new instances.
 
         **Where this door is weaker than the ``KindDefinition`` one, by
         construction.** Its ports are keyed ``(apiVersion, kind)`` with no
@@ -1533,7 +1573,7 @@ class KindRegistry:
         compromise; a workspace that needs its own answer authors a
         ``KindDefinition``, which is per-scope all the way down.
 
-        The gate is PER ENTRY, not per document: the entry *is* the Kind
+        The gate is PER ENTRY, not per instance: the entry *is* the Kind
         declaration, so a partly-approved manifest registers exactly its
         approved entries and warn-skips the rest. It runs BEFORE both the scope
         binding and the already-registered early-return, for the reason the
@@ -1563,7 +1603,7 @@ class KindRegistry:
             if state == UNAPPROVED:
                 # Same refusal as the KindDefinition funnel, same reason: an
                 # authored-but-unapproved Kind is a legitimate state, it stays
-                # an inert part of the document and simply never becomes real.
+                # an inert part of the instance and simply never becomes real.
                 # Registration is what confers schema enforcement and storage
                 # routing, so withholding it IS the absence of effect.
                 #
@@ -1591,7 +1631,7 @@ class KindRegistry:
             if key in self._kinds:
                 # Already registered (by extension or previous call) — but a
                 # SECOND scope declaring the same custom Kind must be governed
-                # by it too, or its own documents would go unregistered.
+                # by it too, or its own instances would go unregistered.
                 existing = self._kinds[key]
                 _bind_scope(existing, scope)
                 # i-085: re-declaring an entry restates its state, so a
@@ -1615,7 +1655,7 @@ class KindRegistry:
             if state == REVOKED:
                 logger.warning(
                     "Registered custom kind %s/%s (alias: %s) as REVOKED — new "
-                    "documents of it are refused and existing ones read back "
+                    "instances of it are refused and existing ones read back "
                     "marked invalid. Approving it again restores validity.",
                     av, kn, alias,
                 )

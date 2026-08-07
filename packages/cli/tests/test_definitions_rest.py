@@ -84,7 +84,7 @@ def _seed_layer_policy(dna_dir) -> None:
 
     async def go():
         live = await M.boot_live(base_dir=str(dna_dir))
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _SCOPE, "LayerPolicy", "tenant-default", LAYER_POLICY_RAW)
 
     asyncio.run(go())

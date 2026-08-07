@@ -211,7 +211,7 @@ def test_resolve_persistence_none_for_undeclared_or_inmemory_slots():
 #
 # i-064: the original test here (`test_mcp_url_comes_from_ctx_not_env`)
 # asserted a contract `mcp_tool_stack` deliberately retired — the adapter
-# documents `DNA_MCP_URL` as the host's env override over the federation's
+# instances `DNA_MCP_URL` as the host's env override over the federation's
 # placeholder URL (see langchain_rt.py's `mcp_tool_stack` docstring). The
 # test was quarantined instead of updated; these two pin the CURRENT
 # contract, from both sides.

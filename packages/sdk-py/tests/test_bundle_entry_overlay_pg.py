@@ -113,7 +113,7 @@ async def _seed(source: SqlAlchemySource, *, skill_policy: str) -> None:
         ("Genome", _SCOPE, GENOME_RAW),
         ("LayerPolicy", "tenant-default", _layer_policy_raw(skill_policy=skill_policy)),
     ]:
-        await source.save_document(_SCOPE, kind, name, raw)
+        await source.save_instance(_SCOPE, kind, name, raw)
         await source.publish(_SCOPE, kind, name)
     await source.write_bundle_entry(_SCOPE, "Skill", "greeter", "SKILL.md", SKILL_MD_BASE)
     await source.write_bundle_entry(_SCOPE, "Skill", "greeter", "scripts/hello.py", HELLO_PY_BASE)

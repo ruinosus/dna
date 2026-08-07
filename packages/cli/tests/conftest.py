@@ -200,18 +200,18 @@ class FakeDocView:
 
 
 class FakeKernel:
-    """Records write_document calls into the shared store."""
+    """Records write_instance calls into the shared store."""
 
     def __init__(self, store: dict):
         self._store = store
-        # doc_cmd._stamp_created_at_if_in_schema walks kernel._kinds; empty
+        # instance_cmd._stamp_created_at_if_in_schema walks kernel._kinds; empty
         # dict makes it a no-op (returns early), which is fine for the test.
         self._kinds: dict = {}
 
     def with_tenant(self, tenant):
         return self
 
-    async def get_document(self, scope, kind, name):
+    async def get_instance(self, scope, kind, name):
         return self._store.get((scope, kind, name))
 
     async def query(self, scope, kind, *, projection=None, **_):
@@ -226,14 +226,14 @@ class FakeKernel:
             if sc == scope and kd == kind:
                 yield {"name": nm} if projection == ["name"] else raw
 
-    async def write_document(self, scope, kind, name, raw, *, if_absent=False, **_):
+    async def write_instance(self, scope, kind, name, raw, *, if_absent=False, **_):
         # ``if_absent`` is the ATOMIC CREATE the create cores rely on; a double
         # that accepted the kwarg and ignored it would report a guarantee the
         # command does not have.
         if if_absent and (scope, kind, name) in self._store:
-            from dna.kernel.errors import DocumentNameTaken
+            from dna.kernel.errors import InstanceNameTaken
 
-            raise DocumentNameTaken(
+            raise InstanceNameTaken(
                 f"{kind} {name!r} already exists in scope {scope!r}")
         self._store[(scope, kind, name)] = raw
         return "v1"

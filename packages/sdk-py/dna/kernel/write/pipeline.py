@@ -1,24 +1,24 @@
-"""WritePipeline — the kernel's document write/delete execution, extracted from
+"""WritePipeline — the kernel's instance write/delete execution, extracted from
 the Kernel god-object (kernel decomposition, Fase 2 —
 ``s-kernel-decomp-f2-writepipeline``).
 
 This is the FAT write-path logic: tenant resolution, capability-gated adapter
 kwargs (author / write_class / version_retention / tenant / layer), the
-layer-policy check, the ``pre_save`` veto gate, ``save_document`` /
-``delete_document`` persistence, and the three-tier cache-invalidation fan-out
+layer-policy check, the ``pre_save`` veto gate, ``save_instance`` /
+``delete_instance`` persistence, and the three-tier cache-invalidation fan-out
 (granular → catalog → base-drop → invalidate → observers → post_save). The
-Kernel RETAINS the public ``write_document`` / ``delete_document`` methods as
+Kernel RETAINS the public ``write_instance`` / ``delete_instance`` methods as
 THIN facades (invalidate-mode validation, ``_REMOVED_KINDS`` block, record-plane
 demotion, OTel span) that delegate their body here.
 
 The load-bearing sequence this pipeline MUST reproduce byte-for-byte (spec Risk
 #1, pinned by ``test_kernel_writepath_characterization``):
 
-    write:  pre_save veto → save_document → granular-invalidate →
+    write:  pre_save veto → save_instance → granular-invalidate →
             catalog-invalidate (only is_catalog_identity) → base-drop
             (scope-mode + base layer) → invalidate (scope-mode) →
             fire-observers (ALWAYS) → post_save (unless skip_hooks)
-    delete: delete_document → granular-invalidate → base-drop → invalidate →
+    delete: delete_instance → granular-invalidate → base-drop → invalidate →
             fire-observers → post_delete  (NO pre_save veto — deletes never veto)
 
 The ``pre_save`` veto (an integrity gate) fires even with ``skip_hooks=True``;
@@ -54,7 +54,7 @@ logger = logging.getLogger("dna.kernel")
 
 
 class WritePipeline:
-    """Executes document writes/deletes against the host's writable source with
+    """Executes instance writes/deletes against the host's writable source with
     the full invalidation fan-out. One per kernel; stateless (all state lives on
     the host, reached via the narrow ``WriteHost`` ref)."""
 
@@ -69,16 +69,16 @@ class WritePipeline:
     ) -> None:
         """Refuse the write outright when ``port`` is a REVOKED Kind.
 
-        This is the "new documents" column of i-085's table, and it is checked
+        This is the "new instances" column of i-085's table, and it is checked
         HERE — one call site, on the port the write already resolved — rather
         than by any caller remembering to ask. The state travels on the port
         precisely so that it cannot be forgotten.
 
-        Note what it refuses: EVERY document of that Kind, conforming or not. A
+        Note what it refuses: EVERY instance of that Kind, conforming or not. A
         revoked Kind is not a stricter schema, it is a withdrawn Kind, so there
         is no shape that would pass and nothing for the author to fix. And note
         what it does NOT touch — deletes. Refusing those would trap the very
-        documents the workspace may now want to clear out, and revocation
+        instances the workspace may now want to clear out, and revocation
         already refuses to destroy anything on its own.
 
         No ``DNA_WRITE_VALIDATION`` escape hatch, unlike its schema-validating
@@ -95,9 +95,9 @@ class WritePipeline:
 
         raise RevokedKindWrite(
             f"write refused for {scope}/{kind}/{name}: the Kind {kind!r} has "
-            f"been revoked, so no new documents of it are accepted — this is "
-            f"not about the document's shape, and editing it will not help. "
-            f"Existing documents are untouched and still readable (marked "
+            f"been revoked, so no new instances of it are accepted — this is "
+            f"not about the instance's shape, and editing it will not help. "
+            f"Existing instances are untouched and still readable (marked "
             f"invalid). Approve the Kind again to accept writes."
         )
 
@@ -186,8 +186,8 @@ class WritePipeline:
         different default, because the two checks have different costs and
         different blast radii. Schema validation is pure CPU on data already in
         hand, so it defaults to ``enforce``. Relation validation costs one
-        document READ per declared relation (~5ms PG / ~3ms SQLite / ~20ms FS,
-        LRU-cached), and it can fail on a document that is perfectly
+        instance READ per declared relation (~5ms PG / ~3ms SQLite / ~20ms FS,
+        LRU-cached), and it can fail on an instance that is perfectly
         well-formed — a forward reference to a target written later in the same
         bootstrap is a legitimate, common pattern (a seed writing a Plan before
         its Story; a scope installed in dependency-free order).
@@ -201,6 +201,91 @@ class WritePipeline:
         """
         mode = os.environ.get("DNA_REF_VALIDATION", "warn").strip().lower()
         return mode if mode in ("enforce", "warn", "off") else "warn"
+
+    async def _ensure_instance_id(
+        self, scope: str, kind: str, name: str, raw: Any,
+        *, tenant: str | None, api_version: Any = None,
+        if_absent: bool = False,
+    ) -> Any:
+        """Guarantee ``raw["metadata"]["id"]`` — minting one only for an
+        instance that does not already have one (i-114).
+
+        Three cases, and the ORDER of them is the whole contract:
+
+        1. The envelope already carries a well-formed id → keep it, untouched.
+           This is the ordinary round-trip: a ``.dna/`` file was read, edited
+           and written back, and its identity rode along in the frontmatter.
+        2. The envelope carries none, but an instance is ALREADY STORED at
+           these coordinates → **adopt the stored id**. This clause is the one
+           that matters, and it is not defensive coding. The application-level
+           write path (``dna.application.instances.write_instance_impl``)
+           rebuilds the envelope from scratch as
+           ``{"metadata": {"name": name}, "spec": …}`` — it does not carry
+           metadata forward at all. Every write through the REST and MCP doors
+           therefore arrives here with NO id. Minting a fresh one on that path
+           would re-identify the instance on every save, and every
+           ``dna_edges.to_id`` pointing at it would silently go stale: the
+           feature would look implemented and be worthless. So an id is minted
+           only where none exists to inherit.
+        3. An instance IS stored and it has no id either → it PREDATES this
+           feature, and it gets the DERIVED id
+           (:func:`dna.kernel.identity.derived_instance_id`), not a random one.
+           This is the same rule the Postgres backfill (revision 0008) applies,
+           and it is here so that every OTHER store converges on the same
+           values without needing a migration of its own. The case is real:
+           this repo's own board lives BOTH as ``.dna/`` YAML in git and as
+           rows in a database, and if the files were minted at random while the
+           rows were derived, the same logical instance would carry two
+           identities and ``to_id`` would be right in one store and wrong in
+           the other from day one.
+        4. Nothing stored at all → a genuinely NEW instance, so mint at random
+           (see :func:`dna.kernel.identity.mint_instance_id`). The split
+           between 3 and 4 is what lets both rules be true at once: "an
+           instance that already existed converges" and "a new instance is
+           unguessable, so delete-and-recreate under the same name is visibly a
+           different object".
+
+        ``get_instance_local`` and not ``get_instance``: the read must NOT fall
+        back to a parent scope, because inheriting a parent instance's id would
+        give two different instances the same identity — the exact confusion
+        ``to_scope`` exists elsewhere in this file to avoid.
+
+        ``if_absent`` skips the read entirely: the caller has asserted the
+        instance does not exist, and the adapter is about to refuse the write
+        if it does, so there is no id to inherit and no reason to pay for the
+        lookup.
+
+        A read that RAISES mints nothing and stamps nothing — it leaves the
+        envelope exactly as it came. Inventing an identity because the store
+        was briefly unreachable is how a transient failure becomes a permanent
+        wrong answer; a write that reaches the adapter without an id keeps the
+        id column it already has (see the adapter's COALESCE), so the honest
+        move is to say nothing.
+        """
+        from dna.kernel.identity import (  # noqa: PLC0415
+            derived_instance_id, instance_id_of, mint_instance_id,
+            stamp_instance_id,
+        )
+        if not isinstance(raw, dict):
+            return raw
+        if instance_id_of(raw) is not None:
+            return raw
+        stored: Any = None
+        if not if_absent:
+            getter = getattr(self._host, "get_instance_local", None)
+            if callable(getter):
+                try:
+                    stored = await getter(scope, kind, name, tenant=tenant)
+                except Exception:  # noqa: BLE001 — see the docstring: an
+                    # unreachable store must not mint a second identity.
+                    return raw
+        if stored is None:
+            return stamp_instance_id(raw, mint_instance_id())
+        return stamp_instance_id(raw, instance_id_of(stored) or derived_instance_id(
+            tenant=tenant, scope=scope,
+            api_version=(api_version if isinstance(api_version, str) else "") or "",
+            kind=kind, name=name,
+        ))
 
     async def _resolve_references(
         self, scope: str, kind: str, name: str, raw: Any, port: Any,
@@ -219,7 +304,7 @@ class WritePipeline:
         - Existence is checked in the SAME scope and tenant as the write.
         - A polymorphic relation passes if the target exists as ANY declared
           Kind.
-        - If the host cannot read documents, the check is SKIPPED rather than
+        - If the host cannot read instances, the check is SKIPPED rather than
           guessed at.
         - ``enforce`` vetoes; ``warn`` logs and persists; ``off`` skips.
 
@@ -229,12 +314,12 @@ class WritePipeline:
         second derivation that could disagree with it.
 
         **Reciprocity is REPORTED here, and only reported.** When a relation
-        declares ``inverse_of`` and the target document does not name this one
+        declares ``inverse_of`` and the target instance does not name this one
         back, that is logged in EVERY mode and vetoes in NONE — including
         ``enforce``. The reason is in ``dna.kernel.kinds.relations``: imposing
         the inverse deadlocks (neither half of a pair can be written first) and
-        deriving it means the kernel writing a document the author did not
-        touch. It costs nothing to report, because the target document was
+        deriving it means the kernel writing an instance the author did not
+        touch. It costs nothing to report, because the target instance was
         already materialized by the existence check above. A dangling relation
         and a one-sided pair are different failures, and only the first is the
         author's to fix in the write they are making right now.
@@ -256,11 +341,11 @@ class WritePipeline:
 
         host = self._host
         # The WritePipeline's WriteHost slice is intentionally narrow and does
-        # not promise a document read. The Kernel that satisfies it structurally
-        # does provide ``get_document``; a host that does not (a test double,
+        # not promise an instance read. The Kernel that satisfies it structurally
+        # does provide ``get_instance``; a host that does not (a test double,
         # a reduced embedding) makes this check unavailable, and an unavailable
         # check must be a no-op rather than a false accusation.
-        getter = getattr(host, "get_document", None)
+        getter = getattr(host, "get_instance", None)
         if not callable(getter):
             return [], False
 
@@ -269,23 +354,28 @@ class WritePipeline:
             scope=scope, name=name, tenant=tenant,
             getter=getter,
             port_for=host.kind_port_for,
-            # Same duck-type as ``get_document`` above: the local-only read
+            # Same duck-type as ``get_instance`` above: the local-only read
             # that attributes a hit to THIS scope rather than to an inherited
-            # parent. A cache hit in practice (``get_document`` just loaded the
+            # parent. A cache hit in practice (``get_instance`` just loaded the
             # very same key), and simply absent on a reduced host.
-            local_getter=getattr(host, "get_document_local", None),
+            local_getter=getattr(host, "get_instance_local", None),
+            # The by-KEY read (fatia 5). Same duck-type, same consequence when
+            # absent: no `by: <key>` relation resolves and every one records
+            # the reason ``unsupported`` — never ``missing``, which would
+            # accuse the data of a gap that belongs to the host.
+            key_getter=getattr(host, "find_instance_by_key", None),
         )
 
         if discords:
-            # Reported BEFORE the veto branch on purpose: a write that is about
-            # to be refused for a dangling relation may ALSO have a one-sided
-            # pair, and the author should hear both rather than discover the
-            # second one only after fixing the first.
+            # Reported BEFORE the veto branch on purpose: a write about to be
+            # refused for a dangling by-NAME relation may ALSO have a one-sided
+            # pair or an unresolved `by: <key>`, and the author should hear
+            # every one rather than discover the next only after fixing the
+            # first. Each note carries its OWN reason for not being a veto —
+            # they are different reasons, and one summary line covering both
+            # would have to be vague enough to explain neither.
             logger.warning(
-                "%s/%s/%s: declared inverse not reciprocated: %s "
-                "(reported, never enforced — the other half is a separate "
-                "write, and refusing here would make a pair unwritable in "
-                "either order)",
+                "%s/%s/%s: relation(s) reported and not enforced: %s",
                 scope, kind, name, "; ".join(discords),
             )
 
@@ -367,7 +457,7 @@ class WritePipeline:
     def validate_kind_writer(self, spec: "Any") -> None:
         """Validate a Kind-Writer Agent's slot↔schema contract
         (feat/kind-writer-pilot, Task 2; multi-Kind: feat/kind-writer-multikind).
-        Called from ``write_document`` only when ``spec.writes_kind`` OR
+        Called from ``write_instance`` only when ``spec.writes_kind`` OR
         ``spec.writes_kinds`` is set — fail early at write time so a malformed
         Kind-Writer is rejected before runtime emission.
 
@@ -465,7 +555,7 @@ class WritePipeline:
         if layer is not None and layer[0] == "tenant":
             _w.warn(
                 "layer=('tenant', X) is deprecated — pass tenant=X to "
-                "write_document/delete_document instead",
+                "write_instance/delete_instance instead",
                 DeprecationWarning, stacklevel=3,
             )
             if explicit_tenant is None:
@@ -489,7 +579,7 @@ class WritePipeline:
         if scope_decl == TenantScope.TENANTED and effective is None:
             raise TenantRequired(
                 f"Kind {kind!r} is TENANTED — pass tenant=<slug> to "
-                "write_document() or bind one via Kernel(tenant=...) / "
+                "write_instance() or bind one via Kernel(tenant=...) / "
                 "kernel.with_tenant(...)"
             )
         if scope_decl == TenantScope.GLOBAL and effective is not None:
@@ -500,7 +590,7 @@ class WritePipeline:
             )
         return effective, residual_layer
 
-    # -- write (moved verbatim from Kernel._write_document_inner) ---------------
+    # -- write (moved verbatim from Kernel._write_instance_inner) ---------------
 
     async def write(
         self, scope: str, kind: str, name: str, raw: dict,
@@ -514,7 +604,7 @@ class WritePipeline:
         if_absent: bool = False,
         if_match: str | None = None,
     ) -> str | None:
-        """Real write_document body — the facade (``Kernel.write_document``) owns
+        """Real write_instance body — the facade (``Kernel.write_instance``) owns
         the OTel span + mode validation + record-plane demotion; the fat logic
         stays here.
 
@@ -553,7 +643,7 @@ class WritePipeline:
         # governs only the scope whose store declared it, and this port is what
         # decides schema enforcement, tenancy and storage routing for the write
         # — resolving it unscoped is how another scope's schema came to veto
-        # this one's documents.
+        # this one's instances.
         _kind_port = host.kind_port_for(
             kind, api_version=_api_version, scope=scope,
         )
@@ -566,6 +656,14 @@ class WritePipeline:
         # Resolve tenant + validate against KindPort.scope
         effective_tenant, residual_layer = self._resolve_tenant_arg(
             kind, tenant, layer, api_version=_api_version, scope=scope,
+        )
+        # i-114 — the instance's IDENTITY, stamped before anything downstream
+        # can see the envelope: hooks, schema validation, relation resolution
+        # and persistence all operate on the shape that will actually be
+        # stored, id included.
+        raw = await self._ensure_instance_id(
+            scope, kind, name, raw, tenant=effective_tenant,
+            api_version=_api_version, if_absent=if_absent,
         )
         # Phase 2a: pass tenant as a first-class kwarg to the adapter
         # if supported. Adapters that don't support tenant yet fall back
@@ -610,8 +708,8 @@ class WritePipeline:
             # A GUARDED update (i-083) — the mirror of the block above, and
             # refused for the same reason with one extra edge to it. ``if_match``
             # is not asked for defensively: a caller passes it because it is
-            # about to REPLACE a document it read a moment ago, and the value of
-            # the token is that the replacement is refused if the document moved
+            # about to REPLACE an instance it read a moment ago, and the value of
+            # the token is that the replacement is refused if the instance moved
             # underneath. Degrading to an unguarded upsert would perform exactly
             # the lost update the caller paid a round trip to prevent, and report
             # success.
@@ -620,20 +718,20 @@ class WritePipeline:
                     f"{type(src).__name__} does not support if_match writes "
                     f"(it declares write_kwargs without 'if_match'), so this "
                     f"kernel cannot promise your update will be refused if the "
-                    f"document changed since you read it. Re-read immediately "
+                    f"instance changed since you read it. Re-read immediately "
                     f"before writing and accept the race, or run against an "
                     f"adapter that declares the kwarg."
                 )
             if if_absent:
                 # Mutually exclusive by meaning, not by policy: one asserts the
-                # document is ABSENT, the other that it is PRESENT and unchanged.
+                # instance is ABSENT, the other that it is PRESENT and unchanged.
                 # Together they can never both hold, so an adapter handed both
                 # would have to invent a precedence — and whichever it picked,
                 # one of the two guarantees the caller believes it holds would be
                 # silently untrue.
                 raise ValueError(
                     "if_absent and if_match cannot be combined: if_absent "
-                    "asserts the document does not exist, if_match asserts it "
+                    "asserts the instance does not exist, if_match asserts it "
                     "exists and still hashes to a token you read. Pick the one "
                     "you mean."
                 )
@@ -713,9 +811,9 @@ class WritePipeline:
         # --- the derived edges ride along with the save (spec-grafo-1) --------
         # The SAME lookups the check above just made also say which Kind each
         # reference resolved to. Handing that to the adapter as a kwarg lets it
-        # write the edges INSIDE the transaction that writes the document —
+        # write the edges INSIDE the transaction that writes the instance —
         # the form ``_events.emit(conn, …)`` → ``dna_outbox`` established — so
-        # the document and its edges enter together or neither does.
+        # the instance and its edges enter together or neither does.
         #
         # Three refusals are encoded in this one condition:
         #  * an adapter that has not adopted the kwarg is never handed it (the
@@ -725,12 +823,12 @@ class WritePipeline:
         #  * ``complete=False`` (a read failed mid-resolution, or the producer
         #    is off) does NOT replace what is stored: an old-but-known edge set
         #    beats a new-but-partial one, and the backfill can repair it later;
-        #  * a document with no declared references still passes ``edges=[]``,
-        #    which is how removing the last reference from a document removes
+        #  * an instance with no declared references still passes ``edges=[]``,
+        #    which is how removing the last reference from an instance removes
         #    its rows instead of leaving stale ones behind.
         if ws.edges and edges_complete:
             kwargs["edges"] = edges
-        version = await src.save_document(scope, kind, name, raw, **kwargs)
+        version = await src.save_instance(scope, kind, name, raw, **kwargs)
         # R2-fix (2026-05-14): three invalidation tiers.
         #
         # mode=none — write only, no cache invalidation. Caller owns hygiene.
@@ -779,7 +877,7 @@ class WritePipeline:
             await self.emit_post_save(scope, kind, name, raw, layer=hook_layer)
         return version
 
-    # -- delete (moved from the persistence body of Kernel.delete_document) -----
+    # -- delete (moved from the persistence body of Kernel.delete_instance) -----
 
     async def delete(
         self, scope: str, kind: str, name: str,
@@ -791,10 +889,19 @@ class WritePipeline:
         invalidate_mode: str,
         api_version: str | None = None,
     ) -> None:
-        """Real delete_document body — the facade owns mode validation +
-        record-plane demotion; the persistence + fan-out live here. NOTE:
-        deletes have NO pre_save veto gate (only writes do)."""
-        from dna.kernel.capabilities import write_kwarg_support
+        """Real delete_instance body — the facade owns mode validation +
+        record-plane demotion; the policy gate, the persistence and the fan-out
+        live here.
+
+        ⚠️ **THE chokepoint for ``on_target_delete``.** Deletes have no
+        ``pre_save`` veto (only writes do), and that absence is exactly what the
+        spec's slice 2 named as the gap: *"deleting a Feature that 47 Stories
+        point at is accepted in silence"*. The gate is here rather than in a
+        face because five of the six delete call sites in this repo funnel into
+        this one method — see :mod:`dna.kernel.write.target_delete` for the
+        count, and for why the sixth (source-to-source ``sync``) is deliberately
+        below it.
+        """
         host = self._host
         src = host._require_writable_source()
         # Resolve tenant + validate against KindPort.scope (back-compat for
@@ -802,7 +909,61 @@ class WritePipeline:
         effective_tenant, residual_layer = self._resolve_tenant_arg(
             kind, tenant, layer, api_version=api_version, scope=scope,
         )
-        # s-kernel-capability-protocols — memoized kwarg probe (see write_document).
+        # ── the gate ──────────────────────────────────────────────────────
+        # Raises TargetDeleteRestricted before ANYTHING is removed. Returns []
+        # — touching no store at all — whenever no registered relation declares
+        # a policy naming this Kind, which is every delete in this registry
+        # today. See the module docstring for why that has to be free.
+        from dna.kernel.write.target_delete import (
+            plan_target_delete,
+            registry_relations,
+        )
+
+        cascade = await plan_target_delete(
+            src, registry_relations(host.kind_ports()),
+            scope, kind, name, tenant=effective_tenant,
+        )
+        for cascade_kind, cascade_name in cascade:
+            # api_version is NOT passed: the edge carries a bare Kind name, and
+            # i-195 makes a Kind name globally unique by an ENFORCED registry
+            # invariant, so the bare name resolves unambiguously. Inventing an
+            # api_version here would be guessing at something the graph did not
+            # say.
+            await self._persist_delete(
+                scope, cascade_kind, cascade_name,
+                skip_hooks=skip_hooks, tenant=effective_tenant,
+                residual_layer=residual_layer, layer=layer,
+                invalidate_mode=invalidate_mode, api_version=None,
+            )
+        await self._persist_delete(
+            scope, kind, name,
+            skip_hooks=skip_hooks, tenant=effective_tenant,
+            residual_layer=residual_layer, layer=layer,
+            invalidate_mode=invalidate_mode, api_version=api_version,
+        )
+
+    async def _persist_delete(
+        self, scope: str, kind: str, name: str, *,
+        skip_hooks: bool,
+        tenant: str | None,
+        residual_layer: tuple[str, str] | None,
+        layer: tuple[str, str] | None,
+        invalidate_mode: str,
+        api_version: str | None,
+    ) -> None:
+        """One instance gone, plus the ordered invalidation fan-out.
+
+        Split out of :meth:`delete` so a ``delete_source`` cascade removes its
+        instances through the SAME persistence and fan-out as a direct delete —
+        the alternative was recursing into ``delete`` and re-planning the whole
+        closure per node, which is quadratic and, worse, would re-ask a question
+        the plan already answered for the whole set.
+        """
+        from dna.kernel.capabilities import write_kwarg_support
+        host = self._host
+        src = host._require_writable_source()
+        effective_tenant = tenant
+        # s-kernel-capability-protocols — memoized kwarg probe (see write_instance).
         ws = write_kwarg_support(src)
         kwargs: dict = {}
         if ws.api_version_delete and api_version:
@@ -825,8 +986,8 @@ class WritePipeline:
                 adapter_layer = ("tenant", effective_tenant)
             if ws.layer_delete:
                 kwargs["layer"] = adapter_layer
-        await src.delete_document(scope, kind, name, **kwargs)
-        # R2-fix (2026-05-14): mirror write_document's three-tier invalidate.
+        await src.delete_instance(scope, kind, name, **kwargs)
+        # R2-fix (2026-05-14): mirror write_instance's three-tier invalidate.
         if invalidate_mode != "none":
             host._invalidate_granular_cache(scope, kind=kind, name=name)
         if invalidate_mode == "scope":

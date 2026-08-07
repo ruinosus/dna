@@ -70,7 +70,7 @@ def _run(tool, target, task):
 def test_the_tool_is_named_delegate_to():
     tool = make_delegate_tool(
         delegator="supervisor",
-        documents=_docs(),
+        instances=_docs(),
         run_local=_never_local,
         call_remote=_never_remote,
     )
@@ -80,7 +80,7 @@ def test_the_tool_is_named_delegate_to():
 def test_the_description_lists_available_targets_with_their_use_when():
     tool = make_delegate_tool(
         delegator="supervisor",
-        documents=_docs(use_when="quando precisar converter algo"),
+        instances=_docs(use_when="quando precisar converter algo"),
         run_local=_never_local,
         call_remote=_never_remote,
     )
@@ -91,7 +91,7 @@ def test_the_description_lists_available_targets_with_their_use_when():
 def test_a_target_missing_use_when_is_still_listed_not_dropped():
     tool = make_delegate_tool(
         delegator="supervisor",
-        documents=_docs(use_when=None),
+        instances=_docs(use_when=None),
         run_local=_never_local,
         call_remote=_never_remote,
     )
@@ -101,7 +101,7 @@ def test_a_target_missing_use_when_is_still_listed_not_dropped():
 def test_a_delegator_with_no_targets_gets_a_description_that_says_so():
     tool = make_delegate_tool(
         delegator="supervisor",
-        documents=_docs(team=()),
+        instances=_docs(team=()),
         run_local=_never_local,
         call_remote=_never_remote,
     )
@@ -114,7 +114,7 @@ def test_a_delegator_with_no_targets_gets_a_description_that_says_so():
 def test_an_out_of_roster_target_is_refused_naming_the_reason_and_valid_targets():
     tool = make_delegate_tool(
         delegator="supervisor",
-        documents=_docs(),
+        instances=_docs(),
         run_local=_never_local,
         call_remote=_never_remote,
     )
@@ -129,7 +129,7 @@ def test_the_refusal_is_a_returned_string_not_a_raised_exception():
     (o próprio ponto do padrão "recusa nomeada, nunca silêncio")."""
     tool = make_delegate_tool(
         delegator="supervisor",
-        documents=_docs(),
+        instances=_docs(),
         run_local=_never_local,
         call_remote=_never_remote,
     )
@@ -149,11 +149,11 @@ def test_the_task_reaches_run_local_verbatim_as_the_request_arg():
         return "ok"
 
     tool = make_delegate_tool(
-        delegator="supervisor", documents=_docs(), run_local=_local, call_remote=_never_remote,
+        delegator="supervisor", instances=_docs(), run_local=_local, call_remote=_never_remote,
     )
-    _run(tool, "conv", "converta este documento")
+    _run(tool, "conv", "converta esta instância")
     assert captured["name"] == "conv"
-    assert captured["request"] == "converta este documento"
+    assert captured["request"] == "converta esta instância"
 
 
 # ── 4. o retorno é o resumo, não o transcript ───────────────────────────────
@@ -164,14 +164,14 @@ def test_the_return_is_the_short_summary_run_local_reduced_to():
     a uma string curta antes de devolver — o transcript inteiro que ele viu
     por dentro nunca deve aparecer na saída da tool."""
     transcript_lines = [f"mensagem intermediária número {i} do subagente" for i in range(9)]
-    final_summary = "feito: documento convertido"
+    final_summary = "feito: instância convertido"
 
     async def _local(name, request):
         _ = transcript_lines  # nunca sai da função — simula o sub-run isolado
         return final_summary
 
     tool = make_delegate_tool(
-        delegator="supervisor", documents=_docs(), run_local=_local, call_remote=_never_remote,
+        delegator="supervisor", instances=_docs(), run_local=_local, call_remote=_never_remote,
     )
     out = _run(tool, "conv", "converta isto")
     assert out == final_summary
@@ -194,7 +194,7 @@ def test_run_local_receives_only_target_name_and_task_nothing_else():
         return "ok"
 
     tool = make_delegate_tool(
-        delegator="supervisor", documents=_docs(), run_local=_local, call_remote=_never_remote,
+        delegator="supervisor", instances=_docs(), run_local=_local, call_remote=_never_remote,
     )
     _run(tool, "conv", "tarefa isolada")
     assert received["args"] == ("conv", "tarefa isolada")
@@ -209,7 +209,7 @@ def test_a_local_agent_target_uses_run_local_and_never_touches_the_network():
         return f"feito por {name}"
 
     tool = make_delegate_tool(
-        delegator="supervisor", documents=_docs(), run_local=_local, call_remote=_never_remote,
+        delegator="supervisor", instances=_docs(), run_local=_local, call_remote=_never_remote,
     )
     out = _run(tool, "conv", "x")
     assert "feito por conv" in out
@@ -222,7 +222,7 @@ def test_a_remote_agent_target_uses_call_remote():
 
     docs = [_docs(team=("conv", "far"))[0], _remote_doc()]
     tool = make_delegate_tool(
-        delegator="supervisor", documents=docs, run_local=_never_local, call_remote=_remote,
+        delegator="supervisor", instances=docs, run_local=_never_local, call_remote=_remote,
     )
     out = _run(tool, "far", "x")
     assert out == "feito remotamente"
@@ -239,7 +239,7 @@ def test_credential_for_completes_a_call_remote_that_still_expects_it():
     docs = [_docs(team=("conv", "far"))[0], _remote_doc()]
     tool = make_delegate_tool(
         delegator="supervisor",
-        documents=docs,
+        instances=docs,
         run_local=_never_local,
         call_remote=_remote,
         credential_for=lambda name: f"token-for-{name}",
@@ -256,7 +256,7 @@ def test_a_crashing_subagent_becomes_a_named_refusal_not_a_raw_exception():
         raise RuntimeError("modelo indisponível")
 
     tool = make_delegate_tool(
-        delegator="supervisor", documents=_docs(), run_local=_local, call_remote=_never_remote,
+        delegator="supervisor", instances=_docs(), run_local=_local, call_remote=_never_remote,
     )
     out = _run(tool, "conv", "x")
     assert isinstance(out, str)

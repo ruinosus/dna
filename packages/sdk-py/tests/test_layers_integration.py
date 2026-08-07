@@ -4,12 +4,12 @@ Proves: overlay merge, tenant isolation, edit propagation, policy enforcement.
 Each class is an independent business scenario with its own fresh schema.
 
 Backed by the pg dialect of SqlAlchemySource (``requires_postgres``): tenant
-overlays live in ``documents.tenant`` with a tenant-aware PK, so base and
+overlays live in ``instances.tenant`` with a tenant-aware PK, so base and
 overlay rows coexist. The sqlite dialect can NOT host these scenarios — its
-``documents`` PK lacks ``tenant`` (i-092 schema debt, strict-xfailed in the
+``instances`` PK lacks ``tenant`` (i-092 schema debt, strict-xfailed in the
 conformance kit), so an overlay publish clobbers the base row. (The retired
 raw SqliteSource sidestepped that by keeping tenant overlays in the legacy
-``layer_documents`` table — a semantics the SQL path no longer has.)
+``layer_instances`` table — a semantics the SQL path no longer has.)
 """
 from __future__ import annotations
 
@@ -88,13 +88,13 @@ SOUL_BRAD_RAW = {
 
 
 async def _seed_base(source: SqlAlchemySource) -> None:
-    """Seed the base documents (module + agent + soul) and publish them."""
+    """Seed the base instances (module + agent + soul) and publish them."""
     for kind, name, raw in [
         ("Genome", "test-mod", MODULE_RAW),
         ("Agent", "brad", AGENT_BRAD_RAW),
         ("Soul", "brad", SOUL_BRAD_RAW),
     ]:
-        await source.save_document("test-mod", kind, name, raw)
+        await source.save_instance("test-mod", kind, name, raw)
         await source.publish("test-mod", kind, name)
 
 
@@ -120,7 +120,7 @@ def _make_kernel(source: SqlAlchemySource) -> Kernel:
 
 
 def _overlay_agent(instruction: str, **extra_spec) -> dict:
-    """Create an overlay document for brad with a custom instruction."""
+    """Create an overlay instance for brad with a custom instruction."""
     spec = {"instruction": instruction, **extra_spec}
     return {
         "apiVersion": "github.com/ruinosus/dna/v1",
@@ -137,7 +137,7 @@ def _overlay_agent(instruction: str, **extra_spec) -> dict:
 
 @pytest_asyncio.fixture
 async def sqlite_env():
-    """Fresh pg store + Kernel with base documents seeded (fixture name kept
+    """Fresh pg store + Kernel with base instances seeded (fixture name kept
     for the scenario classes' readability-diff)."""
     source, cleanup = await _pg_env()
     await _seed_base(source)
@@ -158,14 +158,14 @@ class TestOverlayMerge:
     async def test_overlay_changes_instruction(self, sqlite_env):
         kernel, source = sqlite_env
 
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "alpha",
             "Agent", "brad",
             _overlay_agent("Focus on compliance and regulatory requirements."),
         )
 
         mi = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
-        brad = next((d for d in mi.documents if d.kind == "Agent" and d.name == "brad"), None)
+        brad = next((d for d in mi.instances if d.kind == "Agent" and d.name == "brad"), None)
 
         assert brad is not None
         assert "compliance" in brad.spec.get("instruction", "").lower()
@@ -174,7 +174,7 @@ class TestOverlayMerge:
     async def test_overlay_reflected_in_build_prompt(self, sqlite_env):
         kernel, source = sqlite_env
 
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "alpha",
             "Agent", "brad",
             _overlay_agent("Focus on compliance and regulatory requirements."),
@@ -198,12 +198,12 @@ class TestTenantIsolation:
     async def test_three_tenants_three_instructions(self, sqlite_env):
         kernel, source = sqlite_env
 
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "alpha",
             "Agent", "brad",
             _overlay_agent("Focus on compliance."),
         )
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "beta",
             "Agent", "brad",
             _overlay_agent("Ship fast, iterate later."),
@@ -213,9 +213,9 @@ class TestTenantIsolation:
         mi_alpha = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
         mi_beta = await kernel.instance_async("test-mod", layers={"tenant": "beta"})
 
-        base_instr = next((d for d in mi_base.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
-        alpha_instr = next((d for d in mi_alpha.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
-        beta_instr = next((d for d in mi_beta.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
+        base_instr = next((d for d in mi_base.instances if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
+        alpha_instr = next((d for d in mi_alpha.instances if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
+        beta_instr = next((d for d in mi_beta.instances if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
 
         assert "base architect" in base_instr.lower()
         assert "compliance" in alpha_instr.lower()
@@ -225,7 +225,7 @@ class TestTenantIsolation:
     async def test_base_prompt_unchanged(self, sqlite_env):
         kernel, source = sqlite_env
 
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "alpha",
             "Agent", "brad",
             _overlay_agent("Focus on compliance."),
@@ -255,60 +255,60 @@ class TestEditPropagation:
         kernel, source = sqlite_env
 
         # Initial overlay
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "alpha",
             "Agent", "brad",
             _overlay_agent("Focus on compliance."),
         )
         mi1 = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
-        assert "compliance" in next((d for d in mi1.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "").lower()
+        assert "compliance" in next((d for d in mi1.instances if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "").lower()
 
         # Edit overlay in-place
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "alpha",
             "Agent", "brad",
             _overlay_agent("Pirata do código. Arrr!"),
         )
         mi2 = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
-        assert "pirata" in next((d for d in mi2.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "").lower()
+        assert "pirata" in next((d for d in mi2.instances if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "").lower()
 
     @pytest.mark.asyncio
     async def test_edit_does_not_affect_base(self, sqlite_env):
         kernel, source = sqlite_env
 
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "alpha",
             "Agent", "brad",
             _overlay_agent("Pirata do código. Arrr!"),
         )
 
         mi_base = await kernel.instance_async("test-mod")
-        assert "base architect" in next((d for d in mi_base.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "").lower()
+        assert "base architect" in next((d for d in mi_base.instances if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "").lower()
 
     @pytest.mark.asyncio
     async def test_edit_does_not_affect_other_tenant(self, sqlite_env):
         kernel, source = sqlite_env
 
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "alpha",
             "Agent", "brad",
             _overlay_agent("Pirata do código."),
         )
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "beta",
             "Agent", "brad",
             _overlay_agent("Ship fast."),
         )
 
         # Edit alpha
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "alpha",
             "Agent", "brad",
             _overlay_agent("Totally changed."),
         )
 
         mi_beta = await kernel.instance_async("test-mod", layers={"tenant": "beta"})
-        assert "ship fast" in next((d for d in mi_beta.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "").lower()
+        assert "ship fast" in next((d for d in mi_beta.instances if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "").lower()
 
 
 # ---------------------------------------------------------------------------
@@ -337,7 +337,7 @@ class TestPolicyRestricted:
             ("Agent", "brad", AGENT_BRAD_RAW),
             ("Soul", "brad", SOUL_BRAD_RAW),
         ]:
-            await source.save_document("test-mod", kind, name, raw)
+            await source.save_instance("test-mod", kind, name, raw)
             await source.publish("test-mod", kind, name)
 
         kernel = _make_kernel(source)
@@ -348,28 +348,28 @@ class TestPolicyRestricted:
     async def test_existing_field_overwritten(self, restricted_env):
         kernel, source = restricted_env
 
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "alpha",
             "Agent", "brad",
             _overlay_agent("Overridden instruction."),
         )
 
         mi = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
-        instr = next((d for d in mi.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
+        instr = next((d for d in mi.instances if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
         assert "overridden" in instr.lower()
 
     @pytest.mark.asyncio
     async def test_new_field_ignored(self, restricted_env):
         kernel, source = restricted_env
 
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "alpha",
             "Agent", "brad",
             _overlay_agent("Overridden instruction.", tone="formal"),
         )
 
         mi = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
-        brad_spec = next((d for d in mi.documents if d.kind == "Agent" and d.name == "brad"), None).spec
+        brad_spec = next((d for d in mi.instances if d.kind == "Agent" and d.name == "brad"), None).spec
         assert brad_spec.get("tone") is None
 
 
@@ -403,7 +403,7 @@ class TestPolicyLocked:
             ("Agent", "brad", AGENT_BRAD_RAW),
             ("Soul", "brad", SOUL_BRAD_RAW),
         ]:
-            await source.save_document("test-mod", kind, name, raw)
+            await source.save_instance("test-mod", kind, name, raw)
             await source.publish("test-mod", kind, name)
 
         kernel = _make_kernel(source)
@@ -414,21 +414,21 @@ class TestPolicyLocked:
     async def test_instruction_unchanged(self, locked_env):
         kernel, source = locked_env
 
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "alpha",
             "Agent", "brad",
             _overlay_agent("This should be ignored."),
         )
 
         mi = await kernel.instance_async("test-mod", layers={"tenant": "alpha"})
-        instr = next((d for d in mi.documents if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
+        instr = next((d for d in mi.instances if d.kind == "Agent" and d.name == "brad"), None).spec.get("instruction", "")
         assert "base architect" in instr.lower()
 
     @pytest.mark.asyncio
     async def test_locked_emits_warning(self, locked_env):
         kernel, source = locked_env
 
-        await source.save_layer_document(
+        await source.save_layer_instance(
             "test-mod", "tenant", "alpha",
             "Agent", "brad",
             _overlay_agent("This should be ignored."),

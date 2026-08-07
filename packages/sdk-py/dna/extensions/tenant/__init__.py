@@ -3,7 +3,7 @@
 Story `s-tenant-lifecycle-phase-a-kind-crud` (2026-05-25).
 
 Pre-existing state of tenants in the codebase was half-baked:
-  * dna_documents.tenant column persists per-doc tenant binding.
+  * dna_instances.tenant column persists per-doc tenant binding.
   * /tenants GET listed observed tenants from that column.
   * TenantSwitcher in Studio let users pick between allowed tenants.
 
@@ -102,7 +102,7 @@ class TenantKind(KindBase):
     flatten_in_context = False
     docs = (
         "A Tenant is the identity of an organization/team/individual that "
-        "owns scopes and the documents within them. Stored as bundle "
+        "owns scopes and the instances within them. Stored as bundle "
         "(TENANT.md frontmatter = spec) under the special `_lib` scope. "
         "Slug rules match the runtime tenant claim format ([a-z0-9-]{1,253}). "
         "Created by platform admins via POST /tenants. Suspended via PATCH; "
@@ -122,7 +122,7 @@ class TenantKind(KindBase):
                     "pattern": r"^[a-z0-9-]{1,253}$",
                     "description": (
                         "Tenant identity. Used as the value of "
-                        "dna_documents.tenant for every doc owned by this "
+                        "dna_instances.tenant for every doc owned by this "
                         "tenant. Must match the runtime tenant claim format."
                     ),
                 },
@@ -271,7 +271,7 @@ class TenantWriter(WriterPort):
             f"**Status:** {status} · **Plan:** {plan}\n\n"
             f"Owner: `{clean_spec.get('owner_email', '?')}` · "
             f"Created: `{clean_spec.get('created_at', '?')}`\n\n"
-            f"All DNA documents that carry `dna_documents.tenant = {slug!r}` "
+            f"All DNA instances that carry `dna_instances.tenant = {slug!r}` "
             f"belong to this Tenant. Lifecycle managed by platform admins via "
             f"`POST /tenants`, `PATCH /tenants/{{slug}}`, `DELETE /tenants/{{slug}}`."
         )
@@ -303,6 +303,12 @@ class TenantMembershipKind(KindBase):
     scope = TenantScope.GLOBAL
     kind = "TenantMembership"
     alias = "tenant-membership"
+    # One row per (tenant, user) pair with a role — the platform-level
+    # grant, created by an invite and removed by a DELETE. Same role as its
+    # three siblings in three other extensions; different subject, different
+    # scope, same question asked of it.
+    # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+    traits = frozenset({"tenancy.access-grant"})
     model = dict
     origin = _ORIGIN
     storage = StorageDescriptor.bundle("tenant-memberships", "MEMBERSHIP.md")
@@ -318,6 +324,30 @@ class TenantMembershipKind(KindBase):
         "spec.member_count_cached is updated by the route handler on each "
         "mutation (eventually-consistent)."
     )
+    # This Kind's whole reason to exist is the link in its own docstring
+    # ("Links a user to a Tenant"), and until 06/08/2026 it declared nothing —
+    # so the graph showed TenantMembership and Tenant as two unconnected
+    # islands, which is a model that contradicts the Kind's first sentence.
+    #
+    # `by: slug`, NOT `by: name`, and the distinction is the ``PricingPlan``
+    # lesson applied rather than repeated: `Tenant.spec.slug` is a REQUIRED
+    # field of the target, while `metadata.name` is set by the reader from the
+    # bundle directory (`metadata.setdefault("name", bundle.name)`). The two
+    # agree today by filesystem convention, and a `by: name` declaration would
+    # install a SECOND resolution rule that is right by coincidence — free to
+    # veto a membership the live lookup accepts the day a bundle is renamed.
+    # Declared, drawn, and honestly not resolved.
+    relations = {
+        "tenant_slug": {"to": "Tenant", "cardinality": "one", "by": "slug"},
+    }
+    # `user_id` is reference-SHAPED and points at no instance: it is the
+    # identity provider's stable subject (a Clerk `sub`, an OIDC `sub`). Not
+    # `self` — this row's name is `{tenant_slug}--{email}`, so the id names a
+    # subject rather than the row (contrast `UserRoleAssignment.user_id`,
+    # whose doc name IS the user_id and is therefore `self`).
+    identifiers = {
+        "user_id": {"role": "external", "system": "idp"},
+    }
 
     def schema(self) -> dict[str, Any] | None:
         return {

@@ -4,14 +4,14 @@ special-cases; extension-owned rules ride the ``pre_save`` veto channel.
 Three layers of guarantees:
 
 1. AST ratchet — no concrete Kind-name string literal ("Agent",
-   "Engram", "Genome", ...) inside ``write_document`` /
-   ``_write_document_inner`` / ``delete_document``. Generic dispatch by
+   "Engram", "Genome", ...) inside ``write_instance`` /
+   ``_write_instance_inner`` / ``delete_instance``. Generic dispatch by
    KindPort ATTRIBUTE (e.g. ``is_catalog_identity``) is fine; matching by
    name in the kernel is domain leakage and fails here.
 2. Veto-channel mechanics — priority ordering, key-idempotent registration,
    sync+async listeners, exception propagation (the veto).
 3. Write-path regressions previously only covered inline — bitemporal
-   Engram preservation via ``write_document`` (SdlcExtension hook,
+   Engram preservation via ``write_instance`` (SdlcExtension hook,
    Engram itself registered by HelixExtension since s-engram-rename)
    and the Genome write → catalog-cache drop keyed by
    ``is_catalog_identity``.
@@ -44,7 +44,7 @@ _FORBIDDEN_KIND_LITERALS = frozenset({
     "Agent", "Engram", "Genome",
 })
 
-_WRITE_PATH_FUNCTIONS = ("write_document", "_write_document_inner", "delete_document")
+_WRITE_PATH_FUNCTIONS = ("write_instance", "_write_instance_inner", "delete_instance")
 
 
 def _write_path_function_nodes() -> list[ast.AsyncFunctionDef]:
@@ -158,7 +158,7 @@ async def test_write_document_emits_pre_save_even_with_skip_hooks():
     k.on_veto("pre_save", seen.append)
     raw = {"apiVersion": "x/v1", "kind": "Doc", "metadata": {"name": "d"},
            "spec": {"a": 1}}
-    await k.write_document("scope-x", "Doc", "d", raw, skip_hooks=True)
+    await k.write_instance("scope-x", "Doc", "d", raw, skip_hooks=True)
     assert len(seen) == 1
     ctx = seen[0]
     assert (ctx.scope, ctx.kind, ctx.name) == ("scope-x", "Doc", "d")
@@ -180,7 +180,7 @@ async def test_write_document_veto_blocks_persist():
     raw = {"apiVersion": "x/v1", "kind": "Doc", "metadata": {"name": "d"},
            "spec": {}}
     with pytest.raises(PermissionError):
-        await k.write_document("scope-x", "Doc", "d", raw)
+        await k.write_instance("scope-x", "Doc", "d", raw)
     assert src.save_calls == []  # nothing persisted
 
 
@@ -227,13 +227,13 @@ async def test_bitemporal_guard_fires_through_write_document(tmp_path):
         "valid_to": "2026-06-02T00:00:00+00:00",
         "superseded_by_memory": "sem-x",
     })
-    await k.write_document("proj", "Engram", "rem-x", superseded)
+    await k.write_instance("proj", "Engram", "rem-x", superseded)
 
     # Maintenance write drops valid_to (decay/cue hooks re-emit by name).
     maintenance = _ll_raw("rem-x", {**_ll_base, "surface_count": 3})
-    await k.write_document("proj", "Engram", "rem-x", maintenance)
+    await k.write_instance("proj", "Engram", "rem-x", maintenance)
 
-    stored = await k.get_document("proj", "Engram", "rem-x")
+    stored = await k.get_instance("proj", "Engram", "rem-x")
     assert stored is not None
     assert stored["spec"]["valid_to"] == "2026-06-02T00:00:00+00:00"
     assert stored["spec"]["superseded_by_memory"] == "sem-x"
@@ -255,14 +255,14 @@ async def test_package_write_drops_catalog_cache_via_attribute():
     assert kp is not None and kp.is_catalog_identity is True
 
     k._catalog_cache["acme"] = (0.0, [("s", None)])
-    await k.write_document(
+    await k.write_instance(
         "other-scope", "Agent", "helper",
         {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Agent",
          "metadata": {"name": "helper"}, "spec": {"instruction": "hi"}},
     )
     assert "acme" in k._catalog_cache  # non-catalog Kind → cache untouched
 
-    await k.write_document(
+    await k.write_instance(
         "pkg-scope", "Genome", "pkg-scope",
         {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Genome",
          "metadata": {"name": "pkg-scope"}, "spec": {"default_agent": "x"}},

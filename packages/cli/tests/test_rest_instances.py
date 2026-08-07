@@ -1,11 +1,11 @@
-"""``POST /v1/kinds/{kind}/documents`` — the generic, kubernetes-shaped write.
+"""``POST /v1/kinds/{kind}/instances`` — the generic, kubernetes-shaped write.
 
 The gap this closes: only PER-KIND write routes existed (``/v1/memories``,
 ``/v1/artifacts``, ``/v1/kinds``, ``/v1/projects``, ``/v1/tenants``,
-``/v1/workspaces``). A document of an arbitrary — including tenant-authored —
-Kind had no REST door at all, so a proposer (e.g. a document-converter agent)
-that authors a Kind and matches a document to it had nowhere to write the
-document through the shared REST lane.
+``/v1/workspaces``). An instance of an arbitrary — including tenant-authored —
+Kind had no REST door at all, so a proposer (e.g. an instance-converter agent)
+that authors a Kind and matches an instance to it had nowhere to write the
+instance through the shared REST lane.
 
 The shape follows Kubernetes, deliberately (see the plan): applying a CRD
 CREATES an endpoint that serves that type, the ``kind`` is inferred from the
@@ -24,7 +24,7 @@ regression:
    surface already has: an authored Kind is inert until a human approves it,
    and this door cannot bypass that.
 4. **identity and scope are not caller input** — asserted against the
-   PUBLISHED schema (the OpenAPI document a caller actually reaches), the
+   PUBLISHED schema (the OpenAPI instance a caller actually reaches), the
    REST analogue of what ``test_tools_bind_their_scope.py`` already asserts
    for the MCP tools.
 5. **the provenance edge is real** — citing a ``SourceArtifact`` by
@@ -101,7 +101,7 @@ def _read(dna_dir, kind, name, *, tenant=None, scope=_SCOPE):
 
     async def go():
         live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
-        return await live.kernel.get_document(scope, kind, name, tenant=tenant)
+        return await live.kernel.get_instance(scope, kind, name, tenant=tenant)
 
     return asyncio.run(go())
 
@@ -124,7 +124,7 @@ def test_a_divergent_body_kind_is_refused(dna_dir):
     with _client(dna_dir) as c:
         _author_and_approve(c)
         r = c.post(
-            "/v1/kinds/Contrato/documents", params={"tenant": _WID},
+            "/v1/kinds/Contrato/instances", params={"tenant": _WID},
             json={
                 "kind": "OutraCoisa",
                 "metadata": {"name": "c1"},
@@ -140,7 +140,7 @@ def test_a_matching_body_kind_is_accepted(dna_dir):
     with _client(dna_dir) as c:
         _author_and_approve(c)
         r = c.post(
-            "/v1/kinds/Contrato/documents", params={"tenant": _WID},
+            "/v1/kinds/Contrato/instances", params={"tenant": _WID},
             json={
                 "kind": "Contrato",
                 "metadata": {"name": "c1"},
@@ -157,7 +157,7 @@ def test_the_happy_path_writes_a_conforming_document(dna_dir):
     with _client(dna_dir) as c:
         _author_and_approve(c)
         r = c.post(
-            "/v1/kinds/Contrato/documents", params={"tenant": _WID},
+            "/v1/kinds/Contrato/instances", params={"tenant": _WID},
             json={"metadata": {"name": "c1"}, "spec": {"titulo": "Foo"}},
         )
         assert r.status_code == 201, r.text
@@ -166,7 +166,7 @@ def test_the_happy_path_writes_a_conforming_document(dna_dir):
         assert body["name"] == "c1"
         assert body["created"] is True
     stored = _read(dna_dir, "Contrato", "c1", tenant=_WID)
-    assert stored is not None, "the document was not persisted"
+    assert stored is not None, "the instance was not persisted"
     assert stored["spec"]["titulo"] == "Foo"
 
 
@@ -174,7 +174,7 @@ def test_an_unknown_field_is_refused_by_name(dna_dir):
     with _client(dna_dir) as c:
         _author_and_approve(c)
         r = c.post(
-            "/v1/kinds/Contrato/documents", params={"tenant": _WID},
+            "/v1/kinds/Contrato/instances", params={"tenant": _WID},
             json={
                 "metadata": {"name": "c2"},
                 "spec": {"titulo": "Foo", "campo_fantasma": 1},
@@ -188,7 +188,7 @@ def test_a_missing_required_field_is_refused_by_name(dna_dir):
     with _client(dna_dir) as c:
         _author_and_approve(c)
         r = c.post(
-            "/v1/kinds/Contrato/documents", params={"tenant": _WID},
+            "/v1/kinds/Contrato/instances", params={"tenant": _WID},
             json={"metadata": {"name": "c3"}, "spec": {}},
         )
         assert r.status_code == 400, r.text
@@ -201,7 +201,7 @@ def test_bootstrap_kinds_stay_refused_through_this_route(dna_dir):
     either — it is the SAME core, and the new door adds no back way in."""
     with _client(dna_dir) as c:
         r = c.post(
-            "/v1/kinds/KindDefinition/documents", params={"tenant": _WID},
+            "/v1/kinds/KindDefinition/instances", params={"tenant": _WID},
             json={"metadata": {"name": "anything"}, "spec": {}},
         )
         assert r.status_code == 403, r.text
@@ -220,7 +220,7 @@ def test_writing_under_an_unapproved_kind_refuses(dna_dir):
         assert r.status_code == 201, r.text
         # Never approved.
         w = c.post(
-            "/v1/kinds/Rascunho/documents", params={"tenant": _WID},
+            "/v1/kinds/Rascunho/instances", params={"tenant": _WID},
             json={"metadata": {"name": "d1"}, "spec": {"titulo": "x"}},
         )
         assert w.status_code == 404, w.text
@@ -236,7 +236,7 @@ def test_scope_and_claims_are_absent_from_the_published_route(dna_dir):
     analogue of ``test_tools_bind_their_scope.py``'s source-pattern guard."""
     app = R.build_app(base_dir=str(dna_dir), scope=_SCOPE)
     spec = app.openapi()
-    op = spec["paths"]["/v1/kinds/{kind}/documents"]["post"]
+    op = spec["paths"]["/v1/kinds/{kind}/instances"]["post"]
 
     query_names = {
         p["name"] for p in op.get("parameters", []) if p.get("in") == "query"
@@ -272,7 +272,7 @@ def test_citing_a_source_artifact_closes_the_derived_refs_edge(dna_dir):
         _register_artifact(c, wid)
         _author_and_approve(c, tenant=wid)
         r = c.post(
-            "/v1/kinds/Contrato/documents", params={"tenant": wid},
+            "/v1/kinds/Contrato/instances", params={"tenant": wid},
             json={
                 "metadata": {"name": "c1"}, "spec": {"titulo": "Foo"},
                 "source_sha256": _SHA,
@@ -289,7 +289,7 @@ def test_citing_a_source_artifact_closes_the_derived_refs_edge(dna_dir):
 
 
 def test_a_second_derivation_preserves_the_first(dna_dir):
-    """Two documents citing the SAME artifact — the one-to-many case
+    """Two instances citing the SAME artifact — the one-to-many case
     ``derived_refs`` is a list FOR. Writing the second must not erase the
     first's entry."""
     with _client(dna_dir) as c:
@@ -300,7 +300,7 @@ def test_a_second_derivation_preserves_the_first(dna_dir):
         _author_and_approve(c, tenant=wid)
         for doc_name in ("c1", "c2"):
             r = c.post(
-                "/v1/kinds/Contrato/documents", params={"tenant": wid},
+                "/v1/kinds/Contrato/instances", params={"tenant": wid},
                 json={
                     "metadata": {"name": doc_name}, "spec": {"titulo": "Foo"},
                     "source_sha256": _SHA,
@@ -322,7 +322,7 @@ def test_rewriting_the_same_document_updates_its_own_entry_not_a_duplicate(dna_d
         _author_and_approve(c, tenant=wid)
         for _ in range(2):
             r = c.post(
-                "/v1/kinds/Contrato/documents", params={"tenant": wid},
+                "/v1/kinds/Contrato/instances", params={"tenant": wid},
                 json={
                     "metadata": {"name": "c1"}, "spec": {"titulo": "Foo"},
                     "source_sha256": _SHA,
@@ -339,7 +339,7 @@ def test_citing_an_unregistered_artifact_is_refused(dna_dir):
     with _client(dna_dir) as c:
         _author_and_approve(c)
         r = c.post(
-            "/v1/kinds/Contrato/documents", params={"tenant": _WID},
+            "/v1/kinds/Contrato/instances", params={"tenant": _WID},
             json={
                 "metadata": {"name": "c1"}, "spec": {"titulo": "Foo"},
                 "source_sha256": "d" * 64,
@@ -354,7 +354,7 @@ def test_citing_an_unregistered_artifact_is_refused(dna_dir):
 def test_an_unknown_kind_is_a_named_404(dna_dir):
     with _client(dna_dir) as c:
         r = c.post(
-            "/v1/kinds/NoSuchKind/documents", params={"tenant": _WID},
+            "/v1/kinds/NoSuchKind/instances", params={"tenant": _WID},
             json={"metadata": {"name": "x"}, "spec": {}},
         )
         assert r.status_code == 404, r.text
@@ -363,12 +363,12 @@ def test_an_unknown_kind_is_a_named_404(dna_dir):
 
 # ── a LEITURA da porta genérica ─────────────────────────────────────────────
 #
-# A face REST escrevia qualquer documento (`POST /v1/kinds/{kind}/documents`) e
+# A face REST escrevia qualquer instância (`POST /v1/kinds/{kind}/instances`) e
 # só LIA os Kinds para os quais alguém escreveu uma rota à mão (`/v1/memories`,
-# `/v1/projects`, …). O `list_documents_impl` existia no SDK, completo — com
+# `/v1/projects`, …). O `list_instances_impl` existia no SDK, completo — com
 # projeção, filtro, ordenação e paginação honesta — e não tinha porta.
 #
-# É a assimetria mais cara que uma API pode ter: quem escreve um documento por
+# É a assimetria mais cara que uma API pode ter: quem escreve uma instância por
 # esta porta não consegue lê-lo de volta por porta nenhuma, e descobre isso
 # depois de já ter gravado.
 
@@ -380,14 +380,14 @@ def test_a_porta_generica_LE_o_que_ela_mesma_escreveu(dna_dir):
         _author_and_approve(c)
         for nome in ("c1", "c2"):
             r = c.post(
-                "/v1/kinds/Contrato/documents", params={"tenant": _WID},
+                "/v1/kinds/Contrato/instances", params={"tenant": _WID},
                 json={"metadata": {"name": nome}, "spec": {"titulo": nome.upper()}},
             )
             assert r.status_code == 201, r.text
 
-        r = c.get("/v1/kinds/Contrato/documents", params={"tenant": _WID})
+        r = c.get("/v1/kinds/Contrato/instances", params={"tenant": _WID})
         assert r.status_code == 200, r.text
-        nomes = sorted(d["name"] for d in r.json()["documents"])
+        nomes = sorted(d["name"] for d in r.json()["instances"])
         assert nomes == ["c1", "c2"], r.json()
 
 
@@ -397,13 +397,13 @@ def test_a_projecao_evita_o_1_mais_N(dna_dir):
     kernel — no Postgres ela vira SELECT, e a linha já viaja aparada."""
     with _client(dna_dir) as c:
         _author_and_approve(c)
-        c.post("/v1/kinds/Contrato/documents", params={"tenant": _WID},
+        c.post("/v1/kinds/Contrato/instances", params={"tenant": _WID},
                json={"metadata": {"name": "c1"}, "spec": {"titulo": "Alfa"}})
 
-        r = c.get("/v1/kinds/Contrato/documents",
+        r = c.get("/v1/kinds/Contrato/instances",
                   params={"tenant": _WID, "fields": "titulo"})
         assert r.status_code == 200, r.text
-        doc = r.json()["documents"][0]
+        doc = r.json()["instances"][0]
         assert doc["name"] == "c1"
         assert doc["spec"]["titulo"] == "Alfa"
 
@@ -413,7 +413,7 @@ def test_um_Kind_desconhecido_e_404_NOMEANDO_o_Kind(dna_dir):
     Kind não existe por uma lista vazia, que é indistinguível de "existe e está
     vazio"."""
     with _client(dna_dir) as c:
-        r = c.get("/v1/kinds/NaoExiste/documents", params={"tenant": _WID})
+        r = c.get("/v1/kinds/NaoExiste/instances", params={"tenant": _WID})
         assert r.status_code == 404, r.text
         assert "NaoExiste" in r.text
 
@@ -423,12 +423,12 @@ def test_a_lista_de_um_Kind_VAZIO_e_200_e_nao_404(dna_dir):
     Confundi-las faria a tela dizer "erro" quando devia dizer "nenhum ainda"."""
     with _client(dna_dir) as c:
         _author_and_approve(c)
-        r = c.get("/v1/kinds/Contrato/documents", params={"tenant": _WID})
+        r = c.get("/v1/kinds/Contrato/instances", params={"tenant": _WID})
         assert r.status_code == 200, r.text
-        assert r.json()["documents"] == []
+        assert r.json()["instances"] == []
 
 
-# ── 7. GET de UM documento, verbatim — a leitura que a lista projetada não dá
+# ── 7. GET de UMA instância, verbatim — a leitura que a lista projetada não dá
 
 
 def test_get_one_document_returns_the_spec_verbatim(dna_dir):
@@ -439,22 +439,22 @@ def test_get_one_document_returns_the_spec_verbatim(dna_dir):
     with _client(dna_dir) as c:
         _author_and_approve(c)
         c.post(
-            "/v1/kinds/Contrato/documents", params={"tenant": _WID},
+            "/v1/kinds/Contrato/instances", params={"tenant": _WID},
             json={"metadata": {"name": "c1"}, "spec": {"titulo": "Foo"}},
         )
-        r = c.get("/v1/kinds/Contrato/documents/c1", params={"tenant": _WID})
+        r = c.get("/v1/kinds/Contrato/instances/c1", params={"tenant": _WID})
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["kind"] == "Contrato" and body["name"] == "c1"
-        assert body["document"]["spec"] == {"titulo": "Foo"}
+        assert body["instance"]["spec"] == {"titulo": "Foo"}
         assert body["etag"], "o token de concorrência viaja com a leitura"
 
 
 def test_get_one_document_404s_naming_what_is_missing(dna_dir):
     with _client(dna_dir) as c:
         _author_and_approve(c)
-        faltando = c.get("/v1/kinds/Contrato/documents/nao-existe", params={"tenant": _WID})
+        faltando = c.get("/v1/kinds/Contrato/instances/nao-existe", params={"tenant": _WID})
         assert faltando.status_code == 404
         assert "nao-existe" in faltando.json()["detail"]
-        kind_desconhecido = c.get("/v1/kinds/SemKind/documents/x", params={"tenant": _WID})
+        kind_desconhecido = c.get("/v1/kinds/SemKind/instances/x", params={"tenant": _WID})
         assert kind_desconhecido.status_code == 404

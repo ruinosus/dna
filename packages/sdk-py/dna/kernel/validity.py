@@ -1,19 +1,19 @@
-"""``status`` — the DERIVED half of a document, and where "invalid" is said.
+"""``status`` — the DERIVED half of an instance, and where "invalid" is said.
 
-i-085 needed a place to say *this document is invalid because its Kind was
+i-085 needed a place to say *this instance is invalid because its Kind was
 revoked*, and the search for one is worth recording, because the obvious answers
 are wrong in instructive ways.
 
 **There is no single read envelope to extend.** The kernel has three read
-shapes, not one: ``get_document``/``query`` hand back RAW DICTS (what every
+shapes, not one: ``get_instance``/``query`` hand back RAW DICTS (what every
 hosted face consumes), the sync wrappers and a ``ManifestInstance`` hand back
-:class:`~dna.kernel.document.Document`, and ``resolve_document`` hands back a
-:class:`~dna.kernel.query.resolver.ResolvedDocument` — the only real envelope,
+:class:`~dna.kernel.instance.Instance`, and ``resolve_instance`` hands back a
+:class:`~dna.kernel.query.resolver.ResolvedInstance` — the only real envelope,
 and the one nothing on the read path of a face actually uses. So a new envelope
 would have been a fourth shape that only the code written to look for it would
-ever see, and the mark has to ride IN the document.
+ever see, and the mark has to ride IN the instance.
 
-**But it must not become a STAMP on the document.** Validity follows the Kind's
+**But it must not become a STAMP on the instance.** Validity follows the Kind's
 CURRENT state — that is what makes revocation reversible in one act — so a
 marker persisted into the store would be a lie the moment the Kind is approved
 again. Two things keep it derived: it is computed at READ time from the
@@ -48,31 +48,31 @@ __all__ = [
 ]
 
 #: The reserved top-level key. Reserved by the write path, not by convention:
-#: :func:`strip_derived_status` drops it from every write, so a stored document
+#: :func:`strip_derived_status` drops it from every write, so a stored instance
 #: can never carry a forged or stale one.
 STATUS_KEY = "status"
 
 #: The one reason there is. A machine-readable token beside the prose, because a
-#: surface deciding how to RENDER an invalid document must not have to match on
+#: surface deciding how to RENDER an invalid instance must not have to match on
 #: an English sentence.
 KIND_REVOKED = "kind_revoked"
 
 
 def invalid_status(*, reason: str, message: str) -> dict[str, Any]:
-    """The derived status block for an invalid document."""
+    """The derived status block for an invalid instance."""
     return {"valid": False, "reason": reason, "message": message}
 
 
 def revoked_kind_status(kind: str, api_version: str | None = None) -> dict[str, Any]:
-    """The status block for a document whose Kind was revoked.
+    """The status block for an instance whose Kind was revoked.
 
-    The message says what happened AND that the document is intact, because the
+    The message says what happened AND that the instance is intact, because the
     first question a person reading this has is whether their data survived."""
     which = f"{api_version}/{kind}" if api_version else kind
     return invalid_status(
         reason=KIND_REVOKED,
         message=(
-            f"the Kind {which} has been revoked, so this document is no longer "
+            f"the Kind {which} has been revoked, so this instance is no longer "
             f"valid. It is unchanged and still readable — nothing was deleted. "
             f"Approving the Kind again restores its validity."
         ),
@@ -82,10 +82,10 @@ def revoked_kind_status(kind: str, api_version: str | None = None) -> dict[str, 
 def mark_invalid(raw: Any, status: dict[str, Any]) -> Any:
     """``raw`` with ``status`` attached — a SHALLOW COPY, never a mutation.
 
-    Mutating would be the cheaper thing and the wrong one: ``get_document``
+    Mutating would be the cheaper thing and the wrong one: ``get_instance``
     serves out of a bounded TTL cache, so stamping the cached object would leave
     the mark behind after the Kind is approved again — the exact
-    stamp-on-the-document failure this module exists to avoid. The copy is
+    stamp-on-the-instance failure this module exists to avoid. The copy is
     shallow because only the top level changes."""
     if not isinstance(raw, dict):
         return raw
@@ -104,7 +104,7 @@ def strip_derived_status(raw: Any) -> Any:
     """``raw`` without its derived ``status`` — what the write path persists.
 
     Dropped silently rather than refused, deliberately: a caller that read a
-    marked document and wrote it back (the application layer does this
+    marked instance and wrote it back (the application layer does this
     constantly — ``{**raw, "spec": spec}``) is doing nothing wrong, and failing
     its write would turn a derived annotation into a trap. What must not happen
     is the annotation reaching the STORE, where a later read would replay it as

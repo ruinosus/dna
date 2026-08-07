@@ -1,5 +1,5 @@
 """s-sync-s3 — the helix AgentWriter must EMIT the instruction_file fragment
-(and carried source_files) so save_document persists doc+bundle atomically.
+(and carried source_files) so save_instance persists doc+bundle atomically.
 
 Root cause of i-061/i-062: the writer left AGENT.md body="" for instruction_file
 agents and never wrote instruction.md, assuming the fragment pre-existed —
@@ -40,7 +40,7 @@ def test_emits_fragment_from_carried_source_files():
 
 
 def test_emits_fragment_from_resolved_inline_when_no_source_files():
-    """write_document called WITHOUT the CLI (kinds-api PUT / direct) only has
+    """write_instance called WITHOUT the CLI (kinds-api PUT / direct) only has
     the resolved instruction — the fragment must still be emitted."""
     h = DictBundleHandle("code-reviewer", {})
     W.write(h, _raw({

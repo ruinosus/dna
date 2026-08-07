@@ -84,7 +84,7 @@ def _live(kernel: Kernel, definitions_base: str | None) -> LiveDna:
 
 async def _genome_or_none(kernel: Kernel, scope: str) -> dict[str, Any] | None:
     try:
-        return await kernel.get_document(scope, "Genome", scope)
+        return await kernel.get_instance(scope, "Genome", scope)
     except (FileNotFoundError, ValueError):
         return None
 
@@ -95,8 +95,8 @@ class _Counter:
     def __init__(self, kernel: Kernel) -> None:
         self.reads: list[tuple] = []
         self.writes: list[tuple] = []
-        self._orig_get = kernel.get_document
-        self._orig_write = kernel.write_document
+        self._orig_get = kernel.get_instance
+        self._orig_write = kernel.write_instance
 
         async def counting_get(scope, kind, name, *a, **kw):
             if kind == "Genome":
@@ -121,8 +121,8 @@ class _Counter:
             await asyncio.sleep(0)
             return await self._orig_write(scope, kind, name, *a, **kw)
 
-        kernel.get_document = counting_get  # type: ignore[method-assign]
-        kernel.write_document = counting_write  # type: ignore[method-assign]
+        kernel.get_instance = counting_get  # type: ignore[method-assign]
+        kernel.write_instance = counting_write  # type: ignore[method-assign]
 
 
 # ── the adoption property: access adopts, and the SAME call sees the base ───
@@ -146,7 +146,7 @@ async def test_first_access_adopts_and_the_same_call_sees_the_base(
     assert result is not None and result["written"] is True
     assert result["parent_scope"] == _BASE_SCOPE
     assert "assistant" in {a["name"] for a in listed["agents"]}
-    genome = await kernel.get_document(ws_scope, "Genome", ws_scope)
+    genome = await kernel.get_instance(ws_scope, "Genome", ws_scope)
     assert genome["spec"]["parent_scope"] == _BASE_SCOPE
 
 
@@ -192,7 +192,7 @@ async def test_concurrent_first_burst_single_flights_to_one_write(
     written = [r for r in results if r is not None and r.get("written")]
     assert len(written) == 1
     assert len(counter.writes) == 1
-    genome = await kernel.get_document(
+    genome = await kernel.get_instance(
         live.default_scope(_WS), "Genome", live.default_scope(_WS))
     assert genome["spec"]["parent_scope"] == _BASE_SCOPE
 
@@ -207,7 +207,7 @@ async def test_an_authored_parent_survives_access_even_with_a_cold_cache(
     """An operator-authored ``parent_scope`` is never overwritten — including
     by a FRESH live handle (a new process whose probe cache is cold)."""
     ws_scope = f"tenant-{_WS}"
-    await kernel.write_document(
+    await kernel.write_instance(
         ws_scope, "Genome", ws_scope,
         _doc("Genome", ws_scope, {"parent_scope": "operator-base"}),
         invalidate_mode="doc",
@@ -224,7 +224,7 @@ async def test_an_authored_parent_survives_access_even_with_a_cold_cache(
     again = await adopt_workspace_scope_on_access(cold, _WS)
     assert again is not None and again["written"] is False
     assert len(counter.writes) == 0
-    genome = await kernel.get_document(ws_scope, "Genome", ws_scope)
+    genome = await kernel.get_instance(ws_scope, "Genome", ws_scope)
     assert genome["spec"]["parent_scope"] == "operator-base"
 
 
@@ -255,7 +255,7 @@ async def test_vendor_workspace_and_personal_partition_are_never_touched(
     assert await adopt_workspace_scope_on_access(live, "") is None
 
     assert counter.reads == [] and counter.writes == []
-    base_genome = await kernel.get_document(_BASE_SCOPE, "Genome", _BASE_SCOPE)
+    base_genome = await kernel.get_instance(_BASE_SCOPE, "Genome", _BASE_SCOPE)
     assert "parent_scope" not in (base_genome or {}).get("spec", {})
 
 
@@ -270,7 +270,7 @@ async def test_a_failed_probe_is_not_cached_and_the_next_access_heals(
     survives (fail-soft, returns None) and the NEXT access retries and
     adopts."""
     live = _live(kernel, _BASE_SCOPE)
-    orig_write = kernel.write_document
+    orig_write = kernel.write_instance
     boom = {"armed": True}
 
     async def flaky_write(*a: Any, **kw: Any) -> Any:
@@ -279,7 +279,7 @@ async def test_a_failed_probe_is_not_cached_and_the_next_access_heals(
             raise RuntimeError("transient source hiccup")
         return await orig_write(*a, **kw)
 
-    kernel.write_document = flaky_write  # type: ignore[method-assign]
+    kernel.write_instance = flaky_write  # type: ignore[method-assign]
 
     assert await adopt_workspace_scope_on_access(live, _WS) is None  # soft.
     ws_scope = live.default_scope(_WS)
@@ -287,5 +287,5 @@ async def test_a_failed_probe_is_not_cached_and_the_next_access_heals(
 
     healed = await adopt_workspace_scope_on_access(live, _WS)
     assert healed is not None and healed["written"] is True
-    genome = await kernel.get_document(ws_scope, "Genome", ws_scope)
+    genome = await kernel.get_instance(ws_scope, "Genome", ws_scope)
     assert genome["spec"]["parent_scope"] == _BASE_SCOPE

@@ -33,6 +33,11 @@ spec:
     type: yaml
     container: status-reports
   relations:
+    # OPEN BY DESIGN — evidence for a verdict is whatever supports it. Measured
+    # 06/08/2026 across the stored reports: Story ×68, Issue ×18, Feature ×8,
+    # Kaizen ×4, Epic ×4, ADR ×2 — six Kinds already, from three different
+    # extensions, and a seventh is a new report away. Narrowing this would
+    # convert "the evidence is unusual" into "the declaration is broken".
     evidence_refs:
       to: '*'
       cardinality: many

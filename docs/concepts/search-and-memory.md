@@ -98,7 +98,7 @@ a wiring change, not a rewrite.
 
 DNA does not add a "memory store". Memory is the record Kinds the SDK
 already ships — `Engram`, `Research`, `Evidence` — written through
-`kernel.write_document` and recalled through the same
+`kernel.write_instance` and recalled through the same
 `RecordSearchProvider` as everything else. Four verbs (`dna.memory` ·
 `dna memory <verb>`) formalize the lifecycle:
 
@@ -154,7 +154,7 @@ keeping them apart is the point:
 
 - **World time** — `valid_from` / `valid_to`: *when the fact was true*. `forget`
   sets `valid_to` (optionally with `superseded_by`) so the memory stops
-  surfacing in recall, but the document stays, auditable and revivable.
+  surfacing in recall, but the instance stays, auditable and revivable.
   Contradicted knowledge is *superseded*, not destroyed. `recall(now=…)` reads
   this axis.
 - **Transaction time** — *when this system came to believe it*, taken from the

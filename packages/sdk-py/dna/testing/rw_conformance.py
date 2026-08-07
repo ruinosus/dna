@@ -353,7 +353,7 @@ def reader_writer_conformance_suite(
         kernel_factory: zero-arg callable returning a LOADED kernel
             (``Kernel.auto()``, or a hand-wired kernel with your
             extension). Called once — readers/writers are stateless.
-        fixtures: per-kind raw-document overrides for Kinds whose
+        fixtures: per-kind raw-instance overrides for Kinds whose
             hand-rolled writer needs a richer spec than the synthetic
             default (see :func:`default_fixture`).
         real_bundle_roots: scope directories holding REAL bundles (e.g.

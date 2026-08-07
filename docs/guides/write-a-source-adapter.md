@@ -34,7 +34,7 @@ Adding `MyCapability` is a 4-step process:
    `packages/sdk-py/dna/kernel/capabilities.py`.
 2. Replace any `hasattr(adapter, "method")` in the kernel
    with `isinstance(adapter, MyCapability)`.
-3. Document the capability here.
+3. Instance the capability here.
 4. Cover it in `packages/sdk-py/tests/test_port_contract.py` so adapters
    either implement it or get explicitly skipped.
 
@@ -42,8 +42,8 @@ Adding `MyCapability` is a 4-step process:
 
 | Operation | Acceptance |
 |---|---|
-| `save_document(scope, "Genome", scope, raw)` then `publish(...)` | The root Genome appears in `mi.root` after `kernel.instance_async(scope)`. |
-| `kernel.write_document(scope, "Skill", name, raw)` then `publish(...)` | Skill appears in `mi.documents` / `kernel.query(scope, "Skill")`. Bundle entries (e.g. `SKILL.md`) persisted via the source's backing store. |
+| `save_instance(scope, "Genome", scope, raw)` then `publish(...)` | The root Genome appears in `mi.root` after `kernel.instance_async(scope)`. |
+| `kernel.write_instance(scope, "Skill", name, raw)` then `publish(...)` | Skill appears in `mi.instances` / `kernel.query(scope, "Skill")`. Bundle entries (e.g. `SKILL.md`) persisted via the source's backing store. |
 | `kernel.fetch_bundle_entry_async(scope, kind, name, entry)` | Returns `bytes` for existing entries; `FileNotFoundError` for missing entries (consistent across all adapters). |
 
 ### Boot-time validation (kernel-level, propagates uniformly)
@@ -80,8 +80,8 @@ against the ONE table model in `dna/adapters/sqlalchemy_/schema.py`:
 
 | dialect | driver | tables | control table |
 |---|---|---|---|
-| `sqlite+aiosqlite` | aiosqlite | `documents` / `versions` / `bundle_entries` / `layer_documents` | `alembic_version` |
-| `postgresql+asyncpg` | asyncpg | `{schema}.dna_documents` / `dna_versions` / `dna_bundle_entries` / `dna_layer_documents` / `dna_outbox` / `dna_versions_seq` | `{schema}.alembic_version` |
+| `sqlite+aiosqlite` | aiosqlite | `instances` / `versions` / `bundle_entries` / `layer_instances` | `alembic_version` |
+| `postgresql+asyncpg` | asyncpg | `{schema}.dna_instances` / `dna_versions` / `dna_bundle_entries` / `dna_layer_instances` / `dna_outbox` / `dna_versions_seq` | `{schema}.alembic_version` |
 
 The tables are unchanged — the Alembic baseline revision reproduces the
 retired ladder's final schema exactly (verified against `pg_dump
@@ -134,10 +134,10 @@ kernel = Kernel.auto(source=src)  # or kernel.source(src) on an existing kernel
 - **View cache:** `load_all`/`load_layer(tenant)` are memoized per
   (scope, tenant) with deep-copy returns — same as raw PG — and
   invalidated on local writes AND via `kernel.on_write` (attach_kernel).
-- **Auto-publish:** `save_document`
+- **Auto-publish:** `save_instance`
   is the publish point — the doc is visible in `load_all` immediately;
   `publish()` remains available for the explicit draft→publish flow.
-- **Known inherited limit:** the sqlite dialect inherits i-092 (documents
+- **Known inherited limit:** the sqlite dialect inherits i-092 (instances
   PK lacks `tenant` → a tenant overlay publish clobbers the base row) —
   it binds to the existing schema by design. The pg dialect passes the
   same case (tenant-aware PK): schema debt, not adapter debt.
@@ -217,10 +217,10 @@ One capability is about your STORAGE MODEL rather than a method you
 implement: **`api_version_identity`**. A Kind is identified by
 `(apiVersion, kind)`, so two workspaces may each declare a `Deal` under
 their own namespace. Declare it when your row key carries that identity —
-`(scope, kind, apiVersion, name)` — so both documents can exist at once
+`(scope, kind, apiVersion, name)` — so both instances can exist at once
 and a caller can ask for one of them; the oracle derives it from
 `load_one` accepting `api_version`. The built-in SQL adapter declares it.
-The filesystem adapter does NOT: a document's path is
+The filesystem adapter does NOT: an instance's path is
 `<container>/<name>`, and the container comes from the kernel's
 `StorageDescriptor` registry, so two Kinds are distinct on disk only
 insofar as the registry gives them distinct containers. Neither answer is
@@ -271,7 +271,7 @@ Rules of the kit:
   (`Kernel.auto(source=src)`) if the adapter needs it, and — for
   READ-ONLY adapters — pre-seeding `fixture_docs()` under
   `FIXTURE_SCOPE` in the native storage. Writable adapters are seeded by
-  the kit through their own `save_document`/`publish` (part of the test).
+  the kit through their own `save_instance`/`publish` (part of the test).
 - Cases are capability-aware: they SKIP (`CaseNotApplicable`) what you
   don't declare and FAIL what you declare but don't honor.
 - Non-pytest consumption: `await run_source_conformance(my_factory)`

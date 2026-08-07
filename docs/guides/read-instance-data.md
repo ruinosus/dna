@@ -1,6 +1,6 @@
-# How to read document data
+# How to read instance data
 
-The DNA SDK has a unified way to read data from Documents of any kind.
+The DNA SDK has a unified way to read data from Instances of any kind.
 Follow it so your code doesn't break when kinds evolve, and so you
 don't need to know a kind's typed model to work with it.
 
@@ -14,17 +14,17 @@ these members — and the parity fixture
 
 | Read | Python | TypeScript |
 |---|---|---|
-| All loaded docs (in-memory) | `mi.documents` | `mi.documents` |
-| Docs of a kind | `[d for d in mi.documents if d.kind == "Skill"]` | `mi.documents.filter((d) => d.kind === "Skill")` |
-| Single doc | `next((d for d in mi.documents if d.kind == "Skill" and d.name == "x"), None)` | `mi.documents.find((d) => d.kind === "Skill" && d.name === "x") ?? null` |
+| All loaded docs (in-memory) | `mi.instances` | `mi.instances` |
+| Docs of a kind | `[d for d in mi.instances if d.kind == "Skill"]` | `mi.instances.filter((d) => d.kind === "Skill")` |
+| Single doc | `next((d for d in mi.instances if d.kind == "Skill" and d.name == "x"), None)` | `mi.instances.find((d) => d.kind === "Skill" && d.name === "x") ?? null` |
 | Indexed / record-plane query | `await kernel.query(scope, kind, ...)` | `for await (... of kernel.query(scope, kind, opts))` |
 | Aggregation | `await kernel.count(scope, kind, ...)` | `await kernel.count(scope, kind, opts)` |
-| Single doc, indexed (L2-cached) | `await kernel.get_document(scope, kind, name)` | — (use `kernel.query` with a filter) |
+| Single doc, indexed (L2-cached) | `await kernel.get_instance(scope, kind, name)` | — (use `kernel.query` with a filter) |
 | Root / default agent | `mi.root` / `mi.default_agent()` / `mi.find_agent(name)` | `mi.root` / `mi.defaultAgent()` / `mi.findAgent(name)` |
 | Prompt composition | `mi.build_prompt(...)` (`build_prompt_async` from a loop) | `await mi.buildPrompt(...)` |
 | Layer overlays | `mi.resolve(layers)` (`resolve_async` from a loop) | `mi.resolve(layers)` |
 
-Rule of thumb: `mi.documents` for the scope you already loaded;
+Rule of thumb: `mi.instances` for the scope you already loaded;
 `kernel.query`/`kernel.count` when you need push-down filtering,
 pagination, tenant overlays, or record-plane kinds that are not part of
 the loaded manifest.
@@ -37,11 +37,11 @@ Don't use them in new code; don't teach them.
 ## Python
 
 Two coexisting forms. Pick based on whether you already hold a
-`Document` reference.
+`Instance` reference.
 
 ### Form 1: `mi.read_spec(...)` — sugar for single-field reads
 
-Use when you only need one field and don't want to keep a Document
+Use when you only need one field and don't want to keep an Instance
 around:
 
 ```python
@@ -54,15 +54,15 @@ description = mi.read_metadata("Agent", "foo", "description")
 Raises `KeyError` if the `(kind, name)` doesn't resolve. Returns the
 `default` (or `None`) for missing fields.
 
-### Form 2: `Document.spec.get(...)` — when you already hold a handle
+### Form 2: `Instance.spec.get(...)` — when you already hold a handle
 
 Use when you need multiple fields from the same doc, or when the code
-already holds a `Document` reference (from `mi.documents` or a
+already holds a `Instance` reference (from `mi.instances` or a
 `kernel.query` row):
 
 ```python
-# GOOD — kind-agnostic, works for any Document
-agent = next(d for d in mi.documents if d.kind == "Agent" and d.name == "foo")
+# GOOD — kind-agnostic, works for any Instance
+agent = next(d for d in mi.instances if d.kind == "Agent" and d.name == "foo")
 soul_ref = agent.spec.get("soul")
 skills = agent.spec.get("skills") or []
 description = agent.metadata.get("description")
@@ -83,7 +83,7 @@ soul_ref = agent.typed.soul
 ### Rule of thumb
 
 - **One field, no existing handle:** `mi.read_spec(...)`
-- **Multiple fields OR existing Document handle:** `doc.spec.get(...)`
+- **Multiple fields OR existing Instance handle:** `doc.spec.get(...)`
 - **Inside the extension that owns the kind:** `doc.typed.field` is fine
 
 ## TypeScript
@@ -99,12 +99,12 @@ const skills = mi.readSpecStringArray("Agent", "foo", "skills");
 
 Throws if the `(kind, name)` pair doesn't resolve.
 
-### Form 2: `readSpec*(doc, field)` — when you hold a Document
+### Form 2: `readSpec*(doc, field)` — when you hold an Instance
 
 ```typescript
 import { readSpecString, readSpecStringArray, readSpecRecord } from "dna-sdk";
 
-const agent = mi.documents.find((d) => d.kind === "Agent" && d.name === "foo");
+const agent = mi.instances.find((d) => d.kind === "Agent" && d.name === "foo");
 if (!agent) return;
 const soul = readSpecString(agent, "soul");
 const skills = readSpecStringArray(agent, "skills");

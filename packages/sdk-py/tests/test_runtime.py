@@ -32,7 +32,7 @@ class TestRuntime:
         rt.storage(FilesystemSource(str(BASE_DIR)))
         rt.cache(FilesystemCache(str(BASE_DIR)))
         m = rt.manifest("open-swe")
-        assert len(m.documents) > 0
+        assert len(m.instances) > 0
         assert m.scope == "open-swe"
 
     def test_runtime_importable_from_top_level(self):

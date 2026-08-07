@@ -417,7 +417,7 @@ def test_files_search_shaping_keeps_named_fields_and_no_token():
                 "lastModifiedDateTime": "2026-07-10T12:00:00Z",
                 "size": 20480,
                 "file": {"mimeType": "application/vnd.openxmlformats-"
-                         "officedocument.wordprocessingml.document"},
+                         "officedocument.wordprocessingml.instance"},
                 "searchResult": {"onClickTelemetryUrl": "https://bing.com/…"},
                 "@microsoft.graph.downloadUrl": "https://…files.1drv.test/y23",
             },
@@ -521,7 +521,7 @@ def test_classify_text_extractable_vs_binary():
     # binary Office → not inline-extractable in this slice.
     assert T.is_text_extractable(
         "plan.docx",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.instance",
     ) is False
     assert T.is_text_extractable("sheet.xlsx", "application/octet-stream") is False
     assert T.is_text_extractable("pic.png", "image/png") is False
@@ -583,7 +583,7 @@ def test_file_read_binary_office_returns_metadata_note_not_bytes():
             "webUrl": "https://…/Q3%20Plan.docx",
             "lastModifiedDateTime": "2026-07-10T00:00:00Z",
             "file": {"mimeType": "application/vnd.openxmlformats-"
-                     "officedocument.wordprocessingml.document"},
+                     "officedocument.wordprocessingml.instance"},
             "@microsoft.graph.downloadUrl": "https://dl.files.1drv.test/q3",
         }
 

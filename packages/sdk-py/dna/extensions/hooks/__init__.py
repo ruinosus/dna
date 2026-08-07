@@ -29,6 +29,28 @@ from dna.kernel.studio_ui import docs_ui
 
 
 class HookKind(KindBase):
+    # ---- Island, and a LEGITIMATE one (i-119 group C, 06/08/2026) ---------
+    # i-119 filed `Hook.target` as "nomeia um Kind" and paired it with
+    # `Automation.result_kind` as the two cases that need a vocabulary for
+    # "points at the Kind registry". Measured, that reading is wrong, and the
+    # code says so in one line: `ManifestInstance.apply_hooks` passes this
+    # value straight to `kernel.hooks.use(target, ...)` /
+    # `kernel.hooks.on(target, ...)`. It is a HOOK POINT — `pre_build_prompt`,
+    # `post_save`, `parse_error` — from the kernel's own `HookName` vocabulary
+    # (dna/kernel/hooks.py, s-dna-typed-hook-names). The default value is
+    # `pre_build_prompt`, which is not the name of any Kind and never was.
+    #
+    # So this Kind belongs in i-119's group A: it does not point at an
+    # instance, and nothing points at it. Declaring `relations` here would be
+    # inventing an edge to zero a number, which is the error the taxonomy spec
+    # names. Nothing to do, and the reason IS the deliverable.
+    #
+    # What the field actually is, is a CONTROLLED VOCABULARY token — the same
+    # shape as `Lesson.skill` and `Automation.on.hook`, and the same shape
+    # i-119's third open item raises for `LayerPolicy.layer_id`. That item asks
+    # whether `spec.identifiers` wants a third `role` for "names a dimension of
+    # controlled vocabulary". It is worth the founder knowing the item is not
+    # one field: it is a family of at least four, and this is one of them.
     api_version = "github.com/ruinosus/dna/v1"
     kind = "Hook"
     alias = "helix-hook"

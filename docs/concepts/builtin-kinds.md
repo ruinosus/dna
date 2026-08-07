@@ -124,9 +124,9 @@ doc declares the loop protection, the host enforces it.
 
 A [`Comment`](../reference/kinds/composition.md#comment) (`collab-comment`)
 is a remark, status change or assignment attached to **any** other
-document via `target_ref` (`Kind:name`). It is how discussion and history
+instance via `target_ref` (`Kind:name`). It is how discussion and history
 become data: the SDLC timelines, review notes on an eval finding, or an
-agent narrating its work all land as Comment documents. Reach for it
+agent narrating its work all land as Comment instances. Reach for it
 whenever "who said what about this doc, when" needs to be queryable rather
 than buried in chat.
 
@@ -138,7 +138,7 @@ serialized tldraw snapshot in `spec`. The user draws; the agent reads the
 shapes as JSON (or vision-interprets free strokes) and writes back through
 discrete shape tools. It exists as a Kind — rather than ephemeral UI state —
 so boards are persisted, searchable and embeddable like any other
-document. It is a product-facing Kind: useful when you build an assistant
+instance. It is a product-facing Kind: useful when you build an assistant
 UI on DNA, irrelevant for headless setups.
 
 ## Safety & governance
@@ -160,17 +160,17 @@ personal reaches the model".
 A [`Recognizer`](../reference/kinds/composition.md#recognizer)
 (`presidio-recognizer`) is a [Presidio](https://microsoft.github.io/presidio/)
 ad-hoc PII recognizer as data: an entity type (say `BR_CPF`), regex
-patterns with scores, deny lists and context words. SafetyPolicy documents
+patterns with scores, deny lists and context words. SafetyPolicy instances
 reference Recognizers via `dep_filters`, and the runtime exports them to
 the Presidio engine. Write one when the built-in entities miss a
 domain-specific identifier — an internal employee ID format, a
-country-specific document number.
+country-specific instance number.
 
 ### EvidencePolicy
 
 An [`EvidencePolicy`](../reference/kinds/composition.md#evidencepolicy)
 (`evidence-policy`) controls which event types are automatically captured
-as immutable Evidence documents — the content-level audit trail. It
+as immutable Evidence instances — the content-level audit trail. It
 declares the event list to watch, whether auto-capture is on, and the
 retention period. Use it to tune the audit surface per scope: capture
 everything in a regulated project, only writes elsewhere.
@@ -179,7 +179,7 @@ everything in a regulated project, only writes elsewhere.
 
 A [`UserRoleAssignment`](../reference/kinds/composition.md#userroleassignment)
 (`audit-userroleassignment`) maps a user identity to a role list within a
-tenant — the document name *is* the user id. It backs role-gated endpoints
+tenant — the instance name *is* the user id. It backs role-gated endpoints
 in a hosting platform's admin surface and is the persistent mirror of IdP
 group membership. You only touch it when running DNA multi-user behind
 auth; single-user local setups never see one.
@@ -257,7 +257,7 @@ setup" is just a scope of docs.
 A [`Theme`](../reference/kinds/composition.md#theme) (`helix-theme`)
 declares a UI color palette — primary/accent/success in light **and** dark
 HSL — plus optional typography and radius overrides, applied as CSS
-variables at runtime with no rebuild. Because it is a document, a tenant
+variables at runtime with no rebuild. Because it is an instance, a tenant
 ships its brand by publishing `themes/brand.yaml` in its overlay. Only
 meaningful when a web UI sits on top of DNA.
 
@@ -281,7 +281,7 @@ A [`TestGuide`](../reference/kinds/composition.md#testguide)
 steps (action → expected, optionally *where* in the product) that verifies
 one or more work items via `verifies` refs. It turns the test roteiro that
 used to live in chat into a versioned, schema-validated, re-runnable
-document. Write one per feature you expect a human (or agent) to smoke
+instance. Write one per feature you expect a human (or agent) to smoke
 again later.
 
 ### TestRun
@@ -300,7 +300,7 @@ SDK's eval extension minus its runtime (the upstream runner was a
 Temporal worker driving live agents through LLM judges; none of that
 belongs in a notation library). What ships instead is a **local,
 synchronous, offline runner** whose default target is the kernel itself:
-composing a prompt is a deterministic function of the declared documents,
+composing a prompt is a deterministic function of the declared instances,
 so *"does my agent compose the prompt I expect?"* is a real evaluation of
 declarative config — no LLM required. The [evaluating agents
 guide](../guides/evaluating-agents.md) walks the full workflow, including
@@ -331,7 +331,7 @@ offline, in seconds, in CI.
 An [`EvalRun`](../reference/kinds/record.md#evalrun) (`eval-eval-run`) is
 the persisted ledger of one execution: counts, timestamps, the resolved
 target and per-case results with the outcome of every declared check.
-`dna eval run --save` writes it; being a document, runs are queryable,
+`dna eval run --save` writes it; being an instance, runs are queryable,
 diffable and versioned like everything else.
 
 ### EvalBaseline
@@ -522,10 +522,10 @@ simply compares `rank`. The four standard rungs (owner / admin / member /
 guest) ship as per-tenant seed docs under
 `examples/dna-cloud/.dna/.../roles/`.
 
-## Provenance — the original behind a derived document
+## Provenance — the original behind a derived instance
 
-Some documents are not authored, they are **extracted**. A file arrives, an
-agent reads it, and writes typed documents from what it found. Those documents
+Some instances are not authored, they are **extracted**. A file arrives, an
+agent reads it, and writes typed instances from what it found. Those instances
 are a *projection*: lossy, interpreted, and — on their own — an assertion
 nobody can check. `SourceArtifact` is what makes the claim testable.
 
@@ -534,28 +534,28 @@ nobody can check. `SourceArtifact` is what makes the claim testable.
 A [`SourceArtifact`](../reference/kinds/record.md#sourceartifact)
 (`artifact-source`) records the original a projection came from: the `sha256`
 of its bytes, a `uri` naming where they live, and `derived_refs` — the typed
-documents extracted from it.
+instances extracted from it.
 
 Three properties are worth understanding before you use it, because each is a
 deliberate choice rather than an obvious one.
 
 **The `sha256` is the point, not bookkeeping.** Without a content address,
-"this document was derived from that file" is unfalsifiable — and an
+"this instance was derived from that file" is unfalsifiable — and an
 unfalsifiable provenance claim is worth less than no claim at all, because it
 invites a trust it has not earned. With one, anyone holding the bytes can
 verify the pairing, and re-uploading identical content is recognisably the
 *same* artifact rather than a second one.
 
 **The edge points from the artifact to its derivations**, never the reverse.
-The obvious shape would be a `source_ref` field on each extracted document, and
+The obvious shape would be a `source_ref` field on each extracted instance, and
 it fails twice: an agent composing schemas would have to remember that field
 every time (and Kinds nobody authored have nowhere to put it), and one upload
-commonly yields many documents — a PDF holding twelve invoices should state
+commonly yields many instances — a PDF holding twelve invoices should state
 "these came from one file" once, not twelve times.
 
 **The `uri` is an identity, never a credential.** It names where the bytes
 live; it does not grant access to them. A signed URL stored here would make the
-document itself the capability — copy the document, copy the access. The schema
+instance itself the capability — copy the instance, copy the access. The schema
 is closed (`additionalProperties: false`) precisely so a token cannot be
 attached beside it, and a host is expected to serve artifact reads through an
 authenticated route that checks the caller's membership first.
@@ -567,19 +567,19 @@ self-host), and the kernel treats `uri` as opaque so that stays true.
 ## Delegation — the Agent Card of a remote agent
 
 [A2A](https://a2a-protocol.org/) (Agent2Agent, governed by the Linux
-Foundation) standardized exactly the thing DNA already treats as a document: a
+Foundation) standardized exactly the thing DNA already treats as an instance: a
 self-describing capability descriptor. The A2A *protocol* — the JSON-RPC/gRPC
-call, the task lifecycle — is transport, not a document, and stays out of the
+call, the task lifecycle — is transport, not an instance, and stays out of the
 Kind system entirely. What A2A calls the **Agent Card** — the descriptor a
 server publishes at `/.well-known/agent-card.json` naming who it is, what it
-can do, and where to reach it — is exactly document-shaped, and `RemoteAgent`
+can do, and where to reach it — is exactly instance-shaped, and `RemoteAgent`
 is it.
 
 ### RemoteAgent
 
 A [`RemoteAgent`](../reference/kinds/record.md#remoteagent)
 (`a2a-remote-agent`) is the Agent Card of a third-party A2A agent, held as a
-DNA document: `name`, `description` and `supported_interfaces` (the A2A 1.0
+DNA instance: `name`, `description` and `supported_interfaces` (the A2A 1.0
 interface list — each entry a `protocol_binding` of `JSONRPC` / `GRPC` /
 `HTTP+JSON` with its own `url`, plus an optional `protocol_version`)
 come straight from the A2A spec in snake_case; `skills`, `capabilities` and
@@ -604,14 +604,14 @@ Three properties are worth understanding before you register one:
 means DNA will send workspace data to a URL the tenant chose. A2A has no
 opinion on that — it is transport protocol. So the scope of what may be sent
 is ours, mandatory, and explicit: `data_scope.kinds` names which Kinds'
-documents this endpoint may receive. An implicit scope would mean "everything,"
+instances this endpoint may receive. An implicit scope would mean "everything,"
 and nobody approves that knowingly — an empty list is the honest "registered,
 but permitted to receive nothing," not an error.
 
 **The schema is closed.** `additionalProperties: false` exists so a credential
-— a bearer token, an API key — cannot be smuggled into the document alongside
+— a bearer token, an API key — cannot be smuggled into the instance alongside
 `security_schemes` (which only says *how* to authenticate, never *with what*).
-A document that could carry its own access token would let anyone who can read
+An instance that could carry its own access token would let anyone who can read
 it also call the endpoint with it, the same reasoning that keeps
 `SourceArtifact` closed.
 
@@ -665,7 +665,7 @@ version adds, and it would open silently.
 purpose: it is the same question in both directions, and answering it in two
 different shapes would be a trap for whoever reads them side by side.
 
-The document never carries a credential — the schema is closed precisely so a
+The instance never carries a credential — the schema is closed precisely so a
 token cannot be attached to a grant. Who may act, and over what, lives here; the
 secret they authenticate with belongs to the deployment.
 
@@ -676,7 +676,7 @@ An [`AgentCatalogEntry`](../reference/kinds/record.md#agentcatalogentry)
 `client_id` is opaque** — and it is deliberately the *lesser* half of agent
 identity.
 
-The primary mechanism is **CIMD** (Client ID Metadata Documents): the `client_id`
+The primary mechanism is **CIMD** (Client ID Metadata Instances): the `client_id`
 IS an HTTPS URL serving the client's metadata, so the name can only be declared
 at `acme.com` by whoever controls `acme.com`, and DNS plus TLS already prove
 that. It is the browser padlock's mechanism — you do not trust the text, you

@@ -62,7 +62,7 @@ TRAIT_DATED_CREATE_ONLY = "sdlc.dated-create-only"
 #: The KERNEL-LESS fallback memberships — what each family was before the trait.
 #:
 #: A handful of callers are pure by design (``dna_cli._digest.build_digest``
-#: takes documents and a window, not a kernel) and a few take a narrow duck-typed
+#: takes instances and a window, not a kernel) and a few take a narrow duck-typed
 #: kernel. They get this, which is the PRE-TRAIT behavior verbatim, so nothing
 #: they could do before stops working.
 #:
@@ -73,7 +73,13 @@ FALLBACK_FAMILIES: dict[str, tuple[str, ...]] = {
     TRAIT_WORK_ITEM: (
         "Bug", "Epic", "Feature", "Initiative", "Issue", "Spike", "Story", "Task",
     ),
-    TRAIT_DECISION: ("ADR",),
+    # ADR + Spec (i-121). The second name is not a widening of the family — it
+    # is the family naming a member it always had: Spec carries ADR's status
+    # arc, ADR's supersession, ADR's no-owner shape and (measured over the
+    # stored instances) ADR's timeline/cited_by profile rather than Plan's.
+    # ``test_fallback_families_equal_what_the_kinds_declare`` is what made this
+    # line MOVE instead of rot, which is the whole reason it exists.
+    TRAIT_DECISION: ("ADR", "Spec"),
     TRAIT_OBSERVATION: ("Kaizen",),
     TRAIT_ROLLUP: ("Epic", "Feature", "Initiative"),
     TRAIT_FILED: ("Bug", "Issue", "Kaizen"),
@@ -92,7 +98,7 @@ def _with_trait(kernel: Any, trait: str) -> frozenset[str]:
 
     Not defensiveness for its own sake: the SDK's write core is routinely handed
     a narrow duck-typed kernel (a test double, an adapter shim) that implements
-    only ``get_document`` / ``write_document`` / ``query``. Such a caller gets
+    only ``get_instance`` / ``write_instance`` / ``query``. Such a caller gets
     the documented static fallback rather than an ``AttributeError`` from a
     module it never asked about — and the fallbacks are the pre-trait behavior
     exactly, so nothing it could do before stops working."""

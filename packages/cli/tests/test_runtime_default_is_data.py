@@ -153,7 +153,7 @@ def test_o_doc_autorado_VENCE_o_default_e_a_origem_muda(scope_vazio):
 
     async def cenario():
         live = await M.boot_live(base_dir=str(scope_vazio))
-        await live.kernel.with_tenant("acme").write_document(
+        await live.kernel.with_tenant("acme").write_instance(
             "kit", "PromptTemplate", "memory-recall-briefing",
             {
                 "apiVersion": "github.com/ruinosus/dna/sdlc/v1",
@@ -178,7 +178,7 @@ def test_o_doc_autorado_VENCE_o_default_e_a_origem_muda(scope_vazio):
 
     do_tenant, sem_tenant, listagem = asyncio.run(cenario())
     assert do_tenant["body"] == sentinela
-    assert do_tenant["origin"] == "document"
+    assert do_tenant["origin"] == "instance"
     # quem não é o tenant continua com o default do runtime, e sabe disso
     assert sem_tenant["origin"] == "runtime-default"
     # e o nome NÃO aparece duas vezes na listagem do tenant
@@ -186,7 +186,7 @@ def test_o_doc_autorado_VENCE_o_default_e_a_origem_muda(scope_vazio):
     assert nomes.count("memory-recall-briefing") == 1
     assert next(
         t for t in listagem["templates"] if t["name"] == "memory-recall-briefing"
-    )["origin"] == "document"
+    )["origin"] == "instance"
 
 
 def test_o_corpo_servido_e_o_que_roda_de_verdade(scope_vazio):

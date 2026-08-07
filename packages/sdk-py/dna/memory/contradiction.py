@@ -292,7 +292,7 @@ def validate_claims(raw: Any) -> list[dict[str, Any]]:
     ``dna.memory.verbs.remember``), so a malformed claim is refused with a
     message at the MCP/REST/CLI door instead of being stored and quietly
     ignored by the detector later. The Engram schema declares the same shape,
-    so a raw ``write_document`` is refused too — two doors, one contract.
+    so a raw ``write_instance`` is refused too — two doors, one contract.
 
     Returns the claims with defaults filled in (``polarity`` → ``asserts``),
     ready to be persisted.
@@ -373,7 +373,7 @@ def referents(spec: dict[str, Any]) -> frozenset[str]:
     return frozenset(found)
 
 
-def _document_referent(spec: dict[str, Any]) -> str:
+def _instance_referent(spec: dict[str, Any]) -> str:
     """The memory's own ``Kind/name`` referent, as the AUTHOR wrote it.
 
     Deliberately not ``sorted(referents(spec))[0]``: that set is casefolded for
@@ -394,8 +394,8 @@ def _document_referent(spec: dict[str, Any]) -> str:
 def parse_claims(name: str, spec: dict[str, Any]) -> tuple[Claim, ...]:
     """The comparable claims of ONE memory.
 
-    Lenient by construction (never raises): this reads STORED documents, and a
-    document that got past both doors with a malformed claim must not be able to
+    Lenient by construction (never raises): this reads STORED instances, and a
+    instance that got past both doors with a malformed claim must not be able to
     take a consolidation pass down — the claim is skipped, and a skipped claim
     simply participates in no comparison.
 
@@ -413,7 +413,7 @@ def parse_claims(name: str, spec: dict[str, Any]) -> tuple[Claim, ...]:
     raw = spec.get("claims")
     if not isinstance(raw, (list, tuple)):
         return ()
-    default_subject = _document_referent(spec)
+    default_subject = _instance_referent(spec)
     memory_from = _as_text(spec.get("valid_from"))
     memory_to = _as_text(spec.get("valid_to"))
 

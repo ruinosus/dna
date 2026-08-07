@@ -2,8 +2,8 @@
 
 O template de vitrine do F3 (`adr-copiloto-como-dado`, dna-cloud): um fluxo de
 **intake de contrato** completo — Kind, agente e copiloto com a surface — em
-**zero linhas de código**. A surface de documento do runtime já é
-schema-directed (`update_document_draft` funciona para qualquer Kind), então
+**zero linhas de código**. A surface de instância do runtime já é
+schema-directed (`update_instance_draft` funciona para qualquer Kind), então
 um fluxo novo é só dados.
 
 ## Instalar
@@ -23,5 +23,5 @@ dna copilot install copilot-kits/contrato-intake --scope <seu-escopo> --approve
 | `Copilot/contrato-copiloto` | o binder: monta o agente e declara a **surface** `contrato-intake` (state, tool, canvas, gate) |
 
 Depois de aprovado o Kind, o fluxo inteiro do produto vale: anexar um contrato,
-o agente extrai campo a campo pela surface de documento, o humano revisa no
+o agente extrai campo a campo pela surface de instância, o humano revisa no
 canvas e grava.

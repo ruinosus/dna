@@ -161,7 +161,7 @@ async def test_personal_write_keys_on_personal_partition_zero_migration(kernel, 
     )
     # It lands under the reserved tenant partition (existing FS path segment, the
     # ':' percent-encoded on disk for portability — zero schema migration).
-    hit = await kernel.get_document(
+    hit = await kernel.get_instance(
         "_lib", "Engram", "rem-priv", tenant=personal_tenant(_OID_A)
     )
     assert hit is not None

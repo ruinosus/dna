@@ -14,7 +14,7 @@ Both states were added because a real board could not say two true things:
 
 So this file asserts three things, and the third is the one that matters most
 here: (a) the new states exist and are reachable, (b) the arc refuses the moves
-that would make a terminal state lie, and (c) NOTHING a pre-existing document
+that would make a terminal state lie, and (c) NOTHING a pre-existing instance
 could say stopped being valid.
 """
 from __future__ import annotations
@@ -55,7 +55,7 @@ def test_artifact_statuses_did_not_widen():
 
 
 def test_open_and_terminal_partition_the_arc():
-    """Every status is on exactly one side. A status in neither is a document
+    """Every status is on exactly one side. A status in neither is an instance
     no board knows what to do with."""
     assert SPEC_OPEN_STATUSES | SPEC_TERMINAL_STATUSES == set(SPEC_STATUSES)
     assert not (SPEC_OPEN_STATUSES & SPEC_TERMINAL_STATUSES)
@@ -81,7 +81,7 @@ def test_executed_is_reachable_from_every_live_state(current):
 @pytest.mark.parametrize("current", ["deprecated", "superseded"])
 def test_executed_is_refused_from_a_dead_spec(current):
     """`deprecated` = the design no longer applies; `superseded` = the
-    REPLACEMENT is what got built. Marking either executed hides which document
+    REPLACEMENT is what got built. Marking either executed hides which instance
     the code actually follows."""
     with pytest.raises(InvalidSpecTransition) as exc:
         validate_spec_transition(current, "executed")
@@ -119,14 +119,14 @@ def test_pre_existing_targets_stay_unguarded(current, target):
     """The four transitions that existed before are still total.
 
     A rule applied retroactively would refuse moves that were legal when the
-    documents were written — the one thing an additive change may not do. An
+    instances were written — the one thing an additive change may not do. An
     executed spec being superseded later is exactly such a move, and it is
     legitimate."""
     validate_spec_transition(current, target)  # no raise
 
 
 def test_a_status_less_legacy_doc_is_never_illegal():
-    """`status` is required by the schema, but a document harvested from disk
+    """`status` is required by the schema, but an instance harvested from disk
     before this repo owned the arc may not carry one. It is not retroactively
     in violation."""
     validate_spec_transition(None, "executed")
@@ -186,7 +186,7 @@ def test_schema_declares_the_evidence_fields():
 def test_evidence_fields_are_optional():
     """Required-ness belongs to the VERB, not the schema: a Spec still in
     `draft` has no execution to prove, and making the field required would fail
-    every document that never reaches a terminal state."""
+    every instance that never reaches a terminal state."""
     assert set(SpecKind().schema()["required"]) == {"title", "date", "status"}
 
 

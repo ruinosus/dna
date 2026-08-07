@@ -33,7 +33,7 @@ spec:
   traits: [sdlc.observation, sdlc.filed, sdlc.dated-create-only]
   # SDLC primitives are project-level, not per-tenant.
   tenant_scope: global
-  # Record plane — pure typed document: cacheless writes, never composes
+  # Record plane — pure typed instance: cacheless writes, never composes
   # into agent prompts.
   plane: record
   prompt_target: false
@@ -49,8 +49,15 @@ spec:
   dep_filters:
     issue: sdlc-issue
   relations:
+    # `by` says the target Kind travels in the VALUE (`Story/s-x`); `to` says
+    # WHICH Kinds it may name. Those are two statements, and the runtime
+    # already answers the second one: `dna sdlc kaizen` refuses anything
+    # outside the work-item family (`sdlc_cmd.py` — `if wi_kind not in
+    # _WORK_ITEM_KINDS: raise fail(...)`). This said `to: '*'` until
+    # 06/08/2026 — a declaration weaker than the guard standing beside it, and
+    # the reason "which Kaizens came out of this Story" had no answer.
     work_item:
-      to: '*'
+      to: [Bug, Epic, Feature, Initiative, Issue, Spike, Story, Task]
       cardinality: one
       by: 'Kind/name'
   schema:
@@ -63,7 +70,10 @@ spec:
       work_item:
         type: string
         # target is right and a bare-name lookup would never resolve it.
-        description: "Kind/slug of the work item where this was observed (polymorphic — Story/Spike/Issue)."
+        # The family is DECLARED in `relations.work_item.to`, not repeated
+        # here: this line used to name three Kinds while the CLI accepted
+        # eight, which is how a description becomes the wrong answer.
+        description: "Kind/slug of the work item where this was observed — polymorphic over the work-item family (see relations.work_item)."
       issue:
         type: string
         description: Issue/Story slug tracking the fix.

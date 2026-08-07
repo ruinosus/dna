@@ -1,10 +1,10 @@
-"""The edge PRODUCER — an edge exists because somebody wrote a document.
+"""The edge PRODUCER — an edge exists because somebody wrote an instance.
 
 ``dna_edges`` was created once before, in migration 7, and dropped in migration
 10 with zero rows in it: the table shipped, the producer never did, and for
 fourteen months "the graph has no edges" and "the table was never filled" were
 indistinguishable. So the load-bearing assertion of this module is not that the
-table exists — it is that **writing a document puts a row in it**. Delete the
+table exists — it is that **writing an instance puts a row in it**. Delete the
 producer and these tests go red; ship the table alone and they never go green.
 
 Everything here runs against a REAL SQLite store through a REAL kernel write.
@@ -41,7 +41,7 @@ def _modes(monkeypatch):
     # Reference validation at its DEFAULT (warn): a dangling reference must
     # persist, which is exactly the case whose edge this module cares about.
     monkeypatch.delenv("DNA_REF_VALIDATION", raising=False)
-    # Shape validation off — these documents are about references, not schemas.
+    # Shape validation off — these instances are about references, not schemas.
     monkeypatch.setenv("DNA_WRITE_VALIDATION", "off")
 
 
@@ -83,10 +83,10 @@ class TestTheRowExistsBecauseSomebodyWrote:
         the field the reference was declared on and the Kind it resolved to.
         """
         kernel, src = store
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, "Feature", "f-y", _doc("Feature", "f-y"),
         )
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
         )
         rows = [r for r in await _rows(src) if r["from_kind"] == "Story"]
@@ -106,8 +106,8 @@ class TestTheRowExistsBecauseSomebodyWrote:
         that an inherited resolution can decline to claim otherwise.
         """
         kernel, src = store
-        await kernel.write_document(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
-        await kernel.write_document(
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await kernel.write_instance(
             SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
         )
         row = [r for r in await _rows(src) if r["from_kind"] == "Story"][0]
@@ -119,8 +119,8 @@ class TestTheRowExistsBecauseSomebodyWrote:
         keeps two items of the same field from colliding on the primary key."""
         kernel, src = store
         for n in ("s-a", "s-b"):
-            await kernel.write_document(SCOPE, "Story", n, _doc("Story", n))
-        await kernel.write_document(
+            await kernel.write_instance(SCOPE, "Story", n, _doc("Story", n))
+        await kernel.write_instance(
             SCOPE, "Story", "s-x",
             _doc("Story", "s-x", dependencies=["s-a", "s-b"]),
         )
@@ -138,11 +138,11 @@ class TestDanglingIsRecorded:
     async def test_a_dangling_reference_persists_as_a_row_with_null_to_kind(
         self, store,
     ):
-        """With ``warn`` (the DEFAULT) the document persists, so the edge must
+        """With ``warn`` (the DEFAULT) the instance persists, so the edge must
         too. Dropping it would render a graph tidier than the data deserves —
         and these rows are the list of what is broken."""
         kernel, src = store
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-nope"),
         )
         rows = [r for r in await _rows(src) if r["from_name"] == "s-x"]
@@ -163,16 +163,175 @@ class TestDanglingIsRecorded:
         something broke.
         """
         kernel, src = store
-        await kernel.write_document(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
-        await kernel.write_document(
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await kernel.write_instance(
             SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
         )
-        await kernel.delete_document(SCOPE, "Feature", "f-y")
+        await kernel.delete_instance(SCOPE, "Feature", "f-y")
         rows = [r for r in await _rows(src) if r["from_name"] == "s-x"]
         assert len(rows) == 1, "the incoming edge was destroyed with its target"
         # It still says Feature/f-y — the row is a record of what the Story
         # asserts, and the Story still asserts it.
         assert rows[0]["to_name"] == "f-y"
+
+
+class TestTheEdgeCarriesTheTargetsIdentity:
+    """i-114 — ``to_id`` beside ``to_name``, and why the pair is the point.
+
+    The rule this table follows is Kubernetes': a reference a HUMAN authors
+    carries only the NAME (which is what keeps a ``.dna/`` diff legible), and a
+    reference a MACHINE writes carries name AND uid (``ownerReferences``),
+    because deleting and recreating under the same name is a DIFFERENT object
+    and a controller must not re-attach to the wrong one.
+
+    ``dna_edges`` is the machine-written side. These tests are the only thing
+    that notices if it stops carrying the id: the edge still resolves, still
+    reports the right ``to_kind``, and every other test in this file passes.
+    """
+
+    @staticmethod
+    async def _id_of(kernel, kind: str, name: str) -> str:
+        raw = await kernel.get_instance(SCOPE, kind, name)
+        return raw["metadata"]["id"]
+
+    @pytest.mark.anyio
+    async def test_the_edge_records_the_id_of_the_instance_it_resolved_to(
+        self, store,
+    ):
+        kernel, src = store
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await kernel.write_instance(
+            SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
+        )
+        target_id = await self._id_of(kernel, "Feature", "f-y")
+        rows = [r for r in await _rows(src) if r["from_name"] == "s-x"]
+        assert len(rows) == 1
+        assert rows[0]["to_name"] == "f-y"
+        assert rows[0]["to_id"] == target_id, (
+            "the derived edge kept only the name — which is exactly what a "
+            "rename erases"
+        )
+
+    @pytest.mark.anyio
+    async def test_a_dangling_edge_has_no_id_rather_than_a_wrong_one(self, store):
+        """NULL means "nothing resolved", and it must not be confused with
+        "resolved, id unknown". A dangling edge has no target to have an id."""
+        kernel, src = store
+        await kernel.write_instance(
+            SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-nope"),
+        )
+        rows = [r for r in await _rows(src) if r["from_name"] == "s-x"]
+        assert rows[0]["to_kind"] is None
+        assert rows[0]["to_id"] is None
+
+    @pytest.mark.anyio
+    async def test_recreating_the_target_under_the_same_name_changes_the_id(
+        self, store,
+    ):
+        """⚠️ The property the whole feature is bought for, stated as an
+        experiment.
+
+        Delete ``f-y``, recreate it under the SAME name, and re-derive the
+        Story's edge. ``to_name`` is identical across the two — by the name
+        alone the graph cannot tell that the target was destroyed and replaced.
+        ``to_id`` can, and that is the entire difference between an edge that
+        records a fact and one that records a string.
+
+        MUTANT: make ``mint_instance_id`` derive from the natural key instead of
+        drawing at random and the two ids become equal — this assertion is the
+        only one in the repo that goes red.
+        """
+        kernel, src = store
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await kernel.write_instance(
+            SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
+        )
+        first = [r for r in await _rows(src) if r["from_name"] == "s-x"][0]
+
+        await kernel.delete_instance(SCOPE, "Feature", "f-y")
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        # Re-derive: the Story is rewritten unchanged, which is what any real
+        # edit would do.
+        await kernel.write_instance(
+            SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
+        )
+        second = [r for r in await _rows(src) if r["from_name"] == "s-x"][0]
+
+        assert first["to_name"] == second["to_name"] == "f-y"
+        assert first["to_id"] is not None and second["to_id"] is not None
+        assert first["to_id"] != second["to_id"], (
+            "the replacement inherited the deleted instance's identity — by "
+            "the graph's own account nothing happened"
+        )
+
+    @pytest.mark.anyio
+    async def test_an_instance_that_predates_the_id_converges_instead_of_drawing(
+        self, store,
+    ):
+        """The migration rule, enforced by the WRITE PATH so that every store
+        converges without a migration of its own.
+
+        An instance already in the store with no ``metadata.id`` predates the
+        feature. It gets the DERIVED id — the same value revision 0008's
+        backfill computes — and not a random one, because this repo's board
+        lives BOTH as ``.dna/`` YAML in git and as rows in a database, and two
+        stores minting independently would give one logical instance two
+        identities.
+
+        MUTANT: collapse cases 3 and 4 in ``_ensure_instance_id`` into a single
+        ``mint_instance_id()`` and this is the only assertion that moves — the
+        id is still stable, still unique, still survives every rewrite.
+        """
+        from dna.kernel.identity import derived_instance_id
+
+        kernel, src = store
+        # A row written UNDER the kernel: straight into the adapter, so no id
+        # is ever stamped. This is the shape every pre-i-114 instance has.
+        await src.save_instance(
+            SCOPE, "Feature", "f-old", _doc("Feature", "f-old"),
+        )
+        assert (await kernel.get_instance(
+            SCOPE, "Feature", "f-old"))["metadata"].get("id") is None
+
+        await kernel.write_instance(
+            SCOPE, "Feature", "f-old", _doc("Feature", "f-old", status="doing"),
+        )
+        got = (await kernel.get_instance(SCOPE, "Feature", "f-old"))["metadata"]["id"]
+        assert got == derived_instance_id(
+            tenant=None, scope=SCOPE, api_version=_SDLC_API,
+            kind="Feature", name="f-old",
+        ), "a pre-existing instance drew a random id instead of converging"
+
+    @pytest.mark.anyio
+    async def test_renaming_the_SOURCE_does_not_change_what_it_points_at(
+        self, store,
+    ):
+        """The half of "a rename must not break references" this slice
+        delivers.
+
+        A rename today is delete-then-create under a new name (``dna rename``
+        is the next slice). The instance that MOVED keeps pointing at the same
+        target instance — same ``to_id``, not merely the same string — so the
+        derived graph survives the move intact even though every authored
+        mention of the old name does not.
+        """
+        kernel, src = store
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await kernel.write_instance(
+            SCOPE, "Story", "s-old", _doc("Story", "s-old", feature="f-y"),
+        )
+        before = [r for r in await _rows(src) if r["from_name"] == "s-old"][0]
+
+        await kernel.delete_instance(SCOPE, "Story", "s-old")
+        await kernel.write_instance(
+            SCOPE, "Story", "s-new", _doc("Story", "s-new", feature="f-y"),
+        )
+        after = [r for r in await _rows(src) if r["from_name"] == "s-new"][0]
+
+        assert not [r for r in await _rows(src) if r["from_name"] == "s-old"]
+        assert after["to_id"] == before["to_id"], (
+            "renaming the SOURCE moved what it points at"
+        )
 
 
 class TestDeleteTakesOutgoingAndLeavesIncoming:
@@ -181,19 +340,19 @@ class TestDeleteTakesOutgoingAndLeavesIncoming:
         self, store,
     ):
         kernel, src = store
-        await kernel.write_document(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
-        await kernel.write_document(
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await kernel.write_instance(
             SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
         )
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, "Task", "t-1", _doc("Task", "t-1", story_ref="s-x"),
         )
-        await kernel.delete_document(SCOPE, "Story", "s-x")
+        await kernel.delete_instance(SCOPE, "Story", "s-x")
 
         rows = await _rows(src)
         outgoing = [r for r in rows if r["from_name"] == "s-x"]
         incoming = [r for r in rows if r["to_name"] == "s-x"]
-        assert outgoing == [], "the deleted document's own edges survived"
+        assert outgoing == [], "the deleted instance's own edges survived"
         assert len(incoming) == 1, (
             "the Task's edge was deleted along with its target — that erases "
             "the evidence that this delete broke something"
@@ -204,28 +363,28 @@ class TestDeleteTakesOutgoingAndLeavesIncoming:
 class TestReplacementIsExact:
     @pytest.mark.anyio
     async def test_removing_the_reference_removes_the_row(self, store):
-        """DELETE+INSERT, not INSERT-only: a document that stops asserting a
+        """DELETE+INSERT, not INSERT-only: an instance that stops asserting a
         relation must stop having one."""
         kernel, src = store
-        await kernel.write_document(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
-        await kernel.write_document(
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await kernel.write_instance(
             SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
         )
         assert [r for r in await _rows(src) if r["from_name"] == "s-x"]
-        await kernel.write_document(SCOPE, "Story", "s-x", _doc("Story", "s-x"))
+        await kernel.write_instance(SCOPE, "Story", "s-x", _doc("Story", "s-x"))
         assert [r for r in await _rows(src) if r["from_name"] == "s-x"] == []
 
     @pytest.mark.anyio
     async def test_rewriting_does_not_duplicate(self, store):
         kernel, src = store
-        await kernel.write_document(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
         for _ in range(3):
-            await kernel.write_document(
+            await kernel.write_instance(
                 SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
             )
         rows = [r for r in await _rows(src) if r["from_name"] == "s-x"]
         assert len(rows) == 1
-        # ...and the version tracks the document, so drift is detectable.
+        # ...and the version tracks the instance, so drift is detectable.
         assert rows[0]["from_version"] == 3
 
 
@@ -241,8 +400,8 @@ class TestAPartialSetIsNeverStored:
         because the absent one can be labelled.
         """
         kernel, src = store
-        await kernel.write_document(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
-        await kernel.write_document(
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await kernel.write_instance(
             SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
         )
         before = [r for r in await _rows(src) if r["from_name"] == "s-x"]
@@ -251,10 +410,10 @@ class TestAPartialSetIsNeverStored:
         async def _boom(*a, **kw):
             raise RuntimeError("the store went away mid-resolution")
 
-        monkeypatch.setattr(kernel, "get_document", _boom)
+        monkeypatch.setattr(kernel, "get_instance", _boom)
         # The write itself must still succeed — a derivation failure is not a
-        # reason to refuse to store the document.
-        await kernel.write_document(
+        # reason to refuse to store the instance.
+        await kernel.write_instance(
             SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-other"),
         )
         after = [r for r in await _rows(src) if r["from_name"] == "s-x"]
@@ -270,12 +429,12 @@ class TestAPartialSetIsNeverStored:
         edges — and must therefore not DESTROY any either. The face reports the
         mode so the emptiness is never read as "no relations"."""
         kernel, src = store
-        await kernel.write_document(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
-        await kernel.write_document(
+        await kernel.write_instance(SCOPE, "Feature", "f-y", _doc("Feature", "f-y"))
+        await kernel.write_instance(
             SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
         )
         monkeypatch.setenv("DNA_REF_VALIDATION", "off")
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, "Story", "s-x", _doc("Story", "s-x", feature="f-y"),
         )
         assert [r for r in await _rows(src) if r["from_name"] == "s-x"]
@@ -286,7 +445,7 @@ class TestTheKwargIsCapabilityGated:
         """It has no transaction to write edges in and no table to write them
         to. Claiming the kwarg would make the kernel hand over edges the
         adapter silently drops, and a face would then read the resulting
-        nothing as "this document has no relations"."""
+        nothing as "this instance has no relations"."""
         from dna.adapters.filesystem.writable import FilesystemWritableSource
         from dna.kernel.capabilities import (
             derive_capabilities, source_capabilities, write_kwarg_support,

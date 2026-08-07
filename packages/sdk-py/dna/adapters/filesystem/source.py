@@ -35,8 +35,29 @@ def fs_tenant_segment(tenant: str | None) -> str | None:
     return tenant.replace(":", "%3A")
 
 
+#: Top-level names under a store root that are NOT scopes: ``tenants/`` is the
+#: per-tenant overlay container and ``_legacy/`` the migration sink.
+_RESERVED_TOP_LEVEL = frozenset({"tenants", "_legacy"})
+
+
+def _scope_dirs(base_dir: Path) -> list[str]:
+    """The scope directories under ``base_dir``.
+
+    Shared by the read-only base and the writable subclass's ``list_scopes``
+    so the two cannot drift about what counts as a scope — the writable one is
+    a coroutine, which is exactly why a read path here cannot just call it.
+    """
+    if not base_dir.is_dir():
+        return []
+    return sorted(
+        d.name for d in base_dir.iterdir()
+        if d.is_dir() and not d.name.startswith(".")
+        and d.name not in _RESERVED_TOP_LEVEL
+    )
+
+
 class FilesystemSource(SourcePort):
-    """Loads manifest documents from .dna/<scope>/ directories.
+    """Loads manifest instances from .dna/<scope>/ directories.
 
     Declares the contract explicitly (s-dna-source-conformance-kit): every
     in-repo adapter subclasses its port Protocol so the relationship is
@@ -57,13 +78,13 @@ class FilesystemSource(SourcePort):
         """Resolve ``path`` and refuse it unless it stays under ``base_dir``.
 
         BELT AND BRACES — deliberately redundant with the kernel guard
-        (``validate_document_name`` / ``validate_scope_name`` at
-        ``Kernel.write_document`` / ``fetch_bundle_entry`` / …), and the
+        (``validate_instance_name`` / ``validate_scope_name`` at
+        ``Kernel.write_instance`` / ``fetch_bundle_entry`` / …), and the
         redundancy is the point. **Do not delete either layer as duplicated
         work.** The kernel guard is the PRIMARY seam: it is the door every
         application-layer writer goes through and it can name which input was
         wrong. This one exists because the adapter is reachable WITHOUT the
-        kernel — ``dna.kernel.source.sync`` calls ``save_document`` directly
+        kernel — ``dna.kernel.source.sync`` calls ``save_instance`` directly
         today (benignly: its names come from the source being copied, not from
         a request), the public conformance kit drives adapters on purpose, and
         an adapter that builds ``<base>/<scope>/<container>/<name>`` while
@@ -72,7 +93,7 @@ class FilesystemSource(SourcePort):
 
         It also covers what a per-facade validator cannot reach cheaply:
         ``scope`` lands in a path on EVERY read (``load_all`` backs
-        ``instance`` / ``list_documents`` / ``get_document`` / ``query`` …),
+        ``instance`` / ``list_instances`` / ``get_instance`` / ``query`` …),
         and ``ref`` / ``layer_value`` / a module ``version`` are path segments
         too. One check at the place the path is actually built covers all of
         them, including the door somebody adds tomorrow.
@@ -86,11 +107,11 @@ class FilesystemSource(SourcePort):
 
         COST, and where it is paid. ``Path.resolve()`` is a realpath: one lstat
         per path component, plus link traversal. This method is called on
-        ``load_all``, which backs ``instance`` / ``list_documents`` /
-        ``get_document`` / ``query`` — so the syscalls land on the READ hot
+        ``load_all``, which backs ``instance`` / ``list_instances`` /
+        ``get_instance`` / ``query`` — so the syscalls land on the READ hot
         path, not only on writes, and they scale with the DEPTH of the store
-        root rather than with the number of documents (once per facade call,
-        not once per document). It is a fixed handful of stats per call on a
+        root rather than with the number of instances (once per facade call,
+        not once per instance). It is a fixed handful of stats per call on a
         path prefix the OS has in its dentry cache; the alternative,
         ``os.path.normpath``, is pure string work and would cost nothing — and
         is rejected anyway, deliberately, because it is TEXTUAL: it cannot see
@@ -110,7 +131,7 @@ class FilesystemSource(SourcePort):
             raise PathEscapesStoreRoot(
                 f"{type(self).__name__} refused a path that leaves its store "
                 f"root: {str(resolved)!r} is not under {str(self.base_dir)!r}. "
-                f"Every segment this adapter joins — scope, container, document "
+                f"Every segment this adapter joins — scope, container, instance "
                 f"name, layer value, bundle entry, module version — is a PATH "
                 f"COMPONENT, so one that traverses ('..', '/', an absolute "
                 f"path) moves the anchor and puts the read or write outside the "
@@ -140,6 +161,12 @@ class FilesystemSource(SourcePort):
             tenant_layer_writes=False,
             write_kwargs=frozenset(),
             delete_kwargs=frozenset(),
+            # ⚠️ It ANSWERS, and it SCANS to answer — see
+            # ``find_instances_by_spec_key``. Two flags because "cannot answer"
+            # and "answers the slow way" are decisions for two different
+            # readers, and a directory tree only ever has the second.
+            key_lookup=True,
+            key_lookup_indexed=False,
         )
 
     @property
@@ -243,6 +270,135 @@ class FilesystemSource(SourcePort):
             refs.append((k, n))
         refs.sort()
         return refs
+
+    async def find_instances_by_id_prefix(
+        self, prefix: str, *, scope: str | None = None,
+        tenant: str | None = None, limit: int = 64,
+    ) -> list[Any]:
+        """Candidates whose ``metadata.id`` starts with ``prefix`` (i-114).
+
+        Candidates only — the unique-or-refuse rule lives in
+        ``dna.kernel.identity.resolve_unique_prefix``, once, for every store.
+
+        Projects from ``load_all`` per scope, like every other granular read on
+        this adapter: a directory tree has no index, and this is the dev-mode
+        store. ``scope=None`` sweeps every scope, because an id's whole value is
+        that whoever holds it need not know where the instance lives.
+
+        An instance with no ``metadata.id`` simply does not match. That is not a
+        gap to paper over: an instance the kernel has never written has no
+        identity yet, and inventing one at READ time would mint a different id
+        in every process that looked.
+        """
+        from dna.kernel.identity import (  # noqa: PLC0415
+            InstanceRef, instance_id_of,
+        )
+        if scope is not None:
+            scopes = [scope]
+        else:
+            # NOT ``self.list_scopes()``: that method exists only on the
+            # WRITABLE subclass and is a coroutine there, so calling it from
+            # here either raises AttributeError (read-only source) or returns
+            # an un-awaited coroutine that ``list()`` chokes on. Enumerating
+            # the directory is what ``list_scopes`` does anyway, and doing it
+            # here keeps this read available on the read-only adapter too.
+            scopes = _scope_dirs(self.base_dir)
+        out: list[Any] = []
+        readers = self._effective_readers()
+        for sc in scopes:
+            try:
+                docs: list[dict[str, Any]] = []
+                if tenant:
+                    docs.extend(await self.load_layer(
+                        sc, "tenant", tenant, readers=readers,
+                    ))
+                docs.extend(await self.load_all(sc, readers=readers))
+            except (FileNotFoundError, NotADirectoryError):
+                continue
+            for d in docs:
+                doc_id = instance_id_of(d)
+                if not doc_id or not doc_id.startswith(prefix):
+                    continue
+                meta = d.get("metadata") or {}
+                out.append(InstanceRef(
+                    id=doc_id, scope=sc, kind=d.get("kind", ""),
+                    api_version=d.get("apiVersion", "") or "",
+                    name=meta.get("name") or d.get("name", ""),
+                    tenant=tenant,
+                ))
+                if len(out) >= limit:
+                    return out
+        return out
+
+    async def find_instances_by_spec_key(
+        self, scope: str, kind: str, key: str, value: str, *,
+        tenant: str | None = None, limit: int = 2,
+    ) -> list[dict[str, Any]]:
+        """Candidates of ``kind`` whose ``spec[key]`` is exactly ``value``.
+
+        ⚠️ **O(N), and saying so is the point, because it cannot be anything
+        else here.** A directory tree has no index and no query engine, so the
+        only way to answer "which instance carries this key" is to read the
+        scope's instances and look. It is the same admission
+        :meth:`find_instances_by_id_prefix` makes one method up, for the same
+        structural reason, on the same dev-mode store.
+
+        It is IMPLEMENTED rather than refused, and both were honest options.
+        Refusing (``key_lookup=False``) would report every ``by: <key>``
+        relation as unfollowed on `file://` — true, and it would also leave the
+        author of a Kind unable to learn anything at all about a class of
+        relations they can see declared in front of them. Scanning tells the
+        truth AND answers; the cost is declared where a cost belongs, in
+        ``SourceCapabilities.key_lookup_indexed``, which is False here. An
+        operator reads it from the capability instead of from a profiler.
+
+        What bounds it is the same thing that bounds the SQL leg: the read is
+        per (Kind, key, value) and stops at ``limit`` candidates — 2 in the only
+        caller, because 2 is all it takes to know the answer is "more than one".
+        Candidates only; this method never decides.
+
+        Exact scalar equality, never containment: a list-valued field does not
+        match one of its elements. That mirrors the ``->>`` recheck the SQL leg
+        performs, and the rule is stated twice on purpose — two stores that
+        matched differently would make the kernel's single arbitration a
+        fiction.
+        """
+        docs: list[dict[str, Any]] = []
+        readers = self._effective_readers()
+        try:
+            if tenant:
+                docs.extend(await self.load_layer(
+                    scope, "tenant", tenant, readers=readers,
+                ))
+            docs.extend(await self.load_all(scope, readers=readers))
+        except (FileNotFoundError, NotADirectoryError):
+            return []
+        out: list[dict[str, Any]] = []
+        seen: set[tuple[str, str]] = set()
+        for d in docs:
+            if not isinstance(d, dict) or d.get("kind") != kind:
+                continue
+            spec = d.get("spec")
+            if not isinstance(spec, dict) or spec.get(key) != value:
+                continue
+            meta = d.get("metadata") or {}
+            name = meta.get("name") or d.get("name") or ""
+            api_version = d.get("apiVersion", "") or ""
+            # The tenant overlay is loaded FIRST and shadows the base instance
+            # of the same identity — the ordering ``load_one`` relies on.
+            # Without this dedupe a forked instance comes back twice and reads
+            # as an ambiguity that only the fork created, which would make the
+            # resolver refuse the most ordinary thing a tenant does.
+            if (api_version, name) in seen:
+                continue
+            seen.add((api_version, name))
+            out.append({
+                "scope": scope, "kind": kind, "api_version": api_version,
+                "name": name, "tenant": tenant or "", "raw": d,
+            })
+            if len(out) >= max(1, limit):
+                break
+        return out
 
     async def load_one(
         self, scope: str, kind: str, name: str, *,
@@ -381,7 +537,7 @@ class FilesystemSource(SourcePort):
         Readers take priority: if a reader detects a bundle directory,
         any YAML file with the same stem is skipped to avoid duplicates.
         """
-        documents: list[dict[str, Any]] = []
+        instances: list[dict[str, Any]] = []
         reader_matched: set[str] = set()  # stems matched by readers
 
         # 1. Invoke readers first (bundles take priority)
@@ -393,13 +549,13 @@ class FilesystemSource(SourcePort):
                     if reader.detect(bundle):
                         doc = reader.read(bundle)
                         if isinstance(doc, dict) and "kind" in doc:
-                            documents.append(doc)
+                            instances.append(doc)
                             reader_matched.add(directory.name)
                 except Exception as e:
                     logger.warning("Reader error on %s: %s", directory, e)
 
             # Readers on subdirectories
-            await self._read_recursive(directory, readers, documents, skip, reader_matched)
+            await self._read_recursive(directory, readers, instances, skip, reader_matched)
 
         # 2. Load YAML files. Dedup against reader-loaded bundles is done in
         # step 3 by (kind, name) — stem-only dedup would drop docs of a
@@ -412,14 +568,14 @@ class FilesystemSource(SourcePort):
                 async with aiofiles.open(yaml_file, encoding="utf-8") as f:
                     content = safe_load(await f.read())
                 if isinstance(content, dict) and "kind" in content:
-                    documents.append(content)
+                    instances.append(content)
             except yaml.YAMLError as e:
                 logger.warning("Error parsing %s: %s", yaml_file, e)
 
         # 3. Deduplicate by kind/name — readers (first) take priority over YAML (later)
         seen: set[str] = set()
         deduped: list[dict[str, Any]] = []
-        for doc in documents:
+        for doc in instances:
             name = doc.get("metadata", {}).get("name") or doc.get("name", "")
             key = f"{doc.get('kind', '')}/{name}"
             if key not in seen:
@@ -429,7 +585,7 @@ class FilesystemSource(SourcePort):
 
     async def _read_recursive(
         self, directory: Path, readers: list,
-        documents: list[dict[str, Any]], skip: set[str],
+        instances: list[dict[str, Any]], skip: set[str],
         reader_matched: set[str],
     ) -> None:
         # H3 — container-aware reader routing.
@@ -477,14 +633,14 @@ class FilesystemSource(SourcePort):
                     if reader.detect(bundle):
                         doc = reader.read(bundle)
                         if isinstance(doc, dict) and "kind" in doc:
-                            documents.append(doc)
+                            instances.append(doc)
                         reader_matched.add(subdir.name)
                         matched = True
                         break
                 except Exception as e:
                     logger.warning("Reader error on %s: %s", subdir, e)
             if not matched:
-                await self._read_recursive(subdir, readers, documents, skip, reader_matched)
+                await self._read_recursive(subdir, readers, instances, skip, reader_matched)
 
     async def close(self) -> None:
         pass
@@ -525,7 +681,7 @@ class FilesystemSource(SourcePort):
 
           ``scope`` / ``container`` / ``name``
               ONE path component each. No ``/`` at all, never ``.`` or ``..``.
-              ``validate_scope_name`` / ``validate_document_name``.
+              ``validate_scope_name`` / ``validate_instance_name``.
           ``entry``
               A RELATIVE PATH, anchored at the root this method returns. ``/``
               is legitimate and normal — 482 of the 492 real bundle entries
@@ -534,11 +690,11 @@ class FilesystemSource(SourcePort):
 
         Same concept, two doors, two rules — and for two commits only one door
         was guarded. The consequence was not theoretical: a bundle entry path
-        is ALSO derived from document CONTENT by the registered writers
+        is ALSO derived from instance CONTENT by the registered writers
         (``spec.source_files``, ``spec.root_files``,
         ``spec.scripts|references|assets``, ``spec.extras``,
         ``spec.instruction_file``), and every one of those wrote a file outside
-        the store root through ``Kernel.write_document`` itself, on the base
+        the store root through ``Kernel.write_instance`` itself, on the base
         lane and the tenant lane alike. If you add a third shape here, decide
         which of the two rules it is BEFORE you join it onto anything.
         """

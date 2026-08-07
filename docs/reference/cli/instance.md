@@ -1,16 +1,16 @@
-# `dna doc`
+# `dna instance`
 
-List, show, create, edit, delete documents.
+List, show, create, edit, delete instances.
 
 !!! info "Generated from the command definitions"
 
     This page is introspected from the `dna` Click command tree by
     `scripts/gen_cli_docs.py`, so it stays in lockstep with
-    `dna doc --help`.
+    `dna instance --help`.
 
-## `dna doc apply`
+## `dna instance apply`
 
-Upsert document(s) from a YAML/JSON file, a bundle marker, or a bundle directory.
+Upsert instance(s) from a YAML/JSON file, a bundle marker, or a bundle directory.
 
 YAML/JSON files may hold MULTIPLE documents separated by ``---`` (a YAML
 stream); each is applied independently in order. Single-doc files behave
@@ -18,10 +18,10 @@ exactly as before.
 
 NOTE: this command still uses the local kernel (via dna_session) because
 bundle/marker → kind resolution requires walking registered Kinds. Other
-`dna doc` commands run via dna-client and don't need DNA_SOURCE_URL set.
+`dna instance` commands run via dna-client and don't need DNA_SOURCE_URL set.
 
 ```text
-dna doc apply [OPTIONS] PATH
+dna instance apply [OPTIONS] PATH
 ```
 
 **Arguments**
@@ -39,12 +39,12 @@ dna doc apply [OPTIONS] PATH
 | `--scope` | Override scope (default from env or doc). |
 | `--tenant` | Bind the apply to this tenant (overrides DNA_TENANT). |
 
-## `dna doc create`
+## `dna instance create`
 
-Create a new document via the kernel WriterPort.
+Create a new instance via the kernel WriterPort.
 
 ```text
-dna doc create [OPTIONS] KIND_NAME DOC_NAME
+dna instance create [OPTIONS] KIND_NAME DOC_NAME
 ```
 
 **Arguments**
@@ -60,16 +60,16 @@ dna doc create [OPTIONS] KIND_NAME DOC_NAME
 | --- | --- |
 | `--dry-run` | Validate without writing. |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope to write the document into (default: env / sole scope). |
+| `--scope` | Scope to write the instance into (default: env / sole scope). |
 | `--spec` | Path to JSON file (or `-` for stdin). |
 | `--tenant` | Bind the write to this tenant (overrides DNA_TENANT). |
 
-## `dna doc delete`
+## `dna instance delete`
 
-Delete a document from the scope. Asks for confirmation unless --yes.
+Delete an instance from the scope. Asks for confirmation unless --yes.
 
 ```text
-dna doc delete [OPTIONS] KIND_NAME DOC_NAME
+dna instance delete [OPTIONS] KIND_NAME DOC_NAME
 ```
 
 **Arguments**
@@ -84,16 +84,16 @@ dna doc delete [OPTIONS] KIND_NAME DOC_NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope to delete the document from (default: env / sole scope). |
+| `--scope` | Scope to delete the instance from (default: env / sole scope). |
 | `--tenant` | Bind the delete to this tenant (overrides DNA_TENANT). |
 | `--yes` | Skip confirmation. |
 
-## `dna doc fields`
+## `dna instance fields`
 
 List the fields a Kind accepts (with type + enum + required marker).
 
 ```text
-dna doc fields [OPTIONS] KIND_NAME
+dna instance fields [OPTIONS] KIND_NAME
 ```
 
 **Arguments**
@@ -110,12 +110,12 @@ dna doc fields [OPTIONS] KIND_NAME
 | `--scope` | Scope holding the Kind (default: env / sole scope). |
 | `--tenant` |  |
 
-## `dna doc list`
+## `dna instance list`
 
-List documents of a Kind in the scope.
+List instances of a Kind in the scope.
 
 ```text
-dna doc list [OPTIONS] KIND_NAME
+dna instance list [OPTIONS] KIND_NAME
 ```
 
 **Arguments**
@@ -130,14 +130,14 @@ dna doc list [OPTIONS] KIND_NAME
 | --- | --- |
 | `--help` | Show this message and exit. |
 | `--json` |  |
-| `--scope` | Scope to list documents from (default: env / sole scope). |
+| `--scope` | Scope to list instances from (default: env / sole scope). |
 | `--tenant` | Bind to this tenant (overrides DNA_TENANT). |
 
-## `dna doc make`
+## `dna instance make`
 
 Create a doc via schema-driven flags (no JSON file needed).
 
-Syntax: dna doc make <Kind> <name> field1=value1 field2=value2 ...
+Syntax: dna instance make <Kind> <name> field1=value1 field2=value2 ...
 
 Field types are coerced from the Kind's JSON Schema:
   severity=high                  → "high" (string)
@@ -146,7 +146,7 @@ Field types are coerced from the Kind's JSON Schema:
   labels=                        → [] (empty array on empty value)
 
 ```text
-dna doc make [OPTIONS] KIND_NAME DOC_NAME [FIELDS]...
+dna instance make [OPTIONS] KIND_NAME DOC_NAME [FIELDS]...
 ```
 
 **Arguments**
@@ -163,15 +163,47 @@ dna doc make [OPTIONS] KIND_NAME DOC_NAME [FIELDS]...
 | --- | --- |
 | `--dry-run` | Validate without writing. |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope to write the document into (default: env / sole scope). |
+| `--scope` | Scope to write the instance into (default: env / sole scope). |
 | `--tenant` | Bind the write to this tenant. |
 
-## `dna doc show`
+## `dna instance resolve`
 
-Print the full document (raw frontmatter + spec) as JSON.
+Expand a short instance ID prefix to the instance it names (i-114).
+
+Every instance carries a 12-character `metadata.id` that survives a rename.
+Give the first four or more characters, the way you would quote a short git
+commit hash:
+
+    dna instance resolve k7m3
+
+A prefix that matches more than one instance is REFUSED, with the
+candidates listed — it is never resolved to the first hit.
 
 ```text
-dna doc show [OPTIONS] KIND_NAME DOC_NAME
+dna instance resolve [OPTIONS] INSTANCE_ID
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `INSTANCE_ID` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--help` | Show this message and exit. |
+| `--json` | Print the whole instance. |
+| `--scope` | Narrow the search to one scope (default: every scope). |
+| `--tenant` | Bind to this tenant (overrides DNA_TENANT). |
+
+## `dna instance show`
+
+Print the full instance (raw frontmatter + spec) as JSON.
+
+```text
+dna instance show [OPTIONS] KIND_NAME DOC_NAME
 ```
 
 **Arguments**
@@ -186,10 +218,10 @@ dna doc show [OPTIONS] KIND_NAME DOC_NAME
 | Option | Description |
 | --- | --- |
 | `--help` | Show this message and exit. |
-| `--scope` | Scope to read the document from (default: env / sole scope). |
+| `--scope` | Scope to read the instance from (default: env / sole scope). |
 | `--tenant` | Bind to this tenant (overrides DNA_TENANT). |
 
-## `dna doc transition`
+## `dna instance transition`
 
 Generic status transition for any Kind that declares ``status`` in schema.
 
@@ -198,7 +230,7 @@ optionally closed_at (if new_status is terminal — heuristic), commit_ref,
 and a timeline entry.
 
 ```text
-dna doc transition [OPTIONS] KIND_NAME DOC_NAME NEW_STATUS
+dna instance transition [OPTIONS] KIND_NAME DOC_NAME NEW_STATUS
 ```
 
 **Arguments**
@@ -216,6 +248,6 @@ dna doc transition [OPTIONS] KIND_NAME DOC_NAME NEW_STATUS
 | `--commit-ref` | Git SHA to stamp on transition. |
 | `--help` | Show this message and exit. |
 | `--reason` | Optional reason string. |
-| `--scope` | Scope holding the document (default: env / sole scope). |
+| `--scope` | Scope holding the instance (default: env / sole scope). |
 | `--tenant` |  |
 

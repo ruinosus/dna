@@ -1,7 +1,7 @@
 """Tests for Kernel cache invalidation + on_write observer mechanism.
 
 Protects the contract:
-- write_document / delete_document invalidate _base_instance_cache for
+- write_instance / delete_instance invalidate _base_instance_cache for
   base writes (layer is None)
 - Registered on_write observers fire after successful writes + deletes
 - Observer exceptions are swallowed (don't break the write)
@@ -66,7 +66,7 @@ def test_write_document_invalidates_base_cache(kernel_with_scope):
     assert scope in k._kcache._base
 
     # Write a doc at layer=None (base).
-    asyncio.run(k.write_document(scope, "Agent", "alice", _raw_agent()))
+    asyncio.run(k.write_instance(scope, "Agent", "alice", _raw_agent()))
 
     # Cache entry for this scope should be gone.
     assert scope not in k._kcache._base
@@ -85,7 +85,7 @@ def test_on_write_callback_fires_with_op_write(kernel_with_scope):
     events: list = []
     k.on_write(lambda s, kind, name, op: events.append((s, kind, name, op)))
 
-    asyncio.run(k.write_document(scope, "Agent", "alice", _raw_agent()))
+    asyncio.run(k.write_instance(scope, "Agent", "alice", _raw_agent()))
 
     assert len(events) >= 1
     expected = (scope, "Agent", "alice", "write")
@@ -96,12 +96,12 @@ def test_on_write_callback_fires_with_op_delete(kernel_with_scope):
     """Registered observer receives (scope, kind, name, 'delete') after a delete."""
     k, scope = kernel_with_scope
     # Write a doc first so we have something to delete.
-    asyncio.run(k.write_document(scope, "Agent", "alice", _raw_agent()))
+    asyncio.run(k.write_instance(scope, "Agent", "alice", _raw_agent()))
 
     events: list = []
     k.on_write(lambda s, kind, name, op: events.append((s, kind, name, op)))
 
-    asyncio.run(k.delete_document(scope, "Agent", "alice"))
+    asyncio.run(k.delete_instance(scope, "Agent", "alice"))
 
     # Kernel double-fires for local writes/deletes (see kernel.invalidate
     # docstring): tolerated, payload must be identical across fires.
@@ -126,7 +126,7 @@ def test_observer_exception_is_swallowed(kernel_with_scope):
     k.on_write(good)
 
     # Must not raise.
-    asyncio.run(k.write_document(scope, "Agent", "alice", _raw_agent()))
+    asyncio.run(k.write_instance(scope, "Agent", "alice", _raw_agent()))
 
     # good observer still fired (double-fire tolerated; payload must
     # be identical across fires).

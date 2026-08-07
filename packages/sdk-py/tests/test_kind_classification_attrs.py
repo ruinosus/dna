@@ -31,7 +31,7 @@ ORIG_SCHEMA_INVALIDATING = frozenset({
 # own marker for "no layer may fork this". It is the right classification for the
 # same reason Genome/LayerPolicy/KindDefinition carry it — a namespace claim is
 # an authorization record ABOVE any layer, and being non-overlayable is also what
-# makes the generic write-any-document path refuse it (``is_bootstrap_kind``), so
+# makes the generic write-any-instance path refuse it (``is_bootstrap_kind``), so
 # a workspace cannot grant itself a namespace through the tool it uses to write
 # ordinary content.
 ORIG_NON_OVERLAYABLE = frozenset({

@@ -227,8 +227,8 @@ def test_curated_summary_projection(kernel, kind):
 
 @pytest.mark.parametrize("kind", KINDS)
 def test_summary_bare_dict_port_semantics(kernel, kind):
-    """NOTA do piloto: bare-dict não é Document — sem `.spec`, projeta os
-    defaults declarados (call-sites reais passam Document)."""
+    """NOTA do piloto: bare-dict não é Instance — sem `.spec`, projeta os
+    defaults declarados (call-sites reais passam Instance)."""
     port = _port(kernel, kind)
     full = _golden(kind)["summary_cases"]["full"]["spec"]
     assert port.summary(dict(full)) == CURATED_SUMMARY_DEFAULTS[kind]

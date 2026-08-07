@@ -103,7 +103,7 @@ async def test_guard_detects_a_column_added_without_a_revision(tmp_path, monkeyp
 
     def build_with_undeclared_column(*, is_pg, schema=None):
         tables = real_build(is_pg=is_pg, schema=schema)
-        tables.documents.append_column(
+        tables.instances.append_column(
             sa.Column("undeclared_column", sa.Text, nullable=True)
         )
         return tables

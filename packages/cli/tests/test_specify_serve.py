@@ -111,7 +111,7 @@ def test_template_override_per_workspace_no_redeploy(toolkit_scope):
             "metadata": {"name": "speckit-spec-template"},
             "spec": {"body": sentinel, "tags": ["spec-kit"], "pattern": "spec-kit"},
         }
-        await live.kernel.with_tenant("acme").write_document(
+        await live.kernel.with_tenant("acme").write_instance(
             "kit", "PromptTemplate", "speckit-spec-template", overlay
         )
         overridden = await M.get_template_impl(

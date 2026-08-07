@@ -1,7 +1,7 @@
 """SDLC-owned write-path guards (s-write-path-despecialize).
 
 The bi-temporal Engram guard used to live inline in
-``Kernel._write_document_inner`` as a ``kind == "LessonLearned"``
+``Kernel._write_instance_inner`` as a ``kind == "LessonLearned"``
 special-case. It is now a ``pre_save`` veto hook registered by
 ``SdlcExtension.register``. s-engram-rename (2026-07-19): the Kind itself
 moved to the ``helix`` extension (``/dna/v1``), but this hook stays wired
@@ -47,7 +47,7 @@ async def bitemporal_engram_guard(ctx: PreSaveContext) -> None:
     if not isinstance(spec, dict) or spec.get("valid_to"):
         return
     try:
-        existing = await ctx.kernel.get_document(
+        existing = await ctx.kernel.get_instance(
             ctx.scope, ctx.kind, ctx.name, tenant=ctx.tenant,
         )
     except Exception:  # noqa: BLE001 — guard read must never block a write
@@ -64,10 +64,10 @@ async def bitemporal_engram_guard(ctx: PreSaveContext) -> None:
 
 
 async def sprint_identity_guard(ctx: PreSaveContext) -> None:
-    """A Sprint's ``spec.sprint_id`` MUST equal its document name.
+    """A Sprint's ``spec.sprint_id`` MUST equal its instance name.
 
     ``Story.sprint_ref`` / ``Feature.sprint_ref`` are declared references
-    (``relations.sprint_ref.to: Sprint``), and a relation resolves by DOCUMENT
+    (``relations.sprint_ref.to: Sprint``), and a relation resolves by INSTANCE
     NAME. ``sprint_id`` restates that name inside the spec so it is queryable
     and projectable — which means the two can disagree, and the day they do the
     Kind has two identities: one the graph resolves by and one every human
@@ -75,7 +75,7 @@ async def sprint_identity_guard(ctx: PreSaveContext) -> None:
     is exactly why ``PlanBinding.tier_id`` cannot be declared today.
 
     So this VETOES rather than warns, and it vetoes at the one chokepoint every
-    write passes through (CLI, REST, MCP ``write_document``, seeds) — a rule
+    write passes through (CLI, REST, MCP ``write_instance``, seeds) — a rule
     enforced only where somebody remembered to call it is a rule that is green
     for the wrong reason.
 
@@ -94,10 +94,10 @@ async def sprint_identity_guard(ctx: PreSaveContext) -> None:
     if sprint_id != ctx.name:
         raise ValueError(
             f"Sprint '{ctx.name}': spec.sprint_id is {sprint_id!r} but the "
-            f"document name is {ctx.name!r}. They must match — Story.sprint_ref "
-            f"and Feature.sprint_ref resolve this Sprint by DOCUMENT NAME, so a "
+            f"instance name is {ctx.name!r}. They must match — Story.sprint_ref "
+            f"and Feature.sprint_ref resolve this Sprint by INSTANCE NAME, so a "
             f"mismatch makes the sprint reachable under one identity and "
-            f"queryable under the other. Rename the document to "
+            f"queryable under the other. Rename the instance to "
             f"{sprint_id!r}, or set sprint_id to {ctx.name!r}."
         )
 

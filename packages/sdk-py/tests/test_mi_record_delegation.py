@@ -1,5 +1,5 @@
 """F2.5 two-planes Task 1: ManifestInstance.all/one(_async) delegate
-plane="record" kinds to the kernel record-plane reads (query/get_document).
+plane="record" kinds to the kernel record-plane reads (query/get_instance).
 
 Records never come from the MI materialization — even when the eager build
 happened to load them (pre-Task-2) the MI must answer record reads through
@@ -107,7 +107,7 @@ def test_one_record_kind_delegates_to_kernel_get_document():
         doc = mi.one("StoryLike", "s-1")
     assert doc is not None and doc.spec["title"] == "One"
     assert any(c[1] == "StoryLike" and c[2] == "s-1" for c in src.load_one_calls), (
-        "mi.one(record) must delegate to kernel.get_document_sync → source.load_one"
+        "mi.one(record) must delegate to kernel.get_instance_sync → source.load_one"
     )
 
 
@@ -180,7 +180,7 @@ async def test_all_async_record_results_not_cached_in_mi():
 async def test_sync_record_read_inside_loop_raises():
     """Sync record read on the event-loop thread must RAISE loudly (the
     _run_sync_helper contract) — these call-sites must migrate to await
-    kernel.query/get_document; an eager fallback would be silent-empty
+    kernel.query/get_instance; an eager fallback would be silent-empty
     post-exclusion (worse)."""
     _k, _src, mi = _wire()
     with pytest.warns(DeprecationWarning):
@@ -271,10 +271,10 @@ def test_build_with_tenant_layers_stamps_mi_tenant():
 def test_kernel_without_kind_plane_keeps_legacy_path():
     """Kernels that don't expose kind_plane (mocks, legacy embedders) must
     never trip the record branch."""
-    from dna.kernel.document import Document
-    from dna.kernel.instance import ManifestInstance
+    from dna.kernel.instance import Instance
+    from dna.kernel.manifest import ManifestInstance
     kernel = MagicMock(spec=[])  # no kind_plane attribute at all
-    doc = Document.from_raw(_raw("StoryLike", "s-x"))
-    mi = ManifestInstance(scope="demo", documents=[doc], kinds={}, kernel=kernel)
+    doc = Instance.from_raw(_raw("StoryLike", "s-x"))
+    mi = ManifestInstance(scope="demo", instances=[doc], kinds={}, kernel=kernel)
     with pytest.warns(DeprecationWarning):
         assert mi.all("StoryLike") == [doc]

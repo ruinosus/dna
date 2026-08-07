@@ -1,10 +1,10 @@
-# Copilot kits — a complete flow installed as documents
+# Copilot kits — a complete flow installed as instances
 
-A **copilot kit** is a directory of DNA documents — typically a `KindDefinition`
+A **copilot kit** is a directory of DNA instances — typically a `KindDefinition`
 for the domain, an `Agent` that speaks for it, and a `Copilot` whose
 `spec.surfaces[]` declares the guided flow (state key, canvas keys, blocked
 persistence tools, and the wizard's `steps[]`). Installing the kit is what makes
-the flow exist: no code ships, because the runtime that reads these documents is
+the flow exist: no code ships, because the runtime that reads these instances is
 already generic — the surface middleware projects the agent's patches into
 shared state, and a portal can render the wizard straight from the declaration
 crossed with the target Kind's registered schema.
@@ -18,11 +18,11 @@ dna copilot install <dir> --json        # machine-readable output
 
 ## What `dna copilot install` does
 
-`dna copilot install` scans the directory for DNA documents (YAML with
+`dna copilot install` scans the directory for DNA instances (YAML with
 `apiVersion` / `kind` / `metadata.name`; anything else — README, fixtures — is
 skipped with a note), orders them so definitions land before their consumers
 (`KindDefinition` → `PromptTemplate` → `Agent` → `Copilot`), and writes each one
-through `kernel.write_document`. That last part is the point: every guard the
+through `kernel.write_instance`. That last part is the point: every guard the
 write door has — schema validation, tombstones, layer policy — fires exactly as
 it would for any other write. The installer re-implements nothing.
 
@@ -37,7 +37,7 @@ Two refusals are deliberately loud:
   the missing field to the person who can fix it.
 - **A `KindDefinition` without `approved_by` installs INERT.** Authoring a Kind
   and putting it into effect are two acts by two actors. Without approval the
-  Kind stays a document — auditable, listable — and registers nothing. Passing
+  Kind stays an instance — auditable, listable — and registers nothing. Passing
   `--approve` stamps the operator (`git config user.email`) as approver at
   install time: running the command with the flag *is* the human act, in a
   self-hosted deployment. In a hosted deployment, approval stays in the portal.

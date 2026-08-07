@@ -247,12 +247,12 @@ dna sdlc backfill [OPTIONS] PATTERN
 
 ## `dna sdlc backfill-dates`
 
-Stamp the dates a document was filed without.
+Stamp the dates an instance was filed without.
 
 Repairs ``created_at`` / ``updated_at`` on every board Kind a read surface
 dates by (the digest's windows, the derived journey, recency sorts), taking
-the value from the document's own timeline, else from the commit that added
-its file. Documents with neither are LEFT ALONE and listed — inventing
+the value from the instance's own timeline, else from the commit that added
+its file. Instances with neither are LEFT ALONE and listed — inventing
 "now" would date them all as filed today and skew every digest window from
 here on. Idempotent; ``--dry-run`` previews.
 
@@ -662,9 +662,9 @@ dna sdlc epic [OPTIONS] COMMAND [ARGS]...
 Create a new Epic.
 
 Closes the last CRUD gap in the SDLC CLI (s-dx-epic-create): Story and
-Feature had `create`, but an Epic had to be hand-authored via `dna doc
+Feature had `create`, but an Epic had to be hand-authored via `dna instance
 apply` — an asymmetry the DX epic (e-dna-dx) exists to kill. Mirrors
-`feature create`: same envelope, same write path (`kernel.write_document`),
+`feature create`: same envelope, same write path (`kernel.write_instance`),
 same initial-timeline event. Unlike `story create`, no --ac/--dod guard —
 Epics are roadmap nouns; exit criteria live at the Story level.
 
@@ -967,6 +967,7 @@ dna sdlc feature ship [OPTIONS] NAME
 | `--force` | Mark done even when children Stories aren't all done. |
 | `--help` | Show this message and exit. |
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
+| `--serves` | Que Spec esta entrega SERVE (repetível): `Spec/<nome>`, `<nome>`, ou `none` para afirmar que não serve nenhuma. Grava a citação bidirecional (references ↔ cited_by) — que é de onde a execução da Spec é DERIVADA (i-117). |
 | `--summary` | One-line description (lands on the timeline event). |
 
 ### `dna sdlc feature show`
@@ -1365,6 +1366,7 @@ dna sdlc issue resolve [OPTIONS] NAME
 | `--help` | Show this message and exit. |
 | `--resolution` | How was it resolved? |
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
+| `--serves` | Que Spec esta entrega SERVE (repetível): `Spec/<nome>`, `<nome>`, ou `none` para afirmar que não serve nenhuma. Grava a citação bidirecional (references ↔ cited_by) — que é de onde a execução da Spec é DERIVADA (i-117). |
 
 ### `dna sdlc issue start`
 
@@ -1726,7 +1728,7 @@ dna sdlc list [OPTIONS] {Roadmap|Epic|Feature|Story|Issue|Spec|Plan}
 
 Project narrative — write cadence reminders + scaffold helpers.
 
-The Narrative Kind itself is created via ``dna doc apply`` against
+The Narrative Kind itself is created via ``dna instance apply`` against
 a NARRATIVE.md bundle (the canonical write path). These commands
 are the operator-side ergonomics: telling you when the last one
 was written, what's pending since then, and stubbing out the next
@@ -1832,7 +1834,7 @@ dna sdlc narrative add-paragraph [OPTIONS] NAME
 Scaffold a NARRATIVE.md bundle for a new Narrative doc. Writes
 the file with FLAT frontmatter (the format the bundle reader
 expects) + a body skeleton with the structured-fields headings.
-Does NOT apply — review/edit, then run `dna doc apply`.
+Does NOT apply — review/edit, then run `dna instance apply`.
 
 ```text
 dna sdlc narrative new [OPTIONS] SLUG
@@ -2749,6 +2751,7 @@ dna sdlc story done [OPTIONS] NAME
 | `--no-narrate` | Silencia o warn de narração. |
 | `--note` | Narra esta transição (appenda comment inline na MESMA chamada). |
 | `--scope` | Scope holding the SDLC docs (default: $DNA_SDLC_SCOPE, else the auto-detected sole SDLC scope in the source; required if neither resolves). |
+| `--serves` | Que Spec esta entrega SERVE (repetível): `Spec/<nome>`, `<nome>`, ou `none` para afirmar que não serve nenhuma. Grava a citação bidirecional (references ↔ cited_by) — que é de onde a execução da Spec é DERIVADA (i-117). |
 | `--summary` | One-line description of what shipped (lands on the timeline event). |
 
 ### `dna sdlc story groom`

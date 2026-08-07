@@ -27,7 +27,7 @@ the example scope lives in it:
 
 ## Step 1 — A scope is a directory of manifests
 
-A **scope** is a directory of documents under `.dna/<scope-name>/`. The
+A **scope** is a directory of instances under `.dna/<scope-name>/`. The
 `hello-genome` scope looks like this:
 
 ```
@@ -41,7 +41,7 @@ A **scope** is a directory of documents under `.dna/<scope-name>/`. The
             └── SKILL.md        # kind: Skill — a real marketplace bundle
 ```
 
-Three documents, three Kinds. Note the namespaces: `Genome` and `Agent` are
+Three instances, three Kinds. Note the namespaces: `Genome` and `Agent` are
 DNA's own Kinds (`github.com/ruinosus/dna/v1`), while the Skill is a **market
 format** — DNA reads it byte-faithful under its owner's namespace,
 `agentskills.io/v1`. (Why that matters: [Market
@@ -49,7 +49,7 @@ fidelity](../concepts/market-fidelity.md).)
 
 ### The scope root (Genome)
 
-Every scope is rooted by exactly one `Genome` — its identity document.
+Every scope is rooted by exactly one `Genome` — its identity instance.
 
 ```yaml title=".dna/hello-genome/Genome.yaml"
 apiVersion: github.com/ruinosus/dna/v1
@@ -89,11 +89,11 @@ from dna import Kernel
 mi = Kernel.quick("hello-genome", base_dir="examples/hello-genome/.dna")
 
 print(f"scope: {mi.scope}")
-for d in mi.documents:
+for d in mi.instances:
     print(f"  {d.api_version:32s} {d.kind:8s} {d.name}")
 ```
 
-Every document is identified by `(apiVersion, kind, name)`:
+Every instance is identified by `(apiVersion, kind, name)`:
 
 ```
 scope: hello-genome
@@ -105,18 +105,18 @@ scope: hello-genome
 !!! tip "The `_lib` parent scope"
 
     You may see a log line about a `_lib` parent scope: every scope can
-    inherit shared documents from a sibling `.dna/_lib/` library scope.
+    inherit shared instances from a sibling `.dna/_lib/` library scope.
     Create the (empty) directory to silence it, or put shared agents/skills
     there to actually use it. See [Tenancy and
     layers](../concepts/tenancy-layers.md).
 
 ## Step 3 — Typed access to a Kind
 
-`mi.documents` is the [blessed query surface](../guides/read-document-data.md):
+`mi.instances` is the [blessed query surface](../guides/read-instance-data.md):
 filter by `kind` and `name`, then read typed fields.
 
 ```python
-skill = next(d for d in mi.documents if d.kind == "Skill")
+skill = next(d for d in mi.instances if d.kind == "Skill")
 print(skill.typed.metadata.name)
 print(skill.typed.metadata.description)
 ```
@@ -135,7 +135,7 @@ print(mi.build_prompt(agent="greeter"))
 
 You never wrote that composed prompt down — it is *derived* from the
 authored `spec`. That is the [thesis](../concepts/thesis.md) in one call: the
-document is intent; the prompt is the observed state the kernel reconciles
+instance is intent; the prompt is the observed state the kernel reconciles
 into.
 
 ## Step 5 — Change behavior with a file edit
@@ -160,7 +160,7 @@ uv run python ../../examples/hello-genome/run.py
   how `dep_filters` and templates drive the composition you just saw.
 - **[How to add a Kind](../guides/add-a-kind.md)** — ship your own Kind in
   thirty minutes.
-- **[How to read document data](../guides/read-document-data.md)** — the
+- **[How to read instance data](../guides/read-instance-data.md)** — the
   blessed read surface.
 - **[How to use semantic recall & memory](../guides/semantic-recall.md)** —
   search the scope you just loaded with `dna recall`, offline.

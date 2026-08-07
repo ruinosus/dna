@@ -183,7 +183,7 @@ def linear_time_validator_class() -> Any | None:
 def validate_instance(instance: Any, schema: dict[str, Any]) -> None:
     """``jsonschema.validate`` with the linear-time engine when it is available.
 
-    THE application-side entry point: every place DNA validates a document
+    THE application-side entry point: every place DNA validates an instance
     against an AUTHORED schema calls this instead of ``jsonschema.validate``, so
     "we accepted this pattern because it cannot backtrack" and "we run it on an
     engine that cannot backtrack" are the same statement.

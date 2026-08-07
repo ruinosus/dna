@@ -124,7 +124,7 @@ def test_sem_override_a_coordenada_do_agente_VENCE(monkeypatch):
 def test_o_override_troca_o_deployment_sem_tocar_na_definicao(monkeypatch):
     """⚠️ A separação que este par existe para guardar.
 
-    O documento do agente declara uma COORDENADA portátil, versionada com ele e
+    A instância do agente declara uma COORDENADA portátil, versionada com ele e
     igual em todo ambiente. Qual deployment a atende é fato do AMBIENTE.
 
     Sem isso a única saída seria editar a definição — que é COMPARTILHADA com

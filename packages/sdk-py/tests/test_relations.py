@@ -1,10 +1,10 @@
 """``spec.relations`` — the declaration itself.
 
 The pure core: how a relation is READ, what it refuses, and the two questions
-it can answer without touching a document (does the declaration pair? does it
+it can answer without touching an instance (does the declaration pair? does it
 contradict the schema?). What the WRITE path does with it lives in
 ``test_write_path_reference_validation.py``, against a source that really
-stores documents; what the REGISTRY declares lives in
+stores instances; what the REGISTRY declares lives in
 ``test_kind_graph_registry.py``.
 
 The tests are ordered by what would cost most to discover in the field: a
@@ -94,9 +94,39 @@ class TestByIsCheckedAgainstTo:
         assert rels["r"].by == form
         assert rels["r"].carries_kind is True
 
-    def test_a_composite_form_on_a_concrete_target_is_a_contradiction(self):
-        with pytest.raises(ValueError, match="contradict"):
-            normalize_relations({"r": _rel(to="Story", by="Kind:name")})
+    def test_a_composite_form_MAY_declare_which_kinds_it_names(self):
+        """`by` says where the target Kind name is WRITTEN; `to` says which
+        Kinds it may name. Reading those as one question is what left 21
+        relations in this registry pointing at `*` — declared, and untyped."""
+        rel = normalize_relations({
+            "work_item": _rel(to=["Issue", "Spike", "Story"], by="Kind/name"),
+        })["work_item"]
+        assert rel.to == ("Issue", "Spike", "Story")
+        assert rel.by == "Kind/name"
+        assert rel.carries_kind is True      # the ADDRESS carries a Kind
+        assert rel.open_target is False      # the MODEL constrains which
+
+    def test_a_single_target_composite_is_accepted_too(self):
+        """Refusing this would force an author to write `*` — to LIE about the
+        model — for the sake of a symmetry nothing needs."""
+        rel = normalize_relations({"r": _rel(to="Story", by="Kind:name")})["r"]
+        assert rel.to == ("Story",)
+        assert rel.carries_kind is True
+        assert rel.polymorphic is False
+
+    def test_carries_kind_and_open_target_are_two_different_facts(self):
+        """The mutant this kills: `carries_kind = not self.to`. Under it a typed
+        composite reports carries_kind False — the graph would then believe the
+        value holds a bare name, and a consumer parsing it would read
+        `Story/s-x` as an instance called `Story/s-x`."""
+        typed = normalize_relations({"r": _rel(to=["A", "B"], by="Kind/name")})["r"]
+        by_name = normalize_relations({"r": _rel(to=["A", "B"])})["r"]
+        star = normalize_relations({
+            "r": _rel(to=ANY_TARGET, by="Kind/name"),
+        })["r"]
+        assert (typed.carries_kind, typed.open_target) == (True, False)
+        assert (by_name.carries_kind, by_name.open_target) == (False, False)
+        assert (star.carries_kind, star.open_target) == (True, True)
 
     def test_a_key_addressing_defaults_to_nothing_and_must_be_a_field_name(self):
         with pytest.raises(ValueError, match="spec field"):
@@ -131,16 +161,55 @@ class TestResolvedIsTheRuntimePromise:
         assert rel.resolved is True
         assert rel.polymorphic is True
 
-    def test_a_key_addressed_relation_is_declared_but_NOT_resolved(self):
-        """The whole `by:` design in one assertion: declaring the addressing
-        must not install a resolution rule. If this ever flips to True, the
-        write path starts reading a key nothing indexes and vetoing data the
-        live lookup accepts."""
+    def test_a_key_addressed_relation_is_FOLLOWED_and_never_ENFORCED(self):
+        """Fatia 5 in one assertion, and it is deliberately TWO facts.
+
+        The previous version of this test asserted ``resolved is False`` and
+        warned that flipping it would make the write path *"read a key nothing
+        indexes and veto data the live lookup accepts"*. Both halves of that
+        warning were ANSWERED rather than overruled: the index turned out to
+        already exist (``dna_insts_spec_gin_idx``, baseline revision 0001), and
+        the veto is refused — which is what ``enforced is False`` pins here.
+
+        If ``enforced`` ever flips to True, a ``PlanBinding.tier_id: pro`` —
+        a value ``kernel.tier()`` resolves through ``spec.aliases[]`` — starts
+        refusing writes the runtime itself honors.
+        """
         rel = normalize_relations({
             "workspace_id": _rel(to="Workspace", by="workspace_id"),
         })["workspace_id"]
         assert rel.by == "workspace_id"
-        assert rel.resolved is False
+        assert rel.by_key is True
+        assert rel.by_name is False
+        assert rel.resolved is True, "the kernel FOLLOWS a by-key relation"
+        assert rel.enforced is False, (
+            "a by-key miss must never veto a write — the alias-tolerant live "
+            "lookups accept addresses this resolver cannot see"
+        )
+
+    def test_by_name_and_enforced_are_two_questions_that_happen_to_agree(self):
+        """⚠️ The pair that a rename and a veto each ask, separately.
+
+        They return the same answer for every declaration that exists today,
+        which is exactly what makes collapsing them tempting and what makes
+        collapsing them dangerous: ``dna rename`` asks "is this value a NAME?"
+        and the validator asks "does a miss REFUSE?". Fatia 5 already split
+        ``resolved`` off from both. The day a by-key relation earns a veto,
+        precisely one of these two flips — and if the code had one property
+        doing both jobs, the rename would start rewriting keys."""
+        by_name = normalize_relations({"r": _rel()})["r"]
+        by_key = normalize_relations({
+            "k": _rel(to="Workspace", by="workspace_id"),
+        })["k"]
+        composite = normalize_relations({
+            "c": _rel(to=ANY_TARGET, cardinality="many", by="Kind:name"),
+        })["c"]
+        assert (by_name.by_name, by_name.enforced, by_name.resolved) == (
+            True, True, True)
+        assert (by_key.by_name, by_key.enforced, by_key.resolved) == (
+            False, False, True)
+        assert (composite.by_name, composite.enforced, composite.resolved) == (
+            False, False, False)
 
     def test_a_star_relation_is_declared_but_NOT_resolved(self):
         rel = normalize_relations({
@@ -148,6 +217,17 @@ class TestResolvedIsTheRuntimePromise:
         })["r"]
         assert rel.carries_kind is True
         assert rel.polymorphic is True
+        assert rel.resolved is False
+
+    def test_TYPING_a_composite_does_not_start_resolving_it(self):
+        """Declaring the targets buys the GRAPH a typed edge, and nothing else.
+        If this flips to True the write path starts parsing `Story/s-x` and
+        vetoing every instance written before the form was agreed — the same
+        second-resolution-rule trap `by: <key>` was held back from."""
+        rel = normalize_relations({
+            "verifies": _rel(to=["Feature", "Story"], cardinality="many",
+                             by="Kind/name"),
+        })["verifies"]
         assert rel.resolved is False
 
 
@@ -191,6 +271,7 @@ class TestNormalize:
             _rel(to=["Plan", "Spec"], cardinality="many"),
             _rel(to=ANY_TARGET, cardinality="many", by="{kind, name}"),
             _rel(to="Workspace", by="workspace_id"),
+            _rel(to=["Issue", "Story"], cardinality="many", by="Kind/name"),
         ):
             first = normalize_relations({"r": raw})["r"]
             again = normalize_relations({"r": first.to_declaration()})["r"]
@@ -239,7 +320,7 @@ class TestRelationValues:
         assert relation_values(rel, {"r": [" a ", 3, None, "b"]}) == ["a", "b"]
 
     def test_a_scalar_is_read_from_a_many_relation_and_vice_versa(self):
-        """Cardinality is a MODEL statement; a document contradicting it is
+        """Cardinality is a MODEL statement; an instance contradicting it is
         the schema's business, and giving one mistake two error messages from
         two layers is worse than tolerating it here."""
         many = normalize_relations({"r": _rel(cardinality="many")})["r"]

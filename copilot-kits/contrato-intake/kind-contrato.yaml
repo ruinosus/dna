@@ -29,7 +29,7 @@ spec:
     properties:
       titulo:
         type: string
-        description: O título do contrato, como aparece no documento.
+        description: O título do contrato, como aparece na instância.
       contratante:
         type: string
         description: Quem contrata (razão social ou nome).

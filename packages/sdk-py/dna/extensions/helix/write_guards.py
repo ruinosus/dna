@@ -1,6 +1,6 @@
 """Helix-owned write-path guards (s-write-path-despecialize).
 
-These rules used to live inline in ``Kernel._write_document_inner`` as
+These rules used to live inline in ``Kernel._write_instance_inner`` as
 ``kind == "Agent"`` special-cases — extension domain knowledge leaked
 into the microkernel. They are now ``pre_save`` VETO hooks registered by
 ``HelixExtension.register`` (the extension that owns Agent):
@@ -17,7 +17,7 @@ into the microkernel. They are now ``pre_save`` VETO hooks registered by
   ``writes_kind`` must satisfy the slot↔schema contract at write time.
 
 A raise from a guard vetoes the write (nothing is persisted). The hooks fire
-for EVERY ``kernel.write_document`` regardless of ``skip_hooks`` — they are
+for EVERY ``kernel.write_instance`` regardless of ``skip_hooks`` — they are
 integrity gates, not notifications.
 """
 from __future__ import annotations
@@ -46,7 +46,7 @@ def platform_agent_fork_guard(ctx: PreSaveContext) -> None:
     """Block per-tenant overlays of ``_lib`` Agents.
 
     The `_lib` scope is the shared baseline (jarvis + the 12 transversais);
-    its Agents are edited in git + ``dna doc apply --scope _lib``
+    its Agents are edited in git + ``dna instance apply --scope _lib``
     (base only). A per-tenant overlay silently FORKS the persona and shadows
     the base for that tenant's reads — the root cause of the JARVIS 16384
     outage (2026-05-29) and the stale-persona bug (2026-06-14,
@@ -58,7 +58,7 @@ def platform_agent_fork_guard(ctx: PreSaveContext) -> None:
         raise TenantNotAllowed(
             f"refusing a per-tenant overlay of the _lib agent {ctx.name!r} "
             f"(tenant={ctx.tenant!r}). _lib agents are base-only — "
-            f"edit in git + `dna doc apply --scope _lib`. A tenant fork "
+            f"edit in git + `dna instance apply --scope _lib`. A tenant fork "
             f"shadows the base persona for that tenant (JARVIS 16384 outage)."
         )
 
@@ -169,7 +169,7 @@ def kind_writer_contract_guard(ctx: PreSaveContext) -> None:
     """Validate a Kind-Writer Agent's slot↔schema contract.
 
     A Agent that declares ``writes_kind`` is a Kind-Writer: it emits
-    a structured document of the target Kind. Validate the contract at
+    a structured instance of the target Kind. Validate the contract at
     write time (fail early), not at runtime (feat/kind-writer-pilot, Task 2).
     """
     if ctx.kind != _KIND or not isinstance(ctx.raw, dict):

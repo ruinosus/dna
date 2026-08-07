@@ -61,7 +61,7 @@ def _mk_scope(tmp_path: Path, *, layout: str | None, prompt_template: str | None
 def _build(tmp_path, **kw) -> str:
     _mk_scope(tmp_path, **kw)
     mi = Kernel.quick("layout-scope", base_dir=str(tmp_path))
-    _ = mi.documents
+    _ = mi.instances
     return mi.build_prompt(agent="a1")
 
 

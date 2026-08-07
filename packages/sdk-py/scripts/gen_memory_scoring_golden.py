@@ -109,8 +109,8 @@ def build() -> dict:
     # by construction), so these cases pin cosine + engram_text + the full
     # fused ranking end to end.
     cos_cases = [
-        ("mutating documents safely", "deep copy before mutating documents"),
-        ("mutating documents safely", "banana tropical smoothie"),
+        ("mutating instances safely", "deep copy before mutating instances"),
+        ("mutating instances safely", "banana tropical smoothie"),
         ("reciprocal rank fusion", "reciprocal rank fusion"),
         ("", "anything at all"),
     ]
@@ -130,7 +130,7 @@ def build() -> dict:
 
     engrams = [
         {"name": "rem-target", "spec": {
-            "area": "Feature/kernel", "summary": "deep-copy before mutating documents",
+            "area": "Feature/kernel", "summary": "deep-copy before mutating instances",
             "created_at": "2026-07-01T00:00:00+00:00"}},
         {"name": "rem-decoy", "spec": {
             "area": "Feature/ops", "summary": "safely archive old reports nightly",
@@ -144,7 +144,7 @@ def build() -> dict:
         {"name": "rem-target", "score": 0.033},
         {"name": "rem-noise", "score": 0.020},
     ]
-    query = "mutating documents safely"
+    query = "mutating instances safely"
     refs = [EngramRef(e["name"], e["spec"]) for e in engrams]
     sem = semantic_scores_from_vectors(
         [e["name"] for e in engrams],

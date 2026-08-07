@@ -12,15 +12,17 @@
 #     exists now; the port rebuilds the real dataclass, so /kinds/manifest
 #     output is byte-identical to the class version.
 #
-#  2. `schema_fragments: [sdlc/work-item-activity]` — the FIRST descriptor in
-#     the repo to reference a schema fragment. `timeline` and `produces` are
-#     deliberately ABSENT from the properties below: they are merged in from
-#     the LIVE _timeline_field_schema() / _produces_field_schema() helpers that
-#     Bug, Task, Spike, Issue, Feature and Epic (still classes) also call. A
-#     frozen YAML copy would fork the timeline contract the moment someone adds
-#     a TIMELINE_TYPE — which is precisely the objection the ratchet recorded
-#     against migrating sdlc-spike. The fragment answers it.
-#     Kind-declared properties win over fragment ones, so a Kind can still
+#  2. `timeline` and `produces` are deliberately ABSENT from the properties
+#     below: they are merged in from the LIVE _timeline_field_schema() /
+#     _produces_field_schema() helpers that Bug, Task, Spike, Issue, Feature and
+#     Epic (still classes) also call. A frozen YAML copy would fork the timeline
+#     contract the moment someone adds a TIMELINE_TYPE — which is precisely the
+#     objection the ratchet recorded against migrating sdlc-spike.
+#     Story was the FIRST descriptor in the repo to name a schema fragment
+#     (`schema_fragments: [sdlc/work-item-activity]`). It no longer names one:
+#     `sdlc.work-item` carries the fragment, so declaring the trait IS declaring
+#     the fields, and the two can no longer be declared apart.
+#     Kind-declared properties still win over fragment ones, so a Kind can
 #     specialize a merged field.
 #
 # `summary` is the class's projection, term for term: spec_refs was
@@ -28,7 +30,7 @@
 #
 # Equivalence with the extinct class — identity, every flag, StudioUIMetadata,
 # storage, dep_filters, deep schema, and summary/describe/canonical_digest over
-# REAL documents from this repo's board — is frozen in
+# REAL instances from this repo's board — is frozen in
 # tests/test_descriptor_pattern_equivalence.py.
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
@@ -55,20 +57,21 @@ spec:
     owner: helix-actor
     dependencies: sdlc-story
     spec_refs: sdlc-spec
-  schema_fragments:
-  - sdlc/work-item-activity
+  # `schema_fragments: [sdlc/work-item-activity]` was here, next to the
+  # `sdlc.work-item` trait that MEANS it. Both are gone: the trait now carries
+  # the fragment, so `timeline` + `produces` still arrive from the LIVE helpers
+  # and the port still reports `sdlc/work-item-activity` in `schema_fragments`
+  # — now with `schema_provenance` naming the trait that brought it, which the
+  # hand-written copy could never say.
   relations:
     dependencies:
       to: Story
       cardinality: many
-    # `produces` arrives through the `sdlc/work-item-activity` fragment, so it
-    # is NOT in the schema block below — the port merges it in. The relation is
-    # declared here anyway, because a relation belongs to the Kind and not to
-    # whichever file its property happened to come from.
-    produces:
-      to: '*'
-      cardinality: many
-      by: '{kind, name}'
+    # `produces` is NOT declared here either. It was one of seven byte-identical
+    # copies of one sentence — the sentence `sdlc.work-item` exists to say — and
+    # the trait has carried it since a0822a34. The reason it stays `to: '*'`
+    # lives with the declaration that survived: `_PRODUCES_RELATION` in
+    # `extensions/sdlc/__init__.py`.
     feature:
       to: Feature
       cardinality: one
@@ -198,7 +201,7 @@ spec:
       sprint_ref:
         type: string
         description: The Sprint this Story is committed to — the Sprint
-          document's NAME, which is also its sprint_id (e.g. '2026-Q2-S2').
+          instance's NAME, which is also its sprint_id (e.g. '2026-Q2-S2').
           DECLARED (i-040), so the write path resolves it instead of trusting
           a label. The value SHAPE did not change on 2026-08-06; a `Sprint`
           Kind simply started existing for the identifier to name.

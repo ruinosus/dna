@@ -2,7 +2,7 @@
 """Deterministically dump the DNA REST read-API's OpenAPI schema.
 
 The DNA REST API (``dna_cli._rest_api``) is a FastAPI app; FastAPI auto-emits an
-OpenAPI document from its routes. That document is the GENERATION SOURCE for the
+OpenAPI instance from its routes. That instance is the GENERATION SOURCE for the
 official DNA API clients (``packages/client-ts`` + ``packages/client-py``): the
 clients are generated from it, so they never drift from the live routes.
 
@@ -32,7 +32,7 @@ SPEC_PATH = Path(__file__).resolve().parent.parent / "docs" / "openapi.json"
 
 
 def build_schema() -> dict:
-    """Build the FastAPI app and return its OpenAPI document (a plain dict)."""
+    """Build the FastAPI app and return its OpenAPI instance (a plain dict)."""
     from dna_cli._rest_api import build_app
 
     return build_app().openapi()

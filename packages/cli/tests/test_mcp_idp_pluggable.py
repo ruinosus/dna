@@ -300,7 +300,7 @@ def test_cross_tenant_denied_multi_provider(dna_dir, http_server):
 def test_prm_advertises_all_provider_issuers(dna_dir, http_server, free_port):
     """Wrapped as a Resource Server, the multi-provider layer advertises PRM
     (RFC 9728) listing EVERY configured provider's issuer as an authorization
-    server — one discovery document, N providers."""
+    server — one discovery instance, N providers."""
     import httpx
 
     providers, _, _, _ = _two_providers_and_mints()

@@ -79,10 +79,10 @@ keeps the shared template:
 
 ```console
 # base team template
-$ dna doc apply --scope my-team speckit-spec-template.prompt
+$ dna instance apply --scope my-team speckit-spec-template.prompt
 
 # ACME's house override of the SAME template (overlay — base untouched)
-$ DNA_TENANT=acme dna doc apply --scope my-team speckit-spec-template.prompt
+$ DNA_TENANT=acme dna instance apply --scope my-team speckit-spec-template.prompt
 ```
 
 `get_template("speckit-spec-template", tenant="acme")` now returns ACME's body;
@@ -101,7 +101,7 @@ Those defaults are declared (`dna.prompt_defaults`) and served by the same two
 tools, so **an unauthored template is not an error**:
 
 ```jsonc
-// get_template("memory-recall-briefing")  — on a scope with no documents
+// get_template("memory-recall-briefing")  — on a scope with no instances
 {
   "name": "memory-recall-briefing",
   "body": "Memórias já registradas deste workspace, ...\n{memories}\n...",
@@ -114,14 +114,14 @@ tools, so **an unauthored template is not an error**:
 ```
 
 Every reply from `list_templates` / `get_template` / `list_skills` /
-`get_skill` carries an **`origin`**: `document` (someone authored it — tenant
+`get_skill` carries an **`origin`**: `instance` (someone authored it — tenant
 overlay or scope base) or `runtime-default` (nobody has; this is the text that
 runs). Only a name that is *neither* raises, and that error lists the runtime
 defaults that do exist.
 
 Two consequences worth knowing:
 
-* **The document always wins.** Authoring one flips `origin` to `document` and
+* **The instance always wins.** Authoring one flips `origin` to `instance` and
   the name appears once, not twice, in the listing.
 * **An override byte-identical to the default is treated as no override.**
   The ingestion prompts interpolate the workspace's `CognitivePolicy` (its
@@ -139,15 +139,15 @@ deploy*:
 
 - With `severity: hard`, a governed spec-kit `Story`/`Plan` written into the
   scope **must trace to a Spec** (`spec_refs` / `spec_ref`) — otherwise the write
-  is **vetoed** by DNA's `kernel.write_document` guard.
+  is **vetoed** by DNA's `kernel.write_instance` guard.
 - Softer severities (`warn`/`error`) warn but allow; no constitution passes.
 
 ```console
 # tighten governance live — the next non-traceable spec-kit write is refused
-$ dna doc apply --scope my-team speckit-constitution.guardrail   # severity: hard
+$ dna instance apply --scope my-team speckit-constitution.guardrail   # severity: hard
 
 # loosen it again with zero redeploy — writes flow, advisory only
-$ dna doc apply --scope my-team speckit-constitution.guardrail   # severity: warn
+$ dna instance apply --scope my-team speckit-constitution.guardrail   # severity: warn
 ```
 
 Governance stops being a markdown file you hope people read and becomes policy

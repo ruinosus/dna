@@ -281,7 +281,7 @@ EXTENSIONS_ENTRY_POINT_GROUP = "dna.extensions"
 # Phase 16 — bootstrap kinds
 #
 # Kinds the kernel needs registered/parsed BEFORE ``load_all`` fires.
-# ``SourcePort.load_bootstrap_docs`` returns documents of these kinds
+# ``SourcePort.load_bootstrap_docs`` returns instances of these kinds
 # in priority order; adapters that can filter cheaply (SQL ``WHERE
 # kind IN (...)``) SHOULD do so. Adapters that scan everything anyway
 # (filesystem) MAY return a superset; the kernel filters defensively.
@@ -328,8 +328,8 @@ all installed extensions automatically.
 # ---------------------------------------------------------------------------
 
 class LayerPolicy(str, Enum):
-    """Controls what a layer overlay can do to a kind's documents."""
-    OPEN = "open"            # Deep merge spec, can add new documents
+    """Controls what a layer overlay can do to a kind's instances."""
+    OPEN = "open"            # Deep merge spec, can add new instances
     RESTRICTED = "restricted" # Only override existing keys in spec, can't add new docs
     LOCKED = "locked"        # Block all changes (warn only)
 
@@ -339,15 +339,15 @@ class LayerPolicy(str, Enum):
 # ---------------------------------------------------------------------------
 
 class TenantScope(str, Enum):
-    """Whether a Kind's documents belong to a tenant or are globally shared.
+    """Whether a Kind's instances belong to a tenant or are globally shared.
 
     Mirrors the Kubernetes CRD ``scope: Namespaced | Cluster`` model. Each
     KindPort declares its scope; the kernel enforces it on every write.
 
-    - ``TENANTED`` (default): documents belong to one tenant. Writing
+    - ``TENANTED`` (default): instances belong to one tenant. Writing
       requires a tenant arg; reading is filtered by tenant. Agent,
       EvalCase, EvalRun, AssessmentRun, Finding, etc.
-    - ``GLOBAL``: documents are shared across all tenants. Writes must
+    - ``GLOBAL``: instances are shared across all tenants. Writes must
       not pass a tenant; reads ignore the bound tenant. Doc,
       KindDefinition, Module-level configs, etc.
     """
@@ -387,7 +387,7 @@ class TenantRequired(KernelRefusal):
     """Raised when a TENANTED kind is written without a tenant arg.
 
     Bind a tenant on construction (``Kernel(tenant=X)``) or per-call
-    (``kernel.with_tenant(X).write_document(...)``).
+    (``kernel.with_tenant(X).write_instance(...)``).
     """
 
 
@@ -400,13 +400,13 @@ class TenantNotAllowed(KernelRefusal):
 
 
 class SpecValidationError(ValueError, KernelRefusal):
-    """Raised when ``write_document`` vetoes a doc whose ``spec`` violates
+    """Raised when ``write_instance`` vetoes a doc whose ``spec`` violates
     the Kind's declared JSON Schema (``KindPort.schema()``).
 
     s-write-path-validation (i-008): the kernel used to validate schemas
     only at SCAN/read (the fail-soft ``parse_error`` channel) — a
     shape-broken doc would persist and explode later, far from the author.
-    Now every ``write_document`` validates the spec at write time when the
+    Now every ``write_instance`` validates the spec at write time when the
     Kind declares a schema; Kinds without a schema stay permissive.
 
     Subclasses ``ValueError`` so existing callers that treat write-path
@@ -430,7 +430,7 @@ class InvalidTenantSlug(KernelRefusal, ValueError):
     _system), TRAVERSING (contains ``/``, ``\\`` or NUL, or is ``.`` / ``..``),
     or outside the length bound.
 
-    Also a ``ValueError``, for the same reason ``InvalidDocumentName`` and
+    Also a ``ValueError``, for the same reason ``InvalidInstanceName`` and
     ``InvalidScopeName`` are (``606812c``): a security refusal must be caught
     by faces that still enumerate ``(ValueError, LookupError, PermissionError)``
     as well as by those that catch the ``KernelRefusal`` marker. It matters
@@ -447,7 +447,7 @@ def validate_tenant_slug(tenant: str | None, *, allow_personal: bool = False) ->
     component.
 
     THE RULE IS "CANNOT ESCAPE", NEVER A CHARSET — the same rule the rest of
-    this family holds (``validate_document_name`` / ``validate_scope_name`` /
+    this family holds (``validate_instance_name`` / ``validate_scope_name`` /
     ``validate_bundle_entry``). Character rules (DNS-label, lowercase) are
     still NOT enforced, so uppercase legacy slugs (``T1``, ``Acme``) and dotted
     ones (``t-1a2b3c.node.internal``) keep working; what is refused is the
@@ -464,7 +464,7 @@ def validate_tenant_slug(tenant: str | None, *, allow_personal: bool = False) ->
     path goes through one. This one did not.
 
     MEASURED BEFORE CONSTRAINING, the way the earlier waves measured 1139
-    document names and 492 bundle entries. **33 distinct real tenant slugs**
+    instance names and 492 bundle entries. **33 distinct real tenant slugs**
     across both repos — 3 on-disk ``tenants/`` directories (``acme``, ``demo``,
     ``personal%3Alocal-user``) plus 31 slug literals in ``.py`` / ``.yaml`` /
     ``.json`` / ``.ts`` (``T1``, ``Acme``, ``ws-acme``, ``t-1a2b3c.node.internal``,
@@ -537,7 +537,7 @@ class LayerPolicyViolationError(KernelRefusal):
       that only override existing keys are allowed.
     - OPEN: never raises.
 
-    Raised by ``Kernel.write_document`` before the adapter is touched.
+    Raised by ``Kernel.write_instance`` before the adapter is touched.
     Harness endpoints translate this to HTTP 403.
     """
     pass
@@ -613,14 +613,14 @@ class ResolveNetworkError(ResolveError):
 
 @runtime_checkable
 class SourcePort(Protocol):
-    """WHERE — load documents from storage."""
+    """WHERE — load instances from storage."""
 
     @property
     def supports_readers(self) -> bool:
         """Whether this source uses ReaderPort plugins to detect bundles.
 
         Filesystem sources return True (they walk directories).
-        Database sources return False (documents are self-contained JSON).
+        Database sources return False (instances are self-contained JSON).
         Used by Kernel.auto() to decide whether to wire cache + resolvers.
         """
         return False
@@ -718,7 +718,7 @@ class SourcePort(Protocol):
         ``api_version`` resolves the Kind EXACTLY. A Kind is identified by
         ``(apiVersion, kind)``, and a store whose row key carries that identity
         (``SourceCapabilities.api_version_identity``) can really hold two
-        workspaces' ``Deal`` documents under one name — a bare lookup then
+        workspaces' ``Deal`` instances under one name — a bare lookup then
         answers with whichever row comes back first. Optional, and declared
         through that capability: an adapter whose identity is mediated
         otherwise (the filesystem's ``<container>/<name>`` path, resolved
@@ -898,8 +898,8 @@ class RecordSearchProvider(Protocol):
 # near-verbatim copy of the writable-source contract (its own docstring
 # admitted: "NÃO é uma interface nova... FORMALIZA o contrato que os sources
 # writáveis já satisfazem"). s-sourceport-contract-cleanup unified the two:
-# ``WritableSourcePort`` IS the single contract (save_document /
-# delete_document / query / count — identical signatures). ``RecordStorePort``
+# ``WritableSourcePort`` IS the single contract (save_instance /
+# delete_instance / query / count — identical signatures). ``RecordStorePort``
 # survives as a deprecated module-level alias (see ``__getattr__`` at the
 # bottom of this file); the fifth record-plane operation, ``search``, still
 # lives on ``RecordSearchProvider`` registered on the kernel.
@@ -1000,7 +1000,7 @@ class WriterPort(Protocol):
     ``Path``; same source-agnostic contract.
 
     s-dna-rw-roundtrip-suite — ``serialize`` is part of the contract
-    (it was load-bearing but informal: ``kernel.serialize_document``
+    (it was load-bearing but informal: ``kernel.serialize_instance``
     consumed it via ``hasattr``, so a Protocol-conforming writer could
     silently miss it and only fail at emission time).
 
@@ -1102,7 +1102,7 @@ class ToolDefinition:
 # ---------------------------------------------------------------------------
 
 class StoragePattern(StrEnum):
-    """How a kind's documents are laid out on the filesystem."""
+    """How a kind's instances are laid out on the filesystem."""
     BUNDLE = "bundle"       # Directory with a marker file (e.g. SKILL.md)
     YAML = "yaml"           # Plain YAML files inside a container directory
     ROOT = "root"           # Single root file (e.g. manifest.yaml)
@@ -1118,7 +1118,7 @@ class BodyMode(StrEnum):
 
 @dataclass
 class StorageDescriptor:
-    """Declares how a kind's documents are stored on the filesystem.
+    """Declares how a kind's instances are stored on the filesystem.
 
     Used by writers, readers, and the Studio UI to understand the
     canonical layout for each kind without hardcoded maps.
@@ -1243,7 +1243,7 @@ class KindPort(Protocol):
     prompt_target_priority: int
     flatten_in_context: bool
 
-    # ``is_runtime_artifact`` — True for Kinds whose documents are
+    # ``is_runtime_artifact`` — True for Kinds whose instances are
     # produced by runtime workflows (eval engine, GAIA pipeline,
     # autolab loop, evidence-capture hooks, etc.) rather than authored
     # as source-of-truth. Tools that replicate "the inputs to the
@@ -1567,7 +1567,7 @@ class WritableSourcePort(SourcePort, Protocol):
     user) — when both are passed the adapter combines them.
     """
 
-    async def save_document(
+    async def save_instance(
         self, scope: str, kind: str, name: str, raw: dict,
         author: str | None = None,
         *,
@@ -1579,10 +1579,10 @@ class WritableSourcePort(SourcePort, Protocol):
         if_match: str | None = None,
         edges: list | None = None,
     ) -> str:
-        """Persist one document (an UPSERT by default).
+        """Persist one instance (an UPSERT by default).
 
         ``if_absent=True`` makes it an ATOMIC CREATE: the write claims the name
-        or raises ``dna.kernel.errors.DocumentNameTaken``, never overwrites.
+        or raises ``dna.kernel.errors.InstanceNameTaken``, never overwrites.
         Read-then-write cannot give that guarantee — two callers can both read
         "free" in the same instant — and the two shipped adapters can: a
         composite primary key on the SQL side, ``O_CREAT|O_EXCL`` (files) or
@@ -1590,44 +1590,44 @@ class WritableSourcePort(SourcePort, Protocol):
         ``SourceCapabilities.write_kwargs``.
 
         ``if_match`` is the same guarantee for an UPDATE (i-083): the write
-        proceeds only if the STORED document's ``spec`` still hashes to the
+        proceeds only if the STORED instance's ``spec`` still hashes to the
         given token (:func:`dna.kernel.etag.spec_etag`), else
-        :class:`dna.kernel.errors.StaleDocumentWrite`, and nothing is written.
-        The adapter must read the stored document ITSELF — reading it back
+        :class:`dna.kernel.errors.StaleInstanceWrite`, and nothing is written.
+        The adapter must read the stored instance ITSELF — reading it back
         through a cache the caller already consulted would compare a stale value
         against itself and agree, which is exactly the lost update i-083
         measured. Also optional and declared the same way. ``if_absent`` and
-        ``if_match`` are mutually exclusive: one asserts the document is absent,
+        ``if_match`` are mutually exclusive: one asserts the instance is absent,
         the other that it is present and unchanged.
 
-        ``edges`` carries the DERIVED reference graph of this document — the
+        ``edges`` carries the DERIVED reference graph of this instance — the
         ``x-dna-ref`` targets the write path already resolved while validating
         them (:func:`dna.kernel.query.references.resolve_declared_edges`). An
-        adapter that declares the kwarg replaces this document's outgoing edges
-        INSIDE the same transaction as the document itself, so the two become
+        adapter that declares the kwarg replaces this instance's outgoing edges
+        INSIDE the same transaction as the instance itself, so the two become
         true together; one that does not declare it is never handed them, and
         the graph face answers ``unsupported`` for that store rather than an
         empty edge list.
 
         Three values, three meanings, and the middle one is load-bearing:
         a LIST replaces the stored edges (an empty list therefore REMOVES them,
-        which is how a document that stopped referencing anything stops having
+        which is how an instance that stopped referencing anything stops having
         relations); ``None`` means the kernel has nothing trustworthy to say —
         the producer is off, or a read failed part-way — and the stored edges
         must be LEFT ALONE, because an old known-good edge set beats a fresh
         partial one."""
         ...
 
-    async def delete_document(
+    async def delete_instance(
         self, scope: str, kind: str, name: str,
         *,
         tenant: str | None = None,
         layer: tuple[str, str] | None = None,
         api_version: str | None = None,
     ) -> None:
-        """Delete one document.
+        """Delete one instance.
 
-        ``api_version`` resolves the Kind EXACTLY. A delete carries no document,
+        ``api_version`` resolves the Kind EXACTLY. A delete carries no instance,
         so it used to route by bare Kind NAME — and two workspaces may each
         declare a ``Deal`` under their own namespace, which is precisely what
         namespacing the apiVersion is for. A bare lookup then resolves whichever
@@ -1756,7 +1756,7 @@ def __getattr__(name: str):
         warnings.warn(
             "RecordStorePort is deprecated (s-sourceport-contract-cleanup): "
             "the record-plane contract was unified into WritableSourcePort "
-            "(identical save_document/delete_document/query/count "
+            "(identical save_instance/delete_instance/query/count "
             "signatures). Import WritableSourcePort instead.",
             DeprecationWarning,
             stacklevel=2,

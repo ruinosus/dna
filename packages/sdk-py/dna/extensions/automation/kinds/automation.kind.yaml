@@ -29,6 +29,53 @@
 #   - runner kind ``engine`` — upstream cognitive engines; DNA runners are
 #     the real Kinds Agent (kind=agent) and Tool (kind=tool).
 #
+# ── Island, and the ONE case in i-119 group C that is a founder decision ─────
+# (06/08/2026.) Three fields here point at something. None of them can be
+# declared today, and the three reasons are three different gaps:
+#
+# 1. `result_kind` names a KIND, not an instance. This is i-119's first
+#    vocabulary gap, and it was measured rather than assumed. The obvious
+#    escape — "a Kind IS an instance, so say `to: KindDefinition`" — was
+#    checked against the live registry and is FALSE for most of the universe:
+#      * 84 Kinds are registered; 47 of them are backed by a `*.kind.yaml`
+#        descriptor and 37 are Python `KindBase` classes with no descriptor at
+#        all. `Research` — one of the two Kinds this field's own description
+#        offers as an example — is in the 37.
+#      * even for the 47, the descriptor is PACKAGE DATA registered at load,
+#        not a stored instance. `dna_instances` holds 6 KindDefinition rows in
+#        production (all tenant-authored) and this repo has exactly one
+#        authored outside package data (`copilot-kits/contrato-intake/`).
+#      * and the address would be wrong anyway: the value is the Kind NAME
+#        (`Research`), while a descriptor's `metadata.name` is its slug
+#        (`automation`, not `Automation`). `by: name` is simply a different
+#        string; `by: target_kind` would be the honest address and would still
+#        resolve for a minority.
+#    A relation true for 56% of its targets is worse than none — it makes the
+#    graph look answered. So this needs a WORD, and a word is the founder's.
+#    Proposed, not installed: a fourth `to` form alongside a Kind name, a list
+#    and `"*"` — `to: "@kind"` (or the spelled-out `kind_registry`), meaning
+#    "the value is the NAME OF A KIND, resolved against the registry, never
+#    against an instance". It would be RESOLVABLE, unlike every other
+#    non-`name` addressing here — `kernel.kind_ports()` answers it with no
+#    store read and no index — which is exactly why it deserves its own token
+#    rather than being smuggled in as `to: KindDefinition`. It would close
+#    `Automation.result_kind`, `RemoteAgent.data_scope.kinds`,
+#    `AgentGrant.scope_kinds` and `AuditLog.target_kind` in one decision.
+#
+# 2. `runner.ref` is a real reference — "Agent name (kind=agent) or Tool name
+#    (kind=tool)" — and it is NESTED under `runner`. A relation is named by a
+#    FIRST-LEVEL spec field, which `kind_graph` already publishes as the
+#    `top_level_properties_only` coverage limit. Note it is also a
+#    discriminated pointer: `runner.kind` picks which of the two `runner.ref`
+#    names, so even hoisted it would be `to: [Agent, Tool]` with the
+#    discriminator in a sibling field — the two-field-pointer shape i-119
+#    already filed as its second gap for `AuditLog`.
+#
+# 3. `on.hook` names a kernel HOOK POINT (`KNOWN_HOOK_NAMES`), which is
+#    controlled vocabulary and not a pointer at all — the same reading that
+#    corrects `Hook.target` in `dna/extensions/hooks/__init__.py`, where i-119
+#    made the same misclassification.
+#
 # tenant_scope intentionally NOT declared — permissive (base + per-tenant
 # overlay). Automation is an inheritable `_lib` default (it is already in
 # DEFAULT_INHERITABLE_KINDS_V1); the máxima "inheritable ⇒ never TENANTED"
@@ -48,6 +95,12 @@ spec:
   target_kind: Automation
   alias: dna-automation
   origin: github.com/ruinosus/dna/automation
+  # `on` (the trigger) + `runner` (what executes) + `enabled` declare work for
+  # a host to run; the SDK validates and lists, the HOST executes. That
+  # declare-here/execute-in-the-host split IS this trait, and it is the same
+  # split TestGuide and EvalSuite make from two other extensions.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [execution.declared]
   plane: record
   prompt_target: false
   flatten_in_context: false
@@ -192,7 +245,7 @@ spec:
       result_kind:
         type: string
         description: Kind the automation output should be persisted as
-          (e.g. Research, Doc) when the runner produces a document.
+          (e.g. Research, Doc) when the runner produces an instance.
       result_spec_template:
         type: object
         additionalProperties: true
@@ -240,7 +293,7 @@ spec:
           max_fan_out:
             type: integer
             minimum: 1
-            description: Cap on documents one fire may produce.
+            description: Cap on instances one fire may produce.
           idempotency_key:
             type: string
             description: Template, e.g. '{scope}:{utc_date}'. A 2nd fire

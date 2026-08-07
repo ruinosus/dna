@@ -7,7 +7,7 @@ NAMESPACE, or two workspaces declaring ``Deal`` are the same Kind and one
 silently validates against the other's schema. The founder's decision is that
 the namespace is a **claimed, owned NAME** (``acme.example``) rather than the
 workspace id embedded in the string — see ``KindNamespace``'s descriptor for
-why (short version: the ``api_version`` participates in every document's
+why (short version: the ``api_version`` participates in every instance's
 identity, so a database id baked into it makes renaming a workspace rewrite the
 identity of everything it owns).
 

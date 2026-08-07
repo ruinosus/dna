@@ -2,8 +2,8 @@ from __future__ import annotations
 
 
 def test_mi_read_spec_returns_field(tmp_path):
-    """mi.read_spec reads a field from a specific document without
-    requiring the caller to hold a Document reference."""
+    """mi.read_spec reads a field from a specific instance without
+    requiring the caller to hold an Instance reference."""
     from dna.kernel import Kernel
     from dna.extensions.helix import HelixExtension
     from dna.extensions.agentskills import AgentSkillsExtension

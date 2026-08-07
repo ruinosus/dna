@@ -85,8 +85,24 @@ def _descriptor(**spec_extra):
 
 
 def test_descriptor_traits_reach_the_port():
+    """``port.traits`` is the CLOSURE; ``port.declared_traits`` is what was
+    typed.
+
+    This assertion used to read ``== {"sdlc.work-item", "sdlc.rollup"}`` and it
+    changed on purpose: ``sdlc.rollup`` now IMPLIES ``sdlc.work-item``, which
+    implies ``sdlc.dated``, so a lookup for "which Kinds are dated?" finds this
+    Kind without it having to restate what its role already entails. Both facts
+    stay reachable — a lookup wants the closure, a screen showing the author's
+    own words wants ``declared_traits``."""
+    from dna.kernel.kinds.traits import declared_traits_of
+
     port = _descriptor(traits=["sdlc.work-item", "sdlc.rollup"])
-    assert port.traits == frozenset({"sdlc.work-item", "sdlc.rollup"})
+    assert port.traits == frozenset(
+        {"sdlc.work-item", "sdlc.rollup", "sdlc.dated"}
+    )
+    assert declared_traits_of(port) == frozenset(
+        {"sdlc.work-item", "sdlc.rollup"}
+    )
     assert port_has_trait(port, "sdlc.work-item")
 
 

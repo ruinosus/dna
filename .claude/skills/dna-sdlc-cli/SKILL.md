@@ -6,7 +6,7 @@ description: Use whenever work in this repo needs SDLC tracking (Epic, Feature, 
 # DNA SDLC CLI — work tracker for this repo
 
 This repo dogfoods its own SDLC: Stories, Features, Epics and Issues are
-first-class DNA documents in the `dna-development` scope, stored in-repo at
+first-class DNA instances in the `dna-development` scope, stored in-repo at
 `.dna/dna-development/` (the CLI's default source `./.dna` — run `dna` from
 the repo root, no env var needed). Don't manually edit those YAMLs when
 changing status — the CLI is the canonical write path.
@@ -205,4 +205,4 @@ the cited doc gains `cited_by`) · `changelog` (release notes per scope) ·
   not the CLI).
 - Reading docs programmatically (use the SDK: `Kernel.quick(...)` /
   `mi.all("Story")`).
-- Bulk renames/deletes (use `dna doc` + a git commit, not the SDLC verbs).
+- Bulk renames/deletes (use `dna instance` + a git commit, not the SDLC verbs).

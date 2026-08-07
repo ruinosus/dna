@@ -1,8 +1,8 @@
 """Assigning a workspace its namespace — the identity half of i-080.
 
-ASSIGNED and stored, never derived. ``apiVersion`` participates in a document's
+ASSIGNED and stored, never derived. ``apiVersion`` participates in an instance's
 identity key, so a derived namespace would make renaming or migrating a
-workspace change the identity of every document in it. Nothing reads the
+workspace change the identity of every instance in it. Nothing reads the
 workspace id back out of the namespace, and the stored value survives any later
 change to the workspace.
 
@@ -16,7 +16,7 @@ off an ``apiVersion`` before looking a claim up. So a claim stored as
 The assigned value is the prefix; the apiVersion a Kind is declared under is
 ``f"{namespace}/v1"``, built by the caller.
 
-That is also what keeps the value out of trouble as a document NAME. The claim
+That is also what keeps the value out of trouble as an instance NAME. The claim
 is stored at ``_lib/kind-namespaces/<name>.yaml``; a ``/`` in the name would
 address a directory that does not exist (measured — the write raises
 ``FileNotFoundError``). A prefix has no ``/`` in it, so name and value can stay
@@ -78,7 +78,7 @@ async def assign_namespace(kernel: Any, workspace_id: str, *, now: str) -> str:
     ``KindNamespace`` descriptor says nothing constrains the count — so no
     function can return *the* one, and a function that returned whichever claim
     the registry yielded first would let two authoring sessions land Kinds under
-    two different apiVersions, which participate in document identity. So the
+    two different apiVersions, which participate in instance identity. So the
     contract is narrower and stable: candidates are filtered to the ASSIGNED
     shape (the ``.dna.local`` suffix) and reduced to the EARLIEST by
     ``claimed_at`` (namespace string as tiebreak) — literally "the namespace
@@ -96,7 +96,7 @@ async def assign_namespace(kernel: Any, workspace_id: str, *, now: str) -> str:
     if existing is not None:
         return existing
 
-    from dna.kernel.errors import DocumentNameTaken
+    from dna.kernel.errors import InstanceNameTaken
 
     for _ in range(_MINT_ATTEMPTS):
         # A short random token, not a slug of the id: the value must not invite
@@ -125,11 +125,11 @@ async def assign_namespace(kernel: Any, workspace_id: str, *, now: str) -> str:
             # workspace a namespace another one already owns. Two rows naming
             # one namespace resolve to a REFUSAL for BOTH owners, so silently
             # overwriting would take a third party down with us.
-            await kernel.write_document(
+            await kernel.write_instance(
                 SYSTEM_SCOPE, _KIND, namespace, raw,
                 invalidate_mode="doc", if_absent=True,
             )
-        except DocumentNameTaken:
+        except InstanceNameTaken:
             logger.warning(
                 "namespace assignment: minted name %r was already taken — "
                 "re-minting for workspace %r", namespace, workspace_id,
@@ -155,7 +155,7 @@ async def _stored_for(kernel: Any, workspace_id: str) -> str | None:
     A workspace may own several claims, so the unfiltered answer would depend
     on query order and could flip between two calls — see
     :func:`assign_namespace`'s docstring for why a flipping apiVersion is a
-    document-identity problem, not a cosmetic one. Reducing by ``min`` over
+    instance-identity problem, not a cosmetic one. Reducing by ``min`` over
     the namespace string would make the answer a function of the SET of
     assigned rows rather than of arrival order, which sounds like the same
     guarantee, but it is not MONOTONE under insertion: a second assigned row

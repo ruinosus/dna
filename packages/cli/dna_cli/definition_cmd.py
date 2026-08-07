@@ -80,7 +80,7 @@ def revert(kind: str, name: str, scope: str | None, tenant: str) -> None:
 
 # ── entries / entry — bundle-entry (file-grain) forking (Task 5) ───────────
 #
-# A bundle-pattern Kind (Skill, ...) stores its document as a directory of
+# A bundle-pattern Kind (Skill, ...) stores its instance as a directory of
 # files rather than one YAML doc. ``entries`` lists those files; the ``entry``
 # sub-group forks/reads/reverts ONE file at a time — the same Strain mutation
 # as `get`/`set`/`revert` above, at file grain instead of whole-spec grain.

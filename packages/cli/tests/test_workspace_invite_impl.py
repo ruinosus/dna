@@ -53,7 +53,7 @@ def _run(dna_dir, coro_factory):
 async def _seed_owner(live):
     """An active, oid-bound Owner grant for alice in ws-partner."""
     name = f"{_WS}--alice-at-a-com"
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         "_lib", "WorkspaceMembership", name,
         {
             "apiVersion": "github.com/ruinosus/dna/tenant/v1",
@@ -111,7 +111,7 @@ def test_only_owner_may_invite_owner(dna_dir):
     async def go(live):
         # Seed an ADMIN (not owner).
         name = f"{_WS}--admin-at-a-com"
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             "_lib", "WorkspaceMembership", name,
             {"apiVersion": "github.com/ruinosus/dna/tenant/v1", "kind": "WorkspaceMembership",
              "metadata": {"name": name},

@@ -2,11 +2,11 @@
 
 ``f-modelagem-das-relacoes`` says migrating our own data is part of the work,
 and that "no users" is not "no data". This module reads the repo's SDLC scope —
-hundreds of git-tracked documents — and resolves every declared relation
+hundreds of git-tracked instances — and resolves every declared relation
 against the values actually stored there.
 
 The number it exists to produce is the one nobody would believe without it:
-**zero documents changed.** A relation's NAME is the spec field holding its
+**zero instances changed.** A relation's NAME is the spec field holding its
 value, so moving the declaration out of the JSON Schema and into
 ``spec.relations`` left every stored value exactly where it was. This module is
 what turns that from an argument into a count — and, more usefully, it is what
@@ -54,7 +54,7 @@ def kernel():
 
 
 def _spec(doc) -> dict:
-    """The document's spec, whichever shape the query handed back."""
+    """The instance's spec, whichever shape the query handed back."""
     raw = doc.get("spec") if isinstance(doc, dict) else getattr(doc, "spec", None)
     return raw if isinstance(raw, dict) else {}
 
@@ -91,7 +91,7 @@ async def test_every_relation_value_is_still_where_the_declaration_says(kernel):
     missing = [p for p in _EXPECTED_PAIRS if p not in per_relation]
     assert not missing, (
         f"these relations resolved to NOTHING on a board that carries them: "
-        f"{missing}. Either the board lost the documents, or a relation's name "
+        f"{missing}. Either the board lost the instances, or a relation's name "
         f"stopped being the field that holds its value — which is the one "
         f"thing this migration promised not to change. Measured: {per_relation}"
     )

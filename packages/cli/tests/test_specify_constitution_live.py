@@ -62,14 +62,14 @@ async def _set_severity(live, severity, *, tenant=None):
                  "scope": "both", "pattern": "spec-kit"},
     }
     k = live.kernel.with_tenant(tenant) if tenant else live.kernel
-    await k.write_document("gov", "Guardrail", "speckit-constitution", raw, tenant=tenant)
+    await k.write_instance("gov", "Guardrail", "speckit-constitution", raw, tenant=tenant)
 
 
 def test_warn_constitution_allows_untraceable(gov_scope):
     """As installed (severity=warn) a non-traceable spec-kit Story is advisory."""
     async def scenario():
         live = await M.boot_live(base_dir=str(gov_scope))
-        await live.kernel.write_document("gov", "Story", "s-untraceable", _story("s-untraceable"))
+        await live.kernel.write_instance("gov", "Story", "s-untraceable", _story("s-untraceable"))
 
     asyncio.run(scenario())  # no raise
 
@@ -78,7 +78,7 @@ def test_hard_constitution_vetoes_untraceable(gov_scope):
     async def scenario():
         live = await M.boot_live(base_dir=str(gov_scope))
         await _set_severity(live, "hard")
-        await live.kernel.write_document("gov", "Story", "s-bad", _story("s-bad"))
+        await live.kernel.write_instance("gov", "Story", "s-bad", _story("s-bad"))
 
     with pytest.raises(ConstitutionViolationError, match="trace to a Spec"):
         asyncio.run(scenario())
@@ -88,7 +88,7 @@ def test_hard_constitution_allows_traceable(gov_scope):
     async def scenario():
         live = await M.boot_live(base_dir=str(gov_scope))
         await _set_severity(live, "hard")
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             "gov", "Story", "s-ok", _story("s-ok", traceable=True)
         )
 
@@ -100,7 +100,7 @@ def test_hard_constitution_ignores_non_spec_kit(gov_scope):
     async def scenario():
         live = await M.boot_live(base_dir=str(gov_scope))
         await _set_severity(live, "hard")
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             "gov", "Story", "s-plain", _story("s-plain", spec_kit=False)
         )
 
@@ -116,12 +116,12 @@ def test_no_deploy_governance_loop(gov_scope):
         await _set_severity(live, "hard")
         vetoed = False
         try:
-            await live.kernel.write_document("gov", "Story", "s-loop", _story("s-loop"))
+            await live.kernel.write_instance("gov", "Story", "s-loop", _story("s-loop"))
         except ConstitutionViolationError:
             vetoed = True
         # 2. relax to warn (no redeploy) → the SAME write now succeeds
         await _set_severity(live, "warn")
-        await live.kernel.write_document("gov", "Story", "s-loop", _story("s-loop"))
+        await live.kernel.write_instance("gov", "Story", "s-loop", _story("s-loop"))
         return vetoed
 
     assert asyncio.run(scenario()) is True
@@ -134,7 +134,7 @@ def test_hard_constitution_vetoes_plan_without_spec_ref(gov_scope):
         plan = {"apiVersion": _SDLC, "kind": "Plan", "metadata": {"name": "p-bad"},
                 "spec": {"title": "p", "status": "draft", "methodology": "spec-kit",
                          "body": "x"}}
-        await live.kernel.write_document("gov", "Plan", "p-bad", plan)
+        await live.kernel.write_instance("gov", "Plan", "p-bad", plan)
 
     with pytest.raises(ConstitutionViolationError):
         asyncio.run(scenario())

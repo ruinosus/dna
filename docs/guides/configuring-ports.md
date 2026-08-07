@@ -1,6 +1,6 @@
 # How to configure ports (`dna.config.yaml`)
 
-The kernel is a mediator over a handful of ports — where documents live
+The kernel is a mediator over a handful of ports — where instances live
 (source), how they are searched, how text is embedded. You can wire those
 imperatively, or declare them once in a `dna.config.yaml` and let
 `Kernel.from_config` do the wiring. The file is **language-agnostic**: the same
@@ -20,7 +20,7 @@ an unknown key, a missing `source`, or an out-of-enum `search`/`embedding`
 value fails loud with a didactic message rather than silently doing the wrong
 thing.
 
-### `source` — where documents live
+### `source` — where instances live
 
 | URL | Adapter |
 |---|---|

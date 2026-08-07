@@ -6,8 +6,8 @@ retained history to the last N versions (manifest-plane keeps full history), so 
 single doc rewritten thousands of times doesn't drown the authored-content trail.
 
 Tested at two levels:
-  1. adapter — ``save_document(version_retention=N)`` keeps only the last N.
-  2. kernel  — ``write_document`` of a record-plane Kind applies the cap; a
+  1. adapter — ``save_instance(version_retention=N)`` keeps only the last N.
+  2. kernel  — ``write_instance`` of a record-plane Kind applies the cap; a
      manifest-plane Kind keeps everything.
 """
 import pytest
@@ -35,7 +35,7 @@ async def src(tmp_path):
 @pytest.mark.asyncio
 async def test_retention_keeps_only_last_n(src):
     for i in range(5):
-        await src.save_document("s", "Engram", "m", {"spec": {"i": i}},
+        await src.save_instance("s", "Engram", "m", {"spec": {"i": i}},
                                 version_retention=3)
     versions = await src.list_versions("s", "Engram", "m")
     assert len(versions) == 3
@@ -46,7 +46,7 @@ async def test_retention_keeps_only_last_n(src):
 @pytest.mark.asyncio
 async def test_no_retention_keeps_full_history(src):
     for i in range(5):
-        await src.save_document("s", "Agent", "bot", {"spec": {"i": i}})
+        await src.save_instance("s", "Agent", "bot", {"spec": {"i": i}})
     versions = await src.list_versions("s", "Agent", "bot")
     assert len(versions) == 5
 
@@ -55,7 +55,7 @@ async def test_no_retention_keeps_full_history(src):
 async def test_retention_keeps_the_latest_version(src):
     """Pruning keeps the most recent version (the current doc) — never the doc."""
     for i in range(6):
-        await src.save_document("s", "Engram", "m", {"spec": {"i": i}},
+        await src.save_instance("s", "Engram", "m", {"spec": {"i": i}},
                                 version_retention=3)
     versions = await src.list_versions("s", "Engram", "m")
     assert max(v["version"] for v in versions) == 6  # the last write survives
@@ -112,8 +112,8 @@ async def test_kernel_caps_churn_kind_history(tmp_path):
     k.source(s)
     try:
         for i in range(5):
-            await k.write_document("s", "TestChurn", "r", {"spec": {"i": i}})
-            await k.write_document("s", "TestAuthored", "m", {"spec": {"i": i}})
+            await k.write_instance("s", "TestChurn", "r", {"spec": {"i": i}})
+            await k.write_instance("s", "TestAuthored", "m", {"spec": {"i": i}})
         churn = await s.list_versions("s", "TestChurn", "r")
         authored = await s.list_versions("s", "TestAuthored", "m")
         assert len(churn) == VERSION_CHURN_RETENTION  # capped via self-declared retention
@@ -164,7 +164,7 @@ async def test_kernel_caps_engram_history_via_curated_set(tmp_path):
 
         total_writes = VERSION_CHURN_RETENTION + 4
         for i in range(total_writes):
-            await k.write_document("s", "Engram", "rem-churn", _raw(i))
+            await k.write_instance("s", "Engram", "rem-churn", _raw(i))
 
         versions = await s.list_versions("s", "Engram", "rem-churn")
         assert len(versions) == VERSION_CHURN_RETENTION, (

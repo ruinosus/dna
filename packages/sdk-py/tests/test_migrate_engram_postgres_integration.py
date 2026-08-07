@@ -14,7 +14,7 @@ real — it reproduces what ``PG_MIGRATIONS`` 1..10 used to build), so
 the tables/indexes under test are byte-identical to what a production
 Postgres-backed DNA store has — never a hand-rolled subset schema. Rows are
 seeded through the SAME writer paths production traffic uses
-(``save_document`` / ``save_layer_document`` / ``write_bundle_entry``), so
+(``save_instance`` / ``save_layer_instance`` / ``write_bundle_entry``), so
 the outbox side effects, JSON envelope shape, and tenant defaulting are all
 the real thing, not a stub.
 
@@ -133,14 +133,14 @@ async def test_clean_migration_across_all_tables():
     try:
         scope = "test-scope"
 
-        # documents + versions + outbox (real side effect of save_document)
-        await src.save_document(scope, OLD_KIND, "rem-abc123", _lesson_raw("rem-abc123"))
+        # instances + versions + outbox (real side effect of save_instance)
+        await src.save_instance(scope, OLD_KIND, "rem-abc123", _lesson_raw("rem-abc123"))
         # an unrelated doc must be left completely alone
-        await src.save_document(scope, "Story", "s-unrelated", _story_raw("s-unrelated"))
+        await src.save_instance(scope, "Story", "s-unrelated", _story_raw("s-unrelated"))
 
-        # layer_documents (non-tenant layer — tenant layers route through
-        # documents.tenant instead, see save_layer_document)
-        await src.save_layer_document(
+        # layer_instances (non-tenant layer — tenant layers route through
+        # instances.tenant instead, see save_layer_instance)
+        await src.save_layer_instance(
             scope, "role", "qa", OLD_KIND, "rem-layered",
             _lesson_raw("rem-layered"),
         )
@@ -155,15 +155,15 @@ async def test_clean_migration_across_all_tables():
         conn = await asyncpg.connect(dsn)
         try:
             # snapshot the "before" timestamps to prove the minor updated_at
-            # consistency fix: dna_documents/dna_layer_documents get touched,
+            # consistency fix: dna_instances/dna_layer_instances get touched,
             # dna_versions' created_at (an immutable historical timestamp)
             # must NOT be touched by this migration.
             before_doc_updated_at = await conn.fetchval(
-                f"SELECT updated_at FROM {schema}.dna_documents "
+                f"SELECT updated_at FROM {schema}.dna_instances "
                 "WHERE scope=$1 AND name='rem-abc123'", scope,
             )
             before_layer_updated_at = await conn.fetchval(
-                f"SELECT updated_at FROM {schema}.dna_layer_documents "
+                f"SELECT updated_at FROM {schema}.dna_layer_instances "
                 "WHERE scope=$1 AND name='rem-layered'", scope,
             )
             before_version_created_at = await conn.fetchval(
@@ -177,25 +177,25 @@ async def test_clean_migration_across_all_tables():
 
         assert not report.has_collisions(), report.summary()
         assert report.applied is True
-        assert report.tables["dna_documents"].candidates == 1
+        assert report.tables["dna_instances"].candidates == 1
         assert report.tables["dna_versions"].candidates == 1
-        assert report.tables["dna_layer_documents"].candidates == 1
+        assert report.tables["dna_layer_instances"].candidates == 1
         assert report.tables["dna_bundle_entries"].candidates == 1
         assert report.tables["dna_search_docs"].skipped_missing_table is True
-        # outbox: at least the 3 substantive writes above (save_document x2
-        # incl. version insert emits once per save_document call, layer
-        # save routes through save_document too when layer_id=='tenant'
+        # outbox: at least the 3 substantive writes above (save_instance x2
+        # incl. version insert emits once per save_instance call, layer
+        # save routes through save_instance too when layer_id=='tenant'
         # only — role layer does NOT emit outbox; write_bundle_entry does
-        # not emit outbox either). At minimum the rem-abc123 save_document
+        # not emit outbox either). At minimum the rem-abc123 save_instance
         # emitted one LessonLearned outbox event.
         assert report.outbox_candidate_count >= 1
         assert report.outbox_decision == "leave-immutable"
 
         conn = await __import__("asyncpg").connect(dsn)
         try:
-            # documents: renamed
+            # instances: renamed
             row = await conn.fetchrow(
-                f"SELECT kind, content FROM {schema}.dna_documents "
+                f"SELECT kind, content FROM {schema}.dna_instances "
                 "WHERE scope=$1 AND name='rem-abc123'", scope,
             )
             assert row["kind"] == NEW_KIND
@@ -206,17 +206,17 @@ async def test_clean_migration_across_all_tables():
             assert content["spec"]["summary"] == "A test memory."  # untouched
 
             doc_updated_at = await conn.fetchval(
-                f"SELECT updated_at FROM {schema}.dna_documents "
+                f"SELECT updated_at FROM {schema}.dna_instances "
                 "WHERE scope=$1 AND name='rem-abc123'", scope,
             )
             assert doc_updated_at != before_doc_updated_at, (
-                "dna_documents.updated_at must be bumped by the rewrite — a "
+                "dna_instances.updated_at must be bumped by the rewrite — a "
                 "consumer using it as a staleness signal must see this change"
             )
 
             # unrelated Story doc untouched
             row2 = await conn.fetchrow(
-                f"SELECT kind FROM {schema}.dna_documents "
+                f"SELECT kind FROM {schema}.dna_instances "
                 "WHERE scope=$1 AND name='s-unrelated'", scope,
             )
             assert row2["kind"] == "Story"
@@ -234,10 +234,10 @@ async def test_clean_migration_across_all_tables():
                 "column exists on this table by design"
             )
 
-            # layer_documents: renamed, and updated_at bumped (same
-            # consistency fix as dna_documents).
+            # layer_instances: renamed, and updated_at bumped (same
+            # consistency fix as dna_instances).
             lrow = await conn.fetchrow(
-                f"SELECT kind, updated_at FROM {schema}.dna_layer_documents "
+                f"SELECT kind, updated_at FROM {schema}.dna_layer_instances "
                 "WHERE scope=$1 AND name='rem-layered'", scope,
             )
             assert lrow["kind"] == NEW_KIND
@@ -274,16 +274,16 @@ async def test_idempotent_rerun_is_a_noop():
     dsn, schema, src, cleanup = await _fresh_schema()
     try:
         scope = "test-scope"
-        await src.save_document(scope, OLD_KIND, "rem-abc123", _lesson_raw("rem-abc123"))
+        await src.save_instance(scope, OLD_KIND, "rem-abc123", _lesson_raw("rem-abc123"))
 
         first = await pgmig.migrate_postgres(dsn, schema=schema, apply=True)
         assert not first.has_collisions()
-        assert first.tables["dna_documents"].candidates == 1
+        assert first.tables["dna_instances"].candidates == 1
 
         second = await pgmig.migrate_postgres(dsn, schema=schema, apply=True)
         assert not second.has_collisions()
-        assert second.tables["dna_documents"].candidates == 0
-        assert second.tables["dna_documents"].already_migrated == 1
+        assert second.tables["dna_instances"].candidates == 0
+        assert second.tables["dna_instances"].already_migrated == 1
         assert second.tables["dna_versions"].candidates == 0
         assert second.tables["dna_versions"].already_migrated == 1
     finally:
@@ -300,12 +300,12 @@ async def test_collision_preflight_aborts_before_any_write():
     try:
         scope = "test-scope"
         # A candidate...
-        await src.save_document(scope, OLD_KIND, "rem-dup", _lesson_raw("rem-dup"))
+        await src.save_instance(scope, OLD_KIND, "rem-dup", _lesson_raw("rem-dup"))
         # ...and a PRE-EXISTING Engram row at the exact key it would land on.
-        await src.save_document(scope, NEW_KIND, "rem-dup", _engram_raw("rem-dup"))
+        await src.save_instance(scope, NEW_KIND, "rem-dup", _engram_raw("rem-dup"))
         # Also seed a clean, non-colliding candidate in a DIFFERENT table
         # (bundle_entries) to prove the abort is store-wide, not just the
-        # documents table.
+        # instances table.
         await src.write_bundle_entry(
             scope, "lessons-learned", "rem-clean", "LESSON_LEARNED.md",
             "# clean\n", kind=OLD_KIND,
@@ -315,14 +315,14 @@ async def test_collision_preflight_aborts_before_any_write():
 
         assert report.has_collisions()
         assert report.applied is False
-        assert ("test-scope", "rem-dup", "") in report.tables["dna_documents"].collisions
+        assert ("test-scope", "rem-dup", "") in report.tables["dna_instances"].collisions
 
         import asyncpg
         conn = await asyncpg.connect(dsn)
         try:
             # NOTHING written — the LessonLearned row is still LessonLearned.
             row = await conn.fetchrow(
-                f"SELECT kind FROM {schema}.dna_documents "
+                f"SELECT kind FROM {schema}.dna_instances "
                 "WHERE scope=$1 AND name='rem-dup' AND kind=$2", scope, OLD_KIND,
             )
             assert row is not None, "candidate row must be untouched after an aborted run"
@@ -351,19 +351,19 @@ async def test_dry_run_writes_nothing():
     dsn, schema, src, cleanup = await _fresh_schema()
     try:
         scope = "test-scope"
-        await src.save_document(scope, OLD_KIND, "rem-abc123", _lesson_raw("rem-abc123"))
+        await src.save_instance(scope, OLD_KIND, "rem-abc123", _lesson_raw("rem-abc123"))
 
         report = await pgmig.migrate_postgres(dsn, schema=schema, apply=False)
 
         assert not report.has_collisions()
         assert report.applied is False
-        assert report.tables["dna_documents"].candidates == 1
+        assert report.tables["dna_instances"].candidates == 1
 
         import asyncpg
         conn = await asyncpg.connect(dsn)
         try:
             row = await conn.fetchrow(
-                f"SELECT kind FROM {schema}.dna_documents "
+                f"SELECT kind FROM {schema}.dna_instances "
                 "WHERE scope=$1 AND name='rem-abc123'", scope,
             )
             assert row["kind"] == OLD_KIND, "dry run must not write anything"

@@ -1,6 +1,6 @@
 # Record-plane Kinds
 
-**Record-plane** Kinds are queryable data rows (SDLC work items, research, evidence, audit log, …) — first-class documents you `query`/`count` rather than fold into a prompt.
+**Record-plane** Kinds are queryable data rows (SDLC work items, research, evidence, audit log, …) — first-class instances you `query`/`count` rather than fold into a prompt.
 
 !!! info "Generated from the registered Kinds"
 
@@ -47,7 +47,7 @@ An ADR captures ONE architectural decision with its context, rationale, and cons
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
 | `client_id` | string | yes | O `client_id` OPACO que esta entrada nomeia. Um `client_id` que seja URL é recusado pelo schema: aquele resolve por CIMD, e o nome dele vem ancorado no domínio que o publica. |
-| `client_name` | string | yes | O nome legível — DIGITADO por alguém deste workspace, e a tela diz isso. Não é equivalente ao nome de um documento CIMD, e apresentá-lo como se fosse seria pior que mostrar o id cru: o id avisa que você não sabe quem é; um nome sem procedência não avisa nada. |
+| `client_name` | string | yes | O nome legível — DIGITADO por alguém deste workspace, e a tela diz isso. Não é equivalente ao nome de uma instância CIMD, e apresentá-lo como se fosse seria pior que mostrar o id cru: o id avisa que você não sabe quem é; um nome sem procedência não avisa nada. |
 | `notes` | string |  | Por que este agente existe, para quem ler a lista depois. Um campo de contexto humano, nunca de política: nada aqui é lido para decidir. |
 | `registered_at` | string |  | Quando foi cadastrado. |
 | `registered_by` | string | yes | QUEM cadastrou — o identificador durável da pessoa. Obrigatório porque é ele que torna o rótulo possível: "cadastrado por Maria" é uma frase que o usuário pode pesar; um nome sozinho, num id opaco, não é. |
@@ -65,13 +65,13 @@ An ADR captures ONE architectural decision with its context, rationale, and cons
 | --- | --- | --- | --- |
 | `call_count` | integer |  | Quantas chamadas CONCEDIDAS. Só as concedidas, pela mesma razão que a quota não conta recusa: um número que mistura uso e tentativa não responde nem "quanto ele usou" nem "quanto ele tentou". |
 | `client_id` | string | yes | O identificador do app que pede — LIDO DO TOKEN verificado, nunca de um campo do pedido. O corpo é do chamador: um `client_id` vindo dali deixaria um agente se passar por outro e usar a concessão alheia, com o token continuando válido e a chamada continuando 200. |
-| `client_name` | string |  | O nome LEGÍVEL do agente, como a tela de consentimento o exibe. Ausente quando não há nome confiável — e ausente é o default, porque um `client_id` cru é feio e HONESTO, enquanto um nome fabricado é legível e falso. Numa tela de autorização a segunda coisa é pior. ⚠️ NÃO é auto-declarado. O host só grava aqui um nome que veio ANCORADO: o `client_id` é uma URL HTTPS (CIMD, draft-ietf-oauth-client-id-metadata-document) e o nome foi lido do documento servido naquela origem. Quem controla `acme.com` é o único que pode declarar um nome em `acme.com`, e disso o DNS e o TLS já dão prova. Aceitar nome de um campo do pedido devolveria o ataque que este desenho existe para fechar: a tela do provedor, com a marca dele, no instante da autorização, exibindo a mentira com aparência oficial. A ORIGEM não é campo: ela se DERIVA do `client_id` (o host da URL), e é isso que a tela deve mostrar com o mesmo peso do nome. Um campo de domínio ao lado poderia divergir do `client_id`, e um domínio que diverge da âncora é exatamente o nome auto-declarado com outra roupa. Pela mesma razão não há campo dizendo "de onde veio o nome": com `client_id` opaco não há nome ancorado possível, então a procedência já está dita pela forma do `client_id`. CONGELADO no instante do pedido, de propósito: o registro guarda o que o humano VIU quando decidiu. Se o terceiro se renomear depois, a tela não troca por baixo de uma decisão já tomada — e a âncora, que se deriva do `client_id`, nunca envelhece. |
+| `client_name` | string |  | O nome LEGÍVEL do agente, como a tela de consentimento o exibe. Ausente quando não há nome confiável — e ausente é o default, porque um `client_id` cru é feio e HONESTO, enquanto um nome fabricado é legível e falso. Numa tela de autorização a segunda coisa é pior. ⚠️ NÃO é auto-declarado. O host só grava aqui um nome que veio ANCORADO: o `client_id` é uma URL HTTPS (CIMD, draft-ietf-oauth-client-id-metadata-instance) e o nome foi lido da instância servido naquela origem. Quem controla `acme.com` é o único que pode declarar um nome em `acme.com`, e disso o DNS e o TLS já dão prova. Aceitar nome de um campo do pedido devolveria o ataque que este desenho existe para fechar: a tela do provedor, com a marca dele, no instante da autorização, exibindo a mentira com aparência oficial. A ORIGEM não é campo: ela se DERIVA do `client_id` (o host da URL), e é isso que a tela deve mostrar com o mesmo peso do nome. Um campo de domínio ao lado poderia divergir do `client_id`, e um domínio que diverge da âncora é exatamente o nome auto-declarado com outra roupa. Pela mesma razão não há campo dizendo "de onde veio o nome": com `client_id` opaco não há nome ancorado possível, então a procedência já está dita pela forma do `client_id`. CONGELADO no instante do pedido, de propósito: o registro guarda o que o humano VIU quando decidiu. Se o terceiro se renomear depois, a tela não troca por baixo de uma decisão já tomada — e a âncora, que se deriva do `client_id`, nunca envelhece. |
 | `granted_at` | string |  | Quando um HUMANO concedeu. Ausente enquanto ninguém decidiu. |
 | `last_call_at` | string |  | A auditoria — quando este agente agiu pela última vez. |
 | `requested_at` | string |  | Quando o agente pediu — o pedido nasce da primeira recusa. |
 | `requested_scope_kinds` | array |  | O que o agente PEDIU — separado do que foi concedido, e essa separação é a regra inteira do consentimento: o agente pede, o usuário decide. Um campo só faria pedir ser igual a receber. Serve à tela, que pré-marca o pedido para o humano confirmar ou cortar. Um agente que não declara nada deixa isto vazio, e nada vem marcado: silêncio nunca vira permissão. |
 | `revoked_at` | string |  |  |
-| `scope_kinds` | array |  | Os Kinds cujos documentos este agente pode receber. Mesmo vocabulário do `RemoteAgent.data_scope.kinds`, de propósito: é a mesma pergunta nas duas direções, e responder diferente de cada lado seria uma armadilha para quem lê. AUSENTE ou VAZIO significa "nada pode". Ausência FECHA, nunca abre. |
+| `scope_kinds` | array |  | Os Kinds cujas instâncias este agente pode receber. Mesmo vocabulário do `RemoteAgent.data_scope.kinds`, de propósito: é a mesma pergunta nas duas direções, e responder diferente de cada lado seria uma armadilha para quem lê. AUSENTE ou VAZIO significa "nada pode". Ausência FECHA, nunca abre. |
 | `state` | string | yes | Tri-estado DE PROPÓSITO, como o `signature_state` do `RemoteAgent`. Um booleano `granted` faria "pediu e ninguém decidiu" parecer "negado", e são coisas diferentes: a primeira precisa APARECER numa tela para alguém decidir; a segunda já foi decidida e não pede nada. Um de: `pending`, `active`, `revoked`. |
 | `subject` | string | yes | O usuário que concede — o identificador DURÁVEL dele, não o da sessão. Durável porque a concessão sobrevive ao login: revogar um agente não é deslogar a pessoa, e as duas coisas precisam ser independentes. |
 
@@ -115,7 +115,7 @@ A AgentSession captures a developer↔AI coding conversation as a versioned proj
 - **apiVersion:** `github.com/ruinosus/dna/v1`
 - **Plane:** record
 
-An App is the NAMED composition of copilots (record plane) — the installable/sellable unit of the spec-app-como-composicao decisions (2026-08-05). A kit is the PACKAGE (how a flow ships); an App is the INSTANCE (how it is used, navigated and charged). It groups existing Copilot docs under one identity (title/description/icon), carries the plan entitlement (``requires_plan`` — enforced by the serving runtime, never by the kernel) and the console renders ``/app/<name>`` from this document alone. ``copilots`` is a declared RELATION to ``Copilot`` — the write validates existence and pickers come for free (i-040).
+An App is the NAMED composition of copilots (record plane) — the installable/sellable unit of the spec-app-como-composicao decisions (2026-08-05). A kit is the PACKAGE (how a flow ships); an App is the INSTANCE (how it is used, navigated and charged). It groups existing Copilot docs under one identity (title/description/icon), carries the plan entitlement (``requires_plan`` — enforced by the serving runtime, never by the kernel) and the console renders ``/app/<name>`` from this instance alone. ``copilots`` is a declared RELATION to ``Copilot`` — the write validates existence and pickers come for free (i-040).
 
 **Spec fields**
 
@@ -184,7 +184,7 @@ An Automation declares background work as data — ``on`` picks the trigger (cro
 | `on.primary_input` | string |  | Which input arg carries the main user content fed to an agent runner. Defaults to the first input_schema entry. |
 | `on.tool_name` | string |  | The dispatch tool the model sees (e.g. deep_research_async). |
 | `on.type` | string | yes | Um de: `cron`, `hook`, `tool`. |
-| `result_kind` | string |  | Kind the automation output should be persisted as (e.g. Research, Doc) when the runner produces a document. |
+| `result_kind` | string |  | Kind the automation output should be persisted as (e.g. Research, Doc) when the runner produces an instance. |
 | `result_spec_template` | object |  | Deterministic persist template — when an agent runner synthesizes but does not persist a doc itself, the host creates a result_kind doc from this template ({arg} fills from the args, {output} from the agent synthesis). |
 | `runner` | object | yes |  |
 | `runner.expected_output` | string |  | For an agent runner, what the agent should produce. 'slug' = persist a real domain doc (result_kind) and return its slug; 'text'/'json' = return prose/structured output inline. Hosts default to 'text'. Um de: `slug`, `json`, `text`. |
@@ -197,7 +197,7 @@ An Automation declares background work as data — ``on`` picks the trigger (cro
 | `safety.cooldown_minutes` | integer |  | Do not re-fire for the same scope within this wall-clock window. |
 | `safety.debounce_seconds` | number |  | Coalesce repeated fires within this window into one. |
 | `safety.idempotency_key` | string |  | Template, e.g. '{scope}:{utc_date}'. A 2nd fire with the same resolved key is a no-op. |
-| `safety.max_fan_out` | integer |  | Cap on documents one fire may produce. |
+| `safety.max_fan_out` | integer |  | Cap on instances one fire may produce. |
 | `safety.max_fires_per_minute` | integer |  | Circuit-breaker rate cap per (scope, automation). |
 
 ## Bug
@@ -344,7 +344,7 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 | `ingestion.arbiter_neighbors_multiplier` | integer |  | The arbiter sees a WIDER neighborhood than the reconciliation — `neighbors × multiplier` (capped below). It is deciding a conflict, so it needs more context than the pass that raised it. |
 | `ingestion.enabled` | boolean |  | Master switch. `false` stops all automatic feeding — the agent still writes memory when explicitly asked, because that path is the user's own instruction, not a policy decision. |
 | `ingestion.engine` | string |  | The reconciliation engine. `pipeline` = two fixed model calls (cheap, predictable). `pipeline-agent` = the hybrid: the fixed skeleton, but the reconciliation may ESCALATE an uncertain fact to the arbiter agent (one bounded round; the arbiter decides, the pipeline applies). `agent` = the named agent reconciles everything (reserved; not yet implemented). Um de: `pipeline`, `pipeline-agent`, `agent`. |
-| `ingestion.engine_agent` | string |  | The Agent document that arbitrates escalations (its instruction is the arbiter's role text). Empty + an escalation = the fact degrades to `none` — uncertainty without a judge never writes. |
+| `ingestion.engine_agent` | string |  | The Agent instance that arbitrates escalations (its instruction is the arbiter's role text). Empty + an escalation = the fact degrades to `none` — uncertainty without a judge never writes. |
 | `ingestion.max_arbitrations` | integer |  | Ceiling of arbiter escalations per turn (`pipeline-agent` engine). Beyond it, facts degrade to `none` — uncertainty without budget never writes. |
 | `ingestion.max_facts_per_turn` | integer |  | Ceiling of facts extracted per turn. A real conversation does not produce ten durable facts; a model returning ten is inventing — the ceiling turns that into bounded noise. |
 | `ingestion.max_transcript_chars` | integer |  | How much transcript feeds the extraction. More does not improve the fact and worsens the bill. |
@@ -355,7 +355,7 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 | `ingestion.sdlc` | object |  | The `sdlc` source cadence — how often the board is read for extraction, and how much of it. |
 | `ingestion.sdlc.interval_seconds` | integer |  | Minimum interval between board reads per workspace (default 6h). |
 | `ingestion.sdlc.max_items` | integer |  | Stories per digest — a month of board does not hold a hundred durable facts. |
-| `ingestion.sources` | array |  | WHERE facts may be extracted from. `chat` = the conversation transcript; `sdlc` = board activity; `kind:<Name>` = documents of a given Kind as they are written. A source absent from this list is NEVER read — the list is an allowlist, not a preference. Widening it is the workspace's decision, and it is the decision that governs what the agent may learn about its people. |
+| `ingestion.sources` | array |  | WHERE facts may be extracted from. `chat` = the conversation transcript; `sdlc` = board activity; `kind:<Name>` = instances of a given Kind as they are written. A source absent from this list is NEVER read — the list is an allowlist, not a preference. Widening it is the workspace's decision, and it is the decision that governs what the agent may learn about its people. |
 | `ingestion.transcript_messages` | integer |  | How many recent messages (user AND agent) form the extraction material — decisions often complete across the exchange ("pode ser 60 dias?" / "fechado, 60"). |
 | `ingestion.trigger` | string |  | `per_turn` extracts as the conversation happens (memory is immediate; costs a model call per qualifying turn). `batch` defers to a scheduled pass (cheap; memory arrives late). `off` disables extraction while leaving the rest of the policy in force. Um de: `per_turn`, `batch`, `False`. |
 | `intel` | object |  | Intel-engine tuning (#36 tail) — ranker weights, dedup threshold, feedback strengths and the portal action bar. Engine-wide per workspace; the per-SOURCE `threshold` stays on IntelSource. |
@@ -387,7 +387,7 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 | `memory.policies[].remember` | object |  | Topic steering (guidance; hard enforcement stays in the write path / Presidio). |
 | `memory.policies[].remember.always` | array |  |  |
 | `memory.policies[].remember.never` | array |  |  |
-| `methodology` | object |  | SDLC methodology gates. Read through the session kernel's document port (adapter-agnostic — filesystem, sqlite or Postgres per DNA_SOURCE_URL), so journey transitions honor it wherever the board lives. |
+| `methodology` | object |  | SDLC methodology gates. Read through the session kernel's instance port (adapter-agnostic — filesystem, sqlite or Postgres per DNA_SOURCE_URL), so journey transitions honor it wherever the board lives. |
 | `methodology.auditor_threshold` | integer |  | Ad-hoc cycles within the window that trigger the "next phase requires superpowers" gate. |
 | `methodology.auditor_window` | integer |  | How many recent cycles the auditor looks at. |
 | `owner` | string |  |  |
@@ -438,7 +438,7 @@ A Changelog records release notes per semver version per Keep a Changelog 1.1.0 
 - **apiVersion:** `github.com/ruinosus/dna/v1`
 - **Plane:** record
 
-A Copilot is a declarative, servable AG-UI copilot backend — a binder that composes one-or-more mounted Agents (each with its own Tools and optional MCPFederation) into a single servable ``/agui`` app. It carries only the copilot-level concerns that don't belong on any single Agent ``mounts`` (where agents serve), ``serving`` (the transport), ``tenant`` (inbound-tenant propagation), ``hitl`` (the approval card for gated write tools), ``knowledge`` (RAG collections + the vector store it may read), ``persistence`` (checkpoint/memory/cache/conversation storage backends), ``hosting`` (self-hosted vs a managed runtime), and ``frontend`` (console hints). Instructions and persona stay on the mounted Agent — a Copilot never re-declares them. One document emits a servable backend (Agno today), the single evolution point DNA Cloud's copilots consume. Stored as ``copilots/<name>.yaml`` — marketplace-shareable as a bundle.
+A Copilot is a declarative, servable AG-UI copilot backend — a binder that composes one-or-more mounted Agents (each with its own Tools and optional MCPFederation) into a single servable ``/agui`` app. It carries only the copilot-level concerns that don't belong on any single Agent ``mounts`` (where agents serve), ``serving`` (the transport), ``tenant`` (inbound-tenant propagation), ``hitl`` (the approval card for gated write tools), ``knowledge`` (RAG collections + the vector store it may read), ``persistence`` (checkpoint/memory/cache/conversation storage backends), ``hosting`` (self-hosted vs a managed runtime), and ``frontend`` (console hints). Instructions and persona stay on the mounted Agent — a Copilot never re-declares them. One instance emits a servable backend (Agno today), the single evolution point DNA Cloud's copilots consume. Stored as ``copilots/<name>.yaml`` — marketplace-shareable as a bundle.
 
 **Spec fields**
 
@@ -476,8 +476,8 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | `interaction.attachments.text` | object |  |  |
 | `interaction.attachments.text.extensions` | array |  |  |
 | `interaction.attachments.text.max_chars` | integer |  |  |
-| `interaction.sandbox` | object |  | The SCRIPT-EXECUTION face — the limits the copilot's OWNER declares over the isolated machine that runs a skill's scripts (renderer-first rule satisfied by dna-cloud#319, which ships the executor that reads exactly these fields). Presence of this block does NOT turn execution on: the hosting layer does, by holding a sandbox provider's credential — no credential, no execution, and this block has nothing to limit. What the block DOES is lower the ceiling. Every number here is merged DOWNWARD against the host's own operational limits and never upward, which is the property that makes reading a document safe at all: a document may be authored by a tenant, and a tenant must not be able to buy more compute by writing YAML. Only what the shipped runtime READS lives here (the F4 rule) — the upload budget is a host constant with no document reader, so it stays OUT, and declaring it is a validation error rather than a silent no-op. The provider credential never lives in the doc. |
-| `interaction.sandbox.allow_internet` | boolean |  | Egress from the sandbox, and it travels downward like the numbers: false switches egress OFF for this copilot even where the host allows it, while true grants nothing the host has not already granted. A document is never how the internet gets switched on — with egress off the sandbox cannot reach a public database endpoint either, which is half of why running someone's script is affordable. |
+| `interaction.sandbox` | object |  | The SCRIPT-EXECUTION face — the limits the copilot's OWNER declares over the isolated machine that runs a skill's scripts (renderer-first rule satisfied by dna-cloud#319, which ships the executor that reads exactly these fields). Presence of this block does NOT turn execution on: the hosting layer does, by holding a sandbox provider's credential — no credential, no execution, and this block has nothing to limit. What the block DOES is lower the ceiling. Every number here is merged DOWNWARD against the host's own operational limits and never upward, which is the property that makes reading an instance safe at all: an instance may be authored by a tenant, and a tenant must not be able to buy more compute by writing YAML. Only what the shipped runtime READS lives here (the F4 rule) — the upload budget is a host constant with no instance reader, so it stays OUT, and declaring it is a validation error rather than a silent no-op. The provider credential never lives in the doc. |
+| `interaction.sandbox.allow_internet` | boolean |  | Egress from the sandbox, and it travels downward like the numbers: false switches egress OFF for this copilot even where the host allows it, while true grants nothing the host has not already granted. An instance is never how the internet gets switched on — with egress off the sandbox cannot reach a public database endpoint either, which is half of why running someone's script is affordable. |
 | `interaction.sandbox.budget` | object |  | The cost ceiling in the unit the runtime can actually ENFORCE — seconds, by the same reasoning the sibling voice budget used; a currency cap that only notifies is a notification, not a control. |
 | `interaction.sandbox.budget.max_execute_seconds` | integer |  | Wall-clock ceiling for ONE command. The maximum is where "run a skill's script" stops and "run a job" starts; a request above it is refused here instead of being silently clamped later. |
 | `interaction.sandbox.budget.max_session_seconds` | integer |  | How long the sandbox itself lives. The provider kills it on expiry, which is why this — and not a close() somewhere — is the cost ceiling that holds even when our code forgets. |
@@ -540,7 +540,7 @@ A Copilot is a declarative, servable AG-UI copilot backend — a binder that com
 | `surfaces[].canvas_keys` | array | yes | EVERY state key this surface projects/rehydrates. The console's rehydration allowlist derives from this — a key absent here does not survive a conversation reload. |
 | `surfaces[].description` | string \| null |  | What this surface is for — shown wherever surfaces are listed. |
 | `surfaces[].guidance_template` | string \| null |  | The PromptTemplate name whose body steers the model toward this surface's tool (directed guidance). The template is the voice-as-data catalog; this names the entry. |
-| `surfaces[].kind` | string \| null |  | The target Kind whose documents this surface composes (the wizard derives its fields from this Kind's schema; the review step writes a document of it). Null for surfaces not bound to one Kind (the memory composer). |
+| `surfaces[].kind` | string \| null |  | The target Kind whose instances this surface composes (the wizard derives its fields from this Kind's schema; the review step writes an instance of it). Null for surfaces not bound to one Kind (the memory composer). |
 | `surfaces[].name` | string | yes | The surface's identity (matches the runtime's built-in registry key when overriding one). |
 | `surfaces[].state_key` | string | yes | The graph-state key that MARKS a thread of this surface (the gate decides by STATE, never by route) and anchors canvas rehydration. Must appear in `canvas_keys`. |
 | `surfaces[].steps` | array |  | The surface's WIZARD, declared (F4 of adr-copiloto-como-dado — the visible half). Each step names which of the target Kind's fields it collects; the portal's generic renderer turns this into a stepped screen (stepper + typed inputs derived from the Kind schema + per-field AI affordances + the copilot dock). The concepts came measured from the archetype spikes: linear steps (all three worlds), and a human gate per step (the approved-by-user flag pattern). Conditional steps and invalidation rules remain roadmap — declared here only when the renderer reads them. |
@@ -594,7 +594,7 @@ An Engram is an affective recall artifact (record plane) — the memory co-pilla
 | `affect_evidence_refs` | array |  | Concrete refs (rem-X, verdict-Y, Story/s-Z) that back the affect choice. Required for high-stakes affects so the LLM's claim is auditable against actual artifacts in the manifest. |
 | `affect_reason` | string |  | Story s-remembrance-affect-reason-required. Concrete justification for the chosen affect — names specific slugs/SHAs/AC counts/state. NOT generic ('Story closed', 'shipped successfully'). Validator rejects writes that lack reason OR have boilerplate. Required for high-stakes affects (regret/ominous/surprise); optional for triumph/wistful but encouraged. |
 | `area` | string | yes | Scoped target: Feature/X, Epic/Y, or Roadmap/Z. The LessonLearned surfaces when this area is touched. |
-| `claims` | array |  | Structured assertions this memory makes, so two memories can be compared for CONTRADICTION deterministically (s-grafo-2-contradicao). Prose cannot be compared: "the Kind still needs approval" and "the Kind was approved" share almost no vocabulary, which is why lexical overlap (`dna.memory.merge`) finds repetition and never disagreement. Each claim is `(subject, predicate, object)` over the memory's bi-temporal window. Two claims CONTRADICT when they agree on subject and predicate, disagree on object, and their `[valid_from, valid_to)` windows share an instant — TOKI (arXiv:2606.06240 §2.1), nine of Allen's thirteen base relations. `polarity: denies` states an explicit negation, so "not approved" is comparable instead of being prose. `subject` is optional and defaults to the memory's own `Kind/name` referent (`area`, else the first such `source_refs` entry) — a memory already scoped to `KindDefinition/livro` need only declare `{predicate: approval, object: pending}`. ⚠️ A predicate is treated as SINGLE-VALUED at an instant (the functional-dependency rule). That is what makes detection decidable without an ontology — cardinality declarations are degrau 3 of `f-poder-de-grafo`, a founder gate. Use distinct predicates for genuinely multi-valued attributes, or the pass will present them as a conflict for a human to dismiss. It only ever PRESENTS: nothing here overwrites, expires or merges a memory. **When to declare one — the test is SUBSTITUTION, not importance.** Declare a claim when a LATER value of the same `(subject, predicate)` would make this one FALSE. Nothing else; a memory with no claims is the normal case, not a lapse. "the workspace plan is Pro" and "Barna is in Lisbon this week" qualify — a plan replaces the plan, and there is one whereabouts at a time. "Barna likes tea" does NOT: liking tea does not stop him liking coffee, and values that ACCUMULATE never contradict. "met the client on 2026-08-03" does NOT either: an event HAPPENED, and a later meeting does not un-happen it — events and observations belong in `summary` alone. Claiming those two makes the pass report the normal as a conflict, and a pass that flags the normal trains its reader to ignore it, including the time it is right. This is the same rule the verb's faces announce (`dna.memory.contradiction.WHEN_TO_CLAIM`), restated for the OTHER door — a raw `write_document` on an Engram, which reads this schema and never sees a tool description. |
+| `claims` | array |  | Structured assertions this memory makes, so two memories can be compared for CONTRADICTION deterministically (s-grafo-2-contradicao). Prose cannot be compared: "the Kind still needs approval" and "the Kind was approved" share almost no vocabulary, which is why lexical overlap (`dna.memory.merge`) finds repetition and never disagreement. Each claim is `(subject, predicate, object)` over the memory's bi-temporal window. Two claims CONTRADICT when they agree on subject and predicate, disagree on object, and their `[valid_from, valid_to)` windows share an instant — TOKI (arXiv:2606.06240 §2.1), nine of Allen's thirteen base relations. `polarity: denies` states an explicit negation, so "not approved" is comparable instead of being prose. `subject` is optional and defaults to the memory's own `Kind/name` referent (`area`, else the first such `source_refs` entry) — a memory already scoped to `KindDefinition/livro` need only declare `{predicate: approval, object: pending}`. ⚠️ A predicate is treated as SINGLE-VALUED at an instant (the functional-dependency rule). That is what makes detection decidable without an ontology — cardinality declarations are degrau 3 of `f-poder-de-grafo`, a founder gate. Use distinct predicates for genuinely multi-valued attributes, or the pass will present them as a conflict for a human to dismiss. It only ever PRESENTS: nothing here overwrites, expires or merges a memory. **When to declare one — the test is SUBSTITUTION, not importance.** Declare a claim when a LATER value of the same `(subject, predicate)` would make this one FALSE. Nothing else; a memory with no claims is the normal case, not a lapse. "the workspace plan is Pro" and "Barna is in Lisbon this week" qualify — a plan replaces the plan, and there is one whereabouts at a time. "Barna likes tea" does NOT: liking tea does not stop him liking coffee, and values that ACCUMULATE never contradict. "met the client on 2026-08-03" does NOT either: an event HAPPENED, and a later meeting does not un-happen it — events and observations belong in `summary` alone. Claiming those two makes the pass report the normal as a conflict, and a pass that flags the normal trains its reader to ignore it, including the time it is right. This is the same rule the verb's faces announce (`dna.memory.contradiction.WHEN_TO_CLAIM`), restated for the OTHER door — a raw `write_instance` on an Engram, which reads this schema and never sees a tool description. |
 | `claims[].object` | string \| number \| boolean \| null |  | The asserted value. Absent/null = an EXISTENCE claim, which compares only against another existence claim of opposite polarity. |
 | `claims[].polarity` | string |  | `denies` negates: `asserts X` beside `denies X` is a contradiction; beside `denies Y` it is not. Um de: `asserts`, `denies`. |
 | `claims[].predicate` | string | yes | The attribute being asserted (`approval`, `status`, `owner`). |
@@ -699,7 +699,7 @@ An EvalBaseline pins one EvalRun as the "known good" reference for an EvalSuite.
 | --- | --- | --- | --- |
 | `label` | string |  | Human note on why this run is the reference. |
 | `pinned_at` | string |  |  |
-| `run_name` | string | yes | Name of the pinned EvalRun document. |
+| `run_name` | string | yes | Name of the pinned EvalRun instance. |
 | `suite` | string | yes | Name of the EvalSuite this baseline belongs to. |
 
 ## EvalCase
@@ -768,7 +768,7 @@ An EvalRun is the persisted result of one local execution of an EvalSuite — pa
 - **apiVersion:** `github.com/ruinosus/dna/eval/v1`
 - **Plane:** record
 
-An EvalSuite groups EvalCase documents and configures how the local runner executes them — the case list (empty = all cases in the scope), a default target the cases inherit, and stop_on_fail. Run it with `dna eval run <suite>`; each execution can be persisted as an EvalRun and compared against a pinned EvalBaseline.
+An EvalSuite groups EvalCase instances and configures how the local runner executes them — the case list (empty = all cases in the scope), a default target the cases inherit, and stop_on_fail. Run it with `dna eval run <suite>`; each execution can be persisted as an EvalRun and compared against a pinned EvalBaseline.
 
 **Spec fields**
 
@@ -789,7 +789,7 @@ An EvalSuite groups EvalCase documents and configures how the local runner execu
 - **apiVersion:** `github.com/ruinosus/dna/evidence/v1`
 - **Plane:** record
 
-An Evidence document is an immutable audit event record. Captures the event type, SHA-256 hash of the referenced content, timestamp, author, and optional snapshot. Used by the GAIA report pipeline to provide a verifiable audit trail.
+An Evidence instance is an immutable audit event record. Captures the event type, SHA-256 hash of the referenced content, timestamp, author, and optional snapshot. Used by the GAIA report pipeline to provide a verifiable audit trail.
 
 **Spec fields**
 
@@ -798,7 +798,7 @@ An Evidence document is an immutable audit event record. Captures the event type
 | `author` | string |  |  |
 | `captured_at` | string |  |  |
 | `created_at` | string |  |  |
-| `document_ref` | string |  | `Kind:name` of the document whose save triggered this event — the canonical Kind name and the document name, colon-joined. MEASURED, not inferred — the one runtime producer is the kernel evidence `post_save` handler (`dna/kernel/write/evidence.py`), which writes `f"{kind}:{name}"` straight from the HookContext, and the deleted TypeScript twin wrote the identical form (its test asserted `EvalRun:run1`). The slash-shaped values in some Python test fixtures (`Story/s-x`, `eval-evalrun/my-run`) and the older builder docstring are inert inputs to a pass-through parameter and are NOT the format. Nothing dereferences it today. Declared as a relation with `to: '*'` rather than with a named target: a named one resolves a bare document NAME, and this is the same composite as `Comment.target_ref` — it needs parsing, not a lookup. Absent on the gaia event shape, which carries source_kind/source_name instead. |
+| `document_ref` | string |  | `Kind:name` of the instance whose save triggered this event — the canonical Kind name and the instance name, colon-joined. MEASURED, not inferred — the one runtime producer is the kernel evidence `post_save` handler (`dna/kernel/write/evidence.py`), which writes `f"{kind}:{name}"` straight from the HookContext, and the deleted TypeScript twin wrote the identical form (its test asserted `EvalRun:run1`). The slash-shaped values in some Python test fixtures (`Story/s-x`, `eval-evalrun/my-run`) and the older builder docstring are inert inputs to a pass-through parameter and are NOT the format. Nothing dereferences it today. Declared as a relation with `to: '*'` rather than with a named target: a named one resolves a bare instance NAME, and this is the same composite as `Comment.target_ref` — it needs parsing, not a lookup. Absent on the gaia event shape, which carries source_kind/source_name instead. |
 | `event_type` | string | yes | Um de: `document_created`, `document_modified`, `document_deleted`, `eval_run_completed`, `baseline_pinned`, `finding_created`, `finding_status_changed`, `custom`, `gaia.assessment.started`, `gaia.assessment.completed`, `gaia.assessment.failed`, `gaia.pillar.completed`, `gaia.pillar.threshold_breach`, `gaia.report.issued`. |
 | `notes` | string |  |  |
 | `payload` | object |  |  |
@@ -845,7 +845,7 @@ A Feature is a shippable unit. It implements one or more UseCases, decomposes in
 | `release_target` | string |  |  |
 | `reporter` | string |  |  |
 | `so_that` | string |  | Benefit: 'so that <benefit>'. INVEST/user-story format slot. |
-| `sprint_ref` | string |  | The Sprint this Feature is committed to — the Sprint document's NAME, which is also its sprint_id (e.g. '2026-Q2-S2'). |
+| `sprint_ref` | string |  | The Sprint this Feature is committed to — the Sprint instance's NAME, which is also its sprint_id (e.g. '2026-Q2-S2'). |
 | `status` | string | yes | Um de: `discovery`, `in-development`, `done`, `cancelled`, `blocked`. |
 | `stories` | array |  |  |
 | `time_tracking` | object |  |  |
@@ -908,9 +908,27 @@ An Initiative is a strategic investment unit (1-2 quarters) that groups Epics un
 | `outcome_metric` | string |  | What KR/metric this initiative is targeted at. |
 | `owner` | string |  | Actor name (PM / Product Lead). |
 | `priority` | string |  | Um de: `highest`, `high`, `medium`, `low`, `lowest`. |
+| `produces` | array |  | Artifacts this work item produced — any Kind (hub). |
+| `produces[].at` | string |  |  |
+| `produces[].kind` | string | yes | Artifact Kind (any). |
+| `produces[].name` | string | yes | Artifact doc name. |
+| `produces[].role` | string |  | Optional role hint (e.g. visual-spec, plan, investigation). |
 | `status` | string | yes | Um de: `proposed`, `in-flight`, `done`, `cancelled`, `deferred`. |
 | `target_value` | string |  | e.g. '+30% MAU' or '<200ms p95'. |
 | `theme_ref` | string |  | Optional Theme/OKR Objective slug. |
+| `timeline` | array |  | Append-only activity log. Auto-stamped by the CLI on every status flip / groom / artifact write; populated by AgentSession capture for decision + artifact_produced events. Render in Studio as activity stream. |
+| `timeline[].actor` | string | yes | Who triggered the event (Actor name or 'claude-code'). |
+| `timeline[].at` | string | yes |  |
+| `timeline[].commit_ref` | string |  | Git SHA associated with this event (when relevant). |
+| `timeline[].excerpt` | string |  | decision: snippet from the source transcript. |
+| `timeline[].fields` | object |  | groom: which fields changed and to what. |
+| `timeline[].from` | string |  | status_change: previous status. |
+| `timeline[].paths` | array |  | artifact_produced: file paths touched. |
+| `timeline[].session_ref` | string |  | Back-link to a AgentSession that produced this event. |
+| `timeline[].source` | string |  | Um de: `cli`, `studio`, `mcp`, `agent-session-extracted`, `system`. |
+| `timeline[].summary` | string |  | comment/decision: short human-readable text. |
+| `timeline[].to` | string |  | status_change: new status. |
+| `timeline[].type` | string | yes | Event type. Recognized: status_change, groom, comment, decision, artifact_produced (open vocabulary — new types are additive, e.g. pr_opened). |
 | `title` | string | yes |  |
 | `updated_at` | string |  |  |
 
@@ -935,7 +953,7 @@ An IntelInsight is the dissemination unit of the intelligence layer — a ranked
 | `fact` | string | yes | What happened / the cited fact. |
 | `pirs` | array |  | Which Priority Intelligence Requirements this insight matches. |
 | `score` | number | yes | Actionability score (0..1). The ranker sets this; the digest suppresses insights scoring below the source's threshold. |
-| `source_ref` | string \| null |  | The IntelSource name this insight came from. DECLARED (i-040) — the engine already stamps the source DOCUMENT NAME here, which is exactly what a name-addressed relation resolves by, so the declaration types a relation that was already true instead of asking any producer to write differently. Null/absent stays legal — an optional reference that is simply unset is not a dangling one. |
+| `source_ref` | string \| null |  | The IntelSource name this insight came from. DECLARED (i-040) — the engine already stamps the source INSTANCE NAME here, which is exactly what a name-addressed relation resolves by, so the declaration types a relation that was already true instead of asking any producer to write differently. Null/absent stays legal — an optional reference that is simply unset is not a dangling one. |
 | `state` | string | yes | The feedback disposition — the reader's response to the insight. Um de: `new`, `actioned`, `dismissed`, `snoozed`. |
 | `title` | string | yes | The insight headline. |
 | `why` | string \| null |  | Why it matters to this source. |
@@ -1035,7 +1053,7 @@ A Kaizen is a continuous-improvement observation noticed while working on someth
 | `labels` | array |  | Free-form theme tags (weighted into semantic-search source text). |
 | `status` | string | yes | Observation arc: observed (flagged) → routed (fix tracked in `issue`) → resolved (fix shipped). Um de: `observed`, `routed`, `resolved`. |
 | `updated_at` | string |  |  |
-| `work_item` | string |  | Kind/slug of the work item where this was observed (polymorphic — Story/Spike/Issue). |
+| `work_item` | string |  | Kind/slug of the work item where this was observed — polymorphic over the work-item family (see relations.work_item). |
 
 ## KindNamespace
 
@@ -1043,13 +1061,13 @@ A Kaizen is a continuous-improvement observation noticed while working on someth
 - **apiVersion:** `github.com/ruinosus/dna/tenant/v1`
 - **Plane:** record
 
-A KindNamespace records that a workspace owns an apiVersion namespace — the claim the write path checks before letting anyone declare a Kind in it. The namespace is a claimed NAME (`acme.example`), never the workspace id, because the apiVersion participates in every document's identity and a database id baked into it would make renaming a workspace rewrite the identity of everything it owns. Claims are prefixes and the most specific one wins; a namespace already occupied by a Kind registered from code is RESERVED and cannot be claimed at all. GLOBAL declarative data in `_lib`.
+A KindNamespace records that a workspace owns an apiVersion namespace — the claim the write path checks before letting anyone declare a Kind in it. The namespace is a claimed NAME (`acme.example`), never the workspace id, because the apiVersion participates in every instance's identity and a database id baked into it would make renaming a workspace rewrite the identity of everything it owns. Claims are prefixes and the most specific one wins; a namespace already occupied by a Kind registered from code is RESERVED and cannot be claimed at all. GLOBAL declarative data in `_lib`.
 
 **Spec fields**
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `claimed_at` | string | yes | When the namespace was claimed (ISO 8601). The audit trail is the reason a claim is a document rather than a config entry. |
+| `claimed_at` | string | yes | When the namespace was claimed (ISO 8601). The audit trail is the reason a claim is an instance rather than a config entry. |
 | `namespace` | string | yes | The apiVersion PREFIX being claimed — everything before the version segment (`acme.example` claims `acme.example/v1`; a claim is a prefix, so it also covers `acme.example/crm/v1`). Never contains a version and never ends in `/`. |
 | `notes` | string \| null |  | Free-form operator note — why this namespace was granted, the ticket it came from. Never read by the enforcement path. |
 | `owner` | string | yes | The `workspace_id` of the workspace that owns this namespace. OPAQUE — matched whole, never parsed. It is the same value the kernel `tenant` column carries for that workspace, which is what lets the write path compare a writer to an owner without a lookup. |
@@ -1288,7 +1306,7 @@ An AccountPlan maps one DNA Cloud BILLING ACCOUNT to its current Tier as GLOBAL 
 | `status` | string |  | The billing status of the assignment, e.g. active / past_due / canceled. |
 | `stripe_customer_id` | string |  | The Stripe customer id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
 | `stripe_subscription_id` | string |  | The Stripe subscription id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
-| `tier_id` | string | yes | The assigned PricingPlan's id, e.g. free, pro, enterprise. Resolved to caps via kernel.tier(tier_id) — never a literal in code. This IS a reference, and it is deliberately NOT declared as a relation — the resolver matches `PricingPlan.spec.tier_id` first and `PricingPlan.spec.aliases[]` second, in the `_lib` scope, and NEVER the document name, while the kernel resolves by document name only. `by: tier_id` would DESCRIBE the addressing without resolving it, which is legal — but it would describe only HALF the live rule (the alias fallback has nowhere to go), and a partial description of a live rule is the thing to avoid. Declaring it would install a SECOND resolution rule that can disagree with the live one (an alias-keyed binding is valid data the write path would then veto). It is a keyed reference, the same shape as `Organization.plan_ref`. NOTE the Kind was called `Tier` until the metering rename (dna 0.29.0); this description named the dead Kind until 2026-08-06. |
+| `tier_id` | string | yes | The assigned PricingPlan's id, e.g. free, pro, enterprise. Resolved to caps via kernel.tier(tier_id) — never a literal in code. This IS a reference and it IS declared, as `to: PricingPlan, by: tier_id` (see `spec.relations`). The resolver matches `PricingPlan.spec.tier_id` first and `PricingPlan.spec.aliases[]` second, in the `_lib` scope, and NEVER the instance name — so this runtime does not FOLLOW the declaration, exactly as it does not follow `Project.workspace_id`. It is a keyed reference, the same shape as `Organization.plan_ref`. NOTE the Kind was called `Tier` until the metering rename (dna 0.29.0); this description named the dead Kind until 2026-08-06, and claimed the field was undeclarable until 2026-08-06 as well. |
 | `updated_at` | string |  | When dna-cloud last wrote this assignment (ISO 8601). |
 
 ## Postmortem
@@ -1345,9 +1363,9 @@ A Tier declares one DNA Cloud plan's hard caps (calls/day, rate, tenants) and wh
 | --- | --- | --- | --- |
 | `aliases` | array |  | Alternate ids that resolve to this tier (legacy plan names). kernel.tier() matches these on pass 2. |
 | `calls_per_day` | integer \| null |  | Daily call quota. Null = unlimited (enterprise). THE value the quota enforcer reads — never hardcode it in code. |
-| `definitions_mode` | string |  | Definitions access level granted by the tier — the read-vs-write refinement of the `definitions` feature family, sibling of memory_mode/sdlc_mode. Only the GENERIC document tools consult it, and only on a WRITE — a plan that omits it grants none, so writing an Agent/Soul/Tool/ModelProfile through the generic tool is refused until the operator declares write here. Reads keep riding the coarse feature_families gate. Um de: `none`, `read`, `write`. |
+| `definitions_mode` | string |  | Definitions access level granted by the tier — the read-vs-write refinement of the `definitions` feature family, sibling of memory_mode/sdlc_mode. Only the GENERIC instance tools consult it, and only on a WRITE — a plan that omits it grants none, so writing an Agent/Soul/Tool/ModelProfile through the generic tool is refused until the operator declares write here. Reads keep riding the coarse feature_families gate. Um de: `none`, `read`, `write`. |
 | `display_name` | string | yes | Human-facing plan name, e.g. Free, Pro, Enterprise. |
-| `emit_mode` | string |  | Emit access level granted by the tier — the same read-vs-write refinement for the `emit` feature family. Same rule as definitions_mode - consulted by the generic document tools on a write, and omitting it grants none. Um de: `none`, `read`, `write`. |
+| `emit_mode` | string |  | Emit access level granted by the tier — the same read-vs-write refinement for the `emit` feature family. Same rule as definitions_mode - consulted by the generic instance tools on a write, and omitting it grants none. Um de: `none`, `read`, `write`. |
 | `feature_families` | array |  | Tool families this tier unlocks, e.g. [definitions, sdlc, memory, emit]. |
 | `max_tenants` | integer \| null |  | Number of tenants the plan allows. Null = unlimited. |
 | `memory_mode` | string |  | Memory access level granted by the tier — none, read, or write. Um de: `none`, `read`, `write`. |
@@ -1373,7 +1391,7 @@ A Project is the multi-repo development-space container — the key Kind of the 
 | --- | --- | --- | --- |
 | `board_scope` | string \| null |  | The SDLC scope this project owns (convention <slug>-development). Where its Stories / Issues / Epics live. |
 | `created_at` | string \| null |  | ISO-8601 timestamp, stamped by the writer (not defaulted here). |
-| `intel_source_refs` | array |  | IntelSource names the intelligence layer observes for this project (the sources feeding its insight stream). DECLARED (i-040) — every item resolves by DOCUMENT NAME, the same key `org_ref` and `repo_refs` above already use. |
+| `intel_source_refs` | array |  | IntelSource names the intelligence layer observes for this project (the sources feeding its insight stream). DECLARED (i-040) — every item resolves by INSTANCE NAME, the same key `org_ref` and `repo_refs` above already use. |
 | `name` | string | yes | The project's canonical name. The doc name SHOULD equal this. |
 | `org_ref` | string \| null |  | The Organization (name) this project belongs to. Null while unassigned. |
 | `repo_refs` | array |  | Repo names attached to this project (the N—N edge — a repo may appear on multiple projects). The edge lives on the Project side only. |
@@ -1438,7 +1456,7 @@ A PromptTemplate is a versioned, overlayable user-prompt template owned by the k
 | `capabilities.push_notifications` | boolean |  |  |
 | `capabilities.streaming` | boolean |  |  |
 | `data_scope` | object | yes | O que este endpoint PODE receber. Obrigatório — ver o cabeçalho. |
-| `data_scope.kinds` | array | yes | Nomes de Kind cujos documentos podem ser delegados a este remoto. Lista vazia = nada pode, o que é um estado honesto (registrado, sem permissão) e não um erro. |
+| `data_scope.kinds` | array | yes | Nomes de Kind cujas instâncias podem ser delegados a este remoto. Lista vazia = nada pode, o que é um estado honesto (registrado, sem permissão) e não um erro. |
 | `default_input_modes` | array |  |  |
 | `default_output_modes` | array |  |  |
 | `delegation_target_for` | object |  | O bloco COMPARTILHADO com `Agent` (kernel `DelegationTargetFor`). É o que o roster derivado lê para achar este alvo sem enumerar Kinds. |
@@ -1451,8 +1469,8 @@ A PromptTemplate is a versioned, overlayable user-prompt template owned by the k
 | `documentation_url` | string |  |  |
 | `icon_url` | string |  |  |
 | `name` | string | yes | A2A `name`. O nome pelo qual o agente se anuncia. |
-| `security_schemes` | object |  | A2A `securitySchemes` (forma do OpenAPI 3). Diz COMO autenticar. A credencial em si NUNCA vive aqui — o schema é fechado justamente para que um bearer não possa ser anexado ao documento. Quem guarda a credencial é o deployment, por remoto, e ela nunca é o token do usuário. |
-| `signature_state` | string |  | Tri-estado DE PROPÓSITO: um documento que não foi verificado tem de ser legível como tal. `unsigned` = o Card não trouxe assinatura; `present_unverified` = trouxe e não checamos; `verified` = checamos (não alcançável nesta versão). Um booleano `signed` faria "não verificado" parecer "não assinado", que são coisas diferentes. Um de: `unsigned`, `present_unverified`, `verified`. |
+| `security_schemes` | object |  | A2A `securitySchemes` (forma do OpenAPI 3). Diz COMO autenticar. A credencial em si NUNCA vive aqui — o schema é fechado justamente para que um bearer não possa ser anexado à instância. Quem guarda a credencial é o deployment, por remoto, e ela nunca é o token do usuário. |
+| `signature_state` | string |  | Tri-estado DE PROPÓSITO: uma instância que não foi verificado tem de ser legível como tal. `unsigned` = o Card não trouxe assinatura; `present_unverified` = trouxe e não checamos; `verified` = checamos (não alcançável nesta versão). Um booleano `signed` faria "não verificado" parecer "não assinado", que são coisas diferentes. Um de: `unsigned`, `present_unverified`, `verified`. |
 | `signatures` | array |  | A2A `signatures`, preservadas como vieram. A VERIFICAÇÃO criptográfica está fora desta versão (exige decidir a cadeia de confiança, que é decisão de produto) — por isso `signature_state` existe e é tri-estado. |
 | `skills` | array |  | A2A `skills[]` — o que ele sabe fazer, item a item. |
 | `skills[].description` | string | yes |  |
@@ -1615,10 +1633,10 @@ A Role is one rung of the RBAC ladder expressed as data — its role_id, display
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `derived_refs` | array |  | The typed documents extracted from this artifact — the projection. The edge lives HERE, on the artifact, so one upload that yields twelve documents states that fact once, and so no derived Kind has to carry a field for it. Grows as more is extracted; an empty list means the file is stored and nothing has been read out of it yet, which is an honest state and not an error. |
+| `derived_refs` | array |  | The typed instances extracted from this artifact — the projection. The edge lives HERE, on the artifact, so one upload that yields twelve instances states that fact once, and so no derived Kind has to carry a field for it. Grows as more is extracted; an empty list means the file is stored and nothing has been read out of it yet, which is an honest state and not an error. |
 | `derived_refs[].extracted_at` | string \| null |  | ISO-8601 timestamp of the extraction. |
-| `derived_refs[].kind` | string | yes | The derived document's Kind. |
-| `derived_refs[].name` | string | yes | The derived document's name within that Kind. |
+| `derived_refs[].kind` | string | yes | The derived instance's Kind. |
+| `derived_refs[].name` | string | yes | The derived instance's name within that Kind. |
 | `derived_refs[].scope` | string \| null |  | The scope it was written to, when it differs from the artifact's own. |
 | `detected_mime` | string \| null |  | What the bytes ACTUALLY are, read from their magic bytes (`dna.runtime.mime.detect_mime`). Kept BESIDE `mime`, never instead of it: the pair is the evidence. Overwriting the declared value would erase the fact that they ever disagreed, and that disagreement is the only thing either field is good for on its own. |
 | `filename` | string \| null |  | The name the file arrived with, when one did. Display only — never a path to open, and never trusted as one. |
@@ -1629,7 +1647,7 @@ A Role is one rung of the RBAC ladder expressed as data — its role_id, display
 | `size_bytes` | integer \| null |  | Size of the original in bytes, when known. |
 | `uploaded_at` | string \| null |  | ISO-8601 timestamp of the upload. |
 | `uploaded_by` | string \| null |  | The verified identity that uploaded it, resolved server-side from the request. Never a caller-supplied field. |
-| `uri` | string | yes | Where the bytes live — an IDENTITY, never a credential. Never a signed URL or SAS token: a document carrying one would BE the access to its own original, and would grant it to anyone the document reaches. Reading goes through an authenticated route that checks membership. |
+| `uri` | string | yes | Where the bytes live — an IDENTITY, never a credential. Never a signed URL or SAS token: an instance carrying one would BE the access to its own original, and would grant it to anyone the instance reaches. Reading goes through an authenticated route that checks membership. |
 
 ## Spec
 
@@ -1722,7 +1740,7 @@ A Spike is a time-boxed technical investigation. ONE question + finite time budg
 - **apiVersion:** `github.com/ruinosus/dna/sdlc/v1`
 - **Plane:** record
 
-A Sprint is the timebox that `Story.sprint_ref` and `Feature.sprint_ref` name — an identifier (`2026-Q2-S2`), optionally a display name, a start/end date and a state (planned/active/completed). The document NAME is the key the two references resolve by. Membership is NOT stored here — it is the inverse of `sprint_ref` and is derived from the declared reference, so there is exactly one place a story's sprint is written. Goal, capacity and velocity are deliberately absent until a consumer exists for them.
+A Sprint is the timebox that `Story.sprint_ref` and `Feature.sprint_ref` name — an identifier (`2026-Q2-S2`), optionally a display name, a start/end date and a state (planned/active/completed). The instance NAME is the key the two references resolve by. Membership is NOT stored here — it is the inverse of `sprint_ref` and is derived from the declared reference, so there is exactly one place a story's sprint is written. Goal, capacity and velocity are deliberately absent until a consumer exists for them.
 
 **Spec fields**
 
@@ -1730,7 +1748,7 @@ A Sprint is the timebox that `Story.sprint_ref` and `Feature.sprint_ref` name �
 | --- | --- | --- | --- |
 | `ends_on` | string | yes | Last day of the timebox (ISO 8601 date). REQUIRED, same reason as starts_on. |
 | `name` | string \| null |  | Human display name, e.g. 'Sprint 2 — Q2 2026'. Editable; the identity is sprint_id / the doc name, never this. |
-| `sprint_id` | string | yes | Canonical sprint identifier, e.g. '2026-Q2-S2'. THE DOC NAME MUST EQUAL IT — `Story.sprint_ref` / `Feature.sprint_ref` are declared references and resolve by document name, so a doc whose name and sprint_id disagree is reachable under one of them only. Enforced on write by the sdlc write guards, not left to convention. |
+| `sprint_id` | string | yes | Canonical sprint identifier, e.g. '2026-Q2-S2'. THE DOC NAME MUST EQUAL IT — `Story.sprint_ref` / `Feature.sprint_ref` are declared references and resolve by instance name, so a doc whose name and sprint_id disagree is reachable under one of them only. Enforced on write by the sdlc write guards, not left to convention. |
 | `starts_on` | string | yes | First day of the timebox (ISO 8601 date). REQUIRED — a sprint IS a timebox, and one that cannot say when it starts is a label with a Kind wrapped around it. |
 | `state` | string |  | Where the timebox is in its life. Kept as data rather than derived from the dates because the dates are optional and because a sprint can be closed early — the same three-state vocabulary Jira (future/active/closed) and Azure DevOps iterations use. Um de: `planned`, `active`, `completed`. |
 
@@ -1797,7 +1815,7 @@ A Story is a granular task: one developer, one PR, one estimate. Lists acceptanc
 | `reporter` | string |  | Actor who filed it (vs `owner` who works on it). |
 | `so_that` | string |  | Benefit: 'so that <benefit>'. INVEST/user-story format slot. |
 | `spec_refs` | array |  | Spec docs (kind=Spec) this Story implements. M:N linkage between the planning axis (Story) and the design axis (Spec) — Jira/Confluence-shaped. |
-| `sprint_ref` | string |  | The Sprint this Story is committed to — the Sprint document's NAME, which is also its sprint_id (e.g. '2026-Q2-S2'). DECLARED (i-040), so the write path resolves it instead of trusting a label. The value SHAPE did not change on 2026-08-06; a `Sprint` Kind simply started existing for the identifier to name. |
+| `sprint_ref` | string |  | The Sprint this Story is committed to — the Sprint instance's NAME, which is also its sprint_id (e.g. '2026-Q2-S2'). DECLARED (i-040), so the write path resolves it instead of trusting a label. The value SHAPE did not change on 2026-08-06; a `Sprint` Kind simply started existing for the identifier to name. |
 | `status` | string | yes | Um de: `needs-triage`, `todo`, `in-progress`, `review`, `done`, `blocked`, `deferred`, `cancelled`. |
 | `time_tracking` | object |  |  |
 | `time_tracking.logged_h` | number |  |  |
@@ -1992,7 +2010,7 @@ A WorkspaceScopeGrant records that one workspace may READ one scope that is not 
 | `granted_by` | string \| null |  | Identity (email / oid) of whoever created the grant. |
 | `reason` | string \| null |  | Why this workspace may reach that scope. Free text, for the human reading the audit six months later. |
 | `revoked_at` | string \| null |  | ISO-8601 timestamp when status flipped to `revoked`. |
-| `scope` | string | yes | The single scope name this row grants. One scope per row on purpose - granting and revoking are then one document each, so an audit reads as a list of facts rather than a diff inside a list. |
+| `scope` | string | yes | The single scope name this row grants. One scope per row on purpose - granting and revoking are then one instance each, so an audit reads as a list of facts rather than a diff inside a list. |
 | `status` | string | yes | Only `active` grants anything. Revoking keeps the row (and its history) instead of deleting the evidence that access once existed. Um de: `active`, `revoked`. |
 | `workspace_id` | string | yes | The workspace this grant is FOR — the caller's resolved workspace_id (matches a Workspace.workspace_id / the tenant key). |
 

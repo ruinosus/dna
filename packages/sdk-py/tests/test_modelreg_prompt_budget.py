@@ -77,17 +77,17 @@ async def _kernel(tmp_path) -> Kernel:
     src.attach_kernel(k)
     # Profiles live in the _lib scope (model-profiles/<model_id>.yaml) —
     # kernel.model_profile queries _lib directly regardless of caller scope.
-    await k.write_document(
+    await k.write_instance(
         "_lib", "ModelProfile", "voice-strict",
         _profile("voice-strict", realtime=True, aliases=["voice-strict-preview"]),
     )
-    await k.write_document(
+    await k.write_instance(
         "_lib", "ModelProfile", "chat-friendly",
         _profile("chat-friendly", realtime=False),
     )
-    # Seed the working scope so post-veto get_document asserts read an
+    # Seed the working scope so post-veto get_instance asserts read an
     # existing scope dir (a vetoed FIRST write leaves no scope at all).
-    await k.write_document(
+    await k.write_instance(
         "proj", "Agent", "seed", _agent("seed", {"instruction": "seed"}),
     )
     return k
@@ -134,7 +134,7 @@ async def test_voice_agent_over_cap_is_vetoed(tmp_path, monkeypatch):
     monkeypatch.delenv("DNA_PROMPT_BUDGET_ENFORCE", raising=False)
     k = await _kernel(tmp_path)
     with pytest.raises(PromptBudgetExceededError) as ei:
-        await k.write_document(
+        await k.write_instance(
             "proj", "Agent", "talker",
             _agent("talker", {
                 "instruction": OVER_CAP,
@@ -146,7 +146,7 @@ async def test_voice_agent_over_cap_is_vetoed(tmp_path, monkeypatch):
     assert "talker" in msg and "100-token" in msg and "voice-strict" in msg
     assert "never hardcode caps" in msg
     # Veto happened pre-persist — nothing stored.
-    assert await k.get_document("proj", "Agent", "talker") is None
+    assert await k.get_instance("proj", "Agent", "talker") is None
 
 
 @pytest.mark.asyncio
@@ -156,11 +156,11 @@ async def test_chat_agent_on_realtime_profile_is_also_strict(tmp_path, monkeypat
     monkeypatch.delenv("DNA_PROMPT_BUDGET_ENFORCE", raising=False)
     k = await _kernel(tmp_path)
     with pytest.raises(PromptBudgetExceededError):
-        await k.write_document(
+        await k.write_instance(
             "proj", "Agent", "sneaky",
             _agent("sneaky", {"instruction": OVER_CAP, "model": "voice-strict"}),
         )
-    assert await k.get_document("proj", "Agent", "sneaky") is None
+    assert await k.get_instance("proj", "Agent", "sneaky") is None
 
 
 @pytest.mark.asyncio
@@ -168,14 +168,14 @@ async def test_kill_switch_downgrades_veto_to_warn(tmp_path, monkeypatch, caplog
     monkeypatch.setenv("DNA_PROMPT_BUDGET_ENFORCE", "0")
     k = await _kernel(tmp_path)
     with caplog.at_level(logging.WARNING):
-        await k.write_document(
+        await k.write_instance(
             "proj", "Agent", "talker",
             _agent("talker", {
                 "instruction": OVER_CAP,
                 "voice_persona": {"model": "voice-strict"},
             }),
         )
-    assert await k.get_document("proj", "Agent", "talker") is not None
+    assert await k.get_instance("proj", "Agent", "talker") is not None
     assert any("[prompt-budget]" in r.message and "downgraded" in r.message
                for r in caplog.records)
 
@@ -189,11 +189,11 @@ async def test_chat_agent_over_cap_warns_and_writes(tmp_path, monkeypatch, caplo
     monkeypatch.delenv("DNA_PROMPT_BUDGET_ENFORCE", raising=False)
     k = await _kernel(tmp_path)
     with caplog.at_level(logging.WARNING):
-        await k.write_document(
+        await k.write_instance(
             "proj", "Agent", "chatty",
             _agent("chatty", {"instruction": OVER_CAP, "model": "chat-friendly"}),
         )
-    assert await k.get_document("proj", "Agent", "chatty") is not None
+    assert await k.get_instance("proj", "Agent", "chatty") is not None
     warned = [r for r in caplog.records if "[prompt-budget]" in r.message]
     assert warned, "chat over-cap must warn loud"
     assert "chat-friendly" in warned[0].message
@@ -208,33 +208,33 @@ async def test_chat_agent_over_cap_warns_and_writes(tmp_path, monkeypatch, caplo
 async def test_agent_without_model_passes(tmp_path, monkeypatch):
     monkeypatch.delenv("DNA_PROMPT_BUDGET_ENFORCE", raising=False)
     k = await _kernel(tmp_path)
-    await k.write_document(
+    await k.write_instance(
         "proj", "Agent", "plain",
         _agent("plain", {"instruction": OVER_CAP}),
     )
-    assert await k.get_document("proj", "Agent", "plain") is not None
+    assert await k.get_instance("proj", "Agent", "plain") is not None
 
 
 @pytest.mark.asyncio
 async def test_chat_agent_with_unknown_model_passes(tmp_path, monkeypatch):
     monkeypatch.delenv("DNA_PROMPT_BUDGET_ENFORCE", raising=False)
     k = await _kernel(tmp_path)
-    await k.write_document(
+    await k.write_instance(
         "proj", "Agent", "mystery",
         _agent("mystery", {"instruction": OVER_CAP, "model": "not-registered"}),
     )
-    assert await k.get_document("proj", "Agent", "mystery") is not None
+    assert await k.get_instance("proj", "Agent", "mystery") is not None
 
 
 @pytest.mark.asyncio
 async def test_voice_agent_under_cap_passes(tmp_path, monkeypatch):
     monkeypatch.delenv("DNA_PROMPT_BUDGET_ENFORCE", raising=False)
     k = await _kernel(tmp_path)
-    await k.write_document(
+    await k.write_instance(
         "proj", "Agent", "brief",
         _agent("brief", {
             "instruction": UNDER_CAP,
             "voice_persona": {"model": "voice-strict"},
         }),
     )
-    assert await k.get_document("proj", "Agent", "brief") is not None
+    assert await k.get_instance("proj", "Agent", "brief") is not None

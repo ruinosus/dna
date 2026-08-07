@@ -131,7 +131,7 @@ async def _seed_package(src: Any, scope: str) -> None:
         "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Genome",
         "metadata": {"name": scope}, "spec": {"owner": "conformance"},
     }
-    await src.save_document(scope, "Genome", scope, raw)
+    await src.save_instance(scope, "Genome", scope, raw)
     if hasattr(src, "publish"):
         await src.publish(scope, "Genome", scope)
 
@@ -139,14 +139,14 @@ async def _seed_package(src: Any, scope: str) -> None:
 async def _seed_doc(src: Any, scope: str, name: str, spec: dict, *, tenant: str | None = None) -> None:
     """Seed a published doc with an arbitrary spec (open kind → no schema friction).
 
-    Writes via the raw adapter API (save_document + publish) so the matrix
+    Writes via the raw adapter API (save_instance + publish) so the matrix
     exercises storage/query, not the kernel's write-time schema validation.
     """
     raw = {
         "apiVersion": "github.com/ruinosus/dna/sdlc/v1", "kind": "Story",
         "metadata": {"name": name}, "spec": {"title": name, **spec},
     }
-    await src.save_document(scope, "Story", name, raw, tenant=tenant)
+    await src.save_instance(scope, "Story", name, raw, tenant=tenant)
     if hasattr(src, "publish"):
         # SqlAlchemySource.publish() is tenant-aware (it selects which
         # tenant's draft to promote) — pass the tenant so an overlay draft is
@@ -208,13 +208,13 @@ async def test_query_order_and_limit_parity(adapter):
 @pytest.mark.asyncio
 async def test_tenant_overlay_shadows_base(adapter, request):
     # i-092 — schema debt inherited by the sqlite dialect: the sqlite
-    # documents PK is (scope, kind, name) WITHOUT tenant, so the acme-overlay
+    # instances PK is (scope, kind, name) WITHOUT tenant, so the acme-overlay
     # publish clobbers the base row → query(tenant=None) returns the overlay.
     # FS (no-op publish) + PG (tenant-aware PK) shadow correctly. xfail the
     # sqlite dialect until i-092 is fixed (documented, CI-visible).
     if request.node.callspec.id == "sqlite":
         request.node.add_marker(pytest.mark.xfail(
-            reason="i-092: sqlite documents PK lacks tenant — overlay clobbers base.",
+            reason="i-092: sqlite instances PK lacks tenant — overlay clobbers base.",
             strict=True,
         ))
     src, k = adapter
@@ -245,7 +245,7 @@ async def test_bundle_entry_tenant_isolation(adapter, request):
     # Seed the parent Skill doc per tenant first — bundle entries belong to a
     # doc (the SQL adapters store them in a sibling table keyed on the same doc).
     for t in ("acme", "globex"):
-        await src.save_document(
+        await src.save_instance(
             "conf-test", "Skill", "greeter",
             {"apiVersion": "agentskills.io/v1", "kind": "Skill",
              "metadata": {"name": "greeter"}, "spec": {"instruction": t}},
@@ -290,3 +290,82 @@ async def test_cross_process_invalidation_capability(adapter, request):
     assert getattr(src, "supports_cross_process_invalidation", False), (
         f"{type(src).__name__} has no cross-process write-invalidation channel"
     )
+
+
+# ---------------------------------------------------------------------------
+# 5. World time — the axis only ONE dialect has (spec-topologia fatia 3).
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_world_time_axis_capability(adapter, request):
+    """Postgres keeps the validity window as a ``tstzrange`` column with an
+    ``EXCLUDE USING gist (id WITH =, valid_at WITH &&)``, so it can be ASKED
+    whether a fact was true at an instant and can REFUSE two overlapping
+    validity periods for one instance (revision 0010). FS and SQLite cannot:
+    SQLite has no range type, no GiST and no ``EXCLUDE``; the filesystem has no
+    column at all.
+
+    ⚠️ This is the first dimension in this matrix where the gap is a property
+    of the **dialect** rather than of the adapter class — ``SqlAlchemySource``
+    is one class and answers differently on its two bindings. That is precisely
+    why ``SourceCapabilities.valid_time`` had to be probeable BEFORE the read
+    instead of inferred from the type.
+
+    xfail **strict** for the backends that lack it, and strict is the point:
+    the day one of them grows the axis, this goes green and forces the
+    declaration to be updated with it. The gap is documented and CI-visible
+    rather than remembered.
+    """
+    src, _ = adapter
+    adapter_id = request.node.callspec.id  # "filesystem" | "sqlite" | "postgres"
+    if adapter_id != "postgres":
+        request.node.add_marker(
+            pytest.mark.xfail(
+                reason="spec-topologia fatia 3: world time is a tstzrange column "
+                "plus an EXCLUDE constraint, and neither exists outside Postgres. "
+                "These adapters declare valid_time=False and load_one_valid_at "
+                "raises ValidTimeUnsupported (501) rather than returning the "
+                "instance unfiltered.",
+                strict=True,
+            )
+        )
+    from dna.kernel.capabilities import source_capabilities
+
+    assert source_capabilities(src).valid_time, (
+        f"{type(src).__name__} cannot answer a world-time read"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_store_without_world_time_REFUSES_rather_than_answering(adapter, request):
+    """The other half, and the half that must hold on EVERY adapter: whatever
+    ``valid_time`` says, asking anyway may never produce a confident answer.
+
+    No xfail here on purpose — this is not a gap, it is the contract. A store
+    with the column answers; a store without it raises
+    :class:`~dna.kernel.valid_time.ValidTimeUnsupported`. What no adapter may
+    do is the third thing: hand back the instance unfiltered (asserting it was
+    true then) or ``None`` (asserting it was not), on no evidence.
+
+    ⚠️ The assertion crosses the PORT with a real call rather than reading a
+    flag — a capability that is declared but whose door does nothing is the
+    defect this house has already paid for three times.
+    """
+    from dna.kernel.capabilities import source_capabilities
+    from dna.kernel.valid_time import ValidTimeUnsupported
+
+    src, _ = adapter
+    await _seed_doc(src, "conf-test", "s-when", {"priority": 1})
+    call = getattr(src, "load_one_valid_at", None)
+    if not source_capabilities(src).valid_time:
+        if call is None:
+            return  # no method at all — the kernel never routes a read here
+        with pytest.raises(ValidTimeUnsupported):
+            await call("conf-test", "Story", "s-when",
+                       valid_at="2026-01-01T00:00:00+00:00")
+        return
+    assert call is not None, "declared valid_time=True with no door to it"
+    # Declared true ⇒ an instance that names no window is true at ANY instant,
+    # which is what the unbounded default means.
+    assert await call("conf-test", "Story", "s-when",
+                      valid_at="1999-01-01T00:00:00+00:00") is not None

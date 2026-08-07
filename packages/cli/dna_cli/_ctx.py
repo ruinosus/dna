@@ -12,7 +12,7 @@ Two session patterns:
     deletes / async ops.
 
         with dna_session(scope) as s:
-            s.run(s.kernel.write_document(...))
+            s.run(s.kernel.write_instance(...))
 
   - ``get_holder(scope)`` — sync helper for read-only commands that
     only touch ``query_list`` / ``get_doc`` (no async afterwards).
@@ -157,7 +157,7 @@ class _Holder:
 
     def get_doc(self, kind: str, name: str, *, tenant: str | None = None):
         effective = tenant if tenant is not None else (os.getenv("DNA_TENANT") or None)
-        return self._kernel.get_document_sync(
+        return self._kernel.get_instance_sync(
             self._scope, kind, name, tenant=effective,
         )
 
@@ -211,7 +211,7 @@ def dna_session(scope: str | None = None) -> Iterator[Session]:
     try:
         holder = loop.run_until_complete(_build_holder_async(scope))
         # Register the session's loop as the kernel's main loop so sync
-        # helpers (query_list_sync / get_document_sync) dispatch onto it
+        # helpers (query_list_sync / get_instance_sync) dispatch onto it
         # instead of spawning fresh loops.
         kernel = getattr(holder, "kernel", None)
         if kernel is not None and hasattr(kernel, "register_main_loop"):
@@ -294,10 +294,10 @@ def run_async(coro):
 
 
 class _LocalDocs:
-    """``client.docs(scope)`` — document CRUD against the local kernel.
+    """``client.docs(scope)`` — instance CRUD against the local kernel.
 
     Methods are async and run INSIDE the client's event loop, so they use
-    the kernel's async surface (``query`` / ``get_document``) — the sync
+    the kernel's async surface (``query`` / ``get_instance``) — the sync
     wrappers would trip ``_run_sync_helper`` from a running loop."""
 
     def __init__(self, client: "_LocalClient", scope: str):
@@ -317,7 +317,7 @@ class _LocalDocs:
         return {"items": items}
 
     async def get(self, kind: str, name: str) -> dict:
-        raw = await self._c._holder.kernel.get_document(
+        raw = await self._c._holder.kernel.get_instance(
             self._scope, kind, name, tenant=self._c._tenant,
         )
         if raw is None:
@@ -328,13 +328,13 @@ class _LocalDocs:
         kernel = self._c._holder.kernel
         if self._c._tenant:
             kernel = kernel.with_tenant(self._c._tenant)
-        return await kernel.write_document(self._scope, kind, name, raw)
+        return await kernel.write_instance(self._scope, kind, name, raw)
 
     async def delete(self, kind: str, name: str) -> Any:
         kernel = self._c._holder.kernel
         if self._c._tenant:
             kernel = kernel.with_tenant(self._c._tenant)
-        return await kernel.delete_document(self._scope, kind, name)
+        return await kernel.delete_instance(self._scope, kind, name)
 
 
 class _LocalScopes:
@@ -352,7 +352,7 @@ class _LocalScopes:
     async def tree(self, scope: str) -> dict[str, list[str]]:
         mi = await self._c._holder.kernel.instance_async(scope)
         by_kind: dict[str, list[str]] = {}
-        for d in mi.documents:
+        for d in mi.instances:
             by_kind.setdefault(d.kind, []).append(d.name)
         return {k: sorted(v) for k, v in by_kind.items()}
 
@@ -469,7 +469,7 @@ class _LocalClient:
     # ``revert_definition`` above, but calling the bundle-entry use-cases
     # (``dna.application.{list,read,write,revert}_bundle_entry(ies)_impl``,
     # Task 2) — file-grain forking within a bundle-pattern Kind (Skill, ...)
-    # rather than whole-document spec overrides.
+    # rather than whole-instance spec overrides.
 
     async def list_bundle_entries(
         self, kind: str, name: str, *,

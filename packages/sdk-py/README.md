@@ -32,8 +32,8 @@ from dna import Kernel
 # Scan a scope (directory of YAML/Markdown manifests under .dna/)
 mi = Kernel.quick("hello-genome", base_dir="examples/hello-genome/.dna")
 
-# Every document is identified by (apiVersion, kind, name)
-for d in mi.documents:
+# Every instance is identified by (apiVersion, kind, name)
+for d in mi.instances:
     print(d.api_version, d.kind, d.name)
 
 # Compose agent + soul + skills + guardrails into one system prompt
@@ -46,10 +46,10 @@ Runnable version: [`examples/hello-genome/run.py`](https://github.com/ruinosus/d
 
 ```
 dna/
-├── kernel/       # Kernel (mediator over 5 ports), Document, ManifestInstance
+├── kernel/       # Kernel (mediator over 5 ports), Instance, ManifestInstance
 ├── adapters/     # filesystem (core); sqlite/postgres/sqlalchemy_ via extras
 ├── extensions/   # helix (core Kinds) + market formats + governance
-├── sync/         # lockfile + document hashing
+├── sync/         # lockfile + instance hashing
 └── safety/       # safety pipeline (optional ML extras)
 ```
 

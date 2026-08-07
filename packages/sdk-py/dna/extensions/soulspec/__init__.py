@@ -222,7 +222,7 @@ class SoulWriter(WriterPort):
         """Return the full file list the writer would emit to disk.
 
         Mirrors typescript/src/extensions/soulspec.ts SoulWriter.serialize so
-        `kernel.serialize_document` emits SOUL.md + soul.json + companion
+        `kernel.serialize_instance` emits SOUL.md + soul.json + companion
         markdown files (STYLE.md / AGENTS.md / IDENTITY.md / HEARTBEAT.md),
         not just the primary marker.
         """

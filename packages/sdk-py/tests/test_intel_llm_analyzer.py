@@ -92,7 +92,7 @@ _GOOD_REPLY = json.dumps(
             },
             {
                 # a valid second candidate, minimal + a junk citation (dropped)
-                "title": "Document the auth flow",
+                "title": "Instance the auth flow",
                 "fact": "No auth doc exists.",
                 "action": "Write an auth guide.",
                 "pirs": [],
@@ -157,13 +157,13 @@ def test_llm_analyzer_is_structural_analyzer():
 
 def test_scope_documents_are_folded_into_prompt():
     """A `type: scope` source: the engine hands the target scope's docs in via
-    context['documents']; the analyzer folds them into the prompt material."""
+    context['instances']; the analyzer folds them into the prompt material."""
     client = FakeClient(_GOOD_REPLY)
     LLMAnalyzer(client=client).analyze(
         {"name": "plat", "type": "scope", "uri": "platform", "pirs": ["moat"]},
         {
             "source_name": "plat",
-            "documents": [
+            "instances": [
                 {"title": "Agent/jarvis", "text": "The jarvis persona owns triage."},
                 {"name": "Skill/ingest", "text": "Ingest normalizes PT-BR audio."},
             ],
@@ -300,7 +300,7 @@ async def _kernel(tmp_path) -> Kernel:
 
 
 async def _seed_source(k: Kernel, name: str, spec: dict) -> None:
-    await k.write_document(
+    await k.write_instance(
         _SCOPE, "IntelSource", name,
         {
             "apiVersion": "github.com/ruinosus/dna/intel/v1",
@@ -335,7 +335,7 @@ async def test_run_pass_with_llm_analyzer_delivers(tmp_path):
 @pytest.mark.asyncio
 async def test_run_pass_scope_source_gathers_docs(tmp_path):
     """A `type: scope` source: the engine pulls the TARGET scope's prompt-target
-    docs into context['documents'] and the LLMAnalyzer folds them into its
+    docs into context['instances'] and the LLMAnalyzer folds them into its
     prompt (proving the kernel-bound context path)."""
     k = await _kernel(tmp_path)
     # a prompt-target doc in the target scope (IntelSource is NOT prompt-target,

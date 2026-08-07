@@ -130,18 +130,18 @@ class TestMultiKindDependencyResolution:
         return mi
 
     def test_skills_resolved(self, env):
-        skills = [d for d in env.documents if d.kind == "Skill"]
+        skills = [d for d in env.instances if d.kind == "Skill"]
         names = [s.name for s in skills]
         assert "tdd" in names
         assert "debugging" in names
 
     def test_soul_resolved(self, env):
-        souls = [d for d in env.documents if d.kind == "Soul"]
+        souls = [d for d in env.instances if d.kind == "Soul"]
         names = [s.name for s in souls]
         assert "expert" in names
 
     def test_guardrail_resolved(self, env):
-        guardrails = [d for d in env.documents if d.kind == "Guardrail"]
+        guardrails = [d for d in env.instances if d.kind == "Guardrail"]
         names = [g.name for g in guardrails]
         assert "safety" in names
 
@@ -227,7 +227,7 @@ class TestCachePreventsReResolution:
 
         # First call — populates cache
         mi1 = kernel.instance("my-app")
-        assert len([d for d in mi1.documents if d.kind == "Skill"]) == 2
+        assert len([d for d in mi1.instances if d.kind == "Skill"]) == 2
 
         # Delete the remote to prove cache is used
         import shutil
@@ -235,9 +235,9 @@ class TestCachePreventsReResolution:
 
         # Second call — should still work from cache
         mi2 = kernel.instance("my-app")
-        assert len([d for d in mi2.documents if d.kind == "Skill"]) == 2
-        assert len([d for d in mi2.documents if d.kind == "Soul"]) == 1
-        assert len([d for d in mi2.documents if d.kind == "Guardrail"]) == 1
+        assert len([d for d in mi2.instances if d.kind == "Skill"]) == 2
+        assert len([d for d in mi2.instances if d.kind == "Soul"]) == 1
+        assert len([d for d in mi2.instances if d.kind == "Guardrail"]) == 1
 
 
 class TestLockfileIncludesAllResolvedKinds:
@@ -250,7 +250,7 @@ class TestLockfileIncludesAllResolvedKinds:
         mi = kernel.instance("my-app")
 
         lock = mi.generate_lock()
-        lock_kinds = {e.kind for e in lock.documents}
+        lock_kinds = {e.kind for e in lock.instances}
 
         assert "Genome" in lock_kinds
         assert "Agent" in lock_kinds
@@ -266,7 +266,7 @@ class TestLockfileIncludesAllResolvedKinds:
 
         lock = mi.generate_lock()
         # 1 Module + 1 Agent + 2 Skills + 1 Soul + 1 Guardrail = 6
-        assert len(lock.documents) == 6
+        assert len(lock.instances) == 6
 
 
 class TestGitHubResolverUnit:
@@ -358,7 +358,7 @@ class TestLegacyDepShorthandRejected:
         assert any("items" in e for e in mi.resolve_errors)
         # And the wrong-granularity fallback did NOT happen: no Skill docs
         # imported from the dep.
-        assert not [d for d in mi.documents if d.kind == "Skill"]
+        assert not [d for d in mi.instances if d.kind == "Skill"]
 
     @pytest.mark.asyncio
     async def test_items_format_still_resolves(self, tmp_path):

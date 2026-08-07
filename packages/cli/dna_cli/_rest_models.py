@@ -16,7 +16,7 @@ returned dict through the ``response_model``: a key the model omits is silently
 DROPPED from the response, and a required field the dict omits raises a 500. So
 every model here is a faithful SUPERSET of the handler's real payload, with
 optional/defaulted fields wherever the handler may omit or null a value. Where a
-payload is genuinely dynamic (a memory recall ``hit``, a Document ``spec``, a
+payload is genuinely dynamic (a memory recall ``hit``, an Instance ``spec``, a
 status→count map, an SDLC work-item's verbatim AC/DoD/timeline lists) the ENVELOPE
 is typed but that field stays loose (``dict[str, Any]`` / ``list[...]`` / ``Any``)
 — honest about what can and cannot be pinned. Imported LAZILY by ``build_app``
@@ -61,17 +61,17 @@ class PromptSectionProvenance(BaseModel):
         "'skill:tdd', 'guardrail:polite'."
     ))
     kind: str = Field(description="The contributing Kind (Agent/Soul/Skill/Guardrail/…).")
-    name: str = Field(description="The contributing document name.")
+    name: str = Field(description="The contributing instance name.")
     source: str = Field(description=(
         "Canonical source artifact path, e.g. 'skills/tdd/SKILL.md' ('?' when "
         "the Kind declares no storage pattern)."
     ))
     hash: str | None = Field(default=None, description=(
-        "SHA-256 (full hex) of the resolved raw document composed into this "
+        "SHA-256 (full hex) of the resolved raw instance composed into this "
         "section, or null when it could not be resolved."
     ))
     version: str | None = Field(default=None, description=(
-        "metadata.version of the resolved document, when the author set one."
+        "metadata.version of the resolved instance, when the author set one."
     ))
     origin: str = Field(description=(
         "Effective layer/scope the section resolved from — the scope that won "
@@ -182,7 +182,7 @@ class DefinitionView(BaseModel):
 
 class DefinitionWriteResponse(BaseModel):
     """``PUT``/``DELETE /v1/definitions/{kind}/{name}`` — the write result.
-    ``version`` is set on apply (the write's document version), absent on
+    ``version`` is set on apply (the write's instance version), absent on
     revert."""
 
     kind: str
@@ -246,14 +246,22 @@ class KindGraphEdge(BaseModel):
     (``dep_filters``: a real declaration that drives prompt composition and is
     never checked against stored data).
 
-    ⚠️ ``enforced`` is the flag that matters, and it is NOT the same as
-    ``tier == "declared"``. The kernel resolves a relation at write time only
-    when it has a concrete target Kind AND is addressed by document name
-    (``by == "name"``). A relation addressed by a spec field of the target
-    (``by: workspace_id``) or carrying its Kind in the value (``to: "*"``) is
-    fully declared and deliberately not resolved. A renderer that draws
-    enforced and unenforced edges alike is asserting a confidence the model
-    does not have.
+    ⚠️ ``followed`` and ``enforced`` are TWO flags, and neither is the same as
+    ``tier == "declared"``. They were one field until fatia 5 of
+    ``spec-topologia-do-grafo`` taught the kernel to resolve a spec-KEY
+    address, which split what used to coincide:
+
+    * ``followed`` — the kernel reads the target and this edge exists as data.
+      True for ``by: name`` and for ``by: <key>``.
+    * ``enforced`` — an unresolvable value REFUSES the write. True only for
+      ``by: name``, because the by-key resolver is deliberately poorer than the
+      live alias-tolerant lookups and may not veto what they accept.
+
+    A relation whose value carries its own Kind (``to: "*"`` with a composite
+    ``by``) is fully declared and neither followed nor enforced. A renderer
+    that draws all edges alike asserts a confidence the model does not have;
+    one that reads only ``enforced`` calls thirteen real, edge-producing
+    relations unchecked.
 
     ``to_kind`` is a registered Kind, or ``*`` when the target Kind travels
     inside the VALUE. A declaration naming a Kind nobody registers is a gap,
@@ -271,14 +279,27 @@ class KindGraphEdge(BaseModel):
     #: one of them, and its siblings share ``from_kind``+``field``), or when the
     #: target is chosen per value.
     polymorphic: bool = False
-    #: How the VALUE addresses the target: ``name`` (the target document's
-    #: name — the only addressing the kernel resolves), a spec FIELD of the
-    #: target (``workspace_id``, ``role_id``, ``tier_id``), or a composite form
-    #: (``Kind:name``, ``Kind/name``, ``{kind, name}``) when ``to_kind`` is ``*``.
+    #: How the VALUE addresses the target: ``name`` (the target instance's
+    #: name), a spec FIELD of the target (``workspace_id``, ``role_id``,
+    #: ``tier_id``), or a composite form (``Kind:name``, ``Kind/name``,
+    #: ``{kind, name}``) when ``to_kind`` is ``*``.
     by: str = "name"
-    #: Does the kernel resolve this relation at write time — validating the
-    #: target exists and producing a data edge? Derived from the declaration,
-    #: never from the tier.
+    #: Does the kernel FOLLOW this relation at write time — read the target and
+    #: produce a data edge? True for ``by: name`` and, since fatia 5 of
+    #: ``spec-topologia-do-grafo``, for a spec-KEY address too. False only when
+    #: the value carries its own Kind, which nothing parses yet.
+    #:
+    #: ⚠️ Declared here BECAUSE the key is new. A ``response_model`` drops what
+    #: it does not name, in silence — the renderer would go on reading
+    #: ``enforced`` alone and drawing every by-key relation as unchecked while
+    #: its edges sat in ``dna_edges``. Guarded in ``test_mcp_graph_refs.py``.
+    followed: bool = False
+    #: Does an unresolvable value REFUSE the write? Strictly narrower than
+    #: ``followed``, and the gap IS the ``by: <key>`` relations: the kernel
+    #: resolves them and draws their edges, and deliberately does not veto over
+    #: them, because the live alias-tolerant lookups (``kernel.tier()``,
+    #: ``kernel.model_profile()``) accept addresses this resolver cannot see.
+    #: Derived from the declaration, never from the tier.
     enforced: bool = False
     #: The relation on ``to_kind`` that is this one's other half, when the pair
     #: is declared. ``null`` for the many relations that point one way. The
@@ -350,10 +371,15 @@ class KindGraphCoverage(BaseModel):
     edges: int
     declared: int = 0
     composition: int = 0
-    #: Edges the kernel actually resolves at write time. The number that says
-    #: how much of the model the runtime CHECKS, as opposed to how much of it
-    #: is written down. Derived from ``edges[].enforced``, never from a tier.
+    #: Edges the kernel REFUSES a write over. The number that says how much of
+    #: the model the runtime VETOES on, as opposed to how much of it is written
+    #: down. Derived from ``edges[].enforced``, never from a tier.
     enforced: int = 0
+    #: Edges the kernel READS the target of, and therefore records in
+    #: ``dna_edges``. Strictly ``>= enforced`` since fatia 5, and the gap is
+    #: the ``by: <key>`` relations. A screen reporting only ``enforced`` shows
+    #: a model less connected than the data it is drawn from.
+    followed: int = 0
     #: How many Kinds declare at least one relation — the epic's own measuring
     #: stick, since most Kinds legitimately point at nothing.
     kinds_with_relations: int = 0
@@ -374,7 +400,7 @@ class KindGraphResponse(BaseModel):
     """``GET /v1/graph/kinds`` — the whole SCHEMA graph in one call.
 
     SCHEMA, not data: these edges say which Kinds MAY point at which. Which
-    DOCUMENTS actually point at which is a different graph, derived at write
+    INSTANCES actually point at which is a different graph, derived at write
     time, and this route does not answer it — ``coverage.limits`` carries that
     statement on the wire so it travels with the answer instead of living in a
     doc page a caller may never read.
@@ -446,14 +472,14 @@ class RegisteredKindsResponse(BaseModel):
 
 class AuthorKindResponse(BaseModel):
     """``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false
-    here: this door cannot approve, so the field states the document's actual
+    here: this door cannot approve, so the field states the instance's actual
     state rather than echoing anything the caller sent."""
 
     namespace: str
     kind: str
     name: str
     approved: bool
-    #: The caller's VERIFIED identity as the document recorded it. ECHOED, never
+    #: The caller's VERIFIED identity as the instance recorded it. ECHOED, never
     #: accepted — there is no request field it could have come from.
     proposed_by: str | None = None
     version: str | None = None
@@ -462,6 +488,23 @@ class AuthorKindResponse(BaseModel):
     #: card renders its editable rows from this echo; dropping it here would
     #: violate the fidelity contract (FastAPI silently strips unmodeled keys).
     schema: dict[str, Any] | None = None
+    #: What the Kind POINTS AT, echoed in the shape it was STORED in (not the
+    #: shape the caller sent — ``Relation.to_declaration()`` drops a restated
+    #: default, so the two differ and the instance is the one worth reading
+    #: back). ``None`` for a Kind that declared none.
+    relations: dict[str, Any] | None = None
+    #: The DECLARED plane, or ``None``. ``None`` is not ``"composition"``: the
+    #: instance stores no plane at all unless one was declared, and collapsing
+    #: the two here would report a decision nobody made.
+    plane: str | None = None
+    #: DERIVED, never stored, and ``null`` unless there is something to say —
+    #: i-117's third state, where "the prose named nothing" and "the prose named
+    #: three things" both produce silence rather than a menu. Each entry is
+    #: ``{field, to, cardinality}``. MODELED because FastAPI strips unmodeled
+    #: keys, which is how a hint computed correctly reaches nobody.
+    suggested_relations: list[dict[str, Any]] | None = None
+    #: The paste-ready sentence that goes with ``suggested_relations``.
+    suggestion: str | None = None
 
 
 class ApproveKindResponse(BaseModel):
@@ -490,7 +533,7 @@ class RevokeKindResponse(BaseModel):
     shape, who conferred effect on it, and who has just withdrawn it.
     ``approved_by`` is present on purpose — revoking is a third act, not an
     erasure of the second, and a record saying only "revoked by X" has lost the
-    fact that this Kind governed real documents for a while."""
+    fact that this Kind governed real instances for a while."""
 
     revoked: bool
     kind: str
@@ -505,7 +548,7 @@ class RevokeKindResponse(BaseModel):
 
 
 class AuthoredKindSummary(BaseModel):
-    """One ``KindDefinition`` document as the audit surface sees it — ALL THREE
+    """One ``KindDefinition`` instance as the audit surface sees it — ALL THREE
     actors, so the reviewer deciding whether to confer effect can see who asked
     for it, and whether anyone has since taken it away, without leaving the
     list."""
@@ -520,8 +563,8 @@ class AuthoredKindSummary(BaseModel):
     #: WHICH not-approved this is: ``unapproved`` | ``approved`` | ``revoked``
     #: (i-085). The boolean above cannot carry three values, and the two it
     #: collapses behave in OPPOSITE ways — a Kind that was never approved
-    #: accepts documents with no validation at all, a revoked one refuses them
-    #: and marks every existing document invalid. Reporting the loosest and the
+    #: accepts instances with no validation at all, a revoked one refuses them
+    #: and marks every existing instance invalid. Reporting the loosest and the
     #: tightest states in the system with the same word is how a reviewer ends
     #: up believing a revocation did nothing.
     state: str = "unapproved"
@@ -540,9 +583,9 @@ class AuthoredKindDetail(AuthoredKindSummary):
     """``GET /v1/kinds/{kind}`` — one authored Kind, in full.
 
     SUBCLASSES the summary rather than restating it: the roster and the single
-    read describe the SAME document, and two independent field lists are two
+    read describe the SAME instance, and two independent field lists are two
     vocabularies for one thing — the kind of drift that reads, to the human
-    doing the review, as two different documents.
+    doing the review, as two different instances.
 
     What it adds is what the roster deliberately withholds. ``schema`` is the
     reason the route exists: registration is what confers schema validation and
@@ -551,7 +594,7 @@ class AuthoredKindDetail(AuthoredKindSummary):
     ``traits`` travels with it because it is the other half of what the
     authoring door stored and the other half of what would take effect.
 
-    ``schema`` is ``null``, never ``{}``, for a document that stored none —
+    ``schema`` is ``null``, never ``{}``, for an instance that stored none —
     "there is no schema here" and "the schema is the empty object" are
     different facts about what would be conferred."""
 
@@ -564,12 +607,12 @@ class AuthoredKindDetail(AuthoredKindSummary):
     #: needed.
     schema: dict[str, Any] | None = None
     traits: list[str] = Field(default_factory=list)
-    #: How documents of this Kind will READ — the ordered fields, their human
+    #: How instances of this Kind will READ — the ordered fields, their human
     #: labels, their semantic roles, and what is hidden — composed with the
     #: Kind's own ``display_label``/``ascii_icon``.
     #:
     #: It travels here for the same reason ``schema`` does: this approval
-    #: confers it. ``schema`` says what a document may CONTAIN; this says what
+    #: confers it. ``schema`` says what an instance may CONTAIN; this says what
     #: a person will SEE of it, in what order and under what names, on every
     #: surface the workspace has. That is the half a reviewer could not see,
     #: and the half a portal needs the moment the Kind exists — one
@@ -581,11 +624,28 @@ class AuthoredKindDetail(AuthoredKindSummary):
     #: reading I can read" is the honest answer, and a 500 on the screen a
     #: reviewer uses to decide whether the Kind takes effect is not.
     presentation: dict[str, Any] | None = None
+    #: ⭐ What the Kind POINTS AT — and the field that makes this route load
+    #: bearing for the human gate rather than merely informative. Approval is
+    #: what REGISTERS the Kind, and registration is what makes the write path
+    #: resolve these relations and the graph draw them. A reviewer who is not
+    #: shown the declared links is approving edges nobody displayed, which is
+    #: the shape of a gate that has stopped gating.
+    #:
+    #: Read off the instance VERBATIM, never re-normalized on the way out: a
+    #: stored declaration this runtime can no longer parse must reach the
+    #: reviewer as what it is, not as ``null``.
+    relations: dict[str, Any] | None = None
+    #: The DECLARED plane, or ``null`` for an instance that declares none.
+    #: ``null`` is NOT ``"composition"`` — the default is applied by whatever
+    #: reads the instance, and keeping the two apart is what makes "how many
+    #: tenant Kinds are on the composition plane BY CHOICE?" a question with an
+    #: answer.
+    plane: str | None = None
 
 
 class AuthoredKindsResponse(BaseModel):
     """``GET /v1/kinds`` — every authored Kind in the scope, approved or not.
-    Documents, not registry entries: an UNAPPROVED Kind is exactly the one the
+    Instances, not registry entries: an UNAPPROVED Kind is exactly the one the
     registry does not have, and it is the one a reviewer came here for."""
 
     scope: str
@@ -595,7 +655,7 @@ class AuthoredKindsResponse(BaseModel):
 # ── bundle entries (list/read/write/revert a bundle-file fork — plane B) ────
 #
 # A bundle-pattern Kind (Skill, and any future bundle Kind) stores MULTIPLE
-# files per document (SKILL.md + scripts/…), not a single spec — these are the
+# files per instance (SKILL.md + scripts/…), not a single spec — these are the
 # file-grained twin of DefinitionView/DefinitionWriteResponse above, generic
 # over any bundle Kind, with the SAME LayerPolicy governance (a fork on a
 # LOCKED Kind is vetoed, 403).
@@ -607,7 +667,7 @@ class BundleEntrySummary(BaseModel):
 
 
 class BundleEntriesView(BaseModel):
-    """``GET /v1/definitions/{kind}/{name}/entries`` — a bundle document's
+    """``GET /v1/definitions/{kind}/{name}/entries`` — a bundle instance's
     entry files (base ∪ tenant overlay), each flagged ``overridden`` —
     whether THIS tenant forked that specific file."""
 
@@ -1184,15 +1244,15 @@ class RegisterArtifactResponse(BaseModel):
     artifact: ArtifactSummary
 
 
-# ── the generic, kubernetes-shaped document write ───────────────────────────
+# ── the generic, kubernetes-shaped instance write ───────────────────────────
 #
-# POST /v1/kinds/{kind}/documents — the path names the Kind (the k8s
+# POST /v1/kinds/{kind}/instances — the path names the Kind (the k8s
 # convention this route follows: "kind is inferred from the endpoint the
 # client submits to"), the body carries only what k8s calls `metadata`/`spec`.
 
 
-class WriteKindDocumentRequest(BaseModel):
-    """``POST /v1/kinds/{kind}/documents`` — the document to write.
+class WriteKindInstanceRequest(BaseModel):
+    """``POST /v1/kinds/{kind}/instances`` — the instance to write.
 
     Deliberately narrow: no ``scope``, no ``claims`` anywhere on this model —
     neither is reachable through this route's body (identity/scope are never
@@ -1204,7 +1264,7 @@ class WriteKindDocumentRequest(BaseModel):
     exactly the defect this route exists to close.
 
     ``source_sha256``, when given, cites the ``SourceArtifact`` (by content
-    address) this document was extracted from — the runtime closes the
+    address) this instance was extracted from — the runtime closes the
     provenance edge (``derived_refs``) server-side."""
 
     metadata: dict[str, Any]
@@ -1213,10 +1273,10 @@ class WriteKindDocumentRequest(BaseModel):
     source_sha256: str | None = None
 
 
-class ListKindDocumentsResponse(BaseModel):
-    """``GET /v1/kinds/{kind}/documents`` — uma página de documentos do Kind.
+class ListKindInstancesResponse(BaseModel):
+    """``GET /v1/kinds/{kind}/instances`` — uma página de instâncias do Kind.
 
-    `documents` é a linha como o kernel a moldou: `{"name": …}` sem projeção, e
+    `instances` é a linha como o kernel a moldou: `{"name": …}` sem projeção, e
     `{"name": …, "spec": {…}}` com `fields`. `projected` ecoa o que foi pedido,
     para um leitor distinguir uma página de nomes de uma projetada — sem isso,
     um `spec` ausente seria ambíguo entre "não pedi" e "não tem".
@@ -1227,22 +1287,22 @@ class ListKindDocumentsResponse(BaseModel):
     scope: str
     kind: str
     api_version: str
-    documents: list[dict[str, Any]]
+    instances: list[dict[str, Any]]
     count: int
     offset: int
     has_more: bool
     projected: list[str] | None = None
 
 
-class GetKindDocumentResponse(BaseModel):
-    """``GET /v1/kinds/{kind}/documents/{name}`` — UM documento, VERBATIM.
+class GetKindInstanceResponse(BaseModel):
+    """``GET /v1/kinds/{kind}/instances/{name}`` — UMA instância, VERBATIM.
 
     A lista projetada passa pela vista dos readers quando o Kind é produzível
     por bundle (Agent, Skill…) — e a vista NORMALIZA: `spec.description` e
     `spec.tools_requiring_confirmation` de um Agent gravado pelo funil
     genérico simplesmente não viajam por ela (medido 05/08/2026 na aba
-    Configuração do dna-cloud). Esta porta lê o documento como a camada do
-    chamador o vê, sem projeção e sem vista — o `get_document_impl` que
+    Configuração do dna-cloud). Esta porta lê a instância como a camada do
+    chamador o vê, sem projeção e sem vista — o `get_instance_impl` que
     sempre existiu e não tinha rota.
 
     `etag` é o token de concorrência otimista para um write subsequente
@@ -1250,7 +1310,7 @@ class GetKindDocumentResponse(BaseModel):
 
     Os TRÊS campos `as_of*` só aparecem quando o chamador pediu leitura no
     tempo, e existem para que uma resposta histórica não seja confundível com
-    uma viva por quem só olha `document` (i-106: a rota ACEITAVA `?as_of=` e
+    uma viva por quem só olha `instance` (i-106: a rota ACEITAVA `?as_of=` e
     devolvia o presente, sem nada na resposta que a desmentisse). Presentes ⇒ o
     corpo é o estado de crença daquele instante; ausentes ⇒ é o de agora."""
 
@@ -1258,12 +1318,12 @@ class GetKindDocumentResponse(BaseModel):
     kind: str
     api_version: str
     name: str
-    document: dict[str, Any]
+    instance: dict[str, Any]
     etag: str | None = None
     #: O instante pedido, NORMALIZADO para ISO-8601 UTC — devolver o que o
     #: chamador digitou esconderia um fuso mal lido.
     as_of: str | None = None
-    #: Qual versão do documento respondeu (`dna_versions.version`).
+    #: Qual versão da instância respondeu (`dna_versions.version`).
     as_of_version: int | None = None
     #: Quando ela foi GRAVADA (tempo de transação). Nunca igual a `as_of`, e é a
     #: distância entre os dois que diz há quanto tempo aquela crença estava
@@ -1271,12 +1331,35 @@ class GetKindDocumentResponse(BaseModel):
     as_of_recorded_at: str | None = None
 
 
+class ResolveInstanceResponse(BaseModel):
+    """``GET /v1/instances/{id}`` — the ONE instance a short id names (i-114).
+
+    The id lane, kept separate from the ``{kind}/{name}`` lane on purpose. A
+    short name and a short id are both strings; a single door that accepted
+    "a name or maybe an id" would eventually answer a name query with an id
+    match, and nothing in the response would say so.
+
+    ``id`` echoes back the FULL id, not the prefix the caller sent — the
+    expansion is the answer, exactly as ``git rev-parse`` returns the whole
+    hash. A prefix matching more than one instance is a **409**, never a pick.
+    """
+
+    #: The full 12-character id the prefix expanded to.
+    id: str
+    scope: str
+    kind: str
+    api_version: str
+    name: str
+    instance: dict[str, Any]
+    etag: str | None = None
+
+
 class GraphRefEdge(BaseModel):
     """ONE edge of the derived reference graph.
 
     ``resolved: false`` is a DANGLING reference — declared, written, resolving
     to nothing. It travels rather than being filtered out: with
-    ``DNA_REF_VALIDATION=warn`` (the default) such a document persists, so
+    ``DNA_REF_VALIDATION=warn`` (the default) such an instance persists, so
     dropping the row would render a tidier graph than the data deserves. These
     rows ARE the list of what is broken.
 
@@ -1287,15 +1370,36 @@ class GraphRefEdge(BaseModel):
 
     depth: int
     direction: str
+    #: A aresta grava a apiVersion dos DOIS lados (fatia 1 da
+    #: spec-topologia-do-grafo). `to_kind` sozinho identifica um NOME de Kind,
+    #: e um nome só é único entre apiVersions porque o registro recusa colisões
+    #: — invariante de outro módulo. Um lado da aresta que dependesse disso
+    #: estaria certo por sorte emprestada.
+    from_api_version: str | None = None
     from_kind: str
     from_name: str
     #: The spec field the reference was declared on.
     field: str
     #: Position inside an array-valued reference; 0 for a scalar one.
     ordinal: int
+    to_api_version: str | None = None
     to_kind: str | None = None
     to_name: str
     to_scope: str | None = None
+    #: Quando a instância alvo foi APAGADA (i-131). A aresta continua existindo
+    #: de propósito — a decisão do founder sobre o `AuditLog` diz que uma linha
+    #: de auditoria sobre instância apagada TEM que continuar apontando, e o
+    #: `on_target_delete: allow` é o vocabulário disso. O defeito que este campo
+    #: fecha não era a aresta sobreviver; era ela seguir dizendo
+    #: `resolved: true` enquanto sobrevivia.
+    to_deleted_at: str | None = None
+    #: The ``metadata.id`` of the instance this edge actually resolved to
+    #: (i-114) — the pair Kubernetes' ``ownerReferences`` carries, and for the
+    #: same reason: the AUTHOR wrote ``to_name``, but which instance that name
+    #: hit is a fact only the write path knew, and it stops being recoverable
+    #: the moment the name moves. ``null`` when the edge is dangling, or when
+    #: the target predates the id. Never a stand-in for "unchanged".
+    to_id: str | None = None
     #: Every declared target — more than one means a polymorphic reference.
     declared_to: list[str] = []
     resolved: bool
@@ -1303,13 +1407,13 @@ class GraphRefEdge(BaseModel):
     #: rather than hidden — ``Story.dependencies → Story`` makes cycles
     #: ordinary data, and the closing edge is the one that shows the cycle.
     closes_cycle: bool = False
-    #: The document version these edges were derived from. Lower than the
-    #: document's current version means the relations are STALE.
+    #: The instance version these edges were derived from. Lower than the
+    #: instance's current version means the relations are STALE.
     from_version: int
 
 
 class GraphRefsResponse(BaseModel):
-    """``GET /v1/kinds/{kind}/documents/{name}/refs`` — the DATA graph.
+    """``GET /v1/kinds/{kind}/instances/{name}/refs`` — the DATA graph.
 
     ``stop`` says WHY the walk ended (``complete`` / ``depth_reached`` /
     ``truncated``), because a caller that cannot tell "this is everything" from
@@ -1318,16 +1422,29 @@ class GraphRefsResponse(BaseModel):
     ``graph_producer`` reports the producer's mode (``warn`` / ``enforce`` /
     ``off``). With it ``off`` the write path performs no reference lookups, so
     no edges are produced — defensible operationally, and NOT the same as "this
-    document has no relations". A store that keeps no edge graph at all answers
+    instance has no relations". A store that keeps no edge graph at all answers
     501, never an empty list.
 
     ⚠️ These are the ENFORCED relations only — the ones ``spec.relations``
-    declares with a concrete target addressed by document name, which is the
+    declares with a concrete target addressed by instance name, which is the
     only kind the write path resolves. The schema graph also carries relations
     addressed by a domain key or carrying their Kind in the value, plus
     composition edges from ``dep_filters``, none of which is ever checked
     against data; calling this "the relations" would claim a completeness the
-    producer does not have."""
+    producer does not have.
+
+    ``as_of`` echoes the transaction instant this walk answered for, or is
+    ``null`` for a live one. ``as_of_truncated`` names every node the walk
+    REACHED and could not read that far back (``Kind/name``) — history pruned.
+    Both exist for the same reason ``stop`` does: a caller that cannot tell a
+    historical answer from a present one, or a short graph from a partly
+    unknowable one, will render the second as the first.
+
+    ⚠️ **Every key the impl produces is declared here**, and the guard that
+    keeps it that way is ``packages/cli/tests/test_mcp_graph_refs.py``. FastAPI
+    DISCARDS an undeclared key in silence, which a client cannot tell from "the
+    field does not exist" — measured on 06/08/2026, when this very route was
+    eating three of them."""
 
     scope: str
     kind: str
@@ -1337,11 +1454,13 @@ class GraphRefsResponse(BaseModel):
     depth: int
     stop: str
     graph_producer: str
+    as_of: str | None = None
+    as_of_truncated: list[str] = []
     edges: list[GraphRefEdge] = []
 
 
-class WriteKindDocumentResponse(BaseModel):
-    """``POST /v1/kinds/{kind}/documents`` — the written document. ``scope``
+class WriteKindInstanceResponse(BaseModel):
+    """``POST /v1/kinds/{kind}/instances`` — the written instance. ``scope``
     is DERIVED (there is no ``scope`` field on the request to have supplied
     one from)."""
 

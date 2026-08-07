@@ -512,7 +512,7 @@ def kind_draft_card_html() -> str:
     INTERATIVO, e o primeiro: o host empurra o resultado de ``author_kind``
     (que ecoa o ``schema``), o card renderiza linhas editáveis
     (nome/tipo/obrigatório/descrição) e reautora via ``callServerTool`` —
-    o documento continua INERTE; a aprovação é humana, no portal, e o card
+    a instância continua INERTE; a aprovação é humana, no portal, e o card
     o diz em toda renderização. Um host sem a extensão ignora a declaração
     e segue lendo o ``content`` textual, byte-idêntico."""
     return (

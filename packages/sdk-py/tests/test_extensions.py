@@ -10,7 +10,7 @@ import pytest
 
 from dna.kernel import Kernel
 from dna.kernel.bundle.handle import FilesystemBundleHandle
-from dna.kernel.document import Document
+from dna.kernel.instance import Instance
 
 
 # ---------------------------------------------------------------------------
@@ -99,7 +99,7 @@ class TestHelixExtension:
 
     def test_agent_describe(self, kernel):
         kp = kernel._kinds[("github.com/ruinosus/dna/v1", "Agent")]
-        doc = Document.from_raw({
+        doc = Instance.from_raw({
             "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Agent",
             "metadata": {"name": "ag", "description": "An agent"},
             "spec": {"soul": "s1", "skills": ["a", "b"], "model": "gpt-4"},
@@ -111,7 +111,7 @@ class TestHelixExtension:
 
     def test_agent_summary(self, kernel):
         kp = kernel._kinds[("github.com/ruinosus/dna/v1", "Agent")]
-        doc = Document.from_raw({
+        doc = Instance.from_raw({
             "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Agent",
             "metadata": {"name": "ag"}, "spec": {"skills": ["a", "b", "c"], "soul": "brad"},
         })

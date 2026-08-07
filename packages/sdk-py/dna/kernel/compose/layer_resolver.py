@@ -165,10 +165,10 @@ def _stamp_overlay_metadata(
 
 
 class DefaultLayerResolver:
-    """Merges layer overlay documents into base documents, applying policies by kind alias.
+    """Merges layer overlay instances into base instances, applying policies by kind alias.
 
     Policies map: { kind_alias_or_kind_name: LayerPolicy }
-    - open: deep merge spec (or add new documents)
+    - open: deep merge spec (or add new instances)
     - restricted: only override existing keys in spec
     - locked: block changes (warn only)
     """
@@ -192,18 +192,18 @@ class DefaultLayerResolver:
         # stored; the gate is on what may be authored.
         self._kind_aliases: dict[str, str] = dict(kind_aliases or {})
         # Kinds already warned about (unmatched-policy fallback) — one
-        # warning per kind per resolver instance, not one per document.
+        # warning per kind per resolver instance, not one per instance.
         self._warned_fallback_kinds: set[str] = set()
 
     def resolve(
         self,
-        base_documents: list[dict[str, Any]],
+        base_instances: list[dict[str, Any]],
         layers: dict[str, str],
         source: Any,
         scope: str,
         policies: dict[str, LayerPolicy],
     ) -> list[dict[str, Any]]:
-        result = [copy.deepcopy(doc) for doc in base_documents]
+        result = [copy.deepcopy(doc) for doc in base_instances]
 
         for layer_id, value in layers.items():
             overlay_docs = source.load_layer(scope, layer_id, value)
@@ -319,7 +319,7 @@ class DefaultLayerResolver:
             if merged_timeline is None:
                 name = base.get("metadata", {}).get("name", "")
                 warnings.warn(
-                    f"Layer '{layer_id}={value}' tried to modify locked document '{name}'. Ignored.",
+                    f"Layer '{layer_id}={value}' tried to modify locked instance '{name}'. Ignored.",
                     stacklevel=4,
                 )
                 return base
@@ -377,7 +377,7 @@ class DefaultLayerResolver:
         for key, val in spec_overlay.items():
             if key not in spec_base:
                 warnings.warn(
-                    f"Layer '{layer_id}={value}' tried to add key '{key}' to restricted document. Ignored.",
+                    f"Layer '{layer_id}={value}' tried to add key '{key}' to restricted instance. Ignored.",
                     stacklevel=5,
                 )
                 continue

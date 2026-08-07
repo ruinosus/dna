@@ -24,7 +24,7 @@ async def test_save_without_kernel_raises_runtime_error(tmp_path):
     bound kernel, the adapter must refuse to save."""
     src = FilesystemWritableSource(str(tmp_path))
     with pytest.raises(RuntimeError, match="no kernel bound"):
-        await src.save_document(
+        await src.save_instance(
             "m", "Agent", "bob",
             {"kind": "Agent", "name": "bob", "spec": {}},
         )
@@ -62,14 +62,14 @@ async def test_save_routes_kinddefinition_to_kinds_dir(tmp_path):
         "metadata": {"name": "ticket"},
         "spec": {"kind": "Ticket", "schema": {}},
     }
-    await src.save_document("m", "KindDefinition", "ticket", raw)
+    await src.save_instance("m", "KindDefinition", "ticket", raw)
     # KindDefinition has storage.container="kinds".
     assert (tmp_path / "m" / "kinds" / "ticket.yaml").is_file()
 
 
 @pytest.mark.asyncio
 async def test_delete_routes_kinddefinition_to_kinds_dir(tmp_path):
-    """Parity with save: delete_document must consult storage_for_kind
+    """Parity with save: delete_instance must consult storage_for_kind
     so custom kinds can be removed from their real on-disk location."""
     from dna.extensions.kinddef import KindDefinitionExtension
 
@@ -83,8 +83,8 @@ async def test_delete_routes_kinddefinition_to_kinds_dir(tmp_path):
         "metadata": {"name": "ticket"},
         "spec": {"kind": "Ticket", "schema": {}},
     }
-    await src.save_document("m", "KindDefinition", "ticket", raw)
+    await src.save_instance("m", "KindDefinition", "ticket", raw)
     assert (tmp_path / "m" / "kinds" / "ticket.yaml").is_file()
 
-    await src.delete_document("m", "KindDefinition", "ticket")
+    await src.delete_instance("m", "KindDefinition", "ticket")
     assert not (tmp_path / "m" / "kinds" / "ticket.yaml").exists()

@@ -1,6 +1,6 @@
-"""Saída: um documento `Agent` projetado num Agent Card do A2A.
+"""Saída: uma instância `Agent` projetado num Agent Card do A2A.
 
-É `emit` — a tese que o DNA já tem: projetar um documento num artefato que um
+É `emit` — a tese que o DNA já tem: projetar uma instância num artefato que um
 sistema externo consome (`dna.emit.mcp_ui`, `dna.emit.frontend`). Um Agent Card é
 mais um alvo, não um mecanismo novo. É o lado que permite OUTRO sistema delegar
 PARA nós.
@@ -21,7 +21,7 @@ _AGENT = {
         "delegation_target_for": {
             "agents": ["supervisor-agent"],
             "use_when": "o usuário anexou um arquivo",
-            "purpose": "Registra um arquivo como documento tipado",
+            "purpose": "Registra um arquivo como instância tipada",
         },
     },
 }

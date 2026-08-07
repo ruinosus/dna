@@ -63,7 +63,7 @@ def test_build_excludes_record_docs_from_materialization():
          _raw("StoryLike", "s-2"), _raw("MitigationLike", "m-1")],
         "scope-x",
     )
-    kinds = {d.kind for d in mi.documents}
+    kinds = {d.kind for d in mi.instances}
     assert "StoryLike" not in kinds, "records must NOT be materialized in the MI"
     assert kinds == {"AgentLike", "MitigationLike"}
 
@@ -76,7 +76,7 @@ def test_build_keeps_unregistered_kinds():
         [_raw("AgentLike", "a-1"), _raw("StoryLike", "s-1")],
         "scope-x",
     )
-    assert {d.kind for d in mi.documents} == {"AgentLike"}
+    assert {d.kind for d in mi.instances} == {"AgentLike"}
 
 
 def test_build_excludes_record_docs_with_variant_api_version():
@@ -90,7 +90,7 @@ def test_build_excludes_record_docs_with_variant_api_version():
     legacy = {"apiVersion": "legacy.io/v9", "kind": "StoryLike",
               "metadata": {"name": "s-legacy"}, "spec": {}}
     mi = k.build([_raw("AgentLike", "a-1"), legacy], "scope-x")
-    assert {d.kind for d in mi.documents} == {"AgentLike"}
+    assert {d.kind for d in mi.instances} == {"AgentLike"}
 
 
 # ---------- buildPrompt smoke (composição intacta) ----------
@@ -121,8 +121,8 @@ def test_build_prompt_smoke_with_records_present():
          "metadata": {"name": "ev-1"}, "spec": {"event": "x"}},
     ]
     mi = k.build(raws, "demo")
-    assert {d.kind for d in mi.documents} >= {"Agent", "Skill"}
-    assert "Evidence" not in {d.kind for d in mi.documents}
+    assert {d.kind for d in mi.instances} >= {"Agent", "Skill"}
+    assert "Evidence" not in {d.kind for d in mi.instances}
     prompt = mi.prompt.build(agent="helper")
     assert "Help the user." in prompt
 

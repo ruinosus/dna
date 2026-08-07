@@ -94,6 +94,13 @@ _LEGACY_BRIDGES: dict[tuple[str, int], _Bridge] = {
 #: Table the ladder creates at version 1 and never drops. If the control
 #: table claims a version but this is missing, the control table is lying
 #: about the database and no DDL may be applied on its word.
+#:
+#: ⚠️ HISTORICAL name, deliberately not the current one. i-111 renamed the
+#: table to ``dna_instances`` in Alembic revision 0007 — but a database still
+#: on the RETIRED numbered ladder is by definition pre-Alembic, and therefore
+#: pre-0007: it can only carry ``dna_documents``. Renaming this constant along
+#: with the table makes the sentinel look for a name that database cannot
+#: have, and every legacy bridge refuses.
 _LADDER_SENTINEL = {"postgresql": "dna_documents", "sqlite": "documents"}
 
 _SCRIPT_LOCATION = Path(__file__).parent / "alembic"

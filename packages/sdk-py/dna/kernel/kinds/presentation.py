@@ -5,7 +5,7 @@ runtimes cannot be unified and should not be — a screen is a component tree in
 someone's framework, a card is declarative JSON rendered inside a sandboxed
 iframe wearing a foreign host's theme. What they genuinely share is not the
 framework. It is **what the data means**: which fields a human reads, in what
-order, what to call them, which one NAMES the document, which one is its STATE,
+order, what to call them, which one NAMES the instance, which one is its STATE,
 and which ones are machinery nobody should be shown.
 
 So this module holds a vocabulary of MEANING, and deliberately not a layout
@@ -63,15 +63,15 @@ __all__ = [
 #:
 #: Each says what the VALUE MEANS, never what to paint:
 #:
-#: * ``identifier`` — the stable handle a human uses to name this document to
+#: * ``identifier`` — the stable handle a human uses to name this instance to
 #:   another human (``metadata.name`` on nearly every Kind).
-#: * ``title`` — the headline; what the document is called in prose.
+#: * ``title`` — the headline; what the instance is called in prose.
 #: * ``subtitle`` — one line elaborating the title.
-#: * ``status`` — the document's own lifecycle state (an OPEN value vocabulary:
+#: * ``status`` — the instance's own lifecycle state (an OPEN value vocabulary:
 #:   any workflow defines its own words, which is exactly why no colour map
 #:   belongs anywhere near this module).
 #: * ``owner`` — the actor responsible for it.
-#: * ``parent`` — the document this one belongs to.
+#: * ``parent`` — the instance this one belongs to.
 #: * ``rank`` — relative importance or ordering among siblings.
 #: * ``tag`` — free-form categorical labels.
 #: * ``timestamp`` — a moment in time.
@@ -91,13 +91,13 @@ PRESENTATION_ROLES: frozenset[str] = frozenset({
     "body",
 })
 
-#: A document has one name, one headline, one subtitle and one state. Two
+#: An instance has one name, one headline, one subtitle and one state. Two
 #: fields claiming ``status`` is a DECLARATION error — refusing it here is
 #: cheaper than making every surface invent a tie-break, and a tie-break
 #: invented twice is two different answers.
 SINGULAR_ROLES: tuple[str, ...] = ("identifier", "title", "subtitle", "status")
 
-#: The document's envelope identity. It is not a ``spec`` field on any Kind,
+#: The instance's envelope identity. It is not a ``spec`` field on any Kind,
 #: and every list surface in this repo already reads it from ``metadata.name``
 #: — so a presentation entry naming it resolves there rather than looking for a
 #: spec key that never exists.
@@ -156,7 +156,7 @@ class Presentation:
         return tuple(f.field for f in self.fields)
 
     def to_declaration(self) -> dict[str, Any]:
-        """The AUTHORING shape — what gets stored back in a document's
+        """The AUTHORING shape — what gets stored back in an instance's
         ``spec.presentation``, and what ``kind-definition.schema.json``
         validates.
 
@@ -236,7 +236,7 @@ def _entry(raw: Any, *, seen: set[str], singular: dict[str, str]) -> Presentatio
             if role in singular:
                 raise ValueError(
                     f"presentation.fields declares role {role!r} on both "
-                    f"{singular[role]!r} and {name!r} — a document has one "
+                    f"{singular[role]!r} and {name!r} — an instance has one "
                     f"{role}, and a surface must not have to break the tie"
                 )
             singular[role] = name
@@ -345,10 +345,10 @@ def presentation_wire(kp: Any) -> dict[str, Any] | None:
 def project_row(
     p: Presentation, *, name: Any, spec: dict[str, Any] | None,
 ) -> dict[str, Any]:
-    """One document, projected to exactly the fields the KIND declares.
+    """One instance, projected to exactly the fields the KIND declares.
 
     ``name`` resolves from the envelope (see :data:`ENVELOPE_NAME_FIELD`);
-    every other entry resolves under ``spec``. A field the document does not
+    every other entry resolves under ``spec``. A field the instance does not
     carry projects as ``None`` — absent is REPORTED, never invented, and the
     surface decides how to print nothing."""
     src = spec if isinstance(spec, dict) else {}

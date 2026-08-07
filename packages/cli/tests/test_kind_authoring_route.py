@@ -5,22 +5,22 @@ is inert: no approval marker, so the registry never takes it.
 Three properties, and each is checked against the thing that would actually
 break if it regressed:
 
-1. **the write is real and auditable** — ``POST /v1/kinds`` persists a document
+1. **the write is real and auditable** — ``POST /v1/kinds`` persists an instance
    a later ``GET /v1/kinds`` lists — **and it has no effect**: a FRESH kernel
    booted over the same store, which runs the real 2-phase load and therefore
    the real approval gate, has no port for the authored Kind. Asserting against
-   a fresh kernel is the point: the process that wrote the document could
+   a fresh kernel is the point: the process that wrote the instance could
    trivially "not have it registered" simply because nothing reloaded.
-2. **the generic doors stay shut** — both of them. ``write_document_impl`` is
-   the core the MCP ``write_document`` tool delegates to, and it refuses every
+2. **the generic doors stay shut** — both of them. ``write_instance_impl`` is
+   the core the MCP ``write_instance`` tool delegates to, and it refuses every
    BOOTSTRAP Kind: ``KindDefinition`` (door one) *and* ``Genome``, the ROOT
-   document whose ``spec.custom_kinds`` entries are the SECOND store-loaded
-   registration door — the one that needs no new document and would otherwise
+   instance whose ``spec.custom_kinds`` entries are the SECOND store-loaded
+   registration door — the one that needs no new instance and would otherwise
    let a tenant approve their own Kind by writing a manifest. The REST
    tenant-layer ``PUT /v1/definitions/KindDefinition/...`` is checked too: it is
    a different mechanism (the layer-policy gate) reaching the same verdict.
 3. **the door cannot approve its own write** — a caller-supplied
-   ``approved_by`` is dropped on the floor, verified on the STORED document, not
+   ``approved_by`` is dropped on the floor, verified on the STORED instance, not
    merely in the response body.
 
 And a fourth, which section 0 covers on its own: **the doors are mounted on
@@ -167,7 +167,7 @@ def _config_app(dna_dir, **app):
 def _client(dna_dir, *, raise_server_exceptions: bool = True, **app) -> TestClient:
     """The suite's default client: ``--auth none``, the local / OSS self-host
     lane — which serves these doors (section 0) and is where the unattributed
-    behaviour they document is the correct one."""
+    behaviour they instance is the correct one."""
     return TestClient(
         R.build_app(base_dir=str(dna_dir), scope=_SCOPE, **app),
         raise_server_exceptions=raise_server_exceptions,
@@ -206,7 +206,7 @@ def _registered_port(dna_dir, kind: str):
 
 def _stored_spec(dna_dir, name: str) -> dict:
     async def probe(live):
-        raw = await live.kernel.get_document(_SCOPE, "KindDefinition", name)
+        raw = await live.kernel.get_instance(_SCOPE, "KindDefinition", name)
         return dict((raw or {}).get("spec") or {})
 
     return _on_fresh_kernel(dna_dir, probe)
@@ -257,13 +257,13 @@ def _stored_spec(dna_dir, name: str) -> dict:
 # 404 in either direction. The router's own table cannot be satisfied that way,
 # and the wire tests below carry discriminators of their own.
 
-#: The six operations, keyed the way the OpenAPI document keys them.
+#: The six operations, keyed the way the OpenAPI instance keys them.
 #:
 #: ``revoke`` joined them for i-085, and it belongs on this list for the reason
 #: the list exists: it is the UNDO of the act one line above it, and an approve
 #: door reachable on a lane where its undo is not would be worse than neither.
-#: ``POST .../documents`` (the generic, kubernetes-shaped document write —
-#: s-close-the-two-doors Peça B) joined for the SAME reason: a document under
+#: ``POST .../instances`` (the generic, kubernetes-shaped instance write —
+#: s-close-the-two-doors Peça B) joined for the SAME reason: an instance under
 #: a Kind these doors just approved is unreachable if that route were mounted
 #: on a narrower set of lanes than authoring/approval are.
 _KIND_OPERATIONS = frozenset({
@@ -275,10 +275,10 @@ _KIND_OPERATIONS = frozenset({
     ("GET", "/v1/kinds/registry/{kind}"),
     ("POST", "/v1/kinds/{kind}/approve"),
     ("POST", "/v1/kinds/{kind}/revoke"),
-    ("POST", "/v1/kinds/{kind}/documents"),
+    ("POST", "/v1/kinds/{kind}/instances"),
 })
 
-#: The same doors, as OpenAPI paths (approve/revoke/documents share no path).
+#: The same doors, as OpenAPI paths (approve/revoke/instances share no path).
 _KIND_PATHS = {
     "/v1/kinds", "/v1/kinds/{kind}",
     # A ENUMERAÇÃO do registry (2026-08-06). `/v1/kinds` lista só os Kinds
@@ -289,15 +289,15 @@ _KIND_PATHS = {
     "/v1/kinds/registry",
     "/v1/kinds/registry/{kind}",
     "/v1/kinds/{kind}/approve", "/v1/kinds/{kind}/revoke",
-    "/v1/kinds/{kind}/documents",
+    "/v1/kinds/{kind}/instances",
     # A leitura VERBATIM de um doc (2026-08-05) — o par do POST genérico.
-    "/v1/kinds/{kind}/documents/{name}",
-    # "o que aponta para este documento?" (spec-grafo-1) — o grafo de DADO do
+    "/v1/kinds/{kind}/instances/{name}",
+    # "o que aponta para esta instância?" (spec-grafo-1) — o grafo de DADO do
     # doc, na MESMA família de portas pelo mesmo motivo das outras: uma
-    # relação de um documento sob um Kind que estas portas acabaram de aprovar
+    # relação de uma instância sob um Kind que estas portas acabaram de aprovar
     # fica inalcançável se esta rota for montada num conjunto de lanes mais
     # estreito do que a autoria e a aprovação.
-    "/v1/kinds/{kind}/documents/{name}/refs",
+    "/v1/kinds/{kind}/instances/{name}/refs",
 }
 
 
@@ -424,7 +424,7 @@ def test_an_authored_kind_exists_and_has_no_effect(dna_dir):
         # a claim stored with a version segment resolves to nothing.
         assert "/" not in body["namespace"], body
 
-        # It EXISTS as a document — that is what makes it auditable…
+        # It EXISTS as an instance — that is what makes it auditable…
         listed = c.get("/v1/kinds", params={"tenant": _WID})
         assert listed.status_code == 200, listed.text
         rows = [k for k in listed.json()["kinds"] if k["kind"] == "Contrato"]
@@ -432,7 +432,7 @@ def test_an_authored_kind_exists_and_has_no_effect(dna_dir):
         assert rows[0]["approved"] is False
 
     # …and it has NO effect: a kernel that loads this store from scratch does
-    # not register it, so nothing validates or routes documents of that Kind.
+    # not register it, so nothing validates or routes instances of that Kind.
     assert _registered_port(dna_dir, "Contrato") is None
 
 
@@ -441,16 +441,16 @@ def test_an_authored_kind_exists_and_has_no_effect(dna_dir):
 
 def test_the_generic_bootstrap_refusal_is_untouched(dna_dir):
     """The dedicated door must not open a generic one — and there are TWO."""
-    from dna.application.documents import (
+    from dna.application.instances import (
         BootstrapKindWriteRefused,
-        write_document_impl,
+        write_instance_impl,
     )
 
     async def probe(live):
         out = {}
-        # Door one: a KindDefinition through the generic write-any-document core.
+        # Door one: a KindDefinition through the generic write-any-instance core.
         with pytest.raises(BootstrapKindWriteRefused) as one:
-            await write_document_impl(
+            await write_instance_impl(
                 live, kind="KindDefinition", name="anything",
                 spec={"target_api_version": "evil.example/v1",
                       "target_kind": "Contrato", "alias": "evil-contrato",
@@ -459,12 +459,12 @@ def test_the_generic_bootstrap_refusal_is_untouched(dna_dir):
                 scope=_SCOPE,
             )
         out["kinddef"] = str(one.value)
-        # Door two: the ROOT document, whose spec.custom_kinds entries are the
+        # Door two: the ROOT instance, whose spec.custom_kinds entries are the
         # OTHER store-loaded registration path — and each entry carries its own
         # approved_by. If a tenant could write this, self-approval would be one
         # manifest away and the whole gate decorative.
         with pytest.raises(BootstrapKindWriteRefused) as two:
-            await write_document_impl(
+            await write_instance_impl(
                 live, kind="Genome", name=_SCOPE,
                 spec={"custom_kinds": [
                     {"apiVersion": "evil.example/v1", "kind": "Contrato",
@@ -514,7 +514,7 @@ def test_the_route_cannot_approve_its_own_write(dna_dir):
         )
         name = r.json()["name"]
 
-    # The response is not the evidence — the STORED document is. A route that
+    # The response is not the evidence — the STORED instance is. A route that
     # merely reported `approved: false` while persisting the caller's marker
     # would register the Kind on the next load.
     spec = _stored_spec(dna_dir, name)
@@ -524,7 +524,7 @@ def test_the_route_cannot_approve_its_own_write(dna_dir):
 
 # ── 4. the Kind name is the one body field that reaches a PATH ────────────
 #
-# The document name becomes a DIRECTORY on a filesystem-backed source
+# The instance name becomes a DIRECTORY on a filesystem-backed source
 # (``<scope>/kinds/<name>/KIND.yaml``), and the caller supplies half of that
 # name. An unvalidated ``kind`` is therefore a create-directories-anywhere +
 # write-a-file primitive outside the store root, and a name aimed at another
@@ -570,10 +570,10 @@ def test_a_kind_name_that_is_not_an_identifier_is_refused(dna_dir, bad):
     """``target_kind`` is documented as a CamelCase identifier — so validate it
     as one. An allow-list, not a deny-list of the characters we thought of.
 
-    ``Contrato--Extra`` is in the list for a second reason: the document name
+    ``Contrato--Extra`` is in the list for a second reason: the instance name
     joins namespace and Kind with ``--``, and only the namespace half is
     structurally free of it. An ambiguous name is a trap laid for the approval
-    act, which addresses these documents by name.
+    act, which addresses these instances by name.
 
     ``contrato`` is in it for a third: the guard's message says CamelCase and
     the guard must mean what it says. MEASURED — ``Contrato`` and ``contrato``
@@ -645,7 +645,7 @@ def test_a_traversing_kind_name_writes_no_file_outside_the_store(
 # pinned as a LITERAL here, not merely as "whatever the constant happens to say".
 #
 # The sibling fact — that a shared-secret deployment records
-# ``rest:unidentified`` and not ``rest:local`` — is pinned on a STORED document
+# ``rest:unidentified`` and not ``rest:local`` — is pinned on a STORED instance
 # in §0 (``test_the_shared_secret_lane_authors_and_lists_with_the_right_bearer``),
 # authored over the wire on that very lane, and again by
 # ``test_kind_approval_audit.py`` §6 from a VERIFIED token that names nobody on
@@ -721,7 +721,7 @@ def test_the_local_sentinel_is_reserved_for_the_lane_that_verifies_nothing():
     the helper is shared across every route on this face, the mapping is what
     would silently rot under a rename, and §0 exercises that row end to end by
     authoring on the token lane and reading ``rest:unidentified`` back off the
-    STORED document.
+    STORED instance.
 
     Asserted on the helper rather than through HTTP because the config lane's
     middleware stashes claims for every request it lets through: that branch is
@@ -810,7 +810,7 @@ _OTHER_SCHEMA = {
 #: leak, and a blanket ban on the word "own" would forbid the true sentence.
 _OWNERSHIP_TELL = re.compile(
     r"not\s+yours|not\s+your\b|belongs\s+to|owned\s+by|"
-    r"(?:an|other|another|different)\s+workspace(?:'s)?\s+(?:kind|document|namespace)|"
+    r"(?:an|other|another|different)\s+workspace(?:'s)?\s+(?:kind|instance|namespace)|"
     r"someone\s+else|exists?\s+but|but\s+it\s+(?:is|does)|"
     r"forbidden|unauthori[sz]ed|not\s+authori[sz]ed|permission|access\s+denied",
     re.I,
@@ -831,7 +831,7 @@ def test_the_detail_route_carries_the_schema_the_listing_withholds(dna_dir):
 
     Two halves, and both matter. First: the ten summary fields must come back
     IDENTICAL to the row ``GET /v1/kinds`` already publishes, so the audit
-    screen is not reading two different descriptions of one document. Second:
+    screen is not reading two different descriptions of one instance. Second:
     the schema and the traits — the fields the list does not carry — must be
     there, because a reviewer who cannot see what they would be approving is
     not reviewing anything.
@@ -865,17 +865,33 @@ def test_the_detail_route_carries_the_schema_the_listing_withholds(dna_dir):
     summary = set(RM.AuthoredKindSummary.model_fields)
     assert {k: body[k] for k in summary} == {k: row[k] for k in summary}, body
     # And the detail is exactly the summary plus what this APPROVAL confers — a
-    # field here that is neither is a second vocabulary for the same document.
+    # field here that is neither is a second vocabulary for the same instance.
     # ``presentation`` joined that group deliberately: the approval confers how
-    # documents of the Kind READ exactly as it confers what they may CONTAIN,
+    # instances of the Kind READ exactly as it confers what they may CONTAIN,
     # and a reviewer who cannot see the first is reviewing half of it.
-    assert set(body) == summary | {"schema", "traits", "presentation"}, sorted(body)
+    # ``relations`` + ``plane`` joined the group for the SAME reason, and they
+    # are why this is asserted as a SET rather than member by member: approval
+    # REGISTERS the Kind, and registration is what makes the write path resolve
+    # its relations and the graph draw them. A reviewer who is not shown the
+    # declared links is conferring edges nobody displayed.
+    assert set(body) == summary | {
+        "schema", "traits", "presentation", "relations", "plane",
+    }, sorted(body)
     assert body["presentation"] is None, (
         "this Kind was authored without a presentation — it must not read as "
         "declaring an empty one"
     )
+    assert body["relations"] is None, (
+        "this Kind was authored without relations — it must not read as "
+        "declaring an empty set of them"
+    )
+    assert body["plane"] is None, (
+        "this Kind declared no plane — answering with the DEFAULT here would "
+        "make a Kind whose author chose 'composition' indistinguishable from "
+        "one that was never asked"
+    )
 
-    # The audit half is real, not defaulted: an authored document names its
+    # The audit half is real, not defaulted: an authored instance names its
     # proposer and its birth, and a route that returned the model's defaults
     # for everything would satisfy the equality above on two empty dicts.
     assert body["kind"] == "Contrato", body
@@ -888,7 +904,7 @@ def test_a_neighbours_kind_is_a_404_that_hands_over_no_schema(dna_dir):
     """Strictly more data than the listing ⇒ at least as tight a filter.
 
     B authors ``Contrato``; A authors NOTHING, so a refusal here cannot be an
-    accident of finding the caller's own document. Without the ownership filter
+    accident of finding the caller's own instance. Without the ownership filter
     the scope holds exactly one ``…--Contrato``, the Kind half is all the URL
     carries, and A gets back B's namespace AND B's JSON Schema — the design of
     the workspace's data model, which is a great deal more than the identity
@@ -917,7 +933,7 @@ def test_a_stranger_gets_the_same_answer_as_a_nonexistent_kind(dna_dir):
 
     "It exists but is not yours" IS the probe — a workspace could enumerate
     what its neighbours are authoring one Kind name at a time without ever
-    reading a document. So the two answers must be indistinguishable.
+    reading an instance. So the two answers must be indistinguishable.
 
     **The comparison alone cannot say that.** Both refusals leave the handler
     through the SAME ``raise AuthoredKindNotFound``, reached by two calls that
@@ -1072,7 +1088,7 @@ def test_an_unreadable_registry_refuses_the_read_rather_than_answering(
         r = _detail(c, tenant=_WID)
         assert r.status_code == 503, (
             f"an unreadable registry answered {r.status_code}; the one outcome "
-            f"that is not acceptable is answering with the document: {r.text}"
+            f"that is not acceptable is answering with the instance: {r.text}"
         )
         detail = r.json()["detail"]
         assert "connection reset by peer" in detail, detail
@@ -1098,7 +1114,7 @@ def test_a_tenant_authors_a_presentation_and_reads_it_back(dna_dir):
         body = _detail(c, tenant=_WID).json()
 
     assert body["presentation"] == {
-        # The document's own ``display_label`` — unset here, so honestly null
+        # The instance's own ``display_label`` — unset here, so honestly null
         # rather than a plural invented from the Kind name.
         "label": None,
         "icon": None,

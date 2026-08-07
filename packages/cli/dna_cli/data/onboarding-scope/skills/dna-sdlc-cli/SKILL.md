@@ -5,7 +5,7 @@ description: "Use whenever work in this project needs SDLC tracking (Epic, Featu
 
 # DNA SDLC CLI — the work tracker for this project
 
-This project tracks its own lifecycle as DNA documents: Stories, Features,
+This project tracks its own lifecycle as DNA instances: Stories, Features,
 Epics and Issues are first-class YAML documents in the board scope under
 `.dna/` (the CLI's default source `./.dna` — run `dna` from the project
 root, no env var needed; the sole board scope is auto-detected, or set
@@ -185,6 +185,6 @@ in one shot) · `produces` / `cite` (link artifacts / sources) ·
 
 ## When NOT to use this skill
 
-- Reading documents programmatically (use the SDK: `Kernel.quick(...)` /
+- Reading instances programmatically (use the SDK: `Kernel.quick(...)` /
   `mi.all("Story")` — see the dna-sdk docs).
-- Bulk renames/deletes (use `dna doc` + a git commit, not the SDLC verbs).
+- Bulk renames/deletes (use `dna instance` + a git commit, not the SDLC verbs).

@@ -3,7 +3,7 @@
 The `dna` binary is the terminal surface over the same kernel the SDKs
 expose: every command boots a local `Kernel`, points it at your manifests
 via `DNA_SOURCE_URL` (or `DNA_BASE_DIR` for a plain filesystem directory),
-and reads or writes documents through the same ports. Nothing here is a
+and reads or writes instances through the same ports. Nothing here is a
 second code path — what the CLI validates and stores is exactly what
 `Kernel.quick()` would load.
 
@@ -20,7 +20,7 @@ regenerated from the live Click tree on every build and can't drift.
 $ dna --help
 Usage: dna [OPTIONS] COMMAND [ARGS]...
 
-  DNA — declarative lifecycle + document CLI.
+  DNA — declarative lifecycle + instance CLI.
 
   Boots a local kernel via DNA_SOURCE_URL / DNA_BASE_DIR (filesystem source).
   Run `dna kind list` to start exploring, `dna sdlc --help` for the lifecycle
@@ -32,7 +32,7 @@ Options:
 
 Commands:
   api       Expose the live DNA (definitions + memory) over a REST read-API.
-  doc       List, show, create, edit, delete documents.
+  doc       List, show, create, edit, delete instances.
   docs      Browse the in-product Doc corpus.
   emit      Emit a DNA agent as a target runtime's native artifact (the...
   eval      Run EvalSuites locally (offline, deterministic) and compare...
@@ -45,7 +45,7 @@ Commands:
   memory    Declarative memory over existing Kinds...
   new       Scaffold a valid Kind skeleton into a scope (agent | soul |...
   recall    Hybrid semantic search (dense + lexical + RRF) over the...
-  research  Manage Research synthesis documents (curated syntheses of...
+  research  Manage Research synthesis instances (curated syntheses of...
   scope     List + inspect scopes (manifest modules).
   sdlc      Declarative lifecycle tracking...
   search    Alias of ``dna recall`` (neutral naming).
@@ -161,7 +161,7 @@ EOF
 A **scope** is a directory of manifests — the unit of loading, inheritance
 and tenancy ([Tenancy & layers](../concepts/tenancy-layers.md)). `dna scope
 list` shows every scope the configured source can see; `dna scope tree`
-inventories one scope's documents grouped by Kind — the fastest way to
+inventories one scope's instances grouped by Kind — the fastest way to
 answer "what is actually in here?".
 
 ```console
@@ -184,11 +184,11 @@ Snippet
 ```
 
 Note the two-phase load at work: the `KindDefinition` registered the
-`Snippet` Kind, and the `hello` document was then parsed as a first-class
+`Snippet` Kind, and the `hello` instance was then parsed as a first-class
 instance of it — no Python was written. The two `Doc` pages are absent on
 purpose: `Doc` is a *record-plane* Kind (pure typed content that never
 composes into agent prompts), and the tree inventories the composition
-plane — records are reached with `dna doc list Doc --scope docs` and the
+plane — records are reached with `dna instance list Doc --scope docs` and the
 [`dna docs`](#dna-docs-browse-the-in-product-doc-corpus) group below.
 
 ## `dna genome view` — the derived Genome view
@@ -258,20 +258,20 @@ $ dna kind describe Doc | head -8
     "required": [
 ```
 
-## `dna doc` — generic document CRUD
+## `dna instance` — generic instance CRUD
 
-[Reference →](../reference/cli/doc.md)
+[Reference →](../reference/cli/instance.md)
 
-The workhorse group: list, show, create, edit and delete documents of
-*any* Kind, with the Kind's JSON Schema enforced on every write. `dna doc
+The workhorse group: list, show, create, edit and delete instances of
+*any* Kind, with the Kind's JSON Schema enforced on every write. `dna instance
 fields` prints the fields a Kind accepts (straight from its schema), and
-`dna doc make` builds a document from `field=value` arguments — values are
+`dna instance make` builds an instance from `field=value` arguments — values are
 coerced to the schema's types, so you rarely need to hand-craft JSON. For
-bulk upserts from files there is `dna doc apply`, and Kinds that declare a
-status machine get generic `dna doc transition`.
+bulk upserts from files there is `dna instance apply`, and Kinds that declare a
+status machine get generic `dna instance transition`.
 
 ```console
-$ dna doc fields Comment --scope docs
+$ dna instance fields Comment --scope docs
 Fields for Comment
   required: ['author', 'body', 'created_at', 'target_ref', 'type']
 
@@ -282,16 +282,16 @@ Fields for Comment
   created_at               (string) *   
   edited_at                (string)   
   from_status              (string)   
-  target_ref               (string) *   Kind:name of the target document
+  target_ref               (string) *   Kind:name of the target instance
   to_status                (string)   
   type                     (string) enum=['note', 'status_change', 'assignment', 'system'] *   
 
-$ dna doc make Comment note-1 --scope docs target_ref=Doc:welcome \
+$ dna instance make Comment note-1 --scope docs target_ref=Doc:welcome \
     author=ada body='Ship the welcome page.' type=note \
     created_at=2026-07-09T12:00:00Z
 Created Comment/note-1 in scope docs (5 fields)
 
-$ dna doc show Comment note-1 --scope docs
+$ dna instance show Comment note-1 --scope docs
 {
   "kind": "Comment",
   "name": "note-1",
@@ -312,8 +312,8 @@ $ dna doc show Comment note-1 --scope docs
 
 [Reference →](../reference/cli/docs.md)
 
-Not to be confused with `dna doc` above: `dna docs` (plural) is a reader
-over one specific corpus — a scope named `docs` holding documents of the
+Not to be confused with `dna instance` above: `dna docs` (plural) is a reader
+over one specific corpus — a scope named `docs` holding instances of the
 built-in [`Doc` Kind](../concepts/builtin-kinds.md#doc), the pattern a
 DNA-based product uses to serve its own help pages from the kernel. Each
 page is a `docs/<name>/DOC.md` bundle: a markdown body plus sidebar
@@ -349,7 +349,7 @@ it is an extension point now, not a prerequisite.
 
 [Reference →](../reference/cli/research.md)
 
-A `Research` document is a curated synthesis of external sources — the
+A `Research` instance is a curated synthesis of external sources — the
 [agent-facing knowledge](../concepts/agent-knowledge.md) model: cited
 findings and recommendations as data, not generated wiki prose. The CLI
 lists a scope's research catalog and pretty-prints one synthesis with its
@@ -447,11 +447,11 @@ so a diff never needs to transfer content — and re-serialization noise
 The front door of the ecosystem: point `dna install` at a repository —
 `github:owner/repo[/subdir][@ref]` (a shallow clone, the same URI grammar
 `Genome` dependencies use) or `local:<path>` (a directory you already
-have) — and it detects the DNA documents in the fetched tree with the
+have) — and it detects the DNA instances in the fetched tree with the
 kernel's registered readers, validates each one, and writes the valid
-ones into your source through `kernel.write_document`, so every write
+ones into your source through `kernel.write_instance`, so every write
 guard runs. Third-party manifests are **untrusted data**: schema
-validation is the first defense, and an invalid document is rejected
+validation is the first defense, and an invalid instance is rejected
 with the reason while the install continues with the valid ones (see the
 [threat model](https://github.com/ruinosus/dna/blob/main/SECURITY.md)).
 `--dry-run` prints the plan and stops:
@@ -483,7 +483,7 @@ installed 1 · skipped 0 · rejected 0
 provenance → ~/dna-playground/.dna/market/installed.lock
 ```
 
-Re-running is idempotent (existing documents are skipped with a warning;
+Re-running is idempotent (existing instances are skipped with a warning;
 `--force` overwrites), and every install upserts `installed.lock` in the
 scope — each entry records the origin URI **pinned to the fetched
 commit**, the path inside the fetched tree, and a content SHA-256.
@@ -539,13 +539,13 @@ The remaining groups already have dedicated prose — one line each here:
   The full walkthrough is [Make your project
   agent-ready](../getting-started/agent-onboarding.md).
   ([reference](../reference/cli/init.md))
-- **`dna eval`** — author `EvalCase`/`EvalSuite` documents and run them
+- **`dna eval`** — author `EvalCase`/`EvalSuite` instances and run them
   offline and deterministically, with the composed prompt as the default
   target and an `EvalBaseline` to gate CI on regressions; the walkthrough
   is [How to evaluate agents](evaluating-agents.md).
   ([reference](../reference/cli/eval.md))
 - **`dna recall`** (and its neutral-name alias **`dna search`**) — hybrid
-  semantic search (dense + lexical + RRF) over a scope's documents; the
+  semantic search (dense + lexical + RRF) over a scope's instances; the
   full walkthrough is in [How to use semantic recall &
   memory](semantic-recall.md) and the model behind it in [Search &
   memory](../concepts/search-and-memory.md).

@@ -2,7 +2,7 @@
   "$comment": "s-dna-port-surface-parity → golden surface lock. THE public surface manifest of the Python SDK: each port lists the members of its real typing.Protocol; ManifestInstance/Kernel list the blessed vs deprecated read surface plus the EXACT public_surface. Adding, removing or renaming any tracked member without editing this file turns the suite red — public-surface changes are conscious decisions, never drift. Executors: packages/sdk-py/tests/test_port_surface_golden.py (introspects the real typing.Protocol members), test_blessed_query_surface.py and test_hook_names.py. History: this was a shared Py↔TS manifest with a {py, ts} pair per member; the TypeScript SDK was frozen (tag sdk-ts-final) and the `ts` half was dropped — the Python surface lock, which is what it always really enforced, stays.",
   "ports": {
     "SourcePort": {
-      "doc": "WHERE — load documents from storage. Py: dna/kernel/protocols.py · TS: src/kernel/protocols.ts",
+      "doc": "WHERE — load instances from storage. Py: dna/kernel/protocols.py · TS: src/kernel/protocols.ts",
       "members": [
         {
           "py": "supports_readers"
@@ -42,10 +42,10 @@
       "doc": "SourcePort + write/versioning half. OWN members only (inherited SourcePort members are tracked above).",
       "members": [
         {
-          "py": "save_document"
+          "py": "save_instance"
         },
         {
-          "py": "delete_document"
+          "py": "delete_instance"
         },
         {
           "py": "list_versions"
@@ -379,7 +379,7 @@
         },
         {
           "py": "api_version_identity",
-          "note": "The row key carries the Kind's own identity (scope, kind, apiVersion, name), so two Kinds sharing a name coexist and load_one/delete_document can be pinned to one of them. An adapter whose identity is registry-mediated — the filesystem path's container — declares False."
+          "note": "The row key carries the Kind's own identity (scope, kind, apiVersion, name), so two Kinds sharing a name coexist and load_one/delete_instance can be pinned to one of them. An adapter whose identity is registry-mediated — the filesystem path's container — declares False."
         },
         {
           "py": "as_of_reads",
@@ -387,7 +387,19 @@
         },
         {
           "py": "edge_graph",
-          "note": "The store keeps the DERIVED reference graph (declared-relation edges) and can walk it (traverse_edges). Separate from the 'edges' write kwarg, and asked BEFORE the read for the same reason as_of_reads is: an adapter that records no edges must make the face answer 'unsupported', never an empty list. An empty list reads as 'nothing points at this document' — a claim only a store that actually keeps edges may make."
+          "note": "The store keeps the DERIVED reference graph (declared-relation edges) and can walk it (traverse_edges). Separate from the 'edges' write kwarg, and asked BEFORE the read for the same reason as_of_reads is: an adapter that records no edges must make the face answer 'unsupported', never an empty list. An empty list reads as 'nothing points at this instance' — a claim only a store that actually keeps edges may make."
+        },
+        {
+          "py": "valid_time",
+          "note": "The store keeps WORLD time as a COLUMN (dna_instances.valid_at, a tstzrange) and can be asked 'was this true at T?' (load_one_valid_at), refusing two overlapping validity periods for one instance. NOT the same axis as as_of_reads: that one is TRANSACTION time (what the store believed), this one is WORLD time (when the fact was true), and a store can have either without the other — collapsing them is the classic bitemporal mistake. The FIRST flag whose value depends on the BINDING rather than the class: SqlAlchemySource declares True on Postgres and False on SQLite, which has no range type, no GiST and no EXCLUDE constraint (spec-topologia-do-grafo fatia 3)."
+        },
+        {
+          "py": "key_lookup",
+          "note": "The store can answer 'which instance of Kind K carries spec[key] == v' (find_instances_by_spec_key) — what a relation declared `by: workspace_id` needs in order to be FOLLOWED rather than merely declared (spec-topologia-do-grafo fatia 5). Asked BEFORE the read, like edge_graph and as_of_reads and for their reason: an adapter that cannot look up by key must make the caller hear KeyLookupUnsupported, never None. None reads as 'no instance carries that key' — an accusation against data nobody examined."
+        },
+        {
+          "py": "key_lookup_indexed",
+          "note": "…and it does so through an INDEX rather than by scanning the Kind's instances. The SECOND flag whose value depends on the BINDING rather than the class, and set the same way valid_time is. Postgres has carried dna_insts_spec_gin_idx — a GIN over (content::jsonb->'spec'), generic over the KEY — since baseline revision 0001: measured 07/08/2026 at 200k instances, 1.8ms index-served against 15ms scanned, which is why fatia 5 needed no migration at all. SQLite has no GIN and no containment operator; the filesystem has no index whatsoever. Both answer by walking, and both say so HERE rather than letting an operator discover it as a mysterious write-path slowdown. Deliberately NOT folded into key_lookup: 'cannot answer' and 'answers the slow way' are decisions for two different readers."
         }
       ]
     },
@@ -426,7 +438,7 @@
     "ManifestInstance": {
       "blessed": [
         {
-          "py": "documents",
+          "py": "instances",
           "note": "canonical in-memory read — filter/find by d.kind / d.name; what QUICK-START, READMEs and examples teach"
         },
         {
@@ -460,12 +472,12 @@
       "deprecated": [
         {
           "py": "all",
-          "replacement": "mi.documents (filter by d.kind) or kernel.query(scope, kind)",
+          "replacement": "mi.instances (filter by d.kind) or kernel.query(scope, kind)",
           "removal": "1.0"
         },
         {
           "py": "one",
-          "replacement": "mi.documents (find by d.kind + d.name); Py also kernel.get_document(scope, kind, name), TS kernel.query with a filter",
+          "replacement": "mi.instances (find by d.kind + d.name); Py also kernel.get_instance(scope, kind, name), TS kernel.query with a filter",
           "removal": "1.0"
         }
       ],
@@ -482,7 +494,7 @@
         "default_agent",
         "dependency_tree",
         "describe",
-        "documents",
+        "instances",
         "explain_prompt",
         "explain_prompt_async",
         "find_agent",
@@ -533,13 +545,13 @@
           "note": "aggregation twin of query"
         },
         {
-          "py": "get_document"
+          "py": "get_instance"
         },
         {
           "py": "query_list_sync"
         },
         {
-          "py": "get_document_sync"
+          "py": "get_instance_sync"
         }
       ],
       "deprecated": []

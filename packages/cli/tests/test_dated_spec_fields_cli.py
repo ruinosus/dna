@@ -78,7 +78,7 @@ def _only_doc_of_kind(store: dict, kind: str) -> dict:
 
 @pytest.mark.parametrize("kind", sorted(_CREATE_VERBS))
 def test_create_verb_stamps_every_dated_field(sdlc_runner, store, kind):
-    """A create verb that skips a declared field files a document its own read
+    """A create verb that skips a declared field files an instance its own read
     surfaces cannot date — silently, forever (i-078)."""
     setup, argv = _CREATE_VERBS[kind]
     _run(sdlc_runner, [*setup, argv])

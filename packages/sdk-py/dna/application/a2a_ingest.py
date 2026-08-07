@@ -1,6 +1,6 @@
-"""Entrada: um Agent Card de terceiro vira um `RemoteAgent` documento — INERTE.
+"""Entrada: um Agent Card de terceiro vira um `RemoteAgent` instância — INERTE.
 
-Registrar um agente remoto passa a ser escrever um documento: sem deploy, sem
+Registrar um agente remoto passa a ser escrever uma instância: sem deploy, sem
 edição de código. "Inerte" é a palavra que carrega o desenho inteiro deste
 módulo — buscar um Card por HTTP é só leitura de uma URL pública; NUNCA pode,
 por si só, conceder acesso a dado do workspace. Um `RemoteAgent` só se torna
@@ -58,7 +58,7 @@ _CAPABILITY_FIELD_MAP = {
 
 #: O mesmo, mas DENTRO de cada `supportedInterfaces[]`. Separado do mapa raiz
 #: porque o kernel só converte o nível que declara: um dicionário aninhado que
-#: chega camelCase atravessa a tradução intocado e vira documento inválido —
+#: chega camelCase atravessa a tradução intocado e vira instância inválida —
 #: silenciosamente, porque `additionalProperties: false` acusa o sintoma
 #: (propriedade desconhecida) e não a causa (ninguém traduziu este nível).
 _INTERFACE_FIELD_MAP = {

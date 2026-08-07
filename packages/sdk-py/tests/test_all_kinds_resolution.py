@@ -64,7 +64,7 @@ class TestSkillResolution:
             ]},
         ], {"instruction": "Agent.", "skills": ["brainstorming", "claude-api"]})
 
-        skills = [d for d in mi.documents if d.kind == "Skill"]
+        skills = [d for d in mi.instances if d.kind == "Skill"]
         names = [s.name for s in skills]
         assert "brainstorming" in names
         assert "claude-api" in names
@@ -76,7 +76,7 @@ class TestSkillResolution:
             ]},
         ], {"instruction": "Agent.", "skills": ["brainstorming"]})
 
-        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "brainstorming"), None)
+        skill = next((d for d in mi.instances if d.kind == "Skill" and d.name == "brainstorming"), None)
         assert len(skill.spec.get("instruction", "")) > 100
 
     def test_skill_with_scripts_has_scripts(self, tmp_path):
@@ -86,7 +86,7 @@ class TestSkillResolution:
             ]},
         ], {"instruction": "Agent.", "skills": ["brainstorming"]})
 
-        skill = next((d for d in mi.documents if d.kind == "Skill" and d.name == "brainstorming"), None)
+        skill = next((d for d in mi.instances if d.kind == "Skill" and d.name == "brainstorming"), None)
         scripts = skill.spec.get("scripts", {})
         assert len(scripts) > 0, f"Expected scripts. Spec keys: {list(skill.spec.keys())}"
 
@@ -104,7 +104,7 @@ class TestSoulResolution:
             ]},
         ], {"instruction": "Agent.", "soul": "brad"})
 
-        souls = [d for d in mi.documents if d.kind == "Soul"]
+        souls = [d for d in mi.instances if d.kind == "Soul"]
         names = [s.name for s in souls]
         assert "brad" in names
 
@@ -115,7 +115,7 @@ class TestSoulResolution:
             ]},
         ], {"instruction": "Agent.", "soul": "brad"})
 
-        soul = next((d for d in mi.documents if d.kind == "Soul" and d.name == "brad"), None)
+        soul = next((d for d in mi.instances if d.kind == "Soul" and d.name == "brad"), None)
         soul_content = soul.spec.get("soul_content", "")
         assert len(soul_content) > 50, f"Soul content too short: {len(soul_content)}"
 
@@ -133,7 +133,7 @@ class TestSoulResolution:
             ]},
         ], {"instruction": "Agent.", "soul": "brad"})
 
-        soul = next((d for d in mi.documents if d.kind == "Soul" and d.name == "brad"), None)
+        soul = next((d for d in mi.instances if d.kind == "Soul" and d.name == "brad"), None)
         spec = soul.spec
         assert len(spec.get("style_content", "")) > 0, "Missing STYLE.md content"
         assert len(spec.get("agents_content", "")) > 0, "Missing AGENTS.md content"
@@ -146,7 +146,7 @@ class TestSoulResolution:
             ]},
         ], {"instruction": "Agent.", "soul": "brad"})
 
-        soul = next((d for d in mi.documents if d.kind == "Soul" and d.name == "brad"), None)
+        soul = next((d for d in mi.instances if d.kind == "Soul" and d.name == "brad"), None)
         soul_json = soul.spec.get("soul_json")
         assert soul_json is not None, "Missing soul.json content"
         assert isinstance(soul_json, dict), f"soul_json should be dict, got {type(soul_json)}"
@@ -193,7 +193,7 @@ class TestGuardrailResolution:
             ]},
         ], {"instruction": "Agent.", "guardrails": ["pii-shield"]})
 
-        guardrails = [d for d in mi.documents if d.kind == "Guardrail"]
+        guardrails = [d for d in mi.instances if d.kind == "Guardrail"]
         names = [g.name for g in guardrails]
         assert "pii-shield" in names
 
@@ -205,7 +205,7 @@ class TestGuardrailResolution:
             ]},
         ], {"instruction": "Agent.", "guardrails": ["pii-shield"]})
 
-        gr = next((d for d in mi.documents if d.kind == "Guardrail" and d.name == "pii-shield"), None)
+        gr = next((d for d in mi.instances if d.kind == "Guardrail" and d.name == "pii-shield"), None)
         rules = gr.spec.get("rules", [])
         assert len(rules) == 3
         assert "Never expose PII" in rules
@@ -218,7 +218,7 @@ class TestGuardrailResolution:
             ]},
         ], {"instruction": "Agent.", "guardrails": ["pii-shield"]})
 
-        gr = next((d for d in mi.documents if d.kind == "Guardrail" and d.name == "pii-shield"), None)
+        gr = next((d for d in mi.instances if d.kind == "Guardrail" and d.name == "pii-shield"), None)
         assert gr.spec.get("severity") == "block"
 
 
@@ -263,9 +263,9 @@ class TestAllKindsTogether:
             "guardrails": ["safe"],
         })
 
-        assert next((d for d in mi.documents if d.kind == "Skill" and d.name == "my-skill"), None) is not None
-        assert next((d for d in mi.documents if d.kind == "Soul" and d.name == "wise"), None) is not None
-        assert next((d for d in mi.documents if d.kind == "Guardrail" and d.name == "safe"), None) is not None
+        assert next((d for d in mi.instances if d.kind == "Skill" and d.name == "my-skill"), None) is not None
+        assert next((d for d in mi.instances if d.kind == "Soul" and d.name == "wise"), None) is not None
+        assert next((d for d in mi.instances if d.kind == "Guardrail" and d.name == "safe"), None) is not None
 
     def test_all_kinds_in_context(self, tmp_path):
         repo = self._create_mixed_repo(tmp_path)
@@ -322,7 +322,7 @@ class TestAllKindsTogether:
         })
 
         lock = mi.generate_lock()
-        lock_kinds = {e.kind for e in lock.documents}
+        lock_kinds = {e.kind for e in lock.instances}
         assert "Skill" in lock_kinds
         assert "Soul" in lock_kinds
         assert "Guardrail" in lock_kinds
@@ -347,9 +347,9 @@ class TestAllKindsTogether:
         })
 
         # Confirm first load works
-        assert next((d for d in mi1.documents if d.kind == "Skill" and d.name == "my-skill"), None) is not None
-        assert next((d for d in mi1.documents if d.kind == "Soul" and d.name == "wise"), None) is not None
-        assert next((d for d in mi1.documents if d.kind == "Guardrail" and d.name == "safe"), None) is not None
+        assert next((d for d in mi1.instances if d.kind == "Skill" and d.name == "my-skill"), None) is not None
+        assert next((d for d in mi1.instances if d.kind == "Soul" and d.name == "wise"), None) is not None
+        assert next((d for d in mi1.instances if d.kind == "Guardrail" and d.name == "safe"), None) is not None
 
         # Delete source
         shutil.rmtree(repo)
@@ -362,6 +362,6 @@ class TestAllKindsTogether:
         k.resolver("local", LocalResolver(base_dir=str(base)))
         mi2 = k.instance("proj")
 
-        assert next((d for d in mi2.documents if d.kind == "Skill" and d.name == "my-skill"), None) is not None
-        assert next((d for d in mi2.documents if d.kind == "Soul" and d.name == "wise"), None) is not None
-        assert next((d for d in mi2.documents if d.kind == "Guardrail" and d.name == "safe"), None) is not None
+        assert next((d for d in mi2.instances if d.kind == "Skill" and d.name == "my-skill"), None) is not None
+        assert next((d for d in mi2.instances if d.kind == "Soul" and d.name == "wise"), None) is not None
+        assert next((d for d in mi2.instances if d.kind == "Guardrail" and d.name == "safe"), None) is not None

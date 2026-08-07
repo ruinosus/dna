@@ -3,9 +3,9 @@
 `s-engram-rename` renamed the memory Kind `LessonLearned` → `Engram` and
 moved its identity to `github.com/ruinosus/dna/v1`. Kind resolution is an
 exact `(apiVersion, kind)` 2-tuple lookup with **no fallback**
-(`dna/kernel/instance.py:686` — `self._kinds.get((doc.api_version,
+(`dna/kernel/manifest.py:686` — `self._kinds.get((doc.api_version,
 doc.kind))`): the instant a deployment's pin advances to an SDK version that
-only registers `Engram`, every stored document still carrying the old
+only registers `Engram`, every stored instance still carrying the old
 `(apiVersion, kind)` pair becomes invisible — not an error, just silently
 absent from every `instance()`/`recall()`/prompt build.
 
@@ -22,7 +22,7 @@ before bumping the pin).
   or `scripts/migrate_engram_postgres.py` (Postgres) based on whether
   `--source` looks like a `postgresql://`/`postgres://` DSN or a directory.
 - A **maintenance window**. Step 1 stops all writes to the store; nothing in
-  the deployment should be writing DNA documents between steps 1 and 4.
+  the deployment should be writing DNA instances between steps 1 and 4.
 - `pg_dump`/`pg_restore` (matching the target server's major version) and
   somewhere to store the dump OUTSIDE the database being migrated.
 - `az` CLI access to the deployment's Container Apps (or your platform's
@@ -71,7 +71,7 @@ i.e. every DNA read/write the copilot makes is proxied through `mcp` /
 connection, `DNA_PRIMARY_PG_URL` (a **separate** secret from
 `dna-source-url`), opens LangGraph's own `AsyncPostgresSaver` /
 `AsyncPostgresStore` — a completely different schema (LangGraph's
-checkpoint/store tables) with zero overlap with `dna_documents` / any
+checkpoint/store tables) with zero overlap with `dna_instances` / any
 table this migration touches. **Conclusion: freezing
 `mcp` + `mcp-ws` fully covers `copilot`'s write path; `copilot` itself does
 not need to be scaled down.** This was verified against this repo's
@@ -149,8 +149,8 @@ it:
 python3 scripts/migrate_engram.py --source "$DNA_SOURCE_URL"
 ```
 
-Read the report. It tells you, per table (`dna_documents`, `dna_versions`,
-`dna_layer_documents`, `dna_bundle_entries`, `dna_search_docs`
+Read the report. It tells you, per table (`dna_instances`, `dna_versions`,
+`dna_layer_instances`, `dna_bundle_entries`, `dna_search_docs`
 if present), how many rows are candidates, how many are already migrated,
 how many are orphans (half-migrated — `kind: Engram` with a stale/missing
 `apiVersion`, needs manual attention, see the FS script's docstring for what
@@ -159,11 +159,11 @@ was found**. `dna_outbox`'s count is reported for visibility only; it is
 never rewritten (see the "dna_outbox decision" in
 `scripts/migrate_engram_postgres.py`).
 
-**If the report shows any collision**: STOP. A collision means a document
+**If the report shows any collision**: STOP. A collision means an instance
 already exists under the new identity with the same key a candidate would
 be renamed into (e.g. a `LessonLearned/rem-x` and an `Engram/rem-x` already
 both present in the same scope/tenant). Resolve it manually (rename or merge
-the conflicting document) before re-running — the migration will not touch
+the conflicting instance) before re-running — the migration will not touch
 anything, collision or not, until this is clean. This is enforced
 structurally: `migrate_postgres()` always runs the full read-only pre-flight
 across every table before it ever opens a write transaction, and refuses to
@@ -179,7 +179,7 @@ This re-runs the same pre-flight (data may have theoretically changed since
 the dry run — it hasn't, because writes are frozen) and then, only if it is
 still collision-free, rewrites every table in **one Postgres transaction**:
 all of it commits together, or none of it does. A half-migrated store is
-strictly worse than an unmigrated one — a document renamed in one table but
+strictly worse than an unmigrated one — an instance renamed in one table but
 not another resolves *confusingly* (matched by `kind_for()`, which ignores
 `apiVersion`) rather than cleanly (simply absent).
 
@@ -215,7 +215,7 @@ but the old `.dna/` content builds an inconsistent image.
 ## After cutover
 
 Scale the frozen services (step 1) back up. Verify with a read against a
-document that used to be `LessonLearned` — it should resolve under `Engram`
+instance that used to be `LessonLearned` — it should resolve under `Engram`
 now, and a Postgres query for `kind = 'LessonLearned'` in every table above
 should return zero rows (`migrate_engram.py --source "$DNA_SOURCE_URL"`
 dry-run again is the cheapest way to confirm: it should report zero

@@ -68,7 +68,7 @@ def _run(docs, *, with_enqueue=True, target_name="conv"):
         delegator="sup",
         target_name=target_name,
         request="converta isto",
-        documents=docs,
+        instances=docs,
         run_local=run_local,
         call_remote=call_remote,
     )
@@ -208,7 +208,7 @@ def test_make_delegate_tool_PASSES_the_enqueue_through():
 
     tool = make_delegate_tool(
         delegator="sup",
-        documents=_docs(typical_seconds=120),
+        instances=_docs(typical_seconds=120),
         run_local=run_local,
         call_remote=call_remote,
         enqueue=enqueue,

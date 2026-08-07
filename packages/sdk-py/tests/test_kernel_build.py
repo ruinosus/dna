@@ -23,7 +23,7 @@ class TestKernelBuild:
         ]
         mi = kernel.build(raw_docs, scope="test")
         assert mi.scope == "test"
-        assert len(mi.documents) >= 2
+        assert len(mi.instances) >= 2
 
     def test_build_parses_all_kinds(self, kernel):
         raw_docs = [
@@ -32,7 +32,7 @@ class TestKernelBuild:
             {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Guardrail", "metadata": {"name": "safety"}, "spec": {"rules": ["no harm"]}},
         ]
         mi = kernel.build(raw_docs, scope="test")
-        kinds = {d.kind for d in mi.documents}
+        kinds = {d.kind for d in mi.instances}
         assert "Genome" in kinds
         assert "Agent" in kinds
         assert "Guardrail" in kinds
@@ -45,7 +45,7 @@ class TestKernelBuild:
             {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Agent", "metadata": {"name": "bot"}, "spec": {"model": "gpt-4o"}},
         ]
         mi = kernel.build(raw_docs, scope="test", dep_docs=dep_docs)
-        assert len(mi.documents) >= 2
+        assert len(mi.instances) >= 2
 
     def test_build_is_pure_no_source_needed(self, kernel):
         """Kernel.build() should work without a source configured."""

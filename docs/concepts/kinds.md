@@ -1,20 +1,20 @@
 # Kinds — The Identity System
 
-Kinds are the core concept of the DNA SDK. Every document in a manifest has
+Kinds are the core concept of the DNA SDK. Every instance in a manifest has
 a **Kind** that determines what it is, how it's parsed, how it composes
-with other documents, and how it contributes to prompts.
+with other instances, and how it contributes to prompts.
 
 ---
 
 ## What is a Kind?
 
-A Kind is a type of document in the manifest system. Think of it like a
+A Kind is a type of instance in the manifest system. Think of it like a
 class in OOP — it defines the shape, behavior, and composition role of a
-document. The pair `(apiVersion, kind)` identifies the type; the
+instance. The pair `(apiVersion, kind)` identifies the type; the
 `apiVersion` namespace identifies **who owns the schema**.
 
 ```yaml
-# This document's Kind is "Agent"
+# This instance's Kind is "Agent"
 apiVersion: github.com/ruinosus/dna/v1
 kind: Agent
 metadata:
@@ -30,7 +30,7 @@ gives a typed model, and the schema is enforced at the write boundary:
 
 ```mermaid
 flowchart LR
-    D["document<br/>apiVersion · kind · metadata · spec"] --> ID["(apiVersion, kind)<br/>= Kind identity"]
+    D["instance<br/>apiVersion · kind · metadata · spec"] --> ID["(apiVersion, kind)<br/>= Kind identity"]
     D -->|"KindPort.parse()"| T["typed model"]
     D -->|on write| V{"valid against<br/>Kind schema?"}
     V -->|yes| S[(stored)]
@@ -39,7 +39,7 @@ flowchart LR
 
 ### Validation at the write boundary
 
-`write_document` / `writeDocument` validates the `spec` against the Kind's
+`write_instance` / `writeInstance` validates the `spec` against the Kind's
 declared `schema()` **before persisting** (historically this only happened
 at scan/read, fail-soft — a shape-broken doc would save fine and explode
 later, far from you). What this means for an author:
@@ -94,7 +94,7 @@ and cross-kind references. Convention: `<owner>-<kind>` (e.g.,
 ### Composition Role
 
 ```python
-    is_root = False              # Is this the root document? (only Genome)
+    is_root = False              # Is this the root instance? (only Genome)
     is_prompt_target = True      # Can build_prompt() target this kind?
     prompt_target_priority = 10  # Higher = preferred when names collide
     flatten_in_context = False   # Merge spec fields into template context?
@@ -103,7 +103,7 @@ and cross-kind references. Convention: `<owner>-<kind>` (e.g.,
 | Property | What it controls |
 |----------|-----------------|
 | `is_root` | Only one kind can be root (Genome). `mi.root` returns this. |
-| `is_prompt_target` | `build_prompt(agent="brad")` only finds documents of target kinds. |
+| `is_prompt_target` | `build_prompt(agent="brad")` only finds instances of target kinds. |
 | `prompt_target_priority` | When Agent "brad" and Soul "brad" both exist, the higher priority wins. Agent=10 beats Soul=1. |
 | `flatten_in_context` | Soul's `soul_content` is flattened into the Mustache context so templates can use `{{soul_content}}`. |
 
@@ -115,8 +115,8 @@ and cross-kind references. Convention: `<owner>-<kind>` (e.g.,
 ```
 
 This tells the prompt builder: "When building context for an Agent, filter
-`soulspec-soul` documents by the agent's `spec.soul` field, and filter
-`agentskills-skill` documents by `spec.skills`."
+`soulspec-soul` instances by the agent's `spec.soul` field, and filter
+`agentskills-skill` instances by `spec.skills`."
 
 Example: Agent brad has `soul: "brad"` and `skills: ["brainstorming"]`. The
 context will only include Soul "brad" and Skill "brainstorming" — not all
@@ -131,7 +131,7 @@ souls and skills in the manifest.
 
 The template cascade for `build_prompt()`:
 
-1. **Agent-level**: `spec.promptTemplate` on the document (if set)
+1. **Agent-level**: `spec.promptTemplate` on the instance (if set)
 2. **Kind-level**: `prompt_template()` from the KindPort (shown above)
 3. **Fallback**: `agent.instruction` as plain text
 
@@ -159,7 +159,7 @@ Converts the raw YAML dict into a typed model (dataclasses). The typed model
 gives you autocomplete and validation:
 
 ```python
-agent_doc = next(d for d in mi.documents if d.kind == "Agent" and d.name == "brad")
+agent_doc = next(d for d in mi.instances if d.kind == "Agent" and d.name == "brad")
 agent_doc.spec.instruction   # typed access
 agent_doc.spec.skills        # ["brainstorming", "writing-plans"]
 agent_doc.spec.soul          # "brad"
@@ -252,7 +252,7 @@ class GuardrailKind:
 from dna.kernel import Kernel
 
 mi = Kernel.quick("my-scope")
-for g in (d for d in mi.documents if d.kind == "Guardrail"):
+for g in (d for d in mi.instances if d.kind == "Guardrail"):
     print(f"Rules: {g.spec.rules}, Severity: {g.spec.severity}")
 ```
 
@@ -304,7 +304,7 @@ spec:
 
 ```python
 prompt = mi.build_prompt(agent="brad")
-guardrail = next(d for d in mi.documents if d.kind == "Guardrail" and d.name == "safety")
+guardrail = next(d for d in mi.instances if d.kind == "Guardrail" and d.name == "safety")
 full_prompt = f"{prompt}\n\n## Safety Rules\n" + "\n".join(f"- {r}" for r in guardrail.spec.rules)
 ```
 
@@ -323,10 +323,10 @@ kernel.instance(scope)
     │
     ├── source.load_all()         ← Raw YAML loaded
     ├── KindPort.parse(raw)       ← Parsed into typed model
-    ├── Document.from_raw(raw)    ← Wrapped in Document
+    ├── Instance.from_raw(raw)    ← Wrapped in Instance
     └── ManifestInstance           ← Query API ready
             │
-            ├── mi.documents             ← Query (filter by d.kind/d.name)
+            ├── mi.instances             ← Query (filter by d.kind/d.name)
             ├── kernel.query(scope, k)   ← Indexed / record-plane query
             └── mi.build_prompt()        ← Template composition
 ```
@@ -337,10 +337,10 @@ A Kind registered from CODE — an extension class, or a builtin
 `kinds/*.kind.yaml` descriptor — is **global**: registered once at boot, it
 applies to every scope the process serves.
 
-A Kind loaded from a STORE — a per-scope `KindDefinition` document, or a root
-document's `custom_kinds` — is **bound to the scope that declared it**, and to
+A Kind loaded from a STORE — a per-scope `KindDefinition` instance, or a root
+instance's `custom_kinds` — is **bound to the scope that declared it**, and to
 the scopes that declare that one as an ancestor. An unrelated scope does not
-see it at all, and a document of that Kind written there is simply an
+see it at all, and an instance of that Kind written there is simply an
 unregistered Kind.
 
 The binding matters because registration is what *confers* schema enforcement
@@ -352,11 +352,11 @@ name, an alias or a storage container freely: within one scope those are still
 unique, and across scopes they never meet.
 
 **Down the declared chain, though, a Kind is inherited.** A scope that declares
-`Genome.spec.parent_scope` already reads its parent's documents transitively;
+`Genome.spec.parent_scope` already reads its parent's instances transitively;
 since `i-096` it also gets its parent's declared **Kinds** — so a Kind seeded
 once in a host-curated base scope is readable, enumerable and *writable* from
 every workspace that declares that base as parent, with no extension and no
-release. Precedence is the documents': a local declaration wins over an
+release. Precedence is the instances': a local declaration wins over an
 inherited one, and a nearer ancestor over a farther one.
 
 The direction is the whole guarantee. Inheritance **descends the declared chain
@@ -369,11 +369,11 @@ every other workspace inherits from.
 ### Approval and revocation: three states, not a boolean
 
 A Kind loaded from a store only reaches this binding once it is *approved*:
-both doors — the `KindDefinition` document and a root document's
+both doors — the `KindDefinition` instance and a root instance's
 `custom_kinds` entry — require `approved_by` to name someone, or the entry is
 parsed, logged, and left unregistered, with no schema enforcement or storage
-routing of its own. The `custom_kinds` gate is per entry, not per document: a
-root document may declare several, and only the ones whose `approved_by`
+routing of its own. The `custom_kinds` gate is per entry, not per instance: a
+root instance may declare several, and only the ones whose `approved_by`
 names someone register — one unapproved entry does not hold back its
 approved siblings, nor the reverse. Approval does not buy the same thing at
 both doors, though: a `KindDefinition`'s own schema is enforced once
@@ -386,11 +386,11 @@ store, where the author is untrusted (`register_kind_definitions`,
 Taking an approval back is a **third state**, not the absence of the second,
 and the reason is worth stating plainly because the obvious implementation is
 backwards. Look at what "unapproved" actually means in the table below: a Kind
-that never registered validates nothing, so its documents are accepted *as
+that never registered validates nothing, so its instances are accepted *as
 they come*. Clearing `approved_by` would land a withdrawn Kind exactly there —
 switching the gate **off** rather than closing it.
 
-| state | existing documents | new documents |
+| state | existing instances | new instances |
 |---|---|---|
 | never approved | — | accepted **without validation** |
 | approved | valid, routed | validated against the schema |
@@ -403,28 +403,28 @@ loosening.
 
 What that does to data already in the store:
 
-- **Nothing is deleted, and no read fails.** A document of a revoked Kind comes
+- **Nothing is deleted, and no read fails.** An instance of a revoked Kind comes
   back as itself, carrying a derived `status: {valid: false, reason:
   "kind_revoked", …}`. Erasing it or refusing the read would destroy the
   ability to audit what existed, and the data did nothing wrong — the workspace
   changed its mind.
 - **In a listing it appears, marked — it never vanishes.** Rows are not filtered
-  out, so revocation cannot be used to hide documents without deleting them.
+  out, so revocation cannot be used to hide instances without deleting them.
   The consequence is real: every listing surface has to learn to render the
   mark, and one that has not yet shows what it always showed.
 - **It is reversible in one act.** Approving again clears the revocation and
-  every existing document is valid once more. Validity follows the Kind's
-  *current* state and is never written onto the document — the write path
+  every existing instance is valid once more. Validity follows the Kind's
+  *current* state and is never written onto the instance — the write path
   strips `status` — so there is nothing to migrate in either direction.
 
-`status` is the derived half of a document, in the Kubernetes sense that DNA's
+`status` is the derived half of an instance, in the Kubernetes sense that DNA's
 notation already borrows: `spec` is what an author declared, `status` is what
 the system observed. It is never authored and never stored.
 
 ### When an approval starts to hold
 
-Registration happens inside a **Manifest Instance build**, and the document
-routes (`write_document`, `get_document`, `list_documents`, `list_kinds`) read
+Registration happens inside a **Manifest Instance build**, and the instance
+routes (`write_instance`, `get_instance`, `list_instances`, `list_kinds`) read
 the Kind registry directly rather than building one. That combination used to
 leave the moment an approval took effect *indeterminate*: the approval landed
 in the store, and the Kind became real only when some unrelated call happened
@@ -436,10 +436,10 @@ Two mechanisms make it a guarantee instead, and they answer different halves:
 - **The replica that serves the act honours it immediately.** Approving or
   revoking ends by re-registering that scope from the store — the bootstrap
   slice only (Genome + `KindDefinition` + LayerPolicy), measured at ~55 ms on
-  a filesystem store holding 300 documents, once per act. So *approve, then
+  a filesystem store holding 300 instances, once per act. So *approve, then
   use the Kind* works on the very next call, which is the sequence a human
   actually performs.
-- **Every other replica honours it within a bounded window.** The document
+- **Every other replica honours it within a bounded window.** The instance
   routes refresh the scope's registry when it is older than
   `DNA_KIND_REFRESH_TTL` seconds (default **30**), so the guarantee is a
   number you can publish: **an approval or a revocation is in force everywhere
@@ -456,19 +456,19 @@ for a single-replica self-host. Each served process logs the value in force at
 boot.
 
 Revocation matters more than approval here, and gets the same window in the
-other direction: a Kind that is slow to *close* keeps accepting documents of a
+other direction: a Kind that is slow to *close* keeps accepting instances of a
 Kind the workspace has already withdrawn.
 
 ## Summary
 
 | Concept | What it does |
 |---------|-------------|
-| **Kind** | Type of manifest document (Agent, Skill, Soul, ...) |
+| **Kind** | Type of manifest instance (Agent, Skill, Soul, ...) |
 | **KindPort** | Protocol defining identity, parsing, and composition role |
 | **alias** | Globally unique ID for cross-kind references |
 | **is_prompt_target** | Can `build_prompt()` find this kind? |
 | **prompt_target_priority** | Higher priority wins when names collide |
 | **flatten_in_context** | Merge spec fields into Mustache template context |
-| **dep_filters** | Control which documents of each kind appear in context |
+| **dep_filters** | Control which instances of each kind appear in context |
 | **prompt_template** | Mustache template for rendering prompts |
 | **Extension** | Registers one or more KindPorts on the Kernel |

@@ -118,7 +118,7 @@ async def _seed_source(k, name="copiloto-medico", **over):
         "pirs": ["regulação", "concorrentes", "tech PT-BR"], "muted": False,
     }
     spec.update(over)
-    await k.write_document(
+    await k.write_instance(
         _SCOPE, "IntelSource", name,
         {
             "apiVersion": "github.com/ruinosus/dna/intel/v1",

@@ -194,7 +194,7 @@ def plan_accept(
     """Pure accept plan for a verified token's ``claims`` — the grants a sign-in
     binds and whether each is newly activated. Empty when nothing is claimable
     (unverified email, no oid, no matching unbound invite). The write side
-    (``accept_invites_impl``) turns this into idempotent ``kernel.write_document``
+    (``accept_invites_impl``) turns this into idempotent ``kernel.write_instance``
     upserts."""
     identity = identity_from_token(claims)
     verified_email = verified_email_from_claims(claims)

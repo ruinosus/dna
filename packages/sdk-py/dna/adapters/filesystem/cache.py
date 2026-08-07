@@ -84,9 +84,9 @@ class FilesystemCache:
         key_dir = self._contained(self._base / scope / key)
         if not key_dir.exists():
             return []
-        documents: list[dict[str, Any]] = []
-        await self._read_tree(key_dir, readers or [], documents)
-        return documents
+        instances: list[dict[str, Any]] = []
+        await self._read_tree(key_dir, readers or [], instances)
+        return instances
 
     async def load_all(
         self, scope: str, readers: list | None = None,
@@ -95,14 +95,14 @@ class FilesystemCache:
         if not scope_dir.exists():
             return []
 
-        documents: list[dict[str, Any]] = []
+        instances: list[dict[str, Any]] = []
         readers = readers or []
-        await self._read_tree(scope_dir, readers, documents)
-        return documents
+        await self._read_tree(scope_dir, readers, instances)
+        return instances
 
     async def _read_tree(
         self, directory: Path, readers: list,
-        documents: list[dict[str, Any]],
+        instances: list[dict[str, Any]],
     ) -> None:
         """Recursively read directories for bundles and YAMLs."""
         for subdir in sorted(directory.iterdir()):
@@ -116,7 +116,7 @@ class FilesystemCache:
                     if reader.detect(bundle):
                         doc = reader.read(bundle)
                         if isinstance(doc, dict) and "kind" in doc:
-                            documents.append(doc)
+                            instances.append(doc)
                         matched = True
                         break
                 except Exception as e:
@@ -131,10 +131,10 @@ class FilesystemCache:
                         raw = await f.read()
                     content = safe_load(raw)
                     if isinstance(content, dict) and "kind" in content:
-                        documents.append(content)
+                        instances.append(content)
                         has_yaml = True
                 except yaml.YAMLError:
                     pass
             # Recurse deeper if nothing found at this level
             if not has_yaml:
-                await self._read_tree(subdir, readers, documents)
+                await self._read_tree(subdir, readers, instances)

@@ -5,7 +5,7 @@
 an alias is UNIQUE across the whole registry, so two authors both declaring
 ``alias: deal`` means the second one's Kind cannot register AT ALL — and whoever
 registered first owns that name in every ``dep_filters`` key, Mustache variable
-and LayerPolicy document.
+and LayerPolicy instance.
 
 **The decision, and its limits.** Enforce, for DESCRIPTORS only, and rename
 nothing:
@@ -14,7 +14,7 @@ nothing:
   runtime; a class Kind ships in the distribution and is reviewed;
 * the alias is a LIVE wire format, so the six builtin descriptors that predate
   the rule keep their aliases and sit in a shrink-only allowlist. Renaming one
-  would break documents in the wild to satisfy a convention.
+  would break instances in the wild to satisfy a convention.
 """
 from __future__ import annotations
 

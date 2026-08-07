@@ -2,13 +2,13 @@
 
 ``approve_kind_impl`` reads the authored ``KindDefinition``, merges two keys
 (``approved_by``/``approved_at``) into its spec and writes ``{**raw, "spec":
-spec}``. Read-modify-write with nothing asserting that the document it read is
-still the document it is about to replace.
+spec}``. Read-modify-write with nothing asserting that the instance it read is
+still the instance it is about to replace.
 
 **The measured scenario**, and the reason a plain read-then-write is not enough:
 
 1. a reviewer opens the Kind on replica **B** — which warms B's 60-second
-   granular document cache (``Kernel._GRANULAR_DOC_TTL``) with **v1**;
+   granular instance cache (``Kernel._GRANULAR_DOC_TTL``) with **v1**;
 2. the author edits the Kind to **v2** on replica **A**. The write invalidates
    A's caches. It does not invalidate B's;
 3. the reviewer approves on **B**. The approval reads **v1 from B's cache**,
@@ -21,7 +21,7 @@ Note what that rules out: a guard implemented in the application layer as
 "re-read, compare, write" would re-read through the SAME stale cache, find v1
 matching v1, and let the clobber through. The guarantee has to be evaluated
 where the truth is — the adapter — which is why ``if_match`` had to be threaded
-onto ``kernel.write_document`` rather than bolted onto the approval function.
+onto ``kernel.write_instance`` rather than bolted onto the approval function.
 
 Both replicas share one filesystem store, each with its OWN ``Kernel`` (and so
 its own cache) — which is exactly what two container replicas over one Postgres
@@ -40,7 +40,7 @@ from dna.adapters.filesystem.writable import FilesystemWritableSource
 from dna.application.kind_authoring import approve_kind_impl, author_kind_impl
 from dna.application.live import LiveDna
 from dna.kernel import Kernel
-from dna.kernel.errors import StaleDocumentWrite
+from dna.kernel.errors import StaleInstanceWrite
 
 _SCOPE = "board"
 _TENANT = "ws-acme"
@@ -77,7 +77,7 @@ def store(tmp_path: Path) -> Path:
 
 
 def _replica(base: Path) -> LiveDna:
-    """A replica: its own Kernel, hence its OWN granular document cache, over
+    """A replica: its own Kernel, hence its OWN granular instance cache, over
     the shared store. Two of these is the whole fixture."""
     k = Kernel.auto()
     k.source(FilesystemWritableSource(str(base), kernel=k))
@@ -94,7 +94,7 @@ async def _author(live: LiveDna, schema: dict, *, now: str) -> dict[str, Any]:
 
 
 def _stored(base: Path, doc_name: str) -> dict[str, Any]:
-    """The document as it sits ON DISK — read past every cache, because the
+    """The instance as it sits ON DISK — read past every cache, because the
     whole question is what the STORE holds. A KindDefinition is a bundle: a
     directory holding ``KIND.yaml``."""
     return yaml.safe_load(
@@ -118,8 +118,8 @@ async def test_approving_a_document_that_changed_since_it_was_read_is_refused(
     authored = await _author(replica_a, _V1, now="2026-07-28T00:00:00+00:00")
     doc_name = authored["name"]
 
-    # 1. the reviewer OPENS the Kind on B — warming B's 60s document cache.
-    warmed = await replica_b.kernel.get_document(_SCOPE, _KIND_DOC, doc_name)
+    # 1. the reviewer OPENS the Kind on B — warming B's 60s instance cache.
+    warmed = await replica_b.kernel.get_instance(_SCOPE, _KIND_DOC, doc_name)
     assert warmed["spec"]["schema"] == _V1, (
         "fixture broken: B did not read the authored v1"
     )
@@ -133,21 +133,21 @@ async def test_approving_a_document_that_changed_since_it_was_read_is_refused(
     # … while B still answers v1 from its cache. This is the stale read the
     # approval is about to build its write on; if this ever stops being true the
     # test below would pass for the wrong reason.
-    stale = await replica_b.kernel.get_document(_SCOPE, _KIND_DOC, doc_name)
+    stale = await replica_b.kernel.get_instance(_SCOPE, _KIND_DOC, doc_name)
     assert stale["spec"]["schema"] == _V1, (
         "fixture broken: B's cache no longer serves the stale read this "
         "scenario is built on — the refusal below would prove nothing"
     )
 
     # 3. the reviewer APPROVES on B, off the stale read.
-    with pytest.raises(StaleDocumentWrite) as excinfo:
+    with pytest.raises(StaleInstanceWrite) as excinfo:
         await approve_kind_impl(
             replica_b, kind="Deal", tenant=_TENANT,
             actor="reviewer@acme.example", now="2026-07-28T00:02:00+00:00",
         )
 
-    # The refusal has to be actionable: it names the document and says the
-    # document moved, so the caller knows to re-read rather than to retry.
+    # The refusal has to be actionable: it names the instance and says the
+    # instance moved, so the caller knows to re-read rather than to retry.
     assert doc_name in str(excinfo.value)
 
     # And it wrote NOTHING: the edit survives, and no approval was stamped onto
@@ -199,10 +199,10 @@ async def test_re_approving_after_an_edit_works_once_the_reviewer_re_reads(
     replica_b = _replica(store)
 
     authored = await _author(replica_a, _V1, now="2026-07-28T00:00:00+00:00")
-    await replica_b.kernel.get_document(_SCOPE, _KIND_DOC, authored["name"])
+    await replica_b.kernel.get_instance(_SCOPE, _KIND_DOC, authored["name"])
     await _author(replica_a, _V2, now="2026-07-28T00:01:00+00:00")
 
-    with pytest.raises(StaleDocumentWrite):
+    with pytest.raises(StaleInstanceWrite):
         await approve_kind_impl(
             replica_b, kind="Deal", tenant=_TENANT, actor="rev@acme.example",
             now="2026-07-28T00:02:00+00:00",

@@ -54,12 +54,12 @@ def _compose_ctx(mi: Any, copilot: str) -> Any:
     return build_copilot_context(mi, copilot)
 
 
-def _team_members_and_documents(mi: Any, delegator: str) -> tuple[list[str], list[dict]]:
+def _team_members_and_instances(mi: Any, delegator: str) -> tuple[list[str], list[dict]]:
     """Sync kernel read, offloaded via `asyncio.to_thread` — same discipline
     `_compose_ctx` already follows (kernel reads dispatch back to the owning
     loop; see `build_runtime`'s docstring on the loop-bound SQL connection).
 
-    Documents are only materialized (`mi.documents` — a full-scope load) when
+    Instances are only materialized (`mi.instances` — a full-scope load) when
     `team_members` is non-empty: the common case (no delegation declared)
     never pays that cost.
     """
@@ -69,8 +69,8 @@ def _team_members_and_documents(mi: Any, delegator: str) -> tuple[list[str], lis
     team_members = list(raw_team or [])
     if not team_members:
         return team_members, []
-    documents = [d.raw for d in mi.documents]
-    return team_members, documents
+    instances = [d.raw for d in mi.instances]
+    return team_members, instances
 
 
 def _target_mcp_servers(mi: Any, target_name: str) -> list[Any]:
@@ -116,7 +116,7 @@ def _make_run_local(mi: Any, hooks: RuntimeHooks) -> Callable[[str, str], Awaita
     The visible one: an agent whose whole job runs on a host tool could not do
     its job when delegated to. `create_agent(tools=[])` meant the sub-run got
     the target's MCP tools and NOTHING the host registered — so a converter
-    agent that writes its proposal through a host `update_document_draft`
+    agent that writes its proposal through a host `update_instance_draft`
     reached the model with that tool absent, and the model, having no way to
     do the work, narrated it instead. Nothing errored.
 
@@ -221,7 +221,7 @@ def _maybe_build_delegate_tool(
     mi: Any,
     delegator: str,
     team_members: list[str],
-    documents: list[dict],
+    instances: list[dict],
     hooks: RuntimeHooks,
 ) -> Any | None:
     """The central A.1 property: gated on `team_members` — the raw
@@ -232,7 +232,7 @@ def _maybe_build_delegate_tool(
 
     return make_delegate_tool(
         delegator=delegator,
-        documents=documents,
+        instances=instances,
         run_local=_make_run_local(mi, hooks),
         call_remote=_make_call_remote(hooks),
         # O terceiro transporte. O host o fornece por extensão — sem ele um
@@ -269,10 +269,10 @@ async def build_runtime(
     # A.1 — delegate_to: only when the mounted agent DECLARES team_members
     # (never a hand-kept list of names). See the module docstring for why
     # this lives here and not in the LangChain adapter.
-    team_members, documents = await asyncio.to_thread(
-        _team_members_and_documents, mi, ctx.name
+    team_members, instances = await asyncio.to_thread(
+        _team_members_and_instances, mi, ctx.name
     )
-    tool = _maybe_build_delegate_tool(mi, ctx.name, team_members, documents, hooks)
+    tool = _maybe_build_delegate_tool(mi, ctx.name, team_members, instances, hooks)
     if tool is not None:
         extensions = dict(hooks.extensions or {})
         extensions["tools"] = [*(extensions.get("tools") or []), tool]

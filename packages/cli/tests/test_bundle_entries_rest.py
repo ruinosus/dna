@@ -18,7 +18,7 @@ scripts/hello.py) and its LayerPolicy shape (Kind ALIASES, i-049:
 ``SkillKind.alias = "agentskills-skill"``). The concierge scope ships no Skill
 of its own, so this module seeds ONE (``greeter``) directly on disk — the same
 way ``test_bundle_entry_impls.py``'s ``live`` fixture does for the filesystem
-adapter (no ``write_document`` call needed for a bundle-pattern Kind; the
+adapter (no ``write_instance`` call needed for a bundle-pattern Kind; the
 SKILL.md file itself is the doc).
 """
 from __future__ import annotations
@@ -62,7 +62,7 @@ def _layer_policy_raw(*, skill_policy: str) -> dict:
 def _seed_skill_bundle(dna_dir: pathlib.Path) -> None:
     """Write a base Skill bundle (``greeter``) directly on disk — mirrors
     ``test_bundle_entry_impls.py``'s ``live`` fixture: a bundle-pattern Kind's
-    base file IS the document, no ``write_document`` needed."""
+    base file IS the instance, no ``write_instance`` needed."""
     d = dna_dir / _SCOPE / "skills" / _SKILL
     (d / "scripts").mkdir(parents=True)
     (d / "SKILL.md").write_text(SKILL_MD_BASE)
@@ -78,7 +78,7 @@ def _seed_layer_policy(dna_dir: pathlib.Path, *, skill_policy: str) -> None:
 
     async def go():
         live = await M.boot_live(base_dir=str(dna_dir))
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _SCOPE, "LayerPolicy", "tenant-default",
             _layer_policy_raw(skill_policy=skill_policy),
         )

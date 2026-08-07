@@ -111,7 +111,7 @@ def test_a_missing_credential_REFUSES_instead_of_calling_anonymously(monkeypatch
 
 def test_only_https_is_dialed(monkeypatch):
     """O descritor já exige `https://` no schema; o transporte não confia nisso
-    e checa de novo — um documento antigo, ou um schema afrouxado, não deve
+    e checa de novo — uma instância antigo, ou um schema afrouxado, não deve
     virar texto claro na rede."""
     _nunca_disca(monkeypatch)
     plain = DelegationTarget(

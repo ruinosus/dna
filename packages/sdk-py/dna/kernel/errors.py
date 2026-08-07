@@ -47,7 +47,78 @@ class KernelRefusal(Exception):
     """
 
 
-class DocumentNameTaken(KernelRefusal, FileExistsError):
+class CapabilityRefusal(Exception):
+    """Marker base for *the STORE wired into this deployment cannot answer that*.
+
+    Sibling of :class:`KernelRefusal`, and the distinction between the two is
+    the reason there are two. ``KernelRefusal`` is a **verdict about the
+    request**: policy looked at what you asked for and said no, so the remedy is
+    a different request (fix the instance, take another name, obtain the grant).
+    This one is not about the request at all — it was well formed and the caller
+    was entitled to it. What is missing is a capability of the ADAPTER, and the
+    remedy is a different deployment, never a different call. Relaying one as
+    the other sends the caller hunting for an entitlement they already have.
+
+    Every member exists to refuse a **confident lie**, because in each case the
+    plausible fallback is an answer no store in that state may give:
+
+    ==============================  =========  ================================
+    refusal                         REST       the lie it exists to refuse
+    ==============================  =========  ================================
+    ``AsOfUnsupported``             **501**    today's instance under a past
+                                               timestamp
+    ``AsOfTruncated``               **410**    a bare ``LookupError`` — *"it did
+                                               not exist yet"* is a different
+                                               statement from *"I no longer hold
+                                               the record"*
+    ``GraphUnsupported``            **501**    ``[]`` — reads as *nothing points
+                                               at this instance*
+    ``InstanceIdLookupUnsupported`` **501**    an empty result set
+    ``ValidTimeUnsupported``        **501**    the instance UNFILTERED — which
+                                               asserts *"yes, it was true
+                                               then"* from a store with no
+                                               world-time column
+    ==============================  =========  ================================
+
+    ⚠️ ``AsOfUnsupported`` and ``ValidTimeUnsupported`` are two axes, not two
+    spellings: the first is TRANSACTION time (*what did you believe at T*), the
+    second is WORLD time (*when was it true*). A deployment can have either
+    without the other, and the SQLite binding of ``SqlAlchemySource`` is exactly
+    that case — full version history, no validity column.
+
+    **Why a base and not a tuple.** There was a tuple:
+    ``dna_cli._mcp_refusals.CAPABILITY_REFUSALS`` listed the four by hand and
+    said so in its own docstring, because the four inherit from
+    ``RuntimeError`` / ``NotImplementedError`` / ``LookupError`` and scatter
+    across the builtin hierarchy — no ``except`` reached them as a family, and
+    only the one that happened to be a ``LookupError`` fell inside a tuple the
+    MCP face already caught. So ``recall(as_of=…)`` against a store with no
+    version history reached the client as FastMCP's ``Error calling tool
+    'recall'``: the documented refusal, delivered in the shape of a crash. This
+    house has measured what per-face enumeration costs — it is the same defect
+    ``KernelRefusal`` was created to end, one category over. A face catches one
+    name now, and a capability refusal declared tomorrow is relayed by every
+    face written today.
+
+    **Additive, never a re-parenting.** Each member keeps the builtin base it
+    always had (``RuntimeError`` for the two "this adapter cannot",
+    ``LookupError`` for the pruned history, ``NotImplementedError`` for the id
+    lane), so ``except LookupError`` around an as-of read keeps behaving exactly
+    as it did. Guarded by ``packages/sdk-py/tests/test_capability_refusal_base.py``
+    (the family, its bases, and the fact that the two marker bases stay
+    disjoint) and by ``packages/cli/tests/test_face_refusal_parity.py``, which
+    derives from the REST face's own source that anything it answers 501/410
+    carries this base.
+
+    ⚠️ **Not a ``KernelRefusal``, and the ratchet says so on purpose.**
+    ``tests/test_kernel_refusal_base.py`` lists ``GraphUnsupported`` and
+    ``InstanceIdLookupUnsupported`` under ``_NOT_REFUSALS`` with a paragraph
+    each explaining that they are statements about the deployment. That
+    classification does not change here; it acquires a name.
+    """
+
+
+class InstanceNameTaken(KernelRefusal, FileExistsError):
     """An ``if_absent`` write lost the race: the name was already taken.
 
     The ATOMIC half of "create is never an update". ``refuse_if_exists`` closed
@@ -57,7 +128,7 @@ class DocumentNameTaken(KernelRefusal, FileExistsError):
     unique-name constraint to lean on. It does now: both shipped adapters can
     claim a name atomically (a composite primary key on the SQL side,
     ``O_CREAT|O_EXCL`` / ``mkdir`` on the filesystem), so an ``if_absent`` write
-    either creates the document or raises this — never overwrites.
+    either creates the instance or raises this — never overwrites.
 
     A ``KernelRefusal`` so every face relays it as an honest denial, and a
     ``FileExistsError`` so a caller allocating a name (``create_issue``) can
@@ -65,17 +136,17 @@ class DocumentNameTaken(KernelRefusal, FileExistsError):
     """
 
 
-class StaleDocumentWrite(KernelRefusal, ValueError):
-    """An ``if_match`` write lost the race: the stored document is no longer the
+class StaleInstanceWrite(KernelRefusal, ValueError):
+    """An ``if_match`` write lost the race: the stored instance is no longer the
     one the caller read, so the write would have been a LOST UPDATE.
 
-    The UPDATE half of what :class:`DocumentNameTaken` is for creates.
+    The UPDATE half of what :class:`InstanceNameTaken` is for creates.
     ``if_absent`` answers "this create must not become an update"; this answers
     "this update must not become somebody else's erasure". Both are arbitrated
     by the adapter against the STORE, which is the only thing that makes either
     of them true: a read-modify-write guarded in application code re-reads
     through the very cache that made the read stale (i-083 — a reviewer's 60s
-    granular document cache on one replica, an author's edit on another), and
+    granular instance cache on one replica, an author's edit on another), and
     so compares a stale value against itself and agrees.
 
     The token is the ``spec`` content digest :func:`dna.kernel.etag.spec_etag`
@@ -85,15 +156,15 @@ class StaleDocumentWrite(KernelRefusal, ValueError):
     A ``KernelRefusal`` so every face relays it as an honest denial rather than
     a 500, and a ``ValueError`` so the doors that already map write-path vetoes
     to a client refusal surface it with no new wiring. The remedy is always the
-    same and the message says it: re-read the document and re-apply the change
+    same and the message says it: re-read the instance and re-apply the change
     to the fresh etag.
     """
 
 
-class InvalidDocumentName(KernelRefusal, ValueError):
-    """A document ``name`` is not a single, safe path component.
+class InvalidInstanceName(KernelRefusal, ValueError):
+    """An instance ``name`` is not a single, safe path component.
 
-    A document reaches a source adapter as a PATH COMPONENT — it is stored at
+    An instance reaches a source adapter as a PATH COMPONENT — it is stored at
     ``<scope>/<container>/<name>/…`` or ``<container>/<name>.yaml`` — and
     nothing on the kernel write path used to say so. A caller-supplied
     ``"../../../../ESCAPED"`` was accepted end to end and wrote a file two
@@ -107,7 +178,7 @@ class InvalidDocumentName(KernelRefusal, ValueError):
     identifier". No charset is imposed, because legitimate names in the wild
     include ``s-foo-bar``, ``i-065-layerpolicy-missing``,
     ``ws-1a2b3c.dna.local`` and ``ws-1a2b3c.dna.local--Contrato`` — ``.``,
-    ``-`` and ``--`` are all legal. See :func:`validate_document_name`.
+    ``-`` and ``--`` are all legal. See :func:`validate_instance_name`.
 
     A ``KernelRefusal`` so every face relays it as an honest denial, and ALSO a
     ``ValueError`` — deliberately, for a security refusal — so a face that
@@ -120,7 +191,7 @@ class InvalidDocumentName(KernelRefusal, ValueError):
 class InvalidScopeName(KernelRefusal, ValueError):
     """A ``scope`` is not a single, safe path component.
 
-    The twin of :class:`InvalidDocumentName`, and for the same reason: the
+    The twin of :class:`InvalidInstanceName`, and for the same reason: the
     filesystem adapter builds ``base_dir / scope`` (and
     ``base_dir / "tenants" / <t> / "scopes" / scope``) with no validation at
     all, and ``scope`` IS caller-supplied on the generic write door whenever
@@ -148,13 +219,13 @@ class InvalidBundleEntry(KernelRefusal, ValueError):
 
     The hole this closes was NOT a caller passing a crafted ``entry`` to a
     bundle-entry door — ``606812c`` guarded those. It was that a bundle entry
-    path is ALSO derived from document CONTENT. ``spec.source_files``,
+    path is ALSO derived from instance CONTENT. ``spec.source_files``,
     ``spec.root_files``, ``spec.scripts|references|assets``, ``spec.extras`` and
     ``spec.instruction_file`` are all turned into ``relativePath`` values by the
     registered writers, and ``spec`` is copied verbatim from the caller by
     ``apply_definition_impl`` and taken as an untyped body by
     ``PUT /v1/definitions/{kind}/{name}``. Measured at HEAD through
-    ``Kernel.write_document`` on the default ``Agent`` Kind: each of those five
+    ``Kernel.write_instance`` on the default ``Agent`` Kind: each of those five
     fields wrote a file OUTSIDE the store root, on the base lane and on the
     tenant lane alike, and an ABSOLUTE entry wrote to an arbitrary absolute path
     (``pathlib`` joins discard the anchor when the right operand is absolute).
@@ -186,14 +257,14 @@ class PathEscapesStoreRoot(KernelRefusal, ValueError):
     """A path a store adapter built from caller-supplied segments resolved
     OUTSIDE that adapter's base directory.
 
-    The SECOND layer, deliberately redundant with :class:`InvalidDocumentName`
+    The SECOND layer, deliberately redundant with :class:`InvalidInstanceName`
     / :class:`InvalidScopeName`. Those guard the kernel facade — the primary
     seam, because it is the door every writer and reader goes through and it
     can name WHICH input was wrong. This one guards the filesystem adapter
     itself, which builds ``<base>/<scope>/<container>/<name>/<…>`` and until now
     trusted every segment it was handed. The kernel guard cannot help a caller
     that does not go through the kernel, and there already is one
-    (``dna.kernel.source.sync`` calls ``save_document`` directly — benignly
+    (``dna.kernel.source.sync`` calls ``save_instance`` directly — benignly
     today, since its names come from the source being copied rather than from a
     request), plus the public conformance kit, which drives adapters on purpose.
 
@@ -215,22 +286,22 @@ class RevokedKindWrite(KernelRefusal, ValueError):
     The third state of the registration gate, and the reason it had to BE a
     state rather than the absence of approval. Approval is what confers schema
     validation and storage routing, so withdrawing it looks like it should
-    simply un-register the Kind — but an unregistered Kind's documents are
+    simply un-register the Kind — but an unregistered Kind's instances are
     accepted with NO validation at all (measured), so un-registering LOOSENS the
     gate instead of closing it. A revoked Kind therefore stays registered,
-    marked, and refuses new documents outright:
+    marked, and refuses new instances outright:
 
-        state            existing documents      new documents
+        state            existing instances      new instances
         ---------------- ---------------------- ---------------------------
         never approved   —                       accepted WITHOUT validation
         approved         valid, routed           validated against the schema
         revoked          INVALID                 REFUSED
 
-    Refused, not "vetoed for its shape": a CONFORMING document is refused too,
+    Refused, not "vetoed for its shape": a CONFORMING instance is refused too,
     because what was withdrawn is the Kind, not a schema. That is also why this
     is its own type and not a
     :class:`~dna.kernel.protocols.SpecValidationError` — a caller told its
-    document failed validation would go and fix the document, and no document
+    instance failed validation would go and fix the instance, and no instance
     passes.
 
     Deliberately NOT governed by ``DNA_WRITE_VALIDATION``. That knob trades
@@ -238,18 +309,56 @@ class RevokedKindWrite(KernelRefusal, ValueError):
     workspace's decision about its own Kind, and an environment variable must
     not be able to overrule it.
 
-    Existing documents are untouched — never deleted, never unreadable. They
+    Existing instances are untouched — never deleted, never unreadable. They
     read back MARKED invalid (``status.valid == false``), because erasing them
     or refusing the read would destroy the ability to audit what existed, and
     the data did nothing wrong: the workspace changed its mind. Reversible in
     one act — approving again restores validity, since validity follows the
-    Kind's CURRENT state and is never a stamp on the document.
+    Kind's CURRENT state and is never a stamp on the instance.
 
     A ``KernelRefusal`` so every face relays it as an honest denial, and a
     ``ValueError`` so a face that predates the marker base and still catches
     ``(ValueError, LookupError, PermissionError)`` reports it rather than
     letting it escape as a masked failure.
     """
+
+
+class TargetDeleteRestricted(KernelRefusal, ValueError):
+    """A delete was refused because something still points at the instance, and
+    the relation that points at it declares ``on_target_delete: restrict``.
+
+    The other half of referential integrity, and the half a store like ours can
+    actually have. The spec that recommended this design also wrote down what
+    it costs: integrity imposed by the DATABASE is not available to us, because
+    everyone who has it does DDL per type in an RDBMS and that is incompatible
+    with a type created at runtime. What is available is integrity of
+    APPLICATION, per field — this — and every system in our group (Kubernetes,
+    Foundry, Backstage, DataHub) settled in the same place.
+
+    A :class:`KernelRefusal` and emphatically **not** a
+    :class:`CapabilityRefusal`, because the distinction between the two is
+    exactly the distinction between the two things that can go wrong here. This
+    is a verdict about the REQUEST: the store could have deleted the row, the
+    caller was entitled to ask, and policy said no. The remedy is a different
+    request — delete the referrers first, or repoint them. A capability refusal
+    would send the caller looking for a different deployment, which would not
+    help, since the same policy is declared in the data and would travel with
+    it.
+
+    ``ValueError`` for the reason every other kernel refusal keeps a builtin
+    base: a face written before the marker base existed still catches it.
+
+    :attr:`referrers` carries the list rather than only the count, because the
+    remedy IS the list. A refusal that says "47 things point at this" and makes
+    the caller run a second query to find out which ones has told them they
+    cannot proceed without telling them how to.
+    """
+
+    def __init__(self, message: str, *, referrers: list[dict] | None = None):
+        super().__init__(message)
+        #: ``{kind, name, relation}`` per referring instance — what the caller
+        #: has to deal with before this delete can succeed.
+        self.referrers: list[dict] = list(referrers or [])
 
 
 #: Longest path component the kernel will hand an adapter, in UTF-8 BYTES.
@@ -284,7 +393,7 @@ def _path_component_fault(value: object) -> str | None:
         if char in value:
             return f"contains {label}"
     if value in (".", ".."):
-        return "addresses a directory instead of naming a document"
+        return "addresses a directory instead of naming an instance"
     size = len(value.encode("utf-8", "surrogatepass"))
     if size > MAX_PATH_COMPONENT_BYTES:
         return f"is {size} bytes (max {MAX_PATH_COMPONENT_BYTES})"
@@ -300,20 +409,20 @@ _COMPONENT_RULE = (
 )
 
 
-def validate_document_name(name: object) -> None:
-    """Raise :class:`InvalidDocumentName` unless ``name`` is a safe component.
+def validate_instance_name(name: object) -> None:
+    """Raise :class:`InvalidInstanceName` unless ``name`` is a safe component.
 
-    Called by ``Kernel.write_document`` / ``Kernel.delete_document`` before any
+    Called by ``Kernel.write_instance`` / ``Kernel.delete_instance`` before any
     adapter is touched, so every writer — the SDLC verbs, the generic MCP write
     tool, the REST routes, an extension — inherits it without knowing it exists.
     """
     fault = _path_component_fault(name)
     if fault is not None:
-        raise InvalidDocumentName(
-            f"document name {name!r} {fault} — a document name must be "
+        raise InvalidInstanceName(
+            f"instance name {name!r} {fault} — an instance name must be "
             f"{_COMPONENT_RULE}. It is written to disk as a path component "
             f"(<scope>/<container>/<name>), so a name that traverses would "
-            f"place the document outside the store."
+            f"place the instance outside the store."
         )
 
 
@@ -324,8 +433,8 @@ def validate_scope_name(scope: object) -> None:
     the WRITE and BUNDLE facades refuse ``scope=""``, ``"."`` and ``"a/b"``
     through this validator, but the READ path never calls it — reads are held to
     CONTAINMENT only (``FilesystemSource._contained``), which fires on a genuine
-    escape and lets those three through. So ``list_documents(scope="a/b")``
-    works today while ``write_document(scope="a/b")`` refuses. Deliberate and
+    escape and lets those three through. So ``list_instances(scope="a/b")``
+    works today while ``write_instance(scope="a/b")`` refuses. Deliberate and
     measured, not overlooked: 12 on-disk scopes exist across both repos and not
     one contains a slash, so nothing real depends on either behaviour, and
     tightening the read path would be a change in what a scope IS rather than a
@@ -409,7 +518,7 @@ def validate_bundle_entry(entry: object, *, where: str = "bundle entry") -> None
 
     Called by ``FilesystemBundleHandle`` on EVERY method that builds a path from
     an entry, by ``write_entries_to_handle`` before any writer's output reaches
-    a handle, and by ``Kernel.serialize_document`` on every ``relativePath`` it
+    a handle, and by ``Kernel.serialize_instance`` on every ``relativePath`` it
     hands back. The handle is the closing layer — it is the one door every
     writer must pass — and the other two are the named, early ones that can say
     WHICH field was wrong.
@@ -468,7 +577,7 @@ class ExtensionLoadError(KernelRegistrationError):
 
 class AgentNotFound(LookupError):
     """``build_prompt(agent=X)`` was asked for an agent that no prompt-target
-    document in the loaded manifest declares (missing, renamed, or unparseable).
+    instance in the loaded manifest declares (missing, renamed, or unparseable).
 
     Fail-loud contract (s-dx-build-prompt-fail-loud): the builder used to
     RETURN the string ``"Agent 'X' not found"`` instead of raising — which
@@ -486,6 +595,87 @@ class AgentNotFound(LookupError):
     def __init__(self, agent: str | None) -> None:
         self.agent = agent
         super().__init__(f"Agent '{agent}' not found")
+
+
+class InstanceIdLookupUnsupported(CapabilityRefusal, NotImplementedError):
+    """The wired source cannot resolve a ``metadata.id`` prefix (i-114).
+
+    Raised rather than answering with an empty list, for the same reason
+    ``graph_refs`` answers 501 instead of ``[]`` when no edge store is
+    configured: "this adapter cannot answer" and "no instance has that id" are
+    different facts, and a caller handed silence for the first will read it as
+    the second.
+
+    A :class:`CapabilityRefusal` so every face relays it by name, and still a
+    ``NotImplementedError`` so nothing that caught it the old way changes.
+    """
+
+
+class KeyLookupUnsupported(CapabilityRefusal, NotImplementedError):
+    """The wired source cannot find instances by a spec KEY (fatia 5).
+
+    The sibling of :class:`InstanceIdLookupUnsupported`, and it exists for the
+    identical reason: ``None`` from a store that never looked reads exactly
+    like ``None`` from a store that looked and found nothing. A relation
+    declared ``by: workspace_id`` would then be reported as dangling on every
+    deployment whose adapter simply cannot ask the question — an accusation
+    against data that may be perfectly sound.
+
+    ⚠️ The write path CATCHES this rather than propagating it, and records the
+    edge with reason ``unsupported``. That is deliberate: a capability the
+    store lacks must never fail a write that did nothing wrong. It propagates
+    to whoever asks ``Kernel.find_instance_by_key`` directly, where the caller
+    wanted an answer and silence would be the lie.
+    """
+
+
+class AmbiguousInstanceKey(LookupError):
+    """Two or more instances of one Kind carry the same spec key value.
+
+    A refusal and never a choice, and for a stronger reason than its twin
+    :class:`~dna.kernel.identity.AmbiguousInstanceId`: nothing in the schema
+    makes a spec key unique, and fatia 5 does not make it unique either. A
+    UNIQUE index would refuse a tenant overlay that legitimately carries the
+    same key as the base instance it forks. So ambiguity is not a corrupt state
+    to be prevented at write time — it is a LEGAL state the read has to refuse
+    to guess about. Picking the first row would be indistinguishable from
+    picking the right one, in the diff and on the screen.
+
+    ⚠️ **NEITHER marker base, and the twin is the reason.** It is not a
+    :class:`CapabilityRefusal` — the store answered perfectly well, and what it
+    answered was "two". It is not a :class:`KernelRefusal` either, on exactly
+    the argument ``AmbiguousInstanceId`` is classified by: a refusal marks a
+    verdict about the CALLER, who asked for something policy will not give.
+    This is a fact about the QUESTION — two instances match, so there is no
+    single answer — and the remedy is in the data rather than in permission.
+    Relayed as a denial it would send somebody hunting for an entitlement they
+    already have. ``tests/test_kernel_refusal_base.py`` holds that decision.
+
+    ``LookupError`` because that is what a lookup with no single answer is, and
+    what the sibling already is.
+    """
+
+    def __init__(
+        self, kind: str, key: str, value: str,
+        *, matches: "list[Any] | None" = None,
+    ) -> None:
+        self.kind = kind
+        self.key = key
+        self.value = value
+        #: The candidates, because the remedy IS the list — the same reasoning
+        #: that makes ``TargetDeleteRestricted`` record its referrers instead
+        #: of counting them.
+        self.matches: list[Any] = list(matches or [])
+        shown = ", ".join(
+            str((m or {}).get("name") or "?")
+            for m in self.matches[:8] if isinstance(m, dict)
+        )
+        super().__init__(
+            f"{len(self.matches) or 2} {kind} instances carry "
+            f"{key}={value!r} — refusing to guess which one a relation "
+            f"addressed `by: {key}` means"
+            + (f" ({shown})" if shown else "")
+        )
 
 
 class UnknownLayout(ValueError):
@@ -515,7 +705,7 @@ class UnknownLayout(ValueError):
 
 class ToolNotFound(LookupError):
     """``load_tools(scope)[name]`` was asked for a Tool that no ``Tool``
-    document in the scope declares (missing, renamed, or in another scope).
+    instance in the scope declares (missing, renamed, or in another scope).
 
     Fail-loud contract (s-load-tools-helper), the twin of
     :class:`AgentNotFound`: the agent-facing tool surface is data, so a miss

@@ -38,7 +38,7 @@ _PLANE_BLURB = {
     ),
     "record": (
         "**Record-plane** Kinds are queryable data rows (SDLC work items, "
-        "research, evidence, audit log, …) — first-class documents you "
+        "research, evidence, audit log, …) — first-class instances you "
         "`query`/`count` rather than fold into a prompt."
     ),
 }

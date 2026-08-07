@@ -3,7 +3,7 @@
 PyYAML ships two implementations of the same grammar: a pure-Python
 scanner/parser and a binding over libyaml (C). They are *meant* to agree.
 "Meant to" is not evidence, and a silent divergence here would corrupt
-documents rather than fail loudly — so this module asserts equality on the
+instances rather than fail loudly — so this module asserts equality on the
 repository's own YAML corpus, not on a toy string.
 
 Three properties are locked:
@@ -149,7 +149,7 @@ def test_both_loaders_agree_on_every_yaml_document_in_the_repository():
         elif _shape(pure) != _shape(fast):
             divergences.append(f"{rel}: resolved types differ")
 
-    assert compared > 300, f"only {compared} documents actually compared"
+    assert compared > 300, f"only {compared} instances actually compared"
     assert not divergences, "loader divergence on the real corpus:\n" + "\n".join(
         divergences[:20]
     )

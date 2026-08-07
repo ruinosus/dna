@@ -6,8 +6,8 @@ is what confers schema enforcement and storage routing, and registration happens
 the scope's base MI so the *next* build is fresh. Nothing scheduled that next
 build. It arrived only when somebody happened to call a ``definitions``-family
 route (``list_agents`` / ``compose_prompt`` / ``list_tools`` / ``genome_view``)
-for that scope, in that process — and the document routes (``write_document``,
-``list_documents``, ``get_document``, ``list_kinds``) never do: they read the
+for that scope, in that process — and the instance routes (``write_instance``,
+``list_instances``, ``get_instance``, ``list_kinds``) never do: they read the
 Kind registry directly.
 
 So the measured sequence a human performs — approve, then immediately use the
@@ -24,7 +24,7 @@ Two layers are under test here, and they are deliberately proved apart:
   replica that served the act honours it on the very next call. It closes the
   case a human hits first and closes NOTHING on the sibling replicas.
 * **Layer 2 — ``LiveDna.ensure_kinds`` behind a short TTL at the Kind-resolution
-  seam of the document routes.** This is what closes every replica, and it turns
+  seam of the instance routes.** This is what closes every replica, and it turns
   "indeterminate" into a number: at most ``kind_refresh_ttl`` seconds.
 
 **The trap this file is written against.** A fixture that builds a fresh kernel
@@ -63,11 +63,11 @@ from dna._yaml import safe_load
 from dna.adapters.filesystem import FilesystemCache
 from dna.adapters.filesystem.writable import FilesystemWritableSource
 from dna.application import live as live_mod
-from dna.application.documents import (
+from dna.application.instances import (
     UnknownKindError,
-    get_document_impl,
+    get_instance_impl,
     list_kinds_impl,
-    write_document_impl,
+    write_instance_impl,
 )
 from dna.application.kind_authoring import (
     approve_kind_impl,
@@ -153,7 +153,7 @@ async def _revoke(live: LiveDna, *, now: str = "2026-07-28T12:00:00Z") -> Any:
 
 
 async def _write(live: LiveDna, name: str, titulo: str = "primeiro") -> Any:
-    return await write_document_impl(
+    return await write_instance_impl(
         live, kind="Deal", name=name, spec={"titulo": titulo},
         tenant=_TENANT,
     )
@@ -268,7 +268,7 @@ async def test_the_approved_schema_is_enforced_on_that_very_next_write(
     await _approve(live)
 
     with pytest.raises(Exception) as excinfo:
-        await write_document_impl(
+        await write_instance_impl(
             live, kind="Deal", name="deal-bad", spec={"titulo": 123},
             tenant=_TENANT,
         )
@@ -277,9 +277,9 @@ async def test_the_approved_schema_is_enforced_on_that_very_next_write(
 
 @pytest.mark.asyncio
 async def test_the_catalog_lists_the_kind_on_the_very_next_call(store: Path):
-    """``list_kinds`` is a document route too — it reads the registry directly.
+    """``list_kinds`` is an instance route too — it reads the registry directly.
 
-    An approval that holds for ``write_document`` but leaves the catalog saying
+    An approval that holds for ``write_instance`` but leaves the catalog saying
     the Kind does not exist is a product that contradicts itself in two
     adjacent calls."""
     live = _replica(store)
@@ -294,7 +294,7 @@ async def test_the_catalog_lists_the_kind_on_the_very_next_call(store: Path):
 @pytest.mark.asyncio
 async def test_revocation_closes_the_door_on_the_very_next_write(store: Path):
     """The dangerous half. A revocation that is slow to take effect keeps
-    accepting documents of a Kind the workspace has just withdrawn.
+    accepting instances of a Kind the workspace has just withdrawn.
 
     Same sequence, one process, no rebuild: approve → write (accepted) →
     revoke → write (must be REFUSED)."""
@@ -357,7 +357,7 @@ async def test_a_sibling_replica_that_never_approved_picks_the_kind_up(
 
     Replica B is warm (it has served this scope) and it did NOT serve the
     approval — replica A did. Nothing invalidated B, nothing rebuilt B. The
-    document route's own ``ensure_kinds`` is the only thing that can make this
+    instance route's own ``ensure_kinds`` is the only thing that can make this
     pass."""
     a = _replica(store)
     b = _replica(store)
@@ -439,7 +439,7 @@ async def test_the_seam_does_not_re_read_the_store_inside_the_window(
     store: Path, monkeypatch: pytest.MonkeyPatch,
 ):
     """The cost half of the SLA: one bootstrap read per scope per window, not
-    one per request. A seam that rebuilt on every document call would trade a
+    one per request. A seam that rebuilt on every instance call would trade a
     product bug for a worse one."""
     now = [3_000.0]
     monkeypatch.setattr(live_mod, "_monotonic", lambda: now[0])
@@ -453,10 +453,10 @@ async def test_the_seam_does_not_re_read_the_store_inside_the_window(
 
     for i in range(6):
         await _write(live, f"deal-hot-{i}")
-        await get_document_impl(live, kind="Deal", name=f"deal-hot-{i}",
+        await get_instance_impl(live, kind="Deal", name=f"deal-hot-{i}",
                                 tenant=_TENANT)
     assert calls["n"] == 0, (
-        "12 document calls inside one TTL window rebuilt the registry "
+        "12 instance calls inside one TTL window rebuilt the registry "
         f"{calls['n']} times — the window is what makes the seam affordable"
     )
 

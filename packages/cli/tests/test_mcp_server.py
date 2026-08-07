@@ -92,7 +92,7 @@ def test_compose_prompt_tenant_overlay(dna_dir):
                 "model": "azure/gpt-4o",
             },
         }
-        await live.kernel.with_tenant("acme").write_document(
+        await live.kernel.with_tenant("acme").write_instance(
             _SCOPE, "Agent", _AGENT, overlay
         )
         base = await M.compose_prompt_impl(live, _AGENT, scope=_SCOPE)
@@ -146,7 +146,7 @@ def test_sdlc_surface(dna_dir):
         live = await M.boot_live(base_dir=str(dna_dir))
         # Seed one ADR + one Story into the scope so the SDLC surface returns
         # REAL data end-to-end (not just an empty-but-valid shape).
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _SCOPE, "ADR", "adr-demo",
             {
                 "apiVersion": "github.com/ruinosus/dna/sdlc/v1",
@@ -156,7 +156,7 @@ def test_sdlc_surface(dna_dir):
                          "context": "why", "decision": "what"},
             },
         )
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _SCOPE, "Story", "s-demo",
             {
                 "apiVersion": "github.com/ruinosus/dna/sdlc/v1",
@@ -223,7 +223,7 @@ def test_one_server_exposes_definitions_sdlc_and_memory(dna_dir):
         # Seed one Story so the SDLC surface returns real data (write on THIS
         # loop via a fresh boot — the server's own kernel is built lazily too).
         live = await M.boot_live(base_dir=str(dna_dir))
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _SCOPE, "Story", "s-smoke",
             {"apiVersion": "github.com/ruinosus/dna/sdlc/v1", "kind": "Story",
              "metadata": {"name": "s-smoke"},

@@ -83,7 +83,7 @@ async def _genome_or_none(kernel: Kernel, scope: str) -> dict[str, Any] | None:
     """Read a scope's Genome, treating a scope the FS source has never seen
     (no directory yet — PG's 'empty scope' equivalent) as 'no Genome'."""
     try:
-        return await kernel.get_document(scope, "Genome", scope)
+        return await kernel.get_instance(scope, "Genome", scope)
     except FileNotFoundError:
         return None
 
@@ -103,7 +103,7 @@ async def test_create_births_the_scope_with_the_declared_parent(
     wid = out["workspace_id"]
     ws_scope = live.default_scope(wid)
 
-    genome = await kernel.get_document(ws_scope, "Genome", ws_scope)
+    genome = await kernel.get_instance(ws_scope, "Genome", ws_scope)
     assert genome is not None
     assert genome["spec"]["parent_scope"] == _BASE_SCOPE
 
@@ -116,14 +116,14 @@ async def test_create_births_the_scope_with_the_declared_parent(
     # over it, which means without this line a broken assignment is invisible —
     # every workspace born namespace-less, one WARNING each, suite green.
     #
-    # Through the REAL resolution path, not by reading the document back: a claim
+    # Through the REAL resolution path, not by reading the instance back: a claim
     # stored in a shape `owner_of` cannot resolve (the whole `…/v1` apiVersion
-    # instead of the prefix) exists as a document and still refuses the first
+    # instead of the prefix) exists as an instance and still refuses the first
     # Kind the workspace authors.
     claims = await kernel.kind_namespaces()
     mine = [c for c in claims if (c.get("spec") or {}).get("owner") == wid]
     assert len(mine) == 1, f"expected exactly one namespace claim for {wid}, got {mine}"
-    # `metadata.name`, not `spec.namespace`: the document's own key is what a
+    # `metadata.name`, not `spec.namespace`: the instance's own key is what a
     # correct `assign_namespace` mint sets from the SAME local variable it
     # returns to the caller, so it stays the true prefix even if a bug ever
     # made `spec.namespace` diverge from it. Reading `spec.namespace` here
@@ -136,7 +136,7 @@ async def test_create_births_the_scope_with_the_declared_parent(
     # breaks that circularity: it is independent of whatever the bug did to
     # `spec.namespace`, which is what lets this assertion actually resolve
     # through `namespace_of` the way the write path really does, instead of
-    # tautologically matching the document it was read from.
+    # tautologically matching the instance it was read from.
     assigned = mine[0]["metadata"]["name"]
     api_version = f"{assigned}/v1"
     assert owner_of(namespace_of(api_version), claims).owner == wid, (
@@ -186,7 +186,7 @@ async def test_provision_owner_adopts_an_existing_workspace(
     res = await provision_workspace_owner_impl(live, wid, _CLAIMS)
     assert res["reason"] == "already_member"
 
-    genome = await kernel.get_document(ws_scope, "Genome", ws_scope)
+    genome = await kernel.get_instance(ws_scope, "Genome", ws_scope)
     assert genome is not None
     assert genome["spec"]["parent_scope"] == _BASE_SCOPE
 
@@ -208,9 +208,9 @@ async def test_an_operator_authored_parent_is_never_overwritten(
     ws_scope = live.default_scope(wid)
 
     # An operator re-points the scope at a custom base…
-    custom = await kernel.get_document(ws_scope, "Genome", ws_scope)
+    custom = await kernel.get_instance(ws_scope, "Genome", ws_scope)
     custom["spec"]["parent_scope"] = "operator-base"
-    await kernel.write_document(ws_scope, "Genome", ws_scope, custom,
+    await kernel.write_instance(ws_scope, "Genome", ws_scope, custom,
                                 invalidate_mode="doc")
 
     # …and neither adoption nor the ensure helper claws it back.
@@ -218,7 +218,7 @@ async def test_an_operator_authored_parent_is_never_overwritten(
     res = await ensure_workspace_scope_genome(live, wid)
     assert res["written"] is False
     assert res["parent_scope"] == "operator-base"
-    genome = await kernel.get_document(ws_scope, "Genome", ws_scope)
+    genome = await kernel.get_instance(ws_scope, "Genome", ws_scope)
     assert genome["spec"]["parent_scope"] == "operator-base"
 
 
@@ -242,5 +242,5 @@ async def test_the_vendor_scope_is_never_touched(kernel: Kernel) -> None:
     res = await ensure_workspace_scope_genome(single_tenant, "ws-whatever")
     assert res["written"] is False
 
-    genome = await kernel.get_document(_BASE_SCOPE, "Genome", _BASE_SCOPE)
+    genome = await kernel.get_instance(_BASE_SCOPE, "Genome", _BASE_SCOPE)
     assert "parent_scope" not in (genome or {}).get("spec", {})

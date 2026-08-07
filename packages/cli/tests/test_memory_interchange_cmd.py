@@ -290,7 +290,7 @@ def test_two_distinct_memories_sharing_a_title_do_not_overwrite_each_other(scope
 
     Two docs with different ids that share a title derive the SAME summary;
     a summary-keyed name made the second silently REPLACE the first
-    (write_document is a full replace). --as native has no passthrough copy
+    (write_instance is a full replace). --as native has no passthrough copy
     to fall back on, so the first memory was simply gone."""
     runner = CliRunner()
     src = scoped / "foreign"

@@ -18,8 +18,8 @@ def mi():
 class TestGenerateLock:
     def test_all_docs_have_64_char_sha(self, mi):
         lock = mi.generate_lock()
-        assert len(lock.documents) > 0
-        for entry in lock.documents:
+        assert len(lock.instances) > 0
+        for entry in lock.instances:
             assert len(entry.sha256) == 64, f"SHA for {entry.kind}/{entry.name} is not 64 chars"
 
     def test_scope_matches(self, mi):
@@ -29,8 +29,8 @@ class TestGenerateLock:
     def test_deterministic(self, mi):
         lock1 = mi.generate_lock()
         lock2 = mi.generate_lock()
-        sha_map1 = {(e.kind, e.name): e.sha256 for e in lock1.documents}
-        sha_map2 = {(e.kind, e.name): e.sha256 for e in lock2.documents}
+        sha_map1 = {(e.kind, e.name): e.sha256 for e in lock1.instances}
+        sha_map2 = {(e.kind, e.name): e.sha256 for e in lock2.instances}
         assert sha_map1 == sha_map2
 
 
@@ -44,17 +44,17 @@ class TestWriteReadRoundtrip:
 
         restored = read_lockfile(lock_file)
         assert restored.scope == lock.scope
-        assert len(restored.documents) == len(lock.documents)
+        assert len(restored.instances) == len(lock.instances)
 
-        original_map = {(e.kind, e.name): e.sha256 for e in lock.documents}
-        restored_map = {(e.kind, e.name): e.sha256 for e in restored.documents}
+        original_map = {(e.kind, e.name): e.sha256 for e in lock.instances}
+        restored_map = {(e.kind, e.name): e.sha256 for e in restored.instances}
         assert original_map == restored_map
 
     def test_read_missing_file_returns_empty(self, tmp_path):
         missing = tmp_path / "nonexistent.lock"
         result = read_lockfile(missing)
         assert isinstance(result, Lockfile)
-        assert result.documents == []
+        assert result.instances == []
 
 
 # ── TestVerifyLock ──
@@ -75,10 +75,10 @@ class TestVerifyLock:
         """Remove one entry from the lock before writing — verify sees it as added."""
         lock = mi.generate_lock()
         # Drop the first doc so the lock doesn't know about it
-        removed_entry = lock.documents[0]
+        removed_entry = lock.instances[0]
         trimmed_lock = Lockfile(
             scope=lock.scope,
-            documents=lock.documents[1:],
+            instances=lock.instances[1:],
             lock_version=lock.lock_version,
             generated_at=lock.generated_at,
         )
@@ -105,7 +105,7 @@ class TestVerifyLock:
         )
         augmented_lock = Lockfile(
             scope=lock.scope,
-            documents=lock.documents + [fake_entry],
+            instances=lock.instances + [fake_entry],
             lock_version=lock.lock_version,
             generated_at=lock.generated_at,
         )
@@ -122,7 +122,7 @@ class TestVerifyLock:
         """Mutate one entry's sha256 — verify detects it as changed."""
         lock = mi.generate_lock()
         # Pick first entry and corrupt its SHA
-        target = lock.documents[0]
+        target = lock.instances[0]
         mutated = LockEntry(
             name=target.name,
             kind=target.kind,
@@ -131,10 +131,10 @@ class TestVerifyLock:
             path=target.path,
             sha256="0" * 64,  # Wrong SHA
         )
-        mutated_docs = [mutated] + lock.documents[1:]
+        mutated_docs = [mutated] + lock.instances[1:]
         mutated_lock = Lockfile(
             scope=lock.scope,
-            documents=mutated_docs,
+            instances=mutated_docs,
             lock_version=lock.lock_version,
             generated_at=lock.generated_at,
         )

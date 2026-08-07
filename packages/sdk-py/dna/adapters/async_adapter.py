@@ -45,7 +45,7 @@ _THREAD_HOPPED: frozenset[str] = frozenset({
     "load_bootstrap_docs", "load_all", "resolve_ref", "load_layer",
     "close", "list_doc_refs", "load_one", "count",
     # WritableSourcePort
-    "save_document", "delete_document", "save_manifest", "list_versions",
+    "save_instance", "delete_instance", "save_manifest", "list_versions",
     "get_version", "publish", "load_drafts", "list_scopes",
 })
 

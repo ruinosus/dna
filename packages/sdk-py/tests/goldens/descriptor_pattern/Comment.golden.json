@@ -60,7 +60,7 @@
     "properties": {
       "target_ref": {
         "type": "string",
-        "description": "Kind:name of the target document"
+        "description": "Kind:name of the target instance"
       },
       "author": {
         "type": "string"

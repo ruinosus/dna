@@ -34,7 +34,7 @@ já sabemos que o conteúdo é texto.
 ## OOXML é ZIP por dentro
 
 Um `.docx` é um ZIP, e `filetype` reporta o container. Tratar isso como
-divergência marcaria todo documento do Office — então `mismatch` conhece essa
+divergência marcaria toda instância do Office — então `mismatch` conhece essa
 equivalência. Sem ela, o sinal viraria ruído e ninguém olharia mais para ele.
 """
 from __future__ import annotations

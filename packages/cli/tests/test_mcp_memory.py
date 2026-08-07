@@ -207,11 +207,11 @@ async def _seed_tiers(dna_dir) -> None:
     from dna_cli import _mcp_server as M
 
     live = await M.boot_live(base_dir=str(dna_dir))
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         "_lib", "PricingPlan", "free",
         _tier_doc("free", families=["definitions", "sdlc", "memory"],
                   memory_mode="read"))
-    await live.kernel.write_document(
+    await live.kernel.write_instance(
         "_lib", "PricingPlan", "pro",
         _tier_doc("pro", families=["definitions", "sdlc", "memory", "emit"],
                   memory_mode="write"))

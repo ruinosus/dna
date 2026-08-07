@@ -1,15 +1,15 @@
 """``create_story`` / ``create_issue`` / ``create_feature`` never destroy a
-document that is already there.
+instance that is already there.
 
 The hole: each of the three built a fresh spec and called
-``kernel.write_document`` with no existence check. ``write_document`` is an
+``kernel.write_instance`` with no existence check. ``write_instance`` is an
 upsert keyed on the name, so an agent guessing (or re-trying, or working from a
-stale board) obliterated the existing document's status, timeline,
+stale board) obliterated the existing instance's status, timeline,
 acceptance_criteria and definition_of_done — silently, and reported success.
 "Create" is the ONE verb that must never be an update.
 
 ``create_issue`` had a second, quieter version of the same bug: it derived its
-name from ``max(existing i-NNN) + 1``. Any enumeration that misses a document —
+name from ``max(existing i-NNN) + 1``. Any enumeration that misses an instance —
 a racing writer, an eventually-consistent read — computes a number that is
 already taken, and the write then lands ON TOP of that Issue. It now probes the
 name it intends to use.
@@ -61,15 +61,15 @@ async def test_create_story_refuses_an_existing_name(kernel):
     )
     await S.set_status(kernel, _SCOPE, "Story", "s-one", "in-progress")
 
-    with pytest.raises(S.DocumentExists) as ei:
+    with pytest.raises(S.InstanceExists) as ei:
         await S.create_story(
             kernel, _SCOPE, "s-one", feature="f-y", description="a guess")
 
     msg = str(ei.value)
-    assert "s-one" in msg and "Story" in msg      # names the document…
+    assert "s-one" in msg and "Story" in msg      # names the instance…
     assert "in-progress" in msg                   # …and its current state
 
-    spec = (await kernel.get_document(_SCOPE, "Story", "s-one"))["spec"]
+    spec = (await kernel.get_instance(_SCOPE, "Story", "s-one"))["spec"]
     assert spec["description"] == "the real one"
     assert spec["status"] == "in-progress"
     assert spec["acceptance_criteria"] == ["Given A, when B, then C"]
@@ -80,10 +80,10 @@ async def test_create_story_refuses_an_existing_name(kernel):
 async def test_create_feature_refuses_an_existing_name(kernel):
     await S.create_feature(
         kernel, _SCOPE, "f-one", title="T", description="the real one")
-    with pytest.raises(S.DocumentExists, match="f-one"):
+    with pytest.raises(S.InstanceExists, match="f-one"):
         await S.create_feature(
             kernel, _SCOPE, "f-one", title="T2", description="a guess")
-    spec = (await kernel.get_document(_SCOPE, "Feature", "f-one"))["spec"]
+    spec = (await kernel.get_instance(_SCOPE, "Feature", "f-one"))["spec"]
     assert spec["description"] == "the real one"
 
 
@@ -94,7 +94,7 @@ async def test_the_refusal_points_at_the_update_verbs(kernel):
     await S.create_story(
         kernel, _SCOPE, "s-one", feature="f-x", description="d",
         acceptance_criteria=["Given X"], definition_of_done=["done"])
-    with pytest.raises(S.DocumentExists) as ei:
+    with pytest.raises(S.InstanceExists) as ei:
         await S.create_story(
             kernel, _SCOPE, "s-one", feature="f-x", description="d",
             acceptance_criteria=["Given X"], definition_of_done=["done"])
@@ -106,7 +106,7 @@ async def test_the_refusal_points_at_the_update_verbs(kernel):
 async def test_overwrite_is_reachable_but_only_by_name(kernel):
     """The destructive semantics stay available to a caller that means it (a
     backfill / migration), because refusing outright would only push such a
-    caller into hand-rolling ``kernel.write_document`` with no timeline at all."""
+    caller into hand-rolling ``kernel.write_instance`` with no timeline at all."""
     await S.create_story(
         kernel, _SCOPE, "s-one", feature="f-x", description="the old one",
         acceptance_criteria=["Given X"], definition_of_done=["done"])
@@ -114,17 +114,17 @@ async def test_overwrite_is_reachable_but_only_by_name(kernel):
         kernel, _SCOPE, "s-one", feature="f-x", description="the new one",
         acceptance_criteria=["Given X"], definition_of_done=["done"],
         overwrite=True)
-    spec = (await kernel.get_document(_SCOPE, "Story", "s-one"))["spec"]
+    spec = (await kernel.get_instance(_SCOPE, "Story", "s-one"))["spec"]
     assert spec["description"] == "the new one"
 
 
-# ── create_issue: the auto-incremented name never lands on a live document ──
+# ── create_issue: the auto-incremented name never lands on a live instance ──
 
 
 class _HidingKernel:
     """The real kernel with ONE Issue hidden from ``query`` — the shape of every
     enumeration that can under-report (a concurrent writer, a read replica that
-    has not caught up). ``get_document`` still sees it.
+    has not caught up). ``get_instance`` still sees it.
 
     ⚠️ It hides BOTH row shapes on purpose. ``create_issue`` pushes a
     ``projection=["name"]`` down, and a projected row comes back FLAT
@@ -167,7 +167,7 @@ async def test_a_missed_enumeration_never_destroys_the_document_it_missed(kernel
 
     With ``i-001-first`` invisible, ``max+1`` is 1 and the allocator aims at
     number 1 — but the name it writes is ``i-001-second``, which is free, so
-    ``if_absent`` lets it through. Nothing is overwritten: the document the
+    ``if_absent`` lets it through. Nothing is overwritten: the instance the
     enumeration missed keeps every byte.
 
     What it does NOT guarantee is the ID: two Issues now share ``i-001``. That
@@ -182,7 +182,7 @@ async def test_a_missed_enumeration_never_destroys_the_document_it_missed(kernel
 
     out = await S.create_issue(hiding, _SCOPE, "second", description="the new one")
 
-    kept = (await kernel.get_document(_SCOPE, "Issue", "i-001-first"))["spec"]
+    kept = (await kernel.get_instance(_SCOPE, "Issue", "i-001-first"))["spec"]
     assert kept["description"] == "the real i-001", "the missed doc was destroyed"
     assert out["name"] == "i-001-second"
 
@@ -225,7 +225,7 @@ def test_no_filter_over_the_enumeration_can_reject_the_number_it_produced():
 
 
 class _NoAtomicLateArrival:
-    """An adapter with no ``if_absent``, plus a document that shows up only
+    """An adapter with no ``if_absent``, plus an instance that shows up only
     AFTER the enumeration — the concurrent write that landed in between."""
 
     def __init__(self, inner: Any, late: str) -> None:
@@ -247,17 +247,17 @@ class _NoAtomicLateArrival:
                     continue
             yield row
 
-    async def write_document(self, *a: Any, **kw: Any):
+    async def write_instance(self, *a: Any, **kw: Any):
         if kw.pop("if_absent", False):
             raise NotImplementedError("this adapter cannot claim atomically")
-        return await self._inner.write_document(*a, **kw)
+        return await self._inner.write_instance(*a, **kw)
 
 
 @pytest.mark.asyncio
 async def test_the_fallback_probe_asks_about_the_NUMBER_not_the_name(kernel):
     """On the probe-then-write adapter, the probe has to be worth running.
 
-    #242's probe asked ``get_document("i-002-<our slug>")`` — a name nobody
+    #242's probe asked ``get_instance("i-002-<our slug>")`` — a name nobody
     else would ever pick, so it answered "free" for every real collision. The
     probe now asks whether ANY slug holds ``i-002``, and because it re-reads,
     it can see the write that landed after the enumeration."""
@@ -271,7 +271,7 @@ async def test_the_fallback_probe_asks_about_the_NUMBER_not_the_name(kernel):
         "the enumeration saw only i-001 and aimed at 002; the number probe "
         "re-read, found i-002-landed-late, and stepped past it"
     )
-    kept = (await kernel.get_document(_SCOPE, "Issue", "i-002-landed-late"))["spec"]
+    kept = (await kernel.get_instance(_SCOPE, "Issue", "i-002-landed-late"))["spec"]
     assert kept["description"] == "b"
 
 

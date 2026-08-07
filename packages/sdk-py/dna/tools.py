@@ -13,7 +13,7 @@ decide whether to call a tool, and the JSON Schema of its ``parameters``.
     surface.description                   # the text the model reads
     surface.parameters                    # the args JSON Schema
 
-Because a Tool is one declarative document, the SAME surface is served to a
+Because a Tool is one declarative instance, the SAME surface is served to a
 Python backend (a ``@tool`` function's ``description=``) and a TypeScript
 frontend (CopilotKit ``useCopilotAction``) from ONE source of truth — the
 first place the Py↔TS descriptor parity pays off in a real consumer (see
@@ -55,10 +55,10 @@ class ToolSurface:
 class ToolLibrary(Mapping[str, ToolSurface]):
     """Lazy, cached mapping ``tool name -> ToolSurface`` over one scope.
 
-    ``lib["github-search"]`` reads the Tool document on first access, projects
+    ``lib["github-search"]`` reads the Tool instance on first access, projects
     its agent-facing surface, caches it, and returns it. A missing tool raises
     :class:`~dna.ToolNotFound`. ``"x" in lib`` and ``list(lib)`` / ``lib.names()``
-    enumerate the Tool documents without projecting them.
+    enumerate the Tool instances without projecting them.
 
     Read-only and side-effect-free beyond the internal cache — safe to build
     once and share.
@@ -105,7 +105,7 @@ class ToolLibrary(Mapping[str, ToolSurface]):
     # -- Introspection --------------------------------------------------------
 
     def names(self) -> list[str]:
-        """Names of every Tool document in the scope, sorted. Does NOT project
+        """Names of every Tool instance in the scope, sorted. Does NOT project
         their surfaces — cheap enough to call for discovery."""
         return sorted(getattr(d, "name", "") for d in self.mi._all("Tool"))  # type: ignore[attr-defined]
 

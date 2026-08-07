@@ -1,6 +1,6 @@
 """document_hash — golden lock on the canonical form and its digest.
 
-``document_hash`` is the sync/dedup identity of a document: the canonical JSON
+``document_hash`` is the sync/dedup identity of an instance: the canonical JSON
 below (key order, separators, scalar rendering) and its sha256 are a WIRE
 contract, not an implementation detail — a change silently invalidates every
 stored hash. Each fixture pins the exact canonical string AND the digest.

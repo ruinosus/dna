@@ -1,6 +1,6 @@
 """SafetyPolicyExtension — SafetyPolicy kind (declarative input/output safety enforcement).
 
-SafetyPolicy documents declare enforcement rules in YAML. The runtime applies
+SafetyPolicy instances declare enforcement rules in YAML. The runtime applies
 them as a tiered pipeline on both input (prompt context) and output (LLM
 response). Tier 1 (regex) is built-in; heavier tiers are opt-in via extras.
 
@@ -35,6 +35,11 @@ class SafetyPolicyKind(KindBase):
     api_version = "github.com/ruinosus/dna/v1"
     kind = "SafetyPolicy"
     alias = "helix-safety-policy"
+    # `rules` + `action` + `engine` are read by the tiered scanner on
+    # every input and output. It is the clearest member of the family:
+    # the instance IS what the runtime refuses.
+    # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+    traits = frozenset({"governance.policy"})
     is_schema_affecting = True
     ui = docs_ui("SafetyPolicy", mode="govern", label_en="Safety Policies", label_pt="Políticas de Segurança", display_order=50, description_en="Scope safety/PII/content policy.", description_pt="Política de segurança/PII/conteúdo do scope.")
     model = TypedSafetyPolicy

@@ -150,7 +150,7 @@ def _engram_doc_name(mif_id: str) -> str:
     MIF id, exactly like ``_mif_doc_name`` keys the passthrough copy.
 
     NOT ``_slug(summary)``: two distinct MIF docs can derive the same summary
-    (both untitled, or simply sharing a title), and ``write_document`` is a
+    (both untitled, or simply sharing a title), and ``write_instance`` is a
     full replace at a name — so a summary-keyed projection silently overwrote
     an unrelated, previously-imported memory. The id is the identity
     (``interchange.py`` §6); the projection must be named off it."""
@@ -730,7 +730,7 @@ def export_cmd(
                     raw: dict[str, Any] = {"kind": "Engram", "metadata": {"name": name}, "spec": spec}
                     if api_version:
                         raw["apiVersion"] = api_version
-                    await write_kernel.write_document(s.scope, "Engram", name, raw, invalidate_mode="doc")
+                    await write_kernel.write_instance(s.scope, "Engram", name, raw, invalidate_mode="doc")
 
             s.run(_pin())
 

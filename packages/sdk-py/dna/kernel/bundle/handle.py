@@ -41,7 +41,7 @@ class BundleHandle(Protocol):
     ``"IDENTITY.md"``); nested entries use forward slashes
     (``"scripts/run.py"``, ``"references/spec.md"``).
 
-    An ``entry`` is a PATH, and that is what distinguishes it from a document
+    An ``entry`` is a PATH, and that is what distinguishes it from an instance
     ``name`` — see the note on ``FilesystemBundleHandle._entry_path``. Every
     implementation is expected to hold ``dna.kernel.errors.validate_bundle_entry``:
     the rule is part of the CONTRACT, not one backend's defensive habit,
@@ -139,11 +139,11 @@ class FilesystemBundleHandle:
         ``False`` and only the parent chain is resolved.
 
         ``entry`` VS ``name`` — the divergence this method exists to close.
-        A document ``name`` (and a ``scope``) is ONE path component; an
+        An instance ``name`` (and a ``scope``) is ONE path component; an
         ``entry`` is a relative PATH anchored at the bundle root, and it
         legitimately contains ``/``. Same concept — caller-influenced text that
         becomes a location on disk — behind two different doors, held to two
-        different rules (``validate_document_name`` vs
+        different rules (``validate_instance_name`` vs
         ``validate_bundle_entry``). ``606812c`` guarded the first door and
         ``887e858`` its read half; THIS door stayed open, and that is not a
         coincidence a reader should have to rediscover: when one of a pair is
@@ -152,11 +152,11 @@ class FilesystemBundleHandle:
 
         And it went there. The escape was not a caller handing a crafted
         ``entry`` to a bundle-entry door — those were closed — it was that
-        writers DERIVE entries from document CONTENT (``spec.source_files``,
+        writers DERIVE entries from instance CONTENT (``spec.source_files``,
         ``spec.root_files``, ``spec.scripts|references|assets``,
         ``spec.extras``, ``spec.instruction_file``), and ``spec`` is caller
         input all the way from ``PUT /v1/definitions/{kind}/{name}``. Measured
-        through ``Kernel.write_document`` on the default ``Agent`` Kind: every
+        through ``Kernel.write_instance`` on the default ``Agent`` Kind: every
         one of those fields wrote a file outside the store root, on the base
         lane and the tenant lane, and an ABSOLUTE entry wrote to an arbitrary
         absolute path — a ``pathlib`` join DISCARDS the left operand when the
@@ -179,7 +179,7 @@ class FilesystemBundleHandle:
            see: a SUBDIRECTORY inside the bundle that is itself a symlink
            pointing out of it, which relocates every entry written beneath it.
            Exactly the belt-and-braces relationship
-           ``FilesystemSource._contained`` has with ``validate_document_name``
+           ``FilesystemSource._contained`` has with ``validate_instance_name``
            — do not delete either as duplicated work.
 
         THE CARVE-OUT, and it is ASYMMETRIC — the first version applied it in

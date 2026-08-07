@@ -1,11 +1,11 @@
 """Meta-kind machinery: DeclarativeKindPort synthesized from TypedKindDefinition.
 
-A KindDefinition document declaratively describes a new kind (schema, storage,
+A KindDefinition instance declaratively describes a new kind (schema, storage,
 prompt flags, dep_filters). The kernel's 2-phase loader parses these first
 and synthesizes a DeclarativeKindPort per definition via
 ``DeclarativeKindPort.from_typed(typed_def)``. These synthetic ports are
 registered on the kernel and then the second phase parses every other
-document against the now-expanded kind registry.
+instance against the now-expanded kind registry.
 """
 from __future__ import annotations
 
@@ -250,6 +250,15 @@ class DeclarativeKindPort:
         from dna.kernel.kinds.relations import normalize_relations
 
         self.relations = normalize_relations(getattr(spec, "relations", None))
+        # ``identifiers``: the fields that point NOWHERE and say so. Same
+        # attribute name as ``KindBase.identifiers``, so ``identifiers_of``
+        # reads a descriptor Kind and a hand-written one through ONE getattr,
+        # normalized again here for the reason its two siblings are.
+        from dna.kernel.kinds.identifiers import normalize_identifiers
+
+        self.identifiers = normalize_identifiers(
+            getattr(spec, "identifiers", None)
+        )
         # ``overlayable_fields`` → ``OVERLAYABLE_FIELDS``, the KindBase
         # attribute name, so both policy ports read a descriptor Kind and a
         # hand-written Kind identically. Undeclared stays None = no per-field
@@ -298,35 +307,26 @@ class DeclarativeKindPort:
         # re-scoped after architecture review): KindDefinition.spec.schema_fragments
         # is a list of namespaced fragment IDs (e.g. "sdlc/workitem-common").
         # Any extension can register fragments via kernel.schema_fragment(id, dict).
-        # Kernel walks the list and merges each fragment's properties into
-        # schema.properties, with later fragments + Kind-specific properties
-        # winning over earlier ones. Open-for-extension contract preserved —
-        # kernel never imports from a specific extension.
-        #
-        # Registry is queried lazily via a module-level helper so this class
+        # Open-for-extension contract preserved — the kernel never imports from
+        # a specific extension; the registry is queried lazily so this class
         # doesn't depend on holding a kernel ref.
-        fragment_ids = getattr(spec, "schema_fragments", None) or []
+        #
+        # The MERGE itself no longer happens here. It moved into
+        # ``dna.kernel.kinds.traits.apply_traits``, which merges the SAME list
+        # together with whatever the Kind's TRAITS carry — one merge, one
+        # precedence rule (trait → the Kind's own fragments → the Kind's own
+        # properties), and a provenance map that survives.
+        #
+        # ⭐ And the list now SURVIVES on the port. It used to be consumed here
+        # and dropped, so ``hasattr(port, "schema_fragments")`` was False and
+        # "where did this field come from?" had no answer — the composition was
+        # real and its history was erased.
+        fragment_ids = list(getattr(spec, "schema_fragments", None) or [])
         # Back-compat: honour legacy spec.workitem_common: true as shorthand
         # for schema_fragments: ["sdlc/workitem-common"].
         if getattr(spec, "workitem_common", False):
-            fragment_ids = list(fragment_ids) + ["sdlc/workitem-common"]
-        if fragment_ids:
-            merged_props: dict[str, Any] = {}
-            for fid in fragment_ids:
-                frag = _lookup_schema_fragment(fid)
-                if not frag:
-                    continue
-                frag_props = frag.get("properties") if isinstance(frag, dict) else None
-                if isinstance(frag_props, dict):
-                    merged_props.update(frag_props)
-            # Kind-specific properties override fragment-provided ones.
-            if not self._json_schema:
-                self._json_schema = {"type": "object", "properties": {}}
-            if not isinstance(self._json_schema.get("properties"), dict):
-                self._json_schema["properties"] = {}
-            kind_props = self._json_schema["properties"]
-            merged_props.update(kind_props)
-            self._json_schema["properties"] = merged_props
+            fragment_ids = fragment_ids + ["sdlc/workitem-common"]
+        self.schema_fragments: tuple[str, ...] = tuple(fragment_ids)
 
         self.storage: StorageDescriptor = storage_dict_to_descriptor(spec.storage)
 
@@ -372,6 +372,19 @@ class DeclarativeKindPort:
             if isinstance(raw_spec, dict) and isinstance(raw_spec.get("display_label"), str)
             else (self.kind + "s")
         )
+        # ---- The traits CARRY (spec-kind-taxonomia-o-que-eu-sou, slice 2) ----
+        # Merge in what the declared traits bring — fields, relations, implied
+        # traits — plus this Kind's own ``schema_fragments``, in ONE pass with
+        # one precedence rule. Runs HERE as well as in
+        # ``KindRegistry.register_kind`` (which covers hand-written class Kinds)
+        # because a descriptor port is read in tests and tools before it is ever
+        # registered, and a port whose schema depends on which door it came
+        # through is a port nobody can reason about. ``apply_traits`` is
+        # idempotent, which is what makes two call sites safe rather than a
+        # drift waiting to happen.
+        from dna.kernel.kinds.traits import apply_traits
+
+        apply_traits(self)
 
     # -- Descriptor expressiveness helpers (spec D5) --------------------------
 
@@ -409,7 +422,7 @@ class DeclarativeKindPort:
                     # Linear-time engine when available (decision C): a
                     # spec_default is checked against the SAME authored
                     # subschema — including its `pattern` — that will validate
-                    # every document, so it must run on the same engine.
+                    # every instance, so it must run on the same engine.
                     from dna.kernel.kinds.regex_engine import validate_instance
 
                     validate_instance(value, subschema)
@@ -682,7 +695,7 @@ class DeclarativeKindPort:
         return None
 
     def layout_names(self) -> list[str]:
-        """The prompt layouts documents of this Kind may name (descriptor
+        """The prompt layouts instances of this Kind may name (descriptor
         ``layout_names``). Empty is KindBase's default — a Kind that declares
         none has no layouts, which is what ``UnknownLayout`` reports."""
         return list(self._layout_names)

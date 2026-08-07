@@ -19,7 +19,7 @@ code because it is rebuilt from it on every `mkdocs build`.
 - **[Kernel & Runtime](kernel.md)** — the mediator over the five ports, and
   the thin `Runtime` convenience wrapper. This is the object you construct
   (`Kernel.auto()`) and the entry point to everything else.
-- **[Document & ManifestInstance](document.md)** — the universal document
+- **[Instance & ManifestInstance](instance.md)** — the universal instance
   wrapper and the blessed read/query surface (`all`, `one`, `root`,
   `default_agent`, `build_prompt`, `resolve`).
 - **[Ports & protocols](ports.md)** — the five port `Protocol`s a host wires
@@ -32,5 +32,5 @@ code because it is rebuilt from it on every `mkdocs build`.
   port implementation.
 
 The stable, documented **read surface** is described narratively in
-[How to read document data](../../guides/read-document-data.md); this page is
+[How to read instance data](../../guides/read-instance-data.md); this page is
 the exhaustive, machine-generated counterpart.

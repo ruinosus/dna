@@ -87,7 +87,7 @@ class RegistryAccessor:
         then by aliases[].
 
         Returns the RAW DICT row (kernel.query yields raw dicts, not
-        Documents — callers read profile["spec"][...]) or None when no
+        Instances — callers read profile["spec"][...]) or None when no
         match is found.
 
         The lookup is _lib-direct — ModelProfile is NOT in
@@ -123,7 +123,7 @@ class RegistryAccessor:
         tier_id, then by aliases[].
 
         Returns the RAW DICT row (kernel.query yields raw dicts, not
-        Documents — callers read tier["spec"][...]) or None when no match is
+        Instances — callers read tier["spec"][...]) or None when no match is
         found.
 
         The lookup is _lib-direct — Tier is NOT in _INHERITABLE_KINDS so
@@ -164,7 +164,7 @@ class RegistryAccessor:
         registry by ``spec.account_id``.
 
         Returns the RAW DICT row (kernel.query yields raw dicts, not
-        Documents — callers read plan["spec"]["tier_id"]) or None when no
+        Instances — callers read plan["spec"]["tier_id"]) or None when no
         assignment exists for ``account_id``.
 
         This is the billing→enforcement bridge read. **The subscription belongs

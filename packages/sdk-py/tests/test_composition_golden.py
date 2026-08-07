@@ -1,7 +1,7 @@
 """s-parity-behavioral-harness — Composition-V2 behavioral golden fixtures.
 
 Executor of the golden case set at ``tests/golden-fixtures/composition/``
-(repo root): each case materializes a scope tree, resolves a target document,
+(repo root): each case materializes a scope tree, resolves a target instance,
 and deep-compares against a frozen ``expected/*.json``. The thirteen cases
 cover the whole resolution surface — chain walk, rule lookup, tenant overlay,
 catalog splice, field-level merge, cycle guard, non-inheritable denylist,
@@ -26,7 +26,7 @@ Catalog tier scan in case 10; reads are identical to FilesystemSource),
 resolve ``target``, deep-compare::
 
     {"chain": compute_resolution_chain(scope, tenant),
-     "resolved": resolve_document(...).serialize()}
+     "resolved": resolve_instance(...).serialize()}
 """
 from __future__ import annotations
 
@@ -108,7 +108,7 @@ async def test_composition_golden_fixture(case_path: Path, tmp_path: Path) -> No
     tenant = target.get("tenant") or None
 
     chain = await kernel._compute_resolution_chain(target["scope"], tenant)
-    resolved = await kernel.resolve_document(
+    resolved = await kernel.resolve_instance(
         target["scope"], target["kind"], target["name"], tenant=tenant,
     )
     # json round-trip → tuples become lists, guaranteed JSON-clean compare.

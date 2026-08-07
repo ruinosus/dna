@@ -1,6 +1,6 @@
 # UseCase
 
-A UseCase is a UML-canonical use case document: a goal-oriented interaction
+A UseCase is a UML-canonical use case instance: a goal-oriented interaction
 between one or more Actors and the system. It composes a primary actor,
 supporting actors, and the agent(s) that fulfill the goal, then carries the
 classical UML fields: `preconditions`, `main_flow`, `alternate_flows`,

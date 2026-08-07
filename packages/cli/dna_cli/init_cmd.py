@@ -9,7 +9,7 @@ onboarding assets travel as **Kinds inside an embedded onboarding scope**
 by the SDK's own market readers/writers, not by copying text templates:
 
   1. **Board** — creates ``.dna/<scope>/`` with a Genome written through
-     ``kernel.write_document`` (the same scope-bootstrap ``dna install``
+     ``kernel.write_instance`` (the same scope-bootstrap ``dna install``
      performs; every write guard runs).
   2. **Skill** — reads the embedded ``skills/dna-sdlc-cli`` bundle with the
      ``agentskills-skill`` reader ONCE and projects it with the
@@ -34,14 +34,14 @@ team's own Skill bundle(s) and (optionally) an AGENTS.md. The fetch and
 the untrusted-input validation are the exact machinery of ``dna install``
 (``install_cmd._fetch`` / ``_scan_tree`` / ``_validate_doc`` — one code
 path, the defenses can never drift); only the DESTINATION differs:
-``dna install`` writes documents into the ``.dna/`` source, ``dna init
+``dna install`` writes instances into the ``.dna/`` source, ``dna init
 --from`` PROJECTS Kinds into tool directories. The two compose: run
 ``dna install <uri>`` with the same ref when you also want the pack's
 docs on the board.
 
 SECURITY (``--from``) — pack content is UNTRUSTED DATA: only registered
 Kinds pass, each ``spec`` is schema-validated before any projection,
-document names must be plain slugs (path-shaped names never reach the
+instance names must be plain slugs (path-shaped names never reach the
 projection paths), and a Genome in the pack is ignored (a pack never
 redefines the board scope). The residual risk is inherent to the
 artifact: a Skill IS agent instructions — installing a third-party pack
@@ -135,7 +135,7 @@ class OnboardingPack:
     when the pack is remote); ``agents_raw`` is the raw AgentDefinition or
     ``None`` (the caller falls back to the embedded one, with a note).
     ``label`` names the pack origin for the summary; ``notes`` carry
-    per-document rejections/ignores so nothing disappears silently.
+    per-instance rejections/ignores so nothing disappears silently.
     """
     skills: list[dict]
     agents_raw: dict | None
@@ -273,7 +273,7 @@ async def _bootstrap_board(target: Path, scope: str) -> None:
     """Create ``.dna/<scope>/`` with a Genome, written through the kernel.
 
     Mirrors the scope-bootstrap in ``install_cmd`` ("a scope is born from
-    its Genome"): a full ``Kernel.auto()`` boot + ``write_document``, so
+    its Genome"): a full ``Kernel.auto()`` boot + ``write_instance``, so
     schema validation and every write guard run — never a hand-rolled YAML
     dump. The source is pinned to ``<target>/.dna`` explicitly (NOT the
     ambient ``DNA_SOURCE_URL``), because ``--dir`` names the project being
@@ -286,7 +286,7 @@ async def _bootstrap_board(target: Path, scope: str) -> None:
         kernel, _source_url=f"file://{(target / '.dna').resolve()}"
     )
     kernel.source(source)
-    await kernel.write_document(scope, "Genome", scope, {
+    await kernel.write_instance(scope, "Genome", scope, {
         "apiVersion": "github.com/ruinosus/dna/v1",
         "kind": "Genome",
         "metadata": {

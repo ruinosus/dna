@@ -101,6 +101,27 @@ TIMELINE_SOURCES = (
 )
 
 
+#: The ``produces`` relation, declared ONCE and shared by every work item —
+#: Epic, Feature, Issue, Bug, Task, Spike, and AgentSession's
+#: ``produced_artifacts`` twin. Seven copies of one declaration is seven
+#: chances to drift, and this package has the receipts for that failure mode
+#: (see ``dna.application.sdlc_family``).
+#:
+#: ``to: "*"`` here is OPEN BY DESIGN, and the 06/08/2026 sweep that typed
+#: ``TestGuide.verifies``, ``Kaizen.work_item`` and ``WorkflowEvent.ref``
+#: deliberately left it alone. ``produces`` IS the hub: its whole reason to
+#: exist is that a work item may author an artifact of ANY Kind, including one
+#: a tenant registers tomorrow. Measured over 1,862 stored board docs it
+#: already names TestRun, TestGuide, Plan, HtmlArtifact, Reference, ADR and
+#: Research — seven Kinds from five extensions — and
+#: ``resolve_work_item_outputs`` unions it with seven more typed back-refs. A
+#: closed ``to`` would be a list that goes wrong on the next Kind anybody adds,
+#: and the runtime would still not enforce it.
+_PRODUCES_RELATION: dict[str, Any] = {
+    "to": "*", "cardinality": "many", "by": "{kind, name}",
+}
+
+
 def _produces_field_schema() -> dict[str, Any]:
     """JSON Schema for the spec.produces[] field (s-produces-schema-resolver).
 
@@ -330,9 +351,6 @@ class EpicKind(KindBase):
         "features": {
             "to": "Feature", "cardinality": "many", "inverse_of": "epic",
         },
-        "produces": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -390,8 +408,6 @@ class EpicKind(KindBase):
                 "business_value": {
                     "type": "number", "minimum": 0, "maximum": 1000,
                 },
-                "produces": _produces_field_schema(),
-                "timeline": _timeline_field_schema(),
             },
             "additionalProperties": True,
         }
@@ -451,13 +467,10 @@ class FeatureKind(KindBase):
         "stories": {
             "to": "Story", "cardinality": "many", "inverse_of": "feature",
         },
-        # Points at a Sprint by DOCUMENT NAME, which for a Sprint is also its
+        # Points at a Sprint by INSTANCE NAME, which for a Sprint is also its
         # sprint_id — the Kind is deliberately named by its id, so `by: name`
         # is the truth here and not a convenience.
         "sprint_ref": {"to": "Sprint", "cardinality": "one"},
-        "produces": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -546,13 +559,13 @@ class FeatureKind(KindBase):
                 "created_at": {"type": "string", "format": "date-time"},
                 "updated_at": {"type": "string", "format": "date-time"},
                 # Declared (i-040) since 2026-08-06: the identifier this has
-                # always carried IS a Sprint document's name. See
+                # always carried IS a Sprint instance's name. See
                 # kinds/sprint.kind.yaml for what the Kind deliberately omits.
                 "sprint_ref": {
                     "type": "string",
                     "description": (
                         "The Sprint this Feature is committed to — the "
-                        "Sprint document's NAME, which is also its "
+                        "Sprint instance's NAME, which is also its "
                         "sprint_id (e.g. '2026-Q2-S2')."
                     ),
                 },
@@ -571,8 +584,6 @@ class FeatureKind(KindBase):
                 },
                 "mockups": {"type": "array", "items": {"type": "string"}},
                 "release_target": {"type": "string"},
-                "produces": _produces_field_schema(),
-                "timeline": _timeline_field_schema(),
             },
             "additionalProperties": True,
         }
@@ -612,7 +623,7 @@ class FeatureKind(KindBase):
 #
 # Equivalence with the extinct class — identity, flags, StudioUIMetadata,
 # storage, dep_filters, deep schema, summary/describe/canonical_digest over
-# REAL board documents — is frozen in
+# REAL board instances — is frozen in
 # tests/test_descriptor_pattern_equivalence.py (goldens under
 # tests/goldens/descriptor_pattern/Story.golden.json).
 
@@ -652,11 +663,10 @@ class IssueKind(KindBase):
         "Optional links to a parent Feature (work it belongs to) and a "
         "related Finding (eval-detected origin)."
     )
-    relations = {
-        "produces": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
-    }
+    # No relation of its own: `produces` is the whole set an Issue had, and it
+    # arrives with `sdlc.work-item`. Initiative has looked exactly like this
+    # since the trait started carrying — it never declared `produces` and has
+    # had it since a0822a34.
 
     def dep_filters(self) -> dict[str, str]:
         return {
@@ -726,8 +736,6 @@ class IssueKind(KindBase):
                 },
                 "created_at": {"type": "string", "format": "date-time"},
                 "updated_at": {"type": "string", "format": "date-time"},
-                "produces": _produces_field_schema(),
-                "timeline": _timeline_field_schema(),
             },
             "additionalProperties": True,
         }
@@ -776,7 +784,7 @@ ARTIFACT_STATUSES = ("draft", "proposed", "accepted", "deprecated", "superseded"
 #   VALID. Terminal, neutral, deliberately reversible (``propose``/``accept``
 #   un-shelve it). `deprecated` could not carry this and must not be stretched
 #   to: it means the design no longer applies, which is a different fact about
-#   a different document. The reason is the payload — a shelving whose WHY
+#   a different instance. The reason is the payload — a shelving whose WHY
 #   lives outside the doc is a decision nobody can revisit.
 SPEC_STATUSES = ARTIFACT_STATUSES + ("executed", "shelved")
 
@@ -790,14 +798,14 @@ SPEC_TERMINAL_STATUSES = frozenset(SPEC_STATUSES) - SPEC_OPEN_STATUSES
 #:
 #: Only the NEW targets are constrained. The pre-existing transitions
 #: (propose/accept/deprecate/supersede) stay unguarded exactly as they were —
-#: a rule applied retroactively would fail documents that were legal when
+#: a rule applied retroactively would fail instances that were legal when
 #: written, which is the one thing an additive change may not do.
 SPEC_TRANSITIONS: dict[str, frozenset[str]] = {
     # A design can ship without a formal `accept` — that happens, and refusing
     # it would only teach people to lie about the status. What cannot have
     # shipped is a design declared obsolete or replaced: in `superseded` it was
     # the REPLACEMENT that got built, and marking this one executed hides which
-    # document the code actually follows.
+    # instance the code actually follows.
     "executed": frozenset({"draft", "proposed", "accepted", "shelved"}),
     # Shelving is a decision about work NOT YET DONE. `executed` is already
     # done, `deprecated`/`superseded` are already dead — none of the three is a
@@ -818,7 +826,7 @@ def validate_spec_transition(current: str | None, target: str) -> None:
 
     Unconstrained targets (the four pre-existing ones) always pass, and a
     ``current`` of ``None`` always passes: a legacy Spec with no ``status`` is
-    a document written before this rule and is not retroactively illegal."""
+    an instance written before this rule and is not retroactively illegal."""
     allowed = SPEC_TRANSITIONS.get(target)
     if allowed is None or current is None or current in allowed:
         return
@@ -848,7 +856,7 @@ def spec_board_bucket(status: str | None) -> str:
 
 
 # Spec.phase — Superpowers/Spec-Kit phase progression. Orthogonal to
-# `status`: status is the document's lifecycle (draft → accepted →
+# `status`: status is the instance's lifecycle (draft → accepted →
 # superseded), phase is the SDLC's perspective on the spec (where the
 # work driven by this spec lives in the SDLC).
 SPEC_PHASES = ("brainstorm", "spec", "plan_ready", "implementing", "done")
@@ -866,7 +874,46 @@ class SpecKind(KindBase):
     scope = TenantScope.GLOBAL  # SDLC primitives are project-level, not per-tenant
     kind = "Spec"
     alias = "sdlc-spec"
-    traits = frozenset({"sdlc.dated"})
+    # i-121 — Spec used to declare only ``sdlc.dated``, which dates it and says
+    # nothing about WHAT IT IS. Every consumer that asks the registry "what kind
+    # of thing is this?" therefore had no answer for the Kind this product is
+    # named after: the portal's board lanes derive from ``sdlc.rollup`` /
+    # ``sdlc.decision`` / ``sdlc.work-item``, so every Spec landed in the honest
+    # but empty fourth lane, "no classification".
+    #
+    # ⭐ MEASURED before declared, from the descriptor and from the USE — never
+    # from the name, which would have argued either way ("spec" reads like a
+    # plan; "Spec" is filed next to ADR):
+    #
+    #   descriptor  · statuses are ``ARTIFACT_STATUSES`` — ADR's four, widened at
+    #                 both terminal ends. The Kind's own ``docs`` say "status is
+    #                 ADR-style" in those words.
+    #               · ``supersedes: {to: Spec}`` — replaced, not edited, which is
+    #                 the supersession idiom ADR carries and no work item has.
+    #               · NO owner and NO assignee. ``authors[]``, as ADR has
+    #                 ``deciders[]``.
+    #               · every terminal state owes a WHY (``shelve_reason``,
+    #                 ``deprecation_reason``, ``execution_summary``) — the payload
+    #                 of a decision, not of a task.
+    #               · ``plane: record``, bundle storage with a markdown body:
+    #                 byte for byte ADR's shape.
+    #   use (06/08) · over the 18 stored Specs and 11 stored ADRs of the `dna` and
+    #                 `dna-cloud` scopes: ``timeline`` 17/18 Spec and 11/11 ADR,
+    #                 against **0/162 Plan**; ``cited_by`` 12/18 and 5/11, against
+    #                 0/162. Spec is stored like a decision, not like a plan.
+    #
+    # The one line of the trait's description that argues against —
+    # *"does not progress"* — is answered by the same measurement rather than by
+    # argument: ``phase`` (brainstorm → done) is the field that would be progress,
+    # and **0 of the 18 stored Specs carry it**. It is a declared field nobody
+    # writes; the arc that IS written is the ratification one.
+    #
+    # NOT a new name, deliberately. Vocabulary is the founder's (i-128 has four
+    # proposals waiting), and a ``sdlc.design-artifact`` invented here would also
+    # have missed i-121's point: the lanes read the three names above, so a
+    # fourth would leave every Spec exactly where it was, in the empty lane, with
+    # a trait declared to prove we had looked.
+    traits = frozenset({"sdlc.decision", "sdlc.dated"})
     model = dict
     origin = "github.com/ruinosus/dna/sdlc"
     storage = StorageDescriptor.bundle("specs", "SPEC.md", body_field="body")
@@ -1082,9 +1129,16 @@ class AgentSessionKind(KindBase):
         "the major tools' export formats."
     )
     relations = {
-        "produced_artifacts": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
+        # The `produces` hub under its AgentSession name — same declaration,
+        # same open-by-design reason, so it reads the same constant.
+        "produced_artifacts": _PRODUCES_RELATION,
+    }
+    # `session_id` is reference-SHAPED and points at no instance: it is the
+    # CODING TOOL's own session handle (a Claude Code uuid, a Cursor rowid),
+    # carried so a transcript can be traced back to the tool that produced it.
+    # Nothing in DNA mints it and no Kind will ever hold it.
+    identifiers = {
+        "session_id": {"role": "external", "system": "agent-tool"},
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -1250,11 +1304,7 @@ class BugKind(KindBase):
         "sev1-sev5 outage analysis) e Issue umbrella (enhancement/"
         "question/other)."
     )
-    relations = {
-        "produces": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
-    }
+    # `produces` — the only relation a Bug had — arrives with `sdlc.work-item`.
 
     def dep_filters(self) -> dict[str, str]:
         return {
@@ -1291,8 +1341,6 @@ class BugKind(KindBase):
                     "type": "string", "enum": ["highest", "high", "medium", "low", "lowest"],
                 },
                 "body": {"type": "string"},
-                "produces": _produces_field_schema(),
-                "timeline": _timeline_field_schema(),
                 "created_at": {"type": "string", "format": "date-time"},
                 "updated_at": {"type": "string", "format": "date-time"},
             },
@@ -1329,9 +1377,6 @@ class TaskKind(KindBase):
     )
     relations = {
         "story_ref": {"to": "Story", "cardinality": "one"},
-        "produces": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -1360,8 +1405,6 @@ class TaskKind(KindBase):
                 "blocked_reason": {"type": "string"},
                 "closed_at": {"type": "string", "format": "date-time"},
                 "body": {"type": "string"},
-                "produces": _produces_field_schema(),
-                "timeline": _timeline_field_schema(),
                 "created_at": {"type": "string", "format": "date-time"},
                 "updated_at": {"type": "string", "format": "date-time"},
             },
@@ -1401,9 +1444,23 @@ class SpikeKind(KindBase):
         "ADR (decision já tomada)."
     )
     relations = {
-        "produces": {
-            "to": "*", "cardinality": "many", "by": "{kind, name}",
-        },
+        # A REAL reference that nothing declared. The mapping is not a guess:
+        # `resolve_work_item_outputs` has always read this field as
+        # ``add("Research", r)``, so the RUNTIME already treated each value as
+        # a Research name — the declaration was the only thing missing, and the
+        # gap list could flag the field without being able to say where it
+        # pointed.
+        #
+        # ⚠️ Declaring it makes the kernel RESOLVE it, so here is the
+        # measurement `declarar às cegas` demands (06/08/2026): six values
+        # stored, and TWO will start reporting as dangling —
+        # `dna/sp-memory-as-of` → `rsh-semantica-agi-avaliacao` and
+        # `dna/sp-fusion-validation` → `rsh-dna-cloud-positioning`. Both
+        # Research docs exist, in the `dna-cloud` scope, which `dna` does not
+        # inherit from. The report is CORRECT and is the point: those two
+        # references genuinely do not resolve where they are written. Under the
+        # default `warn` they are logged and the Spike still persists.
+        "research_refs": {"to": "Research", "cardinality": "many"},
     }
 
     def dep_filters(self) -> dict[str, str]:
@@ -1475,8 +1532,6 @@ class SpikeKind(KindBase):
                 "completed_at": {"type": "string", "format": "date-time"},
                 "labels": {"type": "array", "items": {"type": "string"}},
                 "body": {"type": "string"},
-                "produces": _produces_field_schema(),
-                "timeline": _timeline_field_schema(),
                 "created_at": {"type": "string", "format": "date-time"},
                 "updated_at": {"type": "string", "format": "date-time"},
             },
@@ -1527,6 +1582,32 @@ class InitiativeKind(KindBase):
         "Theme/OKR (annual) and Epic (multi-sprint). For enterprise "
         "roadmaps where Theme→Epic skip loses too much resolution."
     )
+
+    # Initiative was an ISLAND under the declared tier — the only rung of the
+    # Theme → Initiative → Epic → Feature → Story → Task ladder that declared
+    # nothing. `epics` was sitting in `dep_filters` (composition, never checked
+    # against data); it is the same reference, and a relation is the strongest
+    # thing this Kind can say about it. Safe to enforce: zero Initiative
+    # instances are stored in either scope (measured 06/08/2026), so nothing
+    # can be vetoed.
+    #
+    # ⚠️ `theme_ref` is deliberately NOT declared, and the reason is worth more
+    # than the declaration would have been. A registered Kind called `Theme`
+    # does exist — and it is the STUDIO COLOUR PALETTE (`helix-theme`: HSL
+    # triplets, light/dark, typography), not the Jira-Align strategic
+    # Theme/OKR this field means. Declaring it would draw a line from a
+    # strategic investment record to a colour scheme: the same false line the
+    # retired name-shape guess drew for `StatusReport.insight → IntelInsight`.
+    # "The target resolves in the registry" is necessary and NOT sufficient —
+    # a homonym passes that test. The strategic Theme Kind does not exist yet;
+    # when it does, this field points at it.
+    #
+    # `owner` is also NOT declared: its value is an Actor name OR a sentinel
+    # (`claude-code`, `human`), so a resolved relation would report a dangling
+    # reference on every legitimate sentinel.
+    relations = {
+        "epics": {"to": "Epic", "cardinality": "many"},
+    }
 
     def dep_filters(self) -> dict[str, str]:
         return {
@@ -1711,7 +1792,7 @@ JOURNEY_METHODOLOGIES = (
 # a verification loop, a deep-sleep orphan scan) that does not exist in this
 # distribution — it arrived as residue of an unrelated extraction. Kinds
 # whose only purpose was to hold that family's output have no future; the
-# documents a PERSON writes (Postmortem, Retrospective, RiskRegister) and
+# instances a PERSON writes (Postmortem, Retrospective, RiskRegister) and
 # CognitivePolicy (read in production by registry_accessor.py) stay.
 
 
@@ -1822,7 +1903,7 @@ def _workitem_common_schema() -> dict[str, Any]:
 #
 # s-dx-html-artifact-kind. A bundle Kind whose primary marker (ARTIFACT.html)
 # holds the raw HTML **verbatim** (byte-faithful round-trip — no frontmatter
-# injection that would corrupt the document), plus an optional artifact.json
+# injection that would corrupt the instance), plus an optional artifact.json
 # companion carrying structured metadata (title, description, source,
 # created_at) — mirrors the Soul bundle (SOUL.md + soul.json). Linked to a
 # work item via ``spec.produces[]`` / ``spec.html_artifacts[]`` so the
@@ -2117,4 +2198,66 @@ class SdlcExtension:
                     "timeline": _timeline_field_schema(),
                 },
             },
+        )
+        SdlcExtension._attach_trait_carry()
+
+    @staticmethod
+    def _attach_trait_carry() -> None:
+        """⭐ Hang the work-item CONTRACT on the trait that names it.
+
+        ``sdlc.work-item`` and ``schema_fragments: [sdlc/work-item-activity]``
+        were the same sentence in two vocabularies sitting side by side in
+        ``story.kind.yaml``, with nothing able to check one against the other: a
+        Kind could take the trait without the fields (in the digest, no
+        ``timeline``) or the fields without the trait (a ``timeline`` nothing
+        walks). And ``produces`` was declared SEVEN times — once per work item —
+        because the family had nowhere to say it once. The comment on
+        ``_PRODUCES_RELATION`` already called that out (*"seven copies of one
+        declaration is seven chances to drift"*) and could only answer it with a
+        Python constant seven modules had to remember to import.
+
+        Now the trait carries both. Declaring ``sdlc.work-item`` IS declaring
+        ``timeline`` + ``produces`` and the ``produces`` relation.
+
+        The kernel cannot do this itself: ``sdlc/work-item-activity`` is THIS
+        extension's fragment and ``dna.kernel`` never imports from an extension.
+        So the kernel registers the trait's NAME, description and implications,
+        and the extension that owns the family attaches what it carries — which
+        is also the honest layering, because the family's contract is the
+        family's to change.
+
+        Runs from ``_register_schema_fragments`` so the ordering that block
+        already guards (fragments before descriptors) covers this too: the
+        fragment must exist by the time a Kind declaring the trait is
+        registered, and a trait pointing at an unregistered fragment is REFUSED
+        rather than silently carrying nothing.
+
+        The per-Kind copies are GONE (slice 3). Slice 2 left them deliberately —
+        the Kind wins over the trait, so seven byte-identical copies made the
+        merge a no-op that proved the mechanism on real data before anybody
+        deleted a line. Deleting them is what proves the trait CARRIES: thirteen
+        declarations came out (seven ``produces`` relations, six
+        ``produces``+``timeline`` property pairs, and Story's
+        ``schema_fragments``) and every registered Kind's schema, relations,
+        traits and fragments were BYTE-IDENTICAL afterwards. The only thing that
+        moved was ``schema_provenance``, from ``kind`` to
+        ``fragment:sdlc/work-item-activity`` — which is the whole point: those
+        fields never were the Kind's own, and now they say so.
+
+        Initiative is the control that makes the claim checkable rather than
+        merely asserted: it never declared ``produces`` in the first place, and
+        has carried it since a0822a34.
+        """
+        try:
+            from dna.kernel.kinds.traits import CORE_TRAITS, register_trait
+        except Exception:  # noqa: BLE001 — kernel may not expose the API yet
+            return
+        register_trait(
+            "sdlc.work-item",
+            CORE_TRAITS["sdlc.work-item"],
+            schema_fragments=["sdlc/work-item-activity"],
+            relations={"produces": _PRODUCES_RELATION},
+            # Measured, not designed: every one of the 8 Kinds declaring
+            # `sdlc.work-item` on 06/08/2026 also declared `sdlc.dated`.
+            implies=["sdlc.dated"],
         )

@@ -69,7 +69,7 @@ def test_octet_stream_DECLARADO_nao_conta_como_afirmacao():
 
 
 def test_OOXML_detectado_como_ZIP_nao_e_divergencia():
-    """Um `.docx` É um zip por dentro. Marcar isso reprovaria todo documento do
+    """Um `.docx` É um zip por dentro. Marcar isso reprovaria toda instância do
     Office, e o ruído mataria o sinal."""
     assert mismatch(
         detected="application/zip",

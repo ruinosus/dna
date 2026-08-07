@@ -181,7 +181,7 @@ def test_open_policy_does_not_unlock_a_non_allowlisted_field():
 def test_timeline_is_exempt_from_the_allowlist():
     """Timeline events are append-only across overlays regardless of policy
     (ADR 2026-05-10) — the merge port concatenates them even onto a LOCKED
-    document. The allowlist must not become the one rule able to refuse the
+    instance. The allowlist must not become the one rule able to refuse the
     write that records them."""
     kernel = _FakeKernel(port=_FakePort(frozenset({"instruction"})))
     mi = _FakeMI(existing=_FakeDoc({"instruction": "base", "timeline": []}))

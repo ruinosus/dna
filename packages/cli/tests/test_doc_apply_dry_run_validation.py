@@ -1,4 +1,4 @@
-"""`dna doc apply --dry-run` must VALIDATE, not just report the verb.
+"""`dna instance apply --dry-run` must VALIDATE, not just report the verb.
 
 i-validation-shallow (axis 2): the sp-exp-value-comparison spike found that a
 schema-violating doc (e.g. a Guardrail ``severity: critical``) was ACCEPTED on
@@ -20,7 +20,7 @@ import pytest
 from click.testing import CliRunner
 
 from dna_cli._ctx import SESSION_PROVIDER_KEY
-from dna_cli.doc_cmd import doc
+from dna_cli.instance_cmd import instance
 
 
 @pytest.fixture
@@ -64,7 +64,7 @@ def _stub_session():
 def test_dry_run_rejects_bad_severity(runner, tmp_path, monkeypatch):
     _mock, obj = _stub_session()
     path = _guardrail_yaml(tmp_path, "critical")
-    result = runner.invoke(doc, ["apply", path, "--dry-run"], obj=obj)
+    result = runner.invoke(instance, ["apply", path, "--dry-run"], obj=obj)
     assert result.exit_code != 0, (
         f"--dry-run must reject an enum-violating severity. Output:\n{result.output}"
     )
@@ -75,14 +75,14 @@ def test_dry_run_rejects_bad_severity(runner, tmp_path, monkeypatch):
 def test_dry_run_rejects_garbage_severity(runner, tmp_path, monkeypatch):
     _mock, obj = _stub_session()
     path = _guardrail_yaml(tmp_path, "garbage")
-    result = runner.invoke(doc, ["apply", path, "--dry-run"], obj=obj)
+    result = runner.invoke(instance, ["apply", path, "--dry-run"], obj=obj)
     assert result.exit_code != 0, result.output
 
 
 def test_dry_run_accepts_valid_severity(runner, tmp_path, monkeypatch):
     _mock, obj = _stub_session()
     path = _guardrail_yaml(tmp_path, "hard")
-    result = runner.invoke(doc, ["apply", path, "--dry-run"], obj=obj)
+    result = runner.invoke(instance, ["apply", path, "--dry-run"], obj=obj)
     assert result.exit_code == 0, (
         f"--dry-run must accept a documented severity. Output:\n{result.output}"
     )

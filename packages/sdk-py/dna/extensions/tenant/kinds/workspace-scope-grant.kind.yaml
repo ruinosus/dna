@@ -32,6 +32,12 @@ spec:
   target_kind: WorkspaceScopeGrant
   alias: tenant-workspace-scope-grant
   origin: github.com/ruinosus/dna/tenant
+  # Records that one workspace may READ one scope that is not its own — and
+  # its own docs already argue this trait's rule: the binder validates
+  # against the rows and derives NOTHING, no wildcard, enumerate. A set an
+  # authorization decision reads has to be enumerable to be auditable.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [tenancy.access-grant]
   tenant_scope: global
   plane: record
   scope_inheritable: false
@@ -41,6 +47,16 @@ spec:
   storage:
     type: yaml
     container: workspace-scope-grants
+  # NOT an identifier: this genuinely points at a Workspace, addressed by the
+  # target's `workspace_id` field rather than by its name — the identical
+  # declaration `Project.workspace_id` already carries. It sat in the gap list
+  # only because nobody had written it down, and declaring it is what takes
+  # WorkspaceScopeGrant out of the island list.
+  relations:
+    workspace_id:
+      to: Workspace
+      cardinality: one
+      by: workspace_id
   schema:
     type: object
     additionalProperties: false
@@ -58,7 +74,7 @@ spec:
         type: string
         minLength: 1
         description: The single scope name this row grants. One scope per row on
-          purpose - granting and revoking are then one document each, so an audit
+          purpose - granting and revoking are then one instance each, so an audit
           reads as a list of facts rather than a diff inside a list.
       status:
         type: string

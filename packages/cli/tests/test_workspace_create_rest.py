@@ -61,7 +61,7 @@ def _client(dna_dir, **kwargs) -> TestClient:
 def _read(dna_dir, kind, name, scope="_lib"):
     async def go():
         live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
-        return await live.kernel.get_document(scope, kind, name)
+        return await live.kernel.get_instance(scope, kind, name)
     return asyncio.run(go())
 
 

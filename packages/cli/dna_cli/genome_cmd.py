@@ -40,7 +40,7 @@ def _names(dna, scope: str, kind: str) -> list[str]:
 
 def _spec(dna, scope: str, kind: str, name: str) -> dict:
     # `docs.list` returns a lightweight {name, kind}; the spec lives on `docs.get`,
-    # which wraps the document under a `raw` key.
+    # which wraps the instance under a `raw` key.
     body = run_async(dna.docs(scope).get(kind, name))
     if not isinstance(body, dict):
         return {}

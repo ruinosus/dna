@@ -1,9 +1,9 @@
-"""Tests for `dna doc apply` clear failure on PromptBudgetExceededError.
+"""Tests for `dna instance apply` clear failure on PromptBudgetExceededError.
 
-Task 9: CLI dna doc apply clear failure (feat/model-profile-prompt-budget).
+Task 9: CLI dna instance apply clear failure (feat/model-profile-prompt-budget).
 
 `apply` uses the local kernel (dna_session) and calls
-kernel.write_document() directly. When writing an over-cap voice
+kernel.write_instance() directly. When writing an over-cap voice
 Agent, the kernel raises PromptBudgetExceededError.
 
 These tests verify that:
@@ -23,7 +23,7 @@ import pytest
 from click.testing import CliRunner
 
 from dna_cli._ctx import SESSION_PROVIDER_KEY
-from dna_cli.doc_cmd import doc
+from dna_cli.instance_cmd import instance
 from dna.kernel.prompt.budget import PromptBudgetExceededError
 
 
@@ -63,10 +63,10 @@ def _make_budget_error():
 def _fake_session(monkeypatch, *, raise_error: Exception | None = None):
     """Fake session injected via ctx.obj — never touches DNA_SOURCE_URL / kernel boot.
 
-    Returns a mock Session whose kernel.write_document raises `raise_error`
+    Returns a mock Session whose kernel.write_instance raises `raise_error`
     (if given) or returns successfully.
     """
-    from dna_cli import doc_cmd
+    from dna_cli import instance_cmd
 
     # Stub _load_apply_input to return a valid raw doc (bypasses kernel marker walk)
     raw_doc = {
@@ -79,9 +79,9 @@ def _fake_session(monkeypatch, *, raise_error: Exception | None = None):
     # Build a mock session
     mock_kernel = MagicMock()
     if raise_error is not None:
-        mock_kernel.write_document = AsyncMock(side_effect=raise_error)
+        mock_kernel.write_instance = AsyncMock(side_effect=raise_error)
     else:
-        mock_kernel.write_document = AsyncMock(return_value={"ok": True})
+        mock_kernel.write_instance = AsyncMock(return_value={"ok": True})
     mock_kernel.with_tenant.return_value = mock_kernel
 
     mock_holder = MagicMock()
@@ -108,7 +108,7 @@ def _fake_session(monkeypatch, *, raise_error: Exception | None = None):
     mock_session.run = _run
 
     # Patch _load_apply_input so we skip kernel marker scan
-    monkeypatch.setattr(doc_cmd, "_load_apply_input", lambda path, kernel: raw_doc)
+    monkeypatch.setattr(instance_cmd, "_load_apply_input", lambda path, kernel: raw_doc)
 
     from contextlib import contextmanager
 
@@ -129,7 +129,7 @@ def test_apply_exits_nonzero_on_prompt_budget_exceeded(
 ):
     """apply must exit with code != 0 when the kernel raises PromptBudgetExceededError."""
     _mock, obj = _fake_session(monkeypatch, raise_error=_make_budget_error())
-    result = runner.invoke(doc, ["apply", over_cap_agent_yaml], obj=obj)
+    result = runner.invoke(instance, ["apply", over_cap_agent_yaml], obj=obj)
     assert result.exit_code != 0, (
         f"Expected non-zero exit, got {result.exit_code}. Output:\n{result.output}"
     )
@@ -138,7 +138,7 @@ def test_apply_exits_nonzero_on_prompt_budget_exceeded(
 def test_apply_shows_model_id_in_error(runner, over_cap_agent_yaml, monkeypatch):
     """The error output must name the offending model."""
     _mock, obj = _fake_session(monkeypatch, raise_error=_make_budget_error())
-    result = runner.invoke(doc, ["apply", over_cap_agent_yaml], obj=obj)
+    result = runner.invoke(instance, ["apply", over_cap_agent_yaml], obj=obj)
     assert "gpt-realtime-2" in result.output, (
         f"Expected model ID in output. Got:\n{result.output}"
     )
@@ -147,7 +147,7 @@ def test_apply_shows_model_id_in_error(runner, over_cap_agent_yaml, monkeypatch)
 def test_apply_shows_agent_name_in_error(runner, over_cap_agent_yaml, monkeypatch):
     """The error output must name the offending agent."""
     _mock, obj = _fake_session(monkeypatch, raise_error=_make_budget_error())
-    result = runner.invoke(doc, ["apply", over_cap_agent_yaml], obj=obj)
+    result = runner.invoke(instance, ["apply", over_cap_agent_yaml], obj=obj)
     assert "jarvis" in result.output, (
         f"Expected agent name in output. Got:\n{result.output}"
     )
@@ -156,7 +156,7 @@ def test_apply_shows_agent_name_in_error(runner, over_cap_agent_yaml, monkeypatc
 def test_apply_shows_token_count_in_error(runner, over_cap_agent_yaml, monkeypatch):
     """The error output must include the estimated token count."""
     _mock, obj = _fake_session(monkeypatch, raise_error=_make_budget_error())
-    result = runner.invoke(doc, ["apply", over_cap_agent_yaml], obj=obj)
+    result = runner.invoke(instance, ["apply", over_cap_agent_yaml], obj=obj)
     # The error message contains "17269" (estimated_tokens) and "16384" (cap)
     assert "17269" in result.output or "16384" in result.output, (
         f"Expected token numbers in output. Got:\n{result.output}"
@@ -172,7 +172,7 @@ def test_apply_does_not_say_write_failed_for_budget_error(
     budget errors the message should stand on its own (no confusing prefix).
     """
     _mock, obj = _fake_session(monkeypatch, raise_error=_make_budget_error())
-    result = runner.invoke(doc, ["apply", over_cap_agent_yaml], obj=obj)
+    result = runner.invoke(instance, ["apply", over_cap_agent_yaml], obj=obj)
     # The output should NOT start with 'write failed:' for a budget error
     combined = (result.output or "") + (result.stderr or "" if hasattr(result, "stderr") else "")
     assert "write failed" not in combined.lower(), (
@@ -190,7 +190,7 @@ def test_apply_still_exits_nonzero_on_other_errors(
 ):
     """Non-budget errors must still cause non-zero exit (regression guard)."""
     _mock, obj = _fake_session(monkeypatch, raise_error=ValueError("some other write error"))
-    result = runner.invoke(doc, ["apply", over_cap_agent_yaml], obj=obj)
+    result = runner.invoke(instance, ["apply", over_cap_agent_yaml], obj=obj)
     assert result.exit_code != 0, (
         f"Expected non-zero exit for ValueError. Got {result.exit_code}."
     )

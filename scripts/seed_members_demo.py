@@ -3,14 +3,14 @@
 project (Role ladder + Memberships).
 
 Mirrors ``scripts/seed_portfolio_demo.py``: writes each doc through
-``kernel.write_document`` (schema validation + cache invalidation fire, the same
+``kernel.write_instance`` (schema validation + cache invalidation fire, the same
 funnel every writer uses), bound to a tenant so the source routes them into that
 tenant's overlay. Works against either backend the runtime is pointed at:
 
     • Filesystem (default)     — DNA_BASE_DIR (defaults to ``<cwd>/.dna``); the
       YAMLs land under ``.dna/tenants/<tenant>/…`` and MUST be committed.
     • Postgres (durable board) — export ``DNA_SOURCE_URL`` and the docs are
-      written into the ``dna_documents`` table with the tenant column.
+      written into the ``dna_instances`` table with the tenant column.
 
 Env knobs (all optional; the defaults seed the ``demo`` FS tenant):
 
@@ -86,7 +86,7 @@ async def _run() -> None:
     now = datetime.now(timezone.utc).isoformat()
 
     async def write(doc: dict) -> None:
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, doc["kind"], doc["metadata"]["name"], doc, tenant=TENANT,
         )
         print(f"  seeded {doc['kind']}/{doc['metadata']['name']}")

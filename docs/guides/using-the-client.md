@@ -4,7 +4,7 @@ The [REST read-API](rest-api.md) (`dna api serve`) is a plain HTTP surface, so
 anything can call it with `fetch`/`requests`. But hand-rolling HTTP means
 hand-maintaining URLs, query params, and response shapes — and re-doing it in
 every consumer. The **official DNA clients** remove that: a typed client for
-TypeScript and Python, **generated from the API's OpenAPI document**, so they
+TypeScript and Python, **generated from the API's OpenAPI instance**, so they
 never drift from the live routes.
 
 | Client | Package | Install |
@@ -14,8 +14,8 @@ never drift from the live routes.
 
 ## How they stay in sync — one spec, two clients
 
-`dna api serve` is a FastAPI app, and FastAPI auto-emits an OpenAPI document from
-its routes. That document is dumped to `docs/openapi.json`
+`dna api serve` is a FastAPI app, and FastAPI auto-emits an OpenAPI instance from
+its routes. That instance is dumped to `docs/openapi.json`
 (`python scripts/dump_openapi.py`) and committed as the **single generation
 source**:
 

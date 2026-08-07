@@ -20,7 +20,7 @@ from datetime import datetime, timezone
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dna.kernel.instance import ManifestInstance
+    from dna.kernel.manifest import ManifestInstance
 
 # ─── Severity ordering (lower = more severe) ─────────────────────────
 _SEVERITY_ORDER: dict[str, int] = {
@@ -53,7 +53,7 @@ def _frontmatter(report_type: str, scope: str) -> str:
 
 
 class ReportBuilder:
-    """Namespace for generating Markdown reports from manifest documents."""
+    """Namespace for generating Markdown reports from manifest instances."""
 
     def __init__(self, mi: ManifestInstance) -> None:
         self._mi = mi
@@ -177,7 +177,7 @@ class ReportBuilder:
     # ─── evidence_manifest ───────────────────────────────────────────
 
     def evidence_manifest(self) -> str:
-        """Generate a manifest of all evidence documents."""
+        """Generate a manifest of all evidence instances."""
         # two-planes F2.5: Evidence é plane=record (verificado, extensão
         # evidence) → delega via query (caller off-loop, ver topo).
         evidence = self._mi._all("Evidence")
@@ -186,10 +186,10 @@ class ReportBuilder:
         md += "# Evidence Manifest\n\n"
 
         if not evidence:
-            md += "_No evidence documents found._\n"
+            md += "_No evidence instances found._\n"
             return md
 
-        md += "| Event Type | Document Ref | SHA-256 | Captured At |\n"
+        md += "| Event Type | Instance Ref | SHA-256 | Captured At |\n"
         md += "|------------|-------------|---------|-------------|\n"
         for e in evidence:
             spec = e.spec

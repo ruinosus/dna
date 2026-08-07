@@ -21,19 +21,19 @@ medidos em 06/08/2026 no ambiente do founder:
   uma CÓPIA hardcoded do mesmo texto. Duas descrições da mesma coisa, e a
   segunda já nascia condenada a derivar.
 
-## A correção: o default vira DADO, sem virar documento
+## A correção: o default vira DADO, sem virar instância
 
-Um default declarado aqui é servido pelo mesmo catálogo que serve os
-documentos, com a ORIGEM DITA — o padrão de honestidade que o `Sourced<T>` do
+Um default declarado aqui é servido pelo mesmo catálogo que serve as
+instâncias, com a ORIGEM DITA — o padrão de honestidade que o `Sourced<T>` do
 portal já aplica (`live`/`sample`/`unprovisioned` são estados DITOS, não
-falhas). O documento continua VENCENDO quando existe; a ausência dele deixa de
+falhas). A instância continua VENCENDO quando existe; a ausência dele deixa de
 ser erro e passa a ser uma resposta que se explica:
 
     origin="runtime-default"
     note="nenhum PromptTemplate 'memory-recall-briefing' autorado no scope
           'dna-cloud' — vale o default do runtime (dna.runtime.middleware.recall)."
 
-⚠️ **Por que NÃO materializar os defaults como documentos de verdade.** Era a
+⚠️ **Por que NÃO materializar os defaults como instâncias de verdade.** Era a
 direção proposta no i-102 e foi avaliada: escrever os defaults como docs no
 scope congela o texto no momento da escrita, e uma melhoria futura do default
 do SDK deixa de alcançar quem já tem o doc — exatamente a semântica de fork
@@ -78,7 +78,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Iterable
 
 __all__ = [
-    "ORIGIN_DOCUMENT",
+    "ORIGIN_INSTANCE",
     "ORIGIN_RUNTIME_DEFAULT",
     "PromptDefault",
     "prompt_default",
@@ -90,7 +90,7 @@ _LOGGER = logging.getLogger(__name__)
 
 #: A origem de uma leitura de catálogo. São os dois estados NORMAIS — nenhum
 #: deles é falha, e é por isso que os dois têm nome.
-ORIGIN_DOCUMENT = "document"          #: venceu um doc autorado (overlay ou base)
+ORIGIN_INSTANCE = "instance"          #: venceu um doc autorado (overlay ou base)
 ORIGIN_RUNTIME_DEFAULT = "runtime-default"  #: não há doc; vale o default do código
 
 #: Os módulos do SDK que declaram uma voz. Importados sob demanda (a primeira
@@ -108,7 +108,7 @@ _WIRED = False
 
 @dataclass(frozen=True)
 class PromptDefault:
-    """Uma voz que o código traz pronta e que um documento pode sobrescrever."""
+    """Uma voz que o código traz pronta e que uma instância pode sobrescrever."""
 
     name: str
     description: str
@@ -162,7 +162,7 @@ def runtime_default_note(name: str, scope: str, kind: str, module: str) -> str:
     return (
         f"no {kind} named {name!r} is authored in scope {scope!r} — this is the "
         f"normal state, and the runtime default (from {module}) is what runs. "
-        f"Write a {kind} document with this name to override it."
+        f"Write a {kind} instance with this name to override it."
     )
 
 

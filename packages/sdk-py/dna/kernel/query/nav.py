@@ -10,7 +10,7 @@ Free functions taking ``(kernel, scope, ...)`` that compute:
 
 Implementation strategy: iterate ``kinds_in_scope(kernel, scope)`` (registry, cheap)
 and use ``kernel.query(scope, kind, tenant=...)`` per Kind. The
-``kernel.list_documents`` granular L1 method is used when only
+``kernel.list_instances`` granular L1 method is used when only
 ``(kind, name)`` refs are needed (avoids materializing doc bodies).
 
 Cost vs legacy mi-based namespaces: same total I/O on a single full
@@ -37,7 +37,7 @@ async def _docs_by_kind(
 ) -> dict[str, list[Any]]:
     """Iterate every Kind in the registry and materialize its docs.
 
-    Returns {kind_name: [Document, ...]}. Used by inventory + composition
+    Returns {kind_name: [Instance, ...]}. Used by inventory + composition
     when we need ALL docs (the "eager scan" — but bounded per-Kind so
     the kernel's L2 list cache covers it).
     """
@@ -60,7 +60,7 @@ async def _doc_index(
     kernel: Any, scope: str, *, tenant: str | None = None,
 ) -> set[tuple[str, str]]:
     """Build {(kind, name)} set across all Kinds. Cheap path: uses
-    ``kernel.list_documents`` (L1 refs only — no bodies materialized).
+    ``kernel.list_instances`` (L1 refs only — no bodies materialized).
     """
     out: set[tuple[str, str]] = set()
     seen_kinds: set[str] = set()
@@ -69,12 +69,12 @@ async def _doc_index(
             continue
         seen_kinds.add(kp.kind)
         try:
-            refs = await kernel.list_documents(scope, kind=kp.kind, tenant=tenant)
+            refs = await kernel.list_instances(scope, kind=kp.kind, tenant=tenant)
         except Exception as e:  # noqa: BLE001
             # fail-soft: read path — a broken Kind listing drops out of the
             # index instead of failing the whole walk (logged).
             logger.debug(
-                "_doc_index: list_documents failed for kind %s in %s: %s",
+                "_doc_index: list_instances failed for kind %s in %s: %s",
                 kp.kind, scope, e,
             )
             refs = []
@@ -122,12 +122,12 @@ async def scope_summary_async(
     lines = [f"Scope: {scope}", f"Kinds: {len(kinds)}"]
     for k in kinds:
         try:
-            refs = await kernel.list_documents(scope, kind=k, tenant=tenant)
+            refs = await kernel.list_instances(scope, kind=k, tenant=tenant)
         except Exception as e:  # noqa: BLE001
             # fail-soft: read path — summary shows 0 docs for a broken Kind
             # instead of failing the whole summary (logged).
             logger.debug(
-                "scope_summary: list_documents failed for kind %s in %s: %s",
+                "scope_summary: list_instances failed for kind %s in %s: %s",
                 k, scope, e,
             )
             refs = []
@@ -208,14 +208,14 @@ async def scope_inventory_async(
             doc_entries.append(entry)
         kinds_data[kind_name] = {
             "count": len(docs),
-            "documents": doc_entries,
+            "instances": doc_entries,
         }
         total += len(docs)
 
     comp = await validate_composition_async(kernel, scope, tenant=tenant)
     return {
         "scope": scope,
-        "total_documents": total,
+        "total_instances": total,
         "kinds": kinds_data,
         "composition": {
             "valid": comp.valid,
@@ -232,7 +232,7 @@ async def scope_describe_async(
     tenant: str | None = None,
 ) -> str:
     """Per-doc human-readable description."""
-    raw = await kernel.get_document(scope, kind, name, tenant=tenant)
+    raw = await kernel.get_instance(scope, kind, name, tenant=tenant)
     if raw is None:
         return f"{kind}/{name} not found"
     doc = kernel._parse_doc(raw, origin="local")
@@ -259,7 +259,7 @@ async def render_doc_async(
     tenant: str | None = None,
 ) -> list[PreviewBlock]:
     """Polymorphic per-Kind preview blocks (KindPort.preview hook)."""
-    raw = await kernel.get_document(scope, kind, name, tenant=tenant)
+    raw = await kernel.get_instance(scope, kind, name, tenant=tenant)
     if raw is None:
         return []
     doc = kernel._parse_doc(raw, origin="local")

@@ -17,7 +17,7 @@ There are three moving parts, each a small convenience over the raw kernel:
 
 `dna new` writes a correct, minimal skeleton into a scope through the kernel
 (every write guard and schema check runs — it is not a text template), leaving
-you with a valid document whose only empty part is the prose you came to write.
+you with a valid instance whose only empty part is the prose you came to write.
 
 ```bash
 dna new soul warm-host -d "Patient, warm, concise concierge voice"
@@ -33,7 +33,7 @@ dna new guardrail no-pii --severity error --guard-scope output
 - `dna new guardrail <name>` creates `guardrails/<name>/GUARDRAIL.md` with a
   starter rule plus a severity and scope.
 
-`dna new` is idempotent: it refuses to overwrite an existing document unless you
+`dna new` is idempotent: it refuses to overwrite an existing instance unless you
 pass `--force`. Add `--json` for machine-readable output, and `--scope` to
 target a scope other than the auto-detected one.
 

@@ -1,4 +1,4 @@
-"""Tests for evidence builder — SHA-256 hashing and document assembly."""
+"""Tests for evidence builder — SHA-256 hashing and instance assembly."""
 from dna.extensions.evidence.builder import compute_content_hash, build_evidence
 
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dna.kernel.instance import ManifestInstance
+    from dna.kernel.manifest import ManifestInstance
     from dna.kernel.lock import Lockfile
 
 
@@ -19,7 +19,7 @@ class LockManager:
         self._host = host
 
     def generate(self) -> Lockfile:
-        """Generate lockfile with SHA256 per document.
+        """Generate lockfile with SHA256 per instance.
 
         Equivalent to ``mi.generate_lock()``.
         """
@@ -28,7 +28,7 @@ class LockManager:
         from dna.kernel.lock import LockEntry, Lockfile
 
         entries = []
-        for d in self._host.documents:
+        for d in self._host.instances:
             raw_json = json.dumps(d.raw, sort_keys=True, ensure_ascii=False)
             sha = hashlib.sha256(raw_json.encode()).hexdigest()
             entries.append(LockEntry(
@@ -37,4 +37,4 @@ class LockManager:
                 path="",
                 sha256=sha,
             ))
-        return Lockfile(scope=self._host.scope, documents=entries)
+        return Lockfile(scope=self._host.scope, instances=entries)

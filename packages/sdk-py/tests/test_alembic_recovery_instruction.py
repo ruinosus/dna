@@ -86,7 +86,7 @@ def test_ahead_of_baseline_message_does_not_ask_for_a_downgrade():
 def test_sqlite_ladder_head_was_fully_published():
     """SQLite needs no bridge — v0.20.0 already reaches its head.
 
-    Documents that the i-040 defect was Postgres-only, so the SQLite paths
+    Instances that the i-040 defect was Postgres-only, so the SQLite paths
     below are unaffected by the bridge.
     """
     from dna.adapters.sqlalchemy_.migrate import (

@@ -27,7 +27,7 @@ What this module pins:
   declared, without reading English prose off a backend. That was i-104: 25
   rows, all of one origin, presented as 25 broken declarations because
   ``reason`` was the only thing to go on;
-* it is SCHEMA, never data: no document read, and the envelope says which
+* it is SCHEMA, never data: no instance read, and the envelope says which
   graph it is;
 * ``tenant`` resolves the scope like the registry route, an unknown scope is
   an empty graph rather than a 404, and the route is mounted (and guarded) on
@@ -172,6 +172,59 @@ def test_declared_is_not_the_same_as_enforced_and_the_wire_says_so(graph):
     assert all(e["by"] != "name" or e["to_kind"] == "*" for e in unenforced)
 
 
+def test_followed_arrives_on_the_wire_and_is_WIDER_than_enforced(graph):
+    """⚠️ The ``response_model`` trap, applied to the key fatia 5 introduced.
+
+    FastAPI's ``response_model`` FILTERS: a key the impl produces and the model
+    does not declare is dropped in silence, and a client cannot tell that apart
+    from "the field does not exist". It happened here on 06/08/2026, to three
+    fields of the refs route at once.
+
+    ``followed`` is exactly that shape of new key, and it carries the whole
+    result of the slice: without it a screen reads ``enforced`` alone and calls
+    every ``by: <key>`` relation unchecked while its edges sit in the table.
+    So the assertion is not "the key is present" but "present AND disagreeing
+    with ``enforced`` somewhere" — a dropped key and a key aliased to its
+    neighbour are different bugs, and both are red here.
+    """
+    declared = [e for e in graph["edges"] if e["tier"] == "declared"]
+    assert declared
+    for e in declared:
+        assert "followed" in e, (
+            "the route dropped `followed` — the response_model does not "
+            "declare it, so FastAPI filtered it out without a word"
+        )
+    # ⚠️ ``by != "name"`` alone is NOT "addressed by a key". A composite form
+    # (``Kind/name``) is also not ``name``, and since 06/08 a composite MAY
+    # declare concrete targets — ``Engram.area`` does — so a filter written as
+    # "not name, and to_kind is not *" sweeps composites in and then asserts
+    # they are followed, which they are not. The vocabulary is closed, so ask
+    # it rather than approximating it.
+    from dna.kernel.kinds.relations import COMPOSITE_FORMS
+
+    by_key = [
+        e for e in declared
+        if e["by"] != "name" and e["by"] not in COMPOSITE_FORMS
+    ]
+    assert by_key, "no key-addressed relation survived — the fixture, not the guard"
+    for e in by_key:
+        assert e["followed"] is True, (
+            f"{e['from_kind']}.{e['field']} is addressed `by: {e['by']}` and "
+            f"the wire says it is not followed — but its edges exist"
+        )
+        assert e["enforced"] is False, (
+            f"{e['from_kind']}.{e['field']} claims to VETO on a key it "
+            f"resolves more poorly than the live lookup does"
+        )
+    cov = graph["coverage"]
+    assert cov["followed"] == cov["enforced"] + len(by_key), (
+        f"coverage.followed ({cov['followed']}) is not "
+        f"enforced ({cov['enforced']}) plus the {len(by_key)} key-addressed "
+        f"edges — the counter and the edge list disagree about the same fact, "
+        f"which is how a screen and a table end up telling different stories"
+    )
+
+
 def test_the_limits_travel_on_the_wire(graph):
     """The caveats ship WITH the answer instead of living in a doc page a
     caller may never read — including the one that matters most, that this is
@@ -196,7 +249,7 @@ def test_the_gaps_come_back_named_not_dropped(graph):
 
 
 def test_a_key_addressed_reference_IS_an_edge_and_says_it_is_not_enforced(graph):
-    """``Comment.target_ref`` really points at a document — by a composite
+    """``Comment.target_ref`` really points at an instance — by a composite
     ``Kind:name`` string. It used to be filtered OUT of the edges into an
     "undeclarable" bucket, which is how eight ``produces`` fields ended up
     described as inexpressible when they were merely undeclared. It is an edge

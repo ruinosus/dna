@@ -52,7 +52,7 @@ $ # …drive /speckit.constitution, /speckit.specify, /speckit.plan, /speckit.ta
 
 # 2. Durably capture the run into DNA Kinds (portability + memory + governance).
 $ dna specify import .specify/
-Imported Spec Kit run: 17 documents across 1 feature(s).
+Imported Spec Kit run: 17 instances across 1 feature(s).
   Feature/f-taskify  (taskify)
 ```
 
@@ -78,7 +78,7 @@ $ #    which fill .specify/memory/constitution.md and specs/001-*/spec.md|plan.m
 
 # 3. Capture the run into DNA — Spec Kit is untouched; DNA mirrors it.
 $ dna specify import ./dna-cloud-invite --scope my-scope
-Imported Spec Kit run: 24 documents across 1 feature(s).
+Imported Spec Kit run: 24 instances across 1 feature(s).
   Feature/f-portal-member-invite-ui  (portal-member-invite-ui)
 
 # 4. The run is now tracked work: a Feature + one Story per task, journey filled.
@@ -114,7 +114,7 @@ already models it (ADR *ADR-spec-kit-adoption* §4):
 | the `specs/<f>/` run itself | **Feature** `f-<slug>` | The hub; carries the `specify_run` export manifest. |
 | the whole run | **WorkflowEvent**(s) `methodology=spec-kit` | Overlays the derived journey with the honest `.specify/` per-phase trail. |
 
-Every write goes through `kernel.write_document`, so all guards fire — the
+Every write goes through `kernel.write_instance`, so all guards fire — the
 constitution *becomes* enforced policy instead of a passive markdown file.
 
 ### Options

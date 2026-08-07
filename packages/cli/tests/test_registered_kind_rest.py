@@ -2,7 +2,7 @@
 
 O buraco medido em 03/08/2026 (dna-cloud): nenhuma rota servia o JSON Schema
 de um Kind REGISTRADO — ``GET /v1/kinds`` lista só os AUTORADOS e
-``/v1/definitions/{kind}/{name}`` exige documento e omite o schema. O portal
+``/v1/definitions/{kind}/{name}`` exige instância e omite o schema. O portal
 copiava constraints à mão (o pior caso: a política de memória duplicava
 min/max de ``neighbors``, o enum de ``engine`` e os triggers), e cada cópia é
 deriva esperando release.
@@ -87,7 +87,7 @@ def test_unknown_kind_is_404(dna_dir):
 
 def test_registry_segment_is_not_swallowed_by_the_authored_kind_route(dna_dir):
     """``/v1/kinds/registry/Agent`` (4 segmentos) nunca deve casar com
-    ``/v1/kinds/{kind}`` (3) nem com ``/{kind}/documents`` — se a ordem de
+    ``/v1/kinds/{kind}`` (3) nem com ``/{kind}/instances`` — se a ordem de
     declaração regredir, este GET devolveria o 404 filtrado da porta de
     autorados em vez do descritor."""
     with _client(dna_dir) as c:
@@ -104,7 +104,7 @@ def test_tenant_param_deriva_o_scope_como_as_rotas_de_documentos(dna_dir):
     o WORKSPACE, e a rota só aceitava ``scope`` cru — obrigando o chamador a
     hardcodar a convenção ``tenant-<ws>``. Com ``tenant``, o scope é DERIVADO
     server-side (``live.default_scope``), o mesmo contrato de toda rota de
-    documento. Aqui (single-workspace, sem vendor) default_scope devolve o
+    instância. Aqui (single-workspace, sem vendor) default_scope devolve o
     base scope — o Kind registrado responde igual ao caminho sem tenant."""
     with _client(dna_dir) as c:
         sem = c.get("/v1/kinds/registry/Agent")

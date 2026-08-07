@@ -35,6 +35,10 @@ spec:
   target_kind: EvalCase
   alias: eval-eval-case
   origin: github.com/ruinosus/dna/eval
+  # `checks` + `target` + `skip` declare what to run and how to judge it; the
+  # case itself never records an outcome. Editable freely for that reason.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [execution.declared]
   plane: record
   prompt_target: false
   flatten_in_context: false

@@ -249,27 +249,29 @@ class DnaClient:
         self, kind: str, schema: dict[str, Any], *,
         traits: list[str] | None = None,
         presentation: dict[str, Any] | list[str] | None = None,
+        relations: dict[str, Any] | None = None,
+        plane: str | None = None,
         tenant: str | None = None,
     ) -> JsonObject:
         """Author a Kind for the calling workspace — a ``KindDefinition``
-        document written WITHOUT an approval marker, under the workspace's own
+        instance written WITHOUT an approval marker, under the workspace's own
         assigned apiVersion namespace.
 
         What comes back is INERT: ``approved`` is always ``false``, and an
         unapproved Kind never enters the registry, so it neither validates
-        documents nor routes their storage. Approval is a separate act with its
+        instances nor routes their storage. Approval is a separate act with its
         own verified actor (:meth:`approve_kind`) — this call cannot perform it,
         and an ``approved_by`` supplied here would be ignored (there is no
-        parameter for it on purpose). The document records ``proposed_by``: the
+        parameter for it on purpose). The instance records ``proposed_by``: the
         server-verified identity of THIS call, stamped here because a proposer
-        cannot be back-filled onto a document that never recorded one.
+        cannot be back-filled onto an instance that never recorded one.
 
         ``kind`` must be a CamelCase identifier — a CAPITAL letter followed by
         up to 63 letters or digits, nothing else. It is the one value that
         reaches a path, and the initial capital is required so ``Contrato`` and
         ``contrato`` cannot collide on a case-insensitive filesystem.
 
-        ``presentation`` (optional) declares how documents of this Kind READ —
+        ``presentation`` (optional) declares how instances of this Kind READ —
         the ordered fields, their human labels and their semantic roles, plus
         what to hide. It is the SAME declaration a Kind shipped inside the SDK
         makes, which is the point: without it, only builtin Kinds could tell a
@@ -281,15 +283,33 @@ class DnaClient:
         deliberately no way to declare a colour, a column or a width — how a
         field LOOKS is each surface's own business.
 
-        400 for a missing tenant, a ``kind`` that is not such an identifier, or
-        a malformed ``presentation`` (the response names the offending key);
-        403 when the workspace does not own the target namespace; 503 when the
+        ``relations`` (optional) declares what the Kind POINTS AT:
+        ``{field: {"to": "Cliente", "cardinality": "one"}}``, where the KEY is
+        the ``spec`` field holding the value. ``to`` takes a Kind name, a list
+        of them, or ``"*"``; ``cardinality`` (``one``/``many``) is required and
+        states the MODEL's multiplicity rather than the JSON's shape;
+        ``inverse_of`` and ``by`` are optional. Omitting it leaves the Kind an
+        island — which is a legitimate statement about a domain and, until this
+        parameter existed, was the only statement a tenant Kind could make.
+        Declaring a relation does NOT create an edge: relations are resolved
+        only for REGISTERED Kinds, and registration is what human approval
+        turns on.
+
+        ``plane`` (optional) is ``composition`` or ``record``, and is stored
+        only when declared — an instance that says nothing keeps the question of
+        the right default open, which is deliberate.
+
+        400 for a missing tenant, a ``kind`` that is not such an identifier, a
+        malformed ``presentation`` or a ``relations`` block that is malformed or
+        contradicts the ``schema`` (the response names the offending key); 403
+        when the workspace does not own the target namespace; 503 when the
         store's namespace-registry scope has not been provisioned."""
         return self._write(
             "POST", "/v1/kinds",
             {
                 "kind": kind, "schema": schema, "traits": traits,
-                "presentation": presentation,
+                "presentation": presentation, "relations": relations,
+                "plane": plane,
             },
             tenant=tenant,
         )
@@ -306,19 +326,19 @@ class DnaClient:
 
         The approver is the caller's server-VERIFIED identity; there is
         deliberately no parameter for it, and an ``approved_by`` in the payload
-        would reach nothing. The document's ``proposed_by`` is preserved, so the
+        would reach nothing. The instance's ``proposed_by`` is preserved, so the
         response names both acts. The two MAY be the same identity — a solo
         author approving their own proposal is two credentials, and the audit
         reports the coincidence rather than refusing it.
 
         404 when no such Kind was authored in this scope (approval acts on an
-        existing document and creates none); 400 for a missing tenant, a
+        existing instance and creates none); 400 for a missing tenant, a
         malformed ``kind``, or a Kind declared under two namespaces at once;
         403 when the namespace gate refuses the write; 409 when the Kind was
         edited between the read and this call (re-read, then approve again).
 
         It is also the UNDO of :meth:`revoke_kind`: approving again clears the
-        revocation, and every existing document is valid once more with nothing
+        revocation, and every existing instance is valid once more with nothing
         to migrate."""
         return self._write("POST", f"/v1/kinds/{kind}/approve", {}, tenant=tenant)
 
@@ -329,20 +349,20 @@ class DnaClient:
 
         Deliberately NOT the inverse of :meth:`approve_kind`. Un-approving would
         return the Kind to *never approved*, and a Kind that never registered is
-        the PERMISSIVE state — its documents are accepted with no validation at
+        the PERMISSIVE state — its instances are accepted with no validation at
         all — so clearing the approval would switch the gate off rather than
         close it. Revoked is a THIRD state::
 
-            state            existing documents   new documents
+            state            existing instances   new instances
             ---------------  -------------------  --------------------------
             never approved   —                    accepted WITHOUT validation
             approved         valid, routed        validated against the schema
             revoked          INVALID              REFUSED
 
-        Nothing is deleted. Existing documents stay readable and come back
+        Nothing is deleted. Existing instances stay readable and come back
         MARKED (``status.valid`` is ``false``), and in a listing they appear
         marked rather than vanishing — so this can never be used to hide data
-        without deleting it. New documents of the Kind are refused outright,
+        without deleting it. New instances of the Kind are refused outright,
         conforming ones included: what was withdrawn is the Kind, not a schema.
 
         Reversible in one call — :meth:`approve_kind` clears the revocation.
@@ -354,7 +374,7 @@ class DnaClient:
 
         404 when no such Kind was authored in this scope, and equally when it
         belongs to another workspace; 400 for a missing tenant or a malformed
-        ``kind``; 409 when the document moved since it was read; 403 when the
+        ``kind``; 409 when the instance moved since it was read; 403 when the
         namespace gate refuses the write."""
         return self._write("POST", f"/v1/kinds/{kind}/revoke", {}, tenant=tenant)
 
@@ -362,7 +382,7 @@ class DnaClient:
         self, *, scope: str | None = None, tenant: str | None = None,
     ) -> JsonObject:
         """List the scope's authored Kinds with their approval state — the
-        audit view. Reads DOCUMENTS, not the registry: an unapproved Kind is
+        audit view. Reads INSTANCES, not the registry: an unapproved Kind is
         precisely the one the registry does not have.
 
         Each row carries BOTH actors (``proposed_by``/``proposed_at`` and
@@ -383,7 +403,7 @@ class DnaClient:
         this is the call that answers it.
 
         ``presentation`` is the other half of that answer, and the one a UI
-        needs: ``schema`` says what a document may CONTAIN, ``presentation``
+        needs: ``schema`` says what an instance may CONTAIN, ``presentation``
         says what a person will SEE of it — which fields, in what order, under
         what names — on every surface the workspace has. It is ``null`` for a
         Kind that declares none.
@@ -412,7 +432,7 @@ class DnaClient:
         validation (min/max, enums, required) from the schema instead of
         hand-copying constraints that then drift from the kernel's.
 
-        ``tenant`` (i-094) resolves the scope the way the document routes do
+        ``tenant`` (i-094) resolves the scope the way the instance routes do
         (``default_scope`` server-side) — a caller that only knows the
         workspace id reaches that workspace's own registered Kinds without
         hardcoding the scope-prefix convention. Explicit ``scope`` wins.
@@ -439,7 +459,7 @@ class DnaClient:
 
         **``tier == "declared"`` is NOT the same as ``enforced``.** The kernel
         resolves a relation at write time only when it has a concrete target
-        Kind addressed by document name (``by == "name"``). A relation
+        Kind addressed by instance name (``by == "name"``). A relation
         addressed by a spec field of the target (``by: "workspace_id"``) or
         carrying its Kind in the value (``to_kind == "*"``) is fully declared
         and deliberately not followed. Filter on ``enforced`` — never on the
@@ -460,7 +480,7 @@ class DnaClient:
         graph the runtime actually checks, and ``limits`` names what the graph
         structurally cannot see. The first limit is the one that matters most:
         these edges are SCHEMA — which Kinds MAY reference which. Which
-        DOCUMENTS reference which is a different graph, and this call does not
+        INSTANCES reference which is a different graph, and this call does not
         answer it.
 
         No 404: a scope with nothing registered is an empty graph whose
@@ -477,7 +497,7 @@ class DnaClient:
         to the registry, not to each caller.
 
         Not :meth:`list_authored_kinds`, which lists the caller's own
-        KindDefinition DOCUMENTS *including the unapproved ones* — the audit
+        KindDefinition INSTANCES *including the unapproved ones* — the audit
         roster behind an approval decision. This lists what is REGISTERED and
         therefore in force, built-ins included.
 
@@ -488,18 +508,18 @@ class DnaClient:
         so a refused operation is visible before it is attempted."""
         return self._get("/v1/kinds/registry", scope=scope, tenant=tenant)
 
-    # -- the generic, kubernetes-shaped document read/write -------------------
+    # -- the generic, kubernetes-shaped instance read/write -------------------
 
-    def list_kind_documents(
+    def list_kind_instances(
         self, kind: str, *,
         api_version: str | None = None, tenant: str | None = None,
         limit: int = 50, offset: int = 0,
         fields: Sequence[str] | None = None,
         order_by: Sequence[str] | None = None,
     ) -> JsonObject:
-        """List the documents of ``kind`` — the READ face of the generic door.
+        """List the instances of ``kind`` — the READ face of the generic door.
 
-        The write (:meth:`write_kind_document`) accepted any Kind, but reading
+        The write (:meth:`write_kind_instance`) accepted any Kind, but reading
         back only worked for the Kinds someone had hand-written a route for
         (``/v1/memories``, ``/v1/projects``, …). Whoever wrote through the
         generic door could not read through it, and found that out AFTER
@@ -511,7 +531,7 @@ class DnaClient:
         Postgres the projection becomes a SELECT and the row travels trimmed.
 
         An unknown Kind is 404 NAMING it, the same answer the write gives. An
-        empty list from a Kind that exists is 200 with ``documents: []`` —
+        empty list from a Kind that exists is 200 with ``instances: []`` —
         "exists and holds nothing" is an answer, and conflating it with "does
         not exist" would make a screen say *error* where it should say *none
         yet*.
@@ -520,55 +540,86 @@ class DnaClient:
         scope are never caller input here (see the server route's docstring).
         """
         return self._get(
-            f"/v1/kinds/{kind}/documents",
+            f"/v1/kinds/{kind}/instances",
             tenant=tenant, api_version=api_version, limit=limit, offset=offset,
             # CSV on the wire: the server splits on comma. `None` stays `None`
-            # so an omitted projection means "the whole document", not "no
+            # so an omitted projection means "the whole instance", not "no
             # fields" — an empty CSV would read as the latter.
             fields=",".join(fields) if fields else None,
             order_by=",".join(order_by) if order_by else None,
         )
 
-    def get_kind_document(
+    def get_kind_instance(
         self, kind: str, name: str, *,
         api_version: str | None = None, tenant: str | None = None,
         as_of: str | None = None,
     ) -> JsonObject:
-        """Read ONE document of ``kind``, VERBATIM — what the list cannot give.
+        """Read ONE instance of ``kind``, VERBATIM — what the list cannot give.
 
         The projected list travels through the readers' view when the Kind is
         bundle-producible (Agent, Skill…), and the view NORMALIZES: real spec
         fields written through the generic door can simply not travel through
         it (measured 2026-08-05: an Agent's ``description`` and
         ``tools_requiring_confirmation``). This is the verbatim read, as the
-        caller's layer sees the document, with the optimistic-concurrency
-        ``etag`` for a follow-up :meth:`write_kind_document` ``if_match``.
+        caller's layer sees the instance, with the optimistic-concurrency
+        ``etag`` for a follow-up :meth:`write_kind_instance` ``if_match``.
 
-        404 names what is missing — the unknown Kind or the document.
+        404 names what is missing — the unknown Kind or the instance.
 
-        ``as_of`` (ISO-8601) reads the document as the store RECORDED it at that
+        ``as_of`` (ISO-8601) reads the instance as the store RECORDED it at that
         instant — transaction time, not world time. The response then carries
         ``as_of`` / ``as_of_version`` / ``as_of_recorded_at``, which is how a
         caller tells a historical body from a live one. It REFUSES rather than
-        approximates: **404** the document did not exist yet, **410** its
+        approximates: **404** the instance did not exist yet, **410** its
         history was pruned past the instant (not the same statement), **501**
         the server's store keeps no history at all, **422** the instant is not
         ISO-8601. Before i-106 the server accepted this parameter and dropped
         it in silence, handing back the present under a past timestamp."""
         return self._get(
-            f"/v1/kinds/{kind}/documents/{name}",
+            f"/v1/kinds/{kind}/instances/{name}",
             tenant=tenant, api_version=api_version, as_of=as_of,
+        )
+
+    def resolve_instance(
+        self, instance_id: str, *,
+        scope: str | None = None, tenant: str | None = None,
+    ) -> JsonObject:
+        """Expand a short ``metadata.id`` PREFIX to the instance it names.
+
+        The id lane (i-114). Every instance carries a 12-character
+        ``metadata.id`` that does not move when the instance is renamed; give
+        the first four or more characters and this returns the whole instance,
+        with the FULL id echoed back — the way ``git rev-parse`` expands a short
+        commit hash.
+
+        Deliberately separate from :meth:`get_kind_instance`, which is the NAME
+        lane. A short name and a short id are both strings, so one door that
+        accepted either would eventually answer a name query with an id match,
+        and nothing in the response would say so.
+
+        It REFUSES rather than guesses: **409** the prefix matches more than one
+        instance (the detail names the candidates — lengthen it), **404** it
+        matches none, **422** it is shorter than four characters or uses
+        characters outside ``[a-z2-7]``, **501** the server's store cannot
+        search by id.
+
+        ``scope`` is normally unnecessary — ids are unique across the store, and
+        not needing to know where the instance lives is most of what an id
+        buys."""
+        return self._get(
+            f"/v1/instances/{instance_id}", tenant=tenant, scope=scope,
         )
 
     def graph_refs(
         self, kind: str, name: str, *,
         direction: str = "in", depth: int = 1,
+        as_of: str | None = None,
         api_version: str | None = None, tenant: str | None = None,
     ) -> JsonObject:
-        """"What points at this document?" — the derived reference graph.
+        """"What points at this instance?" — the derived reference graph.
 
         ``direction="in"`` (the default, and the product question) returns the
-        documents pointing AT this one; ``"out"`` what it points at; ``"both"``
+        instances pointing AT this one; ``"out"`` what it points at; ``"both"``
         the union. ``depth`` walks further and is clamped server-side — two of
         the declared references are self-referential by design, so an unbounded
         walk is not on offer.
@@ -581,20 +632,33 @@ class DnaClient:
         ``truncated``) and ``graph_producer`` reports whether the producer is
         even on. A server whose store keeps no edge graph answers **501**, not
         an empty list — "nothing points at this" is a claim only a store that
-        records edges may make."""
+        records edges may make.
+
+        ``as_of`` (ISO-8601) returns **the graph AS IT WAS at that transaction
+        instant** — the fourth coordinate of the same question, and the same
+        axis :meth:`get_kind_instance` carries for one instance. The response
+        echoes ``as_of`` and lists ``as_of_truncated``: nodes the walk reached
+        and could not read that far back, because their history was pruned. Not
+        an error — the part of the past this store cannot know, named instead of
+        dropped.
+
+        Under ``as_of`` the server answers **501** when it retains no version
+        history and **410** when this instance's history was pruned past the
+        instant. Neither degrades into today's graph, and a **404** ("it did not
+        exist yet then") is an ANSWER rather than either of those."""
         return self._get(
-            f"/v1/kinds/{kind}/documents/{name}/refs",
+            f"/v1/kinds/{kind}/instances/{name}/refs",
             tenant=tenant, api_version=api_version,
-            direction=direction, depth=depth,
+            direction=direction, depth=depth, as_of=as_of,
         )
 
-    def write_kind_document(
+    def write_kind_instance(
         self, kind: str, metadata: dict[str, Any], spec: dict[str, Any], *,
         source_sha256: str | None = None,
         api_version: str | None = None, tenant: str | None = None,
         merge: bool = True, if_match: str | None = None,
     ) -> JsonObject:
-        """Write one document of ``kind`` — the generic door, kubernetes-shaped:
+        """Write one instance of ``kind`` — the generic door, kubernetes-shaped:
         the endpoint names the Kind (applying a CRD creates the endpoint that
         serves it; ``kind`` is inferred from where the client submits, never
         re-stated ambiguously), the body is exactly ``{metadata, spec}`` plus
@@ -612,8 +676,8 @@ class DnaClient:
         409.
 
         ``source_sha256`` (optional) cites the ``SourceArtifact`` (by content
-        address) this document was extracted from; the server closes the
-        ``derived_refs`` provenance edge, preserving every OTHER document
+        address) this instance was extracted from; the server closes the
+        ``derived_refs`` provenance edge, preserving every OTHER instance
         already recorded there and updating THIS one's own entry in place on
         a re-write rather than duplicating it. A citation naming no
         registered artifact under ``tenant`` is 400.
@@ -622,7 +686,7 @@ class DnaClient:
         parameter here — identity and scope are never caller input on this
         route (see the server route's docstring)."""
         return self._write(
-            "POST", f"/v1/kinds/{kind}/documents",
+            "POST", f"/v1/kinds/{kind}/instances",
             {"metadata": metadata, "spec": spec, "source_sha256": source_sha256},
             tenant=tenant, api_version=api_version, merge=merge,
             if_match=if_match,
@@ -634,7 +698,7 @@ class DnaClient:
         self, kind: str, name: str, *,
         scope: str | None = None, tenant: str | None = None,
     ) -> JsonObject:
-        """List a bundle document's entry files (base ∪ tenant overlay), each
+        """List a bundle instance's entry files (base ∪ tenant overlay), each
         flagged ``overridden`` — whether THIS tenant forked that specific file."""
         return self._get(
             f"/v1/definitions/{kind}/{name}/entries", scope=scope, tenant=tenant
@@ -871,8 +935,8 @@ class DnaClient:
         from the workspace and the route refuses to accept one.
 
         ``uri`` names WHERE the bytes live and is stored verbatim. It must not
-        be a signed URL: a document carrying one would BE the access to its own
-        original, and would hand that access to anyone the document reaches.
+        be a signed URL: an instance carrying one would BE the access to its own
+        original, and would hand that access to anyone the instance reaches.
 
         IDEMPOTENT by content address — the same ``sha256`` updates the same
         artifact, and any ``derived_refs`` already extracted from it survive the

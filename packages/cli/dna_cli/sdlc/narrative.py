@@ -20,7 +20,7 @@ from dna_cli.sdlc._root import sdlc
 
 # (The `sdlc session` capture group — multi-tool AgentSession adapters —
 # is a host-platform surface and does not ship here. The AgentSession
-# Kind itself IS registered; write sessions via `dna doc apply`.)
+# Kind itself IS registered; write sessions via `dna instance apply`.)
 
 # ---------------------------------------------------------------------------
 # Narrative — daily/release/retro write cadence + reminder
@@ -30,7 +30,7 @@ from dna_cli.sdlc._root import sdlc
 def narrative_group() -> None:
     """Project narrative — write cadence reminders + scaffold helpers.
 
-    The Narrative Kind itself is created via ``dna doc apply`` against
+    The Narrative Kind itself is created via ``dna instance apply`` against
     a NARRATIVE.md bundle (the canonical write path). These commands
     are the operator-side ergonomics: telling you when the last one
     was written, what's pending since then, and stubbing out the next
@@ -164,7 +164,7 @@ def cmd_narrative_new(
     """Scaffold a NARRATIVE.md bundle for a new Narrative doc. Writes
     the file with FLAT frontmatter (the format the bundle reader
     expects) + a body skeleton with the structured-fields headings.
-    Does NOT apply — review/edit, then run `dna doc apply`.
+    Does NOT apply — review/edit, then run `dna instance apply`.
     """
     import re as _re
     if not _re.match(r"^[a-z0-9][a-z0-9-]*$", slug):
@@ -220,7 +220,7 @@ open_items: []
     click.echo("Edit the structured fields (paragraphs / decisions / open_items),")
     click.echo("then run:")
     click.echo("")
-    click.echo(f"  dna doc apply --scope {scope} {marker.parent}")
+    click.echo(f"  dna instance apply --scope {scope} {marker.parent}")
 
 
 # ---------------------------------------------------------------------------
@@ -247,7 +247,7 @@ def _append_to_narrative_array(
         if existing is None:
             raise fail(
                 f"Narrative/{name!r} not found in scope {scope!r}. "
-                f"Use `dna doc list Narrative --scope {scope}` to find "
+                f"Use `dna instance list Narrative --scope {scope}` to find "
                 f"the right slug, or close a cycle to create one auto."
             )
         spec = dict(existing.spec) if isinstance(existing.spec, dict) else {}
@@ -256,7 +256,7 @@ def _append_to_narrative_array(
         spec[field] = arr
         spec["updated_at"] = _now_iso()
         raw = _build_raw("Narrative", name, spec)
-        s.run(s.kernel.write_document(scope, "Narrative", name, raw))
+        s.run(s.kernel.write_instance(scope, "Narrative", name, raw))
 
 
 @narrative_group.command("add-decision")

@@ -6,8 +6,8 @@ consulted, not read start-to-finish.
 Everything here is **generated from source** — docstrings (Python), the `dna`
 command definitions (CLI), and the registered Kinds' own schemas (Kinds). It
 therefore **cannot drift from the code**: a regeneration runs in CI on every
-change (`scripts/gen_cli_docs.py`, `scripts/gen_kinds_docs.py`, and
-mkdocstrings inline).
+change (`scripts/gen_cli_docs.py`, `scripts/gen_kinds_docs.py`,
+`scripts/gen_ports_docs.py`, and mkdocstrings inline).
 
 ## Pick your surface
 
@@ -15,7 +15,7 @@ mkdocstrings inline).
 
 -   :material-language-python: **[Python API](python/index.md)**
 
-    The `dna` package — `Kernel`, the five ports, `Document`,
+    The `dna` package — `Kernel`, the ports, `Instance`,
     `ManifestInstance`, the extensions and the `dna.testing` conformance kit.
     Rendered inline from the docstrings by mkdocstrings.
 
@@ -29,6 +29,12 @@ mkdocstrings inline).
 
     The registered Kinds and their spec schemas, plus the `KindDefinition`
     descriptor format. Introspected from `Kernel.auto()`.
+
+-   :material-power-plug: **[Ports](ports/index.md)**
+
+    Every extension point DNA has — all 60 Protocols, grouped by what you are
+    trying to change, each with its contract, the capability it lights up and
+    the suite that grades it. Parsed from the source.
 
 </div>
 
@@ -46,7 +52,8 @@ mkdocstrings inline).
 
 The blessed, documented read/query API (`all`, `one`, `root`,
 `default_agent`, `build_prompt`, `resolve`) is walked through narratively in
-[How to read document data](../guides/read-document-data.md); the Python tree
+[How to read instance data](../guides/read-instance-data.md); the Python tree
 above is its exhaustive, machine-generated counterpart. What every source
 adapter must implement is in
-[How to write a source adapter](../guides/write-a-source-adapter.md).
+[How to write a source adapter](../guides/write-a-source-adapter.md), and every
+*other* seam is catalogued in [the port catalogue](ports/index.md).

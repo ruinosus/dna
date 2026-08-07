@@ -155,10 +155,10 @@ def test_the_new_kind_transitions_and_comments_over_the_shared_core(
         def __getattr__(self, item):
             return getattr(self._real, item)
 
-        async def get_document(self, scope, kind, name):
+        async def get_instance(self, scope, kind, name):
             return self.docs.get((scope, kind, name))
 
-        async def write_document(self, scope, kind, name, raw, **kw):
+        async def write_instance(self, scope, kind, name, raw, **kw):
             self.docs[(scope, kind, name)] = raw
 
     k = _K(kernel_with_new_work_item)

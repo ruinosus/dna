@@ -73,7 +73,7 @@ logger = logging.getLogger(__name__)
 #: declared on 7 Kinds and this list holds 3, and they intersect in exactly ONE.
 #: An ADR should be findable by semantic search WITHOUT being decay-ranked as a
 #: memory — retention, affect and reconsolidation are properties of a memory,
-#: not of a document that happens to have embeddable text. Overloading ``embed:``
+#: not of an instance that happens to have embeddable text. Overloading ``embed:``
 #: to mean both would have made every embeddable Kind a memory the moment
 #: somebody declared a field.
 MEMORY_KINDS: tuple[str, ...] = ("Engram", "Research", "Evidence")
@@ -154,7 +154,7 @@ async def remember(
 
     Enrichment (Engram only, idempotent): stamp ``encoding_context`` if
     absent, classify ``memory_type`` if absent, seed ``valid_from`` = created_at.
-    Then ``kernel.write_document`` (which runs the bi-temporal guard + hooks)
+    Then ``kernel.write_instance`` (which runs the bi-temporal guard + hooks)
     and — when a search provider is registered — index the doc so ``recall``
     finds it. Returns ``{kind, name, spec, indexed}``.
 
@@ -164,7 +164,7 @@ async def remember(
     malformed claim comes back as a named ``ValueError`` at whichever door it
     arrived at, instead of being stored and then silently ignored by the
     detector. The Engram schema declares the same shape, so the raw
-    ``write_document`` door refuses it too — two doors, one contract.
+    ``write_instance`` door refuses it too — two doors, one contract.
     """
     allowed = recallable_kinds(kernel)
     if kind not in allowed:
@@ -198,7 +198,7 @@ async def remember(
         kernel.with_tenant(tenant, allow_personal=is_personal_tenant(tenant))
         if tenant else kernel
     )
-    await write_kernel.write_document(scope, kind, name, raw, invalidate_mode="doc")
+    await write_kernel.write_instance(scope, kind, name, raw, invalidate_mode="doc")
 
     indexed = False
     if index:
@@ -311,13 +311,13 @@ async def is_personal_doc(
     only have come from the personal overlay. Present but different → the
     overlay shadows it (the returned spec IS the personal copy). Present and
     identical → shared base content, not personal. Uses the SAME cached
-    ``get_document`` primitive ``recall`` already reads through. Fail-soft:
+    ``get_instance`` primitive ``recall`` already reads through. Fail-soft:
     an errored base probe reports False (display flag; never breaks a read).
     """
     if not is_personal_tenant(tenant) or not spec:
         return False
     try:
-        base = await kernel.get_document(scope, kind, name, tenant=None)
+        base = await kernel.get_instance(scope, kind, name, tenant=None)
     except Exception:  # noqa: BLE001 — a display flag must never break recall
         return False
     if base is None:
@@ -356,9 +356,9 @@ async def cognitive_policy_spec(kernel: Any, scope: str, tenant: str | None) -> 
         return hit[1]
     spec: dict | None = None
     try:
-        nomes = await kernel.list_documents(scope, kind="CognitivePolicy", tenant=tenant)
+        nomes = await kernel.list_instances(scope, kind="CognitivePolicy", tenant=tenant)
         for _kind, nome in nomes or []:
-            doc = await kernel.get_document(scope, "CognitivePolicy", nome, tenant=tenant)
+            doc = await kernel.get_instance(scope, "CognitivePolicy", nome, tenant=tenant)
             raw = doc if isinstance(doc, dict) else None
             cand = (raw or {}).get("spec")
             if isinstance(cand, dict):
@@ -377,7 +377,7 @@ async def _load_spec(
 ) -> dict[str, Any]:
     """Load a doc's spec (deep-copied — the L2 cache hands back a shared ref)."""
     try:
-        raw = await kernel.get_document(scope, kind, name, tenant=tenant)
+        raw = await kernel.get_instance(scope, kind, name, tenant=tenant)
     except Exception:  # noqa: BLE001
         return {}
     if not raw:
@@ -422,14 +422,14 @@ async def recall(
 
     When ``reconsolidate`` is on, each surfaced memory gets a cues_history
     append + a small confidence bump (Nader light reconsolidation) via
-    ``kernel.write_document`` — fail-soft.
+    ``kernel.write_instance`` — fail-soft.
 
     **``as_of`` — the belief state (s-memory-as-of).** The second time axis.
     Without it, behaviour is bit-for-bit what it always was. With it, recall
     answers *"what did the system BELIEVE at T?"* instead of *"what does it
     believe now?"*: every hit's spec is resolved from the store's retained
     version recorded at or before ``as_of`` (``dna_versions.created_at`` —
-    transaction time), not from the current document.
+    transaction time), not from the current instance.
 
     Not to be confused with ``now``, which is world time. ``now`` shifts the
     ``valid_to`` filter and still hands back TODAY's spec for every hit; a note
@@ -620,7 +620,7 @@ async def _reconsolidate(
             api_version = _resolve_api_version(kernel, "Engram")
             if api_version:
                 raw["apiVersion"] = api_version
-            await write_kernel.write_document(
+            await write_kernel.write_instance(
                 scope, "Engram", name, raw, invalidate_mode="doc",
             )
         except Exception as exc:  # noqa: BLE001 — recall must not fail on a bump hiccup
@@ -663,7 +663,7 @@ async def forget(
         kernel.with_tenant(tenant, allow_personal=is_personal_tenant(tenant))
         if tenant else kernel
     )
-    await write_kernel.write_document(scope, kind, name, raw, invalidate_mode="doc")
+    await write_kernel.write_instance(scope, kind, name, raw, invalidate_mode="doc")
     return {
         "kind": kind, "name": name,
         "valid_to": valid_to, "already_forgotten": already,
@@ -684,8 +684,8 @@ async def first_recorded_at(
     """When the store FIRST came to believe each memory — transaction time.
 
     The second clock degrau 0 opened (``dna_versions.created_at``), asked in the
-    other direction: ``recall(as_of=)`` reads a document AT an instant, this
-    reads the instant a document ENTERED. It is the clock the contradiction
+    other direction: ``recall(as_of=)`` reads an instance AT an instant, this
+    reads the instant an instance ENTERED. It is the clock the contradiction
     report's proposal rests on, and the spec's own ``created_at`` is not a
     substitute — that one is authored, so a memory can claim any birthday it
     likes and a correction filed today can claim to predate what it corrects.
@@ -1037,7 +1037,7 @@ async def import_mif_docs(
                 }
                 if memory_api_version:
                     raw_doc["apiVersion"] = memory_api_version
-                await write_kernel.write_document(
+                await write_kernel.write_instance(
                     scope, "Memory", name, raw_doc, invalidate_mode="doc"
                 )
                 existing_passthrough_ids.add(doc_id)
@@ -1052,7 +1052,7 @@ async def import_mif_docs(
                 }
                 if engram_api_version:
                     e_raw["apiVersion"] = engram_api_version
-                await write_kernel.write_document(
+                await write_kernel.write_instance(
                     scope, "Engram", engram_name, e_raw, invalidate_mode="doc"
                 )
                 existing_engram_mif_ids.add(doc_id)

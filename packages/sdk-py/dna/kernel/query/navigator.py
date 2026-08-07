@@ -8,7 +8,7 @@ from __future__ import annotations
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from dna.kernel.instance import ManifestInstance
+    from dna.kernel.manifest import ManifestInstance
 
 from dna.kernel.preview import PreviewBlock, generic_spec_dump
 
@@ -20,7 +20,7 @@ class Navigator:
         self._host = host
 
     def describe(self, kind: str, name: str) -> str:
-        """Describe a single document.
+        """Describe a single instance.
 
         Equivalent to ``mi.describe(kind, name)``.
         """
@@ -104,13 +104,13 @@ class Navigator:
 
             kinds_data[kind_name] = {
                 "count": len(docs),
-                "documents": doc_entries,
+                "instances": doc_entries,
             }
 
         comp = self._host.composition_result
         return {
             "scope": self._host.scope,
-            "total_documents": len(self._host.documents),
+            "total_instances": len(self._host.instances),
             "kinds": kinds_data,
             "composition": {
                 "valid": comp.valid,

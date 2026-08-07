@@ -128,7 +128,7 @@ def test_claim_inherits_the_memorys_bitemporal_window():
 
 
 def test_parse_never_raises_on_a_stored_malformation():
-    """This reads DOCUMENTS. A malformed claim that got past both doors must be
+    """This reads INSTANCES. A malformed claim that got past both doors must be
     SKIPPED, never able to take a consolidation pass down."""
     spec = _mem("x", area="Story/s-1", claims=[
         "a string", {"no": "predicate"}, {"predicate": "p", "polarity": "maybe"},
@@ -484,7 +484,7 @@ def test_the_rules_verdict_is_distinguishable_from_the_models():
     assert {c["decided_by"] for c in report["contradictions"]} == {"rule", "scribe"}
 
 
-# ── the OTHER door: the Engram schema a raw write_document reads ─────────────
+# ── the OTHER door: the Engram schema a raw write_instance reads ─────────────
 
 
 def _find_claims_description(node) -> str:
@@ -506,7 +506,7 @@ def _find_claims_description(node) -> str:
 
 
 def test_the_engram_schema_states_when_a_claim_is_worth_declaring():
-    """``write_document`` on an Engram never sees a tool description.
+    """``write_instance`` on an Engram never sees a tool description.
 
     The three verb faces announce ``WHEN_TO_CLAIM``; this door reads only the
     Kind schema, and a door told WHAT a claim is without being told WHEN is the

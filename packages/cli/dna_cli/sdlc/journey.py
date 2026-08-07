@@ -94,10 +94,10 @@ def _write_feature_reflect_workflow_event(
                 psp = dict(prev_open.spec) if isinstance(prev_open.spec, dict) else {}
                 psp["ended_at"] = now
                 praw = _build_raw("WorkflowEvent", prev_open.name, psp)
-                s.run(s.kernel.write_document(scope, "WorkflowEvent", prev_open.name, praw))
+                s.run(s.kernel.write_instance(scope, "WorkflowEvent", prev_open.name, praw))
                 spec["transitioned_from"] = prev_open.name
             raw = _build_raw("WorkflowEvent", name, spec)
-            s.run(s.kernel.write_document(scope, "WorkflowEvent", name, raw))
+            s.run(s.kernel.write_instance(scope, "WorkflowEvent", name, raw))
         return name
     except Exception:  # noqa: BLE001 — best-effort observability
         return None
@@ -402,11 +402,11 @@ def cmd_journey_enter(
             psp = dict(prev_open.spec) if isinstance(prev_open.spec, dict) else {}
             psp["ended_at"] = now
             praw = _build_raw("WorkflowEvent", prev_open.name, psp)
-            s.run(s.kernel.write_document(scope, "WorkflowEvent", prev_open.name, praw))
+            s.run(s.kernel.write_instance(scope, "WorkflowEvent", prev_open.name, praw))
             spec["transitioned_from"] = prev_open.name
         # Write the new entry.
         raw = _build_raw("WorkflowEvent", name, spec)
-        s.run(s.kernel.write_document(scope, "WorkflowEvent", name, raw))
+        s.run(s.kernel.write_instance(scope, "WorkflowEvent", name, raw))
     click.secho(
         f"ENTERED {phase} → WorkflowEvent/{name} (ref={ref}, parent={parent_ref}, methodology={methodology})",
         fg="cyan",
@@ -663,7 +663,7 @@ def cmd_journey_transition(
         if not psp.get("ended_at"):
             psp["ended_at"] = now
             praw = _build_raw("WorkflowEvent", prev.name, psp)
-            s.run(s.kernel.write_document(scope, "WorkflowEvent", prev.name, praw))
+            s.run(s.kernel.write_instance(scope, "WorkflowEvent", prev.name, praw))
 
         # Open next. Compute skipped_phases — by default from prev_phase
         # → next_phase; --skip-from override widens the window when the
@@ -728,7 +728,7 @@ def cmd_journey_transition(
         if inline_plan:
             spec["inline_plan"] = inline_plan
         raw = _build_raw("WorkflowEvent", name, spec)
-        s.run(s.kernel.write_document(scope, "WorkflowEvent", name, raw))
+        s.run(s.kernel.write_instance(scope, "WorkflowEvent", name, raw))
 
     click.secho(
         f"TRANSITIONED {prev_phase} → {next_phase} for {parent_ref}",
@@ -1409,7 +1409,7 @@ def cmd_journey_close_cycle(
         if not rsp.get("ended_at"):
             rsp["ended_at"] = now
             rraw = _build_raw("WorkflowEvent", latest_reflect.name, rsp)
-            s.run(s.kernel.write_document(scope, "WorkflowEvent", latest_reflect.name, rraw))
+            s.run(s.kernel.write_instance(scope, "WorkflowEvent", latest_reflect.name, rraw))
 
         # Build the new discover entry seeded from this reflect.
         next_name = _entry_name(parent_ref, "discover")
@@ -1434,7 +1434,7 @@ def cmd_journey_close_cycle(
             "tags": ["seeded"],
         }
         nraw = _build_raw("WorkflowEvent", next_name, next_spec)
-        s.run(s.kernel.write_document(scope, "WorkflowEvent", next_name, nraw))
+        s.run(s.kernel.write_instance(scope, "WorkflowEvent", next_name, nraw))
 
         # Auto-Narrative — synthesize a retro Narrative summarizing the
         # cycle that just closed. Skipped when --no-narrative is passed.
@@ -1462,7 +1462,7 @@ def cmd_journey_close_cycle(
                         suffix += 1
                     nname = f"{nname}-{suffix}"
                 nraw = _build_raw("Narrative", nname, nspec)
-                s.run(s.kernel.write_document(scope, "Narrative", nname, nraw))
+                s.run(s.kernel.write_instance(scope, "Narrative", nname, nraw))
                 narrative_written = nname
             except Exception as exc:  # noqa: BLE001
                 # Soft-fail: cycle close succeeded, narrative is best-effort.
@@ -1643,7 +1643,7 @@ def cmd_demand(
             }
             _append_timeline(feat_spec, "status_change", to="discovery")
             feat_raw = _build_raw("Feature", feature, feat_spec)
-            s.run(s.kernel.write_document(scope, "Feature", feature, feat_raw))
+            s.run(s.kernel.write_instance(scope, "Feature", feature, feat_raw))
             click.secho(
                 f"AUTO-CREATED Feature/{feature} (epic: {epic_ref})",
                 fg="yellow",
@@ -1689,7 +1689,7 @@ def cmd_demand(
         _append_timeline(story_spec, "status_change", **{"from": "todo", "to": "in-progress"})
 
         story_raw = _build_raw("Story", story_slug, story_spec)
-        s.run(s.kernel.write_document(scope, "Story", story_slug, story_raw))
+        s.run(s.kernel.write_instance(scope, "Story", story_slug, story_raw))
 
         # 2) Open the discover WorkflowEvent referencing the new Story.
         parent_ref = f"Feature/{feature}"
@@ -1719,11 +1719,11 @@ def cmd_demand(
             psp = dict(prev_open.spec) if isinstance(prev_open.spec, dict) else {}
             psp["ended_at"] = now
             praw = _build_raw("WorkflowEvent", prev_open.name, psp)
-            s.run(s.kernel.write_document(scope, "WorkflowEvent", prev_open.name, praw))
+            s.run(s.kernel.write_instance(scope, "WorkflowEvent", prev_open.name, praw))
             entry_spec["transitioned_from"] = prev_open.name
 
         entry_raw = _build_raw("WorkflowEvent", entry_name, entry_spec)
-        s.run(s.kernel.write_document(scope, "WorkflowEvent", entry_name, entry_raw))
+        s.run(s.kernel.write_instance(scope, "WorkflowEvent", entry_name, entry_raw))
 
     if as_json:
         import json

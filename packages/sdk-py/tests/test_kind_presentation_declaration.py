@@ -5,7 +5,7 @@ an MCP Apps card. Two descriptions of one thing drift, and a new Kind needed
 both. What is shared between those two surfaces is NOT the framework — a React
 screen and a sandboxed prefab iframe cannot and should not share one — it is
 what the DATA MEANS: which fields a human reads, in what order, what to call
-them, which one names the document, which one is its state, and which are
+them, which one names the instance, which one is its state, and which are
 machinery.
 
 So this is deliberately NOT a layout language. There is no column, no width,
@@ -66,7 +66,7 @@ def test_the_role_vocabulary_is_closed_and_stated_here():
 
 
 def test_the_roles_a_document_can_only_have_one_of_are_declared():
-    """A document has one name, one headline and one state. Two fields
+    """An instance has one name, one headline and one state. Two fields
     claiming ``status`` is a declaration error, not a rendering choice the
     surface should have to break the tie for."""
     assert SINGULAR_ROLES == ("identifier", "title", "subtitle", "status")
@@ -172,7 +172,7 @@ def test_the_wire_form_is_stable_and_carries_the_kinds_own_label():
 
 
 def test_the_projection_reads_name_from_the_envelope_and_the_rest_from_spec():
-    """``name`` is the document's envelope identity — it is not a spec field
+    """``name`` is the instance's envelope identity — it is not a spec field
     on any Kind, and every list surface in the repo already treats it that
     way. Everything else resolves under ``spec``."""
     p = normalize_presentation(["name", "title", "status"])
@@ -235,7 +235,7 @@ def test_a_kind_that_declares_none_reports_none():
 def test_a_tenant_kind_definition_declares_it_in_the_same_words():
     """THE constraint. A presentation only a builtin extension could declare
     would make every tenant-authored Kind second-class, and the feature would
-    serve nobody but us. A ``KindDefinition`` document carries the identical
+    serve nobody but us. A ``KindDefinition`` instance carries the identical
     block, through the identical normalizer, onto the identical port
     attribute."""
     from dna.kernel.meta import DeclarativeKindPort
@@ -296,7 +296,7 @@ def test_the_two_kind_definition_schema_copies_are_byte_identical():
 def test_the_schema_declares_presentation_with_the_closed_role_vocabulary():
     """The JSON Schema is what a tenant's editor autocompletes against, so the
     role enum must be the SAME closed set the normalizer enforces — two lists
-    that drift would let a document validate and then fail to load."""
+    that drift would let an instance validate and then fail to load."""
     schema = json.loads(
         (_SDK / "dna" / "kernel" / "schemas" / "kind-definition.schema.json")
         .read_text(encoding="utf-8")
@@ -438,7 +438,7 @@ def test_the_authored_kind_projection_publishes_the_presentation():
 
 
 def test_a_stored_declaration_that_no_longer_normalizes_reads_as_none():
-    """A document stored before a validation tightened must not crash the
+    """An instance stored before a validation tightened must not crash the
     audit read. It reports ``None`` — "this Kind declares no presentation I can
     read" — rather than half a declaration that looks authored."""
     from dna.application.kind_authoring import authored_kind_presentation

@@ -11,10 +11,10 @@ deltas intencionais vs a classe extinta, pinados nos testes:
   - summary projeta ``spec.get(campo, default)`` — só campo AUSENTE cai no
     default; presente-mas-falsy (labels: null) volta as-is. A classe
     coalescia falsy (``or []``) só em labels.
-  - summary exige doc objeto (``.spec``); bare-dict NÃO é Document e
+  - summary exige doc objeto (``.spec``); bare-dict NÃO é Instance e
     projeta os defaults. A classe aceitava bare-dict defensivamente (todos
     os call-sites reais — viz/health, viz/ascii, list endpoints — passam
-    Document).
+    Instance).
   - parse VALIDA contra o schema (a classe era pass-through,
     validate_on_parse=False) — upgrade de validação; no kernel um doc
     inválido vira typed=None + evento parse_error, nunca crash de load.
@@ -54,10 +54,20 @@ GOLDEN_SCHEMA = {
             # is gone by the afternoon: the declaration moved out of the JSON
             # Schema entirely and into `spec.relations` (see
             # kinds/kaizen.kind.yaml, where the form is normalized to
-            # `Kind/name` — a document's slug IS its name). The golden is
+            # `Kind/name` — an instance's slug IS its name). The golden is
             # therefore back to the shape the ORIGINAL class produced, and the
             # VALUE contract never moved at all.
-            "description": "Kind/slug of the work item where this was observed (polymorphic — Story/Spike/Issue).",
+            #
+            # THIRD re-freeze, same day, and this one is a CORRECTION rather
+            # than a move. The old prose named three Kinds; `dna sdlc kaizen`
+            # has always accepted the whole work-item family (`sdlc_cmd.py`
+            # refuses on `_WORK_ITEM_KINDS`, eight members), so the extinct
+            # class's description was wrong about the runtime it described, and
+            # freezing a wrong line does not make it right. It now points at
+            # `relations.work_item.to` — the ONE place the family is stated —
+            # so it cannot go stale against it again. The VALUE contract still
+            # has not moved.
+            "description": "Kind/slug of the work item where this was observed — polymorphic over the work-item family (see relations.work_item).",
         },
         "issue": {
             "type": "string",
@@ -245,9 +255,9 @@ def test_summary_falsy_present_port_semantics_canonical(port):
 
 
 def test_summary_bare_dict_port_semantics_canonical(port):
-    """NOTA do plano: bare-dict não é Document — sem `.spec`, projeta os
+    """NOTA do plano: bare-dict não é Instance — sem `.spec`, projeta os
     defaults declarados. A classe extinta lia o dict direto; canônico é o
-    port (call-sites reais passam Document)."""
+    port (call-sites reais passam Instance)."""
     assert port.summary(dict(_FULL_SPEC)) == GOLDEN_SUMMARY_DEFAULTS
 
 

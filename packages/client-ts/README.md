@@ -1,7 +1,7 @@
 # dna-client (TypeScript)
 
 The **official TypeScript client for the DNA REST API** (`dna api serve`).
-It is **generated from the API's OpenAPI document** (`docs/openapi.json`, dumped
+It is **generated from the API's OpenAPI instance** (`docs/openapi.json`, dumped
 from the FastAPI app), so it never drifts from the live routes — consumers stop
 hand-rolling `fetch`.
 

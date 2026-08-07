@@ -17,7 +17,7 @@ the state here would break the shared-dict contract, so it deliberately does not
 
 Behavior-preserving: ``_catalog_scopes`` / ``_compute_catalog_scopes`` /
 ``_invalidate_catalog_cache`` move here verbatim; the kernel keeps all three as
-thin delegators (write_document + routes/catalog.py call them). Fail-soft: any
+thin delegators (write_instance + routes/catalog.py call them). Fail-soft: any
 scan/lockfile error → ``[]`` cached for the TTL (a Catalog glitch must never
 crash a resolution). A back-ref collaborator that queries through ``k`` (whose
 ``query`` auto-stamps ``k.tenant``), so ``with_tenant`` rebinds it to the copy.
@@ -54,7 +54,7 @@ class CatalogCache:
 
         Cached per tenant with TTL ``_GRANULAR_DOC_TTL`` (60s) — a backstop; the
         authoritative refresh is the explicit ``invalidate`` on Genome writes
-        (``write_document``) and the install path (``routes/catalog.py`` writes
+        (``write_instance``) and the install path (``routes/catalog.py`` writes
         the lockfile directly). The ``exclude`` set is applied AFTER the cache
         (the cached value holds every Catalog scope; per-call exclusion is cheap
         and keeps the cache key tenant-only).
@@ -150,7 +150,7 @@ class CatalogCache:
     def invalidate(self, tenant: "str | None" = None) -> None:
         """Drop the Catalog scope cache — one tenant, or ALL when ``tenant`` is
         ``None`` (a Genome write changes the mandatory set for EVERY tenant, so
-        ``write_document(kind=Genome)`` calls this with no arg). The install
+        ``write_instance(kind=Genome)`` calls this with no arg). The install
         path passes the specific tenant whose lockfile it just wrote. Mutates the
         kernel-owned shared dict in place (identity preserved)."""
         cache = self._k._catalog_cache

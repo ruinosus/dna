@@ -21,10 +21,10 @@ first if you have never loaded a scope.
   souls.
 - **[How to add a Kind](add-a-kind.md)** — ship a new Kind + Extension (or a
   record-style Kind as pure data) in about thirty minutes.
-- **[How to read document data](read-document-data.md)** — the blessed query
+- **[How to read instance data](read-instance-data.md)** — the blessed query
   surface: the one documented way to read manifest data in either SDK.
 
-- **[Copilot kits — a complete flow installed as documents](copilot-kits.md)** —
+- **[Copilot kits — a complete flow installed as instances](copilot-kits.md)** —
   `dna copilot install <dir>`: the Kind, the Agent and the Copilot (with its
   `surfaces[]` flow) written through the kernel door, with the human approval
   gate intact (`--approve` stamps the operator).
@@ -66,7 +66,7 @@ first if you have never loaded a scope.
 ## Lifecycle
 
 - **[Your git log is your SDLC](sdlc.md)** — how this repo tracks its own
-  lifecycle as DNA documents and stamps every commit and PR.
+  lifecycle as DNA instances and stamps every commit and PR.
 
 ## Operations
 

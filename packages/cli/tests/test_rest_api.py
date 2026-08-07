@@ -267,7 +267,7 @@ def _seed_intel_and_run(dna_dir, source="copiloto-medico", tenant="acme"):
 
     async def go():
         live = await M.boot_live(base_dir=str(dna_dir))
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             _SCOPE, "IntelSource", source,
             {
                 "apiVersion": "github.com/ruinosus/dna/intel/v1",
@@ -426,10 +426,10 @@ def _seed_portfolio(dna_dir, *, tenant="acme"):
     async def go():
         live = await M.boot_live(base_dir=str(dna_dir))
         for d in tenant_docs:
-            await live.kernel.write_document(
+            await live.kernel.write_instance(
                 _SCOPE, d["kind"], d["metadata"]["name"], d, tenant=tenant)
         for d in global_docs:
-            await live.kernel.write_document(
+            await live.kernel.write_instance(
                 _SCOPE, d["kind"], d["metadata"]["name"], d, tenant=None)
 
     asyncio.run(go())
@@ -516,7 +516,7 @@ def test_portfolio_board_items_is_full_not_recent(dna_dir):
                    "spec": {"name": name, "title": f"Extra {i}",
                             "description": f"extra story {i}", "status": "todo",
                             "created_at": f"2026-07-0{i+1}T09:00:00+00:00"}}
-            await live.kernel.write_document(_SCOPE, "Story", name, doc, tenant=None)
+            await live.kernel.write_instance(_SCOPE, "Story", name, doc, tenant=None)
 
     asyncio.run(go())
     with _client(dna_dir) as c:
@@ -566,7 +566,7 @@ def _seed_work_item(dna_dir):
 
     async def go():
         live = await M.boot_live(base_dir=str(dna_dir))
-        await live.kernel.write_document(_SCOPE, "Story", "s-rich", doc, tenant=None)
+        await live.kernel.write_instance(_SCOPE, "Story", "s-rich", doc, tenant=None)
 
     asyncio.run(go())
 
@@ -663,7 +663,7 @@ def _seed_members(dna_dir, *, tenant="acme"):
     async def go():
         live = await M.boot_live(base_dir=str(dna_dir))
         for d in [*roles, *members]:
-            await live.kernel.write_document(
+            await live.kernel.write_instance(
                 _SCOPE, d["kind"], d["metadata"]["name"], d, tenant=tenant)
 
     asyncio.run(go())
@@ -1061,7 +1061,7 @@ def test_o_app_expoe_o_kernel_vivo_que_ele_ja_abre(dna_dir):
     para ler as mesmas linhas.
 
     Não é micro-otimização. Dois kernels sobre a mesma fonte são duas caches de
-    Kind e duas janelas de refresh; um documento reescrito passa a ficar visível
+    Kind e duas janelas de refresh; uma instância reescrito passa a ficar visível
     numa e não na outra, e o sintoma aparece longe da causa.
 
     `app.state.live` é a MESMA corrotina memoizada que as rotas usam — não um

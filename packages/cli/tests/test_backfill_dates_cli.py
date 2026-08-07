@@ -1,4 +1,4 @@
-"""``dna sdlc backfill-dates`` — the repair for documents filed before i-078.
+"""``dna sdlc backfill-dates`` — the repair for instances filed before i-078.
 
 Two layers, like the rest of the SDLC CLI:
 
@@ -84,7 +84,7 @@ def test_index_by_doc_name_handles_flat_files_and_bundle_directories():
     })
     assert indexed["i-001-legacy"] == ("2026-03-01T08:00:00+00:00",
                                        "2026-04-09T17:00:00+00:00")
-    # A bundle's entries collapse onto the document: earliest add, latest touch.
+    # A bundle's entries collapse onto the instance: earliest add, latest touch.
     assert indexed["plan-x"] == ("2026-01-15T00:00:00+00:00",
                                  "2026-03-20T00:00:00+00:00")
 
@@ -132,7 +132,7 @@ def test_backfill_dates_leaves_an_undatable_document_alone_and_says_so(
     result = sdlc_runner.invoke(sdlc, ["backfill-dates"])
     assert result.exit_code == 0, result.output
     spec = store[(_SCOPE, "Issue", "i-003-orphan")]["spec"]
-    assert "created_at" not in spec, "invented a date for an undatable document"
+    assert "created_at" not in spec, "invented a date for an undatable instance"
     assert "undatable" in result.output
     assert "1 left undatable" in result.output
 

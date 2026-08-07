@@ -44,7 +44,7 @@ def live(tmp_path: Path) -> LiveDna:
     _write(base / _BASE / "agents" / "assistant.yaml",
            _doc("Agent", "assistant", {"instruction": "Base agent."}))
     # Record-plane Kinds (plane: record in their descriptors) — deliberately
-    # absent from ``mi.documents``; the definitions read must still find them.
+    # absent from ``mi.instances``; the definitions read must still find them.
     _write(base / _BASE / "tools" / "ping.yaml",
            _doc("Tool", "ping", {"type": "http", "endpoint": "https://example.test/ping"}))
     _write(base / _BASE / "copilots" / "concierge.yaml",
@@ -89,7 +89,7 @@ async def live_sqlite(tmp_path: Path):
         ("Genome", _BASE, {}),
         ("Agent", "assistant", {"instruction": "Base agent."}),
     ]:
-        await k.write_document(_BASE, kind, name, _doc(kind, name, spec))
+        await k.write_instance(_BASE, kind, name, _doc(kind, name, spec))
     try:
         yield LiveDna(base_scope=_BASE, kernel=k, provider=None,
                       vendor_workspace=None, workspace_definitions_base=_BASE)
@@ -147,7 +147,7 @@ async def test_apply_with_spec_equal_to_base_still_shows_overridden(live: LiveDn
 # ── record-plane Kinds (Tool, Copilot, …) — i-076 ────────────────────────────
 #
 # 35 of the registered Kinds declare ``plane: record`` in their descriptor, and
-# the instance builder deliberately keeps those out of ``mi.documents`` (the MI
+# the instance builder deliberately keeps those out of ``mi.instances`` (the MI
 # is O(composition)). The definitions API must not inherit that exclusion: it
 # knows exactly which (kind, name) it wants, so it resolves record Kinds through
 # the kernel record plane instead. Before the fix these read paths raised

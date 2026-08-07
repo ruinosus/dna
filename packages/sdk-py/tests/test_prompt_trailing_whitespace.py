@@ -62,7 +62,7 @@ def _mk_scope(tmp_path: Path, scope: str = "pilot-scope") -> Path:
 def mi(tmp_path):
     _mk_scope(tmp_path)
     m = Kernel.quick("pilot-scope", base_dir=str(tmp_path))
-    _ = m.documents  # materialize on the sync path (async tests reuse the cache)
+    _ = m.instances  # materialize on the sync path (async tests reuse the cache)
     return m
 
 
@@ -93,7 +93,7 @@ class TestTrailingNewlineLeak:
     def test_storage_byte_fidelity_untouched(self, mi):
         """The strip is composition-only: the raw doc read from the
         kernel keeps the trailing newline exactly as stored on disk."""
-        doc = next(d for d in mi.documents if d.kind == "Soul")
+        doc = next(d for d in mi.instances if d.kind == "Soul")
         assert doc.spec["soul_content"] == SOUL_BODY  # trailing \n intact
 
 
@@ -108,7 +108,7 @@ class TestPromptKernelLazyPath:
     async def test_lazy_build_prompt_no_leak(self):
         from types import SimpleNamespace
 
-        from dna.kernel.document import Document
+        from dna.kernel.instance import Instance
         from dna.kernel.prompt.engine import build_prompt_async
 
         agent_raw = {
@@ -132,7 +132,7 @@ class TestPromptKernelLazyPath:
 
         def _parse(raw, origin="local"):
             meta = raw.get("metadata", {}) or {}
-            return Document(
+            return Instance(
                 api_version=raw.get("apiVersion", "v1"), kind=raw["kind"],
                 name=meta.get("name", ""), metadata=meta,
                 spec=raw.get("spec", {}) or {},
@@ -165,8 +165,8 @@ class TestPromptKernelLazyPath:
                 yield dict(soul_raw)
 
         kernel = SimpleNamespace(
-            get_document=_get,
-            list_documents=_list,
+            get_instance=_get,
+            list_instances=_list,
             query=_query,
             _parse_doc=_parse,
             _kinds={

@@ -30,7 +30,7 @@ uv run python ../../examples/hello-genome/run.py
 
 It does three things:
 
-1. **Scan** the scope: every document comes back identified by
+1. **Scan** the scope: every instance comes back identified by
    `(apiVersion, kind, name)`.
 2. **Typed access**: the Skill's frontmatter is parsed into a typed model.
 3. **Compose**: `build_prompt(agent="greeter")` renders the agent's

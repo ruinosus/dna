@@ -74,7 +74,7 @@ def test_o_escopo_PEDIDO_e_um_campo_SEPARADO_do_concedido():
 
 
 def test_o_schema_e_FECHADO():
-    """`additionalProperties: false` — um campo a mais num documento de
+    """`additionalProperties: false` — um campo a mais numa instância de
     AUTORIZAÇÃO é a forma mais silenciosa de alguém anexar permissão."""
     assert _erros(_spec(admin=True)), "o schema aceitou um campo desconhecido"
 

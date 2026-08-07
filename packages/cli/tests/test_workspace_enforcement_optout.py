@@ -237,7 +237,7 @@ def _seed(dna_dir, *, calls_per_day: int | None = None):
     PricingPlan with a tight daily cap so metering is OBSERVABLE."""
     async def go():
         live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             "_lib", "WorkspaceMembership", "ws-a--alice-at-a-com",
             {
                 "apiVersion": "github.com/ruinosus/dna/tenant/v1",
@@ -249,7 +249,7 @@ def _seed(dna_dir, *, calls_per_day: int | None = None):
             },
         )
         if calls_per_day is not None:
-            await live.kernel.write_document(
+            await live.kernel.write_instance(
                 "_lib", "PricingPlan", "free",
                 {
                     "apiVersion": "github.com/ruinosus/dna/cloud/v1",

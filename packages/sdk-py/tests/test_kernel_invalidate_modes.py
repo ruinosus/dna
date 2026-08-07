@@ -1,4 +1,4 @@
-"""Tests for R2-fix — Kernel.write_document(invalidate_mode=...).
+"""Tests for R2-fix — Kernel.write_instance(invalidate_mode=...).
 
 Three tiers:
 - scope (default): full Phase-15.1 invalidate (drop _kcache._base + holder.reload).
@@ -22,14 +22,14 @@ class _FakeWritableSource:
         self.save_calls: list[tuple] = []
         self.delete_calls: list[tuple] = []
 
-    async def save_document(
+    async def save_instance(
         self, scope, kind, name, raw,
         author=None, *, tenant=None, layer=None,
     ) -> str:
         self.save_calls.append((scope, kind, name, tenant, layer))
         return "v1"
 
-    async def delete_document(
+    async def delete_instance(
         self, scope, kind, name, *, tenant=None, layer=None,
     ) -> None:
         self.delete_calls.append((scope, kind, name, tenant, layer))
@@ -147,7 +147,7 @@ async def test_scope_mode_drops_base_cache_and_calls_holder_reload():
     k, _src, holder = _wire_mock_kernel()
     assert "scope-x" in k._kcache._base  # precondition
 
-    await k.write_document(
+    await k.write_instance(
         "scope-x", "Agent", "talent-screener",
         {"kind": "Agent", "metadata": {"name": "talent-screener"}, "spec": {}},
     )
@@ -165,7 +165,7 @@ async def test_scope_mode_invalidates_granular_cache():
     k, _src, _holder = _wire_mock_kernel()
     granular = _track_granular_invalidate(k)
 
-    await k.write_document(
+    await k.write_instance(
         "scope-x", "Engram", "rem-foo",
         {"kind": "Engram", "metadata": {"name": "rem-foo"}, "spec": {}},
     )
@@ -180,7 +180,7 @@ async def test_doc_mode_does_NOT_drop_base_cache():
     k, _src, _holder = _wire_mock_kernel()
     cached_mi = k._kcache._base["scope-x"]
 
-    await k.write_document(
+    await k.write_instance(
         "scope-x", "Engram", "rem-sidecar",
         {"kind": "Engram", "metadata": {"name": "rem-sidecar"}, "spec": {}},
         invalidate_mode="doc",
@@ -194,7 +194,7 @@ async def test_doc_mode_does_NOT_drop_base_cache():
 async def test_doc_mode_does_NOT_trigger_holder_reload():
     k, _src, holder = _wire_mock_kernel()
 
-    await k.write_document(
+    await k.write_instance(
         "scope-x", "WorkflowEvent", "je-foo",
         {"kind": "WorkflowEvent", "metadata": {"name": "je-foo"}, "spec": {}},
         invalidate_mode="doc",
@@ -212,7 +212,7 @@ async def test_doc_mode_DOES_invalidate_granular_cache():
     k, _src, _holder = _wire_mock_kernel()
     granular = _track_granular_invalidate(k)
 
-    await k.write_document(
+    await k.write_instance(
         "scope-x", "Engram", "rem-foo",
         {"kind": "Engram", "metadata": {"name": "rem-foo"}, "spec": {}},
         invalidate_mode="doc",
@@ -229,7 +229,7 @@ async def test_none_mode_skips_all_invalidation():
     cached_mi = k._kcache._base["scope-x"]
     granular = _track_granular_invalidate(k)
 
-    await k.write_document(
+    await k.write_instance(
         "scope-x", "Engram", "rem-foo",
         {"kind": "Engram", "metadata": {"name": "rem-foo"}, "spec": {}},
         invalidate_mode="none",
@@ -249,7 +249,7 @@ async def test_write_observers_fire_in_all_modes(mode):
     k, _src, _holder = _wire_mock_kernel()
     fire = _track_fire_observers(k)
 
-    await k.write_document(
+    await k.write_instance(
         "scope-x", "Engram", "rem-foo",
         {"kind": "Engram", "metadata": {"name": "rem-foo"}, "spec": {}},
         invalidate_mode=mode,
@@ -266,21 +266,21 @@ async def test_write_observers_fire_in_all_modes(mode):
 async def test_invalid_mode_raises():
     k, _src, _holder = _wire_mock_kernel()
     with pytest.raises(ValueError, match="invalidate_mode"):
-        await k.write_document(
+        await k.write_instance(
             "scope-x", "Engram", "rem-foo",
             {"kind": "Engram", "metadata": {"name": "rem-foo"}, "spec": {}},
             invalidate_mode="bogus",
         )
 
 
-# ---------- delete_document parity ----------
+# ---------- delete_instance parity ----------
 
 @pytest.mark.asyncio
 async def test_delete_doc_mode_skips_holder_reload():
     k, _src, holder = _wire_mock_kernel()
     cached_mi = k._kcache._base["scope-x"]
 
-    await k.delete_document(
+    await k.delete_instance(
         "scope-x", "Engram", "rem-foo", invalidate_mode="doc",
     )
 
@@ -294,6 +294,6 @@ async def test_delete_doc_mode_skips_holder_reload():
 async def test_delete_invalid_mode_raises():
     k, _src, _holder = _wire_mock_kernel()
     with pytest.raises(ValueError, match="invalidate_mode"):
-        await k.delete_document(
+        await k.delete_instance(
             "scope-x", "Engram", "rem-foo", invalidate_mode="bogus",
         )

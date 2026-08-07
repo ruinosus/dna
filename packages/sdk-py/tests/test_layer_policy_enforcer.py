@@ -83,7 +83,7 @@ def test_restricted_new_doc_raises():
         policies_for_layer=[_lp_doc("tenant-a", "owner-skill", "restricted")],
         existing=None,  # not present in base → adding new doc
     )
-    with pytest.raises(LayerPolicyViolationError, match="cannot add new document"):
+    with pytest.raises(LayerPolicyViolationError, match="cannot add new instance"):
         _enforce(_enforcer(), mi)
 
 

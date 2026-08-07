@@ -1,4 +1,4 @@
-"""``dna sdlc backfill-dates`` — repair documents filed before i-078.
+"""``dna sdlc backfill-dates`` — repair instances filed before i-078.
 
 ``build_issue_spec`` and ``dna sdlc issue file`` both wrote an Issue without
 ``spec.created_at``, and the digest dates a filed Issue by exactly that field —
@@ -6,13 +6,13 @@ so every Issue ever filed was invisible in the digest's ``found`` bucket. The
 writers are fixed; this repairs what is already on disk.
 
 The decision the repair turns on is *what date to write*, and it lives in the
-pure core (:func:`dna.application.sdlc.plan_date_repair`): the document's own
+pure core (:func:`dna.application.sdlc.plan_date_repair`): the instance's own
 timeline first, the git commit that ADDED the file second, and — explicitly —
 nothing third. This module supplies the two impure inputs the core cannot
-compute: the board's documents (via the kernel session) and the git history of
+compute: the board's instances (via the kernel session) and the git history of
 the scope directory.
 
-Idempotent: a document that already carries its declared stamps is untouched,
+Idempotent: an instance that already carries its declared stamps is untouched,
 so the verb is safe to re-run and safe to wire into a migration.
 """
 from __future__ import annotations
@@ -73,14 +73,14 @@ def parse_git_log(text: str) -> dict[str, tuple[str, str]]:
 
 
 def index_by_doc_name(paths: dict[str, tuple[str, str]]) -> dict[str, tuple[str, str]]:
-    """Re-key git dates from repo paths onto document names.
+    """Re-key git dates from repo paths onto instance names.
 
-    A document is stored either as ``<container>/<name>.yaml`` or, for bundle
+    An instance is stored either as ``<container>/<name>.yaml`` or, for bundle
     Kinds, as a ``<container>/<name>/`` directory — so both the file stem and
-    the parent directory name are plausible document names. Registering both
+    the parent directory name are plausible instance names. Registering both
     keeps this storage-shape-agnostic; when several paths map to one name (a
     bundle's entries) the earliest add and the latest touch win, which is
-    exactly the document's own span.
+    exactly the instance's own span.
     """
     out: dict[str, tuple[str, str]] = {}
     for path, (added, touched) in paths.items():
@@ -112,7 +112,7 @@ def git_dates_for_scope(scope: str) -> dict[str, tuple[str, str]]:
     """``doc name → (added_at, last_touched_at)`` from the git history of the
     scope directory. Empty (never raises) outside a working tree, without git,
     or for a non-filesystem source — the repair simply loses its second-choice
-    witness and reports the affected documents as undatable."""
+    witness and reports the affected instances as undatable."""
     directory = _scope_dir(scope)
     if directory is None:
         return {}
@@ -141,12 +141,12 @@ def git_dates_for_scope(scope: str) -> dict[str, tuple[str, str]]:
                    "surface dates — see DATED_SPEC_FIELDS).")
 @_scope_option
 def cmd_backfill_dates(dry_run: bool, only_kind: str | None, scope: str) -> None:
-    """Stamp the dates a document was filed without.
+    """Stamp the dates an instance was filed without.
 
     Repairs ``created_at`` / ``updated_at`` on every board Kind a read surface
     dates by (the digest's windows, the derived journey, recency sorts), taking
-    the value from the document's own timeline, else from the commit that added
-    its file. Documents with neither are LEFT ALONE and listed — inventing
+    the value from the instance's own timeline, else from the commit that added
+    its file. Instances with neither are LEFT ALONE and listed — inventing
     "now" would date them all as filed today and skew every digest window from
     here on. Idempotent; ``--dry-run`` previews.
     """
@@ -182,7 +182,7 @@ def cmd_backfill_dates(dry_run: bool, only_kind: str | None, scope: str) -> None
                 if dry_run:
                     continue
                 spec.update(fields)
-                s.run(s.kernel.write_document(
+                s.run(s.kernel.write_instance(
                     scope, kind, doc.name, _build_raw(kind, doc.name, spec),
                 ))
 

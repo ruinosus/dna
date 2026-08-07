@@ -12,7 +12,7 @@
 # and REJECTS unknown keys — so keep this as a `.sample` and drive the deploy
 # from the env vars above.
 
-# Where the DNA documents live. On the Container App this is the mounted Azure
+# Where the DNA instances live. On the Container App this is the mounted Azure
 # Files share (DNA_BASE_DIR=/mnt/dna); a Postgres source works too.
 source: file:///mnt/dna
 # source: postgresql://dna:dna@db.internal:5432/dna

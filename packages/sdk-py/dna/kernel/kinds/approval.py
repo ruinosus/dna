@@ -7,12 +7,12 @@ to that gate, and the reason it cannot be the absence of the second is a
 measured one:
 
     **Revoking is not the inverse of approving.** Removing the approval returns
-    the Kind to *unregistered*, and an unregistered Kind's documents are
+    the Kind to *unregistered*, and an unregistered Kind's instances are
     accepted with NO validation at all. So a revocation implemented as a plain
     un-approval LOOSENS instead of tightening — it switches the gate off rather
     than closing it.
 
-    state            existing documents      new documents
+    state            existing instances      new instances
     ---------------- ---------------------- ---------------------------
     never approved   —                       accepted WITHOUT validation
     approved         valid, routed           validated against the schema
@@ -20,7 +20,7 @@ measured one:
 
 Clearing ``approved_by`` is therefore indistinguishable from never having
 approved, and the revoked fact has to be PERSISTED. It is persisted the way the
-two acts already on this document are — by naming the actor of its own act
+two acts already on this instance are — by naming the actor of its own act
 (``revoked_by``/``revoked_at`` beside ``proposed_by``/``approved_by``), so a
 reader who understands the audit already understands this.
 
@@ -30,7 +30,7 @@ third state invites is a fourth reader that checks ``approved_by`` and not
 never read directly: :func:`approval_state` is the ONE reader, it returns a
 state rather than a field, and the states are exhaustive — there is no way to
 ask "is it approved?" that silently answers yes for a revoked Kind. Downstream
-of the funnel nobody reads the document at all: the state becomes a fact ON THE
+of the funnel nobody reads the instance at all: the state becomes a fact ON THE
 REGISTERED PORT (``__revoked__``), which is the surface every behaviour-
 conferring path already consults.
 
@@ -49,16 +49,16 @@ from typing import Any, Final
 __all__ = ["APPROVED", "REVOKED", "UNAPPROVED", "approval_state"]
 
 #: Authored, never approved. Parsed, logged, NOT registered — and therefore
-#: without effect: its documents are accepted unvalidated and unrouted.
+#: without effect: its instances are accepted unvalidated and unrouted.
 UNAPPROVED: Final = "unapproved"
 
-#: A human conferred effect. Registered: documents validate against the schema
+#: A human conferred effect. Registered: instances validate against the schema
 #: and route to the declared storage.
 APPROVED: Final = "approved"
 
 #: The workspace changed its mind. Registered — deliberately, because being
 #: KNOWN is what stops revocation from meaning "accepts anything" — but marked,
-#: so new documents are refused and existing ones read back invalid.
+#: so new instances are refused and existing ones read back invalid.
 REVOKED: Final = "revoked"
 
 

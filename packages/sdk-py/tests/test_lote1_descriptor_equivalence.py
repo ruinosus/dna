@@ -220,8 +220,8 @@ def test_curated_summary_projection(kernel, kind):
 
 @pytest.mark.parametrize("kind", KINDS)
 def test_summary_bare_dict_port_semantics(kernel, kind):
-    """NOTA do piloto: bare-dict não é Document — sem `.spec`, projeta os
-    defaults declarados (call-sites reais passam Document)."""
+    """NOTA do piloto: bare-dict não é Instance — sem `.spec`, projeta os
+    defaults declarados (call-sites reais passam Instance)."""
     port = _port(kernel, kind)
     full = _golden(kind)["summary_cases"]["full"]["spec"]
     out = port.summary(dict(full))
@@ -273,7 +273,7 @@ def test_engram_declares_embed_fields(kernel):
 
     Eram ``[summary, body]`` aqui e ``(area, title, summary, body)`` em
     ``dna.memory.semantic.ENGRAM_TEXT_FIELDS`` — o recall montava o vetor da
-    query com quatro planos e comparava contra um vetor de documento que nunca
+    query com quatro planos e comparava contra um vetor de instância que nunca
     viu dois deles. Agora são os mesmos quatro, e
     ``test_embeddable_is_not_recallable.py`` mantém os dois lados iguais."""
     from dna.memory.semantic import ENGRAM_TEXT_FIELDS

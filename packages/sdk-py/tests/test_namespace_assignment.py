@@ -1,8 +1,8 @@
 """A workspace is born with a usable namespace, ASSIGNED and stored.
 
-Never derived from the workspace id: apiVersion participates in a document's
+Never derived from the workspace id: apiVersion participates in an instance's
 identity key, so deriving would make renaming or migrating a workspace change
-the identity of every document in it — the defect i-080's form (b) exists to
+the identity of every instance in it — the defect i-080's form (b) exists to
 avoid.
 
 The kernel here is built the way ``test_kind_approval_gate.py`` builds its
@@ -54,7 +54,7 @@ async def _store_claim(
 ) -> None:
     """Write a ``KindNamespace`` claim directly — a claim that was already there
     before ``assign_namespace`` ever ran, in exactly the shape it must find."""
-    await live_kernel.write_document(
+    await live_kernel.write_instance(
         SYSTEM_SCOPE, "KindNamespace", namespace,
         {
             "apiVersion": TENANT_API_VERSION,
@@ -77,10 +77,10 @@ async def test_a_pre_existing_assignment_is_returned_verbatim(live_kernel):
 
     Every other test here is satisfied by an implementation that computes the
     namespace from the workspace id and stores the result: such a value exists as
-    a document, is deterministic across calls, and resolves through the ownership
+    an instance, is deterministic across calls, and resolves through the ownership
     gate. It is also precisely the defect — consolidate or migrate a workspace to
     a new id and its namespace silently changes, taking the identity of every
-    document it owns with it.
+    instance it owns with it.
 
     So: pre-store a namespace nothing about ``ws-abc`` could produce, and require
     it back. A derivation returns its own hash and fails here."""
@@ -94,7 +94,7 @@ async def test_a_pre_existing_assignment_is_returned_verbatim(live_kernel):
         f"assign_namespace returned {got!r}, not the STORED assignment {stored!r}"
         " — a value it could have computed from 'ws-abc' means the namespace is"
         " DERIVED, and renaming or migrating the workspace would then change the"
-        " apiVersion, and so the identity, of every document it owns"
+        " apiVersion, and so the identity, of every instance it owns"
     )
 
 
@@ -104,7 +104,7 @@ async def test_assignment_is_stored_not_derived(live_kernel):
     assert ns, "a workspace must get a usable namespace"
 
     # Renaming the workspace must not change the namespace.
-    doc = await live_kernel.get_document(SYSTEM_SCOPE, "KindNamespace", ns)
+    doc = await live_kernel.get_instance(SYSTEM_SCOPE, "KindNamespace", ns)
     assert doc["spec"]["namespace"] == ns
     assert "ws-abc" not in ns, (
         "the workspace id must not appear in the namespace: a stored assignment "
@@ -125,7 +125,7 @@ async def test_assignment_is_idempotent(live_kernel):
 async def test_the_assignment_is_a_claim_the_ownership_gate_resolves(live_kernel):
     """The point of assigning at birth is that the FIRST authored Kind waits for
     nothing — so the stored claim has to be the thing ``NamespaceOwnershipGate``
-    looks up, not merely a document that exists.
+    looks up, not merely an instance that exists.
 
     That pins the shape against the near-miss the brief for this task carried:
     storing the whole apiVersion (``…/v1``) as ``spec.namespace``. It reads fine
@@ -151,7 +151,7 @@ async def test_the_answer_is_the_assigned_claim_and_never_flips(live_kernel):
     function of the workspace. ``assign_namespace`` answers with the ASSIGNED one
     and only that.
 
-    Both halves matter, and both are about apiVersion participating in document
+    Both halves matter, and both are about apiVersion participating in instance
     identity: a workspace that proves ownership of a public domain must not have
     its assigned namespace silently swapped out from under Kinds already declared
     under it (authoring under the proven claim is a caller's explicit choice), and

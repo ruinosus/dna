@@ -14,7 +14,7 @@ adapter](../guides/write-a-source-adapter.md).
 
 A **scope** is a directory of manifests — the unit you load with
 `Kernel.quick(scope)`. Scopes are not islands: every scope can inherit shared
-documents from a sibling `.dna/_lib/` **library scope**. Put an agent, skill
+instances from a sibling `.dna/_lib/` **library scope**. Put an agent, skill
 or theme in `_lib` and every scope sees it, unless the scope overrides it.
 
 This is the base of the override model: `_lib` provides shared defaults; a
@@ -22,17 +22,17 @@ scope specialises them.
 
 ## Layers — overlays over a base
 
-A **layer** is an overlay: a set of documents that override the base for some
+A **layer** is an overlay: a set of instances that override the base for some
 dimension without editing the base. The base stays the shared product; a
 layer carries only the *diffs*.
 
 The canonical use is a **tenant overlay** — a per-tenant set of overrides
 composed on top of the shared base at read time. The adapter resolves a
 `load_layer(tenant)` view that merges the tenant's overrides over the base;
-the base document is never mutated. A tenant that overrides nothing sees the
+the base instance is never mutated. A tenant that overrides nothing sees the
 base unchanged.
 
-The merge is by `(kind, name)` — an overlay document shadows its base twin,
+The merge is by `(kind, name)` — an overlay instance shadows its base twin,
 everything else passes through:
 
 ```mermaid
@@ -113,7 +113,7 @@ Three properties are load-bearing:
 * **No grant means today's behavior, exactly.** A deployment that writes no
   rows is unchanged.
 
-Revoking flips `status` to `revoked` rather than deleting the document — the
+Revoking flips `status` to `revoked` rather than deleting the instance — the
 evidence that access once existed is the half of an audit trail that matters
 after an incident.
 
@@ -336,7 +336,7 @@ the portal screens that drive them are tracked separately in DNA Cloud.
 Not every Kind should be overridable by every layer. A **`LayerPolicy`**
 (`github.com/ruinosus/dna/policy/v1 · LayerPolicy`) declares *which layers may
 override which Kinds* — the guardrail on the override model. It is data, like
-everything else: a policy document, validated and versioned.
+everything else: a policy instance, validated and versioned.
 
 ## `overlayable_fields` — which *fields* of a Kind a layer may change
 
@@ -366,7 +366,7 @@ Three things worth knowing before you reach for it:
   so submitting a whole effective spec (read-only fields included) stays a
   no-op rather than an error.
 - **It gates authoring, not composition.** The check runs on the write path.
-  Overlay documents already stored are merged as written — enforcing the list
+  Overlay instances already stored are merged as written — enforcing the list
   on merge would retroactively rewrite content nobody edited.
 
 ## Namespaces — who may declare a Kind
@@ -374,18 +374,18 @@ Three things worth knowing before you reach for it:
 A Kind's identity is the pair `(apiVersion, kind)`: both halves are the
 registry key. So when a workspace authors its own Kind, the `apiVersion` is
 what keeps it apart from everyone else's — two workspaces declaring `Deal`
-under one `apiVersion` are *the same Kind*, and the second one's documents
+under one `apiVersion` are *the same Kind*, and the second one's instances
 would be validated against the first one's schema.
 
 DNA therefore gives a workspace its own `apiVersion` **namespace**, and the
 namespace is a **claimed, owned name** — `acme.example/v1`, not
 `tenant.<workspace-id>/v1`. The distinction matters because the `apiVersion`
-participates in the identity of every document: baking a database id into it
+participates in the identity of every instance: baking a database id into it
 would mean renaming, migrating or consolidating a workspace changes the
 identity of everything that workspace owns. A namespace is what every API
 versioning scheme already uses — the organisation's name, not its row id.
 
-A **`KindNamespace`** document records one claim: a namespace and the
+A **`KindNamespace`** instance records one claim: a namespace and the
 `workspace_id` that owns it. Three rules follow from it, all enforced on the
 write path (the same boundary as `LayerPolicy`, so one gate governs both):
 
@@ -412,7 +412,7 @@ refusal is a `NamespaceOwnershipError`, a `LayerPolicyViolationError` (HTTP
 
 `KindNamespace` is GLOBAL, `_lib`-resident and non-overlayable: the claim
 registry sits *above* any single workspace, so no layer may fork it and the
-generic write-any-document path refuses it. Claiming is a provisioning act,
+generic write-any-instance path refuses it. Claiming is a provisioning act,
 like minting a workspace id.
 
 ## The maxim: inheritable ⇒ never per-tenant-only

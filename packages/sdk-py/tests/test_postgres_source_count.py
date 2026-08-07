@@ -59,23 +59,23 @@ async def source():
 
     # Plain scope — 4 Stories (2 todo, 1 done, 1 sem status) + 1 Issue
     # (other kind, must never count).
-    await src.save_document("count-scope", "Story", "s-1", _story("s-1", {"status": "todo"}))
-    await src.save_document("count-scope", "Story", "s-2", _story("s-2", {"status": "todo"}))
-    await src.save_document("count-scope", "Story", "s-3", _story("s-3", {"status": "done"}))
-    await src.save_document("count-scope", "Story", "s-4", _story("s-4", {}))
-    await src.save_document("count-scope", "Issue", "i-1", {
+    await src.save_instance("count-scope", "Story", "s-1", _story("s-1", {"status": "todo"}))
+    await src.save_instance("count-scope", "Story", "s-2", _story("s-2", {"status": "todo"}))
+    await src.save_instance("count-scope", "Story", "s-3", _story("s-3", {"status": "done"}))
+    await src.save_instance("count-scope", "Story", "s-4", _story("s-4", {}))
+    await src.save_instance("count-scope", "Issue", "i-1", {
         "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Issue",
         "metadata": {"name": "i-1"}, "spec": {"status": "open"},
     })
 
     # Tenant scope — base: a-1 (todo) + a-2 (done); overlay acme: a-1
     # (done — SHADOWS base) + b-1 (todo — overlay-only).
-    await src.save_document("tn-scope", "Story", "a-1", _story("a-1", {"status": "todo"}))
-    await src.save_document("tn-scope", "Story", "a-2", _story("a-2", {"status": "done"}))
-    await src.save_document(
+    await src.save_instance("tn-scope", "Story", "a-1", _story("a-1", {"status": "todo"}))
+    await src.save_instance("tn-scope", "Story", "a-2", _story("a-2", {"status": "done"}))
+    await src.save_instance(
         "tn-scope", "Story", "a-1", _story("a-1", {"status": "done"}), tenant="acme",
     )
-    await src.save_document(
+    await src.save_instance(
         "tn-scope", "Story", "b-1", _story("b-1", {"status": "todo"}), tenant="acme",
     )
 

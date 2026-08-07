@@ -15,7 +15,7 @@ Surface:
   - :func:`set_insight_state` — the feedback transition (new→actioned|dismissed|
     snoozed), read-modify-write through the kernel.
 
-All writes go through ``kernel.write_document`` so cache invalidation, hooks and
+All writes go through ``kernel.write_instance`` so cache invalidation, hooks and
 schema validation fire — the same funnel ``dna research`` / ``dna sdlc`` use.
 """
 from __future__ import annotations
@@ -76,7 +76,7 @@ def _slug(text: str, *, maxlen: int = 48) -> str:
 
 
 def _spec_of(doc: Any) -> dict[str, Any]:
-    """Extract a spec dict from either a parsed Document or a raw dict."""
+    """Extract a spec dict from either a parsed Instance or a raw dict."""
     spec = getattr(doc, "spec", None)
     if spec is None and isinstance(doc, dict):
         spec = doc.get("spec")
@@ -170,7 +170,7 @@ async def run_pass(
     scope = await _resolve_scope(kernel, scope)
     analyzer = analyzer or SeedAnalyzer()
 
-    raw = await kernel.get_document(scope, SOURCE_KIND, source_name, tenant=tenant)
+    raw = await kernel.get_instance(scope, SOURCE_KIND, source_name, tenant=tenant)
     if raw is None:
         raise LookupError(
             f"IntelSource {source_name!r} not found in scope {scope!r}"
@@ -207,19 +207,19 @@ async def run_pass(
 
     # For a `type: scope` source the research material is the TARGET scope's docs.
     # The analyzer is pure (no kernel) — so the engine, which owns kernel I/O,
-    # pre-fetches them into context['documents'] (fail-soft, bounded). The
+    # pre-fetches them into context['instances'] (fail-soft, bounded). The
     # SeedAnalyzer ignores this; the LLMAnalyzer folds it into its prompt.
     # A VOZ do analyzer (#33): os PromptTemplates bem-conhecidos do workspace
     # sobrescrevem os defaults do LLMAnalyzer. O engine resolve (ele tem o
     # kernel) e o analyzer continua puro — o mesmo desenho do
-    # `context['documents']` abaixo. Fail-soft: sem doc, a voz default vale.
+    # `context['instances']` abaixo. Fail-soft: sem doc, a voz default vale.
     overrides: dict[str, str] = {}
     for chave, nome_template in (
         ("system", "intel-analysis-system"),
         ("template", "intel-analysis"),
     ):
         try:
-            doc_t = await kernel.get_document(
+            doc_t = await kernel.get_instance(
                 scope, "PromptTemplate", nome_template, tenant=tenant
             )
             corpo = ((doc_t or {}).get("spec") or {}).get("body")
@@ -232,7 +232,7 @@ async def run_pass(
 
     if src_spec.get("type") == "scope":
         target_scope = src_spec.get("uri") or source_name
-        context["documents"] = await _gather_scope_documents(
+        context["instances"] = await _gather_scope_instances(
             kernel, str(target_scope), tenant,
         )
 
@@ -289,7 +289,7 @@ async def run_pass(
                 "created_at": _now(),
             },
         }
-        await kernel.write_document(
+        await kernel.write_instance(
             scope, INSIGHT_KIND, name, insight_raw, tenant=tenant,
         )
         written.append(
@@ -335,7 +335,7 @@ def _doc_text(spec: dict[str, Any]) -> str:
     return "\n".join(parts)[:_SCOPE_DOC_CHARS]
 
 
-async def _gather_scope_documents(
+async def _gather_scope_instances(
     kernel: Any, target_scope: str, tenant: str | None,
 ) -> list[dict[str, Any]]:
     """Pull the target scope's prompt-target docs as ``[{title, text}]`` research
@@ -683,7 +683,7 @@ async def set_insight_state(
         raise ValueError(
             f"invalid state {state!r} — must be one of {', '.join(VALID_STATES)}"
         )
-    raw = await kernel.get_document(scope, INSIGHT_KIND, name, tenant=tenant)
+    raw = await kernel.get_instance(scope, INSIGHT_KIND, name, tenant=tenant)
     if raw is None:
         raise InsightNotFound(
             f"IntelInsight {name!r} not found in scope {scope!r}"
@@ -695,7 +695,7 @@ async def set_insight_state(
     spec = dict(_spec_of(raw))
     spec["state"] = state
     new_raw["spec"] = spec
-    await kernel.write_document(scope, INSIGHT_KIND, name, new_raw, tenant=tenant)
+    await kernel.write_instance(scope, INSIGHT_KIND, name, new_raw, tenant=tenant)
 
     # Feedback loop (s-intel-feedback-loop): a disposition tunes the ranker via
     # the memory co-pillar. Fail-soft — the transition already persisted above.

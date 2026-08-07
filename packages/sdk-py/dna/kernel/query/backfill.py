@@ -1,6 +1,6 @@
-"""Backfilling the derived reference graph for documents written before it.
+"""Backfilling the derived reference graph for instances written before it.
 
-A document that was saved before the producer existed has no edges, and there
+An instance that was saved before the producer existed has no edges, and there
 are only three wrong answers to that plus one right one.
 
 **Wrong: "on first read."** A read that writes deadlocks, costs
@@ -15,9 +15,9 @@ i-039 refused, arriving through a side door.
 
 **Right: an explicit backfill derived from the SAME declaration the producer
 reads.** For each declared ``(Kind, field)`` pair, ask the store for the
-documents whose ``spec`` HAS that field — on Postgres a JSONB containment
-query the existing ``dna_docs_spec_gin_idx`` serves directly. That is sixteen
-queries against the shipped registry today, not a walk over every document,
+instances whose ``spec`` HAS that field — on Postgres a JSONB containment
+query the existing ``dna_insts_spec_gin_idx`` serves directly. That is sixteen
+queries against the shipped registry today, not a walk over every instance,
 and it is the same fact, resolved the same way, written through the same
 DELETE+INSERT the producer uses. Idempotent, and runnable COLD: nothing in it
 needs the write path to be warm.
@@ -43,18 +43,18 @@ class BackfillReport:
     """What a backfill did, in numbers a human can check against the database."""
 
     pairs: int = 0            # declared (Kind, field) pairs consulted
-    documents: int = 0        # documents whose edges were recomputed
+    instances: int = 0        # instances whose edges were recomputed
     edges: int = 0            # edge rows written
     dangling: int = 0         # of those, edges resolving to nothing
-    skipped: int = 0          # documents left alone (resolution incomplete)
-    #: Scopes where at least one document could not be resolved completely.
+    skipped: int = 0          # instances left alone (resolution incomplete)
+    #: Scopes where at least one instance could not be resolved completely.
     #: The screen reads this as "still being filled" rather than as "empty".
     pending: set[str] = field(default_factory=set)
     dry_run: bool = False
 
     def as_dict(self) -> dict[str, Any]:
         return {
-            "pairs": self.pairs, "documents": self.documents,
+            "pairs": self.pairs, "instances": self.instances,
             "edges": self.edges, "dangling": self.dangling,
             "skipped": self.skipped, "pending": sorted(self.pending),
             "dry_run": self.dry_run,
@@ -69,9 +69,15 @@ def declared_pairs(kernel: Any) -> list[tuple[str, str]]:
     degree is that the graph is made of declarations rather than of opinions.
 
     Filtered to ``Relation.resolved`` for the same reason the write path is:
-    a relation addressed by a target spec field or carrying its Kind in the
-    value produces no edge on write, so scanning for its documents here would
-    read a column nothing would ever fill.
+    a relation whose value carries its own Kind produces no edge on write, so
+    scanning for its instances here would fill a column nothing reads.
+
+    ⚠️ That filter GREW in fatia 5 without a line of this function changing,
+    and the growth is exactly what deriving buys over enumerating: ``resolved``
+    now admits ``by: <key>`` relations, so their (Kind, field) pairs enrol
+    themselves here and the backfill reaches instances written before the
+    resolver existed. A hand-kept list would have gone on scanning the old
+    pairs while reporting success.
     """
     from dna.kernel.kinds.relations import relations_of
 
@@ -93,7 +99,7 @@ def _registry_items(kernel: Any) -> list[tuple[str, Any]]:
     """``(kind_name, port)`` for every registered Kind.
 
     A backfill that cannot reach the registry must SAY so. Returning an empty
-    list there would report "0 pairs, 0 documents" — a successful-looking run
+    list there would report "0 pairs, 0 instances" — a successful-looking run
     that filled nothing, which is precisely the failure this whole degree is
     about.
     """
@@ -116,7 +122,7 @@ def _registry_items(kernel: Any) -> list[tuple[str, Any]]:
 async def backfill_edges(
     kernel: Any, *, scope: str | None = None, dry_run: bool = False,
 ) -> BackfillReport:
-    """Recompute and store edges for existing documents.
+    """Recompute and store edges for existing instances.
 
     ``scope=None`` covers every scope the store holds. ``dry_run`` resolves
     everything and writes nothing — the same reads, so the numbers it reports
@@ -127,7 +133,7 @@ async def backfill_edges(
     source = kernel._source
     if source is None:
         raise RuntimeError("no source registered")
-    reader = getattr(source, "list_documents_with_spec_field", None)
+    reader = getattr(source, "list_instances_with_spec_field", None)
     writer = getattr(source, "replace_edges", None)
     if not callable(reader) or not callable(writer):
         from dna.kernel.query.graph import GraphUnsupported
@@ -141,7 +147,7 @@ async def backfill_edges(
     pairs = declared_pairs(kernel)
     report.pairs = len(pairs)
 
-    # One document can carry several declared fields; resolve it ONCE.
+    # One instance can carry several declared fields; resolve it ONCE.
     # Keyed on the full identity, apiVersion included — two workspaces may each
     # declare a `Deal`, and collapsing them here would give one the other's
     # edges.
@@ -162,9 +168,15 @@ async def backfill_edges(
         edges, _problems, _discords, complete = await resolve_relations(
             port, row["raw"],
             scope=doc_scope, name=name, tenant=tenant or None,
-            getter=kernel.get_document,
+            getter=kernel.get_instance,
             port_for=kernel.kind_port_for,
-            local_getter=getattr(kernel, "get_document_local", None),
+            local_getter=getattr(kernel, "get_instance_local", None),
+            # Without this the backfill would resolve the by-NAME half of an
+            # instance and record every `by: <key>` value as ``unsupported`` —
+            # a graph that is complete for one addressing and blank for the
+            # other, which is worse than not backfilling at all because it
+            # LOOKS finished.
+            key_getter=getattr(kernel, "find_instance_by_key", None),
         )
         if not complete:
             # Same refusal as the write path: a partial edge set stored as
@@ -173,12 +185,12 @@ async def backfill_edges(
             report.skipped += 1
             report.pending.add(doc_scope)
             logger.warning(
-                "graph backfill: %s/%s/%s left unresolved (a document read "
+                "graph backfill: %s/%s/%s left unresolved (an instance read "
                 "failed mid-resolution) — its edges were NOT replaced",
                 doc_scope, kind, name,
             )
             continue
-        report.documents += 1
+        report.instances += 1
         report.edges += len(edges)
         report.dangling += sum(1 for e in edges if e.to_kind is None)
         if not dry_run:

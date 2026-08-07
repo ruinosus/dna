@@ -20,7 +20,7 @@ spec:
     1. **Partes**: `contratante` e `contratada` são pessoas/empresas
        DISTINTAS e não-vazias? Um contrato consigo mesmo é erro.
     2. **Título**: reflete o objeto real? Se genérico ("Contrato"),
-       proponha um específico via `update_document_draft` com rationale.
+       proponha um específico via `update_instance_draft` com rationale.
     3. **Coerência comercial**: `valor_mensal` > 0; `prazo_meses` ≥ 1;
        se `renovacao_automatica` for true, `multa_rescisao` deveria
        existir — aponte se faltar.

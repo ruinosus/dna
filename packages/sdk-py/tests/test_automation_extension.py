@@ -198,7 +198,7 @@ async def test_write_vetoes_shape_broken_doc(kernel):
     # GENERIC write-path schema validation (the guard keeps only the
     # YAML-1.1 heal + cron/hook semantics).
     with pytest.raises(ValueError, match="'cron' is a required property"):
-        await kernel.write_document(
+        await kernel.write_instance(
             "s", "Automation", "no-cron",
             _raw({"on": {"type": "cron"},
                   "runner": {"kind": "agent", "ref": "x"}}, "no-cron"),
@@ -212,12 +212,12 @@ async def test_write_heals_pyyaml_on_boolean_key(kernel):
     # (veto-channel mutation contract), THEN validates it.
     raw = _raw({True: {"type": "hook", "hook": "post_save"},
                 "runner": {"kind": "agent", "ref": "x"}}, "healed")
-    await kernel.write_document("s", "Automation", "healed", raw)
+    await kernel.write_instance("s", "Automation", "healed", raw)
     assert "on" in raw["spec"] and True not in raw["spec"]
     # ... and a healed-but-invalid doc is still vetoed (normalize BEFORE
     # validate, so the bad value cannot hide behind the boolean key).
     with pytest.raises(ValueError, match="invalid cron expression"):
-        await kernel.write_document(
+        await kernel.write_instance(
             "s", "Automation", "healed-bad",
             _raw({True: {"type": "cron", "cron": "61 * * * *"},
                   "runner": {"kind": "agent", "ref": "x"}}, "healed-bad"),
@@ -229,7 +229,7 @@ async def test_write_vetoes_schema_valid_but_bad_cron(kernel):
     # '61 * * * *' is a perfectly valid STRING for the schema — only the
     # guard's grammar parse catches it.
     with pytest.raises(ValueError, match="invalid cron expression"):
-        await kernel.write_document(
+        await kernel.write_instance(
             "s", "Automation", "bad-cron",
             _raw({"on": {"type": "cron", "cron": "61 * * * *"},
                   "runner": {"kind": "agent", "ref": "x"}}, "bad-cron"),
@@ -241,7 +241,7 @@ async def test_write_vetoes_unknown_hook_name(kernel):
     # A typo'd hook would be declared, listed, and silently never fire —
     # the guard turns it into a loud veto listing the typed vocabulary.
     with pytest.raises(ValueError, match="not a kernel lifecycle hook"):
-        await kernel.write_document(
+        await kernel.write_instance(
             "s", "Automation", "bad-hook",
             _raw({"on": {"type": "hook", "hook": "pre_saev"},
                   "runner": {"kind": "agent", "ref": "x"}}, "bad-hook"),
@@ -251,7 +251,7 @@ async def test_write_vetoes_unknown_hook_name(kernel):
 @pytest.mark.asyncio
 async def test_write_accepts_every_known_hook_name(kernel):
     for hook in KNOWN_HOOK_NAMES:
-        await kernel.write_document(
+        await kernel.write_instance(
             "s", "Automation", f"on-{hook.replace('_', '-')}",
             _raw({"on": {"type": "hook", "hook": hook},
                   "runner": {"kind": "agent", "ref": "x"}}),
@@ -260,7 +260,7 @@ async def test_write_accepts_every_known_hook_name(kernel):
 
 @pytest.mark.asyncio
 async def test_write_accepts_valid_cron(kernel):
-    await kernel.write_document(
+    await kernel.write_instance(
         "s", "Automation", "ok",
         _raw({"on": {"type": "cron", "cron": "*/15 0-6 * * 1-5"},
               "runner": {"kind": "tool", "ref": "sync-upstream"}}, "ok"),
@@ -270,7 +270,7 @@ async def test_write_accepts_valid_cron(kernel):
 @pytest.mark.asyncio
 async def test_guard_ignores_other_kinds(kernel):
     # A Genome (or any non-Automation doc) with a weird spec sails past.
-    await kernel.write_document(
+    await kernel.write_instance(
         "s", "Genome", "g",
         {"apiVersion": "github.com/ruinosus/dna/v1", "kind": "Genome",
          "metadata": {"name": "g"},

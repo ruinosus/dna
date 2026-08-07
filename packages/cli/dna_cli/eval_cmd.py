@@ -79,9 +79,9 @@ def _print_run(spec: dict) -> None:
 @eval_.command("run")
 @click.argument("suite")
 @click.option("--scope", default=None, help="Scope to run in (default: resolved from the source).")
-@click.option("--save", is_flag=True, help="Persist the result as an EvalRun document.")
+@click.option("--save", is_flag=True, help="Persist the result as an EvalRun instance.")
 @click.option("--baseline", default=None, metavar="NAME",
-              help="Compare against the EvalBaseline document NAME; exit 1 on regressions.")
+              help="Compare against the EvalBaseline instance NAME; exit 1 on regressions.")
 @click.option("--json", "as_json", is_flag=True, help="Machine-readable output.")
 def cmd_run(suite: str, scope: str | None, save: bool, baseline: str | None, as_json: bool):
     """Execute SUITE offline and report per-case results.
@@ -119,7 +119,7 @@ def cmd_run(suite: str, scope: str | None, save: bool, baseline: str | None, as_
             diff = compare(spec, _spec_of(base_run_doc))
 
         if save:
-            s.run(s.kernel.write_document(s.scope, "EvalRun", run_name, raw))
+            s.run(s.kernel.write_instance(s.scope, "EvalRun", run_name, raw))
 
         if as_json:
             payload: dict[str, Any] = {"run": raw, "saved": save}
@@ -241,7 +241,7 @@ def cmd_show(run_name: str, scope: str | None, as_json: bool):
 @click.argument("run_name")
 @click.option("--scope", default=None, help="Scope to write in (default: resolved from the source).")
 @click.option("--name", "baseline_name", default=None,
-              help="Baseline document name (default: baseline-<suite>).")
+              help="Baseline instance name (default: baseline-<suite>).")
 @click.option("--label", default=None, help="Why this run is the reference.")
 def cmd_pin(run_name: str, scope: str | None, baseline_name: str | None, label: str | None):
     """Pin RUN_NAME as the EvalBaseline for its suite.
@@ -270,5 +270,5 @@ def cmd_pin(run_name: str, scope: str | None, baseline_name: str | None, label: 
             "metadata": {"name": name},
             "spec": spec,
         }
-        s.run(s.kernel.write_document(s.scope, "EvalBaseline", name, raw))
+        s.run(s.kernel.write_instance(s.scope, "EvalBaseline", name, raw))
         click.echo(f"pinned: EvalBaseline/{name} → EvalRun/{run_name} (suite {suite})")

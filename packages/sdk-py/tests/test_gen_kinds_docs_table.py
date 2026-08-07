@@ -9,7 +9,7 @@ que abrisse a referência do `RemoteAgent` para saber como escrever um
 `supported_interfaces` via a linha "array — cada entrada nomeia um binding de
 protocolo" e **nenhum nome de campo** — nem `protocol_binding`, nem `url`, nem
 `protocol_version`. A informação existia no schema, era obrigatória para
-escrever o documento, e não chegava a lugar nenhum.
+escrever a instância, e não chegava a lugar nenhum.
 
 O gerador não tinha teste (só a guarda de drift, que prova que a saída é
 estável — não que ela é completa). Este arquivo testa a função pura que monta a

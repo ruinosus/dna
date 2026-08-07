@@ -1,4 +1,4 @@
-"""Tests for LayerPolicy enforcement in kernel.write_document."""
+"""Tests for LayerPolicy enforcement in kernel.write_instance."""
 from __future__ import annotations
 
 import pytest
@@ -16,10 +16,10 @@ def test_layer_policy_violation_error_carries_message():
 
 
 def test_writable_source_port_save_accepts_layer_kwarg():
-    """Protocol contract: save_document signature accepts optional layer kwarg."""
+    """Protocol contract: save_instance signature accepts optional layer kwarg."""
     import inspect
     from dna.kernel.protocols import WritableSourcePort
-    sig = inspect.signature(WritableSourcePort.save_document)
+    sig = inspect.signature(WritableSourcePort.save_instance)
     params = sig.parameters
     assert "layer" in params
     assert params["layer"].kind == inspect.Parameter.KEYWORD_ONLY
@@ -29,7 +29,7 @@ def test_writable_source_port_save_accepts_layer_kwarg():
 def test_writable_source_port_delete_accepts_layer_kwarg():
     import inspect
     from dna.kernel.protocols import WritableSourcePort
-    sig = inspect.signature(WritableSourcePort.delete_document)
+    sig = inspect.signature(WritableSourcePort.delete_instance)
     params = sig.parameters
     assert "layer" in params
     assert params["layer"].kind == inspect.Parameter.KEYWORD_ONLY
@@ -37,7 +37,7 @@ def test_writable_source_port_delete_accepts_layer_kwarg():
 
 
 def test_kernel_write_document_forwards_layer_to_adapter(tmp_path):
-    """Kernel.write_document forwards layer kwarg to the adapter."""
+    """Kernel.write_instance forwards layer kwarg to the adapter."""
     import asyncio
     from dna.kernel import Kernel
 
@@ -49,11 +49,11 @@ def test_kernel_write_document_forwards_layer_to_adapter(tmp_path):
             self.save_calls = []
             self.delete_calls = []
 
-        async def save_document(self, scope, kind, name, raw, author=None, *, layer=None):
+        async def save_instance(self, scope, kind, name, raw, author=None, *, layer=None):
             self.save_calls.append({"scope": scope, "kind": kind, "name": name, "author": author, "layer": layer})
             return "v1"
 
-        async def delete_document(self, scope, kind, name, *, layer=None):
+        async def delete_instance(self, scope, kind, name, *, layer=None):
             self.delete_calls.append({"scope": scope, "kind": kind, "name": name, "layer": layer})
 
         # Required by _require_writable_source type check (SourcePort methods)
@@ -123,12 +123,12 @@ def test_kernel_write_document_forwards_layer_to_adapter(tmp_path):
     k._source = fake
 
     raw = {"apiVersion": "x", "kind": "K", "metadata": {"name": "n"}, "spec": {}}
-    asyncio.run(k.write_document("s", "K", "n", raw, layer=("tenant", "T1"), skip_hooks=True))
+    asyncio.run(k.write_instance("s", "K", "n", raw, layer=("tenant", "T1"), skip_hooks=True))
 
     assert len(fake.save_calls) == 1
     assert fake.save_calls[0]["layer"] == ("tenant", "T1")
 
-    asyncio.run(k.delete_document("s", "K", "n", layer=("tenant", "T1"), skip_hooks=True))
+    asyncio.run(k.delete_instance("s", "K", "n", layer=("tenant", "T1"), skip_hooks=True))
     assert len(fake.delete_calls) == 1
     assert fake.delete_calls[0]["layer"] == ("tenant", "T1")
 
@@ -205,7 +205,7 @@ def test_policy_locked_rejects_any_write(tmp_path):
         "spec": {"description": "hi"},
     }
     with pytest.raises(LayerPolicyViolationError, match="LOCKED"):
-        asyncio.run(k.write_document("s", "Agent", "x", raw, layer=("tenant", "T1")))
+        asyncio.run(k.write_instance("s", "Agent", "x", raw, layer=("tenant", "T1")))
 
 
 def test_policy_open_allows_write(tmp_path):
@@ -225,7 +225,7 @@ def test_policy_open_allows_write(tmp_path):
         "spec": {"description": "hi"},
     }
     # Must not raise
-    asyncio.run(k.write_document("s", "Agent", "x", raw, layer=("tenant", "T1")))
+    asyncio.run(k.write_instance("s", "Agent", "x", raw, layer=("tenant", "T1")))
 
 
 def test_policy_no_module_defaults_to_open(tmp_path):
@@ -240,7 +240,7 @@ def test_policy_no_module_defaults_to_open(tmp_path):
         "spec": {},
     }
     # Should not raise
-    asyncio.run(k.write_document("s", "Agent", "x", raw, layer=("tenant", "T1")))
+    asyncio.run(k.write_instance("s", "Agent", "x", raw, layer=("tenant", "T1")))
 
 
 def test_policy_restricted_rejects_add_of_new_doc(tmp_path):
@@ -256,7 +256,7 @@ def test_policy_restricted_rejects_add_of_new_doc(tmp_path):
         "spec": {"description": "x"},
     }
     with pytest.raises(LayerPolicyViolationError, match="RESTRICTED.*cannot add"):
-        asyncio.run(k.write_document("s", "Agent", "new", new_raw, layer=("tenant", "T1")))
+        asyncio.run(k.write_instance("s", "Agent", "new", new_raw, layer=("tenant", "T1")))
 
 
 def test_policy_restricted_allows_override_of_existing_doc(tmp_path):
@@ -270,7 +270,7 @@ def test_policy_restricted_allows_override_of_existing_doc(tmp_path):
         "metadata": {"name": "existing"},
         "spec": {"model": "gpt-4o-mini"},
     }
-    asyncio.run(k.write_document("s", "Agent", "existing", base_raw))
+    asyncio.run(k.write_instance("s", "Agent", "existing", base_raw))
     # Override in tenant layer — only changing existing keys → allowed
     override_raw = {
         "apiVersion": "github.com/ruinosus/dna/v1",
@@ -278,7 +278,7 @@ def test_policy_restricted_allows_override_of_existing_doc(tmp_path):
         "metadata": {"name": "existing"},
         "spec": {"model": "gpt-5-mini"},
     }
-    asyncio.run(k.write_document("s", "Agent", "existing", override_raw, layer=("tenant", "T1")))
+    asyncio.run(k.write_instance("s", "Agent", "existing", override_raw, layer=("tenant", "T1")))
 
 
 def test_policy_restricted_rejects_new_top_level_spec_key(tmp_path):
@@ -292,7 +292,7 @@ def test_policy_restricted_rejects_new_top_level_spec_key(tmp_path):
         "metadata": {"name": "x"},
         "spec": {"model": "gpt-4o-mini"},
     }
-    asyncio.run(k.write_document("s", "Agent", "x", base_raw))
+    asyncio.run(k.write_instance("s", "Agent", "x", base_raw))
     # Overlay adds a NEW_KEY that doesn't exist in base
     added_raw = {
         "apiVersion": "github.com/ruinosus/dna/v1",
@@ -301,4 +301,4 @@ def test_policy_restricted_rejects_new_top_level_spec_key(tmp_path):
         "spec": {"model": "gpt-4o-mini", "NEW_KEY": 1},
     }
     with pytest.raises(LayerPolicyViolationError, match="new top-level spec keys"):
-        asyncio.run(k.write_document("s", "Agent", "x", added_raw, layer=("tenant", "T1")))
+        asyncio.run(k.write_instance("s", "Agent", "x", added_raw, layer=("tenant", "T1")))

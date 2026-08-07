@@ -1,6 +1,6 @@
-# RemoteAgent — o Agent Card do A2A, como documento.
+# RemoteAgent — o Agent Card do A2A, como instância.
 #
-# O protocolo A2A não é um Kind: transporte não é documento. O Agent Card é —
+# O protocolo A2A não é um Kind: transporte não é instância. O Agent Card é —
 # um descritor versionado de identidade e capacidade, publicado pelo servidor
 # A2A em `/.well-known/agent-card.json`. Isto é ele, com os nomes em snake_case
 # (a convenção do kernel) e o mapeamento para o JSON do A2A anotado campo a
@@ -15,9 +15,38 @@
 # false` não sabe expressar "estes campos OU aqueles".
 #
 # O que UNE os dois é `delegation_target_for`, e é de propósito: o roster de
-# alvos é DERIVADO ("todo documento que declara o bloco e cuja allowlist me
+# alvos é DERIVADO ("toda instância que declara o bloco e cuja allowlist me
 # inclui"), atravessando os dois Kinds. Um terceiro tipo de alvo, depois, entra
 # sem tocar em quem delega.
+#
+# ── Ilha, e ela FICA ilha (i-119 grupo C, 06/08/2026) ────────────────────────
+# A i-119 arquivou dois campos aqui: `skills` "nomeia Skills" e
+# `delegation_target_for` "nomeia Agents". Medidos contra o schema abaixo, os
+# dois são leitura errada, por dois motivos diferentes — e os dois motivos
+# valem mais que a declaração que não vai acontecer:
+#
+# * `skills` é um array de OBJETOS `{id, name, description, tags, examples}` —
+#   o `skills[]` do Agent Card do A2A, que o REMOTO escreve sobre si mesmo. Não
+#   é uma lista de nomes de `Skill` do DNA (`agentskills.io/v1`, bundle com
+#   SKILL.md, composto no prompt); é o remoto se descrevendo, no vocabulário
+#   dele. `relation_values` lê strings e veria zero valor aqui, então a aresta
+#   declarada seria uma aresta que nunca carrega nada.
+#
+# * `delegation_target_for` é um OBJETO. Quem nomeia Agents é
+#   `delegation_target_for.agents`, um nível ABAIXO — e uma relação é nomeada
+#   por um campo de PRIMEIRO nível do spec (`relations._NAME_RE` não aceita
+#   ponto; `schema_contradictions` só enxerga `properties` do topo; e
+#   `kind_graph` já publica isso como limite conhecido, `top_level_properties_
+#   only`). O valor ainda carrega a sentinela `["*"]` = qualquer delegador, que
+#   não é nome de instância nenhuma. Inexprimível hoje, e por uma lacuna que já
+#   tem nome.
+#
+# E um terceiro que a i-119 não listou, embora seja gêmeo de um que ela listou:
+# `data_scope.kinds` nomeia KINDS, não instâncias — o mesmo caso de
+# `AgentGrant.scope_kinds`, que a issue pôs na primeira ponta de vocabulário.
+# Aninhado, além de tudo. Some as duas lacunas e este Kind é ilha por
+# construção, não por descuido: TUDO que ele aponta está ou dentro de um objeto
+# ou apontando para o registro de Kinds.
 #
 # ── data_scope: o campo que é NOSSO e não do A2A ─────────────────────────────
 # Um RemoteAgent é, por construção, um canal de exfiltração: o DNA manda dado do
@@ -125,7 +154,7 @@ spec:
         description: >
           A2A `securitySchemes` (forma do OpenAPI 3). Diz COMO autenticar. A
           credencial em si NUNCA vive aqui — o schema é fechado justamente
-          para que um bearer não possa ser anexado ao documento. Quem guarda a
+          para que um bearer não possa ser anexado à instância. Quem guarda a
           credencial é o deployment, por remoto, e ela nunca é o token do
           usuário.
         additionalProperties: true
@@ -149,7 +178,7 @@ spec:
         type: string
         enum: [unsigned, present_unverified, verified]
         description: >
-          Tri-estado DE PROPÓSITO: um documento que não foi verificado tem de
+          Tri-estado DE PROPÓSITO: uma instância que não foi verificado tem de
           ser legível como tal. `unsigned` = o Card não trouxe assinatura;
           `present_unverified` = trouxe e não checamos; `verified` = checamos
           (não alcançável nesta versão). Um booleano `signed` faria "não
@@ -166,7 +195,7 @@ spec:
           kinds:
             type: array
             description: >
-              Nomes de Kind cujos documentos podem ser delegados a este
+              Nomes de Kind cujas instâncias podem ser delegados a este
               remoto. Lista vazia = nada pode, o que é um estado honesto
               (registrado, sem permissão) e não um erro.
             items: {type: string}

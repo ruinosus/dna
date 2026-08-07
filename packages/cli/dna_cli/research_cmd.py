@@ -58,7 +58,7 @@ def _name_of(doc: Any, fallback: str = "?") -> str:
 
 @click.group(name="research")
 def research() -> None:
-    """Manage Research synthesis documents (curated syntheses of References)."""
+    """Manage Research synthesis instances (curated syntheses of References)."""
 
 
 @research.command("list")
@@ -128,7 +128,7 @@ def cmd_show(name: str, scope: str | None, tenant: str | None, full: bool) -> No
     click.echo(f"  conducted_at: {spec.get('conducted_at', '?')}")
     # Renamed from `scope_ref` (2026-08-06). ONE name is read, deliberately: a
     # dual read is a transition mechanism, and there is no transition to serve
-    # — every Research document in both repos was migrated in the same change,
+    # — every Research instance in both repos was migrated in the same change,
     # and nobody consumes the SDK yet. Accepting both names would be debt
     # bought to cover a risk that does not exist.
     click.echo(f"  scope:        {spec.get('scope', '?')}")
@@ -180,7 +180,7 @@ def cmd_show(name: str, scope: str | None, tenant: str | None, full: bool) -> No
 def _validate_spec_or_die(path: str, spec: dict[str, Any]) -> None:
     """Validate a Research spec against the Kind's own JSON schema.
 
-    ResearchKind may opt out of validate_on_parse, so ``write_document``
+    ResearchKind may opt out of validate_on_parse, so ``write_instance``
     could persist a malformed spec silently. We validate here, at the
     authoring boundary, using the live Kind schema as the single source
     of truth — collecting ALL errors — and exit non-zero on any violation.
@@ -224,7 +224,7 @@ def _validate_spec_or_die(path: str, spec: dict[str, Any]) -> None:
 def cmd_create(path: str, scope: str | None, tenant: str | None, status: str | None) -> None:
     """Create/upsert a Research doc from a YAML/JSON file.
 
-    First-class research authoring (no ``dna doc apply`` needed). Validates
+    First-class research authoring (no ``dna instance apply`` needed). Validates
     kind == Research and the spec schema BEFORE writing. Tenancy is
     permissive: ``--tenant`` optional.
     """
@@ -256,7 +256,7 @@ def cmd_create(path: str, scope: str | None, tenant: str | None, status: str | N
     with dna_session(scope) as s:
         existing = s.get_doc("Research", name, tenant=tenant)
         action = "UPDATED" if existing else "CREATED"
-        s.run(s.kernel.write_document(s.scope, "Research", name, raw, tenant=tenant))
+        s.run(s.kernel.write_instance(s.scope, "Research", name, raw, tenant=tenant))
     suffix = f" (tenant={tenant})" if tenant else ""
     click.secho(f"{action} Research/{name}{suffix}", fg="green")
 

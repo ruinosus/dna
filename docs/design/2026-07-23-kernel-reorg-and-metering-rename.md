@@ -81,11 +81,11 @@ The dep graph + a consumer survey ran. Two findings resize this effort:
    `instance` (8), `capabilities` (6), `preview` (6), `hooks`, `errors`. 21 leaf
    modules (no intra-kernel deps) move first.
 2. **Consumers import by MODULE PATH, not symbol.** `from dna.kernel.protocols
-   import …` (84 uses), `dna.kernel.instance`, `.hooks`, `.kind_base`, … — **50
+   import …` (84 uses), `dna.kernel.manifest`, `.hooks`, `.kind_base`, … — **50
    SDK files** + the CLI + dna-cloud all reference `dna.kernel.<module>` paths.
    The `kernel/__init__.py` barely re-exports. So moving a module BREAKS those
    paths everywhere — a symbol re-export in `__init__` does NOT save a
-   `from dna.kernel.instance import X`.
+   `from dna.kernel.manifest import X`.
 
 **Consequence:** this is NOT an internal-only refactor like the copilot/web apps.
 It is a **coordinated cross-repo change** — move the modules, then update every

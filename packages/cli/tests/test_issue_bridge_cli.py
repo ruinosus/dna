@@ -84,11 +84,11 @@ def _fake_session(monkeypatch, spec=_SPEC, found=True, record=None,
             # it claims the name or refuses. The double has to accept it, or it
             # asserts against a signature the kernel does not have.
             @staticmethod
-            def write_document(scope, kind, name, raw, *, if_absent=False, **_):
+            def write_instance(scope, kind, name, raw, *, if_absent=False, **_):
                 if if_absent and any(n == name for n, _s in existing_issues):
-                    from dna.kernel.errors import DocumentNameTaken
+                    from dna.kernel.errors import InstanceNameTaken
 
-                    raise DocumentNameTaken(f"{kind} {name!r} already exists")
+                    raise InstanceNameTaken(f"{kind} {name!r} already exists")
                 if record is not None:
                     record.append((name, raw))
 

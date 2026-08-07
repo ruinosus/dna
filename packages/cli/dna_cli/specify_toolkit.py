@@ -183,7 +183,7 @@ def scan_toolkit(path: Path, *, commands_from: str | None = None) -> ToolkitScan
 
 @dataclass
 class ToolkitWrite:
-    """One planned ``kernel.write_document`` for a toolkit artifact."""
+    """One planned ``kernel.write_instance`` for a toolkit artifact."""
 
     kind: str
     name: str
@@ -314,7 +314,7 @@ def _execute(writes: list[ToolkitWrite], *, scope: str | None) -> int:
     written = 0
     with dna_session(scope) as s:
         for w in writes:
-            s.run(s.kernel.write_document(scope, w.kind, w.name, w.raw()))
+            s.run(s.kernel.write_instance(scope, w.kind, w.name, w.raw()))
             written += 1
     return written
 
@@ -326,7 +326,7 @@ def _plan_json(scan: ToolkitScan, writes: list[ToolkitWrite], *, dry_run: bool) 
     return {
         "dry_run": dry_run,
         "root": str(scan.root),
-        "documents": [
+        "instances": [
             {"kind": w.kind, "name": w.name, "origin": w.spec.get("origin"),
              "detail": w.detail}
             for w in writes
@@ -349,7 +349,7 @@ def install_templates(path, constitution_as, commands_from, dry_run, as_json, sc
     """Ingest a Spec Kit **toolkit** (``.specify/templates/`` + slash-commands +
     ``.specify/scripts/`` + constitution) into durable, servable DNA Kinds
     (ADR §5, Layer 3). Served live over ``dna mcp serve`` and overridable per
-    scope/tenant. Every write goes through ``kernel.write_document``."""
+    scope/tenant. Every write goes through ``kernel.write_instance``."""
     scan = scan_toolkit(Path(path), commands_from=commands_from)
     writes = build_toolkit_plan(scan, constitution_as=constitution_as)
     if not writes:
@@ -367,7 +367,7 @@ def install_templates(path, constitution_as, commands_from, dry_run, as_json, sc
         click.secho(f"Spec Kit toolkit → DNA (dry-run) — root: {scan.root}", fg="cyan", bold=True)
         for w in writes:
             click.echo(f"    {w.kind:14} {w.name:30} {w.detail}")
-        click.secho(f"\n{len(writes)} documents would be written (dry-run).", fg="yellow")
+        click.secho(f"\n{len(writes)} instances would be written (dry-run).", fg="yellow")
         return
 
     written = _execute(writes, scope=scope)
@@ -416,7 +416,7 @@ def export_templates(out_dir, force, as_json, scope) -> None:
                 # Read the RAW stored doc — typed Kinds (Skill/Guardrail)
                 # normalize their spec on parse and drop the ``origin``/verbatim
                 # fields the export replays. The source persisted the raw dict.
-                raw = s.run(s.kernel.get_document(s.scope, kind, name))
+                raw = s.run(s.kernel.get_instance(s.scope, kind, name))
                 spec = (raw or {}).get("spec") if isinstance(raw, dict) else None
                 if not isinstance(spec, dict):
                     continue

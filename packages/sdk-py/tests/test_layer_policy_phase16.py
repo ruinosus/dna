@@ -28,8 +28,8 @@ class _MemorySource:
     """Minimal in-memory WritableSourcePort for layer-policy tests.
 
     Enough surface to satisfy ``Kernel.instance_async`` and
-    ``Kernel.write_document``: load_bootstrap_docs, load_all, load_layer,
-    save_document, delete_document, plus stubs for the other
+    ``Kernel.write_instance``: load_bootstrap_docs, load_all, load_layer,
+    save_instance, delete_instance, plus stubs for the other
     WritableSourcePort methods.
     """
 
@@ -106,7 +106,7 @@ class _MemorySource:
     async def close(self) -> None:
         return None
 
-    async def save_document(
+    async def save_instance(
         self, scope, kind, name, raw, author=None,
         *, tenant=None, layer=None,
     ):
@@ -116,7 +116,7 @@ class _MemorySource:
         )
         return "v1"
 
-    async def delete_document(
+    async def delete_instance(
         self, scope, kind, name, *, tenant=None, layer=None,
     ):
         self.delete_calls.append(
@@ -210,7 +210,7 @@ class TestNonOverlayableKindsAllowlist:
             "spec": {"version": "1.0.0"},
         }
         with pytest.raises(LayerPolicyViolationError, match="non-overlayable"):
-            await k.write_document(
+            await k.write_instance(
                 "test-scope", "Genome", "test-scope", raw,
                 layer=("tenant", "acme"),
             )
@@ -227,7 +227,7 @@ class TestNonOverlayableKindsAllowlist:
             "spec": {"target_kind": "MyKind", "target_api_version": "demo/v1", "alias": "demo-mykind"},
         }
         with pytest.raises(LayerPolicyViolationError, match="non-overlayable"):
-            await k.write_document(
+            await k.write_instance(
                 "test-scope", "KindDefinition", "MyKind", raw,
                 layer=("tenant", "acme"),
             )
@@ -243,7 +243,7 @@ class TestNonOverlayableKindsAllowlist:
             "spec": {"layer_id": "tenant", "policies": {"helix-agent": "open"}},
         }
         with pytest.raises(LayerPolicyViolationError, match="non-overlayable"):
-            await k.write_document(
+            await k.write_instance(
                 "test-scope", "LayerPolicy", "tenant-default", raw,
                 layer=("tenant", "acme"),
             )
@@ -260,7 +260,7 @@ class TestNonOverlayableKindsAllowlist:
             "metadata": {"name": "test-scope"},
             "spec": {"version": "1.0.0"},
         }
-        await k.write_document(
+        await k.write_instance(
             "test-scope", "Genome", "test-scope", raw, layer=None,
         )
         assert len(source.save_calls) == 1
@@ -277,7 +277,7 @@ class TestNonOverlayableKindsAllowlist:
             "metadata": {"name": "brad"},
             "spec": {"instruction": "you are brad"},
         }
-        await k.write_document(
+        await k.write_instance(
             "test-scope", "Agent", "brad", raw,
             layer=("tenant", "acme"),
         )
@@ -310,7 +310,7 @@ class TestLayerPolicyDocsEnforcement:
             "spec": {"instruction": "tweaked"},
         }
         with pytest.raises(LayerPolicyViolationError, match="LOCKED"):
-            await k.write_document(
+            await k.write_instance(
                 "test-scope", "Agent", "brad", raw,
                 layer=("tenant", "acme"),
             )
@@ -333,7 +333,7 @@ class TestLayerPolicyDocsEnforcement:
             "metadata": {"name": "brad"},
             "spec": {"instruction": "tweaked"},
         }
-        await k.write_document(
+        await k.write_instance(
             "test-scope", "Agent", "brad", raw,
             layer=("tenant", "acme"),
         )
@@ -360,7 +360,7 @@ class TestLayerPolicyDocsEnforcement:
             "spec": {"instruction": "x"},
         }
         # tenant layer is unrestricted (no policy declared for tenant).
-        await k.write_document(
+        await k.write_instance(
             "test-scope", "Agent", "brad", raw,
             layer=("tenant", "acme"),
         )
@@ -397,7 +397,7 @@ class TestLayerPolicyConflictResolution:
             "spec": {"instruction": "x"},
         }
         with pytest.raises(LayerPolicyViolationError, match="LOCKED"):
-            await k.write_document(
+            await k.write_instance(
                 "test-scope", "Agent", "brad", raw,
                 layer=("tenant", "acme"),
             )
@@ -419,7 +419,7 @@ class TestLayerPolicyConflictResolution:
             "spec": {"instruction": "x"},
         }
         # Should succeed.
-        await k.write_document(
+        await k.write_instance(
             "test-scope", "Agent", "brad", raw,
             layer=("tenant", "acme"),
         )
@@ -444,7 +444,7 @@ class TestEdgeCases:
             "metadata": {"name": "brad"},
             "spec": {"instruction": "x"},
         }
-        await k.write_document(
+        await k.write_instance(
             "test-scope", "Agent", "brad", raw,
             layer=("tenant", "acme"),
         )

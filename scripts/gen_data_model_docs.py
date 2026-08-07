@@ -18,7 +18,7 @@ Two levels, because they answer different questions:
   registered ``KindPort``, its ``spec.relations`` declarations and its
   ``dep_filters``.
 * **PHYSICAL — the real tables.** From ``build_metadata()``. Deliberately
-  framed as the low-information diagram it is: a generic document store,
+  framed as the low-information diagram it is: a generic instance store,
   seven tables, ZERO foreign keys. The page says so rather than faking depth.
 
 **Two edge tiers plus a per-edge ``enforced`` flag, and the ranking is the
@@ -156,7 +156,7 @@ def _load_tables() -> dict[str, list[dict]]:
 #: What the ``to: "*"`` target is CALLED in a diagram. The raw token sanitizes
 #: to a bare underscore, which reads as a rendering accident rather than as a
 #: statement — and the statement matters: these relations really do point at a
-#: document, they just choose its Kind per value.
+#: instance, they just choose its Kind per value.
 _ANY_NODE = "ANY_KIND"
 
 
@@ -243,7 +243,7 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
     out.write(
         "DNA's data model has two levels. The **logical** model — Kinds and\n"
         "the references between them — carries the meaning. The **physical**\n"
-        "model is a generic document store that tells you almost nothing about\n"
+        "model is a generic instance store that tells you almost nothing about\n"
         "the domain, and this page says so rather than dressing it up.\n\n"
     )
 
@@ -256,7 +256,7 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
     )
     out.write("| Owner | Migrates | On this page |\n| --- | --- | --- |\n")
     out.write(
-        "| DNA SDK (this repo) | the document-store tables below, via its own "
+        "| DNA SDK (this repo) | the instance-store tables below, via its own "
         "Alembic tree | yes — fully |\n"
         "| dna-cloud portal | its Prisma schema (accounts, plans, billing — "
         "real relational tables with real foreign keys) | **no** — separate "
@@ -278,7 +278,7 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
     # ---- logical ------------------------------------------------------------
     out.write("## Logical model — Kinds and their references\n\n")
     out.write(
-        f"{len(kinds)} Kinds are registered. Each is a document, not a table: a\n"
+        f"{len(kinds)} Kinds are registered. Each is an instance, not a table: a\n"
         "Kind costs a YAML descriptor and zero migrations, which is the point\n"
         "of an open type system. The cost is that references between Kinds are\n"
         "not database foreign keys — they are fields holding a name.\n\n"
@@ -304,7 +304,7 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
         "veto data the live one accepts.\n\n"
         "`*` on a label marks a polymorphic relation (several possible target "
         "Kinds, or one chosen per value). `[key]` marks the addressing when it "
-        "is not the document name.\n\n"
+        "is not the instance name.\n\n"
     )
 
     total = len(edges)
@@ -425,6 +425,10 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
         "its absence is the point: those were real references the annotation\n"
         "could not express. They are declared relations now, in the table\n"
         "above, with `Enforced` blank.\n\n"
+        "An **undeclared** row can now be ANSWERED rather than only asked —\n"
+        "see the next table. What is left here is what somebody decided to\n"
+        "leave, with the reason recorded in the Kind and in\n"
+        "`tests/test_kind_graph_registry.py`.\n\n"
     )
     if unresolved:
         out.write("| Kind | Field | Origin | Why unresolved |\n"
@@ -436,11 +440,41 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
         out.write("_None._\n")
     out.write("\n")
 
+    # ---- the answered half ---------------------------------------------------
+    idents = [
+        (k["kind"], ident)
+        for k in kinds
+        for _, ident in sorted(k["identifiers"].items())
+    ]
+    out.write(f"### Fields that are NOT references ({len(idents)})\n\n")
+    out.write(
+        "The gap list above is short because these fields ANSWERED it. A\n"
+        "reference-shaped name with no relation used to be an invitation with\n"
+        "no way of being accepted, so two thirds of the rows were permanent by\n"
+        "construction. `spec.identifiers` is how a Kind says a field points\n"
+        "nowhere — `self` for the instance's own key, `external` plus the\n"
+        "minting authority for an id that belongs to another system.\n\n"
+        "This is not the retired inference denylist: the gap row asserts no\n"
+        "target, so nothing false is being silenced, and the answer lives on\n"
+        "the Kind beside its schema rather than in a central table that can go\n"
+        "stale against a Kind it no longer describes.\n\n"
+    )
+    if idents:
+        out.write("| Kind | Field | Role | Minted by |\n| --- | --- | --- | --- |\n")
+        for kind, ident in sorted(idents, key=lambda r: (r[0], r[1].name)):
+            system = f"`{ident.system}`" if ident.system else "—"
+            out.write(
+                f"| `{kind}` | `{ident.name}` | `{ident.role}` | {system} |\n"
+            )
+    else:
+        out.write("_None._\n")
+    out.write("\n")
+
     connected = {e["source"] for e in edges} | {e["target"] for e in edges}
     isolated = sorted({k["kind"] for k in kinds} - connected)
     out.write(f"### Kinds with no reference edge ({len(isolated)})\n\n")
     out.write(
-        "Standalone documents — configuration, composition-plane behaviour, or\n"
+        "Standalone instances — configuration, composition-plane behaviour, or\n"
         "record Kinds whose links are simply not modelled yet.\n\n"
     )
     out.write(", ".join(f"`{k}`" for k in isolated) + "\n\n")
@@ -453,8 +487,8 @@ def _page(kinds: list[dict], edges: list[dict], unresolved: list[dict],
     out.write(
         "!!! note \"This diagram carries little information, by design\"\n\n"
         f"    {len(pg)} tables on Postgres ({len(lite)} on SQLite) and\n"
-        f"    **{fk_count} foreign keys**. They are a generic document store:\n"
-        "    `documents` holds every Kind, of every type, as JSON in a\n"
+        f"    **{fk_count} foreign keys**. They are a generic instance store:\n"
+        "    `instances` holds every Kind, of every type, as JSON in a\n"
         "    `content` column keyed by `(scope, kind, name, tenant)`. Adding a\n"
         "    Kind adds rows, never a table — so the physical diagram cannot\n"
         "    show you the domain. The logical model above is where the domain\n"

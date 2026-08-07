@@ -156,8 +156,17 @@ class ResearchKind(KindBase):
         "References into a position with recommendations."
     )
     # `cited_by` carries `<Kind>/<name>` — the target Kind travels in the
-    # VALUE, which is what `to: "*"` says. `references` is NOT here: it
-    # holds Reference doc names, and Reference is the one Kind name still
+    # VALUE, which is what `by` says.
+    #
+    # `to: "*"` here is OPEN BY DESIGN, not "we could not type it". The writer
+    # is `dna sdlc cite`, whose own docstring is "Bidirectional citation
+    # between ANY two Kinds"; it validates neither side against a family, and
+    # the stored data is spread across ADR, Spec, Story, Feature and Issue
+    # (measured 06/08/2026). Anything authorable can ground itself in a
+    # Research, so a closed `to` would be a list the next citation contradicts.
+    #
+    # `references` is NOT here: it holds Reference doc names, and Reference is
+    # the one Kind name still
     # on the collision allowlist (research/v1 AND sdlc/v1), so a bare-name
     # target would be ambiguous. Declaring it is i-110's work, not this
     # slice's — and the gap list now says so out loud.
@@ -224,8 +233,8 @@ class ResearchKind(KindBase):
                     "description": "When the research was synthesized.",
                 },
                 # Renamed from `scope_ref` on 2026-08-06. The `_ref` suffix
-                # promised a document and there is none: a SCOPE is a partition
-                # of the document store, not a Kind, so the schema graph could
+                # promised an instance and there is none: a SCOPE is a partition
+                # of the instance store, not a Kind, so the schema graph could
                 # only ever report this field as reference-shaped and
                 # unresolvable. Renaming is the only lever the SCHEMA has — the
                 # projection offers no way to mark a reference-shaped NAME as
@@ -233,16 +242,16 @@ class ResearchKind(KindBase):
                 # field never referenced anything.
                 #
                 # Compatible by construction: this schema is
-                # `additionalProperties: true`, so a pre-existing document still
+                # `additionalProperties: true`, so a pre-existing instance still
                 # carrying `scope_ref` keeps validating on read AND on write; it
-                # simply stops being projected. The tracked Research documents
+                # simply stops being projected. The tracked Research instances
                 # are migrated in the same commit.
                 "scope": {
                     "type": "string",
                     "description": (
                         "Scope this research informs (e.g. "
                         "'dna-development'). A scope NAME — a partition of the "
-                        "document store — not a reference to any document."
+                        "instance store — not a reference to any instance."
                     ),
                 },
                 "visibility": {

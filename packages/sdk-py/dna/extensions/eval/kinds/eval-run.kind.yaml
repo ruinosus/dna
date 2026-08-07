@@ -26,6 +26,11 @@ spec:
   target_kind: EvalRun
   alias: eval-eval-run
   origin: github.com/ruinosus/dna/eval
+  # A claim about the past: `started_at`/`finished_at`, the resolved `target`,
+  # the counts, and `suite` pointing back at the declaration it executed. A run
+  # that turns out wrong is superseded by another run, not corrected.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [execution.run]
   plane: record
   prompt_target: false
   flatten_in_context: false
@@ -34,6 +39,16 @@ spec:
   storage:
     type: yaml
     container: eval-runs
+  # An EvalRun that does not point at the suite it executed is modelling that
+  # did not happen — and until 06/08/2026 all four Eval Kinds were islands,
+  # even though every link is spelled out in the descriptions right below
+  # ("Name of the EvalSuite that was executed"). Safe to enforce: zero EvalRun
+  # instances are stored in any scope (measured 06/08/2026), so nothing can be
+  # vetoed, and the relation starts guarding from the first run ever saved.
+  relations:
+    suite:
+      to: EvalSuite
+      cardinality: one
   schema:
     type: object
     required:

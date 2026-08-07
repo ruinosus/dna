@@ -55,13 +55,14 @@ class _Port:
     """The smallest thing the projection accepts: a Kind descriptor stub."""
 
     def __init__(self, kind, *, alias="", plane="record", schema=None,
-                 dep_filters=None, relations=None):
+                 dep_filters=None, relations=None, identifiers=None):
         self.kind = kind
         self.alias = alias
         self.plane = plane
         self._schema = schema or {}
         self.dep_filters = dep_filters or {}
         self.relations = relations
+        self.identifiers = identifiers
 
     def schema(self):
         return self._schema
@@ -76,6 +77,7 @@ class _Replay:
         self.plane = row["plane"]
         self.dep_filters = row["dep_filters"]
         self.relations = row["relations"]
+        self.identifiers = row["identifiers"]
         self._schema = {"properties": row["properties"]}
 
     def schema(self):
@@ -125,10 +127,16 @@ class TestOneReadingOfTheDeclaration:
             for name, rel in relations_of(port).items() for target in rel.to
         }
 
-    def test_enforced_IS_relation_resolved_not_a_second_condition(self):
-        """The mutant this kills: somebody re-deriving "is it enforced?" from
-        the tier name or from ``by == 'name'``. Two readings of one promise are
-        two readings that can disagree, and the write path owns this one."""
+    def test_enforced_and_followed_are_read_off_the_relation_never_re_derived(self):
+        """The mutant this kills: somebody re-deriving either fact from the
+        tier name or from ``by == 'name'``. Two readings of one promise are two
+        readings that can disagree, and the write path owns both.
+
+        It pins TWO keys since fatia 5, because what used to be one fact is
+        two: a ``by: <key>`` relation IS followed (its edges are in the table)
+        and is NOT enforced (a miss does not veto). A graph carrying only
+        ``enforced`` would render that relation as unchecked while its rows sat
+        right there — *capacidade existe, porta não*, rendered on a screen."""
         port = _Port(
             "Project",
             schema=_props("org_ref", "workspace_id", "produces",
@@ -145,7 +153,19 @@ class TestOneReadingOfTheDeclaration:
         rels = relations_of(port)
         assert len(edges) == 3
         for e in edges:
-            assert e["enforced"] is rels[e["field"]].resolved
+            assert e["enforced"] is rels[e["field"]].enforced
+            assert e["followed"] is rels[e["field"]].resolved
+        # …and the two really do DIVERGE on this port, so the loop above is not
+        # passing because every value happens to be the same. Without this the
+        # test would stay green if `followed` were silently aliased to
+        # `enforced`, which is the whole distinction fatia 5 introduced.
+        by_field = {e["field"]: e for e in edges}
+        assert (by_field["org_ref"]["enforced"],
+                by_field["org_ref"]["followed"]) == (True, True)
+        assert (by_field["workspace_id"]["enforced"],
+                by_field["workspace_id"]["followed"]) == (False, True)
+        assert (by_field["produces"]["enforced"],
+                by_field["produces"]["followed"]) == (False, False)
 
     def test_cardinality_comes_from_the_relation_not_from_the_json_type(self):
         """Dor 4. The schema says ``string``; the model says ``many``. The
@@ -271,7 +291,24 @@ class TestTheGapsSurvive:
         rows = kind_rows([_Port("A", schema=_props("thing_ref"))])
         _, unresolved = build_edges(rows)
         assert unresolved[0]["origin"] == "undeclared"
-        assert "no relation declares" in unresolved[0]["reason"]
+        assert "neither a relation nor an identifier" in unresolved[0]["reason"]
+
+    def test_an_identifier_ANSWERS_the_invitation(self):
+        """The half that makes the list finite. A field saying "I am not a
+        reference" (``spec.identifiers``) leaves the gap list — and this is not
+        the retired denylist returning: the gap row asserted no target, so
+        there is no false claim being silenced, and the answer lives on the
+        Kind rather than in a central table that can go stale against a Kind it
+        no longer describes."""
+        rows = kind_rows([_Port(
+            "A", schema=_props("thing_ref"),
+            identifiers={"thing_ref": {"role": "external", "system": "stripe"}},
+        )])
+        edges, unresolved = build_edges(rows)
+        assert unresolved == []
+        # And it does not become an EDGE either: it points nowhere, which is
+        # the entire statement.
+        assert edges == []
 
     def test_the_gap_row_does_NOT_guess_a_target(self):
         """The retired mechanism, refused explicitly. ``KindDefinition.docs ->
@@ -347,7 +384,7 @@ class TestTheBucketsAreDistinguishable:
         ])
         assert set(graph["edges"][0]) == {
             "from_kind", "field", "to_kind", "cardinality", "tier",
-            "polymorphic", "by", "enforced", "inverse_of",
+            "polymorphic", "by", "followed", "enforced", "inverse_of",
         }
 
     def test_every_wire_gap_carries_the_full_key_set(self):

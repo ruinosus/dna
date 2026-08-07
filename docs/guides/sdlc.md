@@ -1,6 +1,6 @@
 # Your git log is your SDLC
 
-DNA tracks its own software lifecycle **as DNA documents**. This repository's
+DNA tracks its own software lifecycle **as DNA instances**. This repository's
 Stories, Features and Issues live in
 [`.dna/dna/`](https://github.com/ruinosus/dna/tree/main/.dna/dna) —
 the repo *is* the project, so its scope sits at the root, right where the
@@ -98,7 +98,7 @@ dna sdlc story pr s-my-story --dry-run   # print title + body, no gh call
 dna sdlc pr-footer s-my-story         # just the footer, for hand-made PRs
 ```
 
-`story pr` assembles the whole PR from the Story document — title
+`story pr` assembles the whole PR from the Story instance — title
 `feat(<first-label>): <story title> (<s-my-story>)`, body = the story
 description plus the acceptance criteria as a task-list checklist, and the
 attribution footer at the end (override the line via `$DNA_SDLC_PR_FOOTER`):
@@ -119,7 +119,7 @@ bookkeeping.
 GitHub Issues are artifacts of the github.com domain — DNA **bridges** to
 them, it does not replace them. Commits carry the `Work-Item:` trailer, PRs
 carry the 🧬 footer, and issues complete the triangle with the same
-attribution plus explicit provenance fields on the Issue document
+attribution plus explicit provenance fields on the Issue instance
 (`github_number`, `github_url`, `github_state`, `github_synced_at` — all on
 the Issue Kind schema, so the write path validates them):
 
@@ -131,7 +131,7 @@ dna sdlc issue import https://github.com/owner/repo/issues/42
 dna sdlc issue sync i-007-my-bug           # refresh github_state from the remote
 ```
 
-`publish` assembles the GitHub issue from the document — title
+`publish` assembles the GitHub issue from the instance — title
 `<title> (<i-007-my-bug>)`, body = description + type/severity + a link back
 to the doc on the board + the same 🧬 footer PRs carry — then stamps the
 GitHub number/URL back onto the doc. It is idempotent: publishing an
@@ -189,16 +189,16 @@ DNA dogfoods this itself: the `e-dna-dx` epic **produces** its own design doc as
 the `HtmlArtifact/ha-e-dna-dx-design` above — so the "why" of the work is
 traceable on the board, not lost in a chat transcript.
 
-## The sprint is a document, not a label
+## The sprint is an instance, not a label
 
 `Story` and `Feature` carry a `sprint_ref`. Until 2026-08-06 it was a
-free-form string whose `_ref` suffix promised a document nothing provided: you
+free-form string whose `_ref` suffix promised an instance nothing provided: you
 could group a board by `2026-Q2-S2` and learn nothing else about it, and a typo
 produced a second, silent sprint.
 
 `Sprint` is now a Kind, and `sprint_ref` is a **declared reference**
-(`spec.relations`) the kernel resolves at write time. The document NAME is the key —
-so the identifier your board already carries is the name you give the document:
+(`spec.relations`) the kernel resolves at write time. The instance NAME is the key —
+so the identifier your board already carries is the name you give the instance:
 
 ```yaml
 # sprint.yaml
@@ -206,7 +206,7 @@ apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Sprint
 metadata: {name: 2026-Q2-S2}
 spec:
-  sprint_id: 2026-Q2-S2          # MUST equal the document name
+  sprint_id: 2026-Q2-S2          # MUST equal the instance name
   name: Sprint 2 — Q2 2026
   starts_on: 2026-04-06
   ends_on: 2026-04-17
@@ -214,22 +214,22 @@ spec:
 ```
 
 ```bash
-dna doc apply sprint.yaml                    # or, without a file:
-dna doc make Sprint 2026-Q2-S2 sprint_id=2026-Q2-S2 \
+dna instance apply sprint.yaml                    # or, without a file:
+dna instance make Sprint 2026-Q2-S2 sprint_id=2026-Q2-S2 \
     starts_on=2026-04-06 ends_on=2026-04-17 state=active
 
 dna sdlc story create s-x --feature f-y --sprint 2026-Q2-S2 --desc "…"
 ```
 
 There is deliberately no `dna sdlc sprint` sub-command yet: the generic
-document door already writes the Kind, and a bespoke command is worth adding
+instance door already writes the Kind, and a bespoke command is worth adding
 the day a board surface needs more than that.
 
 Nothing about an existing board has to change. The value shape is identical,
 and a `sprint_ref` naming a Sprint that does not exist yet still **persists**
 under the default `DNA_REF_VALIDATION=warn` — it is recorded as a dangling
 edge, which is a fact worth having rather than a write worth refusing. Create
-the Sprint document later and the same value resolves. Under
+the Sprint instance later and the same value resolves. Under
 `DNA_REF_VALIDATION=enforce` it is refused, like every other declared
 reference.
 

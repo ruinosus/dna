@@ -224,7 +224,7 @@ class TestKindDefinitionExtension:
         k.cache(FilesystemCache(tmp_path / ".dna"))
 
         mi = k.instance("demo")
-        kinddefs = [d for d in mi.documents if d.kind == "KindDefinition"]
+        kinddefs = [d for d in mi.instances if d.kind == "KindDefinition"]
         assert len(kinddefs) == 1
         assert kinddefs[0].name == "recipe"
 
@@ -271,7 +271,7 @@ class TestTwoPhaseLoading:
         assert key in k._kinds
         assert getattr(k._kinds[key], "__declarative__", False)
 
-        recipes = [d for d in mi.documents if d.kind == "Recipe"]
+        recipes = [d for d in mi.instances if d.kind == "Recipe"]
         assert len(recipes) == 1
         doc = recipes[0]
         assert doc.name == "pasta"
@@ -335,11 +335,11 @@ class TestConflictResolution:
         )
 
         # KindDefinition doc still loaded fine
-        assert len([d for d in mi.documents if d.kind == "KindDefinition"]) == 1
+        assert len([d for d in mi.instances if d.kind == "KindDefinition"]) == 1
 
 
 # ---------------------------------------------------------------------------
-# 3.6 Round-trip via the kernel's serialize_document path
+# 3.6 Round-trip via the kernel's serialize_instance path
 # ---------------------------------------------------------------------------
 
 class TestRoundTrip:
@@ -373,7 +373,7 @@ class TestRoundTrip:
                 "description": "A crusty loaf.",
             },
         }
-        result = k.serialize_document("demo", "Recipe", "bread", raw)
+        result = k.serialize_instance("demo", "Recipe", "bread", raw)
         files = result["files"]
         assert any(f["relativePath"].endswith("RECIPE.md") for f in files)
 
@@ -389,7 +389,7 @@ class TestRoundTrip:
         k2.cache(FilesystemCache(tmp_path / ".dna"))
         mi2 = await k2.instance_async("demo")
 
-        recipes = [d for d in mi2.documents if d.kind == "Recipe"]
+        recipes = [d for d in mi2.instances if d.kind == "Recipe"]
         assert len(recipes) == 1
         reloaded = recipes[0]
         assert reloaded.name == "bread"

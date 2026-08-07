@@ -46,7 +46,7 @@ def _seed_scope(base_dir: str, scope: str) -> None:
                 # validation (i-008) now vetoes the skeletal fixture.
                 "spec": {"title": text, "description": text, "status": "todo"},
             }
-            await kernel.write_document(scope, "Story", name, raw)
+            await kernel.write_instance(scope, "Story", name, raw)
 
     asyncio.run(go())
 

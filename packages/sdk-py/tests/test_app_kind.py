@@ -25,7 +25,7 @@ def _load_app_doc(spec: dict):
     }
     (tmp / "apps" / "meu-app.yaml").write_text(yaml.safe_dump(doc))
     mi = Kernel.quick("s", base_dir=str(tmp.parent))
-    # Record-plane não flatten-a em mi.documents (de propósito) — a leitura
+    # Record-plane não flatten-a em mi.instances (de propósito) — a leitura
     # canônica é pelo registro, como toda tela faz.
     return mi._one("App", "meu-app")
 
@@ -43,7 +43,7 @@ def test_app_declara_a_referencia_aos_copilotos():
 
     A declaração saiu de dentro da propriedade do JSON Schema e virou bloco
     próprio: o schema guarda os DADOS, `relations` guarda o modelo. O nome da
-    relação continua sendo o campo, então nenhum documento de App mudou."""
+    relação continua sendo o campo, então nenhuma instância de App mudou."""
     from dna.kernel.source.descriptor_loader import load_descriptors
 
     raws = load_descriptors("dna.extensions.helix")

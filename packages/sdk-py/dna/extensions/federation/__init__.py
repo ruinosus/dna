@@ -174,6 +174,45 @@ class MCPFederationKind(KindBase):
     is_prompt_target = False
     prompt_target_priority = 0
     flatten_in_context = False
+    # ---- What an MCPFederation POINTS AT (i-119 group C, 06/08/2026) ------
+    # i-119 filed this Kind as an island whose `allowed_tools` / `read_tools`
+    # "nomeiam Tools". Measured, they do not — see the block under the
+    # declaration. What DOES name another instance is the pair of role floors,
+    # and nothing had said so.
+    #
+    # `by: role_id`, not `by: name`, and the precedent is one file away:
+    # `Membership.role` and `WorkspaceMembership.role` already declare
+    # `to: Role, by: role_id`, because `role_id` is a REQUIRED field of the
+    # target while the doc name only equals it by convention
+    # (`role.kind.yaml`: "The doc name SHOULD equal this"). Role is also
+    # TENANTED and not inheritable, so a `by: name` declaration would resolve
+    # against the writer's scope and veto federations the live ladder accepts.
+    # Declared, drawn, honestly not resolved — and this is the first thing that
+    # states, in the model, that DNA's role ladder is EXTENSIBLE data rather
+    # than the four hardcoded strings in `STANDARD_ROLE_RANKS` above.
+    relations = {
+        "min_role": {"to": "Role", "cardinality": "one", "by": "role_id"},
+        "min_role_write": {"to": "Role", "cardinality": "one", "by": "role_id"},
+    }
+    # ---- Why the tool lists are NOT relations -----------------------------
+    # `allowed_tools`, `read_tools` and `write_tools` hold REMOTE tool names,
+    # pre-prefix — the names the FOREIGN MCP server publishes over JSON-RPC,
+    # minted by that server and meaningful only against it. DNA's `Tool` Kind is
+    # a different universe: tools-as-data authored in a scope
+    # (`helix/kinds/tool.kind.yaml`), reachable by name in `Agent.tools`. The
+    # two are unrelated namespaces that happen to share the word "tool", and
+    # `tool_prefix` exists precisely because a remote name has to be rewritten
+    # before it can sit beside a local one. Declaring `to: Tool` would draw 100%
+    # false edges from every federation to Kinds it has never heard of.
+    #
+    # They are not `spec.identifiers` either, and that is a decision rather than
+    # an omission: no name here ends in `_id`/`_ref`/`_slug`, so `kind_graph`
+    # raises no `undeclared` gap for them, and `identifiers` exists to ANSWER a
+    # gap row. Declaring one where nothing asked would be the suppression table
+    # coming back through the door that module was written to close. The
+    # `system` key would also have to name a DIFFERENT authority per instance
+    # (each doc IS its own server), which is a fact about the value, not about
+    # the Kind.
     docs = (
         "An MCPFederation declares an external MCP server whose tools DNA "
         "agents consume: a Agent lists the doc's name in "

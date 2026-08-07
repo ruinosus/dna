@@ -224,7 +224,7 @@ class LangChainRuntime:
         # `extra_names` responde "que tools locais existem" (a allowlist precisa
         # enxergá-las, ou ela as filtra). `extra_confirm` responde "quais delas
         # pedem aprovação humana". Enquanto as locais eram só ESCRITAS — os
-        # drafts de memória e de documento — as duas respostas coincidiam, e a
+        # drafts de memória e de instância — as duas respostas coincidiam, e a
         # coincidência acabou codificada como se fosse a regra.
         #
         # MEDIDO em 02/08/2026 no dna-cloud: `analyze_spreadsheet` apenas LÊ uma
@@ -237,7 +237,7 @@ class LangChainRuntime:
         # desgataria uma escrita futura em silêncio, que é o erro caro do outro
         # lado. É o mesmo `requires_confirmation` que o Kind `Tool` já usa para
         # as tools de MCP; aqui ele viaja no `metadata` da tool do LangChain,
-        # porque uma tool local não tem documento.
+        # porque uma tool local não tem instância.
         extra_names = [n for n in (getattr(t, "name", None) for t in extra_tools) if n]
         extra_confirm = [
             name

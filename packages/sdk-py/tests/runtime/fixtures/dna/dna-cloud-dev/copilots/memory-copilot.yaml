@@ -42,7 +42,7 @@ spec:
   # knowledge: OMITTED by design. The Memory wedge's "RAG" IS DNA's native
   # semantic recall (the mounted `recall` MCP tool is vector search over the
   # memory store) — a pure-action copilot declares no separate corpus/vector
-  # store. (§5 of the design; `search: off` is valid.) A document knowledge
+  # store. (§5 of the design; `search: off` is valid.) An instance knowledge
   # base, if DNA Cloud later adds one, would add knowledge.collections + a
   # knowledge.store here — optional, not required for the wedge.
 

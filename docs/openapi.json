@@ -382,7 +382,7 @@
         "type": "object"
       },
       "AuthorKindResponse": {
-        "description": "``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false\nhere: this door cannot approve, so the field states the document's actual\nstate rather than echoing anything the caller sent.",
+        "description": "``POST /v1/kinds`` — the authored Kind. ``approved`` is ALWAYS false\nhere: this door cannot approve, so the field states the instance's actual\nstate rather than echoing anything the caller sent.",
         "properties": {
           "approved": {
             "title": "Approved",
@@ -400,6 +400,17 @@
             "title": "Namespace",
             "type": "string"
           },
+          "plane": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plane"
+          },
           "proposed_by": {
             "anyOf": [
               {
@@ -410,6 +421,18 @@
               }
             ],
             "title": "Proposed By"
+          },
+          "relations": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relations"
           },
           "schema": {
             "anyOf": [
@@ -422,6 +445,32 @@
               }
             ],
             "title": "Schema"
+          },
+          "suggested_relations": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Relations"
+          },
+          "suggestion": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggestion"
           },
           "version": {
             "anyOf": [
@@ -445,7 +494,7 @@
         "type": "object"
       },
       "AuthoredKindDetail": {
-        "description": "``GET /v1/kinds/{kind}`` — one authored Kind, in full.\n\nSUBCLASSES the summary rather than restating it: the roster and the single\nread describe the SAME document, and two independent field lists are two\nvocabularies for one thing — the kind of drift that reads, to the human\ndoing the review, as two different documents.\n\nWhat it adds is what the roster deliberately withholds. ``schema`` is the\nreason the route exists: registration is what confers schema validation and\nstorage routing, so \"should this take effect?\" is a question ABOUT the\nschema, and a reviewer who cannot see it is not reviewing anything.\n``traits`` travels with it because it is the other half of what the\nauthoring door stored and the other half of what would take effect.\n\n``schema`` is ``null``, never ``{}``, for a document that stored none —\n\"there is no schema here\" and \"the schema is the empty object\" are\ndifferent facts about what would be conferred.",
+        "description": "``GET /v1/kinds/{kind}`` — one authored Kind, in full.\n\nSUBCLASSES the summary rather than restating it: the roster and the single\nread describe the SAME instance, and two independent field lists are two\nvocabularies for one thing — the kind of drift that reads, to the human\ndoing the review, as two different instances.\n\nWhat it adds is what the roster deliberately withholds. ``schema`` is the\nreason the route exists: registration is what confers schema validation and\nstorage routing, so \"should this take effect?\" is a question ABOUT the\nschema, and a reviewer who cannot see it is not reviewing anything.\n``traits`` travels with it because it is the other half of what the\nauthoring door stored and the other half of what would take effect.\n\n``schema`` is ``null``, never ``{}``, for an instance that stored none —\n\"there is no schema here\" and \"the schema is the empty object\" are\ndifferent facts about what would be conferred.",
         "properties": {
           "api_version": {
             "anyOf": [
@@ -529,6 +578,17 @@
             ],
             "title": "Namespace"
           },
+          "plane": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plane"
+          },
           "presentation": {
             "anyOf": [
               {
@@ -562,6 +622,18 @@
               }
             ],
             "title": "Proposed By"
+          },
+          "relations": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relations"
           },
           "revoked_at": {
             "anyOf": [
@@ -614,7 +686,7 @@
         "type": "object"
       },
       "AuthoredKindSummary": {
-        "description": "One ``KindDefinition`` document as the audit surface sees it — ALL THREE\nactors, so the reviewer deciding whether to confer effect can see who asked\nfor it, and whether anyone has since taken it away, without leaving the\nlist.",
+        "description": "One ``KindDefinition`` instance as the audit surface sees it — ALL THREE\nactors, so the reviewer deciding whether to confer effect can see who asked\nfor it, and whether anyone has since taken it away, without leaving the\nlist.",
         "properties": {
           "api_version": {
             "anyOf": [
@@ -752,7 +824,7 @@
         "type": "object"
       },
       "AuthoredKindsResponse": {
-        "description": "``GET /v1/kinds`` — every authored Kind in the scope, approved or not.\nDocuments, not registry entries: an UNAPPROVED Kind is exactly the one the\nregistry does not have, and it is the one a reviewer came here for.",
+        "description": "``GET /v1/kinds`` — every authored Kind in the scope, approved or not.\nInstances, not registry entries: an UNAPPROVED Kind is exactly the one the\nregistry does not have, and it is the one a reviewer came here for.",
         "properties": {
           "kinds": {
             "items": {
@@ -1134,6 +1206,17 @@
             "title": "Kind",
             "type": "string"
           },
+          "plane": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plane"
+          },
           "presentation": {
             "anyOf": [
               {
@@ -1151,6 +1234,18 @@
               }
             ],
             "title": "Presentation"
+          },
+          "relations": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relations"
           },
           "schema": {
             "additionalProperties": true,
@@ -1629,7 +1724,7 @@
         "type": "object"
       },
       "BundleEntriesView": {
-        "description": "``GET /v1/definitions/{kind}/{name}/entries`` — a bundle document's\nentry files (base ∪ tenant overlay), each flagged ``overridden`` —\nwhether THIS tenant forked that specific file.",
+        "description": "``GET /v1/definitions/{kind}/{name}/entries`` — a bundle instance's\nentry files (base ∪ tenant overlay), each flagged ``overridden`` —\nwhether THIS tenant forked that specific file.",
         "properties": {
           "entries": {
             "items": {
@@ -1919,7 +2014,7 @@
         "type": "object"
       },
       "DefinitionWriteResponse": {
-        "description": "``PUT``/``DELETE /v1/definitions/{kind}/{name}`` — the write result.\n``version`` is set on apply (the write's document version), absent on\nrevert.",
+        "description": "``PUT``/``DELETE /v1/definitions/{kind}/{name}`` — the write result.\n``version`` is set on apply (the write's instance version), absent on\nrevert.",
         "properties": {
           "kind": {
             "title": "Kind",
@@ -2094,8 +2189,8 @@
         "title": "GenomeViewResponse",
         "type": "object"
       },
-      "GetKindDocumentResponse": {
-        "description": "``GET /v1/kinds/{kind}/documents/{name}`` — UM documento, VERBATIM.\n\nA lista projetada passa pela vista dos readers quando o Kind é produzível\npor bundle (Agent, Skill…) — e a vista NORMALIZA: `spec.description` e\n`spec.tools_requiring_confirmation` de um Agent gravado pelo funil\ngenérico simplesmente não viajam por ela (medido 05/08/2026 na aba\nConfiguração do dna-cloud). Esta porta lê o documento como a camada do\nchamador o vê, sem projeção e sem vista — o `get_document_impl` que\nsempre existiu e não tinha rota.\n\n`etag` é o token de concorrência otimista para um write subsequente\n(``if_match``): um lost update vira recusa, não sobrescrita silenciosa.\n\nOs TRÊS campos `as_of*` só aparecem quando o chamador pediu leitura no\ntempo, e existem para que uma resposta histórica não seja confundível com\numa viva por quem só olha `document` (i-106: a rota ACEITAVA `?as_of=` e\ndevolvia o presente, sem nada na resposta que a desmentisse). Presentes ⇒ o\ncorpo é o estado de crença daquele instante; ausentes ⇒ é o de agora.",
+      "GetKindInstanceResponse": {
+        "description": "``GET /v1/kinds/{kind}/instances/{name}`` — UMA instância, VERBATIM.\n\nA lista projetada passa pela vista dos readers quando o Kind é produzível\npor bundle (Agent, Skill…) — e a vista NORMALIZA: `spec.description` e\n`spec.tools_requiring_confirmation` de um Agent gravado pelo funil\ngenérico simplesmente não viajam por ela (medido 05/08/2026 na aba\nConfiguração do dna-cloud). Esta porta lê a instância como a camada do\nchamador o vê, sem projeção e sem vista — o `get_instance_impl` que\nsempre existiu e não tinha rota.\n\n`etag` é o token de concorrência otimista para um write subsequente\n(``if_match``): um lost update vira recusa, não sobrescrita silenciosa.\n\nOs TRÊS campos `as_of*` só aparecem quando o chamador pediu leitura no\ntempo, e existem para que uma resposta histórica não seja confundível com\numa viva por quem só olha `instance` (i-106: a rota ACEITAVA `?as_of=` e\ndevolvia o presente, sem nada na resposta que a desmentisse). Presentes ⇒ o\ncorpo é o estado de crença daquele instante; ausentes ⇒ é o de agora.",
         "properties": {
           "api_version": {
             "title": "Api Version",
@@ -2134,11 +2229,6 @@
             ],
             "title": "As Of Version"
           },
-          "document": {
-            "additionalProperties": true,
-            "title": "Document",
-            "type": "object"
-          },
           "etag": {
             "anyOf": [
               {
@@ -2149,6 +2239,11 @@
               }
             ],
             "title": "Etag"
+          },
+          "instance": {
+            "additionalProperties": true,
+            "title": "Instance",
+            "type": "object"
           },
           "kind": {
             "title": "Kind",
@@ -2168,13 +2263,13 @@
           "kind",
           "api_version",
           "name",
-          "document"
+          "instance"
         ],
-        "title": "GetKindDocumentResponse",
+        "title": "GetKindInstanceResponse",
         "type": "object"
       },
       "GraphRefEdge": {
-        "description": "ONE edge of the derived reference graph.\n\n``resolved: false`` is a DANGLING reference — declared, written, resolving\nto nothing. It travels rather than being filtered out: with\n``DNA_REF_VALIDATION=warn`` (the default) such a document persists, so\ndropping the row would render a tidier graph than the data deserves. These\nrows ARE the list of what is broken.\n\n``to_scope`` may differ from the request's scope (a reference can resolve\nin a parent scope) and is ``null`` when the resolution went through the\ninheritance chain without the parent being recorded — never a stand-in for\n\"the same scope\".",
+        "description": "ONE edge of the derived reference graph.\n\n``resolved: false`` is a DANGLING reference — declared, written, resolving\nto nothing. It travels rather than being filtered out: with\n``DNA_REF_VALIDATION=warn`` (the default) such an instance persists, so\ndropping the row would render a tidier graph than the data deserves. These\nrows ARE the list of what is broken.\n\n``to_scope`` may differ from the request's scope (a reference can resolve\nin a parent scope) and is ``null`` when the resolution went through the\ninheritance chain without the parent being recorded — never a stand-in for\n\"the same scope\".",
         "properties": {
           "closes_cycle": {
             "default": false,
@@ -2201,6 +2296,17 @@
             "title": "Field",
             "type": "string"
           },
+          "from_api_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Api Version"
+          },
           "from_kind": {
             "title": "From Kind",
             "type": "string"
@@ -2220,6 +2326,39 @@
           "resolved": {
             "title": "Resolved",
             "type": "boolean"
+          },
+          "to_api_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Api Version"
+          },
+          "to_deleted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Deleted At"
+          },
+          "to_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Id"
           },
           "to_kind": {
             "anyOf": [
@@ -2263,11 +2402,30 @@
         "type": "object"
       },
       "GraphRefsResponse": {
-        "description": "``GET /v1/kinds/{kind}/documents/{name}/refs`` — the DATA graph.\n\n``stop`` says WHY the walk ended (``complete`` / ``depth_reached`` /\n``truncated``), because a caller that cannot tell \"this is everything\" from\n\"this is where I stopped\" will render the second as the first.\n\n``graph_producer`` reports the producer's mode (``warn`` / ``enforce`` /\n``off``). With it ``off`` the write path performs no reference lookups, so\nno edges are produced — defensible operationally, and NOT the same as \"this\ndocument has no relations\". A store that keeps no edge graph at all answers\n501, never an empty list.\n\n⚠️ These are the ENFORCED relations only — the ones ``spec.relations``\ndeclares with a concrete target addressed by document name, which is the\nonly kind the write path resolves. The schema graph also carries relations\naddressed by a domain key or carrying their Kind in the value, plus\ncomposition edges from ``dep_filters``, none of which is ever checked\nagainst data; calling this \"the relations\" would claim a completeness the\nproducer does not have.",
+        "description": "``GET /v1/kinds/{kind}/instances/{name}/refs`` — the DATA graph.\n\n``stop`` says WHY the walk ended (``complete`` / ``depth_reached`` /\n``truncated``), because a caller that cannot tell \"this is everything\" from\n\"this is where I stopped\" will render the second as the first.\n\n``graph_producer`` reports the producer's mode (``warn`` / ``enforce`` /\n``off``). With it ``off`` the write path performs no reference lookups, so\nno edges are produced — defensible operationally, and NOT the same as \"this\ninstance has no relations\". A store that keeps no edge graph at all answers\n501, never an empty list.\n\n⚠️ These are the ENFORCED relations only — the ones ``spec.relations``\ndeclares with a concrete target addressed by instance name, which is the\nonly kind the write path resolves. The schema graph also carries relations\naddressed by a domain key or carrying their Kind in the value, plus\ncomposition edges from ``dep_filters``, none of which is ever checked\nagainst data; calling this \"the relations\" would claim a completeness the\nproducer does not have.\n\n``as_of`` echoes the transaction instant this walk answered for, or is\n``null`` for a live one. ``as_of_truncated`` names every node the walk\nREACHED and could not read that far back (``Kind/name``) — history pruned.\nBoth exist for the same reason ``stop`` does: a caller that cannot tell a\nhistorical answer from a present one, or a short graph from a partly\nunknowable one, will render the second as the first.\n\n⚠️ **Every key the impl produces is declared here**, and the guard that\nkeeps it that way is ``packages/cli/tests/test_mcp_graph_refs.py``. FastAPI\nDISCARDS an undeclared key in silence, which a client cannot tell from \"the\nfield does not exist\" — measured on 06/08/2026, when this very route was\neating three of them.",
         "properties": {
           "api_version": {
             "title": "Api Version",
             "type": "string"
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "as_of_truncated": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "As Of Truncated",
+            "type": "array"
           },
           "depth": {
             "title": "Depth",
@@ -2819,6 +2977,11 @@
             "title": "Enforced",
             "type": "integer"
           },
+          "followed": {
+            "default": 0,
+            "title": "Followed",
+            "type": "integer"
+          },
           "kinds": {
             "title": "Kinds",
             "type": "integer"
@@ -2856,7 +3019,7 @@
         "type": "object"
       },
       "KindGraphEdge": {
-        "description": "One SCHEMA edge: Kind ``from_kind`` points at ``to_kind`` through the\nrelation ``field``.\n\n``tier`` says where the edge comes from — ``declared`` (``spec.relations``,\nthe Kind's own statement about what it points at) or ``composition``\n(``dep_filters``: a real declaration that drives prompt composition and is\nnever checked against stored data).\n\n⚠️ ``enforced`` is the flag that matters, and it is NOT the same as\n``tier == \"declared\"``. The kernel resolves a relation at write time only\nwhen it has a concrete target Kind AND is addressed by document name\n(``by == \"name\"``). A relation addressed by a spec field of the target\n(``by: workspace_id``) or carrying its Kind in the value (``to: \"*\"``) is\nfully declared and deliberately not resolved. A renderer that draws\nenforced and unenforced edges alike is asserting a confidence the model\ndoes not have.\n\n``to_kind`` is a registered Kind, or ``*`` when the target Kind travels\ninside the VALUE. A declaration naming a Kind nobody registers is a gap,\nnot an edge, and comes back under ``unresolved``.",
+        "description": "One SCHEMA edge: Kind ``from_kind`` points at ``to_kind`` through the\nrelation ``field``.\n\n``tier`` says where the edge comes from — ``declared`` (``spec.relations``,\nthe Kind's own statement about what it points at) or ``composition``\n(``dep_filters``: a real declaration that drives prompt composition and is\nnever checked against stored data).\n\n⚠️ ``followed`` and ``enforced`` are TWO flags, and neither is the same as\n``tier == \"declared\"``. They were one field until fatia 5 of\n``spec-topologia-do-grafo`` taught the kernel to resolve a spec-KEY\naddress, which split what used to coincide:\n\n* ``followed`` — the kernel reads the target and this edge exists as data.\n  True for ``by: name`` and for ``by: <key>``.\n* ``enforced`` — an unresolvable value REFUSES the write. True only for\n  ``by: name``, because the by-key resolver is deliberately poorer than the\n  live alias-tolerant lookups and may not veto what they accept.\n\nA relation whose value carries its own Kind (``to: \"*\"`` with a composite\n``by``) is fully declared and neither followed nor enforced. A renderer\nthat draws all edges alike asserts a confidence the model does not have;\none that reads only ``enforced`` calls thirteen real, edge-producing\nrelations unchecked.\n\n``to_kind`` is a registered Kind, or ``*`` when the target Kind travels\ninside the VALUE. A declaration naming a Kind nobody registers is a gap,\nnot an edge, and comes back under ``unresolved``.",
         "properties": {
           "by": {
             "default": "name",
@@ -2880,6 +3043,11 @@
           "field": {
             "title": "Field",
             "type": "string"
+          },
+          "followed": {
+            "default": false,
+            "title": "Followed",
+            "type": "boolean"
           },
           "from_kind": {
             "title": "From Kind",
@@ -2972,7 +3140,7 @@
         "type": "object"
       },
       "KindGraphResponse": {
-        "description": "``GET /v1/graph/kinds`` — the whole SCHEMA graph in one call.\n\nSCHEMA, not data: these edges say which Kinds MAY point at which. Which\nDOCUMENTS actually point at which is a different graph, derived at write\ntime, and this route does not answer it — ``coverage.limits`` carries that\nstatement on the wire so it travels with the answer instead of living in a\ndoc page a caller may never read.\n\nThe ``undeclarable`` list this envelope used to carry is GONE, and its\nabsence is the feature: those rows were real references the annotation\ncould not express, and the declaration expresses them now. They are edges,\nwith ``enforced: false`` saying exactly how far the runtime goes.",
+        "description": "``GET /v1/graph/kinds`` — the whole SCHEMA graph in one call.\n\nSCHEMA, not data: these edges say which Kinds MAY point at which. Which\nINSTANCES actually point at which is a different graph, derived at write\ntime, and this route does not answer it — ``coverage.limits`` carries that\nstatement on the wire so it travels with the answer instead of living in a\ndoc page a caller may never read.\n\nThe ``undeclarable`` list this envelope used to carry is GONE, and its\nabsence is the feature: those rows were real references the annotation\ncould not express, and the declaration expresses them now. They are edges,\nwith ``enforced: false`` saying exactly how far the runtime goes.",
         "properties": {
           "coverage": {
             "$ref": "#/components/schemas/KindGraphCoverage"
@@ -3062,8 +3230,8 @@
         "title": "KindGraphUnresolved",
         "type": "object"
       },
-      "ListKindDocumentsResponse": {
-        "description": "``GET /v1/kinds/{kind}/documents`` — uma página de documentos do Kind.\n\n`documents` é a linha como o kernel a moldou: `{\"name\": …}` sem projeção, e\n`{\"name\": …, \"spec\": {…}}` com `fields`. `projected` ecoa o que foi pedido,\npara um leitor distinguir uma página de nomes de uma projetada — sem isso,\num `spec` ausente seria ambíguo entre \"não pedi\" e \"não tem\".\n\n`has_more` é respondido buscando UMA linha a mais, não adivinhado a partir\nde a página ter vindo cheia.",
+      "ListKindInstancesResponse": {
+        "description": "``GET /v1/kinds/{kind}/instances`` — uma página de instâncias do Kind.\n\n`instances` é a linha como o kernel a moldou: `{\"name\": …}` sem projeção, e\n`{\"name\": …, \"spec\": {…}}` com `fields`. `projected` ecoa o que foi pedido,\npara um leitor distinguir uma página de nomes de uma projetada — sem isso,\num `spec` ausente seria ambíguo entre \"não pedi\" e \"não tem\".\n\n`has_more` é respondido buscando UMA linha a mais, não adivinhado a partir\nde a página ter vindo cheia.",
         "properties": {
           "api_version": {
             "title": "Api Version",
@@ -3073,17 +3241,17 @@
             "title": "Count",
             "type": "integer"
           },
-          "documents": {
+          "has_more": {
+            "title": "Has More",
+            "type": "boolean"
+          },
+          "instances": {
             "items": {
               "additionalProperties": true,
               "type": "object"
             },
-            "title": "Documents",
+            "title": "Instances",
             "type": "array"
-          },
-          "has_more": {
-            "title": "Has More",
-            "type": "boolean"
           },
           "kind": {
             "title": "Kind",
@@ -3116,12 +3284,12 @@
           "scope",
           "kind",
           "api_version",
-          "documents",
+          "instances",
           "count",
           "offset",
           "has_more"
         ],
-        "title": "ListKindDocumentsResponse",
+        "title": "ListKindInstancesResponse",
         "type": "object"
       },
       "MemoriesResponse": {
@@ -3797,7 +3965,7 @@
                 "type": "null"
               }
             ],
-            "description": "SHA-256 (full hex) of the resolved raw document composed into this section, or null when it could not be resolved.",
+            "description": "SHA-256 (full hex) of the resolved raw instance composed into this section, or null when it could not be resolved.",
             "title": "Hash"
           },
           "is_inherited": {
@@ -3811,7 +3979,7 @@
             "type": "string"
           },
           "name": {
-            "description": "The contributing document name.",
+            "description": "The contributing instance name.",
             "title": "Name",
             "type": "string"
           },
@@ -3844,7 +4012,7 @@
                 "type": "null"
               }
             ],
-            "description": "metadata.version of the resolved document, when the author set one.",
+            "description": "metadata.version of the resolved instance, when the author set one.",
             "title": "Version"
           }
         },
@@ -4437,8 +4605,59 @@
         "title": "ReposResponse",
         "type": "object"
       },
+      "ResolveInstanceResponse": {
+        "description": "``GET /v1/instances/{id}`` — the ONE instance a short id names (i-114).\n\nThe id lane, kept separate from the ``{kind}/{name}`` lane on purpose. A\nshort name and a short id are both strings; a single door that accepted\n\"a name or maybe an id\" would eventually answer a name query with an id\nmatch, and nothing in the response would say so.\n\n``id`` echoes back the FULL id, not the prefix the caller sent — the\nexpansion is the answer, exactly as ``git rev-parse`` returns the whole\nhash. A prefix matching more than one instance is a **409**, never a pick.",
+        "properties": {
+          "api_version": {
+            "title": "Api Version",
+            "type": "string"
+          },
+          "etag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Etag"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "instance": {
+            "additionalProperties": true,
+            "title": "Instance",
+            "type": "object"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "scope",
+          "kind",
+          "api_version",
+          "name",
+          "instance"
+        ],
+        "title": "ResolveInstanceResponse",
+        "type": "object"
+      },
       "RevokeKindResponse": {
-        "description": "``POST /v1/kinds/{kind}/revoke`` — the act that WITHDRAWS effect (i-085).\n\nCarries the whole chain of acts, not only the last one: who proposed the\nshape, who conferred effect on it, and who has just withdrawn it.\n``approved_by`` is present on purpose — revoking is a third act, not an\nerasure of the second, and a record saying only \"revoked by X\" has lost the\nfact that this Kind governed real documents for a while.",
+        "description": "``POST /v1/kinds/{kind}/revoke`` — the act that WITHDRAWS effect (i-085).\n\nCarries the whole chain of acts, not only the last one: who proposed the\nshape, who conferred effect on it, and who has just withdrawn it.\n``approved_by`` is present on purpose — revoking is a third act, not an\nerasure of the second, and a record saying only \"revoked by X\" has lost the\nfact that this Kind governed real instances for a while.",
         "properties": {
           "approved_at": {
             "anyOf": [
@@ -5046,8 +5265,8 @@
         "title": "WriteBundleEntryRequest",
         "type": "object"
       },
-      "WriteKindDocumentRequest": {
-        "description": "``POST /v1/kinds/{kind}/documents`` — the document to write.\n\nDeliberately narrow: no ``scope``, no ``claims`` anywhere on this model —\nneither is reachable through this route's body (identity/scope are never\ncaller input here; see the route for the full reasoning).\n\n``kind`` is OPTIONAL and, when given, MUST equal the path's ``{kind}`` —\na caller naming a DIFFERENT Kind in the body is refused (400) rather than\nthe path or the body silently winning. Two sources stating one fact is\nexactly the defect this route exists to close.\n\n``source_sha256``, when given, cites the ``SourceArtifact`` (by content\naddress) this document was extracted from — the runtime closes the\nprovenance edge (``derived_refs``) server-side.",
+      "WriteKindInstanceRequest": {
+        "description": "``POST /v1/kinds/{kind}/instances`` — the instance to write.\n\nDeliberately narrow: no ``scope``, no ``claims`` anywhere on this model —\nneither is reachable through this route's body (identity/scope are never\ncaller input here; see the route for the full reasoning).\n\n``kind`` is OPTIONAL and, when given, MUST equal the path's ``{kind}`` —\na caller naming a DIFFERENT Kind in the body is refused (400) rather than\nthe path or the body silently winning. Two sources stating one fact is\nexactly the defect this route exists to close.\n\n``source_sha256``, when given, cites the ``SourceArtifact`` (by content\naddress) this instance was extracted from — the runtime closes the\nprovenance edge (``derived_refs``) server-side.",
         "properties": {
           "kind": {
             "anyOf": [
@@ -5086,11 +5305,11 @@
           "metadata",
           "spec"
         ],
-        "title": "WriteKindDocumentRequest",
+        "title": "WriteKindInstanceRequest",
         "type": "object"
       },
-      "WriteKindDocumentResponse": {
-        "description": "``POST /v1/kinds/{kind}/documents`` — the written document. ``scope``\nis DERIVED (there is no ``scope`` field on the request to have supplied\none from).",
+      "WriteKindInstanceResponse": {
+        "description": "``POST /v1/kinds/{kind}/instances`` — the written instance. ``scope``\nis DERIVED (there is no ``scope`` field on the request to have supplied\none from).",
         "properties": {
           "api_version": {
             "title": "Api Version",
@@ -5169,7 +5388,7 @@
           "created",
           "merged"
         ],
-        "title": "WriteKindDocumentResponse",
+        "title": "WriteKindInstanceResponse",
         "type": "object"
       }
     }
@@ -5437,7 +5656,7 @@
     },
     "/v1/artifacts": {
       "post": {
-        "description": "Record the ORIGINAL a projection will be derived from.\n\nThe caller must hold an ACTIVE WorkspaceMembership in ``workspace_id``,\nelse **403**. The write scope is DERIVED from the workspace and is\ndeliberately not accepted from the caller.\n\nIDEMPOTENT by content address: the same ``sha256`` updates the same\ndocument, so a retried upload leaves no second artifact behind — and an\nexisting ``derived_refs`` survives the retry rather than being blanked.\n\n``uri`` names where the bytes live and must NOT be a signed URL: a\nstored credential would make the document itself the access to its own\noriginal. 400 on a blank workspace_id / sha256 / uri.",
+        "description": "Record the ORIGINAL a projection will be derived from.\n\nThe caller must hold an ACTIVE WorkspaceMembership in ``workspace_id``,\nelse **403**. The write scope is DERIVED from the workspace and is\ndeliberately not accepted from the caller.\n\nIDEMPOTENT by content address: the same ``sha256`` updates the same\ninstance, so a retried upload leaves no second artifact behind — and an\nexisting ``derived_refs`` survives the retry rather than being blanked.\n\n``uri`` names where the bytes live and must NOT be a signed URL: a\nstored credential would make the instance itself the access to its own\noriginal. 400 on a blank workspace_id / sha256 / uri.",
         "operationId": "register_artifact_v1_artifacts_post",
         "parameters": [
           {
@@ -5980,7 +6199,7 @@
     },
     "/v1/definitions/{kind}/{name}/entries": {
       "get": {
-        "description": "List a bundle document's entry files (base ∪ tenant overlay), each\nflagged ``overridden`` — whether THIS tenant forked that specific\nfile. 404 for a non-bundle Kind or an unknown (kind, name).",
+        "description": "List a bundle instance's entry files (base ∪ tenant overlay), each\nflagged ``overridden`` — whether THIS tenant forked that specific\nfile. 404 for a non-bundle Kind or an unknown (kind, name).",
         "operationId": "list_bundle_entries_v1_definitions__kind___name__entries_get",
         "parameters": [
           {
@@ -6577,7 +6796,7 @@
     },
     "/v1/graph/kinds": {
       "get": {
-        "description": "The SCHEMA graph of the registered Kinds — which Kind may point at\nwhich, through which field, in ONE call.\n\nReplaces \"read every Kind's descriptor and derive the graph in the\nclient\", which cost one request per Kind and got slower as a workspace\ngrew. Same projection that generates ``docs/reference/data-model.md``:\nthe tiering, the ``spec.relations`` reading (the SAME one the write path\nvalidates with) and the gap tables live in the SDK, so the page and\nthis route cannot disagree about what the model says.\n\n**SCHEMA, not data.** The edges say which Kinds MAY reference which.\nWhich DOCUMENTS reference which is a different graph and this route\ndoes not answer it — ``coverage.limits`` says so on the wire.\n\n``tenant`` resolves the scope the way the registry route does\n(``live.default_scope``); an explicit ``scope`` still wins. No 404:\na scope with no Kinds is an empty graph with a coverage block that\nsays ``kinds: 0``, which is an answer — conflating it with \"no such\nscope\" would make a screen say *error* where it should say *nothing\nregistered yet*.",
+        "description": "The SCHEMA graph of the registered Kinds — which Kind may point at\nwhich, through which field, in ONE call.\n\nReplaces \"read every Kind's descriptor and derive the graph in the\nclient\", which cost one request per Kind and got slower as a workspace\ngrew. Same projection that generates ``docs/reference/data-model.md``:\nthe tiering, the ``spec.relations`` reading (the SAME one the write path\nvalidates with) and the gap tables live in the SDK, so the page and\nthis route cannot disagree about what the model says.\n\n**SCHEMA, not data.** The edges say which Kinds MAY reference which.\nWhich INSTANCES reference which is a different graph and this route\ndoes not answer it — ``coverage.limits`` says so on the wire.\n\n``tenant`` resolves the scope the way the registry route does\n(``live.default_scope``); an explicit ``scope`` still wins. No 404:\na scope with no Kinds is an empty graph with a coverage block that\nsays ``kinds: 0``, which is an answer — conflating it with \"no such\nscope\" would make a screen say *error* where it should say *nothing\nregistered yet*.",
         "operationId": "kind_graph_v1_graph_kinds_get",
         "parameters": [
           {
@@ -6976,9 +7195,99 @@
         "summary": "Set Insight State"
       }
     },
+    "/v1/instances/{id}": {
+      "get": {
+        "description": "Expand a short ``metadata.id`` PREFIX to the one instance it names.\n\nThe id lane (i-114). The ``{kind}/{name}`` routes are the NAME lane and\nstay exactly as they were: a name is the address a human authors and\nreviews in a diff, and it is what a ``.dna/`` reference keeps. An id is\nthe identity underneath it — stable across a rename, and the value\n``dna_edges.to_id`` records beside every target name.\n\nResolution is by unique prefix, the way ``git`` expands a short commit\nhash. Four to twelve characters; the response echoes the FULL id.\n\nThe status codes are the whole contract:\n\n* **200** — exactly one instance matches.\n* **409** — MORE THAN ONE matches, and this is the refusal the feature\n  exists for. Answering with the first match would be indistinguishable\n  from answering correctly: same shape, same 200, nothing in the body\n  to say a coin was flipped. The detail names the candidates so the\n  caller can lengthen the prefix.\n* **404** — nothing matches.\n* **422** — the prefix is shorter than four characters, or is not an\n  id at all. A one-character prefix is a typo, not a question, and\n  calling it \"ambiguous\" would hide that the query is the problem.\n* **501** — this deployment's store cannot search by id.",
+        "operationId": "resolve_instance_v1_instances__id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "description": "Narrow the search to one scope. Normally unnecessary — ids are unique across the store, and not needing to know the scope is most of what an id buys.",
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Narrow the search to one scope. Normally unnecessary — ids are unique across the store, and not needing to know the scope is most of what an id buys.",
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResolveInstanceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Instance"
+      }
+    },
     "/v1/kinds": {
       "get": {
-        "description": "List the CALLER's authored Kinds with their approval state — the\naudit view. Reads DOCUMENTS, not the registry: an unapproved Kind is\nprecisely the one the registry does not have, and it is the one a\nreviewer came here for.\n\nFILTERED to what the caller owns (plus inherited and non-namespaced\nrows), because a scope is shared by default and this route otherwise\nhanded a caller its neighbours' Kind names, namespaces and\n``proposed_by``/``approved_by`` — identity strings, i.e. the very fact\nthe approval door's 404 exists to withhold. A request that resolves NO\nworkspace (``--auth none`` self-host, an explicit operator ``scope=``)\nis not filtered — the same hinge the namespace gate uses for an\nunattributed write. 403 for a namespace two claims give to different\nowners, 503 when the claim registry cannot be read: neither degrades to\nthe unfiltered list.\n\n**Mounted on every auth mode.** The filter is what makes this route the\nCALLER's roster rather than the scope's, and it is computed from\n``tenant``. Under ``--auth config`` that is the verified identity's\nworkspace; under ``--auth token`` it is whatever the trusted caller\nsupplied, having resolved it from its own verified session first — so\nthe roster is the caller's to the exact extent the caller is. See the\nsection comment above.",
+        "description": "List the CALLER's authored Kinds with their approval state — the\naudit view. Reads INSTANCES, not the registry: an unapproved Kind is\nprecisely the one the registry does not have, and it is the one a\nreviewer came here for.\n\nFILTERED to what the caller owns (plus inherited and non-namespaced\nrows), because a scope is shared by default and this route otherwise\nhanded a caller its neighbours' Kind names, namespaces and\n``proposed_by``/``approved_by`` — identity strings, i.e. the very fact\nthe approval door's 404 exists to withhold. A request that resolves NO\nworkspace (``--auth none`` self-host, an explicit operator ``scope=``)\nis not filtered — the same hinge the namespace gate uses for an\nunattributed write. 403 for a namespace two claims give to different\nowners, 503 when the claim registry cannot be read: neither degrades to\nthe unfiltered list.\n\n**Mounted on every auth mode.** The filter is what makes this route the\nCALLER's roster rather than the scope's, and it is computed from\n``tenant``. Under ``--auth config`` that is the verified identity's\nworkspace; under ``--auth token`` it is whatever the trusted caller\nsupplied, having resolved it from its own verified session first — so\nthe roster is the caller's to the exact extent the caller is. See the\nsection comment above.",
         "operationId": "list_authored_kinds_v1_kinds_get",
         "parameters": [
           {
@@ -7055,7 +7364,7 @@
         "summary": "List Authored Kinds"
       },
       "post": {
-        "description": "Author a Kind for the calling workspace — a ``KindDefinition``\ndocument written WITHOUT an approval marker, under the workspace's own\nassigned apiVersion namespace (minted on first use, then stable).\n\n``presentation`` (optional) declares how documents of this Kind READ —\nthe ordered fields, their human labels, their semantic roles, and what\nto hide from a human. It is the SAME block a builtin Kind descriptor\ndeclares, through the same normalizer, and it is what keeps a\ntenant-authored Kind from being second-class: without it, only Kinds\nshipped inside the SDK could tell a surface how to render them. A\nmalformed declaration is a 400 naming the offending key — never a card\nthat breaks later, in front of a user, with nothing to say.\n\nThe response's ``approved`` is always ``false``. An ``approved_by`` in\nthe body is ignored, not honoured and not rejected: a caller that could\napprove its own proposal would make the gate decorative. The document\nrecords ``proposed_by`` — the caller's VERIFIED identity, resolved\nserver-side (``_actor_from_state``) and never read from the body, and\nstamped here because a proposer cannot be back-filled onto a document\nthat never recorded one. 400 for a missing tenant / a Kind name that is\nnot a CamelCase identifier, 403 when the namespace gate refuses the\nwrite (the workspace does not own the target namespace), 503 when the\nnamespace registry scope has not been provisioned in this store.\n\n**Mounted on every auth mode.** The namespace gate decides from\n``tenant``: under ``--auth config`` that is bound to the caller's\nVERIFIED identity, under ``--auth none`` there is no second tenant to\ntake it from, and under ``--auth token`` — a trusted server-to-server\nlane — it is caller-supplied and the CALLER is responsible for having\nresolved and verified it. See the section comment above for that\nboundary in full.",
+        "description": "Author a Kind for the calling workspace — a ``KindDefinition``\ninstance written WITHOUT an approval marker, under the workspace's own\nassigned apiVersion namespace (minted on first use, then stable).\n\n``relations`` (optional) declares what the Kind POINTS AT — the\n``{field: {to, cardinality, inverse_of, by}}`` block\n``dna.kernel.kinds.relations`` defines, normalized by the same validator\na builtin descriptor goes through and checked against ``schema`` in the\nsame call. Without it a tenant-authored Kind could not declare a single\nlink, so every one of them was an island BY CONSTRUCTION — a product\nthat says \"model your domain\" and then refuses the half of a model that\nis the edges. A malformed or self-contradicting declaration is a 400\nnaming the relation.\n\n**Declaring a relation does not create an edge.** Relations are\nresolved, validated and drawn only for REGISTERED Kinds, and\nregistration is what HUMAN approval turns on. An edit clears the\napproval marker, so adding a relation to an already-approved Kind sends\nit back to a person rather than past one. Nothing on this door can\nconfer effect, and that is the property to keep.\n\n``plane`` (optional) is ``composition`` or ``record``, stored only when\nDECLARED: ``KindDefinitionSpec`` defaults it to ``composition``, and\nwhether that default is right for tenant Kinds is an open question with\na named owner — writing the default into every instance would settle it\nsilently and leave it unsettleable.\n\n``presentation`` (optional) declares how instances of this Kind READ —\nthe ordered fields, their human labels, their semantic roles, and what\nto hide from a human. It is the SAME block a builtin Kind descriptor\ndeclares, through the same normalizer, and it is what keeps a\ntenant-authored Kind from being second-class: without it, only Kinds\nshipped inside the SDK could tell a surface how to render them. A\nmalformed declaration is a 400 naming the offending key — never a card\nthat breaks later, in front of a user, with nothing to say.\n\nThe response's ``approved`` is always ``false``. An ``approved_by`` in\nthe body is ignored, not honoured and not rejected: a caller that could\napprove its own proposal would make the gate decorative. The instance\nrecords ``proposed_by`` — the caller's VERIFIED identity, resolved\nserver-side (``_actor_from_state``) and never read from the body, and\nstamped here because a proposer cannot be back-filled onto an instance\nthat never recorded one. 400 for a missing tenant / a Kind name that is\nnot a CamelCase identifier, 403 when the namespace gate refuses the\nwrite (the workspace does not own the target namespace), 503 when the\nnamespace registry scope has not been provisioned in this store.\n\n**Mounted on every auth mode.** The namespace gate decides from\n``tenant``: under ``--auth config`` that is bound to the caller's\nVERIFIED identity, under ``--auth none`` there is no second tenant to\ntake it from, and under ``--auth token`` — a trusted server-to-server\nlane — it is caller-supplied and the CALLER is responsible for having\nresolved and verified it. See the section comment above for that\nboundary in full.",
         "operationId": "author_kind_v1_kinds_post",
         "parameters": [
           {
@@ -7128,7 +7437,7 @@
     },
     "/v1/kinds/registry": {
       "get": {
-        "description": "The Kind CATALOG of a scope — every Kind the registry actually\nserves here, with the facts a caller needs before acting on one.\n\nThe gap this closes is the enumeration itself. ``list_kinds_impl`` has\nanswered \"what can I act on here?\" for the MCP face since the catalog\nexisted, and the read-API had only the SINGULAR\n``/v1/kinds/registry/{kind}`` — so every REST consumer that wanted the\nlist had to hardcode one. A hardcoded list is precisely how a Kind that\ngets registered tomorrow stays invisible: the enumeration is the whole\npoint, and it belongs to the registry, not to each caller.\n\nNot the same question as ``GET /v1/kinds``, and the two must not be\nconfused. That one lists the caller's AUTHORED KindDefinition documents\nincluding the unapproved ones — the audit roster, whose subject is an\napproval decision. This one lists what is REGISTERED and therefore in\nforce, built-ins included; an unapproved Kind is by definition absent.\n\nLike its singular sibling, it does NOT filter by caller: a registered\nKind is the product's data model, identical for every tenant and\nholding nobody's content. It also does not filter by PLAN — the MCP\ncatalog shortens itself to a caller's unlocked feature families, and\nthis face has no per-request plan the way that one does, so\n``filtered_by_plan`` is always false here rather than quietly meaning\nsomething different from the same field on the other face.\n\n``tenant`` resolves the scope the way every document route does\n(``live.default_scope``), so a portal that only knows a workspace id\nreaches that workspace's own registered Kinds without hardcoding the\nscope-prefix convention. An explicit ``scope`` still wins.",
+        "description": "The Kind CATALOG of a scope — every Kind the registry actually\nserves here, with the facts a caller needs before acting on one.\n\nThe gap this closes is the enumeration itself. ``list_kinds_impl`` has\nanswered \"what can I act on here?\" for the MCP face since the catalog\nexisted, and the read-API had only the SINGULAR\n``/v1/kinds/registry/{kind}`` — so every REST consumer that wanted the\nlist had to hardcode one. A hardcoded list is precisely how a Kind that\ngets registered tomorrow stays invisible: the enumeration is the whole\npoint, and it belongs to the registry, not to each caller.\n\nNot the same question as ``GET /v1/kinds``, and the two must not be\nconfused. That one lists the caller's AUTHORED KindDefinition instances\nincluding the unapproved ones — the audit roster, whose subject is an\napproval decision. This one lists what is REGISTERED and therefore in\nforce, built-ins included; an unapproved Kind is by definition absent.\n\nLike its singular sibling, it does NOT filter by caller: a registered\nKind is the product's data model, identical for every tenant and\nholding nobody's content. It also does not filter by PLAN — the MCP\ncatalog shortens itself to a caller's unlocked feature families, and\nthis face has no per-request plan the way that one does, so\n``filtered_by_plan`` is always false here rather than quietly meaning\nsomething different from the same field on the other face.\n\n``tenant`` resolves the scope the way every instance route does\n(``live.default_scope``), so a portal that only knows a workspace id\nreaches that workspace's own registered Kinds without hardcoding the\nscope-prefix convention. An explicit ``scope`` still wins.",
         "operationId": "list_registered_kinds_v1_kinds_registry_get",
         "parameters": [
           {
@@ -7207,7 +7516,7 @@
     },
     "/v1/kinds/registry/{kind}": {
       "get": {
-        "description": "The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the\n``ui_schema`` widget hints, so a form can DERIVE validation (min/max,\nenums, required) instead of hand-copying it and drifting.\n\nThe registry sibling of ``GET /v1/kinds/{kind}`` (which reads an\nAUTHORED Kind and filters by caller): a registered Kind is the\nPRODUCT's data model, identical for every tenant and holding nobody's\ncontent, so this door does not filter. Declared BEFORE the\n``/{kind}/documents`` routes so ``registry`` is matched as the literal\nsegment it is (a Kind is CamelCase and can never be named\n``registry``). 404 for a Kind the runtime does not register.\n\n``tenant`` (i-094) resolves the scope the way EVERY document route\ndoes (``live.default_scope`` — under multi-workspace, ``tenant-<ws>``\nfor an outside workspace), so a portal that only knows the workspace\nid reaches the workspace's OWN registered Kinds without hardcoding\nthe scope-prefix convention. An explicit ``scope`` still wins — it is\nthe older, narrower contract and existing callers keep it.",
+        "description": "The descriptor of a REGISTERED Kind — its JSON ``schema`` plus the\n``ui_schema`` widget hints, so a form can DERIVE validation (min/max,\nenums, required) instead of hand-copying it and drifting.\n\nThe registry sibling of ``GET /v1/kinds/{kind}`` (which reads an\nAUTHORED Kind and filters by caller): a registered Kind is the\nPRODUCT's data model, identical for every tenant and holding nobody's\ncontent, so this door does not filter. Declared BEFORE the\n``/{kind}/instances`` routes so ``registry`` is matched as the literal\nsegment it is (a Kind is CamelCase and can never be named\n``registry``). 404 for a Kind the runtime does not register.\n\n``tenant`` (i-094) resolves the scope the way EVERY instance route\ndoes (``live.default_scope`` — under multi-workspace, ``tenant-<ws>``\nfor an outside workspace), so a portal that only knows the workspace\nid reaches the workspace's OWN registered Kinds without hardcoding\nthe scope-prefix convention. An explicit ``scope`` still wins — it is\nthe older, narrower contract and existing callers keep it.",
         "operationId": "get_registered_kind_v1_kinds_registry__kind__get",
         "parameters": [
           {
@@ -7295,7 +7604,7 @@
     },
     "/v1/kinds/{kind}": {
       "get": {
-        "description": "Read ONE authored Kind in full — the listing's row PLUS the\n``schema`` and the ``traits``, i.e. everything a human needs to answer\n\"should this take effect?\".\n\nFiltered to the CALLER exactly as the listing is, and harder-edged\nbecause it carries more: a Kind authored by another workspace in a\nshared scope is a **404**, the same answer a Kind nobody ever authored\ngets — \"it exists but is not yours\" would hand a stranger a probe for\nwhat its neighbours are authoring, and this door would answer that probe\nwith their data model. A request that resolves NO workspace\n(``--auth none`` self-host, an explicit operator ``scope=``) is not\nfiltered, the same hinge the namespace gate uses for an unattributed\nwrite.\n\n400 for a ``kind`` that is not a CamelCase identifier (the same shared\nguard the authoring and approval doors use — it is a path segment here)\nor for a Kind the caller declared under two of its own namespaces at\nonce; 403 for a namespace two claims give to different owners; 503 when\nthe claim registry cannot be read. None of them degrades to answering\nwith the document.\n\n**Mounted on every auth mode**, and this route carries the most: the\nworkspace's JSON Schema, i.e. its data model. The 404 that keeps a\nneighbour's Kind invisible is decided from ``tenant``, so under\n``--auth config`` it is enforced against a verified identity and under\n``--auth token`` it is enforced against what the trusted caller\nresolved and supplied. See the section comment above for that\nboundary.",
+        "description": "Read ONE authored Kind in full — the listing's row PLUS the\n``schema`` and the ``traits``, i.e. everything a human needs to answer\n\"should this take effect?\".\n\nFiltered to the CALLER exactly as the listing is, and harder-edged\nbecause it carries more: a Kind authored by another workspace in a\nshared scope is a **404**, the same answer a Kind nobody ever authored\ngets — \"it exists but is not yours\" would hand a stranger a probe for\nwhat its neighbours are authoring, and this door would answer that probe\nwith their data model. A request that resolves NO workspace\n(``--auth none`` self-host, an explicit operator ``scope=``) is not\nfiltered, the same hinge the namespace gate uses for an unattributed\nwrite.\n\n400 for a ``kind`` that is not a CamelCase identifier (the same shared\nguard the authoring and approval doors use — it is a path segment here)\nor for a Kind the caller declared under two of its own namespaces at\nonce; 403 for a namespace two claims give to different owners; 503 when\nthe claim registry cannot be read. None of them degrades to answering\nwith the instance.\n\n**Mounted on every auth mode**, and this route carries the most: the\nworkspace's JSON Schema, i.e. its data model. The 404 that keeps a\nneighbour's Kind invisible is decided from ``tenant``, so under\n``--auth config`` it is enforced against a verified identity and under\n``--auth token`` it is enforced against what the trusted caller\nresolved and supplied. See the section comment above for that\nboundary.",
         "operationId": "get_authored_kind_v1_kinds__kind__get",
         "parameters": [
           {
@@ -7383,7 +7692,7 @@
     },
     "/v1/kinds/{kind}/approve": {
       "post": {
-        "description": "Approve an authored Kind — the act that puts it INTO EFFECT.\n\nThe approver is the caller's VERIFIED identity, resolved server-side\n(``_actor_from_state``: email → durable oid → ``sub``). An\n``approved_by`` in the body reaches nothing: attribution a caller can\nforge is not attribution. The document's ``proposed_by`` is preserved\nuntouched, so the audit names both acts and neither wears the other's\nname. 404 when no such Kind was authored in this scope (approval acts on\nan existing document and creates none — and a Kind authored by ANOTHER\nworkspace in a shared scope is a 404 too: it is not the caller's to\napprove, and saying \"it exists but is not yours\" would hand a stranger\na probe for what its neighbours are authoring), 400 for a missing\ntenant / a malformed Kind name / a Kind the caller declared under two\nof its own namespaces at once, 403 when the namespace gate refuses the\nwrite, 503 when the namespace registry scope has not been provisioned\nin this store.\n\n**Mounted on every auth mode**, this one included, and it is the route\nwhere the ``--auth token`` boundary is worth naming: the whole value of\nthe record this act writes is naming WHO made it, and on that lane the\nHTTP layer knows nobody. It records ``rest:unidentified`` — verified\nagainst the configured secret, naming no person — and the 404 that hides\na neighbour's Kind rests on the ``tenant`` the caller supplied. That is\nsound exactly insofar as the caller is trusted and resolved the tenant\nfrom its own verified session first, which is what that lane is for; it\nis the documented trust boundary in the section comment above, and the\n``TODO(hosted)`` bridge is what would move the check into this door.",
+        "description": "Approve an authored Kind — the act that puts it INTO EFFECT.\n\nThe approver is the caller's VERIFIED identity, resolved server-side\n(``_actor_from_state``: email → durable oid → ``sub``). An\n``approved_by`` in the body reaches nothing: attribution a caller can\nforge is not attribution. The instance's ``proposed_by`` is preserved\nuntouched, so the audit names both acts and neither wears the other's\nname. 404 when no such Kind was authored in this scope (approval acts on\nan existing instance and creates none — and a Kind authored by ANOTHER\nworkspace in a shared scope is a 404 too: it is not the caller's to\napprove, and saying \"it exists but is not yours\" would hand a stranger\na probe for what its neighbours are authoring), 400 for a missing\ntenant / a malformed Kind name / a Kind the caller declared under two\nof its own namespaces at once, 403 when the namespace gate refuses the\nwrite, 503 when the namespace registry scope has not been provisioned\nin this store.\n\n**Mounted on every auth mode**, this one included, and it is the route\nwhere the ``--auth token`` boundary is worth naming: the whole value of\nthe record this act writes is naming WHO made it, and on that lane the\nHTTP layer knows nobody. It records ``rest:unidentified`` — verified\nagainst the configured secret, naming no person — and the 404 that hides\na neighbour's Kind rests on the ``tenant`` the caller supplied. That is\nsound exactly insofar as the caller is trusted and resolved the tenant\nfrom its own verified session first, which is what that lane is for; it\nis the documented trust boundary in the section comment above, and the\n``TODO(hosted)`` bridge is what would move the check into this door.",
         "operationId": "approve_kind_v1_kinds__kind__approve_post",
         "parameters": [
           {
@@ -7453,10 +7762,10 @@
         "summary": "Approve Kind"
       }
     },
-    "/v1/kinds/{kind}/documents": {
+    "/v1/kinds/{kind}/instances": {
       "get": {
-        "description": "Listar os documentos de ``{kind}`` — a LEITURA da porta genérica.\n\nA face escrevia qualquer documento por ``POST\n/v1/kinds/{kind}/documents`` e só lia os Kinds para os quais alguém\nescrevera uma rota à mão (``/v1/memories``, ``/v1/projects``, …). O\n``list_documents_impl`` já existia no SDK, completo, e não tinha porta:\nquem gravava por aqui não conseguia ler de volta por lugar nenhum, e\ndescobria isso depois de gravar.\n\n``fields`` (CSV, caminhos pontuados; sem prefixo resolve sob ``spec.``)\nempurra a PROJEÇÃO para o kernel. Sem ela, responder \"quais estão\nabertos\" custa 1 + N chamadas — listar os nomes e ler cada um. No\nPostgres a projeção vira SELECT e a linha viaja aparada.\n\nUm Kind desconhecido é 404 **nomeando o Kind**, a mesma resposta que a\nescrita dá. Uma lista vazia de um Kind que existe é 200 com\n``documents: []`` — \"existe e não tem nada\" é uma resposta, e confundi-la\ncom \"não existe\" faria uma tela dizer *erro* onde devia dizer *nenhum\nainda*.",
-        "operationId": "list_kind_documents_v1_kinds__kind__documents_get",
+        "description": "Listar as instâncias de ``{kind}`` — a LEITURA da porta genérica.\n\nA face escrevia qualquer instância por ``POST\n/v1/kinds/{kind}/instances`` e só lia os Kinds para os quais alguém\nescrevera uma rota à mão (``/v1/memories``, ``/v1/projects``, …). O\n``list_instances_impl`` já existia no SDK, completo, e não tinha porta:\nquem gravava por aqui não conseguia ler de volta por lugar nenhum, e\ndescobria isso depois de gravar.\n\n``fields`` (CSV, caminhos pontuados; sem prefixo resolve sob ``spec.``)\nempurra a PROJEÇÃO para o kernel. Sem ela, responder \"quais estão\nabertos\" custa 1 + N chamadas — listar os nomes e ler cada um. No\nPostgres a projeção vira SELECT e a linha viaja aparada.\n\nUm Kind desconhecido é 404 **nomeando o Kind**, a mesma resposta que a\nescrita dá. Uma lista vazia de um Kind que existe é 200 com\n``instances: []`` — \"existe e não tem nada\" é uma resposta, e confundi-la\ncom \"não existe\" faria uma tela dizer *erro* onde devia dizer *nenhum\nainda*.",
+        "operationId": "list_kind_instances_v1_kinds__kind__instances_get",
         "parameters": [
           {
             "in": "path",
@@ -7581,7 +7890,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ListKindDocumentsResponse"
+                  "$ref": "#/components/schemas/ListKindInstancesResponse"
                 }
               }
             },
@@ -7598,11 +7907,11 @@
             "description": "Validation Error"
           }
         },
-        "summary": "List Kind Documents"
+        "summary": "List Kind Instances"
       },
       "post": {
-        "description": "Write one document of ``{kind}`` — the generic door, kubernetes-shaped.\n\nThe body is exactly ``{metadata, spec}`` (plus the optional\n``source_sha256`` provenance citation). ``metadata.name`` is\nREQUIRED — 400 when blank or absent. A ``kind`` in the body that\nDIFFERS from the path is refused (400); one that matches is a no-op\n(redundant, not wrong).\n\nThe write goes through the kernel's own pipeline exactly as the MCP\n``write_document`` tool's does: the Kind's JSON Schema validates\n``spec`` and names the offending field on refusal (400), a BOOTSTRAP\nKind (Genome / LayerPolicy / KindDefinition) is refused (403, the\ngeneric write's own gate — untouched, not relaxed here), an authored\nKind nobody has approved yet resolves to nothing in the registry and\nis a 404 naming it (the SAME answer a Kind that was never authored at\nall gets — there is no third state visible from here), an unknown\nKind is a 404 naming it, and a stale ``if_match`` is a 409.\n\n``source_sha256`` (optional) cites the ``SourceArtifact`` this\ndocument was extracted from (by content address); the runtime closes\nthe ``derived_refs`` provenance edge server-side, preserving every\nOTHER document already recorded there and updating THIS document's\nown entry in place on a re-write — never accreting a duplicate. A\n``source_sha256`` that names no registered artifact under ``tenant``\nis refused (400).",
-        "operationId": "write_kind_document_v1_kinds__kind__documents_post",
+        "description": "Write one instance of ``{kind}`` — the generic door, kubernetes-shaped.\n\nThe body is exactly ``{metadata, spec}`` (plus the optional\n``source_sha256`` provenance citation). ``metadata.name`` is\nREQUIRED — 400 when blank or absent. A ``kind`` in the body that\nDIFFERS from the path is refused (400); one that matches is a no-op\n(redundant, not wrong).\n\nThe write goes through the kernel's own pipeline exactly as the MCP\n``write_instance`` tool's does: the Kind's JSON Schema validates\n``spec`` and names the offending field on refusal (400), a BOOTSTRAP\nKind (Genome / LayerPolicy / KindDefinition) is refused (403, the\ngeneric write's own gate — untouched, not relaxed here), an authored\nKind nobody has approved yet resolves to nothing in the registry and\nis a 404 naming it (the SAME answer a Kind that was never authored at\nall gets — there is no third state visible from here), an unknown\nKind is a 404 naming it, and a stale ``if_match`` is a 409.\n\n``source_sha256`` (optional) cites the ``SourceArtifact`` this\ninstance was extracted from (by content address); the runtime closes\nthe ``derived_refs`` provenance edge server-side, preserving every\nOTHER instance already recorded there and updating THIS instance's\nown entry in place on a re-write — never accreting a duplicate. A\n``source_sha256`` that names no registered artifact under ``tenant``\nis refused (400).",
+        "operationId": "write_kind_instance_v1_kinds__kind__instances_post",
         "parameters": [
           {
             "in": "path",
@@ -7692,7 +8001,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/WriteKindDocumentRequest"
+                "$ref": "#/components/schemas/WriteKindInstanceRequest"
               }
             }
           },
@@ -7703,7 +8012,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/WriteKindDocumentResponse"
+                  "$ref": "#/components/schemas/WriteKindInstanceResponse"
                 }
               }
             },
@@ -7720,13 +8029,13 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Write Kind Document"
+        "summary": "Write Kind Instance"
       }
     },
-    "/v1/kinds/{kind}/documents/{name}": {
+    "/v1/kinds/{kind}/instances/{name}": {
       "get": {
-        "description": "Ler UM documento de ``{kind}``, VERBATIM — o que a lista não dá.\n\nA lista com ``fields`` projeta pela VISTA quando o Kind é produzível\npor readers (Agent, Skill…), e a vista normaliza — campos reais do\nspec gravado (``description``, ``tools_requiring_confirmation`` de um\nAgent) não viajam por ela. Quem gravou pelo POST genérico precisa\nconseguir ler DE VOLTA o que gravou: esta rota é o\n``get_document_impl`` de sempre, na mesma fronteira de confiança do\nPOST (só ``tenant``; o scope é derivado, nunca nomeado).\n\n404 nomeia o que faltou — o Kind desconhecido ou o documento.\n\n``as_of`` (i-106) é a leitura no TEMPO, e chegou aqui por um defeito, não\npor um pedido: esta rota já **aceitava** ``?as_of=`` — o FastAPI descarta\nem silêncio um query param não declarado — e devolvia 200 com o presente.\nMedido em 06/08/2026: um Issue de 18 versões respondia `resolved` com 6\neventos tanto agora quanto \"às 14:00 do dia anterior\", quando às 14:00 do\ndia anterior ele não era nem uma coisa nem outra. Aceitar e ignorar é\npior que recusar: o chamador acredita ter visto o passado e nada na\nresposta o desmente.\n\nAs QUATRO saídas são distintas de propósito, porque colapsar duas\nquaisquer delas reintroduz o mesmo defeito uma casa adiante:\n\n* **200** — o estado de crença naquele instante, com ``as_of``,\n  ``as_of_version`` e ``as_of_recorded_at`` no corpo.\n* **404** — não existia ainda. Isto é uma RESPOSTA.\n* **410** — existia história, mas não tão atrás: as versões daquela época\n  foram podadas (``VERSION_CHURN_RETENTION``). O store não sabe, e dizer\n  404 aqui seria afirmar \"não existia\" a partir de \"não há registro\".\n* **501** — este deployment não guarda histórico nenhum (o adapter de\n  filesystem declara ``versions=True`` e não retém nada).\n\ne **422** quando o instante não é ISO-8601 — erro do chamador, não do\nservidor.",
-        "operationId": "get_kind_document_v1_kinds__kind__documents__name__get",
+        "description": "Ler UMA instância de ``{kind}``, VERBATIM — o que a lista não dá.\n\nA lista com ``fields`` projeta pela VISTA quando o Kind é produzível\npor readers (Agent, Skill…), e a vista normaliza — campos reais do\nspec gravado (``description``, ``tools_requiring_confirmation`` de um\nAgent) não viajam por ela. Quem gravou pelo POST genérico precisa\nconseguir ler DE VOLTA o que gravou: esta rota é o\n``get_instance_impl`` de sempre, na mesma fronteira de confiança do\nPOST (só ``tenant``; o scope é derivado, nunca nomeado).\n\n404 nomeia o que faltou — o Kind desconhecido ou a instância.\n\n``as_of`` (i-106) é a leitura no TEMPO, e chegou aqui por um defeito, não\npor um pedido: esta rota já **aceitava** ``?as_of=`` — o FastAPI descarta\nem silêncio um query param não declarado — e devolvia 200 com o presente.\nMedido em 06/08/2026: um Issue de 18 versões respondia `resolved` com 6\neventos tanto agora quanto \"às 14:00 do dia anterior\", quando às 14:00 do\ndia anterior ele não era nem uma coisa nem outra. Aceitar e ignorar é\npior que recusar: o chamador acredita ter visto o passado e nada na\nresposta o desmente.\n\nAs QUATRO saídas são distintas de propósito, porque colapsar duas\nquaisquer delas reintroduz o mesmo defeito uma casa adiante:\n\n* **200** — o estado de crença naquele instante, com ``as_of``,\n  ``as_of_version`` e ``as_of_recorded_at`` no corpo.\n* **404** — não existia ainda. Isto é uma RESPOSTA.\n* **410** — existia história, mas não tão atrás: as versões daquela época\n  foram podadas (``VERSION_CHURN_RETENTION``). O store não sabe, e dizer\n  404 aqui seria afirmar \"não existia\" a partir de \"não há registro\".\n* **501** — este deployment não guarda histórico nenhum (o adapter de\n  filesystem declara ``versions=True`` e não retém nada).\n\ne **422** quando o instante não é ISO-8601 — erro do chamador, não do\nservidor.",
+        "operationId": "get_kind_instance_v1_kinds__kind__instances__name__get",
         "parameters": [
           {
             "in": "path",
@@ -7779,7 +8088,7 @@
             }
           },
           {
-            "description": "ISO-8601 instant. Return the document AS THIS STORE RECORDED IT at that moment (transaction time) instead of its current state. Refuses rather than approximates: 501 if the store keeps no version history, 410 if this document's history was pruned past the instant, 404 if it did not exist yet.",
+            "description": "ISO-8601 instant. Return the instance AS THIS STORE RECORDED IT at that moment (transaction time) instead of its current state. Refuses rather than approximates: 501 if the store keeps no version history, 410 if this instance's history was pruned past the instant, 404 if it did not exist yet.",
             "in": "query",
             "name": "as_of",
             "required": false,
@@ -7792,7 +8101,7 @@
                   "type": "null"
                 }
               ],
-              "description": "ISO-8601 instant. Return the document AS THIS STORE RECORDED IT at that moment (transaction time) instead of its current state. Refuses rather than approximates: 501 if the store keeps no version history, 410 if this document's history was pruned past the instant, 404 if it did not exist yet.",
+              "description": "ISO-8601 instant. Return the instance AS THIS STORE RECORDED IT at that moment (transaction time) instead of its current state. Refuses rather than approximates: 501 if the store keeps no version history, 410 if this instance's history was pruned past the instant, 404 if it did not exist yet.",
               "title": "As Of"
             }
           },
@@ -7818,7 +8127,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/GetKindDocumentResponse"
+                  "$ref": "#/components/schemas/GetKindInstanceResponse"
                 }
               }
             },
@@ -7835,13 +8144,13 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Kind Document"
+        "summary": "Get Kind Instance"
       }
     },
-    "/v1/kinds/{kind}/documents/{name}/refs": {
+    "/v1/kinds/{kind}/instances/{name}/refs": {
       "get": {
-        "description": "\"O que depende deste documento?\" — o grafo de DADO, com profundidade.\n\nA tela do Kind sempre soube dizer que ``Story.feature → Feature``\nexiste como REGRA, e nunca soube dizer que ESTAS 47 Stories apontam\npara ESTA Feature. Esta rota responde a segunda pergunta, lendo as\narestas que o próprio write path produziu ao validar as referências —\nnada aqui deriva, adivinha ou lê slug.\n\n``direction=in`` (o default, e a pergunta do produto) traz quem aponta\npara cá; ``out`` o que este documento aponta; ``both`` a união.\n``depth`` é OBRIGATÓRIO ter teto: ``Spec.supersedes`` e\n``Story.dependencies`` são auto-referentes por desenho, e uma travessia\nsem limite aqui é incidente de produção, não risco teórico. O valor é\nclampado ao teto do kernel (``DNA_GRAPH_MAX_DEPTH``).\n\n**501, nunca lista vazia**, quando o adapter ativo não guarda arestas\n(o filesystem não tem transação nem tabela para guardá-las). ``[]``\nse lê como \"nada aponta para este documento\", e essa é uma afirmação\nque só um store que de fato registra arestas pode fazer.",
-        "operationId": "graph_refs_v1_kinds__kind__documents__name__refs_get",
+        "description": "\"O que depende desta instância?\" — o grafo de DADO, com profundidade.\n\nA tela do Kind sempre soube dizer que ``Story.feature → Feature``\nexiste como REGRA, e nunca soube dizer que ESTAS 47 Stories apontam\npara ESTA Feature. Esta rota responde a segunda pergunta, lendo as\narestas que o próprio write path produziu ao validar as referências —\nnada aqui deriva, adivinha ou lê slug.\n\n``direction=in`` (o default, e a pergunta do produto) traz quem aponta\npara cá; ``out`` o que esta instância aponta; ``both`` a união.\n``depth`` é OBRIGATÓRIO ter teto: ``Spec.supersedes`` e\n``Story.dependencies`` são auto-referentes por desenho, e uma travessia\nsem limite aqui é incidente de produção, não risco teórico. O valor é\nclampado ao teto do kernel (``DNA_GRAPH_MAX_DEPTH``).\n\n``as_of`` (ISO-8601) devolve **o grafo como ele era naquele instante de\nTRANSAÇÃO** — a quarta coordenada da mesma pergunta. Ele é re-derivado\ndas versões, não filtrado das arestas: ``dna_edges`` é substituída a\ncada escrita e não guarda história nenhuma.\n\n**501, nunca lista vazia**, quando o adapter ativo não guarda arestas\n(o filesystem não tem transação nem tabela para guardá-las). ``[]``\nse lê como \"nada aponta para esta instância\", e essa é uma afirmação\nque só um store que de fato registra arestas pode fazer. Também **501**\nquando o store não retém história e o pedido tem ``as_of`` — o grafo de\nhoje sob um carimbo do passado é a mesma mentira, mais confiante.\n\n**410** quando a instância TEM história e nenhuma alcança ``as_of``: as\nversões daquela época foram podadas, e \"não dá para saber\" não é 404.\n**404** quando ela não existia ainda naquele instante — aí é resposta.",
+        "operationId": "graph_refs_v1_kinds__kind__instances__name__refs_get",
         "parameters": [
           {
             "in": "path",
@@ -7915,6 +8224,22 @@
             }
           },
           {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          },
+          {
             "in": "header",
             "name": "authorization",
             "required": false,
@@ -7958,7 +8283,7 @@
     },
     "/v1/kinds/{kind}/revoke": {
       "post": {
-        "description": "Revoke an authored Kind — the act that WITHDRAWS its effect.\n\nEvery existing document of the Kind becomes invalid: it is NOT deleted\nand NOT made unreadable, it reads back MARKED (``status.valid ==\nfalse``), and in a listing it appears marked rather than vanishing — so\nrevocation can never be used to hide data without deleting it. New\ndocuments of the Kind are refused outright, conforming ones included:\nwhat was withdrawn is the Kind, not a schema.\n\nThe revoker is the caller's VERIFIED identity, resolved server-side, on\nexactly the terms the approval route documents above — including the\n``--auth token`` caveat, which matters here for the same reason: the\nvalue of the record this act writes is naming WHO made it.\n\n``approved_by`` survives untouched, because revoking is a third act and\nnot an erasure of the second. To undo, call the approve route — it is\nthe only thing that clears a revocation, and an EDIT deliberately does\nnot (an edit that un-revoked would be the loosening through a third\ndoor).\n\nSame refusals as its sibling and for the same reasons: 404 when no such\nKind was authored in this scope — or when it belongs to a neighbour,\nbecause \"it exists but is not yours\" would hand a stranger a probe; 400\nfor a missing tenant / a malformed Kind name / a Kind the caller\ndeclared under two of its own namespaces; 409 when the document moved\nsince it was read (i-083 — a revocation is a read-modify-write too, and\nunguarded it would resurrect a stale replica's shape AND mark it\nrevoked); 403 from the namespace gate; 503 when the namespace registry\nscope has not been provisioned in this store.",
+        "description": "Revoke an authored Kind — the act that WITHDRAWS its effect.\n\nEvery existing instance of the Kind becomes invalid: it is NOT deleted\nand NOT made unreadable, it reads back MARKED (``status.valid ==\nfalse``), and in a listing it appears marked rather than vanishing — so\nrevocation can never be used to hide data without deleting it. New\ninstances of the Kind are refused outright, conforming ones included:\nwhat was withdrawn is the Kind, not a schema.\n\nThe revoker is the caller's VERIFIED identity, resolved server-side, on\nexactly the terms the approval route documents above — including the\n``--auth token`` caveat, which matters here for the same reason: the\nvalue of the record this act writes is naming WHO made it.\n\n``approved_by`` survives untouched, because revoking is a third act and\nnot an erasure of the second. To undo, call the approve route — it is\nthe only thing that clears a revocation, and an EDIT deliberately does\nnot (an edit that un-revoked would be the loosening through a third\ndoor).\n\nSame refusals as its sibling and for the same reasons: 404 when no such\nKind was authored in this scope — or when it belongs to a neighbour,\nbecause \"it exists but is not yours\" would hand a stranger a probe; 400\nfor a missing tenant / a malformed Kind name / a Kind the caller\ndeclared under two of its own namespaces; 409 when the instance moved\nsince it was read (i-083 — a revocation is a read-modify-write too, and\nunguarded it would resurrect a stale replica's shape AND mark it\nrevoked); 403 from the namespace gate; 503 when the namespace registry\nscope has not been provisioned in this store.",
         "operationId": "revoke_kind_v1_kinds__kind__revoke_post",
         "parameters": [
           {

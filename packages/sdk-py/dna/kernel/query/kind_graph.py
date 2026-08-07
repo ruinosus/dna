@@ -2,7 +2,7 @@
 
 This module answers *one* question: given the registered Kinds, what does the
 model say about how they relate? It is a projection of the REGISTRY, not of
-stored data — no document is read, nothing is written, and the answer is
+stored data — no instance is read, nothing is written, and the answer is
 identical for every caller of a given scope.
 
 Why it lives in the kernel
@@ -61,7 +61,7 @@ Two tiers, and the ranking is still the point
 ---------------------------------------------
 1. ``declared`` — ``spec.relations``. Carries its own ``enforced`` flag: TRUE
    when the kernel resolves the relation at write time (concrete target,
-   addressed by document name), FALSE when the relation is declared but
+   addressed by instance name), FALSE when the relation is declared but
    addressed by a key this runtime does not follow.
 2. ``composition`` — ``dep_filters`` names the target Kind. A real
    declaration, but it exists to drive prompt composition and is never checked
@@ -95,6 +95,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable
 
+from dna.kernel.kinds.identifiers import identifiers_of
 from dna.kernel.kinds.relations import ANY_TARGET, inverse_gaps, relations_of
 
 #: Edge tiers, strongest first. Ordered — consumers rank by index.
@@ -135,7 +136,7 @@ COVERAGE_LIMITS: tuple[dict[str, str], ...] = (
         "code": "schema_not_data",
         "detail": (
             "These edges say which Kinds MAY point at which, through which "
-            "relation. They say nothing about which DOCUMENTS point at which — "
+            "relation. They say nothing about which INSTANCES point at which — "
             "that is a different graph, derived at write time, and this "
             "projection does not serve it."
         ),
@@ -143,16 +144,19 @@ COVERAGE_LIMITS: tuple[dict[str, str], ...] = (
     {
         "code": "enforced_is_per_edge",
         "detail": (
-            "An edge's `enforced` flag says whether the kernel resolves it at "
-            "write time. TRUE needs both: a concrete target Kind, and `by: "
-            "name` addressing. A relation addressed by a target spec field "
-            "(`by: workspace_id`) or carrying its Kind in the value (`to: *`) "
-            "is fully DECLARED and deliberately not resolved — resolving by "
-            "key needs an index the store does not have, and a second "
-            "resolution rule beside a live one can veto data the live one "
-            "accepts. `composition` edges come from `dep_filters`, which "
-            "drives prompt composition and is never checked against stored "
-            "data."
+            "An edge carries TWO flags and they are not the same question. "
+            "`followed` says the kernel READS the target at write time and "
+            "records this edge — TRUE for a concrete target Kind addressed "
+            "either `by: name` or by a spec KEY of the target. `enforced` says "
+            "an unresolvable value REFUSES the write — TRUE only for `by: "
+            "name`, because the by-key resolver is deliberately poorer than "
+            "the live alias-tolerant lookups (`kernel.tier()` resolves a "
+            "PricingPlan by `tier_id` and THEN by `aliases[]`) and may not "
+            "veto data they accept. A relation carrying its Kind in the value "
+            "(`to: *` with a composite `by`) is fully DECLARED and neither "
+            "followed nor enforced — nothing parses that form yet. "
+            "`composition` edges come from `dep_filters`, which drives prompt "
+            "composition and is never checked against stored data at all."
         ),
     },
     {
@@ -181,9 +185,21 @@ COVERAGE_LIMITS: tuple[dict[str, str], ...] = (
         ),
     },
     {
+        "code": "an_undeclared_gap_can_be_answered",
+        "detail": (
+            "An `undeclared` row is an invitation, and `spec.identifiers` is "
+            "how a Kind ANSWERS it: `role: self` for a field holding the "
+            "instance's own key, `role: external` plus `system` for one minted "
+            "outside DNA. Answered fields leave `unresolved` and appear under "
+            "`identifiers`, with the reason they are not pointers. Before that "
+            "block existed the list carried rows nothing could ever clear, "
+            "which made a finite backlog look like a permanent one."
+        ),
+    },
+    {
         "code": "inverse_is_declaration_only",
         "detail": (
-            "`inverse` rows compare two DECLARATIONS, not two documents. A "
+            "`inverse` rows compare two DECLARATIONS, not two instances. A "
             "sound pair here does not mean any stored Feature and Story agree "
             "— instance reciprocity is checked at write time and REPORTED "
             "there, never enforced."
@@ -227,6 +243,10 @@ def kind_rows(ports: Iterable[Any]) -> list[dict]:
                     for k, v in dict(_attr(port, "dep_filters") or {}).items()
                 },
                 "relations": relations_of(port),
+                # The other half — the fields that point NOWHERE and say so.
+                # Read here so the undeclared-gap pass can be ANSWERED rather
+                # than only asked.
+                "identifiers": identifiers_of(port),
                 "properties": dict((schema or {}).get("properties") or {}),
             }
         )
@@ -304,7 +324,16 @@ def build_edges(kinds: list[dict]) -> tuple[list[dict], list[dict]]:
                     "source": source, "field": name, "target": target,
                     "cardinality": rel.cardinality,
                     "tier": "declared", "polymorphic": rel.polymorphic,
-                    "by": rel.by, "enforced": rel.resolved,
+                    # Two facts, and they were ONE field until fatia 5 split
+                    # them. ``enforced`` now reads the property that actually
+                    # means "an unresolvable value refuses the write";
+                    # ``followed`` is the wider one — "the kernel reads the
+                    # target and draws this edge". A ``by: <key>`` relation is
+                    # followed and NOT enforced, and a schema graph showing
+                    # only the first would report the relation as unchecked
+                    # while its edges sit in the table.
+                    "by": rel.by, "enforced": rel.enforced,
+                    "followed": rel.resolved,
                     "inverse_of": rel.inverse_of,
                 })
 
@@ -330,14 +359,30 @@ def build_edges(kinds: list[dict]) -> tuple[list[dict], list[dict]]:
                     "source": source, "field": field, "target": target,
                     "cardinality": _cardinality(props.get(field, {})),
                     "tier": "composition", "polymorphic": len(targets) > 1,
-                    "by": "name", "enforced": False, "inverse_of": None,
+                    # ``followed`` beside ``enforced`` and both False: a
+                    # composition edge is never read against stored data at
+                    # all, which is a stronger statement than "it does not
+                    # veto" and the reason the two keys have to be present on
+                    # EVERY edge rather than only on the tier that can differ.
+                    "by": "name", "followed": False, "enforced": False,
+                    "inverse_of": None,
                 })
 
         # -- the gap: reference-shaped and undeclared --------------------------
         # No target is guessed. The row says a field LOOKS like it points
-        # somewhere and nothing declares where — which is an invitation to
-        # declare a relation, and is why this needs no denylist: a suppression
-        # table exists to stop a false CLAIM, and nothing here is claimed.
+        # somewhere and nothing declares where — an invitation, not a claim,
+        # which is why it needs no denylist: a suppression table exists to stop
+        # a false CLAIM, and nothing here is claimed.
+        #
+        # ``spec.identifiers`` is how the invitation gets ANSWERED. Until
+        # 06/08/2026 it could not be: a Kind could say where a field points and
+        # had no way to say that it points nowhere, so two thirds of this list
+        # were rows nobody could ever clear (an OAuth `client_id`, a Stripe
+        # customer id, `Sprint.sprint_id` naming its own instance). That is not
+        # a suppression — the answer is a DECLARATION, it lives on the Kind
+        # beside the schema, and it carries a machine-readable reason.
+        for field in sorted(k["identifiers"]):
+            claimed.add(field)
         for field in sorted(props):
             if field in claimed:
                 continue
@@ -345,14 +390,14 @@ def build_edges(kinds: list[dict]) -> tuple[list[dict], list[dict]]:
                 unresolved.append({
                     "source": source, "field": field,
                     "origin": "undeclared",
-                    "reason": "reference-shaped field name, and no relation "
-                              "declares what it points at",
+                    "reason": "reference-shaped field name, and neither a "
+                              "relation nor an identifier declares what it is",
                 })
 
     # -- the inverse pairs, across Kinds ---------------------------------------
     # Computed once over the whole registry rather than per-Kind: a pair is a
     # property of TWO declarations, so no single Kind's pass can see it. This
-    # is dor 1's enforced half — it reads no documents and cannot deadlock.
+    # is dor 1's enforced half — it reads no instances and cannot deadlock.
     for gap in inverse_gaps({k["kind"]: k["relations"] for k in kinds}):
         unresolved.append({
             "source": gap["kind"], "field": gap["relation"],
@@ -393,7 +438,21 @@ def coverage(
         # "declared" and "enforced" stopped being the same thing the day a
         # relation could declare its own addressing.
         "enforced": sum(1 for e in edges if e["enforced"]),
+        # …and how much of it the runtime READS, which since fatia 5 is a
+        # strictly larger number. Reporting only `enforced` would understate
+        # the derived graph by every `by: <key>` edge in the table — a screen
+        # would show a model less connected than the data it is drawn from.
+        # ``e["followed"]``, not ``e.get(...)``: BOTH tiers set the key, and a
+        # third tier that forgot it should raise here rather than be counted as
+        # zero — a missing flag read as False is how a number goes quietly
+        # wrong.
+        "followed": sum(1 for e in edges if e["followed"]),
         "kinds_with_relations": sum(1 for k in kinds if k["relations"]),
+        # The answered half of the gap list: fields that DECLARED they point
+        # nowhere. Derived from the declarations, never counted by hand — and
+        # reported beside `unresolved` on purpose, because "21 gaps" and "21
+        # gaps plus 14 answers" describe very different models.
+        "identifiers": sum(len(k["identifiers"]) for k in kinds),
         "unresolved": len(unresolved),
         # The split the single `unresolved` count could not show: 25 rows all
         # of one origin read exactly like 25 broken declarations.
@@ -431,10 +490,29 @@ def build_kind_graph(ports: Iterable[Any]) -> dict[str, Any]:
                 "tier": e["tier"],
                 "polymorphic": e["polymorphic"],
                 "by": e["by"],
+                # ⚠️ BOTH, and this projection is the third place a key can be
+                # dropped in silence (after the FastAPI ``response_model`` and
+                # the TS twin). It is hand-written and indexes by name, so a
+                # key added to ``build_edges`` simply does not arrive — the
+                # route would keep serving ``enforced`` alone and a screen
+                # would go on calling every ``by: <key>`` relation unchecked
+                # while its edges sat in ``dna_edges``. Caught by
+                # ``test_kind_graph_rest.py`` asking the ROUTE rather than the
+                # projection.
+                "followed": e["followed"],
                 "enforced": e["enforced"],
                 "inverse_of": e["inverse_of"],
             }
             for e in edges
+        ],
+        # The fields that answered the invitation: reference-SHAPED, and
+        # declared to point nowhere. On the wire beside `unresolved` so a
+        # screen can render "this is an id, not a broken reference" instead of
+        # leaving the reader to guess which rows are alarms.
+        "identifiers": [
+            {"kind": r["kind"], **ident.to_wire()}
+            for r in rows
+            for _, ident in sorted(r["identifiers"].items())
         ],
         "unresolved": [
             {

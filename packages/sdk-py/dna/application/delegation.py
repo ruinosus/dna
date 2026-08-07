@@ -14,7 +14,7 @@ estava certa e o erro estava na montagem em volta. Manter a parte correta pequen
    puxaria trabalho de qualquer outro por listá-lo; com só a segunda, um alvo que
    aceita `"*"` seria alvo de quem nunca o quis.
 
-2. **O roster é DERIVADO.** "Todo documento que declara `delegation_target_for` e
+2. **O roster é DERIVADO.** "Toda instância que declara `delegation_target_for` e
    cuja allowlist me inclui" — não uma lista de Kinds. `Agent` e `RemoteAgent`
    entram pelo mesmo caminho porque declaram o mesmo bloco, e um terceiro tipo de
    alvo, depois, entra sem uma linha de mudança aqui. Toda lista mantida à mão
@@ -83,13 +83,13 @@ def _name(doc: Mapping[str, Any]) -> str:
 
 
 def targets_for(
-    delegator: str, documents: Iterable[Mapping[str, Any]]
+    delegator: str, instances: Iterable[Mapping[str, Any]]
 ) -> list[DelegationTarget]:
-    """Os alvos que `delegator` pode alcançar, derivados dos documentos.
+    """Os alvos que `delegator` pode alcançar, derivados das instâncias.
 
     Ver a regra 2: a consulta é por QUEM DECLARA o bloco, nunca por Kind.
     """
-    docs = list(documents)
+    docs = list(instances)
     team: set[str] = set()
     for doc in docs:
         if _name(doc) == delegator:

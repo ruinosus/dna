@@ -283,7 +283,7 @@ class CompositeFilesystemSource(WritableSourcePort):
 
     # ── WritableSourcePort ────────────────────────────────────────────
 
-    async def save_document(
+    async def save_instance(
         self, scope: str, kind: str, name: str, raw: dict,
         author: str | None = None,
         *,
@@ -300,25 +300,25 @@ class CompositeFilesystemSource(WritableSourcePort):
         #
         # ``if_match`` (i-083) forwards rather than being re-implemented here:
         # this source routes per SCOPE, and a guard has to compare against the
-        # document as the STORE holds it — which is whatever the routed child
+        # instance as the STORE holds it — which is whatever the routed child
         # holds. Comparing here would mean this composite reading through its own
         # read path while the child writes through another, i.e. two answers to
         # "what is stored". The child that owns the scope owns the verdict.
-        return await self._route(scope).save_document(
+        return await self._route(scope).save_instance(
             scope, kind, name, raw,
             author=author, tenant=tenant, layer=layer,
             write_class=write_class, version_retention=version_retention,
             if_absent=if_absent, if_match=if_match,
         )
 
-    async def delete_document(
+    async def delete_instance(
         self, scope: str, kind: str, name: str,
         *,
         tenant: str | None = None,
         layer: tuple[str, str] | None = None,
         api_version: str | None = None,
     ) -> None:
-        await self._route(scope).delete_document(
+        await self._route(scope).delete_instance(
             scope, kind, name, tenant=tenant, layer=layer,
             api_version=api_version,
         )
@@ -367,14 +367,24 @@ class CompositeFilesystemSource(WritableSourcePort):
             query_pushdown=True,
             tenant_layer_writes=True,
             # ⚠️ MINUS ``edges``: the filesystem store has no transaction to
-            # write a document and its derived relations together, and no table
+            # write an instance and its derived relations together, and no table
             # to write them TO. Declaring the kwarg would make the kernel hand
             # over edges this adapter would silently drop — and a graph face
-            # would then read the resulting nothing as "this document has no
+            # would then read the resulting nothing as "this instance has no
             # relations". It answers ``unsupported`` instead (see
             # ``SourceCapabilities.edge_graph``).
             write_kwargs=SAVE_OPTIONAL_KWARGS - {"edges"},
             delete_kwargs=DELETE_OPTIONAL_KWARGS,
+            # ⚠️ FALSE here while the flat filesystem declares True, and the
+            # difference is real rather than an oversight: this router does not
+            # subclass ``FilesystemSource`` and implements no
+            # ``find_instances_by_spec_key``, so a ``by: <key>`` relation comes
+            # back ``unsupported`` on it. That is the honest answer, and
+            # emphatically not the ``None`` that would read as "no instance
+            # carries that key". Same shape as ``find_instances_by_id_prefix``,
+            # which it also does not have.
+            key_lookup=False,
+            key_lookup_indexed=False,
         )
 
     async def list_layer_values(self, scope: str, layer_key: str) -> list[str]:

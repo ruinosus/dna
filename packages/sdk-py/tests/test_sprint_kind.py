@@ -1,7 +1,7 @@
 """The ``Sprint`` Kind, and the two references that now resolve to it.
 
 ``Story.sprint_ref`` and ``Feature.sprint_ref`` shipped as free-form strings
-whose ``_ref`` suffix promised a document that did not exist. This module pins
+whose ``_ref`` suffix promised an instance that did not exist. This module pins
 the three things that promise now costs:
 
 1. the Kind exists and says only what it can back up (identity + an optional
@@ -10,7 +10,7 @@ the three things that promise now costs:
    THROUGH THE DOOR — a real kernel write against a real store, so a row in
    ``dna_edges`` is the proof, not an assertion about a schema dict;
 3. the doc name and ``spec.sprint_id`` cannot disagree — enforced by a
-   ``pre_save`` veto, tested through ``kernel.write_document`` rather than by
+   ``pre_save`` veto, tested through ``kernel.write_instance`` rather than by
    calling the guard, because a guard nothing calls is the defect this house
    has already shipped once.
 """
@@ -76,7 +76,7 @@ class TestTheKind:
         compatibility was a constraint (backfilling a Sprint for an existing
         free-form label would have forced two invented dates). The constraint
         was lifted, and the measurement that made it safe is the same one that
-        made it pointless: ZERO documents carry a `sprint_ref`, so there was
+        made it pointless: ZERO instances carry a `sprint_ref`, so there was
         never a label to backfill.
         """
         assert port.schema()["required"] == ["sprint_id", "starts_on", "ends_on"]
@@ -146,7 +146,7 @@ class TestTheDeclaration:
         assert rels["sprint_ref"].to == ("Sprint",)
         assert rels["sprint_ref"].cardinality == "one"
         # The claim the Kind actually makes: this one the kernel FOLLOWS. A
-        # Sprint's document name IS its sprint_id, so `by: name` is the truth
+        # Sprint's instance name IS its sprint_id, so `by: name` is the truth
         # here rather than a convenience.
         assert rels["sprint_ref"].resolved is True
 
@@ -205,10 +205,10 @@ class TestTheEdgeIsBorn:
         self, store, kind,
     ):
         kernel, src = store
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, "Sprint", "2026-Q2-S2", _sprint("2026-Q2-S2"),
         )
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, kind, "w-1", _work_item(kind, "w-1", sprint_ref="2026-Q2-S2"),
         )
         rows = [r for r in await _edges(src) if r["source_field"] == "sprint_ref"]
@@ -222,17 +222,17 @@ class TestTheEdgeIsBorn:
         """THE compatibility claim, and the reason it is safe.
 
         Every `sprint_ref` written before this change names a Sprint that does
-        not exist yet. Under the DEFAULT mode (`warn`) that document still
+        not exist yet. Under the DEFAULT mode (`warn`) that instance still
         persists — the reference is recorded as dangling, which is a fact worth
         having, not a write worth refusing. If this test ever goes red, the
         change stopped being backwards compatible.
         """
         kernel, src = store
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, "Story", "s-legacy",
             _work_item("Story", "s-legacy", sprint_ref="2026-Q2-S2"),
         )
-        assert await kernel.get_document(SCOPE, "Story", "s-legacy") is not None
+        assert await kernel.get_instance(SCOPE, "Story", "s-legacy") is not None
         rows = [r for r in await _edges(src) if r["source_field"] == "sprint_ref"]
         assert len(rows) == 1
         assert rows[0]["to_kind"] is None       # dangling, and honest about it
@@ -243,19 +243,19 @@ class TestTheEdgeIsBorn:
         """The migration path, proven: name the Sprint doc after the label.
 
         No story is edited, no value is rewritten — the identifier the board
-        already carries becomes resolvable the moment the document exists.
+        already carries becomes resolvable the moment the instance exists.
         """
         kernel, src = store
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, "Story", "s-legacy",
             _work_item("Story", "s-legacy", sprint_ref="2026-Q2-S2"),
         )
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, "Sprint", "2026-Q2-S2", _sprint("2026-Q2-S2"),
         )
         # Re-asserting the story is what re-resolves it (edges are produced by
         # a write, never by a background sweep).
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, "Story", "s-legacy",
             _work_item("Story", "s-legacy", sprint_ref="2026-Q2-S2"),
         )
@@ -276,7 +276,7 @@ class TestTheEdgeIsBorn:
         kernel, _ = store
         monkeypatch.setenv("DNA_REF_VALIDATION", "enforce")
         with pytest.raises(SpecValidationError) as exc:
-            await kernel.write_document(
+            await kernel.write_instance(
                 SCOPE, "Story", "s-1",
                 _work_item("Story", "s-1", sprint_ref="2026-Q2-S2"),
             )
@@ -292,7 +292,7 @@ class TestTheEdgeIsBorn:
 class TestTheIdentityGuard:
     @pytest.mark.anyio
     async def test_a_mismatched_sprint_id_is_refused_by_the_kernel(self, store):
-        """Through ``kernel.write_document``, deliberately.
+        """Through ``kernel.write_instance``, deliberately.
 
         Calling ``sprint_identity_guard`` directly would prove the function
         works and nothing about whether any door calls it — the exact shape of
@@ -300,13 +300,13 @@ class TestTheIdentityGuard:
         """
         kernel, src = store
         with pytest.raises(ValueError) as exc:
-            await kernel.write_document(
+            await kernel.write_instance(
                 SCOPE, "Sprint", "2026-Q2-S2",
                 _sprint("2026-Q2-S2", sprint_id="2026-Q2-S3"),
             )
         assert "2026-Q2-S3" in str(exc.value)
         assert "2026-Q2-S2" in str(exc.value)
-        assert await kernel.get_document(SCOPE, "Sprint", "2026-Q2-S2") is None
+        assert await kernel.get_instance(SCOPE, "Sprint", "2026-Q2-S2") is None
 
     @pytest.mark.anyio
     async def test_the_matching_write_goes_through(self, store):
@@ -314,10 +314,10 @@ class TestTheIdentityGuard:
         passes the test above.
         """
         kernel, _ = store
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, "Sprint", "2026-Q2-S2", _sprint("2026-Q2-S2"),
         )
-        assert await kernel.get_document(SCOPE, "Sprint", "2026-Q2-S2") is not None
+        assert await kernel.get_instance(SCOPE, "Sprint", "2026-Q2-S2") is not None
 
     @pytest.mark.anyio
     async def test_the_guard_minds_its_own_Kind(self, store):
@@ -325,8 +325,8 @@ class TestTheIdentityGuard:
         a veto hook that fires on the wrong Kind is worse than no hook.
         """
         kernel, _ = store
-        await kernel.write_document(
+        await kernel.write_instance(
             SCOPE, "Story", "s-1",
             _work_item("Story", "s-1", sprint_ref="whatever"),
         )
-        assert await kernel.get_document(SCOPE, "Story", "s-1") is not None
+        assert await kernel.get_instance(SCOPE, "Story", "s-1") is not None

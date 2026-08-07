@@ -395,9 +395,9 @@ class LiveDna:
         """Make sure ``scope``'s Kind registry is no older than
         :attr:`kind_refresh_ttl`. Returns whether a refresh ran.
 
-        The seam the DOCUMENT routes go through, and the reason an approval now
-        has a publishable bound instead of an indeterminate one. Document routes
-        (``write_document`` / ``get_document`` / ``list_documents`` /
+        The seam the INSTANCE routes go through, and the reason an approval now
+        has a publishable bound instead of an indeterminate one. Instance routes
+        (``write_instance`` / ``get_instance`` / ``list_instances`` /
         ``list_kinds`` / the generic delete) resolve their Kind straight off the
         registry; they never built a Manifest Instance, so on any replica that
         did not itself serve the approval the Kind stayed unregistered until
@@ -442,7 +442,7 @@ class LiveDna:
     async def mi(self, scope: str | None = None, tenant: str | None = None) -> Any:
         """Build a (optionally tenant-resolved) ManifestInstance for ``scope``.
 
-        Eager (``lazy=False``) so ``mi.documents`` is fully materialized for
+        Eager (``lazy=False``) so ``mi.instances`` is fully materialized for
         agent/tool enumeration. ``tenant`` promotes into the layer context, so
         ``build_prompt`` composes the per-tenant overlay — the axis emit drops.
         """

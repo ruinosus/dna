@@ -8,7 +8,7 @@ user bearer; this restores that shape.
 Mechanism (verified against langchain 1.3.14 `langchain/agents/factory.py`):
 `create_agent` supports DYNAMIC tools. The "unknown client-side tool" validation
 at factory.py ~1304 is SKIPPED whenever any middleware defines `wrap_tool_call`
-(`if not has_wrap_tool_call:`), and the `DYNAMIC_TOOL_ERROR_TEMPLATE` documents
+(`if not has_wrap_tool_call:`), and the `DYNAMIC_TOOL_ERROR_TEMPLATE` instances
 "Option 2: Implement `wrap_tool_call` to execute tools that are added
 dynamically". So this middleware:
   (a) injects tool SCHEMAS into `request.tools` in `wrap_model_call` — the model

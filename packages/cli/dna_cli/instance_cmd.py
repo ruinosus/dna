@@ -1,4 +1,4 @@
-"""``dna doc`` — CRUD on documents within a scope.
+"""``dna instance`` — CRUD on instances within a scope.
 
 Migrated to dna-client for read/write CRUD (no local kernel needed
 for the common path). `apply` is the lone exception: it walks a
@@ -47,20 +47,20 @@ def _tenant_write_note(tenant: str | None) -> tuple[str | None, str | None]:
     return effective, warning
 
 
-@click.group("doc", help="List, show, create, edit, delete documents.")
-def doc() -> None:
+@click.group("instance", help="List, show, create, edit, delete instances.")
+def instance() -> None:
     """Group root."""
 
 
-@doc.command("list")
+@instance.command("list")
 @click.argument("kind_name")
-@click.option("--scope", default=None, help="Scope to list documents from (default: env / sole scope).")
+@click.option("--scope", default=None, help="Scope to list instances from (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Bind to this tenant (overrides DNA_TENANT).")
 @click.option("--json", "as_json", is_flag=True)
 def list_docs(
     kind_name: str, scope: str | None, tenant: str | None, as_json: bool,
 ) -> None:
-    """List documents of a Kind in the scope."""
+    """List instances of a Kind in the scope."""
     with dna_client(tenant=tenant) as dna:
         scope = scope or dna.default_scope
         try:
@@ -84,15 +84,15 @@ def list_docs(
         print_table(rows, ["name", "kind"])
 
 
-@doc.command("show")
+@instance.command("show")
 @click.argument("kind_name")
 @click.argument("doc_name")
-@click.option("--scope", default=None, help="Scope to read the document from (default: env / sole scope).")
+@click.option("--scope", default=None, help="Scope to read the instance from (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Bind to this tenant (overrides DNA_TENANT).")
 def show(
     kind_name: str, doc_name: str, scope: str | None, tenant: str | None,
 ) -> None:
-    """Print the full document (raw frontmatter + spec) as JSON."""
+    """Print the full instance (raw frontmatter + spec) as JSON."""
     with dna_client(tenant=tenant) as dna:
         scope = scope or dna.default_scope
         try:
@@ -113,6 +113,55 @@ def show(
             "spec": (raw.get("spec") if isinstance(raw, dict) else None) or {},
         }
     )
+
+
+@instance.command("resolve")
+@click.argument("instance_id")
+@click.option("--scope", default=None,
+              help="Narrow the search to one scope (default: every scope).")
+@click.option("--tenant", default=None, help="Bind to this tenant (overrides DNA_TENANT).")
+@click.option("--json", "as_json", is_flag=True, help="Print the whole instance.")
+def resolve(
+    instance_id: str, scope: str | None, tenant: str | None, as_json: bool,
+) -> None:
+    """Expand a short instance ID prefix to the instance it names (i-114).
+
+    Every instance carries a 12-character `metadata.id` that survives a rename.
+    Give the first four or more characters, the way you would quote a short git
+    commit hash:
+
+        dna instance resolve k7m3
+
+    A prefix that matches more than one instance is REFUSED, with the
+    candidates listed — it is never resolved to the first hit.
+    """
+    from dna.kernel.errors import InstanceIdLookupUnsupported
+    from dna.kernel.identity import (
+        AmbiguousInstanceId, PrefixTooShort, UnknownInstanceId,
+    )
+    from dna.application import resolve_instance_impl
+
+    with dna_client(tenant=tenant) as dna:
+        try:
+            body = run_async(resolve_instance_impl(
+                dna._live(), id=instance_id, scope=scope,
+                tenant=tenant,
+            ))
+        except AmbiguousInstanceId as e:
+            raise fail(str(e)) from e
+        except (UnknownInstanceId, PrefixTooShort) as e:
+            raise fail(str(e)) from e
+        except InstanceIdLookupUnsupported as e:
+            raise fail(str(e)) from e
+        except Exception as e:  # noqa: BLE001
+            raise fail(f"instance resolve failed: {e}") from e
+    if as_json:
+        print_json(body)
+        return
+    print_json({
+        "id": body["id"], "scope": body["scope"], "kind": body["kind"],
+        "name": body["name"], "api_version": body["api_version"],
+    })
 
 
 def _read_spec(spec_arg: str | None) -> dict:
@@ -170,11 +219,11 @@ def _coerce_value(value: str, schema_type: str | None) -> object:
     return value
 
 
-@doc.command("make")
+@instance.command("make")
 @click.argument("kind_name")
 @click.argument("doc_name")
 @click.argument("fields", nargs=-1)
-@click.option("--scope", default=None, help="Scope to write the document into (default: env / sole scope).")
+@click.option("--scope", default=None, help="Scope to write the instance into (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Bind the write to this tenant.")
 @click.option("--dry-run", is_flag=True, help="Validate without writing.")
 def make_doc(
@@ -187,7 +236,7 @@ def make_doc(
 ) -> None:
     """Create a doc via schema-driven flags (no JSON file needed).
 
-    Syntax: dna doc make <Kind> <name> field1=value1 field2=value2 ...
+    Syntax: dna instance make <Kind> <name> field1=value1 field2=value2 ...
 
     Field types are coerced from the Kind's JSON Schema:
       severity=high                  → "high" (string)
@@ -236,11 +285,11 @@ def make_doc(
         )
 
 
-@doc.command("transition")
+@instance.command("transition")
 @click.argument("kind_name")
 @click.argument("doc_name")
 @click.argument("new_status")
-@click.option("--scope", default=None, help="Scope holding the document (default: env / sole scope).")
+@click.option("--scope", default=None, help="Scope holding the instance (default: env / sole scope).")
 @click.option("--tenant", default=None)
 @click.option("--commit-ref", default=None, help="Git SHA to stamp on transition.")
 @click.option("--reason", default=None, help="Optional reason string.")
@@ -324,7 +373,7 @@ def transition(
     )
 
 
-@doc.command("fields")
+@instance.command("fields")
 @click.argument("kind_name")
 @click.option("--scope", default=None, help="Scope holding the Kind (default: env / sole scope).")
 @click.option("--tenant", default=None)
@@ -354,11 +403,11 @@ def fields_help(kind_name: str, scope: str | None, tenant: str | None) -> None:
         click.echo(f"  {name:<24} ({t}){enum_str}{marker}   {desc}")
 
 
-@doc.command("create")
+@instance.command("create")
 @click.argument("kind_name")
 @click.argument("doc_name")
 @click.option("--spec", "spec_path", default=None, help="Path to JSON file (or `-` for stdin).")
-@click.option("--scope", default=None, help="Scope to write the document into (default: env / sole scope).")
+@click.option("--scope", default=None, help="Scope to write the instance into (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Bind the write to this tenant (overrides DNA_TENANT).")
 @click.option("--dry-run", is_flag=True, help="Validate without writing.")
 def create(
@@ -369,7 +418,7 @@ def create(
     tenant: str | None,
     dry_run: bool,
 ) -> None:
-    """Create a new document via the kernel WriterPort."""
+    """Create a new instance via the kernel WriterPort."""
     spec = _read_spec(spec_path)
     with dna_client(tenant=tenant) as dna:
         scope = scope or dna.default_scope
@@ -396,16 +445,16 @@ def create(
         click.secho(f"Created {kind_name}/{doc_name} in scope {scope}{suffix}.", fg="green")
 
 
-@doc.command("delete")
+@instance.command("delete")
 @click.argument("kind_name")
 @click.argument("doc_name")
-@click.option("--scope", default=None, help="Scope to delete the document from (default: env / sole scope).")
+@click.option("--scope", default=None, help="Scope to delete the instance from (default: env / sole scope).")
 @click.option("--tenant", default=None, help="Bind the delete to this tenant (overrides DNA_TENANT).")
 @click.option("--yes", is_flag=True, help="Skip confirmation.")
 def delete(
     kind_name: str, doc_name: str, scope: str | None, tenant: str | None, yes: bool,
 ) -> None:
-    """Delete a document from the scope. Asks for confirmation unless --yes."""
+    """Delete an instance from the scope. Asks for confirmation unless --yes."""
     _eff, _warn = _tenant_write_note(tenant)  # i-020: show effective tenant
     if _warn:
         click.secho(f"  ⚠ {_warn}", fg="yellow", err=True)
@@ -428,7 +477,7 @@ def delete(
 # `apply` — bundle / marker handling still needs local kernel for
 # marker→kind resolution. TODO: add a server-side endpoint that takes
 # (bundle_bytes, marker_name) and returns the canonical raw doc, so
-# this can also migrate to dna-client. Until then, `dna doc apply`
+# this can also migrate to dna-client. Until then, `dna instance apply`
 # requires DNA_SOURCE_URL to be set.
 # ---------------------------------------------------------------------------
 
@@ -463,7 +512,7 @@ def _collect_bundle_files(
     """All bundle entries under ``root`` (excluding the marker + skip dirs):
     text files as ``str``, everything else (fonts, images, audio, archives)
     as ``bytes``. i-062 — the text-only collection dropped binary assets, so
-    `dna doc apply` never synced fonts/images to the target source.
+    `dna instance apply` never synced fonts/images to the target source.
 
     The downstream apply pops these from spec.source_files and writes each via
     ``kernel.write_bundle_entry_async`` (which takes ``str | bytes``).
@@ -494,7 +543,7 @@ def _collect_bundle_files(
 
 
 def _load_apply_input(path: str, kernel) -> dict:
-    """Load `dna doc apply` input — bundle dir, marker file, or YAML/JSON."""
+    """Load `dna instance apply` input — bundle dir, marker file, or YAML/JSON."""
     import yaml as _yaml
     from dna._yaml import safe_load
     from pathlib import Path as _Path
@@ -551,8 +600,8 @@ def _load_apply_input(path: str, kernel) -> dict:
     fm, body = _parse_frontmatter(raw_text, source=str(p))
     # i-061 — a single marker file (e.g. AGENT.md) is still a bundle: collect
     # its sibling entries (instruction.md, scripts/, references/) from the
-    # parent directory so `dna doc apply path/to/AGENT.md` is equivalent to
-    # `dna doc apply path/to/`. Without this, applying the marker alone dropped
+    # parent directory so `dna instance apply path/to/AGENT.md` is equivalent to
+    # `dna instance apply path/to/`. Without this, applying the marker alone dropped
     # the instruction_file fragment, zeroing the agent's instruction.
     # i-062 — collect text AND binary siblings (fonts, images, …).
     sibling_files = _collect_bundle_files(p.parent, p.name)
@@ -667,7 +716,7 @@ def _stamp_created_at_if_in_schema(s, kind_name: str, raw: dict) -> None:
 
 
 def _load_apply_inputs(path: str, kernel) -> list[dict]:
-    """Load `dna doc apply` input as a LIST of raw docs.
+    """Load `dna instance apply` input as a LIST of raw docs.
 
     YAML/JSON files may contain MULTIPLE documents separated by ``---``
     (a YAML stream); each is applied independently. Bundle directories
@@ -681,7 +730,7 @@ def _load_apply_inputs(path: str, kernel) -> list[dict]:
     p = _Path(path)
     suffix = p.suffix.lower()
     # Multi-doc only makes sense for plain YAML/JSON streams. Bundle dirs
-    # and markdown markers carry exactly one document by construction.
+    # and markdown markers carry exactly one instance by construction.
     if p.is_dir() or suffix in (".md", ".markdown"):
         return [_load_apply_input(path, kernel)]
 
@@ -695,7 +744,7 @@ def _load_apply_inputs(path: str, kernel) -> list[dict]:
     except _yaml.YAMLError as e:
         raise fail(f"Invalid YAML/JSON in {path}: {e}")
     if not docs:
-        raise fail(f"{path} contains no documents.")
+        raise fail(f"{path} contains no instances.")
     # Single-doc YAML: defer to _load_apply_input so its validation +
     # behavior (and any test monkeypatch of it) stays the single source of
     # truth for the common case. Multi-doc only kicks in for `---` streams.
@@ -704,7 +753,7 @@ def _load_apply_inputs(path: str, kernel) -> list[dict]:
     for idx, d in enumerate(docs):
         if not isinstance(d, dict):
             raise fail(
-                f"{path} document #{idx} top-level must be a mapping "
+                f"{path} instance #{idx} top-level must be a mapping "
                 f"(apiVersion/kind/metadata/spec)."
             )
     return docs
@@ -713,7 +762,7 @@ def _load_apply_inputs(path: str, kernel) -> list[dict]:
 def _apply_one(s, raw: dict, *, path: str, doc_index: int | None,
                tenant: str | None, dry_run: bool) -> None:
     """Validate + upsert a single raw doc. Shared by single- and multi-doc apply."""
-    label = f"{path}" if doc_index is None else f"{path} document #{doc_index}"
+    label = f"{path}" if doc_index is None else f"{path} instance #{doc_index}"
     if not isinstance(raw, dict):
         raise fail(
             f"{label} top-level must be a mapping (apiVersion/kind/metadata/spec)."
@@ -732,7 +781,7 @@ def _apply_one(s, raw: dict, *, path: str, doc_index: int | None,
     # bundle entry AFTER the doc exists. Source-agnostic (FS / SQLite / Postgres)
     # via kernel.write_bundle_entry_async. Without this, applying an
     # instruction_file Agent to a fresh bundle leaves no instruction
-    # fragment → resolve_document re-resolves it to empty → broken agent.
+    # fragment → resolve_instance re-resolves it to empty → broken agent.
     _bundle_entries: dict = {}
     _spec_for_entries = raw.get("spec")
     if isinstance(_spec_for_entries, dict):
@@ -748,7 +797,7 @@ def _apply_one(s, raw: dict, *, path: str, doc_index: int | None,
         # the Kind's schema defaults are injected at parse time — while the
         # file's spec is raw, so a resolved-vs-raw compare NEVER converges for
         # a Kind with defaults: re-applying an identical file was UPDATED (and
-        # a version bump) forever. `write_document` persists the RAW doc, so
+        # a version bump) forever. `write_instance` persists the RAW doc, so
         # the write is a true no-op exactly when the STORED raw spec equals
         # the incoming one — that is the pair that decides UNCHANGED/UPDATED.
         # (Raw-raw also stays honest the other way: a file that drops a key
@@ -777,7 +826,7 @@ def _apply_one(s, raw: dict, *, path: str, doc_index: int | None,
         # of silently passing dry-run and only failing on the real write
         # (i-validation-shallow).
         try:
-            s.kernel.validate_document(s.scope, kind_name, name, raw)
+            s.kernel.validate_instance(s.scope, kind_name, name, raw)
         except Exception as e:  # noqa: BLE001
             raise fail(f"{label} failed schema validation: {e}")
         print_json(
@@ -805,7 +854,7 @@ def _apply_one(s, raw: dict, *, path: str, doc_index: int | None,
         click.secho(f"  ⚠ {_tenant_warn}", fg="yellow", err=True)
     kernel = s.kernel.with_tenant(effective) if effective else s.kernel
     try:
-        s.run(kernel.write_document(s.scope, kind_name, name, raw))
+        s.run(kernel.write_instance(s.scope, kind_name, name, raw))
     except Exception as e:  # noqa: BLE001
         # Surface prompt-budget errors with a clear message instead of the
         # generic "write failed:" wrapper. The error message from
@@ -821,7 +870,7 @@ def _apply_one(s, raw: dict, *, path: str, doc_index: int | None,
         raise fail(f"write failed: {e}")
     # i-061 — persist bundle entries now that the parent doc exists. These were
     # popped from spec.source_files above; the marker file (AGENT.md) is already
-    # written by write_document, and source_files excludes it by construction.
+    # written by write_instance, and source_files excludes it by construction.
     for _entry_path, _content in _bundle_entries.items():
         try:
             # i-083 — pass text entries as str and binary entries as bytes so
@@ -848,13 +897,13 @@ def _apply_one(s, raw: dict, *, path: str, doc_index: int | None,
     click.secho(f"{action} {kind_name}/{name} in scope {s.scope}{suffix}.", fg=fg)
 
 
-@doc.command("apply")
+@instance.command("apply")
 @click.argument("path", type=click.Path(exists=True, dir_okay=True, readable=True))
 @click.option("--scope", default=None, help="Override scope (default from env or doc).")
 @click.option("--tenant", default=None, help="Bind the apply to this tenant (overrides DNA_TENANT).")
 @click.option("--dry-run", is_flag=True, help="Validate without writing.")
 def apply(path: str, scope: str | None, tenant: str | None, dry_run: bool) -> None:
-    """Upsert document(s) from a YAML/JSON file, a bundle marker, or a bundle directory.
+    """Upsert instance(s) from a YAML/JSON file, a bundle marker, or a bundle directory.
 
     YAML/JSON files may hold MULTIPLE documents separated by ``---`` (a YAML
     stream); each is applied independently in order. Single-doc files behave
@@ -862,7 +911,7 @@ def apply(path: str, scope: str | None, tenant: str | None, dry_run: bool) -> No
 
     NOTE: this command still uses the local kernel (via dna_session) because
     bundle/marker → kind resolution requires walking registered Kinds. Other
-    `dna doc` commands run via dna-client and don't need DNA_SOURCE_URL set.
+    `dna instance` commands run via dna-client and don't need DNA_SOURCE_URL set.
     """
     with open_session(scope) as s:
         raws = _load_apply_inputs(path, s.kernel)

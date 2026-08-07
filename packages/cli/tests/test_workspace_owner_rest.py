@@ -69,7 +69,7 @@ def _seed_grant(dna_dir, ws, email, oid, role, status="active"):
     async def go():
         live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
         name = f"{ws}--{email.replace('@', '-at-').replace('.', '-')}"
-        await live.kernel.write_document(
+        await live.kernel.write_instance(
             "_lib", "WorkspaceMembership", name,
             {"apiVersion": "github.com/ruinosus/dna/tenant/v1", "kind": "WorkspaceMembership",
              "metadata": {"name": name},
@@ -115,7 +115,7 @@ def test_provision_cannot_create_a_workspace_at_all(dna_dir):
     async def read_ws():
         live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
         try:
-            return await live.kernel.get_document("_lib", "Workspace", _WS)
+            return await live.kernel.get_instance("_lib", "Workspace", _WS)
         except FileNotFoundError:
             return None  # `_lib` never even came into existence
     assert asyncio.run(read_ws()) is None  # nothing was written
@@ -209,7 +209,7 @@ def test_provision_backfills_a_missing_workspace_doc_for_an_owner(dna_dir):
 
     async def read_ws():
         live = await M.boot_live(scope=_SCOPE, base_dir=str(dna_dir))
-        return await live.kernel.get_document("_lib", "Workspace", _WS)
+        return await live.kernel.get_instance("_lib", "Workspace", _WS)
     ws = asyncio.run(read_ws())
     assert ws is not None
     assert ws["spec"]["workspace_id"] == _WS

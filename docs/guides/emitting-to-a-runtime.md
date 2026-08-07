@@ -74,7 +74,7 @@ the axes the emit **drops** — so the emitter reports them honestly (on stderr,
 in `--json` under `losses`), never hand-waves them:
 
 - **Composition structure.** `Soul` reuse and a `Guardrail` wired as its own
-  document collapse to one flat `instructions` string. A PromptAgent has no
+  instance collapse to one flat `instructions` string. A PromptAgent has no
   `soul:`/`guardrails:` slot — so two agents that *share* a Soul in DNA would each
   carry a **copied** persona in their emitted YAML (edit-in-two-places drift). The
   structure is a DNA authoring-time concept.

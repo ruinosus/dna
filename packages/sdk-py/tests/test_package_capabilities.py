@@ -17,7 +17,7 @@ def test_from_raw_absent_defaults_empty():
     assert GenomeSpec.from_raw({"owner": "platform"}).capabilities == []
 
 def test_write_roundtrip_via_asdict():
-    # write-path serialization (document.py uses dataclasses.asdict) must carry capabilities
+    # write-path serialization (instance.py uses dataclasses.asdict) must carry capabilities
     caps = [{"kind": "modelreg-modelprofile", "name": "gpt-5.4", "location": "model-profiles/gpt-5.4.yaml"}]
     s = GenomeSpec.from_raw({"owner": "platform", "capabilities": caps})
     d = dataclasses.asdict(s)

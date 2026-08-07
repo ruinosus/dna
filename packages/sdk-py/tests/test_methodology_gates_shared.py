@@ -142,7 +142,7 @@ class _FakeKernel:
         return self._real.kind_ports()
 
     # -- the storage half ---------------------------------------------------
-    async def get_document(self, scope, kind, name):
+    async def get_instance(self, scope, kind, name):
         return self.docs.get((scope, kind, name))
 
     async def query(self, scope, kind, **kw):
@@ -150,7 +150,7 @@ class _FakeKernel:
             if sc == scope and kd == kind:
                 yield doc
 
-    async def write_document(self, scope, kind, name, raw, **kw):
+    async def write_instance(self, scope, kind, name, raw, **kw):
         self.writes.append((scope, kind, name, raw))
         self.docs[(scope, kind, name)] = raw
 

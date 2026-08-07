@@ -393,6 +393,26 @@ class UserProfileKind(KindBase):
         "can read/write only their own profile via the get_my_profile / "
         "update_my_profile tools — never another user's."
     )
+    # `user_id` is reference-SHAPED and points at no instance: it is the
+    # identity provider's stable subject (an email or a `sub` claim), stamped
+    # server-side from verified claims so a client cannot forge it. There is no
+    # User Kind, today or planned — an identity lives in the IdP.
+    #
+    # ⭐ CONFIRMED as a DECISION on 06/08/2026 (i-119, founder decision 1)
+    # rather than left as an unexamined absence. This Kind, `UserRoleAssignment`
+    # (`self` — its instance name IS the user_id), `TenantMembership.user_id`
+    # and `AgentGrant.subject` hold the SAME value, the IdP's durable `sub`, so
+    # all four are islands BY DESIGN and stop counting as islands-to-fix. A
+    # Kind for the person would duplicate the IdP's source of truth and pull
+    # personal data into our store. THE TRIGGER THAT INVERTS IT: the day we
+    # must hang data of OUR OWN on a person that the IdP does not have. Then
+    # THIS Kind becomes the anchor — `AgentGrant.subject` and
+    # `UserRoleAssignment.user_id` become `to: UserProfile, by: user_id`, and
+    # "which grants did this person give?" becomes a TRAVERSAL instead of an
+    # equality of fields.
+    identifiers = {
+        "user_id": {"role": "external", "system": "idp"},
+    }
 
     def dep_filters(self) -> dict[str, str]:
         return {}
@@ -568,7 +588,7 @@ class UserProfileKind(KindBase):
 #
 # Storage: yaml ``canvases/<name>.yaml``. Spec carries the tldraw store
 # (JSON snapshot) + title + summary. Embeddings extract text shapes for
-# semantic recall via search_documents("aquele canvas sobre X").
+# semantic recall via search_instances("aquele canvas sobre X").
 
 
 class CanvasKind(KindBase):
