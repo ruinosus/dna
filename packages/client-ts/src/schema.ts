@@ -2707,6 +2707,11 @@ export interface components {
              * @default 0
              */
             enforced: number;
+            /**
+             * Followed
+             * @default 0
+             */
+            followed: number;
             /** Kinds */
             kinds: number;
             /**
@@ -2736,14 +2741,22 @@ export interface components {
          *     (``dep_filters``: a real declaration that drives prompt composition and is
          *     never checked against stored data).
          *
-         *     ⚠️ ``enforced`` is the flag that matters, and it is NOT the same as
-         *     ``tier == "declared"``. The kernel resolves a relation at write time only
-         *     when it has a concrete target Kind AND is addressed by instance name
-         *     (``by == "name"``). A relation addressed by a spec field of the target
-         *     (``by: workspace_id``) or carrying its Kind in the value (``to: "*"``) is
-         *     fully declared and deliberately not resolved. A renderer that draws
-         *     enforced and unenforced edges alike is asserting a confidence the model
-         *     does not have.
+         *     ⚠️ ``followed`` and ``enforced`` are TWO flags, and neither is the same as
+         *     ``tier == "declared"``. They were one field until fatia 5 of
+         *     ``spec-topologia-do-grafo`` taught the kernel to resolve a spec-KEY
+         *     address, which split what used to coincide:
+         *
+         *     * ``followed`` — the kernel reads the target and this edge exists as data.
+         *       True for ``by: name`` and for ``by: <key>``.
+         *     * ``enforced`` — an unresolvable value REFUSES the write. True only for
+         *       ``by: name``, because the by-key resolver is deliberately poorer than the
+         *       live alias-tolerant lookups and may not veto what they accept.
+         *
+         *     A relation whose value carries its own Kind (``to: "*"`` with a composite
+         *     ``by``) is fully declared and neither followed nor enforced. A renderer
+         *     that draws all edges alike asserts a confidence the model does not have;
+         *     one that reads only ``enforced`` calls thirteen real, edge-producing
+         *     relations unchecked.
          *
          *     ``to_kind`` is a registered Kind, or ``*`` when the target Kind travels
          *     inside the VALUE. A declaration naming a Kind nobody registers is a gap,
@@ -2768,6 +2781,11 @@ export interface components {
             enforced: boolean;
             /** Field */
             field: string;
+            /**
+             * Followed
+             * @default false
+             */
+            followed: boolean;
             /** From Kind */
             from_kind: string;
             /** Inverse Of */

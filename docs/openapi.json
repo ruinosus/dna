@@ -2958,6 +2958,11 @@
             "title": "Enforced",
             "type": "integer"
           },
+          "followed": {
+            "default": 0,
+            "title": "Followed",
+            "type": "integer"
+          },
           "kinds": {
             "title": "Kinds",
             "type": "integer"
@@ -2995,7 +3000,7 @@
         "type": "object"
       },
       "KindGraphEdge": {
-        "description": "One SCHEMA edge: Kind ``from_kind`` points at ``to_kind`` through the\nrelation ``field``.\n\n``tier`` says where the edge comes from — ``declared`` (``spec.relations``,\nthe Kind's own statement about what it points at) or ``composition``\n(``dep_filters``: a real declaration that drives prompt composition and is\nnever checked against stored data).\n\n⚠️ ``enforced`` is the flag that matters, and it is NOT the same as\n``tier == \"declared\"``. The kernel resolves a relation at write time only\nwhen it has a concrete target Kind AND is addressed by instance name\n(``by == \"name\"``). A relation addressed by a spec field of the target\n(``by: workspace_id``) or carrying its Kind in the value (``to: \"*\"``) is\nfully declared and deliberately not resolved. A renderer that draws\nenforced and unenforced edges alike is asserting a confidence the model\ndoes not have.\n\n``to_kind`` is a registered Kind, or ``*`` when the target Kind travels\ninside the VALUE. A declaration naming a Kind nobody registers is a gap,\nnot an edge, and comes back under ``unresolved``.",
+        "description": "One SCHEMA edge: Kind ``from_kind`` points at ``to_kind`` through the\nrelation ``field``.\n\n``tier`` says where the edge comes from — ``declared`` (``spec.relations``,\nthe Kind's own statement about what it points at) or ``composition``\n(``dep_filters``: a real declaration that drives prompt composition and is\nnever checked against stored data).\n\n⚠️ ``followed`` and ``enforced`` are TWO flags, and neither is the same as\n``tier == \"declared\"``. They were one field until fatia 5 of\n``spec-topologia-do-grafo`` taught the kernel to resolve a spec-KEY\naddress, which split what used to coincide:\n\n* ``followed`` — the kernel reads the target and this edge exists as data.\n  True for ``by: name`` and for ``by: <key>``.\n* ``enforced`` — an unresolvable value REFUSES the write. True only for\n  ``by: name``, because the by-key resolver is deliberately poorer than the\n  live alias-tolerant lookups and may not veto what they accept.\n\nA relation whose value carries its own Kind (``to: \"*\"`` with a composite\n``by``) is fully declared and neither followed nor enforced. A renderer\nthat draws all edges alike asserts a confidence the model does not have;\none that reads only ``enforced`` calls thirteen real, edge-producing\nrelations unchecked.\n\n``to_kind`` is a registered Kind, or ``*`` when the target Kind travels\ninside the VALUE. A declaration naming a Kind nobody registers is a gap,\nnot an edge, and comes back under ``unresolved``.",
         "properties": {
           "by": {
             "default": "name",
@@ -3019,6 +3024,11 @@
           "field": {
             "title": "Field",
             "type": "string"
+          },
+          "followed": {
+            "default": false,
+            "title": "Followed",
+            "type": "boolean"
           },
           "from_kind": {
             "title": "From Kind",
