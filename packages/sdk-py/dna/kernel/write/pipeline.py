@@ -39,6 +39,7 @@ import os
 from pathlib import Path  # noqa: F401 — kept for parity with prior inline imports
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
+from dna.kernel.invalidation_cost import emit_write, invalidation_logging_enabled
 from dna.kernel.validity import strip_derived_status
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -864,6 +865,14 @@ class WritePipeline:
                 scope=scope, tenant=effective_tenant or "",
                 kind=kind, name=name, op="write",
             )
+        # i-123 — o CONTADOR do gatilho 2. Desligado, a única linha a mais no
+        # caminho quente é uma comparação de nível; nada é formatado.
+        if invalidation_logging_enabled():
+            emit_write(
+                kind=kind, port=_kind_port,
+                plane=getattr(_kind_port, "plane", "composition"),
+                mode=invalidate_mode, op="write", tenant=effective_tenant,
+            )
         host._fire_write_observers(
             scope, kind, name, "write", tenant=effective_tenant or "",
         )
@@ -996,6 +1005,19 @@ class WritePipeline:
             host.invalidate(
                 scope=scope, tenant=effective_tenant or "",
                 kind=kind, name=name, op="delete",
+            )
+        # i-123 — o mesmo contador da escrita. O delete resolve o port SÓ aqui,
+        # e só com o funil ligado: ele é o único consumidor dele neste corpo, e
+        # uma resolução a mais por delete no caminho desligado seria custo por
+        # nada. Desligado, a única linha a mais é a comparação de nível.
+        if invalidation_logging_enabled():
+            _deleted_port = host.kind_port_for(
+                kind, api_version=api_version, scope=scope,
+            )
+            emit_write(
+                kind=kind, port=_deleted_port,
+                plane=getattr(_deleted_port, "plane", "composition"),
+                mode=invalidate_mode, op="delete", tenant=effective_tenant,
             )
         host._fire_write_observers(
             scope, kind, name, "delete", tenant=effective_tenant or "",

@@ -23,6 +23,7 @@ wrong reason.
 """
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 import pytest
@@ -360,7 +361,18 @@ async def test_the_document_shape_carries_the_same_verdict(store):
         # ``kernel.query`` would have re-asserted the raw-dict marking and
         # passed with the Instance-side marking deleted.
         mi = await fresh.instance_async(_SCOPE)
-        docs = [d for d in mi.instances if d.kind == "Widget"]
+        # ⚠️ i-123 (07/08/2026) — ``mi._all`` e não ``mi.instances``, e a troca
+        # NÃO enfraquece o que este teste prova.
+        #
+        # ``Widget`` é um Kind autorado sem ``plane`` declarado, e desde o i-123
+        # isso o põe no plano ``record`` — excluído da materialização DE
+        # PROPÓSITO, então ``mi.instances`` não o contém mais. ``mi._all``
+        # continua sendo a leitura PELA MI e continua devolvendo ``Instance``
+        # (via ``query_list_sync``), que é exatamente a forma que esta asserção
+        # existe para julgar. O ``to_thread`` é o contrato documentado dessa
+        # superfície: ela é síncrona e RECUSA rodar dentro de um event loop, em
+        # vez de devolver vazio em silêncio.
+        docs = await asyncio.to_thread(mi._all, "Widget")
         assert docs, "the instances must still be there to be judged"
         assert all(not d.is_valid for d in docs)
         assert all(d.status["reason"] == "kind_revoked" for d in docs)

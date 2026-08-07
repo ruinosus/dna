@@ -22,6 +22,12 @@ import contextlib
 import logging
 from typing import TYPE_CHECKING
 
+from dna.kernel.invalidation_cost import (
+    emit_invalidate,
+    invalidation_logging_enabled,
+    now,
+)
+
 if TYPE_CHECKING:  # pragma: no cover
     from dna.kernel.collaborator_ports import InvalidationHost
 
@@ -89,14 +95,45 @@ class InvalidationController:
     ) -> None:
         """Invalidate in-process caches for a (scope, tenant) write/delete event.
         Idempotent. Inside a ``batch_writes()`` block, buffers the event and
-        skips the expensive reload + fan-out (the outermost exit drains it)."""
+        skips the expensive reload + fan-out (the outermost exit drains it).
+
+        i-123 — mede o fan-out. ⚠️ Este número é pequeno POR DESENHO: os holders
+        recarregam preguiçosamente e, dentro de um event loop, o reload vira um
+        ``create_task`` que sai do relógio. O custo real fica no PRÓXIMO build
+        do escopo, medido pelo evento ``rebuild``. Lido sozinho, ele diria que a
+        gaveta cara é barata — e é por isso que ``invalidation_stats`` carrega a
+        ressalva dentro do próprio relatório, em vez de deixá-la num comentário.
+        """
         k = self._k
-        if k._batch_mode_depth > 0:
+        # Desligado, esta é a ÚNICA linha a mais no caminho quente: uma
+        # comparação de nível. O relógio não é lido — ``now()`` fica intocado.
+        observing = invalidation_logging_enabled()
+        started = now() if observing else 0.0
+        batched = k._batch_mode_depth > 0
+        if batched:
             k._batch_pending.append((scope, tenant, kind, name, op))
-            return
-        self.invalidate_internal(
-            scope=scope, tenant=tenant, kind=kind, name=name, op=op,
-        )
+        else:
+            self.invalidate_internal(
+                scope=scope, tenant=tenant, kind=kind, name=name, op=op,
+            )
+        if observing:
+            port_for = getattr(k, "kind_port_for", None)
+            emit_invalidate(
+                kind=kind,
+                # O port é resolvido só aqui, e só ligado: o rótulo precisa
+                # dele para não deixar escapar o nome de um Kind de tenant.
+                port=port_for(kind, scope=scope) if callable(port_for) else None,
+                op=op,
+                # ZERO quando bufferizado, porque nenhum reload aconteceu.
+                # Contar os holders assim mesmo faria a válvula (``batch_writes``)
+                # aparecer no relatório como se custasse o que ela evita.
+                holders=0 if batched else sum(
+                    1 for h in getattr(k, "_holders", [])
+                    if getattr(h, "scope", None) == scope
+                ),
+                ms=(now() - started) * 1000.0,
+                batch=batched, tenant=tenant or None,
+            )
 
     def invalidate_internal(
         self, *, scope: str, tenant: str, kind: str, name: str, op: str,
