@@ -1,0 +1,134 @@
+# `app-container` — the REFERENCE Copier template of this house: ONE python
+# container app of the "DNA runtime face behind a container app" shape.
+#
+# It is the template `dna solution new` / `dna solution update` were built
+# against, and the one the golden test freezes
+# (`packages/cli/tests/goldens/solution/app-container/`).
+#
+# ⚠️ Read `docs/guides/solution-scaffolding.md` before changing anything here.
+# Changing this file changes generated code for everyone who already ran
+# `dna solution new`, and the golden exists so that has to be deliberate.
+#
+# Design rules, each traceable to `Spec/spec-solucao-como-template` §4.4:
+#
+#   • regra 2 — generate the maximum of what the consumer will NOT edit
+#     (the wiring), the minimum of what they WILL (`server.py` is a skeleton
+#     that stops where the reasoning starts). A template that generated the
+#     whole server would be programming a conflict for the first update.
+#   • regra 3 — ONE template per app TYPE, overlaid N times. Hence the answers
+#     file is PER INSTANCE (`.copier-answers.<service_name>.yml`), the
+#     `datarobot-community/af-component-*` pattern. Three MCP doors over one
+#     image = three answers files, three independent updates, one template.
+#   • regra 4 — NO `_tasks`, NO `_migrations`, NO `_jinja_extensions`, ever.
+#     Measured: tasks run 3× per `copier update`, 2 of them in temp dirs with
+#     no git repo, and they are what forces `--trust`. `dna solution` has no
+#     `--trust` flag and refuses such a template outright.
+#
+# ⛔ TWO of the seven wiring places a new app needs are NOT here, and no
+# template can reach them: `azure.yaml` (the azd JSON Schema has fixed
+# top-level keys — no include) and the ROOT bicep that invokes the module
+# below (Bicep has `module`, but the invocation is a line in the root file).
+# `dna solution new` says so on every run. They are covered from the other
+# side, by a wiring guard in the consuming repo.
+
+_answers_file: ".copier-answers.{{ service_name }}.yml"
+_templates_suffix: ".jinja"
+_min_copier_version: "9.7"
+
+_exclude:
+  # Copier's stock defaults, re-listed: declaring `_exclude` REPLACES them.
+  - "copier.yml"
+  - "copier.yaml"
+  - "~*"
+  - "*.py[co]"
+  - "__pycache__"
+  - ".git"
+  - ".DS_Store"
+  - ".svn"
+  # This template's own prose — never rendered into a generated project.
+  - "README.md"
+
+_message_after_copy: |
+  Generated {{ service_name }} (image {{ image_name }}).
+
+# ── The declaration: TOPOLOGY, never behaviour ───────────────────────────────
+# Every question below is a fact about WHERE the app runs, never a fact about
+# WHAT it does. Behaviour lives in `src/`, which the human owns.
+
+service_name:
+  type: str
+  help: "the running instance — the azd service name (a repo has N of these)"
+  default: "api"
+  validator: >-
+    {% if not service_name %}service_name cannot be empty
+    {% elif not (service_name | regex_search('^[a-z][a-z0-9-]*$')) %}lowercase letters, digits and dashes only, starting with a letter
+    {% endif %}
+
+image_name:
+  type: str
+  help: "the IMAGE this service runs — N services can share one image"
+  default: "{{ service_name }}"
+
+python_module:
+  type: str
+  help: "the python package under src/"
+  default: "{{ image_name | replace('-', '_') }}"
+  validator: >-
+    {% if not (python_module | regex_search('^[a-z_][a-z0-9_]*$')) %}a python identifier: lowercase, digits and underscores{% endif %}
+
+description:
+  type: str
+  help: "one line, for pyproject and the container label"
+  default: "{{ service_name }} — a DNA runtime face"
+
+dna_floor:
+  type: str
+  help: "dna-sdk / dna-cli version FLOOR — the declared floor IS the contract"
+  default: "0.74"
+
+dna_ceiling:
+  type: str
+  help: "version CEILING — a stale one makes the resolver ignore a new release in silence"
+  default: "0.75"
+
+env_prefix:
+  type: str
+  help: "the env-var prefix this app reads its knobs from"
+  default: "DNA_API"
+
+identity:
+  type: str
+  help: "the NAME of the identity authority, never its configuration"
+  choices: ["none", "entra", "workos"]
+  default: "workos"
+
+# ⚠️ A `when:`-gated answer is ERASED when its condition stops holding, and
+# comes back as the DEFAULT — not as what the human answered — if the
+# condition returns. Measured: true -> (absent) -> false, in one round trip.
+# `dna solution update` reports every such loss by name; it cannot undo it.
+graph_obo:
+  type: bool
+  help: "carry the Microsoft Graph on-behalf-of pack (only meaningful on an Entra door)"
+  default: false
+  when: "{{ identity == 'entra' }}"
+
+ingress:
+  type: str
+  help: "reachable from outside the environment, or only from inside it"
+  choices: ["internal", "external"]
+  default: "internal"
+
+container_port:
+  type: int
+  help: "the port the app listens on inside the container"
+  default: 8080
+
+can_sleep:
+  type: bool
+  help: "can this app scale to zero? a `no` costs a fixed replica, every month, forever"
+  default: true
+
+max_replicas:
+  type: int
+  help: "upper bound of the autoscaler"
+  default: 2

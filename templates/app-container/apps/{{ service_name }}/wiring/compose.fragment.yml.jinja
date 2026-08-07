@@ -1,0 +1,22 @@
+# {{ service_name }}, for local development.
+#
+# Reachable by the template, and consumed WITHOUT anyone editing a shared file:
+# the root compose file carries one `include:` entry per app, and Compose
+# resolves fragments by path. This is the wiring place that costs nothing to
+# add — which is exactly why it is the one to imitate wherever a format allows.
+#
+#   # docker-compose.dev.yml
+#   include:
+#     - path: ./apps/{{ service_name }}/wiring/compose.fragment.yml
+
+services:
+  {{ service_name }}:
+    build:
+      context: ./apps/{{ service_name }}
+      dockerfile: Dockerfile
+    environment:
+      {{ env_prefix }}_HOST: "0.0.0.0"
+      {{ env_prefix }}_PORT: "{{ container_port }}"
+      {{ env_prefix }}_AUTH: "{{ 'config' if identity != 'none' else 'none' }}"
+    ports:
+      - "{{ container_port }}:{{ container_port }}"

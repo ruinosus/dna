@@ -115,6 +115,28 @@ a2a = ["a2a-sdk[fastapi]>=1.1.2,<2"]
 # imports msal/httpx only inside the exchange/Graph-call seams), off by default
 # (needs the `graph:` config block), HTTP-only. The base install never carries it.
 graph = ["msal>=1.28", "httpx>=0.27"]
+# `dna solution new|update` — scaffolding a repo from Copier templates, and
+# rolling an already-generated one forward. Copier is the OFFICIAL library and
+# the only implementation of this anyone should be writing: a template renderer
+# plus a three-way merge is exactly the sort of thing whose subtle divergences
+# surface first against somebody else's template, at the worst possible moment.
+#
+# Its own extra, beside `mcp`/`api`, because it is a face nobody but a
+# scaffolder needs and its tree is not small (jinja2, pydantic, plumbum,
+# dunamai, questionary, pathspec, funcy). Optional + lazily imported
+# (`dna_cli.solution_cmd` imports copier only inside `_copier()`), so the base
+# install and every other command never carry it. Guard:
+# tests/test_solution_cmd.py::test_base_import_never_pulls_copier.
+#
+# ⚠️ The CEILING is load-bearing, not decoration. `solution_cmd` reads
+# `copier._template.Template` — private API — for the three facts Copier
+# exposes nowhere public: the resolved version, whether the template has git
+# tags AT ALL, and the questions' declared defaults at a GIVEN REF (which is
+# what turns "your version floor silently did not move" from a surprise into a
+# line of output). `tests/test_solution_cmd.py::test_copier_private_surface_*`
+# asserts those attributes still exist, so a bump that moves them fails a test
+# instead of a user; the pin is what keeps such a bump deliberate.
+scaffold = ["copier>=9.17,<10"]
 # The DURABLE quota meter — `_mcp_quota.PostgresQuotaStore`, the counter DNA
 # Cloud's overage billing reads. Needs a SYNCHRONOUS Postgres driver: the
 # QuotaStore port is sync (`enforce_quota` is sync), and asyncpg — the driver
@@ -152,6 +174,14 @@ dev = [
     # seam (the exchange itself is faked in tests — no live Entra). The base
     # install keeps it optional — see the `graph` extra above.
     "msal>=1.28",
+    # `copier` so tests/test_solution_cmd.py + tests/test_solution_golden.py run
+    # the real renderer, the real three-way merge and the real refusals against
+    # real git repos — no fake, no doubled behaviour. A scaffolder proven
+    # against a stub proves nothing: every finding this command reports was
+    # measured out of Copier's actual behaviour, and the tests are what keep
+    # that true as Copier moves. The base install keeps it optional — see the
+    # `scaffold` extra above.
+    "copier>=9.17,<10",
     # `sqlalchemy` + `psycopg2-binary` so tests/test_mcp_quota_postgres.py can
     # drive the DURABLE quota store against a real Postgres (the tests skip
     # without a DSN — see the `quota` extra above).
@@ -161,6 +191,26 @@ dev = [
 
 [tool.pytest.ini_options]
 pythonpath = ["tests"]
+# ⚠️ `tests/goldens/solution/**` is a RENDERED APP TREE, and a rendered app tree
+# contains the test file its template ships (`apps/<svc>/tests/test_smoke.py`).
+# Without this line pytest collects them, imports them against packages that do
+# not exist in this checkout, and writes `__pycache__` INTO the goldens — a
+# golden that changes by being looked at.
+#
+# The obvious fix, a `tests/goldens/conftest.py` with `collect_ignore_glob`, is
+# WRONG here and was measured wrong: `pythonpath = ["tests"]` above puts
+# `tests/` on sys.path, three modules do `from conftest import ...`, and the new
+# file wins the bare module name `conftest` — breaking three unrelated suites
+# with an ImportError that names none of this. Exclusion belongs in the config,
+# beside the `pythonpath` it interacts with, not in a file whose NAME is the
+# hazard.
+#
+# ⚠️ Declaring `norecursedirs` REPLACES pytest's defaults, so they are re-listed.
+# Guarded by tests/test_solution_golden.py::test_o_golden_nunca_e_coletado.
+norecursedirs = [
+    "goldens",
+    "*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv", "{arch}",
+]
 # Run the suite across every core by default (perf/testes-em-paralelo) — same
 # switch, same reasoning, as packages/sdk-py/pyproject.toml. This suite went
 # from 483 s to ~106 s wall with an identical outcome set (1303 passed / 24

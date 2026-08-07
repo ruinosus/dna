@@ -38,6 +38,7 @@ from dna_cli import (
     research_cmd,
     scope_cmd,
     sdlc_cmd,
+    solution_cmd,
     source_cmd,
     copilot_kit_cmd,
     specify_cmd,
@@ -111,6 +112,12 @@ main.add_command(source_cmd.source)
 main.add_command(init_cmd.init)
 main.add_command(install_cmd.install)
 main.add_command(new_cmd.new)
+# Beside `new` and `install`, not under either: `new` writes ONE instance into
+# the kernel, `install` copies a scope into a checkout, and this renders a whole
+# app tree from a Copier template on disk and can UPDATE it later — a different
+# unit of work with a different failure mode. Needs `dna-cli[scaffold]`; the
+# module imports copier lazily, so the base install never carries it.
+main.add_command(solution_cmd.solution)
 main.add_command(eval_cmd.eval_)
 main.add_command(emit_cmd.emit)
 main.add_command(specify_cmd.specify)
