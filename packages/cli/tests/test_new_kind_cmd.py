@@ -544,14 +544,29 @@ class TestSemOExtraMcp:
 
 
 class TestSemRegistro:
-    """MUTANT: the missing ``_lib`` scope reaches the user as a traceback.
+    """⚠️ i-142 — this class pinned a REFUSAL, and the refusal was the bug.
 
-    MEASURED 07/08/2026 on a bare store: ``assign_namespace`` READS the claim
-    registry before it mints, and the filesystem adapter answers a missing
-    scope directory with ``FileNotFoundError`` — an ``OSError``, outside
-    ``AUTHORING_REFUSALS`` by design. So the very first ``dna new kind``
-    against a fresh ``.dna`` lands here and nowhere else, and the CLI is the
-    one face whose caller IS the operator, so the message names the fix."""
+    It said: on a bare store the very first ``dna new kind`` fails, because
+    ``assign_namespace`` READS the claim registry before it mints and the
+    filesystem adapter answered a missing scope DIRECTORY with
+    ``FileNotFoundError``. All true, and this face's message was the best of the
+    four handlers that had grown around it — it NAMED the fix instead of saying
+    "ask an operator", because here the caller usually IS the operator.
+
+    It was still a handler for a store whose only sin was being NEW. Every other
+    adapter answers ``[]`` for a scope that holds nothing, and on disk the first
+    write creates the directory — so there was nothing to provision and nothing
+    to name. The adapter tells the two absences apart now:
+
+    * store present, ``_lib`` absent → **the authoring succeeds**, and ``_lib``
+      appears because the mint writes it;
+    * store ABSENT → still refuses, because that one IS a deployment fault
+      (``StoreUnavailable``, which is still a ``FileNotFoundError``, so this
+      face's handler catches it unchanged).
+
+    Both halves are asserted, and the second is what keeps the first honest: a
+    change that made EVERY absence "empty" would pass the first alone.
+    """
 
     @pytest.fixture
     def bare(self, tmp_path, monkeypatch):
@@ -564,14 +579,26 @@ class TestSemRegistro:
         monkeypatch.setenv("DNA_TENANT", "acme")
         return base
 
-    def test_names_the_scope_and_the_fix(self, runner, bare):
+    def test_a_brand_new_store_authors_its_first_kind(self, runner, bare):
+        r = _run(runner, "kind", "Contrato", "--scope", "loja")
+        assert r.exit_code == 0, r.output
+        assert "Traceback" not in r.output
+        # The registry scope is CREATED by the mint, not demanded from an
+        # operator beforehand — which is the whole content of the fix.
+        assert (bare / "_lib").is_dir(), (
+            "the mint did not create the registry scope it used to refuse to "
+            "read"
+        )
+
+    def test_a_store_that_is_not_there_still_refuses_without_a_traceback(
+        self, runner, tmp_path, monkeypatch,
+    ):
+        monkeypatch.setenv(
+            "DNA_SOURCE_URL", f"file://{(tmp_path / 'never-mounted').resolve()}")
+        monkeypatch.delenv("DNA_BASE_DIR", raising=False)
+        monkeypatch.setenv("DNA_TENANT", "acme")
         r = _run(runner, "kind", "Contrato", "--scope", "loja")
         assert r.exit_code != 0
-        assert "_lib" in r.output
-        assert "manifest.yaml" in r.output, (
-            "the refusal must name the fix — the CLI's caller is usually the "
-            "operator, and 'ask an operator' is advice to ask yourself"
-        )
         assert "Traceback" not in r.output
 
 

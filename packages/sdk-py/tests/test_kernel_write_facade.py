@@ -373,6 +373,25 @@ def test_post_save_hook_context_puts_scope_top_level(tmp_path):
     assert ctx.kind == "Agent"
     assert ctx.name == "alice"
     assert ctx.data["event_type"]      # populated by derive_event_type
+    # ⚠️ i-142 — this used to assert equality with a pristine ``_raw_agent()``,
+    # and that equality was only true because of a BUG. ``_ensure_instance_id``
+    # reads the store to decide adopt-or-mint and, by contract, "a read that
+    # RAISES mints nothing"; the filesystem adapter raised for a scope
+    # directory that did not exist, so THE FIRST INSTANCE WRITTEN INTO ANY NEW
+    # FILESYSTEM SCOPE WAS STORED WITH NO ``metadata.id`` AT ALL. Measured on
+    # the same store, before and after: first instance ``id=None`` then
+    # ``id=sdpf37uwgaja``; second instance (scope now exists) always had one.
+    # Every ``dna_edges.to_id`` aimed at a first-in-scope instance pointed at
+    # an instance with no identity, and the only visible symptom was this
+    # assertion passing.
+    #
+    # The envelope is compared FIELD BY FIELD now, with the minted id asserted
+    # as present rather than as a literal — an id is unguessable on purpose.
+    minted = ctx.data["spec"]["metadata"].pop("id", None)
+    assert minted, (
+        "the first instance in a brand-new scope was written without an "
+        "instance id — the store read refused instead of answering empty"
+    )
     assert ctx.data["spec"] == _raw_agent()
     assert ctx.data["is_update"] is False
     assert ctx.data["author"] == "sdk"

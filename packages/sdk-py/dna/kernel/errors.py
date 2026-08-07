@@ -118,6 +118,55 @@ class CapabilityRefusal(Exception):
     """
 
 
+class StoreUnavailable(CapabilityRefusal, FileNotFoundError):
+    """The STORE this adapter is configured against is not there at all.
+
+    The fifth member of the capability family, and it exists to separate two
+    absences a face could not tell apart (i-142).
+
+    ⚠️ **"Absent because it never existed" and "absent because the store is
+    gone" are different facts, and only the ADAPTER can tell them apart.**
+
+    * A **SCOPE** that holds nothing is EMPTY. Every store says so by
+      answering ``[]`` — measured on SQLite and on a real Postgres — and the
+      filesystem adapter was the only one that raised, because on disk a scope
+      is a DIRECTORY and an absent directory looks like an error. It is not:
+      the first write auto-creates it, so nothing is wrong and nothing needs
+      provisioning. That case answers ``[]`` now, like everywhere else.
+    * A **STORE ROOT** that is not a directory is a DEPLOYMENT fault — a
+      wrong ``DNA_BASE_DIR``, an unmounted volume, a path that was never
+      created. The request was well formed and the caller was entitled to it;
+      what is missing is the deployment. That is this class, and it is the
+      definition of :class:`CapabilityRefusal`.
+
+    WHAT IT COST TO NOT HAVE THIS. ``assign_namespace`` READS the
+    ``KindNamespace`` claim registry in ``_lib`` before it mints, so on a
+    brand-new ``.dna`` the very first Kind authored anywhere failed with
+    ``FileNotFoundError: Scope not found: <base>/_lib`` — and **four** places
+    grew a handler for it: ``dna new kind``'s ``_no_registry`` (names the fix),
+    ``dna_cli._mcp_kinds.NO_REGISTRY`` (tells the agent to ask an operator),
+    the REST face's four ``except (NamespaceRegistryUnreadable,
+    FileNotFoundError)`` arms (503), and ``dna.application.sdlc.existing_or_none``
+    (treats it as an absent instance). Every one of them is RIGHT for a store
+    that LOST its ``_lib`` and WRONG for a store that never had one — and none
+    of them could tell, because a builtin ``FileNotFoundError`` carries no such
+    distinction and is also what an absent bundle entry and an absent template
+    file raise. A fifth handler would have been a fifth guess.
+
+    ⚠️ **The honest limit, written down rather than implied.** Once a scope
+    directory is gone, this adapter cannot tell "deleted" from "never created",
+    and neither can Postgres once the rows are deleted. No store can date an
+    absence. What a store CAN report is whether the store itself is reachable,
+    and that is exactly the line drawn here.
+
+    A ``CapabilityRefusal`` so a face relays it as a deployment problem rather
+    than a denial the caller may appeal, and — additive, never a re-parenting —
+    still a ``FileNotFoundError``, so every handler listed above keeps working
+    unchanged. What changed is that they now fire ONLY for the case they
+    describe.
+    """
+
+
 class InstanceNameTaken(KernelRefusal, FileExistsError):
     """An ``if_absent`` write lost the race: the name was already taken.
 

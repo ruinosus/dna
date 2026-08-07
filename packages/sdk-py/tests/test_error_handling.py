@@ -23,10 +23,32 @@ BASE_DIR = Path(__file__).parent.parent.parent.parent / "scopes" / "open-swe" / 
 
 class TestFilesystemErrors:
     @pytest.mark.asyncio
-    async def test_missing_scope_raises(self, tmp_path):
+    async def test_missing_scope_is_empty_but_a_missing_STORE_refuses(self, tmp_path):
+        """i-142 — the two absences, and they are different facts.
+
+        This test used to be ``test_missing_scope_raises`` and pinned the
+        behaviour that WAS the bug: an absent SCOPE raised, on the only adapter
+        that raised. SQLite and a real Postgres both answer ``[]`` for a scope
+        holding nothing, the first write auto-creates the directory, and four
+        separate faces had grown a handler apologising for a store whose only
+        sin was being new.
+
+        What still refuses is the STORE ROOT being absent — a deployment fault
+        no caller can fix — and it refuses as a ``StoreUnavailable``, which
+        keeps ``FileNotFoundError`` as a base so nothing that caught the old
+        spelling breaks.
+        """
+        from dna.kernel.errors import CapabilityRefusal, StoreUnavailable
+
         src = FilesystemSource(tmp_path)
-        with pytest.raises(FileNotFoundError):
-            await src.load_all("nonexistent")
+        assert await src.load_all("nonexistent") == []
+
+        gone = FilesystemSource(tmp_path / "no-such-store-root")
+        with pytest.raises(StoreUnavailable) as caught:
+            await gone.load_all("nonexistent")
+        # Additive, never a re-parenting: both bases, for two different callers.
+        assert isinstance(caught.value, CapabilityRefusal)
+        assert isinstance(caught.value, FileNotFoundError)
 
     @pytest.mark.asyncio
     async def test_missing_manifest_returns_none(self, tmp_path):

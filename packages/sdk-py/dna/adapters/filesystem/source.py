@@ -66,13 +66,63 @@ class FilesystemSource(SourcePort):
     conformance kit (``dna.testing.source_conformance_suite``).
     """
 
-    # Kernel back-ref installed by the writable subclass's ``attach_kernel``
-    # (KernelAttachable). The read-only base never gets one; declared here so
-    # ``self._kernel`` is a plain (documented) attribute, not a magic getattr.
+    # Kernel back-ref installed by ``attach_kernel`` (KernelAttachable).
+    # Declared here so ``self._kernel`` is a plain (documented) attribute, not
+    # a magic getattr.
+    #
+    # ⚠️ i-140 — this said "the read-only base never gets one", and that was
+    # the whole defect. ``attach_kernel`` lived only on the writable subclass,
+    # so a READ-ONLY source wired into a kernel had no reader view at all, and
+    # every reader-dependent door on it (``query`` / ``list_doc_refs`` /
+    # ``load_one`` / ``find_instances_by_*``) silently skipped every
+    # BUNDLE-stored instance while ``load_all`` — which takes readers as an
+    # argument — returned it. The base is attachable now; see
+    # :meth:`attach_kernel`.
     _kernel: object | None = None
 
     def __init__(self, base_dir: str | Path) -> None:
         self.base_dir = Path(base_dir).resolve()
+
+    def attach_kernel(self, kernel: object) -> None:
+        """KernelAttachable — take the kernel's LIVE reader view (i-140).
+
+        WHY THE READ-ONLY BASE NEEDS THIS. A reader is what turns a bundle
+        DIRECTORY (``agents/brad/AGENT.md``, ``skills/greeter/SKILL.md``) into
+        an instance; without one the scanner sees a directory and walks past.
+        ``load_all`` takes ``readers`` as a parameter, so the kernel hands over
+        its own and bundles appear. Every OTHER read door on this adapter takes
+        no such parameter and has to find readers on ``self`` — and on the
+        read-only base there was nothing to find, because ``attach_kernel``
+        existed only on the writable subclass.
+
+        MEASURED, on one seeded scope holding a bundle-stored ``Skill`` and a
+        yaml-stored ``Story``, read through a kernel::
+
+            adapter                load_all  query  list_doc_refs  load_one
+            FilesystemWritable       1         1         1           HIT
+            Filesystem (read-only)   1         0         0          MISS   ← Skill
+            Filesystem (read-only)   1         1         1           HIT   ← Story
+
+        The row that differs is the STORAGE FORM, not the Kind and not the
+        plane. An empty list is the worst possible spelling of "I was not
+        wired to see that": it is indistinguishable from "there is none".
+
+        Idempotent, and additive — it only widens what this source can SEE.
+        The writable subclass extends it with the writer table
+        (:meth:`~dna.adapters.filesystem.writable.FilesystemWritableSource.attach_kernel`).
+        """
+        from dna.kernel import Kernel as _KernelType
+        if not isinstance(kernel, _KernelType):
+            raise TypeError(
+                f"attach_kernel requires a Kernel instance; got {type(kernel).__name__}"
+            )
+        self._kernel = kernel
+        # A SNAPSHOT for the detached case only — ``_effective_readers`` always
+        # prefers the live list off ``self._kernel``. Kept because the H4
+        # adapter-parity contract asserts ``_readers`` is populated on every
+        # attachable source (SQLite/Postgres store both lists).
+        if not getattr(self, "_readers", None):
+            self._readers = list(kernel._readers)
 
     def _contained(self, path: Path) -> Path:
         """Resolve ``path`` and refuse it unless it stays under ``base_dir``.
@@ -154,9 +204,26 @@ class FilesystemSource(SourcePort):
             layers=True,
             bundle_read=True,
             bundle_write=True,
-            kernel_attachable=False,
+            # ⚠️ i-140 — was False, and it CONTRADICTED ``query_pushdown``
+            # below on the same object. ``query_pushdown=True`` says "delegate
+            # the query to me"; this said "I cannot be given the kernel's
+            # readers" — and this adapter's query is correct only WITH them.
+            # Two flags that cannot both be true is a lie whichever one you
+            # believe, and the one somebody believed returned an empty list.
+            kernel_attachable=True,
             granular_list=True,
             granular_one=True,
+            # ⚠️ TRUE, and what it now promises is checkable: this adapter's
+            # ``query`` returns exactly what its ``load_all`` returns for the
+            # same reader view — see ``_effective_readers``. It is "native but
+            # in-memory" (the flag's own words in ``SourceCapabilities``); it
+            # is NOT a claim that a directory tree filters in the store.
+            # ``key_lookup_indexed=False`` below is where that cost is
+            # declared. Guarded per STORAGE FORM by
+            # ``tests/test_filesystem_reader_view.py``, which compares the two
+            # doors on a bundle-stored and a yaml-stored instance in one scope
+            # — because that divergence, not the absence of a query, was the
+            # defect.
             query_pushdown=True,
             tenant_layer_writes=False,
             write_kwargs=frozenset(),
@@ -198,8 +265,22 @@ class FilesystemSource(SourcePort):
         try:
             all_raws = await self.load_all(scope, readers=None)
         except FileNotFoundError:
-            # Platform scope dir absent — tenant-only scopes still need
-            # to resolve via the tenant overlay below.
+            # ⚠️ i-142 — what this arm catches CHANGED, and the reason it stays
+            # is not the reason it was written. It was written for "platform
+            # scope dir absent, tenant-only scope still resolves via the
+            # overlay below"; ``load_all`` ANSWERS that with ``[]`` now, so the
+            # only thing left here is ``StoreUnavailable``.
+            #
+            # It is kept DELIBERATELY, and the split is: BOOT is lenient, READS
+            # are honest. This method runs while the kernel is being assembled,
+            # and a store root that is not mounted YET (a container racing its
+            # volume) must not turn into a crashloop. Nothing is claimed by
+            # booting empty — the first real read goes through ``load_all`` and
+            # refuses with the full ``StoreUnavailable``, which every face
+            # already relays as a deployment fault (503). Measured: with this
+            # arm removed, the REST authoring and approval doors stopped
+            # answering 503 and died at app construction instead, which moves
+            # the failure somewhere no handler can explain it.
             all_raws = []
         out = [d for d in all_raws if d.get("kind") in BOOTSTRAP_KIND_NAMES]
 
@@ -222,10 +303,56 @@ class FilesystemSource(SourcePort):
     async def load_all(
         self, scope: str, readers: list | None = None,
     ) -> list[dict[str, Any]]:
+        """Every instance in ``scope``. An absent scope is EMPTY, not an error.
+
+        ⚠️ i-142 — this used to raise ``FileNotFoundError`` for a scope
+        directory that does not exist, and it was the ONLY adapter that did.
+        Measured, same call, three stores::
+
+            filesystem   FileNotFoundError: Scope not found: <base>/never-existed
+            sqlite       []
+            postgres     []
+
+        A scope holding nothing is empty everywhere else, and on disk the first
+        write auto-creates the directory — so the raise reported a normal state
+        as a fault. It broke the first thing anybody does with a fresh ``.dna``:
+        ``assign_namespace`` reads the ``KindNamespace`` registry in ``_lib``
+        before it mints, so ``dna new kind`` (and the MCP and REST authoring
+        doors) refused a store whose only sin was being new.
+
+        What still refuses is the case that IS a fault — the store root itself
+        missing — as :class:`~dna.kernel.errors.StoreUnavailable`, which keeps
+        ``FileNotFoundError`` as a base so every existing handler is untouched.
+        See that class for why the two absences are different facts and why the
+        adapter is the only layer that can tell them apart.
+        """
         scope_dir = self._contained(self.base_dir / scope)
-        if not scope_dir.exists():
-            raise FileNotFoundError(f"Scope not found: {scope_dir}")
+        if not scope_dir.is_dir():
+            self._require_store()
+            # The store is there; this scope simply holds nothing yet.
+            return []
         return await self._load_dir(scope_dir, readers or [], skip={"layers", "tenants"})
+
+    def _require_store(self) -> None:
+        """Refuse when the configured store root is not a directory (i-142).
+
+        The ONE check that distinguishes "this scope is empty" from "there is
+        no store here", and it lives on the adapter because the adapter is the
+        only layer that can see the difference. A face receiving a bare
+        ``FileNotFoundError`` had to guess, and four of them guessed the same
+        wrong way for a brand-new store.
+        """
+        if not self.base_dir.is_dir():
+            from dna.kernel.errors import StoreUnavailable
+
+            raise StoreUnavailable(
+                f"{type(self).__name__} is configured against "
+                f"{str(self.base_dir)!r}, which is not a directory. This is a "
+                f"DEPLOYMENT fault, not an empty store: nothing the caller "
+                f"sends will create it, and no read here can be answered. "
+                f"Check DNA_BASE_DIR / the mounted volume. (An absent SCOPE "
+                f"inside a real store is a different fact and answers [].)"
+            )
 
     async def list_doc_refs(
         self, scope: str, *, kind: str | None = None,
@@ -293,6 +420,12 @@ class FilesystemSource(SourcePort):
         from dna.kernel.identity import (  # noqa: PLC0415
             InstanceRef, instance_id_of,
         )
+        # i-142 — BEFORE the sweep, not inside it. ``_scope_dirs`` answers ``[]``
+        # for a base dir that is not there, and the per-scope ``except`` below
+        # swallows the same absence on the explicit-scope leg, so an absent
+        # STORE would come back as "no instance carries that id" — an
+        # accusation against data nobody looked at.
+        self._require_store()
         if scope is not None:
             scopes = [scope]
         else:
@@ -363,6 +496,11 @@ class FilesystemSource(SourcePort):
         matched differently would make the kernel's single arbitration a
         fiction.
         """
+        # i-142 — the store check runs BEFORE the ``except`` below, which would
+        # otherwise turn "there is no store" into ``[]``. ``[]`` here reads as
+        # "no instance carries that key", which is what makes a ``by: <key>``
+        # relation report itself as followed-and-empty rather than unanswerable.
+        self._require_store()
         docs: list[dict[str, Any]] = []
         readers = self._effective_readers()
         try:
@@ -453,7 +591,7 @@ class FilesystemSource(SourcePort):
             self, scope, kind,
             filter=filter, projection=projection, limit=limit,
             offset=offset, order_by=order_by, tenant=tenant,
-            readers=self._query_readers(),
+            readers=self._effective_readers(),
         ):
             yield row
 
@@ -470,19 +608,33 @@ class FilesystemSource(SourcePort):
         )
 
     def _effective_readers(self) -> list:
-        """Internal helper — returns the instance readers list (may be empty)."""
-        return list(getattr(self, "_readers", []) or [])
+        """THE reader view for every read door on this adapter — one method.
 
-    def _query_readers(self) -> list:
-        """Readers for the query path. Prefer the attached kernel's LIVE
-        readers over the source's snapshot (the snapshot is captured at
-        ``attach_kernel`` time, BEFORE extensions register their generic
-        bundle readers via lazy init) — without this preference, query()
-        misses every bundle-format kind (Agent, Skill, Soul, …).
-        Detached sources use their own readers list."""
+        Prefers the attached kernel's LIVE readers over this source's snapshot,
+        and falls back to the snapshot only when detached.
+
+        ⚠️ i-140 — there were TWO of these, and the split was the bug wearing a
+        second hat. ``_query_readers`` (live-preferring) served ``query`` alone;
+        ``_effective_readers`` (snapshot-only) served ``list_doc_refs`` /
+        ``load_one`` / ``find_instances_by_id_prefix`` /
+        ``find_instances_by_spec_key``. So the fix that taught ONE door to see
+        bundles left four doors behind, and the reason it went unnoticed is that
+        every one of them fails by returning less, never by failing.
+
+        The snapshot is stale BY CONSTRUCTION: ``attach_kernel`` runs before
+        extensions register their generic bundle readers via lazy init.
+        Measured on a wired writable source: snapshot 5 readers, live 10. A
+        door reading the snapshot therefore misses whatever the last five
+        register — which is exactly the bundle-format kinds (Agent, Skill,
+        Soul, …). Preferring live is not an optimisation, it is the difference
+        between the adapter's answer and the kernel's.
+
+        Callers that pass an explicit ``readers=`` argument still win — the
+        kernel's own scan path does, and this is the default for everyone else.
+        """
         if self._kernel is not None:
             return list(getattr(self._kernel, "_readers", []) or [])
-        return self._effective_readers()
+        return list(getattr(self, "_readers", []) or [])
 
     async def resolve_ref(self, scope: str, ref: str) -> str:
         # ``ref`` is a RELATIVE PATH by contract (``prompts/x.md``), so it

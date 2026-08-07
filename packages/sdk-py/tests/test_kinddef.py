@@ -281,18 +281,28 @@ class TestTwoPhaseLoading:
         # plano record do kernel, exatamente como já era para as 46 Kinds
         # `record` que este SDK publica (Story, Issue, Spec, ADR...).
         #
-        # ⚠️⚠️ E por que `get_instance` e não `kernel.query`, que seria a
-        # superfície natural de uma lista? Porque `FilesystemSource.query`
-        # **não enxerga instância em BUNDLE** — medido: num escopo onde
-        # `load_all` devolve o `Agent` de um `AGENT.md`, `source.query("Agent")`
-        # devolve zero, e um `PromptTemplate` em yaml no mesmo escopo devolve
-        # um. `Agent` é plano `composition` desde sempre, então **o buraco é
-        # anterior ao i-123 e independente dele**; o que o i-123 faz é torná-lo
-        # ALCANÇÁVEL para um descritor bundle-stored que não declara plane.
-        # Kind de tenant não está nesse conjunto: `author_kind` grava sempre
-        # `storage.type: yaml`. Registrado como issue própria — consertar o
-        # adapter é outra decisão, não carona nesta.
+        # ⚠️⚠️ ESTE COMENTÁRIO DESCREVIA UM DEFEITO — **resolvido no i-140**, e
+        # a linha do `kernel.query` abaixo é a prova. Ele dizia que `kernel.query`
+        # não podia ser usado aqui porque `FilesystemSource.query` **não
+        # enxergava instância em BUNDLE**: num escopo onde `load_all` devolvia o
+        # `Agent` de um `AGENT.md`, `source.query("Agent")` devolvia zero, e um
+        # `PromptTemplate` em yaml no mesmo escopo devolvia um. A causa não era o
+        # plano nem o Kind — era a FORMA DE STORAGE: o adapter declarava
+        # `query_pushdown=True` e `kernel_attachable=False` ao mesmo tempo, e a
+        # `query` dele só está certa COM os readers do kernel. O `Recipe` desta
+        # fixture é exatamente a população alcançável que o i-140 nomeou (um
+        # `KIND.yaml` à mão, `storage.type: bundle`, servido pelo
+        # `GenericBundleReader`, que registra tarde).
+        #
+        # A leitura por `get_instance` fica, porque continua sendo a certa para
+        # UMA instância por nome; o `query` entra ao lado para que este arquivo
+        # fique vermelho se a regressão voltar. A guarda derivada, por forma de
+        # storage e por porta, está em `tests/test_filesystem_reader_view.py`.
         assert mi is not None
+        listed = [d async for d in k.query("demo", "Recipe")]
+        assert len(listed) == 1, (
+            f"kernel.query não enxerga a instância bundle-stored: {listed!r}"
+        )
         doc = await k.get_instance("demo", "Recipe", "pasta")
         assert doc is not None
         assert doc["metadata"]["name"] == "pasta"

@@ -19,6 +19,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Correções
 
+- **O adaptador de filesystem mentia sobre o que sabe fazer — duas vezes, e as
+  duas devolvendo LISTA VAZIA** (i-140 e i-142 do board dna-cloud).
+
+  **i-140 — a capacidade que mente.** O `FilesystemSource` declarava
+  `query_pushdown=True` ("delegue a query pra mim") e `kernel_attachable=False`
+  ("não me dá pra entregar os readers do kernel") **no mesmo objeto**, e a
+  `query` dele só está certa COM os readers. Duas declarações que não podem
+  ambas ser verdade, e quem acreditou numa delas recebeu zero. Medido num
+  escopo com uma instância em BUNDLE e uma em yaml:
+
+  | adapter | Kind | `load_all` | `query` | `list_doc_refs` | `load_one` |
+  |---|---|---|---|---|---|
+  | `FilesystemWritableSource` | Skill | 1 | 1 | 1 | HIT |
+  | `FilesystemSource` (leitura) | Skill | 1 | **0** | **0** | **MISS** |
+  | `FilesystemSource` (leitura) | Story | 1 | 1 | 1 | HIT |
+  | `CompositeFilesystemSource` | Skill | 1 | **0** | **0** | **MISS** |
+
+  O que muda entre uma linha verde e uma vermelha é a **forma de storage**, não
+  o Kind e não o plano. **A escolha foi ensinar a `query` a enxergar** — o
+  `attach_kernel` subiu para a base de leitura e o router composite ganhou o
+  seu, com fan-out para os filhos — e não baixar a capacidade para `False`:
+  aquilo consertaria só o `kernel.query`, deixando `source.query` (a chamada que
+  a ficha mediu) ainda cega, e não tocaria no composite. Junto veio a segunda
+  metade, que a ficha não nomeava: a visão de readers estava partida em DOIS
+  helpers privados, um vivo e um instantâneo tirado no boot, e as quatro portas
+  que liam o instantâneo ficaram cegas para o `GenericBundleReader`, que
+  registra tarde. Agora é UMA.
+
+  **i-142 — o escopo que nunca existiu.** `load_all` de um escopo ausente
+  levantava `FileNotFoundError`, e era **o único adapter que levantava** —
+  sqlite e Postgres real respondem `[]`. Escopo que não guarda nada é VAZIO em
+  toda loja, e na primeira escrita o diretório nasce sozinho; então a exceção
+  reportava um estado normal como falha. Consequência: **nenhuma face conseguia
+  autorar o primeiro Kind numa `.dna` nova** (`assign_namespace` LÊ o registro
+  de claims antes de cunhar), e QUATRO lugares tinham crescido um handler
+  pedindo desculpa por uma loja recém-criada — todos certos para um store que
+  PERDEU o `_lib`, todos errados para um que NUNCA TEVE.
+
+  ⚠️ **E o defeito que isso escondia, pior que a recusa:**
+  `WritePipeline._ensure_instance_id` não cunha id quando a leitura LEVANTA (por
+  contrato: um store momentaneamente inalcançável não pode virar identidade
+  inventada). Como o escopo ausente levantava, **a primeira instância escrita em
+  qualquer escopo novo de filesystem era gravada SEM `metadata.id`** — medido
+  `id=None` na primeira e `id` presente na segunda. A i-114 dá identidade a toda
+  instância e `dna_edges.to_id` aponta para ela; a primeira de cada escopo não
+  tinha para onde apontar, e o único sintoma era um teste afirmando que o
+  envelope voltava intacto.
+
+  O caso que É falha continua recusando: raiz do store ausente levanta o novo
+  `StoreUnavailable` — `CapabilityRefusal` (a família de "esta implantação não
+  sabe") **e** `FileNotFoundError`, aditivo, para que os quatro handlers
+  existentes sigam funcionando e passem a disparar só para o caso que descrevem.
+  A distinção mora no ADAPTER porque é ele quem vê a diferença; nenhuma face vê.
+
+  Guardas derivadas, na granularidade do defeito:
+  `tests/test_filesystem_reader_view.py` compara **o que `load_all` vê** com o
+  que cada porta devolve, **por forma de storage**, nas três formas de source FS;
+  a matriz de conformidade ganhou as duas dimensões novas rodando contra FS,
+  sqlite e Postgres real.
+
 - **A face REST voltava 500 onde a MCP volta 403** — o `_plan_gate` nunca
   nomeava `InstanceModeError`, que é exatamente a recusa que o write genérico
   produz quando o plano omite `definitions_mode`/`emit_mode`. A enumeração à

@@ -735,15 +735,33 @@ def test_a_verified_anonymous_token_is_recorded_as_unidentified(dna_dir):
     assert R._UNIDENTIFIED_LOCAL_ACTOR != R._UNIDENTIFIED_TOKEN_ACTOR
 
 
-def test_approving_without_a_registry_scope_refuses_actionably(dna_dir):
-    """Not a 500 — the same 503 its sibling door has always given.
+def test_approving_after_the_registry_is_DESTROYED_still_refuses(dna_dir):
+    """⚠️ i-142's honest cost, and the one distinction that was really lost.
 
-    Approval resolves the ``KindNamespace`` registry to check the caller owns
-    the namespace the Kind was authored under, so a store whose ``_lib`` scope
-    is not provisioned hits the same deployment precondition the authoring
-    route already maps (``test_kind_authoring_route.py``). Only one of the two
-    routes mapped it, which is how one missing directory answered honestly on
-    one door and with an unmapped 500 on the other.
+    This asserted **503** — "the registry is unreadable, provision ``_lib``" —
+    and got it because the filesystem adapter raised for an absent scope
+    DIRECTORY. That raise is gone (a scope holding nothing is ``[]``, the answer
+    every other store gave), so a destroyed registry now reads as **no claims**
+    rather than as a failed read.
+
+    ⚠️ **The distinction was real, and it was also an accident of directories.**
+    ``rm -rf _lib`` and "nobody ever claimed a namespace" are the same state on
+    every store — delete the rows on Postgres and you get the identical ``[]``.
+    No store can date an absence. And ``NamespaceRegistryUnreadable``'s own
+    docstring is on this side of it: *"no rows is not the same fact as the read
+    failed"*. After the fix a destroyed registry produces NO ROWS, so relaying
+    it as a failed read would be the lie.
+
+    What must not change, and is what this test now pins: it still REFUSES, it
+    still creates nothing, and it still leaks nothing. 404 is the same answer a
+    stranger's Kind gets — with no claim on file the caller owns no namespace,
+    so no authored Kind is under one, which is literally true of this store.
+
+    The 503 lane is alive and guarded elsewhere, on the two failures that ARE
+    failures: a registry read that raises for a reason other than absence
+    (``test_a_registry_read_that_fails_for_a_reason_other_than_a_missing_file``,
+    which injects a driver error) and a store root that is not there at all
+    (asserted below, and on the adapter as ``StoreUnavailable``).
 
     The registry is removed AFTER authoring, and a second client is opened, so
     the refusal is not merely a cached read: the second app boots its own live
@@ -755,10 +773,31 @@ def test_approving_without_a_registry_scope_refuses_actionably(dna_dir):
 
     with _client(dna_dir, raise_server_exceptions=False) as c:
         r = _approve(c, "human")
+        assert r.status_code == 404, r.text
+        # Never a 2xx: an approval door that created what it was asked to
+        # approve would be an authoring door with an approval marker on it.
+        assert r.status_code >= 400
+
+
+def test_approving_against_a_store_that_is_not_there_is_still_a_503(
+    dna_dir, monkeypatch,
+):
+    """The 503 lane on THIS door, kept alive by the case that deserves it.
+
+    A store root that is not a directory is a deployment fault no caller can
+    fix, and the adapter refuses it as ``StoreUnavailable`` — which is still a
+    ``FileNotFoundError``, so this face's existing ``except`` arm catches it
+    unchanged. Written as its own test because the sibling above no longer
+    reaches this arm, and an arm nothing exercises is an arm that rots.
+    """
+    with _client(dna_dir) as c:
+        assert _author(c, "agent").status_code == 201
+
+    monkeypatch.setenv("DNA_BASE_DIR", str(dna_dir.parent / "never-mounted"))
+    with _client(dna_dir.parent / "never-mounted",
+                 raise_server_exceptions=False) as c:
+        r = _approve(c, "human")
         assert r.status_code == 503, r.text
-        detail = r.json()["detail"]
-        assert "_lib" in detail, detail
-        assert re.search(r"provision", detail, re.I), detail
 
 
 # ── 7. the listing must withhold what the approval door already withholds ──

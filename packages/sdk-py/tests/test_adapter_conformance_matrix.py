@@ -13,6 +13,15 @@ so drift fails in CI:
   - cross-process inval: the postgres dialect emits a durable outbox +
                         pg_notify in the write tx; FS/sqlite don't → tracked
                         xfail (s-sqlite-cross-process-invalidation).
+  - storage-form parity : what ``query`` returns == what ``load_all`` sees, per
+                        STORAGE FORM (i-140). The FS adapter answered 0 for a
+                        bundle-stored Kind and 1 for a yaml-stored one in the
+                        same scope; on SQL there is no such thing as a storage
+                        form on disk, which is exactly why the dimension had to
+                        be asserted across all three rather than on FS alone.
+  - absent scope        : a scope that holds nothing reads as ``[]`` (i-142).
+                        SQLite and Postgres always did; the filesystem adapter
+                        raised, and it was the only one.
 
 Postgres runs only when ``DATABASE_URL`` is set (CI sdk-tests has no PG service,
 so PG params skip there — FS + sqlite always run).
@@ -369,3 +378,88 @@ async def test_a_store_without_world_time_REFUSES_rather_than_answering(adapter,
     # which is what the unbounded default means.
     assert await call("conf-test", "Story", "s-when",
                       valid_at="1999-01-01T00:00:00+00:00") is not None
+
+
+# ---------------------------------------------------------------------------
+# 6. Storage form — query returns what load_all sees, whatever the form (i-140).
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_query_returns_what_load_all_sees_per_storage_form(adapter):
+    """⚠️ The dimension where the filesystem adapter LIED, and the lie was a
+    number: ``0``.
+
+    In one scope holding a bundle-stored ``Skill`` and a yaml-stored ``Story``,
+    the FS source answered ``query("Skill") -> 0`` and ``query("Story") -> 1``
+    while ``load_all`` returned both. What differed between the two rows was
+    the STORAGE FORM — a bundle is a DIRECTORY that only a registered reader
+    can turn into an instance, and the adapter's query was not given the
+    kernel's readers.
+
+    It is a MATRIX dimension and not an FS-only test on purpose. "Storage form"
+    is not a concept the SQL adapters have on disk, so the temptation is to
+    call this the filesystem's private business — but the assertion is not
+    about directories, it is about two doors on one store agreeing. Any adapter
+    can break that, and the rows that stay green on SQL are what make the FS
+    row mean something.
+
+    The oracle is the OTHER DOOR, never a hard-coded count: a fixture that
+    seeded one instance instead of two would still have to make the two doors
+    disagree to fail, and the ``assert seen`` floor catches it seeding none.
+    """
+    src, k = adapter
+    # bundle-stored on the filesystem (the agentskills writer owns a directory);
+    # an ordinary row on the SQL adapters.
+    await src.save_instance("conf-test", "Skill", "greeter", {
+        "apiVersion": "agentskills.io/v1", "kind": "Skill",
+        "metadata": {"name": "greeter"}, "spec": {"instruction": "say hi"},
+    })
+    if hasattr(src, "publish"):
+        await src.publish("conf-test", "Skill", "greeter")
+    # yaml-stored on the filesystem.
+    await _seed_doc(src, "conf-test", "s-plain", {"priority": 1})
+
+    readers = list(getattr(k, "_readers", []) or [])
+    for kind in ("Skill", "Story"):
+        seen = [d for d in await src.load_all("conf-test", readers=readers)
+                if d.get("kind") == kind]
+        assert seen, f"load_all sees no {kind} — the fixture, not the adapter"
+        via_source = len([r async for r in src.query("conf-test", kind)])
+        via_kernel = len([r async for r in k.query("conf-test", kind)])
+        assert via_source == via_kernel == len(seen), (
+            f"{kind}: load_all={len(seen)} source.query={via_source} "
+            f"kernel.query={via_kernel} — an empty list is indistinguishable "
+            f"from 'there is none'"
+        )
+
+
+# ---------------------------------------------------------------------------
+# 7. An absent scope reads as EMPTY on every store (i-142).
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_an_absent_scope_reads_as_empty_on_every_store(adapter):
+    """A scope that holds nothing is EMPTY, and that was true on two of three.
+
+    Measured before the fix, same call, three stores::
+
+        filesystem   FileNotFoundError: Scope not found: <base>/never-existed
+        sqlite       []
+        postgres     []
+
+    The filesystem was the outlier, and on disk the divergence is easy to
+    rationalise — an absent scope is an absent DIRECTORY. It is still the wrong
+    answer: the first write auto-creates it, so nothing is broken and nothing
+    needs provisioning. Four faces had grown a handler apologising for a
+    brand-new store, and ``WritePipeline._ensure_instance_id`` — which by
+    contract mints nothing when a read RAISES — quietly wrote the first
+    instance of every new FS scope with NO instance id at all.
+
+    The case that IS a fault (the store root itself absent) keeps refusing, as
+    ``StoreUnavailable``; that half lives in
+    ``tests/test_filesystem_absent_scope.py``, because only a directory-backed
+    store has a root to lose.
+    """
+    src, k = adapter
+    assert await src.load_all("never-written-to") == []
+    assert [r async for r in k.query("never-written-to", "Story")] == []
