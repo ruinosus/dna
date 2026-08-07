@@ -261,6 +261,20 @@ class TestOPedidoDoTrait:
 
         assert "invented.for.this.test" in _kind_help()
 
+    def test_a_template_without_the_slot_refuses_instead_of_shipping_silently(
+        self, monkeypatch,
+    ):
+        """The third mutant: somebody rewrites the help and drops the slot.
+
+        A plain ``.replace`` on a template with no slot is a silent no-op — the
+        command ships, the ask is gone, and nothing fails. So the absence
+        refuses, the same way ``splice_trait_ask`` refuses one door over."""
+        import dna_cli.new_cmd as mod
+
+        monkeypatch.setattr(mod, "_KIND_HELP_TEMPLATE", "no slot here")
+        with pytest.raises(RuntimeError, match="trait"):
+            mod._kind_help()
+
     def test_asking_is_not_requiring(self, runner, store):
         """§8.4 — a Kind that declares no trait must still be born.
 

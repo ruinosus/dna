@@ -529,6 +529,19 @@ def _kind_help() -> str:
     """
     from dna.application.kind_authoring import TRAIT_ASK_SLOT, trait_ask
 
+    if TRAIT_ASK_SLOT not in _KIND_HELP_TEMPLATE:
+        # The same refusal ``splice_trait_ask`` makes, made here because this
+        # function cannot USE it (that one fits the block to a docstring's
+        # indentation; Click needs its own no-rewrap markers instead). A plain
+        # ``.replace`` on a template somebody rewrote without the slot is a
+        # silent no-op — the command would ship with its ask gone and nothing
+        # would say so, which is exactly how ``traits`` reached 17% the first
+        # time.
+        raise RuntimeError(
+            f"the `dna new kind` help template has no {TRAIT_ASK_SLOT} slot to "
+            f"project the trait vocabulary into — a door that stops asking for "
+            f"`traits` is how the field reached 17% coverage the first time"
+        )
     return _KIND_HELP_TEMPLATE.replace(TRAIT_ASK_SLOT, _click_ask(trait_ask()))
 
 
