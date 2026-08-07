@@ -6,7 +6,7 @@ metadata:
 spec:
   title: Procedência de agente — o blueprint persiste e o copiloto diz quem o criou
   description: 'O codigo gerado guarda de onde veio (services[].answers, template.ref). O agente gerado nao: 0 CopilotBlueprint gravados, 0 arestas saindo de Copilot.'
-  status: review
+  status: done
   feature: f-a-fabrica
   priority: highest
   acceptance_criteria:
@@ -46,7 +46,7 @@ spec:
     done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-07T21:48:49+00:00'
-  updated_at: '2026-08-07T22:43:54+00:00'
+  updated_at: '2026-08-07T22:44:30+00:00'
   timeline:
   - at: '2026-08-07T21:48:49+00:00'
     actor: claude-code
@@ -169,8 +169,19 @@ spec:
       / dangling / ciclo), e a profundidade — que a aresta já bastava para responder via
       `dna graph refs --direction out --depth N`.
     commit_ref: 3afaf1b9d94f49306d9eb8646308ca7eb25a6456
+  - at: '2026-08-07T22:44:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 92801bbfedc97cb219fbce2030e936e53b1cca7e
+    summary: 'Entregue e merjado (PR #357). MEDIDO com o código real dos dois lados: a derivação inversa PERDE resposta — 5 respostas em 2 condições (presença-liga da voz; quotas.per_user apagado sem teto). No controle o round-trip é EXATO, então a perda é da CONDIÇÃO, nunca da derivação; a i-088 estava certa para o caso dela e incompleta para este. Mas a metade ANSWERS já estava entregue pela i-137 do dna-cloud (a spec estava errada: ''zero instâncias'' é fato sobre o BANCO, ''não persiste'' é afirmação sobre o CÓDIGO). Construído só o que faltava: Copilot.created_by reflexiva (by:name, resolved+enforced — apontar para CopilotBlueprint foi recusado por fronteira open-core, razão no descritor), dna copilot provenance com 4 estados que não colapsam (respondido/não-respondido/dangling/ciclo), e a profundidade que a aresta já respondia via dna graph refs. 7 mutantes mortos, cada um verificado revertendo.'
   produces:
   - kind: Plan
     name: plan-s-procedencia-do-agente
     role: implementation
     at: '2026-08-07T21:59:42+00:00'
+  references:
+  - Spec/spec-a-fabrica
+  closed_at: '2026-08-07T22:44:20+00:00'
