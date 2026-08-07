@@ -1187,15 +1187,22 @@ class KindRegistry:
                 f"expected 'composition' or 'record'."
             )
         if plane == "record":
-            contradictions = []
-            if getattr(k, "is_prompt_target", False):
-                contradictions.append("is_prompt_target=True")
-            if getattr(k, "flatten_in_context", False):
-                contradictions.append("flatten_in_context=True")
-            if getattr(k, "is_schema_affecting", False):
-                contradictions.append("is_schema_affecting=True")
-            if getattr(k, "is_root", False):
-                contradictions.append("storage.pattern==ROOT")
+            # i-123 — os sinais vêm de ``COMPOSITION_SIGNALS``, não mais de
+            # quatro ``if`` escritos aqui. O MESMO mapa alimenta
+            # ``default_plane``, que decide o plano de um descritor que não
+            # declarou nenhum: enumerá-los duas vezes deixaria o default
+            # produzir ``record`` para um descritor que este lint recusa em
+            # seguida — um Kind autorado que não registra, com a mensagem
+            # apontando um campo que o autor não escreveu.
+            from dna.kernel.kinds.base import COMPOSITION_SIGNALS
+
+            contradictions = [
+                # ``is_root`` é DERIVADO do padrão de storage num ``KindBase``,
+                # e é por isso que a mensagem dele nomeia o storage.
+                "storage.pattern==ROOT" if attr == "is_root" else f"{attr}=True"
+                for attr in COMPOSITION_SIGNALS
+                if getattr(k, attr, False)
+            ]
             if contradictions:
                 raise KindRegistrationError(
                     f"Kind {type(k).__name__} declares plane='record' but "

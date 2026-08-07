@@ -271,12 +271,33 @@ class TestTwoPhaseLoading:
         assert key in k._kinds
         assert getattr(k._kinds[key], "__declarative__", False)
 
-        recipes = [d for d in mi.instances if d.kind == "Recipe"]
-        assert len(recipes) == 1
-        doc = recipes[0]
-        assert doc.name == "pasta"
-        assert doc.spec.get("title") == "Simple Pasta"
-        assert doc.spec.get("ingredients") == ["flour", "water"]
+        # ⚠️ i-123 — a SUPERFÍCIE de leitura mudou, e a razão vale ler.
+        #
+        # Este descritor não declara `plane`, e desde 07/08/2026 isso o põe no
+        # plano `record` (decisão do fundador — ver
+        # `tests/test_plane_default.py`). Um Kind `record` é pulado na
+        # materialização da ManifestInstance DE PROPÓSITO: `mi.instances` é a
+        # composição, e um record não compõe nada. A leitura dele passa pelo
+        # plano record do kernel, exatamente como já era para as 46 Kinds
+        # `record` que este SDK publica (Story, Issue, Spec, ADR...).
+        #
+        # ⚠️⚠️ E por que `get_instance` e não `kernel.query`, que seria a
+        # superfície natural de uma lista? Porque `FilesystemSource.query`
+        # **não enxerga instância em BUNDLE** — medido: num escopo onde
+        # `load_all` devolve o `Agent` de um `AGENT.md`, `source.query("Agent")`
+        # devolve zero, e um `PromptTemplate` em yaml no mesmo escopo devolve
+        # um. `Agent` é plano `composition` desde sempre, então **o buraco é
+        # anterior ao i-123 e independente dele**; o que o i-123 faz é torná-lo
+        # ALCANÇÁVEL para um descritor bundle-stored que não declara plane.
+        # Kind de tenant não está nesse conjunto: `author_kind` grava sempre
+        # `storage.type: yaml`. Registrado como issue própria — consertar o
+        # adapter é outra decisão, não carona nesta.
+        assert mi is not None
+        doc = await k.get_instance("demo", "Recipe", "pasta")
+        assert doc is not None
+        assert doc["metadata"]["name"] == "pasta"
+        assert doc["spec"].get("title") == "Simple Pasta"
+        assert doc["spec"].get("ingredients") == ["flour", "water"]
 
 
 # ---------------------------------------------------------------------------
@@ -389,9 +410,12 @@ class TestRoundTrip:
         k2.cache(FilesystemCache(tmp_path / ".dna"))
         mi2 = await k2.instance_async("demo")
 
-        recipes = [d for d in mi2.instances if d.kind == "Recipe"]
-        assert len(recipes) == 1
-        reloaded = recipes[0]
-        assert reloaded.name == "bread"
-        assert reloaded.spec.get("title") == "Sourdough"
-        assert reloaded.spec.get("ingredients") == ["flour", "water", "salt"]
+        # i-123 — leitura pelo plano `record`; o porquê (e por que
+        # `get_instance` em vez de `query`) está no comentário longo em
+        # ``TestTwoPhaseLoading.test_kinddef_then_instance_doc``.
+        assert mi2 is not None
+        reloaded = await k2.get_instance("demo", "Recipe", "bread")
+        assert reloaded is not None
+        assert reloaded["metadata"]["name"] == "bread"
+        assert reloaded["spec"].get("title") == "Sourdough"
+        assert reloaded["spec"].get("ingredients") == ["flour", "water", "salt"]
