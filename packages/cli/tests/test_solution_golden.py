@@ -36,6 +36,7 @@ teach everyone to stop reading the diff).
 from __future__ import annotations
 
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -66,10 +67,32 @@ CASES: dict[str, dict[str, str]] = {
         "identity": "entra",
         "graph_obo": "true",
         "ingress": "external",
-        "container_port": "8000",
+        "port": "8000",
         "env_prefix": "DNA_MCP",
         "can_sleep": "false",
         "max_replicas": "5",
+    },
+    # ⭐ The case measured in dna-cloud on 07/08/2026: NINE deployable services
+    # over FOUR `apps/` directories, so EIGHT of the nine are another
+    # deployment of an image that already exists. `owns_code: false` is that
+    # eight, and what it must render is ONLY the wiring — regenerating
+    # `apps/mcp/src/` because somebody declared `mcp-ws` would overwrite
+    # production code.
+    #
+    # Frozen as a golden rather than only asserted in a test because the file
+    # SET is the whole claim here: the golden's file-set assertion fails the
+    # moment a Dockerfile reappears, which is the exact regression.
+    "shared-image": {
+        "service_name": "mcp-ws",
+        "image_name": "mcp",
+        "owns_code": "false",
+        "description": "a second door over the mcp image",
+        "identity": "workos",
+        "ingress": "external",
+        "port": "8001",
+        "env_prefix": "DNA_MCP",
+        "can_sleep": "true",
+        "max_replicas": "3",
     },
 }
 
@@ -172,21 +195,23 @@ def test_a_arvore_renderizada_e_a_congelada(case: str, tmp_path: Path) -> None:
 def test_o_golden_exercita_os_dois_lados_de_cada_condicional() -> None:
     """The golden cases have to disagree on every gated value.
 
-    A second case that happened to answer like the first would look like
-    coverage and buy nothing — this is the assertion that keeps `entra-external`
-    from decaying into a copy of `baseline`. Each name below gates a `{% if %}`
-    somewhere in the template.
+    A case that happened to answer like the baseline would look like coverage
+    and buy nothing — this is the assertion that keeps the variants from
+    decaying into copies of `baseline`. Each name below gates a `{% if %}`
+    somewhere in the template, `owns_code` most consequentially of all: it gates
+    whether the code files exist at all.
     """
     baseline_defaults = {
         "identity": "workos",
         "graph_obo": "false",
         "ingress": "internal",
         "can_sleep": "true",
+        "owns_code": "true",
     }
-    variant = CASES["entra-external"]
+    variants = [answers for case, answers in CASES.items() if case != "baseline"]
     for name, default in baseline_defaults.items():
-        assert variant.get(name, default) != default, (
-            f"'{name}' is answered the same in both golden cases, so the branch it "
+        assert any(answers.get(name, default) != default for answers in variants), (
+            f"'{name}' is answered the same in every golden case, so the branch it "
             "gates is never rendered both ways."
         )
 
@@ -237,9 +262,24 @@ def test_o_golden_cobre_todo_arquivo_que_o_template_declara() -> None:
         rendered |= {Path(p).name for p in _frozen(case)}
 
     declared = {
-        p.name.removesuffix(".jinja")
+        _unconditional(p.name).removesuffix(".jinja")
         for p in REFERENCE_TEMPLATE.rglob("*.jinja")
         if "_copier_conf" not in str(p)
     }
     missing = declared - rendered
     assert not missing, f"template files that reach no golden: {sorted(missing)}"
+
+
+_JINJA_BLOCK = re.compile(r"\{%.*?%\}")
+
+
+def _unconditional(name: str) -> str:
+    """A template file name with its `{% if %}` gates stripped.
+
+    ⚠️ Not cosmetic. `{% if owns_code %}Dockerfile{% endif %}.jinja` is how the
+    template emits a file for some answers and not others — Copier skips a path
+    whose rendered segment is empty — so the LITERAL file name in the tree is
+    not the name of the rendered file, and a coverage check comparing them
+    directly would report every conditional file as uncovered forever.
+    """
+    return _JINJA_BLOCK.sub("", name)

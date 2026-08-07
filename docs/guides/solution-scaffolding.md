@@ -74,6 +74,79 @@ such a file is missing Copier **warns and renders the inherited values as
 empty** rather than failing, so `dna solution` surfaces the warning as a named
 finding: generate the upper layer first.
 
+### ⭐ One code directory, N services — `owns_code`
+
+A service is not a directory. Measured in dna-cloud on 07/08/2026: **nine
+deployable services over four `apps/` directories.**
+
+| directory | services | why |
+|---|---|---|
+| `apps/web/` | `web` | |
+| `apps/mcp/` | `mcp`, `mcp-entra`, `mcp-ws` | one image, one identity authority per door |
+| `apps/api/` | `rest`, `rest-user` | one image, two auth lanes |
+| `apps/copilot/` | `copilot`, `worker`, `a2a` | |
+
+So **eight of the nine** are *another deployment of an image that already
+exists*, and for those, generating `Dockerfile` / `pyproject.toml` / `src/` /
+`tests/` would **overwrite production code** because somebody declared a new
+door. `owns_code` is the answer that says which case you are in:
+
+```bash
+# the door that owns the code
+dna solution new templates/app-container ./my-repo --defaults \
+    --data service_name=mcp
+
+# a second door over the SAME image — wiring only
+dna solution new templates/app-container ./my-repo --defaults \
+    --data service_name=mcp-ws --data image_name=mcp --data owns_code=false \
+    --data port=8001 --data can_sleep=true
+```
+
+The second run writes exactly three files:
+
+```
+apps/mcp-ws/wiring/compose.fragment.yml     build context → ./apps/mcp
+apps/mcp-ws/wiring/azure.service.yaml       project       → ./apps/mcp
+apps/mcp-ws/wiring/containerapp.bicep       its OWN port and minReplicas
+```
+
+Nothing under `apps/mcp/` is written or touched. The mechanism is Copier's, not
+ours: a file or directory whose rendered name is **empty** is skipped, so the
+code paths carry a `{% if owns_code %}` segment. Measured against copier 9.17.
+
+⚠️ **`port` and `can_sleep` are per SERVICE, never per image.** Two doors over
+one image legitimately disagree about both — they are `App` fields, and the
+answers file is per service, so each door's wiring carries its own. A template
+that derived them from the image would give a whole fleet one sleep answer,
+which is how a fixed replica gets into a bill with nobody choosing it.
+
+`owns_code: false` requires `image_name` to name *another* service. Otherwise
+the fragment's build context is its own empty directory: a tree that looks
+complete and cannot build. The template refuses it.
+
+### ⭐ The cost, on screen, at the moment it is decided
+
+`can_sleep: false` renders `minReplicas: 1`, and a fixed replica is
+**~US$ 90/month, recurring, forever** — measured: the dna-cloud copilot with a
+fixed replica was US$ 94,43 of a US$ 230,29 invoice, the largest single line on
+it. Every run that renders such an app prints it:
+
+```
+⭐ COST — 1 app(s) answered `can_sleep: false`, so the generated bicep says
+   `minReplicas: 1`:
+    worker
+  A fixed replica is ~US$ 90/month, RECURRING, forever — not a one-off.
+```
+
+It is printed from the **answers file**, so it appears with or without
+`--solution`: `dna solution` runs against repos with no `.dna` anywhere, and
+that is exactly the run where the person generating has least context about
+what a replica costs here.
+
+An **absent** answer is not a cheap answer. It produces no cost line and is
+reported separately as an unanswered cost question — see *"The cost question"*
+below; presuming `true` is the failure the field exists to prevent.
+
 ---
 
 ## Update
@@ -258,7 +331,7 @@ about is simply ignored by Copier, so keeping it costs nothing.
 |---|---|
 | `template.src` + `template.ref` — a **pointer** | any rendered file, any template body |
 | `answers` — free-form, the template's own vocabulary | a typed mirror of the template's questions |
-| `apps` — which `App`s the solution delivers | the **cost commitment** — it lives on `App.can_sleep` |
+| `apps` — every `App` the solution deploys, the complete set | the **cost commitment** — it lives on `App.can_sleep` |
 | | `requires_plan` and anything else that would *look* enforced and not be |
 | | the conflicts, the git state, the working copy |
 
@@ -301,6 +374,81 @@ finding into exit 3.
 `--sleep-answer KEY` is **gone**: it named the answer key to lift out of the
 template's answers, and there is no longer anything to lift.
 
+### ⭐ Both halves, in one write
+
+A recorded run writes the **two halves** of a deployment, joined by name:
+
+| the fact | where it lives | why |
+|---|---|---|
+| `name`, `answers_file`, `template{src,ref}`, `answers` | `Solution.services[]` | the **provenance of the render** — which template, at which ref, answering what |
+| `service_name`, `python_module`, `port`, `can_sleep` | the `App` | the **identity of the deployment** — readable across the fleet without opening a repo |
+| the join | `Solution.apps[]` — the COMPLETE set, the same names as `services[].name` | the only level at which a relation can be **declared** |
+
+The four App fields are copied under **the same names the template asked them
+under** — which is why `copier.yml` spells its questions `service_name`,
+`python_module`, `port` and `can_sleep`. One vocabulary, so the projection is a
+copy rather than a mapping somebody has to remember.
+
+⚠️ **Order matters, and it is not cosmetic.** The `App` is written **before**
+the `Solution`: `apps` is an *enforced* relation, so a Solution naming an App
+that does not exist yet is a refused write under `DNA_REF_VALIDATION=enforce`,
+and the whole record fails.
+
+**If the installed `App` descriptor cannot hold those fields**, no App is
+written, `apps` is left alone — populating an enforced relation whose targets do
+not exist is a broken record, not half a migration — and the run says so:
+
+```
+⚠ NO `App` was written, so nothing declares whether these services may sleep.
+  The installed `App` descriptor cannot hold: service_name, python_module, …
+```
+
+Since #351 landed that is normally unreachable. It is kept because `dna-cli` and
+`dna-sdk` are **separate wheels with independent floors**: a CLI newer than its
+SDK is a real install, and this is what turns it into a sentence instead of a
+traceback in the middle of a scaffold.
+
+### ⚠️ Why the join is `apps[]`, and not `services[].name`
+
+`services[].name` is the same string as the App's `metadata.name` — it is what
+azd calls a service — so it *looks* like the natural place to declare the
+relation. **It cannot be declared there.** `relation_values` reads
+`spec.get(rel.name)`: top level, always. A pointer inside `services[].items` is
+out of reach, and the kernel even names the rule — `top_level_properties_only`.
+
+The failure mode is the worst kind, and it was measured (#351): declaring
+`relations: {services: {to: App}}` **lints green**, reports
+`resolved / enforced = True / True` — announcing that it vetoes bad writes —
+and `relation_values` returns `[]`. It reads nothing, resolves nothing, vetoes
+nothing. A guard that says it is enforced and is not.
+
+So `apps[]` is the join, and therefore it must be **complete**: an `apps` that
+listed only some of the deployments would be the system's one enforceable
+relation left incomplete on purpose.
+
+**Sellability does not need a second list.** It already has a house:
+`App.requires_plan`, which is optional. An App without one is a container that
+runs and is not sold — `worker` is exactly that.
+
+Two lists for one fact would still drift, so that is prevented by a mechanism
+rather than by leaving one empty: every write checks that `services[].name` and
+`apps[]` denote the same set, **derived from both sides**, and refuses with
+both sides named:
+
+```
+Solution 's' would be written with `apps` and `services[].name` disagreeing,
+and they denote the same things — an App IS a deployment.
+  services with no entry in `apps`: api
+  `apps` entries with no service: algum-outro
+```
+
+An **absent** `apps` is not a disagreement — that is the join simply not being
+declared, which the schema allows and §6-B measured as the common case. While
+the `App` descriptor has not moved, no App instance is written, so `apps` is
+left alone: populating an *enforced* relation whose targets do not exist is not
+half a migration, it is a broken record (the kernel says so —
+`unresolved relation(s): spec.apps → 'api' (no App named 'api')`).
+
 ---
 
 ## The two places no template reaches
@@ -338,8 +486,22 @@ For the remaining two there are exactly two options and both cost:
 
 **So cover them from the other side:** a guard in the consuming repo that fails
 when a service exists under `apps/` and is missing from `azure.yaml` or the root
-bicep. The template makes five places impossible to forget; the guard makes the
-other two impossible to forget. Together that is the seven.
+bicep — `scripts/guard-app-wiring.mjs` in dna-cloud. The template makes five
+places impossible to forget; the guard makes the other two impossible to forget.
+Together that is the seven.
+
+⚠️ **Say the true version of this, and only the true version.** The template
+**emits a fragment**; it does not wire anything. Nothing in `dna solution`
+knows whether the fragment was ever pasted into `azure.yaml`, and a doc that
+implied otherwise would be worse than silence — because the failure it hides
+is *invisible by construction*. Measured, in this house: **the A2A door spent
+three days in production without existing**, with every line of code in place,
+because one entry was missing from `azure.yaml` (03/08/2026; the compose entry
+had gone missing the same way on 31/07). Nothing was broken. Nothing failed. It
+simply was not there.
+
+That is what the guard is for, and why it lives in the consuming repo rather
+than here: only the repo that owns `azure.yaml` can check `azure.yaml`.
 
 ---
 

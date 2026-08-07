@@ -8,7 +8,7 @@ from {{ python_module }} import server
 
 
 def test_port_comes_from_the_declared_default() -> None:
-    assert server.PORT == {{ container_port }}
+    assert server.PORT == {{ port }}
 
 
 def test_identity_authority_is_the_one_that_was_declared() -> None:

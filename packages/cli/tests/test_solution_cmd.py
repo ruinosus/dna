@@ -55,6 +55,16 @@ copier = pytest.importorskip("copier", reason="needs dna-cli[scaffold]")
 REPO_ROOT = Path(__file__).resolve().parents[3]
 REFERENCE_TEMPLATE = REPO_ROOT / "templates" / "app-container"
 
+# ⚠️ The code files carry a CONDITIONAL path segment (`{% if owns_code %}…`),
+# which is how one directory serves N services without regenerating anybody's
+# source — Copier skips a file or directory whose rendered name is empty
+# (measured against 9.17). Named here rather than spelled at four call sites so
+# the next rename is one edit.
+SERVER_SKELETON = (
+    "apps/{{ service_name }}/{% if owns_code %}src{% endif %}"
+    "/{{ python_module }}/server.py.jinja"
+)
+
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -244,6 +254,340 @@ def test_new_recusa_sem_defaults_e_sem_terminal(
 
     assert result.exit_code == solution_cmd.EXIT_REFUSED
     assert "--defaults" in result.output
+
+
+# ── ⭐ `can_sleep`: the cost gate, from the answer to the bicep to the screen ──
+
+
+def bicep_of(destination: Path, service: str) -> str:
+    return (destination / f"apps/{service}/wiring/containerapp.bicep").read_text()
+
+
+def test_can_sleep_false_chega_ao_bicep_como_min_replicas_1(
+    runner: CliRunner, template: Path, destination: Path
+) -> None:
+    """⭐ The assertion the whole story is about, made on the RENDERED file.
+
+    `can_sleep` is the one answer that is not a render detail: `false` means a
+    fixed replica, and a fixed replica is ~US$ 90/month for as long as the app
+    exists. Asserting it on the copier.yml — "the question is declared" — would
+    have proven the question exists, which is not the same claim as the number
+    reaching the resource that bills.
+
+    Both sides, in one test, because the mutant is the interesting half: with
+    only the `false` case frozen, a template that hardcoded `minReplicas: 1`
+    would be green and would put every generated app on a permanent replica.
+    """
+    generate(runner, template, destination, service_name="worker", can_sleep="false")
+    generate(runner, template, destination, service_name="sleepy", can_sleep="true")
+
+    assert "minReplicas: 1" in bicep_of(destination, "worker")
+    assert "minReplicas: 0" in bicep_of(destination, "sleepy")
+
+
+def test_a_geracao_imprime_o_custo_quando_o_app_nao_dorme(
+    runner: CliRunner, template: Path, destination: Path
+) -> None:
+    """⭐ The dna-cloud gate says: ask "can it sleep?" WITH THE NUMBER ON SCREEN.
+
+    Generation is the moment that question is actually being answered, so this
+    is where the number goes. Before this, the answer existed in the tree and
+    the price existed in a CLAUDE.md, and nothing put the two in the same place
+    at the same time.
+    """
+    result = generate(
+        runner, template, destination, service_name="worker", can_sleep="false"
+    )
+
+    assert "COST" in result.output
+    assert "worker" in result.output
+    assert "US$ 90" in result.output
+    assert "minReplicas: 1" in result.output
+    assert "94.43" in result.output, "the measured invoice line, not a round guess"
+
+
+def test_um_app_que_dorme_nao_paga_o_aviso(
+    runner: CliRunner, template: Path, destination: Path
+) -> None:
+    """The other half: a warning that fires always is a warning nobody reads."""
+    result = generate(
+        runner, template, destination, service_name="api", can_sleep="true"
+    )
+
+    assert "COST" not in result.output
+    assert "US$ 90" not in result.output
+
+
+def test_o_custo_aparece_sem_registro_nenhum(
+    runner: CliRunner, template: Path, destination: Path
+) -> None:
+    """No `--solution`, no scope, no `.dna` — and the number still appears.
+
+    `dna solution` runs against somebody else's repo, where there is no kernel
+    to talk to. Making the cost line depend on a recorded `Solution` would have
+    hidden it in exactly the case where the person generating has least context
+    about this house's bill.
+    """
+    result = runner.invoke(
+        solution,
+        ["new", str(template), str(destination), "--defaults",
+         "--data", "service_name=worker", "--data", "can_sleep=false", "--json"],
+    )
+    report = json.loads(result.output)
+
+    assert report["solution"] is None
+    assert report["no_sleep"] == ["worker"]
+
+
+def test_uma_camada_muda_de_ideia_e_o_update_diz(
+    runner: CliRunner, template: Path, destination: Path
+) -> None:
+    """The cost is re-stated by `update`, not only by `new`.
+
+    An app that starts sleeping and stops is the same ~US$ 90 decision, taken
+    later and more quietly — the update is the only place that can say so.
+    """
+    generate(runner, template, destination, service_name="worker", can_sleep="true")
+    commit_all(destination, "generated")
+
+    result = runner.invoke(
+        solution,
+        ["update", str(destination), "--service", "worker",
+         "--data", "can_sleep=false"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "COST" in result.output
+    assert "minReplicas: 1" in bicep_of(destination, "worker")
+
+
+def test_uma_resposta_de_custo_ausente_nao_vira_custo(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    """⚠️ Absent is not `false`, and it is not `true` either.
+
+    A template that never asks the question produces no cost line — presuming
+    the expensive side would cry wolf on every unrelated template, and
+    presuming the cheap side is the failure the field exists to prevent. The
+    absence is reported by `unanswered_cost`, which is a different sentence.
+    """
+    silent = tmp_path / "silent-template"
+    silent.mkdir()
+    (silent / "copier.yml").write_text(
+        '_answers_file: ".copier-answers.{{ service_name }}.yml"\n'
+        '_templates_suffix: ".jinja"\n'
+        "service_name:\n  type: str\n  default: api\n"
+    )
+    (silent / "{{ _copier_conf.answers_file }}.jinja").write_text(
+        "{{ _copier_answers|to_nice_yaml -}}\n"
+    )
+    init_repo(silent)
+    commit_all(silent, "v1")
+    git(silent, "tag", "v1.0.0")
+    tree = init_repo(tmp_path / "tree")
+
+    result = CliRunner().invoke(
+        solution, ["new", str(silent), str(tree), "--defaults", "--json"]
+    )
+
+    assert json.loads(result.output)["no_sleep"] == []
+
+
+# ── ⭐ 1 code directory : N services ──────────────────────────────────────────
+
+
+def code_fingerprint(destination: Path, service: str) -> dict[str, str]:
+    """Every non-wiring file under `apps/<service>/`, by content."""
+    root = destination / "apps" / service
+    return {
+        str(p.relative_to(root)): p.read_text(encoding="utf-8")
+        for p in sorted(root.rglob("*"))
+        if p.is_file() and "wiring" not in p.relative_to(root).parts
+    }
+
+
+def test_um_segundo_servico_sobre_a_mesma_imagem_gera_so_a_fiacao(
+    runner: CliRunner, template: Path, destination: Path
+) -> None:
+    """⭐ Measured in dna-cloud, 07/08/2026: NINE services over FOUR directories.
+
+        apps/mcp/  →  mcp, mcp-entra, mcp-ws     (one image, three doors)
+
+    So EIGHT of the nine services are another deployment of an image that
+    already exists, and for those, generating `Dockerfile`/`src`/`tests` would
+    OVERWRITE PRODUCTION CODE because somebody declared a new door. This is the
+    test that says it does not: the owner's tree is compared byte for byte
+    across the second generation, and what the second run leaves behind is
+    exactly the three wiring fragments.
+
+    Asserted on CONTENT, not on mtime or on "the command exited 0": a rewrite
+    that produced identical bytes did not damage anything, and one that produced
+    different bytes is the defect, whatever the exit code said.
+    """
+    generate(runner, template, destination, service_name="mcp", identity="workos")
+    before = code_fingerprint(destination, "mcp")
+    assert "Dockerfile" in before, "precondition: the owner really did get code"
+
+    result = runner.invoke(
+        solution,
+        ["new", str(template), str(destination), "--defaults",
+         "--data", "service_name=mcp-ws", "--data", "image_name=mcp",
+         "--data", "owns_code=false", "--data", "identity=workos"],
+    )
+    assert result.exit_code == 0, result.output
+
+    assert code_fingerprint(destination, "mcp") == before, (
+        "declaring a second door over the mcp image rewrote the mcp image's code"
+    )
+    assert sorted(p.name for p in (destination / "apps/mcp-ws").rglob("*") if p.is_file()) == [
+        "azure.service.yaml",
+        "compose.fragment.yml",
+        "containerapp.bicep",
+    ]
+    assert not (destination / "apps/mcp-ws/Dockerfile").exists()
+    assert not (destination / "apps/mcp-ws/src").exists()
+
+
+def test_a_fiacao_do_segundo_servico_aponta_para_a_imagem_do_primeiro(
+    runner: CliRunner, template: Path, destination: Path
+) -> None:
+    """Wiring-only is useless if the wiring points at an empty directory.
+
+    `apps/mcp-ws/` holds no Dockerfile, so a fragment that said `build:
+    ./apps/mcp-ws` would be a file that renders, passes every file-set
+    assertion, and fails at `docker compose build` — the shape of failure this
+    template exists to remove.
+    """
+    generate(runner, template, destination, service_name="mcp")
+    generate(
+        runner, template, destination,
+        service_name="mcp-ws", image_name="mcp", owns_code="false",
+    )
+
+    compose = (destination / "apps/mcp-ws/wiring/compose.fragment.yml").read_text()
+    azure = (destination / "apps/mcp-ws/wiring/azure.service.yaml").read_text()
+
+    assert "context: ./apps/mcp\n" in compose
+    assert "project: ./apps/mcp\n" in azure
+    assert "mcp-ws:" in compose, "the SERVICE is still mcp-ws — only the code is shared"
+
+
+def test_port_e_can_sleep_sao_do_servico_e_nunca_da_imagem(
+    runner: CliRunner, template: Path, destination: Path
+) -> None:
+    """⭐ Two doors over one image may disagree about both, and often do.
+
+    `port` and `can_sleep` are `App` fields, and an App is a service — so the
+    answers file that carries them is per service. A template that derived them
+    from the image would give the whole fleet one sleep answer, which is exactly
+    how a fixed replica gets into the bill without anybody choosing it.
+    """
+    generate(runner, template, destination, service_name="mcp", port="8080",
+             can_sleep="true")
+    generate(
+        runner, template, destination,
+        service_name="mcp-ws", image_name="mcp", owns_code="false",
+        port="8001", can_sleep="false",
+    )
+
+    assert "targetPort: 8080" in bicep_of(destination, "mcp")
+    assert "minReplicas: 0" in bicep_of(destination, "mcp")
+    assert "targetPort: 8001" in bicep_of(destination, "mcp-ws")
+    assert "minReplicas: 1" in bicep_of(destination, "mcp-ws")
+
+
+def test_owns_code_false_sem_outra_imagem_para_apontar_e_recusado(
+    runner: CliRunner, template: Path, destination: Path
+) -> None:
+    """`owns_code: false` means "somebody else has the code" — so name them.
+
+    Left unchecked, `owns_code=false` with the default `image_name` renders a
+    fragment whose build context is its own empty directory: a tree that looks
+    complete and cannot build. The validator turns that into a refusal at the
+    only moment it is cheap to fix.
+    """
+    result = runner.invoke(
+        solution,
+        ["new", str(template), str(destination), "--defaults",
+         "--data", "service_name=mcp-ws", "--data", "owns_code=false"],
+    )
+
+    assert result.exit_code == solution_cmd.EXIT_REFUSED
+    assert "image_name" in result.output
+    assert not (destination / "apps").exists()
+
+
+def test_um_validator_do_template_vira_recusa_legivel(
+    runner: CliRunner, template: Path, destination: Path
+) -> None:
+    """⚠️ Copier raises a PLAIN `ValueError` for a `validator:` — not a CopierError.
+
+    Measured while adding `owns_code`, and true of `service_name`'s validator
+    since the day it was written: the failure arrived as a bare traceback with
+    neither the command nor the answer name near the top, and `CliRunner` shows
+    it as EMPTY output. Driven through a real validator rather than asserted
+    against the prefix constant, so a Copier release that rewords the message
+    fails here instead of silently restoring the traceback.
+    """
+    result = runner.invoke(
+        solution,
+        ["new", str(template), str(destination), "--defaults",
+         "--data", "service_name=Not A Service"],
+    )
+
+    assert result.exit_code == solution_cmd.EXIT_REFUSED
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert "service_name" in result.output
+    assert "Traceback" not in result.output
+
+
+def test_os_tres_fragmentos_de_fiacao_saem_nos_dois_casos(
+    runner: CliRunner, template: Path, destination: Path
+) -> None:
+    """The three wiring files are the point of the template, in both shapes.
+
+    ⚠️ And they are only THREE of the seven places a service needs. The other
+    two remain unreachable by any template (`azure.yaml`, the root bicep
+    invocation) — this test asserts what is emitted, never that a service is
+    wired. The guard in the consuming repo is what asserts arrival; see
+    `_echo_unreachable_note`.
+    """
+    fragments = ["compose.fragment.yml", "azure.service.yaml", "containerapp.bicep"]
+    generate(runner, template, destination, service_name="mcp")
+    generate(
+        runner, template, destination,
+        service_name="mcp-ws", image_name="mcp", owns_code="false",
+    )
+
+    for service in ("mcp", "mcp-ws"):
+        for name in fragments:
+            assert (destination / f"apps/{service}/wiring/{name}").is_file(), (
+                f"apps/{service}/wiring/{name} was not emitted"
+            )
+
+
+# ── the question names ARE the App's field names ─────────────────────────────
+
+
+def test_as_perguntas_do_template_sao_os_campos_do_App() -> None:
+    """⭐ One vocabulary, asserted against the template rather than remembered.
+
+    `App` IS the service (`Spec/spec-app-e-o-servico`), so the answers that
+    describe the service are spelled exactly as the descriptor spells them. The
+    old name `container_port` is asserted GONE, not merely "port is present":
+    with both accepted, a tree would render from one and a record would be
+    written from the other, and the two would agree only by luck.
+    """
+    from dna._yaml import safe_load
+
+    questions = safe_load((REFERENCE_TEMPLATE / "copier.yml").read_text())
+
+    for field in ("service_name", "python_module", "port", "can_sleep"):
+        assert field in questions, f"the App declares `{field}`; the template must ask it"
+    assert "container_port" not in questions, (
+        "`container_port` was renamed to `port` to match the App field. Two "
+        "spellings of one fact is how a record and a tree drift apart."
+    )
 
 
 # ── trap 4: `_tasks` and the door with no handle ─────────────────────────────
@@ -690,7 +1034,7 @@ def test_um_conflito_e_reportado_e_contado_uma_vez_so(
     server.write_text(server.read_text().replace('IDENTITY = "workos"', 'IDENTITY = "workos"  # pinned by a security review'))
     commit_all(destination, "human edit")
 
-    skeleton = template / "apps/{{ service_name }}/src/{{ python_module }}/server.py.jinja"
+    skeleton = template / SERVER_SKELETON
     skeleton.write_text(
         skeleton.read_text().replace(
             'IDENTITY = "{{ identity }}"',
@@ -723,7 +1067,7 @@ def test_strict_falha_quando_ha_conflito(
     server = destination / "apps/api/src/api/server.py"
     server.write_text(server.read_text().replace('IDENTITY = "workos"', 'IDENTITY = "w"'))
     commit_all(destination, "human edit")
-    skeleton = template / "apps/{{ service_name }}/src/{{ python_module }}/server.py.jinja"
+    skeleton = template / SERVER_SKELETON
     skeleton.write_text(
         skeleton.read_text().replace(
             'IDENTITY = "{{ identity }}"', 'IDENTITY = "{{ identity }}"  # v2'

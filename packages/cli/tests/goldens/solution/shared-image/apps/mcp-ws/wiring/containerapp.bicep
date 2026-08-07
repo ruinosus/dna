@@ -1,9 +1,9 @@
-// api — the container app resource, as a Bicep MODULE.
+// mcp-ws — the container app resource, as a Bicep MODULE.
 //
 // ⛔ This file is reachable by the template. Its INVOCATION is not: the root
 // bicep has to carry a line like
 //
-//   module apiApp '../../apps/api/wiring/containerapp.bicep' = { ... }
+//   module mcpwsApp '../../apps/mcp-ws/wiring/containerapp.bicep' = { ... }
 //
 // and Bicep has no glob or include for that. `dna solution new` prints it; a
 // wiring guard in the consuming repo is what makes forgetting it fail loudly.
@@ -19,12 +19,12 @@ param containerMemory string
 param resourceToken string
 param sourceUrl string
 
-var appName = 'ca-api-${resourceToken}'
+var appName = 'ca-mcp-ws-${resourceToken}'
 
-resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
+resource mcpwsApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: appName
   location: location
-  tags: union(tags, { 'azd-service-name': 'api' })
+  tags: union(tags, { 'azd-service-name': 'mcp-ws' })
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: { '${appIdentityId}': {} }
@@ -34,8 +34,8 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
     configuration: {
       activeRevisionsMode: 'Single'
       ingress: {
-        external: false // INTERNAL
-        targetPort: 8080
+        external: true // EXTERNAL
+        targetPort: 8001
         transport: 'auto'
         allowInsecure: false
       }
@@ -49,13 +49,13 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
     template: {
       containers: [
         {
-          name: 'api'
+          name: 'mcp-ws'
           image: placeholderImage // azd overwrites this with the image it builds
           resources: { cpu: json(containerCpu), memory: containerMemory }
           env: [
-            { name: 'DNA_API_HOST', value: '0.0.0.0' }
-            { name: 'DNA_API_PORT', value: '8080' }
-            { name: 'DNA_API_AUTH', value: 'config' }
+            { name: 'DNA_MCP_HOST', value: '0.0.0.0' }
+            { name: 'DNA_MCP_PORT', value: '8001' }
+            { name: 'DNA_MCP_AUTH', value: 'config' }
             { name: 'DNA_SOURCE_URL', secretRef: 'dna-source-url' }
           ]
         }
@@ -69,7 +69,7 @@ resource apiApp 'Microsoft.App/containerApps@2024-03-01' = {
       //
       // Per SERVICE, never per image: two doors over one image may answer
       // differently, and this file is the one that says which of them pays.
-      scale: { minReplicas: 0, maxReplicas: 2 }
+      scale: { minReplicas: 0, maxReplicas: 3 }
     }
   }
 }

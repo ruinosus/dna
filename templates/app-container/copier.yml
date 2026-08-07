@@ -30,6 +30,21 @@
 # below (Bicep has `module`, but the invocation is a line in the root file).
 # `dna solution new` says so on every run. They are covered from the other
 # side, by a wiring guard in the consuming repo.
+#
+# ⭐ The question names are the `App` Kind's FIELD names, deliberately
+# (`Spec/spec-app-e-o-servico`, `Story/s-template-dirigido-pelo-app`): an `App`
+# IS the service — the unit that has a Dockerfile, a port, wiring and a bill at
+# the end of the month. `service_name`, `python_module`, `port` and `can_sleep`
+# are spelled here exactly as the descriptor spells them, so a declared App and
+# a rendered tree are two views of one fact rather than two vocabularies that
+# have to be translated by whoever remembers both.
+#
+# ⚠️ `container_port` was renamed to `port` on 07/08/2026 for that alignment.
+# An already-generated tree updates through the loss report, not through
+# magic: `dna solution update` will name `container_port` as an answer that
+# changed unasked, and the new `port` takes the template default until somebody
+# passes `--data port=<the old value>`. There is no automatic carry-over, and a
+# template that pretended otherwise would be the quiet kind of wrong.
 
 _answers_file: ".copier-answers.{{ service_name }}.yml"
 _templates_suffix: ".jinja"
@@ -68,6 +83,29 @@ image_name:
   type: str
   help: "the IMAGE this service runs — N services can share one image"
   default: "{{ service_name }}"
+
+# ⭐ 1 code directory : N services. Measured in dna-cloud on 07/08/2026 — NINE
+# deployable services over FOUR `apps/` directories:
+#
+#     apps/web/      → web                          (1)
+#     apps/mcp/      → mcp, mcp-entra, mcp-ws        (3 — one identity authority
+#                                                        per door, ONE image)
+#     apps/api/      → rest, rest-user              (2 — two auth lanes)
+#     apps/copilot/  → copilot, worker, a2a         (3)
+#
+# So EIGHT of the nine are "another deployment of an image that already
+# exists", and for those, generating `Dockerfile`/`pyproject`/`src`/`tests`
+# would OVERWRITE production code because somebody declared a new door. This
+# answer is the difference, and it is asked rather than derived: guessing it
+# from `service_name != image_name` would be a structural decision taken from a
+# naming coincidence, and `apps/api/` already breaks that coincidence (neither
+# `rest` nor `rest-user` is called `api`).
+owns_code:
+  type: bool
+  help: "does this service OWN the code, or is it another deployment of an existing image? (no = wiring only)"
+  default: true
+  validator: >-
+    {% if not owns_code and image_name == service_name %}owns_code=false means this service redeploys ANOTHER service's image, so image_name must name that one — it cannot be '{{ service_name }}' itself{% endif %}
 
 python_module:
   type: str
@@ -118,7 +156,11 @@ ingress:
   choices: ["internal", "external"]
   default: "internal"
 
-container_port:
+# ⭐ `port` and `can_sleep` are PER SERVICE, never per directory. Two doors over
+# one image legitimately disagree about both — `App.port` / `App.can_sleep` are
+# fields of the App, and the answers file is per service, so the wiring each one
+# renders carries its own answers even when the code is shared.
+port:
   type: int
   help: "the port the app listens on inside the container"
   default: 8080

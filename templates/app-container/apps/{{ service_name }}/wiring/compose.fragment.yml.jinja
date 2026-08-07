@@ -1,3 +1,4 @@
+{%- set code_owner = service_name if owns_code else image_name -%}
 # {{ service_name }}, for local development.
 #
 # Reachable by the template, and consumed WITHOUT anyone editing a shared file:
@@ -8,15 +9,25 @@
 #   # docker-compose.dev.yml
 #   include:
 #     - path: ./apps/{{ service_name }}/wiring/compose.fragment.yml
+#
+{%- if owns_code %}
+# The build context is this app's OWN directory — it owns the code.
+{%- else %}
+# ⭐ The build context is `apps/{{ image_name }}`, NOT this directory:
+# {{ service_name }} is another deployment of an image that already exists, so
+# nothing under `apps/{{ image_name }}/` was generated, and nothing there was
+# touched. What this service brings of its own is exactly what is below — its
+# name, its port and its knobs.
+{%- endif %}
 
 services:
   {{ service_name }}:
     build:
-      context: ./apps/{{ service_name }}
+      context: ./apps/{{ code_owner }}
       dockerfile: Dockerfile
     environment:
       {{ env_prefix }}_HOST: "0.0.0.0"
-      {{ env_prefix }}_PORT: "{{ container_port }}"
+      {{ env_prefix }}_PORT: "{{ port }}"
       {{ env_prefix }}_AUTH: "{{ 'config' if identity != 'none' else 'none' }}"
     ports:
-      - "{{ container_port }}:{{ container_port }}"
+      - "{{ port }}:{{ port }}"

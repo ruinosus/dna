@@ -106,7 +106,7 @@ dna solution record [OPTIONS] [DESTINATION]
 
 | Option | Description |
 | --- | --- |
-| `--app` | An App this solution delivers. Repeatable. REPLACES the recorded list when given, because a partial list read as complete is worse than none. |
+| `--app` | An App this solution delivers. Repeatable. REPLACES the recorded list when given — and must then name EVERY recorded service: `apps` is the only join the kernel can enforce, and an App IS a deployment. A list that leaves one out is refused with both sides named. Rarely needed; the recorded layers already fill it. |
 | `--description` | One line of what it delivers. |
 | `--help` | Show this message and exit. |
 | `--json` | Machine-readable report. |

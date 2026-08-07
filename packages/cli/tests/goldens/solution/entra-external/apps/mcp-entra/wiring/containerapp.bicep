@@ -61,9 +61,15 @@ resource mcpentraApp 'Microsoft.App/containerApps@2024-03-01' = {
           ]
         }
       ]
-      // can_sleep: False — the cost gate, AS A FIELD.
+      // ⭐ can_sleep: False — the cost gate, AS A FIELD of the App.
+      //
       // minReplicas 1 means this app never sleeps, and never-sleeping is a
-      // recurring monthly bill, not a one-off.
+      // RECURRING monthly bill, not a one-off: ~US$ 90/month, measured — the
+      // dna-cloud copilot with a fixed replica was US$ 94.43 of a US$ 230.29
+      // invoice, the single largest line on it.
+      //
+      // Per SERVICE, never per image: two doors over one image may answer
+      // differently, and this file is the one that says which of them pays.
       scale: { minReplicas: 1, maxReplicas: 5 }
     }
   }
