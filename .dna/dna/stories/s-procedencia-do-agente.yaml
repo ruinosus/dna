@@ -6,7 +6,7 @@ metadata:
 spec:
   title: Procedência de agente — o blueprint persiste e o copiloto diz quem o criou
   description: 'O codigo gerado guarda de onde veio (services[].answers, template.ref). O agente gerado nao: 0 CopilotBlueprint gravados, 0 arestas saindo de Copilot.'
-  status: in-progress
+  status: review
   feature: f-a-fabrica
   priority: highest
   acceptance_criteria:
@@ -22,7 +22,7 @@ spec:
   - 'CI: verdes'
   definition_of_done_source: cli-create
   created_at: '2026-08-07T21:48:49+00:00'
-  updated_at: '2026-08-07T22:23:31+00:00'
+  updated_at: '2026-08-07T22:33:13+00:00'
   timeline:
   - at: '2026-08-07T21:48:49+00:00'
     actor: claude-code
@@ -79,6 +79,27 @@ spec:
 
       UMA PONTA QUE A MEDIÇÃO ABRIU E ESTA STORY NÃO FECHA: no `modo: conversa`, `confirmar_gravacoes` e `chips_por_etapa` respondidos como `true` viram `false` — e viram `false` NO REGISTRO TAMBÉM, porque `normalizeBlueprint` os canoniza ANTES de `blueprintRecord` projetar. Não é a mesma classe do resto (a supressão é do normalizador, não da materialização), mas é a mesma pergunta: o registro guarda o que a pessoa respondeu ou o que o sistema aceitou? Vale uma ficha no board do dna-cloud.
     commit_ref: 4a32b7b5cdb1ef1f027ab13c193009e98c22ca6e
+  - at: '2026-08-07T22:33:09+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      PR https://github.com/ruinosus/dna/pull/357, e um achado do fechamento que vale registrar.
+
+      A primeira rodada da suíte deixou 5 vermelhos (1 em test_campos_opcionais_por_evidencia.py, 4 em test_solution_kind.py). Confirmados PRE-EXISTENTES com `git stash` sobre o main daquele instante — e o histórico confirma pelo outro lado: o workflow `python` em 4a32b7b5 (o commit em que este branch nasceu) está `failure`. O PR #354 entrou no main durante esta story; depois do rebase os cinco SUMIRAM sem que uma linha deste PR mudasse.
+
+      ⚠️ A lição é sobre o método, não sobre os testes: "vermelho pré-existente" foi a conclusão CERTA e teria sido fácil demais aceitar como estado permanente. O que a fechou foi ter ido conferir o histórico de CI do main em vez de só comparar com o commit-base local — o commit-base era vermelho, o main não era mais.
+
+      VERIFICAÇÃO FINAL, sobre o main rebaseado: sdk-py 5843 passed / 0 failed, cli 2033 passed / 0 failed (invocações separadas, PYTHONPATH fixado neste checkout). `regen-derived.sh` inteiro rodado DE NOVO depois do rebase — nada mudou, os derivados já estavam em sincronia.
+
+      E a porta foi passada à mão contra instâncias reais, não só em teste: `dna copilot provenance --scope concierge` sobre as 4 do examples/emitting-to-a-runtime devolve "0/4 com procedência declarada · 4 não-respondido(s) · 0 pendurado(s)" — que é exatamente o que a story pediu que fosse dito, e não "escrito à mão".
+    commit_ref: 9dba5930ee702be500c3c5c1df6f7409507bcfe3
+  - at: '2026-08-07T22:33:13+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
   produces:
   - kind: Plan
     name: plan-s-procedencia-do-agente
