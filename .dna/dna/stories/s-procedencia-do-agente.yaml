@@ -10,19 +10,43 @@ spec:
   feature: f-a-fabrica
   priority: highest
   acceptance_criteria:
-  - Dado um copiloto criado pelo copiloto-criador, quando eu o leio, entao ele declara o blueprint que o produziu, com as RESPOSTAS verbatim — sobrevivendo a campo apagado por condicao, como o services[].answers sobrevive
-  - Dado um copiloto criado, quando eu consulto o grafo, entao existe aresta declarada dele para a origem — hoje ha ZERO arestas saindo de Copilot
-  - Dado um copiloto escrito a mao, quando eu o leio, entao a ausencia de procedencia e REPORTADA como nao-respondida, jamais presumida
-  - Dado um copiloto que criou outro, quando eu consulto, entao da para responder a profundidade da cadeia
+  - text: Dado um copiloto criado pelo copiloto-criador, quando eu o leio, entao ele declara o blueprint que o produziu, com as RESPOSTAS verbatim — sobrevivendo a campo apagado por condicao, como o services[].answers sobrevive
+    done: true
+    done_at: '2026-08-07T22:43:55+00:00'
+    done_by: story-done-auto
+  - text: Dado um copiloto criado, quando eu consulto o grafo, entao existe aresta declarada dele para a origem — hoje ha ZERO arestas saindo de Copilot
+    done: true
+    done_at: '2026-08-07T22:43:55+00:00'
+    done_by: story-done-auto
+  - text: Dado um copiloto escrito a mao, quando eu o leio, entao a ausencia de procedencia e REPORTADA como nao-respondida, jamais presumida
+    done: true
+    done_at: '2026-08-07T22:43:55+00:00'
+    done_by: story-done-auto
+  - text: Dado um copiloto que criou outro, quando eu consulto, entao da para responder a profundidade da cadeia
+    done: true
+    done_at: '2026-08-07T22:43:55+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: o blueprint persistido e a relacao declarada — e a razao de nao persistir (i-088) revisitada e respondida no descritor'
-  - 'Tests: o round-trip provando que uma resposta apagada por condicao SOBREVIVE — o mesmo defeito que criou services[].answers'
-  - 'Docs: regen-derived.sh inteiro'
-  - 'CI: verdes'
+  - text: 'Code: o blueprint persistido e a relacao declarada — e a razao de nao persistir (i-088) revisitada e respondida no descritor'
+    done: true
+    done_at: '2026-08-07T22:43:55+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: o round-trip provando que uma resposta apagada por condicao SOBREVIVE — o mesmo defeito que criou services[].answers'
+    done: true
+    done_at: '2026-08-07T22:43:55+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: regen-derived.sh inteiro'
+    done: true
+    done_at: '2026-08-07T22:43:55+00:00'
+    done_by: story-done-auto
+  - text: 'CI: verdes'
+    done: true
+    done_at: '2026-08-07T22:43:55+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-07T21:48:49+00:00'
-  updated_at: '2026-08-07T22:33:13+00:00'
+  updated_at: '2026-08-07T22:43:54+00:00'
   timeline:
   - at: '2026-08-07T21:48:49+00:00'
     actor: claude-code
@@ -100,6 +124,51 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-08-07T22:43:54+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      CORREÇÃO DE UMA AFIRMAÇÃO DESTA SPEC (07/08/2026) — e ela é sobre COMO eu medi, não sobre o quê.
+
+      ERRADO na spec: "o CopilotBlueprint NÃO persiste (i-088)".
+
+      Ele PERSISTE. A i-137 do dna-cloud, resolvida às 14h06 de 07/08, fez de materializeCopilot uma
+      TERCEIRA escrita (Agent → Copilot → CopilotBlueprint). A spec foi escrita às 21h48 do MESMO dia,
+      contando linhas num Postgres onde ninguém criou copiloto no intervalo.
+
+      ⭐ A LIÇÃO, e ela vale mais que o conserto:
+        "zero instâncias" é um fato sobre o BANCO.
+        "não persiste" é uma afirmação sobre o CÓDIGO.
+      Eu medi o primeiro e escrevi o segundo. São perguntas diferentes, e um banco de dev quieto
+      responde as duas com o mesmo número.
+
+      O MESMO ERRO na segunda lacuna: "ZERO arestas saindo de Copilot" também era só o dna_edges vazio
+      — runs_in → App já estava DECLARADA desde a manhã. O que faltava era outra pergunta: runs_in
+      responde ONDE RODA; nada respondia DE ONDE VEIO.
+
+      === O QUE SOBROU DEPOIS DE MEDIR, e foi entregue (PR #357) ===
+
+      A pergunta central da story — "a derivação inversa reconstrói as RESPOSTAS ou só o resultado?" —
+      foi medida com o código REAL dos dois lados (materialize.ts + derive.ts verbatim):
+
+        respondido            derive devolveu   o registro guardou
+        voz_id: "marin"       ""                "marin"
+        voz_estilo: "..."     ""                "..."
+        voz_identidade: "..." ""                "..."
+        voz_limite: 600       null              600
+        limite_por_usuario:t  false             true
+
+      CINCO respostas perdidas, DUAS condições (presença-liga da voz; quotas.per_user apagado sem teto).
+      No controle (voz ligada, tetos declarados) o round-trip é EXATO — a perda é da CONDIÇÃO, nunca da
+      derivação. A i-088 estava certa para o caso dela e incompleta para este.
+
+      ⚠️ Mas a metade ANSWERS já estava entregue pela i-137. Então o agente NÃO construiu nada ali —
+      construiu só o que faltava: Copilot.created_by (relação reflexiva, by:name, resolved+enforced),
+      o comando `dna copilot provenance` com quatro estados que não colapsam (respondido / não-respondido
+      / dangling / ciclo), e a profundidade — que a aresta já bastava para responder via
+      `dna graph refs --direction out --depth N`.
+    commit_ref: 3afaf1b9d94f49306d9eb8646308ca7eb25a6456
   produces:
   - kind: Plan
     name: plan-s-procedencia-do-agente
