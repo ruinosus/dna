@@ -150,6 +150,10 @@ def write_app(tmp_path: Path, name: str, **spec) -> None:
     Written as the file the filesystem source reads, because the point is that
     `unanswered_cost_question` goes and LOOKS: a stubbed kernel would prove it
     calls something rather than that it reads the App.
+
+    No `copilots`, deliberately — this is the App of a GENERATED SERVICE, and
+    a generated service serves no copilot. It is the shape that could not be
+    written at all until `copilots` stopped being required.
     """
     apps = tmp_path / "store" / ".dna" / "board" / "apps"
     apps.mkdir(parents=True, exist_ok=True)
@@ -159,7 +163,7 @@ def write_app(tmp_path: Path, name: str, **spec) -> None:
                 "apiVersion": "github.com/ruinosus/dna/v1",
                 "kind": "App",
                 "metadata": {"name": name},
-                "spec": {"title": name, "copilots": ["c"], **spec},
+                "spec": {"title": name, **spec},
             }
         )
     )

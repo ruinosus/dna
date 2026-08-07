@@ -78,6 +78,26 @@
 # sendo um fato reportável ("este App não diz em que serviço roda"), nunca um
 # default presumido.
 #
+# ── ⚠️ `copilots` deixou de ser obrigatório, e alguém vai querer desfazer ─────
+#
+# Achado do agente do template (PR #353), medido: um serviço gerado por
+# `templates/app-container` NÃO TEM COPILOTO NENHUM — ele é um processo que
+# atende, e copiloto é outra coisa. Enquanto `copilots` fosse `required` com
+# `minItems: 1`, "App = serviço" simplesmente não fechava: o comando não
+# conseguia gravar o App do serviço que ele acabara de gerar.
+#
+# ⭐ A razão, escrita aqui porque não é óbvia e o instinto é "consertar" de
+# volta: **um App sem copiloto é um App válido.** Ou é um serviço que atende e
+# ainda não recebeu nenhum, ou é um que nunca vai receber — o `worker` do
+# dna-cloud escala por KEDA e não serve copiloto algum. A lista vazia é um
+# ESTADO, não uma lacuna.
+#
+# Exigir um copiloto era a marca do desenho ANTERIOR, em que o App era a
+# vitrine SOBRE copilotos e não existia sem eles. Agora ele é o contêiner, e o
+# contêiner existe antes do que vive dentro dele. É a mesma razão pela qual
+# `runs_in` nasceu opcional do lado do `Copilot`: nos dois casos o vínculo é
+# real e chega DEPOIS da coisa que o carrega.
+#
 # ⛔ O que NÃO entrou, e por quê: as RESPOSTAS do Copier (`answers`,
 # `answers_file`, `template.src/ref`). Elas continuam na `Solution`, que é o
 # registro que SOBREVIVE ao answers file — um fato medido na fatia 3 de
@@ -109,7 +129,13 @@ spec:
     plan entitlement (``requires_plan`` — enforced by the serving runtime,
     never by the kernel) and the console renders ``/app/<name>`` from this
     instance alone. ``copilots`` is a declared RELATION to ``Copilot`` — the
-    write validates existence and pickers come for free (i-040).
+    write validates existence and pickers come for free (i-040). It is
+    OPTIONAL and carries no ``minItems``: an App with no copilot is a VALID
+    App — a service that serves and has not been given one yet, or one that
+    never will (dna-cloud's ``worker`` scales on KEDA and serves no copilot at
+    all). Requiring one was the mark of the older design, where the App was a
+    shopfront OVER copilots; it is the container now, and a container exists
+    before what lives inside it.
     Since ``spec-app-e-o-servico`` (2026-08-07) an App is also THE SERVICE
     that runs it — one deployment, identified by ``metadata.name``. Two of the
     four new fields describe the CODE and are shared by sibling Apps
@@ -133,7 +159,7 @@ spec:
   schema:
     type: object
     additionalProperties: false
-    required: [title, copilots]
+    required: [title]
     properties:
       title:
         type: string
@@ -148,12 +174,19 @@ spec:
           navegação. Vazio = a inicial do title.
       copilots:
         type: array
-        minItems: 1
         items:
           type: string
-        description: Os copilotos que COMPÕEM este App, por nome de doc —
-          cada um traz seus fluxos (surfaces) para debaixo desta identidade.
-          A referência é validada na gravação (`spec.relations`).
+        description: >-
+          Os copilotos que este App serve, por nome de instância — cada um traz
+          seus fluxos (surfaces) para debaixo desta identidade. A referência é
+          validada na gravação (`spec.relations`). ⚠️ OPCIONAL, e sem
+          `minItems`: uma lista vazia é um estado LEGÍTIMO, não um erro. Um App
+          sem copiloto é um App válido — é um serviço que atende e ainda não
+          recebeu nenhum, ou que nunca vai receber (o `worker` do dna-cloud
+          escala por KEDA e não serve copiloto nenhum). Exigir pelo menos um
+          era a marca do desenho ANTERIOR, em que o App era vitrine SOBRE
+          copilotos; agora ele é o contêiner, e o contêiner existe antes do que
+          vive dentro dele.
       requires_plan:
         type: string
         enum: [free, pro]

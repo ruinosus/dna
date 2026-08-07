@@ -116,11 +116,42 @@ async def test_dois_apps_compartilham_um_service_name(kernel):
 
 def test_os_quatro_campos_do_servico_sao_opcionais():
     """2 instâncias de `App` vivas não responderam nenhuma das quatro
-    perguntas. `required` é a única coisa que decide se elas seguem válidas."""
+    perguntas. `required` é a única coisa que decide se elas seguem válidas.
+
+    E `copilots` saiu do `required` junto: um serviço gerado pelo template não
+    tem copiloto nenhum, então exigir um impedia gravar exatamente o App que
+    esta mudança existe para permitir. Só o `title` sobra."""
     app = _helix_descriptor("app")
-    assert app["spec"]["schema"]["required"] == ["title", "copilots"]
+    assert app["spec"]["schema"]["required"] == ["title"]
+    assert "minItems" not in app["spec"]["schema"]["properties"]["copilots"]
     for campo in ("service_name", "python_module", "port", "can_sleep"):
         assert campo in app["spec"]["schema"]["properties"]
+
+
+@pytest.mark.asyncio
+async def test_o_app_do_servico_gerado_grava_sem_copiloto_nenhum(kernel):
+    """O caso que o template produz, pela porta.
+
+    Um serviço recém-gerado é um processo que atende e não serve copiloto
+    algum — o `worker` do dna-cloud escala por KEDA e nunca vai servir. Com
+    `copilots` obrigatório este write era RECUSADO, e "App = serviço" não
+    fechava no único caminho que o cria."""
+    doc = {
+        "apiVersion": "github.com/ruinosus/dna/v1",
+        "kind": "App",
+        "metadata": {"name": "worker"},
+        "spec": {
+            "title": "worker",
+            "service_name": "copilot",
+            "python_module": "dna_copilot",
+            "port": 8080,
+            "can_sleep": True,
+        },
+    }
+    await kernel.write_instance("frota", "App", "worker", doc)
+    lido = (await kernel.get_instance("frota", "App", "worker"))["spec"]
+    assert "copilots" not in lido
+    assert lido["can_sleep"] is True
 
 
 def test_service_name_e_python_module_recusam_valor_fora_do_padrao():
