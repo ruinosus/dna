@@ -331,7 +331,7 @@ about is simply ignored by Copier, so keeping it costs nothing.
 |---|---|
 | `template.src` + `template.ref` — a **pointer** | any rendered file, any template body |
 | `answers` — free-form, the template's own vocabulary | a typed mirror of the template's questions |
-| `pode_dormir` — the cost commitment | `requires_plan` and anything else that would *look* enforced and not be |
+| the cost commitment — on the `App`, once it can hold it | `requires_plan` and anything else that would *look* enforced and not be |
 | `apps` — which `App`s the solution delivers | the conflicts, the git state, the working copy |
 
 `answers` requires no key and types none, for the reason §2 gives: a gated
@@ -341,10 +341,12 @@ particular `copier.yml` written twice — the second template would not fit.
 ### The cost question, as a field
 
 An app that cannot scale to zero costs a fixed replica — **~US$ 90 a month,
-forever**. `pode_dormir` is the one fact promoted out of `answers`, so that
-*"how many of our services never sleep?"* is answerable across the fleet without
-knowing that this template spelled it `can_sleep` and the next one spells it
-something else.
+forever**. The cost commitment is the one fact promoted out of `answers`, so
+that *"how many of our services never sleep?"* is answerable across the fleet
+without knowing that this template spelled it `can_sleep` and the next one
+spells it something else. It is read as `pode_dormir` on a layer and written to
+`App.can_sleep` once the descriptor can hold it — one fact, one house, as the
+next section explains.
 
 Nothing is presumed. When the answer is absent the field is left unwritten and
 said out loud, on **every** run:
@@ -357,33 +359,38 @@ said out loud, on **every** run:
 `--sleep-answer KEY` names the question when your template calls it something
 else; `--strict` turns the finding into exit 3.
 
-### ⭐ Where the layer lives — `App` **is** the service
+### ⭐ Two halves — the ledger stays, the cost moves house
 
-`Spec/spec-app-e-o-servico` (07/08/2026): an `App` is not a commercial label
-over a pile of copilots. It **is the service** — the unit with a Dockerfile, a
-port, wiring and a bill at the end of the month. So the layer moves onto the
-`App`, and `Solution.services[]` becomes a **view** derived from the `App`
-instances `apps[]` points at, instead of a stored field.
+Founder decision, 07/08/2026, with the numbers on screen. A recorded run writes
+**both halves**, and the line between them is *one fact, one house*:
 
-| the fact | where it lives |
-|---|---|
-| `service_name`, `python_module`, `port`, `can_sleep` | `App` — the service's identity, promoted out of `answers` |
-| `answers_file`, `template`, `answers` | `App` — the layer ledger, moved wholesale |
-| which apps a repo delivers | `Solution.apps[]` |
-| `Solution.services[]` | **derived**, never stored |
+| the fact | where it lives | why |
+|---|---|---|
+| `name`, `answers_file`, `template{src,ref}`, `answers` | `Solution.services[]` | the **provenance of the render** — which template, at which ref, answering what |
+| `service_name`, `python_module`, `port`, `can_sleep` | the `App` | the **identity of the deployment** — readable across the fleet without opening a repo |
+| the join | `services[].name` = the App's `metadata.name` | the key already existed (it is what azd calls a service); nobody had declared it |
 
-⚠️ The spec described `services[]` as *"uma lista de strings"*. It never was —
-it is the ledger above, and the ledger is the **only place a `when:`-erased
-answer survives** (§2). It moves; it does not get dropped. An `App` that took
-the four identity fields and left the ledger behind would delete the measured
-fix on the way to a tidier schema.
+`Solution.services[]` **stays a stored field**, and `required: [title,
+services]` stays with it. `dna solution` does not break.
 
-**While the descriptors have not moved** (`Story/s-kinds-a-conta-declarada`),
-the layer is still recorded in `Solution.services[]` — and every run says so:
+⭐ **Only the cost commitment changes house.** `pode_dormir` leaves
+`services[]` and becomes `App.can_sleep`, because *the invoice is per
+deployment and the App is the deployment*. It is written in one house or the
+other, never both — two houses for one fact is two answers to "does this
+sleep?" that can disagree, and the one that disagrees is found by the invoice.
+
+⚠️ **The ledger does not move, and that matters.** `answers` is the only place
+a `when:`-erased answer survives (§2). An earlier reading had the whole ledger
+moving onto the `App`; it was decided against, and nothing about that rescue
+changes.
+
+**While the `App` descriptor has not moved**
+(`Story/s-kinds-a-conta-declarada`), the cost stays in
+`services[].pode_dormir` — and every run says so:
 
 ```
-⚠ The layer was recorded in `Solution.services[]` — the shape
-  `App is the service` retires.
+⚠ The cost commitment stayed in `Solution.services[].pode_dormir` —
+  no `App` was written.
   The installed `App` descriptor cannot hold: service_name, python_module, …
 ```
 
@@ -392,6 +399,12 @@ declares `additionalProperties: false`, so writing an unknown field is a
 *refused* write, not a tolerated extra — measured. `dna solution` asks the live
 descriptor on every run, so the behaviour changes by itself the day the
 descriptor does, and nothing here needs re-running afterwards.
+
+⚠️ `Solution.apps[]` is **not** touched by a scaffolding run. It is the
+operator's list of the sellable Apps a solution delivers (`--app`, which
+replaces it wholesale); the service↔App join is `services[].name`. Deriving
+`apps` from it as well would be the same fact in two lists, disagreeing on the
+first run that only touched one.
 
 ---
 

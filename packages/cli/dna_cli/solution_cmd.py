@@ -218,9 +218,9 @@ class RunReport:
     #: moment somebody decides. Read from the answers file, so it is reported
     #: with or without `--solution`: the bill does not wait for a record.
     no_sleep: list[str] = field(default_factory=list)
-    #: The `App` fields the live descriptor cannot hold yet. Non-empty means
-    #: this run recorded the layer in `Solution.services[]` — the shape
-    #: `Spec/spec-app-e-o-servico` retires — and said so.
+    #: The `App` fields the live descriptor cannot hold yet. Non-empty means no
+    #: `App` was written and the cost commitment stayed in
+    #: `Solution.services[].pode_dormir` — reported, never silent.
     app_kind_missing_fields: list[str] = field(default_factory=list)
 
     #: The command line that would take every default this run left behind.
@@ -695,20 +695,24 @@ def _echo_report(report: RunReport) -> None:
     if report.app_kind_missing_fields:
         click.echo("")
         click.echo(
-            "⚠ The layer was recorded in `Solution.services[]` — the shape "
-            "`App is the service` retires."
+            "⚠ The cost commitment stayed in `Solution.services[].pode_dormir` — "
+            "no `App` was written."
         )
         click.echo(
             "  The installed `App` descriptor cannot hold: "
             + ", ".join(report.app_kind_missing_fields)
         )
         click.echo(
-            "  `App` declares `additionalProperties: false`, so writing them today is a\n"
-            "  REFUSED write, not a tolerated extra. This run therefore used the old\n"
-            "  shape, and says so rather than leaving you to find out from a schema\n"
-            "  error later. Story/s-kinds-a-conta-declarada is what moves the\n"
-            "  descriptors; nothing here needs re-running afterwards — the next\n"
-            "  `dna solution record` writes the App."
+            "  The invoice is per DEPLOYMENT and the App IS the deployment, so\n"
+            "  `can_sleep` belongs there — one fact, one house. `App` declares\n"
+            "  `additionalProperties: false`, so writing it today is a REFUSED write,\n"
+            "  not a tolerated extra; this run left the value where it was and says so,\n"
+            "  rather than leaving you to find out from a schema error later.\n"
+            "  ⚠️ The LEDGER is not part of this move: `answers_file`, `template` and\n"
+            "     `answers` stay in services[] by decision — that is the provenance of\n"
+            "     the render, and where a `when:`-erased answer survives.\n"
+            "  Story/s-kinds-a-conta-declarada moves the descriptor; nothing here needs\n"
+            "  re-running afterwards — the next `dna solution record` writes the App."
         )
 
     if report.restored_answers:
