@@ -89,8 +89,12 @@ await dna.setInsightState("i-42", "actioned");
 const ws = await dna.createWorkspace({ name: "Acme" });  // id minted server-side
 await dna.createInvite(ws.workspace_id, { email: "teammate@acme.com" });
 
-// `.raw` remains for direct, fully-typed access:
-await dna.raw.DELETE("/v1/memories/{name}", { params: { path: { name: "s-foo" } } });
+// `.raw` remains for direct, fully-typed access. A memory is RETIRED, never
+// deleted (`DELETE /v1/memories/{name}` answers 403 — see the REST guide):
+await dna.raw.POST("/v1/memories/{name}/forget", {
+  params: { path: { name: "s-foo" } },
+  body: { superseded_by: null },   // name the replacement when this is an edit
+});
 ```
 
 A non-2xx response throws `DnaApiError` (carrying `.status` and the API's
@@ -117,8 +121,9 @@ with DnaClient(
     ws = dna.create_workspace("Acme")            # id minted server-side
     dna.create_invite(ws["workspace_id"], "teammate@acme.com")
 
-    # request() remains for direct access:
-    dna.request("DELETE", "/v1/memories/s-foo", params={"tenant": "acme"})
+    # request() remains for direct access. A memory is RETIRED, never deleted
+    # (`DELETE /v1/memories/{name}` answers 403 — see the REST guide):
+    dna.request("POST", "/v1/memories/s-foo/forget", params={"tenant": "acme"})
 ```
 
 A non-2xx response raises `DnaApiError` (same `.status` + `.detail`).

@@ -132,6 +132,19 @@ flowchart LR
   That refusal is what makes the bi-temporal guarantee below true rather than
   merely intended: until i-130 a generic delete removed the row *and its
   version history*, leaving an `as_of` read nothing to reconstruct from.
+
+  Every door the refusal names is a door that exists: `dna memory forget`, the
+  `forget` MCP tool, `dna.memory.forget(...)`, and — since i-136 — the REST
+  `POST /v1/memories/{name}/forget`. That last one had to be built: the REST
+  face refused the delete while exposing no forget, so for one release the
+  refusal named a remedy an HTTP caller could not perform. A refusal is only
+  honest while the door it points at is open.
+- **`superseded_by`** is `forget`'s second argument and the difference between
+  *"this stopped being true"* and *"this was rewritten as that"*. It records
+  `spec.superseded_by_memory` on the tombstone, so an EDIT — write the new
+  memory, retire the old one naming it — leaves a trail from the retired
+  thought to the one that replaced it. Only the caller knows which of the two
+  happened, so nothing infers it.
 - **`consolidate`** is a deterministic decay pass: recompute retention,
   report — or with `--apply`, soft-forget — memories that have gone stale.
   `--dry-run` previews the whole pass with zero effect: one action per memory

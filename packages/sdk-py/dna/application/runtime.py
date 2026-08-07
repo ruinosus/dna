@@ -2125,9 +2125,9 @@ async def forget_impl(
     live: LiveDna, name: str, scope: str | None = None,
     kind: str = "Engram", tenant: str | None = None,
     *, memory_scope: str = "workspace", oid: str | None = None,
-    family: str | None = None,
+    family: str | None = None, superseded_by: str | None = None,
 ) -> dict[str, Any]:
-    """Forget ONE memory by its doc ``name`` (slug) — the DELETE surface the DNA
+    """Forget ONE memory by its doc ``name`` (slug) — the retire surface the DNA
     Cloud memory dashboard calls. NOT a hard delete: routes through the memory
     verb ``dna.memory.forget`` — a **bi-temporal DEMOTION** that stamps
     ``valid_to`` (a revivable tombstone, auditable, never destroyed; verbs.py
@@ -2136,6 +2136,22 @@ async def forget_impl(
     invalidates the recall index AND ``recall``/``list_memories`` both exclude
     ``valid_to`` memories, a forgotten memory disappears from both surfaces (no
     ghost).
+
+    ``superseded_by`` names the memory that REPLACES this one, recorded on the
+    tombstone as ``spec.superseded_by_memory`` (i-136). It is the difference
+    between *"this stopped being true"* and *"this was rewritten as that"*, and
+    only the caller knows which happened — an edit is the second, and a portal
+    that retires the old copy without saying so leaves a tombstone that cannot
+    explain itself. The verb has recorded it since the field existed; this
+    parameter is the missing way to ASK for it from a face. Absent → the
+    tombstone is a plain retirement, exactly as before.
+
+    ⚠️ It is a DECLARATION, not a resolution: nothing here verifies that
+    ``superseded_by`` names a memory that exists (the successor is normally
+    written microseconds earlier by the same caller, and a lookup would buy a
+    round trip to re-confirm what the caller just did). The same two-promises
+    reading as ``spec.relations``: the declaration is imposed, the target is
+    reported.
 
     Result mapping — THREE outcomes, not two. ``forgotten: bool`` answers only
     "did this call change anything", and it answered ``False`` for two completely
@@ -2152,20 +2168,32 @@ async def forget_impl(
         the collapsed boolean hid, and the reason the MCP ``forget`` tool went so
         long without a ``personal`` parameter at all.
 
-    ``forgotten`` is kept, unchanged, for existing callers."""
+    ``forgotten`` is kept, unchanged, for existing callers, and so is the KEY
+    SET of the result when no ``superseded_by`` is passed — ``superseded_by`` is
+    echoed only when it was asked for, so a caller asserting the old shape keeps
+    reading the old shape."""
     from dna.memory import forget
 
     sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
+    supersede = (superseded_by or "").strip() or None
     try:
-        out = await forget(live.kernel, sc, name, kind=kind, tenant=tenant)
+        out = await forget(
+            live.kernel, sc, name, kind=kind, tenant=tenant,
+            superseded_by=supersede,
+        )
     except KeyError:
+        # NOT_FOUND never echoes ``superseded_by``: nothing was stamped, so
+        # reporting the pointer would describe a tombstone that does not exist.
         return {"kind": kind, "name": name, "forgotten": False,
                 "outcome": "not_found"}
     already = bool(out["already_forgotten"])
-    return {
+    res = {
         "kind": kind, "name": name, "forgotten": not already,
         "outcome": "already_forgotten" if already else "forgotten",
     }
+    if supersede:
+        res["superseded_by"] = supersede
+    return res
 
 
 # ── cloud: the billing→enforcement bridge write (AccountPlan) ───────────────

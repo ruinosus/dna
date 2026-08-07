@@ -1159,8 +1159,70 @@ export interface paths {
          *
          *     PLAN-GATED (i-042) still, and BEFORE the refusal: a refusal is not a
          *     reason to stop metering a write attempt on the memory surface.
+         *
+         *     The way out **in this lane** is ``POST /v1/memories/{name}/forget``
+         *     (i-136), appended to the kernel's message by this route rather than
+         *     carried inside it: the kernel names the verb, the command and the tool,
+         *     and it must not learn what an HTTP path looks like. Until that route
+         *     existed the refusal named a remedy the caller could not reach from here,
+         *     which is a wall wearing a signpost.
          */
         delete: operations["delete_memory_v1_memories__name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/memories/{name}/forget": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Forget Memory
+         * @description Retire ONE memory — the REST face of the memory verb ``forget``, and
+         *     since i-136 the ONLY way a portal retires a memory in this lane.
+         *
+         *     A **bi-temporal demotion**, not a delete: it stamps ``valid_to``, the
+         *     memory drops out of ``recall`` and ``list_memories``, and the instance
+         *     plus its whole version history stay exactly where they were — auditable,
+         *     readable at an earlier ``?as_of=``, revivable. That is the same verb
+         *     ``dna memory forget`` and the MCP ``forget`` tool call; this is the third
+         *     face of one core (``dna.application.forget_impl``), never a fourth
+         *     implementation.
+         *
+         *     **Why this route had to exist.** i-130 made ``DELETE /v1/memories/{name}``
+         *     refuse — correctly, the row is immortal — and the refusal named ``forget``.
+         *     But ``forget`` had no REST door, so the refusal named a remedy this lane
+         *     could not perform, and the DELETE it replaced was the ONLY retire
+         *     affordance the portal had. Two flows broke, and the worse one broke
+         *     quietly: the portal's memory EDIT is a replace (write the new, retire the
+         *     old), so a refused second half left BOTH copies live and recall answering
+         *     with both. A door that refuses is only honest if the door it names is open.
+         *
+         *     **Idempotent, which is what makes a retry safe.** Forgetting an already
+         *     forgotten memory keeps the original ``valid_to`` and answers 200 with
+         *     ``outcome: "already_forgotten"`` — so a client whose first attempt died
+         *     in flight can simply repeat it. Repeating it WITH ``superseded_by``
+         *     records the pointer on the existing tombstone, which is exactly what a
+         *     half-finished edit needs to finish.
+         *
+         *     **404 only for a name this layer does not hold** (``outcome: not_found``
+         *     from the core): most often the PARTITION rather than the name — a
+         *     personal Engram is invisible from the workspace lane. Reported as a 404
+         *     instead of a 200 that says nothing happened, because "I could not find
+         *     what you named" is a different fact from "I retired it".
+         *
+         *     PLAN-GATED (i-042), ``memory`` family, ``memory_op='write'`` — the same
+         *     axes the MCP ``forget`` tool crosses, through the same shared gate. A
+         *     demotion is a write.
+         */
+        post: operations["forget_memory_v1_memories__name__forget_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -2034,6 +2096,14 @@ export interface components {
             /** Slug */
             slug?: string | null;
         };
+        /** Body_forget_memory_v1_memories__name__forget_post */
+        Body_forget_memory_v1_memories__name__forget_post: {
+            /**
+             * Superseded By
+             * @description The memory that REPLACES this one, recorded on the tombstone as `spec.superseded_by_memory`. Send it when the retirement is part of an EDIT (write the new memory, then forget the old one naming it) — that is what turns two writes into one declared intent, and it is what a later reader follows to find where the thought went. Omit it for a plain retirement: the memory stopped being true and nothing took its place. NOT resolved — the name is recorded as declared, never checked against the store.
+             */
+            superseded_by?: string | null;
+        };
         /** Body_provision_tenant_owner_v1_tenants__tid__provision_owner_post */
         Body_provision_tenant_owner_v1_tenants__tid__provision_owner_post: {
             /** User */
@@ -2313,7 +2383,14 @@ export interface components {
             /** Version */
             version?: string | null;
         };
-        /** DeleteMemoryResponse */
+        /**
+         * DeleteMemoryResponse
+         * @description ⚠️ Since i-130 this model is never SERIALIZED — the route it belongs to
+         *     refuses (403) before it can return one. It stays declared because the route
+         *     stays declared: removing it would drop the response schema from the OpenAPI
+         *     contract, and a route documented as returning nothing reads as a route that
+         *     was never meant to answer, which is the opposite of what happened.
+         */
         DeleteMemoryResponse: {
             /** Deleted */
             deleted: string;
@@ -2321,6 +2398,36 @@ export interface components {
             scope: string;
             /** Tenant */
             tenant?: string | null;
+        };
+        /**
+         * ForgetMemoryResponse
+         * @description The outcome of ``POST /v1/memories/{name}/forget`` — the REST face of the
+         *     memory verb ``forget`` (i-136).
+         *
+         *     Every field is declared, on purpose and with a test behind it: a
+         *     ``response_model`` DISCARDS what it does not declare, in silence, so an
+         *     undeclared ``superseded_by`` would leave the route echoing a pointer the
+         *     caller never receives.
+         *
+         *     ``outcome`` is the three-way ending ``forget_impl`` reports, and the reason
+         *     this is not a bare boolean: ``forgotten`` (it was live, now it is not) and
+         *     ``already_forgotten`` (idempotent — a retry of a half-finished edit lands
+         *     here, and it is a SUCCESS, not an error) are different facts. The third,
+         *     ``not_found``, never reaches this model — the route maps it to a 404,
+         *     because "there is no such memory in this layer" is not an outcome of
+         *     forgetting, it is a failure to find the thing to forget.
+         */
+        ForgetMemoryResponse: {
+            /** Forgotten */
+            forgotten: boolean;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Outcome */
+            outcome: string;
+            /** Superseded By */
+            superseded_by?: string | null;
         };
         /** GenomeIdentity */
         GenomeIdentity: {
@@ -5234,6 +5341,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeleteMemoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    forget_memory_v1_memories__name__forget_post: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["Body_forget_memory_v1_memories__name__forget_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForgetMemoryResponse"];
                 };
             };
             /** @description Validation Error */

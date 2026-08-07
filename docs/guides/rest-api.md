@@ -41,7 +41,17 @@ overlay only — never another tenant's data):
 - `GET /v1/tools` — the Tool surfaces in a scope
 - `GET /v1/memories` — the tenant's stored memories (`Engram`)
 - `GET /v1/memories/search?q=…` — recall (semantic when indexed, else lexical)
-- `DELETE /v1/memories/{name}` — the tenant deletes one of its own memories
+- `POST /v1/memories/{name}/forget` — the tenant **retires** one of its own
+  memories: a bi-temporal demotion that stamps `valid_to`, so it leaves recall
+  and the list while the instance and its version history stay. The optional
+  body `{"superseded_by": "<name>"}` records, on the tombstone, the memory that
+  REPLACED this one — what an edit sends, and what a later reader follows.
+  Idempotent: re-forgetting keeps the original `valid_to` and answers
+  `outcome: "already_forgotten"`, so a half-finished edit is safe to retry.
+- `DELETE /v1/memories/{name}` — **refused, 403** (i-130). An `Engram` declares
+  `record.invalidate-only`; a hard delete would take the version history with
+  it and break the auditable / point-in-time reconstructable / revivable
+  guarantee the Kind's own descriptor states. The refusal names the route above.
 
 The definitions + search endpoints call the **same** `*_impl` functions the MCP
 server uses — one core, two faces, zero duplicated logic.
