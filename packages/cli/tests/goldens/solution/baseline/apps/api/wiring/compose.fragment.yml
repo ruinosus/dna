@@ -1,0 +1,22 @@
+# api, for local development.
+#
+# Reachable by the template, and consumed WITHOUT anyone editing a shared file:
+# the root compose file carries one `include:` entry per app, and Compose
+# resolves fragments by path. This is the wiring place that costs nothing to
+# add — which is exactly why it is the one to imitate wherever a format allows.
+#
+#   # docker-compose.dev.yml
+#   include:
+#     - path: ./apps/api/wiring/compose.fragment.yml
+
+services:
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    environment:
+      DNA_API_HOST: "0.0.0.0"
+      DNA_API_PORT: "8080"
+      DNA_API_AUTH: "config"
+    ports:
+      - "8080:8080"

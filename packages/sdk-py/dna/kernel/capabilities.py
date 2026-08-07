@@ -258,6 +258,20 @@ class SourceCapabilities:
       (entry points exist; FS is "native but in-memory"). When False
       the kernel serves queries via its load_all fallback
       (``dna.kernel.query.fallback``).
+
+      ⚠️ **It implies ``kernel_attachable`` for any adapter whose query needs
+      READERS**, and i-140 is what happens when it does not. The kernel's
+      fallback is handed the kernel's live readers explicitly; declaring
+      pushdown takes the query away from that fallback, so an adapter that
+      cannot BE handed those readers answers a narrower question than the one
+      it took over — and answers it with an EMPTY LIST, which is
+      indistinguishable from "there is none". The read-only
+      ``FilesystemSource`` declared ``query_pushdown=True`` and
+      ``kernel_attachable=False`` at the same time, and every BUNDLE-stored
+      instance (Agent, Skill, Soul …) was invisible to ``query`` while
+      ``load_all`` returned it. Take the query over, or accept the fallback;
+      do not take it over blind. Guarded per storage form by
+      ``tests/test_filesystem_reader_view.py``.
     - ``tenant_layer_writes`` — writes accept BOTH first-class
       ``tenant`` and ``layer`` kwargs (the modern Phase-2 contract).
     - ``write_kwargs`` / ``delete_kwargs`` — exactly which optional

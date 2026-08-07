@@ -1,6 +1,6 @@
 # `dna new`
 
-Scaffold a valid Kind skeleton into a scope (agent | soul | guardrail | tool).
+Scaffold a valid skeleton into a scope — an INSTANCE (agent | soul | guardrail | tool), or a KIND of your own (kind).
 
 !!! info "Generated from the command definitions"
 
@@ -78,6 +78,186 @@ dna new guardrail [OPTIONS] NAME
 | `--json` | Machine-readable output. |
 | `--scope` | Scope to write into (default: env / sole scope). |
 | `--severity` | warn lets the turn continue; error fails it. _(default: `warn`)_ |
+
+## `dna new kind`
+
+Author a KIND of your own — a typed instance shape, INERT until approved.
+
+
+The one command in this group that creates a Kind rather than an instance of
+one. `dna new kind Contrato` is enough: the name and, ideally, one line saying
+what it is. Everything else — the apiVersion namespace, the alias, the storage
+container, the plane — is derived or defaulted, and nothing that can be derived
+is asked for.
+
+
+What lands is a real, auditable `KindDefinition` instance with NO approval
+marker, so it validates nothing and routes nothing until a human approves it.
+Re-running for the same Kind EDITS the declaration and drops the approval,
+which is why --force is required for the second run.
+
+
+Examples:
+  dna new kind Contrato -d "Um contrato assinado com um cliente"
+  dna new kind Contrato -f 'titulo:string!=O titulo' -f assinado_em:string
+  dna new kind Apolice --relation 'contratos=Contrato:many'
+  dna new kind Contrato --dry-run
+
+
+--field is `NAME[:TYPE][!][=DESCRIPTION]`; the trailing `!` marks it required
+and the type defaults to string. --relation is `FIELD=KIND:CARDINALITY`, or the
+full form `FIELD={to: Contrato, cardinality: many, inverse_of: apolice}` whose
+keys are the declaration's own. A relation whose field you did not declare gets
+one.
+
+
+``traits`` (optional) declares WHAT YOUR KIND IS — the roles it takes part
+in. It is the other axis from ``relations``: relations say what your Kind
+POINTS AT, traits say what it *is*. A Kind that declares neither is findable
+by name and answers no question about itself.
+
+
+A trait is not a label. Declaring one opts your Kind into everything that
+reads that role — a digest, a gallery, a board lane, a refusal — and a trait
+that CARRIES brings its fields and its relations with it, so you declare
+them once here instead of restating them in ``schema``. The vocabulary is
+OPEN; this is what is registered on THIS server right now, and ``[carries
+...]`` is what comes with the name:
+
+
+    execution.declared
+        Declares work a RUNNER executes, and is only ever the script — never
+        the outcome. A TestGuide's steps, an EvalSuite's cases, an
+        Automation's trigger and runner: the instance says what should
+        happen, a host executes it, and what happened is written somewhere
+        else (see `execution.run`). The pair is the structural difference
+        that earns both names — a Kind on this side may be edited freely
+        because it makes no claim about the past.
+    execution.run
+        The record of ONE execution of an `execution.declared` instance:
+        when it ran, what it ran against, and what came out. It is a claim
+        about the past, which is what separates it from the declaration it
+        executed — a run that turns out to be wrong is not corrected, it is
+        superseded by another run. Every member points back at its
+        declaration, by a differently-named field, which is why this trait
+        carries no relation.
+    governance.policy
+        Declarative rules an ENFORCEMENT POINT reads at runtime — not prose
+        for a human, and not configuration in the ordinary sense. Editing
+        one changes what the system refuses, immediately, with no deploy.
+        That is the behavioural commonality: a policy instance is read by a
+        guard, a scanner, an overlay resolver or a decay function, never by
+        somebody wanting to know what happened. It is also why
+        `record.append-only` is wrong for them and right for a run: a policy
+        is MEANT to be rewritten.
+    governance.spec-traced
+        A write of this Kind must trace to a Spec when the scope's
+        constitution demands it (the spec-kit governance guard).
+    memory.recallable
+        Participates in `recall` / `remember` / the memory index — the set
+        the memory verbs search. DISTINCT from `embed:`, which declares
+        WHICH FIELDS carry an embeddable payload: an ADR should be
+        searchable without being decay-ranked as a memory.
+    record.append-only
+        An audit / evidence record: it may be WRITTEN and READ but never
+        deleted through a generic tool. The record is what proves what
+        happened, so deleting it is the first move of anyone with something
+        to hide — and unlike a bad write, it is not recoverable by writing a
+        better one.
+    record.invalidate-only
+        A bi-temporal record, RETIRED by stamping the end of its world-time
+        validity (`valid_to`) and never by removing the row — so it stays
+        auditable, point-in-time reconstructable and revivable. Two things
+        separate it from `record.append-only`, and both matter: this one may
+        be REWRITTEN freely (a recalled Engram is reconsolidated on every
+        surfacing), and its refusal binds EVERY door rather than only the
+        generic tool, because it is a promise about the row and not a rule
+        about a tool. Enforced at the kernel delete chokepoint
+        (`dna.kernel.write.hard_delete`), which names the Kind's own
+        retirement verb in the refusal.
+    sdlc.dated
+        Carries `created_at` AND `updated_at`: a read surface dates, sorts
+        or windows it by both.
+    sdlc.dated-create-only
+        Carries `created_at` but has no `updated_at` arc — an observation is
+        dated when it is made and does not move.
+    sdlc.decision
+        A recorded decision (ADR). Walked by the digest and the gallery, and
+        it may produce outputs, but it is not assigned and does not
+        progress.
+    sdlc.exit-criteria-required
+        A create of this Kind is REFUSED without acceptance criteria and a
+        definition of done — a work item that does not declare what `done`
+        means cannot be shown to be done.
+    sdlc.filed
+        Enters the board by being FILED rather than planned — the digest's
+        `found` bucket (Issue, Kaizen). Deliberately implies NOTHING: Kaizen
+        is filed and is not a work item, so the two do not travel together.
+    sdlc.journey-derived
+        Its journey phases are derived locally from its own spec + timeline
+        (no WorkflowEvent ledger read).
+    sdlc.observation
+        A filed observation (Kaizen) — noticed, not planned. Reaches the
+        digest's `found` bucket; carries no `updated_at` arc.
+    sdlc.rollup  [carries implies sdlc.work-item]
+        A work item that AGGREGATES other work items (Feature / Epic /
+        Initiative). Movement at this level is roadmap movement, which is
+        what the digest's `parents_progressed` bucket reports. IMPLIES
+        `sdlc.work-item` — a thing that rolls work items up is one.
+    sdlc.test-gated
+        A CLOSE of this Kind is REFUSED without a passing product-lane
+        TestRun verifying it. The escape hatches require a reason and land
+        on the timeline.
+    sdlc.work-item  [carries implies sdlc.dated]
+        A board item with a status arc, a timeline and an owner — the thing
+        a person is assigned and closes. Participates in the digest, the
+        gallery, status transitions and comments. CARRIES the work-item
+        activity fields (`timeline`, `produces`) and the `produces`
+        relation, so a work item does not restate either; IMPLIES
+        `sdlc.dated`.
+    tenancy.access-grant
+        A row that GRANTS access: a subject, a scope it reaches, and the
+        level it reaches it at. Read by an authorization decision — which is
+        the whole role, and the reason the set has to be enumerable rather
+        than inferable. Revoking is editing (or expiring) a row, so these
+        are deliberately NOT append-only. Distinct from the Kind that
+        DEFINES the ladder rather than granting a rung of it: a role
+        definition is a catalogue entry, not a grant, and conflating the two
+        would make "who can reach this?" return the vocabulary instead of
+        the answer.
+
+
+Declaring nothing is a legitimate answer and is never refused: a Kind that
+takes part in none of these roles is a statement, not a gap. What is not an
+answer is reaching for the nearest name — a role declared and not exercised
+is worse than one absent, because it also LOOKS like a declaration.
+
+```text
+dna new kind [OPTIONS] KIND_NAME
+```
+
+**Arguments**
+
+| Argument | Required |
+| --- | --- |
+| `KIND_NAME` | yes |
+
+**Options**
+
+| Option | Description |
+| --- | --- |
+| `--description`, `-d` | What this Kind IS, in one line — becomes the schema's own `description`. |
+| `--dry-run` | Print the plan and write nothing. |
+| `--field`, `-f` | `NAME[:TYPE][!][=DESCRIPTION]`. Repeatable; order is kept. |
+| `--force` | Re-author an existing Kind. The declaration is REBUILT, not merged: a field you do not pass again is gone. The edit also drops the approval. |
+| `--help` | Show this message and exit. |
+| `--json` | Machine-readable output. |
+| `--plane` | Omit unless you know which you mean — the difference is a cost, not a taste. Undeclared is NOT the same as declaring the default, and is stored as such. |
+| `--presentation` | Comma-separated field order for how instances READ (the short form: 'name,titulo,situacao'). |
+| `--relation` | FIELD=KIND:CARDINALITY, or FIELD={to: …, cardinality: …}. Repeatable. |
+| `--scope` | Scope to author into (default: env / sole scope). |
+| `--trait` | A role this Kind takes part in. Repeatable, OPTIONAL, and never required — the vocabulary is in this help, and in `dna kind traits`. |
+| `--workspace`, `-w` | The workspace authoring this Kind (default: $DNA_TENANT). It owns the apiVersion namespace the Kind lands under. |
 
 ## `dna new soul`
 

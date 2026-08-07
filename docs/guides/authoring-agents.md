@@ -32,6 +32,15 @@ dna new guardrail no-pii --severity error --guard-scope output
   `soul.json` (see below).
 - `dna new guardrail <name>` creates `guardrails/<name>/GUARDRAIL.md` with a
   starter rule plus a severity and scope.
+- `dna new tool <name>` creates a `Tool` descriptor at `tools/<name>.yaml` —
+  see [Tools as data](tools-as-data.md).
+
+⚠️ **Those four create an INSTANCE of a Kind; `dna new kind` creates a KIND.**
+`dna new agent concierge` makes an instance of the built-in `Agent` Kind — it
+makes no Kind at all. `dna new kind Contrato` makes a `KindDefinition` of your
+own, inert until a human approves it. The walkthrough is in [How to add a
+Kind](add-a-kind.md#before-you-read-any-of-it-dna-new-kind); everything else on
+this page is about instances.
 
 `dna new` is idempotent: it refuses to overwrite an existing instance unless you
 pass `--force`. Add `--json` for machine-readable output, and `--scope` to

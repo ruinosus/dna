@@ -1,0 +1,20 @@
+# ⛔ THE ONE THE TEMPLATE CANNOT PLACE.
+#
+# This is the `services:` entry `mcp-entra` needs in the ROOT
+# `azure.yaml`. It lives here because a template renders FILES, and the azd
+# JSON Schema fixes the root document's top-level keys — there is no `include`,
+# no glob, no fragment directory. So this file is a fragment nobody consumes
+# automatically: someone has to paste it into `azure.yaml` under `services:`.
+#
+# That is the exact shape of the defect this template exists to prevent — six
+# places wired and the seventh forgotten — and it is why the consuming repo
+# needs a wiring guard that fails when a service exists in `apps/` and not in
+# `azure.yaml`. `dna solution new` prints this in its closing note.
+
+mcp-entra:
+  project: ./apps/mcp-entra
+  language: docker
+  host: containerapp
+  docker:
+    path: ./Dockerfile
+    context: .

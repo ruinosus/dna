@@ -30,8 +30,9 @@ These pages are **generated from the Click command definitions** by
 | [`dna invalidation`](invalidation.md) | O custo da invalidação de cache (i-123), lido do log. |
 | [`dna mcp`](mcp.md) | Expose the live DNA (definitions + SDLC + memory) over MCP. |
 | [`dna memory`](memory.md) | Declarative memory over existing Kinds (remember/recall/forget/consolidate). |
-| [`dna new`](new.md) | Scaffold a valid Kind skeleton into a scope (agent \| soul \| guardrail \| tool). |
+| [`dna new`](new.md) | Scaffold a valid skeleton into a scope — an INSTANCE (agent \| soul \| guardrail \| tool), or a KIND of your own (kind). |
 | [`dna recall`](recall.md) | Hybrid semantic search (dense + lexical + RRF) over the scope's records. |
 | [`dna rename`](rename.md) | Rename an instance and repoint the AUTHORED references to it. |
 | [`dna search`](search.md) | Alias of ``dna recall`` (neutral naming). |
+| [`dna solution`](solution.md) | Scaffold and update a repo from Copier templates. |
 | [`dna specify`](specify.md) | Bidirectional GitHub Spec Kit ↔ DNA bridge (import / export). |

@@ -1,0 +1,74 @@
+// {{ service_name }} — the container app resource, as a Bicep MODULE.
+//
+// ⛔ This file is reachable by the template. Its INVOCATION is not: the root
+// bicep has to carry a line like
+//
+//   module {{ service_name | replace('-', '') }}App '../../apps/{{ service_name }}/wiring/containerapp.bicep' = { ... }
+//
+// and Bicep has no glob or include for that. `dna solution new` prints it; a
+// wiring guard in the consuming repo is what makes forgetting it fail loudly.
+
+param location string
+param tags object
+param managedEnvironmentId string
+param appIdentityId string
+param registryName string
+param placeholderImage string
+param containerCpu string
+param containerMemory string
+param resourceToken string
+param sourceUrl string
+
+var appName = 'ca-{{ service_name }}-${resourceToken}'
+
+resource {{ service_name | replace('-', '') }}App 'Microsoft.App/containerApps@2024-03-01' = {
+  name: appName
+  location: location
+  tags: union(tags, { 'azd-service-name': '{{ service_name }}' })
+  identity: {
+    type: 'UserAssigned'
+    userAssignedIdentities: { '${appIdentityId}': {} }
+  }
+  properties: {
+    managedEnvironmentId: managedEnvironmentId
+    configuration: {
+      activeRevisionsMode: 'Single'
+      ingress: {
+        external: {{ 'true' if ingress == 'external' else 'false' }} // {{ ingress | upper }}
+        targetPort: {{ container_port }}
+        transport: 'auto'
+        allowInsecure: false
+      }
+      registries: [
+        { server: '${registryName}.azurecr.io', identity: appIdentityId }
+      ]
+      secrets: [
+        { name: 'dna-source-url', value: sourceUrl }
+      ]
+    }
+    template: {
+      containers: [
+        {
+          name: '{{ service_name }}'
+          image: placeholderImage // azd overwrites this with the image it builds
+          resources: { cpu: json(containerCpu), memory: containerMemory }
+          env: [
+            { name: '{{ env_prefix }}_HOST', value: '0.0.0.0' }
+            { name: '{{ env_prefix }}_PORT', value: '{{ container_port }}' }
+            { name: '{{ env_prefix }}_AUTH', value: '{{ "config" if identity != "none" else "none" }}' }
+{%- if graph_obo | default(false) %}
+            { name: '{{ env_prefix }}_GRAPH_OBO', value: 'true' }
+{%- endif %}
+            { name: 'DNA_SOURCE_URL', secretRef: 'dna-source-url' }
+          ]
+        }
+      ]
+      // can_sleep: {{ can_sleep }} — the cost gate, AS A FIELD.
+      // minReplicas 1 means this app never sleeps, and never-sleeping is a
+      // recurring monthly bill, not a one-off.
+      scale: { minReplicas: {{ 0 if can_sleep else 1 }}, maxReplicas: {{ max_replicas }} }
+    }
+  }
+}
+
+output name string = appName
