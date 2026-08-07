@@ -6,26 +6,59 @@ metadata:
 spec:
   title: O relatório do que falta — e o fim do verde por vacuidade
   description: unanswered_cost_question troca services[] por apps[] (senao um Solution sem services responde 'tudo respondido'), e ganha as outras duas perguntas na mesma saida.
-  status: todo
+  status: done
   feature: f-conta-do-copiloto
   priority: highest
   acceptance_criteria:
-  - Dado um Solution SEM services, quando o relatorio roda, entao ele ainda enxerga os deployments por apps[] e NAO devolve lista vazia
-  - Dado apps[] vazio, quando o relatorio roda, entao ele diz NAO HA O QUE OLHAR — alto, jamais 'tudo respondido'
-  - Dado um campo com 'nao se aplica' declarado, quando o relatorio roda, entao ele CALA sobre esse campo; dado um campo simplesmente ausente, entao ele FALA, toda execucao
-  - Dado can_sleep false, quando o relatorio roda, entao ele NAO e reportado como nao-respondido — e resposta, e cara
+  - text: Dado um Solution SEM services, quando o relatorio roda, entao ele ainda enxerga os deployments por apps[] e NAO devolve lista vazia
+    done: true
+    done_at: '2026-08-07T22:05:05+00:00'
+    done_by: story-done-auto
+  - text: Dado apps[] vazio, quando o relatorio roda, entao ele diz NAO HA O QUE OLHAR — alto, jamais 'tudo respondido'
+    done: true
+    done_at: '2026-08-07T22:05:05+00:00'
+    done_by: story-done-auto
+  - text: Dado um campo com 'nao se aplica' declarado, quando o relatorio roda, entao ele CALA sobre esse campo; dado um campo simplesmente ausente, entao ele FALA, toda execucao
+    done: true
+    done_at: '2026-08-07T22:05:05+00:00'
+    done_by: story-done-auto
+  - text: Dado can_sleep false, quando o relatorio roda, entao ele NAO e reportado como nao-respondido — e resposta, e cara
+    done: true
+    done_at: '2026-08-07T22:05:05+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: a fonte trocada e as tres perguntas numa saida so'
-  - 'Tests: o mutante — fazer a funcao devolver [] deixa teste VERMELHO; sem isso a guarda passa por vacuidade'
-  - 'Docs: a regra escrita onde o proximo leitor a encontre'
-  - 'CI: verdes'
+  - text: 'Code: a fonte trocada e as tres perguntas numa saida so'
+    done: true
+    done_at: '2026-08-07T22:05:05+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: o mutante — fazer a funcao devolver [] deixa teste VERMELHO; sem isso a guarda passa por vacuidade'
+    done: true
+    done_at: '2026-08-07T22:05:05+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: a regra escrita onde o proximo leitor a encontre'
+    done: true
+    done_at: '2026-08-07T22:05:05+00:00'
+    done_by: story-done-auto
+  - text: 'CI: verdes'
+    done: true
+    done_at: '2026-08-07T22:05:05+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-07T20:14:41+00:00'
-  updated_at: '2026-08-07T20:14:41+00:00'
+  updated_at: '2026-08-07T22:05:15+00:00'
   timeline:
   - at: '2026-08-07T20:14:41+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-08-07T22:05:15+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: done
+    commit_ref: 1cd4bef5d96a4f6cbd923db2b92eccdda2b0d82c
+    summary: 'Entregue e merjado (PR #354). A fonte trocou de services[] para apps[]: um Solution sem services deixa de responder ''tudo respondido''. apps[] vazio é NÃO HÁ O QUE OLHAR, alto, e --strict sai 3. CINCO mutantes plantados, todos vermelhos (9/2/9/2/4) — e o primeiro é a resposta honesta à pergunta do founder: trocar a fonte não garante nada, aquele teste garante. Dois bugs reais achados no caminho: spec[''services''] era subscrito direto em dois lugares (KeyError esperando o primeiro repo sem template) e o --strict lia só a lista de custo, saindo 0 exatamente no caso em que ninguém olhou. ⚠️ E ele achou a main VERMELHA desde o #355: duas asserções que congelaram a RESPOSTA em vez da pergunta (uma minha, enumerando os campos do App justamente no arquivo que avisa contra enumerar). As duas consertadas aqui.'
+  closed_at: '2026-08-07T22:05:05+00:00'
