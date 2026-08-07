@@ -104,7 +104,7 @@ version = "1.0.0b260721"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "agent-framework-core" },
-    { name = "azure-search-instances" },
+    { name = "azure-search-documents" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e1/76/7baca3808d0b7afb4cb8aa697a57c9300f5caa1b33b6eb7fc222adc25969/agent_framework_azure_ai_search-1.0.0b260721.tar.gz", hash = "sha256:867d8ab961112034251e4efb4e7133e5b26336b225a051ff9b70058ae33a8b9e", size = 13639, upload-time = "2026-07-21T19:50:22.95Z" }
 wheels = [
@@ -981,7 +981,7 @@ wheels = [
 ]
 
 [[package]]
-name = "azure-search-instances"
+name = "azure-search-documents"
 version = "12.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
@@ -1454,7 +1454,7 @@ wheels = [
 
 [[package]]
 name = "dna-sdk"
-version = "0.73.0"
+version = "0.74.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
