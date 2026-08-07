@@ -433,6 +433,21 @@ _INTERCHANGE_SAMPLE: dict[str, Any] = {
         {"subject": "Feature/interchange", "predicate": "state",
          "object": "proven", "polarity": "asserts"},
     ],
+    # i-139 — a memory that was retired and came back, twice. TWO entries on
+    # purpose: with one, an implementation that keeps only the LAST would still
+    # round-trip green, and "the list survived" would read as fidelity while the
+    # history was quietly being truncated. The first entry omits
+    # `superseded_by` and the second carries it, so the optional key is proven
+    # in both states rather than in whichever one the sample happened to pick.
+    "revivals": [
+        {"valid_to": "2026-06-01T00:00:00+00:00",
+         "revived_at": "2026-06-02T00:00:00+00:00",
+         "revived_by": "conformance-kit"},
+        {"valid_to": "2026-06-10T00:00:00+00:00",
+         "revived_at": "2026-06-11T00:00:00+00:00",
+         "superseded_by": "rem-earlier-successor",
+         "revived_by": "conformance-kit"},
+    ],
     "created_at": _CREATED_AT,
 }
 

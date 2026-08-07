@@ -894,6 +894,55 @@ class ForgetMemoryResponse(BaseModel):
     superseded_by: str | None = None
 
 
+class MemoryRevival(BaseModel):
+    """ONE closed retirement — the period a memory spent out of force, filed
+    into ``spec.revivals`` by ``revive`` (i-139).
+
+    Every field is declared because a ``response_model`` discards in silence
+    what it does not, and this envelope's whole job is to hand the caller the
+    gap it just closed."""
+
+    #: When the memory stopped being in force — the retirement's own
+    #: ``valid_to``, verbatim. The START of the gap.
+    valid_to: str
+    #: When it came back. The END of the gap.
+    revived_at: str
+    #: The memory that had superseded this one during the gap, if any.
+    superseded_by: str | None = None
+    #: WHO revived it, resolved server-side from the verified request — never
+    #: from the body. ``None`` only when the lane attested nobody.
+    revived_by: str | None = None
+
+
+class ReviveMemoryResponse(BaseModel):
+    """The outcome of ``POST /v1/memories/{name}/revive`` — the REST face of the
+    memory verb ``revive``, and the way BACK from ``forget`` (i-139).
+
+    ``outcome`` is three-way for the same reason its sibling is: ``revived``
+    (it was retired, now it is in force) and ``already_in_force`` (idempotent —
+    a retry, a SUCCESS, and no write at all) are different facts.
+    ``not_found`` never reaches this model: the route maps it to a 404.
+
+    ⚠️ **What the returned gap does and does not buy you.** ``revival`` hands
+    back the interval just closed, so the caller holds the exact window the
+    memory spent retired. That window is readable HERE, in the present, and in
+    ``spec.revivals`` forever. What it is NOT is queryable on the world-time
+    axis: ``recall(as_of=T)`` for a ``T`` inside a past gap answers from the
+    TRANSACTION axis — what this store BELIEVED at that instant — because
+    ``dna_instances`` holds one row per instance and its ``valid_at`` column
+    therefore knows only the CURRENT window. A founder decision on i-139,
+    measured (14 memories, 2 retired) against a table rewrite, and stated here
+    rather than only on the board so that whoever consults a revived memory's
+    past knows which axis is answering."""
+
+    kind: str
+    name: str
+    revived: bool
+    outcome: str
+    #: The interval just closed — ``None`` when nothing was (``already_in_force``).
+    revival: MemoryRevival | None = None
+
+
 # ── intel (sources / insights / metrics) ────────────────────────────────────
 
 

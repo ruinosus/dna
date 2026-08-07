@@ -1,4 +1,4 @@
-"""Memory verbs — remember / recall / forget / consolidate.
+"""Memory verbs — remember / recall / forget / revive / consolidate.
 
 Memory in DNA is NOT a new subsystem: it is the Kinds DNA already has
 (Engram, Research, Evidence) written + recalled through the SAME
@@ -19,6 +19,12 @@ DELIBERATELY out — those are a service, not the SDK.
   side-effect (cues_history append + confidence bump), fail-soft.
 - ``forget``   — bi-temporal DEMOTION: set ``valid_to`` (+ optional
   ``superseded_by_memory``). NEVER hard-delete.
+- ``revive``   — the way BACK, and the half this module promised without
+  shipping (i-139): ``forget`` has said *"revivable"* in its own docstring
+  since it existed, and a grep for ``unforget|restore|revive|undelete`` across
+  the SDK returned **zero**. Reopens the current validity window and files the
+  closed one, VERBATIM, into the append-only ``spec.revivals``. NOT an undo —
+  the forgetting is not unsaid, it is dated.
 - ``consolidate`` — a deterministic decay pass (NO LLM): recompute retention,
   report/soft-archive stale memories. ``dry_run=True`` previews the pass as a
   structured report (per-memory action + reason, merge candidates) with zero
@@ -642,8 +648,18 @@ async def forget(
 ) -> dict[str, Any]:
     """Bi-temporal DEMOTION — set ``valid_to`` so the memory drops out of
     default recall. NEVER hard-deletes (auditable, point-in-time reconstructable,
-    revivable). Optionally records ``superseded_by_memory``. Idempotent: an
-    already-invalidated memory keeps its original ``valid_to``.
+    revivable — and since i-139 all three of those words have a function behind
+    them; :func:`revive` is the third). Optionally records
+    ``superseded_by_memory``. Idempotent: an already-invalidated memory keeps its
+    original ``valid_to``.
+
+    A memory that was revived and is being forgotten AGAIN gets a FRESH
+    ``valid_to``, and correctly: ``revive`` moved the previous one into
+    ``spec.revivals``, so there is nothing left here to preserve and the
+    idempotence rule above does not fire. Repeated forget/revive cycles
+    therefore accumulate one ``revivals`` entry per closed gap — the multiple
+    validity intervals the ``valid_at`` COLUMN cannot hold (one row per
+    instance, by primary key), kept as data instead.
 
     Returns ``{kind, name, valid_to, already_forgotten}``.
     """
@@ -667,6 +683,134 @@ async def forget(
     return {
         "kind": kind, "name": name,
         "valid_to": valid_to, "already_forgotten": already,
+    }
+
+
+# ─────────────────────────── revive ───────────────────────────
+
+#: Where a CLOSED retirement is filed when the memory comes back (i-139).
+#:
+#: Named after the EVENT that creates the entry, not after the state it ends,
+#: and the alternative considered was ``spec.retirements``. An entry exists here
+#: **only because a revive happened**; a retirement that is still in force is
+#: not in this list at all — it is the live ``spec.valid_to``. So
+#: ``retirements`` would be a list that omits one retirement, and the reader
+#: would have to be told which. ``revivals`` omits nothing: a memory that has
+#: never come back has never been revived, and the empty list is the truth.
+#: It also matches the verb, so there is one word to learn rather than two.
+REVIVALS_FIELD = "revivals"
+
+
+async def revive(
+    kernel: Any,
+    scope: str,
+    name: str,
+    *,
+    kind: str = "Engram",
+    tenant: str | None = None,
+    revived_by: str | None = None,
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Bring a forgotten memory back into force — the way BACK from
+    :func:`forget`, and the third word of the promise that verb has made since
+    it existed (*auditable, point-in-time reconstructable, **revivable***).
+
+    Measured before it was built (i-139): ``unforget|restore|revive|undelete|
+    recover`` across ``dna/`` and ``dna_cli/`` returned **zero**. The promise
+    named a capability with nothing behind it — the same shape as i-130's
+    *"never hard-deletes"*, in the same docstring, found the same week.
+
+    **This is not an undo.** The forgetting is not unsaid; it is DATED. The
+    closed interval moves, verbatim, into the append-only :data:`REVIVALS_FIELD`
+    — ``{valid_to, superseded_by, revived_at, revived_by}`` — and the current
+    window reopens by removing ``spec.valid_to``. Nothing is overwritten and
+    nothing is lost: the date the memory stopped being in force, and the memory
+    that had superseded it, survive the revival that ended them.
+
+    Why the closed interval is DATA and not a second row, which is the design
+    this shape is often mistaken for: ``dna_instances`` is keyed
+    ``PRIMARY KEY (scope, kind, api_version, name, tenant)`` — one row per
+    instance — while its ``EXCLUDE USING gist (id WITH =, valid_at WITH &&)``
+    would happily hold many disjoint windows per ``id``. The constraint permits
+    the second row; the primary key forbids it. Multiple intervals in the COLUMN
+    is therefore a table rewrite plus a different cardinality for every read and
+    write, and the founder's decision on i-139 measured that against 14 memories
+    (2 retired, 0 superseded) and chose the field.
+
+    ⚠️ **The limitation that choice accepts, stated where the reader is.**
+    ``recall(as_of=T)`` for a ``T`` inside a past gap answers from the
+    TRANSACTION axis — what this store BELIEVED at that instant — not from the
+    world-time axis. ``dna_instances.valid_at`` knows only the CURRENT window,
+    so it cannot answer *"was this true in the world at T"* for a T the memory
+    spent retired. The gaps are readable, precisely and in the present, in
+    ``spec.revivals``; what is not available is a world-time QUERY across them.
+    Reopening that costs the table rewrite above, and the trigger is written on
+    i-139: the day somebody needs to ask it.
+
+    **Idempotent, the same way ``forget`` is and for the same reason.** A memory
+    that is already in force is not retired, so there is no interval to close:
+    nothing is appended, nothing already filed is touched, and the outcome says
+    ``already_in_force``. Reviving twice must not stack two entries or rewrite
+    the first — the record of WHEN it was forgotten is the audit, and a retry is
+    not an event.
+
+    Returns ``{kind, name, revived, outcome, revivals}`` — ``revivals`` being
+    the entry just filed, or ``None`` when nothing was.
+    """
+    spec = await _load_spec(kernel, scope, kind, name, tenant)
+    if not spec:
+        raise KeyError(f"revive: {kind}/{name} not found in scope {scope!r}")
+
+    valid_to = spec.get("valid_to")
+    if not valid_to:
+        # Already in force. NOT an error, and deliberately not a write either:
+        # a no-op that still wrote would add a version to ``dna_versions`` for
+        # an event that did not happen, which is the audit trail lying quietly.
+        return {
+            "kind": kind, "name": name, "revived": False,
+            "outcome": "already_in_force", "revival": None,
+        }
+
+    entry: dict[str, Any] = {
+        "valid_to": valid_to,
+        "revived_at": _now_iso(now),
+    }
+    # Only what is KNOWN goes in. An absent key means "this was not recorded";
+    # a null would mean "recorded as nothing", and an audit entry that cannot
+    # tell those apart is not an audit entry.
+    superseded_by = spec.get("superseded_by_memory")
+    if superseded_by:
+        entry["superseded_by"] = superseded_by
+    if revived_by:
+        entry["revived_by"] = revived_by
+
+    existing = spec.get(REVIVALS_FIELD)
+    spec[REVIVALS_FIELD] = ([*existing] if isinstance(existing, list) else []) + [entry]
+
+    # The window reopens by REMOVING the bound, not by writing a sentinel: the
+    # store's ``valid_at`` column is recomputed from this spec on write
+    # (``valid_window_of``), and an absent ``valid_to`` is what "in force, no
+    # declared end" has always meant to ``currently_valid``.
+    spec.pop("valid_to", None)
+    # The supersession goes with it. It described THIS retirement — "replaced by
+    # that one" — and the retirement is over; leaving it behind would mark a
+    # live memory as superseded and drop it out of the surfaces that honour the
+    # pointer, which is the retirement continuing under another name. It is not
+    # lost: it is in the entry above.
+    spec.pop("superseded_by_memory", None)
+
+    raw: dict[str, Any] = {"kind": kind, "metadata": {"name": name}, "spec": spec}
+    api_version = _resolve_api_version(kernel, kind)
+    if api_version:
+        raw["apiVersion"] = api_version
+    write_kernel = (
+        kernel.with_tenant(tenant, allow_personal=is_personal_tenant(tenant))
+        if tenant else kernel
+    )
+    await write_kernel.write_instance(scope, kind, name, raw, invalidate_mode="doc")
+    return {
+        "kind": kind, "name": name, "revived": True,
+        "outcome": "revived", "revival": entry,
     }
 
 

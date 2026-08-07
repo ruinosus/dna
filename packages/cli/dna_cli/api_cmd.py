@@ -71,6 +71,7 @@ def serve(scope: str | None, base_dir: str | None, host: str, port: int,
       GET    /v1/memories?scope=&tenant=          -> {memories:[...]}
       GET    /v1/memories/search?q=&scope=&tenant=&k=5  -> {query, hits:[...]}
       POST   /v1/memories/{name}/forget?scope=&tenant=  -> retire one; body {superseded_by?}
+      POST   /v1/memories/{name}/revive?scope=&tenant=  -> bring it back; files the gap in spec.revivals
       DELETE /v1/memories/{name}?scope=&tenant=   -> REFUSED 403 (i-130): use the forget route above
       GET    /v1/sources?scope=&tenant=           -> {sources:[...]}
       GET    /v1/insights?scope=&tenant=&state=&source=  -> {insights:[...]}

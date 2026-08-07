@@ -78,6 +78,7 @@ from dna.application import (  # noqa: F401 — re-exported for the faces + test
     create_issue_impl,
     create_story_impl,
     forget_impl,
+    revive_impl,
     get_adr_impl,
     get_skill_impl,
     get_template_impl,

@@ -871,6 +871,43 @@ class DnaClient:
             json={"superseded_by": superseded_by} if superseded_by else None,
         )
 
+    def revive_memory(
+        self,
+        name: str,
+        *,
+        scope: str | None = None,
+        tenant: str | None = None,
+    ) -> JsonObject:
+        """Bring a retired memory BACK into force — the way back from
+        :meth:`forget_memory`, and the third word of the promise ``forget`` has
+        always made (*auditable, reconstructable, **revivable***; i-139).
+
+        Not an undo. The closed interval is filed VERBATIM into the append-only
+        ``spec.revivals`` — ``{valid_to, revived_at, superseded_by?,
+        revived_by?}`` — and the current window reopens. The forgetting is not
+        unsaid, it is dated, and the result hands back the exact window the
+        memory spent retired.
+
+        **No body, deliberately:** WHO revived it is resolved server-side from
+        your verified request. Attribution a caller can forge is not
+        attribution, so there is nothing here for you to set.
+
+        Idempotent, and cheaper than idempotent: a memory already in force
+        answers ``outcome: "already_in_force"`` and performs no write at all, so
+        the version history never records a revival that did not happen.
+
+        ⚠️ Afterwards, a ``search_memories(as_of=T)`` for a ``T`` inside a past
+        gap answers on TRANSACTION time (what the store BELIEVED then), not
+        world time — one row per instance means the store's validity column
+        knows only the CURRENT window. Read ``spec.revivals`` for the gaps
+        themselves; those are exact.
+        """
+        return self.request(
+            "POST",
+            f"/v1/memories/{name}/revive",
+            params={"scope": scope, "tenant": tenant},
+        )
+
     # -- intel (reads) -------------------------------------------------------
 
     def list_sources(
