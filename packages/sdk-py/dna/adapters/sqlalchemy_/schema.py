@@ -601,8 +601,16 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
                       server_default=sa.text("0")),
             sa.Column("output_tokens", sa.Integer, nullable=False,
                       server_default=sa.text("0")),
+            # NULO = desconhecido (linhas anteriores a 0012). `false` = a conta
+            # esta fechada; `true` = alguma chamada ao modelo nao reportou uso e
+            # `input_tokens` e um PISO, nao a conta. Ver a revisao 0012.
+            sa.Column("tokens_partial", sa.Boolean, nullable=True),
             sa.Column("status", sa.Text, nullable=False,
                       server_default=sa.text("'ok'")),
+            # ⭐ O que o turno CONSEGUIU — DECLARADO, nunca inferido do `status`.
+            # Vazio significa DESCONHECIDO, jamais `resolved`. Ver a revisao 0012.
+            sa.Column("outcome", sa.Text, nullable=False,
+                      server_default=sa.text("''")),
             sa.Column("error", sa.Text, nullable=True),
             sa.Column("started_at", sa.DateTime(timezone=True), nullable=False,
                       server_default=sa.text("now()")),

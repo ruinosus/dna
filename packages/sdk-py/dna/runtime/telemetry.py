@@ -64,6 +64,54 @@ cliente — e é o que torna esta lógica exercitável **sem banco e sem rede**.
 só para o que é nosso. O motivo é o mesmo de usar o SDK oficial: o APM do cliente
 **já sabe** ler ``gen_ai.usage.input_tokens``. Um nome próprio transformaria um
 painel pronto num painel a construir.
+
+## ⚠️ O que o turno CONSEGUIU, e o que ele CUSTOU — duas perguntas diferentes
+
+``status`` responde *"estourou exceção?"*, e só isso. Ele foi lido como se
+respondesse *"resolveu?"*, que é a pergunta do negócio, e as duas divergem: um
+turno pode terminar sem exceção nenhuma e não ter resolvido coisa alguma.
+
+Por isso ``outcome`` (``resolved``/``escalated``/``abandoned``), e por isso ele
+é **declarado, nunca inferido**. Vazio significa DESCONHECIDO — jamais
+``resolved``. Um desfecho inferido do ``status`` seria exatamente o zero
+fabricado que este produto proíbe, com a agravante de inclinar a conta a favor
+do agente: todo turno sem exceção viraria "sucesso".
+
+## ⚠️ O ZERO de tokens também tem dois significados, e um deles é mentira
+
+MEDIDO em 07/08/2026, contra os 85 turnos do Postgres de desenvolvimento. A
+hipótese registrada na spec era *"8 dos 9 turnos com erro não gravam os tokens
+que consumiram"* — um defeito de escrita, que se consertaria gravando no
+caminho de exceção. **A medição desmentiu a hipótese**, e a correção é outra.
+
+``model`` e ``input_tokens`` são escritos pelo MESMO lugar (``_llm``), e no
+banco inteiro eles andam juntos: ``model = ''`` ⟺ ``input_tokens = 0``, em 9 de
+9 linhas. Modelo vazio prova que **nenhum span de LLM chegou ao recorder** —
+não que o token se perdeu no caminho. Sete daqueles turnos morreram em 7–32 ms,
+antes de qualquer chamada ao modelo (401 no carregamento das tools,
+``CancelledError``). Para eles o zero é a MEDIÇÃO CERTA, e o turno que somou
+5.662 tokens antes de morrer de ``DiskFull`` prova que a acumulação já
+sobrevivia à exceção.
+
+Sobra um caso, e é o real: o turno que chamou o modelo e cuja chamada
+**estourou**. O ``openinference`` monta os atributos com
+``_token_counts(run.outputs)``, e numa run que errou ``run.outputs`` é ``None``
+— então sai ``llm.model_name`` (que ele lê do ``extra``, carimbado na largada)
+e NENHUM contador. O provedor cobrou o prompt; o span não sabe quanto.
+
+Contar de novo por conta própria seria estimar, e estimativa aqui é o zero
+fabricado com outra roupa. Então o registro passa a dizer **qual dos dois zeros
+ele é**, via ``tokens_partial``:
+
+``False``
+    a conta está fechada — toda chamada ao modelo reportou seu uso, inclusive o
+    caso de nenhuma chamada (zero chamadas, zero tokens, medição correta);
+``True``
+    pelo menos uma chamada terminou sem reportar uso. ``input_tokens`` é um
+    **piso**, não a conta.
+
+Um ROI que soma tokens sem olhar esta coluna continua subestimando o custo — a
+diferença é que agora ele tem como saber que está.
 """
 from __future__ import annotations
 
@@ -77,6 +125,7 @@ _LOGGER = logging.getLogger("dna.runtime.telemetry")
 
 __all__ = [
     "MAX_TEXT",
+    "OUTCOMES",
     "TRUNCATION_MARK",
     "Turn",
     "TurnStep",
@@ -84,6 +133,7 @@ __all__ = [
     "clip",
     "otlp_endpoint",
     "setup_telemetry",
+    "stamp_outcome",
     "stamp_turn",
 ]
 
@@ -130,6 +180,13 @@ ATTR_WORKSPACE = "dna.workspace"
 ATTR_THREAD = "dna.thread_id"
 ATTR_OID = "dna.oid"
 ATTR_AGENT = "dna.agent"
+ATTR_OUTCOME = "dna.outcome"
+
+#: Os únicos desfechos que existem. Um valor fora desta lista é RECUSADO e o
+#: turno fica vazio — porque vazio é "não sei", e "não sei" é a verdade sobre um
+#: desfecho que ninguém soube declarar. Aceitar o valor estranho o faria
+#: aparecer numa contagem que não sabe o que ele significa.
+OUTCOMES = frozenset({"resolved", "escalated", "abandoned"})
 
 #: Do OpenInference, que é quem produz os spans de LangChain.
 OI_KIND = "openinference.span.kind"
@@ -189,7 +246,15 @@ class Turn:
     output_text: str | None = None
     input_tokens: int = 0
     output_tokens: int = 0
+    #: ``True`` = alguma chamada ao modelo não reportou uso, e ``input_tokens``
+    #: é um PISO. Ver o aviso "o ZERO de tokens tem dois significados" no topo.
+    #: Começa ``False``: um turno sem chamada nenhuma tem a conta fechada em
+    #: zero, e isso é uma medição, não uma ausência.
+    tokens_partial: bool = False
     status: str = "ok"
+    #: ⭐ O que o turno CONSEGUIU — declarado por quem fecha, nunca inferido.
+    #: Vazio é DESCONHECIDO. Nada neste módulo o transforma em ``resolved``.
+    outcome: str = ""
     error: str | None = None
     started_at: str | None = None
     ended_at: str | None = None
@@ -199,6 +264,32 @@ class Turn:
 
 def _attrs(span: Any) -> Mapping[str, Any]:
     return getattr(span, "attributes", None) or {}
+
+
+def _desfecho(fonte: Mapping[str, Any]) -> str:
+    """O desfecho declarado nesta fonte, ou ``""``.
+
+    ⭐ **É a única porta pela qual um desfecho entra num ``Turn``**, e ela só
+    deixa passar o que está em ``OUTCOMES``. Qualquer outra coisa — ``"ok"``,
+    ``"sucesso"``, ``True``, um typo — sai como vazio.
+
+    O que a função NÃO faz é o ponto: ela não olha ``status``, não tem
+    fallback, e não tem um "se não disseram, assuma que deu certo". Um desfecho
+    presumido pareceria uma declaração e contaria como uma, e a conta que ele
+    alimenta é justamente a de quanto o agente resolveu sozinho.
+    """
+    valor = fonte.get(ATTR_OUTCOME)
+    if valor is None:
+        return ""
+    texto = str(valor).strip().lower()
+    if texto in OUTCOMES:
+        return texto
+    if texto:
+        _LOGGER.warning(
+            "desfecho %r não é um de %s — o turno fica DESCONHECIDO",
+            valor, sorted(OUTCOMES),
+        )
+    return ""
 
 
 def _nanos_to_ms(start: Any, end: Any) -> int:
@@ -257,9 +348,17 @@ class TurnRecorder:
     o turno que ela observa.
     """
 
+    #: Quantas traces já entregues ficam lembradas, para reconhecer um span
+    #: atrasado em vez de ressuscitar a trace como um turno fantasma. Teto
+    #: pequeno de propósito: o atraso, quando existe, é de milissegundos.
+    LEMBRAR_FECHADAS = 256
+
     def __init__(self, sink: Callable[[Turn], None]) -> None:
         self._sink = sink
         self._abertos: dict[str, Turn] = {}
+        # `dict` e não `set`: a ordem de inserção é o que permite descartar a
+        # mais antiga quando o teto estoura, sem carregar um LRU inteiro.
+        self._fechadas: dict[str, None] = {}
 
     # ── a interface de SpanProcessor ────────────────────────────────────────
     #
@@ -293,6 +392,7 @@ class TurnRecorder:
 
     def shutdown(self) -> None:  # noqa: D102
         self._abertos.clear()
+        self._fechadas.clear()
 
     def force_flush(self, timeout_millis: int = 30_000) -> bool:  # noqa: D102
         return True
@@ -311,6 +411,18 @@ class TurnRecorder:
         atributos = _attrs(span)
         kind = str(atributos.get(OI_KIND) or "").upper()
 
+        # ⚠️ Um span ATRASADO, de uma trace que já foi entregue, não pode
+        # recriar a trace. O `setdefault` abaixo o faria: nasceria um `Turn`
+        # com o mesmo `turn_id`, sem raiz para fechá-lo, preso em `_abertos`
+        # para sempre. Dois estragos, e o segundo é silencioso — um vazamento
+        # de memória num processo que roda por semanas, cujo tamanho é o número
+        # de traces que já passaram.
+        if trace_id in self._fechadas:
+            _LOGGER.debug(
+                "span atrasado para a trace %s, já entregue — ignorado", trace_id
+            )
+            return
+
         turno = self._abertos.setdefault(trace_id, Turn(turn_id=trace_id, trace_id=trace_id))
 
         # ⚠️ As dimensoes sao colhidas de QUALQUER span da trace, nao so do
@@ -326,15 +438,19 @@ class TurnRecorder:
 
         if kind == "TOOL":
             self._passo(turno, span, atributos)
-            return
-
-        if kind == "LLM":
+        elif kind == "LLM":
             self._llm(turno, atributos)
-            return
 
         # Sem `parent`, este é o span RAIZ: o turno inteiro. É aqui que ele
         # fecha — e é por isso que um processo que morre não deixa registro
         # pela metade, e sim registro nenhum.
+        #
+        # ⚠️ Este teste é feito para TODO span, e não só para os que não são
+        # TOOL/LLM. Os dois ramos acima faziam `return`, e um span raiz que
+        # fosse ELE MESMO um LLM — uma invocação direta do modelo, sem chain
+        # em volta — somava os tokens e nunca fechava: o turno inteiro sumia,
+        # tokens e tudo. Somar e fechar são coisas independentes, e tratá-las
+        # em sequência é o que torna a raiz-LLM um caso e não uma exceção.
         if getattr(span, "parent", None) is None:
             self._fechar(turno, span, atributos, trace_id)
 
@@ -368,10 +484,28 @@ class TurnRecorder:
         # SOMA em vez de sobrescrever: um turno com tool tem no mínimo duas
         # chamadas ao modelo, e guardar só a última contaria menos da metade dos
         # tokens — um número errado é pior que nenhum, porque parece confiável.
-        turno.input_tokens += int(_primeiro(atributos, ATTR_INPUT_TOKENS) or 0)
-        turno.output_tokens += int(_primeiro(atributos, ATTR_OUTPUT_TOKENS) or 0)
+        entrada = _primeiro(atributos, ATTR_INPUT_TOKENS)
+        saida = _primeiro(atributos, ATTR_OUTPUT_TOKENS)
+        turno.input_tokens += int(entrada or 0)
+        turno.output_tokens += int(saida or 0)
         if not turno.model:
             turno.model = str(_primeiro(atributos, ATTR_MODEL) or "")
+
+        # ⚠️ Nenhum contador presente = uma chamada ao modelo cujo uso NINGUÉM
+        # sabe. É o que o `openinference` produz quando a run estourou
+        # (`_token_counts(run.outputs)` com `outputs is None`), e o provedor
+        # cobrou o prompt do mesmo jeito. Somar zero aqui e calar é o que fazia
+        # o turno caro parecer barato.
+        if entrada is None and saida is None:
+            turno.tokens_partial = True
+
+    @staticmethod
+    def _consumir_desfecho() -> None:
+        """Tira o desfecho do contexto, para que ele não conte duas vezes."""
+        var = _contexto()
+        atual = var.get()
+        if atual and ATTR_OUTCOME in atual:
+            var.set({k: v for k, v in atual.items() if k != ATTR_OUTCOME})
 
     def _fechar(
         self, turno: Turn, span: Any, atributos: Mapping[str, Any], trace_id: str
@@ -384,6 +518,17 @@ class TurnRecorder:
         turno.input_text = clip(atributos.get(OI_INPUT))
         turno.output_text = clip(atributos.get(OI_OUTPUT))
         turno.status = status
+        # ⭐ DECLARADO ou vazio — nunca derivado do `status`. As duas fontes são
+        # as mesmas das dimensões, e pela mesma razão; o que não existe em
+        # nenhuma delas fica vazio, que é como se escreve "não sei".
+        turno.outcome = _desfecho(_contexto().get() or {}) or _desfecho(atributos)
+        # ⚠️ E o desfecho é CONSUMIDO: uma declaração vale por UM turno.
+        #
+        # `stamp_turn` já limpa o desfecho ao abrir o turno seguinte, e isto
+        # aqui é a mesma garantia pelo outro lado — a que não depende de o host
+        # ter lembrado de carimbar. As duas juntas fecham a herança nos dois
+        # sentidos, e é a herança que transformaria "não sei" em `resolved`.
+        self._consumir_desfecho()
         turno.error = clip(erro, 1024)
         turno.started_at = _iso(getattr(span, "start_time", None))
         turno.ended_at = _iso(getattr(span, "end_time", None))
@@ -398,6 +543,9 @@ class TurnRecorder:
             passo.step_index = i
 
         self._abertos.pop(trace_id, None)
+        self._fechadas[trace_id] = None
+        while len(self._fechadas) > self.LEMBRAR_FECHADAS:
+            self._fechadas.pop(next(iter(self._fechadas)))
         try:
             self._sink(turno)
         except Exception:  # noqa: BLE001
@@ -440,19 +588,85 @@ def stamp_turn(
     o `TurnRecorder` as colhe de qualquer span da trace, entao nao importa se o
     span corrente e o raiz ou um filho.
 
+    ⚠️ **Tambem marca o INICIO do turno, e por isso APAGA o desfecho anterior**
+    — ver o comentario abaixo. Um host que carimbe uma vez por processo em vez
+    de uma vez por turno perde essa protecao; carimbe por turno.
+
     Silencioso sem OTEL: um deployment sem telemetria continua servindo.
     """
-    dims = {
+    # ⚠️ Carimbar o turno APAGA o desfecho do turno anterior, e esta linha é a
+    # única coisa entre o produto e um número inflado.
+    #
+    # A `ContextVar` é por-task, e uma task serve VÁRIOS turnos da mesma
+    # conversa. Sem esta limpeza, um turno que declarou `resolved` deixaria o
+    # valor no contexto, e o PRÓXIMO turno — que não declarou nada, e cujo
+    # desfecho é honestamente desconhecido — o herdaria. Vazio viraria
+    # `resolved` sem ninguém declarar, silenciosamente, e a taxa de resolução
+    # só subiria: uma vez que um turno resolvesse, todos os seguintes daquela
+    # conversa contariam como resolvidos.
+    #
+    # `stamp_turn` é o marco de INÍCIO do turno (o middleware `before_agent` a
+    # chama), então é aqui que o desfecho anterior morre.
+    var = _contexto()
+    contexto = {k: v for k, v in (var.get() or {}).items() if k != ATTR_OUTCOME}
+    var.set(contexto)
+
+    _carimbar({
         chave: str(valor)
         for chave, valor in (
             (ATTR_THREAD, thread_id), (ATTR_WORKSPACE, workspace),
             (ATTR_OID, oid), (ATTR_AGENT, agent),
         )
         if valor
-    }
+    })
+
+
+def stamp_outcome(outcome: str) -> None:
+    """Declara O QUE ESTE TURNO CONSEGUIU: ``resolved``/``escalated``/``abandoned``.
+
+    ⭐ **O seam de escrita do desfecho, e ele é declarativo por desenho.** Quem
+    sabe se o turno resolveu é quem conhece o trabalho — um nó do grafo que
+    fechou o ticket, uma tool de escalada, o handler que viu o usuário desistir.
+    O runtime não sabe, e esta função é como ele fica sabendo.
+
+    **Se ninguém chamar, o turno fica vazio, e vazio significa DESCONHECIDO.**
+    Isso é o comportamento certo, não uma lacuna a tapar depois: a alternativa
+    — presumir ``resolved`` para todo turno sem exceção — produziria uma taxa
+    de resolução que mede a ausência de crashes e se apresenta como medida de
+    valor entregue.
+
+    Um valor fora de ``OUTCOMES`` é RECUSADO com aviso, e o turno segue vazio.
+
+    Chame de dentro do turno, como ``stamp_turn``; vale a última chamada, então
+    um passo posterior pode corrigir o que um anterior declarou. Silenciosa sem
+    OTEL — um deployment sem telemetria continua servindo.
+    """
+    texto = str(outcome or "").strip().lower()
+    if texto not in OUTCOMES:
+        if texto:
+            # Vazio não avisa: declarar "não sei" é legítimo, e é o default.
+            # O que merece aviso é o valor que ALGUÉM quis dizer e não existe.
+            _LOGGER.warning(
+                "desfecho %r recusado (esperado um de %s) — o turno fica DESCONHECIDO",
+                outcome, sorted(OUTCOMES),
+            )
+        return
+    _carimbar({ATTR_OUTCOME: texto})
+
+
+def _carimbar(dims: Mapping[str, str]) -> None:
+    """Funde ``dims`` no contexto do turno e no span corrente.
+
+    ⚠️ **Funde, não substitui.** Um ``set`` do dicionário inteiro faria a
+    segunda chamada apagar o que a primeira carimbou — e como ``stamp_outcome``
+    naturalmente roda DEPOIS de ``stamp_turn`` (o desfecho só se sabe no fim),
+    substituir zeraria thread, workspace e oid justamente no turno que teve
+    desfecho declarado: o registro melhor viraria o registro órfão.
+    """
     if not dims:
         return
-    _contexto().set(dims)
+    var = _contexto()
+    var.set({**(var.get() or {}), **dims})
 
     # Também no span, quando houver um gravável: outras instrumentações
     # propagam o contexto, e aí o atributo viaja junto para o APM do cliente.

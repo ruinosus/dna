@@ -43,6 +43,13 @@ class RuntimeHooks:
     #: `None` (o default) deixa a telemetria sem destino de produto; o OTLP,
     #: se configurado, continua exportando. E o host que injeta porque e ele
     #: quem tem a conexao — a mesma fronteira do `checkpointer`.
+    #:
+    #: ⚠️ O `Turn` ganhou `outcome` e `tokens_partial` na revisao alembic 0012.
+    #: Um sink que enumera colunas a mao (o do dna-cloud enumera) continua
+    #: funcionando e simplesmente NAO as grava — a coluna fica no default do
+    #: banco, que para `outcome` e vazio: "desconhecido", que e a verdade sobre
+    #: um turno cujo desfecho ninguem transportou. Ensinar o sink a grava-las e
+    #: o passo que falta do lado do host.
     turn_sink: Any = None
     #: `async (consulta, limite) -> Sequence` — a busca de memoria. O HOST a
     #: fornece porque e ele que tem o cliente MCP, a credencial e o tenant.

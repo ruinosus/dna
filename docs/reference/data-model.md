@@ -788,7 +788,9 @@ erDiagram
         TEXT output_text
         INTEGER input_tokens
         INTEGER output_tokens
+        BOOLEAN tokens_partial
         TEXT status
+        TEXT outcome
         TEXT error
         DATETIME started_at
         DATETIME ended_at
@@ -971,7 +973,9 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | `output_text` | `TEXT` |  | yes |
 | `input_tokens` | `INTEGER` |  |  |
 | `output_tokens` | `INTEGER` |  |  |
+| `tokens_partial` | `BOOLEAN` |  | yes |
 | `status` | `TEXT` |  |  |
+| `outcome` | `TEXT` |  |  |
 | `error` | `TEXT` |  | yes |
 | `started_at` | `DATETIME` |  |  |
 | `ended_at` | `DATETIME` |  | yes |
