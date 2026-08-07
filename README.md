@@ -6,6 +6,7 @@
 [![docs](https://github.com/ruinosus/dna/actions/workflows/docs.yml/badge.svg)](https://github.com/ruinosus/dna/actions/workflows/docs.yml)
 [![status: pre-1.0](https://img.shields.io/badge/status-pre--1.0-orange)](#status)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ruinosus/dna)
 
 **Define your agents as files. Version them in git. Serve them to any AI tool.**
 
