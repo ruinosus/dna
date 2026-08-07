@@ -1,0 +1,17 @@
+# This file records the ANSWERS that produced ./apps/api.
+# It is written by Copier and read by `dna solution update` — never edit it by
+# hand, and never delete it: without it the app can be regenerated but never
+# UPDATED, which is the whole point of generating it this way.
+_src_path: <TEMPLATE>
+can_sleep: true
+container_port: 8080
+description: api — a DNA runtime face
+dna_ceiling: '0.75'
+dna_floor: '0.74'
+env_prefix: DNA_API
+identity: workos
+image_name: api
+ingress: internal
+max_replicas: 2
+python_module: api
+service_name: api

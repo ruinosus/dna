@@ -1,0 +1,18 @@
+# This file records the ANSWERS that produced ./apps/mcp-entra.
+# It is written by Copier and read by `dna solution update` — never edit it by
+# hand, and never delete it: without it the app can be regenerated but never
+# UPDATED, which is the whole point of generating it this way.
+_src_path: <TEMPLATE>
+can_sleep: false
+container_port: 8000
+description: the delegated door
+dna_ceiling: '0.75'
+dna_floor: '0.74'
+env_prefix: DNA_MCP
+graph_obo: true
+identity: entra
+image_name: mcp
+ingress: external
+max_replicas: 5
+python_module: mcp
+service_name: mcp-entra

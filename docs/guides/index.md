@@ -13,6 +13,11 @@ first if you have never loaded a scope.
   `dna install github:owner/repo[/subdir][@ref]`: fetch, reader-driven
   detection, validation of untrusted manifests, conflicts, and the
   `installed.lock` provenance record.
+- **[Scaffolding a repo — `dna solution new`/`update`](solution-scaffolding.md)**
+  — generate a real app (package, Dockerfile, version floor, deployment wiring)
+  from a Copier template, and roll it forward when the template moves: the four
+  silent Copier behaviours the command reports, and the two wiring places no
+  template can reach.
 
 ## Authoring
 

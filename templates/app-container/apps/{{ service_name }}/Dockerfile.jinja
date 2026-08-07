@@ -1,0 +1,22 @@
+# {{ service_name }} — built from THIS app's own package, never from a shared
+# infra Dockerfile: the version floor lives in pyproject.toml, and a build that
+# installed it anywhere else would make the declared floor a lie.
+FROM python:3.12-slim AS base
+
+LABEL org.opencontainers.image.title="{{ service_name }}" \
+      org.opencontainers.image.description="{{ description }}"
+
+ENV PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    {{ env_prefix }}_HOST=0.0.0.0 \
+    {{ env_prefix }}_PORT={{ container_port }}
+
+WORKDIR /app
+
+COPY pyproject.toml ./
+COPY src ./src
+RUN pip install --no-cache-dir .
+
+EXPOSE {{ container_port }}
+
+CMD ["{{ service_name }}"]
