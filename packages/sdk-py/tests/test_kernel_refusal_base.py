@@ -344,6 +344,20 @@ _NOT_REFUSALS = {
     # which would assert "yes, it was true then" on no evidence at all; but not
     # a denial anyone may appeal, so not a ``KernelRefusal``.
     "ValidTimeUnsupported",
+    # ── the STORE-ROOT lane (i-142) ───────────────────────────────────────
+    # The fifth member of the capability family, classified by the same
+    # argument as the four above: the store this deployment is configured
+    # against is not there — a wrong ``DNA_BASE_DIR``, an unmounted volume — so
+    # no read can be answered, and no request the caller could send would
+    # change that. The remedy is a different deployment, never a different
+    # call, which is exactly what disqualifies it as a ``KernelRefusal``.
+    #
+    # ⚠️ Its whole reason for existing is the line it draws against the case
+    # NEXT to it: an absent SCOPE inside a real store is EMPTY (``[]`` — the
+    # answer SQLite and Postgres already gave), and the first write creates it.
+    # The filesystem adapter used to raise a bare ``FileNotFoundError`` for
+    # both, so four faces read a brand-new store as a broken one.
+    "StoreUnavailable",
     # A LOOKUP MISS, exactly like ``AgentNotFound`` above: no instance carries
     # that id. Nothing was withheld.
     "UnknownInstanceId",

@@ -152,32 +152,25 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
         self.attach_kernel(kernel)
 
     def attach_kernel(self, kernel: object) -> None:
-        """H2 — KernelAttachable Protocol implementation.
+        """H2 — KernelAttachable Protocol implementation, the WRITE half.
 
-        Idempotent: copies the kernel's registered writers + readers
-        into this source's lookup tables and stores a back-ref so the
-        save path can resolve ``storage_for_kind``. Replaces the
-        ``isinstance(source, FilesystemWritableSource)`` special case
-        in ``Kernel.auto`` — every WritableSource implements this
-        method now, so the kernel can call it uniformly.
+        Idempotent. The READ half — the kernel back-ref that every
+        reader-dependent door resolves its reader view through, plus the
+        ``_readers`` snapshot the H4 adapter-parity contract asserts — moved UP
+        to :meth:`FilesystemSource.attach_kernel` in i-140, because the
+        read-only base needed exactly the same wire and had none: it was not
+        attachable at all, so its ``query`` / ``list_doc_refs`` / ``load_one``
+        skipped every bundle-stored instance in silence. This override now adds
+        only what genuinely belongs to the writable subclass — the writer table
+        the save path resolves ``storage_for_kind`` through.
 
-        H4 contract requirement: ``_readers`` is also populated so
-        adapter parity is uniform (SQLite/Postgres store both lists).
-        FS scanner historically read readers from the kernel directly
-        (load_manifest pulls from kernel._readers); having them on the
-        source is back-compat-safe — nothing reads from there yet on
-        FS, but the contract test asserts both are present.
+        It replaced the ``isinstance(source, FilesystemWritableSource)`` special
+        case in ``Kernel.auto``: every WritableSource implements this method, so
+        the kernel calls it uniformly.
         """
-        from dna.kernel import Kernel as _KernelType
-        if not isinstance(kernel, _KernelType):
-            raise TypeError(
-                f"attach_kernel requires a Kernel instance; got {type(kernel).__name__}"
-            )
-        self._kernel = kernel
+        super().attach_kernel(kernel)
         if not self._writers:
             self._writers = list(kernel._writers)
-        if not getattr(self, "_readers", None):
-            self._readers = list(kernel._readers)
 
     def _subdir_for(
         self, kind: str, *, api_version: str | None = None,
@@ -303,13 +296,18 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
             # between it and the bytes. That last part is the entire reason the
             # guard is evaluated here and not in the calling use-case.
             #
-            # ``_query_readers()`` and NOT ``_effective_readers()``: the latter
-            # is the reader snapshot taken at ``attach_kernel`` time, BEFORE
-            # extensions register their generic bundle readers, so it cannot see
-            # a bundle-format Kind at all. With it, every guarded write to a
-            # KindDefinition / Agent / Skill would read ``None``, be judged
+            # The reader view MUST be the LIVE one off the attached kernel and
+            # never the snapshot taken at ``attach_kernel`` time, which predates
+            # the extensions' generic bundle readers and so cannot see a
+            # bundle-format Kind at all. With the snapshot, every guarded write
+            # to a KindDefinition / Agent / Skill would read ``None``, be judged
             # "deleted" and be refused — a guard that refuses everything is not
             # a guard, and it would have refused i-083's own approval path.
+            #
+            # ⚠️ i-140 — there were TWO reader-view helpers and this call site
+            # had to pick the right one by hand; four OTHER doors picked the
+            # wrong one and went blind to bundles. ``_effective_readers()`` IS
+            # the live-preferring one now, and it is the only one.
             #
             # HONEST LIMIT: read-then-write, not an atomic compare-and-swap. It
             # closes the scenario i-083 measured — a STALE READ, seconds wide,
@@ -327,7 +325,7 @@ class FilesystemWritableSource(FilesystemSource, WritableSourcePort):
             check_if_match(
                 await self.load_one(
                     scope, kind, name,
-                    readers=self._query_readers(), tenant=tenant,
+                    readers=self._effective_readers(), tenant=tenant,
                 ),
                 if_match, scope=scope, kind=kind, name=name, tenant=tenant,
             )

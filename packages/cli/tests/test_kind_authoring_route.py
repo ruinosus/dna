@@ -739,22 +739,31 @@ def test_the_local_sentinel_is_reserved_for_the_lane_that_verifies_nothing():
 # ── 6. a first author on a store with no registry scope ───────────────────
 
 
-def test_authoring_without_a_registry_scope_refuses_actionably(dna_dir_without_lib):
-    """Not a 500. Authoring READS the namespace registry before it mints, and a
-    filesystem source raises ``FileNotFoundError`` for a scope directory that is
-    not there — which is the state of every store before anything provisioned
-    one. The operator needs to be told WHAT is missing.
+def test_authoring_without_a_registry_scope_SUCCEEDS(dna_dir_without_lib):
+    """⚠️ i-142 — this asserted a **503**, and the 503 was the bug.
 
-    (The deeper fix — reading a missing registry scope as "no claims yet"
-    instead of raising — lives in the namespace-assignment module and is owned
-    elsewhere. This asserts only the face's half: an actionable refusal.)"""
+    Its own docstring named the deeper fix and said it was owned elsewhere:
+    *"reading a missing registry scope as 'no claims yet' instead of raising"*.
+    That is done. The filesystem adapter answered an absent scope DIRECTORY
+    with ``FileNotFoundError`` while every other store answered ``[]``, so this
+    face was mapping a brand-new store to "the deployment is not ready" — and
+    the first write creates the directory, so there was never anything to
+    provision.
+
+    A store with no ``_lib`` is the state EVERY store is in before anybody
+    authors anything. It is not a 503; it is a 201.
+
+    What still 503s is the store itself being absent, and that half is asserted
+    on the adapter (``StoreUnavailable``, still a ``FileNotFoundError``, so the
+    ``except`` arms on this face are untouched and now fire only for the case
+    they describe)."""
     with _client(dna_dir_without_lib, raise_server_exceptions=False) as c:
         r = c.post("/v1/kinds", params={"tenant": _WID},
                    json={"kind": "Contrato", "schema": _SCHEMA})
-        assert r.status_code == 503, r.text
-        detail = r.json()["detail"]
-        assert "_lib" in detail, detail
-        assert re.search(r"provision|not (been )?(set up|created)", detail, re.I), detail
+        assert r.status_code == 201, r.text
+    # The registry scope is CREATED by the mint, which is why demanding it up
+    # front was the wrong question.
+    assert (dna_dir_without_lib / "_lib").is_dir()
 
 
 # ── 7. reading ONE authored Kind, in full ─────────────────────────────────

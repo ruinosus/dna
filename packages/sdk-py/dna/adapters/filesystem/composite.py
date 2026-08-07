@@ -98,6 +98,36 @@ class CompositeFilesystemSource(WritableSourcePort):
 
     # ── helpers ───────────────────────────────────────────────────────
 
+    def attach_kernel(self, kernel: object) -> None:
+        """KernelAttachable — fan the kernel out to every child (i-140).
+
+        The router carried the SAME contradiction the flat adapter did, one
+        level up and harder to see: it declared ``query_pushdown=True`` while
+        declaring ``kernel_attachable=False``, and it delegates every read to a
+        child ``FilesystemWritableSource``. Those children are constructed with
+        whatever ``kernel`` the composite was built with — and the call sites
+        that build the store BEFORE assembling the kernel around it pass
+        ``None``. With no attach path, ``None`` is what they kept, so no child
+        ever had a reader view and every bundle-stored instance was invisible
+        to every read door except ``load_all``.
+
+        MEASURED before this method existed, on a composite over one child repo
+        holding a bundle-stored ``Skill`` and a yaml-stored ``Story``::
+
+            Skill   load_all=1  source.query=0  kernel.query=0   ← blind
+            Story   load_all=1  source.query=1  kernel.query=1
+
+        Idempotent per child, and deduped by identity: one child may own
+        several scopes, so ``self._children`` names it once per scope.
+        """
+        self._kernel = kernel
+        seen: set[int] = set()
+        for child in self._children.values():
+            if id(child) in seen:
+                continue
+            seen.add(id(child))
+            child.attach_kernel(kernel)
+
     def _route(self, scope: str) -> FilesystemWritableSource:
         try:
             return self._children[scope]
@@ -145,6 +175,17 @@ class CompositeFilesystemSource(WritableSourcePort):
     async def load_all(
         self, scope: str, readers: list | None = None,
     ) -> list[dict[str, Any]]:
+        """Every instance in ``scope``. An unrouted scope is EMPTY (i-142).
+
+        The READ door only, and deliberately not ``_route``. A read of a scope
+        this store holds nothing for is empty — the answer SQLite and Postgres
+        both give, and the answer the flat filesystem adapter gives now. A
+        WRITE to an unknown scope still raises out of ``_route``, because there
+        is genuinely no child to route it to and inventing one would put
+        somebody's instance in a repository they did not name.
+        """
+        if scope not in self._children:
+            return []
         return await self._route(scope).load_all(scope, readers=readers)
 
     async def resolve_ref(self, scope: str, ref: str) -> str:
@@ -361,7 +402,13 @@ class CompositeFilesystemSource(WritableSourcePort):
             layers=True,
             bundle_read=True,
             bundle_write=True,
-            kernel_attachable=False,
+            # ⚠️ i-140 — was False while ``query_pushdown`` below said True, the
+            # same contradiction the flat adapter carried. This router answers
+            # queries by DELEGATING to children whose whole ability to see a
+            # bundle depends on holding the kernel's readers, so "cannot be
+            # attached" and "delegate the query to me" could not both be true.
+            # ``attach_kernel`` fans out to the children now.
+            kernel_attachable=True,
             granular_list=True,
             granular_one=True,
             query_pushdown=True,
