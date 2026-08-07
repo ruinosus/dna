@@ -1,4 +1,9 @@
-"""Tests for ``dna new`` — scaffold a valid Kind skeleton (s-dx-new-scaffolding).
+"""Tests for ``dna new`` — scaffold a valid INSTANCE skeleton (s-dx-new-scaffolding).
+
+⚠️ This line said "a valid Kind skeleton" until 07/08/2026, echoing the group's
+own help. These commands create no Kind: an Agent/Soul/Guardrail/Tool is an
+INSTANCE of a built-in Kind (i-111). The one command in the group that creates
+a Kind is ``dna new kind``, and its guards live in ``test_new_kind_cmd.py``.
 
 Exercises the REAL write path (dna_session → kernel.write_instance → the
 registered readers/writers) against a filesystem scope: the scaffolded doc
