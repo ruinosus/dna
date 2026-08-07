@@ -1,17 +1,21 @@
 """``dna_cli._mcp_instances`` — the GENERIC instance tools on the MCP face.
 
-Four tools that replace what would otherwise be four hand-written tools per
-Kind. The MCP face had 21 hand-written tools and no loop over the Kind registry:
-of the 76 registered Kinds (49 record-plane, most declared purely by a
+The tools that replace what would otherwise be one hand-written set per Kind.
+The MCP face had 21 hand-written tools and no loop over the Kind registry: of
+the 76 registered Kinds (49 record-plane, most declared purely by a
 ``*.kind.yaml`` descriptor) only the handful somebody wrote tools for was
-reachable by an agent. These four are resolved from the registry AT CALL TIME,
-so a Kind that exists is a Kind an agent can use:
+reachable by an agent. These are resolved from the registry AT CALL TIME, so a
+Kind that exists is a Kind an agent can use (named, not counted — this said
+"four" while registering seven):
 
-    list_kinds      — the catalog: what can I act on in this scope?
-    list_instances  — the instances of one Kind
-    get_instance    — one instance, verbatim (and ``as_of``: as it was believed)
-    graph_refs      — what points at this instance (the derived edge graph)
-    write_instance  — create/update one instance
+    list_kinds        — the catalog: what can I act on in this scope?
+    list_instances    — the instances of one Kind
+    search_instances  — the instances of one Kind that RESEMBLE a query
+    get_instance      — one instance, verbatim (and ``as_of``: as it was believed)
+    resolve_instance  — one instance, by id
+    graph_refs        — what points at this instance (the derived edge graph)
+    write_instance    — create/update one instance
+    delete_instance   — remove one instance
 
 This module is a THIN adapter, exactly like the rest of the face. The behavior
 lives in the core (``dna.application.instances``); what lives HERE is the
@@ -201,6 +205,58 @@ def register_instance_tools(
         except (ValueError, LookupError) as exc:
             # A bad operator / unresolvable field path is the caller's mistake —
             # say which, instead of a masked 500.
+            raise ToolError(f"{type(exc).__name__}: {exc}") from None
+
+    @server.tool(run_in_thread=False)
+    async def search_instances(
+        kind: str, query: str, scope: str | None = None,
+        api_version: str | None = None, k: int = 10,
+    ) -> dict[str, Any]:
+        """Find the instances of one Kind that RESEMBLE ``query`` — by
+        SIMILARITY, not by enumeration.
+
+        ``list_instances`` answers "what is there". This answers "is there
+        already something like THIS?", which is the question a creator actually
+        asks before authoring a Kind, a Copilot or a Solution — and the one that
+        had no tool. Enumeration is a fine answer over six instances and no
+        answer at all over six hundred, which is exactly what tenant authoring
+        produces.
+
+        Under it is the search plane DNA already ships: a registered provider
+        (pgvector, or sqlite-vec offline) runs a dense vector plane and a lexical
+        plane and fuses their RANKINGS with Reciprocal Rank Fusion. Nothing is
+        re-ranked or re-fused here.
+
+        One Kind per call — the target Kind decides the metered family, exactly
+        as in ``list_instances``, so this can never be the cheap door into a
+        family your plan gates. ``k`` is clamped to 100.
+
+        ⚠️ **Read ``mode`` before you read ``hits``.** The result says which
+        planes actually ran, because an empty list means two different things:
+
+        * ``mode: "hybrid"``, ``degraded: false`` — the semantic plane ran. An
+          empty ``hits`` here IS an answer: nothing similar was found.
+        * ``degraded: true`` — something did not run, and ``degraded_reason``
+          says which (``no_search_provider`` = this deployment has no embedding
+          provider, so only a lexical token-match scan ran and a paraphrase is
+          unfindable; ``search_provider_error`` = it is configured and failed;
+          ``index_refresh_failed`` = the index is behind, so a just-written
+          instance may be missing). ``notice`` says what was lost in words.
+          An empty ``hits`` here is a BLIND SPOT, not a finding, and must not be
+          reported to a user as "there is nothing like that".
+
+        Each hit carries ``{scope, kind, name, score}``; a provider-backed hit
+        may also carry ``title`` / ``snippet`` / ``rank_dense`` /
+        ``rank_lexical`` — optional by contract, so never depend on them. Read a
+        hit in full with ``get_instance``."""
+        port, tenant = await _guard_for(
+            kind, api_version, scope=scope, family_op="read")
+        try:
+            return await D.search_instances_impl(
+                await live(), kind=port.kind, api_version=port.api_version,
+                query=query, scope=scope, tenant=tenant, k=k,
+            )
+        except (ValueError, LookupError) as exc:
             raise ToolError(f"{type(exc).__name__}: {exc}") from None
 
     @server.tool(run_in_thread=False)
@@ -540,6 +596,6 @@ def register_instance_tools(
             raise ToolError(f"{type(exc).__name__}: {exc}") from None
 
     return [
-        "list_kinds", "list_instances", "get_instance", "resolve_instance",
-        "graph_refs", "write_instance", "delete_instance",
+        "list_kinds", "list_instances", "search_instances", "get_instance",
+        "resolve_instance", "graph_refs", "write_instance", "delete_instance",
     ]

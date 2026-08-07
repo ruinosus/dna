@@ -80,6 +80,42 @@ are declared purely by a `*.kind.yaml` descriptor.
   under, and `writable` + `write_refusal`.
 - `list_instances(kind, scope?, api_version?, limit?, offset?)` — the instances
   of one Kind (paged, with an honest `has_more`).
+- `search_instances(kind, query, scope?, api_version?, k?)` — the instances of
+  one Kind that **resemble** `query`. `list_instances` answers *what is there*;
+  this answers *is there already something like this?*, which is the question a
+  creator asks before authoring a Kind, a Copilot or a Solution — and until
+  `s-porta-de-busca` the only tool for it was enumeration, which works at six
+  instances and does not at six hundred (exactly what tenant Kind authoring
+  produces). Underneath is the search plane DNA already ships and already wires:
+  a registered provider (`pgvector`, or the embeddable `sqlite-vec`) runs a dense
+  vector plane and a lexical plane and fuses their **rankings** with Reciprocal
+  Rank Fusion; nothing is re-ranked or re-fused at the door. One Kind per call,
+  because the target Kind decides the metered family — so a search can never be
+  the cheap door into a family your plan gates. `k` is clamped to 100.
+
+  **Read `mode` before you read `hits`**, because an empty list means two
+  different things and only one of them is an answer:
+
+  | `mode` / `degraded` | what it means | may you conclude "nothing similar exists"? |
+  |---|---|---|
+  | `hybrid` / `false` | dense + lexical + RRF all ran | **yes** |
+  | `lexical` / `true`, `degraded_reason: no_search_provider` | this deployment has no embedding provider; only a token-match scan ran, so a paraphrase is unfindable | **no** |
+  | `lexical` / `true`, `degraded_reason: search_provider_error` | the provider is configured and failed on this call | **no** |
+  | `hybrid` / `true`, `degraded_reason: index_refresh_failed` | the search ran, but over an index that is behind — a just-written instance may be missing | **no** |
+
+  Every degraded answer also carries a `notice` saying in words what was lost and
+  that the result is a **blind spot, not a finding**. That field is the whole
+  point of the tool's honesty: `hits: []` beside a bare boolean is read as *"I
+  searched and there is nothing"* by every caller — human or model — that does
+  not already know better, and reporting a blind spot as an absence is how a
+  workspace ends up declaring the same Kind twice. The index is refreshed for the
+  target Kind before the query (idempotent by text hash, the same seam `recall`
+  uses), so a Kind nobody had ever recalled is not silently invisible; a refresh
+  failure degrades the answer rather than being swallowed.
+
+  Hits carry `{scope, kind, name, score}`; a provider-backed hit may also carry
+  `title` / `snippet` / `rank_dense` / `rank_lexical` — optional by contract, so
+  never depend on them. Read a hit in full with `get_instance`.
 - `get_instance(kind, name, scope?, api_version?, as_of?)` — one instance
   verbatim, as your layer sees it (the per-tenant overlay wins, live).
   `as_of` (an ISO-8601 instant) reads the **belief state** instead: the instance
