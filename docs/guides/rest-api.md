@@ -55,7 +55,7 @@ overlay only — never another tenant's data):
   attribution a caller can forge is not attribution. Idempotent, and a no-op
   writes nothing at all. ⚠️ Afterwards, `recall(as_of=T)` for a `T` inside a
   past gap answers on **transaction** time, not world time — see
-  [the revived-memory note](../concepts/search-and-memory.md#-a-revived-memorys-past-which-clock-answers).
+  [the revived-memory note](../concepts/search-and-memory.md#a-revived-memorys-past-which-clock-answers).
 - `DELETE /v1/memories/{name}` — **refused, 403** (i-130). An `Engram` declares
   `record.invalidate-only`; a hard delete would take the version history with
   it and break the auditable / point-in-time reconstructable / revivable
