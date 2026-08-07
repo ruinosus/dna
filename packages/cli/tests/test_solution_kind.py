@@ -144,6 +144,31 @@ def layer_of(name: str, service: str) -> dict:
     return entry
 
 
+def write_app(tmp_path: Path, name: str, **spec) -> None:
+    """Put a real `App` instance in the scope the `scope` fixture set up.
+
+    Written as the file the filesystem source reads, because the point is that
+    `unanswered_cost_question` goes and LOOKS: a stubbed kernel would prove it
+    calls something rather than that it reads the App.
+
+    No `copilots`, deliberately — this is the App of a GENERATED SERVICE, and
+    a generated service serves no copilot. It is the shape that could not be
+    written at all until `copilots` stopped being required.
+    """
+    apps = tmp_path / "store" / ".dna" / "board" / "apps"
+    apps.mkdir(parents=True, exist_ok=True)
+    (apps / f"{name}.yaml").write_text(
+        yaml.dump(
+            {
+                "apiVersion": "github.com/ruinosus/dna/v1",
+                "kind": "App",
+                "metadata": {"name": name},
+                "spec": {"title": name, **spec},
+            }
+        )
+    )
+
+
 # ── the record is written, and it is a real instance ─────────────────────────
 
 
@@ -246,7 +271,6 @@ def test_toda_resposta_do_registro_chega_ao_copier(
                 template_src=spec["services"][0]["template"]["src"],
                 template_ref=spec["services"][0]["template"]["ref"],
                 answers=spec["services"][0]["answers"],
-                pode_dormir=spec["services"][0].get("pode_dormir"),
             )
         ],
     )
@@ -496,107 +520,106 @@ def test_update_com_solution_inexistente_recusa_nomeando_o_conserto(
     assert "dna solution record" in result.output
 
 
-# ── the cost question, as a field instead of something someone remembers ─────
+# ── the cost question: asked here, ANSWERED on the App ───────────────────────
+#
+# `spec-app-e-o-servico` (07/08/2026) moved the commitment out of
+# `services[].pode_dormir` and onto `App.can_sleep`. The reason is granularity:
+# an entry in `services[]` is one per DEPLOYMENT, and an `App` now IS the
+# deployment — nine services are nine entries and nine Apps. One fact in two
+# places is two names for one fact. What could NOT move is the semantics, and
+# that is what these tests pin: absent means NOBODY ANSWERED, and absent is
+# never `False`.
 
 
-def test_pode_dormir_e_gravado_a_partir_da_resposta_de_custo(
+def test_a_resposta_do_template_fica_em_answers_e_nao_vira_campo(
     runner: CliRunner, template: Path, destination: Path, scope: str
 ) -> None:
-    """The CLAUDE.md cost gate becomes part of the declaration.
+    """A procedência do render permanece; a PROMOÇÃO dela a campo acabou.
 
-    Not a second answer the human retypes — that would be two sources for one
-    fact — but the same fact under the name a reader of the FLEET can use
-    without knowing this template spelled it `can_sleep`.
+    Se a resposta do Copier tivesse sido descartada junto com o campo, o
+    registro teria perdido informação numa mudança que era para não perder
+    nenhuma — e é isso que a primeira asserção mede.
+    """
+    generate(runner, template, destination, service_name="api", can_sleep="false")
+    runner.invoke(solution, ["record", str(destination), "--solution", "s"])
+
+    layer = layer_of("s", "api")
+    assert layer["answers"]["can_sleep"] is False, (
+        "a resposta do template é a procedência do render e continua gravada"
+    )
+    assert "pode_dormir" not in layer
+
+
+def test_o_compromisso_de_custo_e_lido_do_App_de_mesmo_nome(
+    runner: CliRunner, template: Path, destination: Path, tmp_path: Path, scope: str
+) -> None:
+    """A chave entre as duas listas é `services[].name` == `App.metadata.name`.
+
+    `api` tem App que respondeu, `worker` tem App que não respondeu. Se a
+    função ainda lesse `services[].pode_dormir`, `api` apareceria como não
+    respondido (o campo não existe mais) e o teste falharia — que é o que faz
+    dele uma medição e não uma formalidade.
     """
     generate(runner, template, destination, service_name="api", can_sleep="false")
     generate(runner, template, destination, service_name="worker", can_sleep="true")
-    runner.invoke(solution, ["record", str(destination), "--solution", "s"])
-
-    assert layer_of("s", "api")["pode_dormir"] is False
-    assert layer_of("s", "worker")["pode_dormir"] is True
-
-
-def test_uma_camada_sem_resposta_de_custo_nao_presume_o_lado_barato(
-    runner: CliRunner, tmp_path: Path, scope: str
-) -> None:
-    """⚠️ Absent is reported, never defaulted to `true`.
-
-    Presuming the cheap side is how a fixed replica — ~US$ 90/month, forever —
-    gets into the fleet with nobody deciding it. The finding speaks on EVERY
-    run, like `divergent_answers` and unlike `moved_defaults`, because a
-    condition that stays true has to keep being said.
-    """
-    silent = tmp_path / "silent-template"
-    silent.mkdir()
-    (silent / "copier.yml").write_text(
-        '_answers_file: ".copier-answers.{{ service_name }}.yml"\n'
-        '_templates_suffix: ".jinja"\n'
-        "service_name:\n  type: str\n  default: api\n"
-    )
-    (silent / "{{ _copier_conf.answers_file }}.jinja").write_text(
-        "{{ _copier_answers|to_nice_yaml -}}\n"
-    )
-    init_repo(silent)
-    commit_all(silent, "v1")
-    git(silent, "tag", "v1.0.0")
-
-    tree = init_repo(tmp_path / "tree")
-    runner = CliRunner()
-    runner.invoke(solution, ["new", str(silent), str(tree), "--defaults"])
+    write_app(tmp_path, "api", can_sleep=False)
+    write_app(tmp_path, "worker")  # existe, mas nunca respondeu
 
     result = runner.invoke(
-        solution, ["record", str(tree), "--solution", "s", "--json"]
+        solution, ["record", str(destination), "--solution", "s", "--json"]
     )
+    assert json.loads(result.output)["unanswered_cost"] == ["worker"]
 
+
+def test_can_sleep_false_e_uma_RESPOSTA_e_ausente_nao_e_false(
+    runner: CliRunner, template: Path, destination: Path, tmp_path: Path, scope: str
+) -> None:
+    """⚠️ A asserção que a mudança de casa tinha de preservar, nos dois sentidos.
+
+    `False` é a resposta CARA — uma réplica fixa, ~US$ 90/mês, para sempre — e
+    reportá-la como "não respondida" seria gritar lobo até ninguém ouvir mais.
+    Ausente é o oposto: ninguém foi perguntado, e presumir o lado barato é
+    exatamente como essa réplica entra na frota sem decisão.
+
+    Um teste que só checasse `unanswered == []` para `False` passaria com a
+    função devolvendo `[]` sempre; por isso os dois casos são medidos no MESMO
+    run, e a lista tem de conter um e não o outro.
+    """
+    generate(runner, template, destination, service_name="pago")
+    generate(runner, template, destination, service_name="mudo")
+    write_app(tmp_path, "pago", can_sleep=False)   # respondeu, e é o caro
+    # "mudo" não tem App nenhum
+
+    result = runner.invoke(
+        solution, ["record", str(destination), "--solution", "s", "--json"]
+    )
+    unanswered = json.loads(result.output)["unanswered_cost"]
+
+    assert "pago" not in unanswered, "`can_sleep: false` é uma RESPOSTA"
+    assert unanswered == ["mudo"], "ausente é `não respondeu`, nunca `false`"
+
+
+def test_um_servico_sem_App_nao_presume_o_lado_barato(
+    runner: CliRunner, template: Path, destination: Path, scope: str
+) -> None:
+    """Nenhum `App` declarado é o terceiro estado, e ele cai no lado ALTO.
+
+    A finding fala em TODA execução, como `divergent_answers` e ao contrário de
+    `moved_defaults`: uma condição que continua verdadeira tem de continuar
+    sendo dita.
+    """
+    generate(runner, template, destination, service_name="api")
+
+    result = runner.invoke(
+        solution, ["record", str(destination), "--solution", "s", "--json"]
+    )
     assert json.loads(result.output)["unanswered_cost"] == ["api"]
-    assert "pode_dormir" not in layer_of("s", "api")
 
     strict = runner.invoke(
-        solution, ["record", str(tree), "--solution", "s", "--strict"]
+        solution, ["record", str(destination), "--solution", "s", "--strict"]
     )
     assert strict.exit_code == solution_cmd.EXIT_FINDINGS
     assert "US$ 90" in strict.output
-
-
-def test_sleep_answer_nomeia_a_pergunta_quando_o_template_a_chama_de_outra_coisa(
-    runner: CliRunner, tmp_path: Path, scope: str
-) -> None:
-    """`can_sleep` is a GUESS, and the escape from it is a named option.
-
-    The guess never hides: when the key is absent nothing is presumed. Which is
-    what makes a default acceptable here at all — it fails loudly rather than
-    quietly, unlike the fallbacks this house has been bitten by.
-    """
-    other = tmp_path / "other-template"
-    other.mkdir()
-    (other / "copier.yml").write_text(
-        '_answers_file: ".copier-answers.{{ service_name }}.yml"\n'
-        '_templates_suffix: ".jinja"\n'
-        "service_name:\n  type: str\n  default: api\n"
-        "scale_to_zero:\n  type: bool\n  default: false\n"
-    )
-    (other / "{{ _copier_conf.answers_file }}.jinja").write_text(
-        "{{ _copier_answers|to_nice_yaml -}}\n"
-    )
-    init_repo(other)
-    commit_all(other, "v1")
-    git(other, "tag", "v1.0.0")
-
-    tree = init_repo(tmp_path / "tree")
-    runner.invoke(solution, ["new", str(other), str(tree), "--defaults"])
-
-    guessed = runner.invoke(
-        solution, ["record", str(tree), "--solution", "guess", "--json"]
-    )
-    assert json.loads(guessed.output)["unanswered_cost"] == ["api"]
-
-    named = runner.invoke(
-        solution,
-        ["record", str(tree), "--solution", "named", "--json",
-         "--sleep-answer", "scale_to_zero"],
-    )
-    assert json.loads(named.output)["unanswered_cost"] == []
-    assert layer_of("named", "api")["pode_dormir"] is False
 
 
 # ── one template overlaid N times, one record ────────────────────────────────
@@ -768,4 +791,99 @@ def test_o_schema_nao_exige_nenhuma_resposta_do_template() -> None:
         "typing the template's questions here would make this Kind one "
         "particular copier.yml written twice"
     )
-    assert "pode_dormir" not in layer["required"]
+    # ⚠️ E o compromisso de custo não mora mais aqui de forma nenhuma: nem
+    # como campo, nem como exigência. A casa dele é `App.can_sleep`, e este
+    # `additionalProperties: false` é o que garante que ele não volte de
+    # fininho por uma gravação antiga.
+    assert "pode_dormir" not in layer["properties"]
+    assert layer["additionalProperties"] is False
+
+
+def test_o_que_upsert_grava_continua_cabendo_no_schema_da_Solution() -> None:
+    """A trava do AC 2 de `Story/s-kinds-a-conta-declarada`, no lugar onde ela
+    é decidida — o CONSUMIDOR.
+
+    `Spec/spec-app-e-o-servico` pede que `services[]` deixe de existir como
+    campo, com o argumento de que `Solution` tem 0 instâncias e portanto mexer
+    nele custa zero. A contagem está certa; a conclusão não segue dela, e este
+    teste é a medição:
+
+    * o schema é `additionalProperties: false` com `required: [title,
+      services]`, então remover a propriedade não a torna opcional — torna
+      TODA gravação de `Solution` inválida;
+    * `upsert_solution` escreve `spec["services"]` em todo caminho, e é o
+      único caminho por onde `dna solution new` / `update` gravam.
+
+    Logo `dna solution` inteiro para de funcionar no commit que remove o campo,
+    e este teste é o que diz isso em voz alta em vez de deixar o CI descobrir
+    de lado. O founder reescreveu o AC com esta medição na tela: a remoção
+    total está cancelada, e o que saiu foi `pode_dormir` — um campo, não a
+    lista. As respostas do Copier não têm outra casa.
+    """
+    import jsonschema
+    from dna.kernel import Kernel
+
+    port = Kernel.auto()._kinds[("github.com/ruinosus/dna/v1", "Solution")]
+    layer = solution_kind.Layer(
+        name="mcp",
+        answers_file=".copier-answers.mcp.yml",
+        template_src="gh:ruinosus/dna",
+        template_ref="v0.74.0",
+        answers={"identity": "workos", "graph_obo": True},
+    )
+    spec = {"title": "dna-cloud", "services": [layer.to_spec()]}
+
+    jsonschema.validate(spec, port.schema())
+    assert "services" in port.schema()["required"]
+    assert port.schema()["additionalProperties"] is False
+    # e o que o registro guarda e o `App` não tem onde guardar:
+    assert set(layer.to_spec()) >= {"answers", "answers_file", "template"}
+
+
+def test_a_relacao_com_App_nao_e_declaravel_de_dentro_de_services() -> None:
+    """⛔ Por que `services[].name` NÃO virou relação declarada — medido.
+
+    O founder pediu que virasse, usando `by:`. `by:` não serve, e a razão é
+    estrutural: ele diz onde o valor CASA NO ALVO, nunca onde ele é LIDO NA
+    ORIGEM — `relation_values` faz `spec.get(<nome da relação>)`, primeiro
+    nível, sempre. `kind_graph` já nomeia a limitação
+    (`top_level_properties_only`).
+
+    O que este teste mede é a FORMA DO DEFEITO, que é o que torna a recusa
+    obrigatória em vez de opcional: a declaração passaria no lint, se
+    anunciaria como imposta, e leria zero. Uma guarda verde que não guarda
+    nada é o pior dos dois mundos, e é o que aconteceria se alguém "arrumasse"
+    isto no futuro.
+    """
+    from dna.kernel.kinds.relations import (
+        normalize_relations,
+        relation_values,
+        schema_contradictions,
+    )
+
+    rels = normalize_relations({"services": {"to": "App", "cardinality": "many"}})
+    schema = {
+        "type": "object",
+        "properties": {
+            "services": {
+                "type": "array",
+                "items": {"type": "object",
+                          "properties": {"name": {"type": "string"}}},
+            }
+        },
+    }
+    spec = {"services": [{"name": "mcp"}, {"name": "mcp-entra"}]}
+
+    assert schema_contradictions(rels, schema) == [], "o lint passaria VERDE"
+    assert rels["services"].resolved and rels["services"].enforced, (
+        "e ela se anunciaria como resolvida E imposta"
+    )
+    assert relation_values(rels["services"], spec) == [], (
+        "…lendo ZERO valores: nenhuma aresta, nenhum veto, em silêncio"
+    )
+
+    # A que FUNCIONA é `apps[]`, de primeiro nível — e é a declarada.
+    apps = normalize_relations({"apps": {"to": "App", "cardinality": "many"}})
+    assert relation_values(apps["apps"], {"apps": ["mcp", "mcp-entra"]}) == [
+        "mcp", "mcp-entra",
+    ]

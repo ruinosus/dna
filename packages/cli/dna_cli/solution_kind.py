@@ -56,12 +56,18 @@ from typing import Any
 SOLUTION_KIND = "Solution"
 SOLUTION_API_VERSION = "github.com/ruinosus/dna/v1"
 
-#: The answer this house's reference template uses for the cost commitment.
-#: A GUESS, and a loud one: when it is absent from a layer's answers nothing is
-#: presumed — ``pode_dormir`` is left unwritten and reported as unanswered on
-#: every run. A silent ``False`` here would be the cheap side of a ~US$ 90/month
-#: decision, invented by a default.
-DEFAULT_SLEEP_ANSWER = "can_sleep"
+#: The Kind that OWNS the cost commitment since ``spec-app-e-o-servico``
+#: (07/08/2026). It used to live here, promoted out of ``answers`` into
+#: ``services[].pode_dormir``, and that promotion was right only while there
+#: was nowhere else for it: an entry in ``services[]`` is one per DEPLOYMENT
+#: (*"nove serviços sobre quatro imagens são nove entradas aqui"*), an ``App``
+#: is now the deployment, and one fact in two places is two names for one fact.
+#: So this record keeps the PROVENANCE OF THE RENDER — the Copier answer stays
+#: verbatim inside ``answers`` — and the COMMITMENT is read off the ``App``.
+COST_KIND = "App"
+
+#: The field on :data:`COST_KIND` that answers it.
+COST_FIELD = "can_sleep"
 
 
 class SolutionRecordError(Exception):
@@ -70,28 +76,30 @@ class SolutionRecordError(Exception):
 
 @dataclass(frozen=True)
 class Layer:
-    """One answers file, as the ``Solution`` stores it."""
+    """One answers file, as the ``Solution`` stores it.
+
+    ⚠️ No ``pode_dormir``. The cost commitment moved to ``App.can_sleep``
+    (:data:`COST_KIND` / :data:`COST_FIELD`) — see the module constants. What
+    the template answered is not lost: it is in :attr:`answers`, under whatever
+    key that template used, which is all this record ever claimed to hold.
+    """
 
     name: str
     answers_file: str
     template_src: str
     template_ref: str | None
     answers: dict[str, Any]
-    pode_dormir: bool | None
 
     def to_spec(self) -> dict[str, Any]:
         template: dict[str, Any] = {"src": self.template_src}
         if self.template_ref:
             template["ref"] = self.template_ref
-        entry: dict[str, Any] = {
+        return {
             "name": self.name,
             "answers_file": self.answers_file,
             "template": template,
             "answers": dict(self.answers),
         }
-        if self.pode_dormir is not None:
-            entry["pode_dormir"] = self.pode_dormir
-        return entry
 
 
 def service_name_of(answers_relpath: Path | str) -> str:
@@ -116,7 +124,6 @@ def layer_from_answers_file(
     destination: Path,
     answers_relpath: Path,
     *,
-    sleep_answer: str = DEFAULT_SLEEP_ANSWER,
     service: str | None = None,
 ) -> Layer:
     """Read one answers file off disk into the shape the Kind stores."""
@@ -132,14 +139,12 @@ def layer_from_answers_file(
             "but never updated, and a Solution that claimed otherwise would be "
             "the wrong kind of record."
         )
-    sleeps = answers.get(sleep_answer)
     return Layer(
         name=service or service_name_of(answers_relpath),
         answers_file=str(answers_relpath),
         template_src=str(src),
         template_ref=raw.get("_commit"),
         answers=answers,
-        pode_dormir=bool(sleeps) if isinstance(sleeps, bool) else None,
     )
 
 
@@ -264,16 +269,57 @@ def upsert_solution(
         return spec
 
 
-def unanswered_cost_question(spec: dict[str, Any] | None) -> list[str]:
-    """Layers that never said whether they may sleep.
+def unanswered_cost_question(
+    spec: dict[str, Any] | None, *, scope: str | None = None
+) -> list[str]:
+    """Services whose ``App`` never said whether they may sleep.
+
+    Reads :data:`COST_FIELD` off the ``App`` named by each ``services[].name``
+    — the two are the same string, because an entry here is one per DEPLOYMENT
+    and an ``App`` is the deployment. Before ``spec-app-e-o-servico`` this read
+    ``services[].pode_dormir``; the question is the same and the owner moved.
+
+    ⚠️ **Absent is UNANSWERED, and absent is never ``False``.** Three states
+    collapse into "unanswered" and none of them into "may not sleep":
+
+    * no ``App`` by that name — the deployment has no declaration at all;
+    * an ``App`` that omits ``can_sleep`` — nobody was asked;
+    * ``can_sleep: null``.
+
+    ``can_sleep: False`` is an ANSWER, and an expensive one (a fixed replica,
+    ~US$ 90/month, forever). Reporting it as unanswered would be as wrong as
+    presuming it: the first cries wolf, the second hides the replica nobody
+    decided. That distinction is the whole point of this function and is the
+    thing that had to survive the move between Kinds.
 
     Reported rather than refused, and on every run rather than once — the same
     shape as ``divergent_answers``, and for the same reason: a finding that
     speaks only at the moment it appears is a finding that goes quiet while the
     condition stays true.
+
+    A store that cannot be read is not silently "all answered": the read is
+    attempted once, and a failure leaves every service reported as unanswered,
+    which is the loud side.
     """
-    out: list[str] = []
-    for entry in (spec or {}).get("services") or []:
-        if isinstance(entry, dict) and entry.get("pode_dormir") is None:
-            out.append(str(entry.get("name")))
-    return sorted(out)
+    from dna_cli._ctx import open_session  # noqa: PLC0415 — the kernel is lazy
+
+    names = [
+        str(entry.get("name"))
+        for entry in (spec or {}).get("services") or []
+        if isinstance(entry, dict) and entry.get("name")
+    ]
+    if not names:
+        return []
+
+    answered: set[str] = set()
+    try:
+        with open_session(scope) as session:
+            for name in names:
+                doc = session.get_doc(COST_KIND, name)
+                if doc is not None and isinstance(
+                    (doc.spec or {}).get(COST_FIELD), bool
+                ):
+                    answered.add(name)
+    except Exception:  # noqa: BLE001 — unreadable store reports the loud side
+        return sorted(set(names))
+    return sorted(set(names) - answered)

@@ -55,12 +55,31 @@ def test_app_declara_a_referencia_aos_copilotos():
     assert app["spec"]["schema"]["properties"]["requires_plan"]["enum"] == ["free", "pro"]
 
 
-def test_app_sem_copilots_e_recusado():
+def test_app_sem_copilots_e_valido():
+    """⚠️ Isto era o OPOSTO até 07/08/2026, e a inversão é a decisão.
+
+    `spec-app-e-o-servico` fez o App SER o serviço, e um serviço gerado pelo
+    template não tem copiloto nenhum — é um processo que atende. Enquanto
+    `copilots` fosse `required` com `minItems: 1`, o comando não conseguia
+    gravar o App do serviço que ele acabara de gerar. Um App sem copiloto é um
+    App válido: ou ainda não recebeu nenhum, ou nunca vai receber (o `worker`
+    do dna-cloud escala por KEDA e não serve copiloto algum).
+
+    A recusa do `title` ausente é o que impede este teste de virar "o schema
+    não exige mais nada" — a forma que um `required` esvaziado por engano
+    teria.
+    """
     import jsonschema
     from dna.kernel.source.descriptor_loader import load_descriptors
 
     raws = load_descriptors("dna.extensions.helix")
-    app = next(r for r in raws if r["metadata"]["name"] == "app")
+    schema = next(
+        r for r in raws if r["metadata"]["name"] == "app"
+    )["spec"]["schema"]
+
+    jsonschema.validate({"title": "worker"}, schema)
+    jsonschema.validate({"title": "worker", "copilots": []}, schema)
+
     with pytest.raises(jsonschema.ValidationError) as exc:
-        jsonschema.validate({"title": "x"}, app["spec"]["schema"])
-    assert "copilots" in str(exc.value)
+        jsonschema.validate({"copilots": ["editor"]}, schema)
+    assert "title" in str(exc.value)
