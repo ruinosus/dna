@@ -201,6 +201,76 @@
 # `by: name`, resolvida e IMPOSTA — e que, com `App` = deployment, denota o
 # mesmo conjunto que `services[].name`. A junção existe e é declarada; o que
 # não existe é um segundo lugar para declará-la.
+# ── ⭐ 07/08/2026: `services` vira OPCIONAL, por evidência medida ─────────────
+#
+# `Spec/spec-campo-opcional-por-evidencia`, decidida pelo founder depois do
+# dogfood do dna-cloud (`ruinosus/dna-cloud#370`). **O schema impede besteira;
+# a completude é um relatório.** E a regra que impede a segunda metade de virar
+# frouxidão: um campo vira opcional quando a REALIDADE apresenta um caso
+# legítimo, NUNCA por conveniência.
+#
+# O caso, aqui, é a solução inteira: **o dna-cloud nunca foi gerado por
+# template.** Não existe `.copier-answers` porque não houve render. Com
+# `required: [title, services]` o dogfood media nove Apps passando e a
+# `Solution` sozinha recusada — e a recusa dizia "falta um campo", não "este
+# repo não veio de template". O motivo sumia.
+#
+# ⚠️ Note a assimetria com o resto desta decisão, porque ela é o teste da regra:
+# `services` afrouxa e `App.service_name` NÃO, na mesma spec, no mesmo dia. A
+# diferença não é gosto — é que um tem caso real medido e o outro saiu limpo
+# nos nove. É isso que "por evidência" significa na prática.
+#
+# ⚠️ O `minItems: 1` FICA. Opcional cobre o repo que nunca foi renderizado;
+# `minItems` recusa o `services: []`, que não é nem uma coisa nem outra.
+# "Impedir besteira" continua sendo trabalho do schema.
+#
+# ⚠️⚠️ E ISTO ABRE UM BURACO QUE TEM DE FECHAR JUNTO — está registrado aqui
+# porque é onde o próximo leitor vai procurar. `unanswered_cost_question` faz
+# `if not names: return []` sobre `services[]`. Com o campo opcional, uma
+# `Solution` sem ele responde **"tudo respondido"**: verde por VACUIDADE,
+# exatamente a classe de defeito que já cegou três guardas nesta casa. A fonte
+# do relatório passa a ser `apps[]` — a relação imposta, que é o conjunto de
+# deployments por definição e existe em repo gerado ou não — e `apps[]` vazio
+# é "não há o que olhar", alto, jamais "tudo respondido". Quem fecha é
+# `Story/s-relatorio-do-que-falta`; este descritor só faz a metade dele.
+#
+# ── ⭐ A RÉGUA: `answers` é a casa do que o TEMPLATE precisa ──────────────────
+#
+# A mesma spec fixou onde mora um campo de stack, e o teste é mecânico:
+#
+#   ⭐ **O `App` carrega o que a FIAÇÃO precisa. O `services[].answers` carrega
+#     o que o TEMPLATE precisa.**
+#
+# Medido em 07/08/2026 contra os TRÊS fragmentos de fiação de
+# `templates/app-container` (`wiring/compose.fragment.yml`,
+# `wiring/azure.service.yaml`, `wiring/containerapp.bicep`): `service_name` (3
+# usos), `container_port` (2), `identity` (2), `env_prefix` (2), `ingress` (1),
+# `can_sleep` (1), `max_replicas` (1) e `graph_obo` (1) são fatos de
+# DEPLOYMENT; `python_module` (0 usos na fiação, 4 no código), `description`
+# (0) e `dna_floor`/`dna_ceiling` (0) são SÓ RESPOSTA DE RENDER.
+#
+# ⚠️ **`python_module` DESCEU do `App` para cá** por essa medição. Ele nomeia o
+# diretório que o template Python cria sob `src/` e não aparece em uma linha de
+# fiação. O `answers` já era exatamente a casa certa — mapa livre, verbatim, no
+# vocabulário do template — e por isso a mudança não custou schema nenhum aqui:
+# ele entra como qualquer outra resposta.
+#
+# ⭐ E é o que faz o `portal` do dna-cloud (Next.js) caber SEM EXCEÇÃO: ele não
+# responde uma pergunta que o `App` deixou de fazer. A régua também é o que
+# permite um template Node perguntar `package_name` e um Go `module_path` sem
+# inchar o `App` — cada stack traz o seu vocabulário para dentro deste mapa.
+#
+# ── "Não se aplica": não há caso NESTE Kind, e por isso não há mecanismo ──────
+#
+# A outra condição da spec — que "não se aplica" seja resposta DECLARADA e não
+# vazio adivinhado — não gerou mecanismo em lugar nenhum, e menos ainda aqui: a
+# `Solution` não apresentou um único campo com caso legítimo de "a pergunta não
+# tem sujeito". `services` ausente já é uma afirmação legível por si — *esta
+# solução não tem procedência de render* — e não há segunda leitura de que
+# precise ser distinguida. Um mecanismo instalado antes de existir o caso é a
+# decoração que este arquivo recusa em outros três lugares. (Do lado do `App` o
+# único caso medido é o `worker` sem porta, e lá quem o responde é o campo de
+# domínio `ingress: none`, não um mecanismo genérico.)
 apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:
@@ -244,6 +314,16 @@ spec:
     names a relation by a FIRST-LEVEL spec field), so the declared, enforced
     relation to `App` is `apps` — which, with App = deployment, denotes the
     same set.
+    Since `spec-campo-opcional-por-evidencia` (2026-08-07) `services` is
+    OPTIONAL, and the evidence is dna-cloud itself: it was never generated from
+    a template, so there is no `.copier-answers` anywhere, and a `required`
+    turned "this repo has no render provenance" into "a field is missing" —
+    losing the reason. Absent is an ASSERTION (no provenance); `minItems: 1`
+    stays so that `services: []`, which asserts neither, is still refused.
+    ⚠️ Consumers must NOT read "no services" as "nothing to check":
+    `unanswered_cost_question` reads `apps[]` — the enforced relation, which is
+    the set of deployments by definition — precisely so a Solution without
+    `services` cannot answer "all answered" by vacuity.
   relations:
     apps:
       to: App
@@ -251,7 +331,7 @@ spec:
   schema:
     type: object
     additionalProperties: false
-    required: [title, services]
+    required: [title]
     properties:
       title:
         type: string
@@ -268,10 +348,34 @@ spec:
       services:
         type: array
         minItems: 1
-        description: Uma entrada POR CAMADA — e uma camada é um answers file,
-          que é um app. Nove serviços sobre quatro imagens são nove entradas
-          aqui, quatro `template.src` distintos, e nove updates independentes.
-          Nunca um template do repo inteiro (§4.4 regra 3).
+        description: >-
+          Uma entrada POR CAMADA — e uma camada é um answers file, que é um
+          app. Nove serviços sobre quatro imagens são nove entradas aqui,
+          quatro `template.src` distintos, e nove updates independentes. Nunca
+          um template do repo inteiro (§4.4 regra 3).
+          ⭐ EVIDÊNCIA para ser OPCIONAL (`spec-campo-opcional-por-evidencia`,
+          07/08/2026): o **dna-cloud nunca foi gerado por template**. Não há
+          `.copier-answers` porque não houve render — a primeira solução real
+          desta casa tem ZERO camadas, e não por descuido. Enquanto isto era
+          `required`, o dogfood dos nove serviços reais recusava a `Solution`
+          inteira (medido em `ruinosus/dna-cloud#370`: os nove Apps passavam, e
+          só ela ficava), e a recusa não dizia "este repo não veio de template"
+          — dizia que faltava um campo. O motivo sumia, que é o pior da recusa.
+          Ausente é uma AFIRMAÇÃO: esta solução não tem procedência de render.
+          É legível, e é diferente de uma solução gerada cujas camadas ninguém
+          registrou — essa tem `services[]` e o `update` a alcança.
+          ⚠️ `minItems: 1` FICA, e a combinação é deliberada: opcional dá conta
+          do repo que nunca foi renderizado; `minItems` recusa o `services: []`,
+          que não seria nem uma coisa nem outra. O schema impede besteira; a
+          completude é um relatório.
+          ⚠️⚠️ E quem consome isto NÃO pode mais ler "sem `services` = nada a
+          conferir". `unanswered_cost_question` fazia `if not names: return []`
+          sobre esta lista, e com o campo opcional uma `Solution` sem ele
+          responderia "tudo respondido" — verde por vacuidade, a classe de
+          defeito que já cegou três guardas nesta casa. A fonte do relatório
+          passa a ser `apps[]`, a relação imposta, que é o conjunto de
+          deployments por definição e existe em repo gerado ou não
+          (`Story/s-relatorio-do-que-falta`).
         items:
           type: object
           additionalProperties: false
@@ -319,8 +423,17 @@ spec:
                     atualizada; não significa "a mais recente".
             answers:
               type: object
-              description: As respostas desta camada, VERBATIM, no vocabulário
-                do template. Mapa livre de propósito - o conjunto de perguntas
+              description: >-
+                As respostas desta camada, VERBATIM, no vocabulário
+                do template. ⭐ É a casa do que o TEMPLATE precisa, pela régua
+                de `spec-campo-opcional-por-evidencia` — um campo que não
+                aparece em NENHUM dos três fragmentos de fiação não descreve o
+                deployment e mora aqui, não no `App`. Foi por essa medição que
+                `python_module` desceu do `App` para cá em 07/08/2026 (0 usos
+                na fiação, 4 no código gerado) — e é o que faz um `portal`
+                Next.js caber sem exceção, e um template Node trazer
+                `package_name` sem que o `App` mude. Mapa livre de propósito -
+                o conjunto de perguntas
                 é do template e muda com ele, e nenhuma chave é obrigatória
                 porque uma resposta atrás de `when:` legitimamente desaparece
                 (medido - exigir uma seria recusar a gravação exatamente do
