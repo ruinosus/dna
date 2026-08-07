@@ -258,31 +258,48 @@ about is simply ignored by Copier, so keeping it costs nothing.
 |---|---|
 | `template.src` + `template.ref` — a **pointer** | any rendered file, any template body |
 | `answers` — free-form, the template's own vocabulary | a typed mirror of the template's questions |
-| `pode_dormir` — the cost commitment | `requires_plan` and anything else that would *look* enforced and not be |
-| `apps` — which `App`s the solution delivers | the conflicts, the git state, the working copy |
+| `apps` — which `App`s the solution delivers | the **cost commitment** — it lives on `App.can_sleep` |
+| | `requires_plan` and anything else that would *look* enforced and not be |
+| | the conflicts, the git state, the working copy |
 
 `answers` requires no key and types none, for the reason §2 gives: a gated
 answer legitimately disappears, and typing the questions would make the Kind one
 particular `copier.yml` written twice — the second template would not fit.
 
-### The cost question, as a field
+### The cost question — asked here, answered on the `App`
 
 An app that cannot scale to zero costs a fixed replica — **~US$ 90 a month,
-forever**. `pode_dormir` is the one fact promoted out of `answers`, so that
-*"how many of our services never sleep?"* is answerable across the fleet without
-knowing that this template spelled it `can_sleep` and the next one spells it
-something else.
+forever**.
 
-Nothing is presumed. When the answer is absent the field is left unwritten and
-said out loud, on **every** run:
+⚠️ **This changed on 07/08/2026** (`spec-app-e-o-servico`). The commitment used
+to be `services[].pode_dormir`, promoted out of `answers` because nothing else
+could hold it. Now the `App` **is** the deployment, and an entry in `services[]`
+is one per deployment — the same granularity, nine and nine. One fact in two
+places is two names for one fact, so:
+
+* `Solution.services[]` keeps the **provenance of the render** — which template,
+  which ref, which answers. The template's own `can_sleep` answer is still here,
+  verbatim, inside `answers`, like every other answer. What ended was its
+  promotion to a field of its own.
+* **`App.can_sleep`** holds the **commitment**, authored on the App named by
+  `services[].name` — the same string.
+
+Nothing is presumed, and that is the part that had to survive the move. A
+service whose `App` has no `can_sleep` — or no `App` at all — is reported on
+**every** run:
 
 ```
-⚠ 1 recorded layer(s) never said whether they may sleep:
+⚠ 1 recorded service(s) have no App saying whether they may sleep:
     api
 ```
 
-`--sleep-answer KEY` names the question when your template calls it something
-else; `--strict` turns the finding into exit 3.
+⚠️ **Absent is never `false`.** `can_sleep: false` is an *answer*, and an
+expensive one; absent means nobody was asked. Collapsing the two is exactly how
+a fixed replica enters the fleet with nobody deciding it. `--strict` turns the
+finding into exit 3.
+
+`--sleep-answer KEY` is **gone**: it named the answer key to lift out of the
+template's answers, and there is no longer anything to lift.
 
 ---
 
