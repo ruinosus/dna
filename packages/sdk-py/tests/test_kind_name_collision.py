@@ -11,9 +11,13 @@ Contract after i-195:
 
 1. ``kernel.kind()`` (the extension/builtin funnel) REFUSES a new port
    whose ``kind`` name is already registered under a different
-   ``api_version`` — unless the name is in the shrink-only
-   ``KIND_NAME_COLLISION_ALLOWLIST`` (today: exactly ``{"Reference"}``,
-   to be emptied by the Reference-family merge follow-up story).
+   ``api_version`` — with NO exception. The shrink-only
+   ``KIND_NAME_COLLISION_ALLOWLIST`` held one name, ``Reference``, and
+   i-127 emptied it: the ``research`` extension reuses the sdlc Kind
+   instead of registering a second one, so the permission was open with
+   nobody walking through it. **Emptying it was a behaviour change at
+   this door**, not bookkeeping — see
+   ``test_a_second_Reference_is_now_REFUSED_at_the_door``.
 2. The per-scope KindDefinition funnel keeps ALLOWING name collisions
    (live demo scopes ship Doc/EvalCase/EvalSuite shadow kinds under
    local apiVersions) — but bare-name lookups now prefer
@@ -71,11 +75,30 @@ class _FooB(KindBase):
 
 
 def _wire_reference_pair():
+    """A registry in the AMBIGUOUS state, built through the funnel that can
+    still produce it.
+
+    ⚠️ Changed by i-127. This used to call ``k.kind()`` twice, which the
+    ``Reference`` allowlist entry permitted; with the allowlist empty the second
+    call is REFUSED (that refusal is the point, and it has its own test). The
+    ambiguity these tests are about did not go away with it: the **per-scope
+    KindDefinition funnel still allows two api_versions to share a name by
+    design** — contract point 2 of this module, live today in the demo scopes'
+    Doc/EvalCase/EvalSuite shadow Kinds — so the state below is reachable, just
+    not through the extension door any more.
+
+    Which is why the second port is marked ``__declarative__``: it is the honest
+    label for the funnel it would now have to come from. Bare-name lookups
+    therefore prefer the FIRST (extension) port here, which is the same answer
+    the tests below already asserted.
+    """
     src = _FakeWritableSource()
     k = Kernel()
     k._source = src  # type: ignore[assignment]
     k.kind(_ResearchRefLike())
-    k.kind(_SdlcRefLike())
+    sdlc_like = _SdlcRefLike()
+    sdlc_like.__declarative__ = True
+    k._kinds[(sdlc_like.api_version, sdlc_like.kind)] = sdlc_like
     k._kcache._base = {"scope-x": MagicMock(name="mi")}
     holder = MagicMock()
     holder.scope = "scope-x"
@@ -99,17 +122,66 @@ def test_new_kind_name_collision_raises():
         k.kind(_FooB())
 
 
-def test_reference_collision_is_allowlisted():
+def test_a_second_Reference_is_now_REFUSED_at_the_door():
+    """⭐ i-127 — the proof that emptying the allowlist CHANGED BEHAVIOUR.
+
+    This test is the inverse of the one it replaces
+    (``test_reference_collision_is_allowlisted``, which asserted the pair
+    registered fine). It is here because "the constant is empty" and "the door
+    refuses" are two different claims, and a task that deletes a permission owes
+    the second one: a permission nobody exercises still cannot be shown to be
+    gone by reading the list it was written in.
+
+    Measured before the deletion: this same registration ACCEPTED both ports and
+    ``kind_ports()`` reported two ``Reference``. The live registry never
+    exercised it — ``dna/extensions/research/__init__.py`` reuses the sdlc Kind
+    — so no real Kind moved; what moved is that the hole is closed.
+    """
     k = Kernel()
     k.kind(_ResearchRefLike())
-    k.kind(_SdlcRefLike())  # must NOT raise — "Reference" is allowlisted
-    assert len([p for p in k.kind_ports() if p.kind == "Reference"]) == 2
+    with pytest.raises(KindRegistrationError, match="i-195"):
+        k.kind(_SdlcRefLike())
+    assert len([p for p in k.kind_ports() if p.kind == "Reference"]) == 1
+
+
+def test_no_kind_name_is_excepted_from_the_collision_guard():
+    """The ratchet, asked as BEHAVIOUR rather than as a literal.
+
+    Derived: it takes names the live registry actually serves (plus the one that
+    used to be excepted) and tries to register a homonym under a foreign
+    api_version. A name still holding an exception would slip through here while
+    the equality assertion below stayed green only if somebody also edited the
+    literal — and the whole point of i-127 is that the literal and the door had
+    drifted apart, in the harmless direction, for long enough that nobody
+    noticed.
+    """
+    booted = Kernel.auto()
+    live = sorted({p.kind for p in booted.kind_ports()})
+    assert len(live) >= 76, len(live)  # guard over the guard: not a bare kernel
+
+    for name in ["Reference", *live[:5]]:
+        k = Kernel()
+        first = type("_First", (KindBase,), {
+            "api_version": "first.test/v1", "kind": name,
+            "alias": f"first-{name.lower()}",
+            "storage": StorageDescriptor.yaml("firsts"),
+        })
+        second = type("_Second", (KindBase,), {
+            "api_version": "second.test/v1", "kind": name,
+            "alias": f"second-{name.lower()}",
+            "storage": StorageDescriptor.yaml("seconds"),
+        })
+        k.kind(first())
+        with pytest.raises(KindRegistrationError, match="i-195"):
+            k.kind(second())
 
 
 def test_allowlist_is_shrink_only_ratchet():
-    # Emptied by the Reference-family merge; NEVER grows. New collisions
-    # must rename instead (see i-195).
-    assert KIND_NAME_COLLISION_ALLOWLIST == frozenset({"Reference"})
+    # EMPTIED by i-127; NEVER grows. New collisions must rename instead
+    # (see i-195). Kept alongside the behavioural test above on purpose: this
+    # one sees the PERMISSION reappear before any Kind uses it, that one sees
+    # the DOOR reopen even if the permission arrives by some other route.
+    assert KIND_NAME_COLLISION_ALLOWLIST == frozenset()
 
 
 def test_same_api_version_reregistration_still_allowed():

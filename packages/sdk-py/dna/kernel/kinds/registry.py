@@ -264,13 +264,31 @@ EXPLICIT_ALIAS_ALLOWLIST: frozenset[str] = frozenset({
 })
 
 # i-195 — kind names allowed to exist under MULTIPLE api_versions in the
-# extension/builtin funnel. SHRINK-ONLY ratchet: the Reference pair
-# (github.com/ruinosus/dna/research/v1 + github.com/ruinosus/dna/sdlc/v1) predates the guard and is scheduled to
-# be merged by the Reference-family unification follow-up; when that
-# lands, empty this set. NEVER add a name here — rename the new Kind
-# instead (the whole point of i-195 is that bare-name lookups become
-# ambiguous the moment two api_versions share a kind name).
-KIND_NAME_COLLISION_ALLOWLIST: frozenset[str] = frozenset({"Reference"})
+# extension/builtin funnel. SHRINK-ONLY ratchet, and it has now shrunk to
+# NOTHING (i-127, 06/08/2026).
+#
+# It held exactly one name, ``Reference``, for the pair
+# (github.com/ruinosus/dna/research/v1 + github.com/ruinosus/dna/sdlc/v1) that
+# predated the guard — and that pair no longer exists:
+# ``dna/extensions/research/__init__.py`` says in writing that it REUSES the
+# sdlc Kind rather than registering a second one, and a booted kernel serves 84
+# ports under 84 distinct names with a single ``Reference``. The permission was
+# open and nobody walked through it.
+#
+# ⚠️ Empty is not cosmetic here, and the difference is measurable at this exact
+# door: while the entry existed, ``k.kind()`` ACCEPTED a second Kind named
+# ``Reference`` under any api_version — the one hole through which bare-name
+# ambiguity could return with every other guard still green. Emptied, that
+# registration is REFUSED like any other name collision.
+#
+# The blast radius is not local: ``dna_edges.to_api_version`` tolerates NULL
+# (that tolerance is what let revision 0009 land without deleting older edges),
+# and every NULL row is disambiguated by exactly one thing — ``to_kind`` naming
+# a single Kind. See ``tests/test_edge_knows_target_api_version.py``.
+#
+# NEVER add a name here — rename the new Kind instead. The set exists now only
+# so the ratchet has something to stay empty.
+KIND_NAME_COLLISION_ALLOWLIST: frozenset[str] = frozenset()
 
 # i-081 item 16 — the alias namespace convention, ENFORCED for descriptors.
 #
@@ -955,8 +973,9 @@ class KindRegistry:
         # become ambiguous the moment two api_versions share a kind name
         # — the Reference pair shipped exactly that and silently resolved
         # first-match. New extension Kinds must pick a unique name; the
-        # legacy pair is allowlisted (shrink-only ratchet, emptied by the
-        # Reference-family merge). Collisions where the EXISTING port is
+        # allowlist that used to except the legacy pair is now EMPTY
+        # (i-127), so this loop runs for every name without exception.
+        # Collisions where the EXISTING port is
         # a per-scope declarative shadow (demo scopes' local Doc/EvalCase)
         # don't block the extension from claiming its canonical name.
         if k.kind not in KIND_NAME_COLLISION_ALLOWLIST:

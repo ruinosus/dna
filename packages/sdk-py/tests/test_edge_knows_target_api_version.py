@@ -5,8 +5,9 @@ ela SAI (``from_api_version``, na chave primária desde a 0006) e não sabia par
 qual ela ENTRA. Isso funcionava por uma razão que não estava escrita na tabela:
 ``dna.kernel.kinds.registry`` recusa registrar dois Kinds com o MESMO nome sob
 apiVersions diferentes (i-195). A integridade do grafo dependia, calada, de uma
-invariante de OUTRO módulo — que tem uma lista de exceções
-(``KIND_NAME_COLLISION_ALLOWLIST``) com uma entrada.
+invariante de OUTRO módulo — que tinha uma lista de exceções
+(``KIND_NAME_COLLISION_ALLOWLIST``) com uma entrada. **A i-127 esvaziou essa
+lista**, e o achado abaixo é o que a motivou.
 
 Este arquivo prova as duas metades da fatia:
 
@@ -27,9 +28,11 @@ permite colisão por desenho) deixa a lista intacta e esta guarda vermelha; a
 versão enumerada não veria isso.
 
 ⚠️ **Achado desta fatia, medido em 06/08/2026:** a única entrada do allowlist
-está SEM USO — o registry booteado serve 84 portas e 84 nomes distintos, e
-apenas uma ``Reference``. Ver
-``test_a_permissao_do_allowlist_esta_hoje_SEM_USO``.
+estava SEM USO — o registry booteado serve 84 portas e 84 nomes distintos, e
+apenas uma ``Reference``. A i-127 apagou a entrada e provou a diferença NA
+PORTA (``test_a_second_Reference_is_now_REFUSED_at_the_door``, em
+``test_kind_name_collision.py``): antes o segundo homônimo era ACEITO, agora é
+recusado. Ver ``test_o_allowlist_esta_VAZIO``.
 """
 from __future__ import annotations
 
@@ -93,12 +96,13 @@ def test_nenhum_nome_de_kind_e_servido_por_duas_apiversions(booted: Kernel):
 
     **A asserção é ``== {}``, não ``<= allowlist``, e isso foi MEDIDO, não
     escolhido.** Um kernel booteado hoje serve 84 portas e 84 nomes distintos:
-    ZERO homônimos. O allowlist PERMITE ``Reference``, mas a segunda
-    ``Reference`` não existe mais — a extensão ``research`` diz por escrito que
-    reusa a do ``sdlc`` em vez de registrar a sua (ver
-    ``test_a_permissao_do_allowlist_esta_hoje_SEM_USO``). Escrever
-    ``<= allowlist`` aqui seria afrouxar a guarda para caber uma exceção que
-    ninguém exerce.
+    ZERO homônimos. O allowlist PERMITIA ``Reference``, mas a segunda
+    ``Reference`` não existia mais — a extensão ``research`` diz por escrito que
+    reusa a do ``sdlc`` em vez de registrar a sua. Escrever ``<= allowlist``
+    aqui seria afrouxar a guarda para caber uma exceção que ninguém exerce; a
+    i-127 foi além e apagou a exceção (ver ``test_o_allowlist_esta_VAZIO``), o
+    que torna as duas formas equivalentes hoje — e é exatamente por isso que a
+    derivada continua sendo a que se mantém.
 
     **O que ela vê mudar:** QUALQUER nome de Kind passando a ser servido por
     duas apiVersions — pelo allowlist, ou pelo funil declarativo per-scope, que
@@ -128,40 +132,47 @@ def test_nenhum_nome_de_kind_e_servido_por_duas_apiversions(booted: Kernel):
     )
 
 
-def test_o_allowlist_nao_cresceu():
+def test_o_allowlist_esta_VAZIO():
     """A outra metade da catraca: a LISTA, e não o registry.
 
     Separada da anterior de propósito — esta vê a permissão aparecer mesmo que
     o Kind homônimo ainda não tenha sido escrito; aquela vê o Kind aparecer
     mesmo que a permissão não mude. Juntas não há porta.
+
+    ⚠️ **Vazio desde a i-127** (06/08/2026). A fatia 1 mediu que a única entrada
+    estava sem uso e deixou a limpeza como ponta; a i-127 a fez, e a fez com a
+    prova que faltava — ``test_a_second_Reference_is_now_REFUSED_at_the_door``
+    em ``test_kind_name_collision.py`` mede a diferença NA PORTA, porque uma
+    permissão que ninguém exerce não pode ser mostrada como removida lendo a
+    lista onde ela estava escrita.
+
+    O literal continua sendo o certo aqui: um allowlist vazio é a única forma em
+    que a tolerância a ``to_api_version`` NULL desta tabela é segura por
+    construção em vez de por sorte.
     """
-    assert KIND_NAME_COLLISION_ALLOWLIST == frozenset({"Reference"}), (
-        "o allowlist mudou. Se CRESCEU, leia "
+    assert KIND_NAME_COLLISION_ALLOWLIST == frozenset(), (
+        "o allowlist voltou a ter entrada(s): "
+        f"{sorted(KIND_NAME_COLLISION_ALLOWLIST)}. Leia "
         "test_nenhum_nome_de_kind_e_servido_por_duas_apiversions: arestas com "
-        "to_api_version NULL apontando para o nome novo ficam ambíguas. Se "
-        "ENCOLHEU, ótimo — atualize este literal."
+        "to_api_version NULL apontando para o nome permitido ficam ambíguas. A "
+        "saída é renomear o Kind novo, nunca abrir a exceção."
     )
 
 
-def test_a_permissao_do_allowlist_esta_hoje_SEM_USO(booted: Kernel):
-    """⚠️ Achado desta fatia, medido em 06/08/2026 — registrado como teste
-    porque um achado que vira só comentário não sobrevive.
+def test_so_existe_UMA_Reference_registrada(booted: Kernel):
+    """⚠️ O achado que motivou a i-127, mantido como teste depois da limpeza.
 
-    O allowlist existe para permitir DUAS ``Reference``
-    (``research/v1`` + ``sdlc/v1``, i-195). Hoje o kernel booteado registra
+    O allowlist existia para permitir DUAS ``Reference``
+    (``research/v1`` + ``sdlc/v1``, i-195). O kernel booteado registra
     **uma**: ``dna/extensions/research/__init__.py`` afirma explicitamente que
     *"we reuse the existing Kind, we do NOT register a second Reference here"*.
-    A permissão está aberta e ninguém passa por ela.
+    A permissão estava aberta e ninguém passava por ela — e é por isso que
+    apagá-la não moveu nenhum Kind real, só fechou o buraco.
 
-    Isso é uma boa notícia para esta fatia — nenhuma aresta é ambígua hoje — e
-    uma ponta para a i-195: esvaziar o allowlist é a sua história de
-    seguimento, não esta. **Enquanto ele não for esvaziado, é a única porta por
-    onde a ambiguidade pode voltar sem que nenhuma outra guarda perceba.**
-
-    Este teste fica VERMELHO no dia em que uma segunda ``Reference`` voltar a
-    ser registrada — que é exatamente o dia em que o teste acima também fica, e
-    é a redundância que se quer: dois testes falhando dizem "isto foi previsto",
-    um teste falhando diz "isto surpreendeu alguém".
+    Continua valendo depois da limpeza porque ele mede o REGISTRO, não a lista:
+    fica vermelho se uma segunda ``Reference`` voltar por qualquer funil, e é a
+    redundância que se quer com o teste acima — dois testes falhando dizem
+    "isto foi previsto", um teste falhando diz "isto surpreendeu alguém".
     """
     refs = [p for p in booted.kind_ports() if getattr(p, "kind", None) == "Reference"]
     assert len(refs) == 1, (

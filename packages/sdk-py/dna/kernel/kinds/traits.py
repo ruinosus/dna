@@ -106,6 +106,29 @@ becoming a hole. Concretely, in this implementation:
   it won is RECORDED (:func:`schema_provenance`), so a trait whose restriction
   was overridden is visible instead of silently ignored.
 
+⚠️ Provenance has TWO axes, because a name can be two things (i-129)
+--------------------------------------------------------------------
+``produces`` is a schema PROPERTY and a RELATION on all eight sdlc work items,
+and it is not the exception: of 84 booted ports **35 carry at least one name
+that is both**, over 52 distinct names (measured 06/08/2026).
+Provenance was one dict keyed by that name, so whichever axis composed last
+erased the other's answer, and the erasure read exactly like a fact. On the
+snapshot that filed the issue, ``Story.produces`` reported
+``fragment:sdlc/work-item-activity`` — the source of the PROPERTY — as the
+origin of the RELATION, which that fragment does not and cannot declare.
+
+The fix is two dicts, and the read had to be decided WITH the split: separating
+without saying which axis a caller means only trades a silent collision for an
+ambiguous question. So there are three readers and each answers exactly one
+question:
+
+:func:`schema_provenance`     the property axis — the name it always had
+:func:`relation_provenance`   the relation axis
+:func:`provenance_of`         BOTH, for a caller who has a name and no axis;
+                              ``None`` on an axis means "not on that axis",
+                              and ``Provenance.collides`` names the condition
+                              this issue was filed about
+
 ⚠️ Can a trait make a field REQUIRED? — not decided, and deliberately not
 -------------------------------------------------------------------------
 Spec ``spec-kind-taxonomia-o-que-eu-sou`` §12.3 leaves this to the founder,
@@ -166,6 +189,7 @@ __all__ = [
     "CORE_TRAITS",
     "TRAIT_REQUIRED_ENFORCED",
     "TRAIT_SCHEMA_KEYS",
+    "Provenance",
     "Trait",
     "TraitComposition",
     "TraitConflictError",
@@ -177,7 +201,9 @@ __all__ = [
     "normalize_traits",
     "port_has_trait",
     "port_traits",
+    "provenance_of",
     "register_trait",
+    "relation_provenance",
     "schema_provenance",
     "trait_closure",
     "trait_description",
@@ -256,9 +282,14 @@ class TraitComposition:
     relations: dict[str, Any] = field(default_factory=dict)
     #: Every fragment ID that actually contributed, sorted.
     fragments: tuple[str, ...] = ()
-    #: property/relation name → where it came from (``trait:<name>`` or
+    #: PROPERTY name → where it came from (``trait:<name>`` or
     #: ``fragment:<id>``). The provenance that used to be thrown away.
-    origins: dict[str, str] = field(default_factory=dict)
+    property_origins: dict[str, str] = field(default_factory=dict)
+    #: RELATION name → where it came from. A SECOND dict, and the separation is
+    #: the i-129 fix: ``produces`` is a property AND a relation on all eight
+    #: sdlc work items, and one shared dict made the later writer erase the
+    #: other's answer. See :func:`provenance_of`.
+    relation_origins: dict[str, str] = field(default_factory=dict)
 
 
 #: name → :class:`Trait`. Process-global, exactly like ``_SCHEMA_FRAGMENTS``.
@@ -521,14 +552,78 @@ def port_has_trait(port: Any, trait: str) -> bool:
 
 
 def schema_provenance(port: Any) -> dict[str, str]:
-    """field/relation name → where it came from, for a composed port.
+    """PROPERTY name → where it came from, for a composed port.
 
     ``kind`` | ``trait:<name>`` | ``fragment:<id>``. The question
     *"where did this field come from?"* had NO answer before: fragments were
     merged in the port's constructor and the ID list was dropped on the floor,
     so a Kind's schema was a flat thing with an erased history. Returns ``{}``
-    for a port that declares nothing — an honest empty, not a missing one."""
+    for a port that declares nothing — an honest empty, not a missing one.
+
+    ⚠️ **The SCHEMA axis only** (i-129). This dict used to carry relations too,
+    and a name that is both — ``produces`` is a property and a relation on all
+    eight sdlc work items — lost one of its two answers to whichever axis wrote
+    last. Relations now answer at :func:`relation_provenance`; ask
+    :func:`provenance_of` when you do not know which axis you mean."""
     return dict(getattr(port, "schema_provenance", None) or {})
+
+
+def relation_provenance(port: Any) -> dict[str, str]:
+    """RELATION name → where it came from, for a composed port.
+
+    Same vocabulary as :func:`schema_provenance` (``kind`` | ``trait:<name>``),
+    a separate dict, and the separation is the whole of i-129. There is no
+    ``fragment:`` here: a schema fragment carries properties, never relations —
+    which is precisely why ``Story.produces`` reporting
+    ``fragment:sdlc/work-item-activity`` as its RELATION's origin was a lie a
+    reader could not detect."""
+    return dict(getattr(port, "relation_provenance", None) or {})
+
+
+@dataclass(frozen=True)
+class Provenance:
+    """Both axes for ONE name — the answer to the question that no longer has a
+    single answer.
+
+    Splitting the dict fixes the collision and creates a second problem: *"where
+    did ``produces`` come from?"* stops being a well-formed question, because
+    ``produces`` is two things. The options were to make the caller name the
+    axis (and every caller that guesses wrong gets a confident wrong answer) or
+    to answer for BOTH and let the shape say which is which. This is the second.
+
+    ``None`` on an axis means *the name is not on that axis* — ``Story.feature``
+    is a relation and not a property, and saying so is a fact, not a gap.
+    :attr:`collides` is the condition i-129 was filed about, now nameable."""
+
+    #: The name asked about.
+    name: str
+    #: Where the schema PROPERTY of this name came from, or ``None``.
+    property_origin: str | None = None
+    #: Where the RELATION of this name came from, or ``None``.
+    relation_origin: str | None = None
+
+    @property
+    def collides(self) -> bool:
+        """Whether this name is BOTH a property and a relation.
+
+        True for ``produces`` on every sdlc work item. It was true before i-129
+        too — the difference is that it was unobservable, because the one dict
+        had already thrown one of the two answers away."""
+        return self.property_origin is not None and self.relation_origin is not None
+
+
+def provenance_of(port: Any, name: str) -> Provenance:
+    """*"Where did ``name`` come from?"* — answered on both axes at once.
+
+    The reader for anyone who has a field name and no axis in hand: a screen, a
+    ``dna kind show``, a reviewer asking why a Kind carries something. Returns a
+    :class:`Provenance` whose ``None``s are facts rather than absences, so the
+    caller never has to know in advance that ``produces`` is two things."""
+    return Provenance(
+        name=name,
+        property_origin=schema_provenance(port).get(name),
+        relation_origin=relation_provenance(port).get(name),
+    )
 
 
 def trait_closure(declared: Any) -> frozenset[str]:
@@ -616,7 +711,11 @@ def compose_traits(declared: Any) -> TraitComposition:
     closure = trait_closure(declared)
 
     properties: dict[str, Any] = {}
-    origins: dict[str, str] = {}
+    #: TWO dicts, one per axis — see :class:`TraitComposition` and i-129. They
+    #: were one, and a name that is both a property and a relation (``produces``
+    #: on every sdlc work item) had one of its two answers overwritten.
+    prop_origins: dict[str, str] = {}
+    rel_origins: dict[str, str] = {}
     required: dict[str, str] = {}
     relations: dict[str, Any] = {}
     fragments: list[str] = []
@@ -634,7 +733,7 @@ def compose_traits(declared: Any) -> TraitComposition:
                 if prior is not None and prior != subschema:
                     raise TraitConflictError(
                         f"traits disagree about property {pname!r}: "
-                        f"{origins[pname]} and {label} declare it differently. "
+                        f"{prop_origins[pname]} and {label} declare it differently. "
                         f"Trait conflict is REFUSED, not resolved by "
                         f"precedence — the order traits are applied in must "
                         f"never be able to change what a Kind means (this is "
@@ -643,7 +742,7 @@ def compose_traits(declared: Any) -> TraitComposition:
                         f"on the Kind itself, where it wins outright"
                     )
                 properties[pname] = subschema
-                origins.setdefault(pname, label)
+                prop_origins.setdefault(pname, label)
             for rname in (schema.get("required") or ()) if isinstance(schema, Mapping) else ():
                 required.setdefault(rname, label)
         for rname, rel in (trait.relations or {}).items():
@@ -651,13 +750,13 @@ def compose_traits(declared: Any) -> TraitComposition:
             if prior_rel is not None and prior_rel != rel:
                 raise TraitConflictError(
                     f"traits disagree about relation {rname!r}: "
-                    f"{origins[rname]} and trait:{trait.name} declare it "
+                    f"{rel_origins[rname]} and trait:{trait.name} declare it "
                     f"differently. Trait conflict is REFUSED, not resolved — "
                     f"declare the relation on the Kind itself if the two roles "
                     f"genuinely need different edges"
                 )
             relations[rname] = rel
-            origins.setdefault(rname, f"trait:{trait.name}")
+            rel_origins.setdefault(rname, f"trait:{trait.name}")
 
     return TraitComposition(
         declared=normalize_traits(declared),
@@ -666,7 +765,8 @@ def compose_traits(declared: Any) -> TraitComposition:
         required=tuple(sorted(required)),
         relations=relations,
         fragments=tuple(sorted(set(fragments))),
-        origins=origins,
+        property_origins=prop_origins,
+        relation_origins=rel_origins,
     )
 
 
@@ -686,8 +786,9 @@ def apply_traits(port: Any) -> TraitComposition | None:
     ``schema()``          the MERGED schema — trait fields are simply there
     ``schema_fragments``  every fragment that contributed (this used to be
                           ``hasattr → False``: merged, then erased)
-    ``schema_provenance`` field/relation → ``kind`` | ``trait:x`` |
-                          ``fragment:y``
+    ``schema_provenance`` PROPERTY → ``kind`` | ``trait:x`` | ``fragment:y``
+    ``relation_provenance`` RELATION → ``kind`` | ``trait:x`` (never a
+                          fragment: a fragment carries properties)
     ``relations``         the merged relations, Kind's own winning
     ``trait_required``    what traits would make required (see
                           :data:`TRAIT_REQUIRED_ENFORCED`)
@@ -710,6 +811,7 @@ def apply_traits(port: Any) -> TraitComposition | None:
         port.__traits_composed__ = True
         port.declared_traits = frozenset()
         port.schema_provenance = {}
+        port.relation_provenance = {}
         port.trait_required = ()
         port.trait_composition = None
         return None
@@ -720,7 +822,7 @@ def apply_traits(port: Any) -> TraitComposition | None:
     from dna.kernel.meta import _lookup_schema_fragment
 
     merged_props: dict[str, Any] = dict(composed.properties)
-    provenance: dict[str, str] = dict(composed.origins)
+    provenance: dict[str, str] = dict(composed.property_origins)
     contributing_fragments = list(composed.fragments)
 
     for fid in own_fragments:
@@ -770,7 +872,7 @@ def apply_traits(port: Any) -> TraitComposition | None:
         if name not in merged_props:
             raise TraitConflictError(
                 f"trait-declared required field {name!r} "
-                f"({composed.origins.get(name, 'a trait')}) is not a property "
+                f"({composed.property_origins.get(name, 'a trait')}) is not a property "
                 f"of Kind {getattr(port, 'kind', '?')!r} — not from a trait, "
                 f"not from a fragment, not from the Kind itself. An obligation "
                 f"on a field that does not exist can never be satisfied"
@@ -785,19 +887,33 @@ def apply_traits(port: Any) -> TraitComposition | None:
         _install_schema(port, merged_schema)
 
     # ---- relations: trait's, then the Kind's own on top (rule 3)
-    if composed.relations:
-        from dna.kernel.kinds.relations import relations_of
+    #
+    # The relation axis keeps its OWN provenance dict (i-129). It used to write
+    # into the property one, so a name that is both — ``produces`` on all eight
+    # sdlc work items — reported whichever axis wrote last. Two dicts is half
+    # the fix; the other half is that the READ now names its axis
+    # (:func:`schema_provenance` / :func:`relation_provenance` /
+    # :func:`provenance_of`), because a split without that trades a silent
+    # collision for an ambiguous question.
+    from dna.kernel.kinds.relations import relations_of
 
+    rel_provenance: dict[str, str] = dict(composed.relation_origins)
+    own_relations = relations_of(port)
+    if composed.relations:
         merged_rels = dict(composed.relations)
-        for rname, rel in relations_of(port).items():
-            merged_rels[rname] = rel
-            provenance[rname] = "kind"
+        merged_rels.update(own_relations)
         port.relations = merged_rels
+    # Recorded even when no trait carried a relation: a Kind that takes a trait
+    # for its FIELDS and declares its own relations used to get no relation
+    # provenance at all, which reads exactly like "this Kind has no relations".
+    for rname in own_relations:
+        rel_provenance[rname] = "kind"
 
     port.traits = composed.traits
     port.declared_traits = composed.declared
     port.schema_fragments = tuple(sorted(set(contributing_fragments)))
     port.schema_provenance = provenance
+    port.relation_provenance = rel_provenance
     port.trait_required = composed.required
     port.trait_composition = composed
     port.__traits_composed__ = True

@@ -33,7 +33,9 @@ from dna.kernel.kinds.traits import (
     declared_traits_of,
     describe_traits,
     known_traits,
+    provenance_of,
     register_trait,
+    relation_provenance,
     schema_provenance,
     trait_closure,
     trait_definition,
@@ -539,3 +541,202 @@ def test_every_registered_trait_composes_against_the_live_registry():
         assert isinstance(schema_provenance(port), dict)
         assert set(declared_traits_of(port)) <= set(port.traits)
     assert trait_registry()  # and the vocabulary is populated, not empty
+
+
+# ── 9. i-129 — provenance has TWO axes, and neither may answer for the other ─
+#
+# The defect: one dict keyed by NAME, written by both the property pass and the
+# relation pass, so a name that is both lost one of its two answers to whichever
+# ran last. It read exactly like a fact, which is why no test saw it: every
+# assertion asked "is there an answer?" and there always was one.
+#
+# So these ask the other question — "is the answer CORROBORATED by the source it
+# names?" — and they ask it of the live registry rather than of a probe, because
+# the eight Kinds that exhibit it are real ones.
+
+
+def _fragment_properties(fid: str) -> set[str]:
+    from dna.kernel.meta import _lookup_schema_fragment
+
+    frag = _lookup_schema_fragment(fid)
+    return set((frag or {}).get("properties") or {})
+
+
+def test_a_name_that_is_property_AND_relation_keeps_BOTH_answers(probe_traits):
+    """⭐ The i-129 defect, at the granularity it actually occurs.
+
+    ``probe.assignable`` declares ``owner`` twice — once as a schema property,
+    once as a relation — and ``probe/override`` re-declares the PROPERTY from a
+    fragment, so the two axes have genuinely different sources. With one shared
+    dict the fragment (the later writer) took the whole entry and the relation's
+    origin was gone; the assertion that catches it is not "is there an origin"
+    but "does each axis still name ITS OWN source".
+    """
+    register_schema_fragment(
+        "probe/override",
+        {"type": "object", "properties": {"owner": {"type": "integer"}}},
+    )
+    k = Kernel()
+    k.kind_from_descriptor(
+        _descriptor(
+            "TwoAxisProbe",
+            traits=["probe.assignable"],
+            schema_fragments=["probe/override"],
+        )
+    )
+    port = k.kind_port_for("TwoAxisProbe")
+
+    assert schema_provenance(port)["owner"] == "fragment:probe/override"
+    assert relation_provenance(port)["owner"] == "trait:probe.assignable"
+
+    pv = provenance_of(port, "owner")
+    assert pv.collides is True
+    assert (pv.property_origin, pv.relation_origin) == (
+        "fragment:probe/override",
+        "trait:probe.assignable",
+    )
+
+
+def test_provenance_of_reports_a_missing_axis_as_a_FACT(probe_traits):
+    """The other half of the read decision. Splitting the dict makes *"where did
+    X come from?"* ill-posed; :func:`provenance_of` answers for both axes so the
+    caller never has to know in advance which one X is. ``None`` there must mean
+    "not on that axis" — a Kind that has been composed and simply has no
+    relation of that name — and not "nobody recorded it"."""
+    k = Kernel()
+    k.kind(
+        _ClassKind(
+            traits=["probe.assignable"],
+            properties={"title": {"type": "string"}},
+        )
+    )
+    port = k.kind_port_for("HandWritten")
+
+    title = provenance_of(port, "title")
+    assert title.property_origin == "kind"
+    assert title.relation_origin is None
+    assert title.collides is False
+
+    assert provenance_of(port, "nothing_declares_this") == type(title)(
+        name="nothing_declares_this"
+    )
+
+
+def test_a_kind_whose_traits_carry_only_FIELDS_still_records_its_own_relations(
+    probe_traits,
+):
+    """``probe.timestamped`` carries a field and no relation, so the relation
+    merge used to be skipped entirely — and with it the provenance of the Kind's
+    OWN relations. The port then answered ``{}`` for the relation axis, which
+    reads as "this Kind has no relations" while ``relations_of`` lists one."""
+    from dna.kernel.kinds.relations import relations_of
+
+    k = Kernel()
+    k.kind(
+        _ClassKind(
+            traits=["probe.timestamped"],
+            properties={"title": {"type": "string"}},
+            relations={"parent": {"to": "HandWritten", "cardinality": "one"}},
+        )
+    )
+    port = k.kind_port_for("HandWritten")
+
+    assert set(relations_of(port)) == {"parent"}
+    assert relation_provenance(port) == {"parent": "kind"}
+
+
+def test_every_provenance_label_is_CORROBORATED_by_the_source_it_names():
+    """⭐ The derived guard, over the live registry.
+
+    Not "does every field have an origin?" — every field had one, and eight of
+    them were wrong. This asks the source: a ``trait:X`` property origin must be
+    a trait whose INLINE schema declares that property; a ``fragment:Y``
+    property origin must be a fragment that declares it; a ``trait:X`` relation
+    origin must be a trait whose ``relations`` declares it. **A relation origin
+    can never be a ``fragment:``** — a schema fragment carries properties and
+    has no way to declare a relation — which is precisely the shape of the lie
+    that was measured (``Story.produces`` relation → ``fragment:sdlc/work-item-
+    activity``).
+
+    ``kind`` is not corroborated here: after composition the port's own text is
+    no longer separable from the merged result, and asserting something
+    underivable is how a guard starts agreeing with itself.
+    """
+    from dna.extensions.sdlc import SdlcExtension
+
+    k = Kernel()
+    k.load(SdlcExtension())
+
+    checked_trait_props = checked_frag_props = checked_trait_rels = 0
+    for port in k.kind_ports():
+        for name, origin in schema_provenance(port).items():
+            if origin.startswith("trait:"):
+                t = trait_definition(origin.split(":", 1)[1])
+                assert t is not None and name in ((t.schema or {}).get("properties") or {}), (
+                    f"{port.kind}.{name}: property origin {origin!r} names a "
+                    f"trait that does not declare that property — a relation "
+                    f"source leaked into the property axis (i-129)"
+                )
+                checked_trait_props += 1
+            elif origin.startswith("fragment:"):
+                fid = origin.split(":", 1)[1]
+                assert name in _fragment_properties(fid), (
+                    f"{port.kind}.{name}: property origin {origin!r} names a "
+                    f"fragment that does not declare that property"
+                )
+                checked_frag_props += 1
+            else:
+                assert origin == "kind", f"{port.kind}.{name}: {origin!r}"
+
+        for name, origin in relation_provenance(port).items():
+            assert not origin.startswith("fragment:"), (
+                f"{port.kind}.{name}: a RELATION cannot come from a schema "
+                f"fragment — {origin!r} is the property axis answering for the "
+                f"relation axis, which is the i-129 defect verbatim"
+            )
+            if origin.startswith("trait:"):
+                t = trait_definition(origin.split(":", 1)[1])
+                assert t is not None and name in (t.relations or {}), (
+                    f"{port.kind}.{name}: relation origin {origin!r} names a "
+                    f"trait that does not declare that relation"
+                )
+                checked_trait_rels += 1
+            else:
+                assert origin == "kind", f"{port.kind}.{name}: {origin!r}"
+
+    # Guard over the guard: every branch above is vacuous on a registry with no
+    # traits, and the sweep would pass green on a kernel that composed nothing.
+    # The floors are MEASURED (06/08/2026): eight work items × ``produces`` on
+    # each axis, plus ``timeline`` from the same fragment.
+    assert checked_frag_props >= 16, checked_frag_props
+    assert checked_trait_rels >= 8, checked_trait_rels
+    # ⚠️ NOT asserted with a floor, and the absence is the point: no real trait
+    # carries an INLINE schema property today (every sdlc trait carries fields
+    # through a fragment), so a ``>= 1`` here would be a floor nothing can meet
+    # and would have to be relaxed by whoever next ran the suite. The branch is
+    # exercised by ``test_a_declared_trait_puts_its_field_on_a_hand_written_
+    # class_kind`` on a probe instead.
+    assert checked_trait_props == 0, checked_trait_props
+
+
+def test_the_eight_work_items_report_produces_differently_on_each_axis():
+    """The measurement that filed i-129, frozen as an assertion.
+
+    ``produces`` arrives as a PROPERTY from ``sdlc/work-item-activity`` and as a
+    RELATION from ``sdlc.work-item`` — two sources, one name, on every work
+    item. One dict could hold one of them. The count is asserted (not just the
+    shape) because the failure mode this replaces was a per-Kind erasure that a
+    single-Kind spot check can miss."""
+    from dna.extensions.sdlc import SdlcExtension
+
+    k = Kernel()
+    k.load(SdlcExtension())
+
+    carriers = [
+        p for p in k.kind_ports() if provenance_of(p, "produces").collides
+    ]
+    assert len(carriers) == 8, sorted(p.kind for p in carriers)
+    for p in carriers:
+        pv = provenance_of(p, "produces")
+        assert pv.property_origin == "fragment:sdlc/work-item-activity"
+        assert pv.relation_origin == "trait:sdlc.work-item"
