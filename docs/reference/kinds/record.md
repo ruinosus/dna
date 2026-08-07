@@ -1625,6 +1625,33 @@ A Role is one rung of the RBAC ladder expressed as data — its role_id, display
 | `rank` | integer | yes | Ladder rank — higher = more access. highest-role-wins compares this across a user's memberships. |
 | `role_id` | string | yes | Canonical role id, e.g. owner / admin / member / guest. The doc name SHOULD equal this; Membership.role references it. |
 
+## Solution
+
+- **Alias:** `helix-solution`
+- **apiVersion:** `github.com/ruinosus/dna/v1`
+- **Plane:** record
+
+A Solution is the DECLARATION of a repo generated from Copier templates, plus the ANSWERS that generated it — never the code and never the template body. It is the second view of the `.copier-answers.<service>.yml` files a `dna solution new` writes, and the only one that OUTLIVES them: a `when:`-gated answer is erased from the file when its condition stops holding, and a record that survives the file is the only place such a value can survive (measured — see `docs/guides/solution-scaffolding.md`). `dna solution update --solution <name>` reads the answers back from here and re-passes them to Copier, which is what makes a version floor recorded here reach the generated tree instead of staying behind in silence. One entry in `services[]` per answers file — one template overlaid N times is the design, not one template of the whole repo. The per-service `answers` map is deliberately free-form (the vocabulary belongs to the TEMPLATE); `pode_dormir` is the one fact promoted out of it, because a cost commitment must be readable across the fleet without knowing which template asked. `apps` is a declared RELATION to `App` — the sellable unit this solution's code delivers, never one it creates.
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `apps` | array |  | Os `App`s que esta solução ENTREGA, por nome de instância — a unidade vendável, que continua sendo do `App` e do runtime que a serve. Referência validada na gravação (`spec.relations`). Vazio é o caso comum e não é uma lacuna - o próprio dna-cloud gera nove serviços e nenhum `App`. |
+| `criado_em` | string \| null |  | Quando esta solução foi declarada (ISO-8601, relógio de quem gravou). Preservado nas gravações seguintes - um `update` que acrescenta uma camada não recria a solução. |
+| `criado_por` | string \| null |  | A identidade verificada de quem criou esta solução, resolvida a partir da sessão - nunca digitada. Mesmo molde de `SourceArtifact.uploaded_by` e `CopilotBlueprint.criado_por`; não há Kind de pessoa para apontar, e por isso não é uma relação. Vazio é uma AFIRMAÇÃO - a solução é anterior ao registro existir, e ninguém sabe quem a criou. |
+| `description` | string |  | Uma linha do que esta solução entrega. |
+| `repo` | string |  | Onde a árvore gerada vive (URL do git ou caminho). É um ENDEREÇO, não um conteúdo — nada aqui guarda o que está lá dentro. Vazio quando a solução ainda não foi gerada em lugar nenhum. |
+| `services` | array | yes | Uma entrada POR CAMADA — e uma camada é um answers file, que é um app. Nove serviços sobre quatro imagens são nove entradas aqui, quatro `template.src` distintos, e nove updates independentes. Nunca um template do repo inteiro (§4.4 regra 3). |
+| `services[].answers` | object |  | As respostas desta camada, VERBATIM, no vocabulário do template. Mapa livre de propósito - o conjunto de perguntas é do template e muda com ele, e nenhuma chave é obrigatória porque uma resposta atrás de `when:` legitimamente desaparece (medido - exigir uma seria recusar a gravação exatamente do caso que este registro existe para socorrer). Copier já filtra o próprio bookkeeping (`_src_path`, `_commit`) para os campos `template` acima; ele não se repete aqui. |
+| `services[].answers_file` | string | yes | O caminho do `.copier-answers.<name>.yml` RELATIVO à raiz da árvore gerada — o endereço da outra vista deste mesmo fato. Gravado verbatim, nunca derivado do `name` — a convenção do arquivo é declarada pelo template (`_answers_file`), e um Kind que a recalculasse estaria adivinhando a decisão de outro autor. |
+| `services[].name` | string | yes | O nome do serviço — o que `dna solution update --service <name>` recebe, e o que o azd chama de serviço. |
+| `services[].pode_dormir` | boolean |  | Este app pode escalar a zero. É o ÚNICO fato promovido para fora de `answers`, e a razão é que ele não é um detalhe de render - é um COMPROMISSO DE CUSTO. Um app que não dorme custa uma réplica fixa, ~US$ 90/mês, para sempre (o portão de custo do CLAUDE.md do dna-cloud, que já custou essa conta uma vez). Promovido porque quem soma a frota precisa responder "quantos não dormem?" SEM saber que este template chamou a pergunta de `can_sleep` e o próximo vai chamar de outra coisa. Ausente significa que esta camada NUNCA respondeu a pergunta de custo - e isso é um achado reportado a cada execução, nunca um `false` presumido — presumir o lado barato esconderia justamente a réplica que ninguém decidiu. |
+| `services[].template` | object | yes | O PONTEIRO para o template, nunca o corpo dele. |
+| `services[].template.ref` | string |  | A tag/commit em que esta camada está (o `_commit` do answers file) — o que o próximo `update` move. Vazio significa que a camada nunca foi renderizada a partir de um clone versionado, e portanto não pode ser atualizada; não significa "a mais recente". |
+| `services[].template.src` | string | yes | O que o Copier aceita como origem — um caminho local, uma URL git, `gh:owner/repo`. É o `_src_path` do answers file. |
+| `title` | string | yes | O nome que um humano usa para esta solução — o repo, o produto, a linha de montagem. O `metadata.name` é o slug. |
+
 ## SourceArtifact
 
 - **Alias:** `artifact-source`

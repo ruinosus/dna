@@ -68,7 +68,7 @@ import json
 import subprocess
 import sys
 import warnings
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
@@ -185,6 +185,20 @@ class RunReport:
     conflicted_paths: list[str] = field(default_factory=list)
     changed_paths: list[str] = field(default_factory=list)
 
+    #: The ``Solution`` instance this run read from and wrote back to. ``None``
+    #: when the run was not asked to keep a record — the record is opt-in; the
+    #: reporting about it is not.
+    solution: str | None = None
+    #: Answers the record put back that the answers file had LOST. The one
+    #: thing a record buys that a file cannot: a ``when:``-gated answer erased
+    #: from the file returns as the human's value instead of the template's
+    #: default.
+    restored_answers: list[str] = field(default_factory=list)
+    #: Recorded layers that never said whether they may sleep. A fixed replica
+    #: is ~US$ 90/month, forever, so a layer with no answer here is a cost
+    #: decision nobody made — reported on every run, never presumed.
+    unanswered_cost: list[str] = field(default_factory=list)
+
     #: The command line that would take every default this run left behind.
     #: Printed rather than merely described, because it stays correct after
     #: ``_commit`` advances — which the two-ref comparison above does not.
@@ -197,12 +211,18 @@ class RunReport:
         Deliberately excludes :attr:`divergent_answers`: an answer differing
         from today's default is the normal state of any customised app, and a
         `--strict` that failed on it would be a `--strict` nobody could use.
+
+        :attr:`unanswered_cost` IS included, and the asymmetry is deliberate:
+        a divergent answer is a choice somebody made, an unanswered cost
+        question is a choice nobody made. :attr:`restored_answers` is excluded
+        for the opposite reason — a restore is the record WORKING.
         """
         return bool(
             self.moved_defaults
             or self.lost_answers
             or self.missing_external_data
             or self.conflicted_paths
+            or self.unanswered_cost
         )
 
     def to_json(self) -> dict[str, Any]:
@@ -239,6 +259,9 @@ class RunReport:
             "missing_external_data": self.missing_external_data,
             "conflicted_paths": self.conflicted_paths,
             "changed_paths": self.changed_paths,
+            "solution": self.solution,
+            "restored_answers": self.restored_answers,
+            "unanswered_cost": self.unanswered_cost,
             "unreachable_wiring": [place for place, _ in UNREACHABLE_WIRING],
         }
 
@@ -402,6 +425,37 @@ def resolve_answers_file(
             f"{dst} --service {str(found[0]).removeprefix('.copier-answers.').removesuffix('.yml')}"
         )
     return found[0]
+
+
+def _answers_contents(dst: Path) -> dict[str, str]:
+    """Every answers file's raw text, keyed by relative path.
+
+    Content rather than mtime: a render that rewrites a file with the same
+    bytes did not produce a new layer, and second-resolution timestamps would
+    say it did.
+    """
+    if not dst.exists():
+        return {}
+    out: dict[str, str] = {}
+    for path in dst.glob(ANSWERS_GLOB):
+        if path.is_file():
+            out[str(path.relative_to(dst))] = path.read_text(encoding="utf-8")
+    return out
+
+
+def _answers_file_written(dst: Path, before: dict[str, str]) -> Path | None:
+    """The ONE answers file this run created or changed, or ``None``.
+
+    ``None`` on both ambiguous ends, and neither is guessed at: no file
+    changed (nothing to record), or several did (a run that touched two layers
+    is not a layer). Every caller turns ``None`` into a refusal that names the
+    explicit command, because recording the wrong layer would point a future
+    `update` at the wrong app — the same thing ``resolve_answers_file`` already
+    refuses to guess about.
+    """
+    after = _answers_contents(dst)
+    changed = [rel for rel, text in after.items() if before.get(rel) != text]
+    return Path(changed[0]) if len(changed) == 1 else None
 
 
 def recorded_answers(dst: Path, answers_relpath: Path) -> dict[str, Any]:
@@ -585,6 +639,37 @@ def _echo_unreachable_note() -> None:
 
 
 def _echo_report(report: RunReport) -> None:
+    if report.restored_answers:
+        click.echo("")
+        click.echo(
+            f"⭐ {len(report.restored_answers)} answer(s) came back from the "
+            f"Solution record `{report.solution}` — the answers file no longer "
+            "held them:"
+        )
+        for name in report.restored_answers:
+            click.echo(f"    {name}")
+        click.echo(
+            "  A `when:`-gated answer is erased from the file when its condition\n"
+            "  stops holding, and Copier answers the TEMPLATE's default if the\n"
+            "  condition returns. The record outlives the file, so the human's\n"
+            "  value is what was re-passed."
+        )
+
+    if report.unanswered_cost:
+        click.echo("")
+        click.echo(
+            f"⚠ {len(report.unanswered_cost)} recorded layer(s) never said "
+            "whether they may sleep:"
+        )
+        for name in report.unanswered_cost:
+            click.echo(f"    {name}")
+        click.echo(
+            "  An app that cannot scale to zero costs a fixed replica — ~US$ 90 a\n"
+            "  month, forever. Nothing here presumes the cheap side: the field is\n"
+            "  left unwritten and said out loud, on every run, until somebody\n"
+            "  answers it. Name the answer that carries it with --sleep-answer."
+        )
+
     if report.template_untagged:
         click.echo(
             f"⚠ The template has NO git tags — Copier synthesised the version "
@@ -653,9 +738,19 @@ def _echo_report(report: RunReport) -> None:
         click.echo(
             "  A `when:`-gated answer is erased when its condition stops holding, and\n"
             "  returns as the template DEFAULT — not as the value above — if the\n"
-            "  condition comes back. The value is printed here because this file was\n"
-            "  the only place that held it."
+            "  condition comes back."
         )
+        if report.solution:
+            click.echo(
+                f"  The Solution `{report.solution}` kept it: the next update that\n"
+                "  re-opens the condition will re-pass the value above, not the "
+                "default."
+            )
+        else:
+            click.echo(
+                "  The value is printed here because this file is the only place that\n"
+                "  held it. `--solution <name>` gives it a second one that survives."
+            )
 
     if report.conflicted_paths:
         click.echo("")
@@ -669,6 +764,95 @@ def _echo_report(report: RunReport) -> None:
             "     it means a human expressed STRUCTURE the template never asked about.\n"
             "     The fix is a new question in copier.yml, not a merge."
         )
+
+
+# ── the Solution record ──────────────────────────────────────────────────────
+#
+# ⚠️ The record is OPT-IN (`--solution NAME`). Rendering a tree must keep
+# working with no kernel, no scope and no `.dna` anywhere — that is what makes
+# `dna solution` usable against somebody else's repo — so the import below is
+# late for the same reason Copier's is, and every helper here no-ops when no
+# name was given.
+
+
+def _record_options(fn: Any) -> Any:
+    """The three options that turn a run into a recorded one."""
+    fn = click.option(
+        "--sleep-answer",
+        default=None,
+        metavar="KEY",
+        help="The answer that carries the cost commitment (default: can_sleep). "
+        "Absent from a layer's answers, nothing is presumed and the layer is "
+        "reported as never having answered it.",
+    )(fn)
+    fn = click.option(
+        "--scope",
+        "scope",
+        default=None,
+        help="The DNA scope holding the Solution instance.",
+    )(fn)
+    fn = click.option(
+        "--solution",
+        "solution_name",
+        default=None,
+        metavar="NAME",
+        help="Record this run in the Solution instance NAME — the declaration "
+        "and the answers as governed data. It is what lets a `when:`-gated "
+        "answer survive the update that erases it from the answers file.",
+    )(fn)
+    return fn
+
+
+def _solution_kind() -> Any:
+    from dna_cli import solution_kind  # noqa: PLC0415 — the kernel is lazy
+
+    return solution_kind
+
+
+def _record_layer(
+    report: RunReport,
+    destination: Path,
+    answers_relpath: Path,
+    *,
+    solution_name: str,
+    scope: str | None,
+    sleep_answer: str | None,
+    service: str | None = None,
+    extra_answers: dict[str, Any] | None = None,
+) -> None:
+    """Write one layer into the Solution, and report what the record says.
+
+    ``extra_answers`` is what the record already held and the file no longer
+    does — see :func:`dna_cli.solution_kind.upsert_solution` for why the
+    write-back accumulates rather than mirrors.
+    """
+    sk = _solution_kind()
+    try:
+        layer = sk.layer_from_answers_file(
+            destination,
+            answers_relpath,
+            sleep_answer=sleep_answer or sk.DEFAULT_SLEEP_ANSWER,
+            service=service,
+        )
+        if extra_answers:
+            layer = replace(layer, answers={**extra_answers, **layer.answers})
+        spec = sk.upsert_solution(
+            solution_name,
+            [layer],
+            scope=scope,
+            repo=str(destination),
+        )
+    except sk.SolutionRecordError as exc:
+        raise SolutionError(str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 - a kernel failure is a refusal here
+        raise SolutionError(
+            f"the tree is written, but recording it in Solution "
+            f"{solution_name!r} failed: {exc}\n"
+            "  Re-run `dna solution record` once the scope is reachable — the "
+            "answers file on disk is the input, so nothing was lost."
+        ) from exc
+    report.solution = solution_name
+    report.unanswered_cost = sk.unanswered_cost_question(spec)
 
 
 # ── the group ────────────────────────────────────────────────────────────────
@@ -721,8 +905,10 @@ def solution() -> None:
 @click.option(
     "--strict",
     is_flag=True,
-    help=f"Exit {EXIT_FINDINGS} when the run has findings (missing inherited data).",
+    help=f"Exit {EXIT_FINDINGS} when the run has findings (missing inherited data, "
+    "a recorded layer with no cost answer).",
 )
+@_record_options
 def new_(
     template: str,
     destination: Path,
@@ -734,6 +920,9 @@ def new_(
     pretend: bool,
     as_json: bool,
     strict: bool,
+    solution_name: str | None,
+    scope: str | None,
+    sleep_answer: str | None,
 ) -> None:
     """Render TEMPLATE into DESTINATION, recording the answers.
 
@@ -757,6 +946,12 @@ def new_(
 
     report = RunReport(action="new", destination=str(destination), template=template)
     copier = _copier()
+    # ⚠️ Snapshotted BEFORE the render, because "which answers file did this run
+    # write?" has no other answer once the repo holds several. The old
+    # `found[0] if len(found) == 1` reported None from the SECOND `new`
+    # onwards — harmless while nothing consumed it, wrong the moment a record
+    # has to name the layer it just created.
+    answers_before = _answers_contents(destination)
 
     tpl_cls = _copier_template_class()
     tpl = tpl_cls(url=str(template), ref=vcs_ref)
@@ -790,9 +985,28 @@ def new_(
 
     if destination.exists() and _is_git_repo(destination):
         report.changed_paths = [p for _, p in _porcelain(destination)]
+    written: Path | None = None
     if not pretend:
-        found = discover_answers_files(destination)
-        report.answers_file = str(found[0]) if len(found) == 1 else None
+        written = _answers_file_written(destination, answers_before)
+        report.answers_file = str(written) if written else None
+
+    if solution_name and not pretend:
+        if written is None:
+            raise SolutionError(
+                f"the tree is written, but this run cannot tell which answers "
+                f"file it produced, so it will not guess which layer to record "
+                f"in Solution {solution_name!r}.\n"
+                "  Name it and record it explicitly:  dna solution record "
+                f"{destination} --solution {solution_name} --service <name>"
+            )
+        _record_layer(
+            report,
+            destination,
+            written,
+            solution_name=solution_name,
+            scope=scope,
+            sleep_answer=sleep_answer,
+        )
 
     if as_json:
         click.echo(json.dumps(report.to_json(), indent=2, sort_keys=True, default=str))
@@ -862,8 +1076,9 @@ def new_(
     "--strict",
     is_flag=True,
     help=f"Exit {EXIT_FINDINGS} when the run has findings (lost answers, conflicts, "
-    "defaults left behind).",
+    "defaults left behind, a recorded layer with no cost answer).",
 )
+@_record_options
 def update(
     destination: Path,
     answers_file: str | None,
@@ -877,6 +1092,9 @@ def update(
     pretend: bool,
     as_json: bool,
     strict: bool,
+    solution_name: str | None,
+    scope: str | None,
+    sleep_answer: str | None,
 ) -> None:
     """Roll ONE app in DESTINATION forward to a newer template version.
 
@@ -884,6 +1102,12 @@ def update(
     nothing is silently re-defaulted. Whatever the update leaves behind or drops
     is named in the report — that reporting is the reason this command exists
     rather than a `copier update` alias.
+
+    With `--solution NAME` the recorded instance joins the answers file as a
+    second, LONGER memory: the two are merged before anything is compared or
+    re-passed, so an answer `when:` erased from the file comes back as the
+    human's value instead of the template's default, and the merged set is
+    written back afterwards.
     """
     destination = destination.resolve()
     if not _is_git_repo(destination):
@@ -897,7 +1121,7 @@ def update(
     answers_relpath = resolve_answers_file(
         destination, answers_file=answers_file, service=service
     )
-    before = recorded_answers(destination, answers_relpath)
+    from_file = recorded_answers(destination, answers_relpath)
     old_ref = recorded_ref(destination, answers_relpath)
     src = recorded_src(destination, answers_relpath)
     if not src:
@@ -912,6 +1136,35 @@ def update(
         template=src,
         answers_file=str(answers_relpath),
     )
+
+    # ⭐ The seam. `before` is the ONE variable every comparison and the `data=`
+    # Copier receives are built from, so folding the record in here is what
+    # makes a recorded answer compared, re-passed and reported through the
+    # paths fatia 3 already built — instead of a second set living beside them
+    # and agreeing with them only by luck. Merging anywhere further down would
+    # leave an answer that lives only in the record out of `moved_defaults` and
+    # `divergent_answers`, which is the version floor going quiet again by a
+    # different door.
+    layer_name = service or _solution_kind().service_name_of(answers_relpath)
+    solution_spec: dict[str, Any] | None = None
+    from_record: dict[str, Any] = {}
+    if solution_name:
+        sk = _solution_kind()
+        solution_spec = sk.read_solution(solution_name, scope=scope)
+        if solution_spec is None:
+            raise SolutionError(
+                f"no Solution {solution_name!r} in this scope.\n"
+                "  Record the tree first:  dna solution record "
+                f"{destination} --solution {solution_name}"
+            )
+        from_record = sk.recorded_answers_of(solution_spec, layer_name)
+        report.solution = solution_name
+        report.restored_answers = sk.restored_keys(
+            recorded=from_record, from_file=from_file
+        )
+        before = sk.merged_before(recorded=from_record, from_file=from_file)
+    else:
+        before = from_file
 
     copier = _copier()
     tpl_cls = _copier_template_class()
@@ -1013,11 +1266,27 @@ def update(
     report.missing_external_data = _missing_external_data(caught)
 
     after = recorded_answers(destination, answers_relpath)
+    # ⚠️ `from_file`, NOT `before`. This finding asks what the FILE lost across
+    # this run; handing it the merged view would report an answer the record
+    # RESTORED as a loss, on every update, forever — a false alarm generated by
+    # the fix for the real one.
     report.lost_answers = lost_answers(
-        before=before, after=after, asked_for=set(overrides)
+        before=from_file, after=after, asked_for=set(overrides)
     )
     report.conflicted_paths = _conflicted_paths(destination)
     report.changed_paths = [p for _, p in _porcelain(destination)]
+
+    if solution_name and not pretend:
+        _record_layer(
+            report,
+            destination,
+            answers_relpath,
+            solution_name=solution_name,
+            scope=scope,
+            sleep_answer=sleep_answer,
+            service=layer_name,
+            extra_answers=from_record,
+        )
 
     if as_json:
         click.echo(json.dumps(report.to_json(), indent=2, sort_keys=True, default=str))
@@ -1026,7 +1295,14 @@ def update(
         click.echo(f"{verb} {answers_relpath} in {destination}")
         if report.template_version:
             click.echo(f"  template version: {report.template_version}")
-        click.echo(f"  re-passed {len(before)} recorded answer(s)")
+        if solution_name:
+            click.echo(
+                f"  re-passed {len(before)} recorded answer(s) "
+                f"({len(from_file)} from {answers_relpath}, "
+                f"{len(report.restored_answers)} only in Solution {solution_name})"
+            )
+        else:
+            click.echo(f"  re-passed {len(before)} recorded answer(s)")
         if overrides:
             click.echo(
                 "  moved: "
@@ -1078,6 +1354,168 @@ def list_(destination: Path, as_json: bool) -> None:
         click.echo(f"    template: {row['template']}")
         click.echo(f"    ref:      {row['ref']}")
         click.echo(f"    answers:  {len(row['answers'])}")
+
+
+@solution.command("record")
+@click.argument(
+    "destination",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    default=".",
+)
+@click.option(
+    "--solution",
+    "solution_name",
+    required=True,
+    metavar="NAME",
+    help="The Solution instance to write.",
+)
+@click.option("--scope", default=None, help="The DNA scope holding the instance.")
+@click.option(
+    "-a", "--answers-file", default=None, help="Record only this answers file."
+)
+@click.option("-s", "--service", default=None, help="Record only this service.")
+@click.option("--title", default=None, help="Human title (default: the name).")
+@click.option("--description", default=None, help="One line of what it delivers.")
+@click.option(
+    "--app",
+    "apps",
+    multiple=True,
+    metavar="NAME",
+    help="An App this solution delivers. Repeatable. REPLACES the recorded list "
+    "when given, because a partial list read as complete is worse than none.",
+)
+@click.option(
+    "--sleep-answer",
+    default=None,
+    metavar="KEY",
+    help=f"The answer carrying the cost commitment (default: "
+    f"{'can_sleep'!r}).",
+)
+@click.option("--json", "as_json", is_flag=True, help="Machine-readable report.")
+@click.option(
+    "--strict",
+    is_flag=True,
+    help=f"Exit {EXIT_FINDINGS} when a recorded layer never answered the cost "
+    "question.",
+)
+def record(
+    destination: Path,
+    solution_name: str,
+    scope: str | None,
+    answers_file: str | None,
+    service: str | None,
+    title: str | None,
+    description: str | None,
+    apps: tuple[str, ...],
+    sleep_answer: str | None,
+    as_json: bool,
+    strict: bool,
+) -> None:
+    """Record DESTINATION's template layers in a `Solution` instance.
+
+    The declaration and the answers become governed data — versioned,
+    overlayable, and readable across the fleet without opening anybody's repo.
+
+    Records EVERY layer by default: this is what an existing tree needs, and a
+    record that covered some of a repo's apps would answer "which of them may
+    sleep?" with a number that is wrong and looks right. `-a`/`-s` narrow it to
+    one on purpose.
+
+    It stores no code and no template body — a `template.src` + `ref` pointer,
+    the answers verbatim, and the cost commitment. Rendering stays where it
+    was: the official Copier, on this machine.
+    """
+    destination = destination.resolve()
+    sk = _solution_kind()
+
+    if answers_file or service:
+        relpaths = [
+            resolve_answers_file(
+                destination, answers_file=answers_file, service=service
+            )
+        ]
+    else:
+        relpaths = discover_answers_files(destination)
+        if not relpaths:
+            raise SolutionError(
+                f"{destination} records no Copier answers — there is nothing to "
+                "record.\n"
+                "  An answers file is written by `dna solution new`; a tree "
+                "generated without one holds no declaration to govern."
+            )
+
+    layers = []
+    for relpath in relpaths:
+        try:
+            layers.append(
+                sk.layer_from_answers_file(
+                    destination,
+                    relpath,
+                    sleep_answer=sleep_answer or sk.DEFAULT_SLEEP_ANSWER,
+                    service=service if (answers_file or service) else None,
+                )
+            )
+        except sk.SolutionRecordError as exc:
+            raise SolutionError(str(exc)) from exc
+
+    try:
+        spec = sk.upsert_solution(
+            solution_name,
+            layers,
+            scope=scope,
+            title=title,
+            description=description,
+            repo=str(destination),
+            apps=list(apps) if apps else None,
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise SolutionError(f"recording Solution {solution_name!r} failed: {exc}") from exc
+
+    unanswered = sk.unanswered_cost_question(spec)
+    if as_json:
+        click.echo(
+            json.dumps(
+                {
+                    "solution": solution_name,
+                    "destination": str(destination),
+                    "recorded": [layer.name for layer in layers],
+                    "services": [entry.get("name") for entry in spec["services"]],
+                    "unanswered_cost": unanswered,
+                },
+                indent=2,
+                sort_keys=True,
+                default=str,
+            )
+        )
+    else:
+        click.echo(
+            f"Recorded {len(layers)} layer(s) in Solution {solution_name} "
+            f"({len(spec['services'])} total)"
+        )
+        for layer in layers:
+            sleeps = (
+                "?" if layer.pode_dormir is None else ("yes" if layer.pode_dormir else "NO")
+            )
+            click.echo(
+                f"    {layer.name}  ← {layer.answers_file}  "
+                f"(ref {layer.template_ref or '—'}, {len(layer.answers)} answers, "
+                f"sleeps: {sleeps})"
+            )
+        report = RunReport(
+            action="record",
+            destination=str(destination),
+            template=layers[0].template_src,
+            solution=solution_name,
+            unanswered_cost=unanswered,
+        )
+        _echo_report(report)
+
+    if strict and unanswered:
+        raise SolutionError(
+            "A recorded layer never answered the cost question, and --strict was "
+            "given.",
+            EXIT_FINDINGS,
+        )
 
 
 # ── the refusals ─────────────────────────────────────────────────────────────

@@ -46,7 +46,7 @@ readable, so it is reproduced from source rather than asserted:
 
 ## Logical model — Kinds and their references
 
-84 Kinds are registered. Each is an instance, not a table: a
+85 Kinds are registered. Each is an instance, not a table: a
 Kind costs a YAML descriptor and zero migrations, which is the point
 of an open type system. The cost is that references between Kinds are
 not database foreign keys — they are fields holding a name.
@@ -66,7 +66,7 @@ than either:
 
 `*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the instance name.
 
-**152 edges: 108 declared, 44 composition-only — of which 35 are ENFORCED at write time.** 37 of 84 Kinds declare at least one relation, and 2 fields are listed below as gaps.
+**153 edges: 109 declared, 44 composition-only — of which 36 are ENFORCED at write time.** 38 of 85 Kinds declare at least one relation, and 2 fields are listed below as gaps.
 
 !!! warning "Declared is not enforced"
 
@@ -95,7 +95,7 @@ flowchart LR
     eval["eval (4 Kinds)"]
     federation["federation (1 Kind)"]
     guardrails["guardrails (1 Kind)"]
-    helix["helix (14 Kinds)"]
+    helix["helix (15 Kinds)"]
     intel["intel (2 Kinds)"]
     modelreg["modelreg (1 Kind)"]
     portfolio["portfolio (5 Kinds)"]
@@ -124,7 +124,7 @@ flowchart LR
 
 ### Detail by group
 
-All 84 Kinds in one diagram is an unreadable hairball, so
+All 85 Kinds in one diagram is an unreadable hairball, so
 each group with at least 2 edges gets its
 own. A group carrying more than 20 edges is
 split again by tier, which keeps the enforced edges legible instead
@@ -155,7 +155,7 @@ erDiagram
     MCPFederation }o..|| Role : "min_role_write [role_id]"
 ```
 
-#### `helix` — declared (9 edges)
+#### `helix` — declared (10 edges)
 
 ```mermaid
 erDiagram
@@ -169,6 +169,7 @@ erDiagram
     Genome
     ModelProfile
     Roadmap
+    Solution
     Workspace
     App }o--}o Copilot : "copilots"
     Engram }o..}o ANY_KIND : "affect_evidence_refs [Kind/name] *"
@@ -179,6 +180,7 @@ erDiagram
     Genome }o--|| Agent : "default_agent"
     Genome }o..|| ModelProfile : "default_llm [model_id]"
     Genome }o..|| Workspace : "owner_tenant [workspace_id]"
+    Solution }o--}o App : "apps"
 ```
 
 #### `helix` — composition (13 edges)
@@ -488,6 +490,7 @@ the runtime does not follow it — read `By` for why.
 | `Project` | `repo_refs` | `Repo` | many | `name` | yes |  |  |
 | `Project` | `workspace_id` | `Workspace` | one | `workspace_id` |  |  | yes |
 | `Research` | `cited_by` *(poly)* | `*` | many | `Kind/name` |  |  |  |
+| `Solution` | `apps` | `App` | many | `name` | yes |  |  |
 | `SourceArtifact` | `derived_refs` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `Spec` | `epic` | `Epic` | one | `name` | yes |  |  |
 | `Spec` | `supersedes` | `Spec` | one | `name` | yes |  |  |

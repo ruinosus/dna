@@ -17,7 +17,9 @@ Two things to know before you read further, because both change what you expect:
   seven would be worse than none, because you would stop checking.
 * **Copier does the rendering and the merging.** This command adds no engine.
   What it adds is reporting: four things Copier does silently, which were
-  measured and found surprising, and which this command says out loud.
+  measured and found surprising, and which this command says out loud — plus
+  the one place a report was not enough, [the `Solution`
+  record](#keeping-the-declaration-the-solution-record).
 
 ```bash
 pip install 'dna-cli[scaffold]'
@@ -142,10 +144,10 @@ update to identity=workos        →  (absent)
 update back to identity=entra    →  graph_obo: false     ← was true
 ```
 
-`dna solution update` cannot undo this: the answers file was the only place
-holding the value, and the update rewrites that file. What it does is refuse to
-let it happen quietly, printing the name **and the value** so you can carry it
-forward:
+**On its own**, `dna solution update` cannot undo this: the answers file was the
+only place holding the value, and the update rewrites that file. What it does is
+refuse to let it happen quietly, printing the name **and the value** so you can
+carry it forward:
 
 ```
 ⚠ 1 recorded answer(s) changed unasked:
@@ -153,8 +155,14 @@ forward:
 ```
 
 Two consequences for anyone modelling these answers elsewhere: a schema must not
-require a `when:`-gated field, because it legitimately disappears; and a record
-that outlives the answers file is the only place such a value can survive.
+require a `when:`-gated field, because it legitimately disappears; and **a
+record that outlives the answers file is the only place such a value can
+survive.**
+
+⭐ That record now exists — a `Solution` instance, see [Keeping the
+declaration](#keeping-the-declaration-the-solution-record). With one recorded,
+the same round trip ends on `graph_obo: true`, because the value was re-passed
+from somewhere the update does not rewrite.
 
 #### 3. Per-instance answers files need `-a`
 
@@ -196,6 +204,85 @@ papers over a missing field and guarantees the same conflict forever.
 `maxReplicas: 2` to `4` and the template's later change to that line simply never
 arrives: no conflict, no warning. Copier skips, but does not report what it
 skipped. Reporting that is not something this command can do for you.
+
+---
+
+## Keeping the declaration — the `Solution` record
+
+Everything above is a file on disk. `--solution NAME` adds a second view of the
+same fact as **governed data**: a `Solution` instance holding, per layer, the
+template pointer, the answers verbatim, and whether the app may sleep.
+
+```bash
+# record as you generate
+dna solution new templates/app-container ./my-repo --defaults \
+    --data service_name=api --solution dna-cloud
+
+# or record a tree that already exists — every layer at once
+dna solution record ./my-repo --solution dna-cloud
+
+# and then update THROUGH the record
+dna solution update ./my-repo --service api --solution dna-cloud
+```
+
+It is opt-in on purpose: rendering a tree must keep working with no kernel, no
+scope and no `.dna` anywhere, which is what makes `dna solution` usable against
+somebody else's repo.
+
+### What it buys, and it is one thing
+
+**An answer the file lost comes back as yours.** `update --solution` merges the
+record *under* the answers file before anything is compared or re-passed, so the
+`when:` round trip in [§2](#2-a-when-gated-answer-is-erased) ends where you left
+it:
+
+```
+⭐ 1 answer(s) came back from the Solution record `dna-cloud` — the answers
+   file no longer held them:
+    graph_obo
+```
+
+The merge lands in the one variable every finding is computed from, which is why
+a floor that lives only in the record still shows up in *"kept a recorded value
+while the template default moved"*. A record whose answers were re-passed but
+not compared would be the silent-floor defect with a nicer command line.
+
+The write-back **accumulates** rather than mirrors: recording only the
+post-update file would drop the gated value from the record on the very update
+that dropped it from the file. An accumulated answer the template stopped asking
+about is simply ignored by Copier, so keeping it costs nothing.
+
+### What it stores, and what it refuses to
+
+| stored | not stored |
+|---|---|
+| `template.src` + `template.ref` — a **pointer** | any rendered file, any template body |
+| `answers` — free-form, the template's own vocabulary | a typed mirror of the template's questions |
+| `pode_dormir` — the cost commitment | `requires_plan` and anything else that would *look* enforced and not be |
+| `apps` — which `App`s the solution delivers | the conflicts, the git state, the working copy |
+
+`answers` requires no key and types none, for the reason §2 gives: a gated
+answer legitimately disappears, and typing the questions would make the Kind one
+particular `copier.yml` written twice — the second template would not fit.
+
+### The cost question, as a field
+
+An app that cannot scale to zero costs a fixed replica — **~US$ 90 a month,
+forever**. `pode_dormir` is the one fact promoted out of `answers`, so that
+*"how many of our services never sleep?"* is answerable across the fleet without
+knowing that this template spelled it `can_sleep` and the next one spells it
+something else.
+
+Nothing is presumed. When the answer is absent the field is left unwritten and
+said out loud, on **every** run:
+
+```
+⚠ 1 recorded layer(s) never said whether they may sleep:
+    api
+```
+
+`--sleep-answer KEY` names the question when your template calls it something
+else; `--strict` turns the finding into exit 3.
 
 ---
 
