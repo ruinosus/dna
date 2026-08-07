@@ -8825,7 +8825,7 @@
     },
     "/v1/memories/{name}": {
       "delete": {
-        "description": "Delete ONE memory from the tenant's OWN overlay — the portal's\nownership/delete. Never base, never another tenant (a 404 otherwise).\n\nPLAN-GATED (i-042): a delete is a WRITE on the memory surface — the\nMCP twin (``forget``) passes ``memory_op='write'`` through the same\nguard, so this route does too.",
+        "description": "⚠️ **REFUSED (403) since i-130** — a memory is never hard-deleted.\n\nThis route called itself *\"the MCP twin (``forget``)\"* and was not one:\n``forget`` stamps ``valid_to`` and leaves the row in place, while this\nremoved the row and its ``dna_versions`` history with it (measured, both\ndialects: 3 versions → 0, and ``forget`` afterwards raised \"not found\").\nThe founder's decision on i-130 kept the descriptor's promise — the\nmemory is immortal — so the kernel now refuses the hard delete at the\nchokepoint every door crosses, and this route relays the refusal with\nthe way out in it rather than pretending to delete.\n\nIt stays a route, and returns 403 rather than 404/405, because all three\nalternatives lie in a different direction: removing it would 404 as\n*\"there is no such endpoint\"*, 405 would say the METHOD is wrong for the\ncollection, and both hide that there is a policy and a remedy. 403 with\nthe reason is the only answer a portal can act on.\n\nTenant isolation is unchanged and now holds a fortiori: nobody deletes\nany memory, base or overlay, their own or another tenant's.\n\nPLAN-GATED (i-042) still, and BEFORE the refusal: a refusal is not a\nreason to stop metering a write attempt on the memory surface.",
         "operationId": "delete_memory_v1_memories__name__delete",
         "parameters": [
           {

@@ -44,6 +44,7 @@ import os
 import secrets
 from typing import Any
 
+from dna.kernel.errors import DeleteRefused
 from dna.memory.contradiction import WHEN_TO_CLAIM
 from dna.tenancy.enforcement import enforcement_boot_message
 
@@ -2684,15 +2685,33 @@ def build_app(
         scope: str | None = Query(default=None),
         tenant: str | None = Query(default=None),
     ) -> dict[str, Any]:
-        """Delete ONE memory from the tenant's OWN overlay — the portal's
-        ownership/delete. Never base, never another tenant (a 404 otherwise).
+        """⚠️ **REFUSED (403) since i-130** — a memory is never hard-deleted.
 
-        PLAN-GATED (i-042): a delete is a WRITE on the memory surface — the
-        MCP twin (``forget``) passes ``memory_op='write'`` through the same
-        guard, so this route does too."""
+        This route called itself *"the MCP twin (``forget``)"* and was not one:
+        ``forget`` stamps ``valid_to`` and leaves the row in place, while this
+        removed the row and its ``dna_versions`` history with it (measured, both
+        dialects: 3 versions → 0, and ``forget`` afterwards raised "not found").
+        The founder's decision on i-130 kept the descriptor's promise — the
+        memory is immortal — so the kernel now refuses the hard delete at the
+        chokepoint every door crosses, and this route relays the refusal with
+        the way out in it rather than pretending to delete.
+
+        It stays a route, and returns 403 rather than 404/405, because all three
+        alternatives lie in a different direction: removing it would 404 as
+        *"there is no such endpoint"*, 405 would say the METHOD is wrong for the
+        collection, and both hide that there is a policy and a remedy. 403 with
+        the reason is the only answer a portal can act on.
+
+        Tenant isolation is unchanged and now holds a fortiori: nobody deletes
+        any memory, base or overlay, their own or another tenant's.
+
+        PLAN-GATED (i-042) still, and BEFORE the refusal: a refusal is not a
+        reason to stop metering a write attempt on the memory surface."""
         await _plan_gate(request, tenant=tenant, family="memory", memory_op="write")
         try:
             return await delete_memory_impl(await _live(), name, scope, tenant)
+        except DeleteRefused as exc:
+            raise HTTPException(status_code=403, detail=str(exc)) from None
         except MemoryNotFound as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from None
 

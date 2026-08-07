@@ -47,7 +47,16 @@ spec:
   target_kind: Engram
   alias: helix-engram
   origin: github.com/ruinosus/dna/engram
-  traits: [memory.recallable]
+  # ⚠️ ``record.invalidate-only`` is what makes the promise in ``valid_to``
+  # below ("the memory is INVALIDATED, never hard-deleted") TRUE. It was prose
+  # only until i-130: measured 06/08/2026 in both dialects, a generic delete
+  # removed the row AND its three ``dna_versions`` rows, and ``forget``
+  # afterwards raised "not found" — auditable, reconstructable and revivable
+  # all fell together. Declaring the trait is the whole fix, deliberately: a
+  # special case for "Engram" on the delete path would be the enumeration this
+  # house has already lost four guards to, and it would not cover the next
+  # bi-temporal Kind. See ``dna.kernel.write.hard_delete``.
+  traits: [memory.recallable, record.invalidate-only]
   plane: record
   prompt_target: false
   flatten_in_context: false

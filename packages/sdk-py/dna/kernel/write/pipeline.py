@@ -901,15 +901,34 @@ class WritePipeline:
         this one method — see :mod:`dna.kernel.write.target_delete` for the
         count, and for why the sixth (source-to-source ``sync``) is deliberately
         below it.
+
+        ⚠️ **And the chokepoint for ``record.invalidate-only``** (i-130), for
+        the same reason one question earlier: whether an instance of this KIND
+        may be removed at all. See :mod:`dna.kernel.write.hard_delete` — it runs
+        first because it is a registry lookup that touches no store, and because
+        a Kind that may not be deleted must not have its referrers walked to
+        find that out.
         """
         host = self._host
         src = host._require_writable_source()
+        # ── the KIND gate ─────────────────────────────────────────────────
+        # An Engram promises in its own descriptor that it is never
+        # hard-deleted. Enforced here so the promise holds at every door rather
+        # than at whichever one somebody guarded.
+        from dna.kernel.errors import DeleteRefused
+        from dna.kernel.write.hard_delete import hard_delete_refusal
+
+        kind_refusal = hard_delete_refusal(
+            host.kind_port_for(kind, api_version=api_version, scope=scope)
+        )
+        if kind_refusal is not None:
+            raise DeleteRefused(kind_refusal)
         # Resolve tenant + validate against KindPort.scope (back-compat for
         # layer=("tenant", X) → tenant=X with DeprecationWarning)
         effective_tenant, residual_layer = self._resolve_tenant_arg(
             kind, tenant, layer, api_version=api_version, scope=scope,
         )
-        # ── the gate ──────────────────────────────────────────────────────
+        # ── the GRAPH gate ────────────────────────────────────────────────
         # Raises TargetDeleteRestricted before ANYTHING is removed. Returns []
         # — touching no store at all — whenever no registered relation declares
         # a policy naming this Kind, which is every delete in this registry
@@ -923,6 +942,20 @@ class WritePipeline:
             src, registry_relations(host.kind_ports()),
             scope, kind, name, tenant=effective_tenant,
         )
+        # The KIND gate again, over the PLAN — a ``delete_source`` cascade is a
+        # hard delete too, and it reaches ``_persist_delete`` directly. Asked
+        # before the first removal, so a plan that touches an invalidate-only
+        # record is refused whole rather than half-executed. Free today (no
+        # relation declares ``delete_source`` at all, so the plan is empty), and
+        # the point is that it stays free when one does.
+        for cascade_kind, cascade_name in cascade:
+            cascade_refusal = hard_delete_refusal(
+                host.kind_port_for(cascade_kind, scope=scope))
+            if cascade_refusal is not None:
+                raise DeleteRefused(
+                    f"deleting {kind}/{name} would cascade into "
+                    f"{cascade_kind}/{cascade_name}, and {cascade_refusal}"
+                )
         for cascade_kind, cascade_name in cascade:
             # api_version is NOT passed: the edge carries a bare Kind name, and
             # i-195 makes a Kind name globally unique by an ENFORCED registry

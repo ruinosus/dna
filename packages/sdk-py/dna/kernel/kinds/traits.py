@@ -1013,6 +1013,18 @@ CORE_TRAITS: dict[str, str] = {
         "FIELDS carry an embeddable payload: an ADR should be searchable without "
         "being decay-ranked as a memory."
     ),
+    "record.invalidate-only": (
+        "A bi-temporal record, RETIRED by stamping the end of its world-time "
+        "validity (`valid_to`) and never by removing the row — so it stays "
+        "auditable, point-in-time reconstructable and revivable. Two things "
+        "separate it from `record.append-only`, and both matter: this one may "
+        "be REWRITTEN freely (a recalled Engram is reconsolidated on every "
+        "surfacing), and its refusal binds EVERY door rather than only the "
+        "generic tool, because it is a promise about the row and not a rule "
+        "about a tool. Enforced at the kernel delete chokepoint "
+        "(`dna.kernel.write.hard_delete`), which names the Kind's own "
+        "retirement verb in the refusal."
+    ),
 }
 
 #: Which core traits entail which. Both entries are MEASURED, not designed: of

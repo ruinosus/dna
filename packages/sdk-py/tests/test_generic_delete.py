@@ -16,6 +16,7 @@ import pytest
 from dna.application import instances as D
 from dna.application.live import LiveDna
 from dna.kernel import Kernel
+from dna.kernel.write.hard_delete import TRAIT_INVALIDATE_ONLY
 
 _SCOPE = "probe"
 
@@ -45,23 +46,70 @@ def test_append_only_records_are_never_deletable():
 
 def test_ordinary_kinds_are_deletable():
     """The default is deletable, and deliberately so: a delete the owner cannot
-    perform is a delete they will perform by hand against the database."""
+    perform is a delete they will perform by hand against the database.
+
+    ⚠️ ``Engram`` USED TO BE IN THIS LIST, and it passed — it described exactly
+    what the code did (i-130, measured 06/08/2026 in both dialects: the row
+    gone, its three ``dna_versions`` rows gone with it, ``forget`` afterwards
+    raising "not found"). What it described should not have existed: the Engram
+    descriptor promises the opposite in writing. The founder decided on
+    07/08/2026 that the promise survives and the behaviour falls, so the
+    assertion moved next door rather than being deleted — see
+    ``test_an_engram_is_NOT_generically_deletable``. A hole with nothing
+    watching it is how the same regression returns unannounced."""
     k = Kernel.auto()
-    for kind in ("Story", "Skill", "Engram", "Agent"):
+    for kind in ("Story", "Skill", "Agent"):
         port = k.kind_port_for(kind)
         assert port is not None, kind
         assert D.delete_refusal(port) is None, kind
 
 
+def test_an_engram_is_NOT_generically_deletable():
+    """The OPPOSITE of what this file used to assert (i-130).
+
+    Mutant: drop ``record.invalidate-only`` from
+    ``dna/extensions/helix/kinds/engram.kind.yaml``. The Engram falls back to
+    the deletable default — by DERIVATION, exactly as it did before — and this
+    goes red. That is the mutant that matters, because the fix is the
+    declaration and nothing else: there is no ``if kind == "Engram"`` anywhere
+    on the delete path, and if somebody adds one, removing the trait will leave
+    this green and the guard will have stopped guarding.
+
+    The message is asserted too, and not for prose: a refusal that does not name
+    the way out is a wall, and a wall is what sends somebody to ``psql`` — which
+    is the one outcome worse than the delete this refuses."""
+    k = Kernel.auto()
+    port = k.kind_port_for("Engram")
+    assert port is not None
+    refusal = D.delete_refusal(port)
+    assert refusal is not None, (
+        "an Engram promises in its own descriptor that it is never "
+        "hard-deleted; a generic delete that goes through makes the promise "
+        "false for every instance, not just this one"
+    )
+    assert "INVALIDATE-ONLY" in refusal
+    assert "forget" in refusal, "the refusal must say where to go instead"
+
+
 def test_the_refusals_are_derived_not_listed():
-    """Both categories come from a declaration on the Kind (``is_overlayable``
-    and the ``record.append-only`` trait), so a Kind that arrives later — a
-    tenant-authored one included — is covered on arrival."""
+    """All three categories come from a declaration on the Kind
+    (``is_overlayable``, the ``record.append-only`` trait and the
+    ``record.invalidate-only`` trait), so a Kind that arrives later — a
+    tenant-authored one included — is covered on arrival.
+
+    The equality is the guard: a Kind that is refused WITHOUT declaring one of
+    the three is a name somebody wrote down, which is the enumeration this
+    house has lost four guards to."""
     k = Kernel.auto()
     bootstrap = {p.kind for p in k.kind_ports() if D.is_bootstrap_kind(p)}
     append_only = k.kinds_with_trait(D.TRAIT_APPEND_ONLY)
+    invalidate_only = k.kinds_with_trait(TRAIT_INVALIDATE_ONLY)
+    assert "Engram" in set(invalidate_only), (
+        "the floor: a scan that resolves nothing would make the equality below "
+        "pass vacuously"
+    )
     refused = {p.kind for p in k.kind_ports() if D.delete_refusal(p) is not None}
-    assert refused == bootstrap | set(append_only)
+    assert refused == bootstrap | set(append_only) | set(invalidate_only)
 
 
 # ── the catalog reports it BEFORE it is attempted ───────────────────────────
@@ -117,6 +165,10 @@ async def test_list_kinds_reports_deletable_and_the_reason():
     assert by_kind["Genome"]["deletable"] is False
     assert by_kind["Genome"]["delete_refusal"]
     assert by_kind["AuditLog"]["deletable"] is False
+    # i-130 — the catalogue is the half that makes the refusal visible BEFORE it
+    # is attempted, and an agent that reads it never writes the failing call.
+    assert by_kind["Engram"]["deletable"] is False
+    assert "forget" in by_kind["Engram"]["delete_refusal"]
     assert by_kind["Story"]["deletable"] is True
     assert by_kind["Story"]["delete_refusal"] is None
     # ...and delete is REPORTED SEPARATELY from write, because the two do not

@@ -166,39 +166,60 @@ def test_memories_search_recalls(dna_dir):
         assert any("pivot" in (h.get("name") or "") for h in body["hits"])
 
 
-# ── memory: DELETE removes from the tenant's OWN overlay only ────────────────
+# ── memory: DELETE is REFUSED — a memory is never hard-deleted (i-130) ───────
 
 
-def test_delete_memory_overlay_only(dna_dir):
-    """The one write on the read-API, guarded: a tenant deletes its OWN memory,
-    but can NEVER delete base or another tenant's (a 404 — the doc is not in its
-    overlay). The load-bearing #83 isolation."""
-    acme_own = _seed_memory(dna_dir, "ACME deletable memory one", tenant="acme")
-    acme_two = _seed_memory(dna_dir, "ACME survivor memory three", tenant="acme")
-    base_mem = _seed_memory(dna_dir, "BASE undeletable memory two", tenant=None)
+def test_delete_memory_is_refused_and_the_memory_survives(dna_dir):
+    """The OPPOSITE of what this test asserted until i-130, through the REAL door.
+
+    It used to prove that a tenant deletes its OWN memory (200) and never base
+    or another tenant's (404) — the #83 isolation. The first half described a
+    hard delete the Engram descriptor promises does not happen ("INVALIDATED
+    via valid_to, never hard-deleted"), and the measurement agreed with the
+    code: the row went, and its ``dna_versions`` history with it. The founder
+    decided on 07/08/2026 that the promise survives, so the door refuses.
+
+    Mutant: drop ``record.invalidate-only`` from the Engram descriptor. The
+    kernel gate goes quiet, this route deletes again, and every assertion below
+    goes red — which is the point of testing it HERE rather than only on
+    ``delete_refusal``: this route never called that function, and would not
+    have been covered by a fix that stopped at the generic tool.
+
+    The isolation the old test guarded is not lost; it now holds a fortiori —
+    nobody deletes any memory, their own included, and the two 404 cases are
+    asserted below as refusals that reach the same verdict without a store
+    lookup."""
+    acme_own = _seed_memory(dna_dir, "ACME memory one", tenant="acme")
+    acme_two = _seed_memory(dna_dir, "ACME memory three", tenant="acme")
+    base_mem = _seed_memory(dna_dir, "BASE memory two", tenant=None)
 
     with _client(dna_dir) as c:
-        # 1. tenant deletes its OWN memory → 200, and it's gone from its list.
+        # 1. a tenant cannot hard-delete even its OWN memory → 403 + the way out.
         r = c.delete(f"/v1/memories/{acme_own['name']}",
                      params={"scope": _SCOPE, "tenant": "acme"})
-        assert r.status_code == 200, r.text
-        assert r.json()["deleted"] == acme_own["name"]
+        assert r.status_code == 403, r.text
+        detail = r.json()["detail"]
+        assert "INVALIDATE-ONLY" in detail
+        assert "forget" in detail, (
+            "a refusal that does not name the way out is a wall, and a wall is "
+            "what sends somebody to psql"
+        )
         after = {m["name"] for m in c.get(
             "/v1/memories", params={"scope": _SCOPE, "tenant": "acme"}).json()["memories"]}
-        assert acme_own["name"] not in after
+        assert acme_own["name"] in after, "refused, and therefore still there"
 
-        # 2. tenant CANNOT delete a BASE memory → 404, base survives (visible still).
+        # 2. a BASE memory is equally safe from a tenant's delete.
         r = c.delete(f"/v1/memories/{base_mem['name']}",
                      params={"scope": _SCOPE, "tenant": "acme"})
-        assert r.status_code == 404
+        assert r.status_code == 403
         still = {m["name"] for m in c.get(
             "/v1/memories", params={"scope": _SCOPE, "tenant": "acme"}).json()["memories"]}
         assert base_mem["name"] in still
 
-        # 3. a DIFFERENT tenant CANNOT delete acme's surviving memory → 404.
+        # 3. and so is another tenant's.
         r = c.delete(f"/v1/memories/{acme_two['name']}",
                      params={"scope": _SCOPE, "tenant": "globex"})
-        assert r.status_code == 404
+        assert r.status_code == 403
         acme_after = {m["name"] for m in c.get(
             "/v1/memories", params={"scope": _SCOPE, "tenant": "acme"}).json()["memories"]}
         assert acme_two["name"] in acme_after  # untouched.
