@@ -7,9 +7,13 @@ contra o provider real nunca chega a exercitar nos casos difíceis.
 """
 from __future__ import annotations
 
+import pytest
+
+from dna.runtime import telemetry
 from dna.runtime.telemetry import (
     MAX_TEXT,
     TRUNCATION_MARK,
+    Turn,
     TurnRecorder,
     clip,
 )
@@ -373,3 +377,274 @@ def test_as_dimensoes_vem_de_QUALQUER_span_da_trace():
     })
     [turno] = _gravar(filho, _raiz())  # o raiz NAO carrega dimensao nenhuma
     assert (turno.thread_id, turno.workspace, turno.oid) == ("th-42", "ws-1", "user-1")
+
+
+# ── o DESFECHO: o que o turno CONSEGUIU ─────────────────────────────────────
+#
+# ⭐ Esta seção inteira defende UMA propriedade: **vazio nunca vira
+# `resolved`**. Ela é atacada de vários ângulos porque o modo de falha é
+# silencioso e inclina a conta a favor de quem a calcula — uma taxa de
+# resolução inflada não parece errada, parece boa notícia.
+
+
+@pytest.fixture(autouse=True)
+def _contexto_limpo():
+    """Zera a `ContextVar` entre testes.
+
+    Sem isto, um desfecho carimbado num teste vazaria para o seguinte — que é
+    literalmente o defeito que esta seção existe para provar que não acontece,
+    e um teste que o sofre não consegue detectá-lo.
+    """
+    telemetry._contexto().set(None)
+    yield
+    telemetry._contexto().set(None)
+
+
+def test_um_turno_sem_declaracao_fica_DESCONHECIDO_e_nao_resolvido():
+    """⭐ O AC central. Ninguém declarou nada: o desfecho é vazio, e vazio NÃO é
+    `resolved`."""
+    [turno] = _gravar(_raiz())
+    assert turno.outcome == ""
+
+
+def test_um_turno_que_terminou_SEM_EXCECAO_nao_e_presumido_resolvido():
+    """⚠️ A inferência tentadora, e a razão de ela estar proibida.
+
+    `status='ok'` significa "não estourou exceção", não "resolveu". Derivar o
+    desfecho dele produziria uma taxa de resolução que mede a AUSÊNCIA DE
+    CRASHES e se apresenta como medida de valor entregue — nos 85 turnos
+    medidos em 07/08/2026 daria 89%, um número inventado a favor de quem o
+    calcula.
+    """
+    [turno] = _gravar(
+        _Span(kind="LLM", attrs={"llm.token_count.prompt": 900,
+                                 "llm.model_name": "gpt-5.4"}),
+        _Span(kind="TOOL", attrs={"tool.name": "write_instance"}),
+        _raiz(status="OK", attrs={"input.value": "oi", "output.value": "pronto"}),
+    )
+    assert turno.status == "ok"
+    assert turno.outcome == ""
+
+
+def test_o_desfecho_DECLARADO_chega_ao_turno():
+    for declarado in ("resolved", "escalated", "abandoned"):
+        telemetry.stamp_outcome(declarado)
+        [turno] = _gravar(_raiz())
+        assert turno.outcome == declarado
+
+
+def test_um_desfecho_INVENTADO_e_recusado_e_o_turno_fica_vazio():
+    """Nem "ok", nem "sucesso", nem `True`. O que não está em `OUTCOMES` não
+    entra — aceitá-lo o faria aparecer numa contagem que não sabe o que ele
+    significa."""
+    for lixo in ("ok", "sucesso", "done", "resolvido", "", None, True):
+        telemetry.stamp_outcome(lixo)
+        [turno] = _gravar(_raiz())
+        assert turno.outcome == "", f"{lixo!r} não podia ter passado"
+
+
+def test_um_desfecho_no_SPAN_tambem_e_validado():
+    """A `ContextVar` não é a única fonte — o atributo do span também entra, e
+    ele vem de fora. A validação é da PORTA, não da chamada."""
+    [bom] = _gravar(_raiz(attrs={"dna.outcome": "escalated"}))
+    assert bom.outcome == "escalated"
+    [ruim] = _gravar(_raiz(attrs={"dna.outcome": "resolvido_eu_acho"}))
+    assert ruim.outcome == ""
+
+
+def test_o_desfecho_de_um_turno_NAO_VAZA_para_o_proximo():
+    """⚠️⚠️ O jeito mais provável de "vazio virar resolved" na vida real.
+
+    A `ContextVar` é por-task, e uma task serve VÁRIOS turnos da mesma conversa.
+    Se o desfecho sobrevivesse ao turno que o declarou, o turno seguinte — que
+    não declarou nada — o herdaria, e a partir do primeiro `resolved` TODOS os
+    turnos daquela conversa contariam como resolvidos.
+    """
+    saida = []
+    rec = TurnRecorder(saida.append)
+
+    telemetry.stamp_outcome("resolved")
+    rec.on_end(_raiz(trace_id=1))
+    rec.on_end(_raiz(trace_id=2))          # ninguém declarou nada neste
+    rec.on_end(_raiz(trace_id=3))          # nem neste
+
+    assert [t.outcome for t in saida] == ["resolved", "", ""]
+
+
+def test_carimbar_o_TURNO_apaga_o_desfecho_do_turno_anterior():
+    """A mesma proteção pelo outro lado: `stamp_turn` marca o INÍCIO de um
+    turno, então é onde o desfecho anterior morre — sem depender de o recorder
+    ter consumido."""
+    telemetry.stamp_outcome("resolved")
+    telemetry.stamp_turn(thread_id="th-1", workspace="ws-1")
+    [turno] = _gravar(_raiz())
+    assert turno.outcome == ""
+    # ...e o que `stamp_turn` carimbou continua lá: apagar o desfecho não pode
+    # levar as dimensões junto.
+    assert (turno.thread_id, turno.workspace) == ("th-1", "ws-1")
+
+
+def test_carimbar_o_desfecho_NAO_apaga_as_dimensoes():
+    """⚠️ `stamp_outcome` roda naturalmente DEPOIS de `stamp_turn` — o desfecho
+    só se sabe no fim. Se ele substituísse o contexto em vez de fundir, zeraria
+    thread/workspace/oid justamente no turno que teve desfecho declarado: o
+    registro melhor viraria o registro órfão."""
+    telemetry.stamp_turn(thread_id="th-9", workspace="ws-9", oid="user-9",
+                         agent="supervisor-copilot")
+    telemetry.stamp_outcome("escalated")
+    [turno] = _gravar(_raiz())
+    assert turno.outcome == "escalated"
+    assert (turno.thread_id, turno.workspace, turno.oid, turno.agent) == (
+        "th-9", "ws-9", "user-9", "supervisor-copilot"
+    )
+
+
+def test_NENHUM_caminho_de_leitura_produz_resolved_sozinho():
+    """⭐ A varredura: nenhuma combinação de status, erro, tokens, passos ou
+    dimensões faz um turno não-declarado dizer `resolved`.
+
+    Enumerar as formas de turno em vez de testar uma é o que transforma "não vi
+    acontecer" em "não pode acontecer".
+    """
+    formas = (
+        _raiz(),
+        _raiz(status="ERROR", description="estourou"),
+        _raiz(status="OK", attrs={"input.value": "oi", "output.value": "ok"}),
+        _raiz(attrs={"dna.outcome": ""}),
+        _raiz(attrs={"dna.outcome": "ok"}),
+        _raiz(attrs={"dna.thread_id": "th", "dna.agent": "a"}),
+        _raiz(events=[type("_E", (), {"name": "exception", "attributes": {}})()]),
+    )
+    for raiz in formas:
+        [turno] = _gravar(
+            _Span(kind="LLM", attrs={"llm.token_count.prompt": 10}),
+            _Span(kind="TOOL", attrs={"tool.name": "t"}),
+            raiz,
+        )
+        assert turno.outcome != "resolved"
+        assert turno.outcome == ""
+
+
+def test_o_default_do_dataclass_e_vazio_e_nao_resolved():
+    """A última porta: quem constrói um `Turn` à mão também não ganha um
+    `resolved` de graça."""
+    assert Turn(turn_id="x").outcome == ""
+
+
+# ── o ZERO de tokens, e os dois significados dele ───────────────────────────
+
+
+def test_o_turno_que_ESTOUROU_grava_os_tokens_consumidos_ate_a_falha():
+    """⭐ O AC do viés. MEDIDO em 07/08/2026 contra os 85 turnos reais.
+
+    A hipótese da spec era "o turno que falha sai de graça: 8 de 9 não gravam
+    tokens". A acumulação, na verdade, JÁ sobrevivia à exceção — o turno
+    `d2b8520b` morreu de `DiskFull` com 5.662/1.732 gravados. Este teste
+    congela o comportamento que a spec pedia e o código já tinha.
+    """
+    llm = _Span(kind="LLM", attrs={"llm.token_count.prompt": 5662,
+                                   "llm.token_count.completion": 1732,
+                                   "llm.model_name": "gpt-5.4"})
+    [turno] = _gravar(llm, _raiz(status="ERROR", description="DiskFull(...)"))
+    assert turno.status == "error"
+    assert (turno.input_tokens, turno.output_tokens) == (5662, 1732)
+    assert turno.tokens_partial is False
+
+
+def test_uma_chamada_ao_modelo_SEM_contador_marca_a_conta_como_PISO():
+    """⚠️ O caso real que a medição encontrou, e a razão de `tokens_partial`.
+
+    O turno `65ccc02e`: 404 na chamada, `model='gpt-5-mini'`, tokens 0. O
+    `openinference` monta os contadores com `_token_counts(run.outputs)`, e numa
+    run que errou `run.outputs` é `None` — sai o nome do modelo (lido do
+    `extra`, carimbado na largada) e NENHUM contador. O provedor cobrou o
+    prompt; o span não sabe quanto.
+
+    Zero aqui não é medição, é ausência — e é isso que a coluna passa a dizer.
+    """
+    llm = _Span(kind="LLM", attrs={"llm.model_name": "gpt-5-mini"},
+                status="ERROR", description="NotFoundError 404")
+    [turno] = _gravar(llm, _raiz(status="ERROR", description="NotFoundError 404"))
+    assert turno.model == "gpt-5-mini"
+    assert turno.input_tokens == 0
+    assert turno.tokens_partial is True
+
+
+def test_um_turno_SEM_chamada_ao_modelo_tem_a_conta_FECHADA_em_zero():
+    """⚠️ O outro zero, e ele é a MEDIÇÃO CERTA — não pode ser confundido com o
+    de cima.
+
+    Sete dos nove turnos com erro morreram em 7–32 ms, antes de qualquer
+    chamada ao modelo (401 no carregamento das tools, `CancelledError`). Zero
+    chamadas, zero tokens, conta fechada. Marcá-los como parciais transformaria
+    a coluna em ruído: se tudo é suspeito, nada é.
+    """
+    [turno] = _gravar(_raiz(status="ERROR", description="401 Unauthorized"))
+    assert turno.model == ""
+    assert turno.input_tokens == 0
+    assert turno.tokens_partial is False
+
+
+def test_uma_chamada_ilegivel_contamina_o_turno_inteiro():
+    """Duas chamadas, uma reporta e a outra não: o total é um PISO. Marcar só a
+    chamada perdida deixaria o total do turno parecendo completo."""
+    boa = _Span(kind="LLM", attrs={"llm.token_count.prompt": 1200,
+                                   "llm.token_count.completion": 80,
+                                   "llm.model_name": "gpt-5.4"})
+    perdida = _Span(kind="LLM", attrs={"llm.model_name": "gpt-5.4"},
+                    status="ERROR", description="timeout")
+    [turno] = _gravar(boa, perdida, _raiz(status="ERROR", description="timeout"))
+    assert (turno.input_tokens, turno.output_tokens) == (1200, 80)
+    assert turno.tokens_partial is True
+
+
+# ── os dois caminhos onde tokens CONSUMIDOS eram descartados ────────────────
+
+
+def test_uma_raiz_que_e_ELA_MESMA_um_LLM_fecha_o_turno():
+    """⚠️ Uma invocação direta do modelo, sem chain em volta: o span raiz é de
+    kind LLM.
+
+    Os ramos TOOL/LLM faziam `return` antes do teste de raiz, então este turno
+    somava os tokens e NUNCA fechava — o registro inteiro sumia, tokens e tudo,
+    e ficava preso em `_abertos` para sempre. Somar e fechar são independentes.
+    """
+    so_llm = _Span(kind="LLM", parent=None,
+                   attrs={"llm.token_count.prompt": 900,
+                          "llm.token_count.completion": 30,
+                          "llm.model_name": "gpt-5.4"})
+    [turno] = _gravar(so_llm)
+    assert (turno.input_tokens, turno.output_tokens) == (900, 30)
+    assert turno.model == "gpt-5.4"
+
+
+def test_uma_raiz_que_e_ELA_MESMA_uma_TOOL_tambem_fecha():
+    assert len(_gravar(_Span(kind="TOOL", parent=None,
+                             attrs={"tool.name": "sozinha"}))) == 1
+
+
+def test_um_span_ATRASADO_nao_ressuscita_a_trace_como_turno_fantasma():
+    """⚠️ Vazamento de memória silencioso, num processo que roda por semanas.
+
+    Um span que chega depois de a raiz ter fechado recriava o `Turn` pelo
+    `setdefault`: nascia um registro com o mesmo `turn_id`, sem raiz para
+    fechá-lo, preso em `_abertos` para sempre. O tamanho do vazamento é o
+    número de traces que já passaram.
+    """
+    saida = []
+    rec = TurnRecorder(saida.append)
+    rec.on_end(_raiz(trace_id=7))
+    rec.on_end(_Span(kind="LLM", trace_id=7,
+                     attrs={"llm.token_count.prompt": 4000}))
+    assert len(saida) == 1
+    assert rec._abertos == {}
+
+
+def test_a_memoria_de_traces_fechadas_tem_TETO():
+    """Lembrar das fechadas resolve o fantasma e não pode criar um segundo
+    vazamento no lugar do primeiro."""
+    rec = TurnRecorder(lambda _t: None)
+    for i in range(TurnRecorder.LEMBRAR_FECHADAS * 3):
+        rec.on_end(_raiz(trace_id=i + 1))
+    assert len(rec._fechadas) <= TurnRecorder.LEMBRAR_FECHADAS
+    assert rec._abertos == {}

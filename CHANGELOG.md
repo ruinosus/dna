@@ -219,6 +219,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Novidades
 
+- **O turno ganha DESFECHO, e o zero de tokens para de ter dois significados**
+  (`s-turno-tem-desfecho` / `spec-rendimento-do-copiloto`). Migração **0012**,
+  pg-only, aditiva.
+
+  `dna_turn.outcome` (`resolved`/`escalated`/`abandoned`) responde a pergunta
+  que `status` nunca respondeu: `status` diz *"estourou exceção?"*, e vinha
+  sendo lido como *"resolveu?"*. Escreve-se por
+  `dna.runtime.telemetry.stamp_outcome()`, o par de `stamp_turn`.
+
+  ⭐ **Vazio significa DESCONHECIDO, jamais `resolved`, e isso é imposto, não
+  combinado.** Sem backfill — o óbvio (`status='ok'` → `resolved`) inventaria
+  89% de resolução sobre os 85 turnos medidos, um número que mede a ausência de
+  crashes e se apresenta como valor entregue. Sem inferência no runtime. E o
+  desfecho é CONSUMIDO ao fechar o turno e limpo por `stamp_turn`, senão a
+  `ContextVar` por-task faria o primeiro `resolved` de uma conversa contaminar
+  todos os turnos seguintes dela.
+
+  `dna_turn.tokens_partial` (nulo = desconhecido) separa os dois zeros que
+  `input_tokens = 0` confundia: *"nenhuma chamada ao modelo, conta fechada"* e
+  *"houve chamada e o uso dela é ilegível"*. ⚠️ **A hipótese registrada na spec
+  — "8 dos 9 turnos com erro não gravam os tokens que consumiram" — foi medida
+  e DERRUBADA**: `model` e `input_tokens` são escritos pelo mesmo lugar e no
+  banco andam juntos (`model=''` ⟺ `0 tokens`, em 9 de 9), o que prova ausência
+  de span de LLM, não escrita perdida. Sete daqueles turnos morreram em
+  7–32 ms, antes de qualquer chamada ao modelo; um somou 5.662 tokens e só
+  então morreu, provando que a acumulação já sobrevivia à exceção. Sobra um
+  caso real, o da chamada que estourou: o `openinference` monta os contadores
+  com `_token_counts(run.outputs)`, e numa run que errou `run.outputs` é
+  `None` — sai o nome do modelo e nenhum contador, e o provedor cobrou o
+  prompt. Recontar seria estimar, então o registro passa a dizer QUAL zero ele
+  é.
+
+- **Dois caminhos onde tokens JÁ CONSUMIDOS eram descartados**, achados ao
+  medir o item acima. Um span raiz que fosse ele mesmo de kind `LLM`/`TOOL`
+  (invocação direta, sem chain em volta) somava os tokens e **nunca fechava** —
+  o turno inteiro sumia. E um span atrasado, chegando depois de a raiz fechar,
+  ressuscitava a trace como um `Turn` fantasma sem raiz para fechá-lo, preso em
+  memória para sempre: um vazamento do tamanho do número de traces que já
+  passaram pelo processo.
+
 - **Disjuntor de margem no caminho de quota — um FUSÍVEL do operador, e não um
   eixo de venda** (i-134 do board dna-cloud). `calls_per_day` limita
   **frequência**, não custo: o Pro admite ~300 mil chamadas/mês, o que ao preço
