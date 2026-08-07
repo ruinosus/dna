@@ -476,6 +476,29 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         if is_pg else
         sa.Column("updated_at", sa.Text, nullable=False)
     )
+    edge_cols.append(
+        # i-131 — QUANDO a instância que esta aresta resolveu foi apagada.
+        #
+        # A coluna existe porque ``to_kind IS NOT NULL`` respondia a pergunta
+        # ERRADA. Ele é um fato do INSTANTE DA ESCRITA ("a referência achou um
+        # alvo, deste Kind"), e a travessia o servia como se fosse um fato do
+        # instante da LEITURA ("isto ainda aponta para algo"). Apagado o alvo,
+        # a linha continuava — corretamente, ver o comentário do
+        # ``delete_instance`` — dizendo ``resolved: true``. Não era impreciso:
+        # era o oposto, entregue com a mesma confiança.
+        #
+        # ⚠️ NULL é "nenhum delete foi observado", NUNCA "o alvo existe". Uma
+        # linha anterior a esta revisão diz NULL porque ninguém estava olhando,
+        # e a 0011 deliberadamente NÃO faz backfill: ver o docstring dela.
+        #
+        # É TIMESTAMP e não booleano pelo mesmo preço: "sumiu" e "sumiu em tal
+        # instante" custam a mesma escrita, e só o segundo se cruza com o
+        # ``dna_versions.created_at`` da origem para dizer se a aresta foi
+        # escrita antes ou depois de o alvo morrer.
+        sa.Column("to_deleted_at", sa.DateTime(timezone=True), nullable=True)
+        if is_pg else
+        sa.Column("to_deleted_at", sa.Text, nullable=True)
+    )
     edges = sa.Table(
         f"{p}edges", md, *edge_cols,
         # The two directions the traversal walks. "out" is served by the PK

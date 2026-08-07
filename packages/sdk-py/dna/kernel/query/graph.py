@@ -7,6 +7,17 @@ say to each other. The rows come from the write path — the same lookups
 record which Kind it resolved to — so nothing here derives, guesses or parses a
 slug. It reads a fact somebody's write produced.
 
+**And a fact somebody's DELETE produced (i-131).** ``resolved`` used to be
+``to_kind IS NOT NULL``, which is a fact about the WRITE — *"the reference
+found a target"* — served as a fact about the READ — *"this still points at
+something"*. Deleting the target left the edge in place, correctly, saying
+``resolved: true`` about an instance that no longer existed. The fix keeps this
+module free of derivation: the delete stamps ``to_deleted_at`` on the incoming
+edges in its own transaction, so the traversal still only reports what a write
+recorded. Recomputing here instead would have meant a second resolution rule
+beside ``Kernel.get_instance``'s parent-scope fallback — see the 0011
+revision's docstring for the measurement that killed it.
+
 **Why the kernel and not the adapter alone.** The SQL is the adapter's (a
 recursive CTE, identical on Postgres and SQLite). The POLICY is not: the depth
 ceiling, the refusal to answer at all on a store that keeps no edges, and the
@@ -279,8 +290,31 @@ class GraphResult:
 
     @property
     def dangling(self) -> list[dict[str, Any]]:
-        """Edges that resolve to nothing — the list of what is broken."""
+        """Edges that resolve to nothing — the list of what is broken.
+
+        i-131 widened WHAT lands here without widening the definition: an edge
+        whose target was deleted after the edge was written resolves to
+        nothing, and used to be reported as ``resolved`` because the
+        producer's write-time ``to_kind`` was being served as a live fact. See
+        :attr:`orphaned` for the half of this list that HAD a target and lost
+        it.
+        """
         return [e for e in self.edges if not e.get("resolved")]
+
+    @property
+    def orphaned(self) -> list[dict[str, Any]]:
+        """The subset of :attr:`dangling` whose target was DELETED (i-131).
+
+        Its own reading rather than a filter left to the caller, because the
+        two halves of ``dangling`` are different problems with different
+        owners. An edge that NEVER resolved accuses its own author — a typo, or
+        a target nobody ever wrote. An orphaned one accuses a DELETE: something
+        removed an instance while live references pointed at it, and the delete
+        path has no reference veto at all (``WritePipeline.delete``: deletes
+        have no ``pre_save``). Collapsing them is how "47 Stories just lost
+        their Feature" gets read as "47 Stories have typos".
+        """
+        return [e for e in self.edges if e.get("to_deleted_at")]
 
 
 def _clamp_depth(depth: int | None) -> int:

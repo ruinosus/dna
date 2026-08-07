@@ -882,10 +882,14 @@ async def graph_refs_impl(
 
     Three things travel with the answer, none of them decoration:
 
-    * ``resolved`` per edge — ``false`` is a DANGLING reference (declared,
-      written, resolving to nothing). Listed, never filtered: with
-      ``DNA_REF_VALIDATION=warn`` (the default) such instances persist, and a
-      graph that hid the broken half would read as healthier than the data is.
+    * ``resolved`` per edge — ``false`` is a reference that points at nothing.
+      Listed, never filtered: with ``DNA_REF_VALIDATION=warn`` (the default)
+      such instances persist, and a graph that hid the broken half would read
+      as healthier than the data is. It answers about NOW, not about the write
+      (i-131): an edge whose target has since been deleted says ``false``, and
+      ``to_deleted_at`` says WHEN — the difference between "this was never
+      written" and "a delete took this out from under a live reference", which
+      are different repairs.
     * ``stop`` — ``complete`` / ``depth_reached`` / ``truncated``. A caller
       that cannot tell "this is everything" from "this is where I stopped"
       renders the second as the first.
@@ -929,6 +933,13 @@ async def graph_refs_impl(
                 "to_id": e.get("to_id"),
                 "declared_to": list(e["declared_to"]),
                 "resolved": e["resolved"],
+                # i-131 — WHY it is unresolved, when it is. ``resolved: false``
+                # alone conflates two states with different repairs: a
+                # reference that NEVER found a target (a typo, or a target
+                # nobody wrote) and one that found it and was then orphaned by
+                # a delete. NULL here with ``resolved: false`` is the first; a
+                # timestamp is the second, and it says when.
+                "to_deleted_at": e.get("to_deleted_at"),
                 "closes_cycle": e["closes_cycle"],
                 "from_version": e["from_version"],
             }

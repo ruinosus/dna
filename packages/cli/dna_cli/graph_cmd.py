@@ -119,7 +119,18 @@ def refs(
         )
         return
     for e in result.edges:
-        mark = "" if e["resolved"] else "  ⚠ dangling"
+        # i-131 — as duas metades de "não resolve" não são o mesmo problema
+        # nem têm o mesmo dono. `dangling` acusa quem AUTOROU (um nome que
+        # nunca existiu); `alvo apagado` acusa um DELETE que passou por cima
+        # de uma referência viva. Imprimir a mesma palavra para as duas é como
+        # "47 Stories perderam a Feature" virar "47 Stories têm erro de
+        # digitação".
+        if e["resolved"]:
+            mark = ""
+        elif e.get("to_deleted_at"):
+            mark = f"  ⚠ alvo apagado em {e['to_deleted_at']}"
+        else:
+            mark = "  ⚠ dangling"
         click.echo(
             f"[{e['depth']}] {e['from_kind']}/{e['from_name']}"
             f" --{e['source_field']}[{e['ordinal']}]--> "

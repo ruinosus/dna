@@ -1760,6 +1760,11 @@ class SqlAlchemySource(WritableSourcePort):
             e.c.source_field, e.c.ordinal,
             e.c.to_scope, e.c.to_api_version, e.c.to_kind, e.c.to_name,
             e.c.to_id, e.c.declared_to, e.c.from_version,
+            # i-131 — carried through both branches of the CTE, like every
+            # other column: the recursive step re-lists them by hand, and a
+            # column added to one list and not the other is a UNION type error
+            # rather than a silent drop.
+            e.c.to_deleted_at,
         ]
         def closes(prev, kind_col, name_col):
             """1 when ``prev`` already visited this row's target node.
@@ -1807,6 +1812,7 @@ class SqlAlchemySource(WritableSourcePort):
             ea.c.source_field, ea.c.ordinal,
             ea.c.to_scope, ea.c.to_api_version, ea.c.to_kind, ea.c.to_name,
             ea.c.to_id, ea.c.declared_to, ea.c.from_version,
+            ea.c.to_deleted_at,
             (walk.c.depth + 1).label("depth"),
             (walk.c.path + tail(ea_node_kind, ea_node_name)).label("path"),
             closes(walk.c.path, ea_node_kind, ea_node_name).label("closes_cycle"),
@@ -1889,10 +1895,37 @@ class SqlAlchemySource(WritableSourcePort):
                 "declared_to": tuple(
                     t for t in (r.declared_to or "").split(" | ") if t
                 ),
-                # ``to_kind is None`` is the DANGLING edge — declared, written,
-                # resolving to nothing. It is reported, never filtered: it is
-                # the list of what is broken.
-                "resolved": r.to_kind is not None,
+                # i-131 — WHEN the instance this edge resolved to was deleted,
+                # or NULL for "no delete was ever observed". Reported beside
+                # ``resolved`` rather than folded into it, because the two
+                # broken states are different repairs and a reader that cannot
+                # tell them apart will guess: an edge that NEVER resolved is a
+                # typo or a target that was never written, while one that
+                # resolved and was then orphaned is a delete that took
+                # something out from under a live reference. Same axis as
+                # i-104 — the honesty of what the graph says ABOUT ITSELF.
+                "to_deleted_at": (
+                    r.to_deleted_at.isoformat()
+                    if hasattr(r.to_deleted_at, "isoformat")
+                    else r.to_deleted_at
+                ),
+                # ⚠️ i-131 — TWO conditions, and the second is the whole issue.
+                #
+                # ``to_kind is not None`` alone answered a question about the
+                # WRITE ("the reference found a target, of this Kind"), and the
+                # traversal served it as an answer about the READ ("this still
+                # points at something"). Delete the target and the row survived
+                # — correctly, see ``delete_instance`` — still saying
+                # ``resolved: true``. That is not an imprecise answer: it is
+                # the OPPOSITE one, delivered with the same confidence, to a
+                # caller whose whole reason for asking was to tell the two
+                # apart.
+                #
+                # ``to_deleted_at`` is stamped by the delete itself, in the
+                # same transaction that removed the row, so this stays a fact
+                # somebody's WRITE produced — this module derives, guesses and
+                # parses nothing, exactly as its docstring promises.
+                "resolved": r.to_kind is not None and r.to_deleted_at is None,
                 # This edge points back at a node the walk had already
                 # visited. Reported, not hidden: a cycle in the data is
                 # information, and ``Story.dependencies → Story`` makes cycles
@@ -2017,6 +2050,42 @@ class SqlAlchemySource(WritableSourcePort):
                 eg.c.from_kind == kind, eg.c.from_name == name,
                 *self._api_version_where(eg.c.from_api_version, api_version),
             ))
+            # …and i-131: "they become dangling" was the INTENT of the
+            # paragraph above, and for two revisions it was not what the table
+            # said. Nothing changed on the incoming rows, so the traversal kept
+            # deriving ``resolved`` from ``to_kind IS NOT NULL`` — a fact about
+            # the WRITE — and kept answering "yes, this points at something"
+            # about an instance this very statement removed. Surviving was
+            # right; claiming to have resolved was not.
+            #
+            # ONE indexed UPDATE, in the SAME transaction as the delete, so no
+            # reader can observe the row gone and the edge still confident.
+            # Served by ``dna_edges_in_idx`` — measured 0,032 ms server-side on
+            # 10.000 edges. See the 0011 revision for why marking here beats
+            # recomputing on every read (short version: a read-time existence
+            # check by ``(scope, tenant, kind, name)`` is a SECOND resolution
+            # rule beside ``Kernel.get_instance``'s parent-scope fallback, and
+            # it calls a legitimately inherited reference broken).
+            await conn.execute(eg.update().where(
+                eg.c.scope == scope, eg.c.tenant == tenant_val,
+                eg.c.to_kind == kind, eg.c.to_name == name,
+                # An edge that never resolved has nothing to un-claim, and one
+                # already marked keeps its FIRST stamp: the instant this edge's
+                # target went away does not move because somebody deleted a
+                # recreated namesake later.
+                eg.c.to_deleted_at.is_(None),
+                # ⚠️ ``_same_api_family``, NOT ``_api_version_where``. The
+                # latter is an EXACT match, and ``to_api_version`` is NULL on
+                # every row written before revision 0009 and on every edge
+                # whose producer could not say which apiVersion matched — so an
+                # exact pin would silently skip exactly the oldest rows, which
+                # are the ones most likely to be pointing at something that is
+                # about to stop existing. Permissive is the same rule the
+                # traversal's own hop join uses, for the same reason.
+                _same_api_family(
+                    eg.c.to_api_version, sa.literal(api_version or ""),
+                ),
+            ).values(to_deleted_at=self._edge_now()))
             # doc_version=0 is the documented sentinel for delete.
             await self._events.emit(
                 conn, scope=scope, tenant=tenant_val, kind=kind, name=name,
