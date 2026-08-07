@@ -2795,6 +2795,20 @@ class Kernel:
         self._search_provider = provider
         self._search_provider_warned = False
 
+    @property
+    def search_provider(self):
+        """The registered ``RecordSearchProvider``, or ``None``.
+
+        The READ half of ``record_search_provider``, and it exists for exactly
+        one reason: ``search()``'s envelope carries a single ``degraded`` flag,
+        and two very different situations set it — *this deployment has no
+        semantic plane at all* and *the semantic plane is registered and just
+        failed*. A caller that must tell those apart (a door reporting WHAT it
+        lost, s-porta-de-busca) otherwise had to reach for ``_search_provider``
+        through the underscore, which is how a private became a de-facto public
+        in three places already."""
+        return self._search_provider
+
     def embedding_provider(self, provider) -> None:
         """Register the embedding provider (rec-embedding-port). One per kernel;
         later registration replaces (boot-time wiring). Sibling to

@@ -8,13 +8,19 @@ agent unless somebody writes tools for it. The generic path is not missing: the
 CLI's ``dna instance`` has served every Kind in-process for a long time
 (``dna_cli._ctx._LocalDocs``). It was simply never *served*.
 
-These four use-cases are that generic path, transport-agnostic, resolved from
-the kernel's :class:`~dna.kernel.kinds.registry.KindRegistry` **at call time**:
+These use-cases are that generic path, transport-agnostic, resolved from the
+kernel's :class:`~dna.kernel.kinds.registry.KindRegistry` **at call time** (the
+list is spelled out rather than counted: it said "these four" while shipping
+seven, and a count that drifts is the one thing a reader trusts without checking):
 
-    list_kinds_impl      — the Kind catalog (what can I act on here?)
-    list_instances_impl  — the instances of one Kind in a scope
-    get_instance_impl    — one instance, verbatim
-    write_instance_impl  — create/update one instance
+    list_kinds_impl        — the Kind catalog (what can I act on here?)
+    list_instances_impl    — the instances of one Kind in a scope
+    search_instances_impl  — the instances of one Kind that RESEMBLE a query
+    get_instance_impl      — one instance, verbatim
+    resolve_instance_impl  — one instance, by id
+    graph_refs_impl        — what points at one instance
+    write_instance_impl    — create/update one instance
+    delete_instance_impl   — remove one instance
 
 They live in the CORE (``adr-faces-reorg`` move #1) so a face is a thin adapter
 and every face inherits the same rules — most importantly the two refusals
@@ -47,6 +53,7 @@ module only classifies.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Iterable
 
 from dna.application.live import LiveDna
@@ -54,6 +61,8 @@ from dna.kernel.errors import DeleteRefused
 from dna.kernel.etag import spec_etag
 from dna.kernel.kinds.registry import ports_in_scope
 from dna.memory.verbs import MEMORY_KINDS
+
+logger = logging.getLogger(__name__)
 
 __all__ = [
     "AmbiguousKindError",
@@ -75,6 +84,7 @@ __all__ = [
     "list_kinds_impl",
     "resolve_kind_port",
     "resolve_kind_port_live",
+    "search_instances_impl",
     "spec_etag",
     "write_instance_impl",
 ]
@@ -662,6 +672,160 @@ async def list_instances_impl(
         "has_more": has_more,
         "projected": projection,
     }
+
+
+#: The three shapes a search result can take, as ONE machine-readable word.
+#: ``degraded`` alone cannot carry them: the kernel sets that single flag both
+#: when there is no semantic plane at all and when there is one that just
+#: failed, and the two have different remedies (install/configure a provider vs
+#: look at the logs). ``None`` = nothing was lost.
+SEARCH_NO_PROVIDER = "no_search_provider"
+SEARCH_PROVIDER_ERROR = "search_provider_error"
+SEARCH_INDEX_STALE = "index_refresh_failed"
+
+#: What each degradation COSTS the caller, in words the caller will act on.
+#: The sentence exists because ``degraded: true`` beside an empty ``hits`` is
+#: read by both humans and models as *"I searched and there is nothing"* — the
+#: exact fabrication `indisponível ≠ zero` names. Every one of them therefore
+#: ends by saying what the empty list may NOT be taken to mean; the caller sees
+#: the caveat in the same breath as the result, not in a doc it did not open.
+_SEARCH_NOTICE: dict[str, str] = {
+    SEARCH_NO_PROVIDER: (
+        "No embedding/search provider is registered on this deployment, so "
+        "similarity search did not run. What ran instead is an honest LEXICAL "
+        "token-match scan: it finds instances that repeat the words of the "
+        "query and CANNOT find one that says the same thing in other words. "
+        "A short or empty result here is NOT evidence that nothing similar "
+        "exists — it is evidence that this deployment cannot tell."
+    ),
+    SEARCH_PROVIDER_ERROR: (
+        "The search provider is registered but FAILED on this call, so "
+        "similarity search did not run and an honest lexical token-match scan "
+        "answered in its place. A short or empty result here is NOT evidence "
+        "that nothing similar exists — the semantic plane never answered."
+    ),
+    SEARCH_INDEX_STALE: (
+        "The search index could not be refreshed before this query, so any "
+        "instance written since the last successful refresh is invisible to "
+        "it. These results are NOT read-your-writes, and an absent instance "
+        "may simply be an unindexed one."
+    ),
+}
+
+
+async def search_instances_impl(
+    live: LiveDna, *, kind: str, query: str, scope: str | None = None,
+    tenant: str | None = None, api_version: str | None = None, k: int = 10,
+) -> dict[str, Any]:
+    """Find the instances of one Kind that RESEMBLE ``query`` — similarity, not
+    enumeration.
+
+    The capacity was already built and already wired: ``kernel.search()`` routes
+    to the registered ``RecordSearchProvider`` (``adapters/search/pgvector.py``
+    or ``sqlite_vec.py`` — dense pgvector/vec0 + a lexical plane, fused by the
+    shared ``rrf.reciprocal_rank_fusion``) and degrades to an in-memory lexical
+    scan when there is none. Nothing about ranking, fusion or embedding is
+    implemented here and nothing may be: this is the DOOR onto that engine for
+    an arbitrary Kind, which is the only piece that was missing (`s-porta-de-busca`).
+    ``list_instances`` answers *"what is there"* and is the only thing a creator
+    asking *"does something like this already exist?"* had — enumeration works at
+    six Kinds and does not at six hundred, which is exactly what tenant Kind
+    authoring produces.
+
+    ONE Kind per call, deliberately. The Kind is what decides the metering family
+    (:func:`family_for_kind`), so a multi-Kind search would be the cheap door into
+    a family the caller's plan gates — the same reason ``list_instances`` takes one.
+
+    **The index is refreshed first**, for the target Kind, through the same
+    :func:`dna.memory.backfill_index` ``recall`` uses (idempotent by text hash —
+    unchanged instances are not re-embedded). Without it the provider-backed
+    plane would answer confidently out of an index nothing but the memory verbs
+    ever wrote to, and a Kind nobody had recalled would come back empty while its
+    instances sat in the store. A refresh FAILURE is not swallowed: it degrades
+    the answer and says so.
+
+    Returns ``{scope, kind, api_version, query, hits, count, mode, degraded,
+    degraded_reason, notice, index_refreshed, index_error?}``.
+
+    ``mode`` is ``hybrid`` (dense + lexical + RRF) or ``lexical``, and it is the
+    field that makes the two EMPTIES different results rather than the same one:
+
+    * ``mode: "hybrid"``, ``degraded: false``, ``hits: []`` — the semantic plane
+      ran and found nothing. *This* one may be read as "nothing similar exists".
+    * ``degraded: true`` with a ``degraded_reason`` and a ``notice`` — something
+      did not run. The empty list is a BLIND SPOT, and the notice says so in
+      words, because an empty list beside a bare boolean is read as an answer by
+      every caller that does not already know better.
+
+    Hits carry the port's guaranteed ``{scope, kind, name, score}``; a
+    provider-backed hit may also carry ``title`` / ``snippet`` / ``rank_dense`` /
+    ``rank_lexical`` (optional by contract — never depend on them).
+    """
+    sc = scope or live.default_scope(tenant)
+    port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
+    k = max(1, min(int(k), 100))
+
+    # Refresh THIS Kind's slice of the index — same seam, same idempotence, as
+    # the one `recall_impl` runs before every recall. Reused rather than
+    # re-derived: `backfill_index` already takes the Kinds to walk, and its
+    # default (the memory Kinds) is the only thing that made it look memory-only.
+    index_refreshed = False
+    index_error: str | None = None
+    provider = getattr(live.kernel, "search_provider", None)
+    if provider is not None:
+        from dna.memory import backfill_index
+
+        try:
+            await backfill_index(
+                live.kernel, sc, kinds=[port.kind], tenant=tenant,
+            )
+            index_refreshed = True
+        except Exception as exc:  # noqa: BLE001 — a read never breaks on this
+            index_error = f"{type(exc).__name__}: {exc}"
+            logger.warning(
+                "search_instances: index refresh failed for %s/%s (tenant=%s): %s",
+                sc, port.kind, tenant, index_error,
+            )
+
+    # The tenant travels EXPLICITLY. `kernel.search` would otherwise fall back to
+    # the kernel's own binding, and a door that let a caller's scope decide whose
+    # overlay it reads is the one leak this surface must not have: the provider
+    # filters `row_tenant in ("", tenant)`, so the value passed here IS the
+    # isolation boundary.
+    res = await live.kernel.search(
+        sc, query, kind=port.kind, k=k, tenant=tenant,
+    )
+    hits = list(res.get("hits") or [])
+    degraded = bool(res.get("degraded"))
+
+    reason: str | None = None
+    if degraded:
+        # The kernel collapses both into one flag; separate them here, where the
+        # provider is still in hand. Order matters: no provider at all is the
+        # deployment's shape, a failure is an incident.
+        reason = SEARCH_NO_PROVIDER if provider is None else SEARCH_PROVIDER_ERROR
+    elif index_error is not None:
+        # The semantic plane answered, but out of an index that may be missing
+        # the caller's own last write. Degraded, because that is what it is.
+        degraded = True
+        reason = SEARCH_INDEX_STALE
+
+    out: dict[str, Any] = {
+        "scope": sc,
+        "kind": port.kind,
+        "api_version": port.api_version,
+        "query": query,
+        "hits": hits,
+        "count": len(hits),
+        "mode": "lexical" if res.get("degraded") else "hybrid",
+        "degraded": degraded,
+        "degraded_reason": reason,
+        "notice": _SEARCH_NOTICE.get(reason) if reason else None,
+        "index_refreshed": index_refreshed,
+    }
+    if index_error is not None:
+        out["index_error"] = index_error
+    return out
 
 
 async def resolve_instance_impl(

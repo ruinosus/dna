@@ -57,6 +57,7 @@ from dna.application.instances import (
     list_kinds_impl,
     resolve_kind_port,
     resolve_kind_port_live,
+    search_instances_impl,
     spec_etag,
     write_instance_impl,
 )
@@ -162,6 +163,7 @@ __all__ = [
     # hand-written per-Kind tools.
     "list_kinds_impl",
     "list_instances_impl",
+    "search_instances_impl",
     "get_instance_impl",
     "resolve_instance_impl",
     "graph_refs_impl",
