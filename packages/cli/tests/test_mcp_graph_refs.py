@@ -291,3 +291,41 @@ def test_the_tool_is_listed_on_the_face(fs_dir):
     described = (tools["graph_refs"].description or "")
     # The refusal is part of the contract an agent reads BEFORE calling.
     assert "never" in described.lower()
+
+
+# ── o response_model não pode DESCARTAR campo em silêncio ───────────────────
+
+
+def test_the_rest_model_declares_every_key_the_impl_produces(sql_dir):
+    """O ``response_model`` do FastAPI FILTRA — e filtrar é indistinguível de
+    "o campo não existe" para quem lê a resposta.
+
+    Medido em 06/08/2026: a rota REST vinha descartando **três** campos que o
+    impl produzia — ``from_api_version`` e ``to_api_version`` (fatia 1) e
+    ``to_deleted_at`` (i-131). O último é o pior: ele nasceu exatamente para o
+    grafo parar de dizer ``resolved: true`` sobre um alvo apagado, e a face que
+    mais gente consome o apagava de volta.
+
+    ⚠️ Isto só foi notado porque a face MCP existe e um teste as compara. Antes
+    dela, o campo sumia sem nada ficar vermelho — e esse é o ponto desta guarda:
+    ela pergunta ao IMPL o que ele produz, então uma quarta chave nasce coberta,
+    e continua coberta no dia em que alguém apagar a tool MCP.
+
+    O ``==`` é deliberado. ``<=`` deixaria o modelo declarar campo que o impl
+    não produz, que é a mesma desonestidade no sentido inverso.
+    """
+    from dna_cli._rest_models import GraphRefEdge
+
+    produzidas = _rest_refs("Story", "s-x", {"depth": 3, "direction": "both"}).json()
+    assert produzidas["edges"], "a travessia não achou nada — a fixture, não a guarda"
+
+    declaradas = set(GraphRefEdge.model_fields)
+    for aresta in produzidas["edges"]:
+        assert set(aresta) == declaradas, (
+            "o modelo REST e o impl discordam sobre as chaves de uma aresta.\n"
+            f"  só no impl:   {sorted(set(aresta) - declaradas)}\n"
+            f"  só no modelo: {sorted(declaradas - set(aresta))}\n"
+            "Um campo que o impl produz e o modelo não declara é DESCARTADO "
+            "pelo FastAPI, em silêncio — o cliente não distingue isso de "
+            "'o campo não existe'."
+        )

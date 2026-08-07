@@ -438,10 +438,16 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
         # desta tabela: ela morava em ``dna.kernel.kinds.registry``, na guarda
         # da i-195 que recusa registrar dois Kinds homônimos sob apiVersions
         # diferentes. Ou seja: a integridade do grafo dependia, calada, de uma
-        # invariante de OUTRO módulo — que tem uma lista de exceções aberta
-        # (``KIND_NAME_COLLISION_ALLOWLIST``) e nenhuma guarda ligando as duas
-        # coisas. A catraca que passa a ligá-las está em
+        # invariante de OUTRO módulo, e nenhuma guarda ligando as duas coisas.
+        # A catraca que passa a ligá-las está em
         # ``tests/test_edge_knows_target_api_version.py``.
+        #
+        # A ``KIND_NAME_COLLISION_ALLOWLIST`` citada aqui como "lista de
+        # exceções aberta" foi esvaziada em 06/08/2026 (i-127) — a única
+        # entrada estava morta. ⚠️ Isso NÃO torna a unicidade global: o funil
+        # de ``KindDefinition`` por escopo segue permitindo homônimos por
+        # desenho e nunca consulta a constante. É exatamente por isso que a
+        # catraca que importa pergunta ao REGISTRY VIVO, e não à constante.
         #
         # O docstring da revisão 0008 já tinha nomeado a consequência ao
         # explicar por que o backfill de ``to_id`` deixa NULL: *"a aresta grava

@@ -1344,15 +1344,29 @@ class GraphRefEdge(BaseModel):
 
     depth: int
     direction: str
+    #: A aresta grava a apiVersion dos DOIS lados (fatia 1 da
+    #: spec-topologia-do-grafo). `to_kind` sozinho identifica um NOME de Kind,
+    #: e um nome só é único entre apiVersions porque o registro recusa colisões
+    #: — invariante de outro módulo. Um lado da aresta que dependesse disso
+    #: estaria certo por sorte emprestada.
+    from_api_version: str | None = None
     from_kind: str
     from_name: str
     #: The spec field the reference was declared on.
     field: str
     #: Position inside an array-valued reference; 0 for a scalar one.
     ordinal: int
+    to_api_version: str | None = None
     to_kind: str | None = None
     to_name: str
     to_scope: str | None = None
+    #: Quando a instância alvo foi APAGADA (i-131). A aresta continua existindo
+    #: de propósito — a decisão do founder sobre o `AuditLog` diz que uma linha
+    #: de auditoria sobre instância apagada TEM que continuar apontando, e o
+    #: `on_target_delete: allow` é o vocabulário disso. O defeito que este campo
+    #: fecha não era a aresta sobreviver; era ela seguir dizendo
+    #: `resolved: true` enquanto sobrevivia.
+    to_deleted_at: str | None = None
     #: The ``metadata.id`` of the instance this edge actually resolved to
     #: (i-114) — the pair Kubernetes' ``ownerReferences`` carries, and for the
     #: same reason: the AUTHOR wrote ``to_name``, but which instance that name

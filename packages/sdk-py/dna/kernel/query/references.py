@@ -113,9 +113,18 @@ class ResolvedEdge:
     #: ``to_kind`` alone does NOT identify a Kind. It identifies a Kind *name*,
     #: and a name is unique across apiVersions only because
     #: :mod:`dna.kernel.kinds.registry` refuses collisions (i-195) — an
-    #: invariant of ANOTHER module, carrying an open exception list
-    #: (``KIND_NAME_COLLISION_ALLOWLIST``). An edge that omitted this field was
-    #: therefore correct by borrowed luck rather than by construction.
+    #: invariant of ANOTHER module. Its exception list
+    #: (``KIND_NAME_COLLISION_ALLOWLIST``) was emptied on 06/08/2026 (i-127):
+    #: its single entry, ``Reference``, was dead, and while it existed it was
+    #: the one door ambiguity could return through unnoticed.
+    #:
+    #: ⚠️ That does NOT make name uniqueness global. The per-scope
+    #: ``KindDefinition`` funnel still permits homonyms by design (demo scopes
+    #: ship shadows of Doc/EvalCase/EvalSuite) and never touches the constant.
+    #: Uniqueness holds within the builtin/extension set — which is where
+    #: bare-name resolution comes from by preference, and why an edge that
+    #: omitted this field was correct by borrowed luck rather than by
+    #: construction.
     #:
     #: Free, for the third time in this class: ``matched_doc`` is already in
     #: hand from the existence check — the same economics that paid for

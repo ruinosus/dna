@@ -2296,6 +2296,17 @@
             "title": "Field",
             "type": "string"
           },
+          "from_api_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "From Api Version"
+          },
           "from_kind": {
             "title": "From Kind",
             "type": "string"
@@ -2315,6 +2326,28 @@
           "resolved": {
             "title": "Resolved",
             "type": "boolean"
+          },
+          "to_api_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Api Version"
+          },
+          "to_deleted_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "To Deleted At"
           },
           "to_id": {
             "anyOf": [
