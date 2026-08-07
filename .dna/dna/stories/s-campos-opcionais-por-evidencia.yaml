@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: u2kii67klz2l
+  name: s-campos-opcionais-por-evidencia
+spec:
+  title: Os três campos que a realidade recusou — opcionais, com 'não se aplica' declarável
+  description: 'python_module, port e Solution.services viram opcionais (evidencia: portal, worker, o dna-cloud inteiro). service_name FICA obrigatorio — saiu limpo nos nove.'
+  status: todo
+  feature: f-conta-do-copiloto
+  priority: highest
+  acceptance_criteria:
+  - Dado o Kind App, quando eu leio o descritor, entao python_module e port sao opcionais e service_name CONTINUA obrigatorio, com a evidencia de cada um escrita no description
+  - Dado o Kind Solution, quando eu leio o descritor, entao services e opcional e required e [title]
+  - Dado um campo que nao se aplica, quando eu declaro, entao existe forma de dizer NAO SE APLICA — resposta declarada, nunca vazio adivinhado
+  - Dado o dogfood do dna-cloud, quando ele aplica, entao os 9 Apps E a Solution passam
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: os dois descritores, com a regra da evidencia no cabecalho'
+  - 'Tests: um teste por campo provando que o caso real (portal, worker, dna-cloud) passa; e que service_name ausente ainda e RECUSADO'
+  - 'Docs: regen-derived.sh inteiro'
+  - 'CI: sdk-py + cli + postgres verdes'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-07T20:14:38+00:00'
+  updated_at: '2026-08-07T20:14:38+00:00'
+  timeline:
+  - at: '2026-08-07T20:14:38+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

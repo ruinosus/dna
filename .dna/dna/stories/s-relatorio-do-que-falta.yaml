@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: 7kes2om2kwlh
+  name: s-relatorio-do-que-falta
+spec:
+  title: O relatório do que falta — e o fim do verde por vacuidade
+  description: unanswered_cost_question troca services[] por apps[] (senao um Solution sem services responde 'tudo respondido'), e ganha as outras duas perguntas na mesma saida.
+  status: todo
+  feature: f-conta-do-copiloto
+  priority: highest
+  acceptance_criteria:
+  - Dado um Solution SEM services, quando o relatorio roda, entao ele ainda enxerga os deployments por apps[] e NAO devolve lista vazia
+  - Dado apps[] vazio, quando o relatorio roda, entao ele diz NAO HA O QUE OLHAR — alto, jamais 'tudo respondido'
+  - Dado um campo com 'nao se aplica' declarado, quando o relatorio roda, entao ele CALA sobre esse campo; dado um campo simplesmente ausente, entao ele FALA, toda execucao
+  - Dado can_sleep false, quando o relatorio roda, entao ele NAO e reportado como nao-respondido — e resposta, e cara
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: a fonte trocada e as tres perguntas numa saida so'
+  - 'Tests: o mutante — fazer a funcao devolver [] deixa teste VERMELHO; sem isso a guarda passa por vacuidade'
+  - 'Docs: a regra escrita onde o proximo leitor a encontre'
+  - 'CI: verdes'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-07T20:14:41+00:00'
+  updated_at: '2026-08-07T20:14:41+00:00'
+  timeline:
+  - at: '2026-08-07T20:14:41+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
