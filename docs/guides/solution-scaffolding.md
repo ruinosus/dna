@@ -144,8 +144,8 @@ that is exactly the run where the person generating has least context about
 what a replica costs here.
 
 An **absent** answer is not a cheap answer. It produces no cost line and is
-reported separately as [an unanswered cost question](#the-cost-question-as-a-field);
-presuming `true` is the failure the field exists to prevent.
+reported separately as an unanswered cost question — see *"The cost question"*
+below; presuming `true` is the failure the field exists to prevent.
 
 ---
 
