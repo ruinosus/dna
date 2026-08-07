@@ -1,0 +1,286 @@
+# Solution — a DECLARAÇÃO de um repo gerado por template, e as RESPOSTAS que o
+# geraram. Fatia 4 de `Spec/spec-solucao-como-template` (recorte A — "DNA
+# declara, Copier renderiza").
+#
+# ⭐ A LINHA, e ela é o que decide se a ideia serve: este Kind guarda a
+# DECLARAÇÃO e as RESPOSTAS. Nunca o código, nunca o corpo do template, nunca
+# o comportamento. Um Kind que declara demais vira *o código escrito em YAML*,
+# e aí não serve para nada. O que ele NÃO guarda está listado no fim deste
+# comentário, com o motivo de cada recusa, porque a ausência é a decisão.
+#
+# ── Por que ele existe: uma instância `Solution` e o `.copier-answers.<svc>.yml`
+#    são DUAS VISTAS DO MESMO FATO (§4.4 condição 1) ─────────────────────────
+#
+# ⚠️ E a segunda vista não é redundância: é a única que SOBREVIVE. Medido pela
+# fatia 3 e escrito em `docs/guides/solution-scaffolding.md`:
+#
+#     "um `when:`-gated answer é apagado quando a condição deixa de valer, e
+#      volta como o DEFAULT do template — não como o que o humano respondeu —
+#      se a condição voltar. (`graph_obo: true` → (ausente) → `false`, numa
+#      ida e volta.) `dna solution update` não pode desfazer: o answers file
+#      era o único lugar que guardava o valor, e o update reescreve o arquivo."
+#
+#     "duas consequências para quem for modelar estas respostas em outro lugar:
+#      um schema NÃO PODE exigir um campo gated, porque ele legitimamente
+#      desaparece; e um REGISTRO QUE SOBREVIVE AO ANSWERS FILE é o único lugar
+#      onde tal valor pode sobreviver."
+#
+# Este Kind é aquele registro. Daí duas regras de forma, as duas com defeito
+# medido do outro lado:
+#
+#   1. `services[].answers` é um MAPA LIVRE (`additionalProperties: true`,
+#      `required: []`). Nenhuma chave é exigida — a lição literal acima — e
+#      nenhuma é tipada, porque o vocabulário das respostas é do TEMPLATE, não
+#      deste Kind. Tipar `identity`/`ingress`/`container_port` aqui seria
+#      escrever o `templates/app-container/copier.yml` em outro arquivo: o
+#      segundo template da casa não caberia, e o Kind viraria uma cópia
+#      desatualizada de um deles.
+#   2. `pode_dormir` é o oposto, e a exceção é declarada de propósito — ver a
+#      description do campo. É o único fato que este Kind promove para fora do
+#      mapa livre, porque é o único que um leitor precisa responder SEM saber
+#      qual template rodou.
+#
+# ── plane: record — MEDIDO, não escolhido por gosto ───────────────────────────
+#
+# `default_plane` (i-123) devolveria `record` para este descritor de qualquer
+# jeito: ele não carrega nenhum dos quatro COMPOSITION_SIGNALS
+# (`prompt_target`, `flatten_in_context`, `is_schema_affecting`, `is_root`).
+# Está DECLARADO assim mesmo porque "não declarado" e "declarado igual ao
+# default" não são o mesmo fato (é o que `dna new kind --plane` diz), e porque
+# a razão vale por si: uma `Solution` é lida DUAS VEZES NA VIDA (na geração e
+# no update) — §4.1 razão 1. Em `composition` ela pagaria, por gravação, o
+# `invalidate_mode='scope'` (que RECONSTRÓI, não só descarta) e a
+# materialização da `ManifestInstance` a cada build de escopo. Duas contas por
+# nada, num Kind que não compõe prompt nenhum.
+#
+# ── tenant_scope: NÃO declarado (permissivo) — e isto foi medido ──────────────
+#
+# Espelha o `App`, e por uma razão a mais que é dele sozinho: `dna solution` é
+# um comando que roda NA MÁQUINA DO USUÁRIO, contra o `.dna` local, SEM tenant
+# nenhum. `WritePipeline` (pipeline.py:580) RECUSA a escrita de um Kind
+# `TENANTED` quando `effective is None` — declarar `tenanted` aqui tornaria a
+# gravação da fatia 4 impossível pela única porta que a faz. E `global` (o que
+# `PricingPlan` declara) proibiria o caminho contrário: um workspace que grava
+# a SUA solução, que é a fatia 6. Permissivo é o único valor que serve às duas
+# pontas — base para o catálogo do vendor, overlay para a do tenant.
+#
+# ── relations: `apps → App`, e o `enforced` foi lido ANTES de declarar ────────
+#
+# `to: App` com o `by: name` default sai do normalizador com `enforced = True`,
+# e `enforced` é o que autoriza o PICKER de instâncias no wizard
+# (`surface-wizard.refsOfField`). A fatia 1 mediu isso no `CopilotBlueprint` e
+# NÃO declarou `nome → Copilot` por causa dele: lá o campo é onde o humano
+# DIGITA o nome do copiloto que a tela está prestes a criar, e um picker
+# pediria para escolher o que ainda não existe.
+#
+# Aqui a leitura é a inversa, e o teste é o mesmo: um `App` NÃO é criado por
+# nada neste caminho. A fatia 4 não materializa `App` nenhum — o `App` é um
+# registro do portal, criado à parte, e a `Solution` só diz QUAIS deles este
+# repo entrega. Então o humano ESCOLHE de uma lista do que já existe, que é
+# exatamente o que o picker mostra, e o veto sob `DNA_REF_VALIDATION=enforce`
+# recusa um ponteiro pendurado, que é o que ele deve recusar.
+#
+# ⚠️ E por isso `apps` NÃO é obrigatório. MEDIDO na §6-B da spec: *"o dna-cloud
+# gera 9 serviços e nenhum `App`"* — a primeira solução real desta casa tem
+# ZERO. Um `required: [apps]` seria uma exigência que o primeiro exemplo já
+# viola.
+#
+# ── traits: NENHUM, e isto é uma decisão ─────────────────────────────────────
+#
+# Nenhum dos treze `CORE_TRAITS` descreve este papel. `record.append-only` é
+# falso (uma `Solution` é REESCRITA a cada update — é isso que a mantém
+# corrente); `record.invalidate-only` idem; `memory.recallable` e a família
+# `sdlc.*` são de outro domínio. Inventar um (`scaffold.declaration`) com um
+# único Kind declarando seria a "decoração" que `kernel/kinds/traits.py`
+# nomeia: um trait que promete papel e não carrega nada. Se um segundo Kind de
+# geração aparecer, o trait nasce ali, com dois declarantes e um consumidor.
+#
+# ── ⛔ O QUE ESTE KIND RECUSA GUARDAR, e por quê ──────────────────────────────
+#
+#   • O CÓDIGO, e o CORPO do template. §2.3 (o campo de código já foi recusado
+#     no `McpServer`) e §5.3 (Scaffold-como-Kind fica fora do recorte). O
+#     template é um PONTEIRO — `template.src` + `template.ref` — e quem
+#     renderiza é o binário oficial do Copier, na máquina do usuário.
+#   • Qualquer campo de COMPORTAMENTO. O teste acionável da §4.2: *se dois
+#     valores possíveis do campo produzissem código estruturalmente diferente e
+#     não apenas um literal diferente, o campo passa; se ele descrevesse o
+#     corpo de uma função, reprova.* Um `regra_de_recusa:` é literalmente o
+#     campo que o `McpServer` recusou.
+#   • `images[]` como lista própria. O esboço da §4.2 a tinha, e ele é ANTERIOR
+#     à medição da fatia 3: os answers files são POR SERVIÇO, e a imagem de um
+#     serviço já está na resposta dele (`image_name` no template de
+#     referência). Uma segunda casa para o mesmo fato é uma segunda fonte de
+#     verdade, e as duas divergem no primeiro update que só toca uma.
+#   • Um espelho TIPADO das perguntas do template (`identity`, `ingress`,
+#     `container_port`, `dna_floor`…). Ver a regra 1 acima.
+#   • `requires_plan`. §4.1 razão 3: uma solução gerada roda na infra do
+#     CLIENTE, e não há porta nossa para aplicar entitlement nela. O campo
+#     PARECERIA aplicado e não seria — a forma de erro que esta casa mais caro
+#     paga. Entitlement continua no `App`, que o runtime que serve de fato
+#     aplica.
+#   • A árvore renderizada, os conflitos, o estado do git. São fatos sobre uma
+#     CÓPIA DE TRABALHO num momento, não uma declaração. Quem os reporta é o
+#     `RunReport` do `dna solution`, por execução.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: solution
+spec:
+  target_api_version: github.com/ruinosus/dna/v1
+  target_kind: Solution
+  alias: helix-solution
+  origin: github.com/ruinosus/dna/helix
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  storage:
+    type: yaml
+    container: solutions
+  docs: >-
+    A Solution is the DECLARATION of a repo generated from Copier templates,
+    plus the ANSWERS that generated it — never the code and never the template
+    body. It is the second view of the `.copier-answers.<service>.yml` files a
+    `dna solution new` writes, and the only one that OUTLIVES them: a
+    `when:`-gated answer is erased from the file when its condition stops
+    holding, and a record that survives the file is the only place such a
+    value can survive (measured — see `docs/guides/solution-scaffolding.md`).
+    `dna solution update --solution <name>` reads the answers back from here
+    and re-passes them to Copier, which is what makes a version floor
+    recorded here reach the generated tree instead of staying behind in
+    silence. One entry in `services[]` per answers file — one template
+    overlaid N times is the design, not one template of the whole repo. The
+    per-service `answers` map is deliberately free-form (the vocabulary
+    belongs to the TEMPLATE); `pode_dormir` is the one fact promoted out of
+    it, because a cost commitment must be readable across the fleet without
+    knowing which template asked. `apps` is a declared RELATION to `App` — the
+    sellable unit this solution's code delivers, never one it creates.
+  relations:
+    apps:
+      to: App
+      cardinality: many
+  schema:
+    type: object
+    additionalProperties: false
+    required: [title, services]
+    properties:
+      title:
+        type: string
+        description: O nome que um humano usa para esta solução — o repo, o
+          produto, a linha de montagem. O `metadata.name` é o slug.
+      description:
+        type: string
+        description: Uma linha do que esta solução entrega.
+      repo:
+        type: string
+        description: Onde a árvore gerada vive (URL do git ou caminho). É um
+          ENDEREÇO, não um conteúdo — nada aqui guarda o que está lá dentro.
+          Vazio quando a solução ainda não foi gerada em lugar nenhum.
+      services:
+        type: array
+        minItems: 1
+        description: Uma entrada POR CAMADA — e uma camada é um answers file,
+          que é um app. Nove serviços sobre quatro imagens são nove entradas
+          aqui, quatro `template.src` distintos, e nove updates independentes.
+          Nunca um template do repo inteiro (§4.4 regra 3).
+        items:
+          type: object
+          additionalProperties: false
+          required: [name, answers_file, template]
+          properties:
+            name:
+              type: string
+              description: O nome do serviço — o que `dna solution update
+                --service <name>` recebe, e o que o azd chama de serviço.
+            answers_file:
+              type: string
+              description: O caminho do `.copier-answers.<name>.yml` RELATIVO
+                à raiz da árvore gerada — o endereço da outra vista deste
+                mesmo fato. Gravado verbatim, nunca derivado do `name` — a
+                convenção do arquivo é declarada pelo template
+                (`_answers_file`), e um Kind que a recalculasse estaria
+                adivinhando a decisão de outro autor.
+            template:
+              type: object
+              additionalProperties: false
+              required: [src]
+              description: O PONTEIRO para o template, nunca o corpo dele.
+              properties:
+                src:
+                  type: string
+                  description: O que o Copier aceita como origem — um caminho
+                    local, uma URL git, `gh:owner/repo`. É o `_src_path` do
+                    answers file.
+                ref:
+                  type: string
+                  description: A tag/commit em que esta camada está (o
+                    `_commit` do answers file) — o que o próximo `update`
+                    move. Vazio significa que a camada nunca foi renderizada
+                    a partir de um clone versionado, e portanto não pode ser
+                    atualizada; não significa "a mais recente".
+            answers:
+              type: object
+              description: As respostas desta camada, VERBATIM, no vocabulário
+                do template. Mapa livre de propósito - o conjunto de perguntas
+                é do template e muda com ele, e nenhuma chave é obrigatória
+                porque uma resposta atrás de `when:` legitimamente desaparece
+                (medido - exigir uma seria recusar a gravação exatamente do
+                caso que este registro existe para socorrer). Copier já filtra
+                o próprio bookkeeping (`_src_path`, `_commit`) para os campos
+                `template` acima; ele não se repete aqui.
+            pode_dormir:
+              type: boolean
+              description: Este app pode escalar a zero. É o ÚNICO fato
+                promovido para fora de `answers`, e a razão é que ele não é um
+                detalhe de render - é um COMPROMISSO DE CUSTO. Um app que não
+                dorme custa uma réplica fixa, ~US$ 90/mês, para sempre (o
+                portão de custo do CLAUDE.md do dna-cloud, que já custou essa
+                conta uma vez). Promovido porque quem soma a frota precisa
+                responder "quantos não dormem?" SEM saber que este template
+                chamou a pergunta de `can_sleep` e o próximo vai chamar de
+                outra coisa. Ausente significa que esta camada NUNCA respondeu
+                a pergunta de custo - e isso é um achado reportado a cada
+                execução, nunca um `false` presumido — presumir o lado barato
+                esconderia justamente a réplica que ninguém decidiu.
+      apps:
+        type: array
+        items:
+          type: string
+        description: Os `App`s que esta solução ENTREGA, por nome de instância
+          — a unidade vendável, que continua sendo do `App` e do runtime que a
+          serve. Referência validada na gravação (`spec.relations`). Vazio é o
+          caso comum e não é uma lacuna - o próprio dna-cloud gera nove
+          serviços e nenhum `App`.
+      criado_por:
+        type:
+        - string
+        - 'null'
+        description: A identidade verificada de quem criou esta solução,
+          resolvida a partir da sessão - nunca digitada. Mesmo molde de
+          `SourceArtifact.uploaded_by` e `CopilotBlueprint.criado_por`; não há
+          Kind de pessoa para apontar, e por isso não é uma relação. Vazio é
+          uma AFIRMAÇÃO - a solução é anterior ao registro existir, e ninguém
+          sabe quem a criou.
+      criado_em:
+        type:
+        - string
+        - 'null'
+        description: Quando esta solução foi declarada (ISO-8601, relógio de
+          quem gravou). Preservado nas gravações seguintes - um `update` que
+          acrescenta uma camada não recria a solução.
+  display_label: Solução
+  ascii_icon: "▤"
+  presentation:
+    fields:
+      - field: name
+        label: Solução
+        role: identifier
+      - field: title
+        label: Título
+        role: title
+      - field: description
+        label: Descrição
+        role: subtitle
+      - field: criado_em
+        label: Criada em
+        role: timestamp
