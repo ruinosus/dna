@@ -371,10 +371,15 @@ class KindGraphCoverage(BaseModel):
     edges: int
     declared: int = 0
     composition: int = 0
-    #: Edges the kernel actually resolves at write time. The number that says
-    #: how much of the model the runtime CHECKS, as opposed to how much of it
-    #: is written down. Derived from ``edges[].enforced``, never from a tier.
+    #: Edges the kernel REFUSES a write over. The number that says how much of
+    #: the model the runtime VETOES on, as opposed to how much of it is written
+    #: down. Derived from ``edges[].enforced``, never from a tier.
     enforced: int = 0
+    #: Edges the kernel READS the target of, and therefore records in
+    #: ``dna_edges``. Strictly ``>= enforced`` since fatia 5, and the gap is
+    #: the ``by: <key>`` relations. A screen reporting only ``enforced`` shows
+    #: a model less connected than the data it is drawn from.
+    followed: int = 0
     #: How many Kinds declare at least one relation — the epic's own measuring
     #: stick, since most Kinds legitimately point at nothing.
     kinds_with_relations: int = 0

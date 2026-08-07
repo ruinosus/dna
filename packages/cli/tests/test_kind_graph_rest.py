@@ -216,6 +216,13 @@ def test_followed_arrives_on_the_wire_and_is_WIDER_than_enforced(graph):
             f"{e['from_kind']}.{e['field']} claims to VETO on a key it "
             f"resolves more poorly than the live lookup does"
         )
+    cov = graph["coverage"]
+    assert cov["followed"] == cov["enforced"] + len(by_key), (
+        f"coverage.followed ({cov['followed']}) is not "
+        f"enforced ({cov['enforced']}) plus the {len(by_key)} key-addressed "
+        f"edges — the counter and the edge list disagree about the same fact, "
+        f"which is how a screen and a table end up telling different stories"
+    )
 
 
 def test_the_limits_travel_on_the_wire(graph):

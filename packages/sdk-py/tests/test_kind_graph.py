@@ -384,7 +384,7 @@ class TestTheBucketsAreDistinguishable:
         ])
         assert set(graph["edges"][0]) == {
             "from_kind", "field", "to_kind", "cardinality", "tier",
-            "polymorphic", "by", "enforced", "inverse_of",
+            "polymorphic", "by", "followed", "enforced", "inverse_of",
         }
 
     def test_every_wire_gap_carries_the_full_key_set(self):

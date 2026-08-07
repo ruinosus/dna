@@ -144,16 +144,19 @@ COVERAGE_LIMITS: tuple[dict[str, str], ...] = (
     {
         "code": "enforced_is_per_edge",
         "detail": (
-            "An edge's `enforced` flag says whether the kernel resolves it at "
-            "write time. TRUE needs both: a concrete target Kind, and `by: "
-            "name` addressing. A relation addressed by a target spec field "
-            "(`by: workspace_id`) or carrying its Kind in the value (`to: *`) "
-            "is fully DECLARED and deliberately not resolved — resolving by "
-            "key needs an index the store does not have, and a second "
-            "resolution rule beside a live one can veto data the live one "
-            "accepts. `composition` edges come from `dep_filters`, which "
-            "drives prompt composition and is never checked against stored "
-            "data."
+            "An edge carries TWO flags and they are not the same question. "
+            "`followed` says the kernel READS the target at write time and "
+            "records this edge — TRUE for a concrete target Kind addressed "
+            "either `by: name` or by a spec KEY of the target. `enforced` says "
+            "an unresolvable value REFUSES the write — TRUE only for `by: "
+            "name`, because the by-key resolver is deliberately poorer than "
+            "the live alias-tolerant lookups (`kernel.tier()` resolves a "
+            "PricingPlan by `tier_id` and THEN by `aliases[]`) and may not "
+            "veto data they accept. A relation carrying its Kind in the value "
+            "(`to: *` with a composite `by`) is fully DECLARED and neither "
+            "followed nor enforced — nothing parses that form yet. "
+            "`composition` edges come from `dep_filters`, which drives prompt "
+            "composition and is never checked against stored data at all."
         ),
     },
     {
@@ -356,7 +359,13 @@ def build_edges(kinds: list[dict]) -> tuple[list[dict], list[dict]]:
                     "source": source, "field": field, "target": target,
                     "cardinality": _cardinality(props.get(field, {})),
                     "tier": "composition", "polymorphic": len(targets) > 1,
-                    "by": "name", "enforced": False, "inverse_of": None,
+                    # ``followed`` beside ``enforced`` and both False: a
+                    # composition edge is never read against stored data at
+                    # all, which is a stronger statement than "it does not
+                    # veto" and the reason the two keys have to be present on
+                    # EVERY edge rather than only on the tier that can differ.
+                    "by": "name", "followed": False, "enforced": False,
+                    "inverse_of": None,
                 })
 
         # -- the gap: reference-shaped and undeclared --------------------------
@@ -429,6 +438,15 @@ def coverage(
         # "declared" and "enforced" stopped being the same thing the day a
         # relation could declare its own addressing.
         "enforced": sum(1 for e in edges if e["enforced"]),
+        # …and how much of it the runtime READS, which since fatia 5 is a
+        # strictly larger number. Reporting only `enforced` would understate
+        # the derived graph by every `by: <key>` edge in the table — a screen
+        # would show a model less connected than the data it is drawn from.
+        # ``e["followed"]``, not ``e.get(...)``: BOTH tiers set the key, and a
+        # third tier that forgot it should raise here rather than be counted as
+        # zero — a missing flag read as False is how a number goes quietly
+        # wrong.
+        "followed": sum(1 for e in edges if e["followed"]),
         "kinds_with_relations": sum(1 for k in kinds if k["relations"]),
         # The answered half of the gap list: fields that DECLARED they point
         # nowhere. Derived from the declarations, never counted by hand — and
@@ -472,6 +490,16 @@ def build_kind_graph(ports: Iterable[Any]) -> dict[str, Any]:
                 "tier": e["tier"],
                 "polymorphic": e["polymorphic"],
                 "by": e["by"],
+                # ⚠️ BOTH, and this projection is the third place a key can be
+                # dropped in silence (after the FastAPI ``response_model`` and
+                # the TS twin). It is hand-written and indexes by name, so a
+                # key added to ``build_edges`` simply does not arrive — the
+                # route would keep serving ``enforced`` alone and a screen
+                # would go on calling every ``by: <key>`` relation unchecked
+                # while its edges sat in ``dna_edges``. Caught by
+                # ``test_kind_graph_rest.py`` asking the ROUTE rather than the
+                # projection.
+                "followed": e["followed"],
                 "enforced": e["enforced"],
                 "inverse_of": e["inverse_of"],
             }
