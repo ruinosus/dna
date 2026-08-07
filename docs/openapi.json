@@ -3408,6 +3408,47 @@
         "title": "MemoriesResponse",
         "type": "object"
       },
+      "MemoryRevival": {
+        "description": "ONE closed retirement — the period a memory spent out of force, filed\ninto ``spec.revivals`` by ``revive`` (i-139).\n\nEvery field is declared because a ``response_model`` discards in silence\nwhat it does not, and this envelope's whole job is to hand the caller the\ngap it just closed.",
+        "properties": {
+          "revived_at": {
+            "title": "Revived At",
+            "type": "string"
+          },
+          "revived_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revived By"
+          },
+          "superseded_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded By"
+          },
+          "valid_to": {
+            "title": "Valid To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "valid_to",
+          "revived_at"
+        ],
+        "title": "MemoryRevival",
+        "type": "object"
+      },
       "MemorySummary": {
         "description": "One memory as the WORKSPACE list surface projects it.\n\n``affect`` and ``personal`` were added by i-079, when this route stopped\ncarrying its own copy of ``list_memories_impl`` and delegated to the core.\nThey are not decoration: ``affect`` is stored on every Engram and is what a\nmemory card renders, and ``personal`` (i-068) is the per-item flag that\ntells the caller's own memory from a shared one. The core had always\nprojected both — only this face's copy did not, so the two list surfaces of\none app were two different SHAPES as well as two different answers.\n\nBoth are additive and defaulted, so a client written against the older\nresponse keeps parsing. ``personal`` is always ``False`` here: a workspace\nread never resolves the caller's private partition. It is carried anyway so\nthe item shape matches :class:`PersonalMemorySummary` field for field — a\nUI that renders one list must not need two renderers.",
         "properties": {
@@ -4713,6 +4754,45 @@
           "instance"
         ],
         "title": "ResolveInstanceResponse",
+        "type": "object"
+      },
+      "ReviveMemoryResponse": {
+        "description": "The outcome of ``POST /v1/memories/{name}/revive`` — the REST face of the\nmemory verb ``revive``, and the way BACK from ``forget`` (i-139).\n\n``outcome`` is three-way for the same reason its sibling is: ``revived``\n(it was retired, now it is in force) and ``already_in_force`` (idempotent —\na retry, a SUCCESS, and no write at all) are different facts.\n``not_found`` never reaches this model: the route maps it to a 404.\n\n⚠️ **What the returned gap does and does not buy you.** ``revival`` hands\nback the interval just closed, so the caller holds the exact window the\nmemory spent retired. That window is readable HERE, in the present, and in\n``spec.revivals`` forever. What it is NOT is queryable on the world-time\naxis: ``recall(as_of=T)`` for a ``T`` inside a past gap answers from the\nTRANSACTION axis — what this store BELIEVED at that instant — because\n``dna_instances`` holds one row per instance and its ``valid_at`` column\ntherefore knows only the CURRENT window. A founder decision on i-139,\nmeasured (14 memories, 2 retired) against a table rewrite, and stated here\nrather than only on the board so that whoever consults a revived memory's\npast knows which axis is answering.",
+        "properties": {
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "outcome": {
+            "title": "Outcome",
+            "type": "string"
+          },
+          "revival": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MemoryRevival"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "revived": {
+            "title": "Revived",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "kind",
+          "name",
+          "revived",
+          "outcome"
+        ],
+        "title": "ReviveMemoryResponse",
         "type": "object"
       },
       "RevokeKindResponse": {
@@ -9065,6 +9145,94 @@
           }
         },
         "summary": "Forget Memory"
+      }
+    },
+    "/v1/memories/{name}/revive": {
+      "post": {
+        "description": "Bring a forgotten memory BACK into force — the way back from\n``POST /v1/memories/{name}/forget``, and the third word of the promise\n``forget`` has made since it existed (*auditable, point-in-time\nreconstructable, **revivable***). Until i-139 nothing revived: a grep\nfor ``unforget|restore|revive|undelete|recover`` across the SDK returned\nzero, so \"revivable\" named a capability with nothing behind it — the\nsame shape as i-130's *\"never hard-deletes\"*, in the same docstring.\n\n**Not an undo.** The closed interval is filed VERBATIM into the\nappend-only ``spec.revivals`` — ``{valid_to, revived_at, superseded_by?,\nrevived_by?}`` — and the current window reopens. The forgetting is not\nunsaid; it is dated. The response hands that interval back, so the\ncaller holds the exact window the memory spent retired.\n\n**There is NO request body, and that is the point.** WHO revived it\n(``revived_by``) is resolved SERVER-SIDE from the verified request, by\nthe same ``_actor_from_state`` every other audit field on this face\nuses — attribution a caller can forge is not attribution. An unnamed\ncaller gets this face's honest sentinel (``rest:local`` for the\ncredential-free lane, ``rest:unidentified`` for verified-but-nameless)\nrather than a null dressed up as an audit trail.\n\n**Idempotent, and cheaper than idempotent.** A memory already in force\nanswers 200 with ``outcome: \"already_in_force\"`` and performs **no write\nat all** — a no-op that still wrote would add a version to\n``dna_versions`` for an event that did not happen, which is the audit\ntrail lying quietly. Nothing is appended and nothing already filed is\ntouched: the date a memory was forgotten IS the audit, and a retry is\nnot an event.\n\n⚠️ **Which axis answers afterwards.** ``recall(as_of=T)`` for a ``T``\ninside a gap this memory spent retired answers from the TRANSACTION\naxis — what this store BELIEVED then — not the world-time axis.\n``dna_instances`` holds one row per instance, so ``valid_at`` knows only\nthe CURRENT window; the gaps live in ``spec.revivals``, exactly and in\nthe present, but are not queryable as world time. Founder decision on\ni-139, measured against a table rewrite.\n\n404 for a name this layer does not hold, most often the PARTITION rather\nthan the name. PLAN-GATED (i-042), ``memory`` family,\n``memory_op='write'`` — reopening a window is a write.",
+        "operationId": "revive_memory_v1_memories__name__revive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "tenant",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Tenant"
+            }
+          },
+          {
+            "in": "header",
+            "name": "authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviveMemoryResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revive Memory"
       }
     },
     "/v1/orgs": {

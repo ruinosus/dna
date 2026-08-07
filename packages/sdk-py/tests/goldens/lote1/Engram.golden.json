@@ -246,7 +246,7 @@
         "type": "string"
       },
       "superseded_by_memory": {
-        "description": "Name of the memory that invalidated this one (not `superseded_by` — that's an ADR dep_filter token). Pairs with valid_to for point-in-time audit.",
+        "description": "Name of the memory that invalidated this one (not `superseded_by` — that's an ADR dep_filter token). Pairs with valid_to for point-in-time audit, and goes where valid_to goes — `revive` moves both into the `revivals` entry, because a memory back in force is not superseded.",
         "type": "string"
       },
       "surface_count": {
@@ -276,7 +276,7 @@
         "type": "string"
       },
       "valid_to": {
-        "description": "World-time validity end. Set when superseded/contradicted — the memory is INVALIDATED, never hard-deleted. Default recall excludes valid_to<now.",
+        "description": "World-time validity end. Set when superseded/contradicted — the memory is INVALIDATED, never hard-deleted. Default recall excludes valid_to<now. Removed by `revive`, which files the closed interval into `revivals` first — so this is the CURRENT retirement only, never the history of them.",
         "format": "date-time",
         "type": "string"
       },
@@ -290,6 +290,35 @@
           "archived"
         ],
         "type": "string"
+      },
+      "revivals": {
+        "type": "array",
+        "default": [],
+        "description": "APPEND-ONLY log of the periods this memory spent retired and came back from — one entry per completed `forget` → `revive` cycle (i-139). Written only by `revive`; never edited, never reordered.\n`forget` promised \"revivable\" in its own docstring from the day it existed, and nothing revived: a grep for `unforget|restore|revive|undelete|recover` across the SDK returned zero. This field is the half that was missing, and it is what lets the way back be AUDITABLE rather than an erasure — the date the memory stopped being in force, and whatever had superseded it, survive the revival that ended them.\nNamed after the EVENT, not the state: an entry exists only because a revive happened. A retirement still IN FORCE is not here — it is the live `valid_to`. So an empty list means \"never came back\", which is true of a memory retired right now, and no entry is hiding elsewhere.\n⚠️ THE LIMITATION THIS FIELD ACCEPTS, and it is a founder decision (i-139, 07/08/2026), not an oversight. `dna_instances` holds ONE row per instance (PRIMARY KEY scope+kind+api_version+name+tenant), so the `valid_at` column knows only the CURRENT window — even though its `EXCLUDE USING gist (id WITH =, valid_at WITH &&)` would happily hold many disjoint ones. The constraint permits the second row; the primary key forbids it. Therefore `recall(as_of=T)` for a T inside a past gap answers from the TRANSACTION axis (what the store BELIEVED then), not the world-time axis (whether the fact WAS true then). The gaps are readable here, exactly and in the present; what is not available is a world-time QUERY across them. Buying that back means a table rewrite plus a new cardinality for every read and write, measured against 14 memories (2 retired, 0 superseded) and declined.",
+        "items": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "valid_to": {
+              "type": "string",
+              "format": "date-time",
+              "description": "The `valid_to` this retirement carried, VERBATIM — when the memory stopped being in force. The start of the gap."
+            },
+            "revived_at": {
+              "type": "string",
+              "format": "date-time",
+              "description": "When it came back. The end of the gap."
+            },
+            "superseded_by": {
+              "type": "string",
+              "description": "The memory that had superseded this one during the gap, if any. Absent when the retirement named no successor."
+            },
+            "revived_by": {
+              "type": "string",
+              "description": "WHO revived it, resolved by the FACE from a verified request — never from a caller-supplied body, because attribution a caller can forge is not attribution. Absent when the caller declared nothing: the key is omitted rather than null, so \"not recorded\" and \"recorded as nothing\" stay distinguishable."
+            }
+          }
+        }
       }
     },
     "required": [

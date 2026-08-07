@@ -1228,6 +1228,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/memories/{name}/revive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revive Memory
+         * @description Bring a forgotten memory BACK into force — the way back from
+         *     ``POST /v1/memories/{name}/forget``, and the third word of the promise
+         *     ``forget`` has made since it existed (*auditable, point-in-time
+         *     reconstructable, **revivable***). Until i-139 nothing revived: a grep
+         *     for ``unforget|restore|revive|undelete|recover`` across the SDK returned
+         *     zero, so "revivable" named a capability with nothing behind it — the
+         *     same shape as i-130's *"never hard-deletes"*, in the same docstring.
+         *
+         *     **Not an undo.** The closed interval is filed VERBATIM into the
+         *     append-only ``spec.revivals`` — ``{valid_to, revived_at, superseded_by?,
+         *     revived_by?}`` — and the current window reopens. The forgetting is not
+         *     unsaid; it is dated. The response hands that interval back, so the
+         *     caller holds the exact window the memory spent retired.
+         *
+         *     **There is NO request body, and that is the point.** WHO revived it
+         *     (``revived_by``) is resolved SERVER-SIDE from the verified request, by
+         *     the same ``_actor_from_state`` every other audit field on this face
+         *     uses — attribution a caller can forge is not attribution. An unnamed
+         *     caller gets this face's honest sentinel (``rest:local`` for the
+         *     credential-free lane, ``rest:unidentified`` for verified-but-nameless)
+         *     rather than a null dressed up as an audit trail.
+         *
+         *     **Idempotent, and cheaper than idempotent.** A memory already in force
+         *     answers 200 with ``outcome: "already_in_force"`` and performs **no write
+         *     at all** — a no-op that still wrote would add a version to
+         *     ``dna_versions`` for an event that did not happen, which is the audit
+         *     trail lying quietly. Nothing is appended and nothing already filed is
+         *     touched: the date a memory was forgotten IS the audit, and a retry is
+         *     not an event.
+         *
+         *     ⚠️ **Which axis answers afterwards.** ``recall(as_of=T)`` for a ``T``
+         *     inside a gap this memory spent retired answers from the TRANSACTION
+         *     axis — what this store BELIEVED then — not the world-time axis.
+         *     ``dna_instances`` holds one row per instance, so ``valid_at`` knows only
+         *     the CURRENT window; the gaps live in ``spec.revivals``, exactly and in
+         *     the present, but are not queryable as world time. Founder decision on
+         *     i-139, measured against a table rewrite.
+         *
+         *     404 for a name this layer does not hold, most often the PARTITION rather
+         *     than the name. PLAN-GATED (i-042), ``memory`` family,
+         *     ``memory_op='write'`` — reopening a window is a write.
+         */
+        post: operations["revive_memory_v1_memories__name__revive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/orgs": {
         parameters: {
             query?: never;
@@ -3113,6 +3173,25 @@ export interface components {
             tenant?: string | null;
         };
         /**
+         * MemoryRevival
+         * @description ONE closed retirement — the period a memory spent out of force, filed
+         *     into ``spec.revivals`` by ``revive`` (i-139).
+         *
+         *     Every field is declared because a ``response_model`` discards in silence
+         *     what it does not, and this envelope's whole job is to hand the caller the
+         *     gap it just closed.
+         */
+        MemoryRevival: {
+            /** Revived At */
+            revived_at: string;
+            /** Revived By */
+            revived_by?: string | null;
+            /** Superseded By */
+            superseded_by?: string | null;
+            /** Valid To */
+            valid_to: string;
+        };
+        /**
          * MemorySummary
          * @description One memory as the WORKSPACE list surface projects it.
          *
@@ -3681,6 +3760,39 @@ export interface components {
             name: string;
             /** Scope */
             scope: string;
+        };
+        /**
+         * ReviveMemoryResponse
+         * @description The outcome of ``POST /v1/memories/{name}/revive`` — the REST face of the
+         *     memory verb ``revive``, and the way BACK from ``forget`` (i-139).
+         *
+         *     ``outcome`` is three-way for the same reason its sibling is: ``revived``
+         *     (it was retired, now it is in force) and ``already_in_force`` (idempotent —
+         *     a retry, a SUCCESS, and no write at all) are different facts.
+         *     ``not_found`` never reaches this model: the route maps it to a 404.
+         *
+         *     ⚠️ **What the returned gap does and does not buy you.** ``revival`` hands
+         *     back the interval just closed, so the caller holds the exact window the
+         *     memory spent retired. That window is readable HERE, in the present, and in
+         *     ``spec.revivals`` forever. What it is NOT is queryable on the world-time
+         *     axis: ``recall(as_of=T)`` for a ``T`` inside a past gap answers from the
+         *     TRANSACTION axis — what this store BELIEVED at that instant — because
+         *     ``dna_instances`` holds one row per instance and its ``valid_at`` column
+         *     therefore knows only the CURRENT window. A founder decision on i-139,
+         *     measured (14 memories, 2 retired) against a table rewrite, and stated here
+         *     rather than only on the board so that whoever consults a revived memory's
+         *     past knows which axis is answering.
+         */
+        ReviveMemoryResponse: {
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Outcome */
+            outcome: string;
+            revival?: components["schemas"]["MemoryRevival"] | null;
+            /** Revived */
+            revived: boolean;
         };
         /**
          * RevokeKindResponse
@@ -5381,6 +5493,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ForgetMemoryResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revive_memory_v1_memories__name__revive_post: {
+        parameters: {
+            query?: {
+                scope?: string | null;
+                tenant?: string | null;
+            };
+            header?: {
+                authorization?: string | null;
+            };
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReviveMemoryResponse"];
                 };
             };
             /** @description Validation Error */

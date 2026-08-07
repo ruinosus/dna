@@ -2196,6 +2196,61 @@ async def forget_impl(
     return res
 
 
+async def revive_impl(
+    live: LiveDna, name: str, scope: str | None = None,
+    kind: str = "Engram", tenant: str | None = None,
+    *, memory_scope: str = "workspace", oid: str | None = None,
+    family: str | None = None, revived_by: str | None = None,
+) -> dict[str, Any]:
+    """Bring ONE forgotten memory back into force — the shared core behind the
+    REST ``POST /v1/memories/{name}/revive`` (i-139), and the mirror of
+    :func:`forget_impl` in every structural respect: same target resolution,
+    same partitions, same three-way outcome, one core for every face.
+
+    Routes through the memory verb :func:`dna.memory.revive`: the closed
+    interval is filed VERBATIM into the append-only ``spec.revivals`` and the
+    current window reopens. It is a new bi-temporal event, not an undo — the
+    forgetting is dated, never unsaid.
+
+    ``revived_by`` is WHO, and it is resolved by the FACE from a verified
+    request, never taken from a caller-supplied body: attribution a caller can
+    forge is not attribution. The REST face passes ``_actor_from_state``, the
+    same resolver every other audit field on that face already uses, which also
+    means the two honest sentinels for an unnamed caller (``rest:local`` for the
+    credential-free lane, ``rest:unidentified`` for verified-but-nameless) reach
+    this field instead of a ``None`` pretending to be an audit. ``None`` here
+    means only that the CALLER declared nothing, and then the key is simply
+    absent from the entry rather than present and null.
+
+    The three outcomes, and the middle one is the reason this is not a boolean:
+
+      * ``revived``           — it was retired; it is now in force, and the gap
+        it spent retired is filed.
+      * ``already_in_force``  — idempotent. Nothing appended, nothing already
+        filed touched, and **no write at all**: a no-op that still wrote would
+        add a version to ``dna_versions`` for an event that did not happen.
+      * ``not_found``         — no such memory in THIS layer, most often the
+        PARTITION rather than the name (a personal Engram is invisible from the
+        workspace lane).
+    """
+    from dna.memory import revive
+
+    sc, tenant = _resolve_memory_target(live, scope, tenant, memory_scope, oid, family)
+    who = (revived_by or "").strip() or None
+    try:
+        out = await revive(
+            live.kernel, sc, name, kind=kind, tenant=tenant, revived_by=who,
+        )
+    except KeyError:
+        return {"kind": kind, "name": name, "revived": False,
+                "outcome": "not_found", "revival": None}
+    return {
+        "kind": kind, "name": name,
+        "revived": bool(out["revived"]), "outcome": out["outcome"],
+        "revival": out["revival"],
+    }
+
+
 # ── cloud: the billing→enforcement bridge write (AccountPlan) ───────────────
 
 # **The subscription belongs to the BILLING ACCOUNT, not to a workspace.** One

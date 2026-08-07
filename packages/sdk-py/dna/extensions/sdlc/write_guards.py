@@ -11,7 +11,9 @@ not require the Kind to be registered by the SAME extension that fires it.
 This guard never vetoes — it MUTATES ``ctx.raw`` in place (preserving
 ``valid_to``/``superseded_by_memory``) so the write proceeds with the
 corrected payload. The pure helper stays in
-``dna.kernel.write.bitemporal_guard`` (generic bitemporal utility).
+``dna.kernel.write.bitemporal_guard`` (generic bitemporal utility), and since
+i-139 it also owns the one exemption: a write that ARCHIVED the invalidation
+into ``spec.revivals`` is a revive, not a resurrection.
 """
 from __future__ import annotations
 
@@ -40,6 +42,14 @@ async def bitemporal_engram_guard(ctx: PreSaveContext) -> None:
     a superseded episodic silently returns to recall. Single chokepoint for
     every write path (hooks via kinds-api PUT, create_remembrance, CLI).
     Fail-open: never block a write on the guard read.
+
+    ⚠️ A DELIBERATE revive passes (i-139), and that decision is made by the pure
+    helper rather than here: a write that FILED the invalidation into the
+    append-only ``spec.revivals`` has archived it, not dropped it, and not
+    dropping it is the invariant this guard actually protects. See
+    :mod:`dna.kernel.write.bitemporal_guard` — the exemption is derived from the
+    PAYLOAD (it must quote the exact ``valid_to`` being lifted), never from a
+    list of blessed callers or a flag threaded down the write path.
     """
     if ctx.kind != _KIND or not isinstance(ctx.raw, dict):
         return

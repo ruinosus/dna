@@ -100,6 +100,7 @@ from dna.application.runtime import (
     compose_prompt_impl,
     consolidate_impl,
     forget_impl,
+    revive_impl,
     grant_workspace_scope_impl,
     get_adr_impl,
     get_project_impl,
@@ -258,6 +259,7 @@ __all__ = [
     "import_memories_impl",
     "list_memories_impl",
     "forget_impl",
+    "revive_impl",
     # portfolio (the DNA Cloud console read model)
     "list_orgs_impl",
     "list_projects_impl",
