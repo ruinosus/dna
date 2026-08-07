@@ -853,41 +853,75 @@ def test_nao_se_aplica_CALA_o_relatorio_e_ausente_nao(
 
     Os dois estados na MESMA execução, porque a afirmação é a diferença entre
     eles — não o comportamento de cada um isolado.
+
+    ⚠️ O caso é o `worker`: sem `port` DE PROPÓSITO, porque não atende.
+    (`python_module` não serve mais de exemplo — pela régua fiação-vs-render ele
+    saiu do App para `answers`, e o `portal` passou a caber sem exceção nenhuma.
+    Sobrou este, e sobrar UM foi o que matou o mecanismo genérico.)
+
+    ⭐ E o "não se aplica" não é uma anotação sobre o campo: é o FATO. O
+    `worker` não é "um App cuja porta não se aplica", é um App que NÃO ATENDE —
+    `ingress: none` — e não ter porta é consequência disso.
     """
     write_app(
-        tmp_path, "portal", service_name="portal", can_sleep=True, port=3000,
-        **{solution_kind.NOT_APPLICABLE_FIELD: {"python_module": "Next.js"}},
+        tmp_path, "worker", service_name="worker", can_sleep=True,
+        **{solution_kind.INGRESS_FIELD: solution_kind.INGRESS_NONE},
     )
-    write_app(tmp_path, "mcp", service_name="mcp", can_sleep=True, port=8080)
+    write_app(tmp_path, "mcp", service_name="mcp", can_sleep=True)
 
     gaps = solution_kind.declaration_gaps(
-        {"apps": ["portal", "mcp"]}, scope=scope
+        {"apps": ["worker", "mcp"]}, scope=scope
     )
 
-    assert gaps.gaps["python_module"] == ["mcp"], (
-        "`portal` DECLAROU que não se aplica e o relatório cala; `mcp` "
-        "simplesmente não respondeu e o relatório fala"
+    assert gaps.gaps["port"] == ["mcp"], (
+        "`worker` declarou que não atende e o relatório cala sobre a porta; "
+        "`mcp` simplesmente não respondeu e o relatório fala"
     )
 
 
-def test_nao_se_aplica_cala_so_o_campo_declarado(tmp_path: Path, scope: str) -> None:
-    """A declaração é POR CAMPO, nunca um silenciador do deployment inteiro.
+def test_NADA_cala_a_pergunta_de_custo(tmp_path: Path, scope: str) -> None:
+    """⭐ MANTIDO DE PROPÓSITO depois da troca de mecanismo — e ficou mais forte.
 
-    Um `not_applicable` que calasse tudo seria um jeito de sumir com a pergunta
-    de custo — a que tem ~US$ 90/mês atrás dela — escrevendo uma linha sobre
-    outro campo.
+    ⚠️ Este é o teste que alguém apaga por achar redundante. Não é. Leia por quê
+    antes de mexer.
+
+    Ele nasceu contra um `not_applicable` genérico, exigindo granularidade POR
+    CAMPO: uma declaração que calasse o App inteiro seria porta dos fundos para
+    sumir com a pergunta de custo — a que tem ~US$ 90/mês atrás dela — escrevendo
+    uma linha sobre OUTRO campo. Naquele desenho, a porta existia e só não era
+    usada porque o `enum` estava certo.
+
+    Com `ingress` (#355) a porta **não existe**: `ingress` responde a pergunta da
+    porta e só ela. Então a asserção mudou de "a convenção está sendo respeitada"
+    para **"não há valor de `ingress` capaz de suprimir `can_sleep`"** — e é
+    exatamente por ser estrutural que ela precisa continuar escrita: uma
+    propriedade que ninguém verifica é uma propriedade que a próxima refatoração
+    pode remover sem perceber.
+
+    Varre TODOS os valores do enum, não só o interessante, porque a afirmação é
+    sobre o mecanismo inteiro e não sobre um caso.
     """
-    write_app(
-        tmp_path, "portal", service_name="portal",
-        **{solution_kind.NOT_APPLICABLE_FIELD: ["python_module"]},
+    for value in ("none", "internal", "external"):
+        name = f"w-{value}"
+        write_app(
+            tmp_path, name, service_name=name,
+            **{solution_kind.INGRESS_FIELD: value},
+        )
+
+    gaps = solution_kind.declaration_gaps(
+        {"apps": [f"w-{v}" for v in ("none", "internal", "external")]}, scope=scope
     )
 
-    gaps = solution_kind.declaration_gaps({"apps": ["portal"]}, scope=scope)
-
-    assert gaps.gaps["python_module"] == []
-    assert gaps.gaps[solution_kind.COST_FIELD] == ["portal"], (
-        "calar `python_module` não pode calar o custo"
+    assert gaps.gaps[solution_kind.COST_FIELD] == ["w-external", "w-internal", "w-none"], (
+        "NENHUM valor de ingress pode calar a pergunta de custo"
     )
+    assert gaps.gaps["port"] == ["w-external", "w-internal"], (
+        "…e só `none` cala a porta, que é a única pergunta que ele responde"
+    )
+    # A mesma propriedade dita sobre o mecanismo, não sobre esta amostra: nenhum
+    # valor mapeia para o campo de custo, hoje nem por acidente amanhã.
+    for silenced in solution_kind._INGRESS_SILENCES.values():
+        assert solution_kind.COST_FIELD not in silenced
 
 
 def test_can_sleep_false_continua_sendo_RESPOSTA_no_relatorio_novo(
@@ -994,10 +1028,10 @@ def test_o_App_recebe_a_IDENTIDADE_do_servico_e_nao_o_livro_razao() -> None:
     rescue on the table for nothing. Asserted as an ABSENCE, because that is
     the half a later "tidy-up" would quietly undo.
     """
-    spec = one_layer().to_app_spec()
+    layer = one_layer()
+    spec = layer.to_app_spec()
 
     assert spec["service_name"] == "mcp-ws"
-    assert spec["python_module"] == "mcp"
     assert spec["port"] == 8001
     assert spec["can_sleep"] is False
     assert spec["title"] == "a second door over the mcp image"
@@ -1007,6 +1041,20 @@ def test_o_App_recebe_a_IDENTIDADE_do_servico_e_nao_o_livro_razao() -> None:
             f"`{ledger}` is the render's provenance and belongs to "
             "Solution.services[] — one fact, one house"
         )
+
+    # ⭐ THE RULER (`s-campos-opcionais-por-evidencia`): the App carries what
+    # the WIRING needs, `answers` carries what the TEMPLATE needs.
+    # `python_module` appears in ZERO of the three wiring fragments and in two
+    # code files — so it did not become "optional on the App". It LEFT.
+    assert "python_module" not in spec, (
+        "`python_module` is a render answer, not a deployment fact — measured "
+        "at 0 uses across the three wiring fragments"
+    )
+    assert layer.to_spec()["answers"]["python_module"] == "mcp", (
+        "…and it is not lost: it stays in `answers`, where the template's own "
+        "vocabulary lives. That is what lets `portal` fit with NO exception at "
+        "all — Next.js does not answer a question the Kind stopped asking."
+    )
     assert set(spec) <= set(solution_kind.APP_SERVICE_FIELDS) | {"title", "description"}
 
 
@@ -1232,8 +1280,9 @@ def test_a_gravacao_escreve_as_DUAS_METADES_e_elas_casam_pelo_nome(
     assert entry["answers"]["can_sleep"] is False
     # the identity half — and the cost written HERE, once
     assert app["service_name"] == "mcp"
-    assert app["python_module"] == "mcp"
     assert app["port"] == 8080
+    assert "python_module" not in app, "render answer, not a deployment fact"
+    assert entry["answers"]["python_module"] == "mcp", "…and it is in the ledger"
     assert app["can_sleep"] is False
     assert "pode_dormir" not in entry, "one fact, one house"
     # the join — declared on `apps`, which is the only level the kernel reads

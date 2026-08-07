@@ -730,9 +730,10 @@ def _echo_undeclared(report: RunReport) -> None:
         "  Nothing here is presumed: absent means NOBODY ANSWERED, and it is said\n"
         "  on every run until somebody does. Answer by writing the field on the\n"
         "  `App` of that name.\n"
-        "  ⭐ If the question genuinely does NOT APPLY — `portal` has no python\n"
-        f"     module because it is Next.js — declare that on the App\n"
-        f"     (`{sk.NOT_APPLICABLE_FIELD}`) and this report goes quiet about it.\n"
+        "  ⭐ When a question genuinely does not apply, state the FACT and the\n"
+        f"     question stops being asked: a deployment that serves nobody declares\n"
+        f"     `{sk.INGRESS_FIELD}: {sk.INGRESS_NONE}`, and its port is no longer\n"
+        "     asked for — a port nothing calls is just an open port.\n"
         "     Absent and not-applicable are different answers, and keeping them\n"
         "     apart is what stops this list becoming noise nobody reads."
     )

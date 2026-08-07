@@ -1,0 +1,101 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Spec
+metadata:
+  id: hv2rhxqtj7xx
+  name: spec-campo-opcional-por-evidencia
+spec:
+  title: Campo opcional se ganha por evidência — e quem cobra é o relatório
+  date: '2026-08-07T20:14:07+00:00'
+  status: accepted
+  description: O dogfood mediu 3 lacunas legítimas nos 9 serviços reais. Schema impede besteira; completude é relatório. Um campo vira opcional quando a realidade apresenta um caso, nunca por conveniência.
+  body: |-
+    # Campo opcional se ganha por evidência, e quem cobra é o relatório
+
+    Decidido pelo founder em 07/08/2026, depois do dogfood do dna-cloud (PR
+    `ruinosus/dna-cloud#370`) medir os nove serviços reais contra o modelo.
+
+    ## A medição que abriu a decisão
+
+    O derivador leu os nove serviços do `azure.yaml`, do compose e do bicep.
+    **Seis couberam inteiros. Três têm uma lacuna, e nenhuma é erro:**
+
+    | lacuna | o motivo, e é bom |
+    |---|---|
+    | `portal` sem `python_module` | é **Next.js** — não existe pacote Python para nomear |
+    | `worker` sem `port` | não tem `ingress`, **de propósito** ("uma porta que ninguém chama é só uma porta aberta") |
+    | a solução inteira sem procedência | o dna-cloud **nunca foi gerado por template** — não há `.copier-answers` porque não houve render |
+
+    Os nove Apps passam contra o descritor. Só a `Solution` fica.
+
+    ## A bifurcação, e a escolha
+
+    **Leitura A — o schema exige completude.** É o que temos. Resultado medido: `0`
+    Apps declarados, tela vazia, e os seis que cabiam inteiros também de fora.
+    ⚠️ E a recusa não diz que o `portal` é Next.js; diz que falta um campo. **Some o
+    motivo.**
+
+    **Leitura B — o schema impede besteira, o relatório cobra.** Resultado: 9 Apps
+    declarados, 3 perguntas nomeadas, tela funcionando.
+
+    **A leitura B já é a disciplina desta casa** — é literalmente o que
+    `unanswered_cost_question` faz com `can_sleep`: *ausente é NÃO RESPONDIDO,
+    reportado a cada execução, nunca presumido*.
+
+    ## ⭐ A REGRA, e ela é o que impede a B de virar frouxa
+
+    **Um campo vira opcional quando a REALIDADE apresenta um caso legítimo, não
+    quando é conveniente.** E é o dogfood que produz essa evidência.
+
+    Aplicada:
+
+    | campo | opcional? | evidência |
+    |---|---|---|
+    | `python_module` | **sim** | `portal` |
+    | `port` | **sim** | `worker` |
+    | `Solution.services` | **sim** | o dna-cloud inteiro |
+    | `service_name` | **NÃO** | saiu limpo nos nove; nada indica que falte |
+    | `can_sleep` | já é | é o modelo que os outros copiam |
+
+    ## As duas condições, sem as quais a decisão não vale
+
+    **1. "Não se aplica" é uma resposta DECLARADA, não um vazio adivinhado.** Um
+    campo vazio significa duas coisas opostas — *a pergunta não se aplica*
+    (`portal` sem `python_module`) e *ninguém respondeu* (`mcp` sem
+    `python_module` seria isto). Um relatório que não os separa fala de tudo, e um
+    relatório que fala de tudo ninguém lê — aí ele é PIOR que a recusa, porque dá a
+    sensação de que alguém está olhando.
+
+    **2. O relatório fala a cada execução**, não só na primeira, no molde de
+    `unanswered_cost_question` e `divergent_answers`.
+
+    ## ⚠️ O buraco que esta decisão TEM de fechar junto
+
+    `unanswered_cost_question` faz `if not names: return []` sobre `services[]`.
+    Com `services` opcional, um Solution sem ele responde **"tudo respondido"** —
+    verde por vacuidade, exatamente a classe de defeito que já cegou três guardas
+    nesta casa.
+
+    A fonte passa a ser **`apps[]`** — a relação imposta, que é o conjunto de
+    deployments por definição e existe em repo gerado ou não. E `apps[]` vazio é
+    **"não há o que olhar"**, alto, nunca "tudo respondido".
+
+    ## Fora de escopo, com pré-requisito nomeado
+
+    **Adoção retroativa do dna-cloud no template.** Medido em 07/08 no `apps/mcp`
+    real: com `--overwrite` ela **destrói o código** (`server.py` 390 → 42 linhas,
+    465 deleções). Preservando o código com `--exclude` o answers file nasce e o
+    código fica intacto — **mas `copier update` então falha**: `Cannot update because
+    cannot obtain old template references`, porque o `_commit` não é gravado quando o
+    template vem de caminho local.
+
+    **A adoção compra o registro, não a capacidade.** Para valer, o template precisa
+    ser consumido de uma referência git versionada — publicar o template é o
+    pré-requisito, e é outro item.
+  created_at: '2026-08-07T20:14:07+00:00'
+  updated_at: '2026-08-07T20:14:07+00:00'
+  timeline:
+  - at: '2026-08-07T20:14:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: accepted

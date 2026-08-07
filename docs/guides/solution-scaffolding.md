@@ -396,23 +396,42 @@ The reported fields are **derived from the descriptor**, not listed here: what
 everything else in the service identity is the report's. A field that earns its
 optionality on evidence joins the report by itself.
 
-#### "Does not apply" is a declared answer, and the report goes quiet
+#### "Does not apply" is the FACT — not an annotation about the field
 
-An empty field means two opposite things — *the question does not apply*
-(`portal`) and *nobody answered* (`mcp`). A report that does not separate them
-talks about everything, and a report that talks about everything nobody reads;
-at that point it is **worse** than the refusal it replaced, because it feels
-like somebody is looking.
+An empty field means two opposite things — *the question does not apply* and
+*nobody answered*. A report that does not separate them talks about everything,
+and a report that talks about everything nobody reads; at that point it is
+**worse** than the refusal it replaced, because it feels like somebody is
+looking.
 
-Declare it on the `App` — per field, with the reason:
+⭐ The way to separate them is to **state the fact**, and the question stops
+being asked:
 
 ```yaml
-not_applicable:
-  python_module: "Next.js — there is no python package"
+# the App of a worker that scales on KEDA and answers nobody
+ingress: none      # → its `port` is no longer asked for
 ```
 
-A plain list of field names works too; the mapping is better, because the
-reason is exactly what the old refusal lost.
+`worker` is not "an App whose port does not apply" — it is an App that **does
+not serve**, and having no port is the *consequence*. `ingress` was already a
+`copier.yml` question (`internal` / `external`), so `none` is a third value of a
+vocabulary that exists rather than a new mechanism; and the descriptor refuses
+`ingress: none` together with a `port`, so the report is not hiding a question,
+it is declining to ask for something the schema forbids.
+
+⚠️ A generic `not_applicable` map was designed and **deliberately not built**.
+Once `python_module` moved to `answers` by the wiring-vs-render ruler, exactly
+one case was left — and one case does not pay for a general mechanism. What the
+narrower answer buys is structural: `ingress` answers the port question and only
+that one, so there is no way, by accident or on purpose, to silence the **cost**
+question with it. A per-App exemption would have had exactly that back door,
+defended only by getting an enum right.
+
+⚠️ `can_sleep` and `service_name` have **no** way to say "does not apply", and
+that is measured rather than an oversight: there is no case for either across
+the nine real services. If one appears, the form to adopt is named in the
+descriptor (FHIR's `dataAbsentReason`) — **named and not built**. Do not invent
+one.
 
 #### ⚠️ Empty is a finding, not a pass
 

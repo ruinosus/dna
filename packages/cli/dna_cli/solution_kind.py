@@ -125,13 +125,29 @@ COST_FIELD = "can_sleep"
 #: fact, so the projection is a copy under the same names rather than a mapping
 #: somebody has to remember.
 #:
-#: ⚠️ FOUR, not seven. ``answers_file``, ``template`` and ``answers`` stay in
-#: ``Solution.services[]`` — they are the provenance of the RENDER, and
-#: ``answers`` in particular is the only place a ``when:``-erased answer
-#: survives. Founder decision 07/08/2026: the ledger does not move.
+#: ⭐ **THE RULER** (`Story/s-campos-opcionais-por-evidencia`, 07/08/2026):
+#: *the App carries what the WIRING needs; ``answers`` carries what the TEMPLATE
+#: needs.* Measured by asking every `copier.yml` question whether it appears in
+#: any of the three wiring fragments::
+#:
+#:     service_name   3 wiring uses   → deployment fact
+#:     port           2               → deployment fact
+#:     can_sleep      1               → deployment fact
+#:     python_module  0               → ONLY a render answer
+#:
+#: ⚠️ So ``python_module`` is NOT here, and it is not "optional" either — it
+#: left. It lives in ``services[].answers``, where the template's own vocabulary
+#: already lives (free map, no required key, exactly for this). That is what
+#: makes `portal` fit with NO exception at all: Next.js does not answer a
+#: question the Kind stopped asking, and one of the dogfood's three gaps
+#: disappears instead of being tolerated. It is also what keeps a Node or Go
+#: template from bloating the App with `package_name` / `module_path`.
+#:
+#: ⚠️ ``answers_file``, ``template`` and ``answers`` are not here either — the
+#: ledger is the provenance of the RENDER and stays in ``Solution.services[]``,
+#: where a ``when:``-erased answer survives. Founder decision 07/08/2026.
 APP_SERVICE_FIELDS: tuple[str, ...] = (
     "service_name",
-    "python_module",
     "port",
     COST_FIELD,
 )
@@ -326,42 +342,83 @@ def app_kind_absent_fields() -> tuple[str, ...]:
     return tuple(field for field in APP_SERVICE_FIELDS if field not in properties)
 
 
-#: How an `App` says a question DOES NOT APPLY to it — as opposed to nobody
-#: having answered it. ``Spec/spec-campo-opcional-por-evidencia`` condition 1:
-#: an empty field means two opposite things (*the question does not apply* —
-#: `portal` has no python package because it is Next.js — and *nobody
-#: answered*), and a report that does not separate them talks about everything.
-#: A report that talks about everything nobody reads, and then it is WORSE than
-#: the refusal it replaced, because it feels like somebody is looking.
+# ═══════════════════════════════════════════════════════════════════════════
+# ⭐ THE SWAP POINT — "this question does not apply", and how it is spelled.
+#
+# Everything the codebase knows about it is BELOW, in two constants and one
+# reader. The report calls :func:`not_applicable_fields` and never inspects a
+# field name itself; the printed help interpolates the constants rather than
+# spelling them. So the form is swappable here and nowhere else.
+#
+# ⭐ AND IT WAS SWAPPED, on 07/08/2026 (#355), exactly as this block predicted.
+# The generic `not_applicable` map is GONE and was never built. The measurement
+# that killed it: once `python_module` moved to ``answers`` by the
+# wiring-vs-render ruler, ONE case was left — `worker` with no `port` — and one
+# case does not pay for a general mechanism. The real fact is that `worker`
+# **does not serve**; "no port" is the CONSEQUENCE.
+#
+# ⚠️ The replacement is not a new boolean: ``copier.yml`` ALREADY asks
+# ``ingress`` (`choices: [internal, external]`), so ``none`` is a third value
+# of a vocabulary that exists. ``ingress`` has 1 use in the wiring and 0 in
+# generated code, so it is an App field by the same ruler that expelled
+# ``python_module``. And ``ingress: none`` together with a ``port`` is REFUSED
+# at write time by the descriptor (`allOf`/`if`/`then`) — so this reader is not
+# hiding a question, it is declining to ask for something the schema forbids.
+#
+# ⭐ What the swap BOUGHT, and it is the argument this module made for
+# per-field granularity, now made structural instead of conventional: a
+# per-App `not_applicable` would have been a back door for silencing the COST
+# question, defended only by getting an enum right. Here that door does not
+# exist — :func:`not_applicable_fields` cannot return :data:`COST_FIELD` by any
+# input, because `ingress` answers one question and only one.
+#
+# ⚠️ ``can_sleep`` and ``service_name`` have NO way to say "does not apply",
+# and that is deliberate: measured, there is no case for either across the nine
+# services. If one appears, the form to adopt is NAMED AND NOT BUILT — FHIR's
+# `dataAbsentReason`, recorded in the descriptor. Do not invent one here.
+# ═══════════════════════════════════════════════════════════════════════════
+
+#: The `App` field that says what a deployment is reachable from — and, at
+#: :data:`INGRESS_NONE`, that it is not reachable at all.
+INGRESS_FIELD = "ingress"
+
+#: The value that means "this deployment does not serve". The dna-cloud
+#: `worker` is exactly this: it scales on KEDA and answers nobody, so asking it
+#: for a port is asking for a fact that does not exist — *"uma porta que
+#: ninguém chama é só uma porta aberta"*.
+INGRESS_NONE = "none"
+
+#: Which question each ``ingress`` value makes inapplicable. A MAP, so the
+#: relationship is data rather than a chain of ifs — and so the blast radius of
+#: any future value is visible in one place.
 #:
-#: ⚠️ Read, never written, by this module — the field is the App descriptor's
-#: (`Story/s-kinds-a-conta-declarada`). Reading one that does not exist yet is
-#: harmless and self-healing: it answers "nothing declared", every field is
-#: reported, and the day the descriptor lands the declarations start being
-#: honoured with no change here.
-NOT_APPLICABLE_FIELD = "not_applicable"
+#: ⚠️ It maps to ``port`` and can map to nothing else without somebody
+#: deliberately writing it here, which is what makes "ingress cannot silence
+#: the cost question" a property of the code instead of a promise about it.
+_INGRESS_SILENCES: dict[str, frozenset[str]] = {
+    INGRESS_NONE: frozenset({"port"}),
+}
 
 
-def declared_not_applicable(app_spec: dict[str, Any] | None) -> set[str]:
-    """The field names this `App` declared the question does not apply to.
+def not_applicable_fields(app_spec: dict[str, Any] | None) -> set[str]:
+    """The questions this `App`'s own declaration makes inapplicable.
 
-    Accepts the declaration as a LIST of field names or as a MAPPING of field
-    name to reason. That is one declaration in two spellings, not two
-    mechanisms — and the mapping is the better one, because the refusal this
-    whole spec replaced was criticised for exactly the thing a reason carries:
-    *"a recusa não diz que o portal é Next.js; diz que falta um campo. Some o
-    motivo."*
+    ⭐ THE ONLY reader of the mechanism — see the block above. Callers ask for
+    a set of field names and never learn how it was decided, so the day the
+    form changes again, it changes here.
 
-    ⚠️ Anything else is IGNORED rather than guessed at, and the ignoring is
-    loud by consequence: an unreadable declaration leaves the field reported as
-    missing, which is the side that gets looked at.
+    ``Spec/spec-campo-opcional-por-evidencia`` condition 1: an empty field means
+    two opposite things (*the question does not apply* and *nobody answered*),
+    and a report that does not separate them talks about everything. A report
+    that talks about everything nobody reads — and then it is WORSE than the
+    refusal it replaced, because it feels like somebody is looking.
+
+    ⚠️ Read, never written, by this module: ``ingress`` is the App descriptor's
+    field. Reading a descriptor that does not carry it yet is harmless and
+    self-healing — it answers "nothing declared", every field is reported, and
+    the day it lands the declarations start being honoured with no change here.
     """
-    declared = (app_spec or {}).get(NOT_APPLICABLE_FIELD)
-    if isinstance(declared, dict):
-        return {str(k) for k in declared}
-    if isinstance(declared, (list, tuple, set)):
-        return {str(item) for item in declared}
-    return set()
+    return set(_INGRESS_SILENCES.get((app_spec or {}).get(INGRESS_FIELD), frozenset()))
 
 
 def reportable_fields() -> tuple[str, ...]:
@@ -771,8 +828,9 @@ def declaration_gaps(
     would cry wolf until nobody listens, and presuming it hides the replica
     nobody decided.
 
-    A "does not apply" DECLARED on the App silences that field for that
-    deployment, and only that one — see :func:`declared_not_applicable`.
+    A question the App's own declaration makes INAPPLICABLE is silenced for
+    that deployment only — see :func:`not_applicable_fields`. Today that is
+    ``ingress: none`` silencing ``port``, and nothing silences the cost.
     """
     from dna_cli._ctx import open_session  # noqa: PLC0415 — the kernel is lazy
 
@@ -789,7 +847,7 @@ def declaration_gaps(
             for name in sorted(set(deployments)):
                 doc = session.get_doc(APP_KIND, name)
                 app = dict(doc.spec or {}) if doc is not None else {}
-                exempt = declared_not_applicable(app)
+                exempt = not_applicable_fields(app)
                 for field in fields:
                     if field in exempt:
                         continue
