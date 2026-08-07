@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: 6evdmd6r2iyv
+  name: s-procedencia-do-agente
+spec:
+  title: Procedência de agente — o blueprint persiste e o copiloto diz quem o criou
+  description: 'O codigo gerado guarda de onde veio (services[].answers, template.ref). O agente gerado nao: 0 CopilotBlueprint gravados, 0 arestas saindo de Copilot.'
+  status: todo
+  feature: f-a-fabrica
+  priority: highest
+  acceptance_criteria:
+  - Dado um copiloto criado pelo copiloto-criador, quando eu o leio, entao ele declara o blueprint que o produziu, com as RESPOSTAS verbatim — sobrevivendo a campo apagado por condicao, como o services[].answers sobrevive
+  - Dado um copiloto criado, quando eu consulto o grafo, entao existe aresta declarada dele para a origem — hoje ha ZERO arestas saindo de Copilot
+  - Dado um copiloto escrito a mao, quando eu o leio, entao a ausencia de procedencia e REPORTADA como nao-respondida, jamais presumida
+  - Dado um copiloto que criou outro, quando eu consulto, entao da para responder a profundidade da cadeia
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: o blueprint persistido e a relacao declarada — e a razao de nao persistir (i-088) revisitada e respondida no descritor'
+  - 'Tests: o round-trip provando que uma resposta apagada por condicao SOBREVIVE — o mesmo defeito que criou services[].answers'
+  - 'Docs: regen-derived.sh inteiro'
+  - 'CI: verdes'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-07T21:48:49+00:00'
+  updated_at: '2026-08-07T21:48:49+00:00'
+  timeline:
+  - at: '2026-08-07T21:48:49+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

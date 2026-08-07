@@ -1,0 +1,105 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Spec
+metadata:
+  id: jbzictbusy7w
+  name: spec-a-fabrica
+spec:
+  title: A fábrica é feita do próprio material
+  date: '2026-08-07T21:48:17+00:00'
+  status: accepted
+  description: 'O laço reflexivo medido, a família de criadores, e as duas lacunas: procedência de agente e a porta de busca.'
+  body: |-
+    # A fábrica é feita do próprio material — procedência de agente e a porta de busca
+
+    Medido em 07/08/2026 no banco de dev, e aprovado pelo founder no mesmo dia.
+
+    ## O fato que abre tudo
+
+    **Não existe meta-nível.** Um Kind É uma instância: `KindDefinition` tem 6 linhas em
+    `dna_instances`, na mesma tabela das coisas que ele define. **Três foram autoradas por um
+    tenant** (`ContratoDePrestacaoDeServicos`, `Livro`, `TesteBateriaKind`).
+
+    E o laço se fecha, lido do banco:
+
+    ```
+    Copilot/copiloto-criador
+      mounts:   [{ agent: criador-agent }]
+      surfaces: [{ kind: CopilotBlueprint, "gravar cria o copiloto" }]
+    ```
+
+    Um `Copilot`, descrito por um Kind, cujo trabalho é produzir `Copilot`s, através de um Kind
+    (`copilot-blueprint`, uma das seis) que descreve como um Copilot se faz. O par feito por
+    usuário também existe: o tenant autorou `Livro` e existe o copiloto `escrita-de-livro`.
+
+    ⭐ **A aprovação humana é o ÚNICO degrau** onde o laço não se fecha sozinho: `author_kind`
+    grava INERTE. Isso não se afrouxa — está fora de escopo por decisão, não por esquecimento.
+
+    ## ⚠️ Lacuna 1 — o agente gerado não sabe de onde veio
+
+    | procedência | do código gerado | do agente gerado |
+    |---|---|---|
+    | o registro | `Solution.services[].answers`, verbatim | **CopilotBlueprint gravados: 0** |
+    | a ligação | `services[].name → App`, imposta | **arestas saindo de `Copilot`: 0** |
+    | a versão de origem | `template.ref` | **nenhuma** |
+
+    O `CopilotBlueprint` NÃO persiste — é reconstruído por engenharia reversa (`derive.ts` é o
+    inverso de `materialize.ts`, i-088).
+
+    E o argumento que criou `services[].answers` vale aqui inteiro: ele existe porque alguém
+    MEDIU que uma resposta apagada por uma condição se perdia. Do lado do agente ninguém mediu,
+    e a resposta some do mesmo jeito. Se um copiloto criar outro que crie outro, nada mede a
+    profundidade nem a origem.
+
+    ## ⚠️ Lacuna 2 — capacidade existe, porta não
+
+    O SDK tem `adapters/search/{pgvector,sqlite_vec,rrf}.py` e `adapters/embedding/onnx.py`.
+    **Nenhuma tool os expõe.** As 11 tools reais são: author_kind · review_kind · list_kinds ·
+    list_my_kinds · get_document · get_instance · list · recall · remember · consolidate · forget.
+
+    Um criador que precise responder "já existe um Kind parecido com isto?" só tem `list_kinds`
+    — ENUMERAÇÃO. Funciona com seis Kinds; não funciona com seiscentos, que é exatamente o que a
+    autoria por tenant produz.
+
+    ⚠️ Este defeito tem nome nesta casa — **capacidade existe, porta não** — e já apareceu três
+    vezes (28/07). A diferença para "feature faltando" é que o trabalho difícil JÁ ESTÁ FEITO.
+
+    ## A família de criadores: dois existem, dois não
+
+    ✅ criador de **Kind** (`author_kind`/`review_kind` + portão humano; 3 Kinds de tenant provam)
+    ✅ criador de **Copilot** (`copiloto-criador` via a surface `CopilotBlueprint`)
+    ⛔ criador de **App**
+    ⛔ criador de **Solution** (spec em dna-cloud#369)
+
+    ⚠️ **Regra que a família inteira herda:** um criador de App que grave `can_sleep: false` sem
+    mostrar os ~US$ 90/mês estaria provisionando infra recorrente POR CONVERSA. O portão de custo
+    do CLAUDE.md não vale só para humano digitando comando — vale para qualquer coisa que escreva
+    um App, inclusive um agente.
+
+    ## A consequência que fecha com f-conta-do-copiloto
+
+    Se não há meta-nível, a conta vale para a própria fábrica. O `copiloto-criador` é um Copilot
+    como outro qualquer: roda num App, queima tokens, tem desfecho. **Quanto vale um copiloto
+    criado?** Se for "três horas de alguém que sabe", ele tem o maior `value_per_outcome` do
+    catálogo. E se ninguém souber declarar, o painel dirá **não calculável sobre a própria
+    ferramenta** — resposta desconfortável que ela precisa saber dar sobre si mesma.
+
+    ## A ordem, e o porquê de cada uma
+
+    1. **Procedência de agente** — fundação: sem ela tudo que a família criar nasce sem origem, e
+       retroagir é impossível.
+    2. **A porta de busca** — o trabalho difícil está feito; e sem ela todo criador reinventa o
+       que já existe, que é o defeito que esta casa mais repete.
+    3. **Criador de App**, com o portão de custo NA CONVERSA.
+    4. **Criador de Solution** — já tem spec e depende dos três acima.
+
+    ## Fora de escopo, por decisão
+
+    Afrouxar o portão humano. Ele é o único ponto em que alguém decide.
+  created_at: '2026-08-07T21:48:17+00:00'
+  updated_at: '2026-08-07T21:48:17+00:00'
+  timeline:
+  - at: '2026-08-07T21:48:17+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: accepted

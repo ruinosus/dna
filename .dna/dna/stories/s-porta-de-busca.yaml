@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: 5aboz7obewwb
+  name: s-porta-de-busca
+spec:
+  title: A porta de busca — pgvector e rrf existem e nenhuma tool os expoe
+  description: adapters/search/{pgvector,sqlite_vec,rrf}.py + embedding/onnx.py estao no ar. As 11 tools de um copiloto nao incluem busca. Um criador so tem list_kinds, que e enumeracao.
+  status: todo
+  feature: f-a-fabrica
+  priority: highest
+  acceptance_criteria:
+  - Dado um copiloto com a tool nova, quando ele pergunta 'ja existe algo parecido com isto?', entao ele recebe resultado por SIMILARIDADE, nao por enumeracao
+  - Dado que a busca combina lexical e vetorial, quando ela responde, entao usa o rrf que ja existe — nao uma fusao escrita a mao
+  - Dado um ambiente sem provider de embedding, quando a tool e chamada, entao ela degrada de forma HONESTA e diz o que perdeu — nunca devolve vazio como se nao houvesse resultado
+  - Dada a busca, quando ela roda para um tenant, entao ela respeita o escopo do tenant como as outras portas
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: a tool sobre os adapters QUE JA EXISTEM — reimplementar a busca esta proibido'
+  - 'Tests: o caso degradado provando que vazio-por-falta-de-provider nao se confunde com vazio-por-nao-ter-resultado'
+  - 'Docs: a tool documentada onde as outras 11 estao'
+  - 'CI: verdes'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-07T21:48:52+00:00'
+  updated_at: '2026-08-07T21:48:52+00:00'
+  timeline:
+  - at: '2026-08-07T21:48:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
