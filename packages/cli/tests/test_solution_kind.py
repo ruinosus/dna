@@ -1162,8 +1162,16 @@ def test_a_prontidao_do_descritor_e_medida_e_nunca_presumida() -> None:
     assert absent == {f for f in solution_kind.APP_SERVICE_FIELDS if f not in properties}
     assert solution_kind.app_is_the_deployment() is not bool(absent)
 
-    # …and the four are really there, so the comparison above is not vacuous.
-    assert {"service_name", "python_module", "port", "can_sleep"} <= properties
+    # …and they really are there, so the comparison above is not vacuous.
+    #
+    # ⚠️ DERIVED from `APP_SERVICE_FIELDS`, never a list of names. This line
+    # used to spell `{"service_name", "python_module", "port", "can_sleep"}`,
+    # and #355 broke it by moving `python_module` to `answers` — the
+    # wiring-vs-render ruler working exactly as intended, caught by a test that
+    # had frozen the ANSWER instead of the question. It is the enumeration this
+    # very file warns about, committed here by me.
+    assert solution_kind.APP_SERVICE_FIELDS, "the set is not empty"
+    assert set(solution_kind.APP_SERVICE_FIELDS) <= properties
     assert solution_kind.app_is_the_deployment() is True
 
 

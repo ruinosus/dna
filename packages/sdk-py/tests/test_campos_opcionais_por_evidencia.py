@@ -88,6 +88,12 @@ def test_python_module_nao_aparece_em_nenhum_fragmento_de_fiacao():
     ⚠️ `service_name` está aqui como controle: sem ele, a asserção passaria com
     o glob de fiação apontando para lugar nenhum — verde por vacuidade, que é a
     forma de defeito que esta casa já pagou três vezes.
+
+    ⚠️ O controle da porta é **`port`**, não `container_port`. A pergunta foi
+    renomeada no #353 justamente para as perguntas do template e os campos do
+    `App` serem UM vocabulário; este teste nasceu no #355 lendo o template de
+    antes e por isso entrou vermelho na `main` (b592dc90). O controle que
+    importa é que a porta ESTEJA na fiação — e ela está, com o nome de hoje.
     """
     fiacao = sorted(TEMPLATE.glob("apps/*/wiring/*.jinja"))
     assert len(fiacao) == 3, f"fragmentos de fiação encontrados: {fiacao}"
@@ -96,7 +102,10 @@ def test_python_module_nao_aparece_em_nenhum_fragmento_de_fiacao():
     assert "python_module" not in texto
     # o controle: um fato de deployment de verdade ESTÁ lá
     assert "service_name" in texto
-    assert "container_port" in texto
+    assert "port" in texto
+    assert "container_port" not in texto, (
+        "o nome antigo não pode voltar por descuido — o `App` declara `port`"
+    )
     assert "ingress" in texto
 
 
