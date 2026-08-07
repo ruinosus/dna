@@ -242,6 +242,7 @@ A KindDefinition declaratively defines a brand-new kind without writing Python c
 | `embed` | array |  |  |
 | `flatten_in_context` | boolean |  |  |
 | `graph_style` | object |  |  |
+| `identifiers` | any |  |  |
 | `is_catalog_identity` | boolean |  |  |
 | `is_overlayable` | boolean |  |  |
 | `is_root` | boolean |  |  |

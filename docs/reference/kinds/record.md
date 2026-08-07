@@ -908,9 +908,27 @@ An Initiative is a strategic investment unit (1-2 quarters) that groups Epics un
 | `outcome_metric` | string |  | What KR/metric this initiative is targeted at. |
 | `owner` | string |  | Actor name (PM / Product Lead). |
 | `priority` | string |  | Um de: `highest`, `high`, `medium`, `low`, `lowest`. |
+| `produces` | array |  | Artifacts this work item produced — any Kind (hub). |
+| `produces[].at` | string |  |  |
+| `produces[].kind` | string | yes | Artifact Kind (any). |
+| `produces[].name` | string | yes | Artifact doc name. |
+| `produces[].role` | string |  | Optional role hint (e.g. visual-spec, plan, investigation). |
 | `status` | string | yes | Um de: `proposed`, `in-flight`, `done`, `cancelled`, `deferred`. |
 | `target_value` | string |  | e.g. '+30% MAU' or '<200ms p95'. |
 | `theme_ref` | string |  | Optional Theme/OKR Objective slug. |
+| `timeline` | array |  | Append-only activity log. Auto-stamped by the CLI on every status flip / groom / artifact write; populated by AgentSession capture for decision + artifact_produced events. Render in Studio as activity stream. |
+| `timeline[].actor` | string | yes | Who triggered the event (Actor name or 'claude-code'). |
+| `timeline[].at` | string | yes |  |
+| `timeline[].commit_ref` | string |  | Git SHA associated with this event (when relevant). |
+| `timeline[].excerpt` | string |  | decision: snippet from the source transcript. |
+| `timeline[].fields` | object |  | groom: which fields changed and to what. |
+| `timeline[].from` | string |  | status_change: previous status. |
+| `timeline[].paths` | array |  | artifact_produced: file paths touched. |
+| `timeline[].session_ref` | string |  | Back-link to a AgentSession that produced this event. |
+| `timeline[].source` | string |  | Um de: `cli`, `studio`, `mcp`, `agent-session-extracted`, `system`. |
+| `timeline[].summary` | string |  | comment/decision: short human-readable text. |
+| `timeline[].to` | string |  | status_change: new status. |
+| `timeline[].type` | string | yes | Event type. Recognized: status_change, groom, comment, decision, artifact_produced (open vocabulary — new types are additive, e.g. pr_opened). |
 | `title` | string | yes |  |
 | `updated_at` | string |  |  |
 
@@ -1035,7 +1053,7 @@ A Kaizen is a continuous-improvement observation noticed while working on someth
 | `labels` | array |  | Free-form theme tags (weighted into semantic-search source text). |
 | `status` | string | yes | Observation arc: observed (flagged) → routed (fix tracked in `issue`) → resolved (fix shipped). Um de: `observed`, `routed`, `resolved`. |
 | `updated_at` | string |  |  |
-| `work_item` | string |  | Kind/slug of the work item where this was observed (polymorphic — Story/Spike/Issue). |
+| `work_item` | string |  | Kind/slug of the work item where this was observed — polymorphic over the work-item family (see relations.work_item). |
 
 ## KindNamespace
 
@@ -1288,7 +1306,7 @@ An AccountPlan maps one DNA Cloud BILLING ACCOUNT to its current Tier as GLOBAL 
 | `status` | string |  | The billing status of the assignment, e.g. active / past_due / canceled. |
 | `stripe_customer_id` | string |  | The Stripe customer id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
 | `stripe_subscription_id` | string |  | The Stripe subscription id backing the assignment (dna-cloud writes it; the OSS SDK never calls Stripe). |
-| `tier_id` | string | yes | The assigned PricingPlan's id, e.g. free, pro, enterprise. Resolved to caps via kernel.tier(tier_id) — never a literal in code. This IS a reference, and it is deliberately NOT declared as a relation — the resolver matches `PricingPlan.spec.tier_id` first and `PricingPlan.spec.aliases[]` second, in the `_lib` scope, and NEVER the instance name, while the kernel resolves by instance name only. `by: tier_id` would DESCRIBE the addressing without resolving it, which is legal — but it would describe only HALF the live rule (the alias fallback has nowhere to go), and a partial description of a live rule is the thing to avoid. Declaring it would install a SECOND resolution rule that can disagree with the live one (an alias-keyed binding is valid data the write path would then veto). It is a keyed reference, the same shape as `Organization.plan_ref`. NOTE the Kind was called `Tier` until the metering rename (dna 0.29.0); this description named the dead Kind until 2026-08-06. |
+| `tier_id` | string | yes | The assigned PricingPlan's id, e.g. free, pro, enterprise. Resolved to caps via kernel.tier(tier_id) — never a literal in code. This IS a reference and it IS declared, as `to: PricingPlan, by: tier_id` (see `spec.relations`). The resolver matches `PricingPlan.spec.tier_id` first and `PricingPlan.spec.aliases[]` second, in the `_lib` scope, and NEVER the instance name — so this runtime does not FOLLOW the declaration, exactly as it does not follow `Project.workspace_id`. It is a keyed reference, the same shape as `Organization.plan_ref`. NOTE the Kind was called `Tier` until the metering rename (dna 0.29.0); this description named the dead Kind until 2026-08-06, and claimed the field was undeclarable until 2026-08-06 as well. |
 | `updated_at` | string |  | When dna-cloud last wrote this assignment (ISO 8601). |
 
 ## Postmortem
