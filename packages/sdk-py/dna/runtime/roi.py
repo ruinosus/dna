@@ -175,6 +175,90 @@ caso de uso exato do cache.
 cabe nesta story. Fica NOMEADO aqui — e vale notar que o argumento "acrescentar
 campo custa zero enquanto há zero instância de `ModelProfile`" **não transfere**
 para a metade difícil: ``dna_turn`` já tem linhas, e a janela dele fechou.
+
+## ⭐⭐ `edited_args` — o sinal que ninguém lia, e o que ele DE FATO diz (`i-151`)
+
+A `dna_approval` guarda ``arguments`` (o que o agente propôs) e ``edited_args``
+(o que ficou gravado). A promessa é grande e está escrita na issue: *a diferença
+entre os dois é literalmente o quanto o agente errou, medido por um humano, em
+produção, sem ninguém ter montado experimento.* :func:`compare_args` é o leitor
+que faltava, e :attr:`YieldReading.correction` é a resposta.
+
+⚠️ **E a resposta HOJE é uma recusa** — não por preguiça, e sim porque a
+comparação foi FEITA. MEDIDO em 08/08/2026 no Postgres de desenvolvimento:
+**20 `approve` · 3 `edit` · 0 `reject`**, e os três `edit`, comparados, mostram
+**zero valor reescrito e zero valor acrescentado**. Havia diferença TEXTUAL
+entre os dois campos, e ela era 100% máquina:
+
+1. **Os dois campos não têm a mesma forma.** ``arguments`` é o ``args`` do
+   pedido; ``edited_args`` é o ``edited_action`` INTEIRO
+   (``{"name": …, "args": {…}}``) — ver ``dna.runtime.audit.settle``. Uma
+   comparação ingênua acharia 100% de divergência já no primeiro nível, em toda
+   linha, para sempre. :data:`EDIT_ENVELOPE_KEYS` desembrulha isso.
+2. **O ``rationale`` não é argumento de tool.** Ele é INJETADO no schema voltado
+   ao modelo por ``DnaMcpToolsMiddleware`` e **removido antes da execução**.
+   Aparece nos três ``arguments`` e em nenhum ``edited_args`` — um campo
+   "removido pelo humano" que nenhum humano tocou. :data:`SYNTHETIC_ARGS` o
+   desconta, e um teste guarda o nome contra o dono.
+3. **⭐ E o achado que decide tudo: nesta casa `edit` não significa "corrigi".**
+   O único emissor de ``{"type": "edit"}`` é o botão de aceitar do compositor
+   (``canvas.ts`` / ``suggestionDecision``), que monta o ``edited_action`` com um
+   SUBCONJUNTO do patch do próprio agente — os valores são copiados verbatim.
+   Pela porta que existe, um valor reescrito por humano é **impossível por
+   construção**. `edit` ali quer dizer *"aceito estes campos, não aqueles"*.
+
+Descontados (1) e (2), os três `edit` são **idênticos** ao que o agente propôs.
+Um "grau de erro do agente: 0%" seria verdadeiro no cálculo e falso na leitura:
+diria *"o agente acertou tudo"* quando o que houve foi *"a porta de edição não
+sabe reescrever"*. É a mesma classe de erro do "contenção 0%", e por isso a
+resposta é :class:`NotCalculable` com :data:`NO_CORRECTION_TO_MEASURE` — que
+carrega as CONTAGENS (elas são exatas) e diz o que teria de mudar para haver
+número.
+
+**O que existe é a máquina, pronta.** No dia em que um host escrever um
+``edited_action`` com valor de humano, :func:`compare_args` o vê e
+:attr:`YieldReading.correction` vira um :class:`Number` — com procedência
+:data:`INCIDENTAL` (a classe nova, justificada abaixo) e
+:attr:`Number.is_small_sample` enquanto a amostra não passar de
+:data:`MIN_EDITS_FOR_CORRECTION`.
+
+### Como comparar — e as três escolhas com resposta errada fácil
+
+* **Por CAMINHO de JSON, nunca por distância de texto.** A issue avisa: um
+  `edit` que só reordena chaves não é erro nenhum. Dicionário não tem ordem, e
+  um diff por caminho é imune a isso de graça; distância de string contaria a
+  reordenação como reescrita total — e contaria também o reindentar do JSON.
+* **Lista é UMA folha, comparada inteira.** Parear elemento a elemento exige uma
+  noção de identidade que os argumentos não carregam: ``["a","b"] → ["b","a"]``
+  é reordenação em ``tags`` e é reescrita numa pipeline. Sem saber qual, o
+  honesto é não inventar o alinhamento.
+* **⚠️ REMOÇÃO não entra na magnitude.** Um campo que sumiu é indistinguível de
+  um formulário que não o devolve — e isso não é hipótese: 3 de 3 remoções
+  medidas eram o ``rationale``, que a própria máquina tira. A magnitude conta o
+  que só um humano produz (valor REESCRITO ou ACRESCENTADO); a remoção é contada
+  ao lado, com a ambiguidade dita.
+
+### ⚠️ Conteúdo de cliente: o texto viaja, só a CONTAGEM fica
+
+Os dois campos carregam o que o usuário digitou. Então :class:`ArgsDelta` guarda
+**números, e nada mais** — nem valores, nem os caminhos onde eles estavam. Os
+caminhos parecem inócuos e não são: a CHAVE de um objeto JSON pode ser dado do
+usuário (``{"campos": {"<o que ele digitou>": …}}``), e um "só os nomes dos
+campos" vazaria exatamente ali. Nenhum ``source``, ``detail`` ou linha de
+:func:`render` desta leitura contém texto vindo de ``arguments`` ou
+``edited_args``: a comparação lê, conta e descarta.
+
+### A procedência nova: `INCIDENTAL`, e por que não bastava `PROXY`
+
+Contenção é `PROXY` porque **mede outra coisa** que a que parece medir. Este
+número não tem esse defeito: a diferença entre o proposto e o gravado é
+exatamente o que ele diz ser. O defeito dele é outro — ele é **subproduto**: as
+duas linhas não foram escritas para serem comparadas, e o que elas admitem como
+leitura depende de um caminho de escrita (a tela que monta o ``edited_action``)
+que ninguém mantém estável em nome da medição. Um `PROXY` falha por definição e
+falha sempre igual; um `INCIDENTAL` é válido até alguém mexer no formulário, e
+**falha em silêncio quando isso acontece**. São avisos diferentes para quem lê, e
+os três `edit` medidos são a prova de que o segundo aviso é o necessário.
 """
 from __future__ import annotations
 
@@ -188,8 +272,12 @@ __all__ = [
     "CONSTANT",
     "DECISIONS",
     "DECLARED",
+    "EDIT_ENVELOPE_KEYS",
+    "INCIDENTAL",
     "MEASURED",
+    "MIN_EDITS_FOR_CORRECTION",
     "MODEL_PROFILE_KIND",
+    "ArgsDelta",
     "ModelPrice",
     "NotCalculable",
     "Number",
@@ -200,6 +288,7 @@ __all__ = [
     "PROFILE_PRICE_CURRENCY",
     "PROXY",
     "PriceBook",
+    "SYNTHETIC_ARGS",
     "STANDING_REPLICA_USD_MONTH",
     "Sample",
     "TECHNIQUE_ANSWERED",
@@ -208,6 +297,7 @@ __all__ = [
     "ValuePerOutcome",
     "YieldReading",
     "as_price_book",
+    "compare_args",
     "gather_prices",
     "gather_sample",
     "price_age_days",
@@ -220,7 +310,7 @@ __all__ = [
 
 # ── a procedência de cada número ─────────────────────────────────────────────
 #
-# ⭐ Quatro palavras, e elas não são decoração: são a diferença entre um número
+# ⭐ Cinco palavras, e elas não são decoração: são a diferença entre um número
 # que alguém pode usar para decidir e um número que alguém vai usar para decidir
 # achando que é outra coisa.
 
@@ -236,8 +326,16 @@ PROXY = "PROXY"
 #: leitura de fatura e não se atualiza sozinha — ver
 #: :data:`STANDING_REPLICA_USD_MONTH`.
 CONSTANT = "CONSTANT"
+#: ⭐ SUBPRODUTO: mede exatamente o que diz medir, e a partir de um registro que
+#: **não foi escrito para ser medido** (`i-151`). A diferença entre `arguments`
+#: e `edited_args` é literal — não é um `PROXY`, que falha por definição —, mas
+#: o que ela admite como leitura depende do caminho de escrita que produziu as
+#: duas linhas. Mude o formulário e o número muda de significado **em silêncio**,
+#: sem que nada aqui fique vermelho. É esse o aviso que o rótulo carrega, e ele
+#: é diferente do aviso do `PROXY`.
+INCIDENTAL = "INCIDENTAL"
 
-BASES = frozenset({MEASURED, DECLARED, PROXY, CONSTANT})
+BASES = frozenset({MEASURED, DECLARED, PROXY, CONSTANT, INCIDENTAL})
 
 #: O vocabulário do HITL. ⚠️ Enumerado aqui e GUARDADO contra o original: o
 #: dono é `dna.runtime.middleware.hitl.dna_hitl_middleware(allowed_decisions=…)`,
@@ -273,6 +371,9 @@ NO_OUTCOME_DECLARED = "no_outcome_declared"
 NO_VALUE_PER_OUTCOME = "no_value_per_outcome"
 NO_MODEL_PRICE = "no_model_price"
 NO_APPROVALS = "no_approvals"
+NO_EDITS = "no_edits"
+NO_COMPARABLE_EDITS = "no_comparable_edits"
+NO_CORRECTION_TO_MEASURE = "no_correction_to_measure"
 NO_APP = "no_app"
 CAN_SLEEP_UNDECLARED = "can_sleep_undeclared"
 CURRENCY_MISMATCH = "currency_mismatch"
@@ -326,6 +427,12 @@ class Number:
     #: pela mesma razão: um qualificador que não aparece na mesma linha do
     #: número é um qualificador que ninguém lê. O PORQUÊ está em ``source``.
     is_suspect: bool = False
+    #: ⚠️ O número saiu de POUCOS eventos e uma unidade a mais o move demais
+    #: (`i-151`). Terceiro irmão de :attr:`is_floor`, pelo mesmo molde: a
+    #: ressalva viaja colada ao número e :attr:`label` a imprime. O limiar e a
+    #: contagem que o disparou estão em ``source`` — ver
+    #: :data:`MIN_EDITS_FOR_CORRECTION`.
+    is_small_sample: bool = False
 
     def __post_init__(self) -> None:
         if self.basis not in BASES:
@@ -344,7 +451,8 @@ class Number:
         """O rótulo que ACOMPANHA o número onde quer que ele apareça."""
         piso = " ≥ PISO" if self.is_floor else ""
         suspeito = " ⚠ SUSPEITO" if self.is_suspect else ""
-        return f"[{self.basis}{piso}{suspeito}]"
+        pouco = " ⚠ AMOSTRA PEQUENA" if self.is_small_sample else ""
+        return f"[{self.basis}{piso}{suspeito}{pouco}]"
 
     def __str__(self) -> str:
         return f"{_num(self.value)} {self.unit} {self.label}"
@@ -658,6 +766,224 @@ async def gather_prices(kernel: Any, models: Any) -> PriceBook:
     return PriceBook(prices=precos, incomplete=incompletos)
 
 
+# ── `edited_args`: a comparação, e o que ela recusa a olhar (`i-151`) ────────
+
+#: ⚠️ O envelope do ``edited_action`` do `HumanInTheLoopMiddleware`. Enumerado
+#: aqui porque ``dna.runtime.audit.settle`` grava o ``edited_action`` INTEIRO em
+#: ``edited_args`` enquanto ``arguments`` guarda só o ``args`` do pedido: os dois
+#: campos NÃO têm a mesma forma, e comparar sem desembrulhar acharia 100% de
+#: divergência em toda linha, para sempre.
+EDIT_ENVELOPE_KEYS = ("name", "args")
+
+#: ⭐ Argumentos que a MÁQUINA injeta e a máquina tira — não são do agente e não
+#: são do humano, e contá-los inventaria correção onde não houve nenhuma.
+#: ``rationale`` é acrescentado ao schema voltado ao modelo por
+#: ``DnaMcpToolsMiddleware`` e removido antes da execução (``_strip_rationale``);
+#: ele aparece em ``arguments`` e nunca em ``edited_args``. MEDIDO: era 3 de 3
+#: das remoções no banco de desenvolvimento em 08/08/2026.
+#:
+#: ⚠️ Enumerado aqui e GUARDADO contra o dono
+#: (``mcp_tools_mw.RATIONALE_ARG``) por
+#: ``test_o_argumento_SINTETICO_nao_DIVERGE_do_middleware`` — o import direto
+#: não serve: este módulo não depende de LangChain e não vai passar a depender.
+SYNTHETIC_ARGS = ("rationale",)
+
+#: ⚠️ Quantos `edit` a taxa de correção precisa para não ser um título. É
+#: **POLÍTICA, não medição** — escolhida em 08/08/2026, pelo mesmo critério (e
+#: com a mesma honestidade) de :data:`PRICE_STALE_AFTER_DAYS`.
+#:
+#: O raciocínio: abaixo de dez, UM `edit` move a taxa em mais de dez pontos
+#: percentuais. Um número que um clique desloca em dez pontos não é uma
+#: medição de qualidade; é uma anedota com casas decimais. Acima do limiar o
+#: número sai limpo; abaixo, sai **com a marca** :attr:`Number.is_small_sample`
+#: — no molde do PISO, porque suprimir o número faria a leitura silenciar
+#: justamente enquanto a amostra cresce, que é quando alguém está olhando.
+MIN_EDITS_FOR_CORRECTION = 10
+
+
+@dataclass(frozen=True)
+class ArgsDelta:
+    """A comparação de UM par (proposto, gravado) — **em números, e só**.
+
+    ⚠️ Não há um único campo de texto aqui, e é de propósito: os dois lados
+    carregam o que o usuário digitou. Nem os valores, nem os CAMINHOS onde eles
+    estavam — a chave de um objeto JSON pode ser dado do usuário
+    (``{"campos": {"<o que ele digitou>": …}}``), e um "só os nomes" vazaria
+    exatamente ali.
+
+    As folhas são caminhos de JSON. Uma lista conta como UMA folha, comparada
+    inteira: parear elemento a elemento exigiria uma identidade que os
+    argumentos não carregam.
+    """
+
+    #: Folhas presentes nos dois lados, com o MESMO valor.
+    kept: int = 0
+    #: Folhas presentes nos dois lados com valor DIFERENTE — reescrita.
+    changed: int = 0
+    #: Folhas só no lado gravado — o humano acrescentou.
+    added: int = 0
+    #: ⚠️ Folhas só no lado proposto. **Fora da magnitude**: um campo que sumiu é
+    #: indistinguível de um formulário que não o devolve.
+    removed: int = 0
+    #: O envelope ``{name, args}`` foi desembrulhado deste par.
+    unwrapped: bool = False
+    #: Quantas folhas sintéticas (:data:`SYNTHETIC_ARGS`) foram descontadas.
+    ignored: int = 0
+    #: ⚠️ Um dos lados não é JSON legível, ou o gravado está vazio. Não é
+    #: "nenhuma diferença" — é NENHUMA COMPARAÇÃO, e somar os dois como zero
+    #: seria o erro de sempre.
+    unreadable: bool = False
+
+    @property
+    def comparable(self) -> bool:
+        return not self.unreadable
+
+    @property
+    def touched(self) -> int:
+        """⭐ O que **só um humano produz**: valor reescrito ou acrescentado."""
+        return self.changed + self.added
+
+    @property
+    def leaves(self) -> int:
+        """O denominador: as folhas que chegaram ao outro lado, de algum jeito."""
+        return self.kept + self.changed + self.added
+
+
+def _somar_delta(a: ArgsDelta, b: ArgsDelta) -> ArgsDelta:
+    return ArgsDelta(
+        kept=a.kept + b.kept,
+        changed=a.changed + b.changed,
+        added=a.added + b.added,
+        removed=a.removed + b.removed,
+        unwrapped=a.unwrapped or b.unwrapped,
+        ignored=a.ignored + b.ignored,
+        unreadable=a.unreadable or b.unreadable,
+    )
+
+
+def _json_ou_nada(texto: Any) -> Any:
+    """O JSON deste campo, ou :data:`_ILEGIVEL`. Nunca um dicionário vazio.
+
+    ⚠️ Texto vazio e texto que não parseia são a MESMA resposta aqui — *não deu
+    para ler* — e ela é diferente de ``{}``, que seria "o humano gravou nada".
+    """
+    import json
+
+    bruto = texto if isinstance(texto, str) else ""
+    if not bruto.strip():
+        return _ILEGIVEL
+    try:
+        return json.loads(bruto)
+    except (ValueError, TypeError):
+        return _ILEGIVEL
+
+
+_ILEGIVEL = object()
+
+
+def _desembrulhar(valor: Any) -> tuple[Any, bool]:
+    """Tira o envelope ``{"name": …, "args": {…}}`` do ``edited_action``.
+
+    Só quando ele é EXATAMENTE isso: um dicionário cujas chaves cabem em
+    :data:`EDIT_ENVELOPE_KEYS` e que traz um ``args`` de dicionário. Um
+    argumento de tool que por acaso se chame ``name`` não dispara nada, porque
+    faltaria o ``args``.
+    """
+    if (
+        isinstance(valor, Mapping)
+        and set(valor) <= set(EDIT_ENVELOPE_KEYS)
+        and isinstance(valor.get("args"), Mapping)
+    ):
+        return valor["args"], True
+    return valor, False
+
+
+def _folhas(valor: Any, prefixo: tuple[Any, ...] = ()) -> dict[tuple[Any, ...], Any]:
+    """Achata em ``caminho → valor``. Lista é folha; dicionário se abre.
+
+    ⭐ É esta função que torna a comparação imune à REORDENAÇÃO DE CHAVES, que
+    é a armadilha nomeada na `i-151`: um dicionário não tem ordem, e um caminho
+    não muda quando o JSON é reescrito noutra ordem ou noutra indentação. Uma
+    distância de string contaria as duas coisas como reescrita total.
+    """
+    if isinstance(valor, Mapping):
+        if not valor:
+            # ⚠️ Na RAIZ, o vazio não vira folha. Um ``edited_args`` que zerou
+            # tudo tem de sair com ZERO folha em comum — o que a leitura chama
+            # de "não há denominador" — e não com uma folha "acrescentada", que
+            # diria que o humano PÔS alguma coisa quando ele tirou tudo.
+            return {} if not prefixo else {prefixo: _VAZIO}
+        saida: dict[tuple[Any, ...], Any] = {}
+        for chave, dentro in valor.items():
+            saida.update(_folhas(dentro, prefixo + (str(chave),)))
+        return saida
+    return {prefixo: valor}
+
+
+#: O dicionário vazio ANINHADO como folha. Sem ele, ``{"a": {}}`` e ``{"a": 1}``
+#: divergiriam e ``{"a": {}}`` × ``{}`` não — a diferença sumiria justamente
+#: onde ela é uma decisão do humano.
+_VAZIO = object()
+
+
+def compare_args(
+    proposed: Any, recorded: Any, *, ignore: Iterable[str] = SYNTHETIC_ARGS
+) -> ArgsDelta:
+    """O que o agente propôs × o que ficou gravado, **em contagens** (`i-151`).
+
+    ``proposed`` é ``dna_approval.arguments`` e ``recorded`` é ``edited_args``,
+    como texto — os dois como o banco os devolve. **Puro**, e é isso que torna
+    esta regra exercitável sem banco: a mesma fronteira de
+    :func:`sample_from_turns`.
+
+    Três normalizações, e as três vieram da medição, não da teoria:
+
+    1. o envelope ``{name, args}`` sai (:data:`EDIT_ENVELOPE_KEYS`);
+    2. os argumentos SINTÉTICOS saem (:data:`SYNTHETIC_ARGS`) — dos DOIS lados,
+       porque o que a máquina injeta e remove não é correção de ninguém;
+    3. a comparação é por caminho de JSON, imune à ordem das chaves.
+
+    ⚠️ Um ``recorded`` vazio devolve :attr:`ArgsDelta.unreadable`, não um delta
+    zerado. Uma linha `approve` tem ``edited_args`` vazio por definição, e lê-la
+    como "o humano não mudou nada" contaria toda aprovação como prova de acerto
+    do agente — o denominador errado mais fácil de construir nesta leitura.
+    """
+    esquerda = _json_ou_nada(proposed)
+    direita = _json_ou_nada(recorded)
+    if esquerda is _ILEGIVEL or direita is _ILEGIVEL:
+        return ArgsDelta(unreadable=True)
+
+    direita, desembrulhado = _desembrulhar(direita)
+    esquerda, _ = _desembrulhar(esquerda)
+
+    a = _folhas(esquerda)
+    b = _folhas(direita)
+    sinteticos = {str(s) for s in ignore}
+    # Um argumento sintético mora na RAIZ (é injetado no schema da tool), então
+    # o corte é pelo primeiro segmento do caminho — nunca por "contém".
+    descartados = [c for c in (set(a) | set(b)) if c and c[0] in sinteticos]
+    for caminho in descartados:
+        a.pop(caminho, None)
+        b.pop(caminho, None)
+
+    iguais = mudados = 0
+    for caminho, valor in a.items():
+        if caminho not in b:
+            continue
+        if b[caminho] == valor:
+            iguais += 1
+        else:
+            mudados += 1
+    return ArgsDelta(
+        kept=iguais,
+        changed=mudados,
+        added=sum(1 for c in b if c not in a),
+        removed=sum(1 for c in a if c not in b),
+        unwrapped=desembrulhado,
+        ignored=len(descartados),
+    )
+
+
 @dataclass(frozen=True)
 class ValuePerOutcome:
     """Quanto vale UM desfecho resolvido — declarado, nunca medido.
@@ -739,6 +1065,19 @@ class Sample:
     #: Aprovações pedidas e ainda não decididas — fora do denominador da taxa
     #: de aceitação, porque uma pendência não é uma concordância.
     undecided: int = 0
+    #: ⭐ A soma das comparações (proposto × gravado) dos `edit` (`i-151`).
+    #: **Contagens, nunca conteúdo** — ver :class:`ArgsDelta`.
+    edit_delta: ArgsDelta = field(default_factory=ArgsDelta)
+    #: Quantos `edit` chegaram a ser comparados.
+    edits_compared: int = 0
+    #: ⚠️ Quantos `edit` NÃO puderam ser comparados (``edited_args`` vazio ou não
+    #: legível como JSON). Fora do denominador, e contados — porque "não deu
+    #: para ler" não é "não mudou nada".
+    edits_unreadable: int = 0
+
+    @property
+    def edits(self) -> int:
+        return self.decisions.get("edit", 0)
 
     @property
     def declared_outcomes(self) -> int:
@@ -854,6 +1193,8 @@ def sample_from_turns(
 
     decisoes: dict[str, int] = {}
     pendentes = 0
+    delta = ArgsDelta()
+    comparados = ilegiveis = 0
     for linha in approvals:
         decisao = str(_campo(linha, "decision") or "").strip().lower()
         if decisao in DECISIONS:
@@ -862,6 +1203,16 @@ def sample_from_turns(
             # Inclui a pendência (``''``) E o valor estranho. Os dois estão
             # fora do denominador pelo mesmo motivo: não são uma concordância.
             pendentes += 1
+        # ⭐ `i-151`: SÓ o `edit` carrega o par. Comparar um `approve` (cujo
+        # `edited_args` é vazio por definição) o contaria como prova de acerto.
+        if decisao != "edit":
+            continue
+        d = compare_args(_campo(linha, "arguments"), _campo(linha, "edited_args"))
+        if d.comparable:
+            comparados += 1
+            delta = _somar_delta(delta, d)
+        else:
+            ilegiveis += 1
 
     return Sample(
         turns=total,
@@ -869,6 +1220,9 @@ def sample_from_turns(
         usage=uso,
         decisions=decisoes,
         undecided=pendentes,
+        edit_delta=delta,
+        edits_compared=comparados,
+        edits_unreadable=ilegiveis,
     )
 
 
@@ -975,12 +1329,36 @@ async def gather_sample(
         else:
             pendentes += n
 
+    # ⭐ `i-151`: a ÚNICA consulta desta leitura que traz texto, e ela traz o
+    # mínimo. Um ``GROUP BY`` não sabe comparar dois JSON por caminho, então os
+    # pares viajam — restritos a ``decision = 'edit'``, que é a decisão mais
+    # rara (MEDIDO: 3 de 23 no banco de desenvolvimento em 08/08/2026).
+    #
+    # ⚠️ E o texto NÃO fica: :func:`compare_args` lê, conta e descarta. O que
+    # entra na :class:`Sample` são números — nenhum valor de tenant sobrevive à
+    # chamada, e por isso nada dele pode chegar a um ``source`` ou à tela.
+    qe = sa.select(approval.c.arguments, approval.c.edited_args).where(
+        sa.and_(approval.c.decision == "edit", *_onde(approval))
+    )
+    delta = ArgsDelta()
+    comparados = ilegiveis = 0
+    for linha in (await connection.execute(qe)).mappings():
+        d = compare_args(linha["arguments"], linha["edited_args"])
+        if d.comparable:
+            comparados += 1
+            delta = _somar_delta(delta, d)
+        else:
+            ilegiveis += 1
+
     return Sample(
         turns=total,
         outcomes=desfechos,
         usage=uso,
         decisions=decisoes,
         undecided=pendentes,
+        edit_delta=delta,
+        edits_compared=comparados,
+        edits_unreadable=ilegiveis,
     )
 
 
@@ -1065,6 +1443,10 @@ class YieldReading:
     containment: Any
     #: ⚠️ PROXY — taxa de aceitação do HITL.
     acceptance: Any
+    #: ⚠️ INCIDENTAL — quanto o humano REESCREVEU do que o agente propôs
+    #: (`i-151`). Hoje, :class:`NotCalculable` por medição — ver
+    #: :func:`_correction` e a seção do `edited_args` no topo.
+    correction: Any = None
     #: O que quem lê precisa saber junto dos números.
     notes: tuple[str, ...] = ()
 
@@ -1428,15 +1810,118 @@ def _acceptance(sample: Sample) -> Any:
     )
     origem = (
         f"taxa de aceitação: {contagens} — aprovado sem o humano tocar, sobre "
-        f"{sample.decided} decisão(ões). ⚠️ PROXY — `edit` é o mais valioso "
-        "dos três (a diferença entre `arguments` e `edited_args` é o quanto o "
-        "agente errou) e esta taxa não o lê"
+        f"{sample.decided} decisão(ões). ⚠️ PROXY — esta taxa conta o `edit` "
+        "como EVENTO e não olha o conteúdo dele; quem olha é a linha do grau "
+        "de correção (`i-151`), e ela diz por nome quando não dá"
     )
     return Number(
         100.0 * sample.decisions.get("approve", 0) / sample.decided,
         "%",
         PROXY,
         origem,
+    )
+
+
+def _correction(sample: Sample, *, min_edits: float = MIN_EDITS_FOR_CORRECTION) -> Any:
+    """⭐ Quanto o humano teve de REESCREVER do que o agente propôs (`i-151`).
+
+    A taxa de aceitação conta o `edit` como EVENTO; esta linha olha o conteúdo.
+    E o mais importante que ela faz é **recusar** — em quatro estados, e cada um
+    deles diz uma coisa diferente sobre o mundo:
+
+    ==============================  ==============================================
+    estado                          o que houve
+    ==============================  ==============================================
+    :data:`NO_EDITS`                ninguém editou. Nada a comparar, e isso não é
+                                    "o agente acertou": pode ser que ninguém tenha
+                                    olhado.
+    :data:`NO_COMPARABLE_EDITS`     houve `edit` e nenhum par legível.
+    :data:`NO_CORRECTION_TO_MEASURE` ⭐ os pares FORAM comparados e não há
+                                    reescrita nenhuma. O estado medido hoje.
+    (número)                        houve reescrita — e aí sim há magnitude.
+    ==============================  ==============================================
+
+    ⚠️ O terceiro é o que separa esta leitura de um ruído com cara de medição.
+    ``0%`` ali seria verdadeiro no cálculo e leria *"o agente acertou tudo"*,
+    quando o que houve foi *"o `edit` desta casa é um RECORTE, não uma
+    reescrita"*. Mesma classe do "contenção 0%", mesma resposta.
+    """
+    if sample.decided == 0 or sample.edits == 0:
+        return NotCalculable(
+            NO_EDITS,
+            f"nenhuma decisão `edit` na amostra ({sample.decided} decisão(ões) "
+            "no total) — não há par (proposto, gravado) a comparar. Isto NÃO "
+            "diz que o agente acertou: só `edit` produz a comparação",
+            missing=("dna_approval.edited_args",),
+        )
+    if sample.edits_compared == 0:
+        return NotCalculable(
+            NO_COMPARABLE_EDITS,
+            f"os {sample.edits} `edit` da amostra não trouxeram par legível "
+            f"({sample.edits_unreadable} com `edited_args` vazio ou fora de "
+            "JSON) — sem par não há comparação, e vazio aqui não é 'não mudou "
+            "nada'",
+            missing=("dna_approval.edited_args",),
+        )
+    d = sample.edit_delta
+    if d.leaves == 0:
+        return NotCalculable(
+            NO_COMPARABLE_EDITS,
+            f"os {sample.edits_compared} `edit` comparados não deixaram "
+            "nenhum campo em comum com o que foi proposto — não há denominador, "
+            "e uma taxa sobre zero campos não é uma taxa",
+            missing=("dna_approval.edited_args",),
+        )
+    if d.touched == 0:
+        # ⭐ O ESTADO MEDIDO. As contagens são exatas e vão inteiras no detail:
+        # o que se recusa é a TAXA, não os fatos.
+        recorte = (
+            f"; {d.removed} campo(s) apenas RECORTADO(s) do que o agente "
+            "propôs — e recorte não é reescrita: um campo que sumiu é "
+            "indistinguível de um formulário que não o devolve"
+            if d.removed
+            else "; e nem sequer um campo foi recortado — o gravado é IDÊNTICO "
+            "ao proposto, descontados o envelope e os argumentos sintéticos"
+        )
+        return NotCalculable(
+            NO_CORRECTION_TO_MEASURE,
+            f"os {sample.edits_compared} `edit` comparados não reescreveram "
+            f"NENHUM valor ({d.kept} campo(s) idêntico(s), 0 reescrito(s), "
+            f"0 acrescentado(s)){recorte}. Uma taxa de 0% aqui leria 'o agente "
+            "acertou tudo', e o que se mediu foi 'nenhum humano escreveu valor "
+            "nenhum'. Para haver número, é preciso um `edited_action` com valor "
+            "de humano — a porta que emite `edit` hoje só sabe aceitar um "
+            "subconjunto do que o próprio agente propôs",
+            missing=("dna_approval.edited_args",),
+        )
+    pouco = sample.edits_compared < min_edits
+    origem = (
+        f"grau de correção: {d.touched} de {d.leaves} campo(s) do que o agente "
+        f"propôs foi REESCRITO ou ACRESCENTADO pelo humano, em "
+        f"{sample.edits_compared} `edit` ({d.changed} reescrito(s), "
+        f"{d.added} acrescentado(s), {d.kept} intacto(s); {d.removed} "
+        "recortado(s), FORA da conta porque remoção é ambígua). "
+        "⚠️ INCIDENTAL — sai de um registro que não foi escrito para ser "
+        "medido, e muda de significado se a tela que monta o `edited_action` "
+        "mudar"
+    )
+    if sample.edits_unreadable:
+        origem += (
+            f" — {sample.edits_unreadable} `edit` ficaram FORA por não trazerem "
+            "par legível"
+        )
+    if pouco:
+        origem += (
+            f" — ⚠️ AMOSTRA PEQUENA: {sample.edits_compared} `edit` comparados, "
+            f"abaixo do piso de {_num(min_edits)}; abaixo dele um único `edit` "
+            "move a taxa em mais de dez pontos"
+        )
+    return Number(
+        100.0 * d.touched / d.leaves,
+        "%",
+        INCIDENTAL,
+        origem,
+        is_small_sample=pouco,
     )
 
 
@@ -1482,6 +1967,7 @@ def read_yield(
     app: Mapping[str, Any] | None = None,
     prices: PriceBook | Mapping[str, ModelPrice] | None = None,
     price_max_age_days: float = PRICE_STALE_AFTER_DAYS,
+    min_edits_for_correction: float = MIN_EDITS_FOR_CORRECTION,
     now: Any = None,
 ) -> YieldReading:
     """A leitura inteira: custo, rendimento, razão, e os dois proxies.
@@ -1517,6 +2003,7 @@ def read_yield(
     ratio, notas_razao = _ratio(value, cost)
     containment = _containment(sample)
     acceptance = _acceptance(sample)
+    correction = _correction(sample, min_edits=min_edits_for_correction)
     standing = _standing_cost(app)
 
     notas: list[str] = []
@@ -1559,6 +2046,31 @@ def read_yield(
             "conta de hoje sem ninguém notar. O teto é POLÍTICA, não medição: "
             "`price_max_age_days` o troca."
         )
+    if sample.edits_unreadable:
+        notas.append(
+            f"⚠️ {sample.edits_unreadable} decisão(ões) `edit` sem par legível "
+            "(`edited_args` vazio ou fora de JSON): elas estão FORA do grau de "
+            "correção. Vazio ali não é 'o humano não mudou nada'."
+        )
+    if isinstance(correction, NotCalculable) and correction.reason == (
+        NO_CORRECTION_TO_MEASURE
+    ):
+        notas.append(
+            "⭐ Os `edit` desta amostra foram COMPARADOS e não reescreveram "
+            "valor nenhum. Antes de ler isso como qualidade do agente: o único "
+            "emissor de `edit` do console monta o `edited_action` com um "
+            "SUBCONJUNTO do patch do próprio agente, copiando os valores — por "
+            "aquela porta, uma reescrita de humano é impossível por construção. "
+            "O número volta a existir quando um host escrever valor de humano."
+        )
+    if isinstance(correction, Number) and correction.is_small_sample:
+        notas.append(
+            f"⚠️ O GRAU DE CORREÇÃO saiu de {sample.edits_compared} `edit`, "
+            f"abaixo do piso de {_num(min_edits_for_correction)}. Abaixo dele "
+            "um único `edit` move a taxa em mais de dez pontos — é uma "
+            "anedota com casas decimais, e a marca existe para dizer isso na "
+            "mesma linha. O piso é POLÍTICA: `min_edits_for_correction` o troca."
+        )
     if isinstance(standing, Number) and standing.value:
         notas.append(
             "⚠️ O custo da réplica fixa é MENSAL e está FORA da razão, que é "
@@ -1580,6 +2092,7 @@ def read_yield(
         ratio=ratio,
         containment=containment,
         acceptance=acceptance,
+        correction=correction,
         notes=tuple(notas),
     )
 
@@ -1596,6 +2109,7 @@ ROWS = (
     ("ratio", "Rendimento ÷ custo"),
     ("containment", "Contenção"),
     ("acceptance", "Aceitação (HITL)"),
+    ("correction", "Grau de correção"),
 )
 
 

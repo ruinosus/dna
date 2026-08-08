@@ -79,7 +79,7 @@ zero; zero is zero.
 ### 2. Every proxy-derived number carries its label
 
 `Number` cannot be constructed without `basis` and `source` — the constructor
-raises. There are four bases:
+raises. There are five bases:
 
 | basis | meaning |
 |---|---|
@@ -87,6 +87,7 @@ raises. There are four bases:
 | `DECLARED` | stated by a human in a descriptor: `value_per_outcome`, `can_sleep` |
 | `PROXY` | **derived, and not measuring what it looks like it measures** |
 | `CONSTANT` | measured once, elsewhere, carried by hand — see below |
+| `INCIDENTAL` | **a by-product**: it measures exactly what it claims, from a record nobody wrote *in order to be measured* — see `edited_args` below |
 
 Containment and HITL acceptance are `PROXY`. Containment measures *work finished
 without escalating*, not *value delivered*; acceptance measures *agreement of
@@ -375,8 +376,99 @@ turns", and what happened is "this question is not asked here".
   `TokenUse` + price, in that order. Note the "adding a field is free while there
   are zero `ModelProfile` instances" argument does **not** transfer to the hard
   half: `dna_turn` already has rows, and its window has closed.
-* **It does not read `edited_args`.** The difference between `arguments` and
-  `edited_args` is literally how wrong the agent was, measured by a human, in
-  production — the cheapest quality signal in the system, recorded and still
-  never consulted. The acceptance rate counts `edit` without reading it. That is
-  a known gap, not an oversight.
+---
+
+## `edited_args` — the signal nobody read, and what it actually says (`i-151`)
+
+`dna_approval` stores `arguments` (what the agent proposed) and `edited_args`
+(what got recorded). The promise is big: *the difference between the two is
+literally how wrong the agent was, measured by a human, in production, with
+nobody running an experiment.* `compare_args()` is the reader that was missing,
+and `reading.correction` is the answer.
+
+⚠️ **And today the answer is a refusal — because the comparison was made.**
+
+```python
+reading.correction
+# NotCalculable(reason="no_correction_to_measure",
+#               detail="the 3 compared `edit`s rewrote NO value (3 identical
+#                       field(s), 0 rewritten, 0 added) …")
+```
+
+**Measured on the development Postgres, 2026-08-08: 20 `approve` · 3 `edit` ·
+0 `reject`.** The three `edit` rows differ from their proposals by 65% of their
+text, and **the entire difference is machinery**:
+
+| # | what the naive diff would have counted | what it really is |
+|---|---|---|
+| 1 | 100% divergence at the top level, on every row, forever | the two columns **have different shapes**: `arguments` is the request's `args`, `edited_args` is the whole `edited_action` (`{"name": …, "args": {…}}`) — see `dna.runtime.audit.settle` |
+| 2 | a field the human deleted, in 3 of 3 rows | `rationale` is **not a tool argument**: `DnaMcpToolsMiddleware` injects it into the model-facing schema and strips it before execution |
+| 3 | — | ⭐ **`edit` here does not mean "I corrected it"** |
+
+The third is the finding that decides everything. The only emitter of
+`{"type": "edit"}` in the product is the composer's *accept* button
+(`canvas.ts` / `suggestionDecision`), which builds `edited_action` from a
+**subset of the agent's own patch**, copying the values verbatim. Through the
+door that exists, a human-rewritten value is **impossible by construction**.
+`edit` there means *"I accept these fields, not those"*.
+
+Net of (1) and (2), the three edits are **identical** to what the agent
+proposed. A "correction rate: 0%" would be true in the arithmetic and false on
+the screen — it would read *"the agent got everything right"* when what happened
+was *"the editing door cannot rewrite"*. Same class of error as "containment 0%",
+same answer: `NotCalculable`, carrying the exact counts and saying what would
+have to change for a number to exist.
+
+**The machinery ships ready.** The day a host writes an `edited_action` with a
+human's value, `compare_args` sees it and `reading.correction` becomes a
+`Number` with `basis=INCIDENTAL`.
+
+### How to compare — three choices with an easy wrong answer
+
+* **By JSON PATH, never by string distance.** An `edit` that only reorders keys
+  is no error at all; dicts are unordered and a path diff is immune for free.
+  String distance would score reordering — and reindenting — as a total rewrite.
+* **A list is ONE leaf, compared whole.** Pairing element by element needs an
+  identity the arguments do not carry: `["a","b"] → ["b","a"]` is a reorder in
+  `tags` and a rewrite in a pipeline. Not knowing which, do not invent the
+  alignment.
+* **⚠️ REMOVAL does not enter the magnitude.** A field that vanished is
+  indistinguishable from a form that does not round-trip it — and that is not
+  hypothetical: 3 of 3 measured removals were `rationale`, which the machinery
+  itself strips. The magnitude counts only what a human alone produces (a value
+  **rewritten** or **added**); removals are counted alongside, with the
+  ambiguity stated.
+
+### ⚠️ Tenant content: the text travels, only the COUNT stays
+
+Both columns carry what the user typed. So `ArgsDelta` holds **numbers and
+nothing else** — not the values, and not the *paths* either: a JSON object key
+can itself be user data (`{"fields": {"<what they typed>": …}}`), and "just the
+field names" would leak exactly there. No `source`, `detail` or `render()` line
+of this reading contains text from `arguments` or `edited_args`; the comparison
+reads, counts and discards. `gather_sample` is where the text travels — one
+extra query, restricted to `decision = 'edit'`, the rarest decision.
+
+### Small sample: a mark, not a silence
+
+`MIN_EDITS_FOR_CORRECTION` is 10, and it is **policy, not measurement**, dated
+and reasoned like `PRICE_STALE_AFTER_DAYS`: below ten, a single `edit` moves the
+rate by more than ten points, and a number one click can swing that far is an
+anecdote with decimals. Below the floor the number still comes out — carrying
+`Number.is_small_sample`, printed as `⚠ AMOSTRA PEQUENA` on the same line, in the
+mould of `is_floor`. Suppressing it would make the reading go quiet exactly while
+the sample grows, which is when someone is watching.
+`read_yield(..., min_edits_for_correction=...)` overrides it.
+
+### Why a new basis and not `PROXY`
+
+Containment is `PROXY` because it **measures something other** than it appears
+to. This number has no such defect: the difference between proposed and recorded
+is exactly what it says. Its defect is different — it is a **by-product**. The
+two rows were not written to be compared, and what they admit as a reading
+depends on a write path (the screen that assembles `edited_action`) that nobody
+keeps stable for the measurement's sake. A `PROXY` fails by definition and fails
+the same way every time; an `INCIDENTAL` is valid until someone changes the form,
+and then it **fails in silence**. Those are different warnings for the reader,
+and the three measured `edit`s are the proof that the second one is the one
+needed here.

@@ -56,12 +56,36 @@ LINHAS = [
          tokens_partial=False, outcome="resolved", workspace="outro"),
 ]
 
+# ⚠️ `arguments`/`edited_args` estão aqui porque a `i-151` os LÊ, e o caminho do
+# banco é o único que pode divergir do puro: ele traz o par numa SEGUNDA
+# consulta (um `GROUP BY` não compara dois JSON por caminho). A paridade é a
+# asserção que impede as duas contagens de andarem para lados diferentes.
 APROVACOES = [
-    dict(approval_id="a1", tool="t", decision="approve", workspace="w"),
-    dict(approval_id="a2", tool="t", decision="approve", workspace="w"),
-    dict(approval_id="a3", tool="t", decision="edit", workspace="w"),
-    dict(approval_id="a4", tool="t", decision="", workspace="w"),
-    dict(approval_id="a5", tool="t", decision="approve", workspace="outro"),
+    dict(approval_id="a1", tool="t", decision="approve", workspace="w",
+         arguments='{"a": 1}', edited_args=""),
+    dict(approval_id="a2", tool="t", decision="approve", workspace="w",
+         arguments='{"a": 1}', edited_args=""),
+    # O `edit` com REESCRITA — o único que produz magnitude.
+    dict(approval_id="a3", tool="t", decision="edit", workspace="w",
+         arguments='{"a": "proposto", "b": "igual", "rationale": "porque sim"}',
+         edited_args='{"name": "t", "args": {"a": "REESCRITO", "b": "igual"}}'),
+    dict(approval_id="a4", tool="t", decision="", workspace="w",
+         arguments='{"a": 1}', edited_args=""),
+    dict(approval_id="a5", tool="t", decision="approve", workspace="outro",
+         arguments='{"a": 1}', edited_args=""),
+    # O `edit` que só RECORTA — fora da magnitude, contado ao lado.
+    dict(approval_id="a6", tool="t", decision="edit", workspace="w",
+         arguments='{"a": 1, "b": 2}',
+         edited_args='{"name": "t", "args": {"a": 1}}'),
+    # ⚠️ O `edit` ILEGÍVEL: cabe na coluna (é TEXT, sem CHECK) e as duas
+    # contagens têm de recusá-lo IGUAL — senão o banco contaria como comparação
+    # o que a leitura pura conta como buraco.
+    dict(approval_id="a7", tool="t", decision="edit", workspace="w",
+         arguments="{isto não é json", edited_args="{}"),
+    # E um `edit` de OUTRO workspace: o filtro tem de deixá-lo fora da
+    # COMPARAÇÃO também, não só da contagem de decisões.
+    dict(approval_id="a8", tool="t", decision="edit", workspace="outro",
+         arguments='{"a": "x"}', edited_args='{"name": "t", "args": {"a": "y"}}'),
 ]
 
 
@@ -168,6 +192,42 @@ async def test_um_workspace_SEM_turnos_e_NAO_HA_O_QUE_OLHAR(conexao):
     assert r.nothing_to_look_at
     assert isinstance(r.containment, NotCalculable)
     assert r.containment.reason == NO_TURNS
+
+
+async def test_a_comparacao_de_edited_args_bate_nos_DOIS_caminhos(conexao):
+    """⭐ `i-151`: a leitura do `edited_args` é o único ponto em que o caminho
+    do banco NÃO é um `GROUP BY` — os pares viajam numa segunda consulta.
+
+    É por isso que ele pode divergir do puro, e por isso a paridade tem de
+    cobri-lo explicitamente: o `edit` ilegível e o de outro workspace são
+    exatamente os casos em que uma das duas contagens erraria sozinha.
+    """
+    from dna.runtime.roi import gather_sample
+
+    conn, tables = conexao
+    amostra = await gather_sample(conn, tables, workspace="w")
+    assert amostra.edits == 3
+    assert amostra.edits_compared == 2      # o ilegível fica de fora
+    assert amostra.edits_unreadable == 1
+    d = amostra.edit_delta
+    # a3: 1 reescrito + 1 intacto (`rationale` descontado) · a6: 1 intacto + 1
+    # recortado. O `edit` de `outro` não entra em nenhuma das contagens.
+    assert (d.changed, d.added, d.kept, d.removed) == (1, 0, 2, 1)
+    assert d.ignored == 1 and d.unwrapped
+
+
+async def test_o_grau_de_correcao_ATRAVESSA_a_porta_do_banco(conexao):
+    """A porta inteira: do Postgres à linha da tela, com a ressalva colada."""
+    from dna.runtime.roi import INCIDENTAL, Number, gather_sample, read_yield, render
+
+    conn, tables = conexao
+    r = read_yield(await gather_sample(conn, tables, workspace="w"), copilot={})
+    assert isinstance(r.correction, Number)
+    assert r.correction.basis == INCIDENTAL
+    assert r.correction.value == pytest.approx(100.0 / 3)   # 1 de 3 folhas
+    assert r.correction.is_small_sample
+    linha = next(l for l in render(r) if l.startswith("Grau de correção:"))
+    assert "AMOSTRA PEQUENA" in linha
 
 
 async def test_o_dialeto_SEM_as_tabelas_LEVANTA_em_vez_de_devolver_vazio(conexao):
