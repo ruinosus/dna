@@ -886,7 +886,36 @@ class RecordSearchProvider(Protocol):
 
     Hit shape: the guaranteed intersection across providers and the lexical
     fallback is ``{scope, kind, name, score}`` — RRF hits carry extra fields
-    (title/snippet/rank components) that callers must treat as optional."""
+    (title/snippet/rank components) that callers must treat as optional.
+
+    ⚠️ ``score`` is the FUSED RRF value and is a function of RANK ALONE. It is
+    the same number for the #1 hit of a perfect match and the #1 hit of a query
+    about nothing, so it can ORDER results and can never JUSTIFY them (i-103).
+    A provider SHOULD therefore also report, per hit:
+
+      * ``similarity``    — cosine against the query from the dense plane, in
+                            ``[-1, 1]``. **Cosine specifically**, computed
+                            through :func:`dna.kernel.query.relevance.
+                            cosine_similarity` when the store's own metric is
+                            something else (sqlite-vec's ``vec0`` is L2). Two
+                            providers reporting this field on two different
+                            metrics is a divergence only a cross-store
+                            comparison would ever catch.
+      * ``lexical_score`` — the lexical plane's raw strength, **higher is a
+                            better match** on every store (SQLite's ``bm25()``
+                            is negated at the source and must be sign-flipped;
+                            Postgres' ``ts_rank`` already grows with relevance).
+
+    Both are OPTIONAL — a lexical-only hit has no ``similarity``, a dense-only
+    hit has no ``lexical_score``, and a provider reporting neither still
+    conforms (the caller-supplied floor keeps unscored hits for exactly that
+    reason). What a provider must NOT do is report either NAME carrying a
+    different quantity. The conformance kit's ``raw_scores_travel_with_ranks``
+    case checks the range and the direction.
+
+    ⛔ And a provider must NOT filter by relevance on its own: no shipped floor
+    exists, because none is calibratable — see ``dna.kernel.query.relevance``
+    for the measurement. Filtering is the caller's policy, applied above."""
 
     async def search(
         self, *, scope: str, query_text: str, kind: str | None = None,

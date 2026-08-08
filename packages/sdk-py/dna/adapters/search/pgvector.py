@@ -359,8 +359,22 @@ class PgVecRecordSearchProvider:
     ) -> list[dict[str, Any]]:
         """Hybrid dense+lexical search fused with RRF. Returns hits shaped
         ``{scope, kind, name, score, title?, snippet?, rank_dense?,
-        rank_lexical?}`` (the port's guaranteed keys plus optional extras),
-        ordered best-first. Overlay-aware: base ∪ overlay, overlay shadows base."""
+        rank_lexical?, similarity?, lexical_score?}`` (the port's guaranteed
+        keys plus optional extras), ordered best-first. Overlay-aware:
+        base ∪ overlay, overlay shadows base.
+
+        ⚠️ ``score`` is the FUSED RRF value and is a function of RANK ALONE —
+        it says where a candidate placed, never whether it belongs. i-103:
+        ``similarity`` (cosine against the query, dense plane) and
+        ``lexical_score`` (token-overlap strength, higher is better on BOTH
+        stores) travel beside it so a caller can see the number the rank was
+        derived from. Both are OPTIONAL by contract: a lexical-only hit has no
+        ``similarity`` and a dense-only hit has no ``lexical_score``.
+
+        No relevance floor is applied here and none is shipped anywhere — see
+        :mod:`dna.kernel.query.relevance` for the measurement that refuses a
+        constant. Filtering is the caller's policy (``kernel.search
+        (min_similarity=…)``), never the store's."""
         if not query_text.strip() or k <= 0:
             return []
         await self._ensure_ready()
@@ -373,28 +387,42 @@ class PgVecRecordSearchProvider:
             # Dense plane — cosine KNN over the query embedding. Scoped to the
             # store's scope so the ANN scan stays cheap; all-zero query (no
             # tokens) skips the dense plane (its distances are meaningless).
+            #
+            # i-103: the DISTANCE travels with the rank. ``<=>`` is cosine
+            # distance, so ``1 - distance`` is the cosine similarity defined by
+            # ``kernel.query.relevance.cosine_similarity`` — the raw number the
+            # rank was hiding, and the only one that carries any relevance
+            # signal at all.
             dense_ranked: list[int] = []
+            dense_sim: dict[int, float] = {}
             if any(query_vec):
                 dense_rows = await conn.fetch(
-                    f"SELECT id FROM {self._schema}.dna_search_docs "
+                    f"SELECT id, embedding <=> $2::vector AS distance "
+                    f"FROM {self._schema}.dna_search_docs "
                     "WHERE scope=$1 AND embedding IS NOT NULL "
                     "ORDER BY embedding <=> $2::vector LIMIT $3",
                     scope, _vec_literal(query_vec), overfetch,
                 )
                 dense_ranked = [r["id"] for r in dense_rows]
+                dense_sim = {
+                    r["id"]: 1.0 - float(r["distance"]) for r in dense_rows
+                }
 
             # Lexical plane — tsvector match ranked by ts_rank. An empty/
             # unparseable query just contributes no lexical ranks.
             lexical_ranked: list[int] = []
+            lexical_score: dict[int, float] = {}
             ts = _ts_query(query_text)
             if ts:
                 lex_rows = await conn.fetch(
-                    f"SELECT id FROM {self._schema}.dna_search_docs "
+                    f"SELECT id, ts_rank(fts, to_tsquery('simple', $2)) AS rank "
+                    f"FROM {self._schema}.dna_search_docs "
                     "WHERE scope=$1 AND fts @@ to_tsquery('simple', $2) "
                     "ORDER BY ts_rank(fts, to_tsquery('simple', $2)) DESC LIMIT $3",
                     scope, ts, overfetch,
                 )
                 lexical_ranked = [r["id"] for r in lex_rows]
+                lexical_score = {r["id"]: float(r["rank"]) for r in lex_rows}
 
             if not dense_ranked and not lexical_ranked:
                 return []
@@ -426,14 +454,17 @@ class PgVecRecordSearchProvider:
             prev = best.get(key)
             if prev is None:
                 best[key] = _hit(
-                    scope, m, score, dense_pos.get(row_id), lexical_pos.get(row_id)
+                    scope, m, score, dense_pos.get(row_id), lexical_pos.get(row_id),
+                    dense_sim.get(row_id), lexical_score.get(row_id),
                 )
             else:
                 prev_is_base = prev["_tenant"] == ""
                 this_is_overlay = row_tenant != "" and row_tenant == (tenant or "")
                 if this_is_overlay and prev_is_base:
                     best[key] = _hit(
-                        scope, m, score, dense_pos.get(row_id), lexical_pos.get(row_id)
+                        scope, m, score, dense_pos.get(row_id),
+                        lexical_pos.get(row_id),
+                        dense_sim.get(row_id), lexical_score.get(row_id),
                     )
 
         hits = sorted(best.values(), key=lambda h: -h["score"])
@@ -481,6 +512,7 @@ def _now() -> str:
 def _hit(
     scope: str, m: dict[str, Any], score: float,
     rank_dense: int | None, rank_lexical: int | None,
+    similarity: float | None = None, lexical_score: float | None = None,
 ) -> dict[str, Any]:
     hit: dict[str, Any] = {
         "scope": scope, "kind": m["kind"], "name": m["name"], "score": score,
@@ -494,4 +526,12 @@ def _hit(
         hit["rank_dense"] = rank_dense
     if rank_lexical is not None:
         hit["rank_lexical"] = rank_lexical
+    # i-103 — the RAW scores, beside the ranks that were derived from them.
+    # ``score`` above is the FUSED RRF value and is a function of rank alone:
+    # it is identical for the #1 hit of a perfect match and the #1 hit of a
+    # query about nothing. These two are what actually vary.
+    if similarity is not None:
+        hit["similarity"] = similarity
+    if lexical_score is not None:
+        hit["lexical_score"] = lexical_score
     return hit

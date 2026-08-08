@@ -98,8 +98,47 @@ async def test_search_engine_provider_path_resets_damper():
     )
     se = SearchEngine(fake)  # type: ignore[arg-type]
     out = await se.search("s", "q", kind="Doc")
-    assert out == {"hits": [{"name": "semantic"}], "degraded": False}
+    # i-103 added ``floored_out`` / ``floor_unscored`` — present on BOTH
+    # branches with the same keys, so a caller never has to test for their
+    # existence. Zero here because no caller asked for a floor, which is the
+    # default and the only value the SDK itself ever passes.
+    assert out == {
+        "hits": [{"name": "semantic"}], "degraded": False,
+        "floored_out": 0, "floor_unscored": 0,
+    }
     assert fake._search_provider_warned is False  # damper reset via the host
+
+
+@pytest.mark.asyncio
+async def test_search_engine_applies_only_a_caller_supplied_floor():
+    """i-103 — the floor is the CALLER's policy, applied above the provider.
+
+    Above it deliberately: a third-party ``RecordSearchProvider`` needs no new
+    kwarg and cannot get the filtering wrong. And the hit with no ``similarity``
+    survives — dropping a result on the basis of a score you do not have is
+    fabrication in the other direction."""
+    class _Prov:
+        async def search(self, **_k):
+            return [
+                {"name": "strong", "similarity": 0.72},
+                {"name": "noise", "similarity": 0.05},
+                {"name": "lexical-only"},
+            ]
+    fake = _slice(
+        tenant=None, _search_provider=_Prov(), _search_provider_warned=False,
+        query=_agen([]),
+    )
+    se = SearchEngine(fake)  # type: ignore[arg-type]
+
+    unfiltered = await se.search("s", "q", kind="Doc")
+    assert [h["name"] for h in unfiltered["hits"]] == [
+        "strong", "noise", "lexical-only"]
+    assert unfiltered["floored_out"] == 0
+
+    filtered = await se.search("s", "q", kind="Doc", min_similarity=0.5)
+    assert [h["name"] for h in filtered["hits"]] == ["strong", "lexical-only"]
+    assert filtered["floored_out"] == 1
+    assert filtered["floor_unscored"] == 1
 
 
 # ── CatalogCache (the shared-dict-at-collaborator-level invariant) ─────────

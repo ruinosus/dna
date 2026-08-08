@@ -38,12 +38,37 @@ class SearchEngine:
     async def search(
         self, scope: str, query_text: str, *,
         kind: str | None = None, k: int = 10, tenant: str | None = None,
+        min_similarity: float | None = None,
     ) -> dict[str, Any]:
         """Public record search (F2 D2). Provider registered → semantic
         (pgvector/RRF, degraded=False). No provider OR provider error →
         lexical token-match fallback over query() (degraded=True; requires
         ``kind`` — without it returns empty degraded). Tenant binding igual
-        ao query(): kwarg > ``Kernel.tenant``."""
+        ao query(): kwarg > ``Kernel.tenant``.
+
+        ``min_similarity`` (i-103) is the CALLER's relevance floor over the
+        dense plane's raw cosine: hits scoring below it are dropped and counted
+        in ``floored_out``. ``None`` — the default, and the only value the SDK
+        itself ever passes — applies no floor.
+
+        ⚠️ There is deliberately NO shipped default, and that is a measurement
+        rather than a decision left open: on this deployment's own corpus,
+        unrelated queries reach 0.53 while genuine matches start at 0.35, so no
+        cutoff separates them (and neither corpus z-score nor top-1 margin does
+        either — both overlap 12/12). See :mod:`dna.kernel.query.relevance`. The
+        parameter exists because a caller with context may still want one; a
+        constant here would be the engine pretending to a judgment it cannot
+        make.
+
+        The floor is applied HERE rather than inside each provider on purpose:
+        it is policy over the score, not part of producing it, so a third-party
+        ``RecordSearchProvider`` needs no new kwarg and cannot get it wrong. It
+        also never applies to the lexical fallback — a degraded answer is
+        already the honest "we could not tell", and filtering it further would
+        shrink a blind spot into a claim.
+        """
+        from dna.kernel.query.relevance import apply_similarity_floor
+
         host = self._k
         effective_tenant = tenant if tenant is not None else (host.tenant or "")
         prov = host._search_provider
@@ -54,7 +79,14 @@ class SearchEngine:
                     k=k, tenant=effective_tenant or "",
                 )
                 host._search_provider_warned = False  # episode over
-                return {"hits": hits, "degraded": False}
+                kept, dropped, unscored = apply_similarity_floor(
+                    hits, min_similarity,
+                )
+                return {
+                    "hits": kept, "degraded": False,
+                    "floored_out": dropped,
+                    "floor_unscored": unscored,
+                }
             except Exception:  # noqa: BLE001 — search é leitura; degrada, nunca quebra
                 # Damped: full traceback ONCE per failure episode (a broken
                 # provider would otherwise spam a warning per request);
@@ -77,6 +109,12 @@ class SearchEngine:
                 tenant=effective_tenant or None,
             ),
             "degraded": True,
+            # Present with the same keys on BOTH branches so a caller never has
+            # to test for their existence — the floor simply did not run here
+            # (see the docstring: a degraded answer is already "we cannot tell",
+            # and filtering it would turn a blind spot into a claim).
+            "floored_out": 0,
+            "floor_unscored": 0,
         }
 
     async def _lexical_search(

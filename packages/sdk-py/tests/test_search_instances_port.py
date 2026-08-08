@@ -323,14 +323,21 @@ async def test_k_is_clamped(tmp_path):
     live.kernel.record_search_provider(prov)
     seen = {}
 
-    async def _spy(scope, query_text, *, kind=None, k=10, tenant=None):
+    async def _spy(scope, query_text, *, kind=None, k=10, tenant=None,
+                   min_similarity=None):
         seen["k"] = k
+        seen["min_similarity"] = min_similarity
         return {"hits": [], "degraded": False}
 
     live.kernel.search = _spy  # type: ignore[method-assign]
     await D.search_instances_impl(
         live, kind=_KIND, query="x", scope=_SCOPE, tenant=_T, k=10_000)
     assert seen["k"] == 100
+    # i-103 — the floor travels to the engine UNCLAMPED and, when the caller
+    # said nothing, as None. A door that defaulted it to a number here would
+    # reintroduce the shipped constant the measurement refuses, from the one
+    # place nobody would look for it.
+    assert seen["min_similarity"] is None
     await D.search_instances_impl(
         live, kind=_KIND, query="x", scope=_SCOPE, tenant=_T, k=0)
     assert seen["k"] == 1
@@ -413,3 +420,202 @@ async def test_the_tenant_reaches_the_source_on_the_degraded_path_too(tmp_path):
     names = {h["name"] for h in acme["hits"]}
     assert "acme-only" in names
     assert "globex-only" not in names
+
+
+# ── 4. i-103: a rank is not a relevance ─────────────────────────────────────
+#
+# §1 proved the two EMPTIES are different answers. This section is the mirror
+# defect, found later and worse: the two NON-EMPTIES were the same answer.
+# "the engine ran and found something like this" and "the engine ran and
+# returned the least bad row it had" arrived byte-identical, both wearing
+# `degraded: false`, because RRF ranks over noise and nothing downstream could
+# tell them apart. An agent that asks "does this already exist?" and always
+# hears yes stops proposing new things — which is the capability, not a nicety.
+
+
+@pytest.mark.asyncio
+async def test_a_healthy_answer_with_hits_now_carries_the_caveat(tmp_path):
+    """⭐ The field that closes i-103.
+
+    ``degraded`` / ``degraded_reason`` / ``notice`` all describe FAILURE. When
+    everything worked, the envelope said nothing at all — and that silence is
+    what a false positive was wearing. ``relevance_notice`` is the caveat for
+    the healthy path, in the payload, in the same breath as the hits."""
+    live = _live(tmp_path)
+    live.kernel.record_search_provider(_StubProvider(hits=[
+        {"scope": _SCOPE, "kind": _KIND, "name": "alpha", "score": 0.016,
+         "rank_dense": 32, "similarity": 0.30},
+    ]))
+    out = await D.search_instances_impl(
+        live, kind=_KIND, query="a report service in ruby", scope=_SCOPE,
+        tenant=_T)
+
+    # Nothing failed, and that stays true — the existing contract is untouched.
+    assert out["degraded"] is False
+    assert out["degraded_reason"] is None
+    assert out["notice"] is None
+    assert out["mode"] == "hybrid"
+
+    # …and yet the caller is told, in words, not to read this as existence.
+    assert out["relevance_notice"]
+    assert "RANKED, not FILTERED" in out["relevance_notice"]
+    assert "NOT evidence" in out["relevance_notice"]
+
+
+@pytest.mark.asyncio
+async def test_the_caveat_is_absent_where_there_is_nothing_to_caveat(tmp_path):
+    """An empty result needs no warning against over-reading it, and a DEGRADED
+    one already carries a louder ``notice`` that must stay the thing the reader
+    acts on. A caveat that shows up on every response is one nobody reads."""
+    live = _live(tmp_path)
+
+    live.kernel.record_search_provider(_StubProvider(hits=[]))
+    empty = await D.search_instances_impl(
+        live, kind=_KIND, query="nothing", scope=_SCOPE, tenant=_T)
+    assert empty["relevance_notice"] is None
+
+    live.kernel.record_search_provider(None)
+    await _write(live, "alpha", "alpha project")
+    degraded = await D.search_instances_impl(
+        live, kind=_KIND, query="alpha", scope=_SCOPE, tenant=_T)
+    assert degraded["hits"], "premise: the lexical fallback did find something"
+    assert degraded["relevance_notice"] is None
+    assert degraded["notice"], "the degradation notice is still the loud one"
+
+
+@pytest.mark.asyncio
+async def test_the_raw_score_reaches_the_caller_unchanged(tmp_path):
+    """(b) of the issue: the engine's raw numbers travel to whoever calls.
+
+    ``score`` is the fused RRF value and is a function of RANK alone — the same
+    number for the #1 hit of a perfect match and the #1 hit of a query about
+    nothing. ``similarity`` is what actually varies, so it has to arrive."""
+    live = _live(tmp_path)
+    live.kernel.record_search_provider(_StubProvider(hits=[
+        {"scope": _SCOPE, "kind": _KIND, "name": "alpha", "score": 0.0163,
+         "rank_dense": 1, "rank_lexical": 7, "similarity": 0.4434,
+         "lexical_score": 0.064},
+    ]))
+    out = await D.search_instances_impl(
+        live, kind=_KIND, query="anything", scope=_SCOPE, tenant=_T)
+    hit = out["hits"][0]
+    assert hit["similarity"] == 0.4434
+    assert hit["lexical_score"] == 0.064
+    assert hit["score"] == 0.0163  # relayed, never recomputed
+
+
+@pytest.mark.asyncio
+async def test_no_floor_runs_unless_the_caller_asks_for_one(tmp_path):
+    """⚠️ The assertion most likely to look like a bug to a later reader.
+
+    The SDK ships NO default relevance floor, and that is measured rather than
+    forgotten: on the real corpus the relevant and irrelevant populations
+    overlap on raw cosine, on corpus z-score and on top-1 margin, so any default
+    deletes true positives to hide false ones. See
+    ``dna.kernel.query.relevance``. If you are here to add a default, bring a
+    new measurement, not an intuition."""
+    live = _live(tmp_path)
+    live.kernel.record_search_provider(_StubProvider(hits=[
+        {"scope": _SCOPE, "kind": _KIND, "name": "barely-related",
+         "score": 0.01, "rank_dense": 32, "similarity": 0.02},
+    ]))
+    out = await D.search_instances_impl(
+        live, kind=_KIND, query="a report service in ruby", scope=_SCOPE,
+        tenant=_T)
+
+    assert [h["name"] for h in out["hits"]] == ["barely-related"]
+    assert out["min_similarity"] is None
+    assert out["floored_out"] == 0
+
+
+@pytest.mark.asyncio
+async def test_a_caller_supplied_floor_filters_and_is_reported(tmp_path):
+    """(a) of the issue, as POLICY: the caller sets it, the engine applies it,
+    and the envelope SAYS how many it removed. A filter that silently shortens a
+    list teaches its reader the corpus is smaller than it is."""
+    live = _live(tmp_path)
+    live.kernel.record_search_provider(_StubProvider(hits=[
+        {"scope": _SCOPE, "kind": _KIND, "name": "strong", "score": 0.03,
+         "rank_dense": 1, "similarity": 0.72},
+        {"scope": _SCOPE, "kind": _KIND, "name": "noise", "score": 0.01,
+         "rank_dense": 32, "similarity": 0.11},
+    ]))
+    out = await D.search_instances_impl(
+        live, kind=_KIND, query="anything", scope=_SCOPE, tenant=_T,
+        min_similarity=0.5)
+
+    assert [h["name"] for h in out["hits"]] == ["strong"]
+    assert out["count"] == 1
+    assert out["min_similarity"] == 0.5
+    assert out["floored_out"] == 1
+    # A floor is not a failure: the plane ran, it just filtered.
+    assert out["degraded"] is False
+
+
+@pytest.mark.asyncio
+async def test_the_floor_never_deletes_a_hit_it_cannot_score(tmp_path):
+    """Fail OPEN. A hit with no ``similarity`` came only from the LEXICAL plane
+    — literal token evidence — or from a provider that does not report the
+    field. Dropping a result on the basis of a score you do not have is
+    fabrication in the other direction."""
+    live = _live(tmp_path)
+    live.kernel.record_search_provider(_StubProvider(hits=[
+        {"scope": _SCOPE, "kind": _KIND, "name": "lexical-only", "score": 0.016,
+         "rank_lexical": 1},
+    ]))
+    out = await D.search_instances_impl(
+        live, kind=_KIND, query="anything", scope=_SCOPE, tenant=_T,
+        min_similarity=0.99)
+
+    assert [h["name"] for h in out["hits"]] == ["lexical-only"]
+    assert out["floored_out"] == 0
+
+
+@pytest.mark.asyncio
+async def test_the_floor_does_not_run_on_the_degraded_path(tmp_path):
+    """A degraded answer is already the honest "we could not tell". Filtering it
+    further would shrink a blind spot into a claim — the lexical fallback's
+    score is a token ratio, not a cosine, and a floor meant for one applied to
+    the other is a number doing a job it was never measured for."""
+    live = _live(tmp_path)
+    await _write(live, "alpha", "alpha project")
+    live.kernel.record_search_provider(None)
+
+    out = await D.search_instances_impl(
+        live, kind=_KIND, query="alpha", scope=_SCOPE, tenant=_T,
+        min_similarity=0.99)
+
+    assert out["degraded"] is True
+    assert [h["name"] for h in out["hits"]] == ["alpha"]
+    assert out["floored_out"] == 0
+
+
+@pytest.mark.asyncio
+async def test_the_real_engine_reports_a_cosine_through_the_door(tmp_path):
+    """End-to-end over the REAL sqlite-vec provider, because the stub above
+    cannot get the METRIC wrong and the store can: ``vec0``'s own distance is
+    L2, not cosine, so the number only means what the contract says if the
+    provider computes it rather than relabels the distance it already has."""
+    pytest.importorskip("sqlite_vec", reason="search-sqlite extra not installed")
+    from dna.adapters.search.sqlite_vec import SqliteVecRecordSearchProvider
+
+    live = _live(tmp_path)
+    await _write(live, "cache-invalidation", "cache invalidation storm")
+    await _write(live, "billing-portal", "billing portal checkout")
+
+    prov = SqliteVecRecordSearchProvider(live.kernel, db_path=str(tmp_path / "s.db"))
+    live.kernel.record_search_provider(prov)
+    try:
+        out = await D.search_instances_impl(
+            live, kind=_KIND, query="cache invalidation", scope=_SCOPE,
+            tenant=_T)
+    finally:
+        prov.close()
+
+    dense = [h for h in out["hits"] if "rank_dense" in h]
+    assert dense, "premise: the dense plane contributed"
+    for hit in dense:
+        assert -1.0000001 <= hit["similarity"] <= 1.0000001, (
+            f"{hit['name']} reports {hit['similarity']} — not a cosine, so the "
+            f"provider is relaying vec0's L2 distance under the wrong name"
+        )

@@ -210,9 +210,70 @@ async def _case_tenant_overlay_shadows_base(provider: Any) -> None:
     )
 
 
+async def _case_raw_scores_travel_with_ranks(provider: Any) -> None:
+    """i-103 — the RAW score behind each rank is reported, on ONE scale.
+
+    ``score`` is the fused RRF value and is a function of rank alone: it cannot
+    tell a perfect match from the least-bad answer to a query about nothing.
+    ``similarity`` is the number that can, so a provider must report it — and
+    must report the SAME quantity as every other provider, which is the half a
+    single-store test would never catch (pgvector's ``<=>`` IS cosine;
+    sqlite-vec's ``vec0`` distance is L2).
+
+    Asserted as a CONTRACT, not as a ranking: the value must be a cosine (in
+    ``[-1, 1]``) and must order the dense plane the same way the dense RANK
+    does. Absolute magnitudes are left alone — they depend on the embedder, and
+    the fake floor is not the real one.
+    """
+    await _index_fixture(provider)
+    hits = await provider.search(
+        scope=FIXTURE_SCOPE, query_text="memory similarity recall", k=10,
+    )
+    assert hits, "search returned nothing after indexing"
+
+    dense = [h for h in hits if h.get("rank_dense") is not None]
+    assert dense, (
+        "no hit carried rank_dense — the dense plane must run for this query"
+    )
+    for h in dense:
+        assert "similarity" in h, (
+            f"a dense hit must report its raw similarity, got keys {sorted(h)}"
+        )
+        sim = h["similarity"]
+        assert isinstance(sim, (int, float)) and -1.000001 <= sim <= 1.000001, (
+            f"similarity must be a cosine in [-1, 1], got {sim!r} for {h['name']}"
+        )
+
+    # Consistency, which is the whole point: a better dense RANK must never
+    # carry a worse similarity. If these disagree, one of them is being read
+    # off a different metric than the other.
+    by_rank = sorted(dense, key=lambda h: h["rank_dense"])
+    sims = [h["similarity"] for h in by_rank]
+    assert sims == sorted(sims, reverse=True), (
+        f"dense rank and similarity disagree — one of them is on the wrong "
+        f"metric: {[(h['name'], h['rank_dense'], h['similarity']) for h in by_rank]}"
+    )
+
+    # And the lexical plane's own raw strength, on the shared "higher is
+    # better" convention (SQLite's bm25() is negated at the source; Postgres'
+    # ts_rank is not — one field, one direction).
+    lexical = [h for h in hits if h.get("rank_lexical") is not None]
+    if lexical:
+        by_lex = sorted(lexical, key=lambda h: h["rank_lexical"])
+        scores = [h.get("lexical_score") for h in by_lex]
+        assert all(s is not None for s in scores), (
+            f"a lexical hit must report lexical_score, got {scores}"
+        )
+        assert scores == sorted(scores, reverse=True), (
+            f"lexical rank and lexical_score disagree in direction: "
+            f"{[(h['name'], h['rank_lexical'], h['lexical_score']) for h in by_lex]}"
+        )
+
+
 _CASES: list[tuple[str, str, Callable[[Any], Any]]] = [
     ("index_search_round_trip", "always", _case_index_search_round_trip),
     ("rrf_orders_by_relevance", "always", _case_rrf_orders_by_relevance),
+    ("raw_scores_travel_with_ranks", "always", _case_raw_scores_travel_with_ranks),
     ("kind_filter", "always", _case_kind_filter),
     ("k_limit", "always", _case_k_limit),
     ("empty_query_returns_empty", "always", _case_empty_query),
