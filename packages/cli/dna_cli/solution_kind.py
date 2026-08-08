@@ -358,8 +358,10 @@ def app_kind_absent_fields() -> tuple[str, ...]:
 # **does not serve**; "no port" is the CONSEQUENCE.
 #
 # ⚠️ The replacement is not a new boolean: ``copier.yml`` ALREADY asks
-# ``ingress`` (`choices: [internal, external]`), so ``none`` is a third value
-# of a vocabulary that exists. ``ingress`` has 1 use in the wiring and 0 in
+# ``ingress``, so ``none`` is a third value of a vocabulary that exists — and
+# since i-099 (08/08/2026) the template offers that third value too, with
+# ``port`` gated behind it, so a generated tree cannot record the pair the
+# descriptor refuses. ``ingress`` has 1 use in the wiring and 0 in
 # generated code, so it is an App field by the same ruler that expelled
 # ``python_module``. And ``ingress: none`` together with a ``port`` is REFUSED
 # at write time by the descriptor (`allOf`/`if`/`then`) — so this reader is not

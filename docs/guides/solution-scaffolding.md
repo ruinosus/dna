@@ -237,6 +237,15 @@ declaration](#keeping-the-declaration-the-solution-record). With one recorded,
 the same round trip ends on `graph_obo: true`, because the value was re-passed
 from somewhere the update does not rewrite.
 
+⚠️ **`port` is the second gated answer** (i-099, 08/08/2026): it is asked only
+when `ingress != 'none'`. So the same round trip applies to it — flip an app to
+`ingress: none` and back, and `port` returns as **8080**, whatever it was
+before. That is the price of the gate, and it is paid on purpose: the
+alternative was recording a `port` for an app that does not serve, which the
+`App` descriptor **refuses to write** (`ingress: none` beside a `port` is a
+contradiction). Keep the real port in the `Solution` record, or pass
+`--data port=<the old value>` on the update.
+
 #### 3. Per-instance answers files need `-a`
 
 Copier's default lookup is `.copier-answers.yml`. The per-instance layout this
@@ -414,10 +423,26 @@ ingress: none      # → its `port` is no longer asked for
 
 `worker` is not "an App whose port does not apply" — it is an App that **does
 not serve**, and having no port is the *consequence*. `ingress` was already a
-`copier.yml` question (`internal` / `external`), so `none` is a third value of a
-vocabulary that exists rather than a new mechanism; and the descriptor refuses
-`ingress: none` together with a `port`, so the report is not hiding a question,
-it is declining to ask for something the schema forbids.
+`copier.yml` question, so `none` is a third value of a vocabulary that exists
+rather than a new mechanism; and the descriptor refuses `ingress: none`
+together with a `port`, so the report is not hiding a question, it is declining
+to ask for something the schema forbids.
+
+⭐ **And it is generable**, which for one day it was not — the asymmetry worth
+remembering. The Kind accepted `ingress: none` from PR #355 and the reference
+template offered only `internal|external`, always emitting an ingress block
+with a `targetPort`: the house ran a service its own template could not
+produce. Nothing failed, because nothing tried. Closed by i-099 on 08/08/2026:
+
+```bash
+dna solution new templates/app-container ./my-repo --defaults \
+    --data service_name=worker --data ingress=none
+```
+
+renders the container app **with no ingress block**, a compose fragment that
+publishes **no port**, a Dockerfile with **no `EXPOSE`**, a `server.py` whose
+`main()` is the work rather than a server — and an answers file with **no
+`port` key at all**, because that is the one the `App` record is derived from.
 
 ⚠️ A generic `not_applicable` map was designed and **deliberately not built**.
 Once `python_module` moved to `answers` by the wiring-vs-render ruler, exactly

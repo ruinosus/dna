@@ -209,11 +209,15 @@
 # `ingress: none` junto com um `port`. "Não atende" e "atende na 8080" não
 # podem ser ambas verdade.
 #
-# ⚠️ Ponta do TEMPLATE, registrada aqui porque é onde alguém vai procurar: o
-# `copier.yml` pergunta `ingress` com `choices: [internal, external]` e **não
-# tem o valor `none`** — ele emite sempre um bloco de ingress com `targetPort`.
-# Ou seja, o `worker` do dna-cloud NÃO é representável pelo template hoje. O
-# Kind representa; o template ainda não. É uma ponta dele, não deste arquivo.
+# ✅ A ponta do TEMPLATE FOI FECHADA em 08/08/2026 (i-099). O registro fica
+# porque é aqui que alguém vai procurar: durante um dia o `copier.yml`
+# perguntava `ingress` com `choices: [internal, external]` e emitia SEMPRE um
+# bloco de ingress com `targetPort` — o Kind representava o `worker` e o
+# template não conseguia produzi-lo. Declarável e não gerável é a classe de
+# assimetria que fica anos, porque nada falha até alguém tentar. Agora o
+# template oferece `none`, e lá o `port` é uma pergunta GATED
+# (`when: ingress != 'none'`) exatamente para o answers file não gravar a porta
+# que o `allOf` abaixo recusa.
 #
 # ⛔ O que NÃO entrou, e por quê: as RESPOSTAS do Copier (`answers`,
 # `answers_file`, `template.src/ref`). Elas continuam na `Solution`, que é o
@@ -382,9 +386,9 @@ spec:
           a inferência pelo formato de que esta decisão está saindo.
           ⛔ `ingress: none` COM um `port` é contradição, e é recusado na
           gravação (`allOf` abaixo).
-          ⚠️ Ponta do template, não deste Kind: o `copier.yml` oferece só
-          `internal|external` e emite sempre um bloco de ingress com
-          `targetPort` — o `worker` não é gerável por ele hoje.
+          ✅ O template fala os três desde 08/08/2026 (i-099): `copier.yml`
+          oferece `none`, e lá o `port` é uma pergunta gated — um `worker` é
+          gerável, e o que sai não carrega porta em lugar nenhum.
           Ausente significa que ninguém disse quem alcança este App; é um fato
           a reportar, nunca um `internal` presumido.
       port:

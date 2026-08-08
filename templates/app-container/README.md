@@ -47,6 +47,36 @@ overwrite production code.
 `port` and `can_sleep` stay **per service**, never per image — two doors over one
 image legitimately disagree, and each renders its own bicep.
 
+## `ingress: none` — an app that does not serve
+
+```bash
+dna solution new templates/app-container ./my-repo --defaults \
+    --data service_name=worker --data ingress=none
+```
+
+dna-cloud's `worker` scales on KEDA over a queue and answers nobody. `none` is
+the third value of `ingress`, and it removes the port **everywhere**: no ingress
+block in the bicep, no `ports:` in the compose fragment, no `EXPOSE` in the
+Dockerfile, no `PORT` in `server.py` (whose `main()` is the work, not a server),
+and no `port` key in the answers file.
+
+⭐ The last one is the one that matters. `port` is a **gated question**
+(`when: ingress != 'none'`), because the `App` descriptor **refuses**
+`ingress: none` beside a `port` at write time — a template that asked anyway
+would record a port and the App derived from those answers could not be written.
+
+⚠️ Gating costs something, and it is the same cost `graph_obo` carries: a gated
+answer is **erased** when its condition stops holding and returns as the
+**default**, not as what you answered. Flip an app to `ingress: none` and back
+and `port` is 8080 again. Keep the real value in the `Solution` record — which
+exists precisely to outlive the answers file — or pass `--data port=<value>` on
+the update. `dna solution update` names every such loss; it cannot undo one.
+
+Until 08/08/2026 the `App` Kind accepted `ingress: none` and this template did
+not offer it: an App anyone could **declare** and nobody could **generate**.
+That asymmetry sat for as long as it did because nothing fails until somebody
+tries.
+
 ## `can_sleep` — the cost, on screen
 
 `can_sleep: false` renders `minReplicas: 1`. That is **~US$ 90/month, recurring,
