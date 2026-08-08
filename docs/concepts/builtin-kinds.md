@@ -581,12 +581,40 @@ and would have put the corpus outside the Kind system — no version, no tenancy
 no relation back to the file it came from.
 
 **A collection is a name prefix.** Instance names are structured
-(`<collection>/<sha12>/<ordinal>`), so a corpus partitions without a new column
+(`<collection>.<sha12>.<ordinal>`), so a corpus partitions without a new column
 and without a Kind per collection. The narrowing is applied where the search
 provider *chooses* candidates, never to the list it already chose — both planes
 over-fetch a fixed number of rows, so a post-filter would let one voluminous
 collection fill that budget and crowd every other row out while the envelope
 still reported a healthy hybrid search.
+
+The separator is a dot, and both halves of that choice were measured rather than
+picked. An instance name is written to disk as a *single path component*, so
+`validate_instance_name` refuses a `/` before any adapter is reached — the
+format was `<collection>/<sha12>/<ordinal>` until ingestion tried to write one
+and could not. And the separator has to sit *outside* the alphabet a collection
+name may use (`[a-z0-9-]`), or the prefix of `handbook` would sweep up every
+chunk of `handbook-2024` — which is exactly the leak the trailing separator
+exists to prevent.
+
+**A chunk is produced, never authored.** `dna.application.knowledge`'s
+`ingest_knowledge_impl` takes *already-extracted Markdown* plus the `sha256` of
+a registered `SourceArtifact`, cuts it with
+[chonkie](https://github.com/feyninc/chonkie), and writes one instance per
+passage. Bytes stop at the host on purpose: `uri` is opaque by contract, so a
+vendor-neutral SDK that could resolve `blob://` would have to know about
+credentials, and the byte→Markdown converter is the host's dependency already.
+The chunk's provenance (`source_uri`, `source_filename`) is read *from the
+artifact instance*, never accepted from the caller — a citation the caller could
+dictate is not evidence.
+
+Re-ingesting the same file rewrites the same instances, because the name is
+derived from the content address. Re-ingesting it with a *different* cut is the
+case that needs help: fewer passages leave the surplus ordinals behind, in the
+store and in the index, where a search would return them as text from a dead
+version of the document. The port prunes them — through the kernel directly,
+which is the path `record.append-only` deliberately leaves open for a
+purpose-built verb, exactly as `forget` retires an Engram.
 
 **It is embeddable but NOT `memory.recallable`**, and the distinction is the one
 that trait exists for. `memory.recallable` means a Kind participates in the

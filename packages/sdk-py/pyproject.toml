@@ -146,6 +146,25 @@ maf = ["agent-framework==1.12.1", "agent-framework-ag-ui==1.0.0"]
 # Without it, everything falls back to the #244 heuristic + Python `re`,
 # unchanged. Install: pip install "dna-sdk[re2]".
 re2 = ["google-re2>=1.1"]
+# i-154 — a INGESTÃO da base de conhecimento (`dna.application.knowledge`). O
+# cortador é o `chonkie` (MIT), pela regra não-negociável: existe biblioteca
+# mantida para o problema, ela é obrigatória — não se escreve splitter à mão.
+#
+# ⚠️ SEM EXTRAS DO CHONKIE, e esta linha é o contrato. O pacote base traz SEIS
+# dependências (`tqdm`, `numpy`, `chonkie-core`, `tenacity`, `httpx`, `tokie`),
+# das quais `numpy` e `httpx` já estavam na árvore — medido em 08/08/2026:
+# `uv pip install 'chonkie>=1.7,<2'` instalou 3 pacotes. Todo extra dele
+# (`[semantic]`, `[st]`, `[neural]`, `[tokenizers]`, `[hub]`) arrasta modelo,
+# torch ou um download em tempo de execução. Peso é a ÚNICA razão legítima de
+# recusar uma biblioteca oficial, então o `chonkie` só segue sendo a escolha
+# certa enquanto seguir leve: se um dia um extra parecer necessário, MEÇA e
+# diga o número — não ligue por conveniência.
+#
+# Fora de `all` (é um caso de uso, não a base) e DENTRO de `dev`, porque a
+# suíte corta Markdown de verdade — um teste de corte com dublê provaria só
+# que o dublê corta. Nada no install padrão importa `chonkie` (guarda:
+# tests/test_knowledge_import_isolation.py).
+knowledge = ["chonkie>=1.7,<2"]
 all = ["dna-sdk[postgres,sqlite,sql,re2,otel,mime]"]
 dev = [
     "pytest>=7.0",
@@ -163,6 +182,9 @@ dev = [
     # conformance suite runs for real in the CI postgres job (redundant with
     # [all] but explicit, mirroring search-sqlite).
     "dna-sdk[search-pgvector]",
+    # i-154 — o cortador REAL na suíte. `chunk_markdown` é a cola sobre o
+    # `chonkie`, e um teste dela com dublê mediria o dublê.
+    "dna-sdk[knowledge]",
     # A face A2A é servida/consumida pelo SDK OFICIAL. O extra de PRODUÇÃO é
     # `dna-cli[a2a]` (o código serve HTTP, e o dna-cli é quem declara faces);
     # aqui ele entra em `dev` porque os testes moram neste pacote. Os testes que

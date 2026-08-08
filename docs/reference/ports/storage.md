@@ -263,9 +263,14 @@ Semantic (not lexical) retrieval over records. Two shipped — sqlite-vec and pg
     plane's top-40 from ``{Issue: 37, Engram: 2, App: 1}`` to ``{Chunk: 40}``,
     while ``mode`` still read "hybrid" and ``degraded`` still read False.
 
-    ``name_prefix`` selects a NAME PREFIX (``"<collection>/"``) and is how a
+    ``name_prefix`` selects a NAME PREFIX (``"<collection>."``) and is how a
     corpus is partitioned into collections without a column: instance names are
-    structured, and the store's identity index is prefix-searchable.
+    structured, and the store's identity index is prefix-searchable. (The
+    separator was ``/`` until the ingestion half measured that a name carrying
+    one cannot be WRITTEN at all — ``validate_instance_name`` holds every
+    instance name to a single path component. Reads never validate the name,
+    which is why the read half shipped green with a format nothing could
+    produce.)
 
 **The contract**
 
