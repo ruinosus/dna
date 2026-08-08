@@ -188,7 +188,7 @@
 # `relation_values` faz `spec.get(<nome da relação>)`, primeiro nível, sempre.
 #
 # ⚠️ Medido antes de recusar, porque a forma do defeito importa mais que a
-# recusa. Declarar `relations: {services: {to: App, cardinality: many}}` hoje:
+# recusa. Declarar `relations: {services: {to: App, cardinality: many}}` era:
 #
 #     schema_contradictions(...)  → NADA (verde: `services` existe e é array)
 #     Relation.resolved / enforced → True / True   (diz que VETA a escrita)
@@ -196,6 +196,15 @@
 #
 # Uma declaração que passa no lint, se anuncia como imposta, e não faz nada —
 # a forma de erro exata que esta casa mais caro paga. Por isso não foi forçada.
+#
+# ⭐ 07/08/2026 (i-100): a PRIMEIRA linha do bloco acima deixou de ser verdade,
+# e é a única que deixou. `schema_contradictions` só lia `prop["type"]` e nunca
+# `items`; agora, para uma relação RESOLVIDA sobre array cujos `items` o schema
+# tipa como não-string, ela ACUSA. As outras duas linhas seguem exatas — a
+# relação continuaria se anunciando imposta e continuaria lendo zero, porque
+# `relation_values` segue lendo só o primeiro nível. O que mudou é que a recusa
+# escrita neste comentário passou a ser imposta pela máquina: quem "arrumar"
+# isto no futuro colide com o lint, não com um comentário.
 #
 # Quem carrega a relação com o `App` é **`apps[]`**, que é de primeiro nível,
 # `by: name`, resolvida e IMPOSTA — e que, com `App` = deployment, denota o

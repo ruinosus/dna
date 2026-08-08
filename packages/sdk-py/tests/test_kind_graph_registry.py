@@ -115,6 +115,59 @@ class TestEveryDeclarationResolves:
             ]
         assert problems == [], problems
 
+    def test_the_element_type_check_has_real_subjects_to_acquit(self, ports):
+        """i-100's other half, and it exists because the test above cannot
+        tell "nothing is wrong" from "there is nothing to be wrong about".
+
+        ``test_every_relation_agrees_with_its_own_schema`` would pass just as
+        green against a registry with no array-of-object relation at all, or
+        against a ``schema_contradictions`` that returned ``[]`` for
+        everything. So this one MEASURES the population the third check must
+        walk past: relations declared over a field whose ``items`` are typed as
+        something other than a string.
+
+        Measured 07/08/2026: **ten** — ``SourceArtifact.derived_refs``,
+        ``AgentSession.produced_artifacts``, and ``produces`` on Bug, Epic,
+        Feature, Initiative, Issue, Spike, Story and Task. Every one is
+        ``to: "*"`` + ``by: {kind, name}``, hence ``resolved=False``: the
+        kernel says plainly that it does not follow them, so nothing is
+        promised and nothing is broken. They are honest, they are drawn in the
+        kind graph, and the check must never accuse them.
+
+        Not pinned at exactly ten — a new ``*.produces`` is ordinary. What is
+        asserted is that the set is NOT EMPTY (so the acquittal above is real)
+        and that every member is unresolved (so the day one of them becomes
+        resolved, this fails HERE, loudly, instead of resolving zero in
+        silence)."""
+        from dna.kernel.kinds.relations import _declared_types
+
+        subjects = []
+        for port in ports:
+            kind = getattr(port, "kind", None)
+            try:
+                props = (port.schema() or {}).get("properties") or {}
+            except Exception:  # pragma: no cover - defensive
+                continue
+            for name, rel in sorted(relations_of(port).items()):
+                prop = props.get(name)
+                if not isinstance(prop, dict) or prop.get("type") != "array":
+                    continue
+                declared = _declared_types(prop.get("items"))
+                if declared and "string" not in declared:
+                    subjects.append((f"{kind}.{name}", rel.resolved))
+
+        assert subjects, (
+            "no relation in this registry sits on an array of non-strings — "
+            "the acquittal in the test above is vacuous, and i-100's second "
+            "half is no longer being measured by anything"
+        )
+        followed = [n for n, resolved in subjects if resolved]
+        assert followed == [], (
+            "these relations are declared over an array of non-strings AND "
+            "reported as followed by the kernel — `relation_values` reads "
+            f"strings, so each of them resolves ZERO: {followed}"
+        )
+
 
 class TestEveryPairPairs:
     def test_the_registry_has_no_inverse_gap(self, ports):

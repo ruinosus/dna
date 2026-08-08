@@ -1560,10 +1560,18 @@ def test_a_relacao_com_App_nao_e_declaravel_de_dentro_de_services() -> None:
     (`top_level_properties_only`).
 
     O que este teste mede é a FORMA DO DEFEITO, que é o que torna a recusa
-    obrigatória em vez de opcional: a declaração passaria no lint, se
-    anunciaria como imposta, e leria zero. Uma guarda verde que não guarda
-    nada é o pior dos dois mundos, e é o que aconteceria se alguém "arrumasse"
-    isto no futuro.
+    obrigatória em vez de opcional: a declaração se anunciaria como imposta e
+    leria zero. Uma guarda verde que não guarda nada é o pior dos dois mundos,
+    e é o que aconteceria se alguém "arrumasse" isto no futuro.
+
+    ⭐ **07/08/2026 (i-100): a primeira asserção INVERTEU, e essa é a notícia
+    boa.** Este teste dizia `schema_contradictions(...) == []` — *"o lint
+    passaria VERDE"* — e o comentário no `solution.kind.yaml` dizia o mesmo.
+    Era verdade e era o buraco: `schema_contradictions` só olhava
+    `prop["type"]`, nunca `items`. Agora olha, e a recusa que até aqui morava
+    num comentário é imposta pela máquina. As outras duas asserções não mudam
+    — `relation_values` continua lendo só o primeiro nível, que é a limitação
+    de verdade; o que mudou é que ela deixou de ser SILENCIOSA.
     """
     from dna.kernel.kinds.relations import (
         normalize_relations,
@@ -1584,12 +1592,16 @@ def test_a_relacao_com_App_nao_e_declaravel_de_dentro_de_services() -> None:
     }
     spec = {"services": [{"name": "mcp"}, {"name": "mcp-entra"}]}
 
-    assert schema_contradictions(rels, schema) == [], "o lint passaria VERDE"
+    problemas = schema_contradictions(rels, schema)
+    assert len(problemas) == 1, "o lint ACUSA — era ele que passava verde"
+    assert "items of `services`" in problemas[0]
     assert rels["services"].resolved and rels["services"].enforced, (
-        "e ela se anunciaria como resolvida E imposta"
+        "ela AINDA se anuncia resolvida E imposta — o anúncio não mudou, "
+        "mudou quem o contradiz"
     )
     assert relation_values(rels["services"], spec) == [], (
-        "…lendo ZERO valores: nenhuma aresta, nenhum veto, em silêncio"
+        "…lendo ZERO valores: nenhuma aresta, nenhum veto — mas não mais em "
+        "silêncio"
     )
 
     # A que FUNCIONA é `apps[]`, de primeiro nível — e é a declarada.
