@@ -1,0 +1,70 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: zangumuolmgy
+  name: i-103-plano-denso-sem-piso-de-relevancia
+spec:
+  title: A busca semântica nunca devolve 'não achei' — o plano denso não tem piso de relevância
+  description: |-
+    ACHADO ao medir a i-152 do dna-cloud (PR dna-cloud#379), com o motor semântico LIGADO e
+    funcionando.
+
+    ⚠️ O PLANO DENSO NÃO TEM PISO DE RELEVÂNCIA. O RRF ordena por POSTO, e posto existe sobre
+    RUÍDO. Consequência: uma busca nunca devolve vazio por irrelevância — ela devolve o menos
+    irrelevante, com `degraded: False`.
+
+    MEDIDO, contra os 11 App reais:
+
+      "servico de relatorio em ruby"   (kind=App)
+        léxico   → []                                    ← honestamente vazio
+        híbrido  → ['mcp','rest','rest-user',…]  degraded=False
+
+    ⭐ O motor NÃO ELIMINA o falso positivo — ele o torna MAIS CONFIANTE. O léxico ao menos
+    admitia não ter achado nada; o denso responde com cara de acerto.
+
+    E a prova de que o motor FUNCIONA está no mesmo run (não é caso de motor ruim):
+
+      "convite por e-mail nunca chega ao destinatario"  (kind=Issue, 141 instâncias)
+        léxico   → i-139…, i-137…, i-124…               ← lixo
+        híbrido  → i-056-portal-never-accepts-invites    ← #1, sem UM ÚNICO token em comum
+                                                           (o alvo está em inglês)
+
+    === POR QUE ISTO IMPORTA AGORA, e não é teoria ===
+
+    A máxima desta casa é PROCURAR ANTES DE CONSTRUIR, e ela virou capacidade: o criador de App e
+    o criador de Solution (dna-cloud #373, #374) BUSCAM antes de propor e citam o que acharam.
+
+    Com o motor como está, a pergunta "já existe um Kind/App parecido com isto?" NUNCA RECEBE UM
+    NÃO. O criador sempre acha algo, e sempre com `degraded: False` — ou seja, sem o aviso que
+    existe justamente para dizer "não confie nesta resposta".
+
+    ⛔ Um agente que pergunta "já existe?" e sempre ouve "sim, isto aqui" é pior que um que não
+    pergunta: ele para de propor coisa nova por ruído, ou aprende a ignorar a resposta.
+
+    === AS DUAS SAÍDAS ===
+
+      (a) PISO DE RELEVÂNCIA no plano denso — abaixo do limiar, o resultado não entra. Precisa
+          decidir o limiar e como ele é calibrado; um número chumbado é a mesma chumbadura que o
+          preço de modelo recusou.
+      (b) O SCORE BRUTO NO ENVELOPE — a busca continua devolvendo tudo, e QUEM CHAMA decide. Mais
+          honesto (não esconde), e empurra a decisão para quem tem contexto.
+
+    ⭐ Sem (a) OU (b), "já existe algo parecido?" nunca recebe um "não" — e essa é a única resposta
+    que a máxima procurar-antes-de-construir precisa ouvir para funcionar.
+
+    === ACHADO IRMÃO, barato e valioso ===
+
+    Uma linha de `logger.info` no `boot_live` dizendo QUAL provider e QUAL embedder subiram teria
+    evitado a i-152 inteira — que nasceu de alguém (eu) ler um caminho de wiring e concluir sobre
+    o outro. Vale por si.
+  type: bug
+  severity: high
+  status: open
+  created_at: '2026-08-08T12:51:26+00:00'
+  updated_at: '2026-08-08T12:51:26+00:00'
+  timeline:
+  - at: '2026-08-08T12:51:26+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
