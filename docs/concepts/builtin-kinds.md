@@ -564,6 +564,51 @@ The Kind is deliberately vendor-neutral: where the bytes actually live is a
 deployment's own concern (a blob store in a hosted product, a directory in a
 self-host), and the kernel treats `uri` as opaque so that stays true.
 
+### KnowledgeChunk
+
+Extraction is one thing a file can become. **Retrieval** is the other: a passage
+of the original, kept so an agent can find it and quote it. A
+[`KnowledgeChunk`](../reference/kinds/record.md#knowledgechunk)
+(`artifact-knowledge-chunk`) is one such passage — the text, the collection it
+belongs to, and the `SourceArtifact` it came from.
+
+**A chunk is an instance, and that is the whole design.** Everything a corpus
+needs already exists for instances: `embed:` makes the text searchable, tenancy
+isolates one workspace's corpus in the index rather than at the door, and the
+search door already returns an envelope that says whether the semantic plane
+actually ran. A parallel document store would have had to re-earn each of those,
+and would have put the corpus outside the Kind system — no version, no tenancy,
+no relation back to the file it came from.
+
+**A collection is a name prefix.** Instance names are structured
+(`<collection>/<sha12>/<ordinal>`), so a corpus partitions without a new column
+and without a Kind per collection. The narrowing is applied where the search
+provider *chooses* candidates, never to the list it already chose — both planes
+over-fetch a fixed number of rows, so a post-filter would let one voluminous
+collection fill that budget and crowd every other row out while the envelope
+still reported a healthy hybrid search.
+
+**It is embeddable but NOT `memory.recallable`**, and the distinction is the one
+that trait exists for. `memory.recallable` means a Kind participates in the
+memory verbs — retention decay, affect weighting, reconsolidation on recall. A
+passage of a document does not decay, has no affect, and does not change for
+having been read: it is what the file says. Declaring the trait would have put a
+corpus — voluminous by construction — into `recall` beside a person's Engrams,
+ranked by properties it does not have. `embed: [text]` is what makes it
+findable; a caller who wants the corpus asks for it by name.
+
+**Only `text` is embedded.** Without that restriction the indexed body would
+collect *every* string on the instance — the sha256 in hex, the collection name
+repeated on every chunk — and push that noise into both the vector and the
+full-text index. A hex digest is not language, and a collection name repeated
+across a whole corpus makes a search for that name match all of it.
+
+⚠️ Retrieval over a corpus **ranks; it does not filter**. DNA ships no relevance
+floor, because on a real corpus none separates the relevant from the irrelevant
+(the measurement is in `dna.kernel.query.relevance`). So a chunk comes back with
+its score and its source, and a caller presenting chunks to a person or a model
+is expected to pass both along rather than assert on their strength.
+
 ## Delegation — the Agent Card of a remote agent
 
 [A2A](https://a2a-protocol.org/) (Agent2Agent, governed by the Linux
