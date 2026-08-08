@@ -6,25 +6,57 @@ metadata:
 spec:
   title: 'A guarda de orfaos: 5 copilotos sem App, e o dia em que runs_in vira obrigatorio'
   description: runs_in nasce opcional. Uma guarda derivada reporta quantos Copilot estao sem App e quantas arestas App->Copilot penduram (hoje 2 de 4).
-  status: todo
+  status: done
   feature: f-conta-do-copiloto
   priority: medium
   acceptance_criteria:
-  - Dado o estado atual, quando a guarda roda, entao ela reporta a contagem de copilotos orfaos e de arestas penduradas, sem falhar
-  - Dado um universo vazio, quando a guarda roda, entao ela FALHA — universo vazio nao e tudo certo
-  - Dado que a contagem de orfaos chegue a zero, quando a guarda roda, entao ela avisa que runs_in pode virar obrigatorio
+  - text: Dado o estado atual, quando a guarda roda, entao ela reporta a contagem de copilotos orfaos e de arestas penduradas, sem falhar
+    done: true
+    done_at: '2026-08-08T12:59:30+00:00'
+    done_by: story-done-auto
+  - text: Dado um universo vazio, quando a guarda roda, entao ela FALHA — universo vazio nao e tudo certo
+    done: true
+    done_at: '2026-08-08T12:59:30+00:00'
+    done_by: story-done-auto
+  - text: Dado que a contagem de orfaos chegue a zero, quando a guarda roda, entao ela avisa que runs_in pode virar obrigatorio
+    done: true
+    done_at: '2026-08-08T12:59:30+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: a guarda derivada, nunca enumerada'
-  - 'Tests: auto-teste que planta um orfao e prova que a guarda o enxerga'
-  - 'Docs: o porque no cabecalho, com as contagens medidas em 07/08'
-  - 'CI: ligada ao lint'
+  - text: 'Code: a guarda derivada, nunca enumerada'
+    done: true
+    done_at: '2026-08-08T12:59:30+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: auto-teste que planta um orfao e prova que a guarda o enxerga'
+    done: true
+    done_at: '2026-08-08T12:59:30+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: o porque no cabecalho, com as contagens medidas em 07/08'
+    done: true
+    done_at: '2026-08-08T12:59:30+00:00'
+    done_by: story-done-auto
+  - text: 'CI: ligada ao lint'
+    done: true
+    done_at: '2026-08-08T12:59:30+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-07T17:42:03+00:00'
-  updated_at: '2026-08-07T17:42:03+00:00'
+  updated_at: '2026-08-08T12:59:55+00:00'
   timeline:
   - at: '2026-08-07T17:42:03+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-08-08T12:59:55+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: done
+    commit_ref: f4b3c4b9f79ae775357225d5a37b47868fc4e271
+    summary: 'Entregue e merjado (PR #362). ⚠️ E ele DERRUBOU o número da própria story: não são ''5 de 7 sem runs_in'' — são 9 de 9, 100%. O cinco vinha da frase ''cinco copilotos não estão em App nenhum'', que é App.copilots (COMPOSIÇÃO), não runs_in (EXECUÇÃO) — e o cabeçalho do copilot.kind.yaml gasta TRINTA LINHAS medindo esse 1:N justamente para recusar inverse_of entre os dois. A descrição da story reuniu os dois lados que o Kind separou de propósito. A guarda os conta em linhas separadas e NUNCA SOMA. ⭐ E um achado que decidiu onde ela lê: dna_edges está atrasado NOS DOIS SENTIDOS — carrega 1 aresta de um App que não existe mais e não tem nenhuma das 2 de um App que existe. Uma guarda sobre o grafo derivado contaria a de um morto e perderia as de um vivo; por isso ela lê DECLARAÇÃO. Virou comando irmão (dna copilot orphans) e não seção do provenance, porque os contratos de saída se CONTRADIZEM: provenance sai 0 num scope vazio (não ter passado é legítimo) e este tem de sair 1 (um portão que se abre sozinho anuncia o dia errado) — e as duas estão certas.'
+  references:
+  - Spec/spec-app-e-o-servico
+  closed_at: '2026-08-08T12:59:30+00:00'
