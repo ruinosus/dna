@@ -478,8 +478,14 @@ def test_o_rotulo_de_PROXY_aparece_ONDE_o_numero_aparece():
     assert "[PROXY]" in linha_contencao
     assert "[PROXY]" in linha_aceitacao
     # E o custo, que NÃO é proxy, não pode ser rotulado como se fosse.
+    #
+    # ⚠️ `[MEASURED` sem o `]`: desde a `i-101` o rótulo carrega qualificadores
+    # (`≥ PISO`, `⚠ SUSPEITO`) dentro dos mesmos colchetes, e `PRECOS` é um
+    # preço de chamador sem `cost_quoted_at` — idade DESCONHECIDA, portanto
+    # suspeito. A asserção que importa (a procedência aparece, e não é PROXY)
+    # continua exata.
     linha_custo = next(l for l in texto if l.startswith("Custo (tokens):"))
-    assert "[PROXY]" not in linha_custo and "[MEASURED]" in linha_custo
+    assert "[PROXY]" not in linha_custo and "[MEASURED" in linha_custo
 
 
 def test_o_render_diz_QUAL_tecnica_de_mercado_esta_sendo_respondida():

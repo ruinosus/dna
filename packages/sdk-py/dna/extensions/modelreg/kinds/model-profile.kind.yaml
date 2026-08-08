@@ -11,6 +11,14 @@
 # twin) reads instruction_token_cap from THIS registry via
 # kernel.model_profile(id_or_alias); a cap literal in code is a bug.
 #
+# The SAME contract now covers PRICE (s-preco-vem-do-modelprofile):
+# dna.runtime.roi resolves ModelPrice from cost_per_1m_input_usd /
+# cost_per_1m_output_usd (price_book / gather_prices), so a price literal in
+# code is a bug for exactly the reason a cap literal is — a price in code is a
+# price in nobody's code. Null means NOT QUOTED, never zero, and a model with
+# no quote makes the WHOLE money answer not-calculable rather than a partial
+# sum that is smaller than the truth.
+#
 # Profiles live in the `_lib` scope (`model-profiles/<model_id>.yaml`) —
 # ModelProfile is GLOBAL (base only, no per-tenant override) and NOT
 # inheritable; kernel.model_profile() queries `_lib` directly regardless
@@ -56,6 +64,22 @@ spec:
       role: self
   schema:
     type: object
+    # ⚠️ Why the price fields are NOT required, i-101 (08/08/2026). With ZERO
+    # live instances, adding a required field costs nothing TODAY — that window
+    # is real and it is why the two new fields land now. It is not why they are
+    # optional. They are optional because `required` in JSON Schema is
+    # unconditional, and this Kind serves TWO audiences from one object: whoever
+    # registers a token cap (the outage that created the Kind) and whoever
+    # registers a price. Requiring cost_quoted_at would demand a quote date from
+    # someone declaring only instruction_token_cap — and a person forced to fill
+    # a field they have no answer for invents one, which is worse than absent
+    # because an invented date READS as knowledge.
+    #
+    # So the requirement is CONDITIONAL and lives where conditions can be
+    # expressed — the reading: declaring a price without a date still produces
+    # money, marked SUSPECT, with the reading saying to add the date. Same shape
+    # as App.can_sleep, which the schema does not force and the reading refuses
+    # to presume.
     required:
     - model_id
     - provider
@@ -111,12 +135,43 @@ spec:
         type:
         - number
         - 'null'
-        description: USD per 1M input tokens (informational).
+        description: USD per 1M input tokens. NOT informational any more —
+          dna.runtime.roi reads it (price_book / gather_prices) and it feeds the
+          money the product shows. Null means NOT QUOTED, never zero; a null read
+          as 0.0 would report the most expensive model as free. Half a quote
+          (this field without cost_per_1m_output_usd) is not half a price — the
+          whole cost comes back NOT CALCULABLE, never a partial sum.
       cost_per_1m_output_usd:
         type:
         - number
         - 'null'
-        description: USD per 1M output tokens (informational).
+        description: USD per 1M output tokens. Same contract as
+          cost_per_1m_input_usd — read by dna.runtime.roi, null means NOT QUOTED,
+          and the currency is in the field name (_usd), never presumed.
+      cost_quoted_at:
+        type:
+        - string
+        - 'null'
+        description: ISO-8601 date/datetime this price was QUOTED. i-101,
+          decided 08/08/2026. While the cost fields were informational a stale
+          price hurt nobody; now that dna.runtime.roi turns them into the money
+          the product shows, a stale accountable number produces a wrong account
+          wearing the face of a measurement. Past dna.runtime.roi's age ceiling
+          the reading marks the money SUSPECT (the is_suspect qualifier, printed
+          on the same line as the number, in the mould of the FLOOR marker).
+          NULL or absent is NOT read as recent — it is UNKNOWN AGE, and unknown
+          age is suspect too, because presuming the good side is exactly how the
+          old cap lived in nobody's code. OPTIONAL on purpose — see the note on
+          `required` above the schema.
+      cost_source:
+        type:
+        - string
+        - 'null'
+        description: WHERE the quote came from — the provider's pricing page, a
+          negotiated contract, an estimate. i-101. It changes what the number
+          means (a contract price is stable for a year; a pricing page is not)
+          and it travels into the cost's `source` line so whoever reads the money
+          reads its provenance. OPTIONAL, like cost_quoted_at.
       aliases:
         type: array
         items:
