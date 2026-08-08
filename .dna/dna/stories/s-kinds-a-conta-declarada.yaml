@@ -6,23 +6,47 @@ metadata:
 spec:
   title: 'Os três descritores: App é o serviço, Copilot declara rendimento'
   description: App absorve o serviço (service_name, python_module, port, can_sleep); Solution perde services[] (derivado de apps[]); Copilot ganha runs_in (opcional) e value_per_outcome.
-  status: in-progress
+  status: done
   feature: f-conta-do-copiloto
   priority: highest
   acceptance_criteria:
-  - Dado o Kind App, quando eu leio o descritor, então ele declara service_name, python_module, port e can_sleep, com can_sleep documentando o custo de ~US$90/mes de quem nao dorme
-  - Dado o Kind Solution, quando eu leio o descritor, entao services[] nao existe mais como campo e apps[] e a unica lista
-  - Dado o Kind Copilot, quando eu leio o descritor, entao runs_in aponta para App como relacao OPCIONAL e value_per_outcome declara human_minutes + hourly_cost + currency
-  - Dado um Copilot sem runs_in, quando a guarda de orfaos roda, entao ela REPORTA a contagem sem falhar o build
+  - text: Dado o Kind App, quando eu leio o descritor, então ele declara service_name, python_module, port e can_sleep, com can_sleep documentando o custo de ~US$90/mes de quem nao dorme
+    done: true
+    done_at: '2026-08-08T11:45:44+00:00'
+    done_by: story-done-auto
+  - text: Dado o Kind Solution, quando eu leio o descritor, entao services[] nao existe mais como campo e apps[] e a unica lista
+    done: true
+    done_at: '2026-08-08T11:45:44+00:00'
+    done_by: story-done-auto
+  - text: Dado o Kind Copilot, quando eu leio o descritor, entao runs_in aponta para App como relacao OPCIONAL e value_per_outcome declara human_minutes + hourly_cost + currency
+    done: true
+    done_at: '2026-08-08T11:45:44+00:00'
+    done_by: story-done-auto
+  - text: Dado um Copilot sem runs_in, quando a guarda de orfaos roda, entao ela REPORTA a contagem sem falhar o build
+    done: true
+    done_at: '2026-08-08T11:45:44+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: os tres .kind.yaml atualizados, com o porque escrito no cabecalho de cada um'
-  - 'Tests: round-trip de escrita/leitura para os campos novos; a guarda de orfaos com auto-teste que prova que ela enxerga um orfao plantado'
-  - 'Docs: scripts/regen-derived.sh rodado por inteiro (seis geradores)'
-  - 'CI: sdk-py + cli + postgres verdes'
+  - text: 'Code: os tres .kind.yaml atualizados, com o porque escrito no cabecalho de cada um'
+    done: true
+    done_at: '2026-08-08T11:45:44+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: round-trip de escrita/leitura para os campos novos; a guarda de orfaos com auto-teste que prova que ela enxerga um orfao plantado'
+    done: true
+    done_at: '2026-08-08T11:45:44+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: scripts/regen-derived.sh rodado por inteiro (seis geradores)'
+    done: true
+    done_at: '2026-08-08T11:45:44+00:00'
+    done_by: story-done-auto
+  - text: 'CI: sdk-py + cli + postgres verdes'
+    done: true
+    done_at: '2026-08-08T11:45:44+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-07T17:41:27+00:00'
-  updated_at: '2026-08-07T18:18:23+00:00'
+  updated_at: '2026-08-08T11:45:54+00:00'
   timeline:
   - at: '2026-08-07T17:41:27+00:00'
     actor: claude-code
@@ -57,4 +81,15 @@ spec:
 
       O AC 2 original ("services[] deixa de existir") está CANCELADO e substituído pelo acima.
     commit_ref: 89ba92c49d068f0258c9dc171d5183b796c37b82
+  - at: '2026-08-08T11:45:54+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: e1447a83eaabce41b8973918f3507fa84b9eb2b7
+    summary: 'Entregue e merjado (PR #351). App ganhou service_name/python_module/port/can_sleep, Copilot ganhou runs_in e value_per_outcome, copilots virou opcional (required [title]) — o worker era literalmente ingravável antes. E a decisão do founder sobre o pode_dormir: ele saiu de services[] e ficou só em App.can_sleep, porque a fatura é por deployment. inverse_of foi RECUSADO com razão medida: composição (App.copilots) não é execução (runs_in), e um deployment copilot serve sete copilotos em dois Apps.'
   plan_skip_reason: plano está na spec accepted (spec-app-e-o-servico / spec-rendimento-do-copiloto), com AC e DoD já declarados na story
+  references:
+  - Spec/spec-app-e-o-servico
+  closed_at: '2026-08-08T11:45:44+00:00'
