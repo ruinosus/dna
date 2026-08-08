@@ -1,0 +1,38 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: k4xyzhz5wmnm
+  name: s-preco-vem-do-modelprofile
+spec:
+  title: O preço do modelo vem do ModelProfile — não do código de ninguém
+  description: 'read_yield resolve ModelPrice a partir de ModelProfile.cost_per_1m_*, pelo model que dna_turn ja carimba. Sem preco declarado: NAO CALCULAVEL com o nome do modelo que falta.'
+  status: in-progress
+  feature: f-conta-do-copiloto
+  priority: highest
+  acceptance_criteria:
+  - Dado um turno com model carimbado e um ModelProfile com cost_per_1m_input_usd e output, quando eu peco a leitura, entao o custo sai em dinheiro com basis e source apontando para o ModelProfile
+  - ⚠️ Dado um modelo da amostra SEM preco declarado, quando eu peco a leitura, entao o custo INTEIRO e NAO CALCULAVEL nomeando quais modelos faltam — NUNCA soma parcial, porque parcial e menor que o real
+  - Dado que nao existe ModelProfile nenhum (o estado de hoje), quando eu peco a leitura, entao ela diz QUAL modelo declarar — 'nao sei' vira 'declare isto'
+  - Dado um ModelProfile com preco null, quando a leitura roda, entao null e AUSENTE, jamais zero
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: a resolucao lendo o Kind, sem constante embutida em lugar nenhum'
+  - 'Tests: o MUTANTE — fazer o custo somar parcialmente quando falta um preco tem de ficar VERMELHO'
+  - 'Docs: reading-the-yield.md dizendo de onde o preco vem e o que fazer quando falta'
+  - 'CI: verdes'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-08T11:35:27+00:00'
+  updated_at: '2026-08-08T11:35:35+00:00'
+  timeline:
+  - at: '2026-08-08T11:35:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-08T11:35:35+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  plan_skip_reason: o plano está na story e na spec-rendimento-do-copiloto

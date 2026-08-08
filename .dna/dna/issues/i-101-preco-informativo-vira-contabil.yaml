@@ -1,0 +1,50 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: 44jxrbpekdpu
+  name: i-101-preco-informativo-vira-contabil
+spec:
+  title: cost_per_1m_* está marcado (informational) e vai virar contábil — precisa de data?
+  description: |-
+    `ModelProfile.cost_per_1m_input_usd` e `cost_per_1m_output_usd` estão documentados como
+    **"(informational)"** (model-profile.kind.yaml:114 e :119).
+
+    ⚠️ A story `s-preco-vem-do-modelprofile` faz esse número ALIMENTAR A CONTA QUE O PRODUTO
+    MOSTRA. No instante em que isso acontece ele deixa de ser informativo e vira CONTÁBIL — e
+    muda o que se exige dele.
+
+    === O QUE MUDA QUANDO UM NÚMERO VIRA CONTÁBIL ===
+
+    Um campo informativo pode estar velho e não fazer mal a ninguém. Um campo contábil velho
+    produz uma conta errada COM CARA DE MEDIÇÃO — que é exatamente o defeito que o PR #359
+    recusou ao não embutir tabela.
+
+    Preço de LLM muda. Um preço de seis meses atrás vira a conta de hoje sem ninguém notar.
+
+    === A DECISÃO DO FOUNDER ===
+
+    Promover os dois campos de informativo a declarado-com-data, ou não. Se sim, o que
+    acrescentar — e cada opção tem um custo diferente:
+
+      (a) `cost_quoted_at` (data da cotação) — o mínimo. Permite a leitura DIZER a idade do preço.
+      (b) (a) + `cost_source` (de onde veio: página de preço do provedor, contrato, estimativa)
+      (c) (a) + (b) + um TETO DE IDADE: acima de N dias a leitura reporta o preço como
+          SUSPEITO — no molde de `is_floor`, que já existe e já é renderizado.
+
+    ⭐ E a razão de isto ser ficha própria e decisão sua: acrescentar campo obrigatório a um Kind
+    com instâncias vivas quebra as vivas. Hoje há ZERO instância de ModelProfile, então o custo é
+    ZERO — e cada dia que passa custa mais. É a mesma janela que o Solution teve em 07/08.
+
+    ⚠️ E o contrário também tem custo: sem data, a leitura NÃO CONSEGUE dizer que o preço é velho,
+    e o produto mostra dinheiro com a mesma confiança de um preço de hoje.
+  type: task
+  severity: medium
+  status: open
+  created_at: '2026-08-08T11:35:32+00:00'
+  updated_at: '2026-08-08T11:35:32+00:00'
+  timeline:
+  - at: '2026-08-08T11:35:32+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
