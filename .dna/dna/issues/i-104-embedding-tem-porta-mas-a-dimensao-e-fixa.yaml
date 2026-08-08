@@ -28,7 +28,8 @@ spec:
     === AS DUAS METADES, e a segunda é a cara ===
 
     1. O ADAPTADOR REMOTO — barato. A porta existe; falta um provider que fale /v1/embeddings.
-       Há credencial disponível: o AZURE_EMBEDDER_* do aap-kb (1536d) e o próprio OPENAI_BASE_URL.
+       Há credencial disponível no ambiente do operador (um embedder Azure a 1536d) e o
+     próprio OPENAI_BASE_URL.
 
     2. ⚠️ A DIMENSÃO DEIXAR DE SER FIXA NA COLUNA — aqui mora o trabalho. `vector(384)` é tipo
        da coluna do pgvector; trocar para 1536 é MIGRAÇÃO DE TABELA + REINDEXAÇÃO. E, pelo próprio
