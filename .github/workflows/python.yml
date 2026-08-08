@@ -80,6 +80,17 @@ jobs:
           uv pip install -e ../sdk-py -e ".[dev]"
       - name: Test
         run: uv run --no-project pytest tests -q -p no:cacheprovider
+      # `dna copilot orphans` conta os Copilot sem `runs_in` e as arestas
+      # App→Copilot penduradas (Story/s-orfaos-viram-visiveis). Aqui roda o
+      # AUTO-TESTE dela, pelo binário real: é puro, não toca store nenhum, e é
+      # a única metade que CI pode rodar — a varredura precisa de instâncias, e
+      # este repo não tem Copilot no `.dna/` (a guarda recusaria, corretamente,
+      # por universo vazio). Mesmo padrão de `brand_guard.py --self-test` em
+      # guards.yml: o auto-teste é o que prova que a guarda ainda sabe olhar, e
+      # a suíte acima já o atravessa — este passo o exercita pela PORTA, que é
+      # onde esta casa já perdeu um validador certo que nenhuma rota chamava.
+      - name: Guard self-test (dna copilot orphans)
+        run: uv run --no-project dna copilot orphans --self-test
 
   client-py:
     # dna-client (Python) — the REST read-API client. Its usage test drives an
