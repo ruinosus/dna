@@ -1,0 +1,30 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: p4s5wmksllgx
+  name: s-adaptador-de-embedding-remoto
+spec:
+  title: O adaptador de embedding remoto — a porta existe, falta quem fale /v1/embeddings
+  description: adapters/embedding/ so tem onnx.py. A EmbeddingPort ja define model_id, dims e embed(). Falta um provider OpenAI-compativel.
+  status: todo
+  feature: f-a-fabrica
+  priority: medium
+  acceptance_criteria:
+  - Dado OPENAI_BASE_URL e uma chave, quando o provider e registrado, entao kernel.embed usa o remoto e reporta model_id e dims corretos
+  - Dado que o remoto falha, quando a busca roda, entao ela DEGRADA honestamente dizendo o que perdeu — nunca devolve vazio como se nao houvesse resultado
+  - ⚠️ Dado que o embedder remoto e chamada PAGA, quando ele e usado, entao o custo esta documentado e o ONNX local continua sendo o default
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: o adaptador sobre a porta que existe — zero mudanca no contrato'
+  - 'Tests: a degradacao provada; e o model_id distinguindo o espaco'
+  - 'Docs: o custo, e por que o default continua local'
+  - 'CI: verdes'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-08T13:48:30+00:00'
+  updated_at: '2026-08-08T13:48:30+00:00'
+  timeline:
+  - at: '2026-08-08T13:48:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo

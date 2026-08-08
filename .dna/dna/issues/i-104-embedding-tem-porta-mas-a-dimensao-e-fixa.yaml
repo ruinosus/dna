@@ -1,0 +1,119 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: o3nli7foe5ow
+  name: i-104-embedding-tem-porta-mas-a-dimensao-e-fixa
+spec:
+  title: A porta de embedding existe e o Kind já declara dims — quem fixou 384 foi a coluna do pgvector
+  description: |-
+    ⭐ A PORTA JÁ EXISTE e está bem desenhada — `EmbeddingPort` (kernel/protocols.py:909):
+
+      model_id: str
+      dims: int
+      async def embed(texts) -> list[list[float]]
+
+    E o contrato JÁ ANTECIPA o problema: "model_id identifica o ESPAÇO de embedding; vetores de
+    providers com model_id diferente NÃO SÃO COMPARÁVEIS."
+
+    E o Kind `Copilot` JÁ DECLARA tudo (copilot.kind.yaml:342+):
+      knowledge.store.backend  → conjunto ABERTO (pgvector | mongo-atlas | azure-ai-search |
+                                 qdrant | pinecone | null)
+      knowledge.store.embed.model  → "text-embedding-3-small"
+      knowledge.store.embed.dims   → a dimensionalidade
+
+    ⛔ O DESENHO NUNCA FOI FIXO. Quem fixou foi a IMPLEMENTAÇÃO:
+      adapters/embedding/  →  só `onnx.py`. Não há adaptador remoto.
+      dna_search_docs.embedding  →  vector(384), a dimensão TIPADA NA COLUNA
+
+    === AS DUAS METADES, e a segunda é a cara ===
+
+    1. O ADAPTADOR REMOTO — barato. A porta existe; falta um provider que fale /v1/embeddings.
+       Há credencial disponível: o AZURE_EMBEDDER_* do aap-kb (1536d) e o próprio OPENAI_BASE_URL.
+
+    2. ⚠️ A DIMENSÃO DEIXAR DE SER FIXA NA COLUNA — aqui mora o trabalho. `vector(384)` é tipo
+       da coluna do pgvector; trocar para 1536 é MIGRAÇÃO DE TABELA + REINDEXAÇÃO. E, pelo próprio
+       contrato da porta, os vetores antigos NÃO SÃO COMPARÁVEIS com os novos — não convivem.
+       Ou a coluna vira por-model_id, ou o índice é VERSIONADO POR ESPAÇO.
+
+    === ⭐ A PERGUNTA DE PRODUTO QUE DECIDE A SEGUNDA METADE ===
+
+    UM TENANT PODE ESCOLHER O PRÓPRIO EMBEDDER?
+
+      não  → uma coluna basta; trocar é migração única, feita uma vez
+      sim  → o índice tem de ser POR ESPAÇO, e isso muda a TABELA, não o adaptador
+
+    ⚠️ E o `knowledge.store.embed` do Kind sugere que a resposta pretendida é SIM — ele é
+    declarado POR COPILOTO. Se um copiloto declara o embedder, dois copilotos do mesmo tenant
+    podem declarar embedders diferentes. Isso não cabe numa coluna de dimensão fixa.
+
+    === O QUE NÃO ESTÁ QUEBRADO ===
+
+    O ONNX local funciona, mede `degraded: False`, custa ZERO (sem chamada paga) e achou
+    `i-056-portal-never-accepts-invites` a partir de "convite por e-mail nunca chega ao
+    destinatario", SEM UM ÚNICO TOKEN EM COMUM. Trocar não é urgência de qualidade — é de
+    FLEXIBILIDADE, e a diferença importa para priorizar.
+  type: task
+  severity: medium
+  status: open
+  created_at: '2026-08-08T13:40:11+00:00'
+  updated_at: '2026-08-08T13:40:11+00:00'
+  timeline:
+  - at: '2026-08-08T13:40:11+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-08-08T13:48:26+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      DECISÃO DO FOUNDER (08/08/2026): **UMA TABELA POR DIMENSÃO, criada por migration.**
+      Não tabela dinâmica, não coluna única.
+
+      === A MEDIÇÃO QUE DECIDIU ===
+
+      `dna_search_docs` JÁ É dinâmica em tudo, menos numa coisa:
+
+        scope · kind · name · tenant   ← namespace e tenant já são COLUNA
+        embedding vector(384)          ← a ÚNICA coisa fixa, porque vector(N) é TIPO da coluna
+
+      ⛔ TABELA DINÂMICA foi recusada por duas razões, e a primeira é regra dura:
+
+        1. O CLAUDE.md: "Data-access code never runs DDL." Não é preferência — é o que faz o schema
+           ser propriedade de MIGRATION, revisável em PR. Criar tabela em runtime faria o schema
+           depender do que os usuários fizeram, e ninguém mais responderia "qual é o schema?"
+           olhando o repo.
+        2. Volume: uma tabela por coleção × tenant vira CENTENAS, cada uma com índice HNSW próprio
+           — que é caro em memória.
+
+      === ⭐ A SAÍDA: o espaço de dimensões é PEQUENO E QUASE FECHADO ===
+
+        384   MiniLM (o nosso hoje)
+        768   base
+        1024  large
+        1536  openai-3-small / ada
+        3072  openai-3-large
+
+      CINCO tabelas, criadas por migration. E `collection` vira COLUNA, como `kind` e `tenant`
+      já são.
+
+        coleção nova   → INSERT       (era DDL)
+        tenant novo    → INSERT       (era DDL)
+        model_id novo com dimensão já conhecida → NADA, só escreve
+        dimensão INÉDITA → migration, em PR revisado — que é o certo
+
+      === O ROTEAMENTO É TRIVIAL, E A PORTA JÁ DÁ O DADO ===
+
+      `EmbeddingPort` já expõe `dims` no contrato (kernel/protocols.py:909). A busca lê `dims` do
+      provider registrado e sabe em qual tabela procurar. Não é heurística nem configuração nova.
+
+      === ⭐ O QUE ISSO RESPONDE DE QUEBRA ===
+
+      "Um tenant pode escolher o próprio embedder?" → SIM, e barato. Com tabela por dimensão isso
+      deixa de ser decisão de arquitetura.
+
+      ⚠️ MAS o contrato da porta continua valendo e a TELA TEM DE DIZER: "vetores de providers com
+      model_id diferente NÃO SÃO COMPARÁVEIS". Dois copilotos com embedders diferentes NÃO
+      COMPARTILHAM BUSCA, mesmo com a MESMA dimensão. Isso é do modelo, não do armazenamento — e
+      uma tela que mostrasse os dois juntos estaria mentindo.
