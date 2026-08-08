@@ -6,7 +6,7 @@ metadata:
 spec:
   title: A leitura que junta custo e rendimento — e diz quando nao da para calcular
   description: A consulta/porta que cruza dna_turn (custo em tokens) com o desfecho e o value_per_outcome do Copilot. Sem valor declarado o resultado e NAO CALCULAVEL, nunca zero.
-  status: todo
+  status: review
   feature: f-conta-do-copiloto
   priority: high
   acceptance_criteria:
@@ -21,10 +21,33 @@ spec:
   - 'CI: sdk-py + postgres verdes'
   definition_of_done_source: cli-create
   created_at: '2026-08-07T17:42:00+00:00'
-  updated_at: '2026-08-07T17:42:00+00:00'
+  updated_at: '2026-08-08T11:15:16+00:00'
   timeline:
   - at: '2026-08-07T17:42:00+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: todo
+  - at: '2026-08-08T10:43:50+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-08T11:15:10+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'review sem PR aberto (--no-pr): PR #359 aberto na branch feat/s-leitura-do-rendimento; este checkout esta na main porque o board vive na main por regra da casa'
+  - at: '2026-08-08T11:15:12+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'dna.runtime.roi: sem value_per_outcome a leitura devolve NAO CALCULAVEL com o motivo; contencao e aceitacao saem rotuladas PROXY; e vazio e ACHADO (nothing_to_look_at / no_outcome_declared), nunca 0%. Sete mutantes plantados e todos vermelhos. Medido: sdk-py 5901, cli 2037, requires_postgres 121 contra Postgres vivo.'
+  - at: '2026-08-08T11:15:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: review
+  plan_skip_reason: o plano está na spec-rendimento-do-copiloto (accepted) e nos AC/DoD da story
