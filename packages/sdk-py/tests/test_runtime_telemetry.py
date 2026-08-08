@@ -648,3 +648,83 @@ def test_a_memoria_de_traces_fechadas_tem_TETO():
         rec.on_end(_raiz(trace_id=i + 1))
     assert len(rec._fechadas) <= TurnRecorder.LEMBRAR_FECHADAS
     assert rec._abertos == {}
+
+
+# ── a RAIA do turno (`i-158`) ────────────────────────────────────────────────
+#
+# ⭐ A regra é a mesma do desfecho e o estrago tem a MESMA forma — só que a
+# direção que assusta é a inversa. No desfecho, o risco é vazio virar
+# `resolved` (a conta infla). Aqui, o risco é uma raia `test` herdada por um
+# turno de gente de verdade: uso REAL some da conta, em silêncio.
+
+
+def test_um_turno_sem_declaracao_fica_SEM_RAIA_e_nao_real():
+    """⭐ O AC central da raia. Ninguém declarou: vazio — e vazio NÃO é `real`.
+
+    Um default `real` faria todo host que nunca ouviu falar de raia produzir
+    turnos que se dizem de produção, e a suíte de avaliação que a `i-159` vai
+    construir cairia inteira na conta do cliente.
+    """
+    [turno] = _gravar(_raiz())
+    assert turno.lane == ""
+
+
+def test_a_raia_DECLARADA_chega_ao_turno():
+    for raia in sorted(telemetry.LANES):
+        telemetry.stamp_turn(lane=raia)
+        [turno] = _gravar(_raiz())
+        assert turno.lane == raia
+
+
+def test_uma_raia_INVENTADA_e_recusada_e_o_turno_fica_sem_raia():
+    """Nem `prod`, nem `staging`, nem `True`. O que não está em `LANES` não
+    entra — e o turno NÃO cai para `real` como consolo, que seria transformar
+    um typo numa afirmação sobre a conta de alguém."""
+    for lixo in ("prod", "staging", "testing", "producao", "", None, True):
+        telemetry.stamp_turn(lane=lixo)
+        [turno] = _gravar(_raiz())
+        assert turno.lane == "", f"{lixo!r} não podia ter passado"
+
+
+def test_uma_raia_no_SPAN_tambem_e_validada():
+    """A validação é da PORTA, não da chamada: o atributo do span vem de fora
+    (outra instrumentação, um contexto propagado) e passa pela mesma recusa."""
+    [boa] = _gravar(_raiz(attrs={"dna.lane": "test"}))
+    assert boa.lane == "test"
+    [ruim] = _gravar(_raiz(attrs={"dna.lane": "prod"}))
+    assert ruim.lane == ""
+
+
+def test_a_raia_de_um_turno_NAO_VAZA_para_o_proximo():
+    """⚠️⚠️ O defeito que custa dinheiro de verdade, e na direção pior.
+
+    A `ContextVar` é por-task e uma task serve vários turnos. Se a raia
+    sobrevivesse, uma suíte de avaliação que declarou `test` faria o turno
+    seguinte — de um usuário real, na mesma task — sumir da conta. E sumir
+    calado: ninguém procura um turno que o painel nunca mostrou.
+    """
+    telemetry.stamp_turn(lane="test")
+    [primeiro] = _gravar(_raiz(trace_id=1))
+    telemetry.stamp_turn(thread_id="th-2")   # o host recarimbou, SEM raia
+    [segundo] = _gravar(_raiz(trace_id=2))
+    assert (primeiro.lane, segundo.lane) == ("test", "")
+
+
+def test_carimbar_a_raia_NAO_apaga_as_demais_dimensoes():
+    """Mesma armadilha do `stamp_outcome`: fundir, nunca substituir."""
+    telemetry.stamp_turn(thread_id="th-7", workspace="ws-7", oid="user-7",
+                         agent="supervisor-copilot", lane="test")
+    [turno] = _gravar(_raiz())
+    assert turno.lane == "test"
+    assert (turno.thread_id, turno.workspace, turno.oid, turno.agent) == (
+        "th-7", "ws-7", "user-7", "supervisor-copilot"
+    )
+
+
+def test_a_raia_e_INDEPENDENTE_do_desfecho():
+    """As duas viajam pela mesma `ContextVar` e não podem se atropelar: um
+    turno de teste pode ter resolvido, e um turno real pode não ter."""
+    telemetry.stamp_turn(lane="test")
+    telemetry.stamp_outcome("resolved")
+    [turno] = _gravar(_raiz())
+    assert (turno.lane, turno.outcome) == ("test", "resolved")

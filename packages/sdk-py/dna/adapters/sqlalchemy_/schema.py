@@ -634,6 +634,10 @@ def build_metadata(*, is_pg: bool, schema: str | None = None) -> Tables:
             # Vazio significa DESCONHECIDO, jamais `resolved`. Ver a revisao 0012.
             sa.Column("outcome", sa.Text, nullable=False,
                       server_default=sa.text("''")),
+            # ⭐ De que RAIA o turno e: `real` / `test`. Vazio significa NAO
+            # DECLARADA — nem uma nem outra. Ver a revisao 0014.
+            sa.Column("lane", sa.Text, nullable=False,
+                      server_default=sa.text("''")),
             sa.Column("error", sa.Text, nullable=True),
             sa.Column("started_at", sa.DateTime(timezone=True), nullable=False,
                       server_default=sa.text("now()")),

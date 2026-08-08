@@ -813,6 +813,7 @@ erDiagram
         BOOLEAN tokens_partial
         TEXT status
         TEXT outcome
+        TEXT lane
         TEXT error
         DATETIME started_at
         DATETIME ended_at
@@ -998,6 +999,7 @@ prefix, SQLite's do not, and Postgres has tables SQLite lacks.
 | `tokens_partial` | `BOOLEAN` |  | yes |
 | `status` | `TEXT` |  |  |
 | `outcome` | `TEXT` |  |  |
+| `lane` | `TEXT` |  |  |
 | `error` | `TEXT` |  | yes |
 | `started_at` | `DATETIME` |  |  |
 | `ended_at` | `DATETIME` |  | yes |
