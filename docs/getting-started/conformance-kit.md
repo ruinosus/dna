@@ -101,10 +101,15 @@ embeddable one-file-per-scope SQLite store for a shared Postgres database
 search is pgvector's `<=>` cosine distance (accelerated by an IVFFlat index);
 the lexical plane is a generated `tsvector` column ranked by `ts_rank`
 (accelerated by GIN); fusion reuses the **same** pure RRF function as sqlite-vec.
-Its store schema is owned by a numbered migration in the store's own
-`dna_search_migrations` control table (re-boot is a no-op), and `CREATE EXTENSION
-vector` is the migration's first statement — so a database without pgvector fails
-loud rather than silently degrading.
+Its store schema is owned by the **Alembic ladder**, like every other DNA table:
+revision `0013_uma_tabela_por_dimensao` creates one table per embedding width
+(384 · 768 · 1024 · 1536 · 3072), and `CREATE EXTENSION vector` is its first
+statement — so a database without pgvector fails loud rather than silently
+degrading. The provider itself runs **no DDL at all**: it routes on
+`kernel.embedding_dims` and refuses, naming the revision, when the schema it
+needs has not been migrated. So a conformance run needs a schema brought to head
+first (`SqlAlchemySource.run_schema_migrations()` — what a real boot does);
+`tests/_search_schema.py` is the one-call helper the kit's own factories use.
 
 ```bash
 pip install "dna-sdk[search-pgvector]"    # asyncpg (via the `postgres` extra)

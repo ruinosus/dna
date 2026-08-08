@@ -13,8 +13,8 @@ unmigrated Postgres row becomes invisible. This module is that migration.
 
 Schema reality (verified against the Alembic baseline revision,
 ``dna/adapters/sqlalchemy_/alembic/versions/0001_baseline_schema.py``
-and ``dna/adapters/search/pgvector_migrations.py`` — READ THOSE FILES, don't
-trust a summary):
+and ``dna/adapters/sqlalchemy_/alembic/versions/0013_uma_tabela_por_dimensao.py``
+— READ THOSE FILES, don't trust a summary):
 
   * ``dna_instances``       — PK ``(scope, kind, name, tenant)``. ``kind`` is
     a real column; ``content`` is TEXT holding a JSON envelope
@@ -41,12 +41,14 @@ trust a summary):
     ``LessonLearned``/``Engram`` are flat-YAML, non-bundle docs — see the FS
     script's own docstring — so this table is expected to have zero
     matching rows, but the code does not assume that.)
-  * ``dna_search_docs``      — lives in a SEPARATE optional store
-    (``dna/adapters/search/pgvector_migrations.py``, extra
-    ``search-pgvector``): UNIQUE ``(scope, kind, name, tenant)``. This table
-    may not exist at all (pgvector extension/migrations are opt-in) — the
-    migration checks for it with ``to_regclass`` and skips cleanly if
-    absent, it does NOT assume it is there.
+  * the search store       — the pgvector index (extra ``search-pgvector``).
+    ⚠️ Its shape depends on whether revision 0013 has been applied: BEFORE it,
+    one ``dna_search_docs`` with UNIQUE ``(scope, kind, name, tenant)``; AFTER
+    it, one table per embedding WIDTH (``dna_search_docs_384`` …
+    ``dna_search_docs_3072``, ``s-indice-por-dimensao``) with ``model_id`` added
+    to the unique key. This script checks for ALL of them and skips each with
+    ``to_regclass`` — a database may legitimately have the old one, the new
+    ones, or none at all (the store is opt-in). It does NOT assume.
   * ``dna_outbox``           — audit/event log, ``id BIGSERIAL`` PK, no
     unique constraint on ``kind``. See ``_OUTBOX_DECISION`` below for the
     rewrite-vs-leave-alone call.
@@ -117,6 +119,19 @@ def _load_fs_module():
     spec.loader.exec_module(mod)
     return mod
 
+
+#: Every name the pgvector search store has ever had, oldest first. Written out
+#: rather than imported from ``dna.adapters.search.dimensions``, for the same
+#: reason an Alembic revision does not import it: this script is a frozen
+#: artifact aimed at OLD databases, and it has to run standalone (``python
+#: scripts/migrate_engram_postgres.py <dsn>``) without the SDK importable. Every
+#: one is checked with ``to_regclass`` and skipped when absent, so listing a
+#: name that a given database does not have is free.
+_SEARCH_TABLES: tuple[str, ...] = (
+    "dna_search_docs",  # pre-0013: one table, width baked into the column type
+    "dna_search_docs_384", "dna_search_docs_768", "dna_search_docs_1024",
+    "dna_search_docs_1536", "dna_search_docs_3072",  # 0013: one per width
+)
 
 _fs = _load_fs_module()
 OLD_KIND: str = _fs.OLD_KIND
@@ -450,9 +465,15 @@ async def migrate_postgres(
         report.tables["dna_bundle_entries"] = await _preflight_kind_only_table(
             conn, schema, "dna_bundle_entries", ("scope", "name", "entry_path", "tenant"),
         )
-        report.tables["dna_search_docs"] = await _preflight_kind_only_table(
-            conn, schema, "dna_search_docs", ("scope", "name", "tenant"),
-        )
+        # The search store, in BOTH shapes. Pre-0013 databases have the single
+        # ``dna_search_docs``; post-0013 have one per embedding width. Listing
+        # both is not belt-and-braces — this script exists precisely for
+        # databases nobody kept current, so "the old shape" is the likely one,
+        # and a table that is absent costs one catalog lookup to skip.
+        for _table in _SEARCH_TABLES:
+            report.tables[_table] = await _preflight_kind_only_table(
+                conn, schema, _table, ("scope", "name", "tenant"),
+            )
 
         if await _table_exists(conn, schema, "dna_outbox"):
             report.outbox_candidate_count = await conn.fetchval(

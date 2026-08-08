@@ -15,15 +15,14 @@ configured) while still exercising the exact translation that broke —
 fails identically whether or not the server speaks TLS.
 
 Gated on the shared ``requires_postgres`` marker (``tests/conftest.py``); a
-fresh, disposable schema per case, same isolation pattern as the other pgvector
-integration modules.
+fresh, disposable schema per case, MIGRATED TO HEAD, same isolation pattern as
+the other pgvector integration modules (``s-indice-por-dimensao``: the store no
+longer builds its own tables — see ``tests/_search_schema.py``).
 """
 from __future__ import annotations
 
-import os
 import shutil
 import tempfile
-import uuid
 
 import pytest
 import pytest_asyncio
@@ -38,13 +37,7 @@ asyncpg = pytest.importorskip(
 from dna.application.live import LiveDna  # noqa: E402
 from dna.application.runtime import recall_impl, remember_impl  # noqa: E402
 
-
-def _dsn() -> str:
-    for k in ("DATABASE_URL", "DNA_PG_TEST_URL", "DNA_PG_TEST_DSN"):
-        v = os.environ.get(k)
-        if v:
-            return v
-    raise RuntimeError("no Postgres DSN set")  # pragma: no cover — marker guards
+from tests import _search_schema  # noqa: E402
 
 
 def _with_ssl_param(dsn: str) -> str:
@@ -64,11 +57,9 @@ async def live_dna():
     kernel = Kernel.auto()  # deterministic fake embeddings — offline
     kernel.source(FilesystemWritableSource(base_dir=tmp))
 
-    admin_dsn = _dsn()
-    schema = f"dna_i091_ci_{uuid.uuid4().hex[:12]}"
-    admin = await asyncpg.connect(admin_dsn)
-    await admin.execute(f"CREATE SCHEMA {schema}")
-    await admin.close()
+    admin_dsn, schema, drop_schema = await _search_schema.migrated_schema(
+        "dna_i091_ci"
+    )
 
     # One memory ALREADY on disk and NOT in the index — otherwise the refresh
     # has no work to do, never opens a connection, and the case would go green
@@ -92,11 +83,7 @@ async def live_dna():
         yield LiveDna(base_scope="i091", kernel=kernel, provider=provider)
     finally:
         await provider.close()
-        conn = await asyncpg.connect(admin_dsn)
-        try:
-            await conn.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
-        finally:
-            await conn.close()
+        await drop_schema()
         shutil.rmtree(tmp, ignore_errors=True)
 
 

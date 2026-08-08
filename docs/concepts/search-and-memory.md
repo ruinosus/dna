@@ -94,6 +94,61 @@ store for the Postgres that already backs the source plane. Both providers
 pass the **same conformance suite**, so promoting from embedded to server is
 a wiring change, not a rewrite.
 
+## One table per embedding dimension — and why not a dynamic one
+
+`vector(N)` is a Postgres *column type*, so the embedding width is the one
+thing about the pgvector store that could not be a column. Everything else
+already was: `scope`, `kind`, `name` and `tenant` are ordinary columns, and a
+new collection or a new tenant has always been an `INSERT`. Only the width
+forced a schema change — which meant, in practice, that **a tenant could not
+choose its own embedder**.
+
+Since revision `0013_uma_tabela_por_dimensao` there is one table per width:
+
+| width | table | typical model |
+|---:|---|---|
+| 384 | `dna_search_docs_384` | all-MiniLM-L6-v2 (and the fake floor) |
+| 768 | `dna_search_docs_768` | base-size encoders |
+| 1024 | `dna_search_docs_1024` | large-size encoders |
+| 1536 | `dna_search_docs_1536` | `text-embedding-3-small`, ada |
+| 3072 | `dna_search_docs_3072` | `text-embedding-3-large` |
+
+Routing needs no new configuration: `EmbeddingPort` already publishes `dims`,
+the store reads `kernel.embedding_dims`, and that is the whole rule — no
+heuristic, and never a look at the model's *name*.
+
+**A table created on demand, per collection or per width, was refused**, and the
+first reason is a hard rule of this codebase:
+
+> `CLAUDE.md`: *"Data-access code never runs DDL."*
+
+That is not a style preference. It is what makes the schema **property of a
+migration, reviewable in a PR**. A store that creates its own tables makes the
+schema depend on what users did, and then nobody can answer *"what is the
+schema?"* by reading the repo. The second reason is volume: one table per
+collection × tenant is hundreds of tables, each carrying its own ANN index,
+which is expensive in memory.
+
+The dimension space is small and nearly closed, so the cost of the rule is one
+migration on the rare day a genuinely new width appears — and an **unknown width
+fails loud**, naming the migration to write, rather than creating a table or
+quietly rounding to a neighbouring size.
+
+⚠️ **`model_id` is a filter, not a label.** Two collections at the same width
+embedded by *different* models share a table — their vectors are the same
+length, and nothing about them is malformed. The port's contract is the only
+thing that says they are incomparable, so every read and every write carries
+`AND model_id = …`. That filter is what makes co-existence safe; without it a
+shared table would rank one space's vectors against the other's and the result
+would look exactly like relevance.
+
+⚠️ **3072 gets no ANN index, and that is pgvector's limit, not a choice.**
+Measured against pgvector 0.8.2: both `ivfflat` and `hnsw` refuse a column
+wider than 2000 dimensions. `text-embedding-3-large` therefore answers by exact
+scan. The table is correct; it just has no accelerator, and a table quietly
+missing one is the kind of thing that surfaces as "search got slow" months
+later.
+
 ## Memory is the Kinds you already have
 
 DNA does not add a "memory store". Memory is the record Kinds the SDK

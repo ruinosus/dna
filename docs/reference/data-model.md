@@ -35,6 +35,11 @@ readable, so it is reproduced from source rather than asserted:
 | `alembic_version` |
 | `dna_schema_migrations` |
 | `dna_search_docs` |
+| `dna_search_docs_1024` |
+| `dna_search_docs_1536` |
+| `dna_search_docs_3072` |
+| `dna_search_docs_384` |
+| `dna_search_docs_768` |
 | `dna_search_meta` |
 | `dna_search_migrations` |
 | `schema_migrations` |

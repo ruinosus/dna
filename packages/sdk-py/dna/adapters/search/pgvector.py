@@ -14,12 +14,29 @@ both pass the SAME ``record_search_conformance_suite``.
                     pure function shared with the sqlite-vec provider and the TS
                     twin — NOT reimplemented here).
 
-The store schema is OWNED by the shared migration contract
-(``pgvector_migrations.build_pg_migrations`` + ``adapters/_migrations.run_migrations``)
-— closing the same f-embeddings-ddl-debt the sqlite store closed. Every table is
-created by a numbered, append-only, idempotent migration recorded in the store's
-own ``{schema}.dna_search_migrations`` control table; a re-boot against an
-up-to-date store applies nothing.
+⭐ The store schema is owned by ALEMBIC — this module runs ZERO DDL
+------------------------------------------------------------------
+``s-indice-por-dimensao``. The tables are created by revision
+``0013_uma_tabela_por_dimensao``, the same ladder that owns every other DNA
+table, because ``CLAUDE.md`` says *"Data-access code never runs DDL"* and that
+is what makes the schema property of a migration, reviewable in a PR. This
+module's job is to READ the schema and refuse loudly when the one it needs is
+absent — never to create it. (It used to carry its own numbered ladder in
+``pgvector_migrations.py``, run at first search; that file is gone.)
+
+There is one table per embedding WIDTH (``dna_search_docs_384`` …
+``dna_search_docs_3072``) because ``vector(N)`` is the column's TYPE and so the
+width cannot be a column. Routing needs no configuration: ``EmbeddingPort``
+already publishes ``dims``, this provider reads ``kernel.embedding_dims`` and
+:func:`dna.adapters.search.dimensions.search_table` maps it. An unknown width
+raises :class:`~dna.adapters.search.dimensions.UnsupportedEmbeddingDims`
+naming the migration to write. See ``dimensions.py`` for the whole decision.
+
+⚠️ ``model_id`` is a FILTER, not a label. Two collections at the same width but
+different embedders share a table and are NOT comparable (the port's contract
+says so), so every read and every write carries ``AND model_id = …``. That
+filter is what lets a tenant pick its own embedder; without it, a shared table
+would rank one space's vectors against the other's and call it relevance.
 
 Overlay/tenant-aware: ``tenant`` is a column ('' = base). A tenant search reads
 base ∪ overlay and the overlay row shadows the base row for the same
@@ -56,6 +73,7 @@ import logging
 import re
 from typing import Any, TYPE_CHECKING
 
+from dna.adapters.search.dimensions import SUPPORTED_DIMS, search_table
 from dna.adapters.search.rrf import DEFAULT_RRF_K, reciprocal_rank_fusion
 # Pure, extension-free helpers shared with the sqlite-vec provider (importing
 # this module does NOT load the sqlite-vec C extension — that load is lazy,
@@ -133,11 +151,16 @@ class PgVecRecordSearchProvider:
         self._dsn = dsn
         self._schema = schema
         self._rrf_k = rrf_k
-        self._ready = False
+        #: Tables whose existence this provider has already confirmed. NOT a
+        #: single ``_ready`` flag: the width is read from the kernel's embedding
+        #: provider on EVERY call, so a provider swapped at runtime routes to
+        #: the new table instead of writing 1536-wide vectors into the 384 one
+        #: that a cached flag would have kept pointing at.
+        self._verified: set[str] = set()
         self._lock = asyncio.Lock()
 
     # ------------------------------------------------------------------
-    # store / schema (migration-owned)
+    # routing — which table, which space (migration-owned schema)
     # ------------------------------------------------------------------
 
     async def _get_pool(self) -> "asyncpg.Pool":
@@ -162,93 +185,51 @@ class PgVecRecordSearchProvider:
             self._pool = await asyncpg.create_pool(dsn, **connect_kwargs)
         return self._pool
 
-    async def _ensure_ready(self) -> None:
-        """Migrate the store schema + pin the embedding identity, once. Guarded
-        by a lock so a concurrent first-hit burst migrates exactly once."""
-        if self._ready:
-            return
+    async def _table(self) -> str:
+        """The table for the ACTIVE embedding width, verified to exist.
+
+        Two steps, and the order matters:
+
+        1. ``search_table(kernel.embedding_dims)`` — pure. An unseen width
+           raises ``UnsupportedEmbeddingDims`` HERE, before any connection is
+           acquired and before a single row is touched, with a message naming
+           the migration to write.
+        2. one ``to_regclass`` per table name, cached. A width that IS known but
+           whose migration has not been applied to this schema fails loud too —
+           and points at the revision, not at "relation does not exist".
+
+        ⛔ Neither step creates anything. That is not an omission; it is the
+        rule this design exists to obey (``CLAUDE.md``: data-access code never
+        runs DDL). If you ever find yourself wanting a ``CREATE TABLE`` here,
+        the answer is a migration, not a branch.
+        """
+        table = search_table(int(self._kernel.embedding_dims))
+        if table in self._verified:
+            return table
         async with self._lock:
-            if self._ready:
-                return
-            await self._migrate()
-            await self._pin_identity()
-            self._ready = True
-
-    async def _migrate(self) -> list[int]:
-        """Apply pending migrations through the shared forward-only runner —
-        the search store's schema has a real owner (closes f-embeddings-ddl-debt).
-        Preserves Postgres semantics: ONE transaction per version wrapping every
-        statement + the control-table record."""
-        from dna.adapters._migrations import run_migrations
-        from dna.adapters.search.pgvector_migrations import build_pg_migrations
-
-        dims = int(self._kernel.embedding_dims)
-        migrations = build_pg_migrations(dims)
-        pool = await self._get_pool()
-        schema = self._schema
-
-        async def ensure_control_table() -> None:
+            if table in self._verified:
+                return table
+            pool = await self._get_pool()
             async with pool.acquire() as conn:
-                await conn.execute(
-                    f"CREATE TABLE IF NOT EXISTS {schema}.dna_search_migrations "
-                    "(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)"
+                present = await conn.fetchval(
+                    "SELECT to_regclass($1)", f"{self._schema}.{table}"
                 )
-
-        async def fetch_applied() -> list[int]:
-            async with pool.acquire() as conn:
-                rows = await conn.fetch(
-                    f"SELECT version FROM {schema}.dna_search_migrations"
+            if present is None:
+                raise RuntimeError(
+                    f"search table {self._schema}.{table} does not exist. It is "
+                    "created by alembic revision 0013_uma_tabela_por_dimensao, "
+                    "applied by SqlAlchemySource.run_schema_migrations() at "
+                    "boot. This provider does NOT create it — the schema is "
+                    "owned by the migration ladder, not by data-access code."
                 )
-                return [r["version"] for r in rows]
+            self._verified.add(table)
+        return table
 
-        async def apply_version(version: int, statements: list[str]) -> None:
-            async with pool.acquire() as conn:
-                async with conn.transaction():
-                    for stmt in statements:
-                        await conn.execute(stmt.format(schema=schema))
-                    await conn.execute(
-                        f"INSERT INTO {schema}.dna_search_migrations "
-                        "(version, applied_at) VALUES ($1, $2)",
-                        version, _now(),
-                    )
-
-        return await run_migrations(
-            migrations,
-            ensure_control_table=ensure_control_table,
-            fetch_applied=fetch_applied,
-            apply_version=apply_version,
-            dialect="Postgres(search)",
-        )
-
-    async def _pin_identity(self) -> None:
-        """Refuse to reuse a store built for a different embedding space —
-        mixing vectors from different (dims, model_id) is silently wrong."""
-        dims = str(int(self._kernel.embedding_dims))
-        model_id = str(self._kernel.embedding_model_id)
-        pool = await self._get_pool()
-        async with pool.acquire() as conn:
-            rows = await conn.fetch(
-                f"SELECT key, value FROM {self._schema}.dna_search_meta"
-            )
-            existing = {r["key"]: r["value"] for r in rows}
-            if not existing:
-                await conn.executemany(
-                    f"INSERT INTO {self._schema}.dna_search_meta (key, value) "
-                    "VALUES ($1, $2) ON CONFLICT (key) DO NOTHING",
-                    [("embedding_dims", dims), ("embedding_model_id", model_id)],
-                )
-                return
-        if (
-            existing.get("embedding_dims") != dims
-            or existing.get("embedding_model_id") != model_id
-        ):
-            raise ValueError(
-                "search store was built for embedding space "
-                f"({existing.get('embedding_model_id')}, "
-                f"dims={existing.get('embedding_dims')}) "
-                f"but the active provider is ({model_id}, dims={dims}) — "
-                "the vectors are incomparable. Use a fresh schema or re-index."
-            )
+    def _model_id(self) -> str:
+        """The active embedding SPACE. Every read and every write filters on it:
+        the port's contract says vectors from different ``model_id`` are not
+        comparable, and two spaces of the same width share a table."""
+        return str(self._kernel.embedding_model_id)
 
     # ------------------------------------------------------------------
     # index / delete
@@ -261,10 +242,15 @@ class PgVecRecordSearchProvider:
         snippet?}``. ``text`` is used verbatim if present; otherwise derived from
         ``raw`` via :func:`document_text`. Idempotent by text hash — re-indexing
         unchanged text is skipped (no re-embed). Returns the number of records
-        actually (re)embedded."""
+        actually (re)embedded.
+
+        Writes into the table of the ACTIVE width, stamped with the active
+        ``model_id``: the same record embedded by two models is two rows, in the
+        same table when the widths match, and they never meet in a search."""
         if not records:
             return 0
-        await self._ensure_ready()
+        table = await self._table()
+        model_id = self._model_id()
         pool = await self._get_pool()
 
         # Derive text + hash for every record.
@@ -282,9 +268,11 @@ class PgVecRecordSearchProvider:
         async with pool.acquire() as conn:
             for rec, text, h in pending:
                 row = await conn.fetchrow(
-                    f"SELECT text_hash FROM {self._schema}.dna_search_docs "
-                    "WHERE scope=$1 AND kind=$2 AND name=$3 AND tenant=$4",
+                    f"SELECT text_hash FROM {self._schema}.{table} "
+                    "WHERE scope=$1 AND kind=$2 AND name=$3 AND tenant=$4 "
+                    "AND model_id=$5",
                     rec["scope"], rec["kind"], rec["name"], rec.get("tenant") or "",
+                    model_id,
                 )
                 if row is not None and row["text_hash"] == h:
                     continue
@@ -297,57 +285,83 @@ class PgVecRecordSearchProvider:
         async with pool.acquire() as conn:
             async with conn.transaction():
                 for (rec, text, h), vector in zip(to_embed, vectors):
-                    await self._upsert(conn, rec, text, h, vector)
+                    await self._upsert(conn, table, model_id, rec, text, h, vector)
         return len(to_embed)
 
     async def _upsert(
-        self, conn: Any, rec: dict[str, Any], text: str, text_hash: str,
-        vector: list[float],
+        self, conn: Any, table: str, model_id: str, rec: dict[str, Any],
+        text: str, text_hash: str, vector: list[float],
     ) -> None:
         scope, kind, name = rec["scope"], rec["kind"], rec["name"]
         tenant = rec.get("tenant") or ""
         title = rec.get("title")
         snippet = rec.get("snippet") or _snippet(text)
-        # One idempotent UPSERT keyed on the unique (scope, kind, name, tenant):
-        # re-indexing changed text replaces embedding + body (and the generated
-        # fts column recomputes) without duplicating the row.
+        # One idempotent UPSERT keyed on the unique (scope, kind, name, tenant,
+        # model_id): re-indexing changed text replaces embedding + body (and the
+        # generated fts column recomputes) without duplicating the row.
+        # ``model_id`` is IN the key on purpose — re-indexing the same record
+        # under a second embedder must ADD a row, not overwrite the first
+        # space's vector with one it cannot be compared to.
         await conn.execute(
-            f"INSERT INTO {self._schema}.dna_search_docs "
-            "(scope, kind, name, tenant, text_hash, title, snippet, body, embedding) "
-            "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::vector) "
-            "ON CONFLICT (scope, kind, name, tenant) DO UPDATE SET "
+            f"INSERT INTO {self._schema}.{table} "
+            "(scope, kind, name, tenant, model_id, text_hash, title, snippet, "
+            "body, embedding) "
+            "VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10::vector) "
+            "ON CONFLICT (scope, kind, name, tenant, model_id) DO UPDATE SET "
             "text_hash=EXCLUDED.text_hash, title=EXCLUDED.title, "
             "snippet=EXCLUDED.snippet, body=EXCLUDED.body, embedding=EXCLUDED.embedding",
-            scope, kind, name, tenant, text_hash, title, snippet, text,
+            scope, kind, name, tenant, model_id, text_hash, title, snippet, text,
             _vec_literal(vector),
         )
 
     async def delete(self, ids: list[dict[str, Any] | tuple]) -> int:
         """Delete indexed records. Each id is a dict ``{scope, kind, name,
         tenant?}`` or a ``(scope, kind, name[, tenant])`` tuple. Returns the
-        number of rows removed."""
-        await self._ensure_ready()
+        number of rows removed.
+
+        ⭐ Sweeps EVERY dimension table and does NOT filter by ``model_id`` —
+        the deliberate asymmetry with index/search. Those two are about the
+        SPACE (a search must never cross one); delete is about the RECORD, and
+        a record that no longer exists in the source has no business staying
+        indexed in some other embedder's space where nobody is looking. The
+        return is therefore a row count, not a record count: a record indexed
+        under two embedders removes two rows."""
         pool = await self._get_pool()
         removed = 0
         async with pool.acquire() as conn:
-            for ident in ids:
-                if isinstance(ident, dict):
-                    scope, kind, name = ident["scope"], ident["kind"], ident["name"]
-                    tenant = ident.get("tenant") or ""
-                else:
-                    scope, kind, name = ident[0], ident[1], ident[2]
-                    tenant = ident[3] if len(ident) > 3 and ident[3] else ""
-                result = await conn.execute(
-                    f"DELETE FROM {self._schema}.dna_search_docs "
-                    "WHERE scope=$1 AND kind=$2 AND name=$3 AND tenant=$4",
-                    scope, kind, name, tenant,
-                )
-                # asyncpg returns "DELETE <n>"
-                try:
-                    removed += int(result.split()[-1])
-                except (ValueError, IndexError):  # pragma: no cover
-                    pass
+            for table in await self._all_tables(conn):
+                for ident in ids:
+                    if isinstance(ident, dict):
+                        scope, kind = ident["scope"], ident["kind"]
+                        name = ident["name"]
+                        tenant = ident.get("tenant") or ""
+                    else:
+                        scope, kind, name = ident[0], ident[1], ident[2]
+                        tenant = ident[3] if len(ident) > 3 and ident[3] else ""
+                    result = await conn.execute(
+                        f"DELETE FROM {self._schema}.{table} "
+                        "WHERE scope=$1 AND kind=$2 AND name=$3 AND tenant=$4",
+                        scope, kind, name, tenant,
+                    )
+                    # asyncpg returns "DELETE <n>"
+                    try:
+                        removed += int(result.split()[-1])
+                    except (ValueError, IndexError):  # pragma: no cover
+                        pass
         return removed
+
+    async def _all_tables(self, conn: Any) -> list[str]:
+        """Every dimension table that EXISTS in this schema, for the sweeping
+        delete. Reads the catalog rather than assuming: a schema migrated to a
+        revision older than 0013 has none of them, and a delete against a store
+        nobody has indexed into yet is a no-op, not a crash."""
+        rows = await conn.fetch(
+            "SELECT $1::text || t AS present FROM unnest($2::text[]) AS t "
+            "WHERE to_regclass($1::text || t) IS NOT NULL",
+            f"{self._schema}.",
+            [search_table(d) for d in SUPPORTED_DIMS],
+        )
+        return [r["present"].split(".", 1)[1] for r in rows]
 
     # ------------------------------------------------------------------
     # search (RecordSearchProvider)
@@ -374,10 +388,20 @@ class PgVecRecordSearchProvider:
         No relevance floor is applied here and none is shipped anywhere — see
         :mod:`dna.kernel.query.relevance` for the measurement that refuses a
         constant. Filtering is the caller's policy (``kernel.search
-        (min_similarity=…)``), never the store's."""
+        (min_similarity=…)``), never the store's.
+
+        ⚠️ And whatever the caller filters on, it reads ONE embedding space:
+        the table of the active width, restricted to the active ``model_id``.
+        Both halves are load-bearing. Dropping the table routing would compare
+        vectors of different lengths; dropping the ``model_id`` filter would
+        compare vectors of the SAME length produced by different models — which
+        the port's contract says are not comparable, and which no error would
+        ever announce, because the ``similarity`` above would come out looking
+        exactly like relevance."""
         if not query_text.strip() or k <= 0:
             return []
-        await self._ensure_ready()
+        table = await self._table()
+        model_id = self._model_id()
         pool = await self._get_pool()
         overfetch = max(_MIN_CANDIDATES, k * _OVERFETCH)
 
@@ -393,15 +417,21 @@ class PgVecRecordSearchProvider:
             # ``kernel.query.relevance.cosine_similarity`` — the raw number the
             # rank was hiding, and the only one that carries any relevance
             # signal at all.
+            #
+            # s-indice-por-dimensao: ``model_id`` is in the PREDICATE, not
+            # applied afterwards. A post-filter would let a foreign space's
+            # vectors CROWD OUT real candidates inside the LIMIT and silently
+            # shorten the result — and, worse next to i-103, it would compute a
+            # ``similarity`` against a vector that is not comparable at all.
             dense_ranked: list[int] = []
             dense_sim: dict[int, float] = {}
             if any(query_vec):
                 dense_rows = await conn.fetch(
-                    f"SELECT id, embedding <=> $2::vector AS distance "
-                    f"FROM {self._schema}.dna_search_docs "
-                    "WHERE scope=$1 AND embedding IS NOT NULL "
-                    "ORDER BY embedding <=> $2::vector LIMIT $3",
-                    scope, _vec_literal(query_vec), overfetch,
+                    f"SELECT id, embedding <=> $3::vector AS distance "
+                    f"FROM {self._schema}.{table} "
+                    "WHERE scope=$1 AND model_id=$2 AND embedding IS NOT NULL "
+                    "ORDER BY embedding <=> $3::vector LIMIT $4",
+                    scope, model_id, _vec_literal(query_vec), overfetch,
                 )
                 dense_ranked = [r["id"] for r in dense_rows]
                 dense_sim = {
@@ -409,17 +439,22 @@ class PgVecRecordSearchProvider:
                 }
 
             # Lexical plane — tsvector match ranked by ts_rank. An empty/
-            # unparseable query just contributes no lexical ranks.
+            # unparseable query just contributes no lexical ranks. Filtered by
+            # ``model_id`` for the same reason as the dense plane AND one more:
+            # the lexical plane does not look at vectors at all, so without the
+            # filter a foreign space's row would reach the fusion on words
+            # alone — the leak that looks most like a legitimate hit.
             lexical_ranked: list[int] = []
             lexical_score: dict[int, float] = {}
             ts = _ts_query(query_text)
             if ts:
                 lex_rows = await conn.fetch(
-                    f"SELECT id, ts_rank(fts, to_tsquery('simple', $2)) AS rank "
-                    f"FROM {self._schema}.dna_search_docs "
-                    "WHERE scope=$1 AND fts @@ to_tsquery('simple', $2) "
-                    "ORDER BY ts_rank(fts, to_tsquery('simple', $2)) DESC LIMIT $3",
-                    scope, ts, overfetch,
+                    f"SELECT id, ts_rank(fts, to_tsquery('simple', $3)) AS rank "
+                    f"FROM {self._schema}.{table} "
+                    "WHERE scope=$1 AND model_id=$2 "
+                    "AND fts @@ to_tsquery('simple', $3) "
+                    "ORDER BY ts_rank(fts, to_tsquery('simple', $3)) DESC LIMIT $4",
+                    scope, model_id, ts, overfetch,
                 )
                 lexical_ranked = [r["id"] for r in lex_rows]
                 lexical_score = {r["id"]: float(r["rank"]) for r in lex_rows}
@@ -437,7 +472,7 @@ class PgVecRecordSearchProvider:
 
             # Resolve metadata for the fused candidates.
             ids = [int(rid) for rid, _ in fused]
-            meta = await self._resolve_meta(conn, ids)
+            meta = await self._resolve_meta(conn, table, ids)
 
         best: dict[tuple[str, str], dict[str, Any]] = {}
         for rid, score in fused:
@@ -473,13 +508,20 @@ class PgVecRecordSearchProvider:
         return hits[:k]
 
     async def _resolve_meta(
-        self, conn: Any, ids: list[int],
+        self, conn: Any, table: str, ids: list[int],
     ) -> dict[int, dict[str, Any]]:
+        """Metadata for ids that the two planes ALREADY constrained.
+
+        Deliberately NOT re-filtered by ``model_id``. A third copy of the filter
+        would make the two that matter untestable: remove either plane's filter
+        and this one would quietly swallow the leak, so the mutant would stay
+        green while the bug it plants is real. The filter belongs where the
+        candidates are chosen."""
         if not ids:
             return {}
         rows = await conn.fetch(
             f"SELECT id, scope, kind, name, tenant, title, snippet "
-            f"FROM {self._schema}.dna_search_docs WHERE id = ANY($1::bigint[])",
+            f"FROM {self._schema}.{table} WHERE id = ANY($1::bigint[])",
             ids,
         )
         return {r["id"]: dict(r) for r in rows}
@@ -497,17 +539,12 @@ class PgVecRecordSearchProvider:
             except Exception:  # noqa: BLE001
                 pass
             self._pool = None
-            self._ready = False
+            self._verified.clear()
 
 
 # ---------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------
-
-def _now() -> str:
-    from datetime import datetime, timezone
-    return datetime.now(timezone.utc).isoformat()
-
 
 def _hit(
     scope: str, m: dict[str, Any], score: float,
