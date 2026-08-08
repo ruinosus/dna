@@ -14,6 +14,9 @@ houve foi ninguém declarar.
 """
 from __future__ import annotations
 
+import json
+from typing import Any
+
 import pytest
 
 from dna.runtime.roi import (
@@ -22,9 +25,14 @@ from dna.runtime.roi import (
     CURRENCY_MISMATCH,
     DECISIONS,
     DECLARED,
+    INCIDENTAL,
     MEASURED,
+    MIN_EDITS_FOR_CORRECTION,
     NO_APP,
     NO_APPROVALS,
+    NO_COMPARABLE_EDITS,
+    NO_CORRECTION_TO_MEASURE,
+    NO_EDITS,
     NO_MODEL_PRICE,
     NO_OUTCOME_DECLARED,
     NO_TURNS,
@@ -32,12 +40,14 @@ from dna.runtime.roi import (
     PROXY,
     ROWS,
     STANDING_REPLICA_USD_MONTH,
+    SYNTHETIC_ARGS,
     TECHNIQUE_ANSWERED,
     TECHNIQUES_NOT_ANSWERED,
     ModelPrice,
     NotCalculable,
     Number,
     Sample,
+    compare_args,
     read_yield,
     render,
     sample_from_turns,
@@ -72,6 +82,65 @@ def _turno(**kw) -> dict:
 
 def _aprovacao(decision: str) -> dict:
     return {"decision": decision}
+
+
+def _edit(proposto: Any, gravado: Any) -> dict:
+    """Uma linha `edit` com o par (proposto, gravado), como o banco a devolve.
+
+    ⚠️ ``arguments`` guarda o ``args`` do pedido e ``edited_args`` guarda o
+    ``edited_action`` INTEIRO. A assimetria é real (`dna.runtime.audit.settle`)
+    e o dublê a reproduz DE PROPÓSITO: um dublê simétrico deixaria passar
+    exatamente o defeito que a `i-151` mediu.
+    """
+    return {
+        "decision": "edit",
+        "arguments": json.dumps(proposto),
+        "edited_args": json.dumps({"name": "uma_tool", "args": gravado}),
+    }
+
+
+#: ⭐ Os TRÊS `edit` REAIS do Postgres de desenvolvimento (08/08/2026), na FORMA
+#: exata em que estavam gravados — envelope, `rationale`, tudo. Os valores aqui
+#: são inventados (o original é conteúdo de tenant); a ESTRUTURA é a medida, e é
+#: ela que a leitura tem de atravessar sem inventar correção.
+EDITS_MEDIDOS = [
+    {
+        "decision": "edit",
+        "arguments": json.dumps(
+            {"patch": {"draft": {"summary": "um resumo"}}, "rationale": "porque sim"}
+        ),
+        "edited_args": json.dumps(
+            {
+                "args": {"patch": {"draft": {"summary": "um resumo"}}},
+                "name": "update_memory_draft",
+            }
+        ),
+    },
+    {
+        "decision": "edit",
+        "arguments": json.dumps(
+            {"patch": {"draft": {"area": "uma área"}}, "rationale": "porque sim"}
+        ),
+        "edited_args": json.dumps(
+            {
+                "args": {"patch": {"draft": {"area": "uma área"}}},
+                "name": "update_memory_draft",
+            }
+        ),
+    },
+    {
+        "decision": "edit",
+        "arguments": json.dumps(
+            {"patch": {"draft": {"tags": ["a", "b", "c"]}}, "rationale": "porque sim"}
+        ),
+        "edited_args": json.dumps(
+            {
+                "args": {"patch": {"draft": {"tags": ["a", "b", "c"]}}},
+                "name": "update_memory_draft",
+            }
+        ),
+    },
+]
 
 
 def _respostas(reading) -> list:
@@ -452,7 +521,10 @@ def test_um_numero_sem_ORIGEM_nao_chega_a_existir():
 def test_TODO_numero_da_leitura_carrega_procedencia_e_origem():
     """Derivado de `ROWS`: um campo novo sem procedência cai aqui sozinho."""
     amostra = sample_from_turns(
-        [_turno(outcome="resolved")], [_aprovacao("approve")]
+        [_turno(outcome="resolved")],
+        # ⭐ O `edit` com REESCRITA de verdade é o que faz TODA linha desta
+        # leitura produzir número — inclusive a do grau de correção (`i-151`).
+        [_aprovacao("approve"), _edit({"a": "proposto"}, {"a": "reescrito"})],
     )
     r = read_yield(amostra, copilot=COPILOT, app={"can_sleep": False}, prices=PRECOS)
     numeros = [x for x in _respostas(r) if isinstance(x, Number)]
@@ -545,3 +617,303 @@ def test_uma_amostra_montada_A_MAO_com_zero_turnos_nao_engana_a_leitura():
     assert r.nothing_to_look_at
     assert isinstance(r.value, NotCalculable)
     assert isinstance(r.containment, NotCalculable)
+
+
+# ── `i-151`: `edited_args` ganha leitor — e o leitor sabe recusar ────────────
+#
+# ⭐ A ordem destes testes é a ordem em que a medição derrubou as hipóteses.
+# Cada normalização abaixo existe porque, SEM ela, os três `edit` reais do
+# banco de desenvolvimento produziriam "o agente errou ~100%".
+
+
+def test_os_dois_campos_NAO_tem_a_mesma_forma_e_a_comparacao_desembrulha():
+    """⚠️ `arguments` é o `args`; `edited_args` é o `edited_action` INTEIRO.
+
+    Sem desembrulhar, todo par divergiria já no primeiro nível — em toda linha,
+    para sempre. É o defeito nº 1 que a `i-151` mediu.
+    """
+    d = compare_args(
+        json.dumps({"a": 1}),
+        json.dumps({"name": "uma_tool", "args": {"a": 1}}),
+    )
+    assert d.unwrapped
+    assert (d.kept, d.changed, d.added, d.removed) == (1, 0, 0, 0)
+
+
+def test_um_argumento_chamado_name_NAO_e_confundido_com_o_envelope():
+    """O desembrulho é EXATO: sem um `args` de dicionário, não há envelope."""
+    d = compare_args(json.dumps({"name": "x"}), json.dumps({"name": "x"}))
+    assert not d.unwrapped
+    assert (d.kept, d.changed) == (1, 0)
+
+
+def test_REORDENAR_CHAVES_nao_e_correcao_nenhuma():
+    """⭐ A armadilha nomeada na issue, e a razão de comparar por CAMINHO.
+
+    Uma distância de string veria duas cadeias diferentes e chamaria de
+    reescrita total o que é a mesma coisa escrita noutra ordem.
+    """
+    proposto = '{"b": 2, "a": 1}'
+    gravado = '{"args": {"a": 1, "b": 2}, "name": "t"}'
+    assert proposto != gravado
+    d = compare_args(proposto, gravado)
+    assert (d.changed, d.added, d.removed) == (0, 0, 0)
+    assert d.kept == 2
+
+
+def test_REINDENTAR_o_JSON_tambem_nao_e_correcao():
+    """O mesmo argumento, outra formatação — zero diferença estrutural."""
+    d = compare_args('{"a":{"b":1}}', '{\n  "a": {\n    "b": 1\n  }\n}')
+    assert (d.kept, d.changed, d.added, d.removed) == (1, 0, 0, 0)
+
+
+def test_o_argumento_SINTETICO_nao_conta_como_campo_que_o_humano_tirou():
+    """⭐ `rationale` é injetado pela máquina e removido pela máquina.
+
+    MEDIDO: era 3 de 3 das remoções no banco de desenvolvimento. Contá-lo
+    inventaria uma correção de humano onde não houve humano nenhum.
+    """
+    proposto = json.dumps({"a": 1, "rationale": "porque sim"})
+    gravado = json.dumps({"name": "t", "args": {"a": 1}})
+
+    d = compare_args(proposto, gravado)
+    assert d.removed == 0 and d.ignored == 1
+    # E o contrafactual, que é o que dá sentido ao teste: sem o desconto, o
+    # `rationale` apareceria como campo tirado pelo humano.
+    assert compare_args(proposto, gravado, ignore=()).removed == 1
+
+
+def test_o_argumento_SINTETICO_nao_DIVERGE_do_middleware_que_o_injeta():
+    """⚠️ `SYNTHETIC_ARGS` é ENUMERADO em `roi`; esta é a guarda contra o drift.
+
+    O import direto não serve — `roi` não depende de LangChain e não vai passar
+    a depender — então o nome é copiado, e uma cópia sem guarda é como duas
+    listas desta casa já divergiram. Mesmo desenho de `DECISIONS` ×
+    `dna_hitl_middleware`.
+    """
+    pytest.importorskip("langchain.agents.middleware")
+    from dna.runtime.middleware.mcp_tools_mw import RATIONALE_ARG
+
+    assert RATIONALE_ARG in SYNTHETIC_ARGS
+
+
+def test_um_edited_args_VAZIO_nao_e_zero_correcao_e_sim_zero_comparacao():
+    """⚠️ Toda linha `approve` tem `edited_args` vazio. Lê-la como "o humano não
+    mudou nada" contaria cada aprovação como prova de acerto do agente — o
+    denominador errado mais fácil de construir nesta leitura."""
+    d = compare_args(json.dumps({"a": 1}), "")
+    assert d.unreadable and not d.comparable
+    assert (d.kept, d.changed, d.added, d.removed) == (0, 0, 0, 0)
+
+
+def test_um_par_ILEGIVEL_e_contado_a_parte_e_nao_entra_no_denominador():
+    """Não-JSON não é "sem diferença" — é sem comparação, e a leitura o diz."""
+    amostra = sample_from_turns(
+        [_turno()],
+        [{"decision": "edit", "arguments": "{isto não é json", "edited_args": "{}"}],
+    )
+    assert amostra.edits == 1
+    assert amostra.edits_compared == 0 and amostra.edits_unreadable == 1
+    r = read_yield(amostra, copilot=COPILOT, prices=PRECOS)
+    assert isinstance(r.correction, NotCalculable)
+    assert r.correction.reason == NO_COMPARABLE_EDITS
+    assert any("sem par legível" in l for l in render(r))
+
+
+def test_SO_as_linhas_edit_sao_comparadas():
+    """Um `approve` nunca entra na conta do grau de correção."""
+    amostra = sample_from_turns(
+        [_turno()], [_aprovacao("approve"), _aprovacao("reject")]
+    )
+    assert amostra.edits_compared == 0 and amostra.edits_unreadable == 0
+    assert amostra.edit_delta.leaves == 0
+
+
+def test_uma_LISTA_e_UMA_folha_comparada_inteira():
+    """Parear elemento a elemento exigiria uma identidade que os argumentos não
+    carregam: `["a","b"] → ["b","a"]` é reordenação em `tags` e é reescrita numa
+    pipeline. Sem saber qual, não se inventa o alinhamento."""
+    igual = compare_args(json.dumps({"t": ["a", "b"]}), json.dumps({"t": ["a", "b"]}))
+    assert (igual.kept, igual.changed) == (1, 0)
+    trocada = compare_args(json.dumps({"t": ["a", "b"]}), json.dumps({"t": ["b", "a"]}))
+    assert (trocada.kept, trocada.changed) == (0, 1)
+
+
+def test_um_dicionario_vazio_ANINHADO_e_uma_folha_e_nao_some_da_comparacao():
+    """Sem isso, `{"a": {}}` e `{"a": 1}` divergiriam e `{"a": {}}` × `{"a": {}}`
+    não teria folha nenhuma — a decisão do humano sumiria em silêncio."""
+    igual = compare_args(json.dumps({"a": {}}), json.dumps({"name": "t", "args": {"a": {}}}))
+    assert (igual.kept, igual.changed) == (1, 0)
+    mudou = compare_args(json.dumps({"a": {}}), json.dumps({"name": "t", "args": {"a": 1}}))
+    assert (mudou.kept, mudou.changed) == (0, 1)
+
+
+def test_um_edit_que_ZEROU_os_argumentos_nao_vira_campo_ACRESCENTADO():
+    """⚠️ O humano tirou tudo. Contar o `{}` da raiz como folha diria que ele
+    PÔS alguma coisa — e o número sairia 100% pelo motivo oposto ao real.
+
+    Sem denominador, a resposta certa é a recusa, não uma taxa.
+    """
+    amostra = sample_from_turns([_turno()], [_edit({"a": 1}, {})])
+    d = amostra.edit_delta
+    assert (d.added, d.changed, d.kept) == (0, 0, 0)
+    assert d.removed == 1 and d.leaves == 0
+
+    r = read_yield(amostra, copilot=COPILOT, prices=PRECOS)
+    assert isinstance(r.correction, NotCalculable)
+    assert r.correction.reason == NO_COMPARABLE_EDITS
+    assert "não há denominador" in r.correction.detail
+
+
+# ── ⭐ o estado MEDIDO: 3 `edit` que não corrigiram nada ─────────────────────
+
+
+def test_os_TRES_edit_medidos_nao_reescreveram_nada_e_a_leitura_RECUSA():
+    """⭐⭐ O teste central da `i-151`, com a forma exata do banco de dev.
+
+    Os três pares diferem no TEXTO (envelope + `rationale`) e são idênticos na
+    ESTRUTURA. Um "grau de erro: 0%" seria verdadeiro no cálculo e leria "o
+    agente acertou tudo" — quando o que se mediu foi "nenhum humano escreveu
+    valor nenhum". Mesma classe do "contenção 0%".
+    """
+    amostra = sample_from_turns(
+        [_turno() for _ in range(85)],
+        [_aprovacao("approve") for _ in range(20)] + EDITS_MEDIDOS,
+    )
+    assert amostra.decisions == {"approve": 20, "edit": 3}
+    assert amostra.edits_compared == 3 and amostra.edits_unreadable == 0
+    d = amostra.edit_delta
+    assert (d.changed, d.added, d.removed) == (0, 0, 0)
+    assert d.kept == 3 and d.ignored == 3 and d.unwrapped
+
+    r = read_yield(amostra, copilot=COPILOT, prices=PRECOS)
+    assert isinstance(r.correction, NotCalculable)
+    assert r.correction.reason == NO_CORRECTION_TO_MEASURE
+
+    # ⭐ E o mutante que este teste existe para matar: a TELA não pode mostrar
+    # número na linha do grau de correção. A asserção é sobre a LINHA e não
+    # sobre o texto inteiro — o `detail` cita "0%" de propósito, ao explicar o
+    # que ele leria.
+    linha = next(l for l in render(r) if l.startswith("Grau de correção:"))
+    assert linha.startswith("Grau de correção: NÃO CALCULÁVEL")
+    assert f"[{INCIDENTAL}" not in linha, "não há número para rotular"
+
+
+def test_um_edit_que_so_RECORTA_campos_tambem_nao_vira_grau_de_erro():
+    """⚠️ Um campo que sumiu é indistinguível de um formulário que não o
+    devolve. E não é hipótese: é o que o console faz — o `edit` dele é um
+    SUBCONJUNTO do patch do próprio agente."""
+    amostra = sample_from_turns([_turno()], [_edit({"a": 1, "b": 2}, {"a": 1})])
+    d = amostra.edit_delta
+    assert (d.kept, d.changed, d.added, d.removed) == (1, 0, 0, 1)
+    r = read_yield(amostra, copilot=COPILOT, prices=PRECOS)
+    assert r.correction.reason == NO_CORRECTION_TO_MEASURE
+    assert "RECORTADO" in r.correction.detail
+    assert any("impossível por construção" in l for l in render(r))
+
+
+def test_sem_NENHUM_edit_a_recusa_diz_que_isso_NAO_e_acerto_do_agente():
+    """Zero `edit` não é "o agente acertou": pode ser que ninguém tenha olhado.
+    A frase da recusa carrega isso, porque é onde alguém vai ler."""
+    amostra = sample_from_turns([_turno()], [_aprovacao("approve")])
+    r = read_yield(amostra, copilot=COPILOT, prices=PRECOS)
+    assert r.correction.reason == NO_EDITS
+    assert "NÃO diz que o agente acertou" in r.correction.detail
+
+
+# ── e quando HÁ reescrita, o número existe — com rótulo e com ressalva ───────
+
+
+def test_uma_reescrita_de_verdade_VIRA_numero_com_procedencia_INCIDENTAL():
+    """A máquina está pronta: no dia em que um host escrever valor de humano, a
+    linha responde. `INCIDENTAL`, e não `PROXY`: ela mede exatamente o que diz
+    medir, e o defeito dela é sair de um registro que não foi escrito para ser
+    medido."""
+    amostra = sample_from_turns(
+        [_turno()],
+        [_edit({"a": "proposto", "b": "igual"}, {"a": "REESCRITO", "b": "igual"})],
+    )
+    r = read_yield(amostra, copilot=COPILOT, prices=PRECOS)
+    assert isinstance(r.correction, Number)
+    assert r.correction.basis == INCIDENTAL
+    assert r.correction.value == 50.0  # 1 de 2 folhas
+    assert r.correction.unit == "%"
+
+
+def test_um_valor_ACRESCENTADO_pelo_humano_conta_como_correcao():
+    """O humano pôs um campo que o agente não propôs — é correção tanto quanto
+    reescrever um."""
+    amostra = sample_from_turns([_turno()], [_edit({"a": 1}, {"a": 1, "b": 2})])
+    d = amostra.edit_delta
+    assert (d.added, d.changed, d.kept) == (1, 0, 1)
+    r = read_yield(amostra, copilot=COPILOT, prices=PRECOS)
+    assert isinstance(r.correction, Number) and r.correction.value == 50.0
+
+
+def test_a_AMOSTRA_PEQUENA_viaja_colada_ao_numero_e_aparece_na_TELA():
+    """⭐ No molde do PISO: um qualificador guardado no objeto e omitido na tela
+    é a regra cumprida onde ninguém olha."""
+    amostra = sample_from_turns([_turno()], [_edit({"a": "x"}, {"a": "y"})])
+    r = read_yield(amostra, copilot=COPILOT, prices=PRECOS)
+    assert r.correction.is_small_sample
+    assert "AMOSTRA PEQUENA" in r.correction.label
+
+    linhas = render(r)
+    linha = next(l for l in linhas if l.startswith("Grau de correção:"))
+    assert "AMOSTRA PEQUENA" in linha, "a ressalva ficou onde ninguém a lê"
+    assert any("anedota com casas decimais" in l for l in linhas)
+
+
+def test_acima_do_PISO_de_edits_o_numero_sai_LIMPO():
+    """E o piso é POLÍTICA, não medição — `min_edits_for_correction` o troca."""
+    muitos = [_edit({"a": "x"}, {"a": "y"}) for _ in range(MIN_EDITS_FOR_CORRECTION)]
+    r = read_yield(
+        sample_from_turns([_turno()], muitos), copilot=COPILOT, prices=PRECOS
+    )
+    assert isinstance(r.correction, Number) and not r.correction.is_small_sample
+
+    # E com o piso trocado para cima, o MESMO número volta a sair marcado.
+    r2 = read_yield(
+        sample_from_turns([_turno()], muitos),
+        copilot=COPILOT,
+        prices=PRECOS,
+        min_edits_for_correction=MIN_EDITS_FOR_CORRECTION + 1,
+    )
+    assert r2.correction.is_small_sample
+
+
+def test_a_procedencia_INCIDENTAL_e_uma_procedencia_de_verdade():
+    """Ela entra em `BASES`, ou um `Number` com ela não chegaria a existir."""
+    from dna.runtime.roi import BASES
+
+    assert INCIDENTAL in BASES
+    assert Number(1.0, "%", INCIDENTAL, "porque sim").label == f"[{INCIDENTAL}]"
+
+
+# ── ⚠️ conteúdo de cliente: o texto viaja, só a CONTAGEM fica ────────────────
+
+
+def test_NENHUM_pedaco_do_conteudo_do_tenant_sobrevive_a_leitura():
+    """⭐⭐ A regra 2 da issue, e o mutante mais caro desta story.
+
+    Os dois campos carregam o que o usuário digitou. Um `source` ou um `detail`
+    que citasse o valor — ou o CAMINHO onde ele estava, que também pode ser
+    digitado pelo usuário — transformaria um relatório de ROI num vazamento.
+    A varredura cobre a leitura INTEIRA (a `Sample`, cada resposta, cada nota e
+    cada linha de `render`), não só a linha nova.
+    """
+    segredo = "SEGREDO-DO-TENANT-4f2a"
+    chave = "CHAVE-DIGITADA-PELO-USUARIO"
+    amostra = sample_from_turns(
+        [_turno()],
+        [_edit({chave: segredo, "rationale": segredo}, {chave: segredo + "-corrigido"})],
+    )
+    r = read_yield(amostra, copilot=COPILOT, prices=PRECOS)
+    # A comparação FOI feita — senão este teste passaria por vacuidade.
+    assert isinstance(r.correction, Number) and r.correction.value == 100.0
+
+    superficie = "\n".join(
+        [repr(amostra), *render(r), *(repr(x) for x in _respostas(r)), *r.notes]
+    )
+    assert segredo not in superficie
+    assert chave not in superficie

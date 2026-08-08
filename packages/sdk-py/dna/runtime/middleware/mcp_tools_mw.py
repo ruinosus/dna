@@ -44,7 +44,15 @@ from dna.runtime.mcp_tools import load_mcp_tools
 
 _log = logging.getLogger("dna.runtime.mcp_tools_mw")
 
-_RATIONALE_ARG = "rationale"
+#: ⭐ O nome do argumento SINTÉTICO do canal do porquê. Público porque ele tem
+#: um SEGUNDO leitor: `dna.runtime.roi` precisa descontá-lo ao comparar
+#: `arguments` com `edited_args`. Ele entra no que o modelo propôs e é removido
+#: antes da execução (`_strip_rationale`), então uma comparação que o contasse
+#: veria uma "correção do humano" onde houve máquina dos dois lados. Enumerar o
+#: nome lá sem guardar contra este seria a mesma cópia que `roi.DECISIONS` já
+#: teve de guardar contra o `dna_hitl_middleware`.
+RATIONALE_ARG = "rationale"
+_RATIONALE_ARG = RATIONALE_ARG
 _RATIONALE_SCHEMA = {
     "type": "string",
     "description": (
