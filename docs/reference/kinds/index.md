@@ -64,7 +64,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | `volatile_spec_fields` |  | Extra write-/runtime-stamped spec fields excluded from the canonical digest, unioned with the base set {updated_at, version, created_at}. |
 | `workitem_common` |  | DEPRECATED back-compat shorthand for schema_fragments: ["sdlc/workitem-common"]. Python-only. |
 
-## Registered Kinds (85)
+## Registered Kinds (86)
 
 ### Composition plane
 
@@ -133,6 +133,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [Issue](record.md#issue) | `sdlc-issue` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Kaizen](record.md#kaizen) | `sdlc-kaizen` | `github.com/ruinosus/dna/sdlc/v1` |
 | [KindNamespace](record.md#kindnamespace) | `tenant-kind-namespace` | `github.com/ruinosus/dna/tenant/v1` |
+| [KnowledgeChunk](record.md#knowledgechunk) | `artifact-knowledge-chunk` | `github.com/ruinosus/dna/artifact/v1` |
 | [Membership](record.md#membership) | `portfolio-membership` | `github.com/ruinosus/dna/portfolio/v1` |
 | [Memory](record.md#memory) | `mif-memory` | `mif-spec.dev/v1` |
 | [ModelProfile](record.md#modelprofile) | `modelreg-model-profile` | `github.com/ruinosus/dna/modelreg/v1` |

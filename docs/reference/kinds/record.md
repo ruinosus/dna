@@ -1087,6 +1087,27 @@ A KindNamespace records that a workspace owns an apiVersion namespace — the cl
 | `notes` | string \| null |  | Free-form operator note — why this namespace was granted, the ticket it came from. Never read by the enforcement path. |
 | `owner` | string | yes | The `workspace_id` of the workspace that owns this namespace. OPAQUE — matched whole, never parsed. It is the same value the kernel `tenant` column carries for that workspace, which is what lets the write path compare a writer to an owner without a lookup. |
 
+## KnowledgeChunk
+
+- **Alias:** `artifact-knowledge-chunk`
+- **apiVersion:** `github.com/ruinosus/dna/artifact/v1`
+- **Plane:** record
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `collection` | string | yes | A coleção a que este trecho pertence. É o mesmo valor que abre o NOME da instância, e é o dado legível de que o nome deriva. Minúsculas, dígitos e hífen — porque vira prefixo de nome e prefixo de nome é identidade. |
+| `end_char` | integer \| null |  | Offset final (exclusivo) dentro do Markdown extraído. |
+| `extracted_at` | string \| null |  | ISO-8601 de quando a ingestão produziu este trecho. |
+| `ordinal` | integer | yes | A posição do trecho na ordem do documento, base 0. É o "onde" grosso da citação, e o que permite reconstituir a ordem de leitura. |
+| `source_filename` | string \| null |  | O nome com que o arquivo chegou. É o que a citação MOSTRA para uma pessoa ("relatorio-q3.pdf"), porque um sha256 não diz nada a ninguém. Exibição apenas — nunca um caminho para abrir. |
+| `source_sha256` | string | yes | O endereço de conteúdo do SourceArtifact de onde este trecho saiu. É o que torna a citação VERIFICÁVEL: quem tem o arquivo confere. |
+| `source_uri` | string \| null |  | Onde os bytes do original vivem — IDENTIDADE, nunca credencial. A mesma regra do `SourceArtifact.uri`: jamais uma URL assinada. |
+| `start_char` | integer \| null |  | Offset inicial dentro do Markdown extraído. O "onde" FINO da citação — reportado pelo chunker (`chonkie` devolve `start_index`), nunca estimado. Nulo quando o cortador não soube dizer. |
+| `text` | string | yes | O trecho em si — o ÚNICO campo embutido (ver `embed:` acima). É o Markdown extraído do original, recortado; nunca os bytes originais. |
+| `token_count` | integer \| null |  | Tamanho do trecho em tokens, como o chunker o contou. |
+
 ## Membership
 
 - **Alias:** `portfolio-membership`
