@@ -6,22 +6,43 @@ metadata:
 spec:
   title: A leitura que junta custo e rendimento — e diz quando nao da para calcular
   description: A consulta/porta que cruza dna_turn (custo em tokens) com o desfecho e o value_per_outcome do Copilot. Sem valor declarado o resultado e NAO CALCULAVEL, nunca zero.
-  status: review
+  status: done
   feature: f-conta-do-copiloto
   priority: high
   acceptance_criteria:
-  - Dado um Copilot com value_per_outcome declarado e turnos com desfecho, quando eu peco a leitura, entao ela devolve custo, rendimento e a razao entre os dois
-  - Dado um Copilot SEM value_per_outcome, quando eu peco a leitura, entao ela devolve nao-calculavel com o motivo, e nunca zero nem estimativa inventada
-  - Dada a taxa de aceitacao do HITL, quando ela e reportada, entao ela vem rotulada como PROXY, com a contagem de approve/edit/reject que a origina
+  - text: Dado um Copilot com value_per_outcome declarado e turnos com desfecho, quando eu peco a leitura, entao ela devolve custo, rendimento e a razao entre os dois
+    done: true
+    done_at: '2026-08-08T11:29:25+00:00'
+    done_by: story-done-auto
+  - text: Dado um Copilot SEM value_per_outcome, quando eu peco a leitura, entao ela devolve nao-calculavel com o motivo, e nunca zero nem estimativa inventada
+    done: true
+    done_at: '2026-08-08T11:29:25+00:00'
+    done_by: story-done-auto
+  - text: Dada a taxa de aceitacao do HITL, quando ela e reportada, entao ela vem rotulada como PROXY, com a contagem de approve/edit/reject que a origina
+    done: true
+    done_at: '2026-08-08T11:29:25+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: a leitura no SDK, com a origem de cada numero explicita'
-  - 'Tests: o caso sem valor declarado provando que nada e fabricado'
-  - 'Docs: os nomes de mercado (contencao, AHT, holdout) e qual deles esta sendo respondido'
-  - 'CI: sdk-py + postgres verdes'
+  - text: 'Code: a leitura no SDK, com a origem de cada numero explicita'
+    done: true
+    done_at: '2026-08-08T11:29:25+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: o caso sem valor declarado provando que nada e fabricado'
+    done: true
+    done_at: '2026-08-08T11:29:25+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: os nomes de mercado (contencao, AHT, holdout) e qual deles esta sendo respondido'
+    done: true
+    done_at: '2026-08-08T11:29:25+00:00'
+    done_by: story-done-auto
+  - text: 'CI: sdk-py + postgres verdes'
+    done: true
+    done_at: '2026-08-08T11:29:25+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-07T17:42:00+00:00'
-  updated_at: '2026-08-08T11:15:16+00:00'
+  updated_at: '2026-08-08T11:29:37+00:00'
   timeline:
   - at: '2026-08-07T17:42:00+00:00'
     actor: claude-code
@@ -50,4 +71,15 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-08-08T11:29:37+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 5fee0d310b5f19e70b1d10211d0f1ada8eaadb17
+    summary: 'Entregue e merjado (PR #359). runtime/roi.py — leitura pura, mais uma porta de banco. As três regras viraram MECANISMO: Number NÃO SE CONSTRÓI sem basis e sem source (o construtor levanta); render() imprime [PROXY] e ≥PISO na MESMA LINHA do número; e vazio tem DOIS nomes (nothing_to_look_at = 0 turnos; no_outcome_declared = turnos sem desfecho), ambos ACHADO, nunca 0%. SETE mutantes, todos vermelhos (20/3/5/2/2/3/1/1). ⭐ E ele corrigiu a spec num ponto que eu tinha como certo: ''o custo já é exato'' — exata é a contagem de TOKENS; NÃO EXISTE tabela de preço de modelo em lugar nenhum do repo. Então dinheiro depende de um ModelPrice DECLARADO pelo chamador, e sem ele cost volta NÃO CALCULÁVEL enquanto tokens sai normal — uma tabela embutida envelheceria em silêncio e produziria dinheiro errado com cara de medição. E can_sleep NÃO cabe na mesma conta: os US são MENSAIS e o resto é POR TURNO — virou standing_cost separado, basis=CONSTANT, fora da razão.'
   plan_skip_reason: o plano está na spec-rendimento-do-copiloto (accepted) e nos AC/DoD da story
+  references:
+  - Spec/spec-rendimento-do-copiloto
+  closed_at: '2026-08-08T11:29:25+00:00'
