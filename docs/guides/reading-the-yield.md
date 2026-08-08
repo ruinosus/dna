@@ -8,14 +8,14 @@ successful outcome is **worth** (`Copilot.value_per_outcome`).
 Most of what this module does is refuse to make things up.
 
 ```python
-from dna.runtime.roi import ModelPrice, read_yield, render, sample_from_turns
+from dna.runtime.roi import gather_prices, read_yield, render, sample_from_turns
 
 sample = sample_from_turns(turn_rows, approval_rows)
 reading = read_yield(
     sample,
-    copilot=copilot_spec,           # the Copilot's `spec`
-    app=app_spec,                   # the `App` its `runs_in` points at
-    prices={"gpt-5-mini": ModelPrice(0.25, 2.0, "USD")},
+    copilot=copilot_spec,               # the Copilot's `spec`
+    app=app_spec,                       # the `App` its `runs_in` points at
+    prices=await gather_prices(kernel, sample),   # from the ModelProfile registry
 )
 print("\n".join(render(reading)))
 ```
@@ -149,17 +149,14 @@ so instead of pretending a direction.
 The spec that opened this work said *"cost is already exact (tokens × model) —
 nothing is missing"*. Half of that survived contact with the code.
 
-**Token counts are exact.** Money is not, because **there is no model price table
-anywhere in this repository** — no Kind, no constant, no file. Token prices change
-week to week and are a fact about the operator's *contract*, not about the SDK; a
-table embedded here would age in silence and produce wrong money wearing the face
-of a measurement.
-
-So the price is declared by the caller, and without it:
+**Token counts are exact.** Money is not, because **no price table is embedded in
+this code** — no constant, no file, no literal. Token prices change week to week
+and are a fact about the operator's *contract*; a table hardcoded here would age
+in silence and produce wrong money wearing the face of a measurement.
 
 ```python
 reading.tokens   # Number(1500.0, "tokens", MEASURED, …)   ← always available
-reading.cost     # NotCalculable(reason="no_model_price", missing=("gpt-5-mini",))
+reading.cost     # NotCalculable(reason="no_model_price", missing=("gpt-5.4",))
 ```
 
 A model that appears in the sample with **no** declared price makes the whole
@@ -167,6 +164,138 @@ money answer not-calculable — never a partial sum, which would be smaller than
 the truth and is the kind of wrong that fools people most. Prices in two
 currencies do the same (`currency_mismatch`), because adding them produces a
 number that is not money at all.
+
+---
+
+## Where the price comes from: `ModelProfile`, not "the caller"
+
+The paragraph above is right about everything except one word. Until
+`s-preco-vem-do-modelprofile`, the price was declared *by the caller* — and **a
+price each caller assembles is a price in nobody's code**. That is exactly the
+lesson the `ModelProfile` descriptor already carried, with the outage that
+motivated it: a 17,269-token voice persona silently blew past a 16,384 cap
+*because the cap lived in nobody's code*. A price is the same class of fact as a
+cap: **first-class global data**, declared in a Kind.
+
+The two fields have always been there:
+
+| `ModelProfile.spec` field | |
+|---|---|
+| `cost_per_1m_input_usd` | USD per 1M input tokens — `type: [number, "null"]` |
+| `cost_per_1m_output_usd` | USD per 1M output tokens — same |
+
+Two functions turn them into the price the reading consumes:
+
+| | for | needs |
+|---|---|---|
+| `price_book(profiles)` | raw `ModelProfile` rows already in hand | nothing — **pure** |
+| `await gather_prices(kernel, sample)` | resolving only the models the sample used, through `kernel.model_profile()` | a kernel |
+
+Both return a `PriceBook`, and it has **two** maps on purpose — because "no
+price" has two causes that ask different things of the reader:
+
+```python
+PriceBook(
+    prices={"gpt-5.4": ModelPrice(0.25, 2.0, "USD", source="ModelProfile 'gpt-5.4' …")},
+    incomplete={"claude-x": ("cost_per_1m_output_usd",)},   # exists, never quoted
+)
+```
+
+A model absent from both needs a profile **created**; a model in `incomplete`
+needs its profile **completed**, and the reading names the field. Collapsing the
+two into "missing" hands out the wrong instruction, which is nearly as expensive
+as none.
+
+### The four refusals
+
+1. **A model without a price never becomes a partial sum.** If any model in the
+   sample lacks a price, the *whole* money answer is `NotCalculable`, naming the
+   ones that are missing. Partial is smaller than real, and understated cost is
+   the kind of wrong that fools people most.
+2. **`null` is ABSENT, never zero.** The schema declares `type: [number, "null"]`
+   deliberately. A `null` read as `0.0` would report "free" for the most
+   expensive model in the fleet. Half a quote is not half a price either: input
+   declared and output `null` yields *unknown*, exactly like a half-declared
+   `value_per_outcome`. Anything that is not a number — a bool (`float(True)` is
+   `1.0`), a string, a negative — is not a quote.
+3. **"I don't know" becomes "declare THIS."** Measured on the development
+   Postgres on 2026-08-08: **zero `ModelProfile` instances exist.** The field is
+   there and nobody has declared a model. So the reading answers *not calculable*
+   on day one — which is correct — but it must not stay silent about which model
+   to declare. `missing` carries the exact `model_id` `dna_turn` stamped, and
+   `detail` carries the path (`_lib`, `model-profiles/<model_id>.yaml`) and the
+   two field names.
+4. **The currency is in the field NAME.** `cost_per_1m_input_usd` ends in `_usd`;
+   `PROFILE_PRICE_CURRENCY` reads that and presumes nothing.
+
+⚠️ **Aliases are not optional, and the measurement says so.** On the same
+database `dna_turn` stamped 74 turns of `gpt-5.4` and **one** of
+`gpt-5.4-2026-03-05` — a dated snapshot. Without the second pass over
+`aliases[]` (the same one `kernel.model_profile()` does), that single turn would
+make the entire account not-calculable even with `gpt-5.4` declared, by rule 1.
+`gather_prices` keys the book by **the name the turn stamped**, even when the
+match came through an alias.
+
+### How old is the price? — `i-101`, decided 2026-08-08
+
+While `cost_per_1m_*` was *"(informational)"* a stale price hurt nobody. The
+resolution above makes it **accountable**, and a stale accountable number
+produces a wrong account **wearing the face of a measurement** — precisely the
+defect PR #359 refused by not embedding a table. So the Kind gained two fields:
+
+| field | |
+|---|---|
+| `cost_quoted_at` | ISO-8601 — **when** this price was quoted |
+| `cost_source` | **where** it came from: pricing page, contract, estimate |
+
+Past an age ceiling the reading marks the money **suspect** — and it does so in
+the **mould of `is_floor`**, which already existed and was already printed:
+
+```python
+reading.cost.is_suspect          # True
+reading.cost.source              # "… ⚠️ PREÇO VELHO acima do teto de 90d: gpt-5.4 (219d)"
+render(reading)                  # "Custo (tokens): 0.0004 USD [MEASURED ⚠ SUSPEITO]"
+```
+
+Three decisions worth stating, because each had an easy wrong answer:
+
+* **The ceiling is a default, not a law.** `PRICE_STALE_AFTER_DAYS` is 90 days —
+  and it is labelled **policy, not measurement**, with its reason and its date
+  next to it, the same way `STANDING_REPLICA_USD_MONTH` is labelled `CONSTANT`
+  rather than `MEASURED`. `read_yield(..., price_max_age_days=...)` overrides it,
+  because a negotiated contract price is stable for a year and a public pricing
+  page is not, and one ceiling for both is the same hardcoding this module
+  refuses for the price itself.
+* **Absent `cost_quoted_at` is UNKNOWN age, and unknown is not recent.** It is
+  suspect too. Reading absent as fresh would presume the good side — the same
+  error as presuming `can_sleep: true`, which hides exactly the replica nobody
+  decided. The two states share the mark and carry different sentences, just as
+  the two floors (unreadable usage, pre-0012 rows) share `is_floor`.
+* **Suspect does not refuse the number.** The tokens were measured and the price
+  was declared; only the *age* is in doubt. Refusing would throw away a
+  measurement over a metadata gap — that is the line between "not calculable"
+  and "calculable, with a caveat".
+
+Both fields are **optional in the schema on purpose.** With zero live instances,
+adding a *required* field is free today — but `required` in JSON Schema is
+unconditional, and this Kind serves two audiences from one object: whoever
+registers a token cap (the outage that created it) and whoever registers a price.
+Requiring a quote date from someone declaring only `instruction_token_cap` pushes
+them to invent one, and an invented date reads as knowledge. The requirement is
+conditional, so it lives where conditions can be expressed: the reading.
+
+> **On `models.dev`** (MIT, `cost.input` / `cost.output` in USD per 1M, plus
+> `last_updated`): it maps almost 1:1 onto these fields, and importing it is its
+> own story. Note that it does not remove the need for `cost_quoted_at` — it is a
+> community catalogue with no declared refresh cadence, so a price can be stale
+> there too. We do not trust the catalogue; we import **the date it declares**
+> and let the age ceiling do the work.
+
+A hand-built `ModelPrice` still works — a test needs to declare a price without
+assembling a Kind — and its `source` says `PRICE_FROM_CALLER` precisely so the
+screen can tell the two apart. There is deliberately **one** price parameter and
+not two: two sources for the same number is drift waiting to happen, and the one
+that lost would be wrong in silence.
 
 ---
 
@@ -230,6 +359,22 @@ turns", and what happened is "this question is not asked here".
   never *"did it resolve?"*. The vocabulary is imported from
   `dna.runtime.telemetry.OUTCOMES` — one list, never a second copy — and a value
   outside it (`ok`, `sucesso`, a typo) counts as unknown.
+* ⚠️ **It does not price prompt CACHE — because nothing counts it.** Measured
+  2026-08-08: `dna_turn` has `input_tokens` and `output_tokens` and no cache
+  column; `dna.runtime.telemetry` reads `gen_ai.usage.input_tokens` /
+  `output_tokens` and nothing else. A `cost_per_1m_cache_read_usd` on the Kind
+  today would price a quantity nobody counts — a decorative field, which is worse
+  than an absent one because absent is visible. And the consequence is bigger
+  than a missing field: **the direction of the error stops being known for cached
+  traffic.** The floor claim above holds while every input token costs the input
+  price. With prompt cache it depends on the provider — some report cache reads
+  *outside* `input_tokens` (the account understates, the floor holds), some
+  *inside* (the account overstates, charging 1× what was billed at a fraction,
+  and the floor is wrong). In a copilot this is not a detail: the same
+  instruction ships on every turn. Closing it is migration + telemetry +
+  `TokenUse` + price, in that order. Note the "adding a field is free while there
+  are zero `ModelProfile` instances" argument does **not** transfer to the hard
+  half: `dna_turn` already has rows, and its window has closed.
 * **It does not read `edited_args`.** The difference between `arguments` and
   `edited_args` is literally how wrong the agent was, measured by a human, in
   production — the cheapest quality signal in the system, recorded and still
