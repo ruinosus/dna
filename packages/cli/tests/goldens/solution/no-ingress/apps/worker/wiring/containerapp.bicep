@@ -1,9 +1,9 @@
-// {{ service_name }} — the container app resource, as a Bicep MODULE.
+// worker — the container app resource, as a Bicep MODULE.
 //
 // ⛔ This file is reachable by the template. Its INVOCATION is not: the root
 // bicep has to carry a line like
 //
-//   module {{ service_name | replace('-', '') }}App '../../apps/{{ service_name }}/wiring/containerapp.bicep' = { ... }
+//   module workerApp '../../apps/worker/wiring/containerapp.bicep' = { ... }
 //
 // and Bicep has no glob or include for that. `dna solution new` prints it; a
 // wiring guard in the consuming repo is what makes forgetting it fail loudly.
@@ -19,12 +19,12 @@ param containerMemory string
 param resourceToken string
 param sourceUrl string
 
-var appName = 'ca-{{ service_name }}-${resourceToken}'
+var appName = 'ca-worker-${resourceToken}'
 
-resource {{ service_name | replace('-', '') }}App 'Microsoft.App/containerApps@2024-03-01' = {
+resource workerApp 'Microsoft.App/containerApps@2024-03-01' = {
   name: appName
   location: location
-  tags: union(tags, { 'azd-service-name': '{{ service_name }}' })
+  tags: union(tags, { 'azd-service-name': 'worker' })
   identity: {
     type: 'UserAssigned'
     userAssignedIdentities: { '${appIdentityId}': {} }
@@ -33,20 +33,11 @@ resource {{ service_name | replace('-', '') }}App 'Microsoft.App/containerApps@2
     managedEnvironmentId: managedEnvironmentId
     configuration: {
       activeRevisionsMode: 'Single'
-{%- if ingress == 'none' %}
       // ⭐ ingress: NONE — this app does not serve, so it has no ingress block
       // and no targetPort. Omitted, never `external: false`: an internal
       // ingress is still a reachable address inside the environment, and this
       // app was declared to have none. A port here would be surface it was
       // designed not to have.
-{%- else %}
-      ingress: {
-        external: {{ 'true' if ingress == 'external' else 'false' }} // {{ ingress | upper }}
-        targetPort: {{ port }}
-        transport: 'auto'
-        allowInsecure: false
-      }
-{%- endif %}
       registries: [
         { server: '${registryName}.azurecr.io', identity: appIdentityId }
       ]
@@ -57,23 +48,16 @@ resource {{ service_name | replace('-', '') }}App 'Microsoft.App/containerApps@2
     template: {
       containers: [
         {
-          name: '{{ service_name }}'
+          name: 'worker'
           image: placeholderImage // azd overwrites this with the image it builds
           resources: { cpu: json(containerCpu), memory: containerMemory }
           env: [
-{%- if ingress != 'none' %}
-            { name: '{{ env_prefix }}_HOST', value: '0.0.0.0' }
-            { name: '{{ env_prefix }}_PORT', value: '{{ port }}' }
-{%- endif %}
-            { name: '{{ env_prefix }}_AUTH', value: '{{ "config" if identity != "none" else "none" }}' }
-{%- if graph_obo | default(false) %}
-            { name: '{{ env_prefix }}_GRAPH_OBO', value: 'true' }
-{%- endif %}
+            { name: 'DNA_API_AUTH', value: 'none' }
             { name: 'DNA_SOURCE_URL', secretRef: 'dna-source-url' }
           ]
         }
       ]
-      // ⭐ can_sleep: {{ can_sleep }} — the cost gate, AS A FIELD of the App.
+      // ⭐ can_sleep: True — the cost gate, AS A FIELD of the App.
       //
       // minReplicas 1 means this app never sleeps, and never-sleeping is a
       // RECURRING monthly bill, not a one-off: ~US$ 90/month, measured — the
@@ -82,7 +66,7 @@ resource {{ service_name | replace('-', '') }}App 'Microsoft.App/containerApps@2
       //
       // Per SERVICE, never per image: two doors over one image may answer
       // differently, and this file is the one that says which of them pays.
-      scale: { minReplicas: {{ 0 if can_sleep else 1 }}, maxReplicas: {{ max_replicas }} }
+      scale: { minReplicas: 0, maxReplicas: 4 }
     }
   }
 }

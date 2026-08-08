@@ -4,10 +4,9 @@ Anything richer would be behaviour, and behaviour is yours — see `server.py`.
 """
 from __future__ import annotations
 
-from {{ python_module }} import server
+from worker import server
 
 
-{% if ingress == 'none' -%}
 def test_this_app_does_not_serve() -> None:
     """`ingress: none` all the way down — no port anywhere, not even a default.
 
@@ -16,11 +15,7 @@ def test_this_app_does_not_serve() -> None:
     a `port`), so a `PORT` reappearing here would mean something invented one.
     """
     assert not hasattr(server, "PORT")
-{%- else -%}
-def test_port_comes_from_the_declared_default() -> None:
-    assert server.PORT == {{ port }}
-{%- endif %}
 
 
 def test_identity_authority_is_the_one_that_was_declared() -> None:
-    assert server.IDENTITY == "{{ identity }}"
+    assert server.IDENTITY == "none"

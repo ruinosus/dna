@@ -150,20 +150,53 @@ graph_obo:
   default: false
   when: "{{ identity == 'entra' }}"
 
+# ⭐ `none` is the answer that says this app DOES NOT SERVE — dna-cloud's
+# `worker` scales on KEDA over a queue and answers nobody. Added on 08/08/2026
+# (i-099) to close the expensive kind of asymmetry: the `App` Kind has accepted
+# `ingress: none` since PR #355 and this template could not produce it, so
+# there was an App anyone could DECLARE and nobody could GENERATE. The Kind's
+# own header carried it as a loose end ("o `worker` não é representável pelo
+# template hoje"); this is that end tied, and it is the thesis of #353 — the
+# question names ARE the App's field names, so the App's values have to be
+# answerable here.
 ingress:
   type: str
-  help: "reachable from outside the environment, or only from inside it"
-  choices: ["internal", "external"]
+  help: "reachable from outside the environment, only from inside it, or not at all"
+  choices: ["internal", "external", "none"]
   default: "internal"
 
 # ⭐ `port` and `can_sleep` are PER SERVICE, never per directory. Two doors over
 # one image legitimately disagree about both — `App.port` / `App.can_sleep` are
 # fields of the App, and the answers file is per service, so the wiring each one
 # renders carries its own answers even when the code is shared.
+#
+# ⛔ `port` is GATED on `ingress != 'none'`, and the gate is not tidiness: the
+# `App` Kind REFUSES `ingress: none` together with a `port` AT WRITE TIME (the
+# `allOf` at the end of `app.kind.yaml` — "does not serve" and "serves on 8080"
+# cannot both be true). A template that asked anyway would write `port: 8080`
+# into the answers file of an app that does not serve, and the App derived from
+# those answers would be refused by the kernel. `port` IS the ingress
+# `targetPort`; with no ingress there is no port, and nothing left to say it to.
+#
+# ⚠️ AND THIS IS WHAT THE GATE COSTS — written here so it is READ rather than
+# discovered: a `when:`-gated answer is ERASED when its condition stops holding
+# and comes back as the DEFAULT, not as what the human answered, if the
+# condition returns. Same warning `graph_obo` carries above, same measurement
+# (true -> (absent) -> false in one round trip). So flipping a generated app
+# from `ingress: none` back to `internal` brings `port` back as 8080, whatever
+# it had been before.
+#
+# It is acceptable HERE, and only because a record survives the answers file:
+# `Solution.services[].answers` exists precisely to outlive it (measured in
+# fatia 3 of `Spec/spec-solucao-como-template` — the Solution is the register
+# that survives the answers file). Keep the real port there, or pass
+# `--data port=<the old value>` on the update. `dna solution update` names
+# every such loss by name; it cannot undo one.
 port:
   type: int
   help: "the port the app listens on inside the container"
   default: 8080
+  when: "{{ ingress != 'none' }}"
 
 can_sleep:
   type: bool
