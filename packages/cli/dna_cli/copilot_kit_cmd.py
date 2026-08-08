@@ -88,6 +88,7 @@ def copilot() -> None:
       dna copilot install <dir> --dry-run     # lista o plano, escreve nada
       dna copilot install <dir> --approve     # o operador aprova o Kind no ato
       dna copilot provenance                  # quem veio de onde — e quem não diz
+      dna copilot orphans                     # quantos não dizem ONDE RODAM
     """
 
 
@@ -220,3 +221,115 @@ def provenance(scope, tenant, as_json) -> None:
         "a cadeia inteira, elo a elo: "
         "dna graph refs Copilot <nome> --direction out --depth 5"
     )
+    # A irmã: `created_by` responde DE ONDE VEIO, `runs_in` responde ONDE RODA.
+    # Duas perguntas sobre a mesma coisa, e quem faz uma costuma querer a outra.
+    click.echo("onde cada um roda (e quantos não dizem): dna copilot orphans")
+
+
+@copilot.command("orphans")
+@click.option("--scope", default=None, help="Scope a ler (default: env / sole scope).")
+@click.option("--tenant", default=None, help="Ler os copilotos deste tenant.")
+@click.option("--json", "as_json", is_flag=True, help="Saída legível por máquina.")
+@click.option("--self-test", "auto_teste_apenas", is_flag=True,
+              help="Roda só o auto-teste da guarda e sai (não lê store nenhum).")
+def orphans(scope, tenant, as_json, auto_teste_apenas) -> None:
+    """Quantos copilotos não dizem em que App rodam — e o dia em que zerar.
+
+    ``Copilot.runs_in`` nasceu OPCIONAL por decisão registrada do founder, com
+    a data: *vira obrigatório no dia em que a contagem de órfãos chegar a zero
+    — e a guarda é o que torna esse dia visível em vez de esquecido.*
+
+    Ela REPORTA (órfão é estado legítimo hoje) e só FALHA quando o universo é
+    vazio, porque aí a quebrada é ela. O porquê inteiro, incluindo por que não
+    é uma seção de ``dna copilot provenance``, está em
+    ``dna_cli/copilot_orphans.py``.
+    """
+    from dna_cli.copilot_orphans import orphan_report, self_test
+
+    # ⭐ ANTES de olhar qualquer store, em TODA invocação — não só sob a flag.
+    # Uma guarda cujo auto-teste não roda antes dela mesma não é confiável: o
+    # relatório verde dela fica indistinguível de um relatório que não sabe
+    # mais olhar. É o que `guard-app-wiring.mjs` faz, pela mesma razão.
+    casos = self_test()
+    quebrados = [nome for nome, passou in casos if not passou]
+    if auto_teste_apenas or quebrados:
+        for nome, passou in casos:
+            click.secho(f"{'✓' if passou else '✗'} self-test: {nome}",
+                        fg=None if passou else "red")
+    if quebrados:
+        raise fail(
+            "o próprio auto-teste da guarda falhou — ela NÃO é confiável, e "
+            "qualquer contagem que ela imprimisse agora seria pior que nenhuma."
+        )
+    if auto_teste_apenas:
+        click.secho(f"✓ {len(casos)} casos — a guarda ainda sabe olhar.",
+                    fg="green", bold=True)
+        return
+
+    rel = orphan_report(scope=scope, tenant=tenant)
+
+    if as_json:
+        print_json(dict(rel))
+        if rel["refusals"]:
+            raise SystemExit(1)
+        return
+
+    if rel["refusals"]:
+        # ⛔ REGRA 2. Universo vazio NÃO é "tudo certo" — e não imprime contagem
+        # nenhuma ao lado, porque um "0 órfão(s)" junto do aviso convidaria a
+        # ler o zero como resultado, quando não houve varredura.
+        click.secho("✗ dna copilot orphans — a guarda não tem o que reportar:", fg="red", bold=True)
+        for r in rel["refusals"]:
+            click.secho(f"    {r}", fg="red")
+        raise SystemExit(1)
+
+    campos = "/".join(rel["to_app_fields"])
+    for nome in rel["orphans"]:
+        click.echo(f"  · {nome}  — não diz em que App roda")
+    for copiloto, alvo in rel["dangling_runs_in"]:
+        # Dono diferente do órfão: aqui alguém RESPONDEU, e o App não existe.
+        click.secho(f"  ⚠ {copiloto}  — roda em {alvo!r}, que não existe", fg="yellow")
+    for app, alvo in rel["dangling_composition"]:
+        click.secho(f"  ⚠ {app}  — compõe {alvo!r}, que não existe", fg="yellow")
+
+    n = len(rel["orphans"])
+    click.echo(
+        f"\n{n}/{rel['copilots_seen']} copiloto(s) sem `{campos}`"
+        f" · {len(rel['dangling_runs_in'])} apontando App inexistente"
+    )
+    if rel["composition_refs"]:
+        click.echo(
+            f"{len(rel['dangling_composition'])}/{rel['composition_refs']} "
+            f"aresta(s) App→Copilot penduradas"
+        )
+    else:
+        # ⚠️ NUNCA "0 penduradas": zero App (ou nenhum declarando copiloto) é a
+        # pergunta sem universo, e um zero aqui se leria como "nenhuma quebrada".
+        click.echo(
+            f"arestas App→Copilot: nenhuma referência declarada em "
+            f"{rel['apps_seen']} App(s) — não há o que olhar deste lado"
+        )
+
+    if rel["ready"]:
+        click.secho(
+            f"\n⭐ A CONTAGEM CHEGOU A ZERO: os {rel['copilots_seen']} copilotos "
+            f"dizem onde rodam.\n"
+            f"   É o dia registrado na decisão do founder — `{campos}` pode "
+            f"virar OBRIGATÓRIO\n"
+            f"   (`required` no schema de copilot.kind.yaml, "
+            f"`Spec/spec-app-e-o-servico`).",
+            fg="green", bold=True,
+        )
+        if rel["dangling_runs_in"]:
+            click.secho(
+                "   ⚠ mas há App declarado que não existe (acima): obrigatório "
+                "exige presença,\n     e as referências acima continuariam "
+                "penduradas depois da mudança.",
+                fg="yellow",
+            )
+    else:
+        click.echo(
+            f"\nzero órfãos é o gatilho para `{campos}` virar obrigatório "
+            f"(Spec/spec-app-e-o-servico). Faltam {n}."
+        )
+    click.echo("de onde cada um veio: dna copilot provenance")

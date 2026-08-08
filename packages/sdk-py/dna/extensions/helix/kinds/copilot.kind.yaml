@@ -102,6 +102,16 @@
 # que é a pergunta; `inverse_of` responderia "estes dois se contradizem", que
 # não é.
 #
+# ⭐ ELA EXISTE, e chama-se `dna copilot orphans` (`Story/s-orfaos-viram-visiveis`,
+# 08/08/2026 — `dna_cli/copilot_orphans.py`). Ela não lê o nome `runs_in` de
+# lugar nenhum: DERIVA daqui, do `spec.relations` logo abaixo, procurando as
+# relações de `Copilot` cujo `to` inclui `App`. Renomeie a relação e a guarda
+# vai junto. Contagem medida no dia em que ela nasceu, contra o store real:
+# **nenhum** copiloto preenche o campo — 9 de 9 órfãos, e não os "5 de 7" que a
+# story dizia (aqueles 5 são `App.copilots`, COMPOSIÇÃO, que é justamente o que
+# as trinta linhas acima separam de EXECUÇÃO). Quando essa contagem chegar a
+# zero, o comando ANUNCIA, e é o dia de pôr `runs_in` em `required` aqui.
+#
 # ── 07/08/2026: a PROCEDÊNCIA — `created_by`, e as duas coisas que a medição
 #    desmentiu (`Story/s-procedencia-do-agente`) ────────────────────────────────
 #
