@@ -59,7 +59,7 @@ spec:
     o outro. Vale por si.
   type: bug
   severity: high
-  status: open
+  status: triaged
   created_at: '2026-08-08T12:51:26+00:00'
   updated_at: '2026-08-08T12:51:26+00:00'
   timeline:
@@ -68,3 +68,46 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-08-08T16:19:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: in-progress
+  - at: '2026-08-08T17:32:34+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      REABERTA — a tentativa de 08/08/2026 foi INTERROMPIDA (limite de gasto da conta), sem código.
+
+      A ficha ficou marcada `in-progress` por essa tentativa. Nada foi construído: não há `RerankPort`,
+      não há `adapters/rerank/`, e nenhuma medição nova. Deixar `in-progress` faria a próxima pessoa
+      procurar trabalho que não existe.
+
+      ⭐ O QUE A TENTATIVA DEIXOU DE ÚTIL, e é o motivo de valer registrar:
+
+      O remédio nomeado (reranker cross-encoder) parecia "decisão de modelo com custo". **Não é.** O
+      `fastembed` — que este repo JÁ declara para o embedder ONNX — traz cross-encoder LOCAL:
+
+          from fastembed.rerank.cross_encoder import TextCrossEncoder
+
+      Mesma jogada do embedder: ONNX, local, custo ZERO, sem chave, sem portão de custo. Isso tira a
+      decisão do founder e devolve para engenharia.
+
+      ⚠️ DUAS COISAS A MEDIR ANTES DE ACEITAR, e nenhuma foi medida:
+      1. `TextCrossEncoder` existe na versão de fastembed que o lock fixa? Confirme com
+         `TextCrossEncoder.list_supported_models()` antes de desenhar em cima.
+      2. **O corpus desta casa é em PORTUGUÊS.** Os modelos de rerank mais citados são `-en`
+         (ms-marco-MiniLM). Um reranker monolíngue inglês sobre corpus português pode ser PIOR que
+         nenhum — e isso é medição contra as mesmas 24 consultas, não suposição.
+
+      E se a sobreposição sumir com o rerank, um PISO passa a ser possível — o que hoje está recusado
+      com número. Aí a opção (a) da base de conhecimento ("não achei nada sobre isso") deixa de ser
+      uma promessa que não se pode cumprir. Ver i-154 no scope dna-cloud.
+  - at: '2026-08-08T17:32:54+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: triaged
