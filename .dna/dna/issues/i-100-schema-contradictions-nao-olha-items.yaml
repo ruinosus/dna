@@ -45,7 +45,7 @@ spec:
     independentes: esta fecha uma armadilha; a outra abre uma capacidade.
   type: bug
   severity: high
-  status: open
+  status: resolved
   created_at: '2026-08-08T00:06:22+00:00'
   updated_at: '2026-08-08T00:06:22+00:00'
   timeline:
@@ -54,3 +54,12 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-08-08T00:40:28+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: 'Fechada no PR #358. A checagem é gateada em Relation.resolved — a linha exata entre ''o kernel diz que segue'' e ''diz que não segue'' — então as 10 relações honestas continuam passando. Varreduras exaustivas: 24 declarações no dna e 12 no dna-cloud, ZERO acusadas; o bump da versão lá não acorda nada. E o achado extra: o teste que JÁ existia (test_every_relation_agrees_with_its_own_schema) passaria verde contra um registro sem NENHUMA relação array-de-objeto — não distinguia ''nada errado'' de ''não há o que errar''. Ganhou irmão que mede a população real e exige que não seja vazia.'
+  closed_at: '2026-08-08T00:40:28+00:00'
+  resolution: 'Fechada no PR #358. A checagem é gateada em Relation.resolved — a linha exata entre ''o kernel diz que segue'' e ''diz que não segue'' — então as 10 relações honestas continuam passando. Varreduras exaustivas: 24 declarações no dna e 12 no dna-cloud, ZERO acusadas; o bump da versão lá não acorda nada. E o achado extra: o teste que JÁ existia (test_every_relation_agrees_with_its_own_schema) passaria verde contra um registro sem NENHUMA relação array-de-objeto — não distinguia ''nada errado'' de ''não há o que errar''. Ganhou irmão que mede a população real e exige que não seja vazia.'
