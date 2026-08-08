@@ -1,21 +1,33 @@
-"""Forward-only schema-migration runner for the SEARCH stores.
+"""Forward-only schema-migration runner for the EMBEDDABLE search store.
 
-Scope narrowed by i-038. This used to also drive ``SqlAlchemySource``'s
-schema; that moved to Alembic (``adapters/sqlalchemy_/migrate.py``), which
-brings revision checksums and ``autogenerate`` drift detection the numbered
-ladder could not.
+Scope narrowed twice.
 
-The search providers deliberately did NOT move, and this is why: their DDL
-is parametrized at RUNTIME by the active ``EmbeddingPort``'s vector width —
-``build_migrations(dims)`` bakes ``float[384]`` (sqlite-vec ``vec0``) or
-``vector(384)`` (pgvector) into the create statement. An Alembic revision
-is a static file authored ahead of time; it cannot know the width the
-consumer will boot with. Add that these stores are optional extras whose
-tables live beside (and are droppable independently of) the Source's, and a
-small numbered runner is the honest fit. Callers:
-``adapters/search/sqlite_vec.py`` and ``adapters/search/pgvector.py``, each
-with its own control table (``schema_migrations`` /
-``{schema}.dna_search_migrations``).
+**i-038** took ``SqlAlchemySource``'s schema to Alembic
+(``adapters/sqlalchemy_/migrate.py``), which brings revision checksums and
+``autogenerate`` drift detection the numbered ladder could not.
+
+⭐ **``s-indice-por-dimensao`` took the pgvector store too**, and it matters that
+this docstring used to argue the opposite. It said:
+
+    their DDL is parametrized at RUNTIME by the active ``EmbeddingPort``'s
+    vector width […] An Alembic revision is a static file authored ahead of
+    time; it cannot know the width the consumer will boot with.
+
+The premise was wrong, and one observation is what showed it: the space of
+widths is **small and nearly closed** (384 · 768 · 1024 · 1536 · 3072). A static
+revision does not have to *know* the width — it can create a table for each and
+let the store ROUTE by ``kernel.embedding_dims``. What read as an open parameter
+was a five-element enumeration, and the whole case for a runtime ladder rested
+on it. Revision ``0013_uma_tabela_por_dimensao`` now owns the pgvector store,
+``pgvector_migrations.py`` is gone, and that provider runs zero DDL — which is
+what ``CLAUDE.md`` asked for all along ("Data-access code never runs DDL").
+
+What remains here is **sqlite-vec** (``adapters/search/sqlite_vec.py``, control
+table ``schema_migrations`` inside its own store file), plus the public
+``dna.migrations`` re-export. The same move does not obviously transfer to it:
+its store is a FILE PER SCOPE created wherever the consumer points ``db_dir``,
+so there is no shared database for a revision ladder to be applied to. That is
+a different problem, not this one left half-done.
 
 The contract it encodes (documented in ``docs/PORT-CONTRACT.md``
 § "Schema migrations"):
@@ -31,19 +43,22 @@ The contract it encodes (documented in ``docs/PORT-CONTRACT.md``
     nothing and returns ``[]`` — this is what every service boot does.
   - **Control table owned by the adapter.** The helper never touches
     storage itself; the adapter supplies three async callables bound to
-    its own connection/control-table dialect. The search stores' control
-    tables (sqlite-vec ``schema_migrations`` in its own store file,
-    pgvector ``{schema}.dna_search_migrations``) keep their exact name and
-    shape. Note the Source's control tables are NO LONGER among them: it
-    uses Alembic's ``alembic_version`` since i-038.
+    its own connection/control-table dialect. sqlite-vec's
+    ``schema_migrations``, in its own store file, keeps its exact name and
+    shape. Note that neither the Source's control tables (Alembic's
+    ``alembic_version`` since i-038) nor the pgvector store's retired
+    ``dna_search_migrations`` (Alembic since ``s-indice-por-dimensao``) are
+    among them any more.
 
-Why callables instead of a driver abstraction: the two callers have
-deliberately different atomicity semantics (sqlite-vec ``executescript``
-per version + separate record/commit; pgvector one transaction per version
-wrapping statements + record) and different payload shapes (one SQL
-script string vs a list of statements with a ``{schema}`` placeholder).
-``apply_version`` owns "apply + record, with MY atomicity" so the helper
-can unify ordering/skip/reporting without flattening those semantics.
+Why callables instead of a driver abstraction: the callers have deliberately
+different atomicity semantics and payload shapes — sqlite-vec applies one SQL
+script per version with ``executescript`` and records/commits separately, while
+the (now retired) pgvector caller wrapped a list of statements plus the record
+in one transaction. ``apply_version`` owns "apply + record, with MY atomicity"
+so the helper can unify ordering/skip/reporting without flattening that. The
+seam is kept even with one caller left inside the SDK, because
+``dna.migrations`` re-exports this runner as public API: a consumer's own store
+is the second caller.
 """
 from __future__ import annotations
 
