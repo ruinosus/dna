@@ -917,17 +917,6 @@ class RecordSearchProvider(Protocol):
     exists, because none is calibratable — see ``dna.kernel.query.relevance``
     for the measurement. Filtering is the caller's policy, applied above.
 
-    ⭐ A provider MAY also attach ``_rerank_text`` (``dna.kernel.query.rerank.
-    RERANK_TEXT_KEY``): the indexed document text, capped, for the cross-encoder
-    pass the engine runs when a ``RerankPort`` is registered. Underscored
-    because it is plumbing — the engine strips it before the hits leave. Not
-    attaching it is fine and costs nothing today: the engine falls back to
-    ``title`` + ``snippet``. It is worth attaching because the fallback was
-    MEASURED and is weak — a 200-char snippet reranks to no separation at all,
-    while the same model over the full text separates cleanly (i-103, see
-    ``dna.kernel.query.rerank``). The text a reranker needs is not the text a
-    human preview needs.
-
     ⭐ ``kind`` and ``name_prefix`` are NARROWING, and a provider must apply
     them where it CHOOSES candidates — not to the list it already chose. The
     difference is not efficiency, it is honesty: both planes over-fetch a fixed
@@ -989,47 +978,6 @@ class EmbeddingPort(Protocol):
     dims: int
 
     async def embed(self, texts: list[str]) -> list[list[float]]: ...
-
-
-@runtime_checkable
-class RerankPort(Protocol):
-    """Sibling port to ``EmbeddingPort`` (i-103): score a (query, document) PAIR
-    jointly, so the search plane has a number that can JUSTIFY a hit and not
-    only order it. The kernel core gains NO ML deps — a real provider (ONNX
-    ``ms-marco-MiniLM-L-6-v2`` via ``fastembed``, the opt-in ``rerank-onnx``
-    extra) registers itself on the kernel at app boot; when none is registered
-    NOTHING reranks and search behaves exactly as it did. Absent is a no-op:
-    never a degradation, never an error.
-
-    Why a second port rather than more from the first: an ``EmbeddingPort``
-    embeds the query and the document SEPARATELY and then compares two vectors,
-    so nothing in that comparison ever reads them together. Measured on this
-    deployment's own corpus, the comparison does not carry relevance — 5 of 12
-    unrelated queries outscored the worst genuine match, and neither a corpus
-    z-score nor a top-1 margin separated them either (see
-    :mod:`dna.kernel.query.relevance`). A cross-encoder reads query and document
-    in ONE pass and produces a score that does separate them (see
-    :mod:`dna.kernel.query.rerank` for the 48-query measurement, the model
-    comparison, and the floor it makes possible).
-
-    Contract:
-      - ``rerank(query, documents)`` returns one score per document, in input
-        order. Higher is a better match. Empty input → empty list.
-      - Scores are a monotonic ranking signal WITHIN one call: unbounded
-        logits, not normalized, not a probability.
-      - ``model_id`` identifies the scoring scale — the exact analogue of
-        ``EmbeddingPort.model_id`` identifying an embedding space. Vectors from
-        two embedders are not comparable because they live in different spaces;
-        scores from two rerankers are not comparable because they live on
-        different scales. From outside, both failures look identical: a number
-        that reads like relevance and is not. A threshold calibrated against one
-        ``model_id`` says nothing about another's, so whatever stores or
-        compares a rerank score must carry this beside it.
-    """
-
-    model_id: str
-
-    async def rerank(self, query: str, documents: list[str]) -> list[float]: ...
 
 
 @runtime_checkable

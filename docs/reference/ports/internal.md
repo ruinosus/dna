@@ -396,6 +396,11 @@ Record search plus the lexical fallback, the tenant binding, and the registered 
     its failure-warning damper. The provider/damper STATE stays on the kernel
     (shared/per-copy exactly as before); the engine reaches it through the host.
 
+    ``reranker`` (i-103) is reached the same way, but as a PROPERTY rather than
+    an underscored field: an absent reranker is a normal, expected state — not a
+    missing collaborator — so the engine asks what is registered and does
+    nothing at all when the answer is ``None``.
+
 **Not an extension point.** A back-reference from one kernel collaborator to the narrow slice of the kernel it is allowed to reach. Published as a Protocol so the slice is typed and enforceable, not so anybody outside the kernel implements it.
 
 _No members of its own — it is the union of the Protocols above._
