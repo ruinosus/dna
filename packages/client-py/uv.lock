@@ -92,7 +92,7 @@ wheels = [
 
 [[package]]
 name = "dna-cli"
-version = "0.74.0"
+version = "0.75.0"
 source = { editable = "../cli" }
 dependencies = [
     { name = "click" },
@@ -111,6 +111,8 @@ api = [
 requires-dist = [
     { name = "a2a-sdk", extras = ["fastapi"], marker = "extra == 'a2a'", specifier = ">=1.1.2,<2" },
     { name = "click", specifier = ">=8.1.0" },
+    { name = "copier", marker = "extra == 'dev'", specifier = ">=9.17,<10" },
+    { name = "copier", marker = "extra == 'scaffold'", specifier = ">=9.17,<10" },
     { name = "dna-sdk", editable = "../sdk-py" },
     { name = "dna-sdk", extras = ["search-sqlite"], marker = "extra == 'dev'", editable = "../sdk-py" },
     { name = "fastapi", marker = "extra == 'api'", specifier = ">=0.110" },
@@ -133,11 +135,11 @@ requires-dist = [
     { name = "sqlalchemy", marker = "extra == 'quota'", specifier = ">=2" },
     { name = "uvicorn", marker = "extra == 'api'", specifier = ">=0.30" },
 ]
-provides-extras = ["mcp", "api", "a2a", "graph", "quota", "dev"]
+provides-extras = ["mcp", "api", "a2a", "graph", "scaffold", "quota", "dev"]
 
 [[package]]
 name = "dna-client"
-version = "0.74.0"
+version = "0.75.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -159,7 +161,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "dna-sdk"
-version = "0.74.0"
+version = "0.75.0"
 source = { editable = "../sdk-py" }
 dependencies = [
     { name = "aiofiles" },
