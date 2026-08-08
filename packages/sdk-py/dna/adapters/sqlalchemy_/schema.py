@@ -31,6 +31,11 @@ from typing import Any
 
 import sqlalchemy as sa
 
+# Import-safe: ``dimensions`` is pure constants + one pure function, with no
+# asyncpg/pgvector import anywhere in it (the isolation guard in
+# ``tests/test_search_import_isolation.py`` covers the modules that are not).
+from dna.adapters.search.dimensions import SUPPORTED_DIMS as _SEARCH_DIMS
+
 # Indexes deliberately NOT represented in the model, and therefore excluded
 # from autogenerate comparison (see ``alembic/env.py::include_object``).
 #
@@ -71,11 +76,29 @@ FOREIGN_TABLES: frozenset[str] = frozenset({
     # Retired control tables (kept excluded so a database mid-cutover does
     # not look like it has a stray table).
     "schema_migrations", "dna_schema_migrations",
-    # The search stores own their own schema through a separate provider
-    # (adapters/search/*), whose DDL is parametrized by embedding width and
-    # so cannot live in a static revision — see that module.
+    # ⭐ The pgvector search store's own retired control tables. Its schema
+    # USED to be parametrized by embedding width and applied by the provider
+    # at first search — the sentence that stood here said that width "cannot
+    # live in a static revision", and s-indice-por-dimensao showed it can:
+    # revision 0013 creates ONE TABLE PER WIDTH, so the parameter became a
+    # finite list and the DDL came home to the ladder. These three names are
+    # what that cutover left behind (0013 renames `dna_search_docs` to its
+    # dimension); they stay excluded so a database mid-cutover does not look
+    # like it has a stray table.
     "dna_search_migrations", "dna_search_docs", "dna_search_meta",
+    # The sqlite-vec store — a file per scope, its own ladder, never in this
+    # database.
     "search_docs", "search_vec", "search_fts", "search_meta",
+    # ⚠️ The per-width tables 0013 DOES create. They are excluded for a
+    # different reason than everything else in this set: the ladder owns them,
+    # but the MODEL cannot describe them. `embedding vector(N)` has no
+    # SQLAlchemy type without the `pgvector` package, which is not a dependency
+    # of the base install (the store is the optional `search-pgvector` extra) —
+    # so a model entry would either lie about the type or drag an optional
+    # dependency into every install. Derived from SUPPORTED_DIMS, never typed
+    # out: a sixth width added there without this line following would be a
+    # table autogenerate proposes dropping.
+    *(f"dna_search_docs_{d}" for d in _SEARCH_DIMS),
     # AUTOINCREMENT bookkeeping, owned by SQLite itself.
     "sqlite_sequence",
     # Alembic's own control table. Alembic filters it out of its own

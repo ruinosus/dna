@@ -10,15 +10,18 @@ Gated on a Postgres DSN via the shared ``requires_postgres`` marker
 (``tests/conftest.py``): skips cleanly with no DB, runs FOR REAL in the CI
 ``postgres`` job (pgvector-enabled ``pgvector/pgvector:pg16`` image). Each
 case gets a FRESH filesystem source AND a fresh, disposable Postgres schema
-(``dna_memkit_ci_<uuid>``) created before and dropped after — same isolation
-pattern as ``test_pgvector_search_conformance.py``.
+(``dna_memkit_ci_<uuid>``) created, MIGRATED TO HEAD and dropped after — same
+isolation pattern as ``test_pgvector_search_conformance.py``.
+
+⚠️ "migrated to head" is new (``s-indice-por-dimensao``): the provider used to
+build its own tables on first use and no longer does — the schema belongs to
+the alembic ladder. ``tests/_search_schema.py`` runs the same
+``run_schema_migrations()`` a real boot runs.
 """
 from __future__ import annotations
 
-import os
 import shutil
 import tempfile
-import uuid
 
 import pytest
 
@@ -31,13 +34,7 @@ asyncpg = pytest.importorskip(
 
 from dna.testing import memory_conformance_suite, run_memory_conformance  # noqa: E402
 
-
-def _dsn() -> str:
-    for k in ("DATABASE_URL", "DNA_PG_TEST_URL", "DNA_PG_TEST_DSN"):
-        v = os.environ.get(k)
-        if v:
-            return v
-    raise RuntimeError("no Postgres DSN set")  # pragma: no cover — marker guards
+from tests import _search_schema  # noqa: E402
 
 
 async def _pgvector_kernel_factory():
@@ -51,22 +48,14 @@ async def _pgvector_kernel_factory():
     kernel = Kernel.auto()  # no embedding provider → deterministic fake floor
     kernel.source(FilesystemWritableSource(base_dir=tmp))
 
-    dsn = _dsn()
-    schema = f"dna_memkit_ci_{uuid.uuid4().hex[:12]}"
-    admin = await asyncpg.connect(dsn)
-    await admin.execute(f"CREATE SCHEMA {schema}")
-    await admin.close()
+    dsn, schema, drop_schema = await _search_schema.migrated_schema("dna_memkit_ci")
 
     provider = PgVecRecordSearchProvider(kernel, dsn=dsn, schema=schema)
     kernel.record_search_provider(provider)
 
     async def cleanup() -> None:
         await provider.close()
-        conn = await asyncpg.connect(dsn)
-        try:
-            await conn.execute(f"DROP SCHEMA IF EXISTS {schema} CASCADE")
-        finally:
-            await conn.close()
+        await drop_schema()
         shutil.rmtree(tmp, ignore_errors=True)
 
     return kernel, cleanup
