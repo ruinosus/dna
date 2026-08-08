@@ -882,24 +882,66 @@ def schema_contradictions(
 ) -> list[str]:
     """Where a Kind's ``relations`` and its ``schema`` say different things.
 
-    Two contradictions are possible and both are authoring errors the author
-    can fix in one file:
+    Three contradictions are possible and all three are authoring errors the
+    author can fix in one file:
 
     * a relation names a field the schema does not declare — the value has
       nowhere to live, and under ``additionalProperties: false`` it can never
       be written at all;
     * ``cardinality: many`` against a non-array property (or ``one`` against an
-      array) — the model and the data disagree about multiplicity.
+      array) — the model and the data disagree about multiplicity;
+    * a RESOLVED relation whose value the schema types as something that cannot
+      be a string — the multiplicity agrees and the value still cannot be read.
+      See below; this is the one that was missing, and it was missing in the
+      worst direction.
 
-    ``partial=True`` suppresses only the FIRST of those, and exists for exactly
-    one caller: ``KindDefinitionSpec.from_raw``, when the descriptor declares
-    ``schema_fragments``. Those fragments are merged by the PORT, so from_raw
-    is looking at a schema that is genuinely incomplete — and refusing a
-    relation for a property it cannot see would be refusing for lack of
+    ⚠️ **The third check, and why it is not a nicety** (i-100, measured
+    07/08/2026). This function used to read ``prop["type"]`` and stop. It never
+    looked at ``items``, so an ARRAY-OF-OBJECT property took a ``many``
+    relation without a word::
+
+        Agent.spec.mcp_servers  →  {"type": "array", "items": {"type": "object"}}
+
+        normalize_relations({"mcp_servers": {"to": "MCPFederation",
+                                             "cardinality": "many"}})
+          resolved              = True   ← says the kernel follows it
+          enforced              = True   ← says it VETOES the write
+          schema_contradictions = []     ← passes the lint
+          on_target_delete: restrict     ← accepted
+          relation_values(...)  = []     ← reads ZERO
+
+    A guard that announces itself ENFORCED and does nothing. The reason is
+    :func:`relation_values`: a relation value is the target's name (or, since
+    fatia 5, one of its spec keys) and is read as a STRING off the spec field.
+    An object is not a string, so a relation over a list of objects follows
+    nothing — silently, forever, while every property on the declaration
+    reports that it does.
+
+    Gated on :attr:`Relation.resolved`, and that gate is the half that decides
+    whether the check is worth having: a relation the kernel does NOT follow
+    promises nothing to break. This registry declares **ten** honest relations
+    over array-of-object fields — ``SourceArtifact.derived_refs``,
+    ``AgentSession.produced_artifacts`` and eight ``*.produces``, every one of
+    them ``to: "*"`` + ``by: {kind, name}`` and therefore ``resolved=False``.
+    They are drawn in ``kind_graph``, the kernel says plainly that it does not
+    follow them, and they must keep passing. Accusing the honest to catch the
+    dishonest would be the same defect wearing the opposite coat.
+
+    Only a type the schema POSITIVELY declares accuses. An ``items`` that is
+    absent, or that describes its shape through ``$ref``/``oneOf``/``anyOf``,
+    yields nothing here: this reader cannot tell whether the value is a string,
+    and "I could not read the declaration" is not "the declaration is wrong" —
+    the distinction ``partial`` exists to keep.
+
+    ``partial=True`` suppresses only the FIRST of the three, and exists for
+    exactly one caller: ``KindDefinitionSpec.from_raw``, when the descriptor
+    declares ``schema_fragments``. Those fragments are merged by the PORT, so
+    from_raw is looking at a schema that is genuinely incomplete — and refusing
+    a relation for a property it cannot see would be refusing for lack of
     information rather than for a contradiction. The registry-wide lint reads
     the merged ``schema()`` off the port and catches it properly there.
-    Cardinality is still checked for every property that IS present: partial
-    information is not no information.
+    Cardinality and element type are still checked for every property that IS
+    present: partial information is not no information.
 
     A schema with no ``properties`` at all (a Kind that declares no data shape)
     yields nothing: there is nothing to contradict. Returns messages rather
@@ -933,7 +975,48 @@ def schema_contradictions(
                 f"relations[{name!r}].cardinality is 'one' but the schema types "
                 f"`{name}` as an array"
             )
+        elif rel.resolved:
+            # Multiplicity agrees. Now the question nothing asked: can the
+            # declared shape HOLD the string `relation_values` reads? For an
+            # array that question lives in `items`, one level down — the level
+            # this function never looked at. Only for a relation the kernel
+            # FOLLOWS: see the docstring, and the ten honest ones it must not
+            # accuse.
+            holder = prop.get("items") if is_array else prop
+            declared = _declared_types(holder)
+            if declared and "string" not in declared:
+                subject = f"the items of `{name}`" if is_array else f"`{name}`"
+                shown = holder.get("type") if isinstance(holder, Mapping) else None
+                out.append(
+                    f"relations[{name!r}] is resolved — the kernel follows it "
+                    f"and draws its edges — but the schema types {subject} as "
+                    f"{shown!r}, not a string; a relation value is the target's "
+                    f"name or key, read as a string, so this relation would "
+                    f"follow nothing while reporting itself resolved"
+                )
     return out
+
+
+def _declared_types(node: Any) -> tuple[str, ...]:
+    """The JSON Schema ``type`` of one node, as a tuple of type NAMES.
+
+    ``()`` when the node declares no ``type`` this reader can read — absent,
+    or a shape stated through ``$ref``/``oneOf``/``anyOf``. Empty is the
+    "no information" answer and never the "wrong" one, which is why
+    :func:`schema_contradictions` accuses on a non-empty tuple only.
+
+    A union (``type: ["string", "null"]`` — the form every nullable reference
+    in this registry uses) reads as its members, so a nullable string still
+    counts as a string. Reading only ``prop["type"] == "string"`` would accuse
+    ``Project.org_ref`` and three of its neighbours on the day this shipped."""
+    if not isinstance(node, Mapping):
+        return ()
+    declared = node.get("type")
+    if isinstance(declared, str):
+        return (declared,)
+    if isinstance(declared, (list, tuple)):
+        return tuple(t for t in declared if isinstance(t, str))
+    return ()
 
 
 def inverse_gaps(

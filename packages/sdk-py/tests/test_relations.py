@@ -505,3 +505,141 @@ class TestSchemaContradictions:
         assert len(partial) == 1
         assert "as an array" in partial[0]
         assert len(schema_contradictions(rels, schema)) == 2
+
+
+# --- i-100: the check that never looked at `items` -----------------------------
+
+
+class TestTheElementTypeIsChecked:
+    """The trap of i-100, both halves, and they belong in one class because
+    either half alone is worthless.
+
+    A function that returns ``[]`` for everything would satisfy "the honest ten
+    still pass"; a function that accuses every array-of-object would satisfy
+    "the dishonest one is caught" and break ten live declarations. Only the
+    pair is a specification.
+    """
+
+    _ARRAY_OF_OBJECT = {
+        "properties": {
+            "mcp_servers": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {"ref": {"type": "string"}},
+                },
+            },
+        },
+    }
+
+    def test_a_resolved_relation_over_array_of_object_is_a_contradiction(self):
+        """The reproduction from i-100, verbatim: `Agent.spec.mcp_servers`.
+
+        Every property on the declaration says the kernel follows and vetoes;
+        `relation_values` reads zero. The lint used to be the one place that
+        could say so, and it said nothing."""
+        rels = normalize_relations({
+            "mcp_servers": {"to": "MCPFederation", "cardinality": "many"},
+        })
+        rel = rels["mcp_servers"]
+        # the announcement, unchanged — the declaration really does claim this
+        assert rel.resolved is True
+        assert rel.enforced is True
+        # …and it really does read nothing
+        assert relation_values(
+            rel, {"mcp_servers": [{"ref": "github"}, {"ref": "slack"}]},
+        ) == []
+        # which is now SAID, instead of passing green
+        problems = schema_contradictions(rels, self._ARRAY_OF_OBJECT)
+        assert len(problems) == 1
+        assert "items of `mcp_servers`" in problems[0]
+        assert "not a string" in problems[0]
+
+    def test_the_honest_ten_shape_still_passes(self):
+        """`to: "*"` + a composite `by` — the shape of all ten array-of-object
+        relations this registry declares (`SourceArtifact.derived_refs`,
+        `AgentSession.produced_artifacts`, eight `*.produces`).
+
+        They are `resolved=False`: the kernel says plainly that it does not
+        follow them, so there is no promise to break. Accusing them would be
+        the i-100 defect wearing the opposite coat."""
+        rels = normalize_relations({
+            "produces": _rel(to=ANY_TARGET, cardinality="many", by="{kind, name}"),
+        })
+        assert rels["produces"].resolved is False
+        schema = {
+            "properties": {
+                "produces": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {"kind": {"type": "string"}},
+                        "required": ["kind", "name"],
+                    },
+                },
+            },
+        }
+        assert schema_contradictions(rels, schema) == []
+
+    def test_an_array_of_string_is_what_the_kernel_can_actually_read(self):
+        rels = normalize_relations({"stories": _rel(cardinality="many")})
+        assert schema_contradictions(rels, {"properties": {
+            "stories": {"type": "array", "items": {"type": "string"}},
+        }}) == []
+
+    def test_an_array_of_integer_is_caught_too(self):
+        """Not an object, same defect: `relation_values` filters on `str`."""
+        rels = normalize_relations({"stories": _rel(cardinality="many")})
+        problems = schema_contradictions(rels, {"properties": {
+            "stories": {"type": "array", "items": {"type": "integer"}},
+        }})
+        assert len(problems) == 1
+        assert "'integer'" in problems[0]
+
+    def test_a_scalar_object_property_is_the_same_contradiction(self):
+        """The mirror of the array case, and it was open for the same reason —
+        the old check only asked "is it an array?". `cardinality: one` over
+        `type: object` read zero just as quietly. No relation in this registry
+        is declared this way today; the check costs three characters."""
+        rels = normalize_relations({"feature": _rel(to="Feature")})
+        problems = schema_contradictions(
+            rels, {"properties": {"feature": {"type": "object"}}},
+        )
+        assert len(problems) == 1
+        assert "`feature`" in problems[0] and "'object'" in problems[0]
+
+    def test_a_nullable_string_is_a_string(self):
+        """`type: ["string", "null"]` — the form every nullable reference in
+        this registry uses (`Project.org_ref`, `Organization.plan_ref`,
+        `IntelInsight.source_ref`, `Project.workspace_id`). Reading `type`
+        as a bare string would have accused four live declarations."""
+        rels = normalize_relations({"feature": _rel(to="Feature")})
+        assert schema_contradictions(rels, {"properties": {
+            "feature": {"type": ["string", "null"]},
+        }}) == []
+
+    def test_an_undeclared_element_type_is_no_information_not_a_contradiction(self):
+        """An `items` that is absent, or that states its shape through `$ref`
+        / `oneOf`, cannot be read here. "I could not tell" is not "it is
+        wrong" — the same distinction `partial` exists to keep."""
+        rels = normalize_relations({"stories": _rel(cardinality="many")})
+        for items in (None, {}, {"$ref": "#/$defs/Ref"},
+                      {"oneOf": [{"type": "string"}, {"type": "object"}]}):
+            prop = {"type": "array"}
+            if items is not None:
+                prop["items"] = items
+            assert schema_contradictions(
+                rels, {"properties": {"stories": prop}},
+            ) == [], items
+
+    def test_a_multiplicity_contradiction_is_not_reported_twice(self):
+        """One authoring error, one message. `cardinality: one` over an array
+        of objects is wrong once, and saying it in two vocabularies would make
+        one mistake look like two — the reading `inverse_gaps` already
+        applies to unregistered targets."""
+        rels = normalize_relations({"feature": _rel(to="Feature")})
+        problems = schema_contradictions(rels, {"properties": {
+            "feature": {"type": "array", "items": {"type": "object"}},
+        }})
+        assert len(problems) == 1
+        assert "as an array" in problems[0]
