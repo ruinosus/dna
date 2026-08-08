@@ -32,7 +32,7 @@ import os
 import sqlite3
 import struct
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Sequence
 
 from dna.adapters.search.rrf import DEFAULT_RRF_K, reciprocal_rank_fusion
 
@@ -66,14 +66,53 @@ def _serialize_f32(vector: Iterable[float]) -> bytes:
     return struct.pack(f"{len(vec)}f", *vec)
 
 
-def document_text(raw: dict[str, Any]) -> str:
+def document_text(raw: dict[str, Any], fields: Sequence[str] | None = None) -> str:
     """Derive the searchable text blob for a raw instance.
 
     Walks the doc's ``spec`` (and top-level ``metadata.name``) collecting every
     STRING value, in instance order — the same "string values only" discipline
     the kernel's lexical fallback uses, so dense/lexical see the same corpus.
     Callers may override by passing an explicit ``text`` to ``index``.
+
+    ⭐ ``fields`` — the Kind's own answer to *which* of its fields carry the
+    embeddable payload, i.e. the descriptor's ``embed:`` list surfaced as
+    ``KindPort.embed_fields``. When given, ONLY those top-level spec keys are
+    walked and ``metadata.name`` is left out.
+
+    That declaration is not new; honoring it here is. ``embed:`` has existed on
+    seven Kinds and its schema says *"Spec fields composing the doc's embedding
+    text"*, but the only consumer was :meth:`Kernel.embeddable_kinds`, which
+    reads whether the list EXISTS and never which fields are in it — so the
+    indexed text was every string regardless. A declaration nothing honors is
+    the "guard exists, door does not call it" defect, and it becomes visible
+    the moment a Kind carries a field that is identity rather than language: a
+    64-char hex ``source_sha256`` is not text a person would ever query, but it
+    lands in the tsvector and in the embedding all the same, and a collection
+    name repeated on every chunk makes a search FOR that name match the entire
+    corpus.
+
+    ⚠️ Kinds that declare no ``embed:`` are untouched (``fields=None`` → the
+    old walk, byte for byte), so this widens nothing on its own.
     """
+    if fields is not None:
+        spec = raw.get("spec") or {}
+        parts = []
+
+        def _collect(node: Any) -> None:
+            if isinstance(node, str):
+                parts.append(node)
+            elif isinstance(node, dict):
+                for value in node.values():
+                    _collect(value)
+            elif isinstance(node, (list, tuple)):
+                for value in node:
+                    _collect(value)
+
+        for key in fields:
+            if key in spec:
+                _collect(spec[key])
+        return "\n".join(p for p in parts if p)
+
     parts: list[str] = []
     meta = raw.get("metadata") or {}
     name = meta.get("name") or raw.get("name")
@@ -340,7 +379,7 @@ class SqliteVecRecordSearchProvider:
 
     async def search(
         self, *, scope: str, query_text: str, kind: str | None = None,
-        k: int = 10, tenant: str = "",
+        k: int = 10, tenant: str = "", name_prefix: str | None = None,
     ) -> list[dict[str, Any]]:
         """Hybrid dense+lexical search fused with RRF. Returns hits shaped
         ``{scope, kind, name, score, title?, snippet?, rank_dense?,
@@ -423,7 +462,27 @@ class SqliteVecRecordSearchProvider:
         dense_pos = {r: i + 1 for i, r in enumerate(dense_ranked)}
         lexical_pos = {r: i + 1 for i, r in enumerate(lexical_ranked)}
 
-        # Resolve metadata + apply kind/tenant filter with overlay shadowing.
+        # Resolve metadata + apply kind/name/tenant filter with overlay shadowing.
+        #
+        # ⚠️ DIVERGENCE FROM pgvector, deliberate and NAMED (i-154). There the
+        # ``kind``/``name_prefix`` narrowing is a SQL predicate, so it runs
+        # where the candidates are chosen and a volumous Kind cannot crowd the
+        # rest out of the over-fetch. Here it stays post-hoc, because the dense
+        # plane is a ``vec0`` VIRTUAL table: filtering inside its KNN needs the
+        # filter columns declared as vec0 metadata in the DDL, i.e. a store
+        # migration for every existing ``.dna-search/*.db``.
+        #
+        # Accepted, for now, because the two stores are aimed at different
+        # sizes: sqlite-vec is the embeddable OFFLINE FLOOR (one file per scope,
+        # a developer's local corpus) and pgvector is the server. The crowd-out
+        # this costs is a function of corpus size, and it is real — it just
+        # needs a corpus that this store is not the right choice for.
+        #
+        # The results CONTRACT is unaffected (same hits, same order, whenever
+        # nothing was crowded out), which is why both stores still pass the one
+        # ``record_search_conformance_suite``. What differs is behavior under
+        # volume, and a conformance case would have to build a large corpus to
+        # see it. Ficha: give vec0 its metadata columns and pre-filter here too.
         rowids = [int(rid) for rid, _ in fused]
         meta = self._resolve_meta(conn, rowids)
         best: dict[tuple[str, str], dict[str, Any]] = {}
@@ -433,6 +492,8 @@ class SqliteVecRecordSearchProvider:
             if m is None:
                 continue
             if kind is not None and m["kind"] != kind:
+                continue
+            if name_prefix and not str(m["name"]).startswith(name_prefix):
                 continue
             row_tenant = m["tenant"] or ""
             if row_tenant not in ("", tenant or ""):

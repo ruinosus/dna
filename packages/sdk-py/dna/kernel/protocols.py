@@ -915,11 +915,24 @@ class RecordSearchProvider(Protocol):
 
     ⛔ And a provider must NOT filter by relevance on its own: no shipped floor
     exists, because none is calibratable — see ``dna.kernel.query.relevance``
-    for the measurement. Filtering is the caller's policy, applied above."""
+    for the measurement. Filtering is the caller's policy, applied above.
+
+    ⭐ ``kind`` and ``name_prefix`` are NARROWING, and a provider must apply
+    them where it CHOOSES candidates — not to the list it already chose. The
+    difference is not efficiency, it is honesty: both planes over-fetch a fixed
+    number of candidates, so a post-filter lets a volumous Kind (or collection)
+    fill that budget and crowd every other row out, silently. Measured (i-154):
+    1000 rows of one Kind added to a 153-row scope took the pgvector dense
+    plane's top-40 from ``{Issue: 37, Engram: 2, App: 1}`` to ``{Chunk: 40}``,
+    while ``mode`` still read "hybrid" and ``degraded`` still read False.
+
+    ``name_prefix`` selects a NAME PREFIX (``"<collection>/"``) and is how a
+    corpus is partitioned into collections without a column: instance names are
+    structured, and the store's identity index is prefix-searchable."""
 
     async def search(
         self, *, scope: str, query_text: str, kind: str | None = None,
-        k: int = 10, tenant: str = "",
+        k: int = 10, tenant: str = "", name_prefix: str | None = None,
     ) -> list[dict[str, Any]]: ...
 
 

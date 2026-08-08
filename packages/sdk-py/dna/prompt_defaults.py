@@ -100,6 +100,7 @@ _BUILTIN_MODULES = (
     "dna.runtime.middleware.recall",
     "dna.memory.ingestion",
     "dna.extensions.intel.analyzer",
+    "dna.application.knowledge_voice",
 )
 
 _REGISTRY: dict[tuple[str, str], "PromptDefault"] = {}

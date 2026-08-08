@@ -44,8 +44,19 @@ def port():
         registry.register_from_descriptor(raw)
         for raw in load_descriptors("dna.extensions.artifact")
     ]
-    assert len(registered) == 1, f"expected one descriptor, got {len(registered)}"
-    return registered[0]
+    # ⚠️ This used to assert ``len(registered) == 1`` and take ``[0]``, which
+    # froze the ANSWER (*how many* Kinds this package happens to ship) where the
+    # QUESTION is *which* one this file tests. Adding ``KnowledgeChunk`` to the
+    # same package broke it — correctly by its own words, and for a reason that
+    # has nothing to do with SourceArtifact. Selecting by name makes a third
+    # Kind here a non-event, while a MISSING SourceArtifact still fails, which
+    # is the failure worth keeping.
+    by_kind = {p.kind: p for p in registered}
+    assert _KIND in by_kind, (
+        f"{_KIND} is not registered by dna.extensions.artifact; "
+        f"got {sorted(by_kind)}"
+    )
+    return by_kind[_KIND]
 
 
 def _spec(**overrides):

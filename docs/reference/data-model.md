@@ -51,7 +51,7 @@ readable, so it is reproduced from source rather than asserted:
 
 ## Logical model — Kinds and their references
 
-85 Kinds are registered. Each is an instance, not a table: a
+86 Kinds are registered. Each is an instance, not a table: a
 Kind costs a YAML descriptor and zero migrations, which is the point
 of an open type system. The cost is that references between Kinds are
 not database foreign keys — they are fields holding a name.
@@ -71,7 +71,7 @@ than either:
 
 `*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the instance name.
 
-**155 edges: 111 declared, 44 composition-only — of which 38 are ENFORCED at write time.** 39 of 85 Kinds declare at least one relation, and 2 fields are listed below as gaps.
+**156 edges: 112 declared, 44 composition-only — of which 38 are ENFORCED at write time.** 40 of 86 Kinds declare at least one relation, and 2 fields are listed below as gaps.
 
 !!! warning "Declared is not enforced"
 
@@ -96,6 +96,7 @@ against `ANY_KIND` and in the declared-relations table.
 ```mermaid
 flowchart LR
     agentskills["agentskills (1 Kind)"]
+    artifact["artifact (2 Kinds)"]
     cloud["cloud (2 Kinds)"]
     eval["eval (4 Kinds)"]
     federation["federation (1 Kind)"]
@@ -129,12 +130,23 @@ flowchart LR
 
 ### Detail by group
 
-All 85 Kinds in one diagram is an unreadable hairball, so
+All 86 Kinds in one diagram is an unreadable hairball, so
 each group with at least 2 edges gets its
 own. A group carrying more than 20 edges is
 split again by tier, which keeps the enforced edges legible instead
 of losing them among the unvalidated ones. A box from another group
 appearing here is a cross-group reference.
+
+#### `artifact` (2 edges)
+
+```mermaid
+erDiagram
+    ANY_KIND
+    KnowledgeChunk
+    SourceArtifact
+    KnowledgeChunk }o..|| SourceArtifact : "source_sha256 [sha256]"
+    SourceArtifact }o..}o ANY_KIND : "derived_refs [{kind, name}] *"
+```
 
 #### `eval` (4 edges)
 
@@ -432,7 +444,7 @@ erDiagram
     TestRun }o..}o Task : "verifies [Kind/name] *"
 ```
 
-Groups with fewer than 2 edges (listed, not drawn): `artifact`, `cloud`, `collab`, `evidence`, `intel`, `research`.
+Groups with fewer than 2 edges (listed, not drawn): `cloud`, `collab`, `evidence`, `intel`, `research`.
 
 ### Declared relations (`spec.relations`)
 
@@ -485,6 +497,7 @@ the runtime does not follow it — read `By` for why.
 | `Kaizen` | `work_item` *(poly)* | `Story` | one | `Kind/name` |  |  |  |
 | `Kaizen` | `work_item` *(poly)* | `Task` | one | `Kind/name` |  |  |  |
 | `KindNamespace` | `owner` | `Workspace` | one | `workspace_id` |  |  |  |
+| `KnowledgeChunk` | `source_sha256` | `SourceArtifact` | one | `sha256` |  |  |  |
 | `MCPFederation` | `min_role` | `Role` | one | `role_id` |  |  | yes |
 | `MCPFederation` | `min_role_write` | `Role` | one | `role_id` |  |  | yes |
 | `Membership` | `role` | `Role` | one | `role_id` |  |  |  |

@@ -206,3 +206,75 @@ async def test_search_lexical_shape_score_order_and_limit():
     res2 = await k.search("sc", "alpha beta", kind="Story", k=10)
     assert [h["name"] for h in res2["hits"]] == ["s-full", "s-half"]
     assert res2["hits"][1]["score"] == 0.5
+
+
+# ── `name_prefix`: o recorte de coleção, nos DOIS planos ─────────────────────
+#
+# Estes três casos existem porque o kwarg nasceu com duas armadilhas silenciosas,
+# e as duas foram MEDIDAS (i-154), não imaginadas:
+#
+#  1. passar `name_prefix` incondicionalmente quebra qualquer
+#     `RecordSearchProvider` de terceiro escrito contra o protocolo anterior —
+#     com `TypeError`, que o `except` da busca captura e converte em fallback
+#     lexical. O sintoma é `degraded=True` em TODA busca, sem nenhuma pista de
+#     que a causa foi assinatura;
+#  2. o plano degradado não conhecia o recorte, então uma busca COM coleção
+#     pedida e provider caído devolvia trechos de OUTRAS coleções — marcados
+#     apenas como `degraded`, que lê como "menos preciso" e não como "de outro
+#     corpus".
+
+
+@pytest.mark.asyncio
+async def test_provider_da_assinatura_ANTIGA_continua_funcionando():
+    """Sem prefixo pedido, o kwarg novo não é passado — e o provider antigo,
+    que não o aceita, segue no plano denso em vez de degradar calado."""
+    k, _src = _wire()
+
+    class _ProvAntigo:
+        #: exatamente a assinatura de antes do `name_prefix`
+        async def search(self, *, scope, query_text, kind=None, k=10, tenant=""):
+            return [{"scope": scope, "kind": "Story", "name": "s-hit", "score": 0.9}]
+
+    k.record_search_provider(_ProvAntigo())
+    res = await k.search("sc", "tema x", kind="Story", k=5)
+    assert res["degraded"] is False, (
+        "um provider da assinatura antiga degradou a busca inteira — é o "
+        "sintoma de estar passando `name_prefix` incondicionalmente"
+    )
+
+
+@pytest.mark.asyncio
+async def test_prefixo_pedido_CHEGA_ao_provider():
+    recebido = {}
+
+    class _Prov:
+        async def search(self, *, scope, query_text, kind=None, k=10, tenant="",
+                         name_prefix=None):
+            recebido["name_prefix"] = name_prefix
+            return []
+
+    k, _src = _wire()
+    k.record_search_provider(_Prov())
+    await k.search("sc", "x", kind="Story", k=5, name_prefix="politicas/")
+    assert recebido["name_prefix"] == "politicas/"
+
+
+@pytest.mark.asyncio
+async def test_o_plano_DEGRADADO_honra_o_prefixo():
+    """⭐ O caso que impede o vazamento entre coleções.
+
+    Sem provider, a busca cai no plano lexical. Se ele ignorasse o recorte, a
+    resposta traria o trecho da OUTRA coleção com `degraded=True` — e o produto
+    citaria, como se fosse do corpus pedido, um trecho que não é.
+    """
+    k, _src = _wire(docs=[
+        _doc("Story", "politicas/abc/00001", {"title": "tema x da política"}),
+        _doc("Story", "contratos/def/00001", {"title": "tema x do contrato"}),
+    ])
+    res = await k.search("sc", "tema x", kind="Story", k=10,
+                         name_prefix="politicas/")
+    assert res["degraded"] is True, "o cenário só vale com o plano degradado"
+    nomes = [h["name"] for h in res["hits"]]
+    assert nomes == ["politicas/abc/00001"], (
+        f"o plano degradado cruzou coleções: {nomes}"
+    )

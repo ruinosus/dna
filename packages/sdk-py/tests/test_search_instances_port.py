@@ -323,8 +323,14 @@ async def test_k_is_clamped(tmp_path):
     live.kernel.record_search_provider(prov)
     seen = {}
 
+    # ``**_rest`` porque este dublê SUBSTITUI `kernel.search`, e enumerar a
+    # assinatura dela aqui congela a lista de parâmetros do motor dentro de um
+    # arquivo que pergunta uma coisa só: *o `k` é clampado?*. Um parâmetro novo
+    # no motor (foi o `name_prefix`, i-154) derrubava este teste por um motivo
+    # que nada tem a ver com o que ele afirma. O que importa segue asseverado —
+    # `k` e `min_similarity` são lidos pelo NOME, não por posição.
     async def _spy(scope, query_text, *, kind=None, k=10, tenant=None,
-                   min_similarity=None):
+                   min_similarity=None, **_rest):
         seen["k"] = k
         seen["min_similarity"] = min_similarity
         return {"hits": [], "degraded": False}

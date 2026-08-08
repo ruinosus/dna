@@ -1,0 +1,201 @@
+# KnowledgeChunk — um TRECHO de um artefato, indexável e citável.
+#
+# ⭐ POR QUE UM KIND, e não uma tabela de trechos
+# ------------------------------------------------
+# Um trecho é uma INSTÂNCIA. Essa escolha não é estética: ela reusa o caminho
+# inteiro que já existe, em vez de abrir um segundo.
+#
+#   backfill_index(kinds=["KnowledgeChunk"])   já sabe indexar um Kind
+#   document_text(raw)                          já deriva o texto buscável
+#   tenant                                      já isola DENTRO do índice
+#   kind                                        já é filtro do provider
+#   search_instances                            já entrega o envelope honesto
+#                                               (mode/degraded/relevance_notice)
+#
+# Uma tabela de trechos teria de reconstruir os cinco, e o quinto — a honestidade
+# do envelope — é o que a decisão do fundador exige. Um segundo caminho de
+# indexação seria um segundo lugar para a verdade divergir.
+#
+# ⚠️ A PROCEDÊNCIA É O PRODUTO, não um enfeite
+# ---------------------------------------------
+# A decisão do fundador (08/08/2026, i-154) tem duas metades e esta é a (c):
+# TODO trecho vem citado COM A FONTE — qual arquivo, e ONDE dentro dele.
+# Daí `source_sha256` (o endereço de conteúdo, verificável por quem tem o
+# arquivo) e `start_char`/`end_char` (o recorte exato dentro do Markdown
+# extraído). Um trecho que não sabe dizer de onde veio não pode ser citado, e
+# um trecho que não pode ser citado não deveria ter sido indexado.
+#
+# ⛔ E o que NÃO se inventa: `page`. O markitdown devolve Markdown plano e NÃO
+# reporta página; um número de página derivado por adivinhação seria uma
+# citação FALSA — pior que nenhuma, porque parece verificável. O campo não
+# existe neste schema justamente para que ninguém o preencha por estimativa.
+# Se um extrator que sabe a página entrar um dia (docling — ver a ficha), o
+# campo nasce junto com quem sabe respondê-lo.
+#
+# ⭐ `collection` — o que é, e o que custa
+# ----------------------------------------
+# Uma coleção é um PREFIXO DE NOME: `<collection>/<sha12>/<ordinal>`. Medido,
+# e as alternativas foram recusadas com código na tela:
+#
+#   collection ⇒ scope   ⛔ REFUTADO. `LiveDna.default_scope` é função 1:1 do
+#                        workspace, e `scope_is_bound` NEGA qualquer outro
+#                        scope a um workspace autenticado (regime 2) sem uma
+#                        linha `WorkspaceScopeGrant`. Uma coleção-scope seria
+#                        inalcançável pela porta que a consultaria.
+#   collection ⇒ coluna  ⛔ CARO. Migration nova sobre a 0013, que é de hoje.
+#   collection ⇒ prefixo ✅ ZERO migration, e — decisivo — filtrável em SQL
+#                        pelo índice UNIQUE que já existe
+#                        (scope, kind, name, tenant, model_id), que é btree e
+#                        portanto responde a prefixo.
+#
+# O CUSTO, dito: o nome da coleção faz parte da IDENTIDADE do trecho, então
+# renomear uma coleção é reescrever seus trechos. É reversível (re-ingerir
+# custa zero — o embedder é ONNX local), mas não é grátis, e quem renomeia
+# precisa saber disso.
+#
+# `spec.collection` guarda a MESMA coleção como dado legível, para que
+# `kernel.query` filtre sem parsear nome. O nome é DERIVADO do dado, nunca o
+# contrário.
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: knowledge-chunk
+spec:
+  target_api_version: github.com/ruinosus/dna/artifact/v1
+  target_kind: KnowledgeChunk
+  alias: artifact-knowledge-chunk
+  origin: github.com/ruinosus/dna/artifact
+  tenant_scope: tenanted
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  prompt_target_priority: 0
+  # O corpus é PRODUZIDO por ingestão, não autorado à mão. Ferramentas de
+  # seed/export/replicação pulam — re-ingerir do artefato é sempre mais barato
+  # e mais correto do que copiar trechos derivados.
+  is_runtime_artifact: true
+  # ⛔ NÃO declara `memory.recallable`, e a tentação de declarar é forte: o trait
+  # faria `backfill_index` alcançar este Kind por padrão, sem ninguém listá-lo.
+  # Foi o que este descritor fazia até `test_embeddable_is_not_recallable`
+  # cobrar — e a cobrança está certa.
+  #
+  # `memory.recallable` não significa "indexável". Significa **participa dos
+  # verbos de memória**: decaimento de retenção, peso afetivo, reconsolidação a
+  # cada recall. Um trecho de documento não decai, não tem afeto, e não muda por
+  # ter sido lido — ele é o que o arquivo diz. Declarar o trait o colocaria no
+  # `recall`, misturado aos Engrams e re-ranqueado por propriedades que ele não
+  # tem, e o corpus (volumoso por construção) afogaria a memória pessoal.
+  #
+  # ⭐ A distinção é exatamente a que `embed:` × `memory.recallable` existe para
+  # sustentar: *"um ADR deve ser achável por busca semântica SEM ser ranqueado
+  # por decaimento como memória"*. `embed: [text]` abaixo é o que torna este
+  # Kind indexável; quem quiser o corpus chama `backfill_index(kinds=[...])`
+  # explicitamente, que é a porta certa para um universo escolhido de propósito.
+  traits: [record.append-only]
+  # ⭐ SÓ o texto é embutido. Sem esta linha `document_text` colheria TODA
+  # string do spec — inclusive o sha256 em hex e o nome da coleção repetido em
+  # cada trecho — e enfiaria esse ruído no vetor E no tsvector. O sha em hex
+  # não é linguagem; a coleção repetida faz toda busca pelo nome dela casar com
+  # o corpus inteiro.
+  embed: [text]
+  storage:
+    type: yaml
+    container: knowledge-chunks
+  relations:
+    # A volta da aresta que o `SourceArtifact.derived_refs` já declarava e que
+    # ninguém escrevia. Aqui ela é APONTADA, não inferida: o trecho diz de qual
+    # artefato veio, pelo endereço de conteúdo.
+    #
+    # ⭐ O nome da relação É o campo do spec que carrega o valor — regra do
+    # kernel, imposta por `schema_contradictions`. Por isso `source_sha256`, e
+    # não `source`: uma relação chamada `source` sem propriedade `source` é
+    # recusada na carga do descritor, e foi.
+    #
+    # ⚠️ E `by:` decide se existe ARESTA. A forma composta `'{kind, name}'`
+    # está em `COMPOSITE_FORMS` (`kernel/kinds/relations.py`), e
+    # `_is_resolved` devolve False para ela — declara o endereço sem instalar
+    # resolução, exatamente como o `derived_refs` do outro lado. `by: sha256`
+    # aponta um CAMPO DO ALVO (`SourceArtifact.sha256`, o mesmo hex, mesmo
+    # padrão), do mesmo jeito que `by: workspace_id` e `by: tier_id` — e essa
+    # resolve. Trocar a forma foi o que transformou uma declaração inerte na
+    # aresta que a citação precisa para ser verificável.
+    source_sha256:
+      to: SourceArtifact
+      cardinality: one
+      by: sha256
+  schema:
+    type: object
+    additionalProperties: false
+    required:
+    - text
+    - collection
+    - source_sha256
+    - ordinal
+    properties:
+      text:
+        type: string
+        minLength: 1
+        description: >-
+          O trecho em si — o ÚNICO campo embutido (ver `embed:` acima). É o
+          Markdown extraído do original, recortado; nunca os bytes originais.
+      collection:
+        type: string
+        pattern: '^[a-z0-9][a-z0-9-]{0,62}$'
+        description: >-
+          A coleção a que este trecho pertence. É o mesmo valor que abre o NOME
+          da instância, e é o dado legível de que o nome deriva. Minúsculas,
+          dígitos e hífen — porque vira prefixo de nome e prefixo de nome é
+          identidade.
+      source_sha256:
+        type: string
+        pattern: '^[a-f0-9]{64}$'
+        description: >-
+          O endereço de conteúdo do SourceArtifact de onde este trecho saiu.
+          É o que torna a citação VERIFICÁVEL: quem tem o arquivo confere.
+      source_uri:
+        type:
+        - string
+        - 'null'
+        description: >-
+          Onde os bytes do original vivem — IDENTIDADE, nunca credencial. A
+          mesma regra do `SourceArtifact.uri`: jamais uma URL assinada.
+      source_filename:
+        type:
+        - string
+        - 'null'
+        description: >-
+          O nome com que o arquivo chegou. É o que a citação MOSTRA para uma
+          pessoa ("relatorio-q3.pdf"), porque um sha256 não diz nada a ninguém.
+          Exibição apenas — nunca um caminho para abrir.
+      ordinal:
+        type: integer
+        minimum: 0
+        description: >-
+          A posição do trecho na ordem do documento, base 0. É o "onde" grosso
+          da citação, e o que permite reconstituir a ordem de leitura.
+      start_char:
+        type:
+        - integer
+        - 'null'
+        minimum: 0
+        description: >-
+          Offset inicial dentro do Markdown extraído. O "onde" FINO da citação
+          — reportado pelo chunker (`chonkie` devolve `start_index`), nunca
+          estimado. Nulo quando o cortador não soube dizer.
+      end_char:
+        type:
+        - integer
+        - 'null'
+        minimum: 0
+        description: Offset final (exclusivo) dentro do Markdown extraído.
+      token_count:
+        type:
+        - integer
+        - 'null'
+        minimum: 0
+        description: Tamanho do trecho em tokens, como o chunker o contou.
+      extracted_at:
+        type:
+        - string
+        - 'null'
+        description: ISO-8601 de quando a ingestão produziu este trecho.

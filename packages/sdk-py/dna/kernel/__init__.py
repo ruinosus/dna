@@ -2848,7 +2848,7 @@ class Kernel:
     async def search(
         self, scope: str, query_text: str, *,
         kind: str | None = None, k: int = 10, tenant: str | None = None,
-        min_similarity: float | None = None,
+        min_similarity: float | None = None, name_prefix: str | None = None,
     ) -> dict[str, Any]:
         """Public record search (F2 D2). Provider registered → semantic
         (pgvector/RRF, degraded=False); no provider OR provider error → lexical
@@ -2861,7 +2861,7 @@ class Kernel:
         :mod:`dna.kernel.query.relevance`."""
         return await self._search.search(
             scope, query_text, kind=kind, k=k, tenant=tenant,
-            min_similarity=min_similarity,
+            min_similarity=min_similarity, name_prefix=name_prefix,
         )
 
     async def _lexical_search(

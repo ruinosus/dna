@@ -120,6 +120,26 @@ def _provider(kernel: Any) -> Any | None:
     return getattr(kernel, "_search_provider", None)
 
 
+def _embed_fields(kernel: Any, kind: str) -> tuple[str, ...] | None:
+    """The Kind's declared ``embed:`` fields, or ``None`` when it declares none.
+
+    Best-effort by design: a kernel double with no Kind registry, or a Kind that
+    is not registered, answers ``None`` — which is the pre-declaration behavior
+    (index every string in the spec). Indexing must never fail because a
+    descriptor could not be resolved."""
+    port_for = getattr(kernel, "kind_port_for", None)
+    if port_for is None:
+        return None
+    try:
+        port = port_for(kind)
+    except Exception:  # noqa: BLE001 — an unresolvable Kind declares nothing
+        return None
+    fields = getattr(port, "embed_fields", None) if port is not None else None
+    if not fields:
+        return None
+    return tuple(str(f) for f in fields)
+
+
 async def _index_doc(
     kernel: Any, scope: str, kind: str, name: str, spec: dict[str, Any],
     tenant: str | None,
@@ -239,6 +259,12 @@ async def backfill_index(
     kinds = kinds if kinds is not None else recallable_kinds(kernel)
     records: list[dict[str, Any]] = []
     for kind in kinds:
+        # The Kind's OWN answer to "which of my fields ARE the embeddable
+        # payload" — the descriptor's ``embed:`` surfaced as
+        # ``KindPort.embed_fields``. ``None`` for a Kind that declares none,
+        # which is every Kind that behaved this way before, so reading the
+        # declaration here widens nothing by itself.
+        embed_fields = _embed_fields(kernel, kind)
         async for raw in kernel.query(scope, kind, tenant=tenant):
             name = (raw.get("metadata") or {}).get("name") or raw.get("name")
             if not name:
@@ -247,7 +273,7 @@ async def backfill_index(
             records.append({
                 "scope": scope, "kind": kind, "name": name,
                 "tenant": tenant or "",
-                "text": document_text(raw),
+                "text": document_text(raw, embed_fields),
                 "title": spec.get("title") or spec.get("summary") or name,
             })
     if not records:
