@@ -1,0 +1,136 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Spec
+metadata:
+  id: qx2devp3qzms
+  name: spec-relacao-aninhada
+spec:
+  title: Relação aninhada — `from:` como sexta chave
+  date: '2026-08-08T00:07:12+00:00'
+  status: accepted
+  description: 'O grafo passa a ler ponteiro dentro de array. Medido: 17 sítios, 59→83 arestas (+41%), zero migração e zero DDL. E por que isto vem antes do Apache AGE.'
+  body: |-
+    # Relação aninhada — `from:` como sexta chave
+
+    Medido em 07/08/2026 (relatório completo do agente de medição). Aprovado pelo founder.
+
+    ## O problema
+
+    `relation_values` faz `spec.get(rel.name)` — PRIMEIRO NÍVEL, sempre. O kernel publica o
+    limite na wire como `top_level_properties_only`. Então isto não é declarável:
+
+        Copilot.mounts[].agent      → Agent
+        Agent.mcp_servers[].ref     → MCPFederation
+        Copilot.surfaces[].kind     → KindDefinition
+
+    ⭐ E o `copilot.kind.yaml:255` já DOCUMENTA `mounts[].agent` como *"ref — resolved by the
+    emitter"*. O ponteiro existe, é conhecido, e só o emissor o resolve — fora do kernel, sem
+    validação e sem aresta. É "capacidade existe, porta não", o padrão que esta casa já nomeou.
+
+    ## A forma: `from:`
+
+    ```yaml
+    relations:
+      mounts:
+        to: Agent
+        cardinality: many
+        from: agent          # a sub-chave DENTRO de cada item de spec.mounts
+    ```
+
+    Simétrica com `by:`, e a simetria É o argumento:
+      `from:` diz onde o valor é LIDO na origem.
+      `by:`   diz onde ele CASA no alvo.
+    Ausente = comportamento de hoje, byte a byte.
+
+    ⛔ DESCARTADO: "o nome da relação vira caminho" (`mounts[].agent` como chave). Quebra tudo o
+    que depende de *o nome da relação É o campo do spec*: `_NAME_RE`, `to_declaration()`,
+    `source_field`/PK de `dna_edges`, `reciprocates`, `dna kind show`, e as chaves YAML de 73
+    declarações. E a falha silenciosa mais provável: `jsonb_exists(spec,'mounts[].agent')` = false
+    → o backfill varre ZERO e reporta sucesso.
+
+    ## O que `from:` preserva DE GRAÇA — e é isso que faz a forma valer
+
+    - `source_field` continua `mounts`, `ordinal` continua o índice do array
+      → **PK de `dna_edges` não muda. DDL ZERO.**
+    - `backfill.declared_pairs` + `jsonb_exists(spec,'mounts')` continuam corretos sem uma linha
+    - `schema_contradictions` continua certo (`mounts` existe, é array, `many` bate)
+    - **Migração de dado: ZERO.** Lê dado que já está lá, na forma em que está.
+
+    ## O ganho, contado no banco real
+
+    59 → 83 arestas (+41%), 4 → 7 tipos:
+
+      Copilot.mounts[].agent → Agent            9 arestas (8 resolvem, 1 pendura)
+      Agent.mcp_servers[].ref → MCPFederation   9 arestas (9 resolvem)
+      Copilot.surfaces[].kind → KindDefinition  5 arestas — ⚠️ exige `by: target_kind`
+                                                 (o valor é `CopilotBlueprint`, o name é
+                                                  `copilot-blueprint`) — FATIA SEPARADA
+
+    ⛔ NÃO declarar:
+      - `Copilot.mcp_servers[].name` — NÃO é ponteiro, é definição inline de servidor externo
+        (`deepwiki`). Declarar = aresta permanentemente pendurada + Copilot não-escrevível.
+      - `Solution.services[].name` — vale ZERO aresta hoje; `apps[]` já carrega a junção.
+
+    ## ⚠️ O que quebra
+
+    1. `additionalProperties: false` do meta-schema — DUAS cópias byte-idênticas por teste
+       (`docs/schemas/kind-definition.schema.json:107` + a gêmea em `kernel/schemas/`)
+    2. `to_wire()` → `KindGraphEdge` → `docs/openapi.json` → `client-ts/src/schema.ts`
+       (a etapa `bun run gen`, a que um glob de `scripts/*.py` perde)
+    3. `COVERAGE_LIMITS["top_level_properties_only"]` REESCRITO, não apagado — um nível de array
+       passa a ser coberto; `spec.foo.bar`, `a[].b[].c` e `$ref`/`oneOf` continuam fora
+    4. Goldens: `data-model.md`, `openapi.json`, `schema.ts`, `record.md:1663`, `ports/kinds.md`,
+       `solution-scaffolding.md:502`
+    5. `copilot_provenance.py:83-95` REIMPLEMENTA `relation_values` à mão — continuaria
+       funcionando e estaria ERRADO, em silêncio
+    6. Duas asserções EXIGEM a limitação hoje e invertem
+       (`test_kind_graph_rest.py:235`, `test_solution_kind.py:1560`)
+
+    ## ⚠️⚠️ Os riscos que teste NÃO pega
+
+    1. **Explosão ilimitada por instância.** `Story.timeline[]` tem 794 entradas em 158 Stories e
+       cresce a cada evento. `_replace_edges` é delete-then-insert A CADA ESCRITA. Uma relação
+       aninhada num campo tipo-timeline reescreveria N linhas por mudança de status. Hoje a
+       instância mais conectada tem 9 arestas — fixture não chega perto.
+    2. **`ordinal` é UM inteiro.** Cobre `array[].chave`. NÃO cobre dois níveis. A forma tem de
+       RECUSAR caminho mais fundo EM VOZ ALTA, ou a próxima fatia bate em migração de PK.
+    3. **`ordinal` não é identidade estável.** Remover `mounts[1]` renumera `mounts[2]`.
+    4. ⛔ **`on_target_delete: restrict` numa relação aninhada é muito maior do que parece.**
+       `restrict` em `Copilot.mounts` = apagar QUALQUER Agent montado passa a ser recusado — 8 de
+       10 Agents deste banco estão montados. Só aparece num delete, o caminho menos testado.
+       **NADA de `on_target_delete` enforcing nesta fatia.**
+    5. **`to_deleted_at` + item removido** = aresta velha apontando para um ordinal que hoje
+       guarda OUTRO item. Grafo que mente parecendo inteiro.
+    6. ⭐ **A imposição liga sobre dado que JÁ PENDURA.** `mounts[].agent` tem 1 pendurado,
+       `surfaces[].kind` tem 2. Sob `enforce` essas instâncias ficam NÃO-ESCREVÍVEIS. O backfill
+       é read-only e só reporta; o veto morde na próxima escrita — o pior momento, e nenhum teste
+       vê. **Rodar `dna graph backfill --dry-run` ANTES de ligar enforce.**
+
+    ## Por que ISTO e não Apache AGE, agora
+
+    Os dois gatilhos da `spec-topologia-do-grafo` foram MEDIDOS e nenhum é cruzado:
+      p95 de travessia profunda: **3,2 ms** contra limiar de 500 ms → folga 156×
+      pior âncora: **28 linhas** contra teto de 5.000 → folga 178×
+    E aninhar não mexe nesses números: 28 → 28.
+
+    ⭐ Mas o gatilho que importa é o 1 (EXPRESSIVIDADE), e ele é função do que o grafo CONTÉM.
+    `MATCH (c:Copilot)-[*]->(k:KindDefinition)` devolve VAZIO hoje — por falta de ARESTA, não de
+    Cypher. Aninhar é o ÚNICO movimento que torna o gatilho 1 disparável de verdade.
+
+    Comparação que decide a ordem:
+                            aninhar        AGE
+      migração de dado      nenhuma        vértices para 475 instâncias
+      DDL                   nenhum         extensão + grafo + índices
+      restart de servidor   não            sim
+      paridade SQLite       intacta        QUEBRA (on_target_delete viraria só-nuvem)
+      desfazer              apagar `from:` dump/restore
+
+    (Correção de fato: AGE roda em PG 13–18 no Azure — 1.7.0 no 17/18, 1.6.0 no 14–16. A
+    afirmação anterior de "até PG 16" estava errada, conferida na tabela do Learn de 10/07/2026.)
+  created_at: '2026-08-08T00:07:12+00:00'
+  updated_at: '2026-08-08T00:07:12+00:00'
+  timeline:
+  - at: '2026-08-08T00:07:12+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: accepted

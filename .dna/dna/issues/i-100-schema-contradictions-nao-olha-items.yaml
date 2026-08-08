@@ -1,0 +1,56 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: xam5bqewkcl3
+  name: i-100-schema-contradictions-nao-olha-items
+spec:
+  title: 'schema_contradictions não olha `items`: relação sobre array-de-objeto se declara imposta e lê zero'
+  description: |-
+    MEDIDO em 07/08/2026, e provado com o kernel na mão.
+
+    `schema_contradictions` (relations.py:911-936) só olha `prop["type"] == "array"`. NUNCA olha
+    `items`. Uma relação declarada sobre um campo array-DE-OBJETO passa por TODOS os portões:
+
+      Agent.spec.mcp_servers  →  {"type": "array", "items": {"type": "object"}}
+
+      normalize_relations({'mcp_servers': {'to':'MCPFederation','cardinality':'many'}})
+        resolved              = True          ← diz que segue
+        enforced              = True          ← diz que VETA a escrita
+        schema_contradictions = []            ← passa no lint
+        on_target_delete: restrict → ACEITO   ← passa
+        relation_values(...)  = []            ← LÊ ZERO
+
+    ⚠️ Guarda que se anuncia imposta e não faz nada. É a forma de defeito que esta casa mais
+    cara paga, e ela está ARMADA — não disparada.
+
+    === NENHUM Kind faz isso HOJE, e é sorte, não desenho ===
+
+    Varredura dos 85 ports: 73 relações declaradas, 50 resolved, 37 enforced. DEZ ficam sobre
+    campo array-of-object, e todas as dez são `to: "*"` + `by: {kind,name}` → resolved=False.
+    Estão honestas. Mas nada impede a décima primeira de ser declarada com `to:` concreto.
+
+    E os dados fecham o círculo: 9 de 9 entradas de `Agent.spec.mcp_servers` no banco são
+    objetos `{ref, ...}`. Zero strings. O `Agent` declara ZERO relações — mas
+    `helix/__init__.py:570` já declara `"ref_kind": "MCPFederation"` no bloco `presentation`.
+    ⭐ O ponteiro EXISTE, está TIPADO, e mora num QUINTO mecanismo que nem `relations` nem o
+    grafo enxergam.
+
+    === O CONSERTO ===
+
+    ~20 linhas: `schema_contradictions` passa a exigir que o `items` sustente o valor que a
+    relação promete ler. Uma relação sobre array-de-objeto sem forma de ler a sub-chave é
+    CONTRADIÇÃO, e tem de ser reportada como as outras.
+
+    ⚠️ Vale MESMO QUE a decisão sobre relação aninhada (`from:`) seja recusada. São coisas
+    independentes: esta fecha uma armadilha; a outra abre uma capacidade.
+  type: bug
+  severity: high
+  status: open
+  created_at: '2026-08-08T00:06:22+00:00'
+  updated_at: '2026-08-08T00:06:22+00:00'
+  timeline:
+  - at: '2026-08-08T00:06:22+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

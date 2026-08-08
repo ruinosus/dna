@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  id: 453pcviz6fve
+  name: f-relacao-aninhada
+spec:
+  title: Relação aninhada — o grafo passa a enxergar ponteiro dentro de array
+  description: 'relation_values lê só o primeiro nível, então mounts[].agent, mcp_servers[].ref e surfaces[].kind não são arestas. from: como sexta chave: zero migração, zero DDL, 59→83 arestas.'
+  status: in-development
+  reporter: claude-code
+  priority: high
+  created_at: '2026-08-08T00:07:09+00:00'
+  updated_at: '2026-08-08T00:07:09+00:00'
+  timeline:
+  - at: '2026-08-08T00:07:09+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: in-development

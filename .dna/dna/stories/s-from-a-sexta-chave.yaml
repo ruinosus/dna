@@ -1,0 +1,32 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: oua3ezqcow5p
+  name: s-from-a-sexta-chave
+spec:
+  title: '`from:` — o grafo le ponteiro dentro de array, com zero migracao'
+  description: 'from: diz onde o valor e LIDO na origem (by: diz onde CASA no alvo). source_field e ordinal nao mudam, entao a PK de dna_edges nao muda e o DDL e zero.'
+  status: todo
+  feature: f-relacao-aninhada
+  priority: high
+  acceptance_criteria:
+  - Dada uma relacao com from:, quando a instancia e escrita, entao a aresta nasce com source_field igual ao campo de topo e ordinal igual ao indice do array
+  - Dada uma relacao SEM from:, quando ela e lida, entao o comportamento e byte a byte o de hoje
+  - 'Dado um from: que aponte para sub-chave inexistente, entao schema_contradictions ACUSA — nunca le zero calado'
+  - Dado um caminho mais fundo que um nivel (a[].b[].c), quando declarado, entao e RECUSADO EM VOZ ALTA — ordinal e um inteiro so
+  - Dado Copilot.mounts[].agent e Agent.mcp_servers[].ref declarados, quando o backfill roda, entao aparecem 18 arestas novas sem migracao de dado
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: from: em relations.py e references.py; COVERAGE_LIMITS REESCRITO, nao apagado'
+  - 'Tests: os 8 riscos da spec, com atencao ao 6 — instancias com valor pendurado ficam nao-escreviveis sob enforce'
+  - 'Docs: regen-derived.sh inteiro (SEIS geradores); as duas copias do meta-schema; a prosa que fica falsa em record.md e solution-scaffolding.md'
+  - 'CI: verdes. E NADA de on_target_delete enforcing nesta fatia (risco 4)'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-08T00:07:43+00:00'
+  updated_at: '2026-08-08T00:07:43+00:00'
+  timeline:
+  - at: '2026-08-08T00:07:43+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
