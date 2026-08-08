@@ -6,23 +6,47 @@ metadata:
 spec:
   title: O preço do modelo vem do ModelProfile — não do código de ninguém
   description: 'read_yield resolve ModelPrice a partir de ModelProfile.cost_per_1m_*, pelo model que dna_turn ja carimba. Sem preco declarado: NAO CALCULAVEL com o nome do modelo que falta.'
-  status: in-progress
+  status: done
   feature: f-conta-do-copiloto
   priority: highest
   acceptance_criteria:
-  - Dado um turno com model carimbado e um ModelProfile com cost_per_1m_input_usd e output, quando eu peco a leitura, entao o custo sai em dinheiro com basis e source apontando para o ModelProfile
-  - ⚠️ Dado um modelo da amostra SEM preco declarado, quando eu peco a leitura, entao o custo INTEIRO e NAO CALCULAVEL nomeando quais modelos faltam — NUNCA soma parcial, porque parcial e menor que o real
-  - Dado que nao existe ModelProfile nenhum (o estado de hoje), quando eu peco a leitura, entao ela diz QUAL modelo declarar — 'nao sei' vira 'declare isto'
-  - Dado um ModelProfile com preco null, quando a leitura roda, entao null e AUSENTE, jamais zero
+  - text: Dado um turno com model carimbado e um ModelProfile com cost_per_1m_input_usd e output, quando eu peco a leitura, entao o custo sai em dinheiro com basis e source apontando para o ModelProfile
+    done: true
+    done_at: '2026-08-08T12:26:34+00:00'
+    done_by: story-done-auto
+  - text: ⚠️ Dado um modelo da amostra SEM preco declarado, quando eu peco a leitura, entao o custo INTEIRO e NAO CALCULAVEL nomeando quais modelos faltam — NUNCA soma parcial, porque parcial e menor que o real
+    done: true
+    done_at: '2026-08-08T12:26:34+00:00'
+    done_by: story-done-auto
+  - text: Dado que nao existe ModelProfile nenhum (o estado de hoje), quando eu peco a leitura, entao ela diz QUAL modelo declarar — 'nao sei' vira 'declare isto'
+    done: true
+    done_at: '2026-08-08T12:26:34+00:00'
+    done_by: story-done-auto
+  - text: Dado um ModelProfile com preco null, quando a leitura roda, entao null e AUSENTE, jamais zero
+    done: true
+    done_at: '2026-08-08T12:26:34+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: a resolucao lendo o Kind, sem constante embutida em lugar nenhum'
-  - 'Tests: o MUTANTE — fazer o custo somar parcialmente quando falta um preco tem de ficar VERMELHO'
-  - 'Docs: reading-the-yield.md dizendo de onde o preco vem e o que fazer quando falta'
-  - 'CI: verdes'
+  - text: 'Code: a resolucao lendo o Kind, sem constante embutida em lugar nenhum'
+    done: true
+    done_at: '2026-08-08T12:26:34+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: o MUTANTE — fazer o custo somar parcialmente quando falta um preco tem de ficar VERMELHO'
+    done: true
+    done_at: '2026-08-08T12:26:34+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: reading-the-yield.md dizendo de onde o preco vem e o que fazer quando falta'
+    done: true
+    done_at: '2026-08-08T12:26:34+00:00'
+    done_by: story-done-auto
+  - text: 'CI: verdes'
+    done: true
+    done_at: '2026-08-08T12:26:34+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-08T11:35:27+00:00'
-  updated_at: '2026-08-08T11:35:35+00:00'
+  updated_at: '2026-08-08T12:26:54+00:00'
   timeline:
   - at: '2026-08-08T11:35:27+00:00'
     actor: claude-code
@@ -35,4 +59,15 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-08-08T12:26:54+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 74ae74eac150c3e76d1bdc704dfd18f7212ebd79
+    summary: 'Entregue e merjado (PR #361). O preço vem do ModelProfile, e a i-101 do founder entrou junto: cost_quoted_at + cost_source no Kind, e Number.is_suspect no molde do is_floor, impresso na MESMA linha ([MEASURED ⚠ SUSPEITO]). QUINZE mutantes, todos vermelhos. ⭐ E dois achados que mudam o desenho: (1) o dna_turn carimba ''gpt-5.4'' E ''gpt-5.4-2026-03-05'' — o model carimbado NEM SEMPRE é model_id, às vezes é alias; sem a segunda passada aquele único turno mataria a conta inteira pela regra do não-parcial, com a regra CERTA e a resposta ERRADA. (2) o is_floor do CUSTO não é seguro com cache de prompt: há APIs que reportam cache FORA de input_tokens (subestima, piso vale) e DENTRO (SUPERESTIMA — o piso está errado). ⚠️ Cache ficou NOMEADO e não acrescentado, com razão medida: não há contador de cache em dna_turn nem em telemetry.py, então um preço de cache seria preço de uma quantidade que ninguém conta — decorativo, pior que ausente porque ausente se vê. E a janela do dna_turn JÁ FECHOU (85 linhas), diferente da do ModelProfile. Guarda deixada que fica VERMELHA no dia em que o contador nascer.'
   plan_skip_reason: o plano está na story e na spec-rendimento-do-copiloto
+  references:
+  - Spec/spec-rendimento-do-copiloto
+  closed_at: '2026-08-08T12:26:34+00:00'

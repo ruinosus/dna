@@ -1,0 +1,57 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: moeg6pmq6lqw
+  name: i-102-cache-de-prompt-nao-tem-contador
+spec:
+  title: 'Cache de prompt: sem contador, o is_floor do custo é afirmação cega — e pode errar para o lado caro'
+  description: |-
+    ACHADO pelo agente do preço (PR #361) ao medir, e ele NÃO acrescentou de propósito — com razão.
+
+    ⚠️ O `is_floor` do CUSTO não é seguro quando há cache de prompt.
+
+    O módulo `roi.py` afirma que o custo é PISO (subestimado). Com cache isso deixa de ser
+    conhecido: há APIs que reportam o token em cache FORA de `input_tokens` (subestima — o piso
+    vale) e outras que reportam DENTRO (SUPERESTIMA — cobra 1× o que foi cobrado a uma fração,
+    e o piso está ERRADO, na direção que engana para o lado caro).
+
+    ⭐ E num copiloto isto não é caso de borda: A MESMA INSTRUÇÃO VAI EM TODO TURNO. É o caso de
+    uso exato do cache de prompt.
+
+    === POR QUE O CAMPO DE PREÇO NÃO FOI ACRESCENTADO AGORA ===
+
+    `dna_turn` tem `input_tokens`/`output_tokens` e NENHUMA coluna de cache. `runtime/telemetry.py`
+    lê `gen_ai.usage.input_tokens`/`output_tokens` e mais nada. NÃO HÁ CONTADOR.
+
+    Um `cost_per_1m_cache_read_usd` hoje seria preço de uma quantidade que ninguém conta — campo
+    DECORATIVO, e decorativo é pior que ausente, porque ausente se vê.
+
+    ⚠️ E o argumento "acrescentar custa zero com zero instância" NÃO TRANSFERE: ele vale para o
+    ModelProfile, cuja janela está aberta. A metade que decide é o `dna_turn`, que já tem 85 linhas
+    e cuja JANELA FECHOU.
+
+    O models.dev já publica `cache_read` e `cache_write` — a origem existe; falta o contador.
+
+    === A ORDEM, e ela é rígida ===
+
+      1. telemetria passa a LER o contador de cache do provedor (gen_ai.usage.*cache*)
+      2. migration acrescenta as colunas a dna_turn
+      3. TokenUse distingue token em cache de token novo
+      4. ModelProfile ganha cost_per_1m_cache_read/write_usd
+      5. o is_floor do custo deixa de ser afirmação cega
+
+    Inverter 4 e 1 produz o campo decorativo.
+
+    ⭐ O agente deixou uma GUARDA que fica VERMELHA no dia em que o contador nascer — que é o dia
+    de acrescentar o preço. Não é lembrete: é mecanismo.
+  type: task
+  severity: medium
+  status: open
+  created_at: '2026-08-08T12:26:59+00:00'
+  updated_at: '2026-08-08T12:26:59+00:00'
+  timeline:
+  - at: '2026-08-08T12:26:59+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
