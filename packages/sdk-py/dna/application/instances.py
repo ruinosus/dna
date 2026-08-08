@@ -674,6 +674,11 @@ async def list_instances_impl(
     }
 
 
+#: The standing caveat for a HEALTHY hybrid answer (i-103) — imported rather
+#: than restated so the words a caller reads and the measurement that justifies
+#: them cannot drift apart.
+from dna.kernel.query.relevance import RANKED_NOT_FILTERED  # noqa: E402
+
 #: The three shapes a search result can take, as ONE machine-readable word.
 #: ``degraded`` alone cannot carry them: the kernel sets that single flag both
 #: when there is no semantic plane at all and when there is one that just
@@ -716,6 +721,7 @@ _SEARCH_NOTICE: dict[str, str] = {
 async def search_instances_impl(
     live: LiveDna, *, kind: str, query: str, scope: str | None = None,
     tenant: str | None = None, api_version: str | None = None, k: int = 10,
+    min_similarity: float | None = None,
 ) -> dict[str, Any]:
     """Find the instances of one Kind that RESEMBLE ``query`` — similarity, not
     enumeration.
@@ -745,7 +751,8 @@ async def search_instances_impl(
     the answer and says so.
 
     Returns ``{scope, kind, api_version, query, hits, count, mode, degraded,
-    degraded_reason, notice, index_refreshed, index_error?}``.
+    degraded_reason, notice, relevance_notice, min_similarity, floored_out,
+    index_refreshed, index_error?}``.
 
     ``mode`` is ``hybrid`` (dense + lexical + RRF) or ``lexical``, and it is the
     field that makes the two EMPTIES different results rather than the same one:
@@ -757,9 +764,38 @@ async def search_instances_impl(
       words, because an empty list beside a bare boolean is read as an answer by
       every caller that does not already know better.
 
+    ⭐ **i-103 — the other half of that honesty, which was missing.** The three
+    fields above all describe FAILURE; when everything worked the envelope said
+    nothing at all, and a NON-EMPTY result on the healthy path was therefore
+    read as "yes, something like this exists". It is not: RRF orders by RANK,
+    rank exists over noise, and the top hit is the least dissimilar instance in
+    the Kind rather than a similar one. Measured against the real corpus, a
+    query about *"a report service in ruby"* returned an MCP door with
+    ``degraded: false``, and one about the tax-filing deadline outscored ten of
+    twelve genuine matches. Two additions close it, and neither touches the
+    three fields above (a live consumer branches on those, and widening them to
+    also mean "this ran fine, read carefully" would make the honest signal
+    ambiguous):
+
+    * ``relevance_notice`` — the standing caveat on a HEALTHY hybrid answer,
+      in prose, in the same breath as the hits. ``None`` when there is nothing
+      to caveat (no hits, or a degraded answer whose ``notice`` already speaks).
+    * ``min_similarity`` / ``floored_out`` — the caller's own floor over the raw
+      cosine, echoed, plus how many hits it removed. A filter that silently
+      shortens a list teaches its reader the corpus is smaller than it is.
+
+    ⚠️ No DEFAULT floor is shipped, here or anywhere, and that is a measurement
+    and not an omission: relevant and irrelevant queries OVERLAP on raw cosine
+    (0.35–0.63 vs 0.16–0.53), on corpus z-score and on top-1 margin — the last
+    two overlap completely. :mod:`dna.kernel.query.relevance` carries the
+    numbers and names the cross-encoder reranker as the real remedy.
+
     Hits carry the port's guaranteed ``{scope, kind, name, score}``; a
     provider-backed hit may also carry ``title`` / ``snippet`` / ``rank_dense`` /
-    ``rank_lexical`` (optional by contract — never depend on them).
+    ``rank_lexical`` and — since i-103 — ``similarity`` (cosine against the
+    query, dense plane) and ``lexical_score`` (token-overlap strength, higher is
+    better on both stores). All optional by contract; never depend on them.
+    ``score`` remains the FUSED RRF value, which is a function of rank alone.
     """
     sc = scope or live.default_scope(tenant)
     port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
@@ -794,6 +830,7 @@ async def search_instances_impl(
     # isolation boundary.
     res = await live.kernel.search(
         sc, query, kind=port.kind, k=k, tenant=tenant,
+        min_similarity=min_similarity,
     )
     hits = list(res.get("hits") or [])
     degraded = bool(res.get("degraded"))
@@ -821,6 +858,21 @@ async def search_instances_impl(
         "degraded": degraded,
         "degraded_reason": reason,
         "notice": _SEARCH_NOTICE.get(reason) if reason else None,
+        # i-103 — the caveat for the case that used to be silent: hits came
+        # back and nothing failed. Only on the HEALTHY hybrid path with actual
+        # hits: an empty result needs no warning against over-reading it, and a
+        # degraded one already carries a louder `notice` that must stay the
+        # thing the reader acts on.
+        "relevance_notice": (
+            RANKED_NOT_FILTERED
+            if (hits and not degraded and not res.get("degraded"))
+            else None
+        ),
+        # Echoed so a reader of the RESULT can tell a filtered answer from an
+        # unfiltered one without re-reading its own request, and can tell "the
+        # floor removed nothing" from "no floor ran".
+        "min_similarity": min_similarity,
+        "floored_out": int(res.get("floored_out") or 0),
         "index_refreshed": index_refreshed,
     }
     if index_error is not None:

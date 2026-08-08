@@ -26,8 +26,16 @@ services:
       context: ./apps/{{ code_owner }}
       dockerfile: Dockerfile
     environment:
+{%- if ingress != 'none' %}
       {{ env_prefix }}_HOST: "0.0.0.0"
       {{ env_prefix }}_PORT: "{{ port }}"
+{%- endif %}
       {{ env_prefix }}_AUTH: "{{ 'config' if identity != 'none' else 'none' }}"
+{%- if ingress != 'none' %}
     ports:
       - "{{ port }}:{{ port }}"
+{%- else %}
+    # ⭐ ingress: none — nothing to publish and nothing to bind. This app does
+    # not serve: no port on the host, and no {{ env_prefix }}_PORT to read. It
+    # still gets a compose entry — it runs, it just answers nobody.
+{%- endif %}

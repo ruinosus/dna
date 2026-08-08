@@ -566,6 +566,127 @@ def test_os_tres_fragmentos_de_fiacao_saem_nos_dois_casos(
             )
 
 
+# ── ⭐ the App that does NOT serve ────────────────────────────────────────────
+
+
+def _code_lines(text: str) -> str:
+    """The file without its comment lines.
+
+    ⚠️ Not cosmetic, and it is the whole reason this helper exists: every
+    absence below is EXPLAINED in a comment right where the thing used to be,
+    and those comments spell the words `ingress`, `PORT` and `EXPOSE`. A naive
+    ``"EXPOSE" not in text`` would fail on the sentence saying there is no
+    EXPOSE — and the fix somebody would reach for is deleting the sentence.
+    """
+    return "\n".join(
+        line
+        for line in text.splitlines()
+        if not line.lstrip().startswith(("#", "//"))
+    )
+
+
+def test_um_app_que_nao_atende_e_geravel_e_nao_emite_porta_nenhuma(
+    runner: CliRunner, template: Path, destination: Path
+) -> None:
+    """⭐ i-099: `ingress: none` was DECLARABLE and not GENERABLE.
+
+    The `App` Kind has accepted `ingress: none` since PR #355 — dna-cloud's
+    `worker` scales on KEDA over a queue and answers nobody — and this template
+    offered only `internal|external`, always emitting an ingress block with a
+    `targetPort`. So the house ran a service its own reference template could
+    not produce. "Declarable but not generable" is the class of asymmetry that
+    sits for years, because nothing fails until somebody tries.
+
+    ⭐ The assertion that decides is the LAST one, and it is about the ANSWERS
+    file rather than the wiring: the `App` descriptor REFUSES `ingress: none`
+    beside a `port` at write time (`allOf`/`if`/`then` in `app.kind.yaml`).
+    A template that asked for a port anyway would record one, and the App
+    derived from those answers would be refused by the kernel — a generated
+    tree whose own record cannot be written.
+
+    Both directions in ONE run, because the claim is the DIFFERENCE. With only
+    the `none` case asserted, a template that had simply stopped emitting
+    ingress for everyone would be green.
+    """
+    generate(runner, template, destination, service_name="worker", ingress="none")
+    generate(
+        runner, template, destination,
+        service_name="api", ingress="external", port="8000",
+    )
+
+    worker_bicep = _code_lines(bicep_of(destination, "worker"))
+    assert "ingress:" not in worker_bicep, "an app that does not serve has no ingress"
+    assert "targetPort" not in worker_bicep
+    assert "_PORT" not in worker_bicep
+    assert "minReplicas" in worker_bicep, (
+        "the rest of the resource still renders — the absence is the ingress "
+        "block, not the container app"
+    )
+
+    worker_compose = _code_lines(
+        (destination / "apps/worker/wiring/compose.fragment.yml").read_text()
+    )
+    assert "ports:" not in worker_compose
+    assert "_PORT" not in worker_compose
+    assert "worker:" in worker_compose, "it still runs; it just answers nobody"
+
+    worker_docker = _code_lines((destination / "apps/worker/Dockerfile").read_text())
+    assert "EXPOSE" not in worker_docker
+    assert "_PORT" not in worker_docker
+
+    worker_server = _code_lines(
+        (destination / "apps/worker/src/worker/server.py").read_text()
+    )
+    assert "PORT" not in worker_server
+    assert "uvicorn" not in worker_server, (
+        "no ASGI app to serve, so nothing to serve it with"
+    )
+
+    # ⭐ The one that decides. `port` is not an answer this app HAS.
+    assert "port" not in answers_of(destination, "worker")
+    assert answers_of(destination, "worker")["ingress"] == "none"
+
+    # And the other direction, in the same run.
+    api_bicep = _code_lines(bicep_of(destination, "api"))
+    assert "targetPort: 8000" in api_bicep
+    assert "external: true" in api_bicep
+    api_compose = _code_lines(
+        (destination / "apps/api/wiring/compose.fragment.yml").read_text()
+    )
+    assert "ports:" in api_compose
+    assert "8000:8000" in api_compose
+    assert answers_of(destination, "api")["port"] == 8000
+
+
+def test_ingress_none_com_porta_e_recusado_pelo_descritor_do_App() -> None:
+    """⭐ WHY the answer above must be absent, asserted against the descriptor.
+
+    The test above proves the template does not emit a `port`. This one proves
+    that emitting one would not merely be untidy: the live `App` descriptor
+    refuses the pair, so a tree generated with both would produce a record the
+    kernel will not write. Asserted against the shipped `app.kind.yaml` rather
+    than restated in prose, because a rule nobody checks is a rule that a later
+    edit can drop without anyone noticing.
+    """
+    from jsonschema import Draft202012Validator, ValidationError
+
+    from dna._yaml import safe_load
+
+    descriptor = safe_load(
+        (
+            REPO_ROOT
+            / "packages/sdk-py/dna/extensions/helix/kinds/app.kind.yaml"
+        ).read_text()
+    )
+    validator = Draft202012Validator(descriptor["spec"]["schema"])
+
+    validator.validate({"title": "worker", "ingress": "none"})
+    validator.validate({"title": "api", "ingress": "external", "port": 8000})
+
+    with pytest.raises(ValidationError):
+        validator.validate({"title": "worker", "ingress": "none", "port": 8080})
+
+
 # ── the question names ARE the App's field names ─────────────────────────────
 
 

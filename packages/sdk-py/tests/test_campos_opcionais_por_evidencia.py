@@ -258,9 +258,9 @@ async def test_a_contradicao_e_recusada_pela_porta_e_nao_so_no_unit(kernel):
 
 
 def test_ingress_recusa_um_valor_fora_do_conjunto():
-    """`none` é o valor que o template ainda NÃO tem (ele só oferece
-    `internal|external`), e é o que torna o `worker` representável. O `enum`
-    é o que impede um `nenhum`/`false` de silenciar a pergunta por engano."""
+    """`none` é o valor que torna o `worker` representável — e, desde i-099
+    (08/08/2026), GERÁVEL: o template passou a oferecer os três. O `enum` é o
+    que impede um `nenhum`/`false` de silenciar a pergunta por engano."""
     import jsonschema
 
     schema = _schema("app")

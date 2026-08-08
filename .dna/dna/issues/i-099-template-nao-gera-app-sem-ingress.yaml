@@ -39,7 +39,7 @@ spec:
     descobre na hora.
   type: task
   severity: medium
-  status: open
+  status: resolved
   created_at: '2026-08-07T21:13:10+00:00'
   updated_at: '2026-08-07T21:13:10+00:00'
   timeline:
@@ -84,3 +84,12 @@ spec:
       "Declarável mas não gerável" é a classe de assimetria que fica anos. Está escrita no
       `app.kind.yaml` como ponta, e agora aqui com o gatilho: quem gerar um serviço que não atende
       descobre na hora.
+  - at: '2026-08-08T14:48:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: 'Entregue e merjado (PR #365). ⚠️ E a ficha estava incompleta num ponto que decide: eu listei QUATRO lugares onde ''port'' aparece, e são SETE — faltavam o Dockerfile (EXPOSE), o server.py e o test_smoke.py. ⭐ O modo de falhar é o que faz isso valer: o Copier NÃO usa StrictUndefined, então {{ port }} indefinido renderiza STRING VAZIA. Sairia ''EXPOSE '' e int(os.environ.get(''DNA_API_PORT'', '''')) — que RENDERIZA, COMMITA, BUILDA E PASSA NO GOLDEN, e só morre no docker run. A ficha listava os lugares onde port aparece NA FIAÇÃO: lista certa para ''o que o deployment declara'', lista ERRADA para ''o que quebra se a resposta sumir''. E o desenho que saiu daí é melhor que o conserto pedido: um processo que não atende não tem app ASGI, então build_app() some, main() vira o trabalho e o uvicorn sai do pyproject. Goldens NÃO mudaram (conferido na ordem certa) e entrou um quarto caso, no-ingress, porque ausência é o que golden congela bem e grep congela mal — o comentário que explica a ausência contém a palavra.'
+  closed_at: '2026-08-08T14:48:30+00:00'
+  resolution: 'Entregue e merjado (PR #365). ⚠️ E a ficha estava incompleta num ponto que decide: eu listei QUATRO lugares onde ''port'' aparece, e são SETE — faltavam o Dockerfile (EXPOSE), o server.py e o test_smoke.py. ⭐ O modo de falhar é o que faz isso valer: o Copier NÃO usa StrictUndefined, então {{ port }} indefinido renderiza STRING VAZIA. Sairia ''EXPOSE '' e int(os.environ.get(''DNA_API_PORT'', '''')) — que RENDERIZA, COMMITA, BUILDA E PASSA NO GOLDEN, e só morre no docker run. A ficha listava os lugares onde port aparece NA FIAÇÃO: lista certa para ''o que o deployment declara'', lista ERRADA para ''o que quebra se a resposta sumir''. E o desenho que saiu daí é melhor que o conserto pedido: um processo que não atende não tem app ASGI, então build_app() some, main() vira o trabalho e o uvicorn sai do pyproject. Goldens NÃO mudaram (conferido na ordem certa) e entrou um quarto caso, no-ingress, porque ausência é o que golden congela bem e grep congela mal — o comentário que explica a ausência contém a palavra.'

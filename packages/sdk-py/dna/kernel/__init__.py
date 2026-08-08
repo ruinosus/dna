@@ -2848,13 +2848,20 @@ class Kernel:
     async def search(
         self, scope: str, query_text: str, *,
         kind: str | None = None, k: int = 10, tenant: str | None = None,
+        min_similarity: float | None = None,
     ) -> dict[str, Any]:
         """Public record search (F2 D2). Provider registered → semantic
         (pgvector/RRF, degraded=False); no provider OR provider error → lexical
         token-match fallback (degraded=True). Thin facade over the SearchEngine
-        collaborator (s-kernel-decomp-f5-satellites)."""
+        collaborator (s-kernel-decomp-f5-satellites).
+
+        ``min_similarity`` (i-103) is the CALLER's relevance floor over the
+        dense plane's raw cosine — never a default, because no cutoff separates
+        relevant from irrelevant on a measured corpus. See
+        :mod:`dna.kernel.query.relevance`."""
         return await self._search.search(
             scope, query_text, kind=kind, k=k, tenant=tenant,
+            min_similarity=min_similarity,
         )
 
     async def _lexical_search(

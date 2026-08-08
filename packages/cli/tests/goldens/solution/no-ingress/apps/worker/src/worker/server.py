@@ -1,4 +1,4 @@
-"""Entry point for `{{ service_name }}`.
+"""Entry point for `worker`.
 
 ⚠️ This file is a SKELETON, on purpose. The template owns the wiring — the
 container, the bicep module, the compose fragment, the version floor — and
@@ -11,57 +11,26 @@ of depending on a library. The wiring files below `wiring/` are the part you
 are NOT expected to edit, and they are the part that merges clean.
 """
 from __future__ import annotations
-{% if ingress == 'none' %}
-# ⭐ `ingress: none` — {{ service_name }} does NOT serve. No HOST, no PORT, no
+
+# ⭐ `ingress: none` — worker does NOT serve. No HOST, no PORT, no
 # ASGI app to build: nothing calls in, so `main()` below IS the work, and what
 # triggers it (a queue, a schedule, a KEDA scaler) is yours. The wiring says
 # the same thing — no ingress block in the bicep, no published port in the
 # compose fragment, and no `port` in the answers file.
-{%- else %}
-import os
-
-
-HOST = os.environ.get("{{ env_prefix }}_HOST", "0.0.0.0")
-PORT = int(os.environ.get("{{ env_prefix }}_PORT", "{{ port }}"))
-{%- endif %}
 
 # The NAME of the identity authority, decided at generation time. What it means
 # operationally — issuer, audience, JWKS — is configuration this process reads
 # at boot, never a literal baked in here.
-IDENTITY = "{{ identity }}"
-{%- if graph_obo | default(false) %}
-# This door carries the Microsoft Graph on-behalf-of pack: it is the lane that
-# can exchange the verified inbound token for a downstream Graph token.
-GRAPH_OBO = True
-{%- endif %}
+IDENTITY = "none"
 
 
-{% if ingress == 'none' -%}
 def main() -> None:
     """The work this process does.
 
     Replace the body. Nothing below this line is template-owned.
     """
-    raise NotImplementedError("{{ service_name }}: main() is yours to write")
+    raise NotImplementedError("worker: main() is yours to write")
 
 
 if __name__ == "__main__":
     main()
-{%- else -%}
-def build_app():
-    """Return the ASGI app this container serves.
-
-    Replace the body. Nothing below this line is template-owned.
-    """
-    raise NotImplementedError("{{ service_name }}: build_app() is yours to write")
-
-
-def main() -> None:
-    import uvicorn
-
-    uvicorn.run(build_app(), host=HOST, port=PORT)
-
-
-if __name__ == "__main__":
-    main()
-{%- endif %}

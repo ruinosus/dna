@@ -211,6 +211,7 @@ def register_instance_tools(
     async def search_instances(
         kind: str, query: str, scope: str | None = None,
         api_version: str | None = None, k: int = 10,
+        min_similarity: float | None = None,
     ) -> dict[str, Any]:
         """Find the instances of one Kind that RESEMBLE ``query`` — by
         SIMILARITY, not by enumeration.
@@ -245,16 +246,43 @@ def register_instance_tools(
           An empty ``hits`` here is a BLIND SPOT, not a finding, and must not be
           reported to a user as "there is nothing like that".
 
+        ⛔ **And a NON-empty list is not the answer you think it is.** The two
+        planes are fused by RANK, and a rank exists over noise: the top hit is
+        the LEAST DISSIMILAR instance of this Kind, which is not the same thing
+        as a SIMILAR one. There is no relevance floor — measured on a real
+        board, *"a report service in ruby"* came back with an MCP door at
+        ``degraded: false``, and *"the tax filing deadline"* outscored ten of
+        twelve genuine matches. So:
+
+        * ``relevance_notice`` says this in words whenever hits came back
+          healthy. It is not boilerplate; it is the caveat that used to be
+          missing while ``degraded: false`` implied everything was fine.
+        * ⭐ Before you report a hit as prior art — *"this already exists"* —
+          READ it with ``get_instance``. The search narrows 600 instances to
+          10; only reading one tells you whether it is the thing.
+        * ``similarity`` on each hit is the raw cosine against your query and
+          ``lexical_score`` is the token-overlap strength. Use them to ORDER
+          and to doubt, not as a calibrated score: on the measured corpus
+          unrelated queries reach 0.53 and genuine ones start at 0.35.
+        * ``min_similarity`` lets YOU set a floor over that cosine (hits below
+          it are dropped, ``floored_out`` counts them). There is no default,
+          because no single cutoff separates the two populations above — if you
+          set one, you are making a judgment call with your own context, which
+          is exactly who should make it.
+
         Each hit carries ``{scope, kind, name, score}``; a provider-backed hit
         may also carry ``title`` / ``snippet`` / ``rank_dense`` /
-        ``rank_lexical`` — optional by contract, so never depend on them. Read a
-        hit in full with ``get_instance``."""
+        ``rank_lexical`` / ``similarity`` / ``lexical_score`` — optional by
+        contract, so never depend on them. ⚠️ ``score`` is the FUSED RRF value
+        and is a function of RANK alone: it is the same number for the #1 hit of
+        a perfect match and the #1 hit of a query about nothing."""
         port, tenant = await _guard_for(
             kind, api_version, scope=scope, family_op="read")
         try:
             return await D.search_instances_impl(
                 await live(), kind=port.kind, api_version=port.api_version,
                 query=query, scope=scope, tenant=tenant, k=k,
+                min_similarity=min_similarity,
             )
         except (ValueError, LookupError) as exc:
             raise ToolError(f"{type(exc).__name__}: {exc}") from None

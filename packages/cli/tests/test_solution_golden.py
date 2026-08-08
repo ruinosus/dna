@@ -72,6 +72,29 @@ CASES: dict[str, dict[str, str]] = {
         "can_sleep": "false",
         "max_replicas": "5",
     },
+    # ⭐ The App that does NOT SERVE (i-099, 08/08/2026). `ingress: none` is a
+    # value the `App` Kind has accepted since PR #355 and this template could
+    # not produce — an App anyone could DECLARE and nobody could GENERATE.
+    #
+    # Frozen as a whole TREE because the claim is an ABSENCE spread over six
+    # files: no ingress block in the bicep, no published port in the compose
+    # fragment, no EXPOSE and no `*_PORT` in the Dockerfile, no `PORT` in
+    # `server.py`, no `uvicorn` in `pyproject.toml`, and — the one that decides
+    # — no `port` in the ANSWERS file. An absence is what a golden freezes well
+    # and a grep freezes badly, because the comment that explains an absence
+    # contains the word.
+    #
+    # `identity: none` rides along on purpose: `worker` consumes a queue, it
+    # does not verify anybody's token, and this is the only golden case that
+    # exercises that branch of `pyproject.toml` in the same tree.
+    "no-ingress": {
+        "service_name": "worker",
+        "description": "the queue worker — it answers nobody",
+        "identity": "none",
+        "ingress": "none",
+        "can_sleep": "true",
+        "max_replicas": "4",
+    },
     # ⭐ The case measured in dna-cloud on 07/08/2026: NINE deployable services
     # over FOUR `apps/` directories, so EIGHT of the nine are another
     # deployment of an image that already exists. `owns_code: false` is that
@@ -214,6 +237,28 @@ def test_o_golden_exercita_os_dois_lados_de_cada_condicional() -> None:
             f"'{name}' is answered the same in every golden case, so the branch it "
             "gates is never rendered both ways."
         )
+
+
+def test_todo_valor_de_ingress_chega_a_um_golden() -> None:
+    """⭐ `ingress` is the one answer with THREE sides, so "both ways" is not enough.
+
+    Derived from `copier.yml`'s own `choices` rather than from a list kept
+    here: a fourth value added to the question would otherwise enter the
+    template with no golden rendering it, which is the exact hole i-099 was —
+    a value the declaration accepted and nothing generated.
+    """
+    from dna._yaml import safe_load
+
+    questions = safe_load((REFERENCE_TEMPLATE / "copier.yml").read_text())
+    choices = set(questions["ingress"]["choices"])
+    default = questions["ingress"]["default"]
+
+    covered = {answers.get("ingress", default) for answers in CASES.values()}
+    assert choices <= covered, (
+        f"ingress values with no golden: {sorted(choices - covered)}. Every "
+        "choice the question offers has to be rendered by some case, or the "
+        "template accepts a value nobody ever saw the output of."
+    )
 
 
 def test_o_golden_nunca_e_coletado(pytestconfig: pytest.Config) -> None:

@@ -344,8 +344,22 @@ class SqliteVecRecordSearchProvider:
     ) -> list[dict[str, Any]]:
         """Hybrid dense+lexical search fused with RRF. Returns hits shaped
         ``{scope, kind, name, score, title?, snippet?, rank_dense?,
-        rank_lexical?}`` (the port's guaranteed keys plus optional extras),
-        ordered best-first. Overlay-aware: base ∪ overlay, overlay shadows base."""
+        rank_lexical?, similarity?, lexical_score?}`` (the port's guaranteed
+        keys plus optional extras), ordered best-first. Overlay-aware:
+        base ∪ overlay, overlay shadows base.
+
+        ⚠️ ``score`` is the FUSED RRF value and is a function of RANK ALONE —
+        it says where a candidate placed, never whether it belongs. i-103:
+        ``similarity`` (cosine against the query, dense plane) and
+        ``lexical_score`` (token-overlap strength, higher is better on BOTH
+        stores) travel beside it so a caller can see the number the rank was
+        derived from. Both are OPTIONAL by contract: a lexical-only hit has no
+        ``similarity`` and a dense-only hit has no ``lexical_score``.
+
+        No relevance floor is applied here and none is shipped anywhere — see
+        :mod:`dna.kernel.query.relevance` for the measurement that refuses a
+        constant. Filtering is the caller's policy (``kernel.search
+        (min_similarity=…)``), never the store's."""
         if not query_text.strip() or k <= 0:
             return []
         conn = await self._conn_for(scope)
@@ -354,26 +368,49 @@ class SqliteVecRecordSearchProvider:
         # Dense plane — vec0 KNN over the query embedding.
         query_vec = (await self._kernel.embed([query_text]))[0]
         dense_ranked: list[int] = []
+        dense_sim: dict[int, float] = {}
         if any(query_vec):  # all-zero query (no tokens) → skip dense plane
             dense_ranked = [r["doc_rowid"] for r in conn.execute(
                 "SELECT doc_rowid FROM search_vec "
                 "WHERE embedding MATCH ? ORDER BY distance LIMIT ?",
                 (_serialize_f32(query_vec), overfetch),
             ).fetchall()]
+            # i-103 — the RAW similarity the rank was hiding. ⚠️ ``distance``
+            # from this vec0 table is **L2**, not cosine (the DDL declares
+            # ``float[dims]`` with no ``distance_metric``), so it is NOT the
+            # quantity the pgvector provider reports and must not be shipped
+            # under the same name. Converting L2→cosine is valid only for
+            # L2-NORMALIZED vectors — true of the ONNX embedder, false of the
+            # deterministic fake floor — i.e. right in production and quietly
+            # wrong in every test. The vectors are read back and the cosine
+            # computed explicitly instead: ≤40 candidates wide, and both stores
+            # then mean the same thing by ``similarity``.
+            dense_sim = self._cosines(conn, dense_ranked, query_vec)
 
         # Lexical plane — FTS5 BM25. An unparseable MATCH query is not an error;
         # it just contributes no lexical ranks.
         lexical_ranked: list[int] = []
+        lexical_score: dict[int, float] = {}
         fts_query = _fts_query(query_text)
         if fts_query:
             try:
-                lexical_ranked = [r["rowid"] for r in conn.execute(
-                    "SELECT rowid FROM search_fts "
+                lex_rows = conn.execute(
+                    "SELECT rowid, bm25(search_fts) AS bm25 FROM search_fts "
                     "WHERE search_fts MATCH ? ORDER BY bm25(search_fts) LIMIT ?",
                     (fts_query, overfetch),
-                ).fetchall()]
+                ).fetchall()
+                lexical_ranked = [r["rowid"] for r in lex_rows]
+                # ⚠️ SQLite's bm25() is NEGATED (more negative = better match)
+                # while Postgres' ts_rank grows with relevance. ``lexical_score``
+                # is ONE contract across both stores, so the sign is flipped
+                # here: higher always means a better lexical match. Shipping the
+                # raw value would put the two providers on opposite scales under
+                # one field name — a divergence only a cross-store comparison
+                # would ever catch.
+                lexical_score = {r["rowid"]: -float(r["bm25"]) for r in lex_rows}
             except sqlite3.OperationalError:
                 lexical_ranked = []
+                lexical_score = {}
 
         if not dense_ranked and not lexical_ranked:
             return []
@@ -405,17 +442,64 @@ class SqliteVecRecordSearchProvider:
             # Overlay (matching tenant) shadows base (''); otherwise higher
             # fused score wins.
             if prev is None:
-                best[key] = _hit(scope, m, score, dense_pos.get(rowid), lexical_pos.get(rowid))
+                best[key] = _hit(
+                    scope, m, score, dense_pos.get(rowid), lexical_pos.get(rowid),
+                    dense_sim.get(rowid), lexical_score.get(rowid),
+                )
             else:
                 prev_is_base = prev["_tenant"] == ""
                 this_is_overlay = row_tenant != "" and row_tenant == (tenant or "")
                 if this_is_overlay and prev_is_base:
-                    best[key] = _hit(scope, m, score, dense_pos.get(rowid), lexical_pos.get(rowid))
+                    best[key] = _hit(
+                    scope, m, score, dense_pos.get(rowid), lexical_pos.get(rowid),
+                    dense_sim.get(rowid), lexical_score.get(rowid),
+                )
 
         hits = sorted(best.values(), key=lambda h: -h["score"])
         for h in hits:
             h.pop("_tenant", None)
         return hits[:k]
+
+    def _cosines(
+        self, conn: sqlite3.Connection, rowids: list[int],
+        query_vec: list[float],
+    ) -> dict[int, float]:
+        """Cosine similarity of each dense candidate against the query (i-103).
+
+        Reads the stored vectors back out of the vec0 table and computes the
+        cosine through the shared :func:`~dna.kernel.query.relevance.
+        cosine_similarity` — see the call site for why the table's own L2
+        ``distance`` cannot be converted instead.
+
+        Fails SOFT: a vec0 build that will not return its ``embedding`` column
+        leaves the map empty, so hits simply carry no ``similarity`` (the field
+        is optional by contract and :func:`apply_similarity_floor` keeps
+        unscored hits). Losing the raw score must never cost the caller the
+        search itself — this is a READ, and it degrades.
+        """
+        if not rowids:
+            return {}
+        from dna.kernel.query.relevance import cosine_similarity
+
+        width = len(query_vec)
+        placeholders = ",".join("?" * len(rowids))
+        try:
+            rows = conn.execute(
+                f"SELECT doc_rowid, embedding FROM search_vec "
+                f"WHERE doc_rowid IN ({placeholders})",
+                rowids,
+            ).fetchall()
+        except sqlite3.OperationalError:  # pragma: no cover — vec0 build variance
+            logger.debug("search_vec did not return embeddings; no similarity")
+            return {}
+        out: dict[int, float] = {}
+        for row in rows:
+            blob = row["embedding"]
+            if not isinstance(blob, (bytes, bytearray)) or len(blob) != width * 4:
+                continue
+            vec = struct.unpack(f"{width}f", blob)
+            out[row["doc_rowid"]] = cosine_similarity(query_vec, vec)
+        return out
 
     def _resolve_meta(
         self, conn: sqlite3.Connection, rowids: list[int],
@@ -460,6 +544,7 @@ def _snippet(text: str, max_len: int = 200) -> str:
 def _hit(
     scope: str, m: sqlite3.Row, score: float,
     rank_dense: int | None, rank_lexical: int | None,
+    similarity: float | None = None, lexical_score: float | None = None,
 ) -> dict[str, Any]:
     hit: dict[str, Any] = {
         "scope": scope, "kind": m["kind"], "name": m["name"], "score": score,
@@ -473,6 +558,14 @@ def _hit(
         hit["rank_dense"] = rank_dense
     if rank_lexical is not None:
         hit["rank_lexical"] = rank_lexical
+    # i-103 — the RAW scores, beside the ranks derived from them. ``score``
+    # above is the FUSED RRF value and is a function of rank alone: identical
+    # for the #1 hit of a perfect match and the #1 hit of a query about
+    # nothing. These two are what actually vary.
+    if similarity is not None:
+        hit["similarity"] = similarity
+    if lexical_score is not None:
+        hit["lexical_score"] = lexical_score
     return hit
 
 

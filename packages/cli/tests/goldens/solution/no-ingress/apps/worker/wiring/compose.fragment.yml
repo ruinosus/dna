@@ -1,0 +1,23 @@
+# worker, for local development.
+#
+# Reachable by the template, and consumed WITHOUT anyone editing a shared file:
+# the root compose file carries one `include:` entry per app, and Compose
+# resolves fragments by path. This is the wiring place that costs nothing to
+# add — which is exactly why it is the one to imitate wherever a format allows.
+#
+#   # docker-compose.dev.yml
+#   include:
+#     - path: ./apps/worker/wiring/compose.fragment.yml
+#
+# The build context is this app's OWN directory — it owns the code.
+
+services:
+  worker:
+    build:
+      context: ./apps/worker
+      dockerfile: Dockerfile
+    environment:
+      DNA_API_AUTH: "none"
+    # ⭐ ingress: none — nothing to publish and nothing to bind. This app does
+    # not serve: no port on the host, and no DNA_API_PORT to read. It
+    # still gets a compose entry — it runs, it just answers nobody.
