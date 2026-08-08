@@ -142,6 +142,47 @@ is written."""
 # ── live DNA handle (composition root) ─────────────────────────────────────
 
 
+def _log_search_plane(kernel) -> None:
+    """SAY WHICH SEARCH PLANE ACTUALLY CAME UP — the sibling finding of i-103.
+
+    Cheap, and it would have saved a whole investigation on its own. i-152 was
+    diagnosed by READING a wiring path and concluding about the OTHER one, and
+    nothing in the running process contradicted the reading: which
+    ``RecordSearchProvider`` and which ``EmbeddingPort`` a replica ends up with
+    depends on config, on installed extras, and on whether an import quietly
+    failed — three things a reader of the source cannot see and one line of log
+    settles.
+
+    The EMBEDDER is named beside the provider deliberately: a registered
+    provider with the deterministic FAKE embedder still answers with
+    ``degraded: false`` and hits that look real, because the fake floor produces
+    perfectly well-formed vectors that mean nothing across documents. That is
+    the configuration most likely to be mistaken for a working one, so it is the
+    one that has to be visible at boot rather than inferred from bad results
+    later.
+    """
+    prov = getattr(kernel, "search_provider", None)
+    if prov is None:
+        logger.warning(
+            "Search plane: NO provider registered — similarity search is OFF "
+            "and every search degrades to an honest lexical token-match scan. "
+            "A paraphrase is unfindable; an empty result is a blind spot, not "
+            "a finding."
+        )
+        return
+    try:
+        embedder = kernel.embedding_model_id
+        dims = kernel.embedding_dims
+    except Exception:  # noqa: BLE001 — a boot log never breaks the boot
+        embedder, dims = "unknown", "?"
+    logger.info(
+        "Search plane: %s + embedder %s (dims=%s). ⚠️ Hits are RANKED, never "
+        "filtered — there is no relevance floor, so a non-empty result is not "
+        "evidence that something similar exists (i-103).",
+        type(prov).__name__, embedder, dims,
+    )
+
+
 async def boot_live(scope: str | None = None, base_dir: str | None = None) -> LiveDna:
     """Boot the kernel against the configured source and register the search
     provider (pgvector on a Postgres source, sqlite-vec when the
@@ -157,6 +198,7 @@ async def boot_live(scope: str | None = None, base_dir: str | None = None) -> Li
 
     holder = await _build_holder_async(scope)
     provider = _register_provider(holder)  # holder exposes .kernel — enough
+    _log_search_plane(holder.kernel)
     # Model B workspace base-scope isolation (ADR "Model B"): when
     # DNA_VENDOR_WORKSPACE is set the runtime is multi-workspace — a scope-less
     # read resolves to a PER-WORKSPACE default (LiveDna.default_scope), the vendor

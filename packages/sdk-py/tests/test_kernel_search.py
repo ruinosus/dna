@@ -81,7 +81,14 @@ async def test_search_without_provider_falls_back_lexical_degraded():
 async def test_search_fallback_without_kind_returns_empty_degraded():
     k, _src = _wire()
     res = await k.search("sc", "qualquer coisa")
-    assert res == {"hits": [], "degraded": True}
+    # i-103 — ``floored_out`` / ``floor_unscored`` ride on BOTH branches with
+    # the same keys, so a caller never has to test for their existence. Zero on
+    # the degraded path always: the floor deliberately does not run there (a
+    # degraded answer is already "we could not tell", and filtering it further
+    # would shrink a blind spot into a claim).
+    assert res == {
+        "hits": [], "degraded": True, "floored_out": 0, "floor_unscored": 0,
+    }
 
 
 @pytest.mark.asyncio
