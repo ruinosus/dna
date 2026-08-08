@@ -6,22 +6,43 @@ metadata:
 spec:
   title: schema_contradictions passa a olhar `items` — a armadilha armada
   description: Uma relacao sobre array-de-objeto passa por todos os portoes, se declara enforced, aceita restrict, e relation_values le zero. Nenhum Kind faz hoje; nada impede o proximo. ~20 linhas.
-  status: in-progress
+  status: done
   feature: f-relacao-aninhada
   priority: highest
   acceptance_criteria:
-  - Dada uma relacao declarada sobre campo array-de-OBJETO sem forma de ler a sub-chave, quando o registro carrega, entao schema_contradictions REPORTA a contradicao
-  - Dado o caso provado (Agent.spec.mcp_servers com to concreto), quando eu declaro, entao ele NAO sai mais resolved+enforced lendo zero
-  - 'Dadas as dez relacoes honestas de hoje (to: ''*'' + by: kind/name, resolved=False), quando o registro carrega, entao elas CONTINUAM passando — o conserto nao pode acusar quem esta certo'
+  - text: Dada uma relacao declarada sobre campo array-de-OBJETO sem forma de ler a sub-chave, quando o registro carrega, entao schema_contradictions REPORTA a contradicao
+    done: true
+    done_at: '2026-08-08T00:39:45+00:00'
+    done_by: story-done-auto
+  - text: Dado o caso provado (Agent.spec.mcp_servers com to concreto), quando eu declaro, entao ele NAO sai mais resolved+enforced lendo zero
+    done: true
+    done_at: '2026-08-08T00:39:45+00:00'
+    done_by: story-done-auto
+  - text: 'Dadas as dez relacoes honestas de hoje (to: ''*'' + by: kind/name, resolved=False), quando o registro carrega, entao elas CONTINUAM passando — o conserto nao pode acusar quem esta certo'
+    done: true
+    done_at: '2026-08-08T00:39:45+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: a terceira checagem em schema_contradictions'
-  - 'Tests: o caso do Agent.mcp_servers provando a acusacao; e as dez honestas provando a nao-regressao — as duas metades no MESMO run'
-  - 'Docs: regen-derived.sh inteiro'
-  - 'CI: verdes'
+  - text: 'Code: a terceira checagem em schema_contradictions'
+    done: true
+    done_at: '2026-08-08T00:39:45+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: o caso do Agent.mcp_servers provando a acusacao; e as dez honestas provando a nao-regressao — as duas metades no MESMO run'
+    done: true
+    done_at: '2026-08-08T00:39:45+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: regen-derived.sh inteiro'
+    done: true
+    done_at: '2026-08-08T00:39:45+00:00'
+    done_by: story-done-auto
+  - text: 'CI: verdes'
+    done: true
+    done_at: '2026-08-08T00:39:45+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-08T00:07:40+00:00'
-  updated_at: '2026-08-08T00:07:49+00:00'
+  updated_at: '2026-08-08T00:40:09+00:00'
   timeline:
   - at: '2026-08-08T00:07:40+00:00'
     actor: claude-code
@@ -34,4 +55,15 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-08-08T00:40:09+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: f4a8b02181687736cae9f597597cf48c16e370b0
+    summary: 'Entregue e merjado (PR #358). A armadilha está fechada: uma relação resolved sobre array-de-objeto sem tipo que sustente a string agora é ACUSADA. As 10 honestas (to:''*'' + by:{kind,name}, resolved=False) continuam passando — a checagem é gateada em Relation.resolved, que é exatamente a linha entre ''o kernel diz que segue'' e ''diz que não segue''. Dois cuidados medidos: só tipo POSITIVAMENTE declarado acusa (items ausente ou via ref/oneOf = ''não consegui ler'', não ''está errado''), e o helper lê união, senão type:[string,null] acusaria 4 referências nuláveis vivas. ⭐ E ele achou um buraco no teste que JÁ existia: test_every_relation_agrees_with_its_own_schema passaria verde contra um registro SEM NENHUMA relação array-de-objeto — não distingue ''nada errado'' de ''não há o que errar''. Acrescentou um que mede a população real e exige que não seja vazia. Varreduras exaustivas: 24 declarações no dna e 12 no dna-cloud, ZERO acusadas.'
   plan_skip_reason: o plano esta na spec-relacao-aninhada, com o caso provado e os limites
+  references:
+  - Spec/spec-relacao-aninhada
+  closed_at: '2026-08-08T00:39:45+00:00'
