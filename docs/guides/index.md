@@ -62,6 +62,12 @@ first if you have never loaded a scope.
   EvalSuites, run them offline with `dna eval run` (the composed prompt is
   the default target), pin an EvalBaseline and gate CI on regressions.
 
+- **[Reading the yield — cost, return, and not-calculable](reading-the-yield.md)**
+  — cross `dna_turn`'s cost with the outcome and the `Copilot`'s declared
+  `value_per_outcome`. Which of the three market techniques (containment, AHT,
+  holdout) the answer gives, why every proxy number carries its label, and why
+  an empty sample is a finding rather than a zero.
+
 ## DNA Cloud
 
 - **[The DNA Cloud starter catalog & BYO-DNA](dna-cloud-catalog.md)** — the

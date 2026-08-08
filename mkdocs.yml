@@ -96,6 +96,7 @@ nav:
       - How to use semantic recall & memory: guides/semantic-recall.md
       - "Engram rename — the Postgres cutover runbook": guides/engram-postgres-cutover.md
       - How to evaluate agents: guides/evaluating-agents.md
+      - "Reading the yield — cost, return, and not-calculable": guides/reading-the-yield.md
       - Your git log is your SDLC: guides/sdlc.md
       - "Digest: what happened while you were away": guides/sdlc-digest.md
       - "Gallery: the artifacts you need to review": guides/sdlc-gallery.md
