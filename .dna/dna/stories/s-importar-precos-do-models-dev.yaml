@@ -1,0 +1,92 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: els5utks6cus
+  name: s-importar-precos-do-models-dev
+spec:
+  title: O preço vem do models.dev — importado e datado, nunca consultado ao vivo
+  description: models.dev (MIT) publica cost.input/output por milhao em USD, com last_updated. Encaixa 1:1 no ModelProfile e da origem real ao cost_quoted_at que a i-101 decidiu.
+  status: todo
+  feature: f-conta-do-copiloto
+  priority: high
+  acceptance_criteria:
+  - Dado o api.json do models.dev, quando eu importo, entao nascem instancias de ModelProfile com preco, limites, cost_quoted_at vindo de last_updated e cost_source apontando a URL
+  - ⚠️ Dado que a importacao e um ATO DATADO, quando a leitura de ROI calcula, entao ela NAO faz chamada de rede — o preco e dado nosso, versionado
+  - Dado um modelo cujo last_updated e antigo, quando a leitura roda, entao o preco sai marcado como suspeito pelo teto de idade — mesmo tendo vindo de um servico vivo
+  - Dado um modelo que o models.dev nao conhece, quando eu importo, entao ele e REPORTADO como nao encontrado — nunca some em silencio
+  - Dado um ModelProfile ja existente, quando eu reimporto, entao o que um humano curou NAO e sobrescrito sem dizer — no molde do merge do derive-apps
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: o comando de importacao; ZERO chamada de rede no caminho de leitura da conta'
+  - 'Tests: com um api.json de fixture; e o caso do modelo desconhecido sendo reportado'
+  - 'Docs: a licenca MIT registrada, e o aviso de que models.dev e comunitario SEM garantia de frescor'
+  - 'CI: verdes'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-08T11:54:33+00:00'
+  updated_at: '2026-08-08T11:54:40+00:00'
+  timeline:
+  - at: '2026-08-08T11:54:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-08T11:54:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      O founder apontou `models.dev` e ele encaixa quase 1:1 com o `ModelProfile`. MIT.
+
+      === O QUE ELE DÁ (medido em https://models.dev/api.json, 08/08/2026) ===
+
+        "cost":       { "input": 1, "output": 3.2, "cache_read": 0.2, "cache_write": 0 }
+        "limit":      { "context": 204800, "output": 131072 }
+        "modalities": { "input": ["text"], "output": ["text"] }
+        "release_date": "2026-02-11"
+        "last_updated": "2026-02-11"
+
+      Custo é POR MILHÃO de tokens em USD — exatamente a unidade dos nossos campos.
+
+        ModelProfile.cost_per_1m_input_usd   ←  cost.input
+        ModelProfile.cost_per_1m_output_usd  ←  cost.output
+        ModelProfile.context_window          ←  limit.context
+        ModelProfile.max_output_tokens       ←  limit.output
+        ModelProfile.modalities              ←  modalities
+        ⭐ ModelProfile.cost_quoted_at        ←  last_updated
+        ⭐ ModelProfile.cost_source           ←  "models.dev" (a URL)
+
+      Três endpoints: api.json (tudo), models.json (só modelos), catalog.json (combinado).
+
+      === ⭐ POR QUE ISTO VALIDA A DECISÃO DA i-101, E NÃO A SUBSTITUI ===
+
+      Os dois campos que o founder acabou de decidir (cost_quoted_at + cost_source) deixam de ser
+      algo que alguém digita e viram DADO IMPORTADO. E o teto de idade passa a comparar contra uma
+      data que o próprio catálogo mantém.
+
+      ⚠️ E é ESSENCIAL, porque models.dev é COMUNITÁRIO, por pull request, SEM CADÊNCIA DECLARADA
+      e sem garantia de frescor. Um preço pode estar velho lá também — e um catálogo de terceiro
+      PARECE atual só por ser um serviço.
+
+        A gente não confia no catálogo. A gente IMPORTA A DATA QUE ELE DECLARA, e deixa o teto de
+        idade fazer o trabalho. Se o last_updated de um modelo for de seis meses atrás, a leitura
+        DIZ isso — mesmo o número tendo vindo de um serviço vivo.
+
+      Sem essa data, integrar seria trocar um escuro por outro com aparência melhor.
+
+      === A FORMA: IMPORTAR, NÃO CONSULTAR AO VIVO ===
+
+      Um comando (`dna model import --from models.dev`) que GRAVA instâncias de ModelProfile.
+      O preço vira DADO NOSSO — versionado, auditável, com procedência — e NÃO uma dependência de
+      rede no caminho de leitura da conta.
+
+      ⚠️ Consultar ao vivo poria uma chamada de rede a terceiro dentro do cálculo que o produto
+      mostra: indisponibilidade do models.dev viraria "conta indisponível", e uma mudança de preço
+      lá mudaria a nossa conta sem ninguém decidir. Importação é um ato datado; consulta é uma
+      dependência silenciosa.
+
+      === ACHADO DE BRINDE ===
+
+      models.dev tem `cache_read` e `cache_write`, que nós NÃO temos. Cache de prompt muda a conta
+      de verdade em copiloto — a mesma instrução vai em todo turno. Vale decidir se o ModelProfile
+      ganha os dois campos AGORA (zero instâncias, custo zero) ou se fica nomeado.
+    commit_ref: 7463a36aedfc4e1e57b9cb34f01c54c418b650f3
