@@ -55,7 +55,7 @@ spec:
     FLEXIBILIDADE, e a diferença importa para priorizar.
   type: task
   severity: medium
-  status: open
+  status: resolved
   created_at: '2026-08-08T13:40:11+00:00'
   updated_at: '2026-08-08T13:40:11+00:00'
   timeline:
@@ -118,3 +118,12 @@ spec:
       model_id diferente NÃO SÃO COMPARÁVEIS". Dois copilotos com embedders diferentes NÃO
       COMPARTILHAM BUSCA, mesmo com a MESMA dimensão. Isso é do modelo, não do armazenamento — e
       uma tela que mostrasse os dois juntos estaria mentindo.
+  - at: '2026-08-08T15:28:11+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: 'A metade que travava foi resolvida no PR #367: a dimensão deixou de ser fixa (cinco tabelas por migration, roteamento por dims da EmbeddingPort, model_id como filtro). ⚠️ A metade BARATA continua aberta e tem story própria (s-adaptador-de-embedding-remoto): o adaptador que fale /v1/embeddings. Esta entrega REMOVEU o que o bloqueava; não o construiu.'
+  closed_at: '2026-08-08T15:28:11+00:00'
+  resolution: 'A metade que travava foi resolvida no PR #367: a dimensão deixou de ser fixa (cinco tabelas por migration, roteamento por dims da EmbeddingPort, model_id como filtro). ⚠️ A metade BARATA continua aberta e tem story própria (s-adaptador-de-embedding-remoto): o adaptador que fale /v1/embeddings. Esta entrega REMOVEU o que o bloqueava; não o construiu.'

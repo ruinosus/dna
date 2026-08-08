@@ -6,24 +6,51 @@ metadata:
 spec:
   title: Uma tabela por dimensão — o índice deixa de fixar o embedder
   description: dna_search_docs ja e dinamica em scope/kind/tenant; so a dimensao e fixa, porque vector(N) e tipo da coluna. Cinco tabelas por migration, collection vira coluna, e o roteamento le dims da EmbeddingPort.
-  status: in-progress
+  status: done
   feature: f-a-fabrica
   priority: high
   acceptance_criteria:
-  - Dada uma migration, quando ela roda, entao existem tabelas por DIMENSAO (384/768/1024/1536/3072) e nenhuma DDL acontece em runtime
-  - Dado um provider registrado, quando a busca roda, entao ela le dims da EmbeddingPort e escolhe a tabela — sem configuracao nova e sem heuristica
-  - Dada uma collection nova, quando ela nasce, entao e um INSERT — jamais um CREATE TABLE
-  - ⚠️ Dados dois model_id diferentes com a MESMA dimensao, quando a busca roda, entao ela NAO os mistura — o contrato diz que nao sao comparaveis
-  - Dada uma dimensao INEDITA, quando alguem a declara, entao a falha e ALTA e aponta a migration que falta — nunca cria tabela sozinha
+  - text: Dada uma migration, quando ela roda, entao existem tabelas por DIMENSAO (384/768/1024/1536/3072) e nenhuma DDL acontece em runtime
+    done: true
+    done_at: '2026-08-08T15:27:55+00:00'
+    done_by: story-done-auto
+  - text: Dado um provider registrado, quando a busca roda, entao ela le dims da EmbeddingPort e escolhe a tabela — sem configuracao nova e sem heuristica
+    done: true
+    done_at: '2026-08-08T15:27:55+00:00'
+    done_by: story-done-auto
+  - text: Dada uma collection nova, quando ela nasce, entao e um INSERT — jamais um CREATE TABLE
+    done: true
+    done_at: '2026-08-08T15:27:55+00:00'
+    done_by: story-done-auto
+  - text: ⚠️ Dados dois model_id diferentes com a MESMA dimensao, quando a busca roda, entao ela NAO os mistura — o contrato diz que nao sao comparaveis
+    done: true
+    done_at: '2026-08-08T15:27:55+00:00'
+    done_by: story-done-auto
+  - text: Dada uma dimensao INEDITA, quando alguem a declara, entao a falha e ALTA e aponta a migration que falta — nunca cria tabela sozinha
+    done: true
+    done_at: '2026-08-08T15:27:55+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: a migration e o roteamento por dims; ZERO DDL fora de migration'
-  - 'Tests: o mutante — fazer o roteamento ignorar dims e misturar espacos tem de ficar VERMELHO'
-  - 'Docs: a razao da recusa da tabela dinamica, com a regra do CLAUDE.md citada'
-  - 'CI: postgres verde'
+  - text: 'Code: a migration e o roteamento por dims; ZERO DDL fora de migration'
+    done: true
+    done_at: '2026-08-08T15:27:55+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: o mutante — fazer o roteamento ignorar dims e misturar espacos tem de ficar VERMELHO'
+    done: true
+    done_at: '2026-08-08T15:27:55+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: a razao da recusa da tabela dinamica, com a regra do CLAUDE.md citada'
+    done: true
+    done_at: '2026-08-08T15:27:55+00:00'
+    done_by: story-done-auto
+  - text: 'CI: postgres verde'
+    done: true
+    done_at: '2026-08-08T15:27:55+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-08T13:48:27+00:00'
-  updated_at: '2026-08-08T13:48:36+00:00'
+  updated_at: '2026-08-08T15:28:07+00:00'
   timeline:
   - at: '2026-08-08T13:48:27+00:00'
     actor: claude-code
@@ -36,4 +63,15 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-08-08T15:28:07+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 1d6d3beb37b6dc1f1a054618dc34be705d1031d1
+    summary: 'Entregue e merjado (PR #367). Cinco tabelas na migration 0013, roteamento lendo dims da EmbeddingPort, model_id como FILTRO nos dois planos. ⭐ E ele APAGOU o pgvector_migrations.py: era uma escada numerada que o PRÓPRIO PROVIDER rodava na primeira busca — DDL em runtime, dentro do adapter, no repo que escreveu a regra. 10 mutantes, e a contagem engana: o que importa é o de model_id no plano DENSO (2 vermelhos), porque é o ÚNICO que não quebraria nada visível em produção — falha como VAZAMENTO (''alpha viu outro espaço''), não crash. Os 170 documentos NÃO se movem: ALTER TABLE RENAME, O(1), com os índices seguindo (INSERT..SELECT reconstruiria o IVFFlat e deixaria produção sem acelerador no meio). ⚠️ Três correções à minha story: (1) ''collection vira coluna'' — não existe collection, é o SCOPE, coluna desde sempre; (2) ''índice HNSW caro'' — pgvector 0.8.2 RECUSA índice acima de 2000 dims, então para 3072 ele nem é possível; (3) a que mais importa: o _migrations.py ARGUMENTAVA no docstring que a loja não podia ir para o Alembic porque ''uma revisão não pode saber a largura'' — a premissa estava errada: a revisão não precisa SABER, ela cria uma para cada e o store ROTEIA. O que se lia como parâmetro aberto era uma enumeração de cinco elementos.'
   plan_skip_reason: o desenho está no comentário da i-104, decidido pelo founder com a medição
+  references:
+  - Spec/spec-a-fabrica
+  closed_at: '2026-08-08T15:27:55+00:00'

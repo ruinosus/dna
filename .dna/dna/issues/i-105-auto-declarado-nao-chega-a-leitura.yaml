@@ -1,0 +1,53 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: cr4gduppv3g2
+  name: i-105-auto-declarado-nao-chega-a-leitura
+spec:
+  title: O rótulo AUTO-DECLARADO não chega à leitura — e o número derivado lava o rótulo
+  description: |-
+    PONTA DEIXADA PELO PR #381 (dna-cloud), nomeada e não construída de propósito.
+
+    O desfecho passou a ser AUTO-DECLARADO pelo copiloto (decisão do founder em 08/08), e o viés
+    tem de ir NO RÓTULO: perguntar ao agente se ele resolveu é PERGUNTAR À PARTE INTERESSADA.
+
+    Falta no `runtime/roi.py`:
+
+      1. `Number.is_self_declared: bool = False` — irmão de `is_floor` e `is_suspect`
+      2. `Number.label` imprimindo o qualificador na MESMA linha do número
+      3. `_containment()` passando `is_self_declared=True`, com a origem dizendo quem declarou
+
+    ⚠️ 4. E A PARTE SUTIL, que é a razão desta ficha existir: `_yield()` DERIVA de value/cost e
+       já propaga `is_floor` combinando os dois. O novo qualificador PRECISA DA MESMA PROPAGAÇÃO,
+       ou O NÚMERO DERIVADO LAVA O RÓTULO — sai limpo de uma entrada suja.
+
+    ⛔ NÃO usar o `DECLARED` que já existe em BASES: ele significa "dito por um humano num
+    descritor" (value_per_outcome, can_sleep). A contenção continua `PROXY`; o auto-declarado é
+    QUALIFICADOR, não base.
+
+    === E A PONTA DO PORTAL, que vem junto ===
+
+    O `yield_reading._answer()` projeta `label` (o texto chega de graça), mas o `YieldPanel`
+    RAMIFICA EM BOOLEANO (`answer.is_floor`) para os chips. Então o campo precisa entrar em
+    `_answer()`, no tipo de `lib/copilot/yield.ts`, num chip e no i18n.
+
+    ⚠️ Achado de passagem: `is_suspect` JÁ TEM ESSE BURACO HOJE — viaja só dentro do `label`, sem
+    booleano projetado. Ou seja, o preço suspeito aparece no texto e não tem chip.
+
+    === DE ONDE O roi SABE QUE É AUTO-DECLARADO ===
+
+    A procedência NÃO ESTÁ NO DADO — `dna_turn.outcome` não tem coluna de origem. Hoje é uniforme
+    (100% agente, não há outra porta), então o valor pode ser constante. ⚠️ Mas se a opção (d)
+    entrar (agente propõe, humano corrige), a procedência vira POR LINHA. Sugestão do agente que
+    mediu: `Sample` ganhar o campo e `gather_sample` preenchê-lo, para que (d) não exija refazer.
+  type: task
+  severity: medium
+  status: open
+  created_at: '2026-08-08T15:28:14+00:00'
+  updated_at: '2026-08-08T15:28:14+00:00'
+  timeline:
+  - at: '2026-08-08T15:28:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
