@@ -38,7 +38,7 @@ class SearchEngine:
     async def search(
         self, scope: str, query_text: str, *,
         kind: str | None = None, k: int = 10, tenant: str | None = None,
-        min_similarity: float | None = None,
+        min_similarity: float | None = None, name_prefix: str | None = None,
     ) -> dict[str, Any]:
         """Public record search (F2 D2). Provider registered → semantic
         (pgvector/RRF, degraded=False). No provider OR provider error →
@@ -74,9 +74,21 @@ class SearchEngine:
         prov = host._search_provider
         if prov is not None:
             try:
+                # ⚠️ `name_prefix` só é PASSADO quando existe, e isso não é
+                # microtuning. O kwarg é novo: um `RecordSearchProvider` de
+                # terceiro escrito contra o protocolo anterior levanta
+                # `TypeError` ao recebê-lo — e o `except` logo abaixo o captura,
+                # degradando TODA busca para o plano lexical, com
+                # `degraded=True` e nenhuma pista de que a causa foi assinatura.
+                # Passar só quando há prefixo mantém o provider antigo intacto
+                # no caso comum e deixa a incompatibilidade aparecer só onde ela
+                # é real. (Medido: foi exatamente assim que
+                # `test_search_routes_to_registered_provider` caiu.)
+                narrowing = {"name_prefix": name_prefix} if name_prefix else {}
                 hits = await prov.search(
                     scope=scope, query_text=query_text, kind=kind,
                     k=k, tenant=effective_tenant or "",
+                    **narrowing,
                 )
                 host._search_provider_warned = False  # episode over
                 kept, dropped, unscored = apply_similarity_floor(
@@ -104,9 +116,17 @@ class SearchEngine:
                         exc_info=True,
                     )
         return {
+            # ⭐ O prefixo ATRAVESSA para o plano degradado, e essa é a linha
+            # que impede um vazamento entre coleções. O piso de relevância
+            # deliberadamente NÃO atravessa (ver a docstring: filtrar um plano
+            # cego encolheria um ponto cego em afirmação) — mas `name_prefix`
+            # não é política sobre o score, é RECORTE do universo. Um fallback
+            # que ignorasse o recorte devolveria trechos de OUTRAS coleções
+            # marcados apenas como `degraded`, e "degradado" leria como "menos
+            # preciso" quando na verdade seria "de outro corpus".
             "hits": await self._lexical_search(
                 scope, query_text, kind=kind, k=k,
-                tenant=effective_tenant or None,
+                tenant=effective_tenant or None, name_prefix=name_prefix,
             ),
             "degraded": True,
             # Present with the same keys on BOTH branches so a caller never has
@@ -120,6 +140,7 @@ class SearchEngine:
     async def _lexical_search(
         self, scope: str, query_text: str, *,
         kind: str | None = None, k: int = 10, tenant: str | None = None,
+        name_prefix: str | None = None,
     ) -> list[dict[str, Any]]:
         """Degraded fallback for ``search()`` — honest DEV lexical scan,
         NOT similarity (two-planes F2).
@@ -151,9 +172,19 @@ class SearchEngine:
         async for row in self._k.query(scope, kind, tenant=tenant, limit=500):
             tokens: set[str] = set()
             _spec_tokens(row.get("spec") or {}, tokens)
+            name = (row.get("metadata") or {}).get("name") or row.get("name") or ""
+            # ⚠️ O recorte vem ANTES do escore, não depois: `limit=500` é um
+            # orçamento de varredura, e filtrar o que já foi escolhido deixa uma
+            # coleção volumosa consumir o orçamento inteiro e expulsar as
+            # outras — a mesma armadilha que o plano denso mede em
+            # `RecordSearchProvider`. Aqui a varredura é por Kind e o corte é em
+            # memória, então o orçamento continua sendo gasto com o que foi
+            # descartado; isso é uma LIMITAÇÃO do plano degradado, e está dita
+            # em vez de escondida.
+            if name_prefix and not name.startswith(name_prefix):
+                continue
             score = sum(1 for t in q_tokens if t in tokens) / len(q_tokens)
             if score > 0:
-                name = (row.get("metadata") or {}).get("name") or row.get("name") or ""
                 hits.append(
                     {"scope": scope, "kind": kind, "name": name, "score": score},
                 )

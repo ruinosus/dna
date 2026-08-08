@@ -369,7 +369,7 @@ class PgVecRecordSearchProvider:
 
     async def search(
         self, *, scope: str, query_text: str, kind: str | None = None,
-        k: int = 10, tenant: str = "",
+        k: int = 10, tenant: str = "", name_prefix: str | None = None,
     ) -> list[dict[str, Any]]:
         """Hybrid dense+lexical search fused with RRF. Returns hits shaped
         ``{scope, kind, name, score, title?, snippet?, rank_dense?,
@@ -405,6 +405,43 @@ class PgVecRecordSearchProvider:
         pool = await self._get_pool()
         overfetch = max(_MIN_CANDIDATES, k * _OVERFETCH)
 
+        # ⭐ ``kind`` and ``name_prefix`` are PREDICATES, not post-filters — and
+        # ``kind`` used to be a post-filter, which is the bug this fixes.
+        #
+        # MEASURED (i-154, 08/08/2026, against the real local index): the two
+        # planes each pull `overfetch` (40) candidates from the WHOLE scope and
+        # `kind` was applied only afterwards. Adding 1000 rows of one volumous
+        # Kind to a scope holding 153 rows took the dense plane's top-40 from
+        # `{Issue: 37, Engram: 2, App: 1}` to `{ProbeChunk: 40}` — every other
+        # Kind crowded out, 100%. The lexical plane still returned 26 Issues,
+        # so `search(kind="Issue")` kept answering and NOTHING said anything
+        # had changed: `mode` stayed "hybrid" and `degraded` stayed False while
+        # the dense plane had in fact stopped contributing a single Issue.
+        #
+        # That is the one failure this envelope must never have — the whole
+        # point of `degraded`/`relevance_notice` is that the door does not hide
+        # what did not run. A post-filter turns a healthy-looking answer into a
+        # silently lexical one, and no field reports it.
+        #
+        # Filtering where the candidates are CHOSEN also makes a per-collection
+        # search affordable without a new column: `name_prefix` rides the
+        # EXISTING unique btree (scope, kind, name, tenant, model_id), which is
+        # prefix-searchable by construction.
+        #
+        # The tenant/overlay-shadow filter deliberately stays post-hoc: it is
+        # not a narrowing (a row's tenant may be '' OR the caller's) and the
+        # shadowing rule needs both rows in hand to pick the overlay.
+        # Both plane queries bind $1=scope, $2=model_id, $3=(vector|tsquery),
+        # $4=overfetch, so any narrowing parameter starts at $5.
+        narrow = ""
+        extra: list[Any] = []
+        if kind is not None:
+            extra.append(kind)
+            narrow += f" AND kind=${4 + len(extra)}"
+        if name_prefix:
+            extra.append(name_prefix)
+            narrow += f" AND name LIKE ${4 + len(extra)} || '%'"
+
         query_vec = (await self._kernel.embed([query_text]))[0]
 
         async with pool.acquire() as conn:
@@ -429,9 +466,10 @@ class PgVecRecordSearchProvider:
                 dense_rows = await conn.fetch(
                     f"SELECT id, embedding <=> $3::vector AS distance "
                     f"FROM {self._schema}.{table} "
-                    "WHERE scope=$1 AND model_id=$2 AND embedding IS NOT NULL "
+                    "WHERE scope=$1 AND model_id=$2 AND embedding IS NOT NULL"
+                    f"{narrow} "
                     "ORDER BY embedding <=> $3::vector LIMIT $4",
-                    scope, model_id, _vec_literal(query_vec), overfetch,
+                    scope, model_id, _vec_literal(query_vec), overfetch, *extra,
                 )
                 dense_ranked = [r["id"] for r in dense_rows]
                 dense_sim = {
@@ -452,9 +490,10 @@ class PgVecRecordSearchProvider:
                     f"SELECT id, ts_rank(fts, to_tsquery('simple', $3)) AS rank "
                     f"FROM {self._schema}.{table} "
                     "WHERE scope=$1 AND model_id=$2 "
-                    "AND fts @@ to_tsquery('simple', $3) "
+                    "AND fts @@ to_tsquery('simple', $3)"
+                    f"{narrow} "
                     "ORDER BY ts_rank(fts, to_tsquery('simple', $3)) DESC LIMIT $4",
-                    scope, model_id, ts, overfetch,
+                    scope, model_id, ts, overfetch, *extra,
                 )
                 lexical_ranked = [r["id"] for r in lex_rows]
                 lexical_score = {r["id"]: float(r["rank"]) for r in lex_rows}
@@ -480,8 +519,12 @@ class PgVecRecordSearchProvider:
             m = meta.get(row_id)
             if m is None:
                 continue
-            if kind is not None and m["kind"] != kind:
-                continue
+            # ⛔ No second copy of the ``kind`` / ``name_prefix`` filter here.
+            # They are in the two plane PREDICATES above, and repeating them
+            # would make those untestable — remove either predicate and this
+            # copy would quietly swallow the leak, leaving the mutant green
+            # while the crowd-out bug it plants is real. Exactly the argument
+            # ``_resolve_meta`` already makes about ``model_id``.
             row_tenant = m["tenant"] or ""
             if row_tenant not in ("", tenant or ""):
                 continue  # a different tenant's overlay — never leaks

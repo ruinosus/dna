@@ -721,7 +721,7 @@ _SEARCH_NOTICE: dict[str, str] = {
 async def search_instances_impl(
     live: LiveDna, *, kind: str, query: str, scope: str | None = None,
     tenant: str | None = None, api_version: str | None = None, k: int = 10,
-    min_similarity: float | None = None,
+    min_similarity: float | None = None, name_prefix: str | None = None,
 ) -> dict[str, Any]:
     """Find the instances of one Kind that RESEMBLE ``query`` — similarity, not
     enumeration.
@@ -830,7 +830,7 @@ async def search_instances_impl(
     # isolation boundary.
     res = await live.kernel.search(
         sc, query, kind=port.kind, k=k, tenant=tenant,
-        min_similarity=min_similarity,
+        min_similarity=min_similarity, name_prefix=name_prefix,
     )
     hits = list(res.get("hits") or [])
     degraded = bool(res.get("degraded"))
