@@ -57,6 +57,12 @@ spec:
     name: tr-tg-runtime-binding-schema-20260810-215203
     summary: TestRun tr-tg-runtime-binding-schema-20260810-215203 → pass
     outcome: pass
+  - at: '2026-08-10T21:53:00+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/373'
+    pr_url: https://github.com/ruinosus/dna/pull/373
   produces:
   - kind: Plan
     name: plan-s-runtime-binding-schema
