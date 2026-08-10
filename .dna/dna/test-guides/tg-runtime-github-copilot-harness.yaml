@@ -1,0 +1,22 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  id: cpnpcm6zcfdp
+  name: tg-runtime-github-copilot-harness
+spec:
+  description: Validate the runtime-neutral DNA facade and pure GitHub Copilot provider projection.
+  kind_of_test: integration
+  status: active
+  steps:
+  - action: Run test_definitions.py
+    expected: Agent selection, live prompt, complete Tool contracts, Kind catalog and MCP projection pass.
+  - action: Run test_github_copilot_integration.py
+    expected: HTTP and stdio MCP, auth environment references and confirmation hooks pass without runtime ownership.
+  - action: Import the public dna facade and GitHub Copilot binding
+    expected: All documented public symbols import successfully.
+  - action: Run uv lock --check for sdk-py
+    expected: The optional github-copilot dependency metadata is current.
+  verifies:
+  - Story/s-runtime-github-copilot-harness
+  created_at: '2026-08-10T11:44:57+00:00'
+  updated_at: '2026-08-10T11:44:57+00:00'

@@ -1,0 +1,116 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: ejztksw5q5mg
+  name: s-runtime-github-copilot-harness
+spec:
+  title: GitHub Copilot harness consumes live DNA definitions
+  description: Expose a runtime-neutral SDK facade and pure GitHub Copilot binding while the consumer owns CLI sessions streaming permissions and lifecycle.
+  status: in-progress
+  feature: f-copilot-agentframework-target
+  priority: medium
+  labels:
+  - sdk-py
+  - github-copilot
+  - integration
+  acceptance_criteria:
+  - text: Given a scope with a Genome default Agent, when a consumer resolves it through DnaClient, then the composed prompt, complete Tool contracts, MCP servers, and confirmation policy are returned without starting a runtime.
+    done: true
+    done_at: '2026-08-10T11:45:08+00:00'
+    done_by: github-copilot
+    evidence: 'Focused SDK suites: 8 passed; public imports and lock check passed; README and CHANGELOG updated; credentials remain env references; consumer owns lifecycle.'
+  - text: Given a ResolvedAgent, when the GitHub Copilot binding projects it, then model, HTTP or stdio MCP configuration, authentication environment references, local tools, and confirmation hooks reach GitHubCopilotAgent while lifecycle remains consumer-owned.
+    done: true
+    done_at: '2026-08-10T11:45:08+00:00'
+    done_by: github-copilot
+    evidence: 'Focused SDK suites: 8 passed; public imports and lock check passed; README and CHANGELOG updated; credentials remain env references; consumer owns lifecycle.'
+  - text: Given multiple Agents, when no explicit name is passed, then Genome.spec.default_agent selects deterministically; an explicit name overrides it and a missing default fails closed.
+    done: true
+    done_at: '2026-08-10T11:45:08+00:00'
+    done_by: github-copilot
+    evidence: 'Focused SDK suites: 8 passed; public imports and lock check passed; README and CHANGELOG updated; credentials remain env references; consumer owns lifecycle.'
+  acceptance_criteria_source: github-copilot
+  definition_of_done:
+  - text: 'Code: public neutral DTOs, source-aware DnaClient, Kind and instance catalogs, and pure optional GitHub Copilot integration are implemented.'
+    done: true
+    done_at: '2026-08-10T11:45:08+00:00'
+    done_by: github-copilot
+    evidence: 'Focused SDK suites: 8 passed; public imports and lock check passed; README and CHANGELOG updated; credentials remain env references; consumer owns lifecycle.'
+  - text: 'Tests: focused definition and provider-binding suites pass, including stdio MCP and confirmation behavior.'
+    done: true
+    done_at: '2026-08-10T11:45:08+00:00'
+    done_by: github-copilot
+    evidence: 'Focused SDK suites: 8 passed; public imports and lock check passed; README and CHANGELOG updated; credentials remain env references; consumer owns lifecycle.'
+  - text: 'Docs: SDK README and CHANGELOG describe installation, ownership boundaries, and usage.'
+    done: true
+    done_at: '2026-08-10T11:45:08+00:00'
+    done_by: github-copilot
+    evidence: 'Focused SDK suites: 8 passed; public imports and lock check passed; README and CHANGELOG updated; credentials remain env references; consumer owns lifecycle.'
+  - text: 'Security: credentials remain environment references and no runtime lifecycle moves into DNA.'
+    done: true
+    done_at: '2026-08-10T11:45:08+00:00'
+    done_by: github-copilot
+    evidence: 'Focused SDK suites: 8 passed; public imports and lock check passed; README and CHANGELOG updated; credentials remain env references; consumer owns lifecycle.'
+  definition_of_done_source: github-copilot
+  created_at: '2026-08-10T11:41:17+00:00'
+  updated_at: '2026-08-10T11:45:08+00:00'
+  timeline:
+  - at: '2026-08-10T11:41:17+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-10T11:41:25+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-10T11:41:28+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Architecture validated against the official GitHub Copilot provider samples: DNA owns declarative Agent, Tool, Skill, MCP and confirmation data; the consuming app owns CLI process, sessions, streaming, permission interaction and lifecycle. The binding remains a pure projection from ResolvedAgent.'
+    commit_ref: d65a63df392e3e067856a8c3e325af6dc437dc84
+  - at: '2026-08-10T11:45:01+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-runtime-github-copilot-harness
+    summary: TestGuide tg-runtime-github-copilot-harness (integration)
+  - at: '2026-08-10T11:45:07+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-runtime-github-copilot-harness-20260810-114504
+    summary: TestRun tr-tg-runtime-github-copilot-harness-20260810-114504 → pass
+    outcome: pass
+  - at: '2026-08-10T11:45:10+00:00'
+    actor: claude-code
+    type: checklist_check
+    source: cli
+    marked_ac: 3
+    marked_dod: 4
+    evidence: 'Focused SDK suites: 8 passed; public imports and lock check passed; README and CHANGELOG updated; credentials remain env references; consumer owns lifecycle.'
+    by: github-copilot
+  - at: '2026-08-10T11:54:19+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/372'
+    pr_url: https://github.com/ruinosus/dna/pull/372
+  produces:
+  - kind: Plan
+    name: plan-s-runtime-github-copilot-harness
+    role: implementation
+    at: '2026-08-10T11:41:25+00:00'
+  - kind: TestGuide
+    name: tg-runtime-github-copilot-harness
+    role: test-guide
+    at: '2026-08-10T11:45:01+00:00'
+  - kind: TestRun
+    name: tr-tg-runtime-github-copilot-harness-20260810-114504
+    role: test-run
+    at: '2026-08-10T11:45:07+00:00'

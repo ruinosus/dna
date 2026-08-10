@@ -132,6 +132,9 @@ runtime = [
 # the maf adapter imports it (deferred import inside the adapter's build()).
 # Install to use the MAF backend: pip install "dna-sdk[maf]".
 maf = ["agent-framework==1.12.1", "agent-framework-ag-ui==1.0.0"]
+# Pure ResolvedAgent → GitHub Copilot SDK binding. The consumer still owns the
+# CLI loop, sessions, streaming and lifecycle.
+github-copilot = ["agent-framework-github-copilot==1.0.0"]
 # i-081 / decision C — the LINEAR-TIME regex engine. RE2 compiles a pattern to
 # an automaton and matches in time linear in the input, so a tenant-authored
 # `pattern` in a KindDefinition schema CANNOT be a denial of service; installed,

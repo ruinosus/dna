@@ -22,6 +22,7 @@ Optional extras: `postgres`, `sqlite`, `sql` (SqlAlchemySource — one
 adapter for both SQL dialects, same tables; see docs/PORT-CONTRACT.md
 § "Using the SQLAlchemy adapter")
 `safety-ml` (PII/toxicity models),
+`github-copilot` (pure GitHub Copilot SDK binding),
 `all`, `dev`.
 
 ## Minimal example
@@ -42,12 +43,59 @@ print(mi.build_prompt(agent="greeter"))
 
 Runnable version: [`examples/hello-genome/run.py`](https://github.com/ruinosus/dna/blob/main/examples/hello-genome/run.py).
 
+## Runtime-neutral definitions
+
+Use `DnaClient` when an application owns the runtime but wants DNA to own its
+declarative definitions. The client boots the configured source, resolves
+KindDefinitions through the Kernel, applies scope/tenant composition, and
+returns data-only contracts.
+
+```python
+from dna import DnaClient
+
+client = await DnaClient.from_env(scope="development", tenant="acme")
+async with client:
+    # Uses Genome.spec.default_agent; pass a name only as an explicit override.
+    definition = await client.resolve_agent()
+    kinds = await client.kinds.list()
+    tool_kind = await client.kinds.describe("Tool")
+    tools = await client.instances.list("Tool")
+```
+
+Source selection is `DNA_SOURCE_URL` then `base_dir` / `DNA_BASE_DIR`, then
+`./.dna`. `ResolvedAgent`, `ResolvedTool`, `ResolvedMcpServer`, and
+`KindDescriptor` do not start a model, server, session, or event loop.
+
+The optional GitHub Copilot binding converts one resolved definition while the
+consumer retains lifecycle ownership:
+
+```python
+from dna.integrations.github_copilot import build_github_copilot_agent
+
+agent = build_github_copilot_agent(
+    definition,
+    tools=[write_review_report],
+    on_permission_request=permission_handler,
+)
+
+async with agent:
+    session = agent.create_session()
+    async for chunk in agent.run(prompt, session=session, stream=True):
+        print(chunk.text or "", end="")
+```
+
+Install this binding with `pip install "dna-sdk[github-copilot]"`. It maps the
+composed prompt, model, MCP federations and confirmation policy but does not own
+the Copilot CLI or execute declared tools.
+
 ## Layout
 
 ```
 dna/
 ├── kernel/       # Kernel (mediator over 5 ports), Instance, ManifestInstance
+├── application/  # transport-neutral use cases and live source handle
 ├── adapters/     # filesystem (core); sqlite/postgres/sqlalchemy_ via extras
+├── integrations/ # optional pure bindings to consumer-owned runtimes
 ├── extensions/   # helix (core Kinds) + market formats + governance
 ├── sync/         # lockfile + instance hashing
 └── safety/       # safety pipeline (optional ML extras)

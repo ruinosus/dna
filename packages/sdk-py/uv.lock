@@ -1489,7 +1489,7 @@ wheels = [
 
 [[package]]
 name = "dna-sdk"
-version = "0.75.0"
+version = "0.76.0"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -1541,6 +1541,9 @@ dev = [
 ]
 embed-onnx = [
     { name = "fastembed" },
+]
+github-copilot = [
+    { name = "agent-framework-github-copilot" },
 ]
 knowledge = [
     { name = "chonkie" },
@@ -1608,6 +1611,7 @@ requires-dist = [
     { name = "ag-ui-protocol", marker = "extra == 'agno-copilot'", specifier = ">=0.1.19" },
     { name = "agent-framework", marker = "extra == 'maf'", specifier = "==1.12.1" },
     { name = "agent-framework-ag-ui", marker = "extra == 'maf'", specifier = "==1.0.0" },
+    { name = "agent-framework-github-copilot", marker = "extra == 'github-copilot'", specifier = "==1.0.0" },
     { name = "agno", marker = "extra == 'agno-copilot'", specifier = ">=2.6.12" },
     { name = "aiofiles", specifier = ">=24.1" },
     { name = "aiosqlite", marker = "extra == 'sqlite'", specifier = ">=0.20" },
@@ -1654,7 +1658,7 @@ requires-dist = [
     { name = "typing-extensions", marker = "python_full_version < '3.13'", specifier = ">=4.4" },
     { name = "uvicorn", marker = "extra == 'dev'", specifier = ">=0.30" },
 ]
-provides-extras = ["postgres", "sqlite", "safety-ml", "sql", "mime", "otel", "embed-onnx", "search-sqlite", "search-pgvector", "agno-copilot", "runtime", "maf", "re2", "knowledge", "all", "dev"]
+provides-extras = ["postgres", "sqlite", "safety-ml", "sql", "mime", "otel", "embed-onnx", "search-sqlite", "search-pgvector", "agno-copilot", "runtime", "maf", "github-copilot", "re2", "knowledge", "all", "dev"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "aiosqlite", specifier = ">=0.22.1" }]

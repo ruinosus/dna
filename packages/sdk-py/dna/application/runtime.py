@@ -469,6 +469,7 @@ async def read_definition_impl(
 
 async def read_registered_kind_impl(
     live: LiveDna, *, kind: str, scope: str | None = None,
+    api_version: str | None = None,
 ) -> dict[str, Any]:
     """The DESCRIPTOR of a registered Kind — its JSON Schema + ``ui_schema``.
 
@@ -496,7 +497,9 @@ async def read_registered_kind_impl(
     # exist). TTL'd (KIND_REFRESH_TTL): one bootstrap-slice read per scope
     # per window, not one per request.
     await live.ensure_kinds(scope)
-    port = live.kernel.kind_port_for(kind, scope=scope)
+    port = live.kernel.kind_port_for(
+        kind, api_version=api_version, scope=scope,
+    )
     if port is None:
         raise ValueError(f"no registered Kind named {kind!r}")
     schema_fn = getattr(port, "schema", None)

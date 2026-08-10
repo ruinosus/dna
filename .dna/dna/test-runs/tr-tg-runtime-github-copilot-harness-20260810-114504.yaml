@@ -1,0 +1,16 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  id: o7p4xjcaqm7v
+  name: tr-tg-runtime-github-copilot-harness-20260810-114504
+spec:
+  guide_ref: tg-runtime-github-copilot-harness
+  outcome: pass
+  verifies:
+  - Story/s-runtime-github-copilot-harness
+  executed_by: github-copilot
+  executed_at: '2026-08-10T11:45:04+00:00'
+  notes: 8 focused tests passed; public imports succeeded; sdk-py lock resolved cleanly on origin/main d65a63df.
+  evidence:
+  - pytest:8-passed
+  - origin/main:d65a63df
