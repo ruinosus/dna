@@ -112,6 +112,48 @@ ele é**, via ``tokens_partial``:
 
 Um ROI que soma tokens sem olhar esta coluna continua subestimando o custo — a
 diferença é que agora ele tem como saber que está.
+
+## ⭐ E de QUE RAIA o turno é: ``lane`` (``i-158``)
+
+*"Uma coisa é conversa de teste, outra é conversa real."* Um turno gerado por
+uma suíte de avaliação, um smoke, ou um agente exercitando o produto **existe**
+— consumiu tokens de verdade, e o provedor cobrou — mas ele não é uso. Somá-lo
+à conta do cliente é a mesma classe de erro que ``outcome`` inferido do
+``status``: um número certo respondendo a outra pergunta.
+
+MEDIDO em 08/08/2026 no Postgres de desenvolvimento: **86 turnos, 76 do mesmo
+copiloto, TODOS gerados por agente durante desenvolvimento e nenhum de uso
+real.** Nenhuma coluna dizia isso, e por isso o painel da conta somava os 86.
+
+``lane`` mora AQUI, em ``dna_turn``, e não numa tabela do host, por uma razão
+que decide sozinha: **quem precisa excluir o turno de teste da conta é
+:mod:`dna.runtime.roi`, que é deste SDK.** Uma raia que vivesse só no índice de
+conversas do host seria invisível para o leitor que a consome, e cada
+consumidor do SDK reinventaria a exclusão por conta própria — que é como um
+invariante vira convenção e depois vira bug. ``thread_id`` também pode ser
+vazio (turno de A2A, de worker), e uma raia presa à conversa não cobriria esses.
+
+Três estados, e o terceiro é o que mais importa:
+
+``"real"``
+    uso de verdade. **Só quem declara.**
+``"test"``
+    exercício: suíte de avaliação, smoke, demonstração.
+``""`` (vazio)
+    ⭐ **NÃO DECLARADA — e isto não é "real" nem "test".** Os 86 turnos
+    existentes são assim e continuam assim: um backfill para ``real`` afirmaria
+    que aquilo foi uso de cliente (é o oposto do que foi medido), e um backfill
+    para ``test`` difamaria qualquer turno que porventura fosse real. É a mesma
+    decisão que a 0012 tomou sobre ``outcome``, e pelo mesmo motivo. Quem lê a
+    conta tem de DIZER quantos são — ver
+    :attr:`dna.runtime.roi.Sample.undeclared_lane`.
+
+Como o desfecho, a raia é DECLARADA (:func:`stamp_turn`) e um valor fora de
+:data:`LANES` é recusado, deixando o turno vazio. E como o desfecho, ela é
+**apagada no início de cada turno** — porque o estrago tem direção: uma raia
+``test`` herdada por um turno de gente de verdade sumiria com uso REAL da conta,
+em silêncio. Um host que esqueça de recarimbar produz turnos NÃO DECLARADOS, que
+a conta mostra; jamais turnos ``real`` que ninguém declarou.
 """
 from __future__ import annotations
 
@@ -124,6 +166,9 @@ from typing import Any, Callable, Iterable, Mapping, Sequence
 _LOGGER = logging.getLogger("dna.runtime.telemetry")
 
 __all__ = [
+    "LANES",
+    "LANE_REAL",
+    "LANE_TEST",
     "MAX_TEXT",
     "OUTCOMES",
     "TRUNCATION_MARK",
@@ -181,6 +226,22 @@ ATTR_THREAD = "dna.thread_id"
 ATTR_OID = "dna.oid"
 ATTR_AGENT = "dna.agent"
 ATTR_OUTCOME = "dna.outcome"
+ATTR_LANE = "dna.lane"
+
+#: Uso de verdade. ⚠️ **Só quem DECLARA.** Um turno que não diz nada não é
+#: real — é de raia desconhecida, que é uma terceira coisa.
+LANE_REAL = "real"
+
+#: Exercício: suíte de avaliação, smoke, demonstração. O turno aconteceu e
+#: custou; ele só não é uso.
+LANE_TEST = "test"
+
+#: As únicas raias que existem. Um valor fora desta lista é RECUSADO e o turno
+#: fica vazio — a mesma disciplina de :data:`OUTCOMES`, e pelo mesmo motivo:
+#: aceitar o valor estranho o faria aparecer numa contagem que não sabe o que
+#: ele significa. ⚠️ E vazio NÃO é um membro desta lista de propósito: ele é a
+#: ausência de declaração, e um default aqui a transformaria numa declaração.
+LANES = frozenset({LANE_REAL, LANE_TEST})
 
 #: Os únicos desfechos que existem. Um valor fora desta lista é RECUSADO e o
 #: turno fica vazio — porque vazio é "não sei", e "não sei" é a verdade sobre um
@@ -255,6 +316,10 @@ class Turn:
     #: ⭐ O que o turno CONSEGUIU — declarado por quem fecha, nunca inferido.
     #: Vazio é DESCONHECIDO. Nada neste módulo o transforma em ``resolved``.
     outcome: str = ""
+    #: ⭐ De que RAIA este turno é: ``real``, ``test``, ou vazio (`i-158`).
+    #: Vazio é NÃO DECLARADA — e não é nenhuma das duas. Nada neste módulo o
+    #: transforma em ``real``; ver a seção da raia no topo.
+    lane: str = ""
     error: str | None = None
     started_at: str | None = None
     ended_at: str | None = None
@@ -288,6 +353,31 @@ def _desfecho(fonte: Mapping[str, Any]) -> str:
         _LOGGER.warning(
             "desfecho %r não é um de %s — o turno fica DESCONHECIDO",
             valor, sorted(OUTCOMES),
+        )
+    return ""
+
+
+def _raia(fonte: Mapping[str, Any]) -> str:
+    """A raia declarada nesta fonte, ou ``""`` (`i-158`).
+
+    ⭐ **É a única porta pela qual uma raia entra num ``Turn``**, e ela só deixa
+    passar o que está em :data:`LANES`. Um valor fora — ``"testing"``,
+    ``"prod"``, ``True``, um typo — sai como vazio.
+
+    O gêmeo de :func:`_desfecho`, e deliberadamente escrito ao lado dele: as
+    duas recusam pelo mesmo motivo, e uma delas escrita mais frouxa seria a que
+    deixaria entrar o valor que ninguém sabe contar.
+    """
+    valor = fonte.get(ATTR_LANE)
+    if valor is None:
+        return ""
+    texto = str(valor).strip().lower()
+    if texto in LANES:
+        return texto
+    if texto:
+        _LOGGER.warning(
+            "raia %r não é uma de %s — o turno fica NÃO DECLARADO",
+            valor, sorted(LANES),
         )
     return ""
 
@@ -522,6 +612,10 @@ class TurnRecorder:
         # as mesmas das dimensões, e pela mesma razão; o que não existe em
         # nenhuma delas fica vazio, que é como se escreve "não sei".
         turno.outcome = _desfecho(_contexto().get() or {}) or _desfecho(atributos)
+        # ⭐ A RAIA, pelas mesmas duas fontes e com a mesma recusa (`i-158`).
+        # Quem impede a herança de uma raia para o turno seguinte é `stamp_turn`,
+        # que a apaga ao abrir cada turno — a razão está escrita lá.
+        turno.lane = _raia(_contexto().get() or {}) or _raia(atributos)
         # ⚠️ E o desfecho é CONSUMIDO: uma declaração vale por UM turno.
         #
         # `stamp_turn` já limpa o desfecho ao abrir o turno seguinte, e isto
@@ -580,6 +674,7 @@ def stamp_turn(
     workspace: str | None = None,
     oid: str | None = None,
     agent: str | None = None,
+    lane: str | None = None,
 ) -> None:
     """Carimba as dimensoes do produto no span CORRENTE.
 
@@ -591,6 +686,12 @@ def stamp_turn(
     ⚠️ **Tambem marca o INICIO do turno, e por isso APAGA o desfecho anterior**
     — ver o comentario abaixo. Um host que carimbe uma vez por processo em vez
     de uma vez por turno perde essa protecao; carimbe por turno.
+
+    ``lane`` é a RAIA (`i-158`): ``"real"``, ``"test"``, ou nada. ⚠️ **Nada não
+    é ``real``** — é raia NÃO DECLARADA, e é o default de propósito: um host que
+    nunca ouviu falar de raia continua produzindo turnos honestamente
+    indefinidos em vez de turnos que se dizem de produção. Um valor fora de
+    :data:`LANES` é RECUSADO com aviso e o turno segue sem raia.
 
     Silencioso sem OTEL: um deployment sem telemetria continua servindo.
     """
@@ -607,8 +708,20 @@ def stamp_turn(
     #
     # `stamp_turn` é o marco de INÍCIO do turno (o middleware `before_agent` a
     # chama), então é aqui que o desfecho anterior morre.
+    #
+    # ⭐ E a RAIA morre junto, pela mesma razão e na direção que importa
+    # (`i-158`): sem esta limpeza, uma suíte de avaliação que declarasse `test`
+    # deixaria a raia no contexto, e o turno seguinte da mesma task — de um
+    # usuário de verdade — a herdaria. A conta do cliente perderia turnos que
+    # aconteceram, e perderia CALADA. O erro simétrico (um turno de teste que
+    # perde a marca e conta como uso) é o que a linha abaixo previne quando o
+    # host esquece de recarimbar: ele vira NÃO DECLARADO, que é visível, em vez
+    # de `real`, que não é.
     var = _contexto()
-    contexto = {k: v for k, v in (var.get() or {}).items() if k != ATTR_OUTCOME}
+    contexto = {
+        k: v for k, v in (var.get() or {}).items()
+        if k not in (ATTR_OUTCOME, ATTR_LANE)
+    }
     var.set(contexto)
 
     _carimbar({
@@ -616,9 +729,19 @@ def stamp_turn(
         for chave, valor in (
             (ATTR_THREAD, thread_id), (ATTR_WORKSPACE, workspace),
             (ATTR_OID, oid), (ATTR_AGENT, agent),
+            # ⚠️ A raia passa pela MESMA recusa da leitura (`_raia`): um
+            # `lane="prod"` não vira dimensão nenhuma, e o aviso sai aqui, na
+            # chamada de quem errou — não no `on_end`, longe do erro.
+            (ATTR_LANE, _raia({ATTR_LANE: lane}) if lane else None),
         )
         if valor
     })
+    if lane and not _raia({ATTR_LANE: lane}):
+        # `_raia` já avisou QUAL valor caiu; esta linha diz a CONSEQUÊNCIA, que
+        # é a metade que muda o que alguém faz a respeito.
+        _LOGGER.warning(
+            "o turno segue com raia NÃO DECLARADA — ele NÃO vira %r", LANE_REAL,
+        )
 
 
 def stamp_outcome(outcome: str) -> None:

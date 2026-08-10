@@ -56,6 +56,33 @@ LINHAS = [
          tokens_partial=False, outcome="resolved", workspace="outro"),
 ]
 
+#: ⭐ `i-158`: as raias, num WORKSPACE PRÓPRIO — e é de propósito.
+#:
+#: Misturá-las em ``w`` faria as asserções acima (``turns == 7``,
+#: ``outcomes == {...}``) quebrarem por um motivo que nada tem a ver com o que
+#: elas afirmam. Um lote separado mantém cada teste falhando só pelo que ele
+#: mede, e a paridade abaixo cobre os dois lotes.
+#:
+#: Quatro casos, e o quarto é o que decide: uma raia INVENTADA cabe na coluna
+#: (não há CHECK, revisão 0014, de propósito) e tem de sair contada como NÃO
+#: DECLARADA nos dois caminhos — senão o banco criaria uma raia que a leitura
+#: pura recusa.
+LINHAS_DE_RAIA = [
+    dict(turn_id="r1", model="gpt-5-mini", input_tokens=300, output_tokens=100,
+         tokens_partial=False, outcome="resolved", workspace="raias", lane="real"),
+    dict(turn_id="r2", model="gpt-5-mini", input_tokens=100, output_tokens=50,
+         tokens_partial=False, outcome="", workspace="raias", lane="real"),
+    dict(turn_id="r3", model="gpt-5-mini", input_tokens=7000, output_tokens=7000,
+         tokens_partial=False, outcome="resolved", workspace="raias", lane="test"),
+    dict(turn_id="r4", model="gpt-5-mini", input_tokens=1, output_tokens=1,
+         tokens_partial=False, outcome="", workspace="raias", lane="prod"),
+    # E o vazio explícito: o estado dos 86 turnos medidos em 08/08/2026, que é
+    # o que o `DEFAULT ''` da 0014 produz. Escrito por extenso porque um
+    # `executemany` exige as mesmas chaves em todo o lote.
+    dict(turn_id="r5", model="gpt-5-mini", input_tokens=2, output_tokens=2,
+         tokens_partial=False, outcome="", workspace="raias", lane=""),
+]
+
 # ⚠️ `arguments`/`edited_args` estão aqui porque a `i-151` os LÊ, e o caminho do
 # banco é o único que pode divergir do puro: ele traz o par numa SEGUNDA
 # consulta (um `GROUP BY` não compara dois JSON por caminho). A paridade é a
@@ -117,6 +144,7 @@ async def conexao():
             tables=[tables.turn, tables.turn_step, tables.approval],
         )
         await conn.execute(sa.insert(tables.turn), LINHAS)
+        await conn.execute(sa.insert(tables.turn), LINHAS_DE_RAIA)
         await conn.execute(sa.insert(tables.approval), APROVACOES)
 
     async with engine.connect() as conn:
@@ -139,6 +167,55 @@ async def test_a_agregacao_no_banco_bate_com_a_contagem_em_python(conexao):
     )
 
     assert do_banco == do_python
+
+
+async def test_a_agregacao_por_RAIA_no_banco_bate_com_a_de_python(conexao):
+    """⭐ `i-158`: a paridade vale com a raia no `GROUP BY`, e vale FILTRADA.
+
+    O caminho do banco ganhou uma quarta dimensão de agrupamento e um filtro
+    aplicado DEPOIS da agregação. Se ele divergisse do puro, a exclusão de
+    turnos de teste seria diferente conforme quem perguntou — e ninguém
+    descobriria, porque os dois números são plausíveis.
+    """
+    from dna.runtime.roi import gather_sample, sample_from_turns
+
+    conn, tables = conexao
+    for filtro in (None, "real", "test", ""):
+        do_banco = await gather_sample(
+            conn, tables, workspace="raias", lane=filtro
+        )
+        do_python = sample_from_turns(LINHAS_DE_RAIA, lane=filtro)
+        assert do_banco == do_python, f"divergiram com lane={filtro!r}"
+
+
+async def test_uma_raia_INVENTADA_no_banco_conta_como_NAO_DECLARADA(conexao):
+    """`lane = 'prod'` cabe na coluna (não há CHECK) e não pode virar raia."""
+    from dna.runtime.roi import gather_sample
+
+    conn, tables = conexao
+    amostra = await gather_sample(conn, tables, workspace="raias")
+    assert amostra.lanes == {"real": 2, "test": 1, "": 2}
+    assert amostra.undeclared_lane == 2
+
+
+async def test_o_banco_filtrado_pela_raia_real_AINDA_sabe_o_que_excluiu(conexao):
+    """⭐ A regra 3 da issue, atravessando o Postgres.
+
+    A restrição é feita em Python sobre um agregado já vindo por raia — nunca
+    por um `WHERE`. Um `WHERE lane = 'real'` traria o número certo e apagaria
+    a existência dos outros três turnos, e o painel não teria de onde dizer o
+    que ficou de fora.
+    """
+    from dna.runtime.roi import gather_sample, read_yield
+
+    conn, tables = conexao
+    amostra = await gather_sample(conn, tables, workspace="raias", lane="real")
+    assert amostra.turns == 2
+    assert amostra.lanes_seen == 5
+    assert amostra.excluded_turns == 3
+    assert amostra.excluded_by_lane == {"test": 1, "": 2}
+    # E os tokens do turno de teste (14.000) NÃO entram na conta.
+    assert read_yield(amostra, copilot={}).tokens.value == 550
 
 
 async def test_o_desfecho_INVENTADO_nao_e_contado_pelo_banco(conexao):

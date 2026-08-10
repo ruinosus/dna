@@ -266,7 +266,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Any, Iterable, Mapping
 
-from dna.runtime.telemetry import OUTCOMES
+from dna.runtime.telemetry import LANES, OUTCOMES
 
 __all__ = [
     "CONSTANT",
@@ -274,6 +274,7 @@ __all__ = [
     "DECLARED",
     "EDIT_ENVELOPE_KEYS",
     "INCIDENTAL",
+    "LANES",
     "MEASURED",
     "MIN_EDITS_FOR_CORRECTION",
     "MODEL_PROFILE_KIND",
@@ -1074,6 +1075,73 @@ class Sample:
     #: legível como JSON). Fora do denominador, e contados — porque "não deu
     #: para ler" não é "não mudou nada".
     edits_unreadable: int = 0
+    #: ⭐ raia → contagem de turnos, sobre TUDO o que a janela continha — antes
+    #: de qualquer exclusão (`i-158`). A chave ``""`` é a raia NÃO DECLARADA.
+    #:
+    #: ⚠️ Este campo NÃO é filtrado, e é o único da :class:`Sample` que não é:
+    #: ele existe para responder *"o que ficou de fora?"*, e uma contagem que
+    #: já sofreu a exclusão não consegue responder isso. Quando
+    #: :attr:`lane_filter` está setado, :attr:`turns` conta a raia escolhida e
+    #: ``lanes`` conta todas — a diferença entre os dois É o que foi excluído,
+    #: e :attr:`excluded_turns` a nomeia.
+    lanes: Mapping[str, int] = field(default_factory=dict)
+    #: A raia a que os DEMAIS números desta amostra estão restritos, ou ``None``
+    #: quando a amostra é de todas. ``None`` e ``""`` são coisas diferentes:
+    #: ``None`` = não filtrei; ``""`` = filtrei PELA raia não declarada.
+    lane_filter: str | None = None
+
+    @property
+    def lanes_seen(self) -> int:
+        """Quantos turnos a janela continha, ANTES de qualquer exclusão.
+
+        Cai para :attr:`turns` quando ninguém contou as raias — uma amostra
+        vinda de um banco sem a revisão 0014, por exemplo. ⚠️ Isso não é
+        "nenhuma exclusão": é "não dá para saber", e é :attr:`lane_unknown` que
+        distingue as duas.
+        """
+        return sum(self.lanes.values()) or self.turns
+
+    @property
+    def lane_unknown(self) -> bool:
+        """⚠️ A raia não pôde ser CONTADA — banco sem a 0014, ou leitor antigo.
+
+        Diferente de "todos os turnos estão sem raia declarada", que é
+        ``lanes == {"": n}`` e é uma medição. Aqui não houve medição nenhuma, e
+        colapsar as duas faria a tela dizer "86 não declarados" sobre uma
+        pergunta que ninguém chegou a fazer.
+        """
+        return self.turns > 0 and not self.lanes
+
+    @property
+    def undeclared_lane(self) -> int:
+        """Turnos cuja raia NINGUÉM declarou. Hoje, no dev, eram todos os 86."""
+        return self.lanes.get("", 0)
+
+    @property
+    def excluded_turns(self) -> int:
+        """Quantos turnos a janela tinha e esta amostra NÃO conta (`i-158`).
+
+        ⭐ Zero quando não há filtro. É o número que o painel é OBRIGADO a
+        dizer: excluir calado transforma uma decisão de leitura em número, e
+        ninguém consegue conferir um denominador que não aparece.
+        """
+        if self.lane_filter is None:
+            return 0
+        return max(0, self.lanes_seen - self.turns)
+
+    @property
+    def excluded_by_lane(self) -> Mapping[str, int]:
+        """O que ficou de fora, POR RAIA — ``{}`` quando não há filtro.
+
+        A tela precisa disto e não da soma: *"12 de teste"* e *"12 não
+        declarados"* pedem coisas diferentes de quem lê (o primeiro é o
+        mecanismo funcionando, o segundo é uma lacuna a fechar).
+        """
+        if self.lane_filter is None:
+            return {}
+        return {
+            raia: n for raia, n in self.lanes.items() if raia != self.lane_filter
+        }
 
     @property
     def edits(self) -> int:
@@ -1161,19 +1229,45 @@ def _int(valor: Any) -> int:
         return 0
 
 
+def _raia(linha: Any) -> str:
+    """A raia DECLARADA nesta linha, ou ``""`` (`i-158`).
+
+    ⭐ O vocabulário é importado de `dna.runtime.telemetry.LANES` — o mesmo da
+    porta de escrita, e nunca uma segunda cópia. Um valor fora dele sai como
+    vazio, pelo mesmo motivo de :func:`_desfecho`: contá-lo o faria entrar numa
+    estatística que não sabe o que ele significa, e aqui essa estatística é a
+    que decide o que entra na conta de alguém.
+    """
+    valor = _campo(linha, "lane")
+    texto = str(valor or "").strip().lower()
+    return texto if texto in LANES else ""
+
+
 def sample_from_turns(
-    turns: Iterable[Any], approvals: Iterable[Any] = ()
+    turns: Iterable[Any], approvals: Iterable[Any] = (), *, lane: str | None = None
 ) -> Sample:
     """Conta linhas de ``dna_turn`` / ``dna_approval`` numa :class:`Sample`.
 
     Aceita `Mapping` (o que um cursor devolve) ou objeto com atributos (o
     :class:`~dna.runtime.telemetry.Turn` do recorder) — as duas formas do mesmo
     fato, e nenhuma delas obriga um banco a existir para exercitar a regra.
+
+    ``lane`` restringe os números a UMA raia (`i-158`). ⚠️ E restringir NÃO é
+    esquecer: :attr:`Sample.lanes` conta o que a janela inteira tinha, de
+    qualquer jeito, para que :attr:`Sample.excluded_turns` possa dizer o que
+    ficou de fora. ``lane=""`` filtra PELA raia não declarada, que é diferente
+    de ``lane=None`` (não filtrar) — e é uma pergunta legítima: *"quantos
+    turnos ninguém classificou?"*.
     """
     total = 0
     desfechos: dict[str, int] = {}
     uso: dict[str, TokenUse] = {}
+    raias: dict[str, int] = {}
     for linha in turns:
+        raia = _raia(linha)
+        raias[raia] = raias.get(raia, 0) + 1
+        if lane is not None and raia != lane:
+            continue
         total += 1
         desfecho = _desfecho(linha)
         if desfecho:
@@ -1223,6 +1317,8 @@ def sample_from_turns(
         edit_delta=delta,
         edits_compared=comparados,
         edits_unreadable=ilegiveis,
+        lanes=raias,
+        lane_filter=lane,
     )
 
 
@@ -1234,6 +1330,7 @@ async def gather_sample(
     agent: str | None = None,
     since: Any = None,
     until: Any = None,
+    lane: str | None = None,
 ) -> Sample:
     """A mesma :class:`Sample`, agregada NO BANCO — a porta desta leitura.
 
@@ -1248,6 +1345,13 @@ async def gather_sample(
     ``tables.turn`` é ``None``, e chamar isto levanta em vez de devolver uma
     amostra vazia. Vazio significaria "nenhum turno", e o que houve foi "esta
     pergunta não se faz aqui": as duas coisas não podem sair pela mesma porta.
+
+    ``lane`` restringe a UMA raia (`i-158`), e a restrição acontece **em
+    Python, sobre um agregado que já veio por raia** — nunca por um ``WHERE``.
+    Não é economia de código: um ``WHERE lane = 'real'`` traria os turnos reais
+    e apagaria a existência dos outros, e :attr:`Sample.excluded_turns` não
+    teria de onde sair. O painel é obrigado a dizer o que ficou de fora, e um
+    filtro no banco é exatamente o que o impediria de saber.
     """
     import sqlalchemy as sa
 
@@ -1277,24 +1381,32 @@ async def gather_sample(
     if agent is not None:
         filtros_turno.append(turn.c.agent == agent)
 
-    # Um agregado por (modelo, desfecho, legibilidade do uso) — as três
+    # Um agregado por (modelo, desfecho, legibilidade do uso, RAIA) — as quatro
     # dimensões que a leitura precisa distinguir, e nenhuma a mais.
     q = sa.select(
         turn.c.model,
         turn.c.outcome,
         turn.c.tokens_partial,
+        turn.c.lane,
         sa.func.count().label("turns"),
         sa.func.coalesce(sa.func.sum(turn.c.input_tokens), 0).label("input_tokens"),
         sa.func.coalesce(sa.func.sum(turn.c.output_tokens), 0).label("output_tokens"),
-    ).group_by(turn.c.model, turn.c.outcome, turn.c.tokens_partial)
+    ).group_by(turn.c.model, turn.c.outcome, turn.c.tokens_partial, turn.c.lane)
     if filtros_turno:
         q = q.where(sa.and_(*filtros_turno))
 
     total = 0
     desfechos: dict[str, int] = {}
     uso: dict[str, TokenUse] = {}
+    raias: dict[str, int] = {}
     for linha in (await connection.execute(q)).mappings():
         n = _int(linha["turns"])
+        raia = _raia(linha)
+        # ⚠️ A contagem por raia é feita ANTES do filtro, e é o que permite
+        # dizer o que ficou de fora. Ver o docstring.
+        raias[raia] = raias.get(raia, 0) + n
+        if lane is not None and raia != lane:
+            continue
         total += n
         desfecho = _desfecho(linha)
         if desfecho:
@@ -1359,6 +1471,8 @@ async def gather_sample(
         edit_delta=delta,
         edits_compared=comparados,
         edits_unreadable=ilegiveis,
+        lanes=raias,
+        lane_filter=lane,
     )
 
 
@@ -1960,6 +2074,79 @@ def _standing_cost(app_spec: Mapping[str, Any] | None) -> Any:
     )
 
 
+def _notas_de_raia(sample: Sample) -> list[str]:
+    """O que esta conta INCLUI e o que ela deixou de fora, por raia (`i-158`).
+
+    ⭐ **A regra 3 da issue: o painel NUNCA exclui em silêncio.** Excluir calado
+    transforma uma decisão de leitura em número — quem lê vê "76 turnos" e não
+    tem como saber que a janela tinha 88. Então toda exclusão sai por escrito,
+    com a contagem, e discriminada por raia: *"12 de teste"* e *"12 sem raia
+    declarada"* pedem coisas diferentes de quem lê (a primeira é o mecanismo
+    funcionando; a segunda é uma lacuna a fechar).
+
+    E a ausência de raia também fala. Os três casos são distintos e nenhum é
+    zero:
+
+    * ninguém CONTOU as raias (banco sem a revisão 0014) —
+      :attr:`Sample.lane_unknown`;
+    * contou-se, e ninguém DECLAROU — :attr:`Sample.undeclared_lane`;
+    * declarou-se, e a conta está restrita a uma delas.
+    """
+    if sample.turns == 0 and not sample.lanes:
+        return []  # `nothing_to_look_at` já diz o que há a dizer.
+
+    notas: list[str] = []
+    if sample.lane_unknown:
+        notas.append(
+            "⚠️ A RAIA destes turnos NÃO FOI CONTADA — este banco ainda não "
+            "tem `dna_turn.lane` (revisão alembic 0014), ou o leitor não a "
+            "trouxe. Não é 'nenhum turno de teste': é uma pergunta que não "
+            "chegou a ser feita, e a conta abaixo pode conter exercício."
+        )
+        return notas
+
+    if sample.lane_filter is not None:
+        alvo = sample.lane_filter or "NÃO DECLARADA"
+        fora = sample.excluded_turns
+        if fora:
+            detalhe = ", ".join(
+                f"{n} {raia or 'sem raia declarada'}"
+                for raia, n in sorted(sample.excluded_by_lane.items())
+                if n
+            )
+            notas.append(
+                f"⭐ Esta conta é da raia {alvo} e conta {sample.turns} de "
+                f"{sample.lanes_seen} turnos da janela: {fora} ficaram DE FORA "
+                f"({detalhe})."
+            )
+        else:
+            notas.append(
+                f"Esta conta é da raia {alvo}, e os {sample.turns} turnos da "
+                "janela são todos dela — nada foi excluído."
+            )
+    elif len(sample.lanes) > 1 or sample.undeclared_lane:
+        # Sem filtro, a conta soma TUDO. Se há mais de uma raia ali dentro, ou
+        # se há turnos sem raia, quem lê precisa saber — a soma não é de uso.
+        detalhe = ", ".join(
+            f"{n} {raia or 'sem raia declarada'}"
+            for raia, n in sorted(sample.lanes.items())
+            if n
+        )
+        notas.append(
+            f"⚠️ Esta conta soma TODAS as raias ({detalhe}). Turno de teste "
+            "custou tokens de verdade e NÃO é uso — para a conta do uso, leia "
+            "a raia `real`."
+        )
+    if sample.undeclared_lane and sample.lane_filter != "":
+        notas.append(
+            f"{sample.undeclared_lane} turno(s) da janela não declaram raia. "
+            "Vazio ali é NÃO DECLARADO — não é `real` e não é `test`, e "
+            "nenhum backfill vai adivinhar qual era: quem serve o turno "
+            "precisa passar `lane` em `stamp_turn`."
+        )
+    return notas
+
+
 def read_yield(
     sample: Sample,
     *,
@@ -2007,6 +2194,11 @@ def read_yield(
     standing = _standing_cost(app)
 
     notas: list[str] = []
+    # ⭐ A RAIA vem PRIMEIRO, antes de qualquer número (`i-158`), e a ordem é a
+    # regra: quem lê precisa saber SOBRE O QUE a conta é antes de ler a conta.
+    # Uma exclusão anunciada no rodapé é uma exclusão que metade das pessoas lê
+    # depois de já ter decidido.
+    notas.extend(_notas_de_raia(sample))
     if sample.turns == 0:
         notas.append(
             "⭐ NÃO HÁ O QUE OLHAR: nenhum turno na amostra. Um relatório "
@@ -2124,10 +2316,23 @@ def render(reading: YieldReading) -> list[str]:
     if reading.nothing_to_look_at:
         linhas.append("⭐ NÃO HÁ O QUE OLHAR — nenhum turno na amostra.")
     else:
+        # ⭐ A raia entra na PRIMEIRA linha, colada na contagem (`i-158`). É a
+        # mesma disciplina do `label` de :class:`Number`: um qualificador que
+        # não aparece na mesma linha do número é um qualificador que ninguém lê,
+        # e "76 turnos" sem dizer de que raia é a pior versão disso — parece
+        # completo.
+        raia = reading.sample.lane_filter
+        de_que_raia = (
+            f"raia {raia or 'NÃO DECLARADA'} · " if raia is not None else ""
+        )
+        excluidos = reading.sample.excluded_turns
+        fora = (
+            f" · {excluidos} turno(s) FORA desta conta" if excluidos else ""
+        )
         linhas.append(
-            f"{reading.sample.turns} turno(s) · "
+            f"{de_que_raia}{reading.sample.turns} turno(s) · "
             f"{reading.sample.declared_outcomes} com desfecho declarado · "
-            f"{reading.sample.decided} decisão(ões) de HITL"
+            f"{reading.sample.decided} decisão(ões) de HITL{fora}"
         )
     for campo, rotulo in ROWS:
         resposta = getattr(reading, campo)
