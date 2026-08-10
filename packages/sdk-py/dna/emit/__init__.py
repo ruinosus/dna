@@ -127,6 +127,11 @@ class EmitMcpServer:
     transport: str
     #: Server endpoint (``streamable_http`` only), else None.
     url: str | None = None
+    #: Executable and process options for ``stdio`` transports.
+    command: str | None = None
+    args: list[str] = field(default_factory=list)
+    env: dict[str, str] = field(default_factory=dict)
+    cwd: str | None = None
     #: Auth block by env-var NAME (``{kind, env, header?}``) — never a secret
     #: value. Empty when the federation declares no auth.
     auth: dict[str, Any] = field(default_factory=dict)
@@ -809,6 +814,10 @@ def _project_mcp_servers(mi: Any, agent_spec: Any) -> list["EmitMcpServer"]:
                 ref=ref,
                 transport=transport,
                 url=_spec_get(fspec, "url"),
+                command=_spec_get(fspec, "command"),
+                args=list(_spec_get(fspec, "args") or []),
+                env=dict(_spec_get(fspec, "env") or {}),
+                cwd=_spec_get(fspec, "cwd"),
                 auth=dict(auth) if isinstance(auth, dict) else {},
                 allowed_tools=allowed,
                 propagate_tenant=True if propagate is None else bool(propagate),

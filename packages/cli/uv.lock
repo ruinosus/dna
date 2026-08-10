@@ -357,7 +357,7 @@ wheels = [
 
 [[package]]
 name = "dna-cli"
-version = "0.75.0"
+version = "0.76.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
@@ -435,7 +435,7 @@ provides-extras = ["mcp", "api", "a2a", "graph", "scaffold", "quota", "dev"]
 
 [[package]]
 name = "dna-sdk"
-version = "0.75.0"
+version = "0.76.0"
 source = { editable = "../sdk-py" }
 dependencies = [
     { name = "aiofiles" },
@@ -456,6 +456,7 @@ requires-dist = [
     { name = "ag-ui-protocol", marker = "extra == 'agno-copilot'", specifier = ">=0.1.19" },
     { name = "agent-framework", marker = "extra == 'maf'", specifier = "==1.12.1" },
     { name = "agent-framework-ag-ui", marker = "extra == 'maf'", specifier = "==1.0.0" },
+    { name = "agent-framework-github-copilot", marker = "extra == 'github-copilot'", specifier = "==1.0.0" },
     { name = "agno", marker = "extra == 'agno-copilot'", specifier = ">=2.6.12" },
     { name = "aiofiles", specifier = ">=24.1" },
     { name = "aiosqlite", marker = "extra == 'sqlite'", specifier = ">=0.20" },
@@ -463,8 +464,10 @@ requires-dist = [
     { name = "alembic", marker = "extra == 'sqlite'", specifier = ">=1.13" },
     { name = "asyncpg", marker = "extra == 'postgres'", specifier = ">=0.29" },
     { name = "chevron", specifier = ">=0.14" },
+    { name = "chonkie", marker = "extra == 'knowledge'", specifier = ">=1.7,<2" },
     { name = "detoxify", marker = "extra == 'safety-ml'", specifier = ">=0.5" },
     { name = "dna-sdk", extras = ["all"], marker = "extra == 'dev'" },
+    { name = "dna-sdk", extras = ["knowledge"], marker = "extra == 'dev'" },
     { name = "dna-sdk", extras = ["postgres"], marker = "extra == 'search-pgvector'" },
     { name = "dna-sdk", extras = ["postgres", "sqlite", "sql", "re2", "otel", "mime"], marker = "extra == 'all'" },
     { name = "dna-sdk", extras = ["search-pgvector"], marker = "extra == 'dev'" },
@@ -500,7 +503,7 @@ requires-dist = [
     { name = "typing-extensions", marker = "python_full_version < '3.13'", specifier = ">=4.4" },
     { name = "uvicorn", marker = "extra == 'dev'", specifier = ">=0.30" },
 ]
-provides-extras = ["postgres", "sqlite", "safety-ml", "sql", "mime", "otel", "embed-onnx", "search-sqlite", "search-pgvector", "agno-copilot", "runtime", "maf", "re2", "all", "dev"]
+provides-extras = ["postgres", "sqlite", "safety-ml", "sql", "mime", "otel", "embed-onnx", "search-sqlite", "search-pgvector", "agno-copilot", "runtime", "maf", "github-copilot", "re2", "knowledge", "all", "dev"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "aiosqlite", specifier = ">=0.22.1" }]

@@ -219,6 +219,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Novidades
 
+- **O SDK Python ganha uma porta pública e neutra para runtimes consumidores,**
+  com `DnaClient`, `ResolvedAgent`, `ResolvedTool`, `ResolvedMcpServer` e o
+  catálogo de Kinds/instâncias. A resolução parte do source efetivo, usa
+  `Genome.spec.default_agent` quando o nome não é explícito e preserva prompt
+  composto, contratos completos de Tool, política de confirmação e MCP HTTP ou
+  stdio. O extra `dna-sdk[github-copilot]` adiciona um binding puro para
+  `GitHubCopilotAgent`: DNA continua dono da definição declarativa; CLI,
+  sessões, streaming, permissões interativas e lifecycle continuam no app
+  consumidor (`s-runtime-github-copilot-harness`).
+
 - **O turno ganha DESFECHO, e o zero de tokens para de ter dois significados**
   (`s-turno-tem-desfecho` / `spec-rendimento-do-copiloto`). Migração **0012**,
   pg-only, aditiva.

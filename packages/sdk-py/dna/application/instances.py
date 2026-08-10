@@ -569,10 +569,23 @@ async def list_kinds_impl(
         refusal = bootstrap_write_refusal(port) if is_bootstrap_kind(port) else None
         del_refusal = delete_refusal(port)
         storage = getattr(port, "storage", None)
+        is_declarative = bool(getattr(port, "__declarative__", False))
+        is_builtin_descriptor = bool(
+            getattr(port, "__builtin_descriptor__", False)
+        )
+        registration_status = (
+            "revoked"
+            if getattr(port, "__revoked__", False)
+            else "approved"
+            if is_declarative and not is_builtin_descriptor
+            else "builtin"
+        )
         entries.append({
             "kind": port.kind,
             "alias": getattr(port, "alias", None),
             "api_version": port.api_version,
+            "origin": getattr(port, "origin", None),
+            "registration_status": registration_status,
             "family": family,
             "plane": getattr(port, "plane", "composition"),
             "display_label": getattr(port, "display_label", None),

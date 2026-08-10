@@ -12,6 +12,15 @@ from dna.emit import (
 )
 from dna.prompts import PromptLibrary, load_prompts
 from dna.tools import ToolLibrary, ToolSurface, load_tools
+from dna.client import DnaClient
+from dna.definitions import (
+    KindDescriptor,
+    ResolvedAgent,
+    ResolvedMcpServer,
+    ResolvedTool,
+    resolve_agent,
+    resolve_copilot,
+)
 
 __all__ = [
     "Kernel",
@@ -31,4 +40,11 @@ __all__ = [
     "available_targets",
     "EmitContext",
     "EmitResult",
+    "DnaClient",
+    "KindDescriptor",
+    "ResolvedAgent",
+    "ResolvedMcpServer",
+    "ResolvedTool",
+    "resolve_agent",
+    "resolve_copilot",
 ]

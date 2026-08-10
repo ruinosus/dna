@@ -1,0 +1,1 @@
+"""Optional pure bindings from resolved DNA definitions to runtime objects."""
