@@ -11,6 +11,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.77.0] - 2026-08-10
+
+### Added
+
+- Added the runtime-neutral `RuntimeBinding` record Kind and the public
+  `DnaClient.resolve_runtime_binding()` projection. Bindings select an Agent,
+  protocol, provider, named host reference, and lifecycle policies without
+  embedding endpoints, credentials, transports, subscriptions, or sessions.
+- Added the public Python consumer surface for live DNA definitions:
+  `DnaClient`, `ResolvedAgent`, `ResolvedTool`, `ResolvedMcpServer`, and the
+  `dna-sdk[github-copilot]` binding. DNA owns portable definitions while the
+  consuming runtime retains CLI, streaming, permissions, and session lifecycle.
+- Added explicit lane attribution to runtime telemetry and ROI accounting so
+  parameterized and normal turns contribute to the correct lane without being
+  counted twice.
+
+## Historical unreconciled changes
+
 > ⚠️ **Dívida herdada, registrada em 31/07/2026.** O que está nesta seção
 > descreve trabalho **já publicado** entre a 0.27.0 e a 0.40.2: aquelas releases
 > foram cortadas sem mover `[Unreleased]` para seções de versão. Não faz parte da
@@ -2524,7 +2542,8 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.42.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.77.0...HEAD
+[0.77.0]: https://github.com/ruinosus/dna/compare/v0.76.0...v0.77.0
 [0.42.0]: https://github.com/ruinosus/dna/compare/v0.41.0...v0.42.0
 [0.41.0]: https://github.com/ruinosus/dna/compare/v0.40.2...v0.41.0
 [0.17.0]: https://github.com/ruinosus/dna/compare/v0.16.0...v0.17.0
