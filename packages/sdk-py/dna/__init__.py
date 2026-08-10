@@ -1,6 +1,11 @@
 """DNA SDK v3 — Microkernel + Extensions for declarative agent configuration."""
 from dna.kernel import Kernel
-from dna.kernel.errors import AgentNotFound, ToolNotFound, UnknownLayout
+from dna.kernel.errors import (
+    AgentNotFound,
+    RuntimeBindingNotFound,
+    ToolNotFound,
+    UnknownLayout,
+)
 from dna.kernel.boot.runtime import Runtime
 from dna.package_scope import PackageScopeNotFound, anchor_scopes_root
 from dna.emit import (
@@ -17,7 +22,9 @@ from dna.definitions import (
     KindDescriptor,
     ResolvedAgent,
     ResolvedMcpServer,
+    ResolvedRuntimeBinding,
     ResolvedTool,
+    RuntimePolicy,
     resolve_agent,
     resolve_copilot,
 )
@@ -26,6 +33,7 @@ __all__ = [
     "Kernel",
     "Runtime",
     "AgentNotFound",
+    "RuntimeBindingNotFound",
     "ToolNotFound",
     "UnknownLayout",
     "PromptLibrary",
@@ -44,7 +52,9 @@ __all__ = [
     "KindDescriptor",
     "ResolvedAgent",
     "ResolvedMcpServer",
+    "ResolvedRuntimeBinding",
     "ResolvedTool",
+    "RuntimePolicy",
     "resolve_agent",
     "resolve_copilot",
 ]

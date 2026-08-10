@@ -51,7 +51,7 @@ readable, so it is reproduced from source rather than asserted:
 
 ## Logical model — Kinds and their references
 
-86 Kinds are registered. Each is an instance, not a table: a
+87 Kinds are registered. Each is an instance, not a table: a
 Kind costs a YAML descriptor and zero migrations, which is the point
 of an open type system. The cost is that references between Kinds are
 not database foreign keys — they are fields holding a name.
@@ -71,7 +71,7 @@ than either:
 
 `*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the instance name.
 
-**156 edges: 112 declared, 44 composition-only — of which 38 are ENFORCED at write time.** 40 of 86 Kinds declare at least one relation, and 2 fields are listed below as gaps.
+**157 edges: 113 declared, 44 composition-only — of which 39 are ENFORCED at write time.** 41 of 87 Kinds declare at least one relation, and 2 fields are listed below as gaps.
 
 !!! warning "Declared is not enforced"
 
@@ -107,6 +107,7 @@ flowchart LR
     portfolio["portfolio (5 Kinds)"]
     presidio["presidio (1 Kind)"]
     research["research (1 Kind)"]
+    runtime["runtime (1 Kind)"]
     sdlc["sdlc (26 Kinds)"]
     soulspec["soulspec (1 Kind)"]
     tenant["tenant (6 Kinds)"]
@@ -122,6 +123,7 @@ flowchart LR
     portfolio -->|1| cloud
     portfolio -->|1| intel
     portfolio -->|1| tenant
+    runtime -->|1| helix
     sdlc -->|8| helix
     sdlc -->|1| research
     tenant -->|1| portfolio
@@ -130,7 +132,7 @@ flowchart LR
 
 ### Detail by group
 
-All 86 Kinds in one diagram is an unreadable hairball, so
+All 87 Kinds in one diagram is an unreadable hairball, so
 each group with at least 2 edges gets its
 own. A group carrying more than 20 edges is
 split again by tier, which keeps the enforced edges legible instead
@@ -444,7 +446,7 @@ erDiagram
     TestRun }o..}o Task : "verifies [Kind/name] *"
 ```
 
-Groups with fewer than 2 edges (listed, not drawn): `cloud`, `collab`, `evidence`, `intel`, `research`.
+Groups with fewer than 2 edges (listed, not drawn): `cloud`, `collab`, `evidence`, `intel`, `research`, `runtime`.
 
 ### Declared relations (`spec.relations`)
 
@@ -512,6 +514,7 @@ the runtime does not follow it — read `By` for why.
 | `Project` | `repo_refs` | `Repo` | many | `name` | yes |  |  |
 | `Project` | `workspace_id` | `Workspace` | one | `workspace_id` |  |  | yes |
 | `Research` | `cited_by` *(poly)* | `*` | many | `Kind/name` |  |  |  |
+| `RuntimeBinding` | `agent` | `Agent` | one | `name` | yes |  | yes |
 | `Solution` | `apps` | `App` | many | `name` | yes |  |  |
 | `SourceArtifact` | `derived_refs` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `Spec` | `epic` | `Epic` | one | `name` | yes |  |  |

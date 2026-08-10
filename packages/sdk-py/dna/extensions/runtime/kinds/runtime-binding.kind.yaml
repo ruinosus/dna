@@ -1,0 +1,66 @@
+apiVersion: github.com/ruinosus/dna/core/v1
+kind: KindDefinition
+metadata:
+  name: runtime-binding
+spec:
+  target_api_version: github.com/ruinosus/dna/runtime/v1alpha1
+  target_kind: RuntimeBinding
+  alias: runtime-binding
+  origin: github.com/ruinosus/dna/runtime
+  plane: record
+  prompt_target: false
+  flatten_in_context: false
+  storage:
+    type: yaml
+    container: runtime-bindings
+  relations:
+    agent:
+      to: Agent
+      cardinality: one
+  schema:
+    type: object
+    additionalProperties: false
+    required: [agent, runtime, host]
+    properties:
+      agent:
+        type: string
+        minLength: 1
+        description: Portable DNA Agent instance selected by this binding.
+      runtime:
+        type: object
+        additionalProperties: false
+        required: [protocol]
+        properties:
+          protocol:
+            type: string
+            minLength: 1
+            description: Runtime protocol identifier, such as ahp or ag-ui.
+          provider:
+            type: string
+            minLength: 1
+            description: Optional provider implementation identifier.
+      host:
+        type: object
+        additionalProperties: false
+        required: [ref]
+        properties:
+          ref:
+            type: string
+            minLength: 1
+            pattern: '^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$'
+            description: Deployment-resolved host name; never a raw endpoint.
+      policy:
+        type: object
+        additionalProperties: false
+        properties:
+          sessions:
+            type: string
+            enum: [host-authoritative, client-authoritative]
+          reconnect:
+            type: string
+            enum: [resume, fresh]
+          confirmations:
+            type: string
+            enum: [host, client]
+  presentation:
+    fields: [agent, runtime, host, policy]

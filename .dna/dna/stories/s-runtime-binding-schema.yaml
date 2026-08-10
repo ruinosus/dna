@@ -1,0 +1,78 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: rt47o5say2i6
+  name: s-runtime-binding-schema
+spec:
+  title: RuntimeBinding schema and resolved contract
+  description: Add the first protocol-neutral RuntimeBinding Kind and Python SDK resolution contract.
+  status: in-progress
+  feature: f-runtime-bindings
+  priority: high
+  labels:
+  - sdk-py
+  - runtime-binding
+  acceptance_criteria:
+  - Given a RuntimeBinding instance, when DNA parses it, then agent, protocol, provider, host reference, and supported policies are typed and validated.
+  - Given a named RuntimeBinding, when a consumer resolves it, then the SDK returns immutable runtime-neutral data without importing AHP or resolving endpoints and credentials.
+  - Given a missing or malformed binding, when a consumer parses or resolves it, then DNA fails with an actionable error and does not silently invent deployment configuration.
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - 'Code: builtin Kind, typed model, public resolved projection, and resolver are implemented.'
+  - 'Tests: schema, parsing, successful resolution, missing binding, and forbidden deployment fields are covered.'
+  - 'Docs: public API ownership boundary is documented in code and fixtures.'
+  definition_of_done_source: cli-create
+  created_at: '2026-08-10T21:13:09+00:00'
+  updated_at: '2026-08-10T21:52:07+00:00'
+  timeline:
+  - at: '2026-08-10T21:13:09+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-10T21:13:17+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-10T21:46:28+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Durante a validação completa, a suíte de knowledge falhou porque uv run sincroniza [dependency-groups].dev, que não declarava chonkie; a auto-referência dna-sdk[knowledge] existia apenas no extra dev distribuível. Decisão: declarar chonkie diretamente nos dois ambientes dev e adicionar um ratchet de metadata, preservando knowledge como extra de produção.'
+    commit_ref: d9d48bb95237cdfcdc4f99524d65684ffa54c82f
+  - at: '2026-08-10T21:52:00+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-runtime-binding-schema
+    summary: TestGuide tg-runtime-binding-schema (integration)
+  - at: '2026-08-10T21:52:07+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-runtime-binding-schema-20260810-215203
+    summary: TestRun tr-tg-runtime-binding-schema-20260810-215203 → pass
+    outcome: pass
+  - at: '2026-08-10T21:53:00+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/373'
+    pr_url: https://github.com/ruinosus/dna/pull/373
+  produces:
+  - kind: Plan
+    name: plan-s-runtime-binding-schema
+    role: implementation
+    at: '2026-08-10T21:13:17+00:00'
+  - kind: TestGuide
+    name: tg-runtime-binding-schema
+    role: test-guide
+    at: '2026-08-10T21:52:00+00:00'
+  - kind: TestRun
+    name: tr-tg-runtime-binding-schema-20260810-215203
+    role: test-run
+    at: '2026-08-10T21:52:07+00:00'

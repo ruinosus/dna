@@ -268,7 +268,7 @@ _NOT_REFUSALS = {
     # may not have it". They subclass LookupError so a caller can catch the
     # miss narrowly; giving them the refusal base would make every face report
     # a typo'd agent name as a policy denial.
-    "AgentNotFound", "ToolNotFound",
+    "AgentNotFound", "RuntimeBindingNotFound", "ToolNotFound",
     # A typo'd `layout:` — an authoring error in the instance, surfaced loudly
     # so it cannot silently fall through to the Kind default.
     "UnknownLayout",

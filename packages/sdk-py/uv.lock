@@ -1603,6 +1603,7 @@ sqlite = [
 [package.dev-dependencies]
 dev = [
     { name = "aiosqlite" },
+    { name = "chonkie" },
 ]
 
 [package.metadata]
@@ -1619,10 +1620,10 @@ requires-dist = [
     { name = "alembic", marker = "extra == 'sqlite'", specifier = ">=1.13" },
     { name = "asyncpg", marker = "extra == 'postgres'", specifier = ">=0.29" },
     { name = "chevron", specifier = ">=0.14" },
+    { name = "chonkie", marker = "extra == 'dev'", specifier = ">=1.7,<2" },
     { name = "chonkie", marker = "extra == 'knowledge'", specifier = ">=1.7,<2" },
     { name = "detoxify", marker = "extra == 'safety-ml'", specifier = ">=0.5" },
     { name = "dna-sdk", extras = ["all"], marker = "extra == 'dev'" },
-    { name = "dna-sdk", extras = ["knowledge"], marker = "extra == 'dev'" },
     { name = "dna-sdk", extras = ["postgres"], marker = "extra == 'search-pgvector'" },
     { name = "dna-sdk", extras = ["postgres", "sqlite", "sql", "re2", "otel", "mime"], marker = "extra == 'all'" },
     { name = "dna-sdk", extras = ["search-pgvector"], marker = "extra == 'dev'" },
@@ -1661,7 +1662,10 @@ requires-dist = [
 provides-extras = ["postgres", "sqlite", "safety-ml", "sql", "mime", "otel", "embed-onnx", "search-sqlite", "search-pgvector", "agno-copilot", "runtime", "maf", "github-copilot", "re2", "knowledge", "all", "dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "aiosqlite", specifier = ">=0.22.1" }]
+dev = [
+    { name = "aiosqlite", specifier = ">=0.22.1" },
+    { name = "chonkie", specifier = ">=1.7,<2" },
+]
 
 [[package]]
 name = "docstring-parser"

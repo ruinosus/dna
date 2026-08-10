@@ -195,6 +195,20 @@ tools as first-class agent tools — zero code, zero deploy. Secrets never
 live in the doc: the auth block carries env-var *names*, read at connect
 time.
 
+## Runtime bindings
+
+### RuntimeBinding
+
+A [`RuntimeBinding`](../reference/kinds/record.md#runtimebinding)
+(`runtime-binding`) selects how a portable `Agent` is attached to a runtime.
+It names the runtime protocol and optional provider, points to a deployment
+host by reference, and declares policies for confirmations, reconnects, and
+session authority. Deployments resolve the host reference; the binding never
+stores a raw endpoint, credentials, transport objects, subscriptions, or
+sessions. Those remain the runtime host's responsibility, so the same agent
+definition and binding can move between environments without embedding
+deployment state in DNA.
+
 ## Model registry
 
 ### ModelProfile
