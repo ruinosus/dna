@@ -676,6 +676,14 @@ class AgentNotFound(LookupError):
         super().__init__(f"Agent '{agent}' not found")
 
 
+class RuntimeBindingNotFound(LookupError):
+    """A named RuntimeBinding does not exist in the selected DNA scope."""
+
+    def __init__(self, binding: str) -> None:
+        self.binding = binding
+        super().__init__(f"RuntimeBinding '{binding}' not found")
+
+
 class InstanceIdLookupUnsupported(CapabilityRefusal, NotImplementedError):
     """The wired source cannot resolve a ``metadata.id`` prefix (i-114).
 

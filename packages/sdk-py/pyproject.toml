@@ -185,9 +185,10 @@ dev = [
     # conformance suite runs for real in the CI postgres job (redundant with
     # [all] but explicit, mirroring search-sqlite).
     "dna-sdk[search-pgvector]",
-    # i-154 — o cortador REAL na suíte. `chunk_markdown` é a cola sobre o
-    # `chonkie`, e um teste dela com dublê mediria o dublê.
-    "dna-sdk[knowledge]",
+    # i-154 — o cortador REAL na suíte. Dependência direta de dev de propósito:
+    # uma auto-referência `dna-sdk[knowledge]` não materializa com confiança o
+    # extra no próprio ambiente editável, e deixou a suíte sem `chonkie`.
+    "chonkie>=1.7,<2",
     # A face A2A é servida/consumida pelo SDK OFICIAL. O extra de PRODUÇÃO é
     # `dna-cli[a2a]` (o código serve HTTP, e o dna-cli é quem declara faces);
     # aqui ele entra em `dev` porque os testes moram neste pacote. Os testes que
@@ -231,6 +232,7 @@ portfolio = "dna.extensions.portfolio:PortfolioExtension"
 artifact = "dna.extensions.artifact:ArtifactExtension"
 mif = "dna.extensions.mif:MifExtension"
 a2a = "dna.extensions.a2a:A2AExtension"
+runtime = "dna.extensions.runtime:RuntimeExtension"
 
 [build-system]
 requires = ["hatchling"]
@@ -279,6 +281,9 @@ markers = [
 [dependency-groups]
 dev = [
     "aiosqlite>=0.22.1",
+    # `uv run` syncs this group, not `[project.optional-dependencies].dev`.
+    # Keep direct so knowledge tests cannot silently run without the real splitter.
+    "chonkie>=1.7,<2",
 ]
 
 [project.urls]

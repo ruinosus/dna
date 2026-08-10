@@ -1,0 +1,23 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  id: cna4rnp3eccd
+  name: f-runtime-bindings
+spec:
+  title: Portable runtime bindings
+  description: Bind portable DNA agents to named runtime targets without moving transport, credentials, or session lifecycle into DNA.
+  status: in-development
+  epic: e-dna-portability
+  reporter: claude-code
+  priority: high
+  labels:
+  - portability
+  - runtime
+  created_at: '2026-08-10T21:13:06+00:00'
+  updated_at: '2026-08-10T21:13:06+00:00'
+  timeline:
+  - at: '2026-08-10T21:13:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: in-development

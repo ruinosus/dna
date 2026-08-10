@@ -1,0 +1,18 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  id: hs5yf7qdcwom
+  name: tg-runtime-binding-schema
+spec:
+  description: Validate the protocol-neutral RuntimeBinding Kind, public SDK projection, deployment boundary, and repeatable knowledge test environment.
+  kind_of_test: integration
+  status: active
+  steps:
+  - action: Run uv run python -m pytest tests/test_runtime_binding_kind.py tests/test_dev_dependencies.py tests/test_knowledge_ingest.py -q --timeout=120 from packages/sdk-py
+    expected: 51 focused tests pass, including real chonkie ingestion and raw endpoint refusal
+  - action: Run uv run python -m pytest tests -q --timeout=120 from packages/sdk-py
+    expected: the complete SDK suite passes without excluding knowledge ingestion
+  verifies:
+  - Story/s-runtime-binding-schema
+  created_at: '2026-08-10T21:51:56+00:00'
+  updated_at: '2026-08-10T21:51:56+00:00'

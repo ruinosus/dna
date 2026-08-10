@@ -16,6 +16,7 @@ from dna.application import (
 from dna.definitions import (
     KindDescriptor,
     ResolvedAgent,
+    ResolvedRuntimeBinding,
     ResolvedTool,
     resolve_agent,
     resolve_copilot,
@@ -204,6 +205,18 @@ class DnaClient:
             resolve_copilot, manifest, name, model=model, provider=provider,
         )
         return await self._enrich_tools(definition)
+
+    async def resolve_runtime_binding(self, name: str) -> ResolvedRuntimeBinding:
+        """Resolve a binding while leaving host lookup to the deployment."""
+        from dna.kernel.errors import RuntimeBindingNotFound
+
+        try:
+            result = await self.instances.get("RuntimeBinding", name)
+        except LookupError as error:
+            raise RuntimeBindingNotFound(name) from error
+        return ResolvedRuntimeBinding.from_instance(
+            result["instance"], scope=result["scope"],
+        )
 
     async def _enrich_tools(self, definition: ResolvedAgent) -> ResolvedAgent:
         tools: list[ResolvedTool] = []

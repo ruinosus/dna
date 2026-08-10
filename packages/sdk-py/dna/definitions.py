@@ -102,6 +102,68 @@ class ResolvedAgent:
 
 
 @dataclass(frozen=True)
+class RuntimePolicy:
+    """Runtime behavior requested by a binding, without transport state."""
+
+    sessions: str | None = None
+    reconnect: str | None = None
+    confirmations: str | None = None
+
+
+@dataclass(frozen=True)
+class ResolvedRuntimeBinding:
+    """A portable runtime target resolved without endpoints or credentials."""
+
+    name: str
+    agent: str
+    protocol: str
+    host_ref: str
+    provider: str | None = None
+    policy: RuntimePolicy = field(default_factory=RuntimePolicy)
+    scope: str | None = None
+
+    @classmethod
+    def from_instance(
+        cls, raw: Mapping[str, Any], *, scope: str | None = None,
+    ) -> ResolvedRuntimeBinding:
+        metadata = raw.get("metadata") or {}
+        spec = raw.get("spec") or {}
+        runtime = spec.get("runtime") or {}
+        host = spec.get("host") or {}
+        policy = spec.get("policy") or {}
+        required = {
+            "metadata.name": metadata.get("name"),
+            "spec.agent": spec.get("agent"),
+            "spec.runtime.protocol": runtime.get("protocol"),
+            "spec.host.ref": host.get("ref"),
+        }
+        missing = [path for path, value in required.items() if not value]
+        if missing:
+            raise ValueError(
+                "RuntimeBinding is missing required fields: " + ", ".join(missing)
+            )
+        host_ref = str(host["ref"])
+        if "://" in host_ref:
+            raise ValueError(
+                "RuntimeBinding spec.host.ref must name a deployment host, "
+                "not contain a raw endpoint"
+            )
+        return cls(
+            name=str(metadata["name"]),
+            agent=str(spec["agent"]),
+            protocol=str(runtime["protocol"]),
+            provider=(str(runtime["provider"]) if runtime.get("provider") else None),
+            host_ref=host_ref,
+            policy=RuntimePolicy(
+                sessions=policy.get("sessions"),
+                reconnect=policy.get("reconnect"),
+                confirmations=policy.get("confirmations"),
+            ),
+            scope=scope,
+        )
+
+
+@dataclass(frozen=True)
 class KindDescriptor:
     """Stable public description of a Kind active in one scope."""
 
@@ -224,7 +286,9 @@ __all__ = [
     "KindDescriptor",
     "ResolvedAgent",
     "ResolvedMcpServer",
+    "ResolvedRuntimeBinding",
     "ResolvedTool",
+    "RuntimePolicy",
     "resolve_agent",
     "resolve_copilot",
 ]
