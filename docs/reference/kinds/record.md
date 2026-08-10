@@ -1663,6 +1663,27 @@ A Role is one rung of the RBAC ladder expressed as data — its role_id, display
 | `rank` | integer | yes | Ladder rank — higher = more access. highest-role-wins compares this across a user's memberships. |
 | `role_id` | string | yes | Canonical role id, e.g. owner / admin / member / guest. The doc name SHOULD equal this; Membership.role references it. |
 
+## RuntimeBinding
+
+- **Alias:** `runtime-binding`
+- **apiVersion:** `github.com/ruinosus/dna/runtime/v1alpha1`
+- **Plane:** record
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `agent` | string | yes | Portable DNA Agent instance selected by this binding. |
+| `host` | object | yes |  |
+| `host.ref` | string | yes | Deployment-resolved host name; never a raw endpoint. |
+| `policy` | object |  |  |
+| `policy.confirmations` | string |  | Um de: `host`, `client`. |
+| `policy.reconnect` | string |  | Um de: `resume`, `fresh`. |
+| `policy.sessions` | string |  | Um de: `host-authoritative`, `client-authoritative`. |
+| `runtime` | object | yes |  |
+| `runtime.protocol` | string | yes | Runtime protocol identifier, such as ahp or ag-ui. |
+| `runtime.provider` | string |  | Optional provider implementation identifier. |
+
 ## Solution
 
 - **Alias:** `helix-solution`
