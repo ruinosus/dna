@@ -95,6 +95,12 @@ spec:
     marked_dod: 4
     evidence: 'Focused SDK suites: 8 passed; public imports and lock check passed; README and CHANGELOG updated; credentials remain env references; consumer owns lifecycle.'
     by: github-copilot
+  - at: '2026-08-10T11:54:19+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/372'
+    pr_url: https://github.com/ruinosus/dna/pull/372
   produces:
   - kind: Plan
     name: plan-s-runtime-github-copilot-harness
