@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.79.0] - 2026-08-11
+
 ### Added
 
 - Added portable `GenUIComponent` contracts and explicit `GenUIBinding`
@@ -19,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Extended TypeScript Kind authoring with typed traits, presentation,
   relations, plane, scope, and tenant options while preserving the positional
   traits API.
+
+### Fixed
+
+- Aligned the `dna-cli[harness]` dependency with the current `dna-sdk` minor
+  line so the published harness extra resolves the SDK released alongside it.
 
 ## [0.78.0] - 2026-08-11
 
@@ -2564,7 +2571,8 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.78.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.79.0...HEAD
+[0.79.0]: https://github.com/ruinosus/dna/compare/v0.78.0...v0.79.0
 [0.78.0]: https://github.com/ruinosus/dna/compare/v0.77.0...v0.78.0
 [0.77.0]: https://github.com/ruinosus/dna/compare/v0.76.0...v0.77.0
 [0.42.0]: https://github.com/ruinosus/dna/compare/v0.41.0...v0.42.0
