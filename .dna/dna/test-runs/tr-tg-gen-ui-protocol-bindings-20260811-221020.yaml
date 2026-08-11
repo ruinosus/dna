@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  id: 5gxemakv3do5
+  name: tr-tg-gen-ui-protocol-bindings-20260811-221020
+spec:
+  guide_ref: tg-gen-ui-protocol-bindings
+  outcome: pass
+  verifies:
+  - Story/s-gen-ui-protocol-bindings
+  executed_by: claude-code
+  executed_at: '2026-08-11T22:10:20+00:00'

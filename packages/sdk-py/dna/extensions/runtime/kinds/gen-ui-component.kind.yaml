@@ -2,7 +2,7 @@ apiVersion: github.com/ruinosus/dna/core/v1
 kind: KindDefinition
 metadata:
   name: gen-ui-component
-  description: Portable contracts for host-rendered generative UI components.
+  description: Portable governance contracts for generative UI components.
 spec:
   target_api_version: github.com/ruinosus/dna/runtime/v1alpha1
   target_kind: GenUIComponent
@@ -22,19 +22,25 @@ spec:
     type: object
     additionalProperties: false
     required:
-      - tool_name
       - description
-      - input_schema
-      - renderer_ref
       - protocols
       - required_capabilities
       - fallback
+    anyOf:
+      - required: [tool_name, input_schema, renderer_ref]
+      - required: [mcp]
+      - required: [a2ui]
+    dependentRequired:
+      tool_name: [input_schema, renderer_ref]
+      input_schema: [tool_name, renderer_ref]
+      renderer_ref: [tool_name, input_schema]
+      grounding: [mcp]
     properties:
       tool_name:
         type: string
         minLength: 1
         pattern: '^[a-z][a-z0-9_]{0,63}$'
-        description: Stable tool name exposed to the agent.
+        description: Legacy host tool name; use mcp.tool_name for MCP-owned tools.
       description:
         type: string
         minLength: 1
@@ -52,12 +58,56 @@ spec:
             type: array
             items:
               type: string
-        description: JSON Schema for the component tool arguments.
+        description: Legacy host tool arguments; MCP owns its discovered input schema.
       renderer_ref:
         type: string
         minLength: 1
         pattern: '^[a-z][a-z0-9-]{0,63}$'
-        description: Symbolic key resolved only against renderers compiled into the host.
+        description: Legacy symbolic key resolved only against renderers compiled into the host.
+      mcp:
+        type: object
+        additionalProperties: false
+        required: [tool_name]
+        properties:
+          tool_name:
+            type: string
+            minLength: 1
+            pattern: '^[a-z][a-z0-9_]{0,63}$'
+            description: MCP tool whose discovered schema and result own the data contract.
+          resource_uri:
+            type: string
+            minLength: 1
+            pattern: '^ui://[^[:space:]]+$'
+            description: Optional MCP Apps resource rendered by compatible hosts.
+        description: MCP-owned tool and optional portable MCP App resource.
+      a2ui:
+        type: object
+        additionalProperties: false
+        required: [catalog_id, component]
+        properties:
+          catalog_id:
+            type: string
+            minLength: 1
+            description: Host-owned A2UI catalog identifier negotiated by the runtime.
+          component:
+            type: string
+            minLength: 1
+            description: Trusted component name in the declared A2UI catalog.
+        description: Native A2UI rendering binding without executable renderer code.
+      grounding:
+        type: object
+        additionalProperties: false
+        required: [source]
+        properties:
+          source:
+            type: string
+            enum: [mcp-tool-result]
+            description: Authoritative source for operational values rendered by the component.
+          enforce:
+            type: boolean
+            default: true
+            description: Fail closed when values cannot be traced to the authoritative source.
+        description: Structured provenance policy enforced by the consuming runtime.
       protocols:
         type: array
         minItems: 1
@@ -100,12 +150,9 @@ spec:
       - field: name
         label: Component
         role: identifier
-      - field: tool_name
-        label: Tool
-        role: title
       - field: description
         label: Description
-        role: subtitle
+        role: title
       - field: protocols
         label: Protocols
         role: tag

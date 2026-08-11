@@ -217,11 +217,18 @@ endpoint.
 ### GenUIComponent and GenUIBinding
 
 A [`GenUIComponent`](../reference/kinds/record.md#genuicomponent)
-(`runtime-gen-ui-component`) describes a portable UI tool contract: the tool
-name and input schema shown to an Agent, the protocols and host capabilities it
-requires, a non-visual fallback, and a symbolic `renderer_ref`. The reference
-is an external `ui-host` identifier, not executable code or a DNA relation. A
-host resolves it only against renderer implementations compiled into that host.
+(`runtime-gen-ui-component`) describes portable governance for a generative UI
+surface: supported protocols and host capabilities, a non-visual fallback, and
+the bindings a consumer may use. `mcp` names a discovered MCP tool and optional
+MCP Apps resource; MCP remains the owner of its input schema and tool result.
+`a2ui` selects a trusted component from a host-owned catalog. `grounding`
+declares when rendered operational values must come from an MCP tool result.
+
+The legacy `tool_name`, `input_schema`, and symbolic `renderer_ref` fields remain
+supported as one complete host-rendered binding. The reference is an external
+`ui-host` identifier, not executable code or a DNA relation. New components may
+instead declare `mcp`, `a2ui`, or both without duplicating an MCP tool schema in
+DNA. Every component must provide at least one complete rendering binding.
 
 A [`GenUIBinding`](../reference/kinds/record.md#genuibinding)
 (`runtime-gen-ui-binding`) assigns one or more component instance names to one

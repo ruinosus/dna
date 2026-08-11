@@ -908,19 +908,28 @@ A Feature is a shippable unit. It implements one or more UseCases, decomposes in
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
+| `a2ui` | object |  | Native A2UI rendering binding without executable renderer code. |
+| `a2ui.catalog_id` | string | yes | Host-owned A2UI catalog identifier negotiated by the runtime. |
+| `a2ui.component` | string | yes | Trusted component name in the declared A2UI catalog. |
 | `contract_version` | integer |  | Monotonic version of the tool argument contract. |
 | `description` | string | yes | Selection guidance presented to the agent. |
 | `fallback` | object | yes | Non-visual representation used when capabilities are unavailable. |
 | `fallback.message` | string |  |  |
 | `fallback.type` | string | yes | Um de: `text`, `markdown`. |
-| `input_schema` | object | yes | JSON Schema for the component tool arguments. |
+| `grounding` | object |  | Structured provenance policy enforced by the consuming runtime. |
+| `grounding.enforce` | boolean |  | Fail closed when values cannot be traced to the authoritative source. |
+| `grounding.source` | string | yes | Authoritative source for operational values rendered by the component. Um de: `mcp-tool-result`. |
+| `input_schema` | object |  | Legacy host tool arguments; MCP owns its discovered input schema. |
 | `input_schema.properties` | object | yes |  |
 | `input_schema.required` | array |  |  |
 | `input_schema.type` | any | yes |  |
+| `mcp` | object |  | MCP-owned tool and optional portable MCP App resource. |
+| `mcp.resource_uri` | string |  | Optional MCP Apps resource rendered by compatible hosts. |
+| `mcp.tool_name` | string | yes | MCP tool whose discovered schema and result own the data contract. |
 | `protocols` | array | yes | Agent-to-UI protocols capable of carrying this contract. |
-| `renderer_ref` | string | yes | Symbolic key resolved only against renderers compiled into the host. |
+| `renderer_ref` | string |  | Legacy symbolic key resolved only against renderers compiled into the host. |
 | `required_capabilities` | array | yes | Capabilities a host-agent path must advertise before registration. |
-| `tool_name` | string | yes | Stable tool name exposed to the agent. |
+| `tool_name` | string |  | Legacy host tool name; use mcp.tool_name for MCP-owned tools. |
 
 ## HtmlArtifact
 

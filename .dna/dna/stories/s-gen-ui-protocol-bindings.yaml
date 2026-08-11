@@ -1,0 +1,90 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: 4szdnhmcejka
+  name: s-gen-ui-protocol-bindings
+spec:
+  title: Evolve GenUIComponent with structured MCP, A2UI, and grounding bindings while pr
+  description: Evolve GenUIComponent with structured MCP, A2UI, and grounding bindings while preserving the v1alpha1 legacy host contract.
+  status: in-progress
+  feature: f-runtime-bindings
+  acceptance_criteria:
+  - Given a standards-native component, when it declares MCP or A2UI bindings without legacy tool schema fields, then the Kind parses and DnaClient returns typed protocol bindings.
+  - Given an existing host-rendered component, when it uses tool_name, input_schema, and renderer_ref, then it remains valid and resolves unchanged.
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Kind schema, public Python projections, client resolution, focused tests, generated reference, concepts documentation, changelog, and repository guards pass.
+  definition_of_done_source: cli-create
+  created_at: '2026-08-11T21:57:45+00:00'
+  updated_at: '2026-08-11T22:10:24+00:00'
+  timeline:
+  - at: '2026-08-11T21:57:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-11T21:57:53+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-11T22:07:12+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Kept GenUIComponent on runtime/v1alpha1 because the registry intentionally rejects the same Kind name across apiVersions. The evolution is additive: legacy host fields remain a complete supported binding, while MCP owns discovered tool schemas and A2UI names a trusted host catalog component.'
+    commit_ref: 6aed6ad921ae46244e2b4be405948b8ec7900c74
+  - at: '2026-08-11T22:07:35+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-gen-ui-protocol-bindings
+    summary: TestGuide tg-gen-ui-protocol-bindings (manual)
+  - at: '2026-08-11T22:07:42+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-gen-ui-protocol-bindings-20260811-220738
+    summary: TestRun tr-tg-gen-ui-protocol-bindings-20260811-220738 → pass
+    outcome: pass
+  - at: '2026-08-11T22:10:15+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-gen-ui-protocol-bindings
+    summary: TestGuide tg-gen-ui-protocol-bindings (manual)
+  - at: '2026-08-11T22:10:24+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-gen-ui-protocol-bindings-20260811-221020
+    summary: TestRun tr-tg-gen-ui-protocol-bindings-20260811-221020 → pass
+    outcome: pass
+  - at: '2026-08-11T22:12:05+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/379'
+    pr_url: https://github.com/ruinosus/dna/pull/379
+  produces:
+  - kind: Plan
+    name: plan-s-gen-ui-protocol-bindings
+    role: implementation
+    at: '2026-08-11T21:57:53+00:00'
+  - kind: TestGuide
+    name: tg-gen-ui-protocol-bindings
+    role: test-guide
+    at: '2026-08-11T22:07:35+00:00'
+  - kind: TestRun
+    name: tr-tg-gen-ui-protocol-bindings-20260811-220738
+    role: test-run
+    at: '2026-08-11T22:07:42+00:00'
+  - kind: TestRun
+    name: tr-tg-gen-ui-protocol-bindings-20260811-221020
+    role: test-run
+    at: '2026-08-11T22:10:24+00:00'
