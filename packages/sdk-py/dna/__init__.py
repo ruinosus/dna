@@ -19,6 +19,9 @@ from dna.prompts import PromptLibrary, load_prompts
 from dna.tools import ToolLibrary, ToolSurface, load_tools
 from dna.client import DnaClient
 from dna.definitions import (
+    GenUIA2UIBinding,
+    GenUIGroundingPolicy,
+    GenUIMcpBinding,
     KindDescriptor,
     ResolvedAgent,
     ResolvedGenUIBinding,
@@ -51,6 +54,9 @@ __all__ = [
     "EmitContext",
     "EmitResult",
     "DnaClient",
+    "GenUIA2UIBinding",
+    "GenUIGroundingPolicy",
+    "GenUIMcpBinding",
     "KindDescriptor",
     "ResolvedAgent",
     "ResolvedGenUIBinding",

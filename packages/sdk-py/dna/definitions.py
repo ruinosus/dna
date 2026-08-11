@@ -164,20 +164,47 @@ class ResolvedRuntimeBinding:
 
 
 @dataclass(frozen=True)
+class GenUIMcpBinding:
+    """MCP-owned data contract and optional portable App resource."""
+
+    tool_name: str
+    resource_uri: str | None = None
+
+
+@dataclass(frozen=True)
+class GenUIA2UIBinding:
+    """Trusted component selected from a host-owned A2UI catalog."""
+
+    catalog_id: str
+    component: str
+
+
+@dataclass(frozen=True)
+class GenUIGroundingPolicy:
+    """Provenance requirements enforced by the consuming runtime."""
+
+    source: str
+    enforce: bool = True
+
+
+@dataclass(frozen=True)
 class ResolvedGenUIComponent:
     """A portable GenUI contract resolved without executable renderer code."""
 
     name: str
-    tool_name: str
-    description: str
-    input_schema: Mapping[str, Any]
-    renderer_ref: str
-    protocols: tuple[str, ...]
-    required_capabilities: frozenset[str]
-    fallback_type: str
+    tool_name: str | None = None
+    description: str = ""
+    input_schema: Mapping[str, Any] | None = None
+    renderer_ref: str | None = None
+    protocols: tuple[str, ...] = ()
+    required_capabilities: frozenset[str] = frozenset()
+    fallback_type: str = "markdown"
     fallback_message: str | None = None
     contract_version: int = 1
     scope: str | None = None
+    mcp: GenUIMcpBinding | None = None
+    a2ui: GenUIA2UIBinding | None = None
+    grounding: GenUIGroundingPolicy | None = None
 
     @classmethod
     def from_instance(
@@ -186,12 +213,12 @@ class ResolvedGenUIComponent:
         metadata = raw.get("metadata") or {}
         spec = raw.get("spec") or {}
         fallback = spec.get("fallback") or {}
+        mcp = spec.get("mcp") or None
+        a2ui = spec.get("a2ui") or None
+        grounding = spec.get("grounding") or None
         required = {
             "name": metadata.get("name") or raw.get("name"),
-            "spec.tool_name": spec.get("tool_name"),
             "spec.description": spec.get("description"),
-            "spec.input_schema": spec.get("input_schema"),
-            "spec.renderer_ref": spec.get("renderer_ref"),
             "spec.protocols": spec.get("protocols"),
             "spec.fallback.type": fallback.get("type"),
         }
@@ -200,23 +227,67 @@ class ResolvedGenUIComponent:
             raise ValueError(
                 "GenUIComponent is missing required fields: " + ", ".join(missing)
             )
-        renderer_ref = str(spec["renderer_ref"])
-        if "://" in renderer_ref or "/" in renderer_ref:
+        legacy_fields = (
+            spec.get("tool_name"),
+            spec.get("input_schema"),
+            spec.get("renderer_ref"),
+        )
+        if not (all(legacy_fields) or mcp or a2ui):
+            raise ValueError(
+                "GenUIComponent requires a complete legacy host binding, "
+                "spec.mcp, or spec.a2ui"
+            )
+        renderer_ref = spec.get("renderer_ref")
+        if renderer_ref and ("://" in str(renderer_ref) or "/" in str(renderer_ref)):
             raise ValueError(
                 "GenUIComponent spec.renderer_ref must be a symbolic host key, "
                 "not code, a path, or a remote URL"
             )
+        if mcp and not mcp.get("tool_name"):
+            raise ValueError("GenUIComponent spec.mcp.tool_name is required")
+        if a2ui and not (a2ui.get("catalog_id") and a2ui.get("component")):
+            raise ValueError(
+                "GenUIComponent spec.a2ui.catalog_id and component are required"
+            )
+        if grounding and not grounding.get("source"):
+            raise ValueError("GenUIComponent spec.grounding.source is required")
         return cls(
             name=str(metadata.get("name") or raw["name"]),
-            tool_name=str(spec["tool_name"]),
             description=str(spec["description"]),
-            input_schema=dict(spec["input_schema"]),
-            renderer_ref=renderer_ref,
             protocols=tuple(str(item) for item in spec["protocols"]),
             required_capabilities=frozenset(
                 str(item) for item in spec.get("required_capabilities") or ()
             ),
             fallback_type=str(fallback["type"]),
+            tool_name=(str(spec["tool_name"]) if spec.get("tool_name") else None),
+            input_schema=(
+                dict(spec["input_schema"]) if spec.get("input_schema") else None
+            ),
+            renderer_ref=(str(renderer_ref) if renderer_ref else None),
+            mcp=(
+                GenUIMcpBinding(
+                    tool_name=str(mcp["tool_name"]),
+                    resource_uri=(
+                        str(mcp["resource_uri"])
+                        if mcp.get("resource_uri") else None
+                    ),
+                )
+                if mcp else None
+            ),
+            a2ui=(
+                GenUIA2UIBinding(
+                    catalog_id=str(a2ui["catalog_id"]),
+                    component=str(a2ui["component"]),
+                )
+                if a2ui else None
+            ),
+            grounding=(
+                GenUIGroundingPolicy(
+                    source=str(grounding["source"]),
+                    enforce=bool(grounding.get("enforce", True)),
+                )
+                if grounding else None
+            ),
             fallback_message=(
                 str(fallback["message"]) if fallback.get("message") else None
             ),
@@ -379,6 +450,9 @@ def resolve_copilot(
 
 
 __all__ = [
+    "GenUIA2UIBinding",
+    "GenUIGroundingPolicy",
+    "GenUIMcpBinding",
     "KindDescriptor",
     "ResolvedAgent",
     "ResolvedGenUIBinding",

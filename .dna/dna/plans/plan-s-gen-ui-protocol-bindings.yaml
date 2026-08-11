@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  id: 3fprr3uzo4nu
+  name: plan-s-gen-ui-protocol-bindings
+spec:
+  title: 'Plano: s-gen-ui-protocol-bindings'
+  date: '2026-08-11'
+  status: accepted
+  story_ref: s-gen-ui-protocol-bindings
+  journey_phase: plan
+  body: Add an additive v1alpha1 schema union for legacy, MCP, and A2UI bindings; project structured values through DnaClient; validate compatibility and regenerate documentation.
+  created_at: '2026-08-11T21:57:48+00:00'
+  updated_at: '2026-08-11T21:57:48+00:00'

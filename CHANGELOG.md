@@ -11,6 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Evolved `GenUIComponent` additively with structured `mcp`, `a2ui`, and
+  `grounding` bindings. Legacy host tool schemas and renderer references remain
+  supported, while MCP-native components can leave tool schema ownership to MCP
+  discovery and A2UI-native components can reference a host-owned catalog.
+
 ## [0.79.0] - 2026-08-11
 
 ### Added

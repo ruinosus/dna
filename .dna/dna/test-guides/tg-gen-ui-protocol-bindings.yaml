@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  id: bxapkc6bnijn
+  name: tg-gen-ui-protocol-bindings
+spec:
+  description: Verify structured GenUI protocol bindings, legacy compatibility, SDK regressions, and repository guards.
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: cd packages/sdk-py && uv run pytest tests/test_gen_ui_component_kind.py -q
+    expected: expect 20 passed
+  - action: cd packages/sdk-py && uv run --no-project pytest tests -q --timeout=120 -p no:cacheprovider
+    expected: expect SDK suite passes
+  - action: python3 scripts/brand_guard.py && git diff --check
+    expected: expect clean
+  verifies:
+  - Story/s-gen-ui-protocol-bindings
+  created_at: '2026-08-11T22:10:12+00:00'
+  updated_at: '2026-08-11T22:10:12+00:00'
