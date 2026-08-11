@@ -21,6 +21,8 @@ from dna.client import DnaClient
 from dna.definitions import (
     KindDescriptor,
     ResolvedAgent,
+    ResolvedGenUIBinding,
+    ResolvedGenUIComponent,
     ResolvedMcpServer,
     ResolvedRuntimeBinding,
     ResolvedTool,
@@ -51,6 +53,8 @@ __all__ = [
     "DnaClient",
     "KindDescriptor",
     "ResolvedAgent",
+    "ResolvedGenUIBinding",
+    "ResolvedGenUIComponent",
     "ResolvedMcpServer",
     "ResolvedRuntimeBinding",
     "ResolvedTool",

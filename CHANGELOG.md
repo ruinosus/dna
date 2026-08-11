@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added portable `GenUIComponent` contracts and explicit `GenUIBinding`
+  assignments from DNA Agents to renderer-independent UI tools, with typed
+  Python SDK projections and Agent-filtered component resolution.
+- Extended TypeScript Kind authoring with typed traits, presentation,
+  relations, plane, scope, and tenant options while preserving the positional
+  traits API.
+
 ## [0.78.0] - 2026-08-11
 
 ### Added

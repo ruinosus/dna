@@ -164,6 +164,102 @@ class ResolvedRuntimeBinding:
 
 
 @dataclass(frozen=True)
+class ResolvedGenUIComponent:
+    """A portable GenUI contract resolved without executable renderer code."""
+
+    name: str
+    tool_name: str
+    description: str
+    input_schema: Mapping[str, Any]
+    renderer_ref: str
+    protocols: tuple[str, ...]
+    required_capabilities: frozenset[str]
+    fallback_type: str
+    fallback_message: str | None = None
+    contract_version: int = 1
+    scope: str | None = None
+
+    @classmethod
+    def from_instance(
+        cls, raw: Mapping[str, Any], *, scope: str | None = None,
+    ) -> ResolvedGenUIComponent:
+        metadata = raw.get("metadata") or {}
+        spec = raw.get("spec") or {}
+        fallback = spec.get("fallback") or {}
+        required = {
+            "name": metadata.get("name") or raw.get("name"),
+            "spec.tool_name": spec.get("tool_name"),
+            "spec.description": spec.get("description"),
+            "spec.input_schema": spec.get("input_schema"),
+            "spec.renderer_ref": spec.get("renderer_ref"),
+            "spec.protocols": spec.get("protocols"),
+            "spec.fallback.type": fallback.get("type"),
+        }
+        missing = [path for path, value in required.items() if not value]
+        if missing:
+            raise ValueError(
+                "GenUIComponent is missing required fields: " + ", ".join(missing)
+            )
+        renderer_ref = str(spec["renderer_ref"])
+        if "://" in renderer_ref or "/" in renderer_ref:
+            raise ValueError(
+                "GenUIComponent spec.renderer_ref must be a symbolic host key, "
+                "not code, a path, or a remote URL"
+            )
+        return cls(
+            name=str(metadata.get("name") or raw["name"]),
+            tool_name=str(spec["tool_name"]),
+            description=str(spec["description"]),
+            input_schema=dict(spec["input_schema"]),
+            renderer_ref=renderer_ref,
+            protocols=tuple(str(item) for item in spec["protocols"]),
+            required_capabilities=frozenset(
+                str(item) for item in spec.get("required_capabilities") or ()
+            ),
+            fallback_type=str(fallback["type"]),
+            fallback_message=(
+                str(fallback["message"]) if fallback.get("message") else None
+            ),
+            contract_version=int(spec.get("contract_version", 1)),
+            scope=scope,
+        )
+
+
+@dataclass(frozen=True)
+class ResolvedGenUIBinding:
+    """An explicit assignment of GenUI components to one DNA Agent."""
+
+    name: str
+    agent: str
+    components: tuple[str, ...]
+    scope: str | None = None
+
+    @classmethod
+    def from_instance(
+        cls, raw: Mapping[str, Any], *, scope: str | None = None,
+    ) -> ResolvedGenUIBinding:
+        metadata = raw.get("metadata") or {}
+        spec = raw.get("spec") or {}
+        name = metadata.get("name") or raw.get("name")
+        required = {
+            "name": name,
+            "spec.agent": spec.get("agent"),
+            "spec.components": spec.get("components"),
+        }
+        missing = [path for path, value in required.items() if not value]
+        if missing:
+            raise ValueError(
+                "GenUIBinding is missing required fields: " + ", ".join(missing)
+            )
+        return cls(
+            name=str(name),
+            agent=str(spec["agent"]),
+            components=tuple(str(item) for item in spec["components"]),
+            scope=scope,
+        )
+
+
+@dataclass(frozen=True)
 class KindDescriptor:
     """Stable public description of a Kind active in one scope."""
 
@@ -285,6 +381,8 @@ def resolve_copilot(
 __all__ = [
     "KindDescriptor",
     "ResolvedAgent",
+    "ResolvedGenUIBinding",
+    "ResolvedGenUIComponent",
     "ResolvedMcpServer",
     "ResolvedRuntimeBinding",
     "ResolvedTool",

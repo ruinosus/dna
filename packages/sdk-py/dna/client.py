@@ -17,6 +17,8 @@ from dna.application import (
 from dna.definitions import (
     KindDescriptor,
     ResolvedAgent,
+    ResolvedGenUIBinding,
+    ResolvedGenUIComponent,
     ResolvedRuntimeBinding,
     ResolvedTool,
     resolve_agent,
@@ -224,6 +226,58 @@ class DnaClient:
         return ResolvedRuntimeBinding.from_instance(
             result["instance"], scope=result["scope"],
         )
+
+    async def list_gen_ui_bindings(
+        self, *, agent: str | None = None,
+    ) -> tuple[ResolvedGenUIBinding, ...]:
+        """Resolve GenUI assignments, optionally restricted to one DNA Agent."""
+        result = await self.instances.list(
+            "GenUIBinding",
+            fields=("agent", "components"),
+            filter={"agent": agent} if agent else None,
+            order_by=("name",),
+        )
+        return tuple(
+            ResolvedGenUIBinding.from_instance(row, scope=result["scope"])
+            for row in result["instances"]
+        )
+
+    async def list_gen_ui_components(
+        self, *, agent: str | None = None,
+    ) -> tuple[ResolvedGenUIComponent, ...]:
+        """Resolve portable GenUI contracts, optionally assigned to an Agent."""
+        fields = (
+            "tool_name",
+            "description",
+            "input_schema",
+            "renderer_ref",
+            "protocols",
+            "required_capabilities",
+            "fallback",
+            "contract_version",
+        )
+        result = await self.instances.list("GenUIComponent", fields=fields)
+        components = tuple(
+            ResolvedGenUIComponent.from_instance(row, scope=result["scope"])
+            for row in result["instances"]
+        )
+        if agent is None:
+            return components
+
+        bindings = await self.list_gen_ui_bindings(agent=agent)
+        assigned = {
+            component_name
+            for binding in bindings
+            for component_name in binding.components
+        }
+        by_name = {component.name: component for component in components}
+        missing = sorted(assigned - by_name.keys())
+        if missing:
+            raise ValueError(
+                f"GenUIBinding for Agent {agent!r} references unknown "
+                f"GenUIComponent instance(s): {', '.join(missing)}"
+            )
+        return tuple(by_name[name] for name in sorted(assigned))
 
     async def _enrich_tools(self, definition: ResolvedAgent) -> ResolvedAgent:
         tools: list[ResolvedTool] = []
