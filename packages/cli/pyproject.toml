@@ -31,6 +31,7 @@ dependencies = [
 dna = "dna_cli:main"
 
 [project.optional-dependencies]
+harness = ["dna-sdk[github-copilot]>=0.77,<0.78"]
 # The MCP runtime face (`dna mcp serve`) — expose the live DNA (definitions +
 # SDLC + memory) over the Model Context Protocol. Built on FastMCP (the
 # standalone `fastmcp` framework) for native stdio+HTTP transports and built-in

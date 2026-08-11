@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
+import os
 from types import TracebackType
 from typing import Any, Self
 
@@ -157,7 +158,7 @@ class DnaClient:
     async def from_env(
         cls,
         *,
-        scope: str,
+        scope: str | None = None,
         tenant: str | None = None,
         base_dir: str | None = None,
     ) -> DnaClient:
@@ -168,6 +169,12 @@ class DnaClient:
 
         kernel = Kernel.auto()
         source = await source_from_url(resolve_source_url(base_dir), kernel=kernel)
+        resolved_scope = scope or os.getenv("DNA_SCOPE_DEFAULT")
+        if resolved_scope is None:
+            scopes = await source.list_scopes()
+            if not scopes:
+                raise ValueError("No DNA scopes found in the configured source")
+            resolved_scope = scopes[0]
         kernel.source(source)
         if getattr(source, "supports_readers", False):
             from dna.adapters.filesystem import FilesystemCache
@@ -181,8 +188,8 @@ class DnaClient:
 
             kernel.cache(_NoopCache())
         kernel._main_loop = asyncio.get_running_loop()
-        live = LiveDna(base_scope=scope, kernel=kernel, provider=None)
-        return cls(live, scope=scope, tenant=tenant, source=source)
+        live = LiveDna(base_scope=resolved_scope, kernel=kernel, provider=None)
+        return cls(live, scope=resolved_scope, tenant=tenant, source=source)
 
     async def resolve_agent(
         self,

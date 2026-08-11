@@ -11,6 +11,23 @@ adapter `serving.framework` names (default `"langchain"`); `build_copilot` is
 now a back-compat shim over it."""
 
 from dna.runtime.builder import build_copilot, build_runtime
+from dna.runtime.harness import (
+    AgentHarness,
+    AgentHarnessPort,
+    HarnessConfigurationError,
+    HarnessError,
+    HarnessEvent,
+    HarnessExecutionError,
+    HarnessNotFound,
+    RunHandle,
+    RunRequest,
+    SessionResumeError,
+)
+from dna.runtime.harness_registry import (
+    available_harnesses,
+    get_harness,
+    register_harness,
+)
 from dna.runtime.port import (
     AGUIApp,
     RuntimeHooks,
@@ -49,6 +66,19 @@ from dna.runtime.thread_store import (
 __all__ = [
     "build_copilot",
     "build_runtime",
+    "AgentHarness",
+    "AgentHarnessPort",
+    "HarnessConfigurationError",
+    "HarnessError",
+    "HarnessEvent",
+    "HarnessExecutionError",
+    "HarnessNotFound",
+    "RunHandle",
+    "RunRequest",
+    "SessionResumeError",
+    "available_harnesses",
+    "get_harness",
+    "register_harness",
     "AGUIApp",
     "RuntimeHooks",
     "RuntimePort",

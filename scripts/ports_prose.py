@@ -1156,6 +1156,39 @@ PROSE: dict[str, dict] = {
         ],
     },
     # ══ runtime ══════════════════════════════════════════════════════════
+    "AgentHarnessPort": {
+        "group": "runtime",
+        "role": "extend",
+        "one_line": "How a resolved agent runs inside a provider-owned SDK loop",
+        "summary": (
+            "A runtime adapter serves an AG-UI app; a consumer harness starts one "
+            "portable run while the provider SDK keeps ownership of its model and "
+            "tool loop. DNA owns the request, lifecycle events, cancellation and "
+            "session metadata around that loop."
+        ),
+        "when": (
+            "You want `dna run` or another DNA consumer to execute through a provider "
+            "SDK that has no shipped harness."
+        ),
+        "minimum": (
+            "A `provider` id and `start(definition, request)` returning a `RunHandle`. "
+            "Register it with `register_harness(...)`."
+        ),
+        "lights_up": (
+            "`RuntimeBinding.provider: <yours>` and `dna run --provider <yours>`. An "
+            "unregistered provider fails with the available harness ids instead of "
+            "silently selecting another execution path."
+        ),
+        "prove": (
+            "Drive the adapter with its provider SDK fake and assert lifecycle order, "
+            "streaming, cancellation and session resume. "
+            "`tests/runtime/test_github_copilot_harness.py` is the reference."
+        ),
+        "adapters_extra": [
+            "`GitHubCopilotHarness` (`dna.runtime.adapters.github_copilot_harness`) — "
+            "provider `github-copilot`, needs the CLI `[harness]` extra"
+        ],
+    },
     "RuntimePort": {
         "group": "runtime",
         "role": "extend",

@@ -44,6 +44,28 @@ The handle a `RuntimePort` hands back: a framework-agnostic AG-UI app the host m
 
 **Shipped implementations** — none in-tree. This port has no reference adapter yet: you would be writing the first one.
 
+## AgentHarnessPort
+
+`dna.runtime.harness.AgentHarnessPort` · typing-only (not `@runtime_checkable`) · :material-power-plug: **extension point**
+
+A runtime adapter serves an AG-UI app; a consumer harness starts one portable run while the provider SDK keeps ownership of its model and tool loop. DNA owns the request, lifecycle events, cancellation and session metadata around that loop.
+
+**The contract**
+
+| Member | Signature | What it must do |
+| --- | --- | --- |
+| `start` | <code>async def start(self, definition: ResolvedAgent, request: RunRequest) -> RunHandle</code> |  |
+
+**Swap it when** — You want `dna run` or another DNA consumer to execute through a provider SDK that has no shipped harness.
+
+**The minimum that works** — A `provider` id and `start(definition, request)` returning a `RunHandle`. Register it with `register_harness(...)`.
+
+**What it lights up** — `RuntimeBinding.provider: <yours>` and `dna run --provider <yours>`. An unregistered provider fails with the available harness ids instead of silently selecting another execution path.
+
+**How you prove it** — Drive the adapter with its provider SDK fake and assert lifecycle order, streaming, cancellation and session resume. `tests/runtime/test_github_copilot_harness.py` is the reference.
+
+**Shipped implementations** — `GitHubCopilotHarness` (`dna.runtime.adapters.github_copilot_harness`) — provider `github-copilot`, needs the CLI `[harness]` extra
+
 ## RuntimePort
 
 `dna.runtime.port.RuntimePort` · `@runtime_checkable` · :material-power-plug: **extension point**

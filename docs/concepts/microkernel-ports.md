@@ -55,7 +55,7 @@ all.
 !!! tip "Five is where you start, not what there is"
 
     These five are the load-bearing ones. They are not the whole surface: DNA
-    has **60** `Protocol`s, **37** of which are things you are meant to
+    has **61** `Protocol`s, **38** of which are things you are meant to
     implement — the conversation purge, the eval target, the contradiction
     scribe, the scaffold resolver, the runtime backend, the embedding
     provider, and more.
@@ -176,5 +176,5 @@ in [How to write an emitter](../guides/writing-an-emitter.md).
   ports.
 - [How to write a source adapter](../guides/write-a-source-adapter.md) — the
   SourcePort contract in full.
-- [The port catalogue](../reference/ports/index.md) — all 60 ports, grouped by
+- [The port catalogue](../reference/ports/index.md) — all 61 ports, grouped by
   what you are trying to change.

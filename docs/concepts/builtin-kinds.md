@@ -209,6 +209,11 @@ sessions. Those remain the runtime host's responsibility, so the same agent
 definition and binding can move between environments without embedding
 deployment state in DNA.
 
+For a local consumer run, resolve the binding with
+`dna run --binding local-copilot --prompt "Continue the analysis"`. The command
+uses the binding's Agent and provider; it does not treat `spec.host.ref` as an
+endpoint.
+
 ## Model registry
 
 ### ModelProfile
