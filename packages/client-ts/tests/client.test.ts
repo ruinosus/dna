@@ -214,6 +214,40 @@ describe("DnaClient", () => {
     });
   });
 
+  test("authorKind forwards the complete declarative contract", async () => {
+    const { fetchImpl, calls } = stub({ kind: "GenUIComponent", approved: false });
+    const dna = new DnaClient({ baseUrl: BASE, fetch: fetchImpl });
+
+    await dna.authorKind(
+      "GenUIComponent",
+      { type: "object", additionalProperties: false },
+      {
+        scope: "opentag",
+        tenant: "operations",
+        traits: ["genui.component"],
+        plane: "record",
+        presentation: { fields: ["tool_name", "renderer_ref"] },
+        relations: {
+          owner: { to: "Agent", cardinality: "one" },
+        },
+      },
+    );
+
+    expect(calls[0]!.method).toBe("POST");
+    const url = new URL(calls[0]!.url);
+    expect(url.pathname).toBe("/v1/kinds");
+    expect(url.searchParams.get("scope")).toBe("opentag");
+    expect(url.searchParams.get("tenant")).toBe("operations");
+    expect(JSON.parse(calls[0]!.body!)).toEqual({
+      kind: "GenUIComponent",
+      schema: { type: "object", additionalProperties: false },
+      traits: ["genui.component"],
+      plane: "record",
+      presentation: { fields: ["tool_name", "renderer_ref"] },
+      relations: { owner: { to: "Agent", cardinality: "one" } },
+    });
+  });
+
   test("workspace-boundary routes do NOT receive the default scope/tenant", async () => {
     // The workspace boundary is resolved from the caller's VERIFIED identity, so
     // a client-level tenant default must never leak onto these routes and imply

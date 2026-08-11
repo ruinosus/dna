@@ -885,6 +885,43 @@ A Feature is a shippable unit. It implements one or more UseCases, decomposes in
 | `use_cases` | array |  |  |
 | `watchers` | array |  |  |
 
+## GenUIBinding
+
+- **Alias:** `runtime-gen-ui-binding`
+- **apiVersion:** `github.com/ruinosus/dna/runtime/v1alpha1`
+- **Plane:** record
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `agent` | string | yes | DNA Agent instance that receives these components. |
+| `components` | array | yes | GenUIComponent instance names available to the Agent. |
+
+## GenUIComponent
+
+- **Alias:** `runtime-gen-ui-component`
+- **apiVersion:** `github.com/ruinosus/dna/runtime/v1alpha1`
+- **Plane:** record
+
+**Spec fields**
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `contract_version` | integer |  | Monotonic version of the tool argument contract. |
+| `description` | string | yes | Selection guidance presented to the agent. |
+| `fallback` | object | yes | Non-visual representation used when capabilities are unavailable. |
+| `fallback.message` | string |  |  |
+| `fallback.type` | string | yes | Um de: `text`, `markdown`. |
+| `input_schema` | object | yes | JSON Schema for the component tool arguments. |
+| `input_schema.properties` | object | yes |  |
+| `input_schema.required` | array |  |  |
+| `input_schema.type` | any | yes |  |
+| `protocols` | array | yes | Agent-to-UI protocols capable of carrying this contract. |
+| `renderer_ref` | string | yes | Symbolic key resolved only against renderers compiled into the host. |
+| `required_capabilities` | array | yes | Capabilities a host-agent path must advertise before registration. |
+| `tool_name` | string | yes | Stable tool name exposed to the agent. |
+
 ## HtmlArtifact
 
 - **Alias:** `sdlc-html-artifact`

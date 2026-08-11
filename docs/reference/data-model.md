@@ -51,7 +51,7 @@ readable, so it is reproduced from source rather than asserted:
 
 ## Logical model — Kinds and their references
 
-87 Kinds are registered. Each is an instance, not a table: a
+89 Kinds are registered. Each is an instance, not a table: a
 Kind costs a YAML descriptor and zero migrations, which is the point
 of an open type system. The cost is that references between Kinds are
 not database foreign keys — they are fields holding a name.
@@ -71,7 +71,7 @@ than either:
 
 `*` on a label marks a polymorphic relation (several possible target Kinds, or one chosen per value). `[key]` marks the addressing when it is not the instance name.
 
-**157 edges: 113 declared, 44 composition-only — of which 39 are ENFORCED at write time.** 41 of 87 Kinds declare at least one relation, and 2 fields are listed below as gaps.
+**159 edges: 115 declared, 44 composition-only — of which 41 are ENFORCED at write time.** 42 of 89 Kinds declare at least one relation, and 2 fields are listed below as gaps.
 
 !!! warning "Declared is not enforced"
 
@@ -107,7 +107,7 @@ flowchart LR
     portfolio["portfolio (5 Kinds)"]
     presidio["presidio (1 Kind)"]
     research["research (1 Kind)"]
-    runtime["runtime (1 Kind)"]
+    runtime["runtime (3 Kinds)"]
     sdlc["sdlc (26 Kinds)"]
     soulspec["soulspec (1 Kind)"]
     tenant["tenant (6 Kinds)"]
@@ -123,7 +123,7 @@ flowchart LR
     portfolio -->|1| cloud
     portfolio -->|1| intel
     portfolio -->|1| tenant
-    runtime -->|1| helix
+    runtime -->|2| helix
     sdlc -->|8| helix
     sdlc -->|1| research
     tenant -->|1| portfolio
@@ -132,7 +132,7 @@ flowchart LR
 
 ### Detail by group
 
-All 87 Kinds in one diagram is an unreadable hairball, so
+All 89 Kinds in one diagram is an unreadable hairball, so
 each group with at least 2 edges gets its
 own. A group carrying more than 20 edges is
 split again by tier, which keeps the enforced edges legible instead
@@ -252,6 +252,19 @@ erDiagram
     Project }o--|| Organization : "org_ref"
     Project }o--}o Repo : "repo_refs"
     Project }o..|| Workspace : "workspace_id [workspace_id]"
+```
+
+#### `runtime` (3 edges)
+
+```mermaid
+erDiagram
+    Agent
+    GenUIBinding
+    GenUIComponent
+    RuntimeBinding
+    GenUIBinding }o--|| Agent : "agent"
+    GenUIBinding }o--}o GenUIComponent : "components"
+    RuntimeBinding }o--|| Agent : "agent"
 ```
 
 #### `sdlc` — declared (56 edges)
@@ -446,7 +459,7 @@ erDiagram
     TestRun }o..}o Task : "verifies [Kind/name] *"
 ```
 
-Groups with fewer than 2 edges (listed, not drawn): `cloud`, `collab`, `evidence`, `intel`, `research`, `runtime`.
+Groups with fewer than 2 edges (listed, not drawn): `cloud`, `collab`, `evidence`, `intel`, `research`.
 
 ### Declared relations (`spec.relations`)
 
@@ -483,6 +496,8 @@ the runtime does not follow it — read `By` for why.
 | `Feature` | `produces` *(poly)* | `*` | many | `{kind, name}` |  |  |  |
 | `Feature` | `sprint_ref` | `Sprint` | one | `name` | yes |  |  |
 | `Feature` | `stories` | `Story` | many | `name` | yes | `feature` |  |
+| `GenUIBinding` | `agent` | `Agent` | one | `name` | yes |  | yes |
+| `GenUIBinding` | `components` | `GenUIComponent` | many | `name` | yes |  |  |
 | `Genome` | `default_agent` | `Agent` | one | `name` | yes |  |  |
 | `Genome` | `default_llm` | `ModelProfile` | one | `model_id` |  |  | yes |
 | `Genome` | `owner_tenant` | `Workspace` | one | `workspace_id` |  |  | yes |
@@ -659,7 +674,7 @@ leave, with the reason recorded in the Kind and in
 | `Initiative` | `theme_ref` | `undeclared` | reference-shaped field name, and neither a relation nor an identifier declares what it is |
 | `LayerPolicy` | `layer_id` | `undeclared` | reference-shaped field name, and neither a relation nor an identifier declares what it is |
 
-### Fields that are NOT references (19)
+### Fields that are NOT references (20)
 
 The gap list above is short because these fields ANSWERED it. A
 reference-shaped name with no relation used to be an invitation with
@@ -681,6 +696,7 @@ stale against a Kind it no longer describes.
 | `AgentGrant` | `subject` | `external` | `idp` |
 | `AgentSession` | `session_id` | `external` | `agent-tool` |
 | `AuditLog` | `request_id` | `external` | `http-request` |
+| `GenUIComponent` | `renderer_ref` | `external` | `ui-host` |
 | `ModelProfile` | `model_id` | `self` | — |
 | `PlanBinding` | `account_id` | `self` | — |
 | `PlanBinding` | `stripe_customer_id` | `external` | `stripe` |

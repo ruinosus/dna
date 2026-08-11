@@ -64,7 +64,7 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | `volatile_spec_fields` |  | Extra write-/runtime-stamped spec fields excluded from the canonical digest, unioned with the base set {updated_at, version, created_at}. |
 | `workitem_common` |  | DEPRECATED back-compat shorthand for schema_fragments: ["sdlc/workitem-common"]. Python-only. |
 
-## Registered Kinds (87)
+## Registered Kinds (89)
 
 ### Composition plane
 
@@ -126,6 +126,8 @@ Declarative Kind descriptor — the format of builtin `kinds/*.kind.yaml` packag
 | [EvalSuite](record.md#evalsuite) | `eval-eval-suite` | `github.com/ruinosus/dna/eval/v1` |
 | [Evidence](record.md#evidence) | `evidence-evidence` | `github.com/ruinosus/dna/evidence/v1` |
 | [Feature](record.md#feature) | `sdlc-feature` | `github.com/ruinosus/dna/sdlc/v1` |
+| [GenUIBinding](record.md#genuibinding) | `runtime-gen-ui-binding` | `github.com/ruinosus/dna/runtime/v1alpha1` |
+| [GenUIComponent](record.md#genuicomponent) | `runtime-gen-ui-component` | `github.com/ruinosus/dna/runtime/v1alpha1` |
 | [HtmlArtifact](record.md#htmlartifact) | `sdlc-html-artifact` | `github.com/ruinosus/dna/sdlc/v1` |
 | [Initiative](record.md#initiative) | `sdlc-initiative` | `github.com/ruinosus/dna/sdlc/v1` |
 | [IntelInsight](record.md#intelinsight) | `intel-insight` | `github.com/ruinosus/dna/intel/v1` |

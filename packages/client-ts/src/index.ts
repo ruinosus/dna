@@ -77,6 +77,14 @@ export interface ScopeTenant {
   tenant?: string;
 }
 
+/** Optional declarations and routing for an authored tenant Kind. */
+export interface AuthorKindOptions extends ScopeTenant {
+  traits?: string[];
+  presentation?: Record<string, unknown> | string[];
+  relations?: Record<string, unknown>;
+  plane?: "composition" | "record";
+}
+
 /**
  * A typed, read-first client for the DNA REST read-API.
  *
@@ -238,13 +246,25 @@ export class DnaClient {
   async authorKind(
     kind: string,
     schema: Record<string, unknown>,
-    traits?: string[],
+    traitsOrOptions?: string[] | AuthorKindOptions,
     query?: ScopeTenant,
   ) {
+    const options = Array.isArray(traitsOrOptions)
+      ? { ...query, traits: traitsOrOptions }
+      : traitsOrOptions;
     return this.unwrap(
       await this.raw.POST("/v1/kinds", {
-        params: { query: this.q(query) },
-        body: { kind, schema, traits },
+        params: {
+          query: this.q({ scope: options?.scope, tenant: options?.tenant }),
+        },
+        body: {
+          kind,
+          schema,
+          traits: options?.traits,
+          presentation: options?.presentation,
+          relations: options?.relations,
+          plane: options?.plane,
+        },
       }),
     );
   }
