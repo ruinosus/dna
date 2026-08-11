@@ -36,6 +36,7 @@ from dna_cli import (
     recall_cmd,
     rename_cmd,
     research_cmd,
+    run_cmd,
     scope_cmd,
     sdlc_cmd,
     solution_cmd,
@@ -89,6 +90,7 @@ main.add_command(sdlc_cmd.sdlc)
 main.add_command(research_cmd.research)
 main.add_command(recall_cmd.recall)
 main.add_command(recall_cmd.search)
+main.add_command(run_cmd.run)
 main.add_command(memory_cmd.memory)
 main.add_command(genome_cmd.genome)
 main.add_command(graph_cmd.graph)
