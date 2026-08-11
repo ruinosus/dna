@@ -214,6 +214,23 @@ For a local consumer run, resolve the binding with
 uses the binding's Agent and provider; it does not treat `spec.host.ref` as an
 endpoint.
 
+### GenUIComponent and GenUIBinding
+
+A [`GenUIComponent`](../reference/kinds/record.md#genuicomponent)
+(`runtime-gen-ui-component`) describes a portable UI tool contract: the tool
+name and input schema shown to an Agent, the protocols and host capabilities it
+requires, a non-visual fallback, and a symbolic `renderer_ref`. The reference
+is an external `ui-host` identifier, not executable code or a DNA relation. A
+host resolves it only against renderer implementations compiled into that host.
+
+A [`GenUIBinding`](../reference/kinds/record.md#genuibinding)
+(`runtime-gen-ui-binding`) assigns one or more component instance names to one
+DNA `Agent`. Keeping assignment separate from the component contract allows a
+component to be reused by several Agents without duplicating its JSON Schema.
+Consumers can resolve only the components assigned to an Agent; an Agent with
+no binding receives none, and a binding that names a missing component fails
+instead of silently dropping the reference.
+
 ## Model registry
 
 ### ModelProfile
