@@ -11,6 +11,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.78.0] - 2026-08-11
+
+### Added
+
+- Added provider-neutral consumer harness contracts for portable requests,
+  lifecycle events, typed failures, cancellation, and session metadata while
+  provider SDKs retain ownership of their model and tool loops. The first
+  shipped adapter executes through the official GitHub Copilot SDK and supports
+  new sessions and resume.
+- Added `dna run` for executing an Agent or `RuntimeBinding` through a consumer
+  harness, with human-readable or JSONL streaming, provider selection, session
+  resume, automatic scope discovery, and Ctrl+C cancellation.
+
 ## [0.77.0] - 2026-08-10
 
 ### Added
@@ -2542,7 +2555,8 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.77.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.78.0...HEAD
+[0.78.0]: https://github.com/ruinosus/dna/compare/v0.77.0...v0.78.0
 [0.77.0]: https://github.com/ruinosus/dna/compare/v0.76.0...v0.77.0
 [0.42.0]: https://github.com/ruinosus/dna/compare/v0.41.0...v0.42.0
 [0.41.0]: https://github.com/ruinosus/dna/compare/v0.40.2...v0.41.0
