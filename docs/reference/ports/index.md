@@ -1,8 +1,8 @@
 # The port catalogue
 
-DNA's kernel is a **microkernel**: it knows how to store, validate, version and compose instances, and nothing else. Everything else is a `typing.Protocol` — a **port** — that something outside the core satisfies. There are **60** of them.
+DNA's kernel is a **microkernel**: it knows how to store, validate, version and compose instances, and nothing else. Everything else is a `typing.Protocol` — a **port** — that something outside the core satisfies. There are **61** of them.
 
-Most of this page exists to answer one question: *I want to change X — what do I implement?* **37** of the 60 are things you are meant to implement. The rest are listed anyway, marked as what they are, because a seam you cannot see is indistinguishable from a seam that does not exist — and guessing wrong costs more than being told no.
+Most of this page exists to answer one question: *I want to change X — what do I implement?* **38** of the 61 are things you are meant to implement. The rest are listed anyway, marked as what they are, because a seam you cannot see is indistinguishable from a seam that does not exist — and guessing wrong costs more than being told no.
 
 ## What the three roles mean
 
@@ -12,7 +12,7 @@ Most of this page exists to answer one question: *I want to change X — what do
 | :material-hand-extended: handed to you | The kernel implements it and passes it in. You call it; you never satisfy it. |
 | :material-lock: internal seam | A back-reference between the kernel and one of its own collaborators, published as a Protocol so the decomposition stays honest and testable. Not a plug-in surface. |
 
-## All 60 ports
+## All 61 ports
 
 ### Storage & retrieval — where instances live (10)
 
@@ -71,13 +71,14 @@ Where the storage ports face *inward*, these face **out**: the kernel composes a
 | [EmitterPort](emit.md#emitterport) | `dna.emit` | extension point | How a composed agent becomes a runtime's native artifact | 8 |
 | [ScaffoldResolver](emit.md#scaffoldresolver) | `dna.emit.scaffold` | extension point | Where a scaffold template's source comes from | 1 |
 
-### Runtime & threads — serving a live copilot (7)
+### Runtime & threads — serving a live copilot (8)
 
 Emitting produces a file. These ports produce a **running** agent, and the conversation state that outlives a single request. The thread ports are split along a real fault line — what the framework knows versus what only the host knows — and the split is the whole design.
 
 | Port | Module | Role | What it decides | Shipped |
 | --- | --- | --- | --- | --- |
 | [AGUIApp](runtime.md#aguiapp) | `dna.runtime.port` | extension point | The mountable app a runtime adapter returns | — |
+| [AgentHarnessPort](runtime.md#agentharnessport) | `dna.runtime.harness` | extension point | How a resolved agent runs inside a provider-owned SDK loop | 1 |
 | [RuntimePort](runtime.md#runtimeport) | `dna.runtime.port` | extension point | How a composed agent becomes a *running* one | 2 |
 | [ThreadIndexPort](runtime.md#threadindexport) | `dna.runtime.thread_store` | extension point | Whose conversation is this, and what are mine | 1 |
 | [ThreadPurgePort](runtime.md#threadpurgeport) | `dna.runtime.thread_store` | extension point | Retention: find expired threads and drop them | 1 |
