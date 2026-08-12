@@ -6,17 +6,26 @@ metadata:
 spec:
   title: Um SourcePort sobre https:// que resolve definicoes de um DNA hospedado por TOKE
   description: Um SourcePort sobre https:// que resolve definicoes de um DNA hospedado por TOKEN, nunca pela DSN do Postgres. Fecha i-106.
-  status: in-progress
+  status: done
   feature: f-dna-dx-consume
   acceptance_criteria:
-  - Given DNA_SOURCE_URL=https://host/v1 e um bearer, When DnaClient.from_env(scope=X).resolve_copilot(nome), Then o copiloto resolve pela rede sem mudar a forma de from_env/resolve_*
-  - Given a rede cai ou o token e invalido, When qualquer leitura, Then ResolveNetworkError/ResolveAuthError sobem — nunca lista vazia
+  - text: Given DNA_SOURCE_URL=https://host/v1 e um bearer, When DnaClient.from_env(scope=X).resolve_copilot(nome), Then o copiloto resolve pela rede sem mudar a forma de from_env/resolve_*
+    done: true
+    done_at: '2026-08-12T11:14:53+00:00'
+    done_by: story-done-auto
+  - text: Given a rede cai ou o token e invalido, When qualquer leitura, Then ResolveNetworkError/ResolveAuthError sobem — nunca lista vazia
+    done: true
+    done_at: '2026-08-12T11:14:53+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - adapter + source_from_url + testes unit + prova end-to-end contra a face REST real + prosa em docs/concepts + suite verde
+  - text: adapter + source_from_url + testes unit + prova end-to-end contra a face REST real + prosa em docs/concepts + suite verde
+    done: true
+    done_at: '2026-08-12T11:14:53+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-12T10:22:54+00:00'
-  updated_at: '2026-08-12T11:01:50+00:00'
+  updated_at: '2026-08-12T11:15:06+00:00'
   timeline:
   - at: '2026-08-12T10:22:54+00:00'
     actor: claude-code
@@ -50,6 +59,18 @@ spec:
     name: tr-tg-fonte-remota-https-20260812-110147
     summary: TestRun tr-tg-fonte-remota-https-20260812-110147 → pass
     outcome: pass
+  - at: '2026-08-12T11:14:57+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PR #382 merjado. A prova fechou contra o REST local do dna-cloud (scope real, 433 instancias): resolve_copilot(''supervisor-copilot'').knowledge == (''relatorio-prompts'',), com bearer e sem DSN.'
+  - at: '2026-08-12T11:15:06+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: a7ee488869f41ec7bba898354b0c47f10b40f366
   produces:
   - kind: Plan
     name: plan-s-fonte-remota-https
@@ -63,3 +84,4 @@ spec:
     name: tr-tg-fonte-remota-https-20260812-110147
     role: test-run
     at: '2026-08-12T11:01:50+00:00'
+  closed_at: '2026-08-12T11:14:53+00:00'

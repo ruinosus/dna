@@ -55,7 +55,7 @@ spec:
     escolha tem de ser declarada, não herdada.
   type: enhancement
   severity: high
-  status: open
+  status: resolved
   created_at: '2026-08-12T10:01:10+00:00'
   updated_at: '2026-08-12T10:01:10+00:00'
   timeline:
@@ -64,3 +64,17 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-08-12T11:15:51+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'FICA NOMEADO E NAO CONSTRUIDO (medido em 12/08/2026, contra a face REST real): (1) um endpoint em LOTE no servidor — GET /v1/scopes/{scope}/instances?full=1 — colapsaria load_all de 522 chamadas / 1,13s para 1. Nao foi feito porque e mudanca na porta REST PUBLICA do SDK, e portanto decisao do fundador, nao do agente. (2) Uma leitura OVERLAY-ONLY: hoje load_layer devolve base uniao overlay, composto pelo servidor, porque a face nao tem listagem so-do-overlay. A composicao fica correta (remerge da base e no-op), mas ''o que este tenant sobrescreveu?'' nao tem resposta por esta porta. (3) ETag/If-None-Match na face: nao existe header nenhum hoje (so um campo ''etag'' no corpo), e e por isso que o cache virou snapshot opt-in em vez de revalidacao condicional. Se (3) chegar, a decisao de offline merece ser revisitada.'
+  - at: '2026-08-12T11:16:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: 'HttpSource sobre a face REST, autenticado por DNA_API_TOKEN e nunca por DSN (PR #382). DNA_SOURCE_URL=https://host/v1 e a unica mudanca no consumidor.'
+  closed_at: '2026-08-12T11:16:03+00:00'
+  resolution: 'HttpSource sobre a face REST, autenticado por DNA_API_TOKEN e nunca por DSN (PR #382). DNA_SOURCE_URL=https://host/v1 e a unica mudanca no consumidor.'
