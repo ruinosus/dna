@@ -63,6 +63,8 @@ nav:
       - The reference graph — what points at this?: concepts/reference-graph.md
       - Agent-facing knowledge: concepts/agent-knowledge.md
       - DNAP conformance — testing a protocol: concepts/dnap-conformance.md
+  - Specifications:
+      - "DNAP 1.0 — the DNA as a JSON-RPC protocol (draft)": spec/dnap-1.0-draft.md
   - How-to guides:
       - guides/index.md
       - A tour of the dna CLI: guides/cli-tour.md
