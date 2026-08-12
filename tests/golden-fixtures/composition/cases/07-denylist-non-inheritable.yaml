@@ -1,11 +1,23 @@
 id: 07-denylist-non-inheritable
 title: Denylist Kind (Story) never inherits — parent hit is invisible
 notes: |
-  Story is in DEFAULT_NON_INHERITABLE_KINDS_V1 -> default rule is
+  Story DECLARES scope_inheritable: false -> default rule is
   scope_inheritance=disabled. Story/S1 exists in _lib but the resolver
   must NOT walk the chain: local-only layer list, doc=null.
   (The frozen top-level `chain` is the RAW computeResolutionChain walk —
   it still escalates; the resolver ignores it for disabled Kinds.)
+
+  i-107: the note above used to read "Story is in
+  DEFAULT_NON_INHERITABLE_KINDS_V1". That list is gone — the fact belongs to
+  the Kind, so the case declares it in `kinds:` below and the golden proves the
+  DECLARATION drives the resolver. Same expected output, sourced honestly.
+
+# Kinds this case needs registered on the otherwise-bare harness kernel.
+kinds:
+  - kind: Story
+    api_version: github.com/ruinosus/dna/sdlc/v1
+    scope_inheritable: false
+
 target:
   scope: app
   kind: Story

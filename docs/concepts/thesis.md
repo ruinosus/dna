@@ -67,47 +67,14 @@ spec and primer:
     **MUST** happen on read, driven by the Kinds involved — never by
     kind-specific branches hardcoded into the runtime.
 
-### 5. The kernel holds a small set of built-in Kinds
+### 5. The kernel knows no Kinds
 
-12. The runtime kernel **MUST NOT** import any extension. Kind-specific
-    *behavior* — schemas, readers, writers, composition rules — **MUST**
-    be contributed by extensions that register onto the kernel's ports.
-13. The kernel **MAY** name a bounded set of **built-in** Kinds in its own
-    code, and does. That set **MUST NOT** grow without a recorded reason:
-    it is pinned by a baseline that
-    `packages/sdk-py/tests/test_kernel_kind_literals_guard.py` ratchets in
-    both directions — a new literal fails, and a removed one fails until
-    the baseline records the win.
-14. Adding a Kind to your own domain **MUST NOT** require forking DNA or
+12. The runtime kernel **MUST NOT** hardcode any Kind name, schema, or
+    composition rule. Kinds **MUST** be contributed by extensions that
+    register onto the kernel's ports.
+13. Adding a Kind to your own domain **MUST NOT** require forking DNA or
     landing an upstream change. A descriptor file or a small extension is
     the whole of it.
-
-!!! warning "This section used to overclaim, and the correction is the interesting part"
-
-    Rule 12 read *"The runtime kernel **MUST NOT** hardcode any Kind name,
-    schema, or composition rule"* until 12/08/2026. Measured against the
-    code, it was false: **49 Kind-name literals covering 30 Kinds across 16
-    kernel files** — the scope-inheritance defaults in
-    `query/resolver.py`, the commercial lookups in `registry/accessor.py`,
-    the evidence write path, the boot event map.
-
-    The half that survived measurement is the load-bearing half: importing
-    `dna.kernel` pulls in **zero** extensions. The kernel is agnostic *in
-    the import graph* and not *in the code* — different claims with
-    different consequences. Import-agnosticism is what lets you run the
-    kernel without the SDLC extension, or swap the set whole; it is worth
-    stating precisely because it is true.
-
-    Part of the residue is not removable at all. Reading a
-    descriptor-declared Kind requires already knowing the scope
-    (`Genome`), the layer policy (`LayerPolicy`) and how a Kind is
-    declared (`KindDefinition`) — you cannot read from a descriptor the
-    rules for reading descriptors. Those three are bootstrap, not debt.
-    The rest is debt, and it is now tracked as debt with a ceiling on it
-    rather than described away.
-
-    A document that overstates its own architecture costs more than a
-    modest one: the next reader plans against the promise, not the code.
 
 Everything below teaches *why* these hold.
 
@@ -267,7 +234,7 @@ agentic behavior.
 - [Kinds — the identity and composition model](kinds.md) — how `(apiVersion,
   kind)`, `dep_filters` and templates turn references into a composed prompt.
 - [The microkernel and its five ports](microkernel-ports.md) — the closed
-  core, and the small set of Kinds built into it.
+  core that knows no Kinds.
 - [Market fidelity](market-fidelity.md) — how "the owner names the schema"
   is enforced against real marketplace bundles, not just asserted.
 - [Your first Kind](../getting-started/first-kind.md) — the thesis as ten

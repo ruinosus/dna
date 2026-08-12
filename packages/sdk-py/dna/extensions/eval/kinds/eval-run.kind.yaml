@@ -30,7 +30,13 @@ spec:
   # the counts, and `suite` pointing back at the declaration it executed. A run
   # that turns out wrong is superseded by another run, not corrected.
   # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
-  traits: [execution.run]
+  # record.produces-evidence (i-107): the evidence-capture path used to hold a
+  # literal {"EvalRun", "EvalBaseline", "Finding"}. Declaring it here is what
+  # lets the kernel stop knowing this Kind by name.
+  traits: [execution.run, record.produces-evidence]
+  # post_save_event (i-107): was _FIXED_EVENTS["EvalRun"] in kernel/boot/events.py.
+  # One name for both create and update — a run is "completed" either way.
+  post_save_event: eval_run_completed
   plane: record
   prompt_target: false
   flatten_in_context: false

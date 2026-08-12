@@ -967,6 +967,28 @@ class TypedSafetyPolicy:
 # ---------------------------------------------------------------------------
 
 
+def _coerce_post_save_event(raw: Any) -> str | tuple[str, str] | None:
+    """Normalize ``spec.post_save_event`` from a descriptor (i-107).
+
+    YAML has no tuples, so a declared ``[create, update]`` pair arrives as a
+    ``list``; it becomes a tuple here so the class path and the descriptor path
+    hand the same shape to ``event_type_for_port``. Anything else normalizes to
+    ``None`` — the generic event pair — rather than raising: the JSON-schema
+    gate on the descriptor already refuses malformed declarations at the write
+    boundary, and this loader also runs over rows already on disk, where
+    raising would make one bad row unloadable instead of merely unremarkable.
+    """
+    if raw is None or isinstance(raw, str) and not raw:
+        return None
+    if isinstance(raw, str):
+        return raw
+    if isinstance(raw, (list, tuple)) and len(raw) == 2:
+        create, update = raw
+        if isinstance(create, str) and isinstance(update, str):
+            return (create, update)
+    return None
+
+
 @dataclass
 class KindDefinitionSpec:
     target_api_version: str = ""
@@ -1040,6 +1062,10 @@ class KindDefinitionSpec:
     # Kernel classification flags — mirror KindBase defaults.
     scope_inheritable: bool = True
     is_overlayable: bool = True
+    # ``post_save_event`` (i-107): the event_type this Kind emits on write.
+    # str = one name for create AND update; (create, update) = one each;
+    # None = the generic document_created/document_modified pair.
+    post_save_event: str | tuple[str, str] | None = None
     # Extra volatile spec fields, unioned with KindBase.VOLATILE_SPEC_FIELDS.
     volatile_spec_fields: list[str] | None = None
     # ---- Descriptor expressiveness fields (spec 2026-06-11, D1/D3-D7) -------
@@ -1405,6 +1431,7 @@ class KindDefinitionSpec:
             prompt_target_priority=int(raw.get("prompt_target_priority", 5)),
             scope_inheritable=bool(raw.get("scope_inheritable", True)),
             is_overlayable=bool(raw.get("is_overlayable", True)),
+            post_save_event=_coerce_post_save_event(raw.get("post_save_event")),
             volatile_spec_fields=raw.get("volatile_spec_fields"),
             # Descriptor expressiveness (spec D1/D3-D7)
             ui=ui,

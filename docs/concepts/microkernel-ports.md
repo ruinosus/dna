@@ -1,40 +1,12 @@
 # The microkernel and its ports
 
 The runtime is a **microkernel**: a small, closed core that knows how to
-store, validate, version and compose *instances*. Kind-specific
-*behavior* — schemas, readers, writers, composition rules — is contributed
-by **extensions** that plug into the kernel's ports, and the kernel
-imports none of them.
+store, validate, version and compose *instances* — but knows nothing about
+any particular Kind. All Kind-specific knowledge is contributed by
+**extensions** that plug into the kernel's ports.
 
-This is the mechanism behind the thesis claim that [*the kernel holds a
-small set of built-in
-Kinds*](thesis.md#5-the-kernel-holds-a-small-set-of-built-in-kinds).
-
-!!! note "How agnostic, exactly"
-
-    Two claims often get run together, and only one of them is true:
-
-    | claim | status |
-    |---|---|
-    | Importing `dna.kernel` pulls in no extension | ✅ verified |
-    | The kernel never names a Kind in its own code | ❌ false — 49 literals, 30 Kinds, 16 files |
-
-    The kernel is agnostic **in the import graph**, not **in the code**.
-    The first property is the one that buys you something: you can boot
-    the kernel without the SDLC extension, replace the registered set
-    entirely, or ship a build that has never heard of `Story`.
-
-    The literals that remain are pinned by
-    `packages/sdk-py/tests/test_kernel_kind_literals_guard.py`, which
-    derives its Kind vocabulary from the live registry — so a Kind
-    invented tomorrow is guarded the day the kernel first names it,
-    without a list for anyone to forget to update.
-
-    Three of them can never leave. Reading a descriptor-declared Kind
-    presupposes the scope (`Genome`), the layer policy (`LayerPolicy`) and
-    the shape of a Kind declaration (`KindDefinition`); a descriptor
-    cannot bootstrap the reader that reads descriptors. Those are
-    architecture. The rest is debt with a ceiling on it.
+This is the mechanism behind the thesis claim that [*the kernel knows no
+Kinds*](thesis.md#5-the-kernel-knows-no-kinds).
 
 ## The kernel as a mediator over five ports
 

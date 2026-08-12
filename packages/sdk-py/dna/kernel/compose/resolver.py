@@ -414,7 +414,6 @@ class CompositionResolver:
         ``(scope, kind)`` — from the scope's LayerPolicy composition_rules, else
         the inherit-by-default denylist (everything inherits from _lib
         except the per-scope ledger + structural Kinds)."""
-        from dna.kernel.query.resolver import DEFAULT_NON_INHERITABLE_KINDS_V1
         k = self._k
         if k._source is not None:
             try:
@@ -444,7 +443,16 @@ class CompositionResolver:
                     "scope=%r kind=%r (falling back to defaults): %s",
                     scope, kind, e,
                 )
-        if kind not in DEFAULT_NON_INHERITABLE_KINDS_V1:
+        # DERIVED from each Kind's own ``scope_inheritable`` declaration (class
+        # attribute or ``spec.scope_inheritable`` in a descriptor), never from a
+        # list of names here. This used to read a literal
+        # ``DEFAULT_NON_INHERITABLE_KINDS_V1`` — a fourth copy of a list the
+        # kernel already derived, and it had drifted: KindNamespace, Memory,
+        # Sprint and WorkspaceScopeGrant all declare scope_inheritable=false and
+        # were missing from it, so they inherited across scopes against their own
+        # descriptors. Third time that list drifted (see Milestone->Epic).
+        # Locked by tests/test_scope_inheritance_is_declared.py.
+        if kind not in k._NON_INHERITABLE_KINDS:
             return ("enabled", "override_full", "field_level")
         # Non-inheritable Kinds STILL honor tenant overlay (TENANTED Canvas,
         # VoiceEpisode, Story must read tenant=X correctly).

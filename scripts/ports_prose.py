@@ -279,11 +279,9 @@ The eight Protocols on this page are not equally optional.
         {
             "title": "Kinds & extensions — what behaviour DNA knows about",
             "blurb": (
-                "The kernel imports no extension. Every unit of identity and "
-                "composition arrives through these ports, which is why adding a Kind "
-                "never touches the core. (The kernel does NAME a small set of "
-                "built-in Kinds in its own code — see Microkernel & ports for the "
-                "measured extent and the guard that caps it.)"
+                "The kernel knows no Kinds. Every unit of identity and composition "
+                "arrives through these ports, which is why adding a Kind never touches "
+                "the core."
             ),
         },
     ),
@@ -911,9 +909,8 @@ PROSE: dict[str, dict] = {
         "role": "extend",
         "one_line": "What a Kind is, and how it composes",
         "summary": (
-            "Identity, schema and composition role for one Kind. The port that keeps "
-            "Kind-specific behaviour OUT of the kernel — no extension is imported by "
-            "the core, whatever it may name in a literal."
+            "Identity, schema and composition role for one Kind. The port that makes "
+            "*the kernel knows no Kinds* true."
         ),
         "when": (
             "Only when your Kind needs custom behaviour — a bespoke bundle format, a "

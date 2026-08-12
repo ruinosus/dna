@@ -61,20 +61,24 @@ BOOTSTRAP_KINDS: frozenset[str] = frozenset(BOOTSTRAP_KIND_NAMES)
 # Scope inheritance default = DENYLIST (s-platform-inherit-by-default, 2026-06-06).
 # When a scope has NO LayerPolicy with composition_rules, EVERY Kind defaults to
 # scope_inheritance=enabled (override_full merge, field_level tenant overlay)
-# EXCEPT the per-scope ledger + structural Kinds below. Mirrors the kernel's
-# ``Kernel._NON_INHERITABLE_KINDS``.
+# EXCEPT the per-scope ledger + structural Kinds.
 #
-# "Epic" and "Milestone" are BOTH listed on purpose: v1.3 renamed the Milestone
-# Kind to Epic and the rename missed this set, so Epic silently inherited while
-# its Story/Issue/Feature/Roadmap siblings did not. "Milestone" stays as a
-# tombstone — `kind: Milestone` no longer parses, but un-migrated docs may still
-# sit in an `_lib` on disk, and a stale ledger doc must not START leaking into
-# child scopes just because its Kind was retired.
-DEFAULT_NON_INHERITABLE_KINDS_V1: frozenset[str] = frozenset({
-    "Story", "Issue", "Feature", "Epic", "Milestone", "Roadmap",
-    "Narrative", "VibeSession", "Engram", "Plan",
-    "Genome", "KindDefinition", "LayerPolicy",
-})
+# ⚠️ The membership list that used to live here — DEFAULT_NON_INHERITABLE_KINDS_V1,
+# 13 literal Kind names — is GONE (i-107). Each Kind DECLARES its own answer as
+# ``scope_inheritable`` (a KindPort attribute, or ``spec.scope_inheritable`` in a
+# ``.kind.yaml`` descriptor) and ``Kernel._NON_INHERITABLE_KINDS`` derives the set.
+#
+# It was deleted rather than corrected because it was a FOURTH copy of a fact the
+# kernel already derived, and it had drifted for the third time: KindNamespace,
+# Memory, Sprint and WorkspaceScopeGrant each declare ``scope_inheritable: false``
+# and were absent from it, so ``get_composition_rule`` let them inherit across
+# scopes against their own descriptors. The previous drift is the one still
+# commented in ``Kernel._LEGACY_NON_INHERITABLE``: the v1.3 Milestone->Epic rename
+# updated one copy and missed another, and Epic leaked for a release.
+#
+# The retired names (``Milestone``, ``VibeSession``) have no class to declare
+# anything and ride on ``Kernel._LEGACY_NON_INHERITABLE``.
+# Locked by tests/test_scope_inheritance_is_declared.py.
 
 # Display set ONLY (NOT the inheritance source of truth anymore): the
 # composition-summary endpoint iterates this to surface per-Kind local/inherited

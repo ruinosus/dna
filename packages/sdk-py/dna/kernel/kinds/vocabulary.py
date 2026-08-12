@@ -18,6 +18,14 @@ The core vocabulary lives in ``traits.CORE_TRAITS`` and is NOT touched here.
 That separation is the point: thirteen names the founder authored, four an
 agent proposes, and nobody has to diff a commit to tell which is which.
 
+⚠️ A THIRD dict was added below on 12/08/2026 — ``BEHAVIOURAL_TRAITS`` (i-107).
+It is also agent-authored, but it breaks the "rejection costs a description"
+promise this docstring makes about ``PROPOSED_TRAITS``: its two names are READ
+by the kernel's evidence-capture path, so deleting one changes behaviour. It is
+a separate dict for exactly the reason the first two are separate — so the
+different cost is visible without diffing a commit. Read its own comment before
+touching it.
+
 Why these four and not the eight the spec sketched
 --------------------------------------------------
 §9.2's leva B guessed at ~8 traits, one per extension family (Eval, Portfolio,
@@ -88,7 +96,12 @@ from __future__ import annotations
 
 from dna.kernel.kinds.traits import register_trait
 
-__all__ = ["PROPOSED_TRAITS", "register_proposed_traits"]
+__all__ = [
+    "PROPOSED_TRAITS",
+    "BEHAVIOURAL_TRAITS",
+    "register_proposed_traits",
+    "register_behavioural_traits",
+]
 
 
 #: name → description. Same shape as ``traits.CORE_TRAITS``, deliberately, so
@@ -134,6 +147,73 @@ PROPOSED_TRAITS: dict[str, str] = {
 }
 
 
+#: ⚠️ ALSO agent-authored, but these two are NOT free to reject — read this.
+#:
+#: ``PROPOSED_TRAITS`` above is safe to delete in one move because it carries
+#: nothing: rejecting a name there costs a description. These two are the other
+#: case, and they are kept apart precisely so that difference stays visible
+#: without diffing a commit — which is the same reason ``CORE_TRAITS`` and
+#: ``PROPOSED_TRAITS`` are separate dicts in the first place.
+#:
+#: They were introduced by i-107 to REPLACE literal Kind-name sets that the
+#: kernel's evidence-capture path was carrying:
+#:
+#:     write/evidence.py:28   _EVAL_KINDS = {"EvalRun", "EvalBaseline", "Finding"}
+#:     write/evidence.py:131  if kind == "Evidence"
+#:
+#: Deleting a name here without first restoring those literals changes
+#: behaviour: evidence stops being stamped with its suite, or the recursion
+#: guard stops guarding. So a rejection here is a code change, not a
+#: description change — hence the separate dict and this comment.
+#:
+#: ⭐ What the swap BUYS, and the reason it is worth a vocabulary entry: a Kind
+#: authored by a tenant through ``KindDefinition`` could not previously produce
+#: evidence at all. Not "was not configured to" — there was no way to say it.
+#: The kernel knew three names and no Kind outside that set could join, however
+#: much it looked like an eval run. Now it declares
+#: ``traits: [record.produces-evidence]`` and is in.
+#:
+#: ⚠️ ``Finding`` was in that literal set and is NOT a registered Kind (measured
+#: 12/08/2026: ``kind_port_for("Finding")`` is None). A literal set can name a
+#: Kind that does not exist and nothing complains; a declaration cannot, because
+#: there is nothing to declare it on. That dead third entry is why the set is
+#: two names here and was three there.
+BEHAVIOURAL_TRAITS: dict[str, str] = {
+    "record.produces-evidence": (
+        "Writing an instance of this Kind is an event worth CAPTURING as "
+        "Evidence — the evidence handler reads the write and stamps the "
+        "suite/source it came from. Distinct from `execution.run`, which says "
+        "the instance IS the record of an execution: a run is evidence-worthy "
+        "because it is a claim about the past, but a Kind may be "
+        "evidence-worthy without being a run (a baseline is pinned, not run). "
+        "Capture is still gated by the scope's EvidencePolicy — this trait says "
+        "the Kind is ELIGIBLE, never that capture is on."
+    ),
+    "record.is-evidence": (
+        "This Kind IS the evidence record, which the capture path must know so "
+        "it does not capture evidence ABOUT evidence — an unguarded write of a "
+        "captured record re-triggers the handler that wrote it. The trait "
+        "exists as the declarative half of `record.produces-evidence`: without "
+        "it the kernel would still need one hard-coded name to break the loop, "
+        "and one hard-coded name is the whole problem in miniature. Expected to "
+        "be declared by exactly one Kind per deployment, but deliberately not "
+        "enforced as such — a tenant that runs its own evidence Kind alongside "
+        "the built-in one is not doing anything wrong."
+    ),
+}
+
+
+def register_behavioural_traits() -> None:
+    """Publish the load-bearing agent-authored names into the trait registry.
+
+    Same mechanism as :func:`register_proposed_traits`, different contract:
+    these names are READ by the kernel's evidence-capture path, so removing one
+    changes behaviour. See the comment on ``BEHAVIOURAL_TRAITS``.
+    """
+    for name, description in BEHAVIOURAL_TRAITS.items():
+        register_trait(name, description)
+
+
 def register_proposed_traits() -> None:
     """Publish the proposed names into the live trait registry.
 
@@ -153,3 +233,4 @@ def register_proposed_traits() -> None:
 
 
 register_proposed_traits()
+register_behavioural_traits()

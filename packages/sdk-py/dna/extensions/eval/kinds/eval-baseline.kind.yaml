@@ -25,6 +25,11 @@ spec:
   target_kind: EvalBaseline
   alias: eval-eval-baseline
   origin: github.com/ruinosus/dna/eval
+  # record.produces-evidence (i-107) — pinning a baseline is an evidence-worthy
+  # event, which the kernel used to know by name in write/evidence.py.
+  traits: [record.produces-evidence]
+  # post_save_event (i-107): was _FIXED_EVENTS["EvalBaseline"].
+  post_save_event: baseline_pinned
   plane: record
   prompt_target: false
   flatten_in_context: false
