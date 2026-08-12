@@ -1,0 +1,66 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: c5c5zmxeqdqz
+  name: i-106-fonte-remota-https
+spec:
+  title: Não há fonte HTTPS — um repo separado só resolve do dna-cloud compartilhando a DSN do Postgres
+  description: |-
+    ⭐ ACHADO DA ANÁLISE DE 12/08/2026, comparando os três consumidores do DNA
+    (`dna-cloud`, `opentag-reference`, `github-copilot-agent-framework-example`).
+
+    === O PADRÃO QUE O SDK CONSOLIDOU ===
+
+      .dna/<scope>/  →  DnaClient.from_env()  →  ResolvedAgent  →  binding fino  →  runtime
+
+    O binding é minúsculo e o resto é declaração — `dna/integrations/github_copilot.py`
+    tem **124 linhas** e cobre os dez samples oficiais do provider da Microsoft. As
+    releases confirmam a direção: 0.77 `RuntimeBinding`, 0.78 consumer harness + `dna run`,
+    0.79/0.80 contratos declarativos de GenUI.
+
+    === ⛔ O QUE FALTA, e é o que bloqueia governança central ===
+
+    `source_from_url` (`dna/adapters/source_url.py`) aceita **file:// · pkg:// · sqlite:// ·
+    postgresql://**. Não existe adaptador HTTP.
+
+    Consequência medida: um repositório SEPARADO só resolve definições de um dna-cloud
+    COMPARTILHANDO A DSN DO POSTGRES — e o README do `github-copilot-agent-framework-example`
+    já documenta exatamente isso (`DNA_SOURCE_URL=postgresql://user:pass@host/dna`).
+
+    ⚠️ Entre projetos do mesmo dono, aceitável. **Para um terceiro, não**: entregar a DSN é
+    entregar o banco inteiro, e joga fora precisamente o que a camada hospedada existe para
+    dar — porta autenticada, tenant costurado NO SERVIDOR, quota, medição, auditoria. O
+    consumidor passaria a impor o próprio limite de tenant, que é o oposto de fail-closed.
+
+    === A PROPOSTA ===
+
+    Um `SourcePort` sobre **https://**, falando a porta REST/MCP que a camada hospedada já
+    serve, autenticado por token (nunca DSN). O consumidor declara
+
+        DNA_SOURCE_URL=https://<host>/v1   +   um bearer
+
+    e resolve `Agent`/`Copilot`/`Tool`/`RuntimeBinding` pela MESMA API de hoje —
+    `DnaClient.from_env()` e `resolve_*` não mudam de forma.
+
+    ⚠️ **PROCURAR ANTES DE CONSTRUIR** (regra da casa): a leitura já existe do outro lado
+    (`/v1/kinds/{kind}/instances`, e as tools MCP `list_documents`/`get_document`). O
+    trabalho provável é um adaptador que implemente `SourcePort` sobre elas — não um
+    protocolo novo. Se o `SourcePort` exigir capacidades que a porta REST não expõe (leitura
+    bi-temporal, `as_of`, listagem de scopes), isso É o achado, e tem de ser dito antes de
+    desenhar.
+
+    ⚠️ E medir o que se perde: uma fonte remota não tem transação nem leitura local barata.
+    Cache, `if-none-match`, e o que acontece OFFLINE precisam de resposta explícita — um
+    consumidor que não sobe porque a rede caiu é pior que um com definição de ontem, e essa
+    escolha tem de ser declarada, não herdada.
+  type: enhancement
+  severity: high
+  status: open
+  created_at: '2026-08-12T10:01:10+00:00'
+  updated_at: '2026-08-12T10:01:10+00:00'
+  timeline:
+  - at: '2026-08-12T10:01:10+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
