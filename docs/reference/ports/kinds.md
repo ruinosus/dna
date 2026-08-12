@@ -1,6 +1,6 @@
 # Kinds & extensions — what behaviour DNA knows about
 
-The kernel knows no Kinds. Every unit of identity and composition arrives through these ports, which is why adding a Kind never touches the core.
+The kernel imports no extension. Every unit of identity and composition arrives through these ports, which is why adding a Kind never touches the core. (The kernel does NAME a small set of built-in Kinds in its own code — see Microkernel & ports for the measured extent and the guard that caps it.)
 
 !!! info "Generated from the source"
 
@@ -112,7 +112,7 @@ The nine things you may do inside `Extension.register()`: register a Kind (from 
 
 `dna.kernel.protocols.KindPort` · `@runtime_checkable` · :material-power-plug: **extension point**
 
-Identity, schema and composition role for one Kind. The port that makes *the kernel knows no Kinds* true.
+Identity, schema and composition role for one Kind. The port that keeps Kind-specific behaviour OUT of the kernel — no extension is imported by the core, whatever it may name in a literal.
 
 !!! quote "From the source"
 

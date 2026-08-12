@@ -50,7 +50,7 @@ These exist so the kernel never has to ask `hasattr(source, ...)`. That matters 
 
 ### Kinds & extensions — what behaviour DNA knows about (7)
 
-The kernel knows no Kinds. Every unit of identity and composition arrives through these ports, which is why adding a Kind never touches the core.
+The kernel imports no extension. Every unit of identity and composition arrives through these ports, which is why adding a Kind never touches the core. (The kernel does NAME a small set of built-in Kinds in its own code — see Microkernel & ports for the measured extent and the guard that caps it.)
 
 | Port | Module | Role | What it decides | Shipped |
 | --- | --- | --- | --- | --- |

@@ -16,7 +16,8 @@ Start with the thesis; the rest expand its pieces.
   catalog of the composition-plane Kinds beyond the core prompt family:
   collaboration, safety & governance, preferences, testkit.
 - **[The microkernel and its five ports](microkernel-ports.md)** — the
-  closed core that knows no Kinds, and the ports extensions plug into.
+  closed core, the small set of Kinds built into it, and the ports
+  extensions plug into.
 - **[Market fidelity](market-fidelity.md)** — how "consume standards
   byte-faithful under their owner's namespace" is enforced against real
   marketplace bundles.

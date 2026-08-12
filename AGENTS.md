@@ -5,7 +5,15 @@ behavior**: a declarative, typed notation in which every participant of an
 agentic system — agents, skills, souls, guardrails, tools, policies — is a
 YAML/Markdown instance identified by `(apiVersion, kind)`, validated on
 write against a per-Kind schema, and composed on read into prompts by a
-microkernel that itself knows no Kinds (extensions register them).
+microkernel carrying a small set of built-in Kinds and extensible by
+descriptor (extensions register the rest). ⚠️ This line promised a
+"microkernel that itself knows no Kinds" until 12/08/2026; measured, that
+was false in six places. What IS true and verified: the kernel imports no
+extension. What is not: it names ~30 Kinds in string literals — scope
+inheritance, the registry accessor, the evidence write path.
+`packages/sdk-py/tests/test_kernel_kind_literals_guard.py` is the ratchet
+that stops that number growing quietly, and it derives the Kind vocabulary
+from the live registry rather than a hand-written list.
 Standards DNA did not invent are consumed byte-faithful under their owners'
 namespaces — including this very file, which is a live `agents.md/v1`
 instance that the repo's own SDK parses and round-trips
