@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  id: 22q7h2n2onph
+  name: tr-tg-s-dnap-core-server-20260812-160016
+spec:
+  guide_ref: tg-s-dnap-core-server
+  outcome: pass
+  verifies:
+  - Story/s-dnap-core-server
+  executed_by: claude-code
+  executed_at: '2026-08-12T16:00:16+00:00'
+  evidence:
+  - test:packages/sdk-py/tests/test_dnap_protocol.py
