@@ -1,8 +1,8 @@
 # The port catalogue
 
-DNA's kernel is a **microkernel**: it knows how to store, validate, version and compose instances, and nothing else. Everything else is a `typing.Protocol` — a **port** — that something outside the core satisfies. There are **61** of them.
+DNA's kernel is a **microkernel**: it knows how to store, validate, version and compose instances, and nothing else. Everything else is a `typing.Protocol` — a **port** — that something outside the core satisfies. There are **60** of them.
 
-Most of this page exists to answer one question: *I want to change X — what do I implement?* **38** of the 61 are things you are meant to implement. The rest are listed anyway, marked as what they are, because a seam you cannot see is indistinguishable from a seam that does not exist — and guessing wrong costs more than being told no.
+Most of this page exists to answer one question: *I want to change X — what do I implement?* **38** of the 60 are things you are meant to implement. The rest are listed anyway, marked as what they are, because a seam you cannot see is indistinguishable from a seam that does not exist — and guessing wrong costs more than being told no.
 
 ## What the three roles mean
 
@@ -12,7 +12,7 @@ Most of this page exists to answer one question: *I want to change X — what do
 | :material-hand-extended: handed to you | The kernel implements it and passes it in. You call it; you never satisfy it. |
 | :material-lock: internal seam | A back-reference between the kernel and one of its own collaborators, published as a Protocol so the decomposition stays honest and testable. Not a plug-in surface. |
 
-## All 61 ports
+## All 60 ports
 
 ### Storage & retrieval — where instances live (10)
 
@@ -97,7 +97,7 @@ Four seams where DNA deliberately declines to ship an opinion. Each is a place a
 | [EvalTargetPort](judgement.md#evaltargetport) | `dna.extensions.eval.runner` | extension point | What an eval case is actually run against | 1 |
 | [MergeScribe](judgement.md#mergescribe) | `dna.memory.merge` | extension point | Fusing two memories into one | — |
 
-### Internal seams — not extension points (22)
+### Internal seams — not extension points (21)
 
 These are Protocols, and they are not for you.
 
@@ -115,7 +115,6 @@ They are listed here for one reason: **invisible is worse than "this is not for 
 | [InstanceBuildCtx](internal.md#instancebuildctx) | `dna.kernel.collaborator_ports` | internal seam | Manifest-assembly internals | — |
 | [InstanceBuilderHost](internal.md#instancebuilderhost) | `dna.kernel.collaborator_ports` | internal seam | Everything the instance builder needs | — |
 | [InvalidationHost](internal.md#invalidationhost) | `dna.kernel.collaborator_ports` | internal seam | Cache-coherence state | — |
-| [KindLike](internal.md#kindlike) | `dna.kernel.resource` | internal seam | The minimal Kind shape a Resource needs | — |
 | [KindLookup](internal.md#kindlookup) | `dna.kernel.collaborator_ports` | internal seam | Kind identity, plane and storage, for kernel collaborators | — |
 | [LayerObserverCtx](internal.md#layerobserverctx) | `dna.kernel.collaborator_ports` | internal seam | The reverse-dependency observer graph | — |
 | [LayerPolicyHost](internal.md#layerpolicyhost) | `dna.kernel.collaborator_ports` | internal seam | Everything layer-policy enforcement needs | — |
