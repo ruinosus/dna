@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: 4ionlyw3dqu2
+  name: i-113-json-rpc-lib-decisao
+spec:
+  title: 'Framing JSON-RPC 2.0 escrito a mao: a busca foi feita, a decisao de peso e do fundador'
+  description: 'Regra da casa: existe implementacao oficial? usa. Medido em 12/08/2026 — o JSON-RPC 2.0 e o unico protocolo da vizinhanca do DNA SEM implementacao oficial e SEM corpo mantenedor: a spec de uma pagina nao envia servidor de referencia, ao contrario de MCP (fastmcp), A2A (a2a-sdk) e AG-UI (@ag-ui/client), onde reimplementar esta proibido justamente porque uma LEITURA divergente de uma spec grande so aparece contra terceiro. Candidatos medidos: pjrpc 2.2.0 (41 estrelas, release de 08/08/2026, zero dependencias obrigatorias) — o melhor mantido, mas o valor dele sao as integracoes de transporte (aiohttp/flask/fastapi/aio-pika) que nao usamos, o classificador de licenca e ''License :: Public Domain'' sem identificador SPDX numa dependencia OBRIGATORIA de um SDK MIT, e o dispatcher dele nao tem costura para as duas regras que o dispatch do DNAP existe para impor (portao de capacidade -> -32601, enderecamento de canal -> -32004), entao seria embrulhado e nao usado. jsonrpcserver: sem release desde 2022. json-rpc: sincrono, sem release desde 2023. A decisao de acrescentar dependencia obrigatoria ao SDK publico e de peso e nao e de quem esta codando — fica registrada aqui para o fundador confirmar ou reverter. Mitigacao: o framing esta isolado em UM arquivo (dna/protocol/jsonrpc.py, ~150 linhas); nada mais no pacote constroi um envelope, entao trocar por pjrpc e mudanca de um arquivo so.'
+  type: question
+  severity: low
+  status: open
+  related_feature: f-dnap-protocol
+  created_at: '2026-08-12T14:08:20+00:00'
+  updated_at: '2026-08-12T14:08:20+00:00'
+  timeline:
+  - at: '2026-08-12T14:08:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

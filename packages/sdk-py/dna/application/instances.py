@@ -588,6 +588,12 @@ async def list_kinds_impl(
             "registration_status": registration_status,
             "family": family,
             "plane": getattr(port, "plane", "composition"),
+            # ``plane`` says whether a Kind participates in composition;
+            # ``prompt_target`` says whether it is a thing a prompt is
+            # composed FOR. The catalog reported the first and not the second,
+            # which left every face inferring one from the other — and they do
+            # not coincide (27 Kinds are `composition`; 3 are prompt targets).
+            "prompt_target": bool(getattr(port, "is_prompt_target", False)),
             "display_label": getattr(port, "display_label", None),
             "tenant_scope": _enum_value(getattr(port, "scope", None)),
             "storage_pattern": _enum_value(getattr(storage, "pattern", None)),
@@ -615,6 +621,7 @@ async def list_instances_impl(
     fields: Iterable[str] | None = None,
     filter: dict[str, Any] | None = None,  # noqa: A002 — the kernel's own kwarg
     order_by: Iterable[str] | None = None,
+    envelope: bool = False,
 ) -> dict[str, Any]:
     """List the instances of one Kind in a scope (tenant-resolved), optionally
     PROJECTED, FILTERED and ORDERED.
@@ -639,10 +646,30 @@ async def list_instances_impl(
     so every existing caller is untouched; ``projected`` echoes what was asked
     for, so a reader can tell a names-only page from a projected one.
 
+    ⭐ ``envelope=True`` is the THIRD state, and it exists because the first two
+    could not express it. ``fields=None`` means *names only* — yet the rows the
+    kernel yields under a ``None`` projection are the **whole instances**, which
+    this function then throws away one line later. So "give me every instance in
+    full" had no spelling at all: ``fields`` can name leaves but not the whole
+    document (a bare ``"spec"`` resolves as ``spec.spec`` in the projector and is
+    dropped in silence), and ``fields=None`` narrows to names. DNAP's
+    ``select: "full"`` (spec §6.2) needs it, and the alternative was for the
+    protocol face to call ``kernel.query`` itself and re-implement the port
+    resolution and the pagination policy this function owns. ``False`` by
+    default, so every existing caller is byte-identical; mutually exclusive with
+    ``fields``, because a request that asks for both a projection and the whole
+    document is asking for two different answers.
+
     Pages through the kernel's own query — one extra row is fetched to answer
     ``has_more`` honestly instead of guessing from a full page. That extra row is
     only fully meaningful WITH an ``order_by``: without one, ``kernel.query``'s
     page is stable per adapter but not globally defined."""
+    if envelope and fields:
+        raise ValueError(
+            "list_instances: `envelope=True` and `fields=…` ask for two "
+            "different answers (the whole instance, and a projection of it). "
+            "Pick one."
+        )
     sc = scope or live.default_scope(tenant)
     port = await resolve_kind_port_live(live, kind, api_version, scope=sc)
     # E3: default e teto vêm da CognitivePolicy do workspace (o leitor que o
@@ -669,10 +696,12 @@ async def list_instances_impl(
         rows.append(row)
     has_more = len(rows) > limit
     page = rows[:limit]
-    if projection is None:
-        instances: list[dict[str, Any]] = [
-            {"name": n} for n in (_row_name(r) for r in page) if n
-        ]
+    if envelope:
+        # The rows the kernel already yielded, verbatim — nothing added and
+        # nothing removed. This is the branch that used to be unreachable.
+        instances: list[dict[str, Any]] = [r for r in page if isinstance(r, dict)]
+    elif projection is None:
+        instances = [{"name": n} for n in (_row_name(r) for r in page) if n]
     else:
         instances = [r for r in page if isinstance(r, dict)]
     return {
@@ -684,6 +713,10 @@ async def list_instances_impl(
         "offset": offset,
         "has_more": has_more,
         "projected": projection,
+        # TRUE only on the envelope branch, so a reader can tell a full page
+        # from a names-only one without inspecting a row (``projected`` is
+        # None for both).
+        "envelope": envelope,
     }
 
 

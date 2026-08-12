@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: 6kkng6e4nbcb
+  name: i-112-dnap-lacunas-da-tabela-de-erros
+spec:
+  title: A tabela de erros da secao 7 nao cobre 'nao inicializado' nem 'recusado por politica'
+  description: 'Dois estados que o servidor DNAP encontra e que a secao 7 nao nomeia, ambos preenchidos aqui com codigo proprio e REPORTADOS em vez de inventados em silencio. (1) NOT_INITIALIZED: a secao 4 diz que initialize e ''the first message on a connection'' e nao da codigo para quebrar a regra. Estava em -32002 (o que o MCP usa para a condicao identica) ate a revisao da sala limpa atribuir -32002 a NOT_FOUND; foi movido para -32000. A colisao e o proprio argumento: dois leitores independentes ja tinham escolhido o mesmo numero livre para dois sentidos. (2) REFUSED (-32001): a operacao e entendida, esta bem enderecada, e a politica recusa — LayerPolicyViolationError, TenantNotAllowed, StoreUnavailable. Sem codigo proprio, cada uma dessas cai no catch-all do dispatch e volta como -32603 Internal error, dizendo ao cliente que o servidor quebrou quando o servidor decidiu. ''Nao vou'' e ''nao consegui'' e a mesma distincao da secao 7 entre colecao vazia e pergunta sem resposta, uma camada acima. Um terceiro: a secao 7 tem NOT_WRITABLE e nenhum NOT_DELETABLE, e as duas recusas nao coincidem (um AuditLog e gravavel e nunca apagavel); hoje o delete recusado usa -32006 com data.operation=''delete''.'
+  type: question
+  severity: medium
+  status: open
+  related_feature: f-dnap-protocol
+  created_at: '2026-08-12T14:07:51+00:00'
+  updated_at: '2026-08-12T14:07:51+00:00'
+  timeline:
+  - at: '2026-08-12T14:07:51+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

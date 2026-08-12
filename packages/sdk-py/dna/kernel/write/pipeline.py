@@ -174,7 +174,13 @@ class WritePipeline:
                 logger.warning("%s (DNA_WRITE_VALIDATION=warn — persisted anyway)", msg)
                 return
             from dna.kernel.protocols import SpecValidationError  # noqa: PLC0415
-            raise SpecValidationError(msg) from e
+            # ``loc`` and ``e.validator`` are the two facts the sentence above
+            # already states — carried STRUCTURALLY as well, so a face that
+            # must put them on a wire (DNAP's ``-32010``) reads attributes
+            # instead of parsing prose.
+            raise SpecValidationError(
+                msg, path=loc, rule=str(e.validator),
+            ) from e
 
     # -- declared relation validation (i-040, f-modelagem-das-relacoes) -------
 
@@ -395,7 +401,12 @@ class WritePipeline:
             )
             return edges, complete
         from dna.kernel.protocols import SpecValidationError  # noqa: PLC0415
-        raise SpecValidationError(msg)
+        # ``rule`` is known ("a declared relation did not resolve"); ``path``
+        # is NOT — ``problems`` is a list of sentences about possibly several
+        # fields, and picking one to report as THE path would be a guess. It
+        # stays ``None`` on purpose: a face reads "no single path" rather than
+        # a plausible wrong one.
+        raise SpecValidationError(msg, rule="relations")
 
     async def _validate_references(
         self, scope: str, kind: str, name: str, raw: Any, port: Any,

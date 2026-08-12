@@ -1,0 +1,41 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: 7ddxsnrugp24
+  name: s-dnap-core-server
+spec:
+  title: 'DNAP onda 1 — o nucleo do servidor: dispatch JSON-RPC 2.0 com registro de metodo'
+  description: 'DNAP onda 1 — o nucleo do servidor: dispatch JSON-RPC 2.0 com registro de metodos extensivel, initialize, kinds/*, instances/*, canais, cursores e a tabela de erros da secao 7. resolve/* e search/* ficam para a onda 2 e se registram sem tocar no dispatch.'
+  status: in-progress
+  feature: f-dnap-protocol
+  acceptance_criteria:
+  - Given um servidor DNAP sobre LiveDna, When um cliente faz initialize e depois kinds/* e instances/*, Then as cinco regras de conformidade da secao 8 valem e cada uma tem um teste que cai se a regra for afrouxada
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - codigo em dna/protocol + testes com mutantes mortos + prosa em docs/concepts/dnap-protocol.md + guardas de docs verdes + zero regressao na suite
+  definition_of_done_source: cli-create
+  created_at: '2026-08-12T13:38:45+00:00'
+  updated_at: '2026-08-12T14:09:40+00:00'
+  timeline:
+  - at: '2026-08-12T13:38:45+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-12T13:39:04+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-12T14:09:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Onda 1 pronta. Registro de metodos com capacidades DERIVADAS da tabela: a onda 2 registra resolve/* e search/* e o dispatch nao muda uma linha. stdio NDJSON (o mesmo framing do stdio do MCP; RFC 8259 escapa control chars, entao a linha e segura por construcao). JSON-RPC escrito a mao — busca registrada em i-113, a decisao de peso e do fundador. 19 mutantes mortos, um por regra normativa. Quatro achados abertos: i-109 (a projecao aceita ''spec'' e devolve so o nome), i-110 (nenhuma porta expoe marca d''agua de canal), i-111 (secao 6.1 vs. o portao de aprovacao de Kind), i-112 (lacunas da tabela de erros). A spec mudou no meio (sala limpa, 12 buracos): rebase feito, os cinco itens novos da minha fatia implementados e testados.'
+    commit_ref: b7d6d39ebe92f466fa78d6a6eb8cc901741d32f8
+  produces:
+  - kind: Plan
+    name: plan-s-dnap-core-server
+    role: implementation
+    at: '2026-08-12T13:39:04+00:00'
