@@ -17,7 +17,7 @@ spec:
   - codigo + testes com mutantes + prosa em docs/concepts; pytest verde; guardas verdes
   definition_of_done_source: cli-create
   created_at: '2026-08-12T13:02:54+00:00'
-  updated_at: '2026-08-12T13:32:15+00:00'
+  updated_at: '2026-08-12T14:07:46+00:00'
   timeline:
   - at: '2026-08-12T13:02:54+00:00'
     actor: claude-code
@@ -45,6 +45,14 @@ spec:
     name: tr-tg-dnap-conformance-suite-20260812-133210
     summary: TestRun tr-tg-dnap-conformance-suite-20260812-133210 → pass
     outcome: pass
+  - at: '2026-08-12T14:07:46+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-dnap-conformance-suite-20260812-140736
+    summary: TestRun tr-tg-dnap-conformance-suite-20260812-140736 → pass
+    outcome: pass
   produces:
   - kind: Plan
     name: plan-s-dnap-conformance-suite
@@ -58,3 +66,7 @@ spec:
     name: tr-tg-dnap-conformance-suite-20260812-133210
     role: test-run
     at: '2026-08-12T13:32:15+00:00'
+  - kind: TestRun
+    name: tr-tg-dnap-conformance-suite-20260812-140736
+    role: test-run
+    at: '2026-08-12T14:07:46+00:00'

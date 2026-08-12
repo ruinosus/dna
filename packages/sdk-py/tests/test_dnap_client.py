@@ -110,8 +110,8 @@ def test_the_kind_scan_actually_bites():
 @pytest.mark.asyncio
 async def test_the_vocabulary_comes_from_initialize():
     client, server = await _connected()
-    assert client.kinds == tuple(server._initialize()["kinds"])
-    assert client.channels == (CHANNEL,)
+    assert client.kinds == tuple(server._initialize({})["kinds"])
+    assert CHANNEL in client.channels
     assert client.protocol_version == "1.0"
 
 
@@ -137,8 +137,8 @@ async def test_a_server_with_no_vocabulary_is_a_protocol_error_not_a_fallback():
     """The client has no built-in list to fall back to, and must say so rather
     than quietly acquiring one."""
     class _Mute(DnapStubServer):
-        def _initialize(self):
-            hello = super()._initialize()
+        def _initialize(self, params):
+            hello = super()._initialize(params)
             hello["kinds"] = None
             return hello
 
@@ -196,7 +196,10 @@ async def test_unknown_metadata_members_survive_a_round_trip():
 
     class _Recording(DnapStubServer):
         def _instances_write(self, params):
-            sent.append(params["instance"])
+            # §6.2 (revised): the param is `document`. `kind` is read from
+            # document.kind — a separate kind param would be a second spelling
+            # that can disagree with the first.
+            sent.append(params["document"])
             return super()._instances_write(params)
 
     server = _Recording(())
@@ -401,6 +404,149 @@ async def test_batch_answers_are_paired_by_id_not_by_arrival():
     ])
     assert "kinds" in first
     assert "instances" in second
+
+
+# ---------------------------------------------------------------------------
+# what the clean-room revision added to the client's side of the contract
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_a_capability_the_client_did_not_request_is_unusable():
+    """⭐ §4 — the effective set is the INTERSECTION.
+
+    *"A client that did not ask for `write` cannot write, even against a server
+    that offers it."* The client holds itself to what it declared rather than
+    discovering the refusal as a `-32601` it would then have to explain — and
+    the server, asked around the local guard, agrees.
+    """
+    server = DnapStubServer(())
+    client = DnapClient(server.handle, capabilities={"resolve": {}})
+    await client.connect()
+
+    assert "search" in client.capabilities        # the server offers it...
+    assert not client.supports("search")          # ...this connection cannot use it
+    assert client.supports("resolve")
+    with pytest.raises(UnknownCapability, match="search"):
+        await client.search_instances(
+            channel=CHANNEL, kind="ConformanceWidget", query="x")
+
+    response = await server.handle({
+        "jsonrpc": "2.0", "id": 99, "method": "search/instances",
+        "params": {"channel": CHANNEL, "kind": "ConformanceWidget", "query": "x"},
+    })
+    assert response["error"]["code"] == -32601
+
+
+@pytest.mark.asyncio
+async def test_the_client_searches_resolved_knowledge_naming_nothing():
+    """⭐ §6.3 × §8 rule 1 — the conduit, and the closing of gap D6.
+
+    A `knowledge` entry used to be a bare collection name, and a client holding
+    one had no legal way to search it: reaching the corpus meant naming the Kind
+    that holds chunks, which client rule 1 forbids. The address makes the client
+    a pipe — everything in the outgoing search came out of the incoming
+    resolution.
+    """
+    seen: list[dict] = []
+
+    class _Recording(DnapStubServer):
+        def _search(self, params):
+            seen.append(params)
+            return super()._search(params)
+
+    client = DnapClient(_Recording(()).handle)
+    await client.connect()
+    resolved = (await client.resolve_agent(
+        channel=CHANNEL, name="alpha-0"))["resolved"]
+    address = resolved["knowledge"][0]
+
+    result = await client.search_knowledge(
+        address, channel=CHANNEL, query="conformance", k=3)
+
+    assert result["hits"]
+    # the client contributed the query, and nothing about WHAT is searched
+    assert seen[-1]["kind"] == address["kind"]
+    assert seen[-1]["narrow"] == address["narrow"]
+    assert all(h["name"].startswith("bulk-") for h in result["hits"])
+
+
+@pytest.mark.asyncio
+async def test_an_address_without_a_kind_is_an_error_not_a_guess():
+    """The client has no fallback here either: naming a Kind itself is exactly
+    what §8 forbids, so a malformed address is where the trail ends."""
+    client, _ = await _connected()
+    with pytest.raises(DnapProtocolError, match="no 'kind'"):
+        await client.search_knowledge(
+            {"collection": "somewhere"}, channel=CHANNEL, query="x")
+
+
+@pytest.mark.asyncio
+async def test_the_vocabulary_is_re_read_rather_than_frozen():
+    """§4 — *"A Kind legal at `initialize` may answer -32003 after a
+    `kinds/changed`. That is the registry moving, not a client bug."*
+
+    So the vocabulary is not frozen at connect time. Re-reading it is still
+    taking it FROM the wire, which is the whole of client rule 1 — the client
+    invents nothing on this path either.
+    """
+    server = DnapStubServer(())
+    client = DnapClient(server.handle)
+    await client.connect()
+    new_kind = "ConformanceLateArrival"
+    assert new_kind not in client.kinds
+    with pytest.raises(UnknownKind):
+        await client.list_instances(channel=CHANNEL, kind=new_kind)
+
+    await client.write_instance({
+        "apiVersion": "github.com/ruinosus/dna/core/v1",
+        "kind": "KindDefinition",
+        "metadata": {"name": new_kind},
+        "spec": {"kind": new_kind, "apiVersion": "example.test/late/v1",
+                 "plane": "record", "schema": {"type": "object"}},
+    }, channel=CHANNEL)
+
+    notes = await server.drain_notifications()
+    assert any(n["method"] == "notifications/kinds/changed"
+               and n["params"]["change"] == "registered" for n in notes)
+
+    after = await client.refresh_vocabulary(channel=CHANNEL)
+    assert new_kind in after
+    page = await client.list_instances(channel=CHANNEL, kind=new_kind)
+    assert page.instances == ()
+
+
+@pytest.mark.asyncio
+async def test_a_tenant_channel_is_addressed_never_parameterised():
+    """§3 — the overlay is a different ADDRESS, and the client treats it as one.
+
+    Nothing here splits the channel, reads the tenant out of it, or reasons about
+    the base: the string goes on the wire whole. A client that decomposed the
+    address would be the second place the tenant rule could be got wrong.
+    """
+    server = DnapStubServer(())
+    client = DnapClient(server.handle)
+    await client.connect()
+    overlay = next(c for c in client.channels if "#" in c)
+    base = overlay.split("#", 1)[0]
+
+    await client.write_instance({
+        "apiVersion": "example.test/dnap/v1", "kind": "ConformanceWidget",
+        "metadata": {"name": "tenant-only"},
+        "spec": {"title": "conformance tenant only"},
+    }, channel=overlay)
+
+    from dna.dnap import NotFound
+    with pytest.raises(NotFound):
+        await client.get_instance(
+            channel=base, kind="ConformanceWidget", name="tenant-only")
+    got = await client.get_instance(
+        channel=overlay, kind="ConformanceWidget", name="tenant-only")
+    assert got["instance"]["metadata"]["name"] == "tenant-only"
+
+    # read-through: the base's rows are visible from the overlay
+    whole = await client.list_all(channel=overlay, kind="ConformanceWidget")
+    names = {i["metadata"]["name"] for i in whole.instances}
+    assert "alpha-0" in names and "tenant-only" in names
 
 
 @pytest.mark.asyncio

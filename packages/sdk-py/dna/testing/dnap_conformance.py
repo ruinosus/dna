@@ -102,6 +102,8 @@ __all__ = [
     "INVALID_PARAMS",
     "KIND_NOT_SERVED",
     "METHOD_NOT_FOUND",
+    "NOT_FOUND",
+    "NOT_WRITABLE",
     "RESOLUTION_INCOMPLETE",
     "REVISION_CONFLICT",
     "SEARCH_UNAVAILABLE",
@@ -115,9 +117,11 @@ DNAP_PROTOCOL_VERSION = "1.0"
 
 # -- §7 error table. These are the answers the spec froze; they are constants,
 #    not a count of anything, so pinning them does not freeze the surface.
+NOT_FOUND = -32002
 KIND_NOT_SERVED = -32003
 CHANNEL_NOT_SERVED = -32004
 CURSOR_EXPIRED = -32005
+NOT_WRITABLE = -32006
 VALIDATION_FAILED = -32010
 REVISION_CONFLICT = -32011
 RESOLUTION_INCOMPLETE = -32020
@@ -140,6 +144,27 @@ HOST_CONCERNS = (
     "checkpointer", "checkpoint", "store", "threadindex", "threads",
     "telemetry", "tracing", "costtable", "costs", "sink",
 )
+
+#: §6.3 — "The resolved shape is CLOSED. A server MUST NOT add members." The
+#: whole roster, so a member outside it is a finding whatever it is called. This
+#: is an ANSWER the spec froze deliberately (an open shape lets one server's
+#: extra field become another binding's requirement), not a count the suite
+#: invented — which is why pinning it does not violate "freeze the question".
+RESOLVED_MEMBERS = frozenset({
+    "name", "instructions", "model", "tools", "mcpServers",
+    "toolsRequiringConfirmation", "knowledge", "sourceKind", "sourceName",
+    "revision",
+})
+
+#: §6.1 — the schema vocabulary a ``KindDefinition`` may use. Bounded on
+#: purpose: "a keyword the server stores, hands out through kinds/describe, and
+#: does not enforce is a lie told to every client that reads the schema to
+#: pre-validate."
+BOUNDED_SCHEMA_KEYWORDS = frozenset({
+    "type", "enum", "const", "required", "properties", "additionalProperties",
+    "items", "minItems", "maxItems", "uniqueItems", "minLength", "maxLength",
+    "pattern", "minimum", "maximum",
+})
 
 Cleanup = Callable[[], Awaitable[None]]
 Endpoint = Callable[[Any], Awaitable[Any]]
@@ -243,7 +268,11 @@ class DnapHarness:
     break_search: Callable[[], Awaitable[None]] | None = None
     #: Leave a definition resolvable-but-incomplete under the returned name.
     #: The suite then requires ``-32020`` — never a result with filled gaps.
-    break_resolution: Callable[[], Awaitable[str]] | None = None
+    #: Return ``name`` alone, or ``(name, how_many_parts_are_missing)``: §7 says
+    #: -32020 reports ALL of them and never just the first, and only whoever
+    #: broke the definition knows how many that is. Without the count that half
+    #: of the rule is reported ``unverified`` rather than assumed.
+    break_resolution: Callable[[], Awaitable[Any]] | None = None
     #: Expire every outstanding cursor. Without it the suite can only probe a
     #: cursor the server never minted, which is a weaker question.
     expire_cursors: Callable[[], Awaitable[None]] | None = None
@@ -643,7 +672,7 @@ async def _fixture(session: _Session, *, count: int, obligation: str) -> _Fixtur
             name = _unique(f"dnap-conformance-{i}")
             resp = await session.raw("instances/write", {
                 "channel": channel,
-                "instance": {
+                "document": {
                     "apiVersion": api_version,
                     "kind": kind,
                     "metadata": {"name": name},
@@ -837,7 +866,7 @@ async def _case_unknown_method_is_method_not_found(s: _Session) -> None:
 _CAPABILITY_METHODS = {
     "resolve": ("resolve/agent", {"name": "anything"}),
     "search": ("search/instances", {"query": "anything", "k": 1}),
-    "write": ("instances/write", {"instance": {}}),
+    "write": ("instances/write", {"document": {}}),
 }
 
 
@@ -862,6 +891,58 @@ async def _case_method_outside_capability_is_method_not_found(s: _Session) -> No
             rule=f"'{family}' is not in the advertised capabilities, so {method} "
                  f"is outside them",
         )
+
+
+async def _case_effective_capabilities_are_the_intersection(s: _Session) -> None:
+    """⭐ §4 — "The effective capability set is the INTERSECTION of what the
+    client sent and what the server answered."
+
+    *"A client that did not ask for `write` cannot write, even against a server
+    that offers it."* The alternative reading — the client's field is decorative
+    — is equally defensible from the older text and **disagrees about whether a
+    call succeeds**, which is why the revision fixes it rather than leaving it to
+    taste.
+
+    This case needs its own connection: it opens a SECOND one that asks for
+    nothing, and requires the very method the first connection may use to be
+    `-32601` on it. Same server, same moment, two answers — which is the whole
+    claim.
+    """
+    if not s.caps:
+        raise DnapCaseNotApplicable(
+            missing="the server advertised no capability at all",
+            unchecked="that the effective capability set is the intersection of "
+                      "the client's request and the server's answer",
+        )
+    probe = _Session(s.h)
+    hello = await probe.result("initialize", {
+        "protocolVersion": DNAP_PROTOCOL_VERSION,
+        "client": {"name": "dna-dnap-conformance-abstemious", "version": "1.0"},
+        "capabilities": {},          # this client asks for NOTHING
+    })
+    probe.hello = hello if isinstance(hello, dict) else {}
+    if not probe.channels:
+        raise DnapCaseNotApplicable(
+            missing="the second connection was answered with no channels, so it "
+                    "has nothing to be refused about",
+            unchecked="that a capability the CLIENT did not request is unusable",
+        )
+    for family, (method, extra) in _CAPABILITY_METHODS.items():
+        if not s.has(family):
+            continue                 # the server does not offer it either
+        await _must_refuse(
+            probe, method, {"channel": probe.channel(), **extra},
+            expect=METHOD_NOT_FOUND, section="§4",
+            rule=f"this connection did not request {family!r}, so {method} is "
+                 f"outside its effective capabilities even though the server "
+                 f"offers it",
+        )
+        return
+    raise DnapCaseNotApplicable(
+        missing=f"the server offers none of the capability families this suite "
+                f"knows how to probe ({sorted(_CAPABILITY_METHODS)})",
+        unchecked="that a capability the client did not request is unusable",
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -959,6 +1040,232 @@ async def _case_kinds_describe_carries_a_schema(s: _Session) -> None:
             "§6.1", f"kinds/describe for {entry['kind']!r} returned an object with no "
             f"JSON Schema keyword in it: {sorted(schema)!r}"
         )
+
+
+async def _case_every_served_kind_can_describe_itself(s: _Session) -> None:
+    """⛔ §6.1 — a built-in Kind MAY skip a stored ``KindDefinition``, but it MUST
+    still be describable through ``kinds/describe`` under the bounded schema.
+
+    *"A built-in that cannot describe itself is invisible to every client that
+    does not already know it."* Which is every conforming client, since §8 forbids
+    it to know any. So this is checked over the WHOLE advertised vocabulary, not
+    over one sample — an undescribable Kind in position seven is unreachable in
+    exactly the way position one would be.
+    """
+    channel = s.channel()
+    undescribable: list[tuple[str, Any]] = []
+    unbounded: list[tuple[str, list[str]]] = []
+    for entry in await s.kinds_on(channel):
+        kind = entry.get("kind")
+        if not isinstance(kind, str):
+            continue
+        resp = await s.raw("kinds/describe", {"channel": channel, "kind": kind})
+        if "error" in resp:
+            undescribable.append((kind, resp["error"]))
+            continue
+        result = resp["result"]
+        schema = result.get("schema") if isinstance(result, dict) else None
+        if schema is None and isinstance(result, dict):
+            schema = result
+        if not isinstance(schema, dict) or not schema:
+            undescribable.append((kind, result))
+            continue
+        used = _schema_keywords(schema)
+        outside = sorted(used - BOUNDED_SCHEMA_KEYWORDS)
+        if outside:
+            unbounded.append((kind, outside))
+    if undescribable:
+        raise _violation(
+            "§6.1", f"{len(undescribable)} advertised Kind(s) cannot describe "
+            f"themselves: {undescribable!r}. A conforming client knows no Kind of "
+            f"its own, so a Kind it cannot get a schema for is one it can only "
+            f"guess at — and a guessing client writes documents the server rejects.")
+    if unbounded:
+        raise _violation(
+            "§6.1", f"kinds/describe handed out schema keywords outside the bounded "
+            f"set: {unbounded!r}. §6.1 bounds the vocabulary because a keyword the "
+            f"server publishes and does not enforce is a lie told to every client "
+            f"that reads the schema to pre-validate.")
+
+
+def _schema_keywords(schema: Any, *, depth: int = 0) -> set[str]:
+    """Every schema keyword used anywhere in ``schema``.
+
+    Walks nested ``properties`` and ``items`` because the bound is on the
+    vocabulary, not on the top level — a forbidden keyword three levels down is
+    published to the same client and enforced just as little.
+    """
+    if not isinstance(schema, dict) or depth > 12:
+        return set()
+    used = {k for k in schema if not k.startswith("$")}
+    for sub in (schema.get("properties") or {}).values():
+        used |= _schema_keywords(sub, depth=depth + 1)
+    items = schema.get("items")
+    if isinstance(items, dict):
+        used |= _schema_keywords(items, depth=depth + 1)
+    additional = schema.get("additionalProperties")
+    if isinstance(additional, dict):
+        used |= _schema_keywords(additional, depth=depth + 1)
+    return used
+
+
+def _kind_definition_kind(s: _Session) -> str:
+    """The name of the Kind that defines Kinds, taken from the WIRE.
+
+    ⚠️ Read this carefully: §6.1 fixes the string ``KindDefinition`` normatively,
+    so the suite may use it — a conformance suite is allowed to know the protocol
+    it tests. But it is looked up in the advertised vocabulary first, so a server
+    that does not serve it gets a skip naming the obligation rather than a
+    failure about a Kind it never claimed to have.
+    """
+    for candidate in s.kinds:
+        if candidate == "KindDefinition":
+            return candidate
+    raise DnapCaseNotApplicable(
+        missing="the server does not advertise 'KindDefinition', the Kind through "
+                "which §6.1 says a type is created",
+        unchecked="that writing a KindDefinition registers a type, that "
+                  "metadata.name must equal spec.kind, and that an out-of-bounds "
+                  "schema keyword is refused with -32010",
+    )
+
+
+async def _case_writing_a_kind_definition_registers_the_kind(s: _Session) -> None:
+    """⭐ §6.1 — the reflexive rule: writing a ``KindDefinition`` REGISTERS a type.
+
+    *"There is no other way, and no out-of-band mechanism is permitted."* This
+    was gap A11 — *"the feature this specification argued hardest for was the
+    single feature it did not specify"* — and it is the one that makes the type
+    system govern its own vocabulary rather than merely claim to.
+
+    The case asserts the consequence rather than the write: the new Kind must
+    appear in ``kinds/list`` **from that moment**, which is the difference
+    between a stored document and a registered type.
+    """
+    _requires_write(s, "that writing a KindDefinition registers a new type")
+    kind_of_kinds = _kind_definition_kind(s)
+    channel = s.channel()
+    new_kind = "DnapConformance" + uuid.uuid4().hex[:10].capitalize()
+    resp = await s.raw("instances/write", {
+        "channel": channel,
+        "document": {
+            "apiVersion": "github.com/ruinosus/dna/core/v1",
+            "kind": kind_of_kinds,
+            "metadata": {"name": new_kind},
+            "spec": {
+                "kind": new_kind,
+                "apiVersion": "example.test/dnap-conformance/v1",
+                "plane": "record",
+                "schema": {"type": "object",
+                           "properties": {"note": {"type": "string"}},
+                           "required": []},
+            },
+        },
+    })
+    if "error" in resp:
+        raise DnapCaseNotApplicable(
+            missing=f"the server refused a minimal KindDefinition "
+                    f"({resp['error']!r}), so the suite cannot reach the "
+                    f"registration it wanted to observe",
+            unchecked="that writing a KindDefinition registers the type and it "
+                      "appears in kinds/list from that moment",
+        )
+    try:
+        served = {e.get("kind") for e in await s.kinds_on(channel)}
+        if new_kind not in served:
+            raise _violation(
+                "§6.1", f"a KindDefinition for {new_kind!r} was accepted and the "
+                f"Kind does not appear in kinds/list. Then the write stored a "
+                f"document instead of registering a type, and authoring — the act "
+                f"this protocol calls its foundation — did not happen.")
+        # ...and it must be usable, which is what "registered" is FOR.
+        probe = await s.raw("instances/list", {"channel": channel, "kind": new_kind})
+        if "error" in probe and probe["error"].get("code") == KIND_NOT_SERVED:
+            raise _violation(
+                "§6.1", f"{new_kind!r} is listed by kinds/list and answers -32003 "
+                f"KIND_NOT_SERVED. The vocabulary and the registry disagree, and a "
+                f"client that trusts kinds/list — which is the only thing it is "
+                f"allowed to trust — is stuck.")
+    finally:
+        await _cleanup_seeded(s, channel, kind_of_kinds, [new_kind])
+
+
+async def _case_kind_definition_name_must_equal_its_kind(s: _Session) -> None:
+    """§6.1 — ``metadata.name`` MUST equal ``spec.kind``.
+
+    *"One name, no mapping. A second spelling of the same thing is a place for
+    the two to drift, and every reader would then have to know which one is
+    authoritative."*
+    """
+    _requires_write(s, "that a KindDefinition whose name disagrees with its "
+                       "spec.kind is refused")
+    kind_of_kinds = _kind_definition_kind(s)
+    channel = s.channel()
+    declared = "DnapConformanceDeclared" + uuid.uuid4().hex[:8]
+    named = "DnapConformanceNamed" + uuid.uuid4().hex[:8]
+    await _positive_control(s)   # or a server refusing everything "passes" here
+    resp = await s.raw("instances/write", {
+        "channel": channel,
+        "document": {
+            "apiVersion": "github.com/ruinosus/dna/core/v1",
+            "kind": kind_of_kinds,
+            "metadata": {"name": named},        # ≠ spec.kind, and nothing else wrong
+            "spec": {"kind": declared,
+                     "apiVersion": "example.test/dnap-conformance/v1",
+                     "plane": "record",
+                     "schema": {"type": "object", "properties": {}}},
+        },
+    })
+    if "error" not in resp:
+        await _cleanup_seeded(s, channel, kind_of_kinds, [named, declared])
+        raise _violation(
+            "§6.1", f"a KindDefinition named {named!r} declaring spec.kind="
+            f"{declared!r} was ACCEPTED. Two spellings of one type is a place for "
+            f"them to drift, and no reader can tell which is authoritative — "
+            f"kinds/list will publish one of them and instances will carry the "
+            f"other.")
+
+
+async def _case_kind_definition_schema_is_bounded(s: _Session) -> None:
+    """§6.1 — a schema keyword outside the bounded set is ``-32010`` on
+    ``spec.schema``.
+
+    *"A keyword the server stores, hands out through `kinds/describe`, and does
+    not enforce is a lie told to every client that reads the schema to
+    pre-validate."* The probe uses a keyword that is real JSON Schema and
+    genuinely load-bearing (`allOf`), so accepting it is not a harmless nicety:
+    a client would pre-validate against a constraint the server ignores.
+    """
+    _requires_write(s, "that a KindDefinition carrying an out-of-bounds schema "
+                       "keyword is refused with -32010")
+    kind_of_kinds = _kind_definition_kind(s)
+    channel = s.channel()
+    name = "DnapConformanceUnbounded" + uuid.uuid4().hex[:8]
+    err = await _must_refuse(
+        s, "instances/write",
+        {"channel": channel,
+         "document": {
+             "apiVersion": "github.com/ruinosus/dna/core/v1",
+             "kind": kind_of_kinds,
+             "metadata": {"name": name},
+             "spec": {"kind": name,
+                      "apiVersion": "example.test/dnap-conformance/v1",
+                      "plane": "record",
+                      "schema": {"type": "object",
+                                 "properties": {"note": {"type": "string"}},
+                                 # real, load-bearing, and outside the bound
+                                 "allOf": [{"required": ["note"]}]}},
+         }},
+        expect=VALIDATION_FAILED, section="§6.1",
+        rule="'allOf' is outside the fifteen keywords §6.1 bounds a schema to",
+    )
+    blob = repr(err).lower()
+    data = err.get("data") if isinstance(err.get("data"), dict) else {}
+    if "schema" not in str(data.get("path") or "").lower() and "schema" not in blob:
+        raise _violation(
+            "§6.1", f"the refusal does not point at spec.schema: {err!r}. §6.1 says "
+            f"the rejection lands there, and an author holding a large definition "
+            f"needs to be told which part of it the server will not honour.")
 
 
 async def _case_unadvertised_kind_is_kind_not_served(s: _Session) -> None:
@@ -1084,6 +1391,169 @@ async def _case_unserved_tenant_overlay_is_not_the_base(s: _Session) -> None:
         "§3", f"the unserved tenant overlay {overlay} answered a result instead of "
         f"-32004: {got!r}"
     )
+
+
+# ---------------------------------------------------------------------------
+# §3 — the tenant overlay: read-through, write-local, no tombstones
+#
+# ⚠️ These three semantics were invented by the first independent implementation
+# from a single line of text, and the spec says so: "any of the three could have
+# been decided the other way, and two servers would then disagree about what a
+# tenant sees." That is the definition of something a conformance suite has to
+# hold, so all three get a case.
+# ---------------------------------------------------------------------------
+
+async def _served_overlay(s: _Session) -> tuple[str, str]:
+    """A served ``(base, overlay)`` pair, or a skip that names what went unchecked."""
+    overlays = [c for c in s.channels if "#" in c]
+    if not overlays:
+        raise DnapCaseNotApplicable(
+            missing=f"this server advertises no tenant overlay channel "
+                    f"({list(s.channels)!r}); the suite may not invent one, because "
+                    f"an unserved overlay must correctly answer -32004",
+            unchecked="the three tenant-overlay semantics of §3 — read-through, "
+                      "write-local, and no tombstones",
+        )
+    overlay = overlays[0]
+    base = overlay.split("#", 1)[0]
+    if base not in s.channels:
+        raise DnapCaseNotApplicable(
+            missing=f"the overlay {overlay!r} is served but its base {base!r} is "
+                    f"not, so the suite cannot observe the relation between them",
+            unchecked="the three tenant-overlay semantics of §3",
+        )
+    return base, overlay
+
+
+async def _case_tenant_overlay_reads_through_to_the_base(s: _Session) -> None:
+    """§3 — "an instance absent from the overlay resolves to the base channel's".
+
+    *"A tenant sees everything the scope has, plus what it changed."*
+    """
+    base, overlay = await _served_overlay(s)
+    entries = await s.kinds_on(base)
+    kind = next((e["kind"] for e in entries if isinstance(e.get("kind"), str)), None)
+    if kind is None:
+        raise DnapCaseNotApplicable(
+            missing=f"the base channel {base!r} serves no Kind",
+            unchecked="that a tenant overlay reads through to the base",
+        )
+    base_rows = await s.result("instances/list",
+                               {"channel": base, "kind": kind, "limit": 1000})
+    base_names = {n for n in (_name_of(i) for i in _instances_of(base_rows)) if n}
+    if not base_names:
+        raise DnapCaseNotApplicable(
+            missing=f"the base channel holds no instance of {kind!r} to read through to",
+            unchecked="that a tenant overlay reads through to the base",
+        )
+    over_rows = await s.result("instances/list",
+                               {"channel": overlay, "kind": kind, "limit": 1000})
+    over_names = {n for n in (_name_of(i) for i in _instances_of(over_rows)) if n}
+    invisible = sorted(base_names - over_names)
+    if invisible:
+        raise _violation(
+            "§3", f"{len(invisible)} base instance(s) are invisible from the tenant "
+            f"overlay: {invisible[:5]!r}. Read-through is what makes an overlay an "
+            f"overlay rather than a separate scope — a tenant sees everything the "
+            f"scope has, plus what it changed.")
+
+
+async def _case_a_tenant_write_never_touches_the_base(s: _Session) -> None:
+    """⭐ §3 — write-local. *"A tenant cannot edit the platform's copy by accident."*
+
+    The accident is the point: nothing in the request distinguishes an intended
+    tenant edit from one that lands on the shared shelf, so if the server gets
+    this backwards the damage is invisible until another tenant reads it.
+    """
+    _requires_write(s, "that a write on a tenant overlay never modifies the base")
+    base, overlay = await _served_overlay(s)
+    entry = await s.a_kind(base, writable=True)
+    kind = entry["kind"]
+    described = await s.result("kinds/describe", {"channel": base, "kind": kind})
+    schema = described.get("schema", described) if isinstance(described, dict) else {}
+    spec = _minimal_spec(schema)
+    if spec is _UNSATISFIABLE:
+        raise DnapCaseNotApplicable(
+            missing=f"the suite cannot synthesise a valid {kind!r} to write",
+            unchecked="that a write on a tenant overlay never modifies the base",
+        )
+    name = _unique("dnap-conformance-tenant")
+    resp = await s.raw("instances/write", {
+        "channel": overlay,
+        "document": {"apiVersion": entry.get("apiVersion") or "", "kind": kind,
+                     "metadata": {"name": name}, "spec": spec},
+    })
+    if "error" in resp:
+        raise DnapCaseNotApplicable(
+            missing=f"the overlay refused the write ({resp['error']!r})",
+            unchecked="that a write on a tenant overlay never modifies the base",
+        )
+    try:
+        on_base = await s.raw("instances/get",
+                              {"channel": base, "kind": kind, "name": name})
+        if "error" not in on_base:
+            raise _violation(
+                "§3", f"a write addressed to the tenant overlay {overlay!r} is "
+                f"readable on the BASE channel {base!r}. Write-local is the whole "
+                f"point of the address: this tenant just edited the platform's copy, "
+                f"and nothing in the request said so.")
+    finally:
+        await _cleanup_seeded(s, overlay, kind, [name])
+
+
+async def _case_a_tenant_delete_reveals_the_base_rather_than_hiding_it(
+    s: _Session,
+) -> None:
+    """⭐ §3 — no tombstones, and it is §7's central rule wearing another face.
+
+    *"Hiding would make 'this tenant has no X' and 'this tenant deleted X'
+    indistinguishable to every reader."* Which is exactly the collapse the
+    protocol refuses everywhere else: a delete that hides turns an ACTION into an
+    apparent FACT about the corpus, and no reader downstream can separate them.
+
+    So: overlay a base instance, delete the overlay's version, and require the
+    BASE one to come back — not a hole where it was.
+    """
+    _requires_write(s, "that deleting on a tenant overlay reveals the base "
+                       "instance rather than hiding it")
+    base, overlay = await _served_overlay(s)
+    entry = await s.a_kind(base, writable=True)
+    kind = entry["kind"]
+    base_rows = await s.result("instances/list",
+                               {"channel": base, "kind": kind, "limit": 10})
+    names = [n for n in (_name_of(i) for i in _instances_of(base_rows)) if n]
+    if not names:
+        raise DnapCaseNotApplicable(
+            missing=f"the base channel holds no {kind!r} to overlay and un-overlay",
+            unchecked="that a tenant delete reveals the base instance",
+        )
+    name = names[0]
+    got = await s.result("instances/get", {"channel": base, "kind": kind, "name": name})
+    doc = got.get("instance", got) if isinstance(got, dict) else got
+    body = {k: v for k, v in doc.items() if k != "metadata"}
+    body["metadata"] = {"name": name}
+    resp = await s.raw("instances/write", {"channel": overlay, "document": body})
+    if "error" in resp:
+        raise DnapCaseNotApplicable(
+            missing=f"the overlay refused to shadow {name!r} ({resp['error']!r})",
+            unchecked="that a tenant delete reveals the base instance",
+        )
+    deleted = await s.raw("instances/delete",
+                          {"channel": overlay, "kind": kind, "name": name})
+    if "error" in deleted:
+        raise _violation(
+            "§3", f"deleting the tenant's own version of {name!r} was refused: "
+            f"{deleted['error']!r}")
+    after = await s.raw("instances/get",
+                        {"channel": overlay, "kind": kind, "name": name})
+    if "error" in after:
+        raise _violation(
+            "§3", f"after deleting the OVERLAY's version of {name!r}, the overlay "
+            f"reports {after['error']!r} — but the base still holds it. The delete "
+            f"left a tombstone, and a tombstone makes 'this tenant has no {name}' "
+            f"and 'this tenant deleted {name}' the same value to every reader. "
+            f"That is §7's rule in the tenancy layer: an action was recorded as a "
+            f"fact about the corpus.")
 
 
 # ---------------------------------------------------------------------------
@@ -1229,6 +1699,124 @@ async def _case_unhonourable_select_is_invalid_params(s: _Session) -> None:
 # §6.2 rules 2 & 3 / §8.4 — pagination
 # ---------------------------------------------------------------------------
 
+async def _case_select_names_returns_plain_strings(s: _Session) -> None:
+    """⭐ §6.2 rule 5 — `"names"` returns an array of plain STRINGS.
+
+    *"Not one-member documents: a document-shaped object carrying only a name is
+    exactly the narrower shape rule 1 forbids, wearing a disguise."*
+
+    The disguise is the point. `[{"metadata": {"name": "x"}}]` passes any test
+    that only checks "no `spec` came back", which is precisely what the older,
+    weaker form of this case checked — and two servers picking the two shapes
+    return different rows for the same request.
+    """
+    fixture = await _fixture(s, count=1, obligation=(
+        "that select:'names' returns plain strings rather than one-member "
+        "documents (§6.2 rule 5)"))
+    try:
+        result = await _select_or_refusal(s, fixture, "names")
+        if result is None:
+            return
+        instances = _instances_of(result)
+        if not instances:
+            raise _violation(
+                "§6.2", f"select:'names' returned nothing although "
+                f"{len(fixture.names)} instance(s) exist")
+        wrong = [i for i in instances if not isinstance(i, str)]
+        if wrong:
+            raise _violation(
+                "§6.2", f"select:'names' returned {wrong[0]!r} — an object, not a "
+                f"name. A document-shaped thing carrying only a name is the "
+                f"narrower shape rule 1 forbids wearing a disguise, and the "
+                f"disguise works: it satisfies every check that only asks whether "
+                f"'spec' came back.")
+    finally:
+        await _release(s, fixture)
+
+
+async def _case_select_paths_adds_nothing(s: _Session) -> None:
+    """⭐ §6.2 rule 5 — a path list returns **exactly** the requested paths.
+
+    *"A server that helpfully attaches identity and one that does not return
+    different rows for the same request; ask for `metadata.name` when you want
+    it."* The helpful server is the harder bug, because its output looks better.
+
+    The probe asks for a path that is NOT identity, so an attached
+    `metadata.name` is unambiguously an addition rather than the thing requested.
+    """
+    fixture = await _fixture(s, count=1, obligation=(
+        "that a path-list projection adds nothing to what was asked for "
+        "(§6.2 rule 5)"))
+    try:
+        result = await _select_or_refusal(s, fixture, ["kind"])
+        if result is None:
+            return
+        for inst in _instances_of(result):
+            if not isinstance(inst, dict):
+                raise _violation(
+                    "§6.2", f"a path projection returned {inst!r}, not an object")
+            extra = sorted(set(inst) - {"kind"})
+            if extra:
+                raise _violation(
+                    "§6.2", f"select:['kind'] came back carrying {extra!r} as well. "
+                    f"Helpfully attaching identity is still an addition: this "
+                    f"server and one that adds nothing return different rows for "
+                    f"the same request, and no client can tell which it is talking "
+                    f"to.")
+    finally:
+        await _release(s, fixture)
+
+
+async def _case_listing_order_is_lexicographic_by_name(s: _Session) -> None:
+    """⭐ §6.2 rule 4 — order is lexicographic by ``metadata.name``, ascending.
+
+    *"Rules 2 and 3 are both meaningless without a total order."* That is the
+    whole weight of this case: a cursor into an unordered listing cannot promise
+    not to skip, and a stable `revision` over an unstable order is a stable claim
+    about nothing. The rule arrived only after a clean-room implementer noticed
+    both earlier rules were unimplementable without it.
+
+    Checked on the FIRST page and across the paginated walk, because a server can
+    sort a page and still page in another order — which is the failure that
+    silently drops rows.
+    """
+    fixture = await _fixture(s, count=3, obligation=(
+        "that instances/list is ordered lexicographically by metadata.name, "
+        "without which the cursor and the stable revision promise nothing"))
+    try:
+        whole = await s.result("instances/list", {
+            "channel": fixture.channel, "kind": fixture.kind, "limit": 1000})
+        names = [n for n in (_name_of(i) for i in _instances_of(whole)) if n]
+        if names != sorted(names):
+            first = next((i for i in range(1, len(names))
+                          if names[i] < names[i - 1]), None)
+            raise _violation(
+                "§6.2", f"instances/list is not in ascending lexicographic order by "
+                f"metadata.name: {names[first - 1]!r} came before {names[first]!r}. "
+                f"Without a total order a cursor cannot promise not to skip and a "
+                f"constant revision is a constant claim about nothing.")
+        walked: list[str] = []
+        cursor = None
+        for _ in range(200):
+            params: dict[str, Any] = {
+                "channel": fixture.channel, "kind": fixture.kind, "limit": 1}
+            if cursor is not None:
+                params["cursor"] = cursor
+            page = await s.result("instances/list", params)
+            walked += [n for n in (_name_of(i) for i in _instances_of(page)) if n]
+            cursor = page.get("cursor")
+            if not cursor:
+                break
+        if walked != sorted(walked):
+            raise _violation(
+                "§6.2", f"the PAGINATED walk is not in order even though one page "
+                f"is: {walked!r}. A server that sorts within a page and pages by "
+                f"something else is the exact shape that drops rows while every "
+                f"page looks healthy.")
+    finally:
+        await _release(s, fixture)
+
+
 async def _case_list_carries_an_opaque_revision(s: _Session) -> None:
     """§6.2 rule 3 — a listing names the snapshot it belongs to."""
     fixture = await _fixture(s, count=1, obligation=(
@@ -1347,10 +1935,15 @@ async def _case_expired_cursor_is_cursor_expired(s: _Session) -> None:
     """§6.2 rule 2 / §8 — an expired cursor MUST be ``-32005``, so the client
     restarts rather than silently skipping.
 
+    §6.2 rule 3 now spells out why the two are load-bearing together: honouring
+    the stable-revision MUST requires the server to hold a snapshot, which has a
+    lifetime and a memory bound, and *"`CURSOR_EXPIRED` is not a courtesy — it is
+    how a server with finite memory stays honest."*
+
     With ``expire_cursors`` the suite expires a cursor the server really minted.
     Without it, the probe falls back to a cursor the server never minted —
-    weaker, and reported as such, because the spec does not say what a
-    *malformed* cursor gets (see the module docstring's spec-gap note).
+    weaker, and reported as such, because the spec still does not say what a
+    *malformed* cursor gets (reported in ``docs/concepts/dnap-conformance.md``).
     """
     fixture = await _fixture(s, count=3, obligation=(
         "that an expired cursor answers -32005 CURSOR_EXPIRED"))
@@ -1487,7 +2080,7 @@ async def _case_stale_ifmatch_is_revision_conflict(s: _Session) -> None:
         body["metadata"] = {"name": name}
         # Move the stored revision out from under `stale`.
         resp = await s.raw("instances/write", {
-            "channel": fixture.channel, "instance": body, "ifMatch": stale})
+            "channel": fixture.channel, "document": body, "ifMatch": stale})
         if "error" in resp:
             raise DnapCaseNotApplicable(
                 missing=f"a CURRENT ifMatch was itself refused ({resp['error']!r}), "
@@ -1496,7 +2089,7 @@ async def _case_stale_ifmatch_is_revision_conflict(s: _Session) -> None:
             )
         err = await _must_refuse(
             s, "instances/write",
-            {"channel": fixture.channel, "instance": body, "ifMatch": stale},
+            {"channel": fixture.channel, "document": body, "ifMatch": stale},
             expect=REVISION_CONFLICT, section="§6.2",
             rule="the stored revision moved, so the write is based on a document "
                  "its author never saw",
@@ -1550,7 +2143,7 @@ async def _case_validation_failure_names_path_and_rule(s: _Session) -> None:
     spec[target] = 12345  # a number where the schema requires a string
     err = await _must_refuse(
         s, "instances/write",
-        {"channel": channel, "instance": {
+        {"channel": channel, "document": {
             "apiVersion": entry.get("apiVersion") or "",
             "kind": kind,
             "metadata": {"name": _unique("dnap-conformance-invalid")},
@@ -1599,7 +2192,7 @@ async def _case_derived_metadata_on_write_is_refused(s: _Session) -> None:
     name = _unique("dnap-conformance-derived")
     resp = await s.raw("instances/write", {
         "channel": channel,
-        "instance": {
+        "document": {
             "apiVersion": entry.get("apiVersion") or "",
             "kind": entry["kind"],
             # Valid in every other respect, so a refusal can only be about these
@@ -1612,12 +2205,17 @@ async def _case_derived_metadata_on_write_is_refused(s: _Session) -> None:
     if "error" not in resp:
         await _cleanup_seeded(s, channel, entry["kind"], [name])
         raise _violation(
-            "§5", "a write supplying metadata.id and metadata.revision was "
+            "§5/§6.2", "a write supplying metadata.id and metadata.revision was "
             "ACCEPTED, and the instance was otherwise valid — so nothing else "
             "could have carried the refusal. Those members are derived and "
             "server-minted; letting a client author them means a client can mint "
             "an identity or forge a snapshot, and nothing downstream can tell."
         )
+    if resp["error"].get("code") != VALIDATION_FAILED:
+        raise _violation(
+            "§6.2", f"supplied derived metadata was refused with code "
+            f"{resp['error'].get('code')!r}. §6.2 fixes it at -32010 "
+            f"VALIDATION_FAILED, and a client keys its next move on the code.")
 
 
 async def _case_conditional_read_is_not_modified(s: _Session) -> None:
@@ -1659,32 +2257,83 @@ async def _case_conditional_read_is_not_modified(s: _Session) -> None:
 
 
 async def _case_deleted_instance_is_a_miss_not_a_blank(s: _Session) -> None:
-    """§7 — getting what is not there is an error, not an empty document.
+    """§7 — getting what is not there is ``-32002 NOT_FOUND``, not a blank document.
 
     The get-shaped face of the central rule: a blank document reads as "it
     exists and has nothing in it", which is a different and unfalsifiable claim.
+
+    The code is now fixed (it was gap A2 — *"no code for this instance does not
+    exist"* — and until the clean room found it, two servers would have picked
+    two). So the case asserts the code and not merely the refusal: `-32002` and
+    `-32003` mean different repairs, and a client that cannot tell them apart
+    retries the wrong one.
     """
-    _requires_write(s, "that reading a deleted instance errors rather than "
-                       "returning a blank document")
     fixture = await _fixture(s, count=1, obligation=(
-        "that instances/get for a missing name errors rather than returning a "
-        "blank document"))
+        "that instances/get for a missing name answers -32002 NOT_FOUND rather "
+        "than a blank document"))
     try:
-        await _positive_control(s)
-        resp = await s.raw("instances/get", {
-            "channel": fixture.channel, "kind": fixture.kind,
-            "name": _unique("dnap-conformance-never-written"),
-        })
-        if "error" in resp:
-            return
-        result = resp["result"]
-        raise _violation(
-            "§7", f"instances/get for a name that was never written answered a "
-            f"result: {result!r}. 'Absent' and 'present but blank' are different "
-            f"values and a caller acts differently on each."
+        await _must_refuse(
+            s, "instances/get",
+            {"channel": fixture.channel, "kind": fixture.kind,
+             "name": _unique("dnap-conformance-never-written")},
+            expect=NOT_FOUND, section="§7",
+            rule="no instance by that name on that channel — 'absent' and "
+                 "'present but blank' are different values",
         )
     finally:
         await _release(s, fixture)
+
+
+async def _case_a_read_only_kind_refuses_writes_with_not_writable(s: _Session) -> None:
+    """§7 — ``-32006 NOT_WRITABLE``: the Kind is served but ``writable: false``.
+
+    Distinct from `-32003` on purpose, and the distinction is the useful part: a
+    Kind that is not served may appear later, a Kind that is not writable will
+    not. Collapsing them tells an author to keep retrying something that can
+    never work.
+    """
+    _requires_write(s, "that writing a served-but-read-only Kind answers -32006")
+    channel = s.channel()
+    entry = await s.a_kind(channel, writable=False)
+    await _must_refuse(
+        s, "instances/write",
+        {"channel": channel,
+         "document": {"apiVersion": entry.get("apiVersion") or "",
+                      "kind": entry["kind"],
+                      "metadata": {"name": _unique("dnap-conformance-readonly")},
+                      "spec": {}}},
+        expect=NOT_WRITABLE, section="§7",
+        rule=f"kinds/list reports {entry['kind']!r} as writable: false",
+        # A server that validates before consulting writability lands on -32010,
+        # which is a defensible order and still tells the author the truth.
+        also_accept=(VALIDATION_FAILED,),
+    )
+
+
+async def _case_instances_get_result_shape_is_determined(s: _Session) -> None:
+    """⚠️ SPEC GAP — is a fetched document wrapped, or is it the result?
+
+    §6.2 says `instances/get` returns *"the document verbatim"*, which reads as
+    the result BEING the document. But the same section now specifies
+    `instances/write` returning `{"instance": …, "created": true}`, and the
+    conditional read returning `{"notModified": true}` — an envelope that is
+    plainly not a document. So a client cannot tell whether to unwrap, and the
+    two readings produce different code on every get in every client.
+
+    The suite tolerates both shapes everywhere else precisely so this hole is
+    reported once, here, instead of being silently decided in twenty places.
+    """
+    raise DnapSpecGap(
+        section="§6.2",
+        question=(
+            "instances/get is specified as 'the document verbatim', while "
+            "instances/write returns {'instance': …, 'created': bool} and a "
+            "conditional get returns {'notModified': true}. Is a successful get "
+            "the document itself or {'instance': <document>}? Both readings are "
+            "defensible from the text, they disagree on every read, and a client "
+            "cannot probe for it without already having a document to recognise."
+        ),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1822,7 +2471,7 @@ async def _case_change_notification_carries_the_fact_not_the_document(s: _Sessio
             body = {k: v for k, v in doc.items() if k != "metadata"}
             body["metadata"] = {"name": marker}
             resp = await s.raw("instances/write",
-                               {"channel": fixture.channel, "instance": body})
+                               {"channel": fixture.channel, "document": body})
             if "error" in resp:
                 raise DnapCaseNotApplicable(
                     missing=f"the suite could not cause a change to watch "
@@ -1970,6 +2619,122 @@ async def _case_resolution_carries_no_host_concerns(s: _Session) -> None:
             f"definition could no longer leave.")
 
 
+async def _case_the_resolved_shape_is_closed(s: _Session) -> None:
+    """⛔ §6.3 — "The resolved shape is CLOSED. A server MUST NOT add members."
+
+    The general form of the host-concerns case, and the one that actually keeps
+    the agent portable: *"an open shape would let one server's extra field
+    become another binding's requirement, and the agent stops being portable the
+    day someone depends on it."* Host concerns are the leak we have already
+    watched happen; this catches the ones nobody has thought of yet.
+    """
+    _requires_resolve(s, "that a resolution carries no member outside the closed "
+                         "shape §6.3 defines")
+    resolved = await _resolved(s, await _a_resolvable_name(s))
+    extra = sorted(set(resolved) - RESOLVED_MEMBERS)
+    if extra:
+        raise _violation(
+            "§6.3", f"the resolution carries {extra!r}, which the closed shape does "
+            f"not include. The shape is closed so that no binding can come to "
+            f"depend on one server's extra field — the day one does, the agent it "
+            f"binds stops being portable, and nothing in the wire says so.")
+
+
+async def _case_resolved_knowledge_is_a_searchable_address(s: _Session) -> None:
+    """⭐ §6.3 — every `knowledge` entry is an ADDRESS, not a bare name.
+
+    This is gap D6 from the clean room, and it is a contradiction rather than an
+    omission: §8 forbids a client naming a Kind of its own, and a client holding
+    only `"politicas-internas"` could not search that corpus without hardcoding
+    the Kind that holds chunks. Carrying `kind` and `narrow` makes the client a
+    **conduit** — it hands `search/instances` exactly what `resolve/agent` handed
+    it, and still names nothing.
+
+    So the case asserts the shape AND the consequence: the `kind` in the address
+    must be one the server advertised, or the conduit dead-ends at the very
+    refusal (`-32003`) the address exists to avoid.
+    """
+    _requires_resolve(s, "that resolved knowledge entries are searchable addresses "
+                         "carrying kind and narrow, not bare collection names")
+    resolved = await _resolved(s, await _a_resolvable_name(s))
+    knowledge = resolved.get("knowledge")
+    if knowledge is None:
+        raise DnapCaseNotApplicable(
+            missing="the resolution carried no 'knowledge' member",
+            unchecked="that a knowledge entry is a searchable address (collection + "
+                      "kind + narrow) rather than a bare name",
+        )
+    if not isinstance(knowledge, list):
+        raise _violation("§6.3", f"knowledge is {type(knowledge).__name__}: "
+                                 f"{knowledge!r}")
+    if not knowledge:
+        raise DnapCaseNotApplicable(
+            missing="this definition's knowledge allowlist is empty",
+            unchecked="that a knowledge entry is a searchable address rather than a "
+                      "bare name",
+        )
+    for entry in knowledge:
+        if isinstance(entry, str):
+            raise _violation(
+                "§6.3", f"knowledge carries the bare name {entry!r}. A client "
+                f"holding only that cannot search the corpus without naming the "
+                f"Kind that holds it — which §8 forbids it to do. The entry has to "
+                f"be an address: {{collection, kind, narrow}}.")
+        if not isinstance(entry, dict):
+            raise _violation("§6.3", f"a knowledge entry is {entry!r}")
+        for member in ("collection", "kind"):
+            if not entry.get(member):
+                raise _violation(
+                    "§6.3", f"a knowledge entry omits {member!r}: {sorted(entry)!r}")
+        if entry["kind"] not in s.kinds:
+            raise _violation(
+                "§6.3", f"a knowledge address names kind {entry['kind']!r}, which "
+                f"this connection never advertised {list(s.kinds)!r}. The address "
+                f"exists so the client can search without naming a Kind — pointing "
+                f"it at an unserved one dead-ends the conduit at the -32003 it was "
+                f"built to avoid.")
+
+
+async def _case_a_client_can_search_knowledge_naming_nothing(s: _Session) -> None:
+    """⭐ §6.3 × §8 client rule 1 — the conduit, walked end to end.
+
+    The point of the address is not its shape; it is that a client can go from
+    `resolve/agent` to `search/instances` **without ever naming a type**. So the
+    case does exactly that, passing the resolved members through verbatim, and
+    fails if the round trip needs anything the suite would have had to know.
+    """
+    _requires_resolve(s, "that a client can search a resolved knowledge corpus "
+                         "without naming a Kind of its own")
+    _requires_search(s, "that a client can search a resolved knowledge corpus "
+                        "without naming a Kind of its own")
+    resolved = await _resolved(s, await _a_resolvable_name(s))
+    addresses = [e for e in (resolved.get("knowledge") or []) if isinstance(e, dict)]
+    if not addresses:
+        raise DnapCaseNotApplicable(
+            missing="the resolution carried no knowledge address to follow",
+            unchecked="that resolve → search is walkable by a client that names "
+                      "no Kind",
+        )
+    address = addresses[0]
+    params: dict[str, Any] = {
+        "channel": s.channel(),
+        "kind": address["kind"],          # came from the wire, not from the suite
+        "query": "conformance",
+        "k": 5,
+    }
+    if address.get("narrow") is not None:
+        params["narrow"] = address["narrow"]
+    result = await s.result(
+        "search/instances", params,
+        why="the conduit: everything in this request came out of resolve/agent")
+    if not isinstance(result, dict) or not isinstance(result.get("hits"), list):
+        raise _violation(
+            "§6.3/§6.4", f"searching the resolved address {address!r} returned "
+            f"{result!r}. The address is the whole mechanism by which a "
+            f"Kind-agnostic client reaches a corpus; if following it verbatim does "
+            f"not work, the client has no other legal move.")
+
+
 async def _case_resolving_an_unknown_name_is_an_error(s: _Session) -> None:
     """⭐ §7 at the resolution layer — a definition that is not there is not a
     blank definition."""
@@ -2001,12 +2766,52 @@ async def _case_partial_resolution_is_resolution_incomplete(s: _Session) -> None
                  "definition with silent gaps",
             needs="break_resolution",
         )
-    name = await s.h.break_resolution()
-    await _must_refuse(
+    broken = await s.h.break_resolution()
+    name, expected = broken if isinstance(broken, tuple) else (broken, None)
+    err = await _must_refuse(
         s, "resolve/agent", {"channel": s.channel(), "name": name},
         expect=RESOLUTION_INCOMPLETE, section="§7",
         rule="the definition could not be fully resolved",
     )
+    # §7 — "with data.missing: [{kind,name,via}] — ALL of them, never the first".
+    # Reporting only the first turns one repair into n round trips, and the
+    # caller cannot tell whether it is nearly done or has barely started.
+    data = err.get("data") if isinstance(err.get("data"), dict) else {}
+    missing = data.get("missing")
+    if not isinstance(missing, list) or not missing:
+        raise _violation(
+            "§7", f"-32020 carried no data.missing: {err!r}. A resolution that "
+            f"failed without saying WHAT it could not find leaves the caller with "
+            f"the same two options it had before asking.")
+    for item in missing:
+        if not isinstance(item, dict):
+            raise _violation("§7", f"a data.missing entry is {item!r}, not "
+                                   f"{{kind, name, via}}")
+        absent = [m for m in ("kind", "name", "via") if m not in item]
+        if absent:
+            raise _violation(
+                "§7", f"a data.missing entry omits {absent!r}: {sorted(item)!r}. "
+                f"'via' is what makes the report actionable — it says which edge "
+                f"led to the hole, and without it a caller with a deep graph is "
+                f"back to searching.")
+    # "ALL of them, never the first" is the half a black-box probe cannot judge:
+    # only whoever broke the definition knows how many holes it has. So the
+    # harness may say, and if it does not, THAT half is unverified rather than
+    # quietly counted as passed on the strength of the shape check above.
+    if expected is None:
+        raise DnapRuleUnverified(
+            rule="§7 — that -32020 reports ALL the missing parts and never just "
+                 "the first (the shape of data.missing WAS verified; the "
+                 "completeness of it cannot be, from outside)",
+            needs="break_resolution returning (name, expected_missing_count)",
+        )
+    if len(missing) != expected:
+        raise _violation(
+            "§7", f"the definition is missing {expected} part(s) and -32020 "
+            f"reported {len(missing)}: {missing!r}. 'All of them, never the first' "
+            f"is what turns one repair into one round trip — reporting one at a "
+            f"time also leaves the caller unable to tell whether it is nearly done "
+            f"or has barely started.")
 
 
 async def _case_resolve_copilot_reports_its_source(s: _Session) -> None:
@@ -2152,27 +2957,60 @@ async def _case_min_similarity_is_the_callers_policy(s: _Session) -> None:
 
 
 async def _case_min_similarity_discloses_its_effect(s: _Session) -> None:
-    """§6.4 rule 2, second half — "the result reports how many hits it removed".
+    """§6.4 rule 2, second half — ``minSimilarityRemoved`` carries the count.
 
-    ⚠️ SPEC GAP. The rule is normative and the envelope in §6.4 names no member
-    to carry the count. Two conforming servers would report it under two names
-    and no client could read either. The case therefore refuses to invent a
-    field name and files the hole instead — a spec gap is never a pass.
+    *"A filter that hides its own effect turns a policy into a fact."* The member
+    is **absent** when no threshold was applied, and that absence is asserted as
+    hard as the presence: `0` would report a filter that never ran, and a caller
+    reading it would believe the server had looked and found nothing to cut.
+
+    (In the 479-line draft this rule was normative with no member to carry it,
+    and this case filed a `DnapSpecGap` instead of inventing a name. The clean
+    room found the same hole as A9; the field now exists and the case is real.)
     """
-    _requires_search(s, "that a server applying minSimilarity reports how many "
-                        "hits it removed")
-    raise DnapSpecGap(
-        section="§6.4 rule 2",
-        question=(
-            "'When applied, the result reports how many hits it removed' is "
-            "normative, but the envelope in §6.4 names no member for the count "
-            "(the shown members are mode, degraded, degradedReason, "
-            "relevanceNotice, revision). Two conforming servers would pick two "
-            "names and no client could read either. The spec needs to name the "
-            "field — e.g. 'filtered': {'byMinSimilarity': <n>} — before this "
-            "can be tested."
-        ),
-    )
+    fixture = await _search_fixture(
+        s, "that minSimilarityRemoved reports the count when a threshold ran, "
+           "and is ABSENT when none did (§6.4 rule 2)")
+    try:
+        base = await _search(s, fixture, query="conformance", k=10)
+        if "minSimilarityRemoved" in base:
+            raise _violation(
+                "§6.4", f"no minSimilarity was supplied, yet the envelope carries "
+                f"minSimilarityRemoved={base['minSimilarityRemoved']!r}. The member "
+                f"is absent when no threshold was applied — reporting a count for a "
+                f"filter that never ran tells a caller the server looked and found "
+                f"nothing to cut, which is a different fact.")
+        sims = [h.get("similarity") for h in base["hits"]
+                if isinstance(h.get("similarity"), (int, float))]
+        if not sims or len(base["hits"]) < 2:
+            raise DnapCaseNotApplicable(
+                missing=f"the unfiltered search returned {len(base['hits'])} hit(s) "
+                        f"with {len(sims)} similarity value(s), so no threshold can "
+                        f"be placed that removes a known number",
+                unchecked="that minSimilarityRemoved reports the count a threshold "
+                          "removed",
+            )
+        floor = max(sims)
+        expected = sum(1 for s_ in sims if s_ < floor)
+        filtered = await _search(s, fixture, query="conformance", k=10,
+                                 minSimilarity=floor)
+        if "minSimilarityRemoved" not in filtered:
+            raise _violation(
+                "§6.4", f"minSimilarity={floor} was applied and the envelope carries "
+                f"no minSimilarityRemoved ({sorted(filtered)!r}). A filter that "
+                f"hides its own effect turns the caller's policy into an apparent "
+                f"fact about the corpus.")
+        removed = filtered["minSimilarityRemoved"]
+        if not isinstance(removed, int) or removed < 0:
+            raise _violation(
+                "§6.4", f"minSimilarityRemoved={removed!r} is not a count")
+        if expected and removed == 0:
+            raise _violation(
+                "§6.4", f"minSimilarity={floor} removed {expected} hit(s) by the "
+                f"suite's own count of the unfiltered result, and the envelope "
+                f"reports minSimilarityRemoved=0.")
+    finally:
+        await _release(s, fixture)
 
 
 async def _case_two_notes_travel(s: _Session) -> None:
@@ -2200,12 +3038,116 @@ async def _case_two_notes_travel(s: _Session) -> None:
                         f"is the raw measure and is comparable across calls. One "
                         f"cannot stand in for the other.")
             sim = hit["similarity"]
-            if not isinstance(sim, (int, float)) or not (-1.000001 <= sim <= 1.000001):
+            if not isinstance(sim, (int, float)) or not (0 <= sim <= 1.000001):
                 raise _violation(
-                    "§6.4", f"similarity={sim!r} for {hit.get('name')!r} is not a "
-                    f"cosine in [-1, 1] — 'comparable across calls' requires one "
-                    f"shared scale, which is exactly the half a single-server test "
-                    f"never catches.")
+                    "§6.4", f"similarity={sim!r} for {hit.get('name')!r} is outside "
+                    f"[0, 1]. The spec defines similarity by a PROPERTY — a "
+                    f"corpus-independent measure in [0,1] — and not by an "
+                    f"algorithm, precisely so minSimilarity means the same thing on "
+                    f"a dense plane and on a lexical-only server. A value off that "
+                    f"scale makes the caller's only policy knob unusable.")
+    finally:
+        await _release(s, fixture)
+
+
+async def _case_similarity_is_corpus_independent(s: _Session) -> None:
+    """⭐ §6.4 rule 3 — the PROPERTY, tested as a property.
+
+    *"`similarity` is defined by that PROPERTY, not by an algorithm."* So the
+    case must not test for a cosine. It tests what corpus-independence actually
+    means and what makes `similarity` worth carrying next to `score`:
+
+      **the same query over the same document keeps its `similarity` when the
+      candidate set changes, while `score` — a fused rank — is free to move.**
+
+    Narrowing changes the candidate set without changing any document. A server
+    that reports a rank-derived number under the name `similarity` fails here,
+    and that server is exactly the one that leaves a caller unable to tell
+    "first among bad" from "first among good".
+    """
+    fixture = await _search_fixture(
+        s, "that 'similarity' is corpus-independent — stable for a document "
+           "across calls whose candidate set differs (§6.4 rule 3)")
+    try:
+        whole = await s.result("instances/list", {
+            "channel": fixture.channel, "kind": fixture.kind, "limit": 1000})
+        population = [n for n in (_name_of(i) for i in _instances_of(whole)) if n]
+        wide = await _search(s, fixture, query="conformance", k=len(population) or 10)
+        by_name = {h.get("name"): h for h in wide["hits"]
+                   if isinstance(h.get("similarity"), (int, float))}
+        if not by_name:
+            raise DnapCaseNotApplicable(
+                missing="the search returned no hit carrying a numeric similarity",
+                unchecked="that similarity is stable across a change of candidate set",
+            )
+        # The WORST-ranked hit, narrowed as tightly as the corpus allows: the
+        # bigger the change in the candidate set, the bigger the move a
+        # rank-derived impostor has to make, and the smaller the chance a
+        # corpus-dependent number happens to land on the same value twice.
+        target = list(by_name)[-1]
+        prefix, matching = _narrowest_prefix(target, population)
+        if not prefix or len(matching) == len(population):
+            raise DnapCaseNotApplicable(
+                missing=f"no prefix narrows {target!r} to a proper subset, so the "
+                        f"candidate set cannot be changed without changing the corpus",
+                unchecked="that similarity is stable across a change of candidate set",
+            )
+        narrow = await _search(s, fixture, query="conformance", k=len(matching),
+                               narrow={"namePrefix": prefix})
+        got = next((h for h in narrow["hits"] if h.get("name") == target), None)
+        if got is None or not isinstance(got.get("similarity"), (int, float)):
+            raise DnapCaseNotApplicable(
+                missing=f"{target!r} did not come back from the narrowed search "
+                        f"with a similarity to compare",
+                unchecked="that similarity is stable across a change of candidate set",
+            )
+        was, now = by_name[target]["similarity"], got["similarity"]
+        if abs(was - now) > 1e-6:
+            raise _violation(
+                "§6.4", f"the similarity of {target!r} moved from {was} to {now} "
+                f"when only the CANDIDATE SET changed — the document and the query "
+                f"are identical in both calls. That number is therefore a function "
+                f"of the other rows, which is what 'score' already is. A caller "
+                f"holding it cannot compare across calls, and minSimilarity means "
+                f"something different on every request.")
+    finally:
+        await _release(s, fixture)
+
+
+async def _case_mode_names_only_advertised_planes(s: _Session) -> None:
+    """§6.4 — "a server MUST NOT report a mode whose planes it did not advertise".
+
+    `mode` names the planes that actually RAN, drawn from the same vocabulary as
+    `capabilities.search.planes`. `"hybrid"` is legible only when more than one
+    advertised plane contributed, so it requires at least two.
+    """
+    fixture = await _search_fixture(
+        s, "that 'mode' names only planes the server advertised (§6.4)")
+    try:
+        advertised = s.caps.get("search")
+        planes = advertised.get("planes") if isinstance(advertised, dict) else None
+        if not isinstance(planes, list) or not planes:
+            raise DnapCaseNotApplicable(
+                missing=f"capabilities.search advertised no 'planes' "
+                        f"({advertised!r}), so there is no vocabulary to hold "
+                        f"'mode' to",
+                unchecked="that 'mode' names only planes the server advertised",
+            )
+        result = await _search(s, fixture, query="conformance", k=5)
+        mode = result.get("mode")
+        if mode == "hybrid":
+            if len(planes) < 2:
+                raise _violation(
+                    "§6.4", f"mode='hybrid' with a single advertised plane "
+                    f"{planes!r}. Hybrid means more than one contributed; with one "
+                    f"plane there is nothing to fuse, and the caller is being told "
+                    f"the search was stronger than it was.")
+        elif mode not in planes:
+            raise _violation(
+                "§6.4", f"mode={mode!r} is not among the advertised planes "
+                f"{planes!r}. The two are one vocabulary on purpose: a caller reads "
+                f"'mode' against what the server said it could do, and a third word "
+                f"leaves it unable to.")
     finally:
         await _release(s, fixture)
 
@@ -2292,6 +3234,21 @@ async def _case_narrow_applies_where_candidates_are_chosen(s: _Session) -> None:
             )
     finally:
         await _release(s, fixture)
+
+
+def _narrowest_prefix(target: str, population: Sequence[str]) -> tuple[str, list[str]]:
+    """The LONGEST prefix of ``target`` still matching a non-empty subset.
+
+    The mirror of :func:`_narrow_prefix`. That one wants the biggest group a
+    prefix can name; this one wants the smallest, because its case is about
+    changing the candidate set as much as the corpus permits.
+    """
+    for i in range(len(target), 0, -1):
+        prefix = target[:i]
+        matching = [n for n in population if n.startswith(prefix)]
+        if matching:
+            return prefix, matching
+    return "", []
 
 
 def _narrow_prefix(target: str, population: Sequence[str]) -> tuple[str, list[str]]:
@@ -2415,6 +3372,9 @@ _CASES: list[tuple[str, str, str, Callable[[_Session], Awaitable[None]]]] = [
     ("method_outside_capability_is_method_not_found", "§4/§8.2",
      "a method outside every advertised capability is -32601",
      _case_method_outside_capability_is_method_not_found),
+    ("effective_capabilities_are_the_intersection", "§4",
+     "⭐ a capability the CLIENT did not request is unusable, however generous the server",
+     _case_effective_capabilities_are_the_intersection),
     # lifecycle + vocabulary
     ("initialize_advertises_the_connection", "§8.1",
      "initialize advertises kinds, channels and capabilities",
@@ -2428,6 +3388,18 @@ _CASES: list[tuple[str, str, str, Callable[[_Session], Awaitable[None]]]] = [
     ("kinds_describe_carries_a_schema", "§6.1",
      "the schema travels, so a client never has to guess",
      _case_kinds_describe_carries_a_schema),
+    ("every_served_kind_can_describe_itself", "§6.1",
+     "⛔ a built-in that cannot describe itself is invisible to every conforming client",
+     _case_every_served_kind_can_describe_itself),
+    ("writing_a_kind_definition_registers_the_kind", "§6.1",
+     "⭐ the reflexive rule — writing a KindDefinition REGISTERS a type",
+     _case_writing_a_kind_definition_registers_the_kind),
+    ("kind_definition_name_must_equal_its_kind", "§6.1",
+     "one name, no mapping — a second spelling is a place to drift",
+     _case_kind_definition_name_must_equal_its_kind),
+    ("kind_definition_schema_is_bounded", "§6.1",
+     "a keyword published and not enforced is a lie told to every pre-validating client",
+     _case_kind_definition_schema_is_bounded),
     ("unadvertised_kind_is_kind_not_served", "§8.2",
      "a Kind outside the vocabulary is -32003",
      _case_unadvertised_kind_is_kind_not_served),
@@ -2444,6 +3416,15 @@ _CASES: list[tuple[str, str, str, Callable[[_Session], Awaitable[None]]]] = [
     ("unserved_tenant_overlay_is_not_the_base", "§3",
      "⛔ an unserved tenant overlay never falls back to its base scope",
      _case_unserved_tenant_overlay_is_not_the_base),
+    ("tenant_overlay_reads_through_to_the_base", "§3",
+     "a tenant sees everything the scope has, plus what it changed",
+     _case_tenant_overlay_reads_through_to_the_base),
+    ("a_tenant_write_never_touches_the_base", "§3",
+     "⭐ write-local — a tenant cannot edit the platform's copy by accident",
+     _case_a_tenant_write_never_touches_the_base),
+    ("a_tenant_delete_reveals_the_base_rather_than_hiding_it", "§3",
+     "⭐ no tombstones — §7's rule in the tenancy layer: an action is not a fact",
+     _case_a_tenant_delete_reveals_the_base_rather_than_hiding_it),
     # select
     ("select_names_is_honoured_or_rejected", "§8.3",
      "select is honoured exactly or refused with -32602",
@@ -2457,6 +3438,15 @@ _CASES: list[tuple[str, str, str, Callable[[_Session], Awaitable[None]]]] = [
     ("unhonourable_select_is_invalid_params", "§6.2",
      "a projection outside the defined union is refused, not reinterpreted",
      _case_unhonourable_select_is_invalid_params),
+    ("select_names_returns_plain_strings", "§6.2 r5",
+     "⭐ a one-member document is the narrower shape wearing a disguise",
+     _case_select_names_returns_plain_strings),
+    ("select_paths_adds_nothing", "§6.2 r5",
+     "⭐ the helpful server and the exact one return different rows",
+     _case_select_paths_adds_nothing),
+    ("listing_order_is_lexicographic_by_name", "§6.2 r4",
+     "⭐ without a total order the cursor and the stable revision promise nothing",
+     _case_listing_order_is_lexicographic_by_name),
     # pagination
     ("list_carries_an_opaque_revision", "§6.2",
      "a listing names the snapshot it belongs to",
@@ -2490,8 +3480,14 @@ _CASES: list[tuple[str, str, str, Callable[[_Session], Awaitable[None]]]] = [
      "ifNoneMatch at the current revision answers notModified with no body",
      _case_conditional_read_is_not_modified),
     ("deleted_instance_is_a_miss_not_a_blank", "§7",
-     "absent and present-but-blank are different values",
+     "absent and present-but-blank are different values (-32002)",
      _case_deleted_instance_is_a_miss_not_a_blank),
+    ("a_read_only_kind_refuses_writes_with_not_writable", "§7",
+     "-32006 — 'not served' may change; 'not writable' will not",
+     _case_a_read_only_kind_refuses_writes_with_not_writable),
+    ("instances_get_result_shape_is_determined", "§6.2",
+     "⚠️ SPEC GAP — is a fetched document wrapped, or is it the result?",
+     _case_instances_get_result_shape_is_determined),
     # the central rule
     ("positive_control_a_valid_listing_succeeds", "§8",
      "⭐ a valid listing succeeds — without which every refusal case is a tautology",
@@ -2519,6 +3515,15 @@ _CASES: list[tuple[str, str, str, Callable[[_Session], Awaitable[None]]]] = [
     ("resolution_carries_no_host_concerns", "§6.3",
      "⛔ checkpointers, stores, telemetry and cost tables stay with the host",
      _case_resolution_carries_no_host_concerns),
+    ("the_resolved_shape_is_closed", "§6.3",
+     "⛔ one server's extra field becomes another binding's requirement",
+     _case_the_resolved_shape_is_closed),
+    ("resolved_knowledge_is_a_searchable_address", "§6.3",
+     "⭐ a bare corpus name would force the client to name a Kind (gap D6)",
+     _case_resolved_knowledge_is_a_searchable_address),
+    ("a_client_can_search_knowledge_naming_nothing", "§6.3/§8",
+     "⭐ the conduit, walked end to end: resolve → search, naming no type",
+     _case_a_client_can_search_knowledge_naming_nothing),
     ("resolving_an_unknown_name_is_an_error", "§7",
      "⭐ a definition that is not there is not a blank definition",
      _case_resolving_an_unknown_name_is_an_error),
@@ -2539,11 +3544,17 @@ _CASES: list[tuple[str, str, str, Callable[[_Session], Awaitable[None]]]] = [
      "a caller-supplied threshold is applied; the protocol invents none",
      _case_min_similarity_is_the_callers_policy),
     ("min_similarity_discloses_its_effect", "§6.4 r2",
-     "a filter that hides its own effect turns a policy into a fact",
+     "minSimilarityRemoved reports the cut, and is ABSENT when none was made",
      _case_min_similarity_discloses_its_effect),
     ("two_notes_travel", "§6.4 r3",
      "score and similarity are two quantities, and both travel",
      _case_two_notes_travel),
+    ("similarity_is_corpus_independent", "§6.4 r3",
+     "⭐ the PROPERTY, not the algorithm: stable when only the candidate set moves",
+     _case_similarity_is_corpus_independent),
+    ("mode_names_only_advertised_planes", "§6.4",
+     "a server never reports a mode whose planes it did not advertise",
+     _case_mode_names_only_advertised_planes),
     ("hits_are_ordered_by_their_score", "§6.4 r3",
      "the order and the numbers agree",
      _case_hits_are_ordered_by_their_score),

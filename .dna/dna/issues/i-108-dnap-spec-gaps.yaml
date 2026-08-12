@@ -28,3 +28,27 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-08-12T14:06:33+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      ATUALIZADO apos a revisao de sala limpa (spec 479 -> 676 linhas, commit b7d6d39e).
+
+      SEIS dos nove fecharam — e fecharam por um segundo leitor independente, o que e o achado mais interessante: a sala limpa encontrou sozinha o contador sem nome do minSimilarity (A9), a falta de NOT_FOUND (A2), as formas de resultado de select e de write/delete (A3-A5, A13) e o 'JSON Schema' sem limite (A10). Dois leitores sem contato convergindo nos mesmos buracos e evidencia de que os buracos eram reais, e nao confusao de um deles.
+
+      FECHADOS: 1 (minSimilarityRemoved), 2 (-32002), 3 (-32010 para metadata derivada), 6-parcial (write/delete tem forma), 7-parcial (path list nao acrescenta nada), 9-parcial.
+
+      CONTINUAM ABERTOS: 4 (cursor malformado x expirado), 5 (initialize.kinds x kinds/list por canal), 8 (transporte de notificacao — a 10 q6 agora reconhece o problema vizinho: conformidade de CLIENTE nao tem superficie de teste).
+
+      NOVOS, achados lendo a revisao (os tres primeiros quebram interoperabilidade):
+
+      A) 6.2 regra 4 — 'lexicografico' por qual COLACAO? Ordem de codepoint poe 'Z' antes de 'a'; ordem de locale nao. Num protocolo cuja razao de ser e atravessar linguagens, dois servidores ordenando os mesmos nomes diferente quebram o cursor exatamente do jeito que a regra 4 foi criada para impedir.
+      B) 4 — a REGRA foi fixada, a ENTRADA dela nao. A capacidade efetiva e a intersecao (e isso decide se uma chamada SUCEDE), mas o documento nunca diz que metodo pertence a que familia. instances/delete esta sob write? kinds/describe esta sob alguma?
+      C) 3 — um ifMatch no overlay fala QUAL revision? Cada canal tem sequencia propria, e read-through devolve instancias da BASE carregando revisions da sequencia da base. Uma escrita condicional no overlay sobre uma instancia lida por read-through tem duas revisions candidatas e a spec nao nomeia nenhuma.
+      D) 6.3 — 'fechado' diz que nao ha extras; nada diz o MINIMO. Um servidor mandando 'tools': [] e outro omitindo 'tools' sao ambos fechados, e um binding escrito contra um quebra no outro.
+      E) 6.1 — onde uma REGISTRO tem efeito? Um KindDefinition e escrito num canal: registra para o canal, para a conexao, ou para o servidor? E o schema limitado nao admite description/title/default, entao kinds/describe entrega schemas sem documentacao dos proprios campos — provavelmente nao intencional.
+      F) 6.4 — o EXEMPLO contradiz o texto: 'mode e tirado do mesmo vocabulario que capabilities.search.planes', e o exemplo anuncia [lexical, semantic] reportando mode: hybrid.
+      G) editorial — a lista de questoes abertas tem dois itens numerados 5.
+
+      A tabela argumentada esta em docs/concepts/dnap-conformance.md.

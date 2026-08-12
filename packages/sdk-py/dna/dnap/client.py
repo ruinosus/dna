@@ -55,6 +55,8 @@ __all__ = [
     "DnapError",
     "DnapProtocolError",
     "KindNotServed",
+    "NotFound",
+    "NotWritable",
     "Page",
     "ResolutionIncomplete",
     "RevisionConflict",
@@ -126,7 +128,26 @@ class SearchUnavailable(DnapError):
     """-32030 — no plane could run. Distinct from an empty result, on purpose."""
 
 
+class NotFound(DnapError):
+    """-32002 — no instance by that name on that channel.
+
+    Deliberately distinct from an empty listing, and from :class:`KindNotServed`:
+    "not served" may become served, "not found" is about one name, and a caller
+    repairs each differently.
+    """
+
+
+class NotWritable(DnapError):
+    """-32006 — the Kind is served but ``writable: false``.
+
+    Not the same as -32003: a Kind that is not served may appear later; a Kind
+    that is not writable will not, and retrying is wasted work.
+    """
+
+
 _BY_CODE: dict[int, type[DnapError]] = {
+    -32002: NotFound,
+    -32006: NotWritable,
     -32003: KindNotServed,
     -32004: ChannelNotServed,
     -32005: CursorExpired,
@@ -300,8 +321,53 @@ class DnapClient:
     def protocol_version(self) -> str:
         return self.hello.protocol_version
 
+    @property
+    def requested_capabilities(self) -> Mapping[str, Any]:
+        """What THIS client asked for at ``initialize``."""
+        return dict(self._requested)
+
     def supports(self, family: str) -> bool:
-        return family in self.hello.capabilities
+        """§4 — the EFFECTIVE capability set is the intersection.
+
+        A family the server offers and this client did not ask for is not
+        available: *"a client declares the surface it intends to use, and the
+        server holds it to that."* So the client holds itself to it too, rather
+        than discovering the refusal as a `-32601` it would then have to explain.
+        """
+        return family in self.hello.capabilities and family in self._requested
+
+    async def refresh_vocabulary(self, *, channel: str | None = None) -> tuple[str, ...]:
+        """Re-read the served vocabulary after ``notifications/kinds/changed``.
+
+        §4: *"A Kind legal at `initialize` may answer `-32003` after a
+        `kinds/changed`. That is the registry moving, not a client bug."* So the
+        vocabulary is not frozen at connect time — a client that treated it as
+        frozen would report the registry's own movement as its own failure.
+
+        Adopting the new vocabulary is still taking it FROM the wire, which is
+        the whole of client rule 1; the client invents nothing here either.
+        """
+        target = channel or (self.channels[0] if self.channels else None)
+        if target is None:
+            raise DnapProtocolError("no channel to re-read the vocabulary from")
+        entries = await self.list_kinds(channel=target)
+        kinds = tuple(
+            e["kind"] for e in entries
+            if isinstance(e, Mapping) and isinstance(e.get("kind"), str)
+        )
+        if not kinds:
+            raise DnapProtocolError(
+                f"kinds/list on {target!r} named no Kind. This client has no "
+                f"fallback vocabulary to fall back to, which is the point.")
+        self._hello = ServerHello(
+            protocol_version=self.hello.protocol_version,
+            server=self.hello.server,
+            channels=self.hello.channels,
+            kinds=kinds,
+            capabilities=self.hello.capabilities,
+            raw=self.hello.raw,
+        )
+        return kinds
 
     # -- the two guards --------------------------------------------------
 
@@ -499,7 +565,10 @@ class DnapClient:
         kind = body.get("kind")
         if not isinstance(kind, str):
             raise DnapProtocolError(
-                f"the instance names no type in its 'kind' member: {sorted(body)!r}")
+                f"the document names no type in its 'kind' member: {sorted(body)!r}. "
+                f"§6.2 reads the type from there and takes no separate parameter — "
+                f"a second spelling could disagree with the first."
+            )
         self.check_kind(kind)
         metadata = body.get("metadata")
         if isinstance(metadata, Mapping):
@@ -507,7 +576,7 @@ class DnapClient:
                 key: value for key, value in metadata.items()
                 if key not in DERIVED_METADATA_MEMBERS
             }
-        params: dict[str, Any] = {"channel": channel, "instance": body}
+        params: dict[str, Any] = {"channel": channel, "document": body}
         if if_match is not None:
             params["ifMatch"] = if_match
         return await self._call("instances/write", params)
@@ -560,6 +629,42 @@ class DnapClient:
         if min_similarity is not None:
             params["minSimilarity"] = min_similarity
         return await self._call("search/instances", params)
+
+    async def search_knowledge(
+        self, address: Mapping[str, Any], *, channel: str, query: str,
+        k: int | None = None, min_similarity: float | None = None,
+    ) -> Any:
+        """⭐ §6.3 × §8 rule 1 — the conduit.
+
+        ``address`` is one entry of ``resolved.knowledge``. It carries the
+        ``kind`` and the ``narrow`` that reach the corpus, so this method passes
+        them through **verbatim** and the client still names nothing.
+
+        This is what closed the contradiction the clean-room implementation
+        found: §8 forbids a client naming a Kind of its own, and a `knowledge`
+        entry that was a bare collection name left the client no legal way to
+        search it. The fix is not a smarter client — it is an address, and a
+        client that is a pipe.
+
+        The caller's ``narrow`` is deliberately not merge-able: mixing a local
+        narrow into a resolved one would be the client widening or shrinking an
+        allowlist the server resolved, which is the reach ``knowledge`` exists to
+        fix in place.
+        """
+        if not isinstance(address, Mapping):
+            raise DnapProtocolError(
+                f"a knowledge address must be an object, got {address!r}")
+        kind = address.get("kind")
+        if not isinstance(kind, str) or not kind:
+            raise DnapProtocolError(
+                f"the knowledge address {dict(address)!r} carries no 'kind'. Without "
+                f"it this client cannot reach the corpus at all — naming one itself "
+                f"is what §8 forbids, so there is no fallback and this is the error."
+            )
+        return await self.search_instances(
+            channel=channel, kind=kind, query=query, k=k,
+            narrow=address.get("narrow"), min_similarity=min_similarity,
+        )
 
     # -- batching --------------------------------------------------------
 

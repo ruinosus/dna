@@ -32,6 +32,26 @@ from dna.testing.dnap_conformance import _Session, _harness  # noqa: PLC2701
 
 from dnap_stub import (  # noqa: E402
     ACCEPT_DERIVED_METADATA,
+    DESCRIBE_LEAKS_UNBOUNDED_KEYWORDS,
+    IGNORE_CLIENT_CAPABILITIES,
+    KIND_DEFINITION_DOES_NOT_REGISTER,
+    KIND_DEFINITION_NAME_MAY_DRIFT,
+    KIND_DEFINITION_SCHEMA_UNBOUNDED,
+    KNOWLEDGE_IS_A_BARE_NAME,
+    MIN_SIMILARITY_IS_SILENT,
+    MIN_SIMILARITY_REPORTS_ZERO,
+    MISSING_IS_NOT_NOT_FOUND,
+    MODE_IS_NOT_A_PLANE,
+    NAMES_ARE_DOCUMENTS,
+    READ_ONLY_KIND_ACCEPTS_WRITES,
+    RESOLUTION_REPORTS_ONE_GAP,
+    RESOLVED_SHAPE_IS_OPEN,
+    SELECT_PATHS_ADD_IDENTITY,
+    SIMILARITY_IS_CORPUS_DEPENDENT,
+    TENANT_DELETE_TOMBSTONES,
+    TENANT_DOES_NOT_READ_THROUGH,
+    TENANT_WRITE_HITS_THE_BASE,
+    UNORDERED_LISTING,
     ANSWER_NOTIFICATIONS,
     BARE_VALIDATION_ERROR,
     DEGRADED_WITHOUT_REASON,
@@ -88,9 +108,15 @@ async def test_the_report_is_clean_for_a_conformant_server():
     assert report.ok, report.summary()
     assert not report.failed
     assert not report.unverified
-    # The one member of §6.4 rule 2 the spec leaves unnamed. It is a finding
-    # against the DOCUMENT, and a conformant server does not make it go away.
-    assert [n for n, _ in report.spec_gaps] == ["min_similarity_discloses_its_effect"]
+    # A finding against the DOCUMENT, which a conformant server does not make go
+    # away. The 479-line draft had one of these (§6.4 rule 2's unnamed removal
+    # count); the clean-room revision closed it as gap A9 and this is what is
+    # left: §6.2 specifies a fetched document two ways.
+    assert [n for n, _ in report.spec_gaps] == \
+        ["instances_get_result_shape_is_determined"]
+    assert "min_similarity_discloses_its_effect" in report.passed, (
+        "§6.4 rule 2 now names minSimilarityRemoved — the case should be real, "
+        "not a spec gap")
 
 
 # ---------------------------------------------------------------------------
@@ -136,6 +162,41 @@ MUTANTS = [
     # §6.5 — notifications
     (NOTIFICATION_CARRIES_THE_BODY,
      "change_notification_carries_the_fact_not_the_document"),
+
+    # ── everything below arrived with the clean-room revision (479 → 676
+    #    lines). Almost every gap the clean room closed is a rule that a
+    #    conformance suite can now hold a server to — which is why the
+    #    revision made this deliverable bigger rather than smaller.
+    # §4 — the effective capability set
+    (IGNORE_CLIENT_CAPABILITIES, "effective_capabilities_are_the_intersection"),
+    # §6.1 — the reflexive rule (gap A11)
+    (KIND_DEFINITION_DOES_NOT_REGISTER,
+     "writing_a_kind_definition_registers_the_kind"),
+    (KIND_DEFINITION_NAME_MAY_DRIFT, "kind_definition_name_must_equal_its_kind"),
+    (KIND_DEFINITION_SCHEMA_UNBOUNDED, "kind_definition_schema_is_bounded"),
+    (DESCRIBE_LEAKS_UNBOUNDED_KEYWORDS, "every_served_kind_can_describe_itself"),
+    # §3 — the tenant overlay (gap A12)
+    (TENANT_DOES_NOT_READ_THROUGH, "tenant_overlay_reads_through_to_the_base"),
+    (TENANT_WRITE_HITS_THE_BASE, "a_tenant_write_never_touches_the_base"),
+    (TENANT_DELETE_TOMBSTONES,
+     "a_tenant_delete_reveals_the_base_rather_than_hiding_it"),
+    # §6.2 — order and the select shapes (gaps A3–A5)
+    (UNORDERED_LISTING, "listing_order_is_lexicographic_by_name"),
+    (NAMES_ARE_DOCUMENTS, "select_names_returns_plain_strings"),
+    (SELECT_PATHS_ADD_IDENTITY, "select_paths_adds_nothing"),
+    # §7 — the two new codes (gap A2)
+    (MISSING_IS_NOT_NOT_FOUND, "deleted_instance_is_a_miss_not_a_blank"),
+    (READ_ONLY_KIND_ACCEPTS_WRITES,
+     "a_read_only_kind_refuses_writes_with_not_writable"),
+    # §6.3 — the closed shape, the knowledge address (gap D6), the gap list
+    (RESOLVED_SHAPE_IS_OPEN, "the_resolved_shape_is_closed"),
+    (KNOWLEDGE_IS_A_BARE_NAME, "resolved_knowledge_is_a_searchable_address"),
+    (RESOLUTION_REPORTS_ONE_GAP, "partial_resolution_is_resolution_incomplete"),
+    # §6.4 — the named removal count (gap A9), the property (A7), the mode (A8)
+    (MIN_SIMILARITY_IS_SILENT, "min_similarity_discloses_its_effect"),
+    (MIN_SIMILARITY_REPORTS_ZERO, "min_similarity_discloses_its_effect"),
+    (SIMILARITY_IS_CORPUS_DEPENDENT, "similarity_is_corpus_independent"),
+    (MODE_IS_NOT_A_PLANE, "mode_names_only_advertised_planes"),
 ]
 
 
@@ -185,6 +246,11 @@ async def test_a_server_that_errors_on_everything_fails_the_positive_control():
     framing_and_handshake = {
         "envelope_is_jsonrpc_2", "batch_is_supported",
         "initialize_advertises_the_connection", "advertised_kinds_are_a_vocabulary",
+        # a notification is unanswered whatever the server thinks of the method,
+        # so this passing is §2 working rather than content leaking
+        "notification_gets_no_response",
+        # and this one is a finding against the SPEC; it never asks the server
+        "instances_get_result_shape_is_determined",
     }
     leaked = set(report.passed) - framing_and_handshake
     assert not leaked, (
@@ -263,10 +329,10 @@ async def test_the_induced_failure_case_catches_the_empty_collection():
     )
 
     class _BreaksIntoEmpty(DnapStubServer):
-        def _rows(self, channel, kind):
+        def _visible(self, channel, kind):
             if self.store_broken:
-                return []          # the defect, verbatim
-            return super()._rows(channel, kind)
+                return {}          # the defect, verbatim
+            return super()._visible(channel, kind)
 
     async def factory():
         from dna.testing import DnapHarness
@@ -286,9 +352,9 @@ async def test_the_spec_gap_is_reported_and_is_not_a_pass():
     files the hole rather than inventing one — and a filed hole is not a pass."""
     report = await run_dnap_conformance(stub_harness())
     gaps = dict(report.spec_gaps)
-    assert "min_similarity_discloses_its_effect" in gaps
-    assert "min_similarity_discloses_its_effect" not in report.passed
-    assert "§6.4 rule 2" in gaps["min_similarity_discloses_its_effect"]
+    assert "instances_get_result_shape_is_determined" in gaps
+    assert "instances_get_result_shape_is_determined" not in report.passed
+    assert "§6.2" in gaps["instances_get_result_shape_is_determined"]
 
     gap = DnapSpecGap(section="§X", question="what?")
     assert not isinstance(gap, DnapRuleUnverified)
@@ -304,8 +370,8 @@ async def test_a_server_that_grows_its_vocabulary_still_passes():
     """A suite that asserted "exactly N Kinds" or "exactly M methods" would break
     on a spec that grew, for a reason that has nothing to do with conformance."""
     class _Roomier(DnapStubServer):
-        def _initialize(self):
-            hello = super()._initialize()
+        def _initialize(self, params):
+            hello = super()._initialize(params)
             hello["kinds"] = [*hello["kinds"], "ConformanceFuture"]
             hello["capabilities"]["somethingNewInTwoPointOh"] = {}
             hello["serverExtension"] = {"anything": True}
