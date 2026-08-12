@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: iahlco2vyrt7
+  name: i-109-projecao-de-spec-cai-calada
+spec:
+  title: A projecao aceita 'spec' e devolve so o nome, ecoando o pedido
+  description: 'MEDIDO em 12/08/2026. _project_doc(doc, [''spec'']) devolve {''name'': ...}. _resolve_field_path (dna/kernel/protocols.py:84) exige o ponto para reconhecer o prefixo ''spec.'', entao um ''spec'' pelado cai no ramo generico, vira doc[''spec''][''spec''] -> None, e o ''if val is None: continue'' o descarta em silencio. O mesmo vale para ''metadata'' pelado. E list_instances_impl ainda devolve projected=[''spec''] ao lado das linhas sem spec — literalmente ''uma forma mais estreita ecoando o pedido'', a regra 1 da secao 6.2 do DNAP. Nenhum teste do repo cobria projection=[''spec'']. O servidor DNAP RECUSA esses caminhos (dna/protocol/select.py) porque nao consegue honra-los; as faces REST e MCP continuam aceitando e mentindo. Consertar na projecao: resolver ''spec'' como o objeto inteiro, ou levantar QueryError nomeando as formas suportadas.'
+  type: bug
+  severity: high
+  status: open
+  related_feature: f-dnap-protocol
+  created_at: '2026-08-12T14:06:22+00:00'
+  updated_at: '2026-08-12T14:06:22+00:00'
+  timeline:
+  - at: '2026-08-12T14:06:22+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
