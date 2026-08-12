@@ -42,7 +42,7 @@ without being copied.
 - The document shape every participant shares.
 - A registry of **Kinds** (types), advertised by the server, never hardcoded by
   the client.
-- Reading, writing and watching instances of those Kinds.
+- Reading, writing, **searching** and watching instances of those Kinds.
 - **Resolution**: projecting a definition into a runtime-neutral shape.
 
 ### Deliberately out of scope
@@ -103,7 +103,7 @@ answers with what it serves.
 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{
   "protocolVersion":"1.0",
   "client":{"name":"opentag-agent","version":"2.1.0"},
-  "capabilities":{"resolve":{},"watch":{},"write":{}}
+  "capabilities":{"resolve":{},"search":{},"watch":{},"write":{}}
 }}
 
 // ←
@@ -113,6 +113,7 @@ answers with what it serves.
   "channels":["dnap-scope:/dna-cloud"],
   "capabilities":{
     "resolve":{"agent":true,"copilot":true},
+    "search":{"planes":["lexical","semantic"]},
     "watch":{},
     "write":{"validate":true}
   },
@@ -288,7 +289,75 @@ definition could no longer leave.
 Same shape. A `Copilot` is a served surface over an `Agent`; the result carries
 `sourceKind: "Copilot"` and the mounted agent's name.
 
-### 6.4 Notifications
+### 6.4 Search
+
+#### `search/instances`
+
+One method, not two. Searching a corpus of document chunks is searching
+instances of the Kind that holds them, narrowed by name prefix — so a separate
+"knowledge search" would be the same engine behind a second contract that could
+drift from the first.
+
+```jsonc
+// → params
+{"channel":"dnap-scope:/acme","kind":"KnowledgeChunk",
+ "query":"o que a política diz sobre reembolso",
+ "k":5,
+ "narrow":{"namePrefix":"politicas-internas/"},
+ "minSimilarity":null}
+
+// ← result
+{"hits":[
+  {"kind":"KnowledgeChunk","name":"politicas-internas/8b4e7082/00008",
+   "score":0.0325,          // fused rank score — comparable only WITHIN this call
+   "similarity":0.4417,     // raw cosine — comparable across calls
+   "title":"…","snippet":"…"}],
+ "mode":"hybrid",           // "hybrid" | "lexical"
+ "degraded":false,
+ "degradedReason":null,
+ "relevanceNotice":"RANKED_NOT_FILTERED",
+ "revision":"4173"}
+```
+
+**Five rules, and every one of them is a measurement rather than an opinion.**
+
+**1. A result is RANKED, not FILTERED, and the envelope MUST say so.** The
+server ships **no relevance floor**, because on a real corpus none separates the
+relevant from the irrelevant. Measured on the reference deployment over 24
+queries: **8 of 12 irrelevant queries scored above the worst genuinely relevant
+one**, and neither a corpus z-score nor a top-1 margin separated them either
+(12/12 overlap). A server that silently dropped low results would be asserting a
+judgement it cannot make.
+
+**2. `minSimilarity` is the CALLER's policy, never the server's default.** A
+caller with context may hold a threshold; the protocol MUST NOT invent one. When
+applied, the result reports how many hits it removed — a filter that hides its
+own effect turns a policy into a fact.
+
+**3. Two scores travel, because they are two quantities.** `score` is a fused
+rank (comparable only within one call — the top hit of a two-document corpus and
+of a thousand-document corpus receive the same number). `similarity` is the raw
+measure and is comparable across calls. A caller given only the first cannot
+tell "first among bad" from "first among good".
+
+**4. `narrow` applies where candidates are CHOSEN, never to the list already
+chosen.** Every plane over-fetches a fixed number of candidates, so a
+post-filter lets one voluminous slice fill the budget and crowd every other row
+out — silently, while the envelope still reports a healthy search. Measured:
+adding 1000 rows of one Kind to a 153-row scope took the dense plane's top-40
+from `{Issue:37, Engram:2, App:1}` to `{Chunk:40}`, with `mode` still reading
+`hybrid` and `degraded` still reading `false`.
+
+**5. `degraded` separates "I searched and found nothing" from "I could not
+search".** When the semantic plane is unavailable the server MAY answer from a
+lexical plane, and it MUST then set `degraded: true` with a reason. An empty
+`hits` with `degraded: true` is a blind spot, not a finding — this is the
+protocol's central error rule (§7) applied where it is easiest to violate.
+
+⛔ **Not specified:** re-ranking strategy, embedding model, index topology. Those
+are how a server is good, not what makes it conformant.
+
+### 6.5 Notifications
 
 ```jsonc
 {"jsonrpc":"2.0","method":"notifications/instances/changed","params":{
@@ -324,6 +393,7 @@ Standard JSON-RPC codes, plus:
 | `-32010` | `VALIDATION_FAILED` | with `path` and `rule` |
 | `-32011` | `REVISION_CONFLICT` | with the current `revision` |
 | `-32020` | `RESOLUTION_INCOMPLETE` | resolution ran and could not finish |
+| `-32030` | `SEARCH_UNAVAILABLE` | no plane could run — never an empty `hits` |
 
 ### The rule that outranks the table
 
@@ -392,10 +462,10 @@ conventions. Under a protocol they are **verifiable**.
 
 ## 10. Open questions
 
-1. **Write, or read-only?** Every measured consumer only reads. Writes exist for
-   the portal, which is co-located with its store. A read-only DNAP would be
-   half the surface — and would close the door on a third party authoring
-   definitions.
+1. ~~**Write, or read-only?**~~ **DECIDED (founder, 2026-08-12): the protocol
+   reads, writes AND searches.** Read-only would have halved the surface and
+   closed the door on a third party *authoring* — and authoring is the act that
+   makes the Kind system reflexive, since a Kind is itself a written document.
 2. **Does `resolve/*` compose the prompt, or return the parts?** Composed is
    proposed above, and it hides overlay/persona/tenant merging behind the
    server. The cost is that a client cannot re-compose differently.
