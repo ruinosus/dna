@@ -1,6 +1,11 @@
 # DNA Protocol (DNAP) 1.0 — draft
 
-**Status:** draft, unapproved. Nothing implements this yet.
+**Status:** draft, unapproved. Revised 2026-08-12 after the first **clean-room
+implementation** — 2.021 lines of dependency-free TypeScript, written from this
+text alone by someone forbidden to read the reference SDK. That implementation
+returned 12 interoperability-breaking gaps and ~40 smaller decisions it had to
+invent; this revision closes them. The gaps are listed in §11, because a
+specification that hides where it was wrong teaches nothing.
 **Framing:** JSON-RPC 2.0.
 **Written:** 2026-08-12, from measurements against the DNA SDK at 0.80.0.
 
@@ -83,6 +88,28 @@ dnap-scope:/<scope>             one scope's instances
 dnap-scope:/<scope>#<tenant>    the tenant overlay of that scope
 ```
 
+### The tenant overlay
+
+`dnap-scope:/<scope>#<tenant>` is the same scope seen through one tenant's
+layer, and the semantics are three rules:
+
+- **read-through** — an instance absent from the overlay resolves to the base
+  channel's. A tenant sees everything the scope has, plus what it changed.
+- **write-local** — a write on the overlay channel lands in the overlay and
+  never touches the base. This is the whole point: a tenant cannot edit the
+  platform's copy by accident.
+- **no tombstones** — `instances/delete` on the overlay removes the tenant's
+  own version, revealing the base one again. It cannot hide a base instance.
+  Hiding would make "this tenant has no X" and "this tenant deleted X"
+  indistinguishable to every reader, which is §7's rule wearing another face.
+
+Each channel carries its **own** `revision` sequence; a base write does not
+advance the overlay's.
+
+⚠️ These semantics were invented by the first independent implementation from a
+single line of text. Any of the three could have been decided the other way, and
+two servers would then disagree about what a tenant sees.
+
 **Scope is an address, not a parameter.** This is a correction of a measured
 defect in DNA's REST face: a `?scope=` query parameter was accepted and silently
 ignored, returning one scope's content under another scope's name. An address
@@ -130,6 +157,18 @@ Following AHP's rule, **a method outside every advertised capability MUST be
 rejected with `-32601` Method not found** — not silently ignored, and not
 answered with a degraded result.
 
+**The effective capability set is the INTERSECTION of what the client sent and
+what the server answered.** A client that did not ask for `write` cannot write,
+even against a server that offers it. The alternative reading — the client's
+field is decorative — is equally defensible from the text and *disagrees about
+whether a call succeeds*, so it is fixed here: a client declares the surface it
+intends to use, and the server holds it to that.
+
+⚠️ **The vocabulary is live, and a client is not wrong to race it.** A Kind
+legal at `initialize` may answer `-32003` after a `kinds/changed`. That is the
+registry moving, not a client bug; a client SHOULD re-read `kinds/list` on that
+notification rather than treat the refusal as its own error.
+
 ---
 
 ## 5. The document
@@ -151,7 +190,13 @@ Every instance is a JSON object with four top-level members:
 ```
 
 `metadata.name` is authored; `metadata.id` and `metadata.revision` are derived
-and MUST NOT be supplied on write. Servers MAY carry additional `metadata`
+and MUST NOT be supplied on write.
+
+⚠️ **`metadata.id` is minted, stable and opaque — and no method accepts one.**
+It exists so an external system can hold a reference that survives a rename,
+and today that reference cannot be redeemed over this protocol. Either a
+lookup-by-id belongs in 1.0, or the member should not be specified. Left
+unresolved on purpose, in §10. Servers MAY carry additional `metadata`
 members; clients MUST preserve unknown members on round-trip.
 
 ---
@@ -185,6 +230,48 @@ implementation: 27 of 89 Kinds are `composition`; **3 are `promptTarget`**.
 > The schema travels because a client that cannot see it must guess, and a
 > guessing client writes documents the server will reject.
 
+#### Creating a Kind — `KindDefinition`
+
+⭐ **The reflexive rule.** A Kind is an instance of the Kind `KindDefinition`.
+Writing one **registers a type**; there is no other way, and no out-of-band
+mechanism is permitted. This is what §0 means by a typed document system that
+governs its own vocabulary.
+
+```jsonc
+{"apiVersion":"github.com/ruinosus/dna/core/v1",
+ "kind":"KindDefinition",
+ "metadata":{"name":"ReviewChecklist"},
+ "spec":{
+   "kind":"ReviewChecklist",           // the type this defines
+   "apiVersion":"example.com/acme/v1", // the apiVersion its instances carry
+   "plane":"record",                   // "composition" | "record"
+   "schema":{ /* the JSON Schema of its instances' spec */ }}}
+```
+
+**`metadata.name` MUST equal `spec.kind`.** One name, no mapping. A second
+spelling of the same thing is a place for the two to drift, and every reader
+would then have to know which one is authoritative.
+
+A successful write MUST be followed by `notifications/kinds/changed` with
+`change: "registered"`, and the Kind MUST appear in `kinds/list` from that
+moment. Deleting the `KindDefinition` fires `change: "revoked"`; whether stored
+instances of a revoked Kind remain readable is the server's policy, but it MUST
+NOT accept new ones.
+
+⚠️ **`spec.schema` is bounded, not "JSON Schema" at large.** A server MUST
+support exactly: `type`, `enum`, `const`, `required`, `properties`,
+`additionalProperties`, `items`, `minItems`, `maxItems`, `uniqueItems`,
+`minLength`, `maxLength`, `pattern`, `minimum`, `maximum`. A `KindDefinition`
+carrying any other keyword MUST be rejected at write with `-32010` on
+`spec.schema`. A keyword the server stores, hands out through `kinds/describe`,
+and does not enforce is a lie told to every client that reads the schema to
+pre-validate.
+
+⛔ **Kinds built into a server MAY be advertised without a stored
+`KindDefinition`**, but they MUST be describable through `kinds/describe` under
+the same bounded schema. A built-in that cannot describe itself is invisible to
+every client that does not already know it.
+
 ### 6.2 Instances
 
 #### `instances/list`
@@ -217,6 +304,26 @@ implementation: 27 of 89 Kinds are `composition`; **3 are `promptTarget`**.
    belong to one snapshot. Without this a client assembles a quilt of moments
    and calls it a state.
 
+   ⚠️ This MUST is what `-32005` exists for, and the two are load-bearing
+   together: honouring it requires the server to hold a snapshot, which has a
+   lifetime and a memory bound. A server that keeps no snapshot passes every
+   naive test and violates this rule the first time anyone writes mid-listing.
+   `CURSOR_EXPIRED` is not a courtesy — it is how a server with finite memory
+   stays honest.
+
+4. **Order is lexicographic by `metadata.name`, ascending.** Rules 2 and 3 are
+   both meaningless without a total order, and `metadata.name` is the only
+   member §5 guarantees unique within `(channel, kind)`.
+
+5. **The shape of `select`:**
+   - `"names"` → an array of plain strings. Not one-member documents: a
+     document-shaped object carrying only a name is exactly the narrower shape
+     rule 1 forbids, wearing a disguise.
+   - `"full"` → whole documents.
+   - a path list → **exactly** the requested paths, nothing added. A server that
+     helpfully attaches identity and one that does not return different rows for
+     the same request; ask for `metadata.name` when you want it.
+
 #### `instances/get`
 
 `{"channel":…,"kind":"Agent","name":"opentag-triage"}` → the document verbatim,
@@ -227,6 +334,20 @@ with no body.
 
 #### `instances/write`
 
+```jsonc
+// → params
+{"channel":"dnap-scope:/acme","document":{ /* the whole document */ },
+ "ifMatch":null}
+
+// ← result
+{"instance":{ /* stored, with metadata.id and metadata.revision */ },
+ "created":true}
+```
+
+`kind` is read from `document.kind`; a separate `kind` param would be a second
+spelling that can disagree with the first. `metadata.id` and `metadata.revision`
+supplied by the client MUST be rejected with `-32010`.
+
 Upsert, validated against the Kind's schema. `-32010 VALIDATION_FAILED` carries
 the failing path and the rule, never a bare "invalid".
 
@@ -235,7 +356,9 @@ when the stored revision moved.
 
 #### `instances/delete`
 
-`{"channel":…,"kind":…,"name":…,"ifMatch":…}`.
+`{"channel":…,"kind":…,"name":…,"ifMatch":…}` → `{"deleted":true,"revision":"…"}`
+— the revision the channel advanced to, so a watcher can order the delete
+against its own reads.
 
 ### 6.3 Resolution — the reason this protocol exists
 
@@ -257,7 +380,9 @@ needs, and nothing about any particular runtime.
   "mcpServers":[{"ref":"github","transport":"http","url":"…",
                  "allowedTools":["search_code"],"propagateTenant":true}],
   "toolsRequiringConfirmation":["write_review_report"],
-  "knowledge":["politicas-internas"],
+  "knowledge":[{"collection":"politicas-internas",
+                "kind":"KnowledgeChunk",
+                "narrow":{"namePrefix":"politicas-internas/"}}],
   "sourceKind":"Copilot","sourceName":"opentag-copilot",
   "revision":"4172"
 }}
@@ -274,10 +399,22 @@ needs, and nothing about any particular runtime.
 - `toolsRequiringConfirmation` — **policy travels with the definition.** A
   binding that had to be told separately which tools are gated would default to
   ungated the day someone forgot.
-- `knowledge` — the corpora this agent may read. An allowlist, resolved, so no
+- `knowledge` — the corpora this agent may read: an allowlist, resolved, so no
   binding invents its own reach.
+
+  ⭐ **And each entry is a searchable ADDRESS, not a bare name.** This closes a
+  contradiction the first independent implementation found: §8 forbids a client
+  naming a Kind of its own, yet a client holding only `"politicas-internas"`
+  could not search it without hardcoding the Kind that holds chunks. Carrying
+  `kind` and `narrow` here makes the client a **conduit** — it passes to
+  `search/instances` exactly what `resolve/agent` handed it, and still names
+  nothing.
 - `revision` — a resolution is **of a moment**, and a client that caches it must
   be able to say which.
+
+**The resolved shape is CLOSED.** A server MUST NOT add members to it. An open
+shape would let one server's extra field become another binding's requirement,
+and the agent stops being portable the day someone depends on it.
 
 ⛔ **Absent on purpose:** checkpointers, stores, thread indexes, telemetry
 sinks, cost tables. Those are the host's, and every one of them that leaked into
@@ -331,14 +468,26 @@ judgement it cannot make.
 
 **2. `minSimilarity` is the CALLER's policy, never the server's default.** A
 caller with context may hold a threshold; the protocol MUST NOT invent one. When
-applied, the result reports how many hits it removed — a filter that hides its
-own effect turns a policy into a fact.
+applied, the result carries `minSimilarityRemoved` with the count — a filter
+that hides its own effect turns a policy into a fact. The member is **absent**
+when no threshold was applied; `0` would report a filter that never ran.
 
 **3. Two scores travel, because they are two quantities.** `score` is a fused
 rank (comparable only within one call — the top hit of a two-document corpus and
-of a thousand-document corpus receive the same number). `similarity` is the raw
-measure and is comparable across calls. A caller given only the first cannot
-tell "first among bad" from "first among good".
+of a thousand-document corpus receive the same number). `similarity` is a
+**corpus-independent measure in [0,1]**, comparable across calls. A caller given
+only the first cannot tell "first among bad" from "first among good".
+
+⚠️ `similarity` is defined by that PROPERTY, not by an algorithm. Cosine is the
+dense plane's instance of it; a lexical plane MAY report query-token coverage.
+Naming cosine normatively would leave `minSimilarity` — the caller's only policy
+knob — meaning something different on every plane, or undefined on a
+lexical-only server, which rule 5 explicitly contemplates.
+
+**`mode` names the planes that actually RAN**: `"lexical"`, `"semantic"`, or
+`"hybrid"` when more than one contributed. It is drawn from the same vocabulary
+as `capabilities.search.planes`, and a server MUST NOT report a mode whose
+planes it did not advertise.
 
 **4. `narrow` applies where candidates are CHOSEN, never to the list already
 chosen.** Every plane over-fetches a fixed number of candidates, so a
@@ -387,12 +536,14 @@ Standard JSON-RPC codes, plus:
 
 | code | name | means |
 |---|---|---|
+| `-32002` | `NOT_FOUND` | no instance by that name on that channel |
 | `-32003` | `KIND_NOT_SERVED` | the Kind is not in the advertised vocabulary |
+| `-32006` | `NOT_WRITABLE` | the Kind is served but `writable: false` |
 | `-32004` | `CHANNEL_NOT_SERVED` | this server does not serve that scope/tenant |
 | `-32005` | `CURSOR_EXPIRED` | restart the listing |
 | `-32010` | `VALIDATION_FAILED` | with `path` and `rule` |
 | `-32011` | `REVISION_CONFLICT` | with the current `revision` |
-| `-32020` | `RESOLUTION_INCOMPLETE` | resolution ran and could not finish |
+| `-32020` | `RESOLUTION_INCOMPLETE` | with `data.missing: [{kind,name,via}]` — **all** of them, never the first |
 | `-32030` | `SEARCH_UNAVAILABLE` | no plane could run — never an empty `hits` |
 
 ### The rule that outranks the table
@@ -473,7 +624,53 @@ conventions. Under a protocol they are **verifiable**.
    not. A graph traversal method (`instances/refs`) is deliberately not
    specified until something needs it.
 4. **Batch resolve.** A host mounting nine copilots resolves nine times.
+5. **Redeeming `metadata.id`.** It is minted and stable and there is no method
+   that takes one (see §5).
+6. **Client conformance has no test surface.** §8 asks a client to treat
+   `revision` as opaque and preserve unknown `metadata` — and a server cannot
+   observe either. Only client rule 1 is checkable, and only because the server
+   refuses. A specification that closes on *"a property a test can fail on"*
+   should say which side runs the test.
+7. **`instructions` composition is deliberately unspecified** (§1), which means
+   `resolve/agent`'s most important field is by design not reproducible between
+   two conforming servers. The clean-room implementation confirmed the cost is
+   real, not theoretical.
 5. **Multi-scope.** One connection serves one scope's channels. Inheritance
    across scopes — which the reference implementation supports locally — does
    not cross a connection, and the measured refusal is loud rather than silent.
    Whether that is the right trade is unanswered.
+
+---
+
+## 11. What the clean room found
+
+The first independent implementation was given this document and nothing else,
+and forbidden from reading the reference SDK. It shipped nine methods in 2.021
+lines with zero runtime dependencies — which is the useful half of the result:
+**the protocol is implementable from its text, in another language, without the
+ecosystem it was born in.**
+
+The other half is this list. Each entry is a place where two honest readers
+would have built incompatible servers.
+
+| # | the gap | closed in |
+|---|---|---|
+| A11 | ⭐ **how a Kind is created had no wire form** — the document argued for authoring as its foundation and never specified it | §6.1 |
+| D6 | ⭐ **search contradicted conformance** — `knowledge` returned collection names, and searching them required the client to name a Kind, which §8 forbids | §6.3 |
+| A1 | `instances/write` had no documented params | §6.2 |
+| A2 | no code for *this instance does not exist* | §7 |
+| A3–A5 | `select` result shapes, and listing order was never specified — cursors and snapshots are both meaningless without a total order | §6.2 |
+| A6 | whose capabilities gate a method | §4 |
+| A7–A8 | `similarity` was defined as cosine on a plane that has none; `mode` and `planes` were different vocabularies | §6.4 |
+| A9 | the `minSimilarity` removal count had no field name | §6.4 |
+| A10 | "JSON Schema" was named and never bounded | §6.1 |
+| A12 | the tenant overlay was an address with **no semantics at all** — one line of text, three rules invented | §3 |
+| A13–A15 | `write`/`delete` had no result shape; `-32020` carried nothing; the resolved shape's closedness was implied, never stated | §6.2, §6.3, §7 |
+| D1 | rule 3 mandates a snapshot the document never mentioned, and `-32005` read as optional courtesy when it is the escape hatch that makes the MUST affordable | §6.2 |
+| D2, D5 | `metadata.id` has no address; the live vocabulary races §8's client rule | §5, §4, §10 |
+
+⚠️ **A11 is the one worth remembering.** The feature this specification argued
+hardest for — *a Kind is itself a written document* — was the single feature it
+did not specify. It took an implementer with no access to the reference to
+notice, because everyone who could read the SDK already knew the answer and
+never saw the hole.
