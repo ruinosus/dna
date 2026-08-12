@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.80.0] - 2026-08-12
+
 ### Changed
 
 - Evolved `GenUIComponent` additively with structured `mcp`, `a2ui`, and
@@ -2578,7 +2580,8 @@ registries: **PyPI** ([`dna-sdk`](https://pypi.org/project/dna-sdk/),
   source conformance kit now pins the contract: base content is served
   by `load_all`, never by a `load_layer` sentinel.
 
-[Unreleased]: https://github.com/ruinosus/dna/compare/v0.79.0...HEAD
+[Unreleased]: https://github.com/ruinosus/dna/compare/v0.80.0...HEAD
+[0.80.0]: https://github.com/ruinosus/dna/compare/v0.79.0...v0.80.0
 [0.79.0]: https://github.com/ruinosus/dna/compare/v0.78.0...v0.79.0
 [0.78.0]: https://github.com/ruinosus/dna/compare/v0.77.0...v0.78.0
 [0.77.0]: https://github.com/ruinosus/dna/compare/v0.76.0...v0.77.0

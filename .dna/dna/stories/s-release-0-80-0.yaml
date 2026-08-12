@@ -1,0 +1,71 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: ln7yvciu2ob2
+  name: s-release-0-80-0
+spec:
+  title: Release DNA 0.80.0 with structured GenUI MCP, A2UI, and grounding bindings.
+  description: Release DNA 0.80.0 with structured GenUI MCP, A2UI, and grounding bindings.
+  status: in-progress
+  feature: f-runtime-bindings
+  acceptance_criteria:
+  - Given tag v0.80.0, when release sanity runs, then every package manifest reports 0.80.0 and dna-cli resolves dna-sdk from the 0.80 minor line.
+  - Given the 0.80.0 changelog, when consumers review the release, then the GenUI protocol-binding evolution and compatibility guarantees are documented.
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - Version manifests, CLI dependency ranges, changelog links, package builds, release sanity checks, and repository guards pass.
+  definition_of_done_source: cli-create
+  created_at: '2026-08-11T22:31:32+00:00'
+  updated_at: '2026-08-12T09:35:54+00:00'
+  timeline:
+  - at: '2026-08-11T22:31:32+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-11T22:31:41+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-12T09:35:42+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: Selected 0.80.0 because the pre-1.0 public SDK gains structured GenUI binding types and fields. Release artifacts for dna-sdk, dna-cli, and dna-client build with 0.80.0; all manifests and CLI compatibility ranges are aligned.
+    commit_ref: dae00af1c0790e240c73b3d7e6bfea1ffacb2d4a
+  - at: '2026-08-12T09:35:47+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-release-0-80-0
+    summary: TestGuide tg-release-0-80-0 (manual)
+  - at: '2026-08-12T09:35:54+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-release-0-80-0-20260812-093550
+    summary: TestRun tr-tg-release-0-80-0-20260812-093550 → pass
+    outcome: pass
+  - at: '2026-08-12T09:37:54+00:00'
+    actor: claude-code
+    type: pr_opened
+    source: cli
+    summary: 'PR aberto: https://github.com/ruinosus/dna/pull/381'
+    pr_url: https://github.com/ruinosus/dna/pull/381
+  produces:
+  - kind: Plan
+    name: plan-s-release-0-80-0
+    role: implementation
+    at: '2026-08-11T22:31:41+00:00'
+  - kind: TestGuide
+    name: tg-release-0-80-0
+    role: test-guide
+    at: '2026-08-12T09:35:47+00:00'
+  - kind: TestRun
+    name: tr-tg-release-0-80-0-20260812-093550
+    role: test-run
+    at: '2026-08-12T09:35:54+00:00'
