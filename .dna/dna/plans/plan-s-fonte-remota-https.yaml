@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  id: mv3f4523cx6k
+  name: plan-s-fonte-remota-https
+spec:
+  title: 'Plano: s-fonte-remota-https'
+  date: '2026-08-12'
+  status: accepted
+  story_ref: s-fonte-remota-https
+  journey_phase: plan
+  body: 'MEDIR a face REST real primeiro (fields nao devolve spec; sem ETag; instancias ignoram ?scope=), depois HttpSource stdlib-urllib em dna/adapters/http_source.py, ligado em source_from_url, com granular list/one, load_all 1+N+M concorrente, recusa de scope, e cache de snapshot opt-in. Prova: uvicorn com a face REST real + DnaClient.from_env.'
+  created_at: '2026-08-12T10:23:08+00:00'
+  updated_at: '2026-08-12T10:23:08+00:00'

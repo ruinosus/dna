@@ -1,0 +1,65 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: lsxpy77eoeej
+  name: s-fonte-remota-https
+spec:
+  title: Um SourcePort sobre https:// que resolve definicoes de um DNA hospedado por TOKE
+  description: Um SourcePort sobre https:// que resolve definicoes de um DNA hospedado por TOKEN, nunca pela DSN do Postgres. Fecha i-106.
+  status: in-progress
+  feature: f-dna-dx-consume
+  acceptance_criteria:
+  - Given DNA_SOURCE_URL=https://host/v1 e um bearer, When DnaClient.from_env(scope=X).resolve_copilot(nome), Then o copiloto resolve pela rede sem mudar a forma de from_env/resolve_*
+  - Given a rede cai ou o token e invalido, When qualquer leitura, Then ResolveNetworkError/ResolveAuthError sobem — nunca lista vazia
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - adapter + source_from_url + testes unit + prova end-to-end contra a face REST real + prosa em docs/concepts + suite verde
+  definition_of_done_source: cli-create
+  created_at: '2026-08-12T10:22:54+00:00'
+  updated_at: '2026-08-12T11:01:50+00:00'
+  timeline:
+  - at: '2026-08-12T10:22:54+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-12T10:23:14+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-12T11:01:05+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'MEDIDO contra a face REST real antes de desenhar. (1) fields nao devolve o spec: ?fields=spec e ?fields=* respondem [{name}] e ecoam projected:[spec] — aceita e ignora. Logo load_all e 1+N+M, nao 1+N. (2) Custo real do scope dna-cloud (433 instancias, 88 Kinds no registry): 522 chamadas, 1,13s de parede com 8 vias, 2,4 MiB. (3) A face NAO publica header ETag (o corpo carrega um campo etag) — revalidacao condicional nao esta disponivel, entao offline foi DECIDIDO: falha alta por padrao, stale opt-in duplo e sempre anunciado. (4) As rotas de instancia ignoram ?scope= e respondem o scope DERIVADO da credencial — uma porta serve UM scope, e o adaptador recusa (RemoteScopeMismatch) em vez de entregar conteudo de um scope sob o nome de outro. Escolha: (a) sobre as rotas que existem, com o custo dito. O endpoint em lote (GET /v1/scopes/{scope}/instances?full=1) fica NOMEADO e nao construido — e mudanca na porta REST publica, decisao do fundador.'
+    commit_ref: 66917c59ebc8f3e3bff94214e4e1784d883f9bd2
+  - at: '2026-08-12T11:01:28+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-fonte-remota-https
+    summary: TestGuide tg-fonte-remota-https (manual)
+  - at: '2026-08-12T11:01:50+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-fonte-remota-https-20260812-110147
+    summary: TestRun tr-tg-fonte-remota-https-20260812-110147 → pass
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-fonte-remota-https
+    role: implementation
+    at: '2026-08-12T10:23:14+00:00'
+  - kind: TestGuide
+    name: tg-fonte-remota-https
+    role: test-guide
+    at: '2026-08-12T11:01:28+00:00'
+  - kind: TestRun
+    name: tr-tg-fonte-remota-https-20260812-110147
+    role: test-run
+    at: '2026-08-12T11:01:50+00:00'

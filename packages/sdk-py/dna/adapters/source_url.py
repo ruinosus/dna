@@ -23,6 +23,12 @@ Scheme map:
   ``sqlite://<path>`` :class:`SqlAlchemySource` (``sqlite+aiosqlite``)
   ``postgresql://…``  :class:`SqlAlchemySource` (``postgresql+asyncpg``)
   ``postgres://…``    alias of ``postgresql://``
+  ``https://…/v1``    :class:`~dna.adapters.http_source.HttpSource` (READ-ONLY)
+                      over the DNA REST face, authenticated by a BEARER TOKEN
+                      (``DNA_API_TOKEN``) — never a database DSN. This is how a
+                      SEPARATE repository resolves its definitions from a hosted
+                      DNA without being handed the whole database (i-106).
+  ``http://…/v1``     the same adapter, for local development.
   ==================  ======================================================
 
 An unknown scheme fails loud with the supported set. A URL that already carries
@@ -129,6 +135,15 @@ async def source_from_url(
         base_dir = anchor_scopes_root(package, subpath or DEFAULT_SUBPATH)
         return FilesystemSource(base_dir)
 
+    if scheme in ("http", "https"):
+        # The hosted door. READ-ONLY and token-authenticated: the point of this
+        # scheme is that the consumer never holds the DSN, so `kernel=` is not
+        # threaded in (there are no writers to attach) and there is no
+        # `connect()` to await — the first read is the connection.
+        from dna.adapters.http_source import HttpSource
+
+        return HttpSource(url)
+
     if scheme.split("+", 1)[0] in ("sqlite", "postgresql", "postgres"):
         from dna.adapters.sqlalchemy_ import SqlAlchemySource
 
@@ -141,7 +156,9 @@ async def source_from_url(
     raise UnsupportedSourceScheme(
         f"unsupported source URL scheme '{scheme}://' — the SDK ships adapters "
         f"for file:// (filesystem), pkg:// (read-only package-data scope), "
-        f"sqlite:// and postgresql:// (via SqlAlchemySource). Got: {url!r}."
+        f"sqlite:// and postgresql:// (via SqlAlchemySource), and https:// "
+        f"(read-only, token-authenticated, over the DNA REST face). "
+        f"Got: {url!r}."
     )
 
 

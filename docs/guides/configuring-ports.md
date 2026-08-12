@@ -28,6 +28,7 @@ thing.
 | `pkg://<package>[/<subpath>]` | filesystem **read-only** over a scope embedded as **package data** — travels with your app (wheel / Docker). See [shipping a scope with your app](shipping-a-scope.md). |
 | `sqlite:///<path>` | `SqlAlchemySource` (aiosqlite) — **Python only** |
 | `postgresql://<user>:<pass>@<host>/<db>` | `SqlAlchemySource` (asyncpg) |
+| `https://<host>/v1` | `HttpSource` — **read-only**, over the [REST face](rest-api.md), authenticated by a **bearer token** and never a database credential. See [resolving from a hosted DNA](hosted-source.md). **Python only** |
 
 The URL→source resolution is a public surface in its own right —
 `dna.adapters.source_from_url` (Python) / `sourceFromUrl` (TypeScript) — so a
