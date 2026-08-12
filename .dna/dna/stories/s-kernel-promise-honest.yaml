@@ -1,0 +1,65 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: koqfp26hqtl2
+  name: s-kernel-promise-honest
+spec:
+  title: 'A promessa ''um microkernel que nao conhece Kind nenhum'' e falsa em seis lugares '
+  description: A promessa 'um microkernel que nao conhece Kind nenhum' e falsa em seis lugares medidos. Reescrever a promessa para o que e verdade e acrescentar uma guarda DERIVADA que falhe quando um literal de Kind NOVO aparecer no caminho central do kernel.
+  status: in-progress
+  feature: f-dna-1.0-readiness
+  acceptance_criteria:
+  - Dado que o kernel cita nomes de Kind literais em resolver/accessor/evidence/events/invalidation, quando a promessa e reescrita, entao AGENTS.md, docs/index.md, docs/concepts/thesis.md e microkernel-ports.md dizem o que o codigo faz
+  - Dada uma guarda derivada (o conjunto de Kinds vem do registro, nao de uma lista escrita a mao), quando um literal de Kind NOVO aparece no caminho central, entao a guarda falha; e quando um literal ja conhecido e removido, a guarda tambem falha (a baseline aperta, nunca afrouxa sozinha)
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - guarda com teste + baseline commitada + docs corrigidos + o caminho para (a) fichado como issue
+  definition_of_done_source: cli-create
+  created_at: '2026-08-12T22:46:30+00:00'
+  updated_at: '2026-08-12T23:13:16+00:00'
+  timeline:
+  - at: '2026-08-12T22:46:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-12T23:11:24+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-12T23:13:16+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      Guarda entregue e provada nos tres sentidos.
+
+      DERIVADA, nao enumerada — a exigencia explicita:
+      - vocabulario de 'o que e nome de Kind' vem de Kernel.auto(), o registro vivo: 89 Kinds no momento da medicao, ZERO escritos no arquivo da guarda (verificado por regex sobre o proprio fonte: os unicos nomes literais sao Genome/KindDefinition/LayerPolicy, e estao la de proposito, como o trio de bootstrap que o teste fixa — e esse teste FALHA pedindo atualizacao dos docs se algum dia sairem).
+      - superficie varrida = a arvore dna/kernel inteira via rglob, nao lista de arquivos. Modulo novo entra coberto no dia em que nasce.
+      - docstrings excluidas do scan por AST: prosa que NOMEIA um Kind e documentacao, nao acoplamento.
+
+      RATCHET nos dois sentidos, que e o que separa teto de orcamento:
+      - par (kind, arquivo) novo -> falha ('the kernel just learned about Kind(s) it did not know')
+      - par removido -> tambem falha, ate o baseline registrar o ganho. Espaco nao gasto tem de voltar, ou a proxima ampliacao o gasta sem ninguem decidir.
+
+      Anti-cegueira: test_the_derived_vocabulary_is_actually_populated exige >=40 Kinds e o trio estrutural. Sem ele, um registro que nao sobe daria vocabulario vazio, scan vazio, guarda VERDE medindo nada — o modo de falha que esta casa ja teve.
+
+      Provas executadas:
+      1. injetei 'Postmortem' em manifest.py -> FALHOU nomeando arquivo e Kind
+      2. renomeei 'SafetyPolicy' -> FALHOU pedindo o aperto do baseline
+      3. 'Sprocket' (nao registrado) nao entra no vocabulario -> guarda nao inventa Kind
+
+      Baseline congelado: 49 pares / 30 Kinds / 16 arquivos.
+
+      Docs corrigidos em 6 lugares: AGENTS.md, docs/index.md, docs/concepts/{index,thesis,microkernel-ports}.md e scripts/ports_prose.py — este ultimo era a fonte da frase em DUAS paginas de referencia geradas, entao corrigir so o .md teria voltado no proximo gen. Zero ocorrencias residuais de 'knows no Kinds' fora do CHANGELOG (historico, nao se reescreve). mkdocs --strict tem 1 warning PRE-EXISTENTE (analysis/dna-market-critique.md fora do nav) — confirmado identico em main.
+
+      Caminho para (a) fichado em i-107 com os tres blocos medidos e o que NAO sai.
+    commit_ref: 915c72d1e6a116ee5f4a781f5ae0f72f55bbaec4
+  produces:
+  - kind: Plan
+    name: plan-s-kernel-promise-honest
+    role: implementation
+    at: '2026-08-12T23:11:24+00:00'

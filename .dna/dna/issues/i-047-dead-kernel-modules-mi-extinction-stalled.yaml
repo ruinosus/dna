@@ -1,17 +1,41 @@
 apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Issue
 metadata:
+  id: j52lukmkp2wg
   name: i-047-dead-kernel-modules-mi-extinction-stalled
 spec:
   description: '807 LOC mortos identificados na auditoria: kernel/reports_kernel.py (237, ZERO importadores nem em teste — cabecalho promete paridade byte-a-byte com mi.reports, nunca foi ligado), kernel/nav_kernel.py (235, so um teste), kernel/composition.py (30) + extensions/helix/layers.py (28) shims auto-declarados sem importador. Causa raiz: f-mi-class-extinction parou no meio — o caminho legado (instance.py -> navigator.py/reports.py) e o que roda. Decidir: terminar a extincao ou deletar os gemeos abandonados. emit/frontend.py (158) e memory/claude_export.py (119) parecem API publica deliberada — verificar consumidor externo antes de tocar.'
   type: task
   severity: low
-  status: open
+  status: resolved
   timeline:
   - at: '2026-07-21T12:17:47+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: open
+  - at: '2026-08-12T23:12:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: |-
+      RESOLVIDO. Apagados 1.093 linhas em 4 modulos, ZERO chamador de producao em cada (git grep sobre todos os packages tracked antes de apagar): reports_kernel.py 284 (unico hit externo: uma docstring em reports.py) · query/nav.py 285 (ex-nav_kernel, renomeado no reorg; so 1 teste + 2 docstrings) · prompt/engine.py 359 (i-048) · resource.py 165 (so 1 teste; nao estava na ficha, medido junto).
+
+      NAO apagados: kernel/composition.py ja nao existe; extensions/helix/layers.py existe mas nao foi medido nesta passada (fica pra proxima faixa); emit/frontend.py e memory/claude_export.py a propria ficha mandava verificar consumidor externo antes — nao foram tocados.
+
+      Apagar achou um defeito VIVO que o gemeo escondia: Navigator._classify_ref_confidence (mi.nav.inventory) rodava um loop de alias a mao que nao le a forma legada kind=<Name>, entao um dep_filter legado classificava AMBIGUOUS ali e resolvia no mi.composition.validate() — dois leitores vivos discordando da mesma aresta, enquanto resolve_dep_filter_target ja se documentava como THE resolver de todo leitor. A unificacao tinha pousado no twin morto. Consertado no mesmo PR.
+
+      Baseline 3 failed/6412 passed antes; as MESMAS 3 depois. Coleta 6591->6581. docs regenerados; docs_coverage_guard + brand_guard limpos; pacote cli verde (2079 passed). Commit 055ee235.
   created_at: '2026-07-21T12:17:47+00:00'
   updated_at: '2026-07-21T12:17:47+00:00'
+  closed_at: '2026-08-12T23:12:33+00:00'
+  resolution: |-
+    RESOLVIDO. Apagados 1.093 linhas em 4 modulos, ZERO chamador de producao em cada (git grep sobre todos os packages tracked antes de apagar): reports_kernel.py 284 (unico hit externo: uma docstring em reports.py) · query/nav.py 285 (ex-nav_kernel, renomeado no reorg; so 1 teste + 2 docstrings) · prompt/engine.py 359 (i-048) · resource.py 165 (so 1 teste; nao estava na ficha, medido junto).
+
+    NAO apagados: kernel/composition.py ja nao existe; extensions/helix/layers.py existe mas nao foi medido nesta passada (fica pra proxima faixa); emit/frontend.py e memory/claude_export.py a propria ficha mandava verificar consumidor externo antes — nao foram tocados.
+
+    Apagar achou um defeito VIVO que o gemeo escondia: Navigator._classify_ref_confidence (mi.nav.inventory) rodava um loop de alias a mao que nao le a forma legada kind=<Name>, entao um dep_filter legado classificava AMBIGUOUS ali e resolvia no mi.composition.validate() — dois leitores vivos discordando da mesma aresta, enquanto resolve_dep_filter_target ja se documentava como THE resolver de todo leitor. A unificacao tinha pousado no twin morto. Consertado no mesmo PR.
+
+    Baseline 3 failed/6412 passed antes; as MESMAS 3 depois. Coleta 6591->6581. docs regenerados; docs_coverage_guard + brand_guard limpos; pacote cli verde (2079 passed). Commit 055ee235.

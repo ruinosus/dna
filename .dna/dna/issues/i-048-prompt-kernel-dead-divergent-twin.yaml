@@ -1,17 +1,53 @@
 apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Issue
 metadata:
+  id: trmal5rfgs7c
   name: i-048-prompt-kernel-dead-divergent-twin
 spec:
   description: 'prompt_kernel.py e um SEGUNDO motor de composicao, morto e divergente. A docstring promete ''Parity contract ... tests in test_prompt_kernel.py lock the parity'' — esse arquivo de teste NUNCA existiu no historico do git, e nada importa o modulo (uma mencao em docstring de hooks.py). Divergencia real: ele renderiza mustache em passada UNICA, entao se religado, o caso open-swe (ref dentro de instruction, pinado na i-046) compoe diferente do PromptBuilder. Mesma anatomia do dna_edges: promessa de docstring sem lastro. Decidir: deletar (recomendado — o PromptBuilder e o motor real) ou terminar a paridade com os testes prometidos. Relacionada a i-047 (extincao do mi parada no meio).'
   type: bug
   severity: medium
-  status: open
+  status: resolved
   timeline:
   - at: '2026-07-21T12:50:42+00:00'
     actor: claude-code
     type: status_change
     source: cli
     to: open
+  - at: '2026-08-12T23:12:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: |-
+      RESOLVIDO por delecao, que era a recomendacao da propria ficha. prompt/engine.py (ex-prompt_kernel.py), 359 linhas, apagado. Confirmacao antes: git grep sobre todos os packages tracked achou 2 hits, ambos em teste (test_hooks_fail_loud.py:94 e test_prompt_trailing_whitespace.py:112). ZERO chamador de producao. O PromptBuilder e o motor real, como a ficha dizia.
+
+      A ficha estava certa nos dois pontos que levantou — e o segundo era pior do que ela imaginava:
+
+      1. 'test_prompt_kernel.py NUNCA existiu no historico' — confirmado.
+
+      2. A divergencia era REAL e custou um defeito vivo. O gemeo morto chamava hooks.emit_async para post_build_prompt; o PromptBuilder.build_async (vivo) chamava hooks.emit() SINCRONO, que PULA listeners async e so conta o skip. Ou seja: um listener async de post_build_prompt simplesmente nunca disparava no unico caminho que alguem executa. Pior, a docstring de test_hooks_fail_loud.py afirmava textualmente que 'prompt_kernel.build_prompt_async awaits emit_async ... so async listeners actually fire on the kernel build path' — a suite estava verde sobre o gemeo morto enquanto o caminho vivo estava quebrado. s-kernel-fail-soft-audit consertou o twin e nunca o builder.
+
+      Consertado: builder.py agora faz await hooks.emit_async no caminho async. Red provado revertendo o fix (assert [] == fired). O caminho SINCRONO fica com emit() de proposito — nao pode await — e um teste novo fixa isso, pra ninguem copiar o fix pro lugar errado.
+
+      Os 2 testes foram RE-APONTADOS pro caminho vivo (mi.build_prompt_async), nunca apagados — e ganharam um assert de que async e sync compoem byte-identico, que e a divergencia que esta ficha nomeava.
+
+      Commit 055ee235.
   created_at: '2026-07-21T12:50:42+00:00'
   updated_at: '2026-07-21T12:50:42+00:00'
+  closed_at: '2026-08-12T23:12:52+00:00'
+  resolution: |-
+    RESOLVIDO por delecao, que era a recomendacao da propria ficha. prompt/engine.py (ex-prompt_kernel.py), 359 linhas, apagado. Confirmacao antes: git grep sobre todos os packages tracked achou 2 hits, ambos em teste (test_hooks_fail_loud.py:94 e test_prompt_trailing_whitespace.py:112). ZERO chamador de producao. O PromptBuilder e o motor real, como a ficha dizia.
+
+    A ficha estava certa nos dois pontos que levantou — e o segundo era pior do que ela imaginava:
+
+    1. 'test_prompt_kernel.py NUNCA existiu no historico' — confirmado.
+
+    2. A divergencia era REAL e custou um defeito vivo. O gemeo morto chamava hooks.emit_async para post_build_prompt; o PromptBuilder.build_async (vivo) chamava hooks.emit() SINCRONO, que PULA listeners async e so conta o skip. Ou seja: um listener async de post_build_prompt simplesmente nunca disparava no unico caminho que alguem executa. Pior, a docstring de test_hooks_fail_loud.py afirmava textualmente que 'prompt_kernel.build_prompt_async awaits emit_async ... so async listeners actually fire on the kernel build path' — a suite estava verde sobre o gemeo morto enquanto o caminho vivo estava quebrado. s-kernel-fail-soft-audit consertou o twin e nunca o builder.
+
+    Consertado: builder.py agora faz await hooks.emit_async no caminho async. Red provado revertendo o fix (assert [] == fired). O caminho SINCRONO fica com emit() de proposito — nao pode await — e um teste novo fixa isso, pra ninguem copiar o fix pro lugar errado.
+
+    Os 2 testes foram RE-APONTADOS pro caminho vivo (mi.build_prompt_async), nunca apagados — e ganharam um assert de que async e sync compoem byte-identico, que e a divergencia que esta ficha nomeava.
+
+    Commit 055ee235.
