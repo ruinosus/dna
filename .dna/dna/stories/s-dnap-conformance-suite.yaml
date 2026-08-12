@@ -6,18 +6,30 @@ metadata:
 spec:
   title: A suite de conformidade DNAP 1.0 + o DnapClient, escritos a partir da SPEC e NAO
   description: 'A suite de conformidade DNAP 1.0 + o DnapClient, escritos a partir da SPEC e NAO do servidor — que outro agente implementa em paralelo. A ordem E o valor: uma suite derivada da implementacao passa por construcao e nao prova nada.'
-  status: in-progress
+  status: done
   feature: f-dnap-protocol
   acceptance_criteria:
-  - Given um servidor DNAP atras de um endpoint JSON-RPC, When a suite roda, Then cada obrigacao da secao 8 vira um caso nomeado que passa, falha ou PULA COM MOTIVO EXPLICITO — nunca um silencio que se leia como aprovacao
-  - Given um servidor que responde colecao vazia quando nao conseguiu ler, When a suite roda, Then ela FALHA — e cada caso e provado por MUTANTE, nao por leitura
-  - Given o DnapClient, When alguem escrever um nome de Kind literal no seu codigo, Then um teste falha (varredura AST contra o registro vivo), e o proprio teste e provado por mutante
+  - text: Given um servidor DNAP atras de um endpoint JSON-RPC, When a suite roda, Then cada obrigacao da secao 8 vira um caso nomeado que passa, falha ou PULA COM MOTIVO EXPLICITO — nunca um silencio que se leia como aprovacao
+    done: true
+    done_at: '2026-08-12T14:19:49+00:00'
+    done_by: story-done-auto
+  - text: Given um servidor que responde colecao vazia quando nao conseguiu ler, When a suite roda, Then ela FALHA — e cada caso e provado por MUTANTE, nao por leitura
+    done: true
+    done_at: '2026-08-12T14:19:49+00:00'
+    done_by: story-done-auto
+  - text: Given o DnapClient, When alguem escrever um nome de Kind literal no seu codigo, Then um teste falha (varredura AST contra o registro vivo), e o proprio teste e provado por mutante
+    done: true
+    done_at: '2026-08-12T14:19:49+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - codigo + testes com mutantes + prosa em docs/concepts; pytest verde; guardas verdes
+  - text: codigo + testes com mutantes + prosa em docs/concepts; pytest verde; guardas verdes
+    done: true
+    done_at: '2026-08-12T14:19:49+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-12T13:02:54+00:00'
-  updated_at: '2026-08-12T14:07:46+00:00'
+  updated_at: '2026-08-12T14:20:50+00:00'
   timeline:
   - at: '2026-08-12T13:02:54+00:00'
     actor: claude-code
@@ -53,6 +65,33 @@ spec:
     name: tr-tg-dnap-conformance-suite-20260812-140736
     summary: TestRun tr-tg-dnap-conformance-suite-20260812-140736 → pass
     outcome: pass
+  - at: '2026-08-12T14:20:38+00:00'
+    actor: claude-code
+    type: decision
+    source: cli
+    summary: |-
+      PR #385 merjada no verde (14 checks, sdk-py 3.12 e 3.13 inclusos).
+
+      O QUE FICA, em uma frase: a suite testa o CONTRATO porque foi escrita a partir da spec sem olhar servidor nenhum, e ela propria e testada por MUTACAO — 45 defeitos que a spec nomeia, cada um tendo de fazer o SEU caso falhar por nome. Uma regra que a suite nao PEGA e uma regra que a suite nao tem, por melhor que ela leia.
+
+      A decisao de desenho que mais rendeu: QUATRO resultados em vez de dois. 'Nao rodou' e 'nao da para ver de fora' sao coisas diferentes de 'passou', e um relatorio que as juntasse reproduziria, no proprio resumo, a confusao que a secao 7 proibe o servidor de fazer entre resposta vazia e pergunta sem resposta. Por isso DnapCaseNotApplicable nao COMPILA sem dizer o que ficou sem checagem, e DnapRuleUnverified nao e skip: e AssertionError, e report.ok e False enquanto existir.
+
+      O caso que mais custou pensamento foi o mais importante e o mais facil de escrever inutil: 'falha nunca vira colecao vazia'. Perguntar a um servidor saudavel e ver que ele nao mentiu nao prova nada. Ficou em quatro camadas, e a primeira e um CONTROLE POSITIVO em toda sonda negativa — sem ele, um servidor que erra em TUDO passa em todas elas. Isso tem teste proprio.
+
+      A revisao de sala limpa (479 -> 676 linhas) chegou no meio e deixou a entrega MAIOR: quase toda lacuna que ela fechou virou regra cobravel. 50 casos -> 66, 27 mutantes -> 45. E o encontro dos dois metodos vale registrar: dos nove buracos que esta suite reportou contra o rascunho, a sala limpa achou SEIS sozinha. Dois leitores sem contato convergindo e evidencia de que os buracos eram reais.
+    commit_ref: 1e423d44524042447cbbf3478430f01d18e754fe
+  - at: '2026-08-12T14:20:42+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Sem smoke de PRODUTO porque nao ha produto para fumegar: a entrega e biblioteca (dna.testing.dnap_conformance) e cliente (dna.dnap), sem superficie de UI. A metade automatizada esta provada pelo CI da #385, e a metade que um humano validaria — ''a suite realmente pega o defeito?'' — esta provada por 45 mutantes, que e uma evidencia mais forte do que uma passada manual.'
+  - at: '2026-08-12T14:20:50+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: 1e423d44524042447cbbf3478430f01d18e754fe
   produces:
   - kind: Plan
     name: plan-s-dnap-conformance-suite
@@ -70,3 +109,4 @@ spec:
     name: tr-tg-dnap-conformance-suite-20260812-140736
     role: test-run
     at: '2026-08-12T14:07:46+00:00'
+  closed_at: '2026-08-12T14:20:39+00:00'
