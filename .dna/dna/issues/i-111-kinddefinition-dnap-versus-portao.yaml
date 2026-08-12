@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: ng7zrs3fn6du
+  name: i-111-kinddefinition-dnap-versus-portao
+spec:
+  title: A secao 6.1 do DNAP e o portao de aprovacao de Kind do SDK dao respostas diferentes
+  description: 'A secao 6.1 (fechando o buraco A11 da sala limpa) diz que um Kind e uma instancia de KindDefinition, que escrever uma REGISTRA o tipo, que ''nao ha outro jeito'' e que ''nenhum mecanismo out-of-band e permitido''. O SDK recusa a escrita generica de KindDefinition (BootstrapKindWriteRefused — e um Kind de bootstrap) e roteia a autoria por dna/application/kind_authoring.py, onde o que um tenant escreve fica INERTE ate um humano aprovar no portal. Isso e decisao de produto, medida e enviada (ver tenant-kind-authoring-shipped), nao descuido. As duas respondem diferente a ''quem pode criar um tipo''. O servidor DNAP implementa e testa as duas regras que a spec ENUNCIA (metadata.name == spec.kind; spec.schema limitado a 15 palavras-chave, checado recursivamente — dna/protocol/kinddef.py) e deixa o portao do SDK responder se a escrita procede: hoje -32006 NOT_WRITABLE. Precisa de decisao do fundador: (a) DNAP cede e admite uma politica de registro do servidor, (b) o SDK abre a escrita generica de KindDefinition com aprovacao como estado da instancia e nao como portao de escrita, ou (c) o DNAP hospedado expoe um canal em que o registro e imediato. Nao decidido em silencio.'
+  type: question
+  severity: high
+  status: open
+  related_feature: f-dnap-protocol
+  created_at: '2026-08-12T14:07:27+00:00'
+  updated_at: '2026-08-12T14:07:27+00:00'
+  timeline:
+  - at: '2026-08-12T14:07:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

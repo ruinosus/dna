@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  id: iujpkybhh6zd
+  name: plan-s-dnap-conformance-suite
+spec:
+  title: 'Plano: s-dnap-conformance-suite'
+  date: '2026-08-12'
+  status: accepted
+  story_ref: s-dnap-conformance-suite
+  journey_phase: plan
+  body: '1) ler a spec inteira e derivar dela um caso por obrigacao normativa; 2) escrever dna/testing/dnap_conformance.py com vocabulario de resultado de TRES valores alem de passou/falhou: NOT-RUN estruturado (obriga a dizer o que ficou sem checar), UNVERIFIED (a regra nao e observavel de fora e o harness nao ofereceu gancho — nao e skip, conta contra) e SPEC-GAP (a spec nao define o que o caso precisaria assertar); 3) o caso falha-nunca-vira-vazio em camadas: controle positivo + falsificabilidade do [] + sondas de canal/Kind/cursor + injecao de falha; 4) DnapClient em dna/dnap/; 5) mutantes que provam cada caso.'
+  created_at: '2026-08-12T13:02:56+00:00'
+  updated_at: '2026-08-12T13:02:56+00:00'

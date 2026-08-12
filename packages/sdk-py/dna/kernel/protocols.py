@@ -412,7 +412,26 @@ class SpecValidationError(ValueError, KernelRefusal):
     Subclasses ``ValueError`` so existing callers that treat write-path
     vetoes as ValueError (the pre_save guard convention) keep working.
     Mode knob: ``DNA_WRITE_VALIDATION=enforce|warn|off``.
+
+    ``path`` and ``rule`` carry the failure in MACHINE-readable form: which
+    dotted spec path failed, and which rule it failed. They used to exist only
+    inside the sentence — ``"schema validation failed at spec.model: 'x' is
+    not one of […]"`` — which is fine for a human and unusable for a face that
+    must put them on a wire (DNAP §7 requires ``-32010 VALIDATION_FAILED``
+    to carry *"the failing path and the rule, never a bare 'invalid'"*, and
+    parsing them back out of a message is how a face starts depending on
+    prose). Both default to ``None``: a raise site that genuinely does not know
+    the path says ``None`` rather than guessing one, and a consumer that reads
+    ``None`` learns *"not available here"* instead of a plausible wrong answer.
     """
+
+    def __init__(
+        self, *args: object, path: str | None = None, rule: str | None = None,
+    ) -> None:
+        super().__init__(*args)
+        self.path = path
+        self.rule = rule
+
 
 
 class VersionAlreadyPublished(KernelRefusal):

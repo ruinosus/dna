@@ -1,0 +1,14 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Plan
+metadata:
+  id: 6jyxtjotuicx
+  name: plan-s-dnap-core-server
+spec:
+  title: 'Plano: s-dnap-core-server'
+  date: '2026-08-12'
+  status: accepted
+  story_ref: s-dnap-core-server
+  journey_phase: plan
+  body: Reusar os cinco impls de dna/application/instances.py; o servidor e cola e contrato. Registro de metodos com capacidades DERIVADAS da tabela (onda 2 registra resolve/search sem tocar no dispatch). stdio NDJSON. Cada regra normativa ganha teste com mutante morto.
+  created_at: '2026-08-12T13:38:58+00:00'
+  updated_at: '2026-08-12T13:38:58+00:00'
