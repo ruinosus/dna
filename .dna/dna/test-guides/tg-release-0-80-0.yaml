@@ -1,0 +1,24 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  id: npv2sx36oaxz
+  name: tg-release-0-80-0
+spec:
+  description: Verify DNA 0.80.0 metadata, locked dependencies, release artifacts, GenUI contract, clients, and repository guards.
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: Validate four package versions and three CLI SDK ranges
+    expected: expect 0.80.0 and >=0.80,<0.81
+  - action: Build dna-sdk, dna-cli, and Python dna-client
+    expected: expect 0.80.0 wheel and sdist for each
+  - action: Run locked CLI version and GenUI tests
+    expected: expect 1 and 20 passed
+  - action: Install, typecheck, and build TypeScript dna-client
+    expected: expect success
+  - action: Run brand_guard and git diff --check
+    expected: expect clean
+  verifies:
+  - Story/s-release-0-80-0
+  created_at: '2026-08-12T09:35:43+00:00'
+  updated_at: '2026-08-12T09:35:43+00:00'

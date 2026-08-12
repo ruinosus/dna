@@ -1,6 +1,6 @@
 [project]
 name = "dna-cli"
-version = "0.79.0"
+version = "0.80.0"
 description = "DNA command-line interface — the `dna` binary for the declarative SDLC + instance CRUD (kernel-local, no service required)"
 readme = "README.md"
 license = "MIT"
@@ -24,14 +24,14 @@ dependencies = [
     # replaces the registry lookup with the workspace path source below
     # ([tool.uv.sources] — editable ../sdk-py), so dev installs keep tracking
     # the sibling package live; the constraint only bites consumers.
-    "dna-sdk>=0.79,<0.80",
+    "dna-sdk>=0.80,<0.81",
 ]
 
 [project.scripts]
 dna = "dna_cli:main"
 
 [project.optional-dependencies]
-harness = ["dna-sdk[github-copilot]>=0.79,<0.80"]
+harness = ["dna-sdk[github-copilot]>=0.80,<0.81"]
 # The MCP runtime face (`dna mcp serve`) — expose the live DNA (definitions +
 # SDLC + memory) over the Model Context Protocol. Built on FastMCP (the
 # standalone `fastmcp` framework) for native stdio+HTTP transports and built-in
@@ -262,7 +262,7 @@ packages = ["dna_cli"]
 # sibling package (editable), NOT from PyPI — the registry constraint above
 # is what published artifacts carry. Two paths, one name:
 #   dev  (this repo)  → ../sdk-py editable, always current
-#   user (pip/uv add) → PyPI dna-sdk>=0.79,<0.80
+#   user (pip/uv add) → PyPI dna-sdk>=0.80,<0.81
 [tool.uv.sources]
 dna-sdk = { path = "../sdk-py", editable = true }
 

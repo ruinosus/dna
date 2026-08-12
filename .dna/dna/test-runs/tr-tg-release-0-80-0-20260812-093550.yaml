@@ -1,0 +1,12 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  id: n6gnuc5htvtp
+  name: tr-tg-release-0-80-0-20260812-093550
+spec:
+  guide_ref: tg-release-0-80-0
+  outcome: pass
+  verifies:
+  - Story/s-release-0-80-0
+  executed_by: claude-code
+  executed_at: '2026-08-12T09:35:50+00:00'
