@@ -15,7 +15,7 @@ spec:
   - codigo em dna/protocol + testes com mutantes mortos + prosa em docs/concepts/dnap-protocol.md + guardas de docs verdes + zero regressao na suite
   definition_of_done_source: cli-create
   created_at: '2026-08-12T13:38:45+00:00'
-  updated_at: '2026-08-12T14:09:40+00:00'
+  updated_at: '2026-08-12T15:32:39+00:00'
   timeline:
   - at: '2026-08-12T13:38:45+00:00'
     actor: claude-code
@@ -34,6 +34,12 @@ spec:
     source: cli
     summary: 'Onda 1 pronta. Registro de metodos com capacidades DERIVADAS da tabela: a onda 2 registra resolve/* e search/* e o dispatch nao muda uma linha. stdio NDJSON (o mesmo framing do stdio do MCP; RFC 8259 escapa control chars, entao a linha e segura por construcao). JSON-RPC escrito a mao — busca registrada em i-113, a decisao de peso e do fundador. 19 mutantes mortos, um por regra normativa. Quatro achados abertos: i-109 (a projecao aceita ''spec'' e devolve so o nome), i-110 (nenhuma porta expoe marca d''agua de canal), i-111 (secao 6.1 vs. o portao de aprovacao de Kind), i-112 (lacunas da tabela de erros). A spec mudou no meio (sala limpa, 12 buracos): rebase feito, os cinco itens novos da minha fatia implementados e testados.'
     commit_ref: b7d6d39ebe92f466fa78d6a6eb8cc901741d32f8
+  - at: '2026-08-12T15:32:39+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'A suite de conformidade da PR #385 (escrita da SPEC, sem ler este servidor) rodou contra o dna.protocol e achou SEIS coisas que os meus 81 testes nao acharam. Quatro eram bugs meus e estao consertados: (1) SUBSTITUICAO no overlay de tenant — a resolucao de camadas le ATRAVES, entao um tenant que este servidor nunca ouviu falar voltava com o conteudo do scope base, com nada na resposta dizendo isso; agora nenhum canal de tenant e servido sem o deployment declarar. (2) o resultado de list carregava revision: null; a suite recusa, e com razao — a regra 3 fica vazia se duas paginas ''concordam'' em nada. Trocado por um digest de conteudo sobre os pares (name, etag) da fatia: e O(n) e e VERDADE, ao contrario de um token cunhado, que seria O(1) e nao significaria nada. (3) expiracao de cursor era inobservavel; agora ha uma GERACAO de cursor de verdade (o servidor evicta, o cliente recebe -32005), que e o que a nota da propria regra 3 diz ser necessario para o MUST ser pagavel. (4) a validacao do documento passou a vir ANTES do portao de escrita — 400 antes de 403. As outras duas sao achados contra o DOCUMENTO: i-114 (o limite de 15 palavras-chave da secao 6.1 e incompativel com os 78 Kinds embutidos, e a premissa dele nao vale num servidor que aplica o vocabulario inteiro) e i-115 (a secao 6.2 nao determina a forma do resultado de instances/get). Este e o argumento inteiro para uma segunda implementacao, em um paragrafo.'
+    commit_ref: ab06f85e5d31b30f47200aac74ab0d48b8716e97
   produces:
   - kind: Plan
     name: plan-s-dnap-core-server

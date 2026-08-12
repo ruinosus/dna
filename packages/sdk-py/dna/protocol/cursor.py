@@ -31,6 +31,15 @@ Two things the cursor buys that an offset cannot:
 The encoding is base64url of compact JSON — no padding, URL-safe, and
 deliberately not a format a client is invited to read. Nothing secret travels
 in it, so it is not signed; it is opaque, not confidential.
+
+⚠️ **Rule 2 is defended twice, and one of the two defences is untestable in
+isolation.** A mutation that makes :func:`decode_cursor` swallow an unreadable
+cursor and restart at offset 0 does not survive: the cursor it fabricates
+carries ``revision=None``, and :func:`require_same_snapshot` then compares that
+against the live revision and answers ``-32005`` anyway. The observable
+behaviour is identical either way, so no test can tell the two mechanisms
+apart — recorded here rather than left as a surviving mutant somebody later
+reads as a gap.
 """
 from __future__ import annotations
 
@@ -60,27 +69,37 @@ class Cursor:
     select: str
     offset: int
     revision: str | None
+    #: The server's cursor GENERATION at mint time. §6.2 rule 3's own note:
+    #: *"honouring it requires the server to hold a snapshot, which has a
+    #: lifetime and a memory bound … CURSOR_EXPIRED is not a courtesy — it is
+    #: how a server with finite memory stays honest."* Bumping the generation
+    #: is that eviction: a restart, a snapshot drop, an operator clearing
+    #: state. Every outstanding cursor expires at once, loudly, instead of
+    #: quietly resuming against a snapshot the server no longer holds.
+    generation: int = 0
 
     def encode(self) -> str:
         payload = {
             "v": _VERSION, "c": self.channel, "k": self.kind,
             "s": self.select, "o": self.offset, "r": self.revision,
+            "g": self.generation,
         }
         raw = json.dumps(payload, separators=(",", ":"), sort_keys=True)
         return base64.urlsafe_b64encode(raw.encode("utf-8")).decode("ascii").rstrip("=")
 
 
 def encode_cursor(
-    *, channel: str, kind: str, select: str, offset: int, revision: str | None,
+    *, channel: str, kind: str, select: str, offset: int,
+    revision: str | None, generation: int = 0,
 ) -> str:
     return Cursor(
         channel=channel, kind=kind, select=select, offset=offset,
-        revision=revision,
+        revision=revision, generation=generation,
     ).encode()
 
 
 def decode_cursor(
-    raw: object, *, channel: str, kind: str, select: str,
+    raw: object, *, channel: str, kind: str, select: str, generation: int = 0,
 ) -> Cursor:
     """Decode and validate a cursor against the request that presented it.
 
@@ -128,9 +147,16 @@ def decode_cursor(
         raise DnapError.cursor_expired(
             "this cursor carries no usable revision — restart the listing."
         )
+    if payload.get("g") != generation:
+        raise DnapError.cursor_expired(
+            "this cursor was minted against a snapshot this server no longer "
+            "holds — restart the listing. A server with finite memory evicts "
+            "snapshots; saying so is what keeps 'revision is constant across "
+            "the pages of one listing' affordable rather than aspirational."
+        )
     return Cursor(
         channel=channel, kind=kind, select=select, offset=offset,
-        revision=revision,
+        revision=revision, generation=generation,
     )
 
 

@@ -20,20 +20,38 @@ to :class:`~dna.adapters.postgres.eventbus.PostgresEventBus`; no
 ``SourcePort``/``WritableSourcePort`` member exposes it, the SQLite schema sets
 it to ``None``, and the filesystem source has nothing like it. So:
 
-* where a store **does** expose a watermark, this module reads it, the cursor
-  pins it, and a watermark that moved mid-listing answers ``-32005
-  CURSOR_EXPIRED`` — the client restarts rather than assembling "a quilt of
-  moments and calling it a state";
-* where it does **not**, the listing reports ``revision: null`` and
-  ``initialize`` advertises ``revisions.channelWatermark: false``.
+* where a store **does** expose a watermark, this module reads it — one cheap
+  call, and the number is the store's own;
+* where it does **not**, the watermark is **computed**: a digest over the
+  ``(name, spec-etag)`` pairs of the slice being listed.
 
-The second bullet is the whole point. Minting a plausible token would claim a
-snapshot isolation the read does not have, and a client comparing two such
-tokens would draw conclusions from a number the server invented — the §7 rule
-(*an empty result and an unanswerable question are different values*) applied
-to a scalar. ``null`` says "I cannot tell you which moment this is", which is
-true, and the capability flag says it once at connect time so no client has to
-discover it per call.
+⭐ **The fallback is a cost, deliberately paid, and not a lie.** Three answers
+were on the table and two of them were dishonest:
+
+``null``
+    says *"I cannot tell you which moment this is"*, which is true — but §6.2
+    requires a revision, §8's client rule 2 requires clients to treat it as
+    opaque, and a ``null`` invites a client to read it as *absent* instead. It
+    also makes rule 3 (constant across pages) vacuous: two pages both reporting
+    ``null`` agree about nothing.
+
+a minted token (a uuid, a timestamp)
+    is opaque and constant and **means nothing**. A client comparing two such
+    tokens would draw conclusions from a number the server invented. That is
+    §7's rule — *an empty result and an unanswerable question are different
+    values* — applied to a scalar, and it is the worse of the two failures
+    because it looks like an answer.
+
+a content digest
+    is a TRUE statement: *these rows came from this state*. Opaque, constant
+    across the pages of one listing, and it changes when anything in the slice
+    changes. It costs one extra pass over the slice's ``(name, etag)`` pairs.
+
+The digest is what ships. ⚠️ **It is a fallback, not a design**: it is O(n) per
+listing, and a store that exposes a sequence supersedes it at O(1).
+``initialize`` reports which of the two a connection is getting, so a client
+can tell an O(1) watermark from an O(n) one rather than discovering the cost in
+a latency graph.
 
 The probe is **duck-typed on the method**, mirroring
 :func:`dna.memory.as_of.store_supports_as_of` — the established precedent in
@@ -42,11 +60,14 @@ Protocol declares.
 """
 from __future__ import annotations
 
+import hashlib
+from collections.abc import Iterable
 from typing import Any
 
 __all__ = [
     "CHANNEL_REVISION_METHOD",
     "channel_revision",
+    "digest_revision",
     "store_supports_channel_revision",
 ]
 
@@ -76,12 +97,11 @@ async def channel_revision(
 ) -> str | None:
     """The channel's watermark, or ``None`` when the store has none.
 
-    ``None`` is an ANSWER — "this store cannot date a snapshot" — and it is the
-    only value that may stand in for a watermark. A failure to *read* an
-    available watermark is not turned into ``None``: it propagates, because a
-    store that has the capability and could not use it is the unanswerable case,
-    and collapsing it into the "no capability" answer is the §7 sin one layer
-    down.
+    ``None`` means *"this store exposes no sequence"* — the caller then computes
+    :func:`digest_revision` instead. A failure to *read* an available watermark
+    is **not** turned into ``None``: it propagates, because a store that has the
+    capability and could not use it is the unanswerable case, and collapsing it
+    into the "no capability" answer is the §7 sin one layer down.
     """
     src = _source_of(kernel)
     fn = getattr(src, CHANNEL_REVISION_METHOD, None)
@@ -89,3 +109,24 @@ async def channel_revision(
         return None
     value = await fn(scope, tenant=tenant)
     return None if value is None else str(value)
+
+
+def digest_revision(pairs: Iterable[tuple[str, str]]) -> str:
+    """A watermark computed from content — the honest fallback.
+
+    ``pairs`` is ``(name, etag)`` for every instance in the slice. Sorted before
+    hashing, so the digest is a property of the SET and not of the order the
+    store happened to yield it in; a store whose iteration order changed would
+    otherwise report a moved channel and expire every cursor for nothing.
+
+    The empty slice gets a digest too, and a stable one. *"Nothing of this Kind
+    exists here"* is a state like any other, and a listing of it belongs to a
+    snapshot exactly as much as a full one does.
+    """
+    hasher = hashlib.sha256()
+    for name, etag in sorted(pairs):
+        hasher.update(name.encode("utf-8"))
+        hasher.update(b"\x00")
+        hasher.update(etag.encode("utf-8"))
+        hasher.update(b"\x00")
+    return hasher.hexdigest()[:32]

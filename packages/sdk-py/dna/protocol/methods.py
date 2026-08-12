@@ -37,6 +37,7 @@ from dna.protocol.kinddef import KIND_DEFINITION, validate_kind_definition
 from dna.protocol.registry import ChannelRequirement, MethodRegistry
 from dna.protocol.revision import (
     channel_revision,
+    digest_revision,
     store_supports_channel_revision,
 )
 from dna.protocol.select import parse_select
@@ -212,10 +213,18 @@ async def initialize(ctx: RequestContext, params: Mapping[str, Any]) -> dict[str
         # exposes a channel watermark, so listings report `revision: null`
         # instead of a minted one — and the client learns that once, here,
         # rather than inferring it from a null it did not expect.
+        # A DNAP-1.0 extension: WHICH of the two revision mechanisms this
+        # connection is getting. Both are honest; one is O(1) and the other is
+        # O(n) per listing (see dna.protocol.revision), and a client is better
+        # served learning that once here than inferring it from a latency
+        # graph.
         "revisions": {
             "instance": "content-hash",
-            "channelWatermark": store_supports_channel_revision(
-                getattr(ctx.live, "kernel", None)
+            "channel": (
+                "store-sequence"
+                if store_supports_channel_revision(
+                    getattr(ctx.live, "kernel", None))
+                else "content-digest"
             ),
         },
     }
@@ -315,9 +324,7 @@ async def instances_list(
     selection = parse_select(params.get("select"))
     limit = _positive_int(params.get("limit"), "limit")
 
-    current = await channel_revision(
-        getattr(ctx.live, "kernel", None), ctx.scope, tenant=ctx.tenant,
-    )
+    current = await _slice_revision(ctx, entry)
     raw_cursor = params.get("cursor")
     if raw_cursor is None:
         offset, snapshot = 0, current
@@ -325,6 +332,7 @@ async def instances_list(
         cursor = decode_cursor(
             raw_cursor, channel=ctx.channel.uri, kind=kind,
             select=selection.fingerprint,
+            generation=ctx.server.cursor_generation,
         )
         require_same_snapshot(cursor, current)
         offset, snapshot = cursor.offset, cursor.revision
@@ -358,6 +366,7 @@ async def instances_list(
             channel=ctx.channel.uri, kind=kind,
             select=selection.fingerprint,
             offset=offset + len(rows), revision=snapshot,
+            generation=ctx.server.cursor_generation,
         )
     return out
 
@@ -433,7 +442,6 @@ async def instances_write(
             "({apiVersion, kind, metadata, spec}) — spec §6.2",
         )
     entry = await _require_kind(ctx, {"kind": document.get("kind")})
-    _require_writable(entry)
     metadata = document.get("metadata")
     if not isinstance(metadata, dict):
         raise DnapError(
@@ -458,6 +466,13 @@ async def instances_write(
         # §6.1's two rules, checked before the store — see dna.protocol.kinddef
         # (and the conflict with the SDK's authoring gate documented there).
         validate_kind_definition(document)
+    # ⚠️ Writability is checked LAST of the preconditions, and the order is a
+    # decision. A malformed document is malformed whatever the target's policy
+    # is, and 400-before-403 is the order every validating API settles on: a
+    # client told only "not writable" would fix nothing, resubmit the same
+    # broken document to a channel that does accept the Kind, and be refused
+    # again for a reason it was never told the first time.
+    _require_writable(entry)
 
     try:
         result = await write_instance_impl(
@@ -508,12 +523,7 @@ async def instances_delete(
         if err.code == REVISION_CONFLICT:
             err.data["revision"] = await _current_revision(ctx, entry, name)
         raise err from exc
-    return {
-        "deleted": True,
-        "revision": await channel_revision(
-            getattr(ctx.live, "kernel", None), ctx.scope, tenant=ctx.tenant,
-        ),
-    }
+    return {"deleted": True, "revision": await _slice_revision(ctx, entry)}
 
 
 # ── small validators ────────────────────────────────────────────────────────
@@ -594,6 +604,48 @@ def _refuse_derived_metadata(metadata: Mapping[str, Any]) -> None:
         path=f"metadata.{derived[0]}", rule="derived-not-supplied",
         fields=derived,
     )
+
+
+async def _slice_revision(
+    ctx: RequestContext, entry: Mapping[str, Any],
+) -> str:
+    """The snapshot token for one ``(channel, kind)`` slice (§6.2 rule 3).
+
+    The store's own sequence when it has one; otherwise a content digest — see
+    :mod:`dna.protocol.revision` for why the third option (minting a token) is
+    the one that is not on the table.
+
+    ⚠️ The digest branch reads every name+etag of the slice, so it is O(n) per
+    listing. That cost is the honest price of a store with no sequence, and it
+    disappears the moment one is exposed.
+    """
+    from dna.application.instances import list_instances_impl
+
+    kernel = getattr(ctx.live, "kernel", None)
+    supplied = await channel_revision(kernel, ctx.scope, tenant=ctx.tenant)
+    if supplied is not None:
+        return supplied
+
+    from dna.kernel.etag import spec_etag
+
+    pairs: list[tuple[str, str]] = []
+    offset = 0
+    while True:
+        page = await list_instances_impl(
+            ctx.live, kind=entry["kind"], scope=ctx.scope, tenant=ctx.tenant,
+            api_version=entry[_APIVERSION_KEY],
+            envelope=True, order_by=[_ORDER_BY], offset=offset,
+        )
+        rows = list(page.get("instances") or [])
+        for row in rows:
+            metadata = row.get("metadata") if isinstance(row, dict) else None
+            name = (metadata or {}).get("name")
+            if isinstance(name, str):
+                pairs.append((name, spec_etag(row.get("spec"))))
+        if not page.get("has_more") or not rows:
+            break
+        offset += len(rows)
+    return digest_revision(pairs)
 
 
 async def _read(

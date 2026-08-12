@@ -119,6 +119,7 @@ class DnapServer:
         live: Any,
         *,
         scopes: Collection[str] | None = None,
+        tenants: Collection[str] | None = None,
         registry: MethodRegistry | None = None,
         server_info: Mapping[str, Any] | None = None,
         enabled_capabilities: Collection[str] | None = None,
@@ -128,7 +129,14 @@ class DnapServer:
         self.live = live
         base = getattr(live, "base_scope", None)
         served = list(scopes) if scopes else ([base] if base else [])
-        self.channels = ChannelSet(served, default=base if base in served else None)
+        # ⚠️ ``tenants`` defaults to none served. A DNAP server does not own
+        # the tenant registry, so it cannot know which tenants exist — and
+        # the layer resolution underneath reads THROUGH to the base, which
+        # means an undeclared tenant would be answered with the base scope's
+        # content. See ChannelSet for the measurement.
+        self.channels = ChannelSet(
+            served, default=base if base in served else None, tenants=tenants,
+        )
         self.registry = registry if registry is not None else builtin_registry()
         self._enabled: frozenset[str] | None = (
             frozenset(enabled_capabilities)
@@ -136,6 +144,17 @@ class DnapServer:
         )
         self.server_info: dict[str, Any] = dict(server_info or _default_server_info())
         self.session = Session()
+        #: Bumped to evict every outstanding cursor at once — see
+        #: :class:`~dna.protocol.cursor.Cursor`. A real server bumps it on
+        #: restart or when it drops the snapshots it was holding; §6.2 rule 3
+        #: is only affordable because that eviction is SAYABLE
+        #: (``-32005``) rather than silent.
+        self.cursor_generation = 0
+
+    def expire_cursors(self) -> None:
+        """Evict every outstanding cursor. The next page of any listing in
+        flight answers ``-32005 CURSOR_EXPIRED`` and the client restarts."""
+        self.cursor_generation += 1
 
     # ── capability surface ──────────────────────────────────────────────────
 

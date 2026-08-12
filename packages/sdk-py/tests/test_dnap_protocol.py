@@ -733,24 +733,113 @@ async def test_a_moved_snapshot_ends_the_listing_instead_of_continuing_it(live):
 
 
 @pytest.mark.asyncio
-async def test_a_store_with_no_watermark_reports_null_rather_than_minting_one(server):
-    """⭐ The honesty half. The filesystem store cannot date a snapshot, so the
-    listing says ``revision: null`` and ``initialize`` says
-    ``channelWatermark: false``.
+async def test_a_store_with_no_sequence_reports_a_TRUE_digest_not_a_minted_token(
+    server,
+):
+    """⭐ The honesty half of §6.2 rule 3, and the option that was NOT taken.
 
-    **Mutant:** mint a token (a uuid, a timestamp, a hash of the page). Every
-    assertion below still passes for the value — and the server has begun
-    claiming a snapshot isolation it does not have, which a client comparing
-    two tokens will believe. The pair of assertions is the guard: a null
-    revision is only honest if the capability flag says why."""
+    The fixture store exposes no sequence, so the revision is computed: a
+    digest over the slice's `(name, etag)` pairs. That is a TRUE statement —
+    *these rows came from this state* — and it is why the third candidate was
+    rejected. A minted token (a uuid, a timestamp) would satisfy every
+    assertion below about SHAPE and mean nothing; a client comparing two of
+    them would draw conclusions from a number the server invented, which is §7's
+    rule applied to a scalar.
+
+    **Mutant:** return `uuid4().hex` instead of the digest. Every shape
+    assertion still passes — and the last one, that an unchanged channel
+    reports an unchanged revision while a changed one does not, fails. That
+    pair is the only thing separating a watermark from a decoration.
+    """
     result = await _ok(
-        server, "initialize", protocolVersion="1.0", client={}, capabilities={"write": {}, "resolve": {}, "search": {}},
+        server, "initialize", protocolVersion="1.0", client={},
+        capabilities={"write": {}},
     )
-    assert result["revisions"]["channelWatermark"] is False
-    listing = await _ok(
+    assert result["revisions"]["channel"] == "content-digest"
+
+    first = await _ok(
         server, "instances/list", channel=_channel(_SCOPE), kind="Agent",
     )
-    assert listing["revision"] is None
+    assert isinstance(first["revision"], str) and first["revision"], (
+        "§8 client rule 2 asks clients to treat revision as opaque; a null "
+        "invites them to treat it as absent instead"
+    )
+
+    # Reading again changes nothing, so the revision must not move.
+    again = await _ok(
+        server, "instances/list", channel=_channel(_SCOPE), kind="Agent",
+    )
+    assert again["revision"] == first["revision"]
+
+    # Writing does change something, so it must.
+    await _ok(
+        server, "instances/write", channel=_channel(_SCOPE),
+        document=_doc("Agent", "scribe", {"objective": "x"}),
+    )
+    moved = await _ok(
+        server, "instances/list", channel=_channel(_SCOPE), kind="Agent",
+    )
+    assert moved["revision"] != first["revision"]
+
+
+@pytest.mark.asyncio
+async def test_an_unserved_tenant_overlay_is_refused_not_answered_from_the_base(
+    live,
+):
+    """⭐⭐ §3's substitution rule, through the door it nearly escaped by.
+
+    A tenant overlay reads THROUGH to the base, so a request for a tenant this
+    deployment never heard of came back carrying the base scope's content — the
+    caller asked for a tenant's shelf and was handed the shared one, with
+    nothing in the answer to say so. Found by the conformance suite, which is
+    the argument for a second implementation in one sentence.
+
+    **Mutant:** let `ChannelSet.serves` accept any tenant of a served scope.
+    This test fails; every other test in this file passes, because none of them
+    asks for a tenant nobody declared.
+    """
+    server = await _ready(DnapServer(live, scopes=[_SCOPE]))
+    error = await _err(
+        server, "instances/list", channel=_channel(_SCOPE, tenant="acme"),
+        kind="Agent",
+    )
+    assert error["code"] == CHANNEL_NOT_SERVED
+
+    # …and a DECLARED tenant is served, so this is a refusal about the tenant
+    # registry rather than a server that cannot do overlays at all.
+    with_tenant = await _ready(
+        DnapServer(live, scopes=[_SCOPE], tenants=["acme"]),
+    )
+    listed = await _ok(
+        with_tenant, "instances/list",
+        channel=_channel(_SCOPE, tenant="acme"), kind="Agent",
+    )
+    assert listed["instances"] == []
+
+
+@pytest.mark.asyncio
+async def test_expiring_the_cursors_ends_every_listing_in_flight(server):
+    """§6.2 rule 3's own note: *"honouring it requires the server to hold a
+    snapshot, which has a lifetime and a memory bound … CURSOR_EXPIRED is not a
+    courtesy — it is how a server with finite memory stays honest."*
+
+    **Mutant:** ignore the generation in the cursor. The page then resumes
+    against a snapshot the server no longer holds, silently."""
+    await _ready(server)
+    for i in range(4):
+        await _ok(
+            server, "instances/write", channel=_channel(_SCOPE),
+            document=_doc("Agent", f"a{i}", {"objective": "x"}),
+        )
+    page = await _ok(
+        server, "instances/list", channel=_channel(_SCOPE), kind="Agent", limit=2,
+    )
+    server.expire_cursors()
+    error = await _err(
+        server, "instances/list", channel=_channel(_SCOPE), kind="Agent",
+        limit=2, cursor=page["cursor"],
+    )
+    assert error["code"] == CURSOR_EXPIRED
 
 
 # ══ §6.2 — get / write / delete ═════════════════════════════════════════════
@@ -1267,8 +1356,11 @@ async def test_this_sdk_refuses_a_kind_definition_write_and_that_is_the_conflict
     error = await _err(
         server, "instances/write", channel=_channel(_SCOPE),
         document={"apiVersion": "github.com/ruinosus/dna/core/v1",
-                  "kind": "KindDefinition", "metadata": {"name": "Mismatch"},
-                  "spec": {"kind": "Other", "schema": {}}},
+                  "kind": "KindDefinition",
+                  "metadata": {"name": "ReviewChecklist"},
+                  "spec": {"kind": "ReviewChecklist",
+                           "apiVersion": "example.test/v1", "plane": "record",
+                           "schema": {"type": "object"}}},
     )
     assert error["code"] == NOT_WRITABLE
     assert "KindDefinition" in str(error)
@@ -1373,3 +1465,28 @@ def test_an_exception_the_table_does_not_know_is_NOT_given_a_plausible_code():
     boom = RuntimeError("the disk melted")
     with pytest.raises(RuntimeError):
         _translate(boom)
+
+
+def test_the_digest_is_a_property_of_the_SET_not_of_the_iteration_order():
+    """The digest sorts before hashing, and this is the only test that can see
+    it: the fixture store happens to yield names in order, so a behavioural
+    test through the server cannot tell a sorted digest from an unsorted one.
+
+    It matters because the digest drives cursor expiry. A store whose iteration
+    order changed — a different adapter, a different index, a parallel scan —
+    would otherwise report a moved channel and expire every outstanding cursor
+    for a change that never happened.
+
+    **Mutant:** drop the `sorted()`. This fails; nothing else does."""
+    from dna.protocol.revision import digest_revision
+
+    pairs = [("beta", "e2"), ("alpha", "e1"), ("charlie", "e3")]
+    assert digest_revision(pairs) == digest_revision(sorted(pairs))
+    assert digest_revision(pairs) == digest_revision(reversed(sorted(pairs)))
+    # …and it still MOVES when the content moves, or it would be a constant.
+    assert digest_revision(pairs) != digest_revision(
+        [("beta", "e2"), ("alpha", "CHANGED"), ("charlie", "e3")],
+    )
+    # An empty slice gets a digest too: "nothing of this Kind exists here" is a
+    # state, and a listing of it belongs to a snapshot like any other.
+    assert digest_revision([])

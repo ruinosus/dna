@@ -142,7 +142,32 @@ class ChannelSet:
     tenant registry, which is the kernel's job and not addressing's.
     """
 
-    def __init__(self, scopes: Iterable[str], *, default: str | None = None) -> None:
+    def __init__(
+        self,
+        scopes: Iterable[str],
+        *,
+        default: str | None = None,
+        tenants: Iterable[str] | None = None,
+    ) -> None:
+        # ⚠️ ``tenants`` defaults to NONE SERVED, and that default is the fix
+        # for a measured substitution. This class used to serve any tenant of a
+        # served scope, on the reasoning that a tenant is "a layer of" that
+        # scope. But the layer resolution reads THROUGH to the base, so a
+        # request for a tenant this deployment has never heard of came back
+        # carrying the base scope's content — the caller asked for a tenant's
+        # shelf and was handed the shared one, with nothing in the answer to
+        # say so. That is §3's substitution exactly, arriving through the one
+        # door §3's own refusal did not cover.
+        #
+        # A DNAP server does not own the tenant registry, so it cannot know
+        # which tenants exist; the honest default is therefore to serve none
+        # and let a deployment DECLARE the ones it serves. Refusing a real
+        # tenant costs a `-32004` a client can read; serving a fictional one
+        # costs a wrong answer nobody can see.
+        self._tenants = (
+            frozenset(str(t) for t in tenants) if tenants is not None
+            else frozenset()
+        )
         self._scopes = tuple(dict.fromkeys(str(s) for s in scopes))
         if not self._scopes:
             raise ValueError("a DNAP server must serve at least one scope")
@@ -164,12 +189,29 @@ class ChannelSet:
     def default_scope(self) -> str:
         return self._default
 
+    @property
+    def tenants(self) -> frozenset[str]:
+        return self._tenants
+
     def advertised(self) -> list[str]:
-        """The ``channels`` member of the ``initialize`` result."""
-        return [f"{SCOPE_PREFIX}{s}" for s in self._scopes]
+        """The ``channels`` member of the ``initialize`` result.
+
+        Tenant overlays are advertised individually, because a client cannot
+        derive them: there is no wildcard in a channel URI, and a base channel
+        does not imply any overlay.
+        """
+        base = [f"{SCOPE_PREFIX}{s}" for s in self._scopes]
+        return base + [
+            f"{SCOPE_PREFIX}{s}#{t}"
+            for s in self._scopes for t in sorted(self._tenants)
+        ]
 
     def serves(self, channel: Channel) -> bool:
-        return channel.is_root or channel.scope in self._scopes
+        if channel.is_root:
+            return True
+        if channel.scope not in self._scopes:
+            return False
+        return channel.tenant is None or channel.tenant in self._tenants
 
     def require(self, channel: Channel) -> Channel:
         """``channel`` if served, else ``-32004``. There is no third branch."""

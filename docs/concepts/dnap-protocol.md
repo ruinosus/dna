@@ -96,6 +96,29 @@ it — hiding would make "this tenant has no X" and "this tenant deleted X"
 indistinguishable, which is the §7 rule wearing another face). Each channel
 carries its own `revision` sequence.
 
+!!! warning "Read-through is also how substitution sneaks back in"
+    A server serves **no** tenant channel unless a deployment declares it.
+    Because the layer resolution reads through, a request for a tenant the
+    server has never heard of came back carrying the base scope's content — the
+    caller asked for a tenant's shelf and was handed the shared one, with
+    nothing in the answer to say so. That is §3's substitution arriving through
+    the one door §3's own refusal did not cover, and it was found by the
+    conformance suite rather than by this server's own tests, which is the
+    argument for a second implementation in one sentence.
+
+## Conformance
+
+`dna.protocol` runs the DNAP conformance suite
+(`dna.testing.dnap_conformance`), which was written from the specification by
+someone who had not read this server — and which the clean-room TypeScript
+implementation runs too. A specification with one implementation is described,
+not validated; what makes it a contract is two servers, built independently,
+submitting to one set of questions.
+
+The suite reports in five buckets rather than two, and `ok` is false while
+anything is failed **or unverified** — an obligation that could not be observed
+is not an obligation that was met.
+
 ## Creating a Kind — the reflexive rule
 
 A Kind is an instance of the Kind `KindDefinition`. Writing one **registers a
@@ -137,11 +160,19 @@ than silently skipping.
 
 **`revision` is constant across a paginated read.** All pages of one listing
 belong to one snapshot; without that a client assembles a quilt of moments and
-calls it a state. Where the store exposes a channel watermark, the cursor pins
-it and a watermark that moved ends the listing. Where it does not — and no
-adapter in this repo does yet — the listing reports `revision: null` and
-`initialize` says `revisions.channelWatermark: false`. Minting a plausible
-token instead would claim a snapshot isolation the read does not have.
+calls it a state. The cursor pins the revision and every page re-checks it, so
+a channel that moved ends the listing with `-32005` rather than continuing
+against a different state.
+
+Where the store exposes a sequence, that is the revision — O(1), and the number
+is the store's own. Where it does not (no adapter in this repo does yet), the
+revision is **computed**: a digest over the slice's `(name, etag)` pairs. Three
+answers were possible and two were dishonest — `null` makes rule 3 vacuous
+(two pages both reporting nothing agree about nothing), a minted token is
+opaque and constant and *means nothing*, and only the digest is a true
+statement about which state the rows came from. The digest costs a pass over
+the slice; `initialize` reports which mechanism a connection is getting, so the
+cost is visible rather than discovered in a latency graph.
 
 **Order is lexicographic by `metadata.name`, ascending** — pushed down to the
 store, never applied per page. Cursors and snapshots are both meaningless
