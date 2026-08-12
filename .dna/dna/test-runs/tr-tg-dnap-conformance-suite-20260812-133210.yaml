@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  id: 7r5xf5p65qbg
+  name: tr-tg-dnap-conformance-suite-20260812-133210
+spec:
+  guide_ref: tg-dnap-conformance-suite
+  outcome: pass
+  verifies:
+  - Story/s-dnap-conformance-suite
+  executed_by: claude-code
+  executed_at: '2026-08-12T13:32:10+00:00'
+  notes: '222 passed, 65 skipped, 2 xfailed nos kits novos + vizinhos. Suite completa sdk-py: 6246 passed / 3 failed, e as 3 falhas sao PRE-EXISTENTES no commit base (verificado com git stash -u): 3 Kinds nao registrados neste venv local (GenUIComponent, GenUIBinding, RuntimeBinding).'

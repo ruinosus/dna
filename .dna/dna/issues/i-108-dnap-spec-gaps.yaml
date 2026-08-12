@@ -1,0 +1,30 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: wn5bblqlwfjn
+  name: i-108-dnap-spec-gaps
+spec:
+  title: 'DNAP 1.0: nove buracos na spec que dois servidores preencheriam de dois jeitos'
+  description: |-
+    Achados de escrever a SUITE DE CONFORMIDADE a partir da spec, sem olhar o servidor (s-dnap-conformance-suite). Cada linha e um ponto onde a spec NAO determina a resposta — e onde, portanto, dois servidores conformes divergem e nenhum cliente le os dois. A tabela com a argumentacao esta em docs/concepts/dnap-conformance.md.
+
+    1) 6.4 regra 2 — 'the result reports how many hits it removed' e NORMATIVO e o envelope nao nomeia MEMBRO nenhum para o numero. E o unico caso da suite que nao pode ser escrito: e reportado como DnapSpecGap, que nunca conta como passou. Proposta: 'filtered': {'byMinSimilarity': <n>}.
+    2) 7 — nao existe codigo NOT_FOUND. instances/get de um nome ausente e resolve/agent de uma definicao ausente NAO podem devolver branco (regra central), mas a spec nao diz o que devolvem.
+    3) 5 — 'metadata.id/revision MUST NOT be supplied on write' nao nomeia codigo, e como instances/get DEVOLVE os dois, a spec nunca diz QUEM os remove num read-modify-write. Hoje 5 e a regra 3 do cliente se leem como contraditorias.
+    4) 6.2 — so o cursor EXPIRADO tem codigo. Um cursor que o servidor nunca cunhou e igualmente ininterpretavel e cai em -32005 ou -32602 no cara-ou-coroa.
+    5) 4 x 6.1 — a relacao entre o vocabulario do initialize e o kinds/list por canal nao esta dita. A regra 1 do cliente a torna estrutural: um Kind servido num canal e ausente do initialize e INALCANCAVEL por construcao. A suite assere subconjunto.
+    6) 6.2 — as FORMAS DE RESULTADO de instances/get / write / delete nao estao especificadas. 'the document verbatim' versus a resposta notModified, que e claramente um envelope: o cliente nao sabe se desembrulha.
+    7) 6.2 regra 1 — a forma de lista de caminhos do select nao diz se ['metadata.name'] volta aninhado ou plano.
+    8) 6.5 — como um cliente RECEBE uma notificacao sobre um binding request/response nao esta dito, entao 6.5 e inalcancavel sem gancho de harness.
+    9) 6.4 — o default de k, e o vocabulario de narrow alem de namePrefix, nao estao especificados.
+  type: enhancement
+  severity: high
+  status: open
+  created_at: '2026-08-12T13:29:52+00:00'
+  updated_at: '2026-08-12T13:29:52+00:00'
+  timeline:
+  - at: '2026-08-12T13:29:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

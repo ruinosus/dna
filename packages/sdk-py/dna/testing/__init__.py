@@ -29,6 +29,16 @@ Division of labor (keep this straight):
     the adapter's declared ``SourceCapabilities`` and fails when a
     declared capability isn't honored. The real safety net.
 """
+from dna.testing.dnap_conformance import (
+    DnapCase,
+    DnapCaseNotApplicable,
+    DnapConformanceReport,
+    DnapHarness,
+    DnapRuleUnverified,
+    DnapSpecGap,
+    dnap_conformance_suite,
+    run_dnap_conformance,
+)
 from dna.testing.source_conformance import (
     FIXTURE_SCOPE,
     CaseNotApplicable,
@@ -72,6 +82,12 @@ __all__ = [
     "ConformanceCase",
     "ConformanceReport",
     "CoreSourceStub",
+    "DnapCase",
+    "DnapCaseNotApplicable",
+    "DnapConformanceReport",
+    "DnapHarness",
+    "DnapRuleUnverified",
+    "DnapSpecGap",
     "MemoryCaseNotApplicable",
     "MemoryConformanceCase",
     "MemoryConformanceReport",
@@ -81,12 +97,14 @@ __all__ = [
     "RecordSearchReport",
     "SearchCaseNotApplicable",
     "default_fixture",
+    "dnap_conformance_suite",
     "fixture_memories",
     "memory_conformance_suite",
     "memory_scoring_conformance_suite",
     "reader_writer_conformance_suite",
     "record_search_conformance_suite",
     "run_memory_conformance",
+    "run_dnap_conformance",
     "run_memory_scoring_conformance",
     "run_record_search_conformance",
     "fixture_docs",

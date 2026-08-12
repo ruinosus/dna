@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Feature
+metadata:
+  id: bd5w7guhvosi
+  name: f-dnap-protocol
+spec:
+  title: DNAP — o DNA falado como protocolo JSON-RPC 2.0
+  description: 'Spec: docs/spec/dnap-1.0-draft.md (i-107). Nenhum protocolo existente diz o que o agente E: MCP expoe tools, A2A delega, AHP hospeda sessao. resolve/agent e o metodo que justifica um protocolo novo.'
+  status: discovery
+  epic: e-dna-portability
+  reporter: claude-code
+  created_at: '2026-08-12T13:02:33+00:00'
+  updated_at: '2026-08-12T13:02:33+00:00'
+  timeline:
+  - at: '2026-08-12T13:02:33+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: discovery

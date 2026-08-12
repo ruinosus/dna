@@ -1,0 +1,60 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: ak6sgcl2yfwi
+  name: s-dnap-conformance-suite
+spec:
+  title: A suite de conformidade DNAP 1.0 + o DnapClient, escritos a partir da SPEC e NAO
+  description: 'A suite de conformidade DNAP 1.0 + o DnapClient, escritos a partir da SPEC e NAO do servidor — que outro agente implementa em paralelo. A ordem E o valor: uma suite derivada da implementacao passa por construcao e nao prova nada.'
+  status: in-progress
+  feature: f-dnap-protocol
+  acceptance_criteria:
+  - Given um servidor DNAP atras de um endpoint JSON-RPC, When a suite roda, Then cada obrigacao da secao 8 vira um caso nomeado que passa, falha ou PULA COM MOTIVO EXPLICITO — nunca um silencio que se leia como aprovacao
+  - Given um servidor que responde colecao vazia quando nao conseguiu ler, When a suite roda, Then ela FALHA — e cada caso e provado por MUTANTE, nao por leitura
+  - Given o DnapClient, When alguem escrever um nome de Kind literal no seu codigo, Then um teste falha (varredura AST contra o registro vivo), e o proprio teste e provado por mutante
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - codigo + testes com mutantes + prosa em docs/concepts; pytest verde; guardas verdes
+  definition_of_done_source: cli-create
+  created_at: '2026-08-12T13:02:54+00:00'
+  updated_at: '2026-08-12T13:32:15+00:00'
+  timeline:
+  - at: '2026-08-12T13:02:54+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-12T13:03:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-12T13:31:57+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestGuide
+    name: tg-dnap-conformance-suite
+    summary: TestGuide tg-dnap-conformance-suite (regression)
+  - at: '2026-08-12T13:32:15+00:00'
+    actor: claude-code
+    type: artifact_produced
+    source: cli
+    kind: TestRun
+    name: tr-tg-dnap-conformance-suite-20260812-133210
+    summary: TestRun tr-tg-dnap-conformance-suite-20260812-133210 → pass
+    outcome: pass
+  produces:
+  - kind: Plan
+    name: plan-s-dnap-conformance-suite
+    role: implementation
+    at: '2026-08-12T13:03:05+00:00'
+  - kind: TestGuide
+    name: tg-dnap-conformance-suite
+    role: test-guide
+    at: '2026-08-12T13:31:57+00:00'
+  - kind: TestRun
+    name: tr-tg-dnap-conformance-suite-20260812-133210
+    role: test-run
+    at: '2026-08-12T13:32:15+00:00'

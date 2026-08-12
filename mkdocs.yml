@@ -62,6 +62,7 @@ nav:
       - Search & memory: concepts/search-and-memory.md
       - The reference graph — what points at this?: concepts/reference-graph.md
       - Agent-facing knowledge: concepts/agent-knowledge.md
+      - DNAP conformance — testing a protocol: concepts/dnap-conformance.md
   - How-to guides:
       - guides/index.md
       - A tour of the dna CLI: guides/cli-tour.md

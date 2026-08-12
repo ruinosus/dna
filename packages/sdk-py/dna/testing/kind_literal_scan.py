@@ -36,6 +36,7 @@ from typing import Container, Iterable, Iterator
 
 __all__ = [
     "KindLiteral",
+    "scan_kind_name_constants",
     "scan_kind_name_literals",
     "scan_tree",
 ]
@@ -229,6 +230,62 @@ def scan_tree(
         except SyntaxError:  # pragma: no cover — a file this interpreter cannot parse
             continue
     findings.sort(key=lambda f: (f.module, f.lineno, f.symbol))
+    return findings
+
+
+def scan_kind_name_constants(
+    source: str, *, module: str, kind_names: Container[str],
+) -> list[KindLiteral]:
+    """Every string CONSTANT in ``source`` that is a registered Kind name.
+
+    A strictly harder question than :func:`scan_kind_name_literals`, for the one
+    caller that needs it: a component whose contract is to name **no Kind at
+    all**. The ratchet above ignores a lone name on purpose — one name is a
+    reference, not a membership — but a DNAP client that takes its whole
+    vocabulary from ``initialize`` (§8, client rule 1) is non-conformant the
+    moment it writes even one. "Kind-agnostic" is a claim until something can
+    fail on it; this is the something.
+
+    Docstrings are excluded — a bare string expression statement is prose, and
+    prose that mentions a type is describing, not naming. Everything else
+    counts: a default argument, a dict key, a comparison, an f-string's literal
+    half.
+
+    ``symbol`` is the enclosing qualname, ``members`` the single name found.
+    """
+    findings: list[KindLiteral] = []
+    tree = ast.parse(source)
+    docstrings: set[int] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef,
+                             ast.FunctionDef, ast.AsyncFunctionDef)):
+            body = getattr(node, "body", None) or []
+            if body and isinstance(body[0], ast.Expr) and \
+                    isinstance(body[0].value, ast.Constant) and \
+                    isinstance(body[0].value.value, str):
+                docstrings.add(id(body[0].value))
+
+    stack: list[tuple[ast.AST, list[str]]] = [(tree, [])]
+    seen: set[int] = set()
+
+    def walk(node: ast.AST, scope: list[str]) -> None:
+        if id(node) in seen:
+            return
+        seen.add(id(node))
+        if isinstance(node, ast.Constant) and isinstance(node.value, str) \
+                and id(node) not in docstrings and node.value in kind_names:
+            findings.append(KindLiteral(
+                module=module, symbol=_qualname(scope),
+                lineno=getattr(node, "lineno", 0), members=(node.value,),
+            ))
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                walk(child, [*scope, child.name])
+            else:
+                walk(child, scope)
+
+    walk(*stack[0])
+    findings.sort(key=lambda f: (f.lineno, f.members))
     return findings
 
 
