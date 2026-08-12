@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  id: sc4q4cvdsxvm
+  name: tg-fonte-remota-https
+spec:
+  description: 'A prova do i-106: o adaptador HTTPS resolve um Copilot de verdade pela face REST real, com token e sem DSN.'
+  kind_of_test: manual
+  status: active
+  steps:
+  - action: uv run python -m pytest packages/sdk-py/tests/test_http_source.py -q
+    expected: 19 passed
+  - action: uv run python -m pytest packages/cli/tests/test_http_source_e2e.py -q
+    expected: 3 passed — Copilot resolvido pela face REST real, .knowledge == ('knowledge-base',)
+  - action: uv run python -m pytest packages/cli/tests/test_http_source_conformance.py -q
+    expected: 10 passed, 17 skipped (casos writable/pushdown nao se aplicam)
+  verifies:
+  - Story/s-fonte-remota-https
+  created_at: '2026-08-12T11:01:25+00:00'
+  updated_at: '2026-08-12T11:01:25+00:00'

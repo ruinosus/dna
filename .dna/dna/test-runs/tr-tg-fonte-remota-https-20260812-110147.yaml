@@ -1,0 +1,13 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestRun
+metadata:
+  id: fanuqtao5uoa
+  name: tr-tg-fonte-remota-https-20260812-110147
+spec:
+  guide_ref: tg-fonte-remota-https
+  outcome: pass
+  verifies:
+  - Story/s-fonte-remota-https
+  executed_by: claude-code
+  executed_at: '2026-08-12T11:01:47+00:00'
+  notes: 'sdk 6129 passed (7 falhas pre-existentes: falta o pacote opcional ag_ui_langgraph); cli 2024 passed; brand_guard clean; docs_coverage_guard clean.'

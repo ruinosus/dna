@@ -1751,6 +1751,25 @@ def missing_source_port_members(source: Any) -> tuple[list[str], list[str]]:
     return core, fallback
 
 
+def _declared_capabilities(source: Any) -> "SourceCapabilities | None":
+    """The adapter's OWN ``SourceCapabilities``, or ``None`` when it declares
+    none. Deliberately not :func:`dna.kernel.capabilities.source_capabilities`,
+    which falls back to reflection — the caller here needs to tell a
+    DECLARATION from a derivation."""
+    import inspect
+
+    from dna.kernel.capabilities import SourceCapabilities
+
+    fn = getattr(source, "capabilities", None)
+    if not callable(fn) or inspect.iscoroutinefunction(fn):
+        return None
+    try:
+        declared = fn()
+    except Exception:  # noqa: BLE001 — a broken declaration is not a declaration
+        return None
+    return declared if isinstance(declared, SourceCapabilities) else None
+
+
 def validate_source_port(source: Any) -> None:
     """Boot gate for ``kernel.source(src)`` — fail loud on a malformed source.
 
@@ -1778,6 +1797,33 @@ def validate_source_port(source: Any) -> None:
             f"{pkg}.testing.source_conformance_suite(factory) to verify "
             f"the adapter's actual behavior."
         )
+    # A member the adapter DECLARED it does not provide is not a lapse — it IS
+    # the declaration this codebase asked adapters to make
+    # (s-sourceport-contract-cleanup). This gate is a NAME probe that predates
+    # that declaration, so it warned at every boot of an adapter which had
+    # already said, in its own ``SourceCapabilities``, that the kernel should
+    # serve those members from the fallback. A warning nobody can act on is one
+    # everybody learns to skip, and the real ones underneath go with it.
+    #
+    # The probe still speaks for an adapter that DECLARES a capability it does
+    # not implement: that combination is a lie rather than a choice, and the
+    # operator has to hear it.
+    #
+    # Only an EXPLICIT declaration silences it. Deriving the capabilities by
+    # reflection would answer "absent" for the very members this probe just
+    # found absent, and every legacy adapter would fall silent by tautology —
+    # which is the opposite of what the deprecation is trying to achieve.
+    if missing_fallback:
+        declared = _declared_capabilities(source)
+        if declared is not None:
+            opted_out = {
+                "list_doc_refs": not declared.granular_list,
+                "load_one": not declared.granular_one,
+                "query": not declared.query_pushdown,
+                "count": not declared.query_pushdown,
+            }
+            missing_fallback = [m for m in missing_fallback if not opted_out.get(m, False)]
+
     if missing_fallback:
         import logging
 

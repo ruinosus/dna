@@ -86,6 +86,7 @@ nav:
       - The DNA Cloud starter catalog & BYO-DNA: guides/dna-cloud-catalog.md
       - How to configure ports (dna.config.yaml): guides/configuring-ports.md
       - How to ship a scope with your app: guides/shipping-a-scope.md
+      - "Resolving from a hosted DNA (https:// source)": guides/hosted-source.md
       - How to install bundles from a repository: guides/installing-scopes.md
       - "Scaffolding a repo — dna solution new/update": guides/solution-scaffolding.md
       - How to add a Kind: guides/add-a-kind.md
