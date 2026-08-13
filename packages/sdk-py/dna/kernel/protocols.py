@@ -1529,6 +1529,47 @@ class TemplateProvider(Protocol):
 
 
 @runtime_checkable
+class ManifestActivator(Protocol):
+    """Optional Extension capability — turn declared instances into BEHAVIOUR.
+
+    Registering a Kind says what an instance of it *is*. Some Kinds also have
+    to *do* something once a scope is resolved: a ``Hook`` instance has to end
+    up on the kernel's ``HookRegistry``, a ``SafetyPolicy`` with
+    ``scope: input`` has to end up as a masking middleware on
+    ``pre_build_prompt``. That second half is what this capability names.
+
+    ⭐ **Why it exists (i-112, board dna).** Both of those lived in
+    ``ManifestInstance.apply_hooks`` — in the KERNEL — where they read
+    ``Hook.spec`` field by field (``target``/``type``/``action``/``fields``/
+    ``body``, ``exec()``-ing the body) and ``SafetyPolicy.spec``
+    (``scope``/``action``/``rules``, building a ``ScannerPipeline``). The
+    extensions that register those two Kinds did nothing but
+    ``kernel.kind(...)``: the extension declared the TYPE and the kernel
+    implemented the BEHAVIOUR, which is the dependency pointing the wrong way
+    — the same defect i-109 measured for the ``Typed*`` models one axis over.
+
+    i-109's argument is why this is a Protocol and not a trait: a trait would
+    have swapped two strings and left every field read in the kernel, making
+    the boundary LOOK fixed. The knowledge that had to move is the SCHEMA, so
+    the code that reads it is what moves.
+
+    Kept OFF the ``Extension`` Protocol body, exactly like
+    :class:`TemplateProvider`, so extensions that do not activate anything
+    (most of them) keep satisfying ``Extension`` unchanged.
+    ``Kernel.run_manifest_activators(mi)`` feature-tests each loaded extension
+    and calls it; ``ManifestInstance.apply_hooks()`` is the public entry point
+    that asks the kernel to do so, and it names no Kind at all.
+
+    The *kernel* is passed explicitly rather than fished out of the manifest,
+    because an activator's whole job is to register something ON the kernel —
+    a capability that had to reach through a private attribute to do its work
+    would be an inversion in name only.
+    """
+
+    def activate_manifest(self, mi: Any, kernel: Any) -> None: ...
+
+
+@runtime_checkable
 class Extension(Protocol):
     """Registers kinds, readers, and writers on the Kernel.
 
@@ -1538,16 +1579,20 @@ class Extension(Protocol):
     otherwise). ``register()`` receives the registration-time host slice
     — see :class:`ExtensionHost` for the exact vocabulary.
 
-    Optional capability (feature-tested, NOT a required Protocol member so
-    legacy extensions predating Phase 0 keep working) — see
-    :class:`TemplateProvider`:
+    Optional capabilities (feature-tested, NOT required Protocol members so
+    legacy extensions predating Phase 0 keep working):
 
-        def templates(self) -> list[Template]: ...
-
-    When present, ``Kernel.list_templates()`` aggregates entries from
-    every loaded extension so UIs (Tauri Studio, CLI) can offer
-    ``scaffold()`` for any extension-shipped file tree. See
-    ``dna.kernel.compose.templates.Template`` for the payload shape.
+    * :class:`TemplateProvider` — ``def templates(self) -> list[Template]``.
+      When present, ``Kernel.list_templates()`` aggregates entries from
+      every loaded extension so UIs (Tauri Studio, CLI) can offer
+      ``scaffold()`` for any extension-shipped file tree. See
+      ``dna.kernel.compose.templates.Template`` for the payload shape.
+    * :class:`ManifestActivator` — ``def activate_manifest(self, mi, kernel)``.
+      When present, ``Kernel.run_manifest_activators(mi)`` calls it so the
+      extension can turn its OWN declared instances into runtime behaviour
+      (a ``Hook`` onto the HookRegistry, a ``SafetyPolicy`` into a masking
+      middleware). This is where the schema of an extension's Kind gets read;
+      it must not be read in the kernel.
     """
 
     name: str
@@ -1588,6 +1633,7 @@ __all__ = [
     "KindRelations",
     "ExtensionHost",
     "TemplateProvider",
+    "ManifestActivator",
     "Extension",
     "WritableSourcePort",
     "Template",

@@ -57,7 +57,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   models moved without incident, because that constant is a load ORDER of names
   and the kernel never imported their schemas.
 
+### Added
+
+- **`ManifestActivator`** (`dna.kernel.protocols`) — a new optional `Extension`
+  capability, feature-tested exactly like `TemplateProvider`, so no existing
+  extension has to change. `def activate_manifest(self, mi, kernel) -> None`.
+  Registering a Kind says what an instance of it *is*; this says what it *does*
+  once a scope is resolved. `Kernel.run_manifest_activators(mi)` aggregates it;
+  an activator that raises is warned about and skipped, never fatal.
+
+  It exists because `ManifestInstance.apply_hooks()` used to BE the activation,
+  in the kernel: it read `Hook.spec` field by field (`target`/`type`/`action`/
+  `fields`/`body`, `exec()`-ing the body) and `SafetyPolicy.spec`
+  (`scope`/`action`/`rules`, building a `ScannerPipeline`) while the extensions
+  registering those two Kinds did nothing but `kernel.kind(...)` — the extension
+  declared the TYPE and the kernel implemented the BEHAVIOUR. That code now
+  lives in `HookExtension.activate_manifest` and
+  `SafetyPolicyExtension.activate_manifest` (i-112, board `dna`).
+
+  **`ManifestInstance.apply_hooks()` is unchanged for callers** — same name,
+  same signature, same effect — and remains the documented way to activate
+  declared Hooks. It simply names no Kind any more.
+
 ### Removed
+
+- **BREAKING (pre-1.0):** removed `ManifestInstance.reports` and
+  `dna.kernel.reports.ReportBuilder` (`eval_summary`, `findings_summary`,
+  `evidence_manifest`, `compliance_matrix`). Measured before deleting: **zero
+  production callers** in this repository, `packages/cli`, either REST client or
+  the downstream `dna-cloud` — the lazy `mi.reports` property was its only
+  constructor and `tests/test_reports.py` its only caller — and zero mentions in
+  `docs/`, `examples/`, `README.md` or this changelog.
+
+  Two of the four methods were also inert by construction: `findings_summary`
+  and `compliance_matrix` swept the Kind `Finding`, which **nothing in this
+  repository registers**, so they returned the constant `_No findings._` in
+  every scope. `eval_summary` was the last place the kernel parsed an
+  extension's schema (seven `EvalRun` fields), which is what i-112 set out to
+  end; moving 321 lines nobody calls into an extension would have relocated the
+  debt rather than paid it. Same evidence retired this module's async twin
+  `reports_kernel.py` in i-047.
+
+  If eval reporting is wanted again, it belongs in `dna.extensions.eval`
+  alongside the runner that writes an `EvalRun` — not in the kernel.
 
 - **BREAKING (pre-1.0):** removed `dna.kernel.models.TypedTextBlock`,
   `TextBlockSpec`, `TypedHtmlBlock`, `HtmlBlockSpec`, `TypedHtmlTemplate` and

@@ -1846,6 +1846,40 @@ class Kernel:
             else:
                 raise
 
+    # -- Manifest activation (i-112) ------------------------------------------
+
+    def run_manifest_activators(self, mi: Any) -> None:
+        """Let every loaded extension activate its OWN instances on *mi*.
+
+        The generic half of what used to be ``ManifestInstance.apply_hooks``.
+        The kernel knows there is a step called "activation"; it does not know
+        that ``Hook`` or ``SafetyPolicy`` exist — the extensions that register
+        those Kinds implement :class:`~dna.kernel.protocols.ManifestActivator`
+        and read their own schemas (i-112, board dna).
+
+        Feature-tested via ``hasattr`` for the same reason as
+        ``list_templates``: an extension that activates nothing (most of them)
+        must keep satisfying ``Extension`` unchanged.
+
+        A misbehaving activator is warned about and skipped rather than
+        allowed to take the whole scope down — the same fail-soft
+        ``list_templates`` uses, and the same one the old inline code already
+        applied to a Hook whose ``script`` body failed to compile. Activation
+        decorates a manifest that is already valid without it.
+        """
+        import warnings
+        for ext in self._extensions:
+            fn = getattr(ext, "activate_manifest", None)
+            if not callable(fn):
+                continue
+            try:
+                fn(mi, self)
+            except Exception as e:  # noqa: BLE001
+                warnings.warn(
+                    f"extension {getattr(ext, 'name', ext)}"
+                    f".activate_manifest() raised: {e}"
+                )
+
     # -- Templates (Phase 0 contract) -----------------------------------------
 
     def list_templates(self) -> list[Template]:

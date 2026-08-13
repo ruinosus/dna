@@ -4,6 +4,11 @@ Hooks declared as YAML documents are auto-registered on the kernel's
 HookRegistry at ``ManifestInstance.apply_hooks()`` time. Supports
 middleware (inject_fields, script) and event (log, script) actions.
 
+The registration itself lives HERE, in ``HookExtension.activate_manifest``
+(the :class:`~dna.kernel.protocols.ManifestActivator` capability), not in the
+kernel: an extension that registers a Kind owns the code that reads that
+Kind's schema (i-112, board dna).
+
 Storage layout::
 
     .dna/<module>/hooks/<hook-name>/HOOK.md
@@ -33,8 +38,8 @@ class HookKind(KindBase):
     # i-119 filed `Hook.target` as "nomeia um Kind" and paired it with
     # `Automation.result_kind` as the two cases that need a vocabulary for
     # "points at the Kind registry". Measured, that reading is wrong, and the
-    # code says so in one line: `ManifestInstance.apply_hooks` passes this
-    # value straight to `kernel.hooks.use(target, ...)` /
+    # code says so in one line: `HookExtension.activate_manifest` below passes
+    # this value straight to `kernel.hooks.use(target, ...)` /
     # `kernel.hooks.on(target, ...)`. It is a HOOK POINT — `pre_build_prompt`,
     # `post_save`, `parse_error` — from the kernel's own `HookName` vocabulary
     # (dna/kernel/hooks.py, s-dna-typed-hook-names). The default value is
@@ -174,9 +179,100 @@ class HookKind(KindBase):
         return blocks
 
 
+def _field_injector(fields: dict[str, Any]):
+    """Middleware that merges a Hook's ``inject_fields`` into the context."""
+    def injector(ctx):
+        context = ctx.data.get("context", {})
+        context.update(fields)
+        ctx.data["context"] = context
+        return ctx
+    return injector
+
+
+def _event_logger(hook_name: str, target: str):
+    """Listener for ``action: log`` — a structured info line per event."""
+    def log_event(ctx):
+        import logging
+        logging.getLogger("dna.hooks").info(
+            "[Hook:%s] %s agent=%s scope=%s",
+            hook_name, target, ctx.agent, ctx.scope,
+        )
+    return log_event
+
+
+def _compile_hook_script(body: Any, hook_name: str):
+    """Compile a Hook's ``script`` body into a callable, or ``None``.
+
+    Fail-soft with a warning, unchanged from the kernel version it was moved
+    from: one Hook with a typo in its body must not take a whole scope's
+    activation down. The ``exec`` is deliberate — a ``script`` Hook IS inline
+    Python, and the Kind's own ``docs`` say exactly that.
+    """
+    if not isinstance(body, str) or not body.strip():
+        return None
+    try:
+        ns: dict[str, Any] = {}
+        exec(f"_hook_fn = {body.strip()}", ns)  # noqa: S102
+        fn = ns.get("_hook_fn")
+        return fn if callable(fn) else None
+    except Exception as e:  # noqa: BLE001
+        import warnings
+        warnings.warn(f"Hook {hook_name}: script compilation failed: {e}")
+        return None
+
+
 class HookExtension:
     name = "hooks"
     version = "1.0.0"
 
     def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(HookKind())
+
+    # ── ManifestActivator (i-112, board dna) ────────────────────────────────
+    #
+    # The body below used to be half of ``ManifestInstance.apply_hooks``, in
+    # the KERNEL. The kernel read ``Hook.spec`` field by field — target, type,
+    # action, fields, body — ``exec()``d the body and branched on both enums,
+    # while THIS class did nothing but ``kernel.kind(...)``: the extension
+    # declared the type and the kernel implemented the behaviour.
+    #
+    # i-112 MOVED it instead of declaring a trait, and that is the point of the
+    # issue rather than an implementation detail: a trait would have replaced
+    # the string ``"Hook"`` in the kernel and left all five field reads sitting
+    # there, making the boundary LOOK fixed. What had to move is the schema
+    # knowledge, so the code that reads the schema is what moved.
+    #
+    # ``HookKind.kind`` rather than the literal ``"Hook"``: the name lives once,
+    # on the Kind, and a rename cannot leave this reader behind.
+
+    def activate_manifest(self, mi: Any, kernel: Any) -> None:
+        """Register every ``Hook`` instance in *mi* on the kernel's registry."""
+        hooks = getattr(kernel, "hooks", None)
+        if hooks is None:
+            return
+
+        for doc in mi._all(HookKind.kind):
+            spec = doc.spec
+            target = spec.get("target", "")
+            hook_type = spec.get("type", "middleware")
+            action = spec.get("action", "inject_fields")
+            if not target:
+                continue
+
+            if hook_type == "middleware":
+                if action == "inject_fields":
+                    fields = spec.get("fields", {})
+                    if fields:
+                        hooks.use(target, _field_injector(dict(fields)))
+                elif action == "script":
+                    fn = _compile_hook_script(spec.get("body", ""), doc.name)
+                    if fn is not None:
+                        hooks.use(target, fn)
+
+            elif hook_type == "event":
+                if action == "log":
+                    hooks.on(target, _event_logger(doc.name, target))
+                elif action == "script":
+                    fn = _compile_hook_script(spec.get("body", ""), doc.name)
+                    if fn is not None:
+                        hooks.on(target, fn)

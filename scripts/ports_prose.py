@@ -1034,6 +1034,41 @@ PROSE: dict[str, dict] = {
             "in the table below, and nothing else is."
         ),
     },
+    "ManifestActivator": {
+        "group": "kinds",
+        "role": "extend",
+        "one_line": "Turn an extension's declared instances into runtime behaviour",
+        "summary": (
+            "An optional extra capability of an `Extension`. Registering a Kind says "
+            "what an instance of it IS; this says what it DOES once a scope is "
+            "resolved — a `Hook` instance onto the kernel's HookRegistry, a "
+            "`SafetyPolicy` into a masking middleware on `pre_build_prompt`."
+        ),
+        "when": (
+            "Instances of your Kind have to do something at resolve time, not just be "
+            "readable. If reading them is enough, you do not need this."
+        ),
+        "minimum": "`activate_manifest(mi, kernel)`.",
+        "lights_up": (
+            "`ManifestInstance.apply_hooks()` — which despite the name activates every "
+            "extension, not only hooks. Detected by feature test, so omitting it is "
+            "invisible and harmless; an activator that raises is warned about and "
+            "skipped, never fatal."
+        ),
+        "prove": (
+            "`HookExtension.activate_manifest()` (`dna.extensions.hooks`) is the "
+            "reference: it reads `Hook.spec` field by field and calls "
+            "`kernel.hooks.use` / `.on`. That code used to live in the kernel, which "
+            "is why this port exists — an extension registers the Kind, so the "
+            "extension owns the code that reads its schema (i-112)."
+        ),
+        "adapters_extra": [
+            "`HookExtension` (`dna.extensions.hooks`) — registers declared Hooks on "
+            "the HookRegistry",
+            "`SafetyPolicyExtension` (`dna.extensions.safety`) — installs input-side "
+            "PII masking from a declared SafetyPolicy",
+        ],
+    },
     "TemplateProvider": {
         "group": "kinds",
         "role": "extend",

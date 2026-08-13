@@ -75,8 +75,9 @@ kernel" as an open end. Both existing eyes were green over that number, because
 a registered Kind name, docstrings excluded, counted as OCCURRENCES. Three names
 in one tuple is three, because it is three facts.
 
-**Ceiling: 26, shrink-only.** i-107 took it from 39 by translating 13. What
-remains is not undifferentiated debt — it is two decided groups plus five argued
+**Ceiling: 23, shrink-only.** i-107 took it from 39 to 26 by translating 13;
+i-112 took the last three by MOVING code, not by declaring anything. What
+remains is not undifferentiated debt — it is two decided groups plus two argued
 survivors, so the number is a sum of decisions rather than a budget:
 
 * **13 — bootstrap** (``Genome`` / ``KindDefinition`` / ``LayerPolicy``, across
@@ -87,12 +88,39 @@ survivors, so the number is a sum of decisions rather than a budget:
 * **8 — ``registry/accessor.py``**, closed by the FOUNDER in i-108 as not
   commercial logic but the quota gate of the open-source MCP server — eight open
   consumers against one closed. ⛔ Do not reopen from this file.
-* **5 — argued in place**, each next to its own code: ``manifest.py``'s ``Hook``
-  and ``SafetyPolicy`` (i-109 shape — the kernel parses their schemas, so a trait
-  would move two strings and leave every field read), ``reports.py``'s
-  ``EvalRun`` (same), ``evidence.py``'s published ``kind="Evidence"`` default
-  (the sole production caller passes it explicitly), and ``hard_delete.py``'s
-  one-key ``INVALIDATE_VERBS``.
+* **2 — argued in place**, each next to its own code: ``evidence.py``'s
+  published ``kind="Evidence"`` default (a pure function cannot ask a registry,
+  and the sole production caller passes the Kind explicitly off the trait —
+  re-measured 13/08/2026, still true) and ``hard_delete.py``'s one-key
+  ``INVALIDATE_VERBS`` (whose re-open trigger — a SECOND Kind declaring
+  ``record.invalidate-only`` and needing to name its own retirement verb — has
+  not fired: the live registry still answers ``Engram`` and nothing else).
+
+**The three i-112 removed, and the shape of the fix.** They were
+``manifest.py``'s ``Hook`` + ``SafetyPolicy`` and ``reports.py``'s ``EvalRun``,
+and i-109 had already refused to trait them with the reason written beside the
+code: *the kernel parses their SCHEMA; a trait would swap two strings and leave
+every field read exactly where it is, making the boundary LOOK fixed, which is
+worse than leaving it visibly broken.* So i-112 did not declare — it MOVED, and
+where the code turned out to be dead it DELETED:
+
+* ``apply_hooks`` MOVED. Its Hook and SafetyPolicy bodies are now
+  ``HookExtension.activate_manifest`` and ``SafetyPolicyExtension``'s, reached
+  through the new ``ManifestActivator`` capability (``protocols.py``). It had
+  zero INTERNAL callers, but that is the normal profile of a published entry
+  point, not evidence of death: ``HookKind.docs`` and two docs pages promise a
+  Hook activates "when ``ManifestInstance.apply_hooks()`` is called", so
+  deleting it would have left two registered Kinds inert while their own
+  descriptors kept promising behaviour.
+* ``ReportBuilder`` DELETED. Zero production callers in this repo, the CLI, both
+  clients and dna-cloud; zero mentions in ``docs/``, ``examples/``, ``README``
+  or ``CHANGELOG``; and two of its four methods swept ``Finding``, a Kind this
+  repo registers NOWHERE, so they returned the constant "_No findings._" in
+  every scope, forever. Moving 321 lines nobody calls would have relocated the
+  debt rather than paid it.
+
+⭐ The question that separated the two is worth reusing: *does anything else
+PROMISE this?* — not *does anything call it?*
 
 ⚠️ This ceiling is a COUNT with no allowlist, and the asymmetry with the first
 ratchet is deliberate. An allowlist demands an argument per site and is right
@@ -322,8 +350,8 @@ def test_the_bootstrap_ceiling_is_still_one_kind():
 
 #: How many individual registered-Kind-name string literals ``dna/kernel`` is
 #: allowed to contain. Read the module docstring for the breakdown — 13
-#: bootstrap + 8 accessor (i-108, founder) + 5 argued in place. **Shrink only.**
-KERNEL_KIND_NAME_CEILING = 26
+#: bootstrap + 8 accessor (i-108, founder) + 2 argued in place. **Shrink only.**
+KERNEL_KIND_NAME_CEILING = 23
 
 
 def _kernel_kind_name_uses():
@@ -403,6 +431,51 @@ def test_the_accessor_block_is_the_i108_decision_not_debt():
     assert len(accessor) == 8, (
         f"registry/accessor.py now names {len(accessor)} Kinds, not 8. i-108's "
         "measurement was taken at 8; re-read the issue before adjusting."
+    )
+
+
+def test_the_kernel_no_longer_parses_an_extension_kinds_schema():
+    """i-112 — the three names whose removal was the ISSUE, pinned by name.
+
+    ``Hook``, ``SafetyPolicy`` and ``EvalRun`` are the ones i-109 refused to
+    trait, because the kernel was reading their SCHEMA and a trait would have
+    swapped the string and left the field reads. They came out by MOVING code
+    (``apply_hooks`` → ``ManifestActivator``) and by DELETING it
+    (``ReportBuilder``), so a regression here is not "the count crept up" — it
+    is the kernel parsing an extension Kind again, which is the thing the issue
+    was about. Named rather than counted for exactly that reason: the ceiling
+    alone would let one of these come back while another left."""
+    named = {u.kind for u in _kernel_kind_name_uses()}
+    back = sorted({"Hook", "SafetyPolicy", "EvalRun"} & named)
+    assert not back, (
+        f"the kernel names {back} again. Whatever reads those instances belongs "
+        "in the extension that REGISTERS them — see "
+        "`HookExtension.activate_manifest` for the pattern, and i-112's own "
+        "argument for why declaring a trait instead is the wrong fix."
+    )
+
+
+def test_the_two_survivors_are_the_argued_ones_not_leftovers():
+    """The remaining 2 of the 23 are a decision each, and the file says which.
+
+    Same job as the accessor test above, one group over: a reader who sees "23"
+    and goes hunting will find these two first, and both have their argument
+    written where the code is (``write/evidence.py``'s published default;
+    ``write/hard_delete.py``'s one-key verb map). Pinning the SITES means a
+    third survivor cannot arrive under cover of the same number."""
+    uses = _kernel_kind_name_uses()
+    survivors = sorted(
+        f"{u.module}::{u.kind}" for u in uses
+        if u.module not in {"registry/accessor.py"}
+        and u.kind not in {"Genome", "KindDefinition", "LayerPolicy"}
+    )
+    assert survivors == [
+        "write/evidence.py::Evidence",
+        "write/hard_delete.py::Engram",
+    ], (
+        f"the argued survivors changed: {survivors}. Neither the bootstrap "
+        "triple nor registry/accessor.py is in this list by construction, so "
+        "anything new here is a Kind name that arrived without an argument."
     )
 
 

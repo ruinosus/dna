@@ -35,7 +35,6 @@ if TYPE_CHECKING:
     from dna.kernel.query.navigator import Navigator
     from dna.kernel.lock.manager import LockManager
     from dna.kernel.lock import Lockfile
-    from dna.kernel.reports import ReportBuilder
 
 
 class ManifestInstance:
@@ -107,7 +106,6 @@ class ManifestInstance:
         self._composition_engine: CompositionEngine | None = None
         self._navigator: Navigator | None = None
         self._lock_manager: LockManager | None = None
-        self._report_builder: ReportBuilder | None = None
 
     @property
     def instances(self) -> list[Instance]:
@@ -136,7 +134,7 @@ class ManifestInstance:
     @instances.setter
     def instances(self, value: list[Instance]) -> None:
         """Allow internal code to replace the instances list (used by
-        ``apply_hooks`` and ``_materialize_full``)."""
+        ``_materialize_full``)."""
         self._instances = value
         self._lazy_full_loaded = True
 
@@ -227,14 +225,20 @@ class ManifestInstance:
             self._lock_manager = LockManager(self)
         return self._lock_manager
 
-    @property
-    def reports(self) -> ReportBuilder:
-        """Namespace: ``mi.reports.eval_summary()`` / ``findings_summary()``."""
-        if self._report_builder is None:
-            from dna.kernel.reports import ReportBuilder
-            self._report_builder = ReportBuilder(self)
-        return self._report_builder
-
+    # ⛔ ``mi.reports`` (``dna.kernel.reports.ReportBuilder``) was DELETED here
+    # by i-112 (board dna), not moved. Measured 13/08/2026 before touching it:
+    # ZERO production callers in this repo, the CLI, both REST clients and
+    # dna-cloud — this lazy property was its only constructor and
+    # ``tests/test_reports.py`` its only caller — and zero mentions in
+    # ``docs/``, ``examples/``, ``README`` or ``CHANGELOG``. Two of its four
+    # methods (``findings_summary``, ``compliance_matrix``) swept ``Finding``,
+    # which this repo registers NOWHERE, so they returned the constant string
+    # "_No findings._" in every scope, forever. Moving 321 lines nobody calls
+    # into an extension would have relocated the debt; the reason i-112 could
+    # delete this and had to MOVE ``apply_hooks`` is the same one test — does
+    # anything else PROMISE it? Two docs pages and ``HookKind.docs`` promise
+    # ``apply_hooks``; nothing promised this. Same evidence deleted this
+    # module's async twin in i-047.
     def profile_for(self, doc: Any):
         """Find the CompositionProfile for a doc's kind (via alias)."""
         from dna.kernel.compose.resolver import profile_for_orchestrator
@@ -278,14 +282,14 @@ class ManifestInstance:
 
     def _all(self, kind: str) -> list[Instance]:
         """Internal, non-warning twin of :py:meth:`all` — used by the
-        SDK's own collaborators (``apply_hooks``, ``ReportBuilder``,
-        ``get``). External callers use the blessed surface
-        (``mi.instances`` / ``kernel.query``); see ``all()``.
+        SDK's own collaborators (``get``, and the extensions implementing
+        :class:`~dna.kernel.protocols.ManifestActivator`, which read the
+        instances of the Kinds THEY register). External callers use the
+        blessed surface (``mi.instances`` / ``kernel.query``); see ``all()``.
 
         Lazy mode: when the kind isn't already materialized (bootstrap
         kinds are always present), delegate to ``kernel.query`` and
-        cache. Cached entries are dropped by ``apply_hooks`` /
-        ``_materialize_full``.
+        cache. Cached entries are dropped by ``_materialize_full``.
 
         Eager mode: walks ``self.instances`` (back-compat, O(N)).
         """
@@ -962,128 +966,36 @@ class ManifestInstance:
     # -- Declarative Hooks ----------------------------------------------------
 
     def apply_hooks(self) -> None:
-        """Auto-register Hook instances on the kernel's HookRegistry.
+        """Ask every loaded extension to activate the instances it owns.
 
-        ⛔ i-107 — the ``"Hook"`` and ``"SafetyPolicy"`` literals below STAY, and
-        the argument is the one that closed i-109: **a trait would not resolve
-        this.** The names are the smallest part of what this method knows.
+        Historically this method WAS the activation: it read ``Hook.spec``
+        field by field (``target``/``type``/``action``/``fields``/``body``,
+        ``exec()``-ing the body, branching on the ``middleware``/``event`` and
+        ``inject_fields``/``log``/``script`` enums), then read
+        ``SafetyPolicy.spec`` (``scope``/``action``/``rules``) and built a
+        ``dna.safety.scanner.ScannerPipeline``. Two Kinds' schemas, parsed in
+        the kernel, while the extensions that register those Kinds did nothing
+        but ``kernel.kind(...)`` — the dependency pointing the wrong way.
 
-        It reads ``Hook.spec`` field by field — ``target``, ``type``, ``action``,
-        ``fields``, ``body`` — ``exec()``s the body, and branches on the
-        ``middleware``/``listener`` and ``inject_fields``/``script`` enums. Then
-        it reads ``SafetyPolicy.spec`` — ``scope``, ``action``, ``rules`` — and
-        builds a ``dna.safety.scanner.ScannerPipeline`` out of them. Declaring a
-        trait would replace two strings and leave every one of those field reads
-        exactly where it is, in the kernel, which is the shape i-109 measured and
-        named: *"a class with SCHEMA and parse behaviour living in the wrong
-        layer"*. It would also make the boundary LOOK fixed, which is worse than
-        leaving it visibly broken.
+        i-112 (board dna) inverted it, and MOVED rather than declared: a trait
+        would have swapped two strings and left every field read exactly where
+        it was, which is the shape i-109 refused because it makes the boundary
+        LOOK fixed. The behaviour now lives in ``HookExtension`` and
+        ``SafetyPolicyExtension`` via
+        :class:`~dna.kernel.protocols.ManifestActivator`; what is left here is
+        the entry point, and it names no Kind.
 
-        The real defect is inverted ownership, measured 13/08/2026:
-        ``HookExtension.register()`` and ``SafetyPolicyExtension.register()`` do
-        nothing but ``kernel.kind(...)`` — every ``hooks.use`` / ``hooks.on`` call
-        for those two Kinds, and the only ``ScannerPipeline`` construction outside
-        ``dna/safety/`` itself, live HERE. ``HookKind``'s own comment even points
-        at this method for the semantics of ``Hook.target``. The fix is to move
-        the behaviour to the extensions that register the Kinds — i-109's shape,
-        not this issue's — and it is filed rather than smuggled in.
+        The NAME stays ``apply_hooks``: it is published API (the golden port
+        surface, ``docs/concepts/builtin-kinds.md``, and ``HookKind.docs``
+        itself all say a Hook is registered "when
+        ``ManifestInstance.apply_hooks()`` is called"). A rename here would
+        have been the cleanup that breaks every caller for a nicer word.
         """
-        if not self._kernel or not hasattr(self._kernel, "hooks"):
+        if self._kernel is None:
             return
-
-        hooks = self._all("Hook")
-        for doc in hooks:
-            spec = doc.spec
-            target = spec.get("target", "")
-            hook_type = spec.get("type", "middleware")
-            action = spec.get("action", "inject_fields")
-
-            if hook_type == "middleware" and target:
-                if action == "inject_fields":
-                    fields = spec.get("fields", {})
-                    if fields:
-                        def make_injector(f):
-                            def injector(ctx):
-                                context = ctx.data.get("context", {})
-                                context.update(f)
-                                ctx.data["context"] = context
-                                return ctx
-                            return injector
-                        self._kernel.hooks.use(target, make_injector(dict(fields)))
-                elif action == "script":
-                    body = spec.get("body", "").strip()
-                    if body:
-                        try:
-                            ns: dict[str, Any] = {}
-                            exec(f"_hook_fn = {body}", ns)  # noqa: S102
-                            fn = ns.get("_hook_fn")
-                            if callable(fn):
-                                self._kernel.hooks.use(target, fn)
-                        except Exception as e:
-                            import warnings
-                            warnings.warn(f"Hook {doc.name}: script compilation failed: {e}")
-
-            elif hook_type == "event" and target:
-                if action == "log":
-                    def make_logger(hook_name):
-                        def logger(ctx):
-                            import logging
-                            logging.getLogger("dna.hooks").info(
-                                "[Hook:%s] %s agent=%s scope=%s",
-                                hook_name, target, ctx.agent, ctx.scope,
-                            )
-                        return logger
-                    self._kernel.hooks.on(target, make_logger(doc.name))
-                elif action == "script":
-                    body = spec.get("body", "").strip()
-                    if body:
-                        try:
-                            ns_ev: dict[str, Any] = {}
-                            exec(f"_hook_fn = {body}", ns_ev)  # noqa: S102
-                            fn_ev = ns_ev.get("_hook_fn")
-                            if callable(fn_ev):
-                                self._kernel.hooks.on(target, fn_ev)
-                        except Exception as e:
-                            import warnings
-                            warnings.warn(f"Hook {doc.name}: script compilation failed: {e}")
-
-        # -- SafetyPolicy input enforcement -----------------------------------
-        policies = self._all("SafetyPolicy")
-        for doc in policies:
-            spec = doc.spec
-            scope = spec.get("scope", "both")
-            action = spec.get("action", "mask")
-            rules = spec.get("rules", [])
-
-            if scope in ("input", "both") and isinstance(rules, list) and rules:
-                from dna.safety.scanner import ScannerPipeline
-
-                pipeline = ScannerPipeline(rules)
-
-                def make_safety_middleware(p: Any, a: str):  # noqa: E501
-                    def middleware(ctx: Any) -> Any:
-                        context = ctx.data.get("context", {})
-                        for key, val in list(context.items()):
-                            if isinstance(val, str):
-                                try:
-                                    context[key] = p.apply(val, a)
-                                except Exception as e:  # noqa: BLE001
-                                    # fail-soft (fail-OPEN by design): a
-                                    # scanner bug must not take prompt build
-                                    # down — but the value passes UNMASKED,
-                                    # so the miss logs loud, never silent.
-                                    logger.warning(
-                                        "SafetyPolicy scanner failed for "
-                                        "context[%r] — value passed "
-                                        "unmasked: %s", key, e,
-                                    )
-                        ctx.data["context"] = context
-                        return ctx
-                    return middleware
-
-                self._kernel.hooks.use(
-                    "pre_build_prompt", make_safety_middleware(pipeline, action)
-                )
+        run = getattr(self._kernel, "run_manifest_activators", None)
+        if callable(run):
+            run(self)
 
     # -- Lock (delegates to LockManager) ---------------------------------------
 
