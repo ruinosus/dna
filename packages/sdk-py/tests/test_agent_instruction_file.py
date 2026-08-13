@@ -9,7 +9,7 @@ import pytest
 
 from dna.extensions.helix import AgentReader, AgentWriter
 from dna.kernel.bundle.handle import FilesystemBundleHandle
-from dna.kernel.models import AgentSpec
+from dna.extensions.helix.models import AgentSpec
 
 
 def test_agent_spec_accepts_instruction_file():

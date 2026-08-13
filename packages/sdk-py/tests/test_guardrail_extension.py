@@ -39,7 +39,7 @@ class TestGuardrailRegistration:
         assert kp.prompt_target_priority == 0
 
     def test_parse_returns_typed(self):
-        from dna.kernel.models import TypedGuardrail
+        from dna.extensions.guardrails.models import TypedGuardrail
         kp = GuardrailKind()
         raw = {
             "apiVersion": "github.com/ruinosus/dna/v1",

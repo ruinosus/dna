@@ -12,7 +12,7 @@ import yaml
 from dna._yaml import safe_load
 from dna.kernel.source.descriptor_loader import load_descriptors
 from dna.kernel.kinds.base import KindBase
-from dna.kernel.models import (
+from dna.extensions.helix.models import (
     TypedAgent, TypedActor, TypedUseCase,
     TypedGenome, TypedLayerPolicy,
     AgentSpec,

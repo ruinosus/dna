@@ -17,7 +17,7 @@ import yaml
 from typing import Any
 
 from dna._yaml import safe_load
-from dna.kernel.models import TypedHook
+from dna.extensions.hooks.models import TypedHook
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.preview import PreviewBlock
 from dna.kernel.protocols import ExtensionHost, BodyMode, StorageDescriptor

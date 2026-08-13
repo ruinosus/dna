@@ -1,4 +1,4 @@
-from dna.kernel.models import AgentSpec
+from dna.extensions.helix.models import AgentSpec
 
 
 def test_kind_writer_fields_parsed():

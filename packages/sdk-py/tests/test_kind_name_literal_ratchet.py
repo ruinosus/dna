@@ -15,9 +15,50 @@ entry whose site is gone, so a converted site cannot leave its excuse behind.
 Adding an entry means writing the argument for why that particular list cannot be
 a declaration — which is the whole point: the cost of the shortcut is having to
 defend it where the next reader will find it.
+
+──────────────────────────────────────────────────────────────────────────────
+
+**The second ratchet: Kind knowledge in the KERNEL, counted (i-109).**
+
+A Kind name in a literal is the cheap kind of domain knowledge. The expensive
+kind is a Kind's SCHEMA: ``kernel/models.py`` held 17 ``Typed*`` classes and
+eleven extension files imported them back out of the kernel to register the very
+Kinds those classes describe. The dependency pointed the wrong way, and the
+first ratchet was blind to it — ``TypedGuardrail`` contains no Kind-name string.
+
+i-109 moved them to the extensions that register each Kind. Two ceilings hold
+the ground, and they are deliberately different instruments because each is
+blind to what the other sees:
+
+* :func:`test_the_kernel_defines_one_typed_model_for_a_registered_kind` is
+  DERIVED — its oracle is the live registry, exactly like the first ratchet, so
+  it needs no vocabulary of its own. It cannot see a model for a Kind that was
+  never registered.
+* :func:`test_the_kernel_defines_one_typed_class_at_all` is a PREFIX sweep, and
+  it exists because of what the derived one missed: ``TypedTextBlock``,
+  ``TypedHtmlBlock`` and ``TypedHtmlTemplate`` sat in ``kernel/models.py`` for
+  Kinds that are **not registered anywhere in this repo** — 6 dead classes the
+  registry-driven check could never name. They were deleted; this sweep is what
+  keeps the next three from arriving.
+
+**Ceiling: ONE, and it is ``TypedKindDefinition``.** That one is bootstrap and
+stays by decision, the same nature as the three names in
+``protocols.py::BOOTSTRAP_KIND_NAMES``: a Kind is born from a ``KindDefinition``,
+so ``kernel/kinds/registry.py``, ``kernel/meta.py`` and
+``kernel/write/namespace_gate.py`` genuinely parse one. Moving it would make the
+kernel import an extension to learn what a Kind is.
+
+⚠️ Being a bootstrap NAME is not the argument — being parsed BY the kernel is.
+``Genome`` and ``LayerPolicy`` are in ``BOOTSTRAP_KIND_NAMES`` and their models
+moved to ``extensions/helix`` without incident, because that constant is a load
+ORDER of names and the kernel never imported their schemas.
+
+Like the allowlist, the ceiling only comes DOWN. If a reason is ever found to
+move ``TypedKindDefinition`` too, set it to zero.
 """
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import pytest
@@ -26,6 +67,11 @@ from dna.kernel import Kernel
 from dna.testing.kind_literal_scan import scan_tree
 
 _SDK_ROOT = Path(__file__).resolve().parents[1] / "dna"
+_KERNEL_ROOT = _SDK_ROOT / "kernel"
+
+#: The ONE Kind whose typed model the kernel is allowed to define. Read the
+#: module docstring for the argument; lower this to an empty set, never grow it.
+KERNEL_BOOTSTRAP_MODELS = frozenset({"TypedKindDefinition", "KindDefinitionSpec"})
 
 
 #: key → why this literal Kind-name set is irreducible. Read them as claims to be
@@ -151,6 +197,79 @@ def test_every_allowlist_entry_carries_a_real_reason():
     thin = sorted(k for k, v in ALLOWLIST.items() if len(v.strip()) < 40)
     assert not thin, (
         f"ALLOWLIST entries with no argument: {thin}. 'legacy' is not a reason."
+    )
+
+
+# ── the second ratchet: Kind SCHEMAS in the kernel (i-109) ──────────────────
+
+
+def _kernel_classes() -> list[tuple[str, str]]:
+    """``(module-relative-path, class name)`` for every class defined anywhere
+    under ``dna/kernel/`` — nested classes included, since hiding a Kind model
+    inside another class would evade a top-level-only walk."""
+    out: list[tuple[str, str]] = []
+    for py in sorted(_KERNEL_ROOT.rglob("*.py")):
+        tree = ast.parse(py.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ClassDef):
+                out.append((str(py.relative_to(_SDK_ROOT)), node.name))
+    assert out, "no classes found under dna/kernel — the sweep is blind"
+    return out
+
+
+def test_the_kernel_defines_one_typed_model_for_a_registered_kind():
+    """DERIVED, same oracle as the first ratchet: for every REGISTERED Kind
+    ``K``, a class named ``TypedK`` or ``KSpec`` defined inside ``dna/kernel``
+    is the kernel holding that Kind's schema."""
+    kernel = Kernel.auto()
+    names = {p.kind for p in kernel.kind_ports()}
+    assert len(names) > 50, "the registry oracle looks empty — the sweep is blind"
+    model_names = {f"Typed{n}" for n in names} | {f"{n}Spec" for n in names}
+
+    offenders = sorted(
+        f"{path}::{cls}"
+        for path, cls in _kernel_classes()
+        if cls in model_names and cls not in KERNEL_BOOTSTRAP_MODELS
+    )
+    assert not offenders, (
+        "The kernel defines the typed model of a Kind it does not own:\n"
+        + "\n".join(f"  {o}" for o in offenders)
+        + "\n\nMove it to the extension that REGISTERS that Kind (i-109) — the "
+          "extension already imports `Metadata` from `dna.kernel.models`, which "
+          "is generic envelope structure and the only thing that should cross. "
+          "If the kernel genuinely PARSES instances of this Kind itself, it is "
+          "bootstrap: say so in this file's docstring and add it to "
+          "KERNEL_BOOTSTRAP_MODELS."
+    )
+
+
+def test_the_kernel_defines_one_typed_class_at_all():
+    """PREFIX sweep — deliberately NOT derived, because the derived check above
+    is blind to exactly the case that was found: three ``Typed*`` classes for
+    Kinds nobody registers. A model for an unregistered Kind is the same
+    misplaced domain knowledge, and cheaper to spot than to explain later."""
+    offenders = sorted(
+        f"{path}::{cls}"
+        for path, cls in _kernel_classes()
+        if cls.startswith("Typed") and cls not in KERNEL_BOOTSTRAP_MODELS
+    )
+    assert not offenders, (
+        "New Typed* class(es) in the kernel:\n"
+        + "\n".join(f"  {o}" for o in offenders)
+        + "\n\nThe kernel knows no Kinds; extensions register them. Put the "
+          "model next to the registration. See i-109 and this file's docstring."
+    )
+
+
+def test_the_bootstrap_ceiling_is_still_one_kind():
+    """The ceiling only comes down. Two class names, ONE Kind — a rename that
+    quietly admitted a second Kind would otherwise read as a no-op diff."""
+    kinds = {n.removeprefix("Typed").removesuffix("Spec")
+             for n in KERNEL_BOOTSTRAP_MODELS}
+    assert kinds == {"KindDefinition"}, (
+        f"KERNEL_BOOTSTRAP_MODELS now covers {sorted(kinds)}. Only "
+        "KindDefinition is bootstrap by the argument written in this file's "
+        "docstring; a second entry needs its own argument there."
     )
 
 

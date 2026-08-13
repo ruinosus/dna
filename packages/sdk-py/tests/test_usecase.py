@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dna.kernel import Kernel
-from dna.kernel.models import TypedUseCase, UseCaseSpec
+from dna.extensions.helix.models import TypedUseCase, UseCaseSpec
 from dna.adapters.filesystem import FilesystemSource, FilesystemCache
 from dna.extensions.helix import HelixExtension, UseCaseKind
 

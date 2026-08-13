@@ -27,7 +27,7 @@ from pathlib import Path
 
 from dna.extensions.helix import _SPEC_FIELDS, AgentReader
 from dna.kernel.bundle.handle import FilesystemBundleHandle
-from dna.kernel.models import AgentSpec
+from dna.extensions.helix.models import AgentSpec
 
 
 def test_spec_fields_covers_dataclass_minus_instruction():

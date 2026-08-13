@@ -52,7 +52,7 @@ class TestSingleFileRead:
         d = tmp_path / "s1"
         d.mkdir()
         (d / "SOUL.md").write_text("# S1\n\nBody.")
-        from dna.kernel.models import TypedSoul
+        from dna.extensions.soulspec.models import TypedSoul
         typed = TypedSoul.from_raw(SoulReader().read(FilesystemBundleHandle(d)))
         assert typed.metadata.name == "s1"
 

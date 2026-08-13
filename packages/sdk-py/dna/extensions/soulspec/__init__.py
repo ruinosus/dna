@@ -10,7 +10,7 @@ import yaml
 
 from dna._yaml import safe_load
 from dna.kernel.kinds.base import KindBase
-from dna.kernel.models import TypedSoul
+from dna.extensions.soulspec.models import TypedSoul
 from dna.kernel.preview import PreviewBlock
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor, ReaderPort, WriterPort
 from dna.kernel.bundle.handle import BundleHandle

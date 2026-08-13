@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from dna.kernel.models import GenomeSpec
+from dna.extensions.helix.models import GenomeSpec
 from dna.kernel.semver import (
     Constraint,
     InvalidConstraint,

@@ -75,7 +75,7 @@ class TestInstanceSpecDict:
         assert doc.metadata.name == "brad"
 
     def test_spec_from_typed_model(self):
-        from dna.kernel.models import TypedAgent
+        from dna.extensions.helix.models import TypedAgent
         raw = {
             "apiVersion": "github.com/ruinosus/dna/v1",
             "kind": "Agent",
@@ -91,7 +91,7 @@ class TestInstanceSpecDict:
         assert doc.spec.skills == ["greet"]
 
     def test_metadata_from_typed_model(self):
-        from dna.kernel.models import TypedAgent
+        from dna.extensions.helix.models import TypedAgent
         raw = {
             "apiVersion": "github.com/ruinosus/dna/v1",
             "kind": "Agent",
@@ -106,7 +106,7 @@ class TestInstanceSpecDict:
 
     def test_nested_dataclass_becomes_dict(self):
         """SkillSpec has FileEntry dataclasses — they should become plain dicts."""
-        from dna.kernel.models import TypedSkill
+        from dna.extensions.agentskills.models import TypedSkill
         raw = {
             "apiVersion": "agentskills.io/v1",
             "kind": "Skill",
@@ -148,7 +148,7 @@ class TestInstanceSpecDict:
 
     def test_typed_still_accessible(self):
         """doc.typed still returns the original dataclass."""
-        from dna.kernel.models import TypedAgent
+        from dna.extensions.helix.models import TypedAgent
         raw = {
             "apiVersion": "github.com/ruinosus/dna/v1",
             "kind": "Agent",
