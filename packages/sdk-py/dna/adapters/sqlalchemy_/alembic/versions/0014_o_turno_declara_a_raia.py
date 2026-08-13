@@ -35,10 +35,21 @@ rodada, sujando exatamente o dado que ela existe para melhorar.
 no índice de conversas do dna-cloud (``copilot_thread``), sem release de SDK
 nenhum. Ela foi recusada por dois motivos medidos, não por gosto:
 
-1. **Quem precisa excluir o turno de teste da conta é ``dna.runtime.roi``**, que
-   é deste SDK e lê ``dna_turn``. Uma raia invisível para esse leitor faria cada
+1. **Quem precisa excluir o turno de teste da conta lê ``dna_turn``**, não o
+   índice de conversas. Uma raia invisível para esse leitor faria cada
    consumidor do SDK reinventar a exclusão por conta própria — que é como um
    invariante vira convenção e depois vira bug.
+
+   ⚠️ **Nota de 11/08/2026, e ela NÃO revoga a decisão acima.** O leitor que
+   motivou esta coluna chamava-se ``dna.runtime.roi`` e saiu deste repositório
+   nessa data — cruzar custo, preço e aceitação é fato do contrato de quem
+   opera, não do SDK. **A coluna FICA**, e é exatamente o que o argumento (1)
+   sempre disse: a razão nunca foi *"o leitor é do SDK"*, foi *"o leitor lê
+   ``dna_turn``"*. Um leitor que se mudou continua lendo ``dna_turn``, e a
+   alternativa recusada (marcar a raia no índice de conversas do host)
+   continua recusada pelo mesmo motivo — agora com mais força, porque o host
+   e o leitor deixaram de ser o mesmo processo em todo deployment.
+   **Quem já aplicou esta revisão não precisa fazer nada.**
 2. ``dna_turn.thread_id`` **pode ser vazio** (turno de A2A, de worker). Uma raia
    presa à conversa não cobre esses turnos, e eles são exatamente os que uma
    suíte de avaliação automatizada produz.
