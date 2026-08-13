@@ -8,7 +8,7 @@ spec:
   description: '`dna.runtime.roi` (2.348 linhas) calculava custo, preco, ROI e aceitacao dentro deste repositorio ABERTO, e nao tinha nenhum chamador aqui: as tres referencias sao COMENTARIOS (telemetry.py, mcp_tools_mw.py, alembic 0014). Preco de token, valor por desfecho e taxa de aceitacao sao fatos do CONTRATO de quem opera, nao de um SDK de agentes. O modulo, os quatro arquivos de teste e o guia `docs/guides/reading-the-yield.md` saem. NAO sai: `runtime/telemetry.py` (quem ESCREVE `dna_turn`, ligado no ponto unico por onde todo runtime passa) nem as revisoes alembic 0012/0014 — sao schema de uma tabela que este SDK escreve, e um LEITOR nao e dono de schema. Quem ja aplicou nao precisa fazer nada.'
   type: task
   severity: medium
-  status: open
+  status: resolved
   created_at: '2026-08-13T00:20:19+00:00'
   updated_at: '2026-08-13T00:20:19+00:00'
   timeline:
@@ -17,3 +17,38 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-08-13T00:33:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: |-
+      Merjado em #390. `runtime/roi.py` (2.348 linhas), quatro arquivos de teste (1.906 linhas) e `docs/guides/reading-the-yield.md` removidos. Premissa CONFIRMADA antes de mexer: as tres referencias eram COMENTARIOS e nao havia nenhum chamador, aqui nem no CLI.
+
+      FICARAM, e a razao e uma so: `runtime/telemetry.py` (a metade que ESCREVE `dna_turn`) e as revisoes alembic 0012/0014. Sao o schema de uma tabela que ESTE SDK escreve, e um LEITOR nao e dono de schema. O argumento (1) da propria 0014 ja dizia isso sem saber — nunca foi 'o leitor e do SDK', foi 'o leitor le dna_turn'. Quem ja aplicou nao faz nada.
+
+      Um teste foi PORTADO em vez de sair: `test_o_VAZIO_nao_e_uma_raia_do_vocabulario` media o vocabulario (`LANES`), que e deste modulo, e foi para `test_runtime_telemetry.py`. Os outros 129 mediam a conta e foram com ela.
+
+      O Kind `ModelProfile` deixou de NOMEAR um consumidor nas descricoes de `cost_per_1m_*`/`cost_quoted_at` — o contrato nao mudou, mas nomear um consumidor dentro de um schema sempre foi a altitude errada.
+
+      Medido: baseline 6136 passed / 446 skipped -> 6018 / 435, delta -118 passed / -11 skipped, +1 portado. Todos os geradores + guardas + `mkdocs --strict` verdes. Verificado depois do merge: `dna.runtime.roi` sumiu, `dna_cloud_copilot.roi` importa, e `roi.LANES is telemetry.LANES` continua True — o consumidor nao forkou o vocabulario.
+
+      ⚠️ Achado de metodo: a primeira regeneracao da referencia saiu contaminada porque `uv run` numa worktree resolve a venv COMPARTILHADA de ~/projects, cujo editable aponta para outro checkout (86 Kinds em vez de 89). O `_tree_guard` da i-138 pega isso na SUITE e nao pega nos geradores de docs.
+
+      Fica em aberto a i-111: o thread_store NAO e orfao, e nada dele foi movido.
+  closed_at: '2026-08-13T00:33:16+00:00'
+  resolution: |-
+    Merjado em #390. `runtime/roi.py` (2.348 linhas), quatro arquivos de teste (1.906 linhas) e `docs/guides/reading-the-yield.md` removidos. Premissa CONFIRMADA antes de mexer: as tres referencias eram COMENTARIOS e nao havia nenhum chamador, aqui nem no CLI.
+
+    FICARAM, e a razao e uma so: `runtime/telemetry.py` (a metade que ESCREVE `dna_turn`) e as revisoes alembic 0012/0014. Sao o schema de uma tabela que ESTE SDK escreve, e um LEITOR nao e dono de schema. O argumento (1) da propria 0014 ja dizia isso sem saber — nunca foi 'o leitor e do SDK', foi 'o leitor le dna_turn'. Quem ja aplicou nao faz nada.
+
+    Um teste foi PORTADO em vez de sair: `test_o_VAZIO_nao_e_uma_raia_do_vocabulario` media o vocabulario (`LANES`), que e deste modulo, e foi para `test_runtime_telemetry.py`. Os outros 129 mediam a conta e foram com ela.
+
+    O Kind `ModelProfile` deixou de NOMEAR um consumidor nas descricoes de `cost_per_1m_*`/`cost_quoted_at` — o contrato nao mudou, mas nomear um consumidor dentro de um schema sempre foi a altitude errada.
+
+    Medido: baseline 6136 passed / 446 skipped -> 6018 / 435, delta -118 passed / -11 skipped, +1 portado. Todos os geradores + guardas + `mkdocs --strict` verdes. Verificado depois do merge: `dna.runtime.roi` sumiu, `dna_cloud_copilot.roi` importa, e `roi.LANES is telemetry.LANES` continua True — o consumidor nao forkou o vocabulario.
+
+    ⚠️ Achado de metodo: a primeira regeneracao da referencia saiu contaminada porque `uv run` numa worktree resolve a venv COMPARTILHADA de ~/projects, cujo editable aponta para outro checkout (86 Kinds em vez de 89). O `_tree_guard` da i-138 pega isso na SUITE e nao pega nos geradores de docs.
+
+    Fica em aberto a i-111: o thread_store NAO e orfao, e nada dele foi movido.
