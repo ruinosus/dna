@@ -21,7 +21,7 @@ spec:
   - sdk-py e cli verdes + guards de doc limpos + um commit por item + recusas documentadas
   definition_of_done_source: cli-create
   created_at: '2026-07-20T13:04:21+00:00'
-  updated_at: '2026-08-12T22:58:26+00:00'
+  updated_at: '2026-08-13T00:06:52+00:00'
   timeline:
   - at: '2026-07-20T13:04:21+00:00'
     actor: claude-code
@@ -51,6 +51,22 @@ spec:
 
       Baseline confirmada ANTES: 3 failed / 6412 passed. Depois: as MESMAS 3 falhas pre-existentes (claude_export_roundtrip, gen_ui_component_kind, runtime_binding_kind — todas por extras opcionais ausentes no venv). Coleta 6591 -> 6581 (-10, exato). gen_ports/kinds/data_model/cli_docs regenerados; docs_coverage_guard limpo (117 itens).
     commit_ref: 106edd5f9d10cf2d5b377bf9284c44823a84e53f
+  - at: '2026-08-13T00:06:52+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      PR #389 merjado (a0e3d755). Quatro modulos apagados, 1.093 linhas, i-047 e i-048 fechados com evidencia.
+
+      DEIXANDO A HISTORIA EM in-progress DE PROPOSITO — a Faixa 1 nao acabou. A i-047 nomeava tambem extensions/helix/layers.py, que eu NAO medi nesta passada, e a auditoria original de complexidade pode ter outros itens que nao inventariei. Marcar done aqui seria fechar com lacuna.
+
+      O que ficou medido e pendente para quem pegar a proxima fatia:
+        - extensions/helix/layers.py (28 linhas segundo a i-047) — nao medido
+        - emit/frontend.py (158) e memory/claude_export.py (119) — a i-047 mandava verificar consumidor EXTERNO antes de tocar; nao verifiquei
+        - 739 linhas vivas so para os proprios testes (adapters/async_adapter.py 117, adapters/filesystem/composite.py 494, application/agent_grant.py 128) — reportadas na tarefa, nao medidas por mim
+
+      E uma correcao de medicao que vale para a proxima passada: a tarefa reportava "14 ports declarados sem nenhuma implementacao, entre eles ToolPort". Medi e e ARTEFATO DE GREP. Protocol e estrutural: uma classe o satisfaz sem nunca nomea-lo. ToolPort tem implementacao concreta dez linhas abaixo dele (ToolDefinition, "Concrete ToolPort implementation"), e os 13 *Host de collaborator_ports.py sao TODOS satisfeitos por uma instancia viva de Kernel (verificado com hasattr sobre __protocol_attrs__). Zero ports sao cerimonia. Nenhum apagado, e a razao esta aqui para nao se repetir o grep.
+    commit_ref: a0e3d7553a1e28a7e2080ee438bd42b8e5f5a789
   produces:
   - kind: Plan
     name: plan-s-dna-shrink-faixa-1

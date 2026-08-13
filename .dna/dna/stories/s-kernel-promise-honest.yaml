@@ -6,7 +6,7 @@ metadata:
 spec:
   title: 'A promessa ''um microkernel que nao conhece Kind nenhum'' e falsa em seis lugares '
   description: A promessa 'um microkernel que nao conhece Kind nenhum' e falsa em seis lugares medidos. Reescrever a promessa para o que e verdade e acrescentar uma guarda DERIVADA que falhe quando um literal de Kind NOVO aparecer no caminho central do kernel.
-  status: in-progress
+  status: done
   feature: f-dna-1.0-readiness
   acceptance_criteria:
   - text: Dado que o kernel cita nomes de Kind literais em resolver/accessor/evidence/events/invalidation, quando a promessa e reescrita, entao AGENTS.md, docs/index.md, docs/concepts/thesis.md e microkernel-ports.md dizem o que o codigo faz
@@ -25,7 +25,7 @@ spec:
     done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-12T22:46:30+00:00'
-  updated_at: '2026-08-12T23:39:03+00:00'
+  updated_at: '2026-08-13T00:06:26+00:00'
   timeline:
   - at: '2026-08-12T22:46:30+00:00'
     actor: claude-code
@@ -176,8 +176,33 @@ spec:
       DECLARA o Kind de que precisa (bloco "kinds:" no YAML do caso) em vez de depender
       da lista do kernel, entao o golden prova que a DECLARACAO dirige o resolver.
     commit_ref: db4cc1e46888c3c8a0f5d8c95ded0970e199ddfa
+  - at: '2026-08-13T00:06:16+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      PR #389 merjado em main (a0e3d755), CI inteiro verde: sdk-py 3.12 e 3.13, cli 3.12 e 3.13, postgres, docs-build, docs-links, brand-guard, gitleaks, client-py, client-ts.
+
+      ATENCAO ao ler os AC desta historia: eles descrevem a saida (b) — reescrever a promessa e adicionar guarda — e a saida (b) FOI REVERTIDA por decisao do founder no meio da execucao. O AC 1 ("quando a promessa e reescrita, entao AGENTS.md ... dizem o que o codigo faz") NAO foi cumprido, e nao deveria ser: a promessa fica como esta e o CODIGO e que andou ate ela. O AC 2 (guarda derivada) foi cumprido por OUTRA guarda que ja existia no repo — test_kind_name_literal_ratchet.py — depois que descobri que a minha era duplicata inferior e a apaguei.
+
+      O que foi entregue no lugar, e esta em main:
+        - 49 -> 34 literais de nome de Kind no kernel (15 removidos, 0 adicionados)
+        - 3 conjuntos traduzidos: heranca de escopo (scope_inheritable, ja existia — apaguei a quarta copia), captura de evidencia (2 traits novos em BEHAVIOURAL_TRAITS) e nome de evento post_save (post_save_event, atributo)
+        - 1 bug vivo consertado: 4 Kinds herdavam entre escopos contra a propria declaracao
+        - i-108 e i-109 abertos com o argumento de por que trait nao resolve nenhum dos dois
+
+      Fechando sem TestRun de produto (--allow-no-tests): e refatoracao de SDK sem superficie de produto para um humano fumacar. A prova e automatizada e esta no CI do PR merjado — 27 goldens de composicao passando com as expectativas CONGELADAS INALTERADAS, que e a evidencia mais forte disponivel de que a traducao nao mudou semantica.
+    commit_ref: a0e3d7553a1e28a7e2080ee438bd42b8e5f5a789
+  - at: '2026-08-13T00:06:26+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: done
+    commit_ref: a0e3d7553a1e28a7e2080ee438bd42b8e5f5a789
   produces:
   - kind: Plan
     name: plan-s-kernel-promise-honest
     role: implementation
     at: '2026-08-12T23:11:24+00:00'
+  closed_at: '2026-08-13T00:06:18+00:00'
