@@ -1,0 +1,36 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: esqo4ujllk5e
+  name: i-112-kernel-le-esquema-de-extensao
+spec:
+  description: |-
+    MOVER, nao declarar — o resto da forma da i-109, no eixo de LEITURA. Medido em 13/08/2026 durante a i-107, que deixou estes 3 literais de nome de Kind no kernel COM O ARGUMENTO ESCRITO ao lado do codigo: um trait trocaria as strings e deixaria as leituras de campo exatamente onde estao, o que e pior que nao mexer, porque faz a fronteira PARECER consertada.
+
+    1. kernel/manifest.py::apply_hooks (l.969 'Hook', l.1026 'SafetyPolicy'). O kernel le Hook.spec campo a campo — target, type, action, fields, body —, faz exec() do body, e ramifica nos enums middleware/listener e inject_fields/script. Depois le SafetyPolicy.spec (scope, action, rules) e constroi um dna.safety.scanner.ScannerPipeline.
+
+    A INVERSAO, medida: HookExtension.register() e SafetyPolicyExtension.register() NAO fazem nada alem de kernel.kind(...). TODAS as chamadas hooks.use/hooks.on desses dois Kinds, e a unica construcao de ScannerPipeline fora de dna/safety/, vivem no kernel. O comentario do proprio HookKind (extensions/hooks/__init__.py:36) aponta para apply_hooks como a semantica de Hook.target. A extensao registra o TIPO e o kernel implementa o COMPORTAMENTO — exatamente ao contrario.
+
+    2. kernel/reports.py::eval_summary (l.132 'EvalRun'). Le sete campos do esquema do EvalRun: suite, saved_at, total, passed, aggregate_score, total_cost_usd, total_tokens, results[]{case,status,score}. Trait nao resolve, e o execution.run que ja existe reune EvalRun COM TestRun, cujo esquema e outro — a derivacao varreria um Kind cujos campos este codigo nao sabe ler.
+
+    CONTEXTO QUE BARATEIA O CONSERTO (medido 13/08): ReportBuilder tem ZERO chamadores de producao. O unico construtor e a property lazy mi.reports (manifest.py:235); fora isso, so tests/test_reports.py. Nao aparece em docs/, examples/, README nem CHANGELOG. Esta em tests/golden-fixtures/port-surface.json:521 (public_surface do MI), mas NAO em blessed. apply_hooks tem o mesmo perfil: chamadores so em tests (test_hook_kind.py, test_safety_input.py), public_surface:488, nao blessed.
+
+    Ha portanto DUAS saidas, e escolher e parte do trabalho: mover o comportamento para as extensoes que registram os Kinds, ou APAGAR a superficie (re-congelando o golden). A segunda e barata se ninguem usa; a primeira e a certa se alguem for usar. Nao decidir e o que mantem os tres literais no kernel.
+
+    Fecha 3 das 5 ocorrencias 'argumentadas' do teto 26 da i-107 (test_kind_name_literal_ratchet.py). As outras 2 — o default publicado kind='Evidence' e o INVALIDATE_VERBS de uma chave — tem gatilho proprio escrito no codigo e nao pertencem aqui.
+  type: task
+  severity: low
+  status: open
+  created_at: '2026-08-13T12:43:48+00:00'
+  updated_at: '2026-08-13T12:43:48+00:00'
+  timeline:
+  - at: '2026-08-13T12:43:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-08-13T12:44:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: '⚠️ HOMONIMO ENTRE REPOS, registrado para o proximo leitor. O CLI numerou esta ficha como i-112 porque 111 era o maior deste board — legal, ids sao por scope. Mas ''i-112'' JA APARECE no codigo-fonte DESTE repo significando outra coisa: a ficha i-112 do board do dna-cloud (o Catalog tier / capability manifest), citada em extensions/helix/models.py:53 e :80, extensions/cloud/kinds/pricing-plan.kind.yaml:17 e no docstring de Kernel.composition_summary. Um comentario futuro dizendo ''ver i-112'' e ambiguo. Ao referenciar ESTA ficha, escreva ''i-112 (board dna)''.'

@@ -20,7 +20,7 @@ spec:
     DoD: cada literal que sair TEM de sair tambem do baseline goldens/kernel_kind_literals.json — a guarda falha se o baseline nao apertar junto.
   type: task
   severity: low
-  status: open
+  status: resolved
   created_at: '2026-08-12T23:05:48+00:00'
   updated_at: '2026-08-12T23:05:48+00:00'
   timeline:
@@ -29,3 +29,265 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-08-13T11:53:47+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: in-progress
+  - at: '2026-08-13T11:54:14+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'PLANO. Fechar o eixo de LITERAL DE NOME no kernel (a i-109 fechou o eixo de schema). Medido por AST na venv PROPRIA da worktree (89 Kinds registrados): 39 ocorrencias, 15 arquivos, 22 Kinds distintos — nao as 49/30/16 da ficha, que sao de antes da i-109. Destas 39, 21 ja estao decididas: 13 sao o triplo de bootstrap (Genome/KindDefinition/LayerPolicy, em protocols.py=5, compose/instance_builder.py=3, compose/resolver.py=2, models.py=1, catalog/cache.py=1, compose/layer_policy.py=1) e 8 sao o accessor.py, que a i-108 fechou com decisao do founder. Alvo: as 18 restantes. Regra de execucao: para CADA uma, perguntar primeiro se JA EXISTE mecanismo — um trait novo para algo que ja e atributo e regressao, nao conserto (licao da traducao de scope_inheritable, que era a QUARTA copia de um fato ja derivado). E ao trocar lista por derivacao, escrever primeiro o teste que compara os dois conjuntos; divergencia e ACHADO, nao bug a consertar em silencio.'
+  - at: '2026-08-13T12:42:32+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      MEDICAO + ACHADOS (PR #393). Varredura AST na venv PROPRIA da worktree (89 Kinds; a compartilhada resolve outro checkout e devolve 86): 39 ocorrencias, 15 arquivos, 22 Kinds distintos — nao as 49/30/16 da ficha, que sao de antes da i-109. Traduzidas 13, sobram 26.
+
+      O ACHADO QUE MUDOU O DESENHO, e foi na direcao contraria da fatia 1. O plano era APAGAR DEFAULT_INHERITABLE_KINDS_V1 e derivar de scope_inheritable — o comentario do proprio arquivo a chamava de 'display set', vestigio. O teste de paridade veio ANTES da delecao e matou o plano: 74 Kinds sao scope-inheritable e DEZESSEIS deles sao TENANTED (Canvas, UserProfile, AuditLog, Project, Organization, Role, Repo…). Derivar dali teria reportado os dezesseis como violacao de uma invariante que eles nao quebram — PODER herdar nao e a mesma coisa que ENTREGAR um default para herdar. A lista estava CERTA sobre o conceito e errada so em ser lista; virou o trait composition.platform-default, com o conjunto derivado IGUAL aos membros registrados da lista antiga.
+
+      TRES NOMES MORTOS, terceiro achado do mesmo formato nesta issue. LottieAsset, HtmlTemplate e ImagePrompt nao sao Kind registrado — 37% do display set. O composition_summary os consultava a cada chamada e a invariante de tenancy os pulava com 'if kp is None: continue', verde. Depois de Finding (evidence, 12/08) e VibeSession (churn). Uma lista pode nomear um Kind que nao existe; uma declaracao nao tem onde ser escrita.
+
+      MECANISMO QUE JA EXISTIA E FOI USADO EM VEZ DE CRIAR: (a) version_retention — campo ja declaravel nas duas faces, ja lido PRIMEIRO pelo write pipeline, com o conjunto VERSION_CHURN_KINDS servindo so de fallback; Engram e Canvas viraram os dois primeiros adotantes de um campo que o docstring da ratchet citava como 'shipped declarative com ZERO adopters'. (b) record.is-evidence — trait enviado na fatia 2 ontem, reusado em boot/invalidation.py e reports.py. (c) storage.body_field — ja declarado por PromptTemplate (body_field: body) e IGNORADO pelo builder, que lia spec['body'] fixo; so o NOME do Kind precisou de trait novo.
+
+      TRES TRAITS NOVOS, todos com o argumento de por que nenhum mecanismo servia: record.evidence-policy (governance.policy e declarado tambem por SafetyPolicy/LayerPolicy/CognitivePolicy — derivar dele mandaria regras de scanner de seguranca para should_capture), composition.platform-default (medido != scope_inheritable, ver acima) e prompt.named-template.
+
+      GUARDA APERTADA, NAO DUPLICADA: test_kind_name_literal_ratchet.py ganhou o TERCEIRO instrumento no mesmo arquivo (scan_occurrences_in_tree), teto 26 shrink-only, com test_the_ceiling_is_not_slack exigindo IGUALDADE — teto acima da contagem real e folga que alguem gasta sem revisao. Mutante plantado e provado: com um unico _all('Story') no kernel, SO o instrumento novo acusa; o scanner de conjuntos segue verde, que e exatamente a lacuna por onde a i-109 fechou com 39 literais e CI verde.
+  - at: '2026-08-13T13:09:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: resolved
+    summary: |-
+      PR #393, merjado em main 13/08. O eixo de LITERAL DE NOME fechado ate onde o argumento
+      sustenta: 39 ocorrencias -> 26 (15 arquivos -> 11, 22 Kinds distintos -> 15). Medido por AST
+      na venv PROPRIA da worktree (89 Kinds; a compartilhada resolve outro checkout e devolve 86).
+      Nao sao as 49/30/16 da ficha original — aquelas sao de antes da i-109.
+
+      === AS 13 QUE VIRARAM DERIVACAO, e o mecanismo que JA EXISTIA em cada uma ===
+
+      A pergunta foi a mesma para os 18 alvos, ANTES de escrever qualquer linha: "ja existe
+      mecanismo?". Em 3 dos 6 casos existia, e nesses NAO foi criado trait nenhum.
+
+        2  VERSION_CHURN_KINDS {Engram, Canvas} -> campo `version_retention`
+           JA era declaravel nas duas faces (KindPort + spec do descritor, com validacao
+           ate "must be >= 1") e o write pipeline JA o lia PRIMEIRO; o conjunto era so o
+           fallback dele. Zero vocabulario novo. Engram e Canvas viraram os DOIS PRIMEIROS
+           adotantes de um campo que o docstring da propria ratchet citava como "shipped
+           declarative com ZERO adopters".
+        1  boot/invalidation.py `kind == "Evidence"` -> trait record.is-evidence (enviado ontem)
+        1  reports.py `_all("Evidence")`             -> idem
+        2  write/evidence.py query(scope,"EvidencePolicy") -> trait record.evidence-policy (NOVO)
+        5  DEFAULT_INHERITABLE_KINDS_V1 -> trait composition.platform-default (NOVO)
+        2  prompt/builder.py -> trait prompt.named-template (NOVO) + `storage.body_field`
+           O campo JA era declarado pelo descritor (body_field: body) e o builder o IGNORAVA,
+           lendo spec["body"] fixo. So o NOME do Kind precisou de trait.
+
+      Os 3 traits novos vieram com o argumento de por que nenhum mecanismo servia. O mais
+      importante: record.evidence-policy NAO podia ser o governance.policy que o EvidencePolicy
+      ja carregava — esse e declarado tambem por SafetyPolicy, LayerPolicy e CognitivePolicy, e
+      derivar dele mandaria regras de scanner de seguranca para o should_capture.
+
+      === O ACHADO QUE MUDOU O DESENHO, na direcao CONTRARIA da fatia 1 ===
+
+      O plano era APAGAR DEFAULT_INHERITABLE_KINDS_V1 e derivar de scope_inheritable — o
+      comentario do proprio arquivo a chamava de "display set", vestigio. O teste de paridade
+      veio ANTES da delecao, como manda a regra, e matou o plano:
+
+        74 Kinds sao scope-inheritable. DEZESSEIS deles sao TENANTED
+        (Canvas, UserProfile, AuditLog, Project, Organization, Role, Repo, ...).
+
+      Derivar dali teria reportado os dezesseis como violacao de uma invariante que eles NAO
+      quebram: PODER herdar entre escopos nao e o mesmo fato que ENTREGAR um default em _lib
+      para herdar. A lista estava CERTA sobre o conceito e errada so em ser lista — e o conserto
+      honesto de um conceito certo sem declaracao e dar-lhe uma, nao deriva-lo do parente mais
+      proximo que por acaso e declaravel. Virou trait, com o conjunto derivado IGUAL (==, nos
+      dois sentidos) aos membros registrados da lista antiga.
+
+      === TRES NOMES MORTOS, terceiro achado do mesmo formato nesta issue ===
+
+      LottieAsset, HtmlTemplate e ImagePrompt nao sao Kind registrado neste repo — 37% do
+      display set. O composition_summary os consultava a cada chamada e a invariante
+      "herdavel nunca TENANTED" os pulava com `if kp is None: continue`, verde. Depois de
+      Finding (evidence, 12/08) e VibeSession (churn, hoje). Uma lista pode nomear um Kind que
+      nao existe; uma declaracao nao tem onde ser escrita.
+
+      === A GUARDA: apertada, nao duplicada ===
+
+      test_kind_name_literal_ratchet.py ganhou o TERCEIRO instrumento, no mesmo arquivo. Os dois
+      que ja existiam sao cegos a isto POR CONSTRUCAO — o primeiro so ve colecao de 2+ nomes, o
+      segundo ve classe Typed* — e e por isso que a i-109 fechou com CI verde e 39 literais no
+      kernel. Teto 26, shrink-only, com test_the_ceiling_is_not_slack exigindo IGUALDADE: teto
+      acima da contagem real e folga que alguem gasta sem revisao. Mais dois testes fixam o que
+      o numero SIGNIFICA (as 8 do accessor sao a decisao da i-108, nao divida; os 3 nomes de
+      BOOTSTRAP_KIND_NAMES contam como 3, nao como 1).
+
+      Mutante plantado e provado DUAS vezes: com uma tupla de 2 nomes, os dois instrumentos
+      acusam; com um unico _all("Story"), SO o novo acusa — o scanner de conjuntos segue verde.
+      E exatamente a lacuna que ele existe para cobrir.
+
+      === O QUE FICA (26), tudo com argumento escrito ONDE O CODIGO ESTA ===
+
+        13  bootstrap (Genome/KindDefinition/LayerPolicy) — um descritor nao da bootstrap no
+            leitor que le descritores. Ja decidido; 2 a mais do que a ficha listava
+            (catalog/cache.py e compose/layer_policy.py tambem carregam o triplo).
+         8  registry/accessor.py — i-108, decisao do FUNDADOR: portao de quota do servidor MCP
+            open-source, nao logica comercial. Sao 8, nao 4.
+         5  argumentados aqui: manifest.py Hook+SafetyPolicy e reports.py EvalRun (forma da
+            i-109 — o kernel le o ESQUEMA deles; trait trocaria as strings e deixaria as
+            leituras de campo onde estao, fazendo a fronteira PARECER consertada, que e pior
+            que deixa-la visivelmente quebrada); evidence.py kind="Evidence" (default publicado,
+            unico chamador de producao passa explicito, funcao pura nao consulta registro);
+            hard_delete.py INVALIDATE_VERBS (uma frase de mensagem de erro com fallback correto
+            — e aqui a nota importante: o argumento ANTIGO defendia contra um TRAIT, e trait
+            nunca foi a forma certa para um fato por-Kind; a forma certa e campo de descritor,
+            precedente que a propria i-107 abriu com post_save_event. Nao seguiu porque
+            post_save_event destravava uma CAPACIDADE e este nao destrava nada. Gatilho de
+            reabertura escrito e especifico).
+
+      As 3 primeiras viraram a i-112 (board dna) com a medicao que barateia o conserto:
+      ReportBuilder e apply_hooks tem ZERO chamadores de producao.
+
+      === A PROMESSA DO README: NAO TOCADA, de proposito ===
+
+      A condicao era "so se sobrarem bootstrap + i-108". Sobram 5 alem disso, entao a frase
+      "um microkernel que nao conhece Kind nenhum" ainda nao e verdadeira, e mexer nela seria
+      comprar com texto o que o codigo nao entregou. Quando a i-112 fechar, sobram 21 (13+8) e
+      a frase honesta fica disponivel — algo como "um kernel que conhece apenas os Kinds pelos
+      quais um Kind nasce", com a ressalva de que os 8 do accessor sao uma decisao de produto
+      e nao de arquitetura.
+
+      === VERIFICACAO ===
+
+      CI 13/13 verde. Suite sdk-py identica a baseline: as MESMAS 36 falhas pre-existentes
+      (extras opcionais ausentes), 5878 passando (+29 testes novos). CLI 2024/2024. Postgres
+      131/131. brand_guard, docs_coverage_guard e data_model_guard limpos; geradores rodados
+      com PYTHONPATH deste checkout (as tres traits novas entraram em docs/reference/cli/new.md
+      e o novo membro do InvalidationHost em docs/reference/ports/internal.md).
+
+      ⚠️ UMA LICAO CARA: o primeiro push quebrou o job `postgres`. Os testes de Postgres sao
+      `-m requires_postgres` e SKIPam sem DSN — as 437 linhas "skipped" da suite local incluiam
+      o que quebrou. Uma suite verde com 437 skips nao e uma suite verde. Reproduzido depois
+      contra um pgvector/pgvector:pg16 local com o comando exato do workflow. O defeito era o
+      mesmo padrao das tres irmas em processo (Kernel() nu, sem Kind declarando o trait) — e o
+      fato de a versao entre processos ter ficado de fora e o proprio sintoma: a correcao foi
+      aplicada onde os testes rodavam, nao onde o codigo estava.
+  closed_at: '2026-08-13T13:09:27+00:00'
+  resolution: |-
+    PR #393, merjado em main 13/08. O eixo de LITERAL DE NOME fechado ate onde o argumento
+    sustenta: 39 ocorrencias -> 26 (15 arquivos -> 11, 22 Kinds distintos -> 15). Medido por AST
+    na venv PROPRIA da worktree (89 Kinds; a compartilhada resolve outro checkout e devolve 86).
+    Nao sao as 49/30/16 da ficha original — aquelas sao de antes da i-109.
+
+    === AS 13 QUE VIRARAM DERIVACAO, e o mecanismo que JA EXISTIA em cada uma ===
+
+    A pergunta foi a mesma para os 18 alvos, ANTES de escrever qualquer linha: "ja existe
+    mecanismo?". Em 3 dos 6 casos existia, e nesses NAO foi criado trait nenhum.
+
+      2  VERSION_CHURN_KINDS {Engram, Canvas} -> campo `version_retention`
+         JA era declaravel nas duas faces (KindPort + spec do descritor, com validacao
+         ate "must be >= 1") e o write pipeline JA o lia PRIMEIRO; o conjunto era so o
+         fallback dele. Zero vocabulario novo. Engram e Canvas viraram os DOIS PRIMEIROS
+         adotantes de um campo que o docstring da propria ratchet citava como "shipped
+         declarative com ZERO adopters".
+      1  boot/invalidation.py `kind == "Evidence"` -> trait record.is-evidence (enviado ontem)
+      1  reports.py `_all("Evidence")`             -> idem
+      2  write/evidence.py query(scope,"EvidencePolicy") -> trait record.evidence-policy (NOVO)
+      5  DEFAULT_INHERITABLE_KINDS_V1 -> trait composition.platform-default (NOVO)
+      2  prompt/builder.py -> trait prompt.named-template (NOVO) + `storage.body_field`
+         O campo JA era declarado pelo descritor (body_field: body) e o builder o IGNORAVA,
+         lendo spec["body"] fixo. So o NOME do Kind precisou de trait.
+
+    Os 3 traits novos vieram com o argumento de por que nenhum mecanismo servia. O mais
+    importante: record.evidence-policy NAO podia ser o governance.policy que o EvidencePolicy
+    ja carregava — esse e declarado tambem por SafetyPolicy, LayerPolicy e CognitivePolicy, e
+    derivar dele mandaria regras de scanner de seguranca para o should_capture.
+
+    === O ACHADO QUE MUDOU O DESENHO, na direcao CONTRARIA da fatia 1 ===
+
+    O plano era APAGAR DEFAULT_INHERITABLE_KINDS_V1 e derivar de scope_inheritable — o
+    comentario do proprio arquivo a chamava de "display set", vestigio. O teste de paridade
+    veio ANTES da delecao, como manda a regra, e matou o plano:
+
+      74 Kinds sao scope-inheritable. DEZESSEIS deles sao TENANTED
+      (Canvas, UserProfile, AuditLog, Project, Organization, Role, Repo, ...).
+
+    Derivar dali teria reportado os dezesseis como violacao de uma invariante que eles NAO
+    quebram: PODER herdar entre escopos nao e o mesmo fato que ENTREGAR um default em _lib
+    para herdar. A lista estava CERTA sobre o conceito e errada so em ser lista — e o conserto
+    honesto de um conceito certo sem declaracao e dar-lhe uma, nao deriva-lo do parente mais
+    proximo que por acaso e declaravel. Virou trait, com o conjunto derivado IGUAL (==, nos
+    dois sentidos) aos membros registrados da lista antiga.
+
+    === TRES NOMES MORTOS, terceiro achado do mesmo formato nesta issue ===
+
+    LottieAsset, HtmlTemplate e ImagePrompt nao sao Kind registrado neste repo — 37% do
+    display set. O composition_summary os consultava a cada chamada e a invariante
+    "herdavel nunca TENANTED" os pulava com `if kp is None: continue`, verde. Depois de
+    Finding (evidence, 12/08) e VibeSession (churn, hoje). Uma lista pode nomear um Kind que
+    nao existe; uma declaracao nao tem onde ser escrita.
+
+    === A GUARDA: apertada, nao duplicada ===
+
+    test_kind_name_literal_ratchet.py ganhou o TERCEIRO instrumento, no mesmo arquivo. Os dois
+    que ja existiam sao cegos a isto POR CONSTRUCAO — o primeiro so ve colecao de 2+ nomes, o
+    segundo ve classe Typed* — e e por isso que a i-109 fechou com CI verde e 39 literais no
+    kernel. Teto 26, shrink-only, com test_the_ceiling_is_not_slack exigindo IGUALDADE: teto
+    acima da contagem real e folga que alguem gasta sem revisao. Mais dois testes fixam o que
+    o numero SIGNIFICA (as 8 do accessor sao a decisao da i-108, nao divida; os 3 nomes de
+    BOOTSTRAP_KIND_NAMES contam como 3, nao como 1).
+
+    Mutante plantado e provado DUAS vezes: com uma tupla de 2 nomes, os dois instrumentos
+    acusam; com um unico _all("Story"), SO o novo acusa — o scanner de conjuntos segue verde.
+    E exatamente a lacuna que ele existe para cobrir.
+
+    === O QUE FICA (26), tudo com argumento escrito ONDE O CODIGO ESTA ===
+
+      13  bootstrap (Genome/KindDefinition/LayerPolicy) — um descritor nao da bootstrap no
+          leitor que le descritores. Ja decidido; 2 a mais do que a ficha listava
+          (catalog/cache.py e compose/layer_policy.py tambem carregam o triplo).
+       8  registry/accessor.py — i-108, decisao do FUNDADOR: portao de quota do servidor MCP
+          open-source, nao logica comercial. Sao 8, nao 4.
+       5  argumentados aqui: manifest.py Hook+SafetyPolicy e reports.py EvalRun (forma da
+          i-109 — o kernel le o ESQUEMA deles; trait trocaria as strings e deixaria as
+          leituras de campo onde estao, fazendo a fronteira PARECER consertada, que e pior
+          que deixa-la visivelmente quebrada); evidence.py kind="Evidence" (default publicado,
+          unico chamador de producao passa explicito, funcao pura nao consulta registro);
+          hard_delete.py INVALIDATE_VERBS (uma frase de mensagem de erro com fallback correto
+          — e aqui a nota importante: o argumento ANTIGO defendia contra um TRAIT, e trait
+          nunca foi a forma certa para um fato por-Kind; a forma certa e campo de descritor,
+          precedente que a propria i-107 abriu com post_save_event. Nao seguiu porque
+          post_save_event destravava uma CAPACIDADE e este nao destrava nada. Gatilho de
+          reabertura escrito e especifico).
+
+    As 3 primeiras viraram a i-112 (board dna) com a medicao que barateia o conserto:
+    ReportBuilder e apply_hooks tem ZERO chamadores de producao.
+
+    === A PROMESSA DO README: NAO TOCADA, de proposito ===
+
+    A condicao era "so se sobrarem bootstrap + i-108". Sobram 5 alem disso, entao a frase
+    "um microkernel que nao conhece Kind nenhum" ainda nao e verdadeira, e mexer nela seria
+    comprar com texto o que o codigo nao entregou. Quando a i-112 fechar, sobram 21 (13+8) e
+    a frase honesta fica disponivel — algo como "um kernel que conhece apenas os Kinds pelos
+    quais um Kind nasce", com a ressalva de que os 8 do accessor sao uma decisao de produto
+    e nao de arquitetura.
+
+    === VERIFICACAO ===
+
+    CI 13/13 verde. Suite sdk-py identica a baseline: as MESMAS 36 falhas pre-existentes
+    (extras opcionais ausentes), 5878 passando (+29 testes novos). CLI 2024/2024. Postgres
+    131/131. brand_guard, docs_coverage_guard e data_model_guard limpos; geradores rodados
+    com PYTHONPATH deste checkout (as tres traits novas entraram em docs/reference/cli/new.md
+    e o novo membro do InvalidationHost em docs/reference/ports/internal.md).
+
+    ⚠️ UMA LICAO CARA: o primeiro push quebrou o job `postgres`. Os testes de Postgres sao
+    `-m requires_postgres` e SKIPam sem DSN — as 437 linhas "skipped" da suite local incluiam
+    o que quebrou. Uma suite verde com 437 skips nao e uma suite verde. Reproduzido depois
+    contra um pgvector/pgvector:pg16 local com o comando exato do workflow. O defeito era o
+    mesmo padrao das tres irmas em processo (Kernel() nu, sem Kind declarando o trait) — e o
+    fato de a versao entre processos ter ficado de fora e o proprio sintoma: a correcao foi
+    aplicada onde os testes rodavam, nao onde o codigo estava.
