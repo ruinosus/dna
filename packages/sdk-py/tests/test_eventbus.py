@@ -301,11 +301,26 @@ class TestPostgresEventBus:
     async def test_evidence_writes_skipped(self, pg_setup):
         """Evidence-kind writes flow through the bus but kernel.invalidate
         skips them — holder is NOT reloaded.
+
+        i-107 — the skip reads the ``record.is-evidence`` trait, so the kernel
+        has to have a Kind declaring it. Named ``TenantLedger`` on purpose: the
+        cross-process path must skip by DECLARATION, exactly like the in-process
+        one, and a fixture called "Evidence" could not tell the two apart.
         """
         from dna.kernel import Kernel
+        from dna.kernel.kinds.base import KindBase
+        from dna.kernel.protocols import StorageDescriptor
         from dna.adapters.postgres.eventbus import PostgresEventBus
 
+        class _TenantLedger(KindBase):
+            api_version = "market.example/v1"
+            kind = "TenantLedger"
+            alias = "market-tenantledger"
+            storage = StorageDescriptor.yaml("tenantledgers")
+            traits = frozenset({"record.is-evidence"})
+
         kernel = Kernel()
+        kernel.kind(_TenantLedger())
         h = _StubHolder("evbus-test")
         kernel.register_holder(h)
 
@@ -315,19 +330,21 @@ class TestPostgresEventBus:
             await asyncio.sleep(0.2)
 
             evid_raw = {
-                "apiVersion": "github.com/ruinosus/dna/evidence/v1", "kind": "Evidence",
+                "apiVersion": "market.example/v1", "kind": "TenantLedger",
                 "metadata": {"name": "ev-1"}, "spec": {"type": "test"},
             }
             await pg_setup["source"].save_instance(
-                "evbus-test", "Evidence", "ev-1", evid_raw,
+                "evbus-test", "TenantLedger", "ev-1", evid_raw,
             )
 
-            # Wait long enough that a NOTIFY for Evidence would have
+            # Wait long enough that a NOTIFY for the evidence Kind would have
             # arrived AND dispatched if it were going to.
             await asyncio.sleep(1.0)
             assert h.reloads == 0
 
-            # Sanity: a non-Evidence write still triggers the bus.
+            # Sanity: a write of a Kind that declares nothing still triggers
+            # the bus — otherwise the assertion above could pass by the NOTIFY
+            # never arriving at all.
             agent_raw = {
                 "apiVersion": "github.com/ruinosus/dna/v1", "kind": "Agent",
                 "metadata": {"name": "after-evidence"}, "spec": {},
