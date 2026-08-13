@@ -1,0 +1,19 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: twcqerkpppnd
+  name: i-110-a-conta-em-dinheiro-sai-do-sdk
+spec:
+  title: A conta em dinheiro sai do SDK aberto
+  description: '`dna.runtime.roi` (2.348 linhas) calculava custo, preco, ROI e aceitacao dentro deste repositorio ABERTO, e nao tinha nenhum chamador aqui: as tres referencias sao COMENTARIOS (telemetry.py, mcp_tools_mw.py, alembic 0014). Preco de token, valor por desfecho e taxa de aceitacao sao fatos do CONTRATO de quem opera, nao de um SDK de agentes. O modulo, os quatro arquivos de teste e o guia `docs/guides/reading-the-yield.md` saem. NAO sai: `runtime/telemetry.py` (quem ESCREVE `dna_turn`, ligado no ponto unico por onde todo runtime passa) nem as revisoes alembic 0012/0014 — sao schema de uma tabela que este SDK escreve, e um LEITOR nao e dono de schema. Quem ja aplicou nao precisa fazer nada.'
+  type: task
+  severity: medium
+  status: open
+  created_at: '2026-08-13T00:20:19+00:00'
+  updated_at: '2026-08-13T00:20:19+00:00'
+  timeline:
+  - at: '2026-08-13T00:20:19+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
