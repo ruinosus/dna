@@ -120,7 +120,7 @@ def test_kernel_registers_html_artifact() -> None:
 
 
 def test_typed_parse() -> None:
-    from dna.kernel.models import TypedHtmlArtifact
+    from dna.extensions.sdlc.models import TypedHtmlArtifact
     doc = TypedHtmlArtifact.from_raw({
         "metadata": {"name": "ha-x", "description": "d"},
         "spec": {"html": _HTML, "artifact_json": {"title": "T"}},

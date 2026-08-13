@@ -178,7 +178,7 @@ def kind_writer_contract_guard(ctx: PreSaveContext) -> None:
     if isinstance(spec, dict) and (
         spec.get("writes_kind") or spec.get("writes_kinds")
     ):
-        from dna.kernel.models import AgentSpec  # noqa: PLC0415
+        from dna.extensions.helix.models import AgentSpec  # noqa: PLC0415
         ctx.kernel._validate_kind_writer(AgentSpec.from_raw(spec))
 
 

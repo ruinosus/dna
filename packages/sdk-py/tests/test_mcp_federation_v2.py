@@ -13,7 +13,7 @@ import pytest
 
 from dna import Kernel
 from dna.extensions.federation import MCPFederationKind
-from dna.kernel.models import AgentSpec
+from dna.extensions.helix.models import AgentSpec
 
 
 @pytest.fixture(scope="module")

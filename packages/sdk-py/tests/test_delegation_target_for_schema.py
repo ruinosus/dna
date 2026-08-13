@@ -8,10 +8,7 @@ from __future__ import annotations
 
 import pytest
 
-from dna.kernel.models import (
-    DelegationTargetFor,
-    AgentSpec,
-)
+from dna.extensions.helix.models import DelegationTargetFor, AgentSpec
 
 
 def test_absent_field_parses_to_none():

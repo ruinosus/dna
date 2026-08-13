@@ -11,11 +11,7 @@ Verifica:
 """
 from __future__ import annotations
 
-from dna.kernel.models import (
-    CompositionRule,
-    LayerPolicySpec,
-    GenomeSpec,
-)
+from dna.extensions.helix.models import CompositionRule, LayerPolicySpec, GenomeSpec
 
 
 # ---------- Genome.parent_scope -----------------------------------------

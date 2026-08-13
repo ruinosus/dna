@@ -18,7 +18,7 @@ from dna.extensions.helix import (
     LayerPolicyKind,
     GenomeKind,
 )
-from dna.kernel.models import (
+from dna.extensions.helix.models import (
     LayerPolicySpec,
     GenomeSpec,
     TypedLayerPolicy,

@@ -22,7 +22,7 @@ spec:
     Medido durante a i-107, que traduziu os tres conjuntos que ERAM traduziveis (heranca de escopo, captura de evidencia, nome de evento). Este e o bloco que sobrou e nao cabia.
   type: task
   severity: medium
-  status: open
+  status: in-progress
   created_at: '2026-08-12T23:30:38+00:00'
   updated_at: '2026-08-12T23:30:38+00:00'
   timeline:
@@ -31,3 +31,19 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-08-13T11:00:05+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: in-progress
+  - at: '2026-08-13T11:00:20+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'Mapa medido antes de mover (venv PROPRIA da worktree, 89 Kinds registrados — nao a venv compartilhada de ~/projects). As 17 Typed* se separam em TRES grupos, nao um: (1) 14 tem Kind registrado e extensao dona — movidas; (2) TypedKindDefinition e bootstrap e FICA no kernel, porque kernel/kinds/registry.py, kernel/meta.py e kernel/write/namespace_gate.py PARSEIAM instancias dela (um Kind nasce de uma KindDefinition); (3) TypedTextBlock, TypedHtmlBlock e TypedHtmlTemplate nao tem Kind registrado em lugar nenhum deste repo — ''TextBlock'' in nomes-do-registry devolve False para as tres — e nenhum importador. Sao 6 classes ORFAS, nao modelos de Kind.'
+  - at: '2026-08-13T11:00:33+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'O shim de re-export proposto na ficha nao pode existir na forma direta: ''from dna.extensions.helix.models import TypedAgent'' dentro de kernel/models.py reinstala EXATAMENTE a aresta que a issue remove, e desta vez com ciclo de import real. A variante viavel seria um __getattr__ PEP 562 preguicoso, mas ele guarda no kernel uma tabela de 14 nomes de Kind -> modulo de extensao, que e o mesmo conhecimento de dominio com outra roupa. Medido: nenhum consumidor externo quebra — dna-cloud nao importa dna.kernel.models em lugar nenhum (grep em apps/ e scripts/), e o unico import fora do sdk-py e packages/cli/dna_cli/copilot_kit_cmd.py, que importa TypedKindDefinition (que fica). Decisao: sem shim.'

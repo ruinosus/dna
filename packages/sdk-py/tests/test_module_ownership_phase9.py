@@ -5,7 +5,7 @@ in Phase 9b/9c.
 """
 from __future__ import annotations
 
-from dna.kernel.models import GenomeSpec, TypedGenome
+from dna.extensions.helix.models import GenomeSpec, TypedGenome
 
 
 def test_module_spec_defaults_to_public_platform_owned():

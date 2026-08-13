@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 from dna import Kernel
 from dna.extensions.safety import SafetyPolicyKind
-from dna.kernel.models import TypedSafetyPolicy
+from dna.extensions.safety.models import TypedSafetyPolicy
 
 
 class TestSafetyPolicyRegistration:

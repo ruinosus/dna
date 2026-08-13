@@ -287,7 +287,8 @@ It demonstrates:
 - A WriterPort that serializes back to `GUARDRAIL.md`
 - Integration with Agent via `dep_filters`
 
-**1. The model** (`kernel/models.py`)
+**1. The model** (`extensions/guardrails/models.py` — the extension that
+registers the Kind owns its schema; the kernel holds none)
 
 ```python
 @dataclass

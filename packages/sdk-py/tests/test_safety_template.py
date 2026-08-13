@@ -34,7 +34,7 @@ def test_template_files_root_resolves_and_contains_safetypolicy_md() -> None:
 def test_template_safetypolicy_md_frontmatter_uses_locked_categories() -> None:
     """Template YAML frontmatter validates against the T1-locked category enum
     and the new SafetyPolicySpec.engine field round-trips through SDK parser."""
-    from dna.kernel.models import TypedSafetyPolicy
+    from dna.extensions.safety.models import TypedSafetyPolicy
 
     ext = SafetyPolicyExtension()
     tpl = ext.templates()[0]

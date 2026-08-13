@@ -11,7 +11,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING (pre-1.0):** the typed model of a Kind now lives in the extension
+  that REGISTERS that Kind, not in `dna.kernel.models` (i-109). `README.md` and
+  `AGENTS.md` promise "a microkernel that itself knows no Kinds (extensions
+  register them)", and `kernel/models.py` held **17 `Typed*` classes** — the
+  parsed schema of Agent, Skill, Soul, Guardrail, SafetyPolicy, Recognizer,
+  Hook, Genome, LayerPolicy and more — which **eleven extension files imported
+  back out of the kernel** in order to register those very Kinds. The
+  dependency pointed the wrong way.
+
+  Fourteen classes moved, plus the nine `*Spec` / value objects that only they
+  use. New import paths:
+
+  | was `dna.kernel.models` | now |
+  |---|---|
+  | `TypedGenome`/`GenomeSpec`, `TypedLayerPolicy`/`LayerPolicySpec`/`CompositionRule`, `TypedAgent`/`AgentSpec`/`VoicePersona`/`DelegationTargetFor`, `TypedActor`/`ActorSpec`, `TypedUseCase`/`UseCaseSpec` | `dna.extensions.helix.models` |
+  | `TypedSkill`/`SkillSpec` | `dna.extensions.agentskills.models` |
+  | `TypedSoul`/`SoulSpec` | `dna.extensions.soulspec.models` |
+  | `TypedAgentDefinition`/`AgentDefinitionSpec` | `dna.extensions.agentsmd.models` |
+  | `TypedGuardrail`/`GuardrailSpec` | `dna.extensions.guardrails.models` |
+  | `TypedSafetyPolicy`/`SafetyPolicySpec` | `dna.extensions.safety.models` |
+  | `TypedRecognizer`/`RecognizerSpec`/`RecognizerPattern` | `dna.extensions.recognizer.models` |
+  | `TypedHook`/`HookSpec` | `dna.extensions.hooks.models` |
+  | `TypedHtmlArtifact`/`HtmlArtifactSpec` | `dna.extensions.sdlc.models` |
+
+  **No behaviour changed and no schema changed** — the classes are byte-faithful
+  moves, the registry still boots 89 Kinds, and the generated reference is
+  unchanged. **No compatibility shim was added**, deliberately: a re-export in
+  `kernel/models.py` would reinstate the exact edge being removed (and this one
+  really is circular), and a lazy `__getattr__` variant would keep a table of
+  fourteen Kind→module names in the kernel — the same domain knowledge wearing a
+  different coat. Nothing outside `packages/sdk-py` was importing the moved
+  names.
+
+  **`TypedKindDefinition` / `KindDefinitionSpec` stay in the kernel, and that is
+  the decision, not an omission.** A Kind is BORN from a `KindDefinition`:
+  `kernel/kinds/registry.py`, `kernel/meta.py` and
+  `kernel/write/namespace_gate.py` parse instances of it, so moving it would
+  make the kernel import an extension to learn what a Kind is.
+  `dna/extensions/kinddef` continuing to import from the kernel is therefore
+  correct. Note that being a *bootstrap name* is not the argument — `Genome` and
+  `LayerPolicy` are also in `protocols.py::BOOTSTRAP_KIND_NAMES` and their
+  models moved without incident, because that constant is a load ORDER of names
+  and the kernel never imported their schemas.
+
 ### Removed
+
+- **BREAKING (pre-1.0):** removed `dna.kernel.models.TypedTextBlock`,
+  `TextBlockSpec`, `TypedHtmlBlock`, `HtmlBlockSpec`, `TypedHtmlTemplate` and
+  `HtmlTemplateSpec` — six classes for **three Kinds that are not registered
+  anywhere in this repository**. Measured while auditing i-109: `TextBlock`,
+  `HtmlBlock` and `HtmlTemplate` are each absent from `Kernel.auto()`'s 89
+  registered Kind names, no descriptor declares them, no extension registers
+  them, and nothing in the tree imports the classes. They were shipped as models
+  for Kinds that never arrived.
+
+  A registry-driven check could never have named them — that is exactly why the
+  ratchet grew a second, prefix-based sweep alongside the derived one
+  (`tests/test_kind_name_literal_ratchet.py`). If these Kinds are wanted, they
+  should arrive the way every other Kind does: a descriptor plus an extension
+  that registers them, owning its own model.
 
 - **BREAKING (pre-1.0):** removed `dna.runtime.roi`, the reading that crossed a
   turn's token cost with the declared outcome, the human's acceptance and a

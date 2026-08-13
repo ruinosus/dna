@@ -274,7 +274,7 @@ class TestHookTargetIsAHookPointNotAKind:
         )
         # The model's default lives on HookSpec, not in the synthesized schema,
         # so read it where it is authored.
-        from dna.kernel.models import HookSpec
+        from dna.extensions.hooks.models import HookSpec
         assert HookSpec().target in KNOWN_HOOK_NAMES
         assert isinstance(default, dict)  # the property exists at all
 

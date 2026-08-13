@@ -9,7 +9,7 @@ from typing import Any
 
 from dna._yaml import safe_load
 from dna.kernel.kinds.base import KindBase
-from dna.kernel.models import TypedSkill
+from dna.extensions.agentskills.models import TypedSkill
 from dna.kernel.preview import PreviewBlock
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor, ReaderPort, WriterPort
 from dna.kernel.bundle.handle import BundleHandle

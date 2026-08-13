@@ -1,7 +1,7 @@
 """Round-trip tests for ml-privacy-filter SafetyPolicySpec fields (Phase 7 T5)."""
 from __future__ import annotations
 
-from dna.kernel.models import SafetyPolicySpec, TypedSafetyPolicy
+from dna.extensions.safety.models import SafetyPolicySpec, TypedSafetyPolicy
 
 
 def test_ml_privacy_filter_engine_round_trips() -> None:

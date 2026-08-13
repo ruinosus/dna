@@ -1984,7 +1984,7 @@ class HtmlArtifactKind(KindBase):
         }
 
     def parse(self, raw: dict[str, Any]) -> Any:
-        from dna.kernel.models import TypedHtmlArtifact
+        from dna.extensions.sdlc.models import TypedHtmlArtifact
         return TypedHtmlArtifact.from_raw(raw)
 
     def summary(self, doc: Any) -> dict[str, Any] | None:

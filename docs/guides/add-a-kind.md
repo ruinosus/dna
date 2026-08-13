@@ -328,8 +328,11 @@ Choose based on the shape of your spec:
 
 When your spec has structured fields, define a dataclass-based typed
 model. The canonical Kinds use this: `TypedSkill`, `TypedSoul`,
-`TypedGenome`, `TypedAgent`, `TypedActor` (see
-`dna/kernel/models.py`).
+`TypedGenome`, `TypedAgent`, `TypedActor` — and each one lives in the
+extension that REGISTERS its Kind (`dna/extensions/agentskills/models.py`,
+`dna/extensions/soulspec/models.py`, `dna/extensions/helix/models.py`),
+never in `dna/kernel/models.py`. The kernel knows no Kinds (i-109); import
+`Metadata` from it and nothing else.
 
 ```python
 from dataclasses import dataclass

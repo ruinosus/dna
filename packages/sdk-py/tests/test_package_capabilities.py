@@ -1,6 +1,6 @@
 """i-112 catalog ph2 — capability manifest no GenomeSpec."""
 import dataclasses
-from dna.kernel.models import GenomeSpec
+from dna.extensions.helix.models import GenomeSpec
 
 def test_default_empty():
     assert GenomeSpec().capabilities == []

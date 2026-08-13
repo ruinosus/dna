@@ -1,5 +1,5 @@
 """i-112 catalog ph1 — mandatory + global_scope no GenomeSpec (OQ1)."""
-from dna.kernel.models import GenomeSpec
+from dna.extensions.helix.models import GenomeSpec
 
 def test_defaults_false():
     s = GenomeSpec()

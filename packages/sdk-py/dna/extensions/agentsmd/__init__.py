@@ -16,7 +16,7 @@ from typing import Any
 import yaml
 
 from dna._yaml import safe_load
-from dna.kernel.models import TypedAgentDefinition
+from dna.extensions.agentsmd.models import TypedAgentDefinition
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.preview import PreviewBlock
 from dna.kernel.protocols import ExtensionHost, StorageDescriptor, ReaderPort, WriterPort

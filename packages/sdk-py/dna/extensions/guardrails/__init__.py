@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from dna.kernel.models import TypedGuardrail
+from dna.extensions.guardrails.models import TypedGuardrail
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.preview import PreviewBlock
 from dna.kernel.protocols import ExtensionHost, BodyMode, StorageDescriptor
