@@ -1,11 +1,12 @@
 apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Story
 metadata:
+  id: kwyksockk6ow
   name: s-console-rest-seed
 spec:
   title: Portfolio console REST endpoints + demo seed
   description: Add thin REST read-endpoints for the portfolio console and seed the demo portfolio so the portal shows real data.
-  status: review
+  status: done
   feature: f-console-backend
   priority: high
   labels:
@@ -14,14 +15,23 @@ spec:
   - seed
   reporter: claude-code
   acceptance_criteria:
-  - Given the DNA REST API booted for tenant demo, when the console GETs /v1/orgs, /v1/projects, /v1/projects/{slug}, /v1/repos, /v1/board?scope=dna-development and /v1/insights?source=dna, then each returns the seeded portfolio data (project detail resolves repo_refs→Repo docs; board returns the REAL dna-development counts-by-status + recent; insights filter isolates the dna source).
-  - Given the intel /v1/insights endpoint, when ?source=<name> is passed, then only that source's insights are returned (alias of source_ref).
+  - text: Given the DNA REST API booted for tenant demo, when the console GETs /v1/orgs, /v1/projects, /v1/projects/{slug}, /v1/repos, /v1/board?scope=dna-development and /v1/insights?source=dna, then each returns the seeded portfolio data (project detail resolves repo_refs→Repo docs; board returns the REAL dna-development counts-by-status + recent; insights filter isolates the dna source).
+    done: true
+    done_at: '2026-08-13T15:00:00+00:00'
+    done_by: story-done-auto
+  - text: Given the intel /v1/insights endpoint, when ?source=<name> is passed, then only that source's insights are returned (alias of source_ref).
+    done: true
+    done_at: '2026-08-13T15:00:00+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: claude-code
   definition_of_done:
-  - New endpoints are thin adapters delegating to dna.application impls (adr-faces-reorg); REST tests added mirroring the intel ones; sdk-py + cli suites green; brand_guard + docs_coverage_guard clean; CLI reference regenerated; demo portfolio docs + dna IntelSource + DNA insights committed under .dna/tenants/demo/.
+  - text: New endpoints are thin adapters delegating to dna.application impls (adr-faces-reorg); REST tests added mirroring the intel ones; sdk-py + cli suites green; brand_guard + docs_coverage_guard clean; CLI reference regenerated; demo portfolio docs + dna IntelSource + DNA insights committed under .dna/tenants/demo/.
+    done: true
+    done_at: '2026-08-13T15:00:00+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-13T12:24:04+00:00'
-  updated_at: '2026-07-13T12:27:12+00:00'
+  updated_at: '2026-08-13T15:03:42+00:00'
   timeline:
   - at: '2026-07-13T12:24:04+00:00'
     actor: claude-code
@@ -78,6 +88,24 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-08-13T15:00:30+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'TRIAGEM: ''sem PR aberto'' significava FECHADO, nao nunca-aberto. Verificado no codigo, nao no YAML. Rotas vivas em packages/cli/dna_cli/_rest_api.py: :2987 /v1/orgs, :2995 /v1/projects, :3004 /v1/projects/{slug}, :3116 /v1/repos, :3124 /v1/board — todas registradas em build_app com dependencies=guarded (porta ligada, nao so seam). Alias ?source: _rest_api.py:2928-2943 (source_ref or source). Seed presente em .dna/tenants/demo/scopes/dna-development/{organizations,repos,projects,intel-sources,intel-insights}/ + scripts/seed_portfolio_demo.py.'
+  - at: '2026-08-13T15:02:40+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'TRIAGEM 13/08: ''sem PR aberto'' significava FECHADO, nao nunca-aberto. Verificado no CODIGO, nao no YAML. Rotas vivas em packages/cli/dna_cli/_rest_api.py: :2987 /v1/orgs, :2995 /v1/projects, :3004 /v1/projects/{slug}, :3116 /v1/repos, :3124 /v1/board — todas registradas em build_app com dependencies=guarded (porta ligada, nao so seam). Alias ?source: _rest_api.py:2928-2943 (source_ref or source). Seed presente em .dna/tenants/demo/scopes/dna-development/{organizations,repos,projects,intel-sources,intel-insights}/ + scripts/seed_portfolio_demo.py. EXCECAO DE TESTE REGISTRADA: --allow-no-tests porque o smoke de produto ja existiu no fluxo original (tg-console-rest-seed / tr-...-20260713-122527 outcome=pass, no produces[] desta ficha) e o PR merjou com CI verde; esta e uma triagem retroativa, nao uma entrega nova.'
+  - at: '2026-08-13T15:03:42+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: b3c44ec668ab7f576e9e7c9a1f17c174ea22fdd2
+    summary: 'PR #103 MERJADO em 13/07/2026 — a ficha nunca foi fechada (triagem 13/08).'
   produces:
   - kind: Plan
     name: plan-s-console-rest-seed
@@ -91,3 +119,4 @@ spec:
     name: tr-tg-console-rest-seed-20260713-122527
     role: test-run
     at: '2026-07-13T12:25:31+00:00'
+  closed_at: '2026-08-13T15:02:21+00:00'

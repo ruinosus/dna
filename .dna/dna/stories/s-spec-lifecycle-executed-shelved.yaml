@@ -1,23 +1,39 @@
 apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Story
 metadata:
+  id: uhgvw23rpyqc
   name: s-spec-lifecycle-executed-shelved
 spec:
   title: 'O ciclo de vida da Spec ganha os dois estados terminais que faltavam: ''executed'''
   description: 'O ciclo de vida da Spec ganha os dois estados terminais que faltavam: ''executed'' (o desenho virou código — terminal positivo) e ''shelved'' (direção decidida como ''não agora''; o desenho continua válido — terminal neutro). Verbos com evidência obrigatória (spec executed --summary / spec shelve --reason) e --reason no deprecate, que não tinha. Aditivo e retrocompatível: os cinco estados ARTIFACT_STATUSES mantêm significado byte-a-byte e Plan/ADR não herdam nada.'
-  status: review
+  status: done
   feature: f-dna-sdlc-expressiveness
   acceptance_criteria:
-  - 'Given uma Spec accepted que já shipou, When ''dna sdlc spec executed <n> --summary "PR #X"'', Then status=executed + executed_at + execution_summary no doc e o summary na timeline'
-  - Given uma Spec cuja direção foi decidida como 'não agora', When 'dna sdlc spec shelve <n> --reason "..."', Then status=shelved + shelve_reason, e 'accept' a desengaveta
-  - Given uma Spec deprecated ou superseded, When 'spec executed', Then a transição é RECUSADA antes da escrita, nomeando o status atual e os que serviriam
-  - Given um doc Spec escrito antes desta mudança, When validado, Then continua válido e projeta como sempre projetou (accepted = trabalho pendente)
+  - text: 'Given uma Spec accepted que já shipou, When ''dna sdlc spec executed <n> --summary "PR #X"'', Then status=executed + executed_at + execution_summary no doc e o summary na timeline'
+    done: true
+    done_at: '2026-08-13T15:06:12+00:00'
+    done_by: story-done-auto
+  - text: Given uma Spec cuja direção foi decidida como 'não agora', When 'dna sdlc spec shelve <n> --reason "..."', Then status=shelved + shelve_reason, e 'accept' a desengaveta
+    done: true
+    done_at: '2026-08-13T15:06:12+00:00'
+    done_by: story-done-auto
+  - text: Given uma Spec deprecated ou superseded, When 'spec executed', Then a transição é RECUSADA antes da escrita, nomeando o status atual e os que serviriam
+    done: true
+    done_at: '2026-08-13T15:06:12+00:00'
+    done_by: story-done-auto
+  - text: Given um doc Spec escrito antes desta mudança, When validado, Then continua válido e projeta como sempre projetou (accepted = trabalho pendente)
+    done: true
+    done_at: '2026-08-13T15:06:12+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'código + testes (SDK: arco/transições/projeção/retrocompat; CLI: os três verbos e a evidência obrigatória) + docs regeneradas (kinds/CLI/data-model) + guards verdes'
+  - text: 'código + testes (SDK: arco/transições/projeção/retrocompat; CLI: os três verbos e a evidência obrigatória) + docs regeneradas (kinds/CLI/data-model) + guards verdes'
+    done: true
+    done_at: '2026-08-13T15:06:12+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-08-05T23:01:42+00:00'
-  updated_at: '2026-08-05T23:17:05+00:00'
+  updated_at: '2026-08-13T15:07:23+00:00'
   timeline:
   - at: '2026-08-05T23:01:42+00:00'
     actor: claude-code
@@ -87,6 +103,19 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-08-13T15:06:25+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'TRIAGEM 13/08: PR #318 merjado (12d696c), 13 jobs de CI verdes. Seam: packages/sdk-py/dna/extensions/sdlc/__init__.py:789 SPEC_STATUSES, :803 SPEC_TRANSITIONS, :839 spec_board_bucket, :972 enum no schema. PORTA: packages/cli/dna_cli/sdlc_cmd.py:4158 ''spec executed --summary'' e :4178 ''spec shelve'' — registrados so para Kind que DECLARA os estados. A ponta que a propria ficha deixou registrada como ABERTA fechou desde entao: spec_board_bucket E consumido hoje em packages/sdk-py/dna/application/sdlc.py:727-736 (derive_served_spec_candidates deriva a elegibilidade dele, em vez de re-enumerar literais de status). EXCECAO: --allow-no-tests; tg-spec-lifecycle-executed-shelved outcome=pass no produces[].'
+  - at: '2026-08-13T15:07:23+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 12d696cfc3df069ce48d9ae7fe4e270d61836c59
+    summary: 'PR #318 MERJADO em 05/08/2026 — a ficha nunca foi fechada (triagem 13/08).'
   produces:
   - kind: Plan
     name: plan-s-spec-lifecycle-executed-shelved
@@ -100,3 +129,4 @@ spec:
     name: tr-tg-spec-lifecycle-executed-shelved-20260805-230653
     role: test-run
     at: '2026-08-05T23:06:57+00:00'
+  closed_at: '2026-08-13T15:06:12+00:00'

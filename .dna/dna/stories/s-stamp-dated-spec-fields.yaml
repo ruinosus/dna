@@ -1,22 +1,35 @@
 apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Story
 metadata:
+  id: mb2gnzxhjajc
   name: s-stamp-dated-spec-fields
 spec:
   title: Every work-item write path stamps the spec fields a read surface dates by — Issu
   description: Every work-item write path stamps the spec fields a read surface dates by — Issue was invisible in the digest's 'found' bucket because build_issue_spec and cmd_issue_file never wrote created_at (i-078). Fix at the source, backfill the existing boards, and add a guard so the class cannot recur.
-  status: review
+  status: done
   feature: f-sdlc-digest
   acceptance_criteria:
-  - Given an Issue filed via the MCP create_issue tool or the dna sdlc issue file CLI, When it is written, Then spec.created_at and spec.updated_at are stamped and a title may be supplied
-  - Given a board whose Issues predate the fix, When the backfill runs, Then each Issue's created_at is derived from an honest historical signal (first timeline event, else git first-commit date of the file), never from 'now'
-  - Given a work-item builder that omits a spec field a read surface dates/sorts/filters by, When the test suite runs, Then a guard fails naming the Kind and the field
+  - text: Given an Issue filed via the MCP create_issue tool or the dna sdlc issue file CLI, When it is written, Then spec.created_at and spec.updated_at are stamped and a title may be supplied
+    done: true
+    done_at: '2026-08-13T15:07:40+00:00'
+    done_by: story-done-auto
+  - text: Given a board whose Issues predate the fix, When the backfill runs, Then each Issue's created_at is derived from an honest historical signal (first timeline event, else git first-commit date of the file), never from 'now'
+    done: true
+    done_at: '2026-08-13T15:07:40+00:00'
+    done_by: story-done-auto
+  - text: Given a work-item builder that omits a spec field a read surface dates/sorts/filters by, When the test suite runs, Then a guard fails naming the Kind and the field
+    done: true
+    done_at: '2026-08-13T15:07:40+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - code+tests (RED then GREEN)+guard proven to bite+docs regenerated+both boards backfilled+PRs opened in dna and dna-cloud
+  - text: code+tests (RED then GREEN)+guard proven to bite+docs regenerated+both boards backfilled+PRs opened in dna and dna-cloud
+    done: true
+    done_at: '2026-08-13T15:07:40+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-26T12:03:41+00:00'
-  updated_at: '2026-07-26T12:40:16+00:00'
+  updated_at: '2026-08-13T15:08:15+00:00'
   timeline:
   - at: '2026-07-26T12:03:41+00:00'
     actor: claude-code
@@ -67,6 +80,19 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-08-13T15:07:54+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'TRIAGEM 13/08: PR #241 merjado (04796f6) + o par de dados em dna-cloud#153. AC1: packages/sdk-py/dna/application/sdlc.py:872 build_issue_spec, :905 spec[''created_at'']=now; porta CLI em packages/cli/dna_cli/sdlc_cmd.py:2841 cmd_issue_file. AC3 (o guard — o item que impede a classe de voltar): packages/sdk-py/tests/test_dated_spec_fields.py:57 test_core_builder_stamps_every_dated_field parametrizado por Kind + :72 test_every_core_built_kind_is_declared, que nomeia Kind e campo. Backfill honesto provado em :126 (primeira entrada da timeline, nunca ''now''); CLI em packages/cli/tests/test_backfill_dates_cli.py. EXCECAO: --allow-no-tests; tg-dated-spec-fields outcome=pass no produces[].'
+  - at: '2026-08-13T15:08:15+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 04796f654706a6d73a1f9fa6a61cad295996a127
+    summary: 'PR #241 MERJADO em 26/07/2026 (+ dna-cloud #153) — a ficha nunca foi fechada (triagem 13/08).'
   produces:
   - kind: Plan
     name: plan-s-stamp-dated-spec-fields
@@ -80,3 +106,4 @@ spec:
     name: tr-tg-dated-spec-fields-20260726-123337
     role: test-run
     at: '2026-07-26T12:33:42+00:00'
+  closed_at: '2026-08-13T15:07:40+00:00'

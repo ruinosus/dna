@@ -1,6 +1,7 @@
 apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Spike
 metadata:
+  id: ntafdz4yaksn
   name: sp-faces-reorg
 spec:
   title: Reorg das faces DNA (CLI/MCP/REST catchall → hexagonal)
@@ -30,6 +31,11 @@ spec:
     type: comment
     source: cli
     summary: 'Pesquisa (wf_af29628b-a68, 95 agentes, 22/25 claims verificados) VOLTOU. Veredito hexagonal inequivoco: (1) a application layer/_impl vai pro CORE, faces (CLI/MCP/REST) viram adapters finos; (2) shipar dna-mcp/dna-api como distribuicoes SEPARADAS versionadas em lockstep — NAO extras (so gateiam deps) NAO na CLI (arrasta uvicorn/starlette); (3) 1 uvicorn por container ACA. MOVIMENTO No1 = extrair _impl da CLI pro core (load-bearing); split das faces e follow-up mecanico. Migracao incremental com shims (dna mcp/api serve nunca quebra), sem big-bang. Rsh: rsh-faces-reorg.'
+  - at: '2026-08-13T15:15:16+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'TRIAGEM 13/08 (fato para a resposta do founder, sem decidir por ele). O movimento #1 do adr-faces-reorg FECHOU: dna.application existe e as duas faces consomem o core (PR #94, story s-faces-extract-app-layer, fechada hoje). O movimento #2 NAO aconteceu, e a realidade andou para o lado que a pesquisa recusou: o adr-faces-reorg, que esta ACCEPTED, diz no item 4 ''NAO usar extras (pip install dna-cli[mcp])'' — e packages/cli/pyproject.toml:33 declara justamente os extras [mcp] e [api], que sao o que o dna-cloud instala hoje nas apps mcp/rest. Ou seja: ha um ADR aceito que o codigo contradiz. A pergunta que resta para o Barna e binaria: fazer o split em dna-mcp/dna-api e migrar o dna-cloud, OU emendar o ADR aceito para bendizer os extras. Nao mexi em nenhum dos dois.'
   research_refs:
   - rsh-faces-reorg
   follow_up_adr: adr-faces-reorg

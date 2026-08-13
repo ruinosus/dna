@@ -1,23 +1,39 @@
 apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Story
 metadata:
+  id: bxkt2lvf7rrf
   name: s-dna-explain-provenance
 spec:
   title: dna explain — per-section prompt provenance
   description: 'Ship ''dna explain <agent>'' + build_prompt(explain=True): composed prompt PLUS section provenance map (source file, hash, version, layer/overlay origin), byte-equal gate. Ref sp-exp-provenance.'
-  status: review
+  status: done
   feature: f-dna-cloud-intelligence
   acceptance_criteria:
-  - Given an agent, When build_prompt(explain=True), Then it returns the prompt plus a per-section provenance map and the prompt is byte-identical to plain build_prompt.
-  - Given a tenant overlay wins a layer, When dna explain runs, Then the row is marked OVERRIDDEN by tenant overlay.
+  - text: Given an agent, When build_prompt(explain=True), Then it returns the prompt plus a per-section provenance map and the prompt is byte-identical to plain build_prompt.
+    done: true
+    done_at: '2026-08-13T15:13:23+00:00'
+    done_by: story-done-auto
+  - text: Given a tenant overlay wins a layer, When dna explain runs, Then the row is marked OVERRIDDEN by tenant overlay.
+    done: true
+    done_at: '2026-08-13T15:13:23+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: claude-code
   definition_of_done:
-  - 'Code: explain API in prompt builder (Py+TS parity) + dna explain CLI.'
-  - 'Tests: Py+TS cover explain map + byte-equality gate + overlay marker.'
-  - 'Docs: docs/reference regenerated + cli-tour prose; docs_coverage + brand guards clean.'
+  - text: 'Code: explain API in prompt builder (Py+TS parity) + dna explain CLI.'
+    done: true
+    done_at: '2026-08-13T15:13:23+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: Py+TS cover explain map + byte-equality gate + overlay marker.'
+    done: true
+    done_at: '2026-08-13T15:13:23+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: docs/reference regenerated + cli-tour prose; docs_coverage + brand guards clean.'
+    done: true
+    done_at: '2026-08-13T15:13:23+00:00'
+    done_by: story-done-auto
   definition_of_done_source: claude-code
   created_at: '2026-07-13T11:02:55+00:00'
-  updated_at: '2026-07-13T11:49:06+00:00'
+  updated_at: '2026-08-13T15:13:36+00:00'
   timeline:
   - at: '2026-07-13T11:02:55+00:00'
     actor: claude-code
@@ -42,8 +58,22 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-08-13T15:13:27+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'TRIAGEM 13/08: a ficha nao citava PR nenhum e apontava commit_ref 74dbb755, que NAO e ancestral de HEAD e nem e o commit desta story (''fix(compose): inline referenced Skills''). O commit real e cf5a47d5, PR #102 ''feat(compose): Skills compose into build_prompt + dna explain provenance (i-031, s-dna-explain-provenance)'', merjado. Seam: packages/sdk-py/dna/kernel/manifest.py:838 explain_prompt (+ :864 explain_prompt_async). PORTA: packages/cli/dna_cli/explain_cmd.py, ligada em dna_cli/__init__.py:25 e :133 main.add_command(explain_cmd.explain) — ''dna explain <agent>'' e alcancavel. Testes: sdk-py/tests/test_explain_provenance.py, cli/tests/test_explain_cmd.py (o gate byte-equal), cli/tests/test_compose_explain.py. OBSOLESCENCIA PARCIAL do DoD: a metade ''Py+TS parity'' morreu com o congelamento de packages/sdk-ts em 341e5174 (#180). ROT DE DOC DEIXADO PARA QUEM DECIDE (nao consertei — isto e triagem): docs/guides/cli-tour.md:528 ainda oferece ''mi.explainPrompt({agent})'' (TS) numa API que nao existe mais. EXCECAO: --allow-no-tests, story de 12/07 sem smoke de produto no fluxo original.'
+  - at: '2026-08-13T15:13:36+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: cf5a47d5478eec0ca2f52975a01c36720085b3c1
+    summary: 'PR #102 MERJADO (cf5a47d5) — a ficha nunca foi fechada, e o commit_ref que ela carregava estava ERRADO (triagem 13/08).'
   produces:
   - kind: Plan
     name: plan-s-dna-explain-provenance
     role: implementation
     at: '2026-07-13T11:03:27+00:00'
+  closed_at: '2026-08-13T15:13:23+00:00'

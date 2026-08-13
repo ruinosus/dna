@@ -1,11 +1,12 @@
 apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Story
 metadata:
+  id: 3coxqo6dinfk
   name: s-serving-seams-for-apps
 spec:
   title: 'Seams públicos pra apps out-of-tree comporem serving sem arquivo: build_rest_app'
   description: 'Seams públicos pra apps out-of-tree comporem serving sem arquivo: build_rest_app(auth_providers) + dna.migrations; + fixes de runtime que o dna-cloud precisa'
-  status: review
+  status: done
   feature: f-copilot-mcp-apps
   priority: high
   labels:
@@ -14,15 +15,27 @@ spec:
   - runtime
   reporter: claude-code
   acceptance_criteria:
-  - Dado que build_rest_app(auth=config) só montava o verifier lendo dna.config.yaml de disco (file I/O no core) e escondia _multi_provider_verifier no privado, quando esta story fecha, então build_rest_app aceita auth_providers (mappings ou ProviderConfig) e constrói o verifier internamente SEM I/O de arquivo, e a CLI (api_cmd) lê o arquivo e passa auth_providers — a CLI é UM consumidor, não o caminho
-  - Dado que run_migrations vivia escondido em dna.adapters._migrations, quando esta story fecha, então dna.migrations expõe o motor como seam público NEUTRO (zero menção a consumidor), consumível por dna-cloud e futuros DNA Live/Marketplace, cada um com sua própria control table
-  - Dado o copiloto do dna-cloud, quando ele roda contra o runtime, então mcp_tools resolve multi-workspace pelo PATH da URL e langchain_rt/maf_rt honram DNA_MCP_URL do ambiente (endpoint é config de deploy, não declarativo)
+  - text: Dado que build_rest_app(auth=config) só montava o verifier lendo dna.config.yaml de disco (file I/O no core) e escondia _multi_provider_verifier no privado, quando esta story fecha, então build_rest_app aceita auth_providers (mappings ou ProviderConfig) e constrói o verifier internamente SEM I/O de arquivo, e a CLI (api_cmd) lê o arquivo e passa auth_providers — a CLI é UM consumidor, não o caminho
+    done: true
+    done_at: '2026-08-13T15:13:06+00:00'
+    done_by: story-done-auto
+  - text: Dado que run_migrations vivia escondido em dna.adapters._migrations, quando esta story fecha, então dna.migrations expõe o motor como seam público NEUTRO (zero menção a consumidor), consumível por dna-cloud e futuros DNA Live/Marketplace, cada um com sua própria control table
+    done: true
+    done_at: '2026-08-13T15:13:06+00:00'
+    done_by: story-done-auto
+  - text: Dado o copiloto do dna-cloud, quando ele roda contra o runtime, então mcp_tools resolve multi-workspace pelo PATH da URL e langchain_rt/maf_rt honram DNA_MCP_URL do ambiente (endpoint é config de deploy, não declarativo)
+    done: true
+    done_at: '2026-08-13T15:13:06+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - testes do SDK verdes (serving public api + schema migrations contract), o seam público re-exporta o runner real, e o dna-cloud consome sem arquivo
+  - text: testes do SDK verdes (serving public api + schema migrations contract), o seam público re-exporta o runner real, e o dna-cloud consome sem arquivo
+    done: true
+    done_at: '2026-08-13T15:13:06+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-23T14:19:36+00:00'
-  updated_at: '2026-07-23T14:44:08+00:00'
+  updated_at: '2026-08-13T15:13:20+00:00'
   timeline:
   - at: '2026-07-23T14:19:36+00:00'
     actor: claude-code
@@ -53,8 +66,22 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-08-13T15:13:12+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'TRIAGEM 13/08: PR #218 merjado (4ebb30c). AC1: a fachada publica e packages/cli/dna_cli/serving.py; _rest_api.py:309 aceita auth_providers e :709-727 constroi o verifier SEM I/O de arquivo, recusando explicitamente auth=''config'' sem providers; a CLI e UM consumidor — api_cmd.py:130 le o arquivo e passa auth_providers=. AC2: packages/sdk-py/dna/migrations.py e seam publico NEUTRO (a docstring proibe conhecer consumidor; cada um traz sua control table). AC3: packages/sdk-py/dna/runtime/mcp_tools.py:33 _workspace_scoped_path resolve multi-workspace pelo PATH (/mcp -> /w/<ws>/mcp, idempotente), e runtime/adapters/langchain_rt.py:125 + maf_rt.py:179 honram DNA_MCP_URL do ambiente. Teste: packages/cli/tests/test_serving_public_api.py. EXCECAO: --allow-no-tests — o smoke de produto destes seams e o dna-cloud consumindo-os file-free, o que ele faz em producao desde o cutover do monolito.'
+  - at: '2026-08-13T15:13:20+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 4ebb30c110dd85e03e9c513ce9db229b067a34ea
+    summary: 'PR #218 MERJADO em 23/07/2026 — a ficha nunca foi fechada (triagem 13/08).'
   produces:
   - kind: Plan
     name: plan-s-serving-seams-for-apps
     role: implementation
     at: '2026-07-23T14:19:49+00:00'
+  closed_at: '2026-08-13T15:13:06+00:00'

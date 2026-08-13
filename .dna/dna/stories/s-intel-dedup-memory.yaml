@@ -1,11 +1,12 @@
 apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Story
 metadata:
+  id: voayauac2awx
   name: s-intel-dedup-memory
 spec:
   title: 'Nunca mostrar o mesmo insight duas vezes: dedup semântico do candidato contra a '
   description: 'Nunca mostrar o mesmo insight duas vezes: dedup semântico do candidato contra a memória (LessonLearned) do que já foi surfado/agido/dispensado — repetição é a fonte #1 de ruído.'
-  status: review
+  status: done
   feature: f-dna-cloud-intelligence
   priority: high
   labels:
@@ -15,17 +16,35 @@ spec:
   reporter: claude-code
   business_value: 700
   acceptance_criteria:
-  - 'Cada insight surfado é gravado na memória (co-pillar) com estado: surfado | agido | dispensado.'
-  - Candidato novo é matcheado semanticamente contra o histórico; duplicata (mesmo tema/mesma ação) é dropada antes da entrega.
-  - Insight já 'agido' ou 'dispensado' pelo usuário NUNCA reaparece (a não ser que o contexto mude materialmente).
+  - text: 'Cada insight surfado é gravado na memória (co-pillar) com estado: surfado | agido | dispensado.'
+    done: true
+    done_at: '2026-08-13T15:10:30+00:00'
+    done_by: story-done-auto
+  - text: Candidato novo é matcheado semanticamente contra o histórico; duplicata (mesmo tema/mesma ação) é dropada antes da entrega.
+    done: true
+    done_at: '2026-08-13T15:10:30+00:00'
+    done_by: story-done-auto
+  - text: Insight já 'agido' ou 'dispensado' pelo usuário NUNCA reaparece (a não ser que o contexto mude materialmente).
+    done: true
+    done_at: '2026-08-13T15:10:30+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Dedup testado: rodar 2x o mesmo research → 2ª vez entrega 0 insights novos.'
-  - Tenant-isolado (usa o co-pillar de memória, respeita o Tier memory_mode).
-  - 'Métrica: taxa de dedup por pass.'
+  - text: 'Dedup testado: rodar 2x o mesmo research → 2ª vez entrega 0 insights novos.'
+    done: true
+    done_at: '2026-08-13T15:10:30+00:00'
+    done_by: story-done-auto
+  - text: Tenant-isolado (usa o co-pillar de memória, respeita o Tier memory_mode).
+    done: true
+    done_at: '2026-08-13T15:10:30+00:00'
+    done_by: story-done-auto
+  - text: 'Métrica: taxa de dedup por pass.'
+    done: true
+    done_at: '2026-08-13T15:10:30+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-12T13:39:03+00:00'
-  updated_at: '2026-07-12T19:14:03+00:00'
+  updated_at: '2026-08-13T15:11:04+00:00'
   timeline:
   - at: '2026-07-12T13:39:03+00:00'
     actor: claude-code
@@ -55,8 +74,22 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-08-13T15:10:41+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'TRIAGEM 13/08: PR #91 merjado (602f1a1). Seam: packages/sdk-py/dna/extensions/intel/dedup.py (normalized_key + insight_text + dedup_partition). PORTA: ligado no motor, nao pendurado — engine.py:29 importa e engine.py:265-267 chama _dedup_candidates no passo 4 de run_pass, ou seja todo pass passa por ele. Metrica: engine.py:123 dedup_rate + :138 no dict do PassResult. Teste do criterio central (rodar 2x -> 0 novos): packages/sdk-py/tests/test_intel_dedup_feedback.py. EXCECAO: --allow-no-tests — o criterio de aceite E um teste automatizado (''rodar 2x o mesmo research''), verde no CI do PR; nao ha superficie humana a fumegar alem do /v1/insights ja coberto pela story irma.'
+  - at: '2026-08-13T15:11:04+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 602f1a181f8ab406524e6657e53a1579e746da10
+    summary: 'PR #91 MERJADO em 12/07/2026 — a ficha nunca foi fechada (triagem 13/08).'
   produces:
   - kind: Plan
     name: plan-s-intel-dedup-memory
     role: implementation
     at: '2026-07-12T18:53:26+00:00'
+  closed_at: '2026-08-13T15:10:30+00:00'

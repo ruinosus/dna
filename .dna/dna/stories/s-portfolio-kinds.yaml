@@ -1,11 +1,12 @@
 apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Story
 metadata:
+  id: qpf5hx5q6q4w
   name: s-portfolio-kinds
 spec:
   title: 5 portfolio record Kinds as descriptors (byte-identical Py↔TS)
   description: Ship Organization/Project/Repo/Membership/Role as a new portfolio extension of F3 descriptor Kinds, per adr-portfolio-project-model.
-  status: review
+  status: done
   feature: f-portfolio-kinds
   priority: high
   labels:
@@ -16,19 +17,43 @@ spec:
   - portfolio
   business_value: 800
   acceptance_criteria:
-  - Given the portfolio extension is registered (entry-point + TS bootstrap), when Kernel.auto()/loadBuiltins run, then Organization/Project/Repo/Membership/Role register as record-plane, TENANTED, declarative Kinds with aliases portfolio-org/project/repo/membership/role and closed schemas (additionalProperties:false)
-  - Given the 5 descriptors, when hashed, then the Py and TS kinds/*.kind.yaml are byte-identical (test_descriptor_hash_parity + TS twin green)
-  - 'Given Project, when inspected, then it is the multi-repo container: repo_refs carries the N—N edge (Repo has no project back-ref) and it owns board_scope + intel_source_refs'
-  - Given Role is data, when the 4 seed docs (owner/admin/member/guest) are loaded, then they validate against the Role schema and form a strictly-ordered ladder
+  - text: Given the portfolio extension is registered (entry-point + TS bootstrap), when Kernel.auto()/loadBuiltins run, then Organization/Project/Repo/Membership/Role register as record-plane, TENANTED, declarative Kinds with aliases portfolio-org/project/repo/membership/role and closed schemas (additionalProperties:false)
+    done: true
+    done_at: '2026-08-13T15:11:58+00:00'
+    done_by: story-done-auto
+  - text: Given the 5 descriptors, when hashed, then the Py and TS kinds/*.kind.yaml are byte-identical (test_descriptor_hash_parity + TS twin green)
+    done: true
+    done_at: '2026-08-13T15:11:58+00:00'
+    done_by: story-done-auto
+  - text: 'Given Project, when inspected, then it is the multi-repo container: repo_refs carries the N—N edge (Repo has no project back-ref) and it owns board_scope + intel_source_refs'
+    done: true
+    done_at: '2026-08-13T15:11:58+00:00'
+    done_by: story-done-auto
+  - text: Given Role is data, when the 4 seed docs (owner/admin/member/guest) are loaded, then they validate against the Role schema and form a strictly-ordered ladder
+    done: true
+    done_at: '2026-08-13T15:11:58+00:00'
+    done_by: story-done-auto
   acceptance_criteria_source: cli-create
   definition_of_done:
-  - 'Code: portfolio extension (Py __init__ + TS class) + 5 descriptors + 4 seed Role docs; registered in pyproject entry-point + bootstrap loadBuiltins'
-  - 'Tests: test_portfolio_kinds.py + portfolio-extension.test.ts green; guards green (descriptor-hash-parity, ratchet, strict-schema-lint, inheritable-kinds-tenancy)'
-  - 'Docs: Portfolio section in docs/concepts/builtin-kinds.md; docs/reference/** regenerated; brand-guard + docs-coverage clean'
-  - 'CI: all guards green; PR opened off feat/portfolio-kinds'
+  - text: 'Code: portfolio extension (Py __init__ + TS class) + 5 descriptors + 4 seed Role docs; registered in pyproject entry-point + bootstrap loadBuiltins'
+    done: true
+    done_at: '2026-08-13T15:11:58+00:00'
+    done_by: story-done-auto
+  - text: 'Tests: test_portfolio_kinds.py + portfolio-extension.test.ts green; guards green (descriptor-hash-parity, ratchet, strict-schema-lint, inheritable-kinds-tenancy)'
+    done: true
+    done_at: '2026-08-13T15:11:58+00:00'
+    done_by: story-done-auto
+  - text: 'Docs: Portfolio section in docs/concepts/builtin-kinds.md; docs/reference/** regenerated; brand-guard + docs-coverage clean'
+    done: true
+    done_at: '2026-08-13T15:11:58+00:00'
+    done_by: story-done-auto
+  - text: 'CI: all guards green; PR opened off feat/portfolio-kinds'
+    done: true
+    done_at: '2026-08-13T15:11:58+00:00'
+    done_by: story-done-auto
   definition_of_done_source: cli-create
   created_at: '2026-07-12T23:14:17+00:00'
-  updated_at: '2026-07-12T23:17:33+00:00'
+  updated_at: '2026-08-13T15:12:37+00:00'
   timeline:
   - at: '2026-07-12T23:14:17+00:00'
     actor: claude-code
@@ -71,8 +96,22 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-08-13T15:12:11+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'TRIAGEM 13/08: PR #96 merjado (8c8b0b5). Seam: os 5 descritores em packages/sdk-py/dna/extensions/portfolio/kinds/{organization,project,repo,membership,role}.kind.yaml. PORTA: entry-point em packages/sdk-py/pyproject.toml:231 ''portfolio = dna.extensions.portfolio:PortfolioExtension'' — e por ele que Kernel.auto() registra os Kinds, sem o qual seriam arquivos inertes. Os 4 seeds de Role vivem em examples/dna-cloud/.dna/tenants/acme/scopes/acme-development/roles/{owner,admin,member,guest}.yaml. Teste: packages/sdk-py/tests/test_portfolio_kinds.py. OBSOLESCENCIA PARCIAL do DoD, registrada e nao escondida: o item ''TS twin green / byte-identical Py<->TS'' morreu quando packages/sdk-ts foi congelado em 341e5174 (#180) — era verdadeiro no merge e nao ha mais gemeo TS para manter. resolve_role foi diferido de proposito e esta FORA da AC. EXCECAO: --allow-no-tests — Kinds sao dados; o criterio e schema+registro, provado pelos guards (hash-parity, ratchet, strict-schema-lint, inheritable-tenancy) verdes no CI.'
+  - at: '2026-08-13T15:12:37+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 8c8b0b5d66ce3357ef5d9d2bd85d7bec81a55499
+    summary: 'PR #96 MERJADO em 12/07/2026 — a ficha nunca foi fechada (triagem 13/08).'
   produces:
   - kind: Plan
     name: plan-s-portfolio-kinds
     role: implementation
     at: '2026-07-12T23:14:50+00:00'
+  closed_at: '2026-08-13T15:11:58+00:00'

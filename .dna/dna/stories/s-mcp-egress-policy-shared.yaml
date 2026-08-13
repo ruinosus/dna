@@ -1,11 +1,12 @@
 apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Story
 metadata:
+  id: jevk5moli2m4
   name: s-mcp-egress-policy-shared
 spec:
   title: A politica de egresso de MCP externo por plano vira UMA, no pacote CLI ao lado d
   description: A politica de egresso de MCP externo por plano vira UMA, no pacote CLI ao lado do resolvedor de tier, para as duas apps do dna-cloud importarem em vez de copiarem.
-  status: review
+  status: done
   feature: f-dna-hosting
   priority: high
   labels:
@@ -39,7 +40,7 @@ spec:
     evidence: commit ec50565; tg-mcp-egress-policy-shared pass; brand_guard clean; versao intocada
   definition_of_done_source: cli-create
   created_at: '2026-08-06T05:55:33+00:00'
-  updated_at: '2026-08-06T06:05:04+00:00'
+  updated_at: '2026-08-13T15:06:02+00:00'
   timeline:
   - at: '2026-08-06T05:55:33+00:00'
     actor: claude-code
@@ -140,6 +141,24 @@ spec:
     source: cli
     from: in-progress
     to: review
+  - at: '2026-08-13T15:01:53+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'TRIAGEM: PR #322 merjado (2a6acb9). Seam: packages/cli/dna_cli/_mcp_egress.py:81 ALLOWLIST_ENV, :101 FAILSAFE_TIER, :116 egress_allowlist, :129 egress_allows, + filter_egress/partition_egress; teste packages/cli/tests/test_mcp_egress.py. PORTA LIGADA (checado do lado do consumidor, o teste que esta casa erra tres vezes): o dna-cloud IMPORTA de verdade — apps/copilot/tests/test_egress_por_plano.py:18 ''from dna_cli._mcp_egress import filter_egress''. Ponta viva e ja filada: i-098 (cap literal vs campo no PricingPlan).'
+  - at: '2026-08-13T15:05:33+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: 'TRIAGEM 13/08: PR #322 merjado (2a6acb9). Seam: packages/cli/dna_cli/_mcp_egress.py:81 ALLOWLIST_ENV, :101 FAILSAFE_TIER, :116 egress_allowlist, :129 egress_allows, + filter_egress/partition_egress; teste packages/cli/tests/test_mcp_egress.py. PORTA LIGADA, checada do lado do CONSUMIDOR (o teste que esta casa ja errou tres vezes: ''capacidade existe, porta nao''): o dna-cloud importa de verdade — apps/copilot/tests/test_egress_por_plano.py:18 ''from dna_cli._mcp_egress import filter_egress'', com o comentario dizendo que sem o modulo o import quebra ali e nao em producao. Ponta viva e ja filada: i-098 (cap literal vs campo no PricingPlan). EXCECAO: --allow-no-tests; tg-mcp-egress-policy-shared / tr-...-20260806-060306 outcome=pass no produces[].'
+  - at: '2026-08-13T15:06:02+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: review
+    to: done
+    commit_ref: 2a6acb920d4fd0dc8ab7b7efb207166605ee893a
+    summary: 'PR #322 MERJADO em 06/08/2026 — a ficha nunca foi fechada (triagem 13/08).'
   produces:
   - kind: Plan
     name: plan-s-mcp-egress-policy-shared
@@ -153,3 +172,4 @@ spec:
     name: tr-tg-mcp-egress-policy-shared-20260806-060306
     role: test-run
     at: '2026-08-06T06:03:08+00:00'
+  closed_at: '2026-08-13T15:05:20+00:00'
