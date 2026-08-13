@@ -18,7 +18,7 @@ spec:
     Medido em 12/08/2026 durante a i-107. Os 7 pares (Kind, arquivo) correspondentes seguem no baseline de goldens/kernel_kind_literals.json e a guarda impede que cresçam.
   type: task
   severity: medium
-  status: open
+  status: resolved
   created_at: '2026-08-12T23:30:03+00:00'
   updated_at: '2026-08-12T23:30:03+00:00'
   timeline:
@@ -41,3 +41,106 @@ spec:
       2. **O criterio que separou os dois nao foi 'quem chama', foi a NATUREZA.** `roi` calcula dinheiro (preco, valor por desfecho, aceitacao) = fato do contrato de quem opera. `thread_store` declara um contrato neutro de fornecedor = o que um SDK aberto deve segurar. Os acessores desta ficha (`tier`, `account_plan`, `account_for_workspace`) sao do primeiro tipo, e a ficha ja diz isso.
 
       3. **O que FICA tambem precisa de razao escrita.** Em `roi` ficaram `telemetry` e as alembic 0012/0014, porque escrever a tabela e ler a tabela sao papeis diferentes: um LEITOR nao e dono de schema. Aqui a pergunta gemea e quais das 394 linhas sao ESCRITA/registro (ficam) e quais sao consulta comercial (vao).
+  - at: '2026-08-13T10:35:32+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: |-
+      NAO MOVE — a premissa caiu na medicao, e a evidencia inverte a leitura.
+
+      A ficha nasceu da leitura de que `PricingPlan`, `PlanBinding` e `Workspace` no
+      `kernel/registry/accessor.py` eram logica comercial dentro do repo aberto, pelo mesmo
+      argumento que tirou o `runtime/roi.py` daqui. A contagem de consumidores diz outra coisa:
+
+        account_plan            sdk:5   cli:3   dna-cloud:1
+        account_for_workspace   sdk:3   cli:2   dna-cloud:0
+
+      Oito consumidores do lado ABERTO contra um do lado comercial — o inverso exato do `roi`,
+      que tinha zero abertos e quatro fechados.
+
+      === O QUE O ACCESSOR REALMENTE E ===
+
+      O portao de quota do servidor MCP open-source:
+
+        cli/_mcp_server.py:857   resolve workspace -> account_id -> plano
+        cli/_mcp_quota.py:6      le calls/day, rate e tenant caps do Kind Tier
+                                 "um limite literal em codigo e um bug"
+
+      Quem auto-hospeda `dna mcp serve` TAMBEM tem quota, e ela vem do Kind `Tier` lido do
+      `_lib`. Isso e do SDK, nao da SaaS.
+
+      E a extensao `cloud` ja declarava a fronteira com precisao:
+
+        "A ponte billing->enforcement: o webhook do Stripe do dna-cloud ESCREVE; o servidor MCP
+         resolve workspace -> account_id -> plano. O SDK OSS so LE — zero codigo de Stripe."
+
+      O dinheiro esta do lado de la; a leitura esta do lado certo. Os tres nomes sao Kinds que o
+      servidor precisa consultar para impor limite — como um servidor HTTP precisa conhecer
+      `Content-Type`. Mover quebraria o servidor OSS, que e justamente o que a fronteira existe
+      para proteger.
+
+      === A REGUA, que e o que fica desta ficha ===
+
+      Tres casos foram propostos para mover no mesmo dia. A medicao contrariou dois:
+
+        roi           zero consumidores abertos                  -> MOVEU
+        thread_store  5 usos + 5 Ports publicados                -> FICOU
+        accessor      8 usos, e o portao de quota do servidor    -> FICA
+
+      A pergunta certa nunca foi "isso parece comercial?". E **"quem consome do lado aberto?"**.
+      Um modulo que calcula dinheiro e nao tem leitor aberto e da SaaS; um que carrega nome
+      comercial mas serve o servidor OSS e do SDK.
+
+      ⚠️ E o inverso tambem vale, para a proxima vez: se um dia o `_mcp_quota` deixar de existir
+      no lado aberto, esta ficha volta a valer — e o gatilho e esse, nao a aparencia do nome.
+  closed_at: '2026-08-13T10:35:32+00:00'
+  resolution: |-
+    NAO MOVE — a premissa caiu na medicao, e a evidencia inverte a leitura.
+
+    A ficha nasceu da leitura de que `PricingPlan`, `PlanBinding` e `Workspace` no
+    `kernel/registry/accessor.py` eram logica comercial dentro do repo aberto, pelo mesmo
+    argumento que tirou o `runtime/roi.py` daqui. A contagem de consumidores diz outra coisa:
+
+      account_plan            sdk:5   cli:3   dna-cloud:1
+      account_for_workspace   sdk:3   cli:2   dna-cloud:0
+
+    Oito consumidores do lado ABERTO contra um do lado comercial — o inverso exato do `roi`,
+    que tinha zero abertos e quatro fechados.
+
+    === O QUE O ACCESSOR REALMENTE E ===
+
+    O portao de quota do servidor MCP open-source:
+
+      cli/_mcp_server.py:857   resolve workspace -> account_id -> plano
+      cli/_mcp_quota.py:6      le calls/day, rate e tenant caps do Kind Tier
+                               "um limite literal em codigo e um bug"
+
+    Quem auto-hospeda `dna mcp serve` TAMBEM tem quota, e ela vem do Kind `Tier` lido do
+    `_lib`. Isso e do SDK, nao da SaaS.
+
+    E a extensao `cloud` ja declarava a fronteira com precisao:
+
+      "A ponte billing->enforcement: o webhook do Stripe do dna-cloud ESCREVE; o servidor MCP
+       resolve workspace -> account_id -> plano. O SDK OSS so LE — zero codigo de Stripe."
+
+    O dinheiro esta do lado de la; a leitura esta do lado certo. Os tres nomes sao Kinds que o
+    servidor precisa consultar para impor limite — como um servidor HTTP precisa conhecer
+    `Content-Type`. Mover quebraria o servidor OSS, que e justamente o que a fronteira existe
+    para proteger.
+
+    === A REGUA, que e o que fica desta ficha ===
+
+    Tres casos foram propostos para mover no mesmo dia. A medicao contrariou dois:
+
+      roi           zero consumidores abertos                  -> MOVEU
+      thread_store  5 usos + 5 Ports publicados                -> FICOU
+      accessor      8 usos, e o portao de quota do servidor    -> FICA
+
+    A pergunta certa nunca foi "isso parece comercial?". E **"quem consome do lado aberto?"**.
+    Um modulo que calcula dinheiro e nao tem leitor aberto e da SaaS; um que carrega nome
+    comercial mas serve o servidor OSS e do SDK.
+
+    ⚠️ E o inverso tambem vale, para a proxima vez: se um dia o `_mcp_quota` deixar de existir
+    no lado aberto, esta ficha volta a valer — e o gatilho e esse, nao a aparencia do nome.
