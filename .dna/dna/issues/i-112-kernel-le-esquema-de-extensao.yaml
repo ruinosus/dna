@@ -20,7 +20,7 @@ spec:
     Fecha 3 das 5 ocorrencias 'argumentadas' do teto 26 da i-107 (test_kind_name_literal_ratchet.py). As outras 2 — o default publicado kind='Evidence' e o INVALIDATE_VERBS de uma chave — tem gatilho proprio escrito no codigo e nao pertencem aqui.
   type: task
   severity: low
-  status: open
+  status: resolved
   created_at: '2026-08-13T12:43:48+00:00'
   updated_at: '2026-08-13T12:43:48+00:00'
   timeline:
@@ -34,3 +34,104 @@ spec:
     type: comment
     source: cli
     summary: '⚠️ HOMONIMO ENTRE REPOS, registrado para o proximo leitor. O CLI numerou esta ficha como i-112 porque 111 era o maior deste board — legal, ids sao por scope. Mas ''i-112'' JA APARECE no codigo-fonte DESTE repo significando outra coisa: a ficha i-112 do board do dna-cloud (o Catalog tier / capability manifest), citada em extensions/helix/models.py:53 e :80, extensions/cloud/kinds/pricing-plan.kind.yaml:17 e no docstring de Kernel.composition_summary. Um comentario futuro dizendo ''ver i-112'' e ambiguo. Ao referenciar ESTA ficha, escreva ''i-112 (board dna)''.'
+  - at: '2026-08-13T15:21:16+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: in-progress
+  - at: '2026-08-13T15:21:37+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      PREMISSA CONFIRMADA, com o grep excluindo .venv PELO CAMINHO (--exclude-dir) e tambem as worktrees de .claude/worktrees, que na primeira passada poluiram a medicao com copias do proprio board.
+
+      apply_hooks — chamadores de PRODUCAO: ZERO. Chamadores de teste: 6 (test_hook_kind.py:63,146; test_safety_input.py:49,93,137,197). Fora isso so a definicao em manifest.py:964 e mencoes em prosa: docs/concepts/builtin-kinds.md:27, docs/reference/kinds/composition.md:207, o proprio HookKind.docs (extensions/hooks/__init__.py:102) e port-surface.json:488 (public_surface).
+
+      ReportBuilder / mi.reports — chamadores de PRODUCAO: ZERO. O unico construtor era a property lazy manifest.py:231-235; o unico chamador, tests/test_reports.py. ZERO mencoes em docs/, examples/, README.md, CHANGELOG.md. Em port-surface.json:521 (public_surface). Em dna-cloud: ZERO em codigo (os unicos hits sao YAML de board dentro de .claude/worktrees).
+
+      Varridos: ~/projects/dna (packages/{sdk-py,cli,client-py,client-ts}, docs, examples, scopes, scripts, templates, tests, copilot-kits, design, deploy, specs) e ~/projects/dna-cloud (apps, infra, scripts, lib, components, app, docs).
+
+      DUAS MEDICOES A MAIS, que decidiram as outras duas ocorrencias:
+      - build_evidence: o unico chamador de producao (kernel/write/evidence.py:257) passa kind=evidence_kind EXPLICITO, derivado do trait. O default publicado nunca decide uma escrita real — o argumento da i-107 se sustenta.
+      - record.invalidate-only: varredura do registro vivo devolve APENAS Engram. O gatilho de reabertura escrito na i-107 (um SEGUNDO Kind com o trait precisando nomear o proprio verbo) NAO disparou.
+
+      Registro vivo medido na venv PROPRIA da worktree: 89 Kinds (a compartilhada resolve outro checkout). Finding NAO esta entre eles — confirmado.
+  - at: '2026-08-13T15:35:18+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: resolved
+    summary: |-
+      PR #394, merjado em main 13/08. Os 3 literais fecharam por MOVER e por APAGAR, nunca por declarar — a i-109 ja tinha recusado o trait e o argumento dela se sustentou. Teto do ratchet 26 -> 23 (13 bootstrap + 8 accessor + 2 argumentados).
+
+      === A PREMISSA, CONFIRMADA (grep excluindo .venv PELO CAMINHO, e tambem .claude/worktrees, que poluiu a primeira passada com copias do proprio board) ===
+      apply_hooks: ZERO chamadores de producao; 6 de teste. ReportBuilder/mi.reports: ZERO de producao (a property lazy manifest.py:231 era o unico construtor), so tests/test_reports.py. Varridos dna (sdk-py, cli, client-py, client-ts, docs, examples, scopes, scripts, tests, copilot-kits) e dna-cloud (apps, infra, scripts, lib, components, app, docs) — em dna-cloud, ZERO em codigo.
+
+      === O QUE DECIDIU, e NAO foi a contagem de chamadores ===
+      Zero chamador nao separa os dois casos: apply_hooks TEM zero e nao podia morrer. A pergunta que separa e *alguma coisa PROMETE isto?*
+
+      MOVIDO — apply_hooks. HookKind.docs, docs/concepts/builtin-kinds.md e docs/reference/kinds/composition.md prometem que um Hook e registrado "when ManifestInstance.apply_hooks() is called". Apaga-lo deixaria Hook e SafetyPolicy REGISTRADOS e INERTES, com os descritores ainda prometendo comportamento. Zero chamador INTERNO e o perfil normal de uma porta publica, nao prova de morte. Os corpos foram para HookExtension.activate_manifest e SafetyPolicyExtension.activate_manifest.
+
+      O mecanismo: ManifestActivator (kernel/protocols.py), capacidade OPCIONAL de Extension, feature-tested igual ao TemplateProvider — precedente da casa, nenhuma extensao existente muda. Kernel.run_manifest_activators(mi) agrega; um activator que levanta e avisado e pulado, nunca fatal. O kernel passa a SI MESMO como segundo argumento: um activator cujo trabalho e registrar algo NO kernel nao pode ter de pescar o kernel de um atributo privado da MI. apply_hooks fica com nome, assinatura e efeito identicos — so nao nomeia mais Kind nenhum. Custo honesto do ponto de extensao novo: entrada em scripts/ports_prose.py + docs regeneradas (o gen_ports_docs FALHA sem ela — a guarda funcionou).
+
+      APAGADO — ReportBuilder/mi.reports (321 linhas + tests/test_reports.py). Nada o promete: ZERO mencao em docs/, examples/, README, CHANGELOG. E metade dele era inerte POR CONSTRUCAO: findings_summary e compliance_matrix varriam `Finding`, que este repo nao registra em lugar nenhum (confirmado contra os 89 do registro vivo), devolvendo a constante "_No findings._" em qualquer scope, para sempre. Mover codigo sem chamador seria mudar a divida de lugar. Mesmo argumento que aposentou o gemeo async reports_kernel.py na i-047. Golden re-congelado (public_surface perde "reports").
+
+      ⚠️ A ponta que a i-107 chamou de decisao de PRODUTO segue aberta e nao foi decidida aqui: REGISTRAR o Kind Finding continua sendo escolha do fundador. Apagar dois metodos que provadamente devolviam uma constante nao a antecipa — se o Finding for registrado, o relatorio nasce em extensions/, junto do Kind.
+
+      === OS DOIS QUE FICAM, com a premissa RE-MEDIDA e nao herdada ===
+      write/evidence.py kind="Evidence": o unico chamador de producao (linha 257) passa kind=evidence_kind EXPLICITO, derivado do trait — o default publicado nunca decide uma escrita real, e uma funcao pura nao consulta registro.
+      write/hard_delete.py INVALIDATE_VERBS: o gatilho de reabertura escrito na i-107 (um SEGUNDO Kind declarando record.invalidate-only) NAO disparou — varredura do registro vivo devolve APENAS Engram.
+
+      === A GUARDA: teto E significado ===
+      KERNEL_KIND_NAME_CEILING 26 -> 23, que E a contagem real (test_the_ceiling_is_not_slack exige IGUALDADE). Dois testes novos fixam o que o numero SIGNIFICA, porque um teto sozinho deixaria um literal voltar enquanto outro sai: test_the_kernel_no_longer_parses_an_extension_kinds_schema pina Hook/SafetyPolicy/EvalRun POR NOME; test_the_two_survivors_are_the_argued_ones_not_leftovers pina os dois sobreviventes POR SITIO. Mais test_the_two_shipped_activators_are_the_kinds_extensions e um teste de fail-soft do agregador.
+
+      MUTANTES, plantados e provados, os tres restaurados:
+      (1) `self._all("Hook")` de volta no kernel -> 4 testes caem, incluindo os dois novos;
+      (2) teto deixado em 26 com a contagem real em 23 -> test_the_ceiling_is_not_slack cai ("names 23 but the ceiling says 26");
+      (3) activate_manifest renomeado no HookExtension -> o contrato E dois testes de comportamento do Hook caem (a fiacao e real, nao decorativa).
+
+      === VERIFICACAO ===
+      CI 13/13 verde. sdk-py identico a baseline: as MESMAS 36 falhas pre-existentes, comparadas NOME A NOME contra um `git stash` do proprio worktree na MESMA venv (a venv compartilhada de ~/projects tem os extras e devolve 0 — comparar contra ela teria dado uma baseline falsa). 5878 -> 5861 passando (-22 do test_reports apagado, +5 novos). CLI 2024/2024. brand_guard, docs_coverage_guard (+self-test), data_model_guard e os quatro geradores limpos.
+      ⚠️ Postgres RODADO DE VERDADE antes do push, contra um pgvector/pgvector:pg16 local com o comando exato do workflow: 131 passed, 6 skipped. A licao da i-107 (437 skips nao sao suite verde) foi seguida e o job passou no CI em 2m14s.
+
+      === README: NAO TOCADO, e a condicao diz por que ===
+      A condicao era sobrar 21 (13 bootstrap + 8 accessor). Sobram 23 — os dois argumentados acima seguem la, cada um com gatilho proprio escrito. A frase "um microkernel que nao conhece Kind nenhum" ainda nao e verdade, e comprar com texto o que o codigo nao entregou e exatamente o que a i-107 recusou fazer. Quando (e se) esses dois cairem, sobram 21 e a frase honesta fica disponivel.
+  closed_at: '2026-08-13T15:35:18+00:00'
+  resolution: |-
+    PR #394, merjado em main 13/08. Os 3 literais fecharam por MOVER e por APAGAR, nunca por declarar — a i-109 ja tinha recusado o trait e o argumento dela se sustentou. Teto do ratchet 26 -> 23 (13 bootstrap + 8 accessor + 2 argumentados).
+
+    === A PREMISSA, CONFIRMADA (grep excluindo .venv PELO CAMINHO, e tambem .claude/worktrees, que poluiu a primeira passada com copias do proprio board) ===
+    apply_hooks: ZERO chamadores de producao; 6 de teste. ReportBuilder/mi.reports: ZERO de producao (a property lazy manifest.py:231 era o unico construtor), so tests/test_reports.py. Varridos dna (sdk-py, cli, client-py, client-ts, docs, examples, scopes, scripts, tests, copilot-kits) e dna-cloud (apps, infra, scripts, lib, components, app, docs) — em dna-cloud, ZERO em codigo.
+
+    === O QUE DECIDIU, e NAO foi a contagem de chamadores ===
+    Zero chamador nao separa os dois casos: apply_hooks TEM zero e nao podia morrer. A pergunta que separa e *alguma coisa PROMETE isto?*
+
+    MOVIDO — apply_hooks. HookKind.docs, docs/concepts/builtin-kinds.md e docs/reference/kinds/composition.md prometem que um Hook e registrado "when ManifestInstance.apply_hooks() is called". Apaga-lo deixaria Hook e SafetyPolicy REGISTRADOS e INERTES, com os descritores ainda prometendo comportamento. Zero chamador INTERNO e o perfil normal de uma porta publica, nao prova de morte. Os corpos foram para HookExtension.activate_manifest e SafetyPolicyExtension.activate_manifest.
+
+    O mecanismo: ManifestActivator (kernel/protocols.py), capacidade OPCIONAL de Extension, feature-tested igual ao TemplateProvider — precedente da casa, nenhuma extensao existente muda. Kernel.run_manifest_activators(mi) agrega; um activator que levanta e avisado e pulado, nunca fatal. O kernel passa a SI MESMO como segundo argumento: um activator cujo trabalho e registrar algo NO kernel nao pode ter de pescar o kernel de um atributo privado da MI. apply_hooks fica com nome, assinatura e efeito identicos — so nao nomeia mais Kind nenhum. Custo honesto do ponto de extensao novo: entrada em scripts/ports_prose.py + docs regeneradas (o gen_ports_docs FALHA sem ela — a guarda funcionou).
+
+    APAGADO — ReportBuilder/mi.reports (321 linhas + tests/test_reports.py). Nada o promete: ZERO mencao em docs/, examples/, README, CHANGELOG. E metade dele era inerte POR CONSTRUCAO: findings_summary e compliance_matrix varriam `Finding`, que este repo nao registra em lugar nenhum (confirmado contra os 89 do registro vivo), devolvendo a constante "_No findings._" em qualquer scope, para sempre. Mover codigo sem chamador seria mudar a divida de lugar. Mesmo argumento que aposentou o gemeo async reports_kernel.py na i-047. Golden re-congelado (public_surface perde "reports").
+
+    ⚠️ A ponta que a i-107 chamou de decisao de PRODUTO segue aberta e nao foi decidida aqui: REGISTRAR o Kind Finding continua sendo escolha do fundador. Apagar dois metodos que provadamente devolviam uma constante nao a antecipa — se o Finding for registrado, o relatorio nasce em extensions/, junto do Kind.
+
+    === OS DOIS QUE FICAM, com a premissa RE-MEDIDA e nao herdada ===
+    write/evidence.py kind="Evidence": o unico chamador de producao (linha 257) passa kind=evidence_kind EXPLICITO, derivado do trait — o default publicado nunca decide uma escrita real, e uma funcao pura nao consulta registro.
+    write/hard_delete.py INVALIDATE_VERBS: o gatilho de reabertura escrito na i-107 (um SEGUNDO Kind declarando record.invalidate-only) NAO disparou — varredura do registro vivo devolve APENAS Engram.
+
+    === A GUARDA: teto E significado ===
+    KERNEL_KIND_NAME_CEILING 26 -> 23, que E a contagem real (test_the_ceiling_is_not_slack exige IGUALDADE). Dois testes novos fixam o que o numero SIGNIFICA, porque um teto sozinho deixaria um literal voltar enquanto outro sai: test_the_kernel_no_longer_parses_an_extension_kinds_schema pina Hook/SafetyPolicy/EvalRun POR NOME; test_the_two_survivors_are_the_argued_ones_not_leftovers pina os dois sobreviventes POR SITIO. Mais test_the_two_shipped_activators_are_the_kinds_extensions e um teste de fail-soft do agregador.
+
+    MUTANTES, plantados e provados, os tres restaurados:
+    (1) `self._all("Hook")` de volta no kernel -> 4 testes caem, incluindo os dois novos;
+    (2) teto deixado em 26 com a contagem real em 23 -> test_the_ceiling_is_not_slack cai ("names 23 but the ceiling says 26");
+    (3) activate_manifest renomeado no HookExtension -> o contrato E dois testes de comportamento do Hook caem (a fiacao e real, nao decorativa).
+
+    === VERIFICACAO ===
+    CI 13/13 verde. sdk-py identico a baseline: as MESMAS 36 falhas pre-existentes, comparadas NOME A NOME contra um `git stash` do proprio worktree na MESMA venv (a venv compartilhada de ~/projects tem os extras e devolve 0 — comparar contra ela teria dado uma baseline falsa). 5878 -> 5861 passando (-22 do test_reports apagado, +5 novos). CLI 2024/2024. brand_guard, docs_coverage_guard (+self-test), data_model_guard e os quatro geradores limpos.
+    ⚠️ Postgres RODADO DE VERDADE antes do push, contra um pgvector/pgvector:pg16 local com o comando exato do workflow: 131 passed, 6 skipped. A licao da i-107 (437 skips nao sao suite verde) foi seguida e o job passou no CI em 2m14s.
+
+    === README: NAO TOCADO, e a condicao diz por que ===
+    A condicao era sobrar 21 (13 bootstrap + 8 accessor). Sobram 23 — os dois argumentados acima seguem la, cada um com gatilho proprio escrito. A frase "um microkernel que nao conhece Kind nenhum" ainda nao e verdade, e comprar com texto o que o codigo nao entregou e exatamente o que a i-107 recusou fazer. Quando (e se) esses dois cairem, sobram 21 e a frase honesta fica disponivel.
