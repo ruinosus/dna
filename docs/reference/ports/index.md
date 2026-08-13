@@ -1,8 +1,8 @@
 # The port catalogue
 
-DNA's kernel is a **microkernel**: it knows how to store, validate, version and compose instances, and nothing else. Everything else is a `typing.Protocol` — a **port** — that something outside the core satisfies. There are **60** of them.
+DNA's kernel is a **microkernel**: it knows how to store, validate, version and compose instances, and nothing else. Everything else is a `typing.Protocol` — a **port** — that something outside the core satisfies. There are **61** of them.
 
-Most of this page exists to answer one question: *I want to change X — what do I implement?* **38** of the 60 are things you are meant to implement. The rest are listed anyway, marked as what they are, because a seam you cannot see is indistinguishable from a seam that does not exist — and guessing wrong costs more than being told no.
+Most of this page exists to answer one question: *I want to change X — what do I implement?* **39** of the 61 are things you are meant to implement. The rest are listed anyway, marked as what they are, because a seam you cannot see is indistinguishable from a seam that does not exist — and guessing wrong costs more than being told no.
 
 ## What the three roles mean
 
@@ -12,7 +12,7 @@ Most of this page exists to answer one question: *I want to change X — what do
 | :material-hand-extended: handed to you | The kernel implements it and passes it in. You call it; you never satisfy it. |
 | :material-lock: internal seam | A back-reference between the kernel and one of its own collaborators, published as a Protocol so the decomposition stays honest and testable. Not a plug-in surface. |
 
-## All 60 ports
+## All 61 ports
 
 ### Storage & retrieval — where instances live (10)
 
@@ -48,7 +48,7 @@ These exist so the kernel never has to ask `hasattr(source, ...)`. That matters 
 | [TenantAware](capabilities.md#tenantaware) | `dna.kernel.capabilities` | extension point | Writes accept a first-class tenant | — |
 | [Versionable](capabilities.md#versionable) | `dna.kernel.capabilities` | extension point | Per-Kind semver versioning | — |
 
-### Kinds & extensions — what behaviour DNA knows about (7)
+### Kinds & extensions — what behaviour DNA knows about (8)
 
 The kernel knows no Kinds. Every unit of identity and composition arrives through these ports, which is why adding a Kind never touches the core.
 
@@ -59,6 +59,7 @@ The kernel knows no Kinds. Every unit of identity and composition arrives throug
 | [KindPort](kinds.md#kindport) | `dna.kernel.protocols` | extension point | What a Kind is, and how it composes | 1 |
 | [KindPresentation](kinds.md#kindpresentation) | `dna.kernel.protocols` | extension point | How a Kind previews and draws itself | — |
 | [KindRelations](kinds.md#kindrelations) | `dna.kernel.protocols` | extension point | What a Kind points at | — |
+| [ManifestActivator](kinds.md#manifestactivator) | `dna.kernel.protocols` | extension point | Turn an extension's declared instances into runtime behaviour | 2 |
 | [TemplateProvider](kinds.md#templateprovider) | `dna.kernel.protocols` | extension point | Scaffold file trees shipped by an extension | 1 |
 | [ToolPort](kinds.md#toolport) | `dna.kernel.protocols` | extension point | A tool an agent can invoke | — |
 

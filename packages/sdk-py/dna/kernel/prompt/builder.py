@@ -396,9 +396,10 @@ class PromptBuilder:
         name so a scope with more than one library resolves deterministically.
 
         Read off the MI's own ``_kinds`` map, unioned with the kernel's registry
-        when there is one — same shape as ``ReportBuilder._evidence_kinds``, and
-        for the same reason: a trait is a fact about the port, so a kernel-less
-        MI can still answer for the Kinds it was handed.
+        when there is one: a trait is a fact about the port, so a kernel-less MI
+        can still answer for the Kinds it was handed. (This shape had a twin in
+        ``ReportBuilder._evidence_kinds`` until i-112 deleted that surface for
+        having zero callers; this is now the only one.)
         """
         from dna.kernel.kinds.traits import port_traits
 

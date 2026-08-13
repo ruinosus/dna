@@ -21,6 +21,7 @@ from dna.kernel.protocols import (
     EXTENSIONS_ENTRY_POINT_GROUP,
     Extension,
     ExtensionHost,
+    ManifestActivator,
     TemplateProvider,
 )
 
@@ -177,6 +178,91 @@ def test_template_provider_protocol():
 
     assert isinstance(WithTemplates(), TemplateProvider)
     assert not isinstance(_GoodExt(), TemplateProvider)
+
+
+# ---------------------------------------------------------------------------
+# 3b. ManifestActivator — optional capability protocol (i-112, board dna)
+# ---------------------------------------------------------------------------
+
+def test_manifest_activator_protocol():
+    """Optional exactly like TemplateProvider: an extension that activates
+    nothing must keep satisfying ``Extension`` unchanged."""
+    class WithActivation:
+        name = "with-activation"
+        version = "1.0.0"
+
+        def register(self, kernel):  # noqa: ARG002
+            return None
+
+        def activate_manifest(self, mi, kernel):  # noqa: ARG002
+            return None
+
+    assert isinstance(WithActivation(), ManifestActivator)
+    assert isinstance(WithActivation(), Extension)
+    assert not isinstance(_GoodExt(), ManifestActivator)
+
+
+def test_the_two_shipped_activators_are_the_kinds_extensions():
+    """The inversion i-112 shipped, asserted on the real extensions.
+
+    Before it, ``HookExtension.register`` and ``SafetyPolicyExtension.register``
+    did nothing but ``kernel.kind(...)`` while the KERNEL read both Kinds'
+    schemas. If either of these stops satisfying the capability, the behaviour
+    went back somewhere — and the only somewhere it can go is the kernel."""
+    from dna.extensions.hooks import HookExtension
+    from dna.extensions.safety import SafetyPolicyExtension
+
+    assert isinstance(HookExtension(), ManifestActivator)
+    assert isinstance(SafetyPolicyExtension(), ManifestActivator)
+
+
+def test_the_kernel_runs_activators_and_survives_a_bad_one():
+    """One raising activator must not cost the others their activation.
+
+    Same fail-soft ``list_templates`` uses, and the same one the old inline
+    code applied to a Hook whose script body would not compile: activation
+    decorates a manifest that is already valid without it."""
+    import warnings
+
+    calls: list[str] = []
+
+    class _Boom:
+        name = "boom"
+        version = "1.0.0"
+
+        def register(self, kernel):  # noqa: ARG002
+            return None
+
+        def activate_manifest(self, mi, kernel):  # noqa: ARG002
+            calls.append("boom")
+            raise RuntimeError("activator exploded")
+
+    class _Fine:
+        name = "fine"
+        version = "1.0.0"
+
+        def register(self, kernel):  # noqa: ARG002
+            return None
+
+        def activate_manifest(self, mi, kernel):
+            calls.append(f"fine:{kernel is k}")
+
+    k = Kernel()
+    k.load(_Boom())
+    k.load(_Fine())
+    k.load(_GoodExt())  # no activate_manifest — must be skipped silently
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        k.run_manifest_activators(object())
+
+    assert calls == ["boom", "fine:True"], (
+        "a raising activator must not stop the next one, and the kernel must "
+        f"pass ITSELF as the second argument; got {calls}"
+    )
+    assert any("activator exploded" in str(x.message) for x in w), (
+        "the failure must be warned about, never swallowed"
+    )
 
 
 # ---------------------------------------------------------------------------

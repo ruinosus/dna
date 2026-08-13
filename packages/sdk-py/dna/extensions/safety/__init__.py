@@ -13,6 +13,7 @@ body as a YAML list of rule dicts.
 """
 from __future__ import annotations
 
+import logging
 import yaml
 from importlib.resources import files as _pkg_files
 from pathlib import Path as _Path
@@ -29,6 +30,8 @@ from dna.extensions.helix import _schema_from_model
 
 
 from dna.kernel.studio_ui import docs_ui
+
+_logger = logging.getLogger(__name__)
 
 
 class SafetyPolicyKind(KindBase):
@@ -209,12 +212,77 @@ class SafetyPolicyKind(KindBase):
         return blocks
 
 
+def _masking_middleware(pipeline: Any, action: str):
+    """``pre_build_prompt`` middleware that runs the scanner over the context.
+
+    Fail-OPEN by design, unchanged from the kernel version it was moved from:
+    a scanner bug must not take prompt build down — but the value then passes
+    UNMASKED, so the miss logs loud rather than silently.
+    """
+    def middleware(ctx: Any) -> Any:
+        context = ctx.data.get("context", {})
+        for key, val in list(context.items()):
+            if isinstance(val, str):
+                try:
+                    context[key] = pipeline.apply(val, action)
+                except Exception as e:  # noqa: BLE001
+                    _logger.warning(
+                        "SafetyPolicy scanner failed for context[%r] — value "
+                        "passed unmasked: %s", key, e,
+                    )
+        ctx.data["context"] = context
+        return ctx
+    return middleware
+
+
 class SafetyPolicyExtension:
     name = "safety"
     version = "1.0.0"
 
     def register(self, kernel: ExtensionHost) -> None:
         kernel.kind(SafetyPolicyKind())
+
+    # ── ManifestActivator (i-112, board dna) ────────────────────────────────
+    #
+    # The other half of what ``ManifestInstance.apply_hooks`` used to do in the
+    # KERNEL: read ``SafetyPolicy.spec`` (scope, action, rules) and build a
+    # ``dna.safety.scanner.ScannerPipeline`` from it. Measured 13/08/2026, that
+    # was the ONLY ``ScannerPipeline`` construction outside ``dna/safety/``
+    # itself — the kernel was the sole consumer of a pipeline built out of a
+    # Kind it does not own, while this class did nothing but
+    # ``kernel.kind(...)``.
+    #
+    # Declaring a trait on SafetyPolicy would have moved the string and left
+    # the three field reads and the pipeline construction in the kernel, which
+    # is precisely the "looks fixed" outcome i-109 refused. So it MOVED.
+
+    def activate_manifest(self, mi: Any, kernel: Any) -> None:
+        """Install input-side masking for every ``SafetyPolicy`` in *mi*.
+
+        Output-side enforcement is deliberately NOT wired here — it belongs to
+        the runtime that produced the response, not to prompt build. This
+        activates exactly what the kernel used to (``scope`` of ``input`` or
+        ``both``), so the move changes no behaviour.
+        """
+        hooks = getattr(kernel, "hooks", None)
+        if hooks is None:
+            return
+
+        from dna.safety.scanner import ScannerPipeline
+
+        for doc in mi._all(SafetyPolicyKind.kind):
+            spec = doc.spec
+            scope = spec.get("scope", "both")
+            action = spec.get("action", "mask")
+            rules = spec.get("rules", [])
+            if scope not in ("input", "both"):
+                continue
+            if not isinstance(rules, list) or not rules:
+                continue
+            hooks.use(
+                "pre_build_prompt",
+                _masking_middleware(ScannerPipeline(rules), action),
+            )
 
     def templates(self) -> list[Template]:
         """Declare the bundled ``safety/ml-privacy-filter`` scaffold.
