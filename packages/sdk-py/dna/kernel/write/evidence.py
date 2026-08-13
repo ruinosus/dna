@@ -26,12 +26,21 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-#: Traits that replaced the two literal Kind-name checks this module carried
-#: (i-107). Named here rather than inline so the pair is greppable together —
-#: they only make sense as a pair, one marking the source and one breaking the
-#: recursion it would otherwise cause.
+#: Traits that replaced the three literal Kind-name checks this module carried
+#: (i-107). Named here rather than inline so they are greppable together — they
+#: only make sense as a set: one marks the SOURCE, one breaks the recursion the
+#: source would otherwise cause, and one is the GATE that decides.
+#:
+#: ⚠️ The third arrived a day after the first two, and the gap is the lesson: a
+#: reader of this module on 12/08 would have said the evidence path was
+#: translated, because the two visible `kind == "..."` comparisons were gone.
+#: The `kernel.query(scope, "EvidencePolicy")` on the line below was the same
+#: knowledge in a different syntactic shape, and it meant a tenant could declare
+#: which Kind produces evidence and which Kind IS evidence, and still not
+#: declare which Kind decides. Half a translation reads as a whole one.
 TRAIT_PRODUCES_EVIDENCE = "record.produces-evidence"
 TRAIT_IS_EVIDENCE = "record.is-evidence"
+TRAIT_EVIDENCE_POLICY = "record.evidence-policy"
 
 
 # ───────────────────────────────────────────────────────────────────────
@@ -83,6 +92,17 @@ def build_evidence(
         this helper is deliberately pure — stdlib and plain dicts only, no
         kernel — which is what lets it live in the kernel at all
         (``tests/test_kernel_extension_boundary.py``).
+
+        ⛔ i-107 — the ``"Evidence"`` DEFAULT stays, and the argument is
+        different from every other literal this issue removed. It is not the
+        kernel deciding anything: the sole production caller (the capture
+        handler, ~150 lines down) passes ``kind=`` explicitly from the trait,
+        measured 13/08/2026, so this value never decides a real write. It is a
+        published default in a re-exported public signature, and changing it
+        would break callers to buy nothing — the derivation is already in place
+        above it. A pure function cannot ask a registry, so the only honest
+        alternatives are "keep the default" or "make the argument required",
+        and the second is an API break dressed as a cleanup.
 
     Returns
     -------
@@ -191,8 +211,17 @@ def make_evidence_capture_handler(kernel: Any):
             )
             return
 
+        # Which Kinds GATE capture — declared (`record.evidence-policy`), and
+        # resolved per call for the same reason the two sets above are: a tenant
+        # KindDefinition can be approved while the process is up.
+        policy_kinds = kernel.kinds_with_trait(TRAIT_EVIDENCE_POLICY)
+
         scope = ctx.scope
-        if kind == "EvidencePolicy" or scope not in _policy_cache:
+        # Writing a gate instance invalidates the cached policies for its scope,
+        # or an edit would not take effect until restart. Derived rather than
+        # spelled `kind == "EvidencePolicy"`: a tenant Kind that declares the
+        # trait would otherwise be read once and cached forever.
+        if kind in policy_kinds or scope not in _policy_cache:
             # MUST be async — this handler runs from inside post_save
             # emission (which is invoked via `await emit_async` on the
             # caller's event loop). Using sync `kernel.instance(scope)`
@@ -204,7 +233,8 @@ def make_evidence_capture_handler(kernel: Any):
             # → `ConnectionDoesNotExistError`. Fixed 2026-05-03.
             _policy_cache[scope] = [
                 raw.get("spec") or {}
-                async for raw in kernel.query(scope, "EvidencePolicy")
+                for policy_kind in sorted(policy_kinds)
+                async for raw in kernel.query(scope, policy_kind)
             ]
         if not any(should_capture(p, event_type) for p in _policy_cache.get(scope, [])):
             return

@@ -26,6 +26,32 @@ Deliberately NOT reported (they are not memberships):
     is reported, because its KEYS are a membership;
   * a collection with any non-Kind string in it — the caller means something
     other than "these Kinds".
+
+The second eye: OCCURRENCES (i-107)
+-----------------------------------
+:func:`scan_kind_name_occurrences` counts something narrower and blunter — every
+individual string literal that IS a registered Kind name, anywhere in a file. It
+exists because of what the set scanner above is blind to BY CONSTRUCTION, and
+that blindness is not a bug in it:
+
+    ``kernel.query(scope, "EvidencePolicy")``   — an argument, not a collection
+    ``if kind == "Evidence"``                   — a comparison to ONE name
+    ``INVALIDATE_VERBS = {"Engram": "..."}``    — a one-key map
+
+Each of those is a kernel that knows a Kind, and the set scanner reports none of
+them. i-107 measured 39 such occurrences across 15 kernel files while the set
+scanner's allowlist was clean — a guard fully green over a promise that was
+false, which is this house's recurring failure mode (guards that go blind and
+stay green).
+
+It has no allowlist, on purpose. Occurrences are COUNTED, not argued: the paired
+test holds a shrink-only ceiling per tree, so the number can fall without a
+review and cannot rise without one. The argument for each individual survivor
+lives next to the code, which is where the next reader of that code will look
+for it — an allowlist here would be a second place to keep them in sync.
+
+Docstrings are excluded: prose that mentions ``Story`` is documentation, not
+knowledge the runtime acts on.
 """
 from __future__ import annotations
 
@@ -36,7 +62,10 @@ from typing import Container, Iterable, Iterator
 
 __all__ = [
     "KindLiteral",
+    "KindNameUse",
     "scan_kind_name_literals",
+    "scan_kind_name_occurrences",
+    "scan_occurrences_in_tree",
     "scan_tree",
 ]
 
@@ -237,3 +266,93 @@ def _python_files(root: Path, skip: set[str]) -> Iterator[Path]:
         if any(part in skip for part in path.relative_to(root).parts[:-1]):
             continue
         yield path
+
+
+# ── the second eye: individual occurrences (i-107) ─────────────────────────
+
+
+@dataclass(frozen=True)
+class KindNameUse:
+    """One string literal, equal to a registered Kind name, in running code."""
+
+    module: str
+    lineno: int
+    kind: str
+    line: str
+
+    def describe(self) -> str:
+        return f"{self.module}:{self.lineno}  {self.kind}  |  {self.line}"
+
+
+def _docstring_lines(tree: ast.AST) -> set[int]:
+    """Line numbers covered by a module/class/function docstring.
+
+    Prose that mentions a Kind is documentation. Excluded by RANGE rather than
+    by node identity because a docstring is one ``Constant`` spanning many
+    lines, and every Kind name inside it shares those lines.
+    """
+    covered: set[int] = set()
+    for node in ast.walk(tree):
+        if not isinstance(
+            node, (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef),
+        ):
+            continue
+        if not ast.get_docstring(node, clean=False):
+            continue
+        first = node.body[0]
+        for line in range(first.lineno, (first.end_lineno or first.lineno) + 1):
+            covered.add(line)
+    return covered
+
+
+def scan_kind_name_occurrences(
+    source: str, *, module: str, kind_names: Container[str],
+) -> list[KindNameUse]:
+    """Every registered Kind name appearing as a string literal in ``source``.
+
+    Counts OCCURRENCES, not sites: ``("KindDefinition", "LayerPolicy", "Genome")``
+    is three. That is deliberate — a tuple of three names is three facts the
+    kernel knows, and collapsing it to one would let a growing list read as a
+    flat number.
+    """
+    tree = ast.parse(source)
+    skip = _docstring_lines(tree)
+    lines = source.splitlines()
+    found = [
+        KindNameUse(
+            module=module,
+            lineno=node.lineno,
+            kind=node.value,
+            line=lines[node.lineno - 1].strip()[:120] if node.lineno <= len(lines) else "",
+        )
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and node.value in kind_names
+        and node.lineno not in skip
+    ]
+    found.sort(key=lambda u: (u.lineno, u.kind))
+    return found
+
+
+def scan_occurrences_in_tree(
+    root: Path, *, kind_names: Container[str],
+    skip_dirs: Iterable[str] = ("__pycache__", ".venv", "tests"),
+) -> list[KindNameUse]:
+    """:func:`scan_kind_name_occurrences` over every ``*.py`` under ``root``."""
+    skip = set(skip_dirs)
+    found: list[KindNameUse] = []
+    for path in _python_files(root, skip):
+        rel = path.relative_to(root).as_posix()
+        try:
+            src = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):  # pragma: no cover — unreadable file
+            continue
+        try:
+            found.extend(
+                scan_kind_name_occurrences(src, module=rel, kind_names=kind_names)
+            )
+        except SyntaxError:  # pragma: no cover — unparseable by this interpreter
+            continue
+    found.sort(key=lambda u: (u.module, u.lineno, u.kind))
+    return found

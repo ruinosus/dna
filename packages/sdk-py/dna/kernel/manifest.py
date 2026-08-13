@@ -962,7 +962,32 @@ class ManifestInstance:
     # -- Declarative Hooks ----------------------------------------------------
 
     def apply_hooks(self) -> None:
-        """Auto-register Hook instances on the kernel's HookRegistry."""
+        """Auto-register Hook instances on the kernel's HookRegistry.
+
+        ⛔ i-107 — the ``"Hook"`` and ``"SafetyPolicy"`` literals below STAY, and
+        the argument is the one that closed i-109: **a trait would not resolve
+        this.** The names are the smallest part of what this method knows.
+
+        It reads ``Hook.spec`` field by field — ``target``, ``type``, ``action``,
+        ``fields``, ``body`` — ``exec()``s the body, and branches on the
+        ``middleware``/``listener`` and ``inject_fields``/``script`` enums. Then
+        it reads ``SafetyPolicy.spec`` — ``scope``, ``action``, ``rules`` — and
+        builds a ``dna.safety.scanner.ScannerPipeline`` out of them. Declaring a
+        trait would replace two strings and leave every one of those field reads
+        exactly where it is, in the kernel, which is the shape i-109 measured and
+        named: *"a class with SCHEMA and parse behaviour living in the wrong
+        layer"*. It would also make the boundary LOOK fixed, which is worse than
+        leaving it visibly broken.
+
+        The real defect is inverted ownership, measured 13/08/2026:
+        ``HookExtension.register()`` and ``SafetyPolicyExtension.register()`` do
+        nothing but ``kernel.kind(...)`` — every ``hooks.use`` / ``hooks.on`` call
+        for those two Kinds, and the only ``ScannerPipeline`` construction outside
+        ``dna/safety/`` itself, live HERE. ``HookKind``'s own comment even points
+        at this method for the semantics of ``Hook.target``. The fix is to move
+        the behaviour to the extensions that register the Kinds — i-109's shape,
+        not this issue's — and it is filed rather than smuggled in.
+        """
         if not self._kernel or not hasattr(self._kernel, "hooks"):
             return
 

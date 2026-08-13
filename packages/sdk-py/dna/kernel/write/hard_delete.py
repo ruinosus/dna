@@ -96,6 +96,26 @@ TRAIT_INVALIDATE_ONLY = "record.invalidate-only"
 #: *"and what should I call instead?"*, which is a per-Kind fact no trait can
 #: carry. A missing entry costs the caller one sentence of the message and
 #: never the refusal itself.
+#:
+#: ⛔ i-107 re-examined this entry and LEFT it, with a sharper reason than the
+#: paragraph above — because that paragraph defends against a TRAIT, and a trait
+#: was never the right shape for a per-Kind string. The shape that IS right is a
+#: descriptor field, and i-107 itself set that precedent: ``boot/events.py``'s
+#: ``_FIXED_EVENTS`` became ``post_save_event`` on the KindPort and
+#: ``spec.post_save_event`` in a ``.kind.yaml``.
+#:
+#: What separates the two: ``post_save_event`` is BEHAVIOUR. An EvidencePolicy
+#: selects writes to capture BY event type, so a Kind that could not name its own
+#: event was silently ineligible for evidence capture — a capability was missing.
+#: Nothing is ineligible for anything here. This is one English sentence in one
+#: error message, and the fallback sentence below it is correct for every Kind.
+#: Adding a field to ``KindDefinitionSpec`` — schema, parse validation,
+#: ``meta.py``, ``KindBase``, the frozen KindDefinition goldens — to make an
+#: error message slightly more specific is cost with no capability bought, and
+#: "the mechanism exists" is a reason to reach for it only when something is
+#: actually blocked. ⭐ The trigger for re-opening is concrete: a tenant Kind
+#: declaring ``record.invalidate-only`` that needs to name its OWN retirement
+#: verb. Not the aesthetics of the map.
 INVALIDATE_VERBS: dict[str, str] = {
     "Engram": (
         "`forget` retires it — `dna memory forget <name>`, the `forget` MCP "

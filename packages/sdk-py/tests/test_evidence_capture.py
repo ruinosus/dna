@@ -19,6 +19,7 @@ from dna.kernel import Kernel
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import StorageDescriptor
 from dna.kernel.write.evidence import (
+    TRAIT_EVIDENCE_POLICY,
     TRAIT_IS_EVIDENCE,
     TRAIT_PRODUCES_EVIDENCE,
     extract_suite,
@@ -141,3 +142,89 @@ def test_a_tenant_can_run_its_own_evidence_kind():
     k = Kernel.auto()
     k.kind(_MarketEvidence())
     assert k.kinds_with_trait(TRAIT_IS_EVIDENCE) == {"Evidence", "MarketEvidence"}
+
+
+# ------------------------------------------------- the third leg (i-107, day 2)
+
+
+def test_the_gate_kind_is_declared_not_named(kernel):
+    """``EvidencePolicy`` was the LAST literal on this path, and it survived
+    slice 2 because it does not LOOK like one: it was spelled
+    ``kernel.query(scope, "EvidencePolicy")`` — an argument, not a comparison.
+    Same knowledge, different syntax, and the eye that scans for ``kind == "..."``
+    slides straight over it."""
+    assert kernel.kinds_with_trait(TRAIT_EVIDENCE_POLICY) == {"EvidencePolicy"}
+
+
+def test_the_gate_trait_is_narrower_than_governance_policy(kernel):
+    """WHY it is a new name instead of the trait EvidencePolicy already carried.
+
+    ``governance.policy`` is declared by several Kinds; deriving the capture
+    gate from it would feed a safety scanner's rules to ``should_capture``. The
+    assertion IS the measurement, so a future Kind joining ``governance.policy``
+    cannot quietly make that shortcut look safe.
+    """
+    broad = kernel.kinds_with_trait("governance.policy")
+    gate = kernel.kinds_with_trait(TRAIT_EVIDENCE_POLICY)
+    assert gate < broad, (
+        f"the gate {sorted(gate)} must be a STRICT subset of governance.policy "
+        f"{sorted(broad)} — if they are equal, re-read whether the narrow trait "
+        "still earns its name"
+    )
+
+
+@pytest.mark.asyncio
+async def test_a_tenant_gate_kind_decides_capture_end_to_end(tmp_path):
+    """⭐ The proof the translation FINISHED: a Kind the kernel has never heard
+    of, declaring ``record.evidence-policy``, decides what gets captured —
+    exactly as the built-in ``EvidencePolicy`` does.
+
+    Before this, a tenant could declare which Kind produces evidence and which
+    Kind IS evidence, and the gate still had to be the kernel's name. Two thirds
+    of a mechanism reads as a whole one from the outside.
+    """
+    from dna.adapters.sqlalchemy_ import SqlAlchemySource
+    from dna.extensions.evidence import EvidenceExtension
+
+    class _TenantCaptureRule(KindBase):
+        api_version = "market.example/v1"
+        kind = "TenantCaptureRule"
+        alias = "market-tenantcapturerule"
+        storage = StorageDescriptor.yaml("tenantcapturerules")
+        traits = frozenset({TRAIT_EVIDENCE_POLICY})
+
+    source = SqlAlchemySource(f"sqlite+aiosqlite:///{tmp_path / 'gate.db'}")
+    await source.connect()
+    k = Kernel.auto()
+    k.load(EvidenceExtension())
+    k.kind(_TenantCaptureRule())
+    k.source(source)
+    try:
+        # The tenant's OWN gate Kind turns capture on for one event type.
+        await k.write_instance(
+            "s", "TenantCaptureRule", "rule-1",
+            {
+                "apiVersion": "market.example/v1", "kind": "TenantCaptureRule",
+                "metadata": {"name": "rule-1"},
+                "spec": {"events": ["eval_run_completed"], "auto_capture": True},
+            },
+        )
+        await k.write_instance(
+            "s", "EvalRun", "run-1",
+            {
+                "apiVersion": "github.com/ruinosus/dna/eval/v1", "kind": "EvalRun",
+                "metadata": {"name": "run-1"},
+                "spec": {
+                    "suite": "smoke", "total": 1, "passed": 1, "failed": 0,
+                    "results": [{"case": "c1", "status": "passed"}],
+                },
+            },
+        )
+        captured = [r async for r in k.query("s", "Evidence")]
+        assert captured, (
+            "the tenant's gate Kind declared `record.evidence-policy` and "
+            "enabled capture for eval_run_completed — if nothing was captured, "
+            "the capture path is still querying the literal 'EvidencePolicy'"
+        )
+    finally:
+        await source.close()

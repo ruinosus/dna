@@ -55,6 +55,51 @@ ORDER of names and the kernel never imported their schemas.
 
 Like the allowlist, the ceiling only comes DOWN. If a reason is ever found to
 move ``TypedKindDefinition`` too, set it to zero.
+
+──────────────────────────────────────────────────────────────────────────────
+
+**The third ratchet: Kind NAMES in the kernel, counted (i-107).**
+
+The two instruments above are blind to the cheapest form of the same knowledge,
+and i-109's own closing note said so out loud: it shipped with the Typed-model
+ceiling at ONE and reported "39 Kind-name literals, 22 Kinds, still in the
+kernel" as an open end. Both existing eyes were green over that number, because
+
+* the FIRST ratchet only sees a collection of two-or-more names, so
+  ``kernel.query(scope, "EvidencePolicy")``, ``if kind == "Evidence"`` and
+  ``{"Engram": "..."}`` are invisible to it BY CONSTRUCTION;
+* the SECOND sees ``Typed*`` classes, and a Kind name in a string is not a class.
+
+:func:`test_the_kernel_knows_at_most_n_kind_names` closes that hole with
+``scan_occurrences_in_tree``: every string literal under ``dna/kernel`` equal to
+a registered Kind name, docstrings excluded, counted as OCCURRENCES. Three names
+in one tuple is three, because it is three facts.
+
+**Ceiling: 26, shrink-only.** i-107 took it from 39 by translating 13. What
+remains is not undifferentiated debt — it is two decided groups plus five argued
+survivors, so the number is a sum of decisions rather than a budget:
+
+* **13 — bootstrap** (``Genome`` / ``KindDefinition`` / ``LayerPolicy``, across
+  ``protocols.py``, ``compose/instance_builder.py``, ``compose/resolver.py``,
+  ``compose/layer_policy.py``, ``catalog/cache.py``, ``models.py``). Same
+  argument as ``BOOTSTRAP_KIND_NAMES`` in the allowlist below: a descriptor
+  cannot bootstrap the reader that reads descriptors.
+* **8 — ``registry/accessor.py``**, closed by the FOUNDER in i-108 as not
+  commercial logic but the quota gate of the open-source MCP server — eight open
+  consumers against one closed. ⛔ Do not reopen from this file.
+* **5 — argued in place**, each next to its own code: ``manifest.py``'s ``Hook``
+  and ``SafetyPolicy`` (i-109 shape — the kernel parses their schemas, so a trait
+  would move two strings and leave every field read), ``reports.py``'s
+  ``EvalRun`` (same), ``evidence.py``'s published ``kind="Evidence"`` default
+  (the sole production caller passes it explicitly), and ``hard_delete.py``'s
+  one-key ``INVALIDATE_VERBS``.
+
+⚠️ This ceiling is a COUNT with no allowlist, and the asymmetry with the first
+ratchet is deliberate. An allowlist demands an argument per site and is right
+when every site is a standing decision; a count is right when the goal is a
+number that falls. Both are here because they guard the same failure — a guard
+that stays green while the promise it guards goes false — and neither sees what
+the other sees.
 """
 from __future__ import annotations
 
@@ -64,7 +109,7 @@ from pathlib import Path
 import pytest
 
 from dna.kernel import Kernel
-from dna.testing.kind_literal_scan import scan_tree
+from dna.testing.kind_literal_scan import scan_occurrences_in_tree, scan_tree
 
 _SDK_ROOT = Path(__file__).resolve().parents[1] / "dna"
 _KERNEL_ROOT = _SDK_ROOT / "kernel"
@@ -273,6 +318,94 @@ def test_the_bootstrap_ceiling_is_still_one_kind():
     )
 
 
+# ── the third ratchet: Kind NAMES in the kernel, counted (i-107) ───────────
+
+#: How many individual registered-Kind-name string literals ``dna/kernel`` is
+#: allowed to contain. Read the module docstring for the breakdown — 13
+#: bootstrap + 8 accessor (i-108, founder) + 5 argued in place. **Shrink only.**
+KERNEL_KIND_NAME_CEILING = 26
+
+
+def _kernel_kind_name_uses():
+    kernel = Kernel.auto()
+    names = {p.kind for p in kernel.kind_ports()}
+    assert len(names) > 50, (
+        "the registry oracle looks empty — the count is blind. This is the "
+        "shared-venv trap: a stale `dna-sdk` elsewhere on the machine resolves "
+        "to another checkout and reports fewer Kinds. Use the worktree's venv."
+    )
+    return scan_occurrences_in_tree(_KERNEL_ROOT, kind_names=names)
+
+
+def test_the_kernel_knows_at_most_n_kind_names():
+    """The count only goes DOWN. A new one needs an argument next to the code
+    AND a line in this file's docstring saying which group it joined."""
+    uses = _kernel_kind_name_uses()
+    assert len(uses) <= KERNEL_KIND_NAME_CEILING, (
+        f"The kernel now names {len(uses)} Kinds, over the ceiling of "
+        f"{KERNEL_KIND_NAME_CEILING}:\n"
+        + "\n".join(f"  {u.describe()}" for u in uses)
+        + "\n\nDerive it instead — `kernel.kinds_with_trait(...)`, or a per-Kind "
+          "field the descriptor already carries (`version_retention`, "
+          "`post_save_event`, `storage.body_field`, `scope_inheritable`). ⭐ ASK "
+          "FIRST whether a mechanism already exists: a new trait for something "
+          "that is already an attribute is a regression, not a fix. If the site "
+          "is genuinely irreducible, write the argument WHERE THE CODE IS and "
+          "raise this ceiling in the same commit, with the reason in the "
+          "docstring above."
+    )
+
+
+def test_the_ceiling_is_not_slack():
+    """⚠️ The half that makes the ceiling a ratchet rather than a budget.
+
+    A ceiling above the real count is slack somebody can spend without review —
+    which is how a "shrink-only" number quietly stops shrinking. Removing a
+    literal must lower this constant in the same commit."""
+    uses = _kernel_kind_name_uses()
+    assert len(uses) == KERNEL_KIND_NAME_CEILING, (
+        f"The kernel names {len(uses)} Kinds but the ceiling says "
+        f"{KERNEL_KIND_NAME_CEILING}. If you REMOVED one: lower the constant "
+        "to match — that is the ratchet clicking. If you added one, the test "
+        "above already told you what to do."
+    )
+
+
+def test_the_count_is_occurrences_not_sites():
+    """``BOOTSTRAP_KIND_NAMES`` is one tuple and THREE facts. Collapsing a
+    literal collection to a single finding would let a growing list read as a
+    flat number, which is the measurement error this ratchet exists to avoid."""
+    uses = _kernel_kind_name_uses()
+    bootstrap = [
+        u for u in uses
+        if u.module == "protocols.py" and "BOOTSTRAP_KIND_NAMES" in u.line
+    ]
+    assert {u.kind for u in bootstrap} == {"Genome", "KindDefinition", "LayerPolicy"}
+    assert len(bootstrap) == 3, (
+        "the three bootstrap names on one line must count as three — if this "
+        "is 1, the scanner is deduplicating by site and the ceiling is a lie"
+    )
+
+
+def test_the_accessor_block_is_the_i108_decision_not_debt():
+    """⛔ Eight of the twenty-six are ``registry/accessor.py``, and they are a
+    FOUNDER decision (i-108), not a translation nobody got to.
+
+    Pinned here because the next agent to read the ceiling will see the biggest
+    single file and reach for it. The measurement that closed i-108:
+    ``account_plan`` has 8 open-side consumers against 1 closed, and
+    ``cli/_mcp_quota.py`` reads the ``PricingPlan`` Kind to enforce quota on the
+    SELF-HOSTED MCP server. Moving it breaks the OSS server the open-core
+    boundary exists to protect. The re-open trigger is written in i-108 and it is
+    specific: ``_mcp_quota`` ceasing to exist on the open side."""
+    uses = _kernel_kind_name_uses()
+    accessor = [u for u in uses if u.module == "registry/accessor.py"]
+    assert len(accessor) == 8, (
+        f"registry/accessor.py now names {len(accessor)} Kinds, not 8. i-108's "
+        "measurement was taken at 8; re-read the issue before adjusting."
+    )
+
+
 # ── the scanner itself (it is the ratchet's eye; it has to see) ─────────────
 
 
@@ -317,3 +450,78 @@ def test_the_scanner_ignores_a_collection_that_is_not_about_kinds():
         'X = ("Story", "done")', module="m.py", kind_names={"Story", "Issue"}) == []
     assert scan_kind_name_literals(
         'X = ("Story",)', module="m.py", kind_names={"Story", "Issue"}) == []
+
+
+# ── the THIRD eye, planted with the shapes the first two cannot see ─────────
+
+
+@pytest.mark.parametrize("source, expected", [
+    # each of these was a REAL site i-107 translated; the first scanner
+    # reports zero findings for every one of them
+    ('rows = kernel.query(scope, "Issue")', ["Issue"]),
+    ('if kind == "Story":\n    return', ["Story"]),
+    ('VERBS = {"Issue": "close it"}', ["Issue"]),
+    ('def f(kind: str = "Story"): ...', ["Story"]),
+    ('X = ("Story", "Issue")', ["Issue", "Story"]),
+])
+def test_the_occurrence_scanner_sees_what_the_set_scanner_cannot(source, expected):
+    from dna.testing.kind_literal_scan import (
+        scan_kind_name_literals,
+        scan_kind_name_occurrences,
+    )
+
+    names = {"Story", "Issue"}
+    uses = scan_kind_name_occurrences(source, module="m.py", kind_names=names)
+    assert sorted(u.kind for u in uses) == expected
+    if len(expected) == 1:
+        assert scan_kind_name_literals(
+            source, module="m.py", kind_names=names,
+        ) == [], "the set scanner is supposed to be blind here — that is the point"
+
+
+def test_the_occurrence_scanner_ignores_prose():
+    """A docstring that mentions a Kind is documentation, not knowledge the
+    runtime acts on. Without this the count would be dominated by the comments
+    explaining why the count exists."""
+    from dna.testing.kind_literal_scan import scan_kind_name_occurrences
+
+    source = (
+        '"""A module about Story and Issue.\n\nSecond line names Story again.\n"""\n'
+        'def f():\n'
+        '    """Docstring naming Issue."""\n'
+        '    return "Story"\n'
+    )
+    uses = scan_kind_name_occurrences(
+        source, module="m.py", kind_names={"Story", "Issue"})
+    assert [u.kind for u in uses] == ["Story"]
+    assert uses[0].lineno == 7
+
+
+def test_the_occurrence_scanner_ignores_a_string_that_is_not_a_kind():
+    """The oracle is the live registry, so the scanner has no vocabulary of its
+    own to drift — the property the first ratchet was built around."""
+    from dna.testing.kind_literal_scan import scan_kind_name_occurrences
+
+    assert scan_kind_name_occurrences(
+        'x = "Storybook"; y = "story"; z = "StoryPoint"',
+        module="m.py", kind_names={"Story"}) == []
+
+
+def test_a_planted_mutant_is_caught_by_the_ceiling(tmp_path):
+    """MUTANT PROOF — the ceiling is only worth its docstring if a new literal
+    actually trips it. Plant one in a throwaway tree and check the eye sees it,
+    rather than trusting that it would."""
+    from dna.testing.kind_literal_scan import scan_occurrences_in_tree
+
+    clean = tmp_path / "clean"
+    clean.mkdir()
+    (clean / "m.py").write_text(
+        '"""Prose about Story."""\ndef f(k):\n    return k\n', encoding="utf-8")
+    assert scan_occurrences_in_tree(clean, kind_names={"Story", "Issue"}) == []
+
+    (clean / "mutant.py").write_text(
+        'def g(kernel, scope):\n    return kernel.query(scope, "Issue")\n',
+        encoding="utf-8")
+    caught = scan_occurrences_in_tree(clean, kind_names={"Story", "Issue"})
+    assert [u.kind for u in caught] == ["Issue"]
+    assert caught[0].module == "mutant.py"

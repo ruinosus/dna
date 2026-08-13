@@ -207,7 +207,7 @@ class InvalidationHost(Protocol):
     controller is stateless and reaches it through this narrow host — NOT the
     whole kernel. Consumed ONLY by invalidation.
 
-    Required (always present): the four below. The controller ALSO touches three
+    Required (always present): the five below. The controller ALSO touches three
     LAZY members — ``_write_observers``, ``_holders``, ``_layer_observers`` —
     each read defensively via ``getattr(k, name, default)`` (they are created on
     first ``on_write`` / ``register_holder`` / ``resolve_instance``). Because the
@@ -218,6 +218,20 @@ class InvalidationHost(Protocol):
     _batch_mode_depth: int
     _batch_pending: list
     _kcache: "KernelCache"
+
+    def kinds_with_trait(self, trait: str) -> "frozenset[str]":
+        """Which Kinds declare ``trait``. The controller asks for
+        ``record.is-evidence`` to decide what NOT to invalidate — it used to
+        spell that ``kind == "Evidence"`` (i-107).
+
+        REQUIRED rather than read defensively, unlike the three lazy members
+        above, and the difference is worth stating: those are absent until
+        somebody registers an observer, so their default is the truth. A host
+        that cannot answer THIS one would simply stop skipping — the audit
+        stream would invalidate the world on every captured write, correctly and
+        slowly. A guard that silently degrades into a performance cliff is worse
+        than one that fails, so the Protocol asks for it."""
+        ...
 
 
 # ---------------------------------------------------------------------------

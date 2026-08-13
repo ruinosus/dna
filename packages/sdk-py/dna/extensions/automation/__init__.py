@@ -27,7 +27,8 @@ What travels vs what does not (honest evolution):
 
 Inheritable ⇒ never TENANTED (s-inheritable-kinds-tenancy-invariant):
 Automation is an inheritable ``_lib`` default (it is in
-``DEFAULT_INHERITABLE_KINDS_V1``) → tenancy PERMISSIVE (no ``tenant_scope``
+declara ``composition.platform-default``, o trait que substituiu o literal
+``DEFAULT_INHERITABLE_KINDS_V1`` em i-107) → tenancy PERMISSIVE (no ``tenant_scope``
 in the descriptor): base writable in ``_lib`` + per-tenant override via
 overlay.
 """

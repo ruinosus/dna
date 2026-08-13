@@ -767,7 +767,8 @@ async def reconcile_forks_impl(
 # (MCP/REST), tenant-aware — so a workspace/tenant overlay of a template or a
 # slash-command wins with zero redeploy (the payoff of Layer 3: the toolkit
 # becomes versioned, governed, portable policy, not per-repo files). Both Kinds
-# are in ``DEFAULT_INHERITABLE_KINDS_V1`` — the overlay is the kernel's, not new
+# declare ``composition.platform-default`` (the trait that replaced the literal
+# ``DEFAULT_INHERITABLE_KINDS_V1`` in i-107) — the overlay is the kernel's, not new
 # machinery here.
 #
 # ⭐ THE THIRD RUNG (i-101/i-102). Resolution here reads: tenant overlay → base

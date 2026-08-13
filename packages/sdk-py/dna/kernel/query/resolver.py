@@ -80,21 +80,32 @@ BOOTSTRAP_KINDS: frozenset[str] = frozenset(BOOTSTRAP_KIND_NAMES)
 # anything and ride on ``Kernel._LEGACY_NON_INHERITABLE``.
 # Locked by tests/test_scope_inheritance_is_declared.py.
 
-# Display set ONLY (NOT the inheritance source of truth anymore): the
-# composition-summary endpoint iterates this to surface per-Kind local/inherited
-# counts in the Studio sidebar. Membership semantics live in the denylist above.
-DEFAULT_INHERITABLE_KINDS_V1: frozenset[str] = frozenset({
-    "Agent",
-    "LottieAsset",
-    "HtmlTemplate",
-    "Skill",
-    "ImagePrompt",
-    "Theme",
-    "PromptTemplate",
-    # s-automation-trio-extinction: JobType/HookType/ScheduleType foram
-    # extintos e unificados no Kind Automation (o inheritable herdável).
-    "Automation",
-})
+# ⚠️ The display set that used to live here — ``DEFAULT_INHERITABLE_KINDS_V1``,
+# 8 literal Kind names — is GONE (i-107). Each Kind DECLARES it as the trait
+# ``composition.platform-default`` and ``kernel.kinds_with_trait`` derives the
+# set. Its two readers are ``Kernel.composition_summary`` (per-Kind
+# local/inherited counts for the Studio sidebar) and the "a platform default may
+# never be TENANTED" invariant in tests/test_inheritable_kinds_tenancy.py.
+#
+# ⭐ It is NOT the same set as the denylist above, and that measurement is why
+# this became a trait instead of being deleted outright. 74 Kinds are
+# ``scope_inheritable``; SIXTEEN of those are TENANTED (Canvas, UserProfile,
+# AuditLog, Project…). Deriving the display set from scope inheritance would
+# have reported those sixteen as violations of an invariant they do not break —
+# being ALLOWED to inherit is not the same as SHIPPING a default to inherit. The
+# old list was right about the concept and wrong only about being a list, which
+# is the opposite of what the previous slice found and the reason the parity
+# test comes before the deletion rather than after.
+#
+# ⚠️ And here is what a list can do that a declaration cannot: three of its eight
+# names — ``LottieAsset``, ``HtmlTemplate``, ``ImagePrompt`` — are not registered
+# anywhere in this repo. The summary queried them on every call, and the tenancy
+# invariant skipped them with ``if kp is None: continue``. 37% of the set was
+# dead and nothing said so. A trait has to be declared ON something.
+# Locked by tests/test_platform_default_is_declared.py.
+
+#: The replacement, defined HERE so a grep for the deleted constant lands on it.
+TRAIT_PLATFORM_DEFAULT = "composition.platform-default"
 
 
 # Hard limit on parent_scope chain depth — guards against runaway loops

@@ -8,7 +8,8 @@ validation + listing; EXECUTION is the host's (extension point in
 docs/concepts/builtin-kinds.md). These tests pin:
 
 - the descriptor registration surface (alias, plane, permissive tenancy —
-  Automation is in ``DEFAULT_INHERITABLE_KINDS_V1``, so the máxima
+  Automation declares ``composition.platform-default`` (the trait that
+  replaced ``DEFAULT_INHERITABLE_KINDS_V1`` in i-107), so the máxima
   "inheritable ⇒ never TENANTED" applies);
 - the two validation layers: JSON Schema shape (conditional per-trigger
   requireds) at parse, and the ``pre_save`` veto guard for what schema
@@ -28,7 +29,7 @@ from dna.extensions.automation import (
 )
 from dna.kernel import Kernel
 from dna.kernel.hooks import KNOWN_HOOK_NAMES
-from dna.kernel.query.resolver import DEFAULT_INHERITABLE_KINDS_V1
+from dna.kernel.query.resolver import TRAIT_PLATFORM_DEFAULT
 from tests.test_kernel_invalidate_modes import _FakeWritableSource
 
 _KEY = ("github.com/ruinosus/dna/automation/v1", "Automation")
@@ -83,7 +84,8 @@ def test_identity_and_plane(port):
 def test_tenancy_is_permissive_because_inheritable(port):
     # Automation is an inheritable `_lib` default — the máxima "inheritable
     # ⇒ never TENANTED" demands a writable base: tenant_scope undeclared.
-    assert "Automation" in DEFAULT_INHERITABLE_KINDS_V1
+    from dna.kernel import Kernel
+    assert "Automation" in Kernel.auto().kinds_with_trait(TRAIT_PLATFORM_DEFAULT)
     assert getattr(port, "scope", None) is None
 
 

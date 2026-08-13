@@ -170,7 +170,7 @@ The cache-coherence state the invalidation controller fans out over. All of it s
     controller is stateless and reaches it through this narrow host — NOT the
     whole kernel. Consumed ONLY by invalidation.
 
-    Required (always present): the four below. The controller ALSO touches three
+    Required (always present): the five below. The controller ALSO touches three
     LAZY members — ``_write_observers``, ``_holders``, ``_layer_observers`` —
     each read defensively via ``getattr(k, name, default)`` (they are created on
     first ``on_write`` / ``register_holder`` / ``resolve_instance``). Because the
@@ -179,7 +179,11 @@ The cache-coherence state the invalidation controller fans out over. All of it s
 
 **Not an extension point.** A back-reference from one kernel collaborator to the narrow slice of the kernel it is allowed to reach. Published as a Protocol so the slice is typed and enforceable, not so anybody outside the kernel implements it.
 
-_No methods: this Protocol is satisfied by **attributes**, not calls (see the source docstring above)._
+**The contract**
+
+| Member | Signature | What it must do |
+| --- | --- | --- |
+| `kinds_with_trait` | <code>def kinds_with_trait(self, trait: str) -> 'frozenset[str]'</code> | Which Kinds declare ``trait``. The controller asks for ``record.is-evidence`` to decide what NOT to invalidate — it used to spell that ``kind == "Evidence"`` (i-107). |
 
 ## KindLookup
 

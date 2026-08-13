@@ -26,7 +26,9 @@ owns its board scope + intel sources + memory; RBAC is the standard ladder.
     rungs ship as per-tenant seed docs (examples/dna-cloud/.dna/.../roles/).
 
 All 5 are TENANTED — per-tenant portfolio data, NOT shared ``_lib`` defaults,
-and deliberately NOT inheritable (never in ``DEFAULT_INHERITABLE_KINDS_V1``),
+and deliberately NOT a platform default (it does not declare
+``composition.platform-default``, the trait that replaced the literal
+``DEFAULT_INHERITABLE_KINDS_V1`` in i-107),
 so TENANTED is the correct tenancy.
 
 This is the data foundation ONLY — the console UI, the resolve_role helper

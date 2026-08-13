@@ -56,7 +56,9 @@ def test_portfolio_kind_registered_from_descriptor(kind_name, expected):
     assert kp.alias == alias
     assert kp.plane == "record"
     # TENANTED — per-tenant portfolio data, NOT a shared _lib default, and
-    # deliberately NOT inheritable (never in DEFAULT_INHERITABLE_KINDS_V1).
+    # deliberately NOT a platform default (does not declare
+    # composition.platform-default, the trait that replaced
+    # DEFAULT_INHERITABLE_KINDS_V1 in i-107).
     assert kp.scope == TenantScope.TENANTED
     assert kp.storage.container == container
     assert getattr(kp, "__declarative__", False) is True

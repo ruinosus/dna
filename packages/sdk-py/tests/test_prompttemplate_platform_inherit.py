@@ -20,12 +20,15 @@ from dna.adapters.filesystem.writable import FilesystemWritableSource
 
 def test_prompttemplate_in_inheritable_sets():
     # Membership lock (Py kernel + V1 resolver mirror).
-    from dna.kernel.query.resolver import DEFAULT_INHERITABLE_KINDS_V1
+    from dna.kernel.query.resolver import TRAIT_PLATFORM_DEFAULT
 
-    # _INHERITABLE_KINDS is now a derived instance property
-    # (s-kernel-kindport-classification-attrs).
-    assert "PromptTemplate" in Kernel.auto()._INHERITABLE_KINDS
-    assert "PromptTemplate" in DEFAULT_INHERITABLE_KINDS_V1
+    # Both are derived now: _INHERITABLE_KINDS from `scope_inheritable`, the
+    # platform-default set from the `composition.platform-default` trait
+    # (i-107 replaced the literal DEFAULT_INHERITABLE_KINDS_V1). They are
+    # deliberately NOT the same set — see test_platform_default_is_declared.py.
+    k = Kernel.auto()
+    assert "PromptTemplate" in k._INHERITABLE_KINDS
+    assert "PromptTemplate" in k.kinds_with_trait(TRAIT_PLATFORM_DEFAULT)
 
 
 def _make_kernel(tmp: Path) -> Kernel:

@@ -185,6 +185,12 @@ class ThemeKind(KindBase):
     # podem ter tema próprio (override per-tenant). s-inheritable-kinds-tenancy-invariant.
     kind = "Theme"
     alias = "helix-theme"
+    # The comment above says "default de _lib herdável" in prose; this is that
+    # sentence made machine-readable (i-107). It replaces membership of
+    # ``query/resolver.py::DEFAULT_INHERITABLE_KINDS_V1``, a literal list of 8
+    # names in the kernel — 3 of which named Kinds nothing in this repo
+    # registers. The invariant this comment invokes now reads the declaration.
+    traits = frozenset({"composition.platform-default"})
     model = dict
     origin = "github.com/ruinosus/dna"
     storage = StorageDescriptor.yaml("themes")
@@ -622,6 +628,12 @@ class CanvasKind(KindBase):
     flatten_in_context = False
     prompt_target_priority = 0
     description_fallback_field = "title"
+    # Machine-CHURN: a canvas is rewritten on every shape the agent draws, so a
+    # full version history is thousands of snapshots of a whiteboard caught
+    # mid-stroke. Declared here rather than listed in ``kernel/__init__.py`` —
+    # the set that used to hold "Canvas" was a second copy of this very field,
+    # which the write pipeline already read first (i-107).
+    version_retention = 3
     docs = (
         "A Canvas is a shared whiteboard between JARVIS and the user — "
         "tldraw-backed. User draws with mouse/touch/3D hand; JARVIS reads "

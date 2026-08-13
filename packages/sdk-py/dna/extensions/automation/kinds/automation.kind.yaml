@@ -99,8 +99,15 @@ spec:
   # a host to run; the SDK validates and lists, the HOST executes. That
   # declare-here/execute-in-the-host split IS this trait, and it is the same
   # split TestGuide and EvalSuite make from two other extensions.
+  # ``composition.platform-default`` (i-107): an Automation ships in ``_lib``
+  # and every scope inherits it, overriding locally when it wants its own. That
+  # was membership of ``query/resolver.py::DEFAULT_INHERITABLE_KINDS_V1``, a
+  # literal list of 8 names in the kernel — 3 of which named Kinds nothing in
+  # this repo registers. It is also what makes this Kind's tenancy permissive
+  # (see the extension docstring): a TENANTED Kind cannot be written at the base
+  # layer, so it could never ship the default it promises.
   # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
-  traits: [execution.declared]
+  traits: [execution.declared, composition.platform-default]
   plane: record
   prompt_target: false
   flatten_in_context: false

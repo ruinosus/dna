@@ -125,6 +125,24 @@ OPEN; this is what is registered on THIS server right now, and ``[carries
 ...]`` is what comes with the name:
 
 
+    composition.platform-default
+        This Kind ships PLATFORM DEFAULTS: instances of it live in the
+        library scope (`_lib`), every scope inherits them, and a scope or
+        tenant specialises by writing its own on top. Read by the
+        composition summary (which Kinds are worth showing
+        local-vs-inherited counts for) and by the invariant that a Kind like
+        this may never be `TenantScope.TENANTED` — a TENANTED Kind cannot be
+        written at the base layer, so the default it promises could never
+        exist. ⚠️ NOT a restatement of `scope_inheritable`, and the
+        difference was MEASURED before this name was written (i-107,
+        13/08/2026): 74 Kinds are scope-inheritable and 16 of those are
+        TENANTED — Canvas, UserProfile, AuditLog, Project — which is not a
+        contradiction, because being ALLOWED to inherit is not the same as
+        SHIPPING a default to inherit. Deriving this set from
+        `scope_inheritable` would have reported those 16 as violations of an
+        invariant they do not break. That measurement is the reason this is
+        a new name and not a deletion: the literal list it replaces was
+        RIGHT about the concept, and only wrong about being a literal list.
     execution.declared
         Declares work a RUNNER executes, and is only ever the script — never
         the outcome. A TestGuide's steps, an EvalSuite's cases, an
@@ -158,12 +176,40 @@ OPEN; this is what is registered on THIS server right now, and ``[carries
         the memory verbs search. DISTINCT from `embed:`, which declares
         WHICH FIELDS carry an embeddable payload: an ADR should be
         searchable without being decay-ranked as a memory.
+    prompt.named-template
+        This Kind's instances hold REUSABLE PROMPT BODIES addressable by
+        name. When an Agent's `promptTemplate` is a bare slug rather than a
+        file ref or inline Mustache, the prompt builder looks for an
+        instance of a Kind declaring this trait with that name, and uses its
+        body — which is what lets somebody author a prompt on screen and
+        reference it from an agent with no YAML and no file. It carries no
+        schema, deliberately: WHERE the body lives is already declared, as
+        `storage.body_field` on the Kind's own storage descriptor, and the
+        builder reads it from there. A trait that restated the field name
+        would be the second spelling of a fact the descriptor already states
+        — the overdo this module exists to refuse. The trait answers only
+        *which Kinds are prompt libraries*, which nothing else declares.
     record.append-only
         An audit / evidence record: it may be WRITTEN and READ but never
         deleted through a generic tool. The record is what proves what
         happened, so deleting it is the first move of anyone with something
         to hide — and unlike a bad write, it is not recoverable by writing a
         better one.
+    record.evidence-policy
+        This Kind GATES evidence capture: the capture path reads its
+        instances in the write's scope and captures nothing unless one of
+        them names the event. It is the third leg of the pair above, and it
+        was added a day later (i-107) for a reason worth keeping: with only
+        the first two declared, a tenant could say which Kind PRODUCES
+        evidence and which Kind IS evidence, and still had no way to say
+        which Kind DECIDES — the kernel spelled that one `"EvidencePolicy"`.
+        Half a translation reads as a whole one until somebody tries the
+        third step. Narrower than `governance.policy`, deliberately, and
+        that is why this is not that trait: `governance.policy` is declared
+        by SafetyPolicy, EvidencePolicy, LayerPolicy and CognitivePolicy
+        alike — deriving the capture gate from it would read a safety
+        scanner's rules as if they answered `should_capture`. A trait names
+        the role a consumer needs, not the shelf the Kind sits on.
     record.invalidate-only
         A bi-temporal record, RETIRED by stamping the end of its world-time
         validity (`valid_to`) and never by removing the row — so it stays

@@ -235,6 +235,13 @@ def test_invalidation_runs_on_narrow_fake():
         _batch_mode_depth=0,
         _batch_pending=[],
         _kcache=fake_kcache,
+        # i-107 — the evidence skip derives from `record.is-evidence` now, so
+        # the narrow host must be able to answer. This fake says "Ledger" is the
+        # evidence Kind, which is also the point: the controller has no opinion
+        # about the NAME, only about what the host declares.
+        kinds_with_trait=lambda trait: (
+            frozenset({"Ledger"}) if trait == "record.is-evidence" else frozenset()
+        ),
         _write_observers=[],
         _holders=[],
         _layer_observers={},
@@ -242,6 +249,11 @@ def test_invalidation_runs_on_narrow_fake():
     inv = InvalidationController(fake)  # type: ignore[arg-type]
     inv.invalidate(scope="myscope", kind="Agent", name="n", op="save")
     assert dropped == ["myscope"]  # schema-invalidating kind dropped the base cache
+    inv.invalidate(scope="myscope", kind="Ledger", name="n", op="save")
+    assert dropped == ["myscope"], (
+        "the Kind this host DECLARES as evidence must be skipped, and the "
+        "controller must not need it to be spelled 'Evidence' to know"
+    )
     assert isinstance(fake, InvalidationHost)
 
 

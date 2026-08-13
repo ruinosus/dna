@@ -14,9 +14,7 @@ import pytest
 import pytest_asyncio
 
 from dna.adapters.sqlalchemy_ import SqlAlchemySource
-from dna.kernel import (
-    Kernel, VERSION_CHURN_RETENTION, VERSION_CHURN_KINDS,
-)
+from dna.kernel import Kernel, VERSION_CHURN_RETENTION
 from dna.kernel.capabilities import write_kwarg_support
 from dna.kernel.kinds.base import KindBase
 from dna.kernel.protocols import StorageDescriptor
@@ -85,21 +83,12 @@ class _AuthoredKind(KindBase):
     storage = StorageDescriptor.yaml("test-authored")
 
 
-def test_churn_set_excludes_authored_kinds():
-    # Story/Spec/ADR are record-plane but AUTHORED — their history must NOT be
-    # capped (the bug the curated set fixes vs a blanket plane==record rule).
-    for authored in ("Story", "Spec", "ADR", "Feature", "Plan"):
-        assert authored not in VERSION_CHURN_KINDS
-
-
-def test_version_churn_kinds_includes_engram():
-    """s-engram-rename (2026-07-19) fail-open pin: forgetting to keep Engram
-    in this curated set doesn't error anywhere — it silently reverts to full
-    version history (the exact 175k-snapshot bug the set exists to prevent).
-    See test_kernel_caps_engram_history_via_curated_set below for the
-    functional (write-path) proof that this membership is actually load-
-    bearing, not just a name in a set nothing reads."""
-    assert "Engram" in VERSION_CHURN_KINDS
+# ⚠️ The two membership tests that used to sit here — "authored Kinds are not in
+# VERSION_CHURN_KINDS" and "Engram is in VERSION_CHURN_KINDS" — moved to
+# tests/test_version_churn_is_declared.py when the curated set was deleted
+# (i-107). They ask the same two questions of the DECLARATION instead of the
+# set. The functional write-path proof below is unchanged and is what actually
+# holds the ground.
 
 
 @pytest.mark.asyncio
@@ -123,20 +112,23 @@ async def test_kernel_caps_churn_kind_history(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_kernel_caps_engram_history_via_curated_set(tmp_path):
+async def test_kernel_caps_engram_history_via_its_own_declaration(tmp_path):
     """Functional, end-to-end proof for the REAL Engram Kind — not the
-    synthetic ``_ChurnKind`` above (which self-declares ``version_retention``
-    on the class, the PER-KIND opt-in path). Engram's KindPort is a
-    descriptor-synthesized ``DeclarativeKindPort`` (registered by
-    HelixExtension from ``helix/kinds/engram.kind.yaml``) that carries no
-    ``version_retention`` attribute at all — so
-    ``write_pipeline.py``'s ``getattr(_kp, "version_retention", None)`` is
-    always None for it, and the cap can ONLY come from the CURATED
-    ``VERSION_CHURN_KINDS`` membership tested above. Writing the SAME Engram
-    doc repeatedly through the real kernel + HelixExtension registration and
-    asserting the retained version count is capped is the only test that
-    actually exercises that code path (mirrors
-    test_write_path_despecialize.py::
+    synthetic ``_ChurnKind`` above.
+
+    ⚠️ This docstring said the opposite until i-107, and the difference is the
+    whole change: Engram's KindPort is a descriptor-synthesized
+    ``DeclarativeKindPort`` (HelixExtension, from ``helix/kinds/engram.kind.yaml``)
+    that "carries no ``version_retention`` attribute at all", so the cap could
+    only come from the kernel's curated ``VERSION_CHURN_KINDS``. The descriptor
+    now declares ``version_retention: 3`` and the set is gone — same behaviour,
+    read off the Kind. ``meta.py`` sets the attribute only when declared, so
+    ``write/pipeline.py``'s ``getattr(_kp, "version_retention", None)`` is what
+    answers here.
+
+    Writing the SAME Engram doc repeatedly through the real kernel and asserting
+    the retained count is capped is still the only test that exercises the whole
+    path end to end (mirrors test_write_path_despecialize.py::
     test_bitemporal_guard_fires_through_write_document for the sibling
     bitemporal-guard fail-open set).
     """
@@ -170,7 +162,7 @@ async def test_kernel_caps_engram_history_via_curated_set(tmp_path):
         assert len(versions) == VERSION_CHURN_RETENTION, (
             f"Engram's version history must be capped at "
             f"VERSION_CHURN_RETENTION ({VERSION_CHURN_RETENTION}) via the "
-            f"curated VERSION_CHURN_KINDS set, got {len(versions)} retained "
+            f"declared version_retention, got {len(versions)} retained "
             f"versions after {total_writes} writes"
         )
         assert max(v["version"] for v in versions) == total_writes  # latest survives
