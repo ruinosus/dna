@@ -528,6 +528,13 @@ class AgentKind(KindBase):
     api_version = "github.com/ruinosus/dna/v1"
     kind = "Agent"
     alias = "helix-agent"
+    # ``composition.platform-default`` (i-107): this Kind ships defaults in
+    # ``_lib`` that every scope inherits and may override locally. Replaces
+    # membership of ``query/resolver.py::DEFAULT_INHERITABLE_KINDS_V1``, a
+    # literal list of 8 names in the kernel — 3 of which named Kinds that are
+    # not registered anywhere in this repo. Read by ``composition_summary``
+    # and by the "inheritable never TENANTED" invariant.
+    traits = frozenset({"composition.platform-default"})
     is_schema_affecting = True
     model = TypedAgent
     origin = "github.com/ruinosus/dna"

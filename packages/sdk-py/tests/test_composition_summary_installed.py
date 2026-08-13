@@ -11,6 +11,31 @@ from unittest.mock import MagicMock
 import pytest
 
 from dna.kernel import Kernel
+from dna.kernel.kinds.base import KindBase
+from dna.kernel.protocols import StorageDescriptor
+from dna.kernel.query.resolver import TRAIT_PLATFORM_DEFAULT
+
+
+class _PlatformDefaultKind(KindBase):
+    """A stand-in for the platform-default Kinds ``composition_summary`` counts.
+
+    i-107 — the summary iterated the literal ``DEFAULT_INHERITABLE_KINDS_V1``,
+    so a bare ``Kernel()`` with no Kinds registered still produced counts for
+    eight names. It now counts the Kinds DECLARING
+    ``composition.platform-default``, so the fixture has to register one — which
+    is the honest contract, and doubles as proof that a Kind the kernel has no
+    line of code about is counted like a built-in.
+    """
+    api_version = "test.io/v1"
+    storage = StorageDescriptor.yaml("stubs")
+    traits = frozenset({TRAIT_PLATFORM_DEFAULT})
+
+
+def _platform_default(name: str) -> KindBase:
+    return type(
+        f"_Stub{name}", (_PlatformDefaultKind,),
+        {"kind": name, "alias": f"test-{name.lower()}"},
+    )()
 
 
 def _row(name):
@@ -29,6 +54,7 @@ def _make_kernel(scope_to_rows, *, catalog_scopes):
     src = MagicMock()
     src.query = _fake_query
     k = Kernel()
+    k.kind(_platform_default("Skill"))
     k._source = src  # type: ignore[assignment]
 
     async def _chain(scope, tenant):

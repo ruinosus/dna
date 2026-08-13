@@ -633,7 +633,7 @@ class WritePipeline:
         contract guarantees delivery for every write."""
         from dna.kernel.capabilities import write_kwarg_support
         from dna.kernel import (
-            VERSION_CHURN_KINDS, VERSION_CHURN_RETENTION,
+            LEGACY_VERSION_CHURN_KINDS, VERSION_CHURN_RETENTION,
         )
         host = self._host
         src = host._require_writable_source()
@@ -681,13 +681,19 @@ class WritePipeline:
         if ws.write_class:
             kwargs["write_class"] = write_class
         # s-version-prune-record-plane-churn — cap retained version history for
-        # the machine-churn Kinds (curated set + per-Kind opt-in) so autopilot
-        # rewrites don't drown the authored-content history. Authored Kinds keep
-        # full history.
+        # the machine-churn Kinds so autopilot rewrites don't drown the
+        # authored-content history. Authored Kinds keep full history.
+        #
+        # DERIVED from the Kind's own ``version_retention`` declaration (class
+        # attribute or ``spec.version_retention`` in a descriptor), never from a
+        # list of names here — that list is gone (i-107). The declaration was
+        # ALREADY read first, on the line below; the set was its fallback, which
+        # is to say a second copy of a per-Kind fact. ``LEGACY_VERSION_CHURN_KINDS``
+        # holds only retired doc-kinds with no class to declare on.
         if ws.version_retention:
             _kp = _kind_port
             _retention = getattr(_kp, "version_retention", None) if _kp else None
-            if _retention is None and kind in VERSION_CHURN_KINDS:
+            if _retention is None and kind in LEGACY_VERSION_CHURN_KINDS:
                 _retention = VERSION_CHURN_RETENTION
             if _retention is not None:
                 kwargs["version_retention"] = _retention

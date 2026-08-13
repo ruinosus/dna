@@ -12,6 +12,10 @@ from typing import Any, TYPE_CHECKING
 from dna.kernel._text import strip_prompt_block
 from dna.kernel.errors import AgentNotFound, UnknownLayout
 
+#: Which Kinds are prompt LIBRARIES — instances addressable by name from an
+#: Agent's ``promptTemplate``. Replaced the literal ``"PromptTemplate"`` (i-107).
+TRAIT_NAMED_TEMPLATE = "prompt.named-template"
+
 if TYPE_CHECKING:
     from dna.kernel.instance import Instance
     from dna.kernel.manifest import ManifestInstance
@@ -373,15 +377,62 @@ class PromptBuilder:
     #
     # ⚠️ Um slug sem doc correspondente cai na forma 3 (inline), nunca em erro:
     # templates inline de uma palavra são legais hoje e continuam valendo.
+    #
+    # ⭐ i-107 — QUAIS Kinds são biblioteca de prompt vem do trait
+    # ``prompt.named-template``, não do literal ``"PromptTemplate"``. E ONDE o
+    # corpo mora vem de ``storage.body_field``, que o descritor do Kind já
+    # declarava (``body_field: body``) e este código ignorava, lendo
+    # ``spec["body"]`` fixo. Dois fatos por Kind, os dois declaráveis, um deles
+    # já declarado — declarar o segundo teria sido a segunda grafia.
+    #
+    # O que isso compra: uma biblioteca de prompts autorada por tenant. Antes,
+    # um Kind próprio de prompts era invisível para o agent por mais que
+    # parecesse um PromptTemplate — não "não estava configurado", não havia como
+    # dizer.
     _TEMPLATE_NAME_RE = __import__("re").compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
+
+    def _template_ports(self) -> list[Any]:
+        """The Kind ports declaring ``prompt.named-template``, sorted by Kind
+        name so a scope with more than one library resolves deterministically.
+
+        Read off the MI's own ``_kinds`` map, unioned with the kernel's registry
+        when there is one — same shape as ``ReportBuilder._evidence_kinds``, and
+        for the same reason: a trait is a fact about the port, so a kernel-less
+        MI can still answer for the Kinds it was handed.
+        """
+        from dna.kernel.kinds.traits import port_traits
+
+        ports = {
+            kind: port
+            for port in getattr(self._host, "_kinds", {}).values()
+            if (kind := getattr(port, "kind", None)) is not None
+            and TRAIT_NAMED_TEMPLATE in port_traits(port)
+        }
+        lookup = getattr(
+            getattr(self._host, "_kernel", None), "kind_ports_with_trait", None,
+        )
+        if callable(lookup):
+            for port in lookup(TRAIT_NAMED_TEMPLATE):
+                ports.setdefault(getattr(port, "kind", ""), port)
+        return [ports[k] for k in sorted(ports) if k]
+
+    @staticmethod
+    def _template_body(port: Any, spec: dict | None) -> str | None:
+        """The body of one prompt-library instance, at the field its OWN storage
+        descriptor names. ``"body"`` is the fallback, not the rule."""
+        field = getattr(getattr(port, "storage", None), "body_field", None) or "body"
+        body = (spec or {}).get(field)
+        return body if isinstance(body, str) and body.strip() else None
 
     def _named_template_body(self, tmpl: str) -> str | None:
         if not self._TEMPLATE_NAME_RE.match(tmpl):
             return None
+        ports = {p.kind: p for p in self._template_ports()}
+        if not ports:
+            return None
         for d in self._host.instances:
-            if d.kind == "PromptTemplate" and d.name == tmpl:
-                body = (d.spec or {}).get("body")
-                return body if isinstance(body, str) and body.strip() else None
+            if d.kind in ports and d.name == tmpl:
+                return self._template_body(ports[d.kind], d.spec)
         return None
 
     async def _named_template_body_async(self, tmpl: str) -> str | None:
@@ -389,14 +440,16 @@ class PromptBuilder:
         (que num MI preguiçoso re-entra o helper síncrono e levanta)."""
         if not self._TEMPLATE_NAME_RE.match(tmpl):
             return None
-        try:
-            docs = await self._host.all_async("PromptTemplate")
-        except Exception:  # noqa: BLE001 — catálogo indisponível = forma inline
-            return None
-        for d in docs:
-            if d.name == tmpl:
-                body = (d.spec or {}).get("body")
-                return body if isinstance(body, str) and body.strip() else None
+        for port in self._template_ports():
+            try:
+                docs = await self._host.all_async(port.kind)
+            except Exception:  # noqa: BLE001 — catálogo indisponível = forma inline
+                continue
+            for d in docs:
+                if d.name == tmpl:
+                    body = self._template_body(port, d.spec)
+                    if body is not None:
+                        return body
         return None
 
     def _effective_template(self, agent_doc: Instance) -> str:

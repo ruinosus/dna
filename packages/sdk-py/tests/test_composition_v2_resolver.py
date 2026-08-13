@@ -28,7 +28,7 @@ import pytest
 from dna.kernel import Kernel
 from dna.kernel.query.resolver import (
     BOOTSTRAP_KINDS,
-    DEFAULT_INHERITABLE_KINDS_V1,
+    TRAIT_PLATFORM_DEFAULT,
     ResolutionLayer,
     merge_field_level,
     merge_override_full,
@@ -118,10 +118,17 @@ def test_bootstrap_kinds_constant():
     assert "KindDefinition" in BOOTSTRAP_KINDS
 
 
-def test_v1_inheritable_constant():
-    assert "Agent" in DEFAULT_INHERITABLE_KINDS_V1
-    assert "LottieAsset" in DEFAULT_INHERITABLE_KINDS_V1
-    assert "Story" not in DEFAULT_INHERITABLE_KINDS_V1
+def test_platform_defaults_are_declared_not_listed():
+    """i-107 — was ``test_v1_inheritable_constant``, three membership asserts
+    against ``DEFAULT_INHERITABLE_KINDS_V1``. One of them named ``LottieAsset``,
+    which is not a registered Kind in this repo: the literal set answered for it
+    anyway, which is the whole reason the set is gone."""
+    from dna.kernel import Kernel
+
+    defaults = Kernel.auto().kinds_with_trait(TRAIT_PLATFORM_DEFAULT)
+    assert "Agent" in defaults
+    assert "Story" not in defaults
+    assert "LottieAsset" not in defaults  # never registered — see the docstring
 
 
 @pytest.mark.asyncio

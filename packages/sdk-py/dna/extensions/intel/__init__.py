@@ -9,7 +9,8 @@ classes):
     threshold, Priority Intelligence Requirements (PIRs) and mute state.
     TENANTED — a source is the tenant's OWN watchlist (per-tenant user data),
     NOT a shared ``_lib`` default. It is deliberately NOT inheritable (never in
-    ``DEFAULT_INHERITABLE_KINDS_V1``), so TENANTED is correct.
+    não declara ``composition.platform-default``, o trait que substituiu o
+    literal ``DEFAULT_INHERITABLE_KINDS_V1`` em i-107), so TENANTED is correct.
   - Insight (``intel-insight``, kind name ``IntelInsight``) — the
     dissemination unit: a ranked, actionable insight that the
     ranker/digest/dedup/feedback stages reference. TENANTED for the same

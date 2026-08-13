@@ -15,11 +15,40 @@ repo e foi apagado (i-047, s-dna-shrink-faixa-1) — este módulo É o caminho.
 Chamada sync na thread do loop
 levantaria via _run_sync_helper — failing loud, by design. Push-down de
 filtro aqui é follow-up sem ganho real (superfície legada, fria).
+
+⚠️ i-107 — o que este módulo sabe de Kind, e por que só UMA das leituras virou
+derivação
+------------------------------------------------------------------------------
+``evidence_manifest`` lia ``_all("Evidence")`` por NOME e agora deriva do trait
+``record.is-evidence`` — a mesma pergunta que ``write/evidence.py`` já faz para
+decidir o que ESCREVER, então perguntá-la aqui por nome era a segunda resposta
+para uma pergunta só. Um Kind de tenant que declare o trait entra no manifesto.
+
+``eval_summary`` NÃO virou, e o argumento é o mesmo que fechou a i-109: o método
+não lê só o nome ``EvalRun``, ele lê o ESQUEMA dele — ``suite``, ``saved_at``,
+``total``, ``passed``, ``aggregate_score``, ``total_cost_usd``,
+``total_tokens``, ``results[]{case,status,score}``. Trocar o literal por um
+trait deixaria as sete leituras de campo exatamente onde estão e daria a falsa
+impressão de que a fronteira foi consertada — e pior: ``execution.run`` já
+existe e reúne ``EvalRun`` COM ``TestRun``, cujo esquema é outro, de modo que a
+derivação varreria um Kind cujos campos este código não sabe ler. A fronteira
+errada aqui é de CAMADA (um leitor de esquema de extensão morando no kernel),
+não de literal, e o conserto é mover o módulo — trabalho da forma da i-109.
+
+⚠️ E um achado que caiu junto: ``Finding`` NÃO é um Kind registrado (medido
+13/08/2026, ``kind_port_for("Finding")`` devolve None, as mesmas 89 do
+registro vivo). ``findings_summary`` e ``compliance_matrix`` portanto SEMPRE
+devolvem "_No findings._", em qualquer scope — e nada reclama, que é
+exatamente o que uma lista literal permite e uma declaração não permitiria.
+Registrado como ponta aberta na i-107; não consertado aqui porque escolher
+entre registrar o Kind e apagar os dois métodos é decisão de produto.
 """
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, TYPE_CHECKING
+
+from dna.kernel.write.evidence import TRAIT_IS_EVIDENCE
 
 if TYPE_CHECKING:
     from dna.kernel.manifest import ManifestInstance
@@ -59,6 +88,36 @@ class ReportBuilder:
 
     def __init__(self, mi: ManifestInstance) -> None:
         self._mi = mi
+
+    def _evidence_kinds(self) -> frozenset[str]:
+        """Which Kinds ARE evidence records — derived from ``record.is-evidence``.
+
+        Read off the PORTS, not off a kernel, so the answer survives the MI's
+        kernel-less shape: ``ManifestInstance._kinds`` already carries the
+        ``KindPort`` of every Kind this manifest knows, and a trait is a fact
+        about the port. The kernel's own ``kinds_with_trait`` is unioned in when
+        there is one, because a lazy MI may not have materialized every Kind it
+        can reach.
+
+        ⚠️ An MI constructed with ``kinds={}`` therefore reports nothing — which
+        is the honest answer, not a regression: a manifest that knows no Kinds
+        cannot know that one of its rows is an evidence record. Naming
+        ``"Evidence"`` here was what let it pretend otherwise, and it is the same
+        shortcut that let ``findings_summary`` be written against ``Finding``, a
+        Kind nothing in this repo registers.
+        """
+        from dna.kernel.kinds.traits import port_traits
+
+        found = {
+            kind
+            for port in getattr(self._mi, "_kinds", {}).values()
+            if (kind := getattr(port, "kind", None)) is not None
+            and TRAIT_IS_EVIDENCE in port_traits(port)
+        }
+        lookup = getattr(getattr(self._mi, "_kernel", None), "kinds_with_trait", None)
+        if callable(lookup):
+            found |= set(lookup(TRAIT_IS_EVIDENCE))
+        return frozenset(found)
 
     # ─── eval_summary ────────────────────────────────────────────────
 
@@ -179,10 +238,22 @@ class ReportBuilder:
     # ─── evidence_manifest ───────────────────────────────────────────
 
     def evidence_manifest(self) -> str:
-        """Generate a manifest of all evidence instances."""
+        """Generate a manifest of all evidence instances.
+
+        The Kinds swept are the ones DECLARING ``record.is-evidence`` (i-107),
+        not the name ``Evidence``: the four fields read below (``event_type``,
+        ``document_ref``, ``sha256``, ``captured_at``) are the trait's own
+        contract — they are what the capture path in ``kernel/write/evidence.py``
+        writes into whatever Kind declares it — so a tenant Kind that declares
+        the trait is readable here by construction, not by coincidence.
+        Sorted so a deployment with more than one (legal, per the trait's
+        description) renders deterministically.
+        """
         # two-planes F2.5: Evidence é plane=record (verificado, extensão
         # evidence) → delega via query (caller off-loop, ver topo).
-        evidence = self._mi._all("Evidence")
+        evidence: list[Any] = []
+        for evidence_kind in sorted(self._evidence_kinds()):
+            evidence.extend(self._mi._all(evidence_kind))
 
         md = _frontmatter("evidence_manifest", self._mi.scope)
         md += "# Evidence Manifest\n\n"

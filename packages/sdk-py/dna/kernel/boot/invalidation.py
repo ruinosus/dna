@@ -27,6 +27,7 @@ from dna.kernel.invalidation_cost import (
     invalidation_logging_enabled,
     now,
 )
+from dna.kernel.write.evidence import TRAIT_IS_EVIDENCE
 
 if TYPE_CHECKING:  # pragma: no cover
     from dna.kernel.collaborator_ports import InvalidationHost
@@ -141,8 +142,18 @@ class InvalidationController:
         """Real invalidation work — bypasses the batch-mode short-circuit.
         Called from ``invalidate()`` and the ``batch_writes()`` exit flush."""
         k = self._k
-        # 1. Evidence skip — preserve audit-stream churn-avoidance.
-        if kind == "Evidence":
+        # 1. Evidence skip — preserve audit-stream churn-avoidance. An evidence
+        # record is written on every captured write, and invalidating the caches
+        # for each one would make capture cost more than the writes it observes.
+        #
+        # DERIVED from the ``record.is-evidence`` trait, never from the name
+        # "Evidence" (i-107). The evidence-capture path in ``write/evidence.py``
+        # already asks the same question of the same trait to decide what to
+        # WRITE; asking it here by name meant a tenant Kind that declares the
+        # trait got captured — and then paid a full invalidation per capture,
+        # while the built-in Kind did not. Two answers to one question is the
+        # defect; the trait is the one answer.
+        if kind in k.kinds_with_trait(TRAIT_IS_EVIDENCE):
             return
 
         # 2. Drop kernel-level base cache ONLY for schema-changing kinds.

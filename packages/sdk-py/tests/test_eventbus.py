@@ -87,18 +87,34 @@ class TestKernelInvalidateContract:
         assert b.reloads == 0          # different scope, not touched
 
     def test_invalidate_skips_evidence(self):
-        """Audit-stream churn-avoidance: Evidence writes don't reload."""
+        """Audit-stream churn-avoidance: evidence writes don't reload.
+
+        i-107 — the Kind is identified by its ``record.is-evidence``
+        declaration, never by being called "Evidence", so the fixture declares
+        the trait on a Kind with another name entirely.
+        """
         from dna.kernel import Kernel
+        from dna.kernel.kinds.base import KindBase
+        from dna.kernel.protocols import StorageDescriptor
+
+        class _TenantLedger(KindBase):
+            api_version = "market.example/v1"
+            kind = "TenantLedger"
+            alias = "market-tenantledger"
+            storage = StorageDescriptor.yaml("tenantledgers")
+            traits = frozenset({"record.is-evidence"})
+
         k = Kernel()
+        k.kind(_TenantLedger())
         h = _StubHolder("hr-screening")
         k.register_holder(h)
         k._kcache._base = {"hr-screening": "stale-mi"}
         k.invalidate(
             scope="hr-screening", tenant="",
-            kind="Evidence", name="ev-1", op="write",
+            kind="TenantLedger", name="ev-1", op="write",
         )
         assert h.reloads == 0
-        # Cache also untouched — Evidence churn doesn't drop the cache.
+        # Cache also untouched — evidence churn doesn't drop the cache.
         assert k._kcache._base.get("hr-screening") == "stale-mi"
 
     def test_invalidate_idempotent(self):

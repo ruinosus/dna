@@ -160,6 +160,8 @@ PROPOSED_TRAITS: dict[str, str] = {
 #:
 #:     write/evidence.py:28   _EVAL_KINDS = {"EvalRun", "EvalBaseline", "Finding"}
 #:     write/evidence.py:131  if kind == "Evidence"
+#:     write/evidence.py:195   if kind == "EvidencePolicy"      (the third, i-107 day 2)
+#:     boot/invalidation.py:145  if kind == "Evidence"           (idem)
 #:
 #: Deleting a name here without first restoring those literals changes
 #: behaviour: evidence stops being stamped with its suite, or the recursion
@@ -199,6 +201,55 @@ BEHAVIOURAL_TRAITS: dict[str, str] = {
         "be declared by exactly one Kind per deployment, but deliberately not "
         "enforced as such — a tenant that runs its own evidence Kind alongside "
         "the built-in one is not doing anything wrong."
+    ),
+    "composition.platform-default": (
+        "This Kind ships PLATFORM DEFAULTS: instances of it live in the library "
+        "scope (`_lib`), every scope inherits them, and a scope or tenant "
+        "specialises by writing its own on top. Read by the composition summary "
+        "(which Kinds are worth showing local-vs-inherited counts for) and by "
+        "the invariant that a Kind like this may never be `TenantScope.TENANTED` "
+        "— a TENANTED Kind cannot be written at the base layer, so the default "
+        "it promises could never exist.\n\n"
+        "⚠️ NOT a restatement of `scope_inheritable`, and the difference was "
+        "MEASURED before this name was written (i-107, 13/08/2026): 74 Kinds "
+        "are scope-inheritable and 16 of those are TENANTED — Canvas, "
+        "UserProfile, AuditLog, Project — which is not a contradiction, because "
+        "being ALLOWED to inherit is not the same as SHIPPING a default to "
+        "inherit. Deriving this set from `scope_inheritable` would have "
+        "reported those 16 as violations of an invariant they do not break. "
+        "That measurement is the reason this is a new name and not a deletion: "
+        "the literal list it replaces was RIGHT about the concept, and only "
+        "wrong about being a literal list."
+    ),
+    "prompt.named-template": (
+        "This Kind's instances hold REUSABLE PROMPT BODIES addressable by name. "
+        "When an Agent's `promptTemplate` is a bare slug rather than a file ref "
+        "or inline Mustache, the prompt builder looks for an instance of a Kind "
+        "declaring this trait with that name, and uses its body — which is what "
+        "lets somebody author a prompt on screen and reference it from an agent "
+        "with no YAML and no file.\n\n"
+        "It carries no schema, deliberately: WHERE the body lives is already "
+        "declared, as `storage.body_field` on the Kind's own storage descriptor, "
+        "and the builder reads it from there. A trait that restated the field "
+        "name would be the second spelling of a fact the descriptor already "
+        "states — the overdo this module exists to refuse. The trait answers "
+        "only *which Kinds are prompt libraries*, which nothing else declares."
+    ),
+    "record.evidence-policy": (
+        "This Kind GATES evidence capture: the capture path reads its instances "
+        "in the write's scope and captures nothing unless one of them names the "
+        "event. It is the third leg of the pair above, and it was added a day "
+        "later (i-107) for a reason worth keeping: with only the first two "
+        "declared, a tenant could say which Kind PRODUCES evidence and which "
+        "Kind IS evidence, and still had no way to say which Kind DECIDES — the "
+        "kernel spelled that one `\"EvidencePolicy\"`. Half a translation reads "
+        "as a whole one until somebody tries the third step.\n\n"
+        "Narrower than `governance.policy`, deliberately, and that is why this "
+        "is not that trait: `governance.policy` is declared by SafetyPolicy, "
+        "EvidencePolicy, LayerPolicy and CognitivePolicy alike — deriving the "
+        "capture gate from it would read a safety scanner's rules as if they "
+        "answered `should_capture`. A trait names the role a consumer needs, "
+        "not the shelf the Kind sits on."
     ),
 }
 

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from dna.kernel import Kernel
 from dna.kernel.boot.invalidation import InvalidationController
+from dna.kernel.kinds.base import KindBase
+from dna.kernel.protocols import StorageDescriptor
 
 
 class _StubHolder:
@@ -35,12 +37,42 @@ def test_on_write_observer_fires():
     assert seen == [("hr", "Skill", "x", "write")]
 
 
-def test_invalidate_skips_evidence():
+def test_invalidate_skips_the_kind_that_declares_record_is_evidence():
+    """Audit-churn-avoidance, DERIVED (i-107).
+
+    The skip used to be ``kind == "Evidence"``. It now reads the
+    ``record.is-evidence`` trait — the same question the capture path in
+    ``kernel/write/evidence.py`` asks to decide what to WRITE. The Kind here is
+    deliberately not called "Evidence": if this passes, the controller is
+    reading the declaration, and a tenant-authored evidence Kind gets the same
+    skip a built-in one gets.
+    """
+    class _TenantLedger(KindBase):
+        api_version = "market.example/v1"
+        kind = "TenantLedger"
+        alias = "market-tenantledger"
+        storage = StorageDescriptor.yaml("tenantledgers")
+        traits = frozenset({"record.is-evidence"})
+
+    k = Kernel()
+    k.kind(_TenantLedger())
+    h = _StubHolder("hr")
+    k.register_holder(h)
+    k.invalidate(scope="hr", tenant="", kind="TenantLedger", name="ev", op="write")
+    assert h.reloads == 0  # audit-churn-avoidance
+
+
+def test_a_kind_that_declares_nothing_still_invalidates():
+    """The negative half — otherwise the test above could pass by everything
+    being skipped."""
     k = Kernel()
     h = _StubHolder("hr")
     k.register_holder(h)
     k.invalidate(scope="hr", tenant="", kind="Evidence", name="ev", op="write")
-    assert h.reloads == 0  # audit-churn-avoidance
+    assert h.reloads == 1, (
+        "a bare kernel where NO Kind declares `record.is-evidence` must "
+        "invalidate — the skip is a declaration, not a name"
+    )
 
 
 def test_invalidate_reloads_matching_holder_only():

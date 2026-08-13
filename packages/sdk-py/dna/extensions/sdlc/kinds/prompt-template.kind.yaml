@@ -32,6 +32,19 @@ spec:
   target_kind: PromptTemplate
   alias: sdlc-prompt-template
   origin: github.com/ruinosus/dna/sdlc
+  # ``composition.platform-default`` (i-107): prompt templates ship in ``_lib``
+  # and every scope inherits them, writing its own on top when it wants to. That
+  # was membership of ``query/resolver.py::DEFAULT_INHERITABLE_KINDS_V1``, a
+  # literal list of 8 names in the kernel — 3 of which named Kinds nothing in
+  # this repo registers, which is what a list can do and a declaration cannot.
+  # ``prompt.named-template`` (i-107): this is the Kind the prompt builder looks
+  # in when an Agent's ``promptTemplate`` is a bare slug. It replaces
+  # ``kernel/prompt/builder.py``'s ``d.kind == "PromptTemplate"`` — the last
+  # place a Kind NAME decided which prompts an agent could reach. The body field
+  # is NOT restated by the trait: ``storage.body_field: body`` below already
+  # says where it lives, and the builder reads it from there.
+  # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
+  traits: [composition.platform-default, prompt.named-template]
   plane: record
   prompt_target: false
   flatten_in_context: false

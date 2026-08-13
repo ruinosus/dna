@@ -131,13 +131,31 @@ def _run_sync_helper(coro_or_value, *, loop: asyncio.AbstractEventLoop | None = 
 # (engrafia rewrites the SAME Engram 6613×; Remembrance/Canvas/VibeSession
 # similar), drowning the meaningful authored history. NOT keyed on plane — many
 # record-plane Kinds (Story/Spec/ADR/Feature) are AUTHORED and keep FULL history,
-# while churny ones (Canvas/VibeSession) aren't even record-plane. Curated set,
-# like DEFAULT_NON_INHERITABLE_KINDS_V1; a Kind may also self-declare
-# ``version_retention`` to opt in. Authored Kinds keep full history (None).
+# while churny ones (Canvas/VibeSession) aren't even record-plane. Authored
+# Kinds keep full history (None).
 VERSION_CHURN_RETENTION = 3
-VERSION_CHURN_KINDS: frozenset[str] = frozenset({
-    "Engram", "Canvas", "VibeSession",
-})
+
+# ⚠️ The curated set that used to live here — ``VERSION_CHURN_KINDS``, three
+# literal Kind names — is GONE (i-107). ``version_retention`` was ALREADY a
+# declarable field on both faces (``KindPort.version_retention``, and
+# ``spec.version_retention`` in a ``.kind.yaml`` descriptor, validated by
+# ``KindDefinitionSpec.parse``), read by the write pipeline BEFORE this set was
+# consulted — so the set was a second copy of an answer the Kind could give
+# itself, and the same shape ``scope_inheritable`` had turned out to be a FOURTH
+# copy of. Engram and Canvas now declare it; the pipeline reads the declaration.
+#
+# ⭐ What the set could not do, and the declaration can: this file names the
+# machine-churn Kinds of THIS repo. A tenant whose autopilot rewrites its own
+# Kind ten thousand times had no way to say so — not "was not configured to",
+# there was no field to reach. Now it declares ``version_retention: 3`` and the
+# pipeline prunes for it, with no line of kernel code about its Kind.
+# Locked by tests/test_version_churn_is_declared.py.
+#
+# ``VibeSession`` survives here for the same reason it survives in
+# ``_LEGACY_NON_INHERITABLE`` below: it is a retired doc-kind that never got a
+# Kind class, so there is nothing to declare ON. A stale row must not start
+# accumulating unbounded history because its Kind was retired.
+LEGACY_VERSION_CHURN_KINDS: frozenset[str] = frozenset({"VibeSession"})
 
 
 class _DenylistInheritable:
@@ -2576,10 +2594,18 @@ class Kernel:
         Lookup order:
           1. LayerPolicy doc of the scope with
              ``spec.composition_rules[kind]``.
-          2. V1 backward-compat default — if kind ∈
-             ``DEFAULT_INHERITABLE_KINDS_V1``, returns
+          2. Inherit-by-default — unless the Kind declares
+             ``scope_inheritable = False``, returns
              ``(enabled, override_full, field_level)``.
-          3. Otherwise ``(disabled, override_full, none)``.
+          3. A Kind that declares it non-inheritable gets
+             ``(disabled, override_full, field_level)``.
+
+        ⚠️ Step 2 said "if kind ∈ ``DEFAULT_INHERITABLE_KINDS_V1``" until i-107,
+        and had been wrong since i-107's first slice deleted the literal it
+        named — the answer comes from ``Kernel._NON_INHERITABLE_KINDS``, derived
+        from each Kind's own declaration. A docstring naming a constant that no
+        longer exists is the drift a derived set exists to prevent, arriving one
+        layer up.
 
         Note: LayerPolicy itself is BOOTSTRAP — never inherits, never
         overlaid. We read it locally only.
@@ -2627,14 +2653,25 @@ class Kernel:
               "parent_chain": ["innovec-base", "_lib"],
               "resources": {
                 "Agent":  {"local": 1, "inherited": 11, "total": 12},
-                "LottieAsset":   {"local": 0, "inherited": 6,  "total": 6},
+                "Skill":  {"local": 0, "inherited": 6,  "total": 6},
                 ...
               },
             }
 
+        WHICH Kinds are counted: the ones declaring
+        ``composition.platform-default`` — the Kinds that ship defaults in
+        ``_lib`` for a scope to inherit and override, which is exactly what a
+        local-vs-inherited count is a report about (i-107). It used to iterate
+        the literal ``DEFAULT_INHERITABLE_KINDS_V1``, three of whose eight names
+        were Kinds nothing registers — three wasted queries per call, forever,
+        and no way for a tenant Kind to appear in its own sidebar.
+
         Performance: each Kind takes 1 source.query (local-only push-down)
         + 1 source.query (parent push-down dedup) ≈ 10ms ¢. Cached
-        server-side 60s via outer HTTP cache (see API route).
+        server-side 60s via outer HTTP cache (see API route). The derived set is
+        five Kinds today against the old eight, so the swap costs nothing — and
+        it is bounded by DECLARATION rather than by registry size, which is the
+        property that keeps it cheap as the registry grows past 89.
 
         NB: kept inline (NOT extracted to the CompositionResolver collaborator in
         Fase 5) because it needs the ``query`` push-down, and widening
@@ -2642,7 +2679,7 @@ class Kernel:
         F1 ``FakeKernelSlice`` guard (whose composition fake exposes no ``query``).
         It is a thin aggregation over the ``query`` facade + ``_compute_resolution_chain``.
         """
-        from dna.kernel.query.resolver import DEFAULT_INHERITABLE_KINDS_V1
+        from dna.kernel.query.resolver import TRAIT_PLATFORM_DEFAULT
 
         # Parent chain: derived from Genome.parent_scope + V1 fallback.
         chain = await self._compute_resolution_chain(scope, None)
@@ -2656,7 +2693,7 @@ class Kernel:
 
         # Per-Kind counts via origin filter.
         resources: dict[str, dict[str, int]] = {}
-        for kind in sorted(DEFAULT_INHERITABLE_KINDS_V1):
+        for kind in sorted(self.kinds_with_trait(TRAIT_PLATFORM_DEFAULT)):
             local_count = 0
             inherited_count = 0
             installed_count = 0  # Phase 3b ch3 (i-112) — the Catalog tier.

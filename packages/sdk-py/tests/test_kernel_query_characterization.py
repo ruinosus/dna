@@ -31,6 +31,9 @@ from typing import Any
 import pytest
 
 from dna.kernel import Kernel
+from dna.kernel.kinds.base import KindBase
+from dna.kernel.protocols import StorageDescriptor
+from dna.kernel.query.resolver import TRAIT_PLATFORM_DEFAULT
 
 
 # ── MockSource (mirrors test_resolve_document_catalog / test_composition_v2) ──
@@ -176,7 +179,29 @@ async def test_tenant_overlay_field_level_merge_end_to_end():
 
 # ── 4. composition_summary golden (parent_chain + per-Kind counts) ────────
 
-def _summary_kernel(scope_rows, *, catalog):
+
+class _PlatformDefaultKind(KindBase):
+    """A stand-in for the platform-default Kinds ``composition_summary`` counts.
+
+    i-107 — the summary iterated the literal ``DEFAULT_INHERITABLE_KINDS_V1``,
+    so a bare ``Kernel()`` with no Kinds registered still produced counts for
+    eight names. It now counts the Kinds DECLARING
+    ``composition.platform-default``, so the fixture has to register one — which
+    is the honest contract, and doubles as proof that a Kind the kernel has no
+    line of code about is counted like a built-in.
+    """
+    api_version = "test.io/v1"
+    storage = StorageDescriptor.yaml("stubs")
+    traits = frozenset({TRAIT_PLATFORM_DEFAULT})
+
+
+def _platform_default(name: str) -> KindBase:
+    return type(
+        f"_Stub{name}", (_PlatformDefaultKind,),
+        {"kind": name, "alias": f"test-{name.lower()}"},
+    )()
+
+def _summary_kernel(scope_rows, *, catalog, kinds=("Agent",)):
     from unittest.mock import MagicMock
 
     async def _fake_query(scope, kind, *, tenant=None, **kw):
@@ -190,6 +215,8 @@ def _summary_kernel(scope_rows, *, catalog):
     src = MagicMock()
     src.query = _fake_query
     k = Kernel()
+    for name in kinds:
+        k.kind(_platform_default(name))
     k._source = src  # type: ignore[assignment]
 
     async def _chain(scope, tenant):
@@ -210,7 +237,7 @@ async def test_composition_summary_parent_chain_and_counts():
 
     k = _summary_kernel(
         {"proj": [row("local-a")], "_lib": [row("inherited-b")]},
-        catalog=[],
+        catalog=[], kinds=("Agent", "Skill"),
     )
     summary = await k.composition_summary("proj")
 
@@ -219,7 +246,7 @@ async def test_composition_summary_parent_chain_and_counts():
     ua = summary["resources"]["Agent"]
     assert ua == {"local": 1, "inherited": 1, "installed": 0, "total": 2}
     # Kinds with zero across all origins are omitted entirely.
-    assert "LottieAsset" not in summary["resources"]
+    assert "Skill" not in summary["resources"]
 
 
 @pytest.mark.asyncio

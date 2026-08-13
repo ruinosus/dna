@@ -1,16 +1,40 @@
 """Tests for ReportBuilder — eval_summary, findings_summary, evidence_manifest, compliance_matrix."""
 from dna.kernel.instance import Instance
+from dna.kernel.kinds.base import KindBase
 from dna.kernel.manifest import ManifestInstance
+from dna.kernel.protocols import StorageDescriptor
 from dna.kernel.reports import ReportBuilder
 
 
-def _make_mi(docs: list[Instance]) -> ManifestInstance:
+def _make_mi(docs: list[Instance], kinds: dict | None = None) -> ManifestInstance:
     """Create a minimal ManifestInstance with the given instances."""
     return ManifestInstance(
         scope="test-scope",
         instances=docs,
-        kinds={},
+        kinds=kinds or {},
     )
+
+
+class _TenantAttestationKind(KindBase):
+    """The MINIMUM a Kind must say to be swept by ``evidence_manifest`` (i-107).
+
+    The report used to sweep the literal name ``"Evidence"``, so an MI that knew
+    no Kinds at all still produced an evidence manifest. It now derives from
+    ``record.is-evidence`` — the same question ``kernel/write/evidence.py``
+    already asks to decide what to WRITE — so this class doubles as the proof
+    that a Kind the kernel has never heard of is reported exactly like the
+    built-in one. Note the name: nothing here is called "Evidence".
+    """
+    api_version = "market.example/v1"
+    kind = "TenantAttestation"
+    alias = "market-tenantattestation"
+    storage = StorageDescriptor.yaml("tenantattestations")
+    traits = frozenset({"record.is-evidence"})
+
+
+def _evidence_kind_map() -> dict:
+    port = _TenantAttestationKind()
+    return {(port.api_version, port.kind): port}
 
 
 def _eval_run(name: str, suite: str, passed: int, total: int, **extra) -> Instance:
@@ -37,8 +61,8 @@ def _finding(name: str, severity: str, title: str, **extra) -> Instance:
 
 def _evidence(name: str, event_type: str, doc_ref: str, sha256: str, captured_at: str) -> Instance:
     return Instance(
-        api_version="github.com/ruinosus/dna/evidence/v1",
-        kind="Evidence",
+        api_version=_TenantAttestationKind.api_version,
+        kind=_TenantAttestationKind.kind,
         name=name,
         spec={
             "event_type": event_type,
@@ -163,7 +187,7 @@ class TestFindingsSummary:
 
 class TestEvidenceManifest:
     def test_empty(self):
-        mi = _make_mi([])
+        mi = _make_mi([], _evidence_kind_map())
         report = mi.reports.evidence_manifest()
         assert "No evidence instances found" in report
         assert "report: evidence_manifest" in report
@@ -174,7 +198,7 @@ class TestEvidenceManifest:
                       "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
                       "2026-04-13T10:00:00Z"),
         ]
-        mi = _make_mi(docs)
+        mi = _make_mi(docs, _evidence_kind_map())
         report = mi.reports.evidence_manifest()
         assert "eval_run_completed" in report
         assert "evalrun/run-1" in report
@@ -185,10 +209,22 @@ class TestEvidenceManifest:
         docs = [
             _evidence("ev-1", "custom", "ref", "abc", "2026-01-01T00:00:00Z"),
         ]
-        mi = _make_mi(docs)
+        mi = _make_mi(docs, _evidence_kind_map())
         report = mi.reports.evidence_manifest()
         assert "| Event Type |" in report
         assert "| Instance Ref |" in report
+
+    def test_a_kind_that_declares_nothing_is_not_swept(self):
+        """⭐ The half that makes the derivation load-bearing rather than
+        decorative: the SAME instances, an MI that knows no Kind declaring
+        ``record.is-evidence``, and the report says so. Before i-107 the sweep
+        was the literal name ``"Evidence"``, so an MI with ``kinds={}``
+        reported a Kind nothing had declared."""
+        docs = [
+            _evidence("ev-1", "custom", "ref", "abc", "2026-01-01T00:00:00Z"),
+        ]
+        report = _make_mi(docs).reports.evidence_manifest()
+        assert "No evidence instances found" in report
 
 
 # ─── compliance_matrix ───────────────────────────────────────────────

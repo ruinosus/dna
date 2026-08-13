@@ -53,7 +53,14 @@ class EvidencePolicyKind(KindBase):
     # post_save capture hook to decide what becomes an Evidence row.
     # Editing one changes what the runtime records, with no deploy.
     # ⚠️ PROPOSED vocabulary — see dna/kernel/kinds/vocabulary.py.
-    traits = frozenset({"governance.policy"})
+    #
+    # `record.evidence-policy` is the LOAD-BEARING one (i-107): the capture path
+    # queries the Kinds declaring it, where it used to query the literal name
+    # "EvidencePolicy". `governance.policy` stays because it is true and it is
+    # what a "which Kinds does a policy screen list?" question reads — but
+    # SafetyPolicy, LayerPolicy and CognitivePolicy declare it too, so it could
+    # never be the capture gate. Two traits because there are two questions.
+    traits = frozenset({"governance.policy", "record.evidence-policy"})
     model = dict
     origin = _ORIGIN
     storage = StorageDescriptor.yaml("evidence-policies")

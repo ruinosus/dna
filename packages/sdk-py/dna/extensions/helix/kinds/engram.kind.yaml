@@ -57,6 +57,15 @@ spec:
   # house has already lost four guards to, and it would not cover the next
   # bi-temporal Kind. See ``dna.kernel.write.hard_delete``.
   traits: [memory.recallable, record.invalidate-only]
+  # ⚠️ Same argument as ``record.invalidate-only`` above, one axis over. This
+  # used to be membership of ``kernel/__init__.py::VERSION_CHURN_KINDS``, a
+  # three-name set in the kernel. Engrafia rewrites the SAME Engram 6613×, and
+  # keeping every snapshot drowns the authored history the board reads — so the
+  # write pipeline prunes to the last 3. The FIELD already existed and was read
+  # FIRST (``KindPort.version_retention``); the set was only its fallback, i.e.
+  # a second copy of a fact this Kind can state itself — the same shape
+  # ``scope_inheritable`` turned out to be a FOURTH copy of. See i-107.
+  version_retention: 3
   plane: record
   prompt_target: false
   flatten_in_context: false
