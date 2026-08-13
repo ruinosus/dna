@@ -27,3 +27,17 @@ spec:
     type: status_change
     source: cli
     to: open
+  - at: '2026-08-13T00:34:20+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      Referencia cruzada: a i-110 EXECUTOU o outro caso que esta ficha cita ('mesma inversao de fronteira que runtime/roi.py'). `runtime/roi.py` saiu para a camada que cobra em #390 / dna-cloud#393, com decisao do founder.
+
+      O que a execucao ensinou, e que se aplica aqui:
+
+      1. **A medicao vem antes, e pode derrubar a premissa.** A mesma decisao previa mover `runtime/thread_store.py` junto. Medido: 5 usos de PRODUCAO no SDK (nao comentarios), 23 simbolos re-exportados de `dna.runtime`, e 5 Ports no catalogo publicado. Nada dele foi movido — ver i-111. `roi` tinha 3 referencias, todas comentario; a diferenca so aparece medindo.
+
+      2. **O criterio que separou os dois nao foi 'quem chama', foi a NATUREZA.** `roi` calcula dinheiro (preco, valor por desfecho, aceitacao) = fato do contrato de quem opera. `thread_store` declara um contrato neutro de fornecedor = o que um SDK aberto deve segurar. Os acessores desta ficha (`tier`, `account_plan`, `account_for_workspace`) sao do primeiro tipo, e a ficha ja diz isso.
+
+      3. **O que FICA tambem precisa de razao escrita.** Em `roi` ficaram `telemetry` e as alembic 0012/0014, porque escrever a tabela e ler a tabela sao papeis diferentes: um LEITOR nao e dono de schema. Aqui a pergunta gemea e quais das 394 linhas sao ESCRITA/registro (ficam) e quais sao consulta comercial (vao).
