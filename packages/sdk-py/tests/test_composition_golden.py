@@ -79,6 +79,38 @@ def _materialize(tree: dict[str, Any], base: Path) -> None:
                 _write_doc(overlay_dir, doc, i)
 
 
+
+def _register_declared_kinds(kernel: Any, declared: list[dict[str, Any]]) -> None:
+    """Register the Kinds a case needs, from the case's own ``kinds:`` block.
+
+    i-107: scope inheritance is decided by the Kind's ``scope_inheritable``
+    declaration, not by a literal Kind-name list in the kernel. The harness
+    builds a BARE kernel on purpose (it is testing the resolver, not the
+    extensions), so a case that needs a non-inheritable Kind has to say so —
+    case 07 used to get that fact from ``DEFAULT_NON_INHERITABLE_KINDS_V1``,
+    which is exactly the coupling the change removed.
+
+    Declaring it in the case YAML is strictly better than importing the SDLC
+    extension here: the fixture becomes self-describing, and the golden proves
+    the DECLARATION is what drives the resolver rather than proving that some
+    extension happens to declare it.
+    """
+    from dna.kernel.kinds.base import KindBase
+    from dna.kernel.protocols import StorageDescriptor
+
+    for spec in declared:
+        kind_name = spec["kind"]
+        attrs = {
+            "api_version": spec.get("api_version", "github.com/ruinosus/dna/v1"),
+            "kind": kind_name,
+            "alias": spec.get("alias", f"golden-{kind_name.lower()}"),
+            "storage": StorageDescriptor.yaml(f"{kind_name.lower()}s"),
+        }
+        if "scope_inheritable" in spec:
+            attrs["scope_inheritable"] = bool(spec["scope_inheritable"])
+        kernel.kind(type(f"_Golden{kind_name}", (KindBase,), attrs)())
+
+
 def test_fixture_set_present() -> None:
     """The golden fixture dir must exist and hold the minimum case set."""
     assert CASE_DIR.is_dir(), f"missing shared fixture dir: {CASE_DIR}"
@@ -103,6 +135,7 @@ async def test_composition_golden_fixture(case_path: Path, tmp_path: Path) -> No
 
     kernel = Kernel()
     kernel.source(FilesystemWritableSource(tmp_path))
+    _register_declared_kinds(kernel, case.get("kinds") or [])
 
     target = case["target"]
     tenant = target.get("tenant") or None

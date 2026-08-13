@@ -41,8 +41,28 @@ async def test_composition_rule_default_inherits():
 
 @pytest.mark.asyncio
 async def test_composition_rule_non_inheritable_kind():
-    # A per-scope ledger Kind (Story) does NOT inherit across scopes, but still
-    # honors tenant overlay (disabled/override_full/field_level).
+    # A per-scope ledger Kind does NOT inherit across scopes, but still honors
+    # tenant overlay (disabled/override_full/field_level).
+    #
+    # i-107: this used a BARE `Kernel()` and the name "Story", which worked only
+    # because query/resolver.py held a literal list of 13 Kind names. With the
+    # fact moved to the Kind's own `scope_inheritable` declaration, a bare
+    # kernel has no Story registered and therefore nothing to read — so the
+    # test now registers a Kind that DECLARES it, which is what it meant all
+    # along. `Kernel.auto()` would also work (Story really does declare it);
+    # a local class keeps this a resolver test rather than an extension test.
+    from dna.kernel.kinds.base import KindBase
+    from dna.kernel.protocols import StorageDescriptor
+
+    class _Ledger(KindBase):
+        api_version = "collabtest.io/v1"
+        kind = "Ledger"
+        alias = "collabtest-ledger"
+        storage = StorageDescriptor.yaml("ledgers")
+        scope_inheritable = False
+
     k = Kernel()
-    rule = await k._composition.get_composition_rule("myscope", "Story")
+    k.kind(_Ledger())
+    rule = await k._composition.get_composition_rule("myscope", "Ledger")
     assert rule[0] == "disabled"
+    assert rule[1:] == ("override_full", "field_level")

@@ -98,13 +98,23 @@ ALLOWLIST: dict[str, str] = {
         "documented set rather than veto everything or nothing."
     ),
 
-    # ── genuinely not a Kind family ──────────────────────────────────────────
-    "kernel/boot/events.py::_FIXED_EVENTS": (
-        "IRREDUCIBLE, and arguably not a Kind list at all: these are the two "
-        "boot EVENT names that happen to coincide with Kind names. A trait on "
-        "EvalRun would be a statement about the Kind, and this is a statement "
-        "about the boot sequence."
-    ),
+    # ── kernel/boot/events.py::_FIXED_EVENTS — ENTRY REMOVED, i-107 ──────────
+    # Its argument was: "IRREDUCIBLE, and arguably not a Kind list at all: these
+    # are the two boot EVENT names that happen to coincide with Kind names. A
+    # trait on EvalRun would be a statement about the Kind, and this is a
+    # statement about the boot sequence."
+    #
+    # That was wrong, and this file invited the argument — "read them as claims
+    # to be argued with, not as permanent grants". The refutation: EvidencePolicy
+    # selects which writes to capture BY event_type, so a Kind whose event_type
+    # could only ever be `document_created` could not be named by any policy
+    # written against a meaningful event. The event name is not a fact about the
+    # boot sequence; it is the Kind's own vocabulary, and holding it here made
+    # tenant-authored Kinds silently ineligible for evidence capture.
+    #
+    # It is now `post_save_event` on the KindPort / `spec.post_save_event` in a
+    # descriptor. The dict is gone, so the excuse goes with it — which is what
+    # `test_no_stale_allowlist_entries` is for, and it is how this was caught.
 }
 
 

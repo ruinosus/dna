@@ -1,0 +1,33 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: qyloyyfeamw6
+  name: i-109-kernel-typed-models-dependency-inversion
+spec:
+  description: |-
+    INVERSAO DE DEPENDENCIA, nao trait: kernel/models.py tem 1.817 linhas e 17 classes Typed*, e 11 arquivos de extensao (9 extensoes) IMPORTAM DE VOLTA do kernel para usa-las.
+
+    As 17: TypedGenome, TypedLayerPolicy, TypedAgent, TypedActor, TypedUseCase, TypedSkill, TypedSoul, TypedHtmlArtifact, TypedAgentDefinition, TypedGuardrail, TypedSafetyPolicy, TypedKindDefinition, TypedRecognizer, TypedHook, TypedTextBlock, TypedHtmlBlock, TypedHtmlTemplate.
+
+    Quem importa de volta (medido 12/08/2026): agentskills, agentsmd, guardrails, helix (__init__ e write_guards), hooks, kinddef, recognizer, safety, sdlc, soulspec.
+
+    ⛔ Trait NAO resolve. Um trait declara um PAPEL; isto e uma classe com SCHEMA e comportamento de parse morando na camada errada. Declarar traits nos Kinds deixaria as 17 classes exatamente onde estao.
+
+    O no e a re-importacao, e ele e circular na pratica: o kernel define TypedSkill, a extensao agentskills importa TypedSkill do kernel para registrar o Kind Skill. Mover TypedSkill para agentskills inverte a aresta — e as 11 arestas nao podem ser invertidas de uma vez sem quebrar tudo no meio.
+
+    Caminho sugerido (nao executado, precisa de spec): Kind a Kind, cada extensao passando a ser dona do seu Typed*, com um shim de re-export no kernel durante a transicao para nao quebrar consumidor externo (dna-cloud importa alguns destes). O shim morre no fim.
+
+    NAO e a mesma coisa que a i-108 (accessor.py): la a fronteira esta errada por PRODUTO (logica comercial no core aberto) e a decisao e do founder; aqui a fronteira esta errada por ARQUITETURA e a decisao e tecnica — so e grande.
+
+    Medido durante a i-107, que traduziu os tres conjuntos que ERAM traduziveis (heranca de escopo, captura de evidencia, nome de evento). Este e o bloco que sobrou e nao cabia.
+  type: task
+  severity: medium
+  status: open
+  created_at: '2026-08-12T23:30:38+00:00'
+  updated_at: '2026-08-12T23:30:38+00:00'
+  timeline:
+  - at: '2026-08-12T23:30:38+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

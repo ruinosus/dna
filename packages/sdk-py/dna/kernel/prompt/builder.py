@@ -212,9 +212,19 @@ class PromptBuilder:
 
         prompt = await self._render_prompt_async(ctx, agent_doc)
 
+        # Hook: post_build_prompt — AWAIT emit_async, never sync emit().
+        # s-kernel-fail-soft-audit landed this fix on the (now deleted) dead
+        # twin ``prompt/engine.py`` and never here, on the live async path:
+        # sync ``emit()`` SKIPS async listeners (counting them in
+        # ``skipped_async_emits``), so an async post_build_prompt listener
+        # silently never fired on this path. Locked by test_hooks_fail_loud.py
+        # against THIS builder — do not weaken back to emit().
         if hooks and hooks.has("post_build_prompt"):
             from dna.kernel.hooks import HookContext
-            hooks.emit("post_build_prompt", HookContext(scope=self._host.scope, agent=agent_name, prompt=prompt))
+            await hooks.emit_async(
+                "post_build_prompt",
+                HookContext(scope=self._host.scope, agent=agent_name, prompt=prompt),
+            )
 
         # Clean output (s-dx-clean-composition-output) — see build().
         return prompt.rstrip("\n")

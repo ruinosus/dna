@@ -1,6 +1,7 @@
 apiVersion: github.com/ruinosus/dna/sdlc/v1
 kind: Story
 metadata:
+  id: a5l5ksluu4ab
   name: s-dna-shrink-faixa-1
 spec:
   title: 'Faixa 1 da auditoria de complexidade: apagar andaime com zero referencias vivas'
@@ -20,7 +21,7 @@ spec:
   - sdk-py e cli verdes + guards de doc limpos + um commit por item + recusas documentadas
   definition_of_done_source: cli-create
   created_at: '2026-07-20T13:04:21+00:00'
-  updated_at: '2026-07-20T13:04:33+00:00'
+  updated_at: '2026-08-12T22:58:26+00:00'
   timeline:
   - at: '2026-07-20T13:04:21+00:00'
     actor: claude-code
@@ -33,6 +34,23 @@ spec:
     source: cli
     from: todo
     to: in-progress
+  - at: '2026-08-12T22:58:26+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      Faixa 1 executada nos 4 modulos de kernel medidos (i-047 + i-048). Confirmacao ANTES de apagar, git grep sobre todos os packages tracked: reports_kernel (unico hit externo = docstring em reports.py), prompt/engine (2 testes), query/nav (1 teste + 2 docstrings), resource (1 teste). ZERO chamador de producao nos quatro. 1.093 linhas apagadas.
+
+      ⚠️ Apagar achou DOIS defeitos vivos que os gemeos mortos escondiam — em ambos os casos o conserto tinha pousado no gemeo e nunca no caminho vivo:
+
+      (1) PromptBuilder.build_async chamava hooks.emit() SINCRONO. s-kernel-fail-soft-audit consertou isso no prompt/engine.py (morto) e a docstring do proprio test_hooks_fail_loud.py dizia 'prompt_kernel.build_prompt_async awaits emit_async' — enquanto o builder vivo pulava silenciosamente todo listener async de post_build_prompt. Red provado revertendo o fix: assert [] == fired.
+
+      (2) Navigator._classify_ref_confidence (mi.nav.inventory, vivo) rodava um loop kp.alias == target a mao, que nao le a forma legada 'kind=<Name>'. Resultado: um dep_filter legado classificava AMBIGUOUS no inventory e resolvia no composition.validate() — dois leitores VIVOS discordando da mesma aresta. A docstring de resolve_dep_filter_target ja se dizia 'THE resolver for every dep_filter reader ... nav_kernel' — a unificacao tinha pousado no twin morto. Agora usa o resolvedor canonico.
+
+      Testes re-apontados, nunca apagados: os 3 arquivos que exercitavam os mortos agora exercitam o caminho vivo (mi.build_prompt_async, mi.nav.inventory, mi.composition.validate).
+
+      Baseline confirmada ANTES: 3 failed / 6412 passed. Depois: as MESMAS 3 falhas pre-existentes (claude_export_roundtrip, gen_ui_component_kind, runtime_binding_kind — todas por extras opcionais ausentes no venv). Coleta 6591 -> 6581 (-10, exato). gen_ports/kinds/data_model/cli_docs regenerados; docs_coverage_guard limpo (117 itens).
+    commit_ref: 106edd5f9d10cf2d5b377bf9284c44823a84e53f
   produces:
   - kind: Plan
     name: plan-s-dna-shrink-faixa-1

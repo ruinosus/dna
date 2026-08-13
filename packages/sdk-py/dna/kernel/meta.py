@@ -183,6 +183,10 @@ class DeclarativeKindPort:
         # Kernel classification flags — mirror KindBase defaults.
         self.scope_inheritable: bool = bool(getattr(spec, "scope_inheritable", True))
         self.is_overlayable: bool = bool(getattr(spec, "is_overlayable", True))
+        # i-107: the Kind's own event vocabulary, was kernel/boot/events.py.
+        self.post_save_event: str | tuple[str, str] | None = getattr(
+            spec, "post_save_event", None,
+        )
         # ``embed_fields``: source fields for embedding text (D4 derivation).
         self.embed_fields: list[str] | None = getattr(spec, "embed", None)
         # ``summary``: declarative list-endpoint projection {field: default}.

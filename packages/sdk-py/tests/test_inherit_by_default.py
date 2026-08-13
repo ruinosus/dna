@@ -10,7 +10,6 @@ import asyncio
 from pathlib import Path
 
 from dna.kernel import Kernel
-from dna.kernel.query.resolver import DEFAULT_NON_INHERITABLE_KINDS_V1
 from dna.extensions.helix import HelixExtension
 from dna.extensions.sdlc import SdlcExtension
 from dna.adapters.filesystem import FilesystemCache
@@ -29,10 +28,17 @@ _LEDGER_AND_STRUCTURAL = {
 def test_ledger_and_structural_do_not_inherit():
     # _INHERITABLE_KINDS is now a derived instance property
     # (s-kernel-kindport-classification-attrs).
-    inh = Kernel.auto()._INHERITABLE_KINDS
+    k = Kernel.auto()
+    inh = k._INHERITABLE_KINDS
+    non_inh = k._NON_INHERITABLE_KINDS
     for kind in _LEDGER_AND_STRUCTURAL:
         assert kind not in inh, kind
-        assert kind in DEFAULT_NON_INHERITABLE_KINDS_V1, kind
+        # i-107: the second assertion used to read
+        # `kind in DEFAULT_NON_INHERITABLE_KINDS_V1` — a literal list in
+        # query/resolver.py that the resolver ALSO read, so the pair asserted
+        # a copy against itself. It is now the DERIVED set, which is the thing
+        # the resolver actually consults.
+        assert kind in non_inh, kind
 
 
 def test_everything_else_inherits_by_default():
@@ -106,12 +112,18 @@ def test_epic_does_not_inherit_like_its_siblings(tmp_path: Path):
     """Regression — Epic is a per-scope ledger Kind, exactly like Feature.
 
     v1.3 renamed the Milestone Kind to Epic, but the inheritance classification
-    stayed pinned to the DEAD name in BOTH places that carry it
-    (``Kernel._LEGACY_NON_INHERITABLE`` and
+    stayed pinned to the DEAD name in BOTH places that carried it
+    (``Kernel._LEGACY_NON_INHERITABLE`` and the since-deleted
     ``resolver.DEFAULT_NON_INHERITABLE_KINDS_V1``), while ``EpicKind`` itself
     never declared ``scope_inheritable = False``. Net effect: Epic was the one
     ledger Kind that INHERITED — an Epic written to `_lib` showed up in every
     child scope, so every project saw the platform's epics as its own.
+
+    i-107 removed the second of those two places: the copy is gone and the
+    classification is derived from the declaration. Which is the actual cure
+    for this bug class — the same drift had silently recurred for four MORE
+    Kinds (KindNamespace, Memory, Sprint, WorkspaceScopeGrant) by the time the
+    list was deleted.
 
     Feature is the control: same hierarchy, same scope, correctly denylisted.
     """
@@ -119,7 +131,7 @@ def test_epic_does_not_inherit_like_its_siblings(tmp_path: Path):
         k = _make_kernel(tmp_path)
 
         # ── classification: Epic must sit on the same side as Feature ──
-        assert "Epic" in DEFAULT_NON_INHERITABLE_KINDS_V1
+        assert "Epic" in k._NON_INHERITABLE_KINDS
         assert "Epic" not in k._INHERITABLE_KINDS
         assert "Feature" not in k._INHERITABLE_KINDS
 

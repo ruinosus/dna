@@ -1,26 +1,29 @@
 """s-unify-composition-subsystems — the composition readers CONVERGE.
 
-``mi.composition.validate()`` (MI plane), ``nav_kernel``'s validation +
-inventory classification (source plane) and kinds-api docs all consume
-the SAME canonical dep_filter resolver
-(``KindRegistry.resolve_dep_filter_target``, s-alias): a legacy
-``kind=<Name>`` filter and an alias filter resolve IDENTICALLY on every
-path. The record-plane rule is also ONE rule for every reader: ref in
-index → resolved; absent + record target → deferred (never missing).
+``mi.composition.validate()`` (validation), ``mi.nav.inventory()``
+(inventory classification) and kinds-api docs all consume the SAME
+canonical dep_filter resolver (``KindRegistry.resolve_dep_filter_target``,
+s-alias): a legacy ``kind=<Name>`` filter and an alias filter resolve
+IDENTICALLY on every path. The record-plane rule is also ONE rule for
+every reader: ref in index → resolved; absent + record target →
+deferred (never missing).
+
+⚠️ This suite used to assert convergence between the MI plane and a
+"source plane" spelled ``kernel/query/nav.py`` — an async twin of
+``query/navigator.py`` with ZERO production callers, deleted in
+s-dna-shrink-faixa-1 (i-047). Half of every "the two planes agree"
+assertion was therefore about code no caller reached, which is worse
+than no assertion: it read as convergence evidence while covering one
+live reader and one dead one. The convergence claim is now made between
+the two readers that actually run — ``composition.validate()`` and
+``nav.inventory()`` — over the SAME ``ManifestInstance``.
 """
 from __future__ import annotations
-
-from types import SimpleNamespace
 
 import pytest
 
 from dna.kernel import Kernel
-from dna.kernel.instance import Instance
 from dna.kernel.kinds.base import KindBase
-from dna.kernel.query.nav import (
-    scope_inventory_async,
-    validate_composition_async,
-)
 from dna.kernel.protocols import StorageDescriptor
 
 # -- reuse do harness (pytest põe tests/ no sys.path; SEM prefixo tests.) --
@@ -73,93 +76,59 @@ def _kernel() -> Kernel:
     return k
 
 
-def _nav_kernel_over(k: Kernel, raws: list[dict]) -> SimpleNamespace:
-    """Source-plane view: a kernel façade whose ``query`` serves ``raws``
-    (records INCLUDED — the source sees both planes), sharing the REAL
-    kernel's registered kinds so both paths resolve over the same ports."""
-    by_kind: dict[str, list[dict]] = {}
-    for r in raws:
-        by_kind.setdefault(r["kind"], []).append(r)
+# ---------- kind= legado e alias resolvem IGUAL nos dois leitores ----------
 
-    async def _query(scope, kind, **kw):
-        for r in by_kind.get(kind, []):
-            yield r
-
-    async def _list(scope, *, kind=None, tenant=None):
-        if kind is None:
-            return [(r["kind"], r["metadata"]["name"]) for rs in by_kind.values() for r in rs]
-        return [(r["kind"], r["metadata"]["name"]) for r in by_kind.get(kind, [])]
-
-    def _parse(raw, origin="local"):
-        meta = raw.get("metadata", {}) or {}
-        return Instance(
-            api_version=raw.get("apiVersion", "v1"), kind=raw["kind"],
-            name=meta.get("name", ""), metadata=meta,
-            spec=raw.get("spec", {}) or {},
-        )
-
-    return SimpleNamespace(
-        query=_query, list_instances=_list, _parse_doc=_parse,
-        _kinds=k._kinds,
-    )
-
-
-# ---------- kind= legado e alias resolvem IGUAL nos dois caminhos ----------
-
-@pytest.mark.asyncio
-async def test_legacy_and_alias_filters_resolve_identically_on_both_paths():
+def test_legacy_and_alias_filters_resolve_identically():
     k = _kernel()
     raws = [
         _raw("TargetLike", "t-1"),
         _raw("ConsumerLike", "c-1", by_alias="t-1", by_legacy="t-1"),
     ]
-
-    # MI plane (mi.composition.validate)
     mi = k.build(raws, "scope-x")
-    mi_result = mi.composition.validate()
+    result = mi.composition.validate()
 
-    # Source plane (nav_kernel.validate_composition_async)
-    nav_result = await validate_composition_async(
-        _nav_kernel_over(k, raws), "scope-x",
+    assert any("by_alias=t-1" in r for r in result.resolved), (
+        f"alias filter must resolve: {result.resolved}"
     )
-
-    for result, plane in ((mi_result, "MI"), (nav_result, "nav")):
-        assert any("by_alias=t-1" in r for r in result.resolved), (
-            f"[{plane}] alias filter must resolve: {result.resolved}"
-        )
-        assert any("by_legacy=t-1" in r for r in result.resolved), (
-            f"[{plane}] legacy kind= filter must resolve identically to the "
-            f"alias filter: resolved={result.resolved} "
-            f"warnings={result.warnings}"
-        )
-        assert result.missing == []
-        assert result.warnings == []
-
-    # No records involved → the two planes see the same doc set and must
-    # produce byte-identical labels.
-    assert sorted(mi_result.resolved) == sorted(nav_result.resolved)
+    assert any("by_legacy=t-1" in r for r in result.resolved), (
+        "legacy kind= filter must resolve IDENTICALLY to the alias filter "
+        f"(same canonical resolver): resolved={result.resolved} "
+        f"warnings={result.warnings}"
+    )
+    assert result.missing == []
+    assert result.warnings == []
 
 
-@pytest.mark.asyncio
-async def test_inventory_classification_uses_the_same_resolver():
+def test_inventory_classification_uses_the_same_resolver():
+    """The OTHER live reader — ``mi.nav.inventory()`` — classifies the two
+    filter shapes identically. This is the convergence half that still has
+    two real readers: validation labels the edge, inventory grades its
+    confidence, and both must agree that ``kind=TargetLike`` and
+    ``test-targetlike`` name the same target."""
     k = _kernel()
     raws = [
         _raw("TargetLike", "t-1"),
         _raw("ConsumerLike", "c-1", by_alias="t-1", by_legacy="t-1"),
     ]
-    inv = await scope_inventory_async(_nav_kernel_over(k, raws), "scope-x")
+    mi = k.build(raws, "scope-x")
+    inv = mi.nav.inventory()
     (consumer,) = inv["kinds"]["ConsumerLike"]["instances"]
     assert consumer["refs_confidence"]["by_alias"] == "EXTRACTED"
     assert consumer["refs_confidence"]["by_legacy"] == "EXTRACTED", (
         "kind= legado deve classificar igual ao alias (mesmo resolvedor): "
         f"{consumer['refs_confidence']}"
     )
+    # …and the two readers agree the edge is clean.
+    assert inv["composition"]["missing"] == []
+    assert inv["composition"]["resolved"] == mi.composition.validate().resolved
 
 
-# ---------- record rule: uma regra, dois planos ----------
+# ---------- record rule: uma regra para todo leitor ----------
 
-@pytest.mark.asyncio
-async def test_record_rule_one_rule_both_planes():
+def test_record_ref_defers_never_missing():
+    """Records are excluded from materialization, so an MI-plane ref to one
+    DEFERS — it is resolved lazily off the record plane — and must never be
+    reported as missing."""
     k = _kernel()
     raws = [
         _raw("TargetLike", "t-1"),
@@ -167,35 +136,28 @@ async def test_record_rule_one_rule_both_planes():
         _raw("ConsumerLike", "c-1", by_alias="t-1", by_legacy="t-1",
              rec="r-1"),
     ]
-
-    # MI plane: records são excluídos da materialização → ref defere.
     mi = k.build(raws, "scope-x")
-    mi_result = mi.composition.validate()
-    assert any("r-1" in d for d in mi_result.deferred)
-    assert not any("r-1" in m for m in mi_result.missing)
-
-    # Source plane: o record está no índice → resolve.
-    nav_result = await validate_composition_async(
-        _nav_kernel_over(k, raws), "scope-x",
-    )
-    assert any("rec=r-1" in r for r in nav_result.resolved)
-    assert not any("r-1" in m for m in nav_result.missing)
+    result = mi.composition.validate()
+    assert any("r-1" in d for d in result.deferred)
+    assert not any("r-1" in m for m in result.missing)
 
 
-@pytest.mark.asyncio
-async def test_dangling_record_ref_defers_on_source_plane_too():
+def test_dangling_record_ref_defers_too():
+    """Even a record target that exists NOWHERE defers rather than failing
+    missing: the MI plane cannot see the record plane, so absence there is
+    not evidence of absence. Reporting it missing would be a false negative
+    on every lazily-resolved ref."""
     k = _kernel()
     raws = [
         _raw("TargetLike", "t-1"),
         _raw("ConsumerLike", "c-1", by_alias="t-1", by_legacy="t-1",
              rec="r-ghost"),
     ]
-    nav_result = await validate_composition_async(
-        _nav_kernel_over(k, raws), "scope-x",
-    )
-    assert any("r-ghost" in d for d in nav_result.deferred), (
+    mi = k.build(raws, "scope-x")
+    result = mi.composition.validate()
+    assert any("r-ghost" in d for d in result.deferred), (
         "ref a record ausente defere (resolve lazy via record plane), "
-        f"nunca falso-missing: deferred={nav_result.deferred} "
-        f"missing={nav_result.missing}"
+        f"nunca falso-missing: deferred={result.deferred} "
+        f"missing={result.missing}"
     )
-    assert not any("r-ghost" in m for m in nav_result.missing)
+    assert not any("r-ghost" in m for m in result.missing)

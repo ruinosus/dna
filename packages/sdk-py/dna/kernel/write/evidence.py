@@ -20,12 +20,18 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
+from collections.abc import Collection
 from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
 
-_EVAL_KINDS = {"EvalRun", "EvalBaseline", "Finding"}
+#: Traits that replaced the two literal Kind-name checks this module carried
+#: (i-107). Named here rather than inline so the pair is greppable together —
+#: they only make sense as a pair, one marking the source and one breaking the
+#: recursion it would otherwise cause.
+TRAIT_PRODUCES_EVIDENCE = "record.produces-evidence"
+TRAIT_IS_EVIDENCE = "record.is-evidence"
 
 
 # ───────────────────────────────────────────────────────────────────────
@@ -51,8 +57,10 @@ def build_evidence(
     author: str = "system",
     notes: str | None = None,
     suite: str | None = None,
+    kind: str = "Evidence",
+    api_version: str = "github.com/ruinosus/dna/evidence/v1",
 ) -> dict[str, Any]:
-    """Build an Evidence Kind instance dict.
+    """Build an evidence instance dict.
 
     Parameters
     ----------
@@ -66,6 +74,15 @@ def build_evidence(
         Who (or what) captured the evidence.  Defaults to ``"system"``.
     notes:
         Optional free-text annotation.
+    kind / api_version:
+        Which Kind this evidence instance IS. Defaults keep the historical
+        shape for the existing public callers (``EvidenceExtension``
+        re-exports this helper); the capture handler passes the Kind that
+        DECLARES ``record.is-evidence`` instead, so the kernel no longer
+        decides the name. Kept as parameters rather than a lookup because
+        this helper is deliberately pure — stdlib and plain dicts only, no
+        kernel — which is what lets it live in the kernel at all
+        (``tests/test_kernel_extension_boundary.py``).
 
     Returns
     -------
@@ -87,8 +104,8 @@ def build_evidence(
         spec["suite"] = suite
 
     return {
-        "api_version": "github.com/ruinosus/dna/evidence/v1",
-        "kind": "Evidence",
+        "api_version": api_version,
+        "kind": kind,
         "metadata": {
             "name": f"ev-{event_type}-{spec['sha256'][:12]}",
         },
@@ -103,15 +120,34 @@ def should_capture(policy_spec: dict, event_type: str) -> bool:
     return event_type in policy_spec.get("events", [])
 
 
-def extract_suite(kind: str, spec: dict[str, Any], explicit: str | None) -> str | None:
-    """Extract suite name for eval-related Kinds.
+def extract_suite(
+    kind: str,
+    spec: dict[str, Any],
+    explicit: str | None,
+    *,
+    producing_kinds: Collection[str] | None = None,
+) -> str | None:
+    """Extract the suite name for a Kind that PRODUCES evidence.
 
     The spec may be flat ({"suite": "x"}) or nested ({"spec": {"suite": "x"}})
     depending on whether the caller passed the raw doc or just the spec field.
+
+    ``producing_kinds`` is the set of Kinds declaring
+    ``record.produces-evidence`` — normally
+    ``kernel.kinds_with_trait(TRAIT_PRODUCES_EVIDENCE)``, passed in by
+    :func:`make_evidence_capture_handler`. It used to be a literal
+    ``{"EvalRun", "EvalBaseline", "Finding"}`` in this module, which meant a
+    tenant-authored Kind could not produce evidence at all — not "was not
+    configured to", but had no way to say so.
+
+    ⚠️ ``None`` means "no registry to ask" and yields ``None``, i.e. no suite.
+    It does NOT fall back to the old literal set: a silent fallback would let a
+    caller that forgot to pass the set keep working while quietly reverting to
+    a closed list, which is the failure this change exists to remove.
     """
     if explicit:
         return explicit
-    if kind not in _EVAL_KINDS:
+    if not producing_kinds or kind not in producing_kinds:
         return None
     # Handle both flat and nested structures
     inner = spec.get("spec", spec) if isinstance(spec.get("spec"), dict) else spec
@@ -128,7 +164,31 @@ def make_evidence_capture_handler(kernel: Any):
         kind = ctx.kind or ""
         name = ctx.name or ""
 
-        if kind == "Evidence":
+        # Resolved per call, never cached: extensions may register Kinds after
+        # this handler is wired, and a tenant KindDefinition can be approved
+        # while the process is up. A snapshot taken at wiring time would make
+        # a newly-approved Kind silently unable to produce evidence until
+        # restart — the closed-set behaviour this replaced.
+        is_evidence = kernel.kinds_with_trait(TRAIT_IS_EVIDENCE)
+        producing = kernel.kinds_with_trait(TRAIT_PRODUCES_EVIDENCE)
+
+        # Break the recursion: capturing a write of the evidence Kind would
+        # re-trigger this handler on what it just wrote. Declared by the Kind
+        # (`record.is-evidence`), not spelled `kind == "Evidence"` here.
+        if kind in is_evidence:
+            return
+
+        # No Kind declares `record.is-evidence` → nowhere to write. Returning is
+        # correct and not a silent skip: capture is opt-in (this handler is only
+        # wired by EvidenceExtension.register), and a deployment that wires it
+        # without an evidence Kind registered has a wiring bug, not a policy.
+        if not is_evidence:
+            logger.warning(
+                "evidence capture is wired but no registered Kind declares %r "
+                "— nothing can be captured; register the Evidence Kind or "
+                "declare the trait on your own.",
+                TRAIT_IS_EVIDENCE,
+            )
             return
 
         scope = ctx.scope
@@ -149,7 +209,20 @@ def make_evidence_capture_handler(kernel: Any):
         if not any(should_capture(p, event_type) for p in _policy_cache.get(scope, [])):
             return
 
-        suite = extract_suite(kind, data.get("spec", {}), data.get("suite"))
+        suite = extract_suite(
+            kind, data.get("spec", {}), data.get("suite"),
+            producing_kinds=producing,
+        )
+
+        # The Kind to WRITE is the one declaring `record.is-evidence`. Sorted so
+        # a deployment that registers more than one (legal — see the trait's
+        # description) picks deterministically rather than by dict order.
+        evidence_kind = sorted(is_evidence)[0]
+        evidence_port = kernel.kind_port_for(evidence_kind)
+        evidence_api = (
+            getattr(evidence_port, "api_version", None)
+            or "github.com/ruinosus/dna/evidence/v1"
+        )
 
         doc = build_evidence(
             event_type,
@@ -157,13 +230,15 @@ def make_evidence_capture_handler(kernel: Any):
             data.get("spec", {}),
             author=data.get("author", "unknown"),
             suite=suite,
+            kind=evidence_kind,
+            api_version=evidence_api,
         )
 
         try:
             evidence_name = doc["metadata"]["name"]
             raw_evidence = {
-                "apiVersion": doc.get("apiVersion", "github.com/ruinosus/dna/v1"),
-                "kind": "Evidence",
+                "apiVersion": doc.get("api_version", evidence_api),
+                "kind": evidence_kind,
                 "metadata": doc.get("metadata", {}),
                 "spec": doc.get("spec", {}),
             }
@@ -171,7 +246,7 @@ def make_evidence_capture_handler(kernel: Any):
             # post_save → infinite recursion. Source persists via the registered
             # WriterPort — works for FS, Postgres, SQLite, or any backend.
             await kernel.write_instance(
-                scope, "Evidence", evidence_name, raw_evidence,
+                scope, evidence_kind, evidence_name, raw_evidence,
                 skip_hooks=True,
             )
             logger.debug("Evidence captured: %s for %s:%s", event_type, kind, name)

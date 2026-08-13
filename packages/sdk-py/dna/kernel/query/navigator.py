@@ -18,6 +18,19 @@ class Navigator:
 
     def __init__(self, host: ManifestInstance) -> None:
         self._host = host
+        self._registry: Any = None
+
+    @property
+    def registry(self) -> Any:
+        """The canonical Kind registry over this host's registered Kinds.
+
+        Lazy: ``_kinds`` is populated as extensions load, so binding at
+        ``__init__`` would freeze a partial view.
+        """
+        if self._registry is None:
+            from dna.kernel.kinds.registry import KindRegistry
+            self._registry = KindRegistry(self._host._kinds)
+        return self._registry
 
     def describe(self, kind: str, name: str) -> str:
         """Describe a single instance.
@@ -132,15 +145,20 @@ class Navigator:
         - INFERRED: reserved for LLM/heuristic resolution (v2).
 
         ``value`` may be a string (single ref) or list (multiple).
+
+        ⚠️ Resolution goes through ``KindRegistry.resolve_dep_filter_target``
+        — THE canonical dep_filter resolver (s-unify-composition-subsystems),
+        the same one ``validate_refs`` / ``mi.composition`` uses. This method
+        used to hand-roll an ``kp.alias == target_alias`` loop, which cannot
+        read the legacy ``kind=<Name>`` form, so a legacy dep_filter graded
+        AMBIGUOUS here while ``composition.validate()`` resolved it happily —
+        two live readers disagreeing about the same edge. The convergence
+        story unified the (now deleted) ``query/nav.py`` twin and missed this,
+        the reader every ``mi.nav.inventory()`` caller actually reaches.
         """
         host = self._host
-        # Resolve alias → kind name (kp.alias is on each KindPort)
-        kind_name: str | None = None
-        for kn in host.list_kinds():
-            kp = host.kind_for(kn)
-            if kp and getattr(kp, "alias", None) == target_alias:
-                kind_name = kn
-                break
+        kp_target = self.registry.resolve_dep_filter_target(target_alias)
+        kind_name: str | None = kp_target.kind if kp_target is not None else None
         if kind_name is None:
             return "AMBIGUOUS"
         names: list[str] = []

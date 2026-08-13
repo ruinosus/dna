@@ -182,6 +182,25 @@ class KindBase:
     # default. False for the per-scope SDLC ledger + structural Kinds. Was the
     # negation of ``Kernel._NON_INHERITABLE_KINDS``.
     scope_inheritable: bool = True
+    # ``post_save_event``: the event_type a post_save hook sees for this Kind
+    # (i-107). ``None`` → the generic ``document_created`` / ``document_modified``
+    # pair. A single string → that name for BOTH create and update (an EvalRun is
+    # "completed" either way). A ``(create, update)`` pair → one name each.
+    #
+    # This was ``kernel/boot/events.py``'s ``_FIXED_EVENTS`` / ``_SPLIT_EVENTS``
+    # dicts — the kernel holding the event vocabulary of Kinds it does not own.
+    # The name of the event a Kind emits is the Kind's own fact, and a
+    # tenant-authored Kind could not emit anything but ``document_created``;
+    # since EvidencePolicy selects on event_type, that Kind could not be named
+    # by any policy written against a meaningful event.
+    #
+    # A VALUE, therefore an attribute and NOT a trait: the trait vocabulary is
+    # deliberately for role labels that carry nothing (``kinds/vocabulary.py``
+    # argues this at length), and a trait cannot hold "eval_run_completed".
+    #
+    # Declarable from a descriptor as ``spec.post_save_event`` — see
+    # KindDefinitionSpec / kind-definition.schema.json.
+    post_save_event: str | tuple[str, str] | None = None
     # ``OVERLAYABLE_FIELDS``: the per-FIELD refinement of ``is_overlayable``.
     # ``is_overlayable`` answers "may a layer fork this Kind at all"; this
     # answers "which of its top-level spec keys may a layer CHANGE". Both

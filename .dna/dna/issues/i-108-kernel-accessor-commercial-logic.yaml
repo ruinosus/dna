@@ -1,0 +1,29 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: lrjbbxkleael
+  name: i-108-kernel-accessor-commercial-logic
+spec:
+  description: |-
+    MOVER, nao declarar: kernel/registry/accessor.py tem logica COMERCIAL dentro do core aberto. 394 linhas, 11 metodos, consultando por nome literal: PricingPlan (l.136), PlanBinding (l.194), Workspace (l.237 e l.303), WorkspaceMembership, ModelProfile, KindNamespace, CognitivePolicy.
+
+    ⛔ Trait NAO resolve isto, e por isso esta ficha existe separada do resto da i-107. Mesmo derivando o conjunto de Kinds, o kernel continuaria com metodos (tier, account_plan, account_for_workspace, workspace_memberships) que so fazem sentido para quem COBRA POR USO. O problema nao e o kernel saber NOMES de Kind; e o kernel ter a fronteira no lugar errado. Declarar um trait deixaria os literais bonitos e a inversao intacta.
+
+    Mesma inversao de fronteira que runtime/roi.py.
+
+    Contexto que torna isto mais grave: o dna e o core OSS publico; a camada que cobra e o dna-cloud. Um consumidor que instala dna-sdk leva junto os acessores de plano de preco e de vinculo de conta de um produto que ele nao usa — e, pior, a fronteira open-core fica documentada como uma coisa e implementada como outra.
+
+    A saida e mover para a camada que cobra (ou para uma extensao), e isso e DECISAO DO FOUNDER, nao do agente: mexe na fronteira open-core, que e uma escolha de produto.
+
+    Medido em 12/08/2026 durante a i-107. Os 7 pares (Kind, arquivo) correspondentes seguem no baseline de goldens/kernel_kind_literals.json e a guarda impede que cresçam.
+  type: task
+  severity: medium
+  status: open
+  created_at: '2026-08-12T23:30:03+00:00'
+  updated_at: '2026-08-12T23:30:03+00:00'
+  timeline:
+  - at: '2026-08-12T23:30:03+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

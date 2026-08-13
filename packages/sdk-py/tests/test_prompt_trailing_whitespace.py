@@ -97,86 +97,31 @@ class TestTrailingNewlineLeak:
         assert doc.spec["soul_content"] == SOUL_BODY  # trailing \n intact
 
 
-class TestPromptKernelLazyPath:
-    """Same contract on the lazy kernel-driven builder (prompt_kernel).
+class TestAsyncBuildPath:
+    """Same contract on the ASYNC build path.
 
-    Uses the fake-kernel pattern from test_hooks_fail_loud — the lazy
-    builder is driven off kernel protocol methods, not a real source.
+    ⚠️ This class used to be ``TestPromptKernelLazyPath`` and drove
+    ``prompt/engine.py`` through a hand-built ``SimpleNamespace`` fake
+    kernel. That module had zero production callers and was deleted in
+    s-dna-shrink-faixa-1, so the class proved the contract on a path
+    nobody ran — and, worse, the fake supplied its OWN
+    ``prompt_template``, so even the template cascade under test was the
+    test's, not the kernel's. It now drives the live
+    ``PromptBuilder.build_async`` over the same real fixture scope the
+    sync class uses, which is what makes the two comparable at all.
     """
 
     @pytest.mark.asyncio
-    async def test_lazy_build_prompt_no_leak(self):
-        from types import SimpleNamespace
-
-        from dna.kernel.instance import Instance
-        from dna.kernel.prompt.engine import build_prompt_async
-
-        agent_raw = {
-            "apiVersion": "v1", "kind": "Agent",
-            "metadata": {"name": "a-1"},
-            "spec": {"instruction": AGENT_BODY},  # trailing \n
-        }
-        soul_raw = {
-            "apiVersion": "soulspec.org/v1", "kind": "Soul",
-            "metadata": {"name": "s-1"},
-            "spec": {"soul_content": SOUL_BODY},  # trailing \n
-        }
-
-        async def _get(scope, kind, name, **kw):
-            if kind == "Agent" and name == "a-1":
-                return dict(agent_raw)
-            return None
-
-        async def _list(scope, *, kind=None, tenant=None):
-            return []
-
-        def _parse(raw, origin="local"):
-            meta = raw.get("metadata", {}) or {}
-            return Instance(
-                api_version=raw.get("apiVersion", "v1"), kind=raw["kind"],
-                name=meta.get("name", ""), metadata=meta,
-                spec=raw.get("spec", {}) or {},
-            )
-
-        agent_kp = SimpleNamespace(
-            kind="Agent", alias="helix-agent", api_version="v1",
-            is_prompt_target=True, prompt_target_priority=1,
-            flatten_in_context=False,
-            dep_filters=lambda: {},
-            prompt_template=lambda doc=None: (
-                "{{{agent.instruction}}}\n\n{{{soul_content}}}\n\n"
-            ),
-            summary=lambda doc: None,
-        )
-        soul_kp = SimpleNamespace(
-            kind="Soul", alias="soulspec-soul",
-            api_version="soulspec.org/v1",
-            is_prompt_target=True, prompt_target_priority=1,
-            flatten_in_context=True,
-            dep_filters=lambda: {},
-            prompt_template=lambda doc=None: None,
-            summary=lambda doc: None,
-        )
-
-        async def _query(scope, kind, **kw):
-            if kind == "Agent":
-                yield dict(agent_raw)
-            elif kind == "Soul":
-                yield dict(soul_raw)
-
-        kernel = SimpleNamespace(
-            get_instance=_get,
-            list_instances=_list,
-            query=_query,
-            _parse_doc=_parse,
-            _kinds={
-                ("v1", "Agent"): agent_kp,
-                ("soulspec.org/v1", "Soul"): soul_kp,
-            },
-            _source=None,
-            hooks=None,
-        )
-
-        prompt = await build_prompt_async(kernel, "pilot-scope", "a-1")
+    async def test_async_build_prompt_no_leak(self, mi):
+        prompt = await mi.build_prompt_async(agent="pilot-agent")
         assert "Calm, precise, direct." in prompt
         assert "\n\n\n" not in prompt, repr(prompt)
+
+    @pytest.mark.asyncio
+    async def test_async_build_is_byte_identical_to_sync(self, mi):
+        """The two paths differ only in how they await refs — never in
+        what they compose. A divergence here is the defect that a dead
+        divergent twin (i-048) hid for months."""
+        assert await mi.build_prompt_async(agent="pilot-agent") == mi.build_prompt(
+            agent="pilot-agent"
+        )

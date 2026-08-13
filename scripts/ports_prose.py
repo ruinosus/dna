@@ -1568,15 +1568,9 @@ PROSE: dict[str, dict] = {
         "Read-only source-adapter introspection — source type, scope list, metadata. "
         "Attribute-shaped, so it declares no methods.",
     ),
-    "KindLike": _internal(
-        "The minimal Kind shape a Resource needs",
-        "The smallest slice of a Kind that `Resource.deps()` needs, so dependency "
-        "resolution does not depend on the whole `KindPort`.",
-        why=(
-            "A typing-only narrowing of `KindPort`. Any Kind you write already "
-            "satisfies it — implementing it separately would mean writing a Kind that "
-            "is not a Kind. If you are here to add a Kind, "
-            "[`KindPort`](kinds.md#kindport) is the port you want."
-        ),
-    ),
+    # NOTE: "KindLike" lived here until s-dna-shrink-faixa-1 (i-047). It was the
+    # minimal Kind shape that ``dna.kernel.resource.Resource.deps()`` needed —
+    # and ``resource.py`` had ZERO production callers, so the port documented a
+    # narrowing that nothing ever narrowed. Both are deleted. If a future seam
+    # needs a Kind narrowing, add it back WITH its consumer, not before it.
 }

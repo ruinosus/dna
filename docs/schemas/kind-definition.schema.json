@@ -230,6 +230,18 @@
           "default": true,
           "description": "Instances of this Kind inherit across scopes (false for per-scope ledgers + structural Kinds)."
         },
+        "post_save_event": {
+          "description": "The post_save event_type instances of this Kind emit. A string = that name for BOTH create and update (a run is 'completed' either way); a two-element array = [create, update]. Absent = the generic document_created / document_modified pair. EvidencePolicy selects which writes to capture BY event_type, so a Kind that cannot name its event cannot be captured by any policy — which is why this is declarable here rather than a table in kernel/boot/events.py (i-107).",
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          ]
+        },
         "is_overlayable": {
           "type": "boolean",
           "default": true,

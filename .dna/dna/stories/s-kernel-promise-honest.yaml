@@ -1,0 +1,183 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Story
+metadata:
+  id: koqfp26hqtl2
+  name: s-kernel-promise-honest
+spec:
+  title: 'A promessa ''um microkernel que nao conhece Kind nenhum'' e falsa em seis lugares '
+  description: A promessa 'um microkernel que nao conhece Kind nenhum' e falsa em seis lugares medidos. Reescrever a promessa para o que e verdade e acrescentar uma guarda DERIVADA que falhe quando um literal de Kind NOVO aparecer no caminho central do kernel.
+  status: in-progress
+  feature: f-dna-1.0-readiness
+  acceptance_criteria:
+  - text: Dado que o kernel cita nomes de Kind literais em resolver/accessor/evidence/events/invalidation, quando a promessa e reescrita, entao AGENTS.md, docs/index.md, docs/concepts/thesis.md e microkernel-ports.md dizem o que o codigo faz
+    done: true
+    done_at: '2026-08-12T23:52:31+00:00'
+    done_by: story-done-auto
+  - text: Dada uma guarda derivada (o conjunto de Kinds vem do registro, nao de uma lista escrita a mao), quando um literal de Kind NOVO aparece no caminho central, entao a guarda falha; e quando um literal ja conhecido e removido, a guarda tambem falha (a baseline aperta, nunca afrouxa sozinha)
+    done: true
+    done_at: '2026-08-12T23:52:31+00:00'
+    done_by: story-done-auto
+  acceptance_criteria_source: cli-create
+  definition_of_done:
+  - text: guarda com teste + baseline commitada + docs corrigidos + o caminho para (a) fichado como issue
+    done: true
+    done_at: '2026-08-12T23:52:31+00:00'
+    done_by: story-done-auto
+  definition_of_done_source: cli-create
+  created_at: '2026-08-12T22:46:30+00:00'
+  updated_at: '2026-08-12T23:39:03+00:00'
+  timeline:
+  - at: '2026-08-12T22:46:30+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: todo
+  - at: '2026-08-12T23:11:24+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: todo
+    to: in-progress
+  - at: '2026-08-12T23:13:16+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      Guarda entregue e provada nos tres sentidos.
+
+      DERIVADA, nao enumerada — a exigencia explicita:
+      - vocabulario de 'o que e nome de Kind' vem de Kernel.auto(), o registro vivo: 89 Kinds no momento da medicao, ZERO escritos no arquivo da guarda (verificado por regex sobre o proprio fonte: os unicos nomes literais sao Genome/KindDefinition/LayerPolicy, e estao la de proposito, como o trio de bootstrap que o teste fixa — e esse teste FALHA pedindo atualizacao dos docs se algum dia sairem).
+      - superficie varrida = a arvore dna/kernel inteira via rglob, nao lista de arquivos. Modulo novo entra coberto no dia em que nasce.
+      - docstrings excluidas do scan por AST: prosa que NOMEIA um Kind e documentacao, nao acoplamento.
+
+      RATCHET nos dois sentidos, que e o que separa teto de orcamento:
+      - par (kind, arquivo) novo -> falha ('the kernel just learned about Kind(s) it did not know')
+      - par removido -> tambem falha, ate o baseline registrar o ganho. Espaco nao gasto tem de voltar, ou a proxima ampliacao o gasta sem ninguem decidir.
+
+      Anti-cegueira: test_the_derived_vocabulary_is_actually_populated exige >=40 Kinds e o trio estrutural. Sem ele, um registro que nao sobe daria vocabulario vazio, scan vazio, guarda VERDE medindo nada — o modo de falha que esta casa ja teve.
+
+      Provas executadas:
+      1. injetei 'Postmortem' em manifest.py -> FALHOU nomeando arquivo e Kind
+      2. renomeei 'SafetyPolicy' -> FALHOU pedindo o aperto do baseline
+      3. 'Sprocket' (nao registrado) nao entra no vocabulario -> guarda nao inventa Kind
+
+      Baseline congelado: 49 pares / 30 Kinds / 16 arquivos.
+
+      Docs corrigidos em 6 lugares: AGENTS.md, docs/index.md, docs/concepts/{index,thesis,microkernel-ports}.md e scripts/ports_prose.py — este ultimo era a fonte da frase em DUAS paginas de referencia geradas, entao corrigir so o .md teria voltado no proximo gen. Zero ocorrencias residuais de 'knows no Kinds' fora do CHANGELOG (historico, nao se reescreve). mkdocs --strict tem 1 warning PRE-EXISTENTE (analysis/dna-market-critique.md fora do nav) — confirmado identico em main.
+
+      Caminho para (a) fichado em i-107 com os tres blocos medidos e o que NAO sai.
+    commit_ref: 915c72d1e6a116ee5f4a781f5ae0f72f55bbaec4
+  - at: '2026-08-12T23:37:22+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      ⚠️ MUDANCA DE ESCOPO pelo founder no meio da historia: fazer (a) — o trait — e NAO mexer no README. A reescrita dos docs que eu tinha commitado (915c72d1) foi REVERTIDA; a promessa 'knows no Kinds' segue intacta em AGENTS.md, docs/index.md, docs/concepts/{index,thesis}.md. O codigo e que andou na direcao dela.
+
+      O founder tinha razao e minha medicao inicial estava errada em algo especifico: eu tratei a lista literal como 'mecanismo faltando'. Nao era. O mecanismo ja existia TRES vezes.
+
+      TRES traducoes feitas, 49 -> 34 literais (15 removidos, 0 adicionados):
+
+      1. HERANCA DE ESCOPO — e aqui achei um BUG VIVO. Nao virou trait, e a recusa e a parte importante:  JA era atributo de KindPort E campo de descritor, e  JA derivava dele. A lista em query/resolver.py era uma QUARTA COPIA. Um trait  seria a terceira grafia do mesmo fato — exatamente o 'overdo' que vocabulary.py existe para recusar. Entao apaguei a copia em vez de criar vocabulario.
+         ⚠️ E a copia ja tinha derivado DE NOVO: KindNamespace, Memory, Sprint e WorkspaceScopeGrant declaram scope_inheritable: false nos proprios descritores e NAO estavam na lista, entao get_composition_rule devolvia 'enabled' — herdavam entre escopos contra a propria declaracao. Terceira ocorrencia do padrao Milestone->Epic, achada por tentar apagar a lista, nao por alguem notar.
+
+      2. CAPTURA DE EVIDENCIA — dois traits novos:  e . Estes CARREGAM comportamento, entao NAO entraram em PROPOSED_TRAITS (cuja promessa e 'rejeitar custa uma descricao, nunca um boot'). Criei um terceiro dict, BEHAVIOURAL_TRAITS, com a diferenca escrita: rejeitar um destes e mudanca de codigo. A separacao e pela mesma razao que CORE/PROPOSED sao separados — dizer o custo sem precisar diffar commit.
+         ⚠️  estava no literal e NAO e Kind registrado (kind_port_for devolve None). Um set literal pode nomear Kind que nao existe e nada reclama; uma declaracao nao pode, porque nao ha onde pendura-la. O teste antigo test_extract_suite_from_finding_source passava sobre um Kind inexistente.
+
+      3. NOME DE EVENTO post_save — virou , ATRIBUTO e nao trait: e um VALOR ('eval_run_completed'), e trait no DNA nao carrega valor por decisao escrita. Fiado ate o fim: KindBase + KindDefinitionSpec + DeclarativeKindPort + as DUAS copias do kind-definition.schema.json (o gate do schema pegou a primeira tentativa, corretamente).
+
+      ⭐ O GANHO TESTADO EXPLICITAMENTE, nos tres: um Kind que o kernel nunca ouviu falar, registrado em runtime, declara e recebe o MESMO comportamento do embutido (test_a_kind_the_kernel_has_never_heard_of_can_declare_it, test_a_kind_the_kernel_never_heard_of_can_produce_evidence, test_a_tenant_kind_can_finally_name_its_own_event).
+
+      ⛔ Fichados, nao consertados: i-108 (accessor.py, logica comercial no core — mover, decisao do founder) e i-109 (models.py Typed*, inversao de dependencia com 11 arquivos de extensao importando de volta).
+
+      ⚠️ E O ERRO QUE EU COMETI: escrevi uma guarda derivada nova (test_kernel_kind_literals_guard.py + baseline JSON) e o repo JA TINHA UMA MELHOR — test_kind_name_literal_ratchet.py, sobre dna.testing.kind_literal_scan, com ALLOWLIST que exige um MOTIVO ESCRITO por site e que so encolhe. Apaguei a minha. Foi ela, e nao a minha, que pegou a entrada obsoleta de _FIXED_EVENTS. Reinventei roda tendo a licao 'procurar antes de construir' no indice.
+         Bonus: o motivo que a ALLOWLIST dava para _FIXED_EVENTS ('e uma afirmacao sobre o boot, nao sobre o Kind') estava ERRADO, e o proprio arquivo convida a discordar ('claims to be argued with'). Refutacao registrada no lugar da entrada: EvidencePolicy seleciona POR event_type, entao Kind que nao sabe nomear o proprio evento nao pode ser capturado.
+
+      Goldens de composicao: 27 passam com as expectativas CONGELADAS INALTERADAS — a traducao e semanticamente fiel. O caso 07 agora DECLARA o Kind que precisa (bloco kinds: no YAML) em vez de depender da lista do kernel.
+    commit_ref: db4cc1e46888c3c8a0f5d8c95ded0970e199ddfa
+  - at: '2026-08-12T23:39:03+00:00'
+    actor: claude-code
+    type: comment
+    source: cli
+    summary: |-
+      CORRECAO do comentario anterior: escrevi-o com crases e o shell comeu os nomes tecnicos (scope_inheritable, os dois traits, post_save_event sairam vazios). Versao integra abaixo; a anterior fica no historico como o registro do erro.
+
+      MUDANCA DE ESCOPO pelo founder no meio da historia: fazer (a) — o trait — e NAO mexer no README. A reescrita dos docs que eu tinha commitado (915c72d1) foi REVERTIDA; a promessa "knows no Kinds" segue intacta em AGENTS.md, docs/index.md, docs/concepts/index.md e thesis.md. O codigo e que andou na direcao dela.
+
+      O founder tinha razao, e minha medicao inicial errou em algo especifico: eu tratei a lista literal como "mecanismo faltando". Nao era. O mecanismo ja existia — em um dos tres casos, tres vezes.
+
+      TRES TRADUCOES. 49 -> 34 literais (15 removidos, 0 adicionados).
+
+      (1) HERANCA DE ESCOPO — achei um BUG VIVO, e a RECUSA de criar trait e a parte importante.
+          "scope_inheritable" JA era atributo de KindPort E campo de descritor
+          (kind-definition.schema.json), e "Kernel._NON_INHERITABLE_KINDS" JA derivava
+          dele. A lista DEFAULT_NON_INHERITABLE_KINDS_V1 em query/resolver.py era uma
+          QUARTA COPIA. Um trait "scope.non-inheritable" seria a TERCEIRA GRAFIA do
+          mesmo fato — exatamente o "overdo" que vocabulary.py existe para recusar
+          ("a trait that merely restates a fact already declared twice"). Entao apaguei
+          a copia em vez de criar vocabulario.
+          A copia ja tinha derivado DE NOVO: KindNamespace, Memory, Sprint e
+          WorkspaceScopeGrant declaram "scope_inheritable: false" nos proprios
+          descritores e NAO estavam na lista, entao get_composition_rule devolvia
+          "enabled" — herdavam entre escopos contra a propria declaracao. TERCEIRA
+          ocorrencia do padrao Milestone->Epic, achada por tentar apagar a lista, nao
+          por alguem notar.
+
+      (2) CAPTURA DE EVIDENCIA — dois traits novos: "record.produces-evidence" e
+          "record.is-evidence". Estes CARREGAM comportamento, entao NAO entraram em
+          PROPOSED_TRAITS, cuja promessa escrita e "rejeitar custa uma descricao, nunca
+          um boot". Criei um terceiro dict, BEHAVIOURAL_TRAITS, com a diferenca escrita
+          no lugar: rejeitar um destes e mudanca de CODIGO. A separacao segue a mesma
+          razao que separa CORE de PROPOSED — dizer o custo sem precisar diffar commit.
+          "Finding" estava no set literal e NAO e Kind registrado (kind_port_for
+          devolve None). Um set literal pode nomear Kind que nao existe e nada reclama;
+          uma declaracao nao pode, porque nao ha onde pendura-la. O teste antigo
+          test_extract_suite_from_finding_source passava sobre um Kind inexistente.
+
+      (3) NOME DE EVENTO post_save — virou "post_save_event", ATRIBUTO e nao trait:
+          e um VALOR ("eval_run_completed"), e trait no DNA nao carrega valor por
+          decisao escrita em vocabulary.py. Fiado ate o fim: KindBase +
+          KindDefinitionSpec.from_raw + DeclarativeKindPort + as DUAS copias de
+          kind-definition.schema.json (o gate do schema recusou a primeira tentativa,
+          corretamente — additionalProperties: false).
+
+      O GANHO, TESTADO EXPLICITAMENTE NOS TRES: um Kind que o kernel nunca ouviu falar,
+      registrado em runtime, DECLARA e recebe o MESMO comportamento do embutido.
+        test_a_kind_the_kernel_has_never_heard_of_can_declare_it
+        test_a_kind_the_kernel_never_heard_of_can_produce_evidence
+        test_a_tenant_kind_can_finally_name_its_own_event
+      Antes, nos tres casos, era impossivel — nao "nao estava configurado", mas nao
+      havia como dizer.
+
+      FICHADOS, NAO CONSERTADOS (a pedido, com o argumento):
+        i-108 accessor.py — 394 linhas, 11 metodos, logica COMERCIAL no core aberto
+              (PricingPlan, PlanBinding, Workspace...). Trait nao resolve: mesmo
+              derivado, o kernel continuaria com metodos que so servem a quem cobra.
+              A saida e MOVER, e e decisao do founder (mexe na fronteira open-core).
+        i-109 models.py Typed* — 17 classes, 1.817 linhas, 11 arquivos de extensao
+              importando de volta. Inversao de dependencia, nao trait.
+
+      O ERRO QUE EU COMETI, registrado porque e o mais util daqui:
+      Escrevi uma guarda derivada nova (test_kernel_kind_literals_guard.py + baseline
+      JSON) e o repo JA TINHA UMA MELHOR: test_kind_name_literal_ratchet.py, sobre
+      dna.testing.kind_literal_scan.scan_tree, com uma ALLOWLIST que exige um MOTIVO
+      ESCRITO por site e que SO ENCOLHE. Apaguei a minha. E foi a dela, nao a minha,
+      que pegou a entrada obsoleta de _FIXED_EVENTS depois da traducao. Reinventei roda
+      tendo "procurar antes de construir" no indice de memoria.
+      Bonus: o motivo que a ALLOWLIST dava para _FIXED_EVENTS ("e uma afirmacao sobre o
+      boot, nao sobre o Kind") estava ERRADO, e o proprio arquivo convida a discordar
+      ("read them as claims to be argued with, not as permanent grants"). Refutacao
+      deixada no lugar da entrada: EvidencePolicy seleciona POR event_type, entao um
+      Kind que nao sabe nomear o proprio evento nao pode ser capturado por politica
+      nenhuma.
+
+      GOLDENS: os 27 casos de composicao passam com as expectativas CONGELADAS
+      INALTERADAS — prova de que a traducao e semanticamente fiel. O caso 07 agora
+      DECLARA o Kind de que precisa (bloco "kinds:" no YAML do caso) em vez de depender
+      da lista do kernel, entao o golden prova que a DECLARACAO dirige o resolver.
+    commit_ref: db4cc1e46888c3c8a0f5d8c95ded0970e199ddfa
+  produces:
+  - kind: Plan
+    name: plan-s-kernel-promise-honest
+    role: implementation
+    at: '2026-08-12T23:11:24+00:00'

@@ -181,24 +181,6 @@ The cache-coherence state the invalidation controller fans out over. All of it s
 
 _No methods: this Protocol is satisfied by **attributes**, not calls (see the source docstring above)._
 
-## KindLike
-
-`dna.kernel.resource.KindLike` · `@runtime_checkable` · :material-lock: internal seam
-
-The smallest slice of a Kind that `Resource.deps()` needs, so dependency resolution does not depend on the whole `KindPort`.
-
-!!! quote "From the source"
-
-    Minimal Kind interface needed by Resource.deps().
-
-**Not an extension point.** A typing-only narrowing of `KindPort`. Any Kind you write already satisfies it — implementing it separately would mean writing a Kind that is not a Kind. If you are here to add a Kind, [`KindPort`](kinds.md#kindport) is the port you want.
-
-**The contract**
-
-| Member | Signature | What it must do |
-| --- | --- | --- |
-| `dep_filters` | <code>def dep_filters(self) -> dict[str, str] \| None</code> |  |
-
 ## KindLookup
 
 `dna.kernel.collaborator_ports.KindLookup` · `@runtime_checkable` · :material-lock: internal seam

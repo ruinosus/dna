@@ -11,13 +11,15 @@ files with diverging semantics:
 
   2. **``validate_refs``** — THE cross-kind ref validation core. It is
      the single implementation behind ``mi.composition.validate()``
-     (MI plane) and ``nav_kernel.validate_composition_async`` (source
-     plane). Target resolution goes through
-     ``KindRegistry.resolve_dep_filter_target`` — the same canonical
-     resolver (alias contract + legacy ``kind=`` shim, s-alias) used by
-     nav classification and kinds-api docs. The old three-reader
-     asymmetry (each reader hand-rolling its own alias loop with
-     different ``kind=`` / record semantics) is gone.
+     and, through it, of every composition reader. Target resolution goes
+     through ``KindRegistry.resolve_dep_filter_target`` — the same
+     canonical resolver (alias contract + legacy ``kind=`` shim, s-alias)
+     used by ``Navigator._classify_ref_confidence`` and kinds-api docs.
+     The old three-reader asymmetry (each reader hand-rolling its own
+     alias loop with different ``kind=`` / record semantics) is gone —
+     though only since s-dna-shrink-faixa-1: the unification had landed on
+     the dead ``query/nav.py`` twin and the LIVE Navigator kept its
+     hand-rolled loop until that twin was deleted and the gap surfaced.
 
   3. **CompositionEngine** — the ``mi.composition`` namespace
      (validate / iter_doc_deps / consumers_of / dependency_tree). Moved
@@ -130,9 +132,9 @@ def validate_refs(
 ) -> CompositionResult:
     """Validate declared dep_filter refs of ``docs`` against ``doc_index``.
 
-    The ONE implementation behind ``mi.composition.validate()`` and
-    ``nav_kernel.validate_composition_async`` — both feed their own doc
-    set/index but share resolution + classification semantics:
+    The ONE implementation behind ``mi.composition.validate()``; readers
+    feed their own doc set/index but share resolution + classification
+    semantics:
 
     - Target resolution via ``registry.resolve_dep_filter_target`` (the
       canonical s-alias resolver: alias contract + deprecated ``kind=``
@@ -412,7 +414,6 @@ class CompositionResolver:
         ``(scope, kind)`` — from the scope's LayerPolicy composition_rules, else
         the inherit-by-default denylist (everything inherits from _lib
         except the per-scope ledger + structural Kinds)."""
-        from dna.kernel.query.resolver import DEFAULT_NON_INHERITABLE_KINDS_V1
         k = self._k
         if k._source is not None:
             try:
@@ -442,7 +443,16 @@ class CompositionResolver:
                     "scope=%r kind=%r (falling back to defaults): %s",
                     scope, kind, e,
                 )
-        if kind not in DEFAULT_NON_INHERITABLE_KINDS_V1:
+        # DERIVED from each Kind's own ``scope_inheritable`` declaration (class
+        # attribute or ``spec.scope_inheritable`` in a descriptor), never from a
+        # list of names here. This used to read a literal
+        # ``DEFAULT_NON_INHERITABLE_KINDS_V1`` — a fourth copy of a list the
+        # kernel already derived, and it had drifted: KindNamespace, Memory,
+        # Sprint and WorkspaceScopeGrant all declare scope_inheritable=false and
+        # were missing from it, so they inherited across scopes against their own
+        # descriptors. Third time that list drifted (see Milestone->Epic).
+        # Locked by tests/test_scope_inheritance_is_declared.py.
+        if kind not in k._NON_INHERITABLE_KINDS:
             return ("enabled", "override_full", "field_level")
         # Non-inheritable Kinds STILL honor tenant overlay (TENANTED Canvas,
         # VoiceEpisode, Story must read tenant=X correctly).

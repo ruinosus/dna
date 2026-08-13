@@ -7,18 +7,28 @@ Registering an async listener on a hook that is only fired via sync
   ONCE per (hook, listener) at WARNING level;
 - ``emit(strict=True)`` raises instead — for call sites where skipping
   a listener would be a bug;
-- ``prompt_kernel.build_prompt_async`` (async context) awaits
-  ``emit_async`` for ``post_build_prompt`` so async listeners actually
-  fire on the kernel build path.
+- ``PromptBuilder.build_async`` (async context) awaits ``emit_async``
+  for ``post_build_prompt`` so async listeners actually fire on the
+  kernel build path.
+
+⚠️ That third bullet used to name ``prompt_kernel.build_prompt_async``
+— a module with ZERO production callers, deleted in s-dna-shrink-faixa-1.
+The fix had landed on the dead twin and NEVER on ``PromptBuilder``, the
+builder every real caller reaches, so this suite was green about a path
+nobody ran while the live path silently skipped async listeners. The
+test below now drives the LIVE builder through ``mi.build_prompt_async``.
 """
 from __future__ import annotations
 
 import logging
-from types import SimpleNamespace
+from pathlib import Path
 
 import pytest
 
+from dna.kernel import Kernel
 from dna.kernel.hooks import HookContext, HookRegistry
+
+BASE_DIR = Path(__file__).parent.parent.parent.parent / "scopes" / "open-swe" / ".dna"
 
 
 def _ctx() -> HookContext:
@@ -86,74 +96,57 @@ def test_emit_strict_is_noop_without_async_listeners():
     assert hits == ["sync"]
 
 
+@pytest.fixture
+def mi():
+    """A REAL ManifestInstance over the open-swe fixture scope.
+
+    Sync fixture on purpose: ``Kernel.quick`` composes through
+    ``_run_sync_helper``, which refuses to run inside a live event loop —
+    so the MI must be built in the setup phase, before pytest-asyncio
+    enters the loop for the test body.
+    """
+    return Kernel.quick("open-swe", base_dir=str(BASE_DIR))
+
+
 @pytest.mark.asyncio
-async def test_build_prompt_async_reaches_async_post_build_prompt_listener():
-    """The kernel's async build path fires emit_async — an async
-    post_build_prompt listener is awaited, not silently skipped."""
-    from dna.kernel.instance import Instance
-    from dna.kernel.prompt.engine import build_prompt_async
+async def test_build_prompt_async_reaches_async_post_build_prompt_listener(mi):
+    """The LIVE async build path fires emit_async — an async
+    post_build_prompt listener is awaited, not silently skipped.
 
-    agent_raw = {
-        "apiVersion": "v1", "kind": "Agent",
-        "metadata": {"name": "a-1"},
-        "spec": {"instruction": "Do the thing."},
-    }
-
-    async def _get(scope, kind, name, **kw):
-        if kind == "Agent" and name == "a-1":
-            return dict(agent_raw)
-        return None
-
-    async def _list(scope, *, kind=None, tenant=None):
-        return []
-
-    async def _query(scope, kind, **kw):
-        if kind == "Agent":
-            yield dict(agent_raw)
-        return
-
-    def _parse(raw, origin="local"):
-        meta = raw.get("metadata", {}) or {}
-        return Instance(
-            api_version=raw.get("apiVersion", "v1"), kind=raw["kind"],
-            name=meta.get("name", ""), metadata=meta,
-            spec=raw.get("spec", {}) or {},
-        )
-
-    kp = SimpleNamespace(
-        kind="Agent", alias="v1-utilityagent", api_version="v1",
-        is_prompt_target=True, prompt_target_priority=1,
-        flatten_in_context=False,
-        dep_filters=lambda: {},
-        prompt_template=lambda doc=None: None,
-        summary=lambda doc: None,
-    )
-
-    async def _resolve_ref(scope, value):
-        return value
-
-    kernel = SimpleNamespace(
-        query=_query,
-        get_instance=_get,
-        list_instances=_list,
-        _parse_doc=_parse,
-        _kinds={("v1", "Agent"): kp},
-        _source=SimpleNamespace(resolve_ref=_resolve_ref),
-        hooks=HookRegistry(),
-    )
-
+    Drives ``ManifestInstance.build_prompt_async`` → ``PromptBuilder
+    .build_async``, the path every real async caller reaches (harness
+    lifespan, async middleware). The predecessor of this test drove
+    ``prompt/engine.py`` — a module with zero production callers — and so
+    proved nothing about this one, which was still on sync ``emit()``.
+    """
     fired: list[str] = []
 
-    async def on_post(ctx):
+    async def on_post(ctx: HookContext) -> None:
         fired.append(ctx.prompt or "")
 
-    kernel.hooks.on("post_build_prompt", on_post)
+    mi._kernel.hooks.on("post_build_prompt", on_post)
 
-    prompt = await build_prompt_async(kernel, "scope-x", "a-1")
-    assert isinstance(prompt, str)
+    prompt = await mi.build_prompt_async(agent="swe-agent")
+    assert isinstance(prompt, str) and prompt
     assert fired, (
-        "async post_build_prompt listener must fire on the async build "
-        "path (emit_async) — it used to be silently skipped by sync emit()"
+        "async post_build_prompt listener must fire on the LIVE async build "
+        "path (PromptBuilder.build_async → emit_async) — sync emit() skips it"
     )
+    assert fired[0], "the listener receives the composed prompt, not an empty ctx"
     # And nothing was counted as skipped.
-    assert kernel.hooks.skipped_async_emits.get("post_build_prompt", 0) == 0
+    assert mi._kernel.hooks.skipped_async_emits.get("post_build_prompt", 0) == 0
+
+
+def test_sync_build_prompt_still_uses_sync_emit_and_counts_the_skip(mi):
+    """The SYNC path cannot await — it must keep sync ``emit()``, which
+    skips async listeners and COUNTS the skip. Locking this stops the
+    async fix from being copy-pasted onto ``build()``, where it would
+    raise 'coroutine was never awaited' instead of degrading loudly."""
+
+    async def on_post(ctx: HookContext) -> None:  # pragma: no cover — must NOT run
+        raise AssertionError("async listener must not run on the sync path")
+
+    mi._kernel.hooks.on("post_build_prompt", on_post)
+    mi.build_prompt(agent="swe-agent")
+
+    assert mi._kernel.hooks.skipped_async_emits.get("post_build_prompt", 0) == 1

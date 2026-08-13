@@ -175,6 +175,26 @@ OPEN; this is what is registered on THIS server right now, and ``[carries
         about a tool. Enforced at the kernel delete chokepoint
         (`dna.kernel.write.hard_delete`), which names the Kind's own
         retirement verb in the refusal.
+    record.is-evidence
+        This Kind IS the evidence record, which the capture path must know
+        so it does not capture evidence ABOUT evidence — an unguarded write
+        of a captured record re-triggers the handler that wrote it. The
+        trait exists as the declarative half of `record.produces-evidence`:
+        without it the kernel would still need one hard-coded name to break
+        the loop, and one hard-coded name is the whole problem in miniature.
+        Expected to be declared by exactly one Kind per deployment, but
+        deliberately not enforced as such — a tenant that runs its own
+        evidence Kind alongside the built-in one is not doing anything
+        wrong.
+    record.produces-evidence
+        Writing an instance of this Kind is an event worth CAPTURING as
+        Evidence — the evidence handler reads the write and stamps the
+        suite/source it came from. Distinct from `execution.run`, which says
+        the instance IS the record of an execution: a run is evidence-worthy
+        because it is a claim about the past, but a Kind may be
+        evidence-worthy without being a run (a baseline is pinned, not run).
+        Capture is still gated by the scope's EvidencePolicy — this trait
+        says the Kind is ELIGIBLE, never that capture is on.
     sdlc.dated
         Carries `created_at` AND `updated_at`: a read surface dates, sorts
         or windows it by both.

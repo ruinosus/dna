@@ -9,8 +9,10 @@ two-planes F2.5 — EvalRun/Finding/Evidence são plane=record: as leituras
 ``self._mi.all`` abaixo DELEGAM pro kernel record-plane (query_list_sync,
 Task 1). Contexto de thread verificado (2026-06-10): os métodos são SYNC e
 os únicos chamadores são a API pública ``mi.reports`` (testes/uso direto,
-off-loop); o caminho async de produção é ``reports_kernel.py`` (operations),
-que JÁ usa ``kernel.query`` por Kind. Chamada sync na thread do loop
+off-loop). Havia um gêmeo async ``reports_kernel.py`` que ESTA docstring
+apontava como "o caminho de produção": ele tinha ZERO chamadores em todo o
+repo e foi apagado (i-047, s-dna-shrink-faixa-1) — este módulo É o caminho.
+Chamada sync na thread do loop
 levantaria via _run_sync_helper — failing loud, by design. Push-down de
 filtro aqui é follow-up sem ganho real (superfície legada, fria).
 """

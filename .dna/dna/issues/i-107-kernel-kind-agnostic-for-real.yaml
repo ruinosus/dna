@@ -1,0 +1,31 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: n266ojjynlze
+  name: i-107-kernel-kind-agnostic-for-real
+spec:
+  description: |-
+    O caminho para (a): tornar o kernel Kind-agnostico DE VERDADE, nao so no grafo de import. Medido em 12/08/2026 por test_kernel_kind_literals_guard.py: 49 literais de nome de Kind, 30 Kinds distintos, 16 arquivos de dna/kernel, contra um vocabulario de 89 Kinds derivado do registro vivo. A promessa nos docs ja foi corrigida (s-kernel-promise-honest) e a guarda impede o numero de crescer calado; ESTA ficha e sobre faze-lo cair.
+
+    Os tres blocos, em ordem de tamanho:
+
+    1. kernel/models.py — 17 classes Typed* (TypedAgent, TypedSkill, TypedSoul, TypedGuardrail, TypedSafetyPolicy, TypedKindDefinition...) e 11 arquivos de extensao que IMPORTAM DE VOLTA do kernel (agentskills, agentsmd, guardrails, helix x2, hooks, kinddef, recognizer, safety, sdlc, soulspec). O no e a re-importacao: mover os Typed* pras extensoes que registram cada Kind inverte 11 dependencias de uma vez. Provavelmente precisa ser Kind a Kind, com a extensao passando a ser dona do seu Typed*.
+
+    2. kernel/query/resolver.py — DEFAULT_NON_INHERITABLE_KINDS_V1 e DEFAULT_INHERITABLE_KINDS_V1 governam heranca entre escopos por LISTA LITERAL de 21 nomes. Deveria ser um TRAIT declarado no descritor do Kind e derivado do registro. Nota viva no proprio arquivo: Epic e Milestone estao os DOIS na lista porque um rename passou batido e o Kind herdou calado por um tempo — exatamente o defeito que uma lista literal produz e um trait derivado nao produziria.
+
+    3. kernel/registry/accessor.py — consulta PricingPlan, PlanBinding, Workspace, WorkspaceMembership, ModelProfile, KindNamespace, CognitivePolicy por nome. Nomes COMERCIAIS dentro do kernel: o vazamento mais estranho dos tres, porque a camada paga do produto nao devia ter representacao no core aberto.
+
+    NAO e para tirar: Genome, KindDefinition e LayerPolicy. Ler um Kind declarado por descritor pressupoe o escopo, a policy de layer e a forma da declaracao — um descritor nao pode dar bootstrap no leitor que le descritores. Esses tres sao arquitetura, e test_the_bootstrap_kinds_are_the_reason_the_promise_had_to_change os fixa como tal (e falha, pedindo atualizacao dos docs, se algum dia sairem).
+
+    DoD: cada literal que sair TEM de sair tambem do baseline goldens/kernel_kind_literals.json — a guarda falha se o baseline nao apertar junto.
+  type: task
+  severity: low
+  status: open
+  created_at: '2026-08-12T23:05:48+00:00'
+  updated_at: '2026-08-12T23:05:48+00:00'
+  timeline:
+  - at: '2026-08-12T23:05:48+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

@@ -26,7 +26,10 @@ spec:
   target_kind: Evidence
   alias: evidence-evidence
   origin: github.com/ruinosus/dna/evidence
-  traits: [memory.recallable, record.append-only]
+  # record.is-evidence (i-107) breaks the capture recursion: a write of THIS
+  # Kind must not be captured, or the handler re-triggers on what it wrote. The
+  # kernel used to spell that `if kind == "Evidence"`.
+  traits: [memory.recallable, record.append-only, record.is-evidence]
   plane: record
   prompt_target: false
   flatten_in_context: false

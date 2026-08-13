@@ -505,7 +505,7 @@ class WritePipeline:
             scope=scope, kind=kind, name=name,
             layer=layer,
             data={
-                "event_type": derive_event_type(kind, is_update=False),
+                "event_type": derive_event_type(kind, is_update=False, kernel=host),
                 "author": "sdk",
                 "is_update": False,
                 "spec": raw,
