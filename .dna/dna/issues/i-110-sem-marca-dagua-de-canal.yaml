@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: edrfxy3hgncd
+  name: i-110-sem-marca-dagua-de-canal
+spec:
+  title: Nenhuma porta expoe a marca d'agua do canal — o DNAP nao consegue datar um retrato
+  description: 'A regra 3 da secao 6.2 do DNAP exige que a ''revision'' seja constante nas paginas de uma listagem, e a secao 5 chama metadata.revision de ''opaque, monotonic per channel''. O store de referencia TEM um contador monotonico por (scope, tenant) — dna_versions_seq.last_id, atualizado atomicamente a cada escrita — mas ele e SO do Postgres e privado do PostgresEventBus: nenhum membro de SourcePort/WritableSourcePort o expoe, o SQLite o deixa None, e o filesystem nao tem nada parecido. Sem isso o servidor DNAP nao pode datar um retrato, entao ele devolve revision: null e o initialize anuncia revisions.channelWatermark: false. Cunhar um token plausivel seria afirmar um isolamento de retrato que a leitura nao tem. O mecanismo ja esta pronto e testado (dna/protocol/revision.py sonda o metodo ''channel_revision'' por duck-typing, como store_supports_as_of faz com load_one_as_of; o cursor prende a marca e uma marca que andou responde -32005). Falta o adaptador implementar. Feito isso, listagens paginadas passam a ser honestamente consistentes.'
+  type: enhancement
+  severity: medium
+  status: open
+  related_feature: f-dnap-protocol
+  created_at: '2026-08-12T14:06:58+00:00'
+  updated_at: '2026-08-12T14:06:58+00:00'
+  timeline:
+  - at: '2026-08-12T14:06:58+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

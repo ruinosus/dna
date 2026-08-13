@@ -1,0 +1,20 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: gxxkmgymyugb
+  name: i-114-schema-limitado-a-15-palavras
+spec:
+  title: O limite de 15 palavras-chave da secao 6.1 e incompativel com os Kinds embutidos do SDK
+  description: 'ACHADO PELA SUITE DE CONFORMIDADE (caso every_served_kind_can_describe_itself), medido em 12/08/2026: 78 dos Kinds embutidos deste SDK publicam, via kinds/describe, palavras-chave fora do conjunto de 15 da secao 6.1 — allOf, oneOf, anyOf, not, dependentRequired, e as anotacoes description, default, format. A premissa da regra e ''uma palavra-chave que o servidor publica e NAO APLICA e mentira para todo cliente que le o schema para pre-validar''. Ela nao vale aqui: este servidor valida escrita com jsonschema, que aplica o vocabulario INTEIRO — entao publicar allOf e afirmacao verdadeira sobre o que a escrita vai checar. Podar o schema para caber no limite publicaria um schema MAIS FRACO do que o aplicado, e o cliente pre-validaria como aceitavel um documento que o servidor depois recusa: a mesma mentira na direcao contraria. Alem disso description/default/format nao sao restricoes, sao anotacoes — limita-las fora significa que um schema descrito nao pode carregar a propria documentacao. A metade que IMPORTA do caso passa: todo Kind anunciado consegue se descrever. Proposta para a spec: (a) o limite vira um PISO (''um servidor DEVE aplicar ao menos estas 15'') em vez de teto, (b) as anotacoes saem do limite, e (c) um servidor que aplique menos que o vocabulario que publica e que fica nao-conforme. Marcado xfail(strict=True) em tests/test_dnap_protocol_conformance.py, entao o dia em que qualquer um dos lados mudar ele vira XPASS e alguem olha.'
+  type: question
+  severity: medium
+  status: open
+  related_feature: f-dnap-protocol
+  created_at: '2026-08-12T14:55:41+00:00'
+  updated_at: '2026-08-12T14:55:41+00:00'
+  timeline:
+  - at: '2026-08-12T14:55:41+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

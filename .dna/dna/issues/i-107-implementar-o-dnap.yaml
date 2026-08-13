@@ -1,0 +1,80 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: yftl4lkfzwqa
+  name: i-107-implementar-o-dnap
+spec:
+  title: Implementar o DNAP — o DNA falado como protocolo JSON-RPC 2.0
+  description: |-
+    DECISÃO DO FOUNDER (12/08/2026): implementar o DNAP. A spec está em
+    `docs/spec/dnap-1.0-draft.md` (PR #384) e é NORMATIVA — cada regra dela nasceu de um defeito
+    MEDIDO neste SDK, não de preferência.
+
+    === POR QUE UM PROTOCOLO ===
+
+    MCP diz como TOOLS são expostas. A2A, como agentes DELEGAM. AHP, como uma SESSÃO é hospedada —
+    e a spec dele admite: *"assumes agents already exist"*. **Nenhum diz o que o agente É**, e por
+    isso todo runtime reimplementa essa resolução em privado, e o mesmo agente não atravessa dois
+    sem ser copiado.
+
+    ⭐ `resolve/agent` é o método que nenhum outro protocolo tem. É ele que justifica a existência
+    deste, e não mais uma API.
+
+    === A DESCOBERTA QUE ISTO FORMALIZA ===
+
+    O DNA JÁ fala JSON-RPC 2.0 — com a roupa errada. `list_documents`/`get_document`/
+    `write_document` existem como TOOLS MCP: um menu para MODELO, quando o que falta é um protocolo
+    para PROGRAMA. Foi por isso que o `HttpSource` (i-106) teve de falar REST e gastar 522 chamadas
+    para carregar um scope.
+
+    === O RECORTE, e o que decidiu cada regra ===
+
+      lê · escreve · pesquisa            decisão do founder; só-leitura fecharia a porta para um
+                                         terceiro AUTORAR, e autorar é o ato reflexivo do sistema
+                                         (um Kind é, ele mesmo, um documento escrito)
+
+      escopo é CANAL, não parâmetro      a face REST aceita `?scope=` e o IGNORA em silêncio
+      `select` é CONTRATO                `?fields=spec` devolve só o nome E ecoa "projected"
+      cursor, nunca offset               OFFSET n degrada quadraticamente
+      `revision` estável na paginação    senão o cliente monta uma colcha de momentos
+      vocabulário anunciado no initialize hoje o kernel nomeia 21 Kinds literalmente
+      busca ORDENA, não FILTRA           8 de 12 consultas irrelevantes acima da pior relevante
+
+    ⭐ E a regra que vale mais que a tabela de erros: **coleção vazia e pergunta sem resposta são
+    valores DIFERENTES.** Toda vez que uma falha virou lista vazia neste projeto, alguém a leu como
+    resposta.
+
+    === EXECUÇÃO ===
+
+    Onda 1 (em voo): o servidor — dispatch, initialize, kinds/*, instances/*, canais, erros — e, em
+    paralelo e SEM olhar o servidor, a suíte de conformidade + o cliente, escritos a partir da SPEC.
+    A ordem é deliberada: uma suíte derivada da implementação passa por construção e não prova nada.
+
+    Onda 2: `resolve/*` e `search/*` sobre o registro de métodos que a onda 1 deixa aberto.
+
+    ⚠️ REUSO, não reimplementação: `application/instances.py` já tem list/get/write/delete/search
+    `_impl`, e `definitions.py` tem resolve_agent/resolve_copilot. O servidor é COLA E CONTRATO. Se
+    um impl não conseguir cumprir uma regra normativa, isso é ACHADO — não contorno.
+
+    === O QUE ISTO NÃO RESOLVE, e tem de ficar dito ===
+
+    Não encolhe as ~97 mil linhas. Troca chamada de função por chamada de rede (latência, falha,
+    offline em todo caminho que hoje é `import dna`). E não conserta acrescentar campo a Kind
+    embutido — criar tipo é dado; estender tipo embutido continua exigindo release.
+  type: enhancement
+  severity: high
+  status: in-progress
+  created_at: '2026-08-12T12:54:36+00:00'
+  updated_at: '2026-08-12T12:54:36+00:00'
+  timeline:
+  - at: '2026-08-12T12:54:36+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-08-12T12:54:38+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: in-progress

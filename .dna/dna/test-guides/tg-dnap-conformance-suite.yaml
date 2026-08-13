@@ -1,0 +1,26 @@
+apiVersion: github.com/ruinosus/dna/testkit/v1
+kind: TestGuide
+metadata:
+  id: nb75nokodsnt
+  name: tg-dnap-conformance-suite
+spec:
+  description: 'A suite de conformidade DNAP e o DnapClient, verificados pelo unico jeito que uma suite de conformidade PODE ser verificada: por mutacao. Um servidor conforme passa; cada defeito que a spec nomeia e implementado no stub e tem de fazer o SEU caso falhar, por nome.'
+  kind_of_test: regression
+  status: active
+  steps:
+  - action: pytest tests/test_dnap_conformance_kit.py
+    expected: verde contra o stub conforme; 1 xfail (o buraco 6.4 r2) e 1 skip com motivo
+  - action: pytest -k test_each_mutation_is_caught_by_its_case
+    expected: 27 mutantes, cada um pego PELO SEU caso
+  - action: pytest -k errors_on_everything
+    expected: um servidor que so erra FALHA no controle positivo; nenhum caso de conteudo passa
+  - action: pytest -k unverified_is_not_a_pass
+    expected: sem gancho de falha, a regra 8.5 fica UNVERIFIED e report.ok e False
+  - action: pytest -k skip_with_an_explicit_reason
+    expected: 'todo skip da onda 2 diz ''NOT RUN — ... UNCHECKED: ...'''
+  - action: pytest tests/test_dnap_client.py
+    expected: as 4 obrigacoes de cliente; a varredura AST nao acha Kind, e o mutante plantado prova que ela morde
+  verifies:
+  - Story/s-dnap-conformance-suite
+  created_at: '2026-08-12T13:31:53+00:00'
+  updated_at: '2026-08-12T13:31:53+00:00'
