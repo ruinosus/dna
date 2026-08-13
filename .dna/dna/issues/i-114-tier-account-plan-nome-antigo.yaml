@@ -1,0 +1,58 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: flhxlxi2gp3w
+  name: i-114-tier-account-plan-nome-antigo
+spec:
+  title: 'kernel.tier()/account_plan(): o nome publico ficou no vocabulario aposentado'
+  description: |-
+    Achado nao pedido durante a medicao da i-113 (commit 47e1fa2e, 13/08/2026).
+
+    Os Kinds foram renomeados Tier -> PricingPlan e AccountPlan -> PlanBinding (dna
+    0.29.0, spec do metering). O CORPO seguiu o rename. O NOME PUBLICO DO METODO, a
+    DOCSTRING e os ATRIBUTOS INTERNOS nao.
+
+      dna/kernel/registry/accessor.py:136
+          self._k.query(self._TIER_REGISTRY_SCOPE, "PricingPlan")
+      dna/kernel/registry/accessor.py:194
+          self._ACCOUNT_PLAN_REGISTRY_SCOPE, "PlanBinding"
+      dna/kernel/__init__.py:3227   async def tier(self, tier_id_or_alias: str)
+      dna/kernel/__init__.py:3235   async def account_plan(self, account_id: str)
+      __init__.py:3228 (docstring)  'Resolve a Tier (DNA Cloud pricing plan)'
+      __init__.py:3236 (docstring)  'Resolve an AccountPlan (an ACCOUNT->Tier assignment)'
+
+    NAO E BUG — funciona. Importa por tres razoes:
+
+    1. E API PUBLICA de um SDK publicado no PyPI. Quem le kernel.tier() procura um
+       Kind 'Tier' que NAO EXISTE MAIS; o grep nao acha nada e o nome mente sem
+       falhar. Mesma familia de 'O nome do campo nao diz o tipo' e 'O fallback
+       esconde o nome': onde nome e dado divergem sem nada quebrar, a divergencia
+       sobrevive por releases.
+
+    2. Sao exatamente os 8 literais de accessor que o founder decidiu MANTER no
+       kernel na i-108. A decisao esta certa ('o SDK OSS so LE o Kind de plano; o
+       webhook do Stripe do dna-cloud ESCREVE'), mas o nome do metodo ainda anuncia
+       o vocabulario antigo — entao a fronteira open-core esta documentada com o
+       nome errado.
+
+    3. O repo tem regra de vocabulario escrita (AGENTS.md) justamente porque
+       vocabulario que nao se corrige volta a divergir.
+
+    CUSTO: baixo, mas e QUEBRA DE API PUBLICA -> precisa de alias de compat
+    (tier -> pricing_plan, account_plan -> plan_binding), entrada em release notes,
+    e varredura dos consumidores (medido: tier tem cli:2 + testes:6;
+    account_plan tem cli:1 + testes:18 + dna-cloud:1).
+
+    NAO EXECUTADO: a tarefa que achou isto era de medicao, sem permissao de editar.
+    Nomear API publica e decisao, nao arrumacao de agente.
+  type: task
+  severity: low
+  status: open
+  created_at: '2026-08-13T14:53:51+00:00'
+  updated_at: '2026-08-13T14:53:51+00:00'
+  timeline:
+  - at: '2026-08-13T14:53:51+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open

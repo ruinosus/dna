@@ -1,0 +1,189 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: uhc65l6gx3vt
+  name: i-113-kernel-init-e-fachada-nao-move
+spec:
+  title: 'kernel/__init__.py: medido — e fachada de delegacao, NAO move'
+  description: |-
+    MEDI E NAO VALE MEXER. Medicao em 13/08/2026 sobre o commit 47e1fa2e (main).
+    Relatorio completo: scratchpad/kernel-init-medicao.md. NENHUM codigo tocado.
+
+    === A PERGUNTA ERA BINARIA, E AS DUAS PONTAS CAIRAM ===
+
+    A hipotese: '3.371 linhas de re-export = nao-problema; 3.371 linhas de logica =
+    kernel escondido num __init__'. Medido por ast (uma categoria por linha fisica,
+    sem dupla contagem), nenhuma das duas:
+
+      class_logic  1.369 (40,6%) | docstring 1.075 (31,9%) | comentario 503 (14,9%)
+      branco 367 (10,9%) | IMPORT 31 (0,9%) | func_logic 22 | __all__ 1
+
+    Re-export puro: 32 linhas. NAO e fachada de re-export.
+    Mas tambem nao sao 3.371 linhas de logica: o arquivo e UMA classe (Kernel,
+    3.188 linhas, 151 metodos).
+
+    === A MEDICAO QUE DECIDE ===
+
+    78 dos 151 metodos (52%) sao DELEGACAO PURA (corpo = um unico
+    'return self._colaborador.x(...)', fora docstring/import locais) para 17
+    colaboradores JA EXTRAIDOS para subpacotes proprios (KindRegistry,
+    RegistryAccessor, WritePipeline, InstanceBuilder, QueryEngine, CompositionResolver,
+    LayerPolicyEnforcer, SearchEngine, CatalogCache, SourceFacade, ...), com Ports em
+    kernel/collaborator_ports.py.
+
+    Dos 48 metodos com logica real, o corpo executavel soma 837 linhas — e 183 delas
+    sao o __init__, que so CABEIA os 15 colaboradores. A logica de decisao real e
+    ~654 linhas em 47 metodos, num arquivo de 3.371.
+
+    57,7% do arquivo (1.945 linhas) e docstring + comentario + branco.
+
+    VEREDITO: e FACHADA — de delegacao, nao de re-export. A decomposicao JA
+    aconteceu (s-kernel-decompose-god-object, s-kernel-decomp-f3/f4/f5). O que sobrou
+    e a fachada do mediador mais documentacao muito pesada.
+
+    === kinds/ (6.228 linhas): NAO HA POLITICA. E MECANISMO, E FICA ===
+
+    Agnostico e nao conhecer Kinds NOMEADOS, nao e nao ter o conceito. Varridos os 12
+    modulos: a unica excecao e UMA allowlist de 3 aliases de EXTENSAO (nao de Kind) em
+    kinds/registry.py:316-327, shrink-only, com argumento escrito ao lado
+    (helix-tool e chave viva de dep_filters em Agent e UseCase).
+
+    O recibo esta em kinds/base.py:168-184: as frozensets de nome hardcoded do kernel
+    viraram atributos declarados por Kind (is_schema_affecting, is_overlayable,
+    scope_inheritable) e o kernel DERIVA via _classify_kinds() em vez de casar string.
+    _SCHEMA_INVALIDATING_KINDS / _NON_OVERLAYABLE_KINDS / _NON_INHERITABLE_KINDS sao
+    hoje @property derivadas. Isso e a i-107 aterrissando.
+
+    A guarda oficial (tests/test_kind_name_literal_ratchet.py) esta VERDE: 25 passed.
+    KERNEL_KIND_NAME_CEILING = 26, shrink-only = 13 bootstrap + 8 accessor (i-108,
+    founder) + 5 argumentados. A promessa do AGENTS.md ('a microkernel that itself
+    knows no Kinds') e verdade hoje, e e verdade porque foi medida e travada com
+    catraca — nao por acidente.
+
+    === QUEM CHAMA (ast com receptor resolvido, NAO grep) ===
+
+    grep em nomes como use/on/count/query/source/build/load da milhares de falsos
+    positivos. Usei ast contando so X.attr quando X e um Kernel plausivel; exclusao de
+    .venv/node_modules por CAMINHO (os.walk + skip de diretorio), nunca por filtro de
+    linha. E cota inferior.
+
+      dna/tests 2.611 acessos (107 membros) | dna/sdk-prod 244 (47) | dna/cli-prod 175 (35)
+      kernel-interno 116 (38) | DNA-CLOUD/prod 20 (6) | dna-cloud/tests 10 | client-py 0
+
+    O dna-cloud — o UNICO consumidor externo — toca 6 membros: get_instance, query,
+    with_tenant, list_instances, kind_port_for, model_profile.
+
+    === O QUE 'MICROKERNEL' CUSTARIA ===
+
+    Contando CODIGO (nao linhas totais): kernel 15.006 de 49.368 do SDK = 30,4%
+    (o headline de 34% e sobre linhas brutas; kernel tem 46% de codigo, 9.077 de
+    docstring, 4.092 de comentario).
+
+    Para metade seria preciso mover ~7.500 linhas de codigo, e os unicos blocos desse
+    tamanho sao kinds/ (2.714), query/ (1.841), __init__ (1.426), compose/ (1.335),
+    write/ (944), prompt/ (766) — isto e, TIRAR DO KERNEL EXATAMENTE O QUE O KERNEL FAZ.
+    Sobraria Ports + kinds/ + fachada, com o motor noutro pacote: mesmo codigo, um
+    import a mais, e a palavra 'microkernel' comprada com um mv.
+
+    Quebraria: 2.611 acessos de teste + 419 de producao no dna + 20 no dna-cloud +
+    test_blessed_query_surface.py (que CONGELA a superficie publica) + os goldens de
+    API publica.
+
+    BENEFICIARIO NOMEADO: NENHUM. Nao ha consumidor (o cloud toca 6 membros e nao sabe
+    onde a classe mora), nao ha promessa de README por cumprir (a de Kind-agnostico JA
+    esta cumprida e travada), e nao ha teste que fique possivel (os 17 colaboradores JA
+    sao testaveis isolados — foi o que a extracao comprou). Refatorar aqui seria
+    arrumacao e generalizar antes do uso.
+
+    === REGUA DA i-108, QUARTO CASO ===
+
+    (1) a medicao derrubou a premissa? SIM — nem re-export, nem god object.
+    (2) o criterio e NATUREZA, nao 'quem chama'? SIM — o que sobrou e mediacao.
+    (3) o que FICA tem razao escrita? SIM — esta ficha.
+
+    === ACHADOS NAO PEDIDOS ===
+
+    1. NAMING DRIFT em accessor publico -> ficha propria (ver issue irma).
+    2. ~60 dos 123 membros do Kernel tem ZERO chamador de producao (so teste/kernel):
+       composition_summary, find_instance_by_key, kind_by_container, container_for_kind,
+       preview_instance, unregister_kind, list_templates, describe_kind, list_tool_groups.
+       NAO afirmo que e morto — e API publica de lib OSS e varios tem justificativa
+       escrita. Registro como SUPERFICIE, nao como divida: o SDK tem UM consumidor e
+       ele toca 6 membros.
+    3. _REMOVED_KINDS (__init__.py:1193, 34 nomes) esta LIMPO: testei se algum ainda e
+       Kind registrado vivo (colisao real = escrita bloqueada num Kind ativo). Nenhum.
+       Os 11 que aparecem noutros arquivos sao classes Python homonimas (RecallPolicy em
+       dna/memory/policy.py) ou notas de migracao em .kind.yaml. Resultado negativo
+       registrado para ninguem re-verificar.
+  type: task
+  severity: low
+  status: resolved
+  created_at: '2026-08-13T14:53:27+00:00'
+  updated_at: '2026-08-13T14:53:27+00:00'
+  timeline:
+  - at: '2026-08-13T14:53:27+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
+  - at: '2026-08-13T14:54:19+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: open
+    to: resolved
+    summary: |-
+      NAO MOVE — medido, com beneficiario procurado e nao encontrado.
+
+      O __init__.py nao e o kernel escondido num __init__: e a fachada de um mediador
+      cuja decomposicao JA foi executada. 78 dos 151 metodos (52%) delegam para 17
+      colaboradores em subpacotes proprios; 57,7% do arquivo e prosa; a logica de
+      decisao que sobra e ~654 linhas em 47 metodos (mais 183 de cabeamento no
+      __init__) — que e exatamente o que um mediador deve conter.
+
+      Re-export puro: 32 das 3.371 linhas. As duas pontas da hipotese cairam.
+
+      kinds/ (6.228 linhas): ZERO politica. Uma allowlist de 3 aliases de extensao,
+      shrink-only e argumentada. O kernel DERIVA a classificacao de Kind de atributos
+      declarados (kinds/base.py:168-184) em vez de casar string, e a catraca de nomes
+      esta verde (25 passed, teto 26 shrink-only).
+
+      Beneficiario para qualquer movimento: NENHUM. O dna-cloud toca 6 membros. A
+      promessa de Kind-agnostico do AGENTS.md ja esta cumprida e travada. Os 17
+      colaboradores ja sao testaveis isolados. Custo de mexer: 2.611 acessos de teste,
+      419 de producao, mais test_blessed_query_surface.py e os goldens de API publica.
+
+      Confirma a regua da i-108 num quarto caso (roi moveu; thread_store, accessor e
+      agora a fachada do kernel, nao).
+
+      Fica UM item, de nome e nao de estrutura: i-114 (tier/account_plan no
+      vocabulario aposentado). Relatorio completo da medicao no corpo desta ficha.
+  serves_no_spec: true
+  serves_declared_at: '2026-08-13T14:54:19+00:00'
+  closed_at: '2026-08-13T14:54:19+00:00'
+  resolution: |-
+    NAO MOVE — medido, com beneficiario procurado e nao encontrado.
+
+    O __init__.py nao e o kernel escondido num __init__: e a fachada de um mediador
+    cuja decomposicao JA foi executada. 78 dos 151 metodos (52%) delegam para 17
+    colaboradores em subpacotes proprios; 57,7% do arquivo e prosa; a logica de
+    decisao que sobra e ~654 linhas em 47 metodos (mais 183 de cabeamento no
+    __init__) — que e exatamente o que um mediador deve conter.
+
+    Re-export puro: 32 das 3.371 linhas. As duas pontas da hipotese cairam.
+
+    kinds/ (6.228 linhas): ZERO politica. Uma allowlist de 3 aliases de extensao,
+    shrink-only e argumentada. O kernel DERIVA a classificacao de Kind de atributos
+    declarados (kinds/base.py:168-184) em vez de casar string, e a catraca de nomes
+    esta verde (25 passed, teto 26 shrink-only).
+
+    Beneficiario para qualquer movimento: NENHUM. O dna-cloud toca 6 membros. A
+    promessa de Kind-agnostico do AGENTS.md ja esta cumprida e travada. Os 17
+    colaboradores ja sao testaveis isolados. Custo de mexer: 2.611 acessos de teste,
+    419 de producao, mais test_blessed_query_surface.py e os goldens de API publica.
+
+    Confirma a regua da i-108 num quarto caso (roi moveu; thread_store, accessor e
+    agora a fachada do kernel, nao).
+
+    Fica UM item, de nome e nao de estrutura: i-114 (tier/account_plan no
+    vocabulario aposentado). Relatorio completo da medicao no corpo desta ficha.
