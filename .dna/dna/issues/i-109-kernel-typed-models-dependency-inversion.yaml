@@ -22,7 +22,7 @@ spec:
     Medido durante a i-107, que traduziu os tres conjuntos que ERAM traduziveis (heranca de escopo, captura de evidencia, nome de evento). Este e o bloco que sobrou e nao cabia.
   type: task
   severity: medium
-  status: in-progress
+  status: resolved
   created_at: '2026-08-12T23:30:38+00:00'
   updated_at: '2026-08-12T23:30:38+00:00'
   timeline:
@@ -47,3 +47,12 @@ spec:
     type: comment
     source: cli
     summary: 'O shim de re-export proposto na ficha nao pode existir na forma direta: ''from dna.extensions.helix.models import TypedAgent'' dentro de kernel/models.py reinstala EXATAMENTE a aresta que a issue remove, e desta vez com ciclo de import real. A variante viavel seria um __getattr__ PEP 562 preguicoso, mas ele guarda no kernel uma tabela de 14 nomes de Kind -> modulo de extensao, que e o mesmo conhecimento de dominio com outra roupa. Medido: nenhum consumidor externo quebra — dna-cloud nao importa dna.kernel.models em lugar nenhum (grep em apps/ e scripts/), e o unico import fora do sdk-py e packages/cli/dna_cli/copilot_kit_cmd.py, que importa TypedKindDefinition (que fica). Decisao: sem shim.'
+  - at: '2026-08-13T11:23:23+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    from: in-progress
+    to: resolved
+    summary: 'PR #391, merjado em main 13/08. 14 classes Typed* + os 9 Spec/value objects que so elas usam foram para a extensao que REGISTRA cada Kind (helix, agentskills, soulspec, agentsmd, guardrails, safety, recognizer, hooks, sdlc), cada uma num <ext>/models.py que importa do kernel apenas Metadata. TypedKindDefinition FICOU no kernel, por decisao medida: registry.py, meta.py e namespace_gate.py parseiam instancias dela — um Kind nasce de uma KindDefinition. Ser NOME de bootstrap nao foi o argumento: Genome e LayerPolicy tambem estao em BOOTSTRAP_KIND_NAMES e seus modelos se mudaram sem incidente. 6 classes orfas (TypedTextBlock/HtmlBlock/HtmlTemplate + specs) foram APAGADAS: os 3 Kinds nao estao registrados em lugar nenhum deste repo. kernel/models.py 1817 -> 662 linhas; 28 modelos de Kind registrado no kernel -> 2, ambos do KindDefinition. Sem shim, de proposito (reinstalaria a aresta, com ciclo real). Guarda apertada, nao duplicada: test_kind_name_literal_ratchet.py ganhou teto de UM, com instrumento derivado + varredura por prefixo, ambos provados com mutante. CI 13/13 verde; suite identica a baseline (mesmas 36 falhas pre-existentes por extras opcionais). PONTA ABERTA reportada: a promessa do README nao virou verdade — 39 literais de nome de Kind, 22 Kinds distintos, seguem no kernel (accessor.py=8 e a i-108, decisao do fundador); o texto NAO foi mexido.'
+  closed_at: '2026-08-13T11:23:23+00:00'
+  resolution: 'PR #391, merjado em main 13/08. 14 classes Typed* + os 9 Spec/value objects que so elas usam foram para a extensao que REGISTRA cada Kind (helix, agentskills, soulspec, agentsmd, guardrails, safety, recognizer, hooks, sdlc), cada uma num <ext>/models.py que importa do kernel apenas Metadata. TypedKindDefinition FICOU no kernel, por decisao medida: registry.py, meta.py e namespace_gate.py parseiam instancias dela — um Kind nasce de uma KindDefinition. Ser NOME de bootstrap nao foi o argumento: Genome e LayerPolicy tambem estao em BOOTSTRAP_KIND_NAMES e seus modelos se mudaram sem incidente. 6 classes orfas (TypedTextBlock/HtmlBlock/HtmlTemplate + specs) foram APAGADAS: os 3 Kinds nao estao registrados em lugar nenhum deste repo. kernel/models.py 1817 -> 662 linhas; 28 modelos de Kind registrado no kernel -> 2, ambos do KindDefinition. Sem shim, de proposito (reinstalaria a aresta, com ciclo real). Guarda apertada, nao duplicada: test_kind_name_literal_ratchet.py ganhou teto de UM, com instrumento derivado + varredura por prefixo, ambos provados com mutante. CI 13/13 verde; suite identica a baseline (mesmas 36 falhas pre-existentes por extras opcionais). PONTA ABERTA reportada: a promessa do README nao virou verdade — 39 literais de nome de Kind, 22 Kinds distintos, seguem no kernel (accessor.py=8 e a i-108, decisao do fundador); o texto NAO foi mexido.'
