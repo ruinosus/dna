@@ -11,6 +11,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- **BREAKING (pre-1.0):** removed `dna.runtime.roi`, the reading that crossed a
+  turn's token cost with the declared outcome, the human's acceptance and a
+  `Copilot`'s `value_per_outcome`. It had **no caller in this repository** —
+  its only three mentions here were comments — and it belongs with whoever
+  OPERATES: token price, value per outcome and acceptance rate are facts of a
+  commercial contract, not of an agent SDK. Its guide
+  (`docs/guides/reading-the-yield.md`) went with it.
+
+  **Nothing else moves.** `dna.runtime.telemetry` — the half that WRITES
+  `dna_turn`, wired at the single point every runtime passes through — stays,
+  and so do the Alembic revisions behind it (`0012` `dna_turn.outcome`, `0014`
+  `dna_turn.lane`): they are the schema of a table this SDK writes, and a
+  reader is not the owner of a schema. **Anyone who has applied them needs to
+  do nothing.**
+
+  If you depended on this module, everything it read is still public:
+  `dna_turn`/`dna_approval` keep their columns,
+  `dna.runtime.telemetry.LANES`/`OUTCOMES` keep the vocabulary, and
+  `dna.runtime.middleware.mcp_tools_mw.RATIONALE_ARG` is exported precisely so
+  an out-of-tree reader can discount the synthetic argument instead of
+  re-enumerating its name.
+
 ## [0.80.0] - 2026-08-12
 
 ### Changed

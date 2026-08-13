@@ -11,6 +11,9 @@ import pytest
 
 from dna.runtime import telemetry
 from dna.runtime.telemetry import (
+    LANE_REAL,
+    LANE_TEST,
+    LANES,
     MAX_TEXT,
     TRUNCATION_MARK,
     Turn,
@@ -656,6 +659,22 @@ def test_a_memoria_de_traces_fechadas_tem_TETO():
 # direção que assusta é a inversa. No desfecho, o risco é vazio virar
 # `resolved` (a conta infla). Aqui, o risco é uma raia `test` herdada por um
 # turno de gente de verdade: uso REAL some da conta, em silêncio.
+
+
+def test_o_VAZIO_nao_e_uma_raia_do_vocabulario():
+    """⭐ Vazio é a AUSÊNCIA de declaração, e pô-lo na lista o tornaria uma.
+
+    Se `""` fosse membro de `LANES`, `_raia` o deixaria passar como valor
+    válido e a distinção inteira da `i-158` morreria na porta de entrada.
+
+    ⚠️ Esta asserção veio de `test_a_raia_do_turno.py` quando a leitura de
+    rendimento saiu deste repositório (11/08/2026). Ela era a ÚNICA daquele
+    arquivo que media o vocabulário e não a conta — o resto media a conta, e
+    foi com a conta. Deixá-la ir junto teria tirado daqui a guarda do
+    vocabulário que ESTE módulo publica.
+    """
+    assert "" not in LANES
+    assert LANES == {LANE_REAL, LANE_TEST}
 
 
 def test_um_turno_sem_declaracao_fica_SEM_RAIA_e_nao_real():

@@ -11,13 +11,20 @@
 # twin) reads instruction_token_cap from THIS registry via
 # kernel.model_profile(id_or_alias); a cap literal in code is a bug.
 #
-# The SAME contract now covers PRICE (s-preco-vem-do-modelprofile):
-# dna.runtime.roi resolves ModelPrice from cost_per_1m_input_usd /
-# cost_per_1m_output_usd (price_book / gather_prices), so a price literal in
-# code is a bug for exactly the reason a cap literal is — a price in code is a
-# price in nobody's code. Null means NOT QUOTED, never zero, and a model with
-# no quote makes the WHOLE money answer not-calculable rather than a partial
-# sum that is smaller than the truth.
+# The SAME contract now covers PRICE (s-preco-vem-do-modelprofile): a cost
+# reader resolves its price table from cost_per_1m_input_usd /
+# cost_per_1m_output_usd, so a price literal in code is a bug for exactly the
+# reason a cap literal is — a price in code is a price in nobody's code. Null
+# means NOT QUOTED, never zero, and a model with no quote makes the WHOLE money
+# answer not-calculable rather than a partial sum that is smaller than the
+# truth.
+#
+# The reader is deliberately NOT named here. It used to be (dna.runtime.roi,
+# which left this repo on 2026-08-11 — crossing cost, price and acceptance is a
+# fact of whoever OPERATES, not of the SDK), and naming one consumer inside a
+# schema description was always the wrong altitude: this Kind is the
+# DECLARATION, and the contract below binds every reader of it, present and
+# future.
 #
 # Profiles live in the `_lib` scope (`model-profiles/<model_id>.yaml`) —
 # ModelProfile is GLOBAL (base only, no per-tenant override) and NOT
@@ -135,30 +142,30 @@ spec:
         type:
         - number
         - 'null'
-        description: USD per 1M input tokens. NOT informational any more —
-          dna.runtime.roi reads it (price_book / gather_prices) and it feeds the
-          money the product shows. Null means NOT QUOTED, never zero; a null read
-          as 0.0 would report the most expensive model as free. Half a quote
-          (this field without cost_per_1m_output_usd) is not half a price — the
-          whole cost comes back NOT CALCULABLE, never a partial sum.
+        description: USD per 1M input tokens. NOT informational any more — a
+          cost reader turns it into the money the product shows. Null means NOT
+          QUOTED, never zero; a null read as 0.0 would report the most expensive
+          model as free. Half a quote (this field without
+          cost_per_1m_output_usd) is not half a price — the whole cost comes
+          back NOT CALCULABLE, never a partial sum.
       cost_per_1m_output_usd:
         type:
         - number
         - 'null'
         description: USD per 1M output tokens. Same contract as
-          cost_per_1m_input_usd — read by dna.runtime.roi, null means NOT QUOTED,
-          and the currency is in the field name (_usd), never presumed.
+          cost_per_1m_input_usd — null means NOT QUOTED, and the currency is in
+          the field name (_usd), never presumed.
       cost_quoted_at:
         type:
         - string
         - 'null'
         description: ISO-8601 date/datetime this price was QUOTED. i-101,
           decided 08/08/2026. While the cost fields were informational a stale
-          price hurt nobody; now that dna.runtime.roi turns them into the money
-          the product shows, a stale accountable number produces a wrong account
-          wearing the face of a measurement. Past dna.runtime.roi's age ceiling
-          the reading marks the money SUSPECT (the is_suspect qualifier, printed
-          on the same line as the number, in the mould of the FLOOR marker).
+          price hurt nobody; now that a reader turns them into the money the
+          product shows, a stale accountable number produces a wrong account
+          wearing the face of a measurement. Past the reader's age ceiling the
+          reading marks the money SUSPECT (the is_suspect qualifier, printed on
+          the same line as the number, in the mould of the FLOOR marker).
           NULL or absent is NOT read as recent — it is UNKNOWN AGE, and unknown
           age is suspect too, because presuming the good side is exactly how the
           old cap lived in nobody's code. OPTIONAL on purpose — see the note on

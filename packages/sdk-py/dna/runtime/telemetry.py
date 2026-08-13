@@ -126,12 +126,18 @@ copiloto, TODOS gerados por agente durante desenvolvimento e nenhum de uso
 real.** Nenhuma coluna dizia isso, e por isso o painel da conta somava os 86.
 
 ``lane`` mora AQUI, em ``dna_turn``, e não numa tabela do host, por uma razão
-que decide sozinha: **quem precisa excluir o turno de teste da conta é
-:mod:`dna.runtime.roi`, que é deste SDK.** Uma raia que vivesse só no índice de
-conversas do host seria invisível para o leitor que a consome, e cada
-consumidor do SDK reinventaria a exclusão por conta própria — que é como um
-invariante vira convenção e depois vira bug. ``thread_id`` também pode ser
-vazio (turno de A2A, de worker), e uma raia presa à conversa não cobriria esses.
+que decide sozinha: **quem precisa excluir o turno de teste da conta lê
+``dna_turn``, e não o índice de conversas.** Uma raia que vivesse só nesse
+índice seria invisível para o leitor que a consome, e cada consumidor do SDK
+reinventaria a exclusão por conta própria — que é como um invariante vira
+convenção e depois vira bug. ``thread_id`` também pode ser vazio (turno de A2A,
+de worker), e uma raia presa à conversa não cobriria esses.
+
+⚠️ **Onde esse leitor mora mudou; a razão acima, não.** A leitura de rendimento
+que motivou esta coluna saiu deste repositório em 11/08/2026 — ela cruza custo,
+preço e aceitação, e isso é fato do contrato de quem opera, não do SDK. O que
+FICA aqui é a metade que ESCREVE: este módulo, no ponto único por onde todo
+runtime passa, e a coluna que ele carimba. Um leitor não é dono de schema.
 
 Três estados, e o terceiro é o que mais importa:
 
@@ -144,9 +150,9 @@ Três estados, e o terceiro é o que mais importa:
     existentes são assim e continuam assim: um backfill para ``real`` afirmaria
     que aquilo foi uso de cliente (é o oposto do que foi medido), e um backfill
     para ``test`` difamaria qualquer turno que porventura fosse real. É a mesma
-    decisão que a 0012 tomou sobre ``outcome``, e pelo mesmo motivo. Quem lê a
-    conta tem de DIZER quantos são — ver
-    :attr:`dna.runtime.roi.Sample.undeclared_lane`.
+    decisão que a 0012 tomou sobre ``outcome``, e pelo mesmo motivo. **Quem lê
+    a conta tem de DIZER quantos são** — o vazio é um ACHADO, e um leitor que o
+    silencie transforma uma decisão de leitura num número que ninguém confere.
 
 Como o desfecho, a raia é DECLARADA (:func:`stamp_turn`) e um valor fora de
 :data:`LANES` é recusado, deixando o turno vazio. E como o desfecho, ela é
