@@ -1,0 +1,35 @@
+apiVersion: github.com/ruinosus/dna/sdlc/v1
+kind: Issue
+metadata:
+  id: dqdz3mbiivme
+  name: i-111-thread-store-nao-e-orfao
+spec:
+  title: O thread_store NAO e orfao — a premissa da mudanca cai aqui
+  description: |-
+    MEDIDO em 11/08/2026, ao executar a saida de `roi` (i-110). A mesma mudanca previa tirar `runtime/thread_store.py` (967 linhas) + `runtime/adapters/langgraph_threads.py` (151). A medicao NAO sustenta: ao contrario de `roi`, cujas tres referencias eram comentarios, as do `thread_store` sao codigo de producao.
+
+    CINCO pontos de uso, nenhum comentario:
+    1. `runtime/__init__.py` re-exporta 23 simbolos — superficie publica de `dna.runtime`
+    2. `adapters/langchain_rt.py:149-160` — a property `_LangGraphAGUIApp.thread_store` INSTANCIA `LangGraphTranscriptStore`. Chamada de verdade.
+    3. `adapters/langgraph_threads.py:52` importa `Transcript`/`TranscriptExport`
+    4. `adapters/maf_rt.py:136` — o campo `thread_store: Any = None` (o backend que admite nao ter)
+    5. `runtime/port.py` — o Protocol `AGUIApp` documenta `thread_store` como membro OPCIONAL
+
+    E ele nao e um modulo qualquer: sao CINCO Ports do catalogo publicado (`docs/reference/ports/runtime.md`: ThreadIndexPort, ThreadPurgePort, ThreadStorePort, ThreadTranscriptPort, TranscriptPurgePort), com prosa em `scripts/ports_prose.py` — e o proprio `gen_ports_docs.py` tem uma catraca que FALHA quando um nome de port morre.
+
+    A diferenca de natureza decide: `roi` calcula DINHEIRO (preco, valor por desfecho, aceitacao) — fato do contrato de quem opera. `thread_store` declara um CONTRATO neutro de fornecedor: o que e uma conversa, de quem ela e, como se le o transcript sem dupla escrita. Isso e exatamente o que um SDK aberto deve segurar, e quem esta do lado comercial e IMPLEMENTADOR do port (o indice Postgres), nao dono dele.
+
+    Move-lo inverteria a arquitetura de ports: o SDK passaria a precisar importar do consumidor (proibido), ou o adapter LangChain perderia a leitura de conversa de vez. NENHUMA das duas foi decidida, e por isso NADA foi movido.
+
+    PERGUNTA PARA O FUNDADOR: manter (recomendado — o contrato e neutro e o SDK e o dono certo), ou remover a capacidade do adapter LangChain junto e aceitar a quebra de API?
+  type: question
+  severity: medium
+  status: open
+  created_at: '2026-08-13T00:27:52+00:00'
+  updated_at: '2026-08-13T00:27:52+00:00'
+  timeline:
+  - at: '2026-08-13T00:27:52+00:00'
+    actor: claude-code
+    type: status_change
+    source: cli
+    to: open
