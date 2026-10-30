@@ -1,0 +1,266 @@
+{
+  "id": "web-cache",
+  "title": "A cache ↔ the second page load",
+  "category": "Web development",
+  "width": 900,
+  "height": 640,
+  "background": "dots",
+  "learning": {
+    "goal": "Follow one request through an app with a cache, and see why the hit rate decides how fast the app feels.",
+    "question": "A product's price changes in the database, but the cache still holds the old page for 10 minutes. What do users see, and what could you do about it?",
+    "answer": "For up to 10 minutes some users see the old price, because a hit never asks the database. One option is to delete (invalidate) that cache key whenever the price is saved; another is a shorter expiry (TTL) for data that changes often — fewer stale reads, but more misses.",
+    "caveat": "Numbers are illustrative (2 ms for a cache like Redis, 120 ms for a slow query); real ones depend on the network and the query. On a miss the app also pays the cache lookup, which is included here. Expiry, eviction, browser/CDN caches and cache stampedes were left out."
+  },
+  "params": {
+    "hit": {
+      "label": "cache hit rate (%)",
+      "min": 0,
+      "max": 100,
+      "step": 10,
+      "value": 80
+    }
+  },
+  "vars": {
+    "tc": 2,
+    "tdb": 120,
+    "avg": "tc + (1 - hit / 100) * tdb",
+    "bx": 430,
+    "bw": "avg * 2.8"
+  },
+  "steps": [
+    {
+      "type": "text",
+      "at": [
+        40,
+        64
+      ],
+      "text": "why is the 2nd page load so fast?",
+      "size": 42,
+      "chapter": "The question",
+      "say": "You open a product page: slow. You open it again: instant. What changed?"
+    },
+    {
+      "type": "prop",
+      "name": "computer",
+      "at": [
+        120,
+        330
+      ],
+      "size": 100,
+      "label": "browser",
+      "id": "browser"
+    },
+    {
+      "type": "prop",
+      "name": "server",
+      "at": [
+        380,
+        330
+      ],
+      "size": 100,
+      "label": "app",
+      "id": "app"
+    },
+    {
+      "type": "prop",
+      "name": "server",
+      "at": [
+        680,
+        210
+      ],
+      "size": 80,
+      "label": "cache",
+      "id": "cache",
+      "chapter": "1st visit: a miss",
+      "say": "Behind the app there are two places to look: a fast cache in memory and a slower database."
+    },
+    {
+      "type": "prop",
+      "name": "server",
+      "at": [
+        680,
+        430
+      ],
+      "size": 80,
+      "label": "database",
+      "id": "db"
+    },
+    {
+      "type": "link",
+      "from": "browser",
+      "to": "app",
+      "label": "GET /product/42",
+      "say": "The browser asks the app for product 42."
+    },
+    {
+      "type": "link",
+      "from": "app",
+      "to": "cache",
+      "label": "have it?",
+      "say": "The app checks the cache first. It is empty: a miss."
+    },
+    {
+      "type": "text",
+      "at": [
+        735,
+        150
+      ],
+      "text": "miss ✗",
+      "size": 26,
+      "style": {
+        "color": "#C8442C"
+      }
+    },
+    {
+      "type": "link",
+      "from": "app",
+      "to": "db",
+      "label": "query",
+      "style": {
+        "color": "#C8442C"
+      },
+      "say": "So it asks the database, which takes about 120 ms."
+    },
+    {
+      "type": "arrow",
+      "from": [
+        745,
+        345
+      ],
+      "to": [
+        745,
+        235
+      ],
+      "style": {
+        "color": "#8C8578",
+        "dashed": true
+      },
+      "say": "Before answering, the app keeps a copy in the cache."
+    },
+    {
+      "type": "text",
+      "at": [
+        760,
+        300
+      ],
+      "text": "copy",
+      "size": 24,
+      "style": {
+        "color": "#5E5A52"
+      }
+    },
+    {
+      "type": "text",
+      "at": [
+        40,
+        500
+      ],
+      "text": "1st time: 2 + 120 = 122 ms",
+      "size": 28,
+      "style": {
+        "color": "#C8442C"
+      }
+    },
+    {
+      "type": "pause",
+      "ms": 400,
+      "chapter": "2nd visit: a hit"
+    },
+    {
+      "type": "text",
+      "at": [
+        735,
+        185
+      ],
+      "text": "hit ✓",
+      "size": 26,
+      "style": {
+        "color": "#2E8F62"
+      },
+      "say": "Next request for product 42: the copy is there. A hit."
+    },
+    {
+      "type": "text",
+      "at": [
+        40,
+        545
+      ],
+      "text": "2nd time: 2 ms, no database",
+      "size": 28,
+      "style": {
+        "color": "#2E8F62"
+      },
+      "say": "The database is not even asked. That is the whole trick."
+    },
+    {
+      "type": "text",
+      "at": [
+        40,
+        595
+      ],
+      "text": "{hit}% hits → average:",
+      "size": 28,
+      "chapter": "The hit rate",
+      "say": "Real traffic is a mix of hits and misses. Move the hit rate and watch the average."
+    },
+    {
+      "type": "polygon",
+      "points": [
+        [
+          "bx",
+          572
+        ],
+        [
+          "bx + bw",
+          572
+        ],
+        [
+          "bx + bw",
+          600
+        ],
+        [
+          "bx",
+          600
+        ]
+      ],
+      "style": {
+        "color": "#2F5BEA",
+        "fill": "#2F5BEA",
+        "fillStyle": "hachure"
+      }
+    },
+    {
+      "type": "counter",
+      "at": [
+        "bx + bw + 12",
+        596
+      ],
+      "value": "avg",
+      "format": "{v:0} ms",
+      "size": 28,
+      "style": {
+        "color": "#2F5BEA"
+      }
+    },
+    {
+      "type": "highlight",
+      "from": [
+        40,
+        586
+      ],
+      "to": [
+        300,
+        586
+      ],
+      "thickness": 16,
+      "chapter": "The close",
+      "say": "A cache is only as good as its hit rate: at 0 % it only adds work; at 90 % most users never wait for the database."
+    },
+    {
+      "type": "pause",
+      "ms": 300,
+      "say": "The catch: a copy can be out of date. Deciding when to throw it away is the hard part."
+    }
+  ],
+  "locale": "en-US"
+}

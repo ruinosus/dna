@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="chalk-talk {{VERSION}}">
+<title>chalk-talk</title>
+<style id="chalk-fonts">{{FONTS}}</style>
+<style>{{CSS}}</style>
+</head>
+<body>
+<main id="stage">
+  <header>
+    <div>
+      <span id="category" class="eyebrow"></span>
+      <h1 id="title"></h1>
+    </div>
+    <div id="downloads" class="downloads"><button id="png" type="button">PNG</button><button id="svg" type="button">SVG</button></div>
+  </header>
+  <nav id="chapters" class="chapters" aria-label="Chapters"></nav>
+  <div class="layout">
+    <section class="board">
+      <div class="paper"><svg id="paper" role="img"></svg></div>
+      <div class="bar">
+        <button id="back" type="button"></button>
+        <button id="next" type="button" class="primary"></button>
+        <p id="say" class="say" aria-live="polite"></p>
+        <span id="count" class="count"></span>
+        <button id="all" type="button" class="ghost"></button>
+      </div>
+    </section>
+    <aside>
+      <section id="controls" class="card"></section>
+      <section id="learning" class="card learning"></section>
+      <div id="check" class="check" role="status"></div>
+      <p class="foot"><span id="keys"></span><br><span id="made"></span></p>
+    </aside>
+  </div>
+</main>
+<script type="application/json" id="chalk-recipe">{{RECIPE}}</script>
+<script>{{JS}}</script>
+</body>
+</html>

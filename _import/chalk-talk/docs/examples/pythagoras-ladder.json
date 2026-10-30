@@ -1,0 +1,408 @@
+{
+  "id": "pythagoras-ladder",
+  "title": "Pythagorean theorem ↔ a ladder on a wall",
+  "category": "Maths",
+  "width": 960,
+  "height": 680,
+  "background": "grid",
+  "learning": {
+    "goal": "See that in any right triangle the two short sides squared add up to the long side squared, and use it to know how high a ladder reaches.",
+    "question": "A 6 m ladder must reach a window 5.5 m above the ground. How far from the wall can its foot be?",
+    "answer": "The ladder is the long side, so a² + 5.5² = 6². That gives a² = 36 − 30.25 = 5.75, so a ≈ 2.40 m. Any closer and it still reaches; farther and it falls short.",
+    "caveat": "This assumes the wall is exactly vertical and the ground exactly flat (a true right angle) and treats the ladder as a thin line. The 'foot at a quarter of the length' rule is a common ladder-safety guideline (e.g. OSHA's 4-to-1 rule), shown here as an example."
+  },
+  "params": {
+    "a": {
+      "label": "foot of the ladder from the wall (m)",
+      "min": 1,
+      "max": 4,
+      "step": 0.25,
+      "value": 3
+    }
+  },
+  "vars": {
+    "s": 40,
+    "gx": 300,
+    "gy": 420,
+    "h": "sqrt(25 - a^2)",
+    "A": "a * s",
+    "H": "h * s",
+    "fx": "gx + A",
+    "ty": "gy - H",
+    "a2": "a^2",
+    "h2": "h^2"
+  },
+  "steps": [
+    {
+      "type": "text",
+      "at": [
+        40,
+        70
+      ],
+      "text": "How high does a 5 m ladder reach?",
+      "size": 42,
+      "chapter": "The question",
+      "say": "You lean a 5 metre ladder on a wall. How high does it reach? It depends on where you put its foot."
+    },
+    {
+      "type": "line",
+      "from": [
+        300,
+        120
+      ],
+      "to": [
+        300,
+        420
+      ],
+      "style": {
+        "width": 5
+      }
+    },
+    {
+      "type": "text",
+      "at": [
+        314,
+        150
+      ],
+      "text": "wall",
+      "size": 26,
+      "style": {
+        "color": "#5E5A52"
+      }
+    },
+    {
+      "type": "line",
+      "from": [
+        70,
+        420
+      ],
+      "to": [
+        620,
+        420
+      ],
+      "style": {
+        "width": 4
+      }
+    },
+    {
+      "type": "text",
+      "at": [
+        620,
+        460
+      ],
+      "text": "ground",
+      "size": 26,
+      "anchor": "end",
+      "style": {
+        "color": "#5E5A52"
+      }
+    },
+    {
+      "type": "line",
+      "from": [
+        "fx - h",
+        "gy + a"
+      ],
+      "to": [
+        "gx - h",
+        "ty + a"
+      ],
+      "style": {
+        "color": "#C8442C",
+        "width": 3
+      }
+    },
+    {
+      "type": "line",
+      "from": [
+        "fx + h",
+        "gy - a"
+      ],
+      "to": [
+        "gx + h",
+        "ty - a"
+      ],
+      "style": {
+        "color": "#C8442C",
+        "width": 3
+      }
+    },
+    {
+      "type": "repeat",
+      "times": 9,
+      "step": {
+        "type": "line",
+        "from": [
+          "fx - (i + 1) / 10 * A - 1.8 * h",
+          "gy - (i + 1) / 10 * H + 1.8 * a"
+        ],
+        "to": [
+          "fx - (i + 1) / 10 * A + 1.8 * h",
+          "gy - (i + 1) / 10 * H - 1.8 * a"
+        ],
+        "style": {
+          "color": "#C8442C",
+          "width": 2
+        }
+      }
+    },
+    {
+      "type": "polyline",
+      "points": [
+        [
+          300,
+          398
+        ],
+        [
+          322,
+          398
+        ],
+        [
+          322,
+          420
+        ]
+      ],
+      "style": {
+        "width": 2.2
+      },
+      "chapter": "Take it apart",
+      "say": "Wall, ground and ladder make a triangle, and the corner where the wall meets the ground is a right angle."
+    },
+    {
+      "type": "text",
+      "at": [
+        "gx + A / 2",
+        "gy + A + 36"
+      ],
+      "text": "a = {a:2} m",
+      "size": 26,
+      "anchor": "middle",
+      "style": {
+        "color": "#2F5BEA"
+      }
+    },
+    {
+      "type": "text",
+      "at": [
+        "gx - H - 14",
+        "gy - H / 2 + 9"
+      ],
+      "text": "h",
+      "size": 30,
+      "anchor": "end",
+      "style": {
+        "color": "#2E8F62"
+      }
+    },
+    {
+      "type": "text",
+      "at": [
+        640,
+        170
+      ],
+      "text": "ladder: 5 m (fixed)",
+      "size": 26,
+      "style": {
+        "color": "#C8442C"
+      }
+    },
+    {
+      "type": "text",
+      "at": [
+        640,
+        210
+      ],
+      "text": "foot: a = {a:2} m",
+      "size": 26,
+      "style": {
+        "color": "#2F5BEA"
+      },
+      "say": "The ladder never changes: 5 metres. What you choose is a, the distance of the foot from the wall."
+    },
+    {
+      "type": "text",
+      "at": [
+        640,
+        250
+      ],
+      "text": "height: h = {h:2} m",
+      "size": 26,
+      "style": {
+        "color": "#2E8F62"
+      }
+    },
+    {
+      "type": "polygon",
+      "points": [
+        [
+          "gx",
+          "gy"
+        ],
+        [
+          "fx",
+          "gy"
+        ],
+        [
+          "fx",
+          "gy + A"
+        ],
+        [
+          "gx",
+          "gy + A"
+        ]
+      ],
+      "style": {
+        "color": "#2F5BEA",
+        "width": 2.4,
+        "fill": "#2F5BEA",
+        "fillStyle": "hachure",
+        "opacity": 0.8
+      },
+      "chapter": "The idea",
+      "say": "Now build a square on each side. On the ground, a square of side a."
+    },
+    {
+      "type": "polygon",
+      "points": [
+        [
+          "gx - H",
+          "ty"
+        ],
+        [
+          "gx",
+          "ty"
+        ],
+        [
+          "gx",
+          "gy"
+        ],
+        [
+          "gx - H",
+          "gy"
+        ]
+      ],
+      "style": {
+        "color": "#2E8F62",
+        "width": 2.4,
+        "fill": "#2E8F62",
+        "fillStyle": "hachure",
+        "opacity": 0.8
+      },
+      "say": "On the wall, a square of side h."
+    },
+    {
+      "type": "polygon",
+      "points": [
+        [
+          "fx",
+          "gy"
+        ],
+        [
+          "gx",
+          "ty"
+        ],
+        [
+          "gx + H",
+          "ty - A"
+        ],
+        [
+          "fx + H",
+          "gy - A"
+        ]
+      ],
+      "style": {
+        "color": "#C8442C",
+        "width": 2.4,
+        "fill": "#C8442C",
+        "fillStyle": "hachure",
+        "opacity": 0.6
+      },
+      "say": "And on the ladder, a square of side 5. Here is the surprise: the two small squares together have exactly the area of the big one."
+    },
+    {
+      "type": "text",
+      "at": [
+        "(fx + gx) / 2 + H / 2",
+        "(gy + ty) / 2 - A / 2 + 10"
+      ],
+      "text": "5 m",
+      "size": 30,
+      "anchor": "middle",
+      "style": {
+        "color": "#C8442C"
+      }
+    },
+    {
+      "type": "text",
+      "at": [
+        640,
+        330
+      ],
+      "text": "a² + h² = 5²",
+      "size": 36,
+      "id": "rule"
+    },
+    {
+      "type": "text",
+      "at": [
+        640,
+        380
+      ],
+      "text": "{a2:2} + {h2:2} = 25",
+      "size": 28,
+      "style": {
+        "color": "#5E5A52"
+      },
+      "say": "Move the foot of the ladder: the blue and green squares trade area, but their sum is always 25."
+    },
+    {
+      "type": "highlight",
+      "from": [
+        636,
+        320
+      ],
+      "to": [
+        852,
+        320
+      ],
+      "thickness": 30,
+      "chapter": "The close",
+      "say": "So the height is the square root of 25 minus a squared. Move the foot closer, and the ladder climbs higher."
+    },
+    {
+      "type": "text",
+      "at": [
+        640,
+        470
+      ],
+      "text": "safety rule of thumb:",
+      "size": 26,
+      "style": {
+        "color": "#5E5A52"
+      }
+    },
+    {
+      "type": "text",
+      "at": [
+        640,
+        510
+      ],
+      "text": "foot = 5 ÷ 4 = 1.25 m",
+      "size": 26
+    },
+    {
+      "type": "text",
+      "at": [
+        640,
+        550
+      ],
+      "text": "→ it reaches 4.84 m",
+      "size": 26,
+      "style": {
+        "color": "#2E8F62"
+      },
+      "say": "Ladder guides say: put the foot a quarter of the length away. Set a to 1.25 and check that h is about 4.84."
+    }
+  ],
+  "locale": "en-US"
+}

@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>chalk-talk</title>
+<meta name="description" content="A skill that makes Claude explain an idea by drawing it: a hand-drawn lesson that draws itself, in one HTML file.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Shantell+Sans:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root { --ink: #242424; --muted: #6b665c; --line: #e0d8c6; --page: #f3f1ec; --card: #fff; --paper: #fbf7ee; --accent: #2f5bea; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --ink: #ece8df; --muted: #a8a294; --line: #3a3832; --page: #1c1b19; --card: #262521; --paper: #2b2a26; --accent: #8fa8ff; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.55 'Shantell Sans', system-ui, sans-serif; }
+main { max-width: 1160px; margin: 0 auto; padding: 48px 16px 64px; display: flex; flex-direction: column; gap: 40px; }
+h1 { margin: 0; font: 700 clamp(48px, 9vw, 88px)/1 'Caveat', cursive; }
+h2 { margin: 0; font: 700 36px/1.1 'Caveat', cursive; }
+p { margin: 0; }
+a { color: var(--accent); }
+.hero { display: grid; gap: 18px; justify-items: center; text-align: center; }
+.hero .lead { font-size: 20px; max-width: 720px; }
+.hero img { width: 100%; max-width: 900px; border-radius: 12px; border: 1px solid var(--line); background: var(--paper); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.button { display: inline-block; padding: 10px 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); text-decoration: none; font-weight: 700; }
+.button.primary { background: var(--ink); color: var(--page); border-color: var(--ink); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); color: var(--ink); text-decoration: none; transition: transform .15s, border-color .15s; }
+.card:hover { transform: translateY(-2px); border-color: var(--ink); }
+.card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card img { width: 100%; aspect-ratio: 900 / 560; object-fit: contain; border-radius: 8px; background: #fbf7ee; }
+.meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.card b { font: 700 26px/1.1 'Caveat', cursive; }
+.goal { font-size: 14px; color: var(--muted); }
+.how { display: grid; gap: 14px; }
+.how img { width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+code { font-size: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+footer { color: var(--muted); font-size: 14px; text-align: center; }
+@media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <h1>chalk-talk</h1>
+    <p class="lead">Ask Claude to explain something by drawing it — and get a hand-drawn lesson that draws itself, chapter by chapter, with values you can move. One HTML file, offline.</p>
+    <img src="images/hero.gif" alt="A hand-drawn lesson about compound interest drawing itself, then the growth rate is moved and the curve changes">
+    <div class="actions">
+      <a class="button primary" href="https://github.com/ruinosus/chalk-talk#install">Install the skill</a>
+      <a class="button" href="https://github.com/ruinosus/chalk-talk">GitHub</a>
+    </div>
+  </section>
+  <section>
+    <h2>Lessons — open one and press Next</h2>
+    <p class="goal" style="margin: 4px 0 16px">Each one was written by Claude with this skill and plays right here in your browser.</p>
+    <div class="grid">
+      <a class="card" href="lessons/birthday-money.html">
+        <img src="thumbs/birthday-money.png" alt="Compound interest ↔ your birthday money" loading="lazy">
+        <span class="meta"><span>Money</span><span class="lang">English</span></span>
+        <b>Compound interest ↔ your birthday money</b>
+        <span class="goal">See why money that earns interest on its interest grows slowly at first and then much faster, and why starting early matters more than the amount.</span>
+      </a>
+      <a class="card" href="lessons/chalk-talk-how.html">
+        <img src="thumbs/chalk-talk-how.png" alt="chalk-talk ↔ a teacher at the board" loading="lazy">
+        <span class="meta"><span>Developer tools</span><span class="lang">English</span></span>
+        <b>chalk-talk ↔ a teacher at the board</b>
+        <span class="goal">Understand the path from a request to a self-contained HTML lesson: outline, recipe, build checks, offline player.</span>
+      </a>
+      <a class="card" href="lessons/pythagoras-ladder.html">
+        <img src="thumbs/pythagoras-ladder.png" alt="Pythagorean theorem ↔ a ladder on a wall" loading="lazy">
+        <span class="meta"><span>Maths</span><span class="lang">English</span></span>
+        <b>Pythagorean theorem ↔ a ladder on a wall</b>
+        <span class="goal">See that in any right triangle the two short sides squared add up to the long side squared, and use it to know how high a ladder reaches.</span>
+      </a>
+      <a class="card" href="lessons/web-cache.html">
+        <img src="thumbs/web-cache.png" alt="A cache ↔ the second page load" loading="lazy">
+        <span class="meta"><span>Web development</span><span class="lang">English</span></span>
+        <b>A cache ↔ the second page load</b>
+        <span class="goal">Follow one request through an app with a cache, and see why the hit rate decides how fast the app feels.</span>
+      </a>
+      <a class="card" href="lessons/caverna.html">
+        <img src="thumbs/caverna.png" alt="Platão ↔ por dentro da caverna" loading="lazy">
+        <span class="meta"><span>Filosofia</span><span class="lang">Português</span></span>
+        <b>Platão ↔ por dentro da caverna</b>
+        <span class="goal">Entre na cena: descubra o que produz as sombras e por que aprender pode mudar nossa maneira de ver.</span>
+      </a>
+      <a class="card" href="lessons/estoicismo.html">
+        <img src="thumbs/estoicismo.png" alt="Estoicismo ↔ esperando o ônibus" loading="lazy">
+        <span class="meta"><span>Filosofia</span><span class="lang">Português</span></span>
+        <b>Estoicismo ↔ esperando o ônibus</b>
+        <span class="goal">Separar aquilo que depende de nossa escolha daquilo que não está inteiramente sob nosso controle.</span>
+      </a>
+      <a class="card" href="lessons/fila.html">
+        <img src="thumbs/fila.png" alt="Filas ↔ uma manhã na cafeteria" loading="lazy">
+        <span class="meta"><span>Sistemas</span><span class="lang">Português</span></span>
+        <b>Filas ↔ uma manhã na cafeteria</b>
+        <span class="goal">Entender que uma fila desacopla chegada e processamento, mas não cria capacidade.</span>
+      </a>
+      <a class="card" href="lessons/juros.html">
+        <img src="thumbs/juros.png" alt="Juros compostos ↔ a fatura" loading="lazy">
+        <span class="meta"><span>Matemática</span><span class="lang">Português</span></span>
+        <b>Juros compostos ↔ a fatura</b>
+        <span class="goal"></span>
+      </a>
+      <a class="card" href="lessons/pitagoras.html">
+        <img src="thumbs/pitagoras.png" alt="Pitágoras ↔ o telhado" loading="lazy">
+        <span class="meta"><span>Matemática</span><span class="lang">Português</span></span>
+        <b>Pitágoras ↔ o telhado</b>
+        <span class="goal"></span>
+      </a>
+      <a class="card" href="lessons/requisicao.html">
+        <img src="thumbs/requisicao.png" alt="Arquitetura web ↔ da mesa à cozinha" loading="lazy">
+        <span class="meta"><span>Sistemas</span><span class="lang">Português</span></span>
+        <b>Arquitetura web ↔ da mesa à cozinha</b>
+        <span class="goal">Acompanhar uma requisição e distinguir interface, regras do serviço e persistência.</span>
+      </a>
+    </div>
+  </section>
+  <section class="how">
+    <h2>How it works</h2>
+    <img src="images/chalk-talk-how.png" alt="You ask Claude, Claude agrees an outline, writes recipe.json, build.mjs checks it, out comes lesson.html">
+    <ol>
+      <li>Claude asks only what is missing (the everyday thing to tie the idea to, who it is for, which number moves) and agrees a four-part outline with you.</li>
+      <li>It writes a small JSON <b>recipe</b> — what to draw, step by step — never the drawing itself.</li>
+      <li><code>scripts/build.mjs</code> checks the recipe, builds one HTML file and, with a headless browser, checks that nothing leaves the paper and no text covers another.</li>
+    </ol>
+  </section>
+  <footer>chalk-talk is MIT licensed. Strokes by Rough.js; fonts Caveat and Shantell Sans (SIL Open Font License).</footer>
+</main>
+</body>
+</html>

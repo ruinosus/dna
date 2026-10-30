@@ -1,0 +1,283 @@
+{
+  "id": "birthday-money",
+  "title": "Compound interest ↔ your birthday money",
+  "category": "Money",
+  "width": 900,
+  "height": 560,
+  "background": "grid",
+  "learning": {
+    "goal": "See why money that earns interest on its interest grows slowly at first and then much faster, and why starting early matters more than the amount.",
+    "question": "Your friend keeps their $200 in a drawer until age 25 and only then invests it at 7% a year. At 65, who has more, and by how much?",
+    "answer": "You invested for 50 years: 200 × 1.07^50 ≈ $5,891. Your friend gets 40 years: 200 × 1.07^40 ≈ $2,995. Ten years of waiting cost about half the result, because the last decade is when the curve grows the most.",
+    "caveat": "Real growth is not a smooth fixed rate: investments go up and down, and some years lose money. Broad stock index funds have historically averaged roughly 7% a year after inflation over long periods, but that is never guaranteed; a savings account pays less but is safer. Taxes and fees were left out."
+  },
+  "params": {
+    "rate": {
+      "label": "growth per year (%)",
+      "min": 3,
+      "max": 10,
+      "step": 1,
+      "value": 7
+    }
+  },
+  "vars": {
+    "r": "rate / 100",
+    "i1": "200 * r",
+    "i2": "200 * (1 + r) * r",
+    "bx": 380,
+    "by": 150,
+    "bw": 470,
+    "bh": 310,
+    "final": "200 * (1 + r)^50",
+    "simple": "200 * (1 + r * 50)",
+    "ymax": "final * 1.25",
+    "ex": "bx + bw",
+    "ey": "by + bh - final / ymax * bh"
+  },
+  "steps": [
+    {
+      "type": "text",
+      "at": [
+        40,
+        72
+      ],
+      "text": "$200 for your birthday. Spend it… or plant it?",
+      "size": 40,
+      "chapter": "The gift",
+      "say": "You just turned 15 and got $200. What if that money could grow on its own?"
+    },
+    {
+      "type": "prop",
+      "name": "person",
+      "at": [
+        110,
+        270
+      ],
+      "size": 110,
+      "label": "you, 15",
+      "id": "you"
+    },
+    {
+      "type": "prop",
+      "name": "coin",
+      "at": [
+        240,
+        260
+      ],
+      "size": 60,
+      "id": "gift"
+    },
+    {
+      "type": "text",
+      "at": [
+        240,
+        180
+      ],
+      "text": "$200",
+      "size": 32,
+      "anchor": "middle",
+      "style": {
+        "color": "#2E8F62"
+      }
+    },
+    {
+      "type": "text",
+      "at": [
+        40,
+        345
+      ],
+      "text": "year 1: +${i1:2}",
+      "size": 28,
+      "chapter": "Interest on interest",
+      "say": "Put it somewhere that grows {rate}% a year. After one year you earn interest on your $200."
+    },
+    {
+      "type": "text",
+      "at": [
+        40,
+        385
+      ],
+      "text": "year 2: +${i2:2}",
+      "size": 28,
+      "style": {
+        "color": "#2F5BEA"
+      },
+      "say": "In year two you earn on the $200 and on last year's interest, so you get a bit more."
+    },
+    {
+      "type": "text",
+      "at": [
+        40,
+        432
+      ],
+      "text": "that extra ${i2 - i1:2} is",
+      "size": 24,
+      "style": {
+        "color": "#5E5A52"
+      }
+    },
+    {
+      "type": "text",
+      "at": [
+        40,
+        462
+      ],
+      "text": "interest on your interest!",
+      "size": 24,
+      "style": {
+        "color": "#5E5A52"
+      }
+    },
+    {
+      "type": "polyline",
+      "points": [
+        [
+          "bx",
+          "by - 10"
+        ],
+        [
+          "bx",
+          "by + bh"
+        ],
+        [
+          "bx + bw + 10",
+          "by + bh"
+        ]
+      ],
+      "style": {
+        "width": 2.4
+      },
+      "chapter": "Fifty years later",
+      "say": "That tiny extra repeats every year, and it keeps snowballing. Let's watch until you are 65."
+    },
+    {
+      "type": "text",
+      "at": [
+        "bx",
+        "by + bh + 34"
+      ],
+      "text": "age 15",
+      "size": 24,
+      "style": {
+        "color": "#5E5A52"
+      }
+    },
+    {
+      "type": "text",
+      "at": [
+        "bx + bw",
+        "by + bh + 34"
+      ],
+      "text": "age 65",
+      "size": 24,
+      "anchor": "end",
+      "style": {
+        "color": "#5E5A52"
+      }
+    },
+    {
+      "type": "plot",
+      "fn": "200 * (1 + r * x)",
+      "domain": [
+        0,
+        50
+      ],
+      "range": [
+        0,
+        "ymax"
+      ],
+      "box": {
+        "x": "bx",
+        "y": "by",
+        "w": "bw",
+        "h": "bh"
+      },
+      "style": {
+        "color": "#8C8578",
+        "width": 2.4,
+        "dashed": true
+      },
+      "say": "If you only earned on the original $200, it would climb in a straight line."
+    },
+    {
+      "type": "text",
+      "at": [
+        "bx + 20",
+        "by + 30"
+      ],
+      "text": "simple: ${simple:0}",
+      "size": 26,
+      "style": {
+        "color": "#8C8578"
+      }
+    },
+    {
+      "type": "pause",
+      "ms": 400
+    },
+    {
+      "type": "plot",
+      "fn": "200 * (1 + r)^x",
+      "domain": [
+        0,
+        50
+      ],
+      "range": [
+        0,
+        "ymax"
+      ],
+      "box": {
+        "x": "bx",
+        "y": "by",
+        "w": "bw",
+        "h": "bh"
+      },
+      "style": {
+        "color": "#C8442C",
+        "width": 3.4
+      },
+      "say": "With interest on interest, the curve is lazy for years, then bends upward hard."
+    },
+    {
+      "type": "text",
+      "at": [
+        "bx + 20",
+        "by + 66"
+      ],
+      "text": "compound: ${final:0}",
+      "size": 30,
+      "style": {
+        "color": "#C8442C"
+      },
+      "id": "compoundLabel"
+    },
+    {
+      "type": "highlight",
+      "from": [
+        "bx + 18",
+        "by + 72"
+      ],
+      "to": [
+        "bx + 270",
+        "by + 72"
+      ],
+      "thickness": 14,
+      "chapter": "Time does the work",
+      "say": "Same $200, never added a cent. Time did the work. Move the rate and watch."
+    },
+    {
+      "type": "ellipse",
+      "center": [
+        "ex",
+        "ey"
+      ],
+      "rx": 16,
+      "ry": 16,
+      "style": {
+        "color": "#C8442C",
+        "width": 2.4
+      }
+    }
+  ],
+  "locale": "en-US"
+}

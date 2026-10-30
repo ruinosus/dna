@@ -1,0 +1,14 @@
+{
+  "name": "chalk-talk",
+  "owner": {
+    "name": "ruinosus"
+  },
+  "description": "chalk-talk: explain an idea by drawing it, as a hand-drawn lesson in one HTML file.",
+  "plugins": [
+    {
+      "name": "chalk-talk",
+      "source": "./",
+      "description": "Explain an idea by drawing it: a hand-drawn lesson, stroke by stroke, with chapters and values to move, in one HTML file."
+    }
+  ]
+}

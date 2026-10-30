@@ -1,0 +1,5 @@
+{
+  "engine": "../../drawing-engine",
+  "guide": "../../drawing-engine-guide/recipe-prompt.md",
+  "references": "../../drawing-engine-guide/references"
+}

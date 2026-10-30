@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.DS_Store
+docs/examples/*.html
+evals/results/
+tools/sources.json
+tools/.engine
