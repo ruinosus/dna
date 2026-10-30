@@ -5,3 +5,4 @@ docs/examples/*.html
 evals/results/
 tools/sources.json
 tools/.engine
+npm/*.tgz

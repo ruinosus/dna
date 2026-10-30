@@ -2,9 +2,9 @@
 name: chalk-talk
 description: Explains an idea by drawing it, the way a teacher does at the board — a hand-drawn lesson that appears stroke by stroke, chapter by chapter, with narration and values the person can move, delivered as one HTML file that opens offline. Use when someone asks to explain, teach or show something by drawing it ("explain compound interest by drawing", "draw how a web request works", "desenha pra mim como funciona…"), or wants a visual, step-by-step explanation of a concept, a process, an argument or a system for a class, a talk or themselves.
 license: MIT
-compatibility: Needs code execution with Node.js 18 or later. Chrome, Chromium or Edge, when installed, lets the script check the drawing before delivering it; without one, the page checks itself when opened.
+compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "0.5.0"
+  version: "0.6.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -85,6 +85,21 @@ chapters (Next / Back, Play all), the values beside the paper, "Think about it",
 download (the GIF and the video record the lesson drawing itself — good for slides and messages). It needs no
 internet and no install, so it can be sent by e-mail or projected in a class.
 
+### No code execution (an artifact instead)
+
+Where you cannot run code but can show an HTML artifact, put the recipe in this small page — nothing else — and show
+it. The player loads from the CDN and checks the recipe itself:
+
+```html
+<!doctype html>
+<meta charset="utf-8">
+<title>LESSON TITLE</title>
+<script type="application/json" id="chalk-recipe">THE RECIPE JSON</script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.6.0/player.js"></script>
+```
+
+Write `<` inside the JSON as `\u003c`. If the page says the recipe could not be opened, fix what it says.
+
 ## 6. Changing it later
 
 "Make the arrow blue", "add a second person", "use 5 % instead": change only what was asked in the recipe, keep the
@@ -97,4 +112,4 @@ rest as it is, build again and say what changed. A different hook or mold is a n
   recipe contract was written for.
 - Never put HTML, links, scripts or images in a recipe: texts are plain text, colours are hex or names.
 - Never write a script to generate the recipe: write the JSON itself (expressions and `repeat` do the arithmetic).
-- Without code execution, say that this skill needs it to build the drawing and stop; do not hand-write the HTML.
+- Without code execution, never hand-write the player: use the small page in «No code execution» above.

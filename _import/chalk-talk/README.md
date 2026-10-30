@@ -154,6 +154,10 @@ then Settings › Capabilities › Skills › Upload. Code execution must be on.
 
 **Claude API**: upload the same zip with the Skills API (`/v1/skills`) and use it with the code execution tool.
 
+**Without installing anything** — on npm as [`chalk-talk`](https://www.npmjs.com/package/chalk-talk): a page needs
+only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.6.0/player.js"></script>` (that is also
+how the skill shows a lesson where it cannot run code), and `npx chalk-talk lesson.json` builds the one-file lesson.
+
 **Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/chalk-talk` to the folder where the tool
 reads skills (for example `.agents/skills/`). The tool needs Node.js 18 or later.
 

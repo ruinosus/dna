@@ -50,14 +50,16 @@ const contract = await build({
 const code = contract.outputFiles[0].text.split('\n').filter((l) => !/^\/\/ .*\.ts$/.test(l)).join('\n')
 writeFileSync(join(skill, 'scripts/contract.mjs'), `${banner}\n${code}`)
 
-// The player: engine + page code in one script.
-const js = await build({
+// The player: engine + page code in one script — inside the built page (no shell), and on its own for npm / the CDN
+// (with the shell: markup, styles and fonts, made below).
+const player = (shell) => build({
   entryPoints: [join(here, 'player/player.ts')],
   bundle: true, format: 'iife', target: 'es2020', minify: true, write: false, logLevel: 'warning',
   alias: { '@engine': drawing },
   nodePaths: [join(engine, 'node_modules'), join(here, 'node_modules')],
-})
-const script = js.outputFiles[0].text
+  define: { __CHALK_SHELL__: shell === null ? 'null' : JSON.stringify(shell) },
+}).then((r) => r.outputFiles[0].text)
+const script = await player(null)
 if (/<\/script/i.test(script)) throw new Error('The player script contains "</script": it would end the page early.')
 
 const font = (pkg, file) => readFileSync(join(engine, 'node_modules/@fontsource', pkg, 'files', file)).toString('base64')
@@ -73,6 +75,12 @@ const fill = { VERSION: version, FONTS: fonts, CSS: readFileSync(join(here, 'pla
 const page = readFileSync(join(here, 'player/template.html'), 'utf8').replace(/\{\{(VERSION|FONTS|CSS|JS)\}\}/g, (_, k) => fill[k])
 if (!page.includes('{{RECIPE}}')) throw new Error('The template lost its {{RECIPE}} slot.')
 writeFileSync(join(skill, 'assets/player.html'), page)
+
+// The player on its own (npm / CDN): the template's body, the styles and the fonts go inside it.
+const template = readFileSync(join(here, 'player/template.html'), 'utf8')
+const body = template.slice(template.indexOf('<body>') + 6, template.indexOf('<script type="application/json"')).trim()
+mkdirSync(join(here, '../npm'), { recursive: true })
+writeFileSync(join(here, '../npm/player.js'), `/*! chalk-talk player (engine ${version}) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */\n` + await player({ body, css: fill.CSS, fonts }))
 
 // How to write a recipe, the molds and the hooks: the same texts the engine's app uses, so both teach one contract.
 const swap = (text, from, to) => {
@@ -101,3 +109,10 @@ for (const name of EXAMPLES) copyFileSync(join(drawing, 'scenes', `${name}.json`
 
 writeFileSync(join(skill, 'assets/VERSION'), `engine ${version}\nguide ${guideVersion}\nmolds-and-hooks ${refsVersion}\n`)
 console.log(`✓ assets from the engine ${version}: player.html ${(page.length / 1024).toFixed(0)} KB, contract.mjs, ${readdirSync(examples).length} examples`)
+
+// The npm package also carries the command line (npx chalk-talk …): the same scripts and page as the skill.
+mkdirSync(join(here, '../npm/scripts'), { recursive: true })
+mkdirSync(join(here, '../npm/assets'), { recursive: true })
+for (const f of ['build.mjs', 'browser.mjs', 'contract.mjs']) copyFileSync(join(skill, 'scripts', f), join(here, '../npm/scripts', f))
+copyFileSync(join(skill, 'assets/player.html'), join(here, '../npm/assets/player.html'))
+copyFileSync(join(here, '../LICENSE'), join(here, '../npm/LICENSE'))

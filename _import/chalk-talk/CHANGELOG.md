@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 — 2026-10-30
+
+- **On npm** as `chalk-talk`: `player.js` sets up the whole page around a recipe (markup, styles and fonts inside),
+  so a page — or a claude.ai artifact — needs only the recipe and
+  `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.6.0/player.js">`. And `npx chalk-talk lesson.json` is the
+  same `build.mjs` as a command.
+- The skill works **without code execution**: it shows the recipe in that small page as an artifact.
+- The player starts once the page is parsed (a page with only the recipe and the script has no body yet).
+- **GitHub Pages**: the gallery is at https://ruinosus.github.io/chalk-talk/.
+
 ## 0.5.0 — 2026-10-30
 
 Taking it further.

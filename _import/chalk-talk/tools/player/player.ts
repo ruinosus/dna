@@ -30,6 +30,22 @@ const pt = navigator.language.toLowerCase().startsWith('pt')
 const t = pt ? TEXT.pt : TEXT.en
 document.documentElement.lang = pt ? 'pt-BR' : 'en'
 
+// Onda 4: the player loaded on its own (npm / CDN) brings the page around the recipe — its markup, styles and fonts;
+// inside a built file (assets/player.html) they are already on the page and this is null.
+declare const __CHALK_SHELL__: { body: string; css: string; fonts: string } | null
+
+function mount() {
+  if (!__CHALK_SHELL__ || document.getElementById('stage')) return
+  const fonts = document.createElement('style')
+  fonts.id = 'chalk-fonts'
+  fonts.textContent = __CHALK_SHELL__.fonts
+  const css = document.createElement('style')
+  css.textContent = __CHALK_SHELL__.css
+  document.head.append(fonts, css)
+  if (!document.querySelector('meta[name=viewport]')) document.head.append(Object.assign(document.createElement('meta'), { name: 'viewport', content: 'width=device-width, initial-scale=1' }))
+  document.body.insertAdjacentHTML('afterbegin', __CHALK_SHELL__.body)
+}
+
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 function tag<K extends keyof HTMLElementTagNameMap>(name: K, attrs: Record<string, string> = {}, text = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(name)
@@ -404,4 +420,10 @@ async function main() {
   await play(scene)
 }
 
-void main()
+// A page with only the recipe and this script has no body yet while the script runs: start once it is parsed.
+const start = () => {
+  mount()
+  void main()
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start)
+else start()
