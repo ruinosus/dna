@@ -1,6 +1,6 @@
 ---
 type: llm
-target: { source: file, path: lesson.json }
+focus: { source: file, path: lesson.json }
 ---
 Compared with the original recipe below, the only change is the colour of the compound-interest curve (now #2F5BEA, blue). Everything else — steps, texts, numbers, params, positions — is as it was.
 

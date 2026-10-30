@@ -1,6 +1,6 @@
 ---
 type: llm
-target: { source: file, path: lesson.json }
+focus: { source: file, path: lesson.json }
 ---
 The recipe (JSON) explains a web cache to junior developers: it starts from loading a product page twice, shows a
 request going to the cache, a miss going to the database and the answer copied into the cache, and a hit served

@@ -1,6 +1,6 @@
 ---
 type: llm
-target: { source: file, path: lesson.json }
+focus: { source: file, path: lesson.json }
 ---
 Compared with the original recipe below, the rate's `max` is now 20; anything else changed only to keep the drawing on the paper at 20 (a range or a position), and the change is minimal. Texts stay in Portuguese.
 
