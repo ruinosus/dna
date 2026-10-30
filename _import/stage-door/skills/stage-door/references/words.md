@@ -23,6 +23,14 @@ with your bet), never copy the mistake into the file.
   (`on_fail`). A "gate" no one approves is a stage, or a wish.
 - **An output** is something that exists after the stage (a document, a build, a signed form, a number) — not an
   activity ("testing" is an activity; "test report" is an output).
+- **An input** is what a stage receives. It is an **output of an earlier stage or gate** (`from: <its id>`) or
+  comes **from outside** the way (`name: …`: a survey, the year's goals, a client's request). The thread between them —
+  one stage delivers what the next one receives — is what makes a process checkable: write it whenever the material
+  says what a stage needs (a column «Input», «Entradas», «Comes in»).
+- **What comes out of a gate** (`outputs` on the gate): the decision, what was approved, the minutes. The stage after
+  a gate usually receives what was approved.
+- **Metrics** (`metrics`, on a stage or a gate) are how the team follows it (lead time, % approved, rework) — not the
+  number that says the work paid off (that is a `kpi` output).
 - **A number** that says it worked: a starting point, a target and how it is measured; mark that output `kpi: true`,
   and let the flow close in a stage that measures it. Never make one up: ask.
 - **A limit** (`wip`, items at once) is the team's to say: write it only when the material or the person says it.

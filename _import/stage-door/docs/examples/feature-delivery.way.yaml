@@ -49,6 +49,10 @@ stages:
     outputs:
       - id: problema
         name: Problema escrito
+    inputs:
+      - name: Pedidos de clientes
+    metrics:
+      - Ideias por mês
   - id: entender
     name: Entendimento
     phase: descoberta
@@ -64,6 +68,10 @@ stages:
       - id: meta
         name: Meta
         kpi: true
+    inputs:
+      - from: problema
+    metrics:
+      - Tempo até o número de partida
   - id: prototipo
     name: Protótipo
     phase: descoberta
@@ -81,6 +89,10 @@ stages:
       - id: sessoes
         name: 5 sessões com usuários
         required: true
+    inputs:
+      - from: meta
+    metrics:
+      - Pessoas que testaram
   - id: construir
     name: Construção
     phase: entrega
@@ -99,6 +111,10 @@ stages:
         name: Code review
         required: true
     where: DEV
+    inputs:
+      - from: aprovado
+    metrics:
+      - Tempo de construção
   - id: testar
     name: Testes
     phase: entrega
@@ -110,6 +126,11 @@ stages:
       - id: relatorio
         name: Relatório de testes
     where: QA
+    inputs:
+      - from: codigo
+      - from: automaticos
+    metrics:
+      - Defeitos achados
   - id: lancar
     name: Lançamento
     phase: operacao
@@ -122,6 +143,10 @@ stages:
       - id: nota
         name: Nota de lançamento
     where: PRD
+    inputs:
+      - from: liberacao
+    metrics:
+      - Lançamentos sem incidente
   - id: medir
     name: Medição
     phase: operacao
@@ -133,6 +158,11 @@ stages:
       - id: medido
         name: Número depois de 30 dias
         kpi: true
+    inputs:
+      - from: nota
+      - from: meta
+    metrics:
+      - Distância da meta
 gates:
   - id: construir-gate
     after: prototipo
@@ -151,6 +181,13 @@ gates:
           - meta
           - testado
     on_fail: entender
+    metrics:
+      - "% de protótipos aprovados"
+    outputs:
+      - id: aprovado
+        name: Protótipo aprovado
+      - id: decisao-construir
+        name: Decisão de construir
   - id: producao-gate
     after: testar
     name: Pronto para produção?
@@ -168,3 +205,8 @@ gates:
       - kind: activities
         stage: construir
     on_fail: construir
+    metrics:
+      - "% aprovado na primeira vez"
+    outputs:
+      - id: liberacao
+        name: Liberação para produção

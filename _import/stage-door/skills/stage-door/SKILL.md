@@ -4,7 +4,7 @@ description: Turns how a team works — scattered in PDFs, slides, wikis or some
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing.
 metadata:
-  version: "0.1.1"
+  version: "0.2.0"
 ---
 
 # stage-door: a team's way of working, clear and checkable
@@ -19,8 +19,9 @@ and pass `--lang pt` to the script for Portuguese (`en` is the default).
 ## 1. Read, then draft — betting, never inventing
 
 Read everything the person gave you. Then write the whole `.way.yaml` at once: lanes, roles, phases, stages in order
-(each with its lane, the roles that take part, its key question and outputs), gates (after which stage, who approves,
-what must be ready, where it goes back), and numbers if the material has them. The format is
+(each with its lane, the roles that take part, its key question, what it **receives** — an earlier output by id, or
+something from outside — what it **delivers** and its **metrics**), gates (after which stage, who approves, what must be
+ready, **what comes out of it**, where it goes back), and numbers if the material has them. The format is
 `references/format.schema.json`; `examples/` has three finished files — open the one closest to yours.
 
 - **Sort the words out as you go** (`references/words.md`): an activity is not a stage, a ritual (planning, daily,
@@ -57,8 +58,11 @@ node scripts/build.mjs <id>.way.yaml --all [--lang pt] [--out <folder>]
 ```
 
 - `<id>.html` — **the map**: phases on top, who leads in the rows, the stages in order, the gates; a stage or a gate
-  opens its detail; tabs for roles (RACI), gates and outputs; downloads for the workbook, the file and a PNG.
-- `<id>.xlsx` — **the workbook**: Summary, Stages, Gates, Roles (RACI), Outputs, KPIs and a Gate checklist.
+  opens its detail (where each input comes from, who receives each output); a **Stages** tab with the table teams know
+  (comes in, delivers, roles, metrics; the gate as a row); tabs for roles (RACI), gates and outputs; downloads for the
+  workbook, the file and a PNG.
+- `<id>.xlsx` — **the workbook**: Summary, Stages, Gates, Roles (RACI), Outputs, KPIs, a Gate checklist and the
+  **Thread** (who delivers each output and who receives it).
 - `<id>.lesson.html` — **the lesson** (chalk-talk): the flow drawn stroke by stroke, a chapter per phase.
 
 `--html`, `--xlsx` and `--lesson` make one each. End with a short summary: what the flow is in one sentence, the files,

@@ -38,6 +38,10 @@ stages:
     outputs:
       - id: item
         name: Backlog item with its why
+    inputs:
+      - name: Requests from users and stakeholders
+    metrics:
+      - Items captured per sprint
   - id: refine
     name: Refine
     phase: backlog
@@ -51,6 +55,10 @@ stages:
         name: Acceptance criteria
       - id: estimate
         name: Estimate
+    inputs:
+      - from: item
+    metrics:
+      - "% of items ready before planning"
   - id: build
     name: Build
     phase: sprint
@@ -67,6 +75,10 @@ stages:
         name: Code review by a second developer
         required: true
     wip: 3
+    inputs:
+      - from: ready-item
+    metrics:
+      - Cycle time
   - id: accept
     name: Accept
     phase: sprint
@@ -77,6 +89,11 @@ stages:
     outputs:
       - id: accepted
         name: Item accepted
+    inputs:
+      - from: increment
+      - from: criteria
+    metrics:
+      - "% accepted at first review"
   - id: release
     name: Release
     phase: after
@@ -87,6 +104,10 @@ stages:
     outputs:
       - id: notes
         name: Release notes
+    inputs:
+      - from: done-item
+    metrics:
+      - Release frequency
   - id: measure
     name: Measure the outcome
     phase: after
@@ -98,6 +119,10 @@ stages:
       - id: outcome
         name: The number two weeks later
         kpi: true
+    inputs:
+      - from: notes
+    metrics:
+      - Outcome against target
 gates:
   - id: ready
     after: refine
@@ -115,6 +140,11 @@ gates:
           - criteria
           - estimate
     on_fail: refine
+    metrics:
+      - "% ready at first review"
+    outputs:
+      - id: ready-item
+        name: Item ready for a sprint
   - id: done
     after: accept
     name: Done?
@@ -133,3 +163,8 @@ gates:
       - kind: activities
         stage: build
     on_fail: build
+    metrics:
+      - Items done per sprint
+    outputs:
+      - id: done-item
+        name: Done item

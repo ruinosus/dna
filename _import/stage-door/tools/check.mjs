@@ -12,7 +12,7 @@ const skill = resolve(here, '../skills/stage-door')
 const build = join(skill, 'scripts/build.mjs')
 const examples = join(skill, 'examples')
 // The language each example is written in.
-const LANG = { 'feature-delivery': 'pt', scrum: 'en', 'service-desk': 'pt' }
+const LANG = { 'feature-delivery': 'pt', scrum: 'en', 'service-desk': 'pt', 'initiative-portfolio': 'pt' }
 const work = mkdtempSync(join(tmpdir(), 'stage-door-check-'))
 let failed = 0
 const run = (...args) => spawnSync(process.execPath, [build, ...args], { encoding: 'utf8' })
@@ -35,6 +35,21 @@ for (const f of files) {
   copyFileSync(join(examples, f), way)
   const back = run(way, '--from', join(work, `${id}.xlsx`), '--lang', 'en')
   ok(back.status === 0 && back.stdout.includes('the workbook changes nothing'), `${id}: the workbook reads back as no change`, back.stdout + back.stderr)
+}
+
+// the thread back: the person says an input from outside comes from inside after all, in the workbook
+{
+  const engine = await import(join(skill, 'scripts/engine.mjs'))
+  const file = join(work, 'initiative-portfolio.way.yaml')
+  copyFileSync(join(examples, 'initiative-portfolio.way.yaml'), file)
+  const read = engine.readWay(readFileSync(file, 'utf8'))
+  const sheets = engine.workbookOf(read.name, read.def, 'pt')
+  const stages = sheets.find((x) => x.key === 'stages')
+  const at = stages.rows[0].findIndex((c) => (c.v ?? c) === 'Entra')
+  stages.rows.find((r) => (r[3].v ?? r[3]) === 'Descoberta')[at] = 'Hipótese registrada (Ideia); Dados de atendimento'
+  writeFileSync(join(work, 'edited.xlsx'), engine.xlsx(sheets))
+  const back = run(file, '--from', join(work, 'edited.xlsx'), '--lang', 'en')
+  ok(back.status === 0 && back.stdout.includes('stage:descoberta:outside') && back.stdout.includes('1 change'), 'an input’s origin changed in the workbook comes back as one change', back.stdout + back.stderr)
 }
 
 // a broken file: the line of the problem, nothing written

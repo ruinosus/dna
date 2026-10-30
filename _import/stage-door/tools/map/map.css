@@ -2,14 +2,14 @@
 .sd {
   --bg: #f5f6f8; --card: #ffffff; --ink: #1d2330; --muted: #5f6878; --line: #dfe3ea; --soft: #eef1f5;
   --gate: #c8442c; --gate-bg: #fff0ec; --look: #8a5a00; --look-bg: #fff6e0; --active: #1d2330; --on-active: #ffffff;
-  --focus: #2f5bea;
+  --focus: #2f5bea; --link: #2f5bea; --link-bg: #eef2ff; --out: #2e8f62;
   font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg);
   min-height: 100vh; box-sizing: border-box; padding: 20px 16px 40px;
 }
 @media (prefers-color-scheme: dark) {
   .sd:not(.light) {
     --bg: #14171c; --card: #1d2129; --ink: #e8ebf0; --muted: #9aa3b2; --line: #313744; --soft: #252a33;
-    --gate: #ff8a70; --gate-bg: #3a2420; --look: #f2c46b; --look-bg: #332a17; --active: #e8ebf0; --on-active: #14171c; --focus: #8fb0ff;
+    --gate: #ff8a70; --gate-bg: #3a2420; --look: #f2c46b; --look-bg: #332a17; --active: #e8ebf0; --on-active: #14171c; --focus: #8fb0ff; --link: #8fb0ff; --link-bg: #1f2a44; --out: #6fd3a0;
   }
 }
 body { margin: 0; }
@@ -53,6 +53,20 @@ body { margin: 0; }
 .sd-gate.flag i { border-style: dashed; }
 .sd-gate em { font-style: normal; color: var(--muted); }
 .sd-picked { outline: 2.5px solid var(--focus); outline-offset: 2px; }
+.sd-linked { box-shadow: 0 0 0 3px var(--link-bg); }
+.sd-chip { display: inline-block; margin: 1px 4px 1px 0; padding: 1px 8px; border-radius: 999px; background: var(--link-bg); color: var(--link); font-size: 12px; line-height: 1.6; }
+.sd-chip.out { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+.sd-chip.miss { background: var(--look-bg); color: var(--look); }
+.sd-outs { margin: 0; padding: 0; list-style: none; }
+.sd-outs li { color: var(--out); }
+.sd-list { margin: 0; padding: 0; list-style: none; }
+.sd-to { color: var(--muted); font-size: 12px; }
+.sd-to.miss { color: var(--look); }
+.sd-link { background: none; border: 0; padding: 0; font-weight: 700; text-align: left; }
+.sd-link:hover { text-decoration: underline; }
+.sd-stages tr.gate td { background: var(--gate-bg); }
+.sd-stages tr.gate .sd-link { color: var(--gate); }
+.sd-stages td { white-space: normal; }
 
 .sd-detail { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
 .sd-kicker { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }

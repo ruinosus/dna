@@ -19,6 +19,7 @@ const ABOUT = {
   'feature-delivery': ['pt', 'From an idea to a measured result: discovery, delivery and operation, with a prototype gate and a production gate.'],
   scrum: ['en', 'A Scrum team: a backlog item refined, built in a sprint and accepted, with Definition of Ready and Done as gates.'],
   'service-desk': ['pt', 'A service desk: a ticket triaged, solved at first level or escalated, and closed only when the customer confirms.'],
+  'initiative-portfolio': ['pt', 'An initiative portfolio: from an idea to a committee decision, each stage receiving what the one before delivers — the thread, in the Stages tab.'],
 }
 
 for (const dir of ['examples', 'images']) {

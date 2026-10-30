@@ -22,6 +22,8 @@ Most teams' way of working lives in a 30-page PDF, a few slides and the head of 
 - the **phases** (milestones), and **who leads** each stage;
 - the **gates** — who approves, what must be ready, where the work goes back when it does not pass;
 - the **roles** and who takes part where (the RACI comes from it);
+- **what each stage receives and from where** — an output of an earlier stage or gate, or something from outside — and
+  its **metrics**; what **comes out of each gate** (the decision, what was approved);
 - the **number** that says it worked, when there is one.
 
 It **bets, asks, and never invents**: what the material implies becomes a bet you confirm; what it does not say becomes
@@ -38,8 +40,8 @@ From the one `<id>.way.yaml`:
 | | |
 |---|---|
 | **The file** (`.way.yaml`) | The source. Plain text you keep in Git; everything else is made from it. A mistake says its line. |
-| **The map** (`.html`) | One page that opens offline: phases on top, who leads in the rows, stages in order, gates under the stage they close. Click a stage or a gate for its detail; tabs for Roles (RACI), Gates and Outputs; download the workbook, the file or a PNG. «To look at» says what does not hold. |
-| **The workbook** (`.xlsx`) | Summary, Stages, Gates, Roles (RACI), Outputs, KPIs and a **Gate checklist** for the meeting. Header frozen, filters on, lanes in colour. Opens in Excel, Numbers and LibreOffice. |
+| **The map** (`.html`) | One page that opens offline: phases on top, who leads in the rows, stages in order, gates under the stage they close. Click a stage or a gate for its detail — where each input comes from, who receives each output. A **Stages** tab with the table teams know (comes in, delivers, roles, metrics; the gate as a row); tabs for Roles (RACI), Gates and Outputs; download the workbook, the file or a PNG. «To look at» says what does not hold. |
+| **The workbook** (`.xlsx`) | Summary, Stages (with where each input comes from, and metrics), Gates (with what comes out), Roles (RACI), Outputs, KPIs, a **Gate checklist** for the meeting and the **Thread** — who delivers each output and who receives it. Header frozen, filters on, lanes in colour. Opens in Excel, Numbers and LibreOffice. |
 | **The lesson** (`.lesson.html`) | The flow drawn stroke by stroke, a chapter per phase, each gate with who approves it and its way back — made with [chalk-talk](https://github.com/ruinosus/chalk-talk). |
 
 <table>
@@ -136,8 +138,11 @@ stages:
     lane: team
     roles: [dev, po]
     question: Do we understand it well enough to size it?
+    inputs:
+      - from: item                       # an output of an earlier stage, by its id
     outputs:
       - { id: criteria, name: Acceptance criteria }
+    metrics: ["% of items ready before planning"]
   # …
 gates:
   - id: ready
@@ -146,10 +151,13 @@ gates:
     approver: dev
     criteria: [{ kind: outputs, outputs: [criteria] }]
     on_fail: refine
+    outputs:                             # what comes out of the gate
+      - { id: ready-item, name: Item ready for a sprint }
 ```
 
 The whole format is [`references/format.schema.json`](skills/stage-door/references/format.schema.json); three complete
-examples are in [`skills/stage-door/examples/`](skills/stage-door/examples).
+examples are in [`skills/stage-door/examples/`](skills/stage-door/examples) — four, one of them
+([`initiative-portfolio`](skills/stage-door/examples/initiative-portfolio.way.yaml)) with the whole thread.
 
 ## What is inside
 
@@ -157,7 +165,7 @@ examples are in [`skills/stage-door/examples/`](skills/stage-door/examples).
 skills/stage-door/
   SKILL.md                  what Claude follows: read, draft, check, ask once, make, and the way back
   references/               the format, what the words mean, what the check points out, how to ask
-  examples/                 three fictional ways of working (feature delivery, Scrum, service desk)
+  examples/                 four fictional ways of working (feature delivery, Scrum, service desk, initiative portfolio)
   scripts/build.mjs         checks a .way.yaml and makes the map, the workbook and the lesson; reads a workbook back
   scripts/engine.mjs        the rules (generated)
   assets/map.html           the map page (generated)
