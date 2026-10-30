@@ -1,13 +1,13 @@
 // The player inside every chalk-talk HTML file. It reads the recipe from the page, checks it, and plays it chapter by
 // chapter with the drawing engine (Renderer, chapters, reviewer). It is not a second engine: it only builds
 // the page around the drawing. Opened with #review, it runs the reviewer and writes the result for scripts/build.mjs.
-import { buildScope, Renderer, type Theme } from '@engine/renderer'
+import { buildScope, playbackBeats, Renderer, type Theme } from '@engine/renderer'
 import { chaptersFor, defaultValues, validateScene, type Scene } from '@engine/recipe'
 import { PROP_ALIASES, PROP_NAMES } from '@engine/props'
 import { parseChalk } from '@engine/text'
 import { reviewScene } from '@engine/review'
 import { formatNumber, interpolate } from '@engine/expr'
-import { playFrames, recordWebm } from '@engine/record'
+import { animatedSvg, playFrames, recordWebm } from '@engine/record'
 import { applyPalette, GIFEncoder, quantize } from 'gifenc'
 
 const TEXT = {
@@ -107,6 +107,19 @@ async function snapshot(scene: Scene) {
   await fontsLoaded()
   await new Renderer(svg).render(scene, defaultValues(scene), { animate: false })
   document.body.append(tag('pre', { id: 'chalk-snapshot' }, encodeURIComponent(JSON.stringify({ svg: svg.outerHTML }))))
+}
+
+// ---------- #svg: the drawing as an SVG that draws itself with no script (build.mjs --svg) ----------
+async function animated(scene: Scene) {
+  await fontsLoaded()
+  let out: { svg: string; ms: number } | { error: string }
+  try {
+    const ms = playbackBeats(scene).reduce((t, b) => t + b.duration, 0)
+    out = { svg: await animatedSvg(scene, defaultValues(scene), $('chalk-fonts').textContent ?? ''), ms }
+  } catch (e) {
+    out = { error: (e as Error).message }
+  }
+  document.body.append(tag('pre', { id: 'chalk-svg' }, encodeURIComponent(JSON.stringify(out))))
 }
 
 // ---------- #still: only the paper, the whole drawing, for a picture of it (tools/site.mjs) ----------
@@ -411,7 +424,7 @@ async function main() {
   try {
     ;({ scene, course } = readRecipe())
   } catch (e) {
-    if (location.hash === '#review' || location.hash === '#snapshot') {
+    if (location.hash === '#review' || location.hash === '#snapshot' || location.hash === '#svg') {
       const out = tag('pre', { id: `chalk-${location.hash.slice(1)}` }, encodeURIComponent(JSON.stringify({ error: (e as Error).message })))
       return void document.body.append(out)
     }
@@ -421,6 +434,7 @@ async function main() {
   }
   if (location.hash === '#review') return review(scene)
   if (location.hash === '#snapshot') return snapshot(scene)
+  if (location.hash === '#svg') return animated(scene)
   if (location.hash === '#still') return still(scene)
   if (course) contents(course)
   await play(scene)

@@ -10,7 +10,7 @@ Hand-drawn lessons that draw themselves, from a small JSON **recipe** — the pl
 <meta charset="utf-8">
 <title>My lesson</title>
 <script type="application/json" id="chalk-recipe">{ "id": "my-lesson", "title": "…", "width": 900, "height": 560, "steps": [ … ] }</script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.7.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.8.0/player.js"></script>
 ```
 
 The player builds the page around the recipe — chapters, Next / Back, values to move, the check, downloads — and needs
@@ -22,6 +22,7 @@ nothing else. A course is `{ "course": "Title", "lessons": [recipe, recipe, …]
 ```
 npx chalk-talk lesson.json                       # checks the recipe and writes lesson.html
 npx chalk-talk one.json two.json --out course.html --title "The course"
+npx chalk-talk lesson.chalk --svg                # an SVG that draws itself, for a README on GitHub
 ```
 
 It checks the recipe contract, builds one HTML file that opens offline and, when Chrome, Chromium or Edge is

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.0 — 2026-10-30
+
+An SVG that draws itself, for a README on GitHub.
+
+- `build.mjs <recipe> --svg` (also `npx chalk-talk … --svg`) writes `<id>.svg`: the lesson drawn stroke by stroke with
+  CSS animations and no script, so it plays inside an `<img>` — a README on GitHub included. Texts are written left to
+  right, counters count, moves walk; it plays once and stays as the finished drawing, and is still from the start with
+  reduced motion. Only the fonts it uses go inside. A Markdown file with several blocks gives one SVG per lesson.
+- README: an example workflow that redraws the SVGs on every push.
+
 ## 0.7.0 — 2026-10-30
 
 Write it as text — or bring a Mermaid flowchart.

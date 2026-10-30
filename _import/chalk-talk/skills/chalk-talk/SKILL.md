@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "0.7.0"
+  version: "0.8.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -80,6 +80,10 @@ It prints a short report and writes `<id>.html` next to the recipe (`✗ text: l
 `node scripts/build.mjs one.json two.json three.json --out course.html --title "The course"` — one file with a list of
 the lessons. Each lesson is checked on its own.
 
+**For a README on GitHub** (or wherever only an image goes), when the person asks for it: `node scripts/build.mjs
+<id>.chalk --svg` writes `<id>.svg`, a picture that draws itself once with no script; `![title](<id>.svg)` plays it.
+It has no chapters, values or narration: the lesson is still the `.html`.
+
 Fix and run again **at most twice**. If something is still wrong, deliver it and tell the person in plain words what is
 left ("with 15 % the label of the simple interest touches the title").
 
@@ -103,7 +107,7 @@ it. The player loads from the CDN and checks the recipe itself:
 <script type="text/chalk-talk" id="chalk-recipe">
 THE RECIPE AS TEXT
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.7.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.8.0/player.js"></script>
 ```
 
 The text goes as it is (a JSON recipe also works, with `type="application/json"`; write `<` in it as `\u003c`). If

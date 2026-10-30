@@ -541,7 +541,7 @@
 <text x="600" y="806" fill="#2B2B2B" font-family="'Caveat', cursive" font-size="32" font-weight="700" text-anchor="middle" clip-path="url(#dw1-clip-1-24)">Ideas became copyable, cheap, and hard to erase.</text>
 </g>
 </g>
-<g aria-hidden="true" style="opacity: 0; transition: opacity 0.25s; pointer-events: none;">
+<g aria-hidden="true" class="dw-pencil" style="opacity: 0; transition: opacity 0.25s; pointer-events: none;">
 <g transform="translate(-3,-46) scale(1.15)">
 <path d="M3 40 L 8 28 L 33 3 L 41 11 L 16 36 Z" fill="#FFD25E" stroke="#2B2B2B" stroke-width="2" stroke-linejoin="round">
 </path>

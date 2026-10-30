@@ -144,6 +144,43 @@ flowchart LR
 `node skills/chalk-talk/scripts/build.mjs page.md` turns every such block into a lesson. The whole syntax:
 [references/text.md](skills/chalk-talk/references/text.md).
 
+### On GitHub: an SVG that draws itself
+
+GitHub shows no script in a README, but it shows an image — and an SVG can animate itself with CSS. `--svg` draws the
+lesson into one:
+
+```
+npx chalk-talk coffee-order.mmd --svg      # → coffee-order.svg
+```
+
+<p align="center"><img src="docs/images/coffee-order.svg" alt="A coffee order drawn by hand, box by box and arrow by arrow: you, the cashier, the barista" width="720"></p>
+
+It plays once when the page opens and stays as the finished drawing (still from the start for someone who asked for
+less motion). It has no chapters, values or narration — link to the `.html` lesson for those. To keep the SVGs in step
+with the recipes, a workflow like this one draws them on every push:
+
+```yaml
+name: Draw the chalk-talk SVGs
+on:
+  push:
+    paths: ['**/*.chalk', '**/*.mmd']
+permissions:
+  contents: write
+jobs:
+  draw:
+    runs-on: ubuntu-latest   # has Chrome, which draws them
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y chalk-talk@0.8.0 "$f" "${f%.*}.svg" --svg; done
+      - run: |
+          git config user.name github-actions
+          git config user.email github-actions@users.noreply.github.com
+          git add -A -- '*.svg'
+          git diff --cached --quiet || { git commit -m "Draw the chalk-talk SVGs" && git push; }
+```
+
 ## How it works
 
 Claude never writes the drawing itself. It writes a small **recipe** — JSON that says what to draw, step by step:
@@ -196,7 +233,7 @@ then Settings › Capabilities › Skills › Upload. Code execution must be on.
 **Claude API**: upload the same zip with the Skills API (`/v1/skills`) and use it with the code execution tool.
 
 **Without installing anything** — on npm as [`chalk-talk`](https://www.npmjs.com/package/chalk-talk): a page needs
-only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.7.0/player.js"></script>` (that is also
+only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.8.0/player.js"></script>` (that is also
 how the skill shows a lesson where it cannot run code), and `npx chalk-talk lesson.json` builds the one-file lesson.
 
 **Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/chalk-talk` to the folder where the tool

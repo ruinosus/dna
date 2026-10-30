@@ -38,6 +38,22 @@ for (const f of readdirSync(docs).filter((f) => /\.(chalk|mmd)$/.test(f))) {
   const r = run(join(docs, f), [join(dir, f.replace(/\.[^.]+$/, '.html'))])
   expect(r.status === 0, `${f}: ${r.stdout.trim().split('\n').filter((l) => /review/.test(l)).join(' / ') || r.stderr.trim()}`)
 }
+// --svg: an SVG that draws itself with CSS and no script, with only the fonts it uses; a Markdown file gives one per block.
+const svgOut = join(dir, 'coin.svg')
+const sv = run(join(docs, 'coin-jar.chalk'), [svgOut, '--svg', '--no-review'])
+if (sv.status === 4) expect(true, 'no browser here: the --svg check is skipped')
+else {
+  const svg = sv.status === 0 ? readFileSync(svgOut, 'utf8') : ''
+  const timed = (svg.match(/animation:/g) ?? []).length
+  expect(sv.status === 0 && !/<script/i.test(svg) && /@keyframes ct-draw/.test(svg) && /prefers-reduced-motion/.test(svg) && timed > 50 && /font-family:\s*'Caveat'/.test(svg),
+    `--svg draws itself with no script (${timed} timed elements, ${Math.round(svg.length / 1024)} KB)${sv.status ? `: ${sv.stderr.trim()}` : ''}`)
+  const page = join(dir, 'two.md')
+  writeFileSync(page, '```chalk-talk\ntitle Um\nid um\ntext "um" at 40,60\n```\n\n```mermaid\nflowchart LR\n  %% title Dois\n  A --> B\n```\n')
+  const two = run(page, ['--svg', '--no-review'])
+  const names = readdirSync(dir).filter((f) => f.endsWith('.svg')).sort().join(', ')
+  expect(two.status === 0 && names === 'coin.svg, dois.svg, um.svg', `a Markdown file gives one SVG per block (${names}${two.status ? `: ${two.stderr.trim()}` : ''})`)
+}
+
 const badText = join(dir, 'bad.chalk')
 writeFileSync(badText, 'title X\nperson ana at 1\n')
 const bt = run(badText)

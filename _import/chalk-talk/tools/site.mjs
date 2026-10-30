@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { browser } from '../skills/chalk-talk/scripts/browser.mjs'
+import { browser, runPage } from '../skills/chalk-talk/scripts/browser.mjs'
 import { recipesIn } from './recipes.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -37,6 +37,12 @@ for (const { file, scene } of lessons) {
     `--window-size=${width},${height}`, '--virtual-time-budget=20000', `--screenshot=${join(docs, 'thumbs', `${file}.png`)}`,
     `${pathToFileURL(page).href}#still`,
   ], { stdio: 'ignore', timeout: 90000 })
+  // The README shows these as SVGs that draw themselves (build.mjs --svg).
+  if (['coffee-order', 'coin-jar'].includes(file)) {
+    const r = runPage(page, 'svg')
+    if (!r || r.error) throw new Error(`${file}: the animated SVG failed (${r?.error ?? 'no browser'})`)
+    writeFileSync(join(docs, 'images', `${file}.svg`), r.svg)
+  }
   console.log(`✓ ${file}`)
 }
 rmSync(profile, { recursive: true, force: true })
