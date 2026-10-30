@@ -55,11 +55,13 @@ writeFileSync(join(skill, 'scripts/contract.mjs'), `${banner}\n${code}`)
 const mermaid = await build({
   stdin: {
     contents: [
-      "import { DOMParser, parseHTML } from 'linkedom'",
-      "Object.assign(globalThis, { DOMParser, document: parseHTML('<!doctype html><html><body></body></html>').document })",
+      `import ${JSON.stringify(join(here, 'player/node-dom.ts'))}`,
       "import { parseMermaidToExcalidraw } from '@excalidraw/mermaid-to-excalidraw'",
+      "import mermaid from 'mermaid'",
       "import { mermaidToScene } from './mermaid'",
-      'export const fromMermaid = (source, opts) => mermaidToScene(source, parseMermaidToExcalidraw, opts)',
+      "mermaid.initialize({ startOnLoad: false })",
+      "const diagram = (s) => mermaid.mermaidAPI.getDiagramFromText(s)",
+      'export const fromMermaid = (source, opts) => mermaidToScene(source, parseMermaidToExcalidraw, { ...opts, diagram })',
     ].join('\n'),
     resolveDir: drawing,
     loader: 'ts',

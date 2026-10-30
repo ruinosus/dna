@@ -44,7 +44,8 @@ Wait for the person's go ("pode", "go", "yes"). An edit to the outline is a new 
 Write it as **text**, one step per line (`references/text.md`: short, and the person can read and change it); what each
 step draws, the expressions, the palette and the space rules are in `references/recipe.md` — read both before
 writing. `references/examples/` has finished recipes in JSON (open one similar to yours if unsure); JSON still works.
-If the person gives a **Mermaid diagram** (flowchart, sequence, class, state or ER), keep it as it is, add `%% title`,
+If the person gives a **Mermaid diagram** (flowchart, sequence, class, state, ER, pie, timeline, journey, gantt,
+xychart, quadrant, mindmap, kanban, gitGraph), keep it as it is, add `%% title`,
 `%% # chapter` and `%% > narration` lines, and build it as a `.mmd` (`references/text.md` shows how); other Mermaid kinds
 are not drawn yet — say so and offer to write the lesson as text. Keep:
 

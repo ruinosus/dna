@@ -25,6 +25,12 @@
       ],
       "@excalidraw/*": [
         ".engine/node_modules/@excalidraw/*"
+      ],
+      "mermaid": [
+        ".engine/node_modules/mermaid"
+      ],
+      "linkedom": [
+        ".engine/node_modules/linkedom"
       ]
     }
   },

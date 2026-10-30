@@ -1,4 +1,4 @@
-/*! chalk-talk (engine v0.247.0) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */
+/*! chalk-talk (engine v0.248.0-1-gab667ac) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */
 var cr=Object.create;var ge=Object.defineProperty;var hr=Object.getOwnPropertyDescriptor;var ur=Object.getOwnPropertyNames;var dr=Object.getPrototypeOf,pr=Object.prototype.hasOwnProperty;var fr=(e,t,n)=>t in e?ge(e,t,{enumerable:!0,configurable:!0,writable:!0,value:n}):e[t]=n;var gr=(e,t)=>()=>(e&&(t=e(e=0)),t);var mr=(e,t)=>()=>(t||e((t={exports:{}}).exports,t),t.exports);var br=(e,t,n,r)=>{if(t&&typeof t=="object"||typeof t=="function")for(let o of ur(t))!pr.call(e,o)&&o!==n&&ge(e,o,{get:()=>t[o],enumerable:!(r=hr(t,o))||r.enumerable});return e};var yr=(e,t,n)=>(n=e!=null?cr(dr(e)):{},br(t||!e||!e.__esModule?ge(n,"default",{value:e,enumerable:!0}):n,e));var U=(e,t,n)=>fr(e,typeof t!="symbol"?t+"":t,n);var et,q=gr(()=>{et={css:`/* One lesson (lesson.ts), wherever it is mounted: everything under .chalk-talk, so a page or a note keeps its own look.
    The colours are variables a host can set (the Obsidian plugin maps them to its theme). */
 .chalk-talk {
