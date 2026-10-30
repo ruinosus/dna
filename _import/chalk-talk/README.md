@@ -127,7 +127,8 @@ ana -> banco "deposita"
 ````
 
 And a Mermaid diagram you already have becomes a hand-drawn lesson — flowchart, sequence, class, state, ER, pie,
-timeline, journey, gantt, xychart, quadrant, mindmap, kanban and gitGraph. The `%%` lines are comments for Mermaid, so the same block still shows as a normal diagram on GitHub:
+timeline, journey, gantt, xychart, quadrant, mindmap, kanban, gitGraph, sankey, block, packet, treemap, radar,
+requirement, C4, architecture, ishikawa, venn and treeView. The `%%` lines are comments for Mermaid, so the same block still shows as a normal diagram on GitHub:
 
 ````markdown
 ```mermaid

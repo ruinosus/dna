@@ -1,4 +1,4 @@
-/*! chalk-talk player (engine v0.248.0-1-gab667ac) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */
+/*! chalk-talk player (engine v0.249.0) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */
 "use strict";(()=>{var wr=Object.create;var we=Object.defineProperty;var xr=Object.getOwnPropertyDescriptor;var kr=Object.getOwnPropertyNames;var vr=Object.getPrototypeOf,$r=Object.prototype.hasOwnProperty;var Sr=(e,t,n)=>t in e?we(e,t,{enumerable:!0,configurable:!0,writable:!0,value:n}):e[t]=n;var Mr=(e,t)=>()=>(e&&(t=e(e=0)),t);var Er=(e,t)=>()=>(t||e((t={exports:{}}).exports,t),t.exports);var Ar=(e,t,n,r)=>{if(t&&typeof t=="object"||typeof t=="function")for(let o of kr(t))!$r.call(e,o)&&o!==n&&we(e,o,{get:()=>t[o],enumerable:!(r=xr(t,o))||r.enumerable});return e};var Or=(e,t,n)=>(n=e!=null?wr(vr(e)):{},Ar(t||!e||!e.__esModule?we(n,"default",{value:e,enumerable:!0}):n,e));var U=(e,t,n)=>Sr(e,typeof t!="symbol"?t+"":t,n);var tt,q=Mr(()=>{tt={body:`<main id="stage">
   <nav id="course" class="course" aria-label="Lessons" hidden></nav>
   <div id="lesson"></div>
