@@ -160,8 +160,11 @@ export default {
 }
 ```
 
-The lesson opens on chapter 1, drawn and still; **Expand** shows all of it. A VS Code extension and an Obsidian plugin
-with the same blocks are on the way.
+The lesson opens on chapter 1, drawn and still; **Expand** shows all of it.
+
+The same blocks play in the **VS Code** Markdown preview ([vscode-chalk-talk](https://github.com/ruinosus/vscode-chalk-talk))
+and in **Obsidian** notes ([obsidian-chalk-talk](https://github.com/ruinosus/obsidian-chalk-talk)). Neither is in its
+store yet: build and install them by hand, as their READMEs say.
 
 ### On GitHub: an SVG that draws itself
 
