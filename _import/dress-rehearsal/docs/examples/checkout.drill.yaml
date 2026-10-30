@@ -1,0 +1,129 @@
+format: dress-rehearsal/v1
+name: Checkout fora do ar às 3h
+from: runbooks/checkout.md
+about: O pagamento da loja começa a falhar de madrugada, logo depois de um deploy.
+clock: "03:12"
+impact: pedidos perdidos
+roles:
+  - id: plantao
+    name: Plantonista
+    you: true
+  - id: lider
+    name: Líder de incidente
+  - id: release
+    name: Release
+    can: [reverter-deploy]
+  - id: com
+    name: Comunicação
+    can: [pagina-de-status]
+start: alarme
+scenes:
+  - id: alarme
+    says: O alarme de erros no pagamento toca no seu celular.
+    choices:
+      - label: Abrir o painel de pagamentos
+        go: painel
+        runbook: §1
+        minutes: 2
+      - label: Voltar a dormir — deve ser falso alarme
+        go: dormiu
+        minutes: 25
+        lost: 1500
+  - id: painel
+    says: O painel mostra 42% de erros no pagamento desde 03:09. O último deploy foi às 02:58 — uma mudança no cálculo de frete. O banco responde normal.
+    draw: |
+      title Erros no pagamento
+      id painel
+      size 600x300
+      background plain
+      axis 60,220 -> 560,220 domain 0..15 ticks=5 label="minutos desde 03:00"
+      polyline 60,215 160,213 240,210 300,110 380,70 540,70 color=red stroke=3
+      text "42%" at 470,60 size=26 color=red
+      text "deploy 02:58" at 60,40 size=18
+    injects:
+      - at: "03:16"
+        says: O atendimento escreve no canal — três clientes reclamando no Twitter que não conseguem pagar.
+    choices:
+      - label: Reverter o deploy das 02:58
+        go: revertido
+        runbook: §2
+        minutes: 4
+        lost: 150
+        needs: reverter-deploy
+      - label: Investigar o cálculo de frete antes de mexer
+        go: investigando
+        minutes: 14
+        lost: 900
+      - label: Avisar os clientes primeiro (página de status)
+        go: avisados
+        minutes: 3
+        lost: 120
+        needs: pagina-de-status
+        notifies: true
+  - id: avisados
+    says: A página de status diz «instabilidade no pagamento». Os erros seguem em 42%.
+    choices:
+      - label: Reverter o deploy das 02:58
+        go: revertido
+        runbook: §2
+        minutes: 4
+        lost: 150
+        needs: reverter-deploy
+      - label: Investigar o cálculo de frete
+        go: investigando
+        minutes: 14
+        lost: 900
+  - id: investigando
+    says: Você acha o problema — o cálculo de frete quebra para CEPs da região Norte. Corrigir no código leva tempo.
+    choices:
+      - label: Corrigir e publicar a correção
+        go: corrigido
+        minutes: 30
+        lost: 1200
+      - label: Reverter agora e corrigir de dia
+        go: revertido
+        runbook: §2
+        minutes: 4
+        lost: 150
+        needs: reverter-deploy
+      - label: Escalar para o líder de incidente
+        go: investigando-lider
+        runbook: §4
+        minutes: 3
+        calls: lider
+  - id: investigando-lider
+    says: O líder de incidente entra e pergunta por que o deploy ainda não foi revertido.
+    choices:
+      - label: Reverter o deploy
+        go: revertido
+        runbook: §2
+        minutes: 4
+        lost: 150
+        needs: reverter-deploy
+  - id: revertido
+    says: O deploy é revertido. Em dois minutos os erros caem para 0%.
+    choices:
+      - label: Avisar os clientes que voltou ao normal
+        go: resolvido
+        minutes: 3
+        needs: pagina-de-status
+        notifies: true
+      - label: Encerrar o incidente e voltar a dormir
+        go: resolvido
+        minutes: 1
+  - id: corrigido
+    says: A correção entra no ar. O pagamento volta — mas a loja ficou quase uma hora sem vender para o Norte.
+    end: resolved
+  - id: resolvido
+    says: O checkout está normal de novo.
+    end: resolved
+  - id: dormiu
+    says: Às 03:37 o gerente liga — o checkout está fora há meia hora e ninguém respondeu ao alarme.
+    end: worse
+gaps:
+  - says: O runbook não diz quem avisa os clientes, nem quando.
+    source: runbook inteiro
+  - says: O §2 manda reverter no painel de deploy, mas o plantonista não tem esse acesso — só o Release.
+    source: §2
+  - says: O §4 diz «escale» e não diz para quem, nem como.
+    source: §4

@@ -1,0 +1,9 @@
+{
+  "name": "dress-rehearsal",
+  "version": "0.1.0",
+  "description": "Test your incident runbook by playing it: a drill with a clock, choices and consequences, made from the runbook — and a debrief of what the runbook does not say.",
+  "author": { "name": "ruinosus" },
+  "license": "MIT",
+  "repository": "https://github.com/ruinosus/dress-rehearsal",
+  "keywords": ["skill", "incident", "runbook", "tabletop", "sre", "on-call", "drill"]
+}
