@@ -1,5 +1,5 @@
 // Checks the skill as someone installing it would get it: SKILL.md's frontmatter, every example built by
-// scripts/build.mjs, a recipe that breaks the contract (exit 1) and one with a text off the paper (exit 3).
+// scripts/build.mjs, a recipe that breaks the contract (exit 1) and one with a line across a text (exit 3).
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -33,14 +33,15 @@ writeFileSync(bad, JSON.stringify({ id: 'bad', title: 'Bad', width: 900, height:
 const b = run(bad)
 expect(b.status === 1 && /✗ contract: .*r/.test(b.stderr), `a broken recipe stops with exit 1 (${b.stderr.trim()})`)
 
-const off = join(dir, 'off.json')
-writeFileSync(off, JSON.stringify({ id: 'off', title: 'Off', width: 900, height: 560, steps: [
-  { type: 'text', at: [40, 60], text: 'a title', size: 40 },
-  { type: 'text', at: [820, 300], text: 'this sentence runs off the paper', size: 30 },
+// The engine brings a text back inside the paper by itself; a line drawn across a text is left for the reviewer.
+const across = join(dir, 'across.json')
+writeFileSync(across, JSON.stringify({ id: 'across', title: 'Across', width: 900, height: 560, steps: [
+  { type: 'text', at: [300, 300], text: 'a sentence with a line through it', size: 30 },
+  { type: 'line', from: [250, 290], to: [800, 290] },
 ] }))
-const o = run(off)
+const o = run(across)
 const reviewed = !/• review/.test(o.stdout)
-expect(reviewed ? o.status === 3 && /off the paper/.test(o.stdout) : o.status === 0, reviewed ? 'a text off the paper is found (exit 3)' : 'no browser here: off-paper check skipped')
+expect(reviewed ? o.status === 3 && /crosses the text/.test(o.stdout) : o.status === 0, reviewed ? 'a line across a text is found (exit 3)' : 'no browser here: the review check is skipped')
 
 rmSync(dir, { recursive: true, force: true })
 if (failed) {

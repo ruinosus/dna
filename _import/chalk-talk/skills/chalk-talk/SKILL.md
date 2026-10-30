@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Needs code execution with Node.js 18 or later. Chrome, Chromium or Edge, when installed, lets the script check the drawing before delivering it; without one, the page checks itself when opened.
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
 ---
 
 # chalk-talk: explain by drawing

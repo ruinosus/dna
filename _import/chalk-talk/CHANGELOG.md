@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 — 2026-10-30
+
+- The Pythagoras example: its red circle no longer cuts the result at the sliders' maximum (found by 0.2.0's stricter
+  reviewer).
+- `npm run check` tests the reviewer with a line across a text: a text off the paper now comes back on its own.
+
 ## 0.2.0 — 2026-10-30
 
 Drawing better, with fewer coordinates worked out by hand.

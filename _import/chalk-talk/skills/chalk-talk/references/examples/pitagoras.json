@@ -56,9 +56,9 @@
     { "type": "text", "at": [620, 125], "text": "a² + b² = c²", "size": 50,
       "say": "Pitágoras resolve: a ao quadrado mais b ao quadrado é igual a c ao quadrado." },
     { "type": "text", "at": [620, 168], "text": "{a}² + {b}² = {a^2 + b^2}", "size": 32, "style": { "color": "#5E5A52" } },
-    { "type": "text", "at": [620, 212], "text": "telha ≈ {c:1} m", "size": 40,
+    { "type": "text", "at": [620, 222], "text": "telha ≈ {c:1} m", "size": 40,
       "say": "Com só duas medidas, o pedreiro já sabe quanto cortar." },
-    { "type": "ellipse", "center": [712, 210], "rx": 112, "ry": 28,
+    { "type": "ellipse", "center": [742, 214], "rx": 138, "ry": 34,
       "style": { "color": "#C8442C", "width": 2.6, "roughness": 1.6 } }
   ]
 }
