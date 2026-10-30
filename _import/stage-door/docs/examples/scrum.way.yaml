@@ -1,0 +1,135 @@
+format: stage-door/v1
+name: Scrum team
+lanes:
+  - id: product
+    name: Product
+    color: prod
+  - id: team
+    name: Development team
+    color: tech
+roles:
+  - id: po
+    acronym: PO
+    name: Product Owner
+    lane: product
+  - id: sm
+    acronym: SM
+    name: Scrum Master
+    lane: team
+  - id: dev
+    acronym: DEV
+    name: Developers
+    lane: team
+phases:
+  - id: backlog
+    name: Backlog
+  - id: sprint
+    name: Sprint
+  - id: after
+    name: After the sprint
+stages:
+  - id: capture
+    name: Capture
+    phase: backlog
+    lane: product
+    roles:
+      - po
+    question: Who asked for it, and why?
+    outputs:
+      - id: item
+        name: Backlog item with its why
+  - id: refine
+    name: Refine
+    phase: backlog
+    lane: team
+    roles:
+      - dev
+      - po
+    question: Do we understand it well enough to size it?
+    outputs:
+      - id: criteria
+        name: Acceptance criteria
+      - id: estimate
+        name: Estimate
+  - id: build
+    name: Build
+    phase: sprint
+    lane: team
+    roles:
+      - dev
+      - sm
+    question: Does it meet the acceptance criteria?
+    outputs:
+      - id: increment
+        name: Increment that works
+    activities:
+      - id: pairing
+        name: Code review by a second developer
+        required: true
+    wip: 3
+  - id: accept
+    name: Accept
+    phase: sprint
+    lane: product
+    roles:
+      - po
+    question: Is it what was asked?
+    outputs:
+      - id: accepted
+        name: Item accepted
+  - id: release
+    name: Release
+    phase: after
+    lane: team
+    roles:
+      - dev
+    question: Is it in the hands of users?
+    outputs:
+      - id: notes
+        name: Release notes
+  - id: measure
+    name: Measure the outcome
+    phase: after
+    lane: product
+    roles:
+      - po
+    question: Did it change what we hoped?
+    outputs:
+      - id: outcome
+        name: The number two weeks later
+        kpi: true
+gates:
+  - id: ready
+    after: refine
+    name: Ready for a sprint?
+    approver: dev
+    results:
+      - id: ok
+        label: Ready
+        ok: true
+      - id: no
+        label: Not yet
+    criteria:
+      - kind: outputs
+        outputs:
+          - criteria
+          - estimate
+    on_fail: refine
+  - id: done
+    after: accept
+    name: Done?
+    approver: po
+    results:
+      - id: ok
+        label: Done
+        ok: true
+      - id: no
+        label: Back to build
+    criteria:
+      - kind: outputs
+        outputs:
+          - increment
+          - accepted
+      - kind: activities
+        stage: build
+    on_fail: build

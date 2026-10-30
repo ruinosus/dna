@@ -3,6 +3,7 @@
 // internet), the workbook (.xlsx) and a chalk-talk lesson that walks it drawing. And the way back: a workbook someone
 // changed is read as the changes it proposes, one per line, and only the ones taken go into the .way.yaml.
 //
+//   node build.mjs <id>.way.yaml --check [--lang en|pt]                       only check it: nothing is written
 //   node build.mjs <id>.way.yaml [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
 //   node build.mjs <id>.way.yaml --from <edited.xlsx> [--lang en|pt]           the changes, each with its key
 //   node build.mjs <id>.way.yaml --from <edited.xlsx> --take <key,key…|all>    writes the ones taken into the .way.yaml
@@ -25,9 +26,10 @@ const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
 }
-const flags = new Set(['--html', '--xlsx', '--lesson', '--all', ...valued])
+const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--all', ...valued])
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
-const usage = `usage: node build.mjs <id>.way.yaml [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
+const usage = `usage: node build.mjs <id>.way.yaml --check [--lang en|pt]
+       node build.mjs <id>.way.yaml [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
        node build.mjs <id>.way.yaml --from <edited.xlsx> [--take <key,key…|all>]`
 const lang = option('--lang') ?? 'en'
 const fail = (msg) => {
@@ -118,6 +120,7 @@ if (argv.includes('--from')) {
 }
 
 // ---- what to make ----
+if (argv.includes('--check')) process.exit(0)
 const all = argv.includes('--all')
 const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), lesson: all || argv.includes('--lesson') }
 if (!want.xlsx && !want.lesson) want.html = true

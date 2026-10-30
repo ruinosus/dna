@@ -199,6 +199,8 @@ app.addEventListener('click', (e) => {
   render()
   if (focus) (app.querySelector(focus) as HTMLElement | null)?.focus()
   if (d.look) app.querySelector('.sd-picked')?.scrollIntoView({ block: 'nearest', inline: 'center' })
+  // the detail beside the map on a wide screen, under it otherwise: brought into view when it is under
+  if (d.stage || d.gate) app.querySelector('.sd-detail')?.scrollIntoView({ block: 'nearest' })
 })
 
 render()

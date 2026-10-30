@@ -1,0 +1,170 @@
+format: stage-door/v1
+name: Entrega de funcionalidade
+lanes:
+  - id: produto
+    name: Produto
+    color: prod
+  - id: engenharia
+    name: Engenharia
+    color: tech
+  - id: qualidade
+    name: Qualidade
+    color: qa
+roles:
+  - id: po
+    acronym: PO
+    name: Product Owner
+    lane: produto
+  - id: ux
+    acronym: UX
+    name: Design
+    lane: produto
+  - id: tl
+    acronym: TL
+    name: Tech Lead
+    lane: engenharia
+  - id: dev
+    acronym: DEV
+    name: Desenvolvimento
+    lane: engenharia
+  - id: qa
+    acronym: QA
+    name: Qualidade
+    lane: qualidade
+phases:
+  - id: descoberta
+    name: Descoberta
+  - id: entrega
+    name: Entrega
+  - id: operacao
+    name: Operação
+stages:
+  - id: ideia
+    name: Ideia
+    phase: descoberta
+    lane: produto
+    roles:
+      - po
+    question: Vale a pena olhar?
+    outputs:
+      - id: problema
+        name: Problema escrito
+  - id: entender
+    name: Entendimento
+    phase: descoberta
+    lane: produto
+    roles:
+      - po
+      - ux
+    question: Quem sofre e quanto?
+    outputs:
+      - id: partida
+        name: Número de partida
+        kpi: true
+      - id: meta
+        name: Meta
+        kpi: true
+  - id: prototipo
+    name: Protótipo
+    phase: descoberta
+    lane: engenharia
+    roles:
+      - ux
+      - dev
+    question: Funciona na mão de quem usa?
+    outputs:
+      - id: testado
+        name: Protótipo testado com 5 pessoas
+    activities:
+      - id: roteiro
+        name: Roteiro de teste
+      - id: sessoes
+        name: 5 sessões com usuários
+        required: true
+  - id: construir
+    name: Construção
+    phase: entrega
+    lane: engenharia
+    roles:
+      - dev
+      - tl
+    question: Está pronto para testar?
+    outputs:
+      - id: codigo
+        name: Código revisado
+      - id: automaticos
+        name: Testes automáticos
+    activities:
+      - id: review
+        name: Code review
+        required: true
+    where: DEV
+  - id: testar
+    name: Testes
+    phase: entrega
+    lane: qualidade
+    roles:
+      - qa
+    question: Passa nos casos de teste?
+    outputs:
+      - id: relatorio
+        name: Relatório de testes
+    where: QA
+  - id: lancar
+    name: Lançamento
+    phase: operacao
+    lane: engenharia
+    roles:
+      - tl
+      - dev
+    question: Está no ar sem susto?
+    outputs:
+      - id: nota
+        name: Nota de lançamento
+    where: PRD
+  - id: medir
+    name: Medição
+    phase: operacao
+    lane: produto
+    roles:
+      - po
+    question: Bateu a meta?
+    outputs:
+      - id: medido
+        name: Número depois de 30 dias
+        kpi: true
+gates:
+  - id: construir-gate
+    after: prototipo
+    name: Vale construir?
+    approver: po
+    results:
+      - id: sim
+        label: Sim
+        ok: true
+      - id: nao
+        label: Não
+    criteria:
+      - kind: outputs
+        outputs:
+          - partida
+          - meta
+          - testado
+    on_fail: entender
+  - id: producao-gate
+    after: testar
+    name: Pronto para produção?
+    approver: tl
+    results:
+      - id: sim
+        label: Sim
+        ok: true
+      - id: nao
+        label: Não
+    criteria:
+      - kind: outputs
+        outputs:
+          - relatorio
+      - kind: activities
+        stage: construir
+    on_fail: construir
