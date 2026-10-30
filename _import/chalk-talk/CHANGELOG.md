@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.7.0 — 2026-10-30
+
+Write it as text — or bring a Mermaid flowchart.
+
+- **Text recipes** (`.chalk`, or a ```chalk-talk block in Markdown): one step per line, `# chapter`, `> narration`,
+  indented steps inside rows, grids and `when`, `json {…}` for anything else. Errors name the line. The skill now
+  writes the recipe as text (`references/text.md`); JSON still works.
+- **Mermaid, animated**: a ```mermaid flowchart (or `.mmd`) with `%% # chapter` and `%% > narration` comments becomes a
+  hand-drawn lesson, drawn in the order of its arrows — the same block still renders as a plain diagram on GitHub. The
+  layout comes from mermaid-to-excalidraw (MIT), bundled as `scripts/mermaid.mjs` and loaded only when needed.
+- `build.mjs` reads `.json`, `.chalk`, `.mmd` and `.md` (every ```chalk-talk / ```mermaid block is a lesson; several
+  make a course). A page can carry the recipe as text: `<script type="text/chalk-talk" id="chalk-recipe">`.
+- Two new examples: a coin jar (text) and a coffee order (Mermaid).
+
 ## 0.6.1 — 2026-10-30
 
 What the evals found, fixed:

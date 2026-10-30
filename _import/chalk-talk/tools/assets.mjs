@@ -41,7 +41,7 @@ symlinkSync(engine, join(here, '.engine'))
 // The contract, for scripts/build.mjs: plain ESM, no dependency; esbuild's file-path comments left out.
 const contract = await build({
   stdin: {
-    contents: `export { validateScene, chaptersFor, defaultValues } from './recipe'\nexport { PROP_NAMES, PROP_ALIASES } from './props'\n`,
+    contents: `export { validateScene, chaptersFor, defaultValues } from './recipe'\nexport { PROP_NAMES, PROP_ALIASES } from './props'\nexport { parseChalk, printChalk, ChalkTextError } from './text'\n`,
     resolveDir: drawing,
     loader: 'ts',
   },
@@ -49,6 +49,26 @@ const contract = await build({
 })
 const code = contract.outputFiles[0].text.split('\n').filter((l) => !/^\/\/ .*\.ts$/.test(l)).join('\n')
 writeFileSync(join(skill, 'scripts/contract.mjs'), `${banner}\n${code}`)
+
+// The Mermaid converter, apart (it is large): loaded by build.mjs only for a Mermaid block. mermaid-to-excalidraw lays it
+// out and needs a DOM; linkedom stands in for the browser in Node.
+const mermaid = await build({
+  stdin: {
+    contents: [
+      "import { DOMParser, parseHTML } from 'linkedom'",
+      "Object.assign(globalThis, { DOMParser, document: parseHTML('<!doctype html><html><body></body></html>').document })",
+      "import { parseMermaidToExcalidraw } from '@excalidraw/mermaid-to-excalidraw'",
+      "import { mermaidToScene } from './mermaid'",
+      'export const fromMermaid = (source, opts) => mermaidToScene(source, parseMermaidToExcalidraw, opts)',
+    ].join('\n'),
+    resolveDir: drawing,
+    loader: 'ts',
+  },
+  bundle: true, format: 'esm', platform: 'node', target: 'node18', minify: true, write: false, logLevel: 'error',
+  nodePaths: [join(engine, 'node_modules')],
+  banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
+})
+writeFileSync(join(skill, 'scripts/mermaid.mjs'), `${banner}\n${mermaid.outputFiles[0].text}`)
 
 // The player: engine + page code in one script — inside the built page (no shell), and on its own for npm / the CDN
 // (with the shell: markup, styles and fonts, made below).
@@ -113,6 +133,6 @@ console.log(`✓ assets from the engine ${version}: player.html ${(page.length /
 // The npm package also carries the command line (npx chalk-talk …): the same scripts and page as the skill.
 mkdirSync(join(here, '../npm/scripts'), { recursive: true })
 mkdirSync(join(here, '../npm/assets'), { recursive: true })
-for (const f of ['build.mjs', 'browser.mjs', 'contract.mjs']) copyFileSync(join(skill, 'scripts', f), join(here, '../npm/scripts', f))
+for (const f of ['build.mjs', 'browser.mjs', 'contract.mjs', 'mermaid.mjs']) copyFileSync(join(skill, 'scripts', f), join(here, '../npm/scripts', f))
 copyFileSync(join(skill, 'assets/player.html'), join(here, '../npm/assets/player.html'))
 copyFileSync(join(here, '../LICENSE'), join(here, '../npm/LICENSE'))

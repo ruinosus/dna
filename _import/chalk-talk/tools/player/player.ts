@@ -3,6 +3,8 @@
 // the page around the drawing. Opened with #review, it runs the reviewer and writes the result for scripts/build.mjs.
 import { buildScope, Renderer, type Theme } from '@engine/renderer'
 import { chaptersFor, defaultValues, validateScene, type Scene } from '@engine/recipe'
+import { PROP_ALIASES, PROP_NAMES } from '@engine/props'
+import { parseChalk } from '@engine/text'
 import { reviewScene } from '@engine/review'
 import { formatNumber, interpolate } from '@engine/expr'
 import { playFrames, recordWebm } from '@engine/record'
@@ -62,7 +64,11 @@ const fontsLoaded = () => Promise.all([...document.fonts].map((f) => f.load())).
 interface Course { title: string; lessons: Scene[]; at: number }
 
 function readRecipe(): { scene: Scene; course?: Course } {
-  const raw = JSON.parse($('chalk-recipe').textContent ?? '')
+  const holder = $('chalk-recipe')
+  // The recipe may come as text (<script type="text/chalk-talk">) instead of JSON.
+  const raw = holder.getAttribute('type') === 'text/chalk-talk'
+    ? parseChalk(holder.textContent ?? '', [...PROP_NAMES, ...Object.keys(PROP_ALIASES)])
+    : JSON.parse(holder.textContent ?? '')
   if (!raw || !Array.isArray(raw.lessons)) return { scene: validateScene(raw) }
   const lessons = (raw.lessons as unknown[]).map((l) => validateScene(l))
   const wanted = Number(new URLSearchParams(location.search).get('lesson'))

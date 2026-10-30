@@ -103,6 +103,47 @@ Claude asks only what is missing, never draws before you agree the outline, and 
 («make the arrow blue», «use 5 % instead»). Ask for several lessons and they come as **one course file**, with a list
 to go from one to the next.
 
+## Write it as text — or bring a Mermaid diagram
+
+A recipe can be a few lines of text instead of JSON, right inside your Markdown:
+
+````markdown
+```chalk-talk
+title Juntar moedas ↔ o cofrinho
+theme chalkboard
+param n "moedas por mês" 1..8 = 3
+
+# O gancho
+> A Ana guarda moedas todo mês.
+person ana at 150,330 "Ana" mood=idea
+text "quer poupar" right-of ana gap 16 align=start
+
+# Desmontar
+row at 470,150 gap 14
+  repeat n: coin size 44
+bank banco at 740,450 "banco"
+ana -> banco "deposita"
+```
+````
+
+And a Mermaid flowchart you already have becomes a hand-drawn lesson. The `%%` lines are comments for Mermaid, so the
+same block still shows as a normal diagram on GitHub:
+
+````markdown
+```mermaid
+flowchart LR
+  %% # O pedido
+  %% > Você pede um café no balcão.
+  A([Você]) -->|pede| B[Caixa]
+  %% # A cozinha
+  B -->|comanda| C[Barista]
+  C -->|café pronto| A
+```
+````
+
+`node skills/chalk-talk/scripts/build.mjs page.md` turns every such block into a lesson. The whole syntax:
+[references/text.md](skills/chalk-talk/references/text.md).
+
 ## How it works
 
 Claude never writes the drawing itself. It writes a small **recipe** — JSON that says what to draw, step by step:
@@ -155,7 +196,7 @@ then Settings › Capabilities › Skills › Upload. Code execution must be on.
 **Claude API**: upload the same zip with the Skills API (`/v1/skills`) and use it with the code execution tool.
 
 **Without installing anything** — on npm as [`chalk-talk`](https://www.npmjs.com/package/chalk-talk): a page needs
-only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.6.1/player.js"></script>` (that is also
+only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.7.0/player.js"></script>` (that is also
 how the skill shows a lesson where it cannot run code), and `npx chalk-talk lesson.json` builds the one-file lesson.
 
 **Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/chalk-talk` to the folder where the tool

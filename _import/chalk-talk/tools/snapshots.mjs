@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from '../skills/chalk-talk/scripts/browser.mjs'
+import { recipesIn } from './recipes.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
@@ -13,7 +14,8 @@ const update = process.argv.includes('--update')
 const kept = join(here, 'snapshots')
 const player = readFileSync(join(root, 'skills/chalk-talk/assets/player.html'), 'utf8')
 const sources = [join(root, 'skills/chalk-talk/references/examples'), join(root, 'docs/examples')]
-const recipes = sources.flatMap((d) => readdirSync(d).filter((f) => f.endsWith('.json')).map((f) => join(d, f)))
+const recipes = []
+for (const d of sources) recipes.push(...(await recipesIn(d)))
 
 // One element a line, so a difference reads as the element that changed.
 const lines = (svg) => svg.replace(/></g, '>\n<').split('\n')
@@ -22,10 +24,9 @@ const stepOf = (line) => line.match(/data-step="(\d+)"/)?.[1]
 mkdirSync(kept, { recursive: true })
 const dir = mkdtempSync(join(tmpdir(), 'chalk-talk-snap-'))
 let changed = 0
-for (const file of recipes) {
-  const name = file.split('/').pop().replace('.json', '')
+for (const { file: name, scene } of recipes) {
   const page = join(dir, `${name}.html`)
-  const recipe = JSON.stringify(JSON.parse(readFileSync(file, 'utf8'))).replace(/</g, '\\u003c')
+  const recipe = JSON.stringify(scene).replace(/</g, '\\u003c')
   writeFileSync(page, player.replace('{{RECIPE}}', () => recipe))
   const r = runPage(page, 'snapshot')
   if (!r) throw new Error('No Chrome, Chromium or Edge: snapshots need one (set CHROME_PATH).')

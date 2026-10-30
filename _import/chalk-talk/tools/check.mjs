@@ -32,6 +32,17 @@ for (const f of readdirSync(examples)) {
   expect(r.status === 0, `${f}: ${r.stdout.trim().split('\n').filter((l) => l.startsWith('✓ review') || l.startsWith('•') || l.startsWith('!')).join(' / ') || r.stderr.trim()}`)
 }
 
+// The text and Mermaid examples of the gallery build too.
+const docs = join(skill, '../../docs/examples')
+for (const f of readdirSync(docs).filter((f) => /\.(chalk|mmd)$/.test(f))) {
+  const r = run(join(docs, f), [join(dir, f.replace(/\.[^.]+$/, '.html'))])
+  expect(r.status === 0, `${f}: ${r.stdout.trim().split('\n').filter((l) => /review/.test(l)).join(' / ') || r.stderr.trim()}`)
+}
+const badText = join(dir, 'bad.chalk')
+writeFileSync(badText, 'title X\nperson ana at 1\n')
+const bt = run(badText)
+expect(bt.status === 1 && /✗ text: line 2:/.test(bt.stderr), `a broken text names its line (${bt.stderr.trim()})`)
+
 const bad = join(dir, 'bad.json')
 writeFileSync(bad, JSON.stringify({ id: 'bad', title: 'Bad', width: 900, height: 560, steps: [{ type: 'circle', center: [100, 100] }] }))
 const b = run(bad)

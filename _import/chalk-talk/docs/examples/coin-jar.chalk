@@ -1,0 +1,24 @@
+title Juntar moedas ↔ o cofrinho
+id coin-jar
+theme chalkboard
+param n "moedas por mês" 1..8 = 3
+
+# O gancho
+> A Ana guarda moedas todo mês.
+person ana at 150,330 "Ana" mood=idea
+text "quer poupar" right-of ana gap 16 align=start
+
+# Desmontar
+> Cada mês, n moedas vão para o banco.
+row at 470,150 gap 14
+  repeat n: coin size 44
+bank banco at 740,450 "banco"
+ana -> banco "deposita"
+
+# A ideia
+pause ask "E em um ano, quanto junta?"
+counter at 470,270 "12*n" "{v:0} moedas num ano"
+
+quiz "Se n dobra, o total do ano…"
+  * dobra -- 12 × n cresce em linha reta
+  - quadruplica -- não há n² aqui

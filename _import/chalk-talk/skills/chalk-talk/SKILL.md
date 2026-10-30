@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "0.6.1"
+  version: "0.7.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -41,8 +41,11 @@ Wait for the person's go ("pode", "go", "yes"). An edit to the outline is a new 
 
 ## 3. Write the recipe
 
-Read `references/recipe.md` before writing: the step types, the expressions, the palette, the space rules and an
-example. `references/examples/` has seven finished recipes (open one similar to yours if unsure). Keep:
+Write it as **text**, one step per line (`references/text.md`: short, and the person can read and change it); what each
+step draws, the expressions, the palette and the space rules are in `references/recipe.md` — read both before
+writing. `references/examples/` has finished recipes in JSON (open one similar to yours if unsure); JSON still works.
+If the person gives a **Mermaid flowchart**, keep it as it is, add `%% title`, `%% # chapter` and `%% > narration`
+lines, and build it as a `.mmd` (`references/text.md` shows how). Keep:
 
 - 8 to 40 steps, one `chapter` on the first step of each part of the outline, one short `say` when the idea changes;
 - every text in the person's language, and `locale` set to it ("en-US", "pt-BR"…) so numbers are written its way;
@@ -56,16 +59,17 @@ example. `references/examples/` has seven finished recipes (open one similar to 
   `quiz` at the end — only when the person mentions a class, students or a talk, and then in the outline (never in
   the questions of step 1).
 
-Save it as `<id>.json`: in the folder the person is working in, or, when an outputs folder exists for files the person
-downloads (on claude.ai, `/mnt/user-data/outputs`), there.
+Save it as `<id>.chalk` (or `<id>.mmd`, `<id>.json`): in the folder the person is working in, or, when an outputs
+folder exists for files the person downloads (on claude.ai, `/mnt/user-data/outputs`), there. A `.md` file is read
+too: each ```chalk-talk and ```mermaid block in it is a lesson.
 
 ## 4. Build and check
 
 ```
-node scripts/build.mjs <id>.json
+node scripts/build.mjs <id>.chalk
 ```
 
-It prints a short report and writes `<id>.html` next to the recipe:
+It prints a short report and writes `<id>.html` next to the recipe (`✗ text: line N: …` points at a line of the text):
 
 - `✗ contract: …` (exit 1): the recipe breaks the format; nothing was written. Fix exactly what the message says.
 - `! review …` (exit 3): drawn, but something leaves the paper, a text covers another or a line crosses a text — at
@@ -96,11 +100,14 @@ it. The player loads from the CDN and checks the recipe itself:
 <!doctype html>
 <meta charset="utf-8">
 <title>LESSON TITLE</title>
-<script type="application/json" id="chalk-recipe">THE RECIPE JSON</script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.6.1/player.js"></script>
+<script type="text/chalk-talk" id="chalk-recipe">
+THE RECIPE AS TEXT
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.7.0/player.js"></script>
 ```
 
-Write `<` inside the JSON as `\u003c`. If the page says the recipe could not be opened, fix what it says.
+The text goes as it is (a JSON recipe also works, with `type="application/json"`; write `<` in it as `\u003c`). If
+the page says the recipe could not be opened, fix the line it names.
 
 ## 6. Changing it later
 

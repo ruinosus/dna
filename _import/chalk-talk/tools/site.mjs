@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { browser } from '../skills/chalk-talk/scripts/browser.mjs'
+import { recipesIn } from './recipes.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
@@ -16,10 +17,10 @@ const exe = browser()
 if (!exe) throw new Error('No Chrome, Chromium or Edge: the pictures need one (set CHROME_PATH).')
 
 const sources = [join(docs, 'examples'), join(root, 'skills/chalk-talk/references/examples')]
-const lessons = sources.flatMap((d) => readdirSync(d).filter((f) => f.endsWith('.json')).sort().map((f) => {
-  const scene = JSON.parse(readFileSync(join(d, f), 'utf8'))
-  return { file: f.replace('.json', ''), scene, english: (scene.locale ?? 'pt-BR').startsWith('en') }
-}))
+const lessons = []
+for (const d of sources) {
+  for (const { file, scene } of await recipesIn(d)) lessons.push({ file, scene, english: (scene.locale ?? 'pt-BR').startsWith('en') })
+}
 
 for (const dir of ['lessons', 'thumbs']) {
   rmSync(join(docs, dir), { recursive: true, force: true })

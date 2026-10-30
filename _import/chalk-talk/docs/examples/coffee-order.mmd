@@ -1,0 +1,11 @@
+flowchart LR
+  %% title Um café, do pedido à xícara
+  %% # O pedido
+  %% > Você pede um café no balcão.
+  A([Você]) -->|pede| B[Caixa]
+  %% # A cozinha
+  %% > O caixa passa a comanda para o barista.
+  B -->|comanda| C[Barista]
+  %% # A volta
+  %% > O café pronto volta para você.
+  C -->|café pronto| A
