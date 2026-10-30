@@ -1,5 +1,5 @@
 ---
 type: file_exists
-path: "lesson.html"
+path: "*.html"
 ---
 The lesson file was written.

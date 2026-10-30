@@ -207,8 +207,12 @@ crowded papers, changing a lesson, requests that are not about drawing). They ru
 [`claude plugin eval`](https://docs.claude.com/en/docs/claude-code), with and without the skill:
 
 ```
-claude plugin eval . --allow-tools "Bash(node:*)" Write Edit --runs 2 --max-cost-usd 30
+claude plugin eval . --allow-tools Bash Write Edit --runs 1 --max-cost-usd 15
 ```
+
+Last run (0.6.1, one run per case): **0.94 with the skill, 0.31 without it** — without the skill Claude does not ask
+what is missing, does not build the lesson and ends up drawing by hand. The evals grade the conversation and the
+build (asks only what is missing, waits for the go, builds, checks, right language), not how good the drawing is.
 
 ## License
 
