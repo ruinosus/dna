@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.4.0 — 2026-10-30
+
+A lesson for a class.
+
+- **Chalkboard**: `theme: "chalkboard"` draws in chalk on a green board; the player has a button to switch.
+- **A question that waits**: a `pause` with `ask` stops the lesson on a question until someone presses «Show me».
+- **Quiz**: `quiz` in the recipe — 2 to 4 options, one right, each with why — appears when the last chapter is drawn.
+- **Narration** with the browser's own voice (a button; off by default) and a **transcript** of everything the lesson
+  says, by chapter.
+- The page checks itself in parallel with the first chapter; the skill writes the JSON itself, never a generator.
+- A new example: why the Moon has phases, for an 8th-grade class (chalkboard, a question, a quiz).
+
 ## 0.3.0 — 2026-10-30
 
 New pieces.

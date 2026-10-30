@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Needs code execution with Node.js 18 or later. Chrome, Chromium or Edge, when installed, lets the script check the drawing before delivering it; without one, the page checks itself when opened.
 metadata:
-  version: "0.3.0"
+  version: "0.4.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -50,7 +50,9 @@ example. `references/examples/` has seven finished recipes (open one similar to 
   stroke by stroke, a `mood` on a person, and a `balloon` when someone says or thinks something;
 - `place` (beside another piece by its `id`), `row`/`column`/`grid`, `axis` and `timeline` instead of working out
   coordinates by hand whenever pieces sit next to each other, line up, or need marks along a line;
-- `learning` always: goal, question, one grounded answer, and the caveat (what was simplified).
+- `learning` always: goal, question, one grounded answer, and the caveat (what was simplified);
+- for a class: `theme: "chalkboard"`, a `pause` with `ask` opening the part that answers it (the lesson waits), and a
+  `quiz` at the end — when the person mentions a class, students or a talk, offer them in the outline.
 
 Save it as `<id>.json`: in the folder the person is working in, or, when an outputs folder exists for files the person
 downloads (on claude.ai, `/mnt/user-data/outputs`), there.
@@ -89,4 +91,5 @@ rest as it is, build again and say what changed. A different hook or mold is a n
 - Never edit `assets/` or `scripts/contract.mjs`: they are generated, and the player inside them is the same one the
   recipe contract was written for.
 - Never put HTML, links, scripts or images in a recipe: texts are plain text, colours are hex or names.
+- Never write a script to generate the recipe: write the JSON itself (expressions and `repeat` do the arithmetic).
 - Without code execution, say that this skill needs it to build the drawing and stop; do not hand-write the HTML.

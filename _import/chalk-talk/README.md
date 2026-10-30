@@ -35,6 +35,14 @@ hand.
     <td><i>«Explain compound interest by drawing it, for a teenager who just got birthday money.»</i><br>Interest on interest, mark by mark; move the yearly rate.</td>
     <td><i>«Explain by drawing how this very skill works.»</i><br>Yes — chalk-talk drew its own diagram. In the first build the check caught the circle crossing a label and Claude fixed it.</td>
   </tr>
+  <tr>
+    <td width="50%"><img src="docs/thumbs/moon-phases.png" alt="On a chalkboard: the Sun, the Earth and the Moon at eight places of its orbit, each half lit; on the right, the Moon as seen from Earth"></td>
+    <td width="50%"><img src="docs/thumbs/supply-demand.png" alt="A seller and a buyer talk in balloons at a market; a demand line and the crates that arrived set the price"></td>
+  </tr>
+  <tr>
+    <td><i>«Explain why the Moon has phases by drawing it, for my 8th-grade science class. Make it work for the classroom.»</i><br>Claude chose the chalkboard, a question the lesson waits on, and a quiz at the end. Slide the day and the Moon goes round.</td>
+    <td><i>«Explain supply and demand by drawing a conversation at a farmers market.»</i><br>Balloons for who speaks; move how many crates arrived and the price follows the demand line.</td>
+  </tr>
 </table>
 
 **[Open the gallery](https://ruinosus.github.io/chalk-talk/)** to play every lesson in your browser. The recipes behind
@@ -53,6 +61,11 @@ these drawings are in [`docs/examples/`](docs/examples). Build any of them with
 - **Think about it**: a new situation to think through, one possible answer, and where the comparison stops.
 - **Checked**: when the file opens, it checks itself at the values' extremes. Nothing should leave the paper and no
   text should cover another.
+- **Chalkboard**: a button turns the paper into a green board with chalk (or the recipe asks for it, for a class).
+- **A question that waits**: the lesson can stop on a question until someone presses «Show me» — time for the class
+  to answer.
+- **Quiz** at the end: pick an option, see why it is right or not.
+- **Narration** with the browser's own voice (off by default) and a **transcript** of everything the lesson says.
 - **Download** the paper as PNG or SVG.
 - **Language**: the page speaks English or Portuguese, following the browser. Numbers in the drawing follow the
   recipe's language (`3.00` in English, `3,00` in Portuguese).

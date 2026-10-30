@@ -15,12 +15,12 @@
       <span id="category" class="eyebrow"></span>
       <h1 id="title"></h1>
     </div>
-    <div id="downloads" class="downloads"><button id="png" type="button">PNG</button><button id="svg" type="button">SVG</button></div>
+    <div class="tools"><button id="board" type="button" aria-pressed="false"></button><button id="voice" type="button" aria-pressed="false"></button><div id="downloads" class="downloads"><button id="png" type="button">PNG</button><button id="svg" type="button">SVG</button></div></div>
   </header>
   <nav id="chapters" class="chapters" aria-label="Chapters"></nav>
   <div class="layout">
     <section class="board">
-      <div class="paper"><svg id="paper" role="img"></svg></div>
+      <div class="paper"><svg id="paper" role="img"></svg><div id="ask" class="ask" role="dialog" aria-live="polite" hidden></div></div>
       <div class="bar">
         <button id="back" type="button"></button>
         <button id="next" type="button" class="primary"></button>
@@ -32,7 +32,9 @@
     <aside>
       <section id="controls" class="card"></section>
       <section id="learning" class="card learning"></section>
+      <section id="quiz" class="card quiz" hidden></section>
       <div id="check" class="check" role="status"></div>
+      <details id="transcript" class="card transcript"></details>
       <p class="foot"><span id="keys"></span><br><span id="made"></span></p>
     </aside>
   </div>

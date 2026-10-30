@@ -1,10 +1,10 @@
 // The player inside every chalk-talk HTML file. It reads the recipe from the page, checks it, and plays it chapter by
 // chapter with the drawing engine (Renderer, chapters, reviewer). It is not a second engine: it only builds
 // the page around the drawing. Opened with #review, it runs the reviewer and writes the result for scripts/build.mjs.
-import { Renderer } from '@engine/renderer'
+import { buildScope, Renderer, type Theme } from '@engine/renderer'
 import { chaptersFor, defaultValues, validateScene, type Scene } from '@engine/recipe'
 import { reviewScene } from '@engine/review'
-import { formatNumber } from '@engine/expr'
+import { formatNumber, interpolate } from '@engine/expr'
 
 const TEXT = {
   en: {
@@ -13,6 +13,7 @@ const TEXT = {
     download: 'Download', checking: 'Checking the drawing…',
     checked: (n: number) => `Checked at ${n} ${n === 1 ? 'setting' : 'settings'}: nothing leaves the paper and no text covers another.`,
     problems: 'The check found:', broken: 'This drawing could not be opened:', keys: '→ next · ← back · Space play all', made: 'Made with chalk-talk',
+    board: 'Chalkboard', voice: 'Narration', show: 'Show me', yourTurn: 'Your turn', transcript: 'Transcript', again: 'Try another',
   },
   pt: {
     start: 'Início', back: 'Voltar', next: 'Próximo', playAll: 'Tocar tudo', chapter: (n: number, of: number) => `Capítulo ${n} de ${of}`,
@@ -20,6 +21,7 @@ const TEXT = {
     download: 'Baixar', checking: 'Conferindo o desenho…',
     checked: (n: number) => `Conferido em ${n} ${n === 1 ? 'posição' : 'posições'}: nada sai do papel e nenhum texto cobre outro.`,
     problems: 'A conferência achou:', broken: 'Este desenho não pôde ser aberto:', keys: '→ próximo · ← voltar · Espaço tocar tudo', made: 'Feito com chalk-talk',
+    board: 'Quadro-negro', voice: 'Narração', show: 'Mostrar', yourTurn: 'Sua vez', transcript: 'Transcrição', again: 'Tentar outra',
   },
 }
 const pt = navigator.language.toLowerCase().startsWith('pt')
@@ -63,6 +65,7 @@ async function snapshot(scene: Scene) {
 // ---------- #still: only the paper, the whole drawing, for a picture of it (tools/site.mjs) ----------
 async function still(scene: Scene) {
   document.body.classList.add('still')
+  document.querySelector('.paper')!.classList.toggle('is-board', scene.theme === 'chalkboard')
   const svg = document.querySelector<SVGSVGElement>('#paper')!
   await fontsLoaded()
   await new Renderer(svg).render(scene, defaultValues(scene), { animate: false })
@@ -82,6 +85,8 @@ async function play(scene: Scene) {
   const values = defaultValues(scene)
   let at = 0
   let run = 0
+  let theme: Theme = scene.theme ?? 'paper'
+  let speaking = false
 
   const chips = chapters.map((c, i) => {
     const b = tag('button', { type: 'button' }, `${i + 1} · ${c.title}`)
@@ -105,6 +110,18 @@ async function play(scene: Scene) {
     ;($('next') as HTMLButtonElement).disabled = at === chapters.length - 1
   }
 
+  // Before a beat is drawn: a pause with `ask` waits for the person; with narration on, the beat's sentence is spoken.
+  async function beat(text: string | undefined, start: number, mine: number) {
+    const step = scene.steps[start]
+    if (step.type === 'pause' && step.ask) await asked(interpolate(step.ask, buildScope(scene, values), scene.locale))
+    if (mine === run && speaking && text) await speak(text, scene.locale ?? 'pt-BR')
+  }
+
+  function paper() {
+    document.querySelector('.paper')!.classList.toggle('is-board', theme === 'chalkboard')
+    $('board').setAttribute('aria-pressed', String(theme === 'chalkboard'))
+  }
+
   // Draws up to chapter i: animated from where the last chapter ended when going forward one, at once otherwise.
   async function go(i: number, animate: boolean, from?: number) {
     at = Math.max(0, Math.min(chapters.length - 1, i))
@@ -115,13 +132,31 @@ async function play(scene: Scene) {
         animate: animate && !still,
         until: chapters[at].end,
         from: from ?? (at > 0 ? chapters[at - 1].end + 1 : 0),
+        theme,
+        beforeBeat: (text, start) => beat(text, start, mine),
       })
+      if (mine === run && at === chapters.length - 1) quiz(scene)
     } catch (e) {
       // A newer drawing took over (another click, a value moved): nothing to show.
       if (mine === run) throw e
     }
   }
 
+  ;($('board') as HTMLButtonElement).textContent = t.board
+  $('board').addEventListener('click', () => {
+    theme = theme === 'chalkboard' ? 'paper' : 'chalkboard'
+    paper()
+    go(at, false)
+  })
+  paper()
+  if ('speechSynthesis' in window) {
+    ;($('voice') as HTMLButtonElement).textContent = `🔈 ${t.voice}`
+    $('voice').addEventListener('click', () => {
+      speaking = !speaking
+      $('voice').setAttribute('aria-pressed', String(speaking))
+      if (!speaking) speechSynthesis.cancel()
+    })
+  } else $('voice').remove()
   $('back').addEventListener('click', () => go(at - 1, false))
   $('next').addEventListener('click', () => go(at + 1, true))
   $('all').addEventListener('click', () => go(chapters.length - 1, true, 0))
@@ -137,10 +172,12 @@ async function play(scene: Scene) {
 
   controls(scene, values, () => go(at, false))
   learning(scene)
+  transcript(scene, chapters)
   downloads(scene, svg)
   await fontsLoaded()
+  // The check draws hidden on its own paper: it does not wait for the lesson (a question may be waiting for a click).
+  void check(scene)
   await go(0, true)
-  check(scene)
 }
 
 function controls(scene: Scene, values: Record<string, number>, redraw: () => void) {
@@ -181,6 +218,72 @@ function learning(scene: Scene) {
   const answer = tag('details')
   answer.append(tag('summary', {}, t.answer), tag('p', {}, l.answer))
   box.append(tag('h2', {}, t.think), tag('p', {}, l.question), answer, tag('p', { class: 'caveat' }, `${t.caveat}: ${l.caveat}`))
+}
+
+// ---------- onda 3: a question that waits, the voice, the quiz, the transcript ----------
+
+/** Shows the pause's question over the paper and waits for «Show me». */
+function asked(question: string): Promise<void> {
+  const box = $('ask')
+  box.replaceChildren(tag('p', {}, question))
+  const show = tag('button', { type: 'button', class: 'primary' }, t.show)
+  box.append(show)
+  box.hidden = false
+  show.focus()
+  return new Promise((resolve) => show.addEventListener('click', () => {
+    box.hidden = true
+    resolve()
+  }, { once: true }))
+}
+
+/** Says a sentence with the browser's own voice for the recipe's language; never waits more than 20 s. */
+function speak(text: string, lang: string): Promise<void> {
+  return new Promise((resolve) => {
+    const u = new SpeechSynthesisUtterance(text)
+    u.lang = lang
+    const voice = speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith(lang.toLowerCase().slice(0, 2)))
+    if (voice) u.voice = voice
+    const done = () => resolve()
+    u.onend = done
+    u.onerror = done
+    setTimeout(done, 20000)
+    speechSynthesis.speak(u)
+  })
+}
+
+/** The question at the end, once the last chapter is drawn: pick one, see why. */
+function quiz(scene: Scene) {
+  const box = $('quiz')
+  if (!scene.quiz || box.childElementCount) return
+  box.hidden = false
+  const why = tag('p', { class: 'why', role: 'status' })
+  const options = tag('div', { class: 'options' })
+  for (const o of scene.quiz.options) {
+    const b = tag('button', { type: 'button' }, o.text)
+    b.addEventListener('click', () => {
+      options.querySelectorAll('button').forEach((x) => x.classList.remove('is-right', 'is-wrong'))
+      b.classList.add(o.right ? 'is-right' : 'is-wrong')
+      why.textContent = o.why
+      why.className = o.right ? 'why is-right' : 'why'
+    })
+    options.append(b)
+  }
+  box.append(tag('h2', {}, t.yourTurn), tag('p', {}, scene.quiz.question), options, why)
+}
+
+/** Everything the lesson says, in order, by chapter — for reading and for screen readers. */
+function transcript(scene: Scene, chapters: { title: string; start: number; end: number }[]) {
+  const box = $('transcript')
+  const scope = buildScope(scene, defaultValues(scene))
+  const list = tag('ol')
+  for (const c of chapters) {
+    const says = scene.steps.slice(c.start, c.end + 1).flatMap((s) => [s.say, s.type === 'pause' ? s.ask : undefined].filter((x): x is string => !!x))
+    const item = tag('li')
+    item.append(tag('b', {}, c.title))
+    for (const line of says) item.append(tag('p', {}, interpolate(line, scope, scene.locale)))
+    list.append(item)
+  }
+  box.append(tag('summary', {}, t.transcript), list)
 }
 
 // ---------- download: the paper as SVG (with its fonts) or PNG ----------

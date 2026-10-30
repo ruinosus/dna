@@ -1,0 +1,109 @@
+{
+ "id": "moon-phases",
+ "title": "Moon phases ↔ the Moon's shape each night",
+ "category": "Earth and Space Science",
+ "theme": "chalkboard",
+ "locale": "en-US",
+ "width": 1100,
+ "height": 640,
+ "background": "plain",
+ "learning": {
+  "goal": "Understand that the Sun always lights half of the Moon, and that the phase we see depends on how much of that lit half faces Earth as the Moon orbits.",
+  "question": "An astronaut stands on the Moon during a New Moon and looks back at Earth. What does Earth look like to them?",
+  "answer": "Almost a 'full Earth'. At New Moon the Moon sits between the Sun and Earth, so the side of Earth facing the Moon is the sunlit side. Earth shows phases too, always opposite to the Moon's.",
+  "caveat": "Not to scale: the Sun is about 400 times wider than the Moon and about 400 times farther away, and the Moon is about 30 Earth-widths from Earth. A full cycle (New Moon to New Moon) takes about 29.5 days. Shapes are shown as seen from the Northern Hemisphere; from the Southern Hemisphere they look flipped left-right. The Moon's orbit is tilted about 5 degrees, which is why we don't get an eclipse every month."
+ },
+ "params": {
+  "day": {"label": "day of the Moon's cycle", "min": 0, "max": 29, "step": 0.5, "value": 4}
+ },
+ "vars": {
+  "sx": 100, "sy": 360,
+  "ex": 420, "ey": 360, "R": 170, "gr": 17, "ar": 26,
+  "vx": 840, "vy": 280, "vr": 85,
+  "th": "2*pi*day/29.5",
+  "mx": "ex - R*cos(th)",
+  "my": "ey + R*sin(th)",
+  "ct": "cos(th)",
+  "sg": "(day <= 14.75)*2 - 1",
+  "lit": "100*(1 - cos(th))/2",
+  "kk": "floor(day/29.5*8 + 0.5)",
+  "k": "kk - 8*(kk >= 8)"
+ },
+ "quiz": {
+  "question": "A classmate says: \"The phases happen because Earth's shadow falls on the Moon.\" What's the best answer?",
+  "options": [
+   {"text": "Right: Earth's shadow makes the dark part.", "right": false, "why": "Earth's shadow only reaches the Moon during a lunar eclipse, a few times a year at most."},
+   {"text": "Wrong: as the Moon orbits, we see a different amount of its sunlit half.", "right": true, "why": "Half the Moon is always lit; where it is in its orbit decides how much of that half faces us."},
+   {"text": "Wrong: the Moon gives off less light on some nights.", "right": false, "why": "The Moon makes no light of its own; it only reflects sunlight."},
+   {"text": "Wrong: clouds hide part of the Moon.", "right": false, "why": "Clouds come and go, but the phases follow the same 29.5-day cycle everywhere on Earth."}
+  ]
+ },
+ "steps": [
+  {"type": "text", "at": [40, 62], "text": "Why does the Moon change shape?", "size": 42, "chapter": "The puzzle", "duration": 1400, "say": "Some nights the Moon is a full circle, some nights a thin sliver. What is going on?"},
+  {"type": "prop", "name": "person", "at": [985, 610], "size": 90, "mood": "worried", "id": "kid"},
+  {"type": "balloon", "to": "kid", "kind": "thought", "side": "left", "width": 270, "text": "Last week the Moon was round. Tonight it's only half. Is something covering it?"},
+
+  {"type": "circle", "center": ["sx", "sy"], "r": 55, "style": {"color": "#F2C14E", "fill": "#FFE45C", "fillStyle": "solid", "width": 2.4}, "chapter": "Sun, Earth and Moon", "duration": 1400, "say": "Let's look from far above the North Pole. The Sun is far off to the left, lighting everything."},
+  {"type": "text", "at": ["sx", "sy + 95"], "text": "Sun", "anchor": "middle", "size": 28},
+  {"type": "text", "at": ["sx", "sy - 75"], "text": "sunlight", "anchor": "middle", "size": 24, "style": {"color": "#F2C14E"}},
+  {"type": "arrow", "from": ["sx + 65", "sy - 60"], "to": ["sx + 125", "sy - 60"], "style": {"color": "#F2C14E", "width": 2.4}},
+  {"type": "arrow", "from": ["sx + 65", "sy + 60"], "to": ["sx + 125", "sy + 60"], "style": {"color": "#F2C14E", "width": 2.4}},
+  {"type": "circle", "center": ["ex", "ey"], "r": 32, "style": {"color": "#2F5BEA", "fill": "#2F5BEA", "fillStyle": "hachure", "width": 2.4}, "say": "Earth sits in the middle, and the Moon travels around it about once a month."},
+  {"type": "text", "at": ["ex + 34", "ey - 40"], "text": "Earth", "size": 24, "style": {"color": "#2F5BEA"}},
+  {"type": "circle", "center": ["ex", "ey"], "r": "R", "style": {"color": "#8C8578", "dashed": true, "width": 1.6, "roughness": 0.8}},
+  {"type": "repeat", "times": 8, "step": {"type": "circle", "id": "ghost", "center": ["ex - R*cos(i*pi/4)", "ey + R*sin(i*pi/4)"], "r": "gr", "style": {"color": "#8C8578", "fill": "#4A4A44", "fillStyle": "solid", "width": 1.6, "roughness": 0.8}}},
+  {"type": "repeat", "times": 8, "say": "Here is the key: the Sun always lights exactly half of the Moon, the half facing the Sun, wherever the Moon is.", "step": {"type": "polygon", "points": [
+   ["ex - R*cos(i*pi/4)", "ey + R*sin(i*pi/4) - gr"],
+   ["ex - R*cos(i*pi/4) - gr*0.5", "ey + R*sin(i*pi/4) - gr*0.866"],
+   ["ex - R*cos(i*pi/4) - gr*0.866", "ey + R*sin(i*pi/4) - gr*0.5"],
+   ["ex - R*cos(i*pi/4) - gr", "ey + R*sin(i*pi/4)"],
+   ["ex - R*cos(i*pi/4) - gr*0.866", "ey + R*sin(i*pi/4) + gr*0.5"],
+   ["ex - R*cos(i*pi/4) - gr*0.5", "ey + R*sin(i*pi/4) + gr*0.866"],
+   ["ex - R*cos(i*pi/4)", "ey + R*sin(i*pi/4) + gr"]
+  ], "style": {"color": "#FFE45C", "fill": "#FFE45C", "fillStyle": "solid", "width": 1.4, "roughness": 0.6}}},
+  {"type": "note", "at": [40, 590], "text": "the lit half always faces the Sun", "to": "ghost-2"},
+
+  {"type": "pause", "ms": 400, "ask": "If half of the Moon is ALWAYS lit, why don't we always see half?", "chapter": "Which half faces us?"},
+  {"type": "arrow", "from": ["mx + (ar + 6)*cos(th)", "my - (ar + 6)*sin(th)"], "to": ["ex - 40*cos(th)", "ey + 40*sin(th)"], "style": {"color": "#2F5BEA", "dashed": true, "width": 2}, "say": "From Earth we only see the half of the Moon that faces us. Sometimes that half is all lit, sometimes all dark, usually a mix."},
+  {"type": "circle", "center": ["mx", "my"], "r": "ar", "style": {"color": "#FFFFFF", "fill": "#4A4A44", "fillStyle": "solid", "width": 2.4, "roughness": 0.8}},
+  {"type": "polygon", "points": [
+   ["mx", "my - ar"],
+   ["mx - ar*0.5", "my - ar*0.866"],
+   ["mx - ar*0.866", "my - ar*0.5"],
+   ["mx - ar", "my"],
+   ["mx - ar*0.866", "my + ar*0.5"],
+   ["mx - ar*0.5", "my + ar*0.866"],
+   ["mx", "my + ar"]
+  ], "style": {"color": "#FFE45C", "fill": "#FFE45C", "fillStyle": "solid", "width": 1.4, "roughness": 0.6}},
+  {"type": "line", "from": ["mx + 1.6*ar*sin(th)", "my + 1.6*ar*cos(th)"], "to": ["mx - 1.6*ar*sin(th)", "my - 1.6*ar*cos(th)"], "style": {"color": "#2F5BEA", "dashed": true, "width": 2, "roughness": 0.6}},
+  {"type": "text", "at": ["vx", "vy - 120"], "text": "Seen from Earth", "anchor": "middle", "size": 30, "style": {"color": "#2F5BEA"}, "say": "On the right is what you'd see that night. Move the day and watch the Moon travel and change."},
+  {"type": "circle", "center": ["vx", "vy"], "r": "vr", "style": {"color": "#8C8578", "fill": "#4A4A44", "fillStyle": "solid", "width": 2, "roughness": 0.6}},
+  {"type": "polygon", "points": [
+   ["vx", "vy - vr"],
+   ["vx + sg*vr*0.5", "vy - vr*0.866"],
+   ["vx + sg*vr*0.866", "vy - vr*0.5"],
+   ["vx + sg*vr", "vy"],
+   ["vx + sg*vr*0.866", "vy + vr*0.5"],
+   ["vx + sg*vr*0.5", "vy + vr*0.866"],
+   ["vx", "vy + vr"],
+   ["vx + sg*vr*ct*0.5", "vy + vr*0.866"],
+   ["vx + sg*vr*ct*0.866", "vy + vr*0.5"],
+   ["vx + sg*vr*ct", "vy"],
+   ["vx + sg*vr*ct*0.866", "vy - vr*0.5"],
+   ["vx + sg*vr*ct*0.5", "vy - vr*0.866"]
+  ], "style": {"color": "#FFE45C", "fill": "#FFE45C", "fillStyle": "solid", "width": 1.6, "roughness": 0.4}},
+  {"type": "when", "if": "k == 0", "steps": [{"type": "text", "at": ["vx", "vy + 135"], "text": "New Moon", "anchor": "middle", "size": 32}]},
+  {"type": "when", "if": "k == 1", "steps": [{"type": "text", "at": ["vx", "vy + 135"], "text": "Waxing Crescent", "anchor": "middle", "size": 32}]},
+  {"type": "when", "if": "k == 2", "steps": [{"type": "text", "at": ["vx", "vy + 135"], "text": "First Quarter", "anchor": "middle", "size": 32}]},
+  {"type": "when", "if": "k == 3", "steps": [{"type": "text", "at": ["vx", "vy + 135"], "text": "Waxing Gibbous", "anchor": "middle", "size": 32}]},
+  {"type": "when", "if": "k == 4", "steps": [{"type": "text", "at": ["vx", "vy + 135"], "text": "Full Moon", "anchor": "middle", "size": 32}]},
+  {"type": "when", "if": "k == 5", "steps": [{"type": "text", "at": ["vx", "vy + 135"], "text": "Waning Gibbous", "anchor": "middle", "size": 32}]},
+  {"type": "when", "if": "k == 6", "steps": [{"type": "text", "at": ["vx", "vy + 135"], "text": "Third Quarter", "anchor": "middle", "size": 32}]},
+  {"type": "when", "if": "k == 7", "steps": [{"type": "text", "at": ["vx", "vy + 135"], "text": "Waning Crescent", "anchor": "middle", "size": 32}]},
+  {"type": "counter", "at": ["vx", "vy + 175"], "value": "lit", "format": "{v:0}% of the face lit", "anchor": "middle", "size": 26, "style": {"color": "#8C8578"}},
+
+  {"type": "highlight", "from": [40, 98], "to": [700, 98], "thickness": 30, "chapter": "So, the phases are...", "duration": 1400, "say": "Nothing covers the Moon. A phase is simply how much of its sunlit half is turned toward us."},
+  {"type": "text", "at": [40, 108], "text": "Phase = how much of the lit half faces Earth", "size": 30, "style": {"color": "#C8442C"}},
+  {"type": "ellipse", "center": ["mx", "my"], "rx": "ar + 16", "ry": "ar + 16", "style": {"color": "#C8442C", "width": 2.4}, "say": "And it's not Earth's shadow: that's an eclipse, and it's rare. Phases happen every month."}
+ ]
+}

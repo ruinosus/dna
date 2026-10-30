@@ -59,3 +59,24 @@ body.still { background: #fbf7ee; }
 body.still #stage { padding: 0; max-width: none; }
 body.still header, body.still .chapters, body.still .bar, body.still aside { display: none; }
 body.still .paper { border: 0; border-radius: 0; padding: 0; }
+
+/* onda 3 */
+.tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+button[aria-pressed="true"] { background: var(--accent); color: #fff; border-color: var(--accent); }
+.paper { position: relative; }
+.paper.is-board { background: #26372e; border-color: #1c2a23; }
+.ask { position: absolute; inset: auto 16px 16px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; box-shadow: 0 6px 20px rgba(0,0,0,.15); }
+.ask[hidden] { display: none; }
+.ask p { margin: 0; flex: 1 1 240px; font-size: 18px; font-weight: 700; }
+.quiz[hidden] { display: none; }
+.quiz p { margin: 0; font-size: 14px; }
+.quiz .options { display: flex; flex-direction: column; gap: 6px; }
+.quiz .options button { text-align: left; }
+.quiz .options button.is-right { background: var(--ok-bg); border-color: #9fd89f; color: var(--ok); }
+.quiz .options button.is-wrong { background: var(--warn-bg); border-color: #f1c27b; color: var(--warn); }
+.quiz .why { color: var(--muted); }
+.quiz .why.is-right { color: var(--ok); }
+.transcript summary { cursor: pointer; font-size: 14px; font-weight: 700; }
+.transcript ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+.transcript p { margin: 2px 0 0; }
+body.still .paper.is-board { border: 0; }
