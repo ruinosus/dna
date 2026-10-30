@@ -34,7 +34,7 @@ Step types (every step also takes `style`, `say`, `chapter`, `duration`, `id`; a
 - `text`: `at`, `text`, `size`, `font` ("hand" or "body"), `anchor` ("start", "middle", "end"), `rotate`.
 - `highlight`: `from`, `to`, `thickness` — a marker stroke behind the ink.
 - `pause`: `ms` — a breath between ideas.
-- `prop`: `name`, `at` (its bottom centre, where it stands), `size` (its box, 80 by default), `label` (text under it), `flip` (mirror). Names: person, person-sitting, person-pointing, house, car, bus, coin, phone, document, server, bank, cloud, queue, desk, computer, clock, lock, money-arrow. E.g. {"type":"prop","name":"person","at":[150,300],"label":"Ana","id":"ana"}.
+- `prop`: `name`, `at` (its bottom centre, where it stands), `size` (its box, 80 by default), `label` (text under it), `flip` (mirror). Names: person, person-sitting, person-pointing, house, car, bus, coin, phone, document, server, bank, cloud, queue, desk, computer, clock, lock, money-arrow, tree, school, hospital, factory, truck, cart, safe, bulb, gear, database, robot. A person can show a `mood`: happy, sad, surprised, worried or idea (a lit bulb above the head). E.g. {"type":"prop","name":"person","at":[150,300],"label":"Ana","id":"ana"}.
 - `repeat`: `times` (number or expression, up to 50) and one `step`; `i` (0 to n-1) is a value in that step. E.g. {"type":"repeat","times":"n","step":{"type":"prop","name":"coin","at":["100 + i*50",400],"size":40}}. Inside, an `id` x becomes x-0, x-1…
 - `when`: `if` (a condition) and `steps`, drawn only when it is true. E.g. {"type":"when","if":"atraso","steps":[...]}. Steps inside repeat and when take no `say`, `chapter`, `duration` nor `pause`.
 - `move`: `target` (an earlier `id`), `to`, `along` ("line" or "curve"), `ms`: the element walks until its `at` (or `center`, or `from`) is at `to`. E.g. {"type":"move","target":"pedido","to":[600,200],"along":"curve"}.
@@ -47,6 +47,13 @@ Placing without coordinates (prefer these to working out positions by hand):
 - `axis`: `from`, `to`, `domain` [low, high], `ticks` (how many parts, or a list of values), `label`, `format` with `{v}`: an arrow with marks and their numbers, written the recipe's `locale` way.
 - `timeline`: `from`, `to`, `domain` [first, last], `marks` [{"at", "label" above, "text" under}]: a line of time with each mark in its place.
 Steps inside `row`, `column` and `grid` take no `say`, `chapter`, `duration` nor `place`.
+
+More pieces:
+- `balloon`: `to` (the `id` of who speaks), `text` (under 300 characters, wrapped), `side` (above by default; another side is used when it does not fit), `kind` ("speech" or "thought"), `width` (240 by default). Prefer it to a caption when a person says or thinks something.
+- `brace`: `from`, `to`, `label`: a curly brace grouping what lies along it, bulging under a line that runs across (left of one that runs up), the other way with `flip`.
+- `note`: `at`, `text`, and `to` (an `id`) or `point`: a handwritten blue note with a curved arrow — «look here».
+- `table`: `at`, `rows` (up to 12 rows of up to 6 short cells; the first is the header unless `header` is false; cells take `{expr}`), `size`.
+- `bars`: `box` {x, y, w, h}, `values` (numbers or expressions, up to 12), `labels`, `max`, `format` with `{v}`: bars with their value on top and label under.
 
 `style`: `color`, `width`, `roughness` (0 ruler, 1.6 default, 3 scribble), `bowing`, `fill`, `fillStyle` ("hachure", "solid", "zigzag", "cross-hatch", "dots"), `dashed` (true or false), `opacity` (0 to 1).
 

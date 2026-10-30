@@ -1,0 +1,130 @@
+{
+  "id": "supply-demand-tomatoes",
+  "title": "Supply and demand ↔ tomatoes at the market",
+  "category": "Economics",
+  "locale": "en-US",
+  "width": 960,
+  "height": 680,
+  "background": "dots",
+  "learning": {
+    "goal": "See how the price settles where the crates that arrived (supply) meet what buyers are willing to pay (demand), and why more crates mean a lower price.",
+    "question": "A late frost ruins half of the tomato fields near town. Next Saturday, what happens to the price of a crate at the market, and why?",
+    "answer": "Fewer crates arrive, so the supply line moves to the left. With the same buyers wanting tomatoes, the seller can sell every crate at a higher price: the meeting point slides up along the demand curve. Some buyers decide tomatoes are too expensive and buy fewer or none.",
+    "caveat": "The prices are made up to keep the numbers simple, and the demand curve is drawn as a straight line. Supply is fixed here because the crates are already at the market and tomatoes spoil in a day or two; over a season, farmers react to prices by planting more or less. Demand can move too: a heatwave or a pasta-sauce trend shifts the whole blue line."
+  },
+  "params": {
+    "crates": { "label": "tomato crates that arrived", "min": 5, "max": 35, "step": 1, "value": 12 }
+  },
+  "vars": {
+    "price": "40 - crates",
+    "bx": 560,
+    "by": 200,
+    "bw": 340,
+    "bh": 320,
+    "qx": "bx + crates / 40 * bw",
+    "py": "by + bh - price / 40 * bh"
+  },
+  "steps": [
+    {
+      "type": "text", "at": [40, 64], "text": "Why are tomatoes cheap some Saturdays?", "size": 40,
+      "chapter": "The question",
+      "say": "Same market, same tomatoes. So why is a crate expensive one Saturday and cheap the next?"
+    },
+    { "type": "prop", "name": "person", "at": [120, 360], "label": "Rosa, seller", "id": "rosa" },
+    { "type": "prop", "name": "person", "at": [370, 360], "label": "Sam, buyer", "flip": true, "id": "sam" },
+    {
+      "type": "repeat", "times": "crates",
+      "step": {
+        "type": "polygon",
+        "points": [
+          ["90 + (i - 7*floor(i/7)) * 44", "540 - floor(i/7) * 30"],
+          ["124 + (i - 7*floor(i/7)) * 44", "540 - floor(i/7) * 30"],
+          ["124 + (i - 7*floor(i/7)) * 44", "564 - floor(i/7) * 30"],
+          ["90 + (i - 7*floor(i/7)) * 44", "564 - floor(i/7) * 30"]
+        ],
+        "style": { "color": "#C8442C", "fill": "#C8442C", "fillStyle": "hachure", "width": 1.6 }
+      }
+    },
+    {
+      "type": "counter", "at": [244, 604], "value": "crates", "format": "{v} crates arrived today", "size": 28, "anchor": "middle"
+    },
+    {
+      "type": "balloon", "to": "sam", "text": "How much for a crate of tomatoes?", "width": 200,
+      "chapter": "The conversation",
+      "say": "Sam asks the price. Rosa's answer depends on how many crates the truck brought this morning."
+    },
+    {
+      "type": "when", "if": "crates <= 15",
+      "steps": [
+        { "type": "balloon", "to": "rosa", "text": "Only {crates} crates came in, and everyone wants them. ${price:0} a crate!", "width": 210 }
+      ]
+    },
+    {
+      "type": "when", "if": "crates > 15 and crates < 26",
+      "steps": [
+        { "type": "balloon", "to": "rosa", "text": "{crates} crates today, a normal day. ${price:0} a crate.", "width": 210 }
+      ]
+    },
+    {
+      "type": "when", "if": "crates >= 26",
+      "steps": [
+        { "type": "balloon", "to": "rosa", "text": "{crates} crates, and they go soft by tonight! ${price:0} a crate, please buy!", "width": 210 }
+      ]
+    },
+    {
+      "type": "text", "at": [244, 648], "text": "price: ${price:0} a crate", "size": 32, "anchor": "middle",
+      "style": { "color": "#C8442C" },
+      "say": "Few crates: Rosa can ask a lot, someone will pay. Many crates: she has to cut the price before they spoil."
+    },
+    {
+      "type": "text", "at": ["bx", 120], "text": "demand: what buyers will pay", "size": 24,
+      "style": { "color": "#2F5BEA" },
+      "chapter": "Two lines meet",
+      "say": "Put it on a graph. The blue line is demand: the cheaper the crate, the more crates buyers take."
+    },
+    {
+      "type": "axis", "from": ["bx", "by + bh"], "to": ["bx + bw", "by + bh"], "domain": [0, 40], "ticks": 4,
+      "label": "crates", "format": "{v}"
+    },
+    {
+      "type": "axis", "from": ["bx", "by + bh"], "to": ["bx", "by"], "domain": [0, 40], "ticks": 4,
+      "label": "$ per crate", "format": "${v}"
+    },
+    {
+      "type": "plot", "fn": "40 - x", "domain": [0, 40], "range": [0, 40],
+      "box": { "x": "bx", "y": "by", "w": "bw", "h": "bh" },
+      "style": { "color": "#2F5BEA", "width": 3.2 }
+    },
+    {
+      "type": "text", "at": ["bx", 154], "text": "supply: the crates that arrived", "size": 24,
+      "style": { "color": "#C8442C" },
+      "say": "The red line is supply: today it is simply the crates on the truck, whatever the price."
+    },
+    {
+      "type": "line", "from": ["qx", "by"], "to": ["qx", "by + bh"],
+      "style": { "color": "#C8442C", "width": 3.2 }
+    },
+    {
+      "type": "line", "from": ["bx", "py"], "to": ["qx", "py"],
+      "style": { "color": "#8C8578", "width": 2, "dashed": true },
+      "say": "Where the lines cross is the price that sells every crate: the market price."
+    },
+    {
+      "type": "circle", "center": ["qx", "py"], "r": 9,
+      "style": { "color": "#2B2B2B", "fill": "#2B2B2B", "fillStyle": "solid" }
+    },
+    {
+      "type": "ellipse", "center": ["qx", "py"], "rx": 34, "ry": 26,
+      "style": { "color": "#E0B800", "width": 3 },
+      "chapter": "The close",
+      "say": "Move the crates. More crates push the red line right and the price slides down the blue line."
+    },
+    {
+      "type": "highlight", "from": [452, 628], "to": [920, 628], "thickness": 30
+    },
+    {
+      "type": "text", "at": [920, 638], "text": "same buyers + more crates = lower price", "size": 24, "anchor": "end",
+      "say": "Fewer crates, the opposite: buyers compete and the price climbs."
+    }
+  ]
+}

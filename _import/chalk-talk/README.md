@@ -114,10 +114,11 @@ Then `scripts/build.mjs` (plain Node, no dependencies):
    to Claude (exit 3), at most twice. Without a browser, the page checks itself when opened.
 
 What a recipe can draw: text, lines and arrows, curves and polygons, circles, plots of a formula, a yellow marker,
-labelled cards, 18 hand-drawn props (`person`, `house`, `bus`, `coin`, `phone`, `server`, `bank`, `cloud`, `queue`,
-`clock`, `lock`…), repeated pieces (`repeat`), pieces that appear on a condition (`when`), movement (`move`), arrows
-between named pieces (`link`), numbers that count up (`counter`), axes with marks (`axis`) and timelines
-(`timeline`). Positions can be expressions over the values, so the drawing follows the sliders — or be left to the
+labelled cards, 29 hand-drawn props (`person`, `house`, `bus`, `coin`, `phone`, `server`, `bank`, `school`, `hospital`,
+`truck`, `database`, `robot`…) — a person can look happy, sad, surprised, worried or have an idea — repeated pieces (`repeat`), pieces that appear on a condition (`when`), movement (`move`), arrows
+between named pieces (`link`), numbers that count up (`counter`), axes with marks (`axis`), timelines (`timeline`),
+speech and thought balloons (`balloon`), curly braces (`brace`), handwritten notes with an arrow (`note`), tables
+(`table`) and bars (`bars`). Positions can be expressions over the values, so the drawing follows the sliders — or be left to the
 engine: `place` puts a piece beside another by name, and `row`, `column` and `grid` line pieces up. A piece that would
 leave the paper comes back in on its own. The full contract is in
 [`references/recipe.md`](skills/chalk-talk/references/recipe.md).

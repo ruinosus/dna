@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.0 — 2026-10-30
+
+New pieces.
+
+- `balloon`: what a person says (speech) or thinks (thought), wrapped, on the side asked — or the first side that fits.
+- `brace` (a curly brace with a label), `note` (a handwritten note with a curved arrow), `table` (cells take
+  `{expr}`) and `bars` (values that follow the sliders).
+- Eleven props: tree, school, hospital, factory, truck, cart, safe, bulb, gear, database, robot.
+- A person's `mood`: happy, sad, surprised, worried or idea (a lit bulb above the head).
+- Moving a placed piece by hand nudges it (before, it did not move).
+- A new example: supply and demand at a farmers market (balloons, axes, a counter).
+
 ## 0.2.1 — 2026-10-30
 
 - The Pythagoras example: its red circle no longer cuts the result at the sliders' maximum (found by 0.2.0's stricter
