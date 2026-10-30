@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.11.0 — 2026-10-30
+
+All of Mermaid.
+
+- Every kind of Mermaid 11.17 becomes a hand-drawn lesson (zenuml, a plugin apart, is the only one left out): pie,
+  timeline, journey, gantt, xychart, quadrant, mindmap, kanban, gitGraph, sankey, block, packet, treemap, radar,
+  requirement, C4, architecture, ishikawa, venn, treeView, cynefin, eventmodeling, railroad (EBNF, ABNF, PEG) and wardley,
+  besides flowchart, sequence, class, state and ER. Each is drawn in a layout of its own, step by step; a `%% #` before
+  a section, task, slice, branch, column or rule opens a chapter, and with none each section is one.
+- sankey, wardley and eventmodeling are read by chalk-talk itself, so names with accents work (Mermaid's own lexers
+  refuse them).
+- The Mermaid support now carries Mermaid's parser: `scripts/mermaid.mjs` and `chalk-talk/embed-mermaid` are larger
+  (about 1.3 MB gzipped), still loaded only for a Mermaid block. A new example: a sankey from the bean to the cup.
+
 ## 0.10.0 — 2026-10-30
 
 More of Mermaid, and the lesson in VS Code and docs sites.

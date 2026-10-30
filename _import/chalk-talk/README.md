@@ -126,9 +126,8 @@ ana -> banco "deposita"
 ```
 ````
 
-And a Mermaid diagram you already have becomes a hand-drawn lesson — flowchart, sequence, class, state, ER, pie,
-timeline, journey, gantt, xychart, quadrant, mindmap, kanban, gitGraph, sankey, block, packet, treemap, radar,
-requirement, C4, architecture, ishikawa, venn and treeView. The `%%` lines are comments for Mermaid, so the same block still shows as a normal diagram on GitHub:
+And a Mermaid diagram you already have becomes a hand-drawn lesson — any of its 30 kinds (all of Mermaid 11.17 but
+zenuml): flowcharts and sequences, gantt and timelines, mind maps, sankey, C4, wardley maps and the rest. The `%%` lines are comments for Mermaid, so the same block still shows as a normal diagram on GitHub:
 
 ````markdown
 ```mermaid
@@ -193,7 +192,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y chalk-talk@0.10.0 "$f" "${f%.*}.svg" --svg; done
+      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y chalk-talk@0.11.0 "$f" "${f%.*}.svg" --svg; done
       - run: |
           git config user.name github-actions
           git config user.email github-actions@users.noreply.github.com
@@ -253,7 +252,7 @@ then Settings › Capabilities › Skills › Upload. Code execution must be on.
 **Claude API**: upload the same zip with the Skills API (`/v1/skills`) and use it with the code execution tool.
 
 **Without installing anything** — on npm as [`chalk-talk`](https://www.npmjs.com/package/chalk-talk): a page needs
-only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.10.0/player.js"></script>` (that is also
+only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.11.0/player.js"></script>` (that is also
 how the skill shows a lesson where it cannot run code), and `npx chalk-talk lesson.json` builds the one-file lesson.
 
 **Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/chalk-talk` to the folder where the tool

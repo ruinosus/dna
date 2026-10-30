@@ -81,9 +81,9 @@ quiz "Se n dobra, o total do ano…"
 
 ## A Mermaid diagram
 
-A Mermaid **flowchart, sequence, class, state, ER, pie, timeline, journey, gantt, xychart, quadrant, mindmap, kanban,
-gitGraph, sankey, block, packet, treemap, radar, requirement, C4, architecture, ishikawa, venn or treeView** diagram is
-also a recipe: save it as `<id>.mmd` (or put it in a
+**Any Mermaid diagram** (flowchart, sequence, class, state, ER, pie, timeline, journey, gantt, xychart, quadrant,
+mindmap, kanban, gitGraph, sankey, block, packet, treemap, radar, requirement, C4, architecture, ishikawa, venn,
+treeView, cynefin, eventmodeling, railroad, swimlanes, wardley — every kind of Mermaid 11.17 but zenuml) is also a recipe: save it as `<id>.mmd` (or put it in a
 ```mermaid block of a `.md`) and build it. Add `%% title …`, `%% # Chapter` and `%% > narration` lines — comments for
 Mermaid, so the diagram still shows as usual on GitHub. A chapter starts at the arrow (message, relation) after it. The
 drawing follows the order of the arrows, each box before the first arrow that reaches it; a sequence goes top to bottom.

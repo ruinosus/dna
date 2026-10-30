@@ -10,7 +10,7 @@ Hand-drawn lessons that draw themselves, from a small JSON **recipe** — the pl
 <meta charset="utf-8">
 <title>My lesson</title>
 <script type="application/json" id="chalk-recipe">{ "id": "my-lesson", "title": "…", "width": 900, "height": 560, "steps": [ … ] }</script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.10.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.11.0/player.js"></script>
 ```
 
 The player builds the page around the recipe — chapters, Next / Back, values to move, the check, downloads — and needs
