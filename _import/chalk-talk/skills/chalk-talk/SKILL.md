@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Needs code execution with Node.js 18 or later. Chrome, Chromium or Edge, when installed, lets the script check the drawing before delivering it; without one, the page checks itself when opened.
 metadata:
-  version: "0.4.0"
+  version: "0.5.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -70,6 +70,10 @@ It prints a short report and writes `<id>.html` next to the recipe:
   the values shown. Move or shorten what it names.
 - `✓ review` or `• review … the page checks itself when opened` (exit 0): done.
 
+**Several lessons** (a course, a series for a class): write one recipe per lesson and build them together —
+`node scripts/build.mjs one.json two.json three.json --out course.html --title "The course"` — one file with a list of
+the lessons. Each lesson is checked on its own.
+
 Fix and run again **at most twice**. If something is still wrong, deliver it and tell the person in plain words what is
 left ("with 15 % the label of the simple interest touches the title").
 
@@ -77,7 +81,8 @@ left ("with 15 % the label of the simple interest touches the title").
 
 Give the path of the `.html` file (or the file itself where the person downloads files) and say in one or two
 sentences what to look at: "Open it and press Next; in chapter 3, move the rate and watch the curve." The file has
-chapters (Next / Back, Play all), the values beside the paper, "Think about it", and PNG/SVG download. It needs no
+chapters (Next / Back, Play all), the values beside the paper, "Think about it", and PNG, SVG, GIF and WebM
+download (the GIF and the video record the lesson drawing itself — good for slides and messages). It needs no
 internet and no install, so it can be sent by e-mail or projected in a class.
 
 ## 6. Changing it later

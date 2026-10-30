@@ -55,7 +55,7 @@ const js = await build({
   entryPoints: [join(here, 'player/player.ts')],
   bundle: true, format: 'iife', target: 'es2020', minify: true, write: false, logLevel: 'warning',
   alias: { '@engine': drawing },
-  nodePaths: [join(engine, 'node_modules')],
+  nodePaths: [join(engine, 'node_modules'), join(here, 'node_modules')],
 })
 const script = js.outputFiles[0].text
 if (/<\/script/i.test(script)) throw new Error('The player script contains "</script": it would end the page early.')

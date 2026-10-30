@@ -5,6 +5,8 @@ import { buildScope, Renderer, type Theme } from '@engine/renderer'
 import { chaptersFor, defaultValues, validateScene, type Scene } from '@engine/recipe'
 import { reviewScene } from '@engine/review'
 import { formatNumber, interpolate } from '@engine/expr'
+import { playFrames, recordWebm } from '@engine/record'
+import { applyPalette, GIFEncoder, quantize } from 'gifenc'
 
 const TEXT = {
   en: {
@@ -13,7 +15,7 @@ const TEXT = {
     download: 'Download', checking: 'Checking the drawing…',
     checked: (n: number) => `Checked at ${n} ${n === 1 ? 'setting' : 'settings'}: nothing leaves the paper and no text covers another.`,
     problems: 'The check found:', broken: 'This drawing could not be opened:', keys: '→ next · ← back · Space play all', made: 'Made with chalk-talk',
-    board: 'Chalkboard', voice: 'Narration', show: 'Show me', yourTurn: 'Your turn', transcript: 'Transcript', again: 'Try another',
+    board: 'Chalkboard', voice: 'Narration', recording: (p: number) => `Recording… ${p}%`, show: 'Show me', yourTurn: 'Your turn', transcript: 'Transcript', again: 'Try another',
   },
   pt: {
     start: 'Início', back: 'Voltar', next: 'Próximo', playAll: 'Tocar tudo', chapter: (n: number, of: number) => `Capítulo ${n} de ${of}`,
@@ -21,7 +23,7 @@ const TEXT = {
     download: 'Baixar', checking: 'Conferindo o desenho…',
     checked: (n: number) => `Conferido em ${n} ${n === 1 ? 'posição' : 'posições'}: nada sai do papel e nenhum texto cobre outro.`,
     problems: 'A conferência achou:', broken: 'Este desenho não pôde ser aberto:', keys: '→ próximo · ← voltar · Espaço tocar tudo', made: 'Feito com chalk-talk',
-    board: 'Quadro-negro', voice: 'Narração', show: 'Mostrar', yourTurn: 'Sua vez', transcript: 'Transcrição', again: 'Tentar outra',
+    board: 'Quadro-negro', voice: 'Narração', recording: (p: number) => `Gravando… ${p}%`, show: 'Mostrar', yourTurn: 'Sua vez', transcript: 'Transcrição', again: 'Tentar outra',
   },
 }
 const pt = navigator.language.toLowerCase().startsWith('pt')
@@ -40,9 +42,32 @@ function tag<K extends keyof HTMLElementTagNameMap>(name: K, attrs: Record<strin
 // document.fonts.ready does not wait for a face nothing has used yet: load the embedded ones before measuring.
 const fontsLoaded = () => Promise.all([...document.fonts].map((f) => f.load())).catch(() => undefined)
 
-function readRecipe(): Scene {
-  const raw = $('chalk-recipe').textContent ?? ''
-  return validateScene(JSON.parse(raw))
+// Onda 4: the page holds one recipe, or a course — { course, lessons } — of which `?lesson=n` is the one shown.
+interface Course { title: string; lessons: Scene[]; at: number }
+
+function readRecipe(): { scene: Scene; course?: Course } {
+  const raw = JSON.parse($('chalk-recipe').textContent ?? '')
+  if (!raw || !Array.isArray(raw.lessons)) return { scene: validateScene(raw) }
+  const lessons = (raw.lessons as unknown[]).map((l) => validateScene(l))
+  const wanted = Number(new URLSearchParams(location.search).get('lesson'))
+  const at = Number.isInteger(wanted) && wanted >= 1 && wanted <= lessons.length ? wanted - 1 : 0
+  return { scene: lessons[at], course: { title: String(raw.course ?? lessons[0].title), lessons, at } }
+}
+
+/** The list of the course's lessons; each is a link to the same page with `?lesson=n`. */
+function contents(course: Course) {
+  const nav = $('course')
+  nav.hidden = false
+  nav.append(tag('b', {}, course.title))
+  const list = tag('ol')
+  course.lessons.forEach((lesson, k) => {
+    const item = tag('li')
+    const link = tag('a', { href: `?lesson=${k + 1}` }, lesson.title)
+    if (k === course.at) link.setAttribute('aria-current', 'page')
+    item.append(link)
+    list.append(item)
+  })
+  nav.append(list)
 }
 
 // ---------- #review: what scripts/build.mjs reads from a headless browser ----------
@@ -173,7 +198,7 @@ async function play(scene: Scene) {
   controls(scene, values, () => go(at, false))
   learning(scene)
   transcript(scene, chapters)
-  downloads(scene, svg)
+  downloads(scene, svg, () => theme)
   await fontsLoaded()
   // The check draws hidden on its own paper: it does not wait for the lesson (a question may be waiting for a click).
   void check(scene)
@@ -302,11 +327,38 @@ function save(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000)
 }
 
-function downloads(scene: Scene, svg: SVGSVGElement) {
+function downloads(scene: Scene, svg: SVGSVGElement, theme: () => Theme) {
   const box = $('downloads')
   box.prepend(tag('span', {}, t.download))
   const name = (ext: string) => `${(scene.id || 'drawing').replace(/[^a-z0-9-]+/gi, '-').slice(0, 60)}.${ext}`
   $('svg').addEventListener('click', () => save(new Blob([svgText(svg)], { type: 'image/svg+xml' }), name('svg')))
+  // Onda 4: the lesson drawing itself, recorded out of sight with the engine's recorder (drawing/record.ts).
+  const faces = $('chalk-fonts').textContent ?? ''
+  const recording = (button: HTMLButtonElement, make: (progress: (f: number) => void) => Promise<Blob>, ext: string) =>
+    button.addEventListener('click', async () => {
+      const label = button.textContent
+      document.querySelectorAll<HTMLButtonElement>('#downloads button').forEach((b) => (b.disabled = true))
+      try {
+        save(await make((f) => (button.textContent = t.recording(Math.round(f * 100)))), name(ext))
+      } finally {
+        button.textContent = label
+        document.querySelectorAll<HTMLButtonElement>('#downloads button').forEach((b) => (b.disabled = false))
+      }
+    })
+  const paper = () => (theme() === 'chalkboard' ? '#26372E' : '#FBF7EE')
+  if ('MediaRecorder' in window) {
+    recording($('webm') as HTMLButtonElement, (onProgress) => recordWebm(scene, defaultValues(scene), { faces, paper: paper(), theme: theme(), onProgress }), 'webm')
+  } else $('webm').remove()
+  recording($('gif') as HTMLButtonElement, async (onProgress) => {
+    const gif = GIFEncoder()
+    await playFrames(scene, defaultValues(scene), { faces, paper: paper(), theme: theme(), onProgress, fps: 8, scale: 0.6 }, (canvas) => {
+      const { data } = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height)
+      const palette = quantize(data, 64)
+      gif.writeFrame(applyPalette(data, palette), canvas.width, canvas.height, { palette, delay: 125 })
+    })
+    gif.finish()
+    return new Blob([gif.bytes()], { type: 'image/gif' })
+  }, 'gif')
   $('png').addEventListener('click', () => {
     const img = new Image()
     img.onload = () => {
@@ -333,8 +385,9 @@ async function check(scene: Scene) {
 
 async function main() {
   let scene: Scene
+  let course: Course | undefined
   try {
-    scene = readRecipe()
+    ;({ scene, course } = readRecipe())
   } catch (e) {
     if (location.hash === '#review' || location.hash === '#snapshot') {
       const out = tag('pre', { id: `chalk-${location.hash.slice(1)}` }, encodeURIComponent(JSON.stringify({ error: (e as Error).message })))
@@ -347,6 +400,7 @@ async function main() {
   if (location.hash === '#review') return review(scene)
   if (location.hash === '#snapshot') return snapshot(scene)
   if (location.hash === '#still') return still(scene)
+  if (course) contents(course)
   await play(scene)
 }
 

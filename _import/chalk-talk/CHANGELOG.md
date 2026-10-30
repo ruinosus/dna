@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 — 2026-10-30
+
+Taking it further.
+
+- **GIF and video (WebM)** of the lesson drawing itself, from the player's Download buttons (the GIF with `gifenc`,
+  MIT). The recorder is the engine's own, shared with the app it comes from.
+- **A course in one file**: `build.mjs one.json two.json … --out course.html --title "…"` — the lessons in a list,
+  each opened with `?lesson=n`, each reviewed on its own.
+- `build.mjs` only ever writes a path ending in `.html` (a second `.json` used to be taken for the output).
+
 ## 0.4.0 — 2026-10-30
 
 A lesson for a class.

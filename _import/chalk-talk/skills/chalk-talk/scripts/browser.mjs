@@ -26,15 +26,16 @@ export function browser() {
   return null
 }
 
-/** Opens `file` at `#mode` and returns what the page wrote, parsed; null without a browser, { error } when it failed. */
-export function runPage(file, mode) {
+/** Opens `file` (with the `query`, e.g. lesson=2) at `#mode` and returns what the page wrote, parsed; null without a
+ * browser, { error } when it failed. */
+export function runPage(file, mode, query = '') {
   const exe = browser()
   if (!exe) return null
   const profile = mkdtempSync(join(tmpdir(), 'chalk-talk-'))
   try {
     const dom = execFileSync(exe, [
       '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check', '--allow-file-access-from-files',
-      `--user-data-dir=${profile}`, '--virtual-time-budget=30000', '--dump-dom', `${pathToFileURL(file).href}#${mode}`,
+      `--user-data-dir=${profile}`, '--virtual-time-budget=30000', '--dump-dom', `${pathToFileURL(file).href}${query ? `?${query}` : ''}#${mode}`,
     ], { encoding: 'utf8', timeout: 90000, stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 64 * 1024 * 1024 })
     const found = dom.match(new RegExp(`<pre id="chalk-${mode}">([^<]*)</pre>`))
     return found ? JSON.parse(decodeURIComponent(found[1])) : { error: `the page did not finish the ${mode}` }

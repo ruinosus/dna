@@ -66,7 +66,8 @@ these drawings are in [`docs/examples/`](docs/examples). Build any of them with
   to answer.
 - **Quiz** at the end: pick an option, see why it is right or not.
 - **Narration** with the browser's own voice (off by default) and a **transcript** of everything the lesson says.
-- **Download** the paper as PNG or SVG.
+- **Download** the paper as PNG or SVG, or the lesson drawing itself as a **GIF** or a **video** (WebM) — for slides
+  and messages.
 - **Language**: the page speaks English or Portuguese, following the browser. Numbers in the drawing follow the
   recipe's language (`3.00` in English, `3,00` in Portuguese).
 - **One file, about 265 KB**: engine, player, fonts and recipe are all inside. Open it without internet, send it by
@@ -99,7 +100,8 @@ A real conversation in Claude Code (translated from Portuguese and shortened):
 > chapter 3 let him move the rate and watch the curve pull away from the line.
 
 Claude asks only what is missing, never draws before you agree the outline, and changes only what you ask afterwards
-(«make the arrow blue», «use 5 % instead»).
+(«make the arrow blue», «use 5 % instead»). Ask for several lessons and they come as **one course file**, with a list
+to go from one to the next.
 
 ## How it works
 
