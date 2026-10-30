@@ -1,0 +1,5 @@
+---
+type: llm
+focus: { source: file, path: library.blueprint.yaml }
+---
+The file (format front-of-house/v1) follows the notes without inventing: the moments are what the patron does in order (fill the form, wait while it is typed, get the card or be told to come back, borrow), the paper form moment carries the pain «it took 15 minutes» with its source (4 of 6 interviews); the librarian is backstage or on stage as a role, the catalog system is a system; the same-day card promise is owned by the desk lead role with «same day» as its time; the broken printer appears as a failure point. Actors are roles, not names. A feeling score appears only where the notes support it (or is left out). The person allowed small decisions: a feeling inferred from what the notes say («they hate it» → a low score), a moment split for clarity (coming back another day) or an action proposed with an owner from the notes are fine. Fail it only for a pain, a number or an owner presented as coming from the notes when the notes do not have it.
