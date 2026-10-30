@@ -95,3 +95,11 @@
 .chalk-talk.is-compact aside { display: none; margin-top: 8px; min-width: 0; }
 .chalk-talk.is-compact.show-values aside { display: flex; }
 .chalk-talk.is-compact .say { flex-basis: 160px; }
+
+/* spec 2026-10-30 (VS Code, docs): a block's mistake, and «Expand» as a dialog over the page */
+.chalk-talk-error { border: 1px solid #f1c27b; background: #fff6e5; color: #8a4b00; border-radius: 8px; padding: 10px 12px; font: 14px/1.45 system-ui, sans-serif; margin: 0.5em 0; }
+.chalk-talk-error code { display: block; margin-top: 6px; color: #6b665c; }
+.chalk-talk-block { margin: 0.75em 0; }
+.chalk-talk-dialog { width: min(1280px, 94vw); max-width: none; max-height: 92vh; border: 0; border-radius: 12px; padding: 20px 20px 24px; background: #f3f1ec; color: #242424; }
+.chalk-talk-dialog::backdrop { background: rgba(0, 0, 0, .45); }
+.chalk-talk-close { position: sticky; top: 0; float: right; z-index: 1; font: 22px/1 system-ui, sans-serif; background: #fff; border: 1px solid #cfc8b8; border-radius: 8px; width: 36px; height: 36px; cursor: pointer; color: #242424; }

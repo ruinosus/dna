@@ -126,8 +126,8 @@ ana -> banco "deposita"
 ```
 ````
 
-And a Mermaid flowchart you already have becomes a hand-drawn lesson. The `%%` lines are comments for Mermaid, so the
-same block still shows as a normal diagram on GitHub:
+And a Mermaid diagram you already have — flowchart, sequence, class, state or ER — becomes a hand-drawn lesson, node
+shapes and all. The `%%` lines are comments for Mermaid, so the same block still shows as a normal diagram on GitHub:
 
 ````markdown
 ```mermaid
@@ -143,6 +143,25 @@ flowchart LR
 
 `node skills/chalk-talk/scripts/build.mjs page.md` turns every such block into a lesson. The whole syntax:
 [references/text.md](skills/chalk-talk/references/text.md).
+
+### In your docs site
+
+On a docs site the lesson plays inside the page — ` ```chalk-talk ` for the text, ` ```chalk-mermaid ` for a Mermaid
+diagram (a plain ` ```mermaid ` is left to the site). The `chalk-talk` npm package has a remark and a markdown-it plugin,
+and the script that mounts the lessons. With Docusaurus:
+
+```js
+// docusaurus.config.js
+import { remarkChalkTalk } from 'chalk-talk/markdown'
+export default {
+  // …
+  presets: [['classic', { docs: { remarkPlugins: [remarkChalkTalk] } }]],
+  clientModules: ['chalk-talk/mount.global.js'],
+}
+```
+
+The lesson opens on chapter 1, drawn and still; **Expand** shows all of it. A VS Code extension and an Obsidian plugin
+with the same blocks are on the way.
 
 ### On GitHub: an SVG that draws itself
 
@@ -173,7 +192,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y chalk-talk@0.9.0 "$f" "${f%.*}.svg" --svg; done
+      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y chalk-talk@0.10.0 "$f" "${f%.*}.svg" --svg; done
       - run: |
           git config user.name github-actions
           git config user.email github-actions@users.noreply.github.com
@@ -233,7 +252,7 @@ then Settings › Capabilities › Skills › Upload. Code execution must be on.
 **Claude API**: upload the same zip with the Skills API (`/v1/skills`) and use it with the code execution tool.
 
 **Without installing anything** — on npm as [`chalk-talk`](https://www.npmjs.com/package/chalk-talk): a page needs
-only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.9.0/player.js"></script>` (that is also
+only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.10.0/player.js"></script>` (that is also
 how the skill shows a lesson where it cannot run code), and `npx chalk-talk lesson.json` builds the one-file lesson.
 
 **Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/chalk-talk` to the folder where the tool

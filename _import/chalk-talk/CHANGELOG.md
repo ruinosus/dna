@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.10.0 — 2026-10-30
+
+More of Mermaid, and the lesson in VS Code and docs sites.
+
+- **Mermaid:** sequence, class, state and ER diagrams are drawn too (a sequence top to bottom, message by message; ER
+  relations with their cardinality written at the ends), and flowchart nodes keep their shape — stadium, cylinder,
+  hexagon, parallelograms, trapezoids, flag, subroutine, double circle. Other kinds (pie, gantt…) say they are not
+  drawn yet.
+- npm: `chalk-talk/markdown` (`remarkChalkTalk`, `markdownItChalkTalk`) turns ```chalk-talk and ```chalk-mermaid fences
+  into blocks, and `chalk-talk/mount` (or `mount.global.js`, one script) turns the blocks into lessons — the ones on the
+  page and the ones that appear later. «Expand» opens the whole lesson in a dialog.
+
 ## 0.9.0 — 2026-10-30
 
 A lesson you can mount inside any element — the base of the Obsidian plugin.

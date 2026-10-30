@@ -91,6 +91,44 @@ const pre = document.createElement('pre'); pre.id = 'chalk-embed'; pre.textConte
   }
 }
 
+// chalk-talk/markdown: the two fences become blocks (escaped), any other fence is left alone — markdown-it and remark.
+{
+  const { blockHtml, fenceKind, markdownItChalkTalk, remarkChalkTalk } = await import(pathToFileURL(join(skill, '../../npm/markdown.js')).href)
+  const html = blockHtml('text', 'text "<b>" at 1,1')
+  const md = { renderer: { rules: { fence: () => 'PLAIN' } } }
+  markdownItChalkTalk(md)
+  const fence = (info) => md.renderer.rules.fence([{ info, content: 'A --> B' }], 0, {}, {}, {})
+  const tree = { type: 'root', children: [{ type: 'code', lang: 'chalk-mermaid', value: 'flowchart LR\n A --> B' }, { type: 'code', lang: 'js', value: 'x' }] }
+  remarkChalkTalk()(tree)
+  const ok = fenceKind('chalk-talk') === 'text' && fenceKind('chalk-mermaid {x}') === 'mermaid' && fenceKind('mermaid') === undefined &&
+    html.includes('data-chalk-talk="text"') && html.includes('&lt;b&gt;') && !html.includes('<b>') &&
+    fence('chalk-mermaid').includes('data-chalk-talk="mermaid"') && fence('js') === 'PLAIN' &&
+    tree.children[0].data?.hProperties?.dataChalkTalk === 'mermaid' && tree.children[0].data?.hChildren?.[0]?.children?.[0]?.value === 'flowchart LR\n A --> B' && !tree.children[1].data
+  expect(ok, 'chalk-talk/markdown: the two fences become blocks, the others stay (markdown-it, remark)')
+}
+
+// chalk-talk/mount: blocks on the page become lessons, a block added later too, a broken one says its line.
+{
+  const { runPage } = await import('../skills/chalk-talk/scripts/browser.mjs')
+  const { blockHtml } = await import(pathToFileURL(join(skill, '../../npm/markdown.js')).href)
+  const page = join(dir, 'mount.html')
+  const coin = readFileSync(join(docs, 'coin-jar.chalk'), 'utf8')
+  const coffee = readFileSync(join(docs, 'coffee-order.mmd'), 'utf8')
+  writeFileSync(page, `<!doctype html><meta charset="utf-8"><body>${blockHtml('text', coin)}${blockHtml('mermaid', coffee)}${blockHtml('text', 'title X\nperson ana at 1')}
+<script src="${pathToFileURL(join(skill, '../../npm/mount.global.js')).href}"></script>
+<script>
+setTimeout(() => document.body.insertAdjacentHTML('beforeend', ${JSON.stringify(blockHtml('text', 'title Later\ntext "later" at 40,60'))}), 1500)
+setTimeout(() => {
+  const blocks = [...document.querySelectorAll('[data-chalk-talk]')]
+  const out = blocks.map((b) => b.querySelector('.chalk-talk-error') ? 'error:' + b.querySelector('.chalk-talk-error').textContent.match(/line \\d+/)?.[0] : (b.querySelector('.chalk-talk svg')?.querySelectorAll('path, text').length ?? 0) > 0 && b.querySelector('.chalk-talk-source').hidden ? 'lesson' : 'nothing')
+  const pre = document.createElement('pre'); pre.id = 'chalk-mount'; pre.textContent = encodeURIComponent(JSON.stringify({ out, styles: document.querySelectorAll('#chalk-talk-styles').length })); document.body.append(pre)
+}, 6000)
+</script>`)
+  const r = runPage(page, 'mount')
+  if (!r) expect(true, 'no browser here: the mount check is skipped')
+  else expect(JSON.stringify(r.out) === JSON.stringify(['lesson', 'lesson', 'error:line 2', 'lesson']) && r.styles === 1, `chalk-talk/mount: blocks become lessons, one added later too (${JSON.stringify(r)})`)
+}
+
 const badText = join(dir, 'bad.chalk')
 writeFileSync(badText, 'title X\nperson ana at 1\n')
 const bt = run(badText)

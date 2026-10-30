@@ -1,0 +1,18 @@
+sequenceDiagram
+  %% title Um café no balcão
+  participant V as Você
+  participant C as Caixa
+  participant B as Barista
+  %% # O pedido
+  %% > Você pede um café; o caixa passa a comanda adiante.
+  V->>C: um café, por favor
+  C->>B: a comanda
+  %% # A espera
+  %% > O barista tira o expresso e confere até ficar bom.
+  Note right of B: tira o expresso
+  loop até ficar pronto
+    B->>B: confere
+  end
+  %% # A xícara
+  %% > O café volta para você.
+  B-->>V: seu café

@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "0.9.0"
+  version: "0.10.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -44,8 +44,9 @@ Wait for the person's go ("pode", "go", "yes"). An edit to the outline is a new 
 Write it as **text**, one step per line (`references/text.md`: short, and the person can read and change it); what each
 step draws, the expressions, the palette and the space rules are in `references/recipe.md` — read both before
 writing. `references/examples/` has finished recipes in JSON (open one similar to yours if unsure); JSON still works.
-If the person gives a **Mermaid flowchart**, keep it as it is, add `%% title`, `%% # chapter` and `%% > narration`
-lines, and build it as a `.mmd` (`references/text.md` shows how). Keep:
+If the person gives a **Mermaid diagram** (flowchart, sequence, class, state or ER), keep it as it is, add `%% title`,
+`%% # chapter` and `%% > narration` lines, and build it as a `.mmd` (`references/text.md` shows how); other Mermaid kinds
+are not drawn yet — say so and offer to write the lesson as text. Keep:
 
 - 8 to 40 steps, one `chapter` on the first step of each part of the outline, one short `say` when the idea changes;
 - every text in the person's language, and `locale` set to it ("en-US", "pt-BR"…) so numbers are written its way;
@@ -107,7 +108,7 @@ it. The player loads from the CDN and checks the recipe itself:
 <script type="text/chalk-talk" id="chalk-recipe">
 THE RECIPE AS TEXT
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.9.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.10.0/player.js"></script>
 ```
 
 The text goes as it is (a JSON recipe also works, with `type="application/json"`; write `<` in it as `\u003c`). If

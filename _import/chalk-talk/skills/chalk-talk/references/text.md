@@ -79,11 +79,14 @@ quiz "Se n dobra, o total do ano…"
 | `bars box 400,400,300,200 values 1,2,"3*n" labels a,b,c format="{v}%"` | bars |
 | `json {"type": …}` | any step as JSON, for anything the text has no short form for |
 
-## A Mermaid flowchart
+## A Mermaid diagram
 
-A Mermaid flowchart is also a recipe: save it as `<id>.mmd` (or put it in a ```mermaid block of a `.md`) and build it.
-Add `%% title …`, `%% # Chapter` and `%% > narration` lines — comments for Mermaid, so the diagram still shows as usual
-on GitHub. The drawing follows the order of the arrows; each box appears before the first arrow that reaches it.
+A Mermaid **flowchart, sequence, class, state or ER** diagram is also a recipe: save it as `<id>.mmd` (or put it in a
+```mermaid block of a `.md`) and build it. Add `%% title …`, `%% # Chapter` and `%% > narration` lines — comments for
+Mermaid, so the diagram still shows as usual on GitHub. A chapter starts at the arrow (message, relation) after it. The
+drawing follows the order of the arrows, each box before the first arrow that reaches it; a sequence goes top to bottom.
+Node shapes are kept (`([…])`, `[(…)]`, `{{…}}`, `[/…/]`, `>…]`, `[[…]]`, `(((…)))`, `@{ shape: … }`). Other kinds
+(pie, gantt, mindmap, timeline…) are not drawn yet: the build says so.
 
 ```
 flowchart LR
@@ -95,4 +98,14 @@ flowchart LR
   %% > O caixa passa a comanda para o barista.
   B -->|comanda| C[Barista]
   C -->|café pronto| A
+```
+
+```
+sequenceDiagram
+  %% title Um café no balcão
+  %% # O pedido
+  %% > Você pede um café.
+  Você->>Caixa: um café, por favor
+  %% # A conta
+  Caixa-->>Você: são cinco reais
 ```
