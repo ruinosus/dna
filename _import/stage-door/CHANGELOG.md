@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.1 — 2026-10-30
+
+- Smaller: `scripts/engine.mjs` 720 KB → 176 KB and the map page 96 KB → 36 KB — the engine's code the skill does
+  not use (zod, React, i18n) is left out of the bundles. Nothing else changes.
+
 ## 0.1.0 — 2026-10-30
 
 First version.
