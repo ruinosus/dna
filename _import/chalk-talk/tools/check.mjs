@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const skill = resolve(dirname(fileURLToPath(import.meta.url)), '../skills/chalk-talk')
 const build = join(skill, 'scripts/build.mjs')
@@ -52,6 +52,43 @@ else {
   const two = run(page, ['--svg', '--no-review'])
   const names = readdirSync(dir).filter((f) => f.endsWith('.svg')).sort().join(', ')
   expect(two.status === 0 && names === 'coin.svg, dois.svg, um.svg', `a Markdown file gives one SVG per block (${names}${two.status ? `: ${two.stderr.trim()}` : ''})`)
+}
+
+// chalk-talk/embed: two lessons on one page (as two blocks in a note) — each moves on its own, the styles go in once,
+// and a broken text says its line.
+{
+  const { runPage } = await import('../skills/chalk-talk/scripts/browser.mjs')
+  const embed = pathToFileURL(join(skill, '../../npm/embed.js')).href
+  const coin = readFileSync(join(docs, 'coin-jar.chalk'), 'utf8')
+  const page = join(dir, 'embed.html')
+  writeFileSync(page, `<!doctype html><meta charset="utf-8"><body><div id="a"></div><div id="b"></div><script type="module">
+import { mountLesson, readRecipe, ChalkTextError } from ${JSON.stringify(embed)}
+const out = {}
+try {
+  const scene = readRecipe(${JSON.stringify(coin)})
+  const [a, b] = [document.getElementById('a'), document.getElementById('b')]
+  await mountLesson(a, scene, { compact: true, lang: 'pt' })
+  const mb = await mountLesson(b, readRecipe(JSON.stringify(scene)), { compact: true, lang: 'en', onExpand: () => {} })
+  a.querySelector('[data-part="next"]').click()
+  await new Promise((r) => setTimeout(r, 4000))
+  const on = (root) => [...root.querySelectorAll('.chapters button')].findIndex((x) => x.classList.contains('is-on'))
+  out.chapters = [on(a), on(b)]
+  out.drawn = [a, b].map((r) => r.querySelector('svg').querySelectorAll('path').length)
+  out.styles = document.querySelectorAll('#chalk-talk-styles').length
+  out.ids = [...document.body.querySelectorAll('[id]')].map((e) => e.id).filter((id) => !/^(a|b)$/.test(id) && !id.startsWith('dw'))
+  out.expand = [a, b].map((r) => !r.querySelector('[data-part="expand"]').hidden)
+  mb.destroy()
+  out.destroyed = b.childElementCount
+  try { readRecipe('title X\\nperson ana at 1') } catch (e) { out.error = e instanceof ChalkTextError ? e.line : e.message }
+} catch (e) { out.failed = e.message }
+const pre = document.createElement('pre'); pre.id = 'chalk-embed'; pre.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(pre)
+</script>`)
+  const r = runPage(page, 'embed')
+  if (!r) expect(true, 'no browser here: the embed check is skipped')
+  else {
+    const ok = !r.failed && r.chapters?.[0] === 1 && r.chapters?.[1] === 0 && r.drawn.every((n) => n > 5) && r.styles === 1 && !r.ids.length && r.expand[0] === false && r.expand[1] === true && r.destroyed === 0 && r.error === 2
+    expect(ok, `chalk-talk/embed: two lessons on a page, each on its own (${JSON.stringify(r)})`)
+  }
 }
 
 const badText = join(dir, 'bad.chalk')

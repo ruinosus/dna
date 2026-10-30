@@ -1,23 +1,23 @@
-<svg id="paper" role="img" viewBox="0 0 900 660" aria-label="Estoicismo ↔ esperando o ônibus" style="aspect-ratio: 900 / 660;">
+<svg id="paper" role="img" viewBox="0 0 900 660" aria-label="Estoicismo ↔ esperando o ônibus" style="width: 900px; aspect-ratio: 900 / 660;">
 <defs>
 <clipPath id="dw1-clip-1-0">
-<rect x="36" y="4.930826187133789" width="411.1622619628906" height="78.8174057006836">
+<rect x="36" y="5" width="411.2158508300781" height="79">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-30">
-<rect x="63.739234924316406" y="446.7783203125" width="278.81695556640625" height="55.87058639526367">
+<rect x="63.734375" y="447" width="278.82476806640625" height="56">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-51">
-<rect x="574.0452880859375" y="435.3279724121094" width="188.16964721679688" height="52.04611587524414">
+<rect x="574.0078125" y="436" width="188.245849609375" height="52">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-57">
-<rect x="188.61512756347656" y="502.67901611328125" width="523.1312866210938" height="62.24470138549805">
+<rect x="188.5390625" y="502" width="523.2816162109375" height="63">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-59">
-<rect x="171.8033905029297" y="564.5797729492188" width="556.8206787109375" height="68.61882019042969">
+<rect x="171.7109375" y="564" width="556.999755859375" height="70">
 </rect>
 </clipPath>
 </defs>

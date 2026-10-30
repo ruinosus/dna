@@ -91,7 +91,8 @@ const fonts = [
   face('Shantell Sans', 700, font('shantell-sans', 'shantell-sans-latin-700-normal.woff2')),
 ].join('\n')
 
-const fill = { VERSION: version, FONTS: fonts, CSS: readFileSync(join(here, 'player/player.css'), 'utf8'), JS: script }
+const lessonCss = readFileSync(join(here, 'player/player.css'), 'utf8')
+const fill = { VERSION: version, FONTS: fonts, CSS: readFileSync(join(here, 'player/page.css'), 'utf8') + '\n' + lessonCss, JS: script }
 const page = readFileSync(join(here, 'player/template.html'), 'utf8').replace(/\{\{(VERSION|FONTS|CSS|JS)\}\}/g, (_, k) => fill[k])
 if (!page.includes('{{RECIPE}}')) throw new Error('The template lost its {{RECIPE}} slot.')
 writeFileSync(join(skill, 'assets/player.html'), page)
@@ -136,3 +137,16 @@ mkdirSync(join(here, '../npm/assets'), { recursive: true })
 for (const f of ['build.mjs', 'browser.mjs', 'contract.mjs', 'mermaid.mjs']) copyFileSync(join(skill, 'scripts', f), join(here, '../npm/scripts', f))
 copyFileSync(join(skill, 'assets/player.html'), join(here, '../npm/assets/player.html'))
 copyFileSync(join(here, '../LICENSE'), join(here, '../npm/LICENSE'))
+
+// Spec 2026-10-30 (Obsidian): the lesson mounted inside an element (chalk-talk/embed), and the Mermaid converter for the
+// browser apart (chalk-talk/embed-mermaid), both ES modules for a bundler.
+const embed = (entry, define = {}) => build({
+  entryPoints: [join(here, 'player', entry)],
+  bundle: true, format: 'esm', platform: 'browser', target: 'es2020', minify: true, write: false, logLevel: 'error',
+  alias: { '@engine': drawing },
+  nodePaths: [join(engine, 'node_modules'), join(here, 'node_modules')],
+  define,
+}).then((r) => r.outputFiles[0].text)
+const license = `/*! chalk-talk (engine ${version}) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */\n`
+writeFileSync(join(here, '../npm/embed.js'), license + await embed('embed.ts', { __CHALK_EMBED__: JSON.stringify({ css: lessonCss, fonts }) }))
+writeFileSync(join(here, '../npm/embed-mermaid.js'), `/*! chalk-talk Mermaid (engine ${version}) — MIT; mermaid-to-excalidraw and Mermaid (MIT) */\n` + await embed('embed-mermaid.ts'))

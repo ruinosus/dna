@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.9.0 — 2026-10-30
+
+A lesson you can mount inside any element — the base of the Obsidian plugin.
+
+- npm: `chalk-talk/embed` (`mountLesson`, `readRecipe`, `stillLesson`) mounts a lesson inside an element; several can
+  share a page, the styles live under `.chalk-talk`, the keys only work while the focus is in the lesson. `compact`
+  is the lesson for a note. `chalk-talk/embed-mermaid` (`readMermaid`) turns a Mermaid flowchart into a recipe in the
+  browser. Types included.
+- The HTML file and the CDN player mount the same lesson: nothing changes for them.
+
 ## 0.8.0 — 2026-10-30
 
 An SVG that draws itself, for a README on GitHub.

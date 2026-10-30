@@ -1,31 +1,31 @@
-<svg id="paper" role="img" viewBox="0 0 900 300" aria-label="Um café, do pedido à xícara" style="aspect-ratio: 900 / 300;">
+<svg id="paper" role="img" viewBox="0 0 900 300" aria-label="Um café, do pedido à xícara" style="width: 900px; aspect-ratio: 900 / 300;">
 <defs>
 <clipPath id="dw1-clip-1-0">
-<rect x="36" y="13.579977035522461" width="345.1717529296875" height="68.61854934692383">
+<rect x="36" y="13" width="345.2838439941406" height="70">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-2">
-<rect x="108.39144134521484" y="165.7777557373047" width="40.52226257324219" height="49.49631309509277">
+<rect x="108.3828125" y="165.89999389648438" width="40.53996276855469" height="49">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-5">
-<rect x="289.1071472167969" y="100.00221252441406" width="32.15837478637695" height="44.397050857543945">
+<rect x="289.11407470703125" y="100.30000305175781" width="32.15997314453125" height="44">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-7">
-<rect x="406.3964538574219" y="111.97776794433594" width="47.07869338989258" height="49.49631309509277">
+<rect x="406.38751220703125" y="112.10000610351562" width="47.0999755859375" height="49">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-10">
-<rect x="543.4685668945312" y="100.00221252441406" width="57.62864303588867" height="44.397050857543945">
+<rect x="543.4734497070312" y="100.30000305175781" width="57.6319580078125" height="44">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-12">
-<rect x="744.15673828125" y="165.7777557373047" width="61.950599670410156" height="49.49631309509277">
+<rect x="744.1500244140625" y="165.89999389648438" width="61.97998046875" height="49">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-15">
-<rect x="393.767822265625" y="207.50221252441406" width="72.17164611816406" height="44.397050857543945">
+<rect x="393.76251220703125" y="207.8000030517578" width="72.1759033203125" height="44">
 </rect>
 </clipPath>
 </defs>

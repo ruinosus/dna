@@ -1,35 +1,35 @@
-<svg id="paper" role="img" viewBox="0 0 900 660" aria-label="Arquitetura web ↔ da mesa à cozinha" style="aspect-ratio: 900 / 660;">
+<svg id="paper" role="img" viewBox="0 0 900 660" aria-label="Arquitetura web ↔ da mesa à cozinha" style="width: 900px; aspect-ratio: 900 / 660;">
 <defs>
 <clipPath id="dw1-clip-1-0">
-<rect x="36" y="7.480472564697266" width="593.127685546875" height="76.26776123046875">
+<rect x="36" y="8" width="593.15185546875" height="75">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-21">
-<rect x="64.28580474853516" y="452.05316162109375" width="238.80445861816406" height="54.59576225280762">
+<rect x="64.25" y="452" width="238.87982177734375" height="54">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-23">
-<rect x="278.07525634765625" y="184.77833557128906" width="61.27340316772461" height="55.87058639526367">
+<rect x="278.0703125" y="185" width="61.274932861328125" height="56">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-46">
-<rect x="370.27716064453125" y="452.05316162109375" width="214.98023986816406" height="54.59576225280762">
+<rect x="370.2421875" y="452" width="215.0478515625" height="54">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-48">
-<rect x="616.6052856445312" y="184.77833557128906" width="67.19821166992188" height="55.87058639526367">
+<rect x="616.609375" y="185" width="67.20001220703125" height="56">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-61">
-<rect x="660.3244018554688" y="452.05316162109375" width="198.7375946044922" height="54.59576225280762">
+<rect x="660.2890625" y="452" width="198.79986572265625" height="54">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-64">
-<rect x="409.9463806152344" y="491.7783203125" width="81.9478530883789" height="55.87058639526367">
+<rect x="409.9453125" y="492" width="81.94998168945312" height="56">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-66">
-<rect x="181.6533966064453" y="573.8545532226562" width="537.1073608398438" height="67.34399795532227">
+<rect x="181.609375" y="573" width="537.1995849609375" height="69">
 </rect>
 </clipPath>
 </defs>

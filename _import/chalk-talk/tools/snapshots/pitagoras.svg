@@ -1,35 +1,35 @@
-<svg id="paper" role="img" viewBox="0 0 900 560" aria-label="Pitágoras ↔ o telhado" style="aspect-ratio: 900 / 560;">
+<svg id="paper" role="img" viewBox="0 0 900 560" aria-label="Pitágoras ↔ o telhado" style="width: 900px; aspect-ratio: 900 / 560;">
 <defs>
 <pattern id="dw1-paper" width="22" height="22" patternUnits="userSpaceOnUse">
 <circle cx="11" cy="11" r="1.2" fill="#D9D2C3">
 </circle>
 </pattern>
 <clipPath id="dw1-clip-1-0">
-<rect x="36" y="19.206090927124023" width="565.614501953125" height="77.54200744628906">
+<rect x="36" y="20" width="565.7178344726562" height="77">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-5">
-<rect x="403.80181884765625" y="276.4045715332031" width="94.87376403808594" height="64.79391098022461">
+<rect x="403.8046875" y="276" width="94.87991333007812" height="65">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-7">
-<rect x="499.11016845703125" y="511.22900390625" width="83.94992065429688" height="59.694671630859375">
+<rect x="499.109375" y="511" width="83.96392822265625" height="59">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-11">
-<rect x="554" y="349.3549499511719" width="116.66127014160156" height="67.3435287475586">
+<rect x="554" y="349.5" width="116.6639404296875" height="67">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-13">
-<rect x="616" y="64.5572280883789" width="220.64151000976562" height="87.74048614501953">
+<rect x="616" y="65" width="220.64990234375" height="87">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-14">
-<rect x="616" y="125.40457153320312" width="147.38197326660156" height="64.79391098022461">
+<rect x="616" y="125" width="147.391845703125" height="65">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-15">
-<rect x="616" y="171.75570678710938" width="197.0229034423828" height="73.71757888793945">
+<rect x="616" y="172" width="197.0665283203125" height="74">
 </rect>
 </clipPath>
 </defs>

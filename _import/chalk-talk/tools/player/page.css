@@ -1,0 +1,14 @@
+/* The page around the lesson (the HTML file, player.js on a CDN): not used inside an Obsidian note. */
+body { margin: 0; background: #f3f1ec; color: #242424; font: 15px/1.5 'Shantell Sans', system-ui, sans-serif; }
+#stage { max-width: 1280px; margin: 0 auto; padding: 24px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
+.broken { background: #fff6e5; color: #8a4b00; border: 1px solid #f1c27b; border-radius: 10px; padding: 14px; }
+body.still { background: #fbf7ee; }
+body.still #stage { padding: 0; max-width: none; }
+
+/* onda 4: a course */
+.course { display: flex; flex-direction: column; gap: 6px; background: #fff; border: 1px solid #e0d8c6; border-radius: 10px; padding: 10px 14px; }
+.course[hidden] { display: none; }
+.course b { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #6b665c; }
+.course ol { margin: 0; padding-left: 20px; display: flex; flex-wrap: wrap; gap: 4px 22px; }
+.course a { color: #242424; }
+.course a[aria-current="page"] { font-weight: 700; }

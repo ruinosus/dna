@@ -1,51 +1,51 @@
-<svg id="paper" role="img" viewBox="0 0 900 560" aria-label="Compound interest ↔ your birthday money" style="aspect-ratio: 900 / 560;">
+<svg id="paper" role="img" viewBox="0 0 900 560" aria-label="Compound interest ↔ your birthday money" style="width: 900px; aspect-ratio: 900 / 560;">
 <defs>
 <pattern id="dw1-paper" width="24" height="24" patternUnits="userSpaceOnUse">
 <path d="M24 0H0V24" fill="none" stroke="#DCE5EF" stroke-width="1">
 </path>
 </pattern>
 <clipPath id="dw1-clip-1-0">
-<rect x="36" y="21.75571060180664" width="651.0514526367188" height="73.71757888793945">
+<rect x="36" y="22" width="651.19970703125" height="74">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-1-label">
-<rect x="78.05403137207031" y="264.3282470703125" width="63.877750396728516" height="52.045814514160156">
+<rect x="78.04881286621094" y="265" width="63.90196228027344" height="52">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-3">
-<rect x="207.19728088378906" y="137.40455627441406" width="68.37969589233398" height="64.79391098022461">
+<rect x="207.1953125" y="137" width="68.38397216796875" height="65">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-4">
-<rect x="33.984375" y="306.22900390625" width="165.89064025878906" height="59.694671630859375">
+<rect x="33.98400115966797" y="306" width="165.91986083984375" height="59">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-5">
-<rect x="33.984375" y="346.22900390625" width="165.97462463378906" height="59.694671630859375">
+<rect x="33.98400115966797" y="346" width="166.00384521484375" height="59">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-6">
-<rect x="36" y="397.0534362792969" width="168.79364013671875" height="54.59543228149414">
+<rect x="36" y="397" width="168.847900390625" height="54">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-7">
-<rect x="36" y="427.0534362792969" width="218.5528106689453" height="54.59543228149414">
+<rect x="36" y="427" width="218.62380981445312" height="54">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-9">
-<rect x="376" y="459.0534362792969" width="64.18900299072266" height="54.59543228149414">
+<rect x="376" y="459" width="64.20794677734375" height="54">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-10">
-<rect x="791.0238037109375" y="459.0534362792969" width="64.69285202026367" height="54.59543228149414">
+<rect x="791.015625" y="459" width="64.71197509765625" height="54">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-12">
-<rect x="396" y="142.50379943847656" width="121.40896606445312" height="57.14505386352539">
+<rect x="396" y="143" width="121.4378662109375" height="57">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-15">
-<rect x="396" y="174.67938232421875" width="195.80657958984375" height="62.244293212890625">
+<rect x="396" y="175" width="195.82989501953125" height="62">
 </rect>
 </clipPath>
 </defs>

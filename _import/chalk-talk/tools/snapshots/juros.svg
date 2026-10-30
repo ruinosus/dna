@@ -1,27 +1,27 @@
-<svg id="paper" role="img" viewBox="0 0 900 560" aria-label="Juros compostos ↔ a fatura" style="aspect-ratio: 900 / 560;">
+<svg id="paper" role="img" viewBox="0 0 900 560" aria-label="Juros compostos ↔ a fatura" style="width: 900px; aspect-ratio: 900 / 560;">
 <defs>
 <pattern id="dw1-paper" width="24" height="24" patternUnits="userSpaceOnUse">
 <path d="M24 0H0V24" fill="none" stroke="#DCE5EF" stroke-width="1">
 </path>
 </pattern>
 <clipPath id="dw1-clip-1-0">
-<rect x="36" y="19.206090927124023" width="535.632080078125" height="77.54200744628906">
+<rect x="36" y="20" width="535.7296752929688" height="77">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-2">
-<rect x="723.3565063476562" y="470.5038146972656" width="90.64352416992188" height="57.14505386352539">
+<rect x="723.34375" y="471" width="90.65625" height="57">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-3">
-<rect x="63.0726318359375" y="74.50379943847656" width="37.008583068847656" height="57.14505386352539">
+<rect x="63.0703125" y="75" width="37.01600646972656" height="57">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-5">
-<rect x="640.1626586914062" y="356.2371520996094" width="168.09295654296875" height="57.14505386352539">
+<rect x="640.125" y="356.73333740234375" width="168.1339111328125" height="57">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-9">
-<rect x="322.630859375" y="146.80816650390625" width="253.365234375" height="68.61833953857422">
+<rect x="322.5625" y="146.22802734375" width="253.4478759765625" height="70">
 </rect>
 </clipPath>
 </defs>

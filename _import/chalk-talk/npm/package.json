@@ -1,15 +1,55 @@
 {
   "name": "chalk-talk",
-  "version": "0.8.0",
-  "description": "Hand-drawn lessons that draw themselves: a player for chalk-talk recipes (one script for the browser or a CDN) and a command that checks a recipe and builds one HTML file.",
+  "version": "0.9.0",
+  "description": "Hand-drawn lessons that draw themselves: a player for chalk-talk recipes (one script for the browser or a CDN), a lesson you can mount inside any element, and a command that checks a recipe and builds one HTML file.",
   "license": "MIT",
   "type": "module",
   "author": "ruinosus",
   "homepage": "https://ruinosus.github.io/chalk-talk/",
-  "repository": { "type": "git", "url": "git+https://github.com/ruinosus/chalk-talk.git", "directory": "npm" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ruinosus/chalk-talk.git",
+    "directory": "npm"
+  },
   "bugs": "https://github.com/ruinosus/chalk-talk/issues",
-  "keywords": ["chalk-talk", "explainer", "hand-drawn", "svg", "lesson", "education", "claude", "agent-skills"],
-  "bin": { "chalk-talk": "scripts/build.mjs" },
-  "files": ["player.js", "scripts/", "assets/player.html", "README.md", "LICENSE"],
-  "engines": { "node": ">=18" }
+  "keywords": [
+    "chalk-talk",
+    "explainer",
+    "hand-drawn",
+    "svg",
+    "lesson",
+    "education",
+    "claude",
+    "agent-skills"
+  ],
+  "bin": {
+    "chalk-talk": "scripts/build.mjs"
+  },
+  "files": [
+    "player.js",
+    "embed.js",
+    "embed.d.ts",
+    "embed-mermaid.js",
+    "embed-mermaid.d.ts",
+    "scripts/",
+    "assets/player.html",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "exports": {
+    ".": "./player.js",
+    "./player.js": "./player.js",
+    "./embed": {
+      "types": "./embed.d.ts",
+      "default": "./embed.js"
+    },
+    "./embed-mermaid": {
+      "types": "./embed-mermaid.d.ts",
+      "default": "./embed-mermaid.js"
+    },
+    "./package.json": "./package.json"
+  }
 }

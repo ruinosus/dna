@@ -10,12 +10,26 @@ Hand-drawn lessons that draw themselves, from a small JSON **recipe** — the pl
 <meta charset="utf-8">
 <title>My lesson</title>
 <script type="application/json" id="chalk-recipe">{ "id": "my-lesson", "title": "…", "width": 900, "height": 560, "steps": [ … ] }</script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.8.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.9.0/player.js"></script>
 ```
 
 The player builds the page around the recipe — chapters, Next / Back, values to move, the check, downloads — and needs
 nothing else. A course is `{ "course": "Title", "lessons": [recipe, recipe, …] }`, each lesson opened with
 `?lesson=n`.
+
+## Inside an element (a note, a docs page, an app)
+
+```js
+import { mountLesson, readRecipe } from 'chalk-talk/embed'
+
+const lesson = await mountLesson(element, readRecipe(text), { compact: true })
+// … later: lesson.destroy()
+```
+
+`readRecipe` takes the text syntax or JSON (a mistake in the text says its line: `ChalkTextError`). `compact` is the
+lesson for a note: chapters, Values and Expand on top, the bar below, opening on chapter 1 drawn and still. Several
+lessons can share a page. A Mermaid flowchart: `readMermaid(text)` from `chalk-talk/embed-mermaid` (apart, as it carries
+Mermaid).
 
 ## From the command line
 
