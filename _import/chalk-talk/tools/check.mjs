@@ -21,6 +21,10 @@ const field = (k) => head.match(new RegExp(`^${k}: (.*)$`, 'm'))?.[1] ?? ''
 expect(field('name') === 'chalk-talk', 'SKILL.md name is the folder name')
 expect(field('description').length > 0 && field('description').length <= 1024, `SKILL.md description has ${field('description').length} of 1024 characters`)
 expect(readFileSync(join(skill, 'SKILL.md'), 'utf8').split('\n').length < 500, 'SKILL.md under 500 lines')
+const plugin = JSON.parse(readFileSync(join(skill, '../../.claude-plugin/plugin.json'), 'utf8')).version
+const npmVersion = JSON.parse(readFileSync(join(skill, '../../npm/package.json'), 'utf8')).version
+const cdn = readFileSync(join(skill, 'SKILL.md'), 'utf8').match(/chalk-talk@([\d.]+)\/player\.js/)?.[1]
+expect(field('metadata') === '' && head.includes(`version: "${plugin}"`) && npmVersion === plugin && cdn === plugin, `one version everywhere: plugin ${plugin}, npm ${npmVersion}, SKILL.md CDN ${cdn}`)
 
 const examples = join(skill, 'references/examples')
 for (const f of readdirSync(examples)) {

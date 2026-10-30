@@ -1,0 +1,44 @@
+# A tag v* publishes a version: the npm package (with no token — npm trusts this workflow, see "Trusted publisher" in
+# the package settings on npmjs.com) and the GitHub release with the skill's zip for claude.ai and the API.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5 or later.
+      - run: npm install -g npm@11
+
+      - name: The tag, the npm package and the skill say the same version
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          test "$(node -p "require('./npm/package.json').version")" = "$v"
+          test "$(node -p "require('./.claude-plugin/plugin.json').version")" = "$v"
+          grep -q "version: \"$v\"" skills/chalk-talk/SKILL.md
+
+      - name: Publish to npm
+        working-directory: npm
+        run: npm publish --access public
+
+      - name: GitHub release with the skill's zip
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          (cd skills && zip -qr ../chalk-talk.zip chalk-talk -x '*.DS_Store')
+          awk -v v="## ${GITHUB_REF_NAME#v} " 'index($0, v) == 1 {on = 1; next} /^## / {on = 0} on' CHANGELOG.md > notes.md
+          gh release create "$GITHUB_REF_NAME" chalk-talk.zip --title "chalk-talk ${GITHUB_REF_NAME#v}" --notes-file notes.md

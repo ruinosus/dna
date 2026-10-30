@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.1 — 2026-10-30
+
+What the evals found, fixed:
+
+- Step 1 only asks: the outline (and any offer of a chalkboard or a quiz) comes after the answer.
+- The class tools (chalkboard, a question that waits, a quiz) are offered only when the person mentions a class.
+- Without code execution the skill never draws an SVG by hand: it shows the artifact page, or gives the recipe.
+- Releases publish themselves: a tag runs a workflow that publishes to npm (trusted publishing, no token) and creates
+  the GitHub release with the skill's zip.
+
 ## 0.6.0 — 2026-10-30
 
 - **On npm** as `chalk-talk`: `player.js` sets up the whole page around a recipe (markup, styles and fonts inside),

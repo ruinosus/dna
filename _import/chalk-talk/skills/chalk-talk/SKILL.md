@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "0.6.0"
+  version: "0.6.1"
 ---
 
 # chalk-talk: explain by drawing
@@ -25,7 +25,8 @@ Three things make a drawing:
 - **which number the person moves**, if any (the monthly rate, people arriving per minute) — or none.
 
 Never ask what the person already said. Offer up to 3 hooks, best first, each with one line on why it works. If the
-person says "you decide", decide and say what you chose in the outline.
+person says "you decide", decide and say what you chose in the outline. **This message only asks**: no outline, no
+offers, nothing drawn — the outline comes after the answer.
 
 ## 2. Agree the outline before any stroke
 
@@ -52,7 +53,8 @@ example. `references/examples/` has seven finished recipes (open one similar to 
   coordinates by hand whenever pieces sit next to each other, line up, or need marks along a line;
 - `learning` always: goal, question, one grounded answer, and the caveat (what was simplified);
 - for a class: `theme: "chalkboard"`, a `pause` with `ask` opening the part that answers it (the lesson waits), and a
-  `quiz` at the end — when the person mentions a class, students or a talk, offer them in the outline.
+  `quiz` at the end — only when the person mentions a class, students or a talk, and then in the outline (never in
+  the questions of step 1).
 
 Save it as `<id>.json`: in the folder the person is working in, or, when an outputs folder exists for files the person
 downloads (on claude.ai, `/mnt/user-data/outputs`), there.
@@ -95,7 +97,7 @@ it. The player loads from the CDN and checks the recipe itself:
 <meta charset="utf-8">
 <title>LESSON TITLE</title>
 <script type="application/json" id="chalk-recipe">THE RECIPE JSON</script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.6.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.6.1/player.js"></script>
 ```
 
 Write `<` inside the JSON as `\u003c`. If the page says the recipe could not be opened, fix what it says.
@@ -112,4 +114,5 @@ rest as it is, build again and say what changed. A different hook or mold is a n
   recipe contract was written for.
 - Never put HTML, links, scripts or images in a recipe: texts are plain text, colours are hex or names.
 - Never write a script to generate the recipe: write the JSON itself (expressions and `repeat` do the arithmetic).
-- Without code execution, never hand-write the player: use the small page in «No code execution» above.
+- Without code execution, never hand-write the player, an SVG or an image of the drawing: use the small page in
+  «No code execution» above. If you can neither run code nor show an artifact, say so and give the recipe.
