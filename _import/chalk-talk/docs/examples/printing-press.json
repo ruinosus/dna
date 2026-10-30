@@ -1,0 +1,71 @@
+{
+  "id": "printing-press-europe",
+  "title": "The printing press ↔ ideas going viral",
+  "category": "History",
+  "locale": "en-US",
+  "width": 1200,
+  "height": 860,
+  "background": "dots",
+  "learning": {
+    "goal": "Understand how cheap, identical printed copies let ideas spread faster than anyone could stop them, and how that reshaped religion, science and reading in Europe between 1440 and 1600.",
+    "question": "The internet also made copying almost free. Which change after 1440 does it most resemble, and what is different?",
+    "answer": "One grounded reading: like the press, it lets one voice reach many people fast. Luther used short, cheap pamphlets much as people use posts today. A difference: printing still needed a press, paper and a printer willing to risk censorship, so there were still gatekeepers.",
+    "caveat": "Simplified: movable type existed earlier in China and Korea; Gutenberg's press in Mainz (c. 1440–1455) combined metal type, oil-based ink and a screw press. The press worked together with other forces (trade, the Renaissance, church and state politics). Figures such as 250+ printing towns by 1500 and book totals are historians' estimates."
+  },
+  "steps": [
+    {"type": "text", "at": [40, 72], "text": "How did one machine change Europe?", "size": 42, "chapter": "The question", "say": "Before 1440, a new idea spread only as fast as someone could copy it by hand.", "duration": 1400},
+    {"type": "text", "at": [40, 116], "text": "1440–1600: from hand-copied books to a continent of print", "size": 26, "style": {"color": "#5E5A52"}},
+    {"type": "text", "at": [60, 178], "text": "by hand", "size": 30},
+    {"type": "prop", "name": "person-sitting", "at": [160, 330], "size": 120, "id": "scribe", "label": "a scribe"},
+    {"type": "text", "at": [170, 400], "text": "a year or more per Bible", "anchor": "middle", "size": 24, "style": {"color": "#C8442C"}},
+    {"type": "text", "at": [380, 178], "text": "by press", "size": 30, "say": "Around 1450, Gutenberg's press in Mainz printed in weeks what took a scribe years.", "duration": 1400},
+    {"type": "line", "from": [390, 200], "to": [390, 330], "style": {"width": 3}},
+    {"type": "line", "from": [500, 200], "to": [500, 330], "style": {"width": 3}},
+    {"type": "line", "from": [378, 200], "to": [512, 200], "style": {"width": 4}},
+    {"type": "line", "from": [445, 200], "to": [445, 250], "style": {"width": 3}},
+    {"type": "line", "from": [405, 232], "to": [485, 220], "style": {"width": 2.4}},
+    {"type": "polygon", "points": [[418, 250], [472, 250], [472, 262], [418, 262]], "style": {"fill": "#8C8578", "fillStyle": "hachure"}},
+    {"type": "polygon", "points": [[380, 290], [510, 290], [510, 302], [380, 302]], "style": {"fill": "#8C8578", "fillStyle": "hachure"}},
+    {"type": "grid", "at": [540, 190], "columns": 2, "gap": 8, "steps": [
+      {"type": "repeat", "times": 6, "step": {"type": "prop", "name": "document", "size": 40}}
+    ]},
+    {"type": "text", "at": [470, 400], "text": "about 180 Bibles, c. 1455", "anchor": "middle", "size": 24, "style": {"color": "#2E8F62"}},
+
+    {"type": "text", "at": [700, 178], "text": "the trick: movable type", "size": 30, "chapter": "Take it apart", "say": "The secret was small metal letters that could be arranged, printed, and used again.", "duration": 1400},
+    {"type": "row", "at": [700, 200], "gap": 8, "steps": [
+      {"type": "card", "w": 66, "h": 72, "title": "P"},
+      {"type": "card", "w": 66, "h": 72, "title": "R"},
+      {"type": "card", "w": 66, "h": 72, "title": "I"},
+      {"type": "card", "w": 66, "h": 72, "title": "N"},
+      {"type": "card", "w": 66, "h": 72, "title": "T"}
+    ]},
+    {"type": "text", "at": [700, 312], "text": "ink it, press paper, peel off a page", "size": 24},
+    {"type": "row", "at": [700, 330], "gap": 14, "steps": [
+      {"type": "repeat", "times": 6, "step": {"type": "prop", "name": "document", "size": 56}}
+    ]},
+    {"type": "text", "at": [700, 430], "text": "every copy identical, letters reused", "size": 24, "style": {"color": "#2F5BEA"}, "say": "Every copy came out the same, and the letters went on to the next page."},
+
+    {"type": "timeline", "from": [80, 520], "to": [1080, 520], "domain": [1440, 1600], "id": "line",
+     "chapter": "Ideas on the move", "say": "In fifty years, presses spread to hundreds of towns across Europe.", "duration": 1600,
+     "marks": [
+      {"at": 1455, "label": "1455", "text": "Gutenberg Bible"},
+      {"at": 1500, "label": "1500", "text": "250+ towns"},
+      {"at": 1517, "label": "1517", "text": "Luther"},
+      {"at": 1543, "label": "1543", "text": "Copernicus"},
+      {"at": 1600, "label": "1600", "text": "millions of books"}
+    ]},
+    {"type": "card", "at": [60, 590], "w": 330, "h": 154, "title": "Religion", "style": {"color": "#C8442C"},
+     "lines": ["Luther's pamphlets", "spread in weeks", "→ the Reformation"],
+     "say": "Luther's cheap pamphlets reached all of Germany in weeks. The Church could not burn them fast enough."},
+    {"type": "card", "at": [435, 590], "w": 330, "h": 154, "title": "Science", "style": {"color": "#2F5BEA"},
+     "lines": ["same maps and data", "everywhere at once", "→ errors get fixed"],
+     "say": "Scholars far apart read identical copies, compared them, and corrected each other."},
+    {"type": "card", "at": [810, 590], "w": 330, "h": 154, "title": "Readers", "style": {"color": "#2E8F62"},
+     "lines": ["cheaper books", "in local languages", "→ more people read"],
+     "say": "Books got cheaper and appeared in German, English, French — not only Latin."},
+
+    {"type": "text", "at": [600, 806], "text": "Ideas became copyable, cheap, and hard to erase.", "anchor": "middle", "size": 32,
+     "chapter": "Why it mattered", "say": "The press did not cause all this alone, but it made ideas copyable, cheap, and hard to erase.", "duration": 1500},
+    {"type": "highlight", "from": [220, 812], "to": [980, 812], "thickness": 18}
+  ]
+}

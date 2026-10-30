@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Needs code execution with Node.js 18 or later. Chrome, Chromium or Edge, when installed, lets the script check the drawing before delivering it; without one, the page checks itself when opened.
 metadata:
-  version: "0.1.2"
+  version: "0.2.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -47,6 +47,8 @@ example. `references/examples/` has seven finished recipes (open one similar to 
 - every text in the person's language, and `locale` set to it ("en-US", "pt-BR"…) so numbers are written its way;
   facts and numbers right — never invent a quote or a figure to make it work;
 - props (`person`, `house`, `bus`, `coin`, `server`…) for people and things instead of drawing them stroke by stroke;
+- `place` (beside another piece by its `id`), `row`/`column`/`grid`, `axis` and `timeline` instead of working out
+  coordinates by hand whenever pieces sit next to each other, line up, or need marks along a line;
 - `learning` always: goal, question, one grounded answer, and the caveat (what was simplified).
 
 Save it as `<id>.json`: in the folder the person is working in, or, when an outputs folder exists for files the person

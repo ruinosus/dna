@@ -41,6 +41,13 @@ Step types (every step also takes `style`, `say`, `chapter`, `duration`, `id`; a
 - `link`: `from` and `to` (earlier `id`s), `label`: an arrow from the edge of one to the edge of the other, no coordinates. E.g. {"type":"link","from":"ana","to":"banco","label":"pede"}.
 - `counter`: `at`, `value` (expression), `format` with `{v}` (e.g. "R$ {v:0}"), `size`, `anchor`: the number counts from 0 while its beat is drawn.
 
+Placing without coordinates (prefer these to working out positions by hand):
+- `place` on a `text`, `prop`, `card`, `counter`, `circle` or `ellipse`: {"to": an earlier `id`, "side": "below" | "above" | "left" | "right", "gap": 24, "align": "center" | "start" | "end"}. The step's box sits on that side of the other element; its `at`/`center` can then be left out. E.g. {"type":"text","text":"asks","place":{"to":"ana","side":"right","gap":16}}.
+- `row` and `column`: `at` (the top-left corner), `gap`, `align` and `steps` — texts, props, cards, counters, circles, ellipses or a `repeat` of one — set side by side or one under the other, measured; the steps inside need no coordinates. `grid`: the same with `columns`. E.g. {"type":"row","at":[480,120],"gap":14,"steps":[{"type":"repeat","times":"n","step":{"type":"prop","name":"coin","size":44}}]}.
+- `axis`: `from`, `to`, `domain` [low, high], `ticks` (how many parts, or a list of values), `label`, `format` with `{v}`: an arrow with marks and their numbers, written the recipe's `locale` way.
+- `timeline`: `from`, `to`, `domain` [first, last], `marks` [{"at", "label" above, "text" under}]: a line of time with each mark in its place.
+Steps inside `row`, `column` and `grid` take no `say`, `chapter`, `duration` nor `place`.
+
 `style`: `color`, `width`, `roughness` (0 ruler, 1.6 default, 3 scribble), `bowing`, `fill`, `fillStyle` ("hachure", "solid", "zigzag", "cross-hatch", "dots"), `dashed` (true or false), `opacity` (0 to 1).
 
 The player groups steps into beats: each `say`, `chapter` or `pause` starts one, and the steps after it appear together. `duration` on a beat's first step suggests its pace, 1000 to 1600 ms. Keep the whole scene under 15 seconds.
@@ -49,7 +56,7 @@ The player groups steps into beats: each `say`, `chapter` or `pause` starts one,
 
 - Palette: graphite #2B2B2B (default), pen blue #2F5BEA, correction red #C8442C, green #2E8F62, pencil grey #8C8578, marker #FFE45C. At most 3 accent colours.
 - Title text at the top (size 40 to 44). Labels 26 to 34. Nothing under 22.
-- Leave room: nothing closer than 30 px to the edge; texts never touch lines; nothing leaves the drawing at the controls' extreme values.
+- Leave room: a text, prop, card or counter that would leave the paper is brought back in, and a text that would cover another moves a little, but plan the space anyway: nothing closer than 30 px to the edge; texts never touch lines; nothing leaves the drawing at the controls' extreme values.
 - 8 to 40 steps, read from top to bottom, from the real thing to the idea. Draw the real thing recognisably: use a `prop` for people and everyday things instead of drawing them by hand, and give it an `id` when an arrow or a move needs it.
 - Numbers are literals in `size`, `duration`, `ms`, `rotate`, `samples`, `params` and `style`. Colours are hex or plain names; never URLs, HTML, scripts or links. Text is text, not markup.
 

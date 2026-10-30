@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0 — 2026-10-30
+
+Drawing better, with fewer coordinates worked out by hand.
+
+- `place`: a text, prop, card, counter, circle or ellipse sits below, above, left or right of another piece by its `id`.
+- `row`, `column` and `grid`: pieces (or the copies of a `repeat`) measured and lined up from one corner.
+- `axis` (an arrow with marks and numbers in the recipe's language) and `timeline` (marks with a label above and a
+  text under).
+- The drawing settles: a text, prop, card or counter that would leave the paper comes back in, and a text that would
+  cover another moves a little. The old drawings are unchanged (the regression gallery shows no difference).
+- The reviewer no longer lets a circle that cuts through a label pass as a highlight.
+- A new example: how the printing press changed Europe (timeline, rows, grid).
+
 ## 0.1.2 — 2026-10-30
 
 - A gallery for GitHub Pages (`docs/`): every example as a lesson to play, with a picture (`npm run site`).
