@@ -1,0 +1,100 @@
+#!/usr/bin/env node
+// Checks a drill (<id>.drill.yaml) and makes the game — one HTML page that opens with no internet — and the
+// facilitator's script. What does not hold is printed («to look at») and the game is still made; what would break the
+// game (a choice to no scene, a scene with no way on, a drawing that does not read…) says its line and nothing is made.
+//
+//   node build.mjs <id>.drill.yaml --check [--lang en|pt]       only check it: nothing is written
+//   node build.mjs <id>.drill.yaml [--facilitator] [--all] [--lang en|pt] [--out <folder>]
+//
+// With no --facilitator it makes the game; --all makes both. When the drill's «from» is a file beside it (the runbook),
+// each choice's «runbook» mark is looked up in it: the game shows that passage, and a mark the runbook does not have is
+// to look at. Exit codes: 0 done; 1 the file breaks the format (each problem with its line; nothing written); 2 bad
+// arguments. Needs Node 18 or later and nothing else.
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { basename, dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { facilitator, problemText, readDrill, readRecipe, reviewDrill } from './engine.mjs'
+
+const here = dirname(fileURLToPath(import.meta.url))
+const argv = process.argv.slice(2)
+const valued = new Set(['--lang', '--out'])
+const flags = new Set(['--check', '--facilitator', '--all', ...valued])
+const option = (name) => {
+  const at = argv.indexOf(name)
+  return at >= 0 ? argv[at + 1] : undefined
+}
+const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
+const usage = `usage: node build.mjs <id>.drill.yaml --check [--lang en|pt]
+       node build.mjs <id>.drill.yaml [--facilitator] [--all] [--lang en|pt] [--out <folder>]`
+const lang = option('--lang') ?? 'en'
+const fail = (msg) => {
+  console.error(`${msg}\n${usage}`)
+  process.exit(2)
+}
+if (args.length !== 1 || !/\.(ya?ml|json)$/.test(args[0])) fail('✗ one .drill.yaml to read')
+const unknown = argv.find((a) => a.startsWith('--') && !flags.has(a))
+if (unknown) fail(`✗ unknown option ${unknown}`)
+if (!['en', 'pt'].includes(lang)) fail('✗ --lang is en or pt')
+
+const T = {
+  en: { ok: (d) => `✓ ${d.scenes.length} scenes, ${d.scenes.filter((s) => s.end).length} ends, ${d.roles.length} roles`, look: 'to look at', nothing: '✓ nothing to look at', draw: (s) => `the drawing of «${s}»`, runbook: (f) => `• runbook   ${f}`, noRunbook: (f) => `• runbook   «${f}» is not a file here: the marks were not looked up` },
+  pt: { ok: (d) => `✓ ${d.scenes.length} cenas, ${d.scenes.filter((s) => s.end).length} fins, ${d.roles.length} papéis`, look: 'para olhar', nothing: '✓ nada para olhar', draw: (s) => `o desenho de «${s}»`, runbook: (f) => `• runbook   ${f}`, noRunbook: (f) => `• runbook   «${f}» não é um arquivo aqui: as marcas não foram conferidas` },
+}[lang]
+
+const file = resolve(args[0])
+const read = readDrill(readFileSync(file, 'utf8'))
+const problems = read.problems.map((p) => `✗ ${basename(file)}:${p.line}: ${problemText(p, lang)}`)
+// each drawing must read (chalk-talk's text syntax or JSON); its mistake says the line in this file
+if (read.drill)
+  for (const s of read.drill.scenes.filter((x) => x.draw)) {
+    try {
+      readRecipe(s.draw)
+    } catch (e) {
+      const line = (read.drawLines?.[s.id] ?? 1) + (typeof e.line === 'number' ? e.line - 1 : 0)
+      problems.push(`✗ ${basename(file)}:${line}: ${T.draw(s.id)}: ${e.message}`)
+    }
+  }
+if (problems.length) {
+  for (const p of problems) console.error(p)
+  process.exit(1)
+}
+const drill = read.drill
+const id = basename(file).replace(/(\.drill)?\.(ya?ml|json)$/, '')
+console.log(T.ok(drill))
+
+// the runbook it came from, when it is a file beside the drill: the passages the choices cite
+const runbookFile = drill.from ? resolve(dirname(file), drill.from) : undefined
+const runbook = runbookFile && existsSync(runbookFile) ? readFileSync(runbookFile, 'utf8') : undefined
+if (drill.from) console.log(runbook ? T.runbook(drill.from) : T.noRunbook(drill.from))
+const excerpts = {}
+if (runbook) {
+  const lines = runbook.split('\n')
+  for (const ref of new Set(drill.scenes.flatMap((s) => (s.choices ?? []).map((c) => c.runbook).filter(Boolean)))) {
+    const at = lines.findIndex((l) => l.includes(ref))
+    if (at < 0) continue
+    // a heading is followed by its paragraph; a line in the text is itself the passage
+    const own = lines[at].replace(/^#+\s*/, '').replace(ref, '').trim()
+    const next = /^#/.test(lines[at]) ? lines.slice(at + 1).find((l) => l.trim() && !/^#/.test(l)) ?? '' : ''
+    excerpts[ref] = [own, next.trim()].filter(Boolean).join(' — ').slice(0, 300)
+  }
+}
+const looks = reviewDrill(drill, runbook)
+if (looks.length) for (const l of looks) console.log(`! ${T.look}: ${l[lang]}`)
+else console.log(T.nothing)
+if (argv.includes('--check')) process.exit(0)
+
+const out = resolve(option('--out') ?? dirname(file))
+const all = argv.includes('--all')
+const wantGame = all || !argv.includes('--facilitator')
+if (wantGame) {
+  // JSON inside a <script> tag: "<" escaped so no text in the drill can end the tag.
+  const json = JSON.stringify({ id, lang, drill, looks, excerpts }).replace(/</g, '\\u003c')
+  const page = join(out, `${id}.drill.html`)
+  writeFileSync(page, readFileSync(join(here, '../assets/drill.html'), 'utf8').replace('{{DRILL}}', () => json))
+  console.log(`✓ game        ${page}`)
+}
+if (all || argv.includes('--facilitator')) {
+  const md = join(out, `${id}.facilitator.md`)
+  writeFileSync(md, facilitator(drill, looks, lang))
+  console.log(`✓ facilitator ${md}`)
+}

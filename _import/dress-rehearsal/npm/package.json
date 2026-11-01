@@ -1,0 +1,15 @@
+{
+  "name": "dress-rehearsal",
+  "version": "0.2.0",
+  "description": "Test your incident runbook by playing it: check a drill file and make a playable offline game, a debrief of what the runbook does not say, and the facilitator's script.",
+  "license": "MIT",
+  "type": "module",
+  "author": "ruinosus",
+  "homepage": "https://ruinosus.github.io/dress-rehearsal/",
+  "repository": { "type": "git", "url": "git+https://github.com/ruinosus/dress-rehearsal.git", "directory": "npm" },
+  "bugs": "https://github.com/ruinosus/dress-rehearsal/issues",
+  "keywords": ["agent-skills", "incident", "runbook", "tabletop", "game-day", "sre", "on-call", "drill", "claude"],
+  "bin": { "dress-rehearsal": "scripts/build.mjs" },
+  "files": ["scripts/", "assets/", "README.md", "LICENSE"],
+  "engines": { "node": ">=18" }
+}
