@@ -184,7 +184,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y chalk-talk@0.12.0 "$f" "${f%.*}.svg" --svg; done
+      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y chalk-talk@0.13.0 "$f" "${f%.*}.svg" --svg; done
       - run: |
           git config user.name github-actions
           git config user.email github-actions@users.noreply.github.com
@@ -222,9 +222,11 @@ Then `scripts/build.mjs` (plain Node, no dependencies):
    the numbers of the review cannot say.
 
 What a recipe can draw: text, lines and arrows, curves and polygons, circles, plots of a formula, a yellow marker,
-labelled cards, 29 hand-drawn props (`person`, `house`, `bus`, `coin`, `phone`, `server`, `bank`, `school`, `hospital`,
-`truck`, `database`, `robot`…) — a person can look happy, sad, surprised, worried or have an idea — repeated pieces (`repeat`), pieces that appear on a condition (`when`), movement (`move`), arrows
-between named pieces (`link`), numbers that count up (`counter`), axes with marks (`axis`), timelines (`timeline`),
+labelled cards, 45 hand-drawn props (`person`, `house`, `bus`, `coin`, `phone`, `server`, `bank`, `school`, `hospital`,
+`truck`, `database`, `robot`, `ship`, `warehouse`, `shop`, `cup`, `cluster`, `board`, `book`…) and props a recipe makes
+itself from shapes (`define`) — a person can look happy, sad, surprised, worried or have an idea — repeated pieces (`repeat`), pieces that appear on a condition (`when`), movement (`move`), arrows
+between named pieces (`link`, or `a -> b -> c` in the text), a chain of things that pass something along, spread over
+the paper and joined in order (`chain`), numbers that count up (`counter`), axes with marks (`axis`), timelines (`timeline`),
 speech and thought balloons (`balloon`), curly braces (`brace`), handwritten notes with an arrow (`note`), tables
 (`table`) and bars (`bars`). Positions can be expressions over the values, so the drawing follows the sliders — or be left to the
 engine: `place` puts a piece beside another by name, and `row`, `column` and `grid` line pieces up. A piece that would
@@ -248,7 +250,7 @@ then Settings › Capabilities › Skills › Upload. Code execution must be on.
 **Claude API**: upload the same zip with the Skills API (`/v1/skills`) and use it with the code execution tool.
 
 **Without installing anything** — on npm as [`chalk-talk`](https://www.npmjs.com/package/chalk-talk): a page needs
-only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.12.0/player.js"></script>` (that is also
+only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.13.0/player.js"></script>` (that is also
 how the skill shows a lesson where it cannot run code), and `npx chalk-talk lesson.json` builds the one-file lesson.
 
 **Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/chalk-talk` to the folder where the tool
@@ -305,7 +307,7 @@ claude plugin eval . --ablation none --allow-tools Bash Write Edit --tag speed -
 node tools/eval-metrics.mjs run.json    # seconds to the first drawing, files read first, rounds of fixes, quality
 ```
 
-Speed, 0.11.0 → 0.12.0 (Claude Code, two runs per request; 0.11.0 with the outline already approved, its best case):
+Speed, 0.11.0 → 0.13.0 (Claude Code, two runs per request; 0.11.0 with the outline already approved, its best case):
 the first drawing in **28–41 s instead of 49–70 s**, with **no reference file read** before writing instead of 3 or 4.
 The class request still asks first. [`evals/speed-cloud.md`](evals/speed-cloud.md) is the same measure by hand in
 claude.ai.

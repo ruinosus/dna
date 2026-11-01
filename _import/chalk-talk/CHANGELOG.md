@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.13.0 — 2026-11-01
+
+Things that pass something along, and more things to draw.
+
+- **`chain`:** a line of pieces spread over the paper, each joined to the next, with the long `forward` and `back`
+  arrows if asked. It also takes `direction=down` and `wrap` (more lines). The coffee chain of the roadmap is now
+  written with one coordinate.
+- **16 new props** (45 in all):
+  - logistics: ship, container, warehouse, box, pallet, shop, shelf, field, cup;
+  - cloud: function, api-gateway, cache, cluster;
+  - school: board, book, pencil.
+- **`define`:** a prop the recipe makes itself from polygons, polylines, curves and circles, on a 0–100 grid of whole
+  numbers (y down, standing at 50,100). Up to 8 per recipe, of up to 24 shapes each.
+- **`a -> b "label" -> c "label"`** in the text: a link per arrow, each label right after its end.
+- **Balloons:** a balloon slides along the side it was asked for before trying another (a person at the paper's edge
+  keeps it above).
+- The cheat sheet has `chain`, `define` and the new props. The coffee eval (3 runs) used `chain` every time, read no
+  reference file before writing, and drew the first lesson in 36 s with no round of fixes.
+
 ## 0.12.0 — 2026-11-01
 
 Draws first, and checks itself in a second or two — in cloud sandboxes too.

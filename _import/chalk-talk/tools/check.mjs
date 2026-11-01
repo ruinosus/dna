@@ -142,6 +142,9 @@ setTimeout(() => {
   if (/• review/.test(left.stdout)) expect(true, 'no browser here: the coffee chain checks are skipped')
   else {
     expect(left.status === 3 && /the text of step 3 \(«de onde veio isso\?»\) sits on the drawing of step 8/.test(left.stdout), 'the coffee chain with the balloon on the café is found (exit 3)')
+    // onda B: the clean one is written with a chain and the new figures, with no house or desk standing in for them
+    const recipe = readFileSync(join(fixtures, 'coffee-chain.chalk'), 'utf8')
+    expect(/^chain at /m.test(recipe) && !/^\s*(house|desk) /m.test(recipe), 'the coffee chain is a chain of the new figures (no house or desk standing in)')
     const t0 = Date.now()
     const ok = run(join(fixtures, 'coffee-chain.chalk'), [join(dir, 'coffee.html'), '--snapshots'])
     const ms = Date.now() - t0

@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "0.12.0"
+  version: "0.13.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -61,21 +61,29 @@ simplified) — and set `locale` to the person's language, with every text in it
 
 People and things are **props**: person, person-sitting, person-pointing, house, car, bus, coin, phone, document,
 server, bank, cloud, queue, desk, computer, clock, lock, money-arrow, tree, school, hospital, factory, truck, cart,
-safe, bulb, gear, database, robot. A person takes `mood=` happy, sad, surprised, worried or idea.
+safe, bulb, gear, database, robot, ship, container, warehouse, box, pallet, shop, shelf, field, cup, function,
+api-gateway, cache, cluster, board, book, pencil. A person takes `mood=` happy, sad, surprised, worried or idea.
 
 ```
 person ana at 150,330 "Ana" mood=worried
 text "R$ 1.000 viram quanto?" at 40,64 size=36
 text "paga só o mínimo" right-of ana gap 16 align=start
 ana thinks "e se eu atrasar?" side=above width=200
-ana -> banco "paga"
+ana -> banco "paga" -> loja "repassa"
 arrow 60,350 -> 840,350 color=#2E8F62 stroke=3
 highlight 90,500 -> 810,500 thickness=24
 ```
 
-Placing without working out coordinates — prefer these whenever pieces sit side by side or follow each other:
+Placing without working out coordinates — prefer these whenever pieces sit side by side or follow each other. A
+`chain` is things that pass something along: spread over the paper, each joined to the next, with the long arrows if
+asked:
 
 ```
+chain at 40,190 forward="o café desce" back="pedidos sobem"
+  field fazenda "fazenda"
+  truck caminhao "transporte"
+  cup cafe "cafeteria"
+  person voce "você"
 row at 470,150 gap 14
   repeat 3: coin size 44
 repeat 3: coin at "100 + i*60",400 size 40
@@ -89,6 +97,15 @@ bars box 90,320,440,180 values 1000,"1000*f^3","1000*f^6" labels hoje,"3 meses",
 plot "1000*(1+taxa/100)^x" domain 0..12 range 0..4000 box 480,120,360,240
 when atraso:
   text "multa de 2%" at 600,100 color=#C8442C
+```
+
+A thing no prop draws: make it on a 0–100 grid (whole numbers, y down; it stands at 50,100), then use its name:
+
+```
+define xicara
+  polygon 24,48 76,48 70,90 30,90 fill=#FFFFFF
+  curve 74,56 90,62 72,80
+xicara minha at 450,300 "minha xícara"
 ```
 
 Waiting for the person, and a quiz (both for a class):
@@ -162,7 +179,7 @@ it. The player loads from the CDN and checks the recipe itself:
 <script type="text/chalk-talk" id="chalk-recipe">
 THE RECIPE AS TEXT
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.12.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.13.0/player.js"></script>
 ```
 
 If the page says the recipe could not be opened, fix the line it names.

@@ -16,22 +16,18 @@ learning caveat "O fator de exagero por elo (1,6 ou 1,15) é ilustrativo, não u
 # Um cafezinho
 > Você pagou uns oito reais num café. Quanta coisa precisou acontecer antes desse copo chegar na sua mão?
 text "R$ 8 num cafezinho. quantas mãos cabem no copo?" at 40,64 size=36
-person voce at 810,280 "você" mood=happy
-voce thinks "de onde veio isso?" side=above width=200
 
 # Desmontando o copo
 > O grão nasce na fazenda, vira café torrado na fábrica, viaja, espera num armazém e chega à cafeteria.
-tree fazenda at 90,280 "fazenda"
-factory torra at 234,280 "torrefação"
-truck transp at 378,280 "transporte"
-house armazem at 522,280 "armazém"
-desk cafe at 666,280 "cafeteria"
-> O produto desce a cadeia, da matéria-prima até você.
-arrow 60,350 -> 840,350 color=#2E8F62 stroke=3
-text "o café desce a cadeia →" at 450,388 anchor=middle size=26 color=#2E8F62
-> No sentido contrário sobem os pedidos e o dinheiro: é assim que cada elo sabe o que produzir.
-arrow 840,425 -> 60,425 color=#2F5BEA stroke=3
-text "← pedidos e dinheiro sobem" at 450,463 anchor=middle size=26 color=#2F5BEA
+chain at 40,190 forward="o café desce a cadeia" back="pedidos e dinheiro sobem"
+  field fazenda "fazenda"
+  factory torra "torrefação"
+  truck transp "transporte"
+  warehouse armazem "armazém"
+  cup cafe "cafeteria"
+  person voce "você"
+> E no fim da fila, você, com o copo na mão.
+voce thinks "de onde veio isso?" side=above width=200
 
 # O efeito chicote
 > Cada elo só enxerga o pedido de quem está logo abaixo dele.
