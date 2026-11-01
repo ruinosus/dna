@@ -8,9 +8,12 @@
     "typecheck": "tsc -p tsconfig.json",
     "check": "node check.mjs",
     "zip": "node zip.mjs",
-    "site": "node site.mjs"
+    "site": "node site.mjs",
+    "audit": "node node_modules/chalk-talk/kit/tools/audit.mjs .. --skip \"npm/scripts\" --skip \"npm/assets\" --skip \"skills/stage-door/assets\" --skip \"skills/stage-door/scripts/engine.mjs\" --skip \"docs/examples\"",
+    "linux": "node linux-check.mjs"
   },
   "devDependencies": {
+    "chalk-talk": "^0.14.1",
     "esbuild": "0.24.0",
     "typescript": "5.6.3"
   }

@@ -1,6 +1,6 @@
 {
   "name": "stage-door",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A team's way of working, clear and checkable: check a .way.yaml and make an offline map, an Excel workbook and a drawn lesson; read an edited workbook back as proposed changes.",
   "license": "MIT",
   "type": "module",

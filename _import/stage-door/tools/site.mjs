@@ -2,18 +2,16 @@
 // each map and lesson (docs/images/, taken by a headless browser) and docs/index.html listing them. Run after
 // `npm run assets`: npm run site.
 import { execFileSync } from 'node:child_process'
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { copyFileSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
-import { browser } from '../skills/stage-door/scripts/browser.mjs'
+import { fileURLToPath } from 'node:url'
+import { browser, runPages } from '../skills/stage-door/scripts/browser.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
 const docs = join(root, 'docs')
 const examples = join(root, 'skills/stage-door/examples')
-const exe = browser()
-if (!exe) throw new Error('No Chrome, Chromium or Edge: the pictures need one (set CHROME_PATH).')
+if (!browser()) throw new Error('No Chrome, Chromium or Edge: the pictures need one (set CHROME_PATH).')
 // The language each example is written in, and one line on what it shows.
 const ABOUT = {
   'feature-delivery': ['pt', 'From an idea to a measured result: discovery, delivery and operation, with a prototype gate and a production gate.'],
@@ -26,9 +24,9 @@ for (const dir of ['examples', 'images']) {
   rmSync(join(docs, dir), { recursive: true, force: true })
   mkdirSync(join(docs, dir), { recursive: true })
 }
-const profile = mkdtempSync(join(tmpdir(), 'stage-door-site-'))
-const shot = (page, png, [w, h], hash = '') =>
-  execFileSync(exe, ['--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run', `--user-data-dir=${profile}`, `--window-size=${w},${h}`, '--virtual-time-budget=20000', `--screenshot=${png}`, `${pathToFileURL(page).href}${hash}`], { stdio: 'ignore', timeout: 90000 })
+// The pictures, taken by the kit's browser over the DevTools pipe, all in one opening of it at the end.
+const shots = []
+const shot = (page, png, [width, height], mode = '') => shots.push({ file: page, mode, shot: { width, height }, png })
 
 const ways = []
 for (const f of readdirSync(examples).filter((x) => x.endsWith('.way.yaml')).sort()) {
@@ -37,12 +35,17 @@ for (const f of readdirSync(examples).filter((x) => x.endsWith('.way.yaml')).sor
   copyFileSync(join(examples, f), join(docs, 'examples', f))
   execFileSync(process.execPath, [join(root, 'skills/stage-door/scripts/build.mjs'), join(docs, 'examples', f), '--all', '--lang', lang], { stdio: 'ignore' })
   shot(join(docs, 'examples', `${id}.html`), join(docs, 'images', `${id}-map.png`), [1440, 620])
-  shot(join(docs, 'examples', `${id}.lesson.html`), join(docs, 'images', `${id}-lesson.png`), [1200, 760], '#still')
+  shot(join(docs, 'examples', `${id}.lesson.html`), join(docs, 'images', `${id}-lesson.png`), [1200, 760], 'still')
   const name = readFileSync(join(examples, f), 'utf8').match(/^name:\s*(.+)$/m)?.[1] ?? id
   ways.push({ id, name, lang, about })
-  console.log(`✓ ${id}`)
 }
-rmSync(profile, { recursive: true, force: true })
+const { results } = await runPages(shots, { timeout: 60 })
+shots.forEach(({ png }, k) => {
+  const r = results[k]
+  if (!r?.png) throw new Error(`${png}: the picture failed (${r?.error ?? 'no picture'})`)
+  writeFileSync(png, Buffer.from(r.png.split(',')[1], 'base64'))
+})
+for (const { id } of ways) console.log(`✓ ${id}`)
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 const card = ({ id, name, lang, about }) => `

@@ -1,4 +1,3 @@
 {
-  "engine": "../../way-engine",
-  "chalkTalk": "../../chalk-talk"
+  "engine": "../../way-engine"
 }

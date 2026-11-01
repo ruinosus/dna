@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.3.0 — 2026-11-01
+
+The lesson's review no longer hangs in cloud sandboxes.
+
+- The headless browser is chalk-talk's kit (`chalk-talk/kit`, from its npm package): it talks to the browser over the
+  DevTools pipe instead of `--dump-dom`, which hung until a timeout on some machines. It finds Playwright's Chromium,
+  runs without the sandbox as root on Linux, and tries the next browser when one fails. A review that could not run
+  now says «not checked».
+- The gallery's pictures are taken over the same pipe. The zip, the name audit and a Linux check
+  (`npm run linux`) come from the kit.
+- The lesson uses chalk-talk 0.14.1 and its engine (chains, the new props, a figure over a figure found by the
+  review).
+
 ## 0.2.0 — 2026-10-30
 
 - **The thread between stages.** An input points to the output of an earlier stage or gate (`from: <id>`) or comes from
