@@ -7,3 +7,5 @@ docs/chalk-talk/examples/*.html
 dev/*/tools/sources.json
 dev/*/tools/.engine
 dev/*/tools/.lib
+npm/house-lights/skills/
+npm/house-lights/LICENSE

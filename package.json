@@ -3,12 +3,14 @@
   "private": true,
   "type": "module",
   "workspaces": [
+    "npm/house-lights",
     "npm/chalk-talk",
     "dev/chalk-talk/tools",
     "dev/back-of-napkin/tools",
     "dev/dress-rehearsal/tools",
     "dev/gates-and-handoffs/tools",
-    "dev/service-blueprint/tools"
+    "dev/service-blueprint/tools",
+    "dev/house-lights/tools"
   ],
   "scripts": {
     "assets": "npm run -s assets -w dev/chalk-talk/tools && npm run -s assets -w dev/back-of-napkin/tools -w dev/dress-rehearsal/tools -w dev/gates-and-handoffs/tools -w dev/service-blueprint/tools",
