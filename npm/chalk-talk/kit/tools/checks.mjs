@@ -2,7 +2,7 @@
 // SKILL.md's frontmatter, one version everywhere, and a page probed in a headless browser. Part of the skills kit
 // (chalk-talk/kit).
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { runPage } from '../browser.mjs'
@@ -65,3 +65,13 @@ const out = {}
 try { ${body} } catch (e) { out.failed = String(e && e.message || e) }
 const pre = document.createElement('pre'); pre.id = 'chalk-probe'; pre.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(pre)
 </script>`
+
+/** A skill that changed its name: no file in `skill` says the old one, except the file format's id (`<old>/v1`), which
+ * stays so that files made before still open. */
+export function checkNoOldName(expect, skill, old) {
+  const said = new RegExp(`${old}(?!/v\\d)|${old.replace(/-/g, ' ')}`, 'i')
+  const found = readdirSync(skill, { recursive: true, withFileTypes: true })
+    .filter((e) => e.isFile() && said.test(readFileSync(join(e.parentPath, e.name), 'utf8')))
+    .map((e) => join(e.parentPath, e.name).slice(skill.length + 1))
+  expect(!found.length, `the old name «${old}» is gone from the skill (its format id stays)${found.length ? ` — still in ${found.join(', ')}` : ''}`)
+}

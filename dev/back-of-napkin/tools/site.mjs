@@ -82,13 +82,13 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
     <h1>back-of-napkin</h1>
     <p class="lead">Ask Claude to draw a pitch, an architecture, a decision, a number, what happened or a story — and get a hand-drawn board that draws itself, chapter by chapter, with a highlight at the end. One HTML file, offline.</p>
     <div class="actions">
-      <a class="button primary" href="https://github.com/ruinosus/back-of-napkin#install">Install the skill</a>
-      <a class="button" href="https://github.com/ruinosus/back-of-napkin">GitHub</a>
+      <a class="button primary" href="https://github.com/ruinosus/house-lights#install">Install the skill</a>
+      <a class="button" href="https://github.com/ruinosus/house-lights">GitHub</a>
     </div>
   </section>
   <section>
     <h2>One drawing per purpose — open one and press Next</h2>
-    <p class="note" style="margin: 4px 0 16px">Written by Claude with this skill; every example is fictional. To teach a concept, its sibling <a href="https://github.com/ruinosus/chalk-talk">chalk-talk</a> draws a lesson.</p>
+    <p class="note" style="margin: 4px 0 16px">Written by Claude with this skill; every example is fictional. To teach a concept, its sibling <a href="https://github.com/ruinosus/house-lights">chalk-talk</a> draws a lesson.</p>
     <div class="grid">${drawings.map(card).join('')}
     </div>
   </section>

@@ -7,7 +7,7 @@ metadata:
   version: "0.1.0"
 ---
 
-<!-- The shape the skills of this kit share (chalk-talk, stage-door, dress-rehearsal, front-of-house). A reference for
+<!-- The shape the skills of this kit share (chalk-talk, gates-and-handoffs, dress-rehearsal, service-blueprint). A reference for
 a new skill, not a file the skills import: copy it, then replace every <…>. Keep SKILL.md under 500 lines; what the
 model only needs sometimes goes in references/. -->
 

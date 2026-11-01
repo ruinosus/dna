@@ -1,7 +1,7 @@
 # chalk-talk
 
 Hand-drawn lessons that draw themselves, from a small JSON **recipe** — the player behind the
-[chalk-talk skill](https://github.com/ruinosus/chalk-talk). See the [gallery](https://ruinosus.github.io/chalk-talk/).
+[chalk-talk skill](https://github.com/ruinosus/house-lights). See the [gallery](https://ruinosus.github.io/house-lights/chalk-talk/).
 
 ## In a web page (or a claude.ai artifact)
 
@@ -41,6 +41,6 @@ npx chalk-talk lesson.chalk --svg                # an SVG that draws itself, for
 
 It checks the recipe contract, builds one HTML file that opens offline and, when Chrome, Chromium or Edge is
 installed, reviews the drawing (nothing off the paper, no text over text). How to write a recipe:
-[recipe.md](https://github.com/ruinosus/chalk-talk/blob/main/skills/chalk-talk/references/recipe.md).
+[recipe.md](https://github.com/ruinosus/house-lights/blob/main/skills/chalk-talk/references/recipe.md).
 
 MIT. Strokes by Rough.js (MIT); fonts Caveat and Shantell Sans (SIL Open Font License), embedded.

@@ -45,7 +45,7 @@ hand.
   </tr>
 </table>
 
-**[Open the gallery](https://ruinosus.github.io/chalk-talk/)** to play every lesson in your browser. The recipes behind
+**[Open the gallery](https://ruinosus.github.io/house-lights/chalk-talk/)** to play every lesson in your browser. The recipes behind
 these drawings are in [`docs/examples/`](docs/examples). Build any of them with
 `node skills/chalk-talk/scripts/build.mjs docs/examples/web-cache.json`.
 
@@ -250,7 +250,7 @@ leave the paper comes back in on its own. The full contract is in
 Older versions: `/plugin marketplace add ruinosus/chalk-talk`, then `/plugin install chalk-talk@chalk-talk`. Or copy
 `skills/chalk-talk` to `~/.claude/skills/`.
 
-**claude.ai**: download `chalk-talk.zip` from the [latest release](https://github.com/ruinosus/chalk-talk/releases),
+**claude.ai**: download `chalk-talk.zip` from the [latest release](https://github.com/ruinosus/house-lights/releases),
 then Settings › Capabilities › Skills › Upload. Code execution must be on. The lesson comes back as a file to download.
 
 **Claude API**: upload the same zip with the Skills API (`/v1/skills`) and use it with the code execution tool.
@@ -304,8 +304,8 @@ npm run audit     # before a push: no name from your local list in the tracked f
 
 ## The kit (`chalk-talk/kit`)
 
-The skills built the way chalk-talk is ([stage-door](https://github.com/ruinosus/stage-door),
-[dress-rehearsal](https://github.com/ruinosus/dress-rehearsal), [front-of-house](https://github.com/ruinosus/front-of-house))
+The skills built the way chalk-talk is ([gates-and-handoffs](https://github.com/ruinosus/house-lights),
+[dress-rehearsal](https://github.com/ruinosus/house-lights), [service-blueprint](https://github.com/ruinosus/house-lights))
 share what is not their own format: it ships in this package as `chalk-talk/kit`, and is used when a skill is built,
 never installed with it — a skill carries the files it runs.
 

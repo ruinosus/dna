@@ -5,13 +5,13 @@
   "license": "MIT",
   "type": "module",
   "author": "ruinosus",
-  "homepage": "https://ruinosus.github.io/chalk-talk/",
+  "homepage": "https://ruinosus.github.io/house-lights/chalk-talk/",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ruinosus/chalk-talk.git",
+    "url": "git+https://github.com/ruinosus/house-lights.git",
     "directory": "npm"
   },
-  "bugs": "https://github.com/ruinosus/chalk-talk/issues",
+  "bugs": "https://github.com/ruinosus/house-lights/issues",
   "keywords": [
     "agent-skills",
     "chalk-talk",

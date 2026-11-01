@@ -1,0 +1,178 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="service-blueprint (engine v0.258.0)">
+<title>service-blueprint</title>
+<style>/* The blueprint: tokens on .fh (not :root) so the PNG, drawn apart, carries them too. */
+.fh {
+  --bg: #f5f6f8; --card: #ffffff; --ink: #1d2330; --muted: #5f6878; --line: #dfe3ea; --soft: #eef1f5;
+  --evidence: #f4f4f4; --customer: #fff4d6; --front: #eaf1ff; --back: #f2ecff; --support: #eef3ee;
+  --red: #c8442c; --amber: #8a5a00; --amber-bg: #fff6e0; --focus: #2f5bea; --active: #1d2330; --on-active: #fff;
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg);
+  min-height: 100vh; box-sizing: border-box; padding: 20px 16px 40px;
+}
+@media (prefers-color-scheme: dark) {
+  .fh:not(.light) {
+    --bg: #14171c; --card: #1d2129; --ink: #e8ebf0; --muted: #9aa3b2; --line: #313744; --soft: #252a33;
+    --evidence: #23262c; --customer: #3a3220; --front: #1f2a44; --back: #2c2440; --support: #20302a;
+    --red: #ff8a70; --amber: #f2c46b; --amber-bg: #332a17; --focus: #8fb0ff; --active: #e8ebf0; --on-active: #14171c;
+  }
+}
+body { margin: 0; }
+.fh *, .fh *::before, .fh *::after { box-sizing: border-box; }
+.fh button { font: inherit; color: inherit; cursor: pointer; }
+.fh :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.fh-wrap { max-width: 1500px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.fh-wrap > * { min-width: 0; }
+.fh-title { margin: 0; font-size: 24px; line-height: 1.2; }
+.fh-sub { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.fh-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.fh-tab { padding: 6px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-size: 13px; }
+.fh-tab[aria-selected="true"] { background: var(--active); color: var(--on-active); border-color: var(--active); }
+.fh-space { flex: 1; }
+.fh-get { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); font-size: 13px; }
+.fh-look { background: var(--amber-bg); border-radius: 10px; padding: 10px 14px; }
+.fh-look h2 { margin: 0 0 4px; font-size: 12px; color: var(--amber); letter-spacing: .05em; text-transform: uppercase; }
+.fh-look ul { margin: 0; padding: 0; list-style: none; }
+.fh-look button { background: none; border: 0; padding: 2px 0; text-align: left; }
+.fh-look button:hover { text-decoration: underline; }
+.fh-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (min-width: 1600px) { .fh-body { grid-template-columns: minmax(0, 1fr) 340px; } }
+.fh-board { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-x: auto; }
+.fh-grid { display: grid; gap: 6px; align-items: stretch; background: var(--card); }
+.fh-phase { text-align: center; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid var(--line); padding-bottom: 4px; }
+.fh-row { font-size: 12px; font-weight: 700; color: var(--muted); padding: 7px 4px; }
+.fh-cell { border-radius: 6px; padding: 7px 8px; font-size: 12.5px; line-height: 1.35; text-align: left; border: 0; }
+.fh-cell.empty { color: var(--muted); font-style: italic; opacity: .7; }
+.fh-cell.evidence { background: var(--evidence); }
+.fh-cell.customer { background: var(--customer); font-weight: 600; }
+.fh-cell.front { background: var(--front); }
+.fh-cell.back { background: var(--back); }
+.fh-cell.support { background: var(--support); }
+.fh-cell.picked { box-shadow: 0 0 0 2.5px var(--focus); }
+.fh-mark { color: var(--red); margin-left: 4px; }
+.fh-curve { position: relative; height: 96px; }
+.fh-curve svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.fh-face { position: absolute; font-size: 22px; transform: translate(-50%, -50%); background: none; border: 0; padding: 0; line-height: 1; }
+.fh-sep { border-top: 2px dashed var(--line); position: relative; height: 0; margin: 2px 0; }
+.fh-sep span { position: absolute; right: 0; top: -9px; background: var(--card); padding: 0 6px; font-size: 10.5px; color: var(--muted); }
+.fh-detail { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.fh-kicker { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.fh-detail h3 { margin: 0; font-size: 18px; }
+.fh-detail dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 5px 10px; font-size: 13px; }
+.fh-detail dt { font-weight: 700; }
+.fh-detail dd { margin: 0; }
+.fh-detail p { margin: 0; color: var(--muted); font-size: 13px; }
+.fh-warn { color: var(--amber); }
+.fh-table { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.fh-table table { border-collapse: collapse; font-size: 13px; min-width: 100%; }
+.fh-table th, .fh-table td { border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+.fh-table th { background: var(--soft); }
+.fh-table td.b { font-weight: 700; }
+.fh-table td.fill { color: #1d2330; }
+</style>
+</head>
+<body>
+<div class="fh" id="app"></div>
+<script type="application/json" id="blueprint">{{BLUEPRINT}}</script>
+<script>(()=>{var _=new TextEncoder,O=e=>e.replace(/[&<>"]/g,o=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"})[o]).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,""),E=e=>e<26?String.fromCharCode(65+e):E(Math.floor(e/26)-1)+String.fromCharCode(65+e%26),J=e=>e.replace(/[:\\/?*[\]]/g," ").slice(0,31)||"Sheet";function Q(e){let o=[{}],a=r=>JSON.stringify([r.bold??!1,r.fill??"",r.color??"",r.center??!1,r.wrap??!1]),t=new Map([[a({}),0]]);for(let r of e)for(let p of r.rows)for(let u of p){if(typeof u!="object")continue;let{v:n,...g}=u,x=a(g);t.has(x)||(t.set(x,o.length),o.push(g))}let c=new Map([["|",0]]),d=new Map([["",0]]),i=r=>{let p=`${r.bold?"b":""}|${r.color??""}`;return c.has(p)||c.set(p,c.size),c.get(p)},l=r=>r.fill?(d.has(r.fill)||d.set(r.fill,d.size+1),d.get(r.fill)):0,w=o.map(r=>{let p=r.center||r.wrap?`<alignment${r.center?' horizontal="center"':""}${r.wrap?' wrapText="1"':""} vertical="top"/>`:'<alignment vertical="top"/>';return`<xf numFmtId="0" fontId="${i(r)}" fillId="${l(r)}" borderId="${r.fill||r.bold?1:0}" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1">${p}</xf>`}),s=[...c.keys()].map(r=>{let[p,u]=r.split("|");return`<font>${p?"<b/>":""}<sz val="11"/>${u?`<color rgb="FF${u}"/>`:""}<name val="Calibri"/><family val="2"/></font>`}),m=['<fill><patternFill patternType="none"/></fill>','<fill><patternFill patternType="gray125"/></fill>',...[...d.keys()].filter(Boolean).map(r=>`<fill><patternFill patternType="solid"><fgColor rgb="FF${r}"/><bgColor indexed="64"/></patternFill></fill>`)];return{xml:`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+<fonts count="${s.length}">${s.join("")}</fonts>
+<fills count="${m.length}">${m.join("")}</fills>
+<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFD0D7E2"/></left><right style="thin"><color rgb="FFD0D7E2"/></right><top style="thin"><color rgb="FFD0D7E2"/></top><bottom style="thin"><color rgb="FFD0D7E2"/></bottom><diagonal/></border></borders>
+<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+<cellXfs count="${w.length}">${w.join("")}</cellXfs>
+<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`,styleOf:r=>typeof r=="object"?t.get(a((({v:p,...u})=>u)(r)))??0:0}}function Y(e,o){let a=Math.max(e.columns.length,...e.rows.map(w=>w.length),1),t=e.rows.map((w,s)=>{let m=w.map((y,r)=>{let p=`${E(r)}${s+1}`,u=typeof y=="object"?y.v:y,n=o(y),g=n?` s="${n}"`:"";return u===""||u===void 0||u===null?n?`<c r="${p}"${g}/>`:"":typeof u=="number"?`<c r="${p}"${g}><v>${u}</v></c>`:`<c r="${p}"${g} t="inlineStr"><is><t xml:space="preserve">${O(String(u))}</t></is></c>`}).join("");return`<row r="${s+1}">${m}</row>`}),c=`${E(a-1)}${Math.max(1,e.rows.length)}`,d=e.header?'<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft" activeCell="A2" sqref="A2"/>':"",i=e.columns.length?`<cols>${e.columns.map((w,s)=>`<col min="${s+1}" max="${s+1}" width="${w.width}" customWidth="1"/>`).join("")}</cols>`:"",l=e.header&&e.rows.length>1?`<autoFilter ref="A1:${E(Math.max(0,e.columns.length-1))}${e.rows.length}"/>`:"";return`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+<dimension ref="A1:${c}"/><sheetViews><sheetView workbookViewId="0">${d}</sheetView></sheetViews><sheetFormatPr defaultRowHeight="15"/>${i}<sheetData>${t.join("")}</sheetData>${l}
+</worksheet>`}function N(e){let{xml:o,styleOf:a}=Q(e),t=e.map(i=>J(i.name)),c=e.map((i,l)=>i.header&&i.rows.length>1?`<definedName name="_xlnm._FilterDatabase" localSheetId="${l}" hidden="1">'${O(t[l]).replace(/'/g,"''")}'!$A$1:$${E(Math.max(0,i.columns.length-1))}$${i.rows.length}</definedName>`:"").join(""),d=[["[Content_Types].xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${e.map((i,l)=>`<Override PartName="/xl/worksheets/sheet${l+1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`],["_rels/.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`],["xl/workbook.xml",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><bookViews><workbookView/></bookViews><sheets>${t.map((i,l)=>`<sheet name="${O(i)}" sheetId="${l+1}" r:id="rId${l+1}"/>`).join("")}</sheets>${c?`<definedNames>${c}</definedNames>`:""}</workbook>`],["xl/_rels/workbook.xml.rels",`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${e.map((i,l)=>`<Relationship Id="rId${l+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${l+1}.xml"/>`).join("")}<Relationship Id="rId${e.length+1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`],["xl/styles.xml",o],...e.map((i,l)=>[`xl/worksheets/sheet${l+1}.xml`,Y(i,a)])];return ee(d.map(([i,l])=>[i,_.encode(l)]))}var K=(()=>{let e=new Uint32Array(256);for(let o=0;o<256;o++){let a=o;for(let t=0;t<8;t++)a=a&1?3988292384^a>>>1:a>>>1;e[o]=a>>>0}return e})();function Z(e){let o=4294967295;for(let a=0;a<e.length;a++)o=K[(o^e[a])&255]^o>>>8;return(o^4294967295)>>>0}function ee(e){let o=[],a=[],t=0;for(let[s,m]of e){let y=_.encode(s),r=Z(m),p=new DataView(new ArrayBuffer(30));p.setUint32(0,67324752,!0),p.setUint16(4,20,!0),p.setUint16(6,2048,!0),p.setUint16(8,0,!0),p.setUint32(14,r,!0),p.setUint32(18,m.length,!0),p.setUint32(22,m.length,!0),p.setUint16(26,y.length,!0),o.push(new Uint8Array(p.buffer),y,m);let u=new DataView(new ArrayBuffer(46));u.setUint32(0,33639248,!0),u.setUint16(4,20,!0),u.setUint16(6,20,!0),u.setUint16(8,2048,!0),u.setUint32(16,r,!0),u.setUint32(20,m.length,!0),u.setUint32(24,m.length,!0),u.setUint16(28,y.length,!0),u.setUint32(42,t,!0),a.push(new Uint8Array(u.buffer),y),t+=30+y.length+m.length}let c=a.reduce((s,m)=>s+m.length,0),d=new DataView(new ArrayBuffer(22));d.setUint32(0,101010256,!0),d.setUint16(8,e.length,!0),d.setUint16(10,e.length,!0),d.setUint32(12,c,!0),d.setUint32(16,t,!0);let i=[...o,...a,new Uint8Array(d.buffer)],l=new Uint8Array(i.reduce((s,m)=>s+m.length,0)),w=0;for(let s of i)l.set(s,w),w+=s.length;return l}var D={en:{evidence:"Evidence",customer:"The customer does",feels:"Feels",front:"On stage (what they see)",back:"Backstage",support:"Systems and partners",lineInteraction:"line of interaction",lineVisibility:"line of visibility",lineInternal:"line of internal interaction",fail:"failure point",wait:"wait",none:"nothing",nobody:"nobody",promise:"Promise",within:"Within",owner:"Owner",pains:"Pains",pain:"Pain",source:"Source",action:"Action",actions:"Actions",due:"Due",moment:"Moment",phase:"Phase",system:"System",moments:"Moments",count:"How many",way:"Way of working",summary:"Summary",blueprint:"Blueprint",painsActions:"Pains and actions",promises:"Promises",systems:"Systems",name:"Blueprint",who:"Who lives it",phases:"Phases",look:"To look at",nothing:"Nothing to look at",marks:"Marks"},pt:{evidence:"Evid\xEAncia",customer:"O cliente faz",feels:"Sente",front:"Palco (quem ele v\xEA)",back:"Bastidores",support:"Sistemas e parceiros",lineInteraction:"linha de intera\xE7\xE3o",lineVisibility:"linha de visibilidade",lineInternal:"linha de intera\xE7\xE3o interna",fail:"ponto de falha",wait:"espera",none:"nada",nobody:"ningu\xE9m",promise:"Promessa",within:"Prazo",owner:"Dono",pains:"Dores",pain:"Dor",source:"Fonte",action:"A\xE7\xE3o",actions:"A\xE7\xF5es",due:"At\xE9",moment:"Momento",phase:"Fase",system:"Sistema",moments:"Momentos",count:"Quantos",way:"Jeito de trabalhar",summary:"Resumo",blueprint:"Blueprint",painsActions:"Dores e a\xE7\xF5es",promises:"Promessas",systems:"Sistemas",name:"Blueprint",who:"Quem vive",phases:"Fases",look:"Para olhar",nothing:"Nada para olhar",marks:"Marcas"}},A={1:"\u{1F623}",2:"\u{1F615}",3:"\u{1F610}",4:"\u{1F642}",5:"\u{1F604}"},z={1:"FFD5CC",2:"FFE9D1",3:"F1F1F1",4:"DDF3E6",5:"C9EBD6"};var X=e=>N(e),te={bold:!0,fill:"E8EEF7"},L=e=>e.map(o=>({v:o,...te})),I=e=>(e??[]).filter(Boolean).join("; ");function W(e,o,a="en"){let t=D[a],c=n=>e.actors.find(g=>g.id===n)?.name??n??"",d=n=>e.systems.find(g=>g.id===n)?.name??n,i=n=>e.phases.find(g=>g.id===n)?.name??n,l=n=>I((n??[]).map(g=>g.actor?`${g.does} (${c(g.actor)})`:g.does)),w=n=>n===void 0?"":{v:`${n} ${A[n]}`,fill:z[n],center:!0},s={key:"summary",name:t.summary,header:!1,columns:[{title:"",width:24},{title:"",width:90}],rows:[[{v:t.name,bold:!0},{v:e.name,bold:!0}],[t.who,e.who],...e.about?[["",{v:e.about,wrap:!0}]]:[],[t.phases,e.phases.map(n=>n.name).join(" \u2192 ")],[t.moments,e.moments.length],[],[{v:t.look,bold:!0},o.length?"":t.nothing],...o.map(n=>["",{v:n[a],wrap:!0}])]},m=n=>Math.max(14,Math.min(30,n.length+4)),y={key:"blueprint",name:t.blueprint,header:!0,columns:[{title:"",width:26},...e.moments.map(n=>({title:n.customer,width:m(n.customer)}))],rows:[L(["",...e.moments.map(n=>n.customer)]),[{v:t.phase,bold:!0},...e.moments.map(n=>i(n.phase))],[{v:t.feels,bold:!0},...e.moments.map(n=>w(n.feels))],[{v:t.marks,bold:!0},...e.moments.map(n=>I((n.marks??[]).map(g=>g==="fail"?`\u26A0 ${t.fail}`:`\u23F1 ${t.wait}`)))],[{v:t.evidence,bold:!0},...e.moments.map(n=>({v:I(n.evidence)||`(${t.none})`,wrap:!0}))],[{v:t.front,bold:!0,fill:"EAF1FF"},...e.moments.map(n=>({v:l(n.front),wrap:!0,fill:"EAF1FF"}))],[{v:t.back,bold:!0,fill:"F2ECFF"},...e.moments.map(n=>({v:l(n.back),wrap:!0,fill:"F2ECFF"}))],[{v:t.support,bold:!0,fill:"EEF3EE"},...e.moments.map(n=>({v:I((n.support??[]).map(d)),wrap:!0,fill:"EEF3EE"}))],[{v:t.promise,bold:!0},...e.moments.map(n=>({v:n.promise?`${n.promise.says}${n.promise.within?` (${n.promise.within})`:""}`:"",wrap:!0}))]]},r={key:"pains",name:t.painsActions,header:!0,columns:[{title:t.moment,width:28},{title:t.feels,width:8},{title:t.pain,width:40},{title:t.source,width:22},{title:t.action,width:36},{title:t.owner,width:16},{title:t.due,width:12}],rows:[]};r.rows=[L(r.columns.map(n=>n.title))];for(let n of e.moments){let g=e.actions.filter(v=>v.moment===n.id),x=Math.max((n.pains??[]).length,g.length);for(let v=0;v<x;v++){let R=(n.pains??[])[v],V=g[v];r.rows.push([v===0?{v:n.customer,bold:!0}:"",v===0?w(n.feels):"",{v:R?.says??"",wrap:!0},R?.source??"",{v:V?.does??"",wrap:!0},c(V?.owner),V?.due??""])}}let p={key:"promises",name:t.promises,header:!0,columns:[{title:t.moment,width:28},{title:t.promise,width:44},{title:t.within,width:16},{title:t.owner,width:18}],rows:[L([t.moment,t.promise,t.within,t.owner]),...e.moments.filter(n=>n.promise).map(n=>[{v:n.customer,bold:!0},{v:n.promise.says,wrap:!0},n.promise.within??"\u2014",c(n.promise.owner)||"\u2014"])]},u={key:"systems",name:t.systems,header:!0,columns:[{title:t.system,width:28},{title:t.count,width:10},{title:t.moments,width:70}],rows:[L([t.system,t.count,t.moments]),...e.systems.map(n=>{let g=e.moments.filter(x=>(x.support??[]).includes(n.id));return[{v:n.name,bold:!0},g.length,{v:g.map(x=>x.customer).join("; "),wrap:!0}]})]};return[s,y,r,p,u]}var ne={en:{map:"Blueprint",pick:"Pick a moment to see it whole.",excel:"\u2B07 Excel",yaml:"\u2B07 YAML",png:"\u2B07 PNG",noAction:"none yet",of:e=>`${e} of 5`,moments:e=>`${e} moments`},pt:{map:"Blueprint",pick:"Escolha um momento para ver inteiro.",excel:"\u2B07 Excel",yaml:"\u2B07 YAML",png:"\u2B07 PNG",noAction:"nenhuma ainda",of:e=>`${e} de 5`,moments:e=>`${e} momentos`}},S=JSON.parse(document.getElementById("blueprint").textContent),{blueprint:$,lang:j,looks:T}=S,h=D[j],b=ne[j],H=W($,T,j);document.documentElement.lang=j==="pt"?"pt-BR":"en";document.title=$.name;var f=e=>String(e??"").replace(/[&<>"']/g,o=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[o]),P=e=>$.actors.find(o=>o.id===e)?.name??e??"",q=e=>$.systems.find(o=>o.id===e)?.name??e,C=e=>e.actor?`${f(e.does)} <span class="fh-sub">\xB7 ${f(P(e.actor))}</span>`:f(e.does),F="map",U,B=document.getElementById("app");function G(){let e=[["map",b.map],["pains",h.painsActions],["promises",h.promises]];B.innerHTML=`<div class="fh-wrap">
+    <header><h1 class="fh-title">${f($.name)}</h1><p class="fh-sub">${f($.who)} \xB7 ${f($.phases.map(o=>o.name).join(" \u2192 "))} \xB7 ${b.moments($.moments.length)}</p>${$.about?`<p class="fh-sub">${f($.about)}</p>`:""}</header>
+    <div class="fh-bar" role="tablist">${e.map(([o,a])=>`<button class="fh-tab" role="tab" aria-selected="${o===F}" data-tab="${o}">${f(a)}</button>`).join("")}
+      <span class="fh-space"></span><button class="fh-get" data-get="xlsx">${b.excel}</button><button class="fh-get" data-get="yaml">${b.yaml}</button>${F==="map"?`<button class="fh-get" data-get="png">${b.png}</button>`:""}</div>
+    ${T.length?`<section class="fh-look"><h2>${h.look}</h2><ul>${T.map((o,a)=>`<li><button data-look="${a}">${f(o[j])}</button></li>`).join("")}</ul></section>`:""}
+    ${F==="map"?`<div class="fh-body"><section class="fh-board">${oe()}</section><aside class="fh-detail" aria-live="polite">${se()}</aside></div>`:ae(H.find(o=>o.key===F))}
+  </div>`}function oe(){let e=$.moments.length,o=[];for(let s of $.moments)o.at(-1)?.phase===s.phase?o.at(-1).span++:o.push({phase:s.phase,span:1});let a=(s,m)=>`fh-cell ${m}${U===s.id?" picked":""}`,t=`<div class="fh-grid" style="grid-template-columns: 150px repeat(${e}, minmax(140px, 1fr)); min-width: ${150+e*146}px">`;t+="<div></div>"+o.map(s=>`<div class="fh-phase" style="grid-column: span ${s.span}">${f($.phases.find(m=>m.id===s.phase)?.name??s.phase)}</div>`).join("");let c=(s=3)=>10+(5-s)*19,d=$.moments.map((s,m)=>`${(m+.5)*100/e},${c(s.feels)}`).join(" ");t+=`<div class="fh-row" style="padding-top:34px">${h.feels}</div><div class="fh-curve" style="grid-column: span ${e}"><svg viewBox="0 0 100 96" preserveAspectRatio="none"><polyline points="${d}" fill="none" stroke="var(--red)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg>`,t+=$.moments.map((s,m)=>s.feels?`<button class="fh-face" data-moment="${f(s.id)}" title="${f(b.of(s.feels))}" style="left:${(m+.5)*100/e}%;top:${c(s.feels)}px">${A[s.feels]}</button>`:"").join("")+"</div>";let i=(s,m,y,r)=>{t+=`<div class="fh-row">${s}</div>`+$.moments.map(p=>`<button class="${a(p,m)}${r(p)?" empty":""}" data-moment="${f(p.id)}">${y(p)}</button>`).join("")},l=s=>t+=`<div class="fh-sep" style="grid-column: 1 / span ${e+1}"><span>${s}</span></div>`,w=s=>(s.marks??[]).map(m=>`<span class="fh-mark" title="${m==="fail"?h.fail:h.wait}">${m==="fail"?"\u26A0":"\u23F1"}</span>`).join("");return i(h.evidence,"evidence",s=>(s.evidence??[]).map(f).join("<br>")||`(${h.none})`,s=>!(s.evidence??[]).length),i(h.customer,"customer",s=>f(s.customer)+w(s),()=>!1),l(h.lineInteraction),i(h.front,"front",s=>(s.front??[]).map(C).join("<br>")||"\u2014",s=>!(s.front??[]).length),l(h.lineVisibility),i(h.back,"back",s=>(s.back??[]).map(C).join("<br>")||"\u2014",s=>!(s.back??[]).length),l(h.lineInternal),i(h.support,"support",s=>(s.support??[]).map(m=>f(q(m))).join("<br>")||"\u2014",s=>!(s.support??[]).length),t+"</div>"}var k=(e,o)=>o?`<dt>${e}</dt><dd>${o}</dd>`:"";function se(){let e=$.moments.find(t=>t.id===U);if(!e)return`<p>${b.pick}</p>`;let o=$.actions.filter(t=>t.moment===e.id),a=$.phases.find(t=>t.id===e.phase)?.name??e.phase;return`<span class="fh-kicker">${f(h.moment)} \xB7 ${f(a)}</span><h3>${f(e.customer)}</h3>
+    ${e.feels?`<div style="font-size:28px">${A[e.feels]} <span class="fh-sub">${b.of(e.feels)}${(e.marks??[]).map(t=>` \xB7 ${t==="fail"?`\u26A0 ${h.fail}`:`\u23F1 ${h.wait}`}`).join("")}</span></div>`:""}
+    <dl>${k(h.evidence,(e.evidence??[]).map(f).join(" \xB7 ")||`<em class="fh-warn">${h.none}</em>`)}${k(h.front,(e.front??[]).map(C).join("<br>")||`<em>${h.nobody}</em>`)}
+    ${k(h.back,(e.back??[]).map(C).join("<br>"))}${k(h.support,(e.support??[]).map(t=>f(q(t))).join(" \xB7 "))}
+    ${k(h.promise,e.promise?`\xAB${f(e.promise.says)}\xBB \u2014 ${e.promise.within?f(e.promise.within):`<span class="fh-warn">${h.within.toLowerCase()}?</span>`}, ${e.promise.owner?f(P(e.promise.owner)):`<span class="fh-warn">${h.owner.toLowerCase()}?</span>`}`:"")}
+    ${k(h.pains,(e.pains??[]).map(t=>`\xAB${f(t.says)}\xBB${t.source?` <span class="fh-sub">(${f(t.source)})</span>`:""}`).join("<br>"))}
+    ${k(h.actions,o.length?o.map(t=>`${f(t.does)}${t.owner?` <span class="fh-sub">\xB7 ${f(P(t.owner))}${t.due?` \xB7 ${f(t.due)}`:""}</span>`:""}`).join("<br>"):`<span class="fh-warn">${b.noAction}</span>`)}
+    ${k(h.way,e.way?f(e.way):"")}</dl>`}function ae(e){let o=(c,d)=>{let i=typeof c=="object"&&c?c:{v:c},l=d?"th":"td";return`<${l}${i.bold&&!d?' class="b"':""}${i.fill&&!d?` class="fill" style="background:#${i.fill}"`:""}>${f(i.v)}</${l}>`},[a,...t]=e.rows;return`<div class="fh-table" role="tabpanel"><table><thead><tr>${a.map(c=>o(c,!0)).join("")}</tr></thead><tbody>${t.map(c=>`<tr>${c.map(d=>o(d,!1)).join("")}</tr>`).join("")}</tbody></table></div>`}function M(e,o){let a=document.createElement("a");a.href=URL.createObjectURL(e),a.download=o,a.click(),setTimeout(()=>URL.revokeObjectURL(a.href),1e3)}async function re(){let e=B.querySelector(".fh-grid"),[o,a]=[e.scrollWidth+32,e.scrollHeight+32],t=new XMLSerializer().serializeToString(e).replace(/ picked/g,""),c=`<svg xmlns="http://www.w3.org/2000/svg" width="${o}" height="${a}"><foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml" class="fh light" style="min-height:0;padding:16px;background:#fff;width:${o}px"><style>/* The blueprint: tokens on .fh (not :root) so the PNG, drawn apart, carries them too. */
+.fh {
+  --bg: #f5f6f8; --card: #ffffff; --ink: #1d2330; --muted: #5f6878; --line: #dfe3ea; --soft: #eef1f5;
+  --evidence: #f4f4f4; --customer: #fff4d6; --front: #eaf1ff; --back: #f2ecff; --support: #eef3ee;
+  --red: #c8442c; --amber: #8a5a00; --amber-bg: #fff6e0; --focus: #2f5bea; --active: #1d2330; --on-active: #fff;
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg);
+  min-height: 100vh; box-sizing: border-box; padding: 20px 16px 40px;
+}
+@media (prefers-color-scheme: dark) {
+  .fh:not(.light) {
+    --bg: #14171c; --card: #1d2129; --ink: #e8ebf0; --muted: #9aa3b2; --line: #313744; --soft: #252a33;
+    --evidence: #23262c; --customer: #3a3220; --front: #1f2a44; --back: #2c2440; --support: #20302a;
+    --red: #ff8a70; --amber: #f2c46b; --amber-bg: #332a17; --focus: #8fb0ff; --active: #e8ebf0; --on-active: #14171c;
+  }
+}
+body { margin: 0; }
+.fh *, .fh *::before, .fh *::after { box-sizing: border-box; }
+.fh button { font: inherit; color: inherit; cursor: pointer; }
+.fh :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.fh-wrap { max-width: 1500px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.fh-wrap > * { min-width: 0; }
+.fh-title { margin: 0; font-size: 24px; line-height: 1.2; }
+.fh-sub { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.fh-bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.fh-tab { padding: 6px 13px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-size: 13px; }
+.fh-tab[aria-selected="true"] { background: var(--active); color: var(--on-active); border-color: var(--active); }
+.fh-space { flex: 1; }
+.fh-get { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); font-size: 13px; }
+.fh-look { background: var(--amber-bg); border-radius: 10px; padding: 10px 14px; }
+.fh-look h2 { margin: 0 0 4px; font-size: 12px; color: var(--amber); letter-spacing: .05em; text-transform: uppercase; }
+.fh-look ul { margin: 0; padding: 0; list-style: none; }
+.fh-look button { background: none; border: 0; padding: 2px 0; text-align: left; }
+.fh-look button:hover { text-decoration: underline; }
+.fh-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (min-width: 1600px) { .fh-body { grid-template-columns: minmax(0, 1fr) 340px; } }
+.fh-board { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; overflow-x: auto; }
+.fh-grid { display: grid; gap: 6px; align-items: stretch; background: var(--card); }
+.fh-phase { text-align: center; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-bottom: 2px solid var(--line); padding-bottom: 4px; }
+.fh-row { font-size: 12px; font-weight: 700; color: var(--muted); padding: 7px 4px; }
+.fh-cell { border-radius: 6px; padding: 7px 8px; font-size: 12.5px; line-height: 1.35; text-align: left; border: 0; }
+.fh-cell.empty { color: var(--muted); font-style: italic; opacity: .7; }
+.fh-cell.evidence { background: var(--evidence); }
+.fh-cell.customer { background: var(--customer); font-weight: 600; }
+.fh-cell.front { background: var(--front); }
+.fh-cell.back { background: var(--back); }
+.fh-cell.support { background: var(--support); }
+.fh-cell.picked { box-shadow: 0 0 0 2.5px var(--focus); }
+.fh-mark { color: var(--red); margin-left: 4px; }
+.fh-curve { position: relative; height: 96px; }
+.fh-curve svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.fh-face { position: absolute; font-size: 22px; transform: translate(-50%, -50%); background: none; border: 0; padding: 0; line-height: 1; }
+.fh-sep { border-top: 2px dashed var(--line); position: relative; height: 0; margin: 2px 0; }
+.fh-sep span { position: absolute; right: 0; top: -9px; background: var(--card); padding: 0 6px; font-size: 10.5px; color: var(--muted); }
+.fh-detail { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.fh-kicker { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.fh-detail h3 { margin: 0; font-size: 18px; }
+.fh-detail dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 5px 10px; font-size: 13px; }
+.fh-detail dt { font-weight: 700; }
+.fh-detail dd { margin: 0; }
+.fh-detail p { margin: 0; color: var(--muted); font-size: 13px; }
+.fh-warn { color: var(--amber); }
+.fh-table { overflow-x: auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
+.fh-table table { border-collapse: collapse; font-size: 13px; min-width: 100%; }
+.fh-table th, .fh-table td { border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: top; }
+.fh-table th { background: var(--soft); }
+.fh-table td.b { font-weight: 700; }
+.fh-table td.fill { color: #1d2330; }
+</style>${t}</div></foreignObject></svg>`;try{let d=new Image;d.src=`data:image/svg+xml;charset=utf-8,${encodeURIComponent(c)}`,await d.decode();let i=document.createElement("canvas");i.width=o*2,i.height=a*2;let l=i.getContext("2d");l.scale(2,2),l.drawImage(d,0,0);let w=await new Promise(s=>i.toBlob(s,"image/png"));if(!w)throw new Error("no PNG");M(w,`${S.id}.png`)}catch{M(new Blob([c],{type:"image/svg+xml"}),`${S.id}.svg`)}}B.addEventListener("click",e=>{let o=e.target.closest("button");if(!o)return;let a=o.dataset;if(a.tab)F=a.tab;else if(a.moment)U=a.moment;else if(a.look)F="map",U=T[Number(a.look)].moment??U;else{if(a.get==="xlsx")return M(new Blob([X(H)],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),`${S.id}.xlsx`);if(a.get==="yaml")return M(new Blob([S.yaml],{type:"text/yaml"}),`${S.id}.blueprint.yaml`);if(a.get==="png")return void re()}G(),(a.moment||a.look)&&B.querySelector(".fh-detail")?.scrollIntoView({block:"nearest"})});G();})();
+</script>
+</body>
+</html>

@@ -7,16 +7,16 @@
     "dev/chalk-talk/tools",
     "dev/back-of-napkin/tools",
     "dev/dress-rehearsal/tools",
-    "dev/stage-door/tools",
-    "dev/front-of-house/tools"
+    "dev/gates-and-handoffs/tools",
+    "dev/service-blueprint/tools"
   ],
   "scripts": {
-    "assets": "npm run -s assets -w dev/chalk-talk/tools && npm run -s assets -w dev/back-of-napkin/tools -w dev/dress-rehearsal/tools -w dev/stage-door/tools -w dev/front-of-house/tools",
+    "assets": "npm run -s assets -w dev/chalk-talk/tools && npm run -s assets -w dev/back-of-napkin/tools -w dev/dress-rehearsal/tools -w dev/gates-and-handoffs/tools -w dev/service-blueprint/tools",
     "check": "npm run -s check --workspaces --if-present",
     "typecheck": "npm run -s typecheck --workspaces --if-present",
     "linux": "npm run -s linux --workspaces --if-present",
     "site": "npm run -s site --workspaces --if-present",
     "zip": "npm run -s zip --workspaces --if-present",
-    "audit": "node kit/tools/audit.mjs . --skip \"npm/chalk-talk/*.js\" --skip \"npm/chalk-talk/scripts\" --skip \"npm/chalk-talk/assets\" --skip \"npm/house-lights/skills\" --skip \"docs/chalk-talk/lessons\" --skip \"docs/chalk-talk/images/*.svg\" --skip \"docs/back-of-napkin/drawings\" --skip \"docs/dress-rehearsal/examples\" --skip \"docs/stage-door/examples\" --skip \"docs/front-of-house/examples\" --skip \"skills/*/assets\" --skip \"skills/chalk-talk/scripts/mermaid.mjs\" --skip \"skills/chalk-talk/scripts/contract.mjs\" --skip \"skills/back-of-napkin/scripts/contract.mjs\" --skip \"skills/back-of-napkin/scripts/engine-build.mjs\" --skip \"skills/dress-rehearsal/scripts/engine.mjs\" --skip \"skills/stage-door/scripts/engine.mjs\" --skip \"skills/front-of-house/scripts/engine.mjs\""
+    "audit": "node kit/tools/audit.mjs . --skip \"npm/chalk-talk/*.js\" --skip \"npm/chalk-talk/scripts\" --skip \"npm/chalk-talk/assets\" --skip \"npm/house-lights/skills\" --skip \"docs/chalk-talk/lessons\" --skip \"docs/chalk-talk/images/*.svg\" --skip \"docs/back-of-napkin/drawings\" --skip \"docs/dress-rehearsal/examples\" --skip \"docs/gates-and-handoffs/examples\" --skip \"docs/service-blueprint/examples\" --skip \"skills/*/assets\" --skip \"skills/chalk-talk/scripts/mermaid.mjs\" --skip \"skills/chalk-talk/scripts/contract.mjs\" --skip \"skills/back-of-napkin/scripts/contract.mjs\" --skip \"skills/back-of-napkin/scripts/engine-build.mjs\" --skip \"skills/dress-rehearsal/scripts/engine.mjs\" --skip \"skills/gates-and-handoffs/scripts/engine.mjs\" --skip \"skills/service-blueprint/scripts/engine.mjs\""
   }
 }

@@ -1,4 +1,4 @@
-// chalk-talk/embed: one lesson mounted inside an element. The recipe format: https://github.com/ruinosus/chalk-talk
+// chalk-talk/embed: one lesson mounted inside an element. The recipe format: https://github.com/ruinosus/house-lights
 export type Theme = 'paper' | 'chalkboard'
 /** A checked recipe (what readRecipe returns). */
 export interface Scene { id: string; title: string; width: number; height: number; theme?: Theme; locale?: string; steps: unknown[]; [key: string]: unknown }

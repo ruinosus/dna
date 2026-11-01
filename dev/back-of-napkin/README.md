@@ -8,7 +8,7 @@
 
 <p align="center">
   An <a href="https://agentskills.io">Agent Skill</a> for Claude Code, claude.ai, the Claude API and other tools that load skills.<br>
-  <a href="https://ruinosus.github.io/back-of-napkin/">Open the gallery</a> to play one drawing per purpose.
+  <a href="https://ruinosus.github.io/house-lights/back-of-napkin/">Open the gallery</a> to play one drawing per purpose.
 </p>
 
 ---
@@ -45,7 +45,7 @@ nothing leaves the paper and no text covers another.
 - **Claude's Slides:** `--slides <folder>` gives a picture and a GIF per chapter and the notes, for the Slides type.
 
 **back-of-napkin or chalk-talk?** To **teach** a concept — a class, «explain how X works by drawing» — use its sibling
-[chalk-talk](https://github.com/ruinosus/chalk-talk), which draws a lesson. back-of-napkin is for drawing to
+[chalk-talk](https://github.com/ruinosus/house-lights), which draws a lesson. back-of-napkin is for drawing to
 **present, convince, decide, document or tell what happened**. Both draw with the same engine.
 
 ## Install
@@ -58,7 +58,7 @@ nothing leaves the paper and no text covers another.
 ```
 
 Or copy `skills/back-of-napkin` to `~/.claude/skills/`. **claude.ai**: upload `back-of-napkin.zip` from the
-[latest release](https://github.com/ruinosus/back-of-napkin/releases) in Settings › Capabilities › Skills (code
+[latest release](https://github.com/ruinosus/house-lights/releases) in Settings › Capabilities › Skills (code
 execution on). **Claude API**: the same zip with the Skills API. **Other tools**: copy `skills/back-of-napkin` where
 the tool reads skills; it needs Node.js 18 or later. **npm**: `npx back-of-napkin drawing.chalk` builds a recipe.
 

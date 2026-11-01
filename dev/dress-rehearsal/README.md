@@ -8,7 +8,7 @@
 
 <p align="center">
   An <a href="https://agentskills.io">Agent Skill</a> for Claude Code, claude.ai, the Claude API and other tools that load skills.<br>
-  <a href="https://ruinosus.github.io/dress-rehearsal/">Play the examples</a> in your browser.
+  <a href="https://ruinosus.github.io/house-lights/dress-rehearsal/">Play the examples</a> in your browser.
 </p>
 
 ---
@@ -67,7 +67,7 @@ minutes, escalate.
 ```
 
 Or copy `skills/dress-rehearsal` to `~/.claude/skills/`. **claude.ai**: upload `dress-rehearsal.zip` from the
-[latest release](https://github.com/ruinosus/dress-rehearsal/releases) in Settings › Capabilities › Skills (code
+[latest release](https://github.com/ruinosus/house-lights/releases) in Settings › Capabilities › Skills (code
 execution on). **Claude API**: upload the same zip with the Skills API. **Other tools**: copy `skills/dress-rehearsal`
 where the tool reads skills; it needs Node.js 18 or later.
 
@@ -119,5 +119,5 @@ claude plugin eval .. --ablation none --allow-tools Bash Write Edit --case <name
 
 ## License
 
-MIT. Drawings by [chalk-talk](https://github.com/ruinosus/chalk-talk) (MIT; Rough.js MIT; Caveat and Shantell Sans,
+MIT. Drawings by [chalk-talk](https://github.com/ruinosus/house-lights) (MIT; Rough.js MIT; Caveat and Shantell Sans,
 SIL Open Font License).
