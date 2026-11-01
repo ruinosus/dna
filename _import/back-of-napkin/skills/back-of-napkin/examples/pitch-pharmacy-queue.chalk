@@ -1,0 +1,33 @@
+kind pitch
+title Fila sem fila ↔ a farmácia do bairro
+id pitch-fila
+locale pt-BR
+size 900x620
+
+# A dor
+> Toda segunda de manhã, a farmácia do bairro tem uma fila que dobra a esquina.
+text "40 minutos para comprar um remédio" at 40,64 size=36
+row at 60,120 gap 10
+  repeat 6: person size 64
+text "a fila de segunda, às 9h" at 60,250 size=24 color=#8C8578
+
+# Como é hoje
+> Quem tem receita controlada espera igual a quem só quer um protetor solar.
+shop farmacia at 620,240 "farmácia"
+farmacia thinks "metade só busca o que já pagou" side=above width=230
+
+# A solução
+> Com o app, a pessoa pede de casa e só passa no balcão para buscar.
+phone app at 160,470 "pede no app"
+cup pronto at 420,470 "pronto em 10 min"
+app -> pronto "separado no balcão"
+
+# Por que agora
+> A receita digital virou regra: o pedido já chega validado.
+document receita at 640,470 "receita digital"
+animate receita pulse
+
+# O pedido
+> Pedimos três meses de piloto em cinco lojas.
+highlight 240,580 -> 660,580 thickness=26
+text "piloto: 5 lojas, 3 meses" at 450,588 size=28 anchor=middle

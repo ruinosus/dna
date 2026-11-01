@@ -1,0 +1,21 @@
+kind story
+title O primeiro dia da Bia
+id story-primeiro-dia
+locale pt-BR
+size 900x560
+
+# Começo
+> A Bia começa hoje e ninguém sabe onde estão os acessos.
+person bia at 160,320 "Bia" mood=worried
+bia thinks "a quem eu peço?" side=right width=200
+
+# Virada
+> Alguém entrega um caderno com tudo o que ela vai precisar na primeira semana.
+book caderno at 450,320 "o caderno da semana"
+animate caderno pulse
+
+# Fim
+> No fim do dia, a Bia já fez a primeira entrega.
+person bia2 at 740,320 "Bia, às 18h" mood=happy
+highlight 160,480 -> 740,480 thickness=26
+text "um caderno vale mais que dez reuniões" at 450,488 size=28 anchor=middle

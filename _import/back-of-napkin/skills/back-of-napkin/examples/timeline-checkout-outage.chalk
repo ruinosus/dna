@@ -1,0 +1,29 @@
+kind timeline
+title O checkout fora do ar às 3h
+id timeline-checkout
+locale pt-BR
+size 900x600
+
+# Antes
+> Uma madrugada comum: o checkout atende os pedidos de sempre.
+text "03:00 — tudo normal" at 40,64 size=36
+cart carrinho at 140,250 "pedidos"
+server checkout at 320,250 "checkout"
+carrinho -> checkout
+
+# Minuto a minuto
+> O alerta toca, alguém olha o painel, e a correção sai meia hora depois.
+timeline 80,400 -> 820,400 domain 0..60
+  mark 12 "03:12" "alerta"
+  mark 19 "03:19" "painel"
+  mark 28 "03:28" "correção"
+  mark 46 "03:46" "normal"
+
+# A causa
+> O cálculo de frete mudou na véspera e não tinha teste para CEP sem número.
+note at 560,190 "o frete mudou na véspera" -> checkout
+
+# A correção
+> Um teste para cada formato de CEP antes de publicar.
+highlight 120,540 -> 780,540 thickness=26
+text "teste para cada formato de CEP" at 450,548 size=28 anchor=middle
