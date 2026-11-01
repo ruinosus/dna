@@ -27,6 +27,7 @@ export const SYNTAX = {
   when: { line: 'when atraso:\n  text "multa de 2%" at 600,100 color=#C8442C', needs: 'switch atraso "pagar com atraso" off' },
   pause: { line: 'pause ask "Quanto vai virar a fatura em seis meses?"' },
   animate: { line: 'animate caminhao drive', needs: 'truck caminhao at 600,320 "caminhão"' },
+  lottie: { line: 'lottie celebrate at 720,180 size=120' },
   highlight: { line: 'highlight 90,500 -> 810,500 thickness=24' },
   quiz: { line: 'quiz "Se a taxa dobra, a fatura em seis meses…"\n  * mais que dobra o juro -- é juro sobre juro\n  - só dobra -- isso seria juro simples' },
   // Not in the cheat sheet (references/text.md has them all), but a mistake in one still shows how it is written.

@@ -71,6 +71,48 @@ async function recipesOf(file) {
   return out
 }
 
+// Lottie (0.16.0): the animations a `lottie` step names — one of the pack, or a file beside the recipe (never a URL) —
+// go into the recipe's `lotties`; one from the pack brings its credit. The contract then checks them.
+const PACK = ['celebrate', 'think', 'surprised', 'ok', 'idea', 'time']
+const NOTO = 'Animated emoji: Noto Animated Emoji by Google, CC BY 4.0 (creativecommons.org/licenses/by/4.0)'
+function withLotties(recipe, dir) {
+  const found = []
+  const walk = (v) => {
+    if (Array.isArray(v)) return v.forEach(walk)
+    if (!v || typeof v !== 'object') return
+    if (v.type === 'lottie' && typeof v.src === 'string') found.push(v.src)
+    for (const k of ['steps', 'step']) if (v[k]) walk(v[k])
+  }
+  walk(recipe.steps)
+  if (!found.length) return recipe
+  const lotties = { ...(recipe.lotties ?? {}) }
+  let pack = false
+  for (const src of found) {
+    if (lotties[src]) continue
+    if (/^[a-z]+:\/\//i.test(src)) throw new Error(`lottie "${src}": an animation comes from a file beside the recipe or from the pack, never from the internet.`)
+    if (src.startsWith('.') || src.startsWith('/') || src.endsWith('.json')) {
+      const file = resolve(dir, src)
+      let text
+      try {
+        text = readFileSync(file, 'utf8')
+      } catch {
+        throw new Error(`lottie "${src}": no such file beside the recipe (${file}).`)
+      }
+      try {
+        lotties[src] = JSON.parse(text)
+      } catch {
+        throw new Error(`lottie "${src}": the file is not JSON.`)
+      }
+    } else if (PACK.includes(src)) {
+      lotties[src] = JSON.parse(readFileSync(join(here, '../assets/lottie', `${src}.json`), 'utf8'))
+      pack = true
+    } else throw new Error(`lottie "${src}": not in the pack (${PACK.join(', ')}) and not a file (write ./${src}.json for one).`)
+  }
+  const credits = [...(recipe.credits ?? [])]
+  if (pack && !credits.includes(NOTO)) credits.push(NOTO)
+  return { ...recipe, lotties, ...(credits.length ? { credits } : {}) }
+}
+
 /** How the line or step a mistake names is written, as lines to print under it. */
 function example(e) {
   const line = e instanceof ChalkTextError
@@ -82,7 +124,7 @@ function example(e) {
 const scenes = []
 for (const file of sources) {
   try {
-    for (const recipe of await recipesOf(file)) scenes.push(validateScene((checking = recipe)))
+    for (const recipe of await recipesOf(file)) scenes.push(validateScene((checking = withLotties(recipe, dirname(resolve(file))))))
   } catch (e) {
     const where = sources.length > 1 || file.endsWith('.md') ? `${basename(file)}: ` : ''
     console.error(`✗ ${e instanceof ChalkTextError ? 'text' : 'contract'}: ${where}${e.message}`)
@@ -99,7 +141,12 @@ const slug = slugOf(scenes[0], sources[0])
 const work = asSvg ? mkdtempSync(join(tmpdir(), 'chalk-talk-svg-')) : undefined
 const out = work ? join(work, 'page.html') : resolve(outArg ?? join(dirname(resolve(sources[0])), `${slug}.html`))
 const content = course ? { course: option('--title') ?? scenes[0].title, lessons: scenes } : scenes[0]
-const page = fill(readFileSync(join(here, '../assets/player.html'), 'utf8'), { RECIPE: inline(content) })
+let page = fill(readFileSync(join(here, '../assets/player.html'), 'utf8'), { RECIPE: inline(content) })
+// Lottie: the light player goes in only when a lesson has an animation (it is 168 KB).
+if (scenes.some((s) => Object.keys(s.lotties ?? {}).length)) {
+  const player = readFileSync(join(here, '../assets/lottie_light.js'), 'utf8').replace(/<\/script/gi, '<\\/script')
+  page = page.replace('<script type="application/json" id="chalk-recipe">', () => `<script>${player}</script>\n<script type="application/json" id="chalk-recipe">`)
+}
 writeFileSync(out, page)
 
 scenes.forEach((scene, k) => {

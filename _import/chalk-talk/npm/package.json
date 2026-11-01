@@ -1,6 +1,6 @@
 {
   "name": "chalk-talk",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "description": "Hand-drawn lessons that draw themselves: a player for chalk-talk recipes (one script for the browser or a CDN), a lesson you can mount inside any element, and a command that checks a recipe and builds one HTML file.",
   "license": "MIT",
   "type": "module",
@@ -43,6 +43,8 @@
     "scripts/",
     "kit/",
     "assets/player.html",
+    "assets/lottie/",
+    "assets/lottie_light.js",
     "README.md",
     "LICENSE"
   ],

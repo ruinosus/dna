@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "0.15.0"
+  version: "0.16.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -95,6 +95,14 @@ drawing:
 
 ```
 animate caminhao drive
+```
+
+A ready-made animated emoji — **only when the person asks for one, and one per lesson at most** (it is polished, not
+chalk): `celebrate`, `think`, `surprised`, `ok`, `idea` or `time`, centred at `at`; or `./file.json`, a Lottie file the
+person gave, beside the recipe. The build puts it inside the file, with its credit:
+
+```
+lottie celebrate at 720,180 size=120
 ```
 
 Numbers that follow the value:
@@ -189,7 +197,7 @@ it. The player loads from the CDN and checks the recipe itself:
 <script type="text/chalk-talk" id="chalk-recipe">
 THE RECIPE AS TEXT
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.15.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.16.0/player.js"></script>
 ```
 
 If the page says the recipe could not be opened, fix the line it names.

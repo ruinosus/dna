@@ -134,6 +134,13 @@ for (const name of EXAMPLES) copyFileSync(join(drawing, 'scenes', `${name}.json`
 writeFileSync(join(skill, 'assets/VERSION'), `engine ${version}\nguide ${guideVersion}\nmolds-and-hooks ${refsVersion}\n`)
 console.log(`✓ assets from the engine ${version}: player.html ${(page.length / 1024).toFixed(0)} KB, contract.mjs, ${readdirSync(examples).length} examples`)
 
+// Lottie (0.16.0): lottie-web's light player (SVG only, no expressions; MIT) and the Noto pack (CC BY 4.0, its NOTICE),
+// copied as they are; build.mjs puts the player in a lesson only when it has an animation.
+const lottieWeb = JSON.parse(readFileSync(join(here, 'node_modules/lottie-web/package.json'), 'utf8')).version
+writeFileSync(join(skill, 'assets/lottie_light.js'), `/*! lottie-web ${lottieWeb} (light) — MIT License, Copyright (c) 2015 Bodymovin — https://github.com/airbnb/lottie-web */\n` + readFileSync(join(here, 'node_modules/lottie-web/build/player/lottie_light.min.js'), 'utf8'))
+rmSync(join(skill, 'assets/lottie'), { recursive: true, force: true })
+cpSync(join(here, 'noto'), join(skill, 'assets/lottie'), { recursive: true })
+
 // Onda C: the kit's runtime goes into the skill like into any other skill of the kit (claude.ai installs nothing).
 vendor(join(skill, 'scripts'), ['browser.mjs', 'page.mjs'])
 
@@ -145,6 +152,9 @@ for (const f of ['build.mjs', 'browser.mjs', 'page.mjs', 'contract.mjs', 'mermai
 rmSync(join(here, '../npm/kit'), { recursive: true, force: true })
 cpSync(join(here, '../kit'), join(here, '../npm/kit'), { recursive: true })
 copyFileSync(join(skill, 'assets/player.html'), join(here, '../npm/assets/player.html'))
+copyFileSync(join(skill, 'assets/lottie_light.js'), join(here, '../npm/assets/lottie_light.js'))
+rmSync(join(here, '../npm/assets/lottie'), { recursive: true, force: true })
+cpSync(join(skill, 'assets/lottie'), join(here, '../npm/assets/lottie'), { recursive: true })
 copyFileSync(join(here, '../LICENSE'), join(here, '../npm/LICENSE'))
 
 // Spec 2026-10-30 (Obsidian): the lesson mounted inside an element (chalk-talk/embed), and the Mermaid converter for the

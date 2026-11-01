@@ -212,6 +212,41 @@ setTimeout(() => {
   }
 }
 
+// Lottie (0.16.0): an animation of the pack plays inside the drawing, with its credit; a file beside the recipe too;
+// the player goes in only when a lesson has one; an expression, an image from outside, a URL or a missing file is
+// refused.
+{
+  writeFileSync(join(dir, 'mine.json'), readFileSync(join(here, 'noto/think.json'), 'utf8'))
+  const lot = join(dir, 'party.chalk')
+  writeFileSync(lot, 'title X\nid party\nlottie celebrate festa at 700,200 size=140\nlottie ./mine.json at 200,300 size=120\n')
+  const l = run(lot, [join(dir, 'party.html')])
+  const page = readFileSync(join(dir, 'party.html'), 'utf8')
+  expect(l.status === 0 && page.includes('lottie-web') && page.includes('Noto Animated Emoji by Google'), 'a lesson with animations carries the player and the credit', l.stdout + l.stderr)
+  if (!/• review/.test(l.stdout)) {
+    writeFileSync(join(dir, 'party-probe.html'), page.replace('</body>', `<script>setTimeout(async () => { const gs = [...document.querySelectorAll('[data-lottie]')]
+      const shape = () => gs.map((g) => g.querySelector('svg')?.innerHTML.length ?? 0).join(); const a = shape(); await new Promise((r) => setTimeout(r, 500))
+      const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify({ n: gs.length, drawn: gs.every((g) => g.querySelector('svg path')), moved: a !== shape(), credit: document.querySelector('[data-part="credits"]')?.textContent ?? '' })); document.body.append(p) }, 2500)</script></body>`))
+    const { runPage } = await import('../kit/browser.mjs')
+    const r = await runPage(join(dir, 'party-probe.html'), 'probe', '', { timeout: 30 })
+    expect(r && r.n === 2 && r.drawn && r.moved && /CC BY 4.0/.test(r.credit), `the animations play in the lesson, credited (${JSON.stringify(r)})`)
+  }
+  const plain = run(join(dir, 'two.chalk'), [join(dir, 'plain.html'), '--no-review'])
+  expect(plain.status !== 1 && !readFileSync(join(dir, 'plain.html'), 'utf8').includes('lottie-web'), 'a lesson with no animation has no player')
+  const bad = (name, json, why) => {
+    writeFileSync(join(dir, `${name}.json`), JSON.stringify(json))
+    writeFileSync(join(dir, `${name}.chalk`), `title X\nlottie ./${name}.json at 400,200\n`)
+    const r = run(join(dir, `${name}.chalk`))
+    expect(r.status === 1 && why.test(r.stderr), `an animation ${name.replace(/-/g, ' ')} is refused (${r.stderr.trim().split('\n')[0]})`)
+  }
+  const base = { v: '5.7.4', fr: 30, ip: 0, op: 60, w: 100, h: 100 }
+  bad('with-an-expression', { ...base, layers: [{ ks: { o: { a: 0, k: 100, x: 'time * 2' } } }] }, /expression/)
+  bad('with-an-outside-image', { ...base, layers: [], assets: [{ id: 'i', w: 1, h: 1, u: 'https://x/', p: 'a.png' }] }, /image from outside/)
+  writeFileSync(join(dir, 'url.chalk'), 'title X\nlottie https://x.test/a.json at 400,200\n')
+  expect(/never from the internet/.test(run(join(dir, 'url.chalk')).stderr), 'an animation from a URL is refused')
+  writeFileSync(join(dir, 'gone.chalk'), 'title X\nlottie ./gone.json at 400,200\n')
+  expect(/no such file beside the recipe/.test(run(join(dir, 'gone.chalk')).stderr), 'a missing animation file says so')
+}
+
 // The cheat sheet: every example a mistake points to builds, and the ones meant for SKILL.md are in it, word for word.
 {
   const { SYNTAX } = await import('../skills/chalk-talk/scripts/syntax.mjs')

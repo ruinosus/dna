@@ -1,13 +1,17 @@
 // The page of every chalk-talk HTML file (and of player.js on a CDN): it reads the recipe from the page, checks it and
 // mounts the lesson (lesson.ts) — or, for a course, the list of lessons above it. Opened with #review, #snapshot,
 // #snapshots, #svg or #still, it does the job of scripts/build.mjs and of the repository's tools instead.
-import { playbackBeats, Renderer } from '@engine/renderer'
+import { playbackBeats, Renderer, setLottiePlayer, type LottiePlayer } from '@engine/renderer'
 import { chaptersFor, defaultValues, validateScene, type Scene } from '@engine/recipe'
 import { PROP_ALIASES, PROP_NAMES } from '@engine/props'
 import { parseChalk } from '@engine/text'
 import { combinations, reviewScene } from '@engine/review'
 import { animatedSvg } from '@engine/record'
 import { browserLang, fontsLoaded, mountLesson, stillLesson, svgText, tag, TEXT } from './lesson'
+
+// Lottie: the build puts lottie-web's light player before this script only when the lesson has an animation.
+declare const lottie: LottiePlayer | undefined
+if (typeof lottie !== 'undefined') setLottiePlayer(lottie)
 
 const lang = browserLang()
 const t = TEXT[lang]

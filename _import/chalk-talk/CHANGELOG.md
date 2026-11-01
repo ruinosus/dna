@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.16.0 — 2026-11-01
+
+A ready-made animation, when the person asks for one.
+
+- **`lottie celebrate|think|surprised|ok|idea|time at x,y`**: an animated emoji from the pack, Animated Noto Emoji by
+  Google (CC BY 4.0, credited under the lesson), or **`lottie ./file.json`**: a Lottie file the person gave, beside the
+  recipe — never a URL. It plays inside the drawing, so the PNG, the GIF and the video catch it; the review and the
+  contact sheet see its middle frame.
+- The build checks each animation (at most 200 KB, no expressions — no code inside it — and no image from outside)
+  and puts lottie-web's light player (168 KB, MIT) in the file only when the lesson has an animation: a lesson
+  without one is the same size as before.
+- The cheat sheet has it — only when asked for, one per lesson at most.
+
 ## 0.15.0 — 2026-11-01
 
 Things that move in place.

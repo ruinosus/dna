@@ -79,7 +79,7 @@ const MARKUP = `
       <section data-part="quiz" class="card quiz" hidden></section>
       <div data-part="check" class="check" role="status"></div>
       <details data-part="transcript" class="card transcript"></details>
-      <p class="foot"><span data-part="keys"></span><br><span data-part="made"></span></p>
+      <p class="foot"><span data-part="keys"></span><br><span data-part="made"></span><span data-part="credits"></span></p>
     </aside>
   </div>`
 
@@ -129,6 +129,8 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
   button('all').textContent = compact ? `▶ ${t.all}` : t.playAll
   part('keys').textContent = opts.keys === 'document' ? t.keys : ''
   part('made').textContent = t.made
+  // Lottie: what the lesson uses under another license (an animation pack under CC BY) is credited here.
+  for (const c of scene.credits ?? []) part('credits').append(tag('br'), tag('span', {}, c))
 
   function paint() {
     chips.forEach((b, i) => {
