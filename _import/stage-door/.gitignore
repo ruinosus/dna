@@ -1,7 +1,0 @@
-node_modules/
-dist/
-.DS_Store
-evals/results/
-tools/sources.json
-tools/.engine
-npm/*.tgz

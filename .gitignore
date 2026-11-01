@@ -1,0 +1,9 @@
+.DS_Store
+node_modules/
+dist/
+evals/results/
+npm/*/*.tgz
+docs/chalk-talk/examples/*.html
+dev/*/tools/sources.json
+dev/*/tools/.engine
+dev/*/tools/.lib

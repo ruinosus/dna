@@ -1,9 +1,0 @@
-{
-  "name": "stage-door",
-  "version": "0.3.0",
-  "description": "A team's way of working, clear and checkable: stages, gates and who approves them, roles and outputs — as a file, an offline map, an Excel workbook and a drawn lesson.",
-  "author": { "name": "ruinosus" },
-  "license": "MIT",
-  "repository": "https://github.com/ruinosus/stage-door",
-  "keywords": ["skill", "process", "way-of-working", "stage-gate", "raci", "excel"]
-}

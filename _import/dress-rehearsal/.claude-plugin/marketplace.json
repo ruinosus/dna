@@ -1,8 +1,0 @@
-{
-  "name": "dress-rehearsal",
-  "owner": { "name": "ruinosus" },
-  "description": "dress-rehearsal: test your incident runbook by playing it.",
-  "plugins": [
-    { "name": "dress-rehearsal", "source": "./", "description": "Turn an incident runbook into a playable drill — and find what the runbook does not say." }
-  ]
-}

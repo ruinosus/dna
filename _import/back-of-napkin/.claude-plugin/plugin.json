@@ -1,9 +1,0 @@
-{
-  "name": "back-of-napkin",
-  "version": "0.2.1",
-  "description": "Explain anything by drawing it, the way you would on the back of a napkin — a pitch, an architecture, a decision, data, a timeline or a story, drawn stroke by stroke in one HTML file that opens offline.",
-  "author": { "name": "ruinosus" },
-  "license": "MIT",
-  "repository": "https://github.com/ruinosus/back-of-napkin",
-  "keywords": ["skill", "drawing", "pitch", "architecture", "decision", "storytelling", "hand-drawn"]
-}

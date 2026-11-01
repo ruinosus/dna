@@ -1,7 +1,0 @@
-node_modules/
-dist/
-.DS_Store
-evals/results/
-npm/*.tgz
-tools/sources.json
-tools/.lib

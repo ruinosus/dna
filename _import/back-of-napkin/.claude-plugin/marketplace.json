@@ -1,8 +1,0 @@
-{
-  "name": "back-of-napkin",
-  "owner": { "name": "ruinosus" },
-  "description": "back-of-napkin: explain anything by drawing it.",
-  "plugins": [
-    { "name": "back-of-napkin", "source": "./", "description": "A pitch, an architecture, a decision, data, a timeline or a story — drawn stroke by stroke, with chapters and narration, in one HTML file." }
-  ]
-}

@@ -1,0 +1,17 @@
+{
+  "name": "back-of-napkin-tools",
+  "private": true,
+  "type": "module",
+  "description": "Brings chalk-talk's engine into the back-of-napkin skill, and checks, packs and shows it.",
+  "scripts": {
+    "assets": "node assets.mjs",
+    "check": "node check.mjs",
+    "zip": "node zip.mjs",
+    "site": "node site.mjs",
+    "linux": "node linux-check.mjs",
+    "metrics": "node node_modules/chalk-talk/kit/tools/eval-metrics.mjs"
+  },
+  "devDependencies": {
+    "chalk-talk": "*"
+  }
+}

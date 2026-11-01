@@ -1,0 +1,14 @@
+{
+  "name": "house-lights",
+  "version": "1.0.0",
+  "description": "The command behind the house-lights skills: draw a lesson or a pitch, play an incident drill, map a way of working or a customer journey — one offline HTML file each.",
+  "type": "module",
+  "bin": { "house-lights": "cli.mjs" },
+  "files": ["cli.mjs", "skills/", "LICENSE", "README.md"],
+  "engines": { "node": ">=18" },
+  "license": "MIT",
+  "author": "ruinosus",
+  "homepage": "https://ruinosus.github.io/house-lights/",
+  "repository": { "type": "git", "url": "git+https://github.com/ruinosus/house-lights.git", "directory": "npm/house-lights" },
+  "keywords": ["skills", "drawing", "explainer", "presentation", "incident-drill", "service-blueprint"]
+}

@@ -1,8 +1,0 @@
-{
-  "name": "front-of-house",
-  "owner": { "name": "ruinosus" },
-  "description": "front-of-house: a service blueprint, clear and checkable.",
-  "plugins": [
-    { "name": "front-of-house", "source": "./", "description": "Turn interviews, tickets and process docs into a service blueprint: an offline map, a workbook and a drawn lesson." }
-  ]
-}

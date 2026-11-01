@@ -1,0 +1,25 @@
+{
+  "name": "chalk-talk-tools",
+  "private": true,
+  "type": "module",
+  "description": "Builds the generated parts of the chalk-talk skill from the drawing engine, and checks and packs the skill.",
+  "scripts": {
+    "assets": "node assets.mjs",
+    "typecheck": "tsc -p tsconfig.json",
+    "check": "node check.mjs",
+    "zip": "node zip.mjs",
+    "snapshots": "node snapshots.mjs",
+    "site": "node site.mjs",
+    "linux": "node linux-check.mjs",
+    "metrics": "node ../kit/tools/eval-metrics.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.0",
+    "gifenc": "^1.0.3",
+    "lottie-web": "^5.13.0",
+    "pptxgenjs": "4.0.1",
+    "tsx": "^4.19.2",
+    "typescript": "5.6.3",
+    "yaml": "^2.6.1"
+  }
+}
