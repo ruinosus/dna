@@ -8,6 +8,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync,
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { vendor } from 'chalk-talk/kit/tools/vendor.mjs'
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
 const skill = join(root, 'skills/front-of-house')
@@ -37,7 +38,7 @@ const pure = {
     })
   },
 }
-const common = { bundle: true, minify: true, write: false, logLevel: 'warning', alias: { '@lib': lib }, nodePaths: [join(here, 'node_modules'), join(lib, 'node_modules')], plugins: [pure] }
+const common = { bundle: true, minify: true, write: false, logLevel: 'warning', alias: { '@lib': lib, '@kit': join(here, 'node_modules/chalk-talk/kit') }, nodePaths: [join(here, 'node_modules'), join(lib, 'node_modules')], plugins: [pure] }
 const engine = await build({ ...common, entryPoints: [join(root, 'src/engine.ts')], format: 'esm', platform: 'node', target: 'node18', banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" } })
 writeFileSync(join(skill, 'scripts/engine.mjs'), `${banner}\n${engine.outputFiles[0].text}`)
 
@@ -49,11 +50,13 @@ const html = readFileSync(join(root, 'src/page/template.html'), 'utf8').replace(
 if (!html.includes('{{BLUEPRINT}}')) throw new Error('The template lost its {{BLUEPRINT}} slot.')
 writeFileSync(join(skill, 'assets/map.html'), html)
 copyFileSync(join(here, 'node_modules/chalk-talk/assets/player.html'), join(skill, 'assets/lesson.html'))
+// The kit's headless browser (it runs the lesson's reviewer) and page helpers, copied into the skill.
+vendor(join(skill, 'scripts'), ['browser.mjs', 'page.mjs'])
 writeFileSync(join(skill, 'assets/VERSION'), `engine ${version}\nchalk-talk ${chalk}\n`)
 console.log(`✓ assets from the engine ${version} and chalk-talk ${chalk}: engine.mjs ${(engine.outputFiles[0].text.length / 1024).toFixed(0)} KB, map.html ${(html.length / 1024).toFixed(0)} KB`)
 
 mkdirSync(join(root, 'npm/scripts'), { recursive: true })
 mkdirSync(join(root, 'npm/assets'), { recursive: true })
-for (const f of ['build.mjs', 'browser.mjs', 'engine.mjs']) copyFileSync(join(skill, 'scripts', f), join(root, 'npm/scripts', f))
+for (const f of ['build.mjs', 'browser.mjs', 'page.mjs', 'engine.mjs']) copyFileSync(join(skill, 'scripts', f), join(root, 'npm/scripts', f))
 for (const f of ['map.html', 'lesson.html']) copyFileSync(join(skill, 'assets', f), join(root, 'npm/assets', f))
 copyFileSync(join(root, 'LICENSE'), join(root, 'npm/LICENSE'))

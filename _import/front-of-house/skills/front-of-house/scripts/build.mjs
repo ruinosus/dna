@@ -13,6 +13,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
+import { fill, inline } from './page.mjs'
 import { lessonOf, problemText, readBlueprint, reviewBlueprint, validateScene, workbookFile, workbookOf } from './engine.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -60,12 +61,10 @@ const all = argv.includes('--all')
 const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), lesson: all || argv.includes('--lesson') }
 if (!want.xlsx && !want.lesson) want.html = true
 const out = resolve(option('--out') ?? dirname(file))
-// JSON inside a <script> tag: "<" escaped so no text in the blueprint can end the tag.
-const inline = (v) => JSON.stringify(v).replace(/</g, '\\u003c')
 const asset = (f) => readFileSync(join(here, '../assets', f), 'utf8')
 if (want.html) {
   const page = join(out, `${id}.html`)
-  writeFileSync(page, asset('map.html').replace('{{BLUEPRINT}}', () => inline({ id, lang, blueprint, looks, yaml: source })))
+  writeFileSync(page, fill(asset('map.html'), { BLUEPRINT: inline({ id, lang, blueprint, looks, yaml: source }) }))
   console.log(`✓ map       ${page}`)
 }
 if (want.xlsx) {
@@ -77,11 +76,11 @@ let exit = 0
 if (want.lesson) {
   const scene = validateScene(lessonOf(blueprint, lang))
   const page = join(out, `${id}.lesson.html`)
-  writeFileSync(page, asset('lesson.html').replace('{{RECIPE}}', () => inline(scene)))
+  writeFileSync(page, fill(asset('lesson.html'), { RECIPE: inline(scene) }))
   console.log(`✓ lesson    ${page}`)
-  const r = runPage(page, 'review')
+  const r = await runPage(page, 'review')
   if (r === null) console.log('• review    no Chrome, Chromium or Edge here: the lesson checks itself when opened')
-  else if (r.error) console.log(`• review    could not run (${r.error}); the lesson checks itself when opened`)
+  else if (r.error) console.log(`✗ review    not checked: ${r.error}`)
   else if (!r.problems.length) console.log(`✓ review    ${r.combos} ${r.combos === 1 ? 'setting' : 'settings'}: nothing off the paper, no text over text`)
   else {
     for (const p of r.problems) console.log(`! review    ${p}`)

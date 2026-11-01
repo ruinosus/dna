@@ -2,11 +2,11 @@
 // and lesson (the lesson passing chalk-talk's reviewer when there is a browser) and prints what it should look at — the
 // return blueprint on purpose has four things, the others none; a broken file says its line; the map loads nothing from
 // the internet; and, in a browser, the map opens a moment, its tabs and its downloads. Run after npm run assets.
-import { execFileSync, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
@@ -50,8 +50,9 @@ ok(b.status === 1 && b.stderr.includes(`broken.blueprint.yaml:${line}:`) && !exi
 const map = readFileSync(join(skill, 'assets/map.html'), 'utf8')
 ok(!/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(map), 'the map loads nothing from the internet')
 
-const browser = ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium', process.env.CHROME_PATH].find((p) => p && existsSync(p))
-if (!browser) console.log('• no Chrome here: the map was not opened in a browser')
+// The map in a browser, by the kit (over the DevTools pipe): a moment opens, the tabs and the downloads work.
+const { runPage, browser } = await import('../skills/front-of-house/scripts/browser.mjs')
+if (!browser()) console.log('• no Chrome here: the map was not opened in a browser')
 else {
   const html = readFileSync(join(work, 'devolucao.html'), 'utf8').replace('</body>', `<script>
     const got = []; HTMLAnchorElement.prototype.click = function () { got.push(this.download) }
@@ -62,14 +63,10 @@ else {
       await new Promise((r) => setTimeout(r, 1500))
       q('[data-tab="pains"]').click(); out.pains = document.querySelectorAll('.fh-table tbody tr').length
       out.got = got; out.errs = errs
-      const p = document.createElement('pre'); p.id = 'probe'; p.textContent = JSON.stringify(out); document.body.append(p) }, 300)</script></body>`)
+      const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
   writeFileSync(join(work, 'probe.html'), html)
-  const profile = mkdtempSync(join(tmpdir(), 'front-of-house-chrome-'))
-  const dom = execFileSync(browser, ['--headless=new', '--disable-gpu', `--user-data-dir=${profile}`, '--virtual-time-budget=8000', '--dump-dom', pathToFileURL(join(work, 'probe.html')).href], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 90000 })
-  rmSync(profile, { recursive: true, force: true })
-  const found = dom.match(/<pre id="probe">([^<]*)<\/pre>/)
-  const r = found ? JSON.parse(found[1].replace(/&quot;/g, '"')) : { errs: ['the page did not answer'] }
-  ok(r.detail === 'Espera notícia — 6 dias sem nada' && r.pains >= 2 && (r.got ?? []).join() === 'devolucao.xlsx,devolucao.blueprint.yaml,devolucao.png' && !r.errs.length, 'the map in a browser: a moment, the tabs, the downloads', JSON.stringify(r))
+  const r = (await runPage(join(work, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
+  ok(r.detail === 'Espera notícia — 6 dias sem nada' && r.pains >= 2 && (r.got ?? []).join() === 'devolucao.xlsx,devolucao.blueprint.yaml,devolucao.png' && !r.errs?.length, 'the map in a browser: a moment, the tabs, the downloads', JSON.stringify(r))
 }
 
 rmSync(work, { recursive: true, force: true })

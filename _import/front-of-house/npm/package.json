@@ -1,6 +1,6 @@
 {
   "name": "front-of-house",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A service blueprint, clear and checkable: check a .blueprint.yaml and make an offline map, an Excel workbook and a drawn lesson of what the customer lives and who makes it happen behind.",
   "license": "MIT",
   "type": "module",

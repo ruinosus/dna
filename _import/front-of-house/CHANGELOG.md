@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0 — 2026-11-01
+
+The lesson's review no longer hangs in cloud sandboxes.
+
+- The headless browser is chalk-talk's kit (`chalk-talk/kit`, from its npm package): it talks to the browser over the
+  DevTools pipe instead of `--dump-dom`, finds Playwright's Chromium, runs without the sandbox as root on Linux, and
+  tries the next browser when one fails. A review that could not run now says «not checked».
+- The blueprint is read by the kit's YAML reader, with the same messages and the same lines.
+- The check, the gallery's pictures, the zip, the name audit and a Linux check (`npm run linux`) use the kit.
+- The lesson uses chalk-talk 0.14.1.
+
 ## 0.1.0 — 2026-10-30
 
 First version: a service blueprint file (`front-of-house/v1`) made from interviews, tickets and process notes, checked

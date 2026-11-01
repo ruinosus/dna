@@ -1,7 +1,7 @@
 // A service blueprint (format front-of-house/v1): what the customer does at each moment and how they feel, what they see,
 // and who makes it happen in front of them, behind the scenes and in the systems — with the promises, the pains and the
 // actions. Read from YAML (or JSON) with the line of every problem; what names nothing is an error.
-import { isMap, LineCounter, parseDocument } from 'yaml'
+import { readFormat } from '@kit/format'
 
 export const FORMAT = 'front-of-house/v1'
 
@@ -69,18 +69,9 @@ const slug = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,
 const texts = (v: unknown) => (Array.isArray(v) ? v.map(str).filter(Boolean) : str(v) ? [str(v)] : [])
 
 export function readBlueprint(text: string): Read {
-  const lines = new LineCounter()
-  const doc = parseDocument(text, { lineCounter: lines, prettyErrors: false })
-  const at = (path: (string | number)[]) => {
-    for (let p = path; p.length; p = p.slice(0, -1)) {
-      const node = doc.getIn(p, true) as { range?: [number, number, number] } | undefined
-      if (node?.range) return lines.linePos(node.range[0]).line
-    }
-    return 1
-  }
-  if (doc.errors.length) return { problems: [{ line: lines.linePos(doc.errors[0].pos[0]).line, key: 'syntax', detail: doc.errors[0].code }] }
-  const raw = doc.toJS() as unknown
-  if (!isObj(raw) || raw.format !== FORMAT || !isMap(doc.contents)) return { problems: [{ line: at(['format']), key: 'format' }] }
+  const read = readFormat(text, FORMAT)
+  if (!read.ok) return { problems: [read.problem] }
+  const { raw, at } = read.format
   const problems: Problem[] = []
   const need = (v: unknown, what: string, path: (string | number)[]) => {
     if (!str(v)) problems.push({ line: at(path), key: 'missing', what })

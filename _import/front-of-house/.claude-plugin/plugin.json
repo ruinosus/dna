@@ -1,6 +1,6 @@
 {
   "name": "front-of-house",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A service blueprint, clear and checkable: what the customer lives at each moment and who makes it happen behind — as a file, an offline map, an Excel workbook and a drawn lesson.",
   "author": { "name": "ruinosus" },
   "license": "MIT",

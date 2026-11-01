@@ -1,17 +1,16 @@
 // The GitHub Pages gallery (docs/): every example made into its map, workbook and lesson (docs/examples/), pictures of
 // each map and lesson (docs/images/, a headless browser in the light theme) and docs/index.html. Run after npm run assets.
 import { execFileSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { copyFileSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
+import { browser, runPages } from '../skills/front-of-house/scripts/browser.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
 const docs = join(root, 'docs')
 const examples = join(root, 'skills/front-of-house/examples')
-const exe = ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', process.env.CHROME_PATH].find((p) => p && existsSync(p))
-if (!exe) throw new Error('No Chrome: the pictures need one (set CHROME_PATH).')
+if (!browser()) throw new Error('No Chrome, Chromium or Edge: the pictures need one (set CHROME_PATH).')
 const ABOUT = {
   devolucao: ['pt', 'Returning an online purchase: six days with no news is the worst moment — and, on purpose, nobody owns it yet. Four things to look at.'],
   'gym-signup': ['en', 'Joining a neighbourhood gym: twenty minutes of paperwork while the class starts — with an action and an owner.'],
@@ -19,8 +18,9 @@ const ABOUT = {
 for (const d of ['examples', 'images']) rmSync(join(docs, d), { recursive: true, force: true })
 mkdirSync(join(docs, 'examples'), { recursive: true })
 mkdirSync(join(docs, 'images'), { recursive: true })
-const profile = mkdtempSync(join(tmpdir(), 'front-of-house-site-'))
-const shot = (page, png, [w, h], hash = '') => execFileSync(exe, ['--headless=new', '--disable-gpu', '--hide-scrollbars', `--user-data-dir=${profile}`, '--blink-settings=preferredColorScheme=1', `--window-size=${w},${h}`, '--virtual-time-budget=20000', `--screenshot=${png}`, `${pathToFileURL(page).href}${hash}`], { stdio: 'ignore', timeout: 90000 })
+// The pictures, in the light theme, taken by the kit's browser over the DevTools pipe — all in one opening at the end.
+const shots = []
+const shot = (page, png, [width, height], mode = '') => shots.push({ file: page, mode, shot: { width, height, scheme: 'light' }, png })
 const items = []
 for (const f of readdirSync(examples).filter((x) => x.endsWith('.blueprint.yaml')).sort()) {
   const id = f.replace('.blueprint.yaml', '')
@@ -28,11 +28,15 @@ for (const f of readdirSync(examples).filter((x) => x.endsWith('.blueprint.yaml'
   copyFileSync(join(examples, f), join(docs, 'examples', f))
   execFileSync(process.execPath, [join(root, 'skills/front-of-house/scripts/build.mjs'), join(docs, 'examples', f), '--all', '--lang', lang], { stdio: 'ignore' })
   shot(join(docs, 'examples', `${id}.html`), join(docs, 'images', `${id}-map.png`), [1440, 860])
-  shot(join(docs, 'examples', `${id}.lesson.html`), join(docs, 'images', `${id}-lesson.png`), [1100, 640], '#still')
+  shot(join(docs, 'examples', `${id}.lesson.html`), join(docs, 'images', `${id}-lesson.png`), [1100, 640], 'still')
   items.push({ id, lang, about, name: (readFileSync(join(examples, f), 'utf8').match(/^name:\s*(.+)$/m) ?? [])[1] ?? id })
-  console.log(`✓ ${id}`)
 }
-rmSync(profile, { recursive: true, force: true })
+const { results } = await runPages(shots, { timeout: 60 })
+shots.forEach(({ png }, k) => {
+  if (!results[k]?.png) throw new Error(`${png}: the picture failed (${results[k]?.error ?? 'no picture'})`)
+  writeFileSync(png, Buffer.from(results[k].png.split(',')[1], 'base64'))
+})
+for (const { id } of items) console.log(`✓ ${id}`)
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 writeFileSync(join(docs, 'index.html'), `<!doctype html>
 <html lang="en">
