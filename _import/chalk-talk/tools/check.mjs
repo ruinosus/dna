@@ -222,6 +222,7 @@ setTimeout(() => {
   const l = run(lot, [join(dir, 'party.html')])
   const page = readFileSync(join(dir, 'party.html'), 'utf8')
   expect(l.status === 0 && page.includes('lottie-web') && page.includes('Noto Animated Emoji by Google'), 'a lesson with animations carries the player and the credit', l.stdout + l.stderr)
+  expect(/^• lottie +2 animations in one drawing/m.test(l.stdout), 'two animations in one drawing are pointed out (not an error)', l.stdout)
   if (!/• review/.test(l.stdout)) {
     writeFileSync(join(dir, 'party-probe.html'), page.replace('</body>', `<script>setTimeout(async () => { const gs = [...document.querySelectorAll('[data-lottie]')]
       const shape = () => gs.map((g) => g.querySelector('svg')?.innerHTML.length ?? 0).join(); const a = shape(); await new Promise((r) => setTimeout(r, 500))

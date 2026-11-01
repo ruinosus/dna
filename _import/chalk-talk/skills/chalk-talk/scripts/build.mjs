@@ -156,6 +156,9 @@ scenes.forEach((scene, k) => {
   const values = Object.keys(scene.params ?? {}).length + Object.keys(scene.switches ?? {}).length
   const who = course ? `  (${k + 1}) ${scene.title}: ` : '  '
   console.log(`✓ contract${who}${scene.steps.length} steps, ${chaptersFor(scene).length} chapters, ${values} values`)
+  // one ready-made animation per drawing reads better (it is polished, not chalk): said, not an error
+  const lotties = JSON.stringify(scene.steps).match(/"type":"lottie"/g)?.length ?? 0
+  if (lotties > 1) console.log(`• lottie   ${course ? `(${k + 1}) ` : ''}${lotties} animations in one drawing: one reads better (keep the others only if the person asked for them)`)
   for (const w of purposeWarnings(scene)) {
     console.log(`! ${scene.kind.padEnd(9)}${course ? ` (${k + 1})` : ''} ${w.text}`)
     warned = true

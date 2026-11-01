@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.17.1 — 2026-11-01
+
+From the 0.17.0 tests in claude.ai.
+
+- Two or more animations in one drawing are pointed out (one reads better) — a note, not an error.
+- SKILL.md says what an animation costs: the file grows from about 340 KB to about 610 KB.
+- The Noto NOTICE names where the animations come from (noto-emoji-animation) and where the license is stated
+  (noto-emoji-files).
+
 ## 0.17.0 — 2026-11-01
 
 The engine learns what a drawing is for — the base of back-of-napkin.
