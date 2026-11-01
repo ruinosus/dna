@@ -1,6 +1,6 @@
 {
   "name": "back-of-napkin",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Explain anything by drawing it: check a .chalk recipe with its purpose (pitch, arch, decision, data, timeline, story) and build one HTML file that draws itself, stroke by stroke.",
   "license": "MIT",
   "type": "module",

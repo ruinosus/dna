@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.0 — 2026-11-01
+
+Present it, or take it to PowerPoint — with chalk-talk 0.18.0.
+
+- The drawing is built with `--present`: it opens presenting, one chapter at a time on the whole screen, a clicker's
+  PageDown to move on and the speaker notes in a window of their own.
+- `--pptx static|steps|video|all` and `--settings`: a slide per chapter, per beat or a video of each chapter drawing
+  itself, the narration as speaker notes; `--slides <folder>` for Claude's Slides type. `SKILL.md` offers it in one
+  line when delivering.
+- `scripts/pptx.mjs` (pptxgenjs, MIT) comes from chalk-talk's npm package.
+- The check builds the pitch with `--present --pptx`, and so does the Linux check; two evals: «quero o PowerPoint do
+  pitch» and «apresentar ao cliente» (built with `--present`).
+
 ## 0.1.0 — 2026-11-01
 
 First version: a drawing says what it is for (`kind pitch`, `arch`, `decision`, `data`, `timeline` or `story`) and

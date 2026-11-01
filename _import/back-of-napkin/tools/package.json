@@ -13,6 +13,6 @@
     "metrics": "node node_modules/chalk-talk/kit/tools/eval-metrics.mjs"
   },
   "devDependencies": {
-    "chalk-talk": "^0.17.2"
+    "chalk-talk": "^0.18.0"
   }
 }

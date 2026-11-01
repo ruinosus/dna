@@ -5,7 +5,7 @@
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { checker, checkOneVersion, checkSkillMd, runNode } from 'chalk-talk/kit/tools/checks.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -67,6 +67,22 @@ const refused = [
 for (const [what, file, says] of refused) {
   const r = run(file, ['--no-review'])
   expect(r.status === 1 && says.test(r.stdout + r.stderr), `${what} is refused`, r.stdout + r.stderr)
+}
+
+// 0.2.0: the pitch presents, and goes to PowerPoint with a slide per chapter and the narration as notes.
+{
+  const { browser } = await import('../skills/back-of-napkin/scripts/browser.mjs')
+  if (!browser()) console.log('• no Chrome here: presenting and the PowerPoint were not checked')
+  else {
+    const pitch = recipe('pitch.chalk', readFileSync(join(skill, 'examples/pitch-pharmacy-queue.chalk'), 'utf8'))
+    const r = run(pitch, ['--present', '--pptx', '--no-review'])
+    const id = readFileSync(pitch, 'utf8').match(/^id\s+(\S+)/m)?.[1] ?? 'pitch'
+    const html = readFileSync(join(dir, `${id}.html`), 'utf8')
+    const { inspectPptx } = await import(pathToFileURL(join(skill, 'scripts/pptx.mjs')).href)
+    const got = r.status === 0 ? await inspectPptx(readFileSync(join(dir, `${id}.pptx`))) : {}
+    const chapters = (readFileSync(pitch, 'utf8').match(/^# /gm) ?? []).length
+    expect(r.status === 0 && html.includes('<body data-present="1">') && got.slides === chapters && got.notes === chapters, `the pitch presents and becomes a ${chapters}-slide PowerPoint with notes`, r.stdout + r.stderr + JSON.stringify(got))
+  }
 }
 
 // The cheat sheet: every line meant for SKILL.md is in it, word for word (a quiz is a lesson's, so it is left out).

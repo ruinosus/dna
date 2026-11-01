@@ -34,6 +34,16 @@ Claude writes a short text **recipe** (`.chalk`), never the drawing; `scripts/bu
 purpose usually misses, draws it into **one HTML file that opens offline** and — with a headless browser — checks that
 nothing leaves the paper and no text covers another.
 
+## Present it
+
+- **In the browser:** the page opens presenting — one chapter at a time on the whole screen; a clicker's PageDown
+  moves on, PageUp back, Esc stops; the speaker notes (the narration, the next chapter, a clock) open in a window of
+  their own, and the values still move.
+- **PowerPoint:** `--pptx` makes a slide per chapter, `--pptx steps` one per beat (the drawing grows click by click),
+  `--pptx video` a video of each chapter drawing itself (MP4); the narration goes as speaker notes, and `--settings`
+  adds a sequence per setting.
+- **Claude's Slides:** `--slides <folder>` gives a picture and a GIF per chapter and the notes, for the Slides type.
+
 **back-of-napkin or chalk-talk?** To **teach** a concept — a class, «explain how X works by drawing» — use its sibling
 [chalk-talk](https://github.com/ruinosus/chalk-talk), which draws a lesson. back-of-napkin is for drawing to
 **present, convince, decide, document or tell what happened**. Both draw with the same engine.
@@ -66,7 +76,8 @@ npm run zip      # dist/back-of-napkin.zip
 ## Third parties
 
 The player is chalk-talk's (MIT): strokes by Rough.js (MIT); fonts Caveat and Shantell Sans (SIL Open Font License);
-animated emoji from Noto Emoji Animation (CC BY 4.0, see `assets/lottie/NOTICE.md`), played by lottie-web (MIT).
+animated emoji from Noto Emoji Animation (CC BY 4.0, see `assets/lottie/NOTICE.md`), played by lottie-web (MIT). The
+PowerPoint is made by pptxgenjs (MIT), with JSZip inside it (dual MIT or GPLv3; used under MIT).
 
 ## License
 

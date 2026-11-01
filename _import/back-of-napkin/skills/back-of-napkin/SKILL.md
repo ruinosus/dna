@@ -4,7 +4,7 @@ description: Explains anything by drawing it, the way you would on the back of a
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first).
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # back-of-napkin: explain anything by drawing it
@@ -111,8 +111,11 @@ come from. No quiz: that is a lesson's.
 ## 3. Build and check
 
 ```
-node scripts/build.mjs <id>.chalk
+node scripts/build.mjs <id>.chalk --present
 ```
+
+`--present` makes the page open presenting (it is still the same file). Leave it out only when the drawing is not to
+be shown to people (a document, a note).
 
 - `✗ purpose / text / contract …` (exit 1): fix that line as the example under it shows.
 - `! <kind> …` (exit 3): what the purpose usually misses (a pitch with no ask, an architecture with no failure…).
@@ -125,7 +128,14 @@ At most **two** rounds of fixes; then deliver and say what is left.
 ## 4. Deliver
 
 The path of the `.html` (or the file, where the person downloads files) and, in one line, **what you chose and an
-offer to change it**; then one sentence on how to go through it (Next, the value to move, the switch to turn on).
+offer to change it**; then one sentence on how to present it: «it opens presenting — the first key goes full screen
+and opens the speaker notes; PageDown (or a clicker) moves on, Esc stops», and the value or switch to move live.
+
+Then offer the PowerPoint in one line. When asked, build again with `--pptx` (a slide per chapter), `--pptx steps`
+(the drawing grows click by click) or `--pptx video` (each chapter drawing itself); the narration goes as speaker
+notes, and `--settings a,b` adds a sequence per setting (the contact sheet's names). In claude.ai, for the Slides type:
+`--slides <folder>` writes `NN.png`, `NN.gif` and `notes.json` — make the deck from them, a slide per chapter, its
+notes as the speaker notes.
 
 ## Never
 

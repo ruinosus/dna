@@ -6,6 +6,8 @@ Explain anything by drawing it — the command behind the
 ```
 npx back-of-napkin pitch.chalk               # check it and build pitch.html, offline
 npx back-of-napkin pitch.chalk --snapshots   # and a contact sheet of every chapter (needs Chrome, Chromium or Edge)
+npx back-of-napkin pitch.chalk --present     # the page opens presenting (PageDown moves on, speaker notes)
+npx back-of-napkin pitch.chalk --pptx steps  # pitch.pptx: static, steps or video, the narration as speaker notes
 ```
 
 A recipe starts with what the drawing is for: `kind pitch`, `arch`, `decision`, `data`, `timeline` or `story`.
