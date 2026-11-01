@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "0.16.0"
+  version: "0.17.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -23,6 +23,9 @@ Decide the three things a drawing needs yourself, and say them when you deliver:
   with few shapes (a card bill, a bus stop, a café queue);
 - **who it is for**: what the request says, else a curious adult;
 - **the value the person moves**: a real quantity in the idea (the monthly rate, people arriving per minute), or none.
+
+A drawing to present, convince, decide, document or tell what happened (a pitch, an architecture for a client, a
+post-mortem) is **back-of-napkin**'s, when it is installed; this skill teaches.
 
 Ask first — once, all together, and only what is missing — when it is **for a class, students, a talk or a course**
 (see «For a class»), when the request could mean two different things, or when the person asks to see the plan first.
@@ -197,7 +200,7 @@ it. The player loads from the CDN and checks the recipe itself:
 <script type="text/chalk-talk" id="chalk-recipe">
 THE RECIPE AS TEXT
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.16.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.17.0/player.js"></script>
 ```
 
 If the page says the recipe could not be opened, fix the line it names.

@@ -247,6 +247,37 @@ setTimeout(() => {
   expect(/no such file beside the recipe/.test(run(join(dir, 'gone.chalk')).stderr), 'a missing animation file says so')
 }
 
+// back-of-napkin (0.17.0): what each purpose usually misses is said (exit 3), a quiz outside a lesson is refused, and
+// bars with no max keep one scale over the settings.
+{
+  const warn = (name, body, why) => {
+    writeFileSync(join(dir, `${name}.chalk`), `title X\n${body}\ntext "x" at 40,60\n`)
+    const r = run(join(dir, `${name}.chalk`), ['--no-review'])
+    expect(r.status === 3 && why.test(r.stdout), `${name.replace(/-/g, ' ')}: «${(r.stdout.match(/^! .*$/m) ?? [''])[0].replace(/^! \S+\s+/, '')}»`, r.stdout + r.stderr)
+  }
+  warn('a-pitch-with-no-ask', 'kind pitch', /^! pitch +the pitch does not end with an ask/m)
+  warn('an-architecture-with-no-failure', 'kind arch', /^! arch +no failure drawn/m)
+  warn('a-decision-with-no-winner', 'kind decision', /^! decision +the decision does not say which option wins/m)
+  warn('data-with-no-source', 'kind data', /^! data +where do these numbers come from/m)
+  warn('a-timeline-with-no-line', 'kind timeline', /^! timeline +the timeline has no line/m)
+  writeFileSync(join(dir, 'pitch-ok.chalk'), 'title X\nkind pitch\n# The ask\nhighlight 100,300 -> 500,300\ntext "a pilot" at 300,310 anchor=middle\n')
+  const ok = run(join(dir, 'pitch-ok.chalk'), ['--no-review'])
+  expect(ok.status === 0 && !/^! /m.test(ok.stdout), 'a pitch that ends with its ask has nothing to say', ok.stdout)
+  writeFileSync(join(dir, 'pitch-quiz.chalk'), 'title X\nkind pitch\ntext "x" at 40,60\nquiz "q"\n  * a -- b\n  - c -- d\n')
+  expect(/only a lesson has a quiz/.test(run(join(dir, 'pitch-quiz.chalk')).stderr), 'a quiz outside a lesson is refused')
+  // bars with no max: at the switch's two settings, the taller bar is a different height (one scale), not the same
+  writeFileSync(join(dir, 'bars.chalk'), 'title X\nid bars\nswitch dobro "o dobro" off\nvar v = "10 + 10*dobro"\nbars box 100,100,300,300 values v labels a\n')
+  const b = run(join(dir, 'bars.chalk'), [join(dir, 'bars.html'), '--snapshots'])
+  if (!/• review/.test(b.stdout)) {
+    const shots = join(dir, 'bars.snapshots')
+    const height = (f) => {
+      const png = readFileSync(join(shots, f))
+      return png.length // a taller hatched bar draws more strokes: a bigger picture
+    }
+    expect(b.status === 0 && height('bars.ch1.default.png') < height('bars.ch1.dobro-on.png') - 500, 'bars with no max keep one scale: off, the bar is shorter than on')
+  }
+}
+
 // The cheat sheet: every example a mistake points to builds, and the ones meant for SKILL.md are in it, word for word.
 {
   const { SYNTAX } = await import('../skills/chalk-talk/scripts/syntax.mjs')

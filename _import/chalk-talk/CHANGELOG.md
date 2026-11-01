@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.17.0 — 2026-11-01
+
+The engine learns what a drawing is for — the base of back-of-napkin.
+
+- **`kind`** (`lesson`, the default, or `pitch`, `arch`, `decision`, `data`, `timeline`, `story`) and **`source`** in
+  a recipe. Lessons do not change; a quiz belongs to a lesson only.
+- **What each purpose usually misses is said** (exit 3, like a review finding): a pitch with no ask at the end, an
+  architecture with no failure drawn, a decision that does not say which option wins, data with no source, a
+  timeline with no line.
+- **The review finds a balloon on another step's drawing.**
+- **Bars with no `max` keep one scale over the settings**, so they compare (half the value, half the height).
+- SKILL.md: a drawing to present, convince, decide or tell what happened is back-of-napkin's.
+
 ## 0.16.0 — 2026-11-01
 
 A ready-made animation, when the person asks for one.

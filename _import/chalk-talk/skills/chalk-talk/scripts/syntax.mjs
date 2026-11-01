@@ -6,6 +6,8 @@
 export const SYNTAX = {
   title: { line: 'title Juros compostos ↔ a fatura do cartão' },
   locale: { line: 'locale pt-BR' },
+  kind: { line: 'kind story', sheet: false },
+  source: { line: 'source "IBGE, PNAD 2025"', sheet: false },
   size: { line: 'size 900x560' },
   param: { line: 'param taxa "juros ao mês (%)" 1..15 step=1 = 8' },
   switch: { line: 'switch atraso "pagar com atraso" off' },

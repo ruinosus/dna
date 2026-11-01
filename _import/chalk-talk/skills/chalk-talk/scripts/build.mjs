@@ -22,7 +22,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPages } from './browser.mjs'
 import { fill, inline } from './page.mjs'
-import { ChalkTextError, chaptersFor, parseChalk, PROP_ALIASES, PROP_NAMES, validateScene } from './contract.mjs'
+import { ChalkTextError, chaptersFor, parseChalk, PROP_ALIASES, PROP_NAMES, purposeWarnings, validateScene } from './contract.mjs'
 import { syntaxForLine, syntaxForStep } from './syntax.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -149,10 +149,17 @@ if (scenes.some((s) => Object.keys(s.lotties ?? {}).length)) {
 }
 writeFileSync(out, page)
 
+// back-of-napkin: what a drawing of its purpose usually misses (a pitch with no ask…) — drawn anyway, to fix like a
+// review finding (exit 3).
+let warned = false
 scenes.forEach((scene, k) => {
   const values = Object.keys(scene.params ?? {}).length + Object.keys(scene.switches ?? {}).length
   const who = course ? `  (${k + 1}) ${scene.title}: ` : '  '
   console.log(`✓ contract${who}${scene.steps.length} steps, ${chaptersFor(scene).length} chapters, ${values} values`)
+  for (const w of purposeWarnings(scene)) {
+    console.log(`! ${scene.kind.padEnd(9)}${course ? ` (${k + 1})` : ''} ${w.text}`)
+    warned = true
+  }
 })
 
 // Onda C: a figure made with `define` is seen by nobody when the build passes at once (the review measures, it does
@@ -172,7 +179,7 @@ const ran = jobs.length ? await runPages(jobs, { timeout }) : { results: [] }
 const name = (exe) => basename(exe).replace(/\.exe$/i, '')
 const result = (what, k) => ran.results?.[jobs.findIndex((j) => j.what === what && j.k === k)]
 
-let code = 0
+let code = warned ? 3 : 0
 if (noReview) console.log('• review    skipped (--no-review); the page checks itself when opened')
 else if (!ran.results) console.log('• review    no Chrome, Chromium or Edge here: the page checks itself when opened')
 else {

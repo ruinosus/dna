@@ -42,7 +42,7 @@ symlinkSync(engine, join(here, '.engine'))
 // The contract, for scripts/build.mjs: plain ESM, no dependency; esbuild's file-path comments left out.
 const contract = await build({
   stdin: {
-    contents: `export { validateScene, chaptersFor, defaultValues } from './recipe'\nexport { PROP_NAMES, PROP_ALIASES } from './props'\nexport { parseChalk, printChalk, ChalkTextError } from './text'\n`,
+    contents: `export { validateScene, chaptersFor, defaultValues, KINDS } from './recipe'\nexport { PROP_NAMES, PROP_ALIASES } from './props'\nexport { parseChalk, printChalk, ChalkTextError } from './text'\nexport { purposeWarnings } from './purpose'\n`,
     resolveDir: drawing,
     loader: 'ts',
   },
