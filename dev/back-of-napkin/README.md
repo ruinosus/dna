@@ -3,7 +3,7 @@
 <p align="center"><b>Ask Claude to draw a pitch, an architecture, a decision, a number, what happened or a story. Get a hand-drawn board that draws itself, chapter by chapter, with a highlight at the end.</b></p>
 
 <p align="center">
-  <img src="docs/thumbs/pitch-pharmacy-queue.png" alt="A hand-drawn pitch: a queue at a pharmacy on Monday morning, then ordering in the app and picking up in ten minutes, ending on «pilot: 5 stores, 3 months»" width="860">
+  <img src="../../docs/back-of-napkin/thumbs/pitch-pharmacy-queue.png" alt="A hand-drawn pitch: a queue at a pharmacy on Monday morning, then ordering in the app and picking up in ten minutes, ending on «pilot: 5 stores, 3 months»" width="860">
 </p>
 
 <p align="center">
@@ -50,27 +50,27 @@ nothing leaves the paper and no text covers another.
 
 ## Install
 
-**Claude Code**:
+back-of-napkin is one of the five skills of the [house-lights](../../README.md) plugin. **Claude Code:**
 
 ```
-/plugin marketplace add ruinosus/back-of-napkin
-/plugin install back-of-napkin@back-of-napkin
+/plugin marketplace add ruinosus/house-lights
+/plugin install house-lights@house-lights
 ```
 
-Or copy `skills/back-of-napkin` to `~/.claude/skills/`. **claude.ai**: upload `back-of-napkin.zip` from the
-[latest release](https://github.com/ruinosus/house-lights/releases) in Settings › Capabilities › Skills (code
-execution on). **Claude API**: the same zip with the Skills API. **Other tools**: copy `skills/back-of-napkin` where
-the tool reads skills; it needs Node.js 18 or later. **npm**: `npx back-of-napkin drawing.chalk` builds a recipe.
+Claude picks the skill by its description; to call it by name, `/house-lights:back-of-napkin`. **claude.ai**: upload
+`back-of-napkin.zip` from the [latest release](https://github.com/ruinosus/house-lights/releases) in Settings › Capabilities ›
+Skills (code execution on). **Claude API**: the same zip with the Skills API. **Other tools**: copy
+`skills/back-of-napkin` where the tool reads skills; it needs Node.js 18 or later. **npm**: `npx house-lights back-of-napkin <file>`.
 
 ## Develop
 
 ```
-cd tools && npm install
-npm run assets   # brings chalk-talk's engine from its npm package (never edit the generated files)
-npm run check    # SKILL.md, one version, the six examples drawn clean, one warning per purpose, the refusals
-npm run linux    # the six examples as in a cloud sandbox (Linux, root, Playwright's Chromium); needs Docker
-npm run site     # the gallery in docs/
-npm run zip      # dist/back-of-napkin.zip
+npm install       # at the repository root: the five skills are npm workspaces
+npm run assets -w dev/back-of-napkin/tools   # brings chalk-talk's engine from its npm package (never edit the generated files)
+npm run check -w dev/back-of-napkin/tools    # SKILL.md, one version, the six examples drawn clean, one warning per purpose, the refusals
+npm run linux -w dev/back-of-napkin/tools    # the six examples as in a cloud sandbox (Linux, root, Playwright's Chromium); needs Docker
+npm run site -w dev/back-of-napkin/tools     # the gallery in docs/
+npm run zip -w dev/back-of-napkin/tools      # dist/back-of-napkin.zip
 ```
 
 ## Third parties

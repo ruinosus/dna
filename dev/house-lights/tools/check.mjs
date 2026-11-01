@@ -1,7 +1,7 @@
 // Checks what holds the five skills together: one version in the plugin, the npm package and every SKILL.md; the npm
 // package carrying each skill's build; and npx house-lights <skill> drawing an example of each, with its exit code.
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -47,4 +47,14 @@ for (const [s, args] of cases) {
   expect(r.status === 0 && made.length > 0, `npx house-lights ${s} draws an example (${made.join(', ') || 'nothing'})`, r.stdout + r.stderr)
 }
 rmSync(work, { recursive: true, force: true })
+
+// Every relative link of the front page, the README and each skill's guide points at a file that is there.
+const pages = ['docs/index.html', 'README.md', ...SKILLS.map((s) => `dev/${s}/README.md`)]
+const broken = pages.flatMap((page) => {
+  const text = readFileSync(join(repo, page), 'utf8')
+  const links = [...text.matchAll(/(?:href|src)="([^"]+)"|\]\(([^)\s]+)\)/g)].map((m) => (m[1] ?? m[2]).split('#')[0])
+    .filter((l) => l && !l.includes(':') && !l.includes('$'))
+  return links.filter((l) => !existsSync(join(repo, dirname(page), l))).map((l) => `${page} → ${l}`)
+})
+expect(!broken.length, `every relative link is there (${pages.length} pages)${broken.length ? ` — not: ${broken.join(', ')}` : ''}`)
 done('house-lights')

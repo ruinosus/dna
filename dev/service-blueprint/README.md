@@ -3,7 +3,7 @@
 <p align="center"><b>Give Claude your interviews, tickets and process notes. Get a service blueprint — what the customer lives at each moment, and who makes it happen behind.</b></p>
 
 <p align="center">
-  <img src="docs/images/devolucao-map.png" alt="A service blueprint of a return: the line of how the customer feels dips at «waits for news — 6 days», and under it the stage, backstage and systems" width="860">
+  <img src="../../docs/service-blueprint/images/devolucao-map.png" alt="A service blueprint of a return: the line of how the customer feels dips at «waits for news — 6 days», and under it the stage, backstage and systems" width="860">
 </p>
 
 <p align="center">
@@ -42,7 +42,7 @@ research into actions with owners, and anyone who keeps hearing «on our side it
 | **The workbook** (`.xlsx`) | Summary, Blueprint, Pains and actions, Promises, Systems — for the meeting and the follow-up. |
 | **The lesson** (`.lesson.html`) | The journey walked by drawing it, moment by moment, the customer higher when they feel better — made with [chalk-talk](https://github.com/ruinosus/house-lights). |
 
-<p align="center"><img src="docs/images/devolucao-lesson.png" alt="The lesson: the customer at each moment of a return, lower at the six days with no news; under the line of visibility, who does what" width="760"></p>
+<p align="center"><img src="../../docs/service-blueprint/images/devolucao-lesson.png" alt="The lesson: the customer at each moment of a return, lower at the six days with no news; under the line of visibility, who does what" width="760"></p>
 
 ## How a conversation goes
 
@@ -66,28 +66,17 @@ day, checking the health-plan card takes long.
 
 ## Install
 
-**Claude Code**:
+service-blueprint is one of the five skills of the [house-lights](../../README.md) plugin. **Claude Code:**
 
 ```
-/plugin marketplace add ruinosus/service-blueprint
-/plugin install service-blueprint@service-blueprint
+/plugin marketplace add ruinosus/house-lights
+/plugin install house-lights@house-lights
 ```
 
-Or copy `skills/service-blueprint` to `~/.claude/skills/`. **claude.ai**: upload `service-blueprint.zip` from the
-[latest release](https://github.com/ruinosus/house-lights/releases) in Settings › Capabilities › Skills (code
-execution on). **Claude API**: the same zip with the Skills API. **Other tools**: copy `skills/service-blueprint` where the
-tool reads skills; it needs Node.js 18 or later.
-
-**Without a skill** — on npm as `service-blueprint`:
-
-```
-npx service-blueprint returns.blueprint.yaml --check
-npx service-blueprint returns.blueprint.yaml --all --lang pt     # map, workbook and lesson
-```
-
-The format is [`references/format.md`](skills/service-blueprint/references/format.md); two blueprints are in
-[`skills/service-blueprint/examples/`](skills/service-blueprint/examples) — the return one has, on purpose, four things to
-look at.
+Claude picks the skill by its description; to call it by name, `/house-lights:service-blueprint`. **claude.ai**: upload
+`service-blueprint.zip` from the [latest release](https://github.com/ruinosus/house-lights/releases) in Settings › Capabilities ›
+Skills (code execution on). **Claude API**: the same zip with the Skills API. **Other tools**: copy
+`skills/service-blueprint` where the tool reads skills; it needs Node.js 18 or later. **npm**: `npx house-lights service-blueprint <file>`.
 
 ## Develop
 
@@ -95,11 +84,11 @@ look at.
 `sources.example.json`):
 
 ```
-cd tools && npm install
-npm run assets   # scripts/engine.mjs, assets/map.html, assets/lesson.html
-npm run check    # the engine's checks, every example built (and what each must look at), a broken file, the map in Chrome
-npm run site     # docs/: the gallery
-npm run zip      # dist/service-blueprint.zip
+npm install       # at the repository root: the five skills are npm workspaces
+npm run assets -w dev/service-blueprint/tools   # scripts/engine.mjs, assets/map.html, assets/lesson.html
+npm run check -w dev/service-blueprint/tools    # the engine's checks, every example built (and what each must look at), a broken file, the map in Chrome
+npm run site -w dev/service-blueprint/tools     # docs/: the gallery
+npm run zip -w dev/service-blueprint/tools      # dist/service-blueprint.zip
 ```
 
 ## License

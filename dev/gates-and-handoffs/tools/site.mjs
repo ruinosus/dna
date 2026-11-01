@@ -114,7 +114,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
       <div><b><code>&lt;id&gt;.way.yaml</code></b>The source: plain text you keep in Git. Every other file is made from it.</div>
       <div><b>The map (.html)</b>One page that opens offline: click a stage or a gate, see roles (RACI), gates and outputs, download a PNG.</div>
       <div><b>The workbook (.xlsx)</b>Summary, Stages, Gates, Roles (RACI), Outputs, KPIs and a checklist for the gate meeting. Edit it and Claude proposes the changes back.</div>
-      <div><b>The lesson (.html)</b>The flow drawn stroke by stroke, a chapter per phase — made with <a href="https://github.com/ruinosus/house-lights">chalk-talk</a>.</div>
+      <div><b>The lesson (.html)</b>The flow drawn stroke by stroke, a chapter per phase — made with <a href="../chalk-talk/">chalk-talk</a>.</div>
     </div>
   </section>
   <section>

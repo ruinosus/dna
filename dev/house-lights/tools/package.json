@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "check": "node check.mjs",
-    "zip": "node pack.mjs && node zip.mjs"
+    "zip": "node pack.mjs && node zip.mjs",
+    "site": "node site.mjs"
   }
 }

@@ -88,7 +88,7 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
   </section>
   <section>
     <h2>One drawing per purpose — open one and press Next</h2>
-    <p class="note" style="margin: 4px 0 16px">Written by Claude with this skill; every example is fictional. To teach a concept, its sibling <a href="https://github.com/ruinosus/house-lights">chalk-talk</a> draws a lesson.</p>
+    <p class="note" style="margin: 4px 0 16px">Written by Claude with this skill; every example is fictional. To teach a concept, its sibling <a href="../chalk-talk/">chalk-talk</a> draws a lesson.</p>
     <div class="grid">${drawings.map(card).join('')}
     </div>
   </section>

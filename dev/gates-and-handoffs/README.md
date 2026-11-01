@@ -3,7 +3,7 @@
 <p align="center"><b>Give Claude your team's process — the PDF, the slides, what everyone just knows — and get one clear, checkable way of working.</b></p>
 
 <p align="center">
-  <img src="docs/images/feature-delivery-map.png" alt="The map of a delivery flow: phases Discovery, Delivery and Operation on top, Product, Engineering and Quality in the rows, the stages in order and two gates with who approves them" width="860">
+  <img src="../../docs/gates-and-handoffs/images/feature-delivery-map.png" alt="The map of a delivery flow: phases Discovery, Delivery and Operation on top, Product, Engineering and Quality in the rows, the stages in order and two gates with who approves them" width="860">
 </p>
 
 <p align="center">
@@ -46,8 +46,8 @@ From the one `<id>.way.yaml`:
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/scrum-lesson.png" alt="A hand-drawn lesson of a Scrum team: Capture, Refine, Build, Accept, Release and Measure, with the Ready and Done gates"></td>
-    <td width="50%"><img src="docs/images/service-desk-map.png" alt="The map of a service desk: Customer, first level and specialists in the rows; a gate decides whether the ticket is escalated"></td>
+    <td width="50%"><img src="../../docs/gates-and-handoffs/images/scrum-lesson.png" alt="A hand-drawn lesson of a Scrum team: Capture, Refine, Build, Accept, Release and Measure, with the Ready and Done gates"></td>
+    <td width="50%"><img src="../../docs/gates-and-handoffs/images/service-desk-map.png" alt="The map of a service desk: Customer, first level and specialists in the rows; a gate decides whether the ticket is escalated"></td>
   </tr>
   <tr>
     <td>The lesson of a Scrum team: Definition of Ready and Done as gates, and where each sends the work back.</td>
@@ -92,30 +92,17 @@ shortened):
 
 ## Install
 
-**Claude Code**:
+gates-and-handoffs is one of the five skills of the [house-lights](../../README.md) plugin. **Claude Code:**
 
 ```
-/plugin marketplace add ruinosus/gates-and-handoffs
-/plugin install gates-and-handoffs@gates-and-handoffs
+/plugin marketplace add ruinosus/house-lights
+/plugin install house-lights@house-lights
 ```
 
-Or copy `skills/gates-and-handoffs` to `~/.claude/skills/`.
-
-**claude.ai**: download `gates-and-handoffs.zip` from the [latest release](https://github.com/ruinosus/house-lights/releases),
-then Settings › Capabilities › Skills › Upload. Code execution must be on.
-
-**Claude API**: upload the same zip with the Skills API (`/v1/skills`) and use it with the code execution tool.
-
-**Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/gates-and-handoffs` to the folder where the tool
-reads skills. The tool needs Node.js 18 or later.
-
-**Without a skill** — on npm as `gates-and-handoffs`:
-
-```
-npx gates-and-handoffs team.way.yaml --all                    # map, workbook and lesson beside the file
-npx gates-and-handoffs team.way.yaml --from edited.xlsx       # what the edited workbook changes
-npx gates-and-handoffs team.way.yaml --from edited.xlsx --take all
-```
+Claude picks the skill by its description; to call it by name, `/house-lights:gates-and-handoffs`. **claude.ai**: upload
+`gates-and-handoffs.zip` from the [latest release](https://github.com/ruinosus/house-lights/releases) in Settings › Capabilities ›
+Skills (code execution on). **Claude API**: the same zip with the Skills API. **Other tools**: copy
+`skills/gates-and-handoffs` where the tool reads skills; it needs Node.js 18 or later. **npm**: `npx house-lights gates-and-handoffs <file>`.
 
 ## The file
 
@@ -155,9 +142,9 @@ gates:
       - { id: ready-item, name: Item ready for a sprint }
 ```
 
-The whole format is [`references/format.schema.json`](skills/gates-and-handoffs/references/format.schema.json); three complete
-examples are in [`skills/gates-and-handoffs/examples/`](skills/gates-and-handoffs/examples) — four, one of them
-([`initiative-portfolio`](skills/gates-and-handoffs/examples/initiative-portfolio.way.yaml)) with the whole thread.
+The whole format is [`references/format.schema.json`](../../skills/gates-and-handoffs/references/format.schema.json); three complete
+examples are in [`skills/gates-and-handoffs/examples/`](../../skills/gates-and-handoffs/examples) — four, one of them
+([`initiative-portfolio`](../../skills/gates-and-handoffs/examples/initiative-portfolio.way.yaml)) with the whole thread.
 
 ## What is inside
 
@@ -184,12 +171,12 @@ It maps how the work **should** go. It does not track items moving through the s
 `sources.example.json`), checks the examples end to end and makes the gallery:
 
 ```
-cd tools && npm install
-npm run assets   # scripts/engine.mjs, assets/map.html, assets/lesson.html
-npm run check    # every example: map, workbook (and back), lesson; a broken file says its line
-npm run site     # docs/: the gallery
-npm run zip      # dist/gates-and-handoffs.zip
-claude plugin eval .. --ablation none --allow-tools Bash Write Edit   # the evals in evals/
+npm install       # at the repository root: the five skills are npm workspaces
+npm run assets -w dev/gates-and-handoffs/tools   # scripts/engine.mjs, assets/map.html, assets/lesson.html
+npm run check -w dev/gates-and-handoffs/tools    # every example: map, workbook (and back), lesson; a broken file says its line
+npm run site -w dev/gates-and-handoffs/tools     # docs/: the gallery
+npm run zip -w dev/gates-and-handoffs/tools      # dist/gates-and-handoffs.zip
+claude plugin eval . --ablation none --allow-tools Bash Write Edit   # the evals in evals/
 ```
 
 ## License

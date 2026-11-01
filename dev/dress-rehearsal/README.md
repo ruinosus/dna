@@ -3,7 +3,7 @@
 <p align="center"><b>Give Claude your incident runbook. Get a drill your team can play — and, at the end, what the runbook does not say.</b></p>
 
 <p align="center">
-  <img src="docs/images/checkout-scene.png" alt="A drill in play: the clock at 03:14, a graph of payment errors, a message from support, three choices — one blocked until the Release team is called" width="860">
+  <img src="../../docs/dress-rehearsal/images/checkout-scene.png" alt="A drill in play: the clock at 03:14, a graph of payment errors, a message from support, three choices — one blocked until the Release team is called" width="860">
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@ At the end, a **debrief**: the timeline, how long it took to resolve and to tell
 runbook did not say** — the gaps Claude found while reading it, and the ones this game showed. Download it as Markdown
 for the post-mortem, and the improvements as a CSV for your tracker. Then fix the runbook.
 
-<p align="center"><img src="docs/images/database-disk-debrief.png" alt="The debrief: 25 minutes to resolve, customers never told, the timeline, and what the runbook did not say" width="760"></p>
+<p align="center"><img src="../../docs/dress-rehearsal/images/database-disk-debrief.png" alt="The debrief: 25 minutes to resolve, customers never told, the timeline, and what the runbook did not say" width="760"></p>
 
 **For** tech leads and SREs preparing people for on-call, teams that want a «wheel of misfortune» without a game master,
 and anyone who suspects their runbook would not survive a real night.
@@ -59,24 +59,17 @@ minutes, escalate.
 
 ## Install
 
-**Claude Code**:
+dress-rehearsal is one of the five skills of the [house-lights](../../README.md) plugin. **Claude Code:**
 
 ```
-/plugin marketplace add ruinosus/dress-rehearsal
-/plugin install dress-rehearsal@dress-rehearsal
+/plugin marketplace add ruinosus/house-lights
+/plugin install house-lights@house-lights
 ```
 
-Or copy `skills/dress-rehearsal` to `~/.claude/skills/`. **claude.ai**: upload `dress-rehearsal.zip` from the
-[latest release](https://github.com/ruinosus/house-lights/releases) in Settings › Capabilities › Skills (code
-execution on). **Claude API**: upload the same zip with the Skills API. **Other tools**: copy `skills/dress-rehearsal`
-where the tool reads skills; it needs Node.js 18 or later.
-
-**Without a skill** — on npm as `dress-rehearsal`:
-
-```
-npx dress-rehearsal checkout.drill.yaml --check           # check it
-npx dress-rehearsal checkout.drill.yaml --all --lang pt   # the game and the facilitator's script
-```
+Claude picks the skill by its description; to call it by name, `/house-lights:dress-rehearsal`. **claude.ai**: upload
+`dress-rehearsal.zip` from the [latest release](https://github.com/ruinosus/house-lights/releases) in Settings › Capabilities ›
+Skills (code execution on). **Claude API**: the same zip with the Skills API. **Other tools**: copy
+`skills/dress-rehearsal` where the tool reads skills; it needs Node.js 18 or later. **npm**: `npx house-lights dress-rehearsal <file>`.
 
 ## The file
 
@@ -101,20 +94,20 @@ gaps:
   - { says: The runbook does not say who reverts., source: §2 }
 ```
 
-The whole format is [`references/format.md`](skills/dress-rehearsal/references/format.md); two complete drills, with
-their runbooks, are in [`skills/dress-rehearsal/examples/`](skills/dress-rehearsal/examples). The check is on the
+The whole format is [`references/format.md`](../../skills/dress-rehearsal/references/format.md); two complete drills, with
+their runbooks, are in [`skills/dress-rehearsal/examples/`](../../skills/dress-rehearsal/examples). The check is on the
 graph: a choice to no scene or a scene with no way on says its line; a scene nobody reaches, an access nobody has,
 nobody ever told, «escalate» to nobody and a mark the runbook does not have are printed «to look at».
 
 ## Develop
 
 ```
-cd tools && npm install
-npm run assets   # scripts/engine.mjs and assets/drill.html, from src/
-npm run check    # the engine's checks, every example built, broken files and drawings, every example played in Chrome
-npm run site     # docs/: the gallery
-npm run zip      # dist/dress-rehearsal.zip
-claude plugin eval .. --ablation none --allow-tools Bash Write Edit --case <name>   # the evals in evals/
+npm install       # at the repository root: the five skills are npm workspaces
+npm run assets -w dev/dress-rehearsal/tools   # scripts/engine.mjs and assets/drill.html, from src/
+npm run check -w dev/dress-rehearsal/tools    # the engine's checks, every example built, broken files and drawings, every example played in Chrome
+npm run site -w dev/dress-rehearsal/tools     # docs/: the gallery
+npm run zip -w dev/dress-rehearsal/tools      # dist/dress-rehearsal.zip
+claude plugin eval . --ablation none --allow-tools Bash Write Edit --case <name>   # the evals in evals/
 ```
 
 ## License

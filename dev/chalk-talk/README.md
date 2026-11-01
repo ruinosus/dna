@@ -3,7 +3,7 @@
 <p align="center"><b>Ask Claude to explain something by drawing it — and get a hand-drawn lesson that draws itself.</b></p>
 
 <p align="center">
-  <img src="docs/images/hero.gif" alt="A hand-drawn lesson about compound interest drawing itself stroke by stroke, chapter by chapter; then the growth rate is moved and the curve changes" width="820">
+  <img src="../../docs/chalk-talk/images/hero.gif" alt="A hand-drawn lesson about compound interest drawing itself stroke by stroke, chapter by chapter; then the growth rate is moved and the curve changes" width="820">
 </p>
 
 <p align="center">
@@ -20,24 +20,24 @@ hand.
 
 <table>
   <tr>
-    <td width="50%"><img src="docs/images/pythagoras-ladder.png" alt="A ladder against a wall with a square drawn on each side; a² + h² = 5²"></td>
-    <td width="50%"><img src="docs/images/web-cache.png" alt="A browser asks an app for a page; the app asks the cache, misses, queries the database and copies the answer into the cache"></td>
+    <td width="50%"><img src="../../docs/chalk-talk/images/pythagoras-ladder.png" alt="A ladder against a wall with a square drawn on each side; a² + h² = 5²"></td>
+    <td width="50%"><img src="../../docs/chalk-talk/images/web-cache.png" alt="A browser asks an app for a page; the app asks the cache, misses, queries the database and copies the answer into the cache"></td>
   </tr>
   <tr>
     <td><i>«Explain the Pythagorean theorem by drawing it, using a ladder leaning on a wall.»</i><br>Move the foot of the ladder: the blue and green squares change, their sum stays 25.</td>
     <td><i>«Can you draw how a web request with a cache works, for junior developers?»</i><br>Move the hit rate from 0 % to 90 % and watch the average time fall.</td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/images/birthday-money.png" alt="A teenager with a $200 coin; a dashed straight line for simple interest and a red curve for compound interest that shoots up to $5,891 at age 65"></td>
-    <td width="50%"><img src="docs/images/chalk-talk-how.png" alt="How chalk-talk works, drawn by chalk-talk: you ask Claude, Claude chooses the hook, the audience and the value to move, writes the recipe, build.mjs checks it, out comes lesson.html"></td>
+    <td width="50%"><img src="../../docs/chalk-talk/images/birthday-money.png" alt="A teenager with a $200 coin; a dashed straight line for simple interest and a red curve for compound interest that shoots up to $5,891 at age 65"></td>
+    <td width="50%"><img src="../../docs/chalk-talk/images/chalk-talk-how.png" alt="How chalk-talk works, drawn by chalk-talk: you ask Claude, Claude chooses the hook, the audience and the value to move, writes the recipe, build.mjs checks it, out comes lesson.html"></td>
   </tr>
   <tr>
     <td><i>«Explain compound interest by drawing it, for a teenager who just got birthday money.»</i><br>Interest on interest, mark by mark; move the yearly rate.</td>
     <td><i>«Explain by drawing how this very skill works.»</i><br>Yes — chalk-talk drew its own diagram. In the first build the check caught the circle crossing a label and Claude fixed it.</td>
   </tr>
   <tr>
-    <td width="50%"><img src="docs/thumbs/moon-phases.png" alt="On a chalkboard: the Sun, the Earth and the Moon at eight places of its orbit, each half lit; on the right, the Moon as seen from Earth"></td>
-    <td width="50%"><img src="docs/thumbs/supply-demand.png" alt="A seller and a buyer talk in balloons at a market; a demand line and the crates that arrived set the price"></td>
+    <td width="50%"><img src="../../docs/chalk-talk/thumbs/moon-phases.png" alt="On a chalkboard: the Sun, the Earth and the Moon at eight places of its orbit, each half lit; on the right, the Moon as seen from Earth"></td>
+    <td width="50%"><img src="../../docs/chalk-talk/thumbs/supply-demand.png" alt="A seller and a buyer talk in balloons at a market; a demand line and the crates that arrived set the price"></td>
   </tr>
   <tr>
     <td><i>«Explain why the Moon has phases by drawing it, for my 8th-grade science class. Make it work for the classroom.»</i><br>Claude chose the chalkboard, a question the lesson waits on, and a quiz at the end. Slide the day and the Moon goes round.</td>
@@ -46,12 +46,12 @@ hand.
 </table>
 
 **[Open the gallery](https://ruinosus.github.io/house-lights/chalk-talk/)** to play every lesson in your browser. The recipes behind
-these drawings are in [`docs/examples/`](docs/examples). Build any of them with
+these drawings are in [`docs/examples/`](../../docs/chalk-talk/examples). Build any of them with
 `node skills/chalk-talk/scripts/build.mjs docs/examples/web-cache.json`.
 
 ## The lesson you get
 
-<p align="center"><img src="docs/images/player.png" alt="The player: chapters on top, the paper in the middle, Back / Next / Play all under it with the narration, the value to move, «Think about it» and the check on the right" width="820"></p>
+<p align="center"><img src="../../docs/chalk-talk/images/player.png" alt="The player: chapters on top, the paper in the middle, Back / Next / Play all under it with the narration, the value to move, «Think about it» and the check on the right" width="820"></p>
 
 - **Chapters**: it opens on the first chapter and waits. *Next* draws the next part from where it stopped, *Play all*
   draws everything; the arrow keys and Space work too.
@@ -137,7 +137,7 @@ flowchart LR
 ````
 
 `node skills/chalk-talk/scripts/build.mjs page.md` turns every such block into a lesson. The whole syntax:
-[references/text.md](skills/chalk-talk/references/text.md).
+[references/text.md](../../skills/chalk-talk/references/text.md).
 
 ### In your docs site
 
@@ -170,7 +170,7 @@ lesson into one:
 npx chalk-talk coffee-order.mmd --svg      # → coffee-order.svg
 ```
 
-<p align="center"><img src="docs/images/coffee-order.svg" alt="A coffee order drawn by hand, box by box and arrow by arrow: you, the cashier, the barista" width="720"></p>
+<p align="center"><img src="../../docs/chalk-talk/images/coffee-order.svg" alt="A coffee order drawn by hand, box by box and arrow by arrow: you, the cashier, the barista" width="720"></p>
 
 It plays once when the page opens and stays as the finished drawing (still from the start for someone who asked for
 less motion). It has no chapters, values or narration — link to the `.html` lesson for those. To keep the SVGs in step
@@ -237,18 +237,18 @@ speech and thought balloons (`balloon`), curly braces (`brace`), handwritten not
 (`table`) and bars (`bars`). Positions can be expressions over the values, so the drawing follows the sliders — or be left to the
 engine: `place` puts a piece beside another by name, and `row`, `column` and `grid` line pieces up. A piece that would
 leave the paper comes back in on its own. The full contract is in
-[`references/recipe.md`](skills/chalk-talk/references/recipe.md).
+[`references/recipe.md`](../../skills/chalk-talk/references/recipe.md).
 
 ## Install
 
-**Claude Code** (2.1.275 or later):
+chalk-talk is one of the five skills of the [house-lights](../../README.md) plugin. **Claude Code:**
 
 ```
-/plugin install chalk-talk --marketplace ruinosus/chalk-talk
+/plugin marketplace add ruinosus/house-lights
+/plugin install house-lights@house-lights
 ```
 
-Older versions: `/plugin marketplace add ruinosus/chalk-talk`, then `/plugin install chalk-talk@chalk-talk`. Or copy
-`skills/chalk-talk` to `~/.claude/skills/`.
+Or copy `skills/chalk-talk` to `~/.claude/skills/`.
 
 **claude.ai**: download `chalk-talk.zip` from the [latest release](https://github.com/ruinosus/house-lights/releases),
 then Settings › Capabilities › Skills › Upload. Code execution must be on. The lesson comes back as a file to download.
@@ -257,13 +257,13 @@ then Settings › Capabilities › Skills › Upload. Code execution must be on.
 
 **Without installing anything** — on npm as [`chalk-talk`](https://www.npmjs.com/package/chalk-talk): a page needs
 only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.18.1/player.js"></script>` (that is also
-how the skill shows a lesson where it cannot run code), and `npx chalk-talk lesson.json` builds the one-file lesson.
+how the skill shows a lesson where it cannot run code), and `npx house-lights chalk-talk lesson.json` builds the one-file lesson.
 
 **Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/chalk-talk` to the folder where the tool
 reads skills (for example `.agents/skills/`). The tool needs Node.js 18 or later.
 
 > **Tip:** Claude picks a skill by its description. If you have a very long list of skills installed, Claude Code may
-> show it only the names. In that case, call it by name: `/chalk-talk:chalk-talk explain … by drawing it` (or
+> show it only the names. In that case, call it by name: `/house-lights:chalk-talk explain … by drawing it` (or
 > `/chalk-talk …` when the folder was copied to `~/.claude/skills/`).
 
 ## What is inside
@@ -292,13 +292,13 @@ Voice narration, editing the drawing by hand, PDF export, «appear on click» an
 ## Develop
 
 ```
-cd tools && npm install
-npm run assets    # rebuild the generated files from the engine's source (paths in tools/sources.json)
-npm run check     # build every example and check the exit codes
-npm run snapshots # draw every example in a headless browser and compare its SVG with tools/snapshots/
-npm run zip       # dist/chalk-talk.zip for claude.ai and the API
-npm run site      # the gallery in docs/ (GitHub Pages): every example as a lesson, with a picture
-npm run linux     # the review as in a cloud sandbox: Linux, as root, Playwright's Chromium (needs Docker)
+npm install       # at the repository root: the five skills are npm workspaces
+npm run assets -w dev/chalk-talk/tools    # rebuild the generated files from the engine's source (paths in tools/sources.json)
+npm run check -w dev/chalk-talk/tools     # build every example and check the exit codes
+npm run snapshots -w dev/chalk-talk/tools # draw every example in a headless browser and compare its SVG with tools/snapshots/
+npm run zip -w dev/chalk-talk/tools       # dist/chalk-talk.zip for claude.ai and the API
+npm run site -w dev/chalk-talk/tools      # the gallery in docs/ (GitHub Pages): every example as a lesson, with a picture
+npm run linux -w dev/chalk-talk/tools     # the review as in a cloud sandbox: Linux, as root, Playwright's Chromium (needs Docker)
 npm run audit     # before a push: no name from your local list in the tracked files
 ```
 
@@ -323,7 +323,7 @@ never installed with it — a skill carries the files it runs.
 yet, so `npm run assets` only works where it is; everything else (`check`, `snapshots`, `site`, `zip`) works from
 this repository alone.
 
-The skill's own evals are in [`evals/`](evals): 26 requests in English and Portuguese (drawing at once, drawing for a
+The skill's own evals are in [`evals/`](../../evals): 26 requests in English and Portuguese (drawing at once, drawing for a
 class, crowded papers, changing a lesson, requests that are not about drawing, and six fixed requests that measure
 speed). They run with [`claude plugin eval`](https://docs.claude.com/en/docs/claude-code):
 
@@ -335,7 +335,7 @@ node kit/tools/eval-metrics.mjs run.json    # seconds to the first drawing, file
 
 Speed, 0.11.0 → 0.17.1 (Claude Code, two runs per request; 0.11.0 with the outline already approved, its best case):
 the first drawing in **28–41 s instead of 49–70 s**, with **no reference file read** before writing instead of 3 or 4.
-The class request still asks first. [`evals/speed-cloud.md`](evals/speed-cloud.md) is the same measure by hand in
+The class request still asks first. [`evals/speed-cloud.md`](../../evals/chalk-talk-speed-cloud.md) is the same measure by hand in
 claude.ai.
 
 ## Third-party
