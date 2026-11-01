@@ -1,0 +1,4 @@
+---
+type: llm
+---
+Pass when all of these hold: the answer is in Portuguese; it asks numbered questions in one message and stops to wait; among them it asks who approves the prototype, and what at least one stage delivers or where a rejected prototype goes back; each question carries a bet the person can just confirm, saying it is a bet when the text does not support it; the Daily is not a stage (it says it is a ritual, or leaves it out); no map, workbook or lesson is delivered. Placing a bet in the draft file while asking about it is fine. Fail it only if one numbered question bundles two unrelated decisions (for example what a stage delivers and who approves a gate); a question with its natural detail (a number and when it is measured, whether there is an approval and by whom) is one decision.

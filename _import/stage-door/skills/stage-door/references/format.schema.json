@@ -1,0 +1,504 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "stage-door/v1",
+  "title": "A way of working (stage-door/v1)",
+  "description": "The .way.yaml file: who leads, the phases, the stages in order, the gates and who approves them. scripts/build.mjs checks it by code; each problem says its line.",
+  "type": "object",
+  "required": [
+    "format",
+    "name",
+    "lanes",
+    "phases",
+    "stages"
+  ],
+  "properties": {
+    "format": {
+      "const": "stage-door/v1"
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "lanes": {
+      "description": "Who leads stages: a role, a team or an area — never a person. In the order they appear on the map.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 60
+          },
+          "sub": {
+            "type": "string",
+            "maxLength": 60,
+            "description": "A second line: the people in it, a level (\"first level\")"
+          },
+          "color": {
+            "enum": [
+              "prod",
+              "tech",
+              "qa",
+              "forge",
+              "slate",
+              "coral"
+            ],
+            "description": "blue, green, amber, violet, grey, red"
+          },
+          "inside": {
+            "type": "boolean",
+            "description": "false only when told the lane is outside the team"
+          }
+        }
+      }
+    },
+    "roles": {
+      "description": "Functions (PO, Tech Lead, QA) — never a person's name. Stages and gates name them by id.",
+      "type": "array",
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "acronym",
+          "lane"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "acronym": {
+            "type": "string",
+            "maxLength": 12
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "lane": {
+            "$ref": "#/$defs/id"
+          }
+        }
+      }
+    },
+    "phases": {
+      "description": "Milestones, each ending in a deliverable (often at a gate). An environment (DEV, QA, PRD) is never a phase: it is a stage's where.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80
+          }
+        }
+      }
+    },
+    "stages": {
+      "description": "Where the work stands, in order: the order is the flow.",
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "phase",
+          "lane"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80
+          },
+          "phase": {
+            "$ref": "#/$defs/id"
+          },
+          "lane": {
+            "$ref": "#/$defs/id",
+            "description": "Who leads it"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            },
+            "description": "The roles that take part (ids)"
+          },
+          "question": {
+            "type": "string",
+            "maxLength": 140,
+            "description": "The key question the stage answers"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "inputs": {
+            "type": "array",
+            "description": "What comes in: an output of an earlier stage or gate by its id ({from}), a thing from outside the way ({name}), or a plain text (an output's name links by itself; any other text is asked about)",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from"
+                  ],
+                  "properties": {
+                    "from": {
+                      "$ref": "#/$defs/id",
+                      "description": "The id of an output of a stage or a gate"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "name"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "From outside the way (a survey, the year's goals, a client's request)"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "outputs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name"
+              ],
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/id"
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 140
+                },
+                "by": {
+                  "$ref": "#/$defs/id",
+                  "description": "The role that delivers it"
+                },
+                "kpi": {
+                  "type": "boolean",
+                  "description": "A number (starting point, target, measured)"
+                }
+              }
+            }
+          },
+          "activities": {
+            "type": "array",
+            "maxItems": 20,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name"
+              ],
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/id"
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "required": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "where": {
+            "type": "string",
+            "description": "The environment or system it happens in"
+          },
+          "wip": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "description": "How many items it takes at once — only when told"
+          },
+          "optional": {
+            "type": "boolean",
+            "description": "Not every item goes through it"
+          },
+          "metrics": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 140
+            },
+            "description": "How the stage is followed (lead time, % approved…)"
+          }
+        }
+      }
+    },
+    "gates": {
+      "description": "Where someone decides the work goes on: one per stage at most, after it.",
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "after",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "after": {
+            "$ref": "#/$defs/id",
+            "description": "The stage it closes"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 80,
+            "description": "Best as the question decided (\"Ready for production?\")"
+          },
+          "approver": {
+            "$ref": "#/$defs/id",
+            "description": "The role that approves it"
+          },
+          "results": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "label"
+              ],
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/id"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "ok": {
+                  "type": "boolean",
+                  "description": "true on the result that lets the work go on"
+                }
+              }
+            }
+          },
+          "criteria": {
+            "description": "What must be ready",
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "required": [
+                    "kind",
+                    "outputs"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "outputs"
+                    },
+                    "outputs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/id"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "kind",
+                    "stage"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "activities"
+                    },
+                    "stage": {
+                      "$ref": "#/$defs/id",
+                      "description": "Its required activities done"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "kind",
+                    "kpis"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "kpis"
+                    },
+                    "kpis": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/id"
+                      }
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "kind",
+                    "min",
+                    "result"
+                  ],
+                  "properties": {
+                    "kind": {
+                      "const": "subitems"
+                    },
+                    "min": {
+                      "type": "integer"
+                    },
+                    "result": {
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "on_fail": {
+            "$ref": "#/$defs/id",
+            "description": "The stage the work goes back to when it does not pass"
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 2000
+          },
+          "outputs": {
+            "type": "array",
+            "description": "What comes out of the gate (the decision, what was approved, the minutes); a later stage may receive it ({from})",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "name"
+              ],
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/id"
+                },
+                "name": {
+                  "type": "string",
+                  "maxLength": 120
+                },
+                "description": {
+                  "type": "string",
+                  "maxLength": 140
+                },
+                "by": {
+                  "$ref": "#/$defs/id",
+                  "description": "The role that delivers it"
+                },
+                "kpi": {
+                  "type": "boolean",
+                  "description": "A number (starting point, target, measured)"
+                }
+              }
+            }
+          },
+          "metrics": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "string",
+              "maxLength": 140
+            }
+          }
+        }
+      }
+    },
+    "kpis": {
+      "description": "The numbers every item carries, where each is filled and where it comes from.",
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "unit",
+          "stage",
+          "source"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "name": {
+            "type": "string"
+          },
+          "unit": {
+            "enum": [
+              "per_year",
+              "percent"
+            ]
+          },
+          "stage": {
+            "$ref": "#/$defs/id"
+          },
+          "source": {
+            "enum": [
+              "opportunity",
+              "person",
+              "measured"
+            ]
+          },
+          "since": {
+            "$ref": "#/$defs/id",
+            "description": "For a measured one: the stage it is measured from"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,39}$"
+    }
+  }
+}
