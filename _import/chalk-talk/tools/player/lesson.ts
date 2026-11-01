@@ -408,7 +408,7 @@ export async function stillLesson(root: HTMLElement, scene: Scene, theme?: Theme
   box.append(svg)
   root.replaceChildren(box)
   await fontsLoaded()
-  await new Renderer(svg).render(scene, defaultValues(scene), { animate: false, theme: look })
+  await new Renderer(svg).render(scene, defaultValues(scene), { animate: false, theme: look, motion: 'rest' })
 }
 
 /** Says a sentence with the browser's own voice for the recipe's language; never waits more than 20 s. */

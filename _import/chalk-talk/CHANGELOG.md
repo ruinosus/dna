@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.15.0 — 2026-11-01
+
+Things that move in place.
+
+- **`animate <id> spin|drive|steam|talk|pulse|float`**, and `animate <id> stop`: an element already on the board keeps
+  moving in place from that step on — the gear turns, the truck drives, steam rises over the cup, a person talks, a
+  result pulses, a cloud floats. Only a prop's drawing moves, not its label; `speed=slow|fast`.
+- One CSS everywhere: it runs in the lesson, starts at its step in the SVG that draws itself, and each frame of the GIF
+  and the video catches it at its moment; the review and the contact sheet see the drawing still. With «reduce motion»
+  on, nothing moves. About 1 KB, inside the drawing only when a recipe uses it.
+- The cheat sheet has it, used sparingly: one or two per drawing, where the motion says something.
+
 ## 0.14.1 — 2026-11-01
 
 What the other skills needed from the kit when they moved to it.

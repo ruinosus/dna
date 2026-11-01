@@ -41,6 +41,7 @@ Step types (every step also takes `style`, `say`, `chapter`, `duration`, `id`; a
 - `repeat`: `times` (number or expression, up to 50) and one `step`; `i` (0 to n-1) is a value in that step. E.g. {"type":"repeat","times":"n","step":{"type":"prop","name":"coin","at":["100 + i*50",400],"size":40}}. Inside, an `id` x becomes x-0, x-1…
 - `when`: `if` (a condition) and `steps`, drawn only when it is true. E.g. {"type":"when","if":"atraso","steps":[...]}. Steps inside repeat and when take no `say`, `chapter`, `duration` nor `pause`.
 - `move`: `target` (an earlier `id`), `to`, `along` ("line" or "curve"), `ms`: the element walks until its `at` (or `center`, or `from`) is at `to`. E.g. {"type":"move","target":"pedido","to":[600,200],"along":"curve"}.
+- `animate`: `target` (an earlier `id`) and `effect` — spin, drive, steam (wisps over it), talk, pulse, float, or stop — and `speed` ("slow" or "fast"): the element keeps moving in place from this step on (only a prop's drawing, not its label). Use it sparingly, where motion says something (the truck leaves, the gear turns, steam over the cup); one or two per drawing. E.g. {"type":"animate","target":"caminhao","effect":"drive"}.
 - `link`: `from` and `to` (earlier `id`s), `label`: an arrow from the edge of one to the edge of the other, no coordinates. E.g. {"type":"link","from":"ana","to":"banco","label":"pede"}.
 - `counter`: `at`, `value` (expression), `format` with `{v}` (e.g. "R$ {v:0}"), `size`, `anchor`: the number counts from 0 while its beat is drawn.
 

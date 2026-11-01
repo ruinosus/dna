@@ -89,7 +89,7 @@ async function snapshot(scene: Scene) {
   svg.id = 'paper'
   svg.setAttribute('role', 'img')
   await fontsLoaded()
-  await new Renderer(svg).render(scene, defaultValues(scene), { animate: false })
+  await new Renderer(svg).render(scene, defaultValues(scene), { animate: false, motion: 'rest' })
   report('snapshot', { svg: svg.outerHTML })
 }
 
@@ -114,7 +114,7 @@ async function snapshots(scene: Scene) {
   const shots: { chapter: number; title: string; label: string; at: string; png: string; image: HTMLImageElement }[] = []
   for (const [k, chapter] of chapters.entries()) {
     for (const values of settings) {
-      await renderer.render(scene, values, { animate: false, until: chapter.end })
+      await renderer.render(scene, values, { animate: false, until: chapter.end, motion: 'rest' })
       const image = await picture(svgText(svg, faces()))
       const at = Object.entries(values).map(([n, v]) => `${n}=${v}`).join(', ')
       shots.push({ chapter: k + 1, title: chapter.title, label: label(values), at, png: toPng(image, scene.width, scene.height, paperColour(scene)), image })

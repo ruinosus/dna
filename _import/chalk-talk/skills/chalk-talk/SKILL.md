@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "0.14.1"
+  version: "0.15.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -87,6 +87,14 @@ chain at 40,190 forward="o café desce" back="pedidos sobem"
 row at 470,150 gap 14
   repeat 3: coin size 44
 repeat 3: coin at "100 + i*60",400 size 40
+```
+
+Something that keeps moving in place, from that step on — `spin`, `drive`, `steam` (wisps over it), `talk`, `pulse`
+or `float`, and `stop`. Only where the motion says something (the truck leaves, steam over the cup), one or two per
+drawing:
+
+```
+animate caminhao drive
 ```
 
 Numbers that follow the value:
@@ -181,7 +189,7 @@ it. The player loads from the CDN and checks the recipe itself:
 <script type="text/chalk-talk" id="chalk-recipe">
 THE RECIPE AS TEXT
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.14.1/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.15.0/player.js"></script>
 ```
 
 If the page says the recipe could not be opened, fix the line it names.

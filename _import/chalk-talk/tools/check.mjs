@@ -194,6 +194,24 @@ setTimeout(() => {
   }
 }
 
+// Animação: a lesson with `animate` keeps its drawing moving in place — the motions run in the lesson, the review and
+// the contact sheet see it still.
+{
+  const moving = join(dir, 'moving.chalk')
+  writeFileSync(moving, 'title X\nid moving\nfactory torra at 260,320 "torrefação"\ntruck caminhao at 600,320 "caminhão"\nanimate torra steam\nanimate caminhao drive\n')
+  const m = run(moving, [join(dir, 'moving.html')])
+  if (!/• review/.test(m.stdout)) {
+    expect(m.status === 0 && /✓ review/.test(m.stdout), 'a lesson that moves passes the review (it is measured still)', m.stdout + m.stderr)
+    const page = readFileSync(join(dir, 'moving.html'), 'utf8').replace('</body>', `<script>setTimeout(async () => { const els = [...document.querySelectorAll('[data-anim]')]
+      const pos = () => els.map((e) => getComputedStyle(e).transform).join(' / '); const a = pos(); await new Promise((r) => setTimeout(r, 400))
+      const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify({ kinds: els.map((e) => e.dataset.anim), moved: a !== pos() })); document.body.append(p) }, 2500)</script></body>`)
+    writeFileSync(join(dir, 'moving-probe.html'), page)
+    const { runPage } = await import('../kit/browser.mjs')
+    const r = await runPage(join(dir, 'moving-probe.html'), 'probe', '', { timeout: 30 })
+    expect(r && r.moved && [...(r.kinds ?? [])].sort().join() === 'drive,wisp,wisp,wisp', `in the lesson the truck drives and the steam rises (${JSON.stringify(r)})`)
+  }
+}
+
 // The cheat sheet: every example a mistake points to builds, and the ones meant for SKILL.md are in it, word for word.
 {
   const { SYNTAX } = await import('../skills/chalk-talk/scripts/syntax.mjs')
