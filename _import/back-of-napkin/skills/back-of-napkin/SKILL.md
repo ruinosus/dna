@@ -4,7 +4,7 @@ description: Explains anything by drawing it, the way you would on the back of a
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first).
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
 ---
 
 # back-of-napkin: explain anything by drawing it
@@ -111,11 +111,11 @@ come from. No quiz: that is a lesson's.
 ## 3. Build and check
 
 ```
-node scripts/build.mjs <id>.chalk --present
+node scripts/build.mjs <id>.chalk
 ```
 
-`--present` makes the page open presenting (it is still the same file). Leave it out only when the drawing is not to
-be shown to people (a document, a note).
+The page opens presenting (it is still the same file). Add `--no-present` only when the drawing is not to be shown to
+people (a document, a note).
 
 - `✗ purpose / text / contract …` (exit 1): fix that line as the example under it shows.
 - `! <kind> …` (exit 3): what the purpose usually misses (a pitch with no ask, an architecture with no failure…).

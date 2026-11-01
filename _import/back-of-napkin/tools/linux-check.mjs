@@ -10,6 +10,6 @@ const skill = resolve(dirname(fileURLToPath(import.meta.url)), '../skills/back-o
 const examples = join(skill, 'examples')
 const ok = linuxCheck(skill, [
   ...readdirSync(examples).filter((f) => f.endsWith('.chalk')).map((f) => ({ file: join(examples, f), exit: 0 })),
-  { file: join(examples, 'pitch-pharmacy-queue.chalk'), args: ['--present', '--pptx', '--no-review'], exit: 0 },
+  { file: join(examples, 'pitch-pharmacy-queue.chalk'), args: ['--pptx', '--no-review'], exit: 0 },
 ])
 if (!ok) process.exit(1)

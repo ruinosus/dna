@@ -4,7 +4,11 @@
 // decision, data, timeline or story — a lesson is chalk-talk's), then hands over to the engine, which checks the
 // recipe, draws it, reviews it and says what the purpose usually misses.
 //
-//   node build.mjs <id>.chalk [out.html] [--snapshots [folder]] [--no-review] [--svg]
+//   node build.mjs <id>.chalk [out.html] [--no-present] [--snapshots [folder]] [--no-review] [--svg]
+//                 [--pptx [static|steps|video|all]] [--settings a,b] [--slides <folder> [--slides-steps]]
+//
+// A drawing here is made to be shown: the page opens presenting (the engine's --present) unless --no-present (a
+// document, a note).
 //
 // Exit codes: 0 drawn and checked; 1 the recipe breaks the format (or has no purpose); 2 bad arguments; 3 drawn, with
 // something to fix (the review, or what the purpose misses); 4 --svg or --snapshots with no browser.
@@ -33,4 +37,7 @@ for (const file of recipes) {
   }
   if (!KINDS.includes(kind)) fail(`kind ${kind} is not one of ${KINDS.join(', ')}.`)
 }
+const quiet = process.argv.indexOf('--no-present')
+if (quiet >= 0) process.argv.splice(quiet, 1)
+else if (!process.argv.includes('--present')) process.argv.push('--present')
 await import('./engine-build.mjs')

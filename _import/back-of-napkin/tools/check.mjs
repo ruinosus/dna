@@ -69,18 +69,22 @@ for (const [what, file, says] of refused) {
   expect(r.status === 1 && says.test(r.stdout + r.stderr), `${what} is refused`, r.stdout + r.stderr)
 }
 
-// 0.2.0: the pitch presents, and goes to PowerPoint with a slide per chapter and the narration as notes.
+// 0.2.0: the pitch presents (0.2.1: with no flag), and goes to PowerPoint with a slide per chapter and the narration as
+// notes; --no-present makes a page that does not.
 {
   const { browser } = await import('../skills/back-of-napkin/scripts/browser.mjs')
   if (!browser()) console.log('• no Chrome here: presenting and the PowerPoint were not checked')
   else {
     const pitch = recipe('pitch.chalk', readFileSync(join(skill, 'examples/pitch-pharmacy-queue.chalk'), 'utf8'))
-    const r = run(pitch, ['--present', '--pptx', '--no-review'])
+    const r = run(pitch, ['--pptx', '--no-review'])
     const id = readFileSync(pitch, 'utf8').match(/^id\s+(\S+)/m)?.[1] ?? 'pitch'
     const html = readFileSync(join(dir, `${id}.html`), 'utf8')
     const { inspectPptx } = await import(pathToFileURL(join(skill, 'scripts/pptx.mjs')).href)
     const got = r.status === 0 ? await inspectPptx(readFileSync(join(dir, `${id}.pptx`))) : {}
     const chapters = (readFileSync(pitch, 'utf8').match(/^# /gm) ?? []).length
+    const q = run(recipe('note.chalk', readFileSync(pitch, 'utf8')), ['--no-present', '--no-review'])
+    const noteHtml = readFileSync(join(dir, `${id}.html`), 'utf8')
+    expect(q.status === 0 && !noteHtml.includes('data-present="1"'), '--no-present makes a page that does not open presenting', q.stdout + q.stderr)
     expect(r.status === 0 && html.includes('<body data-present="1">') && got.slides === chapters && got.notes === chapters, `the pitch presents and becomes a ${chapters}-slide PowerPoint with notes`, r.stdout + r.stderr + JSON.stringify(got))
   }
 }

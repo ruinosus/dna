@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1 — 2026-11-01
+
+What the first presentations in the cloud found — with chalk-talk 0.18.1.
+
+- The build presents by default (a drawing here is made to be shown); `--no-present` for a document or a note.
+- From chalk-talk 0.18.1: the words on screen follow the recipe's `locale`; a slide's title is PowerPoint's own title
+  placeholder; with `--settings`, a slide says what moved by its label; `--pptx steps` says when it equals static.
+
 ## 0.2.0 — 2026-11-01
 
 Present it, or take it to PowerPoint — with chalk-talk 0.18.0.
