@@ -1,0 +1,54 @@
+format: front-of-house/v1
+name: Joining a neighbourhood gym
+who: A new member
+about: From finding the gym online to the first workout. Made from 8 interviews with members who joined last month.
+phases: [Discover, Join, First week]
+actors:
+  - { id: desk, name: Front desk, layer: front }
+  - { id: coach, name: Coach, layer: front }
+  - { id: sales, name: Membership team, layer: back }
+systems:
+  - { id: site, name: Website }
+  - { id: billing, name: Billing }
+  - { id: booking, name: Class booking app }
+moments:
+  - id: find
+    phase: Discover
+    customer: Finds the gym and compares prices online
+    feels: 3
+    evidence: [Price page]
+    front: [Website price page]
+    support: [site]
+  - id: visit
+    phase: Discover
+    customer: Visits and asks for a tour
+    feels: 4
+    evidence: [A free day pass]
+    front: [{ actor: desk, does: Shows the gym around }]
+  - id: sign
+    phase: Join
+    customer: Signs up at the desk
+    feels: 2
+    marks: [wait]
+    evidence: [A printed contract, The welcome email]
+    front: [{ actor: desk, does: Fills in the form with the member }]
+    back: [{ actor: sales, does: Checks the payment card }]
+    support: [billing]
+    pains:
+      - { says: Twenty minutes of paperwork while the class started, source: 5 of 8 interviews }
+    promise: { says: Your card works the same day, owner: sales, within: same day }
+  - id: first-class
+    phase: First week
+    customer: Books and goes to a first class
+    feels: 4
+    evidence: [Booking confirmation]
+    front: [{ actor: coach, does: Welcomes the newcomer by name }]
+    support: [booking]
+  - id: plan
+    phase: First week
+    customer: Gets a training plan
+    feels: 5
+    evidence: [A one-page plan]
+    front: [{ actor: coach, does: Writes a plan with the member }]
+actions:
+  - { moment: sign, does: Sign up online before the visit, owner: sales, due: 2027-01 }
