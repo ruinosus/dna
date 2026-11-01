@@ -1,0 +1,64 @@
+{
+  "id": "pitagoras-telhado",
+  "title": "Pitágoras ↔ o telhado",
+  "category": "Matemática",
+  "width": 900,
+  "height": 560,
+  "background": "dots",
+  "params": {
+    "a": { "label": "altura do topo (m)", "min": 1, "max": 6, "step": 1, "value": 3 },
+    "b": { "label": "meia largura da casa (m)", "min": 1, "max": 8, "step": 1, "value": 4 }
+  },
+  "vars": {
+    "k": 45,
+    "x0": 450,
+    "y0": 470,
+    "xl": "x0 - b*k",
+    "xb": "x0 + b*k",
+    "ya": "y0 - a*k",
+    "c": "sqrt(a^2 + b^2)"
+  },
+  "steps": [
+    { "type": "text", "at": [40, 72], "text": "por que a telha tem esse comprimento?", "size": 42,
+      "say": "Um telhado visto de frente. Quanto mede a telha, do topo até a beirada?" },
+
+    { "type": "polygon", "points": [["xl", "y0"], ["xb", "y0"], ["xb", "y0 + 52"], ["xl", "y0 + 52"]],
+      "style": { "color": "#8C8578", "width": 2, "fill": "#EDE5D6", "fillStyle": "hachure" },
+      "say": "Primeiro, a casa." },
+
+    { "type": "polyline", "points": [["xl", "y0"], ["x0", "ya"], ["xb", "y0"]],
+      "style": { "width": 3 }, "say": "Depois, o telhado." },
+
+    { "type": "pause", "ms": 400 },
+
+    { "type": "line", "from": ["x0", "ya"], "to": ["x0", "y0"],
+      "style": { "color": "#C8442C", "width": 3, "dashed": true },
+      "say": "Agora a altura, do topo até a laje. Vamos chamar de a." },
+    { "type": "text", "at": ["x0", "ya - 16"], "text": "a = {a} m", "anchor": "middle", "size": 32,
+      "style": { "color": "#C8442C" } },
+
+    { "type": "line", "from": ["x0", "y0"], "to": ["xb", "y0"],
+      "style": { "color": "#2F5BEA", "width": 3.4 },
+      "say": "E metade da largura da casa. Essa é a b." },
+    { "type": "text", "at": ["(x0 + xb)/2", "y0 + 80"], "text": "b = {b} m", "anchor": "middle", "size": 28,
+      "style": { "color": "#2F5BEA" } },
+
+    { "type": "polyline", "points": [["x0", "y0 - 20"], ["x0 + 20", "y0 - 20"], ["x0 + 20", "y0"]],
+      "style": { "width": 2 } },
+
+    { "type": "highlight", "from": ["x0", "ya"], "to": ["xb", "y0"], "thickness": 20,
+      "say": "Sobrou um triângulo retângulo. A telha é o lado maior dele." },
+    { "type": "line", "from": ["x0", "ya"], "to": ["xb", "y0"], "style": { "width": 4 } },
+    { "type": "text", "at": ["(x0 + xb)/2 + 18", "(ya + y0)/2 - 8"], "text": "telha = ?", "size": 34 },
+
+    { "type": "pause", "ms": 500 },
+
+    { "type": "text", "at": [620, 125], "text": "a² + b² = c²", "size": 50,
+      "say": "Pitágoras resolve: a ao quadrado mais b ao quadrado é igual a c ao quadrado." },
+    { "type": "text", "at": [620, 168], "text": "{a}² + {b}² = {a^2 + b^2}", "size": 32, "style": { "color": "#5E5A52" } },
+    { "type": "text", "at": [620, 222], "text": "telha ≈ {c:1} m", "size": 40,
+      "say": "Com só duas medidas, o pedreiro já sabe quanto cortar." },
+    { "type": "ellipse", "center": [742, 214], "rx": 138, "ry": 34,
+      "style": { "color": "#C8442C", "width": 2.6, "roughness": 1.6 } }
+  ]
+}

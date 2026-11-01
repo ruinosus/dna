@@ -300,6 +300,15 @@ setTimeout(() => {
   expect(hint.status === 1 && hint.stderr.includes(SYNTAX.balloon.line), `a mistake shows how its line is written (${hint.stderr.trim().split('\n').join(' / ')})`)
 }
 
+// 0.17.2: a .chalk with no `id` line is named after its file; with one, after the id.
+{
+  writeFileSync(join(dir, 'my-drawing.chalk'), 'title X\ntext "algo" at 40,64\n')
+  writeFileSync(join(dir, 'named.chalk'), 'title X\nid cafe\ntext "algo" at 40,64\n')
+  const a = run(join(dir, 'my-drawing.chalk'), ['--no-review'])
+  const b = run(join(dir, 'named.chalk'), ['--no-review'])
+  expect(a.status === 0 && a.stdout.includes('my-drawing.html') && b.status === 0 && b.stdout.includes('cafe.html'), 'a .chalk is named after its file, or its id', a.stdout + b.stdout)
+}
+
 const badText = join(dir, 'bad.chalk')
 writeFileSync(badText, 'title X\nperson ana at 1\n')
 const bt = run(badText)

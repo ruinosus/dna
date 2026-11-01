@@ -59,10 +59,12 @@ let checking
 const chalk = (text) => parseChalk((reading = text), PROPS)
 
 /** The recipes a file holds: one for .json, .chalk and .mmd; one per ```chalk-talk / ```mermaid block in a .md. */
+const idOf = (file) => basename(file).replace(/\.[^.]+$/, '').replace(/[^a-z0-9-]+/gi, '-').slice(0, 60) || 'drawing'
 async function recipesOf(file) {
   const text = readFileSync(resolve(file), 'utf8')
   if (file.endsWith('.json')) return [JSON.parse(text)]
-  if (file.endsWith('.chalk')) return [chalk(text)]
+  // A .chalk file with no `id` line is named after the file (drawing.chalk → drawing.html), not the reader's default.
+  if (file.endsWith('.chalk')) return [/^id\s/m.test(text) ? chalk(text) : { ...chalk(text), id: idOf(file) }]
   if (file.endsWith('.mmd')) return [await mermaid(text)]
   const blocks = [...text.matchAll(/^```(chalk-talk|mermaid)[^\n]*\n([\s\S]*?)^```/gm)]
   if (!blocks.length) throw new Error('no ```chalk-talk or ```mermaid block in this file.')

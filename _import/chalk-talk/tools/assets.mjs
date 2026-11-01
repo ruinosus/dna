@@ -145,7 +145,7 @@ cpSync(join(here, 'noto'), join(skill, 'assets/lottie'), { recursive: true })
 vendor(join(skill, 'scripts'), ['browser.mjs', 'page.mjs'])
 
 // The npm package also carries the command line (npx chalk-talk …): the same scripts and page as the skill — and the
-// kit itself (chalk-talk/kit), for the other skills' tools.
+// kit itself (chalk-talk/kit), for the other skills' tools, and the references, for the skills that draw with it.
 mkdirSync(join(here, '../npm/scripts'), { recursive: true })
 mkdirSync(join(here, '../npm/assets'), { recursive: true })
 for (const f of ['build.mjs', 'browser.mjs', 'page.mjs', 'contract.mjs', 'mermaid.mjs', 'syntax.mjs']) copyFileSync(join(skill, 'scripts', f), join(here, '../npm/scripts', f))
@@ -155,6 +155,8 @@ copyFileSync(join(skill, 'assets/player.html'), join(here, '../npm/assets/player
 copyFileSync(join(skill, 'assets/lottie_light.js'), join(here, '../npm/assets/lottie_light.js'))
 rmSync(join(here, '../npm/assets/lottie'), { recursive: true, force: true })
 cpSync(join(skill, 'assets/lottie'), join(here, '../npm/assets/lottie'), { recursive: true })
+rmSync(join(here, '../npm/references'), { recursive: true, force: true })
+cpSync(join(skill, 'references'), join(here, '../npm/references'), { recursive: true })
 copyFileSync(join(here, '../LICENSE'), join(here, '../npm/LICENSE'))
 
 // Spec 2026-10-30 (Obsidian): the lesson mounted inside an element (chalk-talk/embed), and the Mermaid converter for the

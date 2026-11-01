@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.17.2 — 2026-11-01
+
+From back-of-napkin's evals.
+
+- A `.chalk` recipe with no `id` line is named after its file (`drawing.chalk` → `drawing.html`), not `lesson.html`.
+- The npm package carries `references/` (the text and recipe references, the molds, the hooks and the drawn examples),
+  for the skills that draw with this engine.
+
 ## 0.17.1 — 2026-11-01
 
 From the 0.17.0 tests in claude.ai.
