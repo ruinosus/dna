@@ -6,13 +6,15 @@ import { isMap, LineCounter, parseDocument, type Document } from 'yaml'
 export type Path = (string | number)[]
 
 /** A problem the reader found before the skill's own checks: `syntax` (with YAML's code) or `format`. */
-export interface FormatProblem { line: number; key: 'syntax' | 'format'; detail?: string }
+export type FormatProblem = { line: number; key: 'syntax'; detail: string } | { line: number; key: 'format' }
 
 export interface Format {
   raw: Record<string, unknown>
   doc: Document
   /** The line where `path` (or the nearest part of it that is in the file) starts; 1 when none is. */
   at: (path: Path) => number
+  /** The line of a position in the text (a node's `range[0]`). */
+  lineOf: (offset: number) => number
 }
 
 export type Read = { ok: true; format: Format } | { ok: false; problem: FormatProblem }
@@ -33,5 +35,5 @@ export function readFormat(text: string, format: string): Read {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw) || (raw as Record<string, unknown>).format !== format || !isMap(doc.contents)) {
     return { ok: false, problem: { line: at(['format']), key: 'format' } }
   }
-  return { ok: true, format: { raw: raw as Record<string, unknown>, doc, at } }
+  return { ok: true, format: { raw: raw as Record<string, unknown>, doc, at, lineOf: (offset) => lines.linePos(offset).line } }
 }

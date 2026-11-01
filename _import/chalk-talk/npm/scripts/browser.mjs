@@ -121,7 +121,7 @@ async function start(exe) {
 
 /** Opens `file` at `#mode` (with `query`) in a tab of its own and returns what the page wrote, parsed — { error } when
  * the page could not be opened or wrote nothing in `ms`. */
-async function open(b, file, mode, query, ms) {
+async function open(b, file, mode, query, ms, shot) {
   const until = Date.now() + ms
   let sessionId
   // Every call waits at most until the page's time is up: a page busy forever does not hold the build.
@@ -133,8 +133,24 @@ async function open(b, file, mode, query, ms) {
   const { targetId } = await ask('Target.createTarget', { url: 'about:blank' })
   try {
     ;({ sessionId } = await ask('Target.attachToTarget', { targetId, flatten: true }))
-    const nav = await ask('Page.navigate', { url: `${pathToFileURL(file).href}${query ? `?${query}` : ''}#${mode}` })
+    if (shot) await ask('Emulation.setDeviceMetricsOverride', { width: shot.width, height: shot.height, deviceScaleFactor: 1, mobile: false })
+    if (shot?.scheme) await ask('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: shot.scheme }] })
+    const nav = await ask('Page.navigate', { url: `${pathToFileURL(file).href}${query ? `?${query}` : ''}${mode ? `#${mode}` : ''}` })
     if (nav.errorText) return { error: `the page did not open (${nav.errorText})` }
+    // A picture of the page as it is once loaded, its fonts in and (when it says so) data-ready on the body.
+    if (shot) {
+      const ready = "document.readyState === 'complete' && document.fonts.status === 'loaded' && (document.body?.dataset.ready ?? '1') === '1'"
+      while (Date.now() < until) {
+        const r = await ask('Runtime.evaluate', { expression: ready, returnByValue: true })
+        if (r.result?.value === true) {
+          await pause(shot.settle ?? 400)
+          const { data } = await ask('Page.captureScreenshot', { format: 'png' })
+          return { png: `data:image/png;base64,${data}` }
+        }
+        await pause(50)
+      }
+      throw new BrowserFailed(`the page was not ready in ${Math.round(ms / 1000)} s`)
+    }
     while (Date.now() < until) {
       const r = await ask('Runtime.evaluate', { expression: `document.getElementById('chalk-${mode}')?.textContent ?? null`, returnByValue: true })
       const text = r.result?.value
@@ -149,7 +165,8 @@ async function open(b, file, mode, query, ms) {
   }
 }
 
-/** Runs `jobs` ({ file, mode, query }) in one browser and returns their results in order, with the browser used —
+/** Runs `jobs` ({ file, mode, query, shot }) in one browser — `shot: { width, height }` answers with { png } (a
+ * picture of the page once loaded) instead of what the page wrote — and returns their results in order, with the browser used —
  * `results` null when there is no browser at all. A browser that fails (does not start, stops, or a page gets no answer
  * in `timeout` seconds) gives way to the next one, which runs every job again; when none works, each result is
  * { error } naming what was tried. */
@@ -162,7 +179,7 @@ export async function runPages(jobs, { timeout = 20 } = {}) {
     try {
       b = await start(exe)
       const results = []
-      for (const { file, mode, query = '' } of jobs) results.push(await open(b, file, mode, query, timeout * 1000))
+      for (const { file, mode = '', query = '', shot } of jobs) results.push(await open(b, file, mode, query, timeout * 1000, shot))
       return { results, used: exe, tried }
     } catch (e) {
       tried.push(`${exe}: ${e instanceof BrowserFailed ? e.message : e.message.split('\n')[0]}`)

@@ -12,6 +12,7 @@ if (r.ok) {
   assert.equal(r.format.at(['items', 1]), 6)
   assert.equal(r.format.at(['items', 1, 'price']), 6, 'a path not in the file says where its nearest part is')
   assert.equal(r.format.at(['nowhere']), 1)
+  assert.equal(r.format.lineOf(text.indexOf('cake')), 6)
 }
 const syntax = readFormat('format: shop/v1\nname: x\n  bad: indent\n', 'shop/v1')
 assert.ok(!syntax.ok && syntax.problem.key === 'syntax' && syntax.problem.line === 2)

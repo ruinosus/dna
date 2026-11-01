@@ -30,6 +30,13 @@ checkOneVersion(expect, {
   let threw = false
   try { fill('a', { X: '1' }) } catch { threw = true }
   expect(threw, 'page.mjs: a key the page does not have is an error')
+  // the browser takes a picture of any page (a map, a still lesson): shot: { width, height } answers with a PNG
+  const plainPage = join(dir, 'plain.html')
+  writeFileSync(plainPage, '<!doctype html><meta charset="utf-8"><body style="margin:0;background:#2E8F62"><h1>shot</h1>')
+  const { runPages } = await import('../kit/browser.mjs')
+  const { results: shots } = await runPages([{ file: plainPage, shot: { width: 320, height: 200 } }])
+  const png = shots?.[0]?.png ? Buffer.from(shots[0].png.split(',')[1], 'base64') : Buffer.alloc(0)
+  if (shots) expect(png.length > 24 && png.readUInt32BE(16) === 320 && png.readUInt32BE(20) === 200, `browser.mjs: a picture of a page (${png.length > 24 ? `${png.readUInt32BE(16)}×${png.readUInt32BE(20)}` : JSON.stringify(shots?.[0])})`)
   const f = runNode(join(here, 'node_modules/tsx/dist/cli.mjs'), [join(kit, 'format.check.ts')], { env: { ...process.env, NODE_PATH: join(here, 'node_modules') } })
   expect(f.status === 0, 'format.ts: the line of a path, a syntax error, another format', f.stdout + f.stderr)
 }

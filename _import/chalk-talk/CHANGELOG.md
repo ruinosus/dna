@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.14.1 — 2026-11-01
+
+What the other skills needed from the kit when they moved to it.
+
+- **`browser.mjs` takes pictures:** a job with `shot: { width, height, scheme? }` answers with a PNG of the page once
+  it is loaded (in the light or dark scheme when asked). The pictures of a map or a game are taken over the DevTools
+  pipe too, with no `--screenshot`.
+- **`format.ts`:** `lineOf(offset)` (the line of a node) and a problem type the skills' own unions accept.
+
 ## 0.14.0 — 2026-11-01
 
 The kit of the skills, and two things the 0.13.0 tests found.
