@@ -1,0 +1,48 @@
+title Cadeia de suprimentos ↔ um cafezinho
+id cadeia-cafe
+category Negócios
+locale pt-BR
+size 900x780
+background dots
+param d "a cafeteria vende a mais (%)" 0..30 step=5 = 10
+switch compartilhar "compartilhar a venda real com a cadeia" off
+var f = "1.6 - 0.45*compartilhar"
+
+learning goal "Entender os elos de uma cadeia de suprimentos, os dois fluxos (produto descendo; pedidos e dinheiro subindo) e por que pequenas mudanças na ponta viram grandes oscilações lá no começo."
+learning question "Uma rede de farmácias vê a venda de um remédio subir 5% numa semana. O que pode acontecer com os pedidos que chegam ao laboratório?"
+learning answer "Se cada elo (loja, distribuidor, atacadista) reforça o estoque 'por garantia' olhando só para quem está logo abaixo, o laboratório pode receber um pico bem maior que 5% e depois uma queda. Compartilhar a venda real e reduzir prazos de reposição amortece esse efeito."
+learning caveat "O fator de exagero por elo (1,6 ou 1,15) é ilustrativo, não um dado medido. Cadeias reais têm vários fornecedores por elo, prazos diferentes, lotes mínimos e preços que variam. O fenômeno é conhecido como efeito Forrester ou efeito chicote (Lee, Padmanabhan e Whang, 1997)."
+
+# Um cafezinho
+> Você pagou uns oito reais num café. Quanta coisa precisou acontecer antes desse copo chegar na sua mão?
+text "R$ 8 num cafezinho. quantas mãos cabem no copo?" at 40,64 size=36
+person voce at 810,280 "você" mood=happy
+voce thinks "de onde veio isso?" side=left width=200
+
+# Desmontando o copo
+> O grão nasce na fazenda, vira café torrado na fábrica, viaja, espera num armazém e chega à cafeteria.
+tree fazenda at 90,280 "fazenda"
+factory torra at 234,280 "torrefação"
+truck transp at 378,280 "transporte"
+house armazem at 522,280 "armazém"
+desk cafe at 666,280 "cafeteria"
+> O produto desce a cadeia, da matéria-prima até você.
+arrow 60,350 -> 840,350 color=#2E8F62 stroke=3
+text "o café desce a cadeia →" at 450,388 anchor=middle size=26 color=#2E8F62
+> No sentido contrário sobem os pedidos e o dinheiro: é assim que cada elo sabe o que produzir.
+arrow 840,425 -> 60,425 color=#2F5BEA stroke=3
+text "← pedidos e dinheiro sobem" at 450,463 anchor=middle size=26 color=#2F5BEA
+
+# O efeito chicote
+> Cada elo só enxerga o pedido de quem está logo abaixo dele.
+pause ask "Se a cafeteria vende 10% a mais, quanto a fazenda sente?"
+> Cada um pede um pouco a mais, por garantia. A variação cresce a cada elo que sobe.
+bars box 90,520,440,150 values d,"d*f","d*f^2","d*f^3" labels cafeteria,armazém,torrefação,fazenda format="+{v:0}%" max=130
+text "cada elo pede um pouco a mais," at 580,545 size=24
+text "\"só por garantia\"" at 580,578 size=24 color=#8C8578
+counter at 580,650 "d*f^3" "fazenda: +{v:0}%" size=34 color=#C8442C
+
+# Amansando o chicote
+> Quando a venda real chega a todos os elos, ninguém precisa adivinhar. Ligue a opção de compartilhar e veja as barras baixarem.
+highlight 90,740 -> 810,740 thickness=24
+text "venda real compartilhada = chicote mais calmo" at 450,749 anchor=middle size=32

@@ -7,9 +7,9 @@
   "height": 660,
   "background": "dots",
   "learning": {
-    "goal": "Understand the path from a request to a self-contained HTML lesson: outline, recipe, build checks, offline player.",
+    "goal": "Understand the path from a request to a self-contained HTML lesson: choices, recipe, build checks, offline player.",
     "question": "Someone asks to make the arrow blue in a lesson already delivered. Which parts of this path run again?",
-    "answer": "Only the end of it: Claude edits that one step's style in the recipe, then build.mjs checks the contract and reviews the layout again and writes a new HTML. The outline is not renegotiated, because the hook and the mold did not change.",
+    "answer": "Only the end of it: Claude edits that one step's style in the recipe, then build.mjs checks the contract and reviews the layout again and writes a new HTML. The choices are not made again, because the hook and the audience did not change.",
     "caveat": "Simplified: the build report has three outcomes (contract error, layout warning, ok), and some checks run when the page opens rather than at build time. Claude never writes the player itself; it only writes the JSON recipe."
   },
   "steps": [
@@ -20,10 +20,10 @@
     {"type": "prop", "name": "person-pointing", "at": [330, 290], "size": 100, "label": "Claude", "id": "claude", "flip": true},
     {"type": "link", "from": "you", "to": "claude", "label": "explain by drawing",
      "say": "You ask to explain something by drawing it."},
-    {"type": "card", "at": [520, 120], "w": 430, "h": 190, "title": "agreed outline",
-     "lines": ["1  the hook, as a question", "2  take the real thing apart", "3  the idea", "4  the close"],
+    {"type": "card", "at": [520, 120], "w": 430, "h": 190, "title": "Claude chooses",
+     "lines": ["1  an everyday hook", "2  who it is for", "3  the value to move", "4  four parts, one board"],
      "style": {"color": "#2E8F62", "width": 2.6}, "id": "outline",
-     "say": "Claude asks only what is missing, then agrees a four-part outline — before any stroke."},
+     "say": "Claude chooses the everyday hook, the audience and the value to move, and plans four parts — then draws at once."},
     {"type": "arrow", "from": [410, 210], "to": [505, 210], "style": {"color": "#2E8F62", "width": 2.4}},
 
     {"type": "prop", "name": "document", "at": [130, 520], "size": 90, "label": "recipe.json", "id": "recipe",

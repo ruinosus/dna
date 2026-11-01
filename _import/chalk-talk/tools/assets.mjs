@@ -136,7 +136,7 @@ console.log(`✓ assets from the engine ${version}: player.html ${(page.length /
 // The npm package also carries the command line (npx chalk-talk …): the same scripts and page as the skill.
 mkdirSync(join(here, '../npm/scripts'), { recursive: true })
 mkdirSync(join(here, '../npm/assets'), { recursive: true })
-for (const f of ['build.mjs', 'browser.mjs', 'contract.mjs', 'mermaid.mjs']) copyFileSync(join(skill, 'scripts', f), join(here, '../npm/scripts', f))
+for (const f of ['build.mjs', 'browser.mjs', 'contract.mjs', 'mermaid.mjs', 'syntax.mjs']) copyFileSync(join(skill, 'scripts', f), join(here, '../npm/scripts', f))
 copyFileSync(join(skill, 'assets/player.html'), join(here, '../npm/assets/player.html'))
 copyFileSync(join(here, '../LICENSE'), join(here, '../npm/LICENSE'))
 

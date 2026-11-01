@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.12.0 — 2026-11-01
+
+Draws first, and checks itself in a second or two — in cloud sandboxes too.
+
+- **Draws first.** For an ordinary request Claude no longer asks and shows an outline: it chooses the everyday hook,
+  who it is for and the value to move, draws, and then says in a line what it chose and offers to change it. It still
+  asks first for a class, students, a talk or a course, when the request could mean two things, or when asked to.
+- **A cheat sheet in SKILL.md** covers the usual drawing (the header, props, placing, links, balloons, counters, bars,
+  plots, `when`, `pause ask`, quizzes, `learning`) and says that a chapter never clears the paper: one board. The
+  references are opened only for a step that is not in it.
+- **A mistake shows how its line is written:** under `✗ text: line N …` or `✗ contract: Step N …` the build prints
+  «write it like:» with a line of that kind that builds (`scripts/syntax.mjs`; the checks build every example and
+  keep the cheat sheet in step with them).
+- **The review talks to the browser over a pipe** (the DevTools protocol) instead of `--dump-dom`, which hung until a
+  90 s timeout on some machines. It finds Playwright's Chromium too, runs without the sandbox as root on Linux, tries
+  the next browser when one fails, says at once when a page cannot open, and gives up on a browser after 20 s
+  (`--review-timeout`). A build with its review takes one to two seconds. «not checked» is said as such.
+- **`--snapshots [folder]`:** a PNG of each chapter as it ends at each setting the review tries, and a contact sheet of
+  them all — what Claude opens in the round of fixes.
+- Evals: six fixed requests that measure speed (`--tag speed`, `tools/eval-metrics.mjs`), and the five vague requests
+  now expect a drawing at once. First drawing in 28–41 s instead of 49–70 s, with no reference read before writing.
+
 ## 0.11.0 — 2026-10-30
 
 All of Mermaid.

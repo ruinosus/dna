@@ -1,13 +1,13 @@
 // The page of every chalk-talk HTML file (and of player.js on a CDN): it reads the recipe from the page, checks it and
-// mounts the lesson (lesson.ts) — or, for a course, the list of lessons above it. Opened with #review, #snapshot, #svg
-// or #still, it does the job of scripts/build.mjs and of the repository's tools instead.
+// mounts the lesson (lesson.ts) — or, for a course, the list of lessons above it. Opened with #review, #snapshot,
+// #snapshots, #svg or #still, it does the job of scripts/build.mjs and of the repository's tools instead.
 import { playbackBeats, Renderer } from '@engine/renderer'
-import { defaultValues, validateScene, type Scene } from '@engine/recipe'
+import { chaptersFor, defaultValues, validateScene, type Scene } from '@engine/recipe'
 import { PROP_ALIASES, PROP_NAMES } from '@engine/props'
 import { parseChalk } from '@engine/text'
-import { reviewScene } from '@engine/review'
+import { combinations, reviewScene } from '@engine/review'
 import { animatedSvg } from '@engine/record'
-import { browserLang, fontsLoaded, mountLesson, stillLesson, tag, TEXT } from './lesson'
+import { browserLang, fontsLoaded, mountLesson, stillLesson, svgText, tag, TEXT } from './lesson'
 
 const lang = browserLang()
 const t = TEXT[lang]
@@ -93,6 +93,106 @@ async function snapshot(scene: Scene) {
   report('snapshot', { svg: svg.outerHTML })
 }
 
+// ---------- #snapshots: pictures for whoever wrote the recipe to look at (build.mjs --snapshots) ----------
+// Each chapter as it ends, at each setting the reviewer draws (the defaults, each switch flipped, each control at its
+// ends), as PNG; and a contact sheet of them all: a row per chapter, a column per setting.
+const TILE = 300
+async function snapshots(scene: Scene) {
+  const svg = offPaper()
+  svg.style.width = `${scene.width}px`
+  await fontsLoaded()
+  const renderer = new Renderer(svg)
+  const chapters = chaptersFor(scene)
+  const settings = combinations(scene)
+  const base = defaultValues(scene)
+  const label = (values: Record<string, number>) => {
+    const changed = Object.keys(values).find((k) => values[k] !== base[k])
+    if (!changed) return 'default'
+    if (scene.switches?.[changed]) return `${changed}-${values[changed] ? 'on' : 'off'}`
+    return `${changed}-${values[changed] === scene.params?.[changed]?.min ? 'min' : 'max'}`
+  }
+  const shots: { chapter: number; title: string; label: string; at: string; png: string; image: HTMLImageElement }[] = []
+  for (const [k, chapter] of chapters.entries()) {
+    for (const values of settings) {
+      await renderer.render(scene, values, { animate: false, until: chapter.end })
+      const image = await picture(svgText(svg, faces()))
+      const at = Object.entries(values).map(([n, v]) => `${n}=${v}`).join(', ')
+      shots.push({ chapter: k + 1, title: chapter.title, label: label(values), at, png: toPng(image, scene.width, scene.height, paperColour(scene)), image })
+    }
+  }
+  report('snapshots', {
+    chapters: chapters.length,
+    settings: settings.length,
+    shots: shots.map(({ image: _, ...s }) => s), // eslint-disable-line @typescript-eslint/no-unused-vars -- not sent
+    sheet: contactSheet(scene, chapters.map((c) => c.title), settings.map(label), shots.map((s) => s.image)),
+  })
+}
+
+const paperColour = (scene: Scene) => (scene.theme === 'chalkboard' ? '#26372E' : '#FBF7EE')
+
+/** An SVG text as an image (a data: URL — a blob: one does not draw on a canvas from a file page). */
+function picture(svg: string): Promise<HTMLImageElement> {
+  return new Promise((ok, fail) => {
+    const img = new Image()
+    img.onload = () => ok(img)
+    img.onerror = () => fail(new Error('a snapshot did not draw'))
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg)
+  })
+}
+
+function toPng(img: HTMLImageElement, width: number, height: number, paper: string): string {
+  const canvas = tag('canvas', { width: String(width), height: String(height) }) as HTMLCanvasElement
+  const g = canvas.getContext('2d')!
+  g.fillStyle = paper
+  g.fillRect(0, 0, width, height)
+  g.drawImage(img, 0, 0, width, height)
+  return canvas.toDataURL('image/png')
+}
+
+/** The pictures in a grid: the settings across, the chapters down, each named. */
+function contactSheet(scene: Scene, chapters: string[], settings: string[], images: HTMLImageElement[]): string {
+  const h = Math.round((TILE * scene.height) / scene.width)
+  const gap = 16
+  const left = 150
+  const top = 44
+  const canvas = tag('canvas', {
+    width: String(left + settings.length * (TILE + gap)),
+    height: String(top + chapters.length * (h + gap)),
+  }) as HTMLCanvasElement
+  const g = canvas.getContext('2d')!
+  g.fillStyle = '#FFFFFF'
+  g.fillRect(0, 0, canvas.width, canvas.height)
+  g.fillStyle = '#242424'
+  g.font = '15px sans-serif'
+  settings.forEach((s, c) => g.fillText(s, left + c * (TILE + gap), 28))
+  chapters.forEach((title, r) => {
+    const y = top + r * (h + gap)
+    g.fillStyle = '#242424'
+    wrapText(g, `${r + 1}. ${title}`, 8, y + 18, left - 16, 18)
+    settings.forEach((_, c) => {
+      const x = left + c * (TILE + gap)
+      g.fillStyle = paperColour(scene)
+      g.fillRect(x, y, TILE, h)
+      g.drawImage(images[r * settings.length + c], x, y, TILE, h)
+      g.strokeStyle = '#D8D2C4'
+      g.strokeRect(x + 0.5, y + 0.5, TILE - 1, h - 1)
+    })
+  })
+  return canvas.toDataURL('image/png')
+}
+
+function wrapText(g: CanvasRenderingContext2D, text: string, x: number, y: number, width: number, line: number) {
+  let row = ''
+  for (const word of text.split(' ')) {
+    if (row && g.measureText(`${row} ${word}`).width > width) {
+      g.fillText(row, x, y)
+      row = word
+      y += line
+    } else row = row ? `${row} ${word}` : word
+  }
+  if (row) g.fillText(row, x, y)
+}
+
 // ---------- #svg: the drawing as an SVG that draws itself with no script (build.mjs --svg) ----------
 async function animated(scene: Scene) {
   await fontsLoaded()
@@ -118,12 +218,13 @@ async function main() {
   try {
     ;({ scene, course } = readRecipe())
   } catch (e) {
-    if (['review', 'snapshot', 'svg'].includes(mode)) return report(mode, { error: (e as Error).message })
+    if (['review', 'snapshot', 'snapshots', 'svg'].includes(mode)) return report(mode, { error: (e as Error).message })
     $('stage').replaceChildren(tag('p', { class: 'broken' }, `${t.broken} ${(e as Error).message}`))
     return
   }
   if (mode === 'review') return review(scene)
   if (mode === 'snapshot') return snapshot(scene)
+  if (mode === 'snapshots') return snapshots(scene)
   if (mode === 'svg') return animated(scene)
   if (mode === 'still') return still(scene)
   document.title = scene.title

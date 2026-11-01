@@ -1,11 +1,10 @@
 // The GitHub Pages gallery (docs/): every example built into a lesson you can open and play (docs/lessons/), a picture
-// of each (docs/thumbs/, taken by a headless browser from the page's #still mode) and docs/index.html listing them.
+// of each (docs/thumbs/: the whole drawing, from the page's #snapshots mode in a headless browser) and docs/index.html
+// listing them.
 // Run after `npm run assets`: npm run site.
-import { execFileSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 import { browser, runPage } from '../skills/chalk-talk/scripts/browser.mjs'
 import { recipesIn } from './recipes.mjs'
 
@@ -13,8 +12,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
 const docs = join(root, 'docs')
 const player = readFileSync(join(root, 'skills/chalk-talk/assets/player.html'), 'utf8')
-const exe = browser()
-if (!exe) throw new Error('No Chrome, Chromium or Edge: the pictures need one (set CHROME_PATH).')
+if (!browser()) throw new Error('No Chrome, Chromium or Edge: the pictures need one (set CHROME_PATH).')
 
 const sources = [join(docs, 'examples'), join(root, 'skills/chalk-talk/references/examples')]
 const lessons = []
@@ -26,26 +24,22 @@ for (const dir of ['lessons', 'thumbs']) {
   rmSync(join(docs, dir), { recursive: true, force: true })
   mkdirSync(join(docs, dir), { recursive: true })
 }
-const profile = mkdtempSync(join(tmpdir(), 'chalk-talk-site-'))
 for (const { file, scene } of lessons) {
   const page = join(docs, 'lessons', `${file}.html`)
   writeFileSync(page, player.replace('{{RECIPE}}', () => JSON.stringify(scene).replace(/</g, '\\u003c')))
-  const width = 1200
-  const height = Math.round((width * scene.height) / scene.width)
-  execFileSync(exe, [
-    '--headless=new', '--disable-gpu', '--hide-scrollbars', '--no-first-run', `--user-data-dir=${profile}`,
-    `--window-size=${width},${height}`, '--virtual-time-budget=20000', `--screenshot=${join(docs, 'thumbs', `${file}.png`)}`,
-    `${pathToFileURL(page).href}#still`,
-  ], { stdio: 'ignore', timeout: 90000 })
+  // The picture is the last chapter at the starting values: the whole drawing.
+  const shots = await runPage(page, 'snapshots', '', { timeout: 60 })
+  if (!shots || shots.error) throw new Error(`${file}: the picture failed (${shots?.error ?? 'no browser'})`)
+  const whole = shots.shots.filter((s) => s.label === 'default').at(-1)
+  writeFileSync(join(docs, 'thumbs', `${file}.png`), Buffer.from(whole.png.replace(/^data:image\/png;base64,/, ''), 'base64'))
   // The README shows these as SVGs that draw themselves (build.mjs --svg).
   if (['coffee-order', 'coin-jar'].includes(file)) {
-    const r = runPage(page, 'svg')
+    const r = await runPage(page, 'svg', '', { timeout: 60 })
     if (!r || r.error) throw new Error(`${file}: the animated SVG failed (${r?.error ?? 'no browser'})`)
     writeFileSync(join(docs, 'images', `${file}.svg`), r.svg)
   }
   console.log(`✓ ${file}`)
 }
-rmSync(profile, { recursive: true, force: true })
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 const card = ({ file, scene, english }) => `
@@ -117,10 +111,10 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
   </section>
   <section class="how">
     <h2>How it works</h2>
-    <img src="images/chalk-talk-how.png" alt="You ask Claude, Claude agrees an outline, writes recipe.json, build.mjs checks it, out comes lesson.html">
+    <img src="images/chalk-talk-how.png" alt="You ask Claude, Claude chooses the hook, the audience and the value to move, writes the recipe, build.mjs checks it, out comes lesson.html">
     <ol>
-      <li>Claude asks only what is missing (the everyday thing to tie the idea to, who it is for, which number moves) and agrees a four-part outline with you.</li>
-      <li>It writes a small JSON <b>recipe</b> — what to draw, step by step — never the drawing itself.</li>
+      <li>Claude chooses the everyday thing to tie the idea to, who it is for and which number moves, and draws at once — then says what it chose and offers to change it. For a class it asks first.</li>
+      <li>It writes a short text <b>recipe</b> — what to draw, step by step — never the drawing itself.</li>
       <li><code>scripts/build.mjs</code> checks the recipe, builds one HTML file and, with a headless browser, checks that nothing leaves the paper and no text covers another.</li>
     </ol>
   </section>

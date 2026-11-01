@@ -1,7 +1,7 @@
 // Checks the skill as someone installing it would get it: SKILL.md's frontmatter, every example built by
 // scripts/build.mjs, a recipe that breaks the contract (exit 1) and one with a line across a text (exit 3).
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -83,7 +83,7 @@ try {
 } catch (e) { out.failed = e.message }
 const pre = document.createElement('pre'); pre.id = 'chalk-embed'; pre.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(pre)
 </script>`)
-  const r = runPage(page, 'embed')
+  const r = await runPage(page, 'embed')
   if (!r) expect(true, 'no browser here: the embed check is skipped')
   else {
     const ok = !r.failed && r.chapters?.[0] === 1 && r.chapters?.[1] === 0 && r.drawn.every((n) => n > 5) && r.styles === 1 && !r.ids.length && r.expand[0] === false && r.expand[1] === true && r.destroyed === 0 && r.error === 2
@@ -124,9 +124,59 @@ setTimeout(() => {
   const pre = document.createElement('pre'); pre.id = 'chalk-mount'; pre.textContent = encodeURIComponent(JSON.stringify({ out, styles: document.querySelectorAll('#chalk-talk-styles').length })); document.body.append(pre)
 }, 6000)
 </script>`)
-  const r = runPage(page, 'mount')
+  const r = await runPage(page, 'mount')
   if (!r) expect(true, 'no browser here: the mount check is skipped')
   else expect(JSON.stringify(r.out) === JSON.stringify(['lesson', 'lesson', 'error:line 2', 'lesson']) && r.styles === 1, `chalk-talk/mount: blocks become lessons, one added later too (${JSON.stringify(r)})`)
+}
+
+// The review in a browser over the DevTools pipe: the coffee chain from a real session — its first version put the
+// balloon on the café (found), the second above the person (clean) — with every chapter at every setting as PNG and a
+// contact sheet, all in a few seconds.
+{
+  const { launchFlags } = await import('../skills/chalk-talk/scripts/browser.mjs')
+  const linux = launchFlags('linux', 0)
+  expect(linux.includes('--no-sandbox') && linux.includes('--disable-dev-shm-usage') && !launchFlags('linux', 1000).includes('--no-sandbox') && !launchFlags('darwin', 0).includes('--no-sandbox'),
+    'no sandbox only as root on Linux, where Chromium will not start without it')
+  const fixtures = join(skill, '../../tools/fixtures')
+  const left = run(join(fixtures, 'coffee-chain-left.chalk'), [join(dir, 'left.html')])
+  if (/• review/.test(left.stdout)) expect(true, 'no browser here: the coffee chain checks are skipped')
+  else {
+    expect(left.status === 3 && /the text of step 3 \(«de onde veio isso\?»\) sits on the drawing of step 8/.test(left.stdout), 'the coffee chain with the balloon on the café is found (exit 3)')
+    const t0 = Date.now()
+    const ok = run(join(fixtures, 'coffee-chain.chalk'), [join(dir, 'coffee.html'), '--snapshots'])
+    const ms = Date.now() - t0
+    const shots = join(dir, 'cadeia-cafe.snapshots')
+    const files = ok.status === 0 ? readdirSync(shots) : []
+    const sheet = files.includes('cadeia-cafe.contact-sheet.png') ? readFileSync(join(shots, 'cadeia-cafe.contact-sheet.png')) : Buffer.alloc(0)
+    // A PNG's width and height are in its header; 4 settings across, 4 chapters down.
+    const [w, h] = sheet.length > 24 ? [sheet.readUInt32BE(16), sheet.readUInt32BE(20)] : [0, 0]
+    const blank = files.filter((f) => f.endsWith('.png')).filter((f) => statSync(join(shots, f)).size < 8000)
+    expect(ok.status === 0 && /✓ review/.test(ok.stdout) && files.filter((f) => /\.ch\d\.[\w-]+\.png$/.test(f)).length === 16 && w === 150 + 4 * 316 && h === 44 + 4 * (Math.round(300 * 780 / 900) + 16) && !blank.length && ms < 8000,
+      `the coffee chain is clean, with 16 snapshots and a ${w}×${h} contact sheet, in ${(ms / 1000).toFixed(1)} s${ok.status ? `: ${ok.stdout}${ok.stderr}` : ''}${blank.length ? ` (blank: ${blank.join(', ')})` : ''}`)
+  }
+  const missing = await (await import('../skills/chalk-talk/scripts/browser.mjs')).runPage(join(dir, 'nowhere.html'), 'review')
+  expect(!missing || /ERR_FILE_NOT_FOUND/.test(missing.error ?? ''), `a page that is not there says so at once (${JSON.stringify(missing)})`)
+}
+
+// The cheat sheet: every example a mistake points to builds, and the ones meant for SKILL.md are in it, word for word.
+{
+  const { SYNTAX } = await import('../skills/chalk-talk/scripts/syntax.mjs')
+  const skillText = readFileSync(join(skill, 'SKILL.md'), 'utf8')
+  const broken = []
+  const absent = []
+  for (const [kind, { line, needs, sheet }] of Object.entries(SYNTAX)) {
+    const file = join(dir, `syntax-${kind}.chalk`)
+    // A recipe needs a step: the header lines get one after them.
+    writeFileSync(file, `${kind === 'title' ? '' : 'title X\n'}${needs ? `${needs}\n` : ''}${line}\ntext "fim" at 40,500\n`)
+    const r = run(file, ['--no-review'])
+    if (r.status !== 0) broken.push(`${kind}: ${r.stderr.trim()}`)
+    if (sheet !== false && !skillText.includes(line)) absent.push(kind)
+  }
+  expect(!broken.length, `every example of how a line is written builds${broken.length ? ` — ${broken.join(' / ')}` : ''}`)
+  expect(!absent.length, `SKILL.md's cheat sheet has every example meant for it${absent.length ? ` — missing ${absent.join(', ')}` : ''}`)
+  writeFileSync(join(dir, 'hint.chalk'), 'title X\nperson ana at 150,330\nana says\n')
+  const hint = run(join(dir, 'hint.chalk'))
+  expect(hint.status === 1 && hint.stderr.includes(SYNTAX.balloon.line), `a mistake shows how its line is written (${hint.stderr.trim().split('\n').join(' / ')})`)
 }
 
 const badText = join(dir, 'bad.chalk')

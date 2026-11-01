@@ -65,7 +65,7 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
         <img src="thumbs/chalk-talk-how.png" alt="chalk-talk ↔ a teacher at the board" loading="lazy">
         <span class="meta"><span>Developer tools</span><span class="lang">English</span></span>
         <b>chalk-talk ↔ a teacher at the board</b>
-        <span class="goal">Understand the path from a request to a self-contained HTML lesson: outline, recipe, build checks, offline player.</span>
+        <span class="goal">Understand the path from a request to a self-contained HTML lesson: choices, recipe, build checks, offline player.</span>
       </a>
       <a class="card" href="lessons/coffee-counter.html">
         <img src="thumbs/coffee-counter.png" alt="Um café no balcão" loading="lazy">
@@ -167,10 +167,10 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
   </section>
   <section class="how">
     <h2>How it works</h2>
-    <img src="images/chalk-talk-how.png" alt="You ask Claude, Claude agrees an outline, writes recipe.json, build.mjs checks it, out comes lesson.html">
+    <img src="images/chalk-talk-how.png" alt="You ask Claude, Claude chooses the hook, the audience and the value to move, writes the recipe, build.mjs checks it, out comes lesson.html">
     <ol>
-      <li>Claude asks only what is missing (the everyday thing to tie the idea to, who it is for, which number moves) and agrees a four-part outline with you.</li>
-      <li>It writes a small JSON <b>recipe</b> — what to draw, step by step — never the drawing itself.</li>
+      <li>Claude chooses the everyday thing to tie the idea to, who it is for and which number moves, and draws at once — then says what it chose and offers to change it. For a class it asks first.</li>
+      <li>It writes a short text <b>recipe</b> — what to draw, step by step — never the drawing itself.</li>
       <li><code>scripts/build.mjs</code> checks the recipe, builds one HTML file and, with a headless browser, checks that nothing leaves the paper and no text covers another.</li>
     </ol>
   </section>

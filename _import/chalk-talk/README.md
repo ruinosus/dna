@@ -29,7 +29,7 @@ hand.
   </tr>
   <tr>
     <td width="50%"><img src="docs/images/birthday-money.png" alt="A teenager with a $200 coin; a dashed straight line for simple interest and a red curve for compound interest that shoots up to $5,891 at age 65"></td>
-    <td width="50%"><img src="docs/images/chalk-talk-how.png" alt="How chalk-talk works, drawn by chalk-talk: you ask Claude, Claude agrees an outline, writes recipe.json, build.mjs checks it, out comes lesson.html"></td>
+    <td width="50%"><img src="docs/images/chalk-talk-how.png" alt="How chalk-talk works, drawn by chalk-talk: you ask Claude, Claude chooses the hook, the audience and the value to move, writes the recipe, build.mjs checks it, out comes lesson.html"></td>
   </tr>
   <tr>
     <td><i>«Explain compound interest by drawing it, for a teenager who just got birthday money.»</i><br>Interest on interest, mark by mark; move the yearly rate.</td>
@@ -75,33 +75,22 @@ these drawings are in [`docs/examples/`](docs/examples). Build any of them with
 
 ## How a conversation goes
 
-A real conversation in Claude Code (translated from Portuguese and shortened):
+Claude draws first: it picks the everyday thing to tie the idea to, who it is for and the value to move, builds the
+lesson, and then says what it chose. A real answer from the evals (Claude Code, shortened):
 
-> **You:** explain compound interest by drawing it, for my 14-year-old nephew
+> **You:** Draw the TCP three-way handshake.
 >
-> **Claude:** Two things are missing — answer both at once.
-> **1. Which everyday thing do we tie it to?** (1) the birthday money he saves *(recommended)* · (2) a snowball rolling
-> downhill · (3) the credit-card bill nobody paid.
-> **2. Which number does he move?** the yearly rate *(recommended)* · the years · none.
->
-> **You:** you decide
->
-> **Claude:** Birthday money, and he moves the yearly rate. Outline:
-> 1. *The question* — R$ 1,000 saved at 14, left alone until 24: why R$ 2,594 and not R$ 2,000?
-> 2. *Take it apart* — year by year: +100, then +110… the interest earns interest too.
-> 3. *The idea* — simple (a straight line to 2,000) next to compound (a curve to 2,594); he moves the rate.
-> 4. *The close* — the difference highlighted; "what if you start 5 years later?"; where the comparison stops.
->
-> Shall I draw it?
->
-> **You:** go
->
-> **Claude:** *(writes the recipe, builds it, the check passes)* Ready: `juros-aniversario.html`. Press Next; in
-> chapter 3 let him move the rate and watch the curve pull away from the line.
+> **Claude:** *(writes the recipe, builds it)* I've drawn the handshake: `lesson.html`, which opens offline.
+> **What I chose:** I tied it to a phone call on a bad line ("Can you hear me?" / "Yes! Can you hear me?"), for a
+> curious adult. There are two values to move: the client's starting number and the server's starting number. Want
+> another hook, another audience or anything changed?
+> The board has four chapters, and nothing is ever erased: why say hello three times; a client and a server, each with
+> a line running down; the three messages — SYN, SYN-ACK, ACK; connected. Press Next to step through; in chapter 3,
+> move the two starting numbers and watch each `ack` change to that number plus one.
 
-Claude asks only what is missing, never draws before you agree the outline, and changes only what you ask afterwards
-(«make the arrow blue», «use 5 % instead»). Ask for several lessons and they come as **one course file**, with a list
-to go from one to the next.
+For a class, students or a talk, Claude asks first — once, only what is missing — and shows the outline before drawing.
+Afterwards it changes only what you ask («make the arrow blue», «use 5 % instead»). Ask for several lessons and they
+come as **one course file**, with a list to go from one to the next.
 
 ## Write it as text — or bring a Mermaid diagram
 
@@ -195,7 +184,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y chalk-talk@0.11.0 "$f" "${f%.*}.svg" --svg; done
+      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y chalk-talk@0.12.0 "$f" "${f%.*}.svg" --svg; done
       - run: |
           git config user.name github-actions
           git config user.email github-actions@users.noreply.github.com
@@ -222,11 +211,15 @@ Claude never writes the drawing itself. It writes a small **recipe** — JSON th
 Then `scripts/build.mjs` (plain Node, no dependencies):
 
 1. **checks the contract**: step types, sizes, expressions, colours. A broken recipe stops here with a message
-   Claude can act on (exit 1).
+   Claude can act on — the line, what is wrong and how that kind of line is written (exit 1).
 2. **builds one HTML file**: the player with the engine and fonts inside, plus the recipe.
-3. **reviews the drawing** in a headless Chrome, Chromium or Edge, when one is installed. The drawing is checked
-   hidden at each value's extremes: anything off the paper, text over text, a line through a text. Problems go back
-   to Claude (exit 3), at most twice. Without a browser, the page checks itself when opened.
+3. **reviews the drawing** in a headless Chrome, Chromium or Edge — Playwright's Chromium too, so it works in cloud
+   sandboxes — in a second or two. The drawing is checked hidden at each value's extremes: anything off the paper,
+   text over text, a line through a text. Problems go back to Claude (exit 3), at most twice. Without a browser, the
+   page checks itself when opened.
+4. with `--snapshots`, **draws pictures to look at**: each chapter as it ends at each value's extremes, and a contact
+   sheet with them all (a row per chapter, a column per setting). Claude opens it in the round of fixes, to see what
+   the numbers of the review cannot say.
 
 What a recipe can draw: text, lines and arrows, curves and polygons, circles, plots of a formula, a yellow marker,
 labelled cards, 29 hand-drawn props (`person`, `house`, `bus`, `coin`, `phone`, `server`, `bank`, `school`, `hospital`,
@@ -255,7 +248,7 @@ then Settings › Capabilities › Skills › Upload. Code execution must be on.
 **Claude API**: upload the same zip with the Skills API (`/v1/skills`) and use it with the code execution tool.
 
 **Without installing anything** — on npm as [`chalk-talk`](https://www.npmjs.com/package/chalk-talk): a page needs
-only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.11.0/player.js"></script>` (that is also
+only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.12.0/player.js"></script>` (that is also
 how the skill shows a lesson where it cannot run code), and `npx chalk-talk lesson.json` builds the one-file lesson.
 
 **Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/chalk-talk` to the folder where the tool
@@ -302,17 +295,20 @@ npm run site      # the gallery in docs/ (GitHub Pages): every example as a less
 yet, so `npm run assets` only works where it is; everything else (`check`, `snapshots`, `site`, `zip`) works from
 this repository alone.
 
-The skill's own evals are in [`evals/`](evals): 20 requests in English and Portuguese (asking before drawing, drawing,
-crowded papers, changing a lesson, requests that are not about drawing). They run with
-[`claude plugin eval`](https://docs.claude.com/en/docs/claude-code), with and without the skill:
+The skill's own evals are in [`evals/`](evals): 26 requests in English and Portuguese (drawing at once, drawing for a
+class, crowded papers, changing a lesson, requests that are not about drawing, and six fixed requests that measure
+speed). They run with [`claude plugin eval`](https://docs.claude.com/en/docs/claude-code):
 
 ```
 claude plugin eval . --allow-tools Bash Write Edit --runs 1 --max-cost-usd 15
+claude plugin eval . --ablation none --allow-tools Bash Write Edit --tag speed --runs 2 --keep-temp --json run.json
+node tools/eval-metrics.mjs run.json    # seconds to the first drawing, files read first, rounds of fixes, quality
 ```
 
-Last run (0.6.1, one run per case): **0.94 with the skill, 0.31 without it** — without the skill Claude does not ask
-what is missing, does not build the lesson and ends up drawing by hand. The evals grade the conversation and the
-build (asks only what is missing, waits for the go, builds, checks, right language), not how good the drawing is.
+Speed, 0.11.0 → 0.12.0 (Claude Code, two runs per request; 0.11.0 with the outline already approved, its best case):
+the first drawing in **28–41 s instead of 49–70 s**, with **no reference file read** before writing instead of 3 or 4.
+The class request still asks first. [`evals/speed-cloud.md`](evals/speed-cloud.md) is the same measure by hand in
+claude.ai.
 
 ## License
 

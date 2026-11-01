@@ -21,23 +21,23 @@
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-4-0">
-<rect x="660.3125" y="117" width="151.7598876953125" height="62">
+<rect x="654.9921875" y="117" width="162.61993408203125" height="62">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-4-1">
-<rect x="637.140625" y="153" width="196.0338134765625" height="52">
+<rect x="659.046875" y="153" width="153.46392822265625" height="52">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-4-2">
-<rect x="628.6640625" y="181" width="214.62384033203125" height="52">
+<rect x="677.59375" y="181" width="116.85589599609375" height="52">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-4-3">
-<rect x="693.15625" y="209" width="85.197998046875" height="52">
+<rect x="659.9609375" y="209" width="151.83587646484375" height="52">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-4-4">
-<rect x="690.6484375" y="237" width="90.1258544921875" height="52">
+<rect x="642.828125" y="237" width="187.69580078125" height="52">
 </rect>
 </clipPath>
 <clipPath id="dw1-clip-1-6-label">
@@ -145,19 +145,19 @@
 <path d="M519.9021874852637 119.8942131643163 C607.1801769763562 118.96942482605478, 697.8195305493578 119.01017813910028, 950.4055320399626 118.81111703704656 M520.5390914402724 120.21728138857836 C622.4567513363469 119.24086014784858, 724.0805546104122 118.65763746389052, 949.5375227300921 119.92431227615732 M948.3127852797509 122.85823885202407 C949.4016446632147 178.26548618897795, 949.1645494025946 232.34838049858809, 950.1284526228904 308.9365595459938 M950.2826577484608 119.37217594981193 C951.2232052730321 181.9793893791735, 949.0818865703344 248.11274416595697, 949.5921000778675 309.8628587424755 M949.4120035340537 311.4424323053457 C798.2330031407014 308.86592613816384, 647.0473117901959 310.1783144617074, 519.1748779596022 311.5782759595701 M949.6064898221885 309.58668685804173 C791.5336422499473 308.67207203322346, 634.4538216377283 309.6701161272195, 520.2167354832239 309.23950270448296 M522.882370698452 308.91598497629167 C518.5501601263285 255.61856701746584, 517.5621127172708 199.02882728129626, 519.0701815962791 119.93583399057388 M519.2387158691884 310.85372158885 C516.4512344533205 250.49298409447073, 517.0969152623414 191.71112233251333, 521.1966567337513 120.61719490885734" stroke="#2E8F62" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="card" data-step="4">
 </path>
 <g data-type="card" data-step="4">
-<text x="735" y="158" fill="#2E8F62" font-family="'Caveat', cursive" font-size="30" font-weight="700" text-anchor="middle" clip-path="url(#dw1-clip-1-4-0)">agreed outline</text>
+<text x="735" y="158" fill="#2E8F62" font-family="'Caveat', cursive" font-size="30" font-weight="700" text-anchor="middle" clip-path="url(#dw1-clip-1-4-0)">Claude chooses</text>
 </g>
 <g data-type="card" data-step="4">
-<text x="735" y="186" fill="#2E8F62" font-family="'Caveat', cursive" font-size="22" font-weight="700" text-anchor="middle" clip-path="url(#dw1-clip-1-4-1)">1  the hook, as a question</text>
+<text x="735" y="186" fill="#2E8F62" font-family="'Caveat', cursive" font-size="22" font-weight="700" text-anchor="middle" clip-path="url(#dw1-clip-1-4-1)">1  an everyday hook</text>
 </g>
 <g data-type="card" data-step="4">
-<text x="735" y="214" fill="#2E8F62" font-family="'Caveat', cursive" font-size="22" font-weight="700" text-anchor="middle" clip-path="url(#dw1-clip-1-4-2)">2  take the real thing apart</text>
+<text x="735" y="214" fill="#2E8F62" font-family="'Caveat', cursive" font-size="22" font-weight="700" text-anchor="middle" clip-path="url(#dw1-clip-1-4-2)">2  who it is for</text>
 </g>
 <g data-type="card" data-step="4">
-<text x="735" y="242" fill="#2E8F62" font-family="'Caveat', cursive" font-size="22" font-weight="700" text-anchor="middle" clip-path="url(#dw1-clip-1-4-3)">3  the idea</text>
+<text x="735" y="242" fill="#2E8F62" font-family="'Caveat', cursive" font-size="22" font-weight="700" text-anchor="middle" clip-path="url(#dw1-clip-1-4-3)">3  the value to move</text>
 </g>
 <g data-type="card" data-step="4">
-<text x="735" y="270" fill="#2E8F62" font-family="'Caveat', cursive" font-size="22" font-weight="700" text-anchor="middle" clip-path="url(#dw1-clip-1-4-4)">4  the close</text>
+<text x="735" y="270" fill="#2E8F62" font-family="'Caveat', cursive" font-size="22" font-weight="700" text-anchor="middle" clip-path="url(#dw1-clip-1-4-4)">4  four parts, one board</text>
 </g>
 <path d="M411.6579517751932 208.9901403516531 C431.49912961097436 206.8843752066046, 449.614565869607 205.91747733749452, 507.41909612715244 207.78915377557277 M411.17062182873485 211.48629486113788 C440.1573846104555 212.46957384853064, 468.9044547041878 212.5274421861619, 505.2306952521205 209.89051510840653" stroke="#2E8F62" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="arrow" data-step="5">
 </path>

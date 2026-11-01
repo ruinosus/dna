@@ -4,98 +4,153 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "0.11.0"
+  version: "0.12.0"
 ---
 
 # chalk-talk: explain by drawing
 
-You make a hand-drawn explanation: a **recipe** (JSON) that the player in this skill draws stroke by stroke, with
-chapters, a short narration and, when there is a real quantity, a value the person moves. You write only the recipe;
-`scripts/build.mjs` checks it and builds one HTML file with everything inside. Never write or copy the player yourself.
+You make a hand-drawn explanation: a **recipe** in a short text (`.chalk`) that the player in this skill draws stroke
+by stroke, with chapters, a short narration and, when there is a real quantity, a value the person moves. You write
+only the recipe; `scripts/build.mjs` checks it and builds one HTML file with everything inside. Never write or copy the
+player yourself. Paths below are relative to this skill's folder.
 
-Paths below are relative to this skill's folder (the folder this file is in).
+## 1. Draw first
 
-## 1. Ask only what is missing — once, all together
+For an ordinary request ("explain X by drawing", "draw how Y works") **do not ask and do not show an outline: draw.**
+Decide the three things a drawing needs yourself, and say them when you deliver:
 
-Three things make a drawing:
+- **the hook**: a thing of everyday life the idea is tied to, that the audience has seen or done and that can be drawn
+  with few shapes (a card bill, a bus stop, a café queue);
+- **who it is for**: what the request says, else a curious adult;
+- **the value the person moves**: a real quantity in the idea (the monthly rate, people arriving per minute), or none.
 
-- **the hook**: a thing of everyday life the idea is tied to (a card bill, a bus stop, a café queue) — read
-  `references/hooks.md`;
-- **who it is for** (a 14-year-old, a team of engineers, a class);
-- **which number the person moves**, if any (the monthly rate, people arriving per minute) — or none.
+Ask first — once, all together, and only what is missing — when it is **for a class, students, a talk or a course**
+(see «For a class»), when the request could mean two different things, or when the person asks to see the plan first.
 
-Never ask what the person already said. Offer up to 3 hooks, best first, each with one line on why it works. If the
-person says "you decide", decide and say what you chose in the outline. **This message only asks**: no outline, no
-offers, nothing drawn — the outline comes after the answer.
+The drawing has four parts, a chapter each: **the hook as a question** ("why does R$ 1,000 become R$ 1,974?"); **take
+it apart** (the real thing, simply, and what is hidden in it); **the idea** (the rule, the flow or the argument, with
+the value that moves); **the close** (a highlight on the result and where the comparison stops).
 
-## 2. Agree the outline before any stroke
+## 2. Write the recipe
 
-Choose a **mold** (`references/molds.md`) and say which. Then the outline in four parts, a few lines in all:
+Write `<id>.chalk` with the lines below — this covers the usual drawing; **you do not need to read anything else
+first**. The paper is 900 × 560 (`size 900x780` makes a taller board), x grows right and y down, a
+prop's `at` is where it stands (its bottom centre); keep 30 px from the edges. `# Title` opens a chapter and
+`> sentence` is the narration: both go to the next step. A point is `x,y` with no space; an expression goes in quotes
+and can use the params and vars.
 
-1. **The hook as a question** — "why does a R$ 1,000 bill become R$ 1,974 in six months?"
-2. **Take it apart** — draw the real thing simply and reveal what is hidden in it.
-3. **The idea** — the relation, the argument, the flow; say which value moves, if any.
-4. **The close** — a highlight on the result, a question to think about, and where the comparison stops.
+**It is one board: a chapter never clears the paper.** Everything drawn stays, like chalk on a blackboard, so plan the
+whole board before writing and give each part its own place — the title once at the top, the hook and the real thing
+in the upper half, the idea below or beside it, the close in what is left. Never draw two things in the same place;
+12 to 25 steps are usually enough.
 
-Wait for the person's go ("pode", "go", "yes"). An edit to the outline is a new outline: show it again.
+The top:
 
-## 3. Write the recipe
+```
+title Juros compostos ↔ a fatura do cartão
+locale pt-BR
+size 900x560
+param taxa "juros ao mês (%)" 1..15 step=1 = 8
+switch atraso "pagar com atraso" off
+var f = "1 + taxa/100"
+learning goal "Ver o juro sobre o juro crescer mês a mês."
+```
 
-Write it as **text**, one step per line (`references/text.md`: short, and the person can read and change it); what each
-step draws, the expressions, the palette and the space rules are in `references/recipe.md` — read both before
-writing. `references/examples/` has finished recipes in JSON (open one similar to yours if unsure); JSON still works.
-If the person gives a **Mermaid diagram** (any kind but zenuml), keep it as it is, add `%% title`,
-`%% # chapter` and `%% > narration` lines, and build it as a `.mmd` (`references/text.md` shows how). Keep:
+Write all four `learning` lines — `goal`, `question` (one to think about), `answer` (grounded) and `caveat` (what was
+simplified) — and set `locale` to the person's language, with every text in it.
 
-- 8 to 40 steps, one `chapter` on the first step of each part of the outline, one short `say` when the idea changes;
-- every text in the person's language, and `locale` set to it ("en-US", "pt-BR"…) so numbers are written its way;
-  facts and numbers right — never invent a quote or a figure to make it work;
-- props (`person`, `house`, `bus`, `coin`, `server`, `school`, `robot`…) for people and things instead of drawing them
-  stroke by stroke, a `mood` on a person, and a `balloon` when someone says or thinks something;
-- `place` (beside another piece by its `id`), `row`/`column`/`grid`, `axis` and `timeline` instead of working out
-  coordinates by hand whenever pieces sit next to each other, line up, or need marks along a line;
-- `learning` always: goal, question, one grounded answer, and the caveat (what was simplified);
-- for a class: `theme: "chalkboard"`, a `pause` with `ask` opening the part that answers it (the lesson waits), and a
-  `quiz` at the end — only when the person mentions a class, students or a talk, and then in the outline (never in
-  the questions of step 1).
+People and things are **props**: person, person-sitting, person-pointing, house, car, bus, coin, phone, document,
+server, bank, cloud, queue, desk, computer, clock, lock, money-arrow, tree, school, hospital, factory, truck, cart,
+safe, bulb, gear, database, robot. A person takes `mood=` happy, sad, surprised, worried or idea.
 
-Save it as `<id>.chalk` (or `<id>.mmd`, `<id>.json`): in the folder the person is working in, or, when an outputs
-folder exists for files the person downloads (on claude.ai, `/mnt/user-data/outputs`), there. A `.md` file is read
-too: each ```chalk-talk and ```mermaid block in it is a lesson.
+```
+person ana at 150,330 "Ana" mood=worried
+text "R$ 1.000 viram quanto?" at 40,64 size=36
+text "paga só o mínimo" right-of ana gap 16 align=start
+ana thinks "e se eu atrasar?" side=above width=200
+ana -> banco "paga"
+arrow 60,350 -> 840,350 color=#2E8F62 stroke=3
+highlight 90,500 -> 810,500 thickness=24
+```
 
-## 4. Build and check
+Placing without working out coordinates — prefer these whenever pieces sit side by side or follow each other:
+
+```
+row at 470,150 gap 14
+  repeat 3: coin size 44
+repeat 3: coin at "100 + i*60",400 size 40
+```
+
+Numbers that follow the value:
+
+```
+counter at 470,270 "1000*f^6" "R$ {v:0} em seis meses" size=34
+bars box 90,320,440,180 values 1000,"1000*f^3","1000*f^6" labels hoje,"3 meses","6 meses" format="R$ {v:0}"
+plot "1000*(1+taxa/100)^x" domain 0..12 range 0..4000 box 480,120,360,240
+when atraso:
+  text "multa de 2%" at 600,100 color=#C8442C
+```
+
+Waiting for the person, and a quiz (both for a class):
+
+```
+pause ask "Quanto vai virar a fatura em seis meses?"
+quiz "Se a taxa dobra, a fatura em seis meses…"
+  * mais que dobra o juro -- é juro sobre juro
+  - só dobra -- isso seria juro simples
+```
+
+Keep: 8 to 40 steps on one board; a short narration only when the idea changes; titles 36 to 44, labels 24 to 34, nothing under 22;
+colours graphite (the default), #2F5BEA, #C8442C, #2E8F62, #8C8578, marker #FFE45C, three accents at most; facts and
+numbers right — never invent a quote or a figure. Other steps (circle, curve, card, table, axis, timeline, brace, note,
+move…) are in `references/text.md`; what each draws, in `references/recipe.md`. Open them only when you need a step that
+is not above or the build's message does not settle a mistake.
+
+If the person gives a **Mermaid diagram**, keep it as it is, add `%% title …`, `%% # chapter` and `%% > narration`
+lines and save it as `<id>.mmd` (`references/text.md` shows how). Save the recipe in the folder the person works in,
+or, when an outputs folder exists for files the person downloads (on claude.ai, `/mnt/user-data/outputs`), there.
+
+## 3. Build and check
 
 ```
 node scripts/build.mjs <id>.chalk
 ```
 
-It prints a short report and writes `<id>.html` next to the recipe (`✗ text: line N: …` points at a line of the text):
+It writes `<id>.html` next to the recipe and prints:
 
-- `✗ contract: …` (exit 1): the recipe breaks the format; nothing was written. Fix exactly what the message says.
-- `! review …` (exit 3): drawn, but something leaves the paper, a text covers another or a line crosses a text — at
-  the values shown. Move or shorten what it names.
-- `✓ review` or `• review … the page checks itself when opened` (exit 0): done.
+- `✗ text: line N …` or `✗ contract: …` (exit 1, nothing written): fix that line the way the message says, as the
+  example under it shows.
+- `! review …` (exit 3): drawn, but something leaves the paper, a text covers another or a line crosses a text. Fix it
+  and build again **with `--snapshots`**: it also writes `<id>.snapshots/<id>.contact-sheet.png` — every chapter at
+  every setting of the values. Open that picture and fix what the review named and anything that does not read right
+  (a figure that is not recognisable, a crowded corner, a text too small).
+- `✓ review`, or `• review … the page checks itself when opened` (no browser here): done.
+- `✗ review not checked: …`: done, but tell the person the drawing was not checked.
 
-**Several lessons** (a course, a series for a class): write one recipe per lesson and build them together —
-`node scripts/build.mjs one.json two.json three.json --out course.html --title "The course"` — one file with a list of
-the lessons. Each lesson is checked on its own.
+At most **two** rounds of fixes; then deliver and say in plain words what is left ("with 15 % the label touches the
+title").
 
-**For a README on GitHub** (or wherever only an image goes), when the person asks for it: `node scripts/build.mjs
-<id>.chalk --svg` writes `<id>.svg`, a picture that draws itself once with no script; `![title](<id>.svg)` plays it.
-It has no chapters, values or narration: the lesson is still the `.html`.
+**Several lessons** (a course): one recipe each, built together — `node scripts/build.mjs one.chalk two.chalk --out
+course.html --title "The course"`. **For a README** (or wherever only an image goes), when asked: `node
+scripts/build.mjs <id>.chalk --svg` writes `<id>.svg`, a picture that draws itself; the lesson is still the `.html`.
 
-Fix and run again **at most twice**. If something is still wrong, deliver it and tell the person in plain words what is
-left ("with 15 % the label of the simple interest touches the title").
+## 4. Deliver
 
-## 5. Deliver
+Give the path of the `.html` (or the file itself where the person downloads files) and, in one line, **what you chose
+and an offer to change it**: "I tied it to a credit card bill, for someone who never studied interest, with the
+monthly rate to move — want another hook, another audience or anything changed?" Then one sentence on what to look at
+("press Next; in chapter 3, move the rate"). The file opens offline, with chapters, the values beside the paper, and
+PNG, SVG, GIF and WebM download — it can go by e-mail or on a projector.
 
-Give the path of the `.html` file (or the file itself where the person downloads files) and say in one or two
-sentences what to look at: "Open it and press Next; in chapter 3, move the rate and watch the curve." The file has
-chapters (Next / Back, Play all), the values beside the paper, "Think about it", and PNG, SVG, GIF and WebM
-download (the GIF and the video record the lesson drawing itself — good for slides and messages). It needs no
-internet and no install, so it can be sent by e-mail or projected in a class.
+## For a class
 
-### No code execution (an artifact instead)
+When the drawing is for a class, students, a talk or a course, **ask first, in one message**: up to three hooks, best
+first, each with a line on why it works for that audience (`references/hooks.md`), who exactly it is for, and which
+number the students may move. Never ask what was already said. Then show the four-part outline in a few lines and
+wait for the go ("pode", "go"). The recipe adds `theme chalkboard`, a `pause ask` opening the part that answers it,
+and a `quiz` at the end.
+
+## No code execution (an artifact instead)
 
 Where you cannot run code but can show an HTML artifact, put the recipe in this small page — nothing else — and show
 it. The player loads from the CDN and checks the recipe itself:
@@ -107,23 +162,20 @@ it. The player loads from the CDN and checks the recipe itself:
 <script type="text/chalk-talk" id="chalk-recipe">
 THE RECIPE AS TEXT
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.11.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.12.0/player.js"></script>
 ```
 
-The text goes as it is (a JSON recipe also works, with `type="application/json"`; write `<` in it as `\u003c`). If
-the page says the recipe could not be opened, fix the line it names.
+If the page says the recipe could not be opened, fix the line it names.
 
-## 6. Changing it later
+## Changing it later
 
-"Make the arrow blue", "add a second person", "use 5 % instead": change only what was asked in the recipe, keep the
-rest as it is, build again and say what changed. A different hook or mold is a new outline (step 2).
+"Make the arrow blue", "add a second person", "use 5 % instead": change only what was asked, keep the rest, build
+again and say what changed. A different hook or audience is a new drawing.
 
 ## Never
 
-- Never draw before the person agreed the outline.
-- Never edit `assets/` or `scripts/contract.mjs`: they are generated, and the player inside them is the same one the
-  recipe contract was written for.
+- Never edit `assets/` or `scripts/contract.mjs`: they are generated.
 - Never put HTML, links, scripts or images in a recipe: texts are plain text, colours are hex or names.
-- Never write a script to generate the recipe: write the JSON itself (expressions and `repeat` do the arithmetic).
-- Without code execution, never hand-write the player, an SVG or an image of the drawing: use the small page in
-  «No code execution» above. If you can neither run code nor show an artifact, say so and give the recipe.
+- Never write a script to generate the recipe: write it yourself (expressions and `repeat` do the arithmetic).
+- Without code execution, never hand-write the player, an SVG or an image of the drawing: use the small page above. If
+  you can neither run code nor show an artifact, say so and give the recipe.

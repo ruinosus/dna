@@ -28,7 +28,7 @@ for (const { file: name, scene } of recipes) {
   const page = join(dir, `${name}.html`)
   const recipe = JSON.stringify(scene).replace(/</g, '\\u003c')
   writeFileSync(page, player.replace('{{RECIPE}}', () => recipe))
-  const r = runPage(page, 'snapshot')
+  const r = await runPage(page, 'snapshot', '', { timeout: 60 })
   if (!r) throw new Error('No Chrome, Chromium or Edge: snapshots need one (set CHROME_PATH).')
   if (r.error) throw new Error(`${name}: ${r.error}`)
   const target = join(kept, `${name}.svg`)
