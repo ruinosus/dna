@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "0.17.2"
+  version: "0.18.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -181,6 +181,11 @@ monthly rate to move — want another hook, another audience or anything changed
 ("press Next; in chapter 3, move the rate"). The file opens offline, with chapters, the values beside the paper, and
 PNG, SVG, GIF and WebM download — it can go by e-mail or on a projector.
 
+**To present it** (a talk, a class on a projector): build with `--present` — the page opens on one chapter at a time,
+full screen and the speaker notes with the first key; a clicker's PageDown moves on. **A PowerPoint**, when asked:
+`--pptx` (a slide per chapter; `steps` grows the drawing click by click, `video` embeds each chapter drawing itself),
+with the narration as speaker notes.
+
 ## For a class
 
 When the drawing is for a class, students, a talk or a course, **ask first, in one message**: up to three hooks, best
@@ -201,7 +206,7 @@ it. The player loads from the CDN and checks the recipe itself:
 <script type="text/chalk-talk" id="chalk-recipe">
 THE RECIPE AS TEXT
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.17.2/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.18.0/player.js"></script>
 ```
 
 If the page says the recipe could not be opened, fix the line it names.

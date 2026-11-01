@@ -68,6 +68,12 @@ these drawings are in [`docs/examples/`](docs/examples). Build any of them with
 - **Narration** with the browser's own voice (off by default) and a **transcript** of everything the lesson says.
 - **Download** the paper as PNG or SVG, or the lesson drawing itself as a **GIF** or a **video** (WebM) — for slides
   and messages.
+- **Present**: one chapter at a time on the whole screen, a clicker's PageDown to move on, and the speaker notes (the
+  narration, the next chapter, a clock) in a window of their own; the values still move. `build.mjs --present` opens
+  the page that way.
+- **PowerPoint**: `build.mjs --pptx` makes a slide per chapter, `--pptx steps` one per beat (the drawing grows click by
+  click), `--pptx video` a video of each chapter drawing itself (MP4) — the narration as speaker notes, and
+  `--settings` a sequence per setting. `--slides <folder>` gives the pictures, GIFs and notes for Claude's Slides.
 - **Language**: the page speaks English or Portuguese, following the browser. Numbers in the drawing follow the
   recipe's language (`3.00` in English, `3,00` in Portuguese).
 - **One file, about 265 KB**: engine, player, fonts and recipe are all inside. Open it without internet, send it by
@@ -184,7 +190,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y chalk-talk@0.17.2 "$f" "${f%.*}.svg" --svg; done
+      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y chalk-talk@0.18.0 "$f" "${f%.*}.svg" --svg; done
       - run: |
           git config user.name github-actions
           git config user.email github-actions@users.noreply.github.com
@@ -250,7 +256,7 @@ then Settings › Capabilities › Skills › Upload. Code execution must be on.
 **Claude API**: upload the same zip with the Skills API (`/v1/skills`) and use it with the code execution tool.
 
 **Without installing anything** — on npm as [`chalk-talk`](https://www.npmjs.com/package/chalk-talk): a page needs
-only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.17.2/player.js"></script>` (that is also
+only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.18.0/player.js"></script>` (that is also
 how the skill shows a lesson where it cannot run code), and `npx chalk-talk lesson.json` builds the one-file lesson.
 
 **Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/chalk-talk` to the folder where the tool
@@ -267,7 +273,8 @@ skills/chalk-talk/
   SKILL.md                 how Claude runs the conversation
   references/              how to write a recipe, the molds, the hooks, seven example recipes
   scripts/build.mjs        checks a recipe and builds the HTML (Node 18+, no dependencies)
-  scripts/contract.mjs     the recipe contract          ┐
+  scripts/pptx.mjs         the PowerPoint maker, loaded only for --pptx ┐
+  scripts/contract.mjs     the recipe contract          │
   assets/player.html       the player, engine and fonts ┘ generated — do not edit
 docs/                      the images and example recipes of this page
 tools/                     builds the generated files, checks and packs the skill
@@ -279,7 +286,7 @@ The drawing engine uses [Rough.js](https://roughjs.com) (MIT) for the hand-drawn
 
 ## Not yet
 
-Voice narration, editing the drawing by hand, PDF export, and showing the lesson inline as a claude.ai artifact
+Voice narration, editing the drawing by hand, PDF export, «appear on click» animations inside the PowerPoint, and showing the lesson inline as a claude.ai artifact
 (today it comes back as a file).
 
 ## Develop
@@ -338,6 +345,8 @@ claude.ai.
 - The animated emoji in `skills/chalk-talk/assets/lottie/` are **Animated Noto Emoji by Google**, under
   [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — not MIT; a lesson that plays one credits it.
 - Rough.js (MIT); the fonts Caveat and Shantell Sans (SIL Open Font License).
+- [pptxgenjs](https://github.com/gitbrent/PptxGenJS) (MIT) is bundled into `scripts/pptx.mjs`, with JSZip inside it
+  (dual MIT or GPLv3; used under MIT).
 
 ## License
 

@@ -73,6 +73,16 @@ const mermaid = await build({
 })
 writeFileSync(join(skill, 'scripts/mermaid.mjs'), `${banner}\n${mermaid.outputFiles[0].text}`)
 
+// back-of-napkin 0.2.0: the PowerPoint maker (pptxgenjs, MIT), apart and loaded only for --pptx. JSZip inside it is
+// dual-licensed MIT or GPLv3; we take it under MIT.
+const pptx = await build({
+  entryPoints: [join(here, 'pptx-entry.mjs')],
+  bundle: true, format: 'esm', platform: 'node', target: 'node18', minify: true, write: false, logLevel: 'error',
+  banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
+})
+const pptxVersion = JSON.parse(readFileSync(join(here, 'node_modules/pptxgenjs/package.json'), 'utf8')).version
+writeFileSync(join(skill, 'scripts/pptx.mjs'), `${banner}\n/*! pptxgenjs ${pptxVersion} — MIT License, Copyright (c) 2015-present Brent Ely; JSZip — MIT License (dual MIT/GPLv3, used under MIT), Copyright (c) 2009-2016 Stuart Knightley, David Duponchel, Franz Buchinger, António Afonso */\n${pptx.outputFiles[0].text}`)
+
 // The player: engine + page code in one script — inside the built page (no shell), and on its own for npm / the CDN
 // (with the shell: markup, styles and fonts, made below).
 const player = (shell) => build({
@@ -148,7 +158,7 @@ vendor(join(skill, 'scripts'), ['browser.mjs', 'page.mjs'])
 // kit itself (chalk-talk/kit), for the other skills' tools, and the references, for the skills that draw with it.
 mkdirSync(join(here, '../npm/scripts'), { recursive: true })
 mkdirSync(join(here, '../npm/assets'), { recursive: true })
-for (const f of ['build.mjs', 'browser.mjs', 'page.mjs', 'contract.mjs', 'mermaid.mjs', 'syntax.mjs']) copyFileSync(join(skill, 'scripts', f), join(here, '../npm/scripts', f))
+for (const f of ['build.mjs', 'browser.mjs', 'page.mjs', 'contract.mjs', 'mermaid.mjs', 'syntax.mjs', 'pptx.mjs']) copyFileSync(join(skill, 'scripts', f), join(here, '../npm/scripts', f))
 rmSync(join(here, '../npm/kit'), { recursive: true, force: true })
 cpSync(join(here, '../kit'), join(here, '../npm/kit'), { recursive: true })
 copyFileSync(join(skill, 'assets/player.html'), join(here, '../npm/assets/player.html'))

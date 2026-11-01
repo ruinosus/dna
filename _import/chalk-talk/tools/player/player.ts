@@ -1,12 +1,15 @@
 // The page of every chalk-talk HTML file (and of player.js on a CDN): it reads the recipe from the page, checks it and
 // mounts the lesson (lesson.ts) — or, for a course, the list of lessons above it. Opened with #review, #snapshot,
-// #snapshots, #svg or #still, it does the job of scripts/build.mjs and of the repository's tools instead.
-import { playbackBeats, Renderer, setLottiePlayer, type LottiePlayer } from '@engine/renderer'
+// #snapshots, #svg, #still or #export, it does the job of scripts/build.mjs and of the repository's tools instead; with
+// #present it opens presenting.
+import { buildScope, playbackBeats, Renderer, setLottiePlayer, type LottiePlayer } from '@engine/renderer'
 import { chaptersFor, defaultValues, validateScene, type Scene } from '@engine/recipe'
 import { PROP_ALIASES, PROP_NAMES } from '@engine/props'
 import { parseChalk } from '@engine/text'
 import { combinations, reviewScene } from '@engine/review'
-import { animatedSvg } from '@engine/record'
+import { animatedSvg, playFrames, recordVideo, videoType } from '@engine/record'
+import { interpolate } from '@engine/expr'
+import { applyPalette, GIFEncoder, quantize } from 'gifenc'
 import { browserLang, fontsLoaded, mountLesson, stillLesson, svgText, tag, TEXT } from './lesson'
 
 // Lottie: the build puts lottie-web's light player before this script only when the lesson has an animation.
@@ -108,13 +111,7 @@ async function snapshots(scene: Scene) {
   const renderer = new Renderer(svg)
   const chapters = chaptersFor(scene)
   const settings = combinations(scene)
-  const base = defaultValues(scene)
-  const label = (values: Record<string, number>) => {
-    const changed = Object.keys(values).find((k) => values[k] !== base[k])
-    if (!changed) return 'default'
-    if (scene.switches?.[changed]) return `${changed}-${values[changed] ? 'on' : 'off'}`
-    return `${changed}-${values[changed] === scene.params?.[changed]?.min ? 'min' : 'max'}`
-  }
+  const label = settingName(scene)
   const shots: { chapter: number; title: string; label: string; at: string; png: string; image: HTMLImageElement }[] = []
   for (const [k, chapter] of chapters.entries()) {
     for (const values of settings) {
@@ -130,6 +127,17 @@ async function snapshots(scene: Scene) {
     shots: shots.map(({ image: _, ...s }) => s), // eslint-disable-line @typescript-eslint/no-unused-vars -- not sent
     sheet: contactSheet(scene, chapters.map((c) => c.title), settings.map(label), shots.map((s) => s.image)),
   })
+}
+
+/** The name of a setting, as the contact sheet heads its column: default, a switch on or off, a control at min or max. */
+function settingName(scene: Scene) {
+  const base = defaultValues(scene)
+  return (values: Record<string, number>) => {
+    const changed = Object.keys(values).find((k) => values[k] !== base[k])
+    if (!changed) return 'default'
+    if (scene.switches?.[changed]) return `${changed}-${values[changed] ? 'on' : 'off'}`
+    return `${changed}-${values[changed] === scene.params?.[changed]?.min ? 'min' : 'max'}`
+  }
 }
 
 const paperColour = (scene: Scene) => (scene.theme === 'chalkboard' ? '#26372E' : '#FBF7EE')
@@ -208,6 +216,84 @@ async function animated(scene: Scene) {
   }
 }
 
+// ---------- #export: what build.mjs makes a PowerPoint or the Slides material from (back-of-napkin 0.2.0) ----------
+// ?export=static,steps,video,gif and ?settings=default,d-max (the contact sheet's names; default when absent). For each
+// setting and chapter: the chapter drawn (PNG), each of its beats (PNG), the chapter drawing itself (MP4, else WebM) and
+// as a GIF; and each chapter's title and narration, for the notes.
+const asData = (blob: Blob) => new Promise<string>((ok) => {
+  const r = new FileReader()
+  r.onload = () => ok(String(r.result))
+  r.readAsDataURL(blob)
+})
+
+async function exported(scene: Scene) {
+  const query = new URLSearchParams(location.search)
+  const want = new Set((query.get('export') ?? 'static').split(','))
+  const named = settingName(scene)
+  const all = combinations(scene)
+  const asked = (query.get('settings') ?? 'default').split(',')
+  const missing = asked.filter((n) => !all.some((v) => named(v) === n))
+  if (missing.length) return report('export', { error: `no setting called ${missing.join(', ')}: the contact sheet names them (${all.map(named).join(', ')})` })
+  await fontsLoaded()
+  const chapters = chaptersFor(scene)
+  const svg = offPaper()
+  svg.style.width = `${scene.width}px`
+  const renderer = new Renderer(svg)
+  const paper = paperColour(scene)
+  const shot = async () => toPng(await picture(svgText(svg, faces())), scene.width * 2, scene.height * 2, paper)
+  const notes = chapters.map((c, k) => {
+    const scope = buildScope(scene, defaultValues(scene))
+    const says = scene.steps.slice(c.start, c.end + 1).flatMap((s) => [s.say, s.type === 'pause' ? s.ask : undefined].filter((x): x is string => !!x))
+    return { title: c.title, narration: says.map((x) => interpolate(x, scope, scene.locale)).join(' '), next: chapters[k + 1]?.title ?? null }
+  })
+  const sets = []
+  for (const name of asked) {
+    const values = all.find((v) => named(v) === name)!
+    const set: Record<string, unknown> = { name }
+    if (want.has('static')) {
+      const pngs = []
+      for (const c of chapters) {
+        await renderer.render(scene, values, { animate: false, until: c.end, motion: 'rest' })
+        pngs.push(await shot())
+      }
+      set.static = pngs
+    }
+    if (want.has('steps')) {
+      const per = []
+      for (const c of chapters) {
+        const pngs = []
+        for (const b of playbackBeats(scene, c.end).filter((b) => b.start >= c.start)) {
+          await renderer.render(scene, values, { animate: false, until: b.end, motion: 'rest' })
+          pngs.push(await shot())
+        }
+        per.push(pngs)
+      }
+      set.steps = per
+    }
+    if (want.has('video')) {
+      const videos = []
+      for (const c of chapters) videos.push(await asData(await recordVideo(scene, values, { faces: faces(), paper, prefer: 'mp4', from: c.start, until: c.end })))
+      set.video = videos
+    }
+    if (want.has('gif')) {
+      const gifs = []
+      for (const c of chapters) {
+        const gif = GIFEncoder()
+        await playFrames(scene, values, { faces: faces(), paper, fps: 8, scale: 0.6, from: c.start, until: c.end }, (canvas) => {
+          const { data } = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height)
+          const palette = quantize(data, 64)
+          gif.writeFrame(applyPalette(data, palette), canvas.width, canvas.height, { palette, delay: 125 })
+        })
+        gif.finish()
+        gifs.push(await asData(new Blob([gif.bytes()], { type: 'image/gif' })))
+      }
+      set.gif = gifs
+    }
+    sets.push(set)
+  }
+  report('export', { title: scene.title, width: scene.width, height: scene.height, paper, notes, sets, videoType: 'MediaRecorder' in window ? videoType('mp4') ?? null : null })
+}
+
 // ---------- #still: only the paper, the whole drawing, for a picture of it (tools/site.mjs) ----------
 async function still(scene: Scene) {
   document.body.classList.add('still')
@@ -222,7 +308,7 @@ async function main() {
   try {
     ;({ scene, course } = readRecipe())
   } catch (e) {
-    if (['review', 'snapshot', 'snapshots', 'svg'].includes(mode)) return report(mode, { error: (e as Error).message })
+    if (['review', 'snapshot', 'snapshots', 'svg', 'export'].includes(mode)) return report(mode, { error: (e as Error).message })
     $('stage').replaceChildren(tag('p', { class: 'broken' }, `${t.broken} ${(e as Error).message}`))
     return
   }
@@ -231,9 +317,10 @@ async function main() {
   if (mode === 'snapshots') return snapshots(scene)
   if (mode === 'svg') return animated(scene)
   if (mode === 'still') return still(scene)
+  if (mode === 'export') return exported(scene).catch((e) => report('export', { error: (e as Error).message }))
   document.title = scene.title
   if (course) contents(course)
-  await mountLesson($('lesson'), scene, { faces: faces(), lang, keys: 'document' })
+  await mountLesson($('lesson'), scene, { faces: faces(), lang, keys: 'document', present: mode === 'present' || document.body.dataset.present === '1' })
 }
 
 // A page with only the recipe and this script has no body yet while the script runs: start once it is parsed.

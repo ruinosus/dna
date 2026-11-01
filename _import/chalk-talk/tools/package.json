@@ -18,6 +18,7 @@
     "esbuild": "0.24.0",
     "gifenc": "^1.0.3",
     "lottie-web": "^5.13.0",
+    "pptxgenjs": "4.0.1",
     "tsx": "^4.19.2",
     "typescript": "5.6.3",
     "yaml": "^2.6.1"

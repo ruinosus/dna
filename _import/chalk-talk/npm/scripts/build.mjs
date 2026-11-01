@@ -12,9 +12,19 @@
 // --snapshots writes, in <id>.snapshots/ beside the page (or the folder given), a PNG of each chapter as it ends at each
 // setting the reviewer tries, and <id>.contact-sheet.png with them all: a picture to look at before delivering.
 //
-// Only .html, .svg and .png files are ever written. Exit codes: 0 drawn and checked (or no browser to check with); 1 a
-// recipe breaks the contract (nothing written); 2 bad arguments; 3 drawn, but the reviewer found something to fix (off
-// the paper, text over text, a line across a text); 4 --svg or --snapshots with no browser to draw them in. Needs Node 18
+// To present (back-of-napkin 0.2.0), one lesson only:
+//   --present                         the page opens presenting: one chapter at a time, full screen and the speaker
+//                                     notes with the first key; PageDown (a clicker) next, PageUp back
+//   --pptx [static|steps|video|all]   <id>.pptx: a slide per chapter (static, the default), per beat (steps) or a video
+//                                     of each chapter drawing itself (video, MP4); title = the chapter, notes = narration
+//   --slides <folder>                 for the Claude Slides type: NN.png and NN.gif per chapter and notes.json
+//                                     (--slides-steps adds NN-MM.png per beat)
+//   --settings a,b                    a sequence per setting, by the contact sheet's names (default when absent)
+//
+// Only .html, .svg, .png, .gif, .json and .pptx files are ever written. Exit codes: 0 drawn and checked (or no browser
+// to check with); 1 a recipe breaks the contract (nothing written); 2 bad arguments; 3 drawn, but the reviewer found
+// something to fix (off the paper, text over text, a line across a text); 4 --svg, --snapshots, --pptx or --slides could
+// not be made (no browser, or the browser cannot record MP4) — the page is still written. Needs Node 18
 // or later and nothing else; the review, --snapshots and --svg use Chrome, Chromium or Edge (Playwright's Chromium too).
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -37,14 +47,22 @@ const ext = asSvg ? '.svg' : '.html'
 // --snapshots takes a folder only when one follows it (not another option, a recipe or the page).
 const snapAt = argv.indexOf('--snapshots')
 const snapFolder = snapAt >= 0 && argv[snapAt + 1] && !argv[snapAt + 1].startsWith('--') && ![...KINDS, ext].some((k) => argv[snapAt + 1].endsWith(k)) ? argv[snapAt + 1] : undefined
-const valued = new Set(['--out', '--title', '--review-timeout'])
-const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]) && !(snapFolder && i === snapAt + 1))
+const pptxAt = argv.indexOf('--pptx')
+const MODES = ['static', 'steps', 'video', 'all']
+const pptxMode = pptxAt < 0 ? undefined : MODES.includes(argv[pptxAt + 1]) ? argv[pptxAt + 1] : 'static'
+const presenting = argv.includes('--present')
+const slidesFolder = option('--slides')
+const settings = option('--settings')
+const exporting = !!pptxMode || !!slidesFolder
+const valued = new Set(['--out', '--title', '--review-timeout', '--slides', '--settings'])
+const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]) && !(snapFolder && i === snapAt + 1) && !(i === pptxAt + 1 && MODES.includes(a)))
 const noReview = argv.includes('--no-review')
 const timeout = Number(option('--review-timeout') ?? 20)
 const sources = args.filter((a) => KINDS.some((k) => a.endsWith(k)))
 const outArg = option('--out') ?? args.find((a) => a.endsWith(ext))
-const usage = 'usage: node build.mjs <recipe.json> [out.html] [--no-review] [--snapshots [folder]] [--review-timeout <s>]\n       node build.mjs <one.json> <two.json> … --out course.html [--title "…"] [--no-review]\n       node build.mjs <recipe.json> [out.svg] --svg'
-if (!sources.length || args.some((a) => !KINDS.some((k) => a.endsWith(k)) && !a.endsWith(ext)) || (outArg && !outArg.endsWith(ext)) || !(timeout > 0) || (asSvg && snapAt >= 0)) {
+const usage = 'usage: node build.mjs <recipe.json> [out.html] [--no-review] [--snapshots [folder]] [--review-timeout <s>]\n       node build.mjs <recipe> [--present] [--pptx [static|steps|video|all]] [--slides <folder> [--slides-steps]] [--settings a,b]\n       node build.mjs <one.json> <two.json> … --out course.html [--title "…"] [--no-review]\n       node build.mjs <recipe.json> [out.svg] --svg'
+const presentsOne = !(presenting || exporting) || (sources.length === 1 && !asSvg)
+if (!sources.length || args.some((a) => !KINDS.some((k) => a.endsWith(k)) && !a.endsWith(ext)) || (outArg && !outArg.endsWith(ext)) || !(timeout > 0) || (asSvg && snapAt >= 0) || !presentsOne || (argv.includes('--slides') && !slidesFolder)) {
   console.error(usage)
   process.exit(2)
 }
@@ -149,6 +167,8 @@ if (scenes.some((s) => Object.keys(s.lotties ?? {}).length)) {
   const player = readFileSync(join(here, '../assets/lottie_light.js'), 'utf8').replace(/<\/script/gi, '<\\/script')
   page = page.replace('<script type="application/json" id="chalk-recipe">', () => `<script>${player}</script>\n<script type="application/json" id="chalk-recipe">`)
 }
+// --present: the page opens presenting (the player reads data-present on the body).
+if (presenting) page = page.replace('<body>', '<body data-present="1">')
 writeFileSync(out, page)
 
 // back-of-napkin: what a drawing of its purpose usually misses (a pitch with no ask…) — drawn anyway, to fix like a
@@ -180,7 +200,17 @@ scenes.forEach((_, k) => {
   if (snapshots) jobs.push({ what: 'snapshots', k, file: out, mode: 'snapshots', query: query(k) })
   if (asSvg) jobs.push({ what: 'svg', k, file: out, mode: 'svg', query: query(k) })
 })
-const ran = jobs.length ? await runPages(jobs, { timeout }) : { results: [] }
+// What the PowerPoint and the Slides material are made of: the page draws it all in #export.
+const want = new Set()
+if (pptxMode === 'all') ['static', 'steps', 'video'].forEach((m) => want.add(m))
+else if (pptxMode) want.add(pptxMode)
+if (want.has('video')) want.add('static') // the video's cover
+if (slidesFolder) ['static', 'gif', ...(argv.includes('--slides-steps') ? ['steps'] : [])].forEach((m) => want.add(m))
+if (exporting) jobs.push({ what: 'export', k: 0, file: out, mode: 'export', query: new URLSearchParams({ export: [...want].join(','), ...(settings ? { settings } : {}) }).toString() })
+// Recording draws in real time: the export gets the drawing's length per setting, and more.
+const drawn = exporting ? scenes[0].steps.reduce((ms, s) => ms + (s.type === 'pause' ? s.ms ?? 600 : 1600), 0) / 1000 : 0
+const runs = (settings ? settings.split(',').length : 1) * ((want.has('video') ? 1 : 0) + (want.has('gif') ? 1 : 0))
+const ran = jobs.length ? await runPages(jobs, { timeout: Math.max(timeout, exporting ? 60 + drawn * runs * 1.5 : 0) }) : { results: [] }
 const name = (exe) => basename(exe).replace(/\.exe$/i, '')
 const result = (what, k) => ran.results?.[jobs.findIndex((j) => j.what === what && j.k === k)]
 
@@ -228,8 +258,10 @@ if (snapshots) {
   }
 }
 
+if (exporting) code = Math.max(code, await exportsFrom(result('export', 0)))
+
 if (!asSvg) {
-  console.log(`→ ${out} (${Math.round(statSync(out).size / 1024)} KB, opens offline${course ? `, ${scenes.length} lessons` : ''})`)
+  console.log(`→ ${out} (${Math.round(statSync(out).size / 1024)} KB, opens offline${course ? `, ${scenes.length} lessons` : ''}${presenting ? ', opens presenting' : ''})`)
   process.exit(code)
 }
 
@@ -253,3 +285,60 @@ for (let k = 0; k < scenes.length; k++) {
 }
 rmSync(work, { recursive: true, force: true })
 process.exit(code)
+
+/** The PowerPoint and the Slides material from what the page drew in #export; the exit code they leave (0 or 4). */
+async function exportsFrom(r) {
+  if (!r || r.error) {
+    console.error(`✗ export    ${r ? r.error : 'no Chrome, Chromium or Edge here to draw it (set CHROME_PATH)'}`)
+    return 4
+  }
+  let worst = 0
+  const data = (url) => Buffer.from(url.replace(/^data:[^,]*,/, ''), 'base64')
+  const many = r.sets.length > 1
+  const titled = (title, set) => (many ? `${title} · ${set.name}` : title)
+  const notes = (k) => r.notes[k].narration
+  if (pptxMode) {
+    const { buildPptx, inspectPptx } = await import('./pptx.mjs')
+    for (const mode of pptxMode === 'all' ? ['static', 'steps', 'video'] : [pptxMode]) {
+      if (mode === 'video' && !String(r.videoType ?? '').startsWith('video/mp4')) {
+        console.error('✗ pptx      video: this browser does not record MP4 (PowerPoint needs it) — use static or steps')
+        worst = 4
+        continue
+      }
+      const slides = r.sets.flatMap((set) => r.notes.flatMap((n, k) => {
+        if (mode === 'static') return [{ title: titled(n.title, set), notes: notes(k), image: set.static[k] }]
+        if (mode === 'video') return [{ title: titled(n.title, set), notes: notes(k), video: set.video[k], cover: set.static[k] }]
+        return set.steps[k].map((image) => ({ title: titled(n.title, set), notes: notes(k), image }))
+      }))
+      const file = resolve(dirname(out), `${slug}${pptxMode === 'all' ? `.${mode}` : ''}.pptx`)
+      const buffer = await buildPptx({ title: r.title, width: r.width, height: r.height, paper: r.paper, slides })
+      writeFileSync(file, buffer)
+      // What was made, opened again: every slide, its notes, its media.
+      const got = await inspectPptx(buffer)
+      const media = mode === 'video' ? got.media.mp4 : got.media.png
+      if (got.slides !== slides.length || got.notes < slides.filter((s) => s.notes).length || media < (mode === 'video' ? slides.length : 1)) {
+        console.error(`✗ pptx      ${mode}: ${got.slides} slides, ${got.notes} notes, ${media} media (expected ${slides.length})`)
+        worst = 4
+        continue
+      }
+      const mb = buffer.length / 1048576
+      console.log(`→ ${file} (${mode}: ${slides.length} slides with notes, ${mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(buffer.length / 1024)} KB`})`)
+      if (mb > 50) console.log(`! pptx      ${Math.round(mb)} MB: large to send by e-mail — static or steps is lighter`)
+    }
+  }
+  if (slidesFolder) {
+    const two = (n) => String(n).padStart(2, '0')
+    for (const set of r.sets) {
+      const into = resolve(slidesFolder, many ? set.name : '')
+      mkdirSync(into, { recursive: true })
+      r.notes.forEach((_, k) => {
+        writeFileSync(join(into, `${two(k + 1)}.png`), data(set.static[k]))
+        writeFileSync(join(into, `${two(k + 1)}.gif`), data(set.gif[k]))
+        set.steps?.[k].forEach((png, b) => writeFileSync(join(into, `${two(k + 1)}-${two(b + 1)}.png`), data(png)))
+      })
+      writeFileSync(join(into, 'notes.json'), JSON.stringify(r.notes.map((n, k) => ({ chapter: k + 1, ...n })), null, 2))
+      console.log(`→ ${into} (${r.notes.length} chapters: NN.png, NN.gif${set.steps ? ', NN-MM.png' : ''} and notes.json, for the Slides type)`)
+    }
+  }
+  return worst
+}

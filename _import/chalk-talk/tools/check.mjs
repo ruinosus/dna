@@ -309,6 +309,42 @@ setTimeout(() => {
   expect(a.status === 0 && a.stdout.includes('my-drawing.html') && b.status === 0 && b.stdout.includes('cafe.html'), 'a .chalk is named after its file, or its id', a.stdout + b.stdout)
 }
 
+// 0.18.0 (back-of-napkin 0.2.0): presenting, the PowerPoint in its three ways, the Slides material, two settings.
+{
+  const { pageProbe, probeScript } = await import('../kit/tools/checks.mjs')
+  const { browser } = await import('../kit/browser.mjs')
+  const jar = join(dir, 'coin-jar.chalk')
+  writeFileSync(jar, readFileSync(join(here, '../docs/examples/coin-jar.chalk'), 'utf8'))
+  if (!browser()) console.log('• no Chrome here: presenting and the PowerPoint were not checked')
+  else {
+    const p = run(jar, ['--present', '--no-review', '--pptx', 'all', '--slides', join(dir, 'slides'), '--slides-steps', '--settings', 'default,n-max'])
+    const { inspectPptx } = await import(pathToFileURL(join(skill, 'scripts/pptx.mjs')).href)
+    const look = async (mode) => inspectPptx(readFileSync(join(dir, `coin-jar.${mode}.pptx`)))
+    const [st, sp, vi] = p.status === 0 ? await Promise.all(['static', 'steps', 'video'].map(look)) : []
+    // two settings × 3 chapters; steps a slide per beat (more than the chapters); a video and its cover per chapter
+    expect(p.status === 0 && st.slides === 6 && st.notes === 6 && st.media.png === 6, 'pptx static: a slide per chapter and setting, with notes', p.stdout + p.stderr + JSON.stringify(st))
+    expect(sp?.slides > 6 && sp.notes === sp.slides, 'pptx steps: a slide per beat, with notes', JSON.stringify(sp))
+    expect(vi?.slides === 6 && vi.media.mp4 === 6 && vi.media.png === 6, 'pptx video: an MP4 per chapter and setting, with its cover', JSON.stringify(vi))
+    const notes = JSON.parse(readFileSync(join(dir, 'slides/default/notes.json'), 'utf8'))
+    const made = readdirSync(join(dir, 'slides/n-max'))
+    expect(notes.length === 3 && notes[0].narration && notes[0].next === notes[1].title && ['01.png', '01.gif', '01-01.png'].every((f) => made.includes(f)), '--slides: PNG, GIF, beats and notes.json per setting', made.join(' '))
+    // The page opens presenting; PageDown three times stops at the last chapter, PageUp goes back one.
+    const html = readFileSync(join(dir, 'coin-jar.html'), 'utf8')
+    const key = (k) => `document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '${k}', bubbles: true }))`
+    const r = await pageProbe(html.replace('</body>', `${probeScript(`
+      const foot = () => document.querySelector('[data-part="present-foot"]').textContent
+      await new Promise((ok) => setTimeout(ok, 800))
+      out.presenting = document.querySelector('.chalk-talk').classList.contains('is-presenting')
+      out.first = foot()
+      for (let i = 0; i < 3; i++) { ${key('PageDown')}; await new Promise((ok) => setTimeout(ok, 150)) }
+      out.last = foot()
+      ${key('PageUp')}
+      await new Promise((ok) => setTimeout(ok, 150))
+      out.back = foot()`)}</body>`))
+    expect(r?.presenting && r.first === '1 / 3 · O gancho' && r.last === '3 / 3 · A ideia' && r.back === '2 / 3 · Desmontar', '--present: opens presenting; PageDown and PageUp move a chapter', JSON.stringify(r))
+  }
+}
+
 const badText = join(dir, 'bad.chalk')
 writeFileSync(badText, 'title X\nperson ana at 1\n')
 const bt = run(badText)

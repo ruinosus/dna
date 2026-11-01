@@ -20,6 +20,8 @@ export const TEXT = {
     problems: 'The check found:', broken: 'This drawing could not be opened:', keys: '→ next · ← back · Space play all', made: 'Made with chalk-talk',
     board: 'Chalkboard', voice: 'Narration', recording: (p: number) => `Recording… ${p}%`, show: 'Show me', yourTurn: 'Your turn', transcript: 'Transcript', again: 'Try another',
     valuesShort: (n: number) => `Values (${n})`, expand: 'Expand', all: 'All',
+    present: 'Present', presentKeys: 'click, → or PageDown next · ← or PageUp back · Esc stop', notes: 'Speaker notes', now: 'Now', after: 'Next', end: 'The end',
+    notesBlocked: 'the browser blocked the notes window', since: 'since the start',
   },
   pt: {
     start: 'Início', back: 'Voltar', next: 'Próximo', playAll: 'Tocar tudo', chapter: (n: number, of: number) => `Capítulo ${n} de ${of}`,
@@ -29,6 +31,8 @@ export const TEXT = {
     problems: 'A conferência achou:', broken: 'Este desenho não pôde ser aberto:', keys: '→ próximo · ← voltar · Espaço tocar tudo', made: 'Feito com chalk-talk',
     board: 'Quadro-negro', voice: 'Narração', recording: (p: number) => `Gravando… ${p}%`, show: 'Mostrar', yourTurn: 'Sua vez', transcript: 'Transcrição', again: 'Tentar outra',
     valuesShort: (n: number) => `Valores (${n})`, expand: 'Expandir', all: 'Tudo',
+    present: 'Apresentar', presentKeys: 'clique, → ou PageDown avança · ← ou PageUp volta · Esc sai', notes: 'Notas do apresentador', now: 'Agora', after: 'Depois', end: 'Fim',
+    notesBlocked: 'o navegador bloqueou a janela de notas', since: 'desde o começo',
   },
 }
 export type Lang = keyof typeof TEXT
@@ -49,6 +53,8 @@ export interface LessonOptions {
   keys?: 'document' | 'self'
   /** Shows «Expand», which calls this. */
   onExpand?: () => void
+  /** back-of-napkin 0.2.0: opens presenting (#present); full screen and the notes come with the first key or click. */
+  present?: boolean
 }
 
 export interface Mounted {
@@ -59,7 +65,7 @@ export interface Mounted {
 const MARKUP = `
   <header class="head">
     <div><span class="eyebrow" data-part="category"></span><h1 data-part="title"></h1></div>
-    <div class="tools"><button data-part="board" type="button" aria-pressed="false"></button><button data-part="voice" type="button" aria-pressed="false"></button><div data-part="downloads" class="downloads"><button data-part="png" type="button">PNG</button><button data-part="svg" type="button">SVG</button><button data-part="gif" type="button">GIF</button><button data-part="webm" type="button">WebM</button></div></div>
+    <div class="tools"><button data-part="present" type="button"></button><button data-part="board" type="button" aria-pressed="false"></button><button data-part="voice" type="button" aria-pressed="false"></button><div data-part="downloads" class="downloads"><button data-part="png" type="button">PNG</button><button data-part="svg" type="button">SVG</button><button data-part="gif" type="button">GIF</button><button data-part="webm" type="button">WebM</button></div></div>
   </header>
   <div class="top"><nav data-part="chapters" class="chapters"></nav><button data-part="values-toggle" type="button" aria-expanded="false" hidden></button><button data-part="expand" type="button" hidden></button></div>
   <div class="layout">
@@ -72,6 +78,7 @@ const MARKUP = `
         <span data-part="count" class="count"></span>
         <button data-part="all" type="button" class="ghost"></button>
       </div>
+      <p data-part="present-foot" class="present-foot"></p>
     </section>
     <aside>
       <section data-part="controls" class="card controls"></section>
@@ -115,6 +122,13 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
   let theme: Theme = scene.theme ?? opts.theme ?? 'paper'
   let speaking = false
   let gone = false
+  // back-of-napkin 0.2.0: presenting — one chapter at a time on the whole screen, the notes in a window of their own.
+  let presenting = false
+  let gestured = false
+  let full = false
+  let notes: Window | null = null
+  let started = 0
+  let clock: ReturnType<typeof setInterval> | undefined
 
   part('category').textContent = scene.category ?? ''
   part('title').textContent = scene.title
@@ -140,6 +154,64 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
     part('count').textContent = t.chapter(at + 1, chapters.length)
     button('back').disabled = at === 0
     button('next').disabled = at === chapters.length - 1
+    part('present-foot').textContent = `${at + 1} / ${chapters.length} · ${chapters[at].title}`
+    notesPaint()
+  }
+
+  /** What the chapter says, as one paragraph: its narration and its questions. */
+  const narration = (i: number) => {
+    const c = chapters[i]
+    const scope = buildScope(scene, values)
+    return scene.steps.slice(c.start, c.end + 1).flatMap((s) => [s.say, s.type === 'pause' ? s.ask : undefined].filter((x): x is string => !!x)).map((x) => interpolate(x, scope, scene.locale)).join(' ')
+  }
+
+  /** The notes window: a blank page the lesson fills — it works offline, from a file on disk. */
+  function notesOpen() {
+    notes = window.open('', 'chalk-notes', 'width=560,height=420')
+    if (!notes) return void (part('present-foot').dataset.note = t.notesBlocked)
+    const d = notes.document
+    d.title = `${t.notes} · ${scene.title}`
+    const style = d.createElement('style')
+    style.textContent = "body{margin:0;padding:24px;font:18px/1.5 system-ui,sans-serif;color:#242424;background:#fff}h1{margin:0 0 4px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#6b665c}h2{margin:0 0 12px;font-size:24px}p{margin:0 0 18px}.next{color:#6b665c;border-top:1px solid #e0d8c6;padding-top:12px;font-size:16px}.clock{font:28px ui-monospace,Menlo,monospace}.clock small{font:13px system-ui,sans-serif;color:#6b665c;margin-left:8px}"
+    d.head.replaceChildren(style)
+    d.body.replaceChildren()
+    for (const name of ['now', 'title', 'say', 'next', 'clock']) d.body.append(Object.assign(d.createElement(name === 'title' ? 'h2' : name === 'now' ? 'h1' : 'p'), { className: name }))
+    notesPaint()
+  }
+
+  function notesPaint() {
+    if (!notes || notes.closed) return
+    const q = (c: string) => notes!.document.querySelector(`.${c}`)!
+    q('now').textContent = `${t.now} — ${at + 1} / ${chapters.length}`
+    q('title').textContent = chapters[at].title
+    q('say').textContent = narration(at)
+    q('next').textContent = at + 1 < chapters.length ? `${t.after} — ${at + 2}. ${chapters[at + 1].title}` : t.end
+    const s = Math.floor((Date.now() - started) / 1000)
+    q('clock').replaceChildren(`${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`, Object.assign(notes.document.createElement('small'), { textContent: t.since }))
+  }
+
+  /** The first key or click while presenting: full screen and the notes (a browser allows both only after a gesture). */
+  function gesture() {
+    if (!presenting || gestured) return
+    gestured = true
+    started = Date.now()
+    clock = setInterval(notesPaint, 1000)
+    root.requestFullscreen?.().then(() => (full = true)).catch(() => undefined)
+    notesOpen()
+  }
+
+  function present(on: boolean) {
+    presenting = on
+    root.classList.toggle('is-presenting', on)
+    if (on) {
+      gestured = false
+      return go(at, false)
+    }
+    if (clock) clearInterval(clock)
+    if (full && document.fullscreenElement) void document.exitFullscreen().catch(() => undefined)
+    full = false
+    notes?.close()
+    notes = null
   }
 
   /** Shows the pause's question over the paper and waits for «Show me». */
@@ -210,8 +282,15 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
 
   const onKey = (e: KeyboardEvent) => {
     if ((e.target as HTMLElement).closest('input, button, summary, textarea, [contenteditable]')) return
-    if (e.key === 'ArrowRight') go(at + 1, true)
-    else if (e.key === 'ArrowLeft') go(at - 1, false)
+    gesture()
+    // A presentation clicker sends PageDown and PageUp; presenting, Space and Enter go one chapter on.
+    if (e.key === 'ArrowRight' || e.key === 'PageDown' || (presenting && (e.key === ' ' || e.key === 'Enter'))) {
+      e.preventDefault()
+      go(at + 1, true)
+    } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+      e.preventDefault()
+      go(at - 1, false)
+    } else if (presenting && e.key === 'Escape') present(false)
     else if (e.key === ' ') {
       e.preventDefault()
       go(chapters.length - 1, true, 0)
@@ -221,6 +300,22 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
   const keyTarget: Document | HTMLElement = opts.keys === 'document' ? document : root
   if (keyTarget === root) root.tabIndex = 0
   keyTarget.addEventListener('keydown', onKey as EventListener)
+
+  button('present').textContent = `▶ ${t.present}`
+  part('present').addEventListener('click', () => {
+    void present(true)
+    gesture()
+  })
+  // Presenting, a click on the paper is «next».
+  root.querySelector('.paper')!.addEventListener('click', (e) => {
+    if (!presenting || (e.target as HTMLElement).closest('button, .ask')) return
+    gesture()
+    void go(at + 1, true)
+  })
+  const onFull = () => {
+    if (presenting && full && !document.fullscreenElement) present(false)
+  }
+  document.addEventListener('fullscreenchange', onFull)
 
   controls()
   if (compact) {
@@ -239,6 +334,7 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
     for (const p of ['learning', 'quiz', 'check', 'transcript']) part(p).remove()
     part('downloads').remove()
     part('board').remove()
+    part('present').remove()
     root.querySelector('.foot')!.remove()
   } else {
     learning()
@@ -255,6 +351,11 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
   await fontsLoaded()
   // The check draws hidden on its own paper: it does not wait for the lesson (a question may be waiting for a click).
   if (!compact) void check()
+  if (opts.present) {
+    root.classList.add('is-presenting')
+    presenting = true
+    part('keys').textContent = t.presentKeys
+  }
   await go(0, !compact)
 
   return {
@@ -263,6 +364,8 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
       run++
       renderer.stop()
       keyTarget.removeEventListener('keydown', onKey as EventListener)
+      document.removeEventListener('fullscreenchange', onFull)
+      if (presenting) present(false)
       if (speaking) speechSynthesis.cancel()
       root.replaceChildren()
     },

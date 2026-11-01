@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.18.0 — 2026-11-01
+
+Present it, or take it to PowerPoint (the base of back-of-napkin 0.2.0).
+
+- **Present**: a «Present» button and `build.mjs --present` — one chapter at a time on the whole screen; a clicker's
+  PageDown (and →, Space, a click) moves on, PageUp back, Esc stops; the speaker notes (narration, next chapter, a
+  clock) in a window of their own; the values still move.
+- **`--pptx static|steps|video|all`**: a slide per chapter, per beat, or with a video of each chapter drawing itself
+  (MP4, H.264, recorded by the browser — no ffmpeg); title = the chapter, notes = the narration; the slide takes the
+  paper's colour. The `.pptx` is opened again and checked (slides, notes, media). `--settings a,b` makes a sequence
+  per setting.
+- **`--slides <folder>`**: for Claude's Slides type — `NN.png`, `NN.gif` per chapter (`--slides-steps` adds the
+  beats) and `notes.json`.
+- The page's new `#export` mode draws all of it; `scripts/pptx.mjs` bundles pptxgenjs 4.0.1 (MIT), loaded only for
+  `--pptx`. The engine is lib-ui 0.258.0 (a stretch recorded, as MP4 when it can).
+
 ## 0.17.2 — 2026-11-01
 
 From back-of-napkin's evals.
