@@ -1,6 +1,6 @@
 // A drill: an incident played as scenes and choices, made from the team's runbook (format dress-rehearsal/v1). Read from
 // YAML (or JSON) with the line of every problem; what breaks the game is an error and nothing is made from the file.
-import { isMap, LineCounter, parseDocument } from 'yaml'
+import { readFormat } from '@kit/format'
 
 export const FORMAT = 'dress-rehearsal/v1'
 
@@ -93,18 +93,9 @@ const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : u
 export const CLOCK = /^([01]?\d|2[0-3]):[0-5]\d$/
 
 export function readDrill(text: string): Read {
-  const lines = new LineCounter()
-  const doc = parseDocument(text, { lineCounter: lines, prettyErrors: false })
-  const at = (path: (string | number)[]) => {
-    for (let p = path; p.length; p = p.slice(0, -1)) {
-      const node = doc.getIn(p, true) as { range?: [number, number, number] } | undefined
-      if (node?.range) return lines.linePos(node.range[0]).line
-    }
-    return 1
-  }
-  if (doc.errors.length) return { problems: [{ line: lines.linePos(doc.errors[0].pos[0]).line, key: 'syntax', detail: doc.errors[0].code }] }
-  const raw = doc.toJS() as unknown
-  if (!isObj(raw) || raw.format !== FORMAT || !isMap(doc.contents)) return { problems: [{ line: at(['format']), key: 'format' }] }
+  const read = readFormat(text, FORMAT)
+  if (!read.ok) return { problems: [read.problem] }
+  const { raw, at, doc, lineOf } = read.format
   const problems: Problem[] = []
   const need = (v: unknown, what: string, path: (string | number)[]) => {
     if (!str(v)) problems.push({ line: at(path), key: 'missing', what })
@@ -187,7 +178,7 @@ export function readDrill(text: string): Read {
     if (!s.draw) return
     const node = doc.getIn(['scenes', i, 'draw'], true) as { range?: [number, number, number]; type?: string } | undefined
     // a block (|) starts on the line after its key
-    if (node?.range) drawLines[s.id] = lines.linePos(node.range[0]).line + (node.type === 'BLOCK_LITERAL' || node.type === 'BLOCK_FOLDED' ? 1 : 0)
+    if (node?.range) drawLines[s.id] = lineOf(node.range[0]) + (node.type === 'BLOCK_LITERAL' || node.type === 'BLOCK_FOLDED' ? 1 : 0)
   })
   return problems.length ? { problems } : { drill, problems, drawLines }
 }

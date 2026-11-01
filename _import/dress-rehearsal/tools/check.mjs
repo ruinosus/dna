@@ -2,11 +2,11 @@
 // facilitator's script with nothing to look at; a broken file — and a broken drawing — says its line; the game page loads
 // nothing from the internet; and, when there is a browser, every example is played to its end there. Run after
 // npm run assets.
-import { execFileSync, spawnSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
@@ -53,8 +53,9 @@ const page = readFileSync(join(skill, 'assets/drill.html'), 'utf8')
 ok(!/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(page), 'the game loads nothing from the internet')
 
 // played to the end in a browser: the first choice the room can take, calling someone in when none can
-const browser = ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium', process.env.CHROME_PATH].find((p) => p && existsSync(p))
-if (!browser) console.log('• no Chrome here: the games were not played in a browser')
+// by the kit's browser, over the DevTools pipe
+const { browser, runPage } = await import('chalk-talk/kit/browser.mjs')
+if (!browser()) console.log('• no Chrome here: the games were not played in a browser')
 else
   for (const f of drills) {
     const id = f.replace('.drill.yaml', '')
@@ -66,15 +67,11 @@ else
           if (!c) break
           c.click()
         }
-        const p = document.createElement('pre'); p.id = 'played'
-        p.textContent = JSON.stringify({ ended: !!document.querySelector('.dr-nums'), steps, errs }); document.body.append(p)
+        const p = document.createElement('pre'); p.id = 'chalk-played'
+        p.textContent = encodeURIComponent(JSON.stringify({ ended: !!document.querySelector('.dr-nums'), steps, errs })); document.body.append(p)
       }, 300)</script></body>`)
     writeFileSync(join(work, `${id}.play.html`), html)
-    const profile = mkdtempSync(join(tmpdir(), 'dress-rehearsal-chrome-'))
-    const dom = execFileSync(browser, ['--headless=new', '--disable-gpu', `--user-data-dir=${profile}`, '--virtual-time-budget=8000', '--dump-dom', pathToFileURL(join(work, `${id}.play.html`)).href], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 90000 })
-    rmSync(profile, { recursive: true, force: true })
-    const found = dom.match(/<pre id="played">([^<]*)<\/pre>/)
-    const r = found ? JSON.parse(found[1].replace(/&quot;/g, '"')) : { ended: false, errs: ['the page did not answer'] }
+    const r = (await runPage(join(work, `${id}.play.html`), 'played', '', { timeout: 60 })) ?? { ended: false, errs: ['the page did not answer'] }
     ok(r.ended && !r.errs.length, `${id}: played to the end in a browser (${r.steps} clicks)`, JSON.stringify(r))
   }
 

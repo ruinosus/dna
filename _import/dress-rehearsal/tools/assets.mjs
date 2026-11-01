@@ -18,7 +18,7 @@ const engine = await build({
   entryPoints: [join(root, 'src/engine.ts')],
   bundle: true, format: 'esm', platform: 'node', target: 'node18', minify: true, write: false, logLevel: 'warning',
   nodePaths: [join(here, 'node_modules')],
-  alias: { 'chalk-contract': contract },
+  alias: { 'chalk-contract': contract, '@kit': join(here, 'node_modules/chalk-talk/kit') },
   banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
 })
 writeFileSync(join(skill, 'scripts/engine.mjs'), `${banner}\n${engine.outputFiles[0].text}`)

@@ -1,6 +1,6 @@
 {
   "name": "dress-rehearsal",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Test your incident runbook by playing it: check a drill file and make a playable offline game, a debrief of what the runbook does not say, and the facilitator's script.",
   "license": "MIT",
   "type": "module",

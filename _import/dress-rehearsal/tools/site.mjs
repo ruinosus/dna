@@ -4,14 +4,14 @@ import { execFileSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
+import { browser, runPages } from 'chalk-talk/kit/browser.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
 const docs = join(root, 'docs')
 const examples = join(root, 'skills/dress-rehearsal/examples')
-const exe = ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', process.env.CHROME_PATH].find((p) => p && existsSync(p))
-if (!exe) throw new Error('No Chrome: the pictures need one (set CHROME_PATH).')
+if (!browser()) throw new Error('No Chrome, Chromium or Edge: the pictures need one (set CHROME_PATH).')
 const ABOUT = {
   checkout: ['pt', 'Checkout down at 3 a.m., right after a deploy — the on-call cannot revert alone, and nobody owns telling the customers.'],
   'database-disk': ['en', 'The orders database disk is almost full at lunchtime — and the biggest files are the ones you must never delete.'],
@@ -19,8 +19,11 @@ const ABOUT = {
 for (const d of ['examples', 'images']) rmSync(join(docs, d), { recursive: true, force: true })
 mkdirSync(join(docs, 'examples/runbooks'), { recursive: true })
 mkdirSync(join(docs, 'images'), { recursive: true })
+// The pages to picture (a scene after the first choice, the debrief after playing it through) go in a folder of their
+// own; the pictures, in the light theme, are taken by the kit's browser over the DevTools pipe, all at the end.
 const profile = mkdtempSync(join(tmpdir(), 'dress-rehearsal-site-'))
-const shot = (page, png) => execFileSync(exe, ['--headless=new', '--disable-gpu', '--hide-scrollbars', `--user-data-dir=${profile}`, '--blink-settings=preferredColorScheme=1', '--window-size=1280,760', '--virtual-time-budget=8000', `--screenshot=${png}`, pathToFileURL(page).href], { stdio: 'ignore', timeout: 90000 })
+const shots = []
+const shot = (page, png) => shots.push({ file: page, shot: { width: 1280, height: 760, scheme: 'light', settle: 800 }, png })
 const drills = []
 for (const f of readdirSync(examples).filter((x) => x.endsWith('.drill.yaml')).sort()) {
   const id = f.replace('.drill.yaml', '')
@@ -37,8 +40,13 @@ for (const f of readdirSync(examples).filter((x) => x.endsWith('.drill.yaml')).s
   writeFileSync(end, game.replace('</body>', `<script>setTimeout(() => { let n = 0; while (!document.querySelector('.dr-nums') && n++ < 40) (document.querySelector('.dr-choice:not(.blocked)') ?? document.querySelector('[data-call]'))?.click() }, 200)</script></body>`))
   shot(end, join(docs, 'images', `${id}-debrief.png`))
   drills.push({ id, lang, about, name: (readFileSync(join(examples, f), 'utf8').match(/^name:\s*(.+)$/m) ?? [])[1] ?? id })
-  console.log(`✓ ${id}`)
 }
+const { results } = await runPages(shots, { timeout: 60 })
+shots.forEach(({ png }, k) => {
+  if (!results[k]?.png) throw new Error(`${png}: the picture failed (${results[k]?.error ?? 'no picture'})`)
+  writeFileSync(png, Buffer.from(results[k].png.split(',')[1], 'base64'))
+})
+for (const { id } of drills) console.log(`✓ ${id}`)
 rmSync(profile, { recursive: true, force: true })
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 writeFileSync(join(docs, 'index.html'), `<!doctype html>
