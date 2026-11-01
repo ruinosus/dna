@@ -1,6 +1,6 @@
 # Speed in claude.ai (by hand)
 
-The `speed-*` cases run in Claude Code with `claude plugin eval` and `tools/eval-metrics.mjs`. claude.ai has no eval
+The `speed-*` cases run in Claude Code with `claude plugin eval` and `kit/tools/eval-metrics.mjs`. claude.ai has no eval
 runner, so the same requests are run there by hand, in a new chat each, with the skill's zip installed.
 
 ## The requests

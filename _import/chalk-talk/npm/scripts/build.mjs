@@ -21,6 +21,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPages } from './browser.mjs'
+import { fill, inline } from './page.mjs'
 import { ChalkTextError, chaptersFor, parseChalk, PROP_ALIASES, PROP_NAMES, validateScene } from './contract.mjs'
 import { syntaxForLine, syntaxForStep } from './syntax.mjs'
 
@@ -98,9 +99,7 @@ const slug = slugOf(scenes[0], sources[0])
 const work = asSvg ? mkdtempSync(join(tmpdir(), 'chalk-talk-svg-')) : undefined
 const out = work ? join(work, 'page.html') : resolve(outArg ?? join(dirname(resolve(sources[0])), `${slug}.html`))
 const content = course ? { course: option('--title') ?? scenes[0].title, lessons: scenes } : scenes[0]
-// JSON inside a <script> tag: "<" escaped so no text in a recipe can end the tag.
-const recipe = JSON.stringify(content).replace(/</g, '\\u003c')
-const page = readFileSync(join(here, '../assets/player.html'), 'utf8').replace('{{RECIPE}}', () => recipe)
+const page = fill(readFileSync(join(here, '../assets/player.html'), 'utf8'), { RECIPE: inline(content) })
 writeFileSync(out, page)
 
 scenes.forEach((scene, k) => {
@@ -109,12 +108,17 @@ scenes.forEach((scene, k) => {
   console.log(`✓ contract${who}${scene.steps.length} steps, ${chaptersFor(scene).length} chapters, ${values} values`)
 })
 
+// Onda C: a figure made with `define` is seen by nobody when the build passes at once (the review measures, it does
+// not see): with one, the snapshots are made anyway and the build asks for one look at the contact sheet.
+const defined = [...new Set(scenes.flatMap((s) => Object.keys(s.defs ?? {})))]
+const snapshots = snapAt >= 0 || (defined.length > 0 && !asSvg)
+
 // One browser for everything the page has to do: the review, the snapshots and the SVGs, lesson by lesson.
 const query = (k) => (course ? `lesson=${k + 1}` : '')
 const jobs = []
 scenes.forEach((_, k) => {
   if (!noReview) jobs.push({ what: 'review', k, file: out, mode: 'review', query: query(k) })
-  if (snapAt >= 0) jobs.push({ what: 'snapshots', k, file: out, mode: 'snapshots', query: query(k) })
+  if (snapshots) jobs.push({ what: 'snapshots', k, file: out, mode: 'snapshots', query: query(k) })
   if (asSvg) jobs.push({ what: 'svg', k, file: out, mode: 'svg', query: query(k) })
 })
 const ran = jobs.length ? await runPages(jobs, { timeout }) : { results: [] }
@@ -137,11 +141,16 @@ else {
   }
 }
 
-if (snapAt >= 0) {
+if (snapshots) {
   const folder = resolve(snapFolder ?? join(dirname(out), `${slug}.snapshots`))
   for (let k = 0; k < scenes.length; k++) {
     const r = result('snapshots', k)
     if (!r || r.error) {
+      // asked for: an error; made only for a defined figure: said, and the page is still delivered
+      if (snapAt < 0) {
+        console.log(`• figures   ${defined.length} defined (${defined.join(', ')}): no browser to draw them here — look at them in the lesson`)
+        break
+      }
       console.error(`✗ snapshots ${r ? r.error : 'no Chrome, Chromium or Edge here to draw them (set CHROME_PATH)'}`)
       code = 4
       break
@@ -154,6 +163,9 @@ if (snapAt >= 0) {
     const sheet = join(into, `${lesson}.contact-sheet.png`)
     png(`${lesson}.contact-sheet.png`, r.sheet)
     console.log(`→ ${sheet} (${r.chapters} ${r.chapters === 1 ? 'chapter' : 'chapters'} × ${r.settings} ${r.settings === 1 ? 'setting' : 'settings'})`)
+    if (defined.length && k === scenes.length - 1) {
+      console.log(`• figures   ${defined.length} defined (${defined.join(', ')}): open the contact sheet once and check ${defined.length === 1 ? 'it reads' : 'they read'} right`)
+    }
   }
 }
 

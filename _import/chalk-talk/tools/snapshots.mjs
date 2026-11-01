@@ -5,7 +5,7 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSyn
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { runPage } from '../skills/chalk-talk/scripts/browser.mjs'
+import { runPage } from '../kit/browser.mjs'
 import { recipesIn } from './recipes.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))

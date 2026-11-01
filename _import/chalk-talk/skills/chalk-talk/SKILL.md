@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "0.13.0"
+  version: "0.14.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -142,6 +142,8 @@ It writes `<id>.html` next to the recipe and prints:
   every setting of the values. Open that picture and fix what the review named and anything that does not read right
   (a figure that is not recognisable, a crowded corner, a text too small).
 - `✓ review`, or `• review … the page checks itself when opened` (no browser here): done.
+- `• figures … defined`: the recipe makes a figure with `define`, and the review only measures it — open the contact
+  sheet once and check the figure reads as the thing it should be.
 - `✗ review not checked: …`: done, but tell the person the drawing was not checked.
 
 At most **two** rounds of fixes; then deliver and say in plain words what is left ("with 15 % the label touches the
@@ -179,7 +181,7 @@ it. The player loads from the CDN and checks the recipe itself:
 <script type="text/chalk-talk" id="chalk-recipe">
 THE RECIPE AS TEXT
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.13.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.14.0/player.js"></script>
 ```
 
 If the page says the recipe could not be opened, fix the line it names.

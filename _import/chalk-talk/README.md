@@ -184,7 +184,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y chalk-talk@0.13.0 "$f" "${f%.*}.svg" --svg; done
+      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y chalk-talk@0.14.0 "$f" "${f%.*}.svg" --svg; done
       - run: |
           git config user.name github-actions
           git config user.email github-actions@users.noreply.github.com
@@ -250,7 +250,7 @@ then Settings › Capabilities › Skills › Upload. Code execution must be on.
 **Claude API**: upload the same zip with the Skills API (`/v1/skills`) and use it with the code execution tool.
 
 **Without installing anything** — on npm as [`chalk-talk`](https://www.npmjs.com/package/chalk-talk): a page needs
-only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.13.0/player.js"></script>` (that is also
+only the recipe and `<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.14.0/player.js"></script>` (that is also
 how the skill shows a lesson where it cannot run code), and `npx chalk-talk lesson.json` builds the one-file lesson.
 
 **Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/chalk-talk` to the folder where the tool
@@ -291,7 +291,26 @@ npm run check     # build every example and check the exit codes
 npm run snapshots # draw every example in a headless browser and compare its SVG with tools/snapshots/
 npm run zip       # dist/chalk-talk.zip for claude.ai and the API
 npm run site      # the gallery in docs/ (GitHub Pages): every example as a lesson, with a picture
+npm run linux     # the review as in a cloud sandbox: Linux, as root, Playwright's Chromium (needs Docker)
+npm run audit     # before a push: no name from your local list in the tracked files
 ```
+
+## The kit (`chalk-talk/kit`)
+
+The skills built the way chalk-talk is ([stage-door](https://github.com/ruinosus/stage-door),
+[dress-rehearsal](https://github.com/ruinosus/dress-rehearsal), [front-of-house](https://github.com/ruinosus/front-of-house))
+share what is not their own format: it ships in this package as `chalk-talk/kit`, and is used when a skill is built,
+never installed with it — a skill carries the files it runs.
+
+- **Copied into each skill:**
+  - `browser.mjs`: a headless Chrome, Chromium or Edge over the DevTools pipe, Playwright's Chromium included, the
+    next browser when one fails;
+  - `page.mjs`: JSON safe inside a `<script>`, and a template filled.
+- **Bundled into each skill's engine:** `format.ts`, which reads YAML so every mistake can say its line.
+- **Tools:** `tools/vendor.mjs`, `zip.mjs`, `gallery.mjs` (the Pages pictures, drawn by the page), `checks.mjs`,
+  `audit.mjs` (names from `~/.config/skill-kit/audit.txt`, a list kept out of every repository),
+  `eval-metrics.mjs` and `linux-check.mjs`.
+- **`SKILL.template.md`:** the shape these skills share, for the next one.
 
 `assets/VERSION` says which engine version the generated files came from. The engine's source is not published
 yet, so `npm run assets` only works where it is; everything else (`check`, `snapshots`, `site`, `zip`) works from
@@ -304,10 +323,10 @@ speed). They run with [`claude plugin eval`](https://docs.claude.com/en/docs/cla
 ```
 claude plugin eval . --allow-tools Bash Write Edit --runs 1 --max-cost-usd 15
 claude plugin eval . --ablation none --allow-tools Bash Write Edit --tag speed --runs 2 --keep-temp --json run.json
-node tools/eval-metrics.mjs run.json    # seconds to the first drawing, files read first, rounds of fixes, quality
+node kit/tools/eval-metrics.mjs run.json    # seconds to the first drawing, files read first, rounds of fixes, quality
 ```
 
-Speed, 0.11.0 → 0.13.0 (Claude Code, two runs per request; 0.11.0 with the outline already approved, its best case):
+Speed, 0.11.0 → 0.14.0 (Claude Code, two runs per request; 0.11.0 with the outline already approved, its best case):
 the first drawing in **28–41 s instead of 49–70 s**, with **no reference file read** before writing instead of 3 or 4.
 The class request still asks first. [`evals/speed-cloud.md`](evals/speed-cloud.md) is the same measure by hand in
 claude.ai.

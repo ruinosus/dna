@@ -1,12 +1,13 @@
-// How fast the skill draws, from an eval run kept with --keep-temp and --json: for each run, the seconds until the
-// first drawing (the first build that wrote the page), the files read before the recipe was written, the rounds of
-// fixes (builds after the first drawing) and the score. Per case, the mean of its runs.
+// How fast a skill delivers, from an eval run kept with --keep-temp and --json: for each run, the seconds until the
+// first page (the first build that wrote an .html), the files read before the source was written, the rounds of fixes
+// (builds after the first page) and the quality grader. Per case, the mean of its runs. Part of the skills kit
+// (chalk-talk/kit).
 //
 //   node eval-metrics.mjs <run.json> [<another run.json> …]
 import { readFileSync } from 'node:fs'
 
 const isBuild = (u) => u.name === 'Bash' && /build\.mjs/.test(u.input?.command ?? '')
-const isRecipe = (u) => (u.name === 'Write' || u.name === 'Edit') && /\.(chalk|mmd|json|md)$/.test(u.input?.file_path ?? '')
+const isRecipe = (u) => (u.name === 'Write' || u.name === 'Edit') && /\.(chalk|mmd|json|md|ya?ml)$/.test(u.input?.file_path ?? '')
 const text = (c) => (typeof c === 'string' ? c : (c ?? []).map((x) => x.text ?? '').join(''))
 
 function metrics(tracePath, startedAt) {
@@ -34,7 +35,7 @@ function metrics(tracePath, startedAt) {
       }
       if (c.type === 'tool_result' && !drawnAt) {
         const u = uses.get(c.tool_use_id)
-        if (u && isBuild(u) && /→ .*\.html/.test(text(c.content))) {
+        if (u && isBuild(u) && /\.html\b/.test(text(c.content)) && !/^✗ (?!review)/m.test(text(c.content))) {
           drawnAt = Date.parse(e.timestamp)
           first = builds
         }

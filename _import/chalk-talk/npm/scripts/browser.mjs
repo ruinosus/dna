@@ -2,7 +2,7 @@
 // reads back what the page wrote in <pre id="chalk-<mode>">. It talks to the browser over the DevTools protocol on a
 // pipe (--remote-debugging-pipe) and waits for that <pre> itself: --dump-dom hangs on some machines, the pipe does not.
 // The browsers are tried in order; one that does not start or does not answer in time gives way to the next.
-// Used by build.mjs and by the repository's tools. Node only, no dependency.
+// Part of the skills kit (chalk-talk/kit): copied into each skill by its tools/assets.mjs. Node only, no dependency.
 import { execFileSync, spawn } from 'node:child_process'
 import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { createRequire } from 'node:module'

@@ -9,11 +9,16 @@
     "check": "node check.mjs",
     "zip": "node zip.mjs",
     "snapshots": "node snapshots.mjs",
-    "site": "node site.mjs"
+    "site": "node site.mjs",
+    "linux": "node linux-check.mjs",
+    "audit": "node ../kit/tools/audit.mjs .. --skip \"npm/*.js\" --skip docs/lessons --skip skills/chalk-talk/assets --skip skills/chalk-talk/scripts/mermaid.mjs --skip skills/chalk-talk/scripts/contract.mjs --skip npm/scripts --skip npm/assets --skip \"docs/images/*.svg\"",
+    "metrics": "node ../kit/tools/eval-metrics.mjs"
   },
   "devDependencies": {
     "esbuild": "0.24.0",
     "gifenc": "^1.0.3",
-    "typescript": "5.6.3"
+    "tsx": "^4.19.2",
+    "typescript": "5.6.3",
+    "yaml": "^2.6.1"
   }
 }

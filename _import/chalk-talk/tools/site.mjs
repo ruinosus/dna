@@ -2,17 +2,18 @@
 // of each (docs/thumbs/: the whole drawing, from the page's #snapshots mode in a headless browser) and docs/index.html
 // listing them.
 // Run after `npm run assets`: npm run site.
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { browser, runPage } from '../skills/chalk-talk/scripts/browser.mjs'
+import { runPage } from '../kit/browser.mjs'
+import { fill, inline } from '../kit/page.mjs'
+import { gallery } from '../kit/tools/gallery.mjs'
 import { recipesIn } from './recipes.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
 const docs = join(root, 'docs')
 const player = readFileSync(join(root, 'skills/chalk-talk/assets/player.html'), 'utf8')
-if (!browser()) throw new Error('No Chrome, Chromium or Edge: the pictures need one (set CHROME_PATH).')
 
 const sources = [join(docs, 'examples'), join(root, 'skills/chalk-talk/references/examples')]
 const lessons = []
@@ -20,25 +21,17 @@ for (const d of sources) {
   for (const { file, scene } of await recipesIn(d)) lessons.push({ file, scene, english: (scene.locale ?? 'pt-BR').startsWith('en') })
 }
 
-for (const dir of ['lessons', 'thumbs']) {
-  rmSync(join(docs, dir), { recursive: true, force: true })
-  mkdirSync(join(docs, dir), { recursive: true })
-}
-for (const { file, scene } of lessons) {
-  const page = join(docs, 'lessons', `${file}.html`)
-  writeFileSync(page, player.replace('{{RECIPE}}', () => JSON.stringify(scene).replace(/</g, '\\u003c')))
-  // The picture is the last chapter at the starting values: the whole drawing.
-  const shots = await runPage(page, 'snapshots', '', { timeout: 60 })
-  if (!shots || shots.error) throw new Error(`${file}: the picture failed (${shots?.error ?? 'no browser'})`)
-  const whole = shots.shots.filter((s) => s.label === 'default').at(-1)
-  writeFileSync(join(docs, 'thumbs', `${file}.png`), Buffer.from(whole.png.replace(/^data:image\/png;base64,/, ''), 'base64'))
-  // The README shows these as SVGs that draw themselves (build.mjs --svg).
-  if (['coffee-order', 'coin-jar'].includes(file)) {
-    const r = await runPage(page, 'svg', '', { timeout: 60 })
-    if (!r || r.error) throw new Error(`${file}: the animated SVG failed (${r?.error ?? 'no browser'})`)
-    writeFileSync(join(docs, 'images', `${file}.svg`), r.svg)
-  }
-  console.log(`✓ ${file}`)
+// The picture of each lesson is its last chapter at the starting values: the whole drawing (the #snapshots mode).
+const pages = await gallery(docs, lessons.map(({ file, scene }) => ({ name: file, html: fill(player, { RECIPE: inline(scene) }) })), {
+  mode: 'snapshots',
+  pick: (r) => r.shots?.filter((s) => s.label === 'default').at(-1)?.png,
+})
+// The README shows these as SVGs that draw themselves (build.mjs --svg).
+for (const [k, { file }] of lessons.entries()) {
+  if (!['coffee-order', 'coin-jar'].includes(file)) continue
+  const r = await runPage(pages[k], 'svg', '', { timeout: 60 })
+  if (!r || r.error) throw new Error(`${file}: the animated SVG failed (${r?.error ?? 'no browser'})`)
+  writeFileSync(join(docs, 'images', `${file}.svg`), r.svg)
 }
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])

@@ -4,10 +4,11 @@
 // out of git; see sources.example.json). Run: npm run assets. Never edit the generated files by hand.
 import { build } from 'esbuild'
 import { execFileSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { vendor } from '../kit/tools/vendor.mjs'
 const here = dirname(fileURLToPath(import.meta.url))
 const skill = resolve(here, '../skills/chalk-talk')
 const config = join(here, 'sources.json')
@@ -133,10 +134,16 @@ for (const name of EXAMPLES) copyFileSync(join(drawing, 'scenes', `${name}.json`
 writeFileSync(join(skill, 'assets/VERSION'), `engine ${version}\nguide ${guideVersion}\nmolds-and-hooks ${refsVersion}\n`)
 console.log(`✓ assets from the engine ${version}: player.html ${(page.length / 1024).toFixed(0)} KB, contract.mjs, ${readdirSync(examples).length} examples`)
 
-// The npm package also carries the command line (npx chalk-talk …): the same scripts and page as the skill.
+// Onda C: the kit's runtime goes into the skill like into any other skill of the kit (claude.ai installs nothing).
+vendor(join(skill, 'scripts'), ['browser.mjs', 'page.mjs'])
+
+// The npm package also carries the command line (npx chalk-talk …): the same scripts and page as the skill — and the
+// kit itself (chalk-talk/kit), for the other skills' tools.
 mkdirSync(join(here, '../npm/scripts'), { recursive: true })
 mkdirSync(join(here, '../npm/assets'), { recursive: true })
-for (const f of ['build.mjs', 'browser.mjs', 'contract.mjs', 'mermaid.mjs', 'syntax.mjs']) copyFileSync(join(skill, 'scripts', f), join(here, '../npm/scripts', f))
+for (const f of ['build.mjs', 'browser.mjs', 'page.mjs', 'contract.mjs', 'mermaid.mjs', 'syntax.mjs']) copyFileSync(join(skill, 'scripts', f), join(here, '../npm/scripts', f))
+rmSync(join(here, '../npm/kit'), { recursive: true, force: true })
+cpSync(join(here, '../kit'), join(here, '../npm/kit'), { recursive: true })
 copyFileSync(join(skill, 'assets/player.html'), join(here, '../npm/assets/player.html'))
 copyFileSync(join(here, '../LICENSE'), join(here, '../npm/LICENSE'))
 

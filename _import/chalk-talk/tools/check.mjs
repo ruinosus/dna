@@ -1,30 +1,38 @@
 // Checks the skill as someone installing it would get it: SKILL.md's frontmatter, every example built by
 // scripts/build.mjs, a recipe that breaks the contract (exit 1) and one with a line across a text (exit 3).
-import { spawnSync } from 'node:child_process'
+import { checker, checkOneVersion, checkSkillMd, runNode } from '../kit/tools/checks.mjs'
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const skill = resolve(dirname(fileURLToPath(import.meta.url)), '../skills/chalk-talk')
+const here = dirname(fileURLToPath(import.meta.url))
+const skill = resolve(here, '../skills/chalk-talk')
 const build = join(skill, 'scripts/build.mjs')
 const dir = mkdtempSync(join(tmpdir(), 'chalk-talk-check-'))
-let failed = 0
-const expect = (ok, what) => {
-  console.log(`${ok ? '✓' : '✗'} ${what}`)
-  if (!ok) failed++
-}
-const run = (recipe, flags = []) => spawnSync(process.execPath, [build, recipe, ...flags], { encoding: 'utf8' })
+const { expect, done } = checker()
+const run = (recipe, flags = []) => runNode(build, [recipe, ...flags])
 
-const head = readFileSync(join(skill, 'SKILL.md'), 'utf8').match(/^---\n([\s\S]*?)\n---/)?.[1] ?? ''
-const field = (k) => head.match(new RegExp(`^${k}: (.*)$`, 'm'))?.[1] ?? ''
-expect(field('name') === 'chalk-talk', 'SKILL.md name is the folder name')
-expect(field('description').length > 0 && field('description').length <= 1024, `SKILL.md description has ${field('description').length} of 1024 characters`)
-expect(readFileSync(join(skill, 'SKILL.md'), 'utf8').split('\n').length < 500, 'SKILL.md under 500 lines')
-const plugin = JSON.parse(readFileSync(join(skill, '../../.claude-plugin/plugin.json'), 'utf8')).version
-const npmVersion = JSON.parse(readFileSync(join(skill, '../../npm/package.json'), 'utf8')).version
-const cdn = readFileSync(join(skill, 'SKILL.md'), 'utf8').match(/chalk-talk@([\d.]+)\/player\.js/)?.[1]
-expect(field('metadata') === '' && head.includes(`version: "${plugin}"`) && npmVersion === plugin && cdn === plugin, `one version everywhere: plugin ${plugin}, npm ${npmVersion}, SKILL.md CDN ${cdn}`)
+const front = checkSkillMd(expect, join(skill, 'SKILL.md'), 'chalk-talk')
+checkOneVersion(expect, {
+  plugin: JSON.parse(readFileSync(join(skill, '../../.claude-plugin/plugin.json'), 'utf8')).version,
+  npm: JSON.parse(readFileSync(join(skill, '../../npm/package.json'), 'utf8')).version,
+  'SKILL.md': front.version,
+  'SKILL.md CDN': readFileSync(join(skill, 'SKILL.md'), 'utf8').match(/chalk-talk@([\d.]+)\/player\.js/)?.[1],
+})
+
+// Onda C: the kit's runtime in the skill is the kit's, byte for byte; the page helpers escape and fill.
+{
+  const kit = join(skill, '../../kit')
+  for (const f of ['browser.mjs', 'page.mjs']) expect(readFileSync(join(kit, f), 'utf8') === readFileSync(join(skill, 'scripts', f), 'utf8'), `scripts/${f} is the kit's`)
+  const { fill, inline } = await import('../kit/page.mjs')
+  expect(inline({ t: '</script>' }) === '{"t":"\\u003c/script>"}' && fill('a {{X}} b', { X: '$&' }) === 'a $& b', 'page.mjs: inline escapes <, fill keeps $ as it is')
+  let threw = false
+  try { fill('a', { X: '1' }) } catch { threw = true }
+  expect(threw, 'page.mjs: a key the page does not have is an error')
+  const f = runNode(join(here, 'node_modules/tsx/dist/cli.mjs'), [join(kit, 'format.check.ts')], { env: { ...process.env, NODE_PATH: join(here, 'node_modules') } })
+  expect(f.status === 0, 'format.ts: the line of a path, a syntax error, another format', f.stdout + f.stderr)
+}
 
 const examples = join(skill, 'references/examples')
 for (const f of readdirSync(examples)) {
@@ -57,7 +65,7 @@ else {
 // chalk-talk/embed: two lessons on one page (as two blocks in a note) — each moves on its own, the styles go in once,
 // and a broken text says its line.
 {
-  const { runPage } = await import('../skills/chalk-talk/scripts/browser.mjs')
+  const { runPage } = await import('../kit/browser.mjs')
   const embed = pathToFileURL(join(skill, '../../npm/embed.js')).href
   const coin = readFileSync(join(docs, 'coin-jar.chalk'), 'utf8')
   const page = join(dir, 'embed.html')
@@ -109,7 +117,7 @@ const pre = document.createElement('pre'); pre.id = 'chalk-embed'; pre.textConte
 
 // chalk-talk/mount: blocks on the page become lessons, a block added later too, a broken one says its line.
 {
-  const { runPage } = await import('../skills/chalk-talk/scripts/browser.mjs')
+  const { runPage } = await import('../kit/browser.mjs')
   const { blockHtml } = await import(pathToFileURL(join(skill, '../../npm/markdown.js')).href)
   const page = join(dir, 'mount.html')
   const coin = readFileSync(join(docs, 'coin-jar.chalk'), 'utf8')
@@ -133,7 +141,7 @@ setTimeout(() => {
 // balloon on the café (found), the second above the person (clean) — with every chapter at every setting as PNG and a
 // contact sheet, all in a few seconds.
 {
-  const { launchFlags } = await import('../skills/chalk-talk/scripts/browser.mjs')
+  const { launchFlags } = await import('../kit/browser.mjs')
   const linux = launchFlags('linux', 0)
   expect(linux.includes('--no-sandbox') && linux.includes('--disable-dev-shm-usage') && !launchFlags('linux', 1000).includes('--no-sandbox') && !launchFlags('darwin', 0).includes('--no-sandbox'),
     'no sandbox only as root on Linux, where Chromium will not start without it')
@@ -157,8 +165,26 @@ setTimeout(() => {
     expect(ok.status === 0 && /✓ review/.test(ok.stdout) && files.filter((f) => /\.ch\d\.[\w-]+\.png$/.test(f)).length === 16 && w === 150 + 4 * 316 && h === 44 + 4 * (Math.round(300 * 780 / 900) + 16) && !blank.length && ms < 8000,
       `the coffee chain is clean, with 16 snapshots and a ${w}×${h} contact sheet, in ${(ms / 1000).toFixed(1)} s${ok.status ? `: ${ok.stdout}${ok.stderr}` : ''}${blank.length ? ` (blank: ${blank.join(', ')})` : ''}`)
   }
-  const missing = await (await import('../skills/chalk-talk/scripts/browser.mjs')).runPage(join(dir, 'nowhere.html'), 'review')
+  const missing = await (await import('../kit/browser.mjs')).runPage(join(dir, 'nowhere.html'), 'review')
   expect(!missing || /ERR_FILE_NOT_FOUND/.test(missing.error ?? ''), `a page that is not there says so at once (${JSON.stringify(missing)})`)
+}
+
+// Onda C: the two things the 0.13.0 tests found — a drawing on top of another is found, and a recipe that defines a
+// figure gets its contact sheet without asking, with a line saying to look at it once.
+{
+  const two = join(dir, 'two.chalk')
+  writeFileSync(two, 'title X\nperson a at 800,300 "você"\nperson b at 805,300 "você"\n')
+  const t = run(two)
+  if (!/• review/.test(t.stdout)) expect(t.status === 3 && /the drawings of steps 1 and 2 sit on each other/.test(t.stdout), 'two people drawn in one place are found (exit 3)', t.stdout)
+  const def = join(dir, 'defined.chalk')
+  writeFileSync(def, 'title X\nid defined\ndefine xicara\n  polygon 24,48 76,48 70,90 30,90 fill=#FFFFFF\n  curve 74,56 90,62 72,80\nxicara minha at 450,300 "minha xícara"\n')
+  const d = run(def)
+  if (!/• review/.test(d.stdout)) {
+    const sheet = join(dir, 'defined.snapshots', 'defined.contact-sheet.png')
+    let made = false
+    try { made = statSync(sheet).size > 1000 } catch {}
+    expect(d.status === 0 && made && /• figures +1 defined \(xicara\): open the contact sheet once/.test(d.stdout), 'a defined figure gets its contact sheet and a line asking for one look', d.stdout)
+  }
 }
 
 // The cheat sheet: every example a mistake points to builds, and the ones meant for SKILL.md are in it, word for word.
@@ -203,7 +229,4 @@ const reviewed = !/• review/.test(o.stdout)
 expect(reviewed ? o.status === 3 && /crosses the text/.test(o.stdout) : o.status === 0, reviewed ? 'a line across a text is found (exit 3)' : 'no browser here: the review check is skipped')
 
 rmSync(dir, { recursive: true, force: true })
-if (failed) {
-  console.error(`${failed} failed`)
-  process.exit(1)
-}
+done('chalk-talk')

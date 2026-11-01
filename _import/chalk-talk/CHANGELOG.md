@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.0 — 2026-11-01
+
+The kit of the skills, and two things the 0.13.0 tests found.
+
+- **`chalk-talk/kit`:** what the skills built like chalk-talk share. The browser over the DevTools pipe, the page
+  helpers, a YAML reader that says the line, and the tools: zip, gallery, checks, a name audit with its list kept
+  outside every repository, eval metrics and the Linux check. chalk-talk now uses it, and its checks, snapshots and
+  gallery come out the same as in 0.13.0.
+- **The review finds a drawing on top of another:** two people drawn in one place, a figure over a figure.
+- **A figure made with `define` gets looked at:** the build makes the contact sheet without being asked and says
+  «open the contact sheet once and check it reads right» (the review measures a figure, it does not see it).
+
 ## 0.13.0 — 2026-11-01
 
 Things that pass something along, and more things to draw.
