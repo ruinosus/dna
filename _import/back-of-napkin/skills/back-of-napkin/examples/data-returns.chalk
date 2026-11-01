@@ -1,0 +1,26 @@
+kind data
+title Devoluções ↔ o tamanho que não serve
+id data-devolucoes
+locale pt-BR
+source "relatório de devoluções da loja (exemplo ilustrativo)"
+size 900x600
+switch guia "com a tabela de medidas na página" off
+var t = "18 - 7*guia"
+
+# O número
+> De cada cem pedidos de roupa, dezoito voltam.
+text "18 de cada 100 pedidos voltam" at 40,64 size=40
+
+# De onde vem
+> A maioria volta pelo mesmo motivo: o tamanho.
+box caixa at 140,300 "devolução"
+caixa thinks "ficou pequeno" side=right width=180
+
+# O que mudou
+> Nas lojas que mostram a tabela de medidas, a conta muda. Ligue a tabela.
+bars box 460,140,380,240 values 18,t labels "sem tabela","com a tabela" format="{v:0}%"
+
+# O que fazer
+> A tabela de medidas em toda página de roupa.
+highlight 120,540 -> 780,540 thickness=26
+text "tabela de medidas em toda página de roupa" at 450,548 size=28 anchor=middle

@@ -1,0 +1,32 @@
+kind arch
+title Login único ↔ o crachá da empresa
+id arch-sso
+locale pt-BR
+size 900x560
+switch fora "o provedor de login fora do ar" off
+
+# O cenário
+> A pessoa abre o sistema de reembolsos e não quer outra senha.
+text "uma senha, todos os sistemas" at 40,64 size=36
+
+# As peças
+> Quatro peças conversam para isso funcionar.
+chain at 40,150
+  computer navegador "navegador"
+  server app "reembolsos"
+  lock idp "provedor de login"
+  database dados "dados"
+
+# Uma requisição de ponta a ponta
+> O navegador vai ao provedor, volta com um crachá, e o app só confere o crachá.
+text "o crachá (token) vale 1 hora" at 450,330 size=26 anchor=middle color=#2F5BEA
+
+# A falha
+> E quando o provedor cai?
+when fora:
+  text "sem provedor, ninguém entra — nem quem já tinha crachá vencido" at 450,400 size=24 anchor=middle color=#C8442C
+
+# O que muda
+> Por isso o crachá dura uma hora: quem já entrou segue trabalhando.
+highlight 220,470 -> 680,470 thickness=24
+text "quem já entrou continua por 1 hora" at 450,478 size=26 anchor=middle

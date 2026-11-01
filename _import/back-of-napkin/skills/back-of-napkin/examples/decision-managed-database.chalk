@@ -1,0 +1,29 @@
+kind decision
+title Banco gerenciado ou banco na máquina?
+id decisao-banco
+locale pt-BR
+size 900x560
+param pessoas "pessoas no time de plataforma" 1..8 step=1 = 2
+
+# A pergunta
+> Precisamos de um banco para o sistema novo. Gerenciado, ou numa máquina nossa?
+text "quem cuida do banco às 3 da manhã?" at 40,64 size=34
+
+# Opção A
+> Gerenciado: a nuvem cuida de backup, atualização e réplica.
+cloud nuvem at 200,250 "gerenciado"
+text "R$ 1.200/mês" below nuvem gap 30 size=26
+
+# Opção B
+> Na máquina: mais barato, mas o backup e a madrugada são nossos.
+server vm at 640,250 "na máquina"
+text "R$ 500/mês" below vm gap 30 size=26
+
+# O critério
+> O que pesa é quem fica de plantão.
+counter at 450,400 "pessoas" "{v:0} pessoas para revezar o plantão" size=28 anchor=middle
+
+# A escolha
+> Com duas pessoas no time, a madrugada sai mais cara que a diferença de preço.
+highlight 80,480 -> 420,480 thickness=26
+text "gerenciado vence" at 250,488 size=30 anchor=middle
