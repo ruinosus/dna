@@ -1,6 +1,6 @@
 {
   "name": "chalk-talk",
-  "version": "0.18.0",
+  "version": "0.18.1",
   "description": "Explain an idea by drawing it: a hand-drawn lesson, stroke by stroke, with chapters and values to move, in one HTML file.",
   "author": { "name": "ruinosus" },
   "license": "MIT",

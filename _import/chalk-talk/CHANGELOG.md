@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.18.1 — 2026-11-01
+
+What the first presentations in the cloud found.
+
+- The words on screen (buttons, «Chapter 1 of 5», the speaker notes) follow the recipe's `locale`: a pt-BR drawing
+  presented from an English browser stays in pt-BR. With no `locale`, the browser's language, as before.
+- A slide's title is PowerPoint's own (the layout's title placeholder): the outline, navigation and screen readers see
+  it; the build checks every slide has one.
+- With `--settings`, the default keeps the chapter's title and another setting adds what moved as it is labelled
+  («O gancho · moedas por mês: 8», «… · Consentimento: ligado»), not its internal name.
+- `--pptx steps` says when each chapter is drawn in one beat (then it is the same as static).
+
 ## 0.18.0 — 2026-11-01
 
 Present it, or take it to PowerPoint (the base of back-of-napkin 0.2.0).

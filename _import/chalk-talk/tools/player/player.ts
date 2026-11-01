@@ -8,17 +8,16 @@ import { PROP_ALIASES, PROP_NAMES } from '@engine/props'
 import { parseChalk } from '@engine/text'
 import { combinations, reviewScene } from '@engine/review'
 import { animatedSvg, playFrames, recordVideo, videoType } from '@engine/record'
-import { interpolate } from '@engine/expr'
+import { formatNumber, interpolate } from '@engine/expr'
 import { applyPalette, GIFEncoder, quantize } from 'gifenc'
-import { browserLang, fontsLoaded, mountLesson, stillLesson, svgText, tag, TEXT } from './lesson'
+import { browserLang, fontsLoaded, langOf, mountLesson, stillLesson, svgText, tag, TEXT } from './lesson'
 
 // Lottie: the build puts lottie-web's light player before this script only when the lesson has an animation.
 declare const lottie: LottiePlayer | undefined
 if (typeof lottie !== 'undefined') setLottiePlayer(lottie)
 
-const lang = browserLang()
-const t = TEXT[lang]
-document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en'
+// Until the recipe is read (a broken one says so in the browser's language); then the recipe's `locale` rules.
+const t = TEXT[browserLang()]
 
 // Onda 4: the player loaded on its own (npm / CDN) brings the page around the recipe — its markup, styles and fonts;
 // inside a built file (assets/player.html) they are already on the page and this is null.
@@ -140,6 +139,20 @@ function settingName(scene: Scene) {
   }
 }
 
+/** A setting as a person reads it, for a slide title: '' for the default, a switch's label and on/off, a control's
+ * label and its value — in the recipe's language. */
+function settingLabel(scene: Scene) {
+  const base = defaultValues(scene)
+  const w = TEXT[langOf(scene)]
+  return (values: Record<string, number>) => {
+    const changed = Object.keys(values).find((k) => values[k] !== base[k])
+    if (!changed) return ''
+    const sw = scene.switches?.[changed]
+    if (sw) return `${sw.label}: ${values[changed] ? w.on : w.off}`
+    return `${scene.params?.[changed]?.label ?? changed}: ${formatNumber(values[changed], undefined, scene.locale)}`
+  }
+}
+
 const paperColour = (scene: Scene) => (scene.theme === 'chalkboard' ? '#26372E' : '#FBF7EE')
 
 /** An SVG text as an image (a data: URL — a blob: one does not draw on a canvas from a file page). */
@@ -230,6 +243,7 @@ async function exported(scene: Scene) {
   const query = new URLSearchParams(location.search)
   const want = new Set((query.get('export') ?? 'static').split(','))
   const named = settingName(scene)
+  const labelled = settingLabel(scene)
   const all = combinations(scene)
   const asked = (query.get('settings') ?? 'default').split(',')
   const missing = asked.filter((n) => !all.some((v) => named(v) === n))
@@ -249,7 +263,7 @@ async function exported(scene: Scene) {
   const sets = []
   for (const name of asked) {
     const values = all.find((v) => named(v) === name)!
-    const set: Record<string, unknown> = { name }
+    const set: Record<string, unknown> = { name, label: labelled(values) }
     if (want.has('static')) {
       const pngs = []
       for (const c of chapters) {
@@ -319,6 +333,8 @@ async function main() {
   if (mode === 'still') return still(scene)
   if (mode === 'export') return exported(scene).catch((e) => report('export', { error: (e as Error).message }))
   document.title = scene.title
+  const lang = langOf(scene)
+  document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en'
   if (course) contents(course)
   await mountLesson($('lesson'), scene, { faces: faces(), lang, keys: 'document', present: mode === 'present' || document.body.dataset.present === '1' })
 }

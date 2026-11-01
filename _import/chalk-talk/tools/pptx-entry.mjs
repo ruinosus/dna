@@ -19,10 +19,15 @@ export async function buildPptx({ title, width, height, paper = '#FBF7EE', slide
   const box = { x: (W - w) / 2, y: top + (H - top - 0.3 - h) / 2, w, h }
   // A dark paper (the chalkboard) takes a light title.
   const dark = parseInt(paper.slice(1, 3), 16) < 128
+  // The title goes in the layout's title placeholder: PowerPoint's outline, navigation and screen readers see it.
+  pptx.defineSlideMaster({
+    title: 'CHAPTER',
+    background: { color: paper.replace('#', '') },
+    objects: [{ placeholder: { options: { name: 'title', type: 'title', x: 0.3, y: 0.15, w: W - 0.6, h: 0.6, fontSize: 26, bold: true, color: dark ? 'F2EFE6' : '242424', fontFace: 'Calibri', valign: 'top' }, text: '' } }],
+  })
   for (const s of slides) {
-    const slide = pptx.addSlide()
-    slide.background = { color: paper.replace('#', '') }
-    slide.addText(s.title, { x: 0.3, y: 0.15, w: W - 0.6, h: 0.6, fontSize: 26, bold: true, color: dark ? 'F2EFE6' : '242424', fontFace: 'Calibri' })
+    const slide = pptx.addSlide({ masterName: 'CHAPTER' })
+    slide.addText(s.title, { placeholder: 'title' })
     if (s.video) slide.addMedia({ type: 'video', data: s.video, cover: s.cover, extn: s.video.startsWith('data:video/mp4') ? 'mp4' : 'webm', ...box })
     else if (s.image) slide.addImage({ data: s.image, ...box })
     if (s.notes) slide.addNotes(s.notes)
@@ -39,6 +44,11 @@ export async function inspectPptx(buffer) {
   return {
     slides: count(/^ppt\/slides\/slide\d+\.xml$/),
     notes: count(/^ppt\/notesSlides\/notesSlide\d+\.xml$/),
+    // Each slide's title, read from its title placeholder (<p:ph type="title"/>), not from a loose text box: '' when none.
+    titles: await Promise.all(names.filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n)).sort((a, b) => parseInt(a.match(/\d+/)) - parseInt(b.match(/\d+/))).map(async (n) => {
+      const sp = (await zip.file(n).async('string')).split('<p:sp>').find((x) => /<p:ph[^>]*type="title"/.test(x)) ?? ''
+      return [...sp.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => m[1]).join('')
+    })),
     media: Object.fromEntries(['png', 'mp4', 'webm'].map((e) => [e, count(new RegExp(`^ppt/media/.+\\.${e}$`))])),
   }
 }

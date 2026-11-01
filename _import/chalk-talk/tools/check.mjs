@@ -323,8 +323,16 @@ setTimeout(() => {
     const [st, sp, vi] = p.status === 0 ? await Promise.all(['static', 'steps', 'video'].map(look)) : []
     // two settings × 3 chapters; steps a slide per beat (more than the chapters); a video and its cover per chapter
     expect(p.status === 0 && st.slides === 6 && st.notes === 6 && st.media.png === 6, 'pptx static: a slide per chapter and setting, with notes', p.stdout + p.stderr + JSON.stringify(st))
+    // 0.18.1: the title is PowerPoint's own (the placeholder); the default setting keeps the chapter's title, another
+    // says what moved by its label.
+    expect(st?.titles[0] === 'O gancho' && st.titles[3] === 'O gancho · moedas por mês: 8', 'pptx: titles in the title placeholder, the setting by its label', JSON.stringify(st?.titles))
     expect(sp?.slides > 6 && sp.notes === sp.slides, 'pptx steps: a slide per beat, with notes', JSON.stringify(sp))
     expect(vi?.slides === 6 && vi.media.mp4 === 6 && vi.media.png === 6, 'pptx video: an MP4 per chapter and setting, with its cover', JSON.stringify(vi))
+    // 0.18.1: with one beat per chapter, steps would only repeat static — the build says so.
+    const one = join(dir, 'one-beat.chalk')
+    writeFileSync(one, 'title Um passo\n# Um\ntext "um" at 40,64 size=36\n# Dois\ntext "dois" at 40,160 size=36\n')
+    const ob = run(one, ['--no-review', '--pptx', 'steps'])
+    expect(ob.status === 0 && /steps comes out the same as static/.test(ob.stdout), '--pptx steps with one beat per chapter says it is the same as static', ob.stdout + ob.stderr)
     const notes = JSON.parse(readFileSync(join(dir, 'slides/default/notes.json'), 'utf8'))
     const made = readdirSync(join(dir, 'slides/n-max'))
     expect(notes.length === 3 && notes[0].narration && notes[0].next === notes[1].title && ['01.png', '01.gif', '01-01.png'].every((f) => made.includes(f)), '--slides: PNG, GIF, beats and notes.json per setting', made.join(' '))
@@ -341,6 +349,15 @@ setTimeout(() => {
       ${key('PageUp')}
       await new Promise((ok) => setTimeout(ok, 150))
       out.back = foot()`)}</body>`))
+    // 0.18.1: the words on screen follow the recipe's locale, not the browser's (headless Chrome is in English).
+    const pt = join(dir, 'coin-jar-pt.chalk')
+    writeFileSync(pt, readFileSync(jar, 'utf8').replace(/^(title .*)$/m, '$1\nlocale pt-BR'))
+    run(pt, ['--no-review', '--out', join(dir, 'coin-jar-pt.html')])
+    const w = await pageProbe(readFileSync(join(dir, 'coin-jar-pt.html'), 'utf8').replace('</body>', `${probeScript(`
+      await new Promise((ok) => setTimeout(ok, 800))
+      out.lang = document.documentElement.lang
+      out.present = document.querySelector('[data-part="present"]').textContent`)}</body>`))
+    expect(w?.lang === 'pt-BR' && /Apresentar/.test(w.present), 'a pt-BR recipe speaks pt-BR on screen in an English browser', JSON.stringify(w))
     expect(r?.presenting && r.first === '1 / 3 · O gancho' && r.last === '3 / 3 · A ideia' && r.back === '2 / 3 · Desmontar', '--present: opens presenting; PageDown and PageUp move a chapter', JSON.stringify(r))
   }
 }

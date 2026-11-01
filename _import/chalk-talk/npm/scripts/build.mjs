@@ -295,7 +295,8 @@ async function exportsFrom(r) {
   let worst = 0
   const data = (url) => Buffer.from(url.replace(/^data:[^,]*,/, ''), 'base64')
   const many = r.sets.length > 1
-  const titled = (title, set) => (many ? `${title} · ${set.name}` : title)
+  // The default setting keeps the chapter's title; another adds what is moved, as the switch or the control is labelled.
+  const titled = (title, set) => (set.label ? `${title} · ${set.label}` : title)
   const notes = (k) => r.notes[k].narration
   if (pptxMode) {
     const { buildPptx, inspectPptx } = await import('./pptx.mjs')
@@ -305,6 +306,7 @@ async function exportsFrom(r) {
         worst = 4
         continue
       }
+      if (mode === 'steps' && r.sets[0].steps.every((beats) => beats.length <= 1)) console.log('! pptx      steps: each chapter is drawn in one beat, so steps comes out the same as static')
       const slides = r.sets.flatMap((set) => r.notes.flatMap((n, k) => {
         if (mode === 'static') return [{ title: titled(n.title, set), notes: notes(k), image: set.static[k] }]
         if (mode === 'video') return [{ title: titled(n.title, set), notes: notes(k), video: set.video[k], cover: set.static[k] }]
@@ -316,8 +318,8 @@ async function exportsFrom(r) {
       // What was made, opened again: every slide, its notes, its media.
       const got = await inspectPptx(buffer)
       const media = mode === 'video' ? got.media.mp4 : got.media.png
-      if (got.slides !== slides.length || got.notes < slides.filter((s) => s.notes).length || media < (mode === 'video' ? slides.length : 1)) {
-        console.error(`✗ pptx      ${mode}: ${got.slides} slides, ${got.notes} notes, ${media} media (expected ${slides.length})`)
+      if (got.slides !== slides.length || got.titles.filter(Boolean).length !== slides.length || got.notes < slides.filter((s) => s.notes).length || media < (mode === 'video' ? slides.length : 1)) {
+        console.error(`✗ pptx      ${mode}: ${got.slides} slides, ${got.titles.filter(Boolean).length} titled, ${got.notes} notes, ${media} media (expected ${slides.length})`)
         worst = 4
         continue
       }

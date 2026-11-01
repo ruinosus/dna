@@ -21,7 +21,7 @@ export const TEXT = {
     board: 'Chalkboard', voice: 'Narration', recording: (p: number) => `Recording… ${p}%`, show: 'Show me', yourTurn: 'Your turn', transcript: 'Transcript', again: 'Try another',
     valuesShort: (n: number) => `Values (${n})`, expand: 'Expand', all: 'All',
     present: 'Present', presentKeys: 'click, → or PageDown next · ← or PageUp back · Esc stop', notes: 'Speaker notes', now: 'Now', after: 'Next', end: 'The end',
-    notesBlocked: 'the browser blocked the notes window', since: 'since the start',
+    notesBlocked: 'the browser blocked the notes window', since: 'since the start', on: 'on', off: 'off',
   },
   pt: {
     start: 'Início', back: 'Voltar', next: 'Próximo', playAll: 'Tocar tudo', chapter: (n: number, of: number) => `Capítulo ${n} de ${of}`,
@@ -32,13 +32,16 @@ export const TEXT = {
     board: 'Quadro-negro', voice: 'Narração', recording: (p: number) => `Gravando… ${p}%`, show: 'Mostrar', yourTurn: 'Sua vez', transcript: 'Transcrição', again: 'Tentar outra',
     valuesShort: (n: number) => `Valores (${n})`, expand: 'Expandir', all: 'Tudo',
     present: 'Apresentar', presentKeys: 'clique, → ou PageDown avança · ← ou PageUp volta · Esc sai', notes: 'Notas do apresentador', now: 'Agora', after: 'Depois', end: 'Fim',
-    notesBlocked: 'o navegador bloqueou a janela de notas', since: 'desde o começo',
+    notesBlocked: 'o navegador bloqueou a janela de notas', since: 'desde o começo', on: 'ligado', off: 'desligado',
   },
 }
 export type Lang = keyof typeof TEXT
 type Words = (typeof TEXT)[Lang]
 
 export const browserLang = (): Lang => (navigator.language.toLowerCase().startsWith('pt') ? 'pt' : 'en')
+/** The words on screen follow the recipe's `locale` (a pt-BR drawing presented from an English browser stays pt-BR);
+ * with none, the browser's. */
+export const langOf = (scene: Scene): Lang => (scene.locale ? (scene.locale.toLowerCase().startsWith('pt') ? 'pt' : 'en') : browserLang())
 
 export interface LessonOptions {
   /** The @font-face rules of the drawing's faces: they go inside the SVG and PNG downloads and the recordings. */
@@ -103,7 +106,7 @@ export const fontsLoaded = () => Promise.all([...document.fonts].map((f) => f.lo
 
 /** Mounts `scene` inside `root` (its children are replaced). The recipe must already be valid (validateScene). */
 export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonOptions): Promise<Mounted> {
-  const t: Words = TEXT[opts.lang ?? browserLang()]
+  const t: Words = TEXT[opts.lang ?? langOf(scene)]
   const compact = !!opts.compact
   root.classList.add('chalk-talk')
   root.classList.toggle('is-compact', compact)
