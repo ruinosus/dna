@@ -1,6 +1,6 @@
 {
   "name": "house-lights",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Five skills for showing an idea to people: teach it by drawing (chalk-talk), present it (back-of-napkin), rehearse an incident (dress-rehearsal), map a team's way of working (gates-and-handoffs) and a customer journey (service-blueprint).",
   "author": { "name": "ruinosus" },
   "homepage": "https://ruinosus.github.io/house-lights/",

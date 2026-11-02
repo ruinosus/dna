@@ -9,7 +9,8 @@ what you already know:
 1. **Who leads** — the lanes (a role, a team, an area).
 2. **How it starts** — where an item comes from, the first stage.
 3. **The stages in order**, and who leads each.
-4. **Where someone decides** — the gates, who approves each, what must be ready.
+4. **Where someone decides** — the gates, who approves each (and whether someone else also approves, in some
+   case: "also", "if it is", "when it involves"), what must be ready.
 5. **What each stage delivers.**
 6. **Where a failed gate goes back.**
 7. **The number** that says it worked (only when the flow delivers something measurable).

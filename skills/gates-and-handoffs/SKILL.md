@@ -4,7 +4,7 @@ description: Turns how a team works — scattered in PDFs, slides, wikis or some
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing.
 metadata:
-  version: "1.0.1"
+  version: "1.1.0"
 ---
 
 # gates-and-handoffs: a team's way of working, clear and checkable
@@ -28,6 +28,10 @@ ready, **what comes out of it**, where it goes back), and numbers if the materia
   review) is neither a stage nor an activity, an environment is not a phase, a person is not a role. The material will mix them; the file must not.
 - **Bet what the material implies** (a "sign-off by the TL" is a gate the Tech Lead approves) and remember the bet: you
   will say it in the questions.
+- **More than one approves, or only sometimes:** a gate is still one per stage. When another role also approves it,
+  or approves it only in some cases ("a change to payments also needs security's OK"), list them in `approvals`:
+  `[{ by: tl }, { by: seg, when: change to payments }]` — all of them are needed; `when` is the condition as people say
+  it. A second gate after the same stage is refused; `approver: tl` stays the shorthand of a single one.
 - **Never invent** a stage, a role, an output, a gate, a person or a number. What the material does not say stays out
   of the file and becomes a question.
 - The person's own words for names (their stage names, their acronyms), ids in lowercase `a-z0-9-`.

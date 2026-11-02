@@ -52,6 +52,12 @@ body { margin: 0; }
 .sd-gate i { flex: none; width: 12px; height: 12px; transform: rotate(45deg); border: 2px solid var(--gate); background: var(--gate-bg); }
 .sd-gate.flag i { border-style: dashed; }
 .sd-gate em { font-style: normal; color: var(--muted); }
+.sd-gate .sd-also { display: block; color: var(--muted); font-size: 11px; }
+.sd-gate .sd-where, .sd-approval .sd-where { color: var(--look); }
+.sd-approval { display: flex; gap: 6px; align-items: baseline; padding: 3px 0; border-top: 1px solid var(--line); }
+.sd-approval:first-child { border-top: 0; }
+.sd-approval .sd-where, .sd-approval .sd-muted { margin-left: auto; font-size: 12px; }
+.sd-muted { color: var(--muted); }
 .sd-picked { outline: 2.5px solid var(--focus); outline-offset: 2px; }
 .sd-linked { box-shadow: 0 0 0 3px var(--link-bg); }
 .sd-chip { display: inline-block; margin: 1px 4px 1px 0; padding: 1px 8px; border-radius: 999px; background: var(--link-bg); color: var(--link); font-size: 12px; line-height: 1.6; }

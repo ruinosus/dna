@@ -1,4 +1,4 @@
-/*! chalk-talk player (engine v0.258.0) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */
+/*! chalk-talk player (engine v0.259.0) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */
 "use strict";(()=>{var eo=Object.create;var je=Object.defineProperty;var no=Object.getOwnPropertyDescriptor;var ro=Object.getOwnPropertyNames;var oo=Object.getPrototypeOf,so=Object.prototype.hasOwnProperty;var io=(e,t,n)=>t in e?je(e,t,{enumerable:!0,configurable:!0,writable:!0,value:n}):e[t]=n;var ao=(e,t)=>()=>(e&&(t=e(e=0)),t);var lo=(e,t)=>()=>(t||e((t={exports:{}}).exports,t),t.exports);var co=(e,t,n,r)=>{if(t&&typeof t=="object"||typeof t=="function")for(let o of ro(t))!so.call(e,o)&&o!==n&&je(e,o,{get:()=>t[o],enumerable:!(r=no(t,o))||r.enumerable});return e};var Cn=(e,t,n)=>(n=e!=null?eo(oo(e)):{},co(t||!e||!e.__esModule?je(n,"default",{value:e,enumerable:!0}):n,e));var q=(e,t,n)=>io(e,typeof t!="symbol"?t+"":t,n);var rt,V=ao(()=>{rt={body:`<main id="stage">
   <nav id="course" class="course" hidden></nav>
   <div id="lesson"></div>

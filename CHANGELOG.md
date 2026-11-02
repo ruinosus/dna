@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.0 — 2026-11-02
+
+- **gates-and-handoffs: more than one approves, or only sometimes.** A gate lists its `approvals` —
+  `[{ by: tl }, { by: seg, when: change to payments }]` — all of them needed; `when` is the condition as people say it.
+  `approver: tl` stays the shorthand of one, so every file made before reads and writes back the same. A second gate
+  after the same stage is still refused, and now says to use `approvals`. The map shows «+ SEG if change to payments»
+  under the gate and lists who approves in its detail; the workbook has a row per approval, a «When» column (only when
+  some approval has a condition), «A (if …)» in the RACI and a checklist item that may not apply; the lesson says it.
+  As the market does it (Azure DevOps, GitLab, ServiceNow, ITIL): one decision, a list of approvals, the condition on
+  the approval.
+- The engine is the hubs Ways engine 0.259.0.
+
 ## 1.0.1 — 2026-11-02
 
 What the first run of all five in the cloud found.

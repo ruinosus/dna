@@ -31,6 +31,10 @@ roles:
     acronym: QA
     name: Qualidade
     lane: qualidade
+  - id: seg
+    acronym: SEG
+    name: Segurança
+    lane: engenharia
 phases:
   - id: descoberta
     name: Descoberta
@@ -191,7 +195,10 @@ gates:
   - id: producao-gate
     after: testar
     name: Pronto para produção?
-    approver: tl
+    approvals:
+      - by: tl
+      - by: seg
+        when: mudança em pagamento
     results:
       - id: sim
         label: Sim

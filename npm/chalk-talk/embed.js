@@ -1,4 +1,4 @@
-/*! chalk-talk (engine v0.258.0) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */
+/*! chalk-talk (engine v0.259.0) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */
 var zr=Object.create;var $t=Object.defineProperty;var Br=Object.getOwnPropertyDescriptor;var Nr=Object.getOwnPropertyNames;var jr=Object.getPrototypeOf,Rr=Object.prototype.hasOwnProperty;var Dr=(t,e,n)=>e in t?$t(t,e,{enumerable:!0,configurable:!0,writable:!0,value:n}):t[e]=n;var Ir=(t,e)=>()=>(t&&(e=t(t=0)),e);var _r=(t,e)=>()=>(e||t((e={exports:{}}).exports,e),e.exports);var Fr=(t,e,n,r)=>{if(e&&typeof e=="object"||typeof e=="function")for(let o of Nr(e))!Rr.call(t,o)&&o!==n&&$t(t,o,{get:()=>e[o],enumerable:!(r=Br(e,o))||r.enumerable});return t};var qr=(t,e,n)=>(n=t!=null?zr(jr(t)):{},Fr(e||!t||!t.__esModule?$t(n,"default",{value:t,enumerable:!0}):n,t));var q=(t,e,n)=>Dr(t,typeof e!="symbol"?e+"":e,n);var ie,V=Ir(()=>{ie={css:`/* One lesson (lesson.ts), wherever it is mounted: everything under .chalk-talk, so a page or a note keeps its own look.
    The colours are variables a host can set (the Obsidian plugin maps them to its theme). */
 .chalk-talk {

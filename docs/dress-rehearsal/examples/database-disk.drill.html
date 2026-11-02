@@ -231,7 +231,7 @@ body { margin: 0; }
         <div class="dr-actions"><button class="dr-btn primary" data-again>${_.again}</button><button class="dr-btn" data-get="md">${_.md}</button><button class="dr-btn" data-get="csv">${_.csv}</button></div></section>
     </div>
   </div>`}function sr(e,t,a){let n=document.createElement("a");n.href=URL.createObjectURL(new Blob([e],{type:a})),n.download=t,n.click(),setTimeout(()=>URL.revokeObjectURL(n.href),1e3)}function lr(e){let a=(te.scenes.find(r=>r.id===oe.scene).choices??[])[e];if(!a)return;let n=oe;oe=nr(te,oe,e,Ne),oe.scene!==n.scene&&(ca++,Bt=a.then,a.calls&&!n.room.includes(a.calls)&&(ut[a.calls]=oe.minute)),Tt(),Ot.querySelector(".dr-choice")?.focus()}Ot.addEventListener("click",e=>{let t=e.target.closest("button");if(!t)return;let a=t.dataset;if(a.choice)return lr(Number(a.choice));if(a.call)return oe=ir(te,oe,a.call,Ne),ut[a.call]=oe.minute,Tt();if(a.again!==void 0){oe=sa(te,Ne),Bt=void 0,ca=1;for(let n of Object.keys(ut))delete ut[n];return Tt()}if(a.get){let n=la(te,oe,or,Ne);a.get==="md"?sr(n.markdown,`${ft.id}.debrief.md`,"text/markdown"):sr(n.csv,`${ft.id}.${Ne==="pt"?"melhorias":"improvements"}.csv`,"text/csv")}});document.addEventListener("keydown",e=>{if(oe.ended||e.metaKey||e.ctrlKey||e.altKey)return;let t=Number(e.key);t>=1&&t<=9&&lr(t-1)});Tt();})();
-/*! chalk-talk (engine v0.258.0) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */
+/*! chalk-talk (engine v0.259.0) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */
 </script>
 </body>
 </html>

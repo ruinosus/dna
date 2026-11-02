@@ -4,7 +4,7 @@
 // where, what goes out and to whom, roles, metrics; the gate as a row of its own); the Roles, Gates and Outputs tabs are
 // the workbook's own sheets; the buttons download the workbook, the .way.yaml it was drawn from, and a PNG of the map.
 import type { LaneColor } from '@engine/murals/api'
-import type { WayDef, WayGate, WayStage } from '@engine/murals/way'
+import { approvalsOf, type WayDef, type WayGate, type WayStage } from '@engine/murals/way'
 import { reviewWay, type Look } from '@engine/ways/review'
 import { threadOf, type Source } from '@engine/ways/thread'
 import { workbookOf, type Sheet, type Value } from '@engine/ways/workbook'
@@ -24,14 +24,14 @@ const WORDS = {
   en: {
     map: 'Map', excel: 'Excel', yaml: 'YAML', png: 'PNG', look: 'To look at', stage: 'Stage', gate: 'Gate', optional: 'optional',
     leads: 'Led by', takePart: 'Take part', comesIn: 'Comes in', delivers: 'Delivers', activities: 'Activities', where: 'Where', limit: 'Limit',
-    then: 'Then', approves: 'Approves', nobody: 'nobody yet', criteria: 'Must be ready', onFail: 'If not', back: 'back to', after: 'After', results: 'Results',
+    then: 'Then', approves: 'Approves', approvesAll: 'Who approves (all)', always: 'always', ifWord: 'if', nobody: 'nobody yet', criteria: 'Must be ready', onFail: 'If not', back: 'back to', after: 'After', results: 'Results',
     pick: 'Pick a stage or a gate on the map to see it whole.', summary: (s: number, g: number, r: number) => `${s} ${s === 1 ? 'stage' : 'stages'} · ${g} ${g === 1 ? 'gate' : 'gates'} · ${r} ${r === 1 ? 'role' : 'roles'}`,
     stages: 'Stages', stage2: 'Stage', description: 'Description', roles: 'Roles', metrics: 'Metrics', outside: 'from outside', comesOut: 'What comes out', nobodyTakes: 'nobody receives it',
   },
   pt: {
     map: 'Mapa', excel: 'Excel', yaml: 'YAML', png: 'PNG', look: 'Para olhar', stage: 'Etapa', gate: 'Gate', optional: 'opcional',
     leads: 'Lidera', takePart: 'Participam', comesIn: 'Entra', delivers: 'Entrega', activities: 'Atividades', where: 'Onde', limit: 'Limite',
-    then: 'Depois', approves: 'Aprova', nobody: 'ninguém ainda', criteria: 'Precisa estar pronto', onFail: 'Se não', back: 'volta para', after: 'Depois de', results: 'Resultados',
+    then: 'Depois', approves: 'Aprova', approvesAll: 'Quem aprova (todos)', always: 'sempre', ifWord: 'se', nobody: 'ninguém ainda', criteria: 'Precisa estar pronto', onFail: 'Se não', back: 'volta para', after: 'Depois de', results: 'Resultados',
     pick: 'Escolha uma etapa ou um gate no mapa para ver inteiro.', summary: (s: number, g: number, r: number) => `${s} ${s === 1 ? 'etapa' : 'etapas'} · ${g} ${g === 1 ? 'gate' : 'gates'} · ${r} ${r === 1 ? 'papel' : 'papéis'}`,
     stages: 'Etapas', stage2: 'Etapa', description: 'Descrição', roles: 'Papéis', metrics: 'Métricas', outside: 'de fora', comesOut: 'O que sai', nobodyTakes: 'ninguém recebe',
   },
@@ -57,6 +57,7 @@ const colorOf = (laneId: string): LaneColor => {
   return way.lanes[i]?.color ?? ORDER[Math.max(0, i) % ORDER.length]
 }
 const acronym = (id?: string | null) => (id ? (roles.find((r) => r.id === id)?.acronym ?? id) : '')
+const roleName = (id: string) => roles.find((r) => r.id === id)?.name ?? ''
 const stageName = (id?: string | null) => (id ? (way.stages.find((s) => s.id === id)?.name ?? id) : '')
 const laneName = (id: string) => way.lanes.find((l) => l.id === id)?.name ?? id
 const gateAfter = (stage: string) => gates.find((g) => g.after === stage)
@@ -139,7 +140,12 @@ function stageCard(s: WayStage, ink: string, near: Set<string>) {
   const card = `<button class="${cls}" style="--lane:${ink}" data-stage="${esc(s.id)}"><b>${esc(s.name)}</b>${(s.roles ?? []).length ? `<span>${esc((s.roles ?? []).map(acronym).join(', '))}</span>` : ''}${s.where ? `<span class="sd-where">${w.where.toLowerCase()}: ${esc(s.where)}</span>` : ''}</button>`
   if (!g) return card
   const gcls = ['sd-gate', flagged({ gate: g.id }) ? 'flag' : '', picked.gate === g.id ? 'sd-picked' : near.has(g.id) ? 'sd-linked' : ''].filter(Boolean).join(' ')
-  return `${card}<button class="${gcls}" data-gate="${esc(g.id)}"><i></i><span>${esc(g.name)}${g.approver ? ` <em>· ${esc(acronym(g.approver))}</em>` : ''}</span></button>`
+  // Spec 2026-11-02 (aprovações no gate): who always approves after the name; each that approves only when something
+  // holds below, its condition in the colour of a stage's «where»
+  const all = approvalsOf(g)
+  const always = all.filter((a) => !a.when).map((a) => acronym(a.by))
+  const when = all.filter((a) => a.when).map((a) => `<small class="sd-also">+ ${esc(acronym(a.by))} <span class="sd-where">${w.ifWord} ${esc(a.when!)}</span></small>`).join('')
+  return `${card}<button class="${gcls}" data-gate="${esc(g.id)}"><i></i><span>${esc(g.name)}${always.length ? ` <em>· ${esc(always.join(', '))}</em>` : ''}${when}</span></button>`
 }
 
 const list = (xs: string[]) => esc(xs.join(' · '))
@@ -155,11 +161,11 @@ function detail() {
       ${s.description ? `<p>${esc(s.description)}</p>` : ''}
       <dl>${row(w.leads, esc(laneName(s.lane)))}${row(w.takePart, list(takePart))}${row(w.comesIn, chips(s.id))}${row(w.delivers, outs(s.outputs ?? [], s === way.stages.at(-1)))}${row(w.metrics, list(s.metrics ?? []))}
       ${row(w.activities, list((s.activities ?? []).map((a) => a.name)))}${row(w.where, esc(s.where ?? ''))}${row(w.limit, s.wip ? String(s.wip) : '')}
-      ${row(w.then, after ? `<span class="sd-gate-name">◆ ${esc(after.name)}</span>${after.approver ? ` (${esc(acronym(after.approver))})` : ''}` : '')}</dl>`
+      ${row(w.then, after ? `<span class="sd-gate-name">◆ ${esc(after.name)}</span>${approvalsOf(after).length ? ` (${esc(approvalsOf(after).map((a) => acronym(a.by)).join(', '))})` : ''}` : '')}</dl>`
   }
   if (g) {
     return `<span class="sd-kicker">${w.gate}</span><h3 class="sd-gate-name">◆ ${esc(g.name)}</h3>${g.description ? `<p>${esc(g.description)}</p>` : ''}
-      <dl>${row(w.after, esc(stageName(g.after)))}${row(w.approves, g.approver ? esc(acronym(g.approver)) : `<em>${w.nobody}</em>`)}
+      <dl>${row(w.after, esc(stageName(g.after)))}${approvalsOf(g).length ? row(w.approvesAll, approvalsOf(g).map((a) => `<span class="sd-approval"><b>${esc(acronym(a.by))}</b> ${esc(roleName(a.by))} <span class="${a.when ? 'sd-where' : 'sd-muted'}">${a.when ? `${w.ifWord} ${esc(a.when)}` : w.always}</span></span>`).join('')) : row(w.approves, `<em>${w.nobody}</em>`)}
       ${row(w.criteria, criteriaOf(g).map(esc).join('<br>'))}${row(w.comesOut, outs(g.outputs ?? [], true))}${row(w.onFail, g.on_fail ? `${w.back} ${esc(stageName(g.on_fail))}` : '')}${row(w.metrics, list(g.metrics ?? []))}${row(w.results, list(g.results.map((r) => r.label)))}</dl>`
   }
   return `<p>${w.pick}</p>`
@@ -179,7 +185,7 @@ function stagesTable() {
       const name = (by?.outputs ?? []).find((y) => y.id === o)?.name ?? o
       return `<span class="sd-chip">← ${esc(by?.name ?? '')} · ${esc(name)}</span>`
     }).join('')
-    const roles2 = [g.approver ? `${acronym(g.approver)} (${w.approves.toLowerCase()})` : '', ...(g.roles ?? []).map(acronym)].filter(Boolean).join(', ')
+    const roles2 = [...approvalsOf(g).map((a) => `${acronym(a.by)} (${w.approves.toLowerCase()}${a.when ? `, ${w.ifWord} ${a.when}` : ''})`), ...(g.roles ?? []).map(acronym)].join(', ')
     return [stage, `<tr class="gate"><td><button class="sd-link" data-gate="${esc(g.id)}">◆ ${esc(g.name)}</button></td><td>${esc(g.description ?? '')}</td><td>${gin}</td><td>${outs(g.outputs ?? [], true)}</td><td>${esc(roles2)}</td><td>${ul(g.metrics ?? [])}</td></tr>`]
   })
   return `<div class="sd-table sd-stages" role="tabpanel"><table><thead><tr>${head}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`

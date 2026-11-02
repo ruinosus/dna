@@ -6,7 +6,7 @@ import { execFileSync, spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const skill = resolve(here, '../../../skills/gates-and-handoffs')
@@ -72,6 +72,36 @@ else {
   execFileSync(office, ['--headless', '--convert-to', 'csv:Text - txt - csv (StarCalc):44,34,76,1,,0,false,true,false,false,false,2', '--outdir', work, join(work, `${id}.xlsx`)], { stdio: 'ignore', timeout: 120000 })
   const csv = readdirSync(work).filter((f) => f.startsWith(id) && f.endsWith('.csv'))
   ok(csv.length >= 7 && readFileSync(join(work, csv.find((f) => /Etapas/.test(f)) ?? csv[0]), 'utf8').includes('Protótipo'), `LibreOffice opens the workbook (${csv.length} sheets)`)
+}
+
+// Spec 2026-11-02 (aprovações no gate): «a change to payments also needs security's OK» is a second approval with its
+// condition (feature-delivery has it); written as a second gate after the stage, it is refused with the way to say it
+{
+  const two = join(work, 'two-gates.way.yaml')
+  const text = readFileSync(join(examples, 'feature-delivery.way.yaml'), 'utf8')
+  writeFileSync(two, text.replace('  - id: producao-gate\n', '  - id: seguranca-gate\n    after: testar\n    name: Segurança ok?\n    approver: seg\n    results:\n      - id: ok\n        label: ok\n        ok: true\n  - id: producao-gate\n'))
+  const r = run(two)
+  ok(r.status === 1 && r.stderr.includes('Another approval on the same gate? use approvals:, with when: for the condition'), 'two gates after a stage: refused, pointing to approvals', r.stderr)
+  // the other examples (only approver) keep their workbook as it was: no «When» column, a row per gate
+  const { readWay, workbookOf } = await import(pathToFileURL(join(skill, 'scripts/engine.mjs')).href)
+  for (const f of files.filter((x) => x !== 'feature-delivery.way.yaml')) {
+    const w = readWay(readFileSync(join(examples, f), 'utf8')).def
+    const rows = workbookOf('x', w, 'pt').find((x) => x.key === 'gates').rows
+    ok(!rows[0].some((c) => ['Quando', 'When'].includes(typeof c === 'object' ? c.v : c)) && rows.length - 1 === w.gates.length, `${f}: the gates sheet as it was`)
+  }
+  // in a browser: the gate says «+ SEG se mudança em pagamento», and its detail lists both approvals
+  const { runPage, browser } = await import(pathToFileURL(join(skill, 'scripts/browser.mjs')).href)
+  if (!browser()) console.log('• no Chrome here: the map was not opened in a browser')
+  else {
+    run(join(examples, 'feature-delivery.way.yaml'), '--lang', 'pt', '--out', work)
+    const html = readFileSync(join(work, 'feature-delivery.html'), 'utf8').replace('</body>', `<script>setTimeout(() => { const q = (s) => document.querySelector(s); const out = {}
+      const g = q('[data-gate="producao-gate"]'); out.gate = g?.textContent.replace(/\\s+/g, ' ').trim(); g?.click()
+      setTimeout(() => { out.approvals = [...document.querySelectorAll('.sd-approval')].map((x) => x.textContent.replace(/\\s+/g, ' ').trim())
+        const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 200) }, 300)</script></body>`)
+    writeFileSync(join(work, 'probe.html'), html)
+    const p = (await runPage(join(work, 'probe.html'), 'probe', '', { timeout: 60 })) ?? {}
+    ok(p.gate === 'Pronto para produção? · TL+ SEG se mudança em pagamento' && p.approvals?.length === 2 && p.approvals[0] === 'TL Tech Lead sempre' && p.approvals[1] === 'SEG Segurança se mudança em pagamento', 'the map: the gate and its two approvals', JSON.stringify(p))
+  }
 }
 
 rmSync(work, { recursive: true, force: true })

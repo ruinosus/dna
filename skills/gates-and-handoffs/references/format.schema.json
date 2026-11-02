@@ -297,7 +297,31 @@
           },
           "approver": {
             "$ref": "#/$defs/id",
-            "description": "The role that approves it"
+            "description": "The role that approves it: the shorthand of approvals with one, no condition"
+          },
+          "approvals": {
+            "description": "Every approval the gate needs, all of them (with it, no approver): a role, and when it applies",
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 6,
+            "items": {
+              "type": "object",
+              "required": [
+                "by"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "by": {
+                  "$ref": "#/$defs/id",
+                  "description": "The role that approves"
+                },
+                "when": {
+                  "type": "string",
+                  "maxLength": 80,
+                  "description": "When it applies, as people say it (\"change to payments\"); none: always"
+                }
+              }
+            }
           },
           "results": {
             "type": "array",
