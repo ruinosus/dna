@@ -8,10 +8,11 @@ import { readCast, type Cast } from '../src/cast'
 import { compare } from '../src/compare'
 import { extractAgent } from '../src/extract'
 import { agentsIn } from '../src/folder'
-import { dimensionOf, keysMarkdown, labelOf } from '../src/labels'
+import { DIMENSIONS, dimensionOf, keysMarkdown, labelOf } from '../src/labels'
 import { readProfile } from '../src/profile'
 import { groupPatterns, reviewCast } from '../src/review'
 import { done, ok } from './ok'
+import { wave1 } from './wave1'
 
 const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills/cast-list/examples')
 const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
@@ -62,4 +63,27 @@ ok(odd.some((l) => l.pt === 'odd: a análise não entendeu 2 arquivos (a.txt, to
 const g = groupPatterns(compare(agents, profile, empty))
 ok(['trigger:OnEscalate', 'node:LogCustomTelemetryEvent'].every((k) => g.look.some((p) => p.key === k)) && g.look.some((p) => p.key.startsWith('text:block:links')) && g.look.length === 3, 'to decide: the three patterns someone is off (the links block too) — the part goes with its fact', g.look.map((p) => p.key))
 ok(g.everyone.some((p) => p.key === 'auth:None') && g.everyone.length + g.look.length === compare(agents, profile, empty).patterns.filter((p) => !p.partOf).length, 'everybody already does the rest — none lost')
+// wave 1: the text's names, and what the run asks about it
+const r1 = compare(agents, wave1(profile), empty)
+const n = r1.names
+ok(dimensionOf('text:size=3 bullets') === 'text' && DIMENSIONS.text.pt === 'F. Texto' && DIMENSIONS.text.en === 'F. Text', 'the text is dimension F')
+ok(labelOf('text:size=3 bullets', 'pt', n) === 'Tamanho da resposta = 3 bullets' && labelOf('text:no-emoji', 'pt', n) === 'Sem emojis', "a marker by the profile's name, with its value", [labelOf('text:size=3 bullets', 'pt', n), labelOf('text:no-emoji', 'pt', n)])
+ok(labelOf('text:link-domain:ajuda.bodega-azul.example', 'pt', n) === 'Link para ajuda.bodega-azul.example' && labelOf('text:email', 'en', n) === 'Mentions an e-mail', 'the built-in markers')
+ok(labelOf('text:block:links', 'pt', n) === 'Formatação de links' && labelOf('text:block:links~variant', 'pt', n) === 'Formatação de links (variação)', "the official block by its name; a variation says so")
+const other = r1.blocks.find((b) => !b.official)!
+ok(labelOf(`text:block:${other.id}`, 'pt', n) === other.label, 'a block with no name: its first words')
+const l1 = reviewCast(r1).map((l) => l.pt)
+const in1 = (x: string) => l1.includes(x)
+ok(in1('bodega-devolucoes tem «Só o conhecimento», mas também «Conhecimento geral do modelo ligado» (regra «Quem pede só o conhecimento tem o conhecimento geral desligado»)'), 'the text and the setting disagree: said as a contradiction', l1)
+ok(in1('1 especialista tem uma variação do bloco oficial «Formatação de links» (bodega-frete): alinhar?'), 'a variation of the official block: align it?')
+ok(in1('1 especialista não tem «Sem emojis» (bodega-loja-fisica): é intencional?'), '«no emojis» missing: asked')
+ok(in1('4 especialistas definem «Tamanho da resposta» de 2 jeitos (3 bullets em 3; 5 frases em 2): unificar?'), 'set in two ways: unify?')
+ok(in1('bodega-loja-fisica define «Tamanho da resposta» duas vezes (3 bullets; 5 frases): qual vale?'), 'set twice: which one holds?')
+ok(in1('O tipo «triagem» tem 1 especialista (bodega-frete): nada a comparar dentro dele'), 'a type with one specialist: told')
+ok(!l1.some((x) => x.startsWith('Só bodega-devolucoes tem')), 'what the contradiction already says is not asked again as a solo', l1.filter((x) => x.startsWith('Só ')))
+const kinds = reviewCast(r1).map((l) => l.key)
+const first = (k: string) => kinds.indexOf(k as never)
+ok(first('contradiction') === 0 && first('off') < first('values') && first('values') < first('twice') && first('twice') < first('solo') && first('solo') < first('type'), 'contradictions first, then off, rules, values, twice, solos, types', kinds)
+ok(!reviewCast(r1).some((l) => /\bagentes?\b|\bagents?\b/i.test(l.pt + l.en)), 'still never «agent» on screen')
+ok(reviewCast(r1).every((l) => l.en && !/[ãçõ]/.test(l.en.replace(/«[^»]*»|\([^)]*\)/g, ''))), 'each in English too', reviewCast(r1).map((l) => l.en))
 done()

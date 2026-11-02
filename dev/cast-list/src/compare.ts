@@ -196,7 +196,9 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
     ...(profile.name ?? cast.name ? { name: profile.name ?? cast.name } : {}),
     roles, unmatched, agents, patterns, offPattern, solos, orchestratorDoes, gaps, conflicts,
     unknown: found.flatMap((a) => a.unknown.map((u) => ({ ...u, agent: a.id }))),
-    names: Object.assign({}, ...found.map((a) => a.names ?? {}), ...found.map((a) => (a.schemaName && a.displayName ? { [a.schemaName]: a.displayName } : {}))),
+    names: Object.assign({}, ...found.map((a) => a.names ?? {}), ...found.map((a) => (a.schemaName && a.displayName ? { [a.schemaName]: a.displayName } : {})),
+      // the text: a block by its official name or its first words, a marker by its name
+      ...blocks.families.map((b) => ({ [`text:block:${b.id}`]: b.official ?? b.label })), ...profile.markers.map((m) => ({ [`text:${m.id}`]: m.name }))),
     types, typeNames: Object.fromEntries(profile.types.map((t) => [t.id, t.name])), typeNotes,
     blocks: blocks.families,
     markerFindings: markerFindings(marked.values, profile.markers, roles),

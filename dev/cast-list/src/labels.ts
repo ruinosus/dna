@@ -4,13 +4,14 @@
 import { MS_PATTERNS, PATTERNS_URL } from './microsoft'
 
 export type Lang = 'en' | 'pt'
-export type Dimension = 'conversation' | 'integrations' | 'knowledge' | 'orchestration' | 'governance' | 'microsoft' | 'declared'
+export type Dimension = 'conversation' | 'integrations' | 'knowledge' | 'orchestration' | 'governance' | 'text' | 'microsoft' | 'declared'
 export const DIMENSIONS: Record<Dimension, { en: string; pt: string }> = {
   conversation: { en: 'A. Conversation', pt: 'A. Conversa' },
   integrations: { en: 'B. Integrations', pt: 'B. Integrações' },
   knowledge: { en: 'C. Knowledge', pt: 'C. Conhecimento' },
   orchestration: { en: 'D. Orchestrator', pt: 'D. Orquestrador' },
   governance: { en: 'E. Governance', pt: 'E. Governança' },
+  text: { en: 'F. Text', pt: 'F. Texto' },
   microsoft: { en: 'Microsoft patterns', pt: 'Padrões Microsoft' },
   declared: { en: 'Declared', pt: 'Declarado' },
 }
@@ -72,6 +73,7 @@ const KINDS: [string, Dimension, string, string][] = [
   ['model:', 'governance', 'Model', 'Modelo'],
   ['auth:', 'governance', 'Sign-in', 'Login'],
   ['ms:', 'microsoft', 'Microsoft pattern:', 'Padrão Microsoft:'],
+  ['text:', 'text', 'Text:', 'Texto:'],
   ['declared:', 'declared', 'Declared:', 'Declarado:'],
 ]
 const kindOf = (key: string) => KINDS.find(([p]) => key.startsWith(p))
@@ -84,6 +86,9 @@ export function dimensionOf(key: string): Dimension {
   return KNOWN[key]?.dim ?? kindOf(key)?.[1] ?? 'governance'
 }
 
+/** `key` matches `pattern`: the same, or with a trailing `*` any key that starts the same. */
+export const matches = (key: string, pattern: string) => (pattern.endsWith('*') ? key.startsWith(pattern.slice(0, -1)) : key === pattern)
+
 /** The fact a key is a part of: reaching a topic is part of having it. */
 export const partOf = (key: string) => (key.startsWith('reaches:') ? `trigger:${key.slice(8)}` : undefined)
 
@@ -94,6 +99,20 @@ const named = (value: string, names?: Names) => names?.[value] ?? value
 export function labelOf(key: string, lang: Lang, names?: Names): string {
   const known = KNOWN[key]
   if (known) return known[lang]
+  // the text: a block by its official name or its first words, a marker by the profile's name (and its value)
+  if (key.startsWith('text:block:')) {
+    const variant = key.endsWith('~variant')
+    const base = variant ? key.slice(0, -8) : key
+    const name = names?.[base] ?? base.slice(11)
+    return variant ? `${name} (${lang === 'pt' ? 'variação' : 'variation'})` : name
+  }
+  if (key.startsWith('text:link-domain:')) return `${lang === 'pt' ? 'Link para' : 'Link to'} ${key.slice(17)}`
+  if (key === 'text:email') return lang === 'pt' ? 'Cita um e-mail' : 'Mentions an e-mail'
+  if (key.startsWith('text:')) {
+    const [id, value] = [key.slice(5).split('=')[0], key.includes('=') ? key.slice(key.indexOf('=') + 1) : undefined]
+    const name = names?.[`text:${id}`] ?? id
+    return value === undefined ? name : `${name} = ${value}`
+  }
   // a topic that leads to what another topic is for: part of that fact
   if (key.startsWith('reaches:')) {
     const fact = labelOf(`trigger:${key.slice(8)}`, lang)

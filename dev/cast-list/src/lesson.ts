@@ -48,6 +48,7 @@ export function lessonOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
   const perRow = Math.max(1, Math.ceil(specialists.length / rows))
   const width = Math.max(1000, LEFT * 2 + Math.max(perRow, orchestrators.length) * COL)
   const centred = (i: number, n: number) => width / 2 + (i - (n - 1) / 2) * COL
+  const rank = (k: string) => (isBehaviour(k) ? 0 : QUIET.test(k) ? 2 : 1)
   const steps: Obj[] = [{ ...text([LEFT, 52], r.name ?? w.chapters[0], 30), chapter: w.chapters[0], say: `${r.name ? `${r.name}: ` : ''}${w.cast(orchestrators.length, specialists.length)}` }]
 
   // 1. the cast
@@ -97,7 +98,6 @@ export function lessonOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
     }
     lowest = Math.max(lowest, y)
   }
-  const rank = (k: string) => (isBehaviour(k) ? 0 : QUIET.test(k) ? 2 : 1)
   const repeats = r.patterns.filter((p) => !p.partOf).sort((a, b) => rank(a.key) - rank(b.key) || (a.scope === b.scope ? 0 : a.scope === 'platform' ? -1 : 1) || b.share - a.share || a.key.localeCompare(b.key))
   const scopeWord = (s: string) => (s === 'platform' ? w.platform : w.specialist)
   section(0, w.chapters[1], w.repeats(r.patterns.length, r.patterns.filter((p) => p.scope === 'platform').length, r.patterns.filter((p) => p.scope !== 'platform').length),
@@ -107,7 +107,9 @@ export function lessonOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
   const offIds = [...new Set(r.offPattern.map((o) => o.agent))].sort()
   offIds.forEach((id, i) => {
     const at = spot.get(id)!
-    const reasons = r.offPattern.filter((o) => o.agent === id).flatMap((o) => wrap(lacks(o.key, lang, 1, r.names), 13, COL - 10)).slice(0, 4)
+    // what it does not do first (escalate, log), then the rest; a variation of a block is said as one
+    const reason = (o: (typeof r.offPattern)[number]) => (o.variant ? `${lang === 'pt' ? 'variação de' : 'a variation of'} «${labelOf(o.key, lang, r.names)}»` : lacks(o.key, lang, 1, r.names))
+    const reasons = r.offPattern.filter((o) => o.agent === id).sort((a, b) => rank(a.key) - rank(b.key)).flatMap((o) => wrap(reason(o), 13, COL - 10)).slice(0, 4)
     steps.push({ ...text([at[0] + 34, at[1] - 50], '×', 30, 'middle', RED), ...(i === 0 ? { chapter: w.chapters[2], say: w.off(offIds) } : {}) })
     reasons.forEach((t, k) => steps.push(text([at[0], at[1] + 66 + k * 16], t, 13, 'middle', RED)))
   })

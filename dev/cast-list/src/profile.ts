@@ -3,6 +3,7 @@
 // areas, what to leave out. Private: it names the team's agents. With no profile, the defaults below hold.
 import { readFormat } from '@kit/format'
 import type { AgentFacts } from './extract'
+import { matches } from './labels'
 import type { Problem } from './problems'
 
 export const PROFILE_FORMAT = 'cast-list/profile-v1'
@@ -41,8 +42,7 @@ const IN = ['instructions', 'descriptions', 'all']
 // the kinds of key there are (references/keys.md): a key in a type or a rule must start with one
 const PREFIXES = new Set(['trigger', 'setting', 'topics', 'instructions', 'connector', 'operation', 'connref', 'mcp', 'flow', 'knowledge', 'node', 'calls', 'reaches', 'child', 'var', 'var-in', 'model', 'auth', 'ms', 'declared', 'text', 'yaml-only'])
 const knownKey = (key: string) => PREFIXES.has(key.split(':')[0])
-/** `key` matches `pattern`: the same, or with a trailing `*` any key that starts the same. */
-export const matches = (key: string, pattern: string) => (pattern.endsWith('*') ? key.startsWith(pattern.slice(0, -1)) : key === pattern)
+export { matches } from './labels'
 type Obj = Record<string, unknown>
 const isObj = (v: unknown): v is Obj => !!v && typeof v === 'object' && !Array.isArray(v)
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : typeof v === 'number' ? String(v) : '')

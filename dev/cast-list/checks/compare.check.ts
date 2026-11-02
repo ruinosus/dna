@@ -8,7 +8,8 @@ import { readCast, type Cast } from '../src/cast'
 import { compare, type Result } from '../src/compare'
 import { extractAgent } from '../src/extract'
 import { agentsIn } from '../src/folder'
-import { DEFAULT_PROFILE, readProfile, type Profile } from '../src/profile'
+import { DEFAULT_PROFILE, readProfile } from '../src/profile'
+import { wave1 } from './wave1'
 import { done, ok } from './ok'
 
 const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills/cast-list/examples')
@@ -85,26 +86,7 @@ const odd = compare([...agents, extractAgent('odd', [{ path: 'agent.mcs.yml', te
 ok(odd.unknown.length === 1 && odd.unknown[0].agent === 'odd' && odd.unknown[0].file === 'x.txt', 'what was not understood says the agent and the file', odd.unknown)
 ok(compare(agents, { ...profile, microsoftPatterns: false }, empty).agents.every((a) => !Object.keys(a.facts).some((k) => k.startsWith('ms:'))), 'microsoft_patterns: off leaves the Microsoft patterns out')
 // wave 1: the text facts in the same count, the types, the official block, the rule with a condition
-const LINKS = `Links:
-- Formate links assim: [título](url), nunca a URL crua.
-- Um link de ação vai no topo; o link da base de ajuda vai no fim.
-- Nunca escreva as palavras «clique aqui».
-- No máximo 3 links por resposta.`
-const w1: Profile = {
-  ...profile,
-  markers: [
-    { id: 'size', name: 'Tamanho da resposta', in: 'instructions', pattern: '(no máximo)\\s*(\\d+)\\s*(bullets?|frases?)', value: '$2 $3' },
-    { id: 'no-emoji', name: 'Sem emojis', in: 'instructions', pattern: '(sem|não use)\\s+emojis?' },
-    { id: 'knowledge-only', name: 'Só o conhecimento', in: 'instructions', pattern: '(somente|apenas)[^.]{0,40}conhecimento' },
-  ],
-  blocks: [{ id: 'links', name: 'Formatação de links', text: LINKS, role: 'specialist' }],
-  types: [
-    { id: 'transaction', name: 'transação', when: { any: ['flow:*'] }, minAgents: 2 },
-    { id: 'guidance', name: 'orientação', when: { all: ['text:link-domain:*', 'node:SearchAndSummarizeContent'] }, minAgents: 2 },
-    { id: 'triage', name: 'triagem', when: { any: ['trigger:OnSelectIntent'] }, minAgents: 2 },
-  ],
-  rules: [...profile.rules, { id: 'knowledge-only', when: ['text:knowledge-only'], not: 'setting:model-knowledge=on', says: 'Quem pede só o conhecimento tem o conhecimento geral desligado' }],
-}
+const w1 = wave1(profile)
 const t = compare(agents, w1, empty)
 ok(t.types['bodega-pedidos'].join() === 'transaction' && t.types['bodega-devolucoes'].join() === 'transaction' && t.types['bodega-cupons'].join() === 'transaction,guidance'
   && t.types['bodega-loja-fisica'].join() === 'guidance' && t.types['bodega-frete'].join() === 'triage' && !t.types['bodega-orquestrador'].length, 'the types: transaction 3, guidance 2 (cupons is both), triage 1', t.types)

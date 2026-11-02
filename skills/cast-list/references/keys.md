@@ -76,6 +76,12 @@ Every fact cast-list finds is a key. The keys below have a name; any other key k
 | `model:<value>` | Model <value> | Modelo <valor> |
 | `auth:<value>` | Sign-in <value> | Login <valor> |
 
+## F. Text — F. Texto
+
+| Key | Name | Nome |
+|---|---|---|
+| `text:<value>` | Text: <value> | Texto: <valor> |
+
 ## Microsoft patterns — Padrões Microsoft
 
 | Key | Name | Nome |
