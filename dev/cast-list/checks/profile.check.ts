@@ -7,7 +7,7 @@ import { readCast, writeCast, type Cast } from '../src/cast'
 import { extractAgent } from '../src/extract'
 import { agentsIn } from '../src/folder'
 import { problemText } from '../src/problems'
-import { DEFAULT_PROFILE, readProfile, rolesOf } from '../src/profile'
+import { DEFAULT_PROFILE, readProfile, rolesOf, typesOf } from '../src/profile'
 import { done, ok } from './ok'
 
 const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills/cast-list/examples')
@@ -48,7 +48,7 @@ focus_areas:
 const w = readProfile(wrong)
 const at = Object.fromEntries(w.problems.map((x) => [`${x.key}${'what' in x ? `:${x.what}` : ''}`, x.line]))
 ok(at['unknownKey:treshold'] === 2 && at['threshold'] === 3 && at['minAgents'] === 4 && at['role:rules[0].role'] === 6 && at['duplicate:rules'] === 7
-  && at['missing:rules[1].has'] === 7 && at['missing:focus_areas[0].facts'] === 9, 'a typo, a share over 1, 0 agents, an unknown role, a repeated id, what is missing: each with its line', w.problems)
+  && at['rule:rules[1]'] === 7 && at['missing:focus_areas[0].facts'] === 9, 'a typo, a share over 1, 0 agents, an unknown role, a repeated id, what is missing: each with its line', w.problems)
 ok(readProfile('format: other\n').problems[0]?.key === 'format' && readProfile('roles: [x\n').problems[0]?.key === 'syntax', 'another format, or YAML that does not read')
 ok(problemText(w.problems.find((x) => x.key === 'role')!, 'pt') === '«rules[0].role» é orchestrator ou specialist (está «especialista»)', 'a problem in Portuguese', w.problems.map((x) => problemText(x, 'pt')))
 
@@ -80,4 +80,64 @@ const back = readCast(written)
 ok(!back.problems.length && JSON.stringify(back.cast) === JSON.stringify(more), 'written with changes, it reads back as what was written', { written })
 ok(written.includes('# the handoff document says frete escalates') && written.includes('# What people said about the agents'), "the person's comments stay", written)
 ok(readCast(writeCast(more)).cast !== undefined && JSON.stringify(readCast(writeCast(more)).cast) === JSON.stringify(more), 'a new cast file (no previous one) reads back too')
+// wave 1: markers, official blocks, types, and rules with a condition
+const w1 = readProfile(`format: cast-list/profile-v1
+markers:
+  - { id: size, name: Tamanho da resposta, in: instructions, pattern: 'no máximo\\s*(\\d+)\\s*(bullets?|frases?)', value: "$1 $2" }
+  - { id: no-emoji, name: Sem emojis, pattern: '(sem|não use)\\s+emojis?' }
+blocks:
+  - { id: links, name: Formatação de links, text: "Formate links assim: [título](url), nunca a URL crua." }
+types:
+  - { id: transaction, name: transação, when: { any: ["flow:*"] } }
+  - { id: guidance, name: orientação, when: { all: ["text:link-domain:*", "node:SearchAndSummarizeContent"], none: ["flow:*"] }, min_agents: 3 }
+rules:
+  - { id: knowledge-only, when: "text:knowledge-only", not: "setting:model-knowledge=on", says: Quem pede só o conhecimento tem o conhecimento geral desligado }
+`)
+const pf = w1.profile!
+ok(!w1.problems.length && pf.markers.length === 2 && pf.markers[0].in === 'instructions' && pf.markers[1].in === 'instructions' && pf.markers[0].value === '$1 $2', 'markers are read; «in» is instructions unless said', w1)
+ok(pf.blocks[0]?.id === 'links' && pf.blocks[0].role === 'specialist', 'an official block, for the specialists unless said')
+ok(pf.types.length === 2 && pf.types[0].minAgents === 2 && pf.types[1].minAgents === 3 && pf.types[1].when.none?.join() === 'flow:*', 'types: when all / any / none, min_agents 2 unless said')
+ok(pf.rules[0].when?.join() === 'text:knowledge-only' && pf.rules[0].not === 'setting:model-knowledge=on' && !pf.rules[0].has && !pf.rules[0].role, 'a rule with a condition and a «not», for every role')
+const broken = readProfile(`format: cast-list/profile-v1
+markers:
+  - { id: m, name: M, pattern: "(unclosed" }
+  - { id: n, name: N, in: everywhere, pattern: "x" }
+types:
+  - { id: t, name: T }
+  - { id: u, name: U, when: { any: ["nonsense:thing"] } }
+rules:
+  - { id: r, says: nothing to check }
+`)
+const by = Object.fromEntries(broken.problems.map((x) => [x.key, x.line]))
+ok(by.regex === 3 && by.in === 4 && by.when === 6 && by.prefix === 7 && by.rule === 9, 'a broken regex, an unknown «in», a type with no when, a key no kind has, a rule with nothing to check: each with its line', broken.problems)
+ok(problemText(broken.problems.find((x) => x.key === 'prefix')!, 'pt').includes('nonsense:thing'), 'the unknown key is named', broken.problems.map((x) => problemText(x, 'pt')))
+
+// the types of each agent: every type that matches; the cast file's types first
+const f = (keys: string[]) => Object.fromEntries(keys.map((k) => [k, [{ file: 'x' }]]))
+const as = [
+  { id: 'a', facts: f(['flow:1', 'text:link-domain:ajuda.example', 'node:SearchAndSummarizeContent']) },
+  { id: 'b', facts: f(['text:link-domain:ajuda.example', 'node:SearchAndSummarizeContent']) },
+  { id: 'c', facts: f(['flow:2']) },
+  { id: 'd', facts: f(['node:SearchAndSummarizeContent']) },
+]
+const specialists = { a: 'specialist', b: 'specialist', c: 'specialist', d: 'specialist' } as const
+const ts = typesOf(as, specialists, pf, { d: ['guidance'] })
+ok(ts.a.join() === 'transaction' && ts.b.join() === 'guidance' && ts.c.join() === 'transaction' && ts.d.join() === 'guidance', 'a type when its keys match («none» rules out); the cast file gives d its type', ts)
+const multi = typesOf(as, specialists, { ...pf, types: [pf.types[0], { ...pf.types[1], when: { all: ['text:link-domain:*'] } }] }, {})
+ok(multi.a.join() === 'transaction,guidance', 'an agent gets every type that matches', multi)
+ok(!typesOf([{ id: 'o', facts: f(['flow:1']) }], { o: 'orchestrator' }, pf, {}).o?.length, 'an orchestrator has no type')
+
+// the cast file: types and the blocks kept
+const castText = `format: cast-list/cast-v1
+agents:
+  - { id: a, role: specialist, types: [ transaction, guidance ] }
+blocks:
+  - { id: links, text: "Formate links assim: [título](url), nunca a URL crua." }
+decisions:
+  - { key: "text:block:links", status: accepted, scope: "type:guidance", why: Todos formatam igual }
+`
+const cr = readCast(castText)
+ok(!cr.problems.length && cr.cast?.agents[0].types?.join() === 'transaction,guidance' && cr.cast.blocks[0].id === 'links' && cr.cast.decisions[0].scope === 'type:guidance', 'the cast file: types, the blocks kept, a type scope', cr)
+ok(writeCast(cr.cast!, castText) === castText, 'written back unchanged, byte for byte (in the style it writes: [ a, b ])')
+ok(readCast(castText.replace('type:guidance', 'tipo')).problems[0]?.key === 'scope', 'a scope that is not one is told')
 done()

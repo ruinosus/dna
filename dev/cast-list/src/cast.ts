@@ -9,16 +9,21 @@ import { ROLES, type Role } from './profile'
 export const CAST_FORMAT = 'cast-list/cast-v1'
 export const STATUSES = ['accepted', 'rejected'] as const
 export const SCOPES = ['platform', 'specialist', 'orchestrator'] as const
+/** A scope: everybody, a role, or the agents of a type (`type:<id>`). */
+export type Scope = (typeof SCOPES)[number] | `type:${string}`
+const isScope = (s: string): s is Scope => (SCOPES as readonly string[]).includes(s) || /^type:[\w-]+$/.test(s)
 export interface Declared { agent: string; key: string; value: string; source: string }
-export interface Decision { key: string; status: (typeof STATUSES)[number]; scope: (typeof SCOPES)[number]; why: string }
+export interface Decision { key: string; status: (typeof STATUSES)[number]; scope: Scope; why: string }
 export interface Cast {
   name?: string
-  agents: { id: string; role: Role }[]
+  agents: { id: string; role: Role; types?: string[] }[]
+  /** The blocks of text of the last run, so a block keeps its id across small edits. */
+  blocks: { id: string; text: string }[]
   declared: Declared[]
   decisions: Decision[]
 }
 
-const FIELDS = ['format', 'name', 'agents', 'declared', 'decisions']
+const FIELDS = ['format', 'name', 'agents', 'blocks', 'declared', 'decisions']
 type Obj = Record<string, unknown>
 const isObj = (v: unknown): v is Obj => !!v && typeof v === 'object' && !Array.isArray(v)
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : typeof v === 'number' || typeof v === 'boolean' ? String(v) : '')
@@ -44,8 +49,11 @@ export function readCast(text: string): { cast?: Cast; problems: Problem[] } {
   const agents = list('agents').map((a, i) => {
     const role = str(a.role)
     if (!(ROLES as readonly string[]).includes(role)) problems.push({ line: at(['agents', i, 'role']), key: 'role', what: `agents[${i}].role`, value: role })
-    return { id: need(a.id, `agents[${i}].id`, ['agents', i]), role: role as Role }
+    const types = Array.isArray(a.types) ? a.types.map(str).filter(Boolean) : []
+    return { id: need(a.id, `agents[${i}].id`, ['agents', i]), role: role as Role, ...(types.length ? { types } : {}) }
   })
+  const blocks = list('blocks').map((b, i) => ({ id: need(b.id, `blocks[${i}].id`, ['blocks', i]), text: need(b.text, `blocks[${i}].text`, ['blocks', i]) }))
+  once('blocks', blocks.map((b) => b.id))
   once('agents', agents.map((a) => a.id))
   const declared = list('declared').map((d, i) => ({
     agent: need(d.agent, `declared[${i}].agent`, ['declared', i]),
@@ -58,12 +66,12 @@ export function readCast(text: string): { cast?: Cast; problems: Problem[] } {
     const status = str(d.status)
     const scope = str(d.scope)
     if (!(STATUSES as readonly string[]).includes(status)) problems.push({ line: at(['decisions', i, 'status']), key: 'status', value: status })
-    if (!(SCOPES as readonly string[]).includes(scope)) problems.push({ line: at(['decisions', i, 'scope']), key: 'scope', value: scope })
+    if (!isScope(scope)) problems.push({ line: at(['decisions', i, 'scope']), key: 'scope', value: scope })
     return { key: need(d.key, `decisions[${i}].key`, ['decisions', i]), status, scope, why: str(d.why) } as Decision
   })
   once('decisions', decisions.map((d) => d.key))
   if (problems.length) return { problems }
-  return { cast: { ...(str(raw.name) ? { name: str(raw.name) } : {}), agents, declared, decisions }, problems }
+  return { cast: { ...(str(raw.name) ? { name: str(raw.name) } : {}), agents, blocks, declared, decisions }, problems }
 }
 
 const HEADER = ` What people said about the agents, and what was decided. build.mjs keeps it up to date; edit it, or fill the
@@ -71,6 +79,7 @@ const HEADER = ` What people said about the agents, and what was decided. build.
 // how each list's items are told apart, so an item that changed keeps its node (and its comments)
 const LISTS = {
   agents: (x: Obj) => str(x.id),
+  blocks: (x: Obj) => str(x.id),
   declared: (x: Obj) => `${str(x.agent)} ${str(x.key)}`,
   decisions: (x: Obj) => str(x.key),
 } as const
@@ -103,7 +112,7 @@ export function writeCast(cast: Cast, previous?: string): string {
         fresh.flow = true
         return fresh
       }
-      for (const [f, v] of Object.entries(want)) if (node.get(f) !== v) node.set(f, v)
+      for (const [f, v] of Object.entries(want)) if (JSON.stringify((node.toJSON() as Obj)[f]) !== JSON.stringify(v)) node.set(f, v)
       for (const f of Object.keys(node.toJSON() as Obj)) if (!(f in want)) node.delete(f)
       return node
     })

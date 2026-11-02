@@ -17,7 +17,7 @@ const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skil
 const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
 const profile = readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!
 const demo = readCast(readFileSync(join(examples, 'demo.cast.yaml'), 'utf8')).cast!
-const empty: Cast = { agents: [], declared: [], decisions: [] }
+const empty: Cast = { agents: [], blocks: [], declared: [], decisions: [] }
 
 // names
 ok(labelOf('trigger:OnEscalate', 'pt') === 'Escalonamento para humano' && labelOf('trigger:OnEscalate', 'en') === 'Escalation to a person', 'a known key has its name')

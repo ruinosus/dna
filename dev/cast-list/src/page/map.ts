@@ -51,11 +51,13 @@ const agents = [...r.agents].sort((a, b) => (a.role === b.role ? a.id.localeComp
 const patternOf = (k: string) => r.patterns.find((p) => p.key === k)
 // who is off a fact, or off a part of it (has the topic, but nothing leads to it)
 const offOf = (k: string) => [...new Set(r.offPattern.filter((o) => o.key === k || o.partOf === k).map((o) => o.agent))]
+// a scope's word: a role's, or the type's name
+const scopeWord = (s: string) => (s.startsWith('type:') ? s.slice(5) : w[s as 'platform'])
 const badge = (k: string) => {
   const p = patternOf(k)
   if (!p) return ''
   const d = p.decision ? `<span class="cl-badge ${p.decision.status}">${esc(w[p.decision.status === 'accepted' ? 'accept' : 'reject'])}</span>` : ''
-  return `<span class="cl-badge ${p.scope}">${u.pattern} · ${esc(w[p.scope])}</span>${d}`
+  return `<span class="cl-badge ${p.scope}">${u.pattern} · ${esc(scopeWord(p.scope))}</span>${d}`
 }
 
 type Tab = 'map' | 'patterns' | 'cast' | 'microsoft' | 'unknown'
@@ -115,7 +117,7 @@ function patternCards() {
       ${lacking.length ? `<span class="cl-lack">${u.lacks}: ${esc(lacking.join(', '))}</span>` : ''}<span>${u.decision}: ${p.decision ? `${esc(w[p.decision.status === 'accepted' ? 'accept' : 'reject'])}${p.decision.why ? ` — ${esc(p.decision.why)}` : ''}` : `<i>${u.toDecide}</i>`}</span></button>`
   }
   return `<section class="cl-card"><h2>${u.candidates}</h2>${look.length ? `<div class="cl-cards">${look.map((p) => card(p.key)).join('')}</div>` : `<p class="cl-empty">—</p>`}
-    ${everyone.length ? `<details class="cl-everyone"><summary>${u.everyone(everyone.length)}</summary><ul>${everyone.map((p) => `<li><button class="cl-fact" data-pattern="${esc(p.key)}">${label(p.key)}</button> <span class="cl-badge ${p.scope}">${esc(w[p.scope])}</span></li>`).join('')}</ul></details>` : ''}</section>`
+    ${everyone.length ? `<details class="cl-everyone"><summary>${u.everyone(everyone.length)}</summary><ul>${everyone.map((p) => `<li><button class="cl-fact" data-pattern="${esc(p.key)}">${label(p.key)}</button> <span class="cl-badge ${p.scope}">${esc(scopeWord(p.scope))}</span></li>`).join('')}</ul></details>` : ''}</section>`
 }
 
 function detail() {

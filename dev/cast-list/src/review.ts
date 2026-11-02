@@ -54,8 +54,8 @@ export function reviewCast(r: Result): Look[] {
     if (!n) continue
     out.push({
       key: 'gap', agents, fact: g.rule.has,
-      en: `Rule «${g.rule.says}»: ${n} ${roleWord(g.rule.role, 'en', n)} ${n === 1 ? 'does' : 'do'} not meet it (${names(agents)})`,
-      pt: `Regra «${g.rule.says}»: ${n} ${roleWord(g.rule.role, 'pt', n)} não ${n === 1 ? 'cumpre' : 'cumprem'} (${names(agents)})`,
+      en: `Rule «${g.rule.says}»: ${n}${g.rule.role ? ` ${roleWord(g.rule.role, 'en', n)}` : ''} ${n === 1 ? 'does' : 'do'} not meet it (${names(agents)})`,
+      pt: `Regra «${g.rule.says}»: ${n}${g.rule.role ? ` ${roleWord(g.rule.role, 'pt', n)}` : ''} não ${n === 1 ? 'cumpre' : 'cumprem'} (${names(agents)})`,
     })
   }
 

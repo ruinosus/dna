@@ -82,7 +82,7 @@ const profile = option('--profile') ? read(resolve(option('--profile')), readPro
 const out = resolve(option('--out') ?? dirname(folder))
 const castFile = join(out, `${id}.cast.yaml`)
 const castText = existsSync(castFile) ? readFileSync(castFile, 'utf8') : undefined
-const cast = castText !== undefined ? read(castFile, readCast).cast : { ...(profile.name ? { name: profile.name } : {}), agents: [], declared: [], decisions: [] }
+const cast = castText !== undefined ? read(castFile, readCast).cast : { ...(profile.name ? { name: profile.name } : {}), agents: [], blocks: [], declared: [], decisions: [] }
 
 // ---- the way back: an edited workbook as the changes it proposes ----
 if (argv.includes('--from')) {

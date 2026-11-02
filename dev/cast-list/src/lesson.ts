@@ -116,7 +116,7 @@ export function lessonOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
   // a rule in a few words (the names are on the map); a rule that only repeats a pattern someone is off is said there
   const gaps = r.gaps.flatMap((g) => {
     const n = g.agents.filter((a) => !r.offPattern.some((o) => o.agent === a && o.key === g.rule.has)).length
-    return n ? [lang === 'pt' ? `«${g.rule.says}»: ${n} ${roleWord(g.rule.role, lang, n)} não ${n === 1 ? 'cumpre' : 'cumprem'}` : `«${g.rule.says}»: ${n} ${roleWord(g.rule.role, lang, n)} ${n === 1 ? 'does' : 'do'} not meet it`] : []
+    return n ? [lang === 'pt' ? `«${g.rule.says}»: ${n}${g.rule.role ? ` ${roleWord(g.rule.role, lang, n)}` : ''} não ${n === 1 ? 'cumpre' : 'cumprem'}` : `«${g.rule.says}»: ${n}${g.rule.role ? ` ${roleWord(g.rule.role, lang, n)}` : ''} ${n === 1 ? 'does' : 'do'} not meet it`] : []
   })
   const unknownFiles = r.unknown.length
   if (unknownFiles) gaps.push(lang === 'pt' ? `${unknownFiles} ${unknownFiles === 1 ? 'arquivo não entendido' : 'arquivos não entendidos'}` : `${unknownFiles} ${unknownFiles === 1 ? 'file' : 'files'} not understood`)

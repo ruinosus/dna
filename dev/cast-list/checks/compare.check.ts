@@ -15,7 +15,7 @@ const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skil
 const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
 const profile = readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!
 const demo = readCast(readFileSync(join(examples, 'demo.cast.yaml'), 'utf8')).cast!
-const empty: Cast = { agents: [], declared: [], decisions: [] }
+const empty: Cast = { agents: [], blocks: [], declared: [], decisions: [] }
 const SPECIALISTS = ['bodega-pedidos', 'bodega-devolucoes', 'bodega-frete', 'bodega-cupons', 'bodega-loja-fisica']
 
 const r = compare(agents, profile, empty)

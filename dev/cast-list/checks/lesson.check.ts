@@ -59,7 +59,7 @@ ok(en.steps.filter((x) => x.chapter).map((x) => x.chapter).join() === 'The cast,
 
 // thirty specialists: two rows, still on a paper the engine takes
 const many = Array.from({ length: 30 }, (_, i) => ({ ...agents.find((a) => a.id === 'bodega-pedidos')!, id: `especialista-${String(i + 1).padStart(2, '0')}` }))
-const big = sceneOf([agents.find((a) => a.id === 'bodega-orquestrador')!, ...many], { agents: [], declared: [], decisions: [] }, 'pt')
+const big = sceneOf([agents.find((a) => a.id === 'bodega-orquestrador')!, ...many], { agents: [], blocks: [], declared: [], decisions: [] }, 'pt')
 const rows = new Set(big.steps.filter((x) => x.type === 'prop' && x.name === 'robot').map((x) => x.at![1]))
 ok(big.width <= 4000 && rows.size === 3, `thirty-one: the orchestrator and two rows (${big.width} wide)`, [...rows])
 done()

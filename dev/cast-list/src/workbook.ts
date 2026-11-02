@@ -61,7 +61,7 @@ export function workbookOf(r: Result, looks: Look[], cast: Cast, lang: Lang = 'e
     }))
   const offSheet = sheet('off', [[w.agent, 24], [w.role, 14], [w.missing, 44], [w.key, 34], [w.scope, 14], [w.accepted, 14]],
     r.offPattern.map((o) => [o.agent, role(o.agent), label(o.key), o.key, scope(o.scope), r.patterns.find((p) => p.key === o.key)?.decision?.status === 'accepted' ? w.yes : '']))
-  const gaps = sheet('gaps', [[w.rule, 16], [w.says, 50], [w.role, 14], [w.notMet, 60]], r.gaps.map((g) => [g.rule.id, g.rule.says, w[g.rule.role], g.agents.join(', ')]))
+  const gaps = sheet('gaps', [[w.rule, 16], [w.says, 50], [w.role, 14], [w.notMet, 60]], r.gaps.map((g) => [g.rule.id, g.rule.says, g.rule.role ? w[g.rule.role] : '', g.agents.join(', ')]))
   const conflicts = sheet('conflicts', [[w.agent, 24], [w.fact, 40], [w.key, 34], [w.declared, 20], [w.source, 40], [w.inYaml, 12]],
     r.conflicts.map((c) => [c.agent, label(c.key), c.key, c.declared, c.source, c.observed ? w.yes : w.no]))
   const cast_ = sheet('agents', [[w.agent, 24], [w.name, 32], [w.role, 14], [w.facts, 8], [w.off, 44], [w.alone, 44], [w.children, 24], [w.unknown, 12]],

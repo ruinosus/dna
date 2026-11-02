@@ -4,13 +4,13 @@
 // in the cast file marks a pattern; an accepted one is checked even when it would no longer be a pattern by its share.
 // A part of a fact (a topic that leads to escalation is part of escalating) is never a pattern of its own: it is
 // checked only on the agents that have the fact, takes the fact's decision, and is never a solo.
-import type { Cast, Decision } from './cast'
+import type { Cast, Decision, Scope } from './cast'
 import type { AgentFacts, Facts, Source, Unknown } from './extract'
 import { partOf } from './labels'
 import { MS_PATTERNS } from './microsoft'
-import { rolesOf, type Profile, type Role, type Rule } from './profile'
+import { matches, rolesOf, typesOf, type Profile, type Role, type Rule } from './profile'
 
-export type Scope = 'platform' | Role
+export type { Scope }
 export interface Pattern {
   key: string
   /** The role where it is a pattern (or, for a decision, the one its scope names first). */
@@ -78,7 +78,8 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
   const sourcesOf = (key: string, of = agents) => of.flatMap((a) => a.facts[key] ?? [])
   const allKeys = [...new Set(agents.flatMap((a) => Object.keys(a.facts)))].sort()
   const decisionOf = (key: string) => cast.decisions.find((d) => d.key === key)
-  const inScope = (scope: Scope) => (scope === 'platform' ? agents : members(scope))
+  const types = typesOf(agents, roles, profile, Object.fromEntries(cast.agents.filter((a) => a.types?.length).map((a) => [a.id, a.types!])))
+  const inScope = (scope: Scope) => (scope === 'platform' ? agents : scope.startsWith('type:') ? agents.filter((a) => types[a.id]?.includes(scope.slice(5))) : members(scope as Role))
 
   const patterns: Pattern[] = []
   for (const role of ['specialist', 'orchestrator'] as Role[]) {
@@ -129,8 +130,16 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
     else if (has.length === 1) solos.push(holding)
   }
 
+  // a rule: for the agents of its role (or all) that have its `when`, what they must have (`has`) or not have (`not`)
+  const holds = (a: (typeof agents)[number], pattern: string) => Object.keys(a.facts).some((k) => matches(k, pattern))
   const gaps: Gap[] = profile.rules
-    .map((rule) => ({ rule, agents: members(rule.role).filter((a) => !(rule.has in a.facts)).map((a) => a.id) }))
+    .map((rule) => ({
+      rule,
+      agents: (rule.role ? members(rule.role) : agents)
+        .filter((a) => (rule.when ?? []).every((w) => holds(a, w)))
+        .filter((a) => (rule.has !== undefined && !holds(a, rule.has)) || (rule.not !== undefined && holds(a, rule.not)))
+        .map((a) => a.id),
+    }))
     .filter((g) => g.agents.length)
 
   return {
