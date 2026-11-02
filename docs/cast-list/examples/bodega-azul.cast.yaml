@@ -15,3 +15,15 @@ agents:
   - { id: bodega-loja-fisica, role: specialist }
   - { id: bodega-orquestrador, role: orchestrator }
   - { id: bodega-pedidos, role: specialist }
+blocks:
+  - id: abre-um-chamado-no-erp
+    text: Abre um chamado no ERP quando o cliente pede uma ação que a loja precisa executar (troca, cancelamento, reembolso).
+  - id: links
+    text: |-
+      Links:
+      - Formate links assim: [título](url), nunca a URL crua.
+      - Um link de ação vai no topo; o link da base de ajuda vai no fim.
+      - Nunca escreva as palavras «clique aqui».
+      - No máximo 3 links por resposta.
+  - id: inicializa-o-agente-quando-ele
+    text: Inicializa o agente quando ele é chamado pelo orquestrador Bodega Azul e recebe a categoria da solicitação.

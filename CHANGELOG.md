@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.3.0 — 2026-11-02
+
+cast-list reads the text of the instructions, and compares by type of agent.
+
+- **The text.** The instructions and the descriptions the model reads are cut into blocks. A block two agents or more
+  share is a fact; a copy that lost a line is a **variation** (half of the smaller one in the other), and the map
+  shows the words that went and came. A block keeps its id across small edits (the cast file keeps it). It compares
+  text, not meaning; copied, test and per-language topics are left out.
+- **What the team looks for**, in the profile: **markers** — a regular expression and the value it captures («at most
+  3 bullets») — so a rule written in different ways by a role («unify?») or twice in one agent («which one holds?»)
+  is told; the domain of each link and an e-mail are found with no marker; and the **official blocks** the team pastes
+  everywhere, checked on every agent with or without a majority.
+- **Types** of specialist (transaction, guidance, triage…), from what each one's YAML and text show — one may be of
+  two: patterns are also found within each type (scope `type:<id>`), a pattern of a type never blames who is not of
+  it, and a type with one agent is told. The matrix groups its columns by type (a type filter; one of two types in
+  both), the workbook has the types and a Text sheet, the lesson draws the cast by type.
+- **The text against the setup:** a rule with `when` and `not` — «asks for the knowledge alone» with the model's
+  general knowledge on. Four settings are read now: general knowledge, content moderation, semantic search, web
+  browsing.
+- An eval for the text (`cast-list-text-pt`, 2/2). The example agents and profile show all of it.
+
 ## 1.2.1 — 2026-11-02
 
 cast-list, finished after its first run in the cloud.

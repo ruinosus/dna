@@ -1,6 +1,6 @@
 {
   "name": "house-lights",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "The command behind the house-lights skills: draw a lesson or a pitch, play an incident drill, map a way of working or a customer journey, compare Copilot Studio agents — one offline HTML file each.",
   "type": "module",
   "bin": {
