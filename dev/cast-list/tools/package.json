@@ -3,7 +3,10 @@
   "private": true,
   "type": "module",
   "description": "Builds the generated parts of the cast-list skill (the engine and the map page), and checks and packs the skill.",
-  "scripts": {},
+  "scripts": {
+    "assets": "node assets.mjs",
+    "typecheck": "tsc -p tsconfig.json"
+  },
   "devDependencies": {
     "@types/node": "^22.0.0",
     "chalk-talk": "*",

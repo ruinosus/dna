@@ -14,7 +14,7 @@
     "dev/house-lights/tools"
   ],
   "scripts": {
-    "assets": "npm run -s assets -w dev/chalk-talk/tools && npm run -s assets -w dev/back-of-napkin/tools -w dev/dress-rehearsal/tools -w dev/gates-and-handoffs/tools -w dev/service-blueprint/tools",
+    "assets": "npm run -s assets -w dev/chalk-talk/tools && npm run -s assets -w dev/back-of-napkin/tools -w dev/dress-rehearsal/tools -w dev/gates-and-handoffs/tools -w dev/service-blueprint/tools -w dev/cast-list/tools",
     "check": "npm run -s check --workspaces --if-present",
     "typecheck": "npm run -s typecheck --workspaces --if-present",
     "linux": "npm run -s linux --workspaces --if-present",
