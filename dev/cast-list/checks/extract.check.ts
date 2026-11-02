@@ -53,6 +53,19 @@ ok(has(c, 'connector:shared_sharepointonline') && has(c, 'operation:shared_share
 ok(keys(c, 'connref:').length === 3, 'bodega-cupons: three connection references', keys(c, 'connref:'))
 ok(!has(c, 'ms:channel-aware-behavior'), 'a tool input that reads the channel is not the channel-aware pattern')
 
+// wave 1: the text each agent carries, and the settings that go with it
+const texts = (id: string) => agents[id].texts
+ok(texts('bodega-loja-fisica').some((t) => t.source === 'instructions' && t.file === 'agent.mcs.yml' && t.line === 6 && t.text.startsWith('Você é o especialista em loja física')), 'the instructions, with the line their text starts on', texts('bodega-loja-fisica').map((t) => [t.source, t.file, t.line]))
+ok(texts('bodega-pedidos').some((t) => t.source === 'descriptions' && t.file === 'topics/ConsultarPoliticasPedidos.topic.mcs.yml'), "a topic's description for the model is a text too")
+ok(texts('bodega-pedidos').some((t) => t.source === 'descriptions' && t.file === 'actions/AbrirChamadoERP.mcs.yml'), "an action's description too")
+ok(!texts('bodega-pedidos').some((t) => t.file.includes(' Copy')), 'a copied topic leaves its text out', texts('bodega-pedidos').map((t) => t.file))
+ok(!texts('bodega-orquestrador').some((t) => t.file.startsWith('agents/')), "the child agent's instructions are the child's, not compared")
+ok(has('bodega-devolucoes', 'setting:model-knowledge=on') && !Object.keys(agents['bodega-pedidos'].facts).some((k) => k.startsWith('setting:model-knowledge')), "the model's general knowledge, only where the file says it")
+ok(agents['bodega-pedidos'].names['7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f'] === 'Abrir chamado no ERP' && has('bodega-cupons', 'flow:7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f'), 'a flow, named by the action that calls it')
+const set = extractAgent('s', [{ path: 'agent.mcs.yml', text: 'kind: GptComponentMetadata\ninstructions: Curto.\nresponseInstructions: |\n  Sempre em tópicos.\ngptCapabilities:\n  webBrowsing: false\naISettings:\n  contentModeration: High\n  isSemanticSearchEnabled: true\n' }, { path: 'topics/Ajuda.es-ES.topic.mcs.yml', text: 'kind: AdaptiveDialog\nmodelDescription: Ayuda\nbeginDialog:\n  kind: OnRecognizedIntent\n  id: main\n' }], kinds)
+ok(['setting:web-browsing=off', 'setting:moderation=high', 'setting:semantic-search=on'].every((k) => k in set.facts), 'web browsing, moderation and semantic search, when the file has them', Object.keys(set.facts))
+ok(set.texts.some((t) => t.text === 'Sempre em tópicos.' && t.line === 4) && !set.texts.some((t) => t.file.includes('es-ES')), 'responseInstructions are instructions; a translated copy is left out', set.texts)
+
 // every fact says where it was seen
 const src = agents['bodega-frete'].facts['trigger:OnUnknownIntent']?.[0]
 ok(src?.file === 'topics/Fallback.topic.mcs.yml' && (src.line ?? 0) > 1, 'a fact says its file and line', src)

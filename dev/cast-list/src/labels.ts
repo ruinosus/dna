@@ -32,6 +32,12 @@ const KNOWN: Record<string, Name> = {
   'trigger:OnActivity': { dim: 'conversation', en: 'On every message', pt: 'Em toda mensagem' },
   'setting:generative=on': { dim: 'conversation', en: 'Generative orchestration on', pt: 'Orquestração generativa ligada' },
   'setting:generative=off': { dim: 'conversation', en: 'Generative orchestration off', pt: 'Orquestração generativa desligada' },
+  'setting:model-knowledge=on': { dim: 'governance', en: "The model's general knowledge on", pt: 'Conhecimento geral do modelo ligado' },
+  'setting:model-knowledge=off': { dim: 'governance', en: "The model's general knowledge off", pt: 'Conhecimento geral do modelo desligado' },
+  'setting:semantic-search=on': { dim: 'knowledge', en: 'Semantic search on', pt: 'Busca semântica ligada' },
+  'setting:semantic-search=off': { dim: 'knowledge', en: 'Semantic search off', pt: 'Busca semântica desligada' },
+  'setting:web-browsing=on': { dim: 'knowledge', en: 'Web browsing on', pt: 'Navegação na web ligada' },
+  'setting:web-browsing=off': { dim: 'knowledge', en: 'Web browsing off', pt: 'Navegação na web desligada' },
   'setting:connectable': { dim: 'orchestration', en: 'Can be called by an orchestrator', pt: 'Pode ser chamado por um orquestrador' },
   'topics:with-model-description': { dim: 'conversation', en: 'Topics described for the model', pt: 'Tópicos descritos para o modelo' },
   'instructions:present': { dim: 'governance', en: 'Has instructions', pt: 'Tem instruções', lacks: { en: ['has no instructions', 'have no instructions'], pt: ['não tem instruções', 'não têm instruções'] } },
@@ -103,8 +109,9 @@ export function labelOf(key: string, lang: Lang, names?: Names): string {
   let value = key.slice(k[0].length)
   if (k[0] === 'ms:') value = MS_NAME[value] ?? value
   if (k[0] === 'auth:' && value === 'None') return lang === 'pt' ? 'Sem login' : 'No sign-in'
+  if (key.startsWith('setting:moderation=')) return lang === 'pt' ? `Moderação de conteúdo: ${key.slice(19)}` : `Content moderation: ${key.slice(19)}`
   // a connector, its operation, a connection, an MCP server or an agent called: by the name the files give
-  if (['connector:', 'connref:', 'mcp:', 'calls:'].includes(k[0])) value = named(value, names)
+  if (['connector:', 'connref:', 'mcp:', 'calls:', 'flow:'].includes(k[0])) value = named(value, names)
   if (k[0] === 'operation:') {
     const [api, op] = [value.slice(0, value.indexOf('/')), value.slice(value.indexOf('/') + 1)]
     value = `${named(api, names)} · ${op}`

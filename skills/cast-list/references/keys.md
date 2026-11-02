@@ -41,6 +41,10 @@ Every fact cast-list finds is a key. The keys below have a name; any other key k
 | Key | Name | Nome |
 |---|---|---|
 | `trigger:OnKnowledgeRequested` | Before searching knowledge | Antes de buscar no conhecimento |
+| `setting:semantic-search=on` | Semantic search on | Busca semântica ligada |
+| `setting:semantic-search=off` | Semantic search off | Busca semântica desligada |
+| `setting:web-browsing=on` | Web browsing on | Navegação na web ligada |
+| `setting:web-browsing=off` | Web browsing off | Navegação na web desligada |
 | `node:SearchAndSummarizeContent` | Generative answers from knowledge | Respostas generativas sobre o conhecimento |
 | `node:SearchKnowledgeSources` | Searches the knowledge sources | Busca nas fontes de conhecimento |
 | `yaml-only:triggerCondition` | Search condition only in YAML (the editor may erase it) | Condição de busca só no YAML (a tela pode apagar) |
@@ -63,6 +67,8 @@ Every fact cast-list finds is a key. The keys below have a name; any other key k
 
 | Key | Name | Nome |
 |---|---|---|
+| `setting:model-knowledge=on` | The model's general knowledge on | Conhecimento geral do modelo ligado |
+| `setting:model-knowledge=off` | The model's general knowledge off | Conhecimento geral do modelo desligado |
 | `instructions:present` | Has instructions | Tem instruções |
 | `node:LogCustomTelemetryEvent` | Logs telemetry | Registra telemetria |
 | `node:CSATQuestion` | Asks for satisfaction (CSAT) | Pergunta a satisfação (CSAT) |

@@ -8,6 +8,8 @@ import { isMap, isScalar, isSeq, LineCounter, parseDocument, type Node } from 'y
 export interface Source { file: string; line?: number }
 export type Facts = Record<string, Source[]>
 export interface Unknown { file: string; why: 'yaml' | 'empty' | 'kind' | 'file'; kind?: string }
+/** A text the model reads: the instructions, or a topic's or an action's description for the model. */
+export interface Text { source: 'instructions' | 'descriptions'; file: string; line: number; text: string }
 export interface AgentFacts {
   /** The folder's name. */
   id: string
@@ -19,6 +21,8 @@ export interface AgentFacts {
   unknown: Unknown[]
   /** Readable names the files give: a connector's API name → «Office 365 Outlook». */
   names: Record<string, string>
+  /** The texts of the agent itself (not its children), for the blocks and markers. */
+  texts: Text[]
 }
 
 type Obj = Record<string, unknown>
@@ -60,10 +64,20 @@ function* nodes(x: unknown): Generator<Obj> {
 /** «cr7b2_bot.shared_office365.shared-office365-…» → «shared_office365». */
 const apiOf = (ref: string) => ref.split('.')[1] ?? ref
 const last = (s: string, sep: string) => s.slice(s.lastIndexOf(sep) + (s.includes(sep) ? sep.length : 0))
+// a copy or a test left in the editor, or a copy per language: its text says nothing new
+const NOISE = /(^|[\s._-])(copy|c[oó]pia|new|test|teste)([\s._-]|$)|\.[a-z]{2}-[A-Z]{2}(\.topic)?\.mcs\.ya?ml$/i
+const MAX_TEXT = 50_000
+/** The line a key's text starts on: the next line for a block scalar (`|`, `>`), the key's own line otherwise. */
+function textLine(source: string, key: string): number {
+  const lines = source.split('\n')
+  const at = lines.findIndex((l) => new RegExp(`^\\s*${key}:`).test(l))
+  if (at < 0) return 1
+  return /:\s*[|>][-+]?\s*$/.test(lines[at]) ? at + 2 : at + 1
+}
 const NODES = new Set(['LogCustomTelemetryEvent', 'CSATQuestion', 'SearchAndSummarizeContent', 'SearchKnowledgeSources'])
 
 export function extractAgent(id: string, files: { path: string; text: string }[], kinds?: Set<string>): AgentFacts {
-  const agent: AgentFacts = { id, facts: {}, children: [], unknown: [], names: {} }
+  const agent: AgentFacts = { id, facts: {}, children: [], unknown: [], names: {}, texts: [] }
   let knowledge: Source[] = []
   // a topic that calls another (BeginDialog) reaches what that topic is for — its trigger, known once every file is read
   const triggers = new Map<string, string>()
@@ -109,6 +123,11 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
       continue
     }
     const text = f.text
+    // the agent's own texts: never a child's, never a copy's
+    const keepText = (source: Text['source'], key: string, value: unknown) => {
+      if (child || !str(value) || NOISE.test(last(f.path, '/'))) return
+      agent.texts.push({ source, file: f.path, line: textLine(text, key), text: (value as string).trimEnd().slice(0, MAX_TEXT) })
+    }
     const instructions = (s: unknown, at: unknown) => {
       if (!str(s)) return
       add('instructions:present', at)
@@ -119,6 +138,16 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
       case 'GptComponentMetadata': {
         agent.displayName ??= str(root.displayName)
         instructions(root.instructions, root)
+        keepText('instructions', 'instructions', root.instructions)
+        keepText('instructions', 'responseInstructions', root.responseInstructions)
+        // the settings that change how it answers, only when the file says them
+        const ai = obj(root.aISettings)
+        const onOff = (v: unknown) => (v === true ? 'on' : 'off')
+        if (typeof ai?.useModelKnowledge === 'boolean') add(`setting:model-knowledge=${onOff(ai.useModelKnowledge)}`, ai)
+        if (str(ai?.contentModeration)) add(`setting:moderation=${(ai!.contentModeration as string).toLowerCase()}`, ai)
+        if (typeof ai?.isSemanticSearchEnabled === 'boolean') add(`setting:semantic-search=${onOff(ai.isSemanticSearchEnabled)}`, ai)
+        const caps = obj(root.gptCapabilities)
+        if (typeof caps?.webBrowsing === 'boolean') add(`setting:web-browsing=${onOff(caps.webBrowsing)}`, caps)
         const model = obj(obj(root.aISettings)?.model)
         if (str(model?.modelNameHint)) add(`model:${model!.modelNameHint}`, model)
         break
@@ -135,6 +164,7 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
         if (trigger) add(`trigger:${trigger}`, begin)
         if (trigger) triggers.set(`${child ?? ''}/${topicName(f.path)}`, trigger)
         if (str(root.modelDescription)) add('topics:with-model-description')
+        keepText('descriptions', 'modelDescription', root.modelDescription)
         const silent = list(root.inputs).some((i) => obj(i)?.kind === 'AutomaticTaskInput' && obj(i)?.shouldPromptUser === false)
         if (trigger === 'OnRecognizedIntent' && silent) add('ms:orchestrator-variables', begin)
         if (trigger === 'OnError' && text.includes('System.Error.SubCode')) add('ms:rai-error-handling', begin)
@@ -144,6 +174,7 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
       }
       case 'TaskDialog': {
         const a = obj(root.action)
+        keepText('descriptions', 'modelDescription', root.modelDescription)
         const ref = str(a?.connectionReference)
         if (a?.kind === 'InvokeConnectorTaskAction' && ref) {
           add(`connector:${apiOf(ref)}`, a)
@@ -151,7 +182,12 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
         }
         if (a?.kind === 'InvokeExternalAgentTaskAction' && obj(a.operationDetails)?.kind === 'ModelContextProtocolMetadata' && ref) add(`mcp:${apiOf(ref)}`, a)
         if (a?.kind === 'InvokeConnectedAgentTaskAction' && str(a.botSchemaName)) add(`calls:${a.botSchemaName}`, a)
-        if (a?.kind === 'InvokeFlowTaskAction' && str(a.flowId)) add(`flow:${a.flowId}`, a)
+        if (a?.kind === 'InvokeFlowTaskAction' && str(a.flowId)) {
+          add(`flow:${a.flowId}`, a)
+          // a flow is known by the action that calls it
+          const name = str(root.modelDisplayName) ?? str(obj(root['mcs.metadata'])?.componentName)
+          if (name) agent.names[a.flowId as string] ??= name
+        }
         break
       }
       case 'KnowledgeSourceConfiguration': {
