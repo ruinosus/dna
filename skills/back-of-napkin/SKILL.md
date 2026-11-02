@@ -4,7 +4,7 @@ description: Explains anything by drawing it, the way you would on the back of a
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first).
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # back-of-napkin: explain anything by drawing it

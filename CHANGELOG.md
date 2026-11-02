@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0 — 2026-11-02
+
+- **cast-list, the sixth skill: Copilot Studio agents compared.** Point it at the folders the VS Code extension clones
+  and it says what most agents do (a pattern — the platform's when the orchestrator has it too, the specialists'
+  otherwise), who is off a pattern, what only one has (innovation or debt), the team's rules not met, and what a
+  handoff or the backlog says that the YAML does not — with the file and line behind each finding. A map that opens
+  offline (filters by role and focus area, a click shows the evidence), a workbook to decide in (Decision column,
+  Declared sheet, read back with `--from` / `--take`), a lesson that draws the cast, and a cast file that keeps what
+  was decided, so the next run checks every agent against the accepted patterns. It runs on Node alone — no model, no
+  install, no network — so it fits a client's locked-down machine; with a model, `--facts` is the way in. A child
+  agent's facts are the child's; a file it cannot read is told and never stops it. The Copilot Studio schema and its
+  reader are inside (`vendor/microsoft`, MIT), to tell a real kind from a made-up one; 8 of Microsoft's 15 reference
+  patterns are recognised in the YAML. `npx house-lights cast-list agents/ --all`.
+
 ## 1.1.0 — 2026-11-02
 
 - **gates-and-handoffs: more than one approves, or only sometimes.** A gate lists its `approvals` —
