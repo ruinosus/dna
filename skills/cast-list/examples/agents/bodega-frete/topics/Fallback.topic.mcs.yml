@@ -1,0 +1,31 @@
+mcs.metadata:
+  componentName: Fallback
+  description: Acionado quando nenhum tópico ou ferramenta corresponde à mensagem do cliente.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnUnknownIntent
+  id: main
+  priority: -1
+  actions:
+    - kind: ConditionGroup
+      id: conditionGroup_ABgTWB
+      conditions:
+        - id: conditionItem_6esZ2m
+          condition: =System.FallbackCount < 3
+          actions:
+            - kind: SendActivity
+              id: sendMessage_BIJUhV
+              activity:
+                text:
+                  - "Desculpe, não entendi. Pode reformular a sua pergunta?"
+                  - "Não captei bem. Pode tentar explicar de outro jeito?"
+
+      elseActions:
+        - kind: SendActivity
+          id: sendMessage_sFTCKn
+          activity:
+            text:
+              - "Não consegui entender a sua solicitação. Você pode escrever para atendimento@bodegaazul.example que a nossa equipe responde em até 1 dia útil."
+
+        - kind: CancelAllDialogs
+          id: cancelAllDialogs_zzUTRS

@@ -1,0 +1,12 @@
+displayName: Bodega Azul - Orquestrador
+schemaName: cr7b2_bodegaOrquestrador
+accessControlPolicy: ChatbotReaders
+authenticationMode: None
+configuration:
+  settings:
+    GenerativeActionsEnabled: true
+
+  recognizer:
+    kind: GenerativeAIRecognizer
+
+language: 1046

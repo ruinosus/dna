@@ -1,0 +1,24 @@
+mcs.metadata:
+  componentName: Agente Loja Física
+  description: Agente conectado Bodega Azul - Loja Física.
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: CategoriaSolicitacao
+    value: =Global.CategoriaSolicitacao
+
+modelDisplayName: Bodega Azul - Loja Física
+modelDescription: "Agente especialista na loja física: endereço, horário, serviços e retirada de pedidos. Use quando a categoria for LojaFisica."
+action:
+  kind: InvokeConnectedAgentTaskAction
+  inputType:
+    properties:
+      CategoriaSolicitacao:
+        displayName: CategoriaSolicitacao
+        description: Categoria da solicitação definida pelo orquestrador.
+        isRequired: true
+        type: String
+
+  botSchemaName: cr7b2_bodegaLojaFisica
+  historyType:
+    kind: ConversationHistory

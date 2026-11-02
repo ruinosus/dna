@@ -1,0 +1,10 @@
+# Name: Categoria da Solicitação
+# Categoria da solicitação do cliente definida pelo orquestrador Bodega Azul (Pedidos, Devolucoes, Frete, Cupons, LojaFisica, Outro).
+name: CategoriaSolicitacao
+aIVisibility: UseInAIContext
+scope: Conversation
+description: Categoria da solicitação do cliente definida pelo orquestrador Bodega Azul (Pedidos, Devolucoes, Frete, Cupons, LojaFisica, Outro).
+schemaName: cr7b2_bodegaDevolucoes.globalvariable.CategoriaSolicitacao
+kind: GlobalVariableComponent
+isExternalInitializationAllowed: true
+defaultValue: =Blank()

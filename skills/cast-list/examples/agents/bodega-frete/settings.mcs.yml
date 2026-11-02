@@ -1,0 +1,13 @@
+displayName: Bodega Azul - Frete
+schemaName: cr7b2_bodegaFrete
+accessControlPolicy: ChatbotReaders
+authenticationMode: None
+configuration:
+  isAgentConnectable: true
+  settings:
+    GenerativeActionsEnabled: true
+
+  recognizer:
+    kind: GenerativeAIRecognizer
+
+language: 1046

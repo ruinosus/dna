@@ -1,0 +1,8 @@
+mcs.metadata:
+  componentName: Guia da Loja Física
+  description: "Endereço, horários, serviços e regras de retirada na loja física da Bodega Azul."
+kind: KnowledgeSourceConfiguration
+source:
+  kind: SharePointSearchSource
+  triggerCondition: =Or(IsBlank(Global.CategoriaSolicitacao), Global.CategoriaSolicitacao = "LojaFisica")
+  site: https://bodegaazul.sharepoint.com/sites/Varejo/Shared%20Documents/LojaFisica

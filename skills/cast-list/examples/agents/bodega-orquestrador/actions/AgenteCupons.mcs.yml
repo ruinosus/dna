@@ -1,0 +1,24 @@
+mcs.metadata:
+  componentName: Agente Cupons
+  description: Agente conectado Bodega Azul - Cupons.
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: CategoriaSolicitacao
+    value: =Global.CategoriaSolicitacao
+
+modelDisplayName: Bodega Azul - Cupons
+modelDescription: "Agente especialista em cupons e promoções: validação de códigos, regras de uso e campanhas vigentes. Use quando a categoria for Cupons."
+action:
+  kind: InvokeConnectedAgentTaskAction
+  inputType:
+    properties:
+      CategoriaSolicitacao:
+        displayName: CategoriaSolicitacao
+        description: Categoria da solicitação definida pelo orquestrador.
+        isRequired: true
+        type: String
+
+  botSchemaName: cr7b2_bodegaCupons
+  historyType:
+    kind: ConversationHistory

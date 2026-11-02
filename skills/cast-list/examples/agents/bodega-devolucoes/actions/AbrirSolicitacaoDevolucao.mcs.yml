@@ -1,0 +1,32 @@
+mcs.metadata:
+  componentName: Abrir solicitação de devolução
+  description: "Envia à equipe de logística reversa um e-mail abrindo a solicitação de devolução."
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: To
+    value: logistica.reversa@bodegaazul.example
+
+  - kind: AutomaticTaskInput
+    propertyName: Subject
+    description: Assunto do e-mail, curto e em português.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+  - kind: AutomaticTaskInput
+    propertyName: Body
+    description: Corpo do e-mail em HTML simples, em português, com o resumo do que foi tratado na conversa.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+modelDisplayName: Abrir solicitação de devolução
+modelDescription: "Envia pelo Outlook um e-mail para a equipe de logística reversa com número do pedido, produto e motivo da devolução. Use depois de confirmar esses dados com o cliente."
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: cr7b2_bodegaDevolucoes.shared_office365.shared-office365-9c9a0063-d62b-4056-b58f-da8e8813aef2
+  connectionProperties:
+    mode: Maker
+
+  operationId: SendEmailV2
+
+outputMode: All

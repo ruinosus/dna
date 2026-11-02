@@ -1,0 +1,32 @@
+mcs.metadata:
+  componentName: Fallback
+  description: Acionado quando nenhum tópico ou ferramenta corresponde à mensagem do cliente.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnUnknownIntent
+  id: main
+  priority: -1
+  actions:
+    - kind: ConditionGroup
+      id: conditionGroup_ntofKN
+      conditions:
+        - id: conditionItem_9l9haQ
+          condition: =System.FallbackCount < 3
+          actions:
+            - kind: SendActivity
+              id: sendMessage_luRZkn
+              activity:
+                text:
+                  - "Desculpe, não entendi. Pode reformular a sua pergunta?"
+                  - "Não captei bem. Pode tentar explicar de outro jeito?"
+
+      elseActions:
+        - kind: SendActivity
+          id: sendMessage_sI3CUS
+          activity:
+            text:
+              - "Estou com dificuldade para entender o seu pedido. Vou te encaminhar para alguém da equipe Bodega Azul."
+
+        - kind: BeginDialog
+          id: beginDialog_kw6sI2
+          dialog: cr7b2_bodegaLojaFisica.topic.Escalate

@@ -1,0 +1,14 @@
+mcs.metadata:
+  componentName: Saudação
+  description: Mensagem de boas-vindas enviada no início da conversa.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnConversationStart
+  id: main
+  actions:
+    - kind: SendActivity
+      id: sendMessage_ySobf4
+      activity:
+        text:
+          - "Olá! Eu sou o {System.Bot.Name}. Vamos resolver a sua troca ou devolução?"
+          - "Oi! Aqui é o especialista em trocas e devoluções da Bodega Azul. Como posso ajudar?"
