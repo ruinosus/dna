@@ -59,11 +59,17 @@ function grid() {
   const cls = (m: Moment, k: string) => `fh-cell ${k}${picked === m.id ? ' picked' : ''}`
   let html = `<div class="fh-grid" style="grid-template-columns: 150px repeat(${n}, minmax(140px, 1fr)); min-width: ${150 + n * 146}px">`
   html += '<div></div>' + runs.map((r) => `<div class="fh-phase" style="grid-column: span ${r.span}">${esc(b.phases.find((p) => p.id === r.phase)?.name ?? r.phase)}</div>`).join('')
-  // how the customer feels: a line through the moments, a face at each
-  const y = (f = 3) => 10 + (5 - f) * 19
-  const pts = b.moments.map((m, i) => `${((i + 0.5) * 100) / n},${y(m.feels)}`).join(' ')
-  html += `<div class="fh-row" style="padding-top:34px">${w.feels}</div><div class="fh-curve" style="grid-column: span ${n}"><svg viewBox="0 0 100 96" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="var(--red)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg>`
-  html += b.moments.map((m, i) => (m.feels ? `<button class="fh-face" data-moment="${esc(m.id)}" title="${esc(u.of(m.feels))}" style="left:${((i + 0.5) * 100) / n}%;top:${y(m.feels)}px">${FACES[m.feels]}</button>` : '')).join('') + '</div>'
+  // how the customer feels: a line through the moments someone said it of, a face at each; a moment nobody said it of
+  // gets no point (not a made-up «3»), and with none the lane says so
+  const y = (f: number) => 10 + (5 - f) * 19
+  const felt = b.moments.flatMap((m, i) => (m.feels ? [{ m, x: ((i + 0.5) * 100) / n, f: m.feels }] : []))
+  html += `<div class="fh-row" style="padding-top:34px">${w.feels}</div>`
+  if (!felt.length) html += `<div class="fh-curve fh-unknown" style="grid-column: span ${n}">${w.noFeels}</div>`
+  else {
+    const pts = felt.map((p) => `${p.x},${y(p.f)}`).join(' ')
+    html += `<div class="fh-curve" style="grid-column: span ${n}"><svg viewBox="0 0 100 96" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="var(--red)" stroke-width="2.5" vector-effect="non-scaling-stroke"/></svg>`
+    html += felt.map((p) => `<button class="fh-face" data-moment="${esc(p.m.id)}" title="${esc(u.of(p.f))}" style="left:${p.x}%;top:${y(p.f)}px">${FACES[p.f]}</button>`).join('') + '</div>'
+  }
   const row = (label: string, k: string, cell: (m: Moment) => string, empty: (m: Moment) => boolean) => {
     html += `<div class="fh-row">${label}</div>` + b.moments.map((m) => `<button class="${cls(m, k)}${empty(m) ? ' empty' : ''}" data-moment="${esc(m.id)}">${cell(m)}</button>`).join('')
   }

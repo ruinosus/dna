@@ -6,6 +6,7 @@ import { readDrill, problemText } from '../src/drill'
 import { facilitator } from '../src/facilitator'
 import { call, canDo, choose, clockAt, debrief, startPlay } from '../src/play'
 import { reviewDrill } from '../src/review'
+import { findPassage } from '../src/runbook'
 
 const dir = new URL('../../../skills/dress-rehearsal/examples/', import.meta.url)
 const text = readFileSync(new URL('checkout.drill.yaml', dir), 'utf8')
@@ -38,7 +39,21 @@ const keys = (t: string, rb = runbook) => reviewDrill(readDrill(t).drill!, rb).m
 assert.ok(keys(text.replace('    can: [reverter-deploy]\n', '')).includes('nobodyCan'))
 assert.ok(keys(text.replace(/        notifies: true\n/g, '')).includes('nobodyTold'))
 assert.ok(keys(text.replace('        calls: lider\n', '')).includes('escalateNowhere'))
+// «escalar» to someone asks «to whom?»; «escalar» a machine is scaling up, not escalating
+const asks = (label: string) => keys(text.replace('        calls: lider\n', '').replace('Escalar para o líder de incidente', label)).includes('escalateNowhere')
+for (const label of ['Escalar o incidente', 'Escalar', 'Escalar à diretoria', 'Escalonar', 'Escalate to the incident lead']) assert.ok(asks(label), label)
+for (const label of ['Escalar a instância de pagamentos', 'Escalar o cluster para 6 réplicas', 'Scale up the payments service']) assert.ok(!asks(label), label)
 assert.ok(keys(text, runbook.replace('## §4', '## 4')).includes('notInRunbook'))
+// a runbook whose steps are a numbered list: «Passos 4» is the 4th step; «Passos» alone asks which step
+const steps = '# Runbook\n\n## Passos\n1. Confirme o alarme.\n2. Veja o painel.\n3. Chame o líder.\n4. Faça o rollback do deploy.\n\n## Depois\nEscreva o post-mortem.\n'
+assert.equal(findPassage(steps, 'Passos 4')?.text, 'Faça o rollback do deploy.')
+assert.equal(findPassage(steps, 'Passos 9'), undefined)
+assert.equal(findPassage(steps, 'Passos')?.steps, 4)
+assert.equal(findPassage(steps, 'Depois')?.text, 'Escreva o post-mortem.')
+assert.equal(findPassage(runbook, '§2')?.text, 'Houve deploy na última hora? — Se houve deploy na última hora, reverta antes de investigar. A reversão é feita no painel de deploy.')
+const about = (mark: string) => reviewDrill(readDrill(text.replace('runbook: §2', `runbook: ${mark}`)).drill!, steps).filter((l) => l.pt.includes(`«${mark}»`)).map((l) => l.key)
+assert.deepEqual(about('Passos'), ['whichStep'])
+assert.deepEqual(about('Passos 4'), [])
 assert.ok(keys(text.replace("      - label: Abrir o painel de pagamentos\n        go: painel\n", "      - label: Abrir o painel de pagamentos\n        go: dormiu\n")).includes('unreachable'))
 
 // a game: the room cannot revert until Release is called; nobody told the customers

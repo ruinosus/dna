@@ -32,7 +32,22 @@ export async function buildPptx({ title, width, height, paper = '#FBF7EE', slide
     else if (s.image) slide.addImage({ data: s.image, ...box })
     if (s.notes) slide.addNotes(s.notes)
   }
-  return pptx.write({ outputType: 'nodebuffer' })
+  return titleAtZero(await pptx.write({ outputType: 'nodebuffer' }))
+}
+
+// pptxgenjs numbers its placeholders from 100, the title too; PowerPoint's convention (and python-pptx's
+// `shapes.title`) is the title at index 0 — an omitted idx. So the title placeholder loses its idx, in the slides and in
+// the layout, which stay linked by type.
+const TITLE_PH = /<p:ph(\s[^>]*?)?\sidx="\d+"([^>]*?\stype="title")/g
+
+async function titleAtZero(buffer) {
+  const JSZip = (await import('jszip')).default
+  const zip = await JSZip.loadAsync(buffer)
+  for (const name of Object.keys(zip.files).filter((n) => /^ppt\/(slides\/slide|slideLayouts\/slideLayout)\d+\.xml$/.test(n))) {
+    const xml = await zip.file(name).async('string')
+    zip.file(name, xml.replace(TITLE_PH, '<p:ph$1$2'))
+  }
+  return zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' })
 }
 
 /** What a .pptx holds, for the build to check what it made: the slides, the notes and the media files by extension. */
@@ -44,9 +59,10 @@ export async function inspectPptx(buffer) {
   return {
     slides: count(/^ppt\/slides\/slide\d+\.xml$/),
     notes: count(/^ppt\/notesSlides\/notesSlide\d+\.xml$/),
-    // Each slide's title, read from its title placeholder (<p:ph type="title"/>), not from a loose text box: '' when none.
+    // Each slide's title, read as PowerPoint and python-pptx do: the title placeholder at index 0 (<p:ph type="title"/>,
+    // no idx or idx="0"), not a loose text box; '' when none.
     titles: await Promise.all(names.filter((n) => /^ppt\/slides\/slide\d+\.xml$/.test(n)).sort((a, b) => parseInt(a.match(/\d+/)) - parseInt(b.match(/\d+/))).map(async (n) => {
-      const sp = (await zip.file(n).async('string')).split('<p:sp>').find((x) => /<p:ph[^>]*type="title"/.test(x)) ?? ''
+      const sp = (await zip.file(n).async('string')).split('<p:sp>').find((x) => /<p:ph(?![^>]*\sidx="(?!0")\d+")[^>]*type="title"/.test(x)) ?? ''
       return [...sp.matchAll(/<a:t>([^<]*)<\/a:t>/g)].map((m) => m[1]).join('')
     })),
     media: Object.fromEntries(['png', 'mp4', 'webm'].map((e) => [e, count(new RegExp(`^ppt/media/.+\\.${e}$`))])),

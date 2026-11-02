@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.1 — 2026-11-02
+
+What the first run of all five in the cloud found.
+
+- **PowerPoint (back-of-napkin, chalk-talk):** a slide's title is at the title placeholder's index 0, as PowerPoint
+  numbers it: python-pptx's `slide.shapes.title`, the outline and screen readers find it (pptxgenjs numbered it 100).
+  The build checks it the same way.
+- **The words on screen:** the list of a course's lessons is labelled in the recipe's language too (it said
+  «Lessons»); a check makes sure a pt lesson has no English word on screen.
+- **dress-rehearsal:** «escalar a instância» is scaling up, not escalating: only «escalar» to someone (para, ao, à…),
+  «escalar o incidente» or «escalar» alone asks «escalar para quem?». A choice can cite a numbered step under a
+  heading («Passos 4»), and the game shows that step; citing only the heading of a list of steps asks which one.
+- **service-blueprint:** with no `feels` at all, the «Sente» lane says «ninguém disse como o cliente se sente» instead of a
+  flat red line; a moment nobody said it of gets no point on the line.
+- The npm package `chalk-talk` 0.19.1 carries the player and PowerPoint fixes.
+
 ## 1.0.0 — 2026-11-01
 
 The five skills become one plugin, **house-lights**, in one repository.

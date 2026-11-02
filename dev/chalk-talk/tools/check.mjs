@@ -99,6 +99,7 @@ try {
   out.expand = [a, b].map((r) => !r.querySelector('[data-part="expand"]').hidden)
   mb.destroy()
   out.destroyed = b.childElementCount
+  out.english = ['Move the values', 'Play all', 'Transcript', 'Download', 'Chapter 1 of'].filter((w) => a.textContent.includes(w))
   try { readRecipe('title X\\nperson ana at 1') } catch (e) { out.error = e instanceof ChalkTextError ? e.line : e.message }
 } catch (e) { out.failed = e.message }
 const pre = document.createElement('pre'); pre.id = 'chalk-embed'; pre.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(pre)
@@ -106,8 +107,8 @@ const pre = document.createElement('pre'); pre.id = 'chalk-embed'; pre.textConte
   const r = await runPage(page, 'embed')
   if (!r) expect(true, 'no browser here: the embed check is skipped')
   else {
-    const ok = !r.failed && r.chapters?.[0] === 1 && r.chapters?.[1] === 0 && r.drawn.every((n) => n > 5) && r.styles === 1 && !r.ids.length && r.expand[0] === false && r.expand[1] === true && r.destroyed === 0 && r.error === 2
-    expect(ok, `chalk-talk/embed: two lessons on a page, each on its own (${JSON.stringify(r)})`)
+    const ok = !r.failed && r.chapters?.[0] === 1 && r.chapters?.[1] === 0 && r.drawn.every((n) => n > 5) && r.styles === 1 && !r.ids.length && r.expand[0] === false && r.expand[1] === true && r.destroyed === 0 && r.error === 2 && !r.english?.length
+    expect(ok, `chalk-talk/embed: two lessons on a page, each on its own, the pt one with no English word on screen (${JSON.stringify(r)})`)
   }
 }
 

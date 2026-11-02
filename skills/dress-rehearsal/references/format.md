@@ -25,7 +25,8 @@ scenes:
     choices:
       - label: Revert the 02:58 deploy
         go: reverted                # the scene it leads to
-        runbook: §2                 # the runbook's mark it follows (a heading or a mark in the text)
+        runbook: §2                 # the runbook's mark it follows (a heading, a mark in the text, or a numbered
+                                    # step under a heading: «Steps 4» is the 4th step under «## Steps»)
         minutes: 4
         lost: 150                   # impact added
         needs: revert-deploy        # someone in the room must `can` this; otherwise the game asks to call them

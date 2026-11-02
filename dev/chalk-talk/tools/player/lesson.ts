@@ -21,7 +21,7 @@ export const TEXT = {
     board: 'Chalkboard', voice: 'Narration', recording: (p: number) => `Recording… ${p}%`, show: 'Show me', yourTurn: 'Your turn', transcript: 'Transcript', again: 'Try another',
     valuesShort: (n: number) => `Values (${n})`, expand: 'Expand', all: 'All',
     present: 'Present', presentKeys: 'click, → or PageDown next · ← or PageUp back · Esc stop', notes: 'Speaker notes', now: 'Now', after: 'Next', end: 'The end',
-    notesBlocked: 'the browser blocked the notes window', since: 'since the start', on: 'on', off: 'off',
+    notesBlocked: 'the browser blocked the notes window', since: 'since the start', on: 'on', off: 'off', lessons: 'Lessons',
   },
   pt: {
     start: 'Início', back: 'Voltar', next: 'Próximo', playAll: 'Tocar tudo', chapter: (n: number, of: number) => `Capítulo ${n} de ${of}`,
@@ -32,7 +32,7 @@ export const TEXT = {
     board: 'Quadro-negro', voice: 'Narração', recording: (p: number) => `Gravando… ${p}%`, show: 'Mostrar', yourTurn: 'Sua vez', transcript: 'Transcrição', again: 'Tentar outra',
     valuesShort: (n: number) => `Valores (${n})`, expand: 'Expandir', all: 'Tudo',
     present: 'Apresentar', presentKeys: 'clique, → ou PageDown avança · ← ou PageUp volta · Esc sai', notes: 'Notas do apresentador', now: 'Agora', after: 'Depois', end: 'Fim',
-    notesBlocked: 'o navegador bloqueou a janela de notas', since: 'desde o começo', on: 'ligado', off: 'desligado',
+    notesBlocked: 'o navegador bloqueou a janela de notas', since: 'desde o começo', on: 'ligado', off: 'desligado', lessons: 'Aulas',
   },
 }
 export type Lang = keyof typeof TEXT

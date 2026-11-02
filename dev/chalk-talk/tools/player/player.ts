@@ -55,9 +55,10 @@ function readRecipe(): { scene: Scene; course?: Course } {
 }
 
 /** The list of the course's lessons; each is a link to the same page with `?lesson=n`. */
-function contents(course: Course) {
+function contents(course: Course, label: string) {
   const nav = $('course')
   nav.hidden = false
+  nav.setAttribute('aria-label', label)
   nav.append(tag('b', {}, course.title))
   const list = tag('ol')
   course.lessons.forEach((lesson, k) => {
@@ -335,7 +336,7 @@ async function main() {
   document.title = scene.title
   const lang = langOf(scene)
   document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en'
-  if (course) contents(course)
+  if (course) contents(course, TEXT[lang].lessons)
   await mountLesson($('lesson'), scene, { faces: faces(), lang, keys: 'document', present: mode === 'present' || document.body.dataset.present === '1' })
 }
 

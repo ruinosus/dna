@@ -7,7 +7,7 @@ export const WORDS = {
     fail: 'failure point', wait: 'wait', none: 'nothing', nobody: 'nobody', promise: 'Promise', within: 'Within', owner: 'Owner', pains: 'Pains', pain: 'Pain', source: 'Source',
     action: 'Action', actions: 'Actions', due: 'Due', moment: 'Moment', phase: 'Phase', system: 'System', moments: 'Moments', count: 'How many', way: 'Way of working',
     summary: 'Summary', blueprint: 'Blueprint', painsActions: 'Pains and actions', promises: 'Promises', systems: 'Systems', name: 'Blueprint', who: 'Who lives it',
-    phases: 'Phases', look: 'To look at', nothing: 'Nothing to look at', marks: 'Marks',
+    phases: 'Phases', look: 'To look at', nothing: 'Nothing to look at', marks: 'Marks', noFeels: 'nobody said how the customer feels',
   },
   pt: {
     evidence: 'Evidência', customer: 'O cliente faz', feels: 'Sente', front: 'Palco (quem ele vê)', back: 'Bastidores', support: 'Sistemas e parceiros',
@@ -15,7 +15,7 @@ export const WORDS = {
     fail: 'ponto de falha', wait: 'espera', none: 'nada', nobody: 'ninguém', promise: 'Promessa', within: 'Prazo', owner: 'Dono', pains: 'Dores', pain: 'Dor', source: 'Fonte',
     action: 'Ação', actions: 'Ações', due: 'Até', moment: 'Momento', phase: 'Fase', system: 'Sistema', moments: 'Momentos', count: 'Quantos', way: 'Jeito de trabalhar',
     summary: 'Resumo', blueprint: 'Blueprint', painsActions: 'Dores e ações', promises: 'Promessas', systems: 'Sistemas', name: 'Blueprint', who: 'Quem vive',
-    phases: 'Fases', look: 'Para olhar', nothing: 'Nada para olhar', marks: 'Marcas',
+    phases: 'Fases', look: 'Para olhar', nothing: 'Nada para olhar', marks: 'Marcas', noFeels: 'ninguém disse como o cliente se sente',
   },
 }
 /** How a moment feels, as a face. */

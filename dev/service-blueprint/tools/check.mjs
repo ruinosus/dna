@@ -69,6 +69,12 @@ else {
   writeFileSync(join(work, 'probe.html'), html)
   const r = (await runPage(join(work, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
   ok(r.detail === 'Espera notícia — 6 dias sem nada' && r.pains >= 2 && (r.got ?? []).join() === 'devolucao.xlsx,devolucao.blueprint.yaml,devolucao.png' && !r.errs?.length, 'the map in a browser: a moment, the tabs, the downloads', JSON.stringify(r))
+  // with no «feels» anywhere, the lane says nobody said it — no flat red line at a made-up «3»
+  const flat = readFileSync(join(work, 'devolucao.html'), 'utf8').replace(/"feels":\d,?/g, '').replace('</body>', `<script>setTimeout(() => { const c = document.querySelector('.fh-curve')
+    const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify({ text: c?.textContent, line: !!c?.querySelector('polyline'), faces: document.querySelectorAll('.fh-face').length })); document.body.append(p) }, 300)</script></body>`)
+  writeFileSync(join(work, 'flat.html'), flat)
+  const f = (await runPage(join(work, 'flat.html'), 'probe', '', { timeout: 60 })) ?? {}
+  ok(f.text === 'ninguém disse como o cliente se sente' && !f.line && f.faces === 0, 'the map with no «feels»: the lane says nobody said it, no line', JSON.stringify(f))
 }
 
 rmSync(work, { recursive: true, force: true })

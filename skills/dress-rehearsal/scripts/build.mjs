@@ -13,7 +13,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { facilitator, problemText, readDrill, readRecipe, reviewDrill } from './engine.mjs'
+import { facilitator, findPassage, problemText, readDrill, readRecipe, reviewDrill } from './engine.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
@@ -68,14 +68,9 @@ const runbook = runbookFile && existsSync(runbookFile) ? readFileSync(runbookFil
 if (drill.from) console.log(runbook ? T.runbook(drill.from) : T.noRunbook(drill.from))
 const excerpts = {}
 if (runbook) {
-  const lines = runbook.split('\n')
   for (const ref of new Set(drill.scenes.flatMap((s) => (s.choices ?? []).map((c) => c.runbook).filter(Boolean)))) {
-    const at = lines.findIndex((l) => l.includes(ref))
-    if (at < 0) continue
-    // a heading is followed by its paragraph; a line in the text is itself the passage
-    const own = lines[at].replace(/^#+\s*/, '').replace(ref, '').trim()
-    const next = /^#/.test(lines[at]) ? lines.slice(at + 1).find((l) => l.trim() && !/^#/.test(l)) ?? '' : ''
-    excerpts[ref] = [own, next.trim()].filter(Boolean).join(' — ').slice(0, 300)
+    const found = findPassage(runbook, ref)
+    if (found) excerpts[ref] = found.text
   }
 }
 const looks = reviewDrill(drill, runbook)

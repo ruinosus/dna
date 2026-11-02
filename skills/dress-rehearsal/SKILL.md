@@ -4,7 +4,7 @@ description: Turns a team's incident runbook (or a post-mortem) into a playable 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install.
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
 ---
 
 # dress-rehearsal: test your runbook by playing it
@@ -26,7 +26,8 @@ the whole drill at once (`references/format.md`; `examples/` has two finished dr
 - **The opening** is what really starts it: the alert, the page, the message. `clock` is when the player comes in.
 - **A scene is what the players see now** (a dashboard, a message, a result); its **choices** are what a person would
   really consider there — the runbook's step, and the tempting wrong ones (the shortcut, «it's probably nothing», the
-  fix that takes an hour). Each choice cites the runbook's mark it follows (`runbook: §2`), costs `minutes`, adds
+  fix that takes an hour). Each choice cites the runbook's mark it follows (`runbook: §2`; a numbered step under a heading is the heading and
+  its number, `runbook: Steps 4`), costs `minutes`, adds
   impact (`lost`), may need an access (`needs`) that only some role `can`, may bring someone in (`calls`), may tell the
   people affected (`notifies`). 2 to 4 choices per scene; 6 to 12 scenes; at least one end that resolves and one that
   gets worse.
