@@ -206,7 +206,7 @@ it. The player loads from the CDN and checks the recipe itself:
 <script type="text/chalk-talk" id="chalk-recipe">
 THE RECIPE AS TEXT
 </script>
-<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.18.1/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chalk-talk@0.19.0/player.js"></script>
 ```
 
 If the page says the recipe could not be opened, fix the line it names.

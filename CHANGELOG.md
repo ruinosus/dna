@@ -14,5 +14,6 @@ The five skills become one plugin, **house-lights**, in one repository.
 - **The engine of chalk-talk 0.18.1 everywhere:** dress-rehearsal, gates-and-handoffs and service-blueprint drew
   their lessons with the engine of 0.14.1; now every skill takes it from this repository, in the same commit.
 - One gallery: https://ruinosus.github.io/house-lights/, with a page per skill.
+- The npm package `chalk-talk` 0.19.0: the same engine as 0.18.1, now built in this repository.
 
 Before 1.0.0, each skill's history is in `dev/<skill>/CHANGELOG.md` and its tags are `<skill>-v<version>`.
