@@ -1,12 +1,15 @@
 // Builds the generated parts of the skill: the engine for scripts/cast.mjs (scripts/engine.mjs: find, extract, compare,
-// review, the workbook and its way back — with the YAML reader inside, so the skill runs on Node alone), from src/ and
-// the way engine's xlsx writer, pinned by tools/sources.json; the workbook reader, copied from gates-and-handoffs; and
-// references/keys.md, from the names in src/labels.ts. Run: npm run assets. Never edit the generated files by hand.
+// review, the workbook and its way back — with the YAML reader inside, so the skill runs on Node alone) and the map page
+// with its code inside (assets/map.html), from src/ and the way engine's xlsx writer, pinned by tools/sources.json; the
+// kit's browser and page helpers; the workbook reader, copied from gates-and-handoffs; and references/keys.md, from the
+// names in src/labels.ts. Run: npm run assets. Never edit the generated files by hand.
 import { build } from 'esbuild'
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+import { vendor } from 'chalk-talk/kit/tools/vendor.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
@@ -41,12 +44,22 @@ const common = { bundle: true, minify: true, write: false, logLevel: 'warning', 
 const engine = await build({ ...common, entryPoints: [join(root, 'src/engine.ts')], format: 'esm', platform: 'node', target: 'node18', banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" } })
 mkdirSync(join(skill, 'scripts'), { recursive: true })
 writeFileSync(join(skill, 'scripts/engine.mjs'), `${banner}\n${engine.outputFiles[0].text}`)
+// the map page, with its code inside
+const css = readFileSync(join(root, 'src/page/map.css'), 'utf8')
+const page = await build({ ...common, entryPoints: [join(root, 'src/page/map.ts')], format: 'iife', target: 'es2020', define: { __MAP_CSS__: JSON.stringify(css) } })
+const script = page.outputFiles[0].text
+if (/<\/script/i.test(script)) throw new Error('The map script contains "</script": it would end the page early.')
+const html = readFileSync(join(root, 'src/page/template.html'), 'utf8').replace(/\{\{(VERSION|CSS|JS)\}\}/g, (_, k) => ({ VERSION: `engine ${version}`, CSS: css, JS: script })[k])
+if (!html.includes('{{CAST}}')) throw new Error('The template lost its {{CAST}} slot.')
+mkdirSync(join(skill, 'assets'), { recursive: true })
+writeFileSync(join(skill, 'assets/map.html'), html)
+// the kit's headless browser (the lesson's reviewer, the map's check) and page helpers
+vendor(join(skill, 'scripts'), ['browser.mjs', 'page.mjs'])
 // the workbook reader is gates-and-handoffs' own (Node only)
 copyFileSync(join(repo, 'skills/gates-and-handoffs/scripts/read-xlsx.mjs'), join(skill, 'scripts/read-xlsx.mjs'))
 // references/keys.md, from the names the engine uses
 const { keysMarkdown } = await import(`data:text/javascript;base64,${Buffer.from((await build({ ...common, entryPoints: [join(root, 'src/labels.ts')], format: 'esm', platform: 'node' })).outputFiles[0].text).toString('base64')}`)
 mkdirSync(join(skill, 'references'), { recursive: true })
 writeFileSync(join(skill, 'references/keys.md'), keysMarkdown())
-mkdirSync(join(skill, 'assets'), { recursive: true })
 writeFileSync(join(skill, 'assets/VERSION'), `engine ${version}\n`)
-console.log(`✓ assets from the engine ${version}: engine.mjs ${(engine.outputFiles[0].text.length / 1024).toFixed(0)} KB, read-xlsx.mjs, references/keys.md`)
+console.log(`✓ assets from the engine ${version}: engine.mjs ${(engine.outputFiles[0].text.length / 1024).toFixed(0)} KB, map.html ${(html.length / 1024).toFixed(0)} KB, read-xlsx.mjs, references/keys.md`)

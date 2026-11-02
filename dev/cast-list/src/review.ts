@@ -9,6 +9,8 @@ import { roleWord } from './words'
 export interface Look {
   key: 'conflict' | 'off' | 'gap' | 'solo' | 'unknown' | 'unmatched'
   agents: string[]
+  /** The fact it is about, when it is about one (the map opens it). */
+  fact?: string
   en: string
   pt: string
 }
@@ -22,8 +24,8 @@ export function reviewCast(r: Result): Look[] {
     const said = c.source ? `«${c.source}»` : null
     const [en, pt] = [labelOf(c.key, 'en'), labelOf(c.key, 'pt')]
     out.push(c.observed
-      ? { key: 'conflict', agents: [c.agent], en: `${c.agent}: ${said ?? 'what was declared'} says it does not have «${en}», but the YAML has it`, pt: `${c.agent}: ${said ?? 'o declarado'} diz que não tem «${pt}», mas o YAML tem` }
-      : { key: 'conflict', agents: [c.agent], en: `${c.agent}: ${said ?? 'what was declared'} says it has «${en}», but the YAML does not`, pt: `${c.agent}: ${said ?? 'o declarado'} diz que tem «${pt}», mas o YAML não tem` })
+      ? { key: 'conflict', agents: [c.agent], fact: c.key, en: `${c.agent}: ${said ?? 'what was declared'} says it does not have «${en}», but the YAML has it`, pt: `${c.agent}: ${said ?? 'o declarado'} diz que não tem «${pt}», mas o YAML tem` }
+      : { key: 'conflict', agents: [c.agent], fact: c.key, en: `${c.agent}: ${said ?? 'what was declared'} says it has «${en}», but the YAML does not`, pt: `${c.agent}: ${said ?? 'o declarado'} diz que tem «${pt}», mas o YAML não tem` })
   }
 
   // off a pattern: one question per key and role
@@ -39,7 +41,7 @@ export function reviewCast(r: Result): Look[] {
     const accepted = r.patterns.find((p) => p.key === g.key)?.decision?.status === 'accepted'
     const who = (lang: 'en' | 'pt') => `${n} ${roleWord(g.role, lang, n)} ${lacks(g.key, lang, n)} (${names(g.agents)})`
     out.push({
-      key: 'off', agents: g.agents,
+      key: 'off', agents: g.agents, fact: g.key,
       en: accepted ? `${who('en')}, and the pattern was accepted: correct it?` : `${who('en')}: on purpose?`,
       pt: accepted ? `${who('pt')}, e o padrão foi aceito: corrigir?` : `${who('pt')}: é intencional?`,
     })
@@ -51,7 +53,7 @@ export function reviewCast(r: Result): Look[] {
     const n = agents.length
     if (!n) continue
     out.push({
-      key: 'gap', agents,
+      key: 'gap', agents, fact: g.rule.has,
       en: `Rule «${g.rule.says}»: ${n} ${roleWord(g.rule.role, 'en', n)} ${n === 1 ? 'does' : 'do'} not meet it (${names(agents)})`,
       pt: `Regra «${g.rule.says}»: ${n} ${roleWord(g.rule.role, 'pt', n)} não ${n === 1 ? 'cumpre' : 'cumprem'} (${names(agents)})`,
     })
@@ -63,7 +65,7 @@ export function reviewCast(r: Result): Look[] {
     const agent = s.agents[0]
     const api = s.key.startsWith('connref:') ? s.key.slice(8) : s.key.startsWith('operation:') ? s.key.slice(10).split('/')[0] : undefined
     if (api && covered.has(`${agent} ${api}`)) continue
-    out.push({ key: 'solo', agents: [agent], en: `Only ${agent} has «${labelOf(s.key, 'en')}»: innovation or debt?`, pt: `Só ${agent} tem «${labelOf(s.key, 'pt')}»: inovação ou dívida?` })
+    out.push({ key: 'solo', agents: [agent], fact: s.key, en: `Only ${agent} has «${labelOf(s.key, 'en')}»: innovation or debt?`, pt: `Só ${agent} tem «${labelOf(s.key, 'pt')}»: inovação ou dívida?` })
   }
 
   const unknown = new Map<string, string[]>()

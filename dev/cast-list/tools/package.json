@@ -5,7 +5,8 @@
   "description": "Builds the generated parts of the cast-list skill (the engine and the map page), and checks and packs the skill.",
   "scripts": {
     "assets": "node assets.mjs",
-    "typecheck": "tsc -p tsconfig.json"
+    "typecheck": "tsc -p tsconfig.json",
+    "check": "node check.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

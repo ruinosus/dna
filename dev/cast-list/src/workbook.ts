@@ -44,7 +44,7 @@ export function workbookOf(r: Result, looks: Look[], cast: Cast, lang: Lang = 'e
       [{ v: w.privacy, color: 'B42318' }, ''],
       [w.count.agents, r.agents.length], [w.count.orchestrators, n('orchestrator')], [w.count.specialists, n('specialist')],
       [w.count.patterns, r.patterns.length], [w.count.off, new Set(r.offPattern.map((o) => o.agent)).size], [w.count.gaps, r.gaps.length],
-      [w.count.conflicts, r.conflicts.length], [w.count.solos, r.solos.length],
+      [w.count.conflicts, r.conflicts.length], [w.count.solos, looks.filter((l) => l.key === 'solo').length],
       ['', ''],
       [{ v: looks.length ? w.look : w.nothing, bold: true }, ''],
       ...looks.map((l): Value[] => ['', { v: l[lang], wrap: true }]),
