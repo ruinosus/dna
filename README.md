@@ -86,7 +86,8 @@ npm run site        # docs/: a gallery per skill and the front page
 npm run zip         # dist/<skill>.zip for claude.ai and dist/house-lights.zip
 npm run linux       # the builds as in a cloud sandbox (Linux, root, Playwright's Chromium); needs Docker
 npm run audit       # before a push: no name from your local list in the tracked files
-claude plugin eval . --allow-tools Bash Write Edit --runs 1   # the evals in evals/, all six skills loaded
+claude plugin eval . --scaffold --allow-tools Bash Write Edit --runs 1   # the evals in evals/, all six skills loaded
+                    # (--scaffold runs the cases' own setup: cast-list's copies its example agents in)
 ```
 
 The engine's source is not published yet, so `npm run assets` works only where it is; everything else works from

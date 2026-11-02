@@ -76,8 +76,9 @@ Run again: an accepted pattern is now checked on every agent of its scope, even 
 
 ## 5. Deliver
 
-End with a short summary: how many agents and patterns, **who is off what** (by name), the open decisions, and the
-files. The map's «Para olhar» / «To look at», the Matrix (filter by role and focus area; a click shows the file and
+End with a short summary: how many agents; **the main patterns by name** — what the specialists do in common, and
+what the platform does (behaviours first: escalation, error handling, telemetry; settings last) — **who is off what**
+(by name), the open decisions with your bet, and the files. A count alone («22 patterns») tells the person nothing. The map's «Para olhar» / «To look at», the Matrix (filter by role and focus area; a click shows the file and
 line), the Patterns cards and the Microsoft tab are where the person continues.
 
 If the Microsoft skills for Copilot Studio are installed (`/plugin marketplace add microsoft/skills-for-copilot-studio`),

@@ -1,0 +1,51 @@
+schema_version: "1.0"
+name: cast-list-compare-pt
+description: Six cloned Copilot Studio agents compared with no profile — the skill fires, makes the map and the workbook, names who is off the pattern, and edits no agent.
+tags: [build, pt]
+runs: 2
+context:
+  scaffold_script: setup.sh
+execution:
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Skill, Read, Write, Edit, Bash]
+  prompt: |
+    Compare os agentes do Copilot Studio que clonei em ./agentes e me diga o que vira padrão e quem está fora dele. Quero o mapa e a planilha. Não precisa me perguntar nada agora.
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?cast-list"'
+  - name: map
+    type: file_exists
+    path: "**/agentes.html"
+  - name: workbook
+    type: file_exists
+    path: "**/agentes.xlsx"
+  - name: names-frete
+    type: regex
+    pattern: 'frete'
+    flags: i
+  - name: names-loja-fisica
+    type: regex
+    pattern: 'loja.?f[ií]sica'
+    flags: i
+  - name: no-agent-edited
+    type: tool_used
+    tool: Edit
+    input_match: 'agentes/'
+    min: 0
+    max: 0
+  - name: no-agent-written
+    type: tool_used
+    tool: Write
+    input_match: 'agentes/'
+    min: 0
+    max: 0
+  - name: findings
+    type: llm
+    criteria: >-
+      The answer, in Portuguese, says the shipping specialist (bodega-frete) does not escalate to a person and the
+      physical-store specialist (bodega-loja-fisica) logs no telemetry, as findings or questions; it says what most
+      specialists do in common; and it leaves the decision on what becomes a standard to the person (it does not
+      declare a pattern accepted by itself). It does not invent agents, connectors or numbers that are not in ./agentes.
