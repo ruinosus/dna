@@ -2,8 +2,11 @@
 // the platform's), who is off a pattern, what only one specialist has (innovation or debt: someone has to say), what
 // only the orchestrator does, the profile's rules not met, and what people said that the YAML contradicts. A decision
 // in the cast file marks a pattern; an accepted one is checked even when it would no longer be a pattern by its share.
+// A part of a fact (a topic that leads to escalation is part of escalating) is never a pattern of its own: it is
+// checked only on the agents that have the fact, takes the fact's decision, and is never a solo.
 import type { Cast, Decision } from './cast'
 import type { AgentFacts, Facts, Source, Unknown } from './extract'
+import { partOf } from './labels'
 import { MS_PATTERNS } from './microsoft'
 import { rolesOf, type Profile, type Role, type Rule } from './profile'
 
@@ -19,8 +22,10 @@ export interface Pattern {
   agents: string[]
   sources: Source[]
   decision?: Decision
+  /** The fact this is a part of (`trigger:OnEscalate` for `reaches:OnEscalate`). */
+  partOf?: string
 }
-export interface OffPattern { agent: string; key: string; scope: Scope }
+export interface OffPattern { agent: string; key: string; scope: Scope; partOf?: string }
 export interface Holding { key: string; agents: string[]; sources: Source[] }
 export interface Gap { rule: Rule; agents: string[] }
 export interface Conflict { agent: string; key: string; declared: string; observed: boolean; source: string }
@@ -38,7 +43,10 @@ export interface Result {
   gaps: Gap[]
   conflicts: Conflict[]
   unknown: (Unknown & { agent: string })[]
+  /** Readable names: a connector's API name or an agent's schema name → the name people know it by. */
+  names: Record<string, string>
 }
+
 
 const NO = /^(no|não|nao|false|off|0)$/i
 // a Microsoft pattern with no mark in the YAML can only be declared
@@ -78,7 +86,7 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
     if (them.length < profile.minAgents) continue
     const other = members(role === 'specialist' ? 'orchestrator' : 'specialist')
     for (const key of allKeys) {
-      if (key.startsWith('declared:') || patterns.some((p) => p.key === key)) continue
+      if (key.startsWith('declared:') || partOf(key) || patterns.some((p) => p.key === key)) continue
       const has = holders(key, them)
       const share = has.length / them.length
       if (share < profile.threshold) continue
@@ -94,17 +102,27 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
     const has = holders(decision.key, them)
     patterns.push({ key: decision.key, role: decision.scope === 'orchestrator' ? 'orchestrator' : 'specialist', scope: decision.scope, share: them.length ? has.length / them.length : 0, agents: has.map((a) => a.id), sources: sourcesOf(decision.key), decision })
   }
+  // the parts of a pattern, among the agents of its scope that have the fact; the fact's decision covers them
+  for (const key of allKeys.filter((k) => partOf(k))) {
+    const parent = patterns.find((p) => p.key === partOf(key))
+    if (!parent) continue
+    const them = inScope(parent.scope).filter((a) => parent.key in a.facts)
+    const share = them.length ? holders(key, them).length / them.length : 0
+    if (share < profile.threshold) continue
+    const decision = decisionOf(key) ?? parent.decision
+    patterns.push({ key, role: parent.role, scope: parent.scope, share, agents: holders(key).map((a) => a.id), sources: sourcesOf(key), partOf: parent.key, ...(decision ? { decision } : {}) })
+  }
   patterns.sort((a, b) => a.scope.localeCompare(b.scope) || a.key.localeCompare(b.key))
 
   const offPattern: OffPattern[] = patterns
     .filter((p) => p.decision?.status !== 'rejected')
-    .flatMap((p) => inScope(p.scope).filter((a) => !(p.key in a.facts)).map((a) => ({ agent: a.id, key: p.key, scope: p.scope })))
+    .flatMap((p) => inScope(p.scope).filter((a) => !(p.key in a.facts) && (!p.partOf || p.partOf in a.facts)).map((a) => ({ agent: a.id, key: p.key, scope: p.scope, ...(p.partOf ? { partOf: p.partOf } : {}) })))
     .sort((a, b) => a.agent.localeCompare(b.agent) || a.key.localeCompare(b.key))
 
   const solos: Holding[] = []
   const orchestratorDoes: Holding[] = []
   for (const key of allKeys) {
-    if (key.startsWith('declared:')) continue
+    if (key.startsWith('declared:') || partOf(key)) continue
     const has = holders(key)
     const holding = { key, agents: has.map((a) => a.id), sources: sourcesOf(key) }
     if (has.every((a) => a.role === 'orchestrator')) orchestratorDoes.push(holding)
@@ -119,5 +137,6 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
     ...(profile.name ?? cast.name ? { name: profile.name ?? cast.name } : {}),
     roles, unmatched, agents, patterns, offPattern, solos, orchestratorDoes, gaps, conflicts,
     unknown: found.flatMap((a) => a.unknown.map((u) => ({ ...u, agent: a.id }))),
+    names: Object.assign({}, ...found.map((a) => a.names ?? {}), ...found.map((a) => (a.schemaName && a.displayName ? { [a.schemaName]: a.displayName } : {}))),
   }
 }

@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.2.1 — 2026-11-02
+
+cast-list, finished after its first run in the cloud.
+
+- **One fact, asked once.** A topic that calls another (the fallback leading to escalation) is now known by what the
+  called topic is for — `reaches:OnEscalate` — and is a part of that fact, not a pattern of its own: an agent with no
+  escalation is off once (not also for «its fallback does not lead there»), the fact's decision covers its part, and an
+  agent that has the escalation topic but whose fallback never reaches it is still found, as the part. The map shows
+  the part right under its fact and in its detail.
+- **Readable names.** Connectors, their operations, MCP servers and the agents an orchestrator calls are named as the
+  files name them — «Conector Office 365 Outlook», «Chama Bodega Azul - Cupons» — on the map, the workbook, the lesson
+  and «to look at»; the technical key stays in the Key column and the detail.
+- **A lesson you can read from the back of the room.** What repeats and what to decide show the five that matter most
+  in bigger letters, and «and N more on the map» for the rest; contradictions come first in what to decide.
+
 ## 1.2.0 — 2026-11-02
 
 - **cast-list, the sixth skill: Copilot Studio agents compared.** Point it at the folders the VS Code extension clones

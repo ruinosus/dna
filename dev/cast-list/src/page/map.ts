@@ -5,7 +5,7 @@
 // did not understand. Downloads: the workbook, the cast file, a PNG of the matrix.
 import type { Cast } from '../cast'
 import type { Result } from '../compare'
-import { DIMENSIONS, dimensionOf, labelOf, type Dimension, type Lang } from '../labels'
+import { DIMENSIONS, dimensionOf, labelOf, partOf, type Dimension, type Lang } from '../labels'
 import { MS_PATTERNS, PATTERNS_URL } from '../microsoft'
 import type { FocusArea, Role } from '../profile'
 import { groupPatterns, type Look } from '../review'
@@ -46,10 +46,11 @@ const sheets = workbookOf(r, looks, data.cast, lang)
 document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en'
 document.title = r.name ?? data.id
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
-const label = (k: string) => esc(labelOf(k, lang))
+const label = (k: string) => esc(labelOf(k, lang, r.names))
 const agents = [...r.agents].sort((a, b) => (a.role === b.role ? a.id.localeCompare(b.id) : a.role === 'orchestrator' ? -1 : 1))
 const patternOf = (k: string) => r.patterns.find((p) => p.key === k)
-const offOf = (k: string) => r.offPattern.filter((o) => o.key === k).map((o) => o.agent)
+// who is off a fact, or off a part of it (has the topic, but nothing leads to it)
+const offOf = (k: string) => [...new Set(r.offPattern.filter((o) => o.key === k || o.partOf === k).map((o) => o.agent))]
 const badge = (k: string) => {
   const p = patternOf(k)
   if (!p) return ''
@@ -91,7 +92,9 @@ function matrix() {
     ${data.focusAreas.length ? `<span style="margin-left:10px">${u.focus}:</span> ${chip('data-focus', '', !focus, u.all)}${data.focusAreas.map((f) => chip('data-focus', f.id, focus === f.id, f.name)).join('')}` : ''}</div>`
   let body = ''
   for (const dim of Object.keys(DIMENSIONS) as Dimension[]) {
-    const rows = keys.filter((k) => dimensionOf(k) === dim).sort((a, b) => labelOf(a, lang).localeCompare(labelOf(b, lang)))
+    // a part of a fact sits right under it
+    const order = (k: string) => (partOf(k) ? `${labelOf(partOf(k)!, lang, r.names)}\u0001${labelOf(k, lang, r.names)}` : labelOf(k, lang, r.names))
+    const rows = keys.filter((k) => dimensionOf(k) === dim).sort((a, b) => order(a).localeCompare(order(b)))
     if (!rows.length) continue
     body += `<tr class="cl-dim"><td colspan="${cols.length + 1}">${esc(DIMENSIONS[dim][lang])}</td></tr>`
     body += rows.map((k) => `<tr><th scope="row" style="text-align:left;font-weight:400"><button class="cl-fact${picked?.key === k && !picked.agent ? ' picked' : ''}" data-key="${esc(k)}">${label(k)}</button>${badge(k)}</th>${cols.map((a) => {
@@ -127,6 +130,10 @@ function detail() {
     ${p ? `<div>${badge(key)}</div><div>${u.decision}: ${p.decision ? `${esc(w[p.decision.status === 'accepted' ? 'accept' : 'reject'])}${p.decision.why ? ` — ${esc(p.decision.why)}` : ''}` : `<i>${u.toDecide}</i>`}</div>` : ''}
     ${solo ? `<div>${u.alone}</div>` : orch ? `<div>${u.orchestratorDoes}</div>` : ''}
     <div><b>${u.who}</b>${files ? `<ul>${files}</ul>` : ` — ${u.none}`}</div>
+    ${r.patterns.filter((x) => x.partOf === key).map((x) => {
+      const off = r.offPattern.filter((o) => o.key === x.key).map((o) => o.agent)
+      return `<div><b>${label(x.key)}</b> — ${off.length ? `<span style="color:var(--off)">${u.lacks}: ${esc(off.join(', '))}</span>` : `${u.who}: ${x.agents.length}`}</div>`
+    }).join('')}
     ${lacking.length ? `<div><b>${u.lacks}</b>: <span style="color:var(--off)">${esc(lacking.join(', '))}</span></div>` : ''}`
 }
 

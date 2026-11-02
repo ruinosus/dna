@@ -12,8 +12,9 @@ const COL = 150
 const LEFT = 40
 const PER_ROW = 24 // 24 columns of 150: under the engine's 4000
 const ROW = 250 // a robot, its name and why it is off
-const SECTION_LINE = 20
-const MAX_ITEMS = 6
+const ITEM = 17 // the size of a list's words: read from the back of the room
+const SECTION_LINE = 23
+const MAX_ITEMS = 5 // the five that matter most; the rest is on the map
 const MAX_LINES = 4
 // settings and the parts of a connector say less than what an agent does: drawn last
 const QUIET = /^(auth|model|setting|topics|connref|operation):/
@@ -26,7 +27,7 @@ const WORDS = {
     off: (ids: string[]) => (ids.length ? `Off a pattern: ${ids.join(', ')}.` : 'Nobody is off a pattern.'),
     missing: (n: number) => (n ? `${n} ${n === 1 ? 'rule is' : 'rules are'} not met.` : 'Every rule is met.'),
     decide: (n: number) => (n ? `${n} ${n === 1 ? 'thing' : 'things'} to decide.` : 'Nothing left to decide.'),
-    pattern: (l: string) => `A pattern? «${l}»`, platform: 'platform', specialist: 'specialists', more: (n: number) => `+ ${n} more`, none: 'nothing',
+    pattern: (l: string) => `A pattern? «${l}»`, platform: 'platform', specialist: 'specialists', more: (n: number) => `and ${n} more on the map`, none: 'nothing',
   },
   pt: {
     chapters: ['O elenco', 'O que se repete', 'Quem está fora', 'O que falta', 'O que decidir'],
@@ -35,7 +36,7 @@ const WORDS = {
     off: (ids: string[]) => (ids.length ? `Fora do padrão: ${ids.join(', ')}.` : 'Ninguém está fora do padrão.'),
     missing: (n: number) => (n ? `${n} ${n === 1 ? 'regra não é cumprida' : 'regras não são cumpridas'}.` : 'Todas as regras são cumpridas.'),
     decide: (n: number) => (n ? `${n} ${n === 1 ? 'coisa' : 'coisas'} para decidir.` : 'Nada em aberto para decidir.'),
-    pattern: (l: string) => `Padrão? «${l}»`, platform: 'plataforma', specialist: 'especialistas', more: (n: number) => `+ ${n}`, none: 'nada',
+    pattern: (l: string) => `Padrão? «${l}»`, platform: 'plataforma', specialist: 'especialistas', more: (n: number) => `e mais ${n} no mapa`, none: 'nada',
   },
 }
 
@@ -89,24 +90,24 @@ export function lessonOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
     if (!shown.length) shown.push(w.none)
     for (const item of shown) {
       // a long item ends with «…» rather than losing words quietly
-      const lines = wrap(item, 15, third - 30)
+      const lines = wrap(item, ITEM, third - 30)
       const shownLines = lines.length > MAX_LINES ? [...lines.slice(0, MAX_LINES - 1), `${lines[MAX_LINES - 1]}…`] : lines
-      shownLines.forEach((t, k) => steps.push(text([x + (k ? 14 : 0), y + k * SECTION_LINE], `${k ? '' : '· '}${t}`, 15, 'start', GREY)))
+      shownLines.forEach((t, k) => steps.push(text([x + (k ? 14 : 0), y + k * SECTION_LINE], `${k ? '' : '· '}${t}`, ITEM, 'start', GREY)))
       y += shownLines.length * SECTION_LINE + 6
     }
     lowest = Math.max(lowest, y)
   }
   const rank = (k: string) => (isBehaviour(k) ? 0 : QUIET.test(k) ? 2 : 1)
-  const repeats = [...r.patterns].sort((a, b) => rank(a.key) - rank(b.key) || (a.scope === b.scope ? 0 : a.scope === 'platform' ? -1 : 1) || b.share - a.share || a.key.localeCompare(b.key))
+  const repeats = r.patterns.filter((p) => !p.partOf).sort((a, b) => rank(a.key) - rank(b.key) || (a.scope === b.scope ? 0 : a.scope === 'platform' ? -1 : 1) || b.share - a.share || a.key.localeCompare(b.key))
   const scopeWord = (s: string) => (s === 'platform' ? w.platform : w.specialist)
   section(0, w.chapters[1], w.repeats(r.patterns.length, r.patterns.filter((p) => p.scope === 'platform').length, r.patterns.filter((p) => p.scope !== 'platform').length),
-    repeats.map((p) => `${labelOf(p.key, lang)} · ${scopeWord(p.scope)}${p.share < 1 ? ` · ${Math.round(p.share * 100)}%` : ''}`), GREEN)
+    repeats.map((p) => `${labelOf(p.key, lang, r.names)} · ${scopeWord(p.scope)}${p.share < 1 ? ` · ${Math.round(p.share * 100)}%` : ''}`), GREEN)
 
   // 3. who is off: a red × by the robot, and why under its name
   const offIds = [...new Set(r.offPattern.map((o) => o.agent))].sort()
   offIds.forEach((id, i) => {
     const at = spot.get(id)!
-    const reasons = r.offPattern.filter((o) => o.agent === id).flatMap((o) => wrap(lacks(o.key, lang, 1), 13, COL - 10)).slice(0, 4)
+    const reasons = r.offPattern.filter((o) => o.agent === id).flatMap((o) => wrap(lacks(o.key, lang, 1, r.names), 13, COL - 10)).slice(0, 4)
     steps.push({ ...text([at[0] + 34, at[1] - 50], '×', 30, 'middle', RED), ...(i === 0 ? { chapter: w.chapters[2], say: w.off(offIds) } : {}) })
     reasons.forEach((t, k) => steps.push(text([at[0], at[1] + 66 + k * 16], t, 13, 'middle', RED)))
   })
@@ -121,7 +122,8 @@ export function lessonOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
   if (unknownFiles) gaps.push(lang === 'pt' ? `${unknownFiles} ${unknownFiles === 1 ? 'arquivo não entendido' : 'arquivos não entendidos'}` : `${unknownFiles} ${unknownFiles === 1 ? 'file' : 'files'} not understood`)
   section(1, w.chapters[3], w.missing(looks.filter((l) => l.key === 'gap').length), gaps, RED)
   const { look } = groupPatterns(r)
-  const open = [...look.filter((p) => !p.decision).map((p) => w.pattern(labelOf(p.key, lang))), ...looks.filter((l) => l.key === 'solo' || l.key === 'conflict').map((l) => l[lang])]
+  // what people and the YAML disagree on first, then the patterns in the open, then what only one has
+  const open = [...looks.filter((l) => l.key === 'conflict').map((l) => l[lang]), ...look.filter((p) => !p.decision).map((p) => w.pattern(labelOf(p.key, lang, r.names))), ...looks.filter((l) => l.key === 'solo').map((l) => l[lang])]
   section(2, w.chapters[4], w.decide(open.length), open)
 
   const id = (r.name ?? 'cast').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'cast'

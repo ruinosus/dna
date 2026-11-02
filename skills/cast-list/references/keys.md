@@ -21,7 +21,8 @@ Every fact cast-list finds is a key. The keys below have a name; any other key k
 | `setting:generative=on` | Generative orchestration on | Orquestração generativa ligada |
 | `setting:generative=off` | Generative orchestration off | Orquestração generativa desligada |
 | `topics:with-model-description` | Topics described for the model | Tópicos descritos para o modelo |
-| `calls:topic:<value>` | Calls the topic <value> | Chama o tópico <valor> |
+| `reaches:<value>` | A topic leads to it (part of trigger:<value>) <value> | Um tópico leva a ele (parte de trigger:<valor>) <valor> |
+| `calls:topic:<value>` | Calls the topic (one not found) <value> | Chama o tópico (não encontrado) <valor> |
 | `trigger:<value>` | Trigger <value> | Gatilho <valor> |
 | `setting:<value>` | Setting <value> | Configuração <valor> |
 

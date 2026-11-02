@@ -17,6 +17,8 @@ export interface AgentFacts {
   /** Child agents (AgentDialog): their facts are theirs, not the parent's. */
   children: { name: string; facts: Facts }[]
   unknown: Unknown[]
+  /** Readable names the files give: a connector's API name → «Office 365 Outlook». */
+  names: Record<string, string>
 }
 
 type Obj = Record<string, unknown>
@@ -61,8 +63,12 @@ const last = (s: string, sep: string) => s.slice(s.lastIndexOf(sep) + (s.include
 const NODES = new Set(['LogCustomTelemetryEvent', 'CSATQuestion', 'SearchAndSummarizeContent', 'SearchKnowledgeSources'])
 
 export function extractAgent(id: string, files: { path: string; text: string }[], kinds?: Set<string>): AgentFacts {
-  const agent: AgentFacts = { id, facts: {}, children: [], unknown: [] }
+  const agent: AgentFacts = { id, facts: {}, children: [], unknown: [], names: {} }
   let knowledge: Source[] = []
+  // a topic that calls another (BeginDialog) reaches what that topic is for — its trigger, known once every file is read
+  const triggers = new Map<string, string>()
+  const calls: { topic: string; into: Facts; at: Source }[] = []
+  const topicName = (path: string) => last(path, '/').replace(/(\.topic)?\.mcs\.ya?ml$|\.ya?ml$/, '')
   for (const f of [...files].sort((a, b) => a.path.localeCompare(b.path))) {
     if (!/\.ya?ml$/.test(f.path)) {
       agent.unknown.push({ file: f.path, why: 'file' })
@@ -127,6 +133,7 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
         const begin = obj(root.beginDialog)
         const trigger = str(begin?.kind)
         if (trigger) add(`trigger:${trigger}`, begin)
+        if (trigger) triggers.set(`${child ?? ''}/${topicName(f.path)}`, trigger)
         if (str(root.modelDescription)) add('topics:with-model-description')
         const silent = list(root.inputs).some((i) => obj(i)?.kind === 'AutomaticTaskInput' && obj(i)?.shouldPromptUser === false)
         if (trigger === 'OnRecognizedIntent' && silent) add('ms:orchestrator-variables', begin)
@@ -167,6 +174,7 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
         for (const c of list(root.connectionReferences).map(obj)) {
           const api = str(c?.connectorId) ? last(c!.connectorId as string, '/') : str(c?.connectionReferenceLogicalName) ? apiOf(c!.connectionReferenceLogicalName as string) : undefined
           if (api) add(`connref:${api}`, c)
+          if (api && str(c?.displayName)) agent.names[api] = c!.displayName as string
         }
         break
     }
@@ -184,7 +192,7 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
         const d = n.dialog as string
         if (d.startsWith('=')) {
           if (d.includes('Switch(')) add('ms:dynamic-topic-redirect', n)
-        } else add(`calls:topic:${last(d, '.topic.')}`, n) // a topic's own schema prefix is dropped
+        } else calls.push({ topic: `${child ?? ''}/${last(d, '.topic.')}`, into: facts, at: { file: f.path, line: r.lineOf(n) } }) // a topic's own schema prefix is dropped
       }
       const reads = (x: unknown) => typeof x === 'string' && x.includes('System.Activity.ChannelId')
       if ((n.kind === 'ConditionGroup' && list(n.conditions).some((c) => reads(obj(c)?.condition))) || (n.kind === 'SetVariable' && reads(n.value))) add('ms:channel-aware-behavior', n)
@@ -192,6 +200,11 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
     }
   }
   if (knowledge.length) agent.facts[`knowledge:count=${knowledge.length}`] = knowledge
+  // «the fallback leads to escalation» is part of escalating (reaches:OnEscalate); a topic not found keeps its name
+  for (const c of calls) {
+    const trigger = triggers.get(c.topic)
+    ;(c.into[trigger ? `reaches:${trigger}` : `calls:topic:${last(c.topic, '/')}`] ??= []).push(c.at)
+  }
   // a key seen twice in the same place is one fact
   for (const facts of [agent.facts, ...agent.children.map((c) => c.facts)])
     for (const [k, v] of Object.entries(facts)) facts[k] = v.filter((s, i) => v.findIndex((x) => x.file === s.file && x.line === s.line) === i)

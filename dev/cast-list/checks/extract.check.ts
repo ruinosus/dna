@@ -39,11 +39,13 @@ all(SPECIALISTS, ['connector:shared_office365', 'operation:shared_office365/Send
 all(SPECIALISTS, ['knowledge:SharePointSearchSource', 'knowledge:count=1', 'node:SearchAndSummarizeContent'], 'every specialist: one SharePoint knowledge source and generative answers')
 all(SPECIALISTS, ['var:CategoriaSolicitacao', 'var-in:CategoriaSolicitacao', 'setting:connectable'], 'every specialist receives the category and can be connected')
 all([o, ...SPECIALISTS], ['setting:generative=on', 'auth:None', 'instructions:present'], 'every agent: generative actions on, no sign-in, instructions')
-all(SPECIALISTS.filter((s) => s !== 'bodega-frete'), ['calls:topic:Escalate'], "the fallback goes to the escalation topic (a topic's own schema prefix is dropped)")
+all(SPECIALISTS.filter((s) => s !== 'bodega-frete'), ['reaches:OnEscalate'], 'the fallback reaches escalation: the called topic is known by its trigger')
+ok(!Object.values(agents).some((a) => Object.keys(a.facts).some((k) => k.startsWith('calls:topic:'))), 'no topic call left unresolved in the examples')
+ok(agents['bodega-cupons'].names.shared_office365 === 'Office 365 Outlook' && agents['bodega-cupons'].names.shared_bodegapromocoesmcp === 'Bodega Azul Promocoes MCP', 'the readable names of the connectors, from connectionreferences')
 
 // what each one does differently, on purpose
 ok(!has('bodega-frete', 'trigger:OnEscalate') && SPECIALISTS.filter((s) => s !== 'bodega-frete').every((s) => has(s, 'trigger:OnEscalate')), 'only bodega-frete does not escalate')
-ok(!has('bodega-frete', 'calls:topic:Escalate'), "bodega-frete's fallback does not go to an escalation topic")
+ok(!has('bodega-frete', 'reaches:OnEscalate'), "bodega-frete's fallback does not reach escalation")
 ok(!has('bodega-loja-fisica', 'node:LogCustomTelemetryEvent') && [o, ...SPECIALISTS].filter((s) => s !== 'bodega-loja-fisica').every((s) => has(s, 'node:LogCustomTelemetryEvent')), 'only bodega-loja-fisica logs no telemetry')
 ok(has('bodega-loja-fisica', 'yaml-only:triggerCondition') && SPECIALISTS.filter((s) => s !== 'bodega-loja-fisica').every((s) => !has(s, 'yaml-only:triggerCondition')), 'only bodega-loja-fisica has a YAML-only triggerCondition')
 const c = 'bodega-cupons'

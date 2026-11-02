@@ -48,7 +48,8 @@ const KNOWN: Record<string, Name> = {
 const MS_NAME = Object.fromEntries(MS_PATTERNS.map((p) => [p.id, p.name]))
 /** The keys known by their kind: [prefix, dimension, name in English, name in Portuguese] — the value follows. */
 const KINDS: [string, Dimension, string, string][] = [
-  ['calls:topic:', 'conversation', 'Calls the topic', 'Chama o tópico'],
+  ['reaches:', 'conversation', 'A topic leads to it (part of trigger:<value>)', 'Um tópico leva a ele (parte de trigger:<valor>)'],
+  ['calls:topic:', 'conversation', 'Calls the topic (one not found)', 'Chama o tópico (não encontrado)'],
   ['trigger:', 'conversation', 'Trigger', 'Gatilho'],
   ['setting:', 'conversation', 'Setting', 'Configuração'],
   ['connector:', 'integrations', 'Connector', 'Conector'],
@@ -73,12 +74,25 @@ const kindOf = (key: string) => KINDS.find(([p]) => key.startsWith(p))
 export const isBehaviour = (key: string) => !!KNOWN[key]?.lacks
 
 export function dimensionOf(key: string): Dimension {
+  if (key.startsWith('reaches:')) return dimensionOf(`trigger:${key.slice(8)}`)
   return KNOWN[key]?.dim ?? kindOf(key)?.[1] ?? 'governance'
 }
 
-export function labelOf(key: string, lang: Lang): string {
+/** The fact a key is a part of: reaching a topic is part of having it. */
+export const partOf = (key: string) => (key.startsWith('reaches:') ? `trigger:${key.slice(8)}` : undefined)
+
+/** Readable names the files give (a connector's API name, an agent's schema name → the name people know). */
+export type Names = Record<string, string>
+const named = (value: string, names?: Names) => names?.[value] ?? value
+
+export function labelOf(key: string, lang: Lang, names?: Names): string {
   const known = KNOWN[key]
   if (known) return known[lang]
+  // a topic that leads to what another topic is for: part of that fact
+  if (key.startsWith('reaches:')) {
+    const fact = labelOf(`trigger:${key.slice(8)}`, lang)
+    return lang === 'pt' ? `Um tópico leva a «${fact}»` : `A topic leads to «${fact}»`
+  }
   const count = /^knowledge:count=(\d+)$/.exec(key)
   if (count) {
     const n = Number(count[1])
@@ -89,15 +103,25 @@ export function labelOf(key: string, lang: Lang): string {
   let value = key.slice(k[0].length)
   if (k[0] === 'ms:') value = MS_NAME[value] ?? value
   if (k[0] === 'auth:' && value === 'None') return lang === 'pt' ? 'Sem login' : 'No sign-in'
+  // a connector, its operation, a connection, an MCP server or an agent called: by the name the files give
+  if (['connector:', 'connref:', 'mcp:', 'calls:'].includes(k[0])) value = named(value, names)
+  if (k[0] === 'operation:') {
+    const [api, op] = [value.slice(0, value.indexOf('/')), value.slice(value.indexOf('/') + 1)]
+    value = `${named(api, names)} · ${op}`
+  }
   return `${k[lang === 'pt' ? 3 : 2]} ${value}`
 }
 
 /** What `n` agents without `key` do not do: «não escala para humano», or «não tem «Conector x»». */
-export function lacks(key: string, lang: Lang, n: number): string {
+export function lacks(key: string, lang: Lang, n: number, names?: Names): string {
   const known = KNOWN[key]?.lacks?.[lang]
   if (known) return known[n === 1 ? 0 : 1]
+  if (key.startsWith('reaches:')) {
+    const fact = labelOf(`trigger:${key.slice(8)}`, lang)
+    return lang === 'pt' ? `${n === 1 ? 'tem' : 'têm'} «${fact}», mas nenhum tópico leva a ele` : `${n === 1 ? 'has' : 'have'} «${fact}», but no topic leads to it`
+  }
   if (key.startsWith('calls:topic:')) return lang === 'pt' ? `${n === 1 ? 'não chama' : 'não chamam'} o tópico ${key.slice(12)}` : `${n === 1 ? 'does' : 'do'} not call the topic ${key.slice(12)}`
-  const name = labelOf(key, lang)
+  const name = labelOf(key, lang, names)
   return lang === 'pt' ? `${n === 1 ? 'não tem' : 'não têm'} «${name}»` : `${n === 1 ? 'does' : 'do'} not have «${name}»`
 }
 

@@ -4,7 +4,7 @@ description: Turns a team's incident runbook (or a post-mortem) into a playable 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install.
 metadata:
-  version: "1.2.0"
+  version: "1.2.1"
 ---
 
 # dress-rehearsal: test your runbook by playing it

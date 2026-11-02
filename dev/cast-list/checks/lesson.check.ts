@@ -39,7 +39,16 @@ const all = texts.join(' ')
 ok(all.includes('«Todo especialista tem KPI»: 4 especialistas não') && all.includes('cumprem'), 'what is missing: the KPI rule, in a few words and whole', all)
 const repeats = texts.slice(texts.indexOf('O que se repete') + 1)
 ok(['Escalonamento', 'Tratamento de erro', 'Registra telemetria', 'Tem instruções'].some((t) => repeats[0].includes(t)), 'what repeats: a behaviour first, not a setting', repeats.slice(0, 3))
-ok(texts.some((t) => t.includes('Servidor MCP')) && texts.some((t) => t.includes('Registra telemetria')), 'what to decide: the patterns in the open and the solos')
+ok(all.includes('Servidor MCP Bodega Azul Promocoes MCP') && all.includes('Registra telemetria'), 'what to decide: the patterns in the open and the solos, by readable names')
+// the items of a column: their first lines start at the column's left edge; a wrapped line is indented
+const column = (title: string) => {
+  const head = s.steps.find((x) => x.type === 'text' && x.text === title)!
+  const next = s.steps.filter((x) => x.type === 'text' && x.at && x.at[0] === head.at![0] && x.at[1] > head.at![1] && x.text!.startsWith('· '))
+  return next.map((x) => x.text!)
+}
+const repeated = column('O que se repete')
+ok(repeated.length === 6 && repeated.at(-1) === '· e mais 15 no mapa', 'what repeats: five, then «e mais N no mapa»', repeated)
+ok(column('O que decidir').length <= 6, 'what to decide: five at most, the rest on the map', column('O que decidir'))
 const says = s.steps.filter((x) => x.say).map((x) => x.say!)
 ok(says.length >= 5 && says[0].includes('1 orquestrador') && says[0].includes('5 especialistas'), 'narrated, from the first chapter', says)
 const inside = (p?: [number, number]) => !p || (p[0] >= 0 && p[0] <= s.width && p[1] >= 0 && p[1] <= s.height)

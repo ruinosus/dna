@@ -29,7 +29,7 @@ export function workbookOf(r: Result, looks: Look[], cast: Cast, lang: Lang = 'e
   })
   const role = (id: string) => w[r.roles[id]]
   const scope = (s: string) => w[s as 'platform']
-  const label = (k: string) => labelOf(k, lang)
+  const label = (k: string) => labelOf(k, lang, r.names)
   // the orchestrators first, then the specialists, each by name
   const agents = [...r.agents].sort((a, b) => (a.role === b.role ? a.id.localeCompare(b.id) : a.role === 'orchestrator' ? -1 : 1))
   const keys = [...new Set([...agents.flatMap((a) => Object.keys(a.facts)), ...r.patterns.map((p) => p.key)])]

@@ -22,7 +22,7 @@ export function reviewCast(r: Result): Look[] {
 
   for (const c of r.conflicts) {
     const said = c.source ? `«${c.source}»` : null
-    const [en, pt] = [labelOf(c.key, 'en'), labelOf(c.key, 'pt')]
+    const [en, pt] = [labelOf(c.key, 'en', r.names), labelOf(c.key, 'pt', r.names)]
     out.push(c.observed
       ? { key: 'conflict', agents: [c.agent], fact: c.key, en: `${c.agent}: ${said ?? 'what was declared'} says it does not have «${en}», but the YAML has it`, pt: `${c.agent}: ${said ?? 'o declarado'} diz que não tem «${pt}», mas o YAML tem` }
       : { key: 'conflict', agents: [c.agent], fact: c.key, en: `${c.agent}: ${said ?? 'what was declared'} says it has «${en}», but the YAML does not`, pt: `${c.agent}: ${said ?? 'o declarado'} diz que tem «${pt}», mas o YAML não tem` })
@@ -39,7 +39,7 @@ export function reviewCast(r: Result): Look[] {
   for (const g of off.values()) {
     const n = g.agents.length
     const accepted = r.patterns.find((p) => p.key === g.key)?.decision?.status === 'accepted'
-    const who = (lang: 'en' | 'pt') => `${n} ${roleWord(g.role, lang, n)} ${lacks(g.key, lang, n)} (${names(g.agents)})`
+    const who = (lang: 'en' | 'pt') => `${n} ${roleWord(g.role, lang, n)} ${lacks(g.key, lang, n, r.names)} (${names(g.agents)})`
     out.push({
       key: 'off', agents: g.agents, fact: g.key,
       en: accepted ? `${who('en')}, and the pattern was accepted: correct it?` : `${who('en')}: on purpose?`,
@@ -65,7 +65,7 @@ export function reviewCast(r: Result): Look[] {
     const agent = s.agents[0]
     const api = s.key.startsWith('connref:') ? s.key.slice(8) : s.key.startsWith('operation:') ? s.key.slice(10).split('/')[0] : undefined
     if (api && covered.has(`${agent} ${api}`)) continue
-    out.push({ key: 'solo', agents: [agent], fact: s.key, en: `Only ${agent} has «${labelOf(s.key, 'en')}»: innovation or debt?`, pt: `Só ${agent} tem «${labelOf(s.key, 'pt')}»: inovação ou dívida?` })
+    out.push({ key: 'solo', agents: [agent], fact: s.key, en: `Only ${agent} has «${labelOf(s.key, 'en', r.names)}»: innovation or debt?`, pt: `Só ${agent} tem «${labelOf(s.key, 'pt', r.names)}»: inovação ou dívida?` })
   }
 
   const unknown = new Map<string, string[]>()
@@ -80,6 +80,9 @@ export function reviewCast(r: Result): Look[] {
 
 /** The patterns to look at (someone is off, or it was decided) before the ones everybody already follows. */
 export function groupPatterns(r: Result): { look: Pattern[]; everyone: Pattern[] } {
-  const quiet = (p: Pattern) => p.share === 1 && !p.decision && !r.offPattern.some((o) => o.key === p.key)
-  return { look: r.patterns.filter((p) => !quiet(p)), everyone: r.patterns.filter(quiet) }
+  // a part of a fact (a topic that leads to it) goes with that fact: someone off the part makes the fact one to look at
+  const offOf = (p: Pattern) => r.offPattern.some((o) => o.key === p.key || o.partOf === p.key)
+  const quiet = (p: Pattern) => p.share === 1 && !p.decision && !offOf(p)
+  const facts = r.patterns.filter((p) => !p.partOf)
+  return { look: facts.filter((p) => !quiet(p)), everyone: facts.filter(quiet) }
 }

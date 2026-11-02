@@ -34,7 +34,16 @@ ok(!r.patterns.some((p) => p.role === 'orchestrator'), 'one orchestrator makes n
 // who is off a pattern
 const off = (res: Result) => [...new Set(res.offPattern.map((o) => o.agent))].sort()
 ok(off(r).join() === 'bodega-frete,bodega-loja-fisica', 'off a pattern: only bodega-frete and bodega-loja-fisica', r.offPattern)
-ok(keys(r.offPattern.filter((o) => o.agent === 'bodega-frete')).join() === 'calls:topic:Escalate,trigger:OnEscalate', 'bodega-frete: does not escalate, and its fallback does not lead to escalation', r.offPattern)
+ok(keys(r.offPattern.filter((o) => o.agent === 'bodega-frete')).join() === 'trigger:OnEscalate', 'bodega-frete: off once — it does not escalate (the fallback that would lead there is part of it)', r.offPattern)
+const part = pattern(r, 'reaches:OnEscalate')
+ok(part?.partOf === 'trigger:OnEscalate' && part.share === 1 && part.scope === 'platform', 'reaching escalation is a part of escalating, checked on the agents that escalate', part)
+ok(!r.solos.some((s) => s.key.startsWith('reaches:')) && !r.orchestratorDoes.some((s) => s.key.startsWith('reaches:')), 'a part is never a solo')
+// pedidos keeps its escalation topic but its fallback no longer leads there: that is still a finding, of the part
+const lost = agents.map((a) => (a.id === 'bodega-pedidos' ? { ...a, facts: Object.fromEntries(Object.entries(a.facts).filter(([k]) => k !== 'reaches:OnEscalate')) } : a))
+const l = compare(lost, profile, demo)
+ok(l.offPattern.some((o) => o.agent === 'bodega-pedidos' && o.key === 'reaches:OnEscalate' && o.partOf === 'trigger:OnEscalate') && !l.offPattern.some((o) => o.agent === 'bodega-pedidos' && o.key === 'trigger:OnEscalate'), 'has the topic, nothing leads to it: off the part, not the fact', l.offPattern)
+ok(pattern(l, 'reaches:OnEscalate')?.decision?.status === 'accepted', "the fact's decision covers its part")
+ok(r.names.shared_office365 === 'Office 365 Outlook' && r.names.cr7b2_bodegaCupons === 'Bodega Azul - Cupons', 'readable names: connectors and agents')
 ok(keys(r.offPattern.filter((o) => o.agent === 'bodega-loja-fisica')).join() === 'node:LogCustomTelemetryEvent', 'bodega-loja-fisica: no telemetry')
 
 // solos and what only the orchestrator does

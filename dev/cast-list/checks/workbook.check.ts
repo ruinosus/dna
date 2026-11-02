@@ -51,7 +51,7 @@ const p = pt[2].rows.map((r) => r.map(title))
 ok(p[0].includes('Decisão') && p[0].includes('Por quê') && p[0].includes('Escopo'), 'patterns: scope, decision and why, to fill in')
 const decided = p.find((r) => r[0] === 'trigger:OnEscalate')!
 ok(decided.includes('aceito') && decided.includes('Ninguém fica sem saída para uma pessoa'), 'the accepted pattern says so', decided)
-ok(['trigger:OnEscalate', 'node:LogCustomTelemetryEvent', 'calls:topic:Escalate'].includes(p[1][0]) && p.findIndex((r) => r[0] === 'auth:None') > 3, 'the patterns someone is off come first')
+ok(['trigger:OnEscalate', 'node:LogCustomTelemetryEvent'].includes(p[1][0]) && !p.some((r) => r[0].startsWith('reaches:')) && p.findIndex((r) => r[0] === 'auth:None') > 2, 'the patterns someone is off come first; a part is decided with its fact, not on its own row')
 
 // the way back: nothing changed, nothing to take — in either language
 ok(!fromSheets(demo, back('pt')).changes.length && !fromSheets(demo, back('en')).changes.length && !fromSheets(demo, back('pt')).problems.length, 'read back as written, the workbook changes nothing (pt and en)', fromSheets(demo, back('pt')))
