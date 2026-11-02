@@ -1,0 +1,9 @@
+These files are copied, unchanged, from microsoft/skills-for-copilot-studio
+(https://github.com/microsoft/skills-for-copilot-studio), commit 9c42d3a612c6e06389b6e5b4eed579aaed1a8b63, under the MIT license in LICENSE
+(Copyright Microsoft Corporation).
+
+- reference/bot.schema.yaml-authoring.json
+- scripts/schema-lookup.bundle.js  (CommonJS: package.json here says so)
+
+cast-list reads the schema to tell a real Copilot Studio kind from one it does not know. They are updated by
+dev/cast-list/tools/vendor-microsoft.mjs, never by hand.
