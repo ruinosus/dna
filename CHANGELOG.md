@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.4.0 — 2026-11-02
+
+cast-list reads what the orchestrator passes each agent, what each flow calls, and what nobody uses.
+
+- **The orchestrator's contract.** What each connected-agent action passes — the conversation history, the inputs,
+  the routing description — is a fact of the agent it calls, so «1 specialist does not receive the conversation
+  history from the orchestrator» is an ordinary off-pattern. Its own findings: a call to an agent not in the folder, a
+  specialist no orchestrator calls, a routing description under 80 characters. The map's orchestrator card and the
+  workbook's **Routing** sheet have a row per call.
+- **Inside the flows.** `workflows/<Name>-<id>/` (`metadata.yml` and `workflow.json`, the definition in
+  `properties.definition` or `definition`) is read, scopes, conditions, switches and loops included: the connectors,
+  operations and HTTP hosts a flow calls, another flow, and whether it answers the agent. A flow that returns nothing
+  is told; the Cast tab draws each chain, agent → flow → system. A JSON that does not read goes to «not understood».
+  Neither the flow's logic nor its secrets are read.
+- **What nobody uses, and what is switched off.** A topic nobody can reach, a tool the model cannot choose, a global
+  variable no file names, a flow no node calls, a node with `disabled: true`, a component with `state: Inactive`:
+  «remove or switch on?», in a new **Unused** tab and sheet, never a pattern nor a solo. A switched-off node is not a
+  fact: a disabled telemetry node is no telemetry.
+- The lesson says the contract in «what is missing» and what nobody uses in «what to decide». An eval
+  (`cast-list-contract-pt`, 2/2). The example agents show all of it, and the earlier ones are unchanged.
+
 ## 1.3.0 — 2026-11-02
 
 cast-list reads the text of the instructions, and compares by type of agent.
