@@ -47,7 +47,7 @@ const column = (title: string) => {
   return next.map((x) => x.text!)
 }
 const repeated = column('O que se repete')
-ok(repeated.length === 6 && repeated.at(-1) === '· e mais 15 no mapa', 'what repeats: five, then «e mais N no mapa»', repeated)
+ok(repeated.length === 6 && repeated.at(-1) === '· e mais 17 no mapa', 'what repeats: five, then «e mais N no mapa»', repeated)
 ok(column('O que decidir').length <= 6, 'what to decide: five at most, the rest on the map', column('O que decidir'))
 const says = s.steps.filter((x) => x.say).map((x) => x.say!)
 ok(says.length >= 5 && says[0].includes('1 orquestrador') && says[0].includes('5 especialistas'), 'narrated, from the first chapter', says)

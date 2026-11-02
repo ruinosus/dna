@@ -44,7 +44,7 @@ ok(has('Regra «Todo especialista tem KPI»: 5 especialistas não cumprem (bodeg
 ok(!pt.some((s) => s.startsWith('Regra «Todo especialista escala')), 'the rule «escala» only repeats a pattern bodega-frete is already off: said once')
 ok(has('Só bodega-frete tem «Desambiguação («você quis dizer…»)»: inovação ou dívida?'), 'the triage topic only frete has: asked')
 ok(has('Só bodega-devolucoes tem «Conhecimento geral do modelo ligado»: inovação ou dívida?'), 'a setting only one has, by its name')
-ok(looks.length === 8 && looks.every((l) => l.en && l.pt), `${looks.length} things to look at, each in English and Portuguese`, pt)
+ok(looks.length === 9 && looks.every((l) => l.en && l.pt), `${looks.length} things to look at, each in English and Portuguese`, pt)
 ok(!looks.some((l) => /\bagentes?\b|\bagents?\b/i.test(l.pt + l.en)), 'the screen words never say «agent»', looks.filter((l) => /agent/i.test(l.pt + l.en)))
 ok(looks.findIndex((l) => l.key === 'off') < looks.findIndex((l) => l.key === 'gap') && looks.findIndex((l) => l.key === 'gap') < looks.findIndex((l) => l.key === 'solo'), 'off a pattern first, then the rules, then the solos')
 
@@ -60,6 +60,6 @@ ok(odd.some((l) => l.pt === 'odd: a análise não entendeu 2 arquivos (a.txt, to
 
 // patterns: the ones with someone off (or decided) first, then what everybody already does
 const g = groupPatterns(compare(agents, profile, empty))
-ok(['trigger:OnEscalate', 'node:LogCustomTelemetryEvent'].every((k) => g.look.some((p) => p.key === k)) && g.look.length === 2, 'to decide: the two patterns someone is off — the part goes with its fact', g.look.map((p) => p.key))
+ok(['trigger:OnEscalate', 'node:LogCustomTelemetryEvent'].every((k) => g.look.some((p) => p.key === k)) && g.look.some((p) => p.key.startsWith('text:block:links')) && g.look.length === 3, 'to decide: the three patterns someone is off (the links block too) — the part goes with its fact', g.look.map((p) => p.key))
 ok(g.everyone.some((p) => p.key === 'auth:None') && g.everyone.length + g.look.length === compare(agents, profile, empty).patterns.filter((p) => !p.partOf).length, 'everybody already does the rest — none lost')
 done()

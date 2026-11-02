@@ -8,7 +8,7 @@ import { readCast, type Cast } from '../src/cast'
 import { compare, type Result } from '../src/compare'
 import { extractAgent } from '../src/extract'
 import { agentsIn } from '../src/folder'
-import { DEFAULT_PROFILE, readProfile } from '../src/profile'
+import { DEFAULT_PROFILE, readProfile, type Profile } from '../src/profile'
 import { done, ok } from './ok'
 
 const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills/cast-list/examples')
@@ -34,7 +34,7 @@ ok(!r.patterns.some((p) => p.role === 'orchestrator'), 'one orchestrator makes n
 // who is off a pattern
 const off = (res: Result) => [...new Set(res.offPattern.map((o) => o.agent))].sort()
 ok(off(r).join() === 'bodega-frete,bodega-loja-fisica', 'off a pattern: only bodega-frete and bodega-loja-fisica', r.offPattern)
-ok(keys(r.offPattern.filter((o) => o.agent === 'bodega-frete')).join() === 'trigger:OnEscalate', 'bodega-frete: off once — it does not escalate (the fallback that would lead there is part of it)', r.offPattern)
+ok(keys(r.offPattern.filter((o) => o.agent === 'bodega-frete' && !o.key.startsWith('text:'))).join() === 'trigger:OnEscalate', 'bodega-frete: off once — it does not escalate (the fallback that would lead there is part of it)', r.offPattern)
 const part = pattern(r, 'reaches:OnEscalate')
 ok(part?.partOf === 'trigger:OnEscalate' && part.share === 1 && part.scope === 'platform', 'reaching escalation is a part of escalating, checked on the agents that escalate', part)
 ok(!r.solos.some((s) => s.key.startsWith('reaches:')) && !r.orchestratorDoes.some((s) => s.key.startsWith('reaches:')), 'a part is never a solo')
@@ -84,4 +84,48 @@ ok(bare.roles['bodega-orquestrador'] === 'orchestrator' && off(bare).join() === 
 const odd = compare([...agents, extractAgent('odd', [{ path: 'agent.mcs.yml', text: 'kind: GptComponentMetadata\n' }, { path: 'x.txt', text: '' }])], profile, empty)
 ok(odd.unknown.length === 1 && odd.unknown[0].agent === 'odd' && odd.unknown[0].file === 'x.txt', 'what was not understood says the agent and the file', odd.unknown)
 ok(compare(agents, { ...profile, microsoftPatterns: false }, empty).agents.every((a) => !Object.keys(a.facts).some((k) => k.startsWith('ms:'))), 'microsoft_patterns: off leaves the Microsoft patterns out')
+// wave 1: the text facts in the same count, the types, the official block, the rule with a condition
+const LINKS = `Links:
+- Formate links assim: [título](url), nunca a URL crua.
+- Um link de ação vai no topo; o link da base de ajuda vai no fim.
+- Nunca escreva as palavras «clique aqui».
+- No máximo 3 links por resposta.`
+const w1: Profile = {
+  ...profile,
+  markers: [
+    { id: 'size', name: 'Tamanho da resposta', in: 'instructions', pattern: '(no máximo)\\s*(\\d+)\\s*(bullets?|frases?)', value: '$2 $3' },
+    { id: 'no-emoji', name: 'Sem emojis', in: 'instructions', pattern: '(sem|não use)\\s+emojis?' },
+    { id: 'knowledge-only', name: 'Só o conhecimento', in: 'instructions', pattern: '(somente|apenas)[^.]{0,40}conhecimento' },
+  ],
+  blocks: [{ id: 'links', name: 'Formatação de links', text: LINKS, role: 'specialist' }],
+  types: [
+    { id: 'transaction', name: 'transação', when: { any: ['flow:*'] }, minAgents: 2 },
+    { id: 'guidance', name: 'orientação', when: { all: ['text:link-domain:*', 'node:SearchAndSummarizeContent'] }, minAgents: 2 },
+    { id: 'triage', name: 'triagem', when: { any: ['trigger:OnSelectIntent'] }, minAgents: 2 },
+  ],
+  rules: [...profile.rules, { id: 'knowledge-only', when: ['text:knowledge-only'], not: 'setting:model-knowledge=on', says: 'Quem pede só o conhecimento tem o conhecimento geral desligado' }],
+}
+const t = compare(agents, w1, empty)
+ok(t.types['bodega-pedidos'].join() === 'transaction' && t.types['bodega-devolucoes'].join() === 'transaction' && t.types['bodega-cupons'].join() === 'transaction,guidance'
+  && t.types['bodega-loja-fisica'].join() === 'guidance' && t.types['bodega-frete'].join() === 'triage' && !t.types['bodega-orquestrador'].length, 'the types: transaction 3, guidance 2 (cupons is both), triage 1', t.types)
+const flow = t.patterns.find((p) => p.key.startsWith('flow:'))
+ok(flow?.scope === 'type:transaction' && flow.share === 1, 'calling the flow is a pattern of the transaction type', flow)
+const help = pattern(t, 'text:link-domain:ajuda.bodega-azul.example')
+ok(help?.scope === 'type:guidance', 'the help link is a pattern of the guidance type', help)
+ok(!t.offPattern.some((o) => (o.key.startsWith('flow:') || o.key.startsWith('text:link-domain')) && ['bodega-loja-fisica', 'bodega-pedidos', 'bodega-frete'].includes(o.agent)), 'a pattern of a type never blames who is not of the type', t.offPattern)
+ok(t.typeNotes.length === 1 && t.typeNotes[0].type === 'triage' && t.typeNotes[0].agents.join() === 'bodega-frete', 'the triage type has 1 specialist: nothing to compare in it', t.typeNotes)
+const links = pattern(t, 'text:block:links')
+ok(links?.official === 'Formatação de links' && links.scope === 'specialist', 'the official block is a pattern of its role', links)
+ok(t.offPattern.some((o) => o.agent === 'bodega-frete' && o.key === 'text:block:links' && o.variant), 'frete is off the official block, with a variation', t.offPattern.filter((o) => o.key === 'text:block:links'))
+ok(t.blocks.some((b) => b.id === 'links' && b.official) && t.blocks.length >= 3, 'the families of blocks come with the result', t.blocks.map((b) => b.id))
+const lonely = compare(agents, { ...w1, blocks: [{ id: 'aviso', name: 'Aviso legal', text: 'Este atendimento é automático e pode errar; confirme os dados importantes com uma pessoa antes de decidir.', role: 'specialist' }] }, empty)
+ok(lonely.offPattern.filter((o) => o.key === 'text:block:aviso').length === 5, 'an official block nobody has: every specialist is off it, with no majority', lonely.offPattern.filter((o) => o.key === 'text:block:aviso'))
+ok(pattern(t, 'text:no-emoji')?.scope === 'platform' && t.offPattern.some((o) => o.agent === 'bodega-loja-fisica' && o.key === 'text:no-emoji'), '«no emojis» is the platform\'s; loja-fisica is off it')
+ok(gap(t, 'knowledge-only') === 'bodega-devolucoes', 'the rule with a condition: only devolucoes asks for the knowledge alone with the general knowledge on')
+ok(t.markerFindings.some((m) => m.kind === 'values') && t.markerFindings.some((m) => m.kind === 'twice' && m.agent === 'bodega-loja-fisica'), 'the marker findings come with the result')
+ok(!t.patterns.some((p) => p.key.endsWith('~variant')) && !t.solos.some((x) => x.key.endsWith('~variant')), 'a variation is neither a pattern nor a solo')
+const decided = compare(agents, w1, { ...empty, decisions: [{ key: 'text:link-domain:ajuda.bodega-azul.example', status: 'accepted', scope: 'type:guidance', why: 'orientação sempre aponta a ajuda' }] })
+ok(pattern(decided, 'text:link-domain:ajuda.bodega-azul.example')?.decision?.scope === 'type:guidance', 'a decision with a type scope marks the pattern of that type')
+const given = compare(agents, w1, { ...empty, agents: [{ id: 'bodega-frete', role: 'specialist', types: ['guidance'] }], decisions: [{ key: 'text:link-domain:ajuda.bodega-azul.example', status: 'accepted', scope: 'type:guidance', why: '' }] })
+ok(given.types['bodega-frete'].join() === 'guidance' && given.offPattern.some((o) => o.agent === 'bodega-frete' && o.key === 'text:link-domain:ajuda.bodega-azul.example'), 'the cast file makes frete a guidance specialist: off the accepted help-link pattern of its new type')
 done()

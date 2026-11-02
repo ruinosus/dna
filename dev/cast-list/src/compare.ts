@@ -5,8 +5,10 @@
 // A part of a fact (a topic that leads to escalation is part of escalating) is never a pattern of its own: it is
 // checked only on the agents that have the fact, takes the fact's decision, and is never a solo.
 import type { Cast, Decision, Scope } from './cast'
+import { blocksOf, type BlockFamily } from './blocks'
 import type { AgentFacts, Facts, Source, Unknown } from './extract'
 import { partOf } from './labels'
+import { markerFindings, markersOf, type MarkerFinding } from './markers'
 import { MS_PATTERNS } from './microsoft'
 import { matches, rolesOf, typesOf, type Profile, type Role, type Rule } from './profile'
 
@@ -24,8 +26,10 @@ export interface Pattern {
   decision?: Decision
   /** The fact this is a part of (`trigger:OnEscalate` for `reaches:OnEscalate`). */
   partOf?: string
+  /** The official block's name, when the pattern is the profile's block. */
+  official?: string
 }
-export interface OffPattern { agent: string; key: string; scope: Scope; partOf?: string }
+export interface OffPattern { agent: string; key: string; scope: Scope; partOf?: string; /** It has a variation of the block. */ variant?: boolean }
 export interface Holding { key: string; agents: string[]; sources: Source[] }
 export interface Gap { rule: Rule; agents: string[] }
 export interface Conflict { agent: string; key: string; declared: string; observed: boolean; source: string }
@@ -45,6 +49,14 @@ export interface Result {
   unknown: (Unknown & { agent: string })[]
   /** Readable names: a connector's API name or an agent's schema name → the name people know it by. */
   names: Record<string, string>
+  /** Each specialist's types (none for an orchestrator), and the types' names. */
+  types: Record<string, string[]>
+  typeNames: Record<string, string>
+  /** Types with too few agents to compare in: nothing is a pattern of them. */
+  typeNotes: { type: string; agents: string[] }[]
+  /** The blocks of text agents share, with who has each and each variation. */
+  blocks: BlockFamily[]
+  markerFindings: MarkerFinding[]
 }
 
 
@@ -54,20 +66,27 @@ const DECLARED_ONLY = new Set(MS_PATTERNS.filter((p) => !p.sign).map((p) => `ms:
 /** A declared key that is a claim about the YAML («trigger:OnEscalate»), not a fact only people know («kpi»). */
 const isClaim = (key: string) => key.includes(':') && !key.startsWith('declared:') && !DECLARED_ONLY.has(key)
 const declaredKey = (key: string) => (key.startsWith('declared:') ? key : `declared:${key}`)
+// a variation of a block says something about the block, not a fact of its own
+const isVariant = (key: string) => key.endsWith('~variant')
 
 export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Result {
   const given = Object.fromEntries(cast.agents.map((a) => [a.id, a.role]))
   const { roles, unmatched } = rolesOf(found, profile, given)
   const ignored = (k: string) => profile.ignore.includes(k) || (!profile.microsoftPatterns && k.startsWith('ms:'))
   const conflicts: Conflict[] = []
+  // what the texts say is seen too: the blocks agents share and the profile's markers
+  const blocks = blocksOf(found, cast.blocks, profile.blocks)
+  const marked = markersOf(found, profile.markers)
+  const seen = (a: AgentFacts): Facts => ({ ...a.facts, ...blocks.facts[a.id], ...marked.facts[a.id] })
   const agents = found.map((a) => {
-    const facts: Facts = Object.fromEntries(Object.entries(a.facts).filter(([k]) => !ignored(k)))
+    const observed = seen(a)
+    const facts: Facts = Object.fromEntries(Object.entries(observed).filter(([k]) => !ignored(k)))
     for (const d of cast.declared.filter((x) => x.agent === a.id)) {
       const says = !NO.test(d.value)
       if (isClaim(d.key)) {
         // what was seen wins: a claim never changes a fact, it only shows where people and the YAML disagree
-        const observed = d.key in a.facts
-        if (says !== observed) conflicts.push({ agent: a.id, key: d.key, declared: d.value || 'yes', observed, source: d.source })
+        const has = d.key in observed
+        if (says !== has) conflicts.push({ agent: a.id, key: d.key, declared: d.value || 'yes', observed: has, source: d.source })
       } else if (says) (facts[declaredKey(d.key)] ??= []).push({ file: d.source ? `declared: ${d.source}` : 'declared' })
     }
     return { id: a.id, role: roles[a.id], ...(a.schemaName ? { schemaName: a.schemaName } : {}), ...(a.displayName ? { displayName: a.displayName } : {}), facts, children: a.children }
@@ -87,7 +106,7 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
     if (them.length < profile.minAgents) continue
     const other = members(role === 'specialist' ? 'orchestrator' : 'specialist')
     for (const key of allKeys) {
-      if (key.startsWith('declared:') || partOf(key) || patterns.some((p) => p.key === key)) continue
+      if (key.startsWith('declared:') || partOf(key) || isVariant(key) || patterns.some((p) => p.key === key)) continue
       const has = holders(key, them)
       const share = has.length / them.length
       if (share < profile.threshold) continue
@@ -96,6 +115,35 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
       const decision = decisionOf(key)
       patterns.push({ key, role, scope: decision?.scope ?? (otherHas ? 'platform' : role), share, agents: holders(key).map((a) => a.id), sources: sourcesOf(key), ...(decision ? { decision } : {}) })
     }
+  }
+  // the patterns of a type, among its specialists, with min_agents of the type: what the role's patterns do not say
+  const typeNotes: Result['typeNotes'] = []
+  for (const type of profile.types) {
+    const them = inScope(`type:${type.id}`)
+    if (!them.length) continue
+    if (them.length < type.minAgents) {
+      typeNotes.push({ type: type.id, agents: them.map((a) => a.id) })
+      continue
+    }
+    for (const key of allKeys) {
+      if (key.startsWith('declared:') || partOf(key) || isVariant(key) || patterns.some((p) => p.key === key)) continue
+      const share = holders(key, them).length / them.length
+      if (share < profile.threshold) continue
+      const decision = decisionOf(key)
+      patterns.push({ key, role: 'specialist', scope: decision?.scope ?? `type:${type.id}`, share, agents: holders(key).map((a) => a.id), sources: sourcesOf(key), ...(decision ? { decision } : {}) })
+    }
+  }
+  // the profile's official blocks are checked on every agent of their role, with or without a majority
+  for (const b of profile.blocks) {
+    const key = `text:block:${b.id}`
+    const found = patterns.find((p) => p.key === key)
+    if (found) {
+      found.official = b.name
+      continue
+    }
+    const them = members(b.role)
+    const decision = decisionOf(key)
+    patterns.push({ key, role: b.role, scope: decision?.scope ?? b.role, share: them.length ? holders(key, them).length / them.length : 0, agents: holders(key).map((a) => a.id), sources: sourcesOf(key), official: b.name, ...(decision ? { decision } : {}) })
   }
   // an accepted pattern is checked even when its share no longer makes it one
   for (const decision of cast.decisions.filter((d) => d.status === 'accepted' && !patterns.some((p) => p.key === d.key))) {
@@ -117,13 +165,15 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
 
   const offPattern: OffPattern[] = patterns
     .filter((p) => p.decision?.status !== 'rejected')
-    .flatMap((p) => inScope(p.scope).filter((a) => !(p.key in a.facts) && (!p.partOf || p.partOf in a.facts)).map((a) => ({ agent: a.id, key: p.key, scope: p.scope, ...(p.partOf ? { partOf: p.partOf } : {}) })))
+    .flatMap((p) => inScope(p.scope).filter((a) => !(p.key in a.facts) && (!p.partOf || p.partOf in a.facts)).map((a) => ({
+      agent: a.id, key: p.key, scope: p.scope, ...(p.partOf ? { partOf: p.partOf } : {}), ...(`${p.key}~variant` in a.facts ? { variant: true } : {}),
+    })))
     .sort((a, b) => a.agent.localeCompare(b.agent) || a.key.localeCompare(b.key))
 
   const solos: Holding[] = []
   const orchestratorDoes: Holding[] = []
   for (const key of allKeys) {
-    if (key.startsWith('declared:') || partOf(key)) continue
+    if (key.startsWith('declared:') || partOf(key) || isVariant(key)) continue
     const has = holders(key)
     const holding = { key, agents: has.map((a) => a.id), sources: sourcesOf(key) }
     if (has.every((a) => a.role === 'orchestrator')) orchestratorDoes.push(holding)
@@ -147,5 +197,8 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
     roles, unmatched, agents, patterns, offPattern, solos, orchestratorDoes, gaps, conflicts,
     unknown: found.flatMap((a) => a.unknown.map((u) => ({ ...u, agent: a.id }))),
     names: Object.assign({}, ...found.map((a) => a.names ?? {}), ...found.map((a) => (a.schemaName && a.displayName ? { [a.schemaName]: a.displayName } : {}))),
+    types, typeNames: Object.fromEntries(profile.types.map((t) => [t.id, t.name])), typeNotes,
+    blocks: blocks.families,
+    markerFindings: markerFindings(marked.values, profile.markers, roles),
   }
 }
