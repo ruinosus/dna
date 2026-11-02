@@ -15,12 +15,12 @@ beginDialog:
   intent: {}
   actions:
     - kind: CreateSearchQuery
-      id: createSearchQuery_XKzVC7
+      id: createSearchQuery_8WzjG8
       userInput: =Topic.PerguntaCliente
       result: Topic.SearchQuery
 
     - kind: SearchAndSummarizeContent
-      id: searchContent_EnqfPO
+      id: searchContent_BEHQYE
       autoSend: false
       variable: Topic.SearchResult
       userInput: =Topic.SearchQuery.SearchQuery
@@ -37,7 +37,7 @@ beginDialog:
       responseCaptureType: FullResponse
 
     - kind: SetVariable
-      id: setVariable_Hb8Wzj
+      id: setVariable_E3NIoo
       variable: Topic.Resposta
       value: =Topic.SearchResult.Text.Content
 

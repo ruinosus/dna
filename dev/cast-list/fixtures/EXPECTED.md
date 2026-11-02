@@ -57,3 +57,21 @@ Every agent has `settings.mcs.yml` with `GenerativeActionsEnabled: true`, `recog
 11. **`.mcs/` folder not included.** A real VS Code clone also writes `.mcs/conn.json` (tenant and environment IDs) and other hidden state. It was left out on purpose. Fake IDs would make these folders look pushable to the plugin's tooling, and the repo's eval fixtures leave it out as well.
 12. **Escalate topic contents.** No template exists for it. It uses `OnEscalate` with an `intent` (`displayName`, `includeInOnSelectIntent: false`, `triggerQueries`) and one `SendActivity`. All of these properties are confirmed in the schema (`OnEscalate.intent` → `Intent`).
 13. **Classification topic is not a separate agent.** In the orchestrator, `ClassificarSolicitacao` is an `OnRecognizedIntent` topic with `intent: {}`, routed by `modelDescription`. It follows the orchestrator-variables pattern. The connected-agent actions read the resulting global through a `ManualTaskInput` with a Power Fx value (`=Global.CategoriaSolicitacao`). ManualTaskInput with an expression is shown in the MCP fixture. For a connected agent it is inferred.
+
+## Wave 1 (cast-list 1.3): the text of the instructions and the types
+
+Added by `gen_fixtures.py` (the `WAVE1` table) to the instructions of the five specialists, as separate paragraphs:
+
+| Agent | Links block | Answer size | No emojis | Other | Type signals |
+|---|---|---|---|---|---|
+| bodega-pedidos | the shared block | «no máximo 3 bullets» | yes | a copy of its knowledge topic, `ConsultarPoliticasPedidos Copy` (its text is left out) | flow action `AbrirChamadoERP` → **transaction** |
+| bodega-devolucoes | the shared block | «no máximo 3 bullets» | yes | «Responda somente com base no conhecimento publicado» **and** `aISettings.useModelKnowledge: true` (a contradiction) | flow action → **transaction** |
+| bodega-frete | **variation**: one line less («link de ação no topo…»), «no máximo 5 links» | none | yes | — | topic `Desambiguar` (`OnSelectIntent`) → **triage** (the only one) |
+| bodega-cupons | the shared block | «no máximo 5 frases» | yes | link to `https://ajuda.bodega-azul.example/atendimento` | flow action → **transaction**; help link + generative answers → **guidance** (two types) |
+| bodega-loja-fisica | the shared block | **twice**: «no máximo 3 bullets» and «no máximo 5 frases» | **no** | help link | help link + generative answers → **guidance** |
+| bodega-orquestrador | — | — | yes | — | (orchestrator, no type) |
+
+- The three transaction specialists call **one** flow of the solution (`flowId 7d1c2a4e-…`), so the flow is not a solo.
+- With the 1.2 findings unchanged, the triage topic is a new solo (only frete has `OnSelectIntent`).
+- Inferred, to confirm in a real clone: how the editor names a copied topic (`<Name> Copy`), and the values of
+  `aISettings.contentModeration` (the schema gives only its type).

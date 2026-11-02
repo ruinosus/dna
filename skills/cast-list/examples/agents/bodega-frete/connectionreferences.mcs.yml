@@ -1,6 +1,6 @@
 kind: ConnectionReferencesSourceFile
 connectionReferences:
-  - id: 2061116b-9466-499f-9a95-3845b3c68aef
-    connectionReferenceLogicalName: cr7b2_bodegaFrete.shared_office365.shared-office365-b0f8e217-f0b5-4043-a162-176b58113675
+  - id: 2683e4c0-ea95-46c4-918a-b896ff983b3f
+    connectionReferenceLogicalName: cr7b2_bodegaFrete.shared_office365.shared-office365-87a66c95-f84e-4a65-a761-64ce01dc8c2e
     connectorId: /providers/Microsoft.PowerApps/apis/shared_office365
     displayName: Office 365 Outlook

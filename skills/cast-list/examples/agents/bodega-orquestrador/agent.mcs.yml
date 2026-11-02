@@ -20,6 +20,8 @@ instructions: |
   Regras:
   - Responda sempre em português do Brasil, de forma cordial e objetiva
   - Se o cliente pedir para falar com uma pessoa, use o tópico de escalonamento
+
+  Não use emojis.
 conversationStarters:
   - title: "Meu pedido"
     text: "Onde está o meu pedido?"

@@ -8,7 +8,7 @@ beginDialog:
   id: main
   actions:
     - kind: SetVariable
-      id: setVariable_4KQSvY
+      id: setVariable_QoCKRT
       variable: Global.CategoriaSolicitacao
       value: =System.Activity.Value.CategoriaSolicitacao
 

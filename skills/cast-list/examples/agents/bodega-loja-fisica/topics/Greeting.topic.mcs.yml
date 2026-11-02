@@ -7,7 +7,7 @@ beginDialog:
   id: main
   actions:
     - kind: SendActivity
-      id: sendMessage_ygbWUz
+      id: sendMessage_6sI2nt
       activity:
         text:
           - "Olá! Eu sou o {System.Bot.Name}. Quer saber sobre a nossa loja física ou retirada de pedidos?"

@@ -8,13 +8,13 @@ beginDialog:
   priority: -1
   actions:
     - kind: ConditionGroup
-      id: conditionGroup_TPCw06
+      id: conditionGroup_RBGXtS
       conditions:
-        - id: conditionItem_ryGn7S
+        - id: conditionItem_nm7LSz
           condition: =System.FallbackCount < 3
           actions:
             - kind: SendActivity
-              id: sendMessage_05PvFg
+              id: sendMessage_9HZrxS
               activity:
                 text:
                   - "Desculpe, não entendi. Pode reformular a sua pergunta?"
@@ -22,11 +22,11 @@ beginDialog:
 
       elseActions:
         - kind: SendActivity
-          id: sendMessage_lXT8aK
+          id: sendMessage_ryGn7S
           activity:
             text:
               - "Estou com dificuldade para entender o seu pedido. Vou te encaminhar para alguém da equipe Bodega Azul."
 
         - kind: BeginDialog
-          id: beginDialog_u0NZwL
+          id: beginDialog_05PvFg
           dialog: cr7b2_bodegaDevolucoes.topic.Escalate

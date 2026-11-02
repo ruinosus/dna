@@ -25,7 +25,7 @@ modelDisplayName: Enviar instruções de retirada por e-mail
 modelDescription: "Envia ao cliente, pelo Outlook, um e-mail com endereço, horário e documentos necessários para retirar o pedido na loja física. Use somente quando o cliente pedir."
 action:
   kind: InvokeConnectorTaskAction
-  connectionReference: cr7b2_bodegaLojaFisica.shared_office365.shared-office365-7954b623-6f24-4af3-b282-fa9c83913992
+  connectionReference: cr7b2_bodegaLojaFisica.shared_office365.shared-office365-f0fdb545-532d-4d56-a81b-286eb298a1e7
   connectionProperties:
     mode: Maker
 

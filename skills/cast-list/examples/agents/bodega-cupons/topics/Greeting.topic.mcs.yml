@@ -7,7 +7,7 @@ beginDialog:
   id: main
   actions:
     - kind: SendActivity
-      id: sendMessage_6Zd2DS
+      id: sendMessage_mhcyPf
       activity:
         text:
           - "Olá! Eu sou o {System.Bot.Name}. Quer validar um cupom ou ver as promoções da semana?"

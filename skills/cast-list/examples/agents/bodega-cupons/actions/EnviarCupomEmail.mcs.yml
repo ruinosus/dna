@@ -25,7 +25,7 @@ modelDisplayName: Enviar cupom por e-mail
 modelDescription: "Envia ao cliente, pelo Outlook, um e-mail com um código de cupom já validado e as regras de uso. Use somente quando o cliente pedir."
 action:
   kind: InvokeConnectorTaskAction
-  connectionReference: cr7b2_bodegaCupons.shared_office365.shared-office365-3b988145-3785-4cc1-8a12-16e80746419d
+  connectionReference: cr7b2_bodegaCupons.shared_office365.shared-office365-8a5ef90d-d584-47ca-b2a1-5c87d8fc6ede
   connectionProperties:
     mode: Maker
 

@@ -16,5 +16,5 @@ beginDialog:
 
   actions:
     - kind: SendActivity
-      id: sendMessage_RBGXtS
+      id: sendMessage_O4ttWg
       activity: "A transferência para um atendente ainda não está disponível neste canal. Fale com a nossa equipe pelo e-mail devolucoes@bodegaazul.example, de segunda a sábado, das 9h às 18h."

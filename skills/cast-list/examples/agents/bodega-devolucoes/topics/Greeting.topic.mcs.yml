@@ -7,7 +7,7 @@ beginDialog:
   id: main
   actions:
     - kind: SendActivity
-      id: sendMessage_ySobf4
+      id: sendMessage_TPCw06
       activity:
         text:
           - "Olá! Eu sou o {System.Bot.Name}. Vamos resolver a sua troca ou devolução?"

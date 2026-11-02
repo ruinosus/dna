@@ -41,8 +41,9 @@ def write(path, content):
 # Shared file builders
 # ---------------------------------------------------------------------------
 
-def agent_file(component, display, instructions, starters):
+def agent_file(component, display, instructions, starters, model_knowledge=None):
     st = "\n\n".join(f"  - title: {q(t)}\n    text: {q(x)}" for t, x in starters)
+    mk = f"  useModelKnowledge: {'true' if model_knowledge else 'false'}\n" if model_knowledge is not None else ""
     return f"""mcs.metadata:
   componentName: {component}
 kind: GptComponentMetadata
@@ -53,7 +54,7 @@ conversationStarters:
 {st}
 
 aISettings:
-  model:
+{mk}  model:
     modelNameHint: GPT5Chat
 """
 
@@ -397,6 +398,70 @@ def outlook_ref(schema):
 # Specialists
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Wave 1 (cast-list 1.3): the text of the instructions, the types of agent
+# ---------------------------------------------------------------------------
+
+# the shared block of links, pasted in four specialists; frete has a variation (one line less, 5 links)
+LINKS = """Links:
+- Formate links assim: [título](url), nunca a URL crua.
+- Um link de ação vai no topo; o link da base de ajuda vai no fim.
+- Nunca escreva as palavras «clique aqui».
+- No máximo 3 links por resposta."""
+LINKS_VARIANT = """Links:
+- Formate links assim: [título](url), nunca a URL crua.
+- Nunca escreva as palavras «clique aqui».
+- No máximo 5 links por resposta."""
+SIZE3 = "Responda em no máximo 3 bullets."
+SIZE5 = "Use no máximo 5 frases por resposta."
+NO_EMOJI = "Não use emojis."
+KNOWLEDGE_ONLY = "Responda somente com base no conhecimento publicado."
+HELP_LINK = "Para dúvidas gerais, indique https://ajuda.bodega-azul.example/atendimento."
+# one flow in the solution, shared by the three transaction specialists
+FLOW_ID = "7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f"
+WAVE1 = {
+    "bodega-pedidos": {"text": [LINKS, SIZE3, NO_EMOJI], "flow": True, "copy": True},
+    "bodega-devolucoes": {"text": [LINKS, SIZE3, NO_EMOJI, KNOWLEDGE_ONLY], "flow": True, "model_knowledge": True},
+    "bodega-frete": {"text": [LINKS_VARIANT, NO_EMOJI], "triage": True},
+    "bodega-cupons": {"text": [LINKS, SIZE5, NO_EMOJI, HELP_LINK], "flow": True},
+    "bodega-loja-fisica": {"text": [LINKS, SIZE3, HELP_LINK, SIZE5]},
+}
+
+
+def flow_action():
+    return f"""mcs.metadata:
+  componentName: Abrir chamado no ERP
+  description: Abre um chamado no ERP da Bodega Azul pelo fluxo da solução.
+kind: TaskDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: resumo
+    description: Resumo do pedido do cliente, em uma frase.
+    shouldPromptUser: false
+
+modelDisplayName: Abrir chamado no ERP
+modelDescription: Abre um chamado no ERP quando o cliente pede uma ação que a loja precisa executar (troca, cancelamento, reembolso).
+action:
+  kind: InvokeFlowTaskAction
+  flowId: {FLOW_ID}
+"""
+
+
+def triage_topic():
+    return """mcs.metadata:
+  componentName: Desambiguar
+  description: Pergunta ao cliente qual assunto ele quis dizer quando mais de um tópico serve.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnSelectIntent
+  id: main
+  actions:
+    - kind: SendActivity
+      id: sendMessage_tRiAg3
+      activity: Sobre qual destes assuntos você quer falar?
+"""
+
+
 SPECIALISTS = [
     {
         "key": "bodega-pedidos",
@@ -602,8 +667,14 @@ Regras:
 def build_specialist(a):
     d = os.path.join(ROOT, a["key"])
     s = a["schema"]
-    write(f"{d}/agent.mcs.yml", agent_file(a["component"], a["display"], a["instructions"], a["starters"]))
+    w1 = WAVE1[a["key"]]
+    text = a["instructions"].rstrip("\n") + "\n\n" + "\n\n".join(w1["text"]) + "\n"
+    write(f"{d}/agent.mcs.yml", agent_file(a["component"], a["display"], text, a["starters"], w1.get("model_knowledge")))
     write(f"{d}/settings.mcs.yml", settings_file(a["display"], s, connectable=True))
+    if w1.get("flow"):
+        write(f"{d}/actions/AbrirChamadoERP.mcs.yml", flow_action())
+    if w1.get("triage"):
+        write(f"{d}/topics/Desambiguar.topic.mcs.yml", triage_topic())
 
     # topics
     write(f"{d}/topics/Greeting.topic.mcs.yml", greeting_topic(a["greeting"]))
@@ -617,6 +688,10 @@ def build_specialist(a):
     tfile, tname, tdesc, tmodel, tinput = a["topic"]
     write(f"{d}/topics/{tfile}.topic.mcs.yml",
           gen_answers_topic(tname, tdesc, tmodel, tinput, f"{s}.knowledge.{kfile}"))
+    # a copy left behind in the editor: the analysis leaves its text out
+    if w1.get("copy"):
+        write(f"{d}/topics/{tfile} Copy.topic.mcs.yml",
+              gen_answers_topic(f"{tname} Copy", tdesc, tmodel, tinput, f"{s}.knowledge.{kfile}"))
 
     # knowledge
     write(f"{d}/knowledge/{kfile}.knowledge.mcs.yml", sharepoint_knowledge(kname, kdesc, ksite, ktc))
@@ -734,6 +809,8 @@ Como trabalhar:
 Regras:
 - Responda sempre em português do Brasil, de forma cordial e objetiva
 - Se o cliente pedir para falar com uma pessoa, use o tópico de escalonamento
+
+Não use emojis.
 """
     starters = [("Meu pedido", "Onde está o meu pedido?"), ("Trocas", "Quero devolver um produto"), ("Cupons", "Tenho um cupom de desconto")]
     write(f"{d}/agent.mcs.yml", agent_file(display, display, instructions, starters))

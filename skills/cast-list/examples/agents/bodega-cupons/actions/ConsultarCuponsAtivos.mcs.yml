@@ -25,7 +25,7 @@ modelDisplayName: Consultar cupons ativos
 modelDescription: Verifica na lista Cupons do SharePoint se um código de cupom existe, se está ativo e qual a validade. Use quando o cliente informar um código de cupom.
 action:
   kind: InvokeConnectorTaskAction
-  connectionReference: cr7b2_bodegaCupons.shared_sharepointonline.shared-sharepointonline-5dc0aa0a-6edf-4fc4-a7d5-cbbfc5636a85
+  connectionReference: cr7b2_bodegaCupons.shared_sharepointonline.shared-sharepointonline-f9f69116-631c-4103-bdd0-e6c557c79a73
   connectionProperties:
     mode: Maker
 

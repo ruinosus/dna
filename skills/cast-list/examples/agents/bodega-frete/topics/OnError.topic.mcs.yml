@@ -8,18 +8,18 @@ beginDialog:
   id: main
   actions:
     - kind: SetVariable
-      id: setVariable_cAN26v
+      id: setVariable_zATTmv
       variable: init:Topic.CurrentTime
       value: =Text(Now(), DateTimeFormat.UTC)
 
     - kind: ConditionGroup
-      id: conditionGroup_i5aTx4
+      id: conditionGroup_tT7GmP
       conditions:
-        - id: conditionItem_QOqZrK
+        - id: conditionItem_pOGTUv
           condition: =System.Conversation.InTestMode = true
           actions:
             - kind: SendActivity
-              id: sendMessage_zATTmv
+              id: sendMessage_4KQSvY
               activity: |-
                 Mensagem de erro: {System.Error.Message}
                 Código do erro: {System.Error.Code}
@@ -28,7 +28,7 @@ beginDialog:
 
       elseActions:
         - kind: SendActivity
-          id: sendMessage_tT7GmP
+          id: sendMessage_RpdnNx
           activity:
             text:
               - |-
@@ -40,9 +40,9 @@ beginDialog:
               - Ocorreu um erro, por favor tente novamente.
 
     - kind: LogCustomTelemetryEvent
-      id: logTelemetry_GO3Bil
+      id: logTelemetry_QOqZrK
       eventName: BodegaFrete_OnError
       properties: "={Agente: \"bodega-frete\", ErrorMessage: System.Error.Message, ErrorCode: System.Error.Code, TimeUTC: Topic.CurrentTime, ConversationId: System.Conversation.Id}"
 
     - kind: CancelAllDialogs
-      id: cancelAllDialogs_pOGTUv
+      id: cancelAllDialogs_2fpaCR

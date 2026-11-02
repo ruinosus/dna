@@ -1,5 +1,5 @@
 // Checks the skill as a person gets it: the engine's checks (checks/*.check.ts); the example agents make the map, the
-// workbook, the lesson (passing chalk-talk's reviewer when there is a browser) and the cast file and print what to look at — 6 with the example profile, 7 with the demo cast file (what
+// workbook, the lesson (passing chalk-talk's reviewer when there is a browser) and the cast file and print what to look at — 7 with the example profile, 8 with the demo cast file (what
 // people said that the YAML contradicts); the workbook filled in comes back (--from, --take); --facts; a clean copy with
 // no node_modules runs on Node alone; 18 agents in under 30 s with the network blocked; broken files never stop it; a
 // broken profile says its line; a folder with no agent says so; the map loads nothing from the internet; and, in a browser, «to look at» opens its fact, a pattern shows the files, the
@@ -37,7 +37,7 @@ const plain = join(work, 'plain')
 const a = run(agents, '--profile', profile, '--all', '--lang', 'pt', '--out', plain)
 ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agents.cast.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, lesson and cast file', a.stdout + a.stderr)
 ok(/✓ review|• review/.test(a.stdout) && !/! review/.test(a.stdout), "the lesson passes chalk-talk's reviewer (when there is a browser)", a.stdout)
-ok(looks(a.stdout) === 6, `6 to look at (${looks(a.stdout)})`, a.stdout)
+ok(looks(a.stdout) === 7, `7 to look at (${looks(a.stdout)})`, a.stdout)
 const again = run(agents, '--profile', profile, '--out', plain)
 ok(again.status === 0 && readFileSync(join(plain, 'agents.cast.yaml'), 'utf8').includes('role: orchestrator'), 'a second run reads the cast file it wrote, and keeps the roles', again.stderr)
 
@@ -46,7 +46,7 @@ const demo = join(work, 'demo')
 mkdirSync(demo)
 copyFileSync(join(examples, 'demo.cast.yaml'), join(demo, 'agents.cast.yaml'))
 const d = run(agents, '--profile', profile, '--lang', 'pt', '--out', demo)
-ok(d.status === 0 && looks(d.stdout) === 7 && d.stdout.includes('mas o YAML não tem'), '7 to look at with the demo cast file, the contradiction first', d.stdout)
+ok(d.status === 0 && looks(d.stdout) === 8 && d.stdout.includes('mas o YAML não tem'), '8 to look at with the demo cast file, the contradiction first', d.stdout)
 ok(readFileSync(join(demo, 'agents.cast.yaml'), 'utf8').includes('# the handoff document says frete escalates'), "the cast file keeps the person's comments")
 
 // what is broken says so
@@ -136,7 +136,7 @@ else {
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
   writeFileSync(join(work, 'probe.html'), html)
   const r = (await runPage(join(work, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
-  ok(r.looks === 7 && r.look === 'Escalonamento para humano', '«to look at»: its first item opens the fact', JSON.stringify(r))
+  ok(r.looks === 8 && r.look === 'Escalonamento para humano', '«to look at»: its first item opens the fact', JSON.stringify(r))
   ok(r.files?.length === 5 && r.files.every((f) => f.startsWith('topics/OnError.topic.mcs.yml:')) && r.lacks, 'a pattern shows the file and line of each, and who is off it', JSON.stringify(r.files))
   ok(r.columns?.length === 6 && !r.columns.some((c) => c.includes('orquestrador')), 'the role filter leaves the orchestrator out', JSON.stringify(r.columns))
   ok((r.got ?? []).join() === 'agents.xlsx,agents.cast.yaml,agents.png' && !r.errs?.length, 'the downloads: workbook, cast file, PNG — no error', JSON.stringify(r))

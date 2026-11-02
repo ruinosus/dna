@@ -25,7 +25,7 @@ modelDisplayName: Enviar resumo do pedido por e-mail
 modelDescription: "Envia ao cliente, pelo Outlook, um e-mail com o resumo do atendimento sobre o pedido. Use somente quando o cliente pedir o resumo por e-mail."
 action:
   kind: InvokeConnectorTaskAction
-  connectionReference: cr7b2_bodegaPedidos.shared_office365.shared-office365-1fd81bee-61e1-4016-a98e-c7e0977d7f43
+  connectionReference: cr7b2_bodegaPedidos.shared_office365.shared-office365-d1f6a460-51c5-47c6-9010-aec0018a7a95
   connectionProperties:
     mode: Maker
 

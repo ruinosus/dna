@@ -14,6 +14,13 @@ instructions: |
   - Responda sempre em português do Brasil
   - Prazos são sempre em dias úteis; deixe isso claro
   - Não calcule valores de frete de cabeça: use apenas o que está na base
+
+  Links:
+  - Formate links assim: [título](url), nunca a URL crua.
+  - Nunca escreva as palavras «clique aqui».
+  - No máximo 5 links por resposta.
+
+  Não use emojis.
 conversationStarters:
   - title: "Prazo de entrega"
     text: "Quanto tempo demora a entrega para o Nordeste?"

@@ -8,18 +8,18 @@ beginDialog:
   id: main
   actions:
     - kind: SetVariable
-      id: setVariable_9IHJE1
+      id: setVariable_Uv9BG8
       variable: init:Topic.CurrentTime
       value: =Text(Now(), DateTimeFormat.UTC)
 
     - kind: ConditionGroup
-      id: conditionGroup_0PSyKa
+      id: conditionGroup_7OYQil
       conditions:
-        - id: conditionItem_gbUv9B
+        - id: conditionItem_fzDk3T
           condition: =System.Conversation.InTestMode = true
           actions:
             - kind: SendActivity
-              id: sendMessage_G87OYQ
+              id: sendMessage_HlIi9C
               activity: |-
                 Mensagem de erro: {System.Error.Message}
                 Código do erro: {System.Error.Code}
@@ -28,7 +28,7 @@ beginDialog:
 
       elseActions:
         - kind: SendActivity
-          id: sendMessage_ilfzDk
+          id: sendMessage_dN6hXK
           activity:
             text:
               - |-
@@ -40,4 +40,4 @@ beginDialog:
               - Ocorreu um erro, por favor tente novamente.
 
     - kind: CancelAllDialogs
-      id: cancelAllDialogs_3THlIi
+      id: cancelAllDialogs_zVC7En

@@ -8,7 +8,7 @@ beginDialog:
   id: main
   actions:
     - kind: SetVariable
-      id: setVariable_62USMu
+      id: setVariable_YkGk0j
       variable: Global.CategoriaSolicitacao
       value: =System.Activity.Value.CategoriaSolicitacao
 

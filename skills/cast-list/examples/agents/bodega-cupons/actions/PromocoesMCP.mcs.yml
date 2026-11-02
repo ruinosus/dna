@@ -11,7 +11,7 @@ modelDisplayName: Servidor MCP de Promoções
 modelDescription: Servidor MCP que lista as campanhas promocionais e os cupons vigentes da Bodega Azul.
 action:
   kind: InvokeExternalAgentTaskAction
-  connectionReference: cr7b2_bodegaCupons.shared_bodegapromocoesmcp.fio2ta
+  connectionReference: cr7b2_bodegaCupons.shared_bodegapromocoesmcp.zsi3cu
   connectionProperties:
     mode: Maker
 

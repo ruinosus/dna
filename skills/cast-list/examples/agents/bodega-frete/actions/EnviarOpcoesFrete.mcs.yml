@@ -25,7 +25,7 @@ modelDisplayName: Enviar opções de frete por e-mail
 modelDescription: "Envia ao cliente, pelo Outlook, um e-mail com as modalidades e prazos de frete consultados na conversa. Use somente quando o cliente pedir."
 action:
   kind: InvokeConnectorTaskAction
-  connectionReference: cr7b2_bodegaFrete.shared_office365.shared-office365-b0f8e217-f0b5-4043-a162-176b58113675
+  connectionReference: cr7b2_bodegaFrete.shared_office365.shared-office365-87a66c95-f84e-4a65-a761-64ce01dc8c2e
   connectionProperties:
     mode: Maker
 

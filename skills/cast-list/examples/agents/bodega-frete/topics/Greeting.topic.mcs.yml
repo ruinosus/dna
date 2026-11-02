@@ -7,7 +7,7 @@ beginDialog:
   id: main
   actions:
     - kind: SendActivity
-      id: sendMessage_WTCjw9
+      id: sendMessage_ABgTWB
       activity:
         text:
           - "Olá! Eu sou o {System.Bot.Name}. Quer saber sobre prazos e valores de entrega?"
