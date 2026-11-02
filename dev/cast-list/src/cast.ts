@@ -109,7 +109,8 @@ export function writeCast(cast: Cast, previous?: string): string {
       const node = before.get(id(want as Obj))
       if (!node) {
         const fresh = doc.createNode(want) as YAMLMap
-        fresh.flow = true
+        // one line per item, except a block of text: its lines read as they are
+        fresh.flow = k !== 'blocks'
         return fresh
       }
       for (const [f, v] of Object.entries(want)) if (JSON.stringify((node.toJSON() as Obj)[f]) !== JSON.stringify(v)) node.set(f, v)

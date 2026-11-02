@@ -39,7 +39,8 @@ ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agent
 ok(/✓ review|• review/.test(a.stdout) && !/! review/.test(a.stdout), "the lesson passes chalk-talk's reviewer (when there is a browser)", a.stdout)
 ok(looks(a.stdout) === 9, `9 to look at (${looks(a.stdout)})`, a.stdout)
 const again = run(agents, '--profile', profile, '--out', plain)
-ok(again.status === 0 && readFileSync(join(plain, 'agents.cast.yaml'), 'utf8').includes('role: orchestrator'), 'a second run reads the cast file it wrote, and keeps the roles', again.stderr)
+const kept = readFileSync(join(plain, 'agents.cast.yaml'), 'utf8')
+ok(again.status === 0 && kept.includes('role: orchestrator') && /blocks:\n(.*\n)*  - id: links-formate-links-assim-titulo\n    text: \|/.test(kept), 'a second run reads the cast file it wrote, and keeps the roles and the blocks of text', kept.slice(0, 600))
 
 // with the demo cast file: what people said, and what was decided
 const demo = join(work, 'demo')

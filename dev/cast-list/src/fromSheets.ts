@@ -24,7 +24,8 @@ const wordOf = <T extends string>(text: string, pairs: [T, keyof (typeof SHEET_W
 const filled = (rows: string[][]) => rows.slice(1).filter((r) => r.some((c) => String(c ?? '').trim()))
 const same = (a: object | undefined, b: object | undefined) => JSON.stringify(a) === JSON.stringify(b)
 
-export function fromSheets(cast: Cast, sheets: SheetRows[]): { changes: Change[]; problems: string[] } {
+/** `typeNames`: the profile's types (id → name), so a scope «tipo:<name>» comes back as type:<id>. */
+export function fromSheets(cast: Cast, sheets: SheetRows[], typeNames: Record<string, string> = {}): { changes: Change[]; problems: string[] } {
   const changes: Change[] = []
   const problems: string[] = []
 
@@ -61,7 +62,10 @@ export function fromSheets(cast: Cast, sheets: SheetRows[]): { changes: Change[]
         continue
       }
       const status = wordOf(decisionText, [['accepted', 'accept'], ['rejected', 'reject']])
-      const scope = wordOf(scopeText, [['platform', 'platform'], ['specialist', 'specialist'], ['orchestrator', 'orchestrator']])
+      // «tipo:orientação», «type:guidance»: a type by its name or id
+      const typed = /^(tipo|type)\s*:\s*(.+)$/i.exec(scopeText)
+      const typeId = typed ? Object.entries(typeNames).find(([id, name]) => norm(name) === norm(typed[2]) || norm(id) === norm(typed[2]))?.[0] : undefined
+      const scope = typed ? (typeId ? (`type:${typeId}` as const) : undefined) : wordOf(scopeText, [['platform', 'platform'], ['specialist', 'specialist'], ['orchestrator', 'orchestrator']])
       if (!status) problems.push(`${ps.name}, ${key}: «${decisionText}» — ${both.map((w) => `${w.accept}/${w.reject}`).join(', ')}`)
       else if (!scope) problems.push(`${ps.name}, ${key}: «${scopeText}» — ${both.map((w) => `${w.platform}/${w.specialist}/${w.orchestrator}`).join(', ')}`)
       else {

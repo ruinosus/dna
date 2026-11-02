@@ -86,7 +86,7 @@ const cast = castText !== undefined ? read(castFile, readCast).cast : { ...(prof
 
 // ---- the way back: an edited workbook as the changes it proposes ----
 if (argv.includes('--from')) {
-  const edited = fromSheets(cast, readXlsx(readFileSync(resolve(option('--from')))))
+  const edited = fromSheets(cast, readXlsx(readFileSync(resolve(option('--from')))), Object.fromEntries(profile.types.map((t) => [t.id, t.name])))
   if (edited.problems.length) {
     for (const p of edited.problems) console.error(`✗ ${basename(option('--from'))}: ${p}`)
     process.exit(1)
@@ -145,8 +145,10 @@ const all = argv.includes('--all')
 const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), lesson: all || argv.includes('--lesson') }
 if (!want.xlsx && !want.lesson) want.html = true
 mkdirSync(out, { recursive: true })
-// the cast file keeps this run's roles, under what people wrote in it
-const kept = { ...cast, agents: result.agents.map((a) => ({ id: a.id, role: a.role })) }
+// the cast file keeps this run's roles and blocks of text (so a block keeps its id across small edits), under what
+// people wrote in it; the types a person gave an agent stay, the ones the profile works out are not written
+const givenTypes = Object.fromEntries(cast.agents.filter((a) => a.types?.length).map((a) => [a.id, a.types]))
+const kept = { ...cast, agents: result.agents.map((a) => ({ id: a.id, role: a.role, ...(givenTypes[a.id] ? { types: givenTypes[a.id] } : {}) })), blocks: result.blocks.map((b) => ({ id: b.id, text: b.text })) }
 const castYaml = writeCast(kept, castText)
 writeFileSync(castFile, castYaml)
 console.log(`✓ cast      ${castFile}`)

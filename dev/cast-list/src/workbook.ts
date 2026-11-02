@@ -10,7 +10,7 @@ import { DIMENSIONS, dimensionOf, labelOf, type Dimension, type Lang } from './l
 import { groupPatterns, type Look } from './review'
 import { SHEET_WORDS } from './words'
 
-export type SheetKey = 'summary' | 'matrix' | 'patterns' | 'off' | 'gaps' | 'conflicts' | 'agents' | 'evidence' | 'declared' | 'unknown'
+export type SheetKey = 'summary' | 'matrix' | 'patterns' | 'text' | 'off' | 'gaps' | 'conflicts' | 'agents' | 'evidence' | 'declared' | 'unknown'
 /** A sheet of rows; the xlsx writer reads its name, columns, rows and header. */
 export interface Sheet extends Omit<LibSheet, 'key'> { key: SheetKey }
 /** The .xlsx of these sheets (the platform's writer: its own `key` names only the platform's sheets). */
@@ -20,6 +20,7 @@ const HEAD = { bold: true, fill: 'E8EEF7' }
 const HAS = { v: '●', fill: 'DDF3E6', center: true }
 const OFF = { v: '×', fill: 'FFD5CC', center: true, bold: true }
 const SAID = { v: '◐', fill: 'FFF3C4', center: true }
+const VARIANT = { v: '≈', fill: 'FFF6DC', center: true, bold: true }
 const ORDER = Object.keys(DIMENSIONS) as Dimension[]
 
 export function workbookOf(r: Result, looks: Look[], cast: Cast, lang: Lang = 'en'): Sheet[] {
@@ -28,11 +29,14 @@ export function workbookOf(r: Result, looks: Look[], cast: Cast, lang: Lang = 'e
     key, name: w[key], header: true, columns: titles.map(([title, width]) => ({ title, width })), rows: [titles.map(([v]) => ({ v, ...HEAD })), ...rows],
   })
   const role = (id: string) => w[r.roles[id]]
-  const scope = (s: string) => w[s as 'platform']
+  // a type's scope is «tipo:<its name>», which comes back as type:<id>
+  const scope = (s: string) => (s.startsWith('type:') ? `${w.type}:${r.typeNames[s.slice(5)] ?? s.slice(5)}` : w[s as 'platform'])
+  const typesOf = (id: string) => (r.types[id] ?? []).map((t) => r.typeNames[t] ?? t).join(' · ')
   const label = (k: string) => labelOf(k, lang, r.names)
   // the orchestrators first, then the specialists, each by name
   const agents = [...r.agents].sort((a, b) => (a.role === b.role ? a.id.localeCompare(b.id) : a.role === 'orchestrator' ? -1 : 1))
-  const keys = [...new Set([...agents.flatMap((a) => Object.keys(a.facts)), ...r.patterns.map((p) => p.key)])]
+  // a variation is shown in its block's own row (≈), not as a row of its own
+  const keys = [...new Set([...agents.flatMap((a) => Object.keys(a.facts)), ...r.patterns.map((p) => p.key)])].filter((k) => !k.endsWith('~variant'))
     .sort((a, b) => ORDER.indexOf(dimensionOf(a)) - ORDER.indexOf(dimensionOf(b)) || a.localeCompare(b))
   const off = new Set(r.offPattern.map((o) => `${o.agent} ${o.key}`))
   const n = (role: string) => r.agents.filter((a) => a.role === role).length
@@ -51,7 +55,7 @@ export function workbookOf(r: Result, looks: Look[], cast: Cast, lang: Lang = 'e
     ],
   }
   const matrix = sheet('matrix', [[w.dimension, 18], [w.fact, 40], [w.key, 34], ...agents.map((a): [string, number] => [a.id, 14])],
-    keys.map((k) => [DIMENSIONS[dimensionOf(k)][lang], label(k), k, ...agents.map((a): Value => (k in a.facts ? (k.startsWith('declared:') ? SAID : HAS) : off.has(`${a.id} ${k}`) ? OFF : ''))]))
+    keys.map((k) => [DIMENSIONS[dimensionOf(k)][lang], label(k), k, ...agents.map((a): Value => (k in a.facts ? (k.startsWith('declared:') ? SAID : HAS) : `${k}~variant` in a.facts ? VARIANT : off.has(`${a.id} ${k}`) ? OFF : ''))]))
   const { look, everyone } = groupPatterns(r)
   const patterns = sheet('patterns', [[w.key, 34], [w.fact, 40], [w.scope, 14], [w.role, 14], [w.share, 10], [w.have, 50], [w.lack, 40], [w.decision, 12], [w.why, 50]],
     [...look, ...everyone].map((p) => {
@@ -64,8 +68,8 @@ export function workbookOf(r: Result, looks: Look[], cast: Cast, lang: Lang = 'e
   const gaps = sheet('gaps', [[w.rule, 16], [w.says, 50], [w.role, 14], [w.notMet, 60]], r.gaps.map((g) => [g.rule.id, g.rule.says, g.rule.role ? w[g.rule.role] : '', g.agents.join(', ')]))
   const conflicts = sheet('conflicts', [[w.agent, 24], [w.fact, 40], [w.key, 34], [w.declared, 20], [w.source, 40], [w.inYaml, 12]],
     r.conflicts.map((c) => [c.agent, label(c.key), c.key, c.declared, c.source, c.observed ? w.yes : w.no]))
-  const cast_ = sheet('agents', [[w.agent, 24], [w.name, 32], [w.role, 14], [w.facts, 8], [w.off, 44], [w.alone, 44], [w.children, 24], [w.unknown, 12]],
-    agents.map((a) => [a.id, a.displayName ?? '', w[a.role], Object.keys(a.facts).length,
+  const cast_ = sheet('agents', [[w.agent, 24], [w.name, 32], [w.role, 14], [w.types, 24], [w.facts, 8], [w.off, 44], [w.alone, 44], [w.children, 24], [w.unknown, 12]],
+    agents.map((a) => [a.id, a.displayName ?? '', w[a.role], typesOf(a.id), Object.keys(a.facts).length,
       r.offPattern.filter((o) => o.agent === a.id).map((o) => label(o.key)).join('; '),
       r.solos.filter((s) => s.agents[0] === a.id).map((s) => label(s.key)).join('; '),
       a.children.map((c) => c.name).join(', '), r.unknown.filter((u) => u.agent === a.id).length || '']))
@@ -73,7 +77,11 @@ export function workbookOf(r: Result, looks: Look[], cast: Cast, lang: Lang = 'e
     agents.flatMap((a) => [{ who: a.id, facts: a.facts }, ...a.children.map((c) => ({ who: `${a.id} › ${c.name}`, facts: c.facts }))])
       .flatMap(({ who, facts }) => Object.entries(facts).sort(([x], [y]) => x.localeCompare(y)).flatMap(([k, sources]) => sources.map((s): Value[] => [who, label(k), k, s.file, s.line ?? '']))))
   const declared = sheet('declared', [[w.agent, 24], [w.key, 34], [w.value, 40], [w.source, 40]], cast.declared.map((d) => [d.agent, d.key, d.value, d.source]))
-  const sheets = [summary, matrix, patterns, offSheet, gaps, conflicts, cast_, evidence, declared]
+  // the blocks of text agents share: who has each, who has a variation (and how alike), and the official ones
+  const text = sheet('text', [[w.id, 28], [w.label, 36], [w.body, 70], [w.have, 50], [w.variant, 40], [w.official, 10]],
+    r.blocks.map((b) => [b.id, b.official ?? b.label, { v: b.text, wrap: true }, Object.keys(b.holders).sort().join(', '),
+      Object.entries(b.variants).sort(([x], [y]) => x.localeCompare(y)).map(([a, v]) => `${a} (${Math.round(v.similarity * 100)}%)`).join(', '), b.official ? w.yes : '']))
+  const sheets = [summary, matrix, patterns, ...(r.blocks.length ? [text] : []), offSheet, gaps, conflicts, cast_, evidence, declared]
   if (r.unknown.length) sheets.push(sheet('unknown', [[w.agent, 24], [w.file, 50], [w.why, 40], [w.kind, 24]], r.unknown.map((u) => [u.agent, u.file, w.why_[u.why], u.kind ?? ''])))
   return sheets
 }

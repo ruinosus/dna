@@ -13,6 +13,7 @@ import { readProfile } from '../src/profile'
 import { reviewCast } from '../src/review'
 import { workbookFile, workbookOf } from '../src/workbook'
 import { done, ok } from './ok'
+import { wave1 } from './wave1'
 
 const skills = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills')
 const examples = join(skills, 'cast-list/examples')
@@ -27,8 +28,8 @@ const back = (lang: 'en' | 'pt') => readXlsx(Buffer.from(workbookFile(sheets(lan
 
 // the sheets
 const pt = sheets('pt')
-ok(pt.map((s) => s.name).join() === 'Resumo,Matriz,Padrões,Fora do padrão,Lacunas,Conflitos,Elenco,Evidências,Declarado', 'the sheets of the spec, in order (pt)', pt.map((s) => s.name))
-ok(sheets('en').map((s) => s.name).join() === 'Summary,Matrix,Patterns,Off pattern,Gaps,Conflicts,Cast,Evidence,Declared', 'and in English')
+ok(pt.map((s) => s.name).join() === 'Resumo,Matriz,Padrões,Texto,Fora do padrão,Lacunas,Conflitos,Elenco,Evidências,Declarado', 'the sheets of the spec, in order (pt)', pt.map((s) => s.name))
+ok(sheets('en').map((s) => s.name).join() === 'Summary,Matrix,Patterns,Text,Off pattern,Gaps,Conflicts,Cast,Evidence,Declared', 'and in English')
 const odd = compare([...agents, extractAgent('odd', [{ path: 'agent.mcs.yml', text: 'kind: GptComponentMetadata\n' }, { path: 'a.txt', text: '' }])], profile, demo)
 ok(workbookOf(odd, reviewCast(odd), demo, 'pt').at(-1)?.name === 'Não entendeu', '«Not understood» only when something was not')
 const summary = pt[0].rows.map((r) => r.map((c) => (typeof c === 'object' ? c.v : c)).join(' | ')).join('\n')
@@ -88,4 +89,28 @@ const wrong = back('pt')
 const pw = wrong.find((s) => s.name === 'Padrões')!
 pw.rows.find((r) => r[0] === 'node:LogCustomTelemetryEvent')![pw.rows[0].indexOf('Decisão')] = 'talvez'
 ok(fromSheets(demo, wrong).problems.some((x) => x.includes('talvez')), 'a decision that is not aceito/rejeitado is told', fromSheets(demo, wrong).problems)
+// wave 1: the types, the blocks of text, and a type scope that comes back
+const r1 = compare(agents, wave1(profile), demo)
+const s1 = workbookOf(r1, reviewCast(r1), demo, 'pt')
+const cells = (key: string) => s1.find((x) => x.key === key)!.rows.map((row) => row.map(title))
+const elenco = cells('agents')
+ok(elenco[0].includes('Tipos') && elenco.find((row) => row[0] === 'bodega-cupons')!.includes('transação · orientação') && elenco.find((row) => row[0] === 'bodega-orquestrador')![elenco[0].indexOf('Tipos')] === '', 'the Cast sheet has the types (cupons has two; the orchestrator none)', elenco)
+const texto = cells('text')
+const links = texto.find((row) => row[0] === 'links')!
+ok(texto[0].join() === 'Id,Rótulo,Texto,Quem tem,Variação,Oficial' && links[1] === 'Formatação de links' && links[2].startsWith('Links:') && links[3] === 'bodega-cupons, bodega-devolucoes, bodega-loja-fisica, bodega-pedidos' && links[4].startsWith('bodega-frete (') && links[5] === 'sim', 'the Text sheet: id, label, the text, who has it, who has a variation (how alike), official', links)
+const mx = cells('matrix')
+const linkRow = mx.find((row) => row[2] === 'text:block:links')!
+ok(linkRow[mx[0].indexOf('bodega-frete')] === '≈' && !mx.some((row) => row[2].endsWith('~variant')), 'the matrix: ≈ for a variation, in the block\'s own row', linkRow)
+const pats1 = cells('patterns')
+const flow = pats1.find((row) => row[0].startsWith('flow:'))!
+ok(flow[pats1[0].indexOf('Escopo')] === 'tipo:transação', 'a type scope reads «tipo:transação»', flow)
+// filled in: «aceito» on the help link, scope tipo:orientação → a decision scoped type:guidance
+const back1 = readXlsx(Buffer.from(workbookFile(s1)))
+const ps1 = back1.find((x) => x.name === 'Padrões')!
+const help = ps1.rows.find((row) => row[0] === 'text:link-domain:ajuda.bodega-azul.example')!
+help[ps1.rows[0].indexOf('Decisão')] = 'aceito'
+const got1 = fromSheets(demo, back1, r1.typeNames)
+const d1 = got1.changes.find((c) => c.kind === 'decision' && c.after?.key === 'text:link-domain:ajuda.bodega-azul.example')
+ok(!got1.problems.length && d1?.kind === 'decision' && d1.after?.scope === 'type:guidance', 'the scope «tipo:orientação» comes back as type:guidance', got1)
+ok(!fromSheets(demo, readXlsx(Buffer.from(workbookFile(s1))), r1.typeNames).changes.length, 'read back as written, it still changes nothing')
 done()
