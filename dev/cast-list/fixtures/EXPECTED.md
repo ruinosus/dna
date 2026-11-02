@@ -75,3 +75,27 @@ Added by `gen_fixtures.py` (the `WAVE1` table) to the instructions of the five s
 - With the 1.2 findings unchanged, the triage topic is a new solo (only frete has `OnSelectIntent`).
 - Inferred, to confirm in a real clone: how the editor names a copied topic (`<Name> Copy`), and the values of
   `aISettings.contentModeration` (the schema gives only its type).
+
+## Wave 2 (cast-list 1.4): the orchestrator's contract, the flows, what nobody uses
+
+Added by `gen_fixtures.py` (the `WAVE2` table and the orchestrator's `connected` list):
+
+| Where | What | What it should give |
+|---|---|---|
+| orchestrator `actions/AgenteFrete` | `historyType: NoHistory`, no inputs (`inputType: {}`) | frete off the patterns «receives the history» and «receives «CategoriaSolicitacao»» (4 of 5) |
+| orchestrator `actions/AgenteCupons` | `modelDescription: Cupons.` (7 characters) | a short routing description |
+| orchestrator `actions/AgenteFidelidade` (new, 6th action) | calls `cr7b2_bodegaFidelidade`, an agent that is not in the folder | «calls one that is not in the folder» |
+| pedidos, devolucoes, cupons `workflows/AbrirChamadoERP-7d1c2a4e/` | `metadata.yml` (`workflowId` = the flow action's `flowId`, `jsonFileName`) + `workflow.json`: trigger `Request` (`kind: Skills`), `Http` POST to `https://erp.bodega-azul.example/chamados` inside a `Scope`, `Response` (`kind: Skills`) | `flow-uses:http:erp.bodega-azul.example` and `flow-returns`: patterns of the transaction type |
+| cupons, its copy of that flow | no `Response` | «the flow «Abrir chamado no ERP» of bodega-cupons returns nothing» |
+| loja-fisica `workflows/ListarLojas-3f2a9c1d/` | `OpenApiConnection` to `shared_commondataserviceforapps` (`ListRecords`), no node calls its `workflowId` | `orphan:flow:ListarLojas`; its connector is not a solo |
+| loja-fisica `topics/AvisoAntigo.topic.mcs.yml` | `OnRecognizedIntent` with `intent: {}`, no `modelDescription`, nobody calls it | `orphan:topic:AvisoAntigo` |
+| frete `variables/PreferenciaAntiga.mcs.yml` | a global variable no other file names | `orphan:variable:PreferenciaAntiga`, not a solo |
+| pedidos `topics/Escalate` | a second `SendActivity` with `disabled: true` | `disabled:node:SendActivity`, with the file and the line |
+
+File counts change: orchestrator 6 actions; pedidos, devolucoes and cupons 1 workflow folder each; loja-fisica 7 topics
+and 1 workflow folder; frete 2 variables.
+
+Inferred, to confirm in a real clone:
+- how a whole disabled topic appears (`state: Inactive` or another property): the fixtures disable a node only;
+- whether each agent's clone brings the flows it uses or only the solution's: the fixtures put the flow in each agent;
+- the type of the answer action in a flow called by an agent: `Response` with `kind: Skills`.

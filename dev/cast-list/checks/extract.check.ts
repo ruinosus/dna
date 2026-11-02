@@ -27,7 +27,7 @@ ok(agents['bodega-pedidos'].schemaName === 'cr7b2_bodegaPedidos' && agents['bode
 
 // the orchestrator
 const o = 'bodega-orquestrador'
-ok(keys(o, 'calls:cr7b2').join() === ['cr7b2_bodegaCupons', 'cr7b2_bodegaDevolucoes', 'cr7b2_bodegaFrete', 'cr7b2_bodegaLojaFisica', 'cr7b2_bodegaPedidos'].map((s) => `calls:${s}`).join(), 'the orchestrator calls the five connected agents', keys(o, 'calls:'))
+ok(keys(o, 'calls:cr7b2').join() === ['cr7b2_bodegaCupons', 'cr7b2_bodegaDevolucoes', 'cr7b2_bodegaFidelidade', 'cr7b2_bodegaFrete', 'cr7b2_bodegaLojaFisica', 'cr7b2_bodegaPedidos'].map((s) => `calls:${s}`).join(), 'the orchestrator calls the five connected agents, and one not in the folder', keys(o, 'calls:'))
 ok(has(o, 'child:SobreBodegaAzul') && has(o, 'var:CategoriaSolicitacao') && has(o, 'ms:orchestrator-variables'), 'the orchestrator: its child agent, its global variable, the orchestrator-variables pattern')
 ok(!has(o, 'trigger:OnToolSelected') && agents[o].children[0]?.name === 'SobreBodegaAzul' && 'trigger:OnToolSelected' in agents[o].children[0].facts, "the child's OnToolSelected is the child's, not the orchestrator's")
 ok(!keys(o, 'connector:').length && !keys(o, 'knowledge:').length && !keys(o, 'connref:').length, 'the orchestrator has no connector, knowledge or connection reference')
@@ -88,4 +88,139 @@ ok(why['topics/Broken.topic.mcs.yml'] === 'yaml' && why['topics/Empty.topic.mcs.
 ok(odd.unknown.find((u) => u.why === 'kind' && u.file === 'topics/Made.topic.mcs.yml')?.kind === 'OnInventado', 'the made-up kind is kept by name')
 ok('trigger:OnEscalate' in odd.facts && 'auth:Integrated' in odd.facts && 'instructions:present' in odd.facts && odd.schemaName === 'x_odd', '.yaml read like .yml; the rest of the agent read', Object.keys(odd.facts))
 ok(!Object.keys(odd.facts).some((k) => k.startsWith('knowledge:')), 'no knowledge folder: no knowledge, and no error')
+
+// wave 2: the orchestrator's contract
+const contract = Object.fromEntries(agents[o].contract.map((c) => [c.calls, c]))
+ok(agents[o].contract.length === 6 && contract.cr7b2_bodegaPedidos.history && contract.cr7b2_bodegaPedidos.inputs.join() === 'CategoriaSolicitacao' && contract.cr7b2_bodegaPedidos.file === 'actions/AgentePedidos.mcs.yml' && !!contract.cr7b2_bodegaPedidos.line,
+  'the contract: who it calls, the history, the inputs, the file and the line', agents[o].contract)
+ok(!contract.cr7b2_bodegaFrete.history && !contract.cr7b2_bodegaFrete.inputs.length, 'frete: no history and no input', contract.cr7b2_bodegaFrete)
+ok(contract.cr7b2_bodegaCupons.description === 'Cupons.', 'cupons: a routing description of 7 characters', contract.cr7b2_bodegaCupons)
+ok(SPECIALISTS.every((id) => !agents[id].contract.length), 'a specialist calls no one')
+
+// wave 2: the flows
+const erp = 'flow-uses:http:erp.bodega-azul.example'
+all(['bodega-pedidos', 'bodega-devolucoes', 'bodega-cupons'], [erp], 'the three transaction specialists: the flow calls the ERP by HTTP (inside a scope)')
+ok(has('bodega-pedidos', 'flow-returns') && has('bodega-devolucoes', 'flow-returns') && !has('bodega-cupons', 'flow-returns'), 'the flow answers the agent, except in cupons')
+ok(agents['bodega-pedidos'].facts[erp][0].file === 'workflows/AbrirChamadoERP-7d1c2a4e/workflow.json' && agents['bodega-pedidos'].facts[erp][0].line! > 1, 'a flow fact says its file and the line of its action', agents['bodega-pedidos'].facts[erp])
+ok(agents['bodega-pedidos'].flows[0]?.name === 'Abrir chamado no ERP' && agents['bodega-pedidos'].flows[0].called, 'the flow is known by its display name, and the agent calls it', agents['bodega-pedidos'].flows)
+const lf = 'bodega-loja-fisica'
+ok(has(lf, 'orphan:flow:ListarLojas') && !keys(lf, 'flow-uses:').length && agents[lf].flows[0]?.called === false, 'a flow no node calls is unused, and what it uses is not a fact', keys(lf, ''))
+
+// wave 2: what nobody uses, what is switched off
+ok(has(lf, 'orphan:topic:AvisoAntigo') && agents[lf].facts['orphan:topic:AvisoAntigo'][0].file === 'topics/AvisoAntigo.topic.mcs.yml', 'a topic nobody can reach, with its file')
+ok(has('bodega-frete', 'orphan:variable:PreferenciaAntiga') && !has('bodega-frete', 'var:PreferenciaAntiga'), 'a variable no file names is unused, not a variable it has')
+const off = agents['bodega-pedidos'].facts['disabled:node:SendActivity']
+ok(off?.length === 1 && off[0].file === 'topics/Escalate.topic.mcs.yml' && !!off[0].line, 'a node switched off, with the file and the line', off)
+const orphans = Object.values(agents).flatMap((a) => Object.keys(a.facts).filter((k) => /^(orphan|disabled):/.test(k)).map((k) => `${a.id} ${k}`))
+ok(orphans.length === 4, 'four unused or switched off in the examples, and no other', orphans)
+
+// wave 2, by hand: the shapes of a flow, and what is not unused
+const y = (s: string) => s.replace(/^\n/, '')
+const flowJson = (d: unknown, wrap: boolean) => JSON.stringify(wrap ? { properties: { definition: d } } : { definition: d }, null, 2)
+const nested = {
+  triggers: { manual: { type: 'Request', kind: 'Skills' } },
+  actions: {
+    Se: { type: 'If', actions: { A: { type: 'Http', inputs: { uri: 'https://a.example/x' } } }, else: { actions: { B: { type: 'Workflow', inputs: {} } } } },
+    Caso: { type: 'Switch', cases: { um: { actions: { C: { type: 'OpenApiConnection', inputs: { host: { apiId: '/providers/Microsoft.PowerApps/apis/shared_teams', operationId: 'PostMessage' } } } } } } },
+    Cada: { type: 'Foreach', actions: { D: { type: 'Http', inputs: { uri: 'https://d.example' } } } },
+  },
+}
+const flowAgent = (wrap: boolean, json = flowJson(nested, wrap)) => extractAgent('f', [
+  { path: 'actions/Chamar.mcs.yml', text: y(`
+kind: TaskDialog
+modelDescription: Chama o fluxo.
+action:
+  kind: InvokeFlowTaskAction
+  flowId: 11111111-2222-3333-4444-555555555555
+`) },
+  { path: 'workflows/Fluxo-11111111/metadata.yml', text: 'workflowId: 11111111-2222-3333-4444-555555555555\njsonFileName: workflow.json\n' },
+  { path: 'workflows/Fluxo-11111111/workflow.json', text: json },
+], kinds)
+for (const wrap of [true, false]) {
+  const f = flowAgent(wrap)
+  const uses = Object.keys(f.facts).filter((k) => k.startsWith('flow-uses:')).sort()
+  ok(uses.join() === ['flow-uses:child-flow', 'flow-uses:connector:shared_teams', 'flow-uses:http:a.example', 'flow-uses:http:d.example', 'flow-uses:operation:shared_teams/PostMessage'].join() && !f.unknown.length,
+    `inside a condition (and its else), a switch and a loop — the definition in ${wrap ? 'properties.definition' : 'definition'}`, [uses, f.unknown])
+}
+const broken = flowAgent(true, '{ "properties": ')
+ok(broken.unknown.some((u) => u.file === 'workflows/Fluxo-11111111/workflow.json' && u.why === 'json') && 'flow:11111111-2222-3333-4444-555555555555' in broken.facts, 'a JSON that does not read goes to «not understood», and the rest is read', broken.unknown)
+const shapeless = flowAgent(true, '{ "something": 1 }')
+ok(shapeless.unknown.some((u) => u.why === 'flow'), 'a flow in a shape it does not know goes to «not understood»', shapeless.unknown)
+
+const topic = (name: string, body: string) => ({ path: `topics/${name}.topic.mcs.yml`, text: y(`
+kind: AdaptiveDialog
+${body}`) })
+const notOrphans = extractAgent('t', [
+  topic('ComDescricao', `modelDescription: Responde sobre prazos.
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions: []
+`),
+  topic('ComFrases', `beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    triggerQueries:
+      - qual o prazo
+  actions: []
+`),
+  topic('Chamado', `beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions: []
+`),
+  topic('Quem', `beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    triggerQueries:
+      - oi
+  actions:
+    - kind: BeginDialog
+      id: b
+      dialog: cr7b2_x.topic.Chamado
+`),
+  ...['OnConversationStart', 'OnUnknownIntent', 'OnError', 'OnEscalate', 'OnRedirect', 'OnSelectIntent', 'OnActivity'].map((t) => topic(t, `beginDialog:
+  kind: ${t}
+  id: main
+  actions: []
+`)),
+  topic('Sozinho', `beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions: []
+`),
+], kinds)
+ok(Object.keys(notOrphans.facts).filter((k) => k.startsWith('orphan:')).join() === 'orphan:topic:Sozinho', 'not unused: a description, phrases, a BeginDialog that calls it, the system triggers', Object.keys(notOrphans.facts))
+
+const switched = extractAgent('d', [
+  topic('OnError', `beginDialog:
+  kind: OnError
+  id: main
+  actions:
+    - kind: LogCustomTelemetryEvent
+      id: t
+      disabled: true
+      eventName: Erro
+`),
+  topic('Velho', `state: Inactive
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    triggerQueries:
+      - velho
+  actions:
+    - kind: LogCustomTelemetryEvent
+      id: t
+      eventName: Velho
+`),
+], kinds)
+ok(!('node:LogCustomTelemetryEvent' in switched.facts) && 'disabled:node:LogCustomTelemetryEvent' in switched.facts, 'a telemetry node switched off is not telemetry', Object.keys(switched.facts))
+ok('disabled:topic:Velho' in switched.facts && !Object.keys(switched.facts).some((k) => k === 'trigger:OnRecognizedIntent'), 'state: Inactive — the topic is switched off, and nothing in it counts', Object.keys(switched.facts))
+
 done()

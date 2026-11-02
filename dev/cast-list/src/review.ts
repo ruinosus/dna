@@ -7,7 +7,7 @@ import type { Role } from './profile'
 import { roleWord } from './words'
 
 export interface Look {
-  key: 'conflict' | 'contradiction' | 'off' | 'gap' | 'values' | 'twice' | 'solo' | 'type' | 'unknown' | 'unmatched'
+  key: 'conflict' | 'contradiction' | 'contract' | 'flow' | 'off' | 'gap' | 'values' | 'twice' | 'solo' | 'unused' | 'type' | 'unknown' | 'unmatched'
   agents: string[]
   /** The fact it is about, when it is about one (the map opens it). */
   fact?: string
@@ -17,7 +17,8 @@ export interface Look {
 
 const names = (xs: string[]) => xs.join(', ')
 // the order of «to look at»: what disagrees first, what is only told last
-const ORDER: Look['key'][] = ['conflict', 'contradiction', 'off', 'gap', 'values', 'twice', 'solo', 'type', 'unknown', 'unmatched']
+const ORDER: Look['key'][] = ['conflict', 'contradiction', 'contract', 'flow', 'off', 'gap', 'values', 'twice', 'solo', 'unused', 'type', 'unknown', 'unmatched']
+const place = (file: string) => file.replace(/(\.topic)?\.mcs\.ya?ml$/, '')
 
 export function reviewCast(r: Result): Look[] {
   const out: Look[] = []
@@ -41,6 +42,19 @@ export function reviewCast(r: Result): Look[] {
       out.push({ key: 'contradiction', agents: [agent], fact: not, en: `${agent} has ${both('en')} (rule «${g.rule.says}»)`, pt: `${agent} tem ${both('pt')} (regra «${g.rule.says}»)` })
     }
   }
+
+  // the orchestrator's contract: a call to what is not in the folder, a specialist nobody calls, a short description
+  for (const m of r.contract.missing)
+    out.push({ key: 'contract', agents: [m.caller], fact: `calls:${m.calls}`, en: `The orchestrator calls «${m.name ?? m.calls}», which is not in the folder`, pt: `O orquestrador chama «${m.name ?? m.calls}», que não está na pasta` })
+  for (const id of r.contract.uncalled)
+    out.push({ key: 'contract', agents: [id], en: `${id} is in the folder, but no orchestrator calls it`, pt: `${id} está na pasta, mas nenhum orquestrador o chama` })
+  for (const x of r.contract.short) {
+    const n = x.description.length
+    out.push({ key: 'contract', agents: [x.agent!], fact: 'routing:described', en: `The routing description of ${x.agent} has only ${n} characters`, pt: `A descrição de roteamento de ${x.agent} tem só ${n} caracteres` })
+  }
+  // a flow an agent calls that answers nothing
+  for (const f of r.flows.filter((x) => x.called && !x.returns))
+    out.push({ key: 'flow', agents: [f.agent], fact: 'flow-returns', en: `The flow «${f.name}» of ${f.agent} returns nothing`, pt: `O fluxo «${f.name}» de ${f.agent} não devolve nada` })
 
   // off a pattern: one question per key, role and type — and a variation of a block is asked as one
   const typeName = (scope: string) => (scope.startsWith('type:') ? r.typeNames[scope.slice(5)] ?? scope.slice(5) : undefined)
@@ -119,6 +133,22 @@ export function reviewCast(r: Result): Look[] {
     if (api && covered.has(`${agent} ${api}`)) continue
     if (told.some((t) => t.agent === agent && t.keys.some((k) => matches(s.key, k)))) continue
     out.push({ key: 'solo', agents: [agent], fact: s.key, en: `Only ${agent} has «${label(s.key, 'en')}»: innovation or debt?`, pt: `Só ${agent} tem «${label(s.key, 'pt')}»: inovação ou dívida?` })
+  }
+
+  // what nothing uses, and what is switched off: remove it, or switch it on?
+  const thing = { topic: ['the topic', 'o tópico'], action: ['the tool', 'a ferramenta'], variable: ['the variable', 'a variável'], flow: ['the flow', 'o fluxo'], knowledge: ['the knowledge source', 'a fonte de conhecimento'] } as Record<string, [string, string]>
+  for (const u of r.unused) {
+    const [en, pt] = thing[u.what] ?? ['', '']
+    const name = r.names[u.name] ?? u.name
+    if (u.how === 'orphan') {
+      const asks = u.what === 'variable' ? ['remove it?', 'remover?'] : ['remove it or switch it on?', 'remover ou ligar?']
+      const verb = u.what === 'variable' ? ['uses', 'usa'] : u.what === 'action' ? ['can choose', 'pode escolher'] : ['calls', 'chama']
+      out.push({ key: 'unused', agents: [u.agent], fact: u.key, en: `Nobody ${verb[0]} ${en} «${name}» (${u.agent}): ${asks[0]}`, pt: `Ninguém ${verb[1]} ${pt} «${name}» (${u.agent}): ${asks[1]}` })
+    } else if (u.what === 'node') {
+      for (const file of [...new Set(u.sources.map((s) => s.file))])
+        out.push({ key: 'unused', agents: [u.agent], fact: u.key, en: `${u.agent} has a switched-off node in «${place(file)}» (${u.name}): remove it?`, pt: `${u.agent} tem um nó desligado em «${place(file)}» (${u.name}): remover?` })
+    } else
+      out.push({ key: 'unused', agents: [u.agent], fact: u.key, en: `${u.agent} has ${en || u.what} «${name}» switched off: remove it?`, pt: `${u.agent} tem ${pt || u.what} «${name}» ${pt.startsWith('a ') ? 'desligada' : 'desligado'}: remover?` })
   }
 
   // a type with too few to compare in

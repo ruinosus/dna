@@ -40,7 +40,7 @@ export const DEFAULT_PROFILE: Profile = { roles: {}, threshold: 0.7, minAgents: 
 const FIELDS = ['format', 'name', 'roles', 'threshold', 'min_agents', 'rules', 'markers', 'blocks', 'types', 'focus_areas', 'ignore', 'microsoft_patterns']
 const IN = ['instructions', 'descriptions', 'all']
 // the kinds of key there are (references/keys.md): a key in a type or a rule must start with one
-const PREFIXES = new Set(['trigger', 'setting', 'topics', 'instructions', 'connector', 'operation', 'connref', 'mcp', 'flow', 'knowledge', 'node', 'calls', 'reaches', 'child', 'var', 'var-in', 'model', 'auth', 'ms', 'declared', 'text', 'yaml-only'])
+const PREFIXES = new Set(['trigger', 'setting', 'topics', 'instructions', 'connector', 'operation', 'connref', 'mcp', 'flow', 'knowledge', 'node', 'calls', 'reaches', 'child', 'var', 'var-in', 'model', 'auth', 'ms', 'declared', 'text', 'yaml-only', 'called-with', 'routing', 'flow-uses', 'flow-returns', 'orphan', 'disabled'])
 const knownKey = (key: string) => PREFIXES.has(key.split(':')[0])
 export { matches } from './labels'
 type Obj = Record<string, unknown>

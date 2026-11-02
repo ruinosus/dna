@@ -35,7 +35,7 @@ ok(!r.patterns.some((p) => p.role === 'orchestrator'), 'one orchestrator makes n
 // who is off a pattern
 const off = (res: Result) => [...new Set(res.offPattern.map((o) => o.agent))].sort()
 ok(off(r).join() === 'bodega-frete,bodega-loja-fisica', 'off a pattern: only bodega-frete and bodega-loja-fisica', r.offPattern)
-ok(keys(r.offPattern.filter((o) => o.agent === 'bodega-frete' && !o.key.startsWith('text:'))).join() === 'trigger:OnEscalate', 'bodega-frete: off once — it does not escalate (the fallback that would lead there is part of it)', r.offPattern)
+ok(keys(r.offPattern.filter((o) => o.agent === 'bodega-frete' && !o.key.startsWith('text:') && !o.key.startsWith('called-with:'))).join() === 'trigger:OnEscalate', 'bodega-frete: off once — it does not escalate (the fallback that would lead there is part of it)', r.offPattern)
 const part = pattern(r, 'reaches:OnEscalate')
 ok(part?.partOf === 'trigger:OnEscalate' && part.share === 1 && part.scope === 'platform', 'reaching escalation is a part of escalating, checked on the agents that escalate', part)
 ok(!r.solos.some((s) => s.key.startsWith('reaches:')) && !r.orchestratorDoes.some((s) => s.key.startsWith('reaches:')), 'a part is never a solo')
@@ -110,4 +110,29 @@ const decided = compare(agents, w1, { ...empty, decisions: [{ key: 'text:link-do
 ok(pattern(decided, 'text:link-domain:ajuda.bodega-azul.example')?.decision?.scope === 'type:guidance', 'a decision with a type scope marks the pattern of that type')
 const given = compare(agents, w1, { ...empty, agents: [{ id: 'bodega-frete', role: 'specialist', types: ['guidance'] }], decisions: [{ key: 'text:link-domain:ajuda.bodega-azul.example', status: 'accepted', scope: 'type:guidance', why: '' }] })
 ok(given.types['bodega-frete'].join() === 'guidance' && given.offPattern.some((o) => o.agent === 'bodega-frete' && o.key === 'text:link-domain:ajuda.bodega-azul.example'), 'the cast file makes frete a guidance specialist: off the accepted help-link pattern of its new type')
+
+// wave 2: the orchestrator's contract, as facts of the agent called
+const fact = (id: string, key: string) => r.agents.find((a) => a.id === id)!.facts[key]
+ok(SPECIALISTS.filter((id) => id !== 'bodega-frete').every((id) => fact(id, 'called-with:history') && fact(id, 'called-with:input:CategoriaSolicitacao')) && !fact('bodega-frete', 'called-with:history') && !fact('bodega-frete', 'called-with:input:CategoriaSolicitacao'),
+  'four specialists are called with the history and the category; frete with neither')
+ok(fact('bodega-pedidos', 'called-with:history')[0].file === 'bodega-orquestrador/actions/AgentePedidos.mcs.yml', 'the evidence is in the orchestrator\'s file', fact('bodega-pedidos', 'called-with:history'))
+ok(pattern(r, 'called-with:history')?.share === 0.8 && pattern(r, 'called-with:input:CategoriaSolicitacao')?.share === 0.8 && pattern(r, 'routing:described')?.share === 1, 'the contract is a pattern of the specialists', r.patterns.filter((p) => /^(called|routing)/.test(p.key)))
+ok(['called-with:history', 'called-with:input:CategoriaSolicitacao'].every((k) => r.offPattern.some((o) => o.agent === 'bodega-frete' && o.key === k)), 'frete is off both')
+ok(r.contract.routes.length === 6 && r.contract.missing.map((m) => m.calls).join() === 'cr7b2_bodegaFidelidade' && r.contract.missing[0].caller === 'bodega-orquestrador', 'the orchestrator calls one that is not in the folder', r.contract.missing)
+ok(r.contract.short.map((x) => `${x.agent}:${x.description.length}`).join() === 'bodega-cupons:7', 'a short routing description: cupons, 7 characters', r.contract.short)
+ok(!r.contract.uncalled.length, 'every specialist of the folder is called')
+const lonelyOne = compare(agents.filter((a) => a.id !== 'bodega-orquestrador').concat({ ...agents.find((a) => a.id === 'bodega-orquestrador')!, contract: agents.find((a) => a.id === 'bodega-orquestrador')!.contract.filter((c) => c.calls !== 'cr7b2_bodegaFrete') }), profile, empty)
+ok(lonelyOne.contract.uncalled.join() === 'bodega-frete', 'a specialist no orchestrator calls', lonelyOne.contract.uncalled)
+const noOrchestrator = compare(agents.filter((a) => a.id !== 'bodega-orquestrador'), profile, empty)
+ok(!noOrchestrator.contract.uncalled.length, 'with no orchestrator, nobody is «not called»')
+
+// wave 2: the flows and what nothing uses
+const silent = r.flows.filter((f) => f.called && !f.returns)
+ok(silent.map((f) => `${f.agent}:${f.name}`).join() === 'bodega-cupons:Abrir chamado no ERP', 'the flow that returns nothing: cupons, «Abrir chamado no ERP»', r.flows)
+ok(r.flows.length === 4, 'four flows, the unused one too')
+ok(!r.patterns.some((p) => /^(orphan|disabled):/.test(p.key)) && !r.solos.some((x) => /^(orphan|disabled):/.test(x.key) || x.key.includes('commondataservice') || x.key === 'var:PreferenciaAntiga'), 'what nothing uses is never a pattern nor a solo — nor what an unused flow uses', keys(r.solos))
+ok(r.unused.map((u) => `${u.agent} ${u.how} ${u.what} ${u.name}`).join('|') === 'bodega-frete orphan variable PreferenciaAntiga|bodega-loja-fisica orphan flow ListarLojas|bodega-loja-fisica orphan topic AvisoAntigo|bodega-pedidos disabled node SendActivity',
+  'the unused and the switched off, each with its file', r.unused)
+ok(r.unused.every((u) => u.sources[0]?.file), 'each with its file')
+
 done()

@@ -20,7 +20,7 @@ export const SHEET_WORDS = {
     yes: 'yes', no: 'no', accept: 'accepted', reject: 'rejected', platform: 'platform', specialist: 'specialist', orchestrator: 'orchestrator',
     title: 'The cast, compared', look: 'To look at', nothing: 'Nothing to look at', privacy: 'This file holds the client’s data: keep it in the client’s environment.',
     count: { agents: 'In the cast', orchestrators: 'Orchestrators', specialists: 'Specialists', patterns: 'Patterns', off: 'Off a pattern', gaps: 'Rules not met', conflicts: 'Conflicts', solos: 'Only one has it' },
-    why_: { yaml: 'YAML that does not read', empty: 'empty', kind: 'a kind Copilot Studio does not have', file: 'not a Copilot Studio file' },
+    why_: { yaml: 'YAML that does not read', empty: 'empty', kind: 'a kind Copilot Studio does not have', file: 'not a Copilot Studio file', json: 'JSON that does not read', flow: 'a flow in a shape the analysis does not know' },
   },
   pt: {
     summary: 'Resumo', matrix: 'Matriz', patterns: 'Padrões', text: 'Texto', off: 'Fora do padrão', gaps: 'Lacunas', conflicts: 'Conflitos', agents: 'Elenco', evidence: 'Evidências', declared: 'Declarado', unknown: 'Não entendeu',
@@ -31,6 +31,6 @@ export const SHEET_WORDS = {
     yes: 'sim', no: 'não', accept: 'aceito', reject: 'rejeitado', platform: 'plataforma', specialist: 'especialista', orchestrator: 'orquestrador',
     title: 'Elenco comparado', look: 'Para olhar', nothing: 'Nada para olhar', privacy: 'Este arquivo tem dados do cliente: deixe-o no ambiente dele.',
     count: { agents: 'No elenco', orchestrators: 'Orquestradores', specialists: 'Especialistas', patterns: 'Padrões', off: 'Fora do padrão', gaps: 'Regras não cumpridas', conflicts: 'Conflitos', solos: 'Só um tem' },
-    why_: { yaml: 'YAML que não se lê', empty: 'vazio', kind: 'um kind que o Copilot Studio não tem', file: 'não é arquivo do Copilot Studio' },
+    why_: { yaml: 'YAML que não se lê', empty: 'vazio', kind: 'um kind que o Copilot Studio não tem', file: 'não é arquivo do Copilot Studio', json: 'JSON que não se lê', flow: 'um fluxo num formato que a análise não conhece' },
   },
 }

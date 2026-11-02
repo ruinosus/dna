@@ -3,11 +3,20 @@
 // topics/ or actions/), except settings.mcs.yml, which has none. A child agent (agents/<Name>/) has its own facts. What
 // cannot be read — broken YAML, an empty file, a kind the schema does not have, a file that is not YAML — goes to
 // `unknown` with its path, and the rest is read all the same.
+//
+// Also: what the orchestrator passes each agent it calls (its contract), what each flow in workflows/ uses, and what
+// nothing uses — a topic nobody can reach, a tool the model cannot choose, a variable no file names, a flow no node
+// calls — and what was switched off. A switched-off node is not a fact: a disabled telemetry node is no telemetry.
+import { lineOfAction, readFlow } from './flows'
 import { isMap, isScalar, isSeq, LineCounter, parseDocument, type Node } from 'yaml'
 
 export interface Source { file: string; line?: number }
 export type Facts = Record<string, Source[]>
-export interface Unknown { file: string; why: 'yaml' | 'empty' | 'kind' | 'file'; kind?: string }
+export interface Unknown { file: string; why: 'yaml' | 'empty' | 'kind' | 'file' | 'json' | 'flow'; kind?: string }
+/** One connected-agent action of an orchestrator: who it calls, with what. */
+export interface Call { calls: string; /** The name the action gives it. */ name?: string; history: boolean; inputs: string[]; description: string; file: string; line?: number }
+/** A flow in workflows/: what it uses (the keys of flow-uses:), whether it answers, and whether a node calls it. */
+export interface Flow { id?: string; name: string; folder: string; uses: string[]; returns: boolean; called: boolean; file: string }
 /** A text the model reads: the instructions, or a topic's or an action's description for the model. */
 export interface Text { source: 'instructions' | 'descriptions'; file: string; line: number; text: string }
 export interface AgentFacts {
@@ -23,6 +32,9 @@ export interface AgentFacts {
   names: Record<string, string>
   /** The texts of the agent itself (not its children), for the blocks and markers. */
   texts: Text[]
+  /** The connected agents it calls, each with what it passes. */
+  contract: Call[]
+  flows: Flow[]
 }
 
 type Obj = Record<string, unknown>
@@ -53,12 +65,17 @@ function read(text: string): { data: unknown; lineOf: (o: unknown) => number | u
 }
 
 /** Every object with a string `kind`, at any depth. */
-function* nodes(x: unknown): Generator<Obj> {
-  if (Array.isArray(x)) for (const y of x) yield* nodes(y)
+function* nodes(x: unknown, off = false): Generator<Obj> {
+  if (Array.isArray(x)) for (const y of x) yield* nodes(y, off)
   const o = obj(x)
   if (!o) return
-  if (typeof o.kind === 'string') yield o
-  for (const v of Object.values(o)) yield* nodes(v)
+  // a switched-off node, and what is inside it, says nothing; `off` asks for those nodes instead
+  if (o.disabled === true) {
+    if (off && typeof o.kind === 'string') yield o
+    return
+  }
+  if (typeof o.kind === 'string' && !off) yield o
+  for (const v of Object.values(o)) yield* nodes(v, off)
 }
 
 /** «cr7b2_bot.shared_office365.shared-office365-…» → «shared_office365». */
@@ -75,15 +92,39 @@ function textLine(source: string, key: string): number {
   return /:\s*[|>][-+]?\s*$/.test(lines[at]) ? at + 2 : at + 1
 }
 const NODES = new Set(['LogCustomTelemetryEvent', 'CSATQuestion', 'SearchAndSummarizeContent', 'SearchKnowledgeSources'])
+const KIND_OF_FOLDER: Record<string, string> = { topics: 'topic', actions: 'action', knowledge: 'knowledge', variables: 'variable' }
+const FLOW_FILE = /^workflows\/([^/]+)\/(.+)$/
 
 export function extractAgent(id: string, files: { path: string; text: string }[], kinds?: Set<string>): AgentFacts {
-  const agent: AgentFacts = { id, facts: {}, children: [], unknown: [], names: {}, texts: [] }
+  const agent: AgentFacts = { id, facts: {}, children: [], unknown: [], names: {}, texts: [], contract: [], flows: [] }
   let knowledge: Source[] = []
   // a topic that calls another (BeginDialog) reaches what that topic is for — its trigger, known once every file is read
   const triggers = new Map<string, string>()
   const calls: { topic: string; into: Facts; at: Source }[] = []
   const topicName = (path: string) => last(path, '/').replace(/(\.topic)?\.mcs\.ya?ml$|\.ya?ml$/, '')
+  // what may turn out unused, known once every file is read
+  const dialogs: string[] = []
+  const lonely: { kind: 'topic' | 'action'; name: string; at: Source }[] = []
+  const variables: { name: string; at: Source }[] = []
+  const flowFolders = new Map<string, { meta?: Obj; metaFile?: string; json: Record<string, { file: string; text: string; data: unknown }> }>()
   for (const f of [...files].sort((a, b) => a.path.localeCompare(b.path))) {
+    const flow = FLOW_FILE.exec(f.path)
+    if (flow && (/\.json$/.test(f.path) || /^metadata\.ya?ml$/.test(flow[2]))) {
+      const folder = flowFolders.get(flow[1]) ?? { json: {} }
+      flowFolders.set(flow[1], folder)
+      if (/\.json$/.test(f.path)) {
+        try {
+          folder.json[flow[2]] = { file: f.path, text: f.text, data: JSON.parse(f.text) }
+        } catch {
+          agent.unknown.push({ file: f.path, why: 'json' })
+        }
+        continue
+      }
+      const m = read(f.text)
+      if (m === 'yaml' || m === 'empty') agent.unknown.push({ file: f.path, why: m })
+      else [folder.meta, folder.metaFile] = [obj(m.data), f.path]
+      continue
+    }
     if (!/\.ya?ml$/.test(f.path)) {
       agent.unknown.push({ file: f.path, why: 'file' })
       continue
@@ -120,6 +161,11 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
     if (made) agent.unknown.push({ file: f.path, why: 'kind', kind: made })
     if (typeof root?.kind !== 'string') {
       if (!made) agent.unknown.push({ file: f.path, why: 'kind' })
+      continue
+    }
+    // a component switched off: that it is there, and nothing else
+    if (root.state === 'Inactive' || root.status === 'Inactive') {
+      add(`disabled:${KIND_OF_FOLDER[f.path.split('/')[child ? 2 : 0]] ?? 'component'}:${topicName(f.path)}`)
       continue
     }
     const text = f.text
@@ -164,6 +210,9 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
         if (trigger) add(`trigger:${trigger}`, begin)
         if (trigger) triggers.set(`${child ?? ''}/${topicName(f.path)}`, trigger)
         if (str(root.modelDescription)) add('topics:with-model-description')
+        // a topic the model cannot pick (no description, no phrases) is reached only if another topic calls it
+        const phrases = list(obj(begin?.intent)?.triggerQueries).length
+        if (!child && trigger === 'OnRecognizedIntent' && !str(root.modelDescription) && !phrases) lonely.push({ kind: 'topic', name: topicName(f.path), at: { file: f.path, line: r.lineOf(root) } })
         keepText('descriptions', 'modelDescription', root.modelDescription)
         const silent = list(root.inputs).some((i) => obj(i)?.kind === 'AutomaticTaskInput' && obj(i)?.shouldPromptUser === false)
         if (trigger === 'OnRecognizedIntent' && silent) add('ms:orchestrator-variables', begin)
@@ -175,13 +224,26 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
       case 'TaskDialog': {
         const a = obj(root.action)
         keepText('descriptions', 'modelDescription', root.modelDescription)
+        if (!child && !str(root.modelDescription)) lonely.push({ kind: 'action', name: topicName(f.path), at: { file: f.path, line: r.lineOf(root) } })
         const ref = str(a?.connectionReference)
         if (a?.kind === 'InvokeConnectorTaskAction' && ref) {
           add(`connector:${apiOf(ref)}`, a)
           if (str(a.operationId)) add(`operation:${apiOf(ref)}/${a.operationId}`, a)
         }
         if (a?.kind === 'InvokeExternalAgentTaskAction' && obj(a.operationDetails)?.kind === 'ModelContextProtocolMetadata' && ref) add(`mcp:${apiOf(ref)}`, a)
-        if (a?.kind === 'InvokeConnectedAgentTaskAction' && str(a.botSchemaName)) add(`calls:${a.botSchemaName}`, a)
+        if (a?.kind === 'InvokeConnectedAgentTaskAction' && str(a.botSchemaName)) {
+          add(`calls:${a.botSchemaName}`, a)
+          if (!child)
+            agent.contract.push({
+              calls: a.botSchemaName as string,
+              ...(str(root.modelDisplayName) ? { name: root.modelDisplayName as string } : {}),
+              history: obj(a.historyType)?.kind === 'ConversationHistory',
+              inputs: list(root.inputs).map((i) => str(obj(i)?.propertyName)).filter((x): x is string => !!x),
+              description: str(root.modelDescription)?.trim() ?? '',
+              file: f.path,
+              line: r.lineOf(a),
+            })
+        }
         if (a?.kind === 'InvokeFlowTaskAction' && str(a.flowId)) {
           add(`flow:${a.flowId}`, a)
           // a flow is known by the action that calls it
@@ -204,6 +266,7 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
         if (!name) break
         add(`var:${name}`)
         if (v.isExternalInitializationAllowed === true) add(`var-in:${name}`)
+        if (!child) variables.push({ name, at: { file: f.path, line: r.lineOf(root) } })
         break
       }
       case 'ConnectionReferencesSourceFile':
@@ -215,6 +278,7 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
         break
     }
 
+    for (const n of nodes(root, true)) add(`disabled:node:${n.kind}`, n)
     // the nodes that say something, wherever they are
     for (const n of nodes(root)) {
       if (NODES.has(n.kind as string)) add(`node:${n.kind}`, n)
@@ -226,6 +290,7 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
       if (n.kind === 'InvokeFlowAction' && str(n.flowId)) add(`flow:${n.flowId}`, n)
       if ((n.kind === 'BeginDialog' || n.kind === 'ReplaceDialog') && str(n.dialog)) {
         const d = n.dialog as string
+        dialogs.push(d)
         if (d.startsWith('=')) {
           if (d.includes('Switch(')) add('ms:dynamic-topic-redirect', n)
         } else calls.push({ topic: `${child ?? ''}/${last(d, '.topic.')}`, into: facts, at: { file: f.path, line: r.lineOf(n) } }) // a topic's own schema prefix is dropped
@@ -236,6 +301,44 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
     }
   }
   if (knowledge.length) agent.facts[`knowledge:count=${knowledge.length}`] = knowledge
+
+  // the flows: what each uses counts only when a node of the agent calls it; one nobody calls is unused
+  const calledFlows = new Set([agent.facts, ...agent.children.map((c) => c.facts)].flatMap((fs) => Object.keys(fs)).filter((k) => k.startsWith('flow:')).map((k) => k.slice(5)))
+  for (const [folder, { meta, metaFile, json }] of [...flowFolders].sort(([a], [b]) => a.localeCompare(b))) {
+    const fileName = str(meta?.jsonFileName) ?? Object.keys(json)[0]
+    const j = fileName ? json[fileName] : undefined
+    const id = str(meta?.workflowId)
+    const key = folder.replace(/-[0-9a-f]{6,}$/i, '')
+    if (!j) {
+      if (metaFile) agent.unknown.push({ file: metaFile, why: 'flow' })
+      continue
+    }
+    const read = readFlow(j.data)
+    if (!read || !id) {
+      agent.unknown.push({ file: j.file, why: 'flow' })
+      continue
+    }
+    const name = str(meta?.displayName) ?? str(obj(obj(j.data)?.properties)?.displayName) ?? key
+    const called = calledFlows.has(id)
+    agent.flows.push({ id, name, folder, uses: read.uses.map((u) => u.key), returns: !!read.returns, called, file: j.file })
+    agent.names[id] ??= name
+    if (!called) {
+      ;(agent.facts[`orphan:flow:${key}`] ??= []).push({ file: metaFile ?? j.file, line: 1 })
+      agent.names[key] ??= name
+      continue
+    }
+    for (const u of read.uses) (agent.facts[`flow-uses:${u.key}`] ??= []).push({ file: j.file, line: lineOfAction(j.text, u.action) })
+    if (read.returns) (agent.facts['flow-returns'] ??= []).push({ file: j.file, line: lineOfAction(j.text, read.returns) })
+  }
+  // a topic or a tool nobody calls; a variable no other file names (and then it is not a variable the agent has)
+  for (const l of lonely) if (!dialogs.some((d) => d === l.name || d.endsWith(`.${l.name}`))) (agent.facts[`orphan:${l.kind}:${l.name}`] ??= []).push(l.at)
+  for (const v of variables) {
+    const named = files.some((f) => f.path !== v.at.file && new RegExp(`\\bGlobal\\.${v.name}\\b`).test(f.text))
+    if (named) continue
+    delete agent.facts[`var:${v.name}`]
+    delete agent.facts[`var-in:${v.name}`]
+    ;(agent.facts[`orphan:variable:${v.name}`] ??= []).push(v.at)
+  }
   // «the fallback leads to escalation» is part of escalating (reaches:OnEscalate); a topic not found keeps its name
   for (const c of calls) {
     const trigger = triggers.get(c.topic)

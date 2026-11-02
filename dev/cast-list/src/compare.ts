@@ -4,9 +4,14 @@
 // in the cast file marks a pattern; an accepted one is checked even when it would no longer be a pattern by its share.
 // A part of a fact (a topic that leads to escalation is part of escalating) is never a pattern of its own: it is
 // checked only on the agents that have the fact, takes the fact's decision, and is never a solo.
+//
+// What an orchestrator passes each agent it calls becomes the called agent's facts (called-with:, routing:), so it is
+// compared like any other; the calls to an agent not in the folder, the specialists no orchestrator calls and the short
+// routing descriptions are told apart. What nothing uses and what is switched off (orphan:, disabled:) is never a
+// pattern nor a solo: it is listed on its own, to remove or to switch on.
 import type { Cast, Decision, Scope } from './cast'
 import { blocksOf, type BlockFamily } from './blocks'
-import type { AgentFacts, Facts, Source, Unknown } from './extract'
+import type { AgentFacts, Call, Facts, Flow, Source, Unknown } from './extract'
 import { partOf } from './labels'
 import { markerFindings, markersOf, type MarkerFinding } from './markers'
 import { MS_PATTERNS } from './microsoft'
@@ -33,6 +38,9 @@ export interface OffPattern { agent: string; key: string; scope: Scope; partOf?:
 export interface Holding { key: string; agents: string[]; sources: Source[] }
 export interface Gap { rule: Rule; agents: string[] }
 export interface Conflict { agent: string; key: string; declared: string; observed: boolean; source: string }
+/** A call of an orchestrator, with the agent of the folder it reaches (none when it is not in the folder). */
+export interface Route extends Call { caller: string; agent?: string }
+export interface Unused { agent: string; key: string; how: 'orphan' | 'disabled'; what: string; name: string; sources: Source[] }
 export interface Result {
   name?: string
   roles: Record<string, Role>
@@ -57,6 +65,12 @@ export interface Result {
   /** The blocks of text agents share, with who has each and each variation. */
   blocks: BlockFamily[]
   markerFindings: MarkerFinding[]
+  /** The orchestrators' calls: every one, those to an agent not in the folder, the specialists nobody calls, the short
+   * routing descriptions. */
+  contract: { routes: Route[]; missing: Route[]; uncalled: string[]; short: Route[] }
+  /** Every flow of every agent, called or not. */
+  flows: (Flow & { agent: string })[]
+  unused: Unused[]
 }
 
 
@@ -68,6 +82,10 @@ const isClaim = (key: string) => key.includes(':') && !key.startsWith('declared:
 const declaredKey = (key: string) => (key.startsWith('declared:') ? key : `declared:${key}`)
 // a variation of a block says something about the block, not a fact of its own
 const isVariant = (key: string) => key.endsWith('~variant')
+/** What nothing uses or what is switched off: listed, never compared. */
+export const isUnused = (key: string) => /^(orphan|disabled):/.test(key)
+/** Shorter than this, a routing description does not say when to call the agent. */
+export const SHORT_ROUTING = 80
 
 export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Result {
   const given = Object.fromEntries(cast.agents.map((a) => [a.id, a.role]))
@@ -77,7 +95,19 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
   // what the texts say is seen too: the blocks agents share and the profile's markers
   const blocks = blocksOf(found, cast.blocks, profile.blocks)
   const marked = markersOf(found, profile.markers)
-  const seen = (a: AgentFacts): Facts => ({ ...a.facts, ...blocks.facts[a.id], ...marked.facts[a.id] })
+  // the contract: what each call passes is a fact of the agent called, seen in the caller's file
+  const bySchema = new Map(found.filter((a) => a.schemaName).map((a) => [a.schemaName!, a.id]))
+  const routes: Route[] = found.flatMap((a) => (a.contract ?? []).map((c) => ({ ...c, caller: a.id, ...(bySchema.has(c.calls) ? { agent: bySchema.get(c.calls) } : {}) })))
+  const called: Record<string, Facts> = {}
+  for (const r of routes.filter((x) => x.agent)) {
+    const into = (called[r.agent!] ??= {})
+    const at = { file: `${r.caller}/${r.file}`, line: r.line }
+    const add = (key: string) => (into[key] ??= []).push(at)
+    if (r.history) add('called-with:history')
+    for (const i of r.inputs) add(`called-with:input:${i}`)
+    if (r.description) add('routing:described')
+  }
+  const seen = (a: AgentFacts): Facts => ({ ...a.facts, ...blocks.facts[a.id], ...marked.facts[a.id], ...called[a.id] })
   const agents = found.map((a) => {
     const observed = seen(a)
     const facts: Facts = Object.fromEntries(Object.entries(observed).filter(([k]) => !ignored(k)))
@@ -106,7 +136,7 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
     if (them.length < profile.minAgents) continue
     const other = members(role === 'specialist' ? 'orchestrator' : 'specialist')
     for (const key of allKeys) {
-      if (key.startsWith('declared:') || partOf(key) || isVariant(key) || patterns.some((p) => p.key === key)) continue
+      if (key.startsWith('declared:') || partOf(key) || isVariant(key) || isUnused(key) || patterns.some((p) => p.key === key)) continue
       const has = holders(key, them)
       const share = has.length / them.length
       if (share < profile.threshold) continue
@@ -126,7 +156,7 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
       continue
     }
     for (const key of allKeys) {
-      if (key.startsWith('declared:') || partOf(key) || isVariant(key) || patterns.some((p) => p.key === key)) continue
+      if (key.startsWith('declared:') || partOf(key) || isVariant(key) || isUnused(key) || patterns.some((p) => p.key === key)) continue
       const share = holders(key, them).length / them.length
       if (share < profile.threshold) continue
       const decision = decisionOf(key)
@@ -173,7 +203,7 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
   const solos: Holding[] = []
   const orchestratorDoes: Holding[] = []
   for (const key of allKeys) {
-    if (key.startsWith('declared:') || partOf(key) || isVariant(key)) continue
+    if (key.startsWith('declared:') || partOf(key) || isVariant(key) || isUnused(key)) continue
     const has = holders(key)
     const holding = { key, agents: has.map((a) => a.id), sources: sourcesOf(key) }
     if (has.every((a) => a.role === 'orchestrator')) orchestratorDoes.push(holding)
@@ -192,6 +222,13 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
     }))
     .filter((g) => g.agents.length)
 
+  const hasOrchestrator = agents.some((a) => a.role === 'orchestrator')
+  const reached = new Set(routes.map((r) => r.agent))
+  const unused: Unused[] = agents.flatMap((a) => Object.keys(a.facts).filter(isUnused).sort().map((key) => {
+    const [how, what, ...name] = key.split(':')
+    return { agent: a.id, key, how: how as Unused['how'], what, name: name.join(':'), sources: a.facts[key] }
+  }))
+
   return {
     ...(profile.name ?? cast.name ? { name: profile.name ?? cast.name } : {}),
     roles, unmatched, agents, patterns, offPattern, solos, orchestratorDoes, gaps, conflicts,
@@ -202,5 +239,13 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
     types, typeNames: Object.fromEntries(profile.types.map((t) => [t.id, t.name])), typeNotes,
     blocks: blocks.families,
     markerFindings: markerFindings(marked.values, profile.markers, roles),
+    contract: {
+      routes,
+      missing: routes.filter((r) => !r.agent),
+      uncalled: hasOrchestrator ? agents.filter((a) => a.role === 'specialist' && !reached.has(a.id)).map((a) => a.id) : [],
+      short: routes.filter((r) => r.description && r.description.length < SHORT_ROUTING),
+    },
+    flows: found.flatMap((a) => (a.flows ?? []).map((f) => ({ ...f, agent: a.id }))),
+    unused,
   }
 }

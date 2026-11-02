@@ -1,0 +1,24 @@
+mcs.metadata:
+  componentName: Agente Fidelidade
+  description: Agente conectado Bodega Azul - Fidelidade.
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: CategoriaSolicitacao
+    value: =Global.CategoriaSolicitacao
+
+modelDisplayName: Bodega Azul - Fidelidade
+modelDescription: "Agente especialista no programa de fidelidade: pontos, níveis e resgates. Use quando a categoria for Fidelidade."
+action:
+  kind: InvokeConnectedAgentTaskAction
+  inputType:
+    properties:
+      CategoriaSolicitacao:
+        displayName: CategoriaSolicitacao
+        description: Categoria da solicitação definida pelo orquestrador.
+        isRequired: true
+        type: String
+
+  botSchemaName: cr7b2_bodegaFidelidade
+  historyType:
+    kind: ConversationHistory

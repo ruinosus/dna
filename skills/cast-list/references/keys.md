@@ -30,6 +30,11 @@ Every fact cast-list finds is a key. The keys below have a name; any other key k
 
 | Key | Name | Nome |
 |---|---|---|
+| `flow-returns` | The flow returns an answer | O fluxo devolve uma resposta |
+| `flow-uses:child-flow` | The flow calls another flow | O fluxo chama outro fluxo |
+| `flow-uses:http:<value>` | Flow calls <value> | Fluxo chama <valor> |
+| `flow-uses:connector:<value>` | Flow uses the connector <value> | Fluxo usa o conector <valor> |
+| `flow-uses:operation:<value>` | Flow uses the operation <value> | Fluxo usa a operação <valor> |
 | `connector:<value>` | Connector <value> | Conector <valor> |
 | `operation:<value>` | Operation <value> | Operação <valor> |
 | `connref:<value>` | Connection reference <value> | Referência de conexão <valor> |
@@ -58,6 +63,9 @@ Every fact cast-list finds is a key. The keys below have a name; any other key k
 | `trigger:OnRedirect` | Takes a call from the orchestrator | Recebe chamada do orquestrador |
 | `trigger:OnToolSelected` | Child chosen as a tool | Filho escolhido como ferramenta |
 | `setting:connectable` | Can be called by an orchestrator | Pode ser chamado por um orquestrador |
+| `called-with:history` | Receives the conversation history | Recebe o histórico da conversa |
+| `routing:described` | Has a routing description | Tem descrição de roteamento |
+| `called-with:input:<value>` | Receives <value> from the orchestrator <value> | Recebe <valor> do orquestrador <valor> |
 | `calls:<value>` | Calls <value> | Chama <valor> |
 | `child:<value>` | Child <value> | Filho <valor> |
 | `var-in:<value>` | Receives from the orchestrator <value> | Recebe do orquestrador <valor> |
@@ -72,6 +80,12 @@ Every fact cast-list finds is a key. The keys below have a name; any other key k
 | `instructions:present` | Has instructions | Tem instruções |
 | `node:LogCustomTelemetryEvent` | Logs telemetry | Registra telemetria |
 | `node:CSATQuestion` | Asks for satisfaction (CSAT) | Pergunta a satisfação (CSAT) |
+| `orphan:topic:<value>` | Topic nobody calls <value> | Tópico que ninguém chama <valor> |
+| `orphan:action:<value>` | Tool nobody can choose <value> | Ferramenta que ninguém escolhe <valor> |
+| `orphan:variable:<value>` | Variable nobody uses <value> | Variável que ninguém usa <valor> |
+| `orphan:flow:<value>` | Flow nobody calls <value> | Fluxo que ninguém chama <valor> |
+| `disabled:node:<value>` | Switched-off node <value> | Nó desligado <valor> |
+| `disabled:<value>` | Switched off <value> | Desligado <valor> |
 | `node:<value>` | Node <value> | Nó <valor> |
 | `model:<value>` | Model <value> | Modelo <valor> |
 | `auth:<value>` | Sign-in <value> | Login <valor> |

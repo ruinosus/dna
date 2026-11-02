@@ -36,7 +36,7 @@ const pt = looks.map((l) => l.pt)
 const has = (s: string) => pt.includes(s)
 ok(has('1 especialista não escala para humano (bodega-frete): é intencional?'), 'bodega-frete does not escalate: asked', pt)
 ok(has('1 especialista não registra telemetria (bodega-loja-fisica): é intencional?'), 'bodega-loja-fisica logs no telemetry: asked')
-ok(!pt.some((s) => s.includes('Escalate') || s.includes('nenhum tópico leva')), "bodega-frete's escalation: asked once, not again for its fallback", pt)
+ok(!looks.filter((l) => l.key !== 'unused').some((l) => l.pt.includes('Escalate') || l.pt.includes('nenhum tópico leva')), "bodega-frete's escalation: asked once, not again for its fallback", pt)
 ok(has('Só bodega-cupons tem «Servidor MCP Bodega Azul Promocoes MCP»: inovação ou dívida?') && has('Só bodega-cupons tem «Conector SharePoint»: inovação ou dívida?'), 'what only bodega-cupons has: asked, by the names the files give', pt)
 ok(!pt.some((s) => /shared_|cr7b2_/.test(s)), 'no technical name on screen when the files give a readable one')
 ok(!pt.some((s) => s.includes('Referência de conexão') || s.includes('Operação GetItems')), "the connection and the operation of a solo connector are not asked again", pt)
@@ -45,7 +45,25 @@ ok(has('Regra «Todo especialista tem KPI»: 5 especialistas não cumprem (bodeg
 ok(!pt.some((s) => s.startsWith('Regra «Todo especialista escala')), 'the rule «escala» only repeats a pattern bodega-frete is already off: said once')
 ok(has('Só bodega-frete tem «Desambiguação («você quis dizer…»)»: inovação ou dívida?'), 'the triage topic only frete has: asked')
 ok(has('Só bodega-devolucoes tem «Conhecimento geral do modelo ligado»: inovação ou dívida?'), 'a setting only one has, by its name')
-ok(looks.length === 9 && looks.every((l) => l.en && l.pt), `${looks.length} things to look at, each in English and Portuguese`, pt)
+// wave 2: the contract, the flows, what nothing uses — said as the plan says them
+for (const s of [
+  '1 especialista não recebe o histórico da conversa do orquestrador (bodega-frete): é intencional?',
+  '1 especialista não recebe «CategoriaSolicitacao» do orquestrador (bodega-frete): é intencional?',
+  'O orquestrador chama «Bodega Azul - Fidelidade», que não está na pasta',
+  'A descrição de roteamento de bodega-cupons tem só 7 caracteres',
+  'O fluxo «Abrir chamado no ERP» de bodega-cupons não devolve nada',
+  'Ninguém chama o tópico «AvisoAntigo» (bodega-loja-fisica): remover ou ligar?',
+  'Ninguém chama o fluxo «Listar lojas» (bodega-loja-fisica): remover ou ligar?',
+  'Ninguém usa a variável «PreferenciaAntiga» (bodega-frete): remover?',
+  'bodega-pedidos tem um nó desligado em «topics/Escalate» (SendActivity): remover?',
+]) ok(has(s), `asked: ${s}`, pt)
+const at = (k: string) => looks.findIndex((l) => l.key === k)
+ok(at('contract') < at('off') && at('flow') < at('off') && at('contract') > -1 && at('unused') > at('solo'), 'the contract and the flows come with the contradictions, what nothing uses after the solos')
+ok(labelOf('called-with:history', 'pt') === 'Recebe o histórico da conversa' && labelOf('called-with:input:CategoriaSolicitacao', 'pt') === 'Recebe «CategoriaSolicitacao» do orquestrador' && labelOf('flow-uses:http:erp.bodega-azul.example', 'pt') === 'Fluxo chama erp.bodega-azul.example',
+  'the names of the contract and the flows')
+ok(dimensionOf('called-with:history') === 'orchestration' && dimensionOf('routing:described') === 'orchestration' && dimensionOf('flow-uses:http:x') === 'integrations' && dimensionOf('orphan:topic:x') === 'governance', 'the contract in D, the flows in B')
+ok(['called-with:input:', 'flow-uses:http:', 'orphan:topic:', 'disabled:node:', 'called-with:history', 'flow-returns'].every((k) => md.includes(k)), 'keys.md lists the new keys')
+ok(looks.length === 18 && looks.every((l) => l.en && l.pt), `${looks.length} things to look at, each in English and Portuguese`, pt)
 ok(!looks.some((l) => /\bagentes?\b|\bagents?\b/i.test(l.pt + l.en)), 'the screen words never say «agent»', looks.filter((l) => /agent/i.test(l.pt + l.en)))
 ok(looks.findIndex((l) => l.key === 'off') < looks.findIndex((l) => l.key === 'gap') && looks.findIndex((l) => l.key === 'gap') < looks.findIndex((l) => l.key === 'solo'), 'off a pattern first, then the rules, then the solos')
 
@@ -61,7 +79,7 @@ ok(odd.some((l) => l.pt === 'odd: a análise não entendeu 2 arquivos (a.txt, to
 
 // patterns: the ones with someone off (or decided) first, then what everybody already does
 const g = groupPatterns(compare(agents, profile, empty))
-ok(['trigger:OnEscalate', 'node:LogCustomTelemetryEvent'].every((k) => g.look.some((p) => p.key === k)) && g.look.some((p) => p.key.startsWith('text:block:links')) && g.look.length === 3, 'to decide: the three patterns someone is off (the links block too) — the part goes with its fact', g.look.map((p) => p.key))
+ok(['trigger:OnEscalate', 'node:LogCustomTelemetryEvent', 'called-with:history', 'called-with:input:CategoriaSolicitacao'].every((k) => g.look.some((p) => p.key === k)) && g.look.some((p) => p.key.startsWith('text:block:links')) && g.look.length === 5, 'to decide: the five patterns someone is off (the links block and the contract too) — the part goes with its fact', g.look.map((p) => p.key))
 ok(g.everyone.some((p) => p.key === 'auth:None') && g.everyone.length + g.look.length === compare(agents, profile, empty).patterns.filter((p) => !p.partOf).length, 'everybody already does the rest — none lost')
 // wave 1: the text's names, and what the run asks about it
 const r1 = compare(agents, wave1(profile), empty)

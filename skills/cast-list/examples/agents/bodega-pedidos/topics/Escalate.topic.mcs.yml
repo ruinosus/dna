@@ -18,3 +18,8 @@ beginDialog:
     - kind: SendActivity
       id: sendMessage_X7qDFG
       activity: "A transferência para um atendente ainda não está disponível neste canal. Fale com a nossa equipe pelo e-mail pedidos@bodegaazul.example, de segunda a sábado, das 9h às 18h."
+
+    - kind: SendActivity
+      id: sendMessage_kDOncS
+      disabled: true
+      activity: "Aguarde, estamos transferindo você para um atendente."

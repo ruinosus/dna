@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Generate six fictional Copilot Studio agent fixtures (Bodega Azul) as cloned-layout .mcs.yml projects."""
+import json
 import os
 import random
 import shutil
@@ -15,6 +16,14 @@ rng = random.Random(20261102)
 
 def rid(prefix):
     return prefix + "_" + "".join(rng.choice(string.ascii_letters + string.digits) for _ in range(6))
+
+
+# wave 2 draws its ids from its own sequence, so the files of the earlier waves keep theirs
+rng2 = random.Random("cast-list wave 2")
+
+
+def rid2(prefix):
+    return prefix + "_" + "".join(rng2.choice(string.ascii_letters + string.digits) for _ in range(6))
 
 
 def guid():
@@ -141,7 +150,14 @@ beginDialog:
 """
 
 
-def escalate_topic(contact):
+def escalate_topic(contact, disabled=False):
+    # wave 2: a message left in the topic, switched off
+    off = f"""
+    - kind: SendActivity
+      id: {rid2('sendMessage')}
+      disabled: true
+      activity: {q('Aguarde, estamos transferindo você para um atendente.')}
+""" if disabled else ""
     return f"""mcs.metadata:
   componentName: Escalar
   description: Acionado quando o cliente pede para falar com uma pessoa.
@@ -162,7 +178,7 @@ beginDialog:
     - kind: SendActivity
       id: {rid('sendMessage')}
       activity: {q('A transferência para um atendente ainda não está disponível neste canal. Fale com a nossa equipe pelo e-mail ' + contact + ', de segunda a sábado, das 9h às 18h.')}
-"""
+{off}"""
 
 
 def error_topic(event_name, agent_key, telemetry):
@@ -462,6 +478,78 @@ beginDialog:
 """
 
 
+# ---------------------------------------------------------------------------
+# Wave 2 (cast-list 1.4): the orchestrator's contract, the flows, what nobody uses
+# ---------------------------------------------------------------------------
+
+LISTAR_LOJAS_ID = "3f2a9c1d-5e6f-4a7b-8c9d-0e1f2a3b4c5d"
+WAVE2 = {
+    "bodega-pedidos": {"flow": "returns", "disabled_node": True},
+    "bodega-devolucoes": {"flow": "returns"},
+    "bodega-cupons": {"flow": "silent"},       # the flow answers nothing to the agent
+    "bodega-loja-fisica": {"orphan_flow": True, "orphan_topic": True},
+    "bodega-frete": {"orphan_variable": True},
+}
+
+
+def flow_folder(d, name, folder, workflow_id, actions, returns=True):
+    write(f"{d}/workflows/{folder}/metadata.yml", f"""displayName: {name}
+workflowId: {workflow_id}
+jsonFileName: workflow.json
+""")
+    if returns:
+        actions = {**actions, "Responder": {"type": "Response", "kind": "Skills", "runAfter": {next(iter(actions)): ["Succeeded"]},
+                                           "inputs": {"statusCode": 200, "body": {"resultado": "@outputs('Resultado')"}}}}
+    flow = {"properties": {"displayName": name, "connectionReferences": {}, "definition": {
+        "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+        "contentVersion": "1.0.0.0",
+        "triggers": {"manual": {"type": "Request", "kind": "Skills", "inputs": {"schema": {"type": "object", "properties": {"resumo": {"type": "string"}}}}}},
+        "actions": actions}}}
+    write(f"{d}/workflows/{folder}/workflow.json", json.dumps(flow, ensure_ascii=False, indent=2) + "\n")
+
+
+def erp_flow(d, returns):
+    flow_folder(d, "Abrir chamado no ERP", "AbrirChamadoERP-7d1c2a4e", FLOW_ID, {
+        "Abrir_chamado": {"type": "Scope", "actions": {
+            "Chamar_ERP": {"type": "Http", "inputs": {"method": "POST", "uri": "https://erp.bodega-azul.example/chamados", "body": "@triggerBody()"}}}}}, returns)
+
+
+def stores_flow(d):
+    flow_folder(d, "Listar lojas", "ListarLojas-3f2a9c1d", LISTAR_LOJAS_ID, {
+        "Listar": {"type": "OpenApiConnection", "inputs": {"host": {
+            "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
+            "connectionName": "shared_commondataserviceforapps", "operationId": "ListRecords"}, "parameters": {"entityName": "lojas"}}}})
+
+
+def old_notice_topic():
+    return f"""mcs.metadata:
+  componentName: Aviso antigo
+  description: Aviso de horário especial de um feriado que já passou.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {{}}
+  actions:
+    - kind: SendActivity
+      id: {rid2('sendMessage')}
+      activity: {q('No feriado de carnaval a loja fecha às 14h.')}
+"""
+
+
+def unused_variable(schema):
+    return f"""# Name: Preferência antiga
+# Preferência de contato que ninguém usa mais.
+name: PreferenciaAntiga
+aIVisibility: UseInAIContext
+scope: Conversation
+description: Preferência de contato que ninguém usa mais.
+schemaName: {schema}.globalvariable.PreferenciaAntiga
+kind: GlobalVariableComponent
+defaultValue: =Blank()
+"""
+
+
 SPECIALISTS = [
     {
         "key": "bodega-pedidos",
@@ -679,8 +767,17 @@ def build_specialist(a):
     # topics
     write(f"{d}/topics/Greeting.topic.mcs.yml", greeting_topic(a["greeting"]))
     write(f"{d}/topics/Fallback.topic.mcs.yml", fallback_topic(s, a["escalate"]))
+    w2 = WAVE2[a["key"]]
     if a["escalate"]:
-        write(f"{d}/topics/Escalate.topic.mcs.yml", escalate_topic(a["contact"]))
+        write(f"{d}/topics/Escalate.topic.mcs.yml", escalate_topic(a["contact"], w2.get("disabled_node", False)))
+    if w2.get("flow"):
+        erp_flow(d, w2["flow"] == "returns")
+    if w2.get("orphan_flow"):
+        stores_flow(d)
+    if w2.get("orphan_topic"):
+        write(f"{d}/topics/AvisoAntigo.topic.mcs.yml", old_notice_topic())
+    if w2.get("orphan_variable"):
+        write(f"{d}/variables/PreferenciaAntiga.mcs.yml", unused_variable(s))
     event = "".join(p.capitalize() for p in a["key"].split("-")) + "_OnError"
     write(f"{d}/topics/OnError.topic.mcs.yml", error_topic(event, a["key"], a["telemetry"]))
     write(f"{d}/topics/RecebimentoOrquestrador.topic.mcs.yml", redirect_topic())
@@ -869,26 +966,24 @@ outputType: {{}}
          "Agente especialista em trocas e devoluções: prazo de arrependimento, etiqueta de devolução e reembolso. Use quando a categoria for Devolucoes."),
         ("AgenteFrete", "Agente Frete", "Bodega Azul - Frete", f"{PREFIX}_bodegaFrete",
          "Agente especialista em frete e entregas: modalidades, prazos por região e frete grátis. Use quando a categoria for Frete."),
-        ("AgenteCupons", "Agente Cupons", "Bodega Azul - Cupons", f"{PREFIX}_bodegaCupons",
-         "Agente especialista em cupons e promoções: validação de códigos, regras de uso e campanhas vigentes. Use quando a categoria for Cupons."),
+        # wave 2: a routing description too short to route by
+        ("AgenteCupons", "Agente Cupons", "Bodega Azul - Cupons", f"{PREFIX}_bodegaCupons", "Cupons."),
         ("AgenteLojaFisica", "Agente Loja Física", "Bodega Azul - Loja Física", f"{PREFIX}_bodegaLojaFisica",
          "Agente especialista na loja física: endereço, horário, serviços e retirada de pedidos. Use quando a categoria for LojaFisica."),
+        # wave 2: an agent of the solution that is not in the folder
+        ("AgenteFidelidade", "Agente Fidelidade", "Bodega Azul - Fidelidade", f"{PREFIX}_bodegaFidelidade",
+         "Agente especialista no programa de fidelidade: pontos, níveis e resgates. Use quando a categoria for Fidelidade."),
     ]
     for fname, comp, model_name, bot, mdesc in connected:
-        write(f"{d}/actions/{fname}.mcs.yml", f"""mcs.metadata:
-  componentName: {comp}
-  description: Agente conectado {model_name}.
-kind: TaskDialog
-inputs:
+        # wave 2: frete is called with no history and without the category
+        bare = fname == "AgenteFrete"
+        inputs = "" if bare else """inputs:
   - kind: ManualTaskInput
     propertyName: CategoriaSolicitacao
     value: =Global.CategoriaSolicitacao
 
-modelDisplayName: {model_name}
-modelDescription: {q(mdesc)}
-action:
-  kind: InvokeConnectedAgentTaskAction
-  inputType:
+"""
+        input_type = "  inputType: {}\n" if bare else """  inputType:
     properties:
       CategoriaSolicitacao:
         displayName: CategoriaSolicitacao
@@ -896,9 +991,18 @@ action:
         isRequired: true
         type: String
 
-  botSchemaName: {bot}
+"""
+        write(f"{d}/actions/{fname}.mcs.yml", f"""mcs.metadata:
+  componentName: {comp}
+  description: Agente conectado {model_name}.
+kind: TaskDialog
+{inputs}modelDisplayName: {model_name}
+modelDescription: {q(mdesc)}
+action:
+  kind: InvokeConnectedAgentTaskAction
+{input_type}  botSchemaName: {bot}
   historyType:
-    kind: ConversationHistory
+    kind: {"NoHistory" if bare else "ConversationHistory"}
 """)
 
     write(f"{d}/agents/SobreBodegaAzul/agent.mcs.yml", """# Name: Sobre a Bodega Azul

@@ -28,6 +28,7 @@ const WORDS = {
     off: (ids: string[]) => (ids.length ? `Off a pattern: ${ids.join(', ')}.` : 'Nobody is off a pattern.'),
     missing: (n: number) => (n ? `${n} ${n === 1 ? 'rule is' : 'rules are'} not met.` : 'Every rule is met.'),
     decide: (n: number) => (n ? `${n} ${n === 1 ? 'thing' : 'things'} to decide.` : 'Nothing left to decide.'),
+    unused: (n: number) => `${n} ${n === 1 ? 'thing nobody uses or switched off' : 'things nobody uses or switched off'}: remove or switch on?`,
     pattern: (l: string) => `A pattern? «${l}»`, platform: 'platform', specialist: 'specialists', more: (n: number) => `and ${n} more on the map`, none: 'nothing',
   },
   pt: {
@@ -37,6 +38,7 @@ const WORDS = {
     off: (ids: string[]) => (ids.length ? `Fora do padrão: ${ids.join(', ')}.` : 'Ninguém está fora do padrão.'),
     missing: (n: number) => (n ? `${n} ${n === 1 ? 'regra não é cumprida' : 'regras não são cumpridas'}.` : 'Todas as regras são cumpridas.'),
     decide: (n: number) => (n ? `${n} ${n === 1 ? 'coisa' : 'coisas'} para decidir.` : 'Nada em aberto para decidir.'),
+    unused: (n: number) => `${n} ${n === 1 ? 'coisa sem uso ou desligada' : 'coisas sem uso ou desligadas'}: remover ou ligar?`,
     pattern: (l: string) => `Padrão? «${l}»`, platform: 'plataforma', specialist: 'especialistas', more: (n: number) => `e mais ${n} no mapa`, none: 'nada',
   },
 }
@@ -146,13 +148,16 @@ export function lessonOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
     const n = g.agents.filter((a) => !r.offPattern.some((o) => o.agent === a && o.key === g.rule.has)).length
     return n ? [lang === 'pt' ? `«${g.rule.says}»: ${n}${g.rule.role ? ` ${roleWord(g.rule.role, lang, n)}` : ''} não ${n === 1 ? 'cumpre' : 'cumprem'}` : `«${g.rule.says}»: ${n}${g.rule.role ? ` ${roleWord(g.rule.role, lang, n)}` : ''} ${n === 1 ? 'does' : 'do'} not meet it`] : []
   })
+  // what the orchestrator's contract lacks, and a flow that answers nothing
+  gaps.push(...looks.filter((l) => l.key === 'contract' || l.key === 'flow').map((l) => l[lang]))
   const unknownFiles = r.unknown.length
   if (unknownFiles) gaps.push(lang === 'pt' ? `${unknownFiles} ${unknownFiles === 1 ? 'arquivo não entendido' : 'arquivos não entendidos'}` : `${unknownFiles} ${unknownFiles === 1 ? 'file' : 'files'} not understood`)
   section(1, w.chapters[3], w.missing(looks.filter((l) => l.key === 'gap').length), gaps, RED)
+  const unused = looks.filter((l) => l.key === 'unused').length
   const { look } = groupPatterns(r)
   // what people and the YAML disagree on first, then a text rule set in two ways (or twice), then the patterns in the
-  // open, then what only one has
-  const open = [...looks.filter((l) => l.key === 'conflict' || l.key === 'values' || l.key === 'twice').map((l) => l[lang]), ...look.filter((p) => !p.decision).map((p) => w.pattern(labelOf(p.key, lang, r.names))), ...looks.filter((l) => l.key === 'solo').map((l) => l[lang])]
+  // open, then what nobody uses (in one line: the list is on the map), then what only one has
+  const open = [...looks.filter((l) => l.key === 'conflict' || l.key === 'values' || l.key === 'twice').map((l) => l[lang]), ...(unused ? [w.unused(unused)] : []), ...look.filter((p) => !p.decision).map((p) => w.pattern(labelOf(p.key, lang, r.names))), ...looks.filter((l) => l.key === 'solo').map((l) => l[lang])]
   section(2, w.chapters[4], w.decide(open.length), open)
 
   const id = (r.name ?? 'cast').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'cast'

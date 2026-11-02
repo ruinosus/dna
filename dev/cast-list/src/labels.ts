@@ -40,6 +40,10 @@ const KNOWN: Record<string, Name> = {
   'setting:web-browsing=on': { dim: 'knowledge', en: 'Web browsing on', pt: 'Navegação na web ligada' },
   'setting:web-browsing=off': { dim: 'knowledge', en: 'Web browsing off', pt: 'Navegação na web desligada' },
   'setting:connectable': { dim: 'orchestration', en: 'Can be called by an orchestrator', pt: 'Pode ser chamado por um orquestrador' },
+  'called-with:history': { dim: 'orchestration', en: 'Receives the conversation history', pt: 'Recebe o histórico da conversa', lacks: { en: ['does not receive the conversation history from the orchestrator', 'do not receive the conversation history from the orchestrator'], pt: ['não recebe o histórico da conversa do orquestrador', 'não recebem o histórico da conversa do orquestrador'] } },
+  'routing:described': { dim: 'orchestration', en: 'Has a routing description', pt: 'Tem descrição de roteamento', lacks: { en: ['has no routing description', 'have no routing description'], pt: ['não tem descrição de roteamento', 'não têm descrição de roteamento'] } },
+  'flow-returns': { dim: 'integrations', en: 'The flow returns an answer', pt: 'O fluxo devolve uma resposta', lacks: { en: ['has a flow that returns nothing', 'have a flow that returns nothing'], pt: ['tem fluxo que não devolve nada', 'têm fluxo que não devolve nada'] } },
+  'flow-uses:child-flow': { dim: 'integrations', en: 'The flow calls another flow', pt: 'O fluxo chama outro fluxo' },
   'topics:with-model-description': { dim: 'conversation', en: 'Topics described for the model', pt: 'Tópicos descritos para o modelo' },
   'instructions:present': { dim: 'governance', en: 'Has instructions', pt: 'Tem instruções', lacks: { en: ['has no instructions', 'have no instructions'], pt: ['não tem instruções', 'não têm instruções'] } },
   'node:LogCustomTelemetryEvent': { dim: 'governance', en: 'Logs telemetry', pt: 'Registra telemetria', lacks: { en: ['logs no telemetry', 'log no telemetry'], pt: ['não registra telemetria', 'não registram telemetria'] } },
@@ -55,6 +59,16 @@ const KNOWN: Record<string, Name> = {
 const MS_NAME = Object.fromEntries(MS_PATTERNS.map((p) => [p.id, p.name]))
 /** The keys known by their kind: [prefix, dimension, name in English, name in Portuguese] — the value follows. */
 const KINDS: [string, Dimension, string, string][] = [
+  ['called-with:input:', 'orchestration', 'Receives <value> from the orchestrator', 'Recebe <valor> do orquestrador'],
+  ['flow-uses:http:', 'integrations', 'Flow calls', 'Fluxo chama'],
+  ['flow-uses:connector:', 'integrations', 'Flow uses the connector', 'Fluxo usa o conector'],
+  ['flow-uses:operation:', 'integrations', 'Flow uses the operation', 'Fluxo usa a operação'],
+  ['orphan:topic:', 'governance', 'Topic nobody calls', 'Tópico que ninguém chama'],
+  ['orphan:action:', 'governance', 'Tool nobody can choose', 'Ferramenta que ninguém escolhe'],
+  ['orphan:variable:', 'governance', 'Variable nobody uses', 'Variável que ninguém usa'],
+  ['orphan:flow:', 'governance', 'Flow nobody calls', 'Fluxo que ninguém chama'],
+  ['disabled:node:', 'governance', 'Switched-off node', 'Nó desligado'],
+  ['disabled:', 'governance', 'Switched off', 'Desligado'],
   ['reaches:', 'conversation', 'A topic leads to it (part of trigger:<value>)', 'Um tópico leva a ele (parte de trigger:<valor>)'],
   ['calls:topic:', 'conversation', 'Calls the topic (one not found)', 'Chama o tópico (não encontrado)'],
   ['trigger:', 'conversation', 'Trigger', 'Gatilho'],
@@ -118,6 +132,7 @@ export function labelOf(key: string, lang: Lang, names?: Names): string {
     const fact = labelOf(`trigger:${key.slice(8)}`, lang)
     return lang === 'pt' ? `Um tópico leva a «${fact}»` : `A topic leads to «${fact}»`
   }
+  if (key.startsWith('called-with:input:')) return lang === 'pt' ? `Recebe «${key.slice(18)}» do orquestrador` : `Receives «${key.slice(18)}» from the orchestrator`
   const count = /^knowledge:count=(\d+)$/.exec(key)
   if (count) {
     const n = Number(count[1])
@@ -130,8 +145,9 @@ export function labelOf(key: string, lang: Lang, names?: Names): string {
   if (k[0] === 'auth:' && value === 'None') return lang === 'pt' ? 'Sem login' : 'No sign-in'
   if (key.startsWith('setting:moderation=')) return lang === 'pt' ? `Moderação de conteúdo: ${key.slice(19)}` : `Content moderation: ${key.slice(19)}`
   // a connector, its operation, a connection, an MCP server or an agent called: by the name the files give
-  if (['connector:', 'connref:', 'mcp:', 'calls:', 'flow:'].includes(k[0])) value = named(value, names)
-  if (k[0] === 'operation:') {
+  if (['connector:', 'connref:', 'mcp:', 'calls:', 'flow:', 'flow-uses:connector:', 'orphan:flow:'].includes(k[0])) value = named(value, names)
+  if (k[0] === 'disabled:') value = value.replace(':', ' ')
+  if (k[0] === 'operation:' || k[0] === 'flow-uses:operation:') {
     const [api, op] = [value.slice(0, value.indexOf('/')), value.slice(value.indexOf('/') + 1)]
     value = `${named(api, names)} · ${op}`
   }
@@ -146,6 +162,7 @@ export function lacks(key: string, lang: Lang, n: number, names?: Names): string
     const fact = labelOf(`trigger:${key.slice(8)}`, lang)
     return lang === 'pt' ? `${n === 1 ? 'tem' : 'têm'} «${fact}», mas nenhum tópico leva a ele` : `${n === 1 ? 'has' : 'have'} «${fact}», but no topic leads to it`
   }
+  if (key.startsWith('called-with:input:')) return lang === 'pt' ? `${n === 1 ? 'não recebe' : 'não recebem'} «${key.slice(18)}» do orquestrador` : `${n === 1 ? 'does' : 'do'} not receive «${key.slice(18)}» from the orchestrator`
   if (key.startsWith('calls:topic:')) return lang === 'pt' ? `${n === 1 ? 'não chama' : 'não chamam'} o tópico ${key.slice(12)}` : `${n === 1 ? 'does' : 'do'} not call the topic ${key.slice(12)}`
   const name = labelOf(key, lang, names)
   return lang === 'pt' ? `${n === 1 ? 'não tem' : 'não têm'} «${name}»` : `${n === 1 ? 'does' : 'do'} not have «${name}»`
