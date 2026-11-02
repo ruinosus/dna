@@ -55,3 +55,23 @@ A line deleted or a decision cleared is a change too.
                 "facts": { "trigger:OnUnknownIntent": [ { "file": "topics/Fallback.topic.mcs.yml", "line": 7 } ] },
                 "children": [], "unknown": [] } ] }
 ```
+
+An orchestrator's agent also has `contract` — a line per connected-agent action: `calls` (the schema name it calls),
+`name` (the action's name for it), `history` (it passes the conversation history), `inputs`, `description` (the
+routing description), `file` and `line` — and every agent has `flows`: `id` (the `workflowId`), `name`, `folder`,
+`uses` (`http:<host>`, `connector:<api>`, `operation:<api>/<op>`, `child-flow`), `returns`, `called` and `file`.
+
+## The facts of the contract, the flows and what nobody uses
+
+| Key | On which agent | From |
+|---|---|---|
+| `called-with:history` | the one called | the orchestrator's action has `historyType: ConversationHistory` |
+| `called-with:input:<name>` | the one called | each input the orchestrator's action passes |
+| `routing:described` | the one called | the action has a `modelDescription` |
+| `flow-uses:http:<host>`, `flow-uses:connector:<api>`, `flow-uses:operation:<api>/<op>`, `flow-uses:child-flow` | the one whose node calls the flow | the actions of `workflow.json`, at any depth |
+| `flow-returns` | the same | the flow has a `Response` action |
+| `orphan:topic:<name>`, `orphan:action:<name>`, `orphan:variable:<name>`, `orphan:flow:<name>` | the one that has it | nothing can reach it (see SKILL.md, step 2) |
+| `disabled:node:<kind>`, `disabled:<topic\|action\|variable\|knowledge>:<name>` | the one that has it | `disabled: true` on a node; `state` or `status: Inactive` on a component |
+
+The contract's facts cite the orchestrator's file (`<orchestrator>/actions/X.mcs.yml`). `orphan:` and `disabled:` are
+never a pattern nor a solo, and what an unused flow calls is not a fact.

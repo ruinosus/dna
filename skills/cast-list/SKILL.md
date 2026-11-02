@@ -26,7 +26,8 @@ node scripts/build.mjs <agents-folder> --all [--profile <team>.cast.yaml] [--lan
 ```
 
 - `<agents-folder>` holds the cloned agents (any depth: a folder with `agent.mcs.yml` is an agent; a child agent in
-  `agents/<Name>/` stays with its parent; hidden folders such as `.mcs/` are never read).
+  `agents/<Name>/` stays with its parent; hidden folders such as `.mcs/` are never read). The flows in
+  `workflows/<Name>-<id>/` (`metadata.yml` and the `workflow.json` definition) are read too.
 - The **profile** is the team's standard, private to the team (`references/profile.md`): who is the orchestrator, how
   common a fact must be to be a pattern (70% of a role, with at least 3 agents, by default), the rules every agent of a
   role must follow, focus areas, what to leave out — and what to look for in the text: **markers** (a pattern of words,
@@ -46,6 +47,14 @@ The `!` lines are what to look at (`references/keys.md` names every fact), in th
   What was seen wins; the contradiction is the finding.
 - **The text against the setup** — a rule with `when` and `not`: «devolucoes tem «Só o conhecimento», mas também
   «Conhecimento geral do modelo ligado»».
+- **The orchestrator's contract** — what each connected-agent action passes (the conversation history, the inputs,
+  the routing description) is a fact of the specialist it calls, so «1 especialista não recebe o histórico da conversa
+  do orquestrador (frete): é intencional?» is an ordinary off-pattern. Its own findings: a call to an agent not in the
+  folder («O orquestrador chama «X», que não está na pasta» — maybe not cloned, maybe gone), a specialist no
+  orchestrator calls, and a routing description under 80 characters (the model routes by it).
+- **A flow that returns nothing** — a flow an agent calls with no `Response`: «O fluxo «X» de cupons não devolve nada».
+  What a flow calls (connectors, operations, HTTP hosts, another flow) is compared like any fact; the map's Cast tab
+  shows each chain, agent → flow → system.
 - **Off a pattern** — «1 especialista não escala para humano (frete): é intencional?». With an accepted pattern:
   «corrigir?». A **variation** of a shared block — «1 especialista tem uma variação do bloco oficial «Formatação de
   links» (frete): alinhar?» — and the map shows the words that went and came. Off a type's pattern: «1 especialista de
@@ -54,6 +63,11 @@ The `!` lines are what to look at (`references/keys.md` names every fact), in th
 - **A text rule set in different ways** — «4 especialistas definem «Tamanho da resposta» de 2 jeitos: unificar?» — or
   **twice in one agent** — «qual vale?».
 - **Only one has it** — innovation to spread, or debt to remove: only the person knows.
+- **Nobody uses it, or it is switched off** — a topic nobody can reach (no description, no phrases, no topic calls
+  it), a tool the model cannot choose (no description), a global variable no file names, a flow no node calls, a node
+  with `disabled: true`, a component with `state: Inactive`: «remover ou ligar?». Never a pattern nor a solo, and a
+  switched-off node is not a fact (a disabled telemetry node is no telemetry). The map's «Sem uso» / «Unused» tab and
+  sheet list them with the file.
 - **A type with one specialist** — nothing to compare within it.
 - **Not understood** — files the analysis could not read (broken YAML, a kind Copilot Studio does not have). The rest
   was read anyway. Only the kind's name may leave the client's environment, typed, to improve the extractor.
@@ -67,6 +81,13 @@ The `!` lines are what to look at (`references/keys.md` names every fact), in th
   person's call — or the model's, as declared facts (step 3).
 - Copies and tests left in the editor (`… Copy`, `test`) and per-language copies are left out.
 - **Not in the clone:** the texts of prompt actions. Say so when the team asks about them.
+
+### The flows: what it reads and what it does not
+
+It reads which connectors, operations and HTTP hosts a flow calls, whether it calls another flow, and whether it
+answers the agent — walking scopes, conditions, switches and loops. It does **not** read what the flow does with them
+(its expressions, its logic), and it does **not** look for secrets in a flow: that is for the team's security tools.
+Say both when the team asks.
 - **A marker** is a JavaScript regular expression, case does not matter (`'(no máximo|at most)\s*(\d+)\s*bullets?'`,
   in single quotes in YAML); `value: "$2 bullets"` keeps what it captured. Try it with `--check`: a regex that does not
   compile is `✗ profile:line`.
