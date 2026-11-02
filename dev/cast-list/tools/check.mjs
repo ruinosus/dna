@@ -1,10 +1,11 @@
 // Checks the skill as a person gets it: the engine's checks (checks/*.check.ts); the example agents make the map, the
 // workbook, the lesson (passing chalk-talk's reviewer when there is a browser) and the cast file and print what to look at — 7 with the example profile, 8 with the demo cast file (what
-// people said that the YAML contradicts); a broken profile says its line; a folder with no agent says so; the map
-// loads nothing from the internet; and, in a browser, «to look at» opens its fact, a pattern shows the files, the
+// people said that the YAML contradicts); the workbook filled in comes back (--from, --take); --facts; a clean copy with
+// no node_modules runs on Node alone; 18 agents in under 30 s with the network blocked; broken files never stop it; a
+// broken profile says its line; a folder with no agent says so; the map loads nothing from the internet; and, in a browser, «to look at» opens its fact, a pattern shows the files, the
 // role filter leaves the orchestrator out, the tabs open and the downloads work. Run after npm run assets.
 import { spawnSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -57,6 +58,57 @@ mkdirSync(join(work, 'empty'))
 const e = run(join(work, 'empty'))
 ok(e.status === 1 && /agent\.mcs\.yml/.test(e.stderr), 'a folder with no agent says so (exit 1)', e.stderr)
 ok(run(agents, '--lang', 'fr').status === 2 && run(agents, '--nope').status === 2 && run(join(work, 'nowhere')).status === 2, 'bad arguments: exit 2')
+
+// the way back: the workbook filled in (a line in Declared, «aceito» on telemetry), saved as an .xlsx again
+const { readXlsx } = await import(join(skill, 'scripts/read-xlsx.mjs'))
+const { workbookFile } = await import(join(skill, 'scripts/engine.mjs'))
+run(agents, '--profile', profile, '--xlsx', '--lang', 'pt', '--out', demo)
+const sheets = readXlsx(readFileSync(join(demo, 'agents.xlsx')))
+sheets.find((x) => x.name === 'Declarado').rows.push(['bodega-frete', 'kpi', 'cotação em menos de 5 s', 'planilha do time'])
+const pats = sheets.find((x) => x.name === 'Padrões')
+pats.rows.find((r) => r[0] === 'node:LogCustomTelemetryEvent')[pats.rows[0].indexOf('Decisão')] = 'aceito'
+writeFileSync(join(work, 'edited.xlsx'), workbookFile(sheets.map((x) => ({ key: 'summary', name: x.name, header: true, columns: (x.rows[0] ?? []).map((t) => ({ title: t, width: 20 })), rows: x.rows }))))
+const listed = run(agents, '--from', join(work, 'edited.xlsx'), '--lang', 'pt', '--out', demo)
+ok(listed.status === 0 && /^\s+d1\s+\+ declarado\s+bodega-frete · KPI declarado = «cotação em menos de 5 s»/m.test(listed.stdout) && /^\s+p1\s+\+ decisão\s+Registra telemetria: aceito \(plataforma\)/m.test(listed.stdout), '--from lists what was filled in, each with its key', listed.stdout)
+ok(run(agents, '--from', join(work, 'edited.xlsx'), '--take', 'zz', '--out', demo).status === 2, '--take with a key that is not there: exit 2')
+const took = run(agents, '--from', join(work, 'edited.xlsx'), '--take', 'all', '--lang', 'pt', '--out', demo)
+const written = readFileSync(join(demo, 'agents.cast.yaml'), 'utf8')
+ok(took.status === 0 && written.includes('cotação em menos de 5 s') && /key: node:LogCustomTelemetryEvent, status: accepted/.test(written) && written.includes('# the handoff document says frete escalates'), '--take all writes them to the cast file, comments kept', written)
+const next = run(agents, '--profile', profile, '--check', '--lang', 'pt', '--out', demo)
+ok(next.stdout.includes('não registra telemetria (bodega-loja-fisica), e o padrão foi aceito: corrigir?') && next.stdout.includes('3 especialistas não cumprem'), 'the next run checks the accepted pattern, and counts the declared KPI', next.stdout)
+
+// the facts, for a model
+const f = run(agents, '--facts', '--out', join(work, 'facts'))
+const facts = JSON.parse(readFileSync(join(work, 'facts', 'agents.facts.json'), 'utf8'))
+ok(f.status === 0 && facts.format === 'cast-list/facts-v1' && facts.agents.length === 6 && facts.agents.find((x) => x.id === 'bodega-frete').facts['trigger:OnUnknownIntent'][0].file === 'topics/Fallback.topic.mcs.yml', '--facts: each agent, its facts with file and line', f.stderr)
+
+// a clean copy of the skill, with no node_modules anywhere above it, runs on Node alone
+const clean = join(work, 'clean')
+cpSync(skill, join(clean, 'cast-list'), { recursive: true })
+const c = spawnSync(process.execPath, [join(clean, 'cast-list/scripts/cast.mjs'), join(clean, 'cast-list/examples/agents'), '--all', '--out', join(clean, 'out')], { encoding: 'utf8', cwd: clean })
+ok(c.status === 0 && existsSync(join(clean, 'out/agents.html')) && existsSync(join(clean, 'out/agents.xlsx')) && existsSync(join(clean, 'out/agents.lesson.html')), 'a clean copy, no node_modules: map, workbook and lesson on Node alone', c.stdout + c.stderr)
+
+// 18 agents (the examples three times over) in under 30 s, with no network: any connection throws
+const many = join(work, 'many')
+for (const n of [1, 2, 3]) for (const d of readdirSync(agents)) cpSync(join(agents, d), join(many, `${d}-${n}`), { recursive: true })
+writeFileSync(join(work, 'no-net.mjs'), "import net from 'node:net'\nnet.Socket.prototype.connect = () => { throw new Error('cast-list must not use the network') }\nglobalThis.fetch = () => { throw new Error('cast-list must not use the network') }\n")
+const start = Date.now()
+const m = spawnSync(process.execPath, ['--import', join(work, 'no-net.mjs'), cast, many, '--all', '--out', join(work, 'many-out')], { encoding: 'utf8' })
+const took18 = (Date.now() - start) / 1000
+ok(m.status === 0 && m.stdout.includes('18 in the cast') && took18 < 30, `18 agents with no network: done in ${took18.toFixed(1)} s`, m.stdout + m.stderr)
+
+// what cannot be read never stops it
+const odd = join(work, 'odd/strange')
+mkdirSync(join(odd, 'topics'), { recursive: true })
+writeFileSync(join(odd, 'agent.mcs.yml'), 'kind: GptComponentMetadata\ninstructions: Seja breve.\n')
+writeFileSync(join(odd, 'topics/Broken.topic.mcs.yml'), 'kind: AdaptiveDialog\nbeginDialog: [unclosed\n')
+writeFileSync(join(odd, 'topics/Empty.topic.mcs.yml'), '')
+writeFileSync(join(odd, 'topics/Made.topic.mcs.yaml'), 'kind: AdaptiveDialog\nbeginDialog:\n  kind: OnInventado\n')
+writeFileSync(join(odd, 'notes.txt'), 'loose')
+mkdirSync(join(odd, '.mcs'))
+writeFileSync(join(odd, '.mcs/conn.json'), '{"never": "read"}')
+const o = run(join(work, 'odd'), '--all', '--lang', 'pt', '--out', join(work, 'odd-out'))
+ok(o.status === 0 && o.stdout.includes('strange: a análise não entendeu 4 arquivos') && !o.stdout.includes('conn.json'), 'broken, empty, made-up and loose files: told, never stopping it; .mcs/ never read', o.stdout + o.stderr)
 
 const map = readFileSync(join(skill, 'assets/map.html'), 'utf8')
 ok(!/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(map), 'the map loads nothing from the internet')
