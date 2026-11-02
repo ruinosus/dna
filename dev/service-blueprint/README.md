@@ -66,7 +66,7 @@ day, checking the health-plan card takes long.
 
 ## Install
 
-service-blueprint is one of the five skills of the [house-lights](../../README.md) plugin. **Claude Code:**
+service-blueprint is one of the six skills of the [house-lights](../../README.md) plugin. **Claude Code:**
 
 ```
 /plugin marketplace add ruinosus/house-lights
@@ -84,7 +84,7 @@ Skills (code execution on). **Claude API**: the same zip with the Skills API. **
 `sources.example.json`):
 
 ```
-npm install       # at the repository root: the five skills are npm workspaces
+npm install       # at the repository root: the six skills are npm workspaces
 npm run assets -w dev/service-blueprint/tools   # scripts/engine.mjs, assets/map.html, assets/lesson.html
 npm run check -w dev/service-blueprint/tools    # the engine's checks, every example built (and what each must look at), a broken file, the map in Chrome
 npm run site -w dev/service-blueprint/tools     # docs/: the gallery

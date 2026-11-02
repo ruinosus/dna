@@ -1,4 +1,4 @@
-// What scripts/cast.mjs uses, bundled into scripts/engine.mjs by tools/assets.mjs (the YAML reader goes inside).
+// What scripts/build.mjs uses, bundled into scripts/engine.mjs by tools/assets.mjs (the YAML reader goes inside).
 export { agentsIn } from './folder'
 export { extractAgent } from './extract'
 export { knownKinds } from './kinds'

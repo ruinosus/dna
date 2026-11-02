@@ -92,7 +92,7 @@ shortened):
 
 ## Install
 
-gates-and-handoffs is one of the five skills of the [house-lights](../../README.md) plugin. **Claude Code:**
+gates-and-handoffs is one of the six skills of the [house-lights](../../README.md) plugin. **Claude Code:**
 
 ```
 /plugin marketplace add ruinosus/house-lights
@@ -171,7 +171,7 @@ It maps how the work **should** go. It does not track items moving through the s
 `sources.example.json`), checks the examples end to end and makes the gallery:
 
 ```
-npm install       # at the repository root: the five skills are npm workspaces
+npm install       # at the repository root: the six skills are npm workspaces
 npm run assets -w dev/gates-and-handoffs/tools   # scripts/engine.mjs, assets/map.html, assets/lesson.html
 npm run check -w dev/gates-and-handoffs/tools    # every example: map, workbook (and back), lesson; a broken file says its line
 npm run site -w dev/gates-and-handoffs/tools     # docs/: the gallery

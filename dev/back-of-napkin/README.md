@@ -50,7 +50,7 @@ nothing leaves the paper and no text covers another.
 
 ## Install
 
-back-of-napkin is one of the five skills of the [house-lights](../../README.md) plugin. **Claude Code:**
+back-of-napkin is one of the six skills of the [house-lights](../../README.md) plugin. **Claude Code:**
 
 ```
 /plugin marketplace add ruinosus/house-lights
@@ -65,7 +65,7 @@ Skills (code execution on). **Claude API**: the same zip with the Skills API. **
 ## Develop
 
 ```
-npm install       # at the repository root: the five skills are npm workspaces
+npm install       # at the repository root: the six skills are npm workspaces
 npm run assets -w dev/back-of-napkin/tools   # brings chalk-talk's engine from its npm package (never edit the generated files)
 npm run check -w dev/back-of-napkin/tools    # SKILL.md, one version, the six examples drawn clean, one warning per purpose, the refusals
 npm run linux -w dev/back-of-napkin/tools    # the six examples as in a cloud sandbox (Linux, root, Playwright's Chromium); needs Docker

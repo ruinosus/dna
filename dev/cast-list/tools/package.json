@@ -6,7 +6,10 @@
   "scripts": {
     "assets": "node assets.mjs",
     "typecheck": "tsc -p tsconfig.json",
-    "check": "node check.mjs"
+    "check": "node check.mjs",
+    "zip": "node zip.mjs",
+    "site": "node site.mjs",
+    "linux": "node linux-check.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

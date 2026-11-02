@@ -1,4 +1,4 @@
-# What people said about the agents, and what was decided. cast.mjs keeps it up to date; edit it, or fill the
+# What people said about the agents, and what was decided. build.mjs keeps it up to date; edit it, or fill the
 # workbook's «Declared» sheet and the «Decision» column and read it back with --from.
 format: cast-list/cast-v1
 name: Bodega Azul — atendimento

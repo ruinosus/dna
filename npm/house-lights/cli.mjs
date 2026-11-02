@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// house-lights <skill> <file> [options]: runs that skill's build with the same options, and gives back its exit code.
+// house-lights <skill> <file or folder> [options]: runs that skill's build with the same options, and gives back its exit code.
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -11,12 +11,13 @@ const SKILLS = {
   'dress-rehearsal': 'play an incident drill made from a runbook (.drill.yaml)',
   'gates-and-handoffs': "map a team's way of working — stages, gates, roles, outputs (.way.yaml)",
   'service-blueprint': 'map a customer journey and who makes each moment happen (.blueprint.yaml)',
+  'cast-list': 'compare Copilot Studio agents: patterns, who is off them, what is missing (a folder of cloned agents)',
 }
 const [skill, ...args] = process.argv.slice(2)
 const build = join(dirname(fileURLToPath(import.meta.url)), 'skills', skill ?? '', 'scripts/build.mjs')
 if (!SKILLS[skill] || !existsSync(build)) {
   if (skill) console.error(`house-lights: no skill named «${skill}».`)
-  console.error('usage: npx house-lights <skill> <file> [options]   (the options are the skill\'s own)\n')
+  console.error('usage: npx house-lights <skill> <file or folder> [options]   (the options are the skill\'s own)\n')
   for (const [name, what] of Object.entries(SKILLS)) console.error(`  ${name.padEnd(19)} ${what}`)
   process.exit(1)
 }

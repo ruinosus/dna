@@ -1,5 +1,5 @@
 // The cast file (format cast-list/cast-v1): the agents of the last run and their roles, what people said about them
-// (declared, with the source) and what was decided about each pattern. cast.mjs keeps it; a person or the model edits
+// (declared, with the source) and what was decided about each pattern. build.mjs keeps it; a person or the model edits
 // it, or it comes back from the workbook. Written back over the previous file, it keeps the comments people wrote.
 import { readFormat } from '@kit/format'
 import { Document, isMap, isSeq, parseDocument, type YAMLMap } from 'yaml'
@@ -66,7 +66,7 @@ export function readCast(text: string): { cast?: Cast; problems: Problem[] } {
   return { cast: { ...(str(raw.name) ? { name: str(raw.name) } : {}), agents, declared, decisions }, problems }
 }
 
-const HEADER = ` What people said about the agents, and what was decided. cast.mjs keeps it up to date; edit it, or fill the
+const HEADER = ` What people said about the agents, and what was decided. build.mjs keeps it up to date; edit it, or fill the
  workbook's «Declared» sheet and the «Decision» column and read it back with --from.`
 // how each list's items are told apart, so an item that changed keeps its node (and its comments)
 const LISTS = {

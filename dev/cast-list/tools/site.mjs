@@ -1,0 +1,101 @@
+// The GitHub Pages gallery (docs/cast-list/): the example agents of a made-up shop compared — the map, the workbook,
+// the lesson and the cast file (with the demo's declared facts and decision) in docs/cast-list/examples/; pictures of
+// the map and the lesson (docs/cast-list/images/, a headless browser in the light theme); and its index.html. Run
+// after npm run assets.
+import { execFileSync } from 'node:child_process'
+import { copyFileSync, cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { browser, runPages } from '../../../skills/cast-list/scripts/browser.mjs'
+
+const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../../..') // the house-lights repository
+const skill = join(repo, 'skills/cast-list')
+const docs = join(repo, 'docs/cast-list')
+if (!browser()) throw new Error('No Chrome, Chromium or Edge: the pictures need one (set CHROME_PATH).')
+const ID = 'bodega-azul'
+for (const d of ['examples', 'images']) rmSync(join(docs, d), { recursive: true, force: true })
+mkdirSync(join(docs, 'examples'), { recursive: true })
+mkdirSync(join(docs, 'images'), { recursive: true })
+// the folder's name is the files' name: the example agents, copied under it
+const work = mkdtempSync(join(tmpdir(), 'cast-list-site-'))
+cpSync(join(skill, 'examples/agents'), join(work, ID), { recursive: true })
+copyFileSync(join(skill, 'examples/demo.cast.yaml'), join(docs, 'examples', `${ID}.cast.yaml`))
+execFileSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(work, ID), '--all', '--lang', 'pt', '--profile', join(skill, 'examples/profile.cast.yaml'), '--out', join(docs, 'examples')], { stdio: 'ignore' })
+rmSync(work, { recursive: true, force: true })
+// The pictures, in the light theme, taken by the kit's browser over the DevTools pipe.
+const shots = [
+  { file: join(docs, 'examples', `${ID}.html`), mode: '', shot: { width: 1440, height: 900, scheme: 'light' }, png: join(docs, 'images', `${ID}-map.png`) },
+  { file: join(docs, 'examples', `${ID}.lesson.html`), mode: 'still', shot: { width: 1100, height: 640, scheme: 'light' }, png: join(docs, 'images', `${ID}-lesson.png`) },
+]
+const { results } = await runPages(shots, { timeout: 60 })
+shots.forEach(({ png }, k) => {
+  if (!results[k]?.png) throw new Error(`${png}: the picture failed (${results[k]?.error ?? 'no picture'})`)
+  writeFileSync(png, Buffer.from(results[k].png.split(',')[1], 'base64'))
+})
+writeFileSync(join(docs, 'index.html'), `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cast-list</title>
+<meta name="description" content="Copilot Studio agents compared: what repeats, who is off the pattern, what only one has — with the file behind each finding. Node alone, no model.">
+<style>
+:root { --ink: #1d2330; --muted: #5f6878; --line: #e2e4e8; --page: #f6f6f3; --card: #fff; --accent: #2f5bea; --warm: #e3f3ea; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --ink: #e8ebf0; --muted: #9aa3b2; --line: #313744; --page: #14171c; --card: #1d2129; --accent: #8fb0ff; --warm: #1c3328; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 1160px; margin: 0 auto; padding: 48px 16px 64px; display: flex; flex-direction: column; gap: 36px; }
+h1 { margin: 0; font-size: clamp(38px, 7vw, 60px); line-height: 1; letter-spacing: -0.02em; }
+h1 span { background: var(--warm); padding: 0 .15em; border-radius: 6px; }
+h2 { margin: 0 0 12px; font-size: 22px; }
+p { margin: 0; }
+a { color: var(--accent); }
+.lead { font-size: 19px; max-width: 780px; }
+.hero { display: grid; gap: 16px; }
+.hero img, .card img { width: 100%; border-radius: 12px; border: 1px solid var(--line); }
+.actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.button { display: inline-block; padding: 10px 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink); text-decoration: none; font-weight: 600; }
+.button.primary { background: var(--ink); color: var(--page); border-color: var(--ink); }
+.card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); max-width: 640px; }
+.meta { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.links { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; font-weight: 600; }
+ul { margin: 0; padding-left: 20px; }
+footer { color: var(--muted); font-size: 14px; text-align: center; }
+a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<main>
+  <section class="hero">
+    <h1><span>cast</span>-list</h1>
+    <p class="lead">Point it at your Copilot Studio agents, cloned. See what they all do (a pattern to agree on), who is off it, and what only one has — with the file and line behind every finding. Decide in Excel; the next run checks what you decided. Node alone: no model, no install, no network.</p>
+    <img src="images/${ID}-map.png" alt="Six agents of a made-up shop compared: a matrix of who has what, a red × where the shipping specialist does not escalate and the store specialist logs no telemetry">
+    <div class="actions"><a class="button primary" href="https://github.com/ruinosus/house-lights#install">Install the skill</a><a class="button" href="https://github.com/ruinosus/house-lights">GitHub</a></div>
+  </section>
+  <section>
+    <h2>The example — open the map, play the lesson, download the workbook</h2>
+    <article class="card">
+      <a href="examples/${ID}.lesson.html"><img src="images/${ID}-lesson.png" alt="The lesson: the orchestrator calls five specialists; two carry a red ×" loading="lazy"></a>
+      <span class="meta">Português · fictional agents</span>
+      <b>Bodega Azul — atendimento</b>
+      <span>An orchestrator and five specialists of a made-up online shop. On purpose: shipping does not escalate to a person, the store logs no telemetry, coupons alone uses an MCP server, and a handoff says shipping escalates when its YAML does not.</span>
+      <span class="links"><a href="examples/${ID}.html">Map</a><a href="examples/${ID}.lesson.html">Lesson</a><a href="examples/${ID}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${ID}.cast.yaml" download>Cast file (.yaml)</a></span>
+    </article>
+  </section>
+  <section>
+    <h2>What it finds</h2>
+    <ul>
+      <li><b>Patterns</b> — a fact in most agents of a role: the platform's when the orchestrator has it too.</li>
+      <li><b>Off a pattern</b> — «does not escalate to a person (shipping): on purpose?»; once a pattern is accepted, «correct it?».</li>
+      <li><b>Only one has it</b> — innovation to spread, or debt to remove.</li>
+      <li><b>Rules not met</b> — from the team's profile («every specialist has a KPI»).</li>
+      <li><b>Contradictions</b> — what a handoff or the backlog says and the YAML does not.</li>
+    </ul>
+  </section>
+  <footer>cast-list is one of the six skills of <a href="../">house-lights</a>. MIT. The Copilot Studio schema inside is Microsoft's (MIT).</footer>
+</main>
+</body>
+</html>
+`)
+console.log(`✓ docs/cast-list: ${ID} (map, workbook, lesson, cast file) and its pictures`)

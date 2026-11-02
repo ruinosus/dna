@@ -59,7 +59,7 @@ minutes, escalate.
 
 ## Install
 
-dress-rehearsal is one of the five skills of the [house-lights](../../README.md) plugin. **Claude Code:**
+dress-rehearsal is one of the six skills of the [house-lights](../../README.md) plugin. **Claude Code:**
 
 ```
 /plugin marketplace add ruinosus/house-lights
@@ -102,7 +102,7 @@ nobody ever told, «escalate» to nobody and a mark the runbook does not have ar
 ## Develop
 
 ```
-npm install       # at the repository root: the five skills are npm workspaces
+npm install       # at the repository root: the six skills are npm workspaces
 npm run assets -w dev/dress-rehearsal/tools   # scripts/engine.mjs and assets/drill.html, from src/
 npm run check -w dev/dress-rehearsal/tools    # the engine's checks, every example built, broken files and drawings, every example played in Chrome
 npm run site -w dev/dress-rehearsal/tools     # docs/: the gallery

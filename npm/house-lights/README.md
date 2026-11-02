@@ -1,11 +1,12 @@
 # house-lights
 
-The command behind the [house-lights](https://github.com/ruinosus/house-lights) skills: five ways of showing an idea
-to people, each one a file you write and an HTML page that opens offline. See the
+The command behind the [house-lights](https://github.com/ruinosus/house-lights) skills: six ways of showing an idea
+to people, each one an HTML page that opens offline. See the
 [gallery](https://ruinosus.github.io/house-lights/).
 
 ```
 npx house-lights <skill> <file> [options]      # the options are the skill's own; with no skill, the list
+npx house-lights cast-list <agents-folder> [options]
 ```
 
 | Skill | What it makes |
@@ -15,6 +16,7 @@ npx house-lights <skill> <file> [options]      # the options are the skill's own
 | `dress-rehearsal` | an incident drill to play, made from a runbook, and its debrief |
 | `gates-and-handoffs` | a team's way of working: stages, gates, roles and outputs, with a workbook |
 | `service-blueprint` | a customer journey and who makes each moment happen, with a workbook |
+| `cast-list` | Copilot Studio agents compared: what repeats, who is off a pattern, what is missing, with a workbook |
 
 ```
 npx house-lights chalk-talk lesson.chalk                       # lesson.html, checked and offline
@@ -25,6 +27,8 @@ npx house-lights dress-rehearsal checkout.drill.yaml --all     # the game and th
 npx house-lights gates-and-handoffs team.way.yaml --all        # the map, the workbook (.xlsx) and the lesson
 npx house-lights gates-and-handoffs team.way.yaml --from edited.xlsx   # what the edited workbook changes
 npx house-lights service-blueprint returns.blueprint.yaml --all       # the map, the workbook and the lesson
+npx house-lights cast-list agents/ --profile team.cast.yaml --all     # the agents compared: map, workbook, lesson
+npx house-lights cast-list agents/ --from filled.xlsx --take all      # the decisions filled in Excel, kept
 ```
 
 Exit codes: 0 made and checked; 1 the file breaks its format (each problem with its line); 2 the command line is
@@ -34,7 +38,7 @@ Node.js 18 or later, nothing else to install.
 The drawing engine alone (to embed lessons in a page, VS Code or Obsidian) is the
 [chalk-talk](https://www.npmjs.com/package/chalk-talk) package.
 
-**Em português:** os mesmos comandos, com `--lang pt` nas três que fazem mapa e jogo. As receitas podem ser escritas
+**Em português:** os mesmos comandos, com `--lang pt` nas quatro que fazem mapa e jogo. As receitas podem ser escritas
 em português; a tela segue o `locale` da receita.
 
 MIT.

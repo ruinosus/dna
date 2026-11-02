@@ -3,10 +3,10 @@
 // one has, the team's rules not met — and makes the map (one HTML page that opens with no internet), the workbook
 // (.xlsx) and the cast file (what people said, what was decided). No model, no install, no network: Node 18 or later.
 //
-//   node cast.mjs <agents-folder> --check [--profile <p.cast.yaml>] [--lang en|pt]     only compare: nothing is written
-//   node cast.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
-//   node cast.mjs <agents-folder> --facts [--out <folder>]                         only the facts, for a model: <id>.facts.json
-//   node cast.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]
+//   node build.mjs <agents-folder> --check [--profile <p.cast.yaml>] [--lang en|pt]     only compare: nothing is written
+//   node build.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
+//   node build.mjs <agents-folder> --facts [--out <folder>]                         only the facts, for a model: <id>.facts.json
+//   node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]
 //                                  what was filled in the workbook (Declared, the Decision column): listed with a key each,
 //                                  and with --take written to the cast file
 //
@@ -33,10 +33,10 @@ const option = (name) => {
   return at >= 0 ? argv[at + 1] : undefined
 }
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
-const usage = `usage: node cast.mjs <agents-folder> --check [--profile <p.cast.yaml>] [--lang en|pt]
-       node cast.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
-       node cast.mjs <agents-folder> --facts [--out <folder>]
-       node cast.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]`
+const usage = `usage: node build.mjs <agents-folder> --check [--profile <p.cast.yaml>] [--lang en|pt]
+       node build.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
+       node build.mjs <agents-folder> --facts [--out <folder>]
+       node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]`
 const lang = option('--lang') ?? 'en'
 const fail = (msg) => {
   console.error(`${msg}\n${usage}`)

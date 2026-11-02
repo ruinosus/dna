@@ -1,7 +1,7 @@
 {
   "name": "house-lights",
   "version": "1.1.0",
-  "description": "The command behind the house-lights skills: draw a lesson or a pitch, play an incident drill, map a way of working or a customer journey \u2014 one offline HTML file each.",
+  "description": "The command behind the house-lights skills: draw a lesson or a pitch, play an incident drill, map a way of working or a customer journey, compare Copilot Studio agents — one offline HTML file each.",
   "type": "module",
   "bin": {
     "house-lights": "cli.mjs"
@@ -29,7 +29,8 @@
     "explainer",
     "presentation",
     "incident-drill",
-    "service-blueprint"
+    "service-blueprint",
+    "copilot-studio"
   ],
   "scripts": {
     "prepack": "node ../../dev/house-lights/tools/pack.mjs"

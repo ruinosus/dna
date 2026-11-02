@@ -241,7 +241,7 @@ leave the paper comes back in on its own. The full contract is in
 
 ## Install
 
-chalk-talk is one of the five skills of the [house-lights](../../README.md) plugin. **Claude Code:**
+chalk-talk is one of the six skills of the [house-lights](../../README.md) plugin. **Claude Code:**
 
 ```
 /plugin marketplace add ruinosus/house-lights
@@ -292,7 +292,7 @@ Voice narration, editing the drawing by hand, PDF export, «appear on click» an
 ## Develop
 
 ```
-npm install       # at the repository root: the five skills are npm workspaces
+npm install       # at the repository root: the six skills are npm workspaces
 npm run assets -w dev/chalk-talk/tools    # rebuild the generated files from the engine's source (paths in tools/sources.json)
 npm run check -w dev/chalk-talk/tools     # build every example and check the exit codes
 npm run snapshots -w dev/chalk-talk/tools # draw every example in a headless browser and compare its SVG with tools/snapshots/

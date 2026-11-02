@@ -1,4 +1,4 @@
-// Builds the generated parts of the skill: the engine for scripts/cast.mjs (scripts/engine.mjs: find, extract, compare,
+// Builds the generated parts of the skill: the engine for scripts/build.mjs (scripts/engine.mjs: find, extract, compare,
 // review, the workbook and its way back — with the YAML reader inside, so the skill runs on Node alone) and the map page
 // with its code inside (assets/map.html), the lesson page (chalk-talk's player), from src/ and the way engine's xlsx writer, pinned by tools/sources.json; the
 // kit's browser and page helpers; the workbook reader, copied from gates-and-handoffs; and references/keys.md, from the

@@ -1,7 +1,7 @@
 <h1 align="center">house-lights</h1>
 
-<p align="center"><b>The lights that come up so everyone can see. Five skills for Claude that show an idea to people — by
-drawing it, playing it or mapping it — each one an HTML file that opens offline.</b></p>
+<p align="center"><b>The lights that come up so everyone can see. Six skills for Claude that show an idea to people — by
+drawing it, playing it, mapping it or comparing it — each one an HTML file that opens offline.</b></p>
 
 <p align="center">
   <img src="docs/chalk-talk/images/hero.gif" alt="A hand-drawn lesson drawing itself on a board, stroke by stroke" width="760">
@@ -14,7 +14,7 @@ drawing it, playing it or mapping it — each one an HTML file that opens offlin
 
 ---
 
-## The five skills
+## The six skills
 
 | Skill | Ask for | You get |
 |---|---|---|
@@ -23,6 +23,7 @@ drawing it, playing it or mapping it — each one an HTML file that opens offlin
 | [dress-rehearsal](dev/dress-rehearsal/README.md) | "make a drill from our checkout runbook" | an incident drill to play, with a clock and choices, and a debrief of what the runbook does not say |
 | [gates-and-handoffs](dev/gates-and-handoffs/README.md) | "who approves what in our delivery?" | a team's way of working — stages, gates, roles, outputs — as a checkable file, a map, a workbook and a lesson |
 | [service-blueprint](dev/service-blueprint/README.md) | "where does our onboarding hurt?" | a customer journey and who makes each moment happen on stage, backstage and in the systems |
+| [cast-list](dev/cast-list/README.md) | "which of our Copilot Studio agents is off the pattern?" | the agents compared: what repeats, who is off it, what only one has — a map, a workbook to decide in, and a lesson; Node alone, no model |
 
 Claude picks the skill by what you ask. To call one by name: `/house-lights:back-of-napkin …`.
 
@@ -33,7 +34,7 @@ Claude picks the skill by what you ask. To call one by name: `/house-lights:back
 
 ## Install
 
-**Claude Code** — all five at once:
+**Claude Code** — all six at once:
 
 ```
 /plugin marketplace add ruinosus/house-lights
@@ -50,6 +51,7 @@ Claude picks the skill by what you ask. To call one by name: `/house-lights:back
 ```
 npx house-lights back-of-napkin pitch.chalk --pptx steps
 npx house-lights gates-and-handoffs team.way.yaml --all
+npx house-lights cast-list agents/ --all
 ```
 
 The drawing engine alone, to embed lessons in a page, is the [chalk-talk](https://www.npmjs.com/package/chalk-talk)
@@ -64,15 +66,16 @@ plugins, install `house-lights` instead and remove the old one (`/plugin uninsta
 
 ## Em português
 
-Cinco skills para mostrar uma ideia a alguém: **chalk-talk** ensina desenhando, **back-of-napkin** desenha para
+Seis skills para mostrar uma ideia a alguém: **chalk-talk** ensina desenhando, **back-of-napkin** desenha para
 apresentar (e vira PowerPoint), **dress-rehearsal** transforma o runbook num ensaio de incidente, **gates-and-handoffs**
-mapeia o jeito de trabalhar do time e **service-blueprint** mapeia a jornada do cliente. Peça em português ("desenha a
+mapeia o jeito de trabalhar do time, **service-blueprint** mapeia a jornada do cliente e **cast-list** compara os
+agentes do Copilot Studio (o que se repete, quem está fora do padrão). Peça em português ("desenha a
 decisão entre as duas opções", "monta o blueprint da devolução"): a tela segue o idioma da receita. A instalação é a
 de cima.
 
 ## Develop
 
-The five skills are npm workspaces; each one's tools are in `dev/<skill>/tools`.
+The six skills are npm workspaces; each one's tools are in `dev/<skill>/tools`.
 
 ```
 npm install
@@ -83,7 +86,7 @@ npm run site        # docs/: a gallery per skill and the front page
 npm run zip         # dist/<skill>.zip for claude.ai and dist/house-lights.zip
 npm run linux       # the builds as in a cloud sandbox (Linux, root, Playwright's Chromium); needs Docker
 npm run audit       # before a push: no name from your local list in the tracked files
-claude plugin eval . --allow-tools Bash Write Edit --runs 1   # the evals in evals/, all five skills loaded
+claude plugin eval . --allow-tools Bash Write Edit --runs 1   # the evals in evals/, all six skills loaded
 ```
 
 The engine's source is not published yet, so `npm run assets` works only where it is; everything else works from
@@ -92,4 +95,5 @@ this repository alone. What changed: [CHANGELOG.md](CHANGELOG.md); before 1.0.0,
 ## License
 
 MIT. Third parties: Rough.js (MIT); the fonts Caveat and Shantell Sans (SIL Open Font License); lottie-web (MIT); the
-animated emoji are Animated Noto Emoji by Google (CC BY 4.0); pptxgenjs (MIT, with JSZip under MIT).
+animated emoji are Animated Noto Emoji by Google (CC BY 4.0); pptxgenjs (MIT, with JSZip under MIT); the Copilot Studio
+schema and its reader in `skills/cast-list/vendor/microsoft` (MIT, Microsoft Corporation).

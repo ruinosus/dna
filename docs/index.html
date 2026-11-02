@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>house-lights</title>
-<meta name="description" content="Five Claude skills for showing an idea to people: teach it by drawing, present it, rehearse an incident, map a team's way of working and a customer journey — each one HTML file that opens offline.">
+<meta name="description" content="Six Claude skills for showing an idea to people: teach it by drawing, present it, rehearse an incident, map a team's way of working and a customer journey, compare Copilot Studio agents — each one HTML file that opens offline.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Shantell+Sans:wght@400;700&display=swap" rel="stylesheet">
@@ -42,7 +42,7 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
 <main>
   <section class="hero">
     <h1>house-lights</h1>
-    <p class="lead">The lights that come up so everyone can see. Five skills for Claude that show an idea to people — by drawing it, playing it or mapping it — each one an HTML file that opens offline.</p>
+    <p class="lead">The lights that come up so everyone can see. Six skills for Claude that show an idea to people — by drawing it, playing it, mapping it or comparing it — each one an HTML file that opens offline.</p>
     <div class="actions">
       <a class="button primary" href="#install">Install</a>
       <a class="button" href="https://github.com/ruinosus/house-lights">GitHub</a>
@@ -80,11 +80,17 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
         <b>Map what the customer lives</b>
         <span>Each moment of a journey, how it feels, and who makes it happen on stage, backstage and in the systems.</span>
       </a>
+      <a class="card" href="cast-list/">
+        <img src="cast-list/images/bodega-azul-map.png" alt="" loading="lazy">
+        <span class="meta"><span>cast-list</span><span>gallery →</span></span>
+        <b>Compare the agents</b>
+        <span>Copilot Studio agents side by side: what repeats, who is off the pattern, what only one has — with the file behind each.</span>
+      </a>
     </div>
   </section>
   <section class="install" id="install">
     <h2>Install</h2>
-    <p>In Claude Code, all five at once:</p>
+    <p>In Claude Code, all six at once:</p>
     <pre>/plugin marketplace add ruinosus/house-lights
 /plugin install house-lights@house-lights</pre>
     <p class="note">In claude.ai, upload each skill's zip from the <a href="https://github.com/ruinosus/house-lights/releases">latest release</a> (Settings › Capabilities › Skills, code execution on). Outside Claude: <code>npx house-lights &lt;skill&gt; &lt;file&gt;</code>.</p>

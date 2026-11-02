@@ -14,7 +14,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
 const repo = resolve(here, '../../..') // the house-lights repository
 const skill = join(repo, 'skills/cast-list')
-const cast = join(skill, 'scripts/cast.mjs')
+const cast = join(skill, 'scripts/build.mjs')
 const examples = join(skill, 'examples')
 const agents = join(examples, 'agents')
 const profile = join(examples, 'profile.cast.yaml')
@@ -85,7 +85,7 @@ ok(f.status === 0 && facts.format === 'cast-list/facts-v1' && facts.agents.lengt
 // a clean copy of the skill, with no node_modules anywhere above it, runs on Node alone
 const clean = join(work, 'clean')
 cpSync(skill, join(clean, 'cast-list'), { recursive: true })
-const c = spawnSync(process.execPath, [join(clean, 'cast-list/scripts/cast.mjs'), join(clean, 'cast-list/examples/agents'), '--all', '--out', join(clean, 'out')], { encoding: 'utf8', cwd: clean })
+const c = spawnSync(process.execPath, [join(clean, 'cast-list/scripts/build.mjs'), join(clean, 'cast-list/examples/agents'), '--all', '--out', join(clean, 'out')], { encoding: 'utf8', cwd: clean })
 ok(c.status === 0 && existsSync(join(clean, 'out/agents.html')) && existsSync(join(clean, 'out/agents.xlsx')) && existsSync(join(clean, 'out/agents.lesson.html')), 'a clean copy, no node_modules: map, workbook and lesson on Node alone', c.stdout + c.stderr)
 
 // 18 agents (the examples three times over) in under 30 s, with no network: any connection throws

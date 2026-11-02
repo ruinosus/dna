@@ -1,4 +1,4 @@
-// Checks what holds the five skills together: one version in the plugin, the npm package and every SKILL.md; the npm
+// Checks what holds the six skills together: one version in the plugin, the npm package and every SKILL.md; the npm
 // package carrying each skill's build; and npx house-lights <skill> drawing an example of each, with its exit code.
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
@@ -9,10 +9,10 @@ import { checker, checkOneVersion, runNode, skillFrontmatter } from 'chalk-talk/
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 const { expect, done } = checker()
-const SKILLS = ['chalk-talk', 'back-of-napkin', 'dress-rehearsal', 'gates-and-handoffs', 'service-blueprint']
+const SKILLS = ['chalk-talk', 'back-of-napkin', 'dress-rehearsal', 'gates-and-handoffs', 'service-blueprint', 'cast-list']
 const json = (f) => JSON.parse(readFileSync(join(repo, f), 'utf8'))
 
-expect(readdirSync(join(repo, 'skills')).sort().join() === [...SKILLS].sort().join(), `the plugin has the five skills (${SKILLS.join(', ')})`)
+expect(readdirSync(join(repo, 'skills')).sort().join() === [...SKILLS].sort().join(), `the plugin has the six skills (${SKILLS.join(', ')})`)
 checkOneVersion(expect, {
   plugin: json('.claude-plugin/plugin.json').version,
   'npm house-lights': json('npm/house-lights/package.json').version,
@@ -22,12 +22,12 @@ checkOneVersion(expect, {
 // The npm package: each skill's build inside, no SKILL.md.
 execFileSync(process.execPath, [join(repo, 'dev/house-lights/tools/pack.mjs')], { stdio: 'ignore' })
 const packed = JSON.parse(execFileSync('npm', ['pack', '--dry-run', '--json', '--ignore-scripts'], { cwd: join(repo, 'npm/house-lights'), encoding: 'utf8' }))[0].files.map((f) => f.path)
-expect(SKILLS.every((s) => packed.includes(`skills/${s}/scripts/build.mjs`)) && !packed.some((p) => p.endsWith('SKILL.md')), `npm house-lights carries the five builds (${packed.length} files)`)
+expect(SKILLS.every((s) => packed.includes(`skills/${s}/scripts/build.mjs`)) && !packed.some((p) => p.endsWith('SKILL.md')), `npm house-lights carries the six builds (${packed.length} files)`)
 
 // npx house-lights <skill> …: an example of each, drawn.
 const cli = join(repo, 'npm/house-lights/cli.mjs')
 const none = runNode(cli)
-expect(none.status === 1 && SKILLS.every((s) => none.stderr.includes(s)), 'house-lights alone lists the five skills (exit 1)', none.stderr)
+expect(none.status === 1 && SKILLS.every((s) => none.stderr.includes(s)), 'house-lights alone lists the six skills (exit 1)', none.stderr)
 const odd = runNode(cli, ['stage-door', 'x.way.yaml'])
 expect(odd.status === 1 && /no skill named «stage-door»/.test(odd.stderr), 'an old or unknown name is told (exit 1)', odd.stderr)
 const ex = (s, f) => join(repo, 'npm/house-lights/skills', s, f)
@@ -38,6 +38,7 @@ const cases = [
   ['dress-rehearsal', [ex('dress-rehearsal', 'examples/checkout.drill.yaml'), '--out', join(work, 'dress-rehearsal')]],
   ['gates-and-handoffs', [ex('gates-and-handoffs', 'examples/scrum.way.yaml'), '--out', join(work, 'gates-and-handoffs')]],
   ['service-blueprint', [ex('service-blueprint', 'examples/gym-signup.blueprint.yaml'), '--out', join(work, 'service-blueprint')]],
+  ['cast-list', [ex('cast-list', 'examples/agents'), '--out', join(work, 'cast-list')]],
 ]
 for (const [s, args] of cases) {
   mkdirSync(join(work, s))
