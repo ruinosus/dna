@@ -166,8 +166,8 @@ types:
   - { id: guidance, name: orientação, when: { all: ["text:link-domain:*", "node:SearchAndSummarizeContent"] } }
   - { id: triage, name: triagem, when: { any: ["trigger:OnSelectIntent"] } }
 `)
-  const t = run(agents, '--profile', join(w1, 'profile.cast.yaml'), '--html', '--lang', 'pt', '--out', w1)
-  ok(t.status === 0, 'the examples with the wave 1 profile: the map', t.stdout + t.stderr)
+  const t = run(agents, '--profile', join(w1, 'profile.cast.yaml'), '--html', '--lesson', '--lang', 'pt', '--out', w1)
+  ok(t.status === 0 && /✓ review/.test(t.stdout), "the examples with the wave 1 profile: the map, and the lesson by type passing chalk-talk's reviewer", t.stdout + t.stderr)
   const page = readFileSync(join(w1, 'agents.html'), 'utf8').replace('</body>', `<script>
     const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
     setTimeout(() => { const q = (s) => document.querySelector(s); const all = (s) => [...document.querySelectorAll(s)]; const out = {}

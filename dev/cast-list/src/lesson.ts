@@ -2,7 +2,7 @@
 // orchestrator on top, an arrow to each specialist it calls, every agent a robot with its name), what repeats (the
 // patterns), who is off (a red × and why, under the agent), what is missing (the rules not met) and what to decide
 // (the patterns in the open, what only one has). Many agents go in rows, so the paper stays one the engine takes.
-import { arrow, GREEN, GREY, RED, text, wrap, type Obj, type XY } from '@lib/drawing/mermaidKit'
+import { arrow, GREEN, GREY, line, RED, text, wrap, type Obj, type XY } from '@lib/drawing/mermaidKit'
 import type { Result } from './compare'
 import { isBehaviour, labelOf, lacks, type Lang } from './labels'
 import { roleWord } from './words'
@@ -12,6 +12,7 @@ const COL = 150
 const LEFT = 40
 const PER_ROW = 24 // 24 columns of 150: under the engine's 4000
 const ROW = 250 // a robot, its name and why it is off
+const PURPLE = '#7B4FC9' // a type, as on the map
 const ITEM = 17 // the size of a list's words: read from the back of the room
 const SECTION_LINE = 23
 const MAX_ITEMS = 5 // the five that matter most; the rest is on the map
@@ -43,7 +44,16 @@ const WORDS = {
 export function lessonOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
   const w = WORDS[lang]
   const orchestrators = r.agents.filter((a) => a.role === 'orchestrator').sort((a, b) => a.id.localeCompare(b.id))
-  const specialists = r.agents.filter((a) => a.role === 'specialist').sort((a, b) => a.id.localeCompare(b.id))
+  // the specialists by their first type (in the profile's order), those with none last; by name within a type
+  const typeIds = Object.keys(r.typeNames)
+  const first = (id: string) => {
+    const t = (r.types[id] ?? [])[0]
+    return t === undefined ? typeIds.length : typeIds.indexOf(t)
+  }
+  const specialists = r.agents.filter((a) => a.role === 'specialist').sort((a, b) => first(a.id) - first(b.id) || a.id.localeCompare(b.id))
+  const typed = typeIds.length > 0 && specialists.some((a) => (r.types[a.id] ?? []).length)
+  // with types, the row comes down so the arrows stop above the types' names
+  const ROW_Y = typed ? 390 : 340
   const rows = Math.max(1, Math.ceil(specialists.length / PER_ROW))
   const perRow = Math.max(1, Math.ceil(specialists.length / rows))
   const width = Math.max(1000, LEFT * 2 + Math.max(perRow, orchestrators.length) * COL)
@@ -64,7 +74,7 @@ export function lessonOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
   specialists.forEach((s, i) => {
     const row = Math.floor(i / perRow)
     const inRow = Math.min(perRow, specialists.length - row * perRow)
-    const at: XY = [centred(i % perRow, inRow), 340 + row * ROW]
+    const at: XY = [centred(i % perRow, inRow), ROW_Y + row * ROW]
     spot.set(s.id, at)
     steps.push({ type: 'prop', name: 'robot', at, size: 64 })
     name(s.id, [at[0], at[1] + 24])
@@ -74,12 +84,28 @@ export function lessonOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
     const from = spot.get(o.id)!
     for (const s of specialists.filter((x) => x.schemaName && `calls:${x.schemaName}` in o.facts)) {
       const to = spot.get(s.id)!
-      if (to[1] === 340) steps.push(arrow([from[0], from[1] + 44], [to[0], to[1] - 76], { color: GREY }))
+      if (to[1] === ROW_Y) steps.push(arrow([from[0], from[1] + 44], [to[0], to[1] - (typed ? 118 : 76)], { color: GREY }))
+    }
+  }
+  // each type's name over its run of robots in a row, with a line under it, as on the map
+  if (typed) {
+    const runs: { name: string; xs: number[]; y: number }[] = []
+    specialists.forEach((sp) => {
+      const t = (r.types[sp.id] ?? [])[0]
+      const name = t === undefined ? (lang === 'pt' ? 'sem tipo' : 'no type') : r.typeNames[t] ?? t
+      const [x, y] = spot.get(sp.id)!
+      const last = runs[runs.length - 1]
+      if (last && last.name === name && last.y === y) last.xs.push(x)
+      else runs.push({ name, xs: [x], y })
+    })
+    for (const run of runs) {
+      const [a, b] = [Math.min(...run.xs), Math.max(...run.xs)]
+      steps.push(text([(a + b) / 2, run.y - 92], run.name, 16, 'middle', PURPLE), line([a - COL / 2 + 14, run.y - 84], [b + COL / 2 - 14, run.y - 84], { color: PURPLE }))
     }
   }
 
   // 2. what repeats, 4. what is missing, 5. what to decide: three columns under the cast
-  const sectionTop = 340 + (rows - 1) * ROW + 160
+  const sectionTop = ROW_Y + (rows - 1) * ROW + 160
   const third = (width - LEFT * 2) / 3
   let lowest = sectionTop
   const section = (i: number, chapter: string, say: string, items: string[], color?: string) => {
@@ -124,8 +150,9 @@ export function lessonOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
   if (unknownFiles) gaps.push(lang === 'pt' ? `${unknownFiles} ${unknownFiles === 1 ? 'arquivo não entendido' : 'arquivos não entendidos'}` : `${unknownFiles} ${unknownFiles === 1 ? 'file' : 'files'} not understood`)
   section(1, w.chapters[3], w.missing(looks.filter((l) => l.key === 'gap').length), gaps, RED)
   const { look } = groupPatterns(r)
-  // what people and the YAML disagree on first, then the patterns in the open, then what only one has
-  const open = [...looks.filter((l) => l.key === 'conflict').map((l) => l[lang]), ...look.filter((p) => !p.decision).map((p) => w.pattern(labelOf(p.key, lang, r.names))), ...looks.filter((l) => l.key === 'solo').map((l) => l[lang])]
+  // what people and the YAML disagree on first, then a text rule set in two ways (or twice), then the patterns in the
+  // open, then what only one has
+  const open = [...looks.filter((l) => l.key === 'conflict' || l.key === 'values' || l.key === 'twice').map((l) => l[lang]), ...look.filter((p) => !p.decision).map((p) => w.pattern(labelOf(p.key, lang, r.names))), ...looks.filter((l) => l.key === 'solo').map((l) => l[lang])]
   section(2, w.chapters[4], w.decide(open.length), open)
 
   const id = (r.name ?? 'cast').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'cast'

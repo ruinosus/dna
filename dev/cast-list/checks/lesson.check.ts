@@ -13,6 +13,7 @@ import { lessonOf } from '../src/lesson'
 import { readProfile } from '../src/profile'
 import { reviewCast } from '../src/review'
 import { done, ok } from './ok'
+import { wave1 } from './wave1'
 
 const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills/cast-list/examples')
 const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
@@ -62,4 +63,22 @@ const many = Array.from({ length: 30 }, (_, i) => ({ ...agents.find((a) => a.id 
 const big = sceneOf([agents.find((a) => a.id === 'bodega-orquestrador')!, ...many], { agents: [], blocks: [], declared: [], decisions: [] }, 'pt')
 const rows = new Set(big.steps.filter((x) => x.type === 'prop' && x.name === 'robot').map((x) => x.at![1]))
 ok(big.width <= 4000 && rows.size === 3, `thirty-one: the orchestrator and two rows (${big.width} wide)`, [...rows])
+// wave 1: the cast drawn by type — each specialist once, under its first type's name
+const r1 = compare(agents, wave1(profile), demo)
+const t1 = validateScene(lessonOf(r1, reviewCast(r1), 'pt')) as unknown as { width: number; height: number; steps: Step[] }
+const robots = t1.steps.filter((x) => x.type === 'prop' && x.name === 'robot')
+ok(robots.length === 6, 'six robots: cupons, with two types, is drawn once')
+const textAt = (t: string) => t1.steps.find((x) => x.type === 'text' && x.text === t)
+const nameX = (id: string) => textAt(id)?.at?.[0] ?? -1
+const [tr, gd, tg] = ['transação', 'orientação', 'triagem'].map(textAt)
+ok(!!tr && !!gd && !!tg, 'the types named over their groups', t1.steps.filter((x) => x.type === 'text').map((x) => x.text).slice(0, 14))
+ok(nameX('bodega-cupons') < nameX('bodega-loja-fisica') && nameX('bodega-pedidos') < nameX('bodega-loja-fisica') && nameX('bodega-loja-fisica') < nameX('bodega-frete'), 'transação first (cupons, devolucoes, pedidos), then orientação, then triagem')
+ok(tr!.at![0] > nameX('bodega-cupons') && tr!.at![0] < nameX('bodega-pedidos') && Math.abs(gd!.at![0] - nameX('bodega-loja-fisica')) < 1 && Math.abs(tg!.at![0] - nameX('bodega-frete')) < 1, 'each type name centred over its group')
+const arrowsEnd = Math.max(...t1.steps.filter((x) => x.type === 'arrow').map((x) => x.to![1]))
+ok(arrowsEnd < tr!.at![1] - 10, 'the arrows stop above the type names: no line through a word', [arrowsEnd, tr!.at![1]])
+const inside1 = (p?: [number, number]) => !p || (p[0] >= 0 && p[0] <= t1.width && p[1] >= 0 && p[1] <= t1.height)
+ok(t1.steps.every((x) => inside1(x.at) && inside1(x.from) && inside1(x.to)), 'nothing off the paper, with the types')
+ok(!s.steps.some((x) => x.type === 'text' && ['transação', 'orientação', 'triagem'].includes(x.text!)), 'with no types in the profile, no type names')
+const w1all = t1.steps.filter((x) => x.type === 'text').map((x) => x.text).join(' ')
+ok(w1all.includes('unificar?') && w1all.includes('qual vale?'), 'what to decide: «unify?» and «which one holds?» come in it', w1all)
 done()
