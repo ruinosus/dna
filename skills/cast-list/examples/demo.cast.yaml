@@ -1,0 +1,10 @@
+# What people said about the agents, and what was decided. cast.mjs keeps it up to date; edit it, or fill the
+# workbook's «Declared» sheet and the «Decision» column and read it back with --from.
+format: cast-list/cast-v1
+name: Bodega Azul — atendimento
+declared:
+  # the handoff document says frete escalates; the YAML says it does not
+  - { agent: bodega-frete, key: "trigger:OnEscalate", value: sim, source: "handoff do frete, seção 4" }
+  - { agent: bodega-pedidos, key: kpi, value: "tempo até a resposta < 2 min", source: backlog }
+decisions:
+  - { key: "trigger:OnEscalate", status: accepted, scope: platform, why: "Ninguém fica sem saída para uma pessoa" }
