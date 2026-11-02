@@ -1,5 +1,5 @@
 // Checks the skill as a person gets it: the engine's checks (checks/*.check.ts); the example agents make the map, the
-// workbook, the lesson (passing chalk-talk's reviewer when there is a browser) and the cast file and print what to look at — 9 with the example profile, 10 with the demo cast file (what
+// workbook, the lesson (passing chalk-talk's reviewer when there is a browser) and the cast file and print what to look at — 13 with the example profile, 14 with the demo cast file (what
 // people said that the YAML contradicts); the workbook filled in comes back (--from, --take); --facts; a clean copy with
 // no node_modules runs on Node alone; 18 agents in under 30 s with the network blocked; broken files never stop it; a
 // broken profile says its line; a folder with no agent says so; the map loads nothing from the internet; and, in a browser, «to look at» opens its fact, a pattern shows the files, the
@@ -37,17 +37,17 @@ const plain = join(work, 'plain')
 const a = run(agents, '--profile', profile, '--all', '--lang', 'pt', '--out', plain)
 ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agents.cast.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, lesson and cast file', a.stdout + a.stderr)
 ok(/✓ review|• review/.test(a.stdout) && !/! review/.test(a.stdout), "the lesson passes chalk-talk's reviewer (when there is a browser)", a.stdout)
-ok(looks(a.stdout) === 9, `9 to look at (${looks(a.stdout)})`, a.stdout)
+ok(looks(a.stdout) === 13, `13 to look at (${looks(a.stdout)})`, a.stdout)
 const again = run(agents, '--profile', profile, '--out', plain)
 const kept = readFileSync(join(plain, 'agents.cast.yaml'), 'utf8')
-ok(again.status === 0 && kept.includes('role: orchestrator') && /blocks:\n(.*\n)*  - id: links-formate-links-assim-titulo\n    text: \|/.test(kept), 'a second run reads the cast file it wrote, and keeps the roles and the blocks of text', kept.slice(0, 600))
+ok(again.status === 0 && kept.includes('role: orchestrator') && /blocks:\n(.*\n)*  - id: links\n    text: \|/.test(kept), 'a second run reads the cast file it wrote, and keeps the roles and the blocks of text', kept.slice(0, 600))
 
 // with the demo cast file: what people said, and what was decided
 const demo = join(work, 'demo')
 mkdirSync(demo)
 copyFileSync(join(examples, 'demo.cast.yaml'), join(demo, 'agents.cast.yaml'))
 const d = run(agents, '--profile', profile, '--lang', 'pt', '--out', demo)
-ok(d.status === 0 && looks(d.stdout) === 10 && d.stdout.includes('mas o YAML não tem'), '10 to look at with the demo cast file, the contradiction first', d.stdout)
+ok(d.status === 0 && looks(d.stdout) === 14 && d.stdout.includes('mas o YAML não tem'), '14 to look at with the demo cast file, the contradiction first', d.stdout)
 ok(readFileSync(join(demo, 'agents.cast.yaml'), 'utf8').includes('# the handoff document says frete escalates'), "the cast file keeps the person's comments")
 
 // what is broken says so
@@ -126,7 +126,7 @@ else {
       q('[data-look="0"]').click(); out.look = q('.cl-detail h3')?.textContent
       q('[data-pattern="node:LogCustomTelemetryEvent"]').click(); out.files = [...all('.cl-detail .cl-file')].map((f) => f.textContent)
       out.lacks = q('.cl-detail')?.textContent.includes('bodega-loja-fisica')
-      q('[data-role="specialist"]').click(); out.columns = [...all('.cl-matrix thead th')].map((t) => t.textContent)
+      q('[data-role="specialist"]').click(); out.columns = [...all('.cl-matrix thead th[scope=col]')].map((t) => t.textContent)
       q('[data-get="xlsx"]').click(); q('[data-get="yaml"]').click(); q('[data-get="png"]').click()
       await new Promise((r) => setTimeout(r, 1500))
       q('[data-tab="patterns"]').click(); out.patterns = all('.cl-table tbody tr').length
@@ -137,36 +137,18 @@ else {
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
   writeFileSync(join(work, 'probe.html'), html)
   const r = (await runPage(join(work, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
-  ok(r.looks === 10 && r.look === 'Escalonamento para humano', '«to look at»: its first item opens the fact', JSON.stringify(r))
+  ok(r.looks === 14 && r.look === 'Escalonamento para humano', '«to look at»: its first item opens the fact', JSON.stringify(r))
   ok(r.files?.length === 5 && r.files.every((f) => f.startsWith('topics/OnError.topic.mcs.yml:')) && r.lacks, 'a pattern shows the file and line of each, and who is off it', JSON.stringify(r.files))
-  ok(r.columns?.length === 6 && !r.columns.some((c) => c.includes('orquestrador')), 'the role filter leaves the orchestrator out', JSON.stringify(r.columns))
+  ok(r.columns?.length === 6 && r.columns.filter((c) => c.startsWith('bodega-cupons')).length === 2 && !r.columns.some((c) => c.includes('orquestrador')), 'the role filter leaves the orchestrator out (cupons in its two types)', JSON.stringify(r.columns))
   ok((r.got ?? []).join() === 'agents.xlsx,agents.cast.yaml,agents.png' && !r.errs?.length, 'the downloads: workbook, cast file, PNG — no error', JSON.stringify(r))
-  ok(r.patterns === 22 && r.cast === 6 && r.ms === 15 && r.unknown === 'Tudo foi entendido.', 'the tabs: patterns, cast, Microsoft, not understood', JSON.stringify(r))
+  ok(r.patterns === 27 && r.cast === 6 && r.ms === 15 && r.unknown === 'Tudo foi entendido.', 'the tabs: patterns, cast, Microsoft, not understood', JSON.stringify(r))
 }
 
-// wave 1 in a browser: the profile with markers, an official block and types
+// wave 1 in a browser: the example profile has markers, an official block and types
 if (browser()) {
   const w1 = join(work, 'w1')
   mkdirSync(w1)
-  writeFileSync(join(w1, 'profile.cast.yaml'), `${readFileSync(profile, 'utf8')}
-markers:
-  - { id: size, name: Tamanho da resposta, pattern: '(no máximo)\\s*(\\d+)\\s*(bullets?|frases?)', value: "$2 $3" }
-  - { id: no-emoji, name: Sem emojis, pattern: '(sem|não use)\\s+emojis?' }
-blocks:
-  - id: links
-    name: Formatação de links
-    text: |
-      Links:
-      - Formate links assim: [título](url), nunca a URL crua.
-      - Um link de ação vai no topo; o link da base de ajuda vai no fim.
-      - Nunca escreva as palavras «clique aqui».
-      - No máximo 3 links por resposta.
-types:
-  - { id: transaction, name: transação, when: { any: ["flow:*"] } }
-  - { id: guidance, name: orientação, when: { all: ["text:link-domain:*", "node:SearchAndSummarizeContent"] } }
-  - { id: triage, name: triagem, when: { any: ["trigger:OnSelectIntent"] } }
-`)
-  const t = run(agents, '--profile', join(w1, 'profile.cast.yaml'), '--html', '--lesson', '--lang', 'pt', '--out', w1)
+  const t = run(agents, '--profile', profile, '--html', '--lesson', '--lang', 'pt', '--out', w1)
   ok(t.status === 0 && /✓ review/.test(t.stdout), "the examples with the wave 1 profile: the map, and the lesson by type passing chalk-talk's reviewer", t.stdout + t.stderr)
   const page = readFileSync(join(w1, 'agents.html'), 'utf8').replace('</body>', `<script>
     const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))

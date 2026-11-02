@@ -1,5 +1,5 @@
-// The profile of wave 1 for the checks: the example profile with markers, an official block, types and a rule with a
-// condition, as the spec's examples write them.
+// The profiles for the checks: `plain` is the example profile as it was in 1.2 (no markers, blocks, types or rule with a
+// condition), so the checks of 1.2 stay what they were; `wave1` adds them back, as the spec's examples write them.
 import type { Profile } from '../src/profile'
 
 export const LINKS = `Links:
@@ -22,3 +22,6 @@ export const wave1 = (profile: Profile): Profile => ({
   ],
   rules: [...profile.rules, { id: 'knowledge-only', when: ['text:knowledge-only'], not: 'setting:model-knowledge=on', says: 'Quem pede só o conhecimento tem o conhecimento geral desligado' }],
 })
+
+/** The example profile with the wave 1 parts taken out. */
+export const plain = (profile: Profile): Profile => ({ ...profile, markers: [], blocks: [], types: [], rules: profile.rules.filter((r) => r.has) })

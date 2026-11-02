@@ -9,12 +9,12 @@ import { compare, type Result } from '../src/compare'
 import { extractAgent } from '../src/extract'
 import { agentsIn } from '../src/folder'
 import { DEFAULT_PROFILE, readProfile } from '../src/profile'
-import { wave1 } from './wave1'
+import { plain, wave1 } from './wave1'
 import { done, ok } from './ok'
 
 const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills/cast-list/examples')
 const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
-const profile = readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!
+const profile = plain(readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!)
 const demo = readCast(readFileSync(join(examples, 'demo.cast.yaml'), 'utf8')).cast!
 const empty: Cast = { agents: [], blocks: [], declared: [], decisions: [] }
 const SPECIALISTS = ['bodega-pedidos', 'bodega-devolucoes', 'bodega-frete', 'bodega-cupons', 'bodega-loja-fisica']

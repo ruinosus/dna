@@ -12,11 +12,11 @@ import { DIMENSIONS, dimensionOf, keysMarkdown, labelOf } from '../src/labels'
 import { readProfile } from '../src/profile'
 import { groupPatterns, reviewCast } from '../src/review'
 import { done, ok } from './ok'
-import { wave1 } from './wave1'
+import { plain, wave1 } from './wave1'
 
 const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills/cast-list/examples')
 const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
-const profile = readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!
+const profile = plain(readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!)
 const demo = readCast(readFileSync(join(examples, 'demo.cast.yaml'), 'utf8')).cast!
 const empty: Cast = { agents: [], blocks: [], declared: [], decisions: [] }
 

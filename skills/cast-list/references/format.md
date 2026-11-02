@@ -11,7 +11,12 @@ format: cast-list/cast-v1
 name: Customer service agents
 agents:                      # the roles of the last run (an agent the profile does not name keeps its role here)
   - { id: main-orchestrator, role: orchestrator }
-  - { id: returns, role: specialist }
+  - { id: returns, role: specialist, types: [ transaction ] }   # types a person gives win over the profile's
+blocks:                      # the blocks of text of the last run, so a block keeps its id across small edits
+  - id: links
+    text: |
+      Links:
+      - Format links as [title](url), never the bare URL.
 declared:                    # what a document or a person says — always with its source
   - { agent: returns, key: kpi, value: "time to answer < 2 min", source: "backlog, epic 12" }
   - { agent: shipping, key: "trigger:OnEscalate", value: "yes", source: "handoff, section 4" }
@@ -19,11 +24,13 @@ decisions:                   # what the team decided about a pattern
   - { key: "trigger:OnEscalate", status: accepted, scope: platform, why: "Nobody is left without a person" }
 ```
 
+- **blocks** and the roles are written by the run; **types** are written only by a person (the ones the profile works
+  out are not kept, so a change in the profile still holds).
 - **declared**: `key` is either something only people know (`kpi`, `owner`, any word: it becomes `declared:<key>`) or a
   fact key (`trigger:OnEscalate`, `references/keys.md`) when a document claims the agent does it. `value` `no` / `não` /
   `false` claims it does **not**. A claim never changes what the YAML shows: when they disagree, it is a conflict.
-- **decisions**: `status` is `accepted` or `rejected`; `scope` is `platform` (every agent), `specialist` or
-  `orchestrator`; `why` says it. An accepted pattern is checked on every agent of its scope on the next run — even when
+- **decisions**: `status` is `accepted` or `rejected`; `scope` is `platform` (every agent), `specialist`,
+  `orchestrator` or `type:<id>` (the specialists of a type — «tipo:<name>» in the workbook); `why` says it. An accepted pattern is checked on every agent of its scope on the next run — even when
   its share would no longer make it a pattern. A rejected one is shown and nobody is off it.
 
 ## The workbook back

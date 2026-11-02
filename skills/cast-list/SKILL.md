@@ -1,6 +1,6 @@
 ---
 name: cast-list
-description: Compares a team's Copilot Studio agents with each other, from the folders the VS Code extension clones — what most of them do (a pattern to agree on, of the platform or of the specialists), who is off a pattern, what only one has (innovation or debt), the team's rules not met, and what people say that the YAML contradicts — with the file and line behind each finding. Delivers a map that opens offline, an Excel workbook to fill in decisions, a lesson that draws the cast, and a cast file that keeps what was decided, so the next run checks it. Runs on Node alone — no model, no install, no network. Use when someone wants to find patterns across Copilot Studio agents, define architecture or delivery standards from evidence, check a new agent against the accepted ones, or see which agents escalate, log telemetry or use which connectors ("compare our Copilot Studio agents", "which of our agents is off the pattern?", "compara os agentes do Copilot Studio", "o que se repete entre os especialistas?").
+description: Compares a team's Copilot Studio agents with each other, from the folders the VS Code extension clones — what most of them do, in their YAML and in the text of their instructions (a pattern to agree on, per role and per type), who is off a pattern, what only one has (innovation or debt), the team's rules not met, and what people say the YAML contradicts — with the file and line of each. Delivers an offline map, an Excel workbook to decide in, a lesson that draws the cast, and a cast file that keeps the decisions for the next run. Node alone: no model, no install, no network. Use when someone wants to find patterns across Copilot Studio agents, define architecture or delivery standards from evidence, check a new agent against the accepted ones, or see which agents escalate, log telemetry, use which connectors or write their rules differently ("compare our Copilot Studio agents", "which of our agents is off the pattern?", "compara os agentes do Copilot Studio", "o que se repete entre os especialistas?").
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing. The Microsoft skills for Copilot Studio are recommended, not needed.
 metadata:
@@ -29,7 +29,10 @@ node scripts/build.mjs <agents-folder> --all [--profile <team>.cast.yaml] [--lan
   `agents/<Name>/` stays with its parent; hidden folders such as `.mcs/` are never read).
 - The **profile** is the team's standard, private to the team (`references/profile.md`): who is the orchestrator, how
   common a fact must be to be a pattern (70% of a role, with at least 3 agents, by default), the rules every agent of a
-  role must follow, focus areas, what to leave out. With no profile, the orchestrator is whoever calls another agent.
+  role must follow, focus areas, what to leave out — and what to look for in the text: **markers** (a pattern of words,
+  with the value it captures, «no máximo 3 bullets»), the **official blocks** the team pastes in every agent, and the
+  **types** of specialist (transaction, guidance, triage…), so patterns are also found within each type. With no
+  profile, the orchestrator is whoever calls another agent, and the shared blocks of text are still found.
 - It writes `<id>.html` (the map), `<id>.xlsx`, `<id>.lesson.html` and `<id>.cast.yaml`, named by the folder. The cast
   file is read again on every run: what people declared and decided stays.
 
@@ -41,12 +44,32 @@ The `!` lines are what to look at (`references/keys.md` names every fact), in th
 
 - **What people said and the YAML do not agree** — a declared fact the agent does not have, or the other way round.
   What was seen wins; the contradiction is the finding.
+- **The text against the setup** — a rule with `when` and `not`: «devolucoes tem «Só o conhecimento», mas também
+  «Conhecimento geral do modelo ligado»».
 - **Off a pattern** — «1 especialista não escala para humano (frete): é intencional?». With an accepted pattern:
-  «corrigir?».
+  «corrigir?». A **variation** of a shared block — «1 especialista tem uma variação do bloco oficial «Formatação de
+  links» (frete): alinhar?» — and the map shows the words that went and came. Off a type's pattern: «1 especialista de
+  transação…»; a type's pattern never blames who is not of the type.
 - **Rules not met** — from the profile.
+- **A text rule set in different ways** — «4 especialistas definem «Tamanho da resposta» de 2 jeitos: unificar?» — or
+  **twice in one agent** — «qual vale?».
 - **Only one has it** — innovation to spread, or debt to remove: only the person knows.
+- **A type with one specialist** — nothing to compare within it.
 - **Not understood** — files the analysis could not read (broken YAML, a kind Copilot Studio does not have). The rest
   was read anyway. Only the kind's name may leave the client's environment, typed, to improve the extractor.
+
+### The text: what it can and cannot tell
+
+- It reads the instructions and the descriptions the model reads (topics, actions), cut into blocks. Two blocks are
+  the same when nearly all their 5-word runs match; a **variation** when at least half of the smaller one is in the
+  other (a copy that lost a line). Numbers and links do not count as differences in that measure — the diff shows them.
+- **Text, not meaning:** the same rule written in other words is another block. Saying two texts mean the same is a
+  person's call — or the model's, as declared facts (step 3).
+- Copies and tests left in the editor (`… Copy`, `test`) and per-language copies are left out.
+- **Not in the clone:** the texts of prompt actions. Say so when the team asks about them.
+- **A marker** is a JavaScript regular expression, case does not matter (`'(no máximo|at most)\s*(\d+)\s*bullets?'`,
+  in single quotes in YAML); `value: "$2 bullets"` keeps what it captured. Try it with `--check`: a regex that does not
+  compile is `✗ profile:line`.
 
 ## 3. Add what only people know — optional, with a model
 

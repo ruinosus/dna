@@ -30,7 +30,7 @@ locked-down environment where a model has few credits or none.
 | | |
 |---|---|
 | **The map** (`.html`) | One page that opens offline: «to look at» on top; the matrix of facts by dimension (conversation, integrations, knowledge, orchestrator, governance) and agent — ● has it, × off a pattern, ◐ declared — filtered by role and focus area; the patterns to decide; a click shows who has it and the file and line. Tabs for the patterns, the cast, the Microsoft reference patterns and what was not understood. |
-| **The workbook** (`.xlsx`) | Summary, Matrix, Patterns (with a Decision column to fill), Off pattern, Gaps, Conflicts, Cast, Evidence, Declared (to fill). Read back with `--from`, taken with `--take`. |
+| **The workbook** (`.xlsx`) | Summary, Matrix, Patterns (with a Decision column to fill), Text (the blocks agents share, who has a variation), Off pattern, Gaps, Conflicts, Cast (with each one's types), Evidence, Declared (to fill). Read back with `--from`, taken with `--take`. |
 | **The lesson** (`.lesson.html`) | A chalk-talk lesson: the cast, what repeats, who is off, what is missing, what to decide. |
 | **The cast file** (`.cast.yaml`) | What people declared (KPIs, owners, what a handoff claims) and what was decided — kept between runs. |
 
@@ -41,6 +41,14 @@ locked-down environment where a model has few credits or none.
 - **Off a pattern**: an agent of that scope without it. **Only one has it**: innovation or debt — someone has to say.
 - **Rules**: what the team's profile says every agent of a role must have. **Conflicts**: what a document claims and
   the YAML does not show; what was seen wins.
+- **The text**, too: the instructions and the descriptions the model reads, cut into blocks. A block two agents or more
+  share is a fact; a copy that lost a line is a **variation**, and the map shows the words that went and came. The
+  team's profile adds **markers** — patterns of words with the value they capture («at most 3 bullets») — so a rule
+  written in two ways, or twice in one agent, is told; and the **official blocks** the team pastes everywhere. It
+  compares text, not meaning.
+- **Types** of specialist (transaction, guidance, triage…), from what their YAML and text show: patterns are also found
+  within each type, and a pattern of a type never blames who is not of it. One may be of two types.
+- A rule can confront the text with the setup: «asks for the knowledge alone» with the model's general knowledge on.
 - A child agent's facts are the child's. A file it cannot read — broken YAML, a kind Copilot Studio does not have — is
   told, and the rest is read anyway.
 

@@ -13,13 +13,13 @@ import { readProfile } from '../src/profile'
 import { reviewCast } from '../src/review'
 import { workbookFile, workbookOf } from '../src/workbook'
 import { done, ok } from './ok'
-import { wave1 } from './wave1'
+import { plain, wave1 } from './wave1'
 
 const skills = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills')
 const examples = join(skills, 'cast-list/examples')
 const { readXlsx } = (await import(join(skills, 'cast-list/scripts/read-xlsx.mjs'))) as { readXlsx: (b: Buffer) => SheetRows[] }
 const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
-const profile = readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!
+const profile = plain(readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!)
 const demoText = readFileSync(join(examples, 'demo.cast.yaml'), 'utf8')
 const demo = readCast(demoText).cast!
 const result = compare(agents, profile, demo)

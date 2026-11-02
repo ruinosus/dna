@@ -16,7 +16,7 @@ const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, 
 
 // the example profile
 const p = readProfile(text('profile.cast.yaml'))
-ok(!p.problems.length && p.profile?.threshold === 0.7 && p.profile.minAgents === 3 && p.profile.rules.length === 2 && p.profile.focusAreas[0]?.facts.length === 3
+ok(!p.problems.length && p.profile?.threshold === 0.7 && p.profile.minAgents === 3 && p.profile.rules.length === 3 && p.profile.markers.length === 3 && p.profile.blocks[0]?.id === 'links' && p.profile.types.length === 3 && p.profile.focusAreas[0]?.facts.length === 3
   && p.profile.ignore.join() === 'trigger:OnConversationStart' && p.profile.microsoftPatterns, 'the example profile is read', p)
 const roles = rolesOf(agents, p.profile!)
 ok(roles.roles['bodega-orquestrador'] === 'orchestrator' && Object.values(roles.roles).filter((r) => r === 'specialist').length === 5 && !roles.unmatched.length, 'by the profile: one orchestrator, five specialists', roles)

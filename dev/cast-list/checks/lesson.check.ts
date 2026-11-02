@@ -13,11 +13,11 @@ import { lessonOf } from '../src/lesson'
 import { readProfile } from '../src/profile'
 import { reviewCast } from '../src/review'
 import { done, ok } from './ok'
-import { wave1 } from './wave1'
+import { plain, wave1 } from './wave1'
 
 const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills/cast-list/examples')
 const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
-const profile = readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!
+const profile = plain(readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!)
 const demo = readCast(readFileSync(join(examples, 'demo.cast.yaml'), 'utf8')).cast!
 type Step = { type: string; chapter?: string; say?: string; text?: string; at?: [number, number]; from?: [number, number]; to?: [number, number]; name?: string }
 const sceneOf = (as: AgentFacts[], cast: Cast, lang: 'en' | 'pt') => {
