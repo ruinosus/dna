@@ -30,7 +30,7 @@ export interface Result {
   /** Agents the profile names that are not in the folder. */
   unmatched: string[]
   /** Each agent with what it has: what was seen (less what the profile ignores) and what people declared. */
-  agents: { id: string; role: Role; displayName?: string; facts: Facts; children: AgentFacts['children'] }[]
+  agents: { id: string; role: Role; schemaName?: string; displayName?: string; facts: Facts; children: AgentFacts['children'] }[]
   patterns: Pattern[]
   offPattern: OffPattern[]
   solos: Holding[]
@@ -62,7 +62,7 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
         if (says !== observed) conflicts.push({ agent: a.id, key: d.key, declared: d.value || 'yes', observed, source: d.source })
       } else if (says) (facts[declaredKey(d.key)] ??= []).push({ file: d.source ? `declared: ${d.source}` : 'declared' })
     }
-    return { id: a.id, role: roles[a.id], ...(a.displayName ? { displayName: a.displayName } : {}), facts, children: a.children }
+    return { id: a.id, role: roles[a.id], ...(a.schemaName ? { schemaName: a.schemaName } : {}), ...(a.displayName ? { displayName: a.displayName } : {}), facts, children: a.children }
   })
 
   const members = (role: Role) => agents.filter((a) => a.role === role)

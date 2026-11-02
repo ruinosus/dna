@@ -4,29 +4,32 @@
 // (.xlsx) and the cast file (what people said, what was decided). No model, no install, no network: Node 18 or later.
 //
 //   node cast.mjs <agents-folder> --check [--profile <p.cast.yaml>] [--lang en|pt]     only compare: nothing is written
-//   node cast.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--all] [--lang en|pt] [--out <folder>]
+//   node cast.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
 //
-// With no --html/--xlsx it makes the map. Files go in --out (or beside the folder), named by the folder: <id>.html,
-// <id>.xlsx, and <id>.cast.yaml, kept up to date (read again on every run). Exit codes: 0 done (what to look at is
-// printed, and is not an error); 1 the profile or the cast file breaks its format (each problem with its line), or no
-// agent in the folder; 2 bad arguments. The outputs hold the client's data: keep them in the client's environment.
+// With no --html/--xlsx/--lesson it makes the map. Files go in --out (or beside the folder), named by the folder:
+// <id>.html, <id>.xlsx, <id>.lesson.html (a chalk-talk lesson), and <id>.cast.yaml, kept up to date (read again on every
+// run). Exit codes: 0 done (what to look at is printed, and is not an error); 1 the profile or the cast file breaks its
+// format (each problem with its line), or no agent in the folder; 2 bad arguments; 3 made, but the lesson's reviewer
+// found something to fix. The outputs hold the client's data: keep them in the client's environment. The lesson's
+// review uses Chrome, Chromium or Edge when there is one.
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { agentsIn, compare, DEFAULT_PROFILE, extractAgent, knownKinds, problemText, readCast, readProfile, reviewCast, workbookFile, workbookOf, writeCast } from './engine.mjs'
+import { runPage } from './browser.mjs'
+import { agentsIn, compare, DEFAULT_PROFILE, extractAgent, knownKinds, lessonOf, problemText, readCast, readProfile, reviewCast, validateScene, workbookFile, workbookOf, writeCast } from './engine.mjs'
 import { fill, inline } from './page.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
 const valued = new Set(['--lang', '--out', '--profile'])
-const flags = new Set(['--check', '--html', '--xlsx', '--all', ...valued])
+const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--all', ...valued])
 const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
 }
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
 const usage = `usage: node cast.mjs <agents-folder> --check [--profile <p.cast.yaml>] [--lang en|pt]
-       node cast.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--all] [--lang en|pt] [--out <folder>]`
+       node cast.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]`
 const lang = option('--lang') ?? 'en'
 const fail = (msg) => {
   console.error(`${msg}\n${usage}`)
@@ -85,8 +88,8 @@ else console.log(T.nothing)
 if (argv.includes('--check')) process.exit(0)
 
 const all = argv.includes('--all')
-const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx') }
-if (!want.xlsx) want.html = true
+const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), lesson: all || argv.includes('--lesson') }
+if (!want.xlsx && !want.lesson) want.html = true
 mkdirSync(out, { recursive: true })
 // the cast file keeps this run's roles, under what people wrote in it
 const kept = { ...cast, agents: result.agents.map((a) => ({ id: a.id, role: a.role })) }
@@ -104,4 +107,19 @@ if (want.xlsx) {
   writeFileSync(book, workbookFile(workbookOf(result, looks, kept, lang)))
   console.log(`✓ workbook  ${book}`)
 }
+let exit = 0
+if (want.lesson) {
+  const page = join(out, `${id}.lesson.html`)
+  writeFileSync(page, fill(readFileSync(join(here, '../assets/lesson.html'), 'utf8'), { RECIPE: inline(validateScene(lessonOf(result, looks, lang))) }))
+  console.log(`✓ lesson    ${page}`)
+  const r = await runPage(page, 'review')
+  if (r === null) console.log('• review    no Chrome, Chromium or Edge here: the lesson checks itself when opened')
+  else if (r.error) console.log(`✗ review    not checked: ${r.error}`)
+  else if (!r.problems.length) console.log(`✓ review    ${r.combos} ${r.combos === 1 ? 'setting' : 'settings'}: nothing off the paper, no text over text`)
+  else {
+    for (const p of r.problems) console.log(`! review    ${p}`)
+    exit = 3
+  }
+}
 console.log(T.privacy)
+process.exit(exit)

@@ -1,5 +1,5 @@
 // Checks the skill as a person gets it: the engine's checks (checks/*.check.ts); the example agents make the map, the
-// workbook and the cast file and print what to look at — 7 with the example profile, 8 with the demo cast file (what
+// workbook, the lesson (passing chalk-talk's reviewer when there is a browser) and the cast file and print what to look at — 7 with the example profile, 8 with the demo cast file (what
 // people said that the YAML contradicts); a broken profile says its line; a folder with no agent says so; the map
 // loads nothing from the internet; and, in a browser, «to look at» opens its fact, a pattern shows the files, the
 // role filter leaves the orchestrator out, the tabs open and the downloads work. Run after npm run assets.
@@ -34,7 +34,8 @@ for (const f of readdirSync(join(root, 'checks')).filter((x) => x.endsWith('.che
 // the examples, with the profile and no cast file yet
 const plain = join(work, 'plain')
 const a = run(agents, '--profile', profile, '--all', '--lang', 'pt', '--out', plain)
-ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.cast.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook and cast file', a.stdout + a.stderr)
+ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agents.cast.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, lesson and cast file', a.stdout + a.stderr)
+ok(/✓ review|• review/.test(a.stdout) && !/! review/.test(a.stdout), "the lesson passes chalk-talk's reviewer (when there is a browser)", a.stdout)
 ok(looks(a.stdout) === 7, `7 to look at (${looks(a.stdout)})`, a.stdout)
 const again = run(agents, '--profile', profile, '--out', plain)
 ok(again.status === 0 && readFileSync(join(plain, 'agents.cast.yaml'), 'utf8').includes('role: orchestrator'), 'a second run reads the cast file it wrote, and keeps the roles', again.stderr)

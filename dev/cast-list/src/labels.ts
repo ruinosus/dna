@@ -69,6 +69,9 @@ const KINDS: [string, Dimension, string, string][] = [
 ]
 const kindOf = (key: string) => KINDS.find(([p]) => key.startsWith(p))
 
+/** A behaviour an agent can lack (escalating, handling errors…), not a setting: what a drawing names first. */
+export const isBehaviour = (key: string) => !!KNOWN[key]?.lacks
+
 export function dimensionOf(key: string): Dimension {
   return KNOWN[key]?.dim ?? kindOf(key)?.[1] ?? 'governance'
 }
