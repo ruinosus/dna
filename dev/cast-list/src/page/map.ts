@@ -19,7 +19,8 @@ const UI = {
   en: {
     map: 'Map', patterns: 'Patterns', cast: 'Cast', microsoft: 'Microsoft', unknown: (n: number) => `What the analysis did not understand (${n})`,
     matrix: 'Who has what', candidates: 'Patterns to decide', everyone: (n: number) => `Everybody already does it (${n})`, all: 'All', role: 'Role', focus: 'Focus',
-    legend: '● has it (click for the file) · × off a pattern of its role · ◐ declared by people', pattern: 'pattern', of: (h: number, n: number, r: string) => `${h} of ${n} ${r}`,
+    legend: '● has it (click for the file) · × off a pattern of its role or type · ≈ a variation of the block · ◐ declared by people', pattern: 'pattern',
+    type: 'Type', noType: 'no type', alsoIn: 'also in', official: 'official block', variation: 'Variation', alike: 'alike', text: 'The text', types: 'Types', of: (h: number, n: number, r: string) => `${h} of ${n} ${r}`,
     who: 'Who has it', lacks: 'Off it', none: 'nobody', decision: 'Decision', toDecide: 'to decide — in the workbook or the cast file', alone: 'Only one has it: innovation or debt?',
     orchestratorDoes: 'Only the orchestrator does it', sign: 'How cast-list knows', follows: 'Who follows it', declaredOnly: 'only declared', nothingUnknown: 'Everything was understood.',
     facts: 'Facts', off: 'Off a pattern', solo: 'Only it has', children: 'Children', close: 'Close ✕', foot: 'The facts come from the YAML files; nothing was made up.',
@@ -29,7 +30,8 @@ const UI = {
   pt: {
     map: 'Mapa', patterns: 'Padrões', cast: 'Elenco', microsoft: 'Microsoft', unknown: (n: number) => `O que a análise não entendeu (${n})`,
     matrix: 'Quem tem o quê', candidates: 'Padrões para decidir', everyone: (n: number) => `Todos já fazem (${n})`, all: 'Todos', role: 'Papel', focus: 'Foco',
-    legend: '● tem (clique para ver o arquivo) · × fora de um padrão do seu papel · ◐ declarado por pessoas', pattern: 'padrão', of: (h: number, n: number, r: string) => `${h} de ${n} ${r}`,
+    legend: '● tem (clique para ver o arquivo) · × fora de um padrão do seu papel ou tipo · ≈ tem uma variação do bloco · ◐ declarado por pessoas', pattern: 'padrão',
+    type: 'Tipo', noType: 'sem tipo', alsoIn: 'também em', official: 'bloco oficial', variation: 'Variação', alike: 'parecido', text: 'O texto', types: 'Tipos', of: (h: number, n: number, r: string) => `${h} de ${n} ${r}`,
     who: 'Quem tem', lacks: 'Fora', none: 'ninguém', decision: 'Decisão', toDecide: 'a decidir — na planilha ou no cast.yaml', alone: 'Só um tem: inovação ou dívida?',
     orchestratorDoes: 'Só o orquestrador faz', sign: 'Como a cast-list sabe', follows: 'Quem segue', declaredOnly: 'só declarado', nothingUnknown: 'Tudo foi entendido.',
     facts: 'Fatos', off: 'Fora do padrão', solo: 'Só ele tem', children: 'Filhos', close: 'Fechar ✕', foot: 'Os fatos vêm dos arquivos YAML; nada foi inventado.',
@@ -52,12 +54,15 @@ const patternOf = (k: string) => r.patterns.find((p) => p.key === k)
 // who is off a fact, or off a part of it (has the topic, but nothing leads to it)
 const offOf = (k: string) => [...new Set(r.offPattern.filter((o) => o.key === k || o.partOf === k).map((o) => o.agent))]
 // a scope's word: a role's, or the type's name
-const scopeWord = (s: string) => (s.startsWith('type:') ? s.slice(5) : w[s as 'platform'])
+const scopeWord = (s: string) => (s.startsWith('type:') ? r.typeNames[s.slice(5)] ?? s.slice(5) : w[s as 'platform'])
+const scopeClass = (s: string) => (s.startsWith('type:') ? 'type' : s)
+const typeIds = Object.keys(r.typeNames)
+const blockOf = (k: string) => (k.startsWith('text:block:') ? r.blocks.find((b) => `text:block:${b.id}` === k) : undefined)
 const badge = (k: string) => {
   const p = patternOf(k)
   if (!p) return ''
   const d = p.decision ? `<span class="cl-badge ${p.decision.status}">${esc(w[p.decision.status === 'accepted' ? 'accept' : 'reject'])}</span>` : ''
-  return `<span class="cl-badge ${p.scope}">${u.pattern} · ${esc(scopeWord(p.scope))}</span>${d}`
+  return `${p.official ? `<span class="cl-badge official">${u.official}</span>` : ''}<span class="cl-badge ${scopeClass(p.scope)}">${u.pattern} · ${esc(scopeWord(p.scope))}</span>${d}`
 }
 
 type Tab = 'map' | 'patterns' | 'cast' | 'microsoft' | 'unknown'
@@ -65,6 +70,7 @@ let tab: Tab = 'map'
 let picked: { key: string; agent?: string } | undefined
 let role: 'all' | Role = 'all'
 let focus: string | undefined
+let type: string | undefined // a type's id, «-» for the specialists with none
 const app = document.getElementById('app')!
 
 function render() {
@@ -84,13 +90,31 @@ function mapTab() {
   return `${look}<div class="cl-body${picked ? ' with-detail' : ''}"><div class="cl-wrap" style="gap:16px">${matrix()}${patternCards()}</div>${picked ? `<aside class="cl-card cl-detail" aria-live="polite">${detail()}</aside>` : ''}</div>`
 }
 
+// the matrix's columns: by type when the profile has types — the orchestrators, each type's specialists (one with
+// two types in both, «also in»), those with none — else the orchestrators, then the specialists
+function columns() {
+  const keep = (a: (typeof agents)[number]) => role === 'all' || a.role === role
+  if (!typeIds.length) return [{ id: '', name: '', cols: agents.filter(keep).map((a) => ({ a, also: [] as string[] })) }]
+  const of = (id: string) => r.types[id] ?? []
+  const specialists = agents.filter((a) => a.role === 'specialist' && keep(a))
+  const groups = [
+    { id: 'orchestrator', name: w.orchestrator, cols: agents.filter((a) => a.role === 'orchestrator' && keep(a)).map((a) => ({ a, also: [] as string[] })) },
+    ...typeIds.map((t) => ({ id: t, name: r.typeNames[t], cols: specialists.filter((a) => of(a.id).includes(t)).map((a) => ({ a, also: of(a.id).filter((x) => x !== t).map((x) => r.typeNames[x] ?? x) })) })),
+    { id: '-', name: u.noType, cols: specialists.filter((a) => !of(a.id).length).map((a) => ({ a, also: [] as string[] })) },
+  ]
+  return groups.filter((g) => g.cols.length && (!type || g.id === type))
+}
+
 function matrix() {
-  const cols = agents.filter((a) => role === 'all' || a.role === role)
+  const groups = columns()
+  const cols = groups.flatMap((g) => g.cols)
   const area = data.focusAreas.find((f) => f.id === focus)
-  const keys = [...new Set([...r.agents.flatMap((a) => Object.keys(a.facts)), ...r.patterns.map((p) => p.key)])].filter((k) => !area || area.facts.includes(k))
+  // a variation is shown in its block's own row (≈), not as a row of its own
+  const keys = [...new Set([...r.agents.flatMap((a) => Object.keys(a.facts)), ...r.patterns.map((p) => p.key)])].filter((k) => !k.endsWith('~variant') && (!area || area.facts.includes(k)))
   const off = new Set(r.offPattern.map((o) => `${o.agent} ${o.key}`))
   const chip = (attr: string, value: string, on: boolean, text: string) => `<button class="cl-chip" ${attr}="${esc(value)}" aria-pressed="${on}">${esc(text)}</button>`
   const filters = `<div class="cl-filters">${u.role}: ${chip('data-role', 'all', role === 'all', u.all)}${chip('data-role', 'specialist', role === 'specialist', w.specialist)}${chip('data-role', 'orchestrator', role === 'orchestrator', w.orchestrator)}
+    ${typeIds.length ? `<span style="margin-left:10px">${u.type}:</span> ${chip('data-type', '', !type, u.all)}${typeIds.map((t) => chip('data-type', t, type === t, r.typeNames[t])).join('')}${chip('data-type', '-', type === '-', u.noType)}` : ''}
     ${data.focusAreas.length ? `<span style="margin-left:10px">${u.focus}:</span> ${chip('data-focus', '', !focus, u.all)}${data.focusAreas.map((f) => chip('data-focus', f.id, focus === f.id, f.name)).join('')}` : ''}</div>`
   let body = ''
   for (const dim of Object.keys(DIMENSIONS) as Dimension[]) {
@@ -99,12 +123,14 @@ function matrix() {
     const rows = keys.filter((k) => dimensionOf(k) === dim).sort((a, b) => order(a).localeCompare(order(b)))
     if (!rows.length) continue
     body += `<tr class="cl-dim"><td colspan="${cols.length + 1}">${esc(DIMENSIONS[dim][lang])}</td></tr>`
-    body += rows.map((k) => `<tr><th scope="row" style="text-align:left;font-weight:400"><button class="cl-fact${picked?.key === k && !picked.agent ? ' picked' : ''}" data-key="${esc(k)}">${label(k)}</button>${badge(k)}</th>${cols.map((a) => {
-      const mark = k in a.facts ? (k.startsWith('declared:') ? ['said', '◐'] : ['has', '●']) : off.has(`${a.id} ${k}`) ? ['off', '×'] : undefined
+    body += rows.map((k) => `<tr><th scope="row" style="text-align:left;font-weight:400"><button class="cl-fact${picked?.key === k && !picked.agent ? ' picked' : ''}" data-key="${esc(k)}">${label(k)}</button>${badge(k)}</th>${cols.map(({ a }) => {
+      const mark = k in a.facts ? (k.startsWith('declared:') ? ['said', '◐'] : ['has', '●']) : `${k}~variant` in a.facts ? ['var', '≈'] : off.has(`${a.id} ${k}`) ? ['off', '×'] : undefined
       return `<td class="cl-mark${mark ? ` ${mark[0]}` : ''}">${mark ? `<button data-key="${esc(k)}" data-agent="${esc(a.id)}" aria-label="${esc(a.id)}: ${label(k)}">${mark[1]}</button>` : ''}</td>`
     }).join('')}</tr>`).join('')
   }
-  return `<section class="cl-card"><h2>${u.matrix}</h2>${filters}<div class="cl-scroll"><table class="cl-matrix"><thead><tr><th></th>${cols.map((a) => `<th scope="col">${esc(a.id)}<small>${esc(w[a.role])}</small></th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div><p class="cl-legend">${u.legend}</p></section>`
+  const heads = groups.some((g) => g.name) ? `<tr class="cl-groups"><th></th>${groups.map((g) => `<th colspan="${g.cols.length}" class="${g.id === 'orchestrator' ? '' : 'typed'}">${esc(g.name)}</th>`).join('')}</tr>` : ''
+  const names = cols.map(({ a, also }) => `<th scope="col">${esc(a.id)}<small>${esc(also.length ? `${u.alsoIn} ${also.join(', ')}` : w[a.role])}</small></th>`).join('')
+  return `<section class="cl-card"><h2>${u.matrix}</h2>${filters}<div class="cl-scroll"><table class="cl-matrix"><thead>${heads}<tr><th></th>${names}</tr></thead><tbody>${body}</tbody></table></div><p class="cl-legend">${u.legend}</p></section>`
 }
 
 function patternCards() {
@@ -117,7 +143,7 @@ function patternCards() {
       ${lacking.length ? `<span class="cl-lack">${u.lacks}: ${esc(lacking.join(', '))}</span>` : ''}<span>${u.decision}: ${p.decision ? `${esc(w[p.decision.status === 'accepted' ? 'accept' : 'reject'])}${p.decision.why ? ` — ${esc(p.decision.why)}` : ''}` : `<i>${u.toDecide}</i>`}</span></button>`
   }
   return `<section class="cl-card"><h2>${u.candidates}</h2>${look.length ? `<div class="cl-cards">${look.map((p) => card(p.key)).join('')}</div>` : `<p class="cl-empty">—</p>`}
-    ${everyone.length ? `<details class="cl-everyone"><summary>${u.everyone(everyone.length)}</summary><ul>${everyone.map((p) => `<li><button class="cl-fact" data-pattern="${esc(p.key)}">${label(p.key)}</button> <span class="cl-badge ${p.scope}">${esc(scopeWord(p.scope))}</span></li>`).join('')}</ul></details>` : ''}</section>`
+    ${everyone.length ? `<details class="cl-everyone"><summary>${u.everyone(everyone.length)}</summary><ul>${everyone.map((p) => `<li><button class="cl-fact" data-pattern="${esc(p.key)}">${label(p.key)}</button> <span class="cl-badge ${scopeClass(p.scope)}">${esc(scopeWord(p.scope))}</span></li>`).join('')}</ul></details>` : ''}</section>`
 }
 
 function detail() {
@@ -128,9 +154,15 @@ function detail() {
   const lacking = offOf(key).filter((id) => !agent || id === agent)
   const solo = r.solos.some((s) => s.key === key)
   const orch = r.orchestratorDoes.some((s) => s.key === key)
+  const block = blockOf(key)
+  const diff = (pieces: { op: string; text: string }[]) => pieces.map((x) => (x.op === 'same' ? esc(x.text) : `<span class="cl-${x.op}">${esc(x.text)}</span>`)).join(' ')
+  const variants = block ? Object.entries(block.variants).filter(([a]) => !agent || a === agent) : []
+  const text = block ? `<div><b>${u.text}</b><pre class="cl-text">${esc(block.text)}</pre></div>
+    ${variants.map(([a, v]) => `<div class="cl-variant"><b>${esc(a)}</b> <span class="cl-file">${esc(v.source.file)}${v.source.line ? `:${v.source.line}` : ''} · ${Math.round(v.similarity * 100)}% ${u.alike}</span><div class="cl-diff">${diff(v.diff)}</div></div>`).join('')}` : ''
   return `<button class="cl-close" data-close="1">${u.close}</button><span class="cl-kicker">${esc(DIMENSIONS[dimensionOf(key)][lang])}</span><h3>${label(key)}</h3><code>${esc(key)}</code>
     ${p ? `<div>${badge(key)}</div><div>${u.decision}: ${p.decision ? `${esc(w[p.decision.status === 'accepted' ? 'accept' : 'reject'])}${p.decision.why ? ` — ${esc(p.decision.why)}` : ''}` : `<i>${u.toDecide}</i>`}</div>` : ''}
     ${solo ? `<div>${u.alone}</div>` : orch ? `<div>${u.orchestratorDoes}</div>` : ''}
+    ${text}
     <div><b>${u.who}</b>${files ? `<ul>${files}</ul>` : ` — ${u.none}`}</div>
     ${r.patterns.filter((x) => x.partOf === key).map((x) => {
       const off = r.offPattern.filter((o) => o.key === x.key).map((o) => o.agent)
@@ -145,6 +177,7 @@ function castTab() {
     const solos = r.solos.filter((s) => s.agents[0] === a.id)
     const unknown = r.unknown.filter((x) => x.agent === a.id)
     return `<section class="cl-card cl-agent"><span class="cl-kicker">${esc(w[a.role])}</span><h3>${esc(a.id)}</h3>${a.displayName ? `<code>${esc(a.displayName)}</code>` : ''}<dl>
+      ${(r.types[a.id] ?? []).length ? `<dt>${u.types}</dt><dd>${esc(r.types[a.id].map((t) => r.typeNames[t] ?? t).join(' · '))}</dd>` : ''}
       <dt>${u.facts}</dt><dd>${Object.keys(a.facts).length}</dd>
       ${off.length ? `<dt>${u.off}</dt><dd class="cl-lack">${off.map((o) => label(o.key)).join('<br>')}</dd>` : ''}
       ${solos.length ? `<dt>${u.solo}</dt><dd>${solos.map((s) => label(s.key)).join('<br>')}</dd>` : ''}
@@ -216,6 +249,7 @@ app.addEventListener('click', (e) => {
   if (d.tab) tab = d.tab as Tab
   else if (d.role) role = d.role as typeof role
   else if (d.focus !== undefined) focus = d.focus || undefined
+  else if (d.type !== undefined) type = d.type || undefined
   else if (d.key) picked = { key: d.key, ...(d.agent ? { agent: d.agent } : {}) }
   else if (d.pattern) picked = { key: d.pattern }
   else if (d.close) picked = undefined

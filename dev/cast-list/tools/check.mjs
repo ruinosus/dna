@@ -144,6 +144,52 @@ else {
   ok(r.patterns === 22 && r.cast === 6 && r.ms === 15 && r.unknown === 'Tudo foi entendido.', 'the tabs: patterns, cast, Microsoft, not understood', JSON.stringify(r))
 }
 
+// wave 1 in a browser: the profile with markers, an official block and types
+if (browser()) {
+  const w1 = join(work, 'w1')
+  mkdirSync(w1)
+  writeFileSync(join(w1, 'profile.cast.yaml'), `${readFileSync(profile, 'utf8')}
+markers:
+  - { id: size, name: Tamanho da resposta, pattern: '(no máximo)\\s*(\\d+)\\s*(bullets?|frases?)', value: "$2 $3" }
+  - { id: no-emoji, name: Sem emojis, pattern: '(sem|não use)\\s+emojis?' }
+blocks:
+  - id: links
+    name: Formatação de links
+    text: |
+      Links:
+      - Formate links assim: [título](url), nunca a URL crua.
+      - Um link de ação vai no topo; o link da base de ajuda vai no fim.
+      - Nunca escreva as palavras «clique aqui».
+      - No máximo 3 links por resposta.
+types:
+  - { id: transaction, name: transação, when: { any: ["flow:*"] } }
+  - { id: guidance, name: orientação, when: { all: ["text:link-domain:*", "node:SearchAndSummarizeContent"] } }
+  - { id: triage, name: triagem, when: { any: ["trigger:OnSelectIntent"] } }
+`)
+  const t = run(agents, '--profile', join(w1, 'profile.cast.yaml'), '--html', '--lang', 'pt', '--out', w1)
+  ok(t.status === 0, 'the examples with the wave 1 profile: the map', t.stdout + t.stderr)
+  const page = readFileSync(join(w1, 'agents.html'), 'utf8').replace('</body>', `<script>
+    const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
+    setTimeout(() => { const q = (s) => document.querySelector(s); const all = (s) => [...document.querySelectorAll(s)]; const out = {}
+      out.groups = all('.cl-groups th').map((t) => t.textContent).filter(Boolean)
+      out.cupons = all('.cl-matrix thead th[scope=col]').filter((t) => t.textContent.startsWith('bodega-cupons')).map((t) => t.textContent)
+      out.variant = all('.cl-mark.var').length
+      out.typeBadge = all('.cl-badge.type').length
+      out.officialBadge = all('.cl-badge.official').length
+      q('[data-type="transaction"]').click(); out.transaction = all('.cl-matrix thead th[scope=col]').map((t) => t.textContent.replace(/(especialista|também em).*/, ''))
+      q('[data-type=""]').click()
+      q('.cl-fact[data-key="text:block:links"]').click(); out.text = q('.cl-detail .cl-text')?.textContent.slice(0, 6); out.variants = all('.cl-detail .cl-variant').length
+      out.del = all('.cl-detail .cl-del').map((x) => x.textContent); out.add = all('.cl-detail .cl-add').map((x) => x.textContent)
+      out.errs = errs
+      const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
+  writeFileSync(join(w1, 'probe.html'), page)
+  const x = (await runPage(join(w1, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
+  ok((x.groups ?? []).join() === 'orquestrador,transação,orientação,triagem' && (x.cupons ?? []).length === 2 && x.cupons.some((c) => c.includes('também em')), 'the matrix by type: cupons in two groups, «também em»', JSON.stringify(x))
+  ok((x.transaction ?? []).join() === 'bodega-cupons,bodega-devolucoes,bodega-pedidos', 'the type filter: transação keeps its three', JSON.stringify(x.transaction))
+  ok(x.variant >= 1 && x.typeBadge >= 1 && x.officialBadge >= 1, '≈ for a variation, the type badge, the official block badge', JSON.stringify(x))
+  ok(x.text === 'Links:' && x.variants === 1 && (x.del ?? []).some((d) => d.includes('link de ação vai no topo')) && (x.del ?? []).includes('3') && (x.add ?? []).includes('5') && !x.errs?.length, "the block's detail: its text, frete's variation word by word", JSON.stringify(x))
+}
+
 rmSync(work, { recursive: true, force: true })
 if (failed) {
   console.error(`✗ cast-list: ${failed} failed`)

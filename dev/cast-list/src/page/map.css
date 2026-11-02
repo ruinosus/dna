@@ -2,7 +2,7 @@
 .cl {
   --bg: #f6f6f3; --card: #ffffff; --ink: #1d2330; --muted: #5f6878; --line: #e2e4e8; --soft: #f3f4f1;
   --has: #2e7d55; --off: #c8442c; --off-bg: #fde8e3; --said: #b7791f;
-  --platform: #2e7d55; --platform-bg: #e3f3ea; --specialist: #3b5bdb; --specialist-bg: #e8edff; --orchestrator: #7b4fc9; --orchestrator-bg: #efe8fb;
+  --platform: #2e7d55; --platform-bg: #e3f3ea; --specialist: #3b5bdb; --specialist-bg: #e8edff; --orchestrator: #7b4fc9; --orchestrator-bg: #efe8fb; --type: #7b4fc9; --type-bg: #efe8fb;
   --amber: #8a5a00; --amber-bg: #fff6dc; --amber-line: #f0dca4; --focus: #2f5bea; --active: #1d2330; --on-active: #fff;
   font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg);
   min-height: 100vh; box-sizing: border-box; padding: 24px 16px 40px;
@@ -11,7 +11,7 @@
   .cl:not(.light) {
     --bg: #14171c; --card: #1d2129; --ink: #e8ebf0; --muted: #9aa3b2; --line: #313744; --soft: #23272f;
     --has: #6fcf9a; --off: #ff8a70; --off-bg: #3a221d; --said: #f2c46b;
-    --platform: #6fcf9a; --platform-bg: #1c3328; --specialist: #9db0ff; --specialist-bg: #232c4a; --orchestrator: #c6a8ff; --orchestrator-bg: #2e2445;
+    --platform: #6fcf9a; --platform-bg: #1c3328; --specialist: #9db0ff; --specialist-bg: #232c4a; --orchestrator: #c6a8ff; --orchestrator-bg: #2e2445; --type: #c6a8ff; --type-bg: #2e2445;
     --amber: #f2c46b; --amber-bg: #2f2716; --amber-line: #5a4a22; --focus: #8fb0ff; --active: #e8ebf0; --on-active: #14171c;
   }
 }
@@ -57,10 +57,16 @@ body { margin: 0; }
 .cl-mark.said button { color: var(--said); }
 .cl-mark.off { background: var(--off-bg); }
 .cl-mark.off button { color: var(--off); font-weight: 700; }
+.cl-mark.var { background: var(--amber-bg); }
+.cl-mark.var button { color: var(--amber); font-weight: 700; }
+.cl-matrix .cl-groups th { font-size: 11px; font-weight: 600; color: var(--muted); padding: 4px 8px 2px; text-align: center; }
+.cl-matrix .cl-groups th.typed { color: var(--type); border-bottom: 2px solid var(--type); }
 .cl-badge { display: inline-block; margin-left: 8px; padding: 0 7px; border-radius: 999px; font-size: 11px; border: 1px solid currentColor; white-space: nowrap; }
 .cl-badge.platform { color: var(--platform); background: var(--platform-bg); }
 .cl-badge.specialist { color: var(--specialist); background: var(--specialist-bg); }
 .cl-badge.orchestrator { color: var(--orchestrator); background: var(--orchestrator-bg); }
+.cl-badge.type { color: var(--type); background: var(--type-bg); }
+.cl-badge.official { color: var(--specialist); background: var(--specialist-bg); }
 .cl-badge.accepted { color: var(--has); }
 .cl-badge.rejected { color: var(--muted); text-decoration: line-through; }
 .cl-legend { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
@@ -95,3 +101,8 @@ body { margin: 0; }
 .cl-table a { color: var(--focus); }
 .cl-empty { color: var(--muted); font-style: italic; margin: 0; }
 .cl-foot { font-size: 12px; color: var(--muted); margin: 0; }
+.cl-text { margin: 4px 0 0; font: 12.5px/1.55 ui-monospace, Menlo, monospace; background: var(--soft); border-radius: 8px; padding: 8px 10px; white-space: pre-wrap; }
+.cl-variant { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+.cl-diff { font: 12.5px/1.6 ui-monospace, Menlo, monospace; }
+.cl-del { background: var(--off-bg); color: var(--off); text-decoration: line-through; border-radius: 3px; padding: 0 2px; }
+.cl-add { background: var(--platform-bg); color: var(--platform); border-radius: 3px; padding: 0 2px; }
