@@ -28,8 +28,8 @@ const back = (lang: 'en' | 'pt') => readXlsx(Buffer.from(workbookFile(sheets(lan
 
 // the sheets
 const pt = sheets('pt')
-ok(pt.map((s) => s.name).join() === 'Resumo,Matriz,Padrões,Texto,Fora do padrão,Lacunas,Conflitos,Elenco,Evidências,Declarado', 'the sheets of the spec, in order (pt)', pt.map((s) => s.name))
-ok(sheets('en').map((s) => s.name).join() === 'Summary,Matrix,Patterns,Text,Off pattern,Gaps,Conflicts,Cast,Evidence,Declared', 'and in English')
+ok(pt.map((s) => s.name).join() === 'Resumo,Matriz,Padrões,Texto,Roteamento,Fora do padrão,Lacunas,Conflitos,Sem uso,Elenco,Evidências,Declarado', 'the sheets of the spec, in order (pt)', pt.map((s) => s.name))
+ok(sheets('en').map((s) => s.name).join() === 'Summary,Matrix,Patterns,Text,Routing,Off pattern,Gaps,Conflicts,Unused,Cast,Evidence,Declared', 'and in English')
 const odd = compare([...agents, extractAgent('odd', [{ path: 'agent.mcs.yml', text: 'kind: GptComponentMetadata\n' }, { path: 'a.txt', text: '' }])], profile, demo)
 ok(workbookOf(odd, reviewCast(odd), demo, 'pt').at(-1)?.name === 'Não entendeu', '«Not understood» only when something was not')
 const summary = pt[0].rows.map((r) => r.map((c) => (typeof c === 'object' ? c.v : c)).join(' | ')).join('\n')
@@ -53,6 +53,18 @@ ok(p[0].includes('Decisão') && p[0].includes('Por quê') && p[0].includes('Esco
 const decided = p.find((r) => r[0] === 'trigger:OnEscalate')!
 ok(decided.includes('aceito') && decided.includes('Ninguém fica sem saída para uma pessoa'), 'the accepted pattern says so', decided)
 ok(['trigger:OnEscalate', 'node:LogCustomTelemetryEvent'].includes(p[1][0]) && !p.some((r) => r[0].startsWith('reaches:')) && p.findIndex((r) => r[0] === 'auth:None') > 2, 'the patterns someone is off come first; a part is decided with its fact, not on its own row')
+
+// wave 2: routing, a row per call; what nobody uses; the flow facts in the matrix and the evidence
+const sheetRows = (name: string) => pt.find((x) => x.name === name)!.rows.map((r) => r.map(title))
+const routing = sheetRows('Roteamento')
+ok(routing[0].join() === 'Quem chama,Chamado,Histórico,Entradas,Descrição de roteamento,Caracteres,Arquivo' && routing.length === 1 + 6, 'routing: who calls, who is called, the history, the inputs, the description and its size — a row per call', routing)
+const fr = routing.find((r) => r[1] === 'bodega-frete')!
+ok(fr[2] === 'não' && fr[3] === '' && routing.some((r) => r[1] === 'Bodega Azul - Fidelidade (não está na pasta)') && routing.find((r) => r[1] === 'bodega-cupons')![5] === '7', 'frete with no history nor input; the call to one not in the folder; cupons with 7 characters', routing)
+const unusedRows = sheetRows('Sem uso')
+ok(unusedRows.length === 1 + 4 && unusedRows.some((r) => r.join() === 'bodega-loja-fisica,fluxo,Listar lojas,ninguém usa,workflows/ListarLojas-3f2a9c1d/metadata.yml:1') && unusedRows.some((r) => r[0] === 'bodega-pedidos' && r[1] === 'nó' && r[3] === 'desligado' && r[4].startsWith('topics/Escalate.topic.mcs.yml:')),
+  'unused: who, what, the name, how, the file', unusedRows)
+ok(row('flow-uses:http:erp.bodega-azul.example')[head.indexOf('bodega-pedidos')] === '●' && title(row('flow-uses:http:erp.bodega-azul.example')[0]) === 'B. Integrações', 'the flow facts in the matrix, in B')
+ok(sheetRows('Evidências').some((r) => r[2] === 'flow-returns' && r[3] === 'workflows/AbrirChamadoERP-7d1c2a4e/workflow.json'), 'and in the evidence, with the file')
 
 // the way back: nothing changed, nothing to take — in either language
 ok(!fromSheets(demo, back('pt')).changes.length && !fromSheets(demo, back('en')).changes.length && !fromSheets(demo, back('pt')).problems.length, 'read back as written, the workbook changes nothing (pt and en)', fromSheets(demo, back('pt')))

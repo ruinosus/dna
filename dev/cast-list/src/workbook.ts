@@ -1,6 +1,7 @@
 // The comparison as a workbook: Summary, Matrix (a row per fact, a column per agent: ● has it, × is off a pattern,
-// ◐ declared), Patterns (with Scope, Decision and Why to fill in), Off pattern, Gaps, Conflicts, Cast, Evidence (file
-// and line of every fact), Declared (to fill in) — and Not understood, when something was not. Sheets of rows the
+// ◐ declared), Patterns (with Scope, Decision and Why to fill in), Text, Routing (what the orchestrator passes each
+// one it calls), Off pattern, Gaps, Conflicts, Unused (nobody uses it, or it is switched off), Cast, Evidence (file and
+// line of every fact), Declared (to fill in) — and Not understood, when something was not. Sheets of rows the
 // platform's xlsx writer turns into an .xlsx; fromSheets reads Patterns and Declared back.
 import type { Sheet as LibSheet, Value } from '@lib/ways/workbook'
 import { xlsx } from '@lib/ways/xlsx'
@@ -10,7 +11,7 @@ import { DIMENSIONS, dimensionOf, labelOf, type Dimension, type Lang } from './l
 import { groupPatterns, type Look } from './review'
 import { SHEET_WORDS } from './words'
 
-export type SheetKey = 'summary' | 'matrix' | 'patterns' | 'text' | 'off' | 'gaps' | 'conflicts' | 'agents' | 'evidence' | 'declared' | 'unknown'
+export type SheetKey = 'summary' | 'matrix' | 'patterns' | 'text' | 'routing' | 'off' | 'gaps' | 'conflicts' | 'unused' | 'agents' | 'evidence' | 'declared' | 'unknown'
 /** A sheet of rows; the xlsx writer reads its name, columns, rows and header. */
 export interface Sheet extends Omit<LibSheet, 'key'> { key: SheetKey }
 /** The .xlsx of these sheets (the platform's writer: its own `key` names only the platform's sheets). */
@@ -48,7 +49,7 @@ export function workbookOf(r: Result, looks: Look[], cast: Cast, lang: Lang = 'e
       [{ v: w.privacy, color: 'B42318' }, ''],
       [w.count.agents, r.agents.length], [w.count.orchestrators, n('orchestrator')], [w.count.specialists, n('specialist')],
       [w.count.patterns, r.patterns.length], [w.count.off, new Set(r.offPattern.map((o) => o.agent)).size], [w.count.gaps, r.gaps.length],
-      [w.count.conflicts, r.conflicts.length], [w.count.solos, looks.filter((l) => l.key === 'solo').length],
+      [w.count.conflicts, r.conflicts.length], [w.count.solos, looks.filter((l) => l.key === 'solo').length], [w.count.unused, r.unused.length],
       ['', ''],
       [{ v: looks.length ? w.look : w.nothing, bold: true }, ''],
       ...looks.map((l): Value[] => ['', { v: l[lang], wrap: true }]),
@@ -81,7 +82,13 @@ export function workbookOf(r: Result, looks: Look[], cast: Cast, lang: Lang = 'e
   const text = sheet('text', [[w.id, 28], [w.label, 36], [w.body, 70], [w.have, 50], [w.variant, 40], [w.official, 10]],
     r.blocks.map((b) => [b.id, b.official ?? b.label, { v: b.text, wrap: true }, Object.keys(b.holders).sort().join(', '),
       Object.entries(b.variants).sort(([x], [y]) => x.localeCompare(y)).map(([a, v]) => `${a} (${Math.round(v.similarity * 100)}%)`).join(', '), b.official ? w.yes : '']))
-  const sheets = [summary, matrix, patterns, ...(r.blocks.length ? [text] : []), offSheet, gaps, conflicts, cast_, evidence, declared]
+  // a row per call of an orchestrator, the one to an agent not in the folder too
+  const routing = sheet('routing', [[w.caller, 24], [w.called, 30], [w.history, 10], [w.inputs, 30], [w.routingText, 70], [w.chars, 10], [w.file, 44]],
+    r.contract.routes.map((c) => [c.caller, c.agent ?? `${c.name ?? c.calls} (${w.notInFolder})`, c.history ? w.yes : w.no, c.inputs.join(', '),
+      { v: c.description, wrap: true }, c.description.length, `${c.file}${c.line ? `:${c.line}` : ''}`]))
+  const unused = sheet('unused', [[w.agent, 24], [w.what, 16], [w.name, 30], [w.how, 14], [w.file, 50]],
+    r.unused.flatMap((u) => u.sources.map((s): Value[] => [u.agent, w.thing[u.what] ?? u.what, r.names[u.name] ?? u.name, w[u.how], `${s.file}${s.line ? `:${s.line}` : ''}`])))
+  const sheets = [summary, matrix, patterns, ...(r.blocks.length ? [text] : []), ...(r.contract.routes.length ? [routing] : []), offSheet, gaps, conflicts, ...(r.unused.length ? [unused] : []), cast_, evidence, declared]
   if (r.unknown.length) sheets.push(sheet('unknown', [[w.agent, 24], [w.file, 50], [w.why, 40], [w.kind, 24]], r.unknown.map((u) => [u.agent, u.file, w.why_[u.why], u.kind ?? ''])))
   return sheets
 }
