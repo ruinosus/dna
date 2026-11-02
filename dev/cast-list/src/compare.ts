@@ -12,7 +12,7 @@
 import type { Cast, Decision, Scope } from './cast'
 import { blocksOf, type BlockFamily } from './blocks'
 import type { AgentFacts, Call, Facts, Flow, Source, Unknown } from './extract'
-import { partOf } from './labels'
+import { partOf, SHORT_ROUTING } from './labels'
 import { markerFindings, markersOf, type MarkerFinding } from './markers'
 import { MS_PATTERNS } from './microsoft'
 import { matches, rolesOf, typesOf, type Profile, type Role, type Rule } from './profile'
@@ -84,8 +84,6 @@ const declaredKey = (key: string) => (key.startsWith('declared:') ? key : `decla
 const isVariant = (key: string) => key.endsWith('~variant')
 /** What nothing uses or what is switched off: listed, never compared. */
 export const isUnused = (key: string) => /^(orphan|disabled):/.test(key)
-/** Shorter than this, a routing description does not say when to call the agent. */
-export const SHORT_ROUTING = 80
 
 export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Result {
   const given = Object.fromEntries(cast.agents.map((a) => [a.id, a.role]))

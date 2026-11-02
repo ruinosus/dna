@@ -5,7 +5,7 @@
 // did not understand. Downloads: the workbook, the cast file, a PNG of the matrix.
 import type { Cast } from '../cast'
 import type { Result } from '../compare'
-import { DIMENSIONS, dimensionOf, labelOf, partOf, type Dimension, type Lang } from '../labels'
+import { DIMENSIONS, dimensionOf, labelOf, partOf, SHORT_ROUTING, type Dimension, type Lang } from '../labels'
 import { MS_PATTERNS, PATTERNS_URL } from '../microsoft'
 import type { FocusArea, Role } from '../profile'
 import { groupPatterns, type Look } from '../review'
@@ -26,6 +26,8 @@ const UI = {
     facts: 'Facts', off: 'Off a pattern', solo: 'Only it has', children: 'Children', close: 'Close ✕', foot: 'The facts come from the YAML files; nothing was made up.',
     summary: (n: number, p: number, o: number, s: number, t: number) => `${n} in the cast · ${p} patterns · ${o} off a pattern · ${s} only one has · threshold ${t}% of each role`,
     excel: '⬇ Excel', yaml: '⬇ cast.yaml', png: '⬇ PNG', name: 'Name', said: 'declared',
+    unused: (n: number) => `Unused (${n})`, nothingUnused: 'Everything is used, nothing is switched off.', flows: 'Flows', returnsNothing: 'returns nothing', otherFlow: 'another flow',
+    routing: 'Routing', called: 'Called', history: 'History', inputs: 'Inputs', description: 'Description', notInFolder: 'not in the folder', chars: (n: number) => `${n} characters`,
   },
   pt: {
     map: 'Mapa', patterns: 'Padrões', cast: 'Elenco', microsoft: 'Microsoft', unknown: (n: number) => `O que a análise não entendeu (${n})`,
@@ -37,6 +39,8 @@ const UI = {
     facts: 'Fatos', off: 'Fora do padrão', solo: 'Só ele tem', children: 'Filhos', close: 'Fechar ✕', foot: 'Os fatos vêm dos arquivos YAML; nada foi inventado.',
     summary: (n: number, p: number, o: number, s: number, t: number) => `${n} no elenco · ${p} padrões · ${o} fora do padrão · ${s} só um tem · limite ${t}% de cada papel`,
     excel: '⬇ Excel', yaml: '⬇ cast.yaml', png: '⬇ PNG', name: 'Nome', said: 'declarado',
+    unused: (n: number) => `Sem uso (${n})`, nothingUnused: 'Tudo é usado, nada está desligado.', flows: 'Fluxos', returnsNothing: 'não devolve nada', otherFlow: 'outro fluxo',
+    routing: 'Roteamento', called: 'Chamado', history: 'Histórico', inputs: 'Entradas', description: 'Descrição', notInFolder: 'não está na pasta', chars: (n: number) => `${n} caracteres`,
   },
 }
 
@@ -65,7 +69,7 @@ const badge = (k: string) => {
   return `${p.official ? `<span class="cl-badge official">${u.official}</span>` : ''}<span class="cl-badge ${scopeClass(p.scope)}">${u.pattern} · ${esc(scopeWord(p.scope))}</span>${d}`
 }
 
-type Tab = 'map' | 'patterns' | 'cast' | 'microsoft' | 'unknown'
+type Tab = 'map' | 'patterns' | 'cast' | 'microsoft' | 'unused' | 'unknown'
 let tab: Tab = 'map'
 let picked: { key: string; agent?: string } | undefined
 let role: 'all' | Role = 'all'
@@ -74,13 +78,13 @@ let type: string | undefined // a type's id, «-» for the specialists with none
 const app = document.getElementById('app')!
 
 function render() {
-  const tabs: [Tab, string][] = [['map', u.map], ['patterns', u.patterns], ['cast', u.cast], ['microsoft', u.microsoft], ['unknown', u.unknown(r.unknown.length)]]
+  const tabs: [Tab, string][] = [['map', u.map], ['patterns', u.patterns], ['cast', u.cast], ['microsoft', u.microsoft], ['unused', u.unused(r.unused.length)], ['unknown', u.unknown(r.unknown.length)]]
   const off = new Set(r.offPattern.map((o) => o.agent)).size
   app.innerHTML = `<div class="cl-wrap">
     <header><h1 class="cl-title">${esc(r.name ?? data.id)}</h1><p class="cl-sub">${u.summary(r.agents.length, r.patterns.length, off, looks.filter((l) => l.key === 'solo').length, Math.round(data.threshold * 100))}</p><p class="cl-private">${esc(w.privacy)}</p></header>
     <div class="cl-bar" role="tablist">${tabs.map(([k, t]) => `<button class="cl-tab" role="tab" aria-selected="${k === tab}" data-tab="${k}">${esc(t)}</button>`).join('')}
       <span class="cl-space"></span><button class="cl-get" data-get="xlsx">${u.excel}</button><button class="cl-get" data-get="yaml">${u.yaml}</button>${tab === 'map' ? `<button class="cl-get" data-get="png">${u.png}</button>` : ''}</div>
-    ${tab === 'map' ? mapTab() : tab === 'patterns' ? table(sheets.find((s) => s.key === 'patterns')!) : tab === 'cast' ? castTab() : tab === 'microsoft' ? microsoftTab() : unknownTab()}
+    ${tab === 'map' ? mapTab() : tab === 'patterns' ? table(sheets.find((s) => s.key === 'patterns')!) : tab === 'cast' ? castTab() : tab === 'microsoft' ? microsoftTab() : tab === 'unused' ? unusedTab() : unknownTab()}
     <p class="cl-foot">${u.foot}</p>
   </div>`
 }
@@ -176,14 +180,46 @@ function castTab() {
     const off = r.offPattern.filter((o) => o.agent === a.id)
     const solos = r.solos.filter((s) => s.agents[0] === a.id)
     const unknown = r.unknown.filter((x) => x.agent === a.id)
-    return `<section class="cl-card cl-agent"><span class="cl-kicker">${esc(w[a.role])}</span><h3>${esc(a.id)}</h3>${a.displayName ? `<code>${esc(a.displayName)}</code>` : ''}<dl>
+    const routing = routingOf(a.id)
+    return `<section class="cl-card cl-agent${routing ? ' wide' : ''}"><span class="cl-kicker">${esc(w[a.role])}</span><h3>${esc(a.id)}</h3>${a.displayName ? `<code>${esc(a.displayName)}</code>` : ''}<dl>
       ${(r.types[a.id] ?? []).length ? `<dt>${u.types}</dt><dd>${esc(r.types[a.id].map((t) => r.typeNames[t] ?? t).join(' · '))}</dd>` : ''}
       <dt>${u.facts}</dt><dd>${Object.keys(a.facts).length}</dd>
       ${off.length ? `<dt>${u.off}</dt><dd class="cl-lack">${off.map((o) => label(o.key)).join('<br>')}</dd>` : ''}
       ${solos.length ? `<dt>${u.solo}</dt><dd>${solos.map((s) => label(s.key)).join('<br>')}</dd>` : ''}
+      ${chains(a.id, a.displayName ?? a.id)}
       ${a.children.length ? `<dt>${u.children}</dt><dd>${a.children.map((c) => `${esc(c.name)} <span class="cl-sub">(${Object.keys(c.facts).map(label).join(', ')})</span>`).join('<br>')}</dd>` : ''}
-      ${unknown.length ? `<dt>${esc(w.unknown)}</dt><dd>${unknown.map((x) => esc(x.file)).join('<br>')}</dd>` : ''}</dl></section>`
+      ${unknown.length ? `<dt>${esc(w.unknown)}</dt><dd>${unknown.map((x) => esc(x.file)).join('<br>')}</dd>` : ''}</dl>${routing}</section>`
   }).join('')}</div>`
+}
+
+// each flow the agent calls, as a chain: the agent → the flow → what the flow calls; in red when it answers nothing
+function chains(id: string, who: string) {
+  const flows = r.flows.filter((f) => f.agent === id && f.called)
+  if (!flows.length) return ''
+  const system = (use: string) => (use === 'child-flow' ? u.otherFlow : use.startsWith('http:') ? use.slice(5) : use.startsWith('connector:') ? r.names[use.slice(10)] ?? use.slice(10) : undefined)
+  const one = (f: (typeof flows)[number]) => {
+    const to = f.uses.map(system).filter((x): x is string => !!x)
+    return `<div class="cl-chain">${[who, f.name, ...(to.length ? [to.join(', ')] : [])].map(esc).join(' <span aria-hidden="true">→</span> ')}${f.returns ? '' : ` <span class="cl-silent">— ${u.returnsNothing}</span>`}</div>`
+  }
+  return `<dt>${u.flows}</dt><dd>${flows.map(one).join('')}</dd>`
+}
+
+// what an orchestrator passes each one it calls; what is missing, in red
+function routingOf(id: string) {
+  const routes = r.contract.routes.filter((c) => c.caller === id)
+  if (!routes.length) return ''
+  const rows = routes.map((c) => {
+    const short = c.description.length < SHORT_ROUTING
+    return `<tr><td>${c.agent ? esc(c.agent) : `<span class="cl-silent">${esc(c.name ?? c.calls)} — ${u.notInFolder}</span>`}</td>
+      <td${c.history ? '' : ' class="cl-silent"'}>${c.history ? w.yes : w.no}</td><td>${c.inputs.length ? esc(c.inputs.join(', ')) : '<span class="cl-silent">—</span>'}</td>
+      <td${short ? ' class="cl-silent"' : ''} title="${esc(c.description)}">${esc(u.chars(c.description.length))}</td></tr>`
+  }).join('')
+  return `<div class="cl-route"><h4>${u.routing}</h4><table class="cl-routing"><thead><tr><th>${u.called}</th><th>${u.history}</th><th>${u.inputs}</th><th>${u.description}</th></tr></thead><tbody>${rows}</tbody></table></div>`
+}
+
+function unusedTab() {
+  const s = sheets.find((x) => x.key === 'unused')
+  return s ? table(s) : `<section class="cl-card"><p class="cl-empty">${u.nothingUnused}</p></section>`
 }
 
 function microsoftTab() {
@@ -260,6 +296,7 @@ app.addEventListener('click', (e) => {
     // what is off a pattern is not «had»: show the whole fact, with who is off it
     if (l.key === 'off' || l.key === 'gap' || l.key === 'conflict') picked = l.fact ? { key: l.fact } : picked
     if (l.key === 'unknown') tab = 'unknown'
+    if (l.key === 'unused') tab = 'unused'
   } else if (d.get === 'xlsx') return save(new Blob([workbookFile(sheets)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${data.id}.xlsx`)
   else if (d.get === 'yaml') return save(new Blob([data.castYaml], { type: 'text/yaml' }), `${data.id}.cast.yaml`)
   else if (d.get === 'png') return void png()

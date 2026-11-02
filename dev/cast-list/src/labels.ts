@@ -103,6 +103,9 @@ export function dimensionOf(key: string): Dimension {
 /** `key` matches `pattern`: the same, or with a trailing `*` any key that starts the same. */
 export const matches = (key: string, pattern: string) => (pattern.endsWith('*') ? key.startsWith(pattern.slice(0, -1)) : key === pattern)
 
+/** Shorter than this, a routing description does not say when to call the agent (here, so the map needs no more). */
+export const SHORT_ROUTING = 80
+
 /** The fact a key is a part of: reaching a topic is part of having it. */
 export const partOf = (key: string) => (key.startsWith('reaches:') ? `trigger:${key.slice(8)}` : undefined)
 

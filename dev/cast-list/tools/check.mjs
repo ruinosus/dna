@@ -133,6 +133,12 @@ else {
       q('[data-tab="cast"]').click(); out.cast = all('.cl-agent').length
       q('[data-tab="microsoft"]').click(); out.ms = all('.cl-table tbody tr').length
       q('[data-tab="unknown"]').click(); out.unknown = q('.cl-empty')?.textContent
+      q('[data-tab="cast"]').click()
+      const card = (id) => [...all('.cl-agent')].find((c) => c.querySelector('h3')?.textContent === id)
+      out.chain = card('bodega-pedidos')?.querySelector('.cl-chain')?.textContent.trim()
+      out.silent = card('bodega-cupons')?.querySelector('.cl-chain .cl-silent')?.textContent
+      out.routing = card('bodega-orquestrador')?.querySelectorAll('.cl-routing tbody tr').length
+      q('[data-tab="unused"]').click(); out.unused = all('.cl-table tbody tr').length
       out.got = got; out.errs = errs
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
   writeFileSync(join(work, 'probe.html'), html)
@@ -141,6 +147,8 @@ else {
   ok(r.files?.length === 5 && r.files.every((f) => f.startsWith('topics/OnError.topic.mcs.yml:')) && r.lacks, 'a pattern shows the file and line of each, and who is off it', JSON.stringify(r.files))
   ok(r.columns?.length === 6 && r.columns.filter((c) => c.startsWith('bodega-cupons')).length === 2 && !r.columns.some((c) => c.includes('orquestrador')), 'the role filter leaves the orchestrator out (cupons in its two types)', JSON.stringify(r.columns))
   ok((r.got ?? []).join() === 'agents.xlsx,agents.cast.yaml,agents.png' && !r.errs?.length, 'the downloads: workbook, cast file, PNG — no error', JSON.stringify(r))
+  ok(r.chain === 'Bodega Azul - Pedidos → Abrir chamado no ERP → erp.bodega-azul.example' && r.silent === '— não devolve nada', 'the cast: the chain of pedidos, and the flow of cupons that returns nothing', JSON.stringify([r.chain, r.silent]))
+  ok(r.routing === 6 && r.unused === 4 && !r.errs?.length, 'the orchestrator\'s routing, 6 calls; the Unused tab, 4 rows; no error', JSON.stringify([r.routing, r.unused, r.errs]))
   ok(r.patterns === 31 && r.cast === 6 && r.ms === 15 && r.unknown === 'Tudo foi entendido.', 'the tabs: patterns, cast, Microsoft, not understood', JSON.stringify(r))
 }
 
