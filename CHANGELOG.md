@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.5.0 — 2026-11-03
+
+cast-list reads the telemetry by name, what really fires, and what a spreadsheet says about the agents.
+
+- **The telemetry by name.** Each `LogCustomTelemetryEvent` is a fact by its **form** — the name with the agent's own
+  name taken out, so «BodegaPedidos_OnError» and «BodegaFrete_OnError» are one event — and each field of its record is
+  a fact too. The event is part of logging telemetry and the field part of the event: a field missing is told
+  («logs «‹name›_OnError» without «ConversationId»»), and neither is ever a solo. Two spellings that differ only in case
+  or separators count as the most common one, and the other is asked about: «the same event?». A name or a record made
+  by a formula is not guessed.
+- **What fires.** `--telemetry <export>` reads the result of one query in Application Insights
+  (`references/telemetry.md`, ready to copy): an event in the YAML that did not fire in the period, and an agent with no
+  line at all (is it connected?). Nothing goes over the network; only the agent, the event and the times are read.
+- **Declared from a spreadsheet, with no model.** `--declared <table>` reads the Power Platform admin center's
+  inventory download or the team's own list (`.csv` with `,` or `;`, or `.xlsx`): the agent's column is found by its
+  values, every other column becomes a declared fact with the file and the line, listed with keys and written with
+  `--take`. `Dono`/`Owner` is the owner, `KPI`/`Indicador` the KPI; the inventory's apps and flows are left out, and a
+  row of an agent not in the folder is listed.
+- A **Telemetry** sheet; each card of the map lists its events and the times they fired; the lesson puts a spelling in
+  «what to decide» and what did not fire in «what is missing». An eval (`cast-list-telemetry-pt`, 2/2). The example agents
+  and three example tables show all of it.
+
 ## 1.4.0 — 2026-11-02
 
 cast-list reads what the orchestrator passes each agent, what each flow calls, and what nobody uses.
