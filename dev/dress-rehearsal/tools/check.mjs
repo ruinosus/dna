@@ -2,6 +2,7 @@
 // facilitator's script with nothing to look at; a broken file — and a broken drawing — says its line; the game page loads
 // nothing from the internet; and, when there is a browser, every example is played to its end there. Run after
 // npm run assets.
+import { checkSkillMd } from 'chalk-talk/kit/tools/checks.mjs'
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -22,6 +23,7 @@ const ok = (cond, what, detail = '') => {
   console.log(`${cond ? '✓' : '✗'} ${what}${!cond && detail ? `\n${detail}` : ''}`)
   if (!cond) failed++
 }
+checkSkillMd(ok, join(skill, 'SKILL.md'), 'dress-rehearsal')
 
 for (const f of readdirSync(join(root, 'checks')).filter((x) => x.endsWith('.check.ts'))) {
   const r = spawnSync('npx', ['tsx', join(root, 'checks', f)], { cwd: here, encoding: 'utf8' })

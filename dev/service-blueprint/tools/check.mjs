@@ -2,7 +2,7 @@
 // and lesson (the lesson passing chalk-talk's reviewer when there is a browser) and prints what it should look at — the
 // return blueprint on purpose has four things, the others none; a broken file says its line; the map loads nothing from
 // the internet; and, in a browser, the map opens a moment, its tabs and its downloads. Run after npm run assets.
-import { checkNoOldName } from 'chalk-talk/kit/tools/checks.mjs'
+import { checkNoOldName, checkSkillMd } from 'chalk-talk/kit/tools/checks.mjs'
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -25,6 +25,7 @@ const ok = (cond, what, detail = '') => {
   console.log(`${cond ? '✓' : '✗'} ${what}${!cond && detail ? `\n${detail}` : ''}`)
   if (!cond) failed++
 }
+checkSkillMd(ok, join(skill, 'SKILL.md'), 'service-blueprint')
 
 for (const f of readdirSync(join(root, 'checks')).filter((x) => x.endsWith('.check.ts'))) {
   const r = spawnSync('npx', ['tsx', '--tsconfig', join(here, 'tsconfig.json'), join(root, 'checks', f)], { cwd: here, encoding: 'utf8' })

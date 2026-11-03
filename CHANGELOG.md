@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.1 — 2026-11-03
+
+- **cast-list's description fits claude.ai.** It had 1156 characters and claude.ai keeps 1024, so the plugin synced
+  with a warning and a cut description. It now has 1017, with the same uses and examples.
+- **Every skill's check reads its SKILL.md.** The name, the 1024 characters of the description and the 500 lines were
+  checked only for chalk-talk and back-of-napkin; cast-list, dress-rehearsal, gates-and-handoffs and service-blueprint
+  check them too.
+
 ## 1.5.0 — 2026-11-03
 
 cast-list reads the telemetry by name, what really fires, and what a spreadsheet says about the agents.

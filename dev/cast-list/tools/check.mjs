@@ -4,6 +4,7 @@
 // no node_modules runs on Node alone; 18 agents in under 30 s with the network blocked; broken files never stop it; a
 // broken profile says its line; a folder with no agent says so; the map loads nothing from the internet; and, in a browser, «to look at» opens its fact, a pattern shows the files, the
 // role filter leaves the orchestrator out, the tabs open and the downloads work. Run after npm run assets.
+import { checkSkillMd } from 'chalk-talk/kit/tools/checks.mjs'
 import { spawnSync } from 'node:child_process'
 import { cpSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -25,6 +26,7 @@ const ok = (cond, what, detail = '') => {
   console.log(`${cond ? '✓' : '✗'} ${what}${!cond && detail ? `\n${detail}` : ''}`)
   if (!cond) failed++
 }
+checkSkillMd(ok, join(skill, 'SKILL.md'), 'cast-list')
 const looks = (out) => (out.match(/^! (to look at|para olhar)/gm) ?? []).length
 
 for (const f of readdirSync(join(root, 'checks')).filter((x) => x.endsWith('.check.ts'))) {

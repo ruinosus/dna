@@ -1,7 +1,7 @@
 // Checks the skill as a person gets it: every example makes its map, workbook and lesson (the lesson passing chalk-talk's
 // reviewer when there is a browser); the workbook it made reads back as no change; a broken file says its line; the map
 // needs nothing from the internet; and, when LibreOffice is here, the workbook opens in it. Run after npm run assets.
-import { checkNoOldName } from 'chalk-talk/kit/tools/checks.mjs'
+import { checkNoOldName, checkSkillMd } from 'chalk-talk/kit/tools/checks.mjs'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -21,6 +21,7 @@ const ok = (cond, what, detail = '') => {
   console.log(`${cond ? '✓' : '✗'} ${what}${!cond && detail ? `\n${detail}` : ''}`)
   if (!cond) failed++
 }
+checkSkillMd(ok, join(skill, 'SKILL.md'), 'gates-and-handoffs')
 
 const files = readdirSync(examples).filter((f) => f.endsWith('.way.yaml'))
 ok(files.length === Object.keys(LANG).length, `${files.length} examples`)
