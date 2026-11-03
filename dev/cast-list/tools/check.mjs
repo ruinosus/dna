@@ -1,5 +1,5 @@
 // Checks the skill as a person gets it: the engine's checks (checks/*.check.ts); the example agents make the map, the
-// workbook, the lesson (passing chalk-talk's reviewer when there is a browser) and the cast file and print what to look at — 22 with the example profile, 23 with the demo cast file (what
+// workbook, the lesson (passing chalk-talk's reviewer when there is a browser) and the cast file and print what to look at — 24 with the example profile, 27 with the demo cast file and the telemetry (what
 // people said that the YAML contradicts); the workbook filled in comes back (--from, --take); --facts; a clean copy with
 // no node_modules runs on Node alone; 18 agents in under 30 s with the network blocked; broken files never stop it; a
 // broken profile says its line; a folder with no agent says so; the map loads nothing from the internet; and, in a browser, «to look at» opens its fact, a pattern shows the files, the
@@ -37,7 +37,7 @@ const plain = join(work, 'plain')
 const a = run(agents, '--profile', profile, '--all', '--lang', 'pt', '--out', plain)
 ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agents.cast.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, lesson and cast file', a.stdout + a.stderr)
 ok(/✓ review|• review/.test(a.stdout) && !/! review/.test(a.stdout), "the lesson passes chalk-talk's reviewer (when there is a browser)", a.stdout)
-ok(looks(a.stdout) === 22, `22 to look at (${looks(a.stdout)})`, a.stdout)
+ok(looks(a.stdout) === 24, `24 to look at (${looks(a.stdout)})`, a.stdout)
 const again = run(agents, '--profile', profile, '--out', plain)
 const kept = readFileSync(join(plain, 'agents.cast.yaml'), 'utf8')
 ok(again.status === 0 && kept.includes('role: orchestrator') && /blocks:\n(.*\n)*  - id: links\n    text: \|/.test(kept), 'a second run reads the cast file it wrote, and keeps the roles and the blocks of text', kept.slice(0, 600))
@@ -46,9 +46,21 @@ ok(again.status === 0 && kept.includes('role: orchestrator') && /blocks:\n(.*\n)
 const demo = join(work, 'demo')
 mkdirSync(demo)
 copyFileSync(join(examples, 'demo.cast.yaml'), join(demo, 'agents.cast.yaml'))
-const d = run(agents, '--profile', profile, '--lang', 'pt', '--out', demo)
-ok(d.status === 0 && looks(d.stdout) === 22 + 1 && d.stdout.includes('mas o YAML não tem'), '23 to look at with the demo cast file, the contradiction first', d.stdout)
+const d = run(agents, '--profile', profile, '--lang', 'pt', '--telemetry', join(examples, 'telemetria.csv'), '--out', demo)
+ok(d.status === 0 && looks(d.stdout) === 24 + 1 + 2 && d.stdout.includes('mas o YAML não tem'), '27 to look at with the demo cast file and the telemetry, the contradiction first', d.stdout)
+ok(d.stdout.includes('O evento «BodegaFrete_OnError» de bodega-frete não disparou em 30 dias') && d.stdout.includes('bodega-loja-fisica não tem nenhuma linha na telemetria'), 'the telemetry: what did not fire, and who has no line', d.stdout)
 ok(readFileSync(join(demo, 'agents.cast.yaml'), 'utf8').includes('# the handoff document says frete escalates'), "the cast file keeps the person's comments")
+
+// declared from outside: the admin center's inventory and the team's spreadsheet, listed and then taken
+const dec = join(work, 'declared')
+const listedOut = run(agents, '--declared', join(examples, 'inventario.csv'), '--declared', join(examples, 'equipe.csv'), '--lang', 'pt', '--out', dec)
+ok(listedOut.status === 0 && /^\s+d1\s+\+ declarado\s+bodega-orquestrador · Dono declarado = «atendimento@bodegaazul.example» \(inventario.csv › linha 2\)/m.test(listedOut.stdout) && listedOut.stdout.includes('linha 8 («Bodega Azul - Fidelidade»)') && !existsSync(join(dec, 'agents.cast.yaml')), '--declared lists what the tables say, each with a key, and the rows of nobody in the folder; nothing written', listedOut.stdout)
+const tookOut = run(agents, '--declared', join(examples, 'equipe.csv'), '--take', 'all', '--lang', 'pt', '--out', dec)
+const afterKpi = run(agents, '--profile', profile, '--check', '--lang', 'pt', '--out', dec)
+ok(tookOut.status === 0 && readFileSync(join(dec, 'agents.cast.yaml'), 'utf8').includes('cotação em menos de 5 s') && afterKpi.stdout.includes('Regra «Todo especialista tem KPI»: 1 especialista não cumpre (bodega-loja-fisica)'), '--take all writes them; the next run counts the KPIs', afterKpi.stdout)
+writeFileSync(join(work, 'nobody.csv'), 'a,b\nx,y\n')
+const nobody = run(agents, '--declared', join(work, 'nobody.csv'), '--out', dec)
+ok(nobody.status === 1 && nobody.stderr.includes('--agent-column') && run(agents, '--declared', join(work, 'none.csv')).status === 2 && run(agents, '--telemetry', join(examples, 'telemetria.csv'), '--telemetry-days', 'x').status === 2, 'a table that names nobody asks for --agent-column; a missing file or bad days: exit 2', nobody.stderr)
 
 // what is broken says so
 writeFileSync(join(work, 'broken.cast.yaml'), readFileSync(profile, 'utf8').replace('threshold: 0.7', 'threshold: 7'))
@@ -138,16 +150,18 @@ else {
       out.chain = card('bodega-pedidos')?.querySelector('.cl-chain')?.textContent.trim()
       out.silent = card('bodega-cupons')?.querySelector('.cl-chain .cl-silent')?.textContent
       out.routing = card('bodega-orquestrador')?.querySelectorAll('.cl-routing tbody tr').length
+      out.events = [card('bodega-pedidos'), card('bodega-frete'), card('bodega-loja-fisica')].map((c) => c?.querySelector('.cl-events')?.textContent.trim())
       q('[data-tab="unused"]').click(); out.unused = all('.cl-table tbody tr').length
       out.got = got; out.errs = errs
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
   writeFileSync(join(work, 'probe.html'), html)
   const r = (await runPage(join(work, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
-  ok(r.looks === 23 && r.look === 'Escalonamento para humano', '«to look at»: its first item opens the fact', JSON.stringify(r))
+  ok(r.looks === 27 && r.look === 'Escalonamento para humano', '«to look at»: its first item opens the fact', JSON.stringify(r))
   ok(r.files?.length === 5 && r.files.every((f) => f.startsWith('topics/OnError.topic.mcs.yml:')) && r.lacks, 'a pattern shows the file and line of each, and who is off it', JSON.stringify(r.files))
   ok(r.columns?.length === 6 && r.columns.filter((c) => c.startsWith('bodega-cupons')).length === 2 && !r.columns.some((c) => c.includes('orquestrador')), 'the role filter leaves the orchestrator out (cupons in its two types)', JSON.stringify(r.columns))
   ok((r.got ?? []).join() === 'agents.xlsx,agents.cast.yaml,agents.png' && !r.errs?.length, 'the downloads: workbook, cast file, PNG — no error', JSON.stringify(r))
   ok(r.chain === 'Bodega Azul - Pedidos → Abrir chamado no ERP → erp.bodega-azul.example' && r.silent === '— não devolve nada', 'the cast: the chain of pedidos, and the flow of cupons that returns nothing', JSON.stringify([r.chain, r.silent]))
+  ok(r.events?.[0] === 'BodegaPedidos_OnError — 7 vezes em 30 dias' && r.events[1] === 'BodegaFrete_OnError — não disparou' && r.events[2] === 'nenhuma linha na telemetria', 'the cast: the events, the times they fired, what did not, who has no line', JSON.stringify(r.events))
   ok(r.routing === 6 && r.unused === 4 && !r.errs?.length, 'the orchestrator\'s routing, 6 calls; the Unused tab, 4 rows; no error', JSON.stringify([r.routing, r.unused, r.errs]))
   ok(r.patterns === 31 && r.cast === 6 && r.ms === 15 && r.unknown === 'Tudo foi entendido.', 'the tabs: patterns, cast, Microsoft, not understood', JSON.stringify(r))
 }

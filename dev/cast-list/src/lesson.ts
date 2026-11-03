@@ -148,16 +148,17 @@ export function lessonOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
     const n = g.agents.filter((a) => !r.offPattern.some((o) => o.agent === a && o.key === g.rule.has)).length
     return n ? [lang === 'pt' ? `«${g.rule.says}»: ${n}${g.rule.role ? ` ${roleWord(g.rule.role, lang, n)}` : ''} não ${n === 1 ? 'cumpre' : 'cumprem'}` : `«${g.rule.says}»: ${n}${g.rule.role ? ` ${roleWord(g.rule.role, lang, n)}` : ''} ${n === 1 ? 'does' : 'do'} not meet it`] : []
   })
-  // what the orchestrator's contract lacks, and a flow that answers nothing
-  gaps.push(...looks.filter((l) => l.key === 'contract' || l.key === 'flow').map((l) => l[lang]))
+  // an event that did not fire (and who has no telemetry), what the orchestrator's contract lacks, a flow that answers
+  // nothing
+  gaps.push(...looks.filter((l) => l.key === 'telemetry').map((l) => l[lang]), ...looks.filter((l) => l.key === 'contract' || l.key === 'flow').map((l) => l[lang]))
   const unknownFiles = r.unknown.length
   if (unknownFiles) gaps.push(lang === 'pt' ? `${unknownFiles} ${unknownFiles === 1 ? 'arquivo não entendido' : 'arquivos não entendidos'}` : `${unknownFiles} ${unknownFiles === 1 ? 'file' : 'files'} not understood`)
   section(1, w.chapters[3], w.missing(looks.filter((l) => l.key === 'gap').length), gaps, RED)
   const unused = looks.filter((l) => l.key === 'unused').length
   const { look } = groupPatterns(r)
-  // what people and the YAML disagree on first, then a text rule set in two ways (or twice), then the patterns in the
+  // what people and the YAML disagree on first, then an event spelt two ways, then a text rule set in two ways (or twice), then the patterns in the
   // open, then what nobody uses (in one line: the list is on the map), then what only one has
-  const open = [...looks.filter((l) => l.key === 'conflict' || l.key === 'values' || l.key === 'twice').map((l) => l[lang]), ...(unused ? [w.unused(unused)] : []), ...look.filter((p) => !p.decision).map((p) => w.pattern(labelOf(p.key, lang, r.names))), ...looks.filter((l) => l.key === 'solo').map((l) => l[lang])]
+  const open = [...looks.filter((l) => l.key === 'conflict' || l.key === 'spelling' || l.key === 'values' || l.key === 'twice').map((l) => l[lang]), ...(unused ? [w.unused(unused)] : []), ...look.filter((p) => !p.decision).map((p) => w.pattern(labelOf(p.key, lang, r.names))), ...looks.filter((l) => l.key === 'solo').map((l) => l[lang])]
   section(2, w.chapters[4], w.decide(open.length), open)
 
   const id = (r.name ?? 'cast').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'cast'

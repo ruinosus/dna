@@ -181,14 +181,15 @@ beginDialog:
 {off}"""
 
 
-def error_topic(event_name, agent_key, telemetry):
+def error_topic(event_name, agent_key, telemetry, conversation_id=True):
     tel = ""
     if telemetry:
+        conv = ", ConversationId: System.Conversation.Id" if conversation_id else ""
         tel = f"""
     - kind: LogCustomTelemetryEvent
       id: {rid('logTelemetry')}
       eventName: {event_name}
-      properties: "={{Agente: \\"{agent_key}\\", ErrorMessage: System.Error.Message, ErrorCode: System.Error.Code, TimeUTC: Topic.CurrentTime, ConversationId: System.Conversation.Id}}"
+      properties: "={{Agente: \\"{agent_key}\\", ErrorMessage: System.Error.Message, ErrorCode: System.Error.Code, TimeUTC: Topic.CurrentTime{conv}}}"
 """
     return f"""mcs.metadata:
   componentName: Em caso de erro
@@ -492,6 +493,47 @@ WAVE2 = {
 }
 
 
+# wave 3: the cupons writes its event another way, and leaves the conversation id out
+WAVE3 = {
+    "bodega-cupons": {"event": "bodega_cupons_onerror", "no_conversation_id": True},
+}
+
+# wave 3, outside the agents' folder: what a person exports — the query of the telemetry (references/telemetry.md), the
+# Power Platform admin center's inventory, and the team's own spreadsheet (with «;», as Excel saves it in Portuguese)
+TELEMETRY_CSV = """agente,evento,vezes
+Bodega Azul - Orquestrador,TopicStart,1840
+Bodega Azul - Orquestrador,BodegaOrquestrador_OnError,12
+Bodega Azul - Pedidos,TopicStart,610
+Bodega Azul - Pedidos,BodegaPedidos_OnError,7
+Bodega Azul - Devoluções,TopicStart,402
+Bodega Azul - Devoluções,BodegaDevolucoes_OnError,3
+Bodega Azul - Frete,TopicStart,355
+Bodega Azul - Cupons,TopicStart,290
+Bodega Azul - Cupons,bodega_cupons_onerror,5
+"""
+
+INVENTORY_CSV = """Item name,Item type,Schema name,Owner,Environment,Created on,Last published
+Bodega Azul - Orquestrador,Agent,cr7b2_bodegaOrquestrador,atendimento@bodegaazul.example,Bodega Azul (Produção),2026-03-02,2026-10-28
+Bodega Azul - Pedidos,Agent,cr7b2_bodegaPedidos,pedidos@bodegaazul.example,Bodega Azul (Produção),2026-03-05,2026-10-21
+Bodega Azul - Devoluções,Agent,cr7b2_bodegaDevolucoes,trocas@bodegaazul.example,Bodega Azul (Produção),2026-03-05,2026-10-14
+Bodega Azul - Frete,Agent,cr7b2_bodegaFrete,frete@bodegaazul.example,Bodega Azul (Produção),2026-03-09,2026-09-30
+Bodega Azul - Cupons,Agent,cr7b2_bodegaCupons,,Bodega Azul (Produção),2026-03-12,2026-10-02
+Bodega Azul - Loja Física,Agent,cr7b2_bodegaLojaFisica,loja@bodegaazul.example,Bodega Azul (Produção),2026-04-01,
+Bodega Azul - Fidelidade,Agent,cr7b2_bodegaFidelidade,fidelidade@bodegaazul.example,Bodega Azul (Testes),2026-08-20,
+Painel de Pedidos,Canvas app,,pedidos@bodegaazul.example,Bodega Azul (Produção),2026-02-11,
+Abrir chamado no ERP,Agent flow,,pedidos@bodegaazul.example,Bodega Azul (Produção),2026-03-05,
+"""
+
+TEAM_CSV = """Agente;KPI;Dono
+Bodega Azul - Pedidos;pedido localizado em até 2 trocas de mensagem;Squad Pedidos
+Bodega Azul - Devoluções;troca aberta sem atendente em 80% dos casos;Squad Pós-venda
+Bodega Azul - Frete;cotação em menos de 5 s;Squad Logística
+Bodega Azul - Cupons;cupom validado na primeira tentativa;Squad Promoções
+Bodega Azul - Loja Física;;Squad Lojas
+Sobre a Bodega Azul;respostas gerais sem encaminhar;Squad Atendimento
+"""
+
+
 def flow_folder(d, name, folder, workflow_id, actions, returns=True):
     write(f"{d}/workflows/{folder}/metadata.yml", f"""displayName: {name}
 workflowId: {workflow_id}
@@ -778,8 +820,9 @@ def build_specialist(a):
         write(f"{d}/topics/AvisoAntigo.topic.mcs.yml", old_notice_topic())
     if w2.get("orphan_variable"):
         write(f"{d}/variables/PreferenciaAntiga.mcs.yml", unused_variable(s))
-    event = "".join(p.capitalize() for p in a["key"].split("-")) + "_OnError"
-    write(f"{d}/topics/OnError.topic.mcs.yml", error_topic(event, a["key"], a["telemetry"]))
+    w3 = WAVE3.get(a["key"], {})
+    event = w3.get("event") or "".join(p.capitalize() for p in a["key"].split("-")) + "_OnError"
+    write(f"{d}/topics/OnError.topic.mcs.yml", error_topic(event, a["key"], a["telemetry"], conversation_id=not w3.get("no_conversation_id")))
     write(f"{d}/topics/RecebimentoOrquestrador.topic.mcs.yml", redirect_topic())
     kfile, kname, kdesc, ksite, ktc = a["knowledge"]
     tfile, tname, tdesc, tmodel, tinput = a["topic"]
@@ -1046,4 +1089,8 @@ if __name__ == "__main__":
     build_orchestrator()
     for a in SPECIALISTS:
         build_specialist(a)
+    examples = os.path.dirname(os.path.normpath(ROOT))
+    write(os.path.join(examples, "telemetria.csv"), TELEMETRY_CSV)
+    write(os.path.join(examples, "inventario.csv"), INVENTORY_CSV)
+    write(os.path.join(examples, "equipe.csv"), TEAM_CSV)
     print("done")

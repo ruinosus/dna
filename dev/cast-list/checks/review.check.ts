@@ -63,7 +63,7 @@ ok(labelOf('called-with:history', 'pt') === 'Recebe o histórico da conversa' &&
   'the names of the contract and the flows')
 ok(dimensionOf('called-with:history') === 'orchestration' && dimensionOf('routing:described') === 'orchestration' && dimensionOf('flow-uses:http:x') === 'integrations' && dimensionOf('orphan:topic:x') === 'governance', 'the contract in D, the flows in B')
 ok(['called-with:input:', 'flow-uses:http:', 'orphan:topic:', 'disabled:node:', 'called-with:history', 'flow-returns'].every((k) => md.includes(k)), 'keys.md lists the new keys')
-ok(looks.length === 18 && looks.every((l) => l.en && l.pt), `${looks.length} things to look at, each in English and Portuguese`, pt)
+ok(looks.length === 20 && looks.every((l) => l.en && l.pt), `${looks.length} things to look at, each in English and Portuguese`, pt)
 ok(!looks.some((l) => /\bagentes?\b|\bagents?\b/i.test(l.pt + l.en)), 'the screen words never say «agent»', looks.filter((l) => /agent/i.test(l.pt + l.en)))
 ok(looks.findIndex((l) => l.key === 'off') < looks.findIndex((l) => l.key === 'gap') && looks.findIndex((l) => l.key === 'gap') < looks.findIndex((l) => l.key === 'solo'), 'off a pattern first, then the rules, then the solos')
 

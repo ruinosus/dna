@@ -28,10 +28,18 @@ const back = (lang: 'en' | 'pt') => readXlsx(Buffer.from(workbookFile(sheets(lan
 
 // the sheets
 const pt = sheets('pt')
-ok(pt.map((s) => s.name).join() === 'Resumo,Matriz,Padrões,Texto,Roteamento,Fora do padrão,Lacunas,Conflitos,Sem uso,Elenco,Evidências,Declarado', 'the sheets of the spec, in order (pt)', pt.map((s) => s.name))
-ok(sheets('en').map((s) => s.name).join() === 'Summary,Matrix,Patterns,Text,Routing,Off pattern,Gaps,Conflicts,Unused,Cast,Evidence,Declared', 'and in English')
+ok(pt.map((s) => s.name).join() === 'Resumo,Matriz,Padrões,Texto,Roteamento,Telemetria,Fora do padrão,Lacunas,Conflitos,Sem uso,Elenco,Evidências,Declarado', 'the sheets of the spec, in order (pt)', pt.map((s) => s.name))
+ok(sheets('en').map((s) => s.name).join() === 'Summary,Matrix,Patterns,Text,Routing,Telemetry,Off pattern,Gaps,Conflicts,Unused,Cast,Evidence,Declared', 'and in English')
 const odd = compare([...agents, extractAgent('odd', [{ path: 'agent.mcs.yml', text: 'kind: GptComponentMetadata\n' }, { path: 'a.txt', text: '' }])], profile, demo)
 ok(workbookOf(odd, reviewCast(odd), demo, 'pt').at(-1)?.name === 'Não entendeu', '«Not understood» only when something was not')
+// the telemetry: each event as written, its form, its fields; with the export, the times
+const tsheet = pt.find((s) => s.key === 'telemetry')!
+const trow = (agent: string) => tsheet.rows.find((x) => x[0] === agent)?.map((c) => (typeof c === 'object' && c ? (c as { v: unknown }).v : c))
+ok(trow('bodega-cupons')?.slice(1, 4).join(' | ') === 'bodega_cupons_onerror | ‹nome›_OnError | Agente, ErrorMessage, ErrorCode, TimeUTC' && tsheet.columns.length === 5, 'the Telemetry sheet: as written, the form it counts as, its fields (no times without the export)', trow('bodega-cupons'))
+const fired = { days: 30, file: 't.csv', rows: [{ agent: 'bodega-pedidos', event: 'BodegaPedidos_OnError', count: 7, line: 2 }, { agent: 'bodega-frete', event: 'TopicStart', count: 3, line: 3 }] }
+const withTimes = workbookOf(compare(agents, profile, demo, fired), [], demo, 'pt').find((s) => s.key === 'telemetry')!
+const times = (agent: string) => withTimes.rows.find((x) => x[0] === agent)?.at(-1)
+ok((withTimes.rows[0].at(-1) as { v: string }).v === 'Disparou (30 dias)' && times('bodega-pedidos') === 7 && (times('bodega-frete') as { v: number }).v === 0 && times('bodega-cupons') === '—', 'with the export: the times, 0 in red, «—» for who has no line', withTimes.rows)
 const summary = pt[0].rows.map((r) => r.map((c) => (typeof c === 'object' ? c.v : c)).join(' | ')).join('\n')
 ok(summary.includes('dados do cliente') && summary.includes('não escala para humano (bodega-frete)'), 'the summary: what to look at, and that it holds the client’s data', summary)
 

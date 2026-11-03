@@ -1,0 +1,10 @@
+Item name,Item type,Schema name,Owner,Environment,Created on,Last published
+Bodega Azul - Orquestrador,Agent,cr7b2_bodegaOrquestrador,atendimento@bodegaazul.example,Bodega Azul (Produção),2026-03-02,2026-10-28
+Bodega Azul - Pedidos,Agent,cr7b2_bodegaPedidos,pedidos@bodegaazul.example,Bodega Azul (Produção),2026-03-05,2026-10-21
+Bodega Azul - Devoluções,Agent,cr7b2_bodegaDevolucoes,trocas@bodegaazul.example,Bodega Azul (Produção),2026-03-05,2026-10-14
+Bodega Azul - Frete,Agent,cr7b2_bodegaFrete,frete@bodegaazul.example,Bodega Azul (Produção),2026-03-09,2026-09-30
+Bodega Azul - Cupons,Agent,cr7b2_bodegaCupons,,Bodega Azul (Produção),2026-03-12,2026-10-02
+Bodega Azul - Loja Física,Agent,cr7b2_bodegaLojaFisica,loja@bodegaazul.example,Bodega Azul (Produção),2026-04-01,
+Bodega Azul - Fidelidade,Agent,cr7b2_bodegaFidelidade,fidelidade@bodegaazul.example,Bodega Azul (Testes),2026-08-20,
+Painel de Pedidos,Canvas app,,pedidos@bodegaazul.example,Bodega Azul (Produção),2026-02-11,
+Abrir chamado no ERP,Agent flow,,pedidos@bodegaazul.example,Bodega Azul (Produção),2026-03-05,

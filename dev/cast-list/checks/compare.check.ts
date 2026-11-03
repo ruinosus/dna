@@ -34,7 +34,7 @@ ok(!r.patterns.some((p) => p.role === 'orchestrator'), 'one orchestrator makes n
 
 // who is off a pattern
 const off = (res: Result) => [...new Set(res.offPattern.map((o) => o.agent))].sort()
-ok(off(r).join() === 'bodega-frete,bodega-loja-fisica', 'off a pattern: only bodega-frete and bodega-loja-fisica', r.offPattern)
+ok(off(r).join() === 'bodega-cupons,bodega-frete,bodega-loja-fisica', 'off a pattern: only bodega-cupons (a telemetry field), bodega-frete and bodega-loja-fisica', r.offPattern)
 ok(keys(r.offPattern.filter((o) => o.agent === 'bodega-frete' && !o.key.startsWith('text:') && !o.key.startsWith('called-with:'))).join() === 'trigger:OnEscalate', 'bodega-frete: off once — it does not escalate (the fallback that would lead there is part of it)', r.offPattern)
 const part = pattern(r, 'reaches:OnEscalate')
 ok(part?.partOf === 'trigger:OnEscalate' && part.share === 1 && part.scope === 'platform', 'reaching escalation is a part of escalating, checked on the agents that escalate', part)
@@ -80,7 +80,7 @@ ok(pattern(rejected, 'node:LogCustomTelemetryEvent')?.decision?.status === 'reje
 
 // with no profile at all, the same agents and the same people off
 const bare = compare(agents, DEFAULT_PROFILE, empty)
-ok(bare.roles['bodega-orquestrador'] === 'orchestrator' && off(bare).join() === 'bodega-frete,bodega-loja-fisica', 'with no profile: the same orchestrator, the same two off a pattern')
+ok(bare.roles['bodega-orquestrador'] === 'orchestrator' && off(bare).join() === 'bodega-cupons,bodega-frete,bodega-loja-fisica', 'with no profile: the same orchestrator, the same three off a pattern')
 // what the analysis did not understand comes with the agent
 const odd = compare([...agents, extractAgent('odd', [{ path: 'agent.mcs.yml', text: 'kind: GptComponentMetadata\n' }, { path: 'x.txt', text: '' }])], profile, empty)
 ok(odd.unknown.length === 1 && odd.unknown[0].agent === 'odd' && odd.unknown[0].file === 'x.txt', 'what was not understood says the agent and the file', odd.unknown)

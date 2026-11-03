@@ -27,7 +27,7 @@ const UI = {
     summary: (n: number, p: number, o: number, s: number, t: number) => `${n} in the cast · ${p} patterns · ${o} off a pattern · ${s} only one has · threshold ${t}% of each role`,
     excel: '⬇ Excel', yaml: '⬇ cast.yaml', png: '⬇ PNG', name: 'Name', said: 'declared',
     unused: (n: number) => `Unused (${n})`, nothingUnused: 'Everything is used, nothing is switched off.', flows: 'Flows', returnsNothing: 'returns nothing', otherFlow: 'another flow',
-    routing: 'Routing', called: 'Called', history: 'History', inputs: 'Inputs', description: 'Description', notInFolder: 'not in the folder', chars: (n: number) => `${n} characters`,
+    telemetry: 'Telemetry', times: (n: number, d: number) => `${n} ${n === 1 ? 'time' : 'times'} in ${d} days`, notFired: 'did not fire', noLine: 'no line in the telemetry', routing: 'Routing', called: 'Called', history: 'History', inputs: 'Inputs', description: 'Description', notInFolder: 'not in the folder', chars: (n: number) => `${n} characters`,
   },
   pt: {
     map: 'Mapa', patterns: 'Padrões', cast: 'Elenco', microsoft: 'Microsoft', unknown: (n: number) => `O que a análise não entendeu (${n})`,
@@ -40,7 +40,7 @@ const UI = {
     summary: (n: number, p: number, o: number, s: number, t: number) => `${n} no elenco · ${p} padrões · ${o} fora do padrão · ${s} só um tem · limite ${t}% de cada papel`,
     excel: '⬇ Excel', yaml: '⬇ cast.yaml', png: '⬇ PNG', name: 'Nome', said: 'declarado',
     unused: (n: number) => `Sem uso (${n})`, nothingUnused: 'Tudo é usado, nada está desligado.', flows: 'Fluxos', returnsNothing: 'não devolve nada', otherFlow: 'outro fluxo',
-    routing: 'Roteamento', called: 'Chamado', history: 'Histórico', inputs: 'Entradas', description: 'Descrição', notInFolder: 'não está na pasta', chars: (n: number) => `${n} caracteres`,
+    telemetry: 'Telemetria', times: (n: number, d: number) => `${n} ${n === 1 ? 'vez' : 'vezes'} em ${d} dias`, notFired: 'não disparou', noLine: 'nenhuma linha na telemetria', routing: 'Roteamento', called: 'Chamado', history: 'Histórico', inputs: 'Entradas', description: 'Descrição', notInFolder: 'não está na pasta', chars: (n: number) => `${n} caracteres`,
   },
 }
 
@@ -187,6 +187,7 @@ function castTab() {
       ${off.length ? `<dt>${u.off}</dt><dd class="cl-lack">${off.map((o) => label(o.key)).join('<br>')}</dd>` : ''}
       ${solos.length ? `<dt>${u.solo}</dt><dd>${solos.map((s) => label(s.key)).join('<br>')}</dd>` : ''}
       ${chains(a.id, a.displayName ?? a.id)}
+      ${eventsOf(a.id)}
       ${a.children.length ? `<dt>${u.children}</dt><dd>${a.children.map((c) => `${esc(c.name)} <span class="cl-sub">(${Object.keys(c.facts).map(label).join(', ')})</span>`).join('<br>')}</dd>` : ''}
       ${unknown.length ? `<dt>${esc(w.unknown)}</dt><dd>${unknown.map((x) => esc(x.file)).join('<br>')}</dd>` : ''}</dl>${routing}</section>`
   }).join('')}</div>`
@@ -202,6 +203,16 @@ function chains(id: string, who: string) {
     return `<div class="cl-chain">${[who, f.name, ...(to.length ? [to.join(', ')] : [])].map(esc).join(' <span aria-hidden="true">→</span> ')}${f.returns ? '' : ` <span class="cl-silent">— ${u.returnsNothing}</span>`}</div>`
   }
   return `<dt>${u.flows}</dt><dd>${flows.map(one).join('')}</dd>`
+}
+
+// the events it logs, as written; with the export of Application Insights, the times each fired, in red when none
+function eventsOf(id: string) {
+  const events = r.telemetry.events.filter((e) => e.agent === id)
+  const days = r.telemetry.days
+  const silent = r.telemetry.silent.includes(id)
+  if (!events.length && !silent) return ''
+  const one = (e: (typeof events)[number]) => `<div class="cl-event"><code>${esc(e.name)}</code>${!days || silent ? '' : e.fired ? ` <span class="cl-sub">— ${esc(u.times(e.fired, days))}</span>` : ` <span class="cl-silent">— ${u.notFired}</span>`}</div>`
+  return `<dt>${u.telemetry}</dt><dd class="cl-events">${events.map(one).join('')}${silent ? `<div class="cl-silent">${u.noLine}</div>` : ''}</dd>`
 }
 
 // what an orchestrator passes each one it calls; what is missing, in red

@@ -85,6 +85,8 @@ Every fact cast-list finds is a key. The keys below have a name; any other key k
 | `orphan:variable:<value>` | Variable nobody uses <value> | Variável que ninguém usa <valor> |
 | `orphan:flow:<value>` | Flow nobody calls <value> | Fluxo que ninguém chama <valor> |
 | `disabled:node:<value>` | Switched-off node <value> | Nó desligado <valor> |
+| `telemetry:event:<value>` | Logs the event <value> | Registra o evento <valor> |
+| `telemetry:field:<value>` | The event carries the field (<event>/<field>) <value> | O evento leva o campo (<evento>/<campo>) <valor> |
 | `disabled:<value>` | Switched off <value> | Desligado <valor> |
 | `node:<value>` | Node <value> | Nó <valor> |
 | `model:<value>` | Model <value> | Modelo <valor> |

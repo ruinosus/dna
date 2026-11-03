@@ -8,15 +8,19 @@
 // nothing uses — a topic nobody can reach, a tool the model cannot choose, a variable no file names, a flow no node
 // calls — and what was switched off. A switched-off node is not a fact: a disabled telemetry node is no telemetry.
 import { lineOfAction, readFlow } from './flows'
+import { fieldsOf, formOf } from './telemetry'
 import { isMap, isScalar, isSeq, LineCounter, parseDocument, type Node } from 'yaml'
 
 export interface Source { file: string; line?: number }
 export type Facts = Record<string, Source[]>
-export interface Unknown { file: string; why: 'yaml' | 'empty' | 'kind' | 'file' | 'json' | 'flow'; kind?: string }
+export interface Unknown { file: string; why: 'yaml' | 'empty' | 'kind' | 'file' | 'json' | 'flow' | 'telemetry'; kind?: string }
 /** One connected-agent action of an orchestrator: who it calls, with what. */
 export interface Call { calls: string; /** The name the action gives it. */ name?: string; history: boolean; inputs: string[]; description: string; file: string; line?: number }
 /** A flow in workflows/: what it uses (the keys of flow-uses:), whether it answers, and whether a node calls it. */
 export interface Flow { id?: string; name: string; folder: string; uses: string[]; returns: boolean; called: boolean; file: string }
+/** A telemetry event the agent logs: its name as written, its form (the agent's own name taken out: «{agent}_OnError»)
+ * and the fields of its record (none when the record is a formula that cannot be read). */
+export interface TelemetryEvent { name: string; form: string; fields?: string[]; file: string; line?: number }
 /** A text the model reads: the instructions, or a topic's or an action's description for the model. */
 export interface Text { source: 'instructions' | 'descriptions'; file: string; line: number; text: string }
 export interface AgentFacts {
@@ -35,6 +39,7 @@ export interface AgentFacts {
   /** The connected agents it calls, each with what it passes. */
   contract: Call[]
   flows: Flow[]
+  telemetry: TelemetryEvent[]
 }
 
 type Obj = Record<string, unknown>
@@ -96,7 +101,7 @@ const KIND_OF_FOLDER: Record<string, string> = { topics: 'topic', actions: 'acti
 const FLOW_FILE = /^workflows\/([^/]+)\/(.+)$/
 
 export function extractAgent(id: string, files: { path: string; text: string }[], kinds?: Set<string>): AgentFacts {
-  const agent: AgentFacts = { id, facts: {}, children: [], unknown: [], names: {}, texts: [], contract: [], flows: [] }
+  const agent: AgentFacts = { id, facts: {}, children: [], unknown: [], names: {}, texts: [], contract: [], flows: [], telemetry: [] }
   let knowledge: Source[] = []
   // a topic that calls another (BeginDialog) reaches what that topic is for — its trigger, known once every file is read
   const triggers = new Map<string, string>()
@@ -106,6 +111,8 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
   const dialogs: string[] = []
   const lonely: { kind: 'topic' | 'action'; name: string; at: Source }[] = []
   const variables: { name: string; at: Source }[] = []
+  // the events it logs, named once every file is read (the agent's names are in settings.mcs.yml)
+  const events: { name: string; properties: unknown; at: Source }[] = []
   const flowFolders = new Map<string, { meta?: Obj; metaFile?: string; json: Record<string, { file: string; text: string; data: unknown }> }>()
   for (const f of [...files].sort((a, b) => a.path.localeCompare(b.path))) {
     const flow = FLOW_FILE.exec(f.path)
@@ -282,6 +289,11 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
     // the nodes that say something, wherever they are
     for (const n of nodes(root)) {
       if (NODES.has(n.kind as string)) add(`node:${n.kind}`, n)
+      if (n.kind === 'LogCustomTelemetryEvent' && !child) {
+        // a name made by a formula says nothing to compare
+        if (str(n.eventName) && !(n.eventName as string).trim().startsWith('=')) events.push({ name: (n.eventName as string).trim(), properties: n.properties, at: { file: f.path, line: r.lineOf(n) } })
+        else agent.unknown.push({ file: f.path, why: 'telemetry' })
+      }
       if (n.kind === 'InvokeConnectorAction' && str(n.connectionReference)) {
         const api = apiOf(n.connectionReference as string)
         add(`connector:${api}`, n)
@@ -301,6 +313,13 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
     }
   }
   if (knowledge.length) agent.facts[`knowledge:count=${knowledge.length}`] = knowledge
+  for (const e of events) {
+    const form = formOf(e.name, agent)
+    const fields = fieldsOf(e.properties)
+    ;(agent.facts[`telemetry:event:${form}`] ??= []).push(e.at)
+    for (const field of fields ?? []) (agent.facts[`telemetry:field:${form}/${field}`] ??= []).push(e.at)
+    agent.telemetry.push({ name: e.name, form, ...(fields ? { fields } : {}), ...e.at })
+  }
 
   // the flows: what each uses counts only when a node of the agent calls it; one nobody calls is unused
   const calledFlows = new Set([agent.facts, ...agent.children.map((c) => c.facts)].flatMap((fs) => Object.keys(fs)).filter((k) => k.startsWith('flow:')).map((k) => k.slice(5)))

@@ -41,8 +41,8 @@ beginDialog:
 
     - kind: LogCustomTelemetryEvent
       id: logTelemetry_PcfoEN
-      eventName: BodegaCupons_OnError
-      properties: "={Agente: \"bodega-cupons\", ErrorMessage: System.Error.Message, ErrorCode: System.Error.Code, TimeUTC: Topic.CurrentTime, ConversationId: System.Conversation.Id}"
+      eventName: bodega_cupons_onerror
+      properties: "={Agente: \"bodega-cupons\", ErrorMessage: System.Error.Message, ErrorCode: System.Error.Code, TimeUTC: Topic.CurrentTime}"
 
     - kind: CancelAllDialogs
       id: cancelAllDialogs_7DG56T

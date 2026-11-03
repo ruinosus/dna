@@ -11,10 +11,11 @@
 // pattern nor a solo: it is listed on its own, to remove or to switch on.
 import type { Cast, Decision, Scope } from './cast'
 import { blocksOf, type BlockFamily } from './blocks'
-import type { AgentFacts, Call, Facts, Flow, Source, Unknown } from './extract'
+import type { AgentFacts, Call, Facts, Flow, Source, TelemetryEvent, Unknown } from './extract'
 import { partOf, SHORT_ROUTING } from './labels'
 import { markerFindings, markersOf, type MarkerFinding } from './markers'
 import { MS_PATTERNS } from './microsoft'
+import { normal } from './telemetry'
 import { matches, rolesOf, typesOf, type Profile, type Role, type Rule } from './profile'
 
 export type { Scope }
@@ -41,6 +42,10 @@ export interface Conflict { agent: string; key: string; declared: string; observ
 /** A call of an orchestrator, with the agent of the folder it reaches (none when it is not in the folder). */
 export interface Route extends Call { caller: string; agent?: string }
 export interface Unused { agent: string; key: string; how: 'orphan' | 'disabled'; what: string; name: string; sources: Source[] }
+/** What the telemetry (an export of Application Insights) says fired: per agent of the folder, each event by name. */
+export interface Fired { days: number; file: string; rows: { agent: string; event: string; count: number; line: number }[] }
+/** An event an agent logs, with the form it is compared by and, with the telemetry, how many times it fired. */
+export interface Event extends TelemetryEvent { agent: string; /** The form it counts as: the most common spelling. */ as: string; fired?: number }
 export interface Result {
   name?: string
   roles: Record<string, Role>
@@ -71,6 +76,9 @@ export interface Result {
   /** Every flow of every agent, called or not. */
   flows: (Flow & { agent: string })[]
   unused: Unused[]
+  /** The telemetry events: each one; who wrote one another way (it counts as `as`); with the telemetry, those that did
+   * not fire and the agents with no line in it. */
+  telemetry: { events: Event[]; spellings: Event[]; notFired: Event[]; silent: string[]; days?: number; file?: string }
 }
 
 
@@ -85,7 +93,35 @@ const isVariant = (key: string) => key.endsWith('~variant')
 /** What nothing uses or what is switched off: listed, never compared. */
 export const isUnused = (key: string) => /^(orphan|disabled):/.test(key)
 
-export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Result {
+/** Two spellings of one event («{agent}_OnError», «{agent}_onerror») count as the one most agents write (on a tie, the
+ * first in order): form → the form it counts as. */
+function spellingsOf(found: AgentFacts[]): Map<string, string> {
+  const by = new Map<string, Map<string, Set<string>>>()
+  for (const a of found)
+    for (const t of a.telemetry ?? []) {
+      const group = by.get(normal(t.form)) ?? new Map<string, Set<string>>()
+      by.set(normal(t.form), group)
+      group.set(t.form, (group.get(t.form) ?? new Set()).add(a.id))
+    }
+  const as = new Map<string, string>()
+  for (const group of by.values()) {
+    const [first] = [...group].sort(([a, x], [b, y]) => y.size - x.size || a.localeCompare(b))
+    for (const form of group.keys()) as.set(form, first[0])
+  }
+  return as
+}
+/** A key with its event's form changed to the form it counts as. */
+function respell(key: string, as: Map<string, string>): string {
+  if (key.startsWith('telemetry:event:')) return `telemetry:event:${as.get(key.slice(16)) ?? key.slice(16)}`
+  if (key.startsWith('telemetry:field:')) {
+    const cut = key.lastIndexOf('/')
+    const form = key.slice(16, cut)
+    return `telemetry:field:${as.get(form) ?? form}${key.slice(cut)}`
+  }
+  return key
+}
+
+export function compare(found: AgentFacts[], profile: Profile, cast: Cast, fired?: Fired): Result {
   const given = Object.fromEntries(cast.agents.map((a) => [a.id, a.role]))
   const { roles, unmatched } = rolesOf(found, profile, given)
   const ignored = (k: string) => profile.ignore.includes(k) || (!profile.microsoftPatterns && k.startsWith('ms:'))
@@ -105,7 +141,13 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
     for (const i of r.inputs) add(`called-with:input:${i}`)
     if (r.description) add('routing:described')
   }
-  const seen = (a: AgentFacts): Facts => ({ ...a.facts, ...blocks.facts[a.id], ...marked.facts[a.id], ...called[a.id] })
+  // an event spelt another way counts as the one most write: its pattern and its fields are the same
+  const spelt = spellingsOf(found)
+  const seen = (a: AgentFacts): Facts => {
+    const facts: Facts = {}
+    for (const [k, v] of Object.entries(a.facts)) (facts[respell(k, spelt)] ??= []).push(...v)
+    return { ...facts, ...blocks.facts[a.id], ...marked.facts[a.id], ...called[a.id] }
+  }
   const agents = found.map((a) => {
     const observed = seen(a)
     const facts: Facts = Object.fromEntries(Object.entries(observed).filter(([k]) => !ignored(k)))
@@ -191,9 +233,18 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
   }
   patterns.sort((a, b) => a.scope.localeCompare(b.scope) || a.key.localeCompare(b.key))
 
+  // the events: each with the form it counts as and, with the telemetry, the times it fired
+  const events: Event[] = found.flatMap((a) => (a.telemetry ?? []).map((t) => {
+    const rows = fired?.rows.filter((x) => x.agent === a.id && normal(x.event) === normal(t.name))
+    return { ...t, agent: a.id, as: spelt.get(t.form) ?? t.form, ...(fired ? { fired: rows!.reduce((n, x) => n + x.count, 0) } : {}) }
+  }))
+  // a record that could not be read lacks no field: that agent is left out of its event's fields
+  const unread = new Set(events.filter((e) => !e.fields).map((e) => `${e.agent} ${e.as}`))
+  const unreadField = (agent: string, key: string) => key.startsWith('telemetry:field:') && unread.has(`${agent} ${key.slice(16, key.lastIndexOf('/'))}`)
+
   const offPattern: OffPattern[] = patterns
     .filter((p) => p.decision?.status !== 'rejected')
-    .flatMap((p) => inScope(p.scope).filter((a) => !(p.key in a.facts) && (!p.partOf || p.partOf in a.facts)).map((a) => ({
+    .flatMap((p) => inScope(p.scope).filter((a) => !(p.key in a.facts) && (!p.partOf || p.partOf in a.facts) && !unreadField(a.id, p.key)).map((a) => ({
       agent: a.id, key: p.key, scope: p.scope, ...(p.partOf ? { partOf: p.partOf } : {}), ...(`${p.key}~variant` in a.facts ? { variant: true } : {}),
     })))
     .sort((a, b) => a.agent.localeCompare(b.agent) || a.key.localeCompare(b.key))
@@ -245,5 +296,12 @@ export function compare(found: AgentFacts[], profile: Profile, cast: Cast): Resu
     },
     flows: found.flatMap((a) => (a.flows ?? []).map((f) => ({ ...f, agent: a.id }))),
     unused,
+    telemetry: {
+      events,
+      spellings: events.filter((e) => e.as !== e.form),
+      notFired: fired ? events.filter((e) => e.fired === 0 && fired.rows.some((x) => x.agent === e.agent)) : [],
+      silent: fired ? found.map((a) => a.id).filter((id) => !fired.rows.some((x) => x.agent === id)) : [],
+      ...(fired ? { days: fired.days, file: fired.file } : {}),
+    },
   }
 }

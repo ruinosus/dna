@@ -106,7 +106,7 @@ body { margin: 0; }
 .cl-diff { font: 12.5px/1.6 ui-monospace, Menlo, monospace; }
 .cl-del { background: var(--off-bg); color: var(--off); text-decoration: line-through; border-radius: 3px; padding: 0 2px; }
 .cl-add { background: var(--platform-bg); color: var(--platform); border-radius: 3px; padding: 0 2px; }
-.cl-chain { margin: 0 0 4px; }
+.cl-chain, .cl-event { margin: 0 0 4px; }
 .cl-silent { color: var(--off); font-weight: 600; }
 .cl-routing { border-collapse: collapse; font-size: 12px; width: 100%; }
 .cl-routing th, .cl-routing td { text-align: left; padding: 3px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }

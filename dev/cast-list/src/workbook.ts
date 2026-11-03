@@ -1,17 +1,17 @@
 // The comparison as a workbook: Summary, Matrix (a row per fact, a column per agent: ● has it, × is off a pattern,
 // ◐ declared), Patterns (with Scope, Decision and Why to fill in), Text, Routing (what the orchestrator passes each
-// one it calls), Off pattern, Gaps, Conflicts, Unused (nobody uses it, or it is switched off), Cast, Evidence (file and
+// one it calls), Telemetry (each event, its form, its fields and, with the export, how many times it fired), Off pattern, Gaps, Conflicts, Unused (nobody uses it, or it is switched off), Cast, Evidence (file and
 // line of every fact), Declared (to fill in) — and Not understood, when something was not. Sheets of rows the
 // platform's xlsx writer turns into an .xlsx; fromSheets reads Patterns and Declared back.
 import type { Sheet as LibSheet, Value } from '@lib/ways/workbook'
 import { xlsx } from '@lib/ways/xlsx'
 import type { Cast } from './cast'
 import type { Result } from './compare'
-import { DIMENSIONS, dimensionOf, labelOf, type Dimension, type Lang } from './labels'
+import { DIMENSIONS, dimensionOf, formText, labelOf, type Dimension, type Lang } from './labels'
 import { groupPatterns, type Look } from './review'
 import { SHEET_WORDS } from './words'
 
-export type SheetKey = 'summary' | 'matrix' | 'patterns' | 'text' | 'routing' | 'off' | 'gaps' | 'conflicts' | 'unused' | 'agents' | 'evidence' | 'declared' | 'unknown'
+export type SheetKey = 'summary' | 'matrix' | 'patterns' | 'text' | 'routing' | 'telemetry' | 'off' | 'gaps' | 'conflicts' | 'unused' | 'agents' | 'evidence' | 'declared' | 'unknown'
 /** A sheet of rows; the xlsx writer reads its name, columns, rows and header. */
 export interface Sheet extends Omit<LibSheet, 'key'> { key: SheetKey }
 /** The .xlsx of these sheets (the platform's writer: its own `key` names only the platform's sheets). */
@@ -86,9 +86,14 @@ export function workbookOf(r: Result, looks: Look[], cast: Cast, lang: Lang = 'e
   const routing = sheet('routing', [[w.caller, 24], [w.called, 30], [w.history, 10], [w.inputs, 30], [w.routingText, 70], [w.chars, 10], [w.file, 44]],
     r.contract.routes.map((c) => [c.caller, c.agent ?? `${c.name ?? c.calls} (${w.notInFolder})`, c.history ? w.yes : w.no, c.inputs.join(', '),
       { v: c.description, wrap: true }, c.description.length, `${c.file}${c.line ? `:${c.line}` : ''}`]))
+  // each event as written, the form it counts as, its fields and, with the export of Application Insights, the times
+  const days = r.telemetry.days
+  const telemetry = sheet('telemetry', [[w.agent, 24], [w.written, 30], [w.form, 28], [w.fields, 50], [w.file, 44], ...(days ? [[w.fired(days), 16] as [string, number]] : [])],
+    r.telemetry.events.map((e) => [e.agent, e.name, formText(e.as, lang), e.fields ? e.fields.join(', ') : w.notRead, `${e.file}${e.line ? `:${e.line}` : ''}`,
+      ...(days ? [e.fired === undefined || r.telemetry.silent.includes(e.agent) ? '—' : e.fired === 0 ? { v: 0, color: 'B42318', bold: true } : e.fired] : [])]))
   const unused = sheet('unused', [[w.agent, 24], [w.what, 16], [w.name, 30], [w.how, 14], [w.file, 50]],
     r.unused.flatMap((u) => u.sources.map((s): Value[] => [u.agent, w.thing[u.what] ?? u.what, r.names[u.name] ?? u.name, w[u.how], `${s.file}${s.line ? `:${s.line}` : ''}`])))
-  const sheets = [summary, matrix, patterns, ...(r.blocks.length ? [text] : []), ...(r.contract.routes.length ? [routing] : []), offSheet, gaps, conflicts, ...(r.unused.length ? [unused] : []), cast_, evidence, declared]
+  const sheets = [summary, matrix, patterns, ...(r.blocks.length ? [text] : []), ...(r.contract.routes.length ? [routing] : []), ...(r.telemetry.events.length ? [telemetry] : []), offSheet, gaps, conflicts, ...(r.unused.length ? [unused] : []), cast_, evidence, declared]
   if (r.unknown.length) sheets.push(sheet('unknown', [[w.agent, 24], [w.file, 50], [w.why, 40], [w.kind, 24]], r.unknown.map((u) => [u.agent, u.file, w.why_[u.why], u.kind ?? ''])))
   return sheets
 }

@@ -1,0 +1,10 @@
+agente,evento,vezes
+Bodega Azul - Orquestrador,TopicStart,1840
+Bodega Azul - Orquestrador,BodegaOrquestrador_OnError,12
+Bodega Azul - Pedidos,TopicStart,610
+Bodega Azul - Pedidos,BodegaPedidos_OnError,7
+Bodega Azul - Devoluções,TopicStart,402
+Bodega Azul - Devoluções,BodegaDevolucoes_OnError,3
+Bodega Azul - Frete,TopicStart,355
+Bodega Azul - Cupons,TopicStart,290
+Bodega Azul - Cupons,bodega_cupons_onerror,5

@@ -68,6 +68,8 @@ const KINDS: [string, Dimension, string, string][] = [
   ['orphan:variable:', 'governance', 'Variable nobody uses', 'Variável que ninguém usa'],
   ['orphan:flow:', 'governance', 'Flow nobody calls', 'Fluxo que ninguém chama'],
   ['disabled:node:', 'governance', 'Switched-off node', 'Nó desligado'],
+  ['telemetry:event:', 'governance', 'Logs the event', 'Registra o evento'],
+  ['telemetry:field:', 'governance', 'The event carries the field (<event>/<field>)', 'O evento leva o campo (<evento>/<campo>)'],
   ['disabled:', 'governance', 'Switched off', 'Desligado'],
   ['reaches:', 'conversation', 'A topic leads to it (part of trigger:<value>)', 'Um tópico leva a ele (parte de trigger:<valor>)'],
   ['calls:topic:', 'conversation', 'Calls the topic (one not found)', 'Chama o tópico (não encontrado)'],
@@ -106,8 +108,19 @@ export const matches = (key: string, pattern: string) => (pattern.endsWith('*') 
 /** Shorter than this, a routing description does not say when to call the agent (here, so the map needs no more). */
 export const SHORT_ROUTING = 80
 
-/** The fact a key is a part of: reaching a topic is part of having it. */
-export const partOf = (key: string) => (key.startsWith('reaches:') ? `trigger:${key.slice(8)}` : undefined)
+/** The fact a key is a part of: reaching a topic is part of having it; an event is part of logging telemetry, and a
+ * field is part of its event. */
+export function partOf(key: string): string | undefined {
+  if (key.startsWith('reaches:')) return `trigger:${key.slice(8)}`
+  if (key.startsWith('telemetry:event:')) return 'node:LogCustomTelemetryEvent'
+  if (key.startsWith('telemetry:field:')) return `telemetry:event:${key.slice(16, key.lastIndexOf('/'))}`
+  return undefined
+}
+
+/** An event's form on screen: the agent's place in its name is «‹name›» («‹nome›»). */
+export const formText = (form: string, lang: Lang) => form.split('{agent}').join(lang === 'pt' ? '‹nome›' : '‹name›')
+/** telemetry:field:<form>/<field> → its event's form and its field. */
+const fieldOf = (key: string) => ({ form: key.slice(16, key.lastIndexOf('/')), field: key.slice(key.lastIndexOf('/') + 1) })
 
 /** Readable names the files give (a connector's API name, an agent's schema name → the name people know). */
 export type Names = Record<string, string>
@@ -136,6 +149,12 @@ export function labelOf(key: string, lang: Lang, names?: Names): string {
     return lang === 'pt' ? `Um tópico leva a «${fact}»` : `A topic leads to «${fact}»`
   }
   if (key.startsWith('called-with:input:')) return lang === 'pt' ? `Recebe «${key.slice(18)}» do orquestrador` : `Receives «${key.slice(18)}» from the orchestrator`
+  if (key.startsWith('telemetry:event:')) return lang === 'pt' ? `Registra o evento «${formText(key.slice(16), lang)}»` : `Logs the event «${formText(key.slice(16), lang)}»`
+  if (key.startsWith('telemetry:field:')) {
+    const { form, field } = fieldOf(key)
+    const event = formText(form, lang)
+    return lang === 'pt' ? `«${event}» leva «${field}»` : `«${event}» carries «${field}»`
+  }
   const count = /^knowledge:count=(\d+)$/.exec(key)
   if (count) {
     const n = Number(count[1])
@@ -166,6 +185,15 @@ export function lacks(key: string, lang: Lang, n: number, names?: Names): string
     return lang === 'pt' ? `${n === 1 ? 'tem' : 'têm'} «${fact}», mas nenhum tópico leva a ele` : `${n === 1 ? 'has' : 'have'} «${fact}», but no topic leads to it`
   }
   if (key.startsWith('called-with:input:')) return lang === 'pt' ? `${n === 1 ? 'não recebe' : 'não recebem'} «${key.slice(18)}» do orquestrador` : `${n === 1 ? 'does' : 'do'} not receive «${key.slice(18)}» from the orchestrator`
+  if (key.startsWith('telemetry:event:')) {
+    const event = formText(key.slice(16), lang)
+    return lang === 'pt' ? `${n === 1 ? 'não registra' : 'não registram'} o evento «${event}»` : `${n === 1 ? 'does' : 'do'} not log the event «${event}»`
+  }
+  if (key.startsWith('telemetry:field:')) {
+    const { form, field } = fieldOf(key)
+    const event = formText(form, lang)
+    return lang === 'pt' ? `${n === 1 ? 'registra' : 'registram'} «${event}» sem «${field}»` : `${n === 1 ? 'logs' : 'log'} «${event}» without «${field}»`
+  }
   if (key.startsWith('calls:topic:')) return lang === 'pt' ? `${n === 1 ? 'não chama' : 'não chamam'} o tópico ${key.slice(12)}` : `${n === 1 ? 'does' : 'do'} not call the topic ${key.slice(12)}`
   const name = labelOf(key, lang, names)
   return lang === 'pt' ? `${n === 1 ? 'não tem' : 'não têm'} «${name}»` : `${n === 1 ? 'does' : 'do'} not have «${name}»`

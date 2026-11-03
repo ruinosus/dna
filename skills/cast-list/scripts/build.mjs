@@ -9,6 +9,11 @@
 //   node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]
 //                                  what was filled in the workbook (Declared, the Decision column): listed with a key each,
 //                                  and with --take written to the cast file
+//   node build.mjs <agents-folder> --declared <table.csv|.xlsx> [--declared <another>] [--agent-column <title>] [--take <key,…|all>]
+//                                  what a spreadsheet says about the agents (the team's, the admin center's inventory): each
+//                                  column becomes a declared fact, listed with a key, and with --take written to the cast file
+//   … --telemetry <export.csv|.xlsx> [--telemetry-days <n>]   what fired, from Application Insights (references/telemetry.md):
+//                                  the events in the YAML that did not fire, and who has no line at all
 //
 // With no --html/--xlsx/--lesson it makes the map. Files go in --out (or beside the folder), named by the folder:
 // <id>.html, <id>.xlsx, <id>.lesson.html (a chalk-talk lesson), and <id>.cast.yaml, kept up to date (read again on every
@@ -20,23 +25,26 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
-import { agentsIn, applyChanges, compare, DEFAULT_PROFILE, extractAgent, fromSheets, knownKinds, labelOf, lessonOf, problemText, readCast, readProfile, reviewCast, validateScene, workbookFile, workbookOf, writeCast } from './engine.mjs'
+import { agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, extractAgent, firedFrom, fromSheets, mergeDeclared, knownKinds, labelOf, lessonOf, problemText, readCast, readCsv, readProfile, reviewCast, validateScene, workbookFile, workbookOf, writeCast } from './engine.mjs'
 import { readXlsx } from './read-xlsx.mjs'
 import { fill, inline } from './page.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
-const valued = new Set(['--lang', '--out', '--profile', '--from', '--take'])
+const valued = new Set(['--lang', '--out', '--profile', '--from', '--take', '--declared', '--agent-column', '--telemetry', '--telemetry-days'])
 const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--all', '--facts', ...valued])
 const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
 }
+const options = (name) => argv.flatMap((a, i) => (a === name && argv[i + 1] ? [argv[i + 1]] : []))
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
 const usage = `usage: node build.mjs <agents-folder> --check [--profile <p.cast.yaml>] [--lang en|pt]
        node build.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
        node build.mjs <agents-folder> --facts [--out <folder>]
-       node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]`
+       node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]
+       node build.mjs <agents-folder> --declared <table.csv|.xlsx> [--agent-column <title>] [--take <key,key…|all>] [--out <folder>]
+       … [--telemetry <export.csv|.xlsx>] [--telemetry-days <n>]`
 const lang = option('--lang') ?? 'en'
 const fail = (msg) => {
   console.error(`${msg}\n${usage}`)
@@ -47,7 +55,11 @@ const unknown = argv.find((a) => a.startsWith('--') && !flags.has(a))
 if (unknown) fail(`✗ unknown option ${unknown}`)
 if (!['en', 'pt'].includes(lang)) fail('✗ --lang is en or pt')
 for (const v of valued) if (argv.includes(v) && !option(v)) fail(`✗ ${v} needs a value`)
-if (argv.includes('--take') && !argv.includes('--from')) fail('✗ --take goes with --from')
+if (argv.includes('--take') && !argv.includes('--from') && !argv.includes('--declared')) fail('✗ --take goes with --from or --declared')
+if (argv.includes('--from') && argv.includes('--declared')) fail('✗ --from or --declared, one at a time')
+for (const f of [...options('--declared'), ...options('--telemetry')]) if (!existsSync(f) || !/\.(csv|xlsx)$/i.test(f)) fail(`✗ ${f}: a .csv or an .xlsx that is there`)
+const days = Number(option('--telemetry-days') ?? 30)
+if (!Number.isInteger(days) || days < 1) fail('✗ --telemetry-days is a whole number of days')
 
 const T = {
   en: {
@@ -57,6 +69,12 @@ const T = {
     changes: (n) => (n ? `${n} change${n === 1 ? '' : 's'} in the workbook (take them with --take <key,…> or --take all):` : '✓ the workbook changes nothing'),
     took: (n, f) => `✓ took ${n} change${n === 1 ? '' : 's'} into ${f}`, unknownKey: (k) => `✗ no change with the key «${k}»`,
     declared: 'declared', decision: 'decision', add: '+', set: '~', remove: '−', accepted: 'accepted', rejected: 'rejected', platform: 'platform', specialist: 'specialist', orchestrator: 'orchestrator', none: (f) => `✗ ${f} has no folder with agent.mcs.yml`, privacy: '• the files hold the client’s data: keep them in the client’s environment',
+    noColumn: (f, cols) => `✗ ${f}: no column names the agents of the folder (by schema name, folder or display name): say which with --agent-column "<title>" (columns: ${cols.join(', ')})`,
+    tie: (f, cols) => `✗ ${f}: the columns ${cols.map((c) => `«${c}»`).join(' and ')} name the agents in different ways: say which with --agent-column "<title>"`,
+    noHeader: (f, cols) => `✗ ${f}: no column with that title (columns: ${cols.join(', ')})`,
+    noEvent: (f, cols) => `✗ ${f}: no column of the event («evento», «event» or «name»; columns: ${cols.join(', ')})`,
+    unmatched: (n, f, list) => `• ${f}: ${n} ${n === 1 ? 'row names' : 'rows name'} nobody in the folder: ${list}`, line: 'line',
+    telemetry: (f, n, d) => `✓ telemetry ${f}: ${n} ${n === 1 ? 'row' : 'rows'} of the folder's agents, ${d} days`,
   },
   pt: {
     found: (n, o, s) => `✓ ${n} no elenco: ${o} ${o === 1 ? 'orquestrador' : 'orquestradores'}, ${s} ${s === 1 ? 'especialista' : 'especialistas'}`,
@@ -65,6 +83,12 @@ const T = {
     changes: (n) => (n ? `${n} ${n === 1 ? 'mudança' : 'mudanças'} na planilha (aceite com --take <chave,…> ou --take all):` : '✓ a planilha não muda nada'),
     took: (n, f) => `✓ ${n} ${n === 1 ? 'mudança gravada' : 'mudanças gravadas'} em ${f}`, unknownKey: (k) => `✗ nenhuma mudança com a chave «${k}»`,
     declared: 'declarado', decision: 'decisão', add: '+', set: '~', remove: '−', accepted: 'aceito', rejected: 'rejeitado', platform: 'plataforma', specialist: 'especialista', orchestrator: 'orquestrador', none: (f) => `✗ ${f} não tem nenhuma pasta com agent.mcs.yml`, privacy: '• os arquivos têm dados do cliente: deixe-os no ambiente dele',
+    noColumn: (f, cols) => `✗ ${f}: nenhuma coluna cita os agentes da pasta (pelo nome de esquema, pela pasta ou pelo nome de exibição): diga qual com --agent-column "<título>" (colunas: ${cols.join(', ')})`,
+    tie: (f, cols) => `✗ ${f}: as colunas ${cols.map((c) => `«${c}»`).join(' e ')} citam os agentes de jeitos diferentes: diga qual com --agent-column "<título>"`,
+    noHeader: (f, cols) => `✗ ${f}: nenhuma coluna com esse título (colunas: ${cols.join(', ')})`,
+    noEvent: (f, cols) => `✗ ${f}: nenhuma coluna do evento («evento», «event» ou «name»; colunas: ${cols.join(', ')})`,
+    unmatched: (n, f, list) => `• ${f}: ${n} ${n === 1 ? 'linha não cita' : 'linhas não citam'} ninguém da pasta: ${list}`, line: 'linha',
+    telemetry: (f, n, d) => `✓ telemetria ${f}: ${n} ${n === 1 ? 'linha' : 'linhas'} dos agentes da pasta, ${d} dias`,
   },
 }[lang]
 
@@ -84,6 +108,36 @@ const castFile = join(out, `${id}.cast.yaml`)
 const castText = existsSync(castFile) ? readFileSync(castFile, 'utf8') : undefined
 const cast = castText !== undefined ? read(castFile, readCast).cast : { ...(profile.name ? { name: profile.name } : {}), agents: [], blocks: [], declared: [], decisions: [] }
 
+// a table from outside: the sheets of an .xlsx, or a .csv
+const tablesOf = (file) => (/\.xlsx$/i.test(file) ? readXlsx(readFileSync(file)) : [readCsv(readFileSync(file, 'utf8'), '')])
+const tableProblem = (file, p) => {
+  console.error(p.problem === 'tie' ? T.tie(basename(file), p.titles) : p.problem === 'header' ? T.noHeader(basename(file), p.titles) : p.problem === 'event' ? T.noEvent(basename(file), p.titles) : T.noColumn(basename(file), p.titles))
+  process.exit(1)
+}
+const line = (c) => {
+  const x = c.after ?? c.before
+  if (c.kind === 'declared') return `${T[c.op]} ${T.declared}  ${x.agent} · ${labelOf(x.key.includes(':') ? x.key : `declared:${x.key}`, lang)}${x.value ? ` = «${x.value}»` : ''}${x.source ? ` (${x.source})` : ''}`
+  return `${T[c.op]} ${T.decision}  ${labelOf(x.key, lang)}: ${T[x.status]} (${T[x.scope]})${x.why ? ` — ${x.why}` : ''}`
+}
+// what changes the cast file: listed, each with its key, and with --take written
+const proposeOrTake = (changes) => {
+  const take = option('--take')
+  if (!take) {
+    console.log(T.changes(changes.length))
+    for (const c of changes) console.log(`  ${c.key}  ${line(c)}`)
+    process.exit(0)
+  }
+  const keys = take === 'all' ? changes.map((c) => c.key) : take.split(',').map((k) => k.trim()).filter(Boolean)
+  const missing = keys.find((k) => !changes.some((c) => c.key === k))
+  if (missing) {
+    console.error(T.unknownKey(missing))
+    process.exit(2)
+  }
+  mkdirSync(out, { recursive: true })
+  writeFileSync(castFile, writeCast(applyChanges(cast, changes, keys), castText))
+  console.log(T.took(keys.length, basename(castFile)))
+  process.exit(0)
+}
 // ---- the way back: an edited workbook as the changes it proposes ----
 if (argv.includes('--from')) {
   const edited = fromSheets(cast, readXlsx(readFileSync(resolve(option('--from')))), Object.fromEntries(profile.types.map((t) => [t.id, t.name])))
@@ -91,28 +145,7 @@ if (argv.includes('--from')) {
     for (const p of edited.problems) console.error(`✗ ${basename(option('--from'))}: ${p}`)
     process.exit(1)
   }
-  const line = (c) => {
-    const x = c.after ?? c.before
-    // a key with no kind («kpi») is something only people know: declared:<key>
-    if (c.kind === 'declared') return `${T[c.op]} ${T.declared}  ${x.agent} · ${labelOf(x.key.includes(':') ? x.key : `declared:${x.key}`, lang)}${x.value ? ` = «${x.value}»` : ''}${x.source ? ` (${x.source})` : ''}`
-    return `${T[c.op]} ${T.decision}  ${labelOf(x.key, lang)}: ${T[x.status]} (${T[x.scope]})${x.why ? ` — ${x.why}` : ''}`
-  }
-  const take = option('--take')
-  if (!take) {
-    console.log(T.changes(edited.changes.length))
-    for (const c of edited.changes) console.log(`  ${c.key}  ${line(c)}`)
-    process.exit(0)
-  }
-  const keys = take === 'all' ? edited.changes.map((c) => c.key) : take.split(',').map((k) => k.trim()).filter(Boolean)
-  const missing = keys.find((k) => !edited.changes.some((c) => c.key === k))
-  if (missing) {
-    console.error(T.unknownKey(missing))
-    process.exit(2)
-  }
-  mkdirSync(out, { recursive: true })
-  writeFileSync(castFile, writeCast(applyChanges(cast, edited.changes, keys), castText))
-  console.log(T.took(keys.length, basename(castFile)))
-  process.exit(0)
+  proposeOrTake(edited.changes)
 }
 
 // the schema's kinds, to tell a made-up one; without the schema every kind is taken as real
@@ -132,7 +165,41 @@ if (argv.includes('--facts')) {
   console.log(T.privacy)
   process.exit(0)
 }
-const result = compare(found, profile, cast)
+if (argv.includes('--declared')) {
+  const changes = []
+  for (const file of options('--declared')) {
+    const sheets = tablesOf(file)
+    let read = 0
+    let problem
+    for (const t of sheets) {
+      const r = declaredFrom(t, found, cast, { file: basename(file), lang, agentColumn: option('--agent-column') })
+      if (r.problem) {
+        problem ??= r.problem
+        continue
+      }
+      read++
+      changes.push(...r.changes)
+      if (r.unmatched.length) console.log(T.unmatched(r.unmatched.length, basename(file), `${r.unmatched.slice(0, 5).map((u) => `${T.line} ${u.line} («${u.value}»)`).join(', ')}${r.unmatched.length > 5 ? ', …' : ''}`))
+    }
+    if (!read) tableProblem(file, problem)
+  }
+  proposeOrTake(mergeDeclared(changes))
+}
+let fired
+if (option('--telemetry')) {
+  const file = option('--telemetry')
+  let problem
+  for (const t of tablesOf(file)) {
+    const r = firedFrom(t, found, { file: basename(file), days, agentColumn: option('--agent-column') })
+    if ('problem' in r) problem ??= r.problem
+    else {
+      fired = r
+      break
+    }
+  }
+  if (!fired) tableProblem(file, problem)
+}
+const result = compare(found, profile, cast, fired)
 const looks = reviewCast(result)
 const roles = Object.values(result.roles)
 console.log(T.found(found.length, roles.filter((r) => r === 'orchestrator').length, roles.filter((r) => r === 'specialist').length))

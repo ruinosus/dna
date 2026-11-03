@@ -2,12 +2,12 @@
 // rules not met, what only one specialist has (innovation or debt?), what the analysis did not understand, and a
 // profile naming what is not in the folder. Questions, not errors; each names the agents, in English and Portuguese.
 import type { Pattern, Result } from './compare'
-import { labelOf, lacks, matches } from './labels'
+import { formText, labelOf, lacks, matches } from './labels'
 import type { Role } from './profile'
 import { roleWord } from './words'
 
 export interface Look {
-  key: 'conflict' | 'contradiction' | 'contract' | 'flow' | 'off' | 'gap' | 'values' | 'twice' | 'solo' | 'unused' | 'type' | 'unknown' | 'unmatched'
+  key: 'conflict' | 'contradiction' | 'spelling' | 'contract' | 'flow' | 'telemetry' | 'off' | 'gap' | 'values' | 'twice' | 'solo' | 'unused' | 'type' | 'unknown' | 'unmatched'
   agents: string[]
   /** The fact it is about, when it is about one (the map opens it). */
   fact?: string
@@ -17,7 +17,7 @@ export interface Look {
 
 const names = (xs: string[]) => xs.join(', ')
 // the order of «to look at»: what disagrees first, what is only told last
-const ORDER: Look['key'][] = ['conflict', 'contradiction', 'contract', 'flow', 'off', 'gap', 'values', 'twice', 'solo', 'unused', 'type', 'unknown', 'unmatched']
+const ORDER: Look['key'][] = ['conflict', 'contradiction', 'spelling', 'contract', 'flow', 'telemetry', 'off', 'gap', 'values', 'twice', 'solo', 'unused', 'type', 'unknown', 'unmatched']
 const place = (file: string) => file.replace(/(\.topic)?\.mcs\.ya?ml$/, '')
 
 export function reviewCast(r: Result): Look[] {
@@ -55,6 +55,18 @@ export function reviewCast(r: Result): Look[] {
   // a flow an agent calls that answers nothing
   for (const f of r.flows.filter((x) => x.called && !x.returns))
     out.push({ key: 'flow', agents: [f.agent], fact: 'flow-returns', en: `The flow «${f.name}» of ${f.agent} returns nothing`, pt: `O fluxo «${f.name}» de ${f.agent} não devolve nada` })
+
+  // the telemetry: an event spelt another way; with the export of Application Insights, what did not fire and who has
+  // no line in it
+  const spelt = new Map<string, (typeof r.telemetry.spellings)[number]>()
+  for (const e of r.telemetry.spellings) spelt.set(`${e.agent} ${e.form}`, e)
+  for (const e of spelt.values())
+    out.push({ key: 'spelling', agents: [e.agent], fact: `telemetry:event:${e.as}`, en: `${e.agent} logs «${e.name}»; the others, «${formText(e.as, 'en')}»: the same event?`, pt: `${e.agent} registra «${e.name}»; os outros, «${formText(e.as, 'pt')}»: é o mesmo evento?` })
+  const days = r.telemetry.days
+  for (const e of r.telemetry.notFired)
+    out.push({ key: 'telemetry', agents: [e.agent], fact: `telemetry:event:${e.as}`, en: `The event «${e.name}» of ${e.agent} did not fire in ${days} days`, pt: `O evento «${e.name}» de ${e.agent} não disparou em ${days} dias` })
+  for (const id of r.telemetry.silent)
+    out.push({ key: 'telemetry', agents: [id], en: `${id} has no line in the telemetry: is it connected to Application Insights?`, pt: `${id} não tem nenhuma linha na telemetria: está ligado ao Application Insights?` })
 
   // off a pattern: one question per key, role and type — and a variation of a block is asked as one
   const typeName = (scope: string) => (scope.startsWith('type:') ? r.typeNames[scope.slice(5)] ?? scope.slice(5) : undefined)
