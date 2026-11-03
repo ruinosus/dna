@@ -40,8 +40,9 @@ document.title = `${u.title} · ${pb.name ?? data.id}`
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 const app = document.getElementById('app')!
 const situationOf = (id: string) => [...pb.org.orchestrators, ...pb.org.types.flatMap((t) => t.people)].find((p) => p.id === id)?.situation ?? []
-// the résumé shown first: the first with a plan, else the first
-let picked = (pb.resumes.find((r) => r.seal === 'pdi' && r.role === 'specialist') ?? pb.resumes[0])?.id
+// the résumé shown first: the one the address names (the stage's «See the résumé»), else the first with a plan
+const named = decodeURIComponent(location.hash.slice(1))
+let picked = (pb.resumes.find((r) => r.id === named) ?? pb.resumes.find((r) => r.seal === 'pdi' && r.role === 'specialist') ?? pb.resumes[0])?.id
 let post = pb.posts[0]?.scope
 
 const COUNT: Record<string, string> = { cast: '', hiring: 'warn', noOwner: 'bad', neverPublished: 'warn', pdi: 'bad', ok: 'good' }

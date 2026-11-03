@@ -14,7 +14,7 @@ import { roleWord, SHEET_WORDS } from '../words'
 
 declare const __MAP_CSS__: string
 
-interface Data { id: string; lang: Lang; result: Result; looks: Look[]; cast: Cast; castYaml: string; focusAreas: FocusArea[]; threshold: number; /** The RH page this run wrote beside the map. */ playbill?: string }
+interface Data { id: string; lang: Lang; result: Result; looks: Look[]; cast: Cast; castYaml: string; focusAreas: FocusArea[]; threshold: number; /** The RH page and the stage this run wrote beside the map. */ playbill?: string; plot?: string }
 const UI = {
   en: {
     map: 'Map', patterns: 'Patterns', cast: 'Cast', microsoft: 'Microsoft', unknown: (n: number) => `What the analysis did not understand (${n})`,
@@ -25,7 +25,7 @@ const UI = {
     orchestratorDoes: 'Only the orchestrator does it', sign: 'How cast-list knows', follows: 'Who follows it', declaredOnly: 'only declared', nothingUnknown: 'Everything was understood.',
     facts: 'Facts', off: 'Off a pattern', solo: 'Only it has', children: 'Children', close: 'Close ✕', foot: 'The facts come from the YAML files; nothing was made up.',
     summary: (n: number, p: number, o: number, s: number, t: number) => `${n} in the cast · ${p} patterns · ${o} off a pattern · ${s} only one has · threshold ${t}% of each role`,
-    excel: '⬇ Excel', yaml: '⬇ cast.yaml', png: '⬇ PNG', playbill: 'The cast’s HR →', name: 'Name', said: 'declared',
+    excel: '⬇ Excel', yaml: '⬇ cast.yaml', png: '⬇ PNG', playbill: 'The cast’s HR →', plot: 'Stage →', name: 'Name', said: 'declared',
     unused: (n: number) => `Unused (${n})`, nothingUnused: 'Everything is used, nothing is switched off.', flows: 'Flows', returnsNothing: 'returns nothing', otherFlow: 'another flow',
     telemetry: 'Telemetry', times: (n: number, d: number) => `${n} ${n === 1 ? 'time' : 'times'} in ${d} days`, notFired: 'did not fire', noLine: 'no line in the telemetry', routing: 'Routing', called: 'Called', history: 'History', inputs: 'Inputs', description: 'Description', notInFolder: 'not in the folder', chars: (n: number) => `${n} characters`,
   },
@@ -38,7 +38,7 @@ const UI = {
     orchestratorDoes: 'Só o orquestrador faz', sign: 'Como a cast-list sabe', follows: 'Quem segue', declaredOnly: 'só declarado', nothingUnknown: 'Tudo foi entendido.',
     facts: 'Fatos', off: 'Fora do padrão', solo: 'Só ele tem', children: 'Filhos', close: 'Fechar ✕', foot: 'Os fatos vêm dos arquivos YAML; nada foi inventado.',
     summary: (n: number, p: number, o: number, s: number, t: number) => `${n} no elenco · ${p} padrões · ${o} fora do padrão · ${s} só um tem · limite ${t}% de cada papel`,
-    excel: '⬇ Excel', yaml: '⬇ cast.yaml', png: '⬇ PNG', playbill: 'RH do elenco →', name: 'Nome', said: 'declarado',
+    excel: '⬇ Excel', yaml: '⬇ cast.yaml', png: '⬇ PNG', playbill: 'RH do elenco →', plot: 'Palco →', name: 'Nome', said: 'declarado',
     unused: (n: number) => `Sem uso (${n})`, nothingUnused: 'Tudo é usado, nada está desligado.', flows: 'Fluxos', returnsNothing: 'não devolve nada', otherFlow: 'outro fluxo',
     telemetry: 'Telemetria', times: (n: number, d: number) => `${n} ${n === 1 ? 'vez' : 'vezes'} em ${d} dias`, notFired: 'não disparou', noLine: 'nenhuma linha na telemetria', routing: 'Roteamento', called: 'Chamado', history: 'Histórico', inputs: 'Entradas', description: 'Descrição', notInFolder: 'não está na pasta', chars: (n: number) => `${n} caracteres`,
   },
@@ -86,7 +86,7 @@ function render() {
   app.innerHTML = `<div class="cl-wrap">
     <header><h1 class="cl-title">${esc(r.name ?? data.id)}</h1><p class="cl-sub">${u.summary(r.agents.length, r.patterns.length, off, looks.filter((l) => l.key === 'solo').length, Math.round(data.threshold * 100))}</p><p class="cl-private">${esc(w.privacy)}</p></header>
     <div class="cl-bar" role="tablist">${tabs.map(([k, t]) => `<button class="cl-tab" role="tab" aria-selected="${k === tab}" data-tab="${k}">${esc(t)}</button>`).join('')}
-      <span class="cl-space"></span>${data.playbill ? `<a class="cl-get" href="${esc(data.playbill)}">${esc(u.playbill)}</a>` : ''}<button class="cl-get" data-get="xlsx">${u.excel}</button><button class="cl-get" data-get="yaml">${u.yaml}</button>${tab === 'map' ? `<button class="cl-get" data-get="png">${u.png}</button>` : ''}</div>
+      <span class="cl-space"></span>${data.plot ? `<a class="cl-get" href="${esc(data.plot)}">${esc(u.plot)}</a>` : ''}${data.playbill ? `<a class="cl-get" href="${esc(data.playbill)}">${esc(u.playbill)}</a>` : ''}<button class="cl-get" data-get="xlsx">${u.excel}</button><button class="cl-get" data-get="yaml">${u.yaml}</button>${tab === 'map' ? `<button class="cl-get" data-get="png">${u.png}</button>` : ''}</div>
     ${tab === 'map' ? mapTab() : tab === 'patterns' ? table(sheets.find((s) => s.key === 'patterns')!) : tab === 'cast' ? castTab() : tab === 'microsoft' ? microsoftTab() : tab === 'unused' ? unusedTab() : unknownTab()}
     <p class="cl-foot">${u.foot}</p>
   </div>`

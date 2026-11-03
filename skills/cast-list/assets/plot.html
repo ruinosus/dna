@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="cast-list (engine v0.259.0)">
+<meta name="robots" content="noindex">
+<title>cast-list</title>
+<style>/* The stage of the cast: a light plot. Light by day, the dark of a theatre when the system is dark. */
+.cl {
+  --bg: #f4f3ef; --stage: #fbfaf6; --stage-edge: #ece9e1; --card: #ffffff; --ink: #1d2330; --muted: #5f6878; --line: #dcdfe5;
+  --warm: #b86e00; --warm-soft: #f6e3c2; --beam: #e9b65e; --ok: #1f7a4d; --bad: #c0392b; --amber: #9a6200; --sys: #2f5bea; --ghost: #8a8f9c;
+  --node: #ffffff; --node-line: #c9ced8; --manager: #1d2330; --on-manager: #ffffff; --focus: #2f5bea; --dark: #10131a;
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg);
+  min-height: 100vh; box-sizing: border-box; padding: 20px 16px 36px;
+}
+@media (prefers-color-scheme: dark) {
+  .cl:not(.light) {
+    --bg: #07090f; --stage: #0d1220; --stage-edge: #080b14; --card: #0e1322; --ink: #e9e4d8; --muted: #9a9fb2; --line: #22293d;
+    --warm: #ffd88a; --warm-soft: #3a3020; --beam: #ffd88a; --ok: #4fd18b; --bad: #ff6a5f; --amber: #ffb340; --sys: #7aa2ff; --ghost: #6f7590;
+    --node: #121a2e; --node-line: #2e3858; --manager: #f3e7c9; --on-manager: #14110a; --focus: #8fb0ff; --dark: #03050a;
+  }
+}
+body { margin: 0; }
+.cl *, .cl *::before, .cl *::after { box-sizing: border-box; }
+.cl button { font: inherit; color: inherit; cursor: pointer; }
+.cl :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.cl a { color: var(--sys); }
+.pl-head { max-width: 1480px; margin: 0 auto 10px; }
+.pl-head h1 { margin: 0; font-size: 22px; } .pl-head h1 span { color: var(--warm); }
+.pl-head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.pl-head .pl-private { color: var(--bad); font-size: 12px; }
+.pl-wrap { max-width: 1480px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; align-items: start; }
+@media (max-width: 1000px) { .pl-wrap { grid-template-columns: 1fr; } }
+.pl-stage { position: relative; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: radial-gradient(1100px 600px at 40% 40%, var(--stage) 0%, var(--stage) 55%, var(--stage-edge) 100%); }
+.pl-stage svg { display: block; width: 100%; height: auto; }
+.pl-panel { display: flex; flex-direction: column; gap: 12px; }
+.pl-box { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+.pl-box h2 { margin: 0 0 8px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
+.pl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pl-chips button, .pl-scenes button { background: var(--node); border: 1px solid var(--node-line); border-radius: 99px; padding: 5px 11px; font-size: 13px; }
+.pl-chips button[aria-pressed="true"] { background: var(--warm); color: var(--bg); border-color: var(--warm); }
+.pl-scenes { display: flex; flex-direction: column; gap: 6px; }
+.pl-scenes button { border-radius: 10px; text-align: left; }
+.pl-scenes button[aria-pressed="true"] { border-color: var(--warm); box-shadow: 0 0 0 1px var(--warm); }
+.pl-cap { margin: 10px 0 0; font-size: 13px; min-height: 40px; }
+.pl-note { margin: 0; color: var(--muted); font-size: 12px; }
+.pl-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+.pl-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.pl-card .pl-name { font-size: 16px; font-weight: 650; margin: 0; }
+.pl-card .pl-role { margin: 0 0 8px; color: var(--muted); font-size: 12px; }
+.pl-dna { display: flex; height: 14px; border-radius: 4px; overflow: hidden; gap: 2px; margin: 4px 0 4px; }
+.pl-dna span { display: block; min-width: 3px; }
+.pl-dna .own { background: var(--node-line); } .pl-dna .shared { background: var(--sys); } .pl-dna .official { background: var(--ok); }
+.pl-dna .variant { background: var(--amber); } .pl-dna .marker { background: var(--warm); }
+.pl-checks { list-style: none; margin: 8px 0 0; padding: 0; font-size: 13px; }
+.pl-checks li { padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.pl-checks .ok::before { content: "✓ "; color: var(--ok); } .pl-checks .off::before { content: "✕ "; color: var(--bad); } .pl-checks .decide::before { content: "? "; color: var(--amber); }
+.pl-checks .off { color: var(--bad); } .pl-checks .decide { color: var(--amber); }
+.pl-narr { position: absolute; left: 14px; right: 14px; bottom: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; font-size: 15px; box-shadow: 0 8px 30px rgba(0,0,0,.25); }
+.pl-narr[hidden] { display: none; }
+.pl-narr.warn { border-color: var(--bad); }
+.pl-narr .pl-step { color: var(--warm); font-weight: 650; margin-right: 6px; }
+.pl-narr q { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
+.pl-narr .pl-keys { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+/* the stage's own marks */
+.pl-group { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; fill: var(--muted); }
+.pl-band { fill: none; stroke: var(--line); stroke-dasharray: 2 4; }
+.pl-edge { fill: none; stroke: var(--node-line); stroke-width: 1.4; }
+.pl-edge.traffic { stroke-width: 1.8; }
+.pl-edge.bad { stroke: var(--bad); stroke-width: 2.6; } .pl-edge.amber { stroke: var(--amber); } .pl-edge.ghost { stroke: var(--ghost); }
+.pl-edge.dashed { stroke-dasharray: 5 5; }
+.pl-elabel { font-size: 11px; fill: var(--muted); paint-order: stroke; stroke: var(--stage); stroke-width: 4px; }
+.pl-elabel.bad { fill: var(--bad); } .pl-elabel.amber { fill: var(--amber); }
+.pl-part { fill: var(--beam); } .pl-part.structure { opacity: .45; }
+.pl-node { cursor: pointer; }
+.pl-node rect { fill: var(--node); stroke: var(--node-line); stroke-width: 1.2; }
+.pl-node text { font-size: 13px; fill: var(--ink); pointer-events: none; }
+.pl-node .pl-sub { font-size: 10.5px; fill: var(--muted); }
+.pl-node.orchestrator rect { fill: var(--manager); stroke: var(--manager); } .pl-node.orchestrator text { fill: var(--on-manager); }
+.pl-node.system rect { stroke: var(--sys); }
+.pl-node.ghost rect, .pl-node.unused rect { stroke: var(--ghost); stroke-dasharray: 4 3; }
+.pl-node.ghost text, .pl-node.unused text { fill: var(--muted); }
+.pl-node:focus { outline: none; } .pl-node:focus-visible rect { stroke: var(--focus); stroke-width: 2.4; }
+.pl-svg .pl-node text.pl-vol { font-size: 11px; fill: var(--warm); font-weight: 650; } .pl-svg .pl-node text.pl-vol.silent { fill: var(--bad); }
+/* the lenses */
+.pl-svg.lensing .pl-node { opacity: .35; }
+.pl-svg.lensing .pl-node.l-ok, .pl-svg.lensing .pl-node.l-amber, .pl-svg.lensing .pl-node.l-bad { opacity: 1; }
+.pl-node.l-ok rect { stroke: var(--ok); stroke-width: 3; } .pl-node.l-amber rect { stroke: var(--amber); stroke-width: 3; }
+.pl-node.l-bad rect { stroke: var(--bad); stroke-width: 3.2; animation: pl-pulse 1.1s ease-in-out infinite; }
+.pl-node.warn rect { stroke: var(--bad); stroke-width: 3.2; animation: pl-pulse .8s ease-in-out infinite; }
+@keyframes pl-pulse { 50% { stroke-opacity: .25; } }
+.pl-dark { fill: var(--dark); pointer-events: none; transition: opacity .45s; }
+@media (prefers-reduced-motion: reduce) { .pl-node.l-bad rect, .pl-node.warn rect { animation: none; } .pl-dark { transition: none; } }
+.pl-foot { max-width: 1480px; margin: 10px auto 0; font-size: 12px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<div class="cl" id="app"></div>
+<script type="application/json" id="cast">{{CAST}}</script>
+<script>(()=>{var F={en:{title:"Stage",sub:"The cast on stage: who talks to whom, the traffic each one gets, the patterns as lenses, and a follow spot that walks a call.",privacy:"This file holds the client\u2019s data: keep it in the client\u2019s environment.",client:"Customer",lenses:"Lenses \u2014 light a pattern",lensHint:"Pick a lens: who follows the pattern lights green, who is off blinks red.",scenes:"Follow spot \u2014 walk a call",actor:"Actor",actorHint:"Click someone on stage.",resume:"See the r\xE9sum\xE9 \u2192",map:"\u2190 Map",vol:(e,n)=>`${e.toLocaleString("en")} topic starts / ${n} days`,silent:"no telemetry",noTraffic:"The traffic shows with the export of Application Insights (--telemetry).",legend:["traffic (topic starts of who receives it)","off a pattern","to decide","not in the folder / unused"],structure:"Inner arrows (flows, systems) are structure, not measured traffic.",step:(e,n)=>`step ${e}/${n}`,keys:"\u2190 \u2192 to move \xB7 space plays all \xB7 Esc leaves",orchestrator:"Orchestrator",specialist:"Specialist",fingerprint:"Fingerprint of its instructions",foot:"cast-list \xB7 no model: what is here is what the files and tables say."},pt:{title:"Palco",sub:"O elenco no palco: quem fala com quem, o tr\xE1fego de cada um, os padr\xF5es como lentes, e um canh\xE3o que segue uma chamada.",privacy:"Este arquivo tem dados do cliente: deixe-o no ambiente dele.",client:"Cliente",lenses:"Lentes \u2014 acenda um padr\xE3o",lensHint:"Escolha uma lente: quem segue o padr\xE3o acende em verde, quem foge pisca em vermelho.",scenes:"Canh\xE3o seguidor \u2014 siga uma chamada",actor:"Ator",actorHint:"Clique em algu\xE9m no palco.",resume:"Ver curr\xEDculo \u2192",map:"\u2190 Mapa",vol:(e,n)=>`${e.toLocaleString("pt-BR")} in\xEDcios de t\xF3pico / ${n} dias`,silent:"sem telemetria",noTraffic:"O tr\xE1fego aparece com a exporta\xE7\xE3o do Application Insights (--telemetry).",legend:["tr\xE1fego (in\xEDcios de t\xF3pico de quem recebe)","fora do padr\xE3o","a decidir","fora da pasta / sem uso"],structure:"As setas internas (fluxos, sistemas) s\xE3o estrutura, n\xE3o tr\xE1fego medido.",step:(e,n)=>`passo ${e}/${n}`,keys:"\u2190 \u2192 avan\xE7am e voltam \xB7 espa\xE7o toca tudo \xB7 Esc sai",orchestrator:"Orquestrador",specialist:"Especialista",fingerprint:"Impress\xE3o digital das instru\xE7\xF5es",foot:"cast-list \xB7 sem modelo: o que est\xE1 aqui \xE9 o que os arquivos e as planilhas dizem."}},y=JSON.parse(document.getElementById("cast").textContent),{stage:o,lang:$}=y,l=F[$];document.documentElement.lang=$==="pt"?"pt-BR":"en";document.title=`${l.title} \xB7 ${o.name??y.id}`;var s=e=>String(e??"").replace(/[&<>"']/g,n=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[n]),v=document.getElementById("app"),N=matchMedia("(prefers-reduced-motion: reduce)").matches,m=168,S=48,b=e=>o.nodes.find(n=>n.id===e),L=e=>e.kind==="orchestrator"||e.kind==="specialist",k,p,f=0,T,q;function V(e){let n=b(e.from),i=b(e.to),r=i.x>=n.x,c=n.x+(r?m/2:-m/2),d=i.x+(r?-m/2:m/2),a=(c+d)/2;return{d:`M${c},${n.y} C${a},${n.y} ${a},${i.y} ${d},${i.y}`,mx:a,my:(n.y+i.y)/2,x2:d,y2:i.y}}var B=e=>e.kind==="client"?l.client:e.label,x=(e,n=24)=>e.length>n?`${e.slice(0,n-1)}\u2026`:e,G=o.nodes.filter(L),M=G.length>1?G.map(e=>e.label).reduce((e,n)=>{let i=0;for(;i<e.length&&e[i]===n[i];)i++;return e.slice(0,i)}):"",j=/[-–·:]\s*$/.test(M)?M:"",O=e=>L(e)&&j?e.label.slice(j.length):B(e);function P(){let e=o.lenses.find(t=>t.id===k),n=t=>{let u=["pl-node",t.kind,t.unused?"unused":""];return e&&u.push(e.bad.includes(t.id)?"l-bad":e.amber.includes(t.id)?"l-amber":e.ok.includes(t.id)?"l-ok":""),p&&p.steps[f]?.node===t.id&&p.steps[f].warn&&u.push("warn"),u.filter(Boolean).join(" ")},i=o.groups.map(t=>`<rect class="pl-band" x="${b(o.nodes.find(u=>u.kind==="specialist").id).x-m/2-18}" y="${t.y1}" width="${m+36}" height="${t.y2-t.y1}" rx="12"/><text class="pl-group" x="${b(o.nodes.find(u=>u.kind==="specialist").id).x-m/2-10}" y="${t.y1-6}">${s(t.label)}</text>`).join(""),r=o.edges.map((t,u)=>{let h=V(t),g=t.tone??"",I=t.kind==="traffic"&&b(t.to).kind!=="ghost",H=t.label?I?`<text class="pl-elabel ${g}" x="${h.x2-10}" y="${h.y2-9}" text-anchor="end">${s(x(t.label[$],56))}</text>`:`<text class="pl-elabel ${g}" x="${h.mx}" y="${h.my-6}" text-anchor="middle">${s(x(t.label[$],40))}</text>`:"";return`<path id="e${u}" class="pl-edge ${t.kind} ${g} ${t.dashed?"dashed":""}" d="${h.d}"/>${H}`}).join(""),c=o.nodes.map(t=>{let u=L(t)&&o.hasTelemetry?`<text class="pl-vol ${t.silent?"silent":""}" x="${m/2}" y="${S+14}" text-anchor="middle">${s(t.silent?l.silent:t.volume!==void 0?l.vol(t.volume,o.days??0):"")}</text>`:"",h=L(t)?` tabindex="0" role="button" aria-label="${s(t.label)}"`:"";return`<g class="${n(t)}" data-node="${s(t.id)}" transform="translate(${t.x-m/2},${t.y-S/2})"${h}>${u}<rect width="${m}" height="${S}" rx="${t.kind==="client"?S/2:10}"/><text x="${m/2}" y="21" text-anchor="middle">${s(x(O(t),22))}</text><text class="pl-sub" x="${m/2}" y="37" text-anchor="middle">${s(x(t.sub[$],30))}</text></g>`}).join(""),d=p?.steps[f],a=d?b(d.node):void 0;return`<svg class="pl-svg ${e?"lensing":""}" viewBox="0 0 ${o.width} ${o.height}" role="img" aria-label="${s(l.title)}">
+    <defs><radialGradient id="pl-spot" r="0.5"><stop offset="0" stop-color="#000"/><stop offset="0.6" stop-color="#000"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+    <mask id="pl-mask"><rect width="${o.width}" height="${o.height}" fill="#fff"/>${a?`<circle cx="${a.x}" cy="${a.y}" r="150" fill="url(#pl-spot)"/>`:""}</mask></defs>
+    <g>${i}</g><g>${r}</g><g id="pl-parts"></g><g>${c}</g>
+    <rect class="pl-dark" width="${o.width}" height="${o.height}" mask="url(#pl-mask)" opacity="${p?.72:0}"/>
+  </svg>`}function D(){let e=o.lenses.find(a=>a.id===k),n=`<section class="pl-box"><h2>${s(l.lenses)}</h2><div class="pl-chips">${o.lenses.map(a=>`<button data-lens="${s(a.id)}" aria-pressed="${a.id===k}">${s(x(a.name[$],28))}</button>`).join("")}</div><p class="pl-cap">${e?s(e.caption[$]):`<span class="pl-note">${s(l.lensHint)}</span>`}</p></section>`,i=o.scenes.length?`<section class="pl-box"><h2>${s(l.scenes)}</h2><div class="pl-scenes">${o.scenes.map(a=>`<button data-scene="${s(a.id)}" aria-pressed="${a.id===p?.id}">\u25B6 ${s(a.title[$])}</button>`).join("")}</div></section>`:"",r=o.actors.find(a=>a.id===T),c=r?`<section class="pl-box pl-card" aria-live="polite"><h2>${s(l.actor)}</h2><p class="pl-name">${s(r.name)}</p><p class="pl-role">${s(r.role==="orchestrator"?l.orchestrator:l.specialist)}${r.types.length?` \xB7 ${s(r.types.join(" \xB7 "))}`:""}${o.hasTelemetry?` \xB7 ${s(r.silent?l.silent:r.volume!==void 0?l.vol(r.volume,o.days??0):"")}`:""}</p>
+      ${r.fingerprint.length?`<p class="pl-note">${s(l.fingerprint)}</p><div class="pl-dna">${r.fingerprint.map(a=>`<span class="${a.kind}" style="flex:${a.size}" title="${s(a.label??"")}"></span>`).join("")}</div>`:""}
+      <ul class="pl-checks">${r.checks.map(a=>`<li class="${a.state}">${s(a[$])}</li>`).join("")}</ul>
+      ${y.playbill?`<p class="pl-note" style="margin-top:8px"><a href="${s(y.playbill)}#${encodeURIComponent(r.id)}">${s(l.resume)}</a></p>`:""}</section>`:`<section class="pl-box pl-card"><h2>${s(l.actor)}</h2><p class="pl-note">${s(l.actorHint)}</p></section>`,d=`<section class="pl-box"><div class="pl-legend">${[["var(--beam)",l.legend[0]],["var(--bad)",l.legend[1]],["var(--amber)",l.legend[2]],["var(--ghost)",l.legend[3]]].map(([a,t])=>`<span><i class="pl-dot" style="background:${a}"></i>${s(t)}</span>`).join("")}</div><p class="pl-note" style="margin-top:8px">${s(o.hasTelemetry?l.structure:l.noTraffic)}</p></section>`;return n+i+c+d}function R(){let e=p?.steps[f];return!p||!e?'<div class="pl-narr" hidden></div>':`<div class="pl-narr ${e.warn?"warn":""}" role="status"><span class="pl-step">${s(l.step(f+1,p.steps.length))}</span>${s(e.text[$])}${e.quote?`<q class="pb-quote">${s(e.quote)}</q>`:""}<span class="pl-keys">${s(l.keys)}</span></div>`}function w(){v.innerHTML=`<header class="pl-head">${y.map?`<p><a href="${s(y.map)}">${s(l.map)}</a></p>`:""}<h1>${s(l.title)} \xB7 <span>${s(o.name??y.id)}</span></h1><p>${s(l.sub)}</p><p class="pl-private">${s(l.privacy)}</p></header>
+    <div class="pl-wrap"><div class="pl-stage">${P()}${R()}</div><aside class="pl-panel">${D()}</aside></div>
+    <p class="pl-foot">${s(l.foot)}</p>`,z()}var E;function z(){E&&cancelAnimationFrame(E);let e=v.querySelector("#pl-parts");if(!e||!o.hasTelemetry)return;let n=[];o.edges.forEach((c,d)=>{let a=v.querySelector(`#e${d}`);if(!a||c.dashed)return;let t=c.kind==="traffic"?c.volume?Math.max(1,Math.min(8,Math.round(Math.log10(c.volume+1)*2.2))):0:1,u=a.getTotalLength();for(let h=0;h<t;h++){let g=document.createElementNS("http://www.w3.org/2000/svg","circle");g.setAttribute("r",c.kind==="traffic"?"3":"2.2"),g.setAttribute("class",`pl-part ${c.kind}`),e.appendChild(g),n.push({el:g,path:a,len:u,phase:h/t,speed:c.kind==="traffic"?11e-5:6e-5})}});let i=c=>{for(let d of n){let a=d.path.getPointAtLength(((d.phase+c*d.speed)%1+1)%1*d.len);d.el.setAttribute("cx",a.x.toFixed(1)),d.el.setAttribute("cy",a.y.toFixed(1))}};if(N)return i(0);let r=c=>{i(c),E=requestAnimationFrame(r)};E=requestAnimationFrame(r)}function A(){q&&clearInterval(q),q=void 0}function C(e){p&&(f=Math.max(0,Math.min(p.steps.length-1,e)),w())}v.addEventListener("click",e=>{let n=e.target,i=n.closest("button"),r=n.closest("[data-node]");if(i?.dataset.lens)k=k===i.dataset.lens?void 0:i.dataset.lens;else if(i?.dataset.scene)A(),p=p?.id===i.dataset.scene?void 0:o.scenes.find(c=>c.id===i.dataset.scene),f=0;else if(r&&o.actors.some(c=>c.id===r.dataset.node))T=r.dataset.node;else return;w()});v.addEventListener("keydown",e=>{let n=e.target.closest?.("[data-node]");n&&(e.key==="Enter"||e.key===" ")&&o.actors.some(i=>i.id===n.dataset.node)&&(e.preventDefault(),T=n.dataset.node,w(),v.querySelector(`[data-node="${CSS.escape(T)}"]`)?.focus())});document.addEventListener("keydown",e=>{if(p)if(e.key==="ArrowRight")C(f+1);else if(e.key==="ArrowLeft")C(f-1);else if(e.key==="Escape")A(),p=void 0,w();else if(e.key===" "&&!e.target.closest?.("[data-node]"))e.preventDefault(),A(),q=window.setInterval(()=>p&&f<p.steps.length-1?C(f+1):A(),1800);else return});w();})();
+</script>
+</body>
+</html>

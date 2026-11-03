@@ -37,7 +37,7 @@ for (const f of readdirSync(join(root, 'checks')).filter((x) => x.endsWith('.che
 // the examples, with the profile and no cast file yet
 const plain = join(work, 'plain')
 const a = run(agents, '--profile', profile, '--all', '--lang', 'pt', '--out', plain)
-ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agents.playbill.html', 'agents.cast.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, lesson, RH and cast file', a.stdout + a.stderr)
+ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agents.playbill.html', 'agents.plot.html', 'agents.cast.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, lesson, RH, stage and cast file', a.stdout + a.stderr)
 ok(/✓ review|• review/.test(a.stdout) && !/! review/.test(a.stdout), "the lesson passes chalk-talk's reviewer (when there is a browser)", a.stdout)
 ok(looks(a.stdout) === 24, `24 to look at (${looks(a.stdout)})`, a.stdout)
 const heads = [...a.stdout.matchAll(/^▸ (.+) · (\d+)$/gm)].map((m) => [m[1], Number(m[2])])
@@ -76,6 +76,10 @@ mkdirSync(rh2)
 copyFileSync(join(rh, 'agents.cast.yaml'), join(rh2, 'agents.cast.yaml'))
 rhRun(rh2)
 ok(readFileSync(join(rh2, 'agents.playbill.html'), 'utf8') === rhPage, 'the same run, the same RH page')
+const plotPage = readFileSync(join(rh, 'agents.plot.html'), 'utf8')
+ok(rhOut.stdout.includes('✓ stage') && readFileSync(join(rh, 'agents.html'), 'utf8').includes('agents.plot.html') && readFileSync(join(rh2, 'agents.plot.html'), 'utf8') === plotPage && !/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(plotPage), 'the stage: written beside the map, linked from it, the same on the same run, loading nothing from the internet')
+const plotOnly = run(agents, '--plot', '--out', join(work, 'plot-only'))
+ok(plotOnly.status === 0 && existsSync(join(work, 'plot-only', 'agents.plot.html')) && !existsSync(join(work, 'plot-only', 'agents.html')), '--plot alone writes only the stage', plotOnly.stdout)
 const only = run(agents, '--playbill', '--out', join(work, 'rh-only'))
 ok(only.status === 0 && existsSync(join(work, 'rh-only', 'agents.playbill.html')) && !existsSync(join(work, 'rh-only', 'agents.html')), '--playbill alone writes only the RH', only.stdout)
 writeFileSync(join(work, 'nobody.csv'), 'a,b\nx,y\n')
@@ -190,6 +194,27 @@ else {
   ok(r.events?.[0] === 'BodegaPedidos_OnError — 7 vezes em 30 dias' && r.events[1] === 'BodegaFrete_OnError — não disparou' && r.events[2] === 'nenhuma linha na telemetria', 'the cast: the events, the times they fired, what did not, who has no line', JSON.stringify(r.events))
   ok(r.routing === 6 && r.unused === 4 && !r.errs?.length, 'the orchestrator\'s routing, 6 calls; the Unused tab, 4 rows; no error', JSON.stringify([r.routing, r.unused, r.errs]))
   ok(r.patterns === 31 && r.cast === 6 && r.ms === 15 && r.unknown === 'Tudo foi entendido.', 'the tabs: patterns, cast, Microsoft, not understood', JSON.stringify(r))
+  // the stage in a browser: a lens lights who it names, frete's scene stops on the contract, a card opens
+  const plotProbe = readFileSync(join(rh, 'agents.plot.html'), 'utf8').replace('</body>', `<script>
+    const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
+    setTimeout(() => { const q = (s) => document.querySelector(s); const all = (s) => document.querySelectorAll(s); const out = {}
+      out.nodes = all('[data-node]').length; out.parts = all('.pl-part').length
+      q('[data-lens="pattern:trigger:OnEscalate"]').click()
+      out.bad = [...all('.pl-node.l-bad')].map((n) => n.dataset.node); out.okN = all('.pl-node.l-ok').length
+      q('[data-lens="pattern:trigger:OnEscalate"]').click()
+      const scene = [...all('[data-scene]')].find((b) => b.textContent.includes('Frete')); scene.click()
+      for (let i = 0; i < 2; i++) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))
+      out.warn = q('.pl-narr.warn')?.textContent.includes('SEM o histórico'); out.spot = q('.pl-node.warn')?.dataset.node
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); out.closed = q('.pl-narr')?.hidden
+      q('[data-node="bodega-frete"]').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      out.card = q('.pl-card .pl-name')?.textContent; out.off = [...all('.pl-checks .off')].map((x) => x.textContent); out.resume = q('.pl-card a')?.getAttribute('href')
+      const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.errs = errs
+      const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 400)</script></body>`)
+  writeFileSync(join(rh, 'plot-probe.html'), plotProbe)
+  const pl = (await runPage(join(rh, 'plot-probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
+  ok(pl.nodes > 12 && pl.parts > 0 && pl.bad?.join() === 'bodega-frete' && pl.okN === 5, 'the stage: the nodes, the traffic moving, the escalation lens lights frete red and five green', JSON.stringify(pl))
+  ok(pl.warn === true && pl.spot === 'bodega-frete' && pl.closed === true, "frete's scene stops on the contract, with the spot on frete; Esc leaves it", JSON.stringify(pl))
+  ok(pl.card === 'Bodega Azul - Frete' && pl.off?.length > 0 && pl.resume === 'agents.playbill.html#bodega-frete' && pl.agent === false && !pl.errs?.length, "a click opens frete's card, off the escalation, with its résumé a link away; never «agente»; no error", JSON.stringify(pl))
   // the RH in a browser: the board, frete's résumé and plan, a click on pedidos, never «agente»
   const rhProbe = readFileSync(join(rh, 'agents.playbill.html'), 'utf8').replace('</body>', `<script>
     const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))

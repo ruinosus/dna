@@ -4,7 +4,7 @@
 // (.xlsx) and the cast file (what people said, what was decided). No model, no install, no network: Node 18 or later.
 //
 //   node build.mjs <agents-folder> --check [--profile <p.cast.yaml>] [--lang en|pt]     only compare: nothing is written
-//   node build.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--playbill] [--all] [--lang en|pt] [--out <folder>]
+//   node build.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--playbill] [--plot] [--all] [--lang en|pt] [--out <folder>]
 //   node build.mjs <agents-folder> --facts [--out <folder>]                         only the facts, for a model: <id>.facts.json
 //   node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]
 //                                  what was filled in the workbook (Declared, the Decision column): listed with a key each,
@@ -15,8 +15,9 @@
 //   … --telemetry <export.csv|.xlsx> [--telemetry-days <n>]   what fired, from Application Insights (references/telemetry.md):
 //                                  the events in the YAML that did not fire, and who has no line at all
 //
-// With no --html/--xlsx/--lesson/--playbill it makes the map. Files go in --out (or beside the folder), named by the folder:
-// <id>.html, <id>.xlsx, <id>.lesson.html (a chalk-talk lesson), <id>.playbill.html (the RH of the cast) and <id>.cast.yaml, kept up to date (read again on every
+// With no --html/--xlsx/--lesson/--playbill/--plot it makes the map. Files go in --out (or beside the folder), named by the folder:
+// <id>.html, <id>.xlsx, <id>.lesson.html (a chalk-talk lesson), <id>.playbill.html (the RH of the cast), <id>.plot.html (the stage) and
+// <id>.cast.yaml, kept up to date (read again on every
 // run). Exit codes: 0 done (what to look at is printed, and is not an error); 1 the profile or the cast file breaks its
 // format (each problem with its line), or no agent in the folder; 2 bad arguments; 3 made, but the lesson's reviewer
 // found something to fix. The outputs hold the client's data: keep them in the client's environment. The lesson's
@@ -25,14 +26,14 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
-import { agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, extractAgent, firedFrom, fromSheets, groupLooks, playbillOf, mergeDeclared, knownKinds, labelOf, lessonOf, problemText, readCast, readCsv, readProfile, reviewCast, validateScene, workbookFile, workbookOf, writeCast } from './engine.mjs'
+import { agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, extractAgent, firedFrom, fromSheets, groupLooks, playbillOf, stageOf, mergeDeclared, knownKinds, labelOf, lessonOf, problemText, readCast, readCsv, readProfile, reviewCast, validateScene, workbookFile, workbookOf, writeCast } from './engine.mjs'
 import { readXlsx } from './read-xlsx.mjs'
 import { fill, inline } from './page.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
 const valued = new Set(['--lang', '--out', '--profile', '--from', '--take', '--declared', '--agent-column', '--telemetry', '--telemetry-days'])
-const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--playbill', '--all', '--facts', ...valued])
+const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--playbill', '--plot', '--all', '--facts', ...valued])
 const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
@@ -213,8 +214,8 @@ else console.log(T.nothing)
 if (argv.includes('--check')) process.exit(0)
 
 const all = argv.includes('--all')
-const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), lesson: all || argv.includes('--lesson'), playbill: all || argv.includes('--playbill') }
-if (!want.xlsx && !want.lesson && !want.playbill) want.html = true
+const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), lesson: all || argv.includes('--lesson'), playbill: all || argv.includes('--playbill'), plot: all || argv.includes('--plot') }
+if (!want.xlsx && !want.lesson && !want.playbill && !want.plot) want.html = true
 mkdirSync(out, { recursive: true })
 // the cast file keeps this run's roles and blocks of text (so a block keeps its id across small edits), under what
 // people wrote in it; the types a person gave an agent stay, the ones the profile works out are not written
@@ -226,7 +227,7 @@ console.log(`✓ cast      ${castFile}`)
 if (want.html) {
   const page = join(out, `${id}.html`)
   const map = readFileSync(join(here, '../assets/map.html'), 'utf8')
-  writeFileSync(page, fill(map, { CAST: inline({ id, lang, result, looks, cast: kept, castYaml, focusAreas: profile.focusAreas, threshold: profile.threshold, ...(want.playbill ? { playbill: `${id}.playbill.html` } : {}) }) }))
+  writeFileSync(page, fill(map, { CAST: inline({ id, lang, result, looks, cast: kept, castYaml, focusAreas: profile.focusAreas, threshold: profile.threshold, ...(want.playbill ? { playbill: `${id}.playbill.html` } : {}), ...(want.plot ? { plot: `${id}.plot.html` } : {}) }) }))
   console.log(`✓ map       ${page}`)
 }
 if (want.playbill) {
@@ -234,6 +235,12 @@ if (want.playbill) {
   const playbill = playbillOf(result, looks, found, kept, profile.rules, fired)
   writeFileSync(page, fill(readFileSync(join(here, '../assets/playbill.html'), 'utf8'), { CAST: inline({ id, lang, playbill, ...(want.html ? { map: `${id}.html` } : {}) }) }))
   console.log(`✓ rh        ${page}`)
+}
+if (want.plot) {
+  const page = join(out, `${id}.plot.html`)
+  const stage = stageOf(result, looks, found, fired)
+  writeFileSync(page, fill(readFileSync(join(here, '../assets/plot.html'), 'utf8'), { CAST: inline({ id, lang, stage, ...(want.html ? { map: `${id}.html` } : {}), ...(want.playbill ? { playbill: `${id}.playbill.html` } : {}) }) }))
+  console.log(`✓ stage     ${page}`)
 }
 if (want.xlsx) {
   const book = join(out, `${id}.xlsx`)
