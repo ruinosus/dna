@@ -153,11 +153,35 @@ const cloned = extractAgent('c', [
   { path: 'connectionreferences.mcs.yml', text: 'connectionReferences:\n  - connectionReferenceLogicalName: c_x.shared_office365.shared-office365-1\n    connectorId: /providers/Microsoft.PowerApps/apis/shared_office365\n' },
   { path: 'knowledge/files/Tabela.pdf', text: '' },
   { path: 'knowledge/files/Tabela.pdf.mcs.yml', text: 'mcs.metadata:\n  componentName: Tabela.pdf\n  description: Uma tabela.\n' },
-  { path: 'workflows/Avisar-11111111-2222-3333-4444-555555555555/metadata.yml', text: 'jsonFileName: workflow.json\nworkflowId: 11111111-2222-3333-4444-555555555555\ntype: 1\n' },
+  { path: 'workflows/Avisar-11111111-2222-3333-4444-555555555555/metadata.yml', text: 'jsonFileName: workflows/Avisar-11111111-2222-3333-4444-555555555555/workflow.json\nworkflowId: 11111111-2222-3333-4444-555555555555\ntype: 1\n' },
   { path: 'workflows/Avisar-11111111-2222-3333-4444-555555555555/workflow.json', text: flowJson(nested, true) },
 ], kinds)
 ok(!cloned.unknown.length && 'connref:shared_office365' in cloned.facts && 'knowledge:file' in cloned.facts && 'knowledge:count=1' in cloned.facts && 'orphan:flow:Avisar' in cloned.facts,
-  'the icon and an uploaded document are not read; connection references without a kind, the uploaded file as knowledge, a flow folder ending in a GUID', [cloned.unknown, Object.keys(cloned.facts)])
+  'the icon and an uploaded document are not read; connection references without a kind, the uploaded file as knowledge, a flow folder ending in a GUID, its jsonFileName a path', [cloned.unknown, Object.keys(cloned.facts)])
+// a topic can begin an action: one among the agent's actions is fine; one of another agent's prefix is not found, by its full name
+const begins = extractAgent('b', [
+  { path: 'actions/Buscar.mcs.yml', text: 'kind: TaskDialog\nmodelDescription: Busca.\naction:\n  kind: InvokeConnectorTaskAction\n  connectionReference: b_x.shared_office365.y\n  operationId: Get\n' },
+  { path: 'topics/Usa.mcs.yml', text: y(`
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent:
+    triggerQueries: [usar]
+  actions:
+    - kind: BeginDialog
+      id: a
+      dialog: b_agente.action.Buscar
+    - kind: BeginDialog
+      id: c
+      dialog: z_outro.action.Copiada
+    - kind: BeginDialog
+      id: d
+      dialog: SemPrefixo
+`) },
+], kinds)
+const callKeys = Object.keys(begins.facts).filter((k) => k.startsWith('calls:')).sort()
+ok(callKeys.join() === 'calls:action:z_outro.action.Copiada,calls:topic:SemPrefixo', 'a topic that begins an action: its own is found, another agent\'s is not (by its full name); a dialog without a prefix keeps its whole name', callKeys)
 const shapeless = flowAgent(true, '{ "something": 1 }')
 ok(shapeless.unknown.some((u) => u.why === 'flow'), 'a flow in a shape it does not know goes to «not understood»', shapeless.unknown)
 

@@ -76,6 +76,7 @@ const KINDS: [string, Dimension, string, string][] = [
   ['disabled:', 'governance', 'Switched off', 'Desligado'],
   ['reaches:', 'conversation', 'A topic leads to it (part of trigger:<value>)', 'Um tópico leva a ele (parte de trigger:<valor>)'],
   ['calls:topic:', 'conversation', 'Calls the topic (one not found)', 'Chama o tópico (não encontrado)'],
+  ['calls:action:', 'conversation', 'Begins the action (one not found)', 'Chama a ação (não encontrada)'],
   ['trigger:', 'conversation', 'Trigger', 'Gatilho'],
   ['setting:', 'conversation', 'Setting', 'Configuração'],
   ['connector:', 'integrations', 'Connector', 'Conector'],
@@ -209,6 +210,7 @@ export function lacks(key: string, lang: Lang, n: number, names?: Names): string
     const event = formText(form, lang)
     return lang === 'pt' ? `${n === 1 ? 'registra' : 'registram'} «${event}» sem «${field}»` : `${n === 1 ? 'logs' : 'log'} «${event}» without «${field}»`
   }
+  if (key.startsWith('calls:action:')) return lang === 'pt' ? `${n === 1 ? 'não chama' : 'não chamam'} a ação ${key.slice(13)}` : `${n === 1 ? 'does' : 'do'} not begin the action ${key.slice(13)}`
   if (key.startsWith('calls:topic:')) return lang === 'pt' ? `${n === 1 ? 'não chama' : 'não chamam'} o tópico ${key.slice(12)}` : `${n === 1 ? 'does' : 'do'} not call the topic ${key.slice(12)}`
   const name = labelOf(key, lang, names)
   return lang === 'pt' ? `${n === 1 ? 'não tem' : 'não têm'} «${name}»` : `${n === 1 ? 'does' : 'do'} not have «${name}»`

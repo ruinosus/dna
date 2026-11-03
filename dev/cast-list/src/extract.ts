@@ -87,7 +87,8 @@ function* nodes(x: unknown, off = false): Generator<Obj> {
 
 /** «cr7b2_bot.shared_office365.shared-office365-…» → «shared_office365». */
 const apiOf = (ref: string) => ref.split('.')[1] ?? ref
-const last = (s: string, sep: string) => s.slice(s.lastIndexOf(sep) + (s.includes(sep) ? sep.length : 0))
+// what follows the last `sep`; the whole string when there is none
+const last = (s: string, sep: string) => (s.includes(sep) ? s.slice(s.lastIndexOf(sep) + sep.length) : s)
 // a copy or a test left in the editor, or a copy per language: its text says nothing new
 const NOISE = /(^|[\s._-])(copy|c[oó]pia|new|test|teste)([\s._-]|$)|\.[a-z]{2}-[A-Z]{2}(\.topic)?\.mcs\.ya?ml$/i
 const MAX_TEXT = 50_000
@@ -113,6 +114,8 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
   // a topic that calls another (BeginDialog) reaches what that topic is for — its trigger, known once every file is read
   const triggers = new Map<string, string>()
   const calls: { topic: string; into: Facts; at: Source }[] = []
+  // a topic can begin an action too (<schema>.action.<Name>): it has to be among the agent's actions
+  const actionCalls: { dialog: string; child: string; into: Facts; at: Source }[] = []
   const topicName = (path: string) => last(path, '/').replace(/(\.topic)?\.mcs\.ya?ml$|\.ya?ml$/, '')
   // what may turn out unused, known once every file is read
   const dialogs: string[] = []
@@ -319,7 +322,8 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
         dialogs.push(d)
         if (d.startsWith('=')) {
           if (d.includes('Switch(')) add('ms:dynamic-topic-redirect', n)
-        } else calls.push({ topic: `${child ?? ''}/${last(d, '.topic.')}`, into: facts, at: { file: f.path, line: r.lineOf(n) } }) // a topic's own schema prefix is dropped
+        } else if (d.includes('.action.')) actionCalls.push({ dialog: d, child: child ?? '', into: facts, at: { file: f.path, line: r.lineOf(n) } })
+        else calls.push({ topic: `${child ?? ''}/${last(d, '.topic.')}`, into: facts, at: { file: f.path, line: r.lineOf(n) } }) // a topic's own schema prefix is dropped
       }
       const reads = (x: unknown) => typeof x === 'string' && x.includes('System.Activity.ChannelId')
       if ((n.kind === 'ConditionGroup' && list(n.conditions).some((c) => reads(obj(c)?.condition))) || (n.kind === 'SetVariable' && reads(n.value))) add('ms:channel-aware-behavior', n)
@@ -338,7 +342,8 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
   // the flows: what each uses counts only when a node of the agent calls it; one nobody calls is unused
   const calledFlows = new Set([agent.facts, ...agent.children.map((c) => c.facts)].flatMap((fs) => Object.keys(fs)).filter((k) => k.startsWith('flow:')).map((k) => k.slice(5)))
   for (const [folder, { meta, metaFile, json }] of [...flowFolders].sort(([a], [b]) => a.localeCompare(b))) {
-    const fileName = str(meta?.jsonFileName) ?? Object.keys(json)[0]
+    // jsonFileName is the file's name, or its path from the agent's folder (workflows/<folder>/workflow.json)
+    const fileName = str(meta?.jsonFileName) ? last(meta!.jsonFileName as string, '/') : Object.keys(json)[0]
     const j = fileName ? json[fileName] : undefined
     const id = str(meta?.workflowId)
     const key = folder.replace(FOLDER_ID, '')
@@ -378,6 +383,10 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
     const trigger = triggers.get(c.topic)
     ;(c.into[trigger ? `reaches:${trigger}` : `calls:topic:${last(c.topic, '/')}`] ??= []).push(c.at)
   }
+  // an action not found (in actions/, or topics/ where a TaskDialog may live) is named in full: its schema prefix may
+  // be another agent's
+  const actions = new Set(files.map((f) => /^(?:agents\/([^/]+)\/)?(?:actions|topics)\/[^/]+$/.exec(f.path)).filter((m) => m).map((m) => `${m![1] ?? ''}/${topicName(m![0])}`))
+  for (const c of actionCalls) if (!actions.has(`${c.child}/${last(c.dialog, '.action.')}`)) (c.into[`calls:action:${c.dialog}`] ??= []).push(c.at)
   // a key seen twice in the same place is one fact
   for (const facts of [agent.facts, ...agent.children.map((c) => c.facts)])
     for (const [k, v] of Object.entries(facts)) facts[k] = v.filter((s, i) => v.findIndex((x) => x.file === s.file && x.line === s.line) === i)

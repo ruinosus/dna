@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.9.5 — 2026-11-03
+
+cast-list, the second run on a real cast (22 files «not understood», down from 96).
+
+- **Flows whose `jsonFileName` is a path** (`workflows/<folder>/workflow.json`, as the extension writes it) are read: the
+  file was looked for by the whole path. The rest of those flows' names, connectors and callers come back with them.
+- **A topic that begins an action** (`<schema>.action.<Name>`) is checked against the agent's actions, not its topics.
+  One not found is named in full, so an action of another agent's prefix (copied from another agent) shows as such:
+  «Chama a ação (não encontrada) …».
+- **A call without a prefix keeps its whole name:** it showed only its last letter («Chama o tópico (não encontrado) s»).
+- **The cast cards no longer spill:** a long path or a GUID wraps inside its card, and a file «not understood» twice
+  for the same reason shows once, with ×2.
+
 ## 1.9.4 — 2026-11-03
 
 cast-list on agents cloned by the VS Code extension on Windows, after a run on a real cast left 96 files «not

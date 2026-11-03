@@ -197,7 +197,7 @@ function castTab() {
       ${chains(a.id, a.displayName ?? a.id)}
       ${eventsOf(a.id)}
       ${a.children.length ? `<dt>${u.children}</dt><dd>${a.children.map((c) => `${esc(c.name)} <span class="cl-sub">(${Object.keys(c.facts).map(label).join(', ')})</span>`).join('<br>')}</dd>` : ''}
-      ${unknown.length ? `<dt>${esc(w.unknown)}</dt><dd>${unknown.map((x) => `${esc(x.file)} <span class="cl-sub">(${esc(w.why_[x.why])})</span>`).join('<br>')}</dd>` : ''}</dl>${routing}</section>`
+      ${unknown.length ? `<dt>${esc(w.unknown)}</dt><dd>${[...new Set(unknown.map((x) => `${x.file}\n${x.why}`))].map((k) => { const [file, why] = k.split('\n'); const n = unknown.filter((x) => x.file === file && x.why === why).length; return `${esc(file)} <span class="cl-sub">(${esc(w.why_[why as keyof typeof w.why_])}${n > 1 ? ` ×${n}` : ''})</span>` }).join('<br>')}</dd>` : ''}</dl>${routing}</section>`
   }).join('')}</div>`
 }
 

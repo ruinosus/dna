@@ -177,6 +177,11 @@ else {
       await new Promise((r) => setTimeout(r, 1500))
       q('[data-tab="patterns"]').click(); out.patterns = all('.cl-table tbody tr').length
       q('[data-tab="cast"]').click(); out.cast = all('.cl-agent').length
+      // a long path without spaces (a flow folder ending in a GUID) wraps inside its card
+      const dd = q('.cl-agent dd'), was = dd.textContent, box = dd.closest('.cl-agent')
+      dd.textContent += ' workflows/' + 'Nome'.repeat(30) + '-11111111-2222-3333-4444-555555555555/metadata.yml'
+      out.spills = dd.scrollWidth > dd.clientWidth + 1 || box.scrollWidth > box.clientWidth + 1
+      dd.textContent = was
       q('[data-tab="microsoft"]').click(); out.ms = all('.cl-table tbody tr').length
       q('[data-tab="unknown"]').click(); out.unknown = q('.cl-empty')?.textContent
       q('[data-tab="cast"]').click()
@@ -200,6 +205,7 @@ else {
   ok(r.events?.[0] === 'BodegaPedidos_OnError — 7 vezes em 30 dias' && r.events[1] === 'BodegaFrete_OnError — não disparou' && r.events[2] === 'nenhuma linha na telemetria', 'the cast: the events, the times they fired, what did not, who has no line', JSON.stringify(r.events))
   ok(r.routing === 6 && r.unused === 4 && !r.errs?.length, 'the orchestrator\'s routing, 6 calls; the Unused tab, 4 rows; no error', JSON.stringify([r.routing, r.unused, r.errs]))
   ok(r.patterns === 31 && r.cast === 6 && r.ms === 15 && r.unknown === 'Tudo foi entendido.', 'the tabs: patterns, cast, Microsoft, not understood', JSON.stringify(r))
+  ok(r.spills === false, 'the cast: a long path wraps inside its card', JSON.stringify(r.spills))
   // the stage in a browser: a lens lights who it names, frete's scene stops on the contract, a card opens
   const plotProbe = readFileSync(join(rh, 'agents.plot.html'), 'utf8').replace('</body>', `<script>
     const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))

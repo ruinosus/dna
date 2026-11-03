@@ -151,7 +151,7 @@ export function readProfile(text: string): { profile?: Profile; problems: Proble
 }
 
 /** Calls another agent (not one of its own topics). */
-export const callsAnAgent = (a: AgentFacts) => Object.keys(a.facts).some((k) => k.startsWith('calls:') && !k.startsWith('calls:topic:'))
+export const callsAnAgent = (a: AgentFacts) => Object.keys(a.facts).some((k) => k.startsWith('calls:') && !k.startsWith('calls:topic:') && !k.startsWith('calls:action:'))
 
 /**
  * Each agent's role: named in the profile; else the role the cast file gave it; else «*» in the profile; else an

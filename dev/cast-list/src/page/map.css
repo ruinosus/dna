@@ -93,11 +93,11 @@ body { margin: 0; }
 .cl-kicker { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .cl-close { align-self: flex-end; background: none; border: 0; color: var(--muted); }
 .cl-agents { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
-.cl-agent { display: flex; flex-direction: column; gap: 6px; }
+.cl-agent { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .cl-agent h3 { margin: 0; font-size: 16px; }
-.cl-agent dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 10px; font-size: 13px; }
+.cl-agent dl { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 10px; font-size: 13px; }
 .cl-agent dt { font-weight: 700; color: var(--muted); }
-.cl-agent dd { margin: 0; }
+.cl-agent dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .cl-agent .cl-lack { color: var(--off); }
 .cl-table { overflow-x: auto; }
 .cl-table table { border-collapse: collapse; font-size: 13px; min-width: 100%; }
