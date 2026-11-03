@@ -92,11 +92,13 @@ npx house-lights cast-list agents/ --all
 node skills/cast-list/scripts/build.mjs agents/ --declared inventory.csv --declared team.xlsx   # proposes d1, d2…
 node skills/cast-list/scripts/build.mjs agents/ --declared team.xlsx --take all                 # writes them
 node skills/cast-list/scripts/build.mjs agents/ --all --telemetry events.csv                    # what fired
+node skills/cast-list/scripts/build.mjs agents/ --all --evals evaluations/                       # the certifications
 ```
 
 `--declared` reads the admin center's inventory or the team's own spreadsheet (CSV with `,` or `;`, or .xlsx, no
 template): the agent's column is found by its values, every other column becomes a declared fact with its file and line.
-`--telemetry` reads one export of Application Insights — the query is in
+`--evals <folder>` reads the exports of Copilot Studio's Evaluate tab — who passed how many, by method, the counts
+only — for the résumés' certifications and a rule `has: "eval:*"`. `--telemetry` reads one export of Application Insights — the query is in
 [references/telemetry.md](../../skills/cast-list/references/telemetry.md) — and holds for that run only.
 
 The outputs hold the client's data: keep them in the client's environment. The

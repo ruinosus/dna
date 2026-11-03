@@ -10,6 +10,7 @@ Generated from `dev/cast-list/src/`. The same cast, as people. Nothing is guesse
 | being hired | called by the orchestrator and not in the folder, or in an environment (`declared:environment`) not the one most are in |
 | with no owner | no `declared:owner` (the inventory's Owner) — only with the inventory |
 | never published | a row in the inventory and no `declared:last-published` — only with the inventory |
+| with no evaluation | no export of the Evaluate tab names it — only with `--evals` |
 | with a development plan | one item of the plan or more that is not cleanup |
 | in good standing | no item, or only cleanup |
 
@@ -19,6 +20,20 @@ The title is the first sentence of the instructions, as written; the summary, th
 `declared:team` (the team spreadsheet's «Dono»), the owner `declared:owner`, the goal `declared:kpi`. The performance
 comes from `--telemetry`: topic starts (`TopicStart`), errors logged (the events of its YAML that fired) and those that
 did not fire. The goal is never measured from the telemetry.
+
+## Certifications (--evals)
+
+`--evals <folder>` reads the exports of Copilot Studio's Evaluate tab, «Evaluate <name> <date>.csv»: who is named by
+the file, a row passes when every `result_N` says Pass, and each method (`testMethodType_N`) is counted. Only the
+counts are kept: `question`, `expectedResponse`, `actualResponse` and `explanation_N` are the client's
+conversation and never reach an output. Who has one gets the fact `eval:run`, so a rule `has: "eval:*"` asks every
+one of a role for it. A file that names nobody in the folder, or has no `result_1`, is told and left out.
+
+## The review of access
+
+Within each type of two or more, a connector, an MCP server or what a flow reaches that only one has is asked about on
+the résumé and on the stage's card: does the post need it? It becomes a cleanup item of the plan only when the team
+decides so — a decision `rejected` on that key, in the type's scope (`type:<id>`).
 
 ## The post
 

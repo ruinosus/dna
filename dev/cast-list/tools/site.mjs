@@ -24,7 +24,7 @@ cpSync(join(skill, 'examples/agents'), join(work, ID), { recursive: true })
 copyFileSync(join(skill, 'examples/demo.cast.yaml'), join(docs, 'examples', `${ID}.cast.yaml`))
 // the inventory and the team spreadsheet taken, so the RH has owners, teams and goals
 execFileSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(work, ID), '--declared', join(skill, 'examples/inventario.csv'), '--declared', join(skill, 'examples/equipe.csv'), '--take', 'all', '--lang', 'pt', '--out', join(docs, 'examples')], { stdio: 'ignore' })
-execFileSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(work, ID), '--all', '--lang', 'pt', '--profile', join(skill, 'examples/profile.cast.yaml'), '--telemetry', join(skill, 'examples/telemetria.csv'), '--out', join(docs, 'examples')], { stdio: 'ignore' })
+execFileSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(work, ID), '--all', '--lang', 'pt', '--profile', join(skill, 'examples/profile.cast.yaml'), '--telemetry', join(skill, 'examples/telemetria.csv'), '--evals', join(skill, 'examples/avaliacoes'), '--out', join(docs, 'examples')], { stdio: 'ignore' })
 rmSync(work, { recursive: true, force: true })
 // The pictures, in the light theme, taken by the kit's browser over the DevTools pipe.
 const shots = [

@@ -4,7 +4,7 @@ description: Compares a team's Copilot Studio agents with each other, from the f
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing. The Microsoft skills for Copilot Studio are recommended, not needed.
 metadata:
-  version: "1.8.0"
+  version: "1.9.0"
 ---
 
 # cast-list: what the agents have in common, and who is off it
@@ -37,6 +37,8 @@ node scripts/build.mjs <agents-folder> --all [--profile <team>.cast.yaml] [--lan
 - It writes `<id>.html` (the map), `<id>.xlsx`, `<id>.lesson.html`, `<id>.playbill.html` (the RH), `<id>.plot.html` (the
   stage) and `<id>.cast.yaml`, named by the folder. The cast
   file is read again on every run: what people declared and decided stays.
+- `--evals <folder>` adds the **evaluations** of Copilot Studio's Evaluate tab (its CSV exports, «Evaluate <name>
+  <date>.csv»): who passed how many, by method — the counts only, never what was asked or answered.
 - `--telemetry <export.csv|.xlsx>` adds **what fired**: the result of one query the person runs in Application Insights
   and exports (`references/telemetry.md` has it, ready to copy). Read on that run only; nothing goes over the network.
 
@@ -171,6 +173,7 @@ part is read):
 - **the post** of each role and type: the accepted patterns and the profile's rules, as requirements;
 - **a résumé** each: the first sentence of its instructions, its manager, team, owner, tools, conduct, goal, and the
   performance from the telemetry (topic starts, errors logged, what did not fire; the goal is never measured from it);
+- **certifications**, with `--evals`, and the **access only it has in its type** («does the post need it?»);
 - **the development plan (PDI):** what «to look at» says about that one alone, as actions.
 
 When the person asks about it ("como está o RH do elenco?"), name who is in a plan and their first items, who has no

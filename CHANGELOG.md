@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.9.0 — 2026-11-03
+
+cast-list reads the evaluations and reviews the access.
+
+- **`--evals <folder>`** reads the exports of Copilot Studio's Evaluate tab («Evaluate <name> <date>.csv»): who is
+  named by the file, a row passes when every method passes, each method counted. **The counts only:** what was asked,
+  answered and explained is the client's conversation and never reaches an output. The résumé gets «Certifications»,
+  the staff board «with no evaluation», and who has one gets `eval:run`, so a rule `has: "eval:*"` asks for it. A file
+  that names nobody, or is not an export, is told and left out.
+- **The review of access:** within each type of two or more, a connector, an MCP server or what a flow reaches that
+  only one has is asked about on the résumé and the stage's card — does the post need it? With a decision `rejected`
+  on that key in the type's scope, it becomes a cleanup item of the plan.
+- The examples get two exports of the Evaluate tab (`examples/avaliacoes/`), written by the fixtures' generator.
+
 ## 1.8.0 — 2026-11-03
 
 cast-list puts the cast on a stage.
