@@ -1,0 +1,51 @@
+schema_version: "1.0"
+name: cast-list-telemetry-pt
+description: Whether the telemetry of six cloned Copilot Studio agents is consistent, and what really fires, with an export of Application Insights — the skill fires, and the answer names the cupons event spelt another way, the frete event that did not fire and the loja-fisica with no telemetry, editing no agent.
+tags: [build, pt]
+runs: 2
+context:
+  scaffold_script: setup.sh
+execution:
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Skill, Read, Write, Edit, Bash]
+  prompt: |
+    A telemetria dos agentes do Copilot Studio em ./agentes está consistente? E o que dispara de verdade? Exportei os eventos dos últimos 30 dias do Application Insights em ./eventos.csv. Use o perfil do time em ./perfil.cast.yaml. Não precisa me perguntar nada agora.
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?cast-list"'
+  - name: used-the-export
+    type: tool_used
+    tool: Bash
+    input_match: '--telemetry'
+  - name: names-spelling
+    type: regex
+    pattern: 'bodega_cupons_onerror'
+    flags: i
+  - name: names-not-fired
+    type: regex
+    pattern: 'n[ãa]o disparou|nunca disparou|sem disparo|zero'
+    flags: i
+  - name: no-agent-edited
+    type: tool_used
+    tool: Edit
+    input_match: 'agentes/'
+    min: 0
+    max: 0
+  - name: no-agent-written
+    type: tool_used
+    tool: Write
+    input_match: 'agentes/'
+    min: 0
+    max: 0
+  - name: findings
+    type: llm
+    criteria: >-
+      The answer, in Portuguese, says that bodega-cupons logs its error event as «bodega_cupons_onerror» while the
+      others follow «<name>_OnError» (the same event spelt another way) and that it lacks the ConversationId field; that
+      the event BodegaFrete_OnError is in frete's YAML but did not fire in the 30 days of the export; and that
+      bodega-loja-fisica logs no telemetry and has no line in the export (maybe not connected to Application Insights).
+      It leaves the decisions to the person, and invents no agent, event or number that is not in ./agentes,
+      ./eventos.csv or the profile.

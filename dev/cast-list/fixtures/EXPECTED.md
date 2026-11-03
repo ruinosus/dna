@@ -99,3 +99,22 @@ Inferred, to confirm in a real clone:
 - how a whole disabled topic appears (`state: Inactive` or another property): the fixtures disable a node only;
 - whether each agent's clone brings the flows it uses or only the solution's: the fixtures put the flow in each agent;
 - the type of the answer action in a flow called by an agent: `Response` with `kind: Skills`.
+
+## Wave 3 (cast-list 1.5): the telemetry by name, what fired, and declared from a spreadsheet
+
+Added by `gen_fixtures.py` (the `WAVE3` table and three tables beside `agents/`):
+
+| Where | What | What it should give |
+|---|---|---|
+| cupons `topics/OnError` | `eventName: bodega_cupons_onerror`, no `ConversationId` in `properties` | counted as `{agent}_OnError` (the form 5 agents write) and asked: «é o mesmo evento?»; off `telemetry:field:{agent}_OnError/ConversationId` |
+| every other agent that logs | `<Key>_OnError` (`BodegaPedidos_OnError`…) with `Agente`, `ErrorMessage`, `ErrorCode`, `TimeUTC`, `ConversationId` | `telemetry:event:{agent}_OnError` and its 5 fields: parts of `node:LogCustomTelemetryEvent`, never solos |
+| `examples/telemetria.csv` | the query of `references/telemetry.md`: `agente,evento,vezes`, the agent by display name, `TopicStart` for each connected one | «O evento «BodegaFrete_OnError» de bodega-frete não disparou em 30 dias»; «bodega-loja-fisica não tem nenhuma linha na telemetria» |
+| `examples/inventario.csv` | the admin center's download: 6 agents by name and schema name, an agent of another environment (`cr7b2_bodegaFidelidade`), a canvas app, an agent flow; cupons with no owner | `declared:owner`, `environment`, `created-on`, `last-published`; the app and the flow left out; Fidelidade listed as naming nobody |
+| `examples/equipe.csv` | `;`, `Agente;KPI;Dono`, loja-fisica with no KPI, a row «Sobre a Bodega Azul» (the orchestrator's child, not a folder) | `declared:kpi` and `declared:owner`; after `--take all` the KPI rule misses only loja-fisica |
+
+With the example profile: 24 to look at (22 + the spelling + the field); with the demo cast file and the telemetry, 27.
+
+Inferred, to confirm in a real clone and a real export:
+- the shape of `properties` (a Power Fx record `={…}`), and whether `cloud_RoleInstance` carries the agent's name;
+- the exact titles of the inventory download (`Item name`, `Item type`, `Schema name`, `Owner`…), and whether the owner
+  comes as a name, an e-mail or an id.

@@ -35,6 +35,15 @@ decisions:                   # what the team decided about a pattern
 
 ## The workbook back
 
+## A spreadsheet from outside
+
+`--declared <table.csv|.xlsx>` (more than once is fine) reads a table the team already has — the admin center's
+inventory download, the team's list — and proposes a `declared:` line per agent and column, with the source
+`<file> › line <n>` (`<file> › <sheet> › line <n>` for an .xlsx). The agent's column is found by its values; the key is
+the column's title in lower case with `-` (`Linha de base` → `linha-de-base`; `Dono`/`Owner` → `owner`, `KPI`/`Indicador`
+→ `kpi`). Listed with keys (`d1`…), written with `--take`, like the workbook below. Two tables saying the same key of
+the same agent: the later one holds.
+
 In Excel, fill the **Declared** sheet (who, key, value, source) and the **Decision** column of **Patterns** (`accepted` /
 `aceito`, `rejected` / `rejeitado`; **Scope** and **Why** beside it). Then:
 
@@ -72,6 +81,12 @@ routing description), `file` and `line` — and every agent has `flows`: `id` (t
 | `flow-returns` | the same | the flow has a `Response` action |
 | `orphan:topic:<name>`, `orphan:action:<name>`, `orphan:variable:<name>`, `orphan:flow:<name>` | the one that has it | nothing can reach it (see SKILL.md, step 2) |
 | `disabled:node:<kind>`, `disabled:<topic\|action\|variable\|knowledge>:<name>` | the one that has it | `disabled: true` on a node; `state` or `status: Inactive` on a component |
+
+| `telemetry:event:<form>` | the one that logs it | a `LogCustomTelemetryEvent` node; the form is its `eventName` with the agent's own name as `{agent}` (part of `node:LogCustomTelemetryEvent`) |
+| `telemetry:field:<form>/<field>` | the same | each field of the node's `properties` record (part of its event) |
+
+Every agent also has `telemetry` in `<id>.facts.json`: `name` (as written), `form`, `fields` (absent when the record is
+a formula), `file` and `line`. An event spelt another way counts as the most common form in the comparison.
 
 The contract's facts cite the orchestrator's file (`<orchestrator>/actions/X.mcs.yml`). `orphan:` and `disabled:` are
 never a pattern nor a solo, and what an unused flow calls is not a fact.

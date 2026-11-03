@@ -1,10 +1,10 @@
 ---
 name: cast-list
-description: Compares a team's Copilot Studio agents with each other, from the folders the VS Code extension clones — what most of them do, in their YAML and in the text of their instructions (a pattern to agree on, per role and per type), who is off a pattern, what only one has (innovation or debt), the team's rules not met, and what people say the YAML contradicts — with the file and line of each. Delivers an offline map, an Excel workbook to decide in, a lesson that draws the cast, and a cast file that keeps the decisions for the next run. Node alone: no model, no install, no network. Use when someone wants to find patterns across Copilot Studio agents, define architecture or delivery standards from evidence, check a new agent against the accepted ones, or see which agents escalate, log telemetry, use which connectors or write their rules differently ("compare our Copilot Studio agents", "which of our agents is off the pattern?", "compara os agentes do Copilot Studio", "o que se repete entre os especialistas?").
+description: Compares a team's Copilot Studio agents with each other, from the folders the VS Code extension clones — what most of them do, in their YAML and in the text of their instructions (a pattern to agree on, per role and per type), who is off a pattern, what only one has (innovation or debt), the team's rules not met, and what people say the YAML contradicts — with the file and line of each. Delivers an offline map, an Excel workbook to decide in, a lesson that draws the cast, and a cast file that keeps the decisions for the next run. Node alone: no model, no install, no network. Use when someone wants to find patterns across Copilot Studio agents, define architecture or delivery standards from evidence, check a new agent against the accepted ones, or see which agents escalate, log telemetry (and which events, and whether they fire), use which connectors or write their rules differently, or bring in what a spreadsheet says about them — the admin center's inventory, the team's own — ("compare our Copilot Studio agents", "which of our agents is off the pattern?", "compara os agentes do Copilot Studio", "o que se repete entre os especialistas?").
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing. The Microsoft skills for Copilot Studio are recommended, not needed.
 metadata:
-  version: "1.4.0"
+  version: "1.5.0"
 ---
 
 # cast-list: what the agents have in common, and who is off it
@@ -36,6 +36,8 @@ node scripts/build.mjs <agents-folder> --all [--profile <team>.cast.yaml] [--lan
   profile, the orchestrator is whoever calls another agent, and the shared blocks of text are still found.
 - It writes `<id>.html` (the map), `<id>.xlsx`, `<id>.lesson.html` and `<id>.cast.yaml`, named by the folder. The cast
   file is read again on every run: what people declared and decided stays.
+- `--telemetry <export.csv|.xlsx>` adds **what fired**: the result of one query the person runs in Application Insights
+  and exports (`references/telemetry.md` has it, ready to copy). Read on that run only; nothing goes over the network.
 
 Exit 1 with `✗ file:line` is a broken profile or cast file: fix the line. Exit 3 is a lesson the reviewer did not pass.
 
@@ -55,6 +57,15 @@ The `!` lines are what to look at (`references/keys.md` names every fact), in th
 - **A flow that returns nothing** — a flow an agent calls with no `Response`: «O fluxo «X» de cupons não devolve nada».
   What a flow calls (connectors, operations, HTTP hosts, another flow) is compared like any fact; the map's Cast tab
   shows each chain, agent → flow → system.
+- **An event spelt another way** — the events are compared by their **form**, the name with the agent's own name
+  taken out («BodegaPedidos_OnError» and «BodegaFrete_OnError» are «‹nome›_OnError»). Two forms that are the same with
+  no case, `_`, `-`, `.` or space count as the most common one, and the other is asked about: «cupons registra
+  «bodega_cupons_onerror»; os outros, «‹nome›_OnError»: é o mesmo evento?» — a different name breaks whoever queries
+  the telemetry. An event is part of logging telemetry, and each field of its record (`properties: "={A: x}"`) is part
+  of the event: «1 especialista registra «‹nome›_OnError» sem «ConversationId» (cupons)». A name or a record made by a
+  formula cannot be read: the name goes to «not understood», the record leaves that agent out of the fields.
+- **What did not fire** (with `--telemetry`) — «O evento «X» de frete não disparou em 30 dias», and «loja-fisica não
+  tem nenhuma linha na telemetria: está ligado ao Application Insights?».
 - **Off a pattern** — «1 especialista não escala para humano (frete): é intencional?». With an accepted pattern:
   «corrigir?». A **variation** of a shared block — «1 especialista tem uma variação do bloco oficial «Formatação de
   links» (frete): alinhar?» — and the map shows the words that went and came. Off a type's pattern: «1 especialista de
@@ -92,9 +103,26 @@ Say both when the team asks.
   in single quotes in YAML); `value: "$2 bullets"` keeps what it captured. Try it with `--check`: a regex that does not
   compile is `✗ profile:line`.
 
-## 3. Add what only people know — optional, with a model
+## 3. Add what only people know
 
-The YAML does not hold KPIs, owners or intentions. When the person gives you documents (a handoff, the backlog):
+The YAML does not hold KPIs, owners or intentions.
+
+**From a spreadsheet, with no model.** Most teams already have one: the **inventory** the Power Platform admin center
+downloads (Manage › Inventory, or Manage › Copilot Studio › Download: name, schema name, owner, environment, last
+published…), or the team's own list with the KPI and the owner. Any `.csv` (`,` or `;`) or `.xlsx`:
+
+```
+node scripts/build.mjs <agents-folder> --declared inventario.csv --declared equipe.xlsx          lists what they say, each with a key
+node scripts/build.mjs <agents-folder> --declared inventario.csv --declared equipe.xlsx --take all   writes it to the cast file
+```
+
+- The agent's column is found by its values (the schema name, the folder or the display name); when two columns name
+  the agents differently, or none does, it asks for `--agent-column "<title>"`.
+- Every other column with a value becomes `declared:<column>` (`Dono` and `Owner` become `owner`, `KPI` and
+  `Indicador` become `kpi`), with the file and the line as its source. The inventory's apps and flows are left out; a row
+  of an agent not in the folder is listed; importing again changes nothing; nothing is removed.
+
+**From documents, with a model.** When the person gives you documents (a handoff, the backlog):
 
 1. `node scripts/build.mjs <agents-folder> --facts` writes `<id>.facts.json`: what was seen, with file and line.
 2. Read **at most two** sources. For each thing they say about an agent, add a line to `declared:` in `<id>.cast.yaml`
@@ -123,7 +151,8 @@ Run again: an accepted pattern is now checked on every agent of its scope, even 
 End with a short summary: how many agents; **the main patterns by name** — what the specialists do in common, and
 what the platform does (behaviours first: escalation, error handling, telemetry; settings last) — **who is off what**
 (by name), the orchestrator's contract when there is one (who gets what; a call to one not in the folder; a short
-routing description), a flow that returns nothing, **what nobody uses or is switched off** (each by name and agent —
+routing description), a flow that returns nothing, the telemetry (an event spelt another way, a field missing and,
+with the export, what did not fire and who has no line), **what nobody uses or is switched off** (each by name and agent —
 the «Unused» list, even when nobody asked), the open decisions with your bet, and the files. A count alone («22 patterns») tells the person nothing. The map's «Para olhar» / «To look at», the Matrix (filter by role and focus area; a click shows the file and
 line), the Patterns cards and the Microsoft tab are where the person continues.
 
