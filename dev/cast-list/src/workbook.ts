@@ -9,9 +9,11 @@ import type { Cast } from './cast'
 import type { Result } from './compare'
 import { DIMENSIONS, dimensionOf, formText, labelOf, type Dimension, type Lang } from './labels'
 import { groupLooks, groupPatterns, type Look } from './review'
+import { pdiOf } from './pdi'
+import { playbillOf } from './playbill'
 import { SHEET_WORDS } from './words'
 
-export type SheetKey = 'summary' | 'matrix' | 'patterns' | 'text' | 'routing' | 'telemetry' | 'off' | 'gaps' | 'conflicts' | 'unused' | 'agents' | 'evidence' | 'declared' | 'unknown'
+export type SheetKey = 'summary' | 'matrix' | 'patterns' | 'text' | 'routing' | 'telemetry' | 'off' | 'gaps' | 'conflicts' | 'unused' | 'agents' | 'staff' | 'pdi' | 'evidence' | 'declared' | 'unknown'
 /** A sheet of rows; the xlsx writer reads its name, columns, rows and header. */
 export interface Sheet extends Omit<LibSheet, 'key'> { key: SheetKey }
 /** The .xlsx of these sheets (the platform's writer: its own `key` names only the platform's sheets). */
@@ -93,7 +95,15 @@ export function workbookOf(r: Result, looks: Look[], cast: Cast, lang: Lang = 'e
       ...(days ? [e.fired === undefined || r.telemetry.silent.includes(e.agent) ? '—' : e.fired === 0 ? { v: 0, color: 'B42318', bold: true } : e.fired] : [])]))
   const unused = sheet('unused', [[w.agent, 24], [w.what, 16], [w.name, 30], [w.how, 14], [w.file, 50]],
     r.unused.flatMap((u) => u.sources.map((s): Value[] => [u.agent, w.thing[u.what] ?? u.what, r.names[u.name] ?? u.name, w[u.how], `${s.file}${s.line ? `:${s.line}` : ''}`])))
-  const sheets = [summary, matrix, patterns, ...(r.blocks.length ? [text] : []), ...(r.contract.routes.length ? [routing] : []), ...(r.telemetry.events.length ? [telemetry] : []), offSheet, gaps, conflicts, ...(r.unused.length ? [unused] : []), cast_, evidence, declared]
+  // the RH: each one's situation and plan (the posts need the profile, the résumé the files: they are the RH page's)
+  const pb = playbillOf(r, looks, [], cast, [])
+  const situations = (id: string) => pb.staff.filter((x) => x.key !== 'cast' && x.people.some((p) => p.id === id)).map((x) => w.situation[x.key]).join(', ')
+  const pdi = pdiOf(looks, r)
+  const staff = sheet('staff', [[w.agent, 24], [w.name, 32], [w.situation_, 34], [w.manager, 24], [w.teamCol, 22], [w.ownerCol, 30], [w.hired, 14], [w.publishedCol, 14], [w.items, 10]],
+    pb.resumes.map((x) => [x.id, x.name, situations(x.id), x.manager ?? '', x.team?.value ?? '', x.owner?.value ?? '', x.created?.value ?? '', x.published?.value ?? '', pdi.filter((p) => p.agent === x.id).length || '']))
+  const plan = sheet('pdi', [[w.agent, 24], [w.item, 60], [w.why, 70], [w.key, 40], [w.group, 18]],
+    pdi.map((p) => [p.agent, p[lang], { v: p.why[lang], wrap: true }, p.keys.join(', '), w.pdiGroup[p.group]]))
+  const sheets = [summary, matrix, patterns, ...(r.blocks.length ? [text] : []), ...(r.contract.routes.length ? [routing] : []), ...(r.telemetry.events.length ? [telemetry] : []), offSheet, gaps, conflicts, ...(r.unused.length ? [unused] : []), cast_, staff, ...(pdi.length ? [plan] : []), evidence, declared]
   if (r.unknown.length) sheets.push(sheet('unknown', [[w.agent, 24], [w.file, 50], [w.why, 40], [w.kind, 24]], r.unknown.map((u) => [u.agent, u.file, w.why_[u.why], u.kind ?? ''])))
   return sheets
 }

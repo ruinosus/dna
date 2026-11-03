@@ -37,7 +37,7 @@ for (const f of readdirSync(join(root, 'checks')).filter((x) => x.endsWith('.che
 // the examples, with the profile and no cast file yet
 const plain = join(work, 'plain')
 const a = run(agents, '--profile', profile, '--all', '--lang', 'pt', '--out', plain)
-ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agents.cast.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, lesson and cast file', a.stdout + a.stderr)
+ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agents.playbill.html', 'agents.cast.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, lesson, RH and cast file', a.stdout + a.stderr)
 ok(/✓ review|• review/.test(a.stdout) && !/! review/.test(a.stdout), "the lesson passes chalk-talk's reviewer (when there is a browser)", a.stdout)
 ok(looks(a.stdout) === 24, `24 to look at (${looks(a.stdout)})`, a.stdout)
 const heads = [...a.stdout.matchAll(/^▸ (.+) · (\d+)$/gm)].map((m) => [m[1], Number(m[2])])
@@ -62,6 +62,22 @@ ok(listedOut.status === 0 && /^\s+d1\s+\+ declarado\s+bodega-orquestrador · Res
 const tookOut = run(agents, '--declared', join(examples, 'equipe.csv'), '--take', 'all', '--lang', 'pt', '--out', dec)
 const afterKpi = run(agents, '--profile', profile, '--check', '--lang', 'pt', '--out', dec)
 ok(tookOut.status === 0 && readFileSync(join(dec, 'agents.cast.yaml'), 'utf8').includes('cotação em menos de 5 s') && afterKpi.stdout.includes('Regra «Todo especialista tem KPI»: 1 especialista não cumpre (bodega-loja-fisica)'), '--take all writes them; the next run counts the KPIs', afterKpi.stdout)
+// the RH: the demo cast file with both tables taken, and the telemetry
+const rh = join(work, 'rh')
+mkdirSync(rh)
+copyFileSync(join(examples, 'demo.cast.yaml'), join(rh, 'agents.cast.yaml'))
+run(agents, '--declared', join(examples, 'inventario.csv'), '--declared', join(examples, 'equipe.csv'), '--take', 'all', '--out', rh)
+const rhRun = (out) => run(agents, '--profile', profile, '--all', '--lang', 'pt', '--telemetry', join(examples, 'telemetria.csv'), '--out', out)
+const rhOut = rhRun(rh)
+const rhPage = existsSync(join(rh, 'agents.playbill.html')) ? readFileSync(join(rh, 'agents.playbill.html'), 'utf8') : ''
+ok(rhOut.status === 0 && rhOut.stdout.includes('✓ rh') && readFileSync(join(rh, 'agents.html'), 'utf8').includes('agents.playbill.html') && !/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(rhPage), '--all writes the RH beside the map, which links to it; the RH loads nothing from the internet', rhOut.stdout)
+const rh2 = join(work, 'rh2')
+mkdirSync(rh2)
+copyFileSync(join(rh, 'agents.cast.yaml'), join(rh2, 'agents.cast.yaml'))
+rhRun(rh2)
+ok(readFileSync(join(rh2, 'agents.playbill.html'), 'utf8') === rhPage, 'the same run, the same RH page')
+const only = run(agents, '--playbill', '--out', join(work, 'rh-only'))
+ok(only.status === 0 && existsSync(join(work, 'rh-only', 'agents.playbill.html')) && !existsSync(join(work, 'rh-only', 'agents.html')), '--playbill alone writes only the RH', only.stdout)
 writeFileSync(join(work, 'nobody.csv'), 'a,b\nx,y\n')
 const nobody = run(agents, '--declared', join(work, 'nobody.csv'), '--out', dec)
 ok(nobody.status === 1 && nobody.stderr.includes('--agent-column') && run(agents, '--declared', join(work, 'none.csv')).status === 2 && run(agents, '--telemetry', join(examples, 'telemetria.csv'), '--telemetry-days', 'x').status === 2, 'a table that names nobody asks for --agent-column; a missing file or bad days: exit 2', nobody.stderr)
@@ -174,6 +190,20 @@ else {
   ok(r.events?.[0] === 'BodegaPedidos_OnError — 7 vezes em 30 dias' && r.events[1] === 'BodegaFrete_OnError — não disparou' && r.events[2] === 'nenhuma linha na telemetria', 'the cast: the events, the times they fired, what did not, who has no line', JSON.stringify(r.events))
   ok(r.routing === 6 && r.unused === 4 && !r.errs?.length, 'the orchestrator\'s routing, 6 calls; the Unused tab, 4 rows; no error', JSON.stringify([r.routing, r.unused, r.errs]))
   ok(r.patterns === 31 && r.cast === 6 && r.ms === 15 && r.unknown === 'Tudo foi entendido.', 'the tabs: patterns, cast, Microsoft, not understood', JSON.stringify(r))
+  // the RH in a browser: the board, frete's résumé and plan, a click on pedidos, never «agente»
+  const rhProbe = readFileSync(join(rh, 'agents.playbill.html'), 'utf8').replace('</body>', `<script>
+    const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
+    setTimeout(() => { const q = (s) => document.querySelector(s); const all = (s) => document.querySelectorAll(s); const out = {}
+      out.counts = [...all('.pb-count')].map((c) => c.textContent.trim())
+      out.name = q('.pb-resume h2')?.textContent; out.items = all('.pb-pdi li').length; out.seal = q('.pb-seal')?.textContent
+      q('[data-who="bodega-pedidos"]').click(); out.pedidos = [q('.pb-resume h2')?.textContent, q('.pb-seal')?.textContent]
+      const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.map = q('a[href="agents.html"]') ? 1 : 0; out.errs = errs
+      const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
+  writeFileSync(join(rh, 'probe.html'), rhProbe)
+  const h = (await runPage(join(rh, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
+  ok(h.counts?.some((c) => c.startsWith('1') && c.includes('sem responsável — Bodega Azul - Cupons')) && h.counts.some((c) => c.includes('em admissão — Bodega Azul - Fidelidade')) && h.counts.some((c) => c.includes('nunca publicado — Bodega Azul - Loja Física')), 'the RH: the staff board says who', JSON.stringify(h.counts))
+  ok(h.name === 'Bodega Azul - Cupons' || h.name === 'Bodega Azul - Frete' || h.name?.startsWith('Bodega Azul'), 'the RH opens on a résumé', JSON.stringify(h))
+  ok(h.pedidos?.[0] === 'Bodega Azul - Pedidos' && h.pedidos[1] === 'EM DIA' && h.agent === false && h.map === 1 && !h.errs?.length, 'a click opens pedidos, in good standing; never «agente» in its own words (the client\'s text is quoted as written); the map is a link away; no error', JSON.stringify(h))
 }
 
 // wave 1 in a browser: the example profile has markers, an official block and types

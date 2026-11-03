@@ -54,6 +54,12 @@ const html = readFileSync(join(root, 'src/page/template.html'), 'utf8').replace(
 if (!html.includes('{{CAST}}')) throw new Error('The template lost its {{CAST}} slot.')
 mkdirSync(join(skill, 'assets'), { recursive: true })
 writeFileSync(join(skill, 'assets/map.html'), html)
+// the RH page, with its code inside, on the same template
+const pbCss = readFileSync(join(root, 'src/page/playbill.css'), 'utf8')
+const pbScript = (await build({ ...common, entryPoints: [join(root, 'src/page/playbill.ts')], format: 'iife', target: 'es2020' })).outputFiles[0].text
+if (/<\/script/i.test(pbScript)) throw new Error('The RH script contains "</script": it would end the page early.')
+const pbHtml = readFileSync(join(root, 'src/page/template.html'), 'utf8').replace(/\{\{(VERSION|CSS|JS)\}\}/g, (_, k) => ({ VERSION: `engine ${version}`, CSS: pbCss, JS: pbScript })[k])
+writeFileSync(join(skill, 'assets/playbill.html'), pbHtml)
 // the lesson page — chalk-talk's player, from its npm package
 copyFileSync(join(repo, 'node_modules/chalk-talk/assets/player.html'), join(skill, 'assets/lesson.html'))
 // the kit's headless browser (the lesson's reviewer, the map's check) and page helpers
@@ -64,5 +70,8 @@ copyFileSync(join(repo, 'skills/gates-and-handoffs/scripts/read-xlsx.mjs'), join
 const { keysMarkdown } = await import(`data:text/javascript;base64,${Buffer.from((await build({ ...common, entryPoints: [join(root, 'src/labels.ts')], format: 'esm', platform: 'node' })).outputFiles[0].text).toString('base64')}`)
 mkdirSync(join(skill, 'references'), { recursive: true })
 writeFileSync(join(skill, 'references/keys.md'), keysMarkdown())
+// references/playbill.md, from the words the RH uses
+const { playbillMarkdown } = await import(`data:text/javascript;base64,${Buffer.from((await build({ ...common, entryPoints: [join(root, 'src/playbillDoc.ts')], format: 'esm', platform: 'node' })).outputFiles[0].text).toString('base64')}`)
+writeFileSync(join(skill, 'references/playbill.md'), playbillMarkdown())
 writeFileSync(join(skill, 'assets/VERSION'), `engine ${version}\nchalk-talk ${chalk}\n`)
-console.log(`✓ assets from the engine ${version} and chalk-talk ${chalk}: engine.mjs ${(engine.outputFiles[0].text.length / 1024).toFixed(0)} KB, map.html ${(html.length / 1024).toFixed(0)} KB, read-xlsx.mjs, references/keys.md`)
+console.log(`✓ assets from the engine ${version} and chalk-talk ${chalk}: engine.mjs ${(engine.outputFiles[0].text.length / 1024).toFixed(0)} KB, map.html ${(html.length / 1024).toFixed(0)} KB, playbill.html ${(pbHtml.length / 1024).toFixed(0)} KB, read-xlsx.mjs, references/keys.md and playbill.md`)

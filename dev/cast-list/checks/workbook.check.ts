@@ -14,6 +14,7 @@ import { reviewCast } from '../src/review'
 import { workbookFile, workbookOf } from '../src/workbook'
 import { done, ok } from './ok'
 import { plain, wave1 } from './wave1'
+import { run } from './example'
 
 const skills = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills')
 const examples = join(skills, 'cast-list/examples')
@@ -28,8 +29,8 @@ const back = (lang: 'en' | 'pt') => readXlsx(Buffer.from(workbookFile(sheets(lan
 
 // the sheets
 const pt = sheets('pt')
-ok(pt.map((s) => s.name).join() === 'Resumo,Matriz,Padrões,Texto,Roteamento,Telemetria,Fora do padrão,Lacunas,Conflitos,Sem uso,Elenco,Evidências,Declarado', 'the sheets of the spec, in order (pt)', pt.map((s) => s.name))
-ok(sheets('en').map((s) => s.name).join() === 'Summary,Matrix,Patterns,Text,Routing,Telemetry,Off pattern,Gaps,Conflicts,Unused,Cast,Evidence,Declared', 'and in English')
+ok(pt.map((s) => s.name).join() === 'Resumo,Matriz,Padrões,Texto,Roteamento,Telemetria,Fora do padrão,Lacunas,Conflitos,Sem uso,Elenco,Quadro de pessoal,PDI,Evidências,Declarado', 'the sheets of the spec, in order (pt)', pt.map((s) => s.name))
+ok(sheets('en').map((s) => s.name).join() === 'Summary,Matrix,Patterns,Text,Routing,Telemetry,Off pattern,Gaps,Conflicts,Unused,Cast,Staff,Development plan,Evidence,Declared', 'and in English')
 const odd = compare([...agents, extractAgent('odd', [{ path: 'agent.mcs.yml', text: 'kind: GptComponentMetadata\n' }, { path: 'a.txt', text: '' }])], profile, demo)
 ok(workbookOf(odd, reviewCast(odd), demo, 'pt').at(-1)?.name === 'Não entendeu', '«Not understood» only when something was not')
 // the telemetry: each event as written, its form, its fields; with the export, the times
@@ -133,4 +134,14 @@ const got1 = fromSheets(demo, back1, r1.typeNames)
 const d1 = got1.changes.find((c) => c.kind === 'decision' && c.after?.key === 'text:link-domain:ajuda.bodega-azul.example')
 ok(!got1.problems.length && d1?.kind === 'decision' && d1.after?.scope === 'type:guidance', 'the scope «tipo:orientação» comes back as type:guidance', got1)
 ok(!fromSheets(demo, readXlsx(Buffer.from(workbookFile(s1))), r1.typeNames).changes.length, 'read back as written, it still changes nothing')
+// the RH in the workbook: each one's situation, and the plan
+const rh = run()
+const rhSheets = workbookOf(rh.result, rh.looks, rh.cast, 'pt')
+const staffSheet = rhSheets.find((s) => s.key === 'staff')!
+const pdiSheet = rhSheets.find((s) => s.key === 'pdi')!
+const staffRow = (id: string) => staffSheet.rows.find((x) => x[0] === id)?.map((c) => (typeof c === 'object' && c ? (c as { v: unknown }).v : c))
+ok(staffSheet.name === 'Quadro de pessoal' && staffRow('bodega-cupons')?.[2] === 'sem responsável, em PDI' && staffRow('bodega-pedidos')?.[2] === 'em dia' && staffRow('bodega-frete')?.[4] === 'Squad Logística' && staffRow('bodega-frete')?.[8] === 5, 'the Staff sheet: situation, team and plan items of each', [staffRow('bodega-cupons'), staffRow('bodega-frete')])
+ok(pdiSheet.name === 'PDI' && pdiSheet.rows.filter((x) => x[0] === 'bodega-frete').length === 5 && pdiSheet.rows.some((x) => x[1] === 'Aprender a encaminhar para uma pessoa'), 'the PDI sheet: a row per item', pdiSheet.rows.slice(0, 3))
+ok(!fromSheets(rh.cast, readXlsx(Buffer.from(workbookFile(rhSheets))), rh.result.typeNames).changes.length, 'with the RH sheets, the workbook still reads back as no change')
+
 done()
