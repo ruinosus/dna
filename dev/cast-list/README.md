@@ -1,7 +1,8 @@
 <h1 align="center">cast-list</h1>
 
-<p align="center"><b>Point Claude at your Copilot Studio agents, cloned. See what they all do, who is off the pattern
-and what only one has — with the file and line behind every finding.</b></p>
+<p align="center"><b>Point Claude at your Copilot Studio agents, cloned. See what they all do, who is off the pattern,
+what only one has, what the orchestrator passes on, which events they log and whether they fire, and what nobody uses —
+with the file and line behind every finding.</b></p>
 
 <p align="center">
   <img src="../../docs/cast-list/images/bodega-azul-map.png" alt="Six agents of a made-up shop compared: a matrix of who has what, with a red × where one specialist does not escalate and another logs no telemetry" width="860">
@@ -29,8 +30,8 @@ locked-down environment where a model has few credits or none.
 
 | | |
 |---|---|
-| **The map** (`.html`) | One page that opens offline: «to look at» on top; the matrix of facts by dimension (conversation, integrations, knowledge, orchestrator, governance) and agent — ● has it, × off a pattern, ◐ declared — filtered by role and focus area; the patterns to decide; a click shows who has it and the file and line. Tabs for the patterns, the cast, the Microsoft reference patterns and what was not understood. |
-| **The workbook** (`.xlsx`) | Summary, Matrix, Patterns (with a Decision column to fill), Text (the blocks agents share, who has a variation), Off pattern, Gaps, Conflicts, Cast (with each one's types), Evidence, Declared (to fill). Read back with `--from`, taken with `--take`. |
+| **The map** (`.html`) | One page that opens offline: «to look at» on top, in groups with how many (Contradictions · Contract and telemetry · Off pattern · Rules · Only one has it · Unused · Not understood; «Only one has it» and «Unused» folded at first); the matrix of facts by dimension (conversation, integrations, knowledge, orchestrator, governance) and agent — ● has it, × off a pattern, ◐ declared — filtered by role and focus area; the patterns to decide; a click shows who has it and the file and line. Tabs for the patterns, the cast (each one's chain — agent → flow → system — and its events, with the times they fired), the Microsoft reference patterns, what nobody uses and what was not understood. |
+| **The workbook** (`.xlsx`) | Summary, Matrix, Patterns (with a Decision column to fill), Text (the blocks agents share, who has a variation), Off pattern, Gaps, Conflicts, Cast (with each one's types), Routing (what the orchestrator passes to each), Telemetry (each event as written, its form, its fields and, with an export, the times it fired), Unused, Evidence, Declared (to fill). Read back with `--from`, taken with `--take`. |
 | **The lesson** (`.lesson.html`) | A chalk-talk lesson: the cast, what repeats, who is off, what is missing, what to decide. |
 | **The cast file** (`.cast.yaml`) | What people declared (KPIs, owners, what a handoff claims) and what was decided — kept between runs. |
 
@@ -49,6 +50,16 @@ locked-down environment where a model has few credits or none.
 - **Types** of specialist (transaction, guidance, triage…), from what their YAML and text show: patterns are also found
   within each type, and a pattern of a type never blames who is not of it. One may be of two types.
 - A rule can confront the text with the setup: «asks for the knowledge alone» with the model's general knowledge on.
+- **The orchestrator's contract**: what each call passes (the conversation history, the inputs, the routing
+  description) is a fact of the specialist called, compared like any other. Told apart: a call to one not in the
+  folder, a specialist nobody calls, a routing description under 80 characters.
+- **Flows**: what a flow calls (connectors, operations, HTTP hosts, another flow) is compared too; a flow with no
+  `Response` is told.
+- **Unused**: a topic nobody can reach, a tool the model cannot choose, a variable no file names, a flow no node calls,
+  a node or a component switched off. Never a pattern nor a solo.
+- **Telemetry by name**: each event is compared by its name with the agent's own name taken out
+  («BodegaPedidos_OnError» and «BodegaFrete_OnError» are «‹name›_OnError»), and each field of its record too. A
+  spelling that differs only in case or separators is asked about: «the same event?».
 - A child agent's facts are the child's. A file it cannot read — broken YAML, a kind Copilot Studio does not have — is
   told, and the rest is read anyway.
 
@@ -72,6 +83,19 @@ or with npm:
 node skills/cast-list/scripts/build.mjs agents/ --all --profile team.cast.yaml --lang pt
 npx house-lights cast-list agents/ --all
 ```
+
+**Bring what you already have:**
+
+```
+node skills/cast-list/scripts/build.mjs agents/ --declared inventory.csv --declared team.xlsx   # proposes d1, d2…
+node skills/cast-list/scripts/build.mjs agents/ --declared team.xlsx --take all                 # writes them
+node skills/cast-list/scripts/build.mjs agents/ --all --telemetry events.csv                    # what fired
+```
+
+`--declared` reads the admin center's inventory or the team's own spreadsheet (CSV with `,` or `;`, or .xlsx, no
+template): the agent's column is found by its values, every other column becomes a declared fact with its file and line.
+`--telemetry` reads one export of Application Insights — the query is in
+[references/telemetry.md](../../skills/cast-list/references/telemetry.md) — and holds for that run only.
 
 The outputs hold the client's data: keep them in the client's environment. The
 [Microsoft skills for Copilot Studio](https://github.com/microsoft/skills-for-copilot-studio) are recommended to

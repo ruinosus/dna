@@ -1,6 +1,7 @@
 // The GitHub Pages gallery (docs/cast-list/): the example agents of a made-up shop compared — the map, the workbook,
 // the lesson and the cast file (with the demo's declared facts and decision) in docs/cast-list/examples/; pictures of
-// the map and the lesson (docs/cast-list/images/, a headless browser in the light theme); and its index.html. Run
+// the map and the lesson (docs/cast-list/images/, a headless browser in the light theme); and its index.html. The
+// example runs with the example export of Application Insights, so the map shows what fired. Run
 // after npm run assets.
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
@@ -21,7 +22,7 @@ mkdirSync(join(docs, 'images'), { recursive: true })
 const work = mkdtempSync(join(tmpdir(), 'cast-list-site-'))
 cpSync(join(skill, 'examples/agents'), join(work, ID), { recursive: true })
 copyFileSync(join(skill, 'examples/demo.cast.yaml'), join(docs, 'examples', `${ID}.cast.yaml`))
-execFileSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(work, ID), '--all', '--lang', 'pt', '--profile', join(skill, 'examples/profile.cast.yaml'), '--out', join(docs, 'examples')], { stdio: 'ignore' })
+execFileSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(work, ID), '--all', '--lang', 'pt', '--profile', join(skill, 'examples/profile.cast.yaml'), '--telemetry', join(skill, 'examples/telemetria.csv'), '--out', join(docs, 'examples')], { stdio: 'ignore' })
 rmSync(work, { recursive: true, force: true })
 // The pictures, in the light theme, taken by the kit's browser over the DevTools pipe.
 const shots = [
@@ -39,7 +40,7 @@ writeFileSync(join(docs, 'index.html'), `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>cast-list</title>
-<meta name="description" content="Copilot Studio agents compared: what repeats, who is off the pattern, what only one has — with the file behind each finding. Node alone, no model.">
+<meta name="description" content="Copilot Studio agents compared: what repeats, who is off the pattern, the orchestrator's contract, the telemetry and what nobody uses — with the file behind each finding. Node alone, no model.">
 <style>
 :root { --ink: #1d2330; --muted: #5f6878; --line: #e2e4e8; --page: #f6f6f3; --card: #fff; --accent: #2f5bea; --warm: #e3f3ea; color-scheme: light dark; }
 @media (prefers-color-scheme: dark) { :root { --ink: #e8ebf0; --muted: #9aa3b2; --line: #313744; --page: #14171c; --card: #1d2129; --accent: #8fb0ff; --warm: #1c3328; } }
@@ -69,7 +70,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
 <main>
   <section class="hero">
     <h1><span>cast</span>-list</h1>
-    <p class="lead">Point it at your Copilot Studio agents, cloned. See what they all do (a pattern to agree on), who is off it, and what only one has — with the file and line behind every finding. Decide in Excel; the next run checks what you decided. Node alone: no model, no install, no network.</p>
+    <p class="lead">Point it at your Copilot Studio agents, cloned. See what they all do — in their YAML and in the text of their instructions — who is off it, what only one has, what the orchestrator passes on, which events they log and whether they fire, and what nobody uses: with the file and line behind every finding. Decide in Excel; the next run checks what you decided. Node alone: no model, no install, no network.</p>
     <img src="images/${ID}-map.png" alt="Six agents of a made-up shop compared: a matrix of who has what, a red × where the shipping specialist does not escalate and the store specialist logs no telemetry">
     <div class="actions"><a class="button primary" href="https://github.com/ruinosus/house-lights#install">Install the skill</a><a class="button" href="https://github.com/ruinosus/house-lights">GitHub</a></div>
   </section>
@@ -79,18 +80,27 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
       <a href="examples/${ID}.lesson.html"><img src="images/${ID}-lesson.png" alt="The lesson: the orchestrator calls five specialists; two carry a red ×" loading="lazy"></a>
       <span class="meta">Português · fictional agents</span>
       <b>Bodega Azul — atendimento</b>
-      <span>An orchestrator and five specialists of a made-up online shop. On purpose: shipping does not escalate to a person, the store logs no telemetry, coupons alone uses an MCP server, and a handoff says shipping escalates when its YAML does not.</span>
+      <span>An orchestrator and five specialists of a made-up online shop, run with a made-up export of Application Insights. On purpose: shipping does not escalate to a person and gets no conversation history, the store logs no telemetry, coupons spells its error event another way and calls a flow that returns nothing, shipping's event did not fire in 30 days, and a few things nobody uses.</span>
       <span class="links"><a href="examples/${ID}.html">Map</a><a href="examples/${ID}.lesson.html">Lesson</a><a href="examples/${ID}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${ID}.cast.yaml" download>Cast file (.yaml)</a></span>
     </article>
   </section>
   <section>
-    <h2>What it finds</h2>
+    <h2>What it finds — «to look at», in groups</h2>
     <ul>
-      <li><b>Patterns</b> — a fact in most agents of a role: the platform's when the orchestrator has it too.</li>
-      <li><b>Off a pattern</b> — «does not escalate to a person (shipping): on purpose?»; once a pattern is accepted, «correct it?».</li>
-      <li><b>Only one has it</b> — innovation to spread, or debt to remove.</li>
-      <li><b>Rules not met</b> — from the team's profile («every specialist has a KPI»).</li>
-      <li><b>Contradictions</b> — what a handoff or the backlog says and the YAML does not.</li>
+      <li><b>Contradictions</b> — what people say and the YAML does not agree; a rule that confronts the text with the setup: «has “Only the knowledge”, but also “The model's general knowledge on”».</li>
+      <li><b>Contract and telemetry</b> — the orchestrator calling one not in the folder, a routing description of 7 characters, a flow that returns nothing, an event spelt another way («the same event?»), an event that did not fire in 30 days, one with no line in the telemetry.</li>
+      <li><b>Off pattern</b> — «1 specialist does not escalate to a person (shipping): on purpose?»; a variation of an official block, a text rule set in two ways or twice in one agent. Patterns are found per role and per type of specialist.</li>
+      <li><b>Rules</b> — from the team's profile («every specialist has a KPI»).</li>
+      <li><b>Only one has it</b> — innovation to spread, or debt to remove. Folded at first in the map.</li>
+      <li><b>Unused</b> — a topic nobody can reach, a variable nobody names, a flow nobody calls, a node switched off. Folded at first too.</li>
+      <li><b>Not understood</b> — a file it could not read is told; the rest is read anyway.</li>
+    </ul>
+  </section>
+  <section>
+    <h2>Bring what you already have</h2>
+    <ul>
+      <li><b>The admin center's inventory</b> or <b>the team's own spreadsheet</b> (<code>--declared</code>, CSV or .xlsx, no template): the column of the agent is found by its values, and every other column becomes what people declared — owner, KPI — with the file and line.</li>
+      <li><b>An export of Application Insights</b> (<code>--telemetry</code>): one query, ready to copy, says which events fired and how many times. Nothing goes over the network.</li>
     </ul>
   </section>
   <footer>cast-list is one of the six skills of <a href="../">house-lights</a>. MIT. The Copilot Studio schema inside is Microsoft's (MIT).</footer>
