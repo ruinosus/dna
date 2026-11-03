@@ -70,8 +70,9 @@ export function agentColumn(t: Table, match: (v: string) => string | undefined, 
   return { at: best[0] }
 }
 
-// the words a spreadsheet uses for the two facts cast-list knows by name (declared:owner, declared:kpi)
-const ALIASES: Record<string, string> = { dono: 'owner', responsavel: 'owner', proprietario: 'owner', 'owner-name': 'owner', indicador: 'kpi', kpis: 'kpi' }
+// the words a spreadsheet uses for the facts cast-list knows by name: the team that answers for it (declared:team, the
+// team spreadsheet's «Dono»), the owner of record (declared:owner, the inventory's Owner) and the KPI (declared:kpi)
+const ALIASES: Record<string, string> = { dono: 'team', responsavel: 'team', equipe: 'team', time: 'team', squad: 'team', proprietario: 'owner', 'owner-name': 'owner', indicador: 'kpi', kpis: 'kpi' }
 /** «Linha de base» → linha-de-base, «Dono» → owner: the key of what a column declares. */
 export const slug = (title: string) => {
   const s = title.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')

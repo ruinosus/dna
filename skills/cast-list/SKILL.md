@@ -122,7 +122,7 @@ node scripts/build.mjs <agents-folder> --declared inventario.csv --declared equi
 
 - The agent's column is found by its values (the schema name, the folder or the display name); when two columns name
   the agents differently, or none does, it asks for `--agent-column "<title>"`.
-- Every other column with a value becomes `declared:<column>` (`Dono` and `Owner` become `owner`, `KPI` and
+- Every other column with a value becomes `declared:<column>` (`Dono`, `Equipe` and `Squad` become `team`, the inventory's `Owner` becomes `owner`, `KPI` and
   `Indicador` become `kpi`), with the file and the line as its source. The inventory's apps and flows are left out; a row
   of an agent not in the folder is listed; importing again changes nothing; nothing is removed.
 

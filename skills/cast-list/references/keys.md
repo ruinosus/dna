@@ -109,7 +109,8 @@ Every fact cast-list finds is a key. The keys below have a name; any other key k
 | Key | Name | Nome |
 |---|---|---|
 | `declared:kpi` | KPI declared | KPI declarado |
-| `declared:owner` | Owner declared | Dono declarado |
+| `declared:team` | Team declared | Equipe declarada |
+| `declared:owner` | Owner declared | Responsável declarado |
 | `declared:<value>` | Declared: <value> | Declarado: <valor> |
 
 ## The Microsoft patterns

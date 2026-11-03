@@ -53,7 +53,8 @@ const KNOWN: Record<string, Name> = {
   'yaml-only:triggerCondition': { dim: 'knowledge', en: 'Search condition only in YAML (the editor may erase it)', pt: 'Condição de busca só no YAML (a tela pode apagar)' },
   'knowledge:SharePointSearchSource': { dim: 'knowledge', en: 'Knowledge in SharePoint', pt: 'Conhecimento no SharePoint' },
   'declared:kpi': { dim: 'declared', en: 'KPI declared', pt: 'KPI declarado', lacks: { en: ['has no KPI declared', 'have no KPI declared'], pt: ['não tem KPI declarado', 'não têm KPI declarado'] } },
-  'declared:owner': { dim: 'declared', en: 'Owner declared', pt: 'Dono declarado', lacks: { en: ['has no owner declared', 'have no owner declared'], pt: ['não tem dono declarado', 'não têm dono declarado'] } },
+  'declared:team': { dim: 'declared', en: 'Team declared', pt: 'Equipe declarada', lacks: { en: ['has no team declared', 'have no team declared'], pt: ['não tem equipe declarada', 'não têm equipe declarada'] } },
+  'declared:owner': { dim: 'declared', en: 'Owner declared', pt: 'Responsável declarado', lacks: { en: ['has no owner declared', 'have no owner declared'], pt: ['não tem responsável declarado', 'não têm responsável declarado'] } },
 }
 
 const MS_NAME = Object.fromEntries(MS_PATTERNS.map((p) => [p.id, p.name]))

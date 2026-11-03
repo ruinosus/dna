@@ -58,7 +58,7 @@ ok(readFileSync(join(demo, 'agents.cast.yaml'), 'utf8').includes('# the handoff 
 // declared from outside: the admin center's inventory and the team's spreadsheet, listed and then taken
 const dec = join(work, 'declared')
 const listedOut = run(agents, '--declared', join(examples, 'inventario.csv'), '--declared', join(examples, 'equipe.csv'), '--lang', 'pt', '--out', dec)
-ok(listedOut.status === 0 && /^\s+d1\s+\+ declarado\s+bodega-orquestrador · Dono declarado = «atendimento@bodegaazul.example» \(inventario.csv › linha 2\)/m.test(listedOut.stdout) && listedOut.stdout.includes('linha 8 («Bodega Azul - Fidelidade»)') && !existsSync(join(dec, 'agents.cast.yaml')), '--declared lists what the tables say, each with a key, and the rows of nobody in the folder; nothing written', listedOut.stdout)
+ok(listedOut.status === 0 && /^\s+d1\s+\+ declarado\s+bodega-orquestrador · Responsável declarado = «atendimento@bodegaazul.example» \(inventario.csv › linha 2\)/m.test(listedOut.stdout) && listedOut.stdout.includes('linha 8 («Bodega Azul - Fidelidade»)') && !existsSync(join(dec, 'agents.cast.yaml')), '--declared lists what the tables say, each with a key, and the rows of nobody in the folder; nothing written', listedOut.stdout)
 const tookOut = run(agents, '--declared', join(examples, 'equipe.csv'), '--take', 'all', '--lang', 'pt', '--out', dec)
 const afterKpi = run(agents, '--profile', profile, '--check', '--lang', 'pt', '--out', dec)
 ok(tookOut.status === 0 && readFileSync(join(dec, 'agents.cast.yaml'), 'utf8').includes('cotação em menos de 5 s') && afterKpi.stdout.includes('Regra «Todo especialista tem KPI»: 1 especialista não cumpre (bodega-loja-fisica)'), '--take all writes them; the next run counts the KPIs', afterKpi.stdout)

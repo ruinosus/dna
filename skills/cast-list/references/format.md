@@ -40,7 +40,7 @@ decisions:                   # what the team decided about a pattern
 `--declared <table.csv|.xlsx>` (more than once is fine) reads a table the team already has — the admin center's
 inventory download, the team's list — and proposes a `declared:` line per agent and column, with the source
 `<file> › line <n>` (`<file> › <sheet> › line <n>` for an .xlsx). The agent's column is found by its values; the key is
-the column's title in lower case with `-` (`Linha de base` → `linha-de-base`; `Dono`/`Owner` → `owner`, `KPI`/`Indicador`
+the column's title in lower case with `-` (`Linha de base` → `linha-de-base`; `Dono`/`Equipe`/`Squad` → `team`, the inventory's `Owner` → `owner`, `KPI`/`Indicador`
 → `kpi`). Listed with keys (`d1`…), written with `--take`, like the workbook below. Two tables saying the same key of
 the same agent: the later one holds.
 
