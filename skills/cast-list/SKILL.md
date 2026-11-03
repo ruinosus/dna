@@ -4,7 +4,7 @@ description: Compares a team's Copilot Studio agents with each other, from the f
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing. The Microsoft skills for Copilot Studio are recommended, not needed.
 metadata:
-  version: "1.5.1"
+  version: "1.6.0"
 ---
 
 # cast-list: what the agents have in common, and who is off it
@@ -43,7 +43,11 @@ Exit 1 with `✗ file:line` is a broken profile or cast file: fix the line. Exit
 
 ## 2. Read what it found
 
-The `!` lines are what to look at (`references/keys.md` names every fact), in this order:
+The `!` lines are what to look at (`references/keys.md` names every fact), each group under a `▸` line with how many:
+**Contradictions** (the first two below), **Contract and telemetry** (the contract, the flows, the events), **Off
+pattern** (off a pattern, a rule set in different ways, a type with one specialist), **Rules**, **Only one has it**,
+**Unused** and **Not understood**. The map shows the same groups, with «Only one has it» and «Unused» folded at first.
+What each says:
 
 - **What people said and the YAML do not agree** — a declared fact the agent does not have, or the other way round.
   What was seen wins; the contradiction is the finding.
@@ -70,16 +74,16 @@ The `!` lines are what to look at (`references/keys.md` names every fact), in th
   «corrigir?». A **variation** of a shared block — «1 especialista tem uma variação do bloco oficial «Formatação de
   links» (frete): alinhar?» — and the map shows the words that went and came. Off a type's pattern: «1 especialista de
   transação…»; a type's pattern never blames who is not of the type.
-- **Rules not met** — from the profile.
 - **A text rule set in different ways** — «4 especialistas definem «Tamanho da resposta» de 2 jeitos: unificar?» — or
   **twice in one agent** — «qual vale?».
+- **A type with one specialist** — nothing to compare within it.
+- **Rules not met** — from the profile.
 - **Only one has it** — innovation to spread, or debt to remove: only the person knows.
 - **Nobody uses it, or it is switched off** — a topic nobody can reach (no description, no phrases, no topic calls
   it), a tool the model cannot choose (no description), a global variable no file names, a flow no node calls, a node
   with `disabled: true`, a component with `state: Inactive`: «remover ou ligar?». Never a pattern nor a solo, and a
   switched-off node is not a fact (a disabled telemetry node is no telemetry). The map's «Sem uso» / «Unused» tab and
   sheet list them with the file.
-- **A type with one specialist** — nothing to compare within it.
 - **Not understood** — files the analysis could not read (broken YAML, a kind Copilot Studio does not have). The rest
   was read anyway. Only the kind's name may leave the client's environment, typed, to improve the extractor.
 

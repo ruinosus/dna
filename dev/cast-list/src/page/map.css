@@ -31,7 +31,12 @@ body { margin: 0; }
 .cl-get { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--card); font-size: 13px; }
 .cl-look { background: var(--amber-bg); border: 1px solid var(--amber-line); border-radius: 12px; padding: 12px 16px; }
 .cl-look h2 { margin: 0 0 6px; font-size: 12px; color: var(--amber); letter-spacing: .06em; text-transform: uppercase; }
-.cl-look ul { margin: 0; padding-left: 18px; }
+.cl-group + .cl-group { margin-top: 4px; }
+.cl-look .cl-group-head { font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+.cl-look .cl-group-head:hover { text-decoration: none; color: var(--amber); }
+.cl-caret { width: 1em; color: var(--amber); }
+.cl-count { font-weight: 500; font-size: 12px; color: var(--amber); background: var(--card); border: 1px solid var(--amber-line); border-radius: 999px; padding: 0 7px; }
+.cl-look ul { margin: 2px 0 6px; padding-left: 36px; }
 .cl-look li { padding: 1px 0; }
 .cl-look button { background: none; border: 0; padding: 0; text-align: left; }
 .cl-look button:hover { text-decoration: underline; }

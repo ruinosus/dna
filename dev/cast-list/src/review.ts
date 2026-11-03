@@ -16,8 +16,25 @@ export interface Look {
 }
 
 const names = (xs: string[]) => xs.join(', ')
-// the order of «to look at»: what disagrees first, what is only told last
-const ORDER: Look['key'][] = ['conflict', 'contradiction', 'spelling', 'contract', 'flow', 'telemetry', 'off', 'gap', 'values', 'twice', 'solo', 'unused', 'type', 'unknown', 'unmatched']
+/** The groups of «to look at», in their order — what disagrees first, what is only told last — each with the kinds of
+ * look in it, in their order too. «Only one has it» and «unused» start folded: they are many and rarely urgent. */
+export const GROUPS: { key: 'contradictions' | 'contract' | 'off' | 'rules' | 'solo' | 'unused' | 'unknown'; en: string; pt: string; keys: Look['key'][]; folded?: true }[] = [
+  { key: 'contradictions', en: 'Contradictions', pt: 'Contradições', keys: ['conflict', 'contradiction'] },
+  { key: 'contract', en: 'Contract and telemetry', pt: 'Contrato e telemetria', keys: ['spelling', 'contract', 'flow', 'telemetry'] },
+  { key: 'off', en: 'Off pattern', pt: 'Fora do padrão', keys: ['off', 'values', 'twice', 'type'] },
+  { key: 'rules', en: 'Rules', pt: 'Regras', keys: ['gap'] },
+  { key: 'solo', en: 'Only one has it', pt: 'Só um tem', keys: ['solo'], folded: true },
+  { key: 'unused', en: 'Unused', pt: 'Sem uso', keys: ['unused'], folded: true },
+  { key: 'unknown', en: 'Not understood', pt: 'Não entendeu', keys: ['unknown', 'unmatched'] },
+]
+const ORDER = GROUPS.flatMap((g) => g.keys)
+
+export type LookGroup = { key: (typeof GROUPS)[number]['key']; en: string; pt: string; folded: boolean; looks: { look: Look; at: number }[] }
+/** «To look at» in its groups, only the ones with something; each look with its place in the list. */
+export function groupLooks(looks: Look[]): LookGroup[] {
+  return GROUPS.map((g) => ({ key: g.key, en: g.en, pt: g.pt, folded: !!g.folded, looks: looks.flatMap((look, at) => (g.keys.includes(look.key) ? [{ look, at }] : [])) }))
+    .filter((g) => g.looks.length)
+}
 const place = (file: string) => file.replace(/(\.topic)?\.mcs\.ya?ml$/, '')
 
 export function reviewCast(r: Result): Look[] {

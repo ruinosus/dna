@@ -10,7 +10,7 @@ import { extractAgent } from '../src/extract'
 import { agentsIn } from '../src/folder'
 import { DIMENSIONS, dimensionOf, keysMarkdown, labelOf } from '../src/labels'
 import { readProfile } from '../src/profile'
-import { groupPatterns, reviewCast } from '../src/review'
+import { GROUPS, groupLooks, groupPatterns, reviewCast } from '../src/review'
 import { done, ok } from './ok'
 import { plain, wave1 } from './wave1'
 
@@ -101,7 +101,19 @@ ok(in1('O tipo «triagem» tem 1 especialista (bodega-frete): nada a comparar de
 ok(!l1.some((x) => x.startsWith('Só bodega-devolucoes tem')), 'what the contradiction already says is not asked again as a solo', l1.filter((x) => x.startsWith('Só ')))
 const kinds = reviewCast(r1).map((l) => l.key)
 const first = (k: string) => kinds.indexOf(k as never)
-ok(first('contradiction') === 0 && first('off') < first('values') && first('values') < first('twice') && first('twice') < first('solo') && first('solo') < first('type'), 'contradictions first, then off, rules, values, twice, solos, types', kinds)
+ok(first('contradiction') === 0 && first('off') < first('values') && first('values') < first('twice') && first('twice') < first('type') && first('type') < first('gap') && first('gap') < first('solo'), 'contradictions first, then off, values, twice, types, rules, solos', kinds)
+
+// «to look at» in groups: each key in one group, in the order of the list; only the groups with something; «only one
+// has it» and «unused» folded
+ok(GROUPS.flatMap((g) => g.keys).sort().join() === ['conflict', 'contradiction', 'spelling', 'contract', 'flow', 'telemetry', 'off', 'gap', 'values', 'twice', 'solo', 'unused', 'type', 'unknown', 'unmatched'].sort().join(), 'every kind of look is in exactly one group', GROUPS)
+const looks1 = reviewCast(r1)
+const groups1 = groupLooks(looks1)
+ok(groups1.flatMap((g) => g.looks.map((x) => x.look)).every((x, i) => x === looks1[i]), 'the groups keep the list and its order', groups1.map((g) => g.key))
+ok(groups1.every((g) => g.looks.length > 0) && groups1.flatMap((g) => g.looks.map((x) => x.at)).every((at, i) => at === i), 'only groups with something; each item keeps its place in the list', groups1.map((g) => [g.key, g.looks.length]))
+ok(groups1.filter((g) => g.folded).map((g) => g.key).join() === 'solo,unused', 'only «only one has it» and «unused» start folded', groups1.map((g) => [g.key, g.folded]))
+ok(groups1.map((g) => g.key).join() === GROUPS.map((g) => g.key).filter((k) => groups1.some((x) => x.key === k)).join(), 'the groups in their order', groups1.map((g) => g.key))
+ok(groupLooks([]).length === 0, 'nothing to look at: no group')
+ok(GROUPS.every((g) => g.en && g.pt && !/\bagentes?\b|\bagents?\b/i.test(g.en + g.pt)), 'each group named in English and Portuguese, never «agent»')
 ok(!reviewCast(r1).some((l) => /\bagentes?\b|\bagents?\b/i.test(l.pt + l.en)), 'still never «agent» on screen')
 ok(reviewCast(r1).every((l) => l.en && !/[ãçõ]/.test(l.en.replace(/«[^»]*»|\([^)]*\)/g, ''))), 'each in English too', reviewCast(r1).map((l) => l.en))
 done()

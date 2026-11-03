@@ -8,7 +8,7 @@ import { xlsx } from '@lib/ways/xlsx'
 import type { Cast } from './cast'
 import type { Result } from './compare'
 import { DIMENSIONS, dimensionOf, formText, labelOf, type Dimension, type Lang } from './labels'
-import { groupPatterns, type Look } from './review'
+import { groupLooks, groupPatterns, type Look } from './review'
 import { SHEET_WORDS } from './words'
 
 export type SheetKey = 'summary' | 'matrix' | 'patterns' | 'text' | 'routing' | 'telemetry' | 'off' | 'gaps' | 'conflicts' | 'unused' | 'agents' | 'evidence' | 'declared' | 'unknown'
@@ -52,7 +52,7 @@ export function workbookOf(r: Result, looks: Look[], cast: Cast, lang: Lang = 'e
       [w.count.conflicts, r.conflicts.length], [w.count.solos, looks.filter((l) => l.key === 'solo').length], [w.count.unused, r.unused.length],
       ['', ''],
       [{ v: looks.length ? w.look : w.nothing, bold: true }, ''],
-      ...looks.map((l): Value[] => ['', { v: l[lang], wrap: true }]),
+      ...groupLooks(looks).flatMap((g): Value[][] => [[{ v: `${g[lang]} · ${g.looks.length}`, bold: true }, ''], ...g.looks.map(({ look }): Value[] => ['', { v: look[lang], wrap: true }])]),
     ],
   }
   const matrix = sheet('matrix', [[w.dimension, 18], [w.fact, 40], [w.key, 34], ...agents.map((a): [string, number] => [a.id, 14])],

@@ -8,7 +8,7 @@ import type { Result } from '../compare'
 import { DIMENSIONS, dimensionOf, labelOf, partOf, SHORT_ROUTING, type Dimension, type Lang } from '../labels'
 import { MS_PATTERNS, PATTERNS_URL } from '../microsoft'
 import type { FocusArea, Role } from '../profile'
-import { groupPatterns, type Look } from '../review'
+import { groupLooks, groupPatterns, type Look } from '../review'
 import { workbookFile, workbookOf, type Sheet } from '../workbook'
 import { roleWord, SHEET_WORDS } from '../words'
 
@@ -76,6 +76,9 @@ let role: 'all' | Role = 'all'
 let focus: string | undefined
 let type: string | undefined // a type's id, «-» for the specialists with none
 const app = document.getElementById('app')!
+// «to look at» in groups; the open ones (all but «only one has it» and «unused», at first)
+const lookGroups = groupLooks(looks)
+const opened = new Set(lookGroups.filter((g) => !g.folded).map((g) => g.key))
 
 function render() {
   const tabs: [Tab, string][] = [['map', u.map], ['patterns', u.patterns], ['cast', u.cast], ['microsoft', u.microsoft], ['unused', u.unused(r.unused.length)], ['unknown', u.unknown(r.unknown.length)]]
@@ -90,7 +93,12 @@ function render() {
 }
 
 function mapTab() {
-  const look = looks.length ? `<section class="cl-look"><h2>${esc(w.look)}</h2><ul>${looks.map((l, i) => `<li><button data-look="${i}">${esc(l[lang])}</button></li>`).join('')}</ul></section>` : ''
+  const group = (g: (typeof lookGroups)[number]) => {
+    const open = opened.has(g.key)
+    const items = open ? `<ul id="cl-group-${g.key}">${g.looks.map(({ look: l, at }) => `<li><button data-look="${at}">${esc(l[lang])}</button></li>`).join('')}</ul>` : ''
+    return `<div class="cl-group"><button class="cl-group-head" data-group="${g.key}" aria-expanded="${open}" aria-controls="cl-group-${g.key}"><span class="cl-caret">${open ? '▾' : '▸'}</span>${esc(g[lang])} <span class="cl-count">${g.looks.length}</span></button>${items}</div>`
+  }
+  const look = looks.length ? `<section class="cl-look"><h2>${esc(w.look)} · ${looks.length}</h2>${lookGroups.map(group).join('')}</section>` : ''
   return `${look}<div class="cl-body${picked ? ' with-detail' : ''}"><div class="cl-wrap" style="gap:16px">${matrix()}${patternCards()}</div>${picked ? `<aside class="cl-card cl-detail" aria-live="polite">${detail()}</aside>` : ''}</div>`
 }
 
@@ -300,6 +308,7 @@ app.addEventListener('click', (e) => {
   else if (d.key) picked = { key: d.key, ...(d.agent ? { agent: d.agent } : {}) }
   else if (d.pattern) picked = { key: d.pattern }
   else if (d.close) picked = undefined
+  else if (d.group) void (opened.has(d.group as never) ? opened.delete(d.group as never) : opened.add(d.group as never))
   else if (d.look) {
     const l = looks[Number(d.look)]
     tab = 'map'

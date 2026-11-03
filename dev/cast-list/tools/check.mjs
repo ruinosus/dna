@@ -40,6 +40,8 @@ const a = run(agents, '--profile', profile, '--all', '--lang', 'pt', '--out', pl
 ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agents.cast.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, lesson and cast file', a.stdout + a.stderr)
 ok(/✓ review|• review/.test(a.stdout) && !/! review/.test(a.stdout), "the lesson passes chalk-talk's reviewer (when there is a browser)", a.stdout)
 ok(looks(a.stdout) === 24, `24 to look at (${looks(a.stdout)})`, a.stdout)
+const heads = [...a.stdout.matchAll(/^▸ (.+) · (\d+)$/gm)].map((m) => [m[1], Number(m[2])])
+ok(heads.length >= 4 && heads.reduce((n, [, c]) => n + c, 0) === 24 && heads[0][0] === 'Contradições' && heads.some(([g]) => g === 'Só um tem'), 'in groups, each with how many, adding up to the list', JSON.stringify(heads))
 const again = run(agents, '--profile', profile, '--out', plain)
 const kept = readFileSync(join(plain, 'agents.cast.yaml'), 'utf8')
 ok(again.status === 0 && kept.includes('role: orchestrator') && /blocks:\n(.*\n)*  - id: links\n    text: \|/.test(kept), 'a second run reads the cast file it wrote, and keeps the roles and the blocks of text', kept.slice(0, 600))
@@ -136,6 +138,10 @@ else {
     const got = []; HTMLAnchorElement.prototype.click = function () { got.push(this.download) }
     const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
     setTimeout(async () => { const q = (s) => document.querySelector(s); const all = (s) => document.querySelectorAll(s); const out = {}
+      const heads = () => [...all('[data-group]')].map((b) => [b.dataset.group, b.getAttribute('aria-expanded'), Number(b.querySelector('.cl-count').textContent)])
+      out.heads = heads(); out.shown = all('[data-look]').length
+      for (const b of [...all('[data-group][aria-expanded="false"]')]) q('[data-group="' + b.dataset.group + '"]').click()
+      out.opened = heads().every(([, e]) => e === 'true')
       out.looks = all('[data-look]').length
       q('[data-look="0"]').click(); out.look = q('.cl-detail h3')?.textContent
       q('[data-pattern="node:LogCustomTelemetryEvent"]').click(); out.files = [...all('.cl-detail .cl-file')].map((f) => f.textContent)
@@ -159,6 +165,8 @@ else {
   writeFileSync(join(work, 'probe.html'), html)
   const r = (await runPage(join(work, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
   ok(r.looks === 27 && r.look === 'Escalonamento para humano', '«to look at»: its first item opens the fact', JSON.stringify(r))
+  const folded = (r.heads ?? []).filter(([, e]) => e === 'false')
+  ok(folded.map(([g]) => g).join() === 'solo,unused' && r.shown === 27 - folded.reduce((n, [, , c]) => n + c, 0) && r.heads.reduce((n, [, , c]) => n + c, 0) === 27 && r.opened, '«to look at» in groups with how many; «only one has it» and «unused» folded, and they open', JSON.stringify([r.heads, r.shown, r.opened]))
   ok(r.files?.length === 5 && r.files.every((f) => f.startsWith('topics/OnError.topic.mcs.yml:')) && r.lacks, 'a pattern shows the file and line of each, and who is off it', JSON.stringify(r.files))
   ok(r.columns?.length === 6 && r.columns.filter((c) => c.startsWith('bodega-cupons')).length === 2 && !r.columns.some((c) => c.includes('orquestrador')), 'the role filter leaves the orchestrator out (cupons in its two types)', JSON.stringify(r.columns))
   ok((r.got ?? []).join() === 'agents.xlsx,agents.cast.yaml,agents.png' && !r.errs?.length, 'the downloads: workbook, cast file, PNG — no error', JSON.stringify(r))

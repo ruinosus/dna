@@ -25,7 +25,7 @@ import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'no
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
-import { agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, extractAgent, firedFrom, fromSheets, mergeDeclared, knownKinds, labelOf, lessonOf, problemText, readCast, readCsv, readProfile, reviewCast, validateScene, workbookFile, workbookOf, writeCast } from './engine.mjs'
+import { agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, extractAgent, firedFrom, fromSheets, groupLooks, mergeDeclared, knownKinds, labelOf, lessonOf, problemText, readCast, readCsv, readProfile, reviewCast, validateScene, workbookFile, workbookOf, writeCast } from './engine.mjs'
 import { readXlsx } from './read-xlsx.mjs'
 import { fill, inline } from './page.mjs'
 
@@ -204,7 +204,11 @@ const looks = reviewCast(result)
 const roles = Object.values(result.roles)
 console.log(T.found(found.length, roles.filter((r) => r === 'orchestrator').length, roles.filter((r) => r === 'specialist').length))
 console.log(T.result(result.patterns.length, new Set(result.offPattern.map((o) => o.agent)).size, looks.filter((l) => l.key === 'solo').length))
-if (looks.length) for (const l of looks) console.log(`! ${T.look}: ${l[lang]}`)
+// in groups, each with how many; every look keeps its own «! to look at» line
+if (looks.length) for (const g of groupLooks(looks)) {
+  console.log(`▸ ${g[lang]} · ${g.looks.length}`)
+  for (const { look } of g.looks) console.log(`! ${T.look}: ${look[lang]}`)
+}
 else console.log(T.nothing)
 if (argv.includes('--check')) process.exit(0)
 

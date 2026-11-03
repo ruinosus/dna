@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.0 — 2026-11-03
+
+cast-list's «to look at» comes in groups.
+
+- **Groups, each with how many:** Contradictions · Contract and telemetry · Off pattern · Rules · Only one has it ·
+  Unused · Not understood — in the command's output (a `▸` line per group; every finding keeps its `!` line), at the
+  top of the map and in the workbook's summary. One list decides them, so the three always agree.
+- **The map folds «Only one has it» and «Unused» at first:** they are many and rarely urgent; a click opens them. A rule
+  not met now comes after what is off a pattern, with its own group.
+
 ## 1.5.1 — 2026-11-03
 
 - **cast-list's description fits claude.ai.** It had 1156 characters and claude.ai keeps 1024, so the plugin synced
