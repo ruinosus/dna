@@ -2,6 +2,7 @@
 // role and type on the side; one résumé at a time — the title, the manager, the team, the tools, the conduct, the goal,
 // the performance from the telemetry and the development plan. A person in the org chart opens their résumé.
 import { shortNames, type Lang } from '../labels'
+import { RELEASE } from '../release'
 import type { Playbill, Resume, Situation } from '../playbill'
 
 interface Data { id: string; lang: Lang; playbill: Playbill; map?: string }
@@ -17,7 +18,7 @@ const UI = {
     manager_: 'Manager', team: 'Team', owner: 'Owner', created: 'Hired', published: 'Last published', schema: 'Badge', env: 'Unit', nobody: 'nobody calls it',
     summary: 'Summary', tools: 'Tools and access', conduct: 'Languages and conduct', goal: 'Goal', noGoal: 'no goal declared', perf: (d: number) => `Performance · ${d} days`, starts: 'topic starts', errors: 'errors logged', notFired: 'did not fire', measured: 'goal measured', noLine: 'no line in the telemetry', noPerf: 'The performance comes with the export of Application Insights (--telemetry).',
     certs: 'Certifications', certsNone: 'No evaluation in the folder of --evals.', passed: (p: number, t: number) => `${p} of ${t} passed`, access: 'Access only it has in its type',
-    views: 'How to see it', cv: 'Résumé', sheet: 'Sheet', pdi: 'Development plan', nothing: 'Nothing to develop.', sources: 'Sources', seal: { ok: 'IN GOOD STANDING', pdi: 'PLAN' }, orchestrator: 'Orchestrator', specialist: 'Specialist', map: '← Map', foot: 'cast-list · no model: what is here is what the files and tables say.',
+    views: 'How to see it', cv: 'Résumé', sheet: 'Sheet', pdi: 'Development plan', nothing: 'Nothing to develop.', sources: 'Sources', seal: { ok: 'IN GOOD STANDING', pdi: 'PLAN' }, orchestrator: 'Orchestrator', specialist: 'Specialist', map: '← Map', foot: `cast-list ${RELEASE} · no model: what is here is what the files and tables say.`,
   },
   pt: {
     title: 'RH do elenco', sub: 'O mesmo elenco, visto como pessoas: quadro de pessoal, organograma, vaga, currículo e plano de desenvolvimento. Tudo sai dos arquivos, da telemetria e das planilhas do time.',
@@ -30,7 +31,7 @@ const UI = {
     manager_: 'Gestor', team: 'Equipe', owner: 'Responsável', created: 'Admissão', published: 'Última publicação', schema: 'Matrícula', env: 'Lotação', nobody: 'ninguém chama',
     summary: 'Resumo', tools: 'Ferramentas e acessos', conduct: 'Idiomas e conduta', goal: 'Meta', noGoal: 'sem meta declarada', perf: (d: number) => `Desempenho · ${d} dias`, starts: 'inícios de tópico', errors: 'erros registrados', notFired: 'não disparou', measured: 'meta medida', noLine: 'nenhuma linha na telemetria', noPerf: 'O desempenho aparece com a exportação do Application Insights (--telemetry).',
     certs: 'Certificações', certsNone: 'Nenhuma avaliação na pasta do --evals.', passed: (p: number, t: number) => `${p} de ${t} aprovados`, access: 'Acessos que só ele tem no tipo',
-    views: 'Como ver', cv: 'Currículo', sheet: 'Ficha', pdi: 'Plano de desenvolvimento', nothing: 'Nada a desenvolver.', sources: 'Fontes', seal: { ok: 'EM DIA', pdi: 'PDI' }, orchestrator: 'Orquestrador', specialist: 'Especialista', map: '← Mapa', foot: 'cast-list · sem modelo: o que está aqui é o que os arquivos e as planilhas dizem.',
+    views: 'Como ver', cv: 'Currículo', sheet: 'Ficha', pdi: 'Plano de desenvolvimento', nothing: 'Nada a desenvolver.', sources: 'Fontes', seal: { ok: 'EM DIA', pdi: 'PDI' }, orchestrator: 'Orquestrador', specialist: 'Especialista', map: '← Mapa', foot: `cast-list ${RELEASE} · sem modelo: o que está aqui é o que os arquivos e as planilhas dizem.`,
   },
 }
 

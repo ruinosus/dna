@@ -2,6 +2,7 @@
 // (declared, with the source) and what was decided about each pattern. build.mjs keeps it; a person or the model edits
 // it, or it comes back from the workbook. Written back over the previous file, it keeps the comments people wrote.
 import { readFormat } from '@kit/format'
+import { RELEASE } from './release'
 import { Document, isMap, isSeq, parseDocument, type YAMLMap } from 'yaml'
 import type { Problem } from './problems'
 import { ROLES, type Role } from './profile'
@@ -75,7 +76,8 @@ export function readCast(text: string): { cast?: Cast; problems: Problem[] } {
 }
 
 const HEADER = ` What people said about the agents, and what was decided. build.mjs keeps it up to date; edit it, or fill the
- workbook's «Declared» sheet and the «Decision» column and read it back with --from.`
+ workbook's «Declared» sheet and the «Decision» column and read it back with --from.
+ Written by cast-list ${RELEASE}.`
 // how each list's items are told apart, so an item that changed keeps its node (and its comments)
 const LISTS = {
   agents: (x: Obj) => str(x.id),
@@ -90,7 +92,8 @@ const plain = (item: object) => Object.fromEntries(Object.entries(item).filter((
 export function writeCast(cast: Cast, previous?: string): string {
   const old = previous ? parseDocument(previous) : undefined
   const doc = old && !old.errors.length && isMap(old.contents) ? old : new Document({ format: CAST_FORMAT })
-  if (doc !== old) doc.commentBefore = HEADER
+  // the header is ours: a new file gets it, and one that has it gets this run's version
+  if (doc !== old || doc.commentBefore?.includes('build.mjs keeps it up to date')) doc.commentBefore = HEADER
   if (doc.get('format') !== CAST_FORMAT) doc.set('format', CAST_FORMAT)
   if (cast.name === undefined) doc.delete('name')
   else if (doc.get('name') !== cast.name) doc.set('name', cast.name)

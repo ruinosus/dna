@@ -2,6 +2,7 @@
 // in proportion to each one's topic starts, lenses that light who follows a pattern and who is off, a follow spot that
 // walks one call of the orchestrator step by step, and the card of an actor. With reduced motion, nothing moves.
 import { shortNames, type Lang } from '../labels'
+import { RELEASE } from '../release'
 import type { Scene, Stage, StageEdge, StageNode } from '../stage'
 
 interface Data { id: string; lang: Lang; stage: Stage; map?: string; playbill?: string }
@@ -14,7 +15,7 @@ const UI = {
     vol: (n: number, d: number) => `${n.toLocaleString('en')} topic starts / ${d} days`, silent: 'no telemetry', noTraffic: 'The traffic shows with the export of Application Insights (--telemetry).',
     legend: ['traffic (topic starts of who receives it)', 'off a pattern', 'to decide', 'not in the folder / unused'], structure: 'Inner arrows (flows, systems) are structure, not measured traffic.',
     step: (k: number, n: number) => `step ${k}/${n}`, keys: '← → to move · space plays all · Esc leaves',
-    orchestrator: 'Orchestrator', specialist: 'Specialist', fingerprint: 'Fingerprint of its instructions', foot: 'cast-list · no model: what is here is what the files and tables say.',
+    orchestrator: 'Orchestrator', specialist: 'Specialist', fingerprint: 'Fingerprint of its instructions', foot: `cast-list ${RELEASE} · no model: what is here is what the files and tables say.`,
   },
   pt: {
     title: 'Palco', sub: 'O elenco no palco: quem fala com quem, o tráfego de cada um, os padrões como lentes, e um canhão que segue uma chamada.',
@@ -24,7 +25,7 @@ const UI = {
     vol: (n: number, d: number) => `${n.toLocaleString('pt-BR')} inícios de tópico / ${d} dias`, silent: 'sem telemetria', noTraffic: 'O tráfego aparece com a exportação do Application Insights (--telemetry).',
     legend: ['tráfego (inícios de tópico de quem recebe)', 'fora do padrão', 'a decidir', 'fora da pasta / sem uso'], structure: 'As setas internas (fluxos, sistemas) são estrutura, não tráfego medido.',
     step: (k: number, n: number) => `passo ${k}/${n}`, keys: '← → avançam e voltam · espaço toca tudo · Esc sai',
-    orchestrator: 'Orquestrador', specialist: 'Especialista', fingerprint: 'Impressão digital das instruções', foot: 'cast-list · sem modelo: o que está aqui é o que os arquivos e as planilhas dizem.',
+    orchestrator: 'Orquestrador', specialist: 'Especialista', fingerprint: 'Impressão digital das instruções', foot: `cast-list ${RELEASE} · sem modelo: o que está aqui é o que os arquivos e as planilhas dizem.`,
   },
 }
 

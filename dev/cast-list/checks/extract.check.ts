@@ -160,6 +160,7 @@ ok(!cloned.unknown.length && 'connref:shared_office365' in cloned.facts && 'know
   'the icon and an uploaded document are not read; connection references without a kind, the uploaded file as knowledge, a flow folder ending in a GUID, its jsonFileName a path', [cloned.unknown, Object.keys(cloned.facts)])
 // a topic can begin an action: one among the agent's actions is fine; one of another agent's prefix is not found, by its full name
 const begins = extractAgent('b', [
+  { path: 'agents/Outro_Agente.mcs.yml', text: 'kind: TaskDialog\nmodelDescription: Chama o outro.\naction:\n  kind: InvokeConnectedAgentTaskAction\n  botSchemaName: z_outro\n' },
   { path: 'actions/Buscar.mcs.yml', text: 'kind: TaskDialog\nmodelDescription: Busca.\naction:\n  kind: InvokeConnectorTaskAction\n  connectionReference: b_x.shared_office365.y\n  operationId: Get\n' },
   { path: 'topics/Usa.mcs.yml', text: y(`
 kind: AdaptiveDialog
@@ -178,10 +179,16 @@ beginDialog:
     - kind: BeginDialog
       id: d
       dialog: SemPrefixo
+    - kind: BeginDialog
+      id: e
+      dialog: b_agente.InvokeConnectedAgentTaskAction.Buscar
+    - kind: BeginDialog
+      id: f
+      dialog: b_agente.InvokeConnectedAgentTaskAction.Outro_Agente
 `) },
 ], kinds)
-const callKeys = Object.keys(begins.facts).filter((k) => k.startsWith('calls:')).sort()
-ok(callKeys.join() === 'calls:action:z_outro.action.Copiada,calls:topic:SemPrefixo', 'a topic that begins an action: its own is found, another agent\'s is not (by its full name); a dialog without a prefix keeps its whole name', callKeys)
+const callKeys = Object.keys(begins.facts).filter((k) => k.startsWith('calls:action:') || k.startsWith('calls:topic:')).sort()
+ok(callKeys.join() === 'calls:action:z_outro.action.Copiada,calls:topic:SemPrefixo', 'a topic that begins an action (by .action. or .InvokeConnectedAgentTaskAction.): its own is found (in actions/ or as a file of agents/), another agent\'s is not (by its full name); a dialog without a prefix keeps its whole name', callKeys)
 const shapeless = flowAgent(true, '{ "something": 1 }')
 ok(shapeless.unknown.some((u) => u.why === 'flow'), 'a flow in a shape it does not know goes to «not understood»', shapeless.unknown)
 

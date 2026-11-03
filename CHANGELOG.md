@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.9.6 — 2026-11-03
+
+- **What a run makes says its version:** the foot of the map, the RH and the stage («cast-list 1.9.6»), their
+  generator tag, and the cast file (`# Written by cast-list 1.9.6.`, renewed on every run), so two runs can be told
+  apart.
+- **A topic that begins a connected agent** (`<schema>.InvokeConnectedAgentTaskAction.<Name>`) is checked against
+  the agent's actions — in `actions/`, `topics/`, or a file of `agents/`, where the extension clones them — and not
+  reported as a topic not found. Any `<schema>.<type>.<Name>` other than a topic is read the same way.
+
 ## 1.9.5 — 2026-11-03
 
 cast-list, the second run on a real cast (22 files «not understood», down from 96).

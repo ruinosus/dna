@@ -4,6 +4,7 @@
 // Tabs: the patterns as the workbook has them, the cast (a card per agent), the Microsoft patterns, what the analysis
 // did not understand. Downloads: the workbook, the cast file, a PNG of the matrix.
 import type { Cast } from '../cast'
+import { RELEASE } from '../release'
 import type { Result } from '../compare'
 import { DIMENSIONS, dimensionOf, labelOf, partOf, SHORT_ROUTING, type Dimension, type Lang } from '../labels'
 import { MS_PATTERNS, PATTERNS_URL } from '../microsoft'
@@ -88,7 +89,7 @@ function render() {
     <div class="cl-bar" role="tablist">${tabs.map(([k, t]) => `<button class="cl-tab" role="tab" aria-selected="${k === tab}" data-tab="${k}">${esc(t)}</button>`).join('')}
       <span class="cl-space"></span>${data.plot ? `<a class="cl-get" href="${esc(data.plot)}">${esc(u.plot)}</a>` : ''}${data.playbill ? `<a class="cl-get" href="${esc(data.playbill)}">${esc(u.playbill)}</a>` : ''}<button class="cl-get" data-get="xlsx">${u.excel}</button><button class="cl-get" data-get="yaml">${u.yaml}</button>${tab === 'map' ? `<button class="cl-get" data-get="png">${u.png}</button>` : ''}</div>
     ${tab === 'map' ? mapTab() : tab === 'patterns' ? table(sheets.find((s) => s.key === 'patterns')!) : tab === 'cast' ? castTab() : tab === 'microsoft' ? microsoftTab() : tab === 'unused' ? unusedTab() : unknownTab()}
-    <p class="cl-foot">${u.foot}</p>
+    <p class="cl-foot">${u.foot} · cast-list ${RELEASE}</p>
   </div>`
 }
 

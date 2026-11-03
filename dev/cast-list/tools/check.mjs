@@ -44,6 +44,10 @@ const heads = [...a.stdout.matchAll(/^▸ (.+) · (\d+)$/gm)].map((m) => [m[1], 
 ok(heads.length >= 4 && heads.reduce((n, [, c]) => n + c, 0) === 24 && heads[0][0] === 'Contradições' && heads.some(([g]) => g === 'Só um tem'), 'in groups, each with how many, adding up to the list', JSON.stringify(heads))
 const again = run(agents, '--profile', profile, '--out', plain)
 const kept = readFileSync(join(plain, 'agents.cast.yaml'), 'utf8')
+const release = JSON.parse(readFileSync(join(repo, '.claude-plugin/plugin.json'), 'utf8')).version
+// the pages say it in their generator tag (and the map, the RH and the stage in their foot, drawn by their script)
+const stamped = (f) => readFileSync(join(plain, f), 'utf8').includes(f.endsWith('.html') ? `cast-list (${release}, engine` : `cast-list ${release}`)
+ok(['agents.cast.yaml', 'agents.html', 'agents.playbill.html', 'agents.plot.html'].every(stamped) && kept.includes(`# Written by cast-list ${release}.`), `what a run makes says the version that made it (cast-list ${release}): the cast file, the map, the RH and the stage`, ['agents.cast.yaml', 'agents.html', 'agents.playbill.html', 'agents.plot.html'].filter((f) => !stamped(f)))
 ok(again.status === 0 && kept.includes('role: orchestrator') && /blocks:\n(.*\n)*  - id: links\n    text: \|/.test(kept), 'a second run reads the cast file it wrote, and keeps the roles and the blocks of text', kept.slice(0, 600))
 
 // with the demo cast file: what people said, and what was decided
