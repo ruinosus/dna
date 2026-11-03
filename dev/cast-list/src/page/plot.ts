@@ -1,7 +1,7 @@
 // The stage on one page that opens with no internet: the cast as nodes and arrows, the traffic moving along the arrows
 // in proportion to each one's topic starts, lenses that light who follows a pattern and who is off, a follow spot that
 // walks one call of the orchestrator step by step, and the card of an actor. With reduced motion, nothing moves.
-import type { Lang } from '../labels'
+import { shortNames, type Lang } from '../labels'
 import type { Scene, Stage, StageEdge, StageNode } from '../stage'
 
 interface Data { id: string; lang: Lang; stage: Stage; map?: string; playbill?: string }
@@ -38,6 +38,9 @@ const app = document.getElementById('app')!
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches
 const W = 168
 const H = 48
+// about how wide a character of an arrow's label is (11px), to keep a label off the nodes
+const CHAR = 5.6
+const overNode = (b: { x: number; y: number; w: number }) => st.nodes.some((n) => b.x < n.x + W / 2 && b.x + b.w > n.x - W / 2 && b.y > n.y - H / 2 - 2 && b.y - 11 < n.y + H / 2 + 2)
 const at = (id: string) => st.nodes.find((n) => n.id === id)!
 const isAgent = (n: StageNode) => n.kind === 'orchestrator' || n.kind === 'specialist'
 let lens: string | undefined
@@ -60,12 +63,12 @@ const label = (n: StageNode) => (n.kind === 'client' ? u.client : n.labels?.[lan
 const clip = (s: string, max = 24) => (s.length > max ? `${s.slice(0, max - 1)}…` : s)
 // the display name without the part every one of the cast shares («Bodega Azul - Pedidos» → «Pedidos»)
 const agents = st.nodes.filter(isAgent)
-const common = agents.length > 1 ? agents.map((n) => n.label).reduce((p, s) => { let i = 0; while (i < p.length && p[i] === s[i]) i++; return p.slice(0, i) }) : ''
-const prefix = /[-–·:]\s*$/.test(common) ? common : ''
-const short = (n: StageNode) => ((isAgent(n) || n.kind === 'ghost') && prefix && n.label.startsWith(prefix) ? n.label.slice(prefix.length) : label(n))
+const shorten = shortNames([...agents, ...st.nodes.filter((n) => n.kind === 'ghost')].map((n) => n.label))
+const short = (n: StageNode) => (isAgent(n) || n.kind === 'ghost' ? shorten(n.label) : label(n))
 
 function svg() {
   const lensOf = st.lenses.find((l) => l.id === lens)
+  const lit = lensOf ? new Set([...lensOf.ok, ...lensOf.amber, ...lensOf.bad]) : undefined
   const cls = (n: StageNode) => {
     const c = ['pl-node', n.kind, n.unused ? 'unused' : '']
     if (lensOf) c.push(lensOf.bad.includes(n.id) ? 'l-bad' : lensOf.amber.includes(n.id) ? 'l-amber' : lensOf.ok.includes(n.id) ? 'l-ok' : '')
@@ -78,7 +81,11 @@ function svg() {
     const tone = e.tone ?? ''
     // what an arrow into one of the cast says sits by where it arrives, so it never lands on a neighbour
     const into = e.kind === 'traffic' && at(e.to).kind !== 'ghost'
-    const lab = e.label ? (into ? `<text class="pl-elabel ${tone}" x="${p.x2 - 10}" y="${p.y2 - 9}" text-anchor="end">${esc(clip(e.label[lang], 56))}</text>` : `<text class="pl-elabel ${tone}" x="${p.mx}" y="${p.my - 6}" text-anchor="middle">${esc(clip(e.label[lang], 40))}</text>`) : ''
+    const text = e.label ? clip(e.label[lang], into ? 56 : 40) : ''
+    const box = into ? { x: p.x2 - 10 - text.length * CHAR, y: p.y2 - 9, w: text.length * CHAR } : { x: p.mx - (text.length * CHAR) / 2, y: p.my - 6, w: text.length * CHAR }
+    // with a lens, only the arrows that touch someone it lights say something; and never a word over a node
+    const quiet = lit && !lit.has(e.from) && !lit.has(e.to)
+    const lab = text && !quiet && !overNode(box) ? (into ? `<text class="pl-elabel ${tone}" x="${p.x2 - 10}" y="${p.y2 - 9}" text-anchor="end">${esc(text)}</text>` : `<text class="pl-elabel ${tone}" x="${p.mx}" y="${p.my - 6}" text-anchor="middle">${esc(text)}</text>`) : ''
     return `<path id="e${i}" class="pl-edge ${e.kind} ${tone} ${e.dashed ? 'dashed' : ''}" d="${p.d}"/>${lab}`
   }).join('')
   const nodes = st.nodes.map((n) => {

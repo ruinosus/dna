@@ -48,7 +48,9 @@ yes(lens('telemetry')?.bad.includes('bodega-loja-fisica') && lens('telemetry')?.
 ok(lens('unused')?.amber.sort().join() === 'bodega-frete,bodega-loja-fisica,bodega-pedidos', 'the unused lens: frete, loja-fisica, pedidos', lens('unused'))
 ok(st.lenses.every((l) => l.name.en && l.name.pt && l.caption.en && l.caption.pt), 'every lens named and told, in both languages')
 
-// the scenes
+// the scenes, in short names: what every one shares («Bodega Azul - ») left out
+ok(st.scenes.map((s) => s.title.pt).sort().join() === 'Cupons,Devoluções,Fidelidade,Frete,Loja Física,Pedidos' && sFreteSteps().some((x) => x.text.pt === 'O orquestrador encaminha para Frete.'), 'the scenes by short names, in their buttons and steps', st.scenes.map((s) => s.title.pt))
+function sFreteSteps() { return st.scenes.find((s) => s.to === 'bodega-frete')!.steps }
 ok(st.scenes.length === 6, 'six scenes: one per call of the orchestrator', st.scenes.map((s) => s.title.pt))
 const sFrete = st.scenes.find((s) => s.to === 'bodega-frete')!
 ok(sFrete.steps.some((x) => x.node === 'bodega-frete' && x.warn && x.text.pt.includes('SEM o histórico')), "frete's scene stops on the contract", sFrete.steps)

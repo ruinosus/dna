@@ -1,7 +1,7 @@
 // The RH of the cast on one page that opens with no internet: the staff board on top; the org chart and the post of each
 // role and type on the side; one résumé at a time — the title, the manager, the team, the tools, the conduct, the goal,
 // the performance from the telemetry and the development plan. A person in the org chart opens their résumé.
-import type { Lang } from '../labels'
+import { shortNames, type Lang } from '../labels'
 import type { Playbill, Resume, Situation } from '../playbill'
 
 interface Data { id: string; lang: Lang; playbill: Playbill; map?: string }
@@ -43,9 +43,7 @@ const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '
 const app = document.getElementById('app')!
 // the part of the names every one of the cast shares («Bodega Azul - »), left out where they stand side by side
 const all = [...pb.org.orchestrators, ...pb.org.types.flatMap((t) => t.people)].map((p) => p.name)
-const common = all.length > 1 ? all.reduce((p, s) => { let i = 0; while (i < p.length && p[i] === s[i]) i++; return p.slice(0, i) }) : ''
-const prefix = /[-–·:]\s*$/.test(common) ? common : ''
-const short = (name: string) => (prefix && name.startsWith(prefix) ? name.slice(prefix.length) : name)
+const short = shortNames(all)
 const situationOf = (id: string) => [...pb.org.orchestrators, ...pb.org.types.flatMap((t) => t.people)].find((p) => p.id === id)?.situation ?? []
 // the résumé shown first: the one the address names (the stage's «See the résumé»), else the first with a plan
 const named = decodeURIComponent(location.hash.slice(1))
@@ -80,7 +78,8 @@ function posts() {
 
 const said = (s?: { value: string; source: string }) => (s ? `${esc(s.value)} <span class="pb-src">(${esc(s.source)})</span>` : '—')
 const fact = (label: string, value: string) => `<div><dt>${esc(label)}</dt><dd>${value}</dd></div>`
-const plain = (s?: { value: string }) => (s ? esc(s.value) : '—')
+// the résumé says the value, and where it came from in small letters under it
+const under = (s?: { value: string; source: string }) => (s ? `${esc(s.value)}<span class="pb-src pb-under">${esc(s.source)}</span>` : '—')
 // a face for the résumé: the cast-list's small robot, drawn here
 const AVATAR = '<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><rect x="9" y="13" width="22" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="2.2"/><line x1="20" y1="13" x2="20" y2="8" stroke="currentColor" stroke-width="2.2"/><circle cx="20" cy="7" r="2" fill="currentColor"/><circle cx="16" cy="21" r="2" fill="currentColor"/><circle cx="24" cy="21" r="2" fill="currentColor"/><path d="M16 26 q4 2.5 8 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
 const section = (title: string, body: string) => `<div class="pb-section"><h3>${esc(title)}</h3>${body}</div>`
@@ -90,8 +89,7 @@ function resume(r: Resume) {
   const role = r.role === 'orchestrator' ? u.orchestrator : u.specialist
   const sub = [r.title ?? '', `${role}${r.types.length ? ` · ${r.types.join(' · ')}` : ''}`].filter(Boolean)
   const cv = view === 'cv'
-  // the résumé says the value; the sheet says where it came from too (the résumé keeps the sources at its foot)
-  const v = cv ? plain : said
+  const v = cv ? under : said
   const facts = [
     fact(u.manager_, r.manager ? esc(r.manager) : r.role === 'orchestrator' ? '—' : esc(u.nobody)),
     fact(u.team, v(r.team)), fact(u.owner, v(r.owner)), fact(u.created, v(r.created)), fact(u.published, v(r.published)),

@@ -228,3 +228,11 @@ export function keysMarkdown(): string {
   for (const p of MS_PATTERNS) out.push(`| \`${p.id}\` — ${p.name} | ${p.sign ?? 'declared only'} |`)
   return `${out.join('\n')}\n`
 }
+
+/** The names without the part every one of them shares, when that part ends in a separator («Bodega Azul - Pedidos»,
+ * «Bodega Azul - Frete» → «Pedidos», «Frete»): where they stand side by side, the shared part says nothing. */
+export function shortNames(all: string[]): (name: string) => string {
+  const common = all.length > 1 ? all.reduce((p, s) => { let i = 0; while (i < p.length && p[i] === s[i]) i++; return p.slice(0, i) }) : ''
+  const prefix = /[-–·:]\s*$/.test(common) ? common : ''
+  return (name) => (prefix && name.startsWith(prefix) && name.length > prefix.length ? name.slice(prefix.length) : name)
+}

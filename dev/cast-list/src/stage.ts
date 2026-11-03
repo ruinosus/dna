@@ -4,7 +4,7 @@
 // the orchestrator, and a card per actor. The same run gives the same stage; no volume is ever invented.
 import type { Fired, Result } from './compare'
 import type { AgentFacts } from './extract'
-import { labelOf, named } from './labels'
+import { labelOf, named, shortNames } from './labels'
 import { accessOf, requirement } from './playbill'
 import { groupPatterns, type Look } from './review'
 
@@ -26,6 +26,8 @@ const both = (en: string, pt: string): Two => ({ en, pt })
 
 export function stageOf(r: Result, looks: Look[], found: AgentFacts[], fired?: Fired): Stage {
   const name = (id: string) => r.agents.find((a) => a.id === id)?.displayName ?? id
+  // in what the stage says (scenes, captions), the names without the part all of them share
+  const brief = shortNames([...r.agents.map((a) => name(a.id)), ...r.contract.missing.map((m) => m.name ?? m.calls)])
   const typeName = (t: string) => r.typeNames[t] ?? t
   const silent = new Set(fired ? r.telemetry.silent : [])
   const starts = (id: string) => (fired && !silent.has(id) ? fired.rows.filter((x) => x.agent === id && x.event === 'TopicStart').reduce((n, x) => n + x.count, 0) : undefined)
@@ -158,7 +160,7 @@ export function stageOf(r: Result, looks: Look[], found: AgentFacts[], fired?: F
     const bad = off.filter((o) => !o.variant).map((o) => o.agent)
     const amber = off.filter((o) => o.variant).map((o) => o.agent)
     const okIds = scope.filter((id) => !bad.includes(id) && !amber.includes(id))
-    const names = (xs: string[]) => xs.map(name).join(', ')
+    const names = (xs: string[]) => xs.map((x) => brief(name(x))).join(', ')
     const w = scopeWord(p.scope)
     const tail = (lang: 'en' | 'pt') => [bad.length ? (lang === 'pt' ? `Fora: ${names(bad)}.` : `Off: ${names(bad)}.`) : '', amber.length ? (lang === 'pt' ? `Variação: ${names(amber)}.` : `A variation: ${names(amber)}.`) : ''].filter(Boolean).join(' ')
     return {
@@ -186,7 +188,7 @@ export function stageOf(r: Result, looks: Look[], found: AgentFacts[], fired?: F
   // one scene per call of the orchestrator, in the order of its files
   const scenes: Scene[] = r.contract.routes.map((c, i) => {
     const to = c.agent ?? c.calls
-    const who = c.agent ? name(c.agent) : (c.name ?? c.calls)
+    const who = brief(c.agent ? name(c.agent) : (c.name ?? c.calls))
     const steps: Step[] = [{ node: 'client', text: both('The customer writes.', 'O cliente escreve.') }]
     const short = c.agent && r.contract.short.some((s) => s.agent === c.agent && s.caller === c.caller)
     steps.push(short

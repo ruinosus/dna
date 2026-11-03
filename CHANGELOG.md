@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.9.3 — 2026-11-03
+
+- **The résumé says where each fact came from:** team, owner, hiring, publishing and environment carry their source
+  (`inventario.csv › linha 6`) in small letters under the value, as the sheet does beside it.
+- **The stage's arrow labels never sit on a node,** with a lens or without; with a lens, only the arrows that touch
+  someone it lights say something.
+- **Short names in the follow spot too:** its buttons and its steps say «O orquestrador encaminha para Frete». One rule
+  for the shared part of the names (`shortNames`) serves the stage, its scenes and the RH.
+
 ## 1.9.2 — 2026-11-03
 
 - **The RH's résumé has two views:** as a résumé — the paper one of the prototype, with a face, the name, the post and

@@ -216,6 +216,10 @@ else {
       sceneBtn().click(); q('[data-lens="telemetry"]').click(); out.lensClosesScene = !!q('.pl-narr.idle') && !!q('.pl-svg.lensing')
       sceneBtn().click(); out.sceneClosesLens = !q('.pl-svg.lensing') && !q('.pl-narr.idle'); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
       out.ghost = q('[data-node="cr7b2_bodegaFidelidade"] text')?.textContent
+      const over = () => [...all('.pl-elabel')].filter((t) => { const b = t.getBoundingClientRect(); return [...all('[data-node] rect')].some((r) => { const n = r.getBoundingClientRect(); return b.left < n.right && b.right > n.left && b.top < n.bottom && b.bottom > n.top }) }).map((t) => t.textContent)
+      out.overPlain = over(); q('[data-lens="unused"]').click(); out.overLens = over()
+      const litIds = new Set([...all('.pl-node.l-ok, .pl-node.l-amber, .pl-node.l-bad')].map((n) => n.dataset.node)); out.labelsLens = all('.pl-elabel').length; q('[data-lens="unused"]').click(); out.labelsPlain = all('.pl-elabel').length
+      out.sceneBtn = [...all('[data-scene]')].map((b) => b.textContent.replace('▶ ', '')).sort().join()
       q('[data-node="bodega-frete"]').dispatchEvent(new MouseEvent('click', { bubbles: true }))
       out.card = q('.pl-card .pl-name')?.textContent; out.off = [...all('.pl-checks .off')].map((x) => x.textContent); out.resume = q('.pl-card a')?.getAttribute('href')
       const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.errs = errs
@@ -224,6 +228,7 @@ else {
   const pl = (await runPage(join(rh, 'plot-probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
   ok(pl.nodes > 12 && pl.parts > 0 && pl.bad?.join() === 'bodega-frete' && pl.okN === 5, 'the stage: the nodes, the traffic moving, the escalation lens lights frete red and five green', JSON.stringify(pl))
   ok(pl.warn === true && pl.spot === 'bodega-frete' && pl.closed === true, "frete's scene stops on the contract, with the spot on frete; Esc leaves it (the caption stays below the stage)", JSON.stringify(pl))
+  ok(pl.overPlain?.length === 0 && pl.overLens?.length === 0 && pl.labelsLens < pl.labelsPlain && pl.sceneBtn === 'Cupons,Devoluções,Fidelidade,Frete,Loja Física,Pedidos', 'no arrow label over a node, with or without a lens; a lens quiets the arrows it does not light; the scenes by short names', JSON.stringify([pl.overPlain, pl.overLens, pl.labelsLens, pl.labelsPlain, pl.sceneBtn]))
   ok(pl.lensClosesScene === true && pl.sceneClosesLens === true && pl.ghost === 'Fidelidade', 'a lens closes the scene, a scene turns the lens off; the one not in the folder by its short name, uncut', JSON.stringify(pl))
   ok(pl.card === 'Bodega Azul - Frete' && pl.off?.length > 0 && pl.resume === 'agents.playbill.html#bodega-frete' && pl.agent === false && !pl.errs?.length, "a click opens frete's card, off the escalation, with its résumé a link away; never «agente»; no error", JSON.stringify(pl))
   // the RH in a browser: the board, frete's résumé and plan, a click on pedidos, never «agente»
@@ -233,7 +238,7 @@ else {
       out.counts = [...all('.pb-count')].map((c) => c.textContent.trim())
       out.name = q('.pb-resume h2')?.textContent; out.items = all('.pb-pdi li').length; out.seal = q('.pb-seal')?.textContent
       q('[data-who="bodega-pedidos"]').click(); out.pedidos = [q('.pb-resume h2')?.textContent, q('.pb-seal')?.textContent]
-      const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.map = q('a[href="agents.html"]') ? 1 : 0; out.cupons = all('.pb-org [data-who="bodega-cupons"]').length; out.cv = !!q('.pb-resume.pb-cv .pb-av') && !q('.pb-cv .pb-facts .pb-src'); q('[data-view="sheet"]').click(); out.sheet = !q('.pb-cv') && !!q('.pb-facts .pb-src') && q('[data-view="sheet"]').getAttribute('aria-pressed') === 'true'; q('[data-view="cv"]').click(); out.back = !!q('.pb-cv'); out.also = q('.pb-org [data-who="bodega-cupons"] .pb-also')?.textContent; out.errs = errs
+      const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.map = q('a[href="agents.html"]') ? 1 : 0; out.cupons = all('.pb-org [data-who="bodega-cupons"]').length; out.cv = !!q('.pb-resume.pb-cv .pb-av') && [...all('.pb-cv .pb-facts .pb-under')].some((x) => x.textContent.startsWith('inventario.csv')); q('[data-view="sheet"]').click(); out.sheet = !q('.pb-cv') && !!q('.pb-facts .pb-src') && q('[data-view="sheet"]').getAttribute('aria-pressed') === 'true'; q('[data-view="cv"]').click(); out.back = !!q('.pb-cv'); out.also = q('.pb-org [data-who="bodega-cupons"] .pb-also')?.textContent; out.errs = errs
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
   writeFileSync(join(rh, 'probe.html'), rhProbe)
   const h = (await runPage(join(rh, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
