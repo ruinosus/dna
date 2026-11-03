@@ -22,11 +22,14 @@ mkdirSync(join(docs, 'images'), { recursive: true })
 const work = mkdtempSync(join(tmpdir(), 'cast-list-site-'))
 cpSync(join(skill, 'examples/agents'), join(work, ID), { recursive: true })
 copyFileSync(join(skill, 'examples/demo.cast.yaml'), join(docs, 'examples', `${ID}.cast.yaml`))
+// the inventory and the team spreadsheet taken, so the RH has owners, teams and goals
+execFileSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(work, ID), '--declared', join(skill, 'examples/inventario.csv'), '--declared', join(skill, 'examples/equipe.csv'), '--take', 'all', '--lang', 'pt', '--out', join(docs, 'examples')], { stdio: 'ignore' })
 execFileSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(work, ID), '--all', '--lang', 'pt', '--profile', join(skill, 'examples/profile.cast.yaml'), '--telemetry', join(skill, 'examples/telemetria.csv'), '--out', join(docs, 'examples')], { stdio: 'ignore' })
 rmSync(work, { recursive: true, force: true })
 // The pictures, in the light theme, taken by the kit's browser over the DevTools pipe.
 const shots = [
   { file: join(docs, 'examples', `${ID}.html`), mode: '', shot: { width: 1440, height: 900, scheme: 'light' }, png: join(docs, 'images', `${ID}-map.png`) },
+  { file: join(docs, 'examples', `${ID}.playbill.html`), mode: '', shot: { width: 1400, height: 1000, scheme: 'light' }, png: join(docs, 'images', `${ID}-rh.png`) },
   { file: join(docs, 'examples', `${ID}.lesson.html`), mode: 'still', shot: { width: 1100, height: 640, scheme: 'light' }, png: join(docs, 'images', `${ID}-lesson.png`) },
 ]
 const { results } = await runPages(shots, { timeout: 60 })
@@ -81,7 +84,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
       <span class="meta">Português · fictional agents</span>
       <b>Bodega Azul — atendimento</b>
       <span>An orchestrator and five specialists of a made-up online shop, run with a made-up export of Application Insights. On purpose: shipping does not escalate to a person and gets no conversation history, the store logs no telemetry, coupons spells its error event another way and calls a flow that returns nothing, shipping's event did not fire in 30 days, and a few things nobody uses.</span>
-      <span class="links"><a href="examples/${ID}.html">Map</a><a href="examples/${ID}.lesson.html">Lesson</a><a href="examples/${ID}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${ID}.cast.yaml" download>Cast file (.yaml)</a></span>
+      <span class="links"><a href="examples/${ID}.html">Map</a><a href="examples/${ID}.playbill.html">RH</a><a href="examples/${ID}.lesson.html">Lesson</a><a href="examples/${ID}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${ID}.cast.yaml" download>Cast file (.yaml)</a></span>
     </article>
   </section>
   <section>
@@ -95,6 +98,13 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
       <li><b>Unused</b> — a topic nobody can reach, a variable nobody names, a flow nobody calls, a node switched off. Folded at first too.</li>
       <li><b>Not understood</b> — a file it could not read is told; the rest is read anyway.</li>
     </ul>
+  </section>
+  <section>
+    <h2>The cast as people — the RH</h2>
+    <article class="card">
+      <a href="examples/${ID}.playbill.html"><img src="images/${ID}-rh.png" alt="The RH of the cast: the staff board, the org chart by type, and a résumé with its development plan" loading="lazy"></a>
+      <span>The same cast for whoever thinks in HR terms: who is being hired, who has no owner, who was never published, the post of each role and type, and a résumé each — with the development plan made of what «to look at» says about that one alone. Nothing invented: no goal, owner or number the files do not have.</span>
+    </article>
   </section>
   <section>
     <h2>Bring what you already have</h2>

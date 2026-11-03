@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.7.0 — 2026-11-03
+
+cast-list writes the RH of the cast.
+
+- **`--playbill` (in `--all` too) writes `<id>.playbill.html`:** the same cast as people, for whoever thinks in HR
+  terms. Everything comes from the files, the telemetry and the tables people gave; a field nothing says stays empty.
+  - **The staff board:** on the staff, being hired (called and not in the folder, or in another environment), with no
+    owner and never published (with the inventory), with a development plan, in good standing — each with the names.
+  - **The org chart** by type, and **the post** of each role and type: the accepted patterns and the profile's rules,
+    as requirements; with no decision yet, a proposal.
+  - **A résumé each:** the first sentence of its instructions, its manager, team, owner, hiring and publishing dates,
+    tools, conduct, goal, and the performance from the telemetry (topic starts, errors logged, what did not fire).
+  - **The development plan (PDI):** what «to look at» says about that one alone, as actions — one item per fact, the
+    inputs the orchestrator does not pass in one call as one. A solo, a type with one and a marker set in ways across
+    the cast are the team's call, not anyone's plan. `references/playbill.md` says how each part is read.
+- **The workbook** gets the Staff and PDI sheets; **the map** links to the RH when the same run wrote it.
+- **Two keys for who answers for it:** the team spreadsheet's «Dono», «Equipe», «Squad» give `declared:team`; only
+  the inventory's `Owner` gives `declared:owner` (until 1.6, «Dono» was the owner).
+
 ## 1.6.0 — 2026-11-03
 
 cast-list's «to look at» comes in groups.

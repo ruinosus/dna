@@ -1,0 +1,51 @@
+schema_version: "1.0"
+name: cast-list-playbill-pt
+description: The RH of six cloned Copilot Studio agents, with the admin center's inventory, the team spreadsheet and an export of Application Insights — the skill fires, writes the RH page, and the answer names cupons with no owner, loja-fisica never published, fidelidade being hired and frete in a development plan, inventing no goal and editing no agent.
+tags: [build, pt]
+runs: 2
+context:
+  scaffold_script: setup.sh
+execution:
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Skill, Read, Write, Edit, Bash]
+  prompt: |
+    Como está o RH do elenco dos nossos agentes do Copilot Studio em ./agentes? Quero o quadro de pessoal e o plano de desenvolvimento de cada um. Tenho o inventário do admin center em ./inventario.csv, a planilha do time em ./equipe.csv e a exportação de 30 dias do Application Insights em ./eventos.csv. Use o perfil do time em ./perfil.cast.yaml e pode tomar tudo o que as planilhas dizem. Não precisa me perguntar nada agora.
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?cast-list"'
+  - name: wrote-the-rh
+    type: tool_used
+    tool: Bash
+    input_match: '--playbill|--all'
+  - name: names-no-owner
+    type: regex
+    pattern: 'cupons[^\n]{0,120}(sem respons[áa]vel|sem dono|n[ãa]o tem respons[áa]vel)|(sem respons[áa]vel|sem dono)[^\n]{0,120}cupons'
+    flags: i
+  - name: names-never-published
+    type: regex
+    pattern: 'nunca publicad'
+    flags: i
+  - name: no-agent-edited
+    type: tool_used
+    tool: Edit
+    input_match: 'agentes/'
+    min: 0
+    max: 0
+  - name: no-agent-written
+    type: tool_used
+    tool: Write
+    input_match: 'agentes/'
+    min: 0
+    max: 0
+  - name: findings
+    type: llm
+    criteria: >-
+      The answer, in Portuguese, describes the staff board — bodega-cupons with no owner in the inventory, the
+      loja-fisica never published, fidelidade being hired (called by the orchestrator and not in the folder), pedidos in
+      good standing — and the development plans by name, among them frete's (hand over to a person, receive the
+      conversation history and the category from the orchestrator, align the links block, check that its error event
+      fires, remove an unused variable). It points to the RH page it wrote. It invents no goal, owner, number or agent
+      that is not in ./agentes, the spreadsheets, the export or the profile.
