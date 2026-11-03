@@ -1,7 +1,8 @@
 // The RH of the cast, with no model: the development plan (PDI) of each one, from what «to look at» says about them
 // alone — and, later in this file, the staff board, the post and the résumé.
 import { pdiOf } from '../src/pdi'
-import { run } from './example'
+import { playbillOf } from '../src/playbill'
+import { fired, found, profile, run } from './example'
 import { done, ok } from './ok'
 
 const { result, looks } = run()
@@ -21,5 +22,48 @@ ok(of('bodega-cupons').includes('Escrever a descrição de roteamento: o que ele
 ok(pdi.every((p) => p.en && p.pt && p.why.en && p.why.pt && !AGENT.test(p.en + p.pt)), 'every item in English and Portuguese, with why, never «agent»', pdi.filter((p) => !p.en || !p.pt || AGENT.test(p.en + p.pt)))
 ok(pdi.every((p) => p.en !== p.pt || /^[^a-z]*$/i.test(p.en)), 'the English is not the Portuguese', pdi.filter((p) => p.en === p.pt))
 ok(pdiOf([], result).length === 0, 'nothing to look at: no PDI')
+
+// the staff board
+const full = run()
+const pb = playbillOf(full.result, full.looks, found, full.cast, profile.rules, fired)
+const in_ = (key: string) => pb.staff.find((s) => s.key === key)?.people.map((p) => p.name).join(', ')
+ok(in_('cast')?.split(', ').length === 6, 'the cast: the six in the folder', in_('cast'))
+ok(in_('hiring') === 'Bodega Azul - Fidelidade', 'being hired: fidelidade, called and not in the folder (and in Testes in the inventory)', in_('hiring'))
+ok(in_('noOwner') === 'Bodega Azul - Cupons', 'no owner: cupons (no Owner in the inventory, though the team spreadsheet gives it a team)', in_('noOwner'))
+ok(in_('neverPublished') === 'Bodega Azul - Loja Física', 'never published: loja-fisica', in_('neverPublished'))
+ok(in_('ok') === 'Bodega Azul - Pedidos' && !!in_('pdi')?.includes('Bodega Azul - Frete') && !!in_('pdi')?.includes('Bodega Azul - Orquestrador'), 'in good standing: pedidos alone (its only item is cleanup); frete and the orchestrator in PDI', [in_('ok'), in_('pdi')])
+ok(pb.missing.length === 0, 'with the inventory, the team spreadsheet and the telemetry, nothing missing', pb.missing)
+
+// the org chart
+ok(pb.org.orchestrators.map((p) => p.id).join() === 'bodega-orquestrador' && pb.org.ghosts.map((g) => g.name).join() === 'Bodega Azul - Fidelidade', 'the org chart: the orchestrator as the manager, fidelidade dashed', pb.org)
+ok(pb.org.types.map((t) => `${t.name}:${t.people.map((p) => p.id.replace('bodega-', '')).join('+')}`).join(' ') === 'transação:cupons+devolucoes+pedidos orientação:cupons+loja-fisica triagem:frete', 'the specialists by type (cupons in its two)', pb.org.types.map((t) => [t.name, t.people.map((p) => p.id)]))
+
+// the post
+const post = pb.posts.find((p) => p.scope === 'specialist')!
+ok(post.requirements.some((r) => r.pt === 'Sabe encaminhar para uma pessoa (escalonamento)' && !r.proposal) && post.requirements.some((r) => r.key === 'declared:kpi' && !r.proposal), "the specialist's post: the accepted escalation and the profile's KPI rule", post.requirements)
+const noDecision = run()
+noDecision.cast.decisions = []
+const pb0 = playbillOf({ ...noDecision.result, patterns: noDecision.result.patterns.map(({ decision, ...p }) => p) }, noDecision.looks, found, noDecision.cast, [], fired)
+ok(pb0.posts.find((p) => p.scope === 'specialist')!.requirements.every((r) => r.proposal) && pb0.posts.find((p) => p.scope === 'specialist')!.requirements.length > 0, 'with no decision, the post is what someone is off, as a proposal', pb0.posts[0])
+
+// the résumé
+const frete = pb.resumes.find((r) => r.id === 'bodega-frete')!
+ok(frete.title === 'Você é o especialista em frete e entregas da Bodega Azul, uma loja online.' && frete.manager === 'Bodega Azul - Orquestrador', 'frete: the title is the first sentence of its instructions; the manager, who calls it', [frete.title, frete.manager])
+ok(frete.team?.value === 'Squad Logística' && frete.owner?.value === 'frete@bodegaazul.example' && frete.goal?.value === 'cotação em menos de 5 s' && frete.goal.source.startsWith('equipe.csv'), 'frete: team, owner and goal, each with its source', [frete.team, frete.owner, frete.goal])
+ok(frete.created?.value === '2026-03-09' && frete.published?.value === '2026-09-30' && frete.schemaName === 'cr7b2_bodegaFrete' && frete.environment?.value === 'Bodega Azul (Produção)', 'frete: hired, published, its schema name and environment, from the inventory', frete)
+ok(frete.summary[0] === 'Explicar modalidades de envio, prazos por região e regras de frete grátis' && frete.summary.length === 3, 'frete: the summary is the first list of its instructions, as written', frete.summary)
+ok(frete.performance?.starts === 355 && frete.performance.errors === 0 && frete.performance.notFired.join() === 'BodegaFrete_OnError' && !frete.performance.silent, 'frete: 355 topic starts, 0 errors, the event that did not fire', frete.performance)
+ok(frete.pdi.length === 5 && frete.seal === 'pdi' && frete.sources.join() === 'YAML,telemetria.csv,handoff do frete, seção 4,inventario.csv,equipe.csv', 'frete: 5 items, the PDI seal, and where it came from (the handoff the demo cast file declares, too)', [frete.pdi.length, frete.seal, frete.sources])
+ok(frete.tools.some((t) => t.pt.includes('Outlook')) && frete.conduct.length > 0, 'frete: its tools and its conduct', [frete.tools, frete.conduct])
+const loja = pb.resumes.find((r) => r.id === 'bodega-loja-fisica')!
+ok(!loja.goal && loja.performance?.silent === true && !loja.published, 'loja-fisica: no goal (never invented), no line in the telemetry, never published', loja)
+ok(pb.resumes.find((r) => r.id === 'bodega-pedidos')!.seal === 'ok', 'pedidos: in good standing')
+ok(!pb.resumes.find((r) => r.id === 'bodega-orquestrador')!.manager, 'nobody calls the orchestrator: no manager')
+
+// with no tables and no telemetry
+const bare = run([], false)
+const pbBare = playbillOf(bare.result, bare.looks, found, bare.cast, profile.rules)
+ok(!pbBare.staff.some((s) => s.key === 'noOwner' || s.key === 'neverPublished') && pbBare.missing.join() === 'inventory,telemetry' && pbBare.resumes.every((r) => !r.performance && !r.team && !r.owner), 'with no tables: no «no owner» or «never published», and it says which tables would tell (the demo cast file already declares KPIs)', pbBare.missing)
+ok(JSON.stringify(playbillOf(full.result, full.looks, found, full.cast, profile.rules, fired)) === JSON.stringify(pb), 'the same run, the same RH')
 
 done()
