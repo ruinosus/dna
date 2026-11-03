@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.8.0 — 2026-11-03
+
+cast-list puts the cast on a stage.
+
+- **`--plot` (in `--all` too) writes `<id>.plot.html`:** the light plot, to show in a meeting. The customer, the
+  orchestrators, the specialists by type, the flows (one node however many share one) and the systems they reach, in
+  columns; the same run gives the same stage.
+  - **The traffic:** dots along the arrows, as many as the log of each one's topic starts in the export; the arrows
+    into flows and systems are structure, never a measured volume; one with no line in the telemetry has a dashed
+    arrow and «no telemetry». With reduced motion, nothing moves.
+  - **The arrows say what is wrong:** «NO history · NO «Category»» in red, «routed by «Coupons.»» in amber, «returns
+    nothing», «calls it, but it is not in the folder»; a flow nobody calls, and what only it reaches, dashed.
+  - **Lenses:** the accepted patterns and the first ones someone is off, then Contract, Telemetry and Unused — who
+    follows lights green, who is off blinks red, what is to decide shows amber.
+  - **The follow spot:** one scene per call of the orchestrator; ← → walk it, space plays it, Esc leaves; it stops
+    where the call breaks.
+  - **The actor's card:** the fingerprint of its instructions (shared blocks, a variation, its own text) and what it
+    meets of its post, with its résumé a link away (the RH opens at `#<id>`).
+- **The map** links to the stage when the same run wrote it.
+
 ## 1.7.0 — 2026-11-03
 
 cast-list writes the RH of the cast.

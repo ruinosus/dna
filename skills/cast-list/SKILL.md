@@ -4,14 +4,14 @@ description: Compares a team's Copilot Studio agents with each other, from the f
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing. The Microsoft skills for Copilot Studio are recommended, not needed.
 metadata:
-  version: "1.7.0"
+  version: "1.8.0"
 ---
 
 # cast-list: what the agents have in common, and who is off it
 
 The agents are cloned from Copilot Studio (the VS Code extension writes a folder per agent, with `agent.mcs.yml`).
-`scripts/build.mjs` reads them, compares them and makes the map, the workbook, the lesson, the RH of the cast and the
-cast file — **with no model**. You run it, read what it found, and help the person decide. You never edit an agent.
+`scripts/build.mjs` reads them, compares them and makes the map, the workbook, the lesson, the RH of the cast, the
+stage and the cast file — **with no model**. You run it, read what it found, and help the person decide. You never edit an agent.
 
 Paths below are relative to this skill's folder (the folder this file is in). Write in the person's language and pass
 `--lang pt` for Portuguese (`en` is the default).
@@ -34,8 +34,8 @@ node scripts/build.mjs <agents-folder> --all [--profile <team>.cast.yaml] [--lan
   with the value it captures, «no máximo 3 bullets»), the **official blocks** the team pastes in every agent, and the
   **types** of specialist (transaction, guidance, triage…), so patterns are also found within each type. With no
   profile, the orchestrator is whoever calls another agent, and the shared blocks of text are still found.
-- It writes `<id>.html` (the map), `<id>.xlsx`, `<id>.lesson.html`, `<id>.playbill.html` (the RH) and `<id>.cast.yaml`,
-  named by the folder. The cast
+- It writes `<id>.html` (the map), `<id>.xlsx`, `<id>.lesson.html`, `<id>.playbill.html` (the RH), `<id>.plot.html` (the
+  stage) and `<id>.cast.yaml`, named by the folder. The cast
   file is read again on every run: what people declared and decided stays.
 - `--telemetry <export.csv|.xlsx>` adds **what fired**: the result of one query the person runs in Application Insights
   and exports (`references/telemetry.md` has it, ready to copy). Read on that run only; nothing goes over the network.
@@ -176,6 +176,16 @@ part is read):
 When the person asks about it ("como está o RH do elenco?"), name who is in a plan and their first items, who has no
 owner, who was never published and who is being hired, by name. Say what a missing table would add (the inventory,
 the team spreadsheet, the export). Never invent a goal, an owner or a number the files do not have.
+
+### The stage
+
+`<id>.plot.html` puts the cast on a stage, to show in a meeting: the customer, the orchestrator, the specialists by
+type, the flows and the systems, with the traffic moving along the arrows in proportion to each one's topic starts
+(only with `--telemetry`; the arrows into flows and systems are structure, never a measured volume). **Lenses** light
+who follows a pattern (green), who is off (red) and what is to decide (amber); the **follow spot** walks each call of
+the orchestrator step by step and stops where it breaks («Frete é chamado SEM o histórico…»); a click on someone opens
+its card — the fingerprint of its instructions and what it meets of its post — with its résumé a link away. Point the
+person to it when they want to show the cast to others.
 
 If the Microsoft skills for Copilot Studio are installed (`/plugin marketplace add microsoft/skills-for-copilot-studio`),
 use them to explain a kind or a reference pattern; cast-list works without them.

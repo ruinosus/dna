@@ -29,6 +29,7 @@ rmSync(work, { recursive: true, force: true })
 // The pictures, in the light theme, taken by the kit's browser over the DevTools pipe.
 const shots = [
   { file: join(docs, 'examples', `${ID}.html`), mode: '', shot: { width: 1440, height: 900, scheme: 'light' }, png: join(docs, 'images', `${ID}-map.png`) },
+  { file: join(docs, 'examples', `${ID}.plot.html`), mode: '', shot: { width: 1500, height: 860, scheme: 'light' }, png: join(docs, 'images', `${ID}-stage.png`) },
   { file: join(docs, 'examples', `${ID}.playbill.html`), mode: '', shot: { width: 1400, height: 1000, scheme: 'light' }, png: join(docs, 'images', `${ID}-rh.png`) },
   { file: join(docs, 'examples', `${ID}.lesson.html`), mode: 'still', shot: { width: 1100, height: 640, scheme: 'light' }, png: join(docs, 'images', `${ID}-lesson.png`) },
 ]
@@ -84,7 +85,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
       <span class="meta">Português · fictional agents</span>
       <b>Bodega Azul — atendimento</b>
       <span>An orchestrator and five specialists of a made-up online shop, run with a made-up export of Application Insights. On purpose: shipping does not escalate to a person and gets no conversation history, the store logs no telemetry, coupons spells its error event another way and calls a flow that returns nothing, shipping's event did not fire in 30 days, and a few things nobody uses.</span>
-      <span class="links"><a href="examples/${ID}.html">Map</a><a href="examples/${ID}.playbill.html">RH</a><a href="examples/${ID}.lesson.html">Lesson</a><a href="examples/${ID}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${ID}.cast.yaml" download>Cast file (.yaml)</a></span>
+      <span class="links"><a href="examples/${ID}.html">Map</a><a href="examples/${ID}.plot.html">Stage</a><a href="examples/${ID}.playbill.html">RH</a><a href="examples/${ID}.lesson.html">Lesson</a><a href="examples/${ID}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${ID}.cast.yaml" download>Cast file (.yaml)</a></span>
     </article>
   </section>
   <section>
@@ -98,6 +99,13 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
       <li><b>Unused</b> — a topic nobody can reach, a variable nobody names, a flow nobody calls, a node switched off. Folded at first too.</li>
       <li><b>Not understood</b> — a file it could not read is told; the rest is read anyway.</li>
     </ul>
+  </section>
+  <section>
+    <h2>The stage — show it in a meeting</h2>
+    <article class="card">
+      <a href="examples/${ID}.plot.html"><img src="images/${ID}-stage.png" alt="The cast on a stage: the orchestrator, the specialists by type, the flows and the systems, with a red arrow into shipping" loading="lazy"></a>
+      <span>The traffic moving along the arrows (each one's topic starts, from the export), lenses that light who follows a pattern and who is off, and a follow spot that walks each call of the orchestrator and stops where it breaks. Click someone for its card.</span>
+    </article>
   </section>
   <section>
     <h2>The cast as people — the RH</h2>
