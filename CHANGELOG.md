@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.9.4 — 2026-11-03
+
+cast-list on agents cloned by the VS Code extension on Windows, after a run on a real cast left 96 files «not
+understood».
+
+- **Flows are read again:** a `workflow.json` saved with a byte-order mark (Windows) did not parse, so every flow was
+  lost — its name, its connectors and operations, who calls it. Every file now drops the mark before it is read. The
+  name comes from `name` in `metadata.yml`, and a folder ending in a whole GUID gives the flow's short name.
+- **Uploaded knowledge counts:** each `knowledge/files/*.mcs.yml` (only its metadata) is a knowledge source
+  («Conhecimento em arquivo enviado»); the document beside it and the agent's `icon.png` are not read and no longer
+  show as «not understood».
+- **`connectionreferences.mcs.yml` without a kind** is known by its name, as cloned, so the access review has its
+  connections.
+- **«Not understood» says why** in the cast card too, as the sheet does (`a telemetry event whose name is a formula`).
+- The example agents are cloned the same way: flows with a byte-order mark and a GUID folder, a real `metadata.yml`,
+  connection references without a kind, an icon each.
+
 ## 1.9.3 — 2026-11-03
 
 - **The résumé says where each fact came from:** team, owner, hiring, publishing and environment carry their source

@@ -53,6 +53,7 @@ Every fact cast-list finds is a key. The keys below have a name; any other key k
 | `node:SearchAndSummarizeContent` | Generative answers from knowledge | Respostas generativas sobre o conhecimento |
 | `node:SearchKnowledgeSources` | Searches the knowledge sources | Busca nas fontes de conhecimento |
 | `yaml-only:triggerCondition` | Search condition only in YAML (the editor may erase it) | Condição de busca só no YAML (a tela pode apagar) |
+| `knowledge:file` | Knowledge in an uploaded file | Conhecimento em arquivo enviado |
 | `knowledge:SharePointSearchSource` | Knowledge in SharePoint | Conhecimento no SharePoint |
 | `knowledge:<value>` | Knowledge <value> | Conhecimento <valor> |
 

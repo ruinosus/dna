@@ -18,7 +18,8 @@ function filesOf(dir: string, at = ''): AgentFolder['files'] {
     const path = at ? `${at}/${e.name}` : e.name
     if (e.isDirectory()) return filesOf(join(dir, e.name), path)
     // only YAML and a flow's JSON are read; any other file is kept by name, for «what the analysis did not understand»
-    return e.isFile() ? [{ path, text: YAML.test(e.name) || FLOW.test(path) ? readFileSync(join(dir, e.name), 'utf8') : '' }] : []
+    // (a file saved on Windows may begin with a byte-order mark, which JSON.parse does not take)
+    return e.isFile() ? [{ path, text: YAML.test(e.name) || FLOW.test(path) ? readFileSync(join(dir, e.name), 'utf8').replace(/^\uFEFF/, '') : '' }] : []
   })
 }
 

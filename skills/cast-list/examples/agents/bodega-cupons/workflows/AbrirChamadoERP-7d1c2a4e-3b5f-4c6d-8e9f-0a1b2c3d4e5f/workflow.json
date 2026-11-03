@@ -1,6 +1,6 @@
-{
+﻿{
+  "schemaVersion": "1.0.0.0",
   "properties": {
-    "displayName": "Abrir chamado no ERP",
     "connectionReferences": {},
     "definition": {
       "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
@@ -32,21 +32,6 @@
                 "uri": "https://erp.bodega-azul.example/chamados",
                 "body": "@triggerBody()"
               }
-            }
-          }
-        },
-        "Responder": {
-          "type": "Response",
-          "kind": "Skills",
-          "runAfter": {
-            "Abrir_chamado": [
-              "Succeeded"
-            ]
-          },
-          "inputs": {
-            "statusCode": 200,
-            "body": {
-              "resultado": "@outputs('Resultado')"
             }
           }
         }

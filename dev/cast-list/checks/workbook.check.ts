@@ -70,10 +70,10 @@ ok(routing[0].join() === 'Quem chama,Chamado,Histórico,Entradas,Descrição de 
 const fr = routing.find((r) => r[1] === 'bodega-frete')!
 ok(fr[2] === 'não' && fr[3] === '' && routing.some((r) => r[1] === 'Bodega Azul - Fidelidade (não está na pasta)') && routing.find((r) => r[1] === 'bodega-cupons')![5] === '7', 'frete with no history nor input; the call to one not in the folder; cupons with 7 characters', routing)
 const unusedRows = sheetRows('Sem uso')
-ok(unusedRows.length === 1 + 4 && unusedRows.some((r) => r.join() === 'bodega-loja-fisica,fluxo,Listar lojas,ninguém usa,workflows/ListarLojas-3f2a9c1d/metadata.yml:1') && unusedRows.some((r) => r[0] === 'bodega-pedidos' && r[1] === 'nó' && r[3] === 'desligado' && r[4].startsWith('topics/Escalate.topic.mcs.yml:')),
+ok(unusedRows.length === 1 + 4 && unusedRows.some((r) => r.join() === 'bodega-loja-fisica,fluxo,Listar lojas,ninguém usa,workflows/ListarLojas-3f2a9c1d-5e6f-4a7b-8c9d-0e1f2a3b4c5d/metadata.yml:1') && unusedRows.some((r) => r[0] === 'bodega-pedidos' && r[1] === 'nó' && r[3] === 'desligado' && r[4].startsWith('topics/Escalate.topic.mcs.yml:')),
   'unused: who, what, the name, how, the file', unusedRows)
 ok(row('flow-uses:http:erp.bodega-azul.example')[head.indexOf('bodega-pedidos')] === '●' && title(row('flow-uses:http:erp.bodega-azul.example')[0]) === 'B. Integrações', 'the flow facts in the matrix, in B')
-ok(sheetRows('Evidências').some((r) => r[2] === 'flow-returns' && r[3] === 'workflows/AbrirChamadoERP-7d1c2a4e/workflow.json'), 'and in the evidence, with the file')
+ok(sheetRows('Evidências').some((r) => r[2] === 'flow-returns' && r[3] === 'workflows/AbrirChamadoERP-7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f/workflow.json'), 'and in the evidence, with the file')
 
 // the way back: nothing changed, nothing to take — in either language
 ok(!fromSheets(demo, back('pt')).changes.length && !fromSheets(demo, back('en')).changes.length && !fromSheets(demo, back('pt')).problems.length, 'read back as written, the workbook changes nothing (pt and en)', fromSheets(demo, back('pt')))

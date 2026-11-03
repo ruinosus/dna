@@ -40,10 +40,22 @@ def block(text, indent):
     return "\n".join((pad + line) if line else "" for line in text.strip("\n").split("\n"))
 
 
-def write(path, content):
+def write(path, content, bom=False):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w", encoding="utf-8") as f:
+    # the extension saves a flow's workflow.json with a byte-order mark on Windows
+    with open(path, "w", encoding="utf-8-sig" if bom else "utf-8") as f:
         f.write(content.rstrip("\n") + "\n")
+
+
+def write_bytes(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, "wb") as f:
+        f.write(data)
+
+
+# what the extension clones beside the YAML: the agent's icon (uploaded knowledge is in checks/extract.check.ts)
+ICON_PNG = bytes.fromhex("89504e470d0a1a0a0000000d4948445200000001000000010806000000"
+                         "1f15c4890000000d49444154789c63f8cf50ef0f0004ff01ff9d1ca3a30000000049454e44ae426082")
 
 
 # ---------------------------------------------------------------------------
@@ -395,8 +407,8 @@ def conn_refs_file(refs):
     displayName: {r['display']}""" + (f"\n    customConnectorId: {r['custom']}" if r.get("custom") else "")
         for r in refs
     )
-    return f"""kind: ConnectionReferencesSourceFile
-connectionReferences:
+    # as the extension clones it: no kind
+    return f"""connectionReferences:
 {items}
 """
 
@@ -552,29 +564,38 @@ Sobre a Bodega Azul;respostas gerais sem encaminhar;Squad Atendimento
 
 
 def flow_folder(d, name, folder, workflow_id, actions, returns=True):
-    write(f"{d}/workflows/{folder}/metadata.yml", f"""displayName: {name}
+    # the extension's metadata.yml: the name in `name`, among other fields of the flow
+    write(f"{d}/workflows/{folder}/metadata.yml", f"""jsonFileName: workflow.json
 workflowId: {workflow_id}
-jsonFileName: workflow.json
+name: {name}
+type: 1
+category: 5
+mode: 0
+scope: 4
+statecode: 1
+statuscode: 2
+runAs: 1
+modernFlowType: 1
 """)
     if returns:
         actions = {**actions, "Responder": {"type": "Response", "kind": "Skills", "runAfter": {next(iter(actions)): ["Succeeded"]},
                                            "inputs": {"statusCode": 200, "body": {"resultado": "@outputs('Resultado')"}}}}
-    flow = {"properties": {"displayName": name, "connectionReferences": {}, "definition": {
+    flow = {"schemaVersion": "1.0.0.0", "properties": {"connectionReferences": {}, "definition": {
         "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
         "contentVersion": "1.0.0.0",
         "triggers": {"manual": {"type": "Request", "kind": "Skills", "inputs": {"schema": {"type": "object", "properties": {"resumo": {"type": "string"}}}}}},
         "actions": actions}}}
-    write(f"{d}/workflows/{folder}/workflow.json", json.dumps(flow, ensure_ascii=False, indent=2) + "\n")
+    write(f"{d}/workflows/{folder}/workflow.json", json.dumps(flow, ensure_ascii=False, indent=2) + "\n", bom=True)
 
 
 def erp_flow(d, returns):
-    flow_folder(d, "Abrir chamado no ERP", "AbrirChamadoERP-7d1c2a4e", FLOW_ID, {
+    flow_folder(d, "Abrir chamado no ERP", f"AbrirChamadoERP-{FLOW_ID}", FLOW_ID, {
         "Abrir_chamado": {"type": "Scope", "actions": {
             "Chamar_ERP": {"type": "Http", "inputs": {"method": "POST", "uri": "https://erp.bodega-azul.example/chamados", "body": "@triggerBody()"}}}}}, returns)
 
 
 def stores_flow(d):
-    flow_folder(d, "Listar lojas", "ListarLojas-3f2a9c1d", LISTAR_LOJAS_ID, {
+    flow_folder(d, "Listar lojas", f"ListarLojas-{LISTAR_LOJAS_ID}", LISTAR_LOJAS_ID, {
         "Listar": {"type": "OpenApiConnection", "inputs": {"host": {
             "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
             "connectionName": "shared_commondataserviceforapps", "operationId": "ListRecords"}, "parameters": {"entityName": "lojas"}}}})
@@ -852,6 +873,7 @@ def build_specialist(a):
 
     # knowledge
     write(f"{d}/knowledge/{kfile}.knowledge.mcs.yml", sharepoint_knowledge(kname, kdesc, ksite, ktc))
+    write_bytes(f"{d}/icon.png", ICON_PNG)
 
     # variables
     write(f"{d}/variables/CategoriaSolicitacao.mcs.yml", variable_file(s, external=True, default="=Blank()"))
@@ -972,6 +994,7 @@ Não use emojis.
     starters = [("Meu pedido", "Onde está o meu pedido?"), ("Trocas", "Quero devolver um produto"), ("Cupons", "Tenho um cupom de desconto")]
     write(f"{d}/agent.mcs.yml", agent_file(display, display, instructions, starters))
     write(f"{d}/settings.mcs.yml", settings_file(display, s, connectable=False))
+    write_bytes(f"{d}/icon.png", ICON_PNG)
 
     write(f"{d}/topics/Greeting.topic.mcs.yml", greeting_topic([
         "Olá! Eu sou o {System.Bot.Name}, o assistente virtual da Bodega Azul. Como posso ajudar hoje?",

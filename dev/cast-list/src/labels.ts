@@ -51,6 +51,7 @@ const KNOWN: Record<string, Name> = {
   'node:SearchAndSummarizeContent': { dim: 'knowledge', en: 'Generative answers from knowledge', pt: 'Respostas generativas sobre o conhecimento' },
   'node:SearchKnowledgeSources': { dim: 'knowledge', phrase: true, en: 'Searches the knowledge sources', pt: 'Busca nas fontes de conhecimento' },
   'yaml-only:triggerCondition': { dim: 'knowledge', en: 'Search condition only in YAML (the editor may erase it)', pt: 'Condição de busca só no YAML (a tela pode apagar)' },
+  'knowledge:file': { dim: 'knowledge', en: 'Knowledge in an uploaded file', pt: 'Conhecimento em arquivo enviado' },
   'knowledge:SharePointSearchSource': { dim: 'knowledge', en: 'Knowledge in SharePoint', pt: 'Conhecimento no SharePoint' },
   'declared:kpi': { dim: 'declared', en: 'KPI declared', pt: 'KPI declarado', lacks: { en: ['has no KPI declared', 'have no KPI declared'], pt: ['não tem KPI declarado', 'não têm KPI declarado'] } },
   'eval:run': { dim: 'governance', phrase: true, en: 'Passed through an evaluation', pt: 'Passou por uma avaliação', lacks: { en: ['has no evaluation', 'have no evaluation'], pt: ['não tem avaliação', 'não têm avaliação'] } },

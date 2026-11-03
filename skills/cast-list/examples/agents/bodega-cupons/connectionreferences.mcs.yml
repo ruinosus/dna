@@ -1,4 +1,3 @@
-kind: ConnectionReferencesSourceFile
 connectionReferences:
   - id: d9eee619-a353-495f-a0dc-468f7fbe750a
     connectionReferenceLogicalName: cr7b2_bodegaCupons.shared_office365.shared-office365-8a5ef90d-d584-47ca-b2a1-5c87d8fc6ede

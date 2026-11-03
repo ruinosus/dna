@@ -101,7 +101,7 @@ ok(SPECIALISTS.every((id) => !agents[id].contract.length), 'a specialist calls n
 const erp = 'flow-uses:http:erp.bodega-azul.example'
 all(['bodega-pedidos', 'bodega-devolucoes', 'bodega-cupons'], [erp], 'the three transaction specialists: the flow calls the ERP by HTTP (inside a scope)')
 ok(has('bodega-pedidos', 'flow-returns') && has('bodega-devolucoes', 'flow-returns') && !has('bodega-cupons', 'flow-returns'), 'the flow answers the agent, except in cupons')
-ok(agents['bodega-pedidos'].facts[erp][0].file === 'workflows/AbrirChamadoERP-7d1c2a4e/workflow.json' && agents['bodega-pedidos'].facts[erp][0].line! > 1, 'a flow fact says its file and the line of its action', agents['bodega-pedidos'].facts[erp])
+ok(agents['bodega-pedidos'].facts[erp][0].file === 'workflows/AbrirChamadoERP-7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f/workflow.json' && agents['bodega-pedidos'].facts[erp][0].line! > 1, 'a flow fact says its file and the line of its action', agents['bodega-pedidos'].facts[erp])
 ok(agents['bodega-pedidos'].flows[0]?.name === 'Abrir chamado no ERP' && agents['bodega-pedidos'].flows[0].called, 'the flow is known by its display name, and the agent calls it', agents['bodega-pedidos'].flows)
 const lf = 'bodega-loja-fisica'
 ok(has(lf, 'orphan:flow:ListarLojas') && !keys(lf, 'flow-uses:').length && agents[lf].flows[0]?.called === false, 'a flow no node calls is unused, and what it uses is not a fact', keys(lf, ''))
@@ -144,6 +144,20 @@ for (const wrap of [true, false]) {
 }
 const broken = flowAgent(true, '{ "properties": ')
 ok(broken.unknown.some((u) => u.file === 'workflows/Fluxo-11111111/workflow.json' && u.why === 'json') && 'flow:11111111-2222-3333-4444-555555555555' in broken.facts, 'a JSON that does not read goes to «not understood», and the rest is read', broken.unknown)
+// as the extension clones on Windows: the flow's JSON with a byte-order mark (the examples have it), its metadata.yml
+// naming it in `name`, its folder ending in the whole GUID
+const bom = readFileSync(join(skill, 'examples/agents/bodega-pedidos/workflows/AbrirChamadoERP-7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f/workflow.json'), 'utf8')
+ok(bom.startsWith('\uFEFF') && agents['bodega-pedidos'].flows.some((f) => f.name === 'Abrir chamado no ERP'), 'a workflow.json with a byte-order mark is read, and the flow has its name', agents['bodega-pedidos'].flows)
+const cloned = extractAgent('c', [
+  { path: 'icon.png', text: '' },
+  { path: 'connectionreferences.mcs.yml', text: 'connectionReferences:\n  - connectionReferenceLogicalName: c_x.shared_office365.shared-office365-1\n    connectorId: /providers/Microsoft.PowerApps/apis/shared_office365\n' },
+  { path: 'knowledge/files/Tabela.pdf', text: '' },
+  { path: 'knowledge/files/Tabela.pdf.mcs.yml', text: 'mcs.metadata:\n  componentName: Tabela.pdf\n  description: Uma tabela.\n' },
+  { path: 'workflows/Avisar-11111111-2222-3333-4444-555555555555/metadata.yml', text: 'jsonFileName: workflow.json\nworkflowId: 11111111-2222-3333-4444-555555555555\ntype: 1\n' },
+  { path: 'workflows/Avisar-11111111-2222-3333-4444-555555555555/workflow.json', text: flowJson(nested, true) },
+], kinds)
+ok(!cloned.unknown.length && 'connref:shared_office365' in cloned.facts && 'knowledge:file' in cloned.facts && 'knowledge:count=1' in cloned.facts && 'orphan:flow:Avisar' in cloned.facts,
+  'the icon and an uploaded document are not read; connection references without a kind, the uploaded file as knowledge, a flow folder ending in a GUID', [cloned.unknown, Object.keys(cloned.facts)])
 const shapeless = flowAgent(true, '{ "something": 1 }')
 ok(shapeless.unknown.some((u) => u.why === 'flow'), 'a flow in a shape it does not know goes to «not understood»', shapeless.unknown)
 

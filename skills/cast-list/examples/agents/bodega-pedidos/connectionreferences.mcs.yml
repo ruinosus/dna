@@ -1,4 +1,3 @@
-kind: ConnectionReferencesSourceFile
 connectionReferences:
   - id: 940ab1fc-5949-4001-8ef4-63459ea972ff
     connectionReferenceLogicalName: cr7b2_bodegaPedidos.shared_office365.shared-office365-d1f6a460-51c5-47c6-9010-aec0018a7a95

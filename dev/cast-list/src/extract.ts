@@ -1,6 +1,8 @@
 // What an agent cloned from Copilot Studio has, as facts: a key («trigger:OnEscalate», «connector:shared_office365») and
 // every file and line it was seen in. Files are told apart by their kind (a connected-agent TaskDialog may live in
-// topics/ or actions/), except settings.mcs.yml, which has none. A child agent (agents/<Name>/) has its own facts. What
+// topics/ or actions/), except those known by their name: settings.mcs.yml and connectionreferences.mcs.yml, which may
+// have none, and the files of uploaded knowledge (knowledge/files/: a .mcs.yml with only its metadata, beside the
+// document itself, which is not read). The agent's icon is not read either. A child agent (agents/<Name>/) has its own facts. What
 // cannot be read — broken YAML, an empty file, a kind the schema does not have, a file that is not YAML — goes to
 // `unknown` with its path, and the rest is read all the same.
 //
@@ -99,6 +101,11 @@ function textLine(source: string, key: string): number {
 const NODES = new Set(['LogCustomTelemetryEvent', 'CSATQuestion', 'SearchAndSummarizeContent', 'SearchKnowledgeSources'])
 const KIND_OF_FOLDER: Record<string, string> = { topics: 'topic', actions: 'action', knowledge: 'knowledge', variables: 'variable' }
 const FLOW_FILE = /^workflows\/([^/]+)\/(.+)$/
+// the icon at the top of an agent, and the documents of its uploaded knowledge, beside their .mcs.yml
+const ICON = /^(agents\/[^/]+\/)?icon\.png$/
+const UPLOADED = /^(agents\/[^/]+\/)?knowledge\/files\//
+// the id the extension appends to a flow's folder: a whole GUID, or a short one
+const FOLDER_ID = /-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9a-f]{6,})$/i
 
 export function extractAgent(id: string, files: { path: string; text: string }[], kinds?: Set<string>): AgentFacts {
   const agent: AgentFacts = { id, facts: {}, children: [], unknown: [], names: {}, texts: [], contract: [], flows: [], telemetry: [] }
@@ -133,7 +140,7 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
       continue
     }
     if (!/\.ya?ml$/.test(f.path)) {
-      agent.unknown.push({ file: f.path, why: 'file' })
+      if (!ICON.test(f.path) && !UPLOADED.test(f.path)) agent.unknown.push({ file: f.path, why: 'file' })
       continue
     }
     const r = read(f.text)
@@ -160,6 +167,20 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
       const generative = obj(conf?.settings)?.GenerativeActionsEnabled
       if (typeof generative === 'boolean') add(`setting:generative=${generative ? 'on' : 'off'}`, conf)
       if (conf?.isAgentConnectable === true) add('setting:connectable', conf)
+      continue
+    }
+
+    if (/^connectionreferences\.mcs\.ya?ml$/.test(f.path.split('/').pop()!) && root) {
+      for (const c of list(root.connectionReferences).map(obj)) {
+        const api = str(c?.connectorId) ? last(c!.connectorId as string, '/') : str(c?.connectionReferenceLogicalName) ? apiOf(c!.connectionReferenceLogicalName as string) : undefined
+        if (api) add(`connref:${api}`, c)
+        if (api && str(c?.displayName)) agent.names[api] = c!.displayName as string
+      }
+      continue
+    }
+    if (UPLOADED.test(f.path) && root && typeof root.kind !== 'string') {
+      add('knowledge:file')
+      knowledge.push({ file: f.path, line: r.lineOf(root) })
       continue
     }
 
@@ -276,13 +297,6 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
         if (!child) variables.push({ name, at: { file: f.path, line: r.lineOf(root) } })
         break
       }
-      case 'ConnectionReferencesSourceFile':
-        for (const c of list(root.connectionReferences).map(obj)) {
-          const api = str(c?.connectorId) ? last(c!.connectorId as string, '/') : str(c?.connectionReferenceLogicalName) ? apiOf(c!.connectionReferenceLogicalName as string) : undefined
-          if (api) add(`connref:${api}`, c)
-          if (api && str(c?.displayName)) agent.names[api] = c!.displayName as string
-        }
-        break
     }
 
     for (const n of nodes(root, true)) add(`disabled:node:${n.kind}`, n)
@@ -327,7 +341,7 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
     const fileName = str(meta?.jsonFileName) ?? Object.keys(json)[0]
     const j = fileName ? json[fileName] : undefined
     const id = str(meta?.workflowId)
-    const key = folder.replace(/-[0-9a-f]{6,}$/i, '')
+    const key = folder.replace(FOLDER_ID, '')
     if (!j) {
       if (metaFile) agent.unknown.push({ file: metaFile, why: 'flow' })
       continue
@@ -337,7 +351,8 @@ export function extractAgent(id: string, files: { path: string; text: string }[]
       agent.unknown.push({ file: j.file, why: 'flow' })
       continue
     }
-    const name = str(meta?.displayName) ?? str(obj(obj(j.data)?.properties)?.displayName) ?? key
+    // the extension's metadata.yml names it in `name`
+    const name = str(meta?.name) ?? str(meta?.displayName) ?? str(obj(obj(j.data)?.properties)?.displayName) ?? key
     const called = calledFlows.has(id)
     agent.flows.push({ id, name, folder, uses: read.uses.map((u) => u.key), returns: !!read.returns, called, file: j.file })
     agent.names[id] ??= name
