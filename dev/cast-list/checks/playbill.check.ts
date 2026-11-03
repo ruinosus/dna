@@ -2,7 +2,8 @@
 // alone — and, later in this file, the staff board, the post and the résumé.
 import { pdiOf } from '../src/pdi'
 import { playbillOf } from '../src/playbill'
-import { fired, found, profile, run } from './example'
+import { accessOf } from '../src/playbill'
+import { evals, fired, found, profile, run } from './example'
 import { done, ok } from './ok'
 
 const { result, looks } = run()
@@ -66,4 +67,20 @@ const pbBare = playbillOf(bare.result, bare.looks, found, bare.cast, profile.rul
 ok(!pbBare.staff.some((s) => s.key === 'noOwner' || s.key === 'neverPublished') && pbBare.missing.join() === 'inventory,telemetry' && pbBare.resumes.every((r) => !r.performance && !r.team && !r.owner), 'with no tables: no «no owner» or «never published», and it says which tables would tell (the demo cast file already declares KPIs)', pbBare.missing)
 ok(JSON.stringify(playbillOf(full.result, full.looks, found, full.cast, profile.rules, fired)) === JSON.stringify(pb), 'the same run, the same RH')
 
+// the evaluations: the counts in the résumé, «with no evaluation» on the board
+const pbE = playbillOf(full.result, full.looks, found, full.cast, profile.rules, fired, evals)
+const cert = (id: string) => pbE.resumes.find((r) => r.id === id)!.certifications
+ok(cert('bodega-pedidos')?.[0]?.passed === 4 && cert('bodega-frete')?.[0]?.passed === 2 && cert('bodega-frete')?.[0]?.total === 4 && cert('bodega-cupons')?.length === 0, 'the certifications: pedidos 4 of 4, frete 2 of 4, cupons none', [cert('bodega-pedidos'), cert('bodega-frete')])
+ok(pbE.staff.find((s) => s.key === 'noEval')?.people.map((p) => p.id).sort().join() === 'bodega-cupons,bodega-devolucoes,bodega-loja-fisica,bodega-orquestrador' && !pb.staff.some((s) => s.key === 'noEval') && pb.resumes.every((r) => !r.certifications), 'with no evaluation: the four with none, only when --evals was given', pbE.staff)
+ok(!/Onde está meu pedido|Manaus|saiu para entrega/.test(JSON.stringify(pbE)), 'no question or answer of an evaluation in the RH')
+
+// the review of access
+const acc = accessOf(full.result)
+ok(acc.some((x) => x.agent === 'bodega-cupons' && x.types.includes('transaction') && x.key === 'connector:shared_sharepointonline') && acc.some((x) => x.agent === 'bodega-cupons' && x.key.startsWith('mcp:')) && acc.every((x) => x.pt.includes('o cargo precisa?')), 'only cupons, in the type transaction, has SharePoint and the MCP server: does the post need them?', acc)
+ok(!acc.some((x) => x.types.includes('triage')) && !acc.some((x) => x.key.startsWith('operation:shared_sharepointonline/')) && new Set(acc.map((x) => `${x.agent} ${x.key}`)).size === acc.length, 'one line per access (its types together; an operation of a connector already asked about left out); a type of one has none', acc)
+ok(!pb.resumes.find((r) => r.id === 'bodega-cupons')!.pdi.some((p) => p.pt.startsWith('Tirar o acesso')), 'a question, not a plan item, until the team decides')
+const decided = run()
+decided.cast.decisions.push({ key: 'connector:shared_sharepointonline', status: 'rejected', scope: 'type:transaction', why: 'o cargo não precisa' })
+const pbD = playbillOf(decided.result, decided.looks, found, decided.cast, profile.rules, fired)
+ok(pbD.resumes.find((r) => r.id === 'bodega-cupons')!.pdi.some((p) => p.pt === 'Tirar o acesso «Conector SharePoint»' && p.group === 'cleanup'), 'with a decision «rejected» in the scope of the type, a cleanup item', pbD.resumes.find((r) => r.id === 'bodega-cupons')!.pdi)
 done()

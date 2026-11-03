@@ -104,7 +104,7 @@ function panel() {
   const card = a
     ? `<section class="pl-box pl-card" aria-live="polite"><h2>${esc(u.actor)}</h2><p class="pl-name">${esc(a.name)}</p><p class="pl-role">${esc(a.role === 'orchestrator' ? u.orchestrator : u.specialist)}${a.types.length ? ` · ${esc(a.types.join(' · '))}` : ''}${st.hasTelemetry ? ` · ${esc(a.silent ? u.silent : a.volume !== undefined ? u.vol(a.volume, st.days ?? 0) : '')}` : ''}</p>
       ${a.fingerprint.length ? `<p class="pl-note">${esc(u.fingerprint)}</p><div class="pl-dna">${a.fingerprint.map((f) => `<span class="${f.kind}" style="flex:${f.size}" title="${esc(f.label ?? '')}"></span>`).join('')}</div>` : ''}
-      <ul class="pl-checks">${a.checks.map((c) => `<li class="${c.state}">${esc(c[lang])}</li>`).join('')}</ul>
+      <ul class="pl-checks">${a.checks.map((c) => `<li class="${c.state}">${esc(c[lang])}</li>`).join('')}${a.access.map((x) => `<li class="decide">${esc(x[lang])}</li>`).join('')}</ul>
       ${data.playbill ? `<p class="pl-note" style="margin-top:8px"><a href="${esc(data.playbill)}#${encodeURIComponent(a.id)}">${esc(u.resume)}</a></p>` : ''}</section>`
     : `<section class="pl-box pl-card"><h2>${esc(u.actor)}</h2><p class="pl-note">${esc(u.actorHint)}</p></section>`
   const legend = `<section class="pl-box"><div class="pl-legend">${[['var(--beam)', u.legend[0]], ['var(--bad)', u.legend[1]], ['var(--amber)', u.legend[2]], ['var(--ghost)', u.legend[3]]].map(([c, t]) => `<span><i class="pl-dot" style="background:${c}"></i>${esc(t)}</span>`).join('')}</div><p class="pl-note" style="margin-top:8px">${esc(st.hasTelemetry ? u.structure : u.noTraffic)}</p></section>`

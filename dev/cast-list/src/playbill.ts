@@ -2,6 +2,7 @@
 // and type, a résumé for each one, and its development plan. Everything comes from the files, the telemetry and the
 // tables people gave; a field nothing says is left empty, never guessed.
 import type { Cast } from './cast'
+import type { EvalSet } from './evals'
 import type { Fired, Result } from './compare'
 import type { AgentFacts } from './extract'
 import { labelOf, type Lang } from './labels'
@@ -9,7 +10,7 @@ import { pdiOf, type PdiItem } from './pdi'
 import type { Rule } from './profile'
 import type { Look } from './review'
 
-export type Situation = 'hiring' | 'noOwner' | 'neverPublished' | 'pdi' | 'ok'
+export type Situation = 'hiring' | 'noOwner' | 'neverPublished' | 'noEval' | 'pdi' | 'ok'
 export interface Person { id: string; name: string; situation: Situation[] }
 export interface Requirement { key: string; en: string; pt: string; proposal: boolean }
 export interface Post { scope: string; name: { en: string; pt: string }; requirements: Requirement[] }
@@ -34,11 +35,44 @@ export interface Resume {
   goal?: Said
   /** From the telemetry: topic starts and errors logged; none when there was no export. */
   performance?: { days: number; starts: number; errors: number; notFired: string[]; silent: boolean }
+  /** The evaluations of Copilot Studio's Evaluate tab: the counts only. None when --evals was not given. */
+  certifications?: EvalSet[]
+  /** What only it has among those of its type: does the post need it? */
+  access: Access[]
   pdi: PdiItem[]
   sources: string[]
   seal: 'ok' | 'pdi'
 }
 export interface Said { value: string; source: string }
+export interface Access { agent: string; types: string[]; typeNames: string[]; key: string; en: string; pt: string }
+
+/** The review of access: within each type of two or more, a connector, an operation, an MCP server or what a flow
+ * reaches that only one has — a question for the person (does the post need it?), not a finding. */
+export function accessOf(r: Result): Access[] {
+  const found = new Map<string, { agent: string; key: string; types: string[] }>()
+  const ACCESS = /^(connector|operation|mcp|flow-uses):/
+  for (const type of Object.keys(r.typeNames)) {
+    const members = r.agents.filter((a) => a.role === 'specialist' && (r.types[a.id] ?? []).includes(type))
+    if (members.length < 2) continue
+    const keys = [...new Set(members.flatMap((a) => Object.keys(a.facts).filter((k) => ACCESS.test(k))))].sort()
+    for (const key of keys) {
+      const holders = members.filter((a) => key in a.facts)
+      if (holders.length !== 1) continue
+      const at = `${holders[0].id} ${key}`
+      const x = found.get(at) ?? { agent: holders[0].id, key, types: [] }
+      x.types.push(type)
+      found.set(at, x)
+    }
+  }
+  // an operation of a connector already asked about says nothing more
+  const list = [...found.values()].filter((x) => !(x.key.startsWith('operation:') && found.has(`${x.agent} connector:${x.key.slice(10, x.key.indexOf('/'))}`)))
+  return list.map((x) => {
+    const names = x.types.map((t) => r.typeNames[t] ?? t)
+    const l = (lang: Lang) => labelOf(x.key, lang, r.names)
+    const ts = (lang: Lang) => names.map((n) => `«${n}»`).join(lang === 'pt' ? ' e ' : ' and ')
+    return { agent: x.agent, types: x.types, typeNames: names, key: x.key, en: `«${l('en')}» — only it has this in ${names.length > 1 ? 'the types' : 'the type'} ${ts('en')}: does the post need it?`, pt: `«${l('pt')}» — só ele tem ${names.length > 1 ? 'nos tipos' : 'no tipo'} ${ts('pt')}: o cargo precisa?` }
+  })
+}
 export interface Playbill {
   name?: string
   /** Each situation with who is in it: only those the tables given can tell. */
@@ -78,7 +112,7 @@ const firstList = (s: string) => {
 }
 
 /** The RH of a run: its result, what to look at, the facts found, the cast file, the profile's rules and the telemetry. */
-export function playbillOf(r: Result, looks: Look[], found: AgentFacts[], cast: Cast, rules: Rule[], fired?: Fired): Playbill {
+export function playbillOf(r: Result, looks: Look[], found: AgentFacts[], cast: Cast, rules: Rule[], fired?: Fired, evals?: EvalSet[]): Playbill {
   const name = (id: string) => r.agents.find((a) => a.id === id)?.displayName ?? id
   const said = (agent: string, key: string): Said | undefined => {
     const d = cast.declared.find((x) => x.agent === agent && x.key === key)
@@ -86,7 +120,13 @@ export function playbillOf(r: Result, looks: Look[], found: AgentFacts[], cast: 
   }
   const inventory = cast.declared.some((d) => INVENTORY.includes(d.key))
   const team = cast.declared.some((d) => d.key === 'team' || d.key === 'kpi')
-  const pdi = pdiOf(looks, r)
+  // the plan, and what the team decided a post does not need (a decision «rejected» on an access, in the type's scope)
+  const access = accessOf(r)
+  const pdi = [...pdiOf(looks, r), ...access.flatMap((x): PdiItem[] => {
+    const d = cast.decisions.find((d) => d.key === x.key && d.status === 'rejected' && x.types.some((t) => d.scope === `type:${t}`))
+    const post = d ? (r.typeNames[d.scope.slice(5)] ?? d.scope.slice(5)) : ''
+    return d ? [{ agent: x.agent, group: 'cleanup', keys: [x.key], en: `Remove the access «${labelOf(x.key, 'en', r.names)}»`, pt: `Tirar o acesso «${labelOf(x.key, 'pt', r.names)}»`, why: { en: `The team decided the post «${post}» does not need it.`, pt: `O time decidiu que o cargo «${post}» não precisa.` } }] : []
+  })]
   const ghosts = r.contract.missing.map((m) => ({ id: m.calls, name: m.name ?? m.calls, caller: m.caller }))
   // the environment most of them are in: one in another is still being hired
   const envs = r.agents.map((a) => said(a.id, 'environment')?.value).filter((v): v is string => !!v)
@@ -97,6 +137,7 @@ export function playbillOf(r: Result, looks: Look[], found: AgentFacts[], cast: 
     if (env && usual && env !== usual) s.push('hiring')
     if (inventory && !said(id, 'owner')) s.push('noOwner')
     if (inventory && said(id, 'created-on') && !said(id, 'last-published')) s.push('neverPublished')
+    if (evals && !evals.some((e) => e.agent === id)) s.push('noEval')
     s.push(pdi.some((p) => p.agent === id && p.group !== 'cleanup') ? 'pdi' : 'ok')
     return s
   }
@@ -108,6 +149,7 @@ export function playbillOf(r: Result, looks: Look[], found: AgentFacts[], cast: 
     { key: 'cast', people: who(people) },
     { key: 'hiring', people: [...ghostsNamed, ...who(people.filter((id) => situation(id).includes('hiring')))] },
     ...(inventory ? [{ key: 'noOwner' as const, people: who(people.filter((id) => situation(id).includes('noOwner'))) }, { key: 'neverPublished' as const, people: who(people.filter((id) => situation(id).includes('neverPublished'))) }] : []),
+    ...(evals ? [{ key: 'noEval' as const, people: who(people.filter((id) => situation(id).includes('noEval'))) }] : []),
     { key: 'pdi', people: who(people.filter((id) => situation(id).includes('pdi'))) },
     { key: 'ok', people: who(people.filter((id) => situation(id).includes('ok'))) },
   ]
@@ -153,7 +195,7 @@ export function playbillOf(r: Result, looks: Look[], found: AgentFacts[], cast: 
       notFired: r.telemetry.notFired.filter((e) => e.agent === a.id).map((e) => e.name),
       silent: r.telemetry.silent.includes(a.id),
     }
-    const sources = [...new Set(['YAML', ...(fired ? [fired.file] : []), ...cast.declared.filter((d) => d.agent === a.id).map((d) => d.source.split(' › ')[0])])]
+    const sources = [...new Set(['YAML', ...(fired ? [fired.file] : []), ...(evals ?? []).filter((e) => e.agent === a.id).map((e) => e.file), ...cast.declared.filter((d) => d.agent === a.id).map((d) => d.source.split(' › ')[0])])]
     const mine = pdi.filter((p) => p.agent === a.id)
     return {
       id: a.id,
@@ -173,6 +215,8 @@ export function playbillOf(r: Result, looks: Look[], found: AgentFacts[], cast: 
       conduct,
       ...(said(a.id, 'kpi') ? { goal: said(a.id, 'kpi') } : {}),
       ...(performance ? { performance } : {}),
+      ...(evals ? { certifications: evals.filter((e) => e.agent === a.id) } : {}),
+      access: access.filter((x) => x.agent === a.id),
       pdi: mine,
       sources,
       seal: mine.some((p) => p.group !== 'cleanup') ? 'pdi' : 'ok',

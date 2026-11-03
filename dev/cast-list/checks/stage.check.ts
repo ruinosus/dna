@@ -61,6 +61,9 @@ ok(sCup.steps.some((x) => x.node === 'bodega-orquestrador' && x.warn) && sCup.st
 const aFrete = st.actors.find((a) => a.id === 'bodega-frete')!
 ok(aFrete.fingerprint.some((f) => f.kind === 'variant') && aFrete.fingerprint.some((f) => f.kind === 'own') && aFrete.checks.some((c) => c.state === 'off' && c.key === 'trigger:OnEscalate'), "frete's card: a variation in its fingerprint; off the escalation", aFrete)
 
+// the review of access on the card
+ok(st.actors.find((a) => a.id === 'bodega-cupons')!.access.some((x) => x.pt.includes('SharePoint')), "cupons' card asks about the access only it has in its type")
+
 // the words
 const words = JSON.stringify([st.lenses.map((l) => [l.name, l.caption]), st.edges.map((e) => e.label), st.scenes.map((s) => [s.title, s.steps.map((x) => x.text)]), st.nodes.map((n) => n.sub)])
 ok(!AGENT.test(words), 'never «agent» in its own words', words.match(/.{0,40}\bagentes?\b.{0,20}/i)?.[0])

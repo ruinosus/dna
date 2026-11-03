@@ -1,0 +1,5 @@
+question,expectedResponse,actualResponse,testMethodType_1,result_1,passingScore_1,explanation_1,testMethodType_2,result_2,passingScore_2,explanation_2
+Quanto custa o frete para o Nordeste?,"Conforme a tabela de frete","O frete para o Nordeste sai a partir da tabela por faixa de CEP.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Pass,70,Same meaning
+O frete grátis vale para qualquer valor?,"Acima de 199 reais","Vale para compras acima de 199 reais.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Pass,70,Same meaning
+Em quantos dias chega em Manaus?,"Até 12 dias úteis","Chega em poucos dias.",GeneralQuality,Fail,,Seems incomplete,CompareMeaning,Fail,70,Different meaning
+Quero falar com uma pessoa,"Encaminhar para uma pessoa","Posso te ajudar com o frete por aqui.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Fail,70,Question not answered

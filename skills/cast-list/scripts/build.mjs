@@ -12,6 +12,8 @@
 //   node build.mjs <agents-folder> --declared <table.csv|.xlsx> [--declared <another>] [--agent-column <title>] [--take <key,…|all>]
 //                                  what a spreadsheet says about the agents (the team's, the admin center's inventory): each
 //                                  column becomes a declared fact, listed with a key, and with --take written to the cast file
+//   … --evals <folder>              the exports of Copilot Studio's Evaluate tab («Evaluate <agent> <date>.csv»): who
+//                                  passed how many, by method — the counts only, never what was asked or answered
 //   … --telemetry <export.csv|.xlsx> [--telemetry-days <n>]   what fired, from Application Insights (references/telemetry.md):
 //                                  the events in the YAML that did not fire, and who has no line at all
 //
@@ -22,17 +24,17 @@
 // format (each problem with its line), or no agent in the folder; 2 bad arguments; 3 made, but the lesson's reviewer
 // found something to fix. The outputs hold the client's data: keep them in the client's environment. The lesson's
 // review uses Chrome, Chromium or Edge when there is one.
-import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
-import { agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, extractAgent, firedFrom, fromSheets, groupLooks, playbillOf, stageOf, mergeDeclared, knownKinds, labelOf, lessonOf, problemText, readCast, readCsv, readProfile, reviewCast, validateScene, workbookFile, workbookOf, writeCast } from './engine.mjs'
+import { agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, evalsFrom, extractAgent, firedFrom, fromSheets, groupLooks, playbillOf, stageOf, mergeDeclared, knownKinds, labelOf, lessonOf, problemText, readCast, readCsv, readProfile, reviewCast, validateScene, withEvals, workbookFile, workbookOf, writeCast } from './engine.mjs'
 import { readXlsx } from './read-xlsx.mjs'
 import { fill, inline } from './page.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
-const valued = new Set(['--lang', '--out', '--profile', '--from', '--take', '--declared', '--agent-column', '--telemetry', '--telemetry-days'])
+const valued = new Set(['--lang', '--out', '--profile', '--from', '--take', '--declared', '--agent-column', '--telemetry', '--telemetry-days', '--evals'])
 const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--playbill', '--plot', '--all', '--facts', ...valued])
 const option = (name) => {
   const at = argv.indexOf(name)
@@ -41,11 +43,11 @@ const option = (name) => {
 const options = (name) => argv.flatMap((a, i) => (a === name && argv[i + 1] ? [argv[i + 1]] : []))
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
 const usage = `usage: node build.mjs <agents-folder> --check [--profile <p.cast.yaml>] [--lang en|pt]
-       node build.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
+       node build.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--playbill] [--plot] [--all] [--lang en|pt] [--out <folder>]
        node build.mjs <agents-folder> --facts [--out <folder>]
        node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]
        node build.mjs <agents-folder> --declared <table.csv|.xlsx> [--agent-column <title>] [--take <key,key…|all>] [--out <folder>]
-       … [--telemetry <export.csv|.xlsx>] [--telemetry-days <n>]`
+       … [--telemetry <export.csv|.xlsx>] [--telemetry-days <n>] [--evals <folder>]`
 const lang = option('--lang') ?? 'en'
 const fail = (msg) => {
   console.error(`${msg}\n${usage}`)
@@ -59,6 +61,7 @@ for (const v of valued) if (argv.includes(v) && !option(v)) fail(`✗ ${v} needs
 if (argv.includes('--take') && !argv.includes('--from') && !argv.includes('--declared')) fail('✗ --take goes with --from or --declared')
 if (argv.includes('--from') && argv.includes('--declared')) fail('✗ --from or --declared, one at a time')
 for (const f of [...options('--declared'), ...options('--telemetry')]) if (!existsSync(f) || !/\.(csv|xlsx)$/i.test(f)) fail(`✗ ${f}: a .csv or an .xlsx that is there`)
+if (option('--evals') && !(existsSync(option('--evals')) && statSync(option('--evals')).isDirectory())) fail(`✗ ${option('--evals')}: a folder with the exports of the Evaluate tab`)
 const days = Number(option('--telemetry-days') ?? 30)
 if (!Number.isInteger(days) || days < 1) fail('✗ --telemetry-days is a whole number of days')
 
@@ -76,6 +79,8 @@ const T = {
     noEvent: (f, cols) => `✗ ${f}: no column of the event («evento», «event» or «name»; columns: ${cols.join(', ')})`,
     unmatched: (n, f, list) => `• ${f}: ${n} ${n === 1 ? 'row names' : 'rows name'} nobody in the folder: ${list}`, line: 'line',
     telemetry: (f, n, d) => `✓ telemetry ${f}: ${n} ${n === 1 ? 'row' : 'rows'} of the folder's agents, ${d} days`,
+    evals: (d, n, a) => `✓ evals     ${d}: ${n} ${n === 1 ? 'evaluation' : 'evaluations'} of ${a} in the folder (counts only)`,
+    evalUnknown: (f, why) => `• evals     ${f}: ${why === 'who' ? 'its name says nobody in the folder («Evaluate <name> <date>.csv»)' : 'no result_1 column: not an export of the Evaluate tab'}`,
   },
   pt: {
     found: (n, o, s) => `✓ ${n} no elenco: ${o} ${o === 1 ? 'orquestrador' : 'orquestradores'}, ${s} ${s === 1 ? 'especialista' : 'especialistas'}`,
@@ -90,6 +95,8 @@ const T = {
     noEvent: (f, cols) => `✗ ${f}: nenhuma coluna do evento («evento», «event» ou «name»; colunas: ${cols.join(', ')})`,
     unmatched: (n, f, list) => `• ${f}: ${n} ${n === 1 ? 'linha não cita' : 'linhas não citam'} ninguém da pasta: ${list}`, line: 'linha',
     telemetry: (f, n, d) => `✓ telemetria ${f}: ${n} ${n === 1 ? 'linha' : 'linhas'} dos agentes da pasta, ${d} dias`,
+    evals: (d, n, a) => `✓ avaliações ${d}: ${n} ${n === 1 ? 'avaliação' : 'avaliações'} de ${a} da pasta (só as contagens)`,
+    evalUnknown: (f, why) => `• avaliações ${f}: ${why === 'who' ? 'o nome não cita ninguém da pasta («Evaluate <nome> <data>.csv»)' : 'sem a coluna result_1: não é uma exportação da aba Evaluate'}`,
   },
 }[lang]
 
@@ -200,7 +207,17 @@ if (option('--telemetry')) {
   }
   if (!fired) tableProblem(file, problem)
 }
-const result = compare(found, profile, cast, fired)
+// the evaluations of the Evaluate tab: the counts only, and eval:run for who has one (a rule «has: eval:*»)
+let evalSets
+if (option('--evals')) {
+  const dir = option('--evals')
+  const names = readdirSync(dir).filter((f) => /\.csv$/i.test(f)).sort()
+  const ev = evalsFrom(names.map((name) => ({ name: `${basename(dir)}/${name}`, table: readCsv(readFileSync(join(dir, name), 'utf8'), name) })), found)
+  evalSets = ev.sets
+  console.log(T.evals(dir, ev.sets.length, new Set(ev.sets.map((s) => s.agent)).size))
+  for (const u of ev.unknown) console.log(T.evalUnknown(u.file, u.why))
+}
+const result = compare(evalSets ? withEvals(found, evalSets) : found, profile, cast, fired)
 const looks = reviewCast(result)
 const roles = Object.values(result.roles)
 console.log(T.found(found.length, roles.filter((r) => r === 'orchestrator').length, roles.filter((r) => r === 'specialist').length))
@@ -232,7 +249,7 @@ if (want.html) {
 }
 if (want.playbill) {
   const page = join(out, `${id}.playbill.html`)
-  const playbill = playbillOf(result, looks, found, kept, profile.rules, fired)
+  const playbill = playbillOf(result, looks, found, kept, profile.rules, fired, evalSets)
   writeFileSync(page, fill(readFileSync(join(here, '../assets/playbill.html'), 'utf8'), { CAST: inline({ id, lang, playbill, ...(want.html ? { map: `${id}.html` } : {}) }) }))
   console.log(`✓ rh        ${page}`)
 }

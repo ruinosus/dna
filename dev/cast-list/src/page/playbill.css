@@ -35,13 +35,13 @@ body { margin: 0; }
 @media (max-width: 860px) { .pb-body { grid-template-columns: 1fr; } }
 .pb-side { display: flex; flex-direction: column; gap: 16px; }
 .pb-org { display: flex; flex-direction: column; gap: 6px; }
-.pb-node { display: flex; justify-content: space-between; gap: 8px; align-items: center; width: 100%; text-align: left; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.pb-node { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; align-items: center; width: 100%; text-align: left; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
 .pb-node.manager { background: var(--active); color: var(--on-active); border-color: var(--active); }
 .pb-node.ghost { border-style: dashed; color: var(--muted); cursor: default; }
 .pb-node[aria-pressed="true"] { border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
 .pb-type { margin: 8px 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--type); }
 .pb-tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
-.pb-tag.ok { color: var(--has); } .pb-tag.pdi, .pb-tag.noOwner { color: var(--off); } .pb-tag.hiring, .pb-tag.neverPublished { color: var(--amber); }
+.pb-tag.ok { color: var(--has); } .pb-tag.pdi, .pb-tag.noOwner { color: var(--off); } .pb-tag.hiring, .pb-tag.neverPublished, .pb-tag.noEval { color: var(--amber); }
 .pb-posts { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
 .pb-posts button { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-size: 12px; }
 .pb-posts button[aria-pressed="true"] { background: var(--active); color: var(--on-active); border-color: var(--active); }

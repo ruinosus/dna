@@ -9,25 +9,27 @@ const UI = {
   en: {
     title: 'The cast’s HR', sub: 'The same cast, as people: staff board, org chart, post, résumé and development plan. Everything comes from the files, the telemetry and the team’s spreadsheets.',
     privacy: 'This file holds the client’s data: keep it in the client’s environment.',
-    staff: { cast: 'on the staff', hiring: 'being hired', noOwner: 'with no owner', neverPublished: 'never published', pdi: 'with a development plan', ok: 'in good standing' } as Record<string, string>,
-    tag: { hiring: 'being hired', noOwner: 'no owner', neverPublished: 'never published', pdi: 'plan', ok: 'in good standing' } as Record<Situation, string>,
+    staff: { cast: 'on the staff', hiring: 'being hired', noOwner: 'with no owner', neverPublished: 'never published', noEval: 'with no evaluation', pdi: 'with a development plan', ok: 'in good standing' } as Record<string, string>,
+    tag: { hiring: 'being hired', noOwner: 'no owner', neverPublished: 'never published', noEval: 'no evaluation', pdi: 'plan', ok: 'in good standing' } as Record<Situation, string>,
     missing: { inventory: 'the admin center’s inventory (owner, environment, published)', team: 'the team’s spreadsheet (team, goal)', telemetry: 'the export of Application Insights (performance)' } as Record<string, string>,
     more: 'More with', org: 'Org chart', client: 'Customer', clientSub: 'who is served', manager: 'manager', ghost: 'called, not in the folder', noType: 'no type',
     post: 'The post', postNote: 'The post is the accepted pattern of the role and type, and the profile’s rules. A newcomer is «hired» when they meet it.', proposal: 'proposal — no decision yet',
     manager_: 'Manager', team: 'Team', owner: 'Owner', created: 'Hired', published: 'Last published', schema: 'Badge', env: 'Unit', nobody: 'nobody calls it',
     summary: 'Summary', tools: 'Tools and access', conduct: 'Languages and conduct', goal: 'Goal', noGoal: 'no goal declared', perf: (d: number) => `Performance · ${d} days`, starts: 'topic starts', errors: 'errors logged', notFired: 'did not fire', measured: 'goal measured', noLine: 'no line in the telemetry', noPerf: 'The performance comes with the export of Application Insights (--telemetry).',
+    certs: 'Certifications', certsNone: 'No evaluation in the folder of --evals.', passed: (p: number, t: number) => `${p} of ${t} passed`, access: 'Access only it has in its type',
     pdi: 'Development plan', nothing: 'Nothing to develop.', sources: 'Sources', seal: { ok: 'IN GOOD STANDING', pdi: 'PLAN' }, orchestrator: 'Orchestrator', specialist: 'Specialist', map: '← Map', foot: 'cast-list · no model: what is here is what the files and tables say.',
   },
   pt: {
     title: 'RH do elenco', sub: 'O mesmo elenco, visto como pessoas: quadro de pessoal, organograma, vaga, currículo e plano de desenvolvimento. Tudo sai dos arquivos, da telemetria e das planilhas do time.',
     privacy: 'Este arquivo tem dados do cliente: deixe-o no ambiente dele.',
-    staff: { cast: 'no quadro', hiring: 'em admissão', noOwner: 'sem responsável', neverPublished: 'nunca publicado', pdi: 'em PDI', ok: 'em dia' } as Record<string, string>,
-    tag: { hiring: 'em admissão', noOwner: 'sem responsável', neverPublished: 'nunca publicado', pdi: 'PDI', ok: 'em dia' } as Record<Situation, string>,
+    staff: { cast: 'no quadro', hiring: 'em admissão', noOwner: 'sem responsável', neverPublished: 'nunca publicado', noEval: 'sem avaliação', pdi: 'em PDI', ok: 'em dia' } as Record<string, string>,
+    tag: { hiring: 'em admissão', noOwner: 'sem responsável', neverPublished: 'nunca publicado', noEval: 'sem avaliação', pdi: 'PDI', ok: 'em dia' } as Record<Situation, string>,
     missing: { inventory: 'o inventário do admin center (responsável, ambiente, publicação)', team: 'a planilha do time (equipe, meta)', telemetry: 'a exportação do Application Insights (desempenho)' } as Record<string, string>,
     more: 'Mais com', org: 'Organograma', client: 'Cliente', clientSub: 'quem é atendido', manager: 'gestor', ghost: 'chamado, fora da pasta', noType: 'sem tipo',
     post: 'A vaga', postNote: 'A vaga é o padrão aceito do papel e do tipo, mais as regras do perfil. Quem chega é «contratado» quando cumpre a vaga.', proposal: 'proposta — sem decisão ainda',
     manager_: 'Gestor', team: 'Equipe', owner: 'Responsável', created: 'Admissão', published: 'Última publicação', schema: 'Matrícula', env: 'Lotação', nobody: 'ninguém chama',
     summary: 'Resumo', tools: 'Ferramentas e acessos', conduct: 'Idiomas e conduta', goal: 'Meta', noGoal: 'sem meta declarada', perf: (d: number) => `Desempenho · ${d} dias`, starts: 'inícios de tópico', errors: 'erros registrados', notFired: 'não disparou', measured: 'meta medida', noLine: 'nenhuma linha na telemetria', noPerf: 'O desempenho aparece com a exportação do Application Insights (--telemetry).',
+    certs: 'Certificações', certsNone: 'Nenhuma avaliação na pasta do --evals.', passed: (p: number, t: number) => `${p} de ${t} aprovados`, access: 'Acessos que só ele tem no tipo',
     pdi: 'Plano de desenvolvimento', nothing: 'Nada a desenvolver.', sources: 'Fontes', seal: { ok: 'EM DIA', pdi: 'PDI' }, orchestrator: 'Orquestrador', specialist: 'Especialista', map: '← Mapa', foot: 'cast-list · sem modelo: o que está aqui é o que os arquivos e as planilhas dizem.',
   },
 }
@@ -45,7 +47,7 @@ const named = decodeURIComponent(location.hash.slice(1))
 let picked = (pb.resumes.find((r) => r.id === named) ?? pb.resumes.find((r) => r.seal === 'pdi' && r.role === 'specialist') ?? pb.resumes[0])?.id
 let post = pb.posts[0]?.scope
 
-const COUNT: Record<string, string> = { cast: '', hiring: 'warn', noOwner: 'bad', neverPublished: 'warn', pdi: 'bad', ok: 'good' }
+const COUNT: Record<string, string> = { cast: '', hiring: 'warn', noOwner: 'bad', neverPublished: 'warn', noEval: 'warn', pdi: 'bad', ok: 'good' }
 function staff() {
   const cards = pb.staff.map((s) => `<div class="pb-count ${COUNT[s.key]}"><b>${s.people.length}</b><span>${esc(u.staff[s.key])}${s.key !== 'cast' && s.people.length ? ` — ${esc(s.people.map((p) => p.name).join(', '))}` : ''}</span></div>`).join('')
   const missing = pb.missing.length ? `<p class="pb-missing">${esc(u.more)}: ${pb.missing.map((m) => esc(u.missing[m])).join(' · ')}</p>` : ''
@@ -97,6 +99,8 @@ function resume(r: Resume) {
     ${section(u.conduct, chips(r.conduct, true))}
     ${section(u.goal, r.goal ? `<p>${said(r.goal)}</p>` : `<p class="pb-empty">${esc(u.noGoal)}</p>`)}
     ${section(p ? u.perf(p.days) : u.perf(0).replace(/ · .*/, ''), perf)}
+    ${r.certifications ? section(u.certs, r.certifications.length ? `<ul>${r.certifications.map((c) => `<li><b>${esc(u.passed(c.passed, c.total))}</b>${c.date ? ` · ${esc(c.date)}` : ''} <span class="pb-src">(${esc(c.methods.map((m) => `${m.name} ${m.passed}/${m.total}`).join(' · '))} — ${esc(c.file)})</span></li>`).join('')}</ul>` : `<p class="pb-empty">${esc(u.certsNone)}</p>`) : ''}
+    ${r.access.length ? section(u.access, `<ul>${r.access.map((x) => `<li>${esc(x[lang])}</li>`).join('')}</ul>`) : ''}
     ${section(u.pdi, plan)}
     <p class="pb-note">${esc(u.sources)}: ${esc(r.sources.join(', '))}</p>
   </article>`

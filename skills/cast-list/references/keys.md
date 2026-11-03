@@ -80,6 +80,7 @@ Every fact cast-list finds is a key. The keys below have a name; any other key k
 | `instructions:present` | Has instructions | Tem instruções |
 | `node:LogCustomTelemetryEvent` | Logs telemetry | Registra telemetria |
 | `node:CSATQuestion` | Asks for satisfaction (CSAT) | Pergunta a satisfação (CSAT) |
+| `eval:run` | Passed through an evaluation | Passou por uma avaliação |
 | `orphan:topic:<value>` | Topic nobody calls <value> | Tópico que ninguém chama <valor> |
 | `orphan:action:<value>` | Tool nobody can choose <value> | Ferramenta que ninguém escolhe <valor> |
 | `orphan:variable:<value>` | Variable nobody uses <value> | Variável que ninguém usa <valor> |

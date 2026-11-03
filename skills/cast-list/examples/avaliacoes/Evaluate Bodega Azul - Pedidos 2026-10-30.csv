@@ -1,0 +1,5 @@
+question,expectedResponse,actualResponse,testMethodType_1,result_1,passingScore_1,explanation_1
+Onde está meu pedido 1234?,,"O pedido 1234 saiu para entrega hoje. Prazo: até amanhã.",GeneralQuality,Pass,,Seems relevant; Seems complete
+Posso pagar com boleto?,,"Sim: boleto à vista, com aprovação em até 2 dias úteis.",GeneralQuality,Pass,,Seems relevant; Seems complete
+Quanto tempo leva o processamento?,,"O processamento leva até 1 dia útil depois do pagamento.",GeneralQuality,Pass,,Seems relevant
+Quero falar com uma pessoa,,"Vou te passar para alguém da equipe agora.",GeneralQuality,Pass,,Seems relevant

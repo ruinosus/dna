@@ -5,7 +5,7 @@
 import type { Fired, Result } from './compare'
 import type { AgentFacts } from './extract'
 import { labelOf } from './labels'
-import { requirement } from './playbill'
+import { accessOf, requirement } from './playbill'
 import { groupPatterns, type Look } from './review'
 
 type Two = { en: string; pt: string }
@@ -15,7 +15,7 @@ export interface StageEdge { from: string; to: string; kind: 'traffic' | 'struct
 export interface Lens { id: string; name: Two; caption: Two; ok: string[]; amber: string[]; bad: string[] }
 export interface Step { node: string; text: Two; warn?: boolean; /** Client text the step quotes, as written (a routing description). */ quote?: string }
 export interface Scene { id: string; to: string; title: Two; steps: Step[] }
-export interface Actor { id: string; name: string; role: 'orchestrator' | 'specialist'; types: string[]; volume?: number; silent?: boolean; fingerprint: { kind: 'shared' | 'official' | 'variant' | 'marker' | 'own'; size: number; label?: string }[]; checks: { key: string; en: string; pt: string; state: 'ok' | 'off' | 'decide' }[] }
+export interface Actor { id: string; name: string; role: 'orchestrator' | 'specialist'; types: string[]; volume?: number; silent?: boolean; fingerprint: { kind: 'shared' | 'official' | 'variant' | 'marker' | 'own'; size: number; label?: string }[]; checks: { key: string; en: string; pt: string; state: 'ok' | 'off' | 'decide' }[]; /** What only it has among those of its type. */ access: Two[] }
 export interface Stage { name?: string; width: number; height: number; hasTelemetry: boolean; days?: number; groups: { label: string; y1: number; y2: number }[]; nodes: StageNode[]; edges: StageEdge[]; lenses: Lens[]; scenes: Scene[]; actors: Actor[] }
 
 const X = { client: 80, orchestrator: 290, specialist: 590, flow: 880, system: 1110 }
@@ -221,6 +221,7 @@ export function stageOf(r: Result, looks: Look[], found: AgentFacts[], fired?: F
   })
 
   // the card of each actor: its fingerprint and the post of its role and type
+  const access = accessOf(r)
   const actors: Actor[] = r.agents.map((a) => {
     const f = found.find((x) => x.id === a.id)
     const total = f?.texts.filter((t) => t.source === 'instructions').reduce((n, t) => n + t.text.length, 0) ?? 0
@@ -239,7 +240,7 @@ export function stageOf(r: Result, looks: Look[], found: AgentFacts[], fired?: F
       const o = r.offPattern.find((x) => x.agent === a.id && x.key === p.key)
       return { key: p.key, en: requirement(p.key, 'en', r.names), pt: requirement(p.key, 'pt', r.names), state: !o ? ('ok' as const) : o.variant ? ('decide' as const) : ('off' as const) }
     })
-    return { id: a.id, name: name(a.id), role: a.role === 'orchestrator' ? 'orchestrator' : 'specialist', types: (r.types[a.id] ?? []).map(typeName), ...vol(a.id), fingerprint: fp, checks }
+    return { id: a.id, name: name(a.id), role: a.role === 'orchestrator' ? 'orchestrator' : 'specialist', types: (r.types[a.id] ?? []).map(typeName), ...vol(a.id), fingerprint: fp, checks, access: access.filter((x) => x.agent === a.id).map((x) => both(x.en, x.pt)) }
   })
 
   const height = Math.max(...nodes.map((n) => n.y)) + 90
