@@ -16,7 +16,7 @@ export const DIMENSIONS: Record<Dimension, { en: string; pt: string }> = {
   declared: { en: 'Declared', pt: 'Declarado' },
 }
 
-interface Name { en: string; pt: string; dim: Dimension; lacks?: { en: [string, string]; pt: [string, string] } }
+interface Name { en: string; pt: string; dim: Dimension; lacks?: { en: [string, string]; pt: [string, string] }; /** The name is already a sentence («Receives the conversation history»), not a thing. */ phrase?: true }
 /** The keys known by heart. `lacks`: what an agent without it does not do (one, many). */
 const KNOWN: Record<string, Name> = {
   'trigger:OnConversationStart': { dim: 'conversation', en: 'Greeting', pt: 'Boas-vindas' },
@@ -24,10 +24,10 @@ const KNOWN: Record<string, Name> = {
   'trigger:OnEscalate': { dim: 'conversation', en: 'Escalation to a person', pt: 'Escalonamento para humano', lacks: { en: ['does not escalate to a person', 'do not escalate to a person'], pt: ['não escala para humano', 'não escalam para humano'] } },
   'trigger:OnError': { dim: 'conversation', en: 'Error handling', pt: 'Tratamento de erro', lacks: { en: ['does not handle errors', 'do not handle errors'], pt: ['não trata erro', 'não tratam erro'] } },
   'trigger:OnRecognizedIntent': { dim: 'conversation', en: 'A topic of its own, by intent', pt: 'Tópico próprio, por intenção' },
-  'trigger:OnRedirect': { dim: 'orchestration', en: 'Takes a call from the orchestrator', pt: 'Recebe chamada do orquestrador', lacks: { en: ['takes no call from the orchestrator', 'take no call from the orchestrator'], pt: ['não recebe chamada do orquestrador', 'não recebem chamada do orquestrador'] } },
+  'trigger:OnRedirect': { dim: 'orchestration', phrase: true, en: 'Takes a call from the orchestrator', pt: 'Recebe chamada do orquestrador', lacks: { en: ['takes no call from the orchestrator', 'take no call from the orchestrator'], pt: ['não recebe chamada do orquestrador', 'não recebem chamada do orquestrador'] } },
   'trigger:OnSelectIntent': { dim: 'conversation', en: 'Disambiguation («did you mean…»)', pt: 'Desambiguação («você quis dizer…»)' },
   'trigger:OnSignIn': { dim: 'conversation', en: 'Sign-in', pt: 'Login' },
-  'trigger:OnGeneratedResponse': { dim: 'conversation', en: 'Reviews the generated answer', pt: 'Revisa a resposta gerada' },
+  'trigger:OnGeneratedResponse': { dim: 'conversation', phrase: true, en: 'Reviews the generated answer', pt: 'Revisa a resposta gerada' },
   'trigger:OnKnowledgeRequested': { dim: 'knowledge', en: 'Before searching knowledge', pt: 'Antes de buscar no conhecimento' },
   'trigger:OnToolSelected': { dim: 'orchestration', en: 'Child chosen as a tool', pt: 'Filho escolhido como ferramenta' },
   'trigger:OnActivity': { dim: 'conversation', en: 'On every message', pt: 'Em toda mensagem' },
@@ -39,21 +39,21 @@ const KNOWN: Record<string, Name> = {
   'setting:semantic-search=off': { dim: 'knowledge', en: 'Semantic search off', pt: 'Busca semântica desligada' },
   'setting:web-browsing=on': { dim: 'knowledge', en: 'Web browsing on', pt: 'Navegação na web ligada' },
   'setting:web-browsing=off': { dim: 'knowledge', en: 'Web browsing off', pt: 'Navegação na web desligada' },
-  'setting:connectable': { dim: 'orchestration', en: 'Can be called by an orchestrator', pt: 'Pode ser chamado por um orquestrador' },
-  'called-with:history': { dim: 'orchestration', en: 'Receives the conversation history', pt: 'Recebe o histórico da conversa', lacks: { en: ['does not receive the conversation history from the orchestrator', 'do not receive the conversation history from the orchestrator'], pt: ['não recebe o histórico da conversa do orquestrador', 'não recebem o histórico da conversa do orquestrador'] } },
-  'routing:described': { dim: 'orchestration', en: 'Has a routing description', pt: 'Tem descrição de roteamento', lacks: { en: ['has no routing description', 'have no routing description'], pt: ['não tem descrição de roteamento', 'não têm descrição de roteamento'] } },
-  'flow-returns': { dim: 'integrations', en: 'The flow returns an answer', pt: 'O fluxo devolve uma resposta', lacks: { en: ['has a flow that returns nothing', 'have a flow that returns nothing'], pt: ['tem fluxo que não devolve nada', 'têm fluxo que não devolve nada'] } },
-  'flow-uses:child-flow': { dim: 'integrations', en: 'The flow calls another flow', pt: 'O fluxo chama outro fluxo' },
+  'setting:connectable': { dim: 'orchestration', phrase: true, en: 'Can be called by an orchestrator', pt: 'Pode ser chamado por um orquestrador' },
+  'called-with:history': { dim: 'orchestration', phrase: true, en: 'Receives the conversation history', pt: 'Recebe o histórico da conversa', lacks: { en: ['does not receive the conversation history from the orchestrator', 'do not receive the conversation history from the orchestrator'], pt: ['não recebe o histórico da conversa do orquestrador', 'não recebem o histórico da conversa do orquestrador'] } },
+  'routing:described': { dim: 'orchestration', phrase: true, en: 'Has a routing description', pt: 'Tem descrição de roteamento', lacks: { en: ['has no routing description', 'have no routing description'], pt: ['não tem descrição de roteamento', 'não têm descrição de roteamento'] } },
+  'flow-returns': { dim: 'integrations', phrase: true, en: 'The flow returns an answer', pt: 'O fluxo devolve uma resposta', lacks: { en: ['has a flow that returns nothing', 'have a flow that returns nothing'], pt: ['tem fluxo que não devolve nada', 'têm fluxo que não devolve nada'] } },
+  'flow-uses:child-flow': { dim: 'integrations', phrase: true, en: 'The flow calls another flow', pt: 'O fluxo chama outro fluxo' },
   'topics:with-model-description': { dim: 'conversation', en: 'Topics described for the model', pt: 'Tópicos descritos para o modelo' },
-  'instructions:present': { dim: 'governance', en: 'Has instructions', pt: 'Tem instruções', lacks: { en: ['has no instructions', 'have no instructions'], pt: ['não tem instruções', 'não têm instruções'] } },
-  'node:LogCustomTelemetryEvent': { dim: 'governance', en: 'Logs telemetry', pt: 'Registra telemetria', lacks: { en: ['logs no telemetry', 'log no telemetry'], pt: ['não registra telemetria', 'não registram telemetria'] } },
-  'node:CSATQuestion': { dim: 'governance', en: 'Asks for satisfaction (CSAT)', pt: 'Pergunta a satisfação (CSAT)', lacks: { en: ['does not ask for satisfaction', 'do not ask for satisfaction'], pt: ['não pergunta a satisfação', 'não perguntam a satisfação'] } },
+  'instructions:present': { dim: 'governance', phrase: true, en: 'Has instructions', pt: 'Tem instruções', lacks: { en: ['has no instructions', 'have no instructions'], pt: ['não tem instruções', 'não têm instruções'] } },
+  'node:LogCustomTelemetryEvent': { dim: 'governance', phrase: true, en: 'Logs telemetry', pt: 'Registra telemetria', lacks: { en: ['logs no telemetry', 'log no telemetry'], pt: ['não registra telemetria', 'não registram telemetria'] } },
+  'node:CSATQuestion': { dim: 'governance', phrase: true, en: 'Asks for satisfaction (CSAT)', pt: 'Pergunta a satisfação (CSAT)', lacks: { en: ['does not ask for satisfaction', 'do not ask for satisfaction'], pt: ['não pergunta a satisfação', 'não perguntam a satisfação'] } },
   'node:SearchAndSummarizeContent': { dim: 'knowledge', en: 'Generative answers from knowledge', pt: 'Respostas generativas sobre o conhecimento' },
-  'node:SearchKnowledgeSources': { dim: 'knowledge', en: 'Searches the knowledge sources', pt: 'Busca nas fontes de conhecimento' },
+  'node:SearchKnowledgeSources': { dim: 'knowledge', phrase: true, en: 'Searches the knowledge sources', pt: 'Busca nas fontes de conhecimento' },
   'yaml-only:triggerCondition': { dim: 'knowledge', en: 'Search condition only in YAML (the editor may erase it)', pt: 'Condição de busca só no YAML (a tela pode apagar)' },
   'knowledge:SharePointSearchSource': { dim: 'knowledge', en: 'Knowledge in SharePoint', pt: 'Conhecimento no SharePoint' },
   'declared:kpi': { dim: 'declared', en: 'KPI declared', pt: 'KPI declarado', lacks: { en: ['has no KPI declared', 'have no KPI declared'], pt: ['não tem KPI declarado', 'não têm KPI declarado'] } },
-  'eval:run': { dim: 'governance', en: 'Passed through an evaluation', pt: 'Passou por uma avaliação', lacks: { en: ['has no evaluation', 'have no evaluation'], pt: ['não tem avaliação', 'não têm avaliação'] } },
+  'eval:run': { dim: 'governance', phrase: true, en: 'Passed through an evaluation', pt: 'Passou por uma avaliação', lacks: { en: ['has no evaluation', 'have no evaluation'], pt: ['não tem avaliação', 'não têm avaliação'] } },
   'declared:team': { dim: 'declared', en: 'Team declared', pt: 'Equipe declarada', lacks: { en: ['has no team declared', 'have no team declared'], pt: ['não tem equipe declarada', 'não têm equipe declarada'] } },
   'declared:owner': { dim: 'declared', en: 'Owner declared', pt: 'Responsável declarado', lacks: { en: ['has no owner declared', 'have no owner declared'], pt: ['não tem responsável declarado', 'não têm responsável declarado'] } },
 }
@@ -126,7 +126,19 @@ const fieldOf = (key: string) => ({ form: key.slice(16, key.lastIndexOf('/')), f
 
 /** Readable names the files give (a connector's API name, an agent's schema name → the name people know). */
 export type Names = Record<string, string>
-const named = (value: string, names?: Names) => names?.[value] ?? value
+// the names Microsoft gives its common connectors, for when the files give none (a flow's connection names only the API)
+const MS_CONNECTORS: Record<string, string> = {
+  shared_commondataserviceforapps: 'Microsoft Dataverse', shared_sharepointonline: 'SharePoint', shared_office365: 'Office 365 Outlook',
+  shared_office365users: 'Office 365 Users', shared_teams: 'Microsoft Teams', shared_approvals: 'Approvals', shared_onedriveforbusiness: 'OneDrive for Business',
+  shared_excelonlinebusiness: 'Excel Online (Business)', shared_sql: 'SQL Server', shared_azureblob: 'Azure Blob Storage', shared_planner: 'Planner',
+  shared_outlook: 'Outlook.com', shared_webcontents: 'HTTP with Microsoft Entra ID', shared_servicenow: 'ServiceNow', shared_salesforce: 'Salesforce',
+}
+/** A connector, an MCP server or an agent by the name the files give it; a common Microsoft connector, by Microsoft's. */
+export const named = (value: string, names?: Names) => names?.[value] ?? MS_CONNECTORS[value] ?? value
+// the kinds whose name is a sentence: «Receives «X» from the orchestrator», «Logs the event «X»»
+const PHRASE_KINDS = ['called-with:input:', 'telemetry:event:', 'telemetry:field:', 'flow-uses:', 'var-in:', 'reaches:']
+/** The name of `key` reads as a sentence, so a job post says it as it is rather than «Has «…»». */
+export const isPhrase = (key: string) => !!KNOWN[key]?.phrase || PHRASE_KINDS.some((p) => key.startsWith(p))
 
 export function labelOf(key: string, lang: Lang, names?: Names): string {
   const known = KNOWN[key]

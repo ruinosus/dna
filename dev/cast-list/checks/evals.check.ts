@@ -16,6 +16,8 @@ ok(of('bodega-pedidos')?.passed === 4 && of('bodega-pedidos')?.total === 4 && of
 const frete = of('bodega-frete')
 ok(frete?.passed === 2 && frete.total === 4 && frete.methods.map((m) => `${m.name}:${m.passed}/${m.total}`).join() === 'GeneralQuality:3/4,CompareMeaning:2/4', 'frete: a row passes when every method passes (2 of 4); each method counted', frete)
 ok(!ev.unknown.length && ev.sets.length === 2, 'both files read', ev)
+const asExported = evalsFrom([{ name: 'Evaluate Bodega Azul - Pedidos 2026-10-30 (1).csv', table: files[1].table }], found)
+ok(asExported.sets[0]?.agent === 'bodega-pedidos' && asExported.sets[0].date === '2026-10-30', 'the name the Evaluate tab gives, with spaces and a copy\'s « (1)», reads the same', asExported)
 const odd = evalsFrom([{ name: 'Evaluate Ninguém 2026-10-30.csv', table: files[0].table }, { name: 'Evaluate Bodega Azul - Cupons 2026-10-30.csv', table: { name: '', rows: [['question', 'answer'], ['x', 'y']] } }], found)
 ok(odd.sets.length === 0 && odd.unknown.map((u) => u.why).join() === 'who,format', 'a file that names nobody in the folder, and one with no result_1: not understood, never stopping', odd.unknown)
 const words = JSON.stringify(ev)
@@ -25,5 +27,5 @@ ok(!/Onde está meu pedido|Manaus|saiu para entrega|Seems|Same meaning|Question 
 const withRule = { ...profile, rules: [...profile.rules, { id: 'eval', role: 'specialist' as const, has: 'eval:*', says: 'Todo especialista passou por uma avaliação' }] }
 const r = compare(withEvals(found, ev.sets), withRule, { agents: [], blocks: [], declared: [], decisions: [] })
 const gap = r.gaps.find((g) => g.rule.id === 'eval')
-ok(r.agents.find((a) => a.id === 'bodega-frete')?.facts['eval:run']?.[0]?.file === 'avaliacoes/Evaluate Bodega Azul - Frete 2026-10-30.csv' && gap?.agents.sort().join() === 'bodega-cupons,bodega-devolucoes,bodega-loja-fisica', 'eval:run with the file as its source; the rule «eval:*» misses the three with none', [gap, r.agents.find((a) => a.id === 'bodega-frete')?.facts['eval:run']])
+ok(r.agents.find((a) => a.id === 'bodega-frete')?.facts['eval:run']?.[0]?.file === 'avaliacoes/evaluate-bodega-azul-frete-2026-10-30.csv' && gap?.agents.sort().join() === 'bodega-cupons,bodega-devolucoes,bodega-loja-fisica', 'eval:run with the file as its source; the rule «eval:*» misses the three with none', [gap, r.agents.find((a) => a.id === 'bodega-frete')?.facts['eval:run']])
 done()

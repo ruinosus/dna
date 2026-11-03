@@ -10,7 +10,7 @@ const UI = {
     title: 'Stage', sub: 'The cast on stage: who talks to whom, the traffic each one gets, the patterns as lenses, and a follow spot that walks a call.',
     privacy: 'This file holds the client’s data: keep it in the client’s environment.', client: 'Customer',
     lenses: 'Lenses — light a pattern', lensHint: 'Pick a lens: who follows the pattern lights green, who is off blinks red.',
-    scenes: 'Follow spot — walk a call', actor: 'Actor', actorHint: 'Click someone on stage.', resume: 'See the résumé →', map: '← Map',
+    scenes: 'Follow spot — walk a call', narrIdle: 'Pick a call under «Follow spot» to walk it step by step here.', actor: 'Actor', actorHint: 'Click someone on stage.', resume: 'See the résumé →', map: '← Map',
     vol: (n: number, d: number) => `${n.toLocaleString('en')} topic starts / ${d} days`, silent: 'no telemetry', noTraffic: 'The traffic shows with the export of Application Insights (--telemetry).',
     legend: ['traffic (topic starts of who receives it)', 'off a pattern', 'to decide', 'not in the folder / unused'], structure: 'Inner arrows (flows, systems) are structure, not measured traffic.',
     step: (k: number, n: number) => `step ${k}/${n}`, keys: '← → to move · space plays all · Esc leaves',
@@ -20,7 +20,7 @@ const UI = {
     title: 'Palco', sub: 'O elenco no palco: quem fala com quem, o tráfego de cada um, os padrões como lentes, e um canhão que segue uma chamada.',
     privacy: 'Este arquivo tem dados do cliente: deixe-o no ambiente dele.', client: 'Cliente',
     lenses: 'Lentes — acenda um padrão', lensHint: 'Escolha uma lente: quem segue o padrão acende em verde, quem foge pisca em vermelho.',
-    scenes: 'Canhão seguidor — siga uma chamada', actor: 'Ator', actorHint: 'Clique em alguém no palco.', resume: 'Ver currículo →', map: '← Mapa',
+    scenes: 'Canhão seguidor — siga uma chamada', narrIdle: 'Escolha uma chamada em «Canhão seguidor» para segui-la passo a passo aqui.', actor: 'Ator', actorHint: 'Clique em alguém no palco.', resume: 'Ver currículo →', map: '← Mapa',
     vol: (n: number, d: number) => `${n.toLocaleString('pt-BR')} inícios de tópico / ${d} dias`, silent: 'sem telemetria', noTraffic: 'O tráfego aparece com a exportação do Application Insights (--telemetry).',
     legend: ['tráfego (inícios de tópico de quem recebe)', 'fora do padrão', 'a decidir', 'fora da pasta / sem uso'], structure: 'As setas internas (fluxos, sistemas) são estrutura, não tráfego medido.',
     step: (k: number, n: number) => `passo ${k}/${n}`, keys: '← → avançam e voltam · espaço toca tudo · Esc sai',
@@ -56,13 +56,13 @@ function path(e: StageEdge) {
   const mid = (x1 + x2) / 2
   return { d: `M${x1},${a.y} C${mid},${a.y} ${mid},${b.y} ${x2},${b.y}`, mx: mid, my: (a.y + b.y) / 2, x2, y2: b.y }
 }
-const label = (n: StageNode) => (n.kind === 'client' ? u.client : n.label)
+const label = (n: StageNode) => (n.kind === 'client' ? u.client : n.labels?.[lang] ?? n.label)
 const clip = (s: string, max = 24) => (s.length > max ? `${s.slice(0, max - 1)}…` : s)
 // the display name without the part every one of the cast shares («Bodega Azul - Pedidos» → «Pedidos»)
 const agents = st.nodes.filter(isAgent)
 const common = agents.length > 1 ? agents.map((n) => n.label).reduce((p, s) => { let i = 0; while (i < p.length && p[i] === s[i]) i++; return p.slice(0, i) }) : ''
 const prefix = /[-–·:]\s*$/.test(common) ? common : ''
-const short = (n: StageNode) => (isAgent(n) && prefix ? n.label.slice(prefix.length) : label(n))
+const short = (n: StageNode) => ((isAgent(n) || n.kind === 'ghost') && prefix && n.label.startsWith(prefix) ? n.label.slice(prefix.length) : label(n))
 
 function svg() {
   const lensOf = st.lenses.find((l) => l.id === lens)
@@ -84,13 +84,13 @@ function svg() {
   const nodes = st.nodes.map((n) => {
     const vol = isAgent(n) && st.hasTelemetry ? `<text class="pl-vol ${n.silent ? 'silent' : ''}" x="${W / 2}" y="${H + 14}" text-anchor="middle">${esc(n.silent ? u.silent : n.volume !== undefined ? u.vol(n.volume, st.days ?? 0) : '')}</text>` : ''
     const focusable = isAgent(n) ? ` tabindex="0" role="button" aria-label="${esc(n.label)}"` : ''
-    return `<g class="${cls(n)}" data-node="${esc(n.id)}" transform="translate(${n.x - W / 2},${n.y - H / 2})"${focusable}>${vol}<rect width="${W}" height="${H}" rx="${n.kind === 'client' ? H / 2 : 10}"/><text x="${W / 2}" y="21" text-anchor="middle">${esc(clip(short(n), 22))}</text><text class="pl-sub" x="${W / 2}" y="37" text-anchor="middle">${esc(clip(n.sub[lang], 30))}</text></g>`
+    return `<g class="${cls(n)}" data-node="${esc(n.id)}" transform="translate(${n.x - W / 2},${n.y - H / 2})"${focusable}>${vol}<rect width="${W}" height="${H}" rx="${n.kind === 'client' ? H / 2 : 10}"/><text x="${W / 2}" y="21" text-anchor="middle">${esc(clip(short(n), n.kind === 'ghost' ? 30 : 22))}</text><text class="pl-sub" x="${W / 2}" y="37" text-anchor="middle">${esc(clip(n.sub[lang], 30))}</text></g>`
   }).join('')
   const s = scene?.steps[step]
   const spot = s ? at(s.node) : undefined
   return `<svg class="pl-svg ${lensOf ? 'lensing' : ''}" viewBox="0 0 ${st.width} ${st.height}" role="img" aria-label="${esc(u.title)}">
     <defs><radialGradient id="pl-spot" r="0.5"><stop offset="0" stop-color="#000"/><stop offset="0.6" stop-color="#000"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
-    <mask id="pl-mask"><rect width="${st.width}" height="${st.height}" fill="#fff"/>${spot ? `<circle cx="${spot.x}" cy="${spot.y}" r="150" fill="url(#pl-spot)"/>` : ''}</mask></defs>
+    <mask id="pl-mask"><rect width="${st.width}" height="${st.height}" fill="#fff"/>${spot ? `<ellipse cx="${spot.x}" cy="${spot.y}" rx="${W / 2 + 34}" ry="${H / 2 + 30}" fill="url(#pl-spot)"/>` : ''}</mask></defs>
     <g>${groups}</g><g>${edges}</g><g id="pl-parts"></g><g>${nodes}</g>
     <rect class="pl-dark" width="${st.width}" height="${st.height}" mask="url(#pl-mask)" opacity="${scene ? 0.72 : 0}"/>
   </svg>`
@@ -113,7 +113,8 @@ function panel() {
 
 function narration() {
   const s = scene?.steps[step]
-  if (!scene || !s) return '<div class="pl-narr" hidden></div>'
+  // below the stage, never over it; when no scene plays, it says how to start one
+  if (!scene || !s) return `<div class="pl-narr idle"><span class="pl-note">${esc(u.narrIdle)}</span></div>`
   return `<div class="pl-narr ${s.warn ? 'warn' : ''}" role="status"><span class="pl-step">${esc(u.step(step + 1, scene.steps.length))}</span>${esc(s.text[lang])}${s.quote ? `<q class="pb-quote">${esc(s.quote)}</q>` : ''}<span class="pl-keys">${esc(u.keys)}</span></div>`
 }
 
@@ -173,11 +174,18 @@ app.addEventListener('click', (e) => {
   const t = e.target as Element
   const b = t.closest('button')
   const n = t.closest<SVGGElement>('[data-node]')
-  if (b?.dataset.lens) lens = lens === b.dataset.lens ? undefined : b.dataset.lens
-  else if (b?.dataset.scene) {
+  // a lens and a scene are never on together: one turns the other off
+  if (b?.dataset.lens) {
+    lens = lens === b.dataset.lens ? undefined : b.dataset.lens
+    if (lens) {
+      stop()
+      scene = undefined
+    }
+  } else if (b?.dataset.scene) {
     stop()
     scene = scene?.id === b.dataset.scene ? undefined : st.scenes.find((s) => s.id === b.dataset.scene)
     step = 0
+    if (scene) lens = undefined
   } else if (n && st.actors.some((a) => a.id === n.dataset.node)) actor = n.dataset.node
   else return
   render()

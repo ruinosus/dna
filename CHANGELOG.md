@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.9.1 — 2026-11-03
+
+cast-list's RH and stage, after a test in claude.ai.
+
+- **The RH's org chart** shows one of two types once, in its first, with «also orientação»; the staff board, the org
+  chart and the stage leave out the part of the names every one shares («Bodega Azul - »), and the one not in the
+  folder is no longer cut.
+- **The stage:** a lens closes the scene and a scene turns the lens off; the follow spot is the size of the node; the
+  caption sits below the stage, never over it; knowledge sources are on stage and in the scenes («Consulta
+  «Conhecimento no SharePoint»»).
+- **Connectors by name:** when the files give none (a flow's connection names only the API), a common Microsoft
+  connector goes by Microsoft's name — `shared_commondataserviceforapps` is «Microsoft Dataverse».
+- **The post's requirements:** a fact whose name is already a sentence is said as it is («Recebe «X» do
+  orquestrador»), not inside «Tem «…»».
+- **The example evaluations** are named in kebab-case (`evaluate-bodega-azul-pedidos-2026-10-30.csv`); the name the
+  Evaluate tab gives, with spaces, reads the same.
+
 ## 1.9.0 — 2026-11-03
 
 cast-list reads the evaluations and reviews the access.

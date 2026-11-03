@@ -61,6 +61,10 @@ ok(sCup.steps.some((x) => x.node === 'bodega-orquestrador' && x.warn) && sCup.st
 const aFrete = st.actors.find((a) => a.id === 'bodega-frete')!
 ok(aFrete.fingerprint.some((f) => f.kind === 'variant') && aFrete.fingerprint.some((f) => f.kind === 'own') && aFrete.checks.some((c) => c.state === 'off' && c.key === 'trigger:OnEscalate'), "frete's card: a variation in its fingerprint; off the escalation", aFrete)
 
+// knowledge on stage, and in the scene
+ok(st.nodes.some((n) => n.id === 'sys:knowledge:SharePointSearchSource' && n.labels?.pt === 'Conhecimento no SharePoint') && st.scenes.find((s) => s.to === 'bodega-frete')!.steps.some((x) => x.node === 'sys:knowledge:SharePointSearchSource' && x.text.pt === 'Consulta «Conhecimento no SharePoint».'), 'the knowledge source is on stage, and frete looks it up in its scene')
+ok(st.nodes.some((n) => n.id === 'sys:connector:shared_commondataserviceforapps' && n.label === 'Microsoft Dataverse'), "a connector the files do not name, by Microsoft's name")
+
 // the review of access on the card
 ok(st.actors.find((a) => a.id === 'bodega-cupons')!.access.some((x) => x.pt.includes('SharePoint')), "cupons' card asks about the access only it has in its type")
 

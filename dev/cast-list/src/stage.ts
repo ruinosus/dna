@@ -4,13 +4,13 @@
 // the orchestrator, and a card per actor. The same run gives the same stage; no volume is ever invented.
 import type { Fired, Result } from './compare'
 import type { AgentFacts } from './extract'
-import { labelOf } from './labels'
+import { labelOf, named } from './labels'
 import { accessOf, requirement } from './playbill'
 import { groupPatterns, type Look } from './review'
 
 type Two = { en: string; pt: string }
 export type NodeKind = 'client' | 'orchestrator' | 'specialist' | 'ghost' | 'flow' | 'system'
-export interface StageNode { id: string; kind: NodeKind; label: string; sub: Two; x: number; y: number; volume?: number; silent?: boolean; unused?: boolean }
+export interface StageNode { id: string; kind: NodeKind; label: string; /** The name, when it is said in words (a knowledge source). */ labels?: Two; sub: Two; x: number; y: number; volume?: number; silent?: boolean; unused?: boolean }
 export interface StageEdge { from: string; to: string; kind: 'traffic' | 'structure'; label?: Two; tone?: 'bad' | 'amber' | 'ghost'; volume?: number; dashed?: boolean }
 export interface Lens { id: string; name: Two; caption: Two; ok: string[]; amber: string[]; bad: string[] }
 export interface Step { node: string; text: Two; warn?: boolean; /** Client text the step quotes, as written (a routing description). */ quote?: string }
@@ -88,10 +88,11 @@ export function stageOf(r: Result, looks: Look[], found: AgentFacts[], fired?: F
 
   // the flows (one node per flow, however many share it) and the systems each one and each specialist reaches
   const flowId = (f: Result['flows'][number]) => `flow:${f.id ?? f.name}`
-  const sysOf = (use: string): { id: string; label: string; sub: Two } | undefined => {
+  const sysOf = (use: string): { id: string; label: string; labels?: Two; sub: Two } | undefined => {
     if (use.startsWith('http:')) return { id: `sys:${use}`, label: use.slice(5), sub: both('HTTP', 'HTTP') }
-    if (use.startsWith('connector:')) return { id: `sys:${use}`, label: r.names[use.slice(10)] ?? use.slice(10), sub: both('connector', 'conector') }
-    if (use.startsWith('mcp:')) return { id: `sys:${use}`, label: r.names[use.slice(4)] ?? use.slice(4), sub: both('MCP server', 'servidor MCP') }
+    if (use.startsWith('connector:')) return { id: `sys:${use}`, label: named(use.slice(10), r.names), sub: both('connector', 'conector') }
+    if (use.startsWith('mcp:')) return { id: `sys:${use}`, label: named(use.slice(4), r.names), sub: both('MCP server', 'servidor MCP') }
+    if (use.startsWith('knowledge:') && !use.startsWith('knowledge:count')) return { id: `sys:${use}`, label: labelOf(use, 'en', r.names), labels: both(labelOf(use, 'en', r.names), labelOf(use, 'pt', r.names)), sub: both('knowledge', 'conhecimento') }
     return undefined
   }
   const flowNodes = new Map<string, StageNode>()
@@ -122,7 +123,7 @@ export function stageOf(r: Result, looks: Look[], found: AgentFacts[], fired?: F
   }
   for (const a of specialists) {
     const keys = Object.keys(a.facts)
-    for (const k of keys.filter((x) => x.startsWith('connector:') || x.startsWith('mcp:'))) {
+    for (const k of keys.filter((x) => x.startsWith('connector:') || x.startsWith('mcp:') || (x.startsWith('knowledge:') && !x.startsWith('knowledge:count')))) {
       const to = reach(k, at(a.id)!.y, true)
       const ops = keys.filter((x) => x.startsWith(`operation:${k.slice(10)}/`)).map((x) => x.slice(x.indexOf('/') + 1))
       if (to) edges.push({ from: a.id, to, kind: 'structure', ...(ops.length ? { label: both(ops.join(', '), ops.join(', ')) } : {}) })
@@ -214,7 +215,9 @@ export function stageOf(r: Result, looks: Look[], found: AgentFacts[], fired?: F
     }
     for (const e of edges.filter((x) => x.from === c.agent && x.to.startsWith('sys:'))) {
       const s = nodes.find((n) => n.id === e.to)!
-      steps.push({ node: s.id, text: both(`It uses ${s.label}${e.label ? ` (${e.label.en})` : ''}.`, `Usa ${s.label}${e.label ? ` (${e.label.pt})` : ''}.`) })
+      steps.push(s.id.startsWith('sys:knowledge:')
+        ? { node: s.id, text: both(`It looks it up in «${s.labels!.en}».`, `Consulta «${s.labels!.pt}».`) }
+        : { node: s.id, text: both(`It uses ${s.label}${e.label ? ` (${e.label.en})` : ''}.`, `Usa ${s.label}${e.label ? ` (${e.label.pt})` : ''}.`) })
     }
     steps.push({ node: c.caller, text: both('The answer goes back to the customer through the orchestrator.', 'A resposta volta ao cliente pelo orquestrador.') })
     return { id: `scene-${i + 1}`, to, title: both(who, who), steps }

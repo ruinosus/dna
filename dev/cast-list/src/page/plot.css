@@ -49,9 +49,9 @@ body { margin: 0; }
 .pl-checks li { padding: 3px 0; border-bottom: 1px dashed var(--line); }
 .pl-checks .ok::before { content: "✓ "; color: var(--ok); } .pl-checks .off::before { content: "✕ "; color: var(--bad); } .pl-checks .decide::before { content: "? "; color: var(--amber); }
 .pl-checks .off { color: var(--bad); } .pl-checks .decide { color: var(--amber); }
-.pl-narr { position: absolute; left: 14px; right: 14px; bottom: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; font-size: 15px; box-shadow: 0 8px 30px rgba(0,0,0,.25); }
-.pl-narr[hidden] { display: none; }
-.pl-narr.warn { border-color: var(--bad); }
+.pl-narr { margin: 0; background: var(--card); border-top: 1px solid var(--line); padding: 10px 14px; font-size: 15px; min-height: 64px; }
+.pl-narr.idle { display: flex; align-items: center; }
+.pl-narr.warn { border-top: 2px solid var(--bad); }
 .pl-narr .pl-step { color: var(--warm); font-weight: 650; margin-right: 6px; }
 .pl-narr q { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
 .pl-narr .pl-keys { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }

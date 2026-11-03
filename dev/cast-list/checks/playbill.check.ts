@@ -2,7 +2,7 @@
 // alone — and, later in this file, the staff board, the post and the résumé.
 import { pdiOf } from '../src/pdi'
 import { playbillOf } from '../src/playbill'
-import { accessOf } from '../src/playbill'
+import { accessOf, requirement } from '../src/playbill'
 import { evals, fired, found, profile, run } from './example'
 import { done, ok } from './ok'
 
@@ -37,7 +37,7 @@ ok(pb.missing.length === 0, 'with the inventory, the team spreadsheet and the te
 
 // the org chart
 ok(pb.org.orchestrators.map((p) => p.id).join() === 'bodega-orquestrador' && pb.org.ghosts.map((g) => g.name).join() === 'Bodega Azul - Fidelidade', 'the org chart: the orchestrator as the manager, fidelidade dashed', pb.org)
-ok(pb.org.types.map((t) => `${t.name}:${t.people.map((p) => p.id.replace('bodega-', '')).join('+')}`).join(' ') === 'transação:cupons+devolucoes+pedidos orientação:cupons+loja-fisica triagem:frete', 'the specialists by type (cupons in its two)', pb.org.types.map((t) => [t.name, t.people.map((p) => p.id)]))
+ok(pb.org.types.map((t) => `${t.name}:${t.people.map((p) => p.id.replace('bodega-', '')).join('+')}`).join(' ') === 'transação:cupons+devolucoes+pedidos orientação:loja-fisica triagem:frete' && pb.org.types[0].people[0].alsoIn?.join() === 'orientação', 'the specialists by type: cupons once, in its first, «also in orientação»', pb.org.types.map((t) => [t.name, t.people.map((p) => [p.id, p.alsoIn])]))
 
 // the post
 const post = pb.posts.find((p) => p.scope === 'specialist')!
@@ -46,6 +46,8 @@ const noDecision = run()
 noDecision.cast.decisions = []
 const pb0 = playbillOf({ ...noDecision.result, patterns: noDecision.result.patterns.map(({ decision, ...p }) => p) }, noDecision.looks, found, noDecision.cast, [], fired)
 ok(pb0.posts.find((p) => p.scope === 'specialist')!.requirements.every((r) => r.proposal) && pb0.posts.find((p) => p.scope === 'specialist')!.requirements.length > 0, 'with no decision, the post is what someone is off, as a proposal', pb0.posts[0])
+
+ok(requirement('called-with:input:CategoriaSolicitacao', 'pt') === 'Recebe «CategoriaSolicitacao» do orquestrador' && requirement('node:SearchKnowledgeSources', 'pt') === 'Busca nas fontes de conhecimento' && requirement('connector:shared_office365', 'pt') === 'Tem «Conector Office 365 Outlook»', 'a requirement already a sentence is said as it is; a thing, as «Tem «…»»', [requirement('called-with:input:CategoriaSolicitacao', 'pt'), requirement('node:SearchKnowledgeSources', 'pt')])
 
 // the résumé
 const frete = pb.resumes.find((r) => r.id === 'bodega-frete')!

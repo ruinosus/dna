@@ -1,4 +1,5 @@
-// The evaluations of Copilot Studio's Evaluate tab, exported as CSV — «Evaluate <agent name> <date>.csv», a row per
+// The evaluations of Copilot Studio's Evaluate tab, exported as CSV — «Evaluate <agent name> <date>.csv» (or the same
+// in kebab-case, «evaluate-<agent-name>-<date>.csv»), a row per
 // test, `result_1` (and `_2`, `_3`… for more methods) Pass or Fail. Only the counts are kept: who, when, how many
 // passed, by method. What was asked, answered and explained is the client's conversation, and is never read into an
 // output.
@@ -9,10 +10,11 @@ export interface EvalSet { agent: string; file: string; date?: string; total: nu
 export interface Evals { sets: EvalSet[]; unknown: { file: string; why: 'who' | 'format' }[] }
 
 const base = (f: string) => f.split(/[\\/]/).pop() ?? f
-/** Who and when, from the file's name: «Evaluate Bodega Azul - Pedidos 2026-10-30.csv» (a copy's « (1)» left out). */
+/** Who and when, from the file's name: «Evaluate Bodega Azul - Pedidos 2026-10-30.csv» or
+ * «evaluate-bodega-azul-pedidos-2026-10-30.csv» (a copy's « (1)» left out). */
 function nameOf(file: string): { who: string; date?: string } {
-  const s = base(file).replace(/\.csv$/i, '').replace(/\s*\(\d+\)$/, '').replace(/^Evaluate\s+/i, '')
-  const m = /^(.*?)\s+(\d{4}-\d{2}-\d{2}|\d{1,2}[-_.]\d{1,2}[-_.]\d{2,4}|\d{8})$/.exec(s)
+  const s = base(file).replace(/\.csv$/i, '').replace(/\s*\(\d+\)$/, '').replace(/^Evaluate[\s_-]+/i, '')
+  const m = /^(.*?)[\s_-]+(\d{4}-\d{2}-\d{2}|\d{1,2}[-_.]\d{1,2}[-_.]\d{2,4}|\d{8})$/.exec(s)
   return m ? { who: m[1], date: m[2] } : { who: s }
 }
 

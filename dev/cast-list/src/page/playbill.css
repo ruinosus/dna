@@ -39,6 +39,7 @@ body { margin: 0; }
 .pb-node.manager { background: var(--active); color: var(--on-active); border-color: var(--active); }
 .pb-node.ghost { border-style: dashed; color: var(--muted); cursor: default; }
 .pb-node[aria-pressed="true"] { border-color: var(--focus); box-shadow: 0 0 0 1px var(--focus); }
+.pb-also { color: var(--type); font-size: 11px; white-space: nowrap; }
 .pb-type { margin: 8px 0 2px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--type); }
 .pb-tag { font-size: 11px; padding: 1px 8px; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
 .pb-tag.ok { color: var(--has); } .pb-tag.pdi, .pb-tag.noOwner { color: var(--off); } .pb-tag.hiring, .pb-tag.neverPublished, .pb-tag.noEval { color: var(--amber); }

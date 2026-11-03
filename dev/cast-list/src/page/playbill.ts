@@ -12,7 +12,7 @@ const UI = {
     staff: { cast: 'on the staff', hiring: 'being hired', noOwner: 'with no owner', neverPublished: 'never published', noEval: 'with no evaluation', pdi: 'with a development plan', ok: 'in good standing' } as Record<string, string>,
     tag: { hiring: 'being hired', noOwner: 'no owner', neverPublished: 'never published', noEval: 'no evaluation', pdi: 'plan', ok: 'in good standing' } as Record<Situation, string>,
     missing: { inventory: 'the admin center’s inventory (owner, environment, published)', team: 'the team’s spreadsheet (team, goal)', telemetry: 'the export of Application Insights (performance)' } as Record<string, string>,
-    more: 'More with', org: 'Org chart', client: 'Customer', clientSub: 'who is served', manager: 'manager', ghost: 'called, not in the folder', noType: 'no type',
+    more: 'More with', org: 'Org chart', also: (t: string[]) => `also ${t.join(', ')}`, client: 'Customer', clientSub: 'who is served', manager: 'manager', ghost: 'called, not in the folder', noType: 'no type',
     post: 'The post', postNote: 'The post is the accepted pattern of the role and type, and the profile’s rules. A newcomer is «hired» when they meet it.', proposal: 'proposal — no decision yet',
     manager_: 'Manager', team: 'Team', owner: 'Owner', created: 'Hired', published: 'Last published', schema: 'Badge', env: 'Unit', nobody: 'nobody calls it',
     summary: 'Summary', tools: 'Tools and access', conduct: 'Languages and conduct', goal: 'Goal', noGoal: 'no goal declared', perf: (d: number) => `Performance · ${d} days`, starts: 'topic starts', errors: 'errors logged', notFired: 'did not fire', measured: 'goal measured', noLine: 'no line in the telemetry', noPerf: 'The performance comes with the export of Application Insights (--telemetry).',
@@ -25,7 +25,7 @@ const UI = {
     staff: { cast: 'no quadro', hiring: 'em admissão', noOwner: 'sem responsável', neverPublished: 'nunca publicado', noEval: 'sem avaliação', pdi: 'em PDI', ok: 'em dia' } as Record<string, string>,
     tag: { hiring: 'em admissão', noOwner: 'sem responsável', neverPublished: 'nunca publicado', noEval: 'sem avaliação', pdi: 'PDI', ok: 'em dia' } as Record<Situation, string>,
     missing: { inventory: 'o inventário do admin center (responsável, ambiente, publicação)', team: 'a planilha do time (equipe, meta)', telemetry: 'a exportação do Application Insights (desempenho)' } as Record<string, string>,
-    more: 'Mais com', org: 'Organograma', client: 'Cliente', clientSub: 'quem é atendido', manager: 'gestor', ghost: 'chamado, fora da pasta', noType: 'sem tipo',
+    more: 'Mais com', org: 'Organograma', also: (t: string[]) => `também ${t.join(', ')}`, client: 'Cliente', clientSub: 'quem é atendido', manager: 'gestor', ghost: 'chamado, fora da pasta', noType: 'sem tipo',
     post: 'A vaga', postNote: 'A vaga é o padrão aceito do papel e do tipo, mais as regras do perfil. Quem chega é «contratado» quando cumpre a vaga.', proposal: 'proposta — sem decisão ainda',
     manager_: 'Gestor', team: 'Equipe', owner: 'Responsável', created: 'Admissão', published: 'Última publicação', schema: 'Matrícula', env: 'Lotação', nobody: 'ninguém chama',
     summary: 'Resumo', tools: 'Ferramentas e acessos', conduct: 'Idiomas e conduta', goal: 'Meta', noGoal: 'sem meta declarada', perf: (d: number) => `Desempenho · ${d} dias`, starts: 'inícios de tópico', errors: 'erros registrados', notFired: 'não disparou', measured: 'meta medida', noLine: 'nenhuma linha na telemetria', noPerf: 'O desempenho aparece com a exportação do Application Insights (--telemetry).',
@@ -41,6 +41,11 @@ document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en'
 document.title = `${u.title} · ${pb.name ?? data.id}`
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 const app = document.getElementById('app')!
+// the part of the names every one of the cast shares («Bodega Azul - »), left out where they stand side by side
+const all = [...pb.org.orchestrators, ...pb.org.types.flatMap((t) => t.people)].map((p) => p.name)
+const common = all.length > 1 ? all.reduce((p, s) => { let i = 0; while (i < p.length && p[i] === s[i]) i++; return p.slice(0, i) }) : ''
+const prefix = /[-–·:]\s*$/.test(common) ? common : ''
+const short = (name: string) => (prefix && name.startsWith(prefix) ? name.slice(prefix.length) : name)
 const situationOf = (id: string) => [...pb.org.orchestrators, ...pb.org.types.flatMap((t) => t.people)].find((p) => p.id === id)?.situation ?? []
 // the résumé shown first: the one the address names (the stage's «See the résumé»), else the first with a plan
 const named = decodeURIComponent(location.hash.slice(1))
@@ -49,17 +54,17 @@ let post = pb.posts[0]?.scope
 
 const COUNT: Record<string, string> = { cast: '', hiring: 'warn', noOwner: 'bad', neverPublished: 'warn', noEval: 'warn', pdi: 'bad', ok: 'good' }
 function staff() {
-  const cards = pb.staff.map((s) => `<div class="pb-count ${COUNT[s.key]}"><b>${s.people.length}</b><span>${esc(u.staff[s.key])}${s.key !== 'cast' && s.people.length ? ` — ${esc(s.people.map((p) => p.name).join(', '))}` : ''}</span></div>`).join('')
+  const cards = pb.staff.map((s) => `<div class="pb-count ${COUNT[s.key]}"><b>${s.people.length}</b><span>${esc(u.staff[s.key])}${s.key !== 'cast' && s.people.length ? ` — ${esc(s.people.map((p) => short(p.name)).join(', '))}` : ''}</span></div>`).join('')
   const missing = pb.missing.length ? `<p class="pb-missing">${esc(u.more)}: ${pb.missing.map((m) => esc(u.missing[m])).join(' · ')}</p>` : ''
   return `<section class="pb-staff" aria-label="${esc(u.title)}">${cards}</section>${missing}`
 }
 
 const tags = (s: Situation[]) => s.filter((x) => x !== 'ok' || s.length === 1).map((x) => `<span class="pb-tag ${x}">${esc(u.tag[x])}</span>`).join(' ')
-const node = (id: string, name: string, cls = '') => `<button class="pb-node ${cls}" data-who="${esc(id)}" aria-pressed="${id === picked}"><span>${esc(name)}</span>${tags(situationOf(id))}</button>`
+const node = (id: string, name: string, also?: string[]) => `<button class="pb-node" data-who="${esc(id)}" aria-pressed="${id === picked}"><span>${esc(short(name))}${also?.length ? ` <small class="pb-also">${esc(u.also(also))}</small>` : ''}</span>${tags(situationOf(id))}</button>`
 function org() {
-  const heads = pb.org.orchestrators.map((p) => `<button class="pb-node manager" data-who="${esc(p.id)}" aria-pressed="${p.id === picked}"><span>${esc(p.name)}<br><small>${esc(u.manager)}</small></span>${tags(p.situation)}</button>`).join('')
-  const types = pb.org.types.map((t) => `<p class="pb-type">${esc(t.name || u.noType)}</p>${t.people.map((p) => node(p.id, p.name)).join('')}`).join('')
-  const ghosts = pb.org.ghosts.map((g) => `<div class="pb-node ghost"><span>${esc(g.name)}</span><span class="pb-tag hiring">${esc(u.ghost)}</span></div>`).join('')
+  const heads = pb.org.orchestrators.map((p) => `<button class="pb-node manager" data-who="${esc(p.id)}" aria-pressed="${p.id === picked}"><span>${esc(short(p.name))}<br><small>${esc(u.manager)}</small></span>${tags(p.situation)}</button>`).join('')
+  const types = pb.org.types.map((t) => `<p class="pb-type">${esc(t.name || u.noType)}</p>${t.people.map((p) => node(p.id, p.name, p.alsoIn)).join('')}`).join('')
+  const ghosts = pb.org.ghosts.map((g) => `<div class="pb-node ghost"><span>${esc(short(g.name))}</span><span class="pb-tag hiring">${esc(u.ghost)}</span></div>`).join('')
   return `<section class="cl-card"><h2>${esc(u.org)}</h2><div class="pb-org"><div class="pb-node ghost" style="justify-content:center"><span>${esc(u.client)} · <small>${esc(u.clientSub)}</small></span></div>${heads}${types}${ghosts}</div></section>`
 }
 

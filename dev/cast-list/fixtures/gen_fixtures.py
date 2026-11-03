@@ -512,16 +512,16 @@ Bodega Azul - Cupons,TopicStart,290
 Bodega Azul - Cupons,bodega_cupons_onerror,5
 """
 
-# wave 4c, outside the agents' folder: two exports of Copilot Studio's Evaluate tab, named as the product names them
-# («Evaluate <agent name> <date>.csv»), in its columns. Pedidos passes all; Frete fails one, on a second method too.
+# wave 4c, outside the agents' folder: two exports of Copilot Studio's Evaluate tab, in its columns. The product names
+# them «Evaluate <agent name> <date>.csv»; here in kebab-case, which the skill reads the same. Pedidos passes all; Frete fails one, on a second method too.
 EVALS = {
-    "Evaluate Bodega Azul - Pedidos 2026-10-30.csv": """question,expectedResponse,actualResponse,testMethodType_1,result_1,passingScore_1,explanation_1
+    "evaluate-bodega-azul-pedidos-2026-10-30.csv": """question,expectedResponse,actualResponse,testMethodType_1,result_1,passingScore_1,explanation_1
 Onde está meu pedido 1234?,,"O pedido 1234 saiu para entrega hoje. Prazo: até amanhã.",GeneralQuality,Pass,,Seems relevant; Seems complete
 Posso pagar com boleto?,,"Sim: boleto à vista, com aprovação em até 2 dias úteis.",GeneralQuality,Pass,,Seems relevant; Seems complete
 Quanto tempo leva o processamento?,,"O processamento leva até 1 dia útil depois do pagamento.",GeneralQuality,Pass,,Seems relevant
 Quero falar com uma pessoa,,"Vou te passar para alguém da equipe agora.",GeneralQuality,Pass,,Seems relevant
 """,
-    "Evaluate Bodega Azul - Frete 2026-10-30.csv": """question,expectedResponse,actualResponse,testMethodType_1,result_1,passingScore_1,explanation_1,testMethodType_2,result_2,passingScore_2,explanation_2
+    "evaluate-bodega-azul-frete-2026-10-30.csv": """question,expectedResponse,actualResponse,testMethodType_1,result_1,passingScore_1,explanation_1,testMethodType_2,result_2,passingScore_2,explanation_2
 Quanto custa o frete para o Nordeste?,"Conforme a tabela de frete","O frete para o Nordeste sai a partir da tabela por faixa de CEP.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Pass,70,Same meaning
 O frete grátis vale para qualquer valor?,"Acima de 199 reais","Vale para compras acima de 199 reais.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Pass,70,Same meaning
 Em quantos dias chega em Manaus?,"Até 12 dias úteis","Chega em poucos dias.",GeneralQuality,Fail,,Seems incomplete,CompareMeaning,Fail,70,Different meaning

@@ -211,7 +211,11 @@ else {
       const scene = [...all('[data-scene]')].find((b) => b.textContent.includes('Frete')); scene.click()
       for (let i = 0; i < 2; i++) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))
       out.warn = q('.pl-narr.warn')?.textContent.includes('SEM o histórico'); out.spot = q('.pl-node.warn')?.dataset.node
-      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); out.closed = q('.pl-narr')?.hidden
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); out.closed = q('.pl-narr')?.classList.contains('idle')
+      const sceneBtn = () => [...all('[data-scene]')].find((b) => b.textContent.includes('Frete'))
+      sceneBtn().click(); q('[data-lens="telemetry"]').click(); out.lensClosesScene = !!q('.pl-narr.idle') && !!q('.pl-svg.lensing')
+      sceneBtn().click(); out.sceneClosesLens = !q('.pl-svg.lensing') && !q('.pl-narr.idle'); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+      out.ghost = q('[data-node="cr7b2_bodegaFidelidade"] text')?.textContent
       q('[data-node="bodega-frete"]').dispatchEvent(new MouseEvent('click', { bubbles: true }))
       out.card = q('.pl-card .pl-name')?.textContent; out.off = [...all('.pl-checks .off')].map((x) => x.textContent); out.resume = q('.pl-card a')?.getAttribute('href')
       const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.errs = errs
@@ -219,7 +223,8 @@ else {
   writeFileSync(join(rh, 'plot-probe.html'), plotProbe)
   const pl = (await runPage(join(rh, 'plot-probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
   ok(pl.nodes > 12 && pl.parts > 0 && pl.bad?.join() === 'bodega-frete' && pl.okN === 5, 'the stage: the nodes, the traffic moving, the escalation lens lights frete red and five green', JSON.stringify(pl))
-  ok(pl.warn === true && pl.spot === 'bodega-frete' && pl.closed === true, "frete's scene stops on the contract, with the spot on frete; Esc leaves it", JSON.stringify(pl))
+  ok(pl.warn === true && pl.spot === 'bodega-frete' && pl.closed === true, "frete's scene stops on the contract, with the spot on frete; Esc leaves it (the caption stays below the stage)", JSON.stringify(pl))
+  ok(pl.lensClosesScene === true && pl.sceneClosesLens === true && pl.ghost === 'Fidelidade', 'a lens closes the scene, a scene turns the lens off; the one not in the folder by its short name, uncut', JSON.stringify(pl))
   ok(pl.card === 'Bodega Azul - Frete' && pl.off?.length > 0 && pl.resume === 'agents.playbill.html#bodega-frete' && pl.agent === false && !pl.errs?.length, "a click opens frete's card, off the escalation, with its résumé a link away; never «agente»; no error", JSON.stringify(pl))
   // the RH in a browser: the board, frete's résumé and plan, a click on pedidos, never «agente»
   const rhProbe = readFileSync(join(rh, 'agents.playbill.html'), 'utf8').replace('</body>', `<script>
@@ -228,13 +233,13 @@ else {
       out.counts = [...all('.pb-count')].map((c) => c.textContent.trim())
       out.name = q('.pb-resume h2')?.textContent; out.items = all('.pb-pdi li').length; out.seal = q('.pb-seal')?.textContent
       q('[data-who="bodega-pedidos"]').click(); out.pedidos = [q('.pb-resume h2')?.textContent, q('.pb-seal')?.textContent]
-      const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.map = q('a[href="agents.html"]') ? 1 : 0; out.errs = errs
+      const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.map = q('a[href="agents.html"]') ? 1 : 0; out.cupons = all('.pb-org [data-who="bodega-cupons"]').length; out.also = q('.pb-org [data-who="bodega-cupons"] .pb-also')?.textContent; out.errs = errs
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
   writeFileSync(join(rh, 'probe.html'), rhProbe)
   const h = (await runPage(join(rh, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
-  ok(h.counts?.some((c) => c.startsWith('1') && c.includes('sem responsável — Bodega Azul - Cupons')) && h.counts.some((c) => c.includes('em admissão — Bodega Azul - Fidelidade')) && h.counts.some((c) => c.includes('nunca publicado — Bodega Azul - Loja Física')), 'the RH: the staff board says who', JSON.stringify(h.counts))
+  ok(h.counts?.some((c) => c.startsWith('1') && c.includes('sem responsável — Cupons')) && h.counts.some((c) => c.includes('em admissão — Fidelidade')) && h.counts.some((c) => c.includes('nunca publicado — Loja Física')), 'the RH: the staff board says who', JSON.stringify(h.counts))
   ok(h.name === 'Bodega Azul - Cupons' || h.name === 'Bodega Azul - Frete' || h.name?.startsWith('Bodega Azul'), 'the RH opens on a résumé', JSON.stringify(h))
-  ok(h.pedidos?.[0] === 'Bodega Azul - Pedidos' && h.pedidos[1] === 'EM DIA' && h.agent === false && h.map === 1 && !h.errs?.length, 'a click opens pedidos, in good standing; never «agente» in its own words (the client\'s text is quoted as written); the map is a link away; no error', JSON.stringify(h))
+  ok(h.pedidos?.[0] === 'Bodega Azul - Pedidos' && h.pedidos[1] === 'EM DIA' && h.agent === false && h.map === 1 && h.cupons === 1 && h.also === 'também orientação' && !h.errs?.length, 'a click opens pedidos, in good standing; never «agente» in its own words (the client\'s text is quoted as written); the map is a link away; no error', JSON.stringify(h))
 }
 
 // wave 1 in a browser: the example profile has markers, an official block and types

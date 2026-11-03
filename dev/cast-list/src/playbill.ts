@@ -5,13 +5,13 @@ import type { Cast } from './cast'
 import type { EvalSet } from './evals'
 import type { Fired, Result } from './compare'
 import type { AgentFacts } from './extract'
-import { labelOf, type Lang } from './labels'
+import { isPhrase, labelOf, type Lang } from './labels'
 import { pdiOf, type PdiItem } from './pdi'
 import type { Rule } from './profile'
 import type { Look } from './review'
 
 export type Situation = 'hiring' | 'noOwner' | 'neverPublished' | 'noEval' | 'pdi' | 'ok'
-export interface Person { id: string; name: string; situation: Situation[] }
+export interface Person { id: string; name: string; situation: Situation[]; /** The other types it is of: it sits in its first. */ alsoIn?: string[] }
 export interface Requirement { key: string; en: string; pt: string; proposal: boolean }
 export interface Post { scope: string; name: { en: string; pt: string }; requirements: Requirement[] }
 export interface Resume {
@@ -93,7 +93,7 @@ const REQUIRE: Record<string, { en: string; pt: string }> = {
   'declared:owner': { en: 'Has an owner', pt: 'Tem um responsável' },
   'declared:team': { en: 'Has a team', pt: 'Tem uma equipe' },
 }
-export const requirement = (key: string, lang: Lang, names: Record<string, string> = {}) => REQUIRE[key]?.[lang] ?? (lang === 'pt' ? `Tem «${labelOf(key, lang, names)}»` : `Has «${labelOf(key, lang, names)}»`)
+export const requirement = (key: string, lang: Lang, names: Record<string, string> = {}) => REQUIRE[key]?.[lang] ?? (isPhrase(key) ? labelOf(key, lang, names) : lang === 'pt' ? `Tem «${labelOf(key, lang, names)}»` : `Has «${labelOf(key, lang, names)}»`)
 export const REQUIREMENTS = REQUIRE
 
 const INVENTORY = ['owner', 'environment', 'created-on', 'last-published']
@@ -158,7 +158,8 @@ export function playbillOf(r: Result, looks: Look[], found: AgentFacts[], cast: 
   const specialists = r.agents.filter((a) => a.role === 'specialist')
   const typeIds = [...new Set(specialists.flatMap((a) => r.types[a.id] ?? []))]
   const types = [
-    ...typeIds.map((t) => ({ id: t, name: r.typeNames[t] ?? t, people: specialists.filter((a) => (r.types[a.id] ?? []).includes(t)).map((a) => person(a.id)) })),
+    // one of two types sits in its first, with the others named
+    ...typeIds.map((t) => ({ id: t, name: r.typeNames[t] ?? t, people: specialists.filter((a) => (r.types[a.id] ?? [])[0] === t).map((a) => ({ ...person(a.id), ...((r.types[a.id] ?? []).length > 1 ? { alsoIn: (r.types[a.id] ?? []).slice(1).map((x) => r.typeNames[x] ?? x) } : {}) })) })).filter((t) => t.people.length),
     ...(specialists.some((a) => !(r.types[a.id] ?? []).length) ? [{ id: '', name: '', people: specialists.filter((a) => !(r.types[a.id] ?? []).length).map((a) => person(a.id)) }] : []),
   ]
 
