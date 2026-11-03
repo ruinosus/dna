@@ -41,9 +41,18 @@ Claude picks the skill by what you ask. To call one by name: `/house-lights:back
 /plugin install house-lights@house-lights
 ```
 
+**VS Code (GitHub Copilot)** — the same plugin, in agent mode: run **Chat: Add Plugin Marketplace** with
+`ruinosus/house-lights` (or add it to `chat.plugins.marketplaces` in your settings), then install **house-lights** from
+Agent Customizations › Browse. The Copilot CLI takes the same marketplace:
+
+```
+copilot plugin marketplace add ruinosus/house-lights
+copilot plugin install house-lights@house-lights
+```
+
 **claude.ai** — each skill is a zip in the [latest release](https://github.com/ruinosus/house-lights/releases)
 (`chalk-talk.zip`, `back-of-napkin.zip`, …): Settings › Capabilities › Skills › Upload, with code execution on.
-**Claude API**: the same zips with the Skills API. **Other tools** (Codex, Copilot, Cursor, Gemini CLI…): copy
+**Claude API**: the same zips with the Skills API. **Other tools** (Codex, Cursor, Gemini CLI…): copy
 `skills/<skill>` where the tool reads skills; they need Node.js 18 or later.
 
 **npm** — the same builds, outside Claude:

@@ -81,7 +81,7 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
     <p>In Claude Code, all six at once:</p>
     <pre>/plugin marketplace add ruinosus/house-lights
 /plugin install house-lights@house-lights</pre>
-    <p class="note">In claude.ai, upload each skill's zip from the <a href="https://github.com/ruinosus/house-lights/releases">latest release</a> (Settings › Capabilities › Skills, code execution on). Outside Claude: <code>npx house-lights &lt;skill&gt; &lt;file&gt;</code>.</p>
+    <p class="note">In claude.ai, upload each skill's zip from the <a href="https://github.com/ruinosus/house-lights/releases">latest release</a> (Settings › Capabilities › Skills, code execution on). In VS Code with GitHub Copilot: <b>Chat: Add Plugin Marketplace</b> › <code>ruinosus/house-lights</code>, then install it from Agent Customizations › Browse. Outside both: <code>npx house-lights &lt;skill&gt; &lt;file&gt;</code>.</p>
   </section>
   <footer>house-lights is MIT licensed; every example is fictional. Strokes by Rough.js; fonts Caveat and Shantell Sans (SIL Open Font License); animated emoji from Noto (CC BY 4.0), played by lottie-web (MIT).</footer>
 </main>
