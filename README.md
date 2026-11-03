@@ -23,7 +23,7 @@ drawing it, playing it, mapping it or comparing it — each one an HTML file tha
 | [dress-rehearsal](dev/dress-rehearsal/README.md) | "make a drill from our checkout runbook" | an incident drill to play, with a clock and choices, and a debrief of what the runbook does not say |
 | [gates-and-handoffs](dev/gates-and-handoffs/README.md) | "who approves what in our delivery?" | a team's way of working — stages, gates, roles, outputs — as a checkable file, a map, a workbook and a lesson |
 | [service-blueprint](dev/service-blueprint/README.md) | "where does our onboarding hurt?" | a customer journey and who makes each moment happen on stage, backstage and in the systems |
-| [cast-list](dev/cast-list/README.md) | "which of our Copilot Studio agents is off the pattern?" | the agents compared: what repeats, who is off it, what only one has — a map, a workbook to decide in, and a lesson; Node alone, no model |
+| [cast-list](dev/cast-list/README.md) | "which of our Copilot Studio agents is off the pattern?" | the agents compared: what repeats, who is off it, the contract, the telemetry, what nobody uses — a map, a workbook to decide in, and a lesson; Node alone, no model |
 
 Claude picks the skill by what you ask. To call one by name: `/house-lights:back-of-napkin …`.
 

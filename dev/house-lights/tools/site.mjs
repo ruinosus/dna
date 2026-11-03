@@ -11,7 +11,7 @@ const SKILLS = [
   ['dress-rehearsal', 'images/checkout-scene.png', 'Rehearse the incident', 'A runbook becomes a drill to play, with a clock and choices, and a debrief of what the runbook does not say.'],
   ['gates-and-handoffs', 'images/feature-delivery-map.png', 'Map how the team works', 'Stages, gates and who approves them, roles and outputs: one checkable file, a map, a workbook and a lesson.'],
   ['service-blueprint', 'images/gym-signup-map.png', 'Map what the customer lives', 'Each moment of a journey, how it feels, and who makes it happen on stage, backstage and in the systems.'],
-  ['cast-list', 'images/bodega-azul-map.png', 'Compare the agents', 'Copilot Studio agents side by side: what repeats, who is off the pattern, what only one has — with the file behind each.'],
+  ['cast-list', 'images/bodega-azul-map.png', 'Compare the agents', 'Copilot Studio agents side by side: what repeats, who is off the pattern, what the orchestrator passes on, which events fire, what nobody uses — with the file behind each.'],
 ]
 for (const [s, img] of SKILLS) if (!existsSync(join(repo, 'docs', s, img))) throw new Error(`docs/${s}/${img} is missing: run that skill's site first.`)
 const card = ([s, img, title, text]) => `
