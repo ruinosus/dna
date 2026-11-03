@@ -75,3 +75,18 @@ body { margin: 0; }
 .pb-pdi small { display: block; color: var(--muted); font-size: 12px; }
 .pb-empty { margin: 0; color: var(--muted); font-size: 13px; }
 .cl-foot { margin: 8px 0 0; font-size: 12px; color: var(--muted); text-align: center; }
+/* the two views of a résumé: as a résumé (the paper one) and as a sheet */
+.pb-views { display: flex; gap: 6px; justify-content: flex-end; }
+.pb-views button { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); font-size: 12px; }
+.pb-views button[aria-pressed="true"] { background: var(--active); color: var(--on-active); border-color: var(--active); }
+.pb-cv { --paper: #fffdf8; --chip-bg: #f1ece1; background: var(--paper); border-radius: 16px; padding: 22px 22px 18px; box-shadow: 0 1px 0 var(--line); }
+@media (prefers-color-scheme: dark) { .cl:not(.light) .pb-cv { --paper: var(--card); --chip-bg: var(--soft); } }
+.pb-cv .pb-head { align-items: center; gap: 14px; }
+.pb-cv .pb-who { flex: 1; min-width: 0; }
+.pb-av { width: 64px; height: 64px; border-radius: 50%; background: var(--chip-bg); color: var(--ink); display: grid; place-items: center; flex: none; }
+.pb-cv h2, .pb-cv .pb-perf b { font-family: Georgia, "Times New Roman", serif; }
+.pb-cv .pb-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); font-size: 12.5px; }
+.pb-cv .pb-chip { background: var(--chip-bg); border-color: transparent; border-radius: 8px; }
+.pb-cv .pb-perf div { background: var(--chip-bg); }
+.pb-cv .pb-seal { font-family: Georgia, "Times New Roman", serif; transform: rotate(-4deg); }
+@media (max-width: 520px) { .pb-cv .pb-facts { grid-template-columns: 1fr; } .pb-av { width: 48px; height: 48px; } }

@@ -4,7 +4,7 @@ description: Compares a team's Copilot Studio agents with each other, from the f
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing. The Microsoft skills for Copilot Studio are recommended, not needed.
 metadata:
-  version: "1.9.1"
+  version: "1.9.2"
 ---
 
 # cast-list: what the agents have in common, and who is off it
@@ -171,7 +171,7 @@ part is read):
   owner and never published (with the inventory), with a development plan, in good standing;
 - **the org chart**, by type;
 - **the post** of each role and type: the accepted patterns and the profile's rules, as requirements;
-- **a résumé** each: the first sentence of its instructions, its manager, team, owner, tools, conduct, goal, and the
+- **a résumé** each — shown as a résumé, or as a sheet with every field's source: the first sentence of its instructions, its manager, team, owner, tools, conduct, goal, and the
   performance from the telemetry (topic starts, errors logged, what did not fire; the goal is never measured from it);
 - **certifications**, with `--evals`, and the **access only it has in its type** («does the post need it?»);
 - **the development plan (PDI):** what «to look at» says about that one alone, as actions.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.9.2 — 2026-11-03
+
+- **The RH's résumé has two views:** as a résumé — the paper one of the prototype, with a face, the name, the post and
+  the stamp on top, the facts in two columns and the sources at its foot — and as the sheet, every field with its
+  source beside it. It opens as a résumé; one click turns it.
+
 ## 1.9.1 — 2026-11-03
 
 cast-list's RH and stage, after a test in claude.ai.

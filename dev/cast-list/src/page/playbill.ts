@@ -17,7 +17,7 @@ const UI = {
     manager_: 'Manager', team: 'Team', owner: 'Owner', created: 'Hired', published: 'Last published', schema: 'Badge', env: 'Unit', nobody: 'nobody calls it',
     summary: 'Summary', tools: 'Tools and access', conduct: 'Languages and conduct', goal: 'Goal', noGoal: 'no goal declared', perf: (d: number) => `Performance · ${d} days`, starts: 'topic starts', errors: 'errors logged', notFired: 'did not fire', measured: 'goal measured', noLine: 'no line in the telemetry', noPerf: 'The performance comes with the export of Application Insights (--telemetry).',
     certs: 'Certifications', certsNone: 'No evaluation in the folder of --evals.', passed: (p: number, t: number) => `${p} of ${t} passed`, access: 'Access only it has in its type',
-    pdi: 'Development plan', nothing: 'Nothing to develop.', sources: 'Sources', seal: { ok: 'IN GOOD STANDING', pdi: 'PLAN' }, orchestrator: 'Orchestrator', specialist: 'Specialist', map: '← Map', foot: 'cast-list · no model: what is here is what the files and tables say.',
+    views: 'How to see it', cv: 'Résumé', sheet: 'Sheet', pdi: 'Development plan', nothing: 'Nothing to develop.', sources: 'Sources', seal: { ok: 'IN GOOD STANDING', pdi: 'PLAN' }, orchestrator: 'Orchestrator', specialist: 'Specialist', map: '← Map', foot: 'cast-list · no model: what is here is what the files and tables say.',
   },
   pt: {
     title: 'RH do elenco', sub: 'O mesmo elenco, visto como pessoas: quadro de pessoal, organograma, vaga, currículo e plano de desenvolvimento. Tudo sai dos arquivos, da telemetria e das planilhas do time.',
@@ -30,7 +30,7 @@ const UI = {
     manager_: 'Gestor', team: 'Equipe', owner: 'Responsável', created: 'Admissão', published: 'Última publicação', schema: 'Matrícula', env: 'Lotação', nobody: 'ninguém chama',
     summary: 'Resumo', tools: 'Ferramentas e acessos', conduct: 'Idiomas e conduta', goal: 'Meta', noGoal: 'sem meta declarada', perf: (d: number) => `Desempenho · ${d} dias`, starts: 'inícios de tópico', errors: 'erros registrados', notFired: 'não disparou', measured: 'meta medida', noLine: 'nenhuma linha na telemetria', noPerf: 'O desempenho aparece com a exportação do Application Insights (--telemetry).',
     certs: 'Certificações', certsNone: 'Nenhuma avaliação na pasta do --evals.', passed: (p: number, t: number) => `${p} de ${t} aprovados`, access: 'Acessos que só ele tem no tipo',
-    pdi: 'Plano de desenvolvimento', nothing: 'Nada a desenvolver.', sources: 'Fontes', seal: { ok: 'EM DIA', pdi: 'PDI' }, orchestrator: 'Orquestrador', specialist: 'Especialista', map: '← Mapa', foot: 'cast-list · sem modelo: o que está aqui é o que os arquivos e as planilhas dizem.',
+    views: 'Como ver', cv: 'Currículo', sheet: 'Ficha', pdi: 'Plano de desenvolvimento', nothing: 'Nada a desenvolver.', sources: 'Fontes', seal: { ok: 'EM DIA', pdi: 'PDI' }, orchestrator: 'Orquestrador', specialist: 'Especialista', map: '← Mapa', foot: 'cast-list · sem modelo: o que está aqui é o que os arquivos e as planilhas dizem.',
   },
 }
 
@@ -51,6 +51,8 @@ const situationOf = (id: string) => [...pb.org.orchestrators, ...pb.org.types.fl
 const named = decodeURIComponent(location.hash.slice(1))
 let picked = (pb.resumes.find((r) => r.id === named) ?? pb.resumes.find((r) => r.seal === 'pdi' && r.role === 'specialist') ?? pb.resumes[0])?.id
 let post = pb.posts[0]?.scope
+// two views of the same résumé: as a résumé (the paper one, for people) and as a sheet (every field with its source)
+let view: 'cv' | 'sheet' = 'cv'
 
 const COUNT: Record<string, string> = { cast: '', hiring: 'warn', noOwner: 'bad', neverPublished: 'warn', noEval: 'warn', pdi: 'bad', ok: 'good' }
 function staff() {
@@ -78,16 +80,22 @@ function posts() {
 
 const said = (s?: { value: string; source: string }) => (s ? `${esc(s.value)} <span class="pb-src">(${esc(s.source)})</span>` : '—')
 const fact = (label: string, value: string) => `<div><dt>${esc(label)}</dt><dd>${value}</dd></div>`
+const plain = (s?: { value: string }) => (s ? esc(s.value) : '—')
+// a face for the résumé: the cast-list's small robot, drawn here
+const AVATAR = '<svg viewBox="0 0 40 40" width="34" height="34" aria-hidden="true"><rect x="9" y="13" width="22" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="2.2"/><line x1="20" y1="13" x2="20" y2="8" stroke="currentColor" stroke-width="2.2"/><circle cx="20" cy="7" r="2" fill="currentColor"/><circle cx="16" cy="21" r="2" fill="currentColor"/><circle cx="24" cy="21" r="2" fill="currentColor"/><path d="M16 26 q4 2.5 8 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
 const section = (title: string, body: string) => `<div class="pb-section"><h3>${esc(title)}</h3>${body}</div>`
 // what the client wrote (the instructions, a block's own words) is quoted as written; the rest are cast-list's words
 const chips = (xs: { en: string; pt: string }[], quote = false) => (xs.length ? `<div class="pb-chips">${xs.map((x) => `<span class="pb-chip${quote ? ' pb-quote' : ''}">${esc(x[lang])}</span>`).join('')}</div>` : '<p class="pb-empty">—</p>')
 function resume(r: Resume) {
   const role = r.role === 'orchestrator' ? u.orchestrator : u.specialist
   const sub = [r.title ?? '', `${role}${r.types.length ? ` · ${r.types.join(' · ')}` : ''}`].filter(Boolean)
+  const cv = view === 'cv'
+  // the résumé says the value; the sheet says where it came from too (the résumé keeps the sources at its foot)
+  const v = cv ? plain : said
   const facts = [
     fact(u.manager_, r.manager ? esc(r.manager) : r.role === 'orchestrator' ? '—' : esc(u.nobody)),
-    fact(u.team, said(r.team)), fact(u.owner, said(r.owner)), fact(u.created, said(r.created)), fact(u.published, said(r.published)),
-    fact(u.schema, esc(r.schemaName ?? '—')), fact(u.env, said(r.environment)),
+    fact(u.team, v(r.team)), fact(u.owner, v(r.owner)), fact(u.created, v(r.created)), fact(u.published, v(r.published)),
+    fact(u.schema, esc(r.schemaName ?? '—')), fact(u.env, v(r.environment)),
   ].join('')
   const p = r.performance
   const perf = p
@@ -96,8 +104,13 @@ function resume(r: Resume) {
       : `<div class="pb-perf"><div><b>${p.starts}</b><span>${esc(u.starts)}</span></div><div class="${p.notFired.length ? 'bad' : ''}"><b>${p.errors}</b><span>${esc(u.errors)}${p.notFired.length ? ` — ${esc(p.notFired.join(', '))} ${esc(u.notFired)}` : ''}</span></div><div><b>—</b><span>${esc(u.measured)}</span></div></div>`
     : `<p class="pb-empty">${esc(u.noPerf)}</p>`
   const plan = r.pdi.length ? `<ol class="pb-pdi">${r.pdi.map((x) => `<li class="${x.group}"><span>${esc(x[lang])}<small>${esc(x.why[lang])}</small></span></li>`).join('')}</ol>` : `<p class="pb-empty">${esc(u.nothing)}</p>`
-  return `<article class="cl-card pb-resume" aria-live="polite">
-    <div class="pb-head"><div><h2>${esc(r.name)}</h2>${r.title ? `<p class="pb-quote">${esc(r.title)}</p>` : ''}<p>${esc(sub[sub.length - 1])}</p></div><span class="pb-seal ${r.seal}">${esc(u.seal[r.seal])}</span></div>
+  const head = cv
+    ? `<div class="pb-head"><span class="pb-av">${AVATAR}</span><div class="pb-who"><h2>${esc(r.name)}</h2>${r.title ? `<p class="pb-quote">${esc(r.title)}</p>` : ''}<p>${esc(sub[sub.length - 1])}</p></div><span class="pb-seal ${r.seal}">${esc(u.seal[r.seal])}</span></div>`
+    : `<div class="pb-head"><div><h2>${esc(r.name)}</h2>${r.title ? `<p class="pb-quote">${esc(r.title)}</p>` : ''}<p>${esc(sub[sub.length - 1])}</p></div><span class="pb-seal ${r.seal}">${esc(u.seal[r.seal])}</span></div>`
+  const views = `<div class="pb-views" role="group" aria-label="${esc(u.views)}">${(['cv', 'sheet'] as const).map((x) => `<button data-view="${x}" aria-pressed="${x === view}">${esc(u[x])}</button>`).join('')}</div>`
+  return `<article class="cl-card pb-resume${cv ? ' pb-cv' : ''}" aria-live="polite">
+    ${views}
+    ${head}
     <dl class="pb-facts">${facts}</dl>
     ${r.summary.length ? section(u.summary, `<ul class="pb-quote">${r.summary.map((s) => `<li>${esc(s)}</li>`).join('')}</ul>`) : ''}
     ${section(u.tools, chips(r.tools))}
@@ -126,6 +139,7 @@ app.addEventListener('click', (e) => {
   if (!t) return
   if (t.dataset.who) picked = t.dataset.who
   else if (t.dataset.post) post = t.dataset.post
+  else if (t.dataset.view) view = t.dataset.view as typeof view
   else return
   render()
   if (t.dataset.who) app.querySelector('.pb-resume')?.scrollIntoView({ block: 'nearest' })

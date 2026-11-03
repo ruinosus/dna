@@ -233,13 +233,13 @@ else {
       out.counts = [...all('.pb-count')].map((c) => c.textContent.trim())
       out.name = q('.pb-resume h2')?.textContent; out.items = all('.pb-pdi li').length; out.seal = q('.pb-seal')?.textContent
       q('[data-who="bodega-pedidos"]').click(); out.pedidos = [q('.pb-resume h2')?.textContent, q('.pb-seal')?.textContent]
-      const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.map = q('a[href="agents.html"]') ? 1 : 0; out.cupons = all('.pb-org [data-who="bodega-cupons"]').length; out.also = q('.pb-org [data-who="bodega-cupons"] .pb-also')?.textContent; out.errs = errs
+      const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.map = q('a[href="agents.html"]') ? 1 : 0; out.cupons = all('.pb-org [data-who="bodega-cupons"]').length; out.cv = !!q('.pb-resume.pb-cv .pb-av') && !q('.pb-cv .pb-facts .pb-src'); q('[data-view="sheet"]').click(); out.sheet = !q('.pb-cv') && !!q('.pb-facts .pb-src') && q('[data-view="sheet"]').getAttribute('aria-pressed') === 'true'; q('[data-view="cv"]').click(); out.back = !!q('.pb-cv'); out.also = q('.pb-org [data-who="bodega-cupons"] .pb-also')?.textContent; out.errs = errs
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
   writeFileSync(join(rh, 'probe.html'), rhProbe)
   const h = (await runPage(join(rh, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
   ok(h.counts?.some((c) => c.startsWith('1') && c.includes('sem responsável — Cupons')) && h.counts.some((c) => c.includes('em admissão — Fidelidade')) && h.counts.some((c) => c.includes('nunca publicado — Loja Física')), 'the RH: the staff board says who', JSON.stringify(h.counts))
   ok(h.name === 'Bodega Azul - Cupons' || h.name === 'Bodega Azul - Frete' || h.name?.startsWith('Bodega Azul'), 'the RH opens on a résumé', JSON.stringify(h))
-  ok(h.pedidos?.[0] === 'Bodega Azul - Pedidos' && h.pedidos[1] === 'EM DIA' && h.agent === false && h.map === 1 && h.cupons === 1 && h.also === 'também orientação' && !h.errs?.length, 'a click opens pedidos, in good standing; never «agente» in its own words (the client\'s text is quoted as written); the map is a link away; no error', JSON.stringify(h))
+  ok(h.pedidos?.[0] === 'Bodega Azul - Pedidos' && h.pedidos[1] === 'EM DIA' && h.agent === false && h.map === 1 && h.cupons === 1 && h.also === 'também orientação' && h.cv === true && h.sheet === true && h.back === true && !h.errs?.length, 'a click opens pedidos, in good standing; it opens as a résumé and turns into the sheet (with every source) and back; never «agente» in its own words (the client\'s text is quoted as written); the map is a link away; no error', JSON.stringify(h))
 }
 
 // wave 1 in a browser: the example profile has markers, an official block and types
