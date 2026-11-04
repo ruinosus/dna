@@ -1,0 +1,121 @@
+<svg id="paper" role="img" viewBox="0 0 900 560" aria-label="Demanda e capacidade ↔ a fila do RH" style="width: 900px; aspect-ratio: 900 / 560;">
+<defs>
+<clipPath id="dw1-clip-1-0">
+<rect x="36" y="23" width="349.046875" height="56">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-2-t0">
+<rect x="81.1953125" y="472" width="17.609375" height="44">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-2-t1">
+<rect x="206.1953125" y="472" width="17.609375" height="44">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-2-t2">
+<rect x="331.1953125" y="472" width="17.609375" height="44">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-2-t3">
+<rect x="456.1953125" y="472" width="17.609375" height="44">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-2-t4">
+<rect x="581.1953125" y="472" width="17.609375" height="44">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-2-t5">
+<rect x="706.1953125" y="472" width="17.609375" height="44">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-2-t6">
+<rect x="831.1953125" y="472" width="17.609375" height="44">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-2-label">
+<rect x="760.421875" y="504" width="83.578125" height="47">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-5">
+<rect x="596" y="298" width="161.40625" height="43">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-6_0">
+<rect x="116" y="219" width="113.09375" height="48">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-8">
+<rect x="285.125" y="500" width="329.75" height="47">
+</rect>
+</clipPath>
+</defs>
+<rect width="900" height="560" fill="#FFFFFF">
+</rect>
+<g>
+</g>
+<g>
+<g data-type="text" data-step="0">
+<text x="40" y="60" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="24" font-weight="600" text-anchor="start" clip-path="url(#dw1-clip-1-0)">chegam 50 chamados por hora</text>
+</g>
+<g data-type="counter" data-step="1">
+<text x="40" y="120" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="25" font-weight="600" text-anchor="start">48 chamados por hora de capacidade</text>
+</g>
+<path d="M90 470 C244.02579833753407 470, 398.05159667506814 470, 840 470 M90 470 C310.61915094964206 470, 531.2383018992841 470, 840 470" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="axis" data-step="2">
+</path>
+<path d="M825.5928463623571 476.9594485457797 C828.5516755853852 475.5301711013016, 831.5105048084133 474.10089365682353, 840 470 M825.5928463623571 476.9594485457797 C830.1384583528665 474.7636676474367, 834.6840703433759 472.5678867490937, 840 470 M840 470 C835.4580578141911 467.8059918194074, 830.9161156283822 465.61198363881476, 825.5928463623571 463.0405514542203 M840 470 C835.2034699679583 467.6830118706402, 830.4069399359165 465.36602374128034, 825.5928463623571 463.0405514542203" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="axis" data-step="2">
+</path>
+<path d="M90 463 C90 465.87577761784195, 90 468.7515552356839, 90 477 M90 463 C90 467.3074890099466, 90 471.61497801989316, 90 477" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="axis" data-step="2">
+</path>
+<g data-type="axis" data-step="2">
+<text x="90" y="500" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-2-t0)">2</text>
+</g>
+<path d="M215 463 C215 465.87584055606277, 215 468.75168111212554, 215 477 M215 463 C215 467.6064154958352, 215 472.2128309916705, 215 477" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="axis" data-step="2">
+</path>
+<g data-type="axis" data-step="2">
+<text x="215" y="500" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-2-t1)">3</text>
+</g>
+<path d="M340 463 C340 465.87590349428353, 340 468.7518069885671, 340 477 M340 463 C340 467.9053419817239, 340 472.8106839634478, 340 477" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="axis" data-step="2">
+</path>
+<g data-type="axis" data-step="2">
+<text x="340" y="500" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-2-t2)">4</text>
+</g>
+<path d="M465 463 C465 465.87596643250436, 465 468.7519328650087, 465 477 M465 463 C465 468.20426846761256, 465 473.40853693522513, 465 477" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="axis" data-step="2">
+</path>
+<g data-type="axis" data-step="2">
+<text x="465" y="500" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-2-t3)">5</text>
+</g>
+<path d="M590 463 C590 465.8760293707252, 590 468.7520587414503, 590 477 M590 463 C590 468.50319495350124, 590 474.0063899070025, 590 477" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="axis" data-step="2">
+</path>
+<g data-type="axis" data-step="2">
+<text x="590" y="500" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-2-t4)">6</text>
+</g>
+<path d="M715 463 C715 465.87609230894594, 715 468.7521846178919, 715 477 M715 463 C715 466.0021214393899, 715 469.0042428787798, 715 477" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="axis" data-step="2">
+</path>
+<g data-type="axis" data-step="2">
+<text x="715" y="500" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-2-t5)">7</text>
+</g>
+<path d="M840 463 C840 465.87615524716676, 840 468.7523104943335, 840 477 M840 463 C840 466.30104792527857, 840 469.6020958505571, 840 477" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="axis" data-step="2">
+</path>
+<g data-type="axis" data-step="2">
+<text x="840" y="500" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-2-t6)">8</text>
+</g>
+<g data-type="axis" data-step="2">
+<text x="840" y="534" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="18" font-weight="600" text-anchor="end" clip-path="url(#dw1-clip-1-2-label)">analistas</text>
+</g>
+<path d="M90 405.2 C93.125 404.39, 102.49999999999999 401.96000000000004, 108.74999999999999 400.34000000000003 C114.99999999999999 398.72, 121.24999999999997 397.1, 127.49999999999997 395.48 C133.74999999999997 393.86, 140.00000000000003 392.24, 146.25000000000003 390.62 C152.50000000000003 389, 158.75 387.38, 165 385.76 C171.25 384.14, 177.5 382.52, 183.75 380.9 C190 379.28, 196.25 377.66, 202.5 376.04 C208.75 374.42, 214.99999999999997 372.8, 221.24999999999997 371.18 C227.49999999999997 369.56, 233.75000000000003 367.94, 240.00000000000003 366.32 C246.25000000000003 364.7, 252.5 363.08, 258.75 361.46 C265 359.84, 271.25 358.22, 277.5 356.6 C283.75 354.98, 290 353.36, 296.25 351.74 C302.5 350.12, 308.75 348.5, 315 346.88 C321.25 345.26, 327.5 343.64, 333.75 342.02 C340 340.4, 346.24999999999994 338.78000000000003, 352.49999999999994 337.16 C358.74999999999994 335.54, 365 333.92, 371.25 332.3 C377.5 330.68, 383.75000000000006 329.06, 390.00000000000006 327.44 C396.25000000000006 325.82, 402.5 324.20000000000005, 408.75 322.58000000000004 C415 320.96000000000004, 421.25 319.34, 427.5 317.71999999999997 C433.75 316.09999999999997, 439.99999999999994 314.48, 446.24999999999994 312.86 C452.49999999999994 311.24, 458.75 309.62, 465 308 C471.25 306.38, 477.5 304.76, 483.75 303.14 C490 301.52, 496.24999999999994 299.90000000000003, 502.49999999999994 298.28000000000003 C508.74999999999994 296.66, 515 295.03999999999996, 521.25 293.41999999999996 C527.5 291.79999999999995, 533.75 290.18000000000006, 540 288.56000000000006 C546.25 286.94000000000005, 552.5 285.32000000000005, 558.75 283.70000000000005 C565 282.08000000000004, 571.25 280.46, 577.5 278.84 C583.75 277.21999999999997, 590 275.6, 596.25 273.98 C602.5 272.36, 608.75 270.74, 615 269.12 C621.25 267.5, 627.5 265.88, 633.75 264.26 C640 262.64, 646.25 261.02, 652.5 259.4 C658.75 257.78, 665 256.15999999999997, 671.25 254.53999999999996 C677.5 252.91999999999996, 683.75 251.3, 690 249.68 C696.25 248.06, 702.5 246.44, 708.75 244.82 C715 243.2, 721.25 241.58000000000004, 727.5 239.96000000000004 C733.75 238.34000000000003, 740 236.72, 746.25 235.1 C752.5 233.48, 758.75 231.85999999999999, 765 230.23999999999998 C771.25 228.61999999999998, 777.5 227.00000000000003, 783.75 225.38000000000002 C790 223.76000000000002, 796.25 222.14, 802.5 220.51999999999998 C808.75 218.89999999999998, 815 217.28000000000006, 821.25 215.66000000000005 C827.5 214.04000000000005, 836.875 211.61, 840 210.8 M90 405.2 C93.125 404.39, 102.49999999999999 401.96000000000004, 108.74999999999999 400.34000000000003 C114.99999999999999 398.72, 121.24999999999997 397.1, 127.49999999999997 395.48 C133.74999999999997 393.86, 140.00000000000003 392.24, 146.25000000000003 390.62 C152.50000000000003 389, 158.75 387.38, 165 385.76 C171.25 384.14, 177.5 382.52, 183.75 380.9 C190 379.28, 196.25 377.66, 202.5 376.04 C208.75 374.42, 214.99999999999997 372.8, 221.24999999999997 371.18 C227.49999999999997 369.56, 233.75000000000003 367.94, 240.00000000000003 366.32 C246.25000000000003 364.7, 252.5 363.08, 258.75 361.46 C265 359.84, 271.25 358.22, 277.5 356.6 C283.75 354.98, 290 353.36, 296.25 351.74 C302.5 350.12, 308.75 348.5, 315 346.88 C321.25 345.26, 327.5 343.64, 333.75 342.02 C340 340.4, 346.24999999999994 338.78000000000003, 352.49999999999994 337.16 C358.74999999999994 335.54, 365 333.92, 371.25 332.3 C377.5 330.68, 383.75000000000006 329.06, 390.00000000000006 327.44 C396.25000000000006 325.82, 402.5 324.20000000000005, 408.75 322.58000000000004 C415 320.96000000000004, 421.25 319.34, 427.5 317.71999999999997 C433.75 316.09999999999997, 439.99999999999994 314.48, 446.24999999999994 312.86 C452.49999999999994 311.24, 458.75 309.62, 465 308 C471.25 306.38, 477.5 304.76, 483.75 303.14 C490 301.52, 496.24999999999994 299.90000000000003, 502.49999999999994 298.28000000000003 C508.74999999999994 296.66, 515 295.03999999999996, 521.25 293.41999999999996 C527.5 291.79999999999995, 533.75 290.18000000000006, 540 288.56000000000006 C546.25 286.94000000000005, 552.5 285.32000000000005, 558.75 283.70000000000005 C565 282.08000000000004, 571.25 280.46, 577.5 278.84 C583.75 277.21999999999997, 590 275.6, 596.25 273.98 C602.5 272.36, 608.75 270.74, 615 269.12 C621.25 267.5, 627.5 265.88, 633.75 264.26 C640 262.64, 646.25 261.02, 652.5 259.4 C658.75 257.78, 665 256.15999999999997, 671.25 254.53999999999996 C677.5 252.91999999999996, 683.75 251.3, 690 249.68 C696.25 248.06, 702.5 246.44, 708.75 244.82 C715 243.2, 721.25 241.58000000000004, 727.5 239.96000000000004 C733.75 238.34000000000003, 740 236.72, 746.25 235.1 C752.5 233.48, 758.75 231.85999999999999, 765 230.23999999999998 C771.25 228.61999999999998, 777.5 227.00000000000003, 783.75 225.38000000000002 C790 223.76000000000002, 796.25 222.14, 802.5 220.51999999999998 C808.75 218.89999999999998, 815 217.28000000000006, 821.25 215.66000000000005 C827.5 214.04000000000005, 836.875 211.61, 840 210.8" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="plot" data-step="3">
+</path>
+<path d="M90 335 C244.6799062751234 335, 399.3598125502468 335, 840 335 M90 335 C267.3194150067866 335, 444.63883001357317 335, 840 335" stroke="#B42318" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-dashed="1" stroke-dasharray="9 8" data-type="line" data-step="4">
+</path>
+<g data-type="text" data-step="5">
+<text x="600" y="325" fill="#B42318" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="15" font-weight="600" text-anchor="start" clip-path="url(#dw1-clip-1-5)">demanda: 50 por hora</text>
+</g>
+<g data-type="text" data-step="6">
+<text x="120" y="250" fill="#B42318" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="19" font-weight="600" text-anchor="start" clip-path="url(#dw1-clip-1-6_0)">a fila cresce</text>
+</g>
+<g data-type="text" data-step="8">
+<text x="450" y="530" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="18" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-8)">5 analistas: 60 por hora de capacidade</text>
+</g>
+</g>
+<g aria-hidden="true" class="dw-pencil" style="opacity: 0;">
+</g>
+</svg>

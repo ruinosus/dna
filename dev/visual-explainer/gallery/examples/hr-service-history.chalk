@@ -1,0 +1,19 @@
+title O atendimento de RH ↔ dez anos em uma linha
+id hr-service-history
+category Processos
+locale pt-BR
+size 900x560
+
+# A linha
+> O jeito de pedir algo ao RH mudou quatro vezes em dez anos.
+text "como se pede algo ao RH" at 40,64 size=36
+timeline 90,300 -> 810,300 domain 2016..2026
+  mark 2016 "2016" "e-mail e planilha"
+  mark 2019 "2019" "portal do colaborador"
+  mark 2022 "2022" "Workday"
+  mark 2025 "2025" "assistente no Teams"
+
+# O que mudou
+> A cada passo, a pergunta repetida deixou de ocupar uma pessoa.
+card at 90,380 w=330 h=126 "Antes" "cada pergunta vira um e-mail" "e espera alguém"
+card at 480,380 w=330 h=126 "Agora" "a pergunta repetida se responde" "o caso difícil vai ao RH"

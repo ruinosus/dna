@@ -60,12 +60,12 @@ for (const f of readdirSync(docs).filter((f) => /\.(chalk|mmd)$/.test(f))) {
 }
 // --svg: an SVG that draws itself with CSS and no script, with only the fonts it uses; a Markdown file gives one per block.
 const svgOut = join(dir, 'coin.svg')
-const sv = run(join(docs, 'coin-jar.chalk'), [svgOut, '--svg', '--no-review'])
+const sv = run(join(docs, 'training-hours.chalk'), [svgOut, '--svg', '--no-review'])
 if (sv.status === 4) expect(true, 'no browser here: the --svg check is skipped')
 else {
   const svg = sv.status === 0 ? readFileSync(svgOut, 'utf8') : ''
   const timed = (svg.match(/animation:/g) ?? []).length
-  expect(sv.status === 0 && !/<script/i.test(svg) && /@keyframes ct-draw/.test(svg) && /prefers-reduced-motion/.test(svg) && timed > 50 && /font-family:\s*'Caveat'/.test(svg),
+  expect(sv.status === 0 && !/<script/i.test(svg) && /@keyframes ct-draw/.test(svg) && /prefers-reduced-motion/.test(svg) && timed > 50 && /font-family:\s*'IBM Plex Sans'/.test(svg),
     `--svg draws itself with no script (${timed} timed elements, ${Math.round(svg.length / 1024)} KB)${sv.status ? `: ${sv.stderr.trim()}` : ''}`)
   const page = join(dir, 'two.md')
   writeFileSync(page, '```visual-explainer\ntitle Um\nid um\ntext "um" at 40,60\n```\n\n```mermaid\nflowchart LR\n  %% title Dois\n  A --> B\n```\n')
@@ -79,7 +79,7 @@ else {
 {
   const { runPage } = await import('../../../kit/browser.mjs')
   const embed = pathToFileURL(join(skill, '../../npm/visual-explainer/embed.js')).href
-  const coin = readFileSync(join(docs, 'coin-jar.chalk'), 'utf8')
+  const coin = readFileSync(join(docs, 'training-hours.chalk'), 'utf8')
   const page = join(dir, 'embed.html')
   writeFileSync(page, `<!doctype html><meta charset="utf-8"><body><div id="a"></div><div id="b"></div><script type="module">
 import { mountLesson, readRecipe, ChalkTextError } from ${JSON.stringify(embed)}
@@ -133,8 +133,8 @@ const pre = document.createElement('pre'); pre.id = 'chalk-embed'; pre.textConte
   const { runPage } = await import('../../../kit/browser.mjs')
   const { blockHtml } = await import(pathToFileURL(join(skill, '../../npm/visual-explainer/markdown.js')).href)
   const page = join(dir, 'mount.html')
-  const coin = readFileSync(join(docs, 'coin-jar.chalk'), 'utf8')
-  const coffee = readFileSync(join(docs, 'coffee-order.mmd'), 'utf8')
+  const coin = readFileSync(join(docs, 'training-hours.chalk'), 'utf8')
+  const coffee = readFileSync(join(docs, 'time-off-request.mmd'), 'utf8')
   writeFileSync(page, `<!doctype html><meta charset="utf-8"><body>${blockHtml('text', coin)}${blockHtml('mermaid', coffee)}${blockHtml('text', 'title X\nperson ana at 1')}
 <script src="${pathToFileURL(join(skill, '../../npm/visual-explainer/mount.global.js')).href}"></script>
 <script>
@@ -320,19 +320,19 @@ setTimeout(() => {
 {
   const { pageProbe, probeScript } = await import('../../../kit/tools/checks.mjs')
   const { browser } = await import('../../../kit/browser.mjs')
-  const jar = join(dir, 'coin-jar.chalk')
-  writeFileSync(jar, readFileSync(join(here, '../gallery/examples/coin-jar.chalk'), 'utf8'))
+  const jar = join(dir, 'training-hours.chalk')
+  writeFileSync(jar, readFileSync(join(here, '../gallery/examples/training-hours.chalk'), 'utf8'))
   if (!browser()) console.log('• no Chrome here: presenting and the PowerPoint were not checked')
   else {
     const p = run(jar, ['--present', '--no-review', '--pptx', 'all', '--slides', join(dir, 'slides'), '--slides-steps', '--settings', 'default,n-max'])
     const { inspectPptx } = await import(pathToFileURL(join(skill, 'scripts/pptx.mjs')).href)
-    const look = async (mode) => inspectPptx(readFileSync(join(dir, `coin-jar.${mode}.pptx`)))
+    const look = async (mode) => inspectPptx(readFileSync(join(dir, `training-hours.${mode}.pptx`)))
     const [st, sp, vi] = p.status === 0 ? await Promise.all(['static', 'steps', 'video'].map(look)) : []
     // two settings × 3 chapters; steps a slide per beat (more than the chapters); a video and its cover per chapter
     expect(p.status === 0 && st.slides === 6 && st.notes === 6 && st.media.png === 6, 'pptx static: a slide per chapter and setting, with notes', p.stdout + p.stderr + JSON.stringify(st))
     // 0.18.1: the title is PowerPoint's own (the placeholder); the default setting keeps the chapter's title, another
     // says what moved by its label.
-    expect(st?.titles[0] === 'O gancho' && st.titles[3] === 'O gancho · moedas por mês: 8', 'pptx: titles in the title placeholder, the setting by its label', JSON.stringify(st?.titles))
+    expect(st?.titles[0] === 'O gancho' && st.titles[3] === 'O gancho · horas de treinamento por mês: 8', 'pptx: titles in the title placeholder, the setting by its label', JSON.stringify(st?.titles))
     expect(sp?.slides > 6 && sp.notes === sp.slides, 'pptx steps: a slide per beat, with notes', JSON.stringify(sp))
     expect(vi?.slides === 6 && vi.media.mp4 === 6 && vi.media.png === 6, 'pptx video: an MP4 per chapter and setting, with its cover', JSON.stringify(vi))
     // 0.18.1: with one beat per chapter, steps would only repeat static — the build says so.
@@ -344,7 +344,7 @@ setTimeout(() => {
     const made = readdirSync(join(dir, 'slides/n-max'))
     expect(notes.length === 3 && notes[0].narration && notes[0].next === notes[1].title && ['01.png', '01.gif', '01-01.png'].every((f) => made.includes(f)), '--slides: PNG, GIF, beats and notes.json per setting', made.join(' '))
     // The page opens presenting; PageDown three times stops at the last chapter, PageUp goes back one.
-    const html = readFileSync(join(dir, 'coin-jar.html'), 'utf8')
+    const html = readFileSync(join(dir, 'training-hours.html'), 'utf8')
     const key = (k) => `document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '${k}', bubbles: true }))`
     const r = await pageProbe(html.replace('</body>', `${probeScript(`
       const foot = () => document.querySelector('[data-part="present-foot"]').textContent
@@ -357,10 +357,10 @@ setTimeout(() => {
       await new Promise((ok) => setTimeout(ok, 150))
       out.back = foot()`)}</body>`))
     // 0.18.1: the words on screen follow the recipe's locale, not the browser's (headless Chrome is in English).
-    const pt = join(dir, 'coin-jar-pt.chalk')
+    const pt = join(dir, 'training-hours-pt.chalk')
     writeFileSync(pt, readFileSync(jar, 'utf8').replace(/^(title .*)$/m, '$1\nlocale pt-BR'))
-    run(pt, ['--no-review', '--out', join(dir, 'coin-jar-pt.html')])
-    const w = await pageProbe(readFileSync(join(dir, 'coin-jar-pt.html'), 'utf8').replace('</body>', `${probeScript(`
+    run(pt, ['--no-review', '--out', join(dir, 'training-hours-pt.html')])
+    const w = await pageProbe(readFileSync(join(dir, 'training-hours-pt.html'), 'utf8').replace('</body>', `${probeScript(`
       await new Promise((ok) => setTimeout(ok, 800))
       out.lang = document.documentElement.lang
       out.present = document.querySelector('[data-part="present"]').textContent`)}</body>`))

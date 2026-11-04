@@ -1,0 +1,129 @@
+{
+  "id": "pedido-ferias",
+  "title": "Pedido de férias ↔ do Teams ao Workday",
+  "width": 900,
+  "height": 560,
+  "category": "Processos",
+  "locale": "pt-BR",
+  "learning": {
+    "goal": "Seguir um pedido do começo ao fim e ver onde ele espera.",
+    "question": "Em que passo o pedido mais espera?",
+    "answer": "Na aprovação do gestor, quando ele está ausente.",
+    "caveat": "Os prazos são ilustrativos; cada empresa tem a sua política."
+  },
+  "quiz": {
+    "question": "Para o pedido não travar quando o gestor está fora, o melhor é…",
+    "options": [
+      {
+        "text": "ter um aprovador substituto",
+        "right": true,
+        "why": "o pedido não depende de uma pessoa só"
+      },
+      {
+        "text": "pedir de novo",
+        "right": false,
+        "why": "o pedido continua esperando o mesmo gestor"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "type": "prop",
+      "name": "person",
+      "id": "ana",
+      "at": [
+        110,
+        170
+      ],
+      "label": "Ana",
+      "chapter": "O pedido",
+      "say": "A colaboradora pede as férias no Teams, ao assistente de RH."
+    },
+    {
+      "type": "prop",
+      "name": "phone",
+      "id": "teams",
+      "at": [
+        400,
+        170
+      ],
+      "label": "assistente no Teams"
+    },
+    {
+      "type": "link",
+      "from": "ana",
+      "to": "teams",
+      "label": "15 dias em março"
+    },
+    {
+      "type": "timeline",
+      "from": [
+        120,
+        430
+      ],
+      "to": [
+        780,
+        430
+      ],
+      "domain": [
+        0,
+        4
+      ],
+      "marks": [
+        {
+          "at": 0,
+          "label": "dia 0",
+          "text": "pedido feito"
+        },
+        {
+          "at": 2,
+          "label": "dia 2",
+          "text": "gestor aprova"
+        },
+        {
+          "at": 3,
+          "label": "dia 3",
+          "text": "RH confere"
+        },
+        {
+          "at": 4,
+          "label": "dia 4",
+          "text": "aviso no Teams"
+        }
+      ],
+      "chapter": "O caminho",
+      "say": "O pedido segue um caminho com dias contados."
+    },
+    {
+      "type": "prop",
+      "name": "server",
+      "id": "workday",
+      "at": [
+        640,
+        170
+      ],
+      "label": "Workday",
+      "chapter": "Onde trava",
+      "say": "Se o gestor está fora, o dia 2 vira o dia 9 — é aí que o pedido para."
+    },
+    {
+      "type": "link",
+      "from": "teams",
+      "to": "workday",
+      "label": "cria o pedido"
+    },
+    {
+      "type": "note",
+      "at": [
+        140,
+        290
+      ],
+      "text": "gestor fora: aprovador substituto",
+      "point": [
+        400,
+        400
+      ]
+    }
+  ],
+  "background": "dots"
+}

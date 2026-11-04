@@ -56,7 +56,7 @@ test('a way of working that breaks its format is refused with its check\'s messa
 test('a valid recipe of each skill goes through', async ($, on) => {
   engine(on)
   await start($)
-  for (const file of ['team.way.yaml', 'returns.blueprint.yaml', 'checkout.drill.yaml', 'coin-jar.chalk']) {
+  for (const file of ['team.way.yaml', 'returns.blueprint.yaml', 'checkout.drill.yaml', 'training-hours.chalk']) {
     const out = await $.tool.call({ tool: 'Write', file_path: `${ROOT}/${file}`, content: 'fine' })
     expect(denied(out)).not.toContain('is not a valid')
   }

@@ -1,0 +1,109 @@
+<svg id="paper" role="img" viewBox="0 0 900 560" aria-label="SLA do RH ↔ prometer só o que se cumpre" style="width: 900px; aspect-ratio: 900 / 560;">
+<defs>
+<clipPath id="dw1-clip-1-0-0">
+<rect x="414.171875" y="33" width="71.65625" height="53">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-0-1">
+<rect x="335.953125" y="68" width="228.09375" height="44">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-1-0">
+<rect x="165.59375" y="183" width="88.8125" height="53">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-1-1">
+<rect x="135.15625" y="218" width="149.6875" height="44">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-1-2">
+<rect x="115.3515625" y="246" width="189.296875" height="44">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-2-0">
+<rect x="645.59375" y="183" width="88.8125" height="53">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-2-1">
+<rect x="588.7109375" y="218" width="202.578125" height="44">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-2-2">
+<rect x="598.234375" y="246" width="183.53125" height="44">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-5-0">
+<rect x="384.5859375" y="403" width="130.828125" height="53">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-5-1">
+<rect x="375" y="438" width="150" height="44">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-6-text">
+<rect x="616" y="440" width="113.390625" height="47">
+</rect>
+</clipPath>
+</defs>
+<rect width="900" height="560" fill="#FFFFFF">
+</rect>
+<g>
+</g>
+<g>
+<path d="M300 30 C361.3486761599779 30, 422.6973523199558 30, 600 30 M300 30 C405.567554756999 30, 511.13510951399803 30, 600 30 M600 30 C600 60.23063085973263, 600 90.46126171946526, 600 130 M600 30 C600 69.57547880709171, 600 109.15095761418343, 600 130 M600 130 C518.2570510357618 130, 436.51410207152367 130, 300 130 M600 130 C506.22510977089405 130, 412.4502195417881 130, 300 130 M300 130 C300 109.06823255121708, 300 88.13646510243416, 300 30 M300 130 C300 93.37320111691952, 300 56.746402233839035, 300 30" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="card" data-step="0">
+</path>
+<g data-type="card" data-step="0">
+<text x="450" y="68" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="22" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-0-0)">A tese</text>
+</g>
+<g data-type="card" data-step="0">
+<text x="450" y="96" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-0-1)">todo pedido tem prazo e dono</text>
+</g>
+<path d="M60 180 C121.47949774749577 180, 182.95899549499154 180, 360 180 M60 180 C126.90760756842792 180, 193.81521513685584 180, 360 180 M360 180 C360 206.0039026690647, 360 232.0078053381294, 360 310 M360 180 C360 209.9185903267935, 360 239.83718065358698, 360 310 M360 310 C242.18798498623073 310, 124.37596997246146 310, 60 310 M360 310 C247.16894541867077 310, 134.33789083734155 310, 60 310 M60 310 C60 280.1232064412907, 60 250.24641288258135, 60 180 M60 310 C60 277.2925221128389, 60 244.58504422567785, 60 180" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="card" data-step="1">
+</path>
+<g data-type="card" data-step="1">
+<text x="210" y="218" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="22" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-1-0)">Razão 1</text>
+</g>
+<g data-type="card" data-step="1">
+<text x="210" y="246" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-1-1)">quem pede planeja</text>
+</g>
+<g data-type="card" data-step="1">
+<text x="210" y="274" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-1-2)">férias, viagem, mudança</text>
+</g>
+<path d="M540 180 C601.6103193350136 180, 663.2206386700273 180, 840 180 M540 180 C628.2476603798568 180, 716.4953207597136 180, 840 180 M840 180 C840 218.70798522047698, 840 257.41597044095397, 840 310 M840 180 C840 214.38905820436776, 840 248.7781164087355, 840 310 M840 310 C746.1189189366996 310, 652.2378378733993 310, 540 310 M840 310 C768.1127810664475 310, 696.225562132895 310, 540 310 M540 310 C540 277.45771056599915, 540 244.9154211319983, 540 180 M540 310 C540 266.1998827736825, 540 222.39976554736495, 540 180" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="card" data-step="2">
+</path>
+<g data-type="card" data-step="2">
+<text x="690" y="218" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="22" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-2-0)">Razão 2</text>
+</g>
+<g data-type="card" data-step="2">
+<text x="690" y="246" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-2-1)">sem prazo, ninguém mede</text>
+</g>
+<g data-type="card" data-step="2">
+<text x="690" y="274" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-2-2)">nem o RH, nem o gestor</text>
+</g>
+<path d="M210 320 C249.10272258426994 335.43528523063287, 288.2054451685399 350.87057046126574, 400 395 M210 320 C279.4055516878143 347.39692829782143, 348.8111033756286 374.79385659564286, 400 395" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="arrow" data-step="3">
+</path>
+<path d="M384.0438342131962 396.1835427259005 C387.327745546952 395.9399598110888, 390.61165688070776 395.69637689627706, 400 395 M384.0438342131962 396.1835427259005 C390.21319427232663 395.7259327136328, 396.3825543314571 395.2683227013651, 400 395 M400 395 C397.6901041376425 392.49467828349003, 395.380208275285 389.9893565669801, 389.1543874256517 383.23680792101317 M400 395 C396.0162417979344 390.67920091134613, 392.0324835958688 386.3584018226923, 389.1543874256517 383.23680792101317" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="arrow" data-step="3">
+</path>
+<path d="M690 320 C650.8144237436354 335.46799062751234, 611.6288474872708 350.93598125502467, 500 395 M690 320 C645.0790815316141 337.73194150067866, 600.1581630632281 355.4638830013573, 500 395" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="arrow" data-step="4">
+</path>
+<path d="M510.84561257434825 383.23680792101317 C508.60876603495586 385.6629000678342, 506.3719194955635 388.0889922146552, 500 395 M510.84561257434825 383.23680792101317 C508.04985465819095 386.26909744349615, 505.2540967420337 389.30138696597913, 500 395 M500 395 C504.95763596044475 395.3677308231217, 509.9152719208895 395.7354616462433, 515.9561657868038 396.1835427259005 M500 395 C503.2184129002224 395.23872459260565, 506.43682580044486 395.47744918521124, 515.9561657868038 396.1835427259005" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="arrow" data-step="4">
+</path>
+<path d="M300 400 C362.0027840975672 400, 424.0055681951344 400, 600 400 M300 400 C392.26781881414354 400, 484.5356376282871 400, 600 400 M600 400 C600 439.09248682670295, 600 478.1849736534059, 600 500 M600 400 C600 436.7695860285312, 600 473.5391720570624, 600 500 M600 500 C517.9117207881063 500, 435.82344157621264 500, 300 500 M600 500 C530.9442880097777 500, 461.88857601955533 500, 300 500 M300 500 C300 468.81632533855736, 300 437.6326506771147, 300 400 M300 500 C300 460.7092036586255, 300 421.41840731725097, 300 400" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="card" data-step="5">
+</path>
+<g data-type="card" data-step="5">
+<text x="450" y="438" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="22" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-5-0)">A conclusão</text>
+</g>
+<g data-type="card" data-step="5">
+<text x="450" y="466" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="16" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-5-1)">prazo + dono = SLA</text>
+</g>
+<g data-type="note" data-step="6">
+<text x="620" y="470" fill="#1F4E8C" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="18" font-weight="600" text-anchor="start" clip-path="url(#dw1-clip-1-6-text)">e a exceção?</text>
+</g>
+<path d="M672.6953125 446 C666.490703125 443.6678385416667, 647.5835416666666 431.3403645833333, 635.46765625 432.00703125 C623.3517708333334 432.6736979166667, 605.9112760416667 447.001171875, 600 450 M672.6953125 446 C666.490703125 443.6678385416667, 647.5835416666666 431.3403645833333, 635.46765625 432.00703125 C623.3517708333334 432.6736979166667, 605.9112760416667 447.001171875, 600 450" stroke="#1F4E8C" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="note" data-step="6">
+</path>
+<path d="M609.6997962800642 437.2754586673919 C607.6908082828137 439.9109213172898, 605.6818202855632 442.54638396718775, 600 450 M609.6997962800642 437.2754586673919 C607.7594024996802 439.8209369585988, 605.8190087192961 442.36641524980564, 600 450 M600 450 C604.8974852294104 449.90460635650635, 609.7949704588208 449.8092127130127, 615.9969656963817 449.68840971005756 M600 450 C604.3268565543348 449.9157211114974, 608.6537131086696 449.8314422229949, 615.9969656963817 449.68840971005756" stroke="#1F4E8C" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="note" data-step="6">
+</path>
+</g>
+<g aria-hidden="true" class="dw-pencil" style="opacity: 0;">
+</g>
+</svg>

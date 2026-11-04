@@ -1,0 +1,23 @@
+title Treinamento ↔ as horas do ano
+id training-hours
+param n "horas de treinamento por mês" 1..8 = 3
+
+# O gancho
+> A Ana faz treinamentos todo mês.
+person ana at 150,330 "Ana"
+text "quer se desenvolver" right-of ana gap 16 align=start
+
+# Desmontar
+> Cada mês, n horas de curso entram no histórico dela.
+row at 470,150 gap 14
+  repeat n: book size 44
+school academia at 740,450 "academia interna"
+ana -> academia "estuda"
+
+# A ideia
+pause ask "E em um ano, quantas horas?"
+counter at 470,270 "12*n" "{v:0} horas num ano"
+
+quiz "Se n dobra, o total do ano…"
+  * dobra -- 12 × n cresce em linha reta
+  - quadruplica -- não há n² aqui

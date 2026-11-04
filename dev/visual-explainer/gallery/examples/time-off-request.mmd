@@ -1,0 +1,11 @@
+flowchart LR
+  %% title Um pedido de férias, do Teams ao Workday
+  %% # O pedido
+  %% > A colaboradora pede as férias ao assistente no Teams.
+  A([Colaboradora]) -->|pede| B[Assistente no Teams]
+  %% # O registro
+  %% > O assistente cria o pedido no Workday, e o gestor aprova.
+  B -->|cria o pedido| C[Workday]
+  %% # A volta
+  %% > A aprovação volta para ela, no Teams.
+  C -->|aprovado| A

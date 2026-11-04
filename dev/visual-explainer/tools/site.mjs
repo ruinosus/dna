@@ -33,7 +33,7 @@ const pages = await gallery(docs, lessons.map(({ file, scene }) => ({ name: file
 })
 // The README shows these as SVGs that draw themselves (build.mjs --svg).
 for (const [k, { file }] of lessons.entries()) {
-  if (!['coffee-order', 'coin-jar'].includes(file)) continue
+  if (!['time-off-request', 'training-hours'].includes(file)) continue
   const r = await runPage(pages[k], 'svg', '', { timeout: 60 })
   if (!r || r.error) throw new Error(`${file}: the animated SVG failed (${r?.error ?? 'no browser'})`)
   writeFileSync(join(docs, 'images', `${file}.svg`), r.svg)
@@ -95,7 +95,7 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
   <section class="hero">
     <h1>visual-explainer</h1>
     <p class="lead">Ask Claude to explain something by drawing it — and get a hand-drawn lesson that draws itself, chapter by chapter, with values you can move. One HTML file, offline.</p>
-    <img src="images/hero.gif" alt="A hand-drawn lesson about compound interest drawing itself, then the growth rate is moved and the curve changes">
+    <img src="images/hero.png" alt="A lesson on demand and capacity at the HR help desk, drawn in the business theme">
     <div class="actions">
       <a class="button primary" href="https://github.com/ruinosus/dna#install">Install the skill</a>
       <a class="button" href="https://github.com/ruinosus/dna">GitHub</a>

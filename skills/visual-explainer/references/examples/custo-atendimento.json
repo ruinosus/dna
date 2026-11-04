@@ -1,0 +1,146 @@
+{
+  "id": "custo-atendimento",
+  "title": "Custo por atendimento ↔ o minuto que custa",
+  "width": 900,
+  "height": 560,
+  "category": "Gestão",
+  "locale": "pt-BR",
+  "params": {
+    "minutos": {
+      "label": "minutos por atendimento",
+      "min": 2,
+      "max": 20,
+      "step": 1,
+      "value": 8
+    }
+  },
+  "vars": {
+    "custo": "minutos * 1"
+  },
+  "learning": {
+    "goal": "Ver que o custo de um atendimento é o tempo de quem atende.",
+    "question": "Quanto custa um atendimento de 8 minutos?",
+    "answer": "R$ 8: 8 minutos a R$ 1 por minuto.",
+    "caveat": "Os valores são ilustrativos; o custo real inclui sistemas e gestão."
+  },
+  "quiz": {
+    "question": "Se o atendimento passa de 8 para 16 minutos, o custo…",
+    "options": [
+      {
+        "text": "dobra",
+        "right": true,
+        "why": "o custo cresce em linha reta com os minutos"
+      },
+      {
+        "text": "fica igual",
+        "right": false,
+        "why": "cada minuto custa o mesmo"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "type": "prop",
+      "name": "person",
+      "id": "colaborador",
+      "at": [
+        120,
+        300
+      ],
+      "label": "colaborador",
+      "chapter": "O gancho",
+      "say": "Toda pergunta que chega ao RH vira um atendimento — e todo atendimento custa o tempo de alguém."
+    },
+    {
+      "type": "prop",
+      "name": "desk",
+      "id": "rh",
+      "at": [
+        420,
+        300
+      ],
+      "label": "atendimento de RH"
+    },
+    {
+      "type": "link",
+      "from": "colaborador",
+      "to": "rh",
+      "label": "qual é o meu saldo?"
+    },
+    {
+      "type": "prop",
+      "name": "clock",
+      "id": "relogio",
+      "at": [
+        700,
+        170
+      ],
+      "label": "minutos",
+      "chapter": "Desmontar",
+      "say": "Um analista custa cerca de R$ 60 por hora: cada minuto de atendimento custa R$ 1."
+    },
+    {
+      "type": "counter",
+      "at": [
+        640,
+        300
+      ],
+      "value": "custo",
+      "format": "R$ {v:0} por atendimento"
+    },
+    {
+      "type": "axis",
+      "from": [
+        90,
+        470
+      ],
+      "to": [
+        840,
+        470
+      ],
+      "domain": [
+        0,
+        20
+      ],
+      "ticks": 4,
+      "label": "minutos",
+      "chapter": "A regra",
+      "say": "Mais minutos, mais custo, em linha reta. Mexa nos minutos e veja o ponto andar."
+    },
+    {
+      "type": "plot",
+      "fn": "x",
+      "domain": [
+        0,
+        20
+      ],
+      "range": [
+        0,
+        20
+      ],
+      "box": {
+        "x": 90,
+        "y": 340,
+        "w": 750,
+        "h": 130
+      }
+    },
+    {
+      "type": "pause",
+      "ms": 600,
+      "ask": "Se o assistente responde a pergunta repetida, o que acontece com o custo?",
+      "chapter": "A ideia"
+    },
+    {
+      "type": "text",
+      "text": "a pergunta repetida custa R$ 0 de analista",
+      "at": [
+        450,
+        60
+      ],
+      "size": 28,
+      "anchor": "middle"
+    }
+  ],
+  "background": "dots"
+}

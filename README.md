@@ -5,7 +5,7 @@ drill, the «what if» simulation, the Copilot Studio agents compared and the so
 checked as it is written, and shown as one HTML file that opens offline. Eight Agent Skills for Claude.</b></p>
 
 <p align="center">
-  <img src="dev/visual-explainer/gallery/images/hero.gif" alt="A hand-drawn lesson drawing itself on a board, stroke by stroke" width="760">
+  <img src="dev/visual-explainer/gallery/images/hero.png" alt="A lesson on demand and capacity at the HR help desk, drawn in the business theme" width="760">
 </p>
 
 <p align="center">

@@ -9,6 +9,6 @@ const here = dirname(fileURLToPath(import.meta.url))
 const ok = linuxCheck(resolve(here, '../../../skills/visual-explainer'), [
   { file: join(here, 'fixtures/coffee-chain-left.chalk'), exit: 3 },
   { file: join(here, 'fixtures/coffee-chain.chalk'), args: ['--snapshots'], exit: 0 },
-  { file: join(here, '../gallery/examples/coin-jar.chalk'), args: ['--pptx', 'video', '--no-review'], exit: 0 },
+  { file: join(here, '../gallery/examples/training-hours.chalk'), args: ['--pptx', 'video', '--no-review'], exit: 0 },
 ])
 if (!ok) process.exit(1)

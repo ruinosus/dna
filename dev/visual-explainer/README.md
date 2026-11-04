@@ -1,9 +1,9 @@
 <h1 align="center">visual-explainer</h1>
 
-<p align="center"><b>Ask Claude to explain something by drawing it — and get a hand-drawn lesson that draws itself.</b></p>
+<p align="center"><b>Ask Claude to explain something by drawing it — and get a lesson that draws itself, chapter by chapter, clean enough for a meeting room.</b></p>
 
 <p align="center">
-  <img src="gallery/images/hero.gif" alt="A hand-drawn lesson about compound interest drawing itself stroke by stroke, chapter by chapter; then the growth rate is moved and the curve changes" width="820">
+  <img src="gallery/images/hero.png" alt="A lesson on demand and capacity at the HR help desk: the capacity line rises with the analysts and crosses the dashed demand line at about four" width="820">
 </p>
 
 <p align="center">
@@ -15,33 +15,33 @@
 
 ## What it draws
 
-Every drawing below was made by Claude with this skill, from the one-line request under it. Nothing was touched by
-hand.
+Every drawing below was made by Claude with this skill, from the one-line request under it, in the business theme
+(the default; «Hand-drawn» switches any lesson to the pencil look).
 
 <table>
   <tr>
-    <td width="50%"><img src="gallery/images/pythagoras-ladder.png" alt="A ladder against a wall with a square drawn on each side; a² + h² = 5²"></td>
+    <td width="50%"><img src="gallery/images/demand-capacity.png" alt="Analysts on one axis; the capacity line rises with them and crosses the dashed line of 50 tickets an hour; under it, «a fila cresce»"></td>
     <td width="50%"><img src="gallery/images/web-cache.png" alt="A browser asks an app for a page; the app asks the cache, misses, queries the database and copies the answer into the cache"></td>
   </tr>
   <tr>
-    <td><i>«Explain the Pythagorean theorem by drawing it, using a ladder leaning on a wall.»</i><br>Move the foot of the ladder: the blue and green squares change, their sum stays 25.</td>
+    <td><i>«Explain by drawing why the HR help desk queue grows at payroll close.»</i><br>Move the analysts: the queue stops growing when the capacity passes the demand.</td>
     <td><i>«Can you draw how a web request with a cache works, for junior developers?»</i><br>Move the hit rate from 0 % to 90 % and watch the average time fall.</td>
   </tr>
   <tr>
-    <td width="50%"><img src="gallery/images/birthday-money.png" alt="A teenager with a $200 coin; a dashed straight line for simple interest and a red curve for compound interest that shoots up to $5,891 at age 65"></td>
-    <td width="50%"><img src="gallery/images/visual-explainer-how.png" alt="How visual-explainer works, drawn by visual-explainer: you ask Claude, Claude chooses the hook, the audience and the value to move, writes the recipe, build.mjs checks it, out comes lesson.html"></td>
+    <td width="50%"><img src="gallery/images/hr-service-history.png" alt="A timeline from 2016 to 2026: e-mail and spreadsheet, the employee portal, Workday, the assistant in Teams; under it, before and now"></td>
+    <td width="50%"><img src="gallery/images/visual-explainer-how.png" alt="How visual-explainer works, drawn by visual-explainer: you ask Claude, Claude writes the recipe, build.mjs checks it, out comes one HTML file"></td>
   </tr>
   <tr>
-    <td><i>«Explain compound interest by drawing it, for a teenager who just got birthday money.»</i><br>Interest on interest, mark by mark; move the yearly rate.</td>
-    <td><i>«Explain by drawing how this very skill works.»</i><br>Yes — visual-explainer drew its own diagram. In the first build the check caught the circle crossing a label and Claude fixed it.</td>
+    <td><i>«Draw how asking something of HR changed in ten years.»</i><br>A timeline and the two ways side by side.</td>
+    <td><i>«Explain by drawing how this very skill works.»</i><br>Yes — visual-explainer drew its own diagram.</td>
   </tr>
   <tr>
-    <td width="50%"><img src="https://ruinosus.github.io/dna/visual-explainer/thumbs/moon-phases.png" alt="On a chalkboard: the Sun, the Earth and the Moon at eight places of its orbit, each half lit; on the right, the Moon as seen from Earth"></td>
-    <td width="50%"><img src="https://ruinosus.github.io/dna/visual-explainer/thumbs/supply-demand.png" alt="A seller and a buyer talk in balloons at a market; a demand line and the crates that arrived set the price"></td>
+    <td width="50%"><img src="gallery/images/time-off-request.png" alt="A Mermaid flowchart drawn as a lesson: the employee asks the assistant in Teams, it creates the request in Workday, the approval comes back"></td>
+    <td width="50%"><img src="gallery/images/training-hours.png" alt="An employee, the training hours of a month as books, the internal academy, and a counter of hours in a year"></td>
   </tr>
   <tr>
-    <td><i>«Explain why the Moon has phases by drawing it, for my 8th-grade science class. Make it work for the classroom.»</i><br>Claude chose the chalkboard, a question the lesson waits on, and a quiz at the end. Slide the day and the Moon goes round.</td>
-    <td><i>«Explain supply and demand by drawing a conversation at a farmers market.»</i><br>Balloons for who speaks; move how many crates arrived and the price follows the demand line.</td>
+    <td><i>A Mermaid flowchart</i>, as it is in the docs: each node and arrow drawn in order, a chapter per comment.</td>
+    <td><i>«Explain by drawing how training hours add up in a year.»</i><br>Move the hours a month; the year's total counts up.</td>
   </tr>
 </table>
 
@@ -167,10 +167,10 @@ GitHub shows no script in a README, but it shows an image — and an SVG can ani
 lesson into one:
 
 ```
-npx @ruinosus/visual-explainer coffee-order.mmd --svg      # → coffee-order.svg
+npx @ruinosus/visual-explainer time-off-request.mmd --svg   # → time-off-request.svg
 ```
 
-<p align="center"><img src="https://ruinosus.github.io/dna/visual-explainer/images/coffee-order.svg" alt="A coffee order drawn by hand, box by box and arrow by arrow: you, the cashier, the barista" width="720"></p>
+<p align="center"><img src="https://ruinosus.github.io/dna/visual-explainer/images/time-off-request.svg" alt="A coffee order drawn by hand, box by box and arrow by arrow: you, the cashier, the barista" width="720"></p>
 
 It plays once when the page opens and stays as the finished drawing (still from the start for someone who asked for
 less motion). It has no chapters, values or narration — link to the `.html` lesson for those. To keep the SVGs in step
@@ -203,14 +203,13 @@ jobs:
 Claude never writes the drawing itself. It writes a small **recipe** — JSON that says what to draw, step by step:
 
 ```json
-{ "id": "birthday-money", "title": "Compound interest ↔ your birthday money", "locale": "en-US",
-  "params": { "rate": { "label": "growth per year (%)", "min": 3, "max": 10, "step": 1, "value": 7 } },
+{ "id": "custo-atendimento", "title": "Custo por atendimento ↔ o minuto que custa", "locale": "pt-BR",
+  "params": { "minutos": { "label": "minutos por atendimento", "min": 2, "max": 20, "step": 1, "value": 8 } },
   "steps": [
-    { "type": "text", "at": [40, 72], "text": "$200 for your birthday. Spend it… or plant it?", "size": 40,
-      "chapter": "The gift", "say": "You just turned 15 and got $200. What if that money could grow on its own?" },
-    { "type": "prop", "name": "person", "at": [110, 270], "size": 110, "label": "you, 15" },
-    { "type": "prop", "name": "coin", "at": [240, 260], "size": 60 },
-    { "type": "text", "at": [40, 345], "text": "year 1: +${i1:2}", "size": 28, "chapter": "Interest on interest" },
+    { "type": "prop", "name": "person", "at": [120, 300], "label": "colaborador",
+      "chapter": "O gancho", "say": "Toda pergunta que chega ao RH vira um atendimento — e todo atendimento custa o tempo de alguém." },
+    { "type": "prop", "name": "desk", "id": "rh", "at": [420, 300], "label": "atendimento de RH" },
+    { "type": "counter", "at": [640, 300], "value": "custo", "format": "R$ {v:0} por atendimento", "chapter": "Desmontar" },
     …
 ```
 

@@ -1,0 +1,13 @@
+sequenceDiagram
+  %% title Um caso de RH, do assistente ao analista
+  participant C as Colaborador
+  participant A as Assistente
+  participant R as Analista de RH
+  %% # A pergunta
+  %% > O colaborador pergunta; o assistente vê que é uma exceção.
+  C->>A: posso dividir as férias em quatro?
+  A->>R: abre um caso no Workday
+  %% # A resposta
+  %% > A analista confere a regra e responde pelo próprio assistente.
+  R-->>A: a regra permite três períodos
+  A-->>C: em até três períodos, um com 14 dias

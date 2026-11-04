@@ -1,0 +1,147 @@
+<svg id="paper" role="img" viewBox="0 0 900 524" aria-label="Um caso de RH, do assistente ao analista" style="width: 900px; aspect-ratio: 900 / 524;">
+<defs>
+<clipPath id="dw1-clip-1-0">
+<rect x="36" y="20" width="519.578125" height="59">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-2">
+<rect x="90.92813110351562" y="106.69999694824219" width="82.34375" height="41">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-4">
+<rect x="444.22027587890625" y="106.69999694824219" width="71.359375" height="41">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-6">
+<rect x="707.7327880859375" y="106.69999694824219" width="96.734375" height="41">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-11">
+<rect x="224.328125" y="178.39999389648438" width="163.34375" height="37">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-16">
+<rect x="554.4375" y="239.89999389648438" width="127.125" height="37">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-21">
+<rect x="546.7578125" y="301.29998779296875" width="142.484375" height="37">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-26">
+<rect x="215.4375" y="362.79998779296875" width="181.125" height="37">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-31">
+<rect x="90.92813110351562" y="429.6000061035156" width="82.34375" height="41">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-33">
+<rect x="444.22027587890625" y="429.6000061035156" width="71.359375" height="41">
+</rect>
+</clipPath>
+<clipPath id="dw1-clip-1-35">
+<rect x="707.7327880859375" y="429.6000061035156" width="96.734375" height="41">
+</rect>
+</clipPath>
+</defs>
+<rect width="900" height="524" fill="#FFFFFF">
+</rect>
+<g>
+</g>
+<g>
+<g data-type="text" data-step="0">
+<text x="40" y="60" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="27" font-weight="600" text-anchor="start" clip-path="url(#dw1-clip-1-0)">Um caso de RH, do assistente ao analista</text>
+</g>
+<path d="M60 100 C89.55114525062963 100, 119.10229050125926 100, 204.2 100 M60 100 C92.1602567045577 100, 124.32051340911538 100, 204.2 100 M204.2 100 C204.2 110.16152504298836, 204.2 120.32305008597673, 204.2 150.8 M204.2 100 C204.2 111.69126452770084, 204.2 123.38252905540169, 204.2 150.8 M204.2 150.8 C147.57169145004823 150.8, 90.94338290009647 150.8, 60 150.8 M204.2 150.8 C149.96587309790775 150.8, 95.7317461958155 150.8, 60 150.8 M60 150.8 C60 139.12506836321205, 60 127.4501367264241, 60 100 M60 150.8 C60 138.01892402563246, 60 125.23784805126489, 60 100" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polygon" data-step="1">
+</path>
+<g data-type="text" data-step="2">
+<text x="132.1" y="131.7" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-2)">Colaborador</text>
+</g>
+<path d="M416.8 100 C442.7724399480783 100, 468.7448798961565 100, 543 100 M416.8 100 C462.8998980158009 100, 508.9997960316017 100, 543 100 M543 100 C543 120.09025417547673, 543 140.18050835095346, 543 150.8 M543 100 C543 115.18510711509735, 543 130.3702142301947, 543 150.8 M543 150.8 C513.5743047812023 150.8, 484.14860956240443 150.8, 416.8 150.8 M543 150.8 C504.74315009778365 150.8, 466.4863001955673 150.8, 416.8 150.8 M416.8 150.8 C416.8 137.0418808175996, 416.8 123.2837616351992, 416.8 100 M416.8 150.8 C416.8 139.5095997421071, 416.8 128.2191994842142, 416.8 100" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polygon" data-step="3">
+</path>
+<g data-type="text" data-step="4">
+<text x="479.9" y="131.7" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-4)">Assistente</text>
+</g>
+<path d="M672.1 100 C706.8008914999384 100, 741.5017829998769 100, 840 100 M672.1 100 C723.7392225963157 100, 775.3784451926314 100, 840 100 M840 100 C840 119.8589833079651, 840 139.7179666159302, 840 150.8 M840 100 C840 118.67894970249385, 840 137.3578994049877, 840 150.8 M840 150.8 C794.0579264010769 150.8, 748.1158528021537 150.8, 672.1 150.8 M840 150.8 C801.351819856139 150.8, 762.7036397122778 150.8, 672.1 150.8 M672.1 150.8 C672.1 134.95869327198716, 672.1 119.11738654397428, 672.1 100 M672.1 150.8 C672.1 130.84027545858174, 672.1 110.88055091716349, 672.1 100" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polygon" data-step="5">
+</path>
+<g data-type="text" data-step="6">
+<text x="756.1" y="131.7" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-6)">Analista de RH</text>
+</g>
+<path d="M132.1 150.8 C132.1 162.69250560906715, 132.1 174.58501121813433, 132.1 208.1 M132.1 150.8 C132.1 165.11505356746727, 132.1 179.43010713493453, 132.1 208.1" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="7">
+</path>
+<path d="M479.9 150.8 C479.9 162.71749253228307, 479.9 174.63498506456614, 479.9 208.1 M479.9 150.8 C479.9 169.19100365445018, 479.9 187.58200730890036, 479.9 208.1" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="8">
+</path>
+<path d="M756 150.8 C756 162.742479455499, 756 174.68495891099798, 756 208.1 M756 150.8 C756 173.2669537414331, 756 195.7339074828662, 756 208.1" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="9">
+</path>
+<path d="M132.1 208.1 C204.74022349942476 208.1, 277.3804469988495 208.1, 479.9 208.1 M132.1 208.1 C223.65033074211328 208.1, 315.20066148422654 208.1, 479.9 208.1" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="arrow" data-step="10">
+</path>
+<path d="M465.49284636235717 215.05944854577967 C468.5019360309983 213.60589253844805, 471.51102569963945 212.15233653111645, 479.9 208.1 M465.49284636235717 215.05944854577967 C469.59281735667196 213.07893678809486, 473.6927883509868 211.09842503041006, 479.9 208.1 M479.9 208.1 C475.62041646932107 206.03272549677627, 471.3408329386422 203.96545099355257, 465.49284636235717 201.14055145422032 M479.9 208.1 C476.90284111259325 206.65220721698043, 473.9056822251865 205.20441443396086, 465.49284636235717 201.14055145422032" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="arrow" data-step="10">
+</path>
+<g data-type="text" data-step="11">
+<text x="306" y="200.4" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="10" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-11)">posso dividir as férias em quatro?</text>
+</g>
+<path d="M132.1 208.1 C132.1 220.9982997180894, 132.1 233.8965994361788, 132.1 269.6 M132.1 208.1 C132.1 220.73787864129991, 132.1 233.3757572825998, 132.1 269.6" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="12">
+</path>
+<path d="M479.9 208.1 C479.9 221.02511814353056, 479.9 233.95023628706113, 479.9 269.6 M479.9 208.1 C479.9 225.11258946764283, 479.9 242.12517893528567, 479.9 269.6" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="13">
+</path>
+<path d="M756 208.1 C756 221.0519365689717, 756 234.00387313794346, 756 269.6 M756 208.1 C756 229.48730029398575, 756 250.8746005879715, 756 269.6" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="14">
+</path>
+<path d="M479.9 269.6 C538.1672236415836 269.6, 596.4344472831674 269.6, 756 269.6 M479.9 269.6 C540.336768623134 269.6, 600.7735372462682 269.6, 756 269.6" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="arrow" data-step="15">
+</path>
+<path d="M741.5928463623571 276.55944854577973 C744.6333488095064 275.09071843666464, 747.6738512566558 273.62198832754956, 756 269.6 M741.5928463623571 276.55944854577973 C745.0541128931093 274.8874662146508, 748.5153794238614 273.2154838835218, 756 269.6 M756 269.6 C750.4436752650131 266.9159891905539, 744.8873505300261 264.23197838110775, 741.5928463623571 262.6405514542203 M756 269.6 C750.5256596685795 266.9555921719982, 745.0513193371589 264.31118434399633, 741.5928463623571 262.6405514542203" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="arrow" data-step="15">
+</path>
+<g data-type="text" data-step="16">
+<text x="618" y="261.9" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="10" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-16)">abre um caso no Workday</text>
+</g>
+<path d="M132.1 269.6 C132.1 282.61120096424594, 132.1 295.6224019284919, 132.1 331 M132.1 269.6 C132.1 291.7753166221641, 132.1 313.95063324432823, 132.1 331" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="17">
+</path>
+<path d="M479.9 269.6 C479.9 282.6379757824913, 479.9 295.67595156498254, 479.9 331 M479.9 269.6 C479.9 283.8629140975699, 479.9 298.1258281951398, 479.9 331" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="18">
+</path>
+<path d="M756 269.6 C756 282.6647506007366, 756 295.72950120147317, 756 331 M756 269.6 C756 288.2305115729757, 756 306.8610231459513, 756 331" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="19">
+</path>
+<path d="M756 331 C697.1307790198549 331, 638.2615580397099 331, 479.9 331 M756 331 C652.5834216896072 331, 549.1668433792144 331, 479.9 331" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-dashed="1" stroke-dasharray="9 8" data-type="arrow" data-step="20">
+</path>
+<path d="M494.3071536376428 324.0405514542203 C491.23523841198534 325.52445566511886, 488.16332318632783 327.0083598760174, 479.9 331 M494.3071536376428 324.0405514542203 C488.60316084292475 326.7958940679493, 482.8991680482067 329.55123668167835, 479.9 331 M479.9 331 C483.8516352117664 332.9088574065126, 487.80327042353275 334.8177148130252, 494.3071536376428 337.9594485457797 M479.9 331 C484.9700910479058 333.44913316382815, 490.0401820958116 335.89826632765636, 494.3071536376428 337.9594485457797" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-dashed="1" stroke-dasharray="9 8" data-type="arrow" data-step="20">
+</path>
+<g data-type="text" data-step="21">
+<text x="618" y="323.3" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="10" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-21)">a regra permite três períodos</text>
+</g>
+<path d="M132.1 331 C132.1 344.166483972501, 132.1 357.332967945002, 132.1 392.5 M132.1 331 C132.1 350.48498690472917, 132.1 369.96997380945834, 132.1 392.5" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="22">
+</path>
+<path d="M479.9 331 C479.9 344.19330239794215, 479.9 357.38660479588435, 479.9 392.5 M479.9 331 C479.9 354.85969773107206, 479.9 378.7193954621442, 479.9 392.5" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="23">
+</path>
+<path d="M756 331 C756 344.22012082338335, 756 357.44024164676665, 756 392.5 M756 331 C756 346.934408557415, 756 362.86881711483, 756 392.5" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="24">
+</path>
+<path d="M479.9 392.5 C404.9847890936397 392.5, 330.0695781872794 392.5, 132.1 392.5 M479.9 392.5 C365.04615086713807 392.5, 250.19230173427613 392.5, 132.1 392.5" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-dashed="1" stroke-dasharray="9 8" data-type="arrow" data-step="25">
+</path>
+<path d="M146.50715363764283 385.5405514542203 C143.40382563347717 387.0396297669023, 140.30049762931154 388.5387080795843, 132.1 392.5 M146.50715363764283 385.5405514542203 C141.44186530648744 387.98736464139347, 136.37657697533206 390.4341778285666, 132.1 392.5 M132.1 392.5 C137.32837641607443 395.02559371273503, 142.55675283214885 397.55118742547, 146.50715363764283 399.4594485457797 M132.1 392.5 C136.76584176439107 394.7538584996545, 141.43168352878214 397.007716999309, 146.50715363764283 399.4594485457797" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-dashed="1" stroke-dasharray="9 8" data-type="arrow" data-step="25">
+</path>
+<g data-type="text" data-step="26">
+<text x="306" y="384.8" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="10" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-26)">em até três períodos, um com 14 dias</text>
+</g>
+<path d="M132.1 392.5 C132.1 399.0745937143266, 132.1 405.64918742865325, 132.1 422.9 M132.1 392.5 C132.1 400.78389670744536, 132.1 409.06779341489073, 132.1 422.9" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="27">
+</path>
+<path d="M479.9 392.5 C479.9 399.08785030186175, 479.9 405.6757006037235, 479.9 422.9 M479.9 392.5 C479.9 402.94635539233684, 479.9 413.3927107846737, 479.9 422.9" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="28">
+</path>
+<path d="M756 392.5 C756 399.1011068893969, 756 405.7022137787938, 756 422.9 M756 392.5 C756 399.0288140772283, 756 405.5576281544566, 756 422.9" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polyline" data-step="29">
+</path>
+<path d="M60 422.9 C91.37471096623689 422.9, 122.74942193247378 422.9, 204.2 422.9 M60 422.9 C101.22636619400234 422.9, 142.45273238800468 422.9, 204.2 422.9 M204.2 422.9 C204.2 434.7880974640697, 204.2 446.6761949281394, 204.2 473.7 M204.2 422.9 C204.2 434.4519820449501, 204.2 446.00396408990025, 204.2 473.7 M204.2 473.7 C163.91295676361767 473.7, 123.62591352723538 473.7, 60 473.7 M204.2 473.7 C172.7356461374834 473.7, 141.2712922749668 473.7, 60 473.7 M60 473.7 C60 462.2988489518315, 60 450.8976979036629, 60 422.9 M60 473.7 C60 457.13372191451487, 60 440.5674438290298, 60 422.9" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polygon" data-step="30">
+</path>
+<g data-type="text" data-step="31">
+<text x="132.1" y="454.6" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-31)">Colaborador</text>
+</g>
+<path d="M416.8 422.9 C444.36837610140446 422.9, 471.93675220280886 422.9, 543 422.9 M416.8 422.9 C445.59431561335924 422.9, 474.3886312267184 422.9, 543 422.9 M543 422.9 C543 434.5568265965581, 543 446.21365319311616, 543 473.7 M543 422.9 C543 437.9458246323466, 543 452.99164926469325, 543 473.7 M543 473.7 C502.6357450209558 473.7, 462.2714900419116 473.7, 416.8 473.7 M543 473.7 C499.4306491102278 473.7, 455.86129822045564 473.7, 416.8 473.7 M416.8 473.7 C416.8 460.215661406219, 416.8 446.731322812438, 416.8 422.9 M416.8 473.7 C416.8 458.62439763098956, 416.8 443.5487952619791, 416.8 422.9" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polygon" data-step="32">
+</path>
+<g data-type="text" data-step="33">
+<text x="479.9" y="454.6" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-33)">Assistente</text>
+</g>
+<path d="M672.1 422.9 C708.9241694725491 422.9, 745.7483389450982 422.9, 840 422.9 M672.1 422.9 C734.295393076744 422.9, 796.4907861534879 422.9, 840 422.9 M840 422.9 C840 434.32555572904647, 840 445.7511114580929, 840 473.7 M840 422.9 C840 441.4396672197431, 840 459.97933443948625, 840 473.7 M840 473.7 C779.5049613951705 473.7, 719.0099227903411 473.7, 672.1 473.7 M840 473.7 C794.283920364771 473.7, 748.5678407295421 473.7, 672.1 473.7 M672.1 473.7 C672.1 458.1324738606065, 672.1 442.56494772121306, 672.1 422.9 M672.1 473.7 C672.1 460.1150733474642, 672.1 446.53014669492836, 672.1 422.9" stroke="#1F2A37" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" data-type="polygon" data-step="34">
+</path>
+<g data-type="text" data-step="35">
+<text x="756.1" y="454.6" fill="#1F2A37" font-family="'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif" font-size="13" font-weight="600" text-anchor="middle" clip-path="url(#dw1-clip-1-35)">Analista de RH</text>
+</g>
+</g>
+<g aria-hidden="true" class="dw-pencil" style="opacity: 0;">
+</g>
+</svg>

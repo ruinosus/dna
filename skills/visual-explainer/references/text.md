@@ -5,27 +5,26 @@ mistake). Save it as `<id>.chalk`. What each step draws, the palette and the rul
 `references/recipe.md`; this page is only how to write them.
 
 ```
-title Juntar moedas ↔ o cofrinho
-id coin-jar
-theme chalkboard
+title Treinamento ↔ as horas do ano
+id training-hours
 locale pt-BR
-param n "moedas por mês" 1..8 = 3
+param n "horas de treinamento por mês" 1..8 = 3
 
 # O gancho
-> A Ana guarda moedas todo mês.
+> A Ana faz treinamentos todo mês.
 person ana at 150,330 "Ana" mood=idea
-text "quer poupar" right-of ana gap 16 align=start
+text "quer se desenvolver" right-of ana gap 16 align=start
 
 # Desmontar
-> Cada mês, n moedas vão para o banco.
+> Cada mês, n horas de curso entram no histórico dela.
 row at 470,150 gap 14
-  repeat n: coin size 44
-bank banco at 740,450 "banco"
-ana -> banco "deposita"
+  repeat n: book size 44
+school academia at 740,450 "academia interna"
+ana -> academia "estuda"
 
 # A ideia
-pause ask "E em um ano, quanto junta?"
-counter at 470,270 "12*n" "{v:0} moedas num ano"
+pause ask "E em um ano, quantas horas?"
+counter at 470,270 "12*n" "{v:0} horas num ano"
 
 learning goal "…"
 learning question "…"

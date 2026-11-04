@@ -1,0 +1,35 @@
+title Demanda e capacidade ↔ a fila do RH
+id demand-capacity
+category Gestão
+locale pt-BR
+size 900x560
+param analistas "analistas no atendimento" 2..8 = 4
+var capacidade = "analistas * 12"
+var cresce = "capacidade < 50"
+
+# A conta
+> Cada analista atende uns 12 chamados por hora. Chegam 50 por hora na virada da folha.
+text "chegam 50 chamados por hora" at 40,60 size=32
+counter at 40,120 "capacidade" "{v:0} chamados por hora de capacidade"
+
+# A fila
+> Quando a capacidade fica abaixo da demanda, a fila cresce sem parar.
+axis 90,470 -> 840,470 domain 2..8 ticks=6 label="analistas"
+plot "x*12" domain 2..8 range 0..100 box 90,200,750,270
+line 90,335 -> 840,335 color=red dashed
+text "demanda: 50 por hora" at 600,325 size=20 color=red
+when cresce:
+  text "a fila cresce" at 120,250 size=26 color=red
+
+# A ideia
+pause ask "Quantos analistas param a fila de crescer?"
+text "5 analistas: 60 por hora de capacidade" at 450,530 size=24 anchor=middle
+
+learning goal "Ver que a fila depende da capacidade comparada com a demanda."
+learning question "Com 4 analistas e 50 chamados por hora, a fila para?"
+learning answer "Não: 4 × 12 = 48 por hora, abaixo de 50."
+learning caveat "Os números são ilustrativos; a demanda varia ao longo do dia."
+
+quiz "Com 4 analistas, a fila…"
+  * cresce -- 48 de capacidade não dá conta de 50
+  - some -- a capacidade ainda está abaixo da demanda

@@ -1,0 +1,128 @@
+{
+  "id": "sla-rh",
+  "title": "SLA do RH ↔ prometer só o que se cumpre",
+  "width": 900,
+  "height": 560,
+  "category": "Gestão",
+  "locale": "pt-BR",
+  "learning": {
+    "goal": "Separar a promessa (o prazo) de quem responde por ela (o dono).",
+    "question": "Um SLA sem dono é um SLA?",
+    "answer": "Não: sem dono, ninguém avisa quando o prazo não vai ser cumprido.",
+    "caveat": "O prazo certo depende do pedido; um único prazo para tudo engana."
+  },
+  "quiz": {
+    "question": "O que um SLA precisa ter?",
+    "options": [
+      {
+        "text": "um prazo e um dono",
+        "right": true,
+        "why": "sem um dos dois, não há promessa"
+      },
+      {
+        "text": "só um prazo",
+        "right": false,
+        "why": "sem dono, ninguém responde pelo atraso"
+      }
+    ]
+  },
+  "steps": [
+    {
+      "type": "card",
+      "at": [
+        300,
+        30
+      ],
+      "title": "A tese",
+      "lines": [
+        "todo pedido tem prazo e dono"
+      ],
+      "w": 300,
+      "h": 100,
+      "chapter": "A tese",
+      "say": "Todo pedido ao RH deveria ter um prazo prometido: um SLA."
+    },
+    {
+      "type": "card",
+      "at": [
+        60,
+        180
+      ],
+      "title": "Razão 1",
+      "lines": [
+        "quem pede planeja",
+        "férias, viagem, mudança"
+      ],
+      "w": 300,
+      "h": 130,
+      "chapter": "As razões",
+      "say": "Quem pede planeja a vida em cima da resposta. E sem prazo, ninguém sabe se o RH está indo bem."
+    },
+    {
+      "type": "card",
+      "at": [
+        540,
+        180
+      ],
+      "title": "Razão 2",
+      "lines": [
+        "sem prazo, ninguém mede",
+        "nem o RH, nem o gestor"
+      ],
+      "w": 300,
+      "h": 130
+    },
+    {
+      "type": "arrow",
+      "from": [
+        210,
+        320
+      ],
+      "to": [
+        400,
+        395
+      ]
+    },
+    {
+      "type": "arrow",
+      "from": [
+        690,
+        320
+      ],
+      "to": [
+        500,
+        395
+      ]
+    },
+    {
+      "type": "card",
+      "at": [
+        300,
+        400
+      ],
+      "title": "A conclusão",
+      "lines": [
+        "prazo + dono = SLA"
+      ],
+      "w": 300,
+      "h": 100,
+      "chapter": "A conclusão",
+      "say": "Então o SLA é uma promessa com prazo e com dono."
+    },
+    {
+      "type": "note",
+      "at": [
+        620,
+        470
+      ],
+      "text": "e a exceção?",
+      "point": [
+        600,
+        450
+      ],
+      "chapter": "A objeção",
+      "say": "«Nem todo caso cabe no prazo.» Verdade: o SLA diz o normal; a exceção tem dono e é avisada."
+    }
+  ],
+  "background": "dots"
+}
