@@ -78,6 +78,13 @@ else {
   ok(f.text === 'ninguém disse como o cliente se sente' && !f.line && f.faces === 0, 'the map with no «feels»: the lane says nobody said it, no line', JSON.stringify(f))
 }
 
+// --check --json: what was read, as one JSON document — what the mod's preview pane draws
+{
+  const j = spawnSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(skill, 'examples/gym-signup.blueprint.yaml'), '--check', '--json'], { encoding: 'utf8' })
+  let doc
+  try { doc = JSON.parse(j.stdout) } catch {}
+  ok(j.status === 0 && doc?.format === 'service-blueprint/read-v1' && Array.isArray(doc.blueprint?.moments) && Array.isArray(doc.looks), '--check --json: the blueprint as read, and what to look at, as one JSON document', j.stdout.slice(0, 200) + j.stderr)
+}
 rmSync(work, { recursive: true, force: true })
 checkNoOldName(ok, skill, 'front-of-house')
 

@@ -19,13 +19,13 @@ import { lessonOf, problemText, readBlueprint, reviewBlueprint, validateScene, w
 const here = dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
 const valued = new Set(['--lang', '--out'])
-const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--all', ...valued])
+const flags = new Set(['--check', '--json', '--html', '--xlsx', '--lesson', '--all', ...valued])
 const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
 }
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
-const usage = `usage: node build.mjs <id>.blueprint.yaml --check [--lang en|pt]
+const usage = `usage: node build.mjs <id>.blueprint.yaml --check [--json] [--lang en|pt]
        node build.mjs <id>.blueprint.yaml [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]`
 const lang = option('--lang') ?? 'en'
 const fail = (msg) => {
@@ -51,6 +51,11 @@ if (read.problems.length) {
 }
 const blueprint = read.blueprint
 const id = basename(file).replace(/(\.blueprint)?\.(ya?ml|json)$/, '')
+// --check --json: the blueprint as it was read and what to look at, as one JSON document (what the mod's preview draws)
+if (argv.includes('--check') && argv.includes('--json')) {
+  console.log(JSON.stringify({ format: 'service-blueprint/read-v1', blueprint, looks: reviewBlueprint(blueprint).map((l) => ({ en: l.en, pt: l.pt })) }))
+  process.exit(0)
+}
 console.log(T.ok(blueprint))
 const looks = reviewBlueprint(blueprint)
 if (looks.length) for (const l of looks) console.log(`! ${T.look}: ${l[lang]}`)

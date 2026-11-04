@@ -111,6 +111,13 @@ else {
   }
 }
 
+// --check --json: what was read, as one JSON document — what the mod's preview pane draws
+{
+  const j = spawnSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(skill, 'examples/feature-delivery.way.yaml'), '--check', '--json'], { encoding: 'utf8' })
+  let doc
+  try { doc = JSON.parse(j.stdout) } catch {}
+  ok(j.status === 0 && doc?.format === 'gates-and-handoffs/read-v1' && Array.isArray(doc.way?.stages) && Array.isArray(doc.looks), '--check --json: the way as read, and what to look at, as one JSON document', j.stdout.slice(0, 200) + j.stderr)
+}
 rmSync(work, { recursive: true, force: true })
 checkNoOldName(ok, skill, 'stage-door')
 

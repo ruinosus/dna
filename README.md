@@ -31,7 +31,9 @@ Claude picks the skill by what you ask. To call one by name: `/house-lights:back
 In Claude Code (2.1.287 or later) the plugin also carries a **mod**: every recipe Claude writes (`.way.yaml`,
 `.blueprint.yaml`, `.drill.yaml`, `.chalk`, a chalk-talk `.json`, a `.sim`) is checked first by its skill and refused
 with the messages when it breaks its format; in a repository that runs the names audit, a write with a name of your
-private list is refused (`/names` says what it watches); and `/sim` and `/sim-preview` run and show a `.sim`.
+private list is refused (`/names` says what it watches); a way of working or a service blueprint opens a preview pane
+(`/way-preview`, `/blueprint-preview`); `/cast <folder>` shows cast-list's comparison in a pane and a toast when an
+agent edited there changes it; and `/sim` and `/sim-preview` run and show a `.sim`.
 Elsewhere the skills work without it.
 
 <p align="center">

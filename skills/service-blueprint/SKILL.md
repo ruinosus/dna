@@ -4,7 +4,7 @@ description: Turns what a team knows about a customer journey — interviews, su
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing.
 metadata:
-  version: "1.12.0"
+  version: "1.13.0"
 ---
 
 # service-blueprint: what the customer lives, and who makes it happen behind
@@ -75,4 +75,6 @@ files, and what is still open.
 ## In Claude Code
 
 With the house-lights plugin, a mod checks every `.blueprint.yaml` you write or edit with this skill's own check: one that breaks
-the format is refused with the messages — fix them and write it again. Elsewhere, run the check yourself.
+the format is refused with the messages — fix them and write it again. One that passes opens a preview pane beside the
+chat (its moments, how the customer feels, on stage and behind); `/blueprint-preview <file>` shows another. Elsewhere,
+run the check yourself.

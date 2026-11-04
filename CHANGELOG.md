@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.13.0 — 2026-11-04
+
+The mod shows what was written, beside the chat.
+
+- **The recipes' preview.** A `.way.yaml` or `.blueprint.yaml` that passes the guard opens a pane: a way of working as
+  its stages in lanes, phase by phase, each gate under its stage with who approves on a line of its own; a service
+  blueprint as its moments — what the customer lives, how they feel (1 to 5), the pains, on stage, backstage and the
+  systems. An SVG in the desktop app, VS Code and the phone, text in the terminal, with what to look at and the EN/PT
+  switch. `/way-preview <file>` and `/blueprint-preview <file>` show another. Long names wrap instead of being cut.
+- **`/cast <agents-folder> [--lang pt]`.** cast-list's comparison (`--check`, nothing written) in a pane: the summary and
+  «to look at», a button per group. After it, an agent's `.mcs.yml` written or edited in that folder is compared again
+  (about 0.1 s) and a toast says what came to look at or went away. The edit is never refused.
+- **`--check --json`** in gates-and-handoffs and service-blueprint: the recipe as read and what to look at, as one JSON
+  document — what the preview draws, from the skill's own reading.
+- The mod's 20 tests run in `npm run check`.
+
 ## 1.12.0 — 2026-11-04
 
 The mod checks every recipe as Claude writes it, and keeps the names of your private list out of what is published.

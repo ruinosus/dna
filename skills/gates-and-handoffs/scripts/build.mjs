@@ -27,9 +27,9 @@ const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
 }
-const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--all', ...valued])
+const flags = new Set(['--check', '--json', '--html', '--xlsx', '--lesson', '--all', ...valued])
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
-const usage = `usage: node build.mjs <id>.way.yaml --check [--lang en|pt]
+const usage = `usage: node build.mjs <id>.way.yaml --check [--json] [--lang en|pt]
        node build.mjs <id>.way.yaml [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
        node build.mjs <id>.way.yaml --from <edited.xlsx> [--take <key,key…|all>]`
 const lang = option('--lang') ?? 'en'
@@ -82,6 +82,11 @@ if (read.fatal || messages.length) {
 const way = read.def
 const name = read.name || basename(file).replace(/(\.way)?\.(ya?ml|json)$/, '')
 const id = basename(file).replace(/(\.way)?\.(ya?ml|json)$/, '')
+// --check --json: the way as it was read and what to look at, as one JSON document (what the mod's preview draws)
+if (argv.includes('--check') && argv.includes('--json')) {
+  console.log(JSON.stringify({ format: 'gates-and-handoffs/read-v1', name, way, looks: reviewWay(way).map((l) => ({ en: l.en, pt: l.pt })) }))
+  process.exit(0)
+}
 console.log(T.ok(read.summary))
 const looks = reviewWay(way)
 if (looks.length) for (const l of looks) console.log(`! ${T.look}: ${l[lang]}`)
