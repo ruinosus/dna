@@ -3,7 +3,7 @@
 <p align="center"><b>Ask Claude to draw a pitch, an architecture, a decision, a number, what happened or a story. Get a hand-drawn board that draws itself, chapter by chapter, with a highlight at the end.</b></p>
 
 <p align="center">
-  <img src="https://ruinosus.github.io/dna/visual-pitch/thumbs/pitch-pharmacy-queue.png" alt="A hand-drawn pitch: a queue at a pharmacy on Monday morning, then ordering in the app and picking up in ten minutes, ending on «pilot: 5 stores, 3 months»" width="860">
+  <img src="https://ruinosus.github.io/dna/visual-pitch/thumbs/pitch-hr-self-service.png" alt="A hand-drawn pitch: the HR help desk queue at payroll close, then the question asked in Teams and answered from Workday, ending on «piloto: 2 áreas, 3 meses»" width="860">
 </p>
 
 <p align="center">

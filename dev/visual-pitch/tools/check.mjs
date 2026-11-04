@@ -76,7 +76,7 @@ for (const [what, file, says] of refused) {
   const { browser } = await import('../../../skills/visual-pitch/scripts/browser.mjs')
   if (!browser()) console.log('• no Chrome here: presenting and the PowerPoint were not checked')
   else {
-    const pitch = recipe('pitch.chalk', readFileSync(join(skill, 'examples/pitch-pharmacy-queue.chalk'), 'utf8'))
+    const pitch = recipe('pitch.chalk', readFileSync(join(skill, 'examples/pitch-hr-self-service.chalk'), 'utf8'))
     const r = run(pitch, ['--pptx', '--no-review'])
     const id = readFileSync(pitch, 'utf8').match(/^id\s+(\S+)/m)?.[1] ?? 'pitch'
     const html = readFileSync(join(dir, `${id}.html`), 'utf8')

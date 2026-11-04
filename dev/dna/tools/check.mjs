@@ -34,7 +34,7 @@ const ex = (s, f) => join(repo, 'npm/dna/skills', s, f)
 const work = mkdtempSync(join(tmpdir(), 'dna-check-'))
 const cases = [
   ['visual-explainer', [ex('visual-explainer', 'references/examples/juros.json'), join(work, 'visual-explainer', 'juros.html'), '--no-review']],
-  ['visual-pitch', [ex('visual-pitch', 'examples/pitch-pharmacy-queue.chalk'), join(work, 'visual-pitch', 'pitch.html'), '--no-review']],
+  ['visual-pitch', [ex('visual-pitch', 'examples/pitch-hr-self-service.chalk'), join(work, 'visual-pitch', 'pitch.html'), '--no-review']],
   ['incident-drill', [ex('incident-drill', 'examples/checkout.drill.yaml'), '--out', join(work, 'incident-drill')]],
   ['way-of-working', [ex('way-of-working', 'examples/scrum.way.yaml'), '--out', join(work, 'way-of-working')]],
   ['service-blueprint', [ex('service-blueprint', 'examples/employee-onboarding.blueprint.yaml'), '--out', join(work, 'service-blueprint')]],

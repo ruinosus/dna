@@ -1,0 +1,33 @@
+kind pitch
+title Autoatendimento de RH ↔ o RH que não vive de fila
+id pitch-autoatendimento-rh
+locale pt-BR
+size 900x620
+
+# A dor
+> Na virada da folha, o atendimento de RH recebe o dobro de chamados — e quase todos repetem as mesmas perguntas.
+text "2 dias para saber o saldo de férias" at 40,64 size=36
+row at 60,120 gap 10
+  repeat 6: person size 64
+text "a fila de chamados da virada da folha" at 60,250 size=24 color=#8C8578
+
+# Como é hoje
+> Quem tem um caso difícil espera igual a quem só quer ver o próprio holerite.
+desk rh at 620,240 "atendimento de RH"
+rh thinks "metade só pergunta o que já está no Workday" side=above width=250
+
+# A solução
+> Com o assistente, a pessoa pergunta no Teams e a resposta vem do Workday na hora; o RH fica com os casos difíceis.
+phone app at 160,470 "pergunta no Teams"
+server workday at 420,470 "Workday"
+app -> workday "saldo e holerite"
+
+# Por que agora
+> O Workday já tem os dados e a API: não é um sistema novo, é uma porta nova.
+document api at 640,470 "API do Workday"
+animate api pulse
+
+# O pedido
+> Pedimos três meses de piloto com duas áreas.
+highlight 240,580 -> 660,580 thickness=26
+text "piloto: 2 áreas, 3 meses" at 450,588 size=28 anchor=middle

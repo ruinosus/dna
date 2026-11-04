@@ -42,7 +42,7 @@ solution's pieces, each with where it stands.
 Elsewhere the skills work without it.
 
 <p align="center">
-  <img src="https://ruinosus.github.io/dna/visual-pitch/thumbs/pitch-pharmacy-queue.png" alt="A hand-drawn pitch ending on «pilot: 5 stores, 3 months»" width="400">
+  <img src="https://ruinosus.github.io/dna/visual-pitch/thumbs/pitch-hr-self-service.png" alt="A hand-drawn pitch ending on «piloto: 2 áreas, 3 meses»" width="400">
   <img src="https://ruinosus.github.io/dna/way-of-working/images/feature-delivery-map.png" alt="A way of working as a map: stages, gates and who approves them" width="400">
 </p>
 

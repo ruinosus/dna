@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url'
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 const SKILLS = [
   ['visual-explainer', 'images/visual-explainer-how.png', 'Teach an idea by drawing it', 'A hand-drawn lesson that appears stroke by stroke, chapter by chapter, with narration and values you can move.'],
-  ['visual-pitch', 'thumbs/pitch-pharmacy-queue.png', 'Present it on a napkin', 'A pitch, an architecture, a decision, data, a timeline or a story, drawn to be shown — it opens presenting, and becomes a PowerPoint.'],
+  ['visual-pitch', 'thumbs/pitch-hr-self-service.png', 'Present it on a napkin', 'A pitch, an architecture, a decision, data, a timeline or a story, drawn to be shown — it opens presenting, and becomes a PowerPoint.'],
   ['incident-drill', 'images/checkout-scene.png', 'Rehearse the incident', 'A runbook becomes a drill to play, with a clock and choices, and a debrief of what the runbook does not say.'],
   ['way-of-working', 'images/feature-delivery-map.png', 'Map how the team works', 'Stages, gates and who approves them, roles and outputs: one checkable file, a map, a workbook and a lesson.'],
   ['service-blueprint', 'images/employee-onboarding-map.png', 'Map what the customer lives', 'Each moment of a journey, how it feels, and who makes it happen on stage, backstage and in the systems.'],

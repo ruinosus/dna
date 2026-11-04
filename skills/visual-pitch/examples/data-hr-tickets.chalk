@@ -1,0 +1,26 @@
+kind data
+title Chamados de RH ↔ a pergunta que se repete
+id data-chamados-rh
+locale pt-BR
+source "relatório de chamados do atendimento de RH (exemplo ilustrativo)"
+size 900x600
+switch guia "com a resposta no autoatendimento" off
+var t = "42 - 30*guia"
+
+# O número
+> De cada cem chamados de RH, quarenta e dois são sobre férias e holerite.
+text "42 de cada 100 chamados são férias e holerite" at 40,64 size=36
+
+# De onde vem
+> A maioria chega pelo mesmo motivo: a pessoa não acha a resposta sozinha.
+box caixa at 140,300 "chamado"
+caixa thinks "onde vejo o meu saldo?" side=right width=200
+
+# O que mudou
+> Nas áreas que já têm o autoatendimento, a conta muda. Ligue o autoatendimento.
+bars box 460,140,380,240 values 42,t labels "sem autoatendimento","com autoatendimento" format="{v:0}%"
+
+# O que fazer
+> Saldo de férias e holerite no autoatendimento, para todas as áreas.
+highlight 120,540 -> 780,540 thickness=26
+text "férias e holerite no autoatendimento" at 450,548 size=28 anchor=middle
