@@ -1,14 +1,15 @@
 // visual-explainer/mount: every [data-visual-explainer] block on the page becomes a lesson — the ones there now and the ones that
 // appear later (a Markdown preview redrawn while you type, a docs site moving between pages). A block holds its text
 // (the text syntax, JSON, or a Mermaid diagram) in a .visual-explainer-source element, which stays readable until the lesson
-// replaces it. visual-explainer/markdown writes these blocks from ```visual-explainer and ```chalk-mermaid fences.
+// replaces it. visual-explainer/markdown writes these blocks from ```visual-explainer and ```visual-explainer-mermaid fences (and ```chalk-talk, ```chalk-mermaid, from before).
 // Spec 2026-10-30 (VS Code e sites de documentação).
 import type { Scene } from '@engine/recipe'
 import type { Theme } from '@engine/renderer'
 import { ChalkTextError, ensureStyles, mountLesson, readRecipe } from './embed.js'
 import type { Mounted } from './lesson'
 
-const BLOCK = '[data-visual-explainer]'
+// [data-chalk-talk] is the block of before DNA (a page rendered with the chalk-talk package): it still mounts
+const BLOCK = '[data-visual-explainer], [data-chalk-talk]'
 const mounted = new Map<HTMLElement, Mounted | null>()
 
 /** The page's light or dark, as VS Code, Docusaurus (data-theme) or the system say. */
@@ -22,7 +23,7 @@ function theme(): Theme {
 }
 
 async function read(block: HTMLElement, source: string): Promise<Scene> {
-  if (block.dataset.visualExplainer !== 'mermaid') return readRecipe(source)
+  if ((block.dataset.visualExplainer ?? block.dataset.chalkTalk) !== 'mermaid') return readRecipe(source)
   const { readMermaid } = await import('./embed-mermaid.js')
   return readMermaid(source, { locale: navigator.language.toLowerCase().startsWith('pt') ? 'pt-BR' : 'en-US' })
 }
@@ -52,7 +53,7 @@ function expand(scene: Scene) {
 async function mountBlock(block: HTMLElement) {
   mounted.set(block, null)
   ensureStyles()
-  const holder = block.querySelector<HTMLElement>('.visual-explainer-source')
+  const holder = block.querySelector<HTMLElement>('.visual-explainer-source, .chalk-talk-source')
   const source = holder?.textContent ?? ''
   const root = document.createElement('div')
   try {

@@ -141,8 +141,8 @@ flowchart LR
 
 ### In your docs site
 
-On a docs site the lesson plays inside the page — ` ```visual-explainer ` for the text, ` ```chalk-mermaid ` for a Mermaid
-diagram (a plain ` ```mermaid ` is left to the site). The `visual-explainer` npm package has a remark and a markdown-it plugin,
+On a docs site the lesson plays inside the page — ` ```visual-explainer ` for the text, ` ```visual-explainer-mermaid ` for a Mermaid
+diagram (a plain ` ```mermaid ` is left to the site). The `@ruinosus/visual-explainer` npm package has a remark and a markdown-it plugin,
 and the script that mounts the lessons. With Docusaurus:
 
 ```js

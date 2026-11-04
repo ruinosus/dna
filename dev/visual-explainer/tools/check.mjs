@@ -121,7 +121,7 @@ const pre = document.createElement('pre'); pre.id = 'chalk-embed'; pre.textConte
   const fence = (info) => md.renderer.rules.fence([{ info, content: 'A --> B' }], 0, {}, {}, {})
   const tree = { type: 'root', children: [{ type: 'code', lang: 'chalk-mermaid', value: 'flowchart LR\n A --> B' }, { type: 'code', lang: 'js', value: 'x' }] }
   remarkVisualExplainer()(tree)
-  const ok = fenceKind('visual-explainer') === 'text' && fenceKind('chalk-mermaid {x}') === 'mermaid' && fenceKind('mermaid') === undefined &&
+  const ok = fenceKind('visual-explainer') === 'text' && fenceKind('visual-explainer-mermaid {x}') === 'mermaid' && fenceKind('chalk-talk') === 'text' && fenceKind('chalk-mermaid {x}') === 'mermaid' && fenceKind('mermaid') === undefined &&
     html.includes('data-visual-explainer="text"') && html.includes('&lt;b&gt;') && !html.includes('<b>') &&
     fence('chalk-mermaid').includes('data-visual-explainer="mermaid"') && fence('js') === 'PLAIN' &&
     tree.children[0].data?.hProperties?.dataVisualExplainer === 'mermaid' && tree.children[0].data?.hChildren?.[0]?.children?.[0]?.value === 'flowchart LR\n A --> B' && !tree.children[1].data

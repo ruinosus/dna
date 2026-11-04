@@ -1,9 +1,10 @@
-// visual-explainer/markdown: ```visual-explainer (the text syntax or JSON) and ```chalk-mermaid (a Mermaid diagram) fences become
+// visual-explainer/markdown: ```visual-explainer (the text syntax or JSON) and ```visual-explainer-mermaid (a Mermaid diagram) fences become
 // <div data-visual-explainer> blocks that visual-explainer/mount turns into lessons. The text goes inside as it is, readable until
 // the lesson replaces it; reading it happens in the browser. Plain Node, no dependency.
 // Spec 2026-10-30 (VS Code e sites de documentação).
 
-const FENCES: Record<string, 'text' | 'mermaid'> = { 'visual-explainer': 'text', 'chalk-mermaid': 'mermaid' }
+// ```chalk-talk and ```chalk-mermaid are the fences of before DNA: documents written with them still draw.
+const FENCES: Record<string, 'text' | 'mermaid'> = { 'visual-explainer': 'text', 'visual-explainer-mermaid': 'mermaid', 'chalk-talk': 'text', 'chalk-mermaid': 'mermaid' }
 
 /** The kind of block a fence's info string asks for, or undefined for any other fence. */
 export function fenceKind(info: string | null | undefined): 'text' | 'mermaid' | undefined {
