@@ -1,0 +1,8 @@
+mcs.metadata:
+  componentName: Guia das Unidades
+  description: "Endereços, horários, serviços, salas e regras de acesso das unidades da empresa."
+kind: KnowledgeSourceConfiguration
+source:
+  kind: SharePointSearchSource
+  triggerCondition: =Or(IsBlank(Global.CategoriaSolicitacao), Global.CategoriaSolicitacao = "Facilities")
+  site: https://empresa.sharepoint.com/sites/Facilities/Shared%20Documents/Unidades

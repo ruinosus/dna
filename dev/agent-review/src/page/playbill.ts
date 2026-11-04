@@ -42,7 +42,7 @@ document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en'
 document.title = `${u.title} · ${pb.name ?? data.id}`
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 const app = document.getElementById('app')!
-// the part of the names every one of the cast shares («Bodega Azul - »), left out where they stand side by side
+// the part of the names every one of the cast shares («RH - »), left out where they stand side by side
 const all = [...pb.org.orchestrators, ...pb.org.types.flatMap((t) => t.people)].map((p) => p.name)
 const short = shortNames(all)
 const situationOf = (id: string) => [...pb.org.orchestrators, ...pb.org.types.flatMap((t) => t.people)].find((p) => p.id === id)?.situation ?? []

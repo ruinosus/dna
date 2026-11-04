@@ -1,0 +1,24 @@
+mcs.metadata:
+  componentName: Agente Admissão
+  description: Agente conectado RH - Admissão.
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: CategoriaSolicitacao
+    value: =Global.CategoriaSolicitacao
+
+modelDisplayName: RH - Admissão
+modelDescription: "Admissão."
+action:
+  kind: InvokeConnectedAgentTaskAction
+  inputType:
+    properties:
+      CategoriaSolicitacao:
+        displayName: CategoriaSolicitacao
+        description: Categoria da solicitação definida pelo orquestrador.
+        isRequired: true
+        type: String
+
+  botSchemaName: cr7b2_rhAdmissao
+  historyType:
+    kind: ConversationHistory

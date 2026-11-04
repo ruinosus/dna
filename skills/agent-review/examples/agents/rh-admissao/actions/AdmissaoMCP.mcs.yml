@@ -1,0 +1,20 @@
+mcs.metadata:
+  componentName: Servidor MCP de Admissão
+  description: Servidor MCP interno com o checklist de admissão e do primeiro dia.
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: canal
+    value: =System.Activity.ChannelId
+
+modelDisplayName: Servidor MCP de Admissão
+modelDescription: Servidor MCP que lista as etapas da admissão e o checklist do primeiro dia de um colaborador.
+action:
+  kind: InvokeExternalAgentTaskAction
+  connectionReference: cr7b2_rhAdmissao.shared_rhadmissaomcp.zsi3cu
+  connectionProperties:
+    mode: Maker
+
+  operationDetails:
+    kind: ModelContextProtocolMetadata
+    operationId: InvokeMCP

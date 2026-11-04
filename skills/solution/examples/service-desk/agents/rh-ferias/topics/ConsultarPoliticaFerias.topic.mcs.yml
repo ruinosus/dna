@@ -1,0 +1,56 @@
+mcs.metadata:
+  componentName: Consultar Política de Férias
+  description: "Responde dúvidas sobre férias e ausências com base na política publicada no SharePoint."
+kind: AdaptiveDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: PerguntaColaborador
+    description: "A pergunta do colaborador sobre férias, folgas, licenças ou o saldo."
+    shouldPromptUser: true
+
+modelDescription: "Responde perguntas sobre saldo de férias, períodos aquisitivos, como pedir férias e licenças e o prazo de aprovação do gestor."
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    - kind: CreateSearchQuery
+      id: createSearchQuery_UGdqz4
+      userInput: =Topic.PerguntaColaborador
+      result: Topic.SearchQuery
+
+    - kind: SearchAndSummarizeContent
+      id: searchContent_eeKb0X
+      autoSend: false
+      variable: Topic.SearchResult
+      userInput: =Topic.SearchQuery.SearchQuery
+      fileSearchDataSource:
+        searchFilesMode:
+          kind: DoNotSearchFiles
+
+      knowledgeSources:
+        kind: SearchSpecificKnowledgeSources
+        knowledgeSources:
+          - cr7b2_rhFerias.knowledge.PoliticaFeriasAusencias
+
+      applyModelKnowledgeSetting: false
+      responseCaptureType: FullResponse
+
+    - kind: SetVariable
+      id: setVariable_0EUmtv
+      variable: Topic.Resposta
+      value: =Topic.SearchResult.Text.Content
+
+inputType:
+  properties:
+    PerguntaColaborador:
+      displayName: PerguntaColaborador
+      description: "A pergunta do colaborador sobre férias, folgas, licenças ou o saldo."
+      type: String
+
+outputType:
+  properties:
+    Resposta:
+      displayName: Resposta
+      description: Resposta fundamentada na base de conhecimento do agente.
+      type: String

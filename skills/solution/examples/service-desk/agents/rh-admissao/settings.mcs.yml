@@ -1,0 +1,13 @@
+displayName: RH - Admissão
+schemaName: cr7b2_rhAdmissao
+accessControlPolicy: ChatbotReaders
+authenticationMode: None
+configuration:
+  isAgentConnectable: true
+  settings:
+    GenerativeActionsEnabled: true
+
+  recognizer:
+    kind: GenerativeAIRecognizer
+
+language: 1046

@@ -1,5 +1,5 @@
 # A solution accelerator: a customer service desk, seen by every skill. The store and its agents are fictional
-# ("Bodega Azul"); the agents were generated from Microsoft's skills-for-copilot-studio samples (MIT, agents/NOTICE.md).
+# ("RH"); the agents were generated from Microsoft's skills-for-copilot-studio samples (MIT, agents/NOTICE.md).
 # The simulation, the blueprint and the drill are lenses of the way: their numbers and lines marked «# bet:» are made
 # up — replace them with your own.
 apiVersion: github.com/ruinosus/dna/v1

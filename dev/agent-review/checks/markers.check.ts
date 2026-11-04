@@ -18,32 +18,32 @@ const MARKERS: Marker[] = [
 ]
 const { facts, values } = markersOf(agents, MARKERS)
 const has = (id: string, key: string) => key in facts[id]
-const SPECIALISTS = ['bodega-pedidos', 'bodega-devolucoes', 'bodega-frete', 'bodega-cupons', 'bodega-loja-fisica']
+const SPECIALISTS = ['rh-ferias', 'rh-beneficios', 'rh-folha', 'rh-admissao', 'rh-facilities']
 
-ok(['bodega-pedidos', 'bodega-devolucoes', 'bodega-loja-fisica'].every((a) => has(a, 'text:size=3 bullets')) && ['bodega-cupons', 'bodega-loja-fisica'].every((a) => has(a, 'text:size=5 frases')), 'the answer size, with its value: 3 bullets in three, 5 frases in two', Object.fromEntries(SPECIALISTS.map((a) => [a, Object.keys(facts[a])])))
-ok(!Object.keys(facts['bodega-frete']).some((k) => k.startsWith('text:size')), 'frete sets no size')
-ok(values['bodega-loja-fisica'].size.join() === '3 bullets,5 frases', 'loja-fisica sets it twice', values['bodega-loja-fisica'])
-ok([...SPECIALISTS.filter((a) => a !== 'bodega-loja-fisica'), 'bodega-orquestrador'].every((a) => has(a, 'text:no-emoji')) && !has('bodega-loja-fisica', 'text:no-emoji'), '«no emojis» everywhere but loja-fisica')
-ok(has('bodega-devolucoes', 'text:knowledge-only') && SPECIALISTS.filter((a) => a !== 'bodega-devolucoes').every((a) => !has(a, 'text:knowledge-only')), '«only the knowledge» only in devolucoes')
-const at = facts['bodega-loja-fisica']['text:size=5 frases'][0]
+ok(['rh-ferias', 'rh-beneficios', 'rh-facilities'].every((a) => has(a, 'text:size=3 bullets')) && ['rh-admissao', 'rh-facilities'].every((a) => has(a, 'text:size=5 frases')), 'the answer size, with its value: 3 bullets in three, 5 frases in two', Object.fromEntries(SPECIALISTS.map((a) => [a, Object.keys(facts[a])])))
+ok(!Object.keys(facts['rh-folha']).some((k) => k.startsWith('text:size')), 'folha sets no size')
+ok(values['rh-facilities'].size.join() === '3 bullets,5 frases', 'facilities sets it twice', values['rh-facilities'])
+ok([...SPECIALISTS.filter((a) => a !== 'rh-facilities'), 'rh-orquestrador'].every((a) => has(a, 'text:no-emoji')) && !has('rh-facilities', 'text:no-emoji'), '«no emojis» everywhere but facilities')
+ok(has('rh-beneficios', 'text:knowledge-only') && SPECIALISTS.filter((a) => a !== 'rh-beneficios').every((a) => !has(a, 'text:knowledge-only')), '«only the knowledge» only in beneficios')
+const at = facts['rh-facilities']['text:size=5 frases'][0]
 ok(at.file === 'agent.mcs.yml' && (at.line ?? 0) > 20, 'a marker says the line it was found on', at)
 
 // built in: the domains of links, an e-mail
-ok(has('bodega-cupons', 'text:link-domain:ajuda.bodega-azul.example') && has('bodega-loja-fisica', 'text:link-domain:ajuda.bodega-azul.example') && !has('bodega-pedidos', 'text:link-domain:ajuda.bodega-azul.example'), 'the domain of a link in the instructions, with no marker in the profile')
+ok(has('rh-admissao', 'text:link-domain:portal.empresa.example') && has('rh-facilities', 'text:link-domain:portal.empresa.example') && !has('rh-ferias', 'text:link-domain:portal.empresa.example'), 'the domain of a link in the instructions, with no marker in the profile')
 const mail = markersOf([extractAgent('m', [{ path: 'agent.mcs.yml', text: 'kind: GptComponentMetadata\ninstructions: Escreva para atendimento@loja.example se precisar.\n' }])], []).facts.m
 ok('text:email' in mail && !Object.keys(mail).some((k) => k.startsWith('text:link-domain')), 'an e-mail is told, and is not a link')
 
 // «in»: the descriptions are not the instructions
-const desc = markersOf(agents, [{ id: 'erp', name: 'ERP', in: 'descriptions', pattern: 'erp' }, { id: 'erp-i', name: 'ERP', in: 'instructions', pattern: 'erp' }]).facts
-ok('text:erp' in desc['bodega-pedidos'] && !('text:erp-i' in desc['bodega-pedidos']), '«in: descriptions» looks only at the descriptions')
+const desc = markersOf(agents, [{ id: 'workday', name: 'Workday', in: 'descriptions', pattern: 'workday' }, { id: 'workday-i', name: 'Workday', in: 'instructions', pattern: 'workday' }]).facts
+ok('text:workday' in desc['rh-ferias'] && !('text:workday-i' in desc['rh-ferias']), '«in: descriptions» looks only at the descriptions')
 
 // the findings
-const roles = Object.fromEntries(agents.map((a) => [a.id, a.id === 'bodega-orquestrador' ? 'orchestrator' : 'specialist'])) as Record<string, 'orchestrator' | 'specialist'>
+const roles = Object.fromEntries(agents.map((a) => [a.id, a.id === 'rh-orquestrador' ? 'orchestrator' : 'specialist'])) as Record<string, 'orchestrator' | 'specialist'>
 const found = markerFindings(values, MARKERS, roles)
 const differ = found.find((x) => x.kind === 'values' && x.marker.id === 'size')
 ok(differ?.kind === 'values' && differ.role === 'specialist' && differ.byValue['3 bullets'].length === 3 && differ.byValue['5 frases'].length === 2, '4 specialists set the size in 2 ways', found)
 const twice = found.filter((x) => x.kind === 'twice')
-ok(twice.length === 1 && twice[0].kind === 'twice' && twice[0].agent === 'bodega-loja-fisica' && twice[0].values.join() === '3 bullets,5 frases', 'loja-fisica sets it twice: which one holds?', twice)
+ok(twice.length === 1 && twice[0].kind === 'twice' && twice[0].agent === 'rh-facilities' && twice[0].values.join() === '3 bullets,5 frases', 'facilities sets it twice: which one holds?', twice)
 ok(!found.some((x) => x.marker.id === 'no-emoji'), 'a marker with no value has no «different ways»')
 
 // a long text is cut, not run forever

@@ -1,0 +1,56 @@
+mcs.metadata:
+  componentName: Consultar Calendário da Folha
+  description: "Responde dúvidas sobre a folha de pagamento com base no calendário publicado no SharePoint."
+kind: AdaptiveDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: PerguntaColaborador
+    description: "A pergunta do colaborador sobre holerite, descontos ou data de pagamento."
+    shouldPromptUser: true
+
+modelDescription: "Responde perguntas sobre o holerite, os descontos, o adiantamento e as datas de pagamento."
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    - kind: CreateSearchQuery
+      id: createSearchQuery_w48SSg
+      userInput: =Topic.PerguntaColaborador
+      result: Topic.SearchQuery
+
+    - kind: SearchAndSummarizeContent
+      id: searchContent_Li6Zd2
+      autoSend: false
+      variable: Topic.SearchResult
+      userInput: =Topic.SearchQuery.SearchQuery
+      fileSearchDataSource:
+        searchFilesMode:
+          kind: DoNotSearchFiles
+
+      knowledgeSources:
+        kind: SearchSpecificKnowledgeSources
+        knowledgeSources:
+          - cr7b2_rhFolha.knowledge.CalendarioRegrasFolha
+
+      applyModelKnowledgeSetting: false
+      responseCaptureType: FullResponse
+
+    - kind: SetVariable
+      id: setVariable_DSOy9A
+      variable: Topic.Resposta
+      value: =Topic.SearchResult.Text.Content
+
+inputType:
+  properties:
+    PerguntaColaborador:
+      displayName: PerguntaColaborador
+      description: "A pergunta do colaborador sobre holerite, descontos ou data de pagamento."
+      type: String
+
+outputType:
+  properties:
+    Resposta:
+      displayName: Resposta
+      description: Resposta fundamentada na base de conhecimento do agente.
+      type: String

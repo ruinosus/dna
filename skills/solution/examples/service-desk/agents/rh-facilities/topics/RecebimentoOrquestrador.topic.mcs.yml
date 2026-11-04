@@ -1,0 +1,16 @@
+mcs.metadata:
+  componentName: Recebimento do Orquestrador
+  description: Ponto de entrada quando o agente é chamado pelo orquestrador do RH como agente conectado.
+kind: AdaptiveDialog
+modelDescription: Inicializa o agente quando ele é chamado pelo orquestrador do RH e recebe a categoria da solicitação.
+beginDialog:
+  kind: OnRedirect
+  id: main
+  actions:
+    - kind: SetVariable
+      id: setVariable_qfPOHb
+      variable: Global.CategoriaSolicitacao
+      value: =System.Activity.Value.CategoriaSolicitacao
+
+inputType: {}
+outputType: {}

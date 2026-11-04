@@ -1,7 +1,7 @@
 Agente;KPI;Dono
-Bodega Azul - Pedidos;pedido localizado em até 2 trocas de mensagem;Squad Pedidos
-Bodega Azul - Devoluções;troca aberta sem atendente em 80% dos casos;Squad Pós-venda
-Bodega Azul - Frete;cotação em menos de 5 s;Squad Logística
-Bodega Azul - Cupons;cupom validado na primeira tentativa;Squad Promoções
-Bodega Azul - Loja Física;;Squad Lojas
-Sobre a Bodega Azul;respostas gerais sem encaminhar;Squad Atendimento
+RH - Férias;saldo informado em até 2 trocas de mensagem;Squad Férias
+RH - Benefícios;inclusão aberta sem atendente em 80% dos casos;Squad Benefícios
+RH - Folha;resposta sobre o holerite em menos de 5 s;Squad Folha
+RH - Admissão;documentos pendentes listados na primeira tentativa;Squad Admissão
+RH - Facilities;;Squad Facilities
+Sobre o RH;respostas gerais sem encaminhar;Squad Atendimento RH

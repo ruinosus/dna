@@ -87,7 +87,7 @@ for (const a of accs) {
   ok(l.status === 0 && accs.every((a) => l.stdout.includes(a)), '--list shows the accelerators')
   const dest = join(work, 'mine')
   const n = run('--new', 'service-desk', dest)
-  ok(n.status === 0 && existsSync(join(dest, 'service-desk.solution.yaml')) && existsSync(join(dest, 'agents/bodega-frete/agent.mcs.yml')), '--new copies an accelerator, pieces and agents', n.stdout + n.stderr)
+  ok(n.status === 0 && existsSync(join(dest, 'service-desk.solution.yaml')) && existsSync(join(dest, 'agents/rh-folha/agent.mcs.yml')), '--new copies an accelerator, pieces and agents', n.stdout + n.stderr)
   ok(run('--new', 'service-desk', dest).status !== 0, '--new refuses a folder that is not empty')
   ok(run('--new', 'nowhere', join(work, 'x')).status !== 0, '--new refuses an accelerator that is not there')
 }

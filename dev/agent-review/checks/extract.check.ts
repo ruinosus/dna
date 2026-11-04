@@ -12,7 +12,7 @@ const skill = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills/
 const kinds = knownKinds(JSON.parse(readFileSync(join(skill, 'vendor/microsoft/reference/bot.schema.yaml-authoring.json'), 'utf8')))
 const found = agentsIn(join(skill, 'examples/agents'))
 const agents = Object.fromEntries(found.map((a) => [a.id, extractAgent(a.id, a.files, kinds)])) as Record<string, AgentFacts>
-const SPECIALISTS = ['bodega-pedidos', 'bodega-devolucoes', 'bodega-frete', 'bodega-cupons', 'bodega-loja-fisica']
+const SPECIALISTS = ['rh-ferias', 'rh-beneficios', 'rh-folha', 'rh-admissao', 'rh-facilities']
 const has = (id: string, key: string) => key in agents[id].facts
 const keys = (id: string, prefix: string) => Object.keys(agents[id].facts).filter((k) => k.startsWith(prefix)).sort()
 /** Every one of `ids` has every key of `list`. */
@@ -21,15 +21,15 @@ const all = (ids: string[], list: string[], what: string) => {
   ok(!missing.length, what, missing.join(', '))
 }
 
-ok(found.map((a) => a.id).sort().join() === ['bodega-orquestrador', ...SPECIALISTS].sort().join(), 'six agents found (the child agent inside the orchestrator is not a seventh)', found.map((a) => a.id))
+ok(found.map((a) => a.id).sort().join() === ['rh-orquestrador', ...SPECIALISTS].sort().join(), 'six agents found (the child agent inside the orchestrator is not a seventh)', found.map((a) => a.id))
 ok(Object.values(agents).every((a) => !a.unknown.length), 'nothing in the examples is left not understood', Object.values(agents).flatMap((a) => a.unknown))
-ok(agents['bodega-pedidos'].schemaName === 'cr7b2_bodegaPedidos' && agents['bodega-pedidos'].displayName === 'Bodega Azul - Pedidos', 'names from settings.mcs.yml, known by its file name (it has no kind)')
+ok(agents['rh-ferias'].schemaName === 'cr7b2_rhFerias' && agents['rh-ferias'].displayName === 'RH - Férias', 'names from settings.mcs.yml, known by its file name (it has no kind)')
 
 // the orchestrator
-const o = 'bodega-orquestrador'
-ok(keys(o, 'calls:cr7b2').join() === ['cr7b2_bodegaCupons', 'cr7b2_bodegaDevolucoes', 'cr7b2_bodegaFidelidade', 'cr7b2_bodegaFrete', 'cr7b2_bodegaLojaFisica', 'cr7b2_bodegaPedidos'].map((s) => `calls:${s}`).join(), 'the orchestrator calls the five connected agents, and one not in the folder', keys(o, 'calls:'))
-ok(has(o, 'child:SobreBodegaAzul') && has(o, 'var:CategoriaSolicitacao') && has(o, 'ms:orchestrator-variables'), 'the orchestrator: its child agent, its global variable, the orchestrator-variables pattern')
-ok(!has(o, 'trigger:OnToolSelected') && agents[o].children[0]?.name === 'SobreBodegaAzul' && 'trigger:OnToolSelected' in agents[o].children[0].facts, "the child's OnToolSelected is the child's, not the orchestrator's")
+const o = 'rh-orquestrador'
+ok(keys(o, 'calls:cr7b2').join() === ['cr7b2_rhAdmissao', 'cr7b2_rhBeneficios', 'cr7b2_rhFacilities', 'cr7b2_rhFerias', 'cr7b2_rhFolha', 'cr7b2_rhMobilidade'].map((s) => `calls:${s}`).join(), 'the orchestrator calls the five connected agents, and one not in the folder', keys(o, 'calls:'))
+ok(has(o, 'child:SobreRH') && has(o, 'var:CategoriaSolicitacao') && has(o, 'ms:orchestrator-variables'), 'the orchestrator: its child agent, its global variable, the orchestrator-variables pattern')
+ok(!has(o, 'trigger:OnToolSelected') && agents[o].children[0]?.name === 'SobreRH' && 'trigger:OnToolSelected' in agents[o].children[0].facts, "the child's OnToolSelected is the child's, not the orchestrator's")
 ok(!keys(o, 'connector:').length && !keys(o, 'knowledge:').length && !keys(o, 'connref:').length, 'the orchestrator has no connector, knowledge or connection reference')
 ok(has(o, 'model:GPT5Chat'), 'the model hint of agent.mcs.yml')
 
@@ -39,35 +39,35 @@ all(SPECIALISTS, ['connector:shared_office365', 'operation:shared_office365/Send
 all(SPECIALISTS, ['knowledge:SharePointSearchSource', 'knowledge:count=1', 'node:SearchAndSummarizeContent'], 'every specialist: one SharePoint knowledge source and generative answers')
 all(SPECIALISTS, ['var:CategoriaSolicitacao', 'var-in:CategoriaSolicitacao', 'setting:connectable'], 'every specialist receives the category and can be connected')
 all([o, ...SPECIALISTS], ['setting:generative=on', 'auth:None', 'instructions:present'], 'every agent: generative actions on, no sign-in, instructions')
-all(SPECIALISTS.filter((s) => s !== 'bodega-frete'), ['reaches:OnEscalate'], 'the fallback reaches escalation: the called topic is known by its trigger')
+all(SPECIALISTS.filter((s) => s !== 'rh-folha'), ['reaches:OnEscalate'], 'the fallback reaches escalation: the called topic is known by its trigger')
 ok(!Object.values(agents).some((a) => Object.keys(a.facts).some((k) => k.startsWith('calls:topic:'))), 'no topic call left unresolved in the examples')
-ok(agents['bodega-cupons'].names.shared_office365 === 'Office 365 Outlook' && agents['bodega-cupons'].names.shared_bodegapromocoesmcp === 'Bodega Azul Promocoes MCP', 'the readable names of the connectors, from connectionreferences')
+ok(agents['rh-admissao'].names.shared_office365 === 'Office 365 Outlook' && agents['rh-admissao'].names.shared_rhadmissaomcp === 'RH Admissao MCP', 'the readable names of the connectors, from connectionreferences')
 
 // what each one does differently, on purpose
-ok(!has('bodega-frete', 'trigger:OnEscalate') && SPECIALISTS.filter((s) => s !== 'bodega-frete').every((s) => has(s, 'trigger:OnEscalate')), 'only bodega-frete does not escalate')
-ok(!has('bodega-frete', 'reaches:OnEscalate'), "bodega-frete's fallback does not reach escalation")
-ok(!has('bodega-loja-fisica', 'node:LogCustomTelemetryEvent') && [o, ...SPECIALISTS].filter((s) => s !== 'bodega-loja-fisica').every((s) => has(s, 'node:LogCustomTelemetryEvent')), 'only bodega-loja-fisica logs no telemetry')
-ok(has('bodega-loja-fisica', 'yaml-only:triggerCondition') && SPECIALISTS.filter((s) => s !== 'bodega-loja-fisica').every((s) => !has(s, 'yaml-only:triggerCondition')), 'only bodega-loja-fisica has a YAML-only triggerCondition')
-const c = 'bodega-cupons'
-ok(has(c, 'connector:shared_sharepointonline') && has(c, 'operation:shared_sharepointonline/GetItems') && has(c, 'mcp:shared_bodegapromocoesmcp'), 'bodega-cupons: SharePoint items and the MCP server')
-ok(keys(c, 'connref:').length === 3, 'bodega-cupons: three connection references', keys(c, 'connref:'))
+ok(!has('rh-folha', 'trigger:OnEscalate') && SPECIALISTS.filter((s) => s !== 'rh-folha').every((s) => has(s, 'trigger:OnEscalate')), 'only rh-folha does not escalate')
+ok(!has('rh-folha', 'reaches:OnEscalate'), "rh-folha's fallback does not reach escalation")
+ok(!has('rh-facilities', 'node:LogCustomTelemetryEvent') && [o, ...SPECIALISTS].filter((s) => s !== 'rh-facilities').every((s) => has(s, 'node:LogCustomTelemetryEvent')), 'only rh-facilities logs no telemetry')
+ok(has('rh-facilities', 'yaml-only:triggerCondition') && SPECIALISTS.filter((s) => s !== 'rh-facilities').every((s) => !has(s, 'yaml-only:triggerCondition')), 'only rh-facilities has a YAML-only triggerCondition')
+const c = 'rh-admissao'
+ok(has(c, 'connector:shared_sharepointonline') && has(c, 'operation:shared_sharepointonline/GetItems') && has(c, 'mcp:shared_rhadmissaomcp'), 'rh-admissao: SharePoint items and the MCP server')
+ok(keys(c, 'connref:').length === 3, 'rh-admissao: three connection references', keys(c, 'connref:'))
 ok(!has(c, 'ms:channel-aware-behavior'), 'a tool input that reads the channel is not the channel-aware pattern')
 
 // wave 1: the text each agent carries, and the settings that go with it
 const texts = (id: string) => agents[id].texts
-ok(texts('bodega-loja-fisica').some((t) => t.source === 'instructions' && t.file === 'agent.mcs.yml' && t.line === 6 && t.text.startsWith('Você é o especialista em loja física')), 'the instructions, with the line their text starts on', texts('bodega-loja-fisica').map((t) => [t.source, t.file, t.line]))
-ok(texts('bodega-pedidos').some((t) => t.source === 'descriptions' && t.file === 'topics/ConsultarPoliticasPedidos.topic.mcs.yml'), "a topic's description for the model is a text too")
-ok(texts('bodega-pedidos').some((t) => t.source === 'descriptions' && t.file === 'actions/AbrirChamadoERP.mcs.yml'), "an action's description too")
-ok(!texts('bodega-pedidos').some((t) => t.file.includes(' Copy')), 'a copied topic leaves its text out', texts('bodega-pedidos').map((t) => t.file))
-ok(!texts('bodega-orquestrador').some((t) => t.file.startsWith('agents/')), "the child agent's instructions are the child's, not compared")
-ok(has('bodega-devolucoes', 'setting:model-knowledge=on') && !Object.keys(agents['bodega-pedidos'].facts).some((k) => k.startsWith('setting:model-knowledge')), "the model's general knowledge, only where the file says it")
-ok(agents['bodega-pedidos'].names['7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f'] === 'Abrir chamado no ERP' && has('bodega-cupons', 'flow:7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f'), 'a flow, named by the action that calls it')
+ok(texts('rh-facilities').some((t) => t.source === 'instructions' && t.file === 'agent.mcs.yml' && t.line === 6 && t.text.startsWith('Você é o especialista em facilities')), 'the instructions, with the line their text starts on', texts('rh-facilities').map((t) => [t.source, t.file, t.line]))
+ok(texts('rh-ferias').some((t) => t.source === 'descriptions' && t.file === 'topics/ConsultarPoliticaFerias.topic.mcs.yml'), "a topic's description for the model is a text too")
+ok(texts('rh-ferias').some((t) => t.source === 'descriptions' && t.file === 'actions/AbrirCasoWorkday.mcs.yml'), "an action's description too")
+ok(!texts('rh-ferias').some((t) => t.file.includes(' Copy')), 'a copied topic leaves its text out', texts('rh-ferias').map((t) => t.file))
+ok(!texts('rh-orquestrador').some((t) => t.file.startsWith('agents/')), "the child agent's instructions are the child's, not compared")
+ok(has('rh-beneficios', 'setting:model-knowledge=on') && !Object.keys(agents['rh-ferias'].facts).some((k) => k.startsWith('setting:model-knowledge')), "the model's general knowledge, only where the file says it")
+ok(agents['rh-ferias'].names['7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f'] === 'Abrir caso no Workday' && has('rh-admissao', 'flow:7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f'), 'a flow, named by the action that calls it')
 const set = extractAgent('s', [{ path: 'agent.mcs.yml', text: 'kind: GptComponentMetadata\ninstructions: Curto.\nresponseInstructions: |\n  Sempre em tópicos.\ngptCapabilities:\n  webBrowsing: false\naISettings:\n  contentModeration: High\n  isSemanticSearchEnabled: true\n' }, { path: 'topics/Ajuda.es-ES.topic.mcs.yml', text: 'kind: AdaptiveDialog\nmodelDescription: Ayuda\nbeginDialog:\n  kind: OnRecognizedIntent\n  id: main\n' }], kinds)
 ok(['setting:web-browsing=off', 'setting:moderation=high', 'setting:semantic-search=on'].every((k) => k in set.facts), 'web browsing, moderation and semantic search, when the file has them', Object.keys(set.facts))
 ok(set.texts.some((t) => t.text === 'Sempre em tópicos.' && t.line === 4) && !set.texts.some((t) => t.file.includes('es-ES')), 'responseInstructions are instructions; a translated copy is left out', set.texts)
 
 // every fact says where it was seen
-const src = agents['bodega-frete'].facts['trigger:OnUnknownIntent']?.[0]
+const src = agents['rh-folha'].facts['trigger:OnUnknownIntent']?.[0]
 ok(src?.file === 'topics/Fallback.topic.mcs.yml' && (src.line ?? 0) > 1, 'a fact says its file and line', src)
 
 // what it cannot read never stops it
@@ -91,25 +91,25 @@ ok(!Object.keys(odd.facts).some((k) => k.startsWith('knowledge:')), 'no knowledg
 
 // wave 2: the orchestrator's contract
 const contract = Object.fromEntries(agents[o].contract.map((c) => [c.calls, c]))
-ok(agents[o].contract.length === 6 && contract.cr7b2_bodegaPedidos.history && contract.cr7b2_bodegaPedidos.inputs.join() === 'CategoriaSolicitacao' && contract.cr7b2_bodegaPedidos.file === 'actions/AgentePedidos.mcs.yml' && !!contract.cr7b2_bodegaPedidos.line,
+ok(agents[o].contract.length === 6 && contract.cr7b2_rhFerias.history && contract.cr7b2_rhFerias.inputs.join() === 'CategoriaSolicitacao' && contract.cr7b2_rhFerias.file === 'actions/AgenteFerias.mcs.yml' && !!contract.cr7b2_rhFerias.line,
   'the contract: who it calls, the history, the inputs, the file and the line', agents[o].contract)
-ok(!contract.cr7b2_bodegaFrete.history && !contract.cr7b2_bodegaFrete.inputs.length, 'frete: no history and no input', contract.cr7b2_bodegaFrete)
-ok(contract.cr7b2_bodegaCupons.description === 'Cupons.', 'cupons: a routing description of 7 characters', contract.cr7b2_bodegaCupons)
+ok(!contract.cr7b2_rhFolha.history && !contract.cr7b2_rhFolha.inputs.length, 'folha: no history and no input', contract.cr7b2_rhFolha)
+ok(contract.cr7b2_rhAdmissao.description === 'Admissão.', 'admissao: a routing description of 7 characters', contract.cr7b2_rhAdmissao)
 ok(SPECIALISTS.every((id) => !agents[id].contract.length), 'a specialist calls no one')
 
 // wave 2: the flows
-const erp = 'flow-uses:http:erp.bodega-azul.example'
-all(['bodega-pedidos', 'bodega-devolucoes', 'bodega-cupons'], [erp], 'the three transaction specialists: the flow calls the ERP by HTTP (inside a scope)')
-ok(has('bodega-pedidos', 'flow-returns') && has('bodega-devolucoes', 'flow-returns') && !has('bodega-cupons', 'flow-returns'), 'the flow answers the agent, except in cupons')
-ok(agents['bodega-pedidos'].facts[erp][0].file === 'workflows/AbrirChamadoERP-7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f/workflow.json' && agents['bodega-pedidos'].facts[erp][0].line! > 1, 'a flow fact says its file and the line of its action', agents['bodega-pedidos'].facts[erp])
-ok(agents['bodega-pedidos'].flows[0]?.name === 'Abrir chamado no ERP' && agents['bodega-pedidos'].flows[0].called, 'the flow is known by its display name, and the agent calls it', agents['bodega-pedidos'].flows)
-const lf = 'bodega-loja-fisica'
-ok(has(lf, 'orphan:flow:ListarLojas') && !keys(lf, 'flow-uses:').length && agents[lf].flows[0]?.called === false, 'a flow no node calls is unused, and what it uses is not a fact', keys(lf, ''))
+const erp = 'flow-uses:http:workday.empresa.example'
+all(['rh-ferias', 'rh-beneficios', 'rh-admissao'], [erp], 'the three transaction specialists: the flow calls the ERP by HTTP (inside a scope)')
+ok(has('rh-ferias', 'flow-returns') && has('rh-beneficios', 'flow-returns') && !has('rh-admissao', 'flow-returns'), 'the flow answers the agent, except in admissao')
+ok(agents['rh-ferias'].facts[erp][0].file === 'workflows/AbrirCasoWorkday-7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f/workflow.json' && agents['rh-ferias'].facts[erp][0].line! > 1, 'a flow fact says its file and the line of its action', agents['rh-ferias'].facts[erp])
+ok(agents['rh-ferias'].flows[0]?.name === 'Abrir caso no Workday' && agents['rh-ferias'].flows[0].called, 'the flow is known by its display name, and the agent calls it', agents['rh-ferias'].flows)
+const lf = 'rh-facilities'
+ok(has(lf, 'orphan:flow:ListarUnidades') && !keys(lf, 'flow-uses:').length && agents[lf].flows[0]?.called === false, 'a flow no node calls is unused, and what it uses is not a fact', keys(lf, ''))
 
 // wave 2: what nobody uses, what is switched off
 ok(has(lf, 'orphan:topic:AvisoAntigo') && agents[lf].facts['orphan:topic:AvisoAntigo'][0].file === 'topics/AvisoAntigo.topic.mcs.yml', 'a topic nobody can reach, with its file')
-ok(has('bodega-frete', 'orphan:variable:PreferenciaAntiga') && !has('bodega-frete', 'var:PreferenciaAntiga'), 'a variable no file names is unused, not a variable it has')
-const off = agents['bodega-pedidos'].facts['disabled:node:SendActivity']
+ok(has('rh-folha', 'orphan:variable:PreferenciaAntiga') && !has('rh-folha', 'var:PreferenciaAntiga'), 'a variable no file names is unused, not a variable it has')
+const off = agents['rh-ferias'].facts['disabled:node:SendActivity']
 ok(off?.length === 1 && off[0].file === 'topics/Escalate.topic.mcs.yml' && !!off[0].line, 'a node switched off, with the file and the line', off)
 const orphans = Object.values(agents).flatMap((a) => Object.keys(a.facts).filter((k) => /^(orphan|disabled):/.test(k)).map((k) => `${a.id} ${k}`))
 ok(orphans.length === 4, 'four unused or switched off in the examples, and no other', orphans)
@@ -146,8 +146,8 @@ const broken = flowAgent(true, '{ "properties": ')
 ok(broken.unknown.some((u) => u.file === 'workflows/Fluxo-11111111/workflow.json' && u.why === 'json') && 'flow:11111111-2222-3333-4444-555555555555' in broken.facts, 'a JSON that does not read goes to «not understood», and the rest is read', broken.unknown)
 // as the extension clones on Windows: the flow's JSON with a byte-order mark (the examples have it), its metadata.yml
 // naming it in `name`, its folder ending in the whole GUID
-const bom = readFileSync(join(skill, 'examples/agents/bodega-pedidos/workflows/AbrirChamadoERP-7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f/workflow.json'), 'utf8')
-ok(bom.startsWith('\uFEFF') && agents['bodega-pedidos'].flows.some((f) => f.name === 'Abrir chamado no ERP'), 'a workflow.json with a byte-order mark is read, and the flow has its name', agents['bodega-pedidos'].flows)
+const bom = readFileSync(join(skill, 'examples/agents/rh-ferias/workflows/AbrirCasoWorkday-7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f/workflow.json'), 'utf8')
+ok(bom.startsWith('\uFEFF') && agents['rh-ferias'].flows.some((f) => f.name === 'Abrir caso no Workday'), 'a workflow.json with a byte-order mark is read, and the flow has its name', agents['rh-ferias'].flows)
 const cloned = extractAgent('c', [
   { path: 'icon.png', text: '' },
   { path: 'connectionreferences.mcs.yml', text: 'connectionReferences:\n  - connectionReferenceLogicalName: c_x.shared_office365.shared-office365-1\n    connectorId: /providers/Microsoft.PowerApps/apis/shared_office365\n' },

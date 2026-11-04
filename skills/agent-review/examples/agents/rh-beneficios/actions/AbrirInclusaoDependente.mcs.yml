@@ -1,0 +1,32 @@
+mcs.metadata:
+  componentName: Abrir inclusão de dependente
+  description: "Envia à equipe de benefícios um e-mail abrindo a inclusão de um dependente."
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: To
+    value: equipe.beneficios@empresa.example
+
+  - kind: AutomaticTaskInput
+    propertyName: Subject
+    description: Assunto do e-mail, curto e em português.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+  - kind: AutomaticTaskInput
+    propertyName: Body
+    description: Corpo do e-mail em HTML simples, em português, com o resumo do que foi tratado na conversa.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+modelDisplayName: Abrir inclusão de dependente
+modelDescription: "Envia pelo Outlook um e-mail para a equipe de benefícios com o nome do dependente, o grau de parentesco e o plano. Use depois de confirmar esses dados com o colaborador."
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: cr7b2_rhBeneficios.shared_office365.shared-office365-664433e6-6640-4087-b712-5b0b91b59b30
+  connectionProperties:
+    mode: Maker
+
+  operationId: SendEmailV2
+
+outputMode: All

@@ -1,0 +1,13 @@
+displayName: RH - Folha
+schemaName: cr7b2_rhFolha
+accessControlPolicy: ChatbotReaders
+authenticationMode: None
+configuration:
+  isAgentConnectable: true
+  settings:
+    GenerativeActionsEnabled: true
+
+  recognizer:
+    kind: GenerativeAIRecognizer
+
+language: 1046

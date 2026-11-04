@@ -24,22 +24,22 @@ ok(normalize('Até 3 links: https://x.example/a — São Paulo!').join(' ') === 
 ok(jaccard(LINKS, LINKS.replace('3 links', '5 links')) === 1, 'another number is the same block')
 ok(jaccard(LINKS, 'Ao citar uma página, escreva o nome dela como texto do link e evite mostrar o endereço; ações primeiro, ajuda por último.') < 0.5, 'the same idea in other words is another block (text, not meaning)')
 
-// the examples: the links block in four, a variation in frete
+// the examples: the links block in four, a variation in folha
 const { families, facts } = blocksOf(agents, [], [])
 const links = families.find((f) => f.text.startsWith('Links:'))!
 ok(!!links && links.id === 'links-formate-links-assim-titulo' && links.label.startsWith('Links: - Formate links assim'), 'the links block: an id from its first words, a label from its first eight', links && [links.id, links.label])
-ok(Object.keys(links.holders).sort().join() === 'bodega-cupons,bodega-devolucoes,bodega-loja-fisica,bodega-pedidos', 'four have it the same', Object.keys(links.holders))
-const v = links.variants['bodega-frete']!
-ok(!!v && v.similarity >= 0.5 && v.similarity < 0.85 && v.source.file === 'agent.mcs.yml', `frete has a variation (${v?.similarity.toFixed(2)})`, v)
+ok(Object.keys(links.holders).sort().join() === 'rh-admissao,rh-beneficios,rh-facilities,rh-ferias', 'four have it the same', Object.keys(links.holders))
+const v = links.variants['rh-folha']!
+ok(!!v && v.similarity >= 0.5 && v.similarity < 0.85 && v.source.file === 'agent.mcs.yml', `folha has a variation (${v?.similarity.toFixed(2)})`, v)
 ok(v.diff.some((p) => p.op === 'del' && p.text.includes('link de ação vai no topo')) && v.diff.some((p) => p.op === 'del' && p.text === '3') && v.diff.some((p) => p.op === 'add' && p.text === '5'), 'its word diff: the line it lacks, 3 → 5', v.diff.filter((p) => p.op !== 'same'))
-ok(`text:block:${links.id}` in facts['bodega-pedidos'] && `text:block:${links.id}~variant` in facts['bodega-frete'] && !(`text:block:${links.id}` in facts['bodega-frete']), 'the facts: the block, or its variation (which is not the block)')
-ok((facts['bodega-pedidos'][`text:block:${links.id}`]?.[0]?.line ?? 0) > 6, 'a block says the line it starts on', facts['bodega-pedidos'][`text:block:${links.id}`])
+ok(`text:block:${links.id}` in facts['rh-ferias'] && `text:block:${links.id}~variant` in facts['rh-folha'] && !(`text:block:${links.id}` in facts['rh-folha']), 'the facts: the block, or its variation (which is not the block)')
+ok((facts['rh-ferias'][`text:block:${links.id}`]?.[0]?.line ?? 0) > 6, 'a block says the line it starts on', facts['rh-ferias'][`text:block:${links.id}`])
 ok(families.every((f) => Object.keys(f.holders).length + Object.keys(f.variants).length >= 2), 'a text only one agent has is not a family')
 ok(!families.some((f) => Object.values(f.holders).some((s) => s.file.includes(' Copy'))), 'the copied topic is not counted')
 
 // the official block, and an id that survives a comma
 const official = blocksOf(agents, [], [{ id: 'links', name: 'Formatação de links', text: LINKS }]).families.find((f) => f.id === 'links')
-ok(official?.official === 'Formatação de links' && Object.keys(official.holders).length === 4 && !!official.variants['bodega-frete'], 'the official block gives its id and name to the family like it')
+ok(official?.official === 'Formatação de links' && Object.keys(official.holders).length === 4 && !!official.variants['rh-folha'], 'the official block gives its id and name to the family like it')
 const kept = blocksOf(agents, [{ id: 'meu-bloco', text: LINKS.replace('crua.', 'crua,') }], []).families.find((f) => f.text.startsWith('Links:'))
 ok(kept?.id === 'meu-bloco', 'a block kept in the review file keeps its id when a comma changes', kept?.id)
 const lone = blocksOf(agents, [], [{ id: 'aviso', name: 'Aviso legal', text: 'Este atendimento é automático e pode errar; confirme os dados importantes com uma pessoa.' }]).families.find((f) => f.id === 'aviso')

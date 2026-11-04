@@ -1,0 +1,12 @@
+mcs.metadata:
+  componentName: Aviso antigo
+  description: Aviso de horário especial de um feriado que já passou.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    - kind: SendActivity
+      id: sendMessage_nlVuog
+      activity: "No feriado de carnaval as unidades fecham às 14h."

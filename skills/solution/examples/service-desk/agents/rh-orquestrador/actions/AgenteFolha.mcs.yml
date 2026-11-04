@@ -1,0 +1,12 @@
+mcs.metadata:
+  componentName: Agente Folha
+  description: Agente conectado RH - Folha.
+kind: TaskDialog
+modelDisplayName: RH - Folha
+modelDescription: "Agente especialista em folha de pagamento: holerite, descontos e calendário de pagamento. Use quando a categoria for Folha."
+action:
+  kind: InvokeConnectedAgentTaskAction
+  inputType: {}
+  botSchemaName: cr7b2_rhFolha
+  historyType:
+    kind: NoHistory

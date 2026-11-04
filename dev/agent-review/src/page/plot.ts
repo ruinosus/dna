@@ -62,7 +62,7 @@ function path(e: StageEdge) {
 }
 const label = (n: StageNode) => (n.kind === 'client' ? u.client : n.labels?.[lang] ?? n.label)
 const clip = (s: string, max = 24) => (s.length > max ? `${s.slice(0, max - 1)}…` : s)
-// the display name without the part every one of the cast shares («Bodega Azul - Pedidos» → «Pedidos»)
+// the display name without the part every one of the cast shares («RH - Férias» → «Férias»)
 const agents = st.nodes.filter(isAgent)
 const shorten = shortNames([...agents, ...st.nodes.filter((n) => n.kind === 'ghost')].map((n) => n.label))
 const short = (n: StageNode) => (isAgent(n) || n.kind === 'ghost' ? shorten(n.label) : label(n))

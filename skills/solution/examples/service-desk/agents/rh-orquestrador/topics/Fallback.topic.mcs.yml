@@ -1,0 +1,32 @@
+mcs.metadata:
+  componentName: Fallback
+  description: Acionado quando nenhum tópico ou ferramenta corresponde à mensagem do colaborador.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnUnknownIntent
+  id: main
+  priority: -1
+  actions:
+    - kind: ConditionGroup
+      id: conditionGroup_NDmY95
+      conditions:
+        - id: conditionItem_MlTJAK
+          condition: =System.FallbackCount < 3
+          actions:
+            - kind: SendActivity
+              id: sendMessage_ZCLuZm
+              activity:
+                text:
+                  - "Desculpe, não entendi. Pode reformular a sua pergunta?"
+                  - "Não captei bem. Pode tentar explicar de outro jeito?"
+
+      elseActions:
+        - kind: SendActivity
+          id: sendMessage_khAcW1
+          activity:
+            text:
+              - "Estou com dificuldade para entender a sua solicitação. Vou te encaminhar para alguém do RH."
+
+        - kind: BeginDialog
+          id: beginDialog_PmX7zH
+          dialog: cr7b2_rhOrquestrador.topic.Escalate

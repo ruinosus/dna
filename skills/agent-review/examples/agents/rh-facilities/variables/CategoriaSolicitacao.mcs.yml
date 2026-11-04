@@ -1,0 +1,10 @@
+# Name: Categoria da Solicitação
+# Categoria da solicitação do colaborador definida pelo orquestrador do RH (Ferias, Beneficios, Folha, Admissao, Facilities, Outro).
+name: CategoriaSolicitacao
+aIVisibility: UseInAIContext
+scope: Conversation
+description: Categoria da solicitação do colaborador definida pelo orquestrador do RH (Ferias, Beneficios, Folha, Admissao, Facilities, Outro).
+schemaName: cr7b2_rhFacilities.globalvariable.CategoriaSolicitacao
+kind: GlobalVariableComponent
+isExternalInitializationAllowed: true
+defaultValue: =Blank()

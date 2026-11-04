@@ -1,6 +1,6 @@
 schema_version: "1.0"
 name: agent-review-playbill-pt
-description: The RH of six cloned Copilot Studio agents, with the admin center's inventory, the team spreadsheet and an export of Application Insights — the skill fires, writes the RH page, and the answer names cupons with no owner, loja-fisica never published, fidelidade being hired and frete in a development plan, inventing no goal and editing no agent.
+description: The RH of six cloned Copilot Studio agents, with the admin center's inventory, the team spreadsheet and an export of Application Insights — the skill fires, writes the RH page, and the answer names admissao with no owner, facilities never published, mobilidade being hired and folha in a development plan, inventing no goal and editing no agent.
 tags: [build, pt]
 runs: 2
 context:
@@ -22,7 +22,7 @@ graders:
     input_match: '--team|--all'
   - name: names-no-owner
     type: regex
-    pattern: 'cupons[^\n]{0,120}(sem respons[áa]vel|sem dono|n[ãa]o tem respons[áa]vel)|(sem respons[áa]vel|sem dono)[^\n]{0,120}cupons'
+    pattern: 'admissao[^\n]{0,120}(sem respons[áa]vel|sem dono|n[ãa]o tem respons[áa]vel)|(sem respons[áa]vel|sem dono)[^\n]{0,120}admissao'
     flags: i
   - name: names-never-published
     type: regex
@@ -43,9 +43,9 @@ graders:
   - name: findings
     type: llm
     criteria: >-
-      The answer, in Portuguese, describes the staff board — bodega-cupons with no owner in the inventory, the
-      loja-fisica never published, fidelidade being hired (called by the orchestrator and not in the folder), pedidos in
-      good standing — and the development plans by name, among them frete's (hand over to a person, receive the
+      The answer, in Portuguese, describes the staff board — rh-admissao with no owner in the inventory, the
+      facilities never published, mobilidade being hired (called by the orchestrator and not in the folder), ferias in
+      good standing — and the development plans by name, among them folha's (hand over to a person, receive the
       conversation history and the category from the orchestrator, align the links block, check that its error event
       fires, remove an unused variable). It points to the RH page it wrote. It invents no goal, owner, number or agent
       that is not in ./agentes, the spreadsheets, the export or the profile.

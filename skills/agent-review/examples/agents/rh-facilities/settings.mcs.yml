@@ -1,0 +1,13 @@
+displayName: RH - Facilities
+schemaName: cr7b2_rhFacilities
+accessControlPolicy: ChatbotReaders
+authenticationMode: None
+configuration:
+  isAgentConnectable: true
+  settings:
+    GenerativeActionsEnabled: true
+
+  recognizer:
+    kind: GenerativeAIRecognizer
+
+language: 1046

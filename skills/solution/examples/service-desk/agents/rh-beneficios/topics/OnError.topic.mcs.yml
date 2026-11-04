@@ -1,0 +1,48 @@
+mcs.metadata:
+  componentName: Em caso de erro
+  description: Tratamento de erros do agente.
+kind: AdaptiveDialog
+startBehavior: UseLatestPublishedContentAndCancelOtherTopics
+beginDialog:
+  kind: OnError
+  id: main
+  actions:
+    - kind: SetVariable
+      id: setVariable_oUQQmg
+      variable: init:Topic.CurrentTime
+      value: =Text(Now(), DateTimeFormat.UTC)
+
+    - kind: ConditionGroup
+      id: conditionGroup_Dld8CV
+      conditions:
+        - id: conditionItem_OwdxDv
+          condition: =System.Conversation.InTestMode = true
+          actions:
+            - kind: SendActivity
+              id: sendMessage_62USMu
+              activity: |-
+                Mensagem de erro: {System.Error.Message}
+                Código do erro: {System.Error.Code}
+                Id da conversa: {System.Conversation.Id}
+                Horário (UTC): {Topic.CurrentTime}
+
+      elseActions:
+        - kind: SendActivity
+          id: sendMessage_F3Bce0
+          activity:
+            text:
+              - |-
+                Ocorreu um erro.
+                Código do erro: {System.Error.Code}
+                Id da conversa: {System.Conversation.Id}
+                Horário (UTC): {Topic.CurrentTime}.
+            speak:
+              - Ocorreu um erro, por favor tente novamente.
+
+    - kind: LogCustomTelemetryEvent
+      id: logTelemetry_s0jOv1
+      eventName: RhBeneficios_OnError
+      properties: "={Agente: \"rh-beneficios\", ErrorMessage: System.Error.Message, ErrorCode: System.Error.Code, TimeUTC: Topic.CurrentTime, ConversationId: System.Conversation.Id}"
+
+    - kind: CancelAllDialogs
+      id: cancelAllDialogs_aJ4s5W

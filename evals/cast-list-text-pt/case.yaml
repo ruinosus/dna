@@ -1,6 +1,6 @@
 schema_version: "1.0"
 name: agent-review-text-pt
-description: The text of six cloned Copilot Studio agents compared with the team's profile — the skill fires, and the answer names the answer size written in two ways, frete's variation of the links block and devolucoes' knowledge contradiction, editing no agent.
+description: The text of six cloned Copilot Studio agents compared with the team's profile — the skill fires, and the answer names the answer size written in two ways, folha's variation of the links block and beneficios' knowledge contradiction, editing no agent.
 tags: [build, pt]
 runs: 2
 context:
@@ -43,7 +43,7 @@ graders:
     type: llm
     criteria: >-
       The answer, in Portuguese, says that the specialists write the answer size in different ways (3 bullets in some,
-      5 sentences in others) and that bodega-loja-fisica sets it twice; that bodega-frete has a variation of the
-      official links block (a line less, a different number of links); and that bodega-devolucoes asks to answer only
+      5 sentences in others) and that rh-facilities sets it twice; that rh-folha has a variation of the
+      official links block (a line less, a different number of links); and that rh-beneficios asks to answer only
       from the knowledge while the model's general knowledge is on. It leaves the decisions to the person, and invents
       no agent, rule or number that is not in ./agentes or the profile.

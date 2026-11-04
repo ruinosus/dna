@@ -1,6 +1,6 @@
 schema_version: "1.0"
 name: agent-review-contract-pt
-description: What the orchestrator passes each specialist, and what is left over, in six cloned Copilot Studio agents — the skill fires, and the answer names frete called with no history, the agent called that is not in the folder, the flow that returns nothing and the topic nobody calls, editing no agent.
+description: What the orchestrator passes each specialist, and what is left over, in six cloned Copilot Studio agents — the skill fires, and the answer names folha called with no history, the agent called that is not in the folder, the flow that returns nothing and the topic nobody calls, editing no agent.
 tags: [build, pt]
 runs: 2
 context:
@@ -20,9 +20,9 @@ graders:
     type: regex
     pattern: 'hist[óo]rico'
     flags: i
-  - name: names-fidelidade
+  - name: names-mobilidade
     type: regex
-    pattern: 'fidelidade'
+    pattern: 'mobilidade'
     flags: i
   - name: names-unused-topic
     type: regex
@@ -44,8 +44,8 @@ graders:
     type: llm
     criteria: >-
       The answer, in Portuguese, says that the orchestrator passes the conversation history and the category
-      (CategoriaSolicitacao) to four specialists but neither to bodega-frete; that it calls a Fidelidade agent that is not
-      in the folder; that the flow «Abrir chamado no ERP» of bodega-cupons returns nothing to the agent; and that
-      something is left over — at least the topic AvisoAntigo nobody calls (the unused flow ListarLojas, the variable
-      PreferenciaAntiga and the switched-off node in pedidos may also be named). It leaves the decisions to the person,
+      (CategoriaSolicitacao) to four specialists but neither to rh-folha; that it calls a Mobilidade agent that is not
+      in the folder; that the flow «Abrir caso no Workday» of rh-admissao returns nothing to the agent; and that
+      something is left over — at least the topic AvisoAntigo nobody calls (the unused flow ListarUnidades, the variable
+      PreferenciaAntiga and the switched-off node in ferias may also be named). It leaves the decisions to the person,
       and invents no agent, flow or number that is not in ./agentes or the profile.

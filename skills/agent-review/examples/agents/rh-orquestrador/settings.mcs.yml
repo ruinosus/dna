@@ -1,0 +1,12 @@
+displayName: RH - Orquestrador
+schemaName: cr7b2_rhOrquestrador
+accessControlPolicy: ChatbotReaders
+authenticationMode: None
+configuration:
+  settings:
+    GenerativeActionsEnabled: true
+
+  recognizer:
+    kind: GenerativeAIRecognizer
+
+language: 1046

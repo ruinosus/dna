@@ -22,11 +22,11 @@ graders:
   - name: workbook
     type: file_exists
     path: "**/agentes.xlsx"
-  - name: names-frete
+  - name: names-folha
     type: regex
-    pattern: 'frete'
+    pattern: 'folha'
     flags: i
-  - name: names-loja-fisica
+  - name: names-facilities
     type: regex
     pattern: 'loja.?f[ií]sica'
     flags: i
@@ -45,7 +45,7 @@ graders:
   - name: findings
     type: llm
     criteria: >-
-      The answer, in Portuguese, says the shipping specialist (bodega-frete) does not escalate to a person and the
-      physical-store specialist (bodega-loja-fisica) logs no telemetry, as findings or questions; it says what most
+      The answer, in Portuguese, says the shipping specialist (rh-folha) does not escalate to a person and the
+      physical-store specialist (rh-facilities) logs no telemetry, as findings or questions; it says what most
       specialists do in common; and it leaves the decision on what becomes a standard to the person (it does not
       declare a pattern accepted by itself). It does not invent agents, connectors or numbers that are not in ./agentes.

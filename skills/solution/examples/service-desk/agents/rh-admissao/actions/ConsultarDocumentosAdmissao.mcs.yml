@@ -1,0 +1,34 @@
+mcs.metadata:
+  componentName: Consultar documentos de admissão
+  description: Consulta a lista de documentos de admissão no SharePoint de RH.
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: dataset
+    value: https://empresa.sharepoint.com/sites/RH
+
+  - kind: ManualTaskInput
+    propertyName: table
+    value: DocumentosAdmissao
+
+  - kind: AutomaticTaskInput
+    propertyName: "'$filter'"
+    description: "Filtro OData pela coluna Matricula com a matrícula informada pelo colaborador. Exemplo: Matricula eq '104233'"
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+  - kind: ManualTaskInput
+    propertyName: "'$top'"
+    value: "10"
+
+modelDisplayName: Consultar documentos de admissão
+modelDescription: Verifica na lista DocumentosAdmissao do SharePoint quais documentos o colaborador já entregou e quais faltam. Use quando o colaborador perguntar o que falta para a admissão.
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: cr7b2_rhAdmissao.shared_sharepointonline.shared-sharepointonline-f9f69116-631c-4103-bdd0-e6c557c79a73
+  connectionProperties:
+    mode: Maker
+
+  operationId: GetItems
+
+outputMode: All

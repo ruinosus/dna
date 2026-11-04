@@ -1,0 +1,7 @@
+mcs.metadata:
+  componentName: Guia de Admissão
+  description: "Etapas, documentos, exame admissional e primeiro dia de quem entra na empresa."
+kind: KnowledgeSourceConfiguration
+source:
+  kind: SharePointSearchSource
+  site: https://empresa.sharepoint.com/sites/RH/Shared%20Documents/Admissao

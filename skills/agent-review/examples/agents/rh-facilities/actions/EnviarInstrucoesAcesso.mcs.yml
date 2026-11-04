@@ -1,0 +1,34 @@
+mcs.metadata:
+  componentName: Enviar instruções de acesso por e-mail
+  description: "Envia ao colaborador um e-mail com as instruções de acesso à unidade."
+kind: TaskDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: To
+    description: "Endereço de e-mail do colaborador que vai receber as instruções de acesso."
+    entity: EmailPrebuiltEntity
+    shouldPromptUser: true
+
+  - kind: AutomaticTaskInput
+    propertyName: Subject
+    description: Assunto do e-mail, curto e em português.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+  - kind: AutomaticTaskInput
+    propertyName: Body
+    description: Corpo do e-mail em HTML simples, em português, com o resumo do que foi tratado na conversa.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+modelDisplayName: Enviar instruções de acesso por e-mail
+modelDescription: "Envia ao colaborador, pelo Outlook, um e-mail com endereço, horário e documentos necessários para entrar na unidade. Use somente quando o colaborador pedir."
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: cr7b2_rhFacilities.shared_office365.shared-office365-f0fdb545-532d-4d56-a81b-286eb298a1e7
+  connectionProperties:
+    mode: Maker
+
+  operationId: SendEmailV2
+
+outputMode: All

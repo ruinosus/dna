@@ -55,28 +55,28 @@ What each says:
 
 - **What people said and the YAML do not agree** — a declared fact the agent does not have, or the other way round.
   What was seen wins; the contradiction is the finding.
-- **The text against the setup** — a rule with `when` and `not`: «devolucoes tem «Só o conhecimento», mas também
+- **The text against the setup** — a rule with `when` and `not`: «beneficios tem «Só o conhecimento», mas também
   «Conhecimento geral do modelo ligado»».
 - **The orchestrator's contract** — what each connected-agent action passes (the conversation history, the inputs,
   the routing description) is a fact of the specialist it calls, so «1 especialista não recebe o histórico da conversa
-  do orquestrador (frete): é intencional?» is an ordinary off-pattern. Its own findings: a call to an agent not in the
+  do orquestrador (folha): é intencional?» is an ordinary off-pattern. Its own findings: a call to an agent not in the
   folder («O orquestrador chama «X», que não está na pasta» — maybe not cloned, maybe gone), a specialist no
   orchestrator calls, and a routing description under 80 characters (the model routes by it).
-- **A flow that returns nothing** — a flow an agent calls with no `Response`: «O fluxo «X» de cupons não devolve nada».
+- **A flow that returns nothing** — a flow an agent calls with no `Response`: «O fluxo «X» de admissao não devolve nada».
   What a flow calls (connectors, operations, HTTP hosts, another flow) is compared like any fact; the map's Agents tab
   shows each chain, agent → flow → system.
 - **An event spelt another way** — the events are compared by their **form**, the name with the agent's own name
-  taken out («BodegaPedidos_OnError» and «BodegaFrete_OnError» are «‹nome›_OnError»). Two forms that are the same with
-  no case, `_`, `-`, `.` or space count as the most common one, and the other is asked about: «cupons registra
-  «bodega_cupons_onerror»; os outros, «‹nome›_OnError»: é o mesmo evento?» — a different name breaks whoever queries
+  taken out («RhFerias_OnError» and «RhFolha_OnError» are «‹nome›_OnError»). Two forms that are the same with
+  no case, `_`, `-`, `.` or space count as the most common one, and the other is asked about: «admissao registra
+  «rh_admissao_onerror»; os outros, «‹nome›_OnError»: é o mesmo evento?» — a different name breaks whoever queries
   the telemetry. An event is part of logging telemetry, and each field of its record (`properties: "={A: x}"`) is part
-  of the event: «1 especialista registra «‹nome›_OnError» sem «ConversationId» (cupons)». A name or a record made by a
+  of the event: «1 especialista registra «‹nome›_OnError» sem «ConversationId» (admissao)». A name or a record made by a
   formula cannot be read: the name goes to «not understood», the record leaves that agent out of the fields.
-- **What did not fire** (with `--telemetry`) — «O evento «X» de frete não disparou em 30 dias», and «loja-fisica não
+- **What did not fire** (with `--telemetry`) — «O evento «X» de folha não disparou em 30 dias», and «facilities não
   tem nenhuma linha na telemetria: está ligado ao Application Insights?».
-- **Off a pattern** — «1 especialista não escala para humano (frete): é intencional?». With an accepted pattern:
+- **Off a pattern** — «1 especialista não escala para humano (folha): é intencional?». With an accepted pattern:
   «corrigir?». A **variation** of a shared block — «1 especialista tem uma variação do bloco oficial «Formatação de
-  links» (frete): alinhar?» — and the map shows the words that went and came. Off a type's pattern: «1 especialista de
+  links» (folha): alinhar?» — and the map shows the words that went and came. Off a type's pattern: «1 especialista de
   transação…»; a type's pattern never blames who is not of the type.
 - **A text rule set in different ways** — «4 especialistas definem «Tamanho da resposta» de 2 jeitos: unificar?» — or
   **twice in one agent** — «qual vale?».
@@ -141,7 +141,7 @@ node scripts/build.mjs <agents-folder> --declared inventario.csv --declared equi
 ## 4. Ask, then decide — once, all together
 
 One message, numbered, from the `!` lines: **at most 6 questions, one thing each, each with your bet** («I'd say the
-frete specialist skipping escalation is an oversight — the other four escalate»). Never ask without a bet.
+folha specialist skipping escalation is an oversight — the other four escalate»). Never ask without a bet.
 
 Write a **decision** only when the person decides: in `decisions:` of the review file (`key`, `status: accepted|rejected`,
 `scope: platform|specialist|orchestrator`, `why`), or they fill the workbook's **Decision** column and **Declared**
@@ -187,7 +187,7 @@ the team spreadsheet, the export). Never invent a goal, an owner or a number the
 type, the flows and the systems, with the traffic moving along the arrows in proportion to each one's topic starts
 (only with `--telemetry`; the arrows into flows and systems are structure, never a measured volume). **Lenses** light
 who follows a pattern (green), who is off (red) and what is to decide (amber); the **walkthrough** follows each call of
-the orchestrator step by step and stops where it breaks («Frete é chamado SEM o histórico…»); a click on someone opens
+the orchestrator step by step and stops where it breaks («Folha é chamado SEM o histórico…»); a click on someone opens
 its card — the fingerprint of its instructions and what it meets of its post — with its résumé a link away. Point the
 person to it when they want to show the agents to others.
 

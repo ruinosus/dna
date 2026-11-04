@@ -1,0 +1,24 @@
+mcs.metadata:
+  componentName: Agente Facilities
+  description: Agente conectado RH - Facilities.
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: CategoriaSolicitacao
+    value: =Global.CategoriaSolicitacao
+
+modelDisplayName: RH - Facilities
+modelDescription: "Agente especialista em facilities: endereço e horário das unidades, salas, visitantes e manutenção. Use quando a categoria for Facilities."
+action:
+  kind: InvokeConnectedAgentTaskAction
+  inputType:
+    properties:
+      CategoriaSolicitacao:
+        displayName: CategoriaSolicitacao
+        description: Categoria da solicitação definida pelo orquestrador.
+        isRequired: true
+        type: String
+
+  botSchemaName: cr7b2_rhFacilities
+  historyType:
+    kind: ConversationHistory

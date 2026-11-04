@@ -1,9 +1,0 @@
-# Name: Preferência antiga
-# Preferência de contato que ninguém usa mais.
-name: PreferenciaAntiga
-aIVisibility: UseInAIContext
-scope: Conversation
-description: Preferência de contato que ninguém usa mais.
-schemaName: cr7b2_bodegaFrete.globalvariable.PreferenciaAntiga
-kind: GlobalVariableComponent
-defaultValue: =Blank()

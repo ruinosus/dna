@@ -2,9 +2,9 @@
 apiVersion: github.com/ruinosus/dna/v1
 kind: AgentStandard
 metadata:
-  name: Bodega Azul — atendimento
+  name: RH — autoatendimento do colaborador
 roles:
-  orchestrator: [bodega-orquestrador]
+  orchestrator: [rh-orquestrador]
   specialist: "*"
 threshold: 0.7     # a pattern: in at least 70% of the agents of a role…
 min_agents: 3      # …with at least 3 agents in that role

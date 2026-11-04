@@ -1,6 +1,6 @@
 schema_version: "1.0"
 name: agent-review-telemetry-pt
-description: Whether the telemetry of six cloned Copilot Studio agents is consistent, and what really fires, with an export of Application Insights — the skill fires, and the answer names the cupons event spelt another way, the frete event that did not fire and the loja-fisica with no telemetry, editing no agent.
+description: Whether the telemetry of six cloned Copilot Studio agents is consistent, and what really fires, with an export of Application Insights — the skill fires, and the answer names the admissao event spelt another way, the folha event that did not fire and the facilities with no telemetry, editing no agent.
 tags: [build, pt]
 runs: 2
 context:
@@ -22,7 +22,7 @@ graders:
     input_match: '--telemetry'
   - name: names-spelling
     type: regex
-    pattern: 'bodega_cupons_onerror'
+    pattern: 'rh_admissao_onerror'
     flags: i
   - name: names-not-fired
     type: regex
@@ -43,9 +43,9 @@ graders:
   - name: findings
     type: llm
     criteria: >-
-      The answer, in Portuguese, says that bodega-cupons logs its error event as «bodega_cupons_onerror» while the
+      The answer, in Portuguese, says that rh-admissao logs its error event as «rh_admissao_onerror» while the
       others follow «<name>_OnError» (the same event spelt another way) and that it lacks the ConversationId field; that
-      the event BodegaFrete_OnError is in frete's YAML but did not fire in the 30 days of the export; and that
-      bodega-loja-fisica logs no telemetry and has no line in the export (maybe not connected to Application Insights).
+      the event RhFolha_OnError is in folha's YAML but did not fire in the 30 days of the export; and that
+      rh-facilities logs no telemetry and has no line in the export (maybe not connected to Application Insights).
       It leaves the decisions to the person, and invents no agent, event or number that is not in ./agentes,
       ./eventos.csv or the profile.

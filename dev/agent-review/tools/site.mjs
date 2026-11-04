@@ -14,14 +14,14 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../../..') // the
 const skill = join(repo, 'skills/agent-review')
 const docs = join(repo, 'docs/agent-review')
 if (!browser()) throw new Error('No Chrome, Chromium or Edge: the pictures need one (set CHROME_PATH).')
-const ID = 'bodega-azul'
+const ID = 'rh-agents'
 for (const d of ['examples', 'images']) rmSync(join(docs, d), { recursive: true, force: true })
 mkdirSync(join(docs, 'examples'), { recursive: true })
 mkdirSync(join(docs, 'images'), { recursive: true })
 // the folder's name is the files' name: the example agents, copied under it
 const work = mkdtempSync(join(tmpdir(), 'agent-review-site-'))
 cpSync(join(skill, 'examples/agents'), join(work, ID), { recursive: true })
-copyFileSync(join(skill, 'examples/demo.review.yaml'), join(docs, 'examples', `${ID}.cast.yaml`))
+copyFileSync(join(skill, 'examples/demo.review.yaml'), join(docs, 'examples', `${ID}.review.yaml`))
 // the inventory and the team spreadsheet taken, so the RH has owners, teams and goals
 execFileSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(work, ID), '--declared', join(skill, 'examples/inventario.csv'), '--declared', join(skill, 'examples/equipe.csv'), '--take', 'all', '--lang', 'pt', '--out', join(docs, 'examples')], { stdio: 'ignore' })
 execFileSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(work, ID), '--all', '--lang', 'pt', '--profile', join(skill, 'examples/team.standard.yaml'), '--telemetry', join(skill, 'examples/telemetria.csv'), '--evals', join(skill, 'examples/avaliacoes'), '--out', join(docs, 'examples')], { stdio: 'ignore' })
@@ -83,7 +83,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
     <article class="card">
       <a href="examples/${ID}.lesson.html"><img src="images/${ID}-lesson.png" alt="The lesson: the orchestrator calls five specialists; two carry a red ×" loading="lazy"></a>
       <span class="meta">Português · fictional agents</span>
-      <b>Bodega Azul — atendimento</b>
+      <b>RH — autoatendimento do colaborador</b>
       <span>An orchestrator and five specialists of a made-up online shop, run with a made-up export of Application Insights. On purpose: shipping does not escalate to a person and gets no conversation history, the store logs no telemetry, coupons spells its error event another way and calls a flow that returns nothing, shipping's event did not fire in 30 days, and a few things nobody uses.</span>
       <span class="links"><a href="examples/${ID}.html">Map</a><a href="examples/${ID}.topology.html">Stage</a><a href="examples/${ID}.team.html">RH</a><a href="https://github.com/ruinosus/dna/blob/gh-pages/agent-review/examples/${ID}.diagrams.md">Diagrams (Mermaid)</a><a href="examples/${ID}.lesson.html">Lesson</a><a href="examples/${ID}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${ID}.cast.yaml" download>Cast file (.yaml)</a></span>
     </article>

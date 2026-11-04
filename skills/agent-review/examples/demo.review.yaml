@@ -3,10 +3,10 @@
 apiVersion: github.com/ruinosus/dna/v1
 kind: AgentReview
 metadata:
-  name: Bodega Azul — atendimento
+  name: RH — autoatendimento do colaborador
 declared:
-  # the handoff document says frete escalates; the YAML says it does not
-  - { agent: bodega-frete, key: "trigger:OnEscalate", value: sim, source: "handoff do frete, seção 4" }
-  - { agent: bodega-pedidos, key: kpi, value: "tempo até a resposta < 2 min", source: backlog }
+  # the handoff document says folha escalates; the YAML says it does not
+  - { agent: rh-folha, key: "trigger:OnEscalate", value: sim, source: "handoff da folha, seção 4" }
+  - { agent: rh-ferias, key: kpi, value: "tempo até a resposta < 2 min", source: backlog }
 decisions:
   - { key: "trigger:OnEscalate", status: accepted, scope: platform, why: "Ninguém fica sem saída para uma pessoa" }

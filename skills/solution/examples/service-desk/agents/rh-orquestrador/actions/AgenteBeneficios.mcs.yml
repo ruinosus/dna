@@ -1,0 +1,24 @@
+mcs.metadata:
+  componentName: Agente Benefícios
+  description: Agente conectado RH - Benefícios.
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: CategoriaSolicitacao
+    value: =Global.CategoriaSolicitacao
+
+modelDisplayName: RH - Benefícios
+modelDescription: "Agente especialista em benefícios: plano de saúde, dependentes, vale-refeição e reembolso. Use quando a categoria for Beneficios."
+action:
+  kind: InvokeConnectedAgentTaskAction
+  inputType:
+    properties:
+      CategoriaSolicitacao:
+        displayName: CategoriaSolicitacao
+        description: Categoria da solicitação definida pelo orquestrador.
+        isRequired: true
+        type: String
+
+  botSchemaName: cr7b2_rhBeneficios
+  historyType:
+    kind: ConversationHistory

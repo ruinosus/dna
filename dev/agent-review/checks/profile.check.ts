@@ -19,17 +19,17 @@ const p = readProfile(text('team.standard.yaml'))
 ok(!p.problems.length && p.profile?.threshold === 0.7 && p.profile.minAgents === 3 && p.profile.rules.length === 3 && p.profile.markers.length === 3 && p.profile.blocks[0]?.id === 'links' && p.profile.types.length === 3 && p.profile.focusAreas[0]?.facts.length === 3
   && p.profile.ignore.join() === 'trigger:OnConversationStart' && p.profile.microsoftPatterns, 'the example profile is read', p)
 const roles = rolesOf(agents, p.profile!)
-ok(roles.roles['bodega-orquestrador'] === 'orchestrator' && Object.values(roles.roles).filter((r) => r === 'specialist').length === 5 && !roles.unmatched.length, 'by the profile: one orchestrator, five specialists', roles)
+ok(roles.roles['rh-orquestrador'] === 'orchestrator' && Object.values(roles.roles).filter((r) => r === 'specialist').length === 5 && !roles.unmatched.length, 'by the profile: one orchestrator, five specialists', roles)
 
 // with no profile: the orchestrator is who calls another agent (a topic call does not count)
 const auto = rolesOf(agents, DEFAULT_PROFILE)
-ok(auto.roles['bodega-orquestrador'] === 'orchestrator' && auto.roles['bodega-frete'] === 'specialist' && Object.keys(auto.roles).length === 6, 'with no profile: whoever calls an agent is the orchestrator', auto)
+ok(auto.roles['rh-orquestrador'] === 'orchestrator' && auto.roles['rh-folha'] === 'specialist' && Object.keys(auto.roles).length === 6, 'with no profile: whoever calls an agent is the orchestrator', auto)
 ok(DEFAULT_PROFILE.threshold === 0.7 && DEFAULT_PROFILE.minAgents === 3, 'the defaults: 0.7 and 3')
 const bare = readProfile('format: cast-list/profile-v1\n')
 ok(!bare.problems.length && bare.profile?.threshold === 0.7 && !bare.profile.rules.length, 'a profile with only its format is the defaults')
 // the review file's role counts when the profile does not name the agent; a name in the profile wins
-const given = rolesOf(agents, { ...DEFAULT_PROFILE, roles: { orchestrator: ['bodega-orquestrador'] } }, { 'bodega-frete': 'orchestrator', 'bodega-orquestrador': 'specialist' })
-ok(given.roles['bodega-frete'] === 'orchestrator' && given.roles['bodega-orquestrador'] === 'orchestrator', "the review file's role, under the profile's", given.roles)
+const given = rolesOf(agents, { ...DEFAULT_PROFILE, roles: { orchestrator: ['rh-orquestrador'] } }, { 'rh-folha': 'orchestrator', 'rh-orquestrador': 'specialist' })
+ok(given.roles['rh-folha'] === 'orchestrator' && given.roles['rh-orquestrador'] === 'orchestrator', "the review file's role, under the profile's", given.roles)
 // a profile naming an agent that is not there says so
 const ghost = rolesOf(agents, { ...p.profile!, roles: { orchestrator: ['orquestrador-antigo'], specialist: '*' } })
 ok(ghost.unmatched.join() === 'orquestrador-antigo', 'a profile naming an agent that is not in the folder: told', ghost.unmatched)
@@ -57,7 +57,7 @@ const c = readCast(text('demo.review.yaml'))
 ok(!c.problems.length && c.cast?.declared.length === 2 && c.cast.decisions[0]?.status === 'accepted' && c.cast.decisions[0].scope === 'platform', 'the example review file is read', c)
 const bad = readCast(`format: cast-list/cast-v1
 declared:
-  - { agent: bodega-frete, value: sim }
+  - { agent: rh-folha, value: sim }
 decisions:
   - { key: "trigger:OnEscalate", status: aceito, scope: platform }
   - { key: "trigger:OnEscalate", status: rejected, scope: everywhere }
@@ -72,13 +72,13 @@ ok(again === text('demo.review.yaml'), 'written back unchanged, it is the same f
 const more: Cast = {
   ...cast,
   agents: agents.map((a) => ({ id: a.id, role: roles.roles[a.id] })),
-  declared: [...cast.declared, { agent: 'bodega-frete', key: 'kpi', value: 'cotação em < 5 s', source: 'planilha' }],
+  declared: [...cast.declared, { agent: 'rh-folha', key: 'kpi', value: 'cotação em < 5 s', source: 'planilha' }],
   decisions: [{ ...cast.decisions[0], why: 'Sempre há uma pessoa' }, { key: 'node:LogCustomTelemetryEvent', status: 'accepted', scope: 'platform', why: '' }],
 }
 const written = writeCast(more, text('demo.review.yaml'))
 const back = readCast(written)
 ok(!back.problems.length && JSON.stringify(back.cast) === JSON.stringify(more), 'written with changes, it reads back as what was written', { written })
-ok(written.includes('# the handoff document says frete escalates') && written.includes('# What people said about the agents'), "the person's comments stay", written)
+ok(written.includes('# the handoff document says folha escalates') && written.includes('# What people said about the agents'), "the person's comments stay", written)
 ok(readCast(writeCast(more)).cast !== undefined && JSON.stringify(readCast(writeCast(more)).cast) === JSON.stringify(more), 'a new review file (no previous one) reads back too')
 // wave 1: markers, official blocks, types, and rules with a condition
 const w1 = readProfile(`format: cast-list/profile-v1

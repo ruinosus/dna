@@ -1,0 +1,13 @@
+displayName: RH - Férias
+schemaName: cr7b2_rhFerias
+accessControlPolicy: ChatbotReaders
+authenticationMode: None
+configuration:
+  isAgentConnectable: true
+  settings:
+    GenerativeActionsEnabled: true
+
+  recognizer:
+    kind: GenerativeAIRecognizer
+
+language: 1046

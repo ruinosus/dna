@@ -1,7 +1,0 @@
-mcs.metadata:
-  componentName: Tabela de Frete e Entregas
-  description: "Modalidades de envio, prazos por região e regras de frete grátis da Bodega Azul."
-kind: KnowledgeSourceConfiguration
-source:
-  kind: SharePointSearchSource
-  site: https://bodegaazul.sharepoint.com/sites/Logistica/Shared%20Documents/Frete

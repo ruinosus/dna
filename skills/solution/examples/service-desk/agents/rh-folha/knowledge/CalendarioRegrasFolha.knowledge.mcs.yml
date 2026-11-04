@@ -1,0 +1,7 @@
+mcs.metadata:
+  componentName: Calendário e Regras da Folha
+  description: "Datas de pagamento, descontos e regras do holerite da empresa."
+kind: KnowledgeSourceConfiguration
+source:
+  kind: SharePointSearchSource
+  site: https://empresa.sharepoint.com/sites/Folha/Shared%20Documents/Calendario

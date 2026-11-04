@@ -5,7 +5,7 @@ what only one has, what the orchestrator passes on, which events they log and wh
 with the file and line behind every finding.</b></p>
 
 <p align="center">
-  <img src="https://ruinosus.github.io/dna/agent-review/images/bodega-azul-map.png" alt="Six agents of a made-up shop compared: a matrix of who has what, with a red × where one specialist does not escalate and another logs no telemetry" width="860">
+  <img src="https://ruinosus.github.io/dna/agent-review/images/rh-agents-map.png" alt="Six agents of a made-up shop compared: a matrix of who has what, with a red × where one specialist does not escalate and another logs no telemetry" width="860">
 </p>
 
 <p align="center">
@@ -61,7 +61,7 @@ locked-down environment where a model has few credits or none.
 - **Unused**: a topic nobody can reach, a tool the model cannot choose, a variable no file names, a flow no node calls,
   a node or a component switched off. Never a pattern nor a solo.
 - **Telemetry by name**: each event is compared by its name with the agent's own name taken out
-  («BodegaPedidos_OnError» and «BodegaFrete_OnError» are «‹name›_OnError»), and each field of its record too. A
+  («RhFerias_OnError» and «RhFolha_OnError» are «‹name›_OnError»), and each field of its record too. A
   spelling that differs only in case or separators is asked about: «the same event?».
 - A child agent's facts are the child's. A file it cannot read — broken YAML, a kind Copilot Studio does not have — is
   told, and the rest is read anyway.

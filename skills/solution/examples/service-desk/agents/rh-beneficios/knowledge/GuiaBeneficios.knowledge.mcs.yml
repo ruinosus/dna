@@ -1,0 +1,7 @@
+mcs.metadata:
+  componentName: Guia de Benefícios
+  description: "Planos, inclusão de dependentes, vale-refeição e regras de reembolso da empresa."
+kind: KnowledgeSourceConfiguration
+source:
+  kind: SharePointSearchSource
+  site: https://empresa.sharepoint.com/sites/RH/Shared%20Documents/Beneficios

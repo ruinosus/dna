@@ -34,32 +34,32 @@ ok(['Conversation', 'Integrations', 'Knowledge', 'Orchestrator', 'Governance', '
 const looks = reviewCast(compare(agents, profile, empty))
 const pt = looks.map((l) => l.pt)
 const has = (s: string) => pt.includes(s)
-ok(has('1 especialista não escala para humano (bodega-frete): é intencional?'), 'bodega-frete does not escalate: asked', pt)
-ok(has('1 especialista não registra telemetria (bodega-loja-fisica): é intencional?'), 'bodega-loja-fisica logs no telemetry: asked')
-ok(!looks.filter((l) => l.key !== 'unused').some((l) => l.pt.includes('Escalate') || l.pt.includes('nenhum tópico leva')), "bodega-frete's escalation: asked once, not again for its fallback", pt)
-ok(has('Só bodega-cupons tem «Servidor MCP Bodega Azul Promocoes MCP»: inovação ou dívida?') && has('Só bodega-cupons tem «Conector SharePoint»: inovação ou dívida?'), 'what only bodega-cupons has: asked, by the names the files give', pt)
+ok(has('1 especialista não escala para humano (rh-folha): é intencional?'), 'rh-folha does not escalate: asked', pt)
+ok(has('1 especialista não registra telemetria (rh-facilities): é intencional?'), 'rh-facilities logs no telemetry: asked')
+ok(!looks.filter((l) => l.key !== 'unused').some((l) => l.pt.includes('Escalate') || l.pt.includes('nenhum tópico leva')), "rh-folha's escalation: asked once, not again for its fallback", pt)
+ok(has('Só rh-admissao tem «Servidor MCP RH Admissao MCP»: inovação ou dívida?') && has('Só rh-admissao tem «Conector SharePoint»: inovação ou dívida?'), 'what only rh-admissao has: asked, by the names the files give', pt)
 ok(!pt.some((s) => /shared_|cr7b2_/.test(s)), 'no technical name on screen when the files give a readable one')
 ok(!pt.some((s) => s.includes('Referência de conexão') || s.includes('Operação GetItems')), "the connection and the operation of a solo connector are not asked again", pt)
-ok(has('Só bodega-loja-fisica tem «Condição de busca só no YAML (a tela pode apagar)»: inovação ou dívida?'), 'the YAML-only condition: asked')
-ok(has('Regra «Todo especialista tem KPI»: 5 especialistas não cumprem (bodega-cupons, bodega-devolucoes, bodega-frete, bodega-loja-fisica, bodega-pedidos)'), 'the KPI rule: asked', pt)
-ok(!pt.some((s) => s.startsWith('Regra «Todo especialista escala')), 'the rule «escala» only repeats a pattern bodega-frete is already off: said once')
-ok(has('Só bodega-frete tem «Desambiguação («você quis dizer…»)»: inovação ou dívida?'), 'the triage topic only frete has: asked')
-ok(has('Só bodega-devolucoes tem «Conhecimento geral do modelo ligado»: inovação ou dívida?'), 'a setting only one has, by its name')
+ok(has('Só rh-facilities tem «Condição de busca só no YAML (a tela pode apagar)»: inovação ou dívida?'), 'the YAML-only condition: asked')
+ok(has('Regra «Todo especialista tem KPI»: 5 especialistas não cumprem (rh-admissao, rh-beneficios, rh-facilities, rh-ferias, rh-folha)'), 'the KPI rule: asked', pt)
+ok(!pt.some((s) => s.startsWith('Regra «Todo especialista escala')), 'the rule «escala» only repeats a pattern rh-folha is already off: said once')
+ok(has('Só rh-folha tem «Desambiguação («você quis dizer…»)»: inovação ou dívida?'), 'the triage topic only folha has: asked')
+ok(has('Só rh-beneficios tem «Conhecimento geral do modelo ligado»: inovação ou dívida?'), 'a setting only one has, by its name')
 // wave 2: the contract, the flows, what nothing uses — said as the plan says them
 for (const s of [
-  '1 especialista não recebe o histórico da conversa do orquestrador (bodega-frete): é intencional?',
-  '1 especialista não recebe «CategoriaSolicitacao» do orquestrador (bodega-frete): é intencional?',
-  'O orquestrador chama «Bodega Azul - Fidelidade», que não está na pasta',
-  'A descrição de roteamento de bodega-cupons tem só 7 caracteres',
-  'O fluxo «Abrir chamado no ERP» de bodega-cupons não devolve nada',
-  'Ninguém chama o tópico «AvisoAntigo» (bodega-loja-fisica): remover ou ligar?',
-  'Ninguém chama o fluxo «Listar lojas» (bodega-loja-fisica): remover ou ligar?',
-  'Ninguém usa a variável «PreferenciaAntiga» (bodega-frete): remover?',
-  'bodega-pedidos tem um nó desligado em «topics/Escalate» (SendActivity): remover?',
+  '1 especialista não recebe o histórico da conversa do orquestrador (rh-folha): é intencional?',
+  '1 especialista não recebe «CategoriaSolicitacao» do orquestrador (rh-folha): é intencional?',
+  'O orquestrador chama «RH - Mobilidade», que não está na pasta',
+  'A descrição de roteamento de rh-admissao tem só 9 caracteres',
+  'O fluxo «Abrir caso no Workday» de rh-admissao não devolve nada',
+  'Ninguém chama o tópico «AvisoAntigo» (rh-facilities): remover ou ligar?',
+  'Ninguém chama o fluxo «Listar unidades» (rh-facilities): remover ou ligar?',
+  'Ninguém usa a variável «PreferenciaAntiga» (rh-folha): remover?',
+  'rh-ferias tem um nó desligado em «topics/Escalate» (SendActivity): remover?',
 ]) ok(has(s), `asked: ${s}`, pt)
 const at = (k: string) => looks.findIndex((l) => l.key === k)
 ok(at('contract') < at('off') && at('flow') < at('off') && at('contract') > -1 && at('unused') > at('solo'), 'the contract and the flows come with the contradictions, what nothing uses after the solos')
-ok(labelOf('called-with:history', 'pt') === 'Recebe o histórico da conversa' && labelOf('called-with:input:CategoriaSolicitacao', 'pt') === 'Recebe «CategoriaSolicitacao» do orquestrador' && labelOf('flow-uses:http:erp.bodega-azul.example', 'pt') === 'Fluxo chama erp.bodega-azul.example',
+ok(labelOf('called-with:history', 'pt') === 'Recebe o histórico da conversa' && labelOf('called-with:input:CategoriaSolicitacao', 'pt') === 'Recebe «CategoriaSolicitacao» do orquestrador' && labelOf('flow-uses:http:workday.empresa.example', 'pt') === 'Fluxo chama workday.empresa.example',
   'the names of the contract and the flows')
 ok(dimensionOf('called-with:history') === 'orchestration' && dimensionOf('routing:described') === 'orchestration' && dimensionOf('flow-uses:http:x') === 'integrations' && dimensionOf('orphan:topic:x') === 'governance', 'the contract in D, the flows in B')
 ok(['called-with:input:', 'flow-uses:http:', 'orphan:topic:', 'disabled:node:', 'called-with:history', 'flow-returns'].every((k) => md.includes(k)), 'keys.md lists the new keys')
@@ -69,12 +69,12 @@ ok(looks.findIndex((l) => l.key === 'off') < looks.findIndex((l) => l.key === 'g
 
 // with the demo review file
 const d = reviewCast(compare(agents, profile, demo)).map((l) => l.pt)
-ok(d[0] === 'bodega-frete: «handoff do frete, seção 4» diz que tem «Escalonamento para humano», mas o YAML não tem', 'what people said and the YAML do not agree: first', d)
-ok(d.includes('1 especialista não escala para humano (bodega-frete), e o padrão foi aceito: corrigir?'), 'off an accepted pattern: correct it?')
+ok(d[0] === 'rh-folha: «handoff da folha, seção 4» diz que tem «Escalonamento para humano», mas o YAML não tem', 'what people said and the YAML do not agree: first', d)
+ok(d.includes('1 especialista não escala para humano (rh-folha), e o padrão foi aceito: corrigir?'), 'off an accepted pattern: correct it?')
 ok(d.some((s) => s.startsWith('Regra «Todo especialista tem KPI»: 4 especialistas')), 'the KPI rule now names four')
 
 // what was not understood, and a profile naming an agent that is not there
-const odd = reviewCast(compare([...agents, extractAgent('odd', [{ path: 'agent.mcs.yml', text: 'kind: GptComponentMetadata\n' }, { path: 'a.txt', text: '' }, { path: 'topics/b.yml', text: '' }])], { ...profile, roles: { ...profile.roles, orchestrator: ['bodega-orquestrador', 'velho'] } }, empty))
+const odd = reviewCast(compare([...agents, extractAgent('odd', [{ path: 'agent.mcs.yml', text: 'kind: GptComponentMetadata\n' }, { path: 'a.txt', text: '' }, { path: 'topics/b.yml', text: '' }])], { ...profile, roles: { ...profile.roles, orchestrator: ['rh-orquestrador', 'velho'] } }, empty))
 ok(odd.some((l) => l.pt === 'odd: a análise não entendeu 2 arquivos (a.txt, topics/b.yml)') && odd.some((l) => l.pt === 'O perfil cita «velho», que não está na pasta'), 'files not understood, and a name in the profile that is not in the folder', odd.map((l) => l.pt))
 
 // patterns: the ones with someone off (or decided) first, then what everybody already does
@@ -86,19 +86,19 @@ const r1 = compare(agents, wave1(profile), empty)
 const n = r1.names
 ok(dimensionOf('text:size=3 bullets') === 'text' && DIMENSIONS.text.pt === 'F. Texto' && DIMENSIONS.text.en === 'F. Text', 'the text is dimension F')
 ok(labelOf('text:size=3 bullets', 'pt', n) === 'Tamanho da resposta = 3 bullets' && labelOf('text:no-emoji', 'pt', n) === 'Sem emojis', "a marker by the profile's name, with its value", [labelOf('text:size=3 bullets', 'pt', n), labelOf('text:no-emoji', 'pt', n)])
-ok(labelOf('text:link-domain:ajuda.bodega-azul.example', 'pt', n) === 'Link para ajuda.bodega-azul.example' && labelOf('text:email', 'en', n) === 'Mentions an e-mail', 'the built-in markers')
+ok(labelOf('text:link-domain:portal.empresa.example', 'pt', n) === 'Link para portal.empresa.example' && labelOf('text:email', 'en', n) === 'Mentions an e-mail', 'the built-in markers')
 ok(labelOf('text:block:links', 'pt', n) === 'Formatação de links' && labelOf('text:block:links~variant', 'pt', n) === 'Formatação de links (variação)', "the official block by its name; a variation says so")
 const other = r1.blocks.find((b) => !b.official)!
 ok(labelOf(`text:block:${other.id}`, 'pt', n) === other.label, 'a block with no name: its first words')
 const l1 = reviewCast(r1).map((l) => l.pt)
 const in1 = (x: string) => l1.includes(x)
-ok(in1('bodega-devolucoes tem «Só o conhecimento», mas também «Conhecimento geral do modelo ligado» (regra «Quem pede só o conhecimento tem o conhecimento geral desligado»)'), 'the text and the setting disagree: said as a contradiction', l1)
-ok(in1('1 especialista tem uma variação do bloco oficial «Formatação de links» (bodega-frete): alinhar?'), 'a variation of the official block: align it?')
-ok(in1('1 especialista não tem «Sem emojis» (bodega-loja-fisica): é intencional?'), '«no emojis» missing: asked')
+ok(in1('rh-beneficios tem «Só o conhecimento», mas também «Conhecimento geral do modelo ligado» (regra «Quem pede só o conhecimento tem o conhecimento geral desligado»)'), 'the text and the setting disagree: said as a contradiction', l1)
+ok(in1('1 especialista tem uma variação do bloco oficial «Formatação de links» (rh-folha): alinhar?'), 'a variation of the official block: align it?')
+ok(in1('1 especialista não tem «Sem emojis» (rh-facilities): é intencional?'), '«no emojis» missing: asked')
 ok(in1('4 especialistas definem «Tamanho da resposta» de 2 jeitos (3 bullets em 3; 5 frases em 2): unificar?'), 'set in two ways: unify?')
-ok(in1('bodega-loja-fisica define «Tamanho da resposta» duas vezes (3 bullets; 5 frases): qual vale?'), 'set twice: which one holds?')
-ok(in1('O tipo «triagem» tem 1 especialista (bodega-frete): nada a comparar dentro dele'), 'a type with one specialist: told')
-ok(!l1.some((x) => x.startsWith('Só bodega-devolucoes tem')), 'what the contradiction already says is not asked again as a solo', l1.filter((x) => x.startsWith('Só ')))
+ok(in1('rh-facilities define «Tamanho da resposta» duas vezes (3 bullets; 5 frases): qual vale?'), 'set twice: which one holds?')
+ok(in1('O tipo «triagem» tem 1 especialista (rh-folha): nada a comparar dentro dele'), 'a type with one specialist: told')
+ok(!l1.some((x) => x.startsWith('Só rh-beneficios tem')), 'what the contradiction already says is not asked again as a solo', l1.filter((x) => x.startsWith('Só ')))
 const kinds = reviewCast(r1).map((l) => l.key)
 const first = (k: string) => kinds.indexOf(k as never)
 ok(first('contradiction') === 0 && first('off') < first('values') && first('values') < first('twice') && first('twice') < first('type') && first('type') < first('gap') && first('gap') < first('solo'), 'contradictions first, then off, values, twice, types, rules, solos', kinds)

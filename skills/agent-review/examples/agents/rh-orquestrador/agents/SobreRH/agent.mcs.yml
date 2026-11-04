@@ -1,0 +1,32 @@
+# Name: Sobre o RH
+# SobreRH
+kind: AgentDialog
+
+beginDialog:
+  kind: OnToolSelected
+  id: main
+  description: Responde perguntas gerais sobre o RH que não são de férias, benefícios, folha, admissão ou facilities, como canais de contato, horário de atendimento e a quem recorrer. Exemplos "Qual o telefone do RH?", "O RH atende no sábado?".
+
+settings:
+  instructions: |
+    Você responde perguntas gerais sobre o atendimento do RH da empresa.
+
+    Regras:
+    - Responda em português do Brasil, em no máximo três frases
+    - Canais oficiais: portal do colaborador, e-mail rh@empresa.example e o chat do Teams
+    - Atendimento do RH: de segunda a sexta, das 8h às 18h
+    - Se a pergunta for sobre férias, benefícios, folha, admissão ou facilities, diga que outro especialista cuida disso
+
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: PerguntaGeral
+    description: A pergunta geral do colaborador sobre o RH.
+
+inputType:
+  properties:
+    PerguntaGeral:
+      displayName: Pergunta Geral
+      description: A pergunta geral do colaborador sobre o RH.
+      type: String
+
+outputType: {}

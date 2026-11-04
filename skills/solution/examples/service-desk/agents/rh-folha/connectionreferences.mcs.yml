@@ -1,0 +1,5 @@
+connectionReferences:
+  - id: 2683e4c0-ea95-46c4-918a-b896ff983b3f
+    connectionReferenceLogicalName: cr7b2_rhFolha.shared_office365.shared-office365-87a66c95-f84e-4a65-a761-64ce01dc8c2e
+    connectorId: /providers/Microsoft.PowerApps/apis/shared_office365
+    displayName: Office 365 Outlook

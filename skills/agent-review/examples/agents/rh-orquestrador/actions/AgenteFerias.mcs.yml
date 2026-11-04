@@ -1,0 +1,24 @@
+mcs.metadata:
+  componentName: Agente Férias
+  description: Agente conectado RH - Férias.
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: CategoriaSolicitacao
+    value: =Global.CategoriaSolicitacao
+
+modelDisplayName: RH - Férias
+modelDescription: "Agente especialista em férias e ausências: saldo, pedido de férias, folgas, licenças e aprovação do gestor. Use quando a categoria for Ferias."
+action:
+  kind: InvokeConnectedAgentTaskAction
+  inputType:
+    properties:
+      CategoriaSolicitacao:
+        displayName: CategoriaSolicitacao
+        description: Categoria da solicitação definida pelo orquestrador.
+        isRequired: true
+        type: String
+
+  botSchemaName: cr7b2_rhFerias
+  historyType:
+    kind: ConversationHistory

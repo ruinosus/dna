@@ -1,0 +1,5 @@
+question,expectedResponse,actualResponse,testMethodType_1,result_1,passingScore_1,explanation_1,testMethodType_2,result_2,passingScore_2,explanation_2
+Quando cai o salário deste mês?,"No quinto dia útil","O salário é pago no quinto dia útil do mês.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Pass,70,Same meaning
+O adiantamento é automático?,"Sim, no dia 20","Sim: o adiantamento cai todo dia 20.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Pass,70,Same meaning
+Quando sai a primeira parcela do 13º?,"Até 30 de novembro","Sai em breve.",GeneralQuality,Fail,,Seems incomplete,CompareMeaning,Fail,70,Different meaning
+Quero falar com uma pessoa,"Encaminhar para uma pessoa","Posso te ajudar com a folha por aqui.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Fail,70,Question not answered

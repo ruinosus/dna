@@ -1,0 +1,25 @@
+mcs.metadata:
+  componentName: Escalar
+  description: Acionado quando o colaborador pede para falar com uma pessoa.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnEscalate
+  id: main
+  intent:
+    displayName: Escalar
+    includeInOnSelectIntent: false
+    triggerQueries:
+      - Falar com um atendente
+      - Quero falar com uma pessoa
+      - Atendimento humano
+      - Me transfere para alguém
+
+  actions:
+    - kind: SendActivity
+      id: sendMessage_X7qDFG
+      activity: "A transferência para um atendente ainda não está disponível neste canal. Fale com a nossa equipe pelo e-mail ferias@empresa.example, de segunda a sábado, das 9h às 18h."
+
+    - kind: SendActivity
+      id: sendMessage_E8ut1s
+      disabled: true
+      activity: "Aguarde, estamos transferindo você para um atendente."

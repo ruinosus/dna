@@ -1,0 +1,35 @@
+mcs.metadata:
+  componentName: Classificar Solicitação
+  description: Define a categoria da solicitação do colaborador para encaminhar ao especialista certo.
+kind: AdaptiveDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: CategoriaSolicitacao
+    description: |-
+      Classifique a solicitação do colaborador em exatamente uma destas categorias:
+      Ferias, Beneficios, Folha, Admissao, Facilities, Outro
+      Use Outro quando nenhuma das demais se aplicar.
+    shouldPromptUser: false
+
+modelDescription: Classifica a solicitação do colaborador (férias, benefícios, folha, admissão, facilities ou outro) antes de acionar um agente especialista. Use sempre antes de chamar um especialista.
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    - kind: SetVariable
+      id: setVariable_K5k7Ur
+      variable: Global.CategoriaSolicitacao
+      value: =Topic.CategoriaSolicitacao
+
+inputType:
+  properties:
+    CategoriaSolicitacao:
+      displayName: CategoriaSolicitacao
+      description: |-
+        Classifique a solicitação do colaborador em exatamente uma destas categorias:
+        Ferias, Beneficios, Folha, Admissao, Facilities, Outro
+        Use Outro quando nenhuma das demais se aplicar.
+      type: String
+
+outputType: {}

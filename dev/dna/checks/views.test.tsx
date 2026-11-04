@@ -21,9 +21,9 @@ const BLUEPRINT = {
     moments: [{ id: 'sign', phase: 'join', customer: 'Signs up at the desk', feels: 2, front: [{ actor: 'desk', does: 'Fills the form' }], support: ['billing'], pains: [{ says: 'Twenty minutes' }] }],
   },
 }
-const CAST1 = '✓ 6 agentes: 1 orquestrador, 5 especialistas\n✓ 38 padrões · 3 fora do padrão · 4 só um tem\n▸ Contradições · 1\n! para olhar: bodega-devolucoes tem «Só o conhecimento»\n▸ Fora do padrão · 2\n! para olhar: 1 especialista não escala (bodega-frete)\n! para olhar: 1 especialista não registra telemetria\n• os arquivos têm dados do cliente\n'
+const CAST1 = '✓ 6 agentes: 1 orquestrador, 5 especialistas\n✓ 38 padrões · 3 fora do padrão · 4 só um tem\n▸ Contradições · 1\n! para olhar: rh-beneficios tem «Só o conhecimento»\n▸ Fora do padrão · 2\n! para olhar: 1 especialista não escala (rh-folha)\n! para olhar: 1 especialista não registra telemetria\n• os arquivos têm dados do cliente\n'
 const CAST2 = CAST1.replace('▸ Fora do padrão · 2', '▸ Fora do padrão · 3') + ''
-const CAST2_FULL = CAST2.replace('! para olhar: 1 especialista não registra telemetria\n', '! para olhar: 1 especialista não registra telemetria\n! para olhar: bodega-pedidos não tem histórico\n')
+const CAST2_FULL = CAST2.replace('! para olhar: 1 especialista não registra telemetria\n', '! para olhar: 1 especialista não registra telemetria\n! para olhar: rh-ferias não tem histórico\n')
 
 function engine(on: any, opts: { toasts?: string[]; cast?: () => string; runs?: string[][]; listed?: Record<string, string[]>; files?: Record<string, string> } = {}) {
   const files: Record<string, string> = { '/repo/team.way.yaml': 'way', '/repo/gym.blueprint.yaml': 'blueprint', ...(opts.files ?? {}) }
@@ -99,7 +99,7 @@ test('/compare-agents compares a folder: the summary and the groups, each openin
   const term = await $.ui.mount(pane('dna-cast', 'terminal'))
   expect((await term.find({ type: 'Text', text: /6 agentes/ }))?.text).toContain('1 orquestrador')
   await term.press({ key: 'g:Fora do padrão' })
-  expect((await term.find({ type: 'Text', text: /não escala/ }))?.text).toContain('bodega-frete')
+  expect((await term.find({ type: 'Text', text: /não escala/ }))?.text).toContain('rh-folha')
   await term.unmount()
 })
 
@@ -110,8 +110,8 @@ test('after /compare-agents, an agent edited in that folder compares again and a
   await start($)
   await $.command.run({ command: 'compare-agents', args: '/repo/agents --lang pt' } as any)
   now = CAST2_FULL
-  await $.tool.call({ tool: 'Write', file_path: '/repo/agents/bodega-pedidos/agent.mcs.yml', content: 'kind: GptComponentMetadata' })
-  expect(toasts.join('\n')).toContain('agent-review: +1 para olhar — bodega-pedidos não tem histórico')
+  await $.tool.call({ tool: 'Write', file_path: '/repo/agents/rh-ferias/agent.mcs.yml', content: 'kind: GptComponentMetadata' })
+  expect(toasts.join('\n')).toContain('agent-review: +1 para olhar — rh-ferias não tem histórico')
   // a file outside the compared folder changes nothing
   const before = toasts.length
   await $.tool.call({ tool: 'Write', file_path: '/repo/other/agent.mcs.yml', content: 'x' })
@@ -127,8 +127,8 @@ test('/way-preview and /compare-agents take a path typed with ~', async ($, on) 
   expect(JSON.stringify(c)).toContain('▸ Fora do padrão · 2')
 })
 
-const PROFILE = 'format: cast-list/profile-v1\nname: Bodega Azul\n'
-const CASTFILE = 'format: cast-list/cast-v1\nname: Bodega Azul\n'
+const PROFILE = 'format: cast-list/profile-v1\nname: RH\n'
+const CASTFILE = 'format: cast-list/cast-v1\nname: RH\n'
 
 test('/compare-agents passes the team profile: the one given, or the only one beside the agents, and asks when there are two', async ($, on) => {
   const runs: string[][] = []
@@ -144,7 +144,7 @@ test('/compare-agents passes the team profile: the one given, or the only one be
   expect(JSON.stringify(found)).toContain('perfil: /repo/team.standard.yaml (o único ao lado dos agentes)')
   expect(runs.at(-1)).toEqual(expect.arrayContaining(['--profile', '/repo/team.standard.yaml']))
   // an edit compares again with the same profile
-  await $.tool.call({ tool: 'Write', file_path: '/repo/agents/bodega-frete/agent.mcs.yml', content: 'x' })
+  await $.tool.call({ tool: 'Write', file_path: '/repo/agents/rh-folha/agent.mcs.yml', content: 'x' })
   expect(runs.at(-1)).toEqual(expect.arrayContaining(['--profile', '/repo/team.standard.yaml']))
   // two profiles: the person chooses, nothing runs
   listed['/repo'] = ['team.standard.yaml', 'other.cast.yaml']

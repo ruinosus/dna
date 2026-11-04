@@ -57,16 +57,16 @@ mkdirSync(demo)
 copyFileSync(join(examples, 'demo.review.yaml'), join(demo, 'agents.review.yaml'))
 const d = run(agents, '--profile', profile, '--lang', 'pt', '--telemetry', join(examples, 'telemetria.csv'), '--out', demo)
 ok(d.status === 0 && looks(d.stdout) === 24 + 1 + 2 && d.stdout.includes('mas o YAML não tem'), '27 to look at with the demo review file and the telemetry, the contradiction first', d.stdout)
-ok(d.stdout.includes('O evento «BodegaFrete_OnError» de bodega-frete não disparou em 30 dias') && d.stdout.includes('bodega-loja-fisica não tem nenhuma linha na telemetria'), 'the telemetry: what did not fire, and who has no line', d.stdout)
-ok(readFileSync(join(demo, 'agents.review.yaml'), 'utf8').includes('# the handoff document says frete escalates'), "the review file keeps the person's comments")
+ok(d.stdout.includes('O evento «RhFolha_OnError» de rh-folha não disparou em 30 dias') && d.stdout.includes('rh-facilities não tem nenhuma linha na telemetria'), 'the telemetry: what did not fire, and who has no line', d.stdout)
+ok(readFileSync(join(demo, 'agents.review.yaml'), 'utf8').includes('# the handoff document says folha escalates'), "the review file keeps the person's comments")
 
 // declared from outside: the admin center's inventory and the team's spreadsheet, listed and then taken
 const dec = join(work, 'declared')
 const listedOut = run(agents, '--declared', join(examples, 'inventario.csv'), '--declared', join(examples, 'equipe.csv'), '--lang', 'pt', '--out', dec)
-ok(listedOut.status === 0 && /^\s+d1\s+\+ declarado\s+bodega-orquestrador · Responsável declarado = «atendimento@bodegaazul.example» \(inventario.csv › linha 2\)/m.test(listedOut.stdout) && listedOut.stdout.includes('linha 8 («Bodega Azul - Fidelidade»)') && !existsSync(join(dec, 'agents.review.yaml')), '--declared lists what the tables say, each with a key, and the rows of nobody in the folder; nothing written', listedOut.stdout)
+ok(listedOut.status === 0 && /^\s+d1\s+\+ declarado\s+rh-orquestrador · Responsável declarado = «rh@empresa.example» \(inventario.csv › linha 2\)/m.test(listedOut.stdout) && listedOut.stdout.includes('linha 8 («RH - Mobilidade»)') && !existsSync(join(dec, 'agents.review.yaml')), '--declared lists what the tables say, each with a key, and the rows of nobody in the folder; nothing written', listedOut.stdout)
 const tookOut = run(agents, '--declared', join(examples, 'equipe.csv'), '--take', 'all', '--lang', 'pt', '--out', dec)
 const afterKpi = run(agents, '--profile', profile, '--check', '--lang', 'pt', '--out', dec)
-ok(tookOut.status === 0 && readFileSync(join(dec, 'agents.review.yaml'), 'utf8').includes('cotação em menos de 5 s') && afterKpi.stdout.includes('Regra «Todo especialista tem KPI»: 1 especialista não cumpre (bodega-loja-fisica)'), '--take all writes them; the next run counts the KPIs', afterKpi.stdout)
+ok(tookOut.status === 0 && readFileSync(join(dec, 'agents.review.yaml'), 'utf8').includes('resposta sobre o holerite em menos de 5 s') && afterKpi.stdout.includes('Regra «Todo especialista tem KPI»: 1 especialista não cumpre (rh-facilities)'), '--take all writes them; the next run counts the KPIs', afterKpi.stdout)
 // the RH: the demo review file with both tables taken, and the telemetry
 const rh = join(work, 'rh')
 mkdirSync(rh)
@@ -120,23 +120,23 @@ const { readXlsx } = await import(join(skill, 'scripts/read-xlsx.mjs'))
 const { workbookFile } = await import(join(skill, 'scripts/engine.mjs'))
 run(agents, '--profile', profile, '--xlsx', '--lang', 'pt', '--out', demo)
 const sheets = readXlsx(readFileSync(join(demo, 'agents.xlsx')))
-sheets.find((x) => x.name === 'Declarado').rows.push(['bodega-frete', 'kpi', 'cotação em menos de 5 s', 'planilha do time'])
+sheets.find((x) => x.name === 'Declarado').rows.push(['rh-folha', 'kpi', 'resposta sobre o holerite em menos de 5 s', 'planilha do time'])
 const pats = sheets.find((x) => x.name === 'Padrões')
 pats.rows.find((r) => r[0] === 'node:LogCustomTelemetryEvent')[pats.rows[0].indexOf('Decisão')] = 'aceito'
 writeFileSync(join(work, 'edited.xlsx'), workbookFile(sheets.map((x) => ({ key: 'summary', name: x.name, header: true, columns: (x.rows[0] ?? []).map((t) => ({ title: t, width: 20 })), rows: x.rows }))))
 const listed = run(agents, '--from', join(work, 'edited.xlsx'), '--lang', 'pt', '--out', demo)
-ok(listed.status === 0 && /^\s+d1\s+\+ declarado\s+bodega-frete · KPI declarado = «cotação em menos de 5 s»/m.test(listed.stdout) && /^\s+p1\s+\+ decisão\s+Registra telemetria: aceito \(plataforma\)/m.test(listed.stdout), '--from lists what was filled in, each with its key', listed.stdout)
+ok(listed.status === 0 && /^\s+d1\s+\+ declarado\s+rh-folha · KPI declarado = «resposta sobre o holerite em menos de 5 s»/m.test(listed.stdout) && /^\s+p1\s+\+ decisão\s+Registra telemetria: aceito \(plataforma\)/m.test(listed.stdout), '--from lists what was filled in, each with its key', listed.stdout)
 ok(run(agents, '--from', join(work, 'edited.xlsx'), '--take', 'zz', '--out', demo).status === 2, '--take with a key that is not there: exit 2')
 const took = run(agents, '--from', join(work, 'edited.xlsx'), '--take', 'all', '--lang', 'pt', '--out', demo)
 const written = readFileSync(join(demo, 'agents.review.yaml'), 'utf8')
-ok(took.status === 0 && written.includes('cotação em menos de 5 s') && /key: node:LogCustomTelemetryEvent, status: accepted/.test(written) && written.includes('# the handoff document says frete escalates'), '--take all writes them to the review file, comments kept', written)
+ok(took.status === 0 && written.includes('resposta sobre o holerite em menos de 5 s') && /key: node:LogCustomTelemetryEvent, status: accepted/.test(written) && written.includes('# the handoff document says folha escalates'), '--take all writes them to the review file, comments kept', written)
 const next = run(agents, '--profile', profile, '--check', '--lang', 'pt', '--out', demo)
-ok(next.stdout.includes('não registra telemetria (bodega-loja-fisica), e o padrão foi aceito: corrigir?') && next.stdout.includes('3 especialistas não cumprem'), 'the next run checks the accepted pattern, and counts the declared KPI', next.stdout)
+ok(next.stdout.includes('não registra telemetria (rh-facilities), e o padrão foi aceito: corrigir?') && next.stdout.includes('3 especialistas não cumprem'), 'the next run checks the accepted pattern, and counts the declared KPI', next.stdout)
 
 // the facts, for a model
 const f = run(agents, '--facts', '--out', join(work, 'facts'))
 const facts = JSON.parse(readFileSync(join(work, 'facts', 'agents.facts.json'), 'utf8'))
-ok(f.status === 0 && facts.format === 'agent-review/facts-v1' && facts.agents.length === 6 && facts.agents.find((x) => x.id === 'bodega-frete').facts['trigger:OnUnknownIntent'][0].file === 'topics/Fallback.topic.mcs.yml', '--facts: each agent, its facts with file and line', f.stderr)
+ok(f.status === 0 && facts.format === 'agent-review/facts-v1' && facts.agents.length === 6 && facts.agents.find((x) => x.id === 'rh-folha').facts['trigger:OnUnknownIntent'][0].file === 'topics/Fallback.topic.mcs.yml', '--facts: each agent, its facts with file and line', f.stderr)
 
 // a clean copy of the skill, with no node_modules anywhere above it, runs on Node alone
 const clean = join(work, 'clean')
@@ -184,7 +184,7 @@ else {
       out.looks = all('[data-look]').length
       q('[data-look="0"]').click(); out.look = q('.cl-detail h3')?.textContent
       q('[data-pattern="node:LogCustomTelemetryEvent"]').click(); out.files = [...all('.cl-detail .cl-file')].map((f) => f.textContent)
-      out.lacks = q('.cl-detail')?.textContent.includes('bodega-loja-fisica')
+      out.lacks = q('.cl-detail')?.textContent.includes('rh-facilities')
       q('[data-role="specialist"]').click(); out.columns = [...all('.cl-matrix thead th[scope=col]')].map((t) => t.textContent)
       q('[data-get="xlsx"]').click(); q('[data-get="yaml"]').click(); q('[data-get="png"]').click()
       await new Promise((r) => setTimeout(r, 1500))
@@ -199,10 +199,10 @@ else {
       q('[data-tab="unknown"]').click(); out.unknown = q('.cl-empty')?.textContent
       q('[data-tab="cast"]').click()
       const card = (id) => [...all('.cl-agent')].find((c) => c.querySelector('h3')?.textContent === id)
-      out.chain = card('bodega-pedidos')?.querySelector('.cl-chain')?.textContent.trim()
-      out.silent = card('bodega-cupons')?.querySelector('.cl-chain .cl-silent')?.textContent
-      out.routing = card('bodega-orquestrador')?.querySelectorAll('.cl-routing tbody tr').length
-      out.events = [card('bodega-pedidos'), card('bodega-frete'), card('bodega-loja-fisica')].map((c) => c?.querySelector('.cl-events')?.textContent.trim())
+      out.chain = card('rh-ferias')?.querySelector('.cl-chain')?.textContent.trim()
+      out.silent = card('rh-admissao')?.querySelector('.cl-chain .cl-silent')?.textContent
+      out.routing = card('rh-orquestrador')?.querySelectorAll('.cl-routing tbody tr').length
+      out.events = [card('rh-ferias'), card('rh-folha'), card('rh-facilities')].map((c) => c?.querySelector('.cl-events')?.textContent.trim())
       q('[data-tab="unused"]').click(); out.unused = all('.cl-table tbody tr').length
       out.got = got; out.errs = errs
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
@@ -212,14 +212,14 @@ else {
   const folded = (r.heads ?? []).filter(([, e]) => e === 'false')
   ok(folded.map(([g]) => g).join() === 'solo,unused' && r.shown === 27 - folded.reduce((n, [, , c]) => n + c, 0) && r.heads.reduce((n, [, , c]) => n + c, 0) === 27 && r.opened, '«to look at» in groups with how many; «only one has it» and «unused» folded, and they open', JSON.stringify([r.heads, r.shown, r.opened]))
   ok(r.files?.length === 5 && r.files.every((f) => f.startsWith('topics/OnError.topic.mcs.yml:')) && r.lacks, 'a pattern shows the file and line of each, and who is off it', JSON.stringify(r.files))
-  ok(r.columns?.length === 6 && r.columns.filter((c) => c.startsWith('bodega-cupons')).length === 2 && !r.columns.some((c) => c.includes('orquestrador')), 'the role filter leaves the orchestrator out (cupons in its two types)', JSON.stringify(r.columns))
+  ok(r.columns?.length === 6 && r.columns.filter((c) => c.startsWith('rh-admissao')).length === 2 && !r.columns.some((c) => c.includes('orquestrador')), 'the role filter leaves the orchestrator out (admissao in its two types)', JSON.stringify(r.columns))
   ok((r.got ?? []).join() === 'agents.xlsx,agents.review.yaml,agents.png' && !r.errs?.length, 'the downloads: workbook, review file, PNG — no error', JSON.stringify(r))
-  ok(r.chain === 'Bodega Azul - Pedidos → Abrir chamado no ERP → erp.bodega-azul.example' && r.silent === '— não devolve nada', 'the cast: the chain of pedidos, and the flow of cupons that returns nothing', JSON.stringify([r.chain, r.silent]))
-  ok(r.events?.[0] === 'BodegaPedidos_OnError — 7 vezes em 30 dias' && r.events[1] === 'BodegaFrete_OnError — não disparou' && r.events[2] === 'nenhuma linha na telemetria', 'the cast: the events, the times they fired, what did not, who has no line', JSON.stringify(r.events))
+  ok(r.chain === 'RH - Férias → Abrir caso no Workday → workday.empresa.example' && r.silent === '— não devolve nada', 'the cast: the chain of ferias, and the flow of admissao that returns nothing', JSON.stringify([r.chain, r.silent]))
+  ok(r.events?.[0] === 'RhFerias_OnError — 7 vezes em 30 dias' && r.events[1] === 'RhFolha_OnError — não disparou' && r.events[2] === 'nenhuma linha na telemetria', 'the cast: the events, the times they fired, what did not, who has no line', JSON.stringify(r.events))
   ok(r.routing === 6 && r.unused === 4 && !r.errs?.length, 'the orchestrator\'s routing, 6 calls; the Unused tab, 4 rows; no error', JSON.stringify([r.routing, r.unused, r.errs]))
   ok(r.patterns === 31 && r.cast === 6 && r.ms === 15 && r.unknown === 'Tudo foi entendido.', 'the tabs: patterns, cast, Microsoft, not understood', JSON.stringify(r))
   ok(r.spills === false, 'the cast: a long path wraps inside its card', JSON.stringify(r.spills))
-  // the stage in a browser: a lens lights who it names, frete's scene stops on the contract, a card opens
+  // the stage in a browser: a lens lights who it names, folha's scene stops on the contract, a card opens
   const plotProbe = readFileSync(join(rh, 'agents.topology.html'), 'utf8').replace('</body>', `<script>
     const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
     setTimeout(() => { const q = (s) => document.querySelector(s); const all = (s) => document.querySelectorAll(s); const out = {}
@@ -227,43 +227,43 @@ else {
       q('[data-lens="pattern:trigger:OnEscalate"]').click()
       out.bad = [...all('.pl-node.l-bad')].map((n) => n.dataset.node); out.okN = all('.pl-node.l-ok').length
       q('[data-lens="pattern:trigger:OnEscalate"]').click()
-      const scene = [...all('[data-scene]')].find((b) => b.textContent.includes('Frete')); scene.click()
+      const scene = [...all('[data-scene]')].find((b) => b.textContent.includes('Folha')); scene.click()
       for (let i = 0; i < 2; i++) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))
       out.warn = q('.pl-narr.warn')?.textContent.includes('SEM o histórico'); out.spot = q('.pl-node.warn')?.dataset.node
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); out.closed = q('.pl-narr')?.classList.contains('idle')
-      const sceneBtn = () => [...all('[data-scene]')].find((b) => b.textContent.includes('Frete'))
+      const sceneBtn = () => [...all('[data-scene]')].find((b) => b.textContent.includes('Folha'))
       sceneBtn().click(); q('[data-lens="telemetry"]').click(); out.lensClosesScene = !!q('.pl-narr.idle') && !!q('.pl-svg.lensing')
       sceneBtn().click(); out.sceneClosesLens = !q('.pl-svg.lensing') && !q('.pl-narr.idle'); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
-      out.ghost = q('[data-node="cr7b2_bodegaFidelidade"] text')?.textContent
+      out.ghost = q('[data-node="cr7b2_rhMobilidade"] text')?.textContent
       const over = () => [...all('.pl-elabel')].filter((t) => { const b = t.getBoundingClientRect(); return [...all('[data-node] rect')].some((r) => { const n = r.getBoundingClientRect(); return b.left < n.right && b.right > n.left && b.top < n.bottom && b.bottom > n.top }) }).map((t) => t.textContent)
       out.overPlain = over(); q('[data-lens="unused"]').click(); out.overLens = over()
       const litIds = new Set([...all('.pl-node.l-ok, .pl-node.l-amber, .pl-node.l-bad')].map((n) => n.dataset.node)); out.labelsLens = all('.pl-elabel').length; q('[data-lens="unused"]').click(); out.labelsPlain = all('.pl-elabel').length
       out.sceneBtn = [...all('[data-scene]')].map((b) => b.textContent.replace('▶ ', '')).sort().join()
-      q('[data-node="bodega-frete"]').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      q('[data-node="rh-folha"]').dispatchEvent(new MouseEvent('click', { bubbles: true }))
       out.card = q('.pl-card .pl-name')?.textContent; out.off = [...all('.pl-checks .off')].map((x) => x.textContent); out.resume = q('.pl-card a')?.getAttribute('href')
       out.errs = errs
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 400)</script></body>`)
   writeFileSync(join(rh, 'plot-probe.html'), plotProbe)
   const pl = (await runPage(join(rh, 'plot-probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
-  ok(pl.nodes > 12 && pl.parts > 0 && pl.bad?.join() === 'bodega-frete' && pl.okN === 5, 'the stage: the nodes, the traffic moving, the escalation lens lights frete red and five green', JSON.stringify(pl))
-  ok(pl.warn === true && pl.spot === 'bodega-frete' && pl.closed === true, "frete's scene stops on the contract, with the spot on frete; Esc leaves it (the caption stays below the stage)", JSON.stringify(pl))
-  ok(pl.overPlain?.length === 0 && pl.overLens?.length === 0 && pl.labelsLens < pl.labelsPlain && pl.sceneBtn === 'Cupons,Devoluções,Fidelidade,Frete,Loja Física,Pedidos', 'no arrow label over a node, with or without a lens; a lens quiets the arrows it does not light; the scenes by short names', JSON.stringify([pl.overPlain, pl.overLens, pl.labelsLens, pl.labelsPlain, pl.sceneBtn]))
-  ok(pl.lensClosesScene === true && pl.sceneClosesLens === true && pl.ghost === 'Fidelidade', 'a lens closes the scene, a scene turns the lens off; the one not in the folder by its short name, uncut', JSON.stringify(pl))
-  ok(pl.card === 'Bodega Azul - Frete' && pl.off?.length > 0 && pl.resume === 'agents.team.html#bodega-frete' && !pl.errs?.length, "a click opens frete's card, off the escalation, with its résumé a link away; no error", JSON.stringify(pl))
-  // the RH in a browser: the board, frete's résumé and plan, a click on pedidos, never «agente»
+  ok(pl.nodes > 12 && pl.parts > 0 && pl.bad?.join() === 'rh-folha' && pl.okN === 5, 'the stage: the nodes, the traffic moving, the escalation lens lights folha red and five green', JSON.stringify(pl))
+  ok(pl.warn === true && pl.spot === 'rh-folha' && pl.closed === true, "folha's scene stops on the contract, with the spot on folha; Esc leaves it (the caption stays below the stage)", JSON.stringify(pl))
+  ok(pl.overPlain?.length === 0 && pl.overLens?.length === 0 && pl.labelsLens < pl.labelsPlain && pl.sceneBtn === 'Admissão,Benefícios,Facilities,Folha,Férias,Mobilidade', 'no arrow label over a node, with or without a lens; a lens quiets the arrows it does not light; the scenes by short names', JSON.stringify([pl.overPlain, pl.overLens, pl.labelsLens, pl.labelsPlain, pl.sceneBtn]))
+  ok(pl.lensClosesScene === true && pl.sceneClosesLens === true && pl.ghost === 'Mobilidade', 'a lens closes the scene, a scene turns the lens off; the one not in the folder by its short name, uncut', JSON.stringify(pl))
+  ok(pl.card === 'RH - Folha' && pl.off?.length > 0 && pl.resume === 'agents.team.html#rh-folha' && !pl.errs?.length, "a click opens folha's card, off the escalation, with its résumé a link away; no error", JSON.stringify(pl))
+  // the RH in a browser: the board, folha's résumé and plan, a click on ferias, never «agente»
   const rhProbe = readFileSync(join(rh, 'agents.team.html'), 'utf8').replace('</body>', `<script>
     const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
     setTimeout(() => { const q = (s) => document.querySelector(s); const all = (s) => document.querySelectorAll(s); const out = {}
       out.counts = [...all('.pb-count')].map((c) => c.textContent.trim())
       out.name = q('.pb-resume h2')?.textContent; out.items = all('.pb-pdi li').length; out.seal = q('.pb-seal')?.textContent
-      q('[data-who="bodega-pedidos"]').click(); out.pedidos = [q('.pb-resume h2')?.textContent, q('.pb-seal')?.textContent]
-      const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.map = q('a[href="agents.html"]') ? 1 : 0; out.cupons = all('.pb-org [data-who="bodega-cupons"]').length; out.cv = !!q('.pb-resume.pb-cv .pb-av') && [...all('.pb-cv .pb-facts .pb-under')].some((x) => x.textContent.startsWith('inventario.csv')); q('[data-view="sheet"]').click(); out.sheet = !q('.pb-cv') && !!q('.pb-facts .pb-src') && q('[data-view="sheet"]').getAttribute('aria-pressed') === 'true'; q('[data-view="cv"]').click(); out.back = !!q('.pb-cv'); out.also = q('.pb-org [data-who="bodega-cupons"] .pb-also')?.textContent; out.errs = errs
+      q('[data-who="rh-ferias"]').click(); out.ferias = [q('.pb-resume h2')?.textContent, q('.pb-seal')?.textContent]
+      const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.map = q('a[href="agents.html"]') ? 1 : 0; out.admissao = all('.pb-org [data-who="rh-admissao"]').length; out.cv = !!q('.pb-resume.pb-cv .pb-av') && [...all('.pb-cv .pb-facts .pb-under')].some((x) => x.textContent.startsWith('inventario.csv')); q('[data-view="sheet"]').click(); out.sheet = !q('.pb-cv') && !!q('.pb-facts .pb-src') && q('[data-view="sheet"]').getAttribute('aria-pressed') === 'true'; q('[data-view="cv"]').click(); out.back = !!q('.pb-cv'); out.also = q('.pb-org [data-who="rh-admissao"] .pb-also')?.textContent; out.errs = errs
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
   writeFileSync(join(rh, 'probe.html'), rhProbe)
   const h = (await runPage(join(rh, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
-  ok(h.counts?.some((c) => c.startsWith('1') && c.includes('sem responsável — Cupons')) && h.counts.some((c) => c.includes('em admissão — Fidelidade')) && h.counts.some((c) => c.includes('nunca publicado — Loja Física')), 'the RH: the staff board says who', JSON.stringify(h.counts))
-  ok(h.name === 'Bodega Azul - Cupons' || h.name === 'Bodega Azul - Frete' || h.name?.startsWith('Bodega Azul'), 'the RH opens on a résumé', JSON.stringify(h))
-  ok(h.pedidos?.[0] === 'Bodega Azul - Pedidos' && h.pedidos[1] === 'EM DIA' && h.agent === false && h.map === 1 && h.cupons === 1 && h.also === 'também orientação' && h.cv === true && h.sheet === true && h.back === true && !h.errs?.length, 'a click opens pedidos, in good standing; it opens as a résumé and turns into the sheet (with every source) and back; never «agente» in its own words (the client\'s text is quoted as written); the map is a link away; no error', JSON.stringify(h))
+  ok(h.counts?.some((c) => c.startsWith('1') && c.includes('sem responsável — Admissão')) && h.counts.some((c) => c.includes('em admissão — Mobilidade')) && h.counts.some((c) => c.includes('nunca publicado — Facilities')), 'the RH: the staff board says who', JSON.stringify(h.counts))
+  ok(h.name === 'RH - Admissão' || h.name === 'RH - Folha' || h.name?.startsWith('RH'), 'the RH opens on a résumé', JSON.stringify(h))
+  ok(h.ferias?.[0] === 'RH - Férias' && h.ferias[1] === 'EM DIA' && h.agent === false && h.map === 1 && h.admissao === 1 && h.also === 'também orientação' && h.cv === true && h.sheet === true && h.back === true && !h.errs?.length, 'a click opens ferias, in good standing; it opens as a résumé and turns into the sheet (with every source) and back; never «agente» in its own words (the client\'s text is quoted as written); the map is a link away; no error', JSON.stringify(h))
 }
 
 // wave 1 in a browser: the example profile has markers, an official block and types
@@ -282,7 +282,7 @@ mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' })
   const mr = (await runPage(join(mmdDir, 'probe.html'), 'probe', '', { timeout: 90 })) ?? { bad: ['the page did not answer'] }
   ok(mr.n === mmds.length && !mr.bad?.length, `Mermaid draws all ${mmds.length} diagrams, with no error and no code on the screen`, mr)
   const chalk = join(repo, 'skills/visual-explainer/scripts/build.mjs')
-  const lessons = ['topologia.mmd', 'cena-frete.mmd'].map((f) => spawnSync(process.execPath, [chalk, join(mmdDir, f), join(work, f.replace('.mmd', '.lesson.html'))], { encoding: 'utf8' }))
+  const lessons = ['topologia.mmd', 'cena-folha.mmd'].map((f) => spawnSync(process.execPath, [chalk, join(mmdDir, f), join(work, f.replace('.mmd', '.lesson.html'))], { encoding: 'utf8' }))
   ok(lessons.every((l) => (l.status === 0 || l.status === 3) && /→ .*opens offline/.test(l.stdout)), 'visual-explainer builds the topology and a scene as lessons', lessons.map((l) => l.stdout + l.stderr).join('\n'))
 }
 if (browser()) {
@@ -294,7 +294,7 @@ if (browser()) {
     const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
     setTimeout(() => { const q = (s) => document.querySelector(s); const all = (s) => [...document.querySelectorAll(s)]; const out = {}
       out.groups = all('.cl-groups th').map((t) => t.textContent).filter(Boolean)
-      out.cupons = all('.cl-matrix thead th[scope=col]').filter((t) => t.textContent.startsWith('bodega-cupons')).map((t) => t.textContent)
+      out.admissao = all('.cl-matrix thead th[scope=col]').filter((t) => t.textContent.startsWith('rh-admissao')).map((t) => t.textContent)
       out.variant = all('.cl-mark.var').length
       out.typeBadge = all('.cl-badge.type').length
       out.officialBadge = all('.cl-badge.official').length
@@ -306,10 +306,10 @@ if (browser()) {
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
   writeFileSync(join(w1, 'probe.html'), page)
   const x = (await runPage(join(w1, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
-  ok((x.groups ?? []).join() === 'orquestrador,transação,orientação,triagem' && (x.cupons ?? []).length === 2 && x.cupons.some((c) => c.includes('também em')), 'the matrix by type: cupons in two groups, «também em»', JSON.stringify(x))
-  ok((x.transaction ?? []).join() === 'bodega-cupons,bodega-devolucoes,bodega-pedidos', 'the type filter: transação keeps its three', JSON.stringify(x.transaction))
+  ok((x.groups ?? []).join() === 'orquestrador,transação,orientação,triagem' && (x.admissao ?? []).length === 2 && x.admissao.some((c) => c.includes('também em')), 'the matrix by type: admissao in two groups, «também em»', JSON.stringify(x))
+  ok((x.transaction ?? []).join() === 'rh-admissao,rh-beneficios,rh-ferias', 'the type filter: transação keeps its three', JSON.stringify(x.transaction))
   ok(x.variant >= 1 && x.typeBadge >= 1 && x.officialBadge >= 1, '≈ for a variation, the type badge, the official block badge', JSON.stringify(x))
-  ok(x.text === 'Links:' && x.variants === 1 && (x.del ?? []).some((d) => d.includes('link de ação vai no topo')) && (x.del ?? []).includes('3') && (x.add ?? []).includes('5') && !x.errs?.length, "the block's detail: its text, frete's variation word by word", JSON.stringify(x))
+  ok(x.text === 'Links:' && x.variants === 1 && (x.del ?? []).some((d) => d.includes('link de ação vai no topo')) && (x.del ?? []).includes('3') && (x.add ?? []).includes('5') && !x.errs?.length, "the block's detail: its text, folha's variation word by word", JSON.stringify(x))
 }
 
 rmSync(work, { recursive: true, force: true })

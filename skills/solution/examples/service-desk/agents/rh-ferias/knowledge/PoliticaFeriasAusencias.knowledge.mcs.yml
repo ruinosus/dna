@@ -1,0 +1,7 @@
+mcs.metadata:
+  componentName: Política de Férias e Ausências
+  description: "Regras de férias, folgas, licenças e prazos de aprovação da empresa."
+kind: KnowledgeSourceConfiguration
+source:
+  kind: SharePointSearchSource
+  site: https://empresa.sharepoint.com/sites/RH/Shared%20Documents/Ferias

@@ -1,0 +1,15 @@
+mcs.metadata:
+  componentName: Abrir caso no Workday
+  description: Abre um caso de atendimento no Workday pelo fluxo da solução.
+kind: TaskDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: resumo
+    description: Resumo da solicitação do colaborador, em uma frase.
+    shouldPromptUser: false
+
+modelDisplayName: Abrir caso no Workday
+modelDescription: Abre um caso no Workday quando o colaborador pede uma ação que o RH precisa executar (ajuste de férias, inclusão de dependente, correção de dados).
+action:
+  kind: InvokeFlowTaskAction
+  flowId: 7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f

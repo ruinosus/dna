@@ -1,7 +1,9 @@
 # Fixtures da agent-review — agentes fictícios
 
-Seis agentes do Copilot Studio de uma loja **fictícia** ("Bodega Azul"), no formato de um clone da extensão do
-VS Code, para testar a agent-review. Nenhum dado real de cliente.
+Seis agentes do Copilot Studio de um **autoatendimento de RH fictício**, no formato de um clone da extensão do
+VS Code, para testar a agent-review. Os cenários seguem o sample público Employee Self-Service da Microsoft (MIT,
+https://github.com/microsoft/CopilotStudioSamples/tree/main/EmployeeSelfServiceAgent): férias, benefícios e
+dependentes, folha, admissão e facilities, com o Workday por trás. Nenhum dado real de cliente nem de empresa.
 
 - Gerados pelo sub-agente Author do plugin **microsoft/skills-for-copilot-studio** (MIT, commit 9c42d3a), a partir dos
   modelos e das fixtures desse repositório (`templates/`, `evals/fixtures/`). Licença em

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate six fictional Copilot Studio agent fixtures (Bodega Azul) as cloned-layout .mcs.yml projects."""
+"""Generate six fictional Copilot Studio agent fixtures — an HR self-service, after Microsoft's Employee Self-Service sample — as cloned-layout .mcs.yml projects."""
 import json
 import os
 import random
@@ -121,7 +121,7 @@ def fallback_topic(schema, escalate):
           id: {rid('sendMessage')}
           activity:
             text:
-              - {q('Estou com dificuldade para entender o seu pedido. Vou te encaminhar para alguém da equipe Bodega Azul.')}
+              - {q('Estou com dificuldade para entender a sua solicitação. Vou te encaminhar para alguém do RH.')}
 
         - kind: BeginDialog
           id: {rid('beginDialog')}
@@ -131,13 +131,13 @@ def fallback_topic(schema, escalate):
           id: {rid('sendMessage')}
           activity:
             text:
-              - {q('Não consegui entender a sua solicitação. Você pode escrever para atendimento@bodegaazul.example que a nossa equipe responde em até 1 dia útil.')}
+              - {q('Não consegui entender a sua solicitação. Você pode escrever para rh@empresa.example que o RH responde em até 1 dia útil.')}
 
         - kind: CancelAllDialogs
           id: {rid('cancelAllDialogs')}"""
     return f"""mcs.metadata:
   componentName: Fallback
-  description: Acionado quando nenhum tópico ou ferramenta corresponde à mensagem do cliente.
+  description: Acionado quando nenhum tópico ou ferramenta corresponde à mensagem do colaborador.
 kind: AdaptiveDialog
 beginDialog:
   kind: OnUnknownIntent
@@ -172,7 +172,7 @@ def escalate_topic(contact, disabled=False):
 """ if disabled else ""
     return f"""mcs.metadata:
   componentName: Escalar
-  description: Acionado quando o cliente pede para falar com uma pessoa.
+  description: Acionado quando o colaborador pede para falar com uma pessoa.
 kind: AdaptiveDialog
 beginDialog:
   kind: OnEscalate
@@ -252,9 +252,9 @@ beginDialog:
 def redirect_topic():
     return f"""mcs.metadata:
   componentName: Recebimento do Orquestrador
-  description: Ponto de entrada quando o agente é chamado pelo orquestrador Bodega Azul como agente conectado.
+  description: Ponto de entrada quando o agente é chamado pelo orquestrador do RH como agente conectado.
 kind: AdaptiveDialog
-modelDescription: Inicializa o agente quando ele é chamado pelo orquestrador Bodega Azul e recebe a categoria da solicitação.
+modelDescription: Inicializa o agente quando ele é chamado pelo orquestrador do RH e recebe a categoria da solicitação.
 beginDialog:
   kind: OnRedirect
   id: main
@@ -276,7 +276,7 @@ def gen_answers_topic(component, desc, model_desc, input_desc, knowledge_ref):
 kind: AdaptiveDialog
 inputs:
   - kind: AutomaticTaskInput
-    propertyName: PerguntaCliente
+    propertyName: PerguntaColaborador
     description: {q(input_desc)}
     shouldPromptUser: true
 
@@ -288,7 +288,7 @@ beginDialog:
   actions:
     - kind: CreateSearchQuery
       id: {rid('createSearchQuery')}
-      userInput: =Topic.PerguntaCliente
+      userInput: =Topic.PerguntaColaborador
       result: Topic.SearchQuery
 
     - kind: SearchAndSummarizeContent
@@ -315,8 +315,8 @@ beginDialog:
 
 inputType:
   properties:
-    PerguntaCliente:
-      displayName: PerguntaCliente
+    PerguntaColaborador:
+      displayName: PerguntaColaborador
       description: {q(input_desc)}
       type: String
 
@@ -388,11 +388,11 @@ outputMode: All
 def variable_file(schema, external, default):
     ext = "isExternalInitializationAllowed: true\n" if external else ""
     return f"""# Name: Categoria da Solicitação
-# Categoria da solicitação do cliente definida pelo orquestrador Bodega Azul (Pedidos, Devolucoes, Frete, Cupons, LojaFisica, Outro).
+# Categoria da solicitação do colaborador definida pelo orquestrador do RH (Ferias, Beneficios, Folha, Admissao, Facilities, Outro).
 name: CategoriaSolicitacao
 aIVisibility: UseInAIContext
 scope: Conversation
-description: Categoria da solicitação do cliente definida pelo orquestrador Bodega Azul (Pedidos, Devolucoes, Frete, Cupons, LojaFisica, Outro).
+description: Categoria da solicitação do colaborador definida pelo orquestrador do RH (Ferias, Beneficios, Folha, Admissao, Facilities, Outro).
 schemaName: {schema}.globalvariable.CategoriaSolicitacao
 kind: GlobalVariableComponent
 {ext}defaultValue: {default}
@@ -431,7 +431,7 @@ def outlook_ref(schema):
 # Wave 1 (agent-review 1.3): the text of the instructions, the types of agent
 # ---------------------------------------------------------------------------
 
-# the shared block of links, pasted in four specialists; frete has a variation (one line less, 5 links)
+# the shared block of links, pasted in four specialists; folha has a variation (one line less, 5 links)
 LINKS = """Links:
 - Formate links assim: [título](url), nunca a URL crua.
 - Um link de ação vai no topo; o link da base de ajuda vai no fim.
@@ -445,31 +445,31 @@ SIZE3 = "Responda em no máximo 3 bullets."
 SIZE5 = "Use no máximo 5 frases por resposta."
 NO_EMOJI = "Não use emojis."
 KNOWLEDGE_ONLY = "Responda somente com base no conhecimento publicado."
-HELP_LINK = "Para dúvidas gerais, indique https://ajuda.bodega-azul.example/atendimento."
+HELP_LINK = "Para dúvidas gerais, indique https://portal.empresa.example/rh/ajuda."
 # one flow in the solution, shared by the three transaction specialists
 FLOW_ID = "7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f"
 WAVE1 = {
-    "bodega-pedidos": {"text": [LINKS, SIZE3, NO_EMOJI], "flow": True, "copy": True},
-    "bodega-devolucoes": {"text": [LINKS, SIZE3, NO_EMOJI, KNOWLEDGE_ONLY], "flow": True, "model_knowledge": True},
-    "bodega-frete": {"text": [LINKS_VARIANT, NO_EMOJI], "triage": True},
-    "bodega-cupons": {"text": [LINKS, SIZE5, NO_EMOJI, HELP_LINK], "flow": True},
-    "bodega-loja-fisica": {"text": [LINKS, SIZE3, HELP_LINK, SIZE5]},
+    "rh-ferias": {"text": [LINKS, SIZE3, NO_EMOJI], "flow": True, "copy": True},
+    "rh-beneficios": {"text": [LINKS, SIZE3, NO_EMOJI, KNOWLEDGE_ONLY], "flow": True, "model_knowledge": True},
+    "rh-folha": {"text": [LINKS_VARIANT, NO_EMOJI], "triage": True},
+    "rh-admissao": {"text": [LINKS, SIZE5, NO_EMOJI, HELP_LINK], "flow": True},
+    "rh-facilities": {"text": [LINKS, SIZE3, HELP_LINK, SIZE5]},
 }
 
 
 def flow_action():
     return f"""mcs.metadata:
-  componentName: Abrir chamado no ERP
-  description: Abre um chamado no ERP da Bodega Azul pelo fluxo da solução.
+  componentName: Abrir caso no Workday
+  description: Abre um caso de atendimento no Workday pelo fluxo da solução.
 kind: TaskDialog
 inputs:
   - kind: AutomaticTaskInput
     propertyName: resumo
-    description: Resumo do pedido do cliente, em uma frase.
+    description: Resumo da solicitação do colaborador, em uma frase.
     shouldPromptUser: false
 
-modelDisplayName: Abrir chamado no ERP
-modelDescription: Abre um chamado no ERP quando o cliente pede uma ação que a loja precisa executar (troca, cancelamento, reembolso).
+modelDisplayName: Abrir caso no Workday
+modelDescription: Abre um caso no Workday quando o colaborador pede uma ação que o RH precisa executar (ajuste de férias, inclusão de dependente, correção de dados).
 action:
   kind: InvokeFlowTaskAction
   flowId: {FLOW_ID}
@@ -479,7 +479,7 @@ action:
 def triage_topic():
     return """mcs.metadata:
   componentName: Desambiguar
-  description: Pergunta ao cliente qual assunto ele quis dizer quando mais de um tópico serve.
+  description: Pergunta ao colaborador qual assunto ele quis dizer quando mais de um tópico serve.
 kind: AdaptiveDialog
 beginDialog:
   kind: OnSelectIntent
@@ -497,69 +497,69 @@ beginDialog:
 
 LISTAR_LOJAS_ID = "3f2a9c1d-5e6f-4a7b-8c9d-0e1f2a3b4c5d"
 WAVE2 = {
-    "bodega-pedidos": {"flow": "returns", "disabled_node": True},
-    "bodega-devolucoes": {"flow": "returns"},
-    "bodega-cupons": {"flow": "silent"},       # the flow answers nothing to the agent
-    "bodega-loja-fisica": {"orphan_flow": True, "orphan_topic": True},
-    "bodega-frete": {"orphan_variable": True},
+    "rh-ferias": {"flow": "returns", "disabled_node": True},
+    "rh-beneficios": {"flow": "returns"},
+    "rh-admissao": {"flow": "silent"},       # the flow answers nothing to the agent
+    "rh-facilities": {"orphan_flow": True, "orphan_topic": True},
+    "rh-folha": {"orphan_variable": True},
 }
 
 
-# wave 3: the cupons writes its event another way, and leaves the conversation id out
+# wave 3: admissao writes its event another way, and leaves the conversation id out
 WAVE3 = {
-    "bodega-cupons": {"event": "bodega_cupons_onerror", "no_conversation_id": True},
+    "rh-admissao": {"event": "rh_admissao_onerror", "no_conversation_id": True},
 }
 
 # wave 3, outside the agents' folder: what a person exports — the query of the telemetry (references/telemetry.md), the
 # Power Platform admin center's inventory, and the team's own spreadsheet (with «;», as Excel saves it in Portuguese)
 TELEMETRY_CSV = """agente,evento,vezes
-Bodega Azul - Orquestrador,TopicStart,1840
-Bodega Azul - Orquestrador,BodegaOrquestrador_OnError,12
-Bodega Azul - Pedidos,TopicStart,610
-Bodega Azul - Pedidos,BodegaPedidos_OnError,7
-Bodega Azul - Devoluções,TopicStart,402
-Bodega Azul - Devoluções,BodegaDevolucoes_OnError,3
-Bodega Azul - Frete,TopicStart,355
-Bodega Azul - Cupons,TopicStart,290
-Bodega Azul - Cupons,bodega_cupons_onerror,5
+RH - Orquestrador,TopicStart,1840
+RH - Orquestrador,RhOrquestrador_OnError,12
+RH - Férias,TopicStart,610
+RH - Férias,RhFerias_OnError,7
+RH - Benefícios,TopicStart,402
+RH - Benefícios,RhBeneficios_OnError,3
+RH - Folha,TopicStart,355
+RH - Admissão,TopicStart,290
+RH - Admissão,rh_admissao_onerror,5
 """
 
 # wave 4c, outside the agents' folder: two exports of Copilot Studio's Evaluate tab, in its columns. The product names
-# them «Evaluate <agent name> <date>.csv»; here in kebab-case, which the skill reads the same. Pedidos passes all; Frete fails one, on a second method too.
+# them «Evaluate <agent name> <date>.csv»; here in kebab-case, which the skill reads the same. Férias passes all; Folha fails one, on a second method too.
 EVALS = {
-    "evaluate-bodega-azul-pedidos-2026-10-30.csv": """question,expectedResponse,actualResponse,testMethodType_1,result_1,passingScore_1,explanation_1
-Onde está meu pedido 1234?,,"O pedido 1234 saiu para entrega hoje. Prazo: até amanhã.",GeneralQuality,Pass,,Seems relevant; Seems complete
-Posso pagar com boleto?,,"Sim: boleto à vista, com aprovação em até 2 dias úteis.",GeneralQuality,Pass,,Seems relevant; Seems complete
-Quanto tempo leva o processamento?,,"O processamento leva até 1 dia útil depois do pagamento.",GeneralQuality,Pass,,Seems relevant
-Quero falar com uma pessoa,,"Vou te passar para alguém da equipe agora.",GeneralQuality,Pass,,Seems relevant
+    "evaluate-rh-ferias-2026-10-30.csv": """question,expectedResponse,actualResponse,testMethodType_1,result_1,passingScore_1,explanation_1
+Quantos dias de férias eu tenho?,,"Você tem 18 dias de saldo no período atual.",GeneralQuality,Pass,,Seems relevant; Seems complete
+Posso dividir as férias em três períodos?,,"Sim: em até três períodos, um deles com pelo menos 14 dias.",GeneralQuality,Pass,,Seems relevant; Seems complete
+Quanto tempo o gestor tem para aprovar?,,"O gestor aprova em até 2 dias úteis no Workday.",GeneralQuality,Pass,,Seems relevant
+Quero falar com uma pessoa,,"Vou te passar para alguém do RH agora.",GeneralQuality,Pass,,Seems relevant
 """,
-    "evaluate-bodega-azul-frete-2026-10-30.csv": """question,expectedResponse,actualResponse,testMethodType_1,result_1,passingScore_1,explanation_1,testMethodType_2,result_2,passingScore_2,explanation_2
-Quanto custa o frete para o Nordeste?,"Conforme a tabela de frete","O frete para o Nordeste sai a partir da tabela por faixa de CEP.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Pass,70,Same meaning
-O frete grátis vale para qualquer valor?,"Acima de 199 reais","Vale para compras acima de 199 reais.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Pass,70,Same meaning
-Em quantos dias chega em Manaus?,"Até 12 dias úteis","Chega em poucos dias.",GeneralQuality,Fail,,Seems incomplete,CompareMeaning,Fail,70,Different meaning
-Quero falar com uma pessoa,"Encaminhar para uma pessoa","Posso te ajudar com o frete por aqui.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Fail,70,Question not answered
+    "evaluate-rh-folha-2026-10-30.csv": """question,expectedResponse,actualResponse,testMethodType_1,result_1,passingScore_1,explanation_1,testMethodType_2,result_2,passingScore_2,explanation_2
+Quando cai o salário deste mês?,"No quinto dia útil","O salário é pago no quinto dia útil do mês.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Pass,70,Same meaning
+O adiantamento é automático?,"Sim, no dia 20","Sim: o adiantamento cai todo dia 20.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Pass,70,Same meaning
+Quando sai a primeira parcela do 13º?,"Até 30 de novembro","Sai em breve.",GeneralQuality,Fail,,Seems incomplete,CompareMeaning,Fail,70,Different meaning
+Quero falar com uma pessoa,"Encaminhar para uma pessoa","Posso te ajudar com a folha por aqui.",GeneralQuality,Pass,,Seems relevant,CompareMeaning,Fail,70,Question not answered
 """,
 }
 
 INVENTORY_CSV = """Item name,Item type,Schema name,Owner,Environment,Created on,Last published
-Bodega Azul - Orquestrador,Agent,cr7b2_bodegaOrquestrador,atendimento@bodegaazul.example,Bodega Azul (Produção),2026-03-02,2026-10-28
-Bodega Azul - Pedidos,Agent,cr7b2_bodegaPedidos,pedidos@bodegaazul.example,Bodega Azul (Produção),2026-03-05,2026-10-21
-Bodega Azul - Devoluções,Agent,cr7b2_bodegaDevolucoes,trocas@bodegaazul.example,Bodega Azul (Produção),2026-03-05,2026-10-14
-Bodega Azul - Frete,Agent,cr7b2_bodegaFrete,frete@bodegaazul.example,Bodega Azul (Produção),2026-03-09,2026-09-30
-Bodega Azul - Cupons,Agent,cr7b2_bodegaCupons,,Bodega Azul (Produção),2026-03-12,2026-10-02
-Bodega Azul - Loja Física,Agent,cr7b2_bodegaLojaFisica,loja@bodegaazul.example,Bodega Azul (Produção),2026-04-01,
-Bodega Azul - Fidelidade,Agent,cr7b2_bodegaFidelidade,fidelidade@bodegaazul.example,Bodega Azul (Testes),2026-08-20,
-Painel de Pedidos,Canvas app,,pedidos@bodegaazul.example,Bodega Azul (Produção),2026-02-11,
-Abrir chamado no ERP,Agent flow,,pedidos@bodegaazul.example,Bodega Azul (Produção),2026-03-05,
+RH - Orquestrador,Agent,cr7b2_rhOrquestrador,rh@empresa.example,RH (Produção),2026-03-02,2026-10-28
+RH - Férias,Agent,cr7b2_rhFerias,ferias@empresa.example,RH (Produção),2026-03-05,2026-10-21
+RH - Benefícios,Agent,cr7b2_rhBeneficios,beneficios@empresa.example,RH (Produção),2026-03-05,2026-10-14
+RH - Folha,Agent,cr7b2_rhFolha,folha@empresa.example,RH (Produção),2026-03-09,2026-09-30
+RH - Admissão,Agent,cr7b2_rhAdmissao,,RH (Produção),2026-03-12,2026-10-02
+RH - Facilities,Agent,cr7b2_rhFacilities,facilities@empresa.example,RH (Produção),2026-04-01,
+RH - Mobilidade,Agent,cr7b2_rhMobilidade,mobilidade@empresa.example,RH (Testes),2026-08-20,
+Painel de Férias,Canvas app,,ferias@empresa.example,RH (Produção),2026-02-11,
+Abrir caso no Workday,Agent flow,,ferias@empresa.example,RH (Produção),2026-03-05,
 """
 
 TEAM_CSV = """Agente;KPI;Dono
-Bodega Azul - Pedidos;pedido localizado em até 2 trocas de mensagem;Squad Pedidos
-Bodega Azul - Devoluções;troca aberta sem atendente em 80% dos casos;Squad Pós-venda
-Bodega Azul - Frete;cotação em menos de 5 s;Squad Logística
-Bodega Azul - Cupons;cupom validado na primeira tentativa;Squad Promoções
-Bodega Azul - Loja Física;;Squad Lojas
-Sobre a Bodega Azul;respostas gerais sem encaminhar;Squad Atendimento
+RH - Férias;saldo informado em até 2 trocas de mensagem;Squad Férias
+RH - Benefícios;inclusão aberta sem atendente em 80% dos casos;Squad Benefícios
+RH - Folha;resposta sobre o holerite em menos de 5 s;Squad Folha
+RH - Admissão;documentos pendentes listados na primeira tentativa;Squad Admissão
+RH - Facilities;;Squad Facilities
+Sobre o RH;respostas gerais sem encaminhar;Squad Atendimento RH
 """
 
 
@@ -589,16 +589,16 @@ modernFlowType: 1
 
 
 def erp_flow(d, returns):
-    flow_folder(d, "Abrir chamado no ERP", f"AbrirChamadoERP-{FLOW_ID}", FLOW_ID, {
-        "Abrir_chamado": {"type": "Scope", "actions": {
-            "Chamar_ERP": {"type": "Http", "inputs": {"method": "POST", "uri": "https://erp.bodega-azul.example/chamados", "body": "@triggerBody()"}}}}}, returns)
+    flow_folder(d, "Abrir caso no Workday", f"AbrirCasoWorkday-{FLOW_ID}", FLOW_ID, {
+        "Abrir_caso": {"type": "Scope", "actions": {
+            "Chamar_Workday": {"type": "Http", "inputs": {"method": "POST", "uri": "https://workday.empresa.example/casos", "body": "@triggerBody()"}}}}}, returns)
 
 
 def stores_flow(d):
-    flow_folder(d, "Listar lojas", f"ListarLojas-{LISTAR_LOJAS_ID}", LISTAR_LOJAS_ID, {
+    flow_folder(d, "Listar unidades", f"ListarUnidades-{LISTAR_LOJAS_ID}", LISTAR_LOJAS_ID, {
         "Listar": {"type": "OpenApiConnection", "inputs": {"host": {
             "apiId": "/providers/Microsoft.PowerApps/apis/shared_commondataserviceforapps",
-            "connectionName": "shared_commondataserviceforapps", "operationId": "ListRecords"}, "parameters": {"entityName": "lojas"}}}})
+            "connectionName": "shared_commondataserviceforapps", "operationId": "ListRecords"}, "parameters": {"entityName": "unidades"}}}})
 
 
 def old_notice_topic():
@@ -613,7 +613,7 @@ beginDialog:
   actions:
     - kind: SendActivity
       id: {rid2('sendMessage')}
-      activity: {q('No feriado de carnaval a loja fecha às 14h.')}
+      activity: {q('No feriado de carnaval as unidades fecham às 14h.')}
 """
 
 
@@ -632,202 +632,202 @@ defaultValue: =Blank()
 
 SPECIALISTS = [
     {
-        "key": "bodega-pedidos",
-        "schema": f"{PREFIX}_bodegaPedidos",
-        "component": "Bodega Azul - Pedidos",
-        "display": "Bodega Azul - Pedidos",
+        "key": "rh-ferias",
+        "schema": f"{PREFIX}_rhFerias",
+        "component": "RH - Férias",
+        "display": "RH - Férias",
         "instructions": """
-Você é o especialista em pedidos da Bodega Azul, uma loja online.
+Você é o especialista em férias e ausências do autoatendimento de RH da empresa.
 
 Responsabilidades:
-- Explicar status de pedido, prazos de processamento e formas de pagamento aceitas
-- Usar a base "Políticas de Pedidos" para responder dúvidas sobre regras de compra
-- Enviar ao cliente, quando ele pedir, um e-mail com o resumo do atendimento
+- Informar o saldo de férias e explicar como pedir férias, folgas e licenças
+- Usar a base "Política de Férias e Ausências" para responder dúvidas sobre regras e prazos
+- Enviar ao colaborador, quando ele pedir, um e-mail com o resumo da solicitação
 
 Regras:
 - Responda sempre em português do Brasil, de forma curta e cordial
-- Nunca invente números de pedido, valores ou prazos
-- Se a dúvida for sobre devolução, frete, cupom ou loja física, diga que é outro especialista que cuida disso
+- Nunca invente saldos, datas ou números de solicitação
+- Se a dúvida for sobre benefícios, folha, admissão ou facilities, diga que é outro especialista que cuida disso
 """,
-        "starters": [("Status do pedido", "Como acompanho o meu pedido?"), ("Pagamento", "Quais formas de pagamento vocês aceitam?")],
+        "starters": [("Saldo de férias", "Quantos dias de férias eu tenho?"), ("Pedir férias", "Como peço férias para o mês que vem?")],
         "greeting": [
-            "Olá! Eu sou o {System.Bot.Name}. Posso te ajudar com o seu pedido na Bodega Azul?",
-            "Oi! Aqui é o especialista em pedidos da Bodega Azul. Em que posso ajudar?",
+            "Olá! Eu sou o {System.Bot.Name}. Posso te ajudar com as suas férias ou ausências?",
+            "Oi! Aqui é o especialista em férias do RH. Em que posso ajudar?",
         ],
-        "contact": "pedidos@bodegaazul.example",
+        "contact": "ferias@empresa.example",
         "escalate": True,
         "telemetry": True,
-        "topic": ("ConsultarPoliticasPedidos", "Consultar Políticas de Pedidos",
-                  "Responde dúvidas sobre pedidos com base nas políticas publicadas no SharePoint.",
-                  "Responde perguntas sobre status de pedido, prazos de processamento, cancelamento antes do envio e formas de pagamento da Bodega Azul.",
-                  "A pergunta do cliente sobre pedidos, status, cancelamento ou pagamento."),
-        "knowledge": ("PoliticasPedidos", "Políticas de Pedidos",
-                      "Políticas de compra, status de pedido, cancelamento e formas de pagamento da Bodega Azul.",
-                      "https://bodegaazul.sharepoint.com/sites/Atendimento/Shared%20Documents/Pedidos", None),
-        "email": ("EnviarResumoPedido", "Enviar resumo do pedido por e-mail",
-                  "Envia ao cliente um e-mail com o resumo do atendimento sobre o pedido.",
-                  "Enviar resumo do pedido por e-mail",
-                  "Envia ao cliente, pelo Outlook, um e-mail com o resumo do atendimento sobre o pedido. Use somente quando o cliente pedir o resumo por e-mail.",
-                  ("auto", "Endereço de e-mail do cliente que vai receber o resumo do pedido.")),
+        "topic": ("ConsultarPoliticaFerias", "Consultar Política de Férias",
+                  "Responde dúvidas sobre férias e ausências com base na política publicada no SharePoint.",
+                  "Responde perguntas sobre saldo de férias, períodos aquisitivos, como pedir férias e licenças e o prazo de aprovação do gestor.",
+                  "A pergunta do colaborador sobre férias, folgas, licenças ou o saldo."),
+        "knowledge": ("PoliticaFeriasAusencias", "Política de Férias e Ausências",
+                      "Regras de férias, folgas, licenças e prazos de aprovação da empresa.",
+                      "https://empresa.sharepoint.com/sites/RH/Shared%20Documents/Ferias", None),
+        "email": ("EnviarResumoFerias", "Enviar resumo da solicitação por e-mail",
+                  "Envia ao colaborador um e-mail com o resumo da solicitação de férias.",
+                  "Enviar resumo da solicitação por e-mail",
+                  "Envia ao colaborador, pelo Outlook, um e-mail com o resumo da solicitação de férias. Use somente quando o colaborador pedir o resumo por e-mail.",
+                  ("auto", "Endereço de e-mail do colaborador que vai receber o resumo da solicitação.")),
     },
     {
-        "key": "bodega-devolucoes",
-        "schema": f"{PREFIX}_bodegaDevolucoes",
-        "component": "Bodega Azul - Devoluções",
-        "display": "Bodega Azul - Devoluções",
+        "key": "rh-beneficios",
+        "schema": f"{PREFIX}_rhBeneficios",
+        "component": "RH - Benefícios",
+        "display": "RH - Benefícios",
         "instructions": """
-Você é o especialista em trocas e devoluções da Bodega Azul, uma loja online.
+Você é o especialista em benefícios do autoatendimento de RH da empresa.
 
 Responsabilidades:
-- Explicar prazos de arrependimento, condições do produto e como gerar a etiqueta de devolução
-- Usar a base "Política de Trocas e Devoluções" para responder
-- Abrir uma solicitação de devolução enviando um e-mail para a equipe de logística reversa
+- Explicar o plano de saúde, o plano odontológico, o vale-refeição e as regras de reembolso
+- Usar a base "Guia de Benefícios" para responder
+- Abrir uma solicitação de inclusão de dependente enviando um e-mail para a equipe de benefícios
 
 Regras:
 - Responda sempre em português do Brasil, com empatia e objetividade
-- Confirme o número do pedido e o motivo antes de abrir a solicitação
-- Não prometa reembolso antes da análise do produto
+- Confirme o nome do dependente e o grau de parentesco antes de abrir a solicitação
+- Não prometa reembolso antes da análise da equipe de benefícios
 """,
-        "starters": [("Trocar produto", "Quero trocar um produto que comprei"), ("Prazo de devolução", "Qual o prazo para devolver uma compra?")],
+        "starters": [("Incluir dependente", "Quero incluir minha filha no plano de saúde"), ("Reembolso", "Como peço reembolso de uma consulta?")],
         "greeting": [
-            "Olá! Eu sou o {System.Bot.Name}. Vamos resolver a sua troca ou devolução?",
-            "Oi! Aqui é o especialista em trocas e devoluções da Bodega Azul. Como posso ajudar?",
+            "Olá! Eu sou o {System.Bot.Name}. Vamos ver os seus benefícios?",
+            "Oi! Aqui é o especialista em benefícios do RH. Como posso ajudar?",
         ],
-        "contact": "devolucoes@bodegaazul.example",
+        "contact": "beneficios@empresa.example",
         "escalate": True,
         "telemetry": True,
-        "topic": ("ConsultarPoliticaDevolucoes", "Consultar Política de Devoluções",
-                  "Responde dúvidas sobre trocas e devoluções com base na política publicada no SharePoint.",
-                  "Responde perguntas sobre prazo de arrependimento, condições para troca, etiqueta de devolução e reembolso na Bodega Azul.",
-                  "A pergunta do cliente sobre troca, devolução ou reembolso."),
-        "knowledge": ("PoliticaTrocasDevolucoes", "Política de Trocas e Devoluções",
-                      "Regras de troca, devolução, arrependimento e reembolso da Bodega Azul.",
-                      "https://bodegaazul.sharepoint.com/sites/Atendimento/Shared%20Documents/Devolucoes", None),
-        "email": ("AbrirSolicitacaoDevolucao", "Abrir solicitação de devolução",
-                  "Envia à equipe de logística reversa um e-mail abrindo a solicitação de devolução.",
-                  "Abrir solicitação de devolução",
-                  "Envia pelo Outlook um e-mail para a equipe de logística reversa com número do pedido, produto e motivo da devolução. Use depois de confirmar esses dados com o cliente.",
-                  ("manual", "logistica.reversa@bodegaazul.example")),
+        "topic": ("ConsultarGuiaBeneficios", "Consultar Guia de Benefícios",
+                  "Responde dúvidas sobre benefícios com base no guia publicado no SharePoint.",
+                  "Responde perguntas sobre plano de saúde, plano odontológico, inclusão de dependentes, vale-refeição e reembolso.",
+                  "A pergunta do colaborador sobre benefícios, dependentes ou reembolso."),
+        "knowledge": ("GuiaBeneficios", "Guia de Benefícios",
+                      "Planos, inclusão de dependentes, vale-refeição e regras de reembolso da empresa.",
+                      "https://empresa.sharepoint.com/sites/RH/Shared%20Documents/Beneficios", None),
+        "email": ("AbrirInclusaoDependente", "Abrir inclusão de dependente",
+                  "Envia à equipe de benefícios um e-mail abrindo a inclusão de um dependente.",
+                  "Abrir inclusão de dependente",
+                  "Envia pelo Outlook um e-mail para a equipe de benefícios com o nome do dependente, o grau de parentesco e o plano. Use depois de confirmar esses dados com o colaborador.",
+                  ("manual", "equipe.beneficios@empresa.example")),
     },
     {
-        "key": "bodega-frete",
-        "schema": f"{PREFIX}_bodegaFrete",
-        "component": "Bodega Azul - Frete",
-        "display": "Bodega Azul - Frete",
+        "key": "rh-folha",
+        "schema": f"{PREFIX}_rhFolha",
+        "component": "RH - Folha",
+        "display": "RH - Folha",
         "instructions": """
-Você é o especialista em frete e entregas da Bodega Azul, uma loja online.
+Você é o especialista em folha de pagamento do autoatendimento de RH da empresa.
 
 Responsabilidades:
-- Explicar modalidades de envio, prazos por região e regras de frete grátis
-- Usar a base "Tabela de Frete e Entregas" para responder
-- Enviar ao cliente, quando ele pedir, um e-mail com as opções de frete consultadas
+- Explicar o holerite, os descontos e o calendário de pagamento
+- Usar a base "Calendário e Regras da Folha" para responder
+- Enviar ao colaborador, quando ele pedir, um e-mail com o calendário de pagamento
 
 Regras:
 - Responda sempre em português do Brasil
-- Prazos são sempre em dias úteis; deixe isso claro
-- Não calcule valores de frete de cabeça: use apenas o que está na base
+- Datas de pagamento são sempre em dias úteis; deixe isso claro
+- Não calcule descontos de cabeça: use apenas o que está na base
 """,
-        "starters": [("Prazo de entrega", "Quanto tempo demora a entrega para o Nordeste?"), ("Frete grátis", "A partir de qual valor o frete é grátis?")],
+        "starters": [("Data do pagamento", "Quando cai o salário deste mês?"), ("Holerite", "Onde vejo o meu holerite?")],
         "greeting": [
-            "Olá! Eu sou o {System.Bot.Name}. Quer saber sobre prazos e valores de entrega?",
-            "Oi! Aqui é o especialista em frete da Bodega Azul. Em que posso ajudar?",
+            "Olá! Eu sou o {System.Bot.Name}. Quer saber sobre o seu holerite ou o calendário de pagamento?",
+            "Oi! Aqui é o especialista em folha do RH. Em que posso ajudar?",
         ],
-        "contact": "entregas@bodegaazul.example",
+        "contact": "folha@empresa.example",
         "escalate": False,
         "telemetry": True,
-        "topic": ("ConsultarTabelaFrete", "Consultar Tabela de Frete",
-                  "Responde dúvidas sobre frete e entregas com base na tabela publicada no SharePoint.",
-                  "Responde perguntas sobre modalidades de envio, prazos de entrega por região e regras de frete grátis da Bodega Azul.",
-                  "A pergunta do cliente sobre frete, prazo ou modalidade de entrega."),
-        "knowledge": ("TabelaFreteEntregas", "Tabela de Frete e Entregas",
-                      "Modalidades de envio, prazos por região e regras de frete grátis da Bodega Azul.",
-                      "https://bodegaazul.sharepoint.com/sites/Logistica/Shared%20Documents/Frete", None),
-        "email": ("EnviarOpcoesFrete", "Enviar opções de frete por e-mail",
-                  "Envia ao cliente um e-mail com as opções de frete consultadas.",
-                  "Enviar opções de frete por e-mail",
-                  "Envia ao cliente, pelo Outlook, um e-mail com as modalidades e prazos de frete consultados na conversa. Use somente quando o cliente pedir.",
-                  ("auto", "Endereço de e-mail do cliente que vai receber as opções de frete.")),
+        "topic": ("ConsultarCalendarioFolha", "Consultar Calendário da Folha",
+                  "Responde dúvidas sobre a folha de pagamento com base no calendário publicado no SharePoint.",
+                  "Responde perguntas sobre o holerite, os descontos, o adiantamento e as datas de pagamento.",
+                  "A pergunta do colaborador sobre holerite, descontos ou data de pagamento."),
+        "knowledge": ("CalendarioRegrasFolha", "Calendário e Regras da Folha",
+                      "Datas de pagamento, descontos e regras do holerite da empresa.",
+                      "https://empresa.sharepoint.com/sites/Folha/Shared%20Documents/Calendario", None),
+        "email": ("EnviarCalendarioFolha", "Enviar calendário da folha por e-mail",
+                  "Envia ao colaborador um e-mail com o calendário de pagamento.",
+                  "Enviar calendário da folha por e-mail",
+                  "Envia ao colaborador, pelo Outlook, um e-mail com as datas de pagamento consultadas na conversa. Use somente quando o colaborador pedir.",
+                  ("auto", "Endereço de e-mail do colaborador que vai receber o calendário.")),
     },
     {
-        "key": "bodega-cupons",
-        "schema": f"{PREFIX}_bodegaCupons",
-        "component": "Bodega Azul - Cupons",
-        "display": "Bodega Azul - Cupons",
+        "key": "rh-admissao",
+        "schema": f"{PREFIX}_rhAdmissao",
+        "component": "RH - Admissão",
+        "display": "RH - Admissão",
         "instructions": """
-Você é o especialista em cupons e promoções da Bodega Azul, uma loja online.
+Você é o especialista em admissão do autoatendimento de RH da empresa.
 
 Responsabilidades:
-- Explicar as regras de uso de cupons com base no "Regulamento de Cupons"
-- Consultar a lista de cupons ativos no SharePoint para verificar se um código existe e está válido
-- Usar o servidor MCP de promoções para buscar as campanhas vigentes
-- Enviar ao cliente, quando ele pedir, um e-mail com o cupom e as regras de uso
+- Explicar as etapas da admissão com base no "Guia de Admissão"
+- Consultar a lista de documentos de admissão no SharePoint para dizer o que ainda falta entregar
+- Usar o servidor MCP de admissão para buscar o checklist do primeiro dia
+- Enviar ao colaborador, quando ele pedir, um e-mail com o checklist de admissão
 
 Regras:
 - Responda sempre em português do Brasil
-- Nunca crie, invente ou altere códigos de cupom
-- Cupons não são cumulativos, salvo quando o regulamento disser o contrário
+- Nunca peça documentos fora da lista oficial de admissão
+- Documentos digitais só valem quando o guia disser que valem
 """,
-        "starters": [("Cupom não funciona", "Meu cupom não está funcionando"), ("Promoções", "Quais promoções estão ativas hoje?")],
+        "starters": [("Documentos", "Quais documentos ainda faltam para a minha admissão?"), ("Primeiro dia", "O que acontece no meu primeiro dia?")],
         "greeting": [
-            "Olá! Eu sou o {System.Bot.Name}. Quer validar um cupom ou ver as promoções da semana?",
-            "Oi! Aqui é o especialista em cupons da Bodega Azul. Como posso ajudar?",
+            "Olá! Eu sou o {System.Bot.Name}. Quer ver o que falta para a sua admissão ou o seu primeiro dia?",
+            "Oi! Aqui é o especialista em admissão do RH. Como posso ajudar?",
         ],
-        "contact": "promocoes@bodegaazul.example",
+        "contact": "admissao@empresa.example",
         "escalate": True,
         "telemetry": True,
-        "topic": ("ConsultarRegulamentoCupons", "Consultar Regulamento de Cupons",
-                  "Responde dúvidas sobre regras de cupons com base no regulamento publicado no SharePoint.",
-                  "Responde perguntas sobre regras de uso de cupons, validade, valor mínimo de compra e acúmulo de descontos na Bodega Azul.",
-                  "A pergunta do cliente sobre regras de cupom ou desconto."),
-        "knowledge": ("RegulamentoCupons", "Regulamento de Cupons",
-                      "Regras de uso, validade e acúmulo de cupons de desconto da Bodega Azul.",
-                      "https://bodegaazul.sharepoint.com/sites/Marketing/Shared%20Documents/Cupons", None),
-        "email": ("EnviarCupomEmail", "Enviar cupom por e-mail",
-                  "Envia ao cliente um e-mail com o código do cupom e as regras de uso.",
-                  "Enviar cupom por e-mail",
-                  "Envia ao cliente, pelo Outlook, um e-mail com um código de cupom já validado e as regras de uso. Use somente quando o cliente pedir.",
-                  ("auto", "Endereço de e-mail do cliente que vai receber o cupom.")),
+        "topic": ("ConsultarGuiaAdmissao", "Consultar Guia de Admissão",
+                  "Responde dúvidas sobre a admissão com base no guia publicado no SharePoint.",
+                  "Responde perguntas sobre as etapas da admissão, os documentos, o exame admissional e o primeiro dia.",
+                  "A pergunta do colaborador sobre admissão, documentos ou primeiro dia."),
+        "knowledge": ("GuiaAdmissao", "Guia de Admissão",
+                      "Etapas, documentos, exame admissional e primeiro dia de quem entra na empresa.",
+                      "https://empresa.sharepoint.com/sites/RH/Shared%20Documents/Admissao", None),
+        "email": ("EnviarChecklistAdmissao", "Enviar checklist de admissão por e-mail",
+                  "Envia ao colaborador um e-mail com o checklist de admissão.",
+                  "Enviar checklist de admissão por e-mail",
+                  "Envia ao colaborador, pelo Outlook, um e-mail com o checklist de admissão e os documentos que faltam. Use somente quando o colaborador pedir.",
+                  ("auto", "Endereço de e-mail do colaborador que vai receber o checklist.")),
     },
     {
-        "key": "bodega-loja-fisica",
-        "schema": f"{PREFIX}_bodegaLojaFisica",
-        "component": "Bodega Azul - Loja Física",
-        "display": "Bodega Azul - Loja Física",
+        "key": "rh-facilities",
+        "schema": f"{PREFIX}_rhFacilities",
+        "component": "RH - Facilities",
+        "display": "RH - Facilities",
         "instructions": """
-Você é o especialista em loja física e retirada da Bodega Azul.
+Você é o especialista em facilities do autoatendimento de RH da empresa.
 
 Responsabilidades:
-- Informar endereço, horário de funcionamento e serviços da loja física
-- Explicar como funciona a retirada na loja de compras feitas no site
-- Usar a base "Guia da Loja Física" para responder
-- Enviar ao cliente, quando ele pedir, um e-mail com as instruções de retirada
+- Informar endereço, horário de funcionamento e serviços de cada unidade
+- Explicar como reservar sala, cadastrar visitante e abrir um chamado de manutenção
+- Usar a base "Guia das Unidades" para responder
+- Enviar ao colaborador, quando ele pedir, um e-mail com as instruções de acesso à unidade
 
 Regras:
 - Responda sempre em português do Brasil
-- Confirme o número do pedido antes de dar instruções de retirada
+- Confirme a unidade antes de dar instruções de acesso
 - Horários especiais de feriado só valem se estiverem no guia
 """,
-        "starters": [("Horário da loja", "Qual o horário de funcionamento da loja física?"), ("Retirada", "Como faço para retirar meu pedido na loja?")],
+        "starters": [("Horário da unidade", "Qual o horário de funcionamento da unidade de São Paulo?"), ("Visitante", "Como cadastro um visitante?")],
         "greeting": [
-            "Olá! Eu sou o {System.Bot.Name}. Quer saber sobre a nossa loja física ou retirada de pedidos?",
-            "Oi! Aqui é o especialista em loja física da Bodega Azul. Como posso ajudar?",
+            "Olá! Eu sou o {System.Bot.Name}. Quer saber sobre as unidades, salas ou visitantes?",
+            "Oi! Aqui é o especialista em facilities do RH. Como posso ajudar?",
         ],
-        "contact": "loja@bodegaazul.example",
+        "contact": "facilities@empresa.example",
         "escalate": True,
         "telemetry": False,
-        "topic": ("ConsultarGuiaLojaFisica", "Consultar Guia da Loja Física",
-                  "Responde dúvidas sobre a loja física com base no guia publicado no SharePoint.",
-                  "Responde perguntas sobre endereço, horário de funcionamento, serviços e retirada de pedidos na loja física da Bodega Azul.",
-                  "A pergunta do cliente sobre a loja física ou a retirada de um pedido."),
-        "knowledge": ("GuiaLojaFisica", "Guia da Loja Física",
-                      "Endereço, horários, serviços e regras de retirada na loja física da Bodega Azul.",
-                      "https://bodegaazul.sharepoint.com/sites/Varejo/Shared%20Documents/LojaFisica",
-                      '=Or(IsBlank(Global.CategoriaSolicitacao), Global.CategoriaSolicitacao = "LojaFisica")'),
-        "email": ("EnviarInstrucoesRetirada", "Enviar instruções de retirada por e-mail",
-                  "Envia ao cliente um e-mail com as instruções de retirada na loja.",
-                  "Enviar instruções de retirada por e-mail",
-                  "Envia ao cliente, pelo Outlook, um e-mail com endereço, horário e documentos necessários para retirar o pedido na loja física. Use somente quando o cliente pedir.",
-                  ("auto", "Endereço de e-mail do cliente que vai receber as instruções de retirada.")),
+        "topic": ("ConsultarGuiaUnidades", "Consultar Guia das Unidades",
+                  "Responde dúvidas sobre as unidades com base no guia publicado no SharePoint.",
+                  "Responde perguntas sobre endereço, horário de funcionamento, reserva de sala, visitantes e manutenção nas unidades.",
+                  "A pergunta do colaborador sobre uma unidade, sala, visitante ou manutenção."),
+        "knowledge": ("GuiaUnidades", "Guia das Unidades",
+                      "Endereços, horários, serviços, salas e regras de acesso das unidades da empresa.",
+                      "https://empresa.sharepoint.com/sites/Facilities/Shared%20Documents/Unidades",
+                      '=Or(IsBlank(Global.CategoriaSolicitacao), Global.CategoriaSolicitacao = "Facilities")'),
+        "email": ("EnviarInstrucoesAcesso", "Enviar instruções de acesso por e-mail",
+                  "Envia ao colaborador um e-mail com as instruções de acesso à unidade.",
+                  "Enviar instruções de acesso por e-mail",
+                  "Envia ao colaborador, pelo Outlook, um e-mail com endereço, horário e documentos necessários para entrar na unidade. Use somente quando o colaborador pedir.",
+                  ("auto", "Endereço de e-mail do colaborador que vai receber as instruções de acesso.")),
     },
 ]
 
@@ -840,7 +840,7 @@ def build_specialist(a):
     write(f"{d}/agent.mcs.yml", agent_file(a["component"], a["display"], text, a["starters"], w1.get("model_knowledge")))
     write(f"{d}/settings.mcs.yml", settings_file(a["display"], s, connectable=True))
     if w1.get("flow"):
-        write(f"{d}/actions/AbrirChamadoERP.mcs.yml", flow_action())
+        write(f"{d}/actions/AbrirCasoWorkday.mcs.yml", flow_action())
     if w1.get("triage"):
         write(f"{d}/topics/Desambiguar.topic.mcs.yml", triage_topic())
 
@@ -885,7 +885,7 @@ def build_specialist(a):
     efile, ecomp, edesc, emodel, emodeldesc, eto = a["email"]
     write(f"{d}/actions/{efile}.mcs.yml", outlook_action(ecomp, edesc, emodel, emodeldesc, o["name"], eto))
 
-    if a["key"] == "bodega-cupons":
+    if a["key"] == "rh-admissao":
         sp = {
             "id": guid(),
             "name": f"{s}.shared_sharepointonline.shared-sharepointonline-{guid()}",
@@ -893,22 +893,22 @@ def build_specialist(a):
             "display": "SharePoint",
         }
         refs.append(sp)
-        write(f"{d}/actions/ConsultarCuponsAtivos.mcs.yml", f"""mcs.metadata:
-  componentName: Consultar cupons ativos
-  description: Consulta a lista de cupons ativos no SharePoint de Marketing.
+        write(f"{d}/actions/ConsultarDocumentosAdmissao.mcs.yml", f"""mcs.metadata:
+  componentName: Consultar documentos de admissão
+  description: Consulta a lista de documentos de admissão no SharePoint de RH.
 kind: TaskDialog
 inputs:
   - kind: ManualTaskInput
     propertyName: dataset
-    value: https://bodegaazul.sharepoint.com/sites/Marketing
+    value: https://empresa.sharepoint.com/sites/RH
 
   - kind: ManualTaskInput
     propertyName: table
-    value: Cupons
+    value: DocumentosAdmissao
 
   - kind: AutomaticTaskInput
     propertyName: "'$filter'"
-    description: "Filtro OData pela coluna Codigo com o código informado pelo cliente, em maiúsculas. Exemplo: Codigo eq 'AZUL10'"
+    description: "Filtro OData pela coluna Matricula com a matrícula informada pelo colaborador. Exemplo: Matricula eq '104233'"
     entity: StringPrebuiltEntity
     shouldPromptUser: false
 
@@ -916,8 +916,8 @@ inputs:
     propertyName: "'$top'"
     value: "10"
 
-modelDisplayName: Consultar cupons ativos
-modelDescription: Verifica na lista Cupons do SharePoint se um código de cupom existe, se está ativo e qual a validade. Use quando o cliente informar um código de cupom.
+modelDisplayName: Consultar documentos de admissão
+modelDescription: Verifica na lista DocumentosAdmissao do SharePoint quais documentos o colaborador já entregou e quais faltam. Use quando o colaborador perguntar o que falta para a admissão.
 action:
   kind: InvokeConnectorTaskAction
   connectionReference: {sp['name']}
@@ -930,23 +930,23 @@ outputMode: All
 """)
         mcp = {
             "id": guid(),
-            "name": f"{s}.shared_bodegapromocoesmcp.{rid('mcp').split('_')[1].lower()}",
-            "connectorId": "/providers/Microsoft.PowerApps/apis/shared_bodegapromocoesmcp",
-            "display": "Bodega Azul Promocoes MCP",
+            "name": f"{s}.shared_rhadmissaomcp.{rid('mcp').split('_')[1].lower()}",
+            "connectorId": "/providers/Microsoft.PowerApps/apis/shared_rhadmissaomcp",
+            "display": "RH Admissao MCP",
             "custom": guid(),
         }
         refs.append(mcp)
-        write(f"{d}/actions/PromocoesMCP.mcs.yml", f"""mcs.metadata:
-  componentName: Servidor MCP de Promoções
-  description: Servidor MCP interno com as campanhas promocionais vigentes da Bodega Azul.
+        write(f"{d}/actions/AdmissaoMCP.mcs.yml", f"""mcs.metadata:
+  componentName: Servidor MCP de Admissão
+  description: Servidor MCP interno com o checklist de admissão e do primeiro dia.
 kind: TaskDialog
 inputs:
   - kind: ManualTaskInput
     propertyName: canal
     value: =System.Activity.ChannelId
 
-modelDisplayName: Servidor MCP de Promoções
-modelDescription: Servidor MCP que lista as campanhas promocionais e os cupons vigentes da Bodega Azul.
+modelDisplayName: Servidor MCP de Admissão
+modelDescription: Servidor MCP que lista as etapas da admissão e o checklist do primeiro dia de um colaborador.
 action:
   kind: InvokeExternalAgentTaskAction
   connectionReference: {mcp['name']}
@@ -966,50 +966,50 @@ action:
 # ---------------------------------------------------------------------------
 
 def build_orchestrator():
-    key = "bodega-orquestrador"
-    s = f"{PREFIX}_bodegaOrquestrador"
+    key = "rh-orquestrador"
+    s = f"{PREFIX}_rhOrquestrador"
     d = os.path.join(ROOT, key)
-    display = "Bodega Azul - Orquestrador"
+    display = "RH - Orquestrador"
     instructions = """
-Você é o assistente virtual da Bodega Azul, uma loja online. Você não responde sozinho às dúvidas
-de atendimento: o seu papel é entender a solicitação e encaminhá-la ao especialista certo.
+Você é o assistente de autoatendimento do RH da empresa. Você não responde sozinho às dúvidas
+dos colaboradores: o seu papel é entender a solicitação e encaminhá-la ao especialista certo.
 
 Como trabalhar:
 1. Antes de acionar um especialista, use o tópico "Classificar Solicitação" para definir a categoria.
 2. Encaminhe conforme a categoria:
-   - Pedidos: agente "Bodega Azul - Pedidos"
-   - Devolucoes: agente "Bodega Azul - Devoluções"
-   - Frete: agente "Bodega Azul - Frete"
-   - Cupons: agente "Bodega Azul - Cupons"
-   - LojaFisica: agente "Bodega Azul - Loja Física"
-   - Outro: se for uma pergunta geral sobre a empresa, use o agente "Sobre a Bodega Azul"
-3. Repasse a resposta do especialista ao cliente sem inventar informações.
+   - Ferias: agente "RH - Férias"
+   - Beneficios: agente "RH - Benefícios"
+   - Folha: agente "RH - Folha"
+   - Admissao: agente "RH - Admissão"
+   - Facilities: agente "RH - Facilities"
+   - Outro: se for uma pergunta geral sobre o RH, use o agente "Sobre o RH"
+3. Repasse a resposta do especialista ao colaborador sem inventar informações.
 
 Regras:
 - Responda sempre em português do Brasil, de forma cordial e objetiva
-- Se o cliente pedir para falar com uma pessoa, use o tópico de escalonamento
+- Se o colaborador pedir para falar com uma pessoa, use o tópico de escalonamento
 
 Não use emojis.
 """
-    starters = [("Meu pedido", "Onde está o meu pedido?"), ("Trocas", "Quero devolver um produto"), ("Cupons", "Tenho um cupom de desconto")]
+    starters = [("Minhas férias", "Quantos dias de férias eu tenho?"), ("Dependentes", "Quero incluir um dependente no plano"), ("Admissão", "Quais documentos faltam na minha admissão?")]
     write(f"{d}/agent.mcs.yml", agent_file(display, display, instructions, starters))
     write(f"{d}/settings.mcs.yml", settings_file(display, s, connectable=False))
     write_bytes(f"{d}/icon.png", ICON_PNG)
 
     write(f"{d}/topics/Greeting.topic.mcs.yml", greeting_topic([
-        "Olá! Eu sou o {System.Bot.Name}, o assistente virtual da Bodega Azul. Como posso ajudar hoje?",
-        "Oi! Bem-vindo à Bodega Azul. Posso ajudar com pedidos, trocas, frete, cupons ou a nossa loja física.",
+        "Olá! Eu sou o {System.Bot.Name}, o autoatendimento do RH. Como posso ajudar hoje?",
+        "Oi! Posso ajudar com férias, benefícios, folha, admissão ou facilities.",
     ]))
     write(f"{d}/topics/Fallback.topic.mcs.yml", fallback_topic(s, escalate=True))
-    write(f"{d}/topics/Escalate.topic.mcs.yml", escalate_topic("atendimento@bodegaazul.example"))
-    write(f"{d}/topics/OnError.topic.mcs.yml", error_topic("BodegaOrquestrador_OnError", key, telemetry=True))
+    write(f"{d}/topics/Escalate.topic.mcs.yml", escalate_topic("rh@empresa.example"))
+    write(f"{d}/topics/OnError.topic.mcs.yml", error_topic("RhOrquestrador_OnError", key, telemetry=True))
 
-    desc = """Classifique a solicitação do cliente em exatamente uma destas categorias:
-Pedidos, Devolucoes, Frete, Cupons, LojaFisica, Outro
+    desc = """Classifique a solicitação do colaborador em exatamente uma destas categorias:
+Ferias, Beneficios, Folha, Admissao, Facilities, Outro
 Use Outro quando nenhuma das demais se aplicar."""
     write(f"{d}/topics/ClassificarSolicitacao.topic.mcs.yml", f"""mcs.metadata:
   componentName: Classificar Solicitação
-  description: Define a categoria da solicitação do cliente para encaminhar ao especialista certo.
+  description: Define a categoria da solicitação do colaborador para encaminhar ao especialista certo.
 kind: AdaptiveDialog
 inputs:
   - kind: AutomaticTaskInput
@@ -1018,7 +1018,7 @@ inputs:
 {block(desc, 6)}
     shouldPromptUser: false
 
-modelDescription: Classifica a solicitação do cliente (pedidos, devoluções, frete, cupons, loja física ou outro) antes de acionar um agente especialista. Use sempre antes de chamar um especialista.
+modelDescription: Classifica a solicitação do colaborador (férias, benefícios, folha, admissão, facilities ou outro) antes de acionar um agente especialista. Use sempre antes de chamar um especialista.
 beginDialog:
   kind: OnRecognizedIntent
   id: main
@@ -1043,23 +1043,23 @@ outputType: {{}}
     write(f"{d}/variables/CategoriaSolicitacao.mcs.yml", variable_file(s, external=False, default="Outro"))
 
     connected = [
-        ("AgentePedidos", "Agente Pedidos", "Bodega Azul - Pedidos", f"{PREFIX}_bodegaPedidos",
-         "Agente especialista em pedidos: status, prazos de processamento, cancelamento antes do envio e formas de pagamento. Use quando a categoria for Pedidos."),
-        ("AgenteDevolucoes", "Agente Devoluções", "Bodega Azul - Devoluções", f"{PREFIX}_bodegaDevolucoes",
-         "Agente especialista em trocas e devoluções: prazo de arrependimento, etiqueta de devolução e reembolso. Use quando a categoria for Devolucoes."),
-        ("AgenteFrete", "Agente Frete", "Bodega Azul - Frete", f"{PREFIX}_bodegaFrete",
-         "Agente especialista em frete e entregas: modalidades, prazos por região e frete grátis. Use quando a categoria for Frete."),
+        ("AgenteFerias", "Agente Férias", "RH - Férias", f"{PREFIX}_rhFerias",
+         "Agente especialista em férias e ausências: saldo, pedido de férias, folgas, licenças e aprovação do gestor. Use quando a categoria for Ferias."),
+        ("AgenteBeneficios", "Agente Benefícios", "RH - Benefícios", f"{PREFIX}_rhBeneficios",
+         "Agente especialista em benefícios: plano de saúde, dependentes, vale-refeição e reembolso. Use quando a categoria for Beneficios."),
+        ("AgenteFolha", "Agente Folha", "RH - Folha", f"{PREFIX}_rhFolha",
+         "Agente especialista em folha de pagamento: holerite, descontos e calendário de pagamento. Use quando a categoria for Folha."),
         # wave 2: a routing description too short to route by
-        ("AgenteCupons", "Agente Cupons", "Bodega Azul - Cupons", f"{PREFIX}_bodegaCupons", "Cupons."),
-        ("AgenteLojaFisica", "Agente Loja Física", "Bodega Azul - Loja Física", f"{PREFIX}_bodegaLojaFisica",
-         "Agente especialista na loja física: endereço, horário, serviços e retirada de pedidos. Use quando a categoria for LojaFisica."),
+        ("AgenteAdmissao", "Agente Admissão", "RH - Admissão", f"{PREFIX}_rhAdmissao", "Admissão."),
+        ("AgenteFacilities", "Agente Facilities", "RH - Facilities", f"{PREFIX}_rhFacilities",
+         "Agente especialista em facilities: endereço e horário das unidades, salas, visitantes e manutenção. Use quando a categoria for Facilities."),
         # wave 2: an agent of the solution that is not in the folder
-        ("AgenteFidelidade", "Agente Fidelidade", "Bodega Azul - Fidelidade", f"{PREFIX}_bodegaFidelidade",
-         "Agente especialista no programa de fidelidade: pontos, níveis e resgates. Use quando a categoria for Fidelidade."),
+        ("AgenteMobilidade", "Agente Mobilidade", "RH - Mobilidade", f"{PREFIX}_rhMobilidade",
+         "Agente especialista em mobilidade interna: vagas internas, transferências e movimentações. Use quando a categoria for Mobilidade."),
     ]
     for fname, comp, model_name, bot, mdesc in connected:
-        # wave 2: frete is called with no history and without the category
-        bare = fname == "AgenteFrete"
+        # wave 2: folha is called with no history and without the category
+        bare = fname == "AgenteFolha"
         inputs = "" if bare else """inputs:
   - kind: ManualTaskInput
     propertyName: CategoriaSolicitacao
@@ -1088,35 +1088,35 @@ action:
     kind: {"NoHistory" if bare else "ConversationHistory"}
 """)
 
-    write(f"{d}/agents/SobreBodegaAzul/agent.mcs.yml", """# Name: Sobre a Bodega Azul
-# SobreBodegaAzul
+    write(f"{d}/agents/SobreRH/agent.mcs.yml", """# Name: Sobre o RH
+# SobreRH
 kind: AgentDialog
 
 beginDialog:
   kind: OnToolSelected
   id: main
-  description: Responde perguntas gerais sobre a Bodega Azul que não são de pedidos, devoluções, frete, cupons ou loja física, como canais de contato, horário do atendimento online e quem somos. Exemplos "Qual o telefone de vocês?", "A Bodega Azul tem aplicativo?".
+  description: Responde perguntas gerais sobre o RH que não são de férias, benefícios, folha, admissão ou facilities, como canais de contato, horário de atendimento e a quem recorrer. Exemplos "Qual o telefone do RH?", "O RH atende no sábado?".
 
 settings:
   instructions: |
-    Você responde perguntas gerais e institucionais sobre a Bodega Azul, uma loja online fictícia.
+    Você responde perguntas gerais sobre o atendimento do RH da empresa.
 
     Regras:
     - Responda em português do Brasil, em no máximo três frases
-    - Canais oficiais: site, e-mail atendimento@bodegaazul.example e chat
-    - Atendimento online: de segunda a sábado, das 9h às 18h
-    - Se a pergunta for sobre pedidos, devoluções, frete, cupons ou loja física, diga que outro especialista cuida disso
+    - Canais oficiais: portal do colaborador, e-mail rh@empresa.example e o chat do Teams
+    - Atendimento do RH: de segunda a sexta, das 8h às 18h
+    - Se a pergunta for sobre férias, benefícios, folha, admissão ou facilities, diga que outro especialista cuida disso
 
 inputs:
   - kind: AutomaticTaskInput
     propertyName: PerguntaGeral
-    description: A pergunta geral do cliente sobre a Bodega Azul.
+    description: A pergunta geral do colaborador sobre o RH.
 
 inputType:
   properties:
     PerguntaGeral:
       displayName: Pergunta Geral
-      description: A pergunta geral do cliente sobre a Bodega Azul.
+      description: A pergunta geral do colaborador sobre o RH.
       type: String
 
 outputType: {}

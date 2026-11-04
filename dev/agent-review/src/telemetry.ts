@@ -1,5 +1,5 @@
 // What a telemetry event says, from the node that logs it (LogCustomTelemetryEvent): its form — the name with the
-// agent's own name taken out, so «BodegaPedidos_OnError» and «BodegaFrete_OnError» are one event, «{agent}_OnError» —
+// agent's own name taken out, so «RhFerias_OnError» and «RhFolha_OnError» are one event, «{agent}_OnError» —
 // and the fields of its record (`properties: "={A: x, B: y}"`). A name or a record made by a formula cannot be read.
 
 /** Lower case, with no accents and no `_`, `-`, `.` or space: how two spellings of one name are told to be the same. */
@@ -14,7 +14,7 @@ export function formOf(name: string, agent: { id: string; schemaName?: string; d
   const plain: { c: string; at: number }[] = []
   for (let at = 0; at < name.length; at++) for (const c of normal(name[at])) plain.push({ c, at })
   const text = plain.map((p) => p.c).join('')
-  // a schema name without its publisher's prefix (cr7b2_bodegaPedidos → bodegaPedidos)
+  // a schema name without its publisher's prefix (cr7b2_rhFerias → rhFerias)
   const schema = agent.schemaName?.slice(agent.schemaName.indexOf('_') + 1)
   const ids = [...new Set([agent.id, schema, agent.displayName].filter((n): n is string => !!n).map(normal).filter((n) => n.length >= 3))]
     .sort((a, b) => b.length - a.length)

@@ -1,0 +1,14 @@
+mcs.metadata:
+  componentName: Saudação
+  description: Mensagem de boas-vindas enviada no início da conversa.
+kind: AdaptiveDialog
+beginDialog:
+  kind: OnConversationStart
+  id: main
+  actions:
+    - kind: SendActivity
+      id: sendMessage_u1hET4
+      activity:
+        text:
+          - "Olá! Eu sou o {System.Bot.Name}. Posso te ajudar com as suas férias ou ausências?"
+          - "Oi! Aqui é o especialista em férias do RH. Em que posso ajudar?"

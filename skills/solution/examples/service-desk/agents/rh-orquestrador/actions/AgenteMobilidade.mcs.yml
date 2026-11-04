@@ -1,0 +1,24 @@
+mcs.metadata:
+  componentName: Agente Mobilidade
+  description: Agente conectado RH - Mobilidade.
+kind: TaskDialog
+inputs:
+  - kind: ManualTaskInput
+    propertyName: CategoriaSolicitacao
+    value: =Global.CategoriaSolicitacao
+
+modelDisplayName: RH - Mobilidade
+modelDescription: "Agente especialista em mobilidade interna: vagas internas, transferências e movimentações. Use quando a categoria for Mobilidade."
+action:
+  kind: InvokeConnectedAgentTaskAction
+  inputType:
+    properties:
+      CategoriaSolicitacao:
+        displayName: CategoriaSolicitacao
+        description: Categoria da solicitação definida pelo orquestrador.
+        isRequired: true
+        type: String
+
+  botSchemaName: cr7b2_rhMobilidade
+  historyType:
+    kind: ConversationHistory

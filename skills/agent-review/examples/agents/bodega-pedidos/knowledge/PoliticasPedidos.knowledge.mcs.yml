@@ -1,7 +1,0 @@
-mcs.metadata:
-  componentName: Políticas de Pedidos
-  description: "Políticas de compra, status de pedido, cancelamento e formas de pagamento da Bodega Azul."
-kind: KnowledgeSourceConfiguration
-source:
-  kind: SharePointSearchSource
-  site: https://bodegaazul.sharepoint.com/sites/Atendimento/Shared%20Documents/Pedidos
