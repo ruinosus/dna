@@ -44,7 +44,7 @@ test('/lenses shows the three lenses and writes one beside the way at a press, c
   expect(runs.some((a) => a[1]!.includes('/process-simulation/') && a.includes('--check'))).toBe(true)
   expect((await p.find({ type: 'Text', text: /Gravado:/ }))?.text).toContain('/repo/team.sim')
   expect((await p.find({ type: 'Text', text: /no problems/ }))?.text).toContain('team.sim')
-  expect((await p.find({ type: 'Text', text: /Para ver:/ }))?.text).toContain('/sim-preview team.sim')
+  expect((await p.find({ type: 'Text', text: /Para ver:/ }))?.text).toContain('/simulation-preview team.sim')
   await p.unmount()
 })
 

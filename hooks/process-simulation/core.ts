@@ -105,7 +105,7 @@ export function diagLines(c: Checked): string[] {
 export type Ran = { rows: string[]; done: number; total: number; ms: number }
 
 /** Runs a checked recipe over its seeds, within the time budget, and gives a line per metric: the median and the p10 to
- * p90 range. /sim and the preview's controls both run through here. */
+ * p90 range. /simulate and the preview's controls both run through here. */
 export async function runMetrics(now: () => Promise<number>, c: Checked, seeds?: number, budgetMs = 7000): Promise<Ran> {
   const list = seedsFor(c.model, c.plan, seeds)
   const started = await now()

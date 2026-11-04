@@ -2,7 +2,7 @@
 name: process-simulation
 description: Turns a process — what arrives, where it goes, who handles it, what it costs — into an animated what-if simulation that opens offline, from a short .sim recipe of 10 to 25 lines - items arriving, queues forming, people and assistants handling the work, a slider for every control, ranges across seeded runs (p10 to p90) and the scenarios side by side. In English or Portuguese. Use when someone wants to show whether an assistant, an automation or more people is worth it, to see where a queue forms, or to ask «what if» about a service desk, an approval, a back office or a counter ("simulate our HR tickets with the self-service assistant", "what if we had two more reviewers?", "simula a fila do RH com o agente").
 license: MIT
-compatibility: Needs code execution and Node.js 18 or later; nothing to install. In Claude Code (2.1.287 or later) the dna mod also checks every .sim as it is written and adds /sim and /sim-preview.
+compatibility: Needs code execution and Node.js 18 or later; nothing to install. In Claude Code (2.1.287 or later) the dna mod also checks every .sim as it is written and adds /simulate and /simulation-preview.
 metadata:
   version: "1.17.0"
 ---
@@ -76,6 +76,6 @@ The keywords, units, weekdays and months change; the ids and labels do not; the 
 ## In Claude Code
 
 With the dna plugin, the mod checks every `.sim` you write or edit: a recipe with errors is refused with the
-validator's messages — fix them and write it again; warnings pass with a toast. `/sim [file.sim] [--seeds N]
-[--set knob=value]` runs it at once and gives you the same numbers; `/sim-preview [file.sim]` opens a pane with the flow and a −/+ for each
+validator's messages — fix them and write it again; warnings pass with a toast. `/simulate [file.sim] [--seeds N]
+[--set knob=value]` runs it at once and gives you the same numbers; `/simulation-preview [file.sim]` opens a pane with the flow and a −/+ for each
 control: a press runs the recipe again with the new value and shows the numbers.

@@ -92,7 +92,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
   </section>
   <section>
     <h2>In Claude Code, the recipe is checked as it is written</h2>
-    <p>The dna plugin carries a mod: a <code>.sim</code> with errors is refused with the validator's messages, so Claude fixes it; <code>/sim</code> runs it and prints each metric's median and range; <code>/sim-preview</code> opens a pane with the flow.</p>
+    <p>The dna plugin carries a mod: a <code>.sim</code> with errors is refused with the validator's messages, so Claude fixes it; <code>/simulate</code> runs it and prints each metric's median and range; <code>/simulation-preview</code> opens a pane with the flow.</p>
   </section>
   <footer>process-simulation is MIT licensed. The examples are illustrative; the self-service one follows the scenarios of <a href="https://github.com/microsoft/CopilotStudioSamples/tree/main/EmployeeSelfServiceAgent">Microsoft's Employee Self-Service sample</a> (MIT). Fonts Bricolage Grotesque and IBM Plex (SIL Open Font License).</footer>
 </main>

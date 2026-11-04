@@ -223,7 +223,7 @@ use them to explain a kind or a reference pattern; agent-review works without th
 
 ## In Claude Code
 
-With the dna plugin, `/cast <agents-folder> [--profile <team>.cast.yaml] [--lang pt]` runs the comparison (`--check`,
+With the dna plugin, `/agents <agents-folder> [--profile <team>.cast.yaml] [--lang pt]` runs the comparison (`--check`,
 nothing written) — with the profile given, or the only one beside the agents (it says which; with two, it asks) — and
 shows the summary and «to look at» in a pane, a button per group. After it, when an agent's `.mcs.yml` in that folder
 is written or edited, the comparison runs again and a toast says what came to look at or went away; the edit is never

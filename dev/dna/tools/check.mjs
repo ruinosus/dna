@@ -91,7 +91,7 @@ const kept = tracked.filter((f) => f.startsWith('docs/') || /^npm\/visual-explai
 const mb = tracked.reduce((n, f) => n + (existsSync(join(repo, f)) ? statSync(join(repo, f)).size : 0), 0) / 1048576
 expect(!kept.length && mb < 25, `main carries only what is installed and built from (${mb.toFixed(1)} MB in ${tracked.length} files)${kept.length ? ` — not: ${kept.slice(0, 5).join(', ')}` : ''}`)
 
-// The mod (hooks/): every test of it — the recipes' and names' guards, process-simulation's guard, /sim and the preview — in
+// The mod (hooks/): every test of it — the recipes' and names' guards, process-simulation's guard, /simulate and the preview — in
 // Claude Code's own harness, when Claude Code is here.
 const claude = spawnSync('claude', ['--version'], { encoding: 'utf8' })
 if (claude.status !== 0) console.log('• no Claude Code here: the mod was not tested')

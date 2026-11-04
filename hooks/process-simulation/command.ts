@@ -1,4 +1,4 @@
-// Feature 2: /sim runs a recipe at once, with no model turn, and prints the median
+// Feature 2: /simulate runs a recipe at once, with no model turn, and prints the median
 // and the p10 to p90 range of each metric. The same numbers reach Claude as context.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
@@ -37,10 +37,10 @@ async function loadRecipe($: EngineInterface, typed: string | undefined) {
 }
 
 export function simCommand(on: On) {
-  on('command.run', { command: 'sim' }, async ($, e) => {
+  on('command.run', { command: 'simulate' }, async ($, e) => {
     const { path, seeds, sets } = parseArgs(e.args)
     const doc = await loadRecipe($, path)
-    if (!doc.path) return { text: `name a recipe, for example /sim examples/corner-cafe.sim` }
+    if (!doc.path) return { text: `name a recipe, for example /simulate examples/corner-cafe.sim` }
     if (doc.src === undefined) return { text: `could not read ${doc.path}` }
 
     const c = check(doc.src, sets)
@@ -59,6 +59,6 @@ export function simCommand(on: On) {
       ...c.warnings.map(d => `warn ${d.text}`),
     ]
     const text = [head, '  metric                             median           (p10 to p90)', ...r.rows, ...notes.map(n => '  ' + n)].join('\n')
-    return { text, context: [`The person ran /sim on ${doc.path}. Results:\n${text}`] }
+    return { text, context: [`The person ran /simulate on ${doc.path}. Results:\n${text}`] }
   })
 }

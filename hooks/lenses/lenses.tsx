@@ -14,7 +14,7 @@ const lenses = atom({ plugin: 'dna', key: 'lenses' } as const, null, { shape: 'l
 
 const KINDS: LensKind[] = ['sim', 'blueprint', 'drill']
 const SKILL: Record<LensKind, string> = { sim: 'process-simulation', blueprint: 'service-blueprint', drill: 'incident-drill' }
-const SHOW: Record<LensKind, string> = { sim: '/sim-preview', blueprint: '/blueprint-preview', drill: '/drill' }
+const SHOW: Record<LensKind, string> = { sim: '/simulation-preview', blueprint: '/blueprint-preview', drill: '/drill' }
 const base = (p: string) => p.replace(/(\.way)?\.ya?ml$/i, '')
 export const lensFile = (way: string, kind: LensKind) => `${base(way)}${kind === 'sim' ? '.sim' : kind === 'blueprint' ? '.blueprint.yaml' : '.drill.yaml'}`
 const fromLine = (text: string) => /^# from: (.+)$/m.exec(text)?.[1] ?? ''

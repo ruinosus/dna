@@ -36,8 +36,8 @@ The dna plugin carries a mod (Claude Code 2.1.287 or later), in `hooks/`:
 | Feature | What it does |
 | --- | --- |
 | Recipe guard | When Claude writes or edits a `.sim`, the validator checks the result first. A recipe with errors is refused with the validator's messages, so Claude fixes it and writes again. Warnings pass, with a toast. It fails open: if the guard itself throws, the write goes through. |
-| `/sim [file.sim] [--seeds N] [--set knob=value]` | Runs the recipe at once, with no model turn, and prints the median and the p10 to p90 range of each metric; Claude receives the same numbers. It stops at 7 s. |
-| `/sim-preview [file.sim]` | A pane with the recipe's flow: an SVG in the desktop app, VS Code and mobile, text lines in the terminal, the validator's messages and an EN/PT switch. It also opens after the first valid `.sim` written in a session. |
+| `/simulate [file.sim] [--seeds N] [--set knob=value]` | Runs the recipe at once, with no model turn, and prints the median and the p10 to p90 range of each metric; Claude receives the same numbers. It stops at 7 s. |
+| `/simulation-preview [file.sim]` | A pane with the recipe's flow: an SVG in the desktop app, VS Code and mobile, text lines in the terminal, the validator's messages and an EN/PT switch. It also opens after the first valid `.sim` written in a session. |
 
 In GitHub Copilot, claude.ai and the API the skill works without it: the script checks and runs the recipe the same
 way.

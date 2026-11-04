@@ -1,6 +1,6 @@
 // Feature 3: a pane beside the chat that draws the current recipe's flow (SVG on the
 // desktop app, VS Code and mobile; text lines in the terminal) and its validator messages.
-// It redraws whenever Claude writes a valid .sim or /sim runs one.
+// It redraws whenever Claude writes a valid .sim or /simulate runs one.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
 
@@ -29,7 +29,7 @@ async function move($: EngineInterface, name: string, dir: 1 | -1 | 0) {
 }
 
 export function preview(on: On) {
-  on('command.run', { command: 'sim-preview' }, async ($, e) => {
+  on('command.run', { command: 'simulation-preview' }, async ($, e) => {
     const path = await pathOf($, e.args.trim())
     if (path) {
       const src = await $.fs.read(path).catch(() => undefined)
@@ -50,7 +50,7 @@ export function preview(on: On) {
       return (
         <Box flexDirection="column">
           <Text>No recipe yet.</Text>
-          <Text dimColor>Ask Claude to write a .sim file, or run /sim-preview path/to/file.sim</Text>
+          <Text dimColor>Ask Claude to write a .sim file, or run /simulation-preview path/to/file.sim</Text>
         </Box>
       )
     }
@@ -82,7 +82,7 @@ export function preview(on: On) {
         {(doc.rows ?? []).map((r) => <Text>{r}</Text>)}
       </Box>
     ) : []
-    const foot = doc.rows?.length ? [] : <Text dimColor>{pt ? 'Rode /sim para ver os números, ou mexa num controle.' : 'Run /sim for the numbers, or move a control.'}</Text>
+    const foot = doc.rows?.length ? [] : <Text dimColor>{pt ? 'Rode /simulate para ver os números, ou mexa num controle.' : 'Run /simulate for the numbers, or move a control.'}</Text>
     const messages = diagLines(c).map(line => <Text dimColor={line.startsWith('warn')}>{line}</Text>)
     if (!c.ok) {
       return (

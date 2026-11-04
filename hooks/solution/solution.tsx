@@ -11,7 +11,7 @@ import { pathOf, scriptOf } from '../recipes/run'
 export const SOLUTION_PANE = 'dna-solution'
 const solution = atom({ plugin: 'dna', key: 'solution' } as const, null, { shape: 'solution-1' })
 
-const SHOW: Record<string, string> = { way: '/way-preview', sim: '/sim-preview', blueprint: '/blueprint-preview', drill: '/drill', agents: '/cast', lesson: '' }
+const SHOW: Record<string, string> = { way: '/way-preview', sim: '/simulation-preview', blueprint: '/blueprint-preview', drill: '/drill', agents: '/agents', lesson: '' }
 const W = {
   en: { kinds: { way: 'The process', sim: 'What if', blueprint: 'The journey', drill: 'The drill', agents: 'The agents', lesson: 'The lesson' } as Record<string, string>, ok: 'passes its check', missing: 'not there', broken: 'does not pass its check', unchecked: 'not checked', stale: 'behind the way', redo: 'Make it again from the way', sure: 'Sure? It may have been edited by hand', redone: 'made again from the way', see: 'see it', page: (f: string) => `The page: ask Claude to run solution on ${f}`, none: 'Run /solution with a .solution.yaml.' },
   pt: { kinds: { way: 'O processo', sim: 'E se', blueprint: 'A jornada', drill: 'O ensaio', agents: 'Os agentes', lesson: 'A explicação' } as Record<string, string>, ok: 'passa no check', missing: 'não está lá', broken: 'não passa no check', unchecked: 'não conferido', stale: 'atrás do way', redo: 'Refazer a partir do way', sure: 'Certeza? Pode ter sido editado à mão', redone: 'refeito a partir do way', see: 'para ver', page: (f: string) => `A página: peça ao Claude para rodar o solution em ${f}`, none: 'Rode /solution com um .solution.yaml.' },

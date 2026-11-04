@@ -34,10 +34,10 @@ In Claude Code (2.1.287 or later) the plugin also carries a **mod**: every recip
 `.blueprint.yaml`, `.drill.yaml`, `.chalk`, a visual-explainer `.json`, a `.sim`) is checked first by its skill and refused
 with the messages when it breaks its format; in a repository that runs the names audit, a write with a name of your
 private list is refused (`/names` says what it watches); a way of working or a service blueprint opens a preview pane
-(`/way-preview`, `/blueprint-preview`); `/cast <folder> [--profile <file>]` shows agent-review's comparison in a pane, with the team's profile and a toast when an
+(`/way-preview`, `/blueprint-preview`); `/agents <folder> [--profile <file>]` shows agent-review's comparison in a pane, with the team's profile and a toast when an
 agent edited there changes it; `/drill <file>` plays an incident drill in a pane, to its debrief; `/lenses <file.way.yaml>` shows a way of
-working as a simulation, a service blueprint and a drill, and writes each beside it; and `/sim` and
-`/sim-preview` run and show a `.sim`, with a −/+ for each control that runs it again; `/solution <file>` shows a
+working as a simulation, a service blueprint and a drill, and writes each beside it; and `/simulate` and
+`/simulation-preview` run and show a `.sim`, with a −/+ for each control that runs it again; `/solution <file>` shows a
 solution's pieces, each with where it stands.
 Elsewhere the skills work without it.
 

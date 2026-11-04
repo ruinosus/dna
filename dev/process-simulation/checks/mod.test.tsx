@@ -79,24 +79,24 @@ test('a valid write reaches the preview, as SVG on desktop and text in the termi
   await term.press({ key: 'lang' })
   const chega = await term.find({ type: 'Text', text: /chega/ })
   expect(chega?.text).toContain('order')
-  const foot = await term.find({ type: 'Text', text: /Rode \/sim/ })
+  const foot = await term.find({ type: 'Text', text: /Rode \/simulate/ })
   expect(foot?.text).toContain('números')
   await term.unmount()
 })
 
-test('/sim runs a recipe and prints each metric', async ($, on) => {
+test('/simulate runs a recipe and prints each metric', async ($, on) => {
   engine(on, { 'cafe.sim': CAFE })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  const out = await $.command.run({ command: 'sim', args: 'cafe.sim --seeds 2 --set baristas=3' } as any)
+  const out = await $.command.run({ command: 'simulate', args: 'cafe.sim --seeds 2 --set baristas=3' } as any)
   expect(out.text).toContain('Corner café')
   expect(out.text).toContain('wait p90 at order')
   expect(out.text).toContain('baristas=3')
 })
 
-test('/sim reports errors instead of running', async ($, on) => {
+test('/simulate reports errors instead of running', async ($, on) => {
   engine(on, { 'bad.sim': BROKEN })
   await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
-  const out = await $.command.run({ command: 'sim', args: 'bad.sim' } as any)
+  const out = await $.command.run({ command: 'simulate', args: 'bad.sim' } as any)
   expect(out.text).toContain('has errors')
 })
 

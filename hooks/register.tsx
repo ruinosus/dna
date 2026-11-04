@@ -4,14 +4,14 @@
 //   previews a pane with the last way of working or service blueprint written; /way-preview, /blueprint-preview
 //   names    in a repository that runs the names audit, refuses a write with a name of the person's private list;
 //            /names says what it watches
-//   /cast    agent-review's comparison of a folder of agents in a pane, and a toast when an agent edited there changes it
+//   /agents    agent-review's comparison of a folder of agents in a pane, and a toast when an agent edited there changes it
 //   /lenses  a way of working as the other skills' recipes (a .sim, a blueprint, a drill), written beside it on a
 //            press, and a toast when the way changes under a lens
 //   /solution an solution solution in a pane: each piece and where it stands, a lens made again from the way
 //   /drill   an incident drill played in a pane: the clock, the scene, the choices and calls as buttons, the debrief
 //   guard    checks each .sim file Claude writes and refuses it with the validator's messages
-//   /sim     runs a recipe with no model turn and prints median and p10 to p90 per metric
-//   preview  a pane with the recipe's flow, opened by /sim-preview or the first valid write
+//   /simulate     runs a recipe with no model turn and prints median and p10 to p90 per metric
+//   preview  a pane with the recipe's flow, opened by /simulation-preview or the first valid write
 import type { Register } from 'claude-code'
 
 import { simCommand } from './process-simulation/command'
@@ -28,7 +28,7 @@ import { preview } from './process-simulation/preview'
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command.register({
-      name: 'sim',
+      name: 'simulate',
       description: 'Run a .sim recipe: median and p10 to p90 of each metric',
       argumentHint: '[file.sim] [--seeds N] [--set knob=value]',
     })
@@ -43,7 +43,7 @@ export const register: Register = on => {
       argumentHint: '[file.blueprint.yaml]',
     })
     await $.command.register({
-      name: 'cast',
+      name: 'agents',
       description: "Compare a folder of cloned Copilot Studio agents with agent-review: what to look at, in a pane",
       argumentHint: '[agents-folder] [--lang pt]',
     })
@@ -67,7 +67,7 @@ export const register: Register = on => {
       description: 'Say what the names guard watches: your private list and this repository',
     })
     await $.command.register({
-      name: 'sim-preview',
+      name: 'simulation-preview',
       description: 'Show the flow of the current .sim recipe in a pane',
       argumentHint: '[file.sim]',
     })
