@@ -1,6 +1,6 @@
 ---
 type: tool_used
 tool: Skill
-input_match: '"skill"\s*:\s*"(?:[\w-]+:)?chalk-talk"'
+input_match: '"skill"\s*:\s*"(?:[\w-]+:)?visual-explainer"'
 ---
-The chalk-talk skill was used.
+The visual-explainer skill was used.

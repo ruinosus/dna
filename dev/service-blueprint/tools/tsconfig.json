@@ -26,7 +26,7 @@
         ".lib/*"
       ],
       "@kit/*": [
-        "../../../node_modules/chalk-talk/kit/*"
+        "../../../node_modules/@ruinosus/visual-explainer/kit/*"
       ],
       "*": [
         "../../../node_modules/*"

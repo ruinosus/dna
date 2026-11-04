@@ -1,5 +1,5 @@
-// /lenses: a way of working seen by the other skills — gates-and-handoffs' --lens writes it as a .sim (box-office), a
-// .blueprint.yaml (service-blueprint) and a .drill.yaml (dress-rehearsal). The pane shows the three, how many of their
+// /lenses: a way of working seen by the other skills — way-of-working' --lens writes it as a .sim (process-simulation), a
+// .blueprint.yaml (service-blueprint) and a .drill.yaml (incident-drill). The pane shows the three, how many of their
 // numbers and lines are bets, and a button to write each beside the way, checked by its own skill. A lens already there
 // that differs is never written over at one press: the button asks again, since it may have been edited by hand.
 // After it, a .way.yaml Claude writes or edits that has a lens beside it from an earlier version gets a toast.
@@ -9,11 +9,11 @@ import type { EngineInterface, On } from 'claude-code'
 import type { LensItem, LensKind } from '../../types'
 import { pathOf, scriptOf } from '../recipes/run'
 
-export const LENS_PANE = 'house-lights-lenses'
-const lenses = atom({ plugin: 'house-lights', key: 'lenses' } as const, null, { shape: 'lenses-1' })
+export const LENS_PANE = 'dna-lenses'
+const lenses = atom({ plugin: 'dna', key: 'lenses' } as const, null, { shape: 'lenses-1' })
 
 const KINDS: LensKind[] = ['sim', 'blueprint', 'drill']
-const SKILL: Record<LensKind, string> = { sim: 'box-office', blueprint: 'service-blueprint', drill: 'dress-rehearsal' }
+const SKILL: Record<LensKind, string> = { sim: 'process-simulation', blueprint: 'service-blueprint', drill: 'incident-drill' }
 const SHOW: Record<LensKind, string> = { sim: '/sim-preview', blueprint: '/blueprint-preview', drill: '/drill' }
 const base = (p: string) => p.replace(/(\.way)?\.ya?ml$/i, '')
 export const lensFile = (way: string, kind: LensKind) => `${base(way)}${kind === 'sim' ? '.sim' : kind === 'blueprint' ? '.blueprint.yaml' : '.drill.yaml'}`
@@ -25,7 +25,7 @@ const W = {
 }
 
 async function derive($: EngineInterface, way: string, kind: LensKind, lang: 'en' | 'pt', gate?: string): Promise<LensItem> {
-  const run = await $.process.run(['node', scriptOf($, 'gates-and-handoffs'), way, '--lens', kind, '--lang', lang, ...(gate ? ['--gate', gate] : [])], { timeoutMs: 3000 })
+  const run = await $.process.run(['node', scriptOf($, 'way-of-working'), way, '--lens', kind, '--lang', lang, ...(gate ? ['--gate', gate] : [])], { timeoutMs: 3000 })
   const file = lensFile(way, kind)
   if (run.exitCode !== 0) return { kind, file, text: '', bets: 0, state: 'error', said: (run.stderr || run.stdout).trim().split('\n').slice(0, 4) }
   const there = await $.fs.read(file).catch(() => undefined)
@@ -58,7 +58,7 @@ async function stale($: EngineInterface, path: string) {
     const item = await derive($, path, kind, 'en')
     if (item.state === 'older') behind.push(file.split('/').pop()!)
   }
-  if (behind.length) $.ui.toast(`gates-and-handoffs: ${behind.join(', ')} came from an earlier version of the way — /lenses ${path.split('/').pop()}`)
+  if (behind.length) $.ui.toast(`way-of-working: ${behind.join(', ')} came from an earlier version of the way — /lenses ${path.split('/').pop()}`)
 }
 
 export function lensesCommand(on: On) {
@@ -81,7 +81,7 @@ export function lensesCommand(on: On) {
     await update($, lenses, () => ({ path, lang, items }))
     await $.ui.open({ id: LENS_PANE, title: 'Lenses' })
     const text = items.map((i) => `${i.kind}: ${i.state === 'error' ? i.said[0] : `${i.file.split('/').pop()} · ${W[lang].bets(i.bets)}`}`).join('\n')
-    return { text, context: [`The person ran /lenses on ${path}. gates-and-handoffs --lens gives:\n${text}\nEach lens is a draft: its # bet: lines are made up and should be replaced with the person's own numbers.`] }
+    return { text, context: [`The person ran /lenses on ${path}. way-of-working --lens gives:\n${text}\nEach lens is a draft: its # bet: lines are made up and should be replaced with the person's own numbers.`] }
   })
 
   on('ui.render', { component: 'Pane', requestId: LENS_PANE }, async ($, e) => {

@@ -1,7 +1,7 @@
 // How fast a skill delivers, from an eval run kept with --keep-temp and --json: for each run, the seconds until the
 // first page (the first build that wrote an .html), the files read before the source was written, the rounds of fixes
 // (builds after the first page) and the quality grader. Per case, the mean of its runs. Part of the skills kit
-// (chalk-talk/kit).
+// (visual-explainer/kit).
 //
 //   node eval-metrics.mjs <run.json> [<another run.json> …]
 import { readFileSync } from 'node:fs'

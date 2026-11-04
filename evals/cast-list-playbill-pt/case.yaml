@@ -1,5 +1,5 @@
 schema_version: "1.0"
-name: cast-list-playbill-pt
+name: agent-review-playbill-pt
 description: The RH of six cloned Copilot Studio agents, with the admin center's inventory, the team spreadsheet and an export of Application Insights — the skill fires, writes the RH page, and the answer names cupons with no owner, loja-fisica never published, fidelidade being hired and frete in a development plan, inventing no goal and editing no agent.
 tags: [build, pt]
 runs: 2
@@ -15,7 +15,7 @@ graders:
   - name: skill-fired
     type: tool_used
     tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?cast-list"'
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?agent-review"'
   - name: wrote-the-rh
     type: tool_used
     tool: Bash

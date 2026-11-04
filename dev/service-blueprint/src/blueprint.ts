@@ -33,7 +33,7 @@ export interface Moment {
   support?: string[]
   promise?: Pledge
   pains?: Pain[]
-  /** A stage of a gates-and-handoffs way of working that sustains it, «way#stage». */
+  /** A stage of a way-of-working way of working that sustains it, «way#stage». */
   way?: string
 }
 export interface Action { id: string; moment: string; does: string; owner?: string; due?: string }

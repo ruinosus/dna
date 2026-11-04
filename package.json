@@ -1,28 +1,28 @@
 {
-  "name": "house-lights-repo",
+  "name": "dna-repo",
   "private": true,
   "type": "module",
   "workspaces": [
-    "npm/house-lights",
-    "npm/chalk-talk",
-    "dev/chalk-talk/tools",
-    "dev/back-of-napkin/tools",
-    "dev/dress-rehearsal/tools",
-    "dev/gates-and-handoffs/tools",
+    "npm/dna",
+    "npm/visual-explainer",
+    "dev/visual-explainer/tools",
+    "dev/visual-pitch/tools",
+    "dev/incident-drill/tools",
+    "dev/way-of-working/tools",
     "dev/service-blueprint/tools",
-    "dev/cast-list/tools",
-    "dev/box-office/tools",
-    "dev/opening-night/tools",
-    "dev/house-lights/tools"
+    "dev/agent-review/tools",
+    "dev/process-simulation/tools",
+    "dev/solution/tools",
+    "dev/dna/tools"
   ],
   "scripts": {
-    "assets": "npm run -s assets -w dev/chalk-talk/tools && npm run -s assets -w dev/back-of-napkin/tools -w dev/dress-rehearsal/tools -w dev/gates-and-handoffs/tools -w dev/service-blueprint/tools -w dev/cast-list/tools -w dev/box-office/tools",
+    "assets": "npm run -s assets -w dev/visual-explainer/tools && npm run -s assets -w dev/visual-pitch/tools -w dev/incident-drill/tools -w dev/way-of-working/tools -w dev/service-blueprint/tools -w dev/agent-review/tools -w dev/process-simulation/tools",
     "check": "npm run -s check --workspaces --if-present",
     "typecheck": "npm run -s typecheck --workspaces --if-present",
     "linux": "npm run -s linux --workspaces --if-present",
     "site": "npm run -s site --workspaces --if-present",
     "zip": "npm run -s zip --workspaces --if-present",
-    "audit": "node kit/tools/audit.mjs . --skip \"npm/chalk-talk/*.js\" --skip \"npm/chalk-talk/scripts\" --skip \"npm/chalk-talk/assets\" --skip \"npm/house-lights/skills\" --skip \"docs/chalk-talk/lessons\" --skip \"docs/chalk-talk/images/*.svg\" --skip \"docs/back-of-napkin/drawings\" --skip \"docs/dress-rehearsal/examples\" --skip \"docs/gates-and-handoffs/examples\" --skip \"docs/service-blueprint/examples\" --skip \"docs/cast-list/examples\" --skip \"skills/*/assets\" --skip \"skills/chalk-talk/scripts/mermaid.mjs\" --skip \"skills/chalk-talk/scripts/contract.mjs\" --skip \"skills/back-of-napkin/scripts/contract.mjs\" --skip \"skills/back-of-napkin/scripts/engine-build.mjs\" --skip \"skills/dress-rehearsal/scripts/engine.mjs\" --skip \"skills/gates-and-handoffs/scripts/engine.mjs\" --skip \"skills/service-blueprint/scripts/engine.mjs\" --skip \"skills/cast-list/scripts/engine.mjs\" --skip \"skills/cast-list/vendor\"",
-    "pages": "node dev/house-lights/tools/pages.mjs"
+    "audit": "node kit/tools/audit.mjs . --skip \"npm/visual-explainer/*.js\" --skip \"npm/visual-explainer/scripts\" --skip \"npm/visual-explainer/assets\" --skip \"npm/dna/skills\" --skip \"docs/visual-explainer/lessons\" --skip \"docs/visual-explainer/images/*.svg\" --skip \"docs/visual-pitch/drawings\" --skip \"docs/incident-drill/examples\" --skip \"docs/way-of-working/examples\" --skip \"docs/service-blueprint/examples\" --skip \"docs/agent-review/examples\" --skip \"skills/*/assets\" --skip \"skills/visual-explainer/scripts/mermaid.mjs\" --skip \"skills/visual-explainer/scripts/contract.mjs\" --skip \"skills/visual-pitch/scripts/contract.mjs\" --skip \"skills/visual-pitch/scripts/engine-build.mjs\" --skip \"skills/incident-drill/scripts/engine.mjs\" --skip \"skills/way-of-working/scripts/engine.mjs\" --skip \"skills/service-blueprint/scripts/engine.mjs\" --skip \"skills/agent-review/scripts/engine.mjs\" --skip \"skills/agent-review/vendor\"",
+    "pages": "node dev/dna/tools/pages.mjs"
   }
 }

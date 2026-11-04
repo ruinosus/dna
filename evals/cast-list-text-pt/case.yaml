@@ -1,5 +1,5 @@
 schema_version: "1.0"
-name: cast-list-text-pt
+name: agent-review-text-pt
 description: The text of six cloned Copilot Studio agents compared with the team's profile — the skill fires, and the answer names the answer size written in two ways, frete's variation of the links block and devolucoes' knowledge contradiction, editing no agent.
 tags: [build, pt]
 runs: 2
@@ -15,7 +15,7 @@ graders:
   - name: skill-fired
     type: tool_used
     tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?cast-list"'
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?agent-review"'
   - name: map
     type: file_exists
     path: "**/agentes.html"

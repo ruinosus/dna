@@ -1,5 +1,5 @@
 // Making the one HTML file a skill delivers: a value as JSON that can sit inside a <script> tag, and a page template
-// with its {{KEYS}} filled. Part of the skills kit (chalk-talk/kit): copied into each skill by its tools/assets.mjs.
+// with its {{KEYS}} filled. Part of the skills kit (visual-explainer/kit): copied into each skill by its tools/assets.mjs.
 
 /** `value` as JSON, with "<" escaped so no text in it can end the <script> tag it goes in. */
 export const inline = (value) => JSON.stringify(value).replace(/</g, '\\u003c')

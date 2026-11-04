@@ -1,9 +1,9 @@
 ---
 type: tool_used
 tool: Skill
-input_match: 'back-of-napkin'
+input_match: 'visual-pitch'
 min: 0
 max: 0
 arm: both
 ---
-To teach a concept is chalk-talk's: back-of-napkin stays out.
+To teach a concept is visual-explainer's: visual-pitch stays out.

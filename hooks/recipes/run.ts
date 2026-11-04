@@ -20,7 +20,7 @@ export type Ran = { exitCode: number; stdout: string; stderr: string; dir: strin
  * the folder, and gives back what it printed (the folder's path taken out by the caller). */
 export async function runOnCopy($: EngineInterface, skill: string, path: string, text: string, args: (file: string, dir: string) => string[], timeoutMs = 7000): Promise<Ran> {
   const tmp = ((await $.env.get('TMPDIR')) ?? '/tmp').replace(/\/$/, '')
-  const dir = `${tmp}/house-lights-guard-${Math.round(await $.clock.now())}-${Math.random().toString(36).slice(2, 8)}`
+  const dir = `${tmp}/dna-guard-${Math.round(await $.clock.now())}-${Math.random().toString(36).slice(2, 8)}`
   const file = `${dir}/${base(path)}`
   try {
     await $.fs.write(file, text)

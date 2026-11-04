@@ -1,0 +1,17 @@
+{
+  "name": "visual-pitch-tools",
+  "private": true,
+  "type": "module",
+  "description": "Brings visual-explainer's engine into the visual-pitch skill, and checks, packs and shows it.",
+  "scripts": {
+    "assets": "node assets.mjs",
+    "check": "node check.mjs",
+    "zip": "node zip.mjs",
+    "site": "node site.mjs",
+    "linux": "node linux-check.mjs",
+    "metrics": "node node_modules/@ruinosus/visual-explainer/kit/tools/eval-metrics.mjs"
+  },
+  "devDependencies": {
+    "@ruinosus/visual-explainer": "*"
+  }
+}

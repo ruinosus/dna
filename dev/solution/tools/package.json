@@ -1,0 +1,14 @@
+{
+  "name": "solution-tools",
+  "private": true,
+  "type": "module",
+  "description": "Checks and packs the solution skill, and makes its gallery of solution accelerators.",
+  "scripts": {
+    "check": "node check.mjs",
+    "zip": "node zip.mjs",
+    "site": "node site.mjs"
+  },
+  "devDependencies": {
+    "@ruinosus/visual-explainer": "*"
+  }
+}

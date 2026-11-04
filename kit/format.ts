@@ -1,6 +1,6 @@
 // Reading a skill's YAML file so every mistake can say its line: the document, where a path is in the file, and the
 // two problems that stop reading at once (YAML that does not parse, a file that is not of this format). Part of the
-// skills kit (chalk-talk/kit): a skill's esbuild puts it in its engine.mjs. Needs the `yaml` package.
+// skills kit (visual-explainer/kit): a skill's esbuild puts it in its engine.mjs. Needs the `yaml` package.
 import { isMap, LineCounter, parseDocument, type Document } from 'yaml'
 
 export type Path = (string | number)[]

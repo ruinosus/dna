@@ -2,7 +2,7 @@
 // reads back what the page wrote in <pre id="chalk-<mode>">. It talks to the browser over the DevTools protocol on a
 // pipe (--remote-debugging-pipe) and waits for that <pre> itself: --dump-dom hangs on some machines, the pipe does not.
 // The browsers are tried in order; one that does not start or does not answer in time gives way to the next.
-// Part of the skills kit (chalk-talk/kit): copied into each skill by its tools/assets.mjs. Node only, no dependency.
+// Part of the skills kit (visual-explainer/kit): copied into each skill by its tools/assets.mjs. Node only, no dependency.
 import { execFileSync, spawn } from 'node:child_process'
 import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs'
 import { createRequire } from 'node:module'
@@ -73,7 +73,7 @@ const pause = (ms) => new Promise((ok) => setTimeout(ok, ms).unref())
 
 /** One browser, started with a profile of its own, spoken to over the pipe. */
 async function start(exe) {
-  const profile = mkdtempSync(join(tmpdir(), 'chalk-talk-'))
+  const profile = mkdtempSync(join(tmpdir(), 'visual-explainer-'))
   const child = spawn(exe, [...launchFlags(), `--user-data-dir=${profile}`, 'about:blank'], { stdio: ['ignore', 'ignore', 'ignore', 'pipe', 'pipe'] })
   const waiting = new Map()
   let id = 0

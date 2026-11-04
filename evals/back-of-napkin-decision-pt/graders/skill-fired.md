@@ -1,6 +1,6 @@
 ---
 type: tool_used
 tool: Skill
-input_match: '"skill"\s*:\s*"(?:[\w-]+:)?back-of-napkin"'
+input_match: '"skill"\s*:\s*"(?:[\w-]+:)?visual-pitch"'
 ---
-The back-of-napkin skill was used.
+The visual-pitch skill was used.

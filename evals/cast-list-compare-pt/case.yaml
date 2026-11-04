@@ -1,5 +1,5 @@
 schema_version: "1.0"
-name: cast-list-compare-pt
+name: agent-review-compare-pt
 description: Six cloned Copilot Studio agents compared with no profile — the skill fires, makes the map and the workbook, names who is off the pattern, and edits no agent.
 tags: [build, pt]
 runs: 2
@@ -15,7 +15,7 @@ graders:
   - name: skill-fired
     type: tool_used
     tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?cast-list"'
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?agent-review"'
   - name: map
     type: file_exists
     path: "**/agentes.html"

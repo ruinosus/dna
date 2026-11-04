@@ -1,6 +1,6 @@
 ---
 type: tool_used
 tool: Skill
-input_match: '"skill"\s*:\s*"(?:[\w-]+:)?gates-and-handoffs"'
+input_match: '"skill"\s*:\s*"(?:[\w-]+:)?way-of-working"'
 ---
-The gates-and-handoffs skill was used.
+The way-of-working skill was used.

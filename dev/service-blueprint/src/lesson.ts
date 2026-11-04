@@ -1,4 +1,4 @@
-// The blueprint explained by drawing it — a chalk-talk lesson that walks the journey: each moment a column, the customer
+// The blueprint explained by drawing it — a visual-explainer lesson that walks the journey: each moment a column, the customer
 // drawn with that moment's mood and as high as they feel, a line over their heads, what they do; then the line of
 // visibility and, under it, what happens on stage, backstage and in the systems. A chapter per phase; each moment says
 // what the customer does, how it feels and the pain they told.

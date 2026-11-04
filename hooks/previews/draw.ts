@@ -4,7 +4,7 @@
 // the terminal, which draws no SVG. Fixed light colors on a white card, so it reads in both themes.
 import type { PreviewLang } from '../../types'
 
-export const PREVIEW_PANE = 'house-lights-recipe'
+export const PREVIEW_PANE = 'dna-recipe'
 const C = { bg: '#ffffff', ink: '#17211f', muted: '#5b6965', line: '#cdd6d3', soft: '#f6f8f7', gate: '#b23a3a', accent: '#2f5bea', warm: '#b86a0e' }
 const esc = (s: unknown) => String(s ?? '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' } as Record<string, string>)[ch] ?? ch)
 export const cut = (s: unknown, n: number) => {

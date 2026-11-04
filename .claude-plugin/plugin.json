@@ -1,12 +1,12 @@
 {
-  "name": "house-lights",
+  "name": "dna",
   "version": "1.17.0",
-  "description": "Eight skills for showing an idea to people: teach it by drawing (chalk-talk), present it (back-of-napkin), rehearse an incident (dress-rehearsal), map a team's way of working (gates-and-handoffs) and a customer journey (service-blueprint), compare Copilot Studio agents (cast-list), simulate a process to ask «what if» (box-office), and put the whole process together as one solution (opening-night) — with a mod that checks each recipe as Claude writes it.",
+  "description": "Eight skills for showing an idea to people: teach it by drawing (visual-explainer), present it (visual-pitch), rehearse an incident (incident-drill), map a team's way of working (way-of-working) and a customer journey (service-blueprint), compare Copilot Studio agents (agent-review), simulate a process to ask «what if» (process-simulation), and put the whole process together as one solution (solution) — with a mod that checks each recipe as Claude writes it.",
   "author": {
     "name": "ruinosus"
   },
-  "homepage": "https://ruinosus.github.io/house-lights/",
-  "repository": "https://github.com/ruinosus/house-lights",
+  "homepage": "https://ruinosus.github.io/dna/",
+  "repository": "https://github.com/ruinosus/dna",
   "license": "MIT",
   "keywords": [
     "skills",

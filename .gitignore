@@ -6,14 +6,14 @@ npm/*/*.tgz
 dev/*/tools/sources.json
 dev/*/tools/.engine
 dev/*/tools/.lib
-npm/house-lights/skills/
-npm/house-lights/LICENSE
+npm/dna/skills/
+npm/dna/LICENSE
 .claude-plugin/types/
 # the site: made by npm run site, published to the gh-pages branch by npm run pages (never kept in main)
 docs/
-# the chalk-talk npm package's built files: made by npm run assets (npm/chalk-talk's prepack checks they are there)
-npm/chalk-talk/*.js
-npm/chalk-talk/scripts/
-npm/chalk-talk/assets/
-npm/chalk-talk/references/
-npm/chalk-talk/LICENSE
+# the visual-explainer npm package's built files: made by npm run assets (npm/visual-explainer's prepack checks they are there)
+npm/visual-explainer/*.js
+npm/visual-explainer/scripts/
+npm/visual-explainer/assets/
+npm/visual-explainer/references/
+npm/visual-explainer/LICENSE

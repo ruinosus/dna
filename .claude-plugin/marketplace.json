@@ -1,10 +1,10 @@
 {
-  "name": "house-lights",
+  "name": "dna",
   "owner": { "name": "ruinosus" },
-  "description": "house-lights: seven skills for showing an idea to people, by drawing it or playing it.",
+  "description": "dna: seven skills for showing an idea to people, by drawing it or playing it.",
   "plugins": [
     {
-      "name": "house-lights",
+      "name": "dna",
       "source": "./",
       "description": "Teach by drawing, present, rehearse an incident, map a way of working and a customer journey, compare Copilot Studio agents, simulate a process."
     }

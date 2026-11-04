@@ -1,0 +1,320 @@
+// Checks the skill as a person gets it: the engine's checks (checks/*.check.ts); the example agents make the map, the
+// workbook, the lesson (passing visual-explainer's reviewer when there is a browser) and the cast file and print what to look at — 24 with the example profile, 27 with the demo cast file and the telemetry (what
+// people said that the YAML contradicts); the workbook filled in comes back (--from, --take); --facts; a clean copy with
+// no node_modules runs on Node alone; 18 agents in under 30 s with the network blocked; broken files never stop it; a
+// broken profile says its line; a folder with no agent says so; the map loads nothing from the internet; and, in a browser, «to look at» opens its fact, a pattern shows the files, the
+// role filter leaves the orchestrator out, the tabs open and the downloads work. Run after npm run assets.
+import { checkSkillMd } from '@ruinosus/visual-explainer/kit/tools/checks.mjs'
+import { spawnSync } from 'node:child_process'
+import { cpSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const here = dirname(fileURLToPath(import.meta.url))
+const root = resolve(here, '..')
+const repo = resolve(here, '../../..') // the dna repository
+const skill = join(repo, 'skills/agent-review')
+const cast = join(skill, 'scripts/build.mjs')
+const examples = join(skill, 'examples')
+const agents = join(examples, 'agents')
+const profile = join(examples, 'profile.cast.yaml')
+const work = mkdtempSync(join(tmpdir(), 'agent-review-check-'))
+let failed = 0
+const run = (...args) => spawnSync(process.execPath, [cast, ...args], { encoding: 'utf8' })
+const ok = (cond, what, detail = '') => {
+  console.log(`${cond ? '✓' : '✗'} ${what}${!cond && detail ? `\n${detail}` : ''}`)
+  if (!cond) failed++
+}
+checkSkillMd(ok, join(skill, 'SKILL.md'), 'agent-review')
+const looks = (out) => (out.match(/^! (to look at|para olhar)/gm) ?? []).length
+
+for (const f of readdirSync(join(root, 'checks')).filter((x) => x.endsWith('.check.ts'))) {
+  const r = spawnSync('npx', ['tsx', '--tsconfig', join(here, 'tsconfig.json'), join(root, 'checks', f)], { cwd: here, encoding: 'utf8' })
+  ok(r.status === 0, `checks/${f}`, r.stdout + r.stderr)
+}
+
+// the examples, with the profile and no cast file yet
+const plain = join(work, 'plain')
+const a = run(agents, '--profile', profile, '--all', '--lang', 'pt', '--out', plain)
+ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agents.playbill.html', 'agents.plot.html', 'agents.cast.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, lesson, RH, stage and cast file', a.stdout + a.stderr)
+ok(/✓ review|• review/.test(a.stdout) && !/! review/.test(a.stdout), "the lesson passes visual-explainer's reviewer (when there is a browser)", a.stdout)
+ok(looks(a.stdout) === 24, `24 to look at (${looks(a.stdout)})`, a.stdout)
+const heads = [...a.stdout.matchAll(/^▸ (.+) · (\d+)$/gm)].map((m) => [m[1], Number(m[2])])
+ok(heads.length >= 4 && heads.reduce((n, [, c]) => n + c, 0) === 24 && heads[0][0] === 'Contradições' && heads.some(([g]) => g === 'Só um tem'), 'in groups, each with how many, adding up to the list', JSON.stringify(heads))
+const again = run(agents, '--profile', profile, '--out', plain)
+const kept = readFileSync(join(plain, 'agents.cast.yaml'), 'utf8')
+const release = JSON.parse(readFileSync(join(repo, '.claude-plugin/plugin.json'), 'utf8')).version
+// the pages say it in their generator tag (and the map, the RH and the stage in their foot, drawn by their script)
+const stamped = (f) => readFileSync(join(plain, f), 'utf8').includes(f.endsWith('.html') ? `agent-review (${release}, engine` : `agent-review ${release}`)
+const madeFiles = ['agents.cast.yaml', 'agents.html', 'agents.playbill.html', 'agents.plot.html', 'agents.diagrams.md', 'agents.diagrams/topologia.mmd']
+ok(madeFiles.every(stamped) && kept.includes(`# Written by agent-review ${release}.`), `what a run makes says the version that made it (agent-review ${release}): the cast file, the map, the RH, the stage and the diagrams`, madeFiles.filter((f) => !stamped(f)))
+ok(again.status === 0 && kept.includes('role: orchestrator') && /blocks:\n(.*\n)*  - id: links\n    text: \|/.test(kept), 'a second run reads the cast file it wrote, and keeps the roles and the blocks of text', kept.slice(0, 600))
+
+// with the demo cast file: what people said, and what was decided
+const demo = join(work, 'demo')
+mkdirSync(demo)
+copyFileSync(join(examples, 'demo.cast.yaml'), join(demo, 'agents.cast.yaml'))
+const d = run(agents, '--profile', profile, '--lang', 'pt', '--telemetry', join(examples, 'telemetria.csv'), '--out', demo)
+ok(d.status === 0 && looks(d.stdout) === 24 + 1 + 2 && d.stdout.includes('mas o YAML não tem'), '27 to look at with the demo cast file and the telemetry, the contradiction first', d.stdout)
+ok(d.stdout.includes('O evento «BodegaFrete_OnError» de bodega-frete não disparou em 30 dias') && d.stdout.includes('bodega-loja-fisica não tem nenhuma linha na telemetria'), 'the telemetry: what did not fire, and who has no line', d.stdout)
+ok(readFileSync(join(demo, 'agents.cast.yaml'), 'utf8').includes('# the handoff document says frete escalates'), "the cast file keeps the person's comments")
+
+// declared from outside: the admin center's inventory and the team's spreadsheet, listed and then taken
+const dec = join(work, 'declared')
+const listedOut = run(agents, '--declared', join(examples, 'inventario.csv'), '--declared', join(examples, 'equipe.csv'), '--lang', 'pt', '--out', dec)
+ok(listedOut.status === 0 && /^\s+d1\s+\+ declarado\s+bodega-orquestrador · Responsável declarado = «atendimento@bodegaazul.example» \(inventario.csv › linha 2\)/m.test(listedOut.stdout) && listedOut.stdout.includes('linha 8 («Bodega Azul - Fidelidade»)') && !existsSync(join(dec, 'agents.cast.yaml')), '--declared lists what the tables say, each with a key, and the rows of nobody in the folder; nothing written', listedOut.stdout)
+const tookOut = run(agents, '--declared', join(examples, 'equipe.csv'), '--take', 'all', '--lang', 'pt', '--out', dec)
+const afterKpi = run(agents, '--profile', profile, '--check', '--lang', 'pt', '--out', dec)
+ok(tookOut.status === 0 && readFileSync(join(dec, 'agents.cast.yaml'), 'utf8').includes('cotação em menos de 5 s') && afterKpi.stdout.includes('Regra «Todo especialista tem KPI»: 1 especialista não cumpre (bodega-loja-fisica)'), '--take all writes them; the next run counts the KPIs', afterKpi.stdout)
+// the RH: the demo cast file with both tables taken, and the telemetry
+const rh = join(work, 'rh')
+mkdirSync(rh)
+copyFileSync(join(examples, 'demo.cast.yaml'), join(rh, 'agents.cast.yaml'))
+run(agents, '--declared', join(examples, 'inventario.csv'), '--declared', join(examples, 'equipe.csv'), '--take', 'all', '--out', rh)
+const rhRun = (out) => run(agents, '--profile', profile, '--all', '--lang', 'pt', '--telemetry', join(examples, 'telemetria.csv'), '--evals', join(examples, 'avaliacoes'), '--out', out)
+const rhOut = rhRun(rh)
+const rhPage = existsSync(join(rh, 'agents.playbill.html')) ? readFileSync(join(rh, 'agents.playbill.html'), 'utf8') : ''
+ok(rhOut.status === 0 && rhOut.stdout.includes('✓ rh') && readFileSync(join(rh, 'agents.html'), 'utf8').includes('agents.playbill.html') && !/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(rhPage), '--all writes the RH beside the map, which links to it; the RH loads nothing from the internet', rhOut.stdout)
+const rh2 = join(work, 'rh2')
+mkdirSync(rh2)
+copyFileSync(join(rh, 'agents.cast.yaml'), join(rh2, 'agents.cast.yaml'))
+rhRun(rh2)
+ok(readFileSync(join(rh2, 'agents.playbill.html'), 'utf8') === rhPage, 'the same run, the same RH page')
+const plotPage = readFileSync(join(rh, 'agents.plot.html'), 'utf8')
+ok(rhOut.stdout.includes('✓ stage') && readFileSync(join(rh, 'agents.html'), 'utf8').includes('agents.plot.html') && readFileSync(join(rh2, 'agents.plot.html'), 'utf8') === plotPage && !/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(plotPage), 'the stage: written beside the map, linked from it, the same on the same run, loading nothing from the internet')
+ok(rhOut.stdout.includes('✓ avaliações') && rhPage.includes('"certifications"') && ['agents.html', 'agents.playbill.html', 'agents.plot.html', 'agents.cast.yaml'].every((f) => !/Onde está meu pedido|Manaus|saiu para entrega|Same meaning/.test(readFileSync(join(rh, f), 'utf8'))), '--evals: the certifications in the RH, and no question, answer or explanation in any output', rhOut.stdout)
+writeFileSync(join(work, 'Evaluate Ninguém 2026-10-30.csv'), 'question,result_1\nx,Pass\n')
+mkdirSync(join(work, 'odd-evals'))
+copyFileSync(join(work, 'Evaluate Ninguém 2026-10-30.csv'), join(work, 'odd-evals', 'Evaluate Ninguém 2026-10-30.csv'))
+const oddEvals = run(agents, '--check', '--lang', 'pt', '--evals', join(work, 'odd-evals'))
+ok(oddEvals.status === 0 && oddEvals.stdout.includes('o nome não cita ninguém da pasta') && run(agents, '--evals', join(work, 'none')).status === 2, 'an export that names nobody is told, never stopping; a folder that is not there: exit 2', oddEvals.stdout)
+// the diagrams: the document and each one alone, the same on the same run
+const mmdDir = join(rh, 'agents.diagrams')
+const mmds = existsSync(mmdDir) ? readdirSync(mmdDir).filter((f) => f.endsWith('.mmd')).sort() : []
+const diagDoc = existsSync(join(rh, 'agents.diagrams.md')) ? readFileSync(join(rh, 'agents.diagrams.md'), 'utf8') : ''
+ok(rhOut.stdout.includes('✓ diagrams') && mmds.length >= 10 && mmds.includes('topologia.mmd') && (diagDoc.match(/^```mermaid$/gm) ?? []).length === mmds.length && mmds.every((f) => diagDoc.includes(readFileSync(join(mmdDir, f), 'utf8').trimEnd())), '--all writes the diagrams: a ```mermaid block in the document per .mmd', [mmds.length, rhOut.stdout])
+ok(mmds.every((f) => readFileSync(join(mmdDir, f), 'utf8') === readFileSync(join(rh2, 'agents.diagrams', f), 'utf8')) && readFileSync(join(rh2, 'agents.diagrams.md'), 'utf8') === diagDoc, 'the same run, the same diagrams')
+const diagOnly = run(agents, '--diagrams', '--out', join(work, 'diagrams-only'))
+ok(diagOnly.status === 0 && existsSync(join(work, 'diagrams-only', 'agents.diagrams.md')) && existsSync(join(work, 'diagrams-only', 'agents.diagrams', 'topology.mmd')) && !existsSync(join(work, 'diagrams-only', 'agents.html')), '--diagrams alone writes only the diagrams (in English by default)', diagOnly.stdout)
+const plotOnly = run(agents, '--plot', '--out', join(work, 'plot-only'))
+ok(plotOnly.status === 0 && existsSync(join(work, 'plot-only', 'agents.plot.html')) && !existsSync(join(work, 'plot-only', 'agents.html')), '--plot alone writes only the stage', plotOnly.stdout)
+const only = run(agents, '--playbill', '--out', join(work, 'rh-only'))
+ok(only.status === 0 && existsSync(join(work, 'rh-only', 'agents.playbill.html')) && !existsSync(join(work, 'rh-only', 'agents.html')), '--playbill alone writes only the RH', only.stdout)
+writeFileSync(join(work, 'nobody.csv'), 'a,b\nx,y\n')
+const nobody = run(agents, '--declared', join(work, 'nobody.csv'), '--out', dec)
+ok(nobody.status === 1 && nobody.stderr.includes('--agent-column') && run(agents, '--declared', join(work, 'none.csv')).status === 2 && run(agents, '--telemetry', join(examples, 'telemetria.csv'), '--telemetry-days', 'x').status === 2, 'a table that names nobody asks for --agent-column; a missing file or bad days: exit 2', nobody.stderr)
+
+// what is broken says so
+writeFileSync(join(work, 'broken.cast.yaml'), readFileSync(profile, 'utf8').replace('threshold: 0.7', 'threshold: 7'))
+const line = readFileSync(join(work, 'broken.cast.yaml'), 'utf8').split('\n').findIndex((l) => l.startsWith('threshold: 7')) + 1
+const b = run(agents, '--profile', join(work, 'broken.cast.yaml'), '--out', join(work, 'broken'))
+ok(b.status === 1 && b.stderr.includes(`broken.cast.yaml:${line}:`) && !existsSync(join(work, 'broken')), `a broken profile says its line (${line}) and writes nothing`, b.stderr)
+mkdirSync(join(work, 'empty'))
+const e = run(join(work, 'empty'))
+ok(e.status === 1 && /agent\.mcs\.yml/.test(e.stderr), 'a folder with no agent says so (exit 1)', e.stderr)
+ok(run(agents, '--lang', 'fr').status === 2 && run(agents, '--nope').status === 2 && run(join(work, 'nowhere')).status === 2, 'bad arguments: exit 2')
+
+// the way back: the workbook filled in (a line in Declared, «aceito» on telemetry), saved as an .xlsx again
+const { readXlsx } = await import(join(skill, 'scripts/read-xlsx.mjs'))
+const { workbookFile } = await import(join(skill, 'scripts/engine.mjs'))
+run(agents, '--profile', profile, '--xlsx', '--lang', 'pt', '--out', demo)
+const sheets = readXlsx(readFileSync(join(demo, 'agents.xlsx')))
+sheets.find((x) => x.name === 'Declarado').rows.push(['bodega-frete', 'kpi', 'cotação em menos de 5 s', 'planilha do time'])
+const pats = sheets.find((x) => x.name === 'Padrões')
+pats.rows.find((r) => r[0] === 'node:LogCustomTelemetryEvent')[pats.rows[0].indexOf('Decisão')] = 'aceito'
+writeFileSync(join(work, 'edited.xlsx'), workbookFile(sheets.map((x) => ({ key: 'summary', name: x.name, header: true, columns: (x.rows[0] ?? []).map((t) => ({ title: t, width: 20 })), rows: x.rows }))))
+const listed = run(agents, '--from', join(work, 'edited.xlsx'), '--lang', 'pt', '--out', demo)
+ok(listed.status === 0 && /^\s+d1\s+\+ declarado\s+bodega-frete · KPI declarado = «cotação em menos de 5 s»/m.test(listed.stdout) && /^\s+p1\s+\+ decisão\s+Registra telemetria: aceito \(plataforma\)/m.test(listed.stdout), '--from lists what was filled in, each with its key', listed.stdout)
+ok(run(agents, '--from', join(work, 'edited.xlsx'), '--take', 'zz', '--out', demo).status === 2, '--take with a key that is not there: exit 2')
+const took = run(agents, '--from', join(work, 'edited.xlsx'), '--take', 'all', '--lang', 'pt', '--out', demo)
+const written = readFileSync(join(demo, 'agents.cast.yaml'), 'utf8')
+ok(took.status === 0 && written.includes('cotação em menos de 5 s') && /key: node:LogCustomTelemetryEvent, status: accepted/.test(written) && written.includes('# the handoff document says frete escalates'), '--take all writes them to the cast file, comments kept', written)
+const next = run(agents, '--profile', profile, '--check', '--lang', 'pt', '--out', demo)
+ok(next.stdout.includes('não registra telemetria (bodega-loja-fisica), e o padrão foi aceito: corrigir?') && next.stdout.includes('3 especialistas não cumprem'), 'the next run checks the accepted pattern, and counts the declared KPI', next.stdout)
+
+// the facts, for a model
+const f = run(agents, '--facts', '--out', join(work, 'facts'))
+const facts = JSON.parse(readFileSync(join(work, 'facts', 'agents.facts.json'), 'utf8'))
+ok(f.status === 0 && facts.format === 'agent-review/facts-v1' && facts.agents.length === 6 && facts.agents.find((x) => x.id === 'bodega-frete').facts['trigger:OnUnknownIntent'][0].file === 'topics/Fallback.topic.mcs.yml', '--facts: each agent, its facts with file and line', f.stderr)
+
+// a clean copy of the skill, with no node_modules anywhere above it, runs on Node alone
+const clean = join(work, 'clean')
+cpSync(skill, join(clean, 'agent-review'), { recursive: true })
+const c = spawnSync(process.execPath, [join(clean, 'agent-review/scripts/build.mjs'), join(clean, 'agent-review/examples/agents'), '--all', '--out', join(clean, 'out')], { encoding: 'utf8', cwd: clean })
+ok(c.status === 0 && existsSync(join(clean, 'out/agents.html')) && existsSync(join(clean, 'out/agents.xlsx')) && existsSync(join(clean, 'out/agents.lesson.html')), 'a clean copy, no node_modules: map, workbook and lesson on Node alone', c.stdout + c.stderr)
+
+// 18 agents (the examples three times over) in under 30 s, with no network: any connection throws
+const many = join(work, 'many')
+for (const n of [1, 2, 3]) for (const d of readdirSync(agents)) cpSync(join(agents, d), join(many, `${d}-${n}`), { recursive: true })
+writeFileSync(join(work, 'no-net.mjs'), "import net from 'node:net'\nnet.Socket.prototype.connect = () => { throw new Error('agent-review must not use the network') }\nglobalThis.fetch = () => { throw new Error('agent-review must not use the network') }\n")
+const start = Date.now()
+const m = spawnSync(process.execPath, ['--import', join(work, 'no-net.mjs'), cast, many, '--all', '--out', join(work, 'many-out')], { encoding: 'utf8' })
+const took18 = (Date.now() - start) / 1000
+ok(m.status === 0 && m.stdout.includes('18 in the cast') && took18 < 30, `18 agents with no network: done in ${took18.toFixed(1)} s`, m.stdout + m.stderr)
+
+// what cannot be read never stops it
+const odd = join(work, 'odd/strange')
+mkdirSync(join(odd, 'topics'), { recursive: true })
+writeFileSync(join(odd, 'agent.mcs.yml'), 'kind: GptComponentMetadata\ninstructions: Seja breve.\n')
+writeFileSync(join(odd, 'topics/Broken.topic.mcs.yml'), 'kind: AdaptiveDialog\nbeginDialog: [unclosed\n')
+writeFileSync(join(odd, 'topics/Empty.topic.mcs.yml'), '')
+writeFileSync(join(odd, 'topics/Made.topic.mcs.yaml'), 'kind: AdaptiveDialog\nbeginDialog:\n  kind: OnInventado\n')
+writeFileSync(join(odd, 'notes.txt'), 'loose')
+mkdirSync(join(odd, '.mcs'))
+writeFileSync(join(odd, '.mcs/conn.json'), '{"never": "read"}')
+const o = run(join(work, 'odd'), '--all', '--lang', 'pt', '--out', join(work, 'odd-out'))
+ok(o.status === 0 && o.stdout.includes('strange: a análise não entendeu 4 arquivos') && !o.stdout.includes('conn.json'), 'broken, empty, made-up and loose files: told, never stopping it; .mcs/ never read', o.stdout + o.stderr)
+
+const map = readFileSync(join(skill, 'assets/map.html'), 'utf8')
+ok(!/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(map), 'the map loads nothing from the internet')
+
+// The map in a browser, by the kit (over the DevTools pipe).
+const { runPage, browser } = await import(join(skill, 'scripts/browser.mjs'))
+if (!browser()) console.log('• no Chrome here: the map was not opened in a browser')
+else {
+  const html = readFileSync(join(demo, 'agents.html'), 'utf8').replace('</body>', `<script>
+    const got = []; HTMLAnchorElement.prototype.click = function () { got.push(this.download) }
+    const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
+    setTimeout(async () => { const q = (s) => document.querySelector(s); const all = (s) => document.querySelectorAll(s); const out = {}
+      const heads = () => [...all('[data-group]')].map((b) => [b.dataset.group, b.getAttribute('aria-expanded'), Number(b.querySelector('.cl-count').textContent)])
+      out.heads = heads(); out.shown = all('[data-look]').length
+      for (const b of [...all('[data-group][aria-expanded="false"]')]) q('[data-group="' + b.dataset.group + '"]').click()
+      out.opened = heads().every(([, e]) => e === 'true')
+      out.looks = all('[data-look]').length
+      q('[data-look="0"]').click(); out.look = q('.cl-detail h3')?.textContent
+      q('[data-pattern="node:LogCustomTelemetryEvent"]').click(); out.files = [...all('.cl-detail .cl-file')].map((f) => f.textContent)
+      out.lacks = q('.cl-detail')?.textContent.includes('bodega-loja-fisica')
+      q('[data-role="specialist"]').click(); out.columns = [...all('.cl-matrix thead th[scope=col]')].map((t) => t.textContent)
+      q('[data-get="xlsx"]').click(); q('[data-get="yaml"]').click(); q('[data-get="png"]').click()
+      await new Promise((r) => setTimeout(r, 1500))
+      q('[data-tab="patterns"]').click(); out.patterns = all('.cl-table tbody tr').length
+      q('[data-tab="cast"]').click(); out.cast = all('.cl-agent').length
+      // a long path without spaces (a flow folder ending in a GUID) wraps inside its card
+      const dd = q('.cl-agent dd'), was = dd.textContent, box = dd.closest('.cl-agent')
+      dd.textContent += ' workflows/' + 'Nome'.repeat(30) + '-11111111-2222-3333-4444-555555555555/metadata.yml'
+      out.spills = dd.scrollWidth > dd.clientWidth + 1 || box.scrollWidth > box.clientWidth + 1
+      dd.textContent = was
+      q('[data-tab="microsoft"]').click(); out.ms = all('.cl-table tbody tr').length
+      q('[data-tab="unknown"]').click(); out.unknown = q('.cl-empty')?.textContent
+      q('[data-tab="cast"]').click()
+      const card = (id) => [...all('.cl-agent')].find((c) => c.querySelector('h3')?.textContent === id)
+      out.chain = card('bodega-pedidos')?.querySelector('.cl-chain')?.textContent.trim()
+      out.silent = card('bodega-cupons')?.querySelector('.cl-chain .cl-silent')?.textContent
+      out.routing = card('bodega-orquestrador')?.querySelectorAll('.cl-routing tbody tr').length
+      out.events = [card('bodega-pedidos'), card('bodega-frete'), card('bodega-loja-fisica')].map((c) => c?.querySelector('.cl-events')?.textContent.trim())
+      q('[data-tab="unused"]').click(); out.unused = all('.cl-table tbody tr').length
+      out.got = got; out.errs = errs
+      const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
+  writeFileSync(join(work, 'probe.html'), html)
+  const r = (await runPage(join(work, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
+  ok(r.looks === 27 && r.look === 'Escalonamento para humano', '«to look at»: its first item opens the fact', JSON.stringify(r))
+  const folded = (r.heads ?? []).filter(([, e]) => e === 'false')
+  ok(folded.map(([g]) => g).join() === 'solo,unused' && r.shown === 27 - folded.reduce((n, [, , c]) => n + c, 0) && r.heads.reduce((n, [, , c]) => n + c, 0) === 27 && r.opened, '«to look at» in groups with how many; «only one has it» and «unused» folded, and they open', JSON.stringify([r.heads, r.shown, r.opened]))
+  ok(r.files?.length === 5 && r.files.every((f) => f.startsWith('topics/OnError.topic.mcs.yml:')) && r.lacks, 'a pattern shows the file and line of each, and who is off it', JSON.stringify(r.files))
+  ok(r.columns?.length === 6 && r.columns.filter((c) => c.startsWith('bodega-cupons')).length === 2 && !r.columns.some((c) => c.includes('orquestrador')), 'the role filter leaves the orchestrator out (cupons in its two types)', JSON.stringify(r.columns))
+  ok((r.got ?? []).join() === 'agents.xlsx,agents.cast.yaml,agents.png' && !r.errs?.length, 'the downloads: workbook, cast file, PNG — no error', JSON.stringify(r))
+  ok(r.chain === 'Bodega Azul - Pedidos → Abrir chamado no ERP → erp.bodega-azul.example' && r.silent === '— não devolve nada', 'the cast: the chain of pedidos, and the flow of cupons that returns nothing', JSON.stringify([r.chain, r.silent]))
+  ok(r.events?.[0] === 'BodegaPedidos_OnError — 7 vezes em 30 dias' && r.events[1] === 'BodegaFrete_OnError — não disparou' && r.events[2] === 'nenhuma linha na telemetria', 'the cast: the events, the times they fired, what did not, who has no line', JSON.stringify(r.events))
+  ok(r.routing === 6 && r.unused === 4 && !r.errs?.length, 'the orchestrator\'s routing, 6 calls; the Unused tab, 4 rows; no error', JSON.stringify([r.routing, r.unused, r.errs]))
+  ok(r.patterns === 31 && r.cast === 6 && r.ms === 15 && r.unknown === 'Tudo foi entendido.', 'the tabs: patterns, cast, Microsoft, not understood', JSON.stringify(r))
+  ok(r.spills === false, 'the cast: a long path wraps inside its card', JSON.stringify(r.spills))
+  // the stage in a browser: a lens lights who it names, frete's scene stops on the contract, a card opens
+  const plotProbe = readFileSync(join(rh, 'agents.plot.html'), 'utf8').replace('</body>', `<script>
+    const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
+    setTimeout(() => { const q = (s) => document.querySelector(s); const all = (s) => document.querySelectorAll(s); const out = {}
+      out.nodes = all('[data-node]').length; out.parts = all('.pl-part').length
+      q('[data-lens="pattern:trigger:OnEscalate"]').click()
+      out.bad = [...all('.pl-node.l-bad')].map((n) => n.dataset.node); out.okN = all('.pl-node.l-ok').length
+      q('[data-lens="pattern:trigger:OnEscalate"]').click()
+      const scene = [...all('[data-scene]')].find((b) => b.textContent.includes('Frete')); scene.click()
+      for (let i = 0; i < 2; i++) document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }))
+      out.warn = q('.pl-narr.warn')?.textContent.includes('SEM o histórico'); out.spot = q('.pl-node.warn')?.dataset.node
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); out.closed = q('.pl-narr')?.classList.contains('idle')
+      const sceneBtn = () => [...all('[data-scene]')].find((b) => b.textContent.includes('Frete'))
+      sceneBtn().click(); q('[data-lens="telemetry"]').click(); out.lensClosesScene = !!q('.pl-narr.idle') && !!q('.pl-svg.lensing')
+      sceneBtn().click(); out.sceneClosesLens = !q('.pl-svg.lensing') && !q('.pl-narr.idle'); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+      out.ghost = q('[data-node="cr7b2_bodegaFidelidade"] text')?.textContent
+      const over = () => [...all('.pl-elabel')].filter((t) => { const b = t.getBoundingClientRect(); return [...all('[data-node] rect')].some((r) => { const n = r.getBoundingClientRect(); return b.left < n.right && b.right > n.left && b.top < n.bottom && b.bottom > n.top }) }).map((t) => t.textContent)
+      out.overPlain = over(); q('[data-lens="unused"]').click(); out.overLens = over()
+      const litIds = new Set([...all('.pl-node.l-ok, .pl-node.l-amber, .pl-node.l-bad')].map((n) => n.dataset.node)); out.labelsLens = all('.pl-elabel').length; q('[data-lens="unused"]').click(); out.labelsPlain = all('.pl-elabel').length
+      out.sceneBtn = [...all('[data-scene]')].map((b) => b.textContent.replace('▶ ', '')).sort().join()
+      q('[data-node="bodega-frete"]').dispatchEvent(new MouseEvent('click', { bubbles: true }))
+      out.card = q('.pl-card .pl-name')?.textContent; out.off = [...all('.pl-checks .off')].map((x) => x.textContent); out.resume = q('.pl-card a')?.getAttribute('href')
+      const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.errs = errs
+      const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 400)</script></body>`)
+  writeFileSync(join(rh, 'plot-probe.html'), plotProbe)
+  const pl = (await runPage(join(rh, 'plot-probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
+  ok(pl.nodes > 12 && pl.parts > 0 && pl.bad?.join() === 'bodega-frete' && pl.okN === 5, 'the stage: the nodes, the traffic moving, the escalation lens lights frete red and five green', JSON.stringify(pl))
+  ok(pl.warn === true && pl.spot === 'bodega-frete' && pl.closed === true, "frete's scene stops on the contract, with the spot on frete; Esc leaves it (the caption stays below the stage)", JSON.stringify(pl))
+  ok(pl.overPlain?.length === 0 && pl.overLens?.length === 0 && pl.labelsLens < pl.labelsPlain && pl.sceneBtn === 'Cupons,Devoluções,Fidelidade,Frete,Loja Física,Pedidos', 'no arrow label over a node, with or without a lens; a lens quiets the arrows it does not light; the scenes by short names', JSON.stringify([pl.overPlain, pl.overLens, pl.labelsLens, pl.labelsPlain, pl.sceneBtn]))
+  ok(pl.lensClosesScene === true && pl.sceneClosesLens === true && pl.ghost === 'Fidelidade', 'a lens closes the scene, a scene turns the lens off; the one not in the folder by its short name, uncut', JSON.stringify(pl))
+  ok(pl.card === 'Bodega Azul - Frete' && pl.off?.length > 0 && pl.resume === 'agents.playbill.html#bodega-frete' && pl.agent === false && !pl.errs?.length, "a click opens frete's card, off the escalation, with its résumé a link away; never «agente»; no error", JSON.stringify(pl))
+  // the RH in a browser: the board, frete's résumé and plan, a click on pedidos, never «agente»
+  const rhProbe = readFileSync(join(rh, 'agents.playbill.html'), 'utf8').replace('</body>', `<script>
+    const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
+    setTimeout(() => { const q = (s) => document.querySelector(s); const all = (s) => document.querySelectorAll(s); const out = {}
+      out.counts = [...all('.pb-count')].map((c) => c.textContent.trim())
+      out.name = q('.pb-resume h2')?.textContent; out.items = all('.pb-pdi li').length; out.seal = q('.pb-seal')?.textContent
+      q('[data-who="bodega-pedidos"]').click(); out.pedidos = [q('.pb-resume h2')?.textContent, q('.pb-seal')?.textContent]
+      const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.map = q('a[href="agents.html"]') ? 1 : 0; out.cupons = all('.pb-org [data-who="bodega-cupons"]').length; out.cv = !!q('.pb-resume.pb-cv .pb-av') && [...all('.pb-cv .pb-facts .pb-under')].some((x) => x.textContent.startsWith('inventario.csv')); q('[data-view="sheet"]').click(); out.sheet = !q('.pb-cv') && !!q('.pb-facts .pb-src') && q('[data-view="sheet"]').getAttribute('aria-pressed') === 'true'; q('[data-view="cv"]').click(); out.back = !!q('.pb-cv'); out.also = q('.pb-org [data-who="bodega-cupons"] .pb-also')?.textContent; out.errs = errs
+      const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
+  writeFileSync(join(rh, 'probe.html'), rhProbe)
+  const h = (await runPage(join(rh, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
+  ok(h.counts?.some((c) => c.startsWith('1') && c.includes('sem responsável — Cupons')) && h.counts.some((c) => c.includes('em admissão — Fidelidade')) && h.counts.some((c) => c.includes('nunca publicado — Loja Física')), 'the RH: the staff board says who', JSON.stringify(h.counts))
+  ok(h.name === 'Bodega Azul - Cupons' || h.name === 'Bodega Azul - Frete' || h.name?.startsWith('Bodega Azul'), 'the RH opens on a résumé', JSON.stringify(h))
+  ok(h.pedidos?.[0] === 'Bodega Azul - Pedidos' && h.pedidos[1] === 'EM DIA' && h.agent === false && h.map === 1 && h.cupons === 1 && h.also === 'também orientação' && h.cv === true && h.sheet === true && h.back === true && !h.errs?.length, 'a click opens pedidos, in good standing; it opens as a résumé and turns into the sheet (with every source) and back; never «agente» in its own words (the client\'s text is quoted as written); the map is a link away; no error', JSON.stringify(h))
+}
+
+// wave 1 in a browser: the example profile has markers, an official block and types
+// Every diagram drawn by Mermaid itself (the official package, only here in the checks), with no syntax error and no
+// entity code left on the screen; and visual-explainer builds the topology and a scene, so visual-pitch can present them.
+if (browser()) {
+  const mmdTexts = mmds.map((f) => [f, readFileSync(join(mmdDir, f), 'utf8')])
+  copyFileSync(join(repo, 'node_modules/mermaid/dist/mermaid.min.js'), join(mmdDir, 'mermaid.min.js'))
+  writeFileSync(join(mmdDir, 'probe.html'), `<!doctype html><meta charset="utf-8"><body><script src="mermaid.min.js"></script><script>
+const all = ${JSON.stringify(mmdTexts).replace(/</g, '\\u003c')}
+mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' })
+;(async () => { const out = []
+  for (const [f, t] of all) { try { const r = await mermaid.render('d' + out.length, t); const txt = new DOMParser().parseFromString(r.svg, 'image/svg+xml').documentElement.textContent; if (/#(35|quot|lt|gt|59|37|96);|Syntax error/.test(txt)) out.push(f + ': ' + txt.slice(0, 120)) } catch (e) { out.push(f + ': ' + String(e.message || e).slice(0, 200)) } }
+  const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify({ bad: out, n: all.length })); document.body.append(p) })()
+</script></body>`)
+  const mr = (await runPage(join(mmdDir, 'probe.html'), 'probe', '', { timeout: 90 })) ?? { bad: ['the page did not answer'] }
+  ok(mr.n === mmds.length && !mr.bad?.length, `Mermaid draws all ${mmds.length} diagrams, with no error and no code on the screen`, mr)
+  const chalk = join(repo, 'skills/visual-explainer/scripts/build.mjs')
+  const lessons = ['topologia.mmd', 'cena-frete.mmd'].map((f) => spawnSync(process.execPath, [chalk, join(mmdDir, f), join(work, f.replace('.mmd', '.lesson.html'))], { encoding: 'utf8' }))
+  ok(lessons.every((l) => (l.status === 0 || l.status === 3) && /→ .*opens offline/.test(l.stdout)), 'visual-explainer builds the topology and a scene as lessons', lessons.map((l) => l.stdout + l.stderr).join('\n'))
+}
+if (browser()) {
+  const w1 = join(work, 'w1')
+  mkdirSync(w1)
+  const t = run(agents, '--profile', profile, '--html', '--lesson', '--lang', 'pt', '--out', w1)
+  ok(t.status === 0 && /✓ review/.test(t.stdout), "the examples with the wave 1 profile: the map, and the lesson by type passing visual-explainer's reviewer", t.stdout + t.stderr)
+  const page = readFileSync(join(w1, 'agents.html'), 'utf8').replace('</body>', `<script>
+    const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
+    setTimeout(() => { const q = (s) => document.querySelector(s); const all = (s) => [...document.querySelectorAll(s)]; const out = {}
+      out.groups = all('.cl-groups th').map((t) => t.textContent).filter(Boolean)
+      out.cupons = all('.cl-matrix thead th[scope=col]').filter((t) => t.textContent.startsWith('bodega-cupons')).map((t) => t.textContent)
+      out.variant = all('.cl-mark.var').length
+      out.typeBadge = all('.cl-badge.type').length
+      out.officialBadge = all('.cl-badge.official').length
+      q('[data-type="transaction"]').click(); out.transaction = all('.cl-matrix thead th[scope=col]').map((t) => t.textContent.replace(/(especialista|também em).*/, ''))
+      q('[data-type=""]').click()
+      q('.cl-fact[data-key="text:block:links"]').click(); out.text = q('.cl-detail .cl-text')?.textContent.slice(0, 6); out.variants = all('.cl-detail .cl-variant').length
+      out.del = all('.cl-detail .cl-del').map((x) => x.textContent); out.add = all('.cl-detail .cl-add').map((x) => x.textContent)
+      out.errs = errs
+      const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
+  writeFileSync(join(w1, 'probe.html'), page)
+  const x = (await runPage(join(w1, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
+  ok((x.groups ?? []).join() === 'orquestrador,transação,orientação,triagem' && (x.cupons ?? []).length === 2 && x.cupons.some((c) => c.includes('também em')), 'the matrix by type: cupons in two groups, «também em»', JSON.stringify(x))
+  ok((x.transaction ?? []).join() === 'bodega-cupons,bodega-devolucoes,bodega-pedidos', 'the type filter: transação keeps its three', JSON.stringify(x.transaction))
+  ok(x.variant >= 1 && x.typeBadge >= 1 && x.officialBadge >= 1, '≈ for a variation, the type badge, the official block badge', JSON.stringify(x))
+  ok(x.text === 'Links:' && x.variants === 1 && (x.del ?? []).some((d) => d.includes('link de ação vai no topo')) && (x.del ?? []).includes('3') && (x.add ?? []).includes('5') && !x.errs?.length, "the block's detail: its text, frete's variation word by word", JSON.stringify(x))
+}
+
+rmSync(work, { recursive: true, force: true })
+if (failed) {
+  console.error(`✗ agent-review: ${failed} failed`)
+  process.exit(1)
+}
+console.log('✓ agent-review')

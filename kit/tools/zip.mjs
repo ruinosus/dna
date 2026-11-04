@@ -1,5 +1,5 @@
 // Packs a skill for claude.ai (Settings › Skills) and the API: <root>/dist/<name>.zip with the skills/<name>/ folder
-// inside. Part of the skills kit (chalk-talk/kit).
+// inside. Part of the skills kit (visual-explainer/kit).
 import { execFileSync } from 'node:child_process'
 import { mkdirSync, rmSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'

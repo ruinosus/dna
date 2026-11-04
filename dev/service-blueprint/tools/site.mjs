@@ -8,7 +8,7 @@ import { browser, runPages } from '../../../skills/service-blueprint/scripts/bro
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
-const repo = resolve(here, '../../..') // the house-lights repository
+const repo = resolve(here, '../../..') // the dna repository
 const docs = join(repo, 'docs/service-blueprint')
 const examples = join(repo, 'skills/service-blueprint/examples')
 if (!browser()) throw new Error('No Chrome, Chromium or Edge: the pictures need one (set CHROME_PATH).')
@@ -77,7 +77,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
     <h1><span>front</span>-of-house</h1>
     <p class="lead">Give Claude your interviews, tickets and process notes. Get a service blueprint: each moment the customer lives and how it feels — and who, on stage and behind, makes it happen. With the worst moment, and whether anyone owns it, in plain sight.</p>
     <img src="images/devolucao-map.png" alt="A service blueprint of a return: the line of how the customer feels dips at «waits for news — 6 days», and under it the stage, backstage and systems">
-    <div class="actions"><a class="button primary" href="https://github.com/ruinosus/house-lights#install">Install the skill</a><a class="button" href="https://github.com/ruinosus/house-lights">GitHub</a></div>
+    <div class="actions"><a class="button primary" href="https://github.com/ruinosus/dna#install">Install the skill</a><a class="button" href="https://github.com/ruinosus/dna">GitHub</a></div>
   </section>
   <section>
     <h2>Examples — open a map, play a lesson, download the workbook</h2>
@@ -90,7 +90,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
       </article>`).join('')}
     </div>
   </section>
-  <footer>service-blueprint is MIT licensed. All examples are fictional. Lessons by <a href="../chalk-talk/">chalk-talk</a>; its sibling <a href="../gates-and-handoffs/">gates-and-handoffs</a> maps how the work goes inside.</footer>
+  <footer>service-blueprint is MIT licensed. All examples are fictional. Lessons by <a href="../visual-explainer/">visual-explainer</a>; its sibling <a href="../way-of-working/">way-of-working</a> maps how the work goes inside.</footer>
 </main>
 </body>
 </html>

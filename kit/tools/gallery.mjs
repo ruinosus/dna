@@ -2,7 +2,7 @@
 // <docs>/thumbs/, in a headless browser (the kit's browser.mjs, over the DevTools pipe). Either the page draws its own
 // picture (`mode`, the #mode that answers with it, and `pick`, which takes the PNG data: URL from the answer) or the
 // browser takes one (`shot: { width, height }`, after `mode` if any). The gallery's index stays the skill's own. Part
-// of the skills kit (chalk-talk/kit).
+// of the skills kit (visual-explainer/kit).
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { browser, runPages } from '../browser.mjs'

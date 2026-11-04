@@ -1,29 +1,29 @@
-// house-lights mod: every feature in one hooks module, since a plugin has one.
-//   recipes  checks each recipe Claude writes (.way.yaml, .blueprint.yaml, .drill.yaml, .chalk, a chalk-talk .json)
+// dna mod: every feature in one hooks module, since a plugin has one.
+//   recipes  checks each recipe Claude writes (.way.yaml, .blueprint.yaml, .drill.yaml, .chalk, a visual-explainer .json)
 //            with its skill's own check, and refuses it with the messages
 //   previews a pane with the last way of working or service blueprint written; /way-preview, /blueprint-preview
 //   names    in a repository that runs the names audit, refuses a write with a name of the person's private list;
 //            /names says what it watches
-//   /cast    cast-list's comparison of a folder of agents in a pane, and a toast when an agent edited there changes it
+//   /cast    agent-review's comparison of a folder of agents in a pane, and a toast when an agent edited there changes it
 //   /lenses  a way of working as the other skills' recipes (a .sim, a blueprint, a drill), written beside it on a
 //            press, and a toast when the way changes under a lens
-//   /solution an opening-night solution in a pane: each piece and where it stands, a lens made again from the way
+//   /solution an solution solution in a pane: each piece and where it stands, a lens made again from the way
 //   /drill   an incident drill played in a pane: the clock, the scene, the choices and calls as buttons, the debrief
 //   guard    checks each .sim file Claude writes and refuses it with the validator's messages
 //   /sim     runs a recipe with no model turn and prints median and p10 to p90 per metric
 //   preview  a pane with the recipe's flow, opened by /sim-preview or the first valid write
 import type { Register } from 'claude-code'
 
-import { simCommand } from './box-office/command'
+import { simCommand } from './process-simulation/command'
 import { namesCommand, namesGuard } from './names/guard'
 import { recipesGuard } from './recipes/guard'
 import { recipePreview } from './previews/preview'
-import { castCommand } from './cast/cast'
+import { castCommand } from './agents/cast'
 import { drillGame } from './drill/drill'
 import { lensesCommand } from './lenses/lenses'
 import { solutionCommand } from './solution/solution'
-import { guard } from './box-office/guard'
-import { preview } from './box-office/preview'
+import { guard } from './process-simulation/guard'
+import { preview } from './process-simulation/preview'
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -44,7 +44,7 @@ export const register: Register = on => {
     })
     await $.command.register({
       name: 'cast',
-      description: "Compare a folder of cloned Copilot Studio agents with cast-list: what to look at, in a pane",
+      description: "Compare a folder of cloned Copilot Studio agents with agent-review: what to look at, in a pane",
       argumentHint: '[agents-folder] [--lang pt]',
     })
     await $.command.register({
@@ -59,7 +59,7 @@ export const register: Register = on => {
     })
     await $.command.register({
       name: 'solution',
-      description: 'Show an opening-night solution (.solution.yaml) in a pane: each piece, where it stands, and the lenses behind the way',
+      description: 'Show an solution solution (.solution.yaml) in a pane: each piece, where it stands, and the lenses behind the way',
       argumentHint: '[file.solution.yaml] [--lang pt]',
     })
     await $.command.register({

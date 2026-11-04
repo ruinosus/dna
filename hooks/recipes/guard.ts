@@ -1,10 +1,10 @@
 // The recipes' guard: every recipe of a skill Claude writes or edits — a way of working, a service blueprint, an
-// incident drill, a chalk-talk lesson, an opening-night solution (its own format only: the pieces are checked by
-// /solution) — is checked first by that skill's own script (its --check, or chalk-talk's build
+// incident drill, a visual-explainer lesson, an solution solution (its own format only: the pieces are checked by
+// /solution) — is checked first by that skill's own script (its --check, or visual-explainer's build
 // with no review), on a copy of the new text in a folder of its own, and refused with the script's messages when it
 // breaks its format, so Claude fixes it and writes again. A way or a blueprint that passes is kept for the preview pane
 // (hooks/previews/), which opens on the first one written in a session. The .sim recipes have their own guard
-// (hooks/box-office/). Anything else passes untouched. It fails open, in its own code: if the check cannot run (no
+// (hooks/process-simulation/). Anything else passes untouched. It fails open, in its own code: if the check cannot run (no
 // node, a timeout), the write goes through.
 import { atom, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
@@ -13,20 +13,20 @@ import { PREVIEW_PANE } from '../previews/draw'
 import { problemLines, runOnCopy } from './run'
 import { PLUGIN, afterEdit } from './text'
 
-const recipe = atom({ plugin: 'house-lights', key: 'recipe' } as const, null, { shape: 'recipe-1' })
+const recipe = atom({ plugin: 'dna', key: 'recipe' } as const, null, { shape: 'recipe-1' })
 
 export type Kind = 'way' | 'blueprint'
 type Recipe = { what: string; skill: string; kind?: Kind; args: (file: string, dir: string) => string[] }
 const RECIPES: { test: RegExp; recipe: Recipe }[] = [
-  { test: /\.way\.ya?ml$/i, recipe: { what: 'way of working', skill: 'gates-and-handoffs', kind: 'way', args: (f) => [f, '--check', '--json'] } },
+  { test: /\.way\.ya?ml$/i, recipe: { what: 'way of working', skill: 'way-of-working', kind: 'way', args: (f) => [f, '--check', '--json'] } },
   { test: /\.blueprint\.ya?ml$/i, recipe: { what: 'service blueprint', skill: 'service-blueprint', kind: 'blueprint', args: (f) => [f, '--check', '--json'] } },
-  { test: /\.drill\.ya?ml$/i, recipe: { what: 'incident drill', skill: 'dress-rehearsal', args: (f) => [f, '--check'] } },
-  { test: /\.solution\.ya?ml$/i, recipe: { what: 'solution', skill: 'opening-night', args: (f) => [f, '--check', '--format'] } },
-  { test: /\.chalk$/i, recipe: { what: 'chalk-talk lesson', skill: 'chalk-talk', args: (f, dir) => [f, `${dir}/out.html`, '--no-review'] } },
-  { test: /\.json$/i, recipe: { what: 'chalk-talk lesson', skill: 'chalk-talk', args: (f, dir) => [f, `${dir}/out.html`, '--no-review'] } },
+  { test: /\.drill\.ya?ml$/i, recipe: { what: 'incident drill', skill: 'incident-drill', args: (f) => [f, '--check'] } },
+  { test: /\.solution\.ya?ml$/i, recipe: { what: 'solution', skill: 'solution', args: (f) => [f, '--check', '--format'] } },
+  { test: /\.chalk$/i, recipe: { what: 'visual-explainer lesson', skill: 'visual-explainer', args: (f, dir) => [f, `${dir}/out.html`, '--no-review'] } },
+  { test: /\.json$/i, recipe: { what: 'visual-explainer lesson', skill: 'visual-explainer', args: (f, dir) => [f, `${dir}/out.html`, '--no-review'] } },
 ]
 
-/** The recipe a file is, by its name — and, for a .json, only a chalk-talk recipe (a title and steps), never any JSON. */
+/** The recipe a file is, by its name — and, for a .json, only a visual-explainer recipe (a title and steps), never any JSON. */
 export function recipeOf(path: string, text: string): Recipe | undefined {
   const hit = RECIPES.find((r) => r.test.test(path))
   if (!hit) return undefined

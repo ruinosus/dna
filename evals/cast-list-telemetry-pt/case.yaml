@@ -1,5 +1,5 @@
 schema_version: "1.0"
-name: cast-list-telemetry-pt
+name: agent-review-telemetry-pt
 description: Whether the telemetry of six cloned Copilot Studio agents is consistent, and what really fires, with an export of Application Insights — the skill fires, and the answer names the cupons event spelt another way, the frete event that did not fire and the loja-fisica with no telemetry, editing no agent.
 tags: [build, pt]
 runs: 2
@@ -15,7 +15,7 @@ graders:
   - name: skill-fired
     type: tool_used
     tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?cast-list"'
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?agent-review"'
   - name: used-the-export
     type: tool_used
     tool: Bash

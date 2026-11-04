@@ -1,6 +1,6 @@
 // The skeleton every skill's tools/check.mjs shares: what passed and what did not, running the skill's own build,
 // SKILL.md's frontmatter, one version everywhere, and a page probed in a headless browser. Part of the skills kit
-// (chalk-talk/kit).
+// (visual-explainer/kit).
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'

@@ -1,7 +1,7 @@
-// /drill: an incident drill of dress-rehearsal, played in a pane beside the chat — the clock, the scene, who is in the
+// /drill: an incident drill of incident-drill, played in a pane beside the chat — the clock, the scene, who is in the
 // room, the choices and who to call as buttons — and at the end the debrief, which can be saved beside the drill. The
-// drill is read by dress-rehearsal's own check (--check --json); the game is played here with the same pure functions
-// the drill's page and its checks use (dev/dress-rehearsal/src/play.ts, built into hooks/drill/play.js). The game is kept in the session's state, so
+// drill is read by incident-drill's own check (--check --json); the game is played here with the same pure functions
+// the drill's page and its checks use (dev/incident-drill/src/play.ts, built into hooks/drill/play.js). The game is kept in the session's state, so
 // closing the pane and opening it again (/drill) goes on where it was.
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
@@ -10,8 +10,8 @@ import type { DrillDoc } from '../../types'
 import { call, canDo, choose, clockAt, debrief, startPlay } from './play.js'
 import { pathOf, scriptOf } from '../recipes/run'
 
-export const DRILL_PANE = 'house-lights-drill'
-const game = atom({ plugin: 'house-lights', key: 'drill' } as const, null, { shape: 'drill-1' })
+export const DRILL_PANE = 'dna-drill'
+const game = atom({ plugin: 'dna', key: 'drill' } as const, null, { shape: 'drill-1' })
 
 const W = {
   en: { room: 'In the room', call: 'Call', needs: 'needs', lost: (n: number, u: string) => `${n} ${u}`, debrief: 'Debrief', resolved: 'To resolve', told: 'To tell the people affected', notHappened: 'did not happen', gaps: 'What the runbook did not say', again: 'Play again', save: 'Save the debrief', saved: (f: string) => `Saved: ${f}`, none: 'Run /drill with a .drill.yaml.', ended: { resolved: 'Resolved', worse: 'It got worse' } },
@@ -22,7 +22,7 @@ const W = {
 export const debriefFile = (path: string) => path.replace(/(\.drill)?\.(ya?ml|json)$/i, '') + '.debrief.md'
 
 async function start($: EngineInterface, path: string, lang: 'en' | 'pt') {
-  const run = await $.process.run(['node', scriptOf($, 'dress-rehearsal'), path, '--check', '--json', '--lang', lang], { timeoutMs: 7000 })
+  const run = await $.process.run(['node', scriptOf($, 'incident-drill'), path, '--check', '--json', '--lang', lang], { timeoutMs: 7000 })
   if (run.exitCode !== 0) return { error: (run.stderr || run.stdout).trim().split('\n').slice(0, 8).join('\n') }
   const readIt = JSON.parse(run.stdout)
   return { doc: { path, lang, read: readIt, play: startPlay(readIt.drill, lang), then: '', saved: '' } as DrillDoc }

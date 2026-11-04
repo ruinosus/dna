@@ -23,7 +23,7 @@ moments:                            # in the customer's order
     support: [warehouse]
     promise: { says: We let you know when it arrives, owner: logistics, within: 1 day }
     pains: [{ says: I thought they had lost my parcel, source: 3 of 10 interviews }]
-    way: returns#check              # optional: the stage of a gates-and-handoffs way of working behind it
+    way: returns#check              # optional: the stage of a way-of-working way of working behind it
 actions:
   - { moment: wait, does: Email «we received your parcel», owner: logistics, due: 2026-12 }
 ```

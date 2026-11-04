@@ -1,6 +1,6 @@
 // A skill's build as in a cloud sandbox: Linux, as root, with Playwright's Chromium and no other browser. Each case is
 // a file to build and the exit code it must give — never «not checked» from a browser that did not answer. Needs
-// Docker; downloads node:22-slim and Playwright's Chromium (~150 MB). Part of the skills kit (chalk-talk/kit).
+// Docker; downloads node:22-slim and Playwright's Chromium (~150 MB). Part of the skills kit (visual-explainer/kit).
 import { execFileSync } from 'node:child_process'
 import { basename } from 'node:path'
 

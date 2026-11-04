@@ -1,4 +1,4 @@
-// Types for the generated play.js (dress-rehearsal's src/play.ts): the game of a drill, pure.
+// Types for the generated play.js (incident-drill's src/play.ts): the game of a drill, pure.
 export type Lang = 'en' | 'pt'
 export type PlayEvent = { minute: number; kind: 'start' | 'choice' | 'call' | 'blocked' | 'end'; text: string }
 export type Play = { scene: string; minute: number; lost: number; room: string[]; events: PlayEvent[]; told?: number; ended?: 'resolved' | 'worse'; blocked: { needs: string; minute: number }[] }

@@ -3,7 +3,7 @@
 import { readdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { linuxCheck } from 'chalk-talk/kit/tools/linux-check.mjs'
+import { linuxCheck } from '@ruinosus/visual-explainer/kit/tools/linux-check.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const skill = resolve(here, '../../../skills/service-blueprint')

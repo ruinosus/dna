@@ -1,7 +1,7 @@
 // What the guards share: the plugin's name in their messages, and an Edit applied in memory to the file as it is.
 import type { EngineInterface } from 'claude-code'
 
-export const PLUGIN = 'house-lights'
+export const PLUGIN = 'dna'
 
 /** The file's text after an Edit, as the tool would leave it; undefined when it cannot be told (no file, no match). */
 export async function afterEdit($: EngineInterface, e: { file_path: string; old_string: string; new_string: string; replace_all?: boolean }): Promise<string | undefined> {

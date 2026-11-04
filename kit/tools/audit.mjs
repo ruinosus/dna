@@ -1,7 +1,7 @@
 // Before a push: no name that must not be in a public repository is in the files git tracks. The names themselves live
 // outside every repository — ~/.config/skill-kit/audit.txt, one pattern per line (a regular expression, matched
 // without case; # starts a comment) — since writing them in a public repository would publish them. Without that file
-// it says so and passes. Part of the skills kit (chalk-talk/kit).
+// it says so and passes. Part of the skills kit (visual-explainer/kit).
 //
 //   node audit.mjs [<repository>] [--skip <glob> …]   exit 1 when a name is found
 import { execFileSync } from 'node:child_process'

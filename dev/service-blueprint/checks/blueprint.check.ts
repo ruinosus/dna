@@ -1,5 +1,5 @@
 // The blueprint read with its lines, what the review finds (the return example on purpose has what to look at), the
-// workbook's sheets and the lesson in chalk-talk's contract.
+// workbook's sheets and the lesson in visual-explainer's contract.
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { validateScene } from '@lib/drawing/recipe'
@@ -57,7 +57,7 @@ assert.ok(pains.some((r) => r[2] === 'Fila de 40 minutos no correio' && r[4] ===
 const bytes = workbookFile(sheets)
 assert.equal(String.fromCharCode(bytes[0], bytes[1]), 'PK')
 
-// the lesson: a recipe chalk-talk takes, a chapter per phase, a person per moment with its mood
+// the lesson: a recipe visual-explainer takes, a chapter per phase, a person per moment with its mood
 const scene = validateScene(lessonOf(b, 'pt')) as { steps: { type: string; chapter?: string; mood?: string; name?: string }[] }
 assert.deepEqual(scene.steps.filter((s) => s.chapter).map((s) => s.chapter), ['Pedir', 'Enviar', 'Receber'])
 assert.deepEqual(scene.steps.filter((s) => s.name === 'person').map((s) => s.mood ?? '-'), ['-', 'happy', 'worried', 'sad', 'happy'])

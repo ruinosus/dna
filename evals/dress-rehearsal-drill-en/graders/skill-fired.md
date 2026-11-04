@@ -1,6 +1,6 @@
 ---
 type: tool_used
 tool: Skill
-input_match: '"skill"\s*:\s*"(?:[\w-]+:)?dress-rehearsal"'
+input_match: '"skill"\s*:\s*"(?:[\w-]+:)?incident-drill"'
 ---
-The dress-rehearsal skill was used.
+The incident-drill skill was used.

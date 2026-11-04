@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="generator" content="agent-review (1.17.0, engine v0.259.0)">
+<meta name="robots" content="noindex">
+<title>agent-review</title>
+<style>/* The stage of the cast: a light plot. Light by day, the dark of a theatre when the system is dark. */
+.cl {
+  --bg: #f4f3ef; --stage: #fbfaf6; --stage-edge: #ece9e1; --card: #ffffff; --ink: #1d2330; --muted: #5f6878; --line: #dcdfe5;
+  --warm: #b86e00; --warm-soft: #f6e3c2; --beam: #e9b65e; --ok: #1f7a4d; --bad: #c0392b; --amber: #9a6200; --sys: #2f5bea; --ghost: #8a8f9c;
+  --node: #ffffff; --node-line: #c9ced8; --manager: #1d2330; --on-manager: #ffffff; --focus: #2f5bea; --dark: #10131a;
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); background: var(--bg);
+  min-height: 100vh; box-sizing: border-box; padding: 20px 16px 36px;
+}
+@media (prefers-color-scheme: dark) {
+  .cl:not(.light) {
+    --bg: #07090f; --stage: #0d1220; --stage-edge: #080b14; --card: #0e1322; --ink: #e9e4d8; --muted: #9a9fb2; --line: #22293d;
+    --warm: #ffd88a; --warm-soft: #3a3020; --beam: #ffd88a; --ok: #4fd18b; --bad: #ff6a5f; --amber: #ffb340; --sys: #7aa2ff; --ghost: #6f7590;
+    --node: #121a2e; --node-line: #2e3858; --manager: #f3e7c9; --on-manager: #14110a; --focus: #8fb0ff; --dark: #03050a;
+  }
+}
+body { margin: 0; }
+.cl *, .cl *::before, .cl *::after { box-sizing: border-box; }
+.cl button { font: inherit; color: inherit; cursor: pointer; }
+.cl :focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.cl a { color: var(--sys); }
+.pl-head { max-width: 1480px; margin: 0 auto 10px; }
+.pl-head h1 { margin: 0; font-size: 22px; } .pl-head h1 span { color: var(--warm); }
+.pl-head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+.pl-head .pl-private { color: var(--bad); font-size: 12px; }
+.pl-wrap { max-width: 1480px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 14px; align-items: start; }
+@media (max-width: 1000px) { .pl-wrap { grid-template-columns: 1fr; } }
+.pl-stage { position: relative; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: radial-gradient(1100px 600px at 40% 40%, var(--stage) 0%, var(--stage) 55%, var(--stage-edge) 100%); }
+.pl-stage svg { display: block; width: 100%; height: auto; }
+.pl-panel { display: flex; flex-direction: column; gap: 12px; }
+.pl-box { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 14px; }
+.pl-box h2 { margin: 0 0 8px; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 650; }
+.pl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pl-chips button, .pl-scenes button { background: var(--node); border: 1px solid var(--node-line); border-radius: 99px; padding: 5px 11px; font-size: 13px; }
+.pl-chips button[aria-pressed="true"] { background: var(--warm); color: var(--bg); border-color: var(--warm); }
+.pl-scenes { display: flex; flex-direction: column; gap: 6px; }
+.pl-scenes button { border-radius: 10px; text-align: left; }
+.pl-scenes button[aria-pressed="true"] { border-color: var(--warm); box-shadow: 0 0 0 1px var(--warm); }
+.pl-cap { margin: 10px 0 0; font-size: 13px; min-height: 40px; }
+.pl-note { margin: 0; color: var(--muted); font-size: 12px; }
+.pl-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+.pl-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.pl-card .pl-name { font-size: 16px; font-weight: 650; margin: 0; }
+.pl-card .pl-role { margin: 0 0 8px; color: var(--muted); font-size: 12px; }
+.pl-dna { display: flex; height: 14px; border-radius: 4px; overflow: hidden; gap: 2px; margin: 4px 0 4px; }
+.pl-dna span { display: block; min-width: 3px; }
+.pl-dna .own { background: var(--node-line); } .pl-dna .shared { background: var(--sys); } .pl-dna .official { background: var(--ok); }
+.pl-dna .variant { background: var(--amber); } .pl-dna .marker { background: var(--warm); }
+.pl-checks { list-style: none; margin: 8px 0 0; padding: 0; font-size: 13px; }
+.pl-checks li { padding: 3px 0; border-bottom: 1px dashed var(--line); }
+.pl-checks .ok::before { content: "✓ "; color: var(--ok); } .pl-checks .off::before { content: "✕ "; color: var(--bad); } .pl-checks .decide::before { content: "? "; color: var(--amber); }
+.pl-checks .off { color: var(--bad); } .pl-checks .decide { color: var(--amber); }
+.pl-narr { margin: 0; background: var(--card); border-top: 1px solid var(--line); padding: 10px 14px; font-size: 15px; min-height: 64px; }
+.pl-narr.idle { display: flex; align-items: center; }
+.pl-narr.warn { border-top: 2px solid var(--bad); }
+.pl-narr .pl-step { color: var(--warm); font-weight: 650; margin-right: 6px; }
+.pl-narr q { display: block; margin-top: 4px; color: var(--muted); font-size: 13px; }
+.pl-narr .pl-keys { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+/* the stage's own marks */
+.pl-group { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; fill: var(--muted); }
+.pl-band { fill: none; stroke: var(--line); stroke-dasharray: 2 4; }
+.pl-edge { fill: none; stroke: var(--node-line); stroke-width: 1.4; }
+.pl-edge.traffic { stroke-width: 1.8; }
+.pl-edge.bad { stroke: var(--bad); stroke-width: 2.6; } .pl-edge.amber { stroke: var(--amber); } .pl-edge.ghost { stroke: var(--ghost); }
+.pl-edge.dashed { stroke-dasharray: 5 5; }
+.pl-elabel { font-size: 11px; fill: var(--muted); paint-order: stroke; stroke: var(--stage); stroke-width: 4px; }
+.pl-elabel.bad { fill: var(--bad); } .pl-elabel.amber { fill: var(--amber); }
+.pl-part { fill: var(--beam); } .pl-part.structure { opacity: .45; }
+.pl-node { cursor: pointer; }
+.pl-node rect { fill: var(--node); stroke: var(--node-line); stroke-width: 1.2; }
+.pl-node text { font-size: 13px; fill: var(--ink); pointer-events: none; }
+.pl-node .pl-sub { font-size: 10.5px; fill: var(--muted); }
+.pl-node.orchestrator rect { fill: var(--manager); stroke: var(--manager); } .pl-node.orchestrator text { fill: var(--on-manager); }
+.pl-node.system rect { stroke: var(--sys); }
+.pl-node.ghost rect, .pl-node.unused rect { stroke: var(--ghost); stroke-dasharray: 4 3; }
+.pl-node.ghost text, .pl-node.unused text { fill: var(--muted); }
+.pl-node:focus { outline: none; } .pl-node:focus-visible rect { stroke: var(--focus); stroke-width: 2.4; }
+.pl-svg .pl-node text.pl-vol { font-size: 11px; fill: var(--warm); font-weight: 650; } .pl-svg .pl-node text.pl-vol.silent { fill: var(--bad); }
+/* the lenses */
+.pl-svg.lensing .pl-node { opacity: .35; }
+.pl-svg.lensing .pl-node.l-ok, .pl-svg.lensing .pl-node.l-amber, .pl-svg.lensing .pl-node.l-bad { opacity: 1; }
+.pl-node.l-ok rect { stroke: var(--ok); stroke-width: 3; } .pl-node.l-amber rect { stroke: var(--amber); stroke-width: 3; }
+.pl-node.l-bad rect { stroke: var(--bad); stroke-width: 3.2; animation: pl-pulse 1.1s ease-in-out infinite; }
+.pl-node.warn rect { stroke: var(--bad); stroke-width: 3.2; animation: pl-pulse .8s ease-in-out infinite; }
+@keyframes pl-pulse { 50% { stroke-opacity: .25; } }
+.pl-dark { fill: var(--dark); pointer-events: none; transition: opacity .45s; }
+@media (prefers-reduced-motion: reduce) { .pl-node.l-bad rect, .pl-node.warn rect { animation: none; } .pl-dark { transition: none; } }
+.pl-foot { max-width: 1480px; margin: 10px auto 0; font-size: 12px; color: var(--muted); text-align: center; }
+</style>
+</head>
+<body>
+<div class="cl" id="app"></div>
+<script type="application/json" id="cast">{{CAST}}</script>
+<script>(()=>{var P=[{id:"orchestrator-variables",name:"Orchestrator-Generated Variables",sign:"an OnRecognizedIntent topic with an AutomaticTaskInput that has shouldPromptUser: false"},{id:"rai-error-handling",name:"RAI Error Handling",sign:"the OnError topic reads System.Error.SubCode"},{id:"knowledge-hold-message",name:"Knowledge Hold Message",sign:"an OnKnowledgeRequested topic that sends a message"},{id:"prevent-tool-call-leaks",name:"Prevent Tool Call Leaks",sign:"an OnGeneratedResponse topic that sets System.ContinueResponse"},{id:"dynamic-topic-redirect",name:"Dynamic Topic Redirect",sign:"a BeginDialog whose dialog is a =Switch( expression"},{id:"channel-aware-behavior",name:"Channel-Aware Behavior",sign:"a condition or SetVariable that reads System.Activity.ChannelId (not a tool input)"},{id:"date-context",name:"Date Context",sign:"the instructions use Today() or Now()"},{id:"line-breaks-in-messages",name:"Line Breaks in Messages",sign:"<br /> inside a SendActivity or Question"},{id:"conversation-history-variable",name:"Conversation History Variable"},{id:"chain-of-thought-logging",name:"Chain of Thought Logging"},{id:"deterministic-mcp-calls",name:"Deterministic MCP Calls"},{id:"prevent-child-agent-responses",name:"Prevent Child Agent Responses"},{id:"jit-glossary",name:"JIT Glossary"},{id:"jit-user-context",name:"JIT User Context"},{id:"teams-production-hardening",name:"Teams Production Hardening"}];var ne=Object.fromEntries(P.map(e=>[e.id,e.name]));function _(e){let t=e.length>1?e.reduce((a,l)=>{let d=0;for(;d<a.length&&a[d]===l[d];)d++;return a.slice(0,d)}):"",c=/[-–·:]\s*$/.test(t)?t:"";return a=>c&&a.startsWith(c)&&a.length>c.length?a.slice(c.length):a}var M="1.17.0";var G={en:{title:"Stage",sub:"The cast on stage: who talks to whom, the traffic each one gets, the patterns as lenses, and a follow spot that walks a call.",privacy:"This file holds the client\u2019s data: keep it in the client\u2019s environment.",client:"Customer",lenses:"Lenses \u2014 light a pattern",lensHint:"Pick a lens: who follows the pattern lights green, who is off blinks red.",scenes:"Follow spot \u2014 walk a call",narrIdle:"Pick a call under \xABFollow spot\xBB to walk it step by step here.",actor:"Actor",actorHint:"Click someone on stage.",resume:"See the r\xE9sum\xE9 \u2192",map:"\u2190 Map",vol:(e,t)=>`${e.toLocaleString("en")} topic starts / ${t} days`,silent:"no telemetry",noTraffic:"The traffic shows with the export of Application Insights (--telemetry).",legend:["traffic (topic starts of who receives it)","off a pattern","to decide","not in the folder / unused"],structure:"Inner arrows (flows, systems) are structure, not measured traffic.",step:(e,t)=>`step ${e}/${t}`,keys:"\u2190 \u2192 to move \xB7 space plays all \xB7 Esc leaves",orchestrator:"Orchestrator",specialist:"Specialist",fingerprint:"Fingerprint of its instructions",foot:`agent-review ${M} \xB7 no model: what is here is what the files and tables say.`},pt:{title:"Palco",sub:"O elenco no palco: quem fala com quem, o tr\xE1fego de cada um, os padr\xF5es como lentes, e um canh\xE3o que segue uma chamada.",privacy:"Este arquivo tem dados do cliente: deixe-o no ambiente dele.",client:"Cliente",lenses:"Lentes \u2014 acenda um padr\xE3o",lensHint:"Escolha uma lente: quem segue o padr\xE3o acende em verde, quem foge pisca em vermelho.",scenes:"Canh\xE3o seguidor \u2014 siga uma chamada",narrIdle:"Escolha uma chamada em \xABCanh\xE3o seguidor\xBB para segui-la passo a passo aqui.",actor:"Ator",actorHint:"Clique em algu\xE9m no palco.",resume:"Ver curr\xEDculo \u2192",map:"\u2190 Mapa",vol:(e,t)=>`${e.toLocaleString("pt-BR")} in\xEDcios de t\xF3pico / ${t} dias`,silent:"sem telemetria",noTraffic:"O tr\xE1fego aparece com a exporta\xE7\xE3o do Application Insights (--telemetry).",legend:["tr\xE1fego (in\xEDcios de t\xF3pico de quem recebe)","fora do padr\xE3o","a decidir","fora da pasta / sem uso"],structure:"As setas internas (fluxos, sistemas) s\xE3o estrutura, n\xE3o tr\xE1fego medido.",step:(e,t)=>`passo ${e}/${t}`,keys:"\u2190 \u2192 avan\xE7am e voltam \xB7 espa\xE7o toca tudo \xB7 Esc sai",orchestrator:"Orquestrador",specialist:"Especialista",fingerprint:"Impress\xE3o digital das instru\xE7\xF5es",foot:`agent-review ${M} \xB7 sem modelo: o que est\xE1 aqui \xE9 o que os arquivos e as planilhas dizem.`}},x=JSON.parse(document.getElementById("cast").textContent),{stage:r,lang:u}=x,i=G[u];document.documentElement.lang=u==="pt"?"pt-BR":"en";document.title=`${i.title} \xB7 ${r.name??x.id}`;var n=e=>String(e??"").replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t]),y=document.getElementById("app"),B=matchMedia("(prefers-reduced-motion: reduce)").matches,g=168,w=48,T=5.6,j=e=>r.nodes.some(t=>e.x<t.x+g/2&&e.x+e.w>t.x-g/2&&e.y>t.y-w/2-2&&e.y-11<t.y+w/2+2),S=e=>r.nodes.find(t=>t.id===e),A=e=>e.kind==="orchestrator"||e.kind==="specialist",b,p,f=0,R,O;function H(e){let t=S(e.from),c=S(e.to),a=c.x>=t.x,l=t.x+(a?g/2:-g/2),d=c.x+(a?-g/2:g/2),s=(l+d)/2;return{d:`M${l},${t.y} C${s},${t.y} ${s},${c.y} ${d},${c.y}`,mx:s,my:(t.y+c.y)/2,x2:d,y2:c.y}}var K=e=>e.kind==="client"?i.client:e.labels?.[u]??e.label,q=(e,t=24)=>e.length>t?`${e.slice(0,t-1)}\u2026`:e,V=r.nodes.filter(A),U=_([...V,...r.nodes.filter(e=>e.kind==="ghost")].map(e=>e.label)),z=e=>A(e)||e.kind==="ghost"?U(e.label):K(e);function J(){let e=r.lenses.find(o=>o.id===b),t=e?new Set([...e.ok,...e.amber,...e.bad]):void 0,c=o=>{let h=["pl-node",o.kind,o.unused?"unused":""];return e&&h.push(e.bad.includes(o.id)?"l-bad":e.amber.includes(o.id)?"l-amber":e.ok.includes(o.id)?"l-ok":""),p&&p.steps[f]?.node===o.id&&p.steps[f].warn&&h.push("warn"),h.filter(Boolean).join(" ")},a=r.groups.map(o=>`<rect class="pl-band" x="${S(r.nodes.find(h=>h.kind==="specialist").id).x-g/2-18}" y="${o.y1}" width="${g+36}" height="${o.y2-o.y1}" rx="12"/><text class="pl-group" x="${S(r.nodes.find(h=>h.kind==="specialist").id).x-g/2-10}" y="${o.y1-6}">${n(o.label)}</text>`).join(""),l=r.edges.map((o,h)=>{let m=H(o),N=o.tone??"",I=o.kind==="traffic"&&S(o.to).kind!=="ghost",$=o.label?q(o.label[u],I?56:40):"",D=I?{x:m.x2-10-$.length*T,y:m.y2-9,w:$.length*T}:{x:m.mx-$.length*T/2,y:m.my-6,w:$.length*T},W=t&&!t.has(o.from)&&!t.has(o.to),F=$&&!W&&!j(D)?I?`<text class="pl-elabel ${N}" x="${m.x2-10}" y="${m.y2-9}" text-anchor="end">${n($)}</text>`:`<text class="pl-elabel ${N}" x="${m.mx}" y="${m.my-6}" text-anchor="middle">${n($)}</text>`:"";return`<path id="e${h}" class="pl-edge ${o.kind} ${N} ${o.dashed?"dashed":""}" d="${m.d}"/>${F}`}).join(""),d=r.nodes.map(o=>{let h=A(o)&&r.hasTelemetry?`<text class="pl-vol ${o.silent?"silent":""}" x="${g/2}" y="${w+14}" text-anchor="middle">${n(o.silent?i.silent:o.volume!==void 0?i.vol(o.volume,r.days??0):"")}</text>`:"",m=A(o)?` tabindex="0" role="button" aria-label="${n(o.label)}"`:"";return`<g class="${c(o)}" data-node="${n(o.id)}" transform="translate(${o.x-g/2},${o.y-w/2})"${m}>${h}<rect width="${g}" height="${w}" rx="${o.kind==="client"?w/2:10}"/><text x="${g/2}" y="21" text-anchor="middle">${n(q(z(o),o.kind==="ghost"?30:22))}</text><text class="pl-sub" x="${g/2}" y="37" text-anchor="middle">${n(q(o.sub[u],30))}</text></g>`}).join(""),s=p?.steps[f],v=s?S(s.node):void 0;return`<svg class="pl-svg ${e?"lensing":""}" viewBox="0 0 ${r.width} ${r.height}" role="img" aria-label="${n(i.title)}">
+    <defs><radialGradient id="pl-spot" r="0.5"><stop offset="0" stop-color="#000"/><stop offset="0.6" stop-color="#000"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+    <mask id="pl-mask"><rect width="${r.width}" height="${r.height}" fill="#fff"/>${v?`<ellipse cx="${v.x}" cy="${v.y}" rx="${g/2+34}" ry="${w/2+30}" fill="url(#pl-spot)"/>`:""}</mask></defs>
+    <g>${a}</g><g>${l}</g><g id="pl-parts"></g><g>${d}</g>
+    <rect class="pl-dark" width="${r.width}" height="${r.height}" mask="url(#pl-mask)" opacity="${p?.72:0}"/>
+  </svg>`}function Q(){let e=r.lenses.find(s=>s.id===b),t=`<section class="pl-box"><h2>${n(i.lenses)}</h2><div class="pl-chips">${r.lenses.map(s=>`<button data-lens="${n(s.id)}" aria-pressed="${s.id===b}">${n(q(s.name[u],28))}</button>`).join("")}</div><p class="pl-cap">${e?n(e.caption[u]):`<span class="pl-note">${n(i.lensHint)}</span>`}</p></section>`,c=r.scenes.length?`<section class="pl-box"><h2>${n(i.scenes)}</h2><div class="pl-scenes">${r.scenes.map(s=>`<button data-scene="${n(s.id)}" aria-pressed="${s.id===p?.id}">\u25B6 ${n(s.title[u])}</button>`).join("")}</div></section>`:"",a=r.actors.find(s=>s.id===R),l=a?`<section class="pl-box pl-card" aria-live="polite"><h2>${n(i.actor)}</h2><p class="pl-name">${n(a.name)}</p><p class="pl-role">${n(a.role==="orchestrator"?i.orchestrator:i.specialist)}${a.types.length?` \xB7 ${n(a.types.join(" \xB7 "))}`:""}${r.hasTelemetry?` \xB7 ${n(a.silent?i.silent:a.volume!==void 0?i.vol(a.volume,r.days??0):"")}`:""}</p>
+      ${a.fingerprint.length?`<p class="pl-note">${n(i.fingerprint)}</p><div class="pl-dna">${a.fingerprint.map(s=>`<span class="${s.kind}" style="flex:${s.size}" title="${n(s.label??"")}"></span>`).join("")}</div>`:""}
+      <ul class="pl-checks">${a.checks.map(s=>`<li class="${s.state}">${n(s[u])}</li>`).join("")}${a.access.map(s=>`<li class="decide">${n(s[u])}</li>`).join("")}</ul>
+      ${x.playbill?`<p class="pl-note" style="margin-top:8px"><a href="${n(x.playbill)}#${encodeURIComponent(a.id)}">${n(i.resume)}</a></p>`:""}</section>`:`<section class="pl-box pl-card"><h2>${n(i.actor)}</h2><p class="pl-note">${n(i.actorHint)}</p></section>`,d=`<section class="pl-box"><div class="pl-legend">${[["var(--beam)",i.legend[0]],["var(--bad)",i.legend[1]],["var(--amber)",i.legend[2]],["var(--ghost)",i.legend[3]]].map(([s,v])=>`<span><i class="pl-dot" style="background:${s}"></i>${n(v)}</span>`).join("")}</div><p class="pl-note" style="margin-top:8px">${n(r.hasTelemetry?i.structure:i.noTraffic)}</p></section>`;return t+c+l+d}function Y(){let e=p?.steps[f];return!p||!e?`<div class="pl-narr idle"><span class="pl-note">${n(i.narrIdle)}</span></div>`:`<div class="pl-narr ${e.warn?"warn":""}" role="status"><span class="pl-step">${n(i.step(f+1,p.steps.length))}</span>${n(e.text[u])}${e.quote?`<q class="pb-quote">${n(e.quote)}</q>`:""}<span class="pl-keys">${n(i.keys)}</span></div>`}function E(){y.innerHTML=`<header class="pl-head">${x.map?`<p><a href="${n(x.map)}">${n(i.map)}</a></p>`:""}<h1>${n(i.title)} \xB7 <span>${n(r.name??x.id)}</span></h1><p>${n(i.sub)}</p><p class="pl-private">${n(i.privacy)}</p></header>
+    <div class="pl-wrap"><div class="pl-stage">${J()}${Y()}</div><aside class="pl-panel">${Q()}</aside></div>
+    <p class="pl-foot">${n(i.foot)}</p>`,X()}var C;function X(){C&&cancelAnimationFrame(C);let e=y.querySelector("#pl-parts");if(!e||!r.hasTelemetry)return;let t=[];r.edges.forEach((l,d)=>{let s=y.querySelector(`#e${d}`);if(!s||l.dashed)return;let v=l.kind==="traffic"?l.volume?Math.max(1,Math.min(8,Math.round(Math.log10(l.volume+1)*2.2))):0:1,o=s.getTotalLength();for(let h=0;h<v;h++){let m=document.createElementNS("http://www.w3.org/2000/svg","circle");m.setAttribute("r",l.kind==="traffic"?"3":"2.2"),m.setAttribute("class",`pl-part ${l.kind}`),e.appendChild(m),t.push({el:m,path:s,len:o,phase:h/v,speed:l.kind==="traffic"?11e-5:6e-5})}});let c=l=>{for(let d of t){let s=d.path.getPointAtLength(((d.phase+l*d.speed)%1+1)%1*d.len);d.el.setAttribute("cx",s.x.toFixed(1)),d.el.setAttribute("cy",s.y.toFixed(1))}};if(B)return c(0);let a=l=>{c(l),C=requestAnimationFrame(a)};C=requestAnimationFrame(a)}function k(){O&&clearInterval(O),O=void 0}function L(e){p&&(f=Math.max(0,Math.min(p.steps.length-1,e)),E())}y.addEventListener("click",e=>{let t=e.target,c=t.closest("button"),a=t.closest("[data-node]");if(c?.dataset.lens)b=b===c.dataset.lens?void 0:c.dataset.lens,b&&(k(),p=void 0);else if(c?.dataset.scene)k(),p=p?.id===c.dataset.scene?void 0:r.scenes.find(l=>l.id===c.dataset.scene),f=0,p&&(b=void 0);else if(a&&r.actors.some(l=>l.id===a.dataset.node))R=a.dataset.node;else return;E()});y.addEventListener("keydown",e=>{let t=e.target.closest?.("[data-node]");t&&(e.key==="Enter"||e.key===" ")&&r.actors.some(c=>c.id===t.dataset.node)&&(e.preventDefault(),R=t.dataset.node,E(),y.querySelector(`[data-node="${CSS.escape(R)}"]`)?.focus())});document.addEventListener("keydown",e=>{if(p)if(e.key==="ArrowRight")L(f+1);else if(e.key==="ArrowLeft")L(f-1);else if(e.key==="Escape")k(),p=void 0,E();else if(e.key===" "&&!e.target.closest?.("[data-node]"))e.preventDefault(),k(),O=window.setInterval(()=>p&&f<p.steps.length-1?L(f+1):k(),1800);else return});E();})();
+</script>
+</body>
+</html>

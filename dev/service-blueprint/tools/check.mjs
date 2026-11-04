@@ -1,8 +1,8 @@
 // Checks the skill as a person gets it: the engine's checks (checks/*.check.ts); every example makes its map, workbook
-// and lesson (the lesson passing chalk-talk's reviewer when there is a browser) and prints what it should look at — the
+// and lesson (the lesson passing visual-explainer's reviewer when there is a browser) and prints what it should look at — the
 // return blueprint on purpose has four things, the others none; a broken file says its line; the map loads nothing from
 // the internet; and, in a browser, the map opens a moment, its tabs and its downloads. Run after npm run assets.
-import { checkNoOldName, checkSkillMd } from 'chalk-talk/kit/tools/checks.mjs'
+import { checkNoOldName, checkSkillMd } from '@ruinosus/visual-explainer/kit/tools/checks.mjs'
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
-const repo = resolve(here, '../../..') // the house-lights repository
+const repo = resolve(here, '../../..') // the dna repository
 const skill = join(repo, 'skills/service-blueprint')
 const build = join(skill, 'scripts/build.mjs')
 const examples = join(skill, 'examples')

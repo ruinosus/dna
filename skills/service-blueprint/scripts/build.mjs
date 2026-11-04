@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Checks a service blueprint (<id>.blueprint.yaml) and makes what is asked of it: the map (one HTML page that opens with
-// no internet), the workbook (.xlsx) and a chalk-talk lesson that walks the journey.
+// no internet), the workbook (.xlsx) and a visual-explainer lesson that walks the journey.
 //
 //   node build.mjs <id>.blueprint.yaml --check [--lang en|pt]       only check it: nothing is written
 //   node build.mjs <id>.blueprint.yaml [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]

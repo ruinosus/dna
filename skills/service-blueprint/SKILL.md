@@ -61,14 +61,14 @@ node scripts/build.mjs <id>.blueprint.yaml --all [--lang pt] [--out <folder>]
   (interaction, visibility, internal), ⚠ failure points and ⏱ waits; a moment opens its detail; tabs for pains and
   actions, and promises; downloads for the workbook, the file and a PNG; «To look at» on top.
 - `<id>.xlsx` — **the workbook**: Summary, Blueprint, Pains and actions, Promises, Systems.
-- `<id>.lesson.html` — **the lesson** (chalk-talk): the journey walked moment by moment.
+- `<id>.lesson.html` — **the lesson** (visual-explainer): the journey walked moment by moment.
 
 End with a short summary: the journey in one sentence, **the worst moment and who owns it (or that nobody does)**, the
 files, and what is still open.
 
 ## From a way of working
 
-A team's `.way.yaml` (gates-and-handoffs) can be the start: `node ../gates-and-handoffs/scripts/build.mjs <id>.way.yaml
+A team's `.way.yaml` (way-of-working) can be the start: `node ../way-of-working/scripts/build.mjs <id>.way.yaml
 --lens blueprint --write` writes a draft blueprint beside it, its bets marked `# bet:`. Read it with the person and
 replace the bets — the customer’s side, how they feel and what hurts come from interviews, never from the way.
 
@@ -80,7 +80,7 @@ replace the bets — the customer’s side, how they feel and what hurts come fr
 
 ## In Claude Code
 
-With the house-lights plugin, a mod checks every `.blueprint.yaml` you write or edit with this skill's own check: one that breaks
+With the dna plugin, a mod checks every `.blueprint.yaml` you write or edit with this skill's own check: one that breaks
 the format is refused with the messages — fix them and write it again. One that passes opens a preview pane beside the
 chat (its moments, how the customer feels, on stage and behind); `/blueprint-preview <file>` shows another. Elsewhere,
 run the check yourself.

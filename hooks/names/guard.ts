@@ -1,5 +1,5 @@
 // The names' guard: in a repository that runs the names audit before it publishes (its package.json has an `audit`
-// script calling audit.mjs, as house-lights does), a Write or Edit whose new text has a name of the person's own list
+// script calling audit.mjs, as dna does), a Write or Edit whose new text has a name of the person's own list
 // (~/.config/skill-kit/audit.txt, the one `npm run audit` reads) is refused, saying which pattern and on which line of
 // the new text — never repeating the text. With no list, or anywhere else, it does nothing. /names says what it watches.
 // It fails open, in its own code: if the list or git cannot be read, the write goes through.

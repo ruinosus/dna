@@ -9,8 +9,8 @@ import { checkRecipe, recipeOf, showRecipe } from '../recipes/guard'
 import { pathOf } from '../recipes/run'
 import { PREVIEW_PANE, blueprintSvg, blueprintText, lookWord, waySvg, wayText } from './draw'
 
-const recipe = atom({ plugin: 'house-lights', key: 'recipe' } as const, null, { shape: 'recipe-1' })
-const lang = atom({ plugin: 'house-lights', key: 'lang' } as const, 'en' as PreviewLang)
+const recipe = atom({ plugin: 'dna', key: 'recipe' } as const, null, { shape: 'recipe-1' })
+const lang = atom({ plugin: 'dna', key: 'lang' } as const, 'en' as PreviewLang)
 
 /** /way-preview and /blueprint-preview: check the named file (or show the last one) and open the pane. */
 async function open($: EngineInterface, typed: string, kind: 'way' | 'blueprint') {

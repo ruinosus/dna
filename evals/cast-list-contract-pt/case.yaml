@@ -1,5 +1,5 @@
 schema_version: "1.0"
-name: cast-list-contract-pt
+name: agent-review-contract-pt
 description: What the orchestrator passes each specialist, and what is left over, in six cloned Copilot Studio agents — the skill fires, and the answer names frete called with no history, the agent called that is not in the folder, the flow that returns nothing and the topic nobody calls, editing no agent.
 tags: [build, pt]
 runs: 2
@@ -15,7 +15,7 @@ graders:
   - name: skill-fired
     type: tool_used
     tool: Skill
-    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?cast-list"'
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?agent-review"'
   - name: names-history
     type: regex
     pattern: 'hist[óo]rico'

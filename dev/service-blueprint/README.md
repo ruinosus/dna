@@ -3,12 +3,12 @@
 <p align="center"><b>Give Claude your interviews, tickets and process notes. Get a service blueprint — what the customer lives at each moment, and who makes it happen behind.</b></p>
 
 <p align="center">
-  <img src="https://ruinosus.github.io/house-lights/service-blueprint/images/devolucao-map.png" alt="A service blueprint of a return: the line of how the customer feels dips at «waits for news — 6 days», and under it the stage, backstage and systems" width="860">
+  <img src="https://ruinosus.github.io/dna/service-blueprint/images/devolucao-map.png" alt="A service blueprint of a return: the line of how the customer feels dips at «waits for news — 6 days», and under it the stage, backstage and systems" width="860">
 </p>
 
 <p align="center">
   An <a href="https://agentskills.io">Agent Skill</a> for Claude Code, claude.ai, the Claude API and other tools that load skills.<br>
-  <a href="https://ruinosus.github.io/house-lights/service-blueprint/">Open the gallery</a> to click through the maps, play the lessons and download the workbooks.
+  <a href="https://ruinosus.github.io/dna/service-blueprint/">Open the gallery</a> to click through the maps, play the lessons and download the workbooks.
 </p>
 
 ---
@@ -40,9 +40,9 @@ research into actions with owners, and anyone who keeps hearing «on our side it
 | **The file** (`.blueprint.yaml`) | The source, plain text in Git; everything else is made from it. A mistake says its line. |
 | **The map** (`.html`) | One page that opens offline: the phases, the line of how the customer feels, the five layers with the three lines (interaction, visibility, internal), ⚠ failure points and ⏱ waits. A moment opens its detail; tabs for pains and actions, and promises; download the workbook, the file or a PNG. |
 | **The workbook** (`.xlsx`) | Summary, Blueprint, Pains and actions, Promises, Systems — for the meeting and the follow-up. |
-| **The lesson** (`.lesson.html`) | The journey walked by drawing it, moment by moment, the customer higher when they feel better — made with [chalk-talk](https://github.com/ruinosus/house-lights). |
+| **The lesson** (`.lesson.html`) | The journey walked by drawing it, moment by moment, the customer higher when they feel better — made with [visual-explainer](https://github.com/ruinosus/dna). |
 
-<p align="center"><img src="https://ruinosus.github.io/house-lights/service-blueprint/images/devolucao-lesson.png" alt="The lesson: the customer at each moment of a return, lower at the six days with no news; under the line of visibility, who does what" width="760"></p>
+<p align="center"><img src="https://ruinosus.github.io/dna/service-blueprint/images/devolucao-lesson.png" alt="The lesson: the customer at each moment of a return, lower at the six days with no news; under the line of visibility, who does what" width="760"></p>
 
 ## How a conversation goes
 
@@ -66,17 +66,17 @@ day, checking the health-plan card takes long.
 
 ## Install
 
-service-blueprint is one of the six skills of the [house-lights](../../README.md) plugin. **Claude Code:**
+service-blueprint is one of the six skills of the [dna](../../README.md) plugin. **Claude Code:**
 
 ```
-/plugin marketplace add ruinosus/house-lights
-/plugin install house-lights@house-lights
+/plugin marketplace add ruinosus/dna
+/plugin install dna@dna
 ```
 
-Claude picks the skill by its description; to call it by name, `/house-lights:service-blueprint`. **claude.ai**: upload
-`service-blueprint.zip` from the [latest release](https://github.com/ruinosus/house-lights/releases) in Settings › Capabilities ›
+Claude picks the skill by its description; to call it by name, `/dna:service-blueprint`. **claude.ai**: upload
+`service-blueprint.zip` from the [latest release](https://github.com/ruinosus/dna/releases) in Settings › Capabilities ›
 Skills (code execution on). **Claude API**: the same zip with the Skills API. **Other tools**: copy
-`skills/service-blueprint` where the tool reads skills; it needs Node.js 18 or later. **npm**: `npx house-lights service-blueprint <file>`.
+`skills/service-blueprint` where the tool reads skills; it needs Node.js 18 or later. **npm**: `npx @ruinosus/dna service-blueprint <file>`.
 
 ## Develop
 
@@ -93,5 +93,5 @@ npm run zip -w dev/service-blueprint/tools      # dist/service-blueprint.zip
 
 ## License
 
-MIT. Lessons by [chalk-talk](https://github.com/ruinosus/house-lights) (MIT; Rough.js MIT; Caveat and Shantell Sans, SIL
-Open Font License). Its sibling [gates-and-handoffs](https://github.com/ruinosus/house-lights) maps how the work goes inside.
+MIT. Lessons by [visual-explainer](https://github.com/ruinosus/dna) (MIT; Rough.js MIT; Caveat and Shantell Sans, SIL
+Open Font License). Its sibling [way-of-working](https://github.com/ruinosus/dna) maps how the work goes inside.
