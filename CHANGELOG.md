@@ -1,5 +1,24 @@
 # Changelog
 
+## 2.0.0 — 2026-11-04
+
+**house-lights is now DNA — Domain Notation of Anything** (ruinosus/dna). The same eight skills, with plain names and
+one notation.
+
+- **The names.** Plugin `dna@dna`; npm `@ruinosus/dna` (the `dna` command) and `@ruinosus/visual-explainer` (the lesson
+  package and the skills kit). Skills: visual-explainer (was chalk-talk), visual-pitch (back-of-napkin), way-of-working
+  (gates-and-handoffs), service-blueprint, incident-drill (dress-rehearsal), agent-review (cast-list),
+  process-simulation (box-office), solution (opening-night). The mod's commands: `/simulate`, `/simulation-preview`,
+  `/agent-review` (were `/sim`, `/sim-preview`, `/cast`); `/drill`, `/lenses`, `/solution` and the previews stay.
+- **apiVersion and kind.** A recipe says what it is under DNA's header — `apiVersion: github.com/ruinosus/dna/v1`,
+  `kind: WayOfWorking | ServiceBlueprint | IncidentDrill | AgentStandard | AgentReview | Solution` and the name in
+  `metadata.name`. **Every file written before still reads**: the `format:` lines of before are read as they were.
+  `--upgrade [--write]` in each skill rewrites a file's header, keeping the rest of the text, and refuses when the file
+  would not read the same. New files — lenses, a new cast file, the examples and the accelerators — are written under
+  DNA's header.
+- **Moving from house-lights:** `/plugin marketplace add ruinosus/dna`, `/plugin install dna@dna`, then
+  `/plugin uninstall house-lights@house-lights`. The npm packages `house-lights` and `chalk-talk` point to the new ones.
+
 ## 1.17.0 — 2026-11-04
 
 The eighth skill: **opening-night**, a process put together as one solution.

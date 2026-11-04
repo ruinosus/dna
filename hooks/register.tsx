@@ -4,7 +4,7 @@
 //   previews a pane with the last way of working or service blueprint written; /way-preview, /blueprint-preview
 //   names    in a repository that runs the names audit, refuses a write with a name of the person's private list;
 //            /names says what it watches
-//   /agents    agent-review's comparison of a folder of agents in a pane, and a toast when an agent edited there changes it
+//   /agent-review    agent-review's comparison of a folder of agents in a pane, and a toast when an agent edited there changes it
 //   /lenses  a way of working as the other skills' recipes (a .sim, a blueprint, a drill), written beside it on a
 //            press, and a toast when the way changes under a lens
 //   /solution an solution solution in a pane: each piece and where it stands, a lens made again from the way
@@ -43,7 +43,7 @@ export const register: Register = on => {
       argumentHint: '[file.blueprint.yaml]',
     })
     await $.command.register({
-      name: 'agents',
+      name: 'agent-review',
       description: "Compare a folder of cloned Copilot Studio agents with agent-review: what to look at, in a pane",
       argumentHint: '[agents-folder] [--lang pt]',
     })

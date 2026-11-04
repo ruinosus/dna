@@ -34,7 +34,7 @@ In Claude Code (2.1.287 or later) the plugin also carries a **mod**: every recip
 `.blueprint.yaml`, `.drill.yaml`, `.chalk`, a visual-explainer `.json`, a `.sim`) is checked first by its skill and refused
 with the messages when it breaks its format; in a repository that runs the names audit, a write with a name of your
 private list is refused (`/names` says what it watches); a way of working or a service blueprint opens a preview pane
-(`/way-preview`, `/blueprint-preview`); `/agents <folder> [--profile <file>]` shows agent-review's comparison in a pane, with the team's profile and a toast when an
+(`/way-preview`, `/blueprint-preview`); `/agent-review <folder> [--profile <file>]` shows agent-review's comparison in a pane, with the team's profile and a toast when an
 agent edited there changes it; `/drill <file>` plays an incident drill in a pane, to its debrief; `/lenses <file.way.yaml>` shows a way of
 working as a simulation, a service blueprint and a drill, and writes each beside it; and `/simulate` and
 `/simulation-preview` run and show a `.sim`, with a −/+ for each control that runs it again; `/solution <file>` shows a
@@ -81,12 +81,25 @@ npx @ruinosus/dna process-simulation hr.sim --lang pt
 The drawing engine alone, to embed lessons in a page, is the [visual-explainer](https://www.npmjs.com/package/@ruinosus/visual-explainer)
 package (it also powers the VS Code and Obsidian extensions).
 
-## Moved here
+## From house-lights
 
-These skills had a repository each until 1.0.0. `stage-door` is now **way-of-working** and `front-of-house` is
-**service-blueprint**; their files keep working (the formats did not change). If you installed one of the old
-plugins, install `dna` instead and remove the old one (`/plugin uninstall <old>@<old>`); the npm packages
-`visual-pitch`, `stage-door`, `front-of-house` and `incident-drill` point to `npx @ruinosus/dna`.
+Until 1.17 this was **house-lights**, with theatre names. 2.0.0 is the same work under DNA, with plain names:
+
+| Before | Now |
+|---|---|
+| plugin `house-lights@house-lights` | `dna@dna` (`/plugin marketplace add ruinosus/dna`) |
+| npm `house-lights` · `chalk-talk` | `@ruinosus/dna` · `@ruinosus/visual-explainer` |
+| chalk-talk · back-of-napkin · gates-and-handoffs | visual-explainer · visual-pitch · way-of-working |
+| service-blueprint · dress-rehearsal · cast-list | service-blueprint · incident-drill · agent-review |
+| box-office · opening-night | process-simulation · solution |
+| `/sim` · `/sim-preview` · `/cast` | `/simulate` · `/simulation-preview` · `/agent-review` |
+
+**Every file you wrote still reads.** A recipe now says what it is under DNA's header — `apiVersion:
+github.com/ruinosus/dna/v1`, a `kind` and the name in `metadata.name` — and the `format:` line of before (`stage-door/v1`,
+`front-of-house/v1`, `dress-rehearsal/v1`, `cast-list/profile-v1`, `opening-night/v1`…) is still read. To rewrite a
+file's header, `--upgrade --write` in its skill. In Claude Code: add the new marketplace, install `dna@dna` and remove
+the old plugin (`/plugin uninstall house-lights@house-lights`). The older repositories (chalk-talk, back-of-napkin,
+stage-door, front-of-house, dress-rehearsal) and house-lights itself point here.
 
 ## Em português
 

@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "1.17.0"
+  version: "2.0.0"
 ---
 
 # visual-explainer: explain by drawing
@@ -206,7 +206,7 @@ it. The player loads from the CDN and checks the recipe itself:
 <script type="text/visual-explainer" id="chalk-recipe">
 THE RECIPE AS TEXT
 </script>
-<script src="https://cdn.jsdelivr.net/npm/visual-explainer@0.19.1/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.20.0/player.js"></script>
 ```
 
 If the page says the recipe could not be opened, fix the line it names.

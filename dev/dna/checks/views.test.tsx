@@ -1,4 +1,4 @@
-// The mod's panes in Claude Code's own harness: the recipes' preview (a way of working, a service blueprint) and /agents
+// The mod's panes in Claude Code's own harness: the recipes' preview (a way of working, a service blueprint) and /agent-review
 // (agent-review's comparison, and the toast when an agent edited in the compared folder changes it). The engine beneath is
 // a fake: files in memory, node answered here with what each skill's --check (--json) prints.
 import { expect, test } from 'claude-code/testing'
@@ -91,10 +91,10 @@ test('/blueprint-preview checks the file and shows its moments', async ($, on) =
   await desk.unmount()
 })
 
-test('/agents compares a folder: the summary and the groups, each opening at a press', async ($, on) => {
+test('/agent-review compares a folder: the summary and the groups, each opening at a press', async ($, on) => {
   engine(on)
   await start($)
-  const r = await $.command.run({ command: 'agents', args: 'agents --lang pt' } as any)
+  const r = await $.command.run({ command: 'agent-review', args: 'agents --lang pt' } as any)
   expect(JSON.stringify(r)).toContain('▸ Fora do padrão · 2')
   const term = await $.ui.mount(pane('dna-cast', 'terminal'))
   expect((await term.find({ type: 'Text', text: /6 no elenco/ }))?.text).toContain('1 orquestrador')
@@ -103,12 +103,12 @@ test('/agents compares a folder: the summary and the groups, each opening at a p
   await term.unmount()
 })
 
-test('after /agents, an agent edited in that folder compares again and a toast says what came to look at', async ($, on) => {
+test('after /agent-review, an agent edited in that folder compares again and a toast says what came to look at', async ($, on) => {
   const toasts: string[] = []
   let now = CAST1
   engine(on, { toasts, cast: () => now })
   await start($)
-  await $.command.run({ command: 'agents', args: '/repo/agents --lang pt' } as any)
+  await $.command.run({ command: 'agent-review', args: '/repo/agents --lang pt' } as any)
   now = CAST2_FULL
   await $.tool.call({ tool: 'Write', file_path: '/repo/agents/bodega-pedidos/agent.mcs.yml', content: 'kind: GptComponentMetadata' })
   expect(toasts.join('\n')).toContain('agent-review: +1 para olhar — bodega-pedidos não tem histórico')
@@ -118,29 +118,29 @@ test('after /agents, an agent edited in that folder compares again and a toast s
   expect(toasts.length).toBe(before)
 })
 
-test('/way-preview and /agents take a path typed with ~', async ($, on) => {
+test('/way-preview and /agent-review take a path typed with ~', async ($, on) => {
   engine(on)
   await start($)
   const w = await $.command.run({ command: 'way-preview', args: '~/team.way.yaml' } as any)
   expect(JSON.stringify(w)).toContain('could not read /home/me/team.way.yaml') // read at the home folder (not in the fake)
-  const c = await $.command.run({ command: 'agents', args: '~/agents --lang pt' } as any)
+  const c = await $.command.run({ command: 'agent-review', args: '~/agent-review --lang pt' } as any)
   expect(JSON.stringify(c)).toContain('▸ Fora do padrão · 2')
 })
 
 const PROFILE = 'format: cast-list/profile-v1\nname: Bodega Azul\n'
 const CASTFILE = 'format: cast-list/cast-v1\nname: Bodega Azul\n'
 
-test('/agents passes the team profile: the one given, or the only one beside the agents, and asks when there are two', async ($, on) => {
+test('/agent-review passes the team profile: the one given, or the only one beside the agents, and asks when there are two', async ($, on) => {
   const runs: string[][] = []
   const listed: Record<string, string[]> = { '/repo/agents': [], '/repo': ['profile.cast.yaml', 'agents.cast.yaml'] }
   const files = { '/repo/profile.cast.yaml': PROFILE, '/repo/agents.cast.yaml': CASTFILE, '/repo/other.cast.yaml': PROFILE }
   engine(on, { runs, listed, files })
   await start($)
-  const given = await $.command.run({ command: 'agents', args: '/repo/agents --profile ~/team.cast.yaml' } as any)
+  const given = await $.command.run({ command: 'agent-review', args: '/repo/agents --profile ~/team.cast.yaml' } as any)
   expect(JSON.stringify(given)).toContain('Fora do padrão')
   expect(runs.at(-1)).toEqual(expect.arrayContaining(['--profile', '/home/me/team.cast.yaml']))
   // none given: the only profile beside the agents (the cast file of decisions is not a profile), said so
-  const found = await $.command.run({ command: 'agents', args: '/repo/agents --lang pt' } as any)
+  const found = await $.command.run({ command: 'agent-review', args: '/repo/agents --lang pt' } as any)
   expect(JSON.stringify(found)).toContain('perfil: /repo/profile.cast.yaml (o único ao lado dos agentes)')
   expect(runs.at(-1)).toEqual(expect.arrayContaining(['--profile', '/repo/profile.cast.yaml']))
   // an edit compares again with the same profile
@@ -149,7 +149,7 @@ test('/agents passes the team profile: the one given, or the only one beside the
   // two profiles: the person chooses, nothing runs
   listed['/repo'] = ['profile.cast.yaml', 'other.cast.yaml']
   const before = runs.length
-  const two = JSON.stringify(await $.command.run({ command: 'agents', args: '/repo/agents' } as any))
+  const two = JSON.stringify(await $.command.run({ command: 'agent-review', args: '/repo/agents' } as any))
   expect(two).toContain('there is more than one profile; choose with --profile')
   expect(two).toContain('/repo/other.cast.yaml')
   expect(runs.length).toBe(before)

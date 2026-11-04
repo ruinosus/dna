@@ -1,6 +1,6 @@
 {
   "name": "@ruinosus/visual-explainer",
-  "version": "0.19.1",
+  "version": "0.20.0",
   "description": "Hand-drawn lessons that draw themselves: a player for visual-explainer recipes (one script for the browser or a CDN), a lesson you can mount inside any element, and a command that checks a recipe and builds one HTML file.",
   "license": "MIT",
   "type": "module",
