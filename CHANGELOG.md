@@ -16,7 +16,7 @@ One way of working, seen by the other skills.
 - **`/lenses <file.way.yaml>`** in the mod: the three lenses in a pane, how many bets each has, a button to write each
   beside the way (asking again before writing over one that differs) and the command to see it. When a `.way.yaml` is
   written or edited and a lens beside it came from an earlier version, a toast says so.
-- All the examples of gates-and-handoffs pass through the three lenses in the checks; the mod's tests are 30.
+- All the examples of gates-and-handoffs pass through the three lenses in the checks; the mod's tests are 31.
 
 ## 1.15.0 — 2026-11-04
 

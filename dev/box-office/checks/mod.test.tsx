@@ -118,3 +118,18 @@ test('the preview\'s controls: + runs the recipe again with the new value and sh
   expect((await term.find({ type: 'Text', text: /wait p90 at order/ }))?.text).toMatch(/\(.+ to .+\)/) // the recipe's own numbers
   await term.unmount()
 })
+
+test('a recipe with rework is drawn with the return under the flow, and its terminal text keeps the share', async ($, on) => {
+  const LOOP = ['sim "Rework"', 'horizon 1 day', 'arrive item 10/hour', 'pool people 3', 'step work by people time ~10min', 'step review time 2min', 'end done', 'knob back 0%..60% = 20%', 'work -> review', 'review ->', '  work $back', '  done rest', 'show count end done'].join('\n')
+  engine(on)
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
+  expect(JSON.stringify(await $.tool.call({ tool: 'Write', file_path: '/w/rework.sim', content: LOOP }))).not.toContain('not a valid')
+  const desk = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const svg = String(((await desk.find({ type: 'Svg' })) as any)?.props?.source ?? '')
+  expect(svg).toContain('stroke-dasharray="6 3"') // the return
+  expect(svg).toContain('>20%<')
+  await desk.unmount()
+  const term = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await term.find({ type: 'Text', text: /^review/ }))?.text).toContain('work 20% | done 80%')
+  await term.unmount()
+})
