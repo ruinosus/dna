@@ -18,3 +18,16 @@ scenario "One more analyst": analysts = 4
 show wait p90 at answer
 show count end gave_up
 show utilization analysts
+
+labels en:
+  request: Request
+  answer: HR analyst
+  answered: Answered
+  gave_up: Gave up
+  analysts: Analysts
+labels pt-BR:
+  request: Solicitação
+  answer: Analista de RH
+  answered: Atendida
+  gave_up: Desistiu
+  analysts: Analistas

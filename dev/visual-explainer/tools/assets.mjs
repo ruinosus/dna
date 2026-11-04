@@ -99,7 +99,11 @@ if (/<\/script/i.test(script)) throw new Error('The player script contains "</sc
 const font = (pkg, file) => readFileSync(join(engine, 'node_modules/@fontsource', pkg, 'files', file)).toString('base64')
 const face = (family, weight, data) =>
   `@font-face{font-family:'${family}';font-style:normal;font-weight:${weight};font-display:block;src:url(data:font/woff2;base64,${data}) format('woff2')}`
+// the business theme's face (the default since DNA 2.0.0), from the repository's own @fontsource
+const plex = (file) => readFileSync(join(repo, 'node_modules/@fontsource/ibm-plex-sans/files', file)).toString('base64')
 const fonts = [
+  face('IBM Plex Sans', 400, plex('ibm-plex-sans-latin-400-normal.woff2')),
+  face('IBM Plex Sans', 600, plex('ibm-plex-sans-latin-600-normal.woff2')),
   face('Caveat', 700, font('caveat', 'caveat-latin-700-normal.woff2')),
   face('Shantell Sans', 400, font('shantell-sans', 'shantell-sans-latin-400-normal.woff2')),
   face('Shantell Sans', 700, font('shantell-sans', 'shantell-sans-latin-700-normal.woff2')),
@@ -115,7 +119,7 @@ writeFileSync(join(skill, 'assets/player.html'), page)
 const template = readFileSync(join(here, 'player/template.html'), 'utf8')
 const body = template.slice(template.indexOf('<body>') + 6, template.indexOf('<script type="application/json"')).trim()
 mkdirSync(join(here, '../../../npm/visual-explainer'), { recursive: true })
-writeFileSync(join(here, '../../../npm/visual-explainer/player.js'), `/*! visual-explainer player (engine ${version}) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */\n` + await player({ body, css: fill.CSS, fonts }))
+writeFileSync(join(here, '../../../npm/visual-explainer/player.js'), `/*! visual-explainer player (engine ${version}) — MIT; Rough.js (MIT); IBM Plex Sans, Caveat and Shantell Sans (SIL OFL) */\n` + await player({ body, css: fill.CSS, fonts }))
 
 // How to write a recipe, the molds and the hooks: the same texts the engine's app uses, so both teach one contract.
 const swap = (text, from, to) => {
@@ -179,7 +183,7 @@ const embed = (entry, define = {}) => build({
   nodePaths: [join(engine, 'node_modules'), join(repo, 'node_modules')],
   define,
 }).then((r) => r.outputFiles[0].text)
-const license = `/*! visual-explainer (engine ${version}) — MIT; Rough.js (MIT); Caveat and Shantell Sans (SIL OFL) */\n`
+const license = `/*! visual-explainer (engine ${version}) — MIT; Rough.js (MIT); IBM Plex Sans, Caveat and Shantell Sans (SIL OFL) */\n`
 writeFileSync(join(here, '../../../npm/visual-explainer/embed.js'), license + await embed('embed.ts', { __CHALK_EMBED__: JSON.stringify({ css: lessonCss, fonts }) }))
 writeFileSync(join(here, '../../../npm/visual-explainer/embed-mermaid.js'), `/*! visual-explainer Mermaid (engine ${version}) — MIT; mermaid-to-excalidraw and Mermaid (MIT) */\n` + await embed('embed-mermaid.ts'))
 

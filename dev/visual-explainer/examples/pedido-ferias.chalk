@@ -1,0 +1,34 @@
+title Pedido de férias ↔ do Teams ao Workday
+id pedido-ferias
+category Processos
+locale pt-BR
+size 900x560
+
+# O pedido
+> A colaboradora pede as férias no Teams, ao assistente de RH.
+person ana at 110,170 "Ana"
+phone teams at 400,170 "assistente no Teams"
+ana -> teams "15 dias em março"
+
+# O caminho
+> O pedido segue um caminho com dias contados.
+timeline 120,430 -> 780,430 domain 0..4
+  mark 0 "dia 0" "pedido feito"
+  mark 2 "dia 2" "gestor aprova"
+  mark 3 "dia 3" "RH confere"
+  mark 4 "dia 4" "aviso no Teams"
+
+# Onde trava
+> Se o gestor está fora, o dia 2 vira o dia 9 — é aí que o pedido para.
+server workday at 640,170 "Workday"
+teams -> workday "cria o pedido"
+note at 140,290 "gestor fora: aprovador substituto" -> 400,400
+
+learning goal "Seguir um pedido do começo ao fim e ver onde ele espera."
+learning question "Em que passo o pedido mais espera?"
+learning answer "Na aprovação do gestor, quando ele está ausente."
+learning caveat "Os prazos são ilustrativos; cada empresa tem a sua política."
+
+quiz "Para o pedido não travar quando o gestor está fora, o melhor é…"
+  * ter um aprovador substituto -- o pedido não depende de uma pessoa só
+  - pedir de novo -- o pedido continua esperando o mesmo gestor

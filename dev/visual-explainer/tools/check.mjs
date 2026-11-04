@@ -272,8 +272,9 @@ setTimeout(() => {
   expect(ok.status === 0 && !/^! /m.test(ok.stdout), 'a pitch that ends with its ask has nothing to say', ok.stdout)
   writeFileSync(join(dir, 'pitch-quiz.chalk'), 'title X\nkind pitch\ntext "x" at 40,60\nquiz "q"\n  * a -- b\n  - c -- d\n')
   expect(/only a lesson has a quiz/.test(run(join(dir, 'pitch-quiz.chalk')).stderr), 'a quiz outside a lesson is refused')
-  // bars with no max: at the switch's two settings, the taller bar is a different height (one scale), not the same
-  writeFileSync(join(dir, 'bars.chalk'), 'title X\nid bars\nswitch dobro "o dobro" off\nvar v = "10 + 10*dobro"\nbars box 100,100,300,300 values v labels a\n')
+  // bars with no max: at the switch's two settings, the taller bar is a different height (one scale), not the same —
+  // measured by the hatching of the paper theme (a taller hatched bar is more strokes; business fills it solid)
+  writeFileSync(join(dir, 'bars.chalk'), 'title X\nid bars\ntheme paper\nswitch dobro "o dobro" off\nvar v = "10 + 10*dobro"\nbars box 100,100,300,300 values v labels a\n')
   const b = run(join(dir, 'bars.chalk'), [join(dir, 'bars.html'), '--snapshots'])
   if (!/• review/.test(b.stdout)) {
     const shots = join(dir, 'bars.snapshots')

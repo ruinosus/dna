@@ -1,0 +1,33 @@
+title SLA do RH ↔ prometer só o que se cumpre
+id sla-rh
+category Gestão
+locale pt-BR
+size 900x560
+
+# A tese
+> Todo pedido ao RH deveria ter um prazo prometido: um SLA.
+card at 300,30 w=300 h=100 "A tese" "todo pedido tem prazo e dono"
+
+# As razões
+> Quem pede planeja a vida em cima da resposta. E sem prazo, ninguém sabe se o RH está indo bem.
+card at 60,180 w=300 h=130 "Razão 1" "quem pede planeja" "férias, viagem, mudança"
+card at 540,180 w=300 h=130 "Razão 2" "sem prazo, ninguém mede" "nem o RH, nem o gestor"
+arrow 210,320 -> 400,395
+arrow 690,320 -> 500,395
+
+# A conclusão
+> Então o SLA é uma promessa com prazo e com dono.
+card at 300,400 w=300 h=100 "A conclusão" "prazo + dono = SLA"
+
+# A objeção
+> «Nem todo caso cabe no prazo.» Verdade: o SLA diz o normal; a exceção tem dono e é avisada.
+note at 620,470 "e a exceção?" -> 600,450
+
+learning goal "Separar a promessa (o prazo) de quem responde por ela (o dono)."
+learning question "Um SLA sem dono é um SLA?"
+learning answer "Não: sem dono, ninguém avisa quando o prazo não vai ser cumprido."
+learning caveat "O prazo certo depende do pedido; um único prazo para tudo engana."
+
+quiz "O que um SLA precisa ter?"
+  * um prazo e um dono -- sem um dos dois, não há promessa
+  - só um prazo -- sem dono, ninguém responde pelo atraso

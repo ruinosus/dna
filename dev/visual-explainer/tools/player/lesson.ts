@@ -18,7 +18,7 @@ export const TEXT = {
     download: 'Download', checking: 'Checking the drawing…',
     checked: (n: number) => `Checked at ${n} ${n === 1 ? 'setting' : 'settings'}: nothing leaves the paper and no text covers another.`,
     problems: 'The check found:', broken: 'This drawing could not be opened:', keys: '→ next · ← back · Space play all', made: 'Made with visual-explainer',
-    board: 'Chalkboard', voice: 'Narration', recording: (p: number) => `Recording… ${p}%`, show: 'Show me', yourTurn: 'Your turn', transcript: 'Transcript', again: 'Try another',
+    board: 'Hand-drawn', voice: 'Narration', recording: (p: number) => `Recording… ${p}%`, show: 'Show me', yourTurn: 'Your turn', transcript: 'Transcript', again: 'Try another',
     valuesShort: (n: number) => `Values (${n})`, expand: 'Expand', all: 'All',
     present: 'Present', presentKeys: 'click, → or PageDown next · ← or PageUp back · Esc stop', notes: 'Speaker notes', now: 'Now', after: 'Next', end: 'The end',
     notesBlocked: 'the browser blocked the notes window', since: 'since the start', on: 'on', off: 'off', lessons: 'Lessons',
@@ -29,7 +29,7 @@ export const TEXT = {
     download: 'Baixar', checking: 'Conferindo o desenho…',
     checked: (n: number) => `Conferido em ${n} ${n === 1 ? 'posição' : 'posições'}: nada sai do papel e nenhum texto cobre outro.`,
     problems: 'A conferência achou:', broken: 'Este desenho não pôde ser aberto:', keys: '→ próximo · ← voltar · Espaço tocar tudo', made: 'Feito com visual-explainer',
-    board: 'Quadro-negro', voice: 'Narração', recording: (p: number) => `Gravando… ${p}%`, show: 'Mostrar', yourTurn: 'Sua vez', transcript: 'Transcrição', again: 'Tentar outra',
+    board: 'Traço à mão', voice: 'Narração', recording: (p: number) => `Gravando… ${p}%`, show: 'Mostrar', yourTurn: 'Sua vez', transcript: 'Transcrição', again: 'Tentar outra',
     valuesShort: (n: number) => `Valores (${n})`, expand: 'Expandir', all: 'Tudo',
     present: 'Apresentar', presentKeys: 'clique, → ou PageDown avança · ← ou PageUp volta · Esc sai', notes: 'Notas do apresentador', now: 'Agora', after: 'Depois', end: 'Fim',
     notesBlocked: 'o navegador bloqueou a janela de notas', since: 'desde o começo', on: 'ligado', off: 'desligado', lessons: 'Aulas',
@@ -122,7 +122,9 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
   const values = defaultValues(scene)
   let at = 0
   let run = 0
-  let theme: Theme = scene.theme ?? opts.theme ?? 'paper'
+  // DNA 2.0.0: business when the recipe and the host say nothing; «Hand-drawn» switches to the paper and back
+  let theme: Theme = scene.theme ?? opts.theme ?? 'business'
+  const base: Theme = theme === 'paper' ? 'business' : theme
   let speaking = false
   let gone = false
   // visual-pitch 0.2.0: presenting — one chapter at a time on the whole screen, the notes in a window of their own.
@@ -240,7 +242,8 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
 
   function paper() {
     root.querySelector('.paper')!.classList.toggle('is-board', theme === 'chalkboard')
-    part('board').setAttribute('aria-pressed', String(theme === 'chalkboard'))
+    root.querySelector('.paper')!.classList.toggle('is-hand', theme === 'paper')
+    part('board').setAttribute('aria-pressed', String(theme === 'paper'))
   }
 
   // Draws up to chapter i: animated from where the last chapter ended when going forward one, at once otherwise.
@@ -266,7 +269,7 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
 
   button('board').textContent = t.board
   part('board').addEventListener('click', () => {
-    theme = theme === 'chalkboard' ? 'paper' : 'chalkboard'
+    theme = theme === 'paper' ? base : 'paper'
     paper()
     go(at, false)
   })
@@ -467,7 +470,7 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
         }
       })
     const faces = opts.faces
-    const back = () => (theme === 'chalkboard' ? '#26372E' : '#FBF7EE')
+    const back = () => (theme === 'chalkboard' ? '#26372E' : theme === 'paper' ? '#FBF7EE' : '#FFFFFF')
     if ('MediaRecorder' in window) {
       recording(button('webm'), (onProgress) => recordWebm(scene, defaultValues(scene), { faces, paper: back(), theme, onProgress }), 'webm')
     } else part('webm').remove()
@@ -510,8 +513,8 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
 /** The whole drawing at once, still, inside `root` (an exported PDF, a printed page, a picture of it). */
 export async function stillLesson(root: HTMLElement, scene: Scene, theme?: Theme): Promise<void> {
   root.classList.add('visual-explainer', 'is-still')
-  const look: Theme = scene.theme ?? theme ?? 'paper'
-  const box = tag('div', { class: `paper${look === 'chalkboard' ? ' is-board' : ''}` })
+  const look: Theme = scene.theme ?? theme ?? 'business'
+  const box = tag('div', { class: `paper${look === 'chalkboard' ? ' is-board' : look === 'paper' ? ' is-hand' : ''}` })
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
   box.append(svg)
   root.replaceChildren(box)

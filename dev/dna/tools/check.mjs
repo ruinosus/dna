@@ -49,6 +49,14 @@ for (const [s, args] of cases) {
   try { made = readdirSync(join(work, s)).filter((f) => f.endsWith('.html')) } catch {}
   expect(r.status === 0 && made.length > 0, `npx @ruinosus/dna ${s} draws an example (${made.join(', ') || 'nothing'})`, r.stdout + r.stderr)
 }
+// Every page a skill makes says its charset: opened from a file, a page without one has its accents read as Latin-1
+// («protÃ³tipo»), and a Portuguese recipe inside it stops parsing («senÃ£o» is no keyword)
+{
+  const pages = SKILLS.flatMap((s) => (existsSync(join(repo, 'skills', s, 'assets')) ? readdirSync(join(repo, 'skills', s, 'assets')).filter((f) => f.endsWith('.html')).map((f) => `${s}/assets/${f}`) : []))
+  const without = pages.filter((f) => !/^<!doctype html>/i.test(readFileSync(join(repo, 'skills', f), 'utf8').trimStart()) || !/<meta charset="utf-8">/i.test(readFileSync(join(repo, 'skills', f), 'utf8').slice(0, 2000)))
+  expect(pages.length >= 8 && !without.length, `every page of the skills starts with a doctype and says its charset (${pages.length} pages)${without.length ? ` — not: ${without.join(', ')}` : ''}`)
+}
+
 // The mod's commands: none named like one of the plugin's skills — Claude Code refuses it (it is /dna:<skill>)
 {
   const names = [...readFileSync(join(repo, 'hooks/register.tsx'), 'utf8').matchAll(/^ {4}name: '([^']+)'/gm)].map((m) => m[1])

@@ -1,27 +1,27 @@
 /* One lesson (lesson.ts), wherever it is mounted: everything under .visual-explainer, so a page or a note keeps its own look.
    The colours are variables a host can set (the Obsidian plugin maps them to its theme). */
 .visual-explainer {
-  --ink: #242424;
-  --muted: #6b665c;
-  --line: #e0d8c6;
+  --ink: #1f2a37;
+  --muted: #667085;
+  --line: #e4e7ec;
   --card: #ffffff;
-  --paper: #fbf7ee;
-  --accent: #242424;
+  --paper: #ffffff;
+  --accent: #1f4e8c;
   --on-accent: #ffffff;
-  --button-line: #cfc8b8;
+  --button-line: #d0d5dd;
   --ok: #0e5a0b;
   --ok-bg: #f1faf1;
   --warn: #8a4b00;
   --warn-bg: #fff6e5;
   color: var(--ink);
-  font: 15px/1.5 'Shantell Sans', system-ui, sans-serif;
+  font: 15px/1.5 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
   display: flex; flex-direction: column; gap: 14px;
 }
 .visual-explainer * { box-sizing: border-box; }
 .visual-explainer:focus-visible { outline: 2px solid #2f5bea; outline-offset: 4px; border-radius: 10px; }
 .visual-explainer .head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .visual-explainer .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
-.visual-explainer h1 { margin: 0; font: 700 clamp(30px, 4vw, 44px)/1.1 'Caveat', cursive; color: var(--ink); }
+.visual-explainer h1 { margin: 0; font: 600 clamp(24px, 3vw, 34px)/1.2 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; letter-spacing: -0.01em; color: var(--ink); }
 .visual-explainer h2 { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .visual-explainer button { font: inherit; font-size: 14px; color: var(--ink); background: var(--card); border: 1px solid var(--button-line); border-radius: 8px; padding: 7px 14px; cursor: pointer; box-shadow: none; height: auto; }
 .visual-explainer button:hover:not(:disabled) { border-color: var(--ink); }
@@ -42,6 +42,7 @@
 .visual-explainer .board { flex: 1 1 640px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 .visual-explainer .paper { position: relative; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
 .visual-explainer .paper.is-board { background: #26372e; border-color: #1c2a23; }
+.visual-explainer .paper.is-hand { background: #fbf7ee; border-color: #e0d8c6; }
 .visual-explainer .paper svg { width: 100%; height: auto; display: block; }
 .visual-explainer .bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
 .visual-explainer .say { flex: 1 1 240px; min-width: 0; margin: 0; font-style: italic; color: var(--ink); opacity: .85; }

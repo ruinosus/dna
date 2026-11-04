@@ -1,0 +1,36 @@
+title Custo por atendimento ↔ o minuto que custa
+id custo-atendimento
+category Gestão
+locale pt-BR
+size 900x560
+param minutos "minutos por atendimento" 2..20 = 8
+var custo = "minutos * 1"
+
+# O gancho
+> Toda pergunta que chega ao RH vira um atendimento — e todo atendimento custa o tempo de alguém.
+person colaborador at 120,300 "colaborador"
+desk rh at 420,300 "atendimento de RH"
+colaborador -> rh "qual é o meu saldo?"
+
+# Desmontar
+> Um analista custa cerca de R$ 60 por hora: cada minuto de atendimento custa R$ 1.
+clock relogio at 700,170 "minutos"
+counter at 640,300 "custo" "R$ {v:0} por atendimento"
+
+# A regra
+> Mais minutos, mais custo, em linha reta. Mexa nos minutos e veja o ponto andar.
+axis 90,470 -> 840,470 domain 0..20 ticks=4 label="minutos"
+plot "x" domain 0..20 range 0..20 box 90,340,750,130
+
+# A ideia
+pause ask "Se o assistente responde a pergunta repetida, o que acontece com o custo?"
+text "a pergunta repetida custa R$ 0 de analista" at 450,60 size=28 anchor=middle
+
+learning goal "Ver que o custo de um atendimento é o tempo de quem atende."
+learning question "Quanto custa um atendimento de 8 minutos?"
+learning answer "R$ 8: 8 minutos a R$ 1 por minuto."
+learning caveat "Os valores são ilustrativos; o custo real inclui sistemas e gestão."
+
+quiz "Se o atendimento passa de 8 para 16 minutos, o custo…"
+  * dobra -- o custo cresce em linha reta com os minutos
+  - fica igual -- cada minuto custa o mesmo

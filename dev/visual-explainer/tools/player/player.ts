@@ -47,8 +47,10 @@ function readRecipe(): { scene: Scene; course?: Course } {
   const raw = holder.getAttribute('type') === 'text/visual-explainer'
     ? parseChalk(holder.textContent ?? '', [...PROP_NAMES, ...Object.keys(PROP_ALIASES)])
     : JSON.parse(holder.textContent ?? '')
-  if (!raw || !Array.isArray(raw.lessons)) return { scene: validateScene(raw) }
-  const lessons = (raw.lessons as unknown[]).map((l) => validateScene(l))
+  // DNA 2.0.0: a recipe that names no theme is drawn in business — the lesson, its pictures, its SVG, video and PowerPoint
+  const themed = (s: Scene): Scene => (s.theme ? s : { ...s, theme: 'business' })
+  if (!raw || !Array.isArray(raw.lessons)) return { scene: themed(validateScene(raw)) }
+  const lessons = (raw.lessons as unknown[]).map((l) => themed(validateScene(l)))
   const wanted = Number(new URLSearchParams(location.search).get('lesson'))
   const at = Number.isInteger(wanted) && wanted >= 1 && wanted <= lessons.length ? wanted - 1 : 0
   return { scene: lessons[at], course: { title: String(raw.course ?? lessons[0].title), lessons, at } }
@@ -154,7 +156,7 @@ function settingLabel(scene: Scene) {
   }
 }
 
-const paperColour = (scene: Scene) => (scene.theme === 'chalkboard' ? '#26372E' : '#FBF7EE')
+const paperColour = (scene: Scene) => (scene.theme === 'chalkboard' ? '#26372E' : scene.theme === 'paper' ? '#FBF7EE' : '#FFFFFF')
 
 /** An SVG text as an image (a data: URL — a blob: one does not draw on a canvas from a file page). */
 function picture(svg: string): Promise<HTMLImageElement> {
