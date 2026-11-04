@@ -1,0 +1,28 @@
+%%{init: {"sequence": {"wrap": true, "width": 220}}}%%
+sequenceDiagram
+  %% title A chamada para Loja Física
+  %% cast-list 1.10.0
+  participant p1 as Cliente
+  participant p2 as Orquestrador
+  participant p3 as Loja Física
+  participant p4 as Office 365 Outlook
+  participant p5 as Conhecimento no SharePoint
+  %% # Cliente
+  %% > O cliente escreve.
+  p1->>p2: O cliente escreve.
+  %% # Orquestrador
+  %% > O orquestrador encaminha para Loja Física.
+  Note over p2: O orquestrador encaminha para Loja Física.<br/>«Agente especialista na loja física: endereço, horário, serviços e retirada de pedidos. Use quando a categoria for LojaFisica.»
+  %% # Loja Física
+  %% > Loja Física recebe o histórico e «CategoriaSolicitacao».
+  p2->>p3: Loja Física recebe o histórico e «CategoriaSolicitacao».
+  %% # Office 365 Outlook
+  %% > Usa Office 365 Outlook (SendEmailV2).
+  p3->>p4: Usa Office 365 Outlook (SendEmailV2).
+  %% # Conhecimento no SharePoint
+  %% > Consulta «Conhecimento no SharePoint».
+  p3->>p5: Consulta «Conhecimento no SharePoint».
+  %% # Orquestrador
+  %% > A resposta volta ao cliente pelo orquestrador.
+  p3-->>p2: A resposta volta ao cliente pelo orquestrador.
+  p2-->>p1: a resposta

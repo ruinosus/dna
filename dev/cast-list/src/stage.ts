@@ -13,7 +13,7 @@ export type NodeKind = 'client' | 'orchestrator' | 'specialist' | 'ghost' | 'flo
 export interface StageNode { id: string; kind: NodeKind; label: string; /** The name, when it is said in words (a knowledge source). */ labels?: Two; sub: Two; x: number; y: number; volume?: number; silent?: boolean; unused?: boolean }
 export interface StageEdge { from: string; to: string; kind: 'traffic' | 'structure'; label?: Two; tone?: 'bad' | 'amber' | 'ghost'; volume?: number; dashed?: boolean }
 export interface Lens { id: string; name: Two; caption: Two; ok: string[]; amber: string[]; bad: string[] }
-export interface Step { node: string; text: Two; warn?: boolean; /** Client text the step quotes, as written (a routing description). */ quote?: string }
+export interface Step { node: string; /** Where the step comes from (the arrow into it), for all but the first. */ from?: string; text: Two; warn?: boolean; /** Client text the step quotes, as written (a routing description). */ quote?: string }
 export interface Scene { id: string; to: string; title: Two; steps: Step[] }
 export interface Actor { id: string; name: string; role: 'orchestrator' | 'specialist'; types: string[]; volume?: number; silent?: boolean; fingerprint: { kind: 'shared' | 'official' | 'variant' | 'marker' | 'own'; size: number; label?: string }[]; checks: { key: string; en: string; pt: string; state: 'ok' | 'off' | 'decide' }[]; /** What only it has among those of its type. */ access: Two[] }
 export interface Stage { name?: string; width: number; height: number; hasTelemetry: boolean; days?: number; groups: { label: string; y1: number; y2: number }[]; nodes: StageNode[]; edges: StageEdge[]; lenses: Lens[]; scenes: Scene[]; actors: Actor[] }
@@ -192,36 +192,36 @@ export function stageOf(r: Result, looks: Look[], found: AgentFacts[], fired?: F
     const steps: Step[] = [{ node: 'client', text: both('The customer writes.', 'O cliente escreve.') }]
     const short = c.agent && r.contract.short.some((s) => s.agent === c.agent && s.caller === c.caller)
     steps.push(short
-      ? { node: c.caller, warn: true, quote: c.description, text: both(`The orchestrator hands over to ${who} by a routing description of ${c.description.length} characters.`, `O orquestrador encaminha para ${who} por uma descrição de roteamento de ${c.description.length} caracteres.`) }
-      : { node: c.caller, quote: c.description, text: both(`The orchestrator hands over to ${who}.`, `O orquestrador encaminha para ${who}.`) })
+      ? { node: c.caller, from: 'client', warn: true, quote: c.description, text: both(`The orchestrator hands over to ${who} by a routing description of ${c.description.length} characters.`, `O orquestrador encaminha para ${who} por uma descrição de roteamento de ${c.description.length} caracteres.`) }
+      : { node: c.caller, from: 'client', quote: c.description, text: both(`The orchestrator hands over to ${who}.`, `O orquestrador encaminha para ${who}.`) })
     if (!c.agent) {
-      steps.push({ node: to, warn: true, text: both(`It calls ${who}, which is not in the folder: not cloned, or gone?`, `Chama ${who}, que não está na pasta: não foi clonado, ou não existe mais?`) })
+      steps.push({ node: to, from: c.caller, warn: true, text: both(`It calls ${who}, which is not in the folder: not cloned, or gone?`, `Chama ${who}, que não está na pasta: não foi clonado, ou não existe mais?`) })
       return { id: `scene-${i + 1}`, to, title: both(who, who), steps }
     }
     const miss = offOf(c.agent)
     if (miss.length) {
       const what = (l: 'en' | 'pt') => miss.map((o) => (o.key === 'called-with:history' ? (l === 'pt' ? 'o histórico' : 'the history') : `«${o.key.slice('called-with:input:'.length)}»`)).join(l === 'pt' ? ' e SEM ' : ' and WITHOUT ')
-      steps.push({ node: c.agent, warn: true, text: both(`${who} is called WITHOUT ${what('en')}: it does not know what the customer already said.`, `${who} é chamado SEM ${what('pt')}: não sabe o que o cliente já disse.`) })
+      steps.push({ node: c.agent, from: c.caller, warn: true, text: both(`${who} is called WITHOUT ${what('en')}: it does not know what the customer already said.`, `${who} é chamado SEM ${what('pt')}: não sabe o que o cliente já disse.`) })
     } else {
       const gets = (l: 'en' | 'pt') => [c.history ? (l === 'pt' ? 'o histórico' : 'the history') : '', ...c.inputs.map((x) => `«${x}»`)].filter(Boolean).join(l === 'pt' ? ' e ' : ' and ') || (l === 'pt' ? 'a chamada' : 'the call')
-      steps.push({ node: c.agent, text: both(`${who} gets ${gets('en')}.`, `${who} recebe ${gets('pt')}.`) })
+      steps.push({ node: c.agent, from: c.caller, text: both(`${who} gets ${gets('en')}.`, `${who} recebe ${gets('pt')}.`) })
     }
     for (const f of r.flows.filter((x) => x.agent === c.agent && x.called)) {
       steps.push(f.returns
-        ? { node: flowId(f), text: both(`It uses the flow «${f.name}».`, `Usa o fluxo «${f.name}».`) }
-        : { node: flowId(f), warn: true, text: both(`The flow «${f.name}» returns nothing to ${who}.`, `O fluxo «${f.name}» não devolve nada para ${who}.`) })
+        ? { node: flowId(f), from: c.agent, text: both(`It uses the flow «${f.name}».`, `Usa o fluxo «${f.name}».`) }
+        : { node: flowId(f), from: c.agent, warn: true, text: both(`The flow «${f.name}» returns nothing to ${who}.`, `O fluxo «${f.name}» não devolve nada para ${who}.`) })
       for (const use of f.uses) {
         const s = sysOf(use)
-        if (s) steps.push({ node: s.id, text: both(`The flow reaches ${s.label}.`, `O fluxo chega a ${s.label}.`) })
+        if (s) steps.push({ node: s.id, from: flowId(f), text: both(`The flow reaches ${s.label}.`, `O fluxo chega a ${s.label}.`) })
       }
     }
     for (const e of edges.filter((x) => x.from === c.agent && x.to.startsWith('sys:'))) {
       const s = nodes.find((n) => n.id === e.to)!
       steps.push(s.id.startsWith('sys:knowledge:')
-        ? { node: s.id, text: both(`It looks it up in «${s.labels!.en}».`, `Consulta «${s.labels!.pt}».`) }
-        : { node: s.id, text: both(`It uses ${s.label}${e.label ? ` (${e.label.en})` : ''}.`, `Usa ${s.label}${e.label ? ` (${e.label.pt})` : ''}.`) })
+        ? { node: s.id, from: c.agent, text: both(`It looks it up in «${s.labels!.en}».`, `Consulta «${s.labels!.pt}».`) }
+        : { node: s.id, from: c.agent, text: both(`It uses ${s.label}${e.label ? ` (${e.label.en})` : ''}.`, `Usa ${s.label}${e.label ? ` (${e.label.pt})` : ''}.`) })
     }
-    steps.push({ node: c.caller, text: both('The answer goes back to the customer through the orchestrator.', 'A resposta volta ao cliente pelo orquestrador.') })
+    steps.push({ node: c.caller, from: c.agent, text: both('The answer goes back to the customer through the orchestrator.', 'A resposta volta ao cliente pelo orquestrador.') })
     return { id: `scene-${i + 1}`, to, title: both(who, who), steps }
   })
 

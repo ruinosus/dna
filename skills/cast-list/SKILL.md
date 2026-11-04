@@ -1,10 +1,10 @@
 ---
 name: cast-list
-description: Compares a team's Copilot Studio agents with each other, from the folders the VS Code extension clones — what most of them do, in their YAML and in the text of their instructions (a pattern to agree on, per role and per type), who is off a pattern, what only one has (innovation or debt), the team's rules not met, and what people say the YAML contradicts — with the file and line of each. Delivers an offline map, an Excel workbook to decide in, a lesson, the cast as HR (résumés, development plans), and a cast file that keeps the decisions. Node alone: no model, no install, no network. Use when someone wants to find patterns across Copilot Studio agents, define standards from evidence, check a new agent against the accepted ones, see which agents escalate, log telemetry (does it fire?) or use which connectors, or bring in a spreadsheet about them ("compare our Copilot Studio agents", "which of our agents is off the pattern?", "compara os agentes do Copilot Studio", "o que se repete entre os especialistas?").
+description: Compares a team's Copilot Studio agents with each other, from the folders the VS Code extension clones — what most of them do, in their YAML and in the text of their instructions (a pattern to agree on, per role and per type), who is off a pattern, what only one has (innovation or debt), the team's rules not met, and what people say the YAML contradicts — with the file and line of each. Delivers an offline map, an Excel workbook to decide in, a lesson, the cast as HR, Mermaid diagrams for the docs, and a cast file that keeps the decisions. Node alone: no model, no install, no network. Use when someone wants to find patterns across Copilot Studio agents, define standards from evidence, check a new agent against the accepted ones, see which agents escalate, log telemetry (does it fire?) or use which connectors, or bring in a spreadsheet about them ("compare our Copilot Studio agents", "which of our agents is off the pattern?", "compara os agentes do Copilot Studio", "o que se repete entre os especialistas?").
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing. The Microsoft skills for Copilot Studio are recommended, not needed.
 metadata:
-  version: "1.9.6"
+  version: "1.10.0"
 ---
 
 # cast-list: what the agents have in common, and who is off it
@@ -35,7 +35,8 @@ node scripts/build.mjs <agents-folder> --all [--profile <team>.cast.yaml] [--lan
   **types** of specialist (transaction, guidance, triage…), so patterns are also found within each type. With no
   profile, the orchestrator is whoever calls another agent, and the shared blocks of text are still found.
 - It writes `<id>.html` (the map), `<id>.xlsx`, `<id>.lesson.html`, `<id>.playbill.html` (the RH), `<id>.plot.html` (the
-  stage) and `<id>.cast.yaml`, named by the folder. The cast
+  stage), `<id>.diagrams.md` with `<id>.diagrams/*.mmd` (what was read, in plain Mermaid) and `<id>.cast.yaml`, named
+  by the folder. The cast
   file is read again on every run: what people declared and decided stays.
 - `--evals <folder>` adds the **evaluations** of Copilot Studio's Evaluate tab (its CSV exports, «Evaluate <name>
   <date>.csv»): who passed how many, by method — the counts only, never what was asked or answered.
@@ -189,6 +190,26 @@ who follows a pattern (green), who is off (red) and what is to decide (amber); t
 the orchestrator step by step and stops where it breaks («Frete é chamado SEM o histórico…»); a click on someone opens
 its card — the fingerprint of its instructions and what it meets of its post — with its résumé a link away. Point the
 person to it when they want to show the cast to others.
+
+### The diagrams
+
+`--diagrams` (also in `--all`) writes what was read as plain Mermaid, for the team's docs — a PR, a wiki, a README, VS
+Code: it shows on GitHub with nothing of ours. `<id>.diagrams.md` has the summary, «to look at» in words and each
+diagram in a ```mermaid block with a sentence on what it shows; `<id>.diagrams/` has each one alone. They come from the
+same data as the stage, so the two never disagree:
+
+- **the topology** (a flowchart): the customer, the orchestrators, the specialists by type, the flows and the systems;
+  thick arrows are calls (with what is missing, a short routing description, and the topic starts with `--telemetry`),
+  thin ones what each one uses, dashed what nobody calls or is not in the folder;
+- **a sequence per call of the orchestrator**: the customer → the orchestrator → the specialist → its flows and systems
+  → back, with ⚠ where it breaks and the routing description quoted as it is;
+- **a lens per pattern** (and the contract, the telemetry, what nobody uses): who follows it, who is to look at, who is
+  off, in words and colour;
+- **the anatomy of each type**: its patterns, accepted or candidate, and who is off each one.
+
+Each `.mmd` carries `%% title`, `%% # chapter` and `%% > narration` (comments for Mermaid): chalk-talk and back-of-napkin
+draw it as a lesson or present it. Point the person to the `.md` when they want to put the cast in their documentation;
+it holds the client's data, like every output.
 
 If the Microsoft skills for Copilot Studio are installed (`/plugin marketplace add microsoft/skills-for-copilot-studio`),
 use them to explain a kind or a reference pattern; cast-list works without them.

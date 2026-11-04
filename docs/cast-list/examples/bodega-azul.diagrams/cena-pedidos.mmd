@@ -1,0 +1,36 @@
+%%{init: {"sequence": {"wrap": true, "width": 220}}}%%
+sequenceDiagram
+  %% title A chamada para Pedidos
+  %% cast-list 1.10.0
+  participant p1 as Cliente
+  participant p2 as Orquestrador
+  participant p3 as Pedidos
+  participant p4 as Abrir chamado no ERP
+  participant p5 as erp.bodega-azul.example
+  participant p6 as Office 365 Outlook
+  participant p7 as Conhecimento no SharePoint
+  %% # Cliente
+  %% > O cliente escreve.
+  p1->>p2: O cliente escreve.
+  %% # Orquestrador
+  %% > O orquestrador encaminha para Pedidos.
+  Note over p2: O orquestrador encaminha para Pedidos.<br/>«Agente especialista em pedidos: status, prazos de processamento, cancelamento antes do envio e formas de pagamento. Use quando a categoria for Pedidos.»
+  %% # Pedidos
+  %% > Pedidos recebe o histórico e «CategoriaSolicitacao».
+  p2->>p3: Pedidos recebe o histórico e «CategoriaSolicitacao».
+  %% # Abrir chamado no ERP
+  %% > Usa o fluxo «Abrir chamado no ERP».
+  p3->>p4: Usa o fluxo «Abrir chamado no ERP».
+  %% # erp.bodega-azul.example
+  %% > O fluxo chega a erp.bodega-azul.example.
+  p4->>p5: O fluxo chega a erp.bodega-azul.example.
+  %% # Office 365 Outlook
+  %% > Usa Office 365 Outlook (SendEmailV2).
+  p3->>p6: Usa Office 365 Outlook (SendEmailV2).
+  %% # Conhecimento no SharePoint
+  %% > Consulta «Conhecimento no SharePoint».
+  p3->>p7: Consulta «Conhecimento no SharePoint».
+  %% # Orquestrador
+  %% > A resposta volta ao cliente pelo orquestrador.
+  p3-->>p2: A resposta volta ao cliente pelo orquestrador.
+  p2-->>p1: a resposta

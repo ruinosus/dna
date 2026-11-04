@@ -35,6 +35,7 @@ locked-down environment where a model has few credits or none.
 | **The lesson** (`.lesson.html`) | A chalk-talk lesson: the cast, what repeats, who is off, what is missing, what to decide. |
 | **The RH of the cast** (`.playbill.html`) | The same cast as people: the staff board (being hired, with no owner, never published, with a development plan, in good standing), the org chart by type, the post of each role and type, and a résumé each — the first sentence of its instructions, manager, team, owner, tools, goal, performance from the telemetry and its development plan (PDI): what «to look at» says about it alone, as actions. The workbook gets the Staff and PDI sheets. |
 | **The stage** (`.plot.html`) | The cast on a stage, to show in a meeting: the traffic moving along the arrows (each one's topic starts, from the export), lenses that light who follows a pattern and who is off, a follow spot that walks each call of the orchestrator and stops where it breaks, and a card per actor. |
+| **The diagrams** (`.diagrams.md`, `.diagrams/*.mmd`) | What was read, in plain Mermaid, for the team's docs (GitHub, a wiki, VS Code): the topology, a sequence per call of the orchestrator, a lens per pattern and the anatomy of each type — from the same data as the stage. Each one also draws in chalk-talk. |
 | **The cast file** (`.cast.yaml`) | What people declared (KPIs, owners, what a handoff claims) and what was decided — kept between runs. |
 
 ## How it decides

@@ -47,7 +47,8 @@ const kept = readFileSync(join(plain, 'agents.cast.yaml'), 'utf8')
 const release = JSON.parse(readFileSync(join(repo, '.claude-plugin/plugin.json'), 'utf8')).version
 // the pages say it in their generator tag (and the map, the RH and the stage in their foot, drawn by their script)
 const stamped = (f) => readFileSync(join(plain, f), 'utf8').includes(f.endsWith('.html') ? `cast-list (${release}, engine` : `cast-list ${release}`)
-ok(['agents.cast.yaml', 'agents.html', 'agents.playbill.html', 'agents.plot.html'].every(stamped) && kept.includes(`# Written by cast-list ${release}.`), `what a run makes says the version that made it (cast-list ${release}): the cast file, the map, the RH and the stage`, ['agents.cast.yaml', 'agents.html', 'agents.playbill.html', 'agents.plot.html'].filter((f) => !stamped(f)))
+const madeFiles = ['agents.cast.yaml', 'agents.html', 'agents.playbill.html', 'agents.plot.html', 'agents.diagrams.md', 'agents.diagrams/topologia.mmd']
+ok(madeFiles.every(stamped) && kept.includes(`# Written by cast-list ${release}.`), `what a run makes says the version that made it (cast-list ${release}): the cast file, the map, the RH, the stage and the diagrams`, madeFiles.filter((f) => !stamped(f)))
 ok(again.status === 0 && kept.includes('role: orchestrator') && /blocks:\n(.*\n)*  - id: links\n    text: \|/.test(kept), 'a second run reads the cast file it wrote, and keeps the roles and the blocks of text', kept.slice(0, 600))
 
 // with the demo cast file: what people said, and what was decided
@@ -88,6 +89,14 @@ mkdirSync(join(work, 'odd-evals'))
 copyFileSync(join(work, 'Evaluate Ninguém 2026-10-30.csv'), join(work, 'odd-evals', 'Evaluate Ninguém 2026-10-30.csv'))
 const oddEvals = run(agents, '--check', '--lang', 'pt', '--evals', join(work, 'odd-evals'))
 ok(oddEvals.status === 0 && oddEvals.stdout.includes('o nome não cita ninguém da pasta') && run(agents, '--evals', join(work, 'none')).status === 2, 'an export that names nobody is told, never stopping; a folder that is not there: exit 2', oddEvals.stdout)
+// the diagrams: the document and each one alone, the same on the same run
+const mmdDir = join(rh, 'agents.diagrams')
+const mmds = existsSync(mmdDir) ? readdirSync(mmdDir).filter((f) => f.endsWith('.mmd')).sort() : []
+const diagDoc = existsSync(join(rh, 'agents.diagrams.md')) ? readFileSync(join(rh, 'agents.diagrams.md'), 'utf8') : ''
+ok(rhOut.stdout.includes('✓ diagrams') && mmds.length >= 10 && mmds.includes('topologia.mmd') && (diagDoc.match(/^```mermaid$/gm) ?? []).length === mmds.length && mmds.every((f) => diagDoc.includes(readFileSync(join(mmdDir, f), 'utf8').trimEnd())), '--all writes the diagrams: a ```mermaid block in the document per .mmd', [mmds.length, rhOut.stdout])
+ok(mmds.every((f) => readFileSync(join(mmdDir, f), 'utf8') === readFileSync(join(rh2, 'agents.diagrams', f), 'utf8')) && readFileSync(join(rh2, 'agents.diagrams.md'), 'utf8') === diagDoc, 'the same run, the same diagrams')
+const diagOnly = run(agents, '--diagrams', '--out', join(work, 'diagrams-only'))
+ok(diagOnly.status === 0 && existsSync(join(work, 'diagrams-only', 'agents.diagrams.md')) && existsSync(join(work, 'diagrams-only', 'agents.diagrams', 'topology.mmd')) && !existsSync(join(work, 'diagrams-only', 'agents.html')), '--diagrams alone writes only the diagrams (in English by default)', diagOnly.stdout)
 const plotOnly = run(agents, '--plot', '--out', join(work, 'plot-only'))
 ok(plotOnly.status === 0 && existsSync(join(work, 'plot-only', 'agents.plot.html')) && !existsSync(join(work, 'plot-only', 'agents.html')), '--plot alone writes only the stage', plotOnly.stdout)
 const only = run(agents, '--playbill', '--out', join(work, 'rh-only'))
@@ -258,6 +267,24 @@ else {
 }
 
 // wave 1 in a browser: the example profile has markers, an official block and types
+// Every diagram drawn by Mermaid itself (the official package, only here in the checks), with no syntax error and no
+// entity code left on the screen; and chalk-talk builds the topology and a scene, so back-of-napkin can present them.
+if (browser()) {
+  const mmdTexts = mmds.map((f) => [f, readFileSync(join(mmdDir, f), 'utf8')])
+  copyFileSync(join(repo, 'node_modules/mermaid/dist/mermaid.min.js'), join(mmdDir, 'mermaid.min.js'))
+  writeFileSync(join(mmdDir, 'probe.html'), `<!doctype html><meta charset="utf-8"><body><script src="mermaid.min.js"></script><script>
+const all = ${JSON.stringify(mmdTexts).replace(/</g, '\\u003c')}
+mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' })
+;(async () => { const out = []
+  for (const [f, t] of all) { try { const r = await mermaid.render('d' + out.length, t); const txt = new DOMParser().parseFromString(r.svg, 'image/svg+xml').documentElement.textContent; if (/#(35|quot|lt|gt|59|37|96);|Syntax error/.test(txt)) out.push(f + ': ' + txt.slice(0, 120)) } catch (e) { out.push(f + ': ' + String(e.message || e).slice(0, 200)) } }
+  const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify({ bad: out, n: all.length })); document.body.append(p) })()
+</script></body>`)
+  const mr = (await runPage(join(mmdDir, 'probe.html'), 'probe', '', { timeout: 90 })) ?? { bad: ['the page did not answer'] }
+  ok(mr.n === mmds.length && !mr.bad?.length, `Mermaid draws all ${mmds.length} diagrams, with no error and no code on the screen`, mr)
+  const chalk = join(repo, 'skills/chalk-talk/scripts/build.mjs')
+  const lessons = ['topologia.mmd', 'cena-frete.mmd'].map((f) => spawnSync(process.execPath, [chalk, join(mmdDir, f), join(work, f.replace('.mmd', '.lesson.html'))], { encoding: 'utf8' }))
+  ok(lessons.every((l) => (l.status === 0 || l.status === 3) && /→ .*opens offline/.test(l.stdout)), 'chalk-talk builds the topology and a scene as lessons', lessons.map((l) => l.stdout + l.stderr).join('\n'))
+}
 if (browser()) {
   const w1 = join(work, 'w1')
   mkdirSync(w1)

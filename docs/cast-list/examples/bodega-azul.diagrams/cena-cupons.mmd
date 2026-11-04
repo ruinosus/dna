@@ -1,0 +1,44 @@
+%%{init: {"sequence": {"wrap": true, "width": 220}}}%%
+sequenceDiagram
+  %% title A chamada para Cupons
+  %% cast-list 1.10.0
+  participant p1 as Cliente
+  participant p2 as Orquestrador
+  participant p3 as Cupons
+  participant p4 as Abrir chamado no ERP
+  participant p5 as erp.bodega-azul.example
+  participant p6 as SharePoint
+  participant p7 as Office 365 Outlook
+  participant p8 as Bodega Azul Promocoes MCP
+  participant p9 as Conhecimento no SharePoint
+  %% # Cliente
+  %% > O cliente escreve.
+  p1->>p2: O cliente escreve.
+  %% # Orquestrador
+  %% > O orquestrador encaminha para Cupons por uma descrição de roteamento de 7 caracteres.
+  Note over p2: ⚠ O orquestrador encaminha para Cupons por uma descrição de roteamento de 7 caracteres.<br/>«Cupons.»
+  %% # Cupons
+  %% > Cupons recebe o histórico e «CategoriaSolicitacao».
+  p2->>p3: Cupons recebe o histórico e «CategoriaSolicitacao».
+  %% # Abrir chamado no ERP
+  %% > O fluxo «Abrir chamado no ERP» não devolve nada para Cupons.
+  p3->>p4: ⚠ O fluxo «Abrir chamado no ERP» não devolve nada para Cupons.
+  %% # erp.bodega-azul.example
+  %% > O fluxo chega a erp.bodega-azul.example.
+  p4->>p5: O fluxo chega a erp.bodega-azul.example.
+  %% # SharePoint
+  %% > Usa SharePoint (GetItems).
+  p3->>p6: Usa SharePoint (GetItems).
+  %% # Office 365 Outlook
+  %% > Usa Office 365 Outlook (SendEmailV2).
+  p3->>p7: Usa Office 365 Outlook (SendEmailV2).
+  %% # Bodega Azul Promocoes MCP
+  %% > Usa Bodega Azul Promocoes MCP.
+  p3->>p8: Usa Bodega Azul Promocoes MCP.
+  %% # Conhecimento no SharePoint
+  %% > Consulta «Conhecimento no SharePoint».
+  p3->>p9: Consulta «Conhecimento no SharePoint».
+  %% # Orquestrador
+  %% > A resposta volta ao cliente pelo orquestrador.
+  p3-->>p2: A resposta volta ao cliente pelo orquestrador.
+  p2-->>p1: a resposta

@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.10.0 — 2026-11-04
+
+cast-list, the diagrams: what was read, in plain Mermaid.
+
+- **`--diagrams`** (also in `--all`) writes `<id>.diagrams.md` and `<id>.diagrams/*.mmd`: the cast as Mermaid, for the
+  team's docs — it shows on GitHub, in a wiki, a README or VS Code with nothing of ours. The document has the summary,
+  «to look at» in words and each diagram in a ```mermaid block with a sentence on what it shows.
+- **The diagrams come from the stage's data**, so the two never disagree: the **topology** (the customer, the
+  orchestrators, the specialists by type, the flows and the systems, with what is missing in each call and the topic
+  starts), a **sequence per call** of the orchestrator (with ⚠ where it breaks and the routing description quoted), a
+  **lens per pattern** (who follows it, who is to look at, who is off, in words and colour) and the **anatomy of each
+  type** (its patterns and who is off each one). In Portuguese or English, by `--lang`.
+- **They draw in chalk-talk too:** each `.mmd` carries `%% title`, `%% # chapter` and `%% > narration`, so chalk-talk
+  and back-of-napkin draw it as a lesson or present it.
+- The checks render every diagram of the example with Mermaid itself (the official package, only in the checks; it is
+  not in the skill nor in the npm package) and build the topology and a scene with chalk-talk.
+
 ## 1.9.6 — 2026-11-03
 
 - **What a run makes says its version:** the foot of the map, the RH and the stage («cast-list 1.9.6»), their

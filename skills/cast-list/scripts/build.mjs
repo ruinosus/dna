@@ -4,7 +4,7 @@
 // (.xlsx) and the cast file (what people said, what was decided). No model, no install, no network: Node 18 or later.
 //
 //   node build.mjs <agents-folder> --check [--profile <p.cast.yaml>] [--lang en|pt]     only compare: nothing is written
-//   node build.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--playbill] [--plot] [--all] [--lang en|pt] [--out <folder>]
+//   node build.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--playbill] [--plot] [--diagrams] [--all] [--lang en|pt] [--out <folder>]
 //   node build.mjs <agents-folder> --facts [--out <folder>]                         only the facts, for a model: <id>.facts.json
 //   node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]
 //                                  what was filled in the workbook (Declared, the Decision column): listed with a key each,
@@ -17,8 +17,9 @@
 //   … --telemetry <export.csv|.xlsx> [--telemetry-days <n>]   what fired, from Application Insights (references/telemetry.md):
 //                                  the events in the YAML that did not fire, and who has no line at all
 //
-// With no --html/--xlsx/--lesson/--playbill/--plot it makes the map. Files go in --out (or beside the folder), named by the folder:
-// <id>.html, <id>.xlsx, <id>.lesson.html (a chalk-talk lesson), <id>.playbill.html (the RH of the cast), <id>.plot.html (the stage) and
+// With no --html/--xlsx/--lesson/--playbill/--plot/--diagrams it makes the map. Files go in --out (or beside the folder), named by the folder:
+// <id>.html, <id>.xlsx, <id>.lesson.html (a chalk-talk lesson), <id>.playbill.html (the RH of the cast), <id>.plot.html (the stage),
+// <id>.diagrams.md with <id>.diagrams/*.mmd (what was read, in plain Mermaid) and
 // <id>.cast.yaml, kept up to date (read again on every
 // run). Exit codes: 0 done (what to look at is printed, and is not an error); 1 the profile or the cast file breaks its
 // format (each problem with its line), or no agent in the folder; 2 bad arguments; 3 made, but the lesson's reviewer
@@ -28,14 +29,14 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
-import { agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, evalsFrom, extractAgent, firedFrom, fromSheets, groupLooks, playbillOf, stageOf, mergeDeclared, knownKinds, labelOf, lessonOf, problemText, readCast, readCsv, readProfile, reviewCast, validateScene, withEvals, workbookFile, workbookOf, writeCast } from './engine.mjs'
+import { agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, evalsFrom, extractAgent, firedFrom, fromSheets, groupLooks, playbillOf, stageOf, mergeDeclared, knownKinds, labelOf, lessonOf, problemText, readCast, readCsv, readProfile, reviewCast, diagramsDoc, diagramsOf, validateScene, withEvals, workbookFile, workbookOf, writeCast } from './engine.mjs'
 import { readXlsx } from './read-xlsx.mjs'
 import { fill, inline } from './page.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
 const valued = new Set(['--lang', '--out', '--profile', '--from', '--take', '--declared', '--agent-column', '--telemetry', '--telemetry-days', '--evals'])
-const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--playbill', '--plot', '--all', '--facts', ...valued])
+const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--playbill', '--plot', '--diagrams', '--all', '--facts', ...valued])
 const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
@@ -43,7 +44,7 @@ const option = (name) => {
 const options = (name) => argv.flatMap((a, i) => (a === name && argv[i + 1] ? [argv[i + 1]] : []))
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
 const usage = `usage: node build.mjs <agents-folder> --check [--profile <p.cast.yaml>] [--lang en|pt]
-       node build.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--playbill] [--plot] [--all] [--lang en|pt] [--out <folder>]
+       node build.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--playbill] [--plot] [--diagrams] [--all] [--lang en|pt] [--out <folder>]
        node build.mjs <agents-folder> --facts [--out <folder>]
        node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]
        node build.mjs <agents-folder> --declared <table.csv|.xlsx> [--agent-column <title>] [--take <key,key…|all>] [--out <folder>]
@@ -231,8 +232,8 @@ else console.log(T.nothing)
 if (argv.includes('--check')) process.exit(0)
 
 const all = argv.includes('--all')
-const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), lesson: all || argv.includes('--lesson'), playbill: all || argv.includes('--playbill'), plot: all || argv.includes('--plot') }
-if (!want.xlsx && !want.lesson && !want.playbill && !want.plot) want.html = true
+const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), lesson: all || argv.includes('--lesson'), playbill: all || argv.includes('--playbill'), plot: all || argv.includes('--plot'), diagrams: all || argv.includes('--diagrams') }
+if (!want.xlsx && !want.lesson && !want.playbill && !want.plot && !want.diagrams) want.html = true
 mkdirSync(out, { recursive: true })
 // the cast file keeps this run's roles and blocks of text (so a block keeps its id across small edits), under what
 // people wrote in it; the types a person gave an agent stay, the ones the profile works out are not written
@@ -258,6 +259,15 @@ if (want.plot) {
   const stage = stageOf(result, looks, found, fired)
   writeFileSync(page, fill(readFileSync(join(here, '../assets/plot.html'), 'utf8'), { CAST: inline({ id, lang, stage, ...(want.html ? { map: `${id}.html` } : {}), ...(want.playbill ? { playbill: `${id}.playbill.html` } : {}) }) }))
   console.log(`✓ stage     ${page}`)
+}
+if (want.diagrams) {
+  const doc = join(out, `${id}.diagrams.md`)
+  const dir = join(out, `${id}.diagrams`)
+  const diagrams = diagramsOf(stageOf(result, looks, found, fired), result, lang)
+  mkdirSync(dir, { recursive: true })
+  for (const d of diagrams) writeFileSync(join(dir, `${d.name}.mmd`), d.mermaid)
+  writeFileSync(doc, diagramsDoc(id, diagrams, result, looks, lang))
+  console.log(`✓ diagrams  ${doc} (${diagrams.length} in ${dir})`)
 }
 if (want.xlsx) {
   const book = join(out, `${id}.xlsx`)
