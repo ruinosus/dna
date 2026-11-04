@@ -28,6 +28,8 @@ scenarios of [Microsoft's Employee Self-Service sample](https://github.com/micro
 | `… hr.sim --check` | the validator's errors (exit 1) and warnings |
 | `… hr.sim --run [--seeds N] [--set knob=value]` | the median and p10 to p90 of each metric |
 | `… hr.sim --to pt-BR [--write]` | the recipe in the other language, round trip exact |
+| `… hr.sim --run … --receipt r.json` | the same, and the run's receipt: the recipe's sha256, the engine, the seed, the runs, the controls, the numbers |
+| `… hr.sim --attest r.json [--json]` | the recipe run again from the receipt: attested (exit 0) or the reason it is not (exit 3) |
 
 ## In Claude Code: the mod
 
@@ -37,6 +39,7 @@ The dna plugin carries a mod (Claude Code 2.1.287 or later), in `hooks/`:
 | --- | --- |
 | Recipe guard | When Claude writes or edits a `.sim`, the validator checks the result first. A recipe with errors is refused with the validator's messages, so Claude fixes it and writes again. Warnings pass, with a toast. It fails open: if the guard itself throws, the write goes through. |
 | `/simulate [file.sim] [--seeds N] [--set knob=value]` | Runs the recipe at once, with no model turn, and prints the median and the p10 to p90 range of each metric; Claude receives the same numbers. It stops at 7 s. |
+| `/attest <receipt.json> [file.sim]` | The verdict on a receipt: `--attest`, run on the host. |
 | `/simulation-preview [file.sim]` | A pane with the recipe's flow: an SVG in the desktop app, VS Code and mobile, text lines in the terminal, the validator's messages and an EN/PT switch. It also opens after the first valid `.sim` written in a session. |
 
 In GitHub Copilot, claude.ai and the API the skill works without it: the script checks and runs the recipe the same

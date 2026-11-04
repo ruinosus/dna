@@ -30,7 +30,14 @@ npx @ruinosus/dna solution --list
 npx @ruinosus/dna solution --new service-desk my-desk
 npx @ruinosus/dna solution my-desk/service-desk.solution.yaml --check
 npx @ruinosus/dna solution my-desk/service-desk.solution.yaml
+npx @ruinosus/dna solution my-desk/service-desk.solution.yaml --okf
+npx @ruinosus/dna solution my-desk/service-desk.solution.yaml --review blueprint --by hr-lead --write
 ```
+
+`--okf` writes `<id>.okf/`, the solution as an [OKF v0.2](https://github.com/GoogleCloudPlatform/open-knowledge-format)
+bundle: a concept per piece (machine-confirmed when its check passes, a draft when not, human-reviewed when a review in
+the solution's `reviewed:` still holds), the simulation as an Attested Computation with its executor and attester, the
+recipes in `references/dna/`, `index.md` and `log.md`. Exporting again with nothing changed writes the same bytes.
 
 The skill is in [`skills/solution`](../../skills/solution/SKILL.md); its format in
 [`references/format.md`](../../skills/solution/references/format.md). Tools: `npm run check|zip|site -w

@@ -78,6 +78,14 @@ Claude picks the skill by its description; to call it by name, `/dna:service-blu
 Skills (code execution on). **Claude API**: the same zip with the Skills API. **Other tools**: copy
 `skills/service-blueprint` where the tool reads skills; it needs Node.js 18 or later. **npm**: `npx @ruinosus/dna service-blueprint <file>`.
 
+
+## From an OKF bundle
+
+`node skills/service-blueprint/scripts/okf-read.mjs <folder> [--json]` reads an [OKF](https://github.com/GoogleCloudPlatform/open-knowledge-format)
+bundle as material: each concept with its type, trust (human-reviewed, machine-confirmed, unverified), staleness and
+sources, and its text inside a data fence — someone else's content, never instructions. Nothing in the bundle is run.
+The recipe written from it cites the concepts as `okf:<path>`.
+
 ## Develop
 
 `tools/` builds the generated files from `src/` and the pieces of the way engine it reuses (`tools/sources.json`, see

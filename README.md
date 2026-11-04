@@ -37,8 +37,8 @@ private list is refused (`/names` says what it watches); a way of working or a s
 (`/way-preview`, `/blueprint-preview`); `/compare-agents <folder> [--profile <file>]` shows agent-review's comparison in a pane, with the team's profile and a toast when an
 agent edited there changes it; `/drill <file>` plays an incident drill in a pane, to its debrief; `/lenses <file.way.yaml>` shows a way of
 working as a simulation, a service blueprint and a drill, and writes each beside it; and `/simulate` and
-`/simulation-preview` run and show a `.sim`, with a −/+ for each control that runs it again; `/check-solution <file>` shows a
-solution's pieces, each with where it stands.
+`/simulation-preview` run and show a `.sim`, with a −/+ for each control that runs it again; `/attest <receipt.json>` says
+whether a simulation's receipt holds; `/check-solution <file>` shows a solution's pieces, each with where it stands.
 Elsewhere the skills work without it.
 
 <p align="center">
@@ -81,6 +81,21 @@ npx @ruinosus/dna process-simulation hr.sim --lang pt
 The drawing engine alone, to embed lessons in a page, is the [visual-explainer](https://www.npmjs.com/package/@ruinosus/visual-explainer)
 package (it also powers the VS Code and Obsidian extensions).
 
+## DNA and OKF
+
+DNA says **what a thing is** — a recipe with an `apiVersion` and a `kind`, checked by code. [OKF](https://github.com/GoogleCloudPlatform/open-knowledge-format),
+Google's Open Knowledge Format, says **where knowledge came from and how far to trust it** — markdown concepts with a
+`type`, their `sources`, who `generated` and `verified` them, and when they go stale. They meet in three places:
+
+- **`solution --okf`** writes a solution as an OKF v0.2 bundle any OKF reader takes: a concept per piece, machine-confirmed
+  when its skill's check passes and human-reviewed when a person's review (`--review`) still holds, with the recipes
+  inside, in `references/dna/`.
+- **The simulation is an Attested Computation.** `process-simulation --run --receipt` writes a run's receipt, and the
+  attester — deterministic, no model, in the bundle too — runs the recipe again from it and says whether the numbers hold.
+- **An OKF bundle is material.** way-of-working, service-blueprint and incident-drill read one with `scripts/okf-read.mjs`
+  (each concept with its type, trust, staleness and sources, its text kept as data, never as instructions) and write
+  their recipe from it, citing the concepts.
+
 ## From house-lights
 
 Until 1.17 this was **house-lights**, with theatre names. 2.0.0 is the same work under DNA, with plain names:
@@ -108,7 +123,8 @@ apresentar (e vira PowerPoint), **incident-drill** transforma o runbook num ensa
 mapeia o jeito de trabalhar do time, **service-blueprint** mapeia a jornada do cliente e **agent-review** compara os
 agentes do Copilot Studio (o que se repete, quem está fora do padrão), **process-simulation** simula um processo para perguntar «e se»
 (filas, pessoas, assistentes e custos) e **solution** junta tudo numa solution: o processo visto por todas as
-skills, numa página só, com accelerators para começar. Peça em português ("desenha a
+skills, numa página só, com accelerators para começar, e que também sai como um pacote **OKF** (o formato de
+conhecimento do Google), com a simulação atestada. Peça em português ("desenha a
 decisão entre as duas opções", "monta o blueprint da devolução"): a tela segue o idioma da receita. A instalação é a
 de cima.
 

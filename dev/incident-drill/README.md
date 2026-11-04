@@ -101,6 +101,14 @@ their runbooks, are in [`skills/incident-drill/examples/`](../../skills/incident
 graph: a choice to no scene or a scene with no way on says its line; a scene nobody reaches, an access nobody has,
 nobody ever told, «escalate» to nobody and a mark the runbook does not have are printed «to look at».
 
+
+## From an OKF bundle
+
+`node skills/incident-drill/scripts/okf-read.mjs <folder> [--json]` reads an [OKF](https://github.com/GoogleCloudPlatform/open-knowledge-format)
+bundle as material: each concept with its type, trust (human-reviewed, machine-confirmed, unverified), staleness and
+sources, and its text inside a data fence — someone else's content, never instructions. Nothing in the bundle is run.
+The recipe written from it cites the concepts as `okf:<path>`.
+
 ## Develop
 
 ```

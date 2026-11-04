@@ -53,6 +53,12 @@ node scripts/build.mjs <id>.sim --run [--set knob=value …]
 it can do). Fix every error and check again. `--run` gives the median and the p10 to p90 range of each metric over
 seeded runs: the same recipe and seed always give the same numbers.
 
+**A number someone can check.** `--run … --receipt <file.json>` also writes the run's receipt (the recipe's sha256, the
+engine, the seed, the runs, the controls and the numbers); `--attest <receipt.json>` runs the recipe again from it and
+says whether it holds — the recipe swapped, a control that is not one or out of its range, another engine, a number
+that does not come out again (exit 3). When you quote a simulation's numbers to someone, give them the receipt. In an
+OKF bundle (the solution's `--okf`) the simulation is an Attested Computation, and its attester does the same.
+
 ## 3. The page
 
 ```
@@ -77,5 +83,6 @@ The keywords, units, weekdays and months change; the ids and labels do not; the 
 
 With the dna plugin, the mod checks every `.sim` you write or edit: a recipe with errors is refused with the
 validator's messages — fix them and write it again; warnings pass with a toast. `/simulate [file.sim] [--seeds N]
-[--set knob=value]` runs it at once and gives you the same numbers; `/simulation-preview [file.sim]` opens a pane with the flow and a −/+ for each
+[--set knob=value]` runs it at once and gives you the same numbers; `/attest <receipt.json> [file.sim]` says whether a
+receipt holds; `/simulation-preview [file.sim]` opens a pane with the flow and a −/+ for each
 control: a press runs the recipe again with the new value and shows the numbers.

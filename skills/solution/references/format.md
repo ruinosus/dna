@@ -22,6 +22,18 @@ Every piece is optional; a solution names at least one. A field that is not one 
 error with its line. A file of before (`format: opening-night/v1` and a top-level `name`) is still read; `--upgrade`
 rewrites its header.
 
+## Reviews
+
+```yaml
+reviewed:
+  blueprint: human:hr-lead 2026-11-05T14:00:00Z a1b2c3d4
+```
+
+One line per piece: `human:<id>`, when (ISO 8601, UTC) and the piece's version then (the first 8 characters of the
+sha256 of what it is made of). Written by `--review <piece> --by <id> [--write]`; a second review of the piece takes the
+place of the first. A line for a piece the solution does not have is an error with its line; a review whose version is
+no longer the piece's is said by `--check` and left out of `--okf`.
+
 ## Lenses
 
 `sim`, `blueprint` and `drill` may be **lenses** of the way: written by way-of-working `--lens`, their first line

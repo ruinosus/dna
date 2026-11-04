@@ -167,6 +167,14 @@ Node.js 18 or later and nothing else. Chrome, Chromium or Edge, when installed, 
 
 It maps how the work **should** go. It does not track items moving through the stages, nor decide a gate.
 
+
+## From an OKF bundle
+
+`node skills/way-of-working/scripts/okf-read.mjs <folder> [--json]` reads an [OKF](https://github.com/GoogleCloudPlatform/open-knowledge-format)
+bundle as material: each concept with its type, trust (human-reviewed, machine-confirmed, unverified), staleness and
+sources, and its text inside a data fence — someone else's content, never instructions. Nothing in the bundle is run.
+The recipe written from it cites the concepts as `okf:<path>`.
+
 ## Develop
 
 `tools/` builds the generated files from the way engine and visual-explainer (`tools/sources.json`, see

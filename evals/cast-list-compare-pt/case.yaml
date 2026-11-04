@@ -28,7 +28,7 @@ graders:
     flags: i
   - name: names-facilities
     type: regex
-    pattern: 'loja.?f[ií]sica'
+    pattern: 'facilities'
     flags: i
   - name: no-agent-edited
     type: tool_used
@@ -45,7 +45,7 @@ graders:
   - name: findings
     type: llm
     criteria: >-
-      The answer, in Portuguese, says the shipping specialist (rh-folha) does not escalate to a person and the
-      physical-store specialist (rh-facilities) logs no telemetry, as findings or questions; it says what most
+      The answer, in Portuguese, says the payroll specialist (rh-folha) does not escalate to a person and the
+      facilities specialist (rh-facilities) logs no telemetry, as findings or questions; it says what most
       specialists do in common; and it leaves the decision on what becomes a standard to the person (it does not
       declare a pattern accepted by itself). It does not invent agents, connectors or numbers that are not in ./agentes.

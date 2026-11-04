@@ -76,11 +76,29 @@ it stands) and a tab per piece, each drawn by its own skill — the map, the sim
 agents compared, the lesson. Tell the person what to open first, and that every number in it is **a model, not a
 forecast**: each piece says where its numbers came from.
 
+## 5. As an OKF bundle, and a person's review
+
+```
+node scripts/build.mjs <id>.solution.yaml --okf [--out <folder>]
+node scripts/build.mjs <id>.solution.yaml --review <piece> --by <id> [--write]
+```
+
+`--okf` writes `<id>.okf/`, the solution as an **OKF v0.2** bundle (Google's Open Knowledge Format) that any OKF reader
+takes without knowing DNA: a concept per piece with what its check says and its sources, the simulation as an
+**Attested Computation** (its controls as parameters, an executor and a deterministic attester inside), the recipes in
+`references/dna/`, `index.md` and `log.md`. A piece that passes its check is *machine-confirmed*; one that fails goes
+as a `draft`. Exporting again with nothing changed writes the same bytes; the log grows only when something changed.
+
+When a person has reviewed a piece (the HR lead read the journey), record it with `--review` — never by hand: it keeps
+the piece's version, so the bundle carries the review as *human-reviewed* only while the piece stays as reviewed, and
+`--check` says when it changed after. Ask who reviewed; never write a review the person did not say happened.
+
 ## Never
 
 - Never present a lens's bets as the person's numbers: say how many there are, and ask for the real ones.
 - Never write over a piece that differs from its lens without asking: it may hold the person's own edits.
 - Never put a client's agents or data in an accelerator: the accelerators are fictional or public.
+- Never record a review nobody made, or put a model or yourself as `human:` — only a person reviews.
 
 ## In Claude Code
 
