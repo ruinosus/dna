@@ -8,20 +8,20 @@ import type { Scene, Stage, StageEdge, StageNode } from '../stage'
 interface Data { id: string; lang: Lang; stage: Stage; map?: string; playbill?: string }
 const UI = {
   en: {
-    title: 'Stage', sub: 'The cast on stage: who talks to whom, the traffic each one gets, the patterns as lenses, and a follow spot that walks a call.',
+    title: 'Topology', sub: 'The agents on one screen: who talks to whom, the traffic each one gets, the patterns as lenses, and a walkthrough that follows a call.',
     privacy: 'This file holds the client’s data: keep it in the client’s environment.', client: 'Customer',
     lenses: 'Lenses — light a pattern', lensHint: 'Pick a lens: who follows the pattern lights green, who is off blinks red.',
-    scenes: 'Follow spot — walk a call', narrIdle: 'Pick a call under «Follow spot» to walk it step by step here.', actor: 'Actor', actorHint: 'Click someone on stage.', resume: 'See the résumé →', map: '← Map',
+    scenes: 'Walkthrough — follow a call', narrIdle: 'Pick a call under «Walkthrough» to follow it step by step here.', actor: 'Actor', actorHint: 'Click an agent on the topology.', resume: 'See the résumé →', map: '← Map',
     vol: (n: number, d: number) => `${n.toLocaleString('en')} topic starts / ${d} days`, silent: 'no telemetry', noTraffic: 'The traffic shows with the export of Application Insights (--telemetry).',
     legend: ['traffic (topic starts of who receives it)', 'off a pattern', 'to decide', 'not in the folder / unused'], structure: 'Inner arrows (flows, systems) are structure, not measured traffic.',
     step: (k: number, n: number) => `step ${k}/${n}`, keys: '← → to move · space plays all · Esc leaves',
     orchestrator: 'Orchestrator', specialist: 'Specialist', fingerprint: 'Fingerprint of its instructions', foot: `agent-review ${RELEASE} · no model: what is here is what the files and tables say.`,
   },
   pt: {
-    title: 'Palco', sub: 'O elenco no palco: quem fala com quem, o tráfego de cada um, os padrões como lentes, e um canhão que segue uma chamada.',
+    title: 'Topologia', sub: 'Os agentes numa tela só: quem fala com quem, o tráfego de cada um, os padrões como lentes, e um passo a passo que segue uma chamada.',
     privacy: 'Este arquivo tem dados do cliente: deixe-o no ambiente dele.', client: 'Cliente',
     lenses: 'Lentes — acenda um padrão', lensHint: 'Escolha uma lente: quem segue o padrão acende em verde, quem foge pisca em vermelho.',
-    scenes: 'Canhão seguidor — siga uma chamada', narrIdle: 'Escolha uma chamada em «Canhão seguidor» para segui-la passo a passo aqui.', actor: 'Ator', actorHint: 'Clique em alguém no palco.', resume: 'Ver currículo →', map: '← Mapa',
+    scenes: 'Passo a passo — siga uma chamada', narrIdle: 'Escolha uma chamada em «Passo a passo» para segui-la aqui.', actor: 'Ator', actorHint: 'Clique em um agente na topologia.', resume: 'Ver currículo →', map: '← Mapa',
     vol: (n: number, d: number) => `${n.toLocaleString('pt-BR')} inícios de tópico / ${d} dias`, silent: 'sem telemetria', noTraffic: 'O tráfego aparece com a exportação do Application Insights (--telemetry).',
     legend: ['tráfego (inícios de tópico de quem recebe)', 'fora do padrão', 'a decidir', 'fora da pasta / sem uso'], structure: 'As setas internas (fluxos, sistemas) são estrutura, não tráfego medido.',
     step: (k: number, n: number) => `passo ${k}/${n}`, keys: '← → avançam e voltam · espaço toca tudo · Esc sai',

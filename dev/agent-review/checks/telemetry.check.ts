@@ -56,7 +56,7 @@ ok(made.telemetry[0]?.form === '{agent}_Error' && made.telemetry[0].fields === u
 ok(!Object.keys(made.facts).some((k) => k.includes('Off')), 'a node switched off is no event')
 // the comparison: a spelling counts as the most common one, a field is compared among who has the event
 const found = Object.values(agents)
-const profile = plain(readProfile(readFileSync(join(skill, 'examples/profile.cast.yaml'), 'utf8')).profile!)
+const profile = plain(readProfile(readFileSync(join(skill, 'examples/team.standard.yaml'), 'utf8')).profile!)
 const empty: Cast = { agents: [], blocks: [], declared: [], decisions: [] }
 const r = compare(found, profile, empty)
 const event = r.patterns.find((p) => p.key === 'telemetry:event:{agent}_OnError')

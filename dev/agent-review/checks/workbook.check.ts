@@ -1,6 +1,6 @@
 // The workbook and its way back: the sheets of the spec, in order and in either language; the matrix with who has
 // each fact and who is off a pattern; then, read back from the .xlsx as Excel would keep it, nothing changes — and a
-// line filled in «Declared» and a decision in «Patterns» come back as two changes that, taken, write the cast file.
+// line filled in «Declared» and a decision in «Patterns» come back as two changes that, taken, write the review file.
 import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -20,8 +20,8 @@ const skills = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills
 const examples = join(skills, 'agent-review/examples')
 const { readXlsx } = (await import(join(skills, 'agent-review/scripts/read-xlsx.mjs'))) as { readXlsx: (b: Buffer) => SheetRows[] }
 const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
-const profile = plain(readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!)
-const demoText = readFileSync(join(examples, 'demo.cast.yaml'), 'utf8')
+const profile = plain(readProfile(readFileSync(join(examples, 'team.standard.yaml'), 'utf8')).profile!)
+const demoText = readFileSync(join(examples, 'demo.review.yaml'), 'utf8')
 const demo = readCast(demoText).cast!
 const result = compare(agents, profile, demo)
 const sheets = (lang: 'en' | 'pt', r = result, cast: Cast = demo) => workbookOf(r, reviewCast(r), cast, lang)
@@ -29,8 +29,8 @@ const back = (lang: 'en' | 'pt') => readXlsx(Buffer.from(workbookFile(sheets(lan
 
 // the sheets
 const pt = sheets('pt')
-ok(pt.map((s) => s.name).join() === 'Resumo,Matriz,Padrões,Texto,Roteamento,Telemetria,Fora do padrão,Lacunas,Conflitos,Sem uso,Elenco,Quadro de pessoal,PDI,Evidências,Declarado', 'the sheets of the spec, in order (pt)', pt.map((s) => s.name))
-ok(sheets('en').map((s) => s.name).join() === 'Summary,Matrix,Patterns,Text,Routing,Telemetry,Off pattern,Gaps,Conflicts,Unused,Cast,Staff,Development plan,Evidence,Declared', 'and in English')
+ok(pt.map((s) => s.name).join() === 'Resumo,Matriz,Padrões,Texto,Roteamento,Telemetria,Fora do padrão,Lacunas,Conflitos,Sem uso,Agentes,Quadro de pessoal,PDI,Evidências,Declarado', 'the sheets of the spec, in order (pt)', pt.map((s) => s.name))
+ok(sheets('en').map((s) => s.name).join() === 'Summary,Matrix,Patterns,Text,Routing,Telemetry,Off pattern,Gaps,Conflicts,Unused,Agents,Staff,Development plan,Evidence,Declared', 'and in English')
 const odd = compare([...agents, extractAgent('odd', [{ path: 'agent.mcs.yml', text: 'kind: GptComponentMetadata\n' }, { path: 'a.txt', text: '' }])], profile, demo)
 ok(workbookOf(odd, reviewCast(odd), demo, 'pt').at(-1)?.name === 'Não entendeu', '«Not understood» only when something was not')
 // the telemetry: each event as written, its form, its fields; with the export, the times
@@ -93,7 +93,7 @@ const all = applyChanges(demo, got.changes, got.changes.map((c) => c.key))
 const written = readCast(writeCast(all, demoText)).cast!
 ok(written.declared.some((d) => d.agent === 'bodega-frete' && d.key === 'kpi' && d.value === 'cotação em menos de 5 s' && d.source === 'planilha do time')
   && written.decisions.some((d) => d.key === 'node:LogCustomTelemetryEvent' && d.status === 'accepted' && d.scope === 'platform' && d.why === 'Sem telemetria não se mede nada')
-  && written.declared.length === 3 && written.decisions.length === 2, 'taken, exactly what was filled in is written to the cast file', written)
+  && written.declared.length === 3 && written.decisions.length === 2, 'taken, exactly what was filled in is written to the review file', written)
 const one = applyChanges(demo, got.changes, [got.changes[0].key])
 ok(one.declared.length + one.decisions.length === 4, 'taking one key takes only that change')
 

@@ -12,7 +12,7 @@ export const roleWord = (role: Role, lang: 'en' | 'pt', n: number) => ROLE_WORDS
 /** The workbook's sheets and columns; fromSheets reads them back in either language. */
 export const SHEET_WORDS = {
   en: {
-    summary: 'Summary', matrix: 'Matrix', patterns: 'Patterns', text: 'Text', off: 'Off pattern', gaps: 'Gaps', conflicts: 'Conflicts', agents: 'Cast', evidence: 'Evidence', declared: 'Declared', unknown: 'Not understood', routing: 'Routing', unused: 'Unused', telemetry: 'Telemetry', written: 'As written', form: 'Form', fields: 'Fields', fired: (d: number) => `Fired (${d} days)`, notRead: 'not read',
+    summary: 'Summary', matrix: 'Matrix', patterns: 'Patterns', text: 'Text', off: 'Off pattern', gaps: 'Gaps', conflicts: 'Conflicts', agents: 'Agents', evidence: 'Evidence', declared: 'Declared', unknown: 'Not understood', routing: 'Routing', unused: 'Unused', telemetry: 'Telemetry', written: 'As written', form: 'Form', fields: 'Fields', fired: (d: number) => `Fired (${d} days)`, notRead: 'not read',
     caller: 'Caller', called: 'Called', history: 'History', inputs: 'Inputs', routingText: 'Routing description', chars: 'Characters', notInFolder: 'not in the folder', what: 'What', how: 'How', thing: { topic: 'topic', action: 'tool', variable: 'variable', flow: 'flow', node: 'node', knowledge: 'knowledge source' } as Record<string, string>, orphan: 'nobody uses it', disabled: 'switched off',
     dimension: 'Dimension', fact: 'Fact', key: 'Key', agent: 'Who', name: 'Name', role: 'Role', scope: 'Scope', share: 'Share', have: 'Who has it', lack: 'Who lacks it',
     decision: 'Decision', why: 'Why', missing: 'Missing', accepted: 'Accepted pattern', rule: 'Rule', says: 'Says', notMet: 'Who does not meet it', value: 'Value', source: 'Source',
@@ -27,7 +27,7 @@ export const SHEET_WORDS = {
     why_: { yaml: 'YAML that does not read', empty: 'empty', kind: 'a kind Copilot Studio does not have', file: 'not a Copilot Studio file', json: 'JSON that does not read', flow: 'a flow in a shape the analysis does not know', telemetry: 'a telemetry event whose name is a formula' },
   },
   pt: {
-    summary: 'Resumo', matrix: 'Matriz', patterns: 'Padrões', text: 'Texto', off: 'Fora do padrão', gaps: 'Lacunas', conflicts: 'Conflitos', agents: 'Elenco', evidence: 'Evidências', declared: 'Declarado', unknown: 'Não entendeu', routing: 'Roteamento', unused: 'Sem uso', telemetry: 'Telemetria', written: 'Como está escrito', form: 'Forma', fields: 'Campos', fired: (d: number) => `Disparou (${d} dias)`, notRead: 'não lido',
+    summary: 'Resumo', matrix: 'Matriz', patterns: 'Padrões', text: 'Texto', off: 'Fora do padrão', gaps: 'Lacunas', conflicts: 'Conflitos', agents: 'Agentes', evidence: 'Evidências', declared: 'Declarado', unknown: 'Não entendeu', routing: 'Roteamento', unused: 'Sem uso', telemetry: 'Telemetria', written: 'Como está escrito', form: 'Forma', fields: 'Campos', fired: (d: number) => `Disparou (${d} dias)`, notRead: 'não lido',
     caller: 'Quem chama', called: 'Chamado', history: 'Histórico', inputs: 'Entradas', routingText: 'Descrição de roteamento', chars: 'Caracteres', notInFolder: 'não está na pasta', what: 'O quê', how: 'Como', thing: { topic: 'tópico', action: 'ferramenta', variable: 'variável', flow: 'fluxo', node: 'nó', knowledge: 'fonte de conhecimento' } as Record<string, string>, orphan: 'ninguém usa', disabled: 'desligado',
     dimension: 'Dimensão', fact: 'Fato', key: 'Chave', agent: 'Quem', name: 'Nome', role: 'Papel', scope: 'Escopo', share: 'Quantos', have: 'Quem tem', lack: 'Quem falta',
     decision: 'Decisão', why: 'Por quê', missing: 'Falta', accepted: 'Padrão aceito', rule: 'Regra', says: 'Diz', notMet: 'Quem não cumpre', value: 'Valor', source: 'Fonte',
@@ -37,8 +37,8 @@ export const SHEET_WORDS = {
     staff: 'Quadro de pessoal', pdi: 'PDI', situation_: 'Situação', manager: 'Gestor', teamCol: 'Equipe', ownerCol: 'Responsável', hired: 'Admissão', publishedCol: 'Publicação', items: 'Itens de PDI', item: 'Item', group: 'Grupo',
     situation: { hiring: 'em admissão', noOwner: 'sem responsável', neverPublished: 'nunca publicado', noEval: 'sem avaliação', pdi: 'em PDI', ok: 'em dia' } as Record<string, string>,
     pdiGroup: { contradictions: 'contradição', contract: 'contrato', off: 'fora do padrão', rules: 'regra', text: 'texto', telemetry: 'telemetria', cleanup: 'limpeza' } as Record<string, string>,
-    title: 'Elenco comparado', look: 'Para olhar', nothing: 'Nada para olhar', privacy: 'Este arquivo tem dados do cliente: deixe-o no ambiente dele.',
-    count: { agents: 'No elenco', orchestrators: 'Orquestradores', specialists: 'Especialistas', patterns: 'Padrões', off: 'Fora do padrão', gaps: 'Regras não cumpridas', conflicts: 'Conflitos', solos: 'Só um tem', unused: 'Sem uso ou desligado' },
+    title: 'Agentes comparados', look: 'Para olhar', nothing: 'Nada para olhar', privacy: 'Este arquivo tem dados do cliente: deixe-o no ambiente dele.',
+    count: { agents: 'Os agentes', orchestrators: 'Orquestradores', specialists: 'Especialistas', patterns: 'Padrões', off: 'Fora do padrão', gaps: 'Regras não cumpridas', conflicts: 'Conflitos', solos: 'Só um tem', unused: 'Sem uso ou desligado' },
     why_: { yaml: 'YAML que não se lê', empty: 'vazio', kind: 'um kind que o Copilot Studio não tem', file: 'não é arquivo do Copilot Studio', json: 'JSON que não se lê', flow: 'um fluxo num formato que a análise não conhece', telemetry: 'um evento de telemetria com o nome em fórmula' },
   },
 }

@@ -23,7 +23,7 @@ microsoft_patterns: on                 # off leaves the ms: facts out
 
 | Field | Default | What it does |
 |---|---|---|
-| `roles` | the orchestrator is whoever calls another agent; the rest are specialists | An agent named here has that role; then the role in the cast file; then `"*"`; then the default. A name with no folder is told in «to look at». |
+| `roles` | the orchestrator is whoever calls another agent; the rest are specialists | An agent named here has that role; then the role in the review file; then `"*"`; then the default. A name with no folder is told in «to look at». |
 | `threshold`, `min_agents` | 0.7, 3 | A pattern of a role. It is the **platform's** when the other role has it too. With one orchestrator there is no majority among orchestrators: what only it does is shown apart. |
 | `rules` | none | `role` is `orchestrator` or `specialist`; `has` is a key (`references/keys.md`), `declared:<thing>` for what only people know. |
 | `focus_areas` | none | Each a filter of the matrix. |
@@ -58,7 +58,7 @@ types:                                 # a specialist gets every type whose «wh
 | `rules[].when` / `has` / `not` | A rule is for the agents (of its `role`, or all) that have every key of `when`; it is broken when one lacks `has`, or has `not`. A key may end in `*`. A broken `not` rule is said as a contradiction. |
 | `markers` | `in`: `instructions` (the default), `descriptions` (what topics and actions tell the model) or `all`. With no `value`: a fact `text:<id>`. With a `value` (`$1`…`$9` from the regex): `text:<id>=<value>` — agents of a role that set it in different ways are told («unify?»), and one that sets it twice («which one holds?»). Two are built in: `text:link-domain:<host>` for each link in the instructions, `text:email`. In YAML, write a regex in single quotes. |
 | `blocks` | The official text. The family of blocks like it (half of it, at least) takes its id and name; every agent of `role` without it, or with a variation, is off it — with or without a majority. With no `blocks`, the blocks two agents or more share are still found, named by their first words. |
-| `types` | `when` with `all`, `any` (one of), `none`. A specialist may be of two types; the cast file's `types` for an agent win. Patterns are found within each type with its `min_agents` (2 unless said), scope `type:<id>`; a pattern of a type never blames who is not of it. A type with fewer agents is told, and compared in nothing. |
+| `types` | `when` with `all`, `any` (one of), `none`. A specialist may be of two types; the review file's `types` for an agent win. Patterns are found within each type with its `min_agents` (2 unless said), scope `type:<id>`; a pattern of a type never blames who is not of it. A type with fewer agents is told, and compared in nothing. |
 
 A key in `when`, `has`, `not` or a type must start like a real kind of key (`references/keys.md`): a typo is
 `✗ profile:line`, as is a regex that does not compile, an unknown `in`, a type with no `when`, or a rule with

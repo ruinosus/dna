@@ -16,8 +16,8 @@ import { plain, wave1 } from './wave1'
 
 const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills/agent-review/examples')
 const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
-const profile = plain(readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!)
-const demo = readCast(readFileSync(join(examples, 'demo.cast.yaml'), 'utf8')).cast!
+const profile = plain(readProfile(readFileSync(join(examples, 'team.standard.yaml'), 'utf8')).profile!)
+const demo = readCast(readFileSync(join(examples, 'demo.review.yaml'), 'utf8')).cast!
 const empty: Cast = { agents: [], blocks: [], declared: [], decisions: [] }
 
 // names
@@ -30,7 +30,7 @@ ok(dimensionOf('trigger:OnEscalate') === 'conversation' && dimensionOf('connecto
 const md = keysMarkdown()
 ok(['Conversation', 'Integrations', 'Knowledge', 'Orchestrator', 'Governance', 'Microsoft', 'Declared'].every((d) => md.includes(`## `) && md.includes(d)) && md.includes('`trigger:OnEscalate`') && md.includes('date-context'), 'the key reference lists every dimension, the keys and the Microsoft patterns')
 
-// to look at, with the example profile and no cast file
+// to look at, with the example profile and no review file
 const looks = reviewCast(compare(agents, profile, empty))
 const pt = looks.map((l) => l.pt)
 const has = (s: string) => pt.includes(s)
@@ -67,7 +67,7 @@ ok(looks.length === 20 && looks.every((l) => l.en && l.pt), `${looks.length} thi
 ok(!looks.some((l) => /\bagentes?\b|\bagents?\b/i.test(l.pt + l.en)), 'the screen words never say «agent»', looks.filter((l) => /agent/i.test(l.pt + l.en)))
 ok(looks.findIndex((l) => l.key === 'off') < looks.findIndex((l) => l.key === 'gap') && looks.findIndex((l) => l.key === 'gap') < looks.findIndex((l) => l.key === 'solo'), 'off a pattern first, then the rules, then the solos')
 
-// with the demo cast file
+// with the demo review file
 const d = reviewCast(compare(agents, profile, demo)).map((l) => l.pt)
 ok(d[0] === 'bodega-frete: «handoff do frete, seção 4» diz que tem «Escalonamento para humano», mas o YAML não tem', 'what people said and the YAML do not agree: first', d)
 ok(d.includes('1 especialista não escala para humano (bodega-frete), e o padrão foi aceito: corrigir?'), 'off an accepted pattern: correct it?')

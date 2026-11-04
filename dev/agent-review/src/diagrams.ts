@@ -40,7 +40,7 @@ const W = {
     fewer: 'too few to compare: no pattern of its own yet', offEdge: 'off', variant: 'a variation',
     scenePrefix: 'scene', lensPrefix: 'lens', typePrefix: 'type', topologyFile: 'topology',
     doc: (n: string) => `${n}: what agent-review read`, privacy: 'These diagrams hold the client’s data: keep this file in the client’s environment.',
-    summary: (n: number, o: number, s: number, p: number, off: number, solo: number) => `${n} in the cast (${o} orchestrator${o === 1 ? '' : 's'}, ${s} specialist${s === 1 ? '' : 's'}) · ${p} patterns · ${off} off a pattern · ${solo} only one has`,
+    summary: (n: number, o: number, s: number, p: number, off: number, solo: number) => `${n} agents (${o} orchestrator${o === 1 ? '' : 's'}, ${s} specialist${s === 1 ? '' : 's'}) · ${p} patterns · ${off} off a pattern · ${solo} only one has`,
     look: 'To look at', nothing: 'Nothing to look at.', diagrams: 'The diagrams', alone: (d: string) => `Each diagram is also on its own in \`${d}/\`, to paste anywhere Mermaid is read.`, made: (v: string) => `Written by agent-review ${v}.`,
   },
   pt: {
@@ -54,7 +54,7 @@ const W = {
     fewer: 'poucos para comparar: ainda sem padrão próprio', offEdge: 'fora', variant: 'variação',
     scenePrefix: 'cena', lensPrefix: 'lente', typePrefix: 'tipo', topologyFile: 'topologia',
     doc: (n: string) => `${n}: o que o agent-review leu`, privacy: 'Estes diagramas têm dados do cliente: deixe este arquivo no ambiente dele.',
-    summary: (n: number, o: number, s: number, p: number, off: number, solo: number) => `${n} no elenco (${o} ${o === 1 ? 'orquestrador' : 'orquestradores'}, ${s} ${s === 1 ? 'especialista' : 'especialistas'}) · ${p} padrões · ${off} fora do padrão · ${solo} só um tem`,
+    summary: (n: number, o: number, s: number, p: number, off: number, solo: number) => `${n} agentes (${o} ${o === 1 ? 'orquestrador' : 'orquestradores'}, ${s} ${s === 1 ? 'especialista' : 'especialistas'}) · ${p} padrões · ${off} fora do padrão · ${solo} só um tem`,
     look: 'Para olhar', nothing: 'Nada para olhar.', diagrams: 'Os diagramas', alone: (d: string) => `Cada diagrama também está sozinho em \`${d}/\`, para colar onde o Mermaid for lido.`, made: (v: string) => `Escrito pelo agent-review ${v}.`,
   },
 }

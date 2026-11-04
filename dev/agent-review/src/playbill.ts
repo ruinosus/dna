@@ -111,7 +111,7 @@ const firstList = (s: string) => {
   return out.slice(0, 5)
 }
 
-/** The RH of a run: its result, what to look at, the facts found, the cast file, the profile's rules and the telemetry. */
+/** The RH of a run: its result, what to look at, the facts found, the review file, the profile's rules and the telemetry. */
 export function playbillOf(r: Result, looks: Look[], found: AgentFacts[], cast: Cast, rules: Rule[], fired?: Fired, evals?: EvalSet[]): Playbill {
   const name = (id: string) => r.agents.find((a) => a.id === id)?.displayName ?? id
   const said = (agent: string, key: string): Said | undefined => {

@@ -119,7 +119,7 @@ Every fact agent-review finds is a key. The keys below have a name; any other ke
 ## The Microsoft patterns
 
 From [microsoft/skills-for-copilot-studio](https://github.com/microsoft/skills-for-copilot-studio/blob/main/patterns). With a mark in the YAML, agent-review finds them (`ms:<id>`);
-the others only a person can say (in the cast file, `declared` with the key `ms:<id>`).
+the others only a person can say (in the review file, `declared` with the key `ms:<id>`).
 
 | Pattern | How agent-review knows |
 |---|---|

@@ -43,7 +43,7 @@ way: service-desk.way.yaml    # the process (way-of-working)
 sim: service-desk.sim         # what if (process-simulation)
 blueprint: service-desk.blueprint.yaml   # the journey (service-blueprint)
 drill: service-desk.drill.yaml           # when it goes wrong (incident-drill)
-agents: agents                # the Copilot Studio agents (agent-review), with profile: <team>.cast.yaml
+agents: agents                # the Copilot Studio agents (agent-review), with profile: <team>.standard.yaml
 lesson: service-desk.chalk    # the idea explained by drawing (visual-explainer)
 ```
 

@@ -41,7 +41,7 @@ async function profilesNear($: EngineInterface, folder: string): Promise<string[
   const up = folder.replace(/\/+$/, '').split('/').slice(0, -1).join('/') || '.'
   for (const dir of folder === '.' ? ['.'] : [folder, up]) {
     for (const e of await $.fs.list(dir).catch(() => [])) {
-      if (e.kind !== 'file' || !/\.cast\.ya?ml$/i.test(e.name)) continue
+      if (e.kind !== 'file' || !/\.(standard|cast)\.ya?ml$/i.test(e.name)) continue
       const path = `${dir.replace(/\/+$/, '')}/${e.name}`
       const text = await $.fs.read(path).catch(() => '')
       if ((/^format:\s*cast-list\/profile-v1\b/m.test(String(text)) || /^kind:\s*AgentStandard\s*$/m.test(String(text))) && !found.includes(path)) found.push(path)
@@ -82,7 +82,7 @@ export function castCommand(on: On) {
     const flag = (name: string) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined)
     const given = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--lang' && args[i - 1] !== '--profile')[0] ?? ''
     const folder = await folderOf($, given)
-    if (!folder) return { text: `name a folder of cloned agents, for example /compare-agents agents/ --profile team.cast.yaml --lang pt` }
+    if (!folder) return { text: `name a folder of cloned agents, for example /compare-agents agents/ --profile team.standard.yaml --lang pt` }
     if (!(await $.fs.exists(folder))) return { text: `could not read ${given}: no such folder` }
     // the team's profile: the one given, or the only one beside the agents (said so); two or more, the person chooses
     let profile: string | undefined

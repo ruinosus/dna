@@ -29,7 +29,7 @@ npx @ruinosus/dna incident-drill checkout.drill.yaml --all     # the game and th
 npx @ruinosus/dna way-of-working team.way.yaml --all        # the map, the workbook (.xlsx) and the lesson
 npx @ruinosus/dna way-of-working team.way.yaml --from edited.xlsx   # what the edited workbook changes
 npx @ruinosus/dna service-blueprint returns.blueprint.yaml --all       # the map, the workbook and the lesson
-npx @ruinosus/dna agent-review agents/ --profile team.cast.yaml --all     # the agents compared: map, workbook, lesson
+npx @ruinosus/dna agent-review agents/ --profile team.standard.yaml --all     # the agents compared: map, workbook, lesson
 npx @ruinosus/dna process-simulation hr.sim --lang pt                          # hr.process-simulation.html: the simulation, offline
 npx @ruinosus/dna process-simulation hr.sim --run --set hr_partners=8          # the median and p10–p90 of each metric
 npx @ruinosus/dna agent-review agents/ --from filled.xlsx --take all      # the decisions filled in Excel, kept

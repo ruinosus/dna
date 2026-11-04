@@ -80,9 +80,9 @@ for (const [s, f, format] of OLD) {
   }
 }
 {
-  const prof = readFileSync(join(repo, 'skills/agent-review/examples/profile.cast.yaml'), 'utf8')
+  const prof = readFileSync(join(repo, 'skills/agent-review/examples/team.standard.yaml'), 'utf8')
   const old = prof.replace(/^apiVersion: github\.com\/ruinosus\/dna\/v1\nkind: AgentStandard\nmetadata:\n {2}name:/m, 'format: cast-list/profile-v1\nname:')
-  const copy = join(work, 'old-profile.cast.yaml')
+  const copy = join(work, 'old-team.standard.yaml')
   writeFileSync(copy, old)
   const r = runNode(join(repo, 'skills/agent-review/scripts/build.mjs'), [join(repo, 'skills/agent-review/examples/agents'), '--check', '--profile', copy])
   expect(old !== prof && r.status === 0 && /38 patterns/.test(r.stdout), 'agent-review: a profile with «format: cast-list/profile-v1» still reads (38 patterns)', r.stdout.slice(0, 300) + r.stderr)

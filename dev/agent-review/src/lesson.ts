@@ -32,7 +32,7 @@ const WORDS = {
     pattern: (l: string) => `A pattern? «${l}»`, platform: 'platform', specialist: 'specialists', more: (n: number) => `and ${n} more on the map`, none: 'nothing',
   },
   pt: {
-    chapters: ['O elenco', 'O que se repete', 'Quem está fora', 'O que falta', 'O que decidir'],
+    chapters: ['Os agentes', 'O que se repete', 'Quem está fora', 'O que falta', 'O que decidir'],
     cast: (o: number, n: number) => (o ? `${o} ${o === 1 ? 'orquestrador chama' : 'orquestradores chamam'} ${n} ${n === 1 ? 'especialista' : 'especialistas'}.` : `${n} ${n === 1 ? 'especialista' : 'especialistas'}, sem orquestrador.`),
     repeats: (p: number, pl: number, sp: number) => (p ? `${p} padrões: ${pl} da plataforma, ${sp} dos especialistas.` : 'Nada se repete o bastante para ser padrão ainda.'),
     off: (ids: string[]) => (ids.length ? `Fora do padrão: ${ids.join(', ')}.` : 'Ninguém está fora do padrão.'),

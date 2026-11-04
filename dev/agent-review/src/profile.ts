@@ -156,7 +156,7 @@ export function readProfile(text: string): { profile?: Profile; problems: Proble
 export const callsAnAgent = (a: AgentFacts) => Object.keys(a.facts).some((k) => k.startsWith('calls:') && !k.startsWith('calls:topic:') && !k.startsWith('calls:action:'))
 
 /**
- * Each agent's role: named in the profile; else the role the cast file gave it; else «*» in the profile; else an
+ * Each agent's role: named in the profile; else the role the review file gave it; else «*» in the profile; else an
  * orchestrator when it calls another agent, a specialist otherwise. `unmatched`: ids the profile names that are not here.
  */
 export function rolesOf(agents: AgentFacts[], profile: Profile, given: Record<string, Role> = {}): { roles: Record<string, Role>; unmatched: string[] } {
@@ -173,7 +173,7 @@ export function rolesOf(agents: AgentFacts[], profile: Profile, given: Record<st
 
 /**
  * Each specialist's types: every type of the profile whose `when` its facts match (all of `all`, one of `any`, none
- * of `none`) — unless the cast file gives its types. An orchestrator has no type.
+ * of `none`) — unless the review file gives its types. An orchestrator has no type.
  */
 export function typesOf(agents: { id: string; facts: Record<string, unknown> }[], roles: Record<string, Role>, profile: Profile, given: Record<string, string[]>): Record<string, string[]> {
   const has = (facts: Record<string, unknown>, pattern: string) => Object.keys(facts).some((k) => matches(k, pattern))

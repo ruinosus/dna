@@ -2,7 +2,7 @@
 // dimension, a column per agent, ● has it, × off a pattern, ◐ declared — filtered by role and focus area; the patterns
 // someone is off as cards, the rest folded. A fact, a mark or a card opens who has it and the file and line of each.
 // Tabs: the patterns as the workbook has them, the cast (a card per agent), the Microsoft patterns, what the analysis
-// did not understand. Downloads: the workbook, the cast file, a PNG of the matrix.
+// did not understand. Downloads: the workbook, the review file, a PNG of the matrix.
 import type { Cast } from '../cast'
 import { RELEASE } from '../release'
 import type { Result } from '../compare'
@@ -18,28 +18,28 @@ declare const __MAP_CSS__: string
 interface Data { id: string; lang: Lang; result: Result; looks: Look[]; cast: Cast; castYaml: string; focusAreas: FocusArea[]; threshold: number; /** The RH page and the stage this run wrote beside the map. */ playbill?: string; plot?: string }
 const UI = {
   en: {
-    map: 'Map', patterns: 'Patterns', cast: 'Cast', microsoft: 'Microsoft', unknown: (n: number) => `What the analysis did not understand (${n})`,
+    map: 'Map', patterns: 'Patterns', cast: 'Agents', microsoft: 'Microsoft', unknown: (n: number) => `What the analysis did not understand (${n})`,
     matrix: 'Who has what', candidates: 'Patterns to decide', everyone: (n: number) => `Everybody already does it (${n})`, all: 'All', role: 'Role', focus: 'Focus',
     legend: '● has it (click for the file) · × off a pattern of its role or type · ≈ a variation of the block · ◐ declared by people', pattern: 'pattern',
     type: 'Type', noType: 'no type', alsoIn: 'also in', official: 'official block', variation: 'Variation', alike: 'alike', text: 'The text', types: 'Types', of: (h: number, n: number, r: string) => `${h} of ${n} ${r}`,
-    who: 'Who has it', lacks: 'Off it', none: 'nobody', decision: 'Decision', toDecide: 'to decide — in the workbook or the cast file', alone: 'Only one has it: innovation or debt?',
+    who: 'Who has it', lacks: 'Off it', none: 'nobody', decision: 'Decision', toDecide: 'to decide — in the workbook or the review file', alone: 'Only one has it: innovation or debt?',
     orchestratorDoes: 'Only the orchestrator does it', sign: 'How agent-review knows', follows: 'Who follows it', declaredOnly: 'only declared', nothingUnknown: 'Everything was understood.',
     facts: 'Facts', off: 'Off a pattern', solo: 'Only it has', children: 'Children', close: 'Close ✕', foot: 'The facts come from the YAML files; nothing was made up.',
-    summary: (n: number, p: number, o: number, s: number, t: number) => `${n} in the cast · ${p} patterns · ${o} off a pattern · ${s} only one has · threshold ${t}% of each role`,
-    excel: '⬇ Excel', yaml: '⬇ cast.yaml', png: '⬇ PNG', playbill: 'The cast’s HR →', plot: 'Stage →', name: 'Name', said: 'declared',
+    summary: (n: number, p: number, o: number, s: number, t: number) => `${n} agents · ${p} patterns · ${o} off a pattern · ${s} only one has · threshold ${t}% of each role`,
+    excel: '⬇ Excel', yaml: '⬇ review.yaml', png: '⬇ PNG', playbill: 'The team →', plot: 'Topology →', name: 'Name', said: 'declared',
     unused: (n: number) => `Unused (${n})`, nothingUnused: 'Everything is used, nothing is switched off.', flows: 'Flows', returnsNothing: 'returns nothing', otherFlow: 'another flow',
     telemetry: 'Telemetry', times: (n: number, d: number) => `${n} ${n === 1 ? 'time' : 'times'} in ${d} days`, notFired: 'did not fire', noLine: 'no line in the telemetry', routing: 'Routing', called: 'Called', history: 'History', inputs: 'Inputs', description: 'Description', notInFolder: 'not in the folder', chars: (n: number) => `${n} characters`,
   },
   pt: {
-    map: 'Mapa', patterns: 'Padrões', cast: 'Elenco', microsoft: 'Microsoft', unknown: (n: number) => `O que a análise não entendeu (${n})`,
+    map: 'Mapa', patterns: 'Padrões', cast: 'Agentes', microsoft: 'Microsoft', unknown: (n: number) => `O que a análise não entendeu (${n})`,
     matrix: 'Quem tem o quê', candidates: 'Padrões para decidir', everyone: (n: number) => `Todos já fazem (${n})`, all: 'Todos', role: 'Papel', focus: 'Foco',
     legend: '● tem (clique para ver o arquivo) · × fora de um padrão do seu papel ou tipo · ≈ tem uma variação do bloco · ◐ declarado por pessoas', pattern: 'padrão',
     type: 'Tipo', noType: 'sem tipo', alsoIn: 'também em', official: 'bloco oficial', variation: 'Variação', alike: 'parecido', text: 'O texto', types: 'Tipos', of: (h: number, n: number, r: string) => `${h} de ${n} ${r}`,
-    who: 'Quem tem', lacks: 'Fora', none: 'ninguém', decision: 'Decisão', toDecide: 'a decidir — na planilha ou no cast.yaml', alone: 'Só um tem: inovação ou dívida?',
+    who: 'Quem tem', lacks: 'Fora', none: 'ninguém', decision: 'Decisão', toDecide: 'a decidir — na planilha ou no review.yaml', alone: 'Só um tem: inovação ou dívida?',
     orchestratorDoes: 'Só o orquestrador faz', sign: 'Como a agent-review sabe', follows: 'Quem segue', declaredOnly: 'só declarado', nothingUnknown: 'Tudo foi entendido.',
     facts: 'Fatos', off: 'Fora do padrão', solo: 'Só ele tem', children: 'Filhos', close: 'Fechar ✕', foot: 'Os fatos vêm dos arquivos YAML; nada foi inventado.',
-    summary: (n: number, p: number, o: number, s: number, t: number) => `${n} no elenco · ${p} padrões · ${o} fora do padrão · ${s} só um tem · limite ${t}% de cada papel`,
-    excel: '⬇ Excel', yaml: '⬇ cast.yaml', png: '⬇ PNG', playbill: 'RH do elenco →', plot: 'Palco →', name: 'Nome', said: 'declarado',
+    summary: (n: number, p: number, o: number, s: number, t: number) => `${n} agentes · ${p} padrões · ${o} fora do padrão · ${s} só um tem · limite ${t}% de cada papel`,
+    excel: '⬇ Excel', yaml: '⬇ review.yaml', png: '⬇ PNG', playbill: 'O time →', plot: 'Topologia →', name: 'Nome', said: 'declarado',
     unused: (n: number) => `Sem uso (${n})`, nothingUnused: 'Tudo é usado, nada está desligado.', flows: 'Fluxos', returnsNothing: 'não devolve nada', otherFlow: 'outro fluxo',
     telemetry: 'Telemetria', times: (n: number, d: number) => `${n} ${n === 1 ? 'vez' : 'vezes'} em ${d} dias`, notFired: 'não disparou', noLine: 'nenhuma linha na telemetria', routing: 'Roteamento', called: 'Chamado', history: 'Histórico', inputs: 'Entradas', description: 'Descrição', notInFolder: 'não está na pasta', chars: (n: number) => `${n} caracteres`,
   },
@@ -319,7 +319,7 @@ app.addEventListener('click', (e) => {
     if (l.key === 'unknown') tab = 'unknown'
     if (l.key === 'unused') tab = 'unused'
   } else if (d.get === 'xlsx') return save(new Blob([workbookFile(sheets)], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${data.id}.xlsx`)
-  else if (d.get === 'yaml') return save(new Blob([data.castYaml], { type: 'text/yaml' }), `${data.id}.cast.yaml`)
+  else if (d.get === 'yaml') return save(new Blob([data.castYaml], { type: 'text/yaml' }), `${data.id}.review.yaml`)
   else if (d.get === 'png') return void png()
   render()
   if (d.key || d.pattern || d.look) app.querySelector('.cl-detail')?.scrollIntoView({ block: 'nearest' })

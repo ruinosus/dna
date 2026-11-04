@@ -1,5 +1,5 @@
-// The profile (the team's standard) and the cast file (what people said, what was decided): read with the line of every
-// problem; who is the orchestrator; and the cast file written back without losing the comments people wrote in it.
+// The profile (the team's standard) and the review file (what people said, what was decided): read with the line of every
+// problem; who is the orchestrator; and the review file written back without losing the comments people wrote in it.
 import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -15,7 +15,7 @@ const text = (f: string) => readFileSync(join(examples, f), 'utf8')
 const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
 
 // the example profile
-const p = readProfile(text('profile.cast.yaml'))
+const p = readProfile(text('team.standard.yaml'))
 ok(!p.problems.length && p.profile?.threshold === 0.7 && p.profile.minAgents === 3 && p.profile.rules.length === 3 && p.profile.markers.length === 3 && p.profile.blocks[0]?.id === 'links' && p.profile.types.length === 3 && p.profile.focusAreas[0]?.facts.length === 3
   && p.profile.ignore.join() === 'trigger:OnConversationStart' && p.profile.microsoftPatterns, 'the example profile is read', p)
 const roles = rolesOf(agents, p.profile!)
@@ -27,9 +27,9 @@ ok(auto.roles['bodega-orquestrador'] === 'orchestrator' && auto.roles['bodega-fr
 ok(DEFAULT_PROFILE.threshold === 0.7 && DEFAULT_PROFILE.minAgents === 3, 'the defaults: 0.7 and 3')
 const bare = readProfile('format: cast-list/profile-v1\n')
 ok(!bare.problems.length && bare.profile?.threshold === 0.7 && !bare.profile.rules.length, 'a profile with only its format is the defaults')
-// the cast file's role counts when the profile does not name the agent; a name in the profile wins
+// the review file's role counts when the profile does not name the agent; a name in the profile wins
 const given = rolesOf(agents, { ...DEFAULT_PROFILE, roles: { orchestrator: ['bodega-orquestrador'] } }, { 'bodega-frete': 'orchestrator', 'bodega-orquestrador': 'specialist' })
-ok(given.roles['bodega-frete'] === 'orchestrator' && given.roles['bodega-orquestrador'] === 'orchestrator', "the cast file's role, under the profile's", given.roles)
+ok(given.roles['bodega-frete'] === 'orchestrator' && given.roles['bodega-orquestrador'] === 'orchestrator', "the review file's role, under the profile's", given.roles)
 // a profile naming an agent that is not there says so
 const ghost = rolesOf(agents, { ...p.profile!, roles: { orchestrator: ['orquestrador-antigo'], specialist: '*' } })
 ok(ghost.unmatched.join() === 'orquestrador-antigo', 'a profile naming an agent that is not in the folder: told', ghost.unmatched)
@@ -52,9 +52,9 @@ ok(at['unknownKey:treshold'] === 2 && at['threshold'] === 3 && at['minAgents'] =
 ok(readProfile('format: other\n').problems[0]?.key === 'format' && readProfile('roles: [x\n').problems[0]?.key === 'syntax', 'another format, or YAML that does not read')
 ok(problemText(w.problems.find((x) => x.key === 'role')!, 'pt') === '«rules[0].role» é orchestrator ou specialist (está «especialista»)', 'a problem in Portuguese', w.problems.map((x) => problemText(x, 'pt')))
 
-// the cast file
-const c = readCast(text('demo.cast.yaml'))
-ok(!c.problems.length && c.cast?.declared.length === 2 && c.cast.decisions[0]?.status === 'accepted' && c.cast.decisions[0].scope === 'platform', 'the example cast file is read', c)
+// the review file
+const c = readCast(text('demo.review.yaml'))
+ok(!c.problems.length && c.cast?.declared.length === 2 && c.cast.decisions[0]?.status === 'accepted' && c.cast.decisions[0].scope === 'platform', 'the example review file is read', c)
 const bad = readCast(`format: cast-list/cast-v1
 declared:
   - { agent: bodega-frete, value: sim }
@@ -67,19 +67,19 @@ ok(b['missing:declared[0].key'] === 3 && b['status'] === 5 && b['duplicate:decis
 
 // written back: the same thing, and the comments stay
 const cast = c.cast!
-const again = writeCast(cast, text('demo.cast.yaml'))
-ok(again === text('demo.cast.yaml'), 'written back unchanged, it is the same file byte for byte', again)
+const again = writeCast(cast, text('demo.review.yaml'))
+ok(again === text('demo.review.yaml'), 'written back unchanged, it is the same file byte for byte', again)
 const more: Cast = {
   ...cast,
   agents: agents.map((a) => ({ id: a.id, role: roles.roles[a.id] })),
   declared: [...cast.declared, { agent: 'bodega-frete', key: 'kpi', value: 'cotação em < 5 s', source: 'planilha' }],
   decisions: [{ ...cast.decisions[0], why: 'Sempre há uma pessoa' }, { key: 'node:LogCustomTelemetryEvent', status: 'accepted', scope: 'platform', why: '' }],
 }
-const written = writeCast(more, text('demo.cast.yaml'))
+const written = writeCast(more, text('demo.review.yaml'))
 const back = readCast(written)
 ok(!back.problems.length && JSON.stringify(back.cast) === JSON.stringify(more), 'written with changes, it reads back as what was written', { written })
 ok(written.includes('# the handoff document says frete escalates') && written.includes('# What people said about the agents'), "the person's comments stay", written)
-ok(readCast(writeCast(more)).cast !== undefined && JSON.stringify(readCast(writeCast(more)).cast) === JSON.stringify(more), 'a new cast file (no previous one) reads back too')
+ok(readCast(writeCast(more)).cast !== undefined && JSON.stringify(readCast(writeCast(more)).cast) === JSON.stringify(more), 'a new review file (no previous one) reads back too')
 // wave 1: markers, official blocks, types, and rules with a condition
 const w1 = readProfile(`format: cast-list/profile-v1
 markers:
@@ -112,7 +112,7 @@ const by = Object.fromEntries(broken.problems.map((x) => [x.key, x.line]))
 ok(by.regex === 3 && by.in === 4 && by.when === 6 && by.prefix === 7 && by.rule === 9, 'a broken regex, an unknown «in», a type with no when, a key no kind has, a rule with nothing to check: each with its line', broken.problems)
 ok(problemText(broken.problems.find((x) => x.key === 'prefix')!, 'pt').includes('nonsense:thing'), 'the unknown key is named', broken.problems.map((x) => problemText(x, 'pt')))
 
-// the types of each agent: every type that matches; the cast file's types first
+// the types of each agent: every type that matches; the review file's types first
 const f = (keys: string[]) => Object.fromEntries(keys.map((k) => [k, [{ file: 'x' }]]))
 const as = [
   { id: 'a', facts: f(['flow:1', 'text:link-domain:ajuda.example', 'node:SearchAndSummarizeContent']) },
@@ -122,12 +122,12 @@ const as = [
 ]
 const specialists = { a: 'specialist', b: 'specialist', c: 'specialist', d: 'specialist' } as const
 const ts = typesOf(as, specialists, pf, { d: ['guidance'] })
-ok(ts.a.join() === 'transaction' && ts.b.join() === 'guidance' && ts.c.join() === 'transaction' && ts.d.join() === 'guidance', 'a type when its keys match («none» rules out); the cast file gives d its type', ts)
+ok(ts.a.join() === 'transaction' && ts.b.join() === 'guidance' && ts.c.join() === 'transaction' && ts.d.join() === 'guidance', 'a type when its keys match («none» rules out); the review file gives d its type', ts)
 const multi = typesOf(as, specialists, { ...pf, types: [pf.types[0], { ...pf.types[1], when: { all: ['text:link-domain:*'] } }] }, {})
 ok(multi.a.join() === 'transaction,guidance', 'an agent gets every type that matches', multi)
 ok(!typesOf([{ id: 'o', facts: f(['flow:1']) }], { o: 'orchestrator' }, pf, {}).o?.length, 'an orchestrator has no type')
 
-// the cast file: types and the blocks kept
+// the review file: types and the blocks kept
 const castText = `format: cast-list/cast-v1
 agents:
   - { id: a, role: specialist, types: [ transaction, guidance ] }
@@ -137,7 +137,7 @@ decisions:
   - { key: "text:block:links", status: accepted, scope: "type:guidance", why: Todos formatam igual }
 `
 const cr = readCast(castText)
-ok(!cr.problems.length && cr.cast?.agents[0].types?.join() === 'transaction,guidance' && cr.cast.blocks[0].id === 'links' && cr.cast.decisions[0].scope === 'type:guidance', 'the cast file: types, the blocks kept, a type scope', cr)
+ok(!cr.problems.length && cr.cast?.agents[0].types?.join() === 'transaction,guidance' && cr.cast.blocks[0].id === 'links' && cr.cast.decisions[0].scope === 'type:guidance', 'the review file: types, the blocks kept, a type scope', cr)
 ok(writeCast(cr.cast!, castText) === castText, 'written back unchanged, byte for byte (in the style it writes: [ a, b ])')
 ok(readCast(castText.replace('type:guidance', 'tipo')).problems[0]?.key === 'scope', 'a scope that is not one is told')
 done()

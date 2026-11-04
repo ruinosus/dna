@@ -21,7 +21,7 @@ const BLUEPRINT = {
     moments: [{ id: 'sign', phase: 'join', customer: 'Signs up at the desk', feels: 2, front: [{ actor: 'desk', does: 'Fills the form' }], support: ['billing'], pains: [{ says: 'Twenty minutes' }] }],
   },
 }
-const CAST1 = '✓ 6 no elenco: 1 orquestrador, 5 especialistas\n✓ 38 padrões · 3 fora do padrão · 4 só um tem\n▸ Contradições · 1\n! para olhar: bodega-devolucoes tem «Só o conhecimento»\n▸ Fora do padrão · 2\n! para olhar: 1 especialista não escala (bodega-frete)\n! para olhar: 1 especialista não registra telemetria\n• os arquivos têm dados do cliente\n'
+const CAST1 = '✓ 6 agentes: 1 orquestrador, 5 especialistas\n✓ 38 padrões · 3 fora do padrão · 4 só um tem\n▸ Contradições · 1\n! para olhar: bodega-devolucoes tem «Só o conhecimento»\n▸ Fora do padrão · 2\n! para olhar: 1 especialista não escala (bodega-frete)\n! para olhar: 1 especialista não registra telemetria\n• os arquivos têm dados do cliente\n'
 const CAST2 = CAST1.replace('▸ Fora do padrão · 2', '▸ Fora do padrão · 3') + ''
 const CAST2_FULL = CAST2.replace('! para olhar: 1 especialista não registra telemetria\n', '! para olhar: 1 especialista não registra telemetria\n! para olhar: bodega-pedidos não tem histórico\n')
 
@@ -97,7 +97,7 @@ test('/compare-agents compares a folder: the summary and the groups, each openin
   const r = await $.command.run({ command: 'compare-agents', args: 'agents --lang pt' } as any)
   expect(JSON.stringify(r)).toContain('▸ Fora do padrão · 2')
   const term = await $.ui.mount(pane('dna-cast', 'terminal'))
-  expect((await term.find({ type: 'Text', text: /6 no elenco/ }))?.text).toContain('1 orquestrador')
+  expect((await term.find({ type: 'Text', text: /6 agentes/ }))?.text).toContain('1 orquestrador')
   await term.press({ key: 'g:Fora do padrão' })
   expect((await term.find({ type: 'Text', text: /não escala/ }))?.text).toContain('bodega-frete')
   await term.unmount()
@@ -132,22 +132,22 @@ const CASTFILE = 'format: cast-list/cast-v1\nname: Bodega Azul\n'
 
 test('/compare-agents passes the team profile: the one given, or the only one beside the agents, and asks when there are two', async ($, on) => {
   const runs: string[][] = []
-  const listed: Record<string, string[]> = { '/repo/agents': [], '/repo': ['profile.cast.yaml', 'agents.cast.yaml'] }
-  const files = { '/repo/profile.cast.yaml': PROFILE, '/repo/agents.cast.yaml': CASTFILE, '/repo/other.cast.yaml': PROFILE }
+  const listed: Record<string, string[]> = { '/repo/agents': [], '/repo': ['team.standard.yaml', 'agents.review.yaml'] }
+  const files = { '/repo/team.standard.yaml': PROFILE, '/repo/agents.review.yaml': CASTFILE, '/repo/other.cast.yaml': PROFILE }
   engine(on, { runs, listed, files })
   await start($)
-  const given = await $.command.run({ command: 'compare-agents', args: '/repo/agents --profile ~/team.cast.yaml' } as any)
+  const given = await $.command.run({ command: 'compare-agents', args: '/repo/agents --profile ~/team.standard.yaml' } as any)
   expect(JSON.stringify(given)).toContain('Fora do padrão')
-  expect(runs.at(-1)).toEqual(expect.arrayContaining(['--profile', '/home/me/team.cast.yaml']))
-  // none given: the only profile beside the agents (the cast file of decisions is not a profile), said so
+  expect(runs.at(-1)).toEqual(expect.arrayContaining(['--profile', '/home/me/team.standard.yaml']))
+  // none given: the only profile beside the agents (the review file of decisions is not a profile), said so
   const found = await $.command.run({ command: 'compare-agents', args: '/repo/agents --lang pt' } as any)
-  expect(JSON.stringify(found)).toContain('perfil: /repo/profile.cast.yaml (o único ao lado dos agentes)')
-  expect(runs.at(-1)).toEqual(expect.arrayContaining(['--profile', '/repo/profile.cast.yaml']))
+  expect(JSON.stringify(found)).toContain('perfil: /repo/team.standard.yaml (o único ao lado dos agentes)')
+  expect(runs.at(-1)).toEqual(expect.arrayContaining(['--profile', '/repo/team.standard.yaml']))
   // an edit compares again with the same profile
   await $.tool.call({ tool: 'Write', file_path: '/repo/agents/bodega-frete/agent.mcs.yml', content: 'x' })
-  expect(runs.at(-1)).toEqual(expect.arrayContaining(['--profile', '/repo/profile.cast.yaml']))
+  expect(runs.at(-1)).toEqual(expect.arrayContaining(['--profile', '/repo/team.standard.yaml']))
   // two profiles: the person chooses, nothing runs
-  listed['/repo'] = ['profile.cast.yaml', 'other.cast.yaml']
+  listed['/repo'] = ['team.standard.yaml', 'other.cast.yaml']
   const before = runs.length
   const two = JSON.stringify(await $.command.run({ command: 'compare-agents', args: '/repo/agents' } as any))
   expect(two).toContain('there is more than one profile; choose with --profile')

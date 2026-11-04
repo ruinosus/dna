@@ -56,7 +56,7 @@ ok(frete.team?.value === 'Squad Logística' && frete.owner?.value === 'frete@bod
 ok(frete.created?.value === '2026-03-09' && frete.published?.value === '2026-09-30' && frete.schemaName === 'cr7b2_bodegaFrete' && frete.environment?.value === 'Bodega Azul (Produção)', 'frete: hired, published, its schema name and environment, from the inventory', frete)
 ok(frete.summary[0] === 'Explicar modalidades de envio, prazos por região e regras de frete grátis' && frete.summary.length === 3, 'frete: the summary is the first list of its instructions, as written', frete.summary)
 ok(frete.performance?.starts === 355 && frete.performance.errors === 0 && frete.performance.notFired.join() === 'BodegaFrete_OnError' && !frete.performance.silent, 'frete: 355 topic starts, 0 errors, the event that did not fire', frete.performance)
-ok(frete.pdi.length === 5 && frete.seal === 'pdi' && frete.sources.join() === 'YAML,telemetria.csv,handoff do frete, seção 4,inventario.csv,equipe.csv', 'frete: 5 items, the PDI seal, and where it came from (the handoff the demo cast file declares, too)', [frete.pdi.length, frete.seal, frete.sources])
+ok(frete.pdi.length === 5 && frete.seal === 'pdi' && frete.sources.join() === 'YAML,telemetria.csv,handoff do frete, seção 4,inventario.csv,equipe.csv', 'frete: 5 items, the PDI seal, and where it came from (the handoff the demo review file declares, too)', [frete.pdi.length, frete.seal, frete.sources])
 ok(frete.tools.some((t) => t.pt.includes('Outlook')) && frete.conduct.length > 0, 'frete: its tools and its conduct', [frete.tools, frete.conduct])
 const loja = pb.resumes.find((r) => r.id === 'bodega-loja-fisica')!
 ok(!loja.goal && loja.performance?.silent === true && !loja.published, 'loja-fisica: no goal (never invented), no line in the telemetry, never published', loja)
@@ -66,7 +66,7 @@ ok(!pb.resumes.find((r) => r.id === 'bodega-orquestrador')!.manager, 'nobody cal
 // with no tables and no telemetry
 const bare = run([], false)
 const pbBare = playbillOf(bare.result, bare.looks, found, bare.cast, profile.rules)
-ok(!pbBare.staff.some((s) => s.key === 'noOwner' || s.key === 'neverPublished') && pbBare.missing.join() === 'inventory,telemetry' && pbBare.resumes.every((r) => !r.performance && !r.team && !r.owner), 'with no tables: no «no owner» or «never published», and it says which tables would tell (the demo cast file already declares KPIs)', pbBare.missing)
+ok(!pbBare.staff.some((s) => s.key === 'noOwner' || s.key === 'neverPublished') && pbBare.missing.join() === 'inventory,telemetry' && pbBare.resumes.every((r) => !r.performance && !r.team && !r.owner), 'with no tables: no «no owner» or «never published», and it says which tables would tell (the demo review file already declares KPIs)', pbBare.missing)
 ok(JSON.stringify(playbillOf(full.result, full.looks, found, full.cast, profile.rules, fired)) === JSON.stringify(pb), 'the same run, the same RH')
 
 // the evaluations: the counts in the résumé, «with no evaluation» on the board

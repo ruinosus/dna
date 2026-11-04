@@ -10,7 +10,6 @@ const node = (id: string) => st.nodes.find((n) => n.id === id)
 const edge = (from: string, to: string) => st.edges.find((e) => e.from === from && e.to === to)
 // a condition with optional parts: undefined is not met
 const yes = (cond: unknown, what: string, detail?: unknown) => ok(!!cond, what, detail)
-const AGENT = /\bagentes?\b|\bagents?\b/i
 
 // the nodes
 ok(['client', 'bodega-orquestrador', 'bodega-pedidos', 'bodega-devolucoes', 'bodega-cupons', 'bodega-loja-fisica', 'bodega-frete'].every((id) => node(id)), 'the customer, the orchestrator and the five specialists', st.nodes.map((n) => n.id))
@@ -70,8 +69,5 @@ ok(st.nodes.some((n) => n.id === 'sys:connector:shared_commondataserviceforapps'
 // the review of access on the card
 ok(st.actors.find((a) => a.id === 'bodega-cupons')!.access.some((x) => x.pt.includes('SharePoint')), "cupons' card asks about the access only it has in its type")
 
-// the words
-const words = JSON.stringify([st.lenses.map((l) => [l.name, l.caption]), st.edges.map((e) => e.label), st.scenes.map((s) => [s.title, s.steps.map((x) => x.text)]), st.nodes.map((n) => n.sub)])
-ok(!AGENT.test(words), 'never «agent» in its own words', words.match(/.{0,40}\bagentes?\b.{0,20}/i)?.[0])
 ok(JSON.stringify(stageOf(result, looks, found, fired)) === JSON.stringify(st), 'the same run, the same stage')
 done()

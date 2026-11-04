@@ -1,5 +1,5 @@
 // The GitHub Pages gallery (docs/agent-review/): the example agents of a made-up shop compared — the map, the workbook,
-// the lesson and the cast file (with the demo's declared facts and decision) in docs/agent-review/examples/; pictures of
+// the lesson and the review file (with the demo's declared facts and decision) in docs/agent-review/examples/; pictures of
 // the map and the lesson (docs/agent-review/images/, a headless browser in the light theme); and its index.html. The
 // example runs with the example export of Application Insights, so the map shows what fired. Run
 // after npm run assets.
@@ -21,16 +21,16 @@ mkdirSync(join(docs, 'images'), { recursive: true })
 // the folder's name is the files' name: the example agents, copied under it
 const work = mkdtempSync(join(tmpdir(), 'agent-review-site-'))
 cpSync(join(skill, 'examples/agents'), join(work, ID), { recursive: true })
-copyFileSync(join(skill, 'examples/demo.cast.yaml'), join(docs, 'examples', `${ID}.cast.yaml`))
+copyFileSync(join(skill, 'examples/demo.review.yaml'), join(docs, 'examples', `${ID}.cast.yaml`))
 // the inventory and the team spreadsheet taken, so the RH has owners, teams and goals
 execFileSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(work, ID), '--declared', join(skill, 'examples/inventario.csv'), '--declared', join(skill, 'examples/equipe.csv'), '--take', 'all', '--lang', 'pt', '--out', join(docs, 'examples')], { stdio: 'ignore' })
-execFileSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(work, ID), '--all', '--lang', 'pt', '--profile', join(skill, 'examples/profile.cast.yaml'), '--telemetry', join(skill, 'examples/telemetria.csv'), '--evals', join(skill, 'examples/avaliacoes'), '--out', join(docs, 'examples')], { stdio: 'ignore' })
+execFileSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(work, ID), '--all', '--lang', 'pt', '--profile', join(skill, 'examples/team.standard.yaml'), '--telemetry', join(skill, 'examples/telemetria.csv'), '--evals', join(skill, 'examples/avaliacoes'), '--out', join(docs, 'examples')], { stdio: 'ignore' })
 rmSync(work, { recursive: true, force: true })
 // The pictures, in the light theme, taken by the kit's browser over the DevTools pipe.
 const shots = [
   { file: join(docs, 'examples', `${ID}.html`), mode: '', shot: { width: 1440, height: 900, scheme: 'light' }, png: join(docs, 'images', `${ID}-map.png`) },
-  { file: join(docs, 'examples', `${ID}.plot.html`), mode: '', shot: { width: 1500, height: 860, scheme: 'light' }, png: join(docs, 'images', `${ID}-stage.png`) },
-  { file: join(docs, 'examples', `${ID}.playbill.html`), mode: '', shot: { width: 1400, height: 1000, scheme: 'light' }, png: join(docs, 'images', `${ID}-rh.png`) },
+  { file: join(docs, 'examples', `${ID}.topology.html`), mode: '', shot: { width: 1500, height: 860, scheme: 'light' }, png: join(docs, 'images', `${ID}-stage.png`) },
+  { file: join(docs, 'examples', `${ID}.team.html`), mode: '', shot: { width: 1400, height: 1000, scheme: 'light' }, png: join(docs, 'images', `${ID}-rh.png`) },
   { file: join(docs, 'examples', `${ID}.lesson.html`), mode: 'still', shot: { width: 1100, height: 640, scheme: 'light' }, png: join(docs, 'images', `${ID}-lesson.png`) },
 ]
 const { results } = await runPages(shots, { timeout: 60 })
@@ -85,7 +85,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
       <span class="meta">Português · fictional agents</span>
       <b>Bodega Azul — atendimento</b>
       <span>An orchestrator and five specialists of a made-up online shop, run with a made-up export of Application Insights. On purpose: shipping does not escalate to a person and gets no conversation history, the store logs no telemetry, coupons spells its error event another way and calls a flow that returns nothing, shipping's event did not fire in 30 days, and a few things nobody uses.</span>
-      <span class="links"><a href="examples/${ID}.html">Map</a><a href="examples/${ID}.plot.html">Stage</a><a href="examples/${ID}.playbill.html">RH</a><a href="https://github.com/ruinosus/dna/blob/gh-pages/agent-review/examples/${ID}.diagrams.md">Diagrams (Mermaid)</a><a href="examples/${ID}.lesson.html">Lesson</a><a href="examples/${ID}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${ID}.cast.yaml" download>Cast file (.yaml)</a></span>
+      <span class="links"><a href="examples/${ID}.html">Map</a><a href="examples/${ID}.topology.html">Stage</a><a href="examples/${ID}.team.html">RH</a><a href="https://github.com/ruinosus/dna/blob/gh-pages/agent-review/examples/${ID}.diagrams.md">Diagrams (Mermaid)</a><a href="examples/${ID}.lesson.html">Lesson</a><a href="examples/${ID}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${ID}.cast.yaml" download>Cast file (.yaml)</a></span>
     </article>
   </section>
   <section>
@@ -103,7 +103,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
   <section>
     <h2>The stage — show it in a meeting</h2>
     <article class="card">
-      <a href="examples/${ID}.plot.html"><img src="images/${ID}-stage.png" alt="The cast on a stage: the orchestrator, the specialists by type, the flows and the systems, with a red arrow into shipping" loading="lazy"></a>
+      <a href="examples/${ID}.topology.html"><img src="images/${ID}-stage.png" alt="The cast on a stage: the orchestrator, the specialists by type, the flows and the systems, with a red arrow into shipping" loading="lazy"></a>
       <span>The traffic moving along the arrows (each one's topic starts, from the export), lenses that light who follows a pattern and who is off, and a follow spot that walks each call of the orchestrator and stops where it breaks. Click someone for its card.</span>
     </article>
   </section>
@@ -117,7 +117,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
   <section>
     <h2>The cast as people — the RH</h2>
     <article class="card">
-      <a href="examples/${ID}.playbill.html"><img src="images/${ID}-rh.png" alt="The RH of the cast: the staff board, the org chart by type, and a résumé with its development plan" loading="lazy"></a>
+      <a href="examples/${ID}.team.html"><img src="images/${ID}-rh.png" alt="The RH of the cast: the staff board, the org chart by type, and a résumé with its development plan" loading="lazy"></a>
       <span>The same cast for whoever thinks in HR terms: who is being hired, who has no owner, who was never published, the post of each role and type, and a résumé each — with the development plan made of what «to look at» says about that one alone. Nothing invented: no goal, owner or number the files do not have.</span>
     </article>
   </section>
@@ -133,4 +133,4 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
 </body>
 </html>
 `)
-console.log(`✓ docs/agent-review: ${ID} (map, workbook, lesson, cast file) and its pictures`)
+console.log(`✓ docs/agent-review: ${ID} (map, workbook, lesson, review file) and its pictures`)

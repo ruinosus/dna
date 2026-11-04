@@ -227,7 +227,7 @@ export function keysMarkdown(): string {
     out.push('')
   }
   out.push(`## The Microsoft patterns`, '', `From [microsoft/skills-for-copilot-studio](${PATTERNS_URL}). With a mark in the YAML, agent-review finds them (\`ms:<id>\`);`,
-    'the others only a person can say (in the cast file, `declared` with the key `ms:<id>`).', '', '| Pattern | How agent-review knows |', '|---|---|')
+    'the others only a person can say (in the review file, `declared` with the key `ms:<id>`).', '', '| Pattern | How agent-review knows |', '|---|---|')
   for (const p of MS_PATTERNS) out.push(`| \`${p.id}\` — ${p.name} | ${p.sign ?? 'declared only'} |`)
   return `${out.join('\n')}\n`
 }

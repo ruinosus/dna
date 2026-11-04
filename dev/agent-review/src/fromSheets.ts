@@ -1,5 +1,5 @@
 // The workbook back: what a person filled in Excel — lines in «Declared», a decision (and its scope and why) in
-// «Patterns» — as changes to the cast file, each with a short key (d1, d2… for declared, p1… for decisions) so the
+// «Patterns» — as changes to the review file, each with a short key (d1, d2… for declared, p1… for decisions) so the
 // person takes the ones they keep. Sheets and columns are found by their name in either language.
 import type { Cast, Decision, Declared } from './cast'
 import type { SheetKey } from './workbook'

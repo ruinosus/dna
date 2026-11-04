@@ -1,7 +1,7 @@
 // Compares the agents: what most agents of a role have (a pattern, and whether the orchestrator has it too — then it is
 // the platform's), who is off a pattern, what only one specialist has (innovation or debt: someone has to say), what
 // only the orchestrator does, the profile's rules not met, and what people said that the YAML contradicts. A decision
-// in the cast file marks a pattern; an accepted one is checked even when it would no longer be a pattern by its share.
+// in the review file marks a pattern; an accepted one is checked even when it would no longer be a pattern by its share.
 // A part of a fact (a topic that leads to escalation is part of escalating) is never a pattern of its own: it is
 // checked only on the agents that have the fact, takes the fact's decision, and is never a solo.
 //

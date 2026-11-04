@@ -1,4 +1,4 @@
-// The cast file (format cast-list/cast-v1): the agents of the last run and their roles, what people said about them
+// The review file (format cast-list/cast-v1): the agents of the last run and their roles, what people said about them
 // (declared, with the source) and what was decided about each pattern. build.mjs keeps it; a person or the model edits
 // it, or it comes back from the workbook. Written back over the previous file, it keeps the comments people wrote.
 import { DNA_API, readFormat } from '@kit/format'

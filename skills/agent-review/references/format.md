@@ -1,6 +1,6 @@
-# The cast file and the facts
+# The review file and the facts
 
-## `<id>.cast.yaml` — `cast-list/cast-v1`
+## `<id>.review.yaml` — `cast-list/cast-v1`
 
 What people said about the agents and what was decided. `scripts/build.mjs` writes it on the first run and keeps it
 up to date (it is read again on every run); its comments and layout stay. Edit it by hand, or fill the workbook and read

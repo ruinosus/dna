@@ -10,7 +10,7 @@ execution:
   timeout_seconds: 900
   allowed_tools: [Skill, Read, Write, Edit, Bash]
   prompt: |
-    Como está o RH do elenco dos nossos agentes do Copilot Studio em ./agentes? Quero o quadro de pessoal e o plano de desenvolvimento de cada um. Tenho o inventário do admin center em ./inventario.csv, a planilha do time em ./equipe.csv e a exportação de 30 dias do Application Insights em ./eventos.csv. Use o perfil do time em ./perfil.cast.yaml e pode tomar tudo o que as planilhas dizem. Não precisa me perguntar nada agora.
+    Como está o time dos nossos agentes do Copilot Studio em ./agentes? Quero o quadro de pessoal e o plano de desenvolvimento de cada um. Tenho o inventário do admin center em ./inventario.csv, a planilha do time em ./equipe.csv e a exportação de 30 dias do Application Insights em ./eventos.csv. Use o perfil do time em ./perfil.cast.yaml e pode tomar tudo o que as planilhas dizem. Não precisa me perguntar nada agora.
 graders:
   - name: skill-fired
     type: tool_used
@@ -19,7 +19,7 @@ graders:
   - name: wrote-the-rh
     type: tool_used
     tool: Bash
-    input_match: '--playbill|--all'
+    input_match: '--team|--all'
   - name: names-no-owner
     type: regex
     pattern: 'cupons[^\n]{0,120}(sem respons[áa]vel|sem dono|n[ãa]o tem respons[áa]vel)|(sem respons[áa]vel|sem dono)[^\n]{0,120}cupons'

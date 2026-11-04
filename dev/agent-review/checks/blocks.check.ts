@@ -41,7 +41,7 @@ ok(!families.some((f) => Object.values(f.holders).some((s) => s.file.includes(' 
 const official = blocksOf(agents, [], [{ id: 'links', name: 'Formatação de links', text: LINKS }]).families.find((f) => f.id === 'links')
 ok(official?.official === 'Formatação de links' && Object.keys(official.holders).length === 4 && !!official.variants['bodega-frete'], 'the official block gives its id and name to the family like it')
 const kept = blocksOf(agents, [{ id: 'meu-bloco', text: LINKS.replace('crua.', 'crua,') }], []).families.find((f) => f.text.startsWith('Links:'))
-ok(kept?.id === 'meu-bloco', 'a block kept in the cast file keeps its id when a comma changes', kept?.id)
+ok(kept?.id === 'meu-bloco', 'a block kept in the review file keeps its id when a comma changes', kept?.id)
 const lone = blocksOf(agents, [], [{ id: 'aviso', name: 'Aviso legal', text: 'Este atendimento é automático e pode errar; confirme os dados importantes com uma pessoa.' }]).families.find((f) => f.id === 'aviso')
 ok(!!lone && !Object.keys(lone.holders).length, 'an official block nobody has is still a family, with nobody in it')
 

@@ -1,6 +1,6 @@
-# The RH of the cast (--playbill)
+# The team: the agents as HR (--team)
 
-Generated from `dev/agent-review/src/`. The same cast, as people. Nothing is guessed: a field nothing says is left empty.
+Generated from `dev/agent-review/src/`. The same agents, as people. Nothing is guessed: a field nothing says is left empty.
 
 ## The staff board
 
@@ -32,7 +32,7 @@ one of a role for it. A file that names nobody in the folder, or has no `result_
 ## The review of access
 
 Within each type of two or more, a connector, an MCP server or what a flow reaches that only one has is asked about on
-the résumé and on the stage's card: does the post need it? It becomes a cleanup item of the plan only when the team
+the résumé and on the topology's card: does the post need it? It becomes a cleanup item of the plan only when the team
 decides so — a decision `rejected` on that key, in the type's scope (`type:<id>`).
 
 ## The post
@@ -62,4 +62,4 @@ What «to look at» says about one alone, written as an action, one item per fac
 7. **cleanup** — what nobody uses or is switched off — it does not put anyone in a plan alone.
 
 Not in anyone's plan: what only one has (innovation or debt is the team's call), a type with one specialist, a marker
-set in different ways across the cast, what was not understood, and what a decision rejected.
+set in different ways across the agents, what was not understood, and what a decision rejected.

@@ -1,5 +1,5 @@
 // Checks the skill as a person gets it: the engine's checks (checks/*.check.ts); the example agents make the map, the
-// workbook, the lesson (passing visual-explainer's reviewer when there is a browser) and the cast file and print what to look at — 24 with the example profile, 27 with the demo cast file and the telemetry (what
+// workbook, the lesson (passing visual-explainer's reviewer when there is a browser) and the review file and print what to look at — 24 with the example profile, 27 with the demo review file and the telemetry (what
 // people said that the YAML contradicts); the workbook filled in comes back (--from, --take); --facts; a clean copy with
 // no node_modules runs on Node alone; 18 agents in under 30 s with the network blocked; broken files never stop it; a
 // broken profile says its line; a folder with no agent says so; the map loads nothing from the internet; and, in a browser, «to look at» opens its fact, a pattern shows the files, the
@@ -18,7 +18,7 @@ const skill = join(repo, 'skills/agent-review')
 const cast = join(skill, 'scripts/build.mjs')
 const examples = join(skill, 'examples')
 const agents = join(examples, 'agents')
-const profile = join(examples, 'profile.cast.yaml')
+const profile = join(examples, 'team.standard.yaml')
 const work = mkdtempSync(join(tmpdir(), 'agent-review-check-'))
 let failed = 0
 const run = (...args) => spawnSync(process.execPath, [cast, ...args], { encoding: 'utf8' })
@@ -34,56 +34,56 @@ for (const f of readdirSync(join(root, 'checks')).filter((x) => x.endsWith('.che
   ok(r.status === 0, `checks/${f}`, r.stdout + r.stderr)
 }
 
-// the examples, with the profile and no cast file yet
+// the examples, with the profile and no review file yet
 const plain = join(work, 'plain')
 const a = run(agents, '--profile', profile, '--all', '--lang', 'pt', '--out', plain)
-ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agents.playbill.html', 'agents.plot.html', 'agents.cast.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, lesson, RH, stage and cast file', a.stdout + a.stderr)
+ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agents.team.html', 'agents.topology.html', 'agents.review.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, lesson, RH, stage and review file', a.stdout + a.stderr)
 ok(/✓ review|• review/.test(a.stdout) && !/! review/.test(a.stdout), "the lesson passes visual-explainer's reviewer (when there is a browser)", a.stdout)
 ok(looks(a.stdout) === 24, `24 to look at (${looks(a.stdout)})`, a.stdout)
 const heads = [...a.stdout.matchAll(/^▸ (.+) · (\d+)$/gm)].map((m) => [m[1], Number(m[2])])
 ok(heads.length >= 4 && heads.reduce((n, [, c]) => n + c, 0) === 24 && heads[0][0] === 'Contradições' && heads.some(([g]) => g === 'Só um tem'), 'in groups, each with how many, adding up to the list', JSON.stringify(heads))
 const again = run(agents, '--profile', profile, '--out', plain)
-const kept = readFileSync(join(plain, 'agents.cast.yaml'), 'utf8')
+const kept = readFileSync(join(plain, 'agents.review.yaml'), 'utf8')
 const release = JSON.parse(readFileSync(join(repo, '.claude-plugin/plugin.json'), 'utf8')).version
 // the pages say it in their generator tag (and the map, the RH and the stage in their foot, drawn by their script)
 const stamped = (f) => readFileSync(join(plain, f), 'utf8').includes(f.endsWith('.html') ? `agent-review (${release}, engine` : `agent-review ${release}`)
-const madeFiles = ['agents.cast.yaml', 'agents.html', 'agents.playbill.html', 'agents.plot.html', 'agents.diagrams.md', 'agents.diagrams/topologia.mmd']
-ok(madeFiles.every(stamped) && kept.includes(`# Written by agent-review ${release}.`), `what a run makes says the version that made it (agent-review ${release}): the cast file, the map, the RH, the stage and the diagrams`, madeFiles.filter((f) => !stamped(f)))
-ok(again.status === 0 && kept.includes('role: orchestrator') && /blocks:\n(.*\n)*  - id: links\n    text: \|/.test(kept), 'a second run reads the cast file it wrote, and keeps the roles and the blocks of text', kept.slice(0, 600))
+const madeFiles = ['agents.review.yaml', 'agents.html', 'agents.team.html', 'agents.topology.html', 'agents.diagrams.md', 'agents.diagrams/topologia.mmd']
+ok(madeFiles.every(stamped) && kept.includes(`# Written by agent-review ${release}.`), `what a run makes says the version that made it (agent-review ${release}): the review file, the map, the RH, the stage and the diagrams`, madeFiles.filter((f) => !stamped(f)))
+ok(again.status === 0 && kept.includes('role: orchestrator') && /blocks:\n(.*\n)*  - id: links\n    text: \|/.test(kept), 'a second run reads the review file it wrote, and keeps the roles and the blocks of text', kept.slice(0, 600))
 
-// with the demo cast file: what people said, and what was decided
+// with the demo review file: what people said, and what was decided
 const demo = join(work, 'demo')
 mkdirSync(demo)
-copyFileSync(join(examples, 'demo.cast.yaml'), join(demo, 'agents.cast.yaml'))
+copyFileSync(join(examples, 'demo.review.yaml'), join(demo, 'agents.review.yaml'))
 const d = run(agents, '--profile', profile, '--lang', 'pt', '--telemetry', join(examples, 'telemetria.csv'), '--out', demo)
-ok(d.status === 0 && looks(d.stdout) === 24 + 1 + 2 && d.stdout.includes('mas o YAML não tem'), '27 to look at with the demo cast file and the telemetry, the contradiction first', d.stdout)
+ok(d.status === 0 && looks(d.stdout) === 24 + 1 + 2 && d.stdout.includes('mas o YAML não tem'), '27 to look at with the demo review file and the telemetry, the contradiction first', d.stdout)
 ok(d.stdout.includes('O evento «BodegaFrete_OnError» de bodega-frete não disparou em 30 dias') && d.stdout.includes('bodega-loja-fisica não tem nenhuma linha na telemetria'), 'the telemetry: what did not fire, and who has no line', d.stdout)
-ok(readFileSync(join(demo, 'agents.cast.yaml'), 'utf8').includes('# the handoff document says frete escalates'), "the cast file keeps the person's comments")
+ok(readFileSync(join(demo, 'agents.review.yaml'), 'utf8').includes('# the handoff document says frete escalates'), "the review file keeps the person's comments")
 
 // declared from outside: the admin center's inventory and the team's spreadsheet, listed and then taken
 const dec = join(work, 'declared')
 const listedOut = run(agents, '--declared', join(examples, 'inventario.csv'), '--declared', join(examples, 'equipe.csv'), '--lang', 'pt', '--out', dec)
-ok(listedOut.status === 0 && /^\s+d1\s+\+ declarado\s+bodega-orquestrador · Responsável declarado = «atendimento@bodegaazul.example» \(inventario.csv › linha 2\)/m.test(listedOut.stdout) && listedOut.stdout.includes('linha 8 («Bodega Azul - Fidelidade»)') && !existsSync(join(dec, 'agents.cast.yaml')), '--declared lists what the tables say, each with a key, and the rows of nobody in the folder; nothing written', listedOut.stdout)
+ok(listedOut.status === 0 && /^\s+d1\s+\+ declarado\s+bodega-orquestrador · Responsável declarado = «atendimento@bodegaazul.example» \(inventario.csv › linha 2\)/m.test(listedOut.stdout) && listedOut.stdout.includes('linha 8 («Bodega Azul - Fidelidade»)') && !existsSync(join(dec, 'agents.review.yaml')), '--declared lists what the tables say, each with a key, and the rows of nobody in the folder; nothing written', listedOut.stdout)
 const tookOut = run(agents, '--declared', join(examples, 'equipe.csv'), '--take', 'all', '--lang', 'pt', '--out', dec)
 const afterKpi = run(agents, '--profile', profile, '--check', '--lang', 'pt', '--out', dec)
-ok(tookOut.status === 0 && readFileSync(join(dec, 'agents.cast.yaml'), 'utf8').includes('cotação em menos de 5 s') && afterKpi.stdout.includes('Regra «Todo especialista tem KPI»: 1 especialista não cumpre (bodega-loja-fisica)'), '--take all writes them; the next run counts the KPIs', afterKpi.stdout)
-// the RH: the demo cast file with both tables taken, and the telemetry
+ok(tookOut.status === 0 && readFileSync(join(dec, 'agents.review.yaml'), 'utf8').includes('cotação em menos de 5 s') && afterKpi.stdout.includes('Regra «Todo especialista tem KPI»: 1 especialista não cumpre (bodega-loja-fisica)'), '--take all writes them; the next run counts the KPIs', afterKpi.stdout)
+// the RH: the demo review file with both tables taken, and the telemetry
 const rh = join(work, 'rh')
 mkdirSync(rh)
-copyFileSync(join(examples, 'demo.cast.yaml'), join(rh, 'agents.cast.yaml'))
+copyFileSync(join(examples, 'demo.review.yaml'), join(rh, 'agents.review.yaml'))
 run(agents, '--declared', join(examples, 'inventario.csv'), '--declared', join(examples, 'equipe.csv'), '--take', 'all', '--out', rh)
 const rhRun = (out) => run(agents, '--profile', profile, '--all', '--lang', 'pt', '--telemetry', join(examples, 'telemetria.csv'), '--evals', join(examples, 'avaliacoes'), '--out', out)
 const rhOut = rhRun(rh)
-const rhPage = existsSync(join(rh, 'agents.playbill.html')) ? readFileSync(join(rh, 'agents.playbill.html'), 'utf8') : ''
-ok(rhOut.status === 0 && rhOut.stdout.includes('✓ rh') && readFileSync(join(rh, 'agents.html'), 'utf8').includes('agents.playbill.html') && !/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(rhPage), '--all writes the RH beside the map, which links to it; the RH loads nothing from the internet', rhOut.stdout)
+const rhPage = existsSync(join(rh, 'agents.team.html')) ? readFileSync(join(rh, 'agents.team.html'), 'utf8') : ''
+ok(rhOut.status === 0 && rhOut.stdout.includes('✓ team') && readFileSync(join(rh, 'agents.html'), 'utf8').includes('agents.team.html') && !/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(rhPage), '--all writes the team page beside the map, which links to it; it loads nothing from the internet', rhOut.stdout)
 const rh2 = join(work, 'rh2')
 mkdirSync(rh2)
-copyFileSync(join(rh, 'agents.cast.yaml'), join(rh2, 'agents.cast.yaml'))
+copyFileSync(join(rh, 'agents.review.yaml'), join(rh2, 'agents.review.yaml'))
 rhRun(rh2)
-ok(readFileSync(join(rh2, 'agents.playbill.html'), 'utf8') === rhPage, 'the same run, the same RH page')
-const plotPage = readFileSync(join(rh, 'agents.plot.html'), 'utf8')
-ok(rhOut.stdout.includes('✓ stage') && readFileSync(join(rh, 'agents.html'), 'utf8').includes('agents.plot.html') && readFileSync(join(rh2, 'agents.plot.html'), 'utf8') === plotPage && !/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(plotPage), 'the stage: written beside the map, linked from it, the same on the same run, loading nothing from the internet')
-ok(rhOut.stdout.includes('✓ avaliações') && rhPage.includes('"certifications"') && ['agents.html', 'agents.playbill.html', 'agents.plot.html', 'agents.cast.yaml'].every((f) => !/Onde está meu pedido|Manaus|saiu para entrega|Same meaning/.test(readFileSync(join(rh, f), 'utf8'))), '--evals: the certifications in the RH, and no question, answer or explanation in any output', rhOut.stdout)
+ok(readFileSync(join(rh2, 'agents.team.html'), 'utf8') === rhPage, 'the same run, the same RH page')
+const plotPage = readFileSync(join(rh, 'agents.topology.html'), 'utf8')
+ok(rhOut.stdout.includes('✓ topology') && readFileSync(join(rh, 'agents.html'), 'utf8').includes('agents.topology.html') && readFileSync(join(rh2, 'agents.topology.html'), 'utf8') === plotPage && !/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(plotPage), 'the topology: written beside the map, linked from it, the same on the same run, loading nothing from the internet')
+ok(rhOut.stdout.includes('✓ avaliações') && rhPage.includes('"certifications"') && ['agents.html', 'agents.team.html', 'agents.topology.html', 'agents.review.yaml'].every((f) => !/Onde está meu pedido|Manaus|saiu para entrega|Same meaning/.test(readFileSync(join(rh, f), 'utf8'))), '--evals: the certifications in the RH, and no question, answer or explanation in any output', rhOut.stdout)
 writeFileSync(join(work, 'Evaluate Ninguém 2026-10-30.csv'), 'question,result_1\nx,Pass\n')
 mkdirSync(join(work, 'odd-evals'))
 copyFileSync(join(work, 'Evaluate Ninguém 2026-10-30.csv'), join(work, 'odd-evals', 'Evaluate Ninguém 2026-10-30.csv'))
@@ -97,10 +97,10 @@ ok(rhOut.stdout.includes('✓ diagrams') && mmds.length >= 10 && mmds.includes('
 ok(mmds.every((f) => readFileSync(join(mmdDir, f), 'utf8') === readFileSync(join(rh2, 'agents.diagrams', f), 'utf8')) && readFileSync(join(rh2, 'agents.diagrams.md'), 'utf8') === diagDoc, 'the same run, the same diagrams')
 const diagOnly = run(agents, '--diagrams', '--out', join(work, 'diagrams-only'))
 ok(diagOnly.status === 0 && existsSync(join(work, 'diagrams-only', 'agents.diagrams.md')) && existsSync(join(work, 'diagrams-only', 'agents.diagrams', 'topology.mmd')) && !existsSync(join(work, 'diagrams-only', 'agents.html')), '--diagrams alone writes only the diagrams (in English by default)', diagOnly.stdout)
-const plotOnly = run(agents, '--plot', '--out', join(work, 'plot-only'))
-ok(plotOnly.status === 0 && existsSync(join(work, 'plot-only', 'agents.plot.html')) && !existsSync(join(work, 'plot-only', 'agents.html')), '--plot alone writes only the stage', plotOnly.stdout)
-const only = run(agents, '--playbill', '--out', join(work, 'rh-only'))
-ok(only.status === 0 && existsSync(join(work, 'rh-only', 'agents.playbill.html')) && !existsSync(join(work, 'rh-only', 'agents.html')), '--playbill alone writes only the RH', only.stdout)
+const plotOnly = run(agents, '--topology', '--out', join(work, 'plot-only'))
+ok(plotOnly.status === 0 && existsSync(join(work, 'plot-only', 'agents.topology.html')) && !existsSync(join(work, 'plot-only', 'agents.html')), '--topology alone writes only the stage', plotOnly.stdout)
+const only = run(agents, '--team', '--out', join(work, 'rh-only'))
+ok(only.status === 0 && existsSync(join(work, 'rh-only', 'agents.team.html')) && !existsSync(join(work, 'rh-only', 'agents.html')), '--team alone writes only the RH', only.stdout)
 writeFileSync(join(work, 'nobody.csv'), 'a,b\nx,y\n')
 const nobody = run(agents, '--declared', join(work, 'nobody.csv'), '--out', dec)
 ok(nobody.status === 1 && nobody.stderr.includes('--agent-column') && run(agents, '--declared', join(work, 'none.csv')).status === 2 && run(agents, '--telemetry', join(examples, 'telemetria.csv'), '--telemetry-days', 'x').status === 2, 'a table that names nobody asks for --agent-column; a missing file or bad days: exit 2', nobody.stderr)
@@ -128,8 +128,8 @@ const listed = run(agents, '--from', join(work, 'edited.xlsx'), '--lang', 'pt', 
 ok(listed.status === 0 && /^\s+d1\s+\+ declarado\s+bodega-frete · KPI declarado = «cotação em menos de 5 s»/m.test(listed.stdout) && /^\s+p1\s+\+ decisão\s+Registra telemetria: aceito \(plataforma\)/m.test(listed.stdout), '--from lists what was filled in, each with its key', listed.stdout)
 ok(run(agents, '--from', join(work, 'edited.xlsx'), '--take', 'zz', '--out', demo).status === 2, '--take with a key that is not there: exit 2')
 const took = run(agents, '--from', join(work, 'edited.xlsx'), '--take', 'all', '--lang', 'pt', '--out', demo)
-const written = readFileSync(join(demo, 'agents.cast.yaml'), 'utf8')
-ok(took.status === 0 && written.includes('cotação em menos de 5 s') && /key: node:LogCustomTelemetryEvent, status: accepted/.test(written) && written.includes('# the handoff document says frete escalates'), '--take all writes them to the cast file, comments kept', written)
+const written = readFileSync(join(demo, 'agents.review.yaml'), 'utf8')
+ok(took.status === 0 && written.includes('cotação em menos de 5 s') && /key: node:LogCustomTelemetryEvent, status: accepted/.test(written) && written.includes('# the handoff document says frete escalates'), '--take all writes them to the review file, comments kept', written)
 const next = run(agents, '--profile', profile, '--check', '--lang', 'pt', '--out', demo)
 ok(next.stdout.includes('não registra telemetria (bodega-loja-fisica), e o padrão foi aceito: corrigir?') && next.stdout.includes('3 especialistas não cumprem'), 'the next run checks the accepted pattern, and counts the declared KPI', next.stdout)
 
@@ -151,7 +151,7 @@ writeFileSync(join(work, 'no-net.mjs'), "import net from 'node:net'\nnet.Socket.
 const start = Date.now()
 const m = spawnSync(process.execPath, ['--import', join(work, 'no-net.mjs'), cast, many, '--all', '--out', join(work, 'many-out')], { encoding: 'utf8' })
 const took18 = (Date.now() - start) / 1000
-ok(m.status === 0 && m.stdout.includes('18 in the cast') && took18 < 30, `18 agents with no network: done in ${took18.toFixed(1)} s`, m.stdout + m.stderr)
+ok(m.status === 0 && m.stdout.includes('18 agents') && took18 < 30, `18 agents with no network: done in ${took18.toFixed(1)} s`, m.stdout + m.stderr)
 
 // what cannot be read never stops it
 const odd = join(work, 'odd/strange')
@@ -213,14 +213,14 @@ else {
   ok(folded.map(([g]) => g).join() === 'solo,unused' && r.shown === 27 - folded.reduce((n, [, , c]) => n + c, 0) && r.heads.reduce((n, [, , c]) => n + c, 0) === 27 && r.opened, '«to look at» in groups with how many; «only one has it» and «unused» folded, and they open', JSON.stringify([r.heads, r.shown, r.opened]))
   ok(r.files?.length === 5 && r.files.every((f) => f.startsWith('topics/OnError.topic.mcs.yml:')) && r.lacks, 'a pattern shows the file and line of each, and who is off it', JSON.stringify(r.files))
   ok(r.columns?.length === 6 && r.columns.filter((c) => c.startsWith('bodega-cupons')).length === 2 && !r.columns.some((c) => c.includes('orquestrador')), 'the role filter leaves the orchestrator out (cupons in its two types)', JSON.stringify(r.columns))
-  ok((r.got ?? []).join() === 'agents.xlsx,agents.cast.yaml,agents.png' && !r.errs?.length, 'the downloads: workbook, cast file, PNG — no error', JSON.stringify(r))
+  ok((r.got ?? []).join() === 'agents.xlsx,agents.review.yaml,agents.png' && !r.errs?.length, 'the downloads: workbook, review file, PNG — no error', JSON.stringify(r))
   ok(r.chain === 'Bodega Azul - Pedidos → Abrir chamado no ERP → erp.bodega-azul.example' && r.silent === '— não devolve nada', 'the cast: the chain of pedidos, and the flow of cupons that returns nothing', JSON.stringify([r.chain, r.silent]))
   ok(r.events?.[0] === 'BodegaPedidos_OnError — 7 vezes em 30 dias' && r.events[1] === 'BodegaFrete_OnError — não disparou' && r.events[2] === 'nenhuma linha na telemetria', 'the cast: the events, the times they fired, what did not, who has no line', JSON.stringify(r.events))
   ok(r.routing === 6 && r.unused === 4 && !r.errs?.length, 'the orchestrator\'s routing, 6 calls; the Unused tab, 4 rows; no error', JSON.stringify([r.routing, r.unused, r.errs]))
   ok(r.patterns === 31 && r.cast === 6 && r.ms === 15 && r.unknown === 'Tudo foi entendido.', 'the tabs: patterns, cast, Microsoft, not understood', JSON.stringify(r))
   ok(r.spills === false, 'the cast: a long path wraps inside its card', JSON.stringify(r.spills))
   // the stage in a browser: a lens lights who it names, frete's scene stops on the contract, a card opens
-  const plotProbe = readFileSync(join(rh, 'agents.plot.html'), 'utf8').replace('</body>', `<script>
+  const plotProbe = readFileSync(join(rh, 'agents.topology.html'), 'utf8').replace('</body>', `<script>
     const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
     setTimeout(() => { const q = (s) => document.querySelector(s); const all = (s) => document.querySelectorAll(s); const out = {}
       out.nodes = all('[data-node]').length; out.parts = all('.pl-part').length
@@ -241,7 +241,7 @@ else {
       out.sceneBtn = [...all('[data-scene]')].map((b) => b.textContent.replace('▶ ', '')).sort().join()
       q('[data-node="bodega-frete"]').dispatchEvent(new MouseEvent('click', { bubbles: true }))
       out.card = q('.pl-card .pl-name')?.textContent; out.off = [...all('.pl-checks .off')].map((x) => x.textContent); out.resume = q('.pl-card a')?.getAttribute('href')
-      const ours = document.body.cloneNode(true); ours.querySelectorAll('.pb-quote, script, style, pre').forEach((x) => x.remove()); out.agent = /\\bagentes?\\b/i.test(ours.textContent); out.errs = errs
+      out.errs = errs
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 400)</script></body>`)
   writeFileSync(join(rh, 'plot-probe.html'), plotProbe)
   const pl = (await runPage(join(rh, 'plot-probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
@@ -249,9 +249,9 @@ else {
   ok(pl.warn === true && pl.spot === 'bodega-frete' && pl.closed === true, "frete's scene stops on the contract, with the spot on frete; Esc leaves it (the caption stays below the stage)", JSON.stringify(pl))
   ok(pl.overPlain?.length === 0 && pl.overLens?.length === 0 && pl.labelsLens < pl.labelsPlain && pl.sceneBtn === 'Cupons,Devoluções,Fidelidade,Frete,Loja Física,Pedidos', 'no arrow label over a node, with or without a lens; a lens quiets the arrows it does not light; the scenes by short names', JSON.stringify([pl.overPlain, pl.overLens, pl.labelsLens, pl.labelsPlain, pl.sceneBtn]))
   ok(pl.lensClosesScene === true && pl.sceneClosesLens === true && pl.ghost === 'Fidelidade', 'a lens closes the scene, a scene turns the lens off; the one not in the folder by its short name, uncut', JSON.stringify(pl))
-  ok(pl.card === 'Bodega Azul - Frete' && pl.off?.length > 0 && pl.resume === 'agents.playbill.html#bodega-frete' && pl.agent === false && !pl.errs?.length, "a click opens frete's card, off the escalation, with its résumé a link away; never «agente»; no error", JSON.stringify(pl))
+  ok(pl.card === 'Bodega Azul - Frete' && pl.off?.length > 0 && pl.resume === 'agents.team.html#bodega-frete' && !pl.errs?.length, "a click opens frete's card, off the escalation, with its résumé a link away; no error", JSON.stringify(pl))
   // the RH in a browser: the board, frete's résumé and plan, a click on pedidos, never «agente»
-  const rhProbe = readFileSync(join(rh, 'agents.playbill.html'), 'utf8').replace('</body>', `<script>
+  const rhProbe = readFileSync(join(rh, 'agents.team.html'), 'utf8').replace('</body>', `<script>
     const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
     setTimeout(() => { const q = (s) => document.querySelector(s); const all = (s) => document.querySelectorAll(s); const out = {}
       out.counts = [...all('.pb-count')].map((c) => c.textContent.trim())

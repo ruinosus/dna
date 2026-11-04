@@ -1,31 +1,31 @@
 #!/usr/bin/env node
 // Compares the Copilot Studio agents cloned in a folder: what most of them do (a pattern), who is off it, what only
 // one has, the team's rules not met — and makes the map (one HTML page that opens with no internet), the workbook
-// (.xlsx) and the cast file (what people said, what was decided). No model, no install, no network: Node 18 or later.
+// (.xlsx) and the review file (what people said, what was decided). No model, no install, no network: Node 18 or later.
 //
-//   node build.mjs <agents-folder> --check [--profile <p.cast.yaml>] [--lang en|pt]     only compare: nothing is written
-//   node build.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--playbill] [--plot] [--diagrams] [--all] [--lang en|pt] [--out <folder>]
+//   node build.mjs <agents-folder> --check [--profile <team>.standard.yaml] [--lang en|pt]     only compare: nothing is written
+//   node build.mjs <agents-folder> [--profile <team>.standard.yaml] [--html] [--xlsx] [--lesson] [--team] [--topology] [--diagrams] [--all] [--lang en|pt] [--out <folder>]
 //   node build.mjs <agents-folder> --facts [--out <folder>]                         only the facts, for a model: <id>.facts.json
 //   node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]
 //                                  what was filled in the workbook (Declared, the Decision column): listed with a key each,
-//                                  and with --take written to the cast file
+//                                  and with --take written to the review file
 //   node build.mjs <agents-folder> --declared <table.csv|.xlsx> [--declared <another>] [--agent-column <title>] [--take <key,…|all>]
 //                                  what a spreadsheet says about the agents (the team's, the admin center's inventory): each
-//                                  column becomes a declared fact, listed with a key, and with --take written to the cast file
+//                                  column becomes a declared fact, listed with a key, and with --take written to the review file
 //   … --evals <folder>              the exports of Copilot Studio's Evaluate tab («Evaluate <agent> <date>.csv»): who
 //                                  passed how many, by method — the counts only, never what was asked or answered
 //   … --telemetry <export.csv|.xlsx> [--telemetry-days <n>]   what fired, from Application Insights (references/telemetry.md):
 //                                  the events in the YAML that did not fire, and who has no line at all
 //
-// With no --html/--xlsx/--lesson/--playbill/--plot/--diagrams it makes the map. Files go in --out (or beside the folder), named by the folder:
-// <id>.html, <id>.xlsx, <id>.lesson.html (a visual-explainer lesson), <id>.playbill.html (the RH of the cast), <id>.plot.html (the stage),
+// With no --html/--xlsx/--lesson/--team/--topology/--diagrams it makes the map. Files go in --out (or beside the folder), named by the folder:
+// <id>.html, <id>.xlsx, <id>.lesson.html (a visual-explainer lesson), <id>.team.html (the agents as a team), <id>.topology.html (who calls whom),
 // <id>.diagrams.md with <id>.diagrams/*.mmd (what was read, in plain Mermaid) and
-// <id>.cast.yaml, kept up to date (read again on every
-// run). Exit codes: 0 done (what to look at is printed, and is not an error); 1 the profile or the cast file breaks its
+// <id>.review.yaml, kept up to date (read again on every
+// run). Exit codes: 0 done (what to look at is printed, and is not an error); 1 the profile or the review file breaks its
 // format (each problem with its line), or no agent in the folder; 2 bad arguments; 3 made, but the lesson's reviewer
 // found something to fix. The outputs hold the client's data: keep them in the client's environment. The lesson's
 // review uses Chrome, Chromium or Edge when there is one.
-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
@@ -36,35 +36,35 @@ import { fill, inline } from './page.mjs'
 const here = dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
 const valued = new Set(['--lang', '--out', '--profile', '--from', '--take', '--declared', '--agent-column', '--telemetry', '--telemetry-days', '--evals'])
-const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--playbill', '--plot', '--diagrams', '--all', '--facts', '--upgrade', '--write', ...valued])
+const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--team', '--topology', '--playbill', '--plot', '--diagrams', '--all', '--facts', '--upgrade', '--write', ...valued])
 const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
 }
 const options = (name) => argv.flatMap((a, i) => (a === name && argv[i + 1] ? [argv[i + 1]] : []))
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
-const usage = `usage: node build.mjs <agents-folder> --check [--profile <p.cast.yaml>] [--lang en|pt]
-       node build.mjs <agents-folder> [--profile <p.cast.yaml>] [--html] [--xlsx] [--lesson] [--playbill] [--plot] [--diagrams] [--all] [--lang en|pt] [--out <folder>]
+const usage = `usage: node build.mjs <agents-folder> --check [--profile <team>.standard.yaml] [--lang en|pt]
+       node build.mjs <agents-folder> [--profile <team>.standard.yaml] [--html] [--xlsx] [--lesson] [--team] [--topology] [--diagrams] [--all] [--lang en|pt] [--out <folder>]
        node build.mjs <agents-folder> --facts [--out <folder>]
        node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]
        node build.mjs <agents-folder> --declared <table.csv|.xlsx> [--agent-column <title>] [--take <key,key…|all>] [--out <folder>]
        … [--telemetry <export.csv|.xlsx>] [--telemetry-days <n>] [--evals <folder>]
-       node build.mjs <team>.cast.yaml --upgrade [--write]    a profile or a cast file of before, with DNA's header`
+       node build.mjs <file>.yaml --upgrade [--write]    a profile or a review file of before, with DNA's header`
 const lang = option('--lang') ?? 'en'
 const fail = (msg) => {
   console.error(`${msg}\n${usage}`)
   process.exit(2)
 }
-// ---- --upgrade: a profile or a cast file of before (format: cast-list/…) with DNA's header, the rest as it is ----
+// ---- --upgrade: a profile or a review file of before (format: cast-list/…) with DNA's header, the rest as it is ----
 if (argv.includes('--upgrade')) {
-  if (args.length !== 1 || !existsSync(args[0]) || !statSync(args[0]).isFile()) fail('✗ one profile or cast file (.cast.yaml) to upgrade')
+  if (args.length !== 1 || !existsSync(args[0]) || !statSync(args[0]).isFile()) fail('✗ one profile or review file (.cast.yaml) to upgrade')
   const file = resolve(args[0])
   const text = readFileSync(file, 'utf8')
   const pt = lang === 'pt'
   const [format, kind, reader] = /^format:\s*["']?cast-list\/profile-v1/m.test(text) ? [PROFILE_FORMAT, PROFILE_KIND, readProfile] : [CAST_FORMAT, CAST_KIND, readCast]
   const up = upgradeHeader(text, format, kind)
   if (up === undefined) {
-    console.log(/^apiVersion:/m.test(text) ? (pt ? `✓ ${basename(file)} já tem o cabeçalho do DNA` : `✓ ${basename(file)} already has DNA's header`) : (pt ? `✗ ${basename(file)} não é um perfil nem um arquivo de decisões do agent-review` : `✗ ${basename(file)} is neither an agent-review profile nor a cast file`))
+    console.log(/^apiVersion:/m.test(text) ? (pt ? `✓ ${basename(file)} já tem o cabeçalho do DNA` : `✓ ${basename(file)} already has DNA's header`) : (pt ? `✗ ${basename(file)} não é um perfil nem um arquivo de decisões do agent-review` : `✗ ${basename(file)} is neither an agent-review profile nor a review file`))
     process.exit(/^apiVersion:/m.test(text) ? 0 : 1)
   }
   const same = (r) => JSON.stringify({ ...(r.profile ?? r.cast), name: undefined })
@@ -94,7 +94,7 @@ if (!Number.isInteger(days) || days < 1) fail('✗ --telemetry-days is a whole n
 
 const T = {
   en: {
-    found: (n, o, s) => `✓ ${n} in the cast: ${o} orchestrator${o === 1 ? '' : 's'}, ${s} specialist${s === 1 ? '' : 's'}`,
+    found: (n, o, s) => `✓ ${n} agents: ${o} orchestrator${o === 1 ? '' : 's'}, ${s} specialist${s === 1 ? '' : 's'}`,
     result: (p, off, solos) => `✓ ${p} patterns · ${off} off a pattern · ${solos} only one has`,
     look: 'to look at', nothing: '✓ nothing to look at', facts: (f) => `✓ facts     ${f}`,
     changes: (n) => (n ? `${n} change${n === 1 ? '' : 's'} in the workbook (take them with --take <key,…> or --take all):` : '✓ the workbook changes nothing'),
@@ -110,7 +110,7 @@ const T = {
     evalUnknown: (f, why) => `• evals     ${f}: ${why === 'testset' ? 'a test set (prompts and expected answers) with no results yet: import it in the Evaluate tab, run it and export the results' : why === 'who' ? 'its name says nobody in the folder («Evaluate <name> <date>.csv»)' : 'no result_1 column: not an export of the Evaluate tab'}`,
   },
   pt: {
-    found: (n, o, s) => `✓ ${n} no elenco: ${o} ${o === 1 ? 'orquestrador' : 'orquestradores'}, ${s} ${s === 1 ? 'especialista' : 'especialistas'}`,
+    found: (n, o, s) => `✓ ${n} agentes: ${o} ${o === 1 ? 'orquestrador' : 'orquestradores'}, ${s} ${s === 1 ? 'especialista' : 'especialistas'}`,
     result: (p, off, solos) => `✓ ${p} padrões · ${off} fora do padrão · ${solos} só um tem`,
     look: 'para olhar', nothing: '✓ nada para olhar', facts: (f) => `✓ fatos     ${f}`,
     changes: (n) => (n ? `${n} ${n === 1 ? 'mudança' : 'mudanças'} na planilha (aceite com --take <chave,…> ou --take all):` : '✓ a planilha não muda nada'),
@@ -139,7 +139,14 @@ const read = (file, reader) => {
 }
 const profile = option('--profile') ? read(resolve(option('--profile')), readProfile).profile : DEFAULT_PROFILE
 const out = resolve(option('--out') ?? dirname(folder))
-const castFile = join(out, `${id}.cast.yaml`)
+// the review file (what people said, what was decided): <id>.review.yaml; one of before, <id>.review.yaml, takes its
+// name the first time — nothing in it is lost
+const castFile = join(out, `${id}.review.yaml`)
+const before = join(out, `${id}.review.yaml`)
+if (!existsSync(castFile) && existsSync(before)) {
+  renameSync(before, castFile)
+  console.log(lang === 'pt' ? `• ${id}.review.yaml agora se chama ${id}.review.yaml` : `• ${id}.review.yaml is now ${id}.review.yaml`)
+}
 const castText = existsSync(castFile) ? readFileSync(castFile, 'utf8') : undefined
 const cast = castText !== undefined ? read(castFile, readCast).cast : { ...(profile.name ? { name: profile.name } : {}), agents: [], blocks: [], declared: [], decisions: [] }
 
@@ -154,7 +161,7 @@ const line = (c) => {
   if (c.kind === 'declared') return `${T[c.op]} ${T.declared}  ${x.agent} · ${labelOf(x.key.includes(':') ? x.key : `declared:${x.key}`, lang)}${x.value ? ` = «${x.value}»` : ''}${x.source ? ` (${x.source})` : ''}`
   return `${T[c.op]} ${T.decision}  ${labelOf(x.key, lang)}: ${T[x.status]} (${T[x.scope]})${x.why ? ` — ${x.why}` : ''}`
 }
-// what changes the cast file: listed, each with its key, and with --take written
+// what changes the review file: listed, each with its key, and with --take written
 const proposeOrTake = (changes) => {
   const take = option('--take')
   if (!take) {
@@ -258,33 +265,34 @@ else console.log(T.nothing)
 if (argv.includes('--check')) process.exit(0)
 
 const all = argv.includes('--all')
-const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), lesson: all || argv.includes('--lesson'), playbill: all || argv.includes('--playbill'), plot: all || argv.includes('--plot'), diagrams: all || argv.includes('--diagrams') }
+// --team and --topology (--playbill and --plot, their names of before, still work)
+const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), lesson: all || argv.includes('--lesson'), playbill: all || argv.includes('--team') || argv.includes('--playbill'), plot: all || argv.includes('--topology') || argv.includes('--plot'), diagrams: all || argv.includes('--diagrams') }
 if (!want.xlsx && !want.lesson && !want.playbill && !want.plot && !want.diagrams) want.html = true
 mkdirSync(out, { recursive: true })
-// the cast file keeps this run's roles and blocks of text (so a block keeps its id across small edits), under what
+// the review file keeps this run's roles and blocks of text (so a block keeps its id across small edits), under what
 // people wrote in it; the types a person gave an agent stay, the ones the profile works out are not written
 const givenTypes = Object.fromEntries(cast.agents.filter((a) => a.types?.length).map((a) => [a.id, a.types]))
 const kept = { ...cast, agents: result.agents.map((a) => ({ id: a.id, role: a.role, ...(givenTypes[a.id] ? { types: givenTypes[a.id] } : {}) })), blocks: result.blocks.map((b) => ({ id: b.id, text: b.text })) }
 const castYaml = writeCast(kept, castText)
 writeFileSync(castFile, castYaml)
-console.log(`✓ cast      ${castFile}`)
+console.log(`✓ review    ${castFile}`)
 if (want.html) {
   const page = join(out, `${id}.html`)
   const map = readFileSync(join(here, '../assets/map.html'), 'utf8')
-  writeFileSync(page, fill(map, { CAST: inline({ id, lang, result, looks, cast: kept, castYaml, focusAreas: profile.focusAreas, threshold: profile.threshold, ...(want.playbill ? { playbill: `${id}.playbill.html` } : {}), ...(want.plot ? { plot: `${id}.plot.html` } : {}) }) }))
+  writeFileSync(page, fill(map, { CAST: inline({ id, lang, result, looks, cast: kept, castYaml, focusAreas: profile.focusAreas, threshold: profile.threshold, ...(want.playbill ? { playbill: `${id}.team.html` } : {}), ...(want.plot ? { plot: `${id}.topology.html` } : {}) }) }))
   console.log(`✓ map       ${page}`)
 }
 if (want.playbill) {
-  const page = join(out, `${id}.playbill.html`)
+  const page = join(out, `${id}.team.html`)
   const playbill = playbillOf(result, looks, found, kept, profile.rules, fired, evalSets)
   writeFileSync(page, fill(readFileSync(join(here, '../assets/playbill.html'), 'utf8'), { CAST: inline({ id, lang, playbill, ...(want.html ? { map: `${id}.html` } : {}) }) }))
-  console.log(`✓ rh        ${page}`)
+  console.log(`✓ team      ${page}`)
 }
 if (want.plot) {
-  const page = join(out, `${id}.plot.html`)
+  const page = join(out, `${id}.topology.html`)
   const stage = stageOf(result, looks, found, fired)
-  writeFileSync(page, fill(readFileSync(join(here, '../assets/plot.html'), 'utf8'), { CAST: inline({ id, lang, stage, ...(want.html ? { map: `${id}.html` } : {}), ...(want.playbill ? { playbill: `${id}.playbill.html` } : {}) }) }))
-  console.log(`✓ stage     ${page}`)
+  writeFileSync(page, fill(readFileSync(join(here, '../assets/plot.html'), 'utf8'), { CAST: inline({ id, lang, stage, ...(want.html ? { map: `${id}.html` } : {}), ...(want.playbill ? { playbill: `${id}.team.html` } : {}) }) }))
+  console.log(`✓ topology  ${page}`)
 }
 if (want.diagrams) {
   const doc = join(out, `${id}.diagrams.md`)

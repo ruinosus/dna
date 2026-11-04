@@ -1,4 +1,4 @@
-// The lesson: a scene the drawing engine takes, in five chapters (the cast, what repeats, who is off, what is missing,
+// The lesson: a scene the drawing engine takes, in five chapters (the agents, what repeats, who is off, what is missing,
 // what to decide); every agent drawn by name; a red × for each one off a pattern and nobody else; nothing off the
 // paper; the screen words never say «agent»; and many agents fit (two rows past a row's room).
 import { readFileSync } from 'node:fs'
@@ -17,8 +17,8 @@ import { plain, wave1 } from './wave1'
 
 const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills/agent-review/examples')
 const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
-const profile = plain(readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!)
-const demo = readCast(readFileSync(join(examples, 'demo.cast.yaml'), 'utf8')).cast!
+const profile = plain(readProfile(readFileSync(join(examples, 'team.standard.yaml'), 'utf8')).profile!)
+const demo = readCast(readFileSync(join(examples, 'demo.review.yaml'), 'utf8')).cast!
 type Step = { type: string; chapter?: string; say?: string; text?: string; at?: [number, number]; from?: [number, number]; to?: [number, number]; name?: string }
 const sceneOf = (as: AgentFacts[], cast: Cast, lang: 'en' | 'pt') => {
   const r = compare(as, profile, cast)
@@ -27,7 +27,7 @@ const sceneOf = (as: AgentFacts[], cast: Cast, lang: 'en' | 'pt') => {
 
 const s = sceneOf(agents, demo, 'pt')
 const chapters = s.steps.filter((x) => x.chapter).map((x) => x.chapter)
-ok(chapters.join() === 'O elenco,O que se repete,Quem está fora,O que falta,O que decidir', 'five chapters, in order', chapters)
+ok(chapters.join() === 'Os agentes,O que se repete,Quem está fora,O que falta,O que decidir', 'five chapters, in order', chapters)
 const texts = s.steps.filter((x) => x.type === 'text').map((x) => x.text!)
 ok(agents.every((a) => texts.some((t) => t.includes(a.id) || a.id.startsWith(t))), 'every agent drawn by name', texts)
 ok(s.steps.filter((x) => x.type === 'prop' && x.name === 'robot').length === 6, 'six robots on the paper')

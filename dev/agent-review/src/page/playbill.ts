@@ -8,7 +8,7 @@ import type { Playbill, Resume, Situation } from '../playbill'
 interface Data { id: string; lang: Lang; playbill: Playbill; map?: string }
 const UI = {
   en: {
-    title: 'The cast’s HR', sub: 'The same cast, as people: staff board, org chart, post, résumé and development plan. Everything comes from the files, the telemetry and the team’s spreadsheets.',
+    title: 'The team', sub: 'Each one seen as a person: staff board, org chart, post, résumé and development plan. Everything comes from the files, the telemetry and the team’s spreadsheets.',
     privacy: 'This file holds the client’s data: keep it in the client’s environment.',
     staff: { cast: 'on the staff', hiring: 'being hired', noOwner: 'with no owner', neverPublished: 'never published', noEval: 'with no evaluation', pdi: 'with a development plan', ok: 'in good standing' } as Record<string, string>,
     tag: { hiring: 'being hired', noOwner: 'no owner', neverPublished: 'never published', noEval: 'no evaluation', pdi: 'plan', ok: 'in good standing' } as Record<Situation, string>,
@@ -21,7 +21,7 @@ const UI = {
     views: 'How to see it', cv: 'Résumé', sheet: 'Sheet', pdi: 'Development plan', nothing: 'Nothing to develop.', sources: 'Sources', seal: { ok: 'IN GOOD STANDING', pdi: 'PLAN' }, orchestrator: 'Orchestrator', specialist: 'Specialist', map: '← Map', foot: `agent-review ${RELEASE} · no model: what is here is what the files and tables say.`,
   },
   pt: {
-    title: 'RH do elenco', sub: 'O mesmo elenco, visto como pessoas: quadro de pessoal, organograma, vaga, currículo e plano de desenvolvimento. Tudo sai dos arquivos, da telemetria e das planilhas do time.',
+    title: 'O time', sub: 'Cada um visto como uma pessoa: quadro de pessoal, organograma, vaga, currículo e plano de desenvolvimento. Tudo sai dos arquivos, da telemetria e das planilhas do time.',
     privacy: 'Este arquivo tem dados do cliente: deixe-o no ambiente dele.',
     staff: { cast: 'no quadro', hiring: 'em admissão', noOwner: 'sem responsável', neverPublished: 'nunca publicado', noEval: 'sem avaliação', pdi: 'em PDI', ok: 'em dia' } as Record<string, string>,
     tag: { hiring: 'em admissão', noOwner: 'sem responsável', neverPublished: 'nunca publicado', noEval: 'sem avaliação', pdi: 'PDI', ok: 'em dia' } as Record<Situation, string>,

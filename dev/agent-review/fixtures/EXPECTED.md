@@ -112,7 +112,7 @@ Added by `gen_fixtures.py` (the `WAVE3` table and three tables beside `agents/`)
 | `examples/inventario.csv` | the admin center's download: 6 agents by name and schema name, an agent of another environment (`cr7b2_bodegaFidelidade`), a canvas app, an agent flow; cupons with no owner | `declared:owner`, `environment`, `created-on`, `last-published`; the app and the flow left out; Fidelidade listed as naming nobody |
 | `examples/equipe.csv` | `;`, `Agente;KPI;Dono`, loja-fisica with no KPI, a row «Sobre a Bodega Azul» (the orchestrator's child, not a folder) | `declared:kpi` and `declared:owner`; after `--take all` the KPI rule misses only loja-fisica |
 
-With the example profile: 24 to look at (22 + the spelling + the field); with the demo cast file and the telemetry, 27.
+With the example profile: 24 to look at (22 + the spelling + the field); with the demo review file and the telemetry, 27.
 
 Inferred, to confirm in a real clone and a real export:
 - the shape of `properties` (a Power Fx record `={…}`), and whether `cloud_RoleInstance` carries the agent's name;

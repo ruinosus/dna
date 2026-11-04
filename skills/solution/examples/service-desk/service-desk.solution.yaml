@@ -13,4 +13,4 @@ sim: service-desk.sim
 blueprint: service-desk.blueprint.yaml
 drill: service-desk.drill.yaml
 agents: agents
-profile: profile.cast.yaml
+profile: team.standard.yaml

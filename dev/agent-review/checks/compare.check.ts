@@ -14,8 +14,8 @@ import { done, ok } from './ok'
 
 const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills/agent-review/examples')
 const agents = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
-const profile = plain(readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!)
-const demo = readCast(readFileSync(join(examples, 'demo.cast.yaml'), 'utf8')).cast!
+const profile = plain(readProfile(readFileSync(join(examples, 'team.standard.yaml'), 'utf8')).profile!)
+const demo = readCast(readFileSync(join(examples, 'demo.review.yaml'), 'utf8')).cast!
 const empty: Cast = { agents: [], blocks: [], declared: [], decisions: [] }
 const SPECIALISTS = ['bodega-pedidos', 'bodega-devolucoes', 'bodega-frete', 'bodega-cupons', 'bodega-loja-fisica']
 
@@ -60,7 +60,7 @@ const gap = (res: Result, id: string) => res.gaps.find((g) => g.rule.id === id)?
 ok(gap(r, 'escala') === 'bodega-frete', 'the rule «escala»: bodega-frete')
 ok(gap(r, 'kpi') === [...SPECIALISTS].sort().join(), 'the rule «kpi»: nobody declared one, all five specialists')
 
-// with the demo cast file: what people said, and what was decided
+// with the demo review file: what people said, and what was decided
 const d = compare(agents, profile, demo)
 ok(gap(d, 'kpi') === SPECIALISTS.filter((s) => s !== 'bodega-pedidos').sort().join(), 'bodega-pedidos declared its KPI: the rule now names four', gap(d, 'kpi'))
 ok('declared:kpi' in d.agents.find((a) => a.id === 'bodega-pedidos')!.facts && !d.solos.some((s) => s.key === 'declared:kpi'), 'a declared fact is a fact of the agent, and not a solo')
@@ -109,7 +109,7 @@ ok(!t.patterns.some((p) => p.key.endsWith('~variant')) && !t.solos.some((x) => x
 const decided = compare(agents, w1, { ...empty, decisions: [{ key: 'text:link-domain:ajuda.bodega-azul.example', status: 'accepted', scope: 'type:guidance', why: 'orientação sempre aponta a ajuda' }] })
 ok(pattern(decided, 'text:link-domain:ajuda.bodega-azul.example')?.decision?.scope === 'type:guidance', 'a decision with a type scope marks the pattern of that type')
 const given = compare(agents, w1, { ...empty, agents: [{ id: 'bodega-frete', role: 'specialist', types: ['guidance'] }], decisions: [{ key: 'text:link-domain:ajuda.bodega-azul.example', status: 'accepted', scope: 'type:guidance', why: '' }] })
-ok(given.types['bodega-frete'].join() === 'guidance' && given.offPattern.some((o) => o.agent === 'bodega-frete' && o.key === 'text:link-domain:ajuda.bodega-azul.example'), 'the cast file makes frete a guidance specialist: off the accepted help-link pattern of its new type')
+ok(given.types['bodega-frete'].join() === 'guidance' && given.offPattern.some((o) => o.agent === 'bodega-frete' && o.key === 'text:link-domain:ajuda.bodega-azul.example'), 'the review file makes frete a guidance specialist: off the accepted help-link pattern of its new type')
 
 // wave 2: the orchestrator's contract, as facts of the agent called
 const fact = (id: string, key: string) => r.agents.find((a) => a.id === id)!.facts[key]

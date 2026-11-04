@@ -78,8 +78,8 @@ copyFileSync(join(repo, 'skills/way-of-working/scripts/read-xlsx.mjs'), join(ski
 const { keysMarkdown } = await import(`data:text/javascript;base64,${Buffer.from((await build({ ...common, entryPoints: [join(root, 'src/labels.ts')], format: 'esm', platform: 'node' })).outputFiles[0].text).toString('base64')}`)
 mkdirSync(join(skill, 'references'), { recursive: true })
 writeFileSync(join(skill, 'references/keys.md'), keysMarkdown())
-// references/playbill.md, from the words the RH uses
+// references/team.md, from the words the team page uses
 const { playbillMarkdown } = await import(`data:text/javascript;base64,${Buffer.from((await build({ ...common, entryPoints: [join(root, 'src/playbillDoc.ts')], format: 'esm', platform: 'node' })).outputFiles[0].text).toString('base64')}`)
-writeFileSync(join(skill, 'references/playbill.md'), playbillMarkdown())
+writeFileSync(join(skill, 'references/team.md'), playbillMarkdown())
 writeFileSync(join(skill, 'assets/VERSION'), `engine ${version}\nvisual-explainer ${chalk}\n`)
 console.log(`✓ assets from the engine ${version} and visual-explainer ${chalk}: engine.mjs ${(engine.outputFiles[0].text.length / 1024).toFixed(0)} KB, map.html ${(html.length / 1024).toFixed(0)} KB, playbill.html ${(pbHtml.length / 1024).toFixed(0)} KB, plot.html ${(plHtml.length / 1024).toFixed(0)} KB, read-xlsx.mjs, references/keys.md and playbill.md`)

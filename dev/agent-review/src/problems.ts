@@ -1,4 +1,4 @@
-// What can be wrong in a profile or a cast file, each with its line, and the sentence that says it.
+// What can be wrong in a profile or a review file, each with its line, and the sentence that says it.
 import { DNA_API } from '@kit/format'
 
 export type Problem =

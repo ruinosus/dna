@@ -83,9 +83,9 @@ const AGENT_TYPES = new Set(['agent', 'agente', 'agents', 'agentes', 'copilotstu
 
 export interface Imported { changes: Change[]; /** Rows of agents that are not in the folder. */ unmatched: { line: number; value: string }[]; problem?: Extract<Column, { problem: string }> }
 
-/** What a table declares about the agents of the folder, as changes to the cast file: a column becomes
+/** What a table declares about the agents of the folder, as changes to the review file: a column becomes
  * declared:<column>, its source the file and the line. Rows of what is not an agent (the inventory's apps and flows) are
- * left out; a value already in the cast file is no change; nothing is removed. */
+ * left out; a value already in the review file is no change; nothing is removed. */
 export function declaredFrom(t: Table, agents: Who[], cast: Cast, o: { file: string; lang: 'en' | 'pt'; agentColumn?: string }): Imported {
   const match = matcher(agents)
   const col = agentColumn(t, match, agents.length, o.agentColumn)

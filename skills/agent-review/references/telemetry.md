@@ -29,7 +29,7 @@ customEvents
 node scripts/build.mjs <agents-folder> --all --telemetry eventos.csv [--telemetry-days 30] [--lang pt]
 ```
 
-The file is read on this run only (it is not kept in the cast file): pass it again on the next one.
+The file is read on this run only (it is not kept in the review file): pass it again on the next one.
 
 - «O evento «X» de y não disparou em 30 dias» — the event is in y's YAML, y has lines in the export, and none is X.
 - «y não tem nenhuma linha na telemetria: está ligado ao Application Insights?» — y is not in the export at all.

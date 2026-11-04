@@ -1,4 +1,4 @@
-// The example as a person runs it in full: the agents, the team's profile, the demo's cast file with the inventory and
+// The example as a person runs it in full: the agents, the team's profile, the demo's review file with the inventory and
 // the team spreadsheet taken, and the export of Application Insights — what the RH and the stage are checked on.
 import { readdirSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -16,8 +16,8 @@ import { evalsFrom } from '../src/evals'
 export const examples = resolve(dirname(fileURLToPath(import.meta.url)), '../../../skills/agent-review/examples')
 const csv = (f: string) => readCsv(readFileSync(join(examples, f), 'utf8'), '')
 export const found = agentsIn(join(examples, 'agents')).map((a) => extractAgent(a.id, a.files))
-export const profile = readProfile(readFileSync(join(examples, 'profile.cast.yaml'), 'utf8')).profile!
-export const demo = readCast(readFileSync(join(examples, 'demo.cast.yaml'), 'utf8')).cast!
+export const profile = readProfile(readFileSync(join(examples, 'team.standard.yaml'), 'utf8')).profile!
+export const demo = readCast(readFileSync(join(examples, 'demo.review.yaml'), 'utf8')).cast!
 const tables = (cast: Cast, files: string[]) => {
   const changes = mergeDeclared(files.flatMap((f) => declaredFrom(csv(f), found, cast, { file: f, lang: 'pt' }).changes))
   return applyChanges(cast, changes, changes.map((c) => c.key))

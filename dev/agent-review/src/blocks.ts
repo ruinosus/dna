@@ -3,7 +3,7 @@
 // punctuation, numbers as #n, URLs as #url) and compared by their 5-word shingles: the same block when their Jaccard
 // is 0.85 or more; a variation when at least half of the smaller one's shingles are in the other (containment: a copy
 // that lost one of four lines is still a variation, where Jaccard alone would call it another block); else another. Blocks of two agents or more make a family; its text is
-// the form most of them share, its id survives small edits (kept in the cast file), and an official block from the
+// the form most of them share, its id survives small edits (kept in the review file), and an official block from the
 // profile gives the family its id and name. The same meaning in other words is another block: text, not meaning.
 import type { AgentFacts, Facts, Source, Text } from './extract'
 import { wordDiff, type Piece } from './diff'
@@ -96,7 +96,7 @@ const labelOf = (text: string) => {
 
 /**
  * The families of blocks the agents share, and each agent's facts: `text:block:<id>` when it has the block,
- * `text:block:<id>~variant` when it has a variation. `known` are the blocks kept in the cast file (their ids stay);
+ * `text:block:<id>~variant` when it has a variation. `known` are the blocks kept in the review file (their ids stay);
  * `official` the profile's (they are families even when nobody has them).
  */
 export function blocksOf(agents: AgentFacts[], known: { id: string; text: string }[], official: Official[]): { families: BlockFamily[]; facts: Record<string, Facts> } {
