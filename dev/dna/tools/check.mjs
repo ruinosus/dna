@@ -61,7 +61,7 @@ for (const [s, args] of cases) {
 {
   const names = [...readFileSync(join(repo, 'hooks/register.tsx'), 'utf8').matchAll(/^ {4}name: '([^']+)'/gm)].map((m) => m[1])
   const clash = names.filter((n) => SKILLS.includes(n) || ['agents', 'help', 'clear', 'config', 'plugin', 'skills', 'mcp', 'model'].includes(n))
-  expect(names.length >= 9 && !clash.length, `the mod's ${names.length} commands, none named like a skill or a command of Claude Code's own${clash.length ? ` — not: ${clash.join(', ')}` : ''}`)
+  expect(names.length >= 10 && names.includes('attest') && !clash.length, `the mod's ${names.length} commands, none named like a skill or a command of Claude Code's own${clash.length ? ` — not: ${clash.join(', ')}` : ''}`)
 }
 
 // OKF (2.1.0): kit/okf-read.mjs reads a third-party bundle as data — the three skills that write recipes from material

@@ -11,6 +11,7 @@
 //   /drill   an incident drill played in a pane: the clock, the scene, the choices and calls as buttons, the debrief
 //   guard    checks each .sim file Claude writes and refuses it with the validator's messages
 //   /simulate     runs a recipe with no model turn and prints median and p10 to p90 per metric
+//   /attest       the verdict on a simulation's receipt (process-simulation --attest)
 //   preview  a pane with the recipe's flow, opened by /simulation-preview or the first valid write
 import type { Register } from 'claude-code'
 
@@ -24,6 +25,7 @@ import { lensesCommand } from './lenses/lenses'
 import { solutionCommand } from './solution/solution'
 import { guard } from './process-simulation/guard'
 import { preview } from './process-simulation/preview'
+import { attestCommand } from './process-simulation/attest'
 
 // The mod's commands. None is named like one of Claude Code's own (/agents…) or like one of the plugin's skills
 // (/dna:solution, /dna:agent-review…): those are refused.
@@ -68,6 +70,11 @@ const COMMANDS = [
     description: 'Say what the names guard watches: your private list and this repository',
   },
   {
+    name: 'attest',
+    description: 'Check a simulation receipt: the recipe, the controls and the numbers, run again',
+    argumentHint: '<receipt.json> [file.sim]',
+  },
+  {
     name: 'simulation-preview',
     description: 'Show the flow of the current .sim recipe in a pane',
     argumentHint: '[file.sim]',
@@ -98,4 +105,5 @@ export const register: Register = on => {
   guard(on)
   simCommand(on)
   preview(on)
+  attestCommand(on)
 }
