@@ -29,6 +29,7 @@ function engine(on: any, files: Record<string, string> = {}) {
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.toast', () => ({ value: undefined }))
   on('clock.now', () => ({ value: 1_000_000 }))
+  on('env.get', () => ({ value: undefined })) // as a session with no HOME: the names guard has no list
   on('fs.read', (_: any, e: any) => {
     const hit = Object.keys(files).find(k => String(e.path ?? e.args?.[0] ?? '').endsWith(k))
     return hit ? { value: files[hit] } : { deny: 'ENOENT ' + JSON.stringify(e) }

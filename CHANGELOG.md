@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.12.0 — 2026-11-04
+
+The mod checks every recipe as Claude writes it, and keeps the names of your private list out of what is published.
+
+- **The recipes' guard.** A `.way.yaml`, `.blueprint.yaml`, `.drill.yaml`, `.chalk` or chalk-talk `.json` that Claude
+  writes or edits is checked first by its skill's own script (its `--check`, or chalk-talk's build with no review), on
+  a copy in a folder of its own, and refused with the script's messages — the line and what to write — when it breaks
+  its format. A `.json` is checked only when it is a chalk-talk recipe. If the check cannot run, the write goes through.
+- **The names' guard.** In a repository that runs the names audit before it publishes (an `audit` script calling
+  `audit.mjs`, as house-lights does), a write whose new text has a name of `~/.config/skill-kit/audit.txt` is refused,
+  saying which pattern and on which line — never repeating the text. An edit is checked on what it adds, so removing
+  a name is never blocked. With no list, or anywhere else, it does nothing. `/names` says what it watches.
+- **The guards fail open in their own code**, box-office's too: a hook that threw would stop the plugin's other
+  guards. The mod's 16 tests run in `npm run check` (dev/house-lights).
+
 ## 1.11.2 — 2026-11-04
 
 - gates-and-handoffs: **the gate's card no longer spills** in the side panel of a wide screen. Each approval's

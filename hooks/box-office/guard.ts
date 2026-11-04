@@ -1,5 +1,5 @@
 // Feature 1: checks every .sim file Claude writes or edits, and refuses the write
-// with the validator's messages when the recipe has errors, so Claude fixes it first.
+// with the validator's messages when the recipe has errors, so Claude fixes it first. It fails open, in its own code.
 import { atom, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
 
@@ -10,7 +10,13 @@ const last = atom({ plugin: 'house-lights', key: 'last' } as const, null, { shap
 let openedPreview = false
 
 async function judge($: EngineInterface, path: string, src: string, go: () => Promise<any>) {
-  const c = check(src)
+  // never throws: a recipe the parser cannot even read lets the write through (a hook that throws would stop the others)
+  let c: ReturnType<typeof check>
+  try {
+    c = check(src)
+  } catch {
+    return go()
+  }
   if (!c.ok) {
     const list = c.errors.map(d => `- ${d.text}`).join('\n')
     const more = c.warnings.length ? '\nWarnings:\n' + c.warnings.map(d => `- ${d.text}`).join('\n') : ''
@@ -35,7 +41,7 @@ export function guard(on: On) {
   on('tool.call', { tool: 'Write' }, async ($, e, next) => {
     if (!isSim(e.file_path)) return next(e)
     return judge($, e.file_path, e.content, () => next(e))
-  }).catch(($, e, next) => next(e))
+  })
 
   on('tool.call', { tool: 'Edit' }, async ($, e, next) => {
     if (!isSim(e.file_path)) return next(e)
@@ -47,5 +53,5 @@ export function guard(on: On) {
       ? before.split(e.old_string).join(e.new_string)
       : before.slice(0, at) + e.new_string + before.slice(at + e.old_string.length)
     return judge($, e.file_path, after, () => next(e))
-  }).catch(($, e, next) => next(e))
+  })
 }

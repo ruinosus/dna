@@ -4,7 +4,7 @@ description: Explains an idea by drawing it, the way a teacher does at the board
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "1.11.2"
+  version: "1.12.0"
 ---
 
 # chalk-talk: explain by drawing
@@ -223,3 +223,8 @@ again and say what changed. A different hook or audience is a new drawing.
 - Never write a script to generate the recipe: write it yourself (expressions and `repeat` do the arithmetic).
 - Without code execution, never hand-write the player, an SVG or an image of the drawing: use the small page above. If
   you can neither run code nor show an artifact, say so and give the recipe.
+
+## In Claude Code
+
+With the house-lights plugin, a mod checks every `.chalk` or `.json` recipe you write or edit with this skill's own check: one that breaks
+the format is refused with the messages — fix them and write it again. Elsewhere, run the check yourself.

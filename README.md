@@ -28,8 +28,11 @@ drawing it, playing it, mapping it, comparing it or simulating it — each one a
 
 Claude picks the skill by what you ask. To call one by name: `/house-lights:back-of-napkin …`.
 
-In Claude Code (2.1.287 or later) the plugin also carries a **mod** for box-office: every `.sim` Claude writes is
-checked first, and `/sim` and `/sim-preview` run and show a recipe. Elsewhere the skills work without it.
+In Claude Code (2.1.287 or later) the plugin also carries a **mod**: every recipe Claude writes (`.way.yaml`,
+`.blueprint.yaml`, `.drill.yaml`, `.chalk`, a chalk-talk `.json`, a `.sim`) is checked first by its skill and refused
+with the messages when it breaks its format; in a repository that runs the names audit, a write with a name of your
+private list is refused (`/names` says what it watches); and `/sim` and `/sim-preview` run and show a `.sim`.
+Elsewhere the skills work without it.
 
 <p align="center">
   <img src="https://ruinosus.github.io/house-lights/back-of-napkin/thumbs/pitch-pharmacy-queue.png" alt="A hand-drawn pitch ending on «pilot: 5 stores, 3 months»" width="400">

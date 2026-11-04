@@ -2,8 +2,7 @@
 // the same numbers in both languages, the seeded snapshots, the validator, determinism); every example checks, runs
 // and makes its page; a broken recipe says what to fix and exits 1; the page loads nothing from the internet and
 // carries its version; a clean copy of the skill runs on Node alone; and, in a browser, the page simulates the example
-// to the end of its comparison, with its fonts inside. The mod's own tests run from the repository's root
-// (claude plugin test .), when Claude Code is here. Run after npm run assets.
+// to the end of its comparison, with its fonts inside. The mod's tests run in dev/house-lights/tools/check.mjs. Run after npm run assets.
 import { checkSkillMd } from 'chalk-talk/kit/tools/checks.mjs'
 import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
@@ -92,14 +91,7 @@ else {
   ok(r.columns === 5 && r.pending === false && r.fonts === true && r.en === 'en' && !r.errs?.length, 'the three scenarios compared to the end, the fonts inside, EN at a click, no error', JSON.stringify(r))
 }
 
-// the mod: its tests (dev/box-office/checks/mod.test.tsx) in Claude Code's own harness, from the repository's root
-const claude = spawnSync('claude', ['--version'], { encoding: 'utf8' })
-if (claude.status !== 0) console.log('• no Claude Code here: the mod was not tested')
-else {
-  const t = spawnSync('claude', ['plugin', 'test', repo], { encoding: 'utf8', timeout: 240000 })
-  const pass = Number((t.stdout.match(/(\d+) pass/) ?? [])[1] ?? 0)
-  ok(t.status === 0 && pass >= 6, `the mod in Claude Code's harness: ${pass} tests pass (guard, /sim, /sim-preview)`, t.stdout + t.stderr)
-}
+// the mod's tests (dev/box-office/checks/mod.test.tsx) run with the whole mod's, in dev/house-lights/tools/check.mjs
 
 rmSync(work, { recursive: true, force: true })
 if (failed) {

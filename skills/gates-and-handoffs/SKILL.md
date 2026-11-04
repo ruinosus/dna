@@ -4,7 +4,7 @@ description: Turns how a team works — scattered in PDFs, slides, wikis or some
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing.
 metadata:
-  version: "1.11.2"
+  version: "1.12.0"
 ---
 
 # gates-and-handoffs: a team's way of working, clear and checkable
@@ -94,3 +94,8 @@ and run step 4 again so the map, the workbook and the lesson match the file.
 - Never put a person's name as a role or a lane, an environment as a phase, an activity or a ritual as a stage.
 - Never edit the generated `.html`, `.xlsx` or `.lesson.html`: change the `.way.yaml` and build again.
 - This maps how the work *should* go. It does not track items moving through it, nor decide a gate: say so if asked.
+
+## In Claude Code
+
+With the house-lights plugin, a mod checks every `.way.yaml` you write or edit with this skill's own check: one that breaks
+the format is refused with the messages — fix them and write it again. Elsewhere, run the check yourself.

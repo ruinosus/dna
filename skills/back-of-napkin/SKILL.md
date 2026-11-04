@@ -4,7 +4,7 @@ description: Explains anything by drawing it, the way you would on the back of a
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first).
 metadata:
-  version: "1.11.2"
+  version: "1.12.0"
 ---
 
 # back-of-napkin: explain anything by drawing it
@@ -144,3 +144,8 @@ notes as the speaker notes.
   like `[__]` on the board — say it in words, and say which numbers would help when you deliver. A sample screen
   (an app, a ranking, a dashboard) shows words, not figures: «your turn is next», not «3rd · 12 min».
 - Never write `kind lesson` or a quiz: teaching is chalk-talk's.
+
+## In Claude Code
+
+With the house-lights plugin, a mod checks every `.chalk` you write or edit with this skill's own check: one that breaks
+the format is refused with the messages — fix them and write it again. Elsewhere, run the check yourself.

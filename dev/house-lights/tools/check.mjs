@@ -1,6 +1,6 @@
 // Checks what holds the seven skills together: one version in the plugin, the npm package and every SKILL.md; the npm
 // package carrying each skill's build; and npx house-lights <skill> drawing an example of each, with its exit code.
-import { execFileSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
@@ -56,6 +56,17 @@ const tracked = execFileSync('git', ['-C', repo, 'ls-files', '-z'], { encoding: 
 const kept = tracked.filter((f) => f.startsWith('docs/') || /^npm\/chalk-talk\/(?:[^/]+\.js$|scripts\/|assets\/|references\/)/.test(f))
 const mb = tracked.reduce((n, f) => n + (existsSync(join(repo, f)) ? statSync(join(repo, f)).size : 0), 0) / 1048576
 expect(!kept.length && mb < 25, `main carries only what is installed and built from (${mb.toFixed(1)} MB in ${tracked.length} files)${kept.length ? ` — not: ${kept.slice(0, 5).join(', ')}` : ''}`)
+
+// The mod (hooks/): every test of it — the recipes' and names' guards, box-office's guard, /sim and the preview — in
+// Claude Code's own harness, when Claude Code is here.
+const claude = spawnSync('claude', ['--version'], { encoding: 'utf8' })
+if (claude.status !== 0) console.log('• no Claude Code here: the mod was not tested')
+else {
+  const t = spawnSync('claude', ['plugin', 'test', repo], { encoding: 'utf8', timeout: 300000 })
+  const pass = Number((t.stdout.match(/(\d+) pass/) ?? [])[1] ?? 0)
+  const fail = Number((t.stdout.match(/(\d+) fail/) ?? [])[1] ?? 0)
+  expect(t.status === 0 && pass >= 16 && fail === 0, `the mod in Claude Code's harness: ${pass} tests pass, ${fail} fail`, t.stdout + t.stderr)
+}
 
 // Every relative link of the front page, the README and each skill's guide points at a file that is there.
 // the site's front page only once npm run site has made it (docs/ is not kept in git)
