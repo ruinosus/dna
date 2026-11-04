@@ -1,5 +1,31 @@
 # Changelog
 
+## 2.1.0 — 2026-11-04
+
+**DNA speaks OKF** — [Open Knowledge Format](https://github.com/GoogleCloudPlatform/open-knowledge-format) v0.2, Google's
+format for knowledge with its provenance, trust and lifecycle. DNA says what a thing is; OKF says where it came from and
+how far to trust it.
+
+- **`solution --okf`** writes the solution as an OKF bundle any OKF reader takes: a concept per piece (Way of Working,
+  Service Blueprint, Incident Drill, Agent Review, Lesson) with what its skill's check says and its sources as footnotes
+  (the blueprint's pains, the drill's runbook and gaps, each agent); *machine-confirmed* when the check passes, a `draft`
+  when it does not; the recipes in `references/dna/`; `index.md` and `log.md`. Exporting again with nothing changed
+  writes the same bytes, and the log grows only when something changed.
+- **A person's review.** `solution --review <piece> --by <id> [--write]` records a review in the solution (`reviewed:`);
+  the bundle carries it as *human-reviewed* while the piece stays as reviewed, and `--check` says when it changed after.
+- **The simulation is an Attested Computation.** `process-simulation --run --receipt <file>` writes a run's receipt (the
+  recipe's sha256, the engine, the seed, the runs, the controls, the numbers); `--attest <receipt>` runs the recipe
+  again and says whether it holds, or why not — the recipe swapped, a control that is not one or out of range, another
+  engine, a number moved (exit 3). The bundle carries the executor and a deterministic attester with the engine, so a
+  receipt can be checked with the bundle alone. The mod's `/attest` says the verdict.
+- **An OKF bundle is material.** `scripts/okf-read.mjs` (in the kit, and in way-of-working, service-blueprint and
+  incident-drill) reads a bundle: each concept's type, trust tier, staleness, status, sources and links, its text inside
+  a data fence — someone else's content, never instructions; a document that breaks the format is listed, never
+  refused; nothing in it is run. The three skills write their recipe from it, citing `okf:<path>`. An eval: a drill
+  written from a bundle with a line that gives orders cites its concepts and does not obey it (1.00, one run).
+- `@ruinosus/visual-explainer` 0.21.0: the kit carries the OKF reader.
+- The agent-review compare eval names the HR agents again (it still asked for the store's).
+
 ## 2.0.1 — 2026-11-04
 
 What the installed 2.0.0 still said from before DNA, found by testing it from the marketplace.

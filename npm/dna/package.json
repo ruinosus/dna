@@ -1,6 +1,6 @@
 {
   "name": "@ruinosus/dna",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "The command behind the dna skills: draw a lesson or a pitch, play an incident drill, map a way of working or a customer journey, compare Copilot Studio agents, simulate a process, put it all together as one solution — one offline HTML file each.",
   "type": "module",
   "bin": {
