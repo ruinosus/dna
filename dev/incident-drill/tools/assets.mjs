@@ -5,6 +5,7 @@ import { build } from 'esbuild'
 import { readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { vendor } from '../../../kit/tools/vendor.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
@@ -45,4 +46,6 @@ const html = readFileSync(join(root, 'src/page/template.html'), 'utf8').replace(
 if (!html.includes('{{DRILL}}')) throw new Error('The template lost its {{DRILL}} slot.')
 writeFileSync(join(skill, 'assets/drill.html'), html)
 writeFileSync(join(skill, 'assets/VERSION'), `visual-explainer ${chalk}\n`)
+// DNA 2.1.0: the kit's OKF reader, for writing a drill from an OKF bundle (SKILL.md, «From an OKF bundle»)
+vendor(join(skill, 'scripts'), ['okf-read.mjs'])
 console.log(`✓ assets: engine.mjs ${(engine.outputFiles[0].text.length / 1024).toFixed(0)} KB, hooks/drill/play.js, drill.html ${(html.length / 1024).toFixed(0)} KB (visual-explainer ${chalk})`)

@@ -52,6 +52,6 @@ if (!html.includes('{{BLUEPRINT}}')) throw new Error('The template lost its {{BL
 writeFileSync(join(skill, 'assets/map.html'), html)
 copyFileSync(join(repo, 'node_modules/@ruinosus/visual-explainer/assets/player.html'), join(skill, 'assets/lesson.html'))
 // The kit's headless browser (it runs the lesson's reviewer) and page helpers, copied into the skill.
-vendor(join(skill, 'scripts'), ['browser.mjs', 'page.mjs'])
+vendor(join(skill, 'scripts'), ['browser.mjs', 'page.mjs', 'okf-read.mjs'])
 writeFileSync(join(skill, 'assets/VERSION'), `engine ${version}\nvisual-explainer ${chalk}\n`)
 console.log(`✓ assets from the engine ${version} and visual-explainer ${chalk}: engine.mjs ${(engine.outputFiles[0].text.length / 1024).toFixed(0)} KB, map.html ${(html.length / 1024).toFixed(0)} KB`)

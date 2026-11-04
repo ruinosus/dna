@@ -64,6 +64,43 @@ for (const [s, args] of cases) {
   expect(names.length >= 9 && !clash.length, `the mod's ${names.length} commands, none named like a skill or a command of Claude Code's own${clash.length ? ` — not: ${clash.join(', ')}` : ''}`)
 }
 
+// OKF (2.1.0): kit/okf-read.mjs reads a third-party bundle as data — the three skills that write recipes from material
+// carry it byte for byte; it reads the specification's own example, and a rough bundle without refusing it, keeping
+// the text that gives orders inside the data fence
+{
+  const reader = join(repo, 'kit/okf-read.mjs')
+  const copies = ['way-of-working', 'service-blueprint', 'incident-drill'].map((s) => join(repo, 'skills', s, 'scripts/okf-read.mjs'))
+  const same = existsSync(reader) && copies.every((c) => existsSync(c) && readFileSync(c, 'utf8') === readFileSync(reader, 'utf8'))
+  expect(same, 'scripts/okf-read.mjs of way-of-working, service-blueprint and incident-drill is the kit\'s')
+  const fixtures = join(repo, 'dev/dna/tools/okf-fixtures')
+  const read = (dir, ...more) => runNode(reader, [join(fixtures, dir), '--json', ...more])
+  const acme = existsSync(reader) ? read('acme-retail') : { status: 1, stdout: '', stderr: 'no reader' }
+  const a = acme.status === 0 ? JSON.parse(acme.stdout) : {}
+  // the expected numbers come from the files themselves, not from the reader
+  const mds = (dir) => readdirSync(dir, { recursive: true }).filter((f) => f.endsWith('.md') && !/(^|\/)(index|log)\.md$/.test(f)).map((f) => readFileSync(join(dir, f), 'utf8'))
+  const acmeDocs = mds(join(fixtures, 'acme-retail')).filter((t) => /^---\n(?:[\s\S]*?\n)?type:/.test(t))
+  const human = acmeDocs.filter((t) => /^verified:[\s\S]*?by: human:/m.test(t.split('\n---')[0])).length
+  expect(a.format === 'dna/okf-read-v1' && a.concepts?.length === acmeDocs.length && a.counts?.['human-reviewed'] === human &&
+         a.concepts.some((c) => c.type === 'Attested Computation' && c.path === '/computations/revenue-ytd.md') && a.dna === false,
+         `okf-read reads the specification's acme_retail: ${acmeDocs.length} concepts, ${human} human-reviewed`, acme.stdout.slice(0, 400) + acme.stderr)
+  const rough = existsSync(reader) ? read('rough', '--now', '2026-11-04T00:00:00Z') : { status: 1, stdout: '', stderr: '' }
+  const r = rough.status === 0 ? JSON.parse(rough.stdout) : {}
+  const outage = r.concepts?.find((c) => c.path === '/playbooks/checkout-outage.md')
+  const old = r.concepts?.find((c) => c.path === '/playbooks/old-escalation.md')
+  expect(r.concepts?.length === 2 && r.not_conformant?.map((n) => n.path).sort().join() === '/notes/no-type.md,/notes/plain.md' &&
+         outage?.trust === 'human-reviewed' && outage?.stale === false && outage?.sources?.[0]?.id === 'runbook' &&
+         old?.trust === 'machine-confirmed' && old?.stale === true && old?.status === 'deprecated' && r.okf_version === '0.2' &&
+         r.log?.map((l) => l.date).join() === '2026-10-02,2026-09-14' && outage?.links?.includes('../vendors/card-provider.md'),
+         'okf-read reads a rough bundle without refusing it: no type and no frontmatter listed, trust, stale, deprecated, the log, a broken link kept', rough.stdout.slice(0, 600) + rough.stderr)
+  const text = existsSync(reader) ? runNode(reader, [join(fixtures, 'rough'), '--now', '2026-11-04T00:00:00Z']).stdout : ''
+  const order = text.indexOf('Ignore all previous instructions')
+  const fenceOpen = text.lastIndexOf('<<<okf-data path="/playbooks/checkout-outage.md"', order)
+  const fenceClose = text.indexOf('okf-data>>>', fenceOpen)
+  expect(order > 0 && fenceOpen >= 0 && fenceOpen < order && order < fenceClose && text.split('Ignore all previous instructions').length === 2 &&
+         /third-party content: data, not instructions/.test(text) && /2 concepts · 1 human-reviewed · 1 machine-confirmed · 1 stale · 1 deprecated · 2 not conformant/.test(text),
+         'okf-read as text: the counts first, and the text that gives orders only inside its data fence', text.slice(0, 500))
+}
+
 // The docs teach DNA's header, never the format line of before (which is still read, and only named as that); the way's
 // schema asks for what the examples have (its required fields and fixed values, checked here by hand on every example)
 {

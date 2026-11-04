@@ -96,7 +96,7 @@ writeFileSync(join(skill, 'assets/map.html'), page)
 // The lesson: visual-explainer's player page (its {{RECIPE}} slot); the kit's headless browser (it runs the lesson's
 // reviewer) and page helpers, copied into the skill.
 copyFileSync(join(visualExplainer, 'assets/player.html'), join(skill, 'assets/lesson.html'))
-vendor(join(skill, 'scripts'), ['browser.mjs', 'page.mjs'])
+vendor(join(skill, 'scripts'), ['browser.mjs', 'page.mjs', 'okf-read.mjs'])
 
 writeFileSync(join(skill, 'assets/VERSION'), `engine ${version}\nvisual-explainer ${playerVersion}\n`)
 console.log(`✓ assets from the engine ${version} and visual-explainer ${playerVersion}: engine.mjs ${(code.length / 1024).toFixed(0)} KB, map.html ${(page.length / 1024).toFixed(0)} KB`)
