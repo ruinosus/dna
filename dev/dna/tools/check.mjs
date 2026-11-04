@@ -49,6 +49,13 @@ for (const [s, args] of cases) {
   try { made = readdirSync(join(work, s)).filter((f) => f.endsWith('.html')) } catch {}
   expect(r.status === 0 && made.length > 0, `npx @ruinosus/dna ${s} draws an example (${made.join(', ') || 'nothing'})`, r.stdout + r.stderr)
 }
+// The mod's commands: none named like one of the plugin's skills — Claude Code refuses it (it is /dna:<skill>)
+{
+  const names = [...readFileSync(join(repo, 'hooks/register.tsx'), 'utf8').matchAll(/^ {4}name: '([^']+)'/gm)].map((m) => m[1])
+  const clash = names.filter((n) => SKILLS.includes(n) || ['agents', 'help', 'clear', 'config', 'plugin', 'skills', 'mcp', 'model'].includes(n))
+  expect(names.length >= 9 && !clash.length, `the mod's ${names.length} commands, none named like a skill or a command of Claude Code's own${clash.length ? ` — not: ${clash.join(', ')}` : ''}`)
+}
+
 // DNA's header is how a file says what it is now; every file written before it still reads: each kind, written back
 // with the format line of before, passes its skill's check
 const OLD = [

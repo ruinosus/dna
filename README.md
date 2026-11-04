@@ -34,10 +34,10 @@ In Claude Code (2.1.287 or later) the plugin also carries a **mod**: every recip
 `.blueprint.yaml`, `.drill.yaml`, `.chalk`, a visual-explainer `.json`, a `.sim`) is checked first by its skill and refused
 with the messages when it breaks its format; in a repository that runs the names audit, a write with a name of your
 private list is refused (`/names` says what it watches); a way of working or a service blueprint opens a preview pane
-(`/way-preview`, `/blueprint-preview`); `/agent-review <folder> [--profile <file>]` shows agent-review's comparison in a pane, with the team's profile and a toast when an
+(`/way-preview`, `/blueprint-preview`); `/compare-agents <folder> [--profile <file>]` shows agent-review's comparison in a pane, with the team's profile and a toast when an
 agent edited there changes it; `/drill <file>` plays an incident drill in a pane, to its debrief; `/lenses <file.way.yaml>` shows a way of
 working as a simulation, a service blueprint and a drill, and writes each beside it; and `/simulate` and
-`/simulation-preview` run and show a `.sim`, with a −/+ for each control that runs it again; `/solution <file>` shows a
+`/simulation-preview` run and show a `.sim`, with a −/+ for each control that runs it again; `/check-solution <file>` shows a
 solution's pieces, each with where it stands.
 Elsewhere the skills work without it.
 
@@ -92,7 +92,7 @@ Until 1.17 this was **house-lights**, with theatre names. 2.0.0 is the same work
 | chalk-talk · back-of-napkin · gates-and-handoffs | visual-explainer · visual-pitch · way-of-working |
 | service-blueprint · dress-rehearsal · cast-list | service-blueprint · incident-drill · agent-review |
 | box-office · opening-night | process-simulation · solution |
-| `/sim` · `/sim-preview` · `/cast` | `/simulate` · `/simulation-preview` · `/agent-review` |
+| `/sim` · `/sim-preview` · `/cast` | `/simulate` · `/simulation-preview` · `/compare-agents` |
 
 **Every file you wrote still reads.** A recipe now says what it is under DNA's header — `apiVersion:
 github.com/ruinosus/dna/v1`, a `kind` and the name in `metadata.name` — and the `format:` line of before (`stage-door/v1`,

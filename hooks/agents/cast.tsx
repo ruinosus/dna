@@ -1,4 +1,4 @@
-// /agent-review: agent-review's comparison of a folder of cloned Copilot Studio agents, in a pane — the summary and «to look at» in
+// /compare-agents: agent-review's comparison of a folder of cloned Copilot Studio agents, in a pane — the summary and «to look at» in
 // its groups, a button each to open — by agent-review's own --check (nothing written). After it, an agent's .mcs.yml that
 // Claude writes or edits in that folder runs the comparison again, and a toast says what came to look at or went away;
 // it never refuses the edit, the YAML is Copilot Studio's.
@@ -76,13 +76,13 @@ async function after($: EngineInterface, path: string) {
 }
 
 export function castCommand(on: On) {
-  on('command.run', { command: 'agent-review' }, async ($, e) => {
+  on('command.run', { command: 'compare-agents' }, async ($, e) => {
     const args = e.args.trim().split(/\s+/).filter(Boolean)
     const lang = args.includes('--lang') && args[args.indexOf('--lang') + 1] === 'pt' ? 'pt' : 'en'
     const flag = (name: string) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined)
     const given = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--lang' && args[i - 1] !== '--profile')[0] ?? ''
     const folder = await folderOf($, given)
-    if (!folder) return { text: `name a folder of cloned agents, for example /agent-review agents/ --profile team.cast.yaml --lang pt` }
+    if (!folder) return { text: `name a folder of cloned agents, for example /compare-agents agents/ --profile team.cast.yaml --lang pt` }
     if (!(await $.fs.exists(folder))) return { text: `could not read ${given}: no such folder` }
     // the team's profile: the one given, or the only one beside the agents (said so); two or more, the person chooses
     let profile: string | undefined
@@ -108,14 +108,14 @@ export function castCommand(on: On) {
     await update($, openGroup, () => '')
     await $.ui.open({ id: CAST_PANE, title: 'agent-review' })
     const text = [...(note ? [note] : []), ...r.doc.summary, ...r.doc.groups.map((g) => `▸ ${g.name} · ${g.looks.length}`)].join('\n')
-    return { text, context: [`The person ran /agent-review on ${folder}. agent-review says:\n${text}`] }
+    return { text, context: [`The person ran /compare-agents on ${folder}. agent-review says:\n${text}`] }
   })
 
   on('ui.render', { component: 'Pane', requestId: CAST_PANE }, async ($, e) => {
     const { Box, Text, Button } = $.ui.resolve(e)
     const doc = await read($, cast)
     const opened = await read($, openGroup)
-    if (!doc) return <Text dimColor>Run /agent-review with a folder of cloned agents.</Text>
+    if (!doc) return <Text dimColor>Run /compare-agents with a folder of cloned agents.</Text>
     return (
       <Box flexDirection="column" gap={1}>
         <Text bold>{doc.folder.split('/').pop()}</Text>

@@ -83,5 +83,5 @@ forecast**: each piece says where its numbers came from.
 ## In Claude Code
 
 With the dna plugin, a `.solution.yaml` you write is checked for its format (a broken one is refused with the
-messages). `/solution [file]` shows its pieces in a pane, each with where it stands, and a button that makes a lens
+messages). `/check-solution [file]` shows its pieces in a pane, each with where it stands, and a button that makes a lens
 again from the way when it fell behind — asking first, since it may have been edited by hand.

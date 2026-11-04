@@ -1,6 +1,6 @@
 // The recipes' guard: every recipe of a skill Claude writes or edits — a way of working, a service blueprint, an
 // incident drill, a visual-explainer lesson, an solution solution (its own format only: the pieces are checked by
-// /solution) — is checked first by that skill's own script (its --check, or visual-explainer's build
+// /check-solution) — is checked first by that skill's own script (its --check, or visual-explainer's build
 // with no review), on a copy of the new text in a folder of its own, and refused with the script's messages when it
 // breaks its format, so Claude fixes it and writes again. A way or a blueprint that passes is kept for the preview pane
 // (hooks/previews/), which opens on the first one written in a session. The .sim recipes have their own guard

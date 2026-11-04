@@ -1,4 +1,4 @@
-// /solution in Claude Code's own harness: an solution solution in a pane — each piece and where it stands — and a
+// /check-solution in Claude Code's own harness: an solution solution in a pane — each piece and where it stands — and a
 // lens that fell behind the way made again from it, only at a second press. A .solution.yaml that breaks its format is
 // refused when written. The engine beneath is a fake: node answered with what solution's --check --json prints.
 import { expect, test } from 'claude-code/testing'
@@ -31,12 +31,12 @@ function engine(on: any, opts: { runs?: string[][]; stale?: () => boolean } = {}
 }
 const pane = { plugin: 'dna', component: 'Pane', requestId: 'dna-solution', surface: 'terminal', props: { title: 'x', isFocused: false, bodyColumns: 120, placement: 'dock', scroll: { offset: 0, bodyRows: 40 }, view: {} } } as const
 
-test('/solution shows each piece and where it stands; a lens behind the way is made again only at a second press', async ($, on) => {
+test('/check-solution shows each piece and where it stands; a lens behind the way is made again only at a second press', async ($, on) => {
   const runs: string[][] = []
   let stale = true
   engine(on, { runs, stale: () => stale })
   await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
-  const r = JSON.stringify(await $.command.run({ command: 'solution', args: '/repo/desk.solution.yaml' } as any))
+  const r = JSON.stringify(await $.command.run({ command: 'check-solution', args: '/repo/desk.solution.yaml' } as any))
   expect(r).toContain('sim: desk.sim — atrás do way')
   expect(r).toContain('drill: desk.drill.yaml — não passa no check')
   const p = await $.ui.mount(pane)
@@ -60,5 +60,5 @@ test('a .solution.yaml that breaks its format is refused when written; one that 
   expect(out).toContain('is not a valid solution yet')
   expect(out).toContain('«simulation» is not a field')
   expect(JSON.stringify(await $.tool.call({ tool: 'Write', file_path: '/repo/fine.solution.yaml', content: 'format: opening-night/v1' }))).not.toContain('not a valid')
-  expect(JSON.stringify(await $.command.run({ command: 'solution', args: '~/missing.solution.yaml' } as any))).toContain('could not read ~/missing.solution.yaml: no such file')
+  expect(JSON.stringify(await $.command.run({ command: 'check-solution', args: '~/missing.solution.yaml' } as any))).toContain('could not read ~/missing.solution.yaml: no such file')
 })

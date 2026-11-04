@@ -9,7 +9,8 @@ one notation.
   package and the skills kit). Skills: visual-explainer (was chalk-talk), visual-pitch (back-of-napkin), way-of-working
   (gates-and-handoffs), service-blueprint, incident-drill (dress-rehearsal), agent-review (cast-list),
   process-simulation (box-office), solution (opening-night). The mod's commands: `/simulate`, `/simulation-preview`,
-  `/agent-review` (were `/sim`, `/sim-preview`, `/cast`); `/drill`, `/lenses`, `/solution` and the previews stay.
+  `/compare-agents` and `/check-solution` (were `/sim`, `/sim-preview`, `/cast`, `/solution` — a command named like a
+  skill is refused, and `/agents` is Claude Code's own); `/drill`, `/lenses` and the previews stay.
 - **apiVersion and kind.** A recipe says what it is under DNA's header — `apiVersion: github.com/ruinosus/dna/v1`,
   `kind: WayOfWorking | ServiceBlueprint | IncidentDrill | AgentStandard | AgentReview | Solution` and the name in
   `metadata.name`. **Every file written before still reads**: the `format:` lines of before are read as they were.
