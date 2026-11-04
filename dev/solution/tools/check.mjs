@@ -197,6 +197,45 @@ if (browser()) {
      "the bundle's attester confirms a run's receipt and refuses a forged one, with only the bundle's files", g.stdout + g.stderr + f.stdout + f.stderr)
 }
 
+// a person's review of a piece (reviewed: in the solution, written by --review): human-reviewed in the bundle while the
+// piece stays as it was reviewed; said by --check, and gone from the bundle, once it changes
+{
+  const env = (now) => ({ encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, env: { ...process.env, DNA_NOW: now } })
+  const sol = (dir) => join(dir, 'employee-self-service.solution.yaml')
+  const dir = join(work, 'review')
+  cpSync(join(examples, 'employee-self-service'), dir, { recursive: true })
+  const before = readFileSync(sol(dir), 'utf8')
+  const dry = spawnSync(process.execPath, [build, sol(dir), '--review', 'blueprint', '--by', 'gerente-rh'], env('2026-11-05T14:00:00Z'))
+  ok(dry.status === 0 && /^reviewed:\n {2}blueprint: human:gerente-rh 2026-11-05T14:00:00Z [0-9a-f]{8}$/m.test(dry.stdout) && readFileSync(sol(dir), 'utf8') === before,
+     '--review without --write shows the solution with the review, and writes nothing', dry.stdout.slice(-300) + dry.stderr)
+  const w = spawnSync(process.execPath, [build, sol(dir), '--review', 'blueprint', '--by', 'gerente-rh', '--write'], env('2026-11-05T14:00:00Z'))
+  const written = readFileSync(sol(dir), 'utf8')
+  ok(w.status === 0 && /^ {2}blueprint: human:gerente-rh 2026-11-05T14:00:00Z [0-9a-f]{8}$/m.test(written) && written.startsWith(before.trimEnd()),
+     '--review --write keeps the solution as it was and adds the review', w.stdout + w.stderr)
+  const again = spawnSync(process.execPath, [build, sol(dir), '--review', 'blueprint', '--by', 'human:lider-rh', '--write'], env('2026-11-06T10:00:00Z'))
+  const twice = readFileSync(sol(dir), 'utf8')
+  ok(again.status === 0 && (twice.match(/^ {2}blueprint:/gm) ?? []).length === 1 && /^ {2}blueprint: human:lider-rh 2026-11-06T10:00:00Z/m.test(twice), 'a second review of the same piece takes the place of the first', twice.slice(-200))
+  const out = join(work, 'review.okf')
+  const e = spawnSync(process.execPath, [build, sol(dir), '--okf', '--out', out], env('2026-11-06T11:00:00Z'))
+  const journey = existsSync(join(out, 'journey.md')) ? readFileSync(join(out, 'journey.md'), 'utf8') : ''
+  const c = spawnSync(process.execPath, [build, sol(dir), '--check'], env('2026-11-06T11:00:00Z'))
+  ok(e.status === 0 && journey.includes('  - { by: human:lider-rh, at: 2026-11-06T10:00:00Z }') && /\*\*Review\*\*: .*journey\.md.* human:lider-rh/.test(readFileSync(join(out, 'log.md'), 'utf8')) && c.status === 0 && !/changed after/.test(c.stdout),
+     'the review goes to the bundle as human-reviewed, with a Review in the log; --check says nothing', e.stdout + e.stderr + journey.slice(0, 600))
+  const bp = join(dir, 'employee-self-service.blueprint.yaml')
+  writeFileSync(bp, readFileSync(bp, 'utf8') + '# A moment was added after the review.\n')
+  const c2 = spawnSync(process.execPath, [build, sol(dir), '--check'], env('2026-11-07T09:00:00Z'))
+  spawnSync(process.execPath, [build, sol(dir), '--okf', '--out', out], env('2026-11-07T09:00:00Z'))
+  const journey2 = readFileSync(join(out, 'journey.md'), 'utf8')
+  ok(c2.status === 0 && c2.stdout.includes("blueprint changed after human:lider-rh's review") && !journey2.includes('{ by: human:lider-rh') && journey2.includes("blueprint changed after human:lider-rh's review"),
+     'the piece changed after the review: --check says so, and the review leaves the bundle', c2.stdout + journey2.slice(0, 500))
+  writeFileSync(sol(dir), readFileSync(sol(dir), 'utf8') + '  agents: human:x 2026-11-05T14:00:00Z abcdef12\n')
+  const c3 = spawnSync(process.execPath, [build, sol(dir), '--check'], env('2026-11-07T09:00:00Z'))
+  const line = readFileSync(sol(dir), 'utf8').trimEnd().split('\n').length
+  ok(c3.status === 1 && c3.stderr.includes(`employee-self-service.solution.yaml:${line}:`) && /agents/.test(c3.stderr), 'a review of a piece the solution does not have is an error, with its line', c3.stdout + c3.stderr)
+  const nb = spawnSync(process.execPath, [build, join(examples, 'employee-self-service', 'employee-self-service.solution.yaml'), '--review', 'lesson', '--by', 'x'], env('2026-11-07T09:00:00Z'))
+  ok(nb.status === 2 && /lesson/.test(nb.stderr), '--review of a piece the solution does not have: exit 2', nb.stdout + nb.stderr)
+}
+
 rmSync(work, { recursive: true, force: true })
 if (failed) {
   console.error(`✗ ${failed} check${failed === 1 ? '' : 's'} failed`)

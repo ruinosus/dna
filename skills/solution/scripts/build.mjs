@@ -34,7 +34,7 @@ export const PIECES = {
   agents: { skill: 'agent-review', folder: true, check: (f, o) => [f, '--check', '--lang', o.lang, ...o.profile], page: (f, o) => [f, '--html', '--lang', o.lang, ...o.profile, '--out', o.dir] },
   lesson: { skill: 'visual-explainer', test: /\.(chalk|json|mmd)$/i, check: (f, o) => [f, join(o.dir, 'out.html'), '--no-review'], page: (f, o) => [f, join(o.dir, 'lesson.html'), '--no-review'] },
 }
-const KEYS = ['apiVersion', 'kind', 'metadata', 'format', 'name', 'about', 'lang', ...Object.keys(PIECES), 'profile']
+const KEYS = ['apiVersion', 'kind', 'metadata', 'format', 'name', 'about', 'lang', ...Object.keys(PIECES), 'profile', 'reviewed']
 // What the file says it is: DNA's header (apiVersion, kind Solution, the name in metadata) or the format line of before.
 const DNA_API = 'github.com/ruinosus/dna/v1'
 const KIND = 'Solution'
@@ -46,6 +46,7 @@ const T = {
     usage: `usage: node build.mjs <id>.solution.yaml --check [--json] [--format] [--lang en|pt]
        node build.mjs <id>.solution.yaml [--lang en|pt] [--out <folder>]
        node build.mjs <id>.solution.yaml --okf [--lang en|pt] [--out <folder>]
+       node build.mjs <id>.solution.yaml --review <piece> --by <id> [--write]
        node build.mjs --list
        node build.mjs --new <accelerator> <folder>
        node build.mjs <id>.solution.yaml --upgrade [--write]`,
@@ -60,6 +61,10 @@ const T = {
     none: `a solution names at least one piece: ${Object.keys(PIECES).join(', ')}`,
     kind: (k, f) => `«${k}: ${f}» is not a ${k === 'agents' ? 'folder of agents' : `${k} file`} (${PIECES[k].test})`,
     profile: '«profile» goes with «agents»',
+    review: (l) => `line ${l}: a review is «  <piece>: human:<id> <when, ISO 8601> <version>» — write it with --review <piece> --by <id>`,
+    reviewPiece: (k) => `«reviewed» has «${k}», which is not a piece of this solution`,
+    reviewChanged: (k, by) => `${k} changed after ${by}'s review: review it again (--review ${k} --by <id>)`,
+    reviewed: (k, by, f) => `✓ ${f}: ${k} reviewed by ${by}`,
     missing: (k, f) => `${k}: ${f} is not there`,
     broken: (k, f, s) => `${k}: ${f} does not pass ${s}'s check`,
     ok: (k, f) => `${k.padEnd(9)} ${f}`,
@@ -81,6 +86,7 @@ const T = {
     usage: `uso: node build.mjs <id>.solution.yaml --check [--json] [--format] [--lang en|pt]
      node build.mjs <id>.solution.yaml [--lang en|pt] [--out <pasta>]
      node build.mjs <id>.solution.yaml --okf [--lang en|pt] [--out <pasta>]
+     node build.mjs <id>.solution.yaml --review <peça> --by <id> [--write]
      node build.mjs --list
      node build.mjs --new <accelerator> <pasta>
      node build.mjs <id>.solution.yaml --upgrade [--write]`,
@@ -95,6 +101,10 @@ const T = {
     none: `uma solution nomeia ao menos uma peça: ${Object.keys(PIECES).join(', ')}`,
     kind: (k, f) => `«${k}: ${f}» não é ${k === 'agents' ? 'uma pasta de agentes' : `um arquivo de ${k}`} (${PIECES[k].test})`,
     profile: '«profile» vai junto com «agents»',
+    review: (l) => `linha ${l}: uma revisão é «  <peça>: human:<id> <quando, ISO 8601> <versão>» — escreva com --review <peça> --by <id>`,
+    reviewPiece: (k) => `«reviewed» tem «${k}», que não é uma peça desta solution`,
+    reviewChanged: (k, by) => `${k} mudou depois da revisão de ${by}: revise de novo (--review ${k} --by <id>)`,
+    reviewed: (k, by, f) => `✓ ${f}: ${k} revisado por ${by}`,
     missing: (k, f) => `${k}: ${f} não está lá`,
     broken: (k, f, s) => `${k}: ${f} não passa no check do ${s}`,
     ok: (k, f) => `${k.padEnd(9)} ${f}`,
@@ -139,9 +149,21 @@ export function readSolution(text, lang = 'en') {
   const def = {}
   const problems = []
   let inMetadata = false
+  let inReviewed = false
+  const reviewed = {}
   text.split(/\r?\n/).forEach((raw, i) => {
     const line = raw.replace(/^﻿/, '')
     if (!line.trim() || /^\s*#/.test(line)) return
+    // reviewed: a person's review of a piece, one line each — «  <piece>: human:<id> <ISO 8601> <version>»
+    if (inReviewed && /^\s/.test(line)) {
+      const r = /^\s+([a-z]+):\s*(human:\S+)\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)\s+([0-9a-f]{8})\s*$/.exec(line)
+      if (!r) return problems.push({ line: i + 1, text: t.review(i + 1) })
+      if (!(r[1] in PIECES)) return problems.push({ line: i + 1, text: t.reviewPiece(r[1]) })
+      if (r[1] in reviewed) return problems.push({ line: i + 1, text: t.twice(`reviewed.${r[1]}`) })
+      reviewed[r[1]] = { by: r[2], at: r[3], version: r[4], line: i + 1 }
+      return
+    }
+    inReviewed = false
     // metadata: is the one block, with the name inside (DNA's header)
     const sub = inMetadata ? /^\s+([a-z_]+):\s*(.*?)\s*$/.exec(line) : null
     if (sub) {
@@ -160,6 +182,7 @@ export function readSolution(text, lang = 'en') {
     if (!KEYS.includes(m[1])) return problems.push({ line: i + 1, text: t.unknown(m[1]) })
     if (m[1] in def) return problems.push({ line: i + 1, text: t.twice(m[1]) })
     if (m[1] === 'metadata') return void (inMetadata = true)
+    if (m[1] === 'reviewed') return void (inReviewed = true, (def.reviewed = { value: '', line: i + 1 }))
     def[m[1]] = { value, line: i + 1 }
   })
   const at = (k) => def[k]?.line ?? 1
@@ -171,8 +194,9 @@ export function readSolution(text, lang = 'en') {
   if (!pieces.length) problems.push({ line: 1, text: t.none })
   for (const k of pieces) if (PIECES[k].test && !PIECES[k].test.test(def[k].value)) problems.push({ line: at(k), text: t.kind(k, def[k].value) })
   if (def.profile && !def.agents) problems.push({ line: at('profile'), text: t.profile })
+  for (const [k, r] of Object.entries(reviewed)) if (!pieces.includes(k)) problems.push({ line: r.line, text: t.reviewPiece(k) })
   const value = (k) => def[k]?.value
-  return { problems, solution: { name: value('name'), about: value('about') ?? '', lang: value('lang') ?? 'en', profile: value('profile'), pieces: pieces.map((k) => ({ kind: k, file: value(k) })) } }
+  return { problems, solution: { name: value('name'), about: value('about') ?? '', lang: value('lang') ?? 'en', profile: value('profile'), pieces: pieces.map((k) => ({ kind: k, file: value(k) })), reviewed } }
 }
 
 const versionOf = (text) => createHash('sha256').update(text).digest('hex').slice(0, 8)
@@ -306,7 +330,7 @@ ${data}
 
 // ---- the command ----
 const argv = process.argv.slice(2)
-const valued = new Set(['--lang', '--out', '--new'])
+const valued = new Set(['--lang', '--out', '--new', '--review', '--by'])
 const flags = new Set(['--check', '--json', '--format', '--list', '--upgrade', '--write', '--okf', ...valued])
 const option = (name) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : undefined)
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
@@ -375,7 +399,47 @@ if (isMain) {
     console.log(`✓ ${basename(file)}: ${sol.pieces.map((p) => p.kind).join(', ')}`)
     process.exit(0)
   }
+  // --review <piece> --by <id>: a person's review of a piece, kept in the solution with the piece's version now
+  if (argv.includes('--review')) {
+    const kind = option('--review')
+    const by = option('--by')
+    if (!kind || !by) fail(`✗ --review <piece> --by <id>\n${t.usage}`)
+    const piece = sol.pieces.find((p) => p.kind === kind)
+    if (!piece) fail(`✗ ${t.reviewPiece(kind)}`)
+    if (!existsSync(resolve(folder, piece.file))) fail(`✗ ${t.missing(kind, piece.file)}`)
+    const { pieceContent } = await import('./okf.mjs')
+    const who = by.startsWith('human:') ? by : `human:${by}`
+    const when = new Date(process.env.DNA_NOW ?? Date.now()).toISOString().replace(/\.\d{3}Z$/, 'Z')
+    const entry = `  ${kind}: ${who} ${when} ${pieceContent(piece, sol, folder, skills, lang).version}`
+    const text = readFileSync(file, 'utf8')
+    const lines = text.replace(/\n+$/, '').split('\n')
+    const head = lines.findIndex((l) => /^reviewed:\s*$/.test(l))
+    if (head < 0) lines.push('reviewed:', entry)
+    else {
+      let end = head + 1
+      while (end < lines.length && /^\s+\S/.test(lines[end])) end++
+      const at = lines.slice(head + 1, end).findIndex((l) => new RegExp(`^\\s+${kind}:`).test(l))
+      if (at >= 0) lines[head + 1 + at] = entry
+      else lines.splice(end, 0, entry)
+    }
+    const next = lines.join('\n') + '\n'
+    if (!argv.includes('--write')) {
+      process.stdout.write(next)
+      process.exit(0)
+    }
+    writeFileSync(file, next)
+    console.log(t.reviewed(kind, who, basename(file)))
+    process.exit(0)
+  }
   const checked = checkPieces(sol, folder, lang)
+  // a review that no longer holds: the piece changed after it
+  if (Object.keys(sol.reviewed).length) {
+    const { pieceContent } = await import('./okf.mjs')
+    for (const c of checked) {
+      const r = sol.reviewed[c.kind]
+      if (r && c.state !== 'missing' && pieceContent(c, sol, folder, skills, lang).version !== r.version) c.looks.push(t.reviewChanged(c.kind, r.by))
+    }
+  }
   const failing = checked.some((c) => c.state === 'missing' || c.state === 'broken')
   if (argv.includes('--check') && argv.includes('--json')) {
     console.log(JSON.stringify({ format: 'solution/read-v1', name: sol.name, about: sol.about, lang, file: basename(file), pieces: checked }))

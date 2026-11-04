@@ -180,6 +180,28 @@ function drillBody(j, t, runbook) {
 
 const fmt = (x) => (Math.abs(x) >= 100 ? String(Math.round(x)) : String(Number(x.toPrecision(4))))
 
+/** What a piece is made of, for its version (the 8 hex a review and the bundle compare): its file (a folder: each file's
+ *  name and hash), the profile with the agents, the runbook with the drill. { path, version, extra, facts }. */
+export function pieceContent({ kind, file }, sol, folder, skills, lang) {
+  const skill = { way: 'way-of-working', sim: 'process-simulation', blueprint: 'service-blueprint', drill: 'incident-drill', agents: 'agent-review', lesson: 'visual-explainer' }[kind]
+  const path = resolve(folder, file)
+  const extra = []
+  let content = statSync(path).isDirectory() ? filesOf(path).map(([p, b]) => `${p}\n${sha(b)}`).join('\n') : readFileSync(path, 'utf8')
+  if (kind === 'agents' && sol.profile && existsSync(resolve(folder, sol.profile))) {
+    extra.push(resolve(folder, sol.profile))
+    content += `\n${readFileSync(resolve(folder, sol.profile), 'utf8')}`
+  }
+  const facts = ['way', 'blueprint', 'drill'].includes(kind) ? factsOf(skills, skill, path, lang) : undefined
+  if (kind === 'drill' && facts?.drill?.from) {
+    const rb = resolve(dirname(path), facts.drill.from)
+    if (existsSync(rb)) {
+      extra.push(rb)
+      content += `\n${readFileSync(rb, 'utf8')}`
+    }
+  }
+  return { path, version: versionOf(content), extra, facts }
+}
+
 /** The bundle, written to `out`: { files: [paths written], log: [lines added] }. */
 export async function exportOkf({ sol, folder, checked, out, lang, now = new Date(process.env.DNA_NOW ?? Date.now()), skills, reviewed = {} }) {
   const t = T[lang] ?? T.en
@@ -203,25 +225,10 @@ export async function exportOkf({ sol, folder, checked, out, lang, now = new Dat
     const def = CONCEPTS[c.kind]
     const skill = c.skill
     const actor = `dna/${skill}/${skillVersion(skills, skill)}`
-    const path = resolve(folder, c.file)
     if (c.state === 'missing') continue
-    const isDir = statSync(path).isDirectory()
-    const extra = []
-    let content = isDir ? filesOf(path).map(([p, b]) => `${p}\n${sha(b)}`).join('\n') : readFileSync(path, 'utf8')
-    if (c.kind === 'agents' && sol.profile && existsSync(resolve(folder, sol.profile))) {
-      extra.push(resolve(folder, sol.profile))
-      content += `\n${readFileSync(resolve(folder, sol.profile), 'utf8')}`
-    }
-    const facts = ['way', 'blueprint', 'drill'].includes(c.kind) && c.state === 'ok' ? factsOf(skills, skill, path, lang) : undefined
+    const { path, version, extra, facts: read } = pieceContent(c, sol, folder, skills, lang)
+    const facts = c.state === 'ok' ? read : undefined
     let runbook
-    if (c.kind === 'drill' && facts?.drill?.from) {
-      const rb = resolve(dirname(path), facts.drill.from)
-      if (existsSync(rb)) {
-        extra.push(rb)
-        content += `\n${readFileSync(rb, 'utf8')}`
-      }
-    }
-    const version = versionOf(content)
     const resource = addCopy(path)
     for (const e of extra) {
       const r = addCopy(e)
