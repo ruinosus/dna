@@ -1,7 +1,8 @@
-<h1 align="center">dna</h1>
+<h1 align="center">DNA — Domain Notation of Anything</h1>
 
-<p align="center"><b>The lights that come up so everyone can see. Seven skills for Claude that show an idea to people — by
-drawing it, playing it, mapping it, comparing it or simulating it — each one an HTML file that opens offline.</b></p>
+<p align="center"><b>A process, written as files you can check: the way of working, the customer's journey, the incident
+drill, the «what if» simulation, the Copilot Studio agents compared and the solution that puts them together — each
+checked as it is written, and shown as one HTML file that opens offline. Eight Agent Skills for Claude.</b></p>
 
 <p align="center">
   <img src="dev/visual-explainer/gallery/images/hero.gif" alt="A hand-drawn lesson drawing itself on a board, stroke by stroke" width="760">

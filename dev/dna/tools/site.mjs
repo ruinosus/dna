@@ -29,7 +29,7 @@ writeFileSync(join(repo, 'docs/index.html'), `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>dna</title>
+<title>DNA — Domain Notation of Anything</title>
 <meta name="description" content="Eight Claude skills for showing an idea to people: teach it by drawing, present it, rehearse an incident, map a team's way of working and a customer journey, compare Copilot Studio agents, simulate a process, and put the whole process together — each one HTML file that opens offline.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -67,8 +67,8 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
 <body>
 <main>
   <section class="hero">
-    <h1>dna</h1>
-    <p class="lead">The lights that come up so everyone can see. Eight skills for Claude that show an idea to people — by drawing it, playing it, mapping it, comparing it or simulating it — each one an HTML file that opens offline.</p>
+    <h1>DNA</h1>
+    <p class="lead">A process, written as files you can check: the way of working, the journey, the drill, the simulation, the agents compared and the solution that puts them together — each one an HTML file that opens offline. Eight Agent Skills for Claude.</p>
     <div class="actions">
       <a class="button primary" href="#install">Install</a>
       <a class="button" href="https://github.com/ruinosus/dna">GitHub</a>
