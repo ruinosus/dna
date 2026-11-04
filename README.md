@@ -19,7 +19,7 @@ checked as it is written, and shown as one HTML file that opens offline. Eight A
 
 | Skill | Ask for | You get |
 |---|---|---|
-| [visual-explainer](dev/visual-explainer/README.md) | "explain compound interest by drawing it" | a hand-drawn lesson that appears stroke by stroke, chapter by chapter, with values you can move |
+| [visual-explainer](dev/visual-explainer/README.md) | "explain compound interest by drawing it" | a lesson that draws itself, chapter by chapter, with values you can move |
 | [visual-pitch](dev/visual-pitch/README.md) | "draw the architecture so I can present it to the client" | a pitch, an architecture, a decision, data, a timeline or a story drawn to be shown — it opens presenting, and becomes a PowerPoint |
 | [incident-drill](dev/incident-drill/README.md) | "make a drill from our checkout runbook" | an incident drill to play, with a clock and choices, and a debrief of what the runbook does not say |
 | [way-of-working](dev/way-of-working/README.md) | "who approves what in our delivery?" | a team's way of working — stages, gates, roles, outputs — as a checkable file, a map, a workbook and a lesson |
@@ -42,7 +42,7 @@ solution's pieces, each with where it stands.
 Elsewhere the skills work without it.
 
 <p align="center">
-  <img src="https://ruinosus.github.io/dna/visual-pitch/thumbs/pitch-hr-self-service.png" alt="A hand-drawn pitch ending on «piloto: 2 áreas, 3 meses»" width="400">
+  <img src="https://ruinosus.github.io/dna/visual-pitch/thumbs/pitch-hr-self-service.png" alt="A pitch drawn in the business look, ending on «piloto: 2 áreas, 3 meses»" width="400">
   <img src="https://ruinosus.github.io/dna/way-of-working/images/feature-delivery-map.png" alt="A way of working as a map: stages, gates and who approves them" width="400">
 </p>
 

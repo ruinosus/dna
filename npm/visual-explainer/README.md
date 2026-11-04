@@ -1,6 +1,6 @@
 # visual-explainer
 
-Hand-drawn lessons that draw themselves, from a small JSON **recipe** — the player behind the
+Lessons that draw themselves — in a clean business look, or hand-drawn — from a small JSON **recipe** — the player behind the
 [visual-explainer skill](https://github.com/ruinosus/dna). See the [gallery](https://ruinosus.github.io/dna/visual-explainer/).
 
 ## In a web page (or a claude.ai artifact)

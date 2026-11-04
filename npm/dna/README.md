@@ -11,7 +11,7 @@ npx @ruinosus/dna agent-review <agents-folder> [options]
 
 | Skill | What it makes |
 |---|---|
-| `visual-explainer` | a hand-drawn lesson that appears stroke by stroke, with chapters and values to move |
+| `visual-explainer` | a lesson that draws itself, chapter by chapter, with values to move |
 | `visual-pitch` | a drawing to present: a pitch, an architecture, a decision, data, a timeline or a story |
 | `incident-drill` | an incident drill to play, made from a runbook, and its debrief |
 | `way-of-working` | a team's way of working: stages, gates, roles and outputs, with a workbook |

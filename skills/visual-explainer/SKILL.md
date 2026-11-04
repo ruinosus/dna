@@ -1,6 +1,6 @@
 ---
 name: visual-explainer
-description: Explains an idea by drawing it, the way a teacher does at the board — a hand-drawn lesson that appears stroke by stroke, chapter by chapter, with narration and values the person can move, delivered as one HTML file that opens offline. Use when someone asks to explain, teach or show something by drawing it ("explain compound interest by drawing", "draw how a web request works", "desenha pra mim como funciona…"), or wants a visual, step-by-step explanation of a concept, a process, an argument or a system for a class, a talk or themselves.
+description: Explains an idea by drawing it — a clean lesson that draws itself chapter by chapter (hand-drawn or on a chalkboard when asked), with narration and values the person can move, delivered as one HTML file that opens offline. Use when someone asks to explain, teach or show something by drawing it ("explain compound interest by drawing", "draw how a web request works", "desenha pra mim como funciona…"), or wants a visual, step-by-step explanation of a concept, a process, an argument or a system for a class, a talk or themselves.
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
@@ -9,11 +9,15 @@ metadata:
 
 # visual-explainer: explain by drawing
 
-You make a hand-drawn explanation: a **recipe** in a short text (`.chalk`) that the player in this skill draws stroke
-by stroke, with chapters, a short narration and, when there is a real quantity, a value the person moves. You write
+You make a drawn explanation: a **recipe** in a short text (`.chalk`) that the player in this skill draws step
+by step, with chapters, a short narration and, when there is a real quantity, a value the person moves. You write
 only the recipe; `scripts/build.mjs` checks it and builds one HTML file with everything inside. Never write or copy the
 player yourself. Paths below are relative to this skill's folder.
 
+
+It draws in the **business** look by default: straight lines, a sans-serif face, a white page, a sober palette —
+for a meeting room. Add `theme paper` for the hand-drawn look or `theme chalkboard` for a classroom board only when
+the person asks for it; the lesson's «Hand-drawn» button switches any lesson to the paper and back.
 ## 1. Draw first
 
 For an ordinary request ("explain X by drawing", "draw how Y works") **do not ask and do not show an outline: draw.**
@@ -191,7 +195,7 @@ with the narration as speaker notes.
 When the drawing is for a class, students, a talk or a course, **ask first, in one message**: up to three hooks, best
 first, each with a line on why it works for that audience (`references/hooks.md`), who exactly it is for, and which
 number the students may move. Never ask what was already said. Then show the four-part outline in a few lines and
-wait for the go ("pode", "go"). The recipe adds `theme chalkboard`, a `pause ask` opening the part that answers it,
+wait for the go ("pode", "go"). The recipe adds a `pause ask` opening the part that answers it,
 and a `quiz` at the end.
 
 ## No code execution (an artifact instead)

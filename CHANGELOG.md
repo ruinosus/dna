@@ -17,6 +17,19 @@ one notation.
   `--upgrade [--write]` in each skill rewrites a file's header, keeping the rest of the text, and refuses when the file
   would not read the same. New files — lenses, a new cast file, the examples and the accelerators — are written under
   DNA's header.
+- **The business look, by default.** visual-explainer and visual-pitch — and every lesson the other skills make —
+  draw with straight strokes, IBM Plex Sans, a white page, a sober palette and the props as line icons; the pages around
+  them in the same face. `theme paper` (hand-drawn) and `theme chalkboard` stay, and «Hand-drawn» switches any lesson.
+  The site follows.
+- **Business examples.** agent-review's six example agents are an HR self-service after Microsoft's Employee
+  Self-Service sample (Workday, the HR SharePoint, an admission MCP server), one for one with the store they replace;
+  an HR help desk instead of the café; an expense claim and joining the company instead of the return and the gym;
+  an HR self-service business case and HR tickets instead of the pharmacy and the returns; the reference lessons and
+  the gallery of visual-explainer in the same vein. No client's data or names.
+- **Fixes on the way:** process-simulation's page had no charset — opened from a file, its accents broke and a
+  Portuguese recipe stopped parsing (every page is checked for it now); a card too short for its lines is refused by
+  the contract with the height it needs (the page waited for it forever); a mod command named like a skill is refused
+  by Claude Code, and took the others with it (they register one by one now).
 - **Moving from house-lights:** `/plugin marketplace add ruinosus/dna`, `/plugin install dna@dna`, then
   `/plugin uninstall house-lights@house-lights`. The npm packages `house-lights` and `chalk-talk` point to the new ones.
 

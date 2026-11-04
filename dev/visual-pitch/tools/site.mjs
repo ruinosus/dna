@@ -47,15 +47,15 @@ writeFileSync(join(docs, 'index.html'), `<!doctype html>
 <meta name="description" content="A skill that makes Claude explain anything by drawing it, the way you would on the back of a napkin: a pitch, an architecture, a decision, data, a timeline or a story, drawn stroke by stroke in one HTML file.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Shantell+Sans:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
 <style>
-:root { --ink: #242424; --muted: #6b665c; --line: #e0d8c6; --page: #f3f1ec; --card: #fff; --accent: #2f5bea; color-scheme: light dark; }
-@media (prefers-color-scheme: dark) { :root { --ink: #ece8df; --muted: #a8a294; --line: #3a3832; --page: #1c1b19; --card: #262521; --accent: #8fa8ff; } }
+:root { --ink: #1f2a37; --muted: #667085; --line: #e4e7ec; --page: #f4f6f8; --card: #fff; --accent: #1f4e8c; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --ink: #e9ecef; --muted: #a3acb6; --line: #333a42; --page: #15181c; --card: #1e2228; --accent: #8db8e6; } }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.55 'Shantell Sans', system-ui, sans-serif; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.55 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; }
 main { max-width: 1160px; margin: 0 auto; padding: 48px 16px 64px; display: flex; flex-direction: column; gap: 40px; }
-h1 { margin: 0; font: 700 clamp(48px, 9vw, 88px)/1 'Caveat', cursive; }
-h2 { margin: 0; font: 700 36px/1.1 'Caveat', cursive; }
+h1 { margin: 0; font: 600 clamp(34px, 6vw, 56px)/1.1 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; letter-spacing: -0.02em; }
+h2 { margin: 0; font: 600 26px/1.2 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; letter-spacing: -0.01em; }
 p { margin: 0; }
 a { color: var(--accent); }
 .hero { display: grid; gap: 18px; justify-items: center; text-align: center; }
@@ -67,9 +67,9 @@ a { color: var(--accent); }
 .card { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); color: var(--ink); text-decoration: none; transition: transform .15s, border-color .15s; }
 .card:hover { transform: translateY(-2px); border-color: var(--ink); }
 .card:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.card img { width: 100%; aspect-ratio: 900 / 560; object-fit: contain; border-radius: 8px; background: #fbf7ee; }
+.card img { width: 100%; aspect-ratio: 900 / 560; object-fit: contain; border-radius: 8px; background: #ffffff; }
 .meta { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
-.card b { font: 700 26px/1.1 'Caveat', cursive; }
+.card b { font: 600 19px/1.3 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; }
 .note { color: var(--muted); }
 code { font-size: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
 footer { color: var(--muted); font-size: 14px; text-align: center; }
@@ -92,7 +92,7 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
     <div class="grid">${drawings.map(card).join('')}
     </div>
   </section>
-  <footer>visual-pitch is MIT licensed and draws with visual-explainer's engine. Strokes by Rough.js; fonts Caveat and Shantell Sans (SIL Open Font License); animated emoji from Noto (CC BY 4.0), played by lottie-web (MIT).</footer>
+  <footer>visual-pitch is MIT licensed and draws with visual-explainer's engine. IBM Plex Sans (SIL Open Font License); the hand-drawn look by Rough.js, Caveat and Shantell Sans (SIL OFL); animated emoji from Noto (CC BY 4.0), played by lottie-web (MIT).</footer>
 </main>
 </body>
 </html>

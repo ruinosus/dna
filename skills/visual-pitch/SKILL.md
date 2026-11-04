@@ -1,6 +1,6 @@
 ---
 name: visual-pitch
-description: Explains anything by drawing it, the way you would on the back of a napkin — a pitch, an architecture, a decision, data, a timeline or a story, drawn stroke by stroke with chapters and narration in one HTML file that opens offline. Use when someone wants to present, convince, decide, document or tell what happened by drawing it ("draw the architecture so I can present it to the client", "a pitch for our pilot", "draw the post-mortem", "desenha a decisão entre as duas opções", "monta um desenho para eu apresentar"). Not for teaching a concept (a class, "explain how X works by drawing", "me explica desenhando"): that is visual-explainer's.
+description: Explains anything by drawing it for a meeting — a pitch, an architecture, a decision, data, a timeline or a story, drawn step by step in a clean business look, with chapters and narration, in one HTML file that opens offline (and opens presenting). Use when someone wants to present, convince, decide, document or tell what happened by drawing it ("draw the architecture so I can present it to the client", "a pitch for our pilot", "draw the post-mortem", "desenha a decisão entre as duas opções", "monta um desenho para eu apresentar"). Not for teaching a concept (a class, "explain how X works by drawing", "me explica desenhando"): that is visual-explainer's.
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first).
 metadata:
