@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.16.0 — 2026-11-04
+
+One way of working, seen by the other skills.
+
+- **`--lens sim|blueprint|drill`** in gates-and-handoffs writes a `.way.yaml` as another skill's recipe: a box-office
+  simulation (the stages and gates in their order, the roles as teams, each gate's «no» going back to its `on_fail`), a
+  service blueprint (a moment per stage, the lead on stage, a wait after each gate, each moment pointing at its stage)
+  and a dress-rehearsal drill on one gate (`--gate`). What the way does not have is a bet, marked `# bet:` and counted.
+  `--write` writes it beside the way and checks it with its own skill; one that differs is written over only with
+  `--force`. The first line says the way and its version (`# from: <id>.way.yaml@<sha256 8>`).
+- **Loops in box-office.** A route may send an item back to an earlier step — rework, a review that returns it — as
+  long as every step can still reach an end (an error says which cannot). The flow counts every visit (it settles to a
+  fixed point), a way out with no share is a warning, and the page and the preview draw the return under the flow.
+- **`/lenses <file.way.yaml>`** in the mod: the three lenses in a pane, how many bets each has, a button to write each
+  beside the way (asking again before writing over one that differs) and the command to see it. When a `.way.yaml` is
+  written or edited and a lens beside it came from an earlier version, a toast says so.
+- All the examples of gates-and-handoffs pass through the three lenses in the checks; the mod's tests are 30.
+
 ## 1.15.0 — 2026-11-04
 
 - **`/cast --profile <file>`** compares the agents with the team's profile, as `--all --profile` does: the rules, the

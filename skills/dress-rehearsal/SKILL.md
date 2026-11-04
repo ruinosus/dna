@@ -4,7 +4,7 @@ description: Turns a team's incident runbook (or a post-mortem) into a playable 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install.
 metadata:
-  version: "1.15.0"
+  version: "1.16.0"
 ---
 
 # dress-rehearsal: test your runbook by playing it
@@ -74,6 +74,12 @@ node scripts/build.mjs <id>.drill.yaml --all [--lang pt] [--out <folder>]
 
 End with a short summary: the drill in one sentence, the files, **the gaps found** (the runbook's fixes), and how to run
 it (alone in 10 minutes, or as a 30-minute team session).
+
+## From a way of working
+
+A team's `.way.yaml` (gates-and-handoffs) can be the start: `node ../gates-and-handoffs/scripts/build.mjs <id>.way.yaml
+--lens drill --write` writes a draft drill on one of its gates beside it, its bets marked `# bet:`. Read it with the person and
+replace the bets — the scenes with what really happens when that gate says no.
 
 ## Never
 

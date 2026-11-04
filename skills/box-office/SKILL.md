@@ -4,7 +4,7 @@ description: Turns a process — what arrives, where it goes, who handles it, wh
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. In Claude Code (2.1.287 or later) the house-lights mod also checks every .sim as it is written and adds /sim and /sim-preview.
 metadata:
-  version: "1.15.0"
+  version: "1.16.0"
 ---
 
 # box-office: a process you can watch, and ask «what if»
@@ -36,6 +36,11 @@ Read what the person gives (a description, a volume, a team, a cost). Then write
 - **Labels** (`labels en:`, `labels pt-BR:`) give each id its name on screen; keep them under about 22 characters.
 - **Never present a made-up number as theirs.** When the material has no volume, time or cost, bet one, say so in a
   comment at the top («# The volumes are made up: replace them with your own») and ask for the real one.
+
+- **Rework** is a route back: `review ->` · `work $sent_back` · `done rest`. Every step must still reach an end.
+- **From a way of working:** a team's `.way.yaml` (gates-and-handoffs) becomes a draft recipe with
+  `node ../gates-and-handoffs/scripts/build.mjs <id>.way.yaml --lens sim --write` — its stages, gates and roles, the
+  rework of each gate, and every number a bet (`# bet:`) to replace.
 
 ## 2. Check, then run
 

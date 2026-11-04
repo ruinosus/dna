@@ -9,7 +9,7 @@ const cut = (s: string, n: number) => (s.length > n ? s.slice(0, n - 1) + '…' 
 const pct = (x: number) => `${Math.round(x * 100)}%`
 
 type Node = { id: string; kind: 'src' | 'step' | 'end'; col: number; x: number; y: number; w: number; h: number; title: string; sub: string; strong?: boolean; danger?: boolean }
-type Edge = { from: string; to: string; label: string; ab?: boolean }
+type Edge = { from: string; to: string; label: string; ab?: boolean; back?: boolean }
 
 export function flowSvg(c: Checked, locale: PreviewLang): { svg: string; width: number; height: number } {
   const P = c.plan, M = c.model
@@ -21,7 +21,7 @@ export function flowSvg(c: Checked, locale: PreviewLang): { svg: string; width: 
     P.routes.forEach((r: any, i: number) => {
       const ts = r.k === 's' ? [r.to] : r.k === 'b' ? r.tos : [...r.byAttr, r.other]
       ts.forEach((t: any) => {
-        if (t && !t.e && d(t.i) < d(i) + 1) { depth[t.i] = d(i) + 1; moved = true }
+        if (t && !t.e && !P.back[i].includes(t.i) && d(t.i) < d(i) + 1) { depth[t.i] = d(i) + 1; moved = true }
       })
     })
   }
@@ -47,11 +47,11 @@ export function flowSvg(c: Checked, locale: PreviewLang): { svg: string; width: 
   const edges: Edge[] = [{ from: 'src', to: name(P.entry), label: '' }]
   P.routes.forEach((r: any, i: number) => {
     const from = P.steps[i].name
-    if (r.k === 's') edges.push({ from, to: name(r.to), label: '' })
-    else if (r.k === 'b') r.tos.forEach((t: any, k: number) => edges.push({ from, to: name(t), label: pct(r.ps[k]) }))
+    if (r.k === 's') edges.push({ from, to: name(r.to), label: '', back: !r.to.e && P.back[i].includes(r.to.i) })
+    else if (r.k === 'b') r.tos.forEach((t: any, k: number) => edges.push({ from, to: name(t), label: pct(r.ps[k]), back: !t.e && P.back[i].includes(t.i) }))
     else {
-      M.mix.values.forEach((v: string, a: number) => { if (r.byAttr[a]) edges.push({ from, to: name(r.byAttr[a]), label: label(M, v, locale) }) })
-      if (r.other) edges.push({ from, to: name(r.other), label: locale === 'pt-BR' ? 'senão' : 'otherwise' })
+      M.mix.values.forEach((v: string, a: number) => { if (r.byAttr[a]) edges.push({ from, to: name(r.byAttr[a]), label: label(M, v, locale), back: !r.byAttr[a].e && P.back[i].includes(r.byAttr[a].i) }) })
+      if (r.other) edges.push({ from, to: name(r.other), label: locale === 'pt-BR' ? 'senão' : 'otherwise', back: !r.other.e && P.back[i].includes(r.other.i) })
     }
     const ab = P.abandon[i]
     if (ab) edges.push({ from, to: name(ab.to), label: (locale === 'pt-BR' ? 'desiste após ' : 'gives up after ') + fmtDuration(ab.after), ab: true })
@@ -60,7 +60,9 @@ export function flowSvg(c: Checked, locale: PreviewLang): { svg: string; width: 
   const colW = 196, rowH = 92, top = 64
   const maxRows = Math.max(...cols.map(c => c.length))
   const width = cols.length * colW + 24
-  const height = top + maxRows * rowH + 20
+  const backs = edges.filter(e => e.back)
+  const under = backs.length ? 22 + 18 * backs.length : 0 // the space under the flow where the returns run
+  const height = top + maxRows * rowH + 20 + under
   cols.forEach((ids, ci) => {
     const off = top + ((maxRows - ids.length) * rowH) / 2
     ids.forEach((id, ri) => {
@@ -81,6 +83,16 @@ export function flowSvg(c: Checked, locale: PreviewLang): { svg: string; width: 
   for (const ed of edges) {
     const a = nodes[ed.from], b = nodes[ed.to]
     if (!a || !b) continue
+    if (ed.back) {
+      // a return (rework): down from the step that sends it back, under the flow, up into the step it goes to
+      const yb = top + maxRows * rowH + 14 + 18 * backs.indexOf(ed), xa = a.x + a.w / 2, xb = b.x + b.w / 2
+      parts.push(`<path d="M${xa} ${a.y + a.h} L${xa} ${yb - 8} Q${xa} ${yb} ${xa - 8} ${yb} L${xb + 8} ${yb} Q${xb} ${yb} ${xb} ${yb - 8} L${xb} ${b.y + b.h}" fill="none" stroke="${C.edge}" stroke-width="1.4" stroke-dasharray="6 3" marker-end="url(#arr)"/>`)
+      if (ed.label) {
+        const mx = (xa + xb) / 2, w = ed.label.length * 6.4 + 12
+        labels.push(`<rect x="${mx - w / 2}" y="${yb - 9}" width="${w}" height="18" rx="9" fill="${C.soft}" stroke="${C.line}"/><text x="${mx}" y="${yb + 4}" font-size="11" text-anchor="middle" fill="${C.muted}">${esc(ed.label)}</text>`)
+      }
+      continue
+    }
     const x1 = a.x + a.w, y1 = a.y + a.h / 2 + (ed.ab ? 14 : 0), x2 = b.x, y2 = b.y + b.h / 2, dx = (x2 - x1) / 2
     parts.push(`<path d="M${x1} ${y1} C${x1 + dx} ${y1} ${x2 - dx} ${y2} ${x2} ${y2}" fill="none" stroke="${ed.ab ? C.crit : C.edge}" stroke-width="1.4"${ed.ab ? ' stroke-dasharray="4 4"' : ''} marker-end="url(#${ed.ab ? 'arr-ab' : 'arr'})"/>`)
     if (ed.label) {

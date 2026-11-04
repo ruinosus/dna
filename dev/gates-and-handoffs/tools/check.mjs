@@ -3,7 +3,7 @@
 // needs nothing from the internet; and, when LibreOffice is here, the workbook opens in it. Run after npm run assets.
 import { checkNoOldName, checkSkillMd } from 'chalk-talk/kit/tools/checks.mjs'
 import { execFileSync, spawnSync } from 'node:child_process'
-import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -117,6 +117,31 @@ else {
   let doc
   try { doc = JSON.parse(j.stdout) } catch {}
   ok(j.status === 0 && doc?.format === 'gates-and-handoffs/read-v1' && Array.isArray(doc.way?.stages) && Array.isArray(doc.looks), '--check --json: the way as read, and what to look at, as one JSON document', j.stdout.slice(0, 200) + j.stderr)
+}
+// --lens: each example seen by the other skills — a .sim, a blueprint and a drill, each passing its own skill's check;
+// the version of the way at the top; a lens beside it that differs is not written over without --force
+{
+  const lensDir = join(work, 'lenses')
+  mkdirSync(lensDir)
+  for (const f of files) {
+    const way = join(lensDir, f)
+    copyFileSync(join(examples, f), way)
+    for (const kind of ['sim', 'blueprint', 'drill']) {
+      const r = run(way, '--lens', kind, '--lang', LANG[f.replace('.way.yaml', '')], '--write')
+      ok(r.status === 0 && /^ {2}✓/m.test(r.stdout) && !/✗/.test(r.stdout), `--lens ${kind} of ${f}: written and passes ${{ sim: 'box-office', blueprint: 'service-blueprint', drill: 'dress-rehearsal' }[kind]}'s check`, r.stdout + r.stderr)
+    }
+  }
+  const sim = join(lensDir, 'feature-delivery.sim')
+  ok(/^# from: feature-delivery\.way\.yaml@[0-9a-f]{8}$/m.test(readFileSync(sim, 'utf8')), '--lens: the way and its version at the top')
+  ok(/^ {2}[a-z_]+ \$construir_gate_nao$/m.test(readFileSync(sim, 'utf8')) && /^ {2}entender \$construir_gate_nao$/m.test(readFileSync(sim, 'utf8')), "--lens sim: a gate's «no» goes back to its on_fail (a loop)")
+  writeFileSync(sim, readFileSync(sim, 'utf8') + '# edited by hand\n')
+  const again = run(join(lensDir, 'feature-delivery.way.yaml'), '--lens', 'sim', '--write')
+  ok(again.status !== 0 && readFileSync(sim, 'utf8').includes('# edited by hand'), '--lens --write does not write over a lens that differs', again.stdout + again.stderr)
+  const forced = run(join(lensDir, 'feature-delivery.way.yaml'), '--lens', 'sim', '--write', '--force')
+  ok(forced.status === 0 && !readFileSync(sim, 'utf8').includes('# edited by hand'), '--lens --write --force writes over it')
+  const printed = run(join(examples, 'scrum.way.yaml'), '--lens', 'drill', '--gate', 'done')
+  ok(printed.status === 0 && printed.stdout.startsWith('# from: scrum.way.yaml@') && /bet/.test(printed.stderr), '--lens with no --write prints the lens, and says how many bets it has')
+  ok(run(join(examples, 'scrum.way.yaml'), '--lens', 'drill', '--gate', 'nowhere').status !== 0, '--lens drill --gate of a gate that is not there is refused')
 }
 rmSync(work, { recursive: true, force: true })
 checkNoOldName(ok, skill, 'stage-door')

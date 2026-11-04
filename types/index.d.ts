@@ -17,6 +17,12 @@ export type DrillDoc = {
   saved: string
 }
 
+/** /lenses: a way of working written by gates-and-handoffs --lens as another skill's recipe, and where it stands beside
+ * the way (new; the same; from an earlier version of the way; different, maybe edited by hand). */
+export type LensKind = 'sim' | 'blueprint' | 'drill'
+export type LensItem = { kind: LensKind; file: string; text: string; bets: number; state: 'new' | 'same' | 'older' | 'edited' | 'error'; said: string[]; armed?: boolean; wrote?: boolean }
+export type LensDoc = { path: string; lang: 'en' | 'pt'; items: LensItem[] }
+
 declare module 'claude-code' {
   interface PluginState {
     'house-lights': {
@@ -26,6 +32,7 @@ declare module 'claude-code' {
       cast: Shaped<CastDoc | null>
       castOpen: string
       drill: Shaped<DrillDoc | null>
+      lenses: Shaped<LensDoc | null>
     }
   }
 }

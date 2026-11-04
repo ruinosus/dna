@@ -134,6 +134,7 @@
       S.model = M; S.knobs = knobs;
       rebuild();
       var fl = SIMLANG.flows(M, S.plan);
+      fl.endless.forEach(function (x) { r.diags.push({ sev: 'warn', text: SIMLANG.fmtMsg('endless', { x: x }, lang) }); });
       fl.loads.forEach(function (ld) {
         if (ld.load > 1.001) {
           var stepName = S.plan.steps[ld.steps[0]].name;
@@ -448,13 +449,13 @@
     depth.src = 0;
     var entryName = P.entry.e ? P.ends[P.entry.i] : P.steps[P.entry.i].name;
     function tname(t) { return t.e ? P.ends[t.i] : P.steps[t.i].name; }
-    // longest path depth over steps (the validator already rejected loops)
+    // longest path depth over steps, leaving out the edges that go back (rework), drawn as returns under the flow
     var stepDepth = P.steps.map(function () { return 1; }), changed = true, guard = 0;
     while (changed && guard++ < 50) {
       changed = false;
       P.routes.forEach(function (r, i) {
         var ts = r.k === 's' ? [r.to] : r.k === 'b' ? r.tos : r.byAttr.concat([r.other]);
-        ts.forEach(function (t) { if (t && !t.e && stepDepth[t.i] < stepDepth[i] + 1) { stepDepth[t.i] = stepDepth[i] + 1; changed = true; } });
+        ts.forEach(function (t) { if (t && !t.e && P.back[i].indexOf(t.i) < 0 && stepDepth[t.i] < stepDepth[i] + 1) { stepDepth[t.i] = stepDepth[i] + 1; changed = true; } });
       });
     }
     var maxD = Math.max.apply(null, stepDepth);
@@ -488,28 +489,29 @@
       var ab = P.abandon[i];
       if (ab) edges.push({ from: from, to: nodeKey(ab.to), key: from + '>' + tname(ab.to) + '!', w: 0, label: tr('after', { x: fmtDur(ab.after) }), ab: true });
     });
+    edges.forEach(function (e) { var a = nodes[e.from], b = nodes[e.to]; if (!e.ab && a && b && a.type === 'step' && b.type === 'step' && P.back[a.si].indexOf(b.si) >= 0) e.back = true; });
     // merge duplicate keys (two attribute values routed to the same target)
     var merged = {}, list = [];
     edges.forEach(function (e) {
       if (merged[e.key]) { merged[e.key].w += e.w; merged[e.key].label = [merged[e.key].label, e.label].filter(Boolean).join(', '); }
       else { merged[e.key] = e; list.push(e); }
     });
-    S.layout = { nodes: nodes, cols: cols, edges: list, byKey: merged };
+    S.layout = { nodes: nodes, cols: cols, edges: list, byKey: merged, backs: list.filter(function (e) { return e.back; }).length };
     sizeCanvas();
   }
   function sizeCanvas() {
     if (!S.layout) return;
     var L = S.layout, wrap = $('canvas-wrap'), nCols = L.cols.length;
     var maxRows = Math.max.apply(null, L.cols.map(function (c) { return c.length; }));
-    var W = Math.max(wrap.clientWidth, nCols * 140), rowH = 118, H = Math.max(240, maxRows * rowH + 40);
+    var W = Math.max(wrap.clientWidth, nCols * 140), rowH = 118, under = L.backs ? 26 + 18 * L.backs : 0, H = Math.max(240, maxRows * rowH + 40 + under);
     var dpr = window.devicePixelRatio || 1;
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     var colW = W / nCols;
-    L.W = W; L.H = H;
+    L.W = W; L.H = H; L.under = under;
     L.cols.forEach(function (ids, c) {
-      var off = (H - ids.length * rowH) / 2;
+      var off = (H - under - ids.length * rowH) / 2;
       ids.forEach(function (id, r) {
         var n = L.nodes[id];
         n.x = colW * (c + 0.5);
@@ -523,6 +525,11 @@
 
   function bez(e) {
     var a = S.layout.nodes[e.from], b = S.layout.nodes[e.to], dy = e.ab ? 12 : 0;
+    if (e.back) {
+      // a return: down from the step that sends it back, along the space under the flow, up into the step it goes to
+      var k = S.layout.edges.filter(function (x) { return x.back; }).indexOf(e), yb = S.layout.H - S.layout.under + 14 + 18 * k;
+      return [a.x, a.y + a.h / 2, a.x, yb, b.x, yb, b.x, b.y + b.h / 2];
+    }
     var x1 = a.x + a.w / 2, y1 = a.y + dy, x2 = b.x - b.w / 2, y2 = b.y + (e.ab ? 0 : 0), dx = (x2 - x1) * 0.5;
     if (e.ab) { y1 = a.y + a.h / 2 - 8; }
     return [x1, y1, x1 + dx, y1, x2 - dx, y2, x2, y2];

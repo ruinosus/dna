@@ -43,7 +43,7 @@ Rules:
 - **Capacity.** A step without `by` has unlimited capacity (the usual case for an AI agent). With `by`, each item takes one unit of the resource and waits in a FIFO queue when none is free.
 - **Costs.** `cost` on a step is per item. `cost` on a resource is per unit per period (100 analysts at 4000/month cost 400,000 a month).
 - **Branches.** `rest` takes whatever is left to reach 100% and may appear once per route. A route whose branches use a `$knob` must have a `rest`.
-- **Loops** are not allowed in v1.
+- **Loops.** A route may send an item back to an earlier step (rework, a review that returns it): `review ->` · `work $back` · `done rest`. Every step must still reach an end, or it is an error; each visit takes its time and its place in the queue again. A way out with no share (the control at its top) is a warning: items would go round for ever. The page draws a return under the flow.
 - **Metrics:** `count end X`, `share end X` (share of all finished items), `wait pNN at X` (queue wait), `queue X` (average queue length), `utilization X` (busy time over on-shift capacity), `cost per day|week|month|year`.
 
 ## Time, rates and variability
@@ -97,7 +97,7 @@ Errors block the run; warnings do not.
 | --- | --- |
 | Unreadable line, bad duration, number, rate or calendar spec | error |
 | Unknown step, end, pool or metric target | error |
-| A step with no route; routes that loop | error |
+| A step with no route; a loop with no way out | error |
 | Branches that do not add up to 100% (no `rest`), `rest` twice, a `$knob` branch without `rest`, branches over 100% at the top of a control's range | error |
 | Attribute route that does not cover every mix value and has no `otherwise` | error |
 | Undeclared control; scenario setting an unknown control | error |

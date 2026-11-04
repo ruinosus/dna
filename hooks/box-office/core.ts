@@ -35,6 +35,7 @@ export function check(src: string, overrides: Record<string, number> = {}): Chec
   if (r.ok) {
     plan = SIMLANG.compile(r.model, initialKnobs(r.model, overrides))
     flows = SIMLANG.flows(r.model, plan)
+    for (const x of flows.endless) diags.push({ sev: 'warn', text: SIMLANG.fmtMsg('endless', { x }, r.model.lang) })
     for (const ld of flows.loads) {
       if (ld.load > 1.001) {
         const step = plan.steps[ld.steps[0]].name

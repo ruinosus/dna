@@ -4,7 +4,7 @@ description: Turns what a team knows about a customer journey — interviews, su
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing.
 metadata:
-  version: "1.15.0"
+  version: "1.16.0"
 ---
 
 # service-blueprint: what the customer lives, and who makes it happen behind
@@ -65,6 +65,12 @@ node scripts/build.mjs <id>.blueprint.yaml --all [--lang pt] [--out <folder>]
 
 End with a short summary: the journey in one sentence, **the worst moment and who owns it (or that nobody does)**, the
 files, and what is still open.
+
+## From a way of working
+
+A team's `.way.yaml` (gates-and-handoffs) can be the start: `node ../gates-and-handoffs/scripts/build.mjs <id>.way.yaml
+--lens blueprint --write` writes a draft blueprint beside it, its bets marked `# bet:`. Read it with the person and
+replace the bets — the customer’s side, how they feel and what hurts come from interviews, never from the way.
 
 ## Never
 

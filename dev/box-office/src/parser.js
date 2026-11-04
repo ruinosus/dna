@@ -58,7 +58,8 @@ var SIMLANG = (function () {
     showBad: ['line {l}: unknown metric; use count end, share end, wait p90 at, queue, utilization or cost per', 'linha {l}: métrica desconhecida; use contagem fim, fração fim, espera p90 em, fila, utilização ou custo por'],
     showTarget: ['line {l}: "{x}" does not exist', 'linha {l}: "{x}" não existe'],
     unreachable: ['step "{x}" is never reached', 'a etapa "{x}" nunca é alcançada'],
-    cycle: ['routes loop back on themselves; v1 does not support loops', 'as rotas voltam sobre si mesmas; a v1 não aceita laços'],
+    noExit: ['"{x}" never reaches an end: a loop needs a way out (a branch to a step or an end outside it)', '"{x}" nunca chega a um fim: um laço precisa de uma saída (um ramo para uma etapa ou um fim fora dele)'],
+    endless: ['items that reach "{x}" go round the loop and almost never leave: give the way out a share', 'os itens que chegam a "{x}" dão voltas no laço e quase nunca saem: dê uma parte à saída'],
     unstable: ['the queue at "{x}" grows without limit: demand is {v} of capacity', 'a fila em "{x}" cresce sem limite: a demanda é {v} da capacidade'],
     locale: ['line {l}: "{x}" is a {y} keyword but this file is lang {z}; use "{w}"', 'linha {l}: "{x}" é palavra-chave {y}, mas este arquivo é lang {z}; use "{w}"'],
     scenarioKnob: ['line {l}: scenario "{x}" sets an unknown control "{y}"', 'linha {l}: o cenário "{x}" define um controle desconhecido "{y}"'],
@@ -419,8 +420,9 @@ var SIMLANG = (function () {
       if (!ok) err('showTarget', { l: sh.l, x: sh.x });
     });
 
-    // Reachability and loops.
-    var entry = (M.arrival && M.arrival.entry) || M.stepOrder[0], seen = {}, stack = {}, loop = false;
+    // Reachability, and loops: an item may go back to an earlier step (rework, a review that sends it back), as long as
+    // every step it can reach can still reach an end.
+    var entry = (M.arrival && M.arrival.entry) || M.stepOrder[0], seen = {};
     function outs(n) {
       var r = M.routes[n], o = [];
       if (!r) return o;
@@ -430,16 +432,25 @@ var SIMLANG = (function () {
       if (M.abandon[n]) o.push(M.abandon[n].to);
       return o;
     }
-    function dfs(n) {
-      if (stack[n]) { loop = true; return; }
-      if (seen[n] || !M.steps[n]) { seen[n] = true; return; }
-      seen[n] = stack[n] = true;
-      outs(n).forEach(dfs);
-      stack[n] = false;
+    var todo = M.steps[entry] ? [entry] : [];
+    while (todo.length) {
+      var n0 = todo.pop();
+      if (seen[n0]) continue;
+      seen[n0] = true;
+      if (M.steps[n0]) outs(n0).forEach(function (t) { if (!seen[t]) todo.push(t); });
     }
-    if (M.steps[entry]) dfs(entry);
-    if (loop) err('cycle');
-    M.stepOrder.forEach(function (n) { if (!seen[n]) err('unreachable', { x: n }, 'warn'); });
+    var exits = {}, grew = true;
+    Object.keys(M.ends).forEach(function (e) { exits[e] = true; });
+    while (grew) {
+      grew = false;
+      M.stepOrder.forEach(function (n) {
+        if (!exits[n] && outs(n).some(function (t) { return exits[t]; })) { exits[n] = true; grew = true; }
+      });
+    }
+    M.stepOrder.forEach(function (n) {
+      if (!seen[n]) err('unreachable', { x: n }, 'warn');
+      else if (!exits[n] && M.routes[n]) err('noExit', { x: n });
+    });
     M._outs = outs;
     M._entry = entry;
   }
@@ -498,44 +509,62 @@ var SIMLANG = (function () {
       var a = M.abandon[n];
       return a ? { after: a.after, to: tg(a.to) } : null;
     });
-    return { horizon: M.horizon, currency: M.currency, arrival: arrival, statedPerMin: statedPerMin, openFrac: stats.openFrac,
+    var plan = { horizon: M.horizon, currency: M.currency, arrival: arrival, statedPerMin: statedPerMin, openFrac: stats.openFrac,
       entry: tg(M._entry), mixN: mixN, mixCum: mixCum, pools: pools, poolSteps: poolSteps, steps: steps,
       ends: M.endOrder.slice(), routes: routes, abandon: abandon };
+    plan.back = backEdges(plan);
+    return plan;
   }
 
-  // Average flow (items/min) into each step, and the load on each pool, for the instability warning.
-  function flows(M, plan) {
-    var inflow = plan.steps.map(function () { return 0; }), order = [], indeg = plan.steps.map(function () { return 0; });
-    plan.routes.forEach(function (r) {
-      var ts = r.k === 's' ? [r.to] : r.k === 'b' ? r.tos : r.byAttr.concat([r.other]);
-      ts.forEach(function (t) { if (t && !t.e) indeg[t.i]++; });
-    });
-    var q = [];
-    indeg.forEach(function (d, i) { if (!d) q.push(i); });
-    while (q.length) {
-      var i = q.shift(); order.push(i);
-      var r = plan.routes[i], ts = r.k === 's' ? [r.to] : r.k === 'b' ? r.tos : r.byAttr.concat([r.other]);
-      ts.forEach(function (t) { if (t && !t.e && --indeg[t.i] === 0) q.push(t.i); });
+  function targetsOf(r) { return (r.k === 's' ? [r.to] : r.k === 'b' ? r.tos : r.byAttr.concat([r.other])).filter(Boolean); }
+
+  // The edges that go back (rework): to a step still open in a depth-first walk from the entry, in the order the routes
+  // are written. plan.back[i] lists the step indices step i goes back to. The drawings lay the flow out without them and
+  // draw them as returns; everything else (the run, the flows) treats them as any edge.
+  function backEdges(plan) {
+    var back = plan.steps.map(function () { return []; }), state = plan.steps.map(function () { return 0; });
+    function walk(i) {
+      state[i] = 1;
+      targetsOf(plan.routes[i]).forEach(function (t) {
+        if (t.e) return;
+        if (state[t.i] === 1) { if (back[i].indexOf(t.i) < 0) back[i].push(t.i); }
+        else if (state[t.i] === 0) walk(t.i);
+      });
+      state[i] = 2;
     }
-    var avgRate = plan.statedPerMin * plan.openFrac;
-    if (!plan.entry.e) inflow[plan.entry.i] = avgRate;
-    order.forEach(function (i) {
-      var r = plan.routes[i], f = inflow[i];
-      function add(t, p) { if (t && !t.e) inflow[t.i] += f * p; }
-      if (r.k === 's') add(r.to, 1);
-      else if (r.k === 'b') r.tos.forEach(function (t, k) { add(t, r.ps[k]); });
-      else {
-        var mixP = M.mix.pcts;
-        r.byAttr.forEach(function (t, a) { add(t || r.other, mixP[a]); });
+    if (!plan.entry.e) walk(plan.entry.i);
+    plan.steps.forEach(function (_, i) { if (!state[i]) walk(i); });
+    return back;
+  }
+
+  // Average flow (items/min) into each step, and the load on each pool, for the instability warning. With loops, the flow
+  // into a step counts every visit: it is the fixed point of inflow = arrivals + what the routes send, found by repeating
+  // until it settles. A loop whose way out has no share never settles: its steps are named in `endless`.
+  function flows(M, plan) {
+    var n = plan.steps.length, avgRate = plan.statedPerMin * plan.openFrac;
+    var inflow = plan.steps.map(function () { return 0; }), settled = false;
+    for (var round = 0; round < 2000 && !settled; round++) {
+      var next = plan.steps.map(function () { return 0; });
+      if (!plan.entry.e) next[plan.entry.i] = avgRate;
+      for (var i = 0; i < n; i++) {
+        var r = plan.routes[i], f = inflow[i];
+        if (!f) continue;
+        var add = function (t, p) { if (t && !t.e) next[t.i] += f * p; };
+        if (r.k === 's') add(r.to, 1);
+        else if (r.k === 'b') r.tos.forEach(function (t, k) { add(t, r.ps[k]); });
+        else M.mix.pcts.forEach(function (p, a) { add(r.byAttr[a] || r.other, p); });
       }
-    });
+      settled = next.every(function (v, k) { return Math.abs(v - inflow[k]) <= 1e-9 * Math.max(1, avgRate); });
+      inflow = next;
+    }
+    var endless = settled ? [] : plan.steps.filter(function (_, k) { return inflow[k] > 50 * Math.max(avgRate, 1e-12); }).map(function (st) { return st.name; });
     var loads = plan.pools.map(function (pl, pi) {
       var demand = 0;
       plan.poolSteps[pi].forEach(function (si) { demand += inflow[si] * meanTime(plan.steps[si].time); });
       var avail = (pl.shift ? pl.shift.len / 1440 : 1) * (pl.days ? pl.days.filter(Boolean).length / 7 : 1);
       return { pool: pl.name, load: pl.qty * avail > 0 ? demand / (pl.qty * avail) : Infinity, steps: plan.poolSteps[pi] };
     });
-    return { inflow: inflow, loads: loads };
+    return { inflow: inflow, loads: loads, endless: endless };
   }
 
   return { parse: parse, compile: compile, flows: flows, translate: translate, detectLang: detectLang, fmtMsg: fmtMsg, meanTime: meanTime };

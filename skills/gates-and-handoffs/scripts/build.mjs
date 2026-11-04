@@ -12,26 +12,30 @@
 // Exit codes: 0 done (what to look at is printed, and is not an error); 1 the file breaks the format (each problem with
 // its line; nothing written); 2 bad arguments; 3 made, but the lesson's reviewer found something to fix. Needs Node 18
 // or later and nothing else; the lesson's review uses Chrome, Chromium or Edge when there is one.
-import { readFileSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
 import { fill, inline } from './page.mjs'
 import { applyRows, checkWay, exportWay, fromSheets, itemName, problemText, readWay, reviewWay, show, STAGE_DOOR, validateScene, wayDiff, wayLesson, workbookOf, xlsx } from './engine.mjs'
 import { readXlsx } from './read-xlsx.mjs'
+import { blueprintOf, drillOf, simOf } from './lenses.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
-const valued = new Set(['--lang', '--out', '--from', '--take'])
+const valued = new Set(['--lang', '--out', '--from', '--take', '--lens', '--gate'])
 const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
 }
-const flags = new Set(['--check', '--json', '--html', '--xlsx', '--lesson', '--all', ...valued])
+const flags = new Set(['--check', '--json', '--html', '--xlsx', '--lesson', '--all', '--write', '--force', ...valued])
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
 const usage = `usage: node build.mjs <id>.way.yaml --check [--json] [--lang en|pt]
        node build.mjs <id>.way.yaml [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
-       node build.mjs <id>.way.yaml --from <edited.xlsx> [--take <key,key…|all>]`
+       node build.mjs <id>.way.yaml --from <edited.xlsx> [--take <key,key…|all>]
+       node build.mjs <id>.way.yaml --lens sim|blueprint|drill [--gate <id>] [--lang en|pt] [--write [--force]] [--out <folder>]`
 const lang = option('--lang') ?? 'en'
 const fail = (msg) => {
   console.error(`${msg}\n${usage}`)
@@ -87,6 +91,39 @@ if (argv.includes('--check') && argv.includes('--json')) {
   console.log(JSON.stringify({ format: 'gates-and-handoffs/read-v1', name, way, looks: reviewWay(way).map((l) => ({ en: l.en, pt: l.pt })) }))
   process.exit(0)
 }
+// ---- the lenses: the same way as another skill's recipe ----
+if (argv.includes('--lens')) {
+  const kind = option('--lens')
+  const lensLang = lang === 'pt' ? 'pt' : 'en'
+  const from = `${basename(file)}@${createHash('sha256').update(source).digest('hex').slice(0, 8)}`
+  const made = kind === 'sim' ? simOf(way, name, from, lensLang) : kind === 'blueprint' ? blueprintOf(way, name, from, id, lensLang) : kind === 'drill' ? drillOf(way, name, from, option('--gate'), lensLang) : { error: '--lens is sim, blueprint or drill' }
+  if (made.error) fail(`✗ ${made.error}`)
+  const target = { sim: `${id}.sim`, blueprint: `${id}.blueprint.yaml`, drill: `${id}.drill.yaml` }[kind]
+  const skill = { sim: 'box-office', blueprint: 'service-blueprint', drill: 'dress-rehearsal' }[kind]
+  const bets = lang === 'pt' ? `${made.bets.length} ${made.bets.length === 1 ? 'número ou texto apostado' : 'números ou textos apostados'} (# bet:): troque pelos seus` : `${made.bets.length} ${made.bets.length === 1 ? 'number or line bet' : 'numbers or lines bet'} (# bet:): replace them with your own`
+  if (!argv.includes('--write')) {
+    process.stdout.write(made.text)
+    console.error(`• ${bets}`)
+    process.exit(0)
+  }
+  const path = join(resolve(option('--out') ?? dirname(file)), target)
+  if (existsSync(path) && readFileSync(path, 'utf8') !== made.text && !argv.includes('--force')) {
+    fail(lang === 'pt' ? `✗ ${target} já existe e é diferente (talvez editado à mão): --force escreve por cima` : `✗ ${target} is there and differs (maybe edited by hand): --force writes over it`)
+  }
+  writeFileSync(path, made.text)
+  console.log(`✓ ${kind.padEnd(9)} ${path}`)
+  console.log(`• ${bets}`)
+  // checked by its own skill, when it is beside this one (the plugin, the npm package)
+  const script = join(here, `../../${skill}/scripts/build.mjs`)
+  if (existsSync(script)) {
+    const c = spawnSync(process.execPath, [script, path, '--check', ...(kind === 'sim' ? [] : ['--lang', lang])], { encoding: 'utf8' })
+    for (const l of `${c.stdout}${c.stderr}`.trim().split('\n')) if (l) console.log(`  ${l}`)
+    process.exit(c.status === 0 ? 0 : 1)
+  }
+  console.log(lang === 'pt' ? `• ${skill} não está aqui ao lado: confira com a skill ${skill}` : `• ${skill} is not beside this skill: check it with ${skill}`)
+  process.exit(0)
+}
+
 console.log(T.ok(read.summary))
 const looks = reviewWay(way)
 if (looks.length) for (const l of looks) console.log(`! ${T.look}: ${l[lang]}`)

@@ -5,6 +5,8 @@
 //   names    in a repository that runs the names audit, refuses a write with a name of the person's private list;
 //            /names says what it watches
 //   /cast    cast-list's comparison of a folder of agents in a pane, and a toast when an agent edited there changes it
+//   /lenses  a way of working as the other skills' recipes (a .sim, a blueprint, a drill), written beside it on a
+//            press, and a toast when the way changes under a lens
 //   /drill   an incident drill played in a pane: the clock, the scene, the choices and calls as buttons, the debrief
 //   guard    checks each .sim file Claude writes and refuses it with the validator's messages
 //   /sim     runs a recipe with no model turn and prints median and p10 to p90 per metric
@@ -17,6 +19,7 @@ import { recipesGuard } from './recipes/guard'
 import { recipePreview } from './previews/preview'
 import { castCommand } from './cast/cast'
 import { drillGame } from './drill/drill'
+import { lensesCommand } from './lenses/lenses'
 import { guard } from './box-office/guard'
 import { preview } from './box-office/preview'
 
@@ -48,6 +51,11 @@ export const register: Register = on => {
       argumentHint: '[file.drill.yaml] [--lang pt]',
     })
     await $.command.register({
+      name: 'lenses',
+      description: 'See a way of working (.way.yaml) as a simulation, a service blueprint and a drill, and write them beside it',
+      argumentHint: '[file.way.yaml] [--gate id] [--lang pt]',
+    })
+    await $.command.register({
       name: 'names',
       description: 'Say what the names guard watches: your private list and this repository',
     })
@@ -63,6 +71,7 @@ export const register: Register = on => {
   recipePreview(on)
   castCommand(on)
   drillGame(on)
+  lensesCommand(on)
   namesGuard(on)
   namesCommand(on)
   guard(on)

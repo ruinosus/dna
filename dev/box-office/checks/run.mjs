@@ -69,12 +69,27 @@ const cases = [
   ['missing route', base + 'show count end done', 'noRoute'],
   ['bad duration', base.replace('1min', '1 parsec') + 'a -> done', 'badDur'],
   ['mixed locale', base + 'a -> done\netapa b tempo 1min\nb -> done', 'locale'],
-  ['loop', base + 'step b time 1min\na -> b\nb -> a', 'cycle'],
+  ['loop with no way out', base + 'step b time 1min\na -> b\nb -> a', 'noExit'],
   ['knob without rest', base + 'end other\nknob r 0%..50% = 10%\na ->\n  done $r\n  other 90%', 'knobNeedsRest']
 ];
 for (const [name, src, key] of cases) {
   const r = SIMLANG.parse(src);
   check(`validator: ${name} -> ${key}`, r.diags.some(d => d.key === key), JSON.stringify(r.diags.map(d => d.key)));
+}
+
+// Rework: a review that sends a fifth back. Accepted; every visit counts in the flow (10/hour in, 12.5/hour through
+// the work: 10 / (1 - 20%)); the return is the one back edge; every item still finishes; a way out with no share warns.
+{
+  const src = 'sim "rework"\nhorizon 30 day\nseed 3\narrive item 10/hour\npool people 4\nstep work by people time ~10min\nstep review time 2min\nend done\nknob back 0%..100% = 20%\nwork -> review\nreview ->\n  work $back\n  done rest\nshow count end done\nshow utilization people\n';
+  const r = SIMLANG.parse(src);
+  check('a loop with a way out is a valid recipe', r.ok, JSON.stringify(r.diags.map(d => d.text)));
+  const plan = SIMLANG.compile(r.model, initialKnobs(r.model)), fl = SIMLANG.flows(r.model, plan);
+  check('a loop counts every visit in the flow', Math.abs(fl.inflow[0] * 60 - 12.5) < 1e-6 && Math.abs(fl.inflow[1] * 60 - 12.5) < 1e-6, String(fl.inflow.map(v => v * 60)));
+  check('the return is the back edge', JSON.stringify(plan.back) === '[[],[0]]', JSON.stringify(plan.back));
+  const done = runSeeds(r.model, initialKnobs(r.model), [3])[0][0];
+  check('every item of a loop still finishes', done > 7000 && done < 7400, String(done));
+  const stuck = SIMLANG.flows(r.model, SIMLANG.compile(r.model, { back: 1 }));
+  check('a loop whose way out has no share is named', stuck.endless.includes('work') && stuck.endless.includes('review'), JSON.stringify(stuck.endless));
 }
 
 // Determinism: same seed, same result.

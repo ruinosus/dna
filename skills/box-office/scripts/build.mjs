@@ -60,7 +60,9 @@ function check(src, overrides = {}) {
   const r = SIMLANG.parse(src)
   if (r.ok) {
     const plan = SIMLANG.compile(r.model, initialKnobs(r.model, overrides))
-    for (const ld of SIMLANG.flows(r.model, plan).loads) {
+    const fl = SIMLANG.flows(r.model, plan)
+    for (const x of fl.endless) r.diags.push({ sev: 'warn', text: SIMLANG.fmtMsg('endless', { x }, r.model.lang) })
+    for (const ld of fl.loads) {
       if (ld.load > 1.001) r.diags.push({ sev: 'warn', text: SIMLANG.fmtMsg('unstable', { x: plan.steps[ld.steps[0]].name, v: `${Math.round(ld.load * 100)}%` }, r.model.lang) })
     }
   }

@@ -4,7 +4,7 @@ description: Turns how a team works — scattered in PDFs, slides, wikis or some
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing.
 metadata:
-  version: "1.15.0"
+  version: "1.16.0"
 ---
 
 # gates-and-handoffs: a team's way of working, clear and checkable
@@ -88,6 +88,26 @@ node scripts/build.mjs <id>.way.yaml --from <edited.xlsx> --take <key>,<key>… 
 
 and run step 4 again so the map, the workbook and the lesson match the file.
 
+## 6. The same way, seen by the other skills
+
+```
+node scripts/build.mjs <id>.way.yaml --lens sim|blueprint|drill [--gate <id>] [--lang en|pt] [--write [--force]]
+```
+
+- `--lens sim` — a box-office simulation (`<id>.sim`): the stages and gates in their order, the roles as teams, each
+  gate's «no» going back to its `on_fail` (rework, a loop) or out to an end; a control for each team and each «no».
+  Where the queue forms, and what one more person changes.
+- `--lens blueprint` — a service blueprint (`<id>.blueprint.yaml`): each stage a moment of whoever the work is for, its
+  lead on stage and the others behind, what it delivers as what they see, a wait after each gate.
+- `--lens drill` — an incident drill (`<id>.drill.yaml`) on one gate (`--gate`, or the first with an `on_fail`): on the
+  eve of the delivery it says no, and the room chooses.
+
+Each lens is a draft, never a conclusion: what the way does not have (a volume, a time, a team's size, what the customer
+does, a scene) is a bet marked `# bet:`, and the run says how many. Tell the person so, and ask for the real ones.
+Without `--write` it prints the lens; with it, it writes it beside the way and checks it with its own skill (when that
+skill is beside this one). A lens there that differs — maybe edited by hand — is written over only with `--force`. The
+first line, `# from: <id>.way.yaml@<version>`, says which version of the way a lens came from.
+
 ## Never
 
 - Never invent what the material and the person did not say — ask.
@@ -99,5 +119,6 @@ and run step 4 again so the map, the workbook and the lesson match the file.
 
 With the house-lights plugin, a mod checks every `.way.yaml` you write or edit with this skill's own check: one that breaks
 the format is refused with the messages — fix them and write it again. One that passes opens a preview pane beside the
-chat (its stages in lanes, the gates and who approves); `/way-preview <file>` shows another. Elsewhere, run the check
+chat (its stages in lanes, the gates and who approves); `/way-preview <file>` shows another. `/lenses <file>` shows its three lenses
+and writes each beside it at a press; when the way changes under a lens, a toast says so. Elsewhere, run the check
 yourself.
