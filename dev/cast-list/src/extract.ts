@@ -49,11 +49,15 @@ const obj = (x: unknown): Obj | undefined => (x && typeof x === 'object' && !Arr
 const str = (x: unknown): string | undefined => (typeof x === 'string' && x.trim() ? x : undefined)
 const list = (x: unknown): unknown[] => (Array.isArray(x) ? x : [])
 
+// Copilot Studio writes the keys of a Workday record (@Descriptor, @type, @Primary) with no quotes, which plain YAML
+// refuses (@ is reserved): quoted before reading, on the same line, so every line stays where it was.
+const AT_KEY = /^(\s*(?:- )?)(@[^\s:#'"]+)(?=:(?:\s|$))/gm
+
 /** The YAML as plain values, and the line each map starts at. */
 function read(text: string): { data: unknown; lineOf: (o: unknown) => number | undefined } | 'yaml' | 'empty' {
   if (!text.trim()) return 'empty'
   const lines = new LineCounter()
-  const doc = parseDocument(text, { lineCounter: lines, uniqueKeys: false })
+  const doc = parseDocument(text.replace(AT_KEY, '$1"$2"'), { lineCounter: lines, uniqueKeys: false })
   if (doc.errors.length) return 'yaml'
   const at = new WeakMap<object, number>()
   const plain = (n: unknown): unknown => {

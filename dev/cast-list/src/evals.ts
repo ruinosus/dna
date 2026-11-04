@@ -7,7 +7,7 @@ import type { AgentFacts } from './extract'
 import { matcher, type Table } from './tables'
 
 export interface EvalSet { agent: string; file: string; date?: string; total: number; passed: number; methods: { name: string; passed: number; total: number }[] }
-export interface Evals { sets: EvalSet[]; unknown: { file: string; why: 'who' | 'format' }[] }
+export interface Evals { sets: EvalSet[]; unknown: { file: string; why: 'who' | 'format' | 'testset' }[] }
 
 const base = (f: string) => f.split(/[\\/]/).pop() ?? f
 /** Who and when, from the file's name: «Evaluate Bodega Azul - Pedidos 2026-10-30.csv» or
@@ -22,20 +22,25 @@ export function evalsFrom(files: { name: string; table: Table }[], agents: { id:
   const match = matcher(agents)
   const out: Evals = { sets: [], unknown: [] }
   for (const { name, table } of files) {
+    const head = (table.rows[0] ?? []).map((h) => h.replace(/^\uFEFF/, '').trim().toLowerCase())
+    // a test set the Evaluate tab imports (prompts, expected answers), not yet run: whatever its name
+    if (head.includes('prompt') && head.includes('expected response') && !head.some((h) => /^result_\d+$/.test(h))) {
+      out.unknown.push({ file: name, why: 'testset' })
+      continue
+    }
     const { who, date } = nameOf(name)
     const agent = match(who)
     if (!agent) {
       out.unknown.push({ file: name, why: 'who' })
       continue
     }
-    const head = table.rows[0] ?? []
     // the methods: result_N, with testMethodType_N naming it
-    const ns = head.flatMap((h) => /^result_(\d+)$/i.exec(h.trim())?.[1] ?? []).map(Number).sort((a, b) => a - b)
+    const ns = head.flatMap((h) => /^result_(\d+)$/.exec(h)?.[1] ?? []).map(Number).sort((a, b) => a - b)
     if (!ns.length) {
       out.unknown.push({ file: name, why: 'format' })
       continue
     }
-    const col = (t: string) => head.findIndex((h) => h.trim().toLowerCase() === t.toLowerCase())
+    const col = (t: string) => head.indexOf(t.toLowerCase())
     const rows = table.rows.slice(1).filter((r) => r.some((c) => c.trim()))
     const pass = (r: string[], n: number) => (r[col(`result_${n}`)] ?? '').trim().toLowerCase() === 'pass'
     const methods = ns.map((n) => {

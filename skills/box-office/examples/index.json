@@ -1,0 +1,6 @@
+[
+  { "id": "ess", "file": "employee-self-service.sim" },
+  { "id": "docs", "file": "admission-documents.sim" },
+  { "id": "cafe", "file": "corner-cafe.sim" },
+  { "id": "cafe-pt", "file": "cafe-da-esquina.pt-BR.sim" }
+]

@@ -81,7 +81,7 @@ const T = {
     unmatched: (n, f, list) => `• ${f}: ${n} ${n === 1 ? 'row names' : 'rows name'} nobody in the folder: ${list}`, line: 'line',
     telemetry: (f, n, d) => `✓ telemetry ${f}: ${n} ${n === 1 ? 'row' : 'rows'} of the folder's agents, ${d} days`,
     evals: (d, n, a) => `✓ evals     ${d}: ${n} ${n === 1 ? 'evaluation' : 'evaluations'} of ${a} in the folder (counts only)`,
-    evalUnknown: (f, why) => `• evals     ${f}: ${why === 'who' ? 'its name says nobody in the folder («Evaluate <name> <date>.csv»)' : 'no result_1 column: not an export of the Evaluate tab'}`,
+    evalUnknown: (f, why) => `• evals     ${f}: ${why === 'testset' ? 'a test set (prompts and expected answers) with no results yet: import it in the Evaluate tab, run it and export the results' : why === 'who' ? 'its name says nobody in the folder («Evaluate <name> <date>.csv»)' : 'no result_1 column: not an export of the Evaluate tab'}`,
   },
   pt: {
     found: (n, o, s) => `✓ ${n} no elenco: ${o} ${o === 1 ? 'orquestrador' : 'orquestradores'}, ${s} ${s === 1 ? 'especialista' : 'especialistas'}`,
@@ -97,7 +97,7 @@ const T = {
     unmatched: (n, f, list) => `• ${f}: ${n} ${n === 1 ? 'linha não cita' : 'linhas não citam'} ninguém da pasta: ${list}`, line: 'linha',
     telemetry: (f, n, d) => `✓ telemetria ${f}: ${n} ${n === 1 ? 'linha' : 'linhas'} dos agentes da pasta, ${d} dias`,
     evals: (d, n, a) => `✓ avaliações ${d}: ${n} ${n === 1 ? 'avaliação' : 'avaliações'} de ${a} da pasta (só as contagens)`,
-    evalUnknown: (f, why) => `• avaliações ${f}: ${why === 'who' ? 'o nome não cita ninguém da pasta («Evaluate <nome> <data>.csv»)' : 'sem a coluna result_1: não é uma exportação da aba Evaluate'}`,
+    evalUnknown: (f, why) => `• avaliações ${f}: ${why === 'testset' ? 'um conjunto de teste (perguntas e respostas esperadas), ainda sem resultado: importe na aba Evaluate, rode e exporte o resultado' : why === 'who' ? 'o nome não cita ninguém da pasta («Evaluate <nome> <data>.csv»)' : 'sem a coluna result_1: não é uma exportação da aba Evaluate'}`,
   },
 }[lang]
 

@@ -20,6 +20,10 @@ const asExported = evalsFrom([{ name: 'Evaluate Bodega Azul - Pedidos 2026-10-30
 ok(asExported.sets[0]?.agent === 'bodega-pedidos' && asExported.sets[0].date === '2026-10-30', 'the name the Evaluate tab gives, with spaces and a copy\'s « (1)», reads the same', asExported)
 const odd = evalsFrom([{ name: 'Evaluate Ninguém 2026-10-30.csv', table: files[0].table }, { name: 'Evaluate Bodega Azul - Cupons 2026-10-30.csv', table: { name: '', rows: [['question', 'answer'], ['x', 'y']] } }], found)
 ok(odd.sets.length === 0 && odd.unknown.map((u) => u.why).join() === 'who,format', 'a file that names nobody in the folder, and one with no result_1: not understood, never stopping', odd.unknown)
+// a test set (what the Evaluate tab imports: prompts and expected answers), as Microsoft's samples ship them: told as
+// such, whatever its name — it has no results yet
+const sets = evalsFrom([{ name: 'Workday.csv', table: { name: '', rows: [['\uFEFFPrompt', 'Expected response ', 'Test Method Type', 'Passing Score'], ['What is my cost center?', 'Cost center', 'CompareMeaning', '70']] } }], found)
+ok(sets.sets.length === 0 && sets.unknown.map((u) => u.why).join() === 'testset', 'a test set with no results: told as a test set, not as a file that names nobody', sets.unknown)
 const words = JSON.stringify(ev)
 ok(!/Onde está meu pedido|Manaus|saiu para entrega|Seems|Same meaning|Question not answered/.test(words), 'nothing asked, answered or explained is kept', words.slice(0, 300))
 

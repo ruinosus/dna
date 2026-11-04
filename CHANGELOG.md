@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.11.0 — 2026-11-04
+
+The seventh skill: **box-office**, a process you can watch and ask «what if».
+
+- **A `.sim` recipe of 10 to 25 lines** — what arrives, the steps, who handles them, the routes, the costs, the
+  controls, the scenarios and the metrics — becomes `<id>.box-office.html`: one page that opens offline, drawing the
+  flow and animating the items, with a slider for every control, the p10 to p90 range of seeded runs in the
+  background and the scenarios side by side. In English or Portuguese, with the screen switching between EN and PT.
+- **`scripts/build.mjs`** checks a recipe (`--check`: each error with what to do), runs it (`--run`, with `--set`),
+  translates it (`--to pt-BR|en`, round trip exact) and makes the page, opening on the recipe given; also
+  `npx house-lights box-office`.
+- **The example** follows the scenarios of Microsoft's public Employee Self-Service sample with Workday (MIT): the
+  vacation balance and profile read from Workday, time off approved by the manager, policy questions answered or sent
+  to an HR partner. Its numbers are made up, and the recipe says so.
+- **The first mod of house-lights** (Claude Code 2.1.287 or later): every `.sim` Claude writes or edits is checked
+  first and refused with the validator's messages when it has errors; `/sim` runs a recipe at once; `/sim-preview`
+  opens a pane with its flow. Elsewhere the skill works without it.
+- The page carries its fonts (Bricolage Grotesque and IBM Plex, SIL Open Font License) and loads nothing from the
+  internet; it says its version.
+
+cast-list, from reading Microsoft's Employee Self-Service sample (`dev/cast-list/tools/prova-ess.mjs`):
+
+- **Workday records with `@` keys** (`@Descriptor`, `@type`, `@Primary`), written by Copilot Studio with no quotes,
+  are read: plain YAML refuses them, and 5 of the sample's topics were «not understood». The lines stay the same.
+- **A test set of the Evaluate tab** (prompts and expected answers, not yet run) is told as such by `--evals` — import
+  it, run it and export the results — instead of «its name says nobody in the folder».
+
 ## 1.10.0 — 2026-11-04
 
 cast-list, the diagrams: what was read, in plain Mermaid.

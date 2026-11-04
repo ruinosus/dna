@@ -1,6 +1,6 @@
 # house-lights
 
-The command behind the [house-lights](https://github.com/ruinosus/house-lights) skills: six ways of showing an idea
+The command behind the [house-lights](https://github.com/ruinosus/house-lights) skills: seven ways of showing an idea
 to people, each one an HTML page that opens offline. See the
 [gallery](https://ruinosus.github.io/house-lights/).
 
@@ -17,6 +17,7 @@ npx house-lights cast-list <agents-folder> [options]
 | `gates-and-handoffs` | a team's way of working: stages, gates, roles and outputs, with a workbook |
 | `service-blueprint` | a customer journey and who makes each moment happen, with a workbook |
 | `cast-list` | Copilot Studio agents compared: what repeats, who is off a pattern, what is missing, with a workbook |
+| `box-office` | a process to watch and ask «what if»: queues, people, assistants and costs, with sliders and scenarios |
 
 ```
 npx house-lights chalk-talk lesson.chalk                       # lesson.html, checked and offline
@@ -28,6 +29,8 @@ npx house-lights gates-and-handoffs team.way.yaml --all        # the map, the wo
 npx house-lights gates-and-handoffs team.way.yaml --from edited.xlsx   # what the edited workbook changes
 npx house-lights service-blueprint returns.blueprint.yaml --all       # the map, the workbook and the lesson
 npx house-lights cast-list agents/ --profile team.cast.yaml --all     # the agents compared: map, workbook, lesson
+npx house-lights box-office hr.sim --lang pt                          # hr.box-office.html: the simulation, offline
+npx house-lights box-office hr.sim --run --set hr_partners=8          # the median and p10–p90 of each metric
 npx house-lights cast-list agents/ --from filled.xlsx --take all      # the decisions filled in Excel, kept
 ```
 

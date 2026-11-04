@@ -1,5 +1,5 @@
-// The front page of the GitHub Pages site (docs/index.html): the six skills, each with a picture from its own gallery
-// (docs/<skill>/, made by that skill's site), what it is for and how to install them all. Run after the six sites.
+// The front page of the GitHub Pages site (docs/index.html): the seven skills, each with a picture from its own gallery
+// (docs/<skill>/, made by that skill's site), what it is for and how to install them all. Run after the seven sites.
 import { existsSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -12,6 +12,7 @@ const SKILLS = [
   ['gates-and-handoffs', 'images/feature-delivery-map.png', 'Map how the team works', 'Stages, gates and who approves them, roles and outputs: one checkable file, a map, a workbook and a lesson.'],
   ['service-blueprint', 'images/gym-signup-map.png', 'Map what the customer lives', 'Each moment of a journey, how it feels, and who makes it happen on stage, backstage and in the systems.'],
   ['cast-list', 'images/bodega-azul-map.png', 'Compare the agents', 'Copilot Studio agents side by side: what repeats, who is off the pattern, what the orchestrator passes on, which events fire, what nobody uses — with the file behind each.'],
+  ['box-office', 'images/employee-self-service.png', 'Ask «what if» of a process', 'What arrives, who handles it, what it costs: a short recipe becomes a simulation to watch, with a slider for every control and the scenarios side by side.'],
 ]
 for (const [s, img] of SKILLS) if (!existsSync(join(repo, 'docs', s, img))) throw new Error(`docs/${s}/${img} is missing: run that skill's site first.`)
 const card = ([s, img, title, text]) => `
@@ -28,7 +29,7 @@ writeFileSync(join(repo, 'docs/index.html'), `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>house-lights</title>
-<meta name="description" content="Six Claude skills for showing an idea to people: teach it by drawing, present it, rehearse an incident, map a team's way of working and a customer journey, compare Copilot Studio agents — each one HTML file that opens offline.">
+<meta name="description" content="Seven Claude skills for showing an idea to people: teach it by drawing, present it, rehearse an incident, map a team's way of working and a customer journey, compare Copilot Studio agents, simulate a process — each one HTML file that opens offline.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Shantell+Sans:wght@400;700&display=swap" rel="stylesheet">
@@ -66,7 +67,7 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
 <main>
   <section class="hero">
     <h1>house-lights</h1>
-    <p class="lead">The lights that come up so everyone can see. Six skills for Claude that show an idea to people — by drawing it, playing it, mapping it or comparing it — each one an HTML file that opens offline.</p>
+    <p class="lead">The lights that come up so everyone can see. Seven skills for Claude that show an idea to people — by drawing it, playing it, mapping it, comparing it or simulating it — each one an HTML file that opens offline.</p>
     <div class="actions">
       <a class="button primary" href="#install">Install</a>
       <a class="button" href="https://github.com/ruinosus/house-lights">GitHub</a>
@@ -78,7 +79,7 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
   </section>
   <section class="install" id="install">
     <h2>Install</h2>
-    <p>In Claude Code, all six at once:</p>
+    <p>In Claude Code, all seven at once:</p>
     <pre>/plugin marketplace add ruinosus/house-lights
 /plugin install house-lights@house-lights</pre>
     <p class="note">In claude.ai, upload each skill's zip from the <a href="https://github.com/ruinosus/house-lights/releases">latest release</a> (Settings › Capabilities › Skills, code execution on). In VS Code with GitHub Copilot: <b>Chat: Add Plugin Marketplace</b> › <code>ruinosus/house-lights</code>, then install it from Agent Customizations › Browse. Outside both: <code>npx house-lights &lt;skill&gt; &lt;file&gt;</code>.</p>

@@ -62,7 +62,7 @@ Quem atende o cliente e o que cada um alcança. Setas grossas são chamadas; fin
 ```mermaid
 flowchart LR
   %% title Topologia · Bodega Azul — atendimento
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   subgraph s3 ["Cliente"]
     n1(["Cliente"])
   end
@@ -144,7 +144,7 @@ O que acontece, passo a passo, quando o orquestrador encaminha para Cupons. ⚠ 
 %%{init: {"sequence": {"wrap": true, "width": 220}}}%%
 sequenceDiagram
   %% title A chamada para Cupons
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   participant p1 as Cliente
   participant p2 as Orquestrador
   participant p3 as Cupons
@@ -195,7 +195,7 @@ O que acontece, passo a passo, quando o orquestrador encaminha para Devoluções
 %%{init: {"sequence": {"wrap": true, "width": 220}}}%%
 sequenceDiagram
   %% title A chamada para Devoluções
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   participant p1 as Cliente
   participant p2 as Orquestrador
   participant p3 as Devoluções
@@ -238,7 +238,7 @@ O que acontece, passo a passo, quando o orquestrador encaminha para Fidelidade. 
 %%{init: {"sequence": {"wrap": true, "width": 220}}}%%
 sequenceDiagram
   %% title A chamada para Fidelidade
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   participant p1 as Cliente
   participant p2 as Orquestrador
   participant p3 as Fidelidade
@@ -261,7 +261,7 @@ O que acontece, passo a passo, quando o orquestrador encaminha para Frete. ⚠ m
 %%{init: {"sequence": {"wrap": true, "width": 220}}}%%
 sequenceDiagram
   %% title A chamada para Frete
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   participant p1 as Cliente
   participant p2 as Orquestrador
   participant p3 as Frete
@@ -296,7 +296,7 @@ O que acontece, passo a passo, quando o orquestrador encaminha para Loja Física
 %%{init: {"sequence": {"wrap": true, "width": 220}}}%%
 sequenceDiagram
   %% title A chamada para Loja Física
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   participant p1 as Cliente
   participant p2 as Orquestrador
   participant p3 as Loja Física
@@ -331,7 +331,7 @@ O que acontece, passo a passo, quando o orquestrador encaminha para Pedidos. ⚠
 %%{init: {"sequence": {"wrap": true, "width": 220}}}%%
 sequenceDiagram
   %% title A chamada para Pedidos
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   participant p1 as Cliente
   participant p2 as Orquestrador
   participant p3 as Pedidos
@@ -373,7 +373,7 @@ sequenceDiagram
 ```mermaid
 flowchart LR
   %% title Lente: Escalonamento para humano
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   n1["Cupons<br/><small>cumpre</small>"]
   n2["Devoluções<br/><small>cumpre</small>"]
   n3["Pedidos<br/><small>cumpre</small>"]
@@ -401,7 +401,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   %% title Lente: Registra telemetria
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   n1["Cupons<br/><small>cumpre</small>"]
   n2["Devoluções<br/><small>cumpre</small>"]
   n3["Pedidos<br/><small>cumpre</small>"]
@@ -429,7 +429,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   %% title Lente: Sem emojis
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   n1["Cupons<br/><small>cumpre</small>"]
   n2["Devoluções<br/><small>cumpre</small>"]
   n3["Pedidos<br/><small>cumpre</small>"]
@@ -457,7 +457,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   %% title Lente: Recebe o histórico da conversa
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   n1["Cupons<br/><small>cumpre</small>"]
   n2["Devoluções<br/><small>cumpre</small>"]
   n3["Pedidos<br/><small>cumpre</small>"]
@@ -486,7 +486,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   %% title Lente: Recebe «CategoriaSolicitacao» do orquestrador
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   n1["Cupons<br/><small>cumpre</small>"]
   n2["Devoluções<br/><small>cumpre</small>"]
   n3["Pedidos<br/><small>cumpre</small>"]
@@ -515,7 +515,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   %% title Lente: Formatação de links
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   n1["Cupons<br/><small>cumpre</small>"]
   n2["Devoluções<br/><small>cumpre</small>"]
   n3["Pedidos<br/><small>cumpre</small>"]
@@ -544,7 +544,7 @@ O que o orquestrador passa, e como encaminha: em vermelho o que falta; em âmbar
 ```mermaid
 flowchart LR
   %% title Lente: Contrato
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   n1["Cupons<br/><small>para olhar</small>"]
   n2["Devoluções<br/><small>cumpre</small>"]
   n3["Pedidos<br/><small>cumpre</small>"]
@@ -574,7 +574,7 @@ Quem registra, e o que dispara: em vermelho quem não registra ou não tem linha
 ```mermaid
 flowchart LR
   %% title Lente: Telemetria
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   n1["Cupons<br/><small>para olhar</small>"]
   n2["Devoluções<br/><small>cumpre</small>"]
   n3["Pedidos<br/><small>cumpre</small>"]
@@ -603,7 +603,7 @@ O que ninguém usa, ou está desligado: remover ou ligar?
 ```mermaid
 flowchart LR
   %% title Lente: Sem uso
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   n1["Cupons<br/><small>cumpre</small>"]
   n2["Devoluções<br/><small>cumpre</small>"]
   n3["Pedidos<br/><small>para olhar</small>"]
@@ -631,7 +631,7 @@ Os padrões do tipo «transação» (aceitos ou ainda candidatos) e, em vermelho
 ```mermaid
 flowchart TD
   %% title O tipo «transação»
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   t["«transação»<br/><small>3 especialistas: Cupons, Devoluções, Pedidos</small>"]
   %% # Fluxo chama erp.bodega-azul.example
   t --> q1["Fluxo chama erp.bodega-azul.example<br/><small>candidato · 3 de 3</small>"]
@@ -653,7 +653,7 @@ Os padrões do tipo «orientação» (aceitos ou ainda candidatos) e, em vermelh
 ```mermaid
 flowchart TD
   %% title O tipo «orientação»
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   t["«orientação»<br/><small>2 especialistas: Cupons, Loja Física</small>"]
   %% # Link para ajuda.bodega-azul.example
   t --> q1["Link para ajuda.bodega-azul.example<br/><small>candidato · 2 de 2</small>"]
@@ -673,7 +673,7 @@ Os padrões do tipo «triagem» (aceitos ou ainda candidatos) e, em vermelho, qu
 ```mermaid
 flowchart TD
   %% title O tipo «triagem»
-  %% cast-list 1.10.0
+  %% cast-list 1.11.0
   t["«triagem»<br/><small>1 especialista: Frete</small>"]
   t --- none["poucos para comparar: ainda sem padrão próprio"]
   classDef bad fill:#fde2e1,stroke:#c0392b,color:#7b1d16,stroke-width:2px
@@ -685,4 +685,4 @@ flowchart TD
 
 ---
 
-Escrito pelo cast-list 1.10.0.
+Escrito pelo cast-list 1.11.0.

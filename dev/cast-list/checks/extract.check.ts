@@ -268,4 +268,11 @@ beginDialog:
 ok(!('node:LogCustomTelemetryEvent' in switched.facts) && 'disabled:node:LogCustomTelemetryEvent' in switched.facts, 'a telemetry node switched off is not telemetry', Object.keys(switched.facts))
 ok('disabled:topic:Velho' in switched.facts && !Object.keys(switched.facts).some((k) => k === 'trigger:OnRecognizedIntent'), 'state: Inactive — the topic is switched off, and nothing in it counts', Object.keys(switched.facts))
 
+// Copilot Studio writes the keys of a Workday record (@Descriptor, @type, @Primary) with no quotes, which plain YAML
+// refuses: Microsoft's own Employee Self-Service sample has them. They are read, and the lines stay where they were.
+const workday = extractAgent('w', [
+  { path: 'agent.mcs.yml', text: 'kind: GptComponentMetadata\ninstructions: Workday.\n' },
+  { path: 'topics/Contato.topic.mcs.yml', text: 'kind: AdaptiveDialog\nbeginDialog:\n  kind: OnRecognizedIntent\n  id: main\n  actions:\n    - kind: SetVariable\n      id: v\n      variable: Topic.Contact\n      type:\n        kind: Record\n        properties:\n          @Descriptor: String\n          @type: String\n    - kind: LogCustomTelemetryEvent\n      id: log\n      eventName: "@ não é chave"\n' },
+], kinds)
+ok(!workday.unknown.length && 'trigger:OnRecognizedIntent' in workday.facts && workday.facts['node:LogCustomTelemetryEvent']?.[0]?.line === 14, 'a Workday record with @-keys and no quotes is read, at its own lines', [workday.unknown, Object.keys(workday.facts)])
 done()

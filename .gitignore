@@ -9,3 +9,4 @@ dev/*/tools/.engine
 dev/*/tools/.lib
 npm/house-lights/skills/
 npm/house-lights/LICENSE
+.claude-plugin/types/

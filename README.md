@@ -1,7 +1,7 @@
 <h1 align="center">house-lights</h1>
 
-<p align="center"><b>The lights that come up so everyone can see. Six skills for Claude that show an idea to people — by
-drawing it, playing it, mapping it or comparing it — each one an HTML file that opens offline.</b></p>
+<p align="center"><b>The lights that come up so everyone can see. Seven skills for Claude that show an idea to people — by
+drawing it, playing it, mapping it, comparing it or simulating it — each one an HTML file that opens offline.</b></p>
 
 <p align="center">
   <img src="docs/chalk-talk/images/hero.gif" alt="A hand-drawn lesson drawing itself on a board, stroke by stroke" width="760">
@@ -14,7 +14,7 @@ drawing it, playing it, mapping it or comparing it — each one an HTML file tha
 
 ---
 
-## The six skills
+## The seven skills
 
 | Skill | Ask for | You get |
 |---|---|---|
@@ -24,8 +24,12 @@ drawing it, playing it, mapping it or comparing it — each one an HTML file tha
 | [gates-and-handoffs](dev/gates-and-handoffs/README.md) | "who approves what in our delivery?" | a team's way of working — stages, gates, roles, outputs — as a checkable file, a map, a workbook and a lesson |
 | [service-blueprint](dev/service-blueprint/README.md) | "where does our onboarding hurt?" | a customer journey and who makes each moment happen on stage, backstage and in the systems |
 | [cast-list](dev/cast-list/README.md) | "which of our Copilot Studio agents is off the pattern?" | the agents compared: what repeats, who is off it, the contract, the telemetry, what nobody uses — a map, a workbook to decide in, and a lesson; Node alone, no model |
+| [box-office](dev/box-office/README.md) | "what if the assistant answered half the HR questions?" | a process to watch: items arriving, queues forming, people and assistants at work, a slider for every control, the ranges of many runs and the scenarios side by side — and, in Claude Code, a mod that checks every `.sim` as it is written |
 
 Claude picks the skill by what you ask. To call one by name: `/house-lights:back-of-napkin …`.
+
+In Claude Code (2.1.287 or later) the plugin also carries a **mod** for box-office: every `.sim` Claude writes is
+checked first, and `/sim` and `/sim-preview` run and show a recipe. Elsewhere the skills work without it.
 
 <p align="center">
   <img src="docs/back-of-napkin/thumbs/pitch-pharmacy-queue.png" alt="A hand-drawn pitch ending on «pilot: 5 stores, 3 months»" width="400">
@@ -34,7 +38,7 @@ Claude picks the skill by what you ask. To call one by name: `/house-lights:back
 
 ## Install
 
-**Claude Code** — all six at once:
+**Claude Code** — all seven at once:
 
 ```
 /plugin marketplace add ruinosus/house-lights
@@ -61,6 +65,7 @@ copilot plugin install house-lights@house-lights
 npx house-lights back-of-napkin pitch.chalk --pptx steps
 npx house-lights gates-and-handoffs team.way.yaml --all
 npx house-lights cast-list agents/ --all
+npx house-lights box-office hr.sim --lang pt
 ```
 
 The drawing engine alone, to embed lessons in a page, is the [chalk-talk](https://www.npmjs.com/package/chalk-talk)
@@ -75,16 +80,17 @@ plugins, install `house-lights` instead and remove the old one (`/plugin uninsta
 
 ## Em português
 
-Seis skills para mostrar uma ideia a alguém: **chalk-talk** ensina desenhando, **back-of-napkin** desenha para
+Sete skills para mostrar uma ideia a alguém: **chalk-talk** ensina desenhando, **back-of-napkin** desenha para
 apresentar (e vira PowerPoint), **dress-rehearsal** transforma o runbook num ensaio de incidente, **gates-and-handoffs**
 mapeia o jeito de trabalhar do time, **service-blueprint** mapeia a jornada do cliente e **cast-list** compara os
-agentes do Copilot Studio (o que se repete, quem está fora do padrão). Peça em português ("desenha a
+agentes do Copilot Studio (o que se repete, quem está fora do padrão) e **box-office** simula um processo para perguntar «e se»
+(filas, pessoas, assistentes e custos). Peça em português ("desenha a
 decisão entre as duas opções", "monta o blueprint da devolução"): a tela segue o idioma da receita. A instalação é a
 de cima.
 
 ## Develop
 
-The six skills are npm workspaces; each one's tools are in `dev/<skill>/tools`.
+The seven skills are npm workspaces; each one's tools are in `dev/<skill>/tools`.
 
 ```
 npm install
@@ -95,7 +101,7 @@ npm run site        # docs/: a gallery per skill and the front page
 npm run zip         # dist/<skill>.zip for claude.ai and dist/house-lights.zip
 npm run linux       # the builds as in a cloud sandbox (Linux, root, Playwright's Chromium); needs Docker
 npm run audit       # before a push: no name from your local list in the tracked files
-claude plugin eval . --scaffold --allow-tools Bash Write Edit --runs 1   # the evals in evals/, all six skills loaded
+claude plugin eval . --scaffold --allow-tools Bash Write Edit --runs 1   # the evals in evals/, all seven skills loaded
                     # (--scaffold runs the cases' own setup: cast-list's copies its example agents in)
 ```
 
