@@ -5,6 +5,7 @@
 //   names    in a repository that runs the names audit, refuses a write with a name of the person's private list;
 //            /names says what it watches
 //   /cast    cast-list's comparison of a folder of agents in a pane, and a toast when an agent edited there changes it
+//   /drill   an incident drill played in a pane: the clock, the scene, the choices and calls as buttons, the debrief
 //   guard    checks each .sim file Claude writes and refuses it with the validator's messages
 //   /sim     runs a recipe with no model turn and prints median and p10 to p90 per metric
 //   preview  a pane with the recipe's flow, opened by /sim-preview or the first valid write
@@ -15,6 +16,7 @@ import { namesCommand, namesGuard } from './names/guard'
 import { recipesGuard } from './recipes/guard'
 import { recipePreview } from './previews/preview'
 import { castCommand } from './cast/cast'
+import { drillGame } from './drill/drill'
 import { guard } from './box-office/guard'
 import { preview } from './box-office/preview'
 
@@ -41,6 +43,11 @@ export const register: Register = on => {
       argumentHint: '[agents-folder] [--lang pt]',
     })
     await $.command.register({
+      name: 'drill',
+      description: 'Play an incident drill (.drill.yaml) in a pane: the clock, the choices, who to call, the debrief',
+      argumentHint: '[file.drill.yaml] [--lang pt]',
+    })
+    await $.command.register({
       name: 'names',
       description: 'Say what the names guard watches: your private list and this repository',
     })
@@ -55,6 +62,7 @@ export const register: Register = on => {
   recipesGuard(on)
   recipePreview(on)
   castCommand(on)
+  drillGame(on)
   namesGuard(on)
   namesCommand(on)
   guard(on)

@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.14.0 — 2026-11-04
+
+The incident drill, played beside the chat.
+
+- **`/drill <file.drill.yaml> [--lang pt]`** plays a dress-rehearsal drill in a pane: the clock, the impact, who is in
+  the room, the scene and its injects, the choices as buttons (one the room cannot do says what it needs), a button to
+  call each role not in the room; at the end the debrief — the numbers, what happened, what the runbook did not say —
+  and buttons to save it beside the drill (`<id>.debrief.md`) or play again. The game stays in the session's state:
+  `/drill` with no file opens it again where it was.
+- **One game, not two:** the pane plays with dress-rehearsal's own `src/play.ts`, built into `hooks/drill/play.js` (pure,
+  no Node); the checks play all 15 paths of the example with it and with the skill's engine, to the same debrief.
+- **`--check --json`** in dress-rehearsal: the drill as read, what to look at and the runbook's passages, as one JSON
+  document.
+- The mod's 23 tests run in `npm run check`.
+
 ## 1.13.0 — 2026-11-04
 
 The mod shows what was written, beside the chat.

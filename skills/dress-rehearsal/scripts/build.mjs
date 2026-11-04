@@ -3,7 +3,7 @@
 // facilitator's script. What does not hold is printed («to look at») and the game is still made; what would break the
 // game (a choice to no scene, a scene with no way on, a drawing that does not read…) says its line and nothing is made.
 //
-//   node build.mjs <id>.drill.yaml --check [--lang en|pt]       only check it: nothing is written
+//   node build.mjs <id>.drill.yaml --check [--json] [--lang en|pt]   only check it: nothing is written
 //   node build.mjs <id>.drill.yaml [--facilitator] [--all] [--lang en|pt] [--out <folder>]
 //
 // With no --facilitator it makes the game; --all makes both. When the drill's «from» is a file beside it (the runbook),
@@ -18,13 +18,13 @@ import { facilitator, findPassage, problemText, readDrill, readRecipe, reviewDri
 const here = dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
 const valued = new Set(['--lang', '--out'])
-const flags = new Set(['--check', '--facilitator', '--all', ...valued])
+const flags = new Set(['--check', '--json', '--facilitator', '--all', ...valued])
 const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
 }
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
-const usage = `usage: node build.mjs <id>.drill.yaml --check [--lang en|pt]
+const usage = `usage: node build.mjs <id>.drill.yaml --check [--json] [--lang en|pt]
        node build.mjs <id>.drill.yaml [--facilitator] [--all] [--lang en|pt] [--out <folder>]`
 const lang = option('--lang') ?? 'en'
 const fail = (msg) => {
@@ -60,12 +60,14 @@ if (problems.length) {
 }
 const drill = read.drill
 const id = basename(file).replace(/(\.drill)?\.(ya?ml|json)$/, '')
-console.log(T.ok(drill))
+// with --check --json the output is one JSON document: the lines for people stay quiet
+const asJson = argv.includes('--check') && argv.includes('--json')
+if (!asJson) console.log(T.ok(drill))
 
 // the runbook it came from, when it is a file beside the drill: the passages the choices cite
 const runbookFile = drill.from ? resolve(dirname(file), drill.from) : undefined
 const runbook = runbookFile && existsSync(runbookFile) ? readFileSync(runbookFile, 'utf8') : undefined
-if (drill.from) console.log(runbook ? T.runbook(drill.from) : T.noRunbook(drill.from))
+if (drill.from && !asJson) console.log(runbook ? T.runbook(drill.from) : T.noRunbook(drill.from))
 const excerpts = {}
 if (runbook) {
   for (const ref of new Set(drill.scenes.flatMap((s) => (s.choices ?? []).map((c) => c.runbook).filter(Boolean)))) {
@@ -74,6 +76,12 @@ if (runbook) {
   }
 }
 const looks = reviewDrill(drill, runbook)
+// --check --json: the drill as read, what to look at and the runbook's passages, as one JSON document (what the mod's
+// /drill plays in its pane)
+if (asJson) {
+  process.stdout.write(`${JSON.stringify({ format: 'dress-rehearsal/read-v1', drill, looks: looks.map((l) => ({ en: l.en, pt: l.pt })), excerpts })}\n`)
+  process.exit(0)
+}
 if (looks.length) for (const l of looks) console.log(`! ${T.look}: ${l[lang]}`)
 else console.log(T.nothing)
 if (argv.includes('--check')) process.exit(0)

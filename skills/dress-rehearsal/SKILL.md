@@ -4,7 +4,7 @@ description: Turns a team's incident runbook (or a post-mortem) into a playable 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install.
 metadata:
-  version: "1.13.0"
+  version: "1.14.0"
 ---
 
 # dress-rehearsal: test your runbook by playing it
@@ -84,4 +84,6 @@ it (alone in 10 minutes, or as a 30-minute team session).
 ## In Claude Code
 
 With the house-lights plugin, a mod checks every `.drill.yaml` you write or edit with this skill's own check: one that breaks
-the format is refused with the messages — fix them and write it again. Elsewhere, run the check yourself.
+the format is refused with the messages — fix them and write it again. `/drill <file> [--lang pt]` plays the drill in a
+pane beside the chat — the clock, the scene, the choices and who to call as buttons — and ends on the debrief, which a
+button saves beside the drill (`<id>.debrief.md`). Elsewhere, run the check yourself and open the page.

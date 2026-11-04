@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = resolve(here, '..')
@@ -77,6 +77,35 @@ else
     const r = (await runPage(join(work, `${id}.play.html`), 'played', '', { timeout: 60 })) ?? { ended: false, errs: ['the page did not answer'] }
     ok(r.ended && !r.errs.length, `${id}: played to the end in a browser (${r.steps} clicks)`, JSON.stringify(r))
   }
+
+// --check --json, and the mod's game: the drill as read is one JSON document, and the mod's hooks/drill/play.js (built
+// from src/play.ts) plays it to the same debrief as the skill's engine, on every path of the example
+{
+  const ex = join(skill, 'examples/checkout.drill.yaml')
+  const j = spawnSync(process.execPath, [join(skill, 'scripts/build.mjs'), ex, '--check', '--json', '--lang', 'pt'], { encoding: 'utf8' })
+  let doc
+  try { doc = JSON.parse(j.stdout) } catch {}
+  ok(j.status === 0 && doc?.format === 'dress-rehearsal/read-v1' && Array.isArray(doc.drill?.scenes) && Array.isArray(doc.looks) && typeof doc.excerpts === 'object', '--check --json: the drill as read, what to look at and the runbook passages, one JSON document', j.stdout.slice(0, 200) + j.stderr)
+  const mod = await import(pathToFileURL(join(repo, 'hooks/drill/play.js')).href)
+  const eng = await import(pathToFileURL(join(skill, 'scripts/engine.mjs')).href)
+  const d = doc.drill
+  // every path: depth-first over the choices (and a call of each role first), each one played by both
+  const paths = []
+  const walk = (seq, scene, depth) => {
+    const s = d.scenes.find((x) => x.id === scene)
+    if (!s || s.end || depth > 12) return paths.push(seq)
+    ;(s.choices ?? []).forEach((c, i) => walk([...seq, i], c.go, depth + 1))
+  }
+  walk([], d.start, 0)
+  const playAll = (m, seq) => {
+    let p = m.startPlay(d, 'pt')
+    for (const r of d.roles) p = m.call(d, p, r.id, 'pt')
+    for (const i of seq) p = m.choose(d, p, i, 'pt')
+    return m.debrief(d, p, doc.looks, 'pt').markdown
+  }
+  const same = paths.every((seq) => playAll(mod, seq) === playAll(eng, seq))
+  ok(paths.length >= 3 && same, `the mod's game plays all ${paths.length} paths of the example to the same debrief as the engine`)
+}
 
 rmSync(work, { recursive: true, force: true })
 if (failed) {
