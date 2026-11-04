@@ -45,6 +45,7 @@ const T = {
   en: {
     usage: `usage: node build.mjs <id>.solution.yaml --check [--json] [--format] [--lang en|pt]
        node build.mjs <id>.solution.yaml [--lang en|pt] [--out <folder>]
+       node build.mjs <id>.solution.yaml --okf [--lang en|pt] [--out <folder>]
        node build.mjs --list
        node build.mjs --new <accelerator> <folder>
        node build.mjs <id>.solution.yaml --upgrade [--write]`,
@@ -79,6 +80,7 @@ const T = {
   pt: {
     usage: `uso: node build.mjs <id>.solution.yaml --check [--json] [--format] [--lang en|pt]
      node build.mjs <id>.solution.yaml [--lang en|pt] [--out <pasta>]
+     node build.mjs <id>.solution.yaml --okf [--lang en|pt] [--out <pasta>]
      node build.mjs --list
      node build.mjs --new <accelerator> <pasta>
      node build.mjs <id>.solution.yaml --upgrade [--write]`,
@@ -305,7 +307,7 @@ ${data}
 // ---- the command ----
 const argv = process.argv.slice(2)
 const valued = new Set(['--lang', '--out', '--new'])
-const flags = new Set(['--check', '--json', '--format', '--list', '--upgrade', '--write', ...valued])
+const flags = new Set(['--check', '--json', '--format', '--list', '--upgrade', '--write', '--okf', ...valued])
 const option = (name) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : undefined)
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
 const fail = (msg, code = 2) => {
@@ -391,6 +393,16 @@ if (isMain) {
   const looks = checked.flatMap((c) => c.looks)
   for (const l of looks) console.log(`! ${t.look}: ${l}`)
   if (!looks.length && !failing && checked.every((c) => c.state === 'ok')) console.log(t.nothing)
+  // --okf: the solution as an OKF v0.2 bundle (scripts/okf.mjs); a piece that fails its check goes as a draft
+  if (argv.includes('--okf')) {
+    const { exportOkf } = await import('./okf.mjs')
+    const id = basename(file).replace(/\.solution\.ya?ml$/i, '')
+    const out = resolve(option('--out') ?? join(folder, `${id}.okf`))
+    const done = await exportOkf({ sol, file, folder, checked, out, lang, skills, reviewed: sol.reviewed })
+    console.log(`✓ okf ${out}: ${done.concepts} concepts, ${done.written.length ? `${done.written.length} files written` : 'nothing changed'}`)
+    for (const l of done.log) console.log(`  ${l}`)
+    process.exit(failing ? 4 : 0)
+  }
   if (failing) process.exit(4)
   if (argv.includes('--check')) process.exit(0)
 

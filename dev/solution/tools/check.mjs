@@ -6,7 +6,7 @@
 import { checkSkillMd } from '@ruinosus/visual-explainer/kit/tools/checks.mjs'
 import { browser, runPages } from '@ruinosus/visual-explainer/kit/browser.mjs'
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -115,6 +115,87 @@ if (browser()) {
     ok(kinds.every((x) => seen[x] === true), `${a}: in a browser, each tab opens its piece`, JSON.stringify(seen))
   })
 } else console.log('• no Chrome, Chromium or Edge: the tabs were not opened')
+
+// DNA 2.1.0: --okf writes the solution as an OKF v0.2 bundle — conformant, read back by the kit's reader, the same
+// bytes when nothing changed, one concept changed when one piece did, a broken piece a draft, and the attester inside
+// it checking a run's receipt
+{
+  const { readBundle } = await import(join(repo, 'kit/okf-read.mjs'))
+  const okfRun = (now, ...args) => spawnSync(process.execPath, [build, ...args], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, env: { ...process.env, DNA_NOW: now } })
+  const T1 = '2026-11-04T21:10:00Z'
+  const T2 = '2026-11-05T08:00:00Z'
+  const walk = (dir) => readdirSync(dir, { recursive: true }).filter((f) => statSync(join(dir, f)).isFile()).sort()
+  const snapshot = (dir) => walk(dir).map((f) => `${f}\n${readFileSync(join(dir, f), 'utf8')}`).join('\n\0\n')
+  /** The minimal conformance of OKF §11, and every internal link and path field resolving. */
+  const conformance = (dir) => {
+    const bad = []
+    for (const f of walk(dir).filter((f) => f.endsWith('.md'))) {
+      const text = readFileSync(join(dir, f), 'utf8')
+      const reserved = /(^|\/)(index|log)\.md$/.test(f)
+      const fm = /^---\n([\s\S]*?)\n---\n/.exec(text)
+      if (!reserved && !(fm && /^type: \S/m.test(fm[1]))) bad.push(`${f}: no type`)
+      if (f === 'index.md' && !(fm && /^okf_version: "0\.2"$/m.test(fm[1]))) bad.push('index.md: no okf_version "0.2"')
+      if (reserved && f !== 'index.md' && fm) bad.push(`${f}: a frontmatter on a reserved file`)
+      if (f === 'log.md') {
+        const dates = [...text.matchAll(/^## (\d{4}-\d{2}-\d{2})$/gm)].map((m) => m[1])
+        if (!dates.length || dates.join() !== [...dates].sort().reverse().join()) bad.push(`log.md: dates not newest first (${dates})`)
+      }
+      const targets = [...text.matchAll(/\]\(([^)\s#]+)\)/g)].map((m) => m[1]).filter((h) => !/^[a-z]+:/i.test(h))
+      for (const m of (fm?.[1] ?? '').matchAll(/(?:^|[\s{,])(?:resource|computation): ("[^"]+"|[^\s,}]+)/gm)) targets.push(m[1].replace(/^"|"$/g, ''))
+      for (const t of targets) {
+        if (/^[a-z]+:/i.test(t) || / /.test(t)) continue // a URL, or a scope descriptor («3 of 10 interviews»)
+        const at = t.startsWith('/') ? join(dir, t) : join(dir, dirname(f), t)
+        if (!existsSync(at)) bad.push(`${f}: ${t} does not resolve`)
+      }
+    }
+    return bad
+  }
+  for (const a of accs) {
+    const file = join(examples, a, `${a}.solution.yaml`)
+    const out = join(work, `${a}.okf`)
+    const e = okfRun(T1, file, '--okf', '--out', out)
+    const bad = existsSync(out) ? conformance(out) : ['no bundle']
+    ok(e.status === 0 && !bad.length && /^✓ okf /m.test(e.stdout), `${a}: --okf writes a conformant OKF v0.2 bundle`, e.stdout + e.stderr + bad.join('\n'))
+    const b = existsSync(out) ? readBundle(out, { now: new Date(T1) }) : { concepts: [] }
+    const kinds = readFileSync(file, 'utf8').match(/^(way|sim|blueprint|drill|agents|lesson):/gm).length
+    ok(b.dna === true && b.concepts.filter((c) => c.path.split('/').length === 2 || c.path === '/computations/simulation.md').length === kinds &&
+       b.concepts.filter((c) => c.dna && !c.path.startsWith('/references/')).every((c) => c.trust === 'machine-confirmed' && c.status === 'stable'),
+       `${a}: the kit's reader reads it back — made by DNA, one concept per piece (${kinds}), each machine-confirmed`, JSON.stringify(b.concepts.map((c) => [c.path, c.trust, c.status])))
+    const before = snapshot(out)
+    okfRun(T2, file, '--okf', '--out', out)
+    ok(snapshot(out) === before, `${a}: exporting again with nothing changed gives the same bytes`)
+  }
+  // one piece changed: only its concept, and the log of the day
+  const copy = join(work, 'ess-copy')
+  cpSync(join(examples, 'employee-self-service'), copy, { recursive: true })
+  const sol = join(copy, 'employee-self-service.solution.yaml')
+  const out = join(work, 'ess-copy.okf')
+  okfRun(T1, sol, '--okf', '--out', out)
+  const was = Object.fromEntries(walk(out).map((f) => [f, readFileSync(join(out, f), 'utf8')]))
+  const bp = join(copy, 'employee-self-service.blueprint.yaml')
+  writeFileSync(bp, readFileSync(bp, 'utf8') + '# The moments were reread with the HR team.\n')
+  const u = okfRun(T2, sol, '--okf', '--out', out)
+  const now = Object.fromEntries(walk(out).map((f) => [f, readFileSync(join(out, f), 'utf8')]))
+  const changed = Object.keys(now).filter((f) => now[f] !== was[f]).sort()
+  ok(u.status === 0 && changed.join() === 'journey.md,log.md,references/dna/employee-self-service.blueprint.yaml' &&
+     /^## 2026-11-05\n\* \*\*Update\*\*: .*journey\.md/m.test(now['log.md']) && now['journey.md'].includes('at: 2026-11-05T08:00:00Z') && now['process.md'].includes('at: 2026-11-04T21:10:00Z'),
+     'a piece changed: only its concept and its copy change, with an Update in the log of the day', u.stdout + u.stderr + changed.join(', '))
+  // a broken piece: a draft, without verified
+  writeFileSync(bp, readFileSync(bp, 'utf8').replace(/^moments:/m, 'momentz:'))
+  const d = okfRun(T2, sol, '--okf', '--out', out)
+  const journey = existsSync(join(out, 'journey.md')) ? readFileSync(join(out, 'journey.md'), 'utf8') : ''
+  ok(d.status === 4 && /^status: draft$/m.test(journey) && !/^verified:/m.test(journey), 'a piece that fails its check still goes, as status: draft, without verified (exit 4)', d.stdout + d.stderr + journey.slice(0, 400))
+  // the attester the bundle carries, on a run's receipt
+  const attester = join(work, 'employee-self-service.okf', 'references/attesters/process-simulation.mjs')
+  const receipt = join(work, 'receipt.json')
+  spawnSync(process.execPath, [join(repo, 'skills/process-simulation/scripts/build.mjs'), join(work, 'employee-self-service.okf/references/dna/employee-self-service.sim'), '--run', '--seeds', '2', '--set', 'hr_partners=10', '--receipt', receipt], { encoding: 'utf8' })
+  const g = spawnSync(process.execPath, [attester, receipt], { encoding: 'utf8' })
+  const forged = join(work, 'forged.json')
+  writeFileSync(forged, JSON.stringify({ ...JSON.parse(readFileSync(receipt, 'utf8')), set: { hr_partners: 99 } }))
+  const f = spawnSync(process.execPath, [attester, forged], { encoding: 'utf8' })
+  ok(g.status === 0 && /^✓ attested/m.test(g.stdout) && f.status === 3 && /hr_partners=99 is outside 4\.\.30/.test(f.stdout),
+     "the bundle's attester confirms a run's receipt and refuses a forged one, with only the bundle's files", g.stdout + g.stderr + f.stdout + f.stderr)
+}
 
 rmSync(work, { recursive: true, force: true })
 if (failed) {
