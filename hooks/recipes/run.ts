@@ -5,6 +5,13 @@ import type { EngineInterface } from 'claude-code'
 export function scriptOf($: EngineInterface, skill: string): string {
   return `${$.plugin.root}/skills/${skill}/scripts/build.mjs`
 }
+/** A path as the person typed it to a command: «~» and «~/…» are their home folder (no shell expands them here);
+ * anything else as given, relative to the working folder. */
+export async function pathOf($: EngineInterface, given: string): Promise<string> {
+  if (given !== '~' && !given.startsWith('~/')) return given
+  const home = await $.env.get('HOME')
+  return home ? `${home.replace(/\/$/, '')}${given.slice(1)}` : given
+}
 const base = (p: string) => p.split('/').pop() || 'recipe'
 
 export type Ran = { exitCode: number; stdout: string; stderr: string; dir: string }

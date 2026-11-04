@@ -82,10 +82,10 @@ export function namesGuard(on: On) {
 export function namesCommand(on: On) {
   on('command.run', { command: 'names' }, async ($) => {
     const list = await listOf($)
-    if (!list) return { text: `${PLUGIN}: no list at ~/${LIST}: the names guard does nothing.` }
+    if (!list) return { text: `no list at ~/${LIST}: the names guard does nothing.` }
     const root = await watchedRepo($, './x')
     return {
-      text: `${PLUGIN}: ${list.patterns.length} pattern${list.patterns.length === 1 ? '' : 's'} in ~/${LIST}. ${root ? `This repository (${root.split('/').pop()}) runs the audit: a write with one of them is refused.` : 'This folder is not in a repository that runs the audit: nothing is checked here.'}`,
+      text: `${list.patterns.length} pattern${list.patterns.length === 1 ? '' : 's'} in ~/${LIST}. ${root ? `This repository (${root.split('/').pop()}) runs the audit: a write with one of them is refused.` : 'This folder is not in a repository that runs the audit: nothing is checked here.'}`,
     }
   })
 }

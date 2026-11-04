@@ -65,7 +65,7 @@ else {
   const t = spawnSync('claude', ['plugin', 'test', repo], { encoding: 'utf8', timeout: 300000 })
   const pass = Number((t.stdout.match(/(\d+) pass/) ?? [])[1] ?? 0)
   const fail = Number((t.stdout.match(/(\d+) fail/) ?? [])[1] ?? 0)
-  expect(t.status === 0 && pass >= 23 && fail === 0, `the mod in Claude Code's harness: ${pass} tests pass, ${fail} fail`, t.stdout + t.stderr)
+  expect(t.status === 0 && pass >= 25 && fail === 0, `the mod in Claude Code's harness: ${pass} tests pass, ${fail} fail`, t.stdout + t.stderr)
 }
 
 // Every relative link of the front page, the README and each skill's guide points at a file that is there.

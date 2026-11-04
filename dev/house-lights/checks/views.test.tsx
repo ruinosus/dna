@@ -34,7 +34,7 @@ function engine(on: any, opts: { toasts?: string[]; cast?: () => string } = {}) 
     return { value: undefined }
   })
   on('clock.now', () => ({ value: 1_000_000 }))
-  on('env.get', (_: any, e: any) => ({ value: e.name === 'TMPDIR' ? '/tmp' : undefined }))
+  on('env.get', (_: any, e: any) => ({ value: e.name === 'TMPDIR' ? '/tmp' : e.name === 'HOME' ? '/home/me' : undefined }))
   on('fs.read', (_: any, e: any) => (e.path in files ? { value: files[e.path] } : { deny: `ENOENT ${e.path}` }))
   on('fs.write', (_: any, e: any) => {
     files[e.path] = e.text
@@ -115,4 +115,13 @@ test('after /cast, an agent edited in that folder compares again and a toast say
   const before = toasts.length
   await $.tool.call({ tool: 'Write', file_path: '/repo/other/agent.mcs.yml', content: 'x' })
   expect(toasts.length).toBe(before)
+})
+
+test('/way-preview and /cast take a path typed with ~', async ($, on) => {
+  engine(on)
+  await start($)
+  const w = await $.command.run({ command: 'way-preview', args: '~/team.way.yaml' } as any)
+  expect(JSON.stringify(w)).toContain('could not read /home/me/team.way.yaml') // read at the home folder (not in the fake)
+  const c = await $.command.run({ command: 'cast', args: '~/agents --lang pt' } as any)
+  expect(JSON.stringify(c)).toContain('▸ Fora do padrão · 2')
 })

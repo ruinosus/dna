@@ -8,8 +8,7 @@ import type { EngineInterface, On } from 'claude-code'
 
 import type { DrillDoc } from '../../types'
 import { call, canDo, choose, clockAt, debrief, startPlay } from './play.js'
-import { scriptOf } from '../recipes/run'
-import { PLUGIN } from '../recipes/text'
+import { pathOf, scriptOf } from '../recipes/run'
 
 export const DRILL_PANE = 'house-lights-drill'
 const game = atom({ plugin: 'house-lights', key: 'drill' } as const, null, { shape: 'drill-1' })
@@ -33,14 +32,16 @@ export function drillGame(on: On) {
   on('command.run', { command: 'drill' }, async ($, e) => {
     const args = e.args.trim().split(/\s+/).filter(Boolean)
     const lang = args.includes('--lang') && args[args.indexOf('--lang') + 1] === 'pt' ? 'pt' : 'en'
-    const path = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--lang')[0]
-    if (path) {
+    const typed = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--lang')[0]
+    if (typed) {
+      const path = await pathOf($, typed)
+      if (!(await $.fs.exists(path))) return { text: `could not read ${typed}: no such file` }
       const r = await start($, path, lang).catch((err) => ({ error: String(err) }))
-      if ('error' in r) return { text: `${PLUGIN}: ${path} cannot be played:\n${r.error}` }
+      if ('error' in r) return { text: `${path} cannot be played:\n${r.error}` }
       await update($, game, () => r.doc)
-    } else if (!(await read($, game))) return { text: `${PLUGIN}: name a drill, for example /drill checkout.drill.yaml --lang pt` }
+    } else if (!(await read($, game))) return { text: `name a drill, for example /drill checkout.drill.yaml --lang pt` }
     await $.ui.open({ id: DRILL_PANE, title: 'Incident drill' })
-    return { text: `${PLUGIN}: the drill is in the pane.` }
+    return { text: `the drill is in the pane.` }
   })
 
   on('ui.render', { component: 'Pane', requestId: DRILL_PANE }, async ($, e) => {

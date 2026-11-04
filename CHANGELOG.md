@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.14.1 — 2026-11-04
+
+- **The mod's commands take a path typed with `~`** (`/drill ~/drills/checkout.drill.yaml`): no shell expands it for
+  a command, so `/drill`, `/cast`, `/way-preview`, `/blueprint-preview`, `/sim` and `/sim-preview` read it as the home
+  folder. A file or folder that is not there is said plainly, instead of Node's error.
+- **No doubled name** in the commands' replies: Claude Code already says «house-lights:».
+
 ## 1.14.0 — 2026-11-04
 
 The incident drill, played beside the chat.

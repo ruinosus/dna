@@ -6,7 +6,8 @@ import type { On } from 'claude-code'
 
 import type { PreviewLang } from '../../types'
 
-import { PANE, PLUGIN, check, diagLines } from './core'
+import { PANE, check, diagLines } from './core'
+import { pathOf } from '../recipes/run'
 import { flowSvg, flowText } from './flow-svg'
 
 const last = atom({ plugin: 'house-lights', key: 'last' } as const, null, { shape: 'last-1' })
@@ -14,15 +15,15 @@ const lang = atom({ plugin: 'house-lights', key: 'lang' } as const, 'en' as Prev
 
 export function preview(on: On) {
   on('command.run', { command: 'sim-preview' }, async ($, e) => {
-    const path = e.args.trim()
+    const path = await pathOf($, e.args.trim())
     if (path) {
       const src = await $.fs.read(path).catch(() => undefined)
-      if (typeof src !== 'string') return { text: `${PLUGIN}: could not read ${path}` }
+      if (typeof src !== 'string') return { text: `could not read ${path}` }
       const at = await $.clock.now()
       await update($, last, () => ({ path, src, at }))
     }
     await $.ui.open({ id: PANE, title: 'Process preview' })
-    return { text: `${PLUGIN}: preview pane opened.` }
+    return { text: `preview pane opened.` }
   })
 
   on('ui.render', { component: 'Pane', requestId: 'box-office-preview' }, async ($, e) => {

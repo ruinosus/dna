@@ -6,26 +6,27 @@ import type { EngineInterface, On } from 'claude-code'
 
 import type { PreviewLang } from '../../types'
 import { checkRecipe, recipeOf, showRecipe } from '../recipes/guard'
-import { PLUGIN } from '../recipes/text'
+import { pathOf } from '../recipes/run'
 import { PREVIEW_PANE, blueprintSvg, blueprintText, lookWord, waySvg, wayText } from './draw'
 
 const recipe = atom({ plugin: 'house-lights', key: 'recipe' } as const, null, { shape: 'recipe-1' })
 const lang = atom({ plugin: 'house-lights', key: 'lang' } as const, 'en' as PreviewLang)
 
 /** /way-preview and /blueprint-preview: check the named file (or show the last one) and open the pane. */
-async function open($: EngineInterface, path: string, kind: 'way' | 'blueprint') {
-  if (path) {
+async function open($: EngineInterface, typed: string, kind: 'way' | 'blueprint') {
+  if (typed) {
+    const path = await pathOf($, typed)
     const text = await $.fs.read(path).catch(() => undefined)
-    if (typeof text !== 'string') return { text: `${PLUGIN}: could not read ${path}` }
+    if (typeof text !== 'string') return { text: `could not read ${path}` }
     const r = recipeOf(path, text)
-    if (!r || r.kind !== kind) return { text: `${PLUGIN}: ${path} is not a ${kind === 'way' ? '.way.yaml' : '.blueprint.yaml'}` }
+    if (!r || r.kind !== kind) return { text: `${path} is not a ${kind === 'way' ? '.way.yaml' : '.blueprint.yaml'}` }
     const checked = await checkRecipe($, path, text, r).catch(() => undefined)
-    if (!checked) return { text: `${PLUGIN}: ${r.skill}'s check could not run (is node on the PATH?)` }
-    if (checked.problems.length) return { text: `${PLUGIN}: ${path} has errors:\n${checked.problems.join('\n')}` }
+    if (!checked) return { text: `${r.skill}'s check could not run (is node on the PATH?)` }
+    if (checked.problems.length) return { text: `${path} has errors:\n${checked.problems.join('\n')}` }
     await showRecipe($, path, kind, checked.read)
   }
   await $.ui.open({ id: PREVIEW_PANE, title: kind === 'way' ? 'Way of working' : 'Service blueprint' })
-  return { text: `${PLUGIN}: preview pane opened.` }
+  return { text: `preview pane opened.` }
 }
 
 export function recipePreview(on: On) {

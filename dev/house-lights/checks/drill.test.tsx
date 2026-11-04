@@ -20,17 +20,19 @@ const DRILL = {
   },
 }
 
-function engine(on: any, writes: Record<string, string>) {
+function engine(on: any, writes: Record<string, string>, runs: string[][] = []) {
   on('command.register', (_: any, e: any) => ({ value: { command: e.name } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('clock.now', () => ({ value: 1_000_000 }))
-  on('env.get', () => ({ value: undefined }))
+  on('env.get', (_: any, e: any) => ({ value: e.name === 'HOME' ? '/home/me' : undefined }))
+  on('fs.exists', (_: any, e: any) => ({ value: !String(e.path).includes('missing') }))
   on('fs.write', (_: any, e: any) => {
     writes[e.path] = e.text
     return { value: undefined }
   })
   on('process.run', (_: any, e: any) => {
     const argv: string[] = [...e.argv]
+    runs.push(argv)
     if (argv[0] === 'node' && argv[1]!.includes('/dress-rehearsal/') && argv.includes('--json')) {
       return { value: argv[2]!.includes('broken') ? { exitCode: 1, stdout: '', stderr: '✗ broken.drill.yaml:1: «format» must be dress-rehearsal/v1\n' } : { exitCode: 0, stdout: JSON.stringify(DRILL), stderr: '' } }
     }
@@ -76,4 +78,16 @@ test('/drill says why a drill cannot be played, and with no drill asks for one',
   await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
   expect(JSON.stringify(await $.command.run({ command: 'drill', args: '' } as any))).toContain('name a drill')
   expect(JSON.stringify(await $.command.run({ command: 'drill', args: '/repo/broken.drill.yaml' } as any))).toContain('«format» must be dress-rehearsal/v1')
+})
+
+test('a path typed with ~ is the home folder, and one that is not there is said plainly', async ($, on) => {
+  const runs: string[][] = []
+  engine(on, {}, runs)
+  await $.session.start({ cwd: '/repo', surface: 'terminal', isInteractive: true })
+  const r = await $.command.run({ command: 'drill', args: '~/drills/checkout.drill.yaml --lang pt' } as any)
+  expect(JSON.stringify(r)).toContain('the drill is in the pane')
+  expect(runs.some((a) => a[0] === 'node' && a[2] === '/home/me/drills/checkout.drill.yaml')).toBe(true)
+  const missing = JSON.stringify(await $.command.run({ command: 'drill', args: '~/missing.drill.yaml' } as any))
+  expect(missing).toContain('could not read ~/missing.drill.yaml: no such file')
+  expect(missing).not.toContain('house-lights:') // Claude Code names the plugin itself
 })

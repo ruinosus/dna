@@ -6,8 +6,7 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
 
 import type { CastGroup } from '../../types'
-import { scriptOf } from '../recipes/run'
-import { PLUGIN } from '../recipes/text'
+import { pathOf, scriptOf } from '../recipes/run'
 
 export const CAST_PANE = 'house-lights-cast'
 const cast = atom({ plugin: 'house-lights', key: 'cast' } as const, null, { shape: 'cast-1' })
@@ -28,7 +27,7 @@ export function parseCast(out: string): { summary: string[]; groups: CastGroup[]
 
 /** The folder to compare: the one given, the last one, or the working folder when agents are right under it. */
 async function folderOf($: EngineInterface, given: string): Promise<string | undefined> {
-  if (given) return given
+  if (given) return pathOf($, given)
   const last = await read($, cast)
   if (last) return last.folder
   const entries = await $.fs.list('.').catch(() => [])
@@ -67,9 +66,10 @@ export function castCommand(on: On) {
     const lang = args.includes('--lang') && args[args.indexOf('--lang') + 1] === 'pt' ? 'pt' : 'en'
     const given = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--lang')[0] ?? ''
     const folder = await folderOf($, given)
-    if (!folder) return { text: `${PLUGIN}: name a folder of cloned agents, for example /cast agents/ --lang pt` }
+    if (!folder) return { text: `name a folder of cloned agents, for example /cast agents/ --lang pt` }
+    if (!(await $.fs.exists(folder))) return { text: `could not read ${given}: no such folder` }
     const r = await compare($, folder, lang).catch((err) => ({ error: String(err) }))
-    if ('error' in r) return { text: `${PLUGIN}: cast-list could not compare ${folder}:\n${r.error}` }
+    if ('error' in r) return { text: `cast-list could not compare ${folder}:\n${r.error}` }
     await update($, cast, () => r.doc)
     await update($, openGroup, () => '')
     await $.ui.open({ id: CAST_PANE, title: 'cast-list' })

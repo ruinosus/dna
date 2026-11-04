@@ -3,7 +3,8 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
 
-import { PLUGIN, check, diagLines, fmtMetric, metricName, metricValue, quant, runOne, seedsFor } from './core'
+import { check, diagLines, fmtMetric, metricName, metricValue, quant, runOne, seedsFor } from './core'
+import { pathOf } from '../recipes/run'
 
 const last = atom({ plugin: 'house-lights', key: 'last' } as const, null, { shape: 'last-1' })
 
@@ -25,8 +26,9 @@ function parseArgs(args: string) {
   return { path, seeds, sets }
 }
 
-async function loadRecipe($: EngineInterface, path: string | undefined) {
-  if (path) {
+async function loadRecipe($: EngineInterface, typed: string | undefined) {
+  if (typed) {
+    const path = await pathOf($, typed)
     const src = await $.fs.read(path).catch(() => undefined)
     return typeof src === 'string' ? { path, src } : { path, src: undefined }
   }
@@ -38,11 +40,11 @@ export function simCommand(on: On) {
   on('command.run', { command: 'sim' }, async ($, e) => {
     const { path, seeds, sets } = parseArgs(e.args)
     const doc = await loadRecipe($, path)
-    if (!doc.path) return { text: `${PLUGIN}: name a recipe, for example /sim examples/corner-cafe.sim` }
-    if (doc.src === undefined) return { text: `${PLUGIN}: could not read ${doc.path}` }
+    if (!doc.path) return { text: `name a recipe, for example /sim examples/corner-cafe.sim` }
+    if (doc.src === undefined) return { text: `could not read ${doc.path}` }
 
     const c = check(doc.src, sets)
-    if (!c.ok) return { text: `${PLUGIN}: ${doc.path} has errors:\n` + diagLines(c).join('\n') }
+    if (!c.ok) return { text: `${doc.path} has errors:\n` + diagLines(c).join('\n') }
 
     const unknown = Object.keys(sets).filter(k => !(k in c.model.knobs))
     const list = seedsFor(c.model, c.plan, seeds)
