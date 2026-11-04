@@ -7,6 +7,8 @@ import { matches } from './labels'
 import type { Problem } from './problems'
 
 export const PROFILE_FORMAT = 'cast-list/profile-v1'
+/** The kind under DNA's header (apiVersion github.com/ruinosus/dna/v1); PROFILE_FORMAT is the line of before. */
+export const PROFILE_KIND = 'AgentStandard'
 export const ROLES = ['orchestrator', 'specialist'] as const
 export type Role = (typeof ROLES)[number]
 /** A list of agent ids, or «*»: every agent not named elsewhere. */
@@ -50,8 +52,8 @@ const strs = (v: unknown) => (Array.isArray(v) ? v.map(str).filter(Boolean) : st
 const isRole = (v: string): v is Role => (ROLES as readonly string[]).includes(v)
 
 export function readProfile(text: string): { profile?: Profile; problems: Problem[] } {
-  const read = readFormat(text, PROFILE_FORMAT)
-  if (!read.ok) return { problems: [read.problem.key === 'format' ? { ...read.problem, format: PROFILE_FORMAT } : read.problem] }
+  const read = readFormat(text, PROFILE_FORMAT, PROFILE_KIND)
+  if (!read.ok) return { problems: [read.problem.key === 'format' ? { ...read.problem, format: PROFILE_FORMAT, kind: PROFILE_KIND } : read.problem] }
   const { raw, at } = read.format
   const problems: Problem[] = []
   for (const k of Object.keys(raw)) if (!FIELDS.includes(k)) problems.push({ line: at([k]), key: 'unknownKey', what: k })

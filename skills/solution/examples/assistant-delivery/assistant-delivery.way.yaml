@@ -1,7 +1,9 @@
 # A solution accelerator: delivering a Copilot Studio assistant, from the request to its release — with the gate that
 # sends it back when the answers are not good enough. Fictional: replace the roles and the gate with your team's.
-format: stage-door/v1
-name: Entrega de um assistente
+apiVersion: github.com/ruinosus/dna/v1
+kind: WayOfWorking
+metadata:
+  name: Entrega de um assistente
 lanes:
   - id: produto
     name: Produto

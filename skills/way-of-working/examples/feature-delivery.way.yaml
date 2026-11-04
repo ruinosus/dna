@@ -1,5 +1,7 @@
-format: stage-door/v1
-name: Entrega de funcionalidade
+apiVersion: github.com/ruinosus/dna/v1
+kind: WayOfWorking
+metadata:
+  name: Entrega de funcionalidade
 lanes:
   - id: produto
     name: Produto

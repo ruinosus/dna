@@ -1,8 +1,10 @@
-# from: employee-self-service.way.yaml@e31fc149
+# from: employee-self-service.way.yaml@1caf97c9
 # Derived from employee-self-service.way.yaml by way-of-working --lens.
 # bet: the scenes are a draft: rewrite them with what really happens when this gate says no.
-format: dress-rehearsal/v1
-name: "«Approved?» says no"
+apiVersion: github.com/ruinosus/dna/v1
+kind: IncidentDrill
+metadata:
+  name: "«Approved?» says no"
 about: "On the eve of the delivery, «Approved?» of the way «Time off through the self-service assistant» says no."
 clock: "09:00"
 impact: "days late"

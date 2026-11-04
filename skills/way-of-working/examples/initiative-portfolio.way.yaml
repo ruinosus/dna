@@ -1,5 +1,7 @@
-format: stage-door/v1
-name: Portfólio de iniciativas
+apiVersion: github.com/ruinosus/dna/v1
+kind: WayOfWorking
+metadata:
+  name: Portfólio de iniciativas
 lanes:
   - id: produto
     name: Produto

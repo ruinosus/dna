@@ -1,5 +1,6 @@
 // What scripts/build.mjs uses, bundled into scripts/engine.mjs by tools/assets.mjs.
-export { FORMAT, readDrill, problemText, reachable } from './drill'
+export { FORMAT, KIND, readDrill, problemText, reachable } from './drill'
+export { DNA_API, upgradeHeader } from '@kit/format'
 export { reviewDrill } from './review'
 export { findPassage } from './runbook'
 export { facilitator } from './facilitator'

@@ -2,8 +2,10 @@
 # manager approves. The scenarios are those of Microsoft's public sample (MIT):
 # https://github.com/microsoft/CopilotStudioSamples/tree/main/EmployeeSelfServiceAgent
 # The roles and the gate are illustrative: replace them with your own.
-format: stage-door/v1
-name: Time off through the self-service assistant
+apiVersion: github.com/ruinosus/dna/v1
+kind: WayOfWorking
+metadata:
+  name: Time off through the self-service assistant
 lanes:
   - id: employees
     name: Employees

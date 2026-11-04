@@ -55,7 +55,8 @@ const pure = {
 const rules = await build({
   stdin: {
     contents: [
-      "export { readWay, exportWay, STAGE_DOOR } from './ways/portable'",
+      "export { readWay, exportWay, STAGE_DOOR, DNA, DNA_API, DNA_KIND } from './ways/portable'",
+      `export { upgradeHeader } from ${JSON.stringify(join(repo, 'kit/format.ts'))}`,
       "export { checkWay, problemText, wayDiff, applyRows, show, itemName } from './ways/wayChanges'",
       "export { reviewWay } from './ways/review'",
       "export { workbookOf } from './ways/workbook'",

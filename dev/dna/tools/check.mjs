@@ -1,7 +1,7 @@
 // Checks what holds the seven skills together: one version in the plugin, the npm package and every SKILL.md; the npm
 // package carrying each skill's build; and npx @ruinosus/dna <skill> drawing an example of each, with its exit code.
 import { execFileSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -48,6 +48,39 @@ for (const [s, args] of cases) {
   let made = []
   try { made = readdirSync(join(work, s)).filter((f) => f.endsWith('.html')) } catch {}
   expect(r.status === 0 && made.length > 0, `npx @ruinosus/dna ${s} draws an example (${made.join(', ') || 'nothing'})`, r.stdout + r.stderr)
+}
+// DNA's header is how a file says what it is now; every file written before it still reads: each kind, written back
+// with the format line of before, passes its skill's check
+const OLD = [
+  ['way-of-working', 'examples/scrum.way.yaml', 'stage-door/v1'],
+  ['service-blueprint', 'examples/gym-signup.blueprint.yaml', 'front-of-house/v1'],
+  ['incident-drill', 'examples/checkout.drill.yaml', 'dress-rehearsal/v1'],
+  ['solution', 'examples/assistant-delivery/assistant-delivery.solution.yaml', 'opening-night/v1'],
+]
+for (const [s, f, format] of OLD) {
+  const src = join(repo, 'skills', s, f)
+  const text = readFileSync(src, 'utf8')
+  const old = text.replace(/^apiVersion: github\.com\/ruinosus\/dna\/v1\nkind: \w+\nmetadata:\n {2}name:/m, `format: ${format}\nname:`)
+  expect(old !== text, `${s}: ${f} has DNA's header`)
+  if (old !== text) {
+    const copy = join(work, `old-${s}-${f.split('/').pop()}`)
+    writeFileSync(copy, old)
+    for (const p of readdirSync(dirname(src))) if (p !== f.split('/').pop()) try { cpSync(join(dirname(src), p), join(work, p), { recursive: true }) } catch {}
+    const r = runNode(join(repo, 'skills', s, 'scripts/build.mjs'), [copy, '--check'])
+    expect(r.status === 0, `${s}: a file with «format: ${format}» (from before DNA) still passes its check`, r.stdout + r.stderr)
+    const up = runNode(join(repo, 'skills', s, 'scripts/build.mjs'), [copy, '--upgrade'])
+    expect(up.status === 0 && up.stdout === text, `${s}: --upgrade gives it DNA's header, the rest as it was`, up.stdout.slice(0, 200) + up.stderr)
+  }
+}
+{
+  const prof = readFileSync(join(repo, 'skills/agent-review/examples/profile.cast.yaml'), 'utf8')
+  const old = prof.replace(/^apiVersion: github\.com\/ruinosus\/dna\/v1\nkind: AgentStandard\nmetadata:\n {2}name:/m, 'format: cast-list/profile-v1\nname:')
+  const copy = join(work, 'old-profile.cast.yaml')
+  writeFileSync(copy, old)
+  const r = runNode(join(repo, 'skills/agent-review/scripts/build.mjs'), [join(repo, 'skills/agent-review/examples/agents'), '--check', '--profile', copy])
+  expect(old !== prof && r.status === 0 && /38 patterns/.test(r.stdout), 'agent-review: a profile with «format: cast-list/profile-v1» still reads (38 patterns)', r.stdout.slice(0, 300) + r.stderr)
+  const up = runNode(join(repo, 'skills/agent-review/scripts/build.mjs'), [copy, '--upgrade'])
+  expect(up.status === 0 && up.stdout === prof, 'agent-review: --upgrade gives the profile DNA\'s header', up.stdout.slice(0, 200) + up.stderr)
 }
 rmSync(work, { recursive: true, force: true })
 

@@ -1,5 +1,7 @@
-format: dress-rehearsal/v1
-name: The orders database is almost full
+apiVersion: github.com/ruinosus/dna/v1
+kind: IncidentDrill
+metadata:
+  name: The orders database is almost full
 from: runbooks/database-disk.md
 about: At lunchtime the orders database disk reaches 92% and keeps growing.
 clock: "12:40"

@@ -34,7 +34,10 @@ export const PIECES = {
   agents: { skill: 'agent-review', folder: true, check: (f, o) => [f, '--check', '--lang', o.lang, ...o.profile], page: (f, o) => [f, '--html', '--lang', o.lang, ...o.profile, '--out', o.dir] },
   lesson: { skill: 'visual-explainer', test: /\.(chalk|json|mmd)$/i, check: (f, o) => [f, join(o.dir, 'out.html'), '--no-review'], page: (f, o) => [f, join(o.dir, 'lesson.html'), '--no-review'] },
 }
-const KEYS = ['format', 'name', 'about', 'lang', ...Object.keys(PIECES), 'profile']
+const KEYS = ['apiVersion', 'kind', 'metadata', 'format', 'name', 'about', 'lang', ...Object.keys(PIECES), 'profile']
+// What the file says it is: DNA's header (apiVersion, kind Solution, the name in metadata) or the format line of before.
+const DNA_API = 'github.com/ruinosus/dna/v1'
+const KIND = 'Solution'
 const FORMAT = 'opening-night/v1'
 const LENSES = ['sim', 'blueprint', 'drill'] // the pieces way-of-working --lens writes from the way
 
@@ -43,11 +46,14 @@ const T = {
     usage: `usage: node build.mjs <id>.solution.yaml --check [--json] [--format] [--lang en|pt]
        node build.mjs <id>.solution.yaml [--lang en|pt] [--out <folder>]
        node build.mjs --list
-       node build.mjs --new <accelerator> <folder>`,
+       node build.mjs --new <accelerator> <folder>
+       node build.mjs <id>.solution.yaml --upgrade [--write]`,
     syntax: (l) => `line ${l}: write it as «key: value» (one per line; # starts a comment)`,
     unknown: (k) => `«${k}» is not a field of a solution; the fields are ${KEYS.join(', ')}`,
     twice: (k) => `«${k}» is written twice`,
-    format: `«format» must be ${FORMAT}`,
+    format: `the file starts with «apiVersion: ${DNA_API}» and «kind: ${KIND}» (or «format: ${FORMAT}», from before)`,
+    upgraded: (f) => `✓ ${f}: now apiVersion ${DNA_API} and kind ${KIND}; the rest as it was`,
+    already: (f) => `✓ ${f} already has DNA's header`,
     name: '«name» is missing: the solution\'s name, as people say it',
     lang: '«lang» is en or pt',
     none: `a solution names at least one piece: ${Object.keys(PIECES).join(', ')}`,
@@ -74,11 +80,14 @@ const T = {
     usage: `uso: node build.mjs <id>.solution.yaml --check [--json] [--format] [--lang en|pt]
      node build.mjs <id>.solution.yaml [--lang en|pt] [--out <pasta>]
      node build.mjs --list
-     node build.mjs --new <accelerator> <pasta>`,
+     node build.mjs --new <accelerator> <pasta>
+     node build.mjs <id>.solution.yaml --upgrade [--write]`,
     syntax: (l) => `linha ${l}: escreva como «chave: valor» (uma por linha; # começa um comentário)`,
     unknown: (k) => `«${k}» não é um campo de solution; os campos são ${KEYS.join(', ')}`,
     twice: (k) => `«${k}» está escrito duas vezes`,
-    format: `«format» precisa ser ${FORMAT}`,
+    format: `o arquivo começa com «apiVersion: ${DNA_API}» e «kind: ${KIND}» (ou com «format: ${FORMAT}», de antes)`,
+    upgraded: (f) => `✓ ${f}: agora com apiVersion ${DNA_API} e kind ${KIND}; o resto como estava`,
+    already: (f) => `✓ ${f} já tem o cabeçalho do DNA`,
     name: 'falta «name»: o nome da solution, como as pessoas falam',
     lang: '«lang» é en ou pt',
     none: `uma solution nomeia ao menos uma peça: ${Object.keys(PIECES).join(', ')}`,
@@ -103,25 +112,57 @@ const T = {
   },
 }
 
+/** A value as written: plain, or in quotes ("…" as JSON, '…' as YAML); null when the quotes do not close. */
+function unquote(value) {
+  if (/^".*"$/.test(value)) { try { return JSON.parse(value) } catch { return null } }
+  if (/^'.*'$/.test(value)) return value.slice(1, -1).replace(/''/g, "'")
+  return value
+}
+
+/** The header of before as DNA's: `format: opening-night/v1` becomes apiVersion and kind, and the top-level name moves
+ * into metadata where it was — comments and the rest as they are. Undefined when there is nothing to change. */
+export function upgradeHeader(text) {
+  const lines = text.split('\n')
+  const at = lines.findIndex((l) => /^format:\s*["']?opening-night\/v1["']?\s*(#.*)?$/.test(l))
+  if (at < 0 || lines.some((l) => /^apiVersion:/.test(l))) return undefined
+  lines.splice(at, 1, `apiVersion: ${DNA_API}`, `kind: ${KIND}`)
+  const n = lines.findIndex((l) => /^name:\s*\S/.test(l))
+  if (n >= 0) lines.splice(n, 1, 'metadata:', `  name:${lines[n].slice('name:'.length)}`)
+  return lines.join('\n')
+}
+
 /** The solution file: flat «key: value» lines, a value plain or quoted. Gives what it read and the problems, with lines. */
 export function readSolution(text, lang = 'en') {
   const t = T[lang]
   const def = {}
   const problems = []
+  let inMetadata = false
   text.split(/\r?\n/).forEach((raw, i) => {
     const line = raw.replace(/^﻿/, '')
     if (!line.trim() || /^\s*#/.test(line)) return
-    const m = /^([a-z_]+):\s*(.*?)\s*$/.exec(line)
+    // metadata: is the one block, with the name inside (DNA's header)
+    const sub = inMetadata ? /^\s+([a-z_]+):\s*(.*?)\s*$/.exec(line) : null
+    if (sub) {
+      if (sub[1] !== 'name') return problems.push({ line: i + 1, text: t.unknown(`metadata.${sub[1]}`) })
+      if ('name' in def) return problems.push({ line: i + 1, text: t.twice('name') })
+      const value = unquote(sub[2].replace(/\s+#.*$/, ''))
+      if (value === null) return problems.push({ line: i + 1, text: t.syntax(i + 1) })
+      def.name = { value, line: i + 1 }
+      return
+    }
+    inMetadata = false
+    const m = /^([A-Za-z_]+):\s*(.*?)\s*$/.exec(line)
     if (!m) return problems.push({ line: i + 1, text: t.syntax(i + 1) })
-    let value = m[2].replace(/\s+#.*$/, '')
-    if (/^".*"$/.test(value)) { try { value = JSON.parse(value) } catch { return problems.push({ line: i + 1, text: t.syntax(i + 1) }) } }
-    else if (/^'.*'$/.test(value)) value = value.slice(1, -1).replace(/''/g, "'")
+    const value = unquote(m[2].replace(/\s+#.*$/, ''))
+    if (value === null) return problems.push({ line: i + 1, text: t.syntax(i + 1) })
     if (!KEYS.includes(m[1])) return problems.push({ line: i + 1, text: t.unknown(m[1]) })
     if (m[1] in def) return problems.push({ line: i + 1, text: t.twice(m[1]) })
+    if (m[1] === 'metadata') return void (inMetadata = true)
     def[m[1]] = { value, line: i + 1 }
   })
   const at = (k) => def[k]?.line ?? 1
-  if (def.format?.value !== FORMAT) problems.push({ line: at('format'), text: t.format })
+  const dna = 'apiVersion' in def || 'kind' in def
+  if (dna ? def.apiVersion?.value !== DNA_API || def.kind?.value !== KIND || 'format' in def : def.format?.value !== FORMAT) problems.push({ line: at(dna ? 'apiVersion' : 'format'), text: t.format })
   if (!def.name?.value) problems.push({ line: 1, text: t.name })
   if (def.lang && !['en', 'pt'].includes(def.lang.value)) problems.push({ line: at('lang'), text: t.lang })
   const pieces = Object.keys(PIECES).filter((k) => def[k]?.value)
@@ -264,7 +305,7 @@ ${data}
 // ---- the command ----
 const argv = process.argv.slice(2)
 const valued = new Set(['--lang', '--out', '--new'])
-const flags = new Set(['--check', '--json', '--format', '--list', ...valued])
+const flags = new Set(['--check', '--json', '--format', '--list', '--upgrade', '--write', ...valued])
 const option = (name) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : undefined)
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
 const fail = (msg, code = 2) => {
@@ -304,6 +345,21 @@ if (isMain) {
   if (args.length !== 1) fail(T[ui].usage)
   const file = resolve(args[0])
   if (!existsSync(file)) fail(`✗ ${args[0]}: no such file`)
+  // --upgrade: the header of before as DNA's, the rest as it is (written with --write)
+  if (argv.includes('--upgrade')) {
+    const text = readFileSync(file, 'utf8')
+    const up = upgradeHeader(text)
+    if (up === undefined) {
+      if (/^apiVersion:/m.test(text)) { console.log(T[ui].already(basename(file))); process.exit(0) }
+    } else {
+      const a = readSolution(text), b = readSolution(up)
+      if (JSON.stringify(a) !== JSON.stringify(b)) fail(`✗ ${basename(file)}: with the new header the file does not read the same; nothing written`, 1)
+      if (!argv.includes('--write')) { process.stdout.write(up); process.exit(0) }
+      writeFileSync(file, up)
+      console.log(T[ui].upgraded(basename(file)))
+      process.exit(0)
+    }
+  }
   const folder = dirname(file)
   const read = readSolution(readFileSync(file, 'utf8'), ui)
   if (read.problems.length) {

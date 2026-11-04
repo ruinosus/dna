@@ -1,9 +1,11 @@
-# from: employee-self-service.way.yaml@e31fc149
+# from: employee-self-service.way.yaml@1caf97c9
 # Derived from employee-self-service.way.yaml by way-of-working --lens.
 # bet: «customer» is what whoever the work is for does at each stage; the way says what the team does.
 # feels and pains are left out: they come from interviews, never from the way.
-format: front-of-house/v1
-name: "Time off through the self-service assistant"
+apiVersion: github.com/ruinosus/dna/v1
+kind: ServiceBlueprint
+metadata:
+  name: "Time off through the self-service assistant"
 who: "Whoever the work is for"
 about: "The way «Time off through the self-service assistant», seen from the side of whoever the work is for."
 phases: ["Ask", "Approve"]

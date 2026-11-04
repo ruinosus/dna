@@ -1,13 +1,15 @@
 // The cast file (format cast-list/cast-v1): the agents of the last run and their roles, what people said about them
 // (declared, with the source) and what was decided about each pattern. build.mjs keeps it; a person or the model edits
 // it, or it comes back from the workbook. Written back over the previous file, it keeps the comments people wrote.
-import { readFormat } from '@kit/format'
+import { DNA_API, readFormat } from '@kit/format'
 import { RELEASE } from './release'
 import { Document, isMap, isSeq, parseDocument, type YAMLMap } from 'yaml'
 import type { Problem } from './problems'
 import { ROLES, type Role } from './profile'
 
 export const CAST_FORMAT = 'cast-list/cast-v1'
+/** The kind under DNA's header (apiVersion github.com/ruinosus/dna/v1); CAST_FORMAT is the line of before. */
+export const CAST_KIND = 'AgentReview'
 export const STATUSES = ['accepted', 'rejected'] as const
 export const SCOPES = ['platform', 'specialist', 'orchestrator'] as const
 /** A scope: everybody, a role, or the agents of a type (`type:<id>`). */
@@ -30,8 +32,8 @@ const isObj = (v: unknown): v is Obj => !!v && typeof v === 'object' && !Array.i
 const str = (v: unknown) => (typeof v === 'string' ? v.trim() : typeof v === 'number' || typeof v === 'boolean' ? String(v) : '')
 
 export function readCast(text: string): { cast?: Cast; problems: Problem[] } {
-  const read = readFormat(text, CAST_FORMAT)
-  if (!read.ok) return { problems: [read.problem.key === 'format' ? { ...read.problem, format: CAST_FORMAT } : read.problem] }
+  const read = readFormat(text, CAST_FORMAT, CAST_KIND)
+  if (!read.ok) return { problems: [read.problem.key === 'format' ? { ...read.problem, format: CAST_FORMAT, kind: CAST_KIND } : read.problem] }
   const { raw, at } = read.format
   const problems: Problem[] = []
   for (const k of Object.keys(raw)) if (!FIELDS.includes(k)) problems.push({ line: at([k]), key: 'unknownKey', what: k })
@@ -91,12 +93,19 @@ const plain = (item: object) => Object.fromEntries(Object.entries(item).filter((
 /** The cast as YAML: over `previous` (keeping its comments and layout) when there is one. */
 export function writeCast(cast: Cast, previous?: string): string {
   const old = previous ? parseDocument(previous) : undefined
-  const doc = old && !old.errors.length && isMap(old.contents) ? old : new Document({ format: CAST_FORMAT })
+  const doc = old && !old.errors.length && isMap(old.contents) ? old : new Document({ apiVersion: DNA_API, kind: CAST_KIND })
   // the header is ours: a new file gets it, and one that has it gets this run's version
   if (doc !== old || doc.commentBefore?.includes('build.mjs keeps it up to date')) doc.commentBefore = HEADER
-  if (doc.get('format') !== CAST_FORMAT) doc.set('format', CAST_FORMAT)
-  if (cast.name === undefined) doc.delete('name')
-  else if (doc.get('name') !== cast.name) doc.set('name', cast.name)
+  // what the file says it is: DNA's header for a new one; one written with the format line of before keeps it
+  const dna = doc.get('format') === undefined
+  if (dna) {
+    if (doc.get('apiVersion') !== DNA_API) doc.set('apiVersion', DNA_API)
+    if (doc.get('kind') !== CAST_KIND) doc.set('kind', CAST_KIND)
+  } else if (doc.get('format') !== CAST_FORMAT) doc.set('format', CAST_FORMAT)
+  const nameAt = dna ? ['metadata', 'name'] : ['name']
+  if (cast.name === undefined) {
+    if (doc.hasIn(nameAt)) doc.deleteIn(nameAt)
+  } else if (doc.getIn(nameAt) !== cast.name) doc.setIn(nameAt, cast.name)
   for (const [k, id] of Object.entries(LISTS) as [keyof typeof LISTS, (x: Obj) => string][]) {
     const items = cast[k] as object[]
     if (!items.length) {

@@ -76,6 +76,8 @@ const T = {
   },
 }
 
+// the owner of the kinds DNA invents: a lens is written under DNA's header (apiVersion, kind, metadata.name)
+const DNA_API = 'github.com/ruinosus/dna/v1'
 const sid = (id) => String(id).replace(/[^\p{L}\p{N}_]/gu, '_') // a .sim id: letters, digits and _
 const did = (id) => String(id).toLowerCase().replace(/[^a-z0-9-]/g, '-') // a blueprint or drill id: a-z0-9-
 const q = (s) => JSON.stringify(String(s)) // a YAML string, safe for any text
@@ -195,7 +197,7 @@ export function blueprintOf(way, name, from, id, lang = 'en') {
   const lead = new Set(way.stages.map((s) => s.roles?.[0]).filter(Boolean))
   const systems = [...new Set(way.stages.flatMap((s) => (s.where ? [].concat(s.where) : [])))]
   const out = [`# from: ${from}`, `# ${t.from(file)}`, `# ${t.bpHead}`, `# ${t.bpHead2}`]
-  out.push('format: front-of-house/v1', `name: ${q(name)}`, `who: ${q(t.who)}`, `about: ${q(t.about(name))}`)
+  out.push(`apiVersion: ${DNA_API}`, 'kind: ServiceBlueprint', 'metadata:', `  name: ${q(name)}`, `who: ${q(t.who)}`, `about: ${q(t.about(name))}`)
   out.push(`phases: [${way.phases.map((p) => q(p.name)).join(', ')}]`)
   out.push('actors:')
   for (const r of way.roles) out.push(`  - { id: ${did(r.id)}, name: ${q(r.name)}, layer: ${lead.has(r.id) ? 'front' : 'back'} }`)
@@ -244,7 +246,7 @@ export function drillOf(way, name, from, gateId, lang = 'en') {
   const needs = (g.criteria ?? []).flatMap((c) => (c.kind === 'outputs' ? c.outputs : c.kind === 'stage' ? [c.stage] : c.kind === 'kpis' ? c.kpis : []))
   const outputName = (oid) => way.stages.flatMap((s) => s.outputs ?? []).concat(way.gates.flatMap((x) => x.outputs ?? [])).find((o) => o.id === oid)?.name ?? stageName(way, oid)
   const out = [`# from: ${from}`, `# ${t.from(file)}`, `# ${t.drHead}`]
-  out.push('format: dress-rehearsal/v1', `name: ${q(t.drillName(g.name))}`, `about: ${q(t.drillAbout(g.name, name))}`, 'clock: "09:00"', `impact: ${q(t.impact)}`, 'call_minutes: 30')
+  out.push(`apiVersion: ${DNA_API}`, 'kind: IncidentDrill', 'metadata:', `  name: ${q(t.drillName(g.name))}`, `about: ${q(t.drillAbout(g.name, name))}`, 'clock: "09:00"', `impact: ${q(t.impact)}`, 'call_minutes: 30')
   out.push('roles:')
   for (const r of way.roles) {
     const can = []

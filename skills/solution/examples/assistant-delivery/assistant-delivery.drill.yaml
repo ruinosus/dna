@@ -1,8 +1,10 @@
-# from: assistant-delivery.way.yaml@98b12ee8
+# from: assistant-delivery.way.yaml@0b224276
 # Derivado de assistant-delivery.way.yaml pelo way-of-working --lens.
 # bet: as cenas são um rascunho: reescreva com o que acontece de fato quando este gate diz não.
-format: dress-rehearsal/v1
-name: "«Acerto ≥ 85%?» diz não"
+apiVersion: github.com/ruinosus/dna/v1
+kind: IncidentDrill
+metadata:
+  name: "«Acerto ≥ 85%?» diz não"
 about: "Na véspera da entrega, «Acerto ≥ 85%?» do fluxo «Entrega de um assistente» diz não."
 clock: "09:00"
 impact: "dias de atraso"

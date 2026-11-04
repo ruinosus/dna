@@ -1,5 +1,7 @@
-format: dress-rehearsal/v1
-name: Checkout fora do ar às 3h
+apiVersion: github.com/ruinosus/dna/v1
+kind: IncidentDrill
+metadata:
+  name: Checkout fora do ar às 3h
 from: runbooks/checkout.md
 about: O pagamento da loja começa a falhar de madrugada, logo depois de um deploy.
 clock: "03:12"

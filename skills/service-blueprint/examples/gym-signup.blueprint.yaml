@@ -1,5 +1,7 @@
-format: front-of-house/v1
-name: Joining a neighbourhood gym
+apiVersion: github.com/ruinosus/dna/v1
+kind: ServiceBlueprint
+metadata:
+  name: Joining a neighbourhood gym
 who: A new member
 about: From finding the gym online to the first workout. Made from 8 interviews with members who joined last month.
 phases: [Discover, Join, First week]

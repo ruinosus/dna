@@ -29,14 +29,14 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSy
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
-import { agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, evalsFrom, extractAgent, firedFrom, fromSheets, groupLooks, playbillOf, stageOf, mergeDeclared, knownKinds, labelOf, lessonOf, problemText, readCast, readCsv, readProfile, reviewCast, diagramsDoc, diagramsOf, validateScene, withEvals, workbookFile, workbookOf, writeCast } from './engine.mjs'
+import { CAST_FORMAT, CAST_KIND, DNA_API, PROFILE_FORMAT, PROFILE_KIND, upgradeHeader, agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, evalsFrom, extractAgent, firedFrom, fromSheets, groupLooks, playbillOf, stageOf, mergeDeclared, knownKinds, labelOf, lessonOf, problemText, readCast, readCsv, readProfile, reviewCast, diagramsDoc, diagramsOf, validateScene, withEvals, workbookFile, workbookOf, writeCast } from './engine.mjs'
 import { readXlsx } from './read-xlsx.mjs'
 import { fill, inline } from './page.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
 const valued = new Set(['--lang', '--out', '--profile', '--from', '--take', '--declared', '--agent-column', '--telemetry', '--telemetry-days', '--evals'])
-const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--playbill', '--plot', '--diagrams', '--all', '--facts', ...valued])
+const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--playbill', '--plot', '--diagrams', '--all', '--facts', '--upgrade', '--write', ...valued])
 const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
@@ -48,11 +48,37 @@ const usage = `usage: node build.mjs <agents-folder> --check [--profile <p.cast.
        node build.mjs <agents-folder> --facts [--out <folder>]
        node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]
        node build.mjs <agents-folder> --declared <table.csv|.xlsx> [--agent-column <title>] [--take <key,key…|all>] [--out <folder>]
-       … [--telemetry <export.csv|.xlsx>] [--telemetry-days <n>] [--evals <folder>]`
+       … [--telemetry <export.csv|.xlsx>] [--telemetry-days <n>] [--evals <folder>]
+       node build.mjs <team>.cast.yaml --upgrade [--write]    a profile or a cast file of before, with DNA's header`
 const lang = option('--lang') ?? 'en'
 const fail = (msg) => {
   console.error(`${msg}\n${usage}`)
   process.exit(2)
+}
+// ---- --upgrade: a profile or a cast file of before (format: cast-list/…) with DNA's header, the rest as it is ----
+if (argv.includes('--upgrade')) {
+  if (args.length !== 1 || !existsSync(args[0]) || !statSync(args[0]).isFile()) fail('✗ one profile or cast file (.cast.yaml) to upgrade')
+  const file = resolve(args[0])
+  const text = readFileSync(file, 'utf8')
+  const pt = lang === 'pt'
+  const [format, kind, reader] = /^format:\s*["']?cast-list\/profile-v1/m.test(text) ? [PROFILE_FORMAT, PROFILE_KIND, readProfile] : [CAST_FORMAT, CAST_KIND, readCast]
+  const up = upgradeHeader(text, format, kind)
+  if (up === undefined) {
+    console.log(/^apiVersion:/m.test(text) ? (pt ? `✓ ${basename(file)} já tem o cabeçalho do DNA` : `✓ ${basename(file)} already has DNA's header`) : (pt ? `✗ ${basename(file)} não é um perfil nem um arquivo de decisões do agent-review` : `✗ ${basename(file)} is neither an agent-review profile nor a cast file`))
+    process.exit(/^apiVersion:/m.test(text) ? 0 : 1)
+  }
+  const same = (r) => JSON.stringify({ ...(r.profile ?? r.cast), name: undefined })
+  if (same(reader(up)) !== same(reader(text)) || reader(up).problems.length !== reader(text).problems.length) {
+    console.error(pt ? `✗ ${basename(file)}: depois do cabeçalho novo, o arquivo não se lê igual; nada escrito` : `✗ ${basename(file)}: with the new header the file does not read the same; nothing written`)
+    process.exit(1)
+  }
+  if (!argv.includes('--write')) {
+    process.stdout.write(up)
+    process.exit(0)
+  }
+  writeFileSync(file, up)
+  console.log(pt ? `✓ ${basename(file)}: agora com apiVersion ${DNA_API} e kind ${kind}; o resto como estava` : `✓ ${basename(file)}: now apiVersion ${DNA_API} and kind ${kind}; the rest as it was`)
+  process.exit(0)
 }
 if (args.length !== 1 || !existsSync(args[0]) || !statSync(args[0]).isDirectory()) fail('✗ one folder with the cloned agents')
 const unknown = argv.find((a) => a.startsWith('--') && !flags.has(a))

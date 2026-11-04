@@ -14,12 +14,12 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
 import { fill, inline } from './page.mjs'
-import { lessonOf, problemText, readBlueprint, reviewBlueprint, validateScene, workbookFile, workbookOf } from './engine.mjs'
+import { DNA_API, FORMAT, KIND, lessonOf, problemText, readBlueprint, reviewBlueprint, upgradeHeader, validateScene, workbookFile, workbookOf } from './engine.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
 const valued = new Set(['--lang', '--out'])
-const flags = new Set(['--check', '--json', '--html', '--xlsx', '--lesson', '--all', ...valued])
+const flags = new Set(['--check', '--json', '--html', '--xlsx', '--lesson', '--all', '--upgrade', '--write', ...valued])
 const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
@@ -43,6 +43,30 @@ const T = {
 }[lang]
 
 const file = resolve(args[0])
+// ---- --upgrade: the header of before (`format: front-of-house/v1`) as DNA's, the rest of the text as it is ----
+if (argv.includes('--upgrade')) {
+  const text = readFileSync(file, 'utf8')
+  const up = upgradeHeader(text, FORMAT, KIND)
+  const pt = lang === 'pt'
+  if (up === undefined) {
+    if (/^apiVersion:/m.test(text)) {
+      console.log(pt ? `✓ ${basename(file)} já tem o cabeçalho do DNA` : `✓ ${basename(file)} already has DNA's header`)
+      process.exit(0)
+    }
+  } else {
+    if (JSON.stringify(readBlueprint(up)) !== JSON.stringify(readBlueprint(text))) {
+      console.error(pt ? `✗ ${basename(file)}: depois do cabeçalho novo, o arquivo não se lê igual; nada escrito` : `✗ ${basename(file)}: with the new header the file does not read the same; nothing written`)
+      process.exit(1)
+    }
+    if (!argv.includes('--write')) {
+      process.stdout.write(up)
+      process.exit(0)
+    }
+    writeFileSync(file, up)
+    console.log(pt ? `✓ ${basename(file)}: agora com apiVersion ${DNA_API} e kind ${KIND}; o resto como estava` : `✓ ${basename(file)}: now apiVersion ${DNA_API} and kind ${KIND}; the rest as it was`)
+    process.exit(0)
+  }
+}
 const source = readFileSync(file, 'utf8')
 const read = readBlueprint(source)
 if (read.problems.length) {

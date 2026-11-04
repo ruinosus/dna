@@ -1,8 +1,10 @@
 // A drill: an incident played as scenes and choices, made from the team's runbook (format dress-rehearsal/v1). Read from
 // YAML (or JSON) with the line of every problem; what breaks the game is an error and nothing is made from the file.
-import { readFormat } from '@kit/format'
+import { DNA_API, readFormat } from '@kit/format'
 
 export const FORMAT = 'dress-rehearsal/v1'
+/** The kind under DNA's header (apiVersion github.com/ruinosus/dna/v1): the file of now; FORMAT is the line of before. */
+export const KIND = 'IncidentDrill'
 
 export interface Role {
   id: string
@@ -93,7 +95,7 @@ const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : u
 export const CLOCK = /^([01]?\d|2[0-3]):[0-5]\d$/
 
 export function readDrill(text: string): Read {
-  const read = readFormat(text, FORMAT)
+  const read = readFormat(text, FORMAT, KIND)
   if (!read.ok) return { problems: [read.problem] }
   const { raw, at, doc, lineOf } = read.format
   const problems: Problem[] = []
@@ -201,7 +203,7 @@ export function problemText(p: Problem, lang: 'en' | 'pt' = 'en'): string {
   const pt = lang === 'pt'
   switch (p.key) {
     case 'syntax': return pt ? `não se lê como YAML (${p.detail})` : `does not read as YAML (${p.detail})`
-    case 'format': return pt ? `«format» precisa ser ${FORMAT}` : `«format» must be ${FORMAT}`
+    case 'format': return pt ? `o arquivo começa com «apiVersion: ${DNA_API}» e «kind: ${KIND}» (ou com «format: ${FORMAT}», de antes)` : `the file starts with «apiVersion: ${DNA_API}» and «kind: ${KIND}» (or «format: ${FORMAT}», from before)`
     case 'missing': return pt ? `falta «${p.what}»` : `«${p.what}» is missing`
     case 'duplicate': return pt ? `${p.what}: o id «${p.id}» se repete` : `${p.what}: the id «${p.id}» is repeated`
     case 'unknownScene': return pt ? `«${p.from}» leva a «${p.go}», que não é uma cena` : `«${p.from}» goes to «${p.go}», which is not a scene`

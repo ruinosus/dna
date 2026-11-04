@@ -1,9 +1,11 @@
-# from: service-desk.way.yaml@1c463e6c
+# from: service-desk.way.yaml@52832ab3
 # Derivado de service-desk.way.yaml pelo way-of-working --lens.
 # bet: «customer» é o que faz quem recebe o trabalho em cada etapa; o way diz o que o time faz.
 # feels e pains ficam de fora: vêm de entrevistas, nunca do way.
-format: front-of-house/v1
-name: "Central de atendimento"
+apiVersion: github.com/ruinosus/dna/v1
+kind: ServiceBlueprint
+metadata:
+  name: "Central de atendimento"
 who: "Quem recebe o trabalho"
 about: "O fluxo «Central de atendimento», visto do lado de quem recebe o trabalho."
 phases: ["Entrada", "Resolução", "Fechamento"]

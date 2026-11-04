@@ -1,5 +1,7 @@
-format: front-of-house/v1
-name: Devolução de uma compra online
+apiVersion: github.com/ruinosus/dna/v1
+kind: ServiceBlueprint
+metadata:
+  name: Devolução de uma compra online
 who: Cliente da loja
 about: Do pedido de devolução até o dinheiro de volta. Montado a partir de 10 entrevistas, do fluxo da logística e dos tickets do atendimento.
 phases:

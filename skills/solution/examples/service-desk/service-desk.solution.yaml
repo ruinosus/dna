@@ -2,8 +2,10 @@
 # ("Bodega Azul"); the agents were generated from Microsoft's skills-for-copilot-studio samples (MIT, agents/NOTICE.md).
 # The simulation, the blueprint and the drill are lenses of the way: their numbers and lines marked «# bet:» are made
 # up — replace them with your own.
-format: opening-night/v1
-name: Central de atendimento
+apiVersion: github.com/ruinosus/dna/v1
+kind: Solution
+metadata:
+  name: Central de atendimento
 about: Do chamado do cliente ao encerramento, com os agentes do Copilot Studio que atendem antes de uma pessoa.
 lang: pt
 way: service-desk.way.yaml

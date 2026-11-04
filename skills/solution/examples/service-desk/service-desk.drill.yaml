@@ -1,8 +1,10 @@
-# from: service-desk.way.yaml@1c463e6c
+# from: service-desk.way.yaml@52832ab3
 # Derivado de service-desk.way.yaml pelo way-of-working --lens.
 # bet: as cenas são um rascunho: reescreva com o que acontece de fato quando este gate diz não.
-format: dress-rehearsal/v1
-name: "«Resolvido no primeiro nível?» diz não"
+apiVersion: github.com/ruinosus/dna/v1
+kind: IncidentDrill
+metadata:
+  name: "«Resolvido no primeiro nível?» diz não"
 about: "Na véspera da entrega, «Resolvido no primeiro nível?» do fluxo «Central de atendimento» diz não."
 clock: "09:00"
 impact: "dias de atraso"

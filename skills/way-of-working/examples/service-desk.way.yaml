@@ -1,5 +1,7 @@
-format: stage-door/v1
-name: Central de atendimento
+apiVersion: github.com/ruinosus/dna/v1
+kind: WayOfWorking
+metadata:
+  name: Central de atendimento
 lanes:
   - id: cliente
     name: Cliente

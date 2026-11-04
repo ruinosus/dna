@@ -1,8 +1,9 @@
 // What can be wrong in a profile or a cast file, each with its line, and the sentence that says it.
+import { DNA_API } from '@kit/format'
 
 export type Problem =
   | { line: number; key: 'syntax'; detail: string }
-  | { line: number; key: 'format'; format: string }
+  | { line: number; key: 'format'; format: string; kind: string }
   | { line: number; key: 'missing'; what: string }
   | { line: number; key: 'duplicate'; what: string; id: string }
   | { line: number; key: 'unknownKey'; what: string }
@@ -21,7 +22,7 @@ export function problemText(p: Problem, lang: 'en' | 'pt' = 'en'): string {
   const pt = lang === 'pt'
   switch (p.key) {
     case 'syntax': return pt ? `não se lê como YAML (${p.detail})` : `does not read as YAML (${p.detail})`
-    case 'format': return pt ? `«format» precisa ser ${p.format}` : `«format» must be ${p.format}`
+    case 'format': return pt ? `o arquivo começa com «apiVersion: ${DNA_API}» e «kind: ${p.kind}» (ou com «format: ${p.format}», de antes)` : `the file starts with «apiVersion: ${DNA_API}» and «kind: ${p.kind}» (or «format: ${p.format}», from before)`
     case 'missing': return pt ? `falta «${p.what}»` : `«${p.what}» is missing`
     case 'duplicate': return pt ? `${p.what}: o id «${p.id}» se repete` : `${p.what}: the id «${p.id}» is repeated`
     case 'unknownKey': return pt ? `«${p.what}» não é um campo deste arquivo` : `«${p.what}» is not a field of this file`

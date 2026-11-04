@@ -1,9 +1,11 @@
-# from: assistant-delivery.way.yaml@98b12ee8
+# from: assistant-delivery.way.yaml@0b224276
 # Derivado de assistant-delivery.way.yaml pelo way-of-working --lens.
 # bet: «customer» é o que faz quem recebe o trabalho em cada etapa; o way diz o que o time faz.
 # feels e pains ficam de fora: vêm de entrevistas, nunca do way.
-format: front-of-house/v1
-name: "Entrega de um assistente"
+apiVersion: github.com/ruinosus/dna/v1
+kind: ServiceBlueprint
+metadata:
+  name: "Entrega de um assistente"
 who: "Quem recebe o trabalho"
 about: "O fluxo «Entrega de um assistente», visto do lado de quem recebe o trabalho."
 phases: ["Descoberta", "Entrega"]

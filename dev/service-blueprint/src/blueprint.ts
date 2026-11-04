@@ -1,9 +1,11 @@
 // A service blueprint (format front-of-house/v1): what the customer does at each moment and how they feel, what they see,
 // and who makes it happen in front of them, behind the scenes and in the systems — with the promises, the pains and the
 // actions. Read from YAML (or JSON) with the line of every problem; what names nothing is an error.
-import { readFormat } from '@kit/format'
+import { DNA_API, readFormat } from '@kit/format'
 
 export const FORMAT = 'front-of-house/v1'
+/** The kind under DNA's header (apiVersion github.com/ruinosus/dna/v1): the file of now; FORMAT is the line of before. */
+export const KIND = 'ServiceBlueprint'
 
 export interface Phase { id: string; name: string }
 export interface Actor {
@@ -69,7 +71,7 @@ const slug = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,
 const texts = (v: unknown) => (Array.isArray(v) ? v.map(str).filter(Boolean) : str(v) ? [str(v)] : [])
 
 export function readBlueprint(text: string): Read {
-  const read = readFormat(text, FORMAT)
+  const read = readFormat(text, FORMAT, KIND)
   if (!read.ok) return { problems: [read.problem] }
   const { raw, at } = read.format
   const problems: Problem[] = []
@@ -153,7 +155,7 @@ export function problemText(p: Problem, lang: 'en' | 'pt' = 'en'): string {
   const what = { phase: pt ? 'fase' : 'phase', actor: pt ? 'ator' : 'actor', system: pt ? 'sistema' : 'system', moment: pt ? 'momento' : 'moment' }
   switch (p.key) {
     case 'syntax': return pt ? `não se lê como YAML (${p.detail})` : `does not read as YAML (${p.detail})`
-    case 'format': return pt ? `«format» precisa ser ${FORMAT}` : `«format» must be ${FORMAT}`
+    case 'format': return pt ? `o arquivo começa com «apiVersion: ${DNA_API}» e «kind: ${KIND}» (ou com «format: ${FORMAT}», de antes)` : `the file starts with «apiVersion: ${DNA_API}» and «kind: ${KIND}» (or «format: ${FORMAT}», from before)`
     case 'missing': return pt ? `falta «${p.what}»` : `«${p.what}» is missing`
     case 'duplicate': return pt ? `${p.what}: o id «${p.id}» se repete` : `${p.what}: the id «${p.id}» is repeated`
     case 'unknown': return pt ? `«${p.at}» cita o ${what[p.what]} «${p.id}», que não existe` : `«${p.at}» names the ${what[p.what]} «${p.id}», which does not exist`

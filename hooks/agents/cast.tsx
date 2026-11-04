@@ -35,7 +35,7 @@ async function folderOf($: EngineInterface, given: string): Promise<string | und
   return undefined
 }
 
-/** The team's profiles (format cast-list/profile-v1) beside the agents: in the folder and in the one above it. */
+/** The team's profiles (kind AgentStandard, or format cast-list/profile-v1 from before) beside the agents: in the folder and in the one above it. */
 async function profilesNear($: EngineInterface, folder: string): Promise<string[]> {
   const found: string[] = []
   const up = folder.replace(/\/+$/, '').split('/').slice(0, -1).join('/') || '.'
@@ -44,7 +44,7 @@ async function profilesNear($: EngineInterface, folder: string): Promise<string[
       if (e.kind !== 'file' || !/\.cast\.ya?ml$/i.test(e.name)) continue
       const path = `${dir.replace(/\/+$/, '')}/${e.name}`
       const text = await $.fs.read(path).catch(() => '')
-      if (/^format:\s*cast-list\/profile-v1\b/m.test(String(text)) && !found.includes(path)) found.push(path)
+      if ((/^format:\s*cast-list\/profile-v1\b/m.test(String(text)) || /^kind:\s*AgentStandard\s*$/m.test(String(text))) && !found.includes(path)) found.push(path)
     }
   }
   return found

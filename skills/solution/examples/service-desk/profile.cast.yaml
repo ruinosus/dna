@@ -1,6 +1,8 @@
 # The team's standard, written so a run can check it. Private: it names your agents — keep it in your environment.
-format: cast-list/profile-v1
-name: Bodega Azul — atendimento
+apiVersion: github.com/ruinosus/dna/v1
+kind: AgentStandard
+metadata:
+  name: Bodega Azul — atendimento
 roles:
   orchestrator: [bodega-orquestrador]
   specialist: "*"

@@ -19,7 +19,7 @@ import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
 import { fill, inline } from './page.mjs'
-import { applyRows, checkWay, exportWay, fromSheets, itemName, problemText, readWay, reviewWay, show, STAGE_DOOR, validateScene, wayDiff, wayLesson, workbookOf, xlsx } from './engine.mjs'
+import { applyRows, checkWay, DNA, DNA_API, DNA_KIND, exportWay, fromSheets, itemName, problemText, readWay, reviewWay, show, STAGE_DOOR, upgradeHeader, validateScene, wayDiff, wayLesson, workbookOf, xlsx } from './engine.mjs'
 import { readXlsx } from './read-xlsx.mjs'
 import { blueprintOf, drillOf, simOf } from './lenses.mjs'
 
@@ -30,7 +30,7 @@ const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
 }
-const flags = new Set(['--check', '--json', '--html', '--xlsx', '--lesson', '--all', '--write', '--force', ...valued])
+const flags = new Set(['--check', '--json', '--html', '--xlsx', '--lesson', '--all', '--write', '--force', '--upgrade', ...valued])
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
 const usage = `usage: node build.mjs <id>.way.yaml --check [--json] [--lang en|pt]
        node build.mjs <id>.way.yaml [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
@@ -48,7 +48,7 @@ if (argv.includes('--take') && !argv.includes('--from')) fail('✗ --take goes w
 
 const T = {
   en: {
-    syntax: (d) => `does not read as YAML (${d})`, format: `«format» must be ${STAGE_DOOR}`, noLanes: 'no lanes: a way needs at least one (who leads the stages)',
+    syntax: (d) => `does not read as YAML (${d})`, format: `the file starts with «apiVersion: ${DNA_API}» and «kind: ${DNA_KIND}» (or «format: ${STAGE_DOOR}», from before)`, noLanes: 'no lanes: a way needs at least one (who leads the stages)',
     shape: (w) => `${w} must be a list of items, each with an id`, duplicate: (w, id) => `${w}: the id «${id}» is repeated`,
     laneUnknown: (s, l, ls) => `stage ${s}: the lane «${l}» does not exist (lanes: ${ls})`, phaseUnknown: (s, p, ps) => `stage ${s}: the phase «${p}» does not exist (phases: ${ps})`,
     gateUnknown: (g, a) => `gate ${g}: «after» names «${a}», which is not a stage`,
@@ -58,7 +58,7 @@ const T = {
     unknownKey: (k) => `✗ no change has the key «${k}»`,
   },
   pt: {
-    syntax: (d) => `não lê como YAML (${d})`, format: `«format» precisa ser ${STAGE_DOOR}`, noLanes: 'nenhuma raia: o jeito de trabalhar precisa de pelo menos uma (quem lidera as etapas)',
+    syntax: (d) => `não lê como YAML (${d})`, format: `o arquivo começa com «apiVersion: ${DNA_API}» e «kind: ${DNA_KIND}» (ou com «format: ${STAGE_DOOR}», de antes)`, noLanes: 'nenhuma raia: o jeito de trabalhar precisa de pelo menos uma (quem lidera as etapas)',
     shape: (w) => `${w} precisa ser uma lista de itens, cada um com id`, duplicate: (w, id) => `${w}: o id «${id}» se repete`,
     laneUnknown: (s, l, ls) => `etapa ${s}: a raia «${l}» não existe (raias: ${ls})`, phaseUnknown: (s, p, ps) => `etapa ${s}: a fase «${p}» não existe (fases: ${ps})`,
     gateUnknown: (g, a) => `gate ${g}: «after» diz «${a}», que não é uma etapa`,
@@ -71,6 +71,30 @@ const T = {
 
 // ---- read and check ----
 const file = resolve(args[0])
+// ---- --upgrade: the header of before (`format: stage-door/v1`) as DNA's, the rest of the text as it is ----
+if (argv.includes('--upgrade')) {
+  const text = readFileSync(file, 'utf8')
+  const up = upgradeHeader(text, STAGE_DOOR, DNA_KIND)
+  const pt = lang === 'pt'
+  if (up === undefined) {
+    if (/^apiVersion:/m.test(text)) {
+      console.log(pt ? `✓ ${basename(file)} já tem o cabeçalho do DNA` : `✓ ${basename(file)} already has DNA's header`)
+      process.exit(0)
+    }
+  } else {
+    if (readWay(up).problems.length !== readWay(text).problems.length || JSON.stringify(readWay(up).def) !== JSON.stringify(readWay(text).def)) {
+      console.error(pt ? `✗ ${basename(file)}: depois do cabeçalho novo, o arquivo não se lê igual; nada escrito` : `✗ ${basename(file)}: with the new header the file does not read the same; nothing written`)
+      process.exit(1)
+    }
+    if (!argv.includes('--write')) {
+      process.stdout.write(up)
+      process.exit(0)
+    }
+    writeFileSync(file, up)
+    console.log(pt ? `✓ ${basename(file)}: agora com apiVersion ${DNA_API} e kind ${DNA_KIND}; o resto como estava` : `✓ ${basename(file)}: now apiVersion ${DNA_API} and kind ${DNA_KIND}; the rest as it was`)
+    process.exit(0)
+  }
+}
 const source = readFileSync(file, 'utf8')
 const read = readWay(source)
 const at = (line, text) => `✗ ${basename(file)}:${line}: ${text}`
@@ -157,7 +181,8 @@ if (argv.includes('--from')) {
     process.exit(2)
   }
   const next = applyRows(way, edited.way, rows.filter((r) => keys.includes(r.key)))
-  writeFileSync(file, exportWay(name, next, file.endsWith('.json') ? 'json' : 'yaml', STAGE_DOOR))
+  // the file keeps how it said what it is: DNA's header, or the format line of before
+  writeFileSync(file, exportWay(name, next, file.endsWith('.json') ? 'json' : 'yaml', /^apiVersion:/m.test(source) || /"apiVersion"/.test(source) ? DNA : STAGE_DOOR))
   console.log(T.took(keys.length, basename(file)))
   process.exit(0)
 }
