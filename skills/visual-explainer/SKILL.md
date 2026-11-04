@@ -210,7 +210,7 @@ it. The player loads from the CDN and checks the recipe itself:
 <script type="text/visual-explainer" id="chalk-recipe">
 THE RECIPE AS TEXT
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.20.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.20.1/player.js"></script>
 ```
 
 If the page says the recipe could not be opened, fix the line it names.

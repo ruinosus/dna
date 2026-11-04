@@ -190,7 +190,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y @ruinosus/visual-explainer@0.20.0 "$f" "${f%.*}.svg" --svg; done
+      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y @ruinosus/visual-explainer@0.20.1 "$f" "${f%.*}.svg" --svg; done
       - run: |
           git config user.name github-actions
           git config user.email github-actions@users.noreply.github.com
@@ -255,7 +255,7 @@ then Settings › Capabilities › Skills › Upload. Code execution must be on.
 **Claude API**: upload the same zip with the Skills API (`/v1/skills`) and use it with the code execution tool.
 
 **Without installing anything** — on npm as [`visual-explainer`](https://www.npmjs.com/package/@ruinosus/visual-explainer): a page needs
-only the recipe and `<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.20.0/player.js"></script>` (that is also
+only the recipe and `<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.20.1/player.js"></script>` (that is also
 how the skill shows a lesson where it cannot run code), and `npx @ruinosus/dna visual-explainer lesson.json` builds the one-file lesson.
 
 **Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/visual-explainer` to the folder where the tool

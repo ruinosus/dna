@@ -12,14 +12,15 @@ import type { Mounted } from './lesson'
 const BLOCK = '[data-visual-explainer], [data-chalk-talk]'
 const mounted = new Map<HTMLElement, Mounted | null>()
 
-/** The page's light or dark, as VS Code, Docusaurus (data-theme) or the system say. */
+/** The page's light or dark, as VS Code, Docusaurus (data-theme) or the system say: a light page gets DNA's business
+ *  look (the lesson's «Hand-drawn» switches to the paper), a dark one the chalkboard — there is no dark business look. */
 function theme(): Theme {
   const body = document.body.classList
   const page = document.documentElement.dataset.theme
   if (body.contains('vscode-dark') || body.contains('vscode-high-contrast')) return 'chalkboard'
-  if (body.contains('vscode-light') || page === 'light') return 'paper'
+  if (body.contains('vscode-light') || page === 'light') return 'business'
   if (page === 'dark') return 'chalkboard'
-  return matchMedia('(prefers-color-scheme: dark)').matches ? 'chalkboard' : 'paper'
+  return matchMedia('(prefers-color-scheme: dark)').matches ? 'chalkboard' : 'business'
 }
 
 async function read(block: HTMLElement, source: string): Promise<Scene> {

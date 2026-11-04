@@ -10,7 +10,7 @@ Lessons that draw themselves — in a clean business look, or hand-drawn — fro
 <meta charset="utf-8">
 <title>My lesson</title>
 <script type="application/json" id="chalk-recipe">{ "id": "my-lesson", "title": "…", "width": 900, "height": 560, "steps": [ … ] }</script>
-<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.20.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.20.1/player.js"></script>
 ```
 
 The player builds the page around the recipe — chapters, Next / Back, values to move, the check, downloads — and needs

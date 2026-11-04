@@ -128,26 +128,27 @@ const pre = document.createElement('pre'); pre.id = 'chalk-embed'; pre.textConte
   expect(ok, 'visual-explainer/markdown: the two fences become blocks, the others stay (markdown-it, remark)')
 }
 
-// visual-explainer/mount: blocks on the page become lessons, a block added later too, a broken one says its line.
+// visual-explainer/mount: blocks on the page become lessons, a block added later too, a broken one says its line; on a
+// light page (VS Code's vscode-light here) they take DNA's business look, not the hand-drawn paper.
 {
   const { runPage } = await import('../../../kit/browser.mjs')
   const { blockHtml } = await import(pathToFileURL(join(skill, '../../npm/visual-explainer/markdown.js')).href)
   const page = join(dir, 'mount.html')
   const coin = readFileSync(join(docs, 'training-hours.chalk'), 'utf8')
   const coffee = readFileSync(join(docs, 'time-off-request.mmd'), 'utf8')
-  writeFileSync(page, `<!doctype html><meta charset="utf-8"><body>${blockHtml('text', coin)}${blockHtml('mermaid', coffee)}${blockHtml('text', 'title X\nperson ana at 1')}
+  writeFileSync(page, `<!doctype html><meta charset="utf-8"><body class="vscode-light">${blockHtml('text', coin)}${blockHtml('mermaid', coffee)}${blockHtml('text', 'title X\nperson ana at 1')}
 <script src="${pathToFileURL(join(skill, '../../npm/visual-explainer/mount.global.js')).href}"></script>
 <script>
 setTimeout(() => document.body.insertAdjacentHTML('beforeend', ${JSON.stringify(blockHtml('text', 'title Later\ntext "later" at 40,60'))}), 1500)
 setTimeout(() => {
   const blocks = [...document.querySelectorAll('[data-visual-explainer]')]
   const out = blocks.map((b) => b.querySelector('.visual-explainer-error') ? 'error:' + b.querySelector('.visual-explainer-error').textContent.match(/line \\d+/)?.[0] : (b.querySelector('.visual-explainer svg')?.querySelectorAll('path, text').length ?? 0) > 0 && b.querySelector('.visual-explainer-source').hidden ? 'lesson' : 'nothing')
-  const pre = document.createElement('pre'); pre.id = 'chalk-mount'; pre.textContent = encodeURIComponent(JSON.stringify({ out, styles: document.querySelectorAll('#visual-explainer-styles').length })); document.body.append(pre)
+  const pre = document.createElement('pre'); pre.id = 'chalk-mount'; pre.textContent = encodeURIComponent(JSON.stringify({ out, styles: document.querySelectorAll('#visual-explainer-styles').length, hand: document.querySelectorAll('.visual-explainer .paper.is-hand').length, papers: document.querySelectorAll('.visual-explainer .paper').length })); document.body.append(pre)
 }, 6000)
 </script>`)
   const r = await runPage(page, 'mount')
   if (!r) expect(true, 'no browser here: the mount check is skipped')
-  else expect(JSON.stringify(r.out) === JSON.stringify(['lesson', 'lesson', 'error:line 2', 'lesson']) && r.styles === 1, `visual-explainer/mount: blocks become lessons, one added later too (${JSON.stringify(r)})`)
+  else expect(JSON.stringify(r.out) === JSON.stringify(['lesson', 'lesson', 'error:line 2', 'lesson']) && r.styles === 1 && r.papers >= 3 && r.hand === 0, `visual-explainer/mount: blocks become lessons, one added later too, business on a light page (${JSON.stringify(r)})`)
 }
 
 // The review in a browser over the DevTools pipe: the coffee chain from a real session — its first version put the

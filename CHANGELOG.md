@@ -1,5 +1,12 @@
 # Changelog
 
+## npm @ruinosus/visual-explainer 0.20.1 — 2026-11-04
+
+- **The business look on a light page.** `@ruinosus/visual-explainer/mount` (VS Code's preview, Docusaurus, any page
+  with the blocks) still gave a light page the hand-drawn paper — the light/dark rule from before the business theme.
+  A light page now gets the business look (the lesson's «Hand-drawn» switches to the paper); a dark one still gets the
+  chalkboard, as there is no dark business look. The plugin is unchanged: the skills' player never passed a theme.
+
 ## 2.0.0 — 2026-11-04
 
 **house-lights is now DNA — Domain Notation of Anything** (ruinosus/dna). The same eight skills, with plain names and
