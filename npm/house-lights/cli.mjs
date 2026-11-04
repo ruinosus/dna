@@ -13,6 +13,7 @@ const SKILLS = {
   'service-blueprint': 'map a customer journey and who makes each moment happen (.blueprint.yaml)',
   'cast-list': 'compare Copilot Studio agents: patterns, who is off them, what is missing (a folder of cloned agents)',
   'box-office': 'simulate a process and ask «what if»: queues, people, assistants and costs (.sim)',
+  'opening-night': 'put a process together as a solution: every piece checked, one page with a tab each (.solution.yaml)',
 }
 const [skill, ...args] = process.argv.slice(2)
 const build = join(dirname(fileURLToPath(import.meta.url)), 'skills', skill ?? '', 'scripts/build.mjs')

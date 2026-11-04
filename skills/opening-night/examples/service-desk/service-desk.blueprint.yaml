@@ -1,0 +1,56 @@
+# from: service-desk.way.yaml@1c463e6c
+# Derivado de service-desk.way.yaml pelo gates-and-handoffs --lens.
+# bet: «customer» é o que faz quem recebe o trabalho em cada etapa; o way diz o que o time faz.
+# feels e pains ficam de fora: vêm de entrevistas, nunca do way.
+format: front-of-house/v1
+name: "Central de atendimento"
+who: "Quem recebe o trabalho"
+about: "O fluxo «Central de atendimento», visto do lado de quem recebe o trabalho."
+phases: ["Entrada", "Resolução", "Fechamento"]
+actors:
+  - { id: cli, name: "Cliente", layer: front }
+  - { id: at, name: "Atendente", layer: front }
+  - { id: sup, name: "Supervisor de atendimento", layer: front }
+  - { id: esp, name: "Especialista", layer: front }
+systems:
+  - { id: portal-de-atendimento, name: "Portal de atendimento" }
+moments:
+  - id: registrar
+    phase: "Entrada"
+    customer: "Espera «Registrar o pedido»: O que aconteceu, e desde quando?"   # bet
+    evidence: ["Chamado aberto com a descrição"]
+    front: [{ actor: cli, does: "Registrar o pedido" }]
+    support: [portal-de-atendimento]
+    way: service-desk#registrar
+  - id: triar
+    phase: "Entrada"
+    customer: "Espera «Triagem»: É urgente, e quem resolve?"   # bet
+    evidence: ["Prioridade e categoria"]
+    front: [{ actor: at, does: "Triagem" }]
+    way: service-desk#triar
+  - id: resolver
+    phase: "Resolução"
+    customer: "Espera «Resolver no primeiro nível»: Dá para resolver com o roteiro?"   # bet
+    evidence: ["Solução aplicada"]
+    front: [{ actor: at, does: "Resolver no primeiro nível" }]
+    way: service-desk#resolver
+  - id: investigar
+    phase: "Resolução"
+    customer: "Espera «Investigar»: Qual é a causa?"   # bet
+    marks: [wait]
+    evidence: ["Chamado escalado", "Causa e correção"]
+    front: [{ actor: esp, does: "Investigar" }]
+    way: service-desk#investigar
+  - id: confirmar
+    phase: "Fechamento"
+    customer: "Espera «Confirmar com o cliente»: Resolveu para quem pediu?"   # bet
+    evidence: ["Confirmação do cliente"]
+    front: [{ actor: cli, does: "Confirmar com o cliente" }, { actor: at, does: "Confirmar com o cliente" }]
+    way: service-desk#confirmar
+  - id: medir
+    phase: "Fechamento"
+    customer: "Espera «Medir a satisfação»: Como foi para o cliente?"   # bet
+    marks: [wait]
+    evidence: ["Chamado encerrado", "Nota de satisfação"]
+    front: [{ actor: sup, does: "Medir a satisfação" }]
+    way: service-desk#medir

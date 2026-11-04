@@ -1,0 +1,173 @@
+format: stage-door/v1
+name: Central de atendimento
+lanes:
+  - id: cliente
+    name: Cliente
+    color: coral
+  - id: atendimento
+    name: Atendimento
+    sub: primeiro nível
+    color: prod
+  - id: especialistas
+    name: Especialistas
+    sub: segundo nível
+    color: forge
+roles:
+  - id: cli
+    acronym: CLI
+    name: Cliente
+    lane: cliente
+  - id: at
+    acronym: AT
+    name: Atendente
+    lane: atendimento
+  - id: sup
+    acronym: SUP
+    name: Supervisor de atendimento
+    lane: atendimento
+  - id: esp
+    acronym: ESP
+    name: Especialista
+    lane: especialistas
+phases:
+  - id: entrada
+    name: Entrada
+  - id: resolucao
+    name: Resolução
+  - id: fechamento
+    name: Fechamento
+stages:
+  - id: registrar
+    name: Registrar o pedido
+    phase: entrada
+    lane: cliente
+    roles:
+      - cli
+    question: O que aconteceu, e desde quando?
+    outputs:
+      - id: chamado
+        name: Chamado aberto com a descrição
+    where: Portal de atendimento
+    inputs:
+      - name: O problema do cliente
+    metrics:
+      - Chamados por dia
+  - id: triar
+    name: Triagem
+    phase: entrada
+    lane: atendimento
+    roles:
+      - at
+    question: É urgente, e quem resolve?
+    inputs:
+      - from: chamado
+    outputs:
+      - id: prioridade
+        name: Prioridade e categoria
+    wip: 10
+    metrics:
+      - Tempo até a triagem
+  - id: resolver
+    name: Resolver no primeiro nível
+    phase: resolucao
+    lane: atendimento
+    roles:
+      - at
+    question: Dá para resolver com o roteiro?
+    outputs:
+      - id: solucao
+        name: Solução aplicada
+    activities:
+      - id: roteiro
+        name: Seguir o roteiro da categoria
+        required: true
+    inputs:
+      - from: prioridade
+    metrics:
+      - "% resolvidos no primeiro nível"
+  - id: investigar
+    name: Investigar
+    phase: resolucao
+    lane: especialistas
+    roles:
+      - esp
+    question: Qual é a causa?
+    optional: true
+    outputs:
+      - id: causa
+        name: Causa e correção
+    inputs:
+      - from: escalado
+    metrics:
+      - Tempo de investigação
+  - id: confirmar
+    name: Confirmar com o cliente
+    phase: fechamento
+    lane: cliente
+    roles:
+      - cli
+      - at
+    question: Resolveu para quem pediu?
+    outputs:
+      - id: confirmacao
+        name: Confirmação do cliente
+    inputs:
+      - from: solucao
+      - from: causa
+    metrics:
+      - "% confirmados na primeira vez"
+  - id: medir
+    name: Medir a satisfação
+    phase: fechamento
+    lane: atendimento
+    roles:
+      - sup
+    question: Como foi para o cliente?
+    outputs:
+      - id: nota
+        name: Nota de satisfação
+        kpi: true
+    inputs:
+      - from: encerrado
+    metrics:
+      - Nota média
+gates:
+  - id: escalar
+    after: resolver
+    name: Resolvido no primeiro nível?
+    approver: sup
+    results:
+      - id: sim
+        label: Sim
+        ok: true
+      - id: nao
+        label: Escalar
+    criteria:
+      - kind: activities
+        stage: resolver
+    on_fail: investigar
+    metrics:
+      - Taxa de escalada
+    outputs:
+      - id: escalado
+        name: Chamado escalado
+  - id: encerrar
+    after: confirmar
+    name: Pode encerrar?
+    approver: cli
+    results:
+      - id: sim
+        label: Encerrar
+        ok: true
+      - id: nao
+        label: Reabrir
+    criteria:
+      - kind: outputs
+        outputs:
+          - confirmacao
+    on_fail: triar
+    metrics:
+      - Taxa de reabertura
+    outputs:
+      - id: encerrado
+        name: Chamado encerrado

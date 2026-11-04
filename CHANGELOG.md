@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.17.0 — 2026-11-04
+
+The eighth skill: **opening-night**, a process put together as one solution.
+
+- **`<id>.solution.yaml`** (`opening-night/v1`) names the pieces of one process, beside it: the way of working, the
+  simulation, the journey, the drill, the Copilot Studio agents (with the team's profile), the lesson. `--check` checks
+  each piece with its own skill (exit 4 with that skill's messages when one fails or is missing) and says which lens
+  fell behind the way, by its `# from: <way>@<version>`, with the command that makes it again. A piece with no
+  `# from:` is written by hand and kept as it is.
+- **The page** (`<id>.solution.html`): one offline file, a summary — each piece, the question it answers, where it
+  stands — and a tab per piece, each drawn by its own skill.
+- **Solution accelerators** to start from, `--list` and `--new <name> <folder>`: `employee-self-service` (an assistant
+  with Workday, after Microsoft's public sample), `service-desk` (a customer service desk with its six fictional
+  Copilot Studio agents and the team's profile) and `assistant-delivery` (delivering an assistant, with the gate that
+  sends it back to be built again). Their gallery is on the site.
+- **`/solution <file>`** in the mod: the pieces in a pane, and a button that makes a lens again from the way — at a
+  second press, since it may have been edited by hand. A `.solution.yaml` that breaks its format is refused when
+  written.
+- **gates-and-handoffs `--lens blueprint`**: the moment after a gate shows what comes out of the gate, so the wait is
+  never empty-handed.
+- `npx house-lights opening-night`; the mod's tests are 33.
+
 ## 1.16.0 — 2026-11-04
 
 One way of working, seen by the other skills.

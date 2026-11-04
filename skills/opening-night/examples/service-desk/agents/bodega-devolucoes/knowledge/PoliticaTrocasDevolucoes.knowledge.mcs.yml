@@ -1,0 +1,7 @@
+mcs.metadata:
+  componentName: Política de Trocas e Devoluções
+  description: "Regras de troca, devolução, arrependimento e reembolso da Bodega Azul."
+kind: KnowledgeSourceConfiguration
+source:
+  kind: SharePointSearchSource
+  site: https://bodegaazul.sharepoint.com/sites/Atendimento/Shared%20Documents/Devolucoes

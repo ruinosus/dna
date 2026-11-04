@@ -1,0 +1,34 @@
+mcs.metadata:
+  componentName: Enviar resumo do pedido por e-mail
+  description: "Envia ao cliente um e-mail com o resumo do atendimento sobre o pedido."
+kind: TaskDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: To
+    description: "Endereço de e-mail do cliente que vai receber o resumo do pedido."
+    entity: EmailPrebuiltEntity
+    shouldPromptUser: true
+
+  - kind: AutomaticTaskInput
+    propertyName: Subject
+    description: Assunto do e-mail, curto e em português.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+  - kind: AutomaticTaskInput
+    propertyName: Body
+    description: Corpo do e-mail em HTML simples, em português, com o resumo do que foi tratado na conversa.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+modelDisplayName: Enviar resumo do pedido por e-mail
+modelDescription: "Envia ao cliente, pelo Outlook, um e-mail com o resumo do atendimento sobre o pedido. Use somente quando o cliente pedir o resumo por e-mail."
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: cr7b2_bodegaPedidos.shared_office365.shared-office365-d1f6a460-51c5-47c6-9010-aec0018a7a95
+  connectionProperties:
+    mode: Maker
+
+  operationId: SendEmailV2
+
+outputMode: All

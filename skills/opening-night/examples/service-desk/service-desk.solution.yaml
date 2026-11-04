@@ -1,0 +1,14 @@
+# A solution accelerator: a customer service desk, seen by every skill. The store and its agents are fictional
+# ("Bodega Azul"); the agents were generated from Microsoft's skills-for-copilot-studio samples (MIT, agents/NOTICE.md).
+# The simulation, the blueprint and the drill are lenses of the way: their numbers and lines marked «# bet:» are made
+# up — replace them with your own.
+format: opening-night/v1
+name: Central de atendimento
+about: Do chamado do cliente ao encerramento, com os agentes do Copilot Studio que atendem antes de uma pessoa.
+lang: pt
+way: service-desk.way.yaml
+sim: service-desk.sim
+blueprint: service-desk.blueprint.yaml
+drill: service-desk.drill.yaml
+agents: agents
+profile: profile.cast.yaml

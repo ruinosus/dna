@@ -1,0 +1,105 @@
+# Employee Self-Service with Workday: an illustrative model.
+# The scenarios are those of Microsoft's public sample (MIT):
+# https://github.com/microsoft/CopilotStudioSamples/tree/main/EmployeeSelfServiceAgent
+# The volumes, times and costs are made up: replace them with your own.
+sim "Employee Self-Service with Workday"
+lang en
+horizon 1 month
+seed 11
+currency USD
+
+arrive request 1500/day during 7h-20h peak mon x1.3
+mix intent: balance 30%, time_off 20%, profile 20%, dependents 5%, facilities 10%, other 15%
+pool managers 40 shift 8h/day days mon-fri
+pool hr_partners $hr_partners shift 8h/day days mon-fri cost 5000/month
+pool facilities_desk 6 shift 8h/day days mon-fri cost 3500/month
+
+step ess time ~20s cost 0.03
+step workday_read time 3s
+step time_off_request time ~1min cost 0.02
+step manager_approval by managers time ~10min
+step knowledge time ~15s cost 0.01
+step hr_review by hr_partners time ~30min
+step facilities_ticket by facilities_desk time ~15min
+
+end answered_by_assistant
+end time_off_approved
+end resolved_by_hr
+end resolved_by_facilities
+end gave_up
+
+ess ->
+  when intent = balance workday_read
+  when intent = profile workday_read
+  when intent = time_off time_off_request
+  when intent = dependents hr_review
+  when intent = facilities facilities_ticket
+  otherwise knowledge
+workday_read -> answered_by_assistant
+time_off_request -> manager_approval
+manager_approval -> time_off_approved
+knowledge ->
+  answered_by_assistant $knowledge_rate
+  hr_review rest
+hr_review -> resolved_by_hr
+hr_review abandon after 3day -> gave_up
+facilities_ticket -> resolved_by_facilities
+
+knob knowledge_rate 0%..90% = 50%
+knob hr_partners 4..30 = 14
+scenario "No knowledge answers": knowledge_rate = 0%
+scenario "Better knowledge": knowledge_rate = 80%
+scenario "Smaller HR team": hr_partners = 8
+
+show share end answered_by_assistant
+show wait p90 at hr_review
+show utilization hr_partners
+show cost per month
+
+labels en:
+  request: Request
+  ess: Self-service
+  workday_read: Read from Workday
+  time_off_request: Time off in Workday
+  manager_approval: Manager approval
+  knowledge: HR policies
+  hr_review: HR partner
+  hr_partners: HR partners
+  facilities_ticket: Facilities ticket
+  facilities_desk: Facilities desk
+  answered_by_assistant: Answered at once
+  time_off_approved: Time off approved
+  resolved_by_hr: Resolved by HR
+  resolved_by_facilities: Resolved by Facilities
+  gave_up: Gave up
+  knowledge_rate: Policy questions answered
+  balance: Vacation balance
+  time_off: Time off
+  profile: Profile and contact
+  dependents: Dependents
+  facilities: Facilities
+  other: Other
+
+labels pt-BR:
+  request: Pedido
+  ess: Autoatendimento
+  workday_read: Consulta ao Workday
+  time_off_request: Folga no Workday
+  manager_approval: Aprovação do gestor
+  knowledge: Políticas de RH
+  hr_review: Parceiro de RH
+  hr_partners: Parceiros de RH
+  facilities_ticket: Chamado Facilities
+  facilities_desk: Equipe de Facilities
+  answered_by_assistant: Respondido na hora
+  time_off_approved: Folga aprovada
+  resolved_by_hr: Resolvido pelo RH
+  resolved_by_facilities: Resolvido (Facilities)
+  gave_up: Desistiu
+  knowledge_rate: Perguntas de política respondidas
+  balance: Saldo de férias
+  time_off: Folga
+  profile: Perfil e contato
+  dependents: Dependentes
+  facilities: Facilities
+  other: Outros

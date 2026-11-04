@@ -18,6 +18,7 @@ npx house-lights cast-list <agents-folder> [options]
 | `service-blueprint` | a customer journey and who makes each moment happen, with a workbook |
 | `cast-list` | Copilot Studio agents compared: what repeats, who is off a pattern, what is missing, with a workbook |
 | `box-office` | a process to watch and ask «what if»: queues, people, assistants and costs, with sliders and scenarios |
+| `opening-night` | a solution: one process seen by every skill, each piece checked, one page with a tab per piece |
 
 ```
 npx house-lights chalk-talk lesson.chalk                       # lesson.html, checked and offline
@@ -32,6 +33,9 @@ npx house-lights cast-list agents/ --profile team.cast.yaml --all     # the agen
 npx house-lights box-office hr.sim --lang pt                          # hr.box-office.html: the simulation, offline
 npx house-lights box-office hr.sim --run --set hr_partners=8          # the median and p10–p90 of each metric
 npx house-lights cast-list agents/ --from filled.xlsx --take all      # the decisions filled in Excel, kept
+npx house-lights gates-and-handoffs team.way.yaml --lens sim --write   # the way as a simulation (also blueprint, drill)
+npx house-lights opening-night --new service-desk my-desk             # start from a solution accelerator
+npx house-lights opening-night my-desk/service-desk.solution.yaml     # every piece checked, one page with them all
 ```
 
 Exit codes: 0 made and checked; 1 the file breaks its format (each problem with its line); 2 the command line is

@@ -23,6 +23,11 @@ export type LensKind = 'sim' | 'blueprint' | 'drill'
 export type LensItem = { kind: LensKind; file: string; text: string; bets: number; state: 'new' | 'same' | 'older' | 'edited' | 'error'; said: string[]; armed?: boolean; wrote?: boolean }
 export type LensDoc = { path: string; lang: 'en' | 'pt'; items: LensItem[] }
 
+/** /solution: an opening-night solution as its --check --json read it — each piece, where it stands, and the lens
+ * the pane's button is waiting to be pressed again for (`armed`) before making it again from the way. */
+export type SolutionPiece = { kind: string; file: string; skill: string; state: 'ok' | 'missing' | 'broken' | 'unchecked'; stale?: boolean; said: string[]; looks: string[]; redone?: boolean }
+export type SolutionDoc = { path: string; name: string; lang: 'en' | 'pt'; way: string; pieces: SolutionPiece[]; armed: string }
+
 declare module 'claude-code' {
   interface PluginState {
     'house-lights': {
@@ -33,6 +38,7 @@ declare module 'claude-code' {
       castOpen: string
       drill: Shaped<DrillDoc | null>
       lenses: Shaped<LensDoc | null>
+      solution: Shaped<SolutionDoc | null>
     }
   }
 }

@@ -14,7 +14,7 @@ drawing it, playing it, mapping it, comparing it or simulating it — each one a
 
 ---
 
-## The seven skills
+## The eight skills
 
 | Skill | Ask for | You get |
 |---|---|---|
@@ -25,6 +25,7 @@ drawing it, playing it, mapping it, comparing it or simulating it — each one a
 | [service-blueprint](dev/service-blueprint/README.md) | "where does our onboarding hurt?" | a customer journey and who makes each moment happen on stage, backstage and in the systems |
 | [cast-list](dev/cast-list/README.md) | "which of our Copilot Studio agents is off the pattern?" | the agents compared: what repeats, who is off it, the contract, the telemetry, what nobody uses — a map, a workbook to decide in, and a lesson; Node alone, no model |
 | [box-office](dev/box-office/README.md) | "what if the assistant answered half the HR questions?" | a process to watch: items arriving, queues forming, people and assistants at work, a slider for every control, the ranges of many runs and the scenarios side by side — and, in Claude Code, a mod that checks every `.sim` as it is written |
+| [opening-night](dev/opening-night/README.md) | "put our HR self-service together as one solution" | one process seen by every skill: a `.solution.yaml` that names the way, the simulation, the journey, the drill and the agents, checks each with its skill, says which fell behind the way, and makes one page with a tab per piece — with solution accelerators to start from |
 
 Claude picks the skill by what you ask. To call one by name: `/house-lights:back-of-napkin …`.
 
@@ -35,7 +36,8 @@ private list is refused (`/names` says what it watches); a way of working or a s
 (`/way-preview`, `/blueprint-preview`); `/cast <folder> [--profile <file>]` shows cast-list's comparison in a pane, with the team's profile and a toast when an
 agent edited there changes it; `/drill <file>` plays an incident drill in a pane, to its debrief; `/lenses <file.way.yaml>` shows a way of
 working as a simulation, a service blueprint and a drill, and writes each beside it; and `/sim` and
-`/sim-preview` run and show a `.sim`, with a −/+ for each control that runs it again.
+`/sim-preview` run and show a `.sim`, with a −/+ for each control that runs it again; `/solution <file>` shows a
+solution's pieces, each with where it stands.
 Elsewhere the skills work without it.
 
 <p align="center">
@@ -87,17 +89,18 @@ plugins, install `house-lights` instead and remove the old one (`/plugin uninsta
 
 ## Em português
 
-Sete skills para mostrar uma ideia a alguém: **chalk-talk** ensina desenhando, **back-of-napkin** desenha para
+Oito skills para mostrar uma ideia a alguém: **chalk-talk** ensina desenhando, **back-of-napkin** desenha para
 apresentar (e vira PowerPoint), **dress-rehearsal** transforma o runbook num ensaio de incidente, **gates-and-handoffs**
 mapeia o jeito de trabalhar do time, **service-blueprint** mapeia a jornada do cliente e **cast-list** compara os
-agentes do Copilot Studio (o que se repete, quem está fora do padrão) e **box-office** simula um processo para perguntar «e se»
-(filas, pessoas, assistentes e custos). Peça em português ("desenha a
+agentes do Copilot Studio (o que se repete, quem está fora do padrão), **box-office** simula um processo para perguntar «e se»
+(filas, pessoas, assistentes e custos) e **opening-night** junta tudo numa solution: o processo visto por todas as
+skills, numa página só, com accelerators para começar. Peça em português ("desenha a
 decisão entre as duas opções", "monta o blueprint da devolução"): a tela segue o idioma da receita. A instalação é a
 de cima.
 
 ## Develop
 
-The seven skills are npm workspaces; each one's tools are in `dev/<skill>/tools`.
+The eight skills are npm workspaces; each one's tools are in `dev/<skill>/tools`.
 
 ```
 npm install

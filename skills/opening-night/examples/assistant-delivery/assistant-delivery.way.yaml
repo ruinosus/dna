@@ -1,0 +1,86 @@
+# A solution accelerator: delivering a Copilot Studio assistant, from the request to its release — with the gate that
+# sends it back when the answers are not good enough. Fictional: replace the roles and the gate with your team's.
+format: stage-door/v1
+name: Entrega de um assistente
+lanes:
+  - id: produto
+    name: Produto
+  - id: construcao
+    name: Construção
+  - id: qualidade
+    name: Qualidade
+roles:
+  - id: po
+    acronym: PO
+    name: Product Owner
+    lane: produto
+  - id: dev
+    acronym: DEV
+    name: Desenvolvimento
+    lane: construcao
+  - id: qa
+    acronym: QA
+    name: Qualidade
+    lane: qualidade
+phases:
+  - id: descoberta
+    name: Descoberta
+  - id: entrega
+    name: Entrega
+stages:
+  - id: triagem
+    name: Triagem
+    phase: descoberta
+    lane: produto
+    roles: [po]
+    question: O pedido é para um assistente?
+    outputs:
+      - id: casos
+        name: Casos de uso e perguntas de teste
+  - id: construcao
+    name: Construção
+    phase: entrega
+    lane: construcao
+    roles: [dev]
+    question: O assistente responde aos casos?
+    inputs:
+      - from: casos
+    outputs:
+      - id: assistente
+        name: Assistente no ambiente de teste
+  - id: avaliacao
+    name: Avaliação
+    phase: entrega
+    lane: qualidade
+    roles: [qa]
+    question: Quanto ele acerta?
+    inputs:
+      - from: assistente
+    outputs:
+      - id: acerto
+        name: Acerto nas perguntas de teste
+        kpi: true
+  - id: publicacao
+    name: Publicação
+    phase: entrega
+    lane: construcao
+    roles: [dev]
+    question: Está no ar para quem pediu?
+gates:
+  - id: acerto-gate
+    after: avaliacao
+    name: Acerto ≥ 85%?
+    approver: qa
+    criteria:
+      - kind: outputs
+        outputs: [acerto]
+    results:
+      - id: sim
+        label: Sim
+        ok: true
+      - id: nao
+        label: Não
+    on_fail: construcao
+    outputs:
+      - id: liberado
+        name: Assistente liberado para publicar

@@ -1,0 +1,15 @@
+mcs.metadata:
+  componentName: Abrir chamado no ERP
+  description: Abre um chamado no ERP da Bodega Azul pelo fluxo da solução.
+kind: TaskDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: resumo
+    description: Resumo do pedido do cliente, em uma frase.
+    shouldPromptUser: false
+
+modelDisplayName: Abrir chamado no ERP
+modelDescription: Abre um chamado no ERP quando o cliente pede uma ação que a loja precisa executar (troca, cancelamento, reembolso).
+action:
+  kind: InvokeFlowTaskAction
+  flowId: 7d1c2a4e-3b5f-4c6d-8e9f-0a1b2c3d4e5f

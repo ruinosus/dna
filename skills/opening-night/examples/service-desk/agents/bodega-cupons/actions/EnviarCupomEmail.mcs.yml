@@ -1,0 +1,34 @@
+mcs.metadata:
+  componentName: Enviar cupom por e-mail
+  description: "Envia ao cliente um e-mail com o código do cupom e as regras de uso."
+kind: TaskDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: To
+    description: "Endereço de e-mail do cliente que vai receber o cupom."
+    entity: EmailPrebuiltEntity
+    shouldPromptUser: true
+
+  - kind: AutomaticTaskInput
+    propertyName: Subject
+    description: Assunto do e-mail, curto e em português.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+  - kind: AutomaticTaskInput
+    propertyName: Body
+    description: Corpo do e-mail em HTML simples, em português, com o resumo do que foi tratado na conversa.
+    entity: StringPrebuiltEntity
+    shouldPromptUser: false
+
+modelDisplayName: Enviar cupom por e-mail
+modelDescription: "Envia ao cliente, pelo Outlook, um e-mail com um código de cupom já validado e as regras de uso. Use somente quando o cliente pedir."
+action:
+  kind: InvokeConnectorTaskAction
+  connectionReference: cr7b2_bodegaCupons.shared_office365.shared-office365-8a5ef90d-d584-47ca-b2a1-5c87d8fc6ede
+  connectionProperties:
+    mode: Maker
+
+  operationId: SendEmailV2
+
+outputMode: All

@@ -12,6 +12,7 @@
     "dev/service-blueprint/tools",
     "dev/cast-list/tools",
     "dev/box-office/tools",
+    "dev/opening-night/tools",
     "dev/house-lights/tools"
   ],
   "scripts": {

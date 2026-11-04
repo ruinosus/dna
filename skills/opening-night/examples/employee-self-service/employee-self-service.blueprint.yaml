@@ -1,0 +1,43 @@
+# from: employee-self-service.way.yaml@e31fc149
+# Derived from employee-self-service.way.yaml by gates-and-handoffs --lens.
+# bet: «customer» is what whoever the work is for does at each stage; the way says what the team does.
+# feels and pains are left out: they come from interviews, never from the way.
+format: front-of-house/v1
+name: "Time off through the self-service assistant"
+who: "Whoever the work is for"
+about: "The way «Time off through the self-service assistant», seen from the side of whoever the work is for."
+phases: ["Ask", "Approve"]
+actors:
+  - { id: employee, name: "Employee", layer: front }
+  - { id: assistant, name: "Self-service assistant", layer: front }
+  - { id: manager, name: "Manager", layer: front }
+systems:
+  - { id: workday, name: "Workday" }
+moments:
+  - id: question
+    phase: "Ask"
+    customer: "Waits for «Ask the assistant»: How many days do I have, and can I take next week?"   # bet
+    evidence: ["The dates asked for"]
+    front: [{ actor: employee, does: "Ask the assistant" }]
+    way: employee-self-service#question
+  - id: balance
+    phase: "Ask"
+    customer: "Waits for «Read the balance in Workday»: Does the employee have the days?"   # bet
+    evidence: ["A time off request in Workday"]
+    front: [{ actor: assistant, does: "Read the balance in Workday" }]
+    support: [workday]
+    way: employee-self-service#balance
+  - id: approval
+    phase: "Approve"
+    customer: "Waits for «Manager reviews»: Can the team spare them?"   # bet
+    evidence: ["The request reviewed against the team's calendar"]
+    front: [{ actor: manager, does: "Manager reviews" }]
+    way: employee-self-service#approval
+  - id: recorded
+    phase: "Approve"
+    customer: "Waits for «Recorded and told»: Does the employee know it is approved?"   # bet
+    marks: [wait]
+    evidence: ["The manager's decision", "The confirmation in Teams"]
+    front: [{ actor: assistant, does: "Recorded and told" }]
+    support: [workday]
+    way: employee-self-service#recorded

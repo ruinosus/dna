@@ -1,0 +1,56 @@
+﻿{
+  "schemaVersion": "1.0.0.0",
+  "properties": {
+    "connectionReferences": {},
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "triggers": {
+        "manual": {
+          "type": "Request",
+          "kind": "Skills",
+          "inputs": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "resumo": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "actions": {
+        "Abrir_chamado": {
+          "type": "Scope",
+          "actions": {
+            "Chamar_ERP": {
+              "type": "Http",
+              "inputs": {
+                "method": "POST",
+                "uri": "https://erp.bodega-azul.example/chamados",
+                "body": "@triggerBody()"
+              }
+            }
+          }
+        },
+        "Responder": {
+          "type": "Response",
+          "kind": "Skills",
+          "runAfter": {
+            "Abrir_chamado": [
+              "Succeeded"
+            ]
+          },
+          "inputs": {
+            "statusCode": 200,
+            "body": {
+              "resultado": "@outputs('Resultado')"
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+# The team's standard, written so a run can check it. Private: it names your agents — keep it in your environment.
+format: cast-list/profile-v1
+name: Bodega Azul — atendimento
+roles:
+  orchestrator: [bodega-orquestrador]
+  specialist: "*"
+threshold: 0.7     # a pattern: in at least 70% of the agents of a role…
+min_agents: 3      # …with at least 3 agents in that role
+rules:
+  - { id: escala, role: specialist, has: "trigger:OnEscalate", says: "Todo especialista escala para humano" }
+  - { id: kpi, role: specialist, has: "declared:kpi", says: "Todo especialista tem KPI" }
+  # what the text says against how the agent is set up
+  - { id: knowledge-only, when: "text:knowledge-only", not: "setting:model-knowledge=on",
+      says: "Quem pede só o conhecimento tem o conhecimento geral desligado" }
+
+# what to look for in the text (JavaScript regular expressions; case does not matter)
+markers:
+  - { id: size, name: Tamanho da resposta, in: instructions,
+      pattern: '(no máximo|at most|up to)\s*(\d+)\s*(bullets?|frases?|sentences?)', value: "$2 $3" }
+  - { id: no-emoji, name: Sem emojis, pattern: '(sem|não use|no)\s+emojis?' }
+  - { id: knowledge-only, name: Só o conhecimento, pattern: '(somente|apenas|only)[^.]{0,40}(conhecimento|knowledge)' }
+
+# the block the team pastes in every specialist
+blocks:
+  - id: links
+    name: Formatação de links
+    text: |
+      Links:
+      - Formate links assim: [título](url), nunca a URL crua.
+      - Um link de ação vai no topo; o link da base de ajuda vai no fim.
+      - Nunca escreva as palavras «clique aqui».
+      - No máximo 3 links por resposta.
+
+# the kinds of specialist: one may be of two types; patterns are also found within each type
+types:
+  - { id: transaction, name: transação, when: { any: ["flow:*"] } }
+  - { id: guidance, name: orientação, when: { all: ["text:link-domain:*", "node:SearchAndSummarizeContent"] } }
+  - { id: triage, name: triagem, when: { any: ["trigger:OnSelectIntent"] } }
+
+focus_areas:
+  - { id: confiabilidade, name: Confiabilidade, facts: ["trigger:OnError", "node:LogCustomTelemetryEvent", "ms:rai-error-handling"] }
+ignore: ["trigger:OnConversationStart"]
+microsoft_patterns: on

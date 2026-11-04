@@ -1,0 +1,12 @@
+mcs.metadata:
+  componentName: Agente Frete
+  description: Agente conectado Bodega Azul - Frete.
+kind: TaskDialog
+modelDisplayName: Bodega Azul - Frete
+modelDescription: "Agente especialista em frete e entregas: modalidades, prazos por região e frete grátis. Use quando a categoria for Frete."
+action:
+  kind: InvokeConnectedAgentTaskAction
+  inputType: {}
+  botSchemaName: cr7b2_bodegaFrete
+  historyType:
+    kind: NoHistory

@@ -1,0 +1,11 @@
+# A solution accelerator: delivering a Copilot Studio assistant, with the gate that sends it back to be built again when
+# it does not answer well enough. Fictional. The simulation, the blueprint and the drill are lenses of the way: their
+# numbers and lines marked «# bet:» are made up — replace them with your own.
+format: opening-night/v1
+name: Entrega de um assistente
+about: Do pedido à publicação, com o gate de acerto que devolve o assistente à construção.
+lang: pt
+way: assistant-delivery.way.yaml
+sim: assistant-delivery.sim
+blueprint: assistant-delivery.blueprint.yaml
+drill: assistant-delivery.drill.yaml

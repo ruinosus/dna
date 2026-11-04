@@ -1,0 +1,5 @@
+connectionReferences:
+  - id: 5ff8574b-35b4-4aed-afda-88d178151c9b
+    connectionReferenceLogicalName: cr7b2_bodegaLojaFisica.shared_office365.shared-office365-f0fdb545-532d-4d56-a81b-286eb298a1e7
+    connectorId: /providers/Microsoft.PowerApps/apis/shared_office365
+    displayName: Office 365 Outlook

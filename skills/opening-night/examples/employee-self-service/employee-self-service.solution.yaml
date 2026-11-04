@@ -1,0 +1,12 @@
+# A solution accelerator: an employee self-service assistant with Workday, after Microsoft's public sample (MIT):
+# https://github.com/microsoft/CopilotStudioSamples/tree/main/EmployeeSelfServiceAgent
+# The simulation is written by hand (the whole service, by kind of request); the blueprint and the drill are lenses of
+# the time-off way. Every volume, time and cost, and every line marked «# bet:», is made up — replace them with your own.
+format: opening-night/v1
+name: Employee Self-Service with Workday
+about: What employees ask the assistant, what reaches a manager or HR, and what one more HR partner or better answers would change.
+lang: en
+way: employee-self-service.way.yaml
+sim: employee-self-service.sim
+blueprint: employee-self-service.blueprint.yaml
+drill: employee-self-service.drill.yaml

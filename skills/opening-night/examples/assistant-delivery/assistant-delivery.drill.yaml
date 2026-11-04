@@ -1,0 +1,38 @@
+# from: assistant-delivery.way.yaml@98b12ee8
+# Derivado de assistant-delivery.way.yaml pelo gates-and-handoffs --lens.
+# bet: as cenas são um rascunho: reescreva com o que acontece de fato quando este gate diz não.
+format: dress-rehearsal/v1
+name: "«Acerto ≥ 85%?» diz não"
+about: "Na véspera da entrega, «Acerto ≥ 85%?» do fluxo «Entrega de um assistente» diz não."
+clock: "09:00"
+impact: "dias de atraso"
+call_minutes: 30
+roles:
+  - { id: po, name: "Product Owner" }
+  - { id: dev, name: "Desenvolvimento", can: [rework-construcao] }
+  - { id: qa, name: "Qualidade", you: true, can: [decide-acerto-gate] }
+start: reproved
+scenes:
+  - id: reproved
+    says: "«Acerto ≥ 85%?» volta «Não» para o trabalho que entrega amanhã."
+    choices:
+      - { label: "Voltar para «Construção» e refazer", go: redone, minutes: 240, lost: 1, needs: rework-construcao }
+      - { label: "Chamar Qualidade para entender o que faltou", go: criteria, minutes: 30 }
+      - { label: "Seguir mesmo assim", go: worse, minutes: 10, lost: 3 }
+      - { label: "Avisar quem espera que vai atrasar", go: told, minutes: 15, notifies: true }
+  - id: told
+    says: "Quem espera já sabe do atraso. O gate continua dizendo não."
+    choices:
+      - { label: "Voltar para «Construção» e refazer", go: redone, minutes: 240, lost: 1, needs: rework-construcao }
+      - { label: "Seguir mesmo assim", go: worse, minutes: 10, lost: 3 }
+  - id: criteria
+    says: "Qualidade explica o que «Acerto ≥ 85%?» precisa: Acerto nas perguntas de teste."
+    choices:
+      - { label: "Voltar para «Construção» e refazer", go: redone, minutes: 240, lost: 1, needs: rework-construcao }
+      - { label: "Seguir mesmo assim", go: worse, minutes: 10, lost: 3 }
+  - id: redone
+    says: "«Construção» é refeito e volta a «Acerto ≥ 85%?», que diz sim. Um dia de atraso."
+    end: resolved
+  - id: worse
+    says: "Seguiu sem «Acerto ≥ 85%?»: o problema aparece em «Publicação»."
+    end: worse

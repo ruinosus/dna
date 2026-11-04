@@ -1,0 +1,93 @@
+# A solution accelerator: an employee asks the self-service assistant for time off, and Workday records it once the
+# manager approves. The scenarios are those of Microsoft's public sample (MIT):
+# https://github.com/microsoft/CopilotStudioSamples/tree/main/EmployeeSelfServiceAgent
+# The roles and the gate are illustrative: replace them with your own.
+format: stage-door/v1
+name: Time off through the self-service assistant
+lanes:
+  - id: employees
+    name: Employees
+  - id: assistant
+    name: Self-service assistant
+  - id: managers
+    name: Managers
+roles:
+  - id: employee
+    acronym: EMP
+    name: Employee
+    lane: employees
+  - id: assistant
+    acronym: ESS
+    name: Self-service assistant
+    lane: assistant
+  - id: manager
+    acronym: MGR
+    name: Manager
+    lane: managers
+phases:
+  - id: ask
+    name: Ask
+  - id: approve
+    name: Approve
+stages:
+  - id: question
+    name: Ask the assistant
+    phase: ask
+    lane: employees
+    roles: [employee]
+    question: How many days do I have, and can I take next week?
+    outputs:
+      - id: dates
+        name: The dates asked for
+  - id: balance
+    name: Read the balance in Workday
+    phase: ask
+    lane: assistant
+    roles: [assistant]
+    question: Does the employee have the days?
+    where: Workday
+    inputs:
+      - from: dates
+    outputs:
+      - id: request
+        name: A time off request in Workday
+  - id: approval
+    name: Manager reviews
+    phase: approve
+    lane: managers
+    roles: [manager]
+    question: Can the team spare them?
+    inputs:
+      - from: request
+    outputs:
+      - id: reviewed
+        name: The request reviewed against the team's calendar
+  - id: recorded
+    name: Recorded and told
+    phase: approve
+    lane: assistant
+    roles: [assistant]
+    question: Does the employee know it is approved?
+    where: Workday
+    outputs:
+      - id: confirmation
+        name: The confirmation in Teams
+        kpi: true
+gates:
+  - id: approved
+    after: approval
+    name: Approved?
+    approver: manager
+    criteria:
+      - kind: outputs
+        outputs: [reviewed]
+    results:
+      - id: yes
+        label: Approved
+        ok: true
+      - id: no
+        label: Declined
+    on_fail: question
+    outputs:
+      - id: decision
+        name: The manager's decision

@@ -1,0 +1,7 @@
+mcs.metadata:
+  componentName: Regulamento de Cupons
+  description: "Regras de uso, validade e acúmulo de cupons de desconto da Bodega Azul."
+kind: KnowledgeSourceConfiguration
+source:
+  kind: SharePointSearchSource
+  site: https://bodegaazul.sharepoint.com/sites/Marketing/Shared%20Documents/Cupons

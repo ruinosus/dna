@@ -204,13 +204,13 @@ export function blueprintOf(way, name, from, id, lang = 'en') {
     for (const s of systems) out.push(`  - { id: ${did(s)}, name: ${q(s)} }`)
   }
   out.push('moments:')
-  let afterGate = false
+  let afterGate = null // the gate just passed: what comes out of it is what the person sees while they wait
   for (const s of way.stages) {
     const phase = way.phases.find((p) => p.id === s.phase)?.name ?? s.phase
     bets.push(`what the customer does at «${s.name}»`)
     out.push(`  - id: ${did(s.id)}`, `    phase: ${q(phase)}`, `    customer: ${q(s.question ? t.customerQ(s.name, s.question) : t.customer(s.name))}   # bet`)
     if (afterGate) out.push('    marks: [wait]')
-    const ev = [...(s.outputs ?? []).map((o) => o.name)]
+    const ev = [...(afterGate?.outputs ?? []).map((o) => o.name), ...(s.outputs ?? []).map((o) => o.name)]
     if (ev.length) out.push(`    evidence: [${ev.map(q).join(', ')}]`)
     const [first, ...rest] = s.roles ?? []
     if (first) out.push(`    front: [{ actor: ${did(first)}, does: ${q(s.name)} }]`)
@@ -220,7 +220,7 @@ export function blueprintOf(way, name, from, id, lang = 'en') {
     if (backs.length) out.push(`    back: [${backs.map((r) => `{ actor: ${did(r)}, does: ${q(s.name)} }`).join(', ')}]`)
     if (s.where) out.push(`    support: [${[].concat(s.where).map(did).join(', ')}]`)
     out.push(`    way: ${did(id)}#${did(s.id)}`)
-    afterGate = Boolean(gateAfter(way, s.id))
+    afterGate = gateAfter(way, s.id) ?? null
   }
   return { text: out.join('\n') + '\n', bets }
 }

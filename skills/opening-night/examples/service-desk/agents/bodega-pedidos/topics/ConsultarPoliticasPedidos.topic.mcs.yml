@@ -1,0 +1,56 @@
+mcs.metadata:
+  componentName: Consultar Políticas de Pedidos
+  description: "Responde dúvidas sobre pedidos com base nas políticas publicadas no SharePoint."
+kind: AdaptiveDialog
+inputs:
+  - kind: AutomaticTaskInput
+    propertyName: PerguntaCliente
+    description: "A pergunta do cliente sobre pedidos, status, cancelamento ou pagamento."
+    shouldPromptUser: true
+
+modelDescription: "Responde perguntas sobre status de pedido, prazos de processamento, cancelamento antes do envio e formas de pagamento da Bodega Azul."
+beginDialog:
+  kind: OnRecognizedIntent
+  id: main
+  intent: {}
+  actions:
+    - kind: CreateSearchQuery
+      id: createSearchQuery_UGdqz4
+      userInput: =Topic.PerguntaCliente
+      result: Topic.SearchQuery
+
+    - kind: SearchAndSummarizeContent
+      id: searchContent_eeKb0X
+      autoSend: false
+      variable: Topic.SearchResult
+      userInput: =Topic.SearchQuery.SearchQuery
+      fileSearchDataSource:
+        searchFilesMode:
+          kind: DoNotSearchFiles
+
+      knowledgeSources:
+        kind: SearchSpecificKnowledgeSources
+        knowledgeSources:
+          - cr7b2_bodegaPedidos.knowledge.PoliticasPedidos
+
+      applyModelKnowledgeSetting: false
+      responseCaptureType: FullResponse
+
+    - kind: SetVariable
+      id: setVariable_0EUmtv
+      variable: Topic.Resposta
+      value: =Topic.SearchResult.Text.Content
+
+inputType:
+  properties:
+    PerguntaCliente:
+      displayName: PerguntaCliente
+      description: "A pergunta do cliente sobre pedidos, status, cancelamento ou pagamento."
+      type: String
+
+outputType:
+  properties:
+    Resposta:
+      displayName: Resposta
+      description: Resposta fundamentada na base de conhecimento do agente.
+      type: String

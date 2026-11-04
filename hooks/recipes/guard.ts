@@ -1,5 +1,6 @@
 // The recipes' guard: every recipe of a skill Claude writes or edits — a way of working, a service blueprint, an
-// incident drill, a chalk-talk lesson — is checked first by that skill's own script (its --check, or chalk-talk's build
+// incident drill, a chalk-talk lesson, an opening-night solution (its own format only: the pieces are checked by
+// /solution) — is checked first by that skill's own script (its --check, or chalk-talk's build
 // with no review), on a copy of the new text in a folder of its own, and refused with the script's messages when it
 // breaks its format, so Claude fixes it and writes again. A way or a blueprint that passes is kept for the preview pane
 // (hooks/previews/), which opens on the first one written in a session. The .sim recipes have their own guard
@@ -20,6 +21,7 @@ const RECIPES: { test: RegExp; recipe: Recipe }[] = [
   { test: /\.way\.ya?ml$/i, recipe: { what: 'way of working', skill: 'gates-and-handoffs', kind: 'way', args: (f) => [f, '--check', '--json'] } },
   { test: /\.blueprint\.ya?ml$/i, recipe: { what: 'service blueprint', skill: 'service-blueprint', kind: 'blueprint', args: (f) => [f, '--check', '--json'] } },
   { test: /\.drill\.ya?ml$/i, recipe: { what: 'incident drill', skill: 'dress-rehearsal', args: (f) => [f, '--check'] } },
+  { test: /\.solution\.ya?ml$/i, recipe: { what: 'solution', skill: 'opening-night', args: (f) => [f, '--check', '--format'] } },
   { test: /\.chalk$/i, recipe: { what: 'chalk-talk lesson', skill: 'chalk-talk', args: (f, dir) => [f, `${dir}/out.html`, '--no-review'] } },
   { test: /\.json$/i, recipe: { what: 'chalk-talk lesson', skill: 'chalk-talk', args: (f, dir) => [f, `${dir}/out.html`, '--no-review'] } },
 ]
