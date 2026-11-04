@@ -33,7 +33,7 @@ export function flowSvg(c: Checked, locale: PreviewLang): { svg: string; width: 
     nodes[n.id] = { ...n, x: 0, y: 0, w: 0, h: 0 }
   }
   const rate = M.arrival.rate
-  add({ id: 'src', kind: 'src', col: 0, title: label(M, M.arrival.item, locale), sub: `${compact(P.statedPerMin * rate.per)} per ${unitName(rate.per)}` })
+  add({ id: 'src', kind: 'src', col: 0, title: label(M, M.arrival.item, locale), sub: `${compact(P.statedPerMin * rate.per)} ${locale === 'pt-BR' ? 'por' : 'per'} ${unitName(rate.per, locale)}` })
   P.steps.forEach((st: any, i: number) => {
     const tm = st.time
     const time = (tm.k === 'e' ? '~' : '') + (tm.k === 'u' ? `${fmtDuration(tm.a)}–${fmtDuration(tm.b)}` : fmtDuration(tm.a))
@@ -75,7 +75,7 @@ export function flowSvg(c: Checked, locale: PreviewLang): { svg: string; width: 
   const parts: string[] = []
   parts.push(`<rect width="${width}" height="${height}" rx="10" fill="${C.bg}"/>`)
   parts.push(`<text x="16" y="28" font-size="15" font-weight="600" fill="${C.ink}">${esc(cut(M.name, 80))}</text>`)
-  parts.push(`<text x="16" y="46" font-size="11.5" fill="${C.muted}">${esc(c.ok ? (c.warnings.length ? `${c.warnings.length} warning(s)` : 'valid recipe') : `${c.errors.length} error(s)`)}</text>`)
+  parts.push(`<text x="16" y="46" font-size="11.5" fill="${C.muted}">${esc(c.ok ? (c.warnings.length ? (locale === 'pt-BR' ? `${c.warnings.length} aviso(s)` : `${c.warnings.length} warning(s)`) : locale === 'pt-BR' ? 'receita válida' : 'valid recipe') : locale === 'pt-BR' ? `${c.errors.length} erro(s)` : `${c.errors.length} error(s)`)}</text>`)
   parts.push(`<defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${C.edge}"/></marker><marker id="arr-ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${C.crit}"/></marker></defs>`)
   const labels: string[] = []
   for (const ed of edges) {
@@ -107,16 +107,17 @@ function compact(n: number): string {
   return n >= 100 ? Math.round(n).toLocaleString('en-US') : String(Math.round(n * 10) / 10)
 }
 
-function unitName(perMin: number): string {
-  const m: Record<string, string> = { '1': 'minute', '60': 'hour', '1440': 'day', '10080': 'week', '43200': 'month', '525600': 'year' }
-  return m[String(perMin)] ?? `${perMin} min`
+function unitName(perMin: number, locale: PreviewLang): string {
+  const en: Record<string, string> = { '1': 'minute', '60': 'hour', '1440': 'day', '10080': 'week', '43200': 'month', '525600': 'year' }
+  const pt: Record<string, string> = { '1': 'minuto', '60': 'hora', '1440': 'dia', '10080': 'semana', '43200': 'mês', '525600': 'ano' }
+  return (locale === 'pt-BR' ? pt : en)[String(perMin)] ?? `${perMin} min`
 }
 
 // The same flow as text lines, for the terminal, which draws no SVG.
 export function flowText(c: Checked, locale: PreviewLang): string[] {
   const P = c.plan, M = c.model
   const nm = (t: any) => label(M, t.e ? P.ends[t.i] : P.steps[t.i].name, locale)
-  const lines = [`${label(M, M.arrival.item, locale)} arrive → ${nm(P.entry)}`]
+  const lines = [`${label(M, M.arrival.item, locale)} ${locale === 'pt-BR' ? 'chega' : 'arrives'} → ${nm(P.entry)}`]
   P.routes.forEach((r: any, i: number) => {
     const st = P.steps[i]
     const who = st.pool >= 0 ? ` [${P.pools[st.pool].qty} × ${label(M, P.pools[st.pool].name, locale)}]` : ''

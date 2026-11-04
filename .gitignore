@@ -3,10 +3,17 @@ node_modules/
 dist/
 evals/results/
 npm/*/*.tgz
-docs/chalk-talk/examples/*.html
 dev/*/tools/sources.json
 dev/*/tools/.engine
 dev/*/tools/.lib
 npm/house-lights/skills/
 npm/house-lights/LICENSE
 .claude-plugin/types/
+# the site: made by npm run site, published to the gh-pages branch by npm run pages (never kept in main)
+docs/
+# the chalk-talk npm package's built files: made by npm run assets (npm/chalk-talk's prepack checks they are there)
+npm/chalk-talk/*.js
+npm/chalk-talk/scripts/
+npm/chalk-talk/assets/
+npm/chalk-talk/references/
+npm/chalk-talk/LICENSE

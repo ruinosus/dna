@@ -39,11 +39,12 @@ export function preview(on: On) {
       )
     }
     const c = check(doc.src)
+    const pt = locale === 'pt-BR'
     const file = doc.path.split('/').pop()
     const head = (
       <Box flexDirection="row" gap={1}>
         <Text bold>{file}</Text>
-        <Text dimColor>{c.ok ? (c.warnings.length ? `${c.warnings.length} warning(s)` : 'valid') : `${c.errors.length} error(s)`}</Text>
+        <Text dimColor>{pt ? (c.ok ? (c.warnings.length ? `${c.warnings.length} aviso(s)` : 'válida') : `${c.errors.length} erro(s)`) : c.ok ? (c.warnings.length ? `${c.warnings.length} warning(s)` : 'valid') : `${c.errors.length} error(s)`}</Text>
         <Button key="lang" label={locale === 'en' ? 'PT' : 'EN'} onPress={() => update($, lang, l => (l === 'en' ? 'pt-BR' : 'en'))} />
       </Box>
     )
@@ -65,7 +66,7 @@ export function preview(on: On) {
           {head}
           <Svg source={svg} alt={`Flow of ${c.model.name}`} width={Math.min(width, slot)} />
           {messages}
-          <Text dimColor>Run /sim for the numbers.</Text>
+          <Text dimColor>{pt ? 'Rode /sim para ver os números.' : 'Run /sim for the numbers.'}</Text>
         </Box>
       )
     }
@@ -75,7 +76,7 @@ export function preview(on: On) {
         <Text bold>{c.model.name}</Text>
         {flowText(c, locale).map(line => <Text>{line}</Text>)}
         {messages}
-        <Text dimColor>Run /sim for the numbers.</Text>
+        <Text dimColor>{pt ? 'Rode /sim para ver os números.' : 'Run /sim for the numbers.'}</Text>
       </Box>
     )
   })

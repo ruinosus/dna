@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.11.1 — 2026-11-04
+
+- **A lighter install.** What Claude Code and the Copilot clone to install the plugin went from 56 MB to about 17 MB:
+  the site moved to the `gh-pages` branch (`npm run site`, then `npm run pages`), and the chalk-talk npm package's
+  built files are made by `npm run assets` instead of kept in git (its `prepack` checks they are there). The install
+  commands do not change.
+- The chalk-talk gallery's own recipes and hand-made pictures live in `dev/chalk-talk/gallery/`; the READMEs show the
+  pictures from the published site.
+- box-office: the preview pane says its own words in Portuguese too («chega», «por hora», «receita válida», «Rode /sim
+  para ver os números»), and `--run` no longer ends a recipe with no control in a stray «·».
+
 ## 1.11.0 — 2026-11-04
 
 The seventh skill: **box-office**, a process you can watch and ask «what if».

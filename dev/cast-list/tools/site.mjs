@@ -85,7 +85,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
       <span class="meta">Português · fictional agents</span>
       <b>Bodega Azul — atendimento</b>
       <span>An orchestrator and five specialists of a made-up online shop, run with a made-up export of Application Insights. On purpose: shipping does not escalate to a person and gets no conversation history, the store logs no telemetry, coupons spells its error event another way and calls a flow that returns nothing, shipping's event did not fire in 30 days, and a few things nobody uses.</span>
-      <span class="links"><a href="examples/${ID}.html">Map</a><a href="examples/${ID}.plot.html">Stage</a><a href="examples/${ID}.playbill.html">RH</a><a href="https://github.com/ruinosus/house-lights/blob/main/docs/cast-list/examples/${ID}.diagrams.md">Diagrams (Mermaid)</a><a href="examples/${ID}.lesson.html">Lesson</a><a href="examples/${ID}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${ID}.cast.yaml" download>Cast file (.yaml)</a></span>
+      <span class="links"><a href="examples/${ID}.html">Map</a><a href="examples/${ID}.plot.html">Stage</a><a href="examples/${ID}.playbill.html">RH</a><a href="https://github.com/ruinosus/house-lights/blob/gh-pages/cast-list/examples/${ID}.diagrams.md">Diagrams (Mermaid)</a><a href="examples/${ID}.lesson.html">Lesson</a><a href="examples/${ID}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${ID}.cast.yaml" download>Cast file (.yaml)</a></span>
     </article>
   </section>
   <section>
@@ -111,7 +111,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
     <h2>The diagrams — the cast in Mermaid, for the team's docs</h2>
     <article class="card">
       <span><code>--diagrams</code> writes what was read as plain Mermaid: the topology, a sequence per call of the orchestrator, a lens per pattern and the anatomy of each type, in one Markdown document and one <code>.mmd</code> each. It shows on GitHub, in a wiki or in VS Code with nothing of ours, and draws in chalk-talk too.</span>
-      <span class="links"><a href="https://github.com/ruinosus/house-lights/blob/main/docs/cast-list/examples/${ID}.diagrams.md">The example's diagrams, on GitHub</a></span>
+      <span class="links"><a href="https://github.com/ruinosus/house-lights/blob/gh-pages/cast-list/examples/${ID}.diagrams.md">The example's diagrams, on GitHub</a></span>
     </article>
   </section>
   <section>

@@ -3,7 +3,7 @@
 <p align="center"><b>Give Claude your team's process — the PDF, the slides, what everyone just knows — and get one clear, checkable way of working.</b></p>
 
 <p align="center">
-  <img src="../../docs/gates-and-handoffs/images/feature-delivery-map.png" alt="The map of a delivery flow: phases Discovery, Delivery and Operation on top, Product, Engineering and Quality in the rows, the stages in order and two gates with who approves them" width="860">
+  <img src="https://ruinosus.github.io/house-lights/gates-and-handoffs/images/feature-delivery-map.png" alt="The map of a delivery flow: phases Discovery, Delivery and Operation on top, Product, Engineering and Quality in the rows, the stages in order and two gates with who approves them" width="860">
 </p>
 
 <p align="center">
@@ -46,8 +46,8 @@ From the one `<id>.way.yaml`:
 
 <table>
   <tr>
-    <td width="50%"><img src="../../docs/gates-and-handoffs/images/scrum-lesson.png" alt="A hand-drawn lesson of a Scrum team: Capture, Refine, Build, Accept, Release and Measure, with the Ready and Done gates"></td>
-    <td width="50%"><img src="../../docs/gates-and-handoffs/images/service-desk-map.png" alt="The map of a service desk: Customer, first level and specialists in the rows; a gate decides whether the ticket is escalated"></td>
+    <td width="50%"><img src="https://ruinosus.github.io/house-lights/gates-and-handoffs/images/scrum-lesson.png" alt="A hand-drawn lesson of a Scrum team: Capture, Refine, Build, Accept, Release and Measure, with the Ready and Done gates"></td>
+    <td width="50%"><img src="https://ruinosus.github.io/house-lights/gates-and-handoffs/images/service-desk-map.png" alt="The map of a service desk: Customer, first level and specialists in the rows; a gate decides whether the ticket is escalated"></td>
   </tr>
   <tr>
     <td>The lesson of a Scrum team: Definition of Ready and Done as gates, and where each sends the work back.</td>

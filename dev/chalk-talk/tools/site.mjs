@@ -2,7 +2,7 @@
 // of each (docs/thumbs/: the whole drawing, from the page's #snapshots mode in a headless browser) and docs/index.html
 // listing them.
 // Run after `npm run assets`: npm run site.
-import { readFileSync, writeFileSync } from 'node:fs'
+import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from '../../../kit/browser.mjs'
@@ -16,7 +16,11 @@ const repo = resolve(here, '../../..') // the house-lights repository
 const docs = join(repo, 'docs/chalk-talk')
 const player = readFileSync(join(repo, 'skills/chalk-talk/assets/player.html'), 'utf8')
 
-const sources = [join(docs, 'examples'), join(repo, 'skills/chalk-talk/references/examples')]
+// the gallery's own recipes and hand-made pictures live in dev/chalk-talk/gallery/; docs/ is made, not kept
+const gallerySrc = join(root, 'gallery')
+mkdirSync(join(docs, 'images'), { recursive: true })
+cpSync(join(gallerySrc, 'images'), join(docs, 'images'), { recursive: true })
+const sources = [join(gallerySrc, 'examples'), join(repo, 'skills/chalk-talk/references/examples')]
 const lessons = []
 for (const d of sources) {
   for (const { file, scene } of await recipesIn(d)) lessons.push({ file, scene, english: (scene.locale ?? 'pt-BR').startsWith('en') })

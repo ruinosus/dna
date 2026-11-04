@@ -5,7 +5,7 @@ what only one has, what the orchestrator passes on, which events they log and wh
 with the file and line behind every finding.</b></p>
 
 <p align="center">
-  <img src="../../docs/cast-list/images/bodega-azul-map.png" alt="Six agents of a made-up shop compared: a matrix of who has what, with a red × where one specialist does not escalate and another logs no telemetry" width="860">
+  <img src="https://ruinosus.github.io/house-lights/cast-list/images/bodega-azul-map.png" alt="Six agents of a made-up shop compared: a matrix of who has what, with a red × where one specialist does not escalate and another logs no telemetry" width="860">
 </p>
 
 <p align="center">

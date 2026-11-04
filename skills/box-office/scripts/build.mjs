@@ -118,7 +118,8 @@ if (argv.includes('--run')) {
   const unknown = Object.keys(sets).filter((k) => !(k in r.model.knobs))
   if (json) console.log(JSON.stringify({ name: r.model.name, knobs, runs: seeds.length, rows, warnings: r.diags.map((d) => d.text), ...(unknown.length ? { unknown } : {}) }, null, 2))
   else {
-    console.log(`✓ ${r.model.name} · ${seeds.length} runs · ${Date.now() - t0} ms · ${Object.entries(knobs).map(([k, v]) => `${k}=${r.model.knobs[k].pct ? `${Math.round(v * 100)}%` : v}`).join(', ')}`)
+    const set = Object.entries(knobs).map(([k, v]) => `${k}=${r.model.knobs[k].pct ? `${Math.round(v * 100)}%` : v}`).join(', ')
+    console.log(`✓ ${r.model.name} · ${seeds.length} runs · ${Date.now() - t0} ms${set ? ` · ${set}` : ''}`)
     const f = (x) => (Math.abs(x) >= 100 ? Math.round(x).toLocaleString('en-US') : x.toFixed(3))
     for (const row of rows) console.log(`  ${row.metric.padEnd(36)} median ${f(row.median).padStart(12)}   (${f(row.p10)} to ${f(row.p90)})`)
     if (unknown.length) console.log(`! ignored unknown controls: ${unknown.join(', ')}`)

@@ -89,4 +89,6 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
 </body>
 </html>
 `)
+// GitHub Pages serves the folder as it is (no Jekyll: the _-prefixed and .md files pass through)
+writeFileSync(join(repo, 'docs/.nojekyll'), '')
 console.log(`✓ docs/index.html with the ${SKILLS.length} skills`)

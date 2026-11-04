@@ -4,7 +4,7 @@
 drawing it, playing it, mapping it, comparing it or simulating it — each one an HTML file that opens offline.</b></p>
 
 <p align="center">
-  <img src="docs/chalk-talk/images/hero.gif" alt="A hand-drawn lesson drawing itself on a board, stroke by stroke" width="760">
+  <img src="dev/chalk-talk/gallery/images/hero.gif" alt="A hand-drawn lesson drawing itself on a board, stroke by stroke" width="760">
 </p>
 
 <p align="center">
@@ -32,8 +32,8 @@ In Claude Code (2.1.287 or later) the plugin also carries a **mod** for box-offi
 checked first, and `/sim` and `/sim-preview` run and show a recipe. Elsewhere the skills work without it.
 
 <p align="center">
-  <img src="docs/back-of-napkin/thumbs/pitch-pharmacy-queue.png" alt="A hand-drawn pitch ending on «pilot: 5 stores, 3 months»" width="400">
-  <img src="docs/gates-and-handoffs/images/feature-delivery-map.png" alt="A way of working as a map: stages, gates and who approves them" width="400">
+  <img src="https://ruinosus.github.io/house-lights/back-of-napkin/thumbs/pitch-pharmacy-queue.png" alt="A hand-drawn pitch ending on «pilot: 5 stores, 3 months»" width="400">
+  <img src="https://ruinosus.github.io/house-lights/gates-and-handoffs/images/feature-delivery-map.png" alt="A way of working as a map: stages, gates and who approves them" width="400">
 </p>
 
 ## Install
@@ -97,7 +97,8 @@ npm install
 npm run assets      # the generated files of each skill (chalk-talk first: the others take its engine from here)
 npm run check       # every skill's checks, and dev/house-lights: one version, the npm package, npx house-lights
 npm run typecheck
-npm run site        # docs/: a gallery per skill and the front page
+npm run site        # docs/: a gallery per skill and the front page (made here, never kept in main)
+npm run pages       # docs/ to the gh-pages branch, which GitHub Pages serves
 npm run zip         # dist/<skill>.zip for claude.ai and dist/house-lights.zip
 npm run linux       # the builds as in a cloud sandbox (Linux, root, Playwright's Chromium); needs Docker
 npm run audit       # before a push: no name from your local list in the tracked files

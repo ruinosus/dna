@@ -3,7 +3,7 @@
 <p align="center"><b>Give Claude your interviews, tickets and process notes. Get a service blueprint — what the customer lives at each moment, and who makes it happen behind.</b></p>
 
 <p align="center">
-  <img src="../../docs/service-blueprint/images/devolucao-map.png" alt="A service blueprint of a return: the line of how the customer feels dips at «waits for news — 6 days», and under it the stage, backstage and systems" width="860">
+  <img src="https://ruinosus.github.io/house-lights/service-blueprint/images/devolucao-map.png" alt="A service blueprint of a return: the line of how the customer feels dips at «waits for news — 6 days», and under it the stage, backstage and systems" width="860">
 </p>
 
 <p align="center">
@@ -42,7 +42,7 @@ research into actions with owners, and anyone who keeps hearing «on our side it
 | **The workbook** (`.xlsx`) | Summary, Blueprint, Pains and actions, Promises, Systems — for the meeting and the follow-up. |
 | **The lesson** (`.lesson.html`) | The journey walked by drawing it, moment by moment, the customer higher when they feel better — made with [chalk-talk](https://github.com/ruinosus/house-lights). |
 
-<p align="center"><img src="../../docs/service-blueprint/images/devolucao-lesson.png" alt="The lesson: the customer at each moment of a return, lower at the six days with no news; under the line of visibility, who does what" width="760"></p>
+<p align="center"><img src="https://ruinosus.github.io/house-lights/service-blueprint/images/devolucao-lesson.png" alt="The lesson: the customer at each moment of a return, lower at the six days with no news; under the line of visibility, who does what" width="760"></p>
 
 ## How a conversation goes
 

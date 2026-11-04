@@ -4,7 +4,7 @@ description: Turns how a team works — scattered in PDFs, slides, wikis or some
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing.
 metadata:
-  version: "1.11.0"
+  version: "1.11.1"
 ---
 
 # gates-and-handoffs: a team's way of working, clear and checkable

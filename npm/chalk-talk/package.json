@@ -29,6 +29,9 @@
   "bin": {
     "chalk-talk": "scripts/build.mjs"
   },
+  "scripts": {
+    "prepack": "node prepack.mjs"
+  },
   "files": [
     "player.js",
     "embed.js",

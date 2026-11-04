@@ -14,7 +14,7 @@ const repo = resolve(here, '../../..') // the house-lights repository
 const update = process.argv.includes('--update')
 const kept = join(here, 'snapshots')
 const player = readFileSync(join(repo, 'skills/chalk-talk/assets/player.html'), 'utf8')
-const sources = [join(repo, 'skills/chalk-talk/references/examples'), join(repo, 'docs/chalk-talk/examples')]
+const sources = [join(repo, 'skills/chalk-talk/references/examples'), join(repo, 'dev/chalk-talk/gallery/examples')]
 const recipes = []
 for (const d of sources) recipes.push(...(await recipesIn(d)))
 

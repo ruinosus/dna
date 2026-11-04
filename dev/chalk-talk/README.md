@@ -3,7 +3,7 @@
 <p align="center"><b>Ask Claude to explain something by drawing it — and get a hand-drawn lesson that draws itself.</b></p>
 
 <p align="center">
-  <img src="../../docs/chalk-talk/images/hero.gif" alt="A hand-drawn lesson about compound interest drawing itself stroke by stroke, chapter by chapter; then the growth rate is moved and the curve changes" width="820">
+  <img src="gallery/images/hero.gif" alt="A hand-drawn lesson about compound interest drawing itself stroke by stroke, chapter by chapter; then the growth rate is moved and the curve changes" width="820">
 </p>
 
 <p align="center">
@@ -20,24 +20,24 @@ hand.
 
 <table>
   <tr>
-    <td width="50%"><img src="../../docs/chalk-talk/images/pythagoras-ladder.png" alt="A ladder against a wall with a square drawn on each side; a² + h² = 5²"></td>
-    <td width="50%"><img src="../../docs/chalk-talk/images/web-cache.png" alt="A browser asks an app for a page; the app asks the cache, misses, queries the database and copies the answer into the cache"></td>
+    <td width="50%"><img src="gallery/images/pythagoras-ladder.png" alt="A ladder against a wall with a square drawn on each side; a² + h² = 5²"></td>
+    <td width="50%"><img src="gallery/images/web-cache.png" alt="A browser asks an app for a page; the app asks the cache, misses, queries the database and copies the answer into the cache"></td>
   </tr>
   <tr>
     <td><i>«Explain the Pythagorean theorem by drawing it, using a ladder leaning on a wall.»</i><br>Move the foot of the ladder: the blue and green squares change, their sum stays 25.</td>
     <td><i>«Can you draw how a web request with a cache works, for junior developers?»</i><br>Move the hit rate from 0 % to 90 % and watch the average time fall.</td>
   </tr>
   <tr>
-    <td width="50%"><img src="../../docs/chalk-talk/images/birthday-money.png" alt="A teenager with a $200 coin; a dashed straight line for simple interest and a red curve for compound interest that shoots up to $5,891 at age 65"></td>
-    <td width="50%"><img src="../../docs/chalk-talk/images/chalk-talk-how.png" alt="How chalk-talk works, drawn by chalk-talk: you ask Claude, Claude chooses the hook, the audience and the value to move, writes the recipe, build.mjs checks it, out comes lesson.html"></td>
+    <td width="50%"><img src="gallery/images/birthday-money.png" alt="A teenager with a $200 coin; a dashed straight line for simple interest and a red curve for compound interest that shoots up to $5,891 at age 65"></td>
+    <td width="50%"><img src="gallery/images/chalk-talk-how.png" alt="How chalk-talk works, drawn by chalk-talk: you ask Claude, Claude chooses the hook, the audience and the value to move, writes the recipe, build.mjs checks it, out comes lesson.html"></td>
   </tr>
   <tr>
     <td><i>«Explain compound interest by drawing it, for a teenager who just got birthday money.»</i><br>Interest on interest, mark by mark; move the yearly rate.</td>
     <td><i>«Explain by drawing how this very skill works.»</i><br>Yes — chalk-talk drew its own diagram. In the first build the check caught the circle crossing a label and Claude fixed it.</td>
   </tr>
   <tr>
-    <td width="50%"><img src="../../docs/chalk-talk/thumbs/moon-phases.png" alt="On a chalkboard: the Sun, the Earth and the Moon at eight places of its orbit, each half lit; on the right, the Moon as seen from Earth"></td>
-    <td width="50%"><img src="../../docs/chalk-talk/thumbs/supply-demand.png" alt="A seller and a buyer talk in balloons at a market; a demand line and the crates that arrived set the price"></td>
+    <td width="50%"><img src="https://ruinosus.github.io/house-lights/chalk-talk/thumbs/moon-phases.png" alt="On a chalkboard: the Sun, the Earth and the Moon at eight places of its orbit, each half lit; on the right, the Moon as seen from Earth"></td>
+    <td width="50%"><img src="https://ruinosus.github.io/house-lights/chalk-talk/thumbs/supply-demand.png" alt="A seller and a buyer talk in balloons at a market; a demand line and the crates that arrived set the price"></td>
   </tr>
   <tr>
     <td><i>«Explain why the Moon has phases by drawing it, for my 8th-grade science class. Make it work for the classroom.»</i><br>Claude chose the chalkboard, a question the lesson waits on, and a quiz at the end. Slide the day and the Moon goes round.</td>
@@ -46,12 +46,12 @@ hand.
 </table>
 
 **[Open the gallery](https://ruinosus.github.io/house-lights/chalk-talk/)** to play every lesson in your browser. The recipes behind
-these drawings are in [`docs/examples/`](../../docs/chalk-talk/examples). Build any of them with
-`node skills/chalk-talk/scripts/build.mjs docs/examples/web-cache.json`.
+these drawings are in [`gallery/examples/`](gallery/examples). Build any of them with
+`node skills/chalk-talk/scripts/build.mjs dev/chalk-talk/gallery/examples/web-cache.json`.
 
 ## The lesson you get
 
-<p align="center"><img src="../../docs/chalk-talk/images/player.png" alt="The player: chapters on top, the paper in the middle, Back / Next / Play all under it with the narration, the value to move, «Think about it» and the check on the right" width="820"></p>
+<p align="center"><img src="gallery/images/player.png" alt="The player: chapters on top, the paper in the middle, Back / Next / Play all under it with the narration, the value to move, «Think about it» and the check on the right" width="820"></p>
 
 - **Chapters**: it opens on the first chapter and waits. *Next* draws the next part from where it stopped, *Play all*
   draws everything; the arrow keys and Space work too.
@@ -170,7 +170,7 @@ lesson into one:
 npx chalk-talk coffee-order.mmd --svg      # → coffee-order.svg
 ```
 
-<p align="center"><img src="../../docs/chalk-talk/images/coffee-order.svg" alt="A coffee order drawn by hand, box by box and arrow by arrow: you, the cashier, the barista" width="720"></p>
+<p align="center"><img src="https://ruinosus.github.io/house-lights/chalk-talk/images/coffee-order.svg" alt="A coffee order drawn by hand, box by box and arrow by arrow: you, the cashier, the barista" width="720"></p>
 
 It plays once when the page opens and stays as the finished drawing (still from the start for someone who asked for
 less motion). It has no chapters, values or narration — link to the `.html` lesson for those. To keep the SVGs in step
@@ -276,7 +276,7 @@ skills/chalk-talk/
   scripts/pptx.mjs         the PowerPoint maker, loaded only for --pptx ┐
   scripts/contract.mjs     the recipe contract          │
   assets/player.html       the player, engine and fonts ┘ generated — do not edit
-docs/                      the images and example recipes of this page
+gallery/                   the gallery's example recipes and hand-made pictures (the site in docs/ is made from them)
 tools/                     builds the generated files, checks and packs the skill
 ```
 

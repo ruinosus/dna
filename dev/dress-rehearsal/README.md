@@ -3,7 +3,7 @@
 <p align="center"><b>Give Claude your incident runbook. Get a drill your team can play — and, at the end, what the runbook does not say.</b></p>
 
 <p align="center">
-  <img src="../../docs/dress-rehearsal/images/checkout-scene.png" alt="A drill in play: the clock at 03:14, a graph of payment errors, a message from support, three choices — one blocked until the Release team is called" width="860">
+  <img src="https://ruinosus.github.io/house-lights/dress-rehearsal/images/checkout-scene.png" alt="A drill in play: the clock at 03:14, a graph of payment errors, a message from support, three choices — one blocked until the Release team is called" width="860">
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@ At the end, a **debrief**: the timeline, how long it took to resolve and to tell
 runbook did not say** — the gaps Claude found while reading it, and the ones this game showed. Download it as Markdown
 for the post-mortem, and the improvements as a CSV for your tracker. Then fix the runbook.
 
-<p align="center"><img src="../../docs/dress-rehearsal/images/database-disk-debrief.png" alt="The debrief: 25 minutes to resolve, customers never told, the timeline, and what the runbook did not say" width="760"></p>
+<p align="center"><img src="https://ruinosus.github.io/house-lights/dress-rehearsal/images/database-disk-debrief.png" alt="The debrief: 25 minutes to resolve, customers never told, the timeline, and what the runbook did not say" width="760"></p>
 
 **For** tech leads and SREs preparing people for on-call, teams that want a «wheel of misfortune» without a game master,
 and anyone who suspects their runbook would not survive a real night.

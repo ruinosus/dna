@@ -53,7 +53,7 @@ for (const f of readdirSync(examples)) {
 }
 
 // The text and Mermaid examples of the gallery build too.
-const docs = join(skill, '../../docs/chalk-talk/examples')
+const docs = join(skill, '../../dev/chalk-talk/gallery/examples')
 for (const f of readdirSync(docs).filter((f) => /\.(chalk|mmd)$/.test(f))) {
   const r = run(join(docs, f), [join(dir, f.replace(/\.[^.]+$/, '.html'))])
   expect(r.status === 0, `${f}: ${r.stdout.trim().split('\n').filter((l) => /review/.test(l)).join(' / ') || r.stderr.trim()}`)
@@ -320,7 +320,7 @@ setTimeout(() => {
   const { pageProbe, probeScript } = await import('../../../kit/tools/checks.mjs')
   const { browser } = await import('../../../kit/browser.mjs')
   const jar = join(dir, 'coin-jar.chalk')
-  writeFileSync(jar, readFileSync(join(here, '../../../docs/chalk-talk/examples/coin-jar.chalk'), 'utf8'))
+  writeFileSync(jar, readFileSync(join(here, '../gallery/examples/coin-jar.chalk'), 'utf8'))
   if (!browser()) console.log('• no Chrome here: presenting and the PowerPoint were not checked')
   else {
     const p = run(jar, ['--present', '--no-review', '--pptx', 'all', '--slides', join(dir, 'slides'), '--slides-steps', '--settings', 'default,n-max'])

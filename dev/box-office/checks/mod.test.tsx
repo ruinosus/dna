@@ -60,7 +60,7 @@ test('an edit that breaks the recipe is refused', async ($, on) => {
   expect(JSON.stringify(out)).toContain('nowhere')
 })
 
-test('a valid write reaches the preview, as SVG on desktop and text in the terminal', async ($, on) => {
+test('a valid write reaches the preview, as SVG on desktop and text in the terminal, in EN and PT', async ($, on) => {
   engine(on)
   await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true })
   const out = await $.tool.call({ tool: 'Write', file_path: '/w/cafe.sim', content: CAFE })
@@ -72,8 +72,14 @@ test('a valid write reaches the preview, as SVG on desktop and text in the termi
   await desk.unmount()
 
   const term = await $.ui.mount({ ...PANE, surface: 'terminal' })
-  const line = await term.find({ type: 'Text', text: /arrive/ })
+  const line = await term.find({ type: 'Text', text: /arrives/ })
   expect(line?.text).toContain('order')
+  // the EN/PT switch: the pane's own words follow it, not only the labels
+  await term.press({ key: 'lang' })
+  const chega = await term.find({ type: 'Text', text: /chega/ })
+  expect(chega?.text).toContain('order')
+  const foot = await term.find({ type: 'Text', text: /Rode \/sim/ })
+  expect(foot?.text).toContain('números')
   await term.unmount()
 })
 

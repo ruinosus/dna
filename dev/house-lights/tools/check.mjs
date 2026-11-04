@@ -1,7 +1,7 @@
 // Checks what holds the seven skills together: one version in the plugin, the npm package and every SKILL.md; the npm
 // package carrying each skill's build; and npx house-lights <skill> drawing an example of each, with its exit code.
 import { execFileSync } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -49,6 +49,13 @@ for (const [s, args] of cases) {
   expect(r.status === 0 && made.length > 0, `npx house-lights ${s} draws an example (${made.join(', ') || 'nothing'})`, r.stdout + r.stderr)
 }
 rmSync(work, { recursive: true, force: true })
+
+// What Claude Code and the Copilot clone to install the plugin stays small: the site goes to the gh-pages branch and
+// the chalk-talk npm package's built files are made, not kept.
+const tracked = execFileSync('git', ['-C', repo, 'ls-files', '-z'], { encoding: 'utf8' }).split('\0').filter(Boolean)
+const kept = tracked.filter((f) => f.startsWith('docs/') || /^npm\/chalk-talk\/(?:[^/]+\.js$|scripts\/|assets\/|references\/)/.test(f))
+const mb = tracked.reduce((n, f) => n + (existsSync(join(repo, f)) ? statSync(join(repo, f)).size : 0), 0) / 1048576
+expect(!kept.length && mb < 25, `main carries only what is installed and built from (${mb.toFixed(1)} MB in ${tracked.length} files)${kept.length ? ` — not: ${kept.slice(0, 5).join(', ')}` : ''}`)
 
 // Every relative link of the front page, the README and each skill's guide points at a file that is there.
 const pages = ['docs/index.html', 'README.md', ...SKILLS.map((s) => `dev/${s}/README.md`)]
