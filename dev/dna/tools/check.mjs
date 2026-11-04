@@ -64,6 +64,46 @@ for (const [s, args] of cases) {
   expect(names.length >= 9 && !clash.length, `the mod's ${names.length} commands, none named like a skill or a command of Claude Code's own${clash.length ? ` — not: ${clash.join(', ')}` : ''}`)
 }
 
+// The docs teach DNA's header, never the format line of before (which is still read, and only named as that); the way's
+// schema asks for what the examples have (its required fields and fixed values, checked here by hand on every example)
+{
+  const OLD_IDS = /\b(stage-door\/v1|front-of-house\/v1|dress-rehearsal\/v1|cast-list\/profile-v1|cast-list\/cast-v1|opening-night\/v1)\b/
+  const docs = [
+    ...SKILLS.flatMap((s) => {
+      const dir = join(repo, 'skills', s)
+      const refs = existsSync(join(dir, 'references')) ? readdirSync(join(dir, 'references')).filter((f) => f.endsWith('.md')).map((f) => `skills/${s}/references/${f}`) : []
+      return [`skills/${s}/SKILL.md`, ...refs]
+    }),
+    ...SKILLS.map((s) => `dev/${s}/README.md`).filter((f) => existsSync(join(repo, f))),
+    ...readdirSync(join(repo, 'evals')).flatMap((e) => (existsSync(join(repo, 'evals', e, 'graders')) ? readdirSync(join(repo, 'evals', e, 'graders')).map((g) => `evals/${e}/graders/${g}`) : [])),
+  ]
+  const teach = docs.flatMap((f) => readFileSync(join(repo, f), 'utf8').split('\n').map((l, i) => [f, i + 1, l]))
+    .filter(([, , l]) => /^\s*format:\s*\S/.test(l) && OLD_IDS.test(l) || /^#+ .*\(?(format )?(stage-door|front-of-house|dress-rehearsal|cast-list|opening-night)\//.test(l) || /\(format (stage-door|front-of-house|dress-rehearsal|opening-night)\/v1\)/.test(l) || /always `opening-night\/v1`/.test(l))
+  expect(docs.length >= 20 && !teach.length, `the ${docs.length} docs teach DNA's header, not the format line of before${teach.length ? ` — not: ${teach.map(([f, n]) => `${f}:${n}`).join(', ')}` : ''}`)
+
+  const schema = JSON.parse(readFileSync(join(repo, 'skills/way-of-working/references/format.schema.json'), 'utf8'))
+  const { parse } = await import('yaml')
+  const exDir = join(repo, 'skills/way-of-working/examples')
+  const fits = (doc) => {
+    const bad = []
+    for (const k of schema.required ?? []) if (!(k in doc)) bad.push(`no ${k}`)
+    const branches = schema.anyOf ?? [{ required: [] }]
+    if (!branches.some((b) => (b.required ?? []).every((k) => k in doc))) bad.push('neither header')
+    for (const [k, v] of Object.entries(schema.properties ?? {})) if ('const' in v && k in doc && doc[k] !== v.const) bad.push(`${k} is not ${v.const}`)
+    const meta = schema.properties?.metadata
+    if (doc.metadata && meta?.required) for (const k of meta.required) if (!(k in doc.metadata)) bad.push(`no metadata.${k}`)
+    return bad
+  }
+  const off = readdirSync(exDir).filter((f) => f.endsWith('.way.yaml')).map((f) => [f, fits(parse(readFileSync(join(exDir, f), 'utf8')))]).filter(([, b]) => b.length)
+  const before = fits(parse(readFileSync(join(exDir, 'scrum.way.yaml'), 'utf8').replace(/^apiVersion: github\.com\/ruinosus\/dna\/v1\nkind: \w+\nmetadata:\n {2}name:/m, 'format: stage-door/v1\nname:')))
+  expect(!off.length && !before.length, `the way's schema asks for what the examples have, and still takes the header of before${off.length || before.length ? ` — ${JSON.stringify({ off, before })}` : ''}`)
+
+  const market = JSON.parse(readFileSync(join(repo, '.claude-plugin/marketplace.json'), 'utf8'))
+  const said = [market.description, ...market.plugins.map((p) => p.description)].join(' ')
+  const missing = SKILLS.filter((s) => !said.includes(s))
+  expect(/^DNA\b/.test(market.description) && /\bEight\b|\beight\b/.test(market.description) && !missing.length, `the marketplace says DNA, eight skills, and names each${missing.length ? ` — not: ${missing.join(', ')}` : ''} (${market.description})`)
+}
+
 // DNA's header is how a file says what it is now; every file written before it still reads: each kind, written back
 // with the format line of before, passes its skill's check
 const OLD = [

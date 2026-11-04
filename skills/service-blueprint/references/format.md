@@ -1,4 +1,4 @@
-# The blueprint file (front-of-house/v1)
+# The blueprint file (`kind: ServiceBlueprint`)
 
 ```yaml
 apiVersion: github.com/ruinosus/dna/v1

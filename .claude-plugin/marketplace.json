@@ -1,12 +1,12 @@
 {
   "name": "dna",
   "owner": { "name": "ruinosus" },
-  "description": "dna: seven skills for showing an idea to people, by drawing it or playing it.",
+  "description": "DNA — Domain Notation of Anything: eight skills for showing an idea to people, by drawing it or playing it.",
   "plugins": [
     {
       "name": "dna",
       "source": "./",
-      "description": "Teach by drawing, present, rehearse an incident, map a way of working and a customer journey, compare Copilot Studio agents, simulate a process."
+      "description": "Eight skills for showing an idea to people: teach it by drawing (visual-explainer), present it (visual-pitch), rehearse an incident (incident-drill), map a team's way of working (way-of-working) and a customer journey (service-blueprint), compare Copilot Studio agents (agent-review), simulate a process to ask «what if» (process-simulation), and put the whole process together as one solution (solution) — with a mod that checks each recipe as Claude writes it."
     }
   ]
 }

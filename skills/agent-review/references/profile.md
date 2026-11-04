@@ -1,12 +1,14 @@
-# The profile — `cast-list/profile-v1`
+# The profile — `kind: AgentStandard`
 
 The team's standard, written so a run can check it. **Private**: it names the team's agents. Pass it with
 `--profile <file>`; with none, the defaults below hold. A field that is not one of these (a typo) is an error with its
 line, so a misspelled `treshold` never goes unnoticed.
 
 ```yaml
-format: cast-list/profile-v1
-name: Customer service agents          # the title of the map and the lesson
+apiVersion: github.com/ruinosus/dna/v1
+kind: AgentStandard
+metadata:
+  name: Customer service agents          # the title of the map and the lesson
 roles:
   orchestrator: [main-orchestrator]    # agent folders by name, or "*"
   specialist: "*"                      # everyone not named elsewhere

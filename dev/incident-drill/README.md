@@ -74,8 +74,10 @@ Skills (code execution on). **Claude API**: the same zip with the Skills API. **
 ## The file
 
 ```yaml
-format: dress-rehearsal/v1
-name: Checkout down at 3 a.m.
+apiVersion: github.com/ruinosus/dna/v1
+kind: IncidentDrill
+metadata:
+  name: Checkout down at 3 a.m.
 from: runbooks/checkout.md          # the game shows each passage a choice follows
 clock: "03:12"
 impact: lost orders

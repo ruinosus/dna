@@ -107,8 +107,10 @@ Skills (code execution on). **Claude API**: the same zip with the Skills API. **
 ## The file
 
 ```yaml
-format: stage-door/v1
-name: Scrum team
+apiVersion: github.com/ruinosus/dna/v1
+kind: WayOfWorking
+metadata:
+  name: Scrum team
 lanes:
   - { id: product, name: Product, color: prod }
   - { id: team, name: Development team, color: tech }

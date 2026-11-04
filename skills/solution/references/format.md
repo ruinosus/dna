@@ -1,11 +1,13 @@
-# The solution file (opening-night/v1)
+# The solution file (`kind: Solution`)
 
-One `key: value` per line; `#` starts a comment; a value may be in quotes. Paths are relative to the solution file.
+One `key: value` per line (but `metadata:`, whose `name` is indented under it); `#` starts a comment; a value may be in
+quotes. Paths are relative to the solution file.
 
 | Field | What | Read by |
 |---|---|---|
-| `format` | always `opening-night/v1` | — |
-| `name` | the solution's name, as people say it | the page's title |
+| `apiVersion` | always `github.com/ruinosus/dna/v1` | — |
+| `kind` | always `Solution` | — |
+| `metadata.name` | the solution's name, as people say it | the page's title |
 | `about` | one or two sentences: what process, from where to where | the page |
 | `lang` | `en` (default) or `pt`: the page and the messages | every piece's page |
 | `way` | the way of working, `<id>.way.yaml` — the source of the lenses | way-of-working |
@@ -17,7 +19,8 @@ One `key: value` per line; `#` starts a comment; a value may be in quotes. Paths
 | `lesson` | the idea explained by drawing, `.chalk`, `.json` or `.mmd` | visual-explainer |
 
 Every piece is optional; a solution names at least one. A field that is not one of these, or one written twice, is an
-error with its line.
+error with its line. A file of before (`format: opening-night/v1` and a top-level `name`) is still read; `--upgrade`
+rewrites its header.
 
 ## Lenses
 

@@ -4,7 +4,7 @@ description: Puts one process together as a solution — the way of working, the
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Each piece is checked and drawn by its own dna skill, so it works fully where the other skills are beside it (the plugin, the npm package); alone, it checks the solution file and lists the pieces. In Claude Code the dna mod adds /solution.
 metadata:
-  version: "2.0.0"
+  version: "2.0.1"
 ---
 
 # solution: a process, every piece together
@@ -35,8 +35,10 @@ When they already have pieces (a `.way.yaml`, a `.sim`, a folder of cloned agent
 `references/format.md` has every field. In short:
 
 ```yaml
-format: opening-night/v1
-name: Central de atendimento
+apiVersion: github.com/ruinosus/dna/v1
+kind: Solution
+metadata:
+  name: Central de atendimento
 about: Do chamado do cliente ao encerramento.
 lang: pt                      # en (default) or pt: the page and the messages
 way: service-desk.way.yaml    # the process (way-of-working)

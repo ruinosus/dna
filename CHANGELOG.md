@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.0.1 — 2026-11-04
+
+What the installed 2.0.0 still said from before DNA, found by testing it from the marketplace.
+
+- **The way's schema takes DNA's header.** `way-of-working/references/format.schema.json` required
+  `format: stage-door/v1`, so an editor that validates by it flagged the skill's own examples. It now asks for
+  `apiVersion`, `kind: WayOfWorking` and `metadata.name`, and still takes the header of before (`format` and a top-level
+  `name`).
+- **The docs teach DNA's header.** The solution's SKILL.md and format, agent-review's review file and profile,
+  incident-drill's format and the READMEs showed the `format:` line of before as the way to write a file; they now show
+  `apiVersion`, `kind` and `metadata.name`. Files written before still read, and `--upgrade` still rewrites them.
+- **The marketplace says DNA.** Its description said «seven skills» and left solution out; it now matches the plugin's.
+- A check fails if a doc teaches a header of before, if the way's schema does not fit the examples, or if the
+  marketplace stops naming the eight skills.
+
 ## npm @ruinosus/visual-explainer 0.20.1 — 2026-11-04
 
 - **The business look on a light page.** `@ruinosus/visual-explainer/mount` (VS Code's preview, Docusaurus, any page

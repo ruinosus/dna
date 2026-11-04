@@ -6,8 +6,10 @@ drill (incident-drill), the Copilot Studio agents (agent-review), the lesson tha
 short file beside the pieces:
 
 ```yaml
-format: opening-night/v1
-name: Central de atendimento
+apiVersion: github.com/ruinosus/dna/v1
+kind: Solution
+metadata:
+  name: Central de atendimento
 about: Do chamado do cliente ao encerramento.
 lang: pt
 way: service-desk.way.yaml

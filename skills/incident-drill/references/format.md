@@ -1,8 +1,10 @@
-# The drill file (dress-rehearsal/v1)
+# The drill file (`kind: IncidentDrill`)
 
 ```yaml
-format: dress-rehearsal/v1
-name: Checkout down at 3 a.m.
+apiVersion: github.com/ruinosus/dna/v1
+kind: IncidentDrill
+metadata:
+  name: Checkout down at 3 a.m.
 from: runbooks/checkout.md          # the runbook, beside the drill: its passages show in the game
 about: Payments start failing at night, right after a deploy.
 clock: "03:12"                      # when the player comes in (HH:MM)

@@ -1,23 +1,49 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "stage-door/v1",
-  "title": "A way of working (stage-door/v1)",
+  "$id": "github.com/ruinosus/dna/v1/WayOfWorking",
+  "title": "A way of working (kind: WayOfWorking)",
   "description": "The .way.yaml file: who leads, the phases, the stages in order, the gates and who approves them. scripts/build.mjs checks it by code; each problem says its line.",
   "type": "object",
   "required": [
-    "format",
-    "name",
     "lanes",
     "phases",
     "stages"
   ],
-  "properties": {
-    "format": {
-      "const": "stage-door/v1"
+  "anyOf": [
+    {
+      "required": [
+        "apiVersion",
+        "kind",
+        "metadata"
+      ]
     },
-    "name": {
-      "type": "string",
-      "maxLength": 80
+    {
+      "required": [
+        "format",
+        "name"
+      ]
+    }
+  ],
+  "properties": {
+    "apiVersion": {
+      "description": "DNA's header: what the file is.",
+      "const": "github.com/ruinosus/dna/v1"
+    },
+    "kind": {
+      "const": "WayOfWorking"
+    },
+    "metadata": {
+      "type": "object",
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 80
+        }
+      }
     },
     "lanes": {
       "description": "Who leads stages: a role, a team or an area — never a person. In the order they appear on the map.",
@@ -517,6 +543,15 @@
           }
         }
       }
+    },
+    "format": {
+      "const": "stage-door/v1",
+      "description": "The header of before DNA, still read (with a top-level name); --upgrade rewrites it as apiVersion, kind and metadata."
+    },
+    "name": {
+      "type": "string",
+      "maxLength": 80,
+      "description": "With format: the name of before; DNA puts it in metadata.name."
     }
   },
   "$defs": {

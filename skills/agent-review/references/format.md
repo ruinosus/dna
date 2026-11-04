@@ -1,14 +1,16 @@
 # The review file and the facts
 
-## `<id>.review.yaml` — `cast-list/cast-v1`
+## `<id>.review.yaml` — `kind: AgentReview`
 
 What people said about the agents and what was decided. `scripts/build.mjs` writes it on the first run and keeps it
 up to date (it is read again on every run); its comments and layout stay. Edit it by hand, or fill the workbook and read
 it back with `--from` / `--take`. A problem in it is an error with its line.
 
 ```yaml
-format: cast-list/cast-v1
-name: Customer service agents
+apiVersion: github.com/ruinosus/dna/v1
+kind: AgentReview
+metadata:
+  name: Customer service agents
 agents:                      # the roles of the last run (an agent the profile does not name keeps its role here)
   - { id: main-orchestrator, role: orchestrator }
   - { id: returns, role: specialist, types: [ transaction ] }   # types a person gives win over the profile's
