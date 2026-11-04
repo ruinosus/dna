@@ -4,7 +4,7 @@ description: Compares a team's Copilot Studio agents with each other, from the f
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing. The Microsoft skills for Copilot Studio are recommended, not needed.
 metadata:
-  version: "1.14.1"
+  version: "1.15.0"
 ---
 
 # cast-list: what the agents have in common, and who is off it
@@ -223,7 +223,8 @@ use them to explain a kind or a reference pattern; cast-list works without them.
 
 ## In Claude Code
 
-With the house-lights plugin, `/cast <agents-folder> [--lang pt]` runs the comparison (`--check`, nothing written) and
+With the house-lights plugin, `/cast <agents-folder> [--profile <team>.cast.yaml] [--lang pt]` runs the comparison (`--check`,
+nothing written) — with the profile given, or the only one beside the agents (it says which; with two, it asks) — and
 shows the summary and «to look at» in a pane, a button per group. After it, when an agent's `.mcs.yml` in that folder
 is written or edited, the comparison runs again and a toast says what came to look at or went away; the edit is never
 refused.

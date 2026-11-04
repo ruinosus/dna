@@ -3,7 +3,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On } from 'claude-code'
 
-import { check, diagLines, fmtMetric, metricName, metricValue, quant, runOne, seedsFor } from './core'
+import { check, diagLines, knobText, runMetrics } from './core'
 import { pathOf } from '../recipes/run'
 
 const last = atom({ plugin: 'house-lights', key: 'last' } as const, null, { shape: 'last-1' })
@@ -47,37 +47,18 @@ export function simCommand(on: On) {
     if (!c.ok) return { text: `${doc.path} has errors:\n` + diagLines(c).join('\n') }
 
     const unknown = Object.keys(sets).filter(k => !(k in c.model.knobs))
-    const list = seedsFor(c.model, c.plan, seeds)
-    const started = await $.clock.now()
-    const values: number[][] = c.model.shows.map(() => [])
-    let done = 0
-    for (const s of list) {
-      const res = runOne(c.plan, s)
-      c.model.shows.forEach((m: any, i: number) => values[i]?.push(metricValue(m, res)))
-      done++
-      if ((await $.clock.now()) - started > BUDGET_MS) break
-    }
-    const ms = Math.round((await $.clock.now()) - started)
+    const r = await runMetrics(() => $.clock.now(), c, seeds, BUDGET_MS)
     const at = await $.clock.now()
     await update($, last, () => ({ path: doc.path as string, src: doc.src as string, at }))
 
-    const knobs = c.model.knobOrder.map((k: string) => {
-      const K = c.model.knobs[k]
-      const v = k in sets ? sets[k] : K.init
-      return `${k}=${K.pct ? Math.round(v * 100) + '%' : v}`
-    })
-    const rows = c.model.shows.map((m: any, i: number) => {
-      const v = (values[i] ?? []).sort((a, b) => a - b)
-      const f = (x: number) => fmtMetric(m, x, c.plan.currency)
-      return `  ${metricName(m).padEnd(34)} ${f(quant(v, 0.5)).padStart(14)}   (${f(quant(v, 0.1))} to ${f(quant(v, 0.9))})`
-    })
-    const head = `${c.model.name} · ${done} run${done === 1 ? '' : 's'} · ${ms} ms` + (knobs.length ? ` · ${knobs.join(', ')}` : '')
+    const knobs = c.model.knobOrder.map((k: string) => `${k}=${knobText(c.model.knobs[k], k in sets ? sets[k]! : c.model.knobs[k].init)}`)
+    const head = `${c.model.name} · ${r.done} run${r.done === 1 ? '' : 's'} · ${r.ms} ms` + (knobs.length ? ` · ${knobs.join(', ')}` : '')
     const notes = [
-      ...(done < list.length ? [`stopped after ${done} of ${list.length} runs to stay within the time limit`] : []),
+      ...(r.done < r.total ? [`stopped after ${r.done} of ${r.total} runs to stay within the time limit`] : []),
       ...(unknown.length ? [`ignored unknown controls: ${unknown.join(', ')}`] : []),
       ...c.warnings.map(d => `warn ${d.text}`),
     ]
-    const text = [head, '  metric                             median           (p10 to p90)', ...rows, ...notes.map(n => '  ' + n)].join('\n')
+    const text = [head, '  metric                             median           (p10 to p90)', ...r.rows, ...notes.map(n => '  ' + n)].join('\n')
     return { text, context: [`The person ran /sim on ${doc.path}. Results:\n${text}`] }
   })
 }

@@ -100,3 +100,35 @@ export function metricName(m: any): string {
 export function diagLines(c: Checked): string[] {
   return [...c.errors.map(d => `error  ${d.text}`), ...c.warnings.map(d => `warn   ${d.text}`)]
 }
+
+export type Ran = { rows: string[]; done: number; total: number; ms: number }
+
+/** Runs a checked recipe over its seeds, within the time budget, and gives a line per metric: the median and the p10 to
+ * p90 range. /sim and the preview's controls both run through here. */
+export async function runMetrics(now: () => Promise<number>, c: Checked, seeds?: number, budgetMs = 7000): Promise<Ran> {
+  const list = seedsFor(c.model, c.plan, seeds)
+  const started = await now()
+  const values: number[][] = c.model.shows.map(() => [])
+  let done = 0
+  for (const s of list) {
+    const res = runOne(c.plan, s)
+    c.model.shows.forEach((m: any, i: number) => values[i]?.push(metricValue(m, res)))
+    done++
+    if ((await now()) - started > budgetMs) break
+  }
+  const rows = c.model.shows.map((m: any, i: number) => {
+    const v = (values[i] ?? []).sort((a, b) => a - b)
+    const f = (x: number) => fmtMetric(m, x, c.plan.currency)
+    return `  ${metricName(m).padEnd(34)} ${f(quant(v, 0.5)).padStart(14)}   (${f(quant(v, 0.1))} to ${f(quant(v, 0.9))})`
+  })
+  return { rows, done, total: list.length, ms: Math.round((await now()) - started) }
+}
+
+/** A control's value one step up or down: a tenth of its range (5 points for a share), whole for a count, kept in range. */
+export function stepKnob(K: { min: number; max: number; pct: boolean }, v: number, dir: 1 | -1): number {
+  const step = K.pct ? 0.05 : Math.max(1, Math.round((K.max - K.min) / 10))
+  const next = Math.min(K.max, Math.max(K.min, v + dir * step))
+  return K.pct ? Math.round(next * 100) / 100 : next
+}
+
+export const knobText = (K: { pct: boolean }, v: number) => (K.pct ? `${Math.round(v * 100)}%` : String(v))

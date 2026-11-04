@@ -99,3 +99,22 @@ test('/sim reports errors instead of running', async ($, on) => {
   const out = await $.command.run({ command: 'sim', args: 'bad.sim' } as any)
   expect(out.text).toContain('has errors')
 })
+
+test('the preview\'s controls: + runs the recipe again with the new value and shows the numbers; back to the recipe runs its own values', async ($, on) => {
+  engine(on)
+  await $.session.start({ cwd: '/', surface: 'terminal', isInteractive: true })
+  await $.tool.call({ tool: 'Write', file_path: '/w/cafe.sim', content: CAFE })
+  const term = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  expect((await term.find({ type: 'Text', text: /baristas =/ }))?.text).toBe('baristas = 2 (recipe)')
+  expect((await term.find({ type: 'Text', text: /or move a control/ }))?.text).toBeTruthy()
+  await term.press({ key: 'k+:baristas' })
+  expect((await term.find({ type: 'Text', text: /baristas =/ }))?.text).toBe('baristas = 3')
+  expect((await term.find({ type: 'Text', text: /wait p90 at order/ }))?.text).toMatch(/\(.+ to .+\)/)
+  await term.press({ key: 'k+:baristas' })
+  await term.press({ key: 'k+:baristas' }) // never past the range (1..4)
+  expect((await term.find({ type: 'Text', text: /baristas =/ }))?.text).toBe('baristas = 4')
+  await term.press({ key: 'k0' })
+  expect((await term.find({ type: 'Text', text: /baristas =/ }))?.text).toBe('baristas = 2 (recipe)')
+  expect((await term.find({ type: 'Text', text: /wait p90 at order/ }))?.text).toMatch(/\(.+ to .+\)/) // the recipe's own numbers
+  await term.unmount()
+})

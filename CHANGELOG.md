@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.15.0 — 2026-11-04
+
+- **`/cast --profile <file>`** compares the agents with the team's profile, as `--all --profile` does: the rules, the
+  roles, the threshold. With none given, the only profile (`format: cast-list/profile-v1`) in the agents' folder or the
+  one above it is used, and the reply says which; with two or more, it lists them and asks. An agent edited after
+  compares again with the same profile.
+- **The `.sim` preview's controls:** a −/+ beside each `knob` runs the recipe again with the new value (a tenth of the
+  range, 5 points for a share, never past it) and shows each metric's median and p10 to p90 under the flow; «Back to the
+  recipe» runs it with its own values. The numbers stay with the recipe until it is written again.
+- `/sim` and the preview share one run (`runMetrics`); the mod's tests are 27.
+
 ## 1.14.1 — 2026-11-04
 
 - **The mod's commands take a path typed with `~`** (`/drill ~/drills/checkout.drill.yaml`): no shell expands it for

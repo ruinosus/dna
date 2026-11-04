@@ -4,7 +4,7 @@ description: Turns a process — what arrives, where it goes, who handles it, wh
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. In Claude Code (2.1.287 or later) the house-lights mod also checks every .sim as it is written and adds /sim and /sim-preview.
 metadata:
-  version: "1.14.1"
+  version: "1.15.0"
 ---
 
 # box-office: a process you can watch, and ask «what if»
@@ -72,4 +72,5 @@ The keywords, units, weekdays and months change; the ids and labels do not; the 
 
 With the house-lights plugin, the mod checks every `.sim` you write or edit: a recipe with errors is refused with the
 validator's messages — fix them and write it again; warnings pass with a toast. `/sim [file.sim] [--seeds N]
-[--set knob=value]` runs it at once and gives you the same numbers; `/sim-preview [file.sim]` opens a pane with the flow.
+[--set knob=value]` runs it at once and gives you the same numbers; `/sim-preview [file.sim]` opens a pane with the flow and a −/+ for each
+control: a press runs the recipe again with the new value and shows the numbers.

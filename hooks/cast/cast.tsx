@@ -35,11 +35,26 @@ async function folderOf($: EngineInterface, given: string): Promise<string | und
   return undefined
 }
 
-async function compare($: EngineInterface, folder: string, lang: 'en' | 'pt') {
-  const run = await $.process.run(['node', scriptOf($, 'cast-list'), folder, '--check', '--lang', lang], { timeoutMs: 7000 })
+/** The team's profiles (format cast-list/profile-v1) beside the agents: in the folder and in the one above it. */
+async function profilesNear($: EngineInterface, folder: string): Promise<string[]> {
+  const found: string[] = []
+  const up = folder.replace(/\/+$/, '').split('/').slice(0, -1).join('/') || '.'
+  for (const dir of folder === '.' ? ['.'] : [folder, up]) {
+    for (const e of await $.fs.list(dir).catch(() => [])) {
+      if (e.kind !== 'file' || !/\.cast\.ya?ml$/i.test(e.name)) continue
+      const path = `${dir.replace(/\/+$/, '')}/${e.name}`
+      const text = await $.fs.read(path).catch(() => '')
+      if (/^format:\s*cast-list\/profile-v1\b/m.test(String(text)) && !found.includes(path)) found.push(path)
+    }
+  }
+  return found
+}
+
+async function compare($: EngineInterface, folder: string, lang: 'en' | 'pt', profile?: string) {
+  const run = await $.process.run(['node', scriptOf($, 'cast-list'), folder, '--check', '--lang', lang, ...(profile ? ['--profile', profile] : [])], { timeoutMs: 7000 })
   if (run.exitCode !== 0) return { error: (run.stderr || run.stdout).trim().split('\n').slice(0, 6).join('\n') }
   const real = (await $.fs.stat(folder, { resolve: true }).catch(() => undefined))?.realPath ?? folder
-  return { doc: { folder: real, lang, ...parseCast(run.stdout), at: await $.clock.now() } }
+  return { doc: { folder: real, lang, ...(profile ? { profile } : {}), ...parseCast(run.stdout), at: await $.clock.now() } }
 }
 
 const count = (gs: CastGroup[]) => gs.reduce((n, g) => n + g.looks.length, 0)
@@ -48,7 +63,7 @@ const count = (gs: CastGroup[]) => gs.reduce((n, g) => n + g.looks.length, 0)
 async function after($: EngineInterface, path: string) {
   const doc = await read($, cast)
   if (!doc || !/\.mcs\.ya?ml$/i.test(path) || !path.startsWith(`${doc.folder}/`)) return
-  const r = await compare($, doc.folder, doc.lang)
+  const r = await compare($, doc.folder, doc.lang, doc.profile)
   if ('error' in r) return
   const before = new Set(doc.groups.flatMap((g) => g.looks))
   const now = r.doc.groups.flatMap((g) => g.looks)
@@ -64,16 +79,35 @@ export function castCommand(on: On) {
   on('command.run', { command: 'cast' }, async ($, e) => {
     const args = e.args.trim().split(/\s+/).filter(Boolean)
     const lang = args.includes('--lang') && args[args.indexOf('--lang') + 1] === 'pt' ? 'pt' : 'en'
-    const given = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--lang')[0] ?? ''
+    const flag = (name: string) => (args.includes(name) ? args[args.indexOf(name) + 1] : undefined)
+    const given = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--lang' && args[i - 1] !== '--profile')[0] ?? ''
     const folder = await folderOf($, given)
-    if (!folder) return { text: `name a folder of cloned agents, for example /cast agents/ --lang pt` }
+    if (!folder) return { text: `name a folder of cloned agents, for example /cast agents/ --profile team.cast.yaml --lang pt` }
     if (!(await $.fs.exists(folder))) return { text: `could not read ${given}: no such folder` }
-    const r = await compare($, folder, lang).catch((err) => ({ error: String(err) }))
+    // the team's profile: the one given, or the only one beside the agents (said so); two or more, the person chooses
+    let profile: string | undefined
+    let note = ''
+    const typed = flag('--profile')
+    if (typed) {
+      profile = await pathOf($, typed)
+      if (!(await $.fs.exists(profile))) return { text: `could not read ${typed}: no such file` }
+    } else if (!given && (await read($, cast))?.profile) {
+      profile = (await read($, cast))!.profile
+    } else {
+      const near = await profilesNear($, folder)
+      if (near.length === 1) {
+        profile = near[0]
+        note = lang === 'pt' ? `perfil: ${profile} (o único ao lado dos agentes)` : `profile: ${profile} (the only one beside the agents)`
+      } else if (near.length > 1) {
+        return { text: `${lang === 'pt' ? 'há mais de um perfil; escolha com --profile' : 'there is more than one profile; choose with --profile'}:\n${near.map((p) => `  ${p}`).join('\n')}` }
+      }
+    }
+    const r = await compare($, folder, lang, profile).catch((err) => ({ error: String(err) }))
     if ('error' in r) return { text: `cast-list could not compare ${folder}:\n${r.error}` }
     await update($, cast, () => r.doc)
     await update($, openGroup, () => '')
     await $.ui.open({ id: CAST_PANE, title: 'cast-list' })
-    const text = [...r.doc.summary, ...r.doc.groups.map((g) => `▸ ${g.name} · ${g.looks.length}`)].join('\n')
+    const text = [...(note ? [note] : []), ...r.doc.summary, ...r.doc.groups.map((g) => `▸ ${g.name} · ${g.looks.length}`)].join('\n')
     return { text, context: [`The person ran /cast on ${folder}. cast-list says:\n${text}`] }
   })
 

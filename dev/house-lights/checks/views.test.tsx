@@ -25,8 +25,8 @@ const CAST1 = '✓ 6 no elenco: 1 orquestrador, 5 especialistas\n✓ 38 padrões
 const CAST2 = CAST1.replace('▸ Fora do padrão · 2', '▸ Fora do padrão · 3') + ''
 const CAST2_FULL = CAST2.replace('! para olhar: 1 especialista não registra telemetria\n', '! para olhar: 1 especialista não registra telemetria\n! para olhar: bodega-pedidos não tem histórico\n')
 
-function engine(on: any, opts: { toasts?: string[]; cast?: () => string } = {}) {
-  const files: Record<string, string> = { '/repo/team.way.yaml': 'way', '/repo/gym.blueprint.yaml': 'blueprint' }
+function engine(on: any, opts: { toasts?: string[]; cast?: () => string; runs?: string[][]; listed?: Record<string, string[]>; files?: Record<string, string> } = {}) {
+  const files: Record<string, string> = { '/repo/team.way.yaml': 'way', '/repo/gym.blueprint.yaml': 'blueprint', ...(opts.files ?? {}) }
   on('command.register', (_: any, e: any) => ({ value: { command: e.name } }))
   on('ui.open', () => ({ value: { isPlaced: true } }))
   on('ui.toast', (_: any, e: any) => {
@@ -41,10 +41,11 @@ function engine(on: any, opts: { toasts?: string[]; cast?: () => string } = {}) 
     return { value: undefined }
   })
   on('fs.exists', () => ({ value: true }))
-  on('fs.list', () => ({ value: [] }))
+  on('fs.list', (_: any, e: any) => ({ value: (opts.listed?.[e.path] ?? []).map((name) => ({ name, kind: 'file' })) }))
   on('fs.stat', (_: any, e: any) => ({ value: { kind: 'dir', size: 0, mtimeMs: 0, isLink: false, realPath: e.path.startsWith('/') ? e.path : `/repo/${e.path.replace(/\/$/, '')}` } }))
   on('process.run', (_: any, e: any) => {
     const argv: string[] = [...e.argv]
+    opts.runs?.push(argv)
     if (argv[0] !== 'node') return { value: { exitCode: 0, stdout: '', stderr: '' } }
     if (argv[1]!.includes('/cast-list/')) return { value: { exitCode: 0, stdout: opts.cast ? opts.cast() : CAST1, stderr: '' } }
     const json = argv[1]!.includes('/gates-and-handoffs/') ? WAY : argv[1]!.includes('/service-blueprint/') ? BLUEPRINT : undefined
@@ -124,4 +125,32 @@ test('/way-preview and /cast take a path typed with ~', async ($, on) => {
   expect(JSON.stringify(w)).toContain('could not read /home/me/team.way.yaml') // read at the home folder (not in the fake)
   const c = await $.command.run({ command: 'cast', args: '~/agents --lang pt' } as any)
   expect(JSON.stringify(c)).toContain('▸ Fora do padrão · 2')
+})
+
+const PROFILE = 'format: cast-list/profile-v1\nname: Bodega Azul\n'
+const CASTFILE = 'format: cast-list/cast-v1\nname: Bodega Azul\n'
+
+test('/cast passes the team profile: the one given, or the only one beside the agents, and asks when there are two', async ($, on) => {
+  const runs: string[][] = []
+  const listed: Record<string, string[]> = { '/repo/agents': [], '/repo': ['profile.cast.yaml', 'agents.cast.yaml'] }
+  const files = { '/repo/profile.cast.yaml': PROFILE, '/repo/agents.cast.yaml': CASTFILE, '/repo/other.cast.yaml': PROFILE }
+  engine(on, { runs, listed, files })
+  await start($)
+  const given = await $.command.run({ command: 'cast', args: '/repo/agents --profile ~/team.cast.yaml' } as any)
+  expect(JSON.stringify(given)).toContain('Fora do padrão')
+  expect(runs.at(-1)).toEqual(expect.arrayContaining(['--profile', '/home/me/team.cast.yaml']))
+  // none given: the only profile beside the agents (the cast file of decisions is not a profile), said so
+  const found = await $.command.run({ command: 'cast', args: '/repo/agents --lang pt' } as any)
+  expect(JSON.stringify(found)).toContain('perfil: /repo/profile.cast.yaml (o único ao lado dos agentes)')
+  expect(runs.at(-1)).toEqual(expect.arrayContaining(['--profile', '/repo/profile.cast.yaml']))
+  // an edit compares again with the same profile
+  await $.tool.call({ tool: 'Write', file_path: '/repo/agents/bodega-frete/agent.mcs.yml', content: 'x' })
+  expect(runs.at(-1)).toEqual(expect.arrayContaining(['--profile', '/repo/profile.cast.yaml']))
+  // two profiles: the person chooses, nothing runs
+  listed['/repo'] = ['profile.cast.yaml', 'other.cast.yaml']
+  const before = runs.length
+  const two = JSON.stringify(await $.command.run({ command: 'cast', args: '/repo/agents' } as any))
+  expect(two).toContain('there is more than one profile; choose with --profile')
+  expect(two).toContain('/repo/other.cast.yaml')
+  expect(runs.length).toBe(before)
 })
