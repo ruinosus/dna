@@ -91,6 +91,39 @@ else {
   ok(r.columns === 5 && r.pending === false && r.fonts === true && r.en === 'en' && !r.errs?.length, 'the three scenarios compared to the end, the fonts inside, EN at a click, no error', JSON.stringify(r))
 }
 
+// a run's receipt, and the attester that checks it (DNA 2.1.0: the simulation as an OKF Attested Computation)
+{
+  const ess = join(repo, 'skills/solution/examples/employee-self-service/employee-self-service.sim')
+  const receipt = join(work, 'receipt.json')
+  const plain = run(ess, '--run', '--seeds', '3', '--set', 'hr_partners=14', '--json')
+  const r = run(ess, '--run', '--seeds', '3', '--set', 'hr_partners=14', '--receipt', receipt)
+  const got = existsSync(receipt) ? JSON.parse(readFileSync(receipt, 'utf8')) : {}
+  ok(r.status === 0 && got.format === 'dna/process-simulation/receipt-v1' && /^[0-9a-f]{64}$/.test(got.recipe_sha256 ?? '') &&
+     got.engine === `dna/process-simulation/${release}` && got.seed === 11 && got.runs === 3 && got.set?.hr_partners === 14 &&
+     JSON.stringify(got.rows) === JSON.stringify(JSON.parse(plain.stdout).rows),
+     '--receipt writes the run: the recipe\'s sha256, the engine, the seed, the runs, the controls and the same numbers', r.stdout + r.stderr + JSON.stringify(got).slice(0, 300))
+  const attest = (rc, ...more) => { const f = join(work, `r-${Math.random().toString(36).slice(2)}.json`); writeFileSync(f, JSON.stringify(rc)); return run(ess, '--attest', f, ...more) }
+  const good = attest(got)
+  ok(good.status === 0 && /^✓ attested: Employee Self-Service with Workday, 4 metrics, seed 11, 3 runs/m.test(good.stdout), '--attest confirms a good receipt', good.stdout + good.stderr)
+  const j = attest(got, '--json')
+  const v = j.status === 0 ? JSON.parse(j.stdout) : {}
+  ok(v.format === 'dna/process-simulation/verdict-v1' && v.ok === true && v.checked?.length === 4, '--attest --json gives the verdict as a document', j.stdout + j.stderr)
+  const bad = [
+    [{ ...got, recipe_sha256: '0'.repeat(64) }, 'the recipe was swapped'],
+    [{ ...got, set: { ...got.set, hr_partners: 50 } }, 'hr_partners=50 is outside 4..30'],
+    [{ ...got, set: { ...got.set, custo: 1 } }, 'custo is not a parameter'],
+    [{ ...got, engine: 'dna/process-simulation/9.9.0' }, 'made by another engine (9.9.0)'],
+    [{ ...got, rows: got.rows?.map((x, i) => (i ? x : { ...x, median: x.median * 1.01 })) }, `${got.rows?.[0]?.metric}: the receipt says`],
+  ]
+  for (const [rc, why] of bad) {
+    const x = attest(rc)
+    ok(x.status === 3 && x.stdout.includes(`✗ ${why}`), `--attest refuses: «${why}» (exit 3)`, `${x.status} ${x.stdout}${x.stderr}`)
+  }
+  const torn = join(work, 'torn.json'); writeFileSync(torn, '{ not json')
+  const t = run(ess, '--attest', torn)
+  ok(t.status === 2, 'a receipt that is not JSON: exit 2', `${t.status} ${t.stdout}${t.stderr}`)
+}
+
 // the mod's tests (dev/process-simulation/checks/mod.test.tsx) run with the whole mod's, in dev/dna/tools/check.mjs
 
 rmSync(work, { recursive: true, force: true })

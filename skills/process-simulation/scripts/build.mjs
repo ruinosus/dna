@@ -6,24 +6,28 @@
 //   node build.mjs <recipe.sim> [<another.sim> …] [--lang en|pt] [--out <folder>]   the page: <id>.process-simulation.html,
 //                                  opening on the first recipe (the others in its Example menu)
 //   node build.mjs <recipe.sim> --check                     only check: the validator's errors and warnings
-//   node build.mjs <recipe.sim> --run [--seeds N] [--set knob=value …] [--json]
-//                                  run it here: the median and the p10 to p90 range of each metric
+//   node build.mjs <recipe.sim> --run [--seeds N] [--set knob=value …] [--json] [--receipt <file.json>]
+//                                  run it here: the median and the p10 to p90 range of each metric; --receipt also
+//                                  writes the run's receipt (what an OKF attester checks)
+//   node build.mjs <recipe.sim> --attest <receipt.json> [--json]   run it again and say whether the receipt holds
 //   node build.mjs <recipe.sim> --to en|pt-BR [--write]     the same recipe in the other language (exact round trip)
 //
-// Exit codes: 0 done (warnings are not errors); 1 the recipe has errors (each with its message); 2 bad arguments.
+// Exit codes: 0 done (warnings are not errors); 1 the recipe has errors (each with its message); 2 bad arguments;
+// 3 --attest refused the receipt.
 // The format is in references/format.md.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { BO, SIMLANG } from './engine.mjs'
+import { ATTEST, SIMLANG } from './engine.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const argv = process.argv.slice(2)
-const valued = new Set(['--lang', '--out', '--seeds', '--set', '--to'])
+const valued = new Set(['--lang', '--out', '--seeds', '--set', '--to', '--receipt', '--attest'])
 const flags = new Set(['--check', '--run', '--json', '--write', ...valued])
 const usage = `usage: node build.mjs <recipe.sim> [<another.sim> …] [--lang en|pt] [--out <folder>]
        node build.mjs <recipe.sim> --check
-       node build.mjs <recipe.sim> --run [--seeds N] [--set knob=value …] [--json]
+       node build.mjs <recipe.sim> --run [--seeds N] [--set knob=value …] [--json] [--receipt <file.json>]
+       node build.mjs <recipe.sim> --attest <receipt.json> [--json]
        node build.mjs <recipe.sim> --to en|pt-BR [--write]`
 const fail = (msg) => {
   console.error(`${msg}\n\n${usage}`)
@@ -72,6 +76,24 @@ const tell = (file, r) => {
   for (const d of r.diags) console.log(`${d.sev === "error" ? "✗" : "!"} ${basename(file)}: ${d.text}`)
 }
 const src = (f) => readFileSync(f, 'utf8')
+// the engine as an OKF actor: dna/process-simulation/<the skill's version>
+const ENGINE = `dna/process-simulation/${/version: "([^"]+)"/.exec(readFileSync(join(here, '../SKILL.md'), 'utf8'))?.[1] ?? '0.0.0'}`
+
+if (argv.includes('--attest')) {
+  let receipt
+  try {
+    receipt = JSON.parse(readFileSync(option('--attest'), 'utf8'))
+  } catch {
+    fail(`✗ ${option('--attest')} is not a JSON receipt`)
+  }
+  const v = ATTEST.attest(receipt, src(files[0]), ENGINE)
+  if (argv.includes('--json')) console.log(JSON.stringify({ format: 'dna/process-simulation/verdict-v1', ok: v.ok, ...(v.reason ? { reason: v.reason } : {}), checked: v.checked }, null, 2))
+  else if (v.ok) {
+    const name = SIMLANG.parse(src(files[0])).model.name
+    console.log(`✓ attested: ${name}, ${receipt.rows.length} metrics, seed ${receipt.seed}, ${receipt.runs} runs`)
+  } else console.log(`✗ ${v.reason}`)
+  process.exit(v.ok ? 0 : 3)
+}
 
 if (argv.includes('--to')) {
   const to = /^pt/i.test(option('--to')) ? 'pt-BR' : 'en'
@@ -100,23 +122,12 @@ if (argv.includes('--run')) {
   // with --json the warnings go in the JSON, so the output stays one document
   if (!json || !r.ok) tell(files[0], r)
   if (!r.ok) process.exit(1)
-  const knobs = initialKnobs(r.model, sets)
-  const plan = SIMLANG.compile(r.model, knobs)
-  const expected = plan.statedPerMin * plan.openFrac * plan.horizon
-  const n = Number(option('--seeds') ?? (expected > 200000 ? 6 : 10))
-  const seeds = Array.from({ length: Math.max(1, n) }, (_, i) => r.model.seed * 1009 + i * 7919 + 1)
   const t0 = Date.now()
-  const values = r.model.shows.map(() => [])
-  for (const s of seeds) {
-    const sim = new BO.Sim(plan, s, {})
-    sim.runUntil(plan.horizon)
-    const res = sim.results()
-    r.model.shows.forEach((m, i) => values[i].push(BO.metric(m, res)))
-  }
-  const rows = r.model.shows.map((m, i) => {
-    const v = values[i].sort((a, b) => a - b)
-    return { metric: m.kind + (m.pn ? ` p${m.pn}` : '') + (m.x ? ` ${m.x}` : m.perName ? ` per ${m.perName}` : ''), p10: BO.quant(v, 0.1), median: BO.quant(v, 0.5), p90: BO.quant(v, 0.9) }
-  })
+  const done = ATTEST.run(src(files[0]), { seeds: option('--seeds'), set: sets, engine: ENGINE })
+  const { knobs, receipt } = done
+  const rows = receipt.rows
+  const seeds = { length: receipt.runs }
+  if (option('--receipt')) writeFileSync(option('--receipt'), JSON.stringify(receipt, null, 2) + '\n')
   const unknown = Object.keys(sets).filter((k) => !(k in r.model.knobs))
   if (json) console.log(JSON.stringify({ name: r.model.name, knobs, runs: seeds.length, rows, warnings: r.diags.map((d) => d.text), ...(unknown.length ? { unknown } : {}) }, null, 2))
   else {
