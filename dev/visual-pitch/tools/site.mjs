@@ -44,7 +44,7 @@ writeFileSync(join(docs, 'index.html'), `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>visual-pitch</title>
-<meta name="description" content="A skill that makes Claude explain anything by drawing it, the way you would on the back of a napkin: a pitch, an architecture, a decision, data, a timeline or a story, drawn stroke by stroke in one HTML file.">
+<meta name="description" content="A skill that makes Claude explain anything by drawing it, for a meeting: a pitch, an architecture, a decision, data, a timeline or a story, drawn stroke by stroke in one HTML file.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
@@ -80,7 +80,7 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
 <main>
   <section class="hero">
     <h1>visual-pitch</h1>
-    <p class="lead">Ask Claude to draw a pitch, an architecture, a decision, a number, what happened or a story — and get a hand-drawn board that draws itself, chapter by chapter, with a highlight at the end. One HTML file, offline.</p>
+    <p class="lead">Ask Claude to draw a pitch, an architecture, a decision, a number, what happened or a story — and get a clean drawing that draws itself, chapter by chapter, with a highlight at the end. One HTML file, offline.</p>
     <div class="actions">
       <a class="button primary" href="https://github.com/ruinosus/dna#install">Install the skill</a>
       <a class="button" href="https://github.com/ruinosus/dna">GitHub</a>

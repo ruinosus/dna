@@ -54,7 +54,7 @@ writeFileSync(join(docs, 'index.html'), `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>visual-explainer</title>
-<meta name="description" content="A skill that makes Claude explain an idea by drawing it: a hand-drawn lesson that draws itself, in one HTML file.">
+<meta name="description" content="A skill that makes Claude explain an idea by drawing it: a lesson that draws itself, in one HTML file.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
@@ -94,7 +94,7 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
 <main>
   <section class="hero">
     <h1>visual-explainer</h1>
-    <p class="lead">Ask Claude to explain something by drawing it — and get a hand-drawn lesson that draws itself, chapter by chapter, with values you can move. One HTML file, offline.</p>
+    <p class="lead">Ask Claude to explain something by drawing it — and get a lesson that draws itself, chapter by chapter, with values you can move. One HTML file, offline.</p>
     <img src="images/hero.png" alt="A lesson on demand and capacity at the HR help desk, drawn in the business theme">
     <div class="actions">
       <a class="button primary" href="https://github.com/ruinosus/dna#install">Install the skill</a>
