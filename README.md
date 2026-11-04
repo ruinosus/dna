@@ -94,7 +94,8 @@ The seven skills are npm workspaces; each one's tools are in `dev/<skill>/tools`
 
 ```
 npm install
-npm run assets      # the generated files of each skill (chalk-talk first: the others take its engine from here)
+npm run assets      # the generated files of each skill (chalk-talk first: the others take its engine from here);
+                    # again after a pull or a branch switch, since the built files are not kept in git
 npm run check       # every skill's checks, and dev/house-lights: one version, the npm package, npx house-lights
 npm run typecheck
 npm run site        # docs/: a gallery per skill and the front page (made here, never kept in main)

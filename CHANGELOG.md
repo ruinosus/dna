@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.11.2 — 2026-11-04
+
+- gates-and-handoffs: **the gate's card no longer spills** in the side panel of a wide screen. Each approval's
+  condition («sempre», «se mexe com dado de colaborador») goes on its own line under the role, and long values wrap
+  inside the card; checked in a browser at the panel's 300 px.
+- Developing: since 1.11.1, after a pull or a branch switch run `npm run assets` (and `npm run site` for docs/): git
+  removes the built files it no longer keeps.
+
 ## 1.11.1 — 2026-11-04
 
 - **A lighter install.** What Claude Code and the Copilot clone to install the plugin went from 56 MB to about 17 MB:

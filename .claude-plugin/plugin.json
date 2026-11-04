@@ -1,6 +1,6 @@
 {
   "name": "house-lights",
-  "version": "1.11.1",
+  "version": "1.11.2",
   "description": "Seven skills for showing an idea to people: teach it by drawing (chalk-talk), present it (back-of-napkin), rehearse an incident (dress-rehearsal), map a team's way of working (gates-and-handoffs) and a customer journey (service-blueprint), compare Copilot Studio agents (cast-list), and simulate a process to ask «what if» (box-office) — with a mod that checks .sim recipes as Claude writes them.",
   "author": {
     "name": "ruinosus"

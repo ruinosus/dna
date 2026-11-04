@@ -98,10 +98,16 @@ else {
     const html = readFileSync(join(work, 'feature-delivery.html'), 'utf8').replace('</body>', `<script>setTimeout(() => { const q = (s) => document.querySelector(s); const out = {}
       const g = q('[data-gate="producao-gate"]'); out.gate = g?.textContent.replace(/\\s+/g, ' ').trim(); g?.click()
       setTimeout(() => { out.approvals = [...document.querySelectorAll('.sd-approval')].map((x) => x.textContent.replace(/\\s+/g, ' ').trim())
+        // as the side panel of a wide screen (300 px), with a long condition: nothing goes past the card's edge
+        const d = q('.sd-detail'); d.style.width = '300px'; d.style.boxSizing = 'border-box'
+        const cond = d.querySelector('.sd-approval .sd-where'); if (cond) cond.textContent += ' ou com dado de colaborador de outro país'
+        const edge = d.getBoundingClientRect().right - parseFloat(getComputedStyle(d).paddingRight) + 1
+        out.spills = [...d.querySelectorAll('*')].filter((e) => e.getBoundingClientRect().right > edge).map((e) => e.className || e.tagName).slice(0, 5)
         const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 200) }, 300)</script></body>`)
     writeFileSync(join(work, 'probe.html'), html)
     const p = (await runPage(join(work, 'probe.html'), 'probe', '', { timeout: 60 })) ?? {}
     ok(p.gate === 'Pronto para produção? · TL+ SEG se mudança em pagamento' && p.approvals?.length === 2 && p.approvals[0] === 'TL Tech Lead sempre' && p.approvals[1] === 'SEG Segurança se mudança em pagamento', 'the map: the gate and its two approvals', JSON.stringify(p))
+    ok(Array.isArray(p.spills) && !p.spills.length, 'the gate in the side panel (300 px): its approvals and a long condition wrap inside the card', JSON.stringify(p.spills))
   }
 }
 

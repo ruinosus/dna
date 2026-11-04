@@ -58,7 +58,8 @@ const mb = tracked.reduce((n, f) => n + (existsSync(join(repo, f)) ? statSync(jo
 expect(!kept.length && mb < 25, `main carries only what is installed and built from (${mb.toFixed(1)} MB in ${tracked.length} files)${kept.length ? ` — not: ${kept.slice(0, 5).join(', ')}` : ''}`)
 
 // Every relative link of the front page, the README and each skill's guide points at a file that is there.
-const pages = ['docs/index.html', 'README.md', ...SKILLS.map((s) => `dev/${s}/README.md`)]
+// the site's front page only once npm run site has made it (docs/ is not kept in git)
+const pages = [...(existsSync(join(repo, 'docs/index.html')) ? ['docs/index.html'] : []), 'README.md', ...SKILLS.map((s) => `dev/${s}/README.md`)]
 const broken = pages.flatMap((page) => {
   const text = readFileSync(join(repo, page), 'utf8')
   const links = [...text.matchAll(/(?:href|src)="([^"]+)"|\]\(([^)\s]+)\)/g)].map((m) => (m[1] ?? m[2]).split('#')[0])

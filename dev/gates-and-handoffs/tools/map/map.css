@@ -54,9 +54,10 @@ body { margin: 0; }
 .sd-gate em { font-style: normal; color: var(--muted); }
 .sd-gate .sd-also { display: block; color: var(--muted); font-size: 11px; }
 .sd-gate .sd-where, .sd-approval .sd-where { color: var(--look); }
-.sd-approval { display: flex; gap: 6px; align-items: baseline; padding: 3px 0; border-top: 1px solid var(--line); }
+.sd-approval { display: flex; flex-wrap: wrap; gap: 0 6px; align-items: baseline; padding: 3px 0; border-top: 1px solid var(--line); }
 .sd-approval:first-child { border-top: 0; }
-.sd-approval .sd-where, .sd-approval .sd-muted { margin-left: auto; font-size: 12px; }
+/* the condition on its own line under the role, so a narrow card never squeezes it into a column of single words */
+.sd-approval .sd-where, .sd-approval .sd-muted { flex-basis: 100%; font-size: 12px; }
 .sd-muted { color: var(--muted); }
 .sd-picked { outline: 2.5px solid var(--focus); outline-offset: 2px; }
 .sd-linked { box-shadow: 0 0 0 3px var(--link-bg); }
@@ -77,9 +78,10 @@ body { margin: 0; }
 .sd-detail { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
 .sd-kicker { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .sd-detail h3 { margin: 0; font-size: 18px; line-height: 1.3; }
-.sd-detail dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 10px; font-size: 13px; }
+.sd-detail { min-width: 0; }
+.sd-detail dl { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 10px; font-size: 13px; }
 .sd-detail dt { font-weight: 700; }
-.sd-detail dd { margin: 0; }
+.sd-detail dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .sd-detail p { margin: 0; color: var(--muted); font-size: 13px; }
 .sd-detail .sd-gate-name { color: var(--gate); }
 
