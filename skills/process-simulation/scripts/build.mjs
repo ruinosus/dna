@@ -77,7 +77,18 @@ const tell = (file, r) => {
 }
 const src = (f) => readFileSync(f, 'utf8')
 // the engine as an OKF actor: dna/process-simulation/<the skill's version>
-const ENGINE = `dna/process-simulation/${/version: "([^"]+)"/.exec(readFileSync(join(here, '../SKILL.md'), 'utf8'))?.[1] ?? '0.0.0'}`
+// (the SKILL.md's version; in the npm package, which carries no SKILL.md, the package's — the same version)
+const ENGINE = `dna/process-simulation/${(() => {
+  try {
+    return /version: "([^"]+)"/.exec(readFileSync(join(here, '../SKILL.md'), 'utf8'))[1]
+  } catch {
+    try {
+      return JSON.parse(readFileSync(join(here, '../../../package.json'), 'utf8')).version
+    } catch {
+      return '0.0.0'
+    }
+  }
+})()}`
 
 if (argv.includes('--attest')) {
   let receipt
