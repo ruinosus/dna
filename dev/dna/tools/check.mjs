@@ -37,9 +37,9 @@ const cases = [
   ['visual-pitch', [ex('visual-pitch', 'examples/pitch-pharmacy-queue.chalk'), join(work, 'visual-pitch', 'pitch.html'), '--no-review']],
   ['incident-drill', [ex('incident-drill', 'examples/checkout.drill.yaml'), '--out', join(work, 'incident-drill')]],
   ['way-of-working', [ex('way-of-working', 'examples/scrum.way.yaml'), '--out', join(work, 'way-of-working')]],
-  ['service-blueprint', [ex('service-blueprint', 'examples/gym-signup.blueprint.yaml'), '--out', join(work, 'service-blueprint')]],
+  ['service-blueprint', [ex('service-blueprint', 'examples/employee-onboarding.blueprint.yaml'), '--out', join(work, 'service-blueprint')]],
   ['agent-review', [ex('agent-review', 'examples/agents'), '--out', join(work, 'agent-review')]],
-  ['process-simulation', [ex('process-simulation', 'examples/corner-cafe.sim'), '--out', join(work, 'process-simulation')]],
+  ['process-simulation', [ex('process-simulation', 'examples/hr-help-desk.sim'), '--out', join(work, 'process-simulation')]],
   ['solution', [ex('solution', 'examples/assistant-delivery/assistant-delivery.solution.yaml'), '--out', join(work, 'solution')]],
 ]
 for (const [s, args] of cases) {
@@ -60,7 +60,7 @@ for (const [s, args] of cases) {
 // with the format line of before, passes its skill's check
 const OLD = [
   ['way-of-working', 'examples/scrum.way.yaml', 'stage-door/v1'],
-  ['service-blueprint', 'examples/gym-signup.blueprint.yaml', 'front-of-house/v1'],
+  ['service-blueprint', 'examples/employee-onboarding.blueprint.yaml', 'front-of-house/v1'],
   ['incident-drill', 'examples/checkout.drill.yaml', 'dress-rehearsal/v1'],
   ['solution', 'examples/assistant-delivery/assistant-delivery.solution.yaml', 'opening-night/v1'],
 ]

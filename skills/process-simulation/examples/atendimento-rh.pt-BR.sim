@@ -1,0 +1,27 @@
+sim "Atendimento de RH na virada da folha"
+lang pt-BR
+horizonte 1 dia
+moeda BRL
+
+chegada solicitacao 30/hora durante 8h-17h pico 9h-11h x2
+equipe analistas $analistas turno 8h-17h
+etapa atendimento com analistas tempo ~5min custo 4
+
+fim atendida
+fim desistiu
+atendimento -> atendida
+atendimento desiste após 30min -> desistiu
+
+controle analistas 2..8 = 3
+cenário "Mais um analista": analistas = 4
+
+mostrar espera p90 em atendimento
+mostrar contagem fim desistiu
+mostrar utilização analistas
+
+rótulos en:
+  atendimento: Answer
+  atendida: Answered
+  desistiu: Gave up
+  solicitacao: Request
+  analistas: Analysts

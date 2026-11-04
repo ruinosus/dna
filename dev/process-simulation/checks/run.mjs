@@ -94,7 +94,7 @@ for (const [name, src, key] of cases) {
 
 // Determinism: same seed, same result.
 {
-  const src = readFileSync(join(EXAMPLES, 'corner-cafe.sim'), 'utf8'), r = SIMLANG.parse(src);
+  const src = readFileSync(join(EXAMPLES, 'hr-help-desk.sim'), 'utf8'), r = SIMLANG.parse(src);
   const x = runSeeds(r.model, initialKnobs(r.model), [42]), y = runSeeds(r.model, initialKnobs(r.model), [42]);
   check('same seed gives the same run', JSON.stringify(x) === JSON.stringify(y));
 }

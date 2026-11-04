@@ -20,7 +20,7 @@ Portuguese.
 ## 1. Read, then write the recipe
 
 Read what the person gives (a description, a volume, a team, a cost). Then write the whole recipe at once
-(`references/format.md`; `examples/` has four, from a café to an employee self-service with Workday):
+(`references/format.md`; `examples/` has four, from an HR help desk to an employee self-service with Workday):
 
 - **What arrives** (`arrive`), with its rate and, when the material says so, its window (`during 7h-20h`) and its
   peaks (`peak mon x1.3`). The stated rate is the average: peaks reshape it, never add to it.

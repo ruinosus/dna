@@ -131,7 +131,7 @@ Errors block the run; warnings do not.
 
 | Gap found while building the prototype | Decision in v1.1 |
 | --- | --- |
-| Customers arrived at 3 a.m. at a café that opens at 7 | New `during Ah-Bh` clause on `arrive` (`durante` in pt-BR) |
+| Requests arrived at 3 a.m. at a help desk that opens at 8 | New `during Ah-Bh` clause on `arrive` (`durante` in pt-BR) |
 | Nothing said which step items enter | `arrive ... -> step`, defaulting to the first declared step |
 | `shift 8h/day` had no start time | Starts at 08:00; `shift 7h-15h` sets it explicitly |
 | `500k/year peak x1.8` produced about 566k a year | The stated rate is the average; peaks redistribute it |

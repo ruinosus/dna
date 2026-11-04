@@ -10,7 +10,7 @@ const SKILLS = [
   ['visual-pitch', 'thumbs/pitch-pharmacy-queue.png', 'Present it on a napkin', 'A pitch, an architecture, a decision, data, a timeline or a story, drawn to be shown — it opens presenting, and becomes a PowerPoint.'],
   ['incident-drill', 'images/checkout-scene.png', 'Rehearse the incident', 'A runbook becomes a drill to play, with a clock and choices, and a debrief of what the runbook does not say.'],
   ['way-of-working', 'images/feature-delivery-map.png', 'Map how the team works', 'Stages, gates and who approves them, roles and outputs: one checkable file, a map, a workbook and a lesson.'],
-  ['service-blueprint', 'images/gym-signup-map.png', 'Map what the customer lives', 'Each moment of a journey, how it feels, and who makes it happen on stage, backstage and in the systems.'],
+  ['service-blueprint', 'images/employee-onboarding-map.png', 'Map what the customer lives', 'Each moment of a journey, how it feels, and who makes it happen on stage, backstage and in the systems.'],
   ['agent-review', 'images/rh-agents-map.png', 'Compare the agents', 'Copilot Studio agents side by side: what repeats, who is off the pattern, what the orchestrator passes on, which events fire, what nobody uses — with the file behind each.'],
   ['process-simulation', 'images/employee-self-service.png', 'Ask «what if» of a process', 'What arrives, who handles it, what it costs: a short recipe becomes a simulation to watch, with a slider for every control and the scenarios side by side.'],
   ['solution', 'images/service-desk.png', 'Put the whole process together', 'One solution, every piece in one page: the way of working, the simulation, the journey, the drill and the agents — and accelerators to start from.'],

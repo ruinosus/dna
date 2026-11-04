@@ -14,8 +14,8 @@ if (!browser()) throw new Error('No Chrome, Chromium or Edge: the pictures need 
 const ABOUT = {
   'employee-self-service': ['en', 'Employee Self-Service with Workday, after the scenarios of Microsoft’s public sample: vacation balance and profile read from Workday, time off approved by the manager, policy questions answered or sent to an HR partner. Move «Policy questions answered» and watch the HR queue. The numbers are made up.'],
   'admission-documents': ['en', 'Admission documents read by an extraction step and reviewed by people when its confidence is low: how many reviewers the confidence asks for.'],
-  'corner-cafe': ['en', 'A corner café from 7 to 15, two baristas, a morning peak, customers who give up after 15 minutes: what a third barista buys.'],
-  'cafe-da-esquina.pt-BR': ['pt', 'O mesmo café, com a receita em português: a tela também troca para PT.'],
+  'hr-help-desk': ['en', 'An HR help desk on payroll close, 8 to 17, three analysts, a morning peak, people who give up after 30 minutes: what one more analyst buys.'],
+  'atendimento-rh.pt-BR': ['pt', 'O mesmo atendimento, com a receita em português: a tela também troca para PT.'],
 }
 for (const d of ['examples', 'images']) rmSync(join(docs, d), { recursive: true, force: true })
 mkdirSync(join(docs, 'examples'), { recursive: true })

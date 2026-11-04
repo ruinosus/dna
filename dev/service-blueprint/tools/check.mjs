@@ -15,9 +15,9 @@ const repo = resolve(here, '../../..') // the dna repository
 const skill = join(repo, 'skills/service-blueprint')
 const build = join(skill, 'scripts/build.mjs')
 const examples = join(skill, 'examples')
-const LANG = { devolucao: 'pt', 'gym-signup': 'en' }
+const LANG = { 'reembolso-despesas': 'pt', 'employee-onboarding': 'en' }
 // what each example has to look at, on purpose
-const LOOKS = { devolucao: 4, 'gym-signup': 0 }
+const LOOKS = { 'reembolso-despesas': 4, 'employee-onboarding': 0 }
 const work = mkdtempSync(join(tmpdir(), 'service-blueprint-check-'))
 let failed = 0
 const run = (...args) => spawnSync(process.execPath, [build, ...args], { encoding: 'utf8' })
@@ -43,7 +43,7 @@ for (const f of files) {
   ok(n === LOOKS[id], `${id}: ${LOOKS[id]} to look at`, r.stdout)
 }
 
-const text = readFileSync(join(examples, 'devolucao.blueprint.yaml'), 'utf8')
+const text = readFileSync(join(examples, 'reembolso-despesas.blueprint.yaml'), 'utf8')
 const broken = text.replace('owner: financeiro, within', 'owner: tesouraria, within')
 writeFileSync(join(work, 'broken.blueprint.yaml'), broken)
 const line = broken.split('\n').findIndex((l) => l.includes('tesouraria')) + 1
@@ -57,7 +57,7 @@ ok(!/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(map), 'the map lo
 const { runPage, browser } = await import('../../../skills/service-blueprint/scripts/browser.mjs')
 if (!browser()) console.log('• no Chrome here: the map was not opened in a browser')
 else {
-  const html = readFileSync(join(work, 'devolucao.html'), 'utf8').replace('</body>', `<script>
+  const html = readFileSync(join(work, 'reembolso-despesas.html'), 'utf8').replace('</body>', `<script>
     const got = []; HTMLAnchorElement.prototype.click = function () { got.push(this.download) }
     const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
     setTimeout(async () => { const q = (s) => document.querySelector(s); const out = {}
@@ -69,9 +69,9 @@ else {
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify(out)); document.body.append(p) }, 300)</script></body>`)
   writeFileSync(join(work, 'probe.html'), html)
   const r = (await runPage(join(work, 'probe.html'), 'probe', '', { timeout: 60 })) ?? { errs: ['the page did not answer'] }
-  ok(r.detail === 'Espera notícia — 6 dias sem nada' && r.pains >= 2 && (r.got ?? []).join() === 'devolucao.xlsx,devolucao.blueprint.yaml,devolucao.png' && !r.errs?.length, 'the map in a browser: a moment, the tabs, the downloads', JSON.stringify(r))
+  ok(r.detail === 'Espera notícia — 6 dias sem nada' && r.pains >= 2 && (r.got ?? []).join() === 'reembolso-despesas.xlsx,reembolso-despesas.blueprint.yaml,reembolso-despesas.png' && !r.errs?.length, 'the map in a browser: a moment, the tabs, the downloads', JSON.stringify(r))
   // with no «feels» anywhere, the lane says nobody said it — no flat red line at a made-up «3»
-  const flat = readFileSync(join(work, 'devolucao.html'), 'utf8').replace(/"feels":\d,?/g, '').replace('</body>', `<script>setTimeout(() => { const c = document.querySelector('.fh-curve')
+  const flat = readFileSync(join(work, 'reembolso-despesas.html'), 'utf8').replace(/"feels":\d,?/g, '').replace('</body>', `<script>setTimeout(() => { const c = document.querySelector('.fh-curve')
     const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify({ text: c?.textContent, line: !!c?.querySelector('polyline'), faces: document.querySelectorAll('.fh-face').length })); document.body.append(p) }, 300)</script></body>`)
   writeFileSync(join(work, 'flat.html'), flat)
   const f = (await runPage(join(work, 'flat.html'), 'probe', '', { timeout: 60 })) ?? {}
@@ -80,7 +80,7 @@ else {
 
 // --check --json: what was read, as one JSON document — what the mod's preview pane draws
 {
-  const j = spawnSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(skill, 'examples/gym-signup.blueprint.yaml'), '--check', '--json'], { encoding: 'utf8' })
+  const j = spawnSync(process.execPath, [join(skill, 'scripts/build.mjs'), join(skill, 'examples/employee-onboarding.blueprint.yaml'), '--check', '--json'], { encoding: 'utf8' })
   let doc
   try { doc = JSON.parse(j.stdout) } catch {}
   ok(j.status === 0 && doc?.format === 'service-blueprint/read-v1' && Array.isArray(doc.blueprint?.moments) && Array.isArray(doc.looks), '--check --json: the blueprint as read, and what to look at, as one JSON document', j.stdout.slice(0, 200) + j.stderr)

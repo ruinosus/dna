@@ -13,8 +13,8 @@ const docs = join(repo, 'docs/service-blueprint')
 const examples = join(repo, 'skills/service-blueprint/examples')
 if (!browser()) throw new Error('No Chrome, Chromium or Edge: the pictures need one (set CHROME_PATH).')
 const ABOUT = {
-  devolucao: ['pt', 'Returning an online purchase: six days with no news is the worst moment — and, on purpose, nobody owns it yet. Four things to look at.'],
-  'gym-signup': ['en', 'Joining a neighbourhood gym: twenty minutes of paperwork while the class starts — with an action and an owner.'],
+  'reembolso-despesas': ['pt', 'Reembolso de despesas de viagem: seis dias sem notícia é o pior momento — e, de propósito, ninguém responde por ele ainda. Quatro coisas para olhar.'],
+  'employee-onboarding': ['en', 'Joining the company: two hours waiting for a laptop on the first day — with an action and an owner.'],
 }
 for (const d of ['examples', 'images']) rmSync(join(docs, d), { recursive: true, force: true })
 mkdirSync(join(docs, 'examples'), { recursive: true })
@@ -76,7 +76,7 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
   <section class="hero">
     <h1><span>front</span>-of-house</h1>
     <p class="lead">Give Claude your interviews, tickets and process notes. Get a service blueprint: each moment the customer lives and how it feels — and who, on stage and behind, makes it happen. With the worst moment, and whether anyone owns it, in plain sight.</p>
-    <img src="images/devolucao-map.png" alt="A service blueprint of a return: the line of how the customer feels dips at «waits for news — 6 days», and under it the stage, backstage and systems">
+    <img src="images/reembolso-despesas-map.png" alt="A service blueprint of an expense claim: the line of how the customer feels dips at «waits for news — 6 days», and under it the stage, backstage and systems">
     <div class="actions"><a class="button primary" href="https://github.com/ruinosus/dna#install">Install the skill</a><a class="button" href="https://github.com/ruinosus/dna">GitHub</a></div>
   </section>
   <section>

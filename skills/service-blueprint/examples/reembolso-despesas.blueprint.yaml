@@ -1,0 +1,67 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: ServiceBlueprint
+metadata:
+  name: Reembolso de despesas de viagem
+who: Colaborador
+about: Do lançamento da despesa até o dinheiro na conta. Montado a partir de 10 entrevistas, do fluxo de contas a pagar e dos chamados do atendimento de RH.
+phases:
+  - { id: lancar, name: Lançar }
+  - { id: aprovar, name: Aprovar }
+  - { id: receber, name: Receber }
+actors:
+  - { id: atendimento, name: Atendimento de RH, layer: front }
+  - { id: gestor, name: Gestor, layer: front }
+  - { id: contas, name: Contas a pagar, layer: back }
+  - { id: financeiro, name: Financeiro, layer: back }
+systems:
+  - { id: despesas, name: Sistema de despesas }
+  - { id: workday, name: Workday }
+  - { id: erp, name: ERP financeiro }
+  - { id: pagamentos, name: Pagamentos }
+moments:
+  - id: lancar
+    phase: lancar
+    customer: Lança a despesa no portal
+    feels: 3
+    evidence: [Tela de lançamento]
+    front: [Formulário guiado]
+    back: [{ actor: contas, does: Regra da política confere o valor }]
+    support: [despesas]
+  - id: comprovante
+    phase: lancar
+    customer: Anexa o comprovante
+    feels: 4
+    evidence: [Comprovante digitalizado]
+    back: [{ actor: contas, does: Lê o comprovante }]
+    support: [workday]
+  - id: aprovar
+    phase: aprovar
+    customer: Espera o gestor aprovar
+    feels: 2
+    marks: [wait]
+    evidence: [Aviso de aprovação pendente]
+    front: [{ actor: gestor, does: Aprova a despesa no Workday }]
+    support: [workday]
+    pains:
+      - { says: O gestor estava de férias e a aprovação parou por uma semana, source: NPS (comentários) }
+  - id: esperar
+    phase: aprovar
+    customer: Espera notícia — 6 dias sem nada
+    feels: 1
+    marks: [fail]
+    back: [{ actor: contas, does: Contas a pagar confere e lança no ERP }]
+    support: [erp]
+    promise: { says: Avisamos quando o reembolso for aprovado }
+    pains:
+      - { says: Achei que tinham perdido a minha despesa, source: 3 de 10 entrevistas }
+  - id: reembolso
+    phase: receber
+    customer: Recebe o dinheiro na conta
+    feels: 4
+    evidence: [E-mail «seu reembolso foi pago», Extrato]
+    front: [E-mail automático]
+    back: [{ actor: financeiro, does: Libera o pagamento }]
+    support: [pagamentos]
+    promise: { says: O dinheiro cai em até 5 dias úteis, owner: financeiro, within: 5 dias úteis }
+actions:
+  - { moment: aprovar, does: Aprovador substituto quando o gestor está ausente, owner: contas, due: 2026-12 }

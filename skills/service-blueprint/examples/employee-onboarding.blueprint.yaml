@@ -1,0 +1,56 @@
+apiVersion: github.com/ruinosus/dna/v1
+kind: ServiceBlueprint
+metadata:
+  name: Joining the company
+who: A new employee
+about: From the signed offer to the end of the first week. Made from 8 interviews with people who joined last quarter.
+phases: [Offer, Join, First week]
+actors:
+  - { id: recruiter, name: Recruiter, layer: front }
+  - { id: manager, name: Manager, layer: front }
+  - { id: hr-ops, name: HR operations, layer: back }
+systems:
+  - { id: careers, name: Careers site }
+  - { id: workday, name: Workday }
+  - { id: it, name: IT service desk }
+moments:
+  - id: offer
+    phase: Offer
+    customer: Signs the offer online
+    feels: 4
+    evidence: [The signed offer]
+    front: [Careers site offer page]
+    support: [careers]
+  - id: documents
+    phase: Offer
+    customer: Sends the admission documents
+    feels: 3
+    evidence: [The document checklist]
+    front: [{ actor: recruiter, does: Answers questions about the documents }]
+  - id: first-day
+    phase: Join
+    customer: Arrives on the first day
+    feels: 2
+    marks: [wait]
+    evidence: [A badge, The welcome email]
+    front: [{ actor: manager, does: Meets the newcomer at reception }]
+    back: [{ actor: hr-ops, does: Activates the employee record }]
+    support: [workday]
+    pains:
+      - { says: Two hours waiting for a laptop and a login, source: 5 of 8 interviews }
+    promise: { says: Your laptop and access are ready on day one, owner: hr-ops, within: first day }
+  - id: tools
+    phase: First week
+    customer: Gets the tools and the trainings
+    feels: 4
+    evidence: [The training plan]
+    front: [{ actor: manager, does: Walks through the first week's plan }]
+    support: [it]
+  - id: check-in
+    phase: First week
+    customer: Has a first check-in with the manager
+    feels: 5
+    evidence: [A one-page plan for 90 days]
+    front: [{ actor: manager, does: Agrees the 90-day goals with the newcomer }]
+actions:
+  - { moment: first-day, does: Order the laptop when the offer is signed, owner: hr-ops, due: 2027-01 }

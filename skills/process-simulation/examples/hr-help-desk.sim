@@ -1,0 +1,20 @@
+sim "HR help desk at payroll close"
+lang en
+horizon 1 day
+currency USD
+
+arrive request 30/hour during 8h-17h peak 9h-11h x2
+pool analysts $analysts shift 8h-17h
+step answer by analysts time ~5min cost 4
+
+end answered
+end gave_up
+answer -> answered
+answer abandon after 30min -> gave_up
+
+knob analysts 2..8 = 3
+scenario "One more analyst": analysts = 4
+
+show wait p90 at answer
+show count end gave_up
+show utilization analysts

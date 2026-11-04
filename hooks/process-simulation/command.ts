@@ -40,7 +40,7 @@ export function simCommand(on: On) {
   on('command.run', { command: 'simulate' }, async ($, e) => {
     const { path, seeds, sets } = parseArgs(e.args)
     const doc = await loadRecipe($, path)
-    if (!doc.path) return { text: `name a recipe, for example /simulate examples/corner-cafe.sim` }
+    if (!doc.path) return { text: `name a recipe, for example /simulate examples/hr-help-desk.sim` }
     if (doc.src === undefined) return { text: `could not read ${doc.path}` }
 
     const c = check(doc.src, sets)
