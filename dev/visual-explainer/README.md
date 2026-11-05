@@ -1,14 +1,14 @@
 <h1 align="center">visual-explainer</h1>
 
-<p align="center"><b>Ask Claude to explain something by drawing it — and get a lesson that draws itself, chapter by chapter, clean enough for a meeting room.</b></p>
+<p align="center"><b>Ask Claude to explain something by drawing it — and get an explainer that draws itself, chapter by chapter, clean enough for a meeting room.</b></p>
 
 <p align="center">
-  <img src="gallery/images/hero.png" alt="A lesson on demand and capacity at the HR help desk: the capacity line rises with the analysts and crosses the dashed demand line at about four" width="820">
+  <img src="gallery/images/hero.png" alt="An explainer on demand and capacity at the HR help desk: the capacity line rises with the analysts and crosses the dashed demand line at about four" width="820">
 </p>
 
 <p align="center">
   An <a href="https://agentskills.io">Agent Skill</a> for Claude Code, claude.ai, the Claude API and other tools that load skills.<br>
-  The lesson is <b>one HTML file</b>: it opens offline, has chapters, narration and values you can move.
+  The explainer is <b>one HTML file</b>: it opens offline, has chapters, narration and values you can move.
 </p>
 
 ---
@@ -16,7 +16,7 @@
 ## What it draws
 
 Every drawing below was made by Claude with this skill, from the one-line request under it, in the business theme
-(the default; «Hand-drawn» switches any lesson to the pencil look).
+(the default; «Hand-drawn» switches any explainer to the pencil look).
 
 <table>
   <tr>
@@ -36,7 +36,7 @@ Every drawing below was made by Claude with this skill, from the one-line reques
     <td><i>«Explain by drawing how this very skill works.»</i><br>Yes — visual-explainer drew its own diagram.</td>
   </tr>
   <tr>
-    <td width="50%"><img src="gallery/images/time-off-request.png" alt="A Mermaid flowchart drawn as a lesson: the employee asks the assistant in Teams, it creates the request in Workday, the approval comes back"></td>
+    <td width="50%"><img src="gallery/images/time-off-request.png" alt="A Mermaid flowchart drawn as an explainer: the employee asks the assistant in Teams, it creates the request in Workday, the approval comes back"></td>
     <td width="50%"><img src="gallery/images/training-hours.png" alt="An employee, the training hours of a month as books, the internal academy, and a counter of hours in a year"></td>
   </tr>
   <tr>
@@ -45,11 +45,11 @@ Every drawing below was made by Claude with this skill, from the one-line reques
   </tr>
 </table>
 
-**[Open the gallery](https://ruinosus.github.io/dna/visual-explainer/)** to play every lesson in your browser. The recipes behind
+**[Open the gallery](https://ruinosus.github.io/dna/visual-explainer/)** to play every explainer in your browser. The recipes behind
 these drawings are in [`gallery/examples/`](gallery/examples). Build any of them with
 `node skills/visual-explainer/scripts/build.mjs dev/visual-explainer/gallery/examples/web-cache.json`.
 
-## The lesson you get
+## The explainer you get
 
 <p align="center"><img src="gallery/images/player.png" alt="The player: chapters on top, the paper in the middle, Back / Next / Play all under it with the narration, the value to move, «Think about it» and the check on the right" width="820"></p>
 
@@ -62,11 +62,11 @@ these drawings are in [`gallery/examples/`](gallery/examples). Build any of them
 - **Checked**: when the file opens, it checks itself at the values' extremes. Nothing should leave the paper and no
   text should cover another.
 - **Chalkboard**: a button turns the paper into a green board with chalk (or the recipe asks for it, for a class).
-- **A question that waits**: the lesson can stop on a question until someone presses «Show me» — time for the class
+- **A question that waits**: the explainer can stop on a question until someone presses «Show me» — time for the class
   to answer.
 - **Quiz** at the end: pick an option, see why it is right or not.
-- **Narration** with the browser's own voice (off by default) and a **transcript** of everything the lesson says.
-- **Download** the paper as PNG or SVG, or the lesson drawing itself as a **GIF** or a **video** (WebM) — for slides
+- **Narration** with the browser's own voice (off by default) and a **transcript** of everything the explainer says.
+- **Download** the paper as PNG or SVG, or the explainer drawing itself as a **GIF** or a **video** (WebM) — for slides
   and messages.
 - **Present**: one chapter at a time on the whole screen, a clicker's PageDown to move on, and the speaker notes (the
   narration, the next chapter, a clock) in a window of their own; the values still move. `build.mjs --present` opens
@@ -82,11 +82,11 @@ these drawings are in [`gallery/examples/`](gallery/examples). Build any of them
 ## How a conversation goes
 
 Claude draws first: it picks the everyday thing to tie the idea to, who it is for and the value to move, builds the
-lesson, and then says what it chose. A real answer from the evals (Claude Code, shortened):
+explainer, and then says what it chose. A real answer from the evals (Claude Code, shortened):
 
 > **You:** Draw the TCP three-way handshake.
 >
-> **Claude:** *(writes the recipe, builds it)* I've drawn the handshake: `lesson.html`, which opens offline.
+> **Claude:** *(writes the recipe, builds it)* I've drawn the handshake: `explainer.html`, which opens offline.
 > **What I chose:** I tied it to a phone call on a bad line ("Can you hear me?" / "Yes! Can you hear me?"), for a
 > curious adult. There are two values to move: the client's starting number and the server's starting number. Want
 > another hook, another audience or anything changed?
@@ -95,7 +95,7 @@ lesson, and then says what it chose. A real answer from the evals (Claude Code, 
 > move the two starting numbers and watch each `ack` change to that number plus one.
 
 For a class, students or a talk, Claude asks first — once, only what is missing — and shows the outline before drawing.
-Afterwards it changes only what you ask («make the arrow blue», «use 5 % instead»). Ask for several lessons and they
+Afterwards it changes only what you ask («make the arrow blue», «use 5 % instead»). Ask for several explainers and they
 come as **one course file**, with a list to go from one to the next.
 
 ## Write it as text — or bring a Mermaid diagram
@@ -121,7 +121,7 @@ ana -> banco "deposita"
 ```
 ````
 
-And a Mermaid diagram you already have becomes a hand-drawn lesson — any of its 30 kinds (all of Mermaid 11.17 but
+And a Mermaid diagram you already have becomes a hand-drawn explainer — any of its 30 kinds (all of Mermaid 11.17 but
 zenuml): flowcharts and sequences, gantt and timelines, mind maps, sankey, C4, wardley maps and the rest. The `%%` lines are comments for Mermaid, so the same block still shows as a normal diagram on GitHub:
 
 ````markdown
@@ -136,14 +136,14 @@ flowchart LR
 ```
 ````
 
-`node skills/visual-explainer/scripts/build.mjs page.md` turns every such block into a lesson. The whole syntax:
+`node skills/visual-explainer/scripts/build.mjs page.md` turns every such block into an explainer. The whole syntax:
 [references/text.md](../../skills/visual-explainer/references/text.md).
 
 ### In your docs site
 
-On a docs site the lesson plays inside the page — ` ```visual-explainer ` for the text, ` ```visual-explainer-mermaid ` for a Mermaid
+On a docs site the explainer plays inside the page — ` ```visual-explainer ` for the text, ` ```visual-explainer-mermaid ` for a Mermaid
 diagram (a plain ` ```mermaid ` is left to the site). The `@ruinosus/visual-explainer` npm package has a remark and a markdown-it plugin,
-and the script that mounts the lessons. With Docusaurus:
+and the script that mounts the explainers. With Docusaurus:
 
 ```js
 // docusaurus.config.js
@@ -155,7 +155,7 @@ export default {
 }
 ```
 
-The lesson opens on chapter 1, drawn and still; **Expand** shows all of it.
+The explainer opens on chapter 1, drawn and still; **Expand** shows all of it.
 
 The same blocks play in the **VS Code** Markdown preview ([vscode-visual-explainer](https://github.com/ruinosus/vscode-visual-explainer))
 and in **Obsidian** notes ([obsidian-visual-explainer](https://github.com/ruinosus/obsidian-visual-explainer)). Neither is in its
@@ -164,7 +164,7 @@ store yet: build and install them by hand, as their READMEs say.
 ### On GitHub: an SVG that draws itself
 
 GitHub shows no script in a README, but it shows an image — and an SVG can animate itself with CSS. `--svg` draws the
-lesson into one:
+explainer into one:
 
 ```
 npx @ruinosus/visual-explainer time-off-request.mmd --svg   # → time-off-request.svg
@@ -173,7 +173,7 @@ npx @ruinosus/visual-explainer time-off-request.mmd --svg   # → time-off-reque
 <p align="center"><img src="https://ruinosus.github.io/dna/visual-explainer/images/time-off-request.svg" alt="A coffee order drawn by hand, box by box and arrow by arrow: you, the cashier, the barista" width="720"></p>
 
 It plays once when the page opens and stays as the finished drawing (still from the start for someone who asked for
-less motion). It has no chapters, values or narration — link to the `.html` lesson for those. To keep the SVGs in step
+less motion). It has no chapters, values or narration — link to the `.html` explainer for those. To keep the SVGs in step
 with the recipes, a workflow like this one draws them on every push:
 
 ```yaml
@@ -190,7 +190,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y @ruinosus/visual-explainer@0.21.0 "$f" "${f%.*}.svg" --svg; done
+      - run: git ls-files '*.chalk' '*.mmd' | while read -r f; do npx -y @ruinosus/visual-explainer@0.22.0 "$f" "${f%.*}.svg" --svg; done
       - run: |
           git config user.name github-actions
           git config user.email github-actions@users.noreply.github.com
@@ -250,13 +250,13 @@ visual-explainer is one of the six skills of the [dna](../../README.md) plugin. 
 Or copy `skills/visual-explainer` to `~/.claude/skills/`.
 
 **claude.ai**: download `visual-explainer.zip` from the [latest release](https://github.com/ruinosus/dna/releases),
-then Settings › Capabilities › Skills › Upload. Code execution must be on. The lesson comes back as a file to download.
+then Settings › Capabilities › Skills › Upload. Code execution must be on. The explainer comes back as a file to download.
 
 **Claude API**: upload the same zip with the Skills API (`/v1/skills`) and use it with the code execution tool.
 
 **Without installing anything** — on npm as [`visual-explainer`](https://www.npmjs.com/package/@ruinosus/visual-explainer): a page needs
-only the recipe and `<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.21.0/player.js"></script>` (that is also
-how the skill shows a lesson where it cannot run code), and `npx @ruinosus/dna visual-explainer lesson.json` builds the one-file lesson.
+only the recipe and `<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.22.0/player.js"></script>` (that is also
+how the skill shows an explainer where it cannot run code), and `npx @ruinosus/dnan explainer drawn with visual-explainer.json` builds the one-file explainer.
 
 **Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/visual-explainer` to the folder where the tool
 reads skills (for example `.agents/skills/`). The tool needs Node.js 18 or later.
@@ -285,7 +285,7 @@ The drawing engine uses [Rough.js](https://roughjs.com) (MIT) for the hand-drawn
 
 ## Not yet
 
-Voice narration, editing the drawing by hand, PDF export, «appear on click» animations inside the PowerPoint, and showing the lesson inline as a claude.ai artifact
+Voice narration, editing the drawing by hand, PDF export, «appear on click» animations inside the PowerPoint, and showing the explainer inline as a claude.ai artifact
 (today it comes back as a file).
 
 ## Develop
@@ -296,7 +296,7 @@ npm run assets -w dev/visual-explainer/tools    # rebuild the generated files fr
 npm run check -w dev/visual-explainer/tools     # build every example and check the exit codes
 npm run snapshots -w dev/visual-explainer/tools # draw every example in a headless browser and compare its SVG with tools/snapshots/
 npm run zip -w dev/visual-explainer/tools       # dist/visual-explainer.zip for claude.ai and the API
-npm run site -w dev/visual-explainer/tools      # the gallery in docs/ (GitHub Pages): every example as a lesson, with a picture
+npm run site -w dev/visual-explainer/tools      # the gallery in docs/ (GitHub Pages): every example as an explainer, with a picture
 npm run linux -w dev/visual-explainer/tools     # the review as in a cloud sandbox: Linux, as root, Playwright's Chromium (needs Docker)
 npm run audit     # before a push: no name from your local list in the tracked files
 ```
@@ -323,7 +323,7 @@ yet, so `npm run assets` only works where it is; everything else (`check`, `snap
 this repository alone.
 
 The skill's own evals are in [`evals/`](../../evals): 26 requests in English and Portuguese (drawing at once, drawing for a
-class, crowded papers, changing a lesson, requests that are not about drawing, and six fixed requests that measure
+class, crowded papers, changing an explainer, requests that are not about drawing, and six fixed requests that measure
 speed). They run with [`claude plugin eval`](https://docs.claude.com/en/docs/claude-code):
 
 ```
@@ -339,10 +339,10 @@ claude.ai.
 
 ## Third-party
 
-- [lottie-web](https://github.com/airbnb/lottie-web) (light build, MIT) goes into a lesson only when it plays an
+- [lottie-web](https://github.com/airbnb/lottie-web) (light build, MIT) goes into an explainer only when it plays an
   animation.
 - The animated emoji in `skills/visual-explainer/assets/lottie/` are **Animated Noto Emoji by Google**, under
-  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — not MIT; a lesson that plays one credits it.
+  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) — not MIT; an explainer that plays one credits it.
 - Rough.js (MIT); the fonts Caveat and Shantell Sans (SIL Open Font License).
 - [pptxgenjs](https://github.com/gitbrent/PptxGenJS) (MIT) is bundled into `scripts/pptx.mjs`, with JSZip inside it
   (dual MIT or GPLv3; used under MIT).

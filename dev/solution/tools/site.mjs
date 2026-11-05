@@ -19,7 +19,7 @@ const field = (text, k) => (new RegExp(`^${k}:\\s*(.+)$`, 'm').exec(text)?.[1] ?
 const items = readdirSync(examples).filter((d) => existsSync(join(examples, d, `${d}.solution.yaml`))).map((id) => {
   const text = readFileSync(join(examples, id, `${id}.solution.yaml`), 'utf8')
   execFileSync(process.execPath, [join(repo, 'skills/solution/scripts/build.mjs'), join(examples, id, `${id}.solution.yaml`), '--out', join(docs, 'examples')], { stdio: 'ignore' })
-  const pieces = (text.match(/^(way|sim|blueprint|drill|agents|lesson):/gm) ?? []).map((k) => k.slice(0, -1))
+  const pieces = (text.match(/^(way|sim|blueprint|drill|agents|explainer):/gm) ?? []).map((k) => k.slice(0, -1))
   return { id, name: field(text, 'name'), about: field(text, 'about'), lang: field(text, 'lang') || 'en', pieces, page: `examples/${id}.solution.html` }
 })
 const shots = items.map((d) => ({ file: join(docs, d.page), mode: '', shot: { width: 1300, height: 820, scheme: 'light', settle: 300 }, png: join(docs, 'images', `${d.id}.png`) }))

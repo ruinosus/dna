@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Checks a visual-pitch recipe and builds one HTML file that draws itself — with visual-explainer's engine
 // (engine-build.mjs). This file only checks the purpose first: a drawing here says what it is for (`kind pitch`, arch,
-// decision, data, timeline or story — a lesson is visual-explainer's), then hands over to the engine, which checks the
+// decision, data, timeline or story — an explainer is visual-explainer's), then hands over to the engine, which checks the
 // recipe, draws it, reviews it and says what the purpose usually misses.
 //
 //   node build.mjs <id>.chalk [out.html] [--no-present] [--snapshots [folder]] [--no-review] [--svg]
@@ -30,9 +30,9 @@ for (const file of recipes) {
     console.error(`✗ purpose: ${msg}\n  write it like:\n    kind pitch`)
     process.exit(1)
   }
-  if (kind === undefined || kind === 'lesson') {
-    fail(kind === 'lesson'
-      ? 'a lesson is visual-explainer\'s (to teach); visual-pitch draws to present, convince, decide, document or tell what happened.'
+  if (kind === undefined || kind === 'explainer' || kind === 'lesson') {
+    fail(kind !== undefined
+      ? 'an explainer is visual-explainer\'s (to explain); visual-pitch draws to present, convince, decide, document or tell what happened.'
       : `say what the drawing is for, on a line of its own: kind ${KINDS.join('|')}.`)
   }
   if (!KINDS.includes(kind)) fail(`kind ${kind} is not one of ${KINDS.join(', ')}.`)

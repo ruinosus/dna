@@ -1,16 +1,16 @@
-// visual-explainer/embed: one lesson mounted inside an element. The recipe format: https://github.com/ruinosus/dna
+// visual-explainer/embed: one explainer mounted inside an element. The recipe format: https://github.com/ruinosus/dna
 export type Theme = 'paper' | 'chalkboard'
 /** A checked recipe (what readRecipe returns). */
 export interface Scene { id: string; title: string; width: number; height: number; theme?: Theme; locale?: string; steps: unknown[]; [key: string]: unknown }
 export interface Mounted { destroy(): void }
-export interface LessonOptions {
+export interface ExplainerOptions {
   /** Button language; the browser's by default. */
   lang?: 'en' | 'pt'
-  /** The lesson inside a note: chapters, Values and Expand on top, the bar below; opens on chapter 1, drawn and still. */
+  /** The explainer inside a note: chapters, Values and Expand on top, the bar below; opens on chapter 1, drawn and still. */
   compact?: boolean
   /** The theme when the recipe has none. */
   theme?: Theme
-  /** 'document': arrow keys and Space work anywhere on the page; otherwise only while the focus is in the lesson. */
+  /** 'document': arrow keys and Space work anywhere on the page; otherwise only while the focus is in the explainer. */
   keys?: 'document' | 'self'
   /** Shows «Expand», which calls this. */
   onExpand?: () => void
@@ -19,8 +19,8 @@ export interface LessonOptions {
 export class ChalkTextError extends Error { line: number }
 /** JSON when the text starts with "{", the text syntax otherwise; throws ChalkTextError or the contract's Error. */
 export function readRecipe(source: string): Scene
-export function mountLesson(root: HTMLElement, scene: Scene, options?: LessonOptions): Promise<Mounted>
+export function mountExplainer(root: HTMLElement, scene: Scene, options?: ExplainerOptions): Promise<Mounted>
 /** The whole drawing at once, still (an exported PDF, a printed page). */
-export function stillLesson(root: HTMLElement, scene: Scene, theme?: Theme): Promise<void>
+export function stillExplainer(root: HTMLElement, scene: Scene, theme?: Theme): Promise<void>
 export function ensureStyles(doc?: Document): void
 export function removeStyles(doc?: Document): void

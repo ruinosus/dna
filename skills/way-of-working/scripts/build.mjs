@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 // Checks a way of working (<id>.way.yaml) and makes what is asked of it: the map (an HTML page that opens with no
-// internet), the workbook (.xlsx) and a visual-explainer lesson that walks it drawing. And the way back: a workbook someone
+// internet), the workbook (.xlsx) and an explainer drawn with visual-explainer that walks it drawing. And the way back: a workbook someone
 // changed is read as the changes it proposes, one per line, and only the ones taken go into the .way.yaml.
 //
 //   node build.mjs <id>.way.yaml --check [--lang en|pt]                       only check it: nothing is written
-//   node build.mjs <id>.way.yaml [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
+//   node build.mjs <id>.way.yaml [--html] [--xlsx] [--explainer] [--all] [--lang en|pt] [--out <folder>]
 //   node build.mjs <id>.way.yaml --from <edited.xlsx> [--lang en|pt]           the changes, each with its key
 //   node build.mjs <id>.way.yaml --from <edited.xlsx> --take <key,key…|all>    writes the ones taken into the .way.yaml
 //
-// With no --html/--xlsx/--lesson it makes the map. Files go beside the .way.yaml (or in --out), named by its id.
+// With no --html/--xlsx/--explainer it makes the map. Files go beside the .way.yaml (or in --out), named by its id.
 // Exit codes: 0 done (what to look at is printed, and is not an error); 1 the file breaks the format (each problem with
-// its line; nothing written); 2 bad arguments; 3 made, but the lesson's reviewer found something to fix. Needs Node 18
-// or later and nothing else; the lesson's review uses Chrome, Chromium or Edge when there is one.
+// its line; nothing written); 2 bad arguments; 3 made, but the explainer's reviewer found something to fix. Needs Node 18
+// or later and nothing else; the explainer's review uses Chrome, Chromium or Edge when there is one.
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
@@ -24,16 +24,17 @@ import { readXlsx } from './read-xlsx.mjs'
 import { blueprintOf, drillOf, simOf } from './lenses.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const argv = process.argv.slice(2)
+// DNA 2.2.0: --lesson, the explainer's flag before, still works.
+const argv = process.argv.slice(2).map((a) => (a === '--lesson' ? '--explainer' : a))
 const valued = new Set(['--lang', '--out', '--from', '--take', '--lens', '--gate'])
 const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
 }
-const flags = new Set(['--check', '--json', '--html', '--xlsx', '--lesson', '--all', '--write', '--force', '--upgrade', ...valued])
+const flags = new Set(['--check', '--json', '--html', '--xlsx', '--explainer', '--all', '--write', '--force', '--upgrade', ...valued])
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
 const usage = `usage: node build.mjs <id>.way.yaml --check [--json] [--lang en|pt]
-       node build.mjs <id>.way.yaml [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
+       node build.mjs <id>.way.yaml [--html] [--xlsx] [--explainer] [--all] [--lang en|pt] [--out <folder>]
        node build.mjs <id>.way.yaml --from <edited.xlsx> [--take <key,key…|all>]
        node build.mjs <id>.way.yaml --lens sim|blueprint|drill [--gate <id>] [--lang en|pt] [--write [--force]] [--out <folder>]`
 const lang = option('--lang') ?? 'en'
@@ -190,8 +191,8 @@ if (argv.includes('--from')) {
 // ---- what to make ----
 if (argv.includes('--check')) process.exit(0)
 const all = argv.includes('--all')
-const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), lesson: all || argv.includes('--lesson') }
-if (!want.xlsx && !want.lesson) want.html = true
+const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), explainer: all || argv.includes('--explainer') }
+if (!want.xlsx && !want.explainer) want.html = true
 const out = resolve(option('--out') ?? dirname(file))
 const asset = (f) => readFileSync(join(here, '../assets', f), 'utf8')
 
@@ -206,13 +207,13 @@ if (want.xlsx) {
   console.log(`✓ workbook  ${book}`)
 }
 let exit = 0
-if (want.lesson) {
+if (want.explainer) {
   const scene = validateScene(wayLesson(name, way, lang))
-  const page = join(out, `${id}.lesson.html`)
-  writeFileSync(page, fill(asset('lesson.html'), { RECIPE: inline(scene) }))
-  console.log(`✓ lesson    ${page}`)
+  const page = join(out, `${id}.explainer.html`)
+  writeFileSync(page, fill(asset('explainer.html'), { RECIPE: inline(scene) }))
+  console.log(`✓ explainer    ${page}`)
   const r = await runPage(page, 'review')
-  if (r === null) console.log('• review    no Chrome, Chromium or Edge here: the lesson checks itself when opened')
+  if (r === null) console.log('• review    no Chrome, Chromium or Edge here: the explainer checks itself when opened')
   else if (r.error) console.log(`✗ review    not checked: ${r.error}`)
   else if (!r.problems.length) console.log(`✓ review    ${r.combos} ${r.combos === 1 ? 'setting' : 'settings'}: nothing off the paper, no text over text`)
   else {

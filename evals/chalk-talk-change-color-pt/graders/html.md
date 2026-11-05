@@ -2,4 +2,4 @@
 type: file_exists
 path: "*.html"
 ---
-The lesson file was written.
+The explainer file was written.

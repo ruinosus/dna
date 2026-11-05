@@ -5,7 +5,7 @@ drill, the «what if» simulation, the Copilot Studio agents compared and the so
 checked as it is written, and shown as one HTML file that opens offline. Eight Agent Skills for Claude.</b></p>
 
 <p align="center">
-  <img src="dev/visual-explainer/gallery/images/hero.png" alt="A lesson on demand and capacity at the HR help desk, drawn in the business theme" width="760">
+  <img src="dev/visual-explainer/gallery/images/hero.png" alt="An explainer on demand and capacity at the HR help desk, drawn in the business theme" width="760">
 </p>
 
 <p align="center">
@@ -19,12 +19,12 @@ checked as it is written, and shown as one HTML file that opens offline. Eight A
 
 | Skill | Ask for | You get |
 |---|---|---|
-| [visual-explainer](dev/visual-explainer/README.md) | "explain compound interest by drawing it" | a lesson that draws itself, chapter by chapter, with values you can move |
+| [visual-explainer](dev/visual-explainer/README.md) | "explain compound interest by drawing it" | an explainer that draws itself, chapter by chapter, with values you can move |
 | [visual-pitch](dev/visual-pitch/README.md) | "draw the architecture so I can present it to the client" | a pitch, an architecture, a decision, data, a timeline or a story drawn to be shown — it opens presenting, and becomes a PowerPoint |
 | [incident-drill](dev/incident-drill/README.md) | "make a drill from our checkout runbook" | an incident drill to play, with a clock and choices, and a debrief of what the runbook does not say |
-| [way-of-working](dev/way-of-working/README.md) | "who approves what in our delivery?" | a team's way of working — stages, gates, roles, outputs — as a checkable file, a map, a workbook and a lesson |
+| [way-of-working](dev/way-of-working/README.md) | "who approves what in our delivery?" | a team's way of working — stages, gates, roles, outputs — as a checkable file, a map, a workbook and an explainer |
 | [service-blueprint](dev/service-blueprint/README.md) | "where does our onboarding hurt?" | a customer journey and who makes each moment happen on stage, backstage and in the systems |
-| [agent-review](dev/agent-review/README.md) | "which of our Copilot Studio agents is off the pattern?" | the agents compared: what repeats, who is off it, the contract, the telemetry, what nobody uses — a map, a workbook to decide in, and a lesson; Node alone, no model |
+| [agent-review](dev/agent-review/README.md) | "which of our Copilot Studio agents is off the pattern?" | the agents compared: what repeats, who is off it, the contract, the telemetry, what nobody uses — a map, a workbook to decide in, and an explainer; Node alone, no model |
 | [process-simulation](dev/process-simulation/README.md) | "what if the assistant answered half the HR questions?" | a process to watch: items arriving, queues forming, people and assistants at work, a slider for every control, the ranges of many runs and the scenarios side by side — and, in Claude Code, a mod that checks every `.sim` as it is written |
 | [solution](dev/solution/README.md) | "put our HR self-service together as one solution" | one process seen by every skill: a `.solution.yaml` that names the way, the simulation, the journey, the drill and the agents, checks each with its skill, says which fell behind the way, and makes one page with a tab per piece — with solution accelerators to start from |
 
@@ -78,7 +78,7 @@ npx @ruinosus/dna agent-review agents/ --all
 npx @ruinosus/dna process-simulation hr.sim --lang pt
 ```
 
-The drawing engine alone, to embed lessons in a page, is the [visual-explainer](https://www.npmjs.com/package/@ruinosus/visual-explainer)
+The drawing engine alone, to embed explainers in a page, is the [visual-explainer](https://www.npmjs.com/package/@ruinosus/visual-explainer)
 package (it also powers the VS Code and Obsidian extensions).
 
 ## DNA and OKF

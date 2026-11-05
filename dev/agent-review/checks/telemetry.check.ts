@@ -9,7 +9,7 @@ import { extractAgent } from '../src/extract'
 import { agentsIn } from '../src/folder'
 import { applyChanges } from '../src/fromSheets'
 import { labelOf } from '../src/labels'
-import { lessonOf } from '../src/lesson'
+import { explainerOf } from '../src/explainer'
 import { readProfile } from '../src/profile'
 import { reviewCast } from '../src/review'
 import { declaredFrom, firedFrom, mergeDeclared, readCsv } from '../src/tables'
@@ -82,8 +82,8 @@ ok(withFired.telemetry.events.find((e) => e.agent === 'rh-admissao')?.fired === 
 const tl = reviewCast(withFired).filter((l) => l.key === 'telemetry').map((l) => l.pt)
 ok(tl.join('|') === 'O evento «RhFolha_OnError» de rh-folha não disparou em 30 dias|rh-facilities não tem nenhuma linha na telemetria: está ligado ao Application Insights?', 'said', tl)
 ok(!r.telemetry.notFired.length && !r.telemetry.silent.length, 'with no export, nothing is said about what fired')
-const lesson = (lessonOf(withFired, reviewCast(withFired), 'pt').steps as { text?: string }[]).map((x) => x.text ?? '').join(' ')
-ok(lesson.includes('é o mesmo evento?') && lesson.includes('não disparou em 30 dias'), 'the lesson: the spelling in «what to decide», what did not fire in «what is missing»')
+const explainer = (explainerOf(withFired, reviewCast(withFired), 'pt').steps as { text?: string }[]).map((x) => x.text ?? '').join(' ')
+ok(explainer.includes('é o mesmo evento?') && explainer.includes('não disparou em 30 dias'), 'the explainer: the spelling in «what to decide», what did not fire in «what is missing»')
 ok('problem' in firedFrom({ name: '', rows: [['agente', 'vezes'], ['RH - Férias', '3'], ['RH - Folha', '1']] }, found, { file: 'x', days: 30 }), 'an export with no event column says so')
 
 // a CSV

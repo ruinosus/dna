@@ -1,5 +1,5 @@
 // /check-solution: an solution solution in a pane — each piece (the way, the simulation, the journey, the drill, the
-// agents, the lesson) with where it stands, by solution's own check (--check --json), and the command that shows
+// agents, the explainer) with where it stands, by solution's own check (--check --json), and the command that shows
 // it. A lens that fell behind the way has a button that makes it again from the way (way-of-working --lens --write
 // --force) — asking first, since it may have been edited by hand.
 import { atom, read, update } from 'claude-code'
@@ -11,10 +11,10 @@ import { pathOf, scriptOf } from '../recipes/run'
 export const SOLUTION_PANE = 'dna-solution'
 const solution = atom({ plugin: 'dna', key: 'solution' } as const, null, { shape: 'solution-1' })
 
-const SHOW: Record<string, string> = { way: '/way-preview', sim: '/simulation-preview', blueprint: '/blueprint-preview', drill: '/drill', agents: '/compare-agents', lesson: '' }
+const SHOW: Record<string, string> = { way: '/way-preview', sim: '/simulation-preview', blueprint: '/blueprint-preview', drill: '/drill', agents: '/compare-agents', explainer: '' }
 const W = {
-  en: { kinds: { way: 'The process', sim: 'What if', blueprint: 'The journey', drill: 'The drill', agents: 'The agents', lesson: 'The lesson' } as Record<string, string>, ok: 'passes its check', missing: 'not there', broken: 'does not pass its check', unchecked: 'not checked', stale: 'behind the way', redo: 'Make it again from the way', sure: 'Sure? It may have been edited by hand', redone: 'made again from the way', see: 'see it', page: (f: string) => `The page: ask Claude to run solution on ${f}`, none: 'Run /check-solution with a .solution.yaml.' },
-  pt: { kinds: { way: 'O processo', sim: 'E se', blueprint: 'A jornada', drill: 'O ensaio', agents: 'Os agentes', lesson: 'A explicação' } as Record<string, string>, ok: 'passa no check', missing: 'não está lá', broken: 'não passa no check', unchecked: 'não conferido', stale: 'atrás do way', redo: 'Refazer a partir do way', sure: 'Certeza? Pode ter sido editado à mão', redone: 'refeito a partir do way', see: 'para ver', page: (f: string) => `A página: peça ao Claude para rodar o solution em ${f}`, none: 'Rode /check-solution com um .solution.yaml.' },
+  en: { kinds: { way: 'The process', sim: 'What if', blueprint: 'The journey', drill: 'The drill', agents: 'The agents', explainer: 'The explainer' } as Record<string, string>, ok: 'passes its check', missing: 'not there', broken: 'does not pass its check', unchecked: 'not checked', stale: 'behind the way', redo: 'Make it again from the way', sure: 'Sure? It may have been edited by hand', redone: 'made again from the way', see: 'see it', page: (f: string) => `The page: ask Claude to run solution on ${f}`, none: 'Run /check-solution with a .solution.yaml.' },
+  pt: { kinds: { way: 'O processo', sim: 'E se', blueprint: 'A jornada', drill: 'O ensaio', agents: 'Os agentes', explainer: 'A explicação' } as Record<string, string>, ok: 'passa no check', missing: 'não está lá', broken: 'não passa no check', unchecked: 'não conferido', stale: 'atrás do way', redo: 'Refazer a partir do way', sure: 'Certeza? Pode ter sido editado à mão', redone: 'refeito a partir do way', see: 'para ver', page: (f: string) => `A página: peça ao Claude para rodar o solution em ${f}`, none: 'Rode /check-solution com um .solution.yaml.' },
 }
 const dirOf = (p: string) => p.split('/').slice(0, -1).join('/') || '.'
 

@@ -1,6 +1,6 @@
 // The GitHub Pages gallery (docs/agent-review/): the example agents of a made-up shop compared — the map, the workbook,
-// the lesson and the review file (with the demo's declared facts and decision) in docs/agent-review/examples/; pictures of
-// the map and the lesson (docs/agent-review/images/, a headless browser in the light theme); and its index.html. The
+// the explainer and the review file (with the demo's declared facts and decision) in docs/agent-review/examples/; pictures of
+// the map and the explainer (docs/agent-review/images/, a headless browser in the light theme); and its index.html. The
 // example runs with the example export of Application Insights, so the map shows what fired. Run
 // after npm run assets.
 import { execFileSync } from 'node:child_process'
@@ -31,7 +31,7 @@ const shots = [
   { file: join(docs, 'examples', `${ID}.html`), mode: '', shot: { width: 1440, height: 900, scheme: 'light' }, png: join(docs, 'images', `${ID}-map.png`) },
   { file: join(docs, 'examples', `${ID}.topology.html`), mode: '', shot: { width: 1500, height: 860, scheme: 'light' }, png: join(docs, 'images', `${ID}-stage.png`) },
   { file: join(docs, 'examples', `${ID}.team.html`), mode: '', shot: { width: 1400, height: 1000, scheme: 'light' }, png: join(docs, 'images', `${ID}-rh.png`) },
-  { file: join(docs, 'examples', `${ID}.lesson.html`), mode: 'still', shot: { width: 1100, height: 640, scheme: 'light' }, png: join(docs, 'images', `${ID}-lesson.png`) },
+  { file: join(docs, 'examples', `${ID}.explainer.html`), mode: 'still', shot: { width: 1100, height: 640, scheme: 'light' }, png: join(docs, 'images', `${ID}-explainer.png`) },
 ]
 const { results } = await runPages(shots, { timeout: 60 })
 shots.forEach(({ png }, k) => {
@@ -79,13 +79,13 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
     <div class="actions"><a class="button primary" href="https://github.com/ruinosus/dna#install">Install the skill</a><a class="button" href="https://github.com/ruinosus/dna">GitHub</a></div>
   </section>
   <section>
-    <h2>The example — open the map, play the lesson, download the workbook</h2>
+    <h2>The example — open the map, play the explainer, download the workbook</h2>
     <article class="card">
-      <a href="examples/${ID}.lesson.html"><img src="images/${ID}-lesson.png" alt="The lesson: the orchestrator calls five specialists; two carry a red ×" loading="lazy"></a>
+      <a href="examples/${ID}.explainer.html"><img src="images/${ID}-explainer.png" alt="The explainer: the orchestrator calls five specialists; two carry a red ×" loading="lazy"></a>
       <span class="meta">Português · fictional agents</span>
       <b>RH — autoatendimento do colaborador</b>
       <span>An orchestrator and five specialists of a made-up online shop, run with a made-up export of Application Insights. On purpose: shipping does not escalate to a person and gets no conversation history, the store logs no telemetry, coupons spells its error event another way and calls a flow that returns nothing, shipping's event did not fire in 30 days, and a few things nobody uses.</span>
-      <span class="links"><a href="examples/${ID}.html">Map</a><a href="examples/${ID}.topology.html">Stage</a><a href="examples/${ID}.team.html">RH</a><a href="https://github.com/ruinosus/dna/blob/gh-pages/agent-review/examples/${ID}.diagrams.md">Diagrams (Mermaid)</a><a href="examples/${ID}.lesson.html">Lesson</a><a href="examples/${ID}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${ID}.cast.yaml" download>Cast file (.yaml)</a></span>
+      <span class="links"><a href="examples/${ID}.html">Map</a><a href="examples/${ID}.topology.html">Stage</a><a href="examples/${ID}.team.html">RH</a><a href="https://github.com/ruinosus/dna/blob/gh-pages/agent-review/examples/${ID}.diagrams.md">Diagrams (Mermaid)</a><a href="examples/${ID}.explainer.html">Explainer</a><a href="examples/${ID}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${ID}.cast.yaml" download>Cast file (.yaml)</a></span>
     </article>
   </section>
   <section>
@@ -133,4 +133,4 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
 </body>
 </html>
 `)
-console.log(`✓ docs/agent-review: ${ID} (map, workbook, lesson, review file) and its pictures`)
+console.log(`✓ docs/agent-review: ${ID} (map, workbook, explainer, review file) and its pictures`)

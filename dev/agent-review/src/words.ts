@@ -1,4 +1,4 @@
-// The words the review, the map, the workbook and the lesson share, in English and Portuguese.
+// The words the review, the map, the workbook and the explainer share, in English and Portuguese.
 import type { Role } from './profile'
 export type { Lang } from './labels'
 

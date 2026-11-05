@@ -1,4 +1,4 @@
-// The GitHub Pages gallery (docs/): every example built into a lesson you can open and play (docs/lessons/), a picture
+// The GitHub Pages gallery (docs/): every example built into an explainer you can open and play (docs/explainers/), a picture
 // of each (docs/thumbs/: the whole drawing, from the page's #snapshots mode in a headless browser) and docs/index.html
 // listing them.
 // Run after `npm run assets`: npm run site.
@@ -21,18 +21,18 @@ const gallerySrc = join(root, 'gallery')
 mkdirSync(join(docs, 'images'), { recursive: true })
 cpSync(join(gallerySrc, 'images'), join(docs, 'images'), { recursive: true })
 const sources = [join(gallerySrc, 'examples'), join(repo, 'skills/visual-explainer/references/examples')]
-const lessons = []
+const explainers = []
 for (const d of sources) {
-  for (const { file, scene } of await recipesIn(d)) lessons.push({ file, scene, english: (scene.locale ?? 'pt-BR').startsWith('en') })
+  for (const { file, scene } of await recipesIn(d)) explainers.push({ file, scene, english: (scene.locale ?? 'pt-BR').startsWith('en') })
 }
 
-// The picture of each lesson is its last chapter at the starting values: the whole drawing (the #snapshots mode).
-const pages = await gallery(docs, lessons.map(({ file, scene }) => ({ name: file, html: fill(player, { RECIPE: inline(scene) }) })), {
+// The picture of each explainer is its last chapter at the starting values: the whole drawing (the #snapshots mode).
+const pages = await gallery(docs, explainers.map(({ file, scene }) => ({ name: file, html: fill(player, { RECIPE: inline(scene) }) })), {
   mode: 'snapshots',
   pick: (r) => r.shots?.filter((s) => s.label === 'default').at(-1)?.png,
 })
 // The README shows these as SVGs that draw themselves (build.mjs --svg).
-for (const [k, { file }] of lessons.entries()) {
+for (const [k, { file }] of explainers.entries()) {
   if (!['time-off-request', 'training-hours'].includes(file)) continue
   const r = await runPage(pages[k], 'svg', '', { timeout: 60 })
   if (!r || r.error) throw new Error(`${file}: the animated SVG failed (${r?.error ?? 'no browser'})`)
@@ -41,7 +41,7 @@ for (const [k, { file }] of lessons.entries()) {
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 const card = ({ file, scene, english }) => `
-      <a class="card" href="lessons/${file}.html">
+      <a class="card" href="explainers/${file}.html">
         <img src="thumbs/${file}.png" alt="${esc(scene.title)}" loading="lazy">
         <span class="meta"><span>${esc(scene.category ?? '')}</span><span class="lang">${english ? 'English' : 'Português'}</span></span>
         <b>${esc(scene.title)}</b>
@@ -54,7 +54,7 @@ writeFileSync(join(docs, 'index.html'), `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>visual-explainer</title>
-<meta name="description" content="A skill that makes Claude explain an idea by drawing it: a lesson that draws itself, in one HTML file.">
+<meta name="description" content="A skill that makes Claude explain an idea by drawing it: an explainer that draws itself, in one HTML file.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
@@ -94,22 +94,22 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
 <main>
   <section class="hero">
     <h1>visual-explainer</h1>
-    <p class="lead">Ask Claude to explain something by drawing it — and get a lesson that draws itself, chapter by chapter, with values you can move. One HTML file, offline.</p>
-    <img src="images/hero.png" alt="A lesson on demand and capacity at the HR help desk, drawn in the business theme">
+    <p class="lead">Ask Claude to explain something by drawing it — and get an explainer that draws itself, chapter by chapter, with values you can move. One HTML file, offline.</p>
+    <img src="images/hero.png" alt="An explainer on demand and capacity at the HR help desk, drawn in the business theme">
     <div class="actions">
       <a class="button primary" href="https://github.com/ruinosus/dna#install">Install the skill</a>
       <a class="button" href="https://github.com/ruinosus/dna">GitHub</a>
     </div>
   </section>
   <section>
-    <h2>Lessons — open one and press Next</h2>
+    <h2>Explainers — open one and press Next</h2>
     <p class="goal" style="margin: 4px 0 16px">Each one was written by Claude with this skill and plays right here in your browser.</p>
-    <div class="grid">${lessons.map(card).join('')}
+    <div class="grid">${explainers.map(card).join('')}
     </div>
   </section>
   <section class="how">
     <h2>How it works</h2>
-    <img src="images/visual-explainer-how.png" alt="You ask Claude, Claude chooses the hook, the audience and the value to move, writes the recipe, build.mjs checks it, out comes lesson.html">
+    <img src="images/visual-explainer-how.png" alt="You ask Claude, Claude chooses the hook, the audience and the value to move, writes the recipe, build.mjs checks it, out comes explainer.html">
     <ol>
       <li>Claude chooses the everyday thing to tie the idea to, who it is for and which number moves, and draws at once — then says what it chose and offers to change it. For a class it asks first.</li>
       <li>It writes a short text <b>recipe</b> — what to draw, step by step — never the drawing itself.</li>
@@ -121,4 +121,4 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
 </body>
 </html>
 `)
-console.log(`✓ docs/index.html with ${lessons.length} lessons`)
+console.log(`✓ docs/index.html with ${explainers.length} explainers`)

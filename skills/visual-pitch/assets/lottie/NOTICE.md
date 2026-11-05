@@ -5,4 +5,4 @@ idea (💡 U+1F4A1) and time (⏰ U+23F0) — are **Animated Noto Emoji by Googl
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), not under visual-explainer's MIT license. The animations come
 from https://googlefonts.github.io/noto-emoji-animation/ (the Lottie files at fonts.gstatic.com/s/e/notoemoji/latest/);
 the license is stated at https://googlefonts.github.io/noto-emoji-files/ («Animated Noto Emoji is licensed under CC BY
-4.0»). They are unchanged. A lesson that plays one shows the credit «Animated emoji: Noto Animated Emoji by Google, CC BY 4.0».
+4.0»). They are unchanged. An explainer that plays one shows the credit «Animated emoji: Noto Animated Emoji by Google, CC BY 4.0».

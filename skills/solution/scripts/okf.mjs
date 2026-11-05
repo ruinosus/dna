@@ -20,19 +20,19 @@ export const CONCEPTS = {
   blueprint: { file: 'journey.md', type: 'Service Blueprint', role: { en: 'the journey', pt: 'a jornada' } },
   drill: { file: 'drill.md', type: 'Incident Drill', role: { en: 'when it goes wrong', pt: 'quando dá errado' } },
   agents: { file: 'agents.md', type: 'Agent Review', role: { en: 'the agents', pt: 'os agentes' } },
-  lesson: { file: 'lesson.md', type: 'Lesson', role: { en: 'the lesson', pt: 'a explicação' } },
+  explainer: { file: 'explainer.md', type: 'Explainer', role: { en: 'the explainer', pt: 'a explicação' } },
   sim: { file: 'computations/simulation.md', type: 'Attested Computation', role: { en: 'what if', pt: 'e se' } },
 }
 const T = {
   en: {
-    about: { way: 'Who does what, the stages in order, and the gates that decide.', blueprint: 'What the person lives at each step, who makes it happen, and where it hurts.', drill: 'What the team does when it goes wrong, played as a drill.', agents: 'The Copilot Studio agents, compared with each other.', lesson: 'The idea explained by drawing, chapter by chapter.', sim: 'The what-if simulation of the process.' },
-    phases: 'Phases and stages', gates: 'Gates', after: 'after', approves: 'approved by', onFail: 'if not', moments: 'Moments', feels: 'feels', actions: 'Actions', owner: 'owner', due: 'due', roles: 'Roles', scenes: (n) => `${n} scenes`, gaps: 'What the runbook does not say', said: 'What the check says', look: 'To look at', broken: 'This piece fails its check: it is a draft until it passes.', params: 'Parameters', scenarios: 'Scenarios', run: (seed, runs) => `The default run (seed ${seed}, ${runs} runs)`, metric: 'Metric', median: 'Median', range: 'p10 to p90', recipe: (f) => `The recipe: [${f}](${f}).`, attest: 'A run of it is attested by the attester: `node ../references/attesters/process-simulation.mjs <receipt.json>`.', lessonOf: (f) => `Drawn by visual-explainer from \`${f}\`.`,
+    about: { way: 'Who does what, the stages in order, and the gates that decide.', blueprint: 'What the person lives at each step, who makes it happen, and where it hurts.', drill: 'What the team does when it goes wrong, played as a drill.', agents: 'The Copilot Studio agents, compared with each other.', explainer: 'The idea explained by drawing, chapter by chapter.', sim: 'The what-if simulation of the process.' },
+    phases: 'Phases and stages', gates: 'Gates', after: 'after', approves: 'approved by', onFail: 'if not', moments: 'Moments', feels: 'feels', actions: 'Actions', owner: 'owner', due: 'due', roles: 'Roles', scenes: (n) => `${n} scenes`, gaps: 'What the runbook does not say', said: 'What the check says', look: 'To look at', broken: 'This piece fails its check: it is a draft until it passes.', params: 'Parameters', scenarios: 'Scenarios', run: (seed, runs) => `The default run (seed ${seed}, ${runs} runs)`, metric: 'Metric', median: 'Median', range: 'p10 to p90', recipe: (f) => `The recipe: [${f}](${f}).`, attest: 'A run of it is attested by the attester: `node ../references/attesters/process-simulation.mjs <receipt.json>`.', explainerOf: (f) => `Drawn by visual-explainer from \`${f}\`.`,
     rootHead: 'The solution', compHead: 'Computations', refHead: 'References', compIndex: 'The simulation as an Attested Computation.', refIndex: 'The DNA recipes, the executor and the attester.', dnaDir: 'The recipes as DNA writes them, the source of each concept.', skillsDir: 'How to run the simulation and get a receipt.', attDir: 'The deterministic attester and the engine it runs.',
     created: (l) => `Exported ${l}.`, updated: (l) => `${l} changed.`, reviewed: (l, by) => `${l} reviewed by ${by}.`, removed: (t) => `«${t}» left the solution.`,
   },
   pt: {
-    about: { way: 'Quem faz o quê, as etapas em ordem e os gates que decidem.', blueprint: 'O que a pessoa vive a cada passo, quem faz acontecer e onde dói.', drill: 'O que o time faz quando dá errado, jogado como um ensaio.', agents: 'Os agentes do Copilot Studio, comparados entre si.', lesson: 'A ideia explicada desenhando, capítulo a capítulo.', sim: 'A simulação «e se» do processo.' },
-    phases: 'Fases e etapas', gates: 'Gates', after: 'depois de', approves: 'aprovado por', onFail: 'se não', moments: 'Momentos', feels: 'sente', actions: 'Ações', owner: 'dono', due: 'prazo', roles: 'Papéis', scenes: (n) => `${n} cenas`, gaps: 'O que o runbook não diz', said: 'O que o check diz', look: 'A olhar', broken: 'Esta peça não passa no check: é rascunho até passar.', params: 'Parâmetros', scenarios: 'Cenários', run: (seed, runs) => `A execução padrão (semente ${seed}, ${runs} rodadas)`, metric: 'Métrica', median: 'Mediana', range: 'p10 a p90', recipe: (f) => `A receita: [${f}](${f}).`, attest: 'Uma execução dela é atestada pelo attester: `node ../references/attesters/process-simulation.mjs <recibo.json>`.', lessonOf: (f) => `Desenhada pelo visual-explainer a partir de \`${f}\`.`,
+    about: { way: 'Quem faz o quê, as etapas em ordem e os gates que decidem.', blueprint: 'O que a pessoa vive a cada passo, quem faz acontecer e onde dói.', drill: 'O que o time faz quando dá errado, jogado como um ensaio.', agents: 'Os agentes do Copilot Studio, comparados entre si.', explainer: 'A ideia explicada desenhando, capítulo a capítulo.', sim: 'A simulação «e se» do processo.' },
+    phases: 'Fases e etapas', gates: 'Gates', after: 'depois de', approves: 'aprovado por', onFail: 'se não', moments: 'Momentos', feels: 'sente', actions: 'Ações', owner: 'dono', due: 'prazo', roles: 'Papéis', scenes: (n) => `${n} cenas`, gaps: 'O que o runbook não diz', said: 'O que o check diz', look: 'A olhar', broken: 'Esta peça não passa no check: é rascunho até passar.', params: 'Parâmetros', scenarios: 'Cenários', run: (seed, runs) => `A execução padrão (semente ${seed}, ${runs} rodadas)`, metric: 'Métrica', median: 'Mediana', range: 'p10 a p90', recipe: (f) => `A receita: [${f}](${f}).`, attest: 'Uma execução dela é atestada pelo attester: `node ../references/attesters/process-simulation.mjs <recibo.json>`.', explainerOf: (f) => `Desenhada pelo visual-explainer a partir de \`${f}\`.`,
     rootHead: 'A solução', compHead: 'Computações', refHead: 'Referências', compIndex: 'A simulação como Attested Computation.', refIndex: 'As receitas do DNA, o executor e o attester.', dnaDir: 'As receitas como o DNA as escreve, a fonte de cada conceito.', skillsDir: 'Como rodar a simulação e obter um recibo.', attDir: 'O attester determinístico e o motor que ele roda.',
     created: (l) => `Exportado: ${l}.`, updated: (l) => `${l} mudou.`, reviewed: (l, by) => `${l} revisado por ${by}.`, removed: (t) => `«${t}» saiu da solução.`,
   },
@@ -183,7 +183,7 @@ const fmt = (x) => (Math.abs(x) >= 100 ? String(Math.round(x)) : String(Number(x
 /** What a piece is made of, for its version (the 8 hex a review and the bundle compare): its file (a folder: each file's
  *  name and hash), the profile with the agents, the runbook with the drill. { path, version, extra, facts }. */
 export function pieceContent({ kind, file }, sol, folder, skills, lang) {
-  const skill = { way: 'way-of-working', sim: 'process-simulation', blueprint: 'service-blueprint', drill: 'incident-drill', agents: 'agent-review', lesson: 'visual-explainer' }[kind]
+  const skill = { way: 'way-of-working', sim: 'process-simulation', blueprint: 'service-blueprint', drill: 'incident-drill', agents: 'agent-review', explainer: 'visual-explainer' }[kind]
   const path = resolve(folder, file)
   const extra = []
   let content = statSync(path).isDirectory() ? filesOf(path).map(([p, b]) => `${p}\n${sha(b)}`).join('\n') : readFileSync(path, 'utf8')
@@ -262,7 +262,12 @@ export async function exportOkf({ sol, folder, checked, out, lang, now = new Dat
       sources = readdirSync(dir).filter((d) => existsSync(join(dir, d, 'agent.mcs.yml'))).sort().map((d) => ({ id: d, resource: `${resource}/${d}/agent.mcs.yml`, title: d }))
       body = [`## ${t.said}`, '', ...c.said.filter((l) => /^✓/.test(l)).map((l) => `- ${l.replace(/^✓\s*/, '')}`), '']
     }
-    if (c.kind === 'lesson') body = [t.lessonOf(c.file), '']
+    if (c.kind === 'explainer') {
+      // The recipe in a ```visual-explainer block, so a Markdown preview with DNA (VS Code, Obsidian) draws it in place.
+      const recipe = readFileSync(path, 'utf8').trim()
+      const fence = '`'.repeat(Math.max(3, ...[...recipe.matchAll(/`+/g)].map((m) => m[0].length + 1)))
+      body = [t.explainerOf(c.file), '', `${fence}${/\.mmd$/i.test(c.file) ? 'visual-explainer-mermaid' : 'visual-explainer'}`, recipe, fence, '']
+    }
     if (c.kind === 'sim') {
       const { SIMLANG, ATTEST } = await import(pathToFileURL(join(skills, 'process-simulation/scripts/engine.mjs')).href)
       const src = readFileSync(path, 'utf8')

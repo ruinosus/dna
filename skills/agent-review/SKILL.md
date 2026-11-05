@@ -1,16 +1,16 @@
 ---
 name: agent-review
-description: Compares a team's Copilot Studio agents with each other, from the folders the VS Code extension clones — what most of them do, in their YAML and in the text of their instructions (a pattern to agree on, per role and per type), who is off a pattern, what only one has (innovation or debt), the team's rules not met, and what people say the YAML contradicts — with the file and line of each. Delivers an offline map, an Excel workbook to decide in, a lesson, the agents as a team, Mermaid diagrams for the docs, and a review file that keeps the decisions. Node alone: no model, no install, no network. Use when someone wants to find patterns across Copilot Studio agents, define standards from evidence, check a new agent against the accepted ones, see which agents escalate, log telemetry or use which connectors, or bring in a spreadsheet about them ("compare our Copilot Studio agents", "which of our agents is off the pattern?", "compara os agentes do Copilot Studio", "o que se repete entre os especialistas?").
+description: Compares a team's Copilot Studio agents with each other, from the folders the VS Code extension clones — what most of them do, in their YAML and in the text of their instructions (a pattern to agree on, per role and per type), who is off a pattern, what only one has (innovation or debt), the team's rules not met, and what people say the YAML contradicts — with the file and line of each. Delivers an offline map, an Excel workbook to decide in, an explainer, the agents as a team, Mermaid diagrams for the docs, and a review file that keeps the decisions. Node alone: no model, no install, no network. Use when someone wants to find patterns across Copilot Studio agents, define standards from evidence, check a new agent against the accepted ones, see which agents escalate, log telemetry or use which connectors, or bring in a spreadsheet about them ("compare our Copilot Studio agents", "which of our agents is off the pattern?", "compara os agentes do Copilot Studio", "o que se repete entre os especialistas?").
 license: MIT
-compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing. The Microsoft skills for Copilot Studio are recommended, not needed.
+compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the explainer's drawing. The Microsoft skills for Copilot Studio are recommended, not needed.
 metadata:
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # agent-review: what the agents have in common, and who is off it
 
 The agents are cloned from Copilot Studio (the VS Code extension writes a folder per agent, with `agent.mcs.yml`).
-`scripts/build.mjs` reads them, compares them and makes the map, the workbook, the lesson, the agents as a team, the
+`scripts/build.mjs` reads them, compares them and makes the map, the workbook, the explainer, the agents as a team, the
 topology and the review file — **with no model**. You run it, read what it found, and help the person decide. You never edit an agent.
 
 Paths below are relative to this skill's folder (the folder this file is in). Write in the person's language and pass
@@ -34,7 +34,7 @@ node scripts/build.mjs <agents-folder> --all [--profile <team>.standard.yaml] [-
   with the value it captures, «no máximo 3 bullets»), the **official blocks** the team pastes in every agent, and the
   **types** of specialist (transaction, guidance, triage…), so patterns are also found within each type. With no
   profile, the orchestrator is whoever calls another agent, and the shared blocks of text are still found.
-- It writes `<id>.html` (the map), `<id>.xlsx`, `<id>.lesson.html`, `<id>.team.html` (the agents as a team), `<id>.topology.html` (who
+- It writes `<id>.html` (the map), `<id>.xlsx`, `<id>.explainer.html`, `<id>.team.html` (the agents as a team), `<id>.topology.html` (who
   calls whom), `<id>.diagrams.md` with `<id>.diagrams/*.mmd` (what was read, in plain Mermaid) and `<id>.review.yaml`, named
   by the folder. The review
   file is read again on every run: what people declared and decided stays.
@@ -43,7 +43,7 @@ node scripts/build.mjs <agents-folder> --all [--profile <team>.standard.yaml] [-
 - `--telemetry <export.csv|.xlsx>` adds **what fired**: the result of one query the person runs in Application Insights
   and exports (`references/telemetry.md` has it, ready to copy). Read on that run only; nothing goes over the network.
 
-Exit 1 with `✗ file:line` is a broken profile or review file: fix the line. Exit 3 is a lesson the reviewer did not pass.
+Exit 1 with `✗ file:line` is a broken profile or review file: fix the line. Exit 3 is an explainer the reviewer did not pass.
 
 ## 2. Read what it found
 
@@ -208,7 +208,7 @@ same data as the topology page, so the two never disagree:
 - **the anatomy of each type**: its patterns, accepted or candidate, and who is off each one.
 
 Each `.mmd` carries `%% title`, `%% # chapter` and `%% > narration` (comments for Mermaid): visual-explainer and visual-pitch
-draw it as a lesson or present it. Point the person to the `.md` when they want to put the agents in their documentation;
+draw it as an explainer or present it. Point the person to the `.md` when they want to put the agents in their documentation;
 it holds the client's data, like every output.
 
 If the Microsoft skills for Copilot Studio are installed (`/plugin marketplace add microsoft/skills-for-copilot-studio`),

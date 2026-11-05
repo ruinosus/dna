@@ -16,7 +16,7 @@ quotes. Paths are relative to the solution file.
 | `drill` | the incident drill, `<id>.drill.yaml` | incident-drill |
 | `agents` | a folder of Copilot Studio agents, as the VS Code extension clones them | agent-review |
 | `profile` | the team's profile for the agents, `<team>.standard.yaml` (only with `agents`) | agent-review |
-| `lesson` | the idea explained by drawing, `.chalk`, `.json` or `.mmd` | visual-explainer |
+| `explainer` | the idea explained by drawing, `.chalk`, `.json` or `.mmd` | visual-explainer |
 
 Every piece is optional; a solution names at least one. A field that is not one of these, or one written twice, is an
 error with its line. A file of before (`format: opening-night/v1` and a top-level `name`) is still read; `--upgrade`

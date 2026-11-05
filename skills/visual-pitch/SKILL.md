@@ -4,7 +4,7 @@ description: Explains anything by drawing it for a meeting — a pitch, an archi
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first).
 metadata:
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # visual-pitch: explain anything by drawing it
@@ -106,7 +106,7 @@ pause ask "Quanto vai virar a fatura em seis meses?"
 Colours: graphite (default), #2F5BEA, #C8442C, #2E8F62, #8C8578, marker #FFE45C; three accents at most. Titles 36–44,
 labels 24–34, nothing under 22. Any other step (circle, curve, card, table, axis, timeline, brace, note, move): write
 it; a mistake shows how it is written, and `references/text.md` has every line. `source "…"` says where numbers
-come from. No quiz: that is a lesson's.
+come from. No quiz: that is an explainer's.
 
 ## 3. Build and check
 
@@ -143,7 +143,7 @@ notes as the speaker notes.
 - Never put HTML, links or scripts in a recipe; never invent a fact, a number or a quote, and never leave a blank
   like `[__]` on the board — say it in words, and say which numbers would help when you deliver. A sample screen
   (an app, a ranking, a dashboard) shows words, not figures: «your turn is next», not «3rd · 12 min».
-- Never write `kind lesson` or a quiz: teaching is visual-explainer's.
+- Never write `kind explainer` or a quiz: teaching is visual-explainer's.
 
 ## In Claude Code
 

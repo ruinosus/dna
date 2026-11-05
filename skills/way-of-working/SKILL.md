@@ -1,17 +1,17 @@
 ---
 name: way-of-working
-description: Turns how a team works — scattered in PDFs, slides, wikis or someone's head — into one clear, checkable way of working (stages, phases, gates and who approves them, roles, outputs) and delivers it as a .way.yaml file, a map page that opens offline, an Excel workbook (stages, gates, RACI, outputs, a gate checklist) and a lesson that walks it by drawing. Reads an edited workbook back as proposed changes. Use when someone wants to map, document, review or explain a team's process, delivery flow, stage-gate, RACI or "way of working" ("turn our process PDF into a flow", "who approves what in our delivery?", "make an onboarding map of how we work", "monta o nosso fluxo de entrega").
+description: Turns how a team works — scattered in PDFs, slides, wikis or someone's head — into one clear, checkable way of working (stages, phases, gates and who approves them, roles, outputs) and delivers it as a .way.yaml file, a map page that opens offline, an Excel workbook (stages, gates, RACI, outputs, a gate checklist) and an explainer that walks it by drawing. Reads an edited workbook back as proposed changes. Use when someone wants to map, document, review or explain a team's process, delivery flow, stage-gate, RACI or "way of working" ("turn our process PDF into a flow", "who approves what in our delivery?", "make an onboarding map of how we work", "monta o nosso fluxo de entrega").
 license: MIT
-compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing.
+compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the explainer's drawing.
 metadata:
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # way-of-working: a team's way of working, clear and checkable
 
 You read what the team has (documents, slides, what the person tells you), write **one file**, `<id>.way.yaml`, that
 says how the work goes — and `scripts/build.mjs` checks it and makes what the person needs from it. You write only the
-`.way.yaml`; never write the map, the workbook or the lesson yourself.
+`.way.yaml`; never write the map, the workbook or the explainer yourself.
 
 Paths below are relative to this skill's folder (the folder this file is in). Write to the person in their language,
 and pass `--lang pt` to the script for Portuguese (`en` is the default).
@@ -42,7 +42,7 @@ ready, **what comes out of it**, where it goes back), and numbers if the materia
 node scripts/build.mjs <id>.way.yaml --check [--lang pt]
 ```
 
-`--check` writes nothing — no map, workbook or lesson before the questions are answered. Lines with `✗` break the format at the line they name: fix them yourself and run again — never show the person a file
+`--check` writes nothing — no map, workbook or explainer before the questions are answered. Lines with `✗` break the format at the line they name: fix them yourself and run again — never show the person a file
 that does not pass. Lines with `!` are what does not hold (`references/look.md`): they become your first questions.
 
 ## 3. Ask what is missing — once, all together
@@ -67,9 +67,9 @@ node scripts/build.mjs <id>.way.yaml --all [--lang pt] [--out <folder>]
   workbook, the file and a PNG.
 - `<id>.xlsx` — **the workbook**: Summary, Stages, Gates, Roles (RACI), Outputs, KPIs, a Gate checklist and the
   **Thread** (who delivers each output and who receives it).
-- `<id>.lesson.html` — **the lesson** (visual-explainer): the flow drawn stroke by stroke, a chapter per phase.
+- `<id>.explainer.html` — **the explainer** (visual-explainer): the flow drawn stroke by stroke, a chapter per phase.
 
-`--html`, `--xlsx` and `--lesson` make one each. End with a short summary: what the flow is in one sentence, the files,
+`--html`, `--xlsx` and `--explainer` make one each. End with a short summary: what the flow is in one sentence, the files,
 what is still open, and that the `.way.yaml` is the source — the one to keep in version control.
 
 ## 5. The way back: someone edited the workbook
@@ -86,7 +86,7 @@ own. Then write the chosen ones:
 node scripts/build.mjs <id>.way.yaml --from <edited.xlsx> --take <key>,<key>…   # or --take all, when they say so
 ```
 
-and run step 4 again so the map, the workbook and the lesson match the file.
+and run step 4 again so the map, the workbook and the explainer match the file.
 
 ## 6. The same way, seen by the other skills
 
@@ -124,7 +124,7 @@ recipes themselves in `references/dna/`: use those.
 
 - Never invent what the material and the person did not say — ask.
 - Never put a person's name as a role or a lane, an environment as a phase, an activity or a ritual as a stage.
-- Never edit the generated `.html`, `.xlsx` or `.lesson.html`: change the `.way.yaml` and build again.
+- Never edit the generated `.html`, `.xlsx` or `.explainer.html`: change the `.way.yaml` and build again.
 - This maps how the work *should* go. It does not track items moving through it, nor decide a gate: say so if asked.
 
 ## In Claude Code

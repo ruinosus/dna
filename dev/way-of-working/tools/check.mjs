@@ -1,4 +1,4 @@
-// Checks the skill as a person gets it: every example makes its map, workbook and lesson (the lesson passing visual-explainer's
+// Checks the skill as a person gets it: every example makes its map, workbook and explainer (the explainer passing visual-explainer's
 // reviewer when there is a browser); the workbook it made reads back as no change; a broken file says its line; the map
 // needs nothing from the internet; and, when LibreOffice is here, the workbook opens in it. Run after npm run assets.
 import { checkNoOldName, checkSkillMd } from '@ruinosus/visual-explainer/kit/tools/checks.mjs'
@@ -29,9 +29,14 @@ for (const f of files) {
   const id = f.replace('.way.yaml', '')
   const lang = LANG[id] ?? 'en'
   const r = run(join(examples, f), '--all', '--lang', lang, '--out', work)
-  const made = ['html', 'xlsx', 'lesson.html'].every((ext) => existsSync(join(work, `${id}.${ext}`)))
-  ok(r.status === 0 && made, `${id}: map, workbook and lesson`, r.stdout + r.stderr)
+  const made = ['html', 'xlsx', 'explainer.html'].every((ext) => existsSync(join(work, `${id}.${ext}`)))
+  ok(r.status === 0 && made, `${id}: map, workbook and explainer`, r.stdout + r.stderr)
   ok(!/^! (to look at|para olhar)/m.test(r.stdout), `${id}: nothing to look at`, r.stdout)
+  if (f === files[0]) {
+    mkdirSync(join(work, 'old'), { recursive: true })
+    const old = run(join(examples, f), '--lesson', '--lang', lang, '--out', join(work, 'old'))
+    ok(old.status === 0 && existsSync(join(work, 'old', `${id}.explainer.html`)), `${id}: --lesson, the flag before 2.2.0, still writes the explainer`, old.stdout + old.stderr)
+  }
   // the workbook it made, read back: no change
   const way = join(work, f)
   copyFileSync(join(examples, f), way)

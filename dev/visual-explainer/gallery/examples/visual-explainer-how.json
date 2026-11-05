@@ -7,8 +7,8 @@
   "height": 660,
   "background": "dots",
   "learning": {
-    "goal": "Understand the path from a request to a self-contained HTML lesson: choices, recipe, build checks, offline player.",
-    "question": "Someone asks to make the arrow blue in a lesson already delivered. Which parts of this path run again?",
+    "goal": "Understand the path from a request to a self-contained HTML explainer: choices, recipe, build checks, offline player.",
+    "question": "Someone asks to make the arrow blue in an explainer already delivered. Which parts of this path run again?",
     "answer": "Only the end of it: Claude edits that one step's style in the recipe, then build.mjs checks the contract and reviews the layout again and writes a new HTML. The choices are not made again, because the hook and the audience did not change.",
     "caveat": "Simplified: the build report has three outcomes (contract error, layout warning, ok), and some checks run when the page opens rather than at build time. Claude never writes the player itself; it only writes the JSON recipe."
   },
@@ -41,7 +41,7 @@
      "say": "If something breaks, Claude fixes just that and builds again — at most twice."},
     {"type": "text", "at": [308, 522], "text": "fix", "anchor": "middle", "size": 26, "style": {"color": "#C8442C"}},
 
-    {"type": "prop", "name": "computer", "at": [830, 520], "size": 100, "label": "lesson.html", "id": "lesson",
+    {"type": "prop", "name": "computer", "at": [830, 520], "size": 100, "label": "explainer.html", "id": "explainer",
      "chapter": "One file, offline", "duration": 1300},
     {"type": "arrow", "from": [545, 470], "to": [765, 470], "style": {"width": 2.4},
      "say": "Out comes one HTML file with the player inside."},
@@ -50,6 +50,6 @@
     {"type": "highlight", "from": [740, 600], "to": [920, 600], "thickness": 20},
     {"type": "text", "at": [830, 608], "text": "no internet", "anchor": "middle", "size": 26},
     {"type": "ellipse", "center": [830, 456], "rx": 66, "ry": 46, "style": {"color": "#2F5BEA", "width": 2.4},
-     "say": "Open it anywhere — e-mail it, project it — and the lesson plays, chapter by chapter."}
+     "say": "Open it anywhere — e-mail it, project it — and the explainer plays, chapter by chapter."}
   ]
 }

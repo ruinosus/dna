@@ -1,6 +1,6 @@
 // visual-explainer/markdown: ```visual-explainer (the text syntax or JSON) and ```visual-explainer-mermaid (a Mermaid diagram) fences become
-// <div data-visual-explainer> blocks that visual-explainer/mount turns into lessons. The text goes inside as it is, readable until
-// the lesson replaces it; reading it happens in the browser. Plain Node, no dependency.
+// <div data-visual-explainer> blocks that visual-explainer/mount turns into explainers. The text goes inside as it is, readable until
+// the explainer replaces it; reading it happens in the browser. Plain Node, no dependency.
 // Spec 2026-10-30 (VS Code e sites de documentação).
 
 // ```chalk-talk and ```chalk-mermaid are the fences of before DNA: documents written with them still draw.

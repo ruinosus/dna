@@ -35,7 +35,7 @@ checkOneVersion(expect, {
   let threw = false
   try { fill('a', { X: '1' }) } catch { threw = true }
   expect(threw, 'page.mjs: a key the page does not have is an error')
-  // the browser takes a picture of any page (a map, a still lesson): shot: { width, height } answers with a PNG
+  // the browser takes a picture of any page (a map, a still explainer): shot: { width, height } answers with a PNG
   const plainPage = join(dir, 'plain.html')
   writeFileSync(plainPage, '<!doctype html><meta charset="utf-8"><body style="margin:0;background:#2E8F62"><h1>shot</h1>')
   const { runPages } = await import('../../../kit/browser.mjs')
@@ -74,7 +74,7 @@ else {
   expect(two.status === 0 && names === 'coin.svg, dois.svg, um.svg', `a Markdown file gives one SVG per block (${names}${two.status ? `: ${two.stderr.trim()}` : ''})`)
 }
 
-// visual-explainer/embed: two lessons on one page (as two blocks in a note) — each moves on its own, the styles go in once,
+// visual-explainer/embed: two explainers on one page (as two blocks in a note) — each moves on its own, the styles go in once,
 // and a broken text says its line.
 {
   const { runPage } = await import('../../../kit/browser.mjs')
@@ -82,13 +82,13 @@ else {
   const coin = readFileSync(join(docs, 'training-hours.chalk'), 'utf8')
   const page = join(dir, 'embed.html')
   writeFileSync(page, `<!doctype html><meta charset="utf-8"><body><div id="a"></div><div id="b"></div><script type="module">
-import { mountLesson, readRecipe, ChalkTextError } from ${JSON.stringify(embed)}
+import { mountExplainer, readRecipe, ChalkTextError } from ${JSON.stringify(embed)}
 const out = {}
 try {
   const scene = readRecipe(${JSON.stringify(coin)})
   const [a, b] = [document.getElementById('a'), document.getElementById('b')]
-  await mountLesson(a, scene, { compact: true, lang: 'pt' })
-  const mb = await mountLesson(b, readRecipe(JSON.stringify(scene)), { compact: true, lang: 'en', onExpand: () => {} })
+  await mountExplainer(a, scene, { compact: true, lang: 'pt' })
+  const mb = await mountExplainer(b, readRecipe(JSON.stringify(scene)), { compact: true, lang: 'en', onExpand: () => {} })
   a.querySelector('[data-part="next"]').click()
   await new Promise((r) => setTimeout(r, 4000))
   const on = (root) => [...root.querySelectorAll('.chapters button')].findIndex((x) => x.classList.contains('is-on'))
@@ -108,7 +108,7 @@ const pre = document.createElement('pre'); pre.id = 'chalk-embed'; pre.textConte
   if (!r) expect(true, 'no browser here: the embed check is skipped')
   else {
     const ok = !r.failed && r.chapters?.[0] === 1 && r.chapters?.[1] === 0 && r.drawn.every((n) => n > 5) && r.styles === 1 && !r.ids.length && r.expand[0] === false && r.expand[1] === true && r.destroyed === 0 && r.error === 2 && !r.english?.length
-    expect(ok, `visual-explainer/embed: two lessons on a page, each on its own, the pt one with no English word on screen (${JSON.stringify(r)})`)
+    expect(ok, `visual-explainer/embed: two explainers on a page, each on its own, the pt one with no English word on screen (${JSON.stringify(r)})`)
   }
 }
 
@@ -128,7 +128,7 @@ const pre = document.createElement('pre'); pre.id = 'chalk-embed'; pre.textConte
   expect(ok, 'visual-explainer/markdown: the two fences become blocks, the others stay (markdown-it, remark)')
 }
 
-// visual-explainer/mount: blocks on the page become lessons, a block added later too, a broken one says its line; on a
+// visual-explainer/mount: blocks on the page become explainers, a block added later too, a broken one says its line; on a
 // light page (VS Code's vscode-light here) they take DNA's business look, not the hand-drawn paper.
 {
   const { runPage } = await import('../../../kit/browser.mjs')
@@ -142,13 +142,13 @@ const pre = document.createElement('pre'); pre.id = 'chalk-embed'; pre.textConte
 setTimeout(() => document.body.insertAdjacentHTML('beforeend', ${JSON.stringify(blockHtml('text', 'title Later\ntext "later" at 40,60'))}), 1500)
 setTimeout(() => {
   const blocks = [...document.querySelectorAll('[data-visual-explainer]')]
-  const out = blocks.map((b) => b.querySelector('.visual-explainer-error') ? 'error:' + b.querySelector('.visual-explainer-error').textContent.match(/line \\d+/)?.[0] : (b.querySelector('.visual-explainer svg')?.querySelectorAll('path, text').length ?? 0) > 0 && b.querySelector('.visual-explainer-source').hidden ? 'lesson' : 'nothing')
+  const out = blocks.map((b) => b.querySelector('.visual-explainer-error') ? 'error:' + b.querySelector('.visual-explainer-error').textContent.match(/line \\d+/)?.[0] : (b.querySelector('.visual-explainer svg')?.querySelectorAll('path, text').length ?? 0) > 0 && b.querySelector('.visual-explainer-source').hidden ? 'explainer' : 'nothing')
   const pre = document.createElement('pre'); pre.id = 'chalk-mount'; pre.textContent = encodeURIComponent(JSON.stringify({ out, styles: document.querySelectorAll('#visual-explainer-styles').length, hand: document.querySelectorAll('.visual-explainer .paper.is-hand').length, papers: document.querySelectorAll('.visual-explainer .paper').length })); document.body.append(pre)
 }, 6000)
 </script>`)
   const r = await runPage(page, 'mount')
   if (!r) expect(true, 'no browser here: the mount check is skipped')
-  else expect(JSON.stringify(r.out) === JSON.stringify(['lesson', 'lesson', 'error:line 2', 'lesson']) && r.styles === 1 && r.papers >= 3 && r.hand === 0, `visual-explainer/mount: blocks become lessons, one added later too, business on a light page (${JSON.stringify(r)})`)
+  else expect(JSON.stringify(r.out) === JSON.stringify(['explainer', 'explainer', 'error:line 2', 'explainer']) && r.styles === 1 && r.papers >= 3 && r.hand === 0, `visual-explainer/mount: blocks become explainers, one added later too, business on a light page (${JSON.stringify(r)})`)
 }
 
 // The review in a browser over the DevTools pipe: the coffee chain from a real session — its first version put the
@@ -201,26 +201,26 @@ setTimeout(() => {
   }
 }
 
-// Animação: a lesson with `animate` keeps its drawing moving in place — the motions run in the lesson, the review and
+// Animação: an explainer with `animate` keeps its drawing moving in place — the motions run in the explainer, the review and
 // the contact sheet see it still.
 {
   const moving = join(dir, 'moving.chalk')
   writeFileSync(moving, 'title X\nid moving\nfactory torra at 260,320 "torrefação"\ntruck caminhao at 600,320 "caminhão"\nanimate torra steam\nanimate caminhao drive\n')
   const m = run(moving, [join(dir, 'moving.html')])
   if (!/• review/.test(m.stdout)) {
-    expect(m.status === 0 && /✓ review/.test(m.stdout), 'a lesson that moves passes the review (it is measured still)', m.stdout + m.stderr)
+    expect(m.status === 0 && /✓ review/.test(m.stdout), 'an explainer that moves passes the review (it is measured still)', m.stdout + m.stderr)
     const page = readFileSync(join(dir, 'moving.html'), 'utf8').replace('</body>', `<script>setTimeout(async () => { const els = [...document.querySelectorAll('[data-anim]')]
       const pos = () => els.map((e) => getComputedStyle(e).transform).join(' / '); const a = pos(); await new Promise((r) => setTimeout(r, 400))
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify({ kinds: els.map((e) => e.dataset.anim), moved: a !== pos() })); document.body.append(p) }, 2500)</script></body>`)
     writeFileSync(join(dir, 'moving-probe.html'), page)
     const { runPage } = await import('../../../kit/browser.mjs')
     const r = await runPage(join(dir, 'moving-probe.html'), 'probe', '', { timeout: 30 })
-    expect(r && r.moved && [...(r.kinds ?? [])].sort().join() === 'drive,wisp,wisp,wisp', `in the lesson the truck drives and the steam rises (${JSON.stringify(r)})`)
+    expect(r && r.moved && [...(r.kinds ?? [])].sort().join() === 'drive,wisp,wisp,wisp', `in the explainer the truck drives and the steam rises (${JSON.stringify(r)})`)
   }
 }
 
 // Lottie (0.16.0): an animation of the pack plays inside the drawing, with its credit; a file beside the recipe too;
-// the player goes in only when a lesson has one; an expression, an image from outside, a URL or a missing file is
+// the player goes in only when an explainer has one; an expression, an image from outside, a URL or a missing file is
 // refused.
 {
   writeFileSync(join(dir, 'mine.json'), readFileSync(join(here, 'noto/think.json'), 'utf8'))
@@ -228,7 +228,7 @@ setTimeout(() => {
   writeFileSync(lot, 'title X\nid party\nlottie celebrate festa at 700,200 size=140\nlottie ./mine.json at 200,300 size=120\n')
   const l = run(lot, [join(dir, 'party.html')])
   const page = readFileSync(join(dir, 'party.html'), 'utf8')
-  expect(l.status === 0 && page.includes('lottie-web') && page.includes('Noto Animated Emoji by Google'), 'a lesson with animations carries the player and the credit', l.stdout + l.stderr)
+  expect(l.status === 0 && page.includes('lottie-web') && page.includes('Noto Animated Emoji by Google'), 'an explainer with animations carries the player and the credit', l.stdout + l.stderr)
   expect(/^• lottie +2 animations in one drawing/m.test(l.stdout), 'two animations in one drawing are pointed out (not an error)', l.stdout)
   if (!/• review/.test(l.stdout)) {
     writeFileSync(join(dir, 'party-probe.html'), page.replace('</body>', `<script>setTimeout(async () => { const gs = [...document.querySelectorAll('[data-lottie]')]
@@ -236,10 +236,10 @@ setTimeout(() => {
       const p = document.createElement('pre'); p.id = 'chalk-probe'; p.textContent = encodeURIComponent(JSON.stringify({ n: gs.length, drawn: gs.every((g) => g.querySelector('svg path')), moved: a !== shape(), credit: document.querySelector('[data-part="credits"]')?.textContent ?? '' })); document.body.append(p) }, 2500)</script></body>`))
     const { runPage } = await import('../../../kit/browser.mjs')
     const r = await runPage(join(dir, 'party-probe.html'), 'probe', '', { timeout: 30 })
-    expect(r && r.n === 2 && r.drawn && r.moved && /CC BY 4.0/.test(r.credit), `the animations play in the lesson, credited (${JSON.stringify(r)})`)
+    expect(r && r.n === 2 && r.drawn && r.moved && /CC BY 4.0/.test(r.credit), `the animations play in the explainer, credited (${JSON.stringify(r)})`)
   }
   const plain = run(join(dir, 'two.chalk'), [join(dir, 'plain.html'), '--no-review'])
-  expect(plain.status !== 1 && !readFileSync(join(dir, 'plain.html'), 'utf8').includes('lottie-web'), 'a lesson with no animation has no player')
+  expect(plain.status !== 1 && !readFileSync(join(dir, 'plain.html'), 'utf8').includes('lottie-web'), 'an explainer with no animation has no player')
   const bad = (name, json, why) => {
     writeFileSync(join(dir, `${name}.json`), JSON.stringify(json))
     writeFileSync(join(dir, `${name}.chalk`), `title X\nlottie ./${name}.json at 400,200\n`)
@@ -255,7 +255,7 @@ setTimeout(() => {
   expect(/no such file beside the recipe/.test(run(join(dir, 'gone.chalk')).stderr), 'a missing animation file says so')
 }
 
-// visual-pitch (0.17.0): what each purpose usually misses is said (exit 3), a quiz outside a lesson is refused, and
+// visual-pitch (0.17.0): what each purpose usually misses is said (exit 3), a quiz outside an explainer is refused, and
 // bars with no max keep one scale over the settings.
 {
   const warn = (name, body, why) => {
@@ -264,6 +264,10 @@ setTimeout(() => {
     expect(r.status === 3 && why.test(r.stdout), `${name.replace(/-/g, ' ')}: «${(r.stdout.match(/^! .*$/m) ?? [''])[0].replace(/^! \S+\s+/, '')}»`, r.stdout + r.stderr)
   }
   warn('a-pitch-with-no-ask', 'kind pitch', /^! pitch +the pitch does not end with an ask/m)
+  // DNA 2.2.0: kind lesson, the explainer's name before, is still read
+  writeFileSync(join(dir, 'old-lesson.chalk'), 'title X\nkind lesson\ntext "x" at 40,60\n')
+  const old = run(join(dir, 'old-lesson.chalk'), ['--no-review'])
+  expect(old.status === 0, 'kind lesson, the name before 2.2.0, still builds as an explainer', old.stdout + old.stderr)
   warn('an-architecture-with-no-failure', 'kind arch', /^! arch +no failure drawn/m)
   warn('a-decision-with-no-winner', 'kind decision', /^! decision +the decision does not say which option wins/m)
   warn('data-with-no-source', 'kind data', /^! data +where do these numbers come from/m)
@@ -272,7 +276,7 @@ setTimeout(() => {
   const ok = run(join(dir, 'pitch-ok.chalk'), ['--no-review'])
   expect(ok.status === 0 && !/^! /m.test(ok.stdout), 'a pitch that ends with its ask has nothing to say', ok.stdout)
   writeFileSync(join(dir, 'pitch-quiz.chalk'), 'title X\nkind pitch\ntext "x" at 40,60\nquiz "q"\n  * a -- b\n  - c -- d\n')
-  expect(/only a lesson has a quiz/.test(run(join(dir, 'pitch-quiz.chalk')).stderr), 'a quiz outside a lesson is refused')
+  expect(/only an explainer has a quiz/.test(run(join(dir, 'pitch-quiz.chalk')).stderr), 'a quiz outside an explainer is refused')
   // bars with no max: at the switch's two settings, the taller bar is a different height (one scale), not the same —
   // measured by the hatching of the paper theme (a taller hatched bar is more strokes; business fills it solid)
   writeFileSync(join(dir, 'bars.chalk'), 'title X\nid bars\ntheme paper\nswitch dobro "o dobro" off\nvar v = "10 + 10*dobro"\nbars box 100,100,300,300 values v labels a\n')

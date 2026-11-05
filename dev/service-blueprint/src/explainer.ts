@@ -1,4 +1,4 @@
-// The blueprint explained by drawing it — a visual-explainer lesson that walks the journey: each moment a column, the customer
+// The blueprint explained by drawing it — an explainer drawn with visual-explainer that walks the journey: each moment a column, the customer
 // drawn with that moment's mood and as high as they feel, a line over their heads, what they do; then the line of
 // visibility and, under it, what happens on stage, backstage and in the systems. A chapter per phase; each moment says
 // what the customer does, how it feels and the pain they told.
@@ -10,7 +10,7 @@ const MOOD: Record<number, string | undefined> = { 1: 'sad', 2: 'worried', 3: un
 const FRONT = '#2F5BEA'
 const BACK = '#7B4FC9'
 
-export function lessonOf(b: Blueprint, lang: Lang = 'en'): Obj {
+export function explainerOf(b: Blueprint, lang: Lang = 'en'): Obj {
   const w = WORDS[lang]
   const col = 180
   const left = 40

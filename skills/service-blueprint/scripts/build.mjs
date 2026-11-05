@@ -1,32 +1,33 @@
 #!/usr/bin/env node
 // Checks a service blueprint (<id>.blueprint.yaml) and makes what is asked of it: the map (one HTML page that opens with
-// no internet), the workbook (.xlsx) and a visual-explainer lesson that walks the journey.
+// no internet), the workbook (.xlsx) and an explainer drawn with visual-explainer that walks the journey.
 //
 //   node build.mjs <id>.blueprint.yaml --check [--lang en|pt]       only check it: nothing is written
-//   node build.mjs <id>.blueprint.yaml [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]
+//   node build.mjs <id>.blueprint.yaml [--html] [--xlsx] [--explainer] [--all] [--lang en|pt] [--out <folder>]
 //
-// With no --html/--xlsx/--lesson it makes the map. Files go beside the blueprint (or in --out), named by its id.
+// With no --html/--xlsx/--explainer it makes the map. Files go beside the blueprint (or in --out), named by its id.
 // Exit codes: 0 done (what to look at is printed, and is not an error); 1 the file breaks the format (each problem with
-// its line; nothing written); 2 bad arguments; 3 made, but the lesson's reviewer found something to fix. Needs Node 18
-// or later and nothing else; the lesson's review uses Chrome, Chromium or Edge when there is one.
+// its line; nothing written); 2 bad arguments; 3 made, but the explainer's reviewer found something to fix. Needs Node 18
+// or later and nothing else; the explainer's review uses Chrome, Chromium or Edge when there is one.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
 import { fill, inline } from './page.mjs'
-import { DNA_API, FORMAT, KIND, lessonOf, problemText, readBlueprint, reviewBlueprint, upgradeHeader, validateScene, workbookFile, workbookOf } from './engine.mjs'
+import { DNA_API, FORMAT, KIND, explainerOf, problemText, readBlueprint, reviewBlueprint, upgradeHeader, validateScene, workbookFile, workbookOf } from './engine.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const argv = process.argv.slice(2)
+// DNA 2.2.0: --lesson, the explainer's flag before, still works.
+const argv = process.argv.slice(2).map((a) => (a === '--lesson' ? '--explainer' : a))
 const valued = new Set(['--lang', '--out'])
-const flags = new Set(['--check', '--json', '--html', '--xlsx', '--lesson', '--all', '--upgrade', '--write', ...valued])
+const flags = new Set(['--check', '--json', '--html', '--xlsx', '--explainer', '--all', '--upgrade', '--write', ...valued])
 const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
 }
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
 const usage = `usage: node build.mjs <id>.blueprint.yaml --check [--json] [--lang en|pt]
-       node build.mjs <id>.blueprint.yaml [--html] [--xlsx] [--lesson] [--all] [--lang en|pt] [--out <folder>]`
+       node build.mjs <id>.blueprint.yaml [--html] [--xlsx] [--explainer] [--all] [--lang en|pt] [--out <folder>]`
 const lang = option('--lang') ?? 'en'
 const fail = (msg) => {
   console.error(`${msg}\n${usage}`)
@@ -87,8 +88,8 @@ else console.log(T.nothing)
 if (argv.includes('--check')) process.exit(0)
 
 const all = argv.includes('--all')
-const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), lesson: all || argv.includes('--lesson') }
-if (!want.xlsx && !want.lesson) want.html = true
+const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), explainer: all || argv.includes('--explainer') }
+if (!want.xlsx && !want.explainer) want.html = true
 const out = resolve(option('--out') ?? dirname(file))
 const asset = (f) => readFileSync(join(here, '../assets', f), 'utf8')
 if (want.html) {
@@ -102,13 +103,13 @@ if (want.xlsx) {
   console.log(`✓ workbook  ${book}`)
 }
 let exit = 0
-if (want.lesson) {
-  const scene = validateScene(lessonOf(blueprint, lang))
-  const page = join(out, `${id}.lesson.html`)
-  writeFileSync(page, fill(asset('lesson.html'), { RECIPE: inline(scene) }))
-  console.log(`✓ lesson    ${page}`)
+if (want.explainer) {
+  const scene = validateScene(explainerOf(blueprint, lang))
+  const page = join(out, `${id}.explainer.html`)
+  writeFileSync(page, fill(asset('explainer.html'), { RECIPE: inline(scene) }))
+  console.log(`✓ explainer    ${page}`)
   const r = await runPage(page, 'review')
-  if (r === null) console.log('• review    no Chrome, Chromium or Edge here: the lesson checks itself when opened')
+  if (r === null) console.log('• review    no Chrome, Chromium or Edge here: the explainer checks itself when opened')
   else if (r.error) console.log(`✗ review    not checked: ${r.error}`)
   else if (!r.problems.length) console.log(`✓ review    ${r.combos} ${r.combos === 1 ? 'setting' : 'settings'}: nothing off the paper, no text over text`)
   else {

@@ -1,4 +1,4 @@
-// The words the map, the workbook and the lesson share, in English and Portuguese.
+// The words the map, the workbook and the explainer share, in English and Portuguese.
 export type Lang = 'en' | 'pt'
 export const WORDS = {
   en: {

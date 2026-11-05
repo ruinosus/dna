@@ -1,16 +1,16 @@
 ---
 name: service-blueprint
-description: Turns what a team knows about a customer journey — interviews, support tickets, survey comments, internal process docs — into a service blueprint that is clear and checkable — each moment the customer lives and how they feel, what they see, and who makes it happen on stage, backstage and in the systems, with promises, pains and actions — delivered as a .blueprint.yaml file, a map page that opens offline, an Excel workbook and a lesson that walks the journey by drawing. Use when someone wants to map a customer or user journey, build a service blueprint, find where customers suffer and who owns it, or prepare a journey review ("blueprint our expense reimbursement from these interviews", "where does our onboarding hurt?", "monta o blueprint da admissão").
+description: Turns what a team knows about a customer journey — interviews, support tickets, survey comments, internal process docs — into a service blueprint that is clear and checkable — each moment the customer lives and how they feel, what they see, and who makes it happen on stage, backstage and in the systems, with promises, pains and actions — delivered as a .blueprint.yaml file, a map page that opens offline, an Excel workbook and an explainer that walks the journey by drawing. Use when someone wants to map a customer or user journey, build a service blueprint, find where customers suffer and who owns it, or prepare a journey review ("blueprint our expense reimbursement from these interviews", "where does our onboarding hurt?", "monta o blueprint da admissão").
 license: MIT
-compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the lesson's drawing.
+compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the explainer's drawing.
 metadata:
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # service-blueprint: what the customer lives, and who makes it happen behind
 
 You read what the team has about a journey and write **one file**, `<id>.blueprint.yaml`; `scripts/build.mjs` checks it
-and makes the map, the workbook and the lesson. You write only the `.blueprint.yaml`.
+and makes the map, the workbook and the explainer. You write only the `.blueprint.yaml`.
 
 Paths below are relative to this skill's folder (the folder this file is in). Write in the person's language and pass
 `--lang pt` for Portuguese (`en` is the default).
@@ -61,7 +61,7 @@ node scripts/build.mjs <id>.blueprint.yaml --all [--lang pt] [--out <folder>]
   (interaction, visibility, internal), ⚠ failure points and ⏱ waits; a moment opens its detail; tabs for pains and
   actions, and promises; downloads for the workbook, the file and a PNG; «To look at» on top.
 - `<id>.xlsx` — **the workbook**: Summary, Blueprint, Pains and actions, Promises, Systems.
-- `<id>.lesson.html` — **the lesson** (visual-explainer): the journey walked moment by moment.
+- `<id>.explainer.html` — **the explainer** (visual-explainer): the journey walked moment by moment.
 
 End with a short summary: the journey in one sentence, **the worst moment and who owns it (or that nobody does)**, the
 files, and what is still open.

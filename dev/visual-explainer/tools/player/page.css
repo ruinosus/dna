@@ -1,4 +1,4 @@
-/* The page around the lesson (the HTML file, player.js on a CDN): not used inside an Obsidian note. */
+/* The page around the explainer (the HTML file, player.js on a CDN): not used inside an Obsidian note. */
 body { margin: 0; background: #f4f6f8; color: #1f2a37; font: 15px/1.5 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif; }
 #stage { max-width: 1280px; margin: 0 auto; padding: 24px 16px 40px; display: flex; flex-direction: column; gap: 14px; }
 .broken { background: #fff6e5; color: #8a4b00; border: 1px solid #f1c27b; border-radius: 10px; padding: 14px; }

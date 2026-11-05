@@ -8,7 +8,7 @@
 
 <p align="center">
   An <a href="https://agentskills.io">Agent Skill</a> for Claude Code, claude.ai, the Claude API and other tools that load skills.<br>
-  <a href="https://ruinosus.github.io/dna/service-blueprint/">Open the gallery</a> to click through the maps, play the lessons and download the workbooks.
+  <a href="https://ruinosus.github.io/dna/service-blueprint/">Open the gallery</a> to click through the maps, play the explainers and download the workbooks.
 </p>
 
 ---
@@ -40,9 +40,9 @@ research into actions with owners, and anyone who keeps hearing «on our side it
 | **The file** (`.blueprint.yaml`) | The source, plain text in Git; everything else is made from it. A mistake says its line. |
 | **The map** (`.html`) | One page that opens offline: the phases, the line of how the customer feels, the five layers with the three lines (interaction, visibility, internal), ⚠ failure points and ⏱ waits. A moment opens its detail; tabs for pains and actions, and promises; download the workbook, the file or a PNG. |
 | **The workbook** (`.xlsx`) | Summary, Blueprint, Pains and actions, Promises, Systems — for the meeting and the follow-up. |
-| **The lesson** (`.lesson.html`) | The journey walked by drawing it, moment by moment, the customer higher when they feel better — made with [visual-explainer](https://github.com/ruinosus/dna). |
+| **The explainer** (`.explainer.html`) | The journey walked by drawing it, moment by moment, the customer higher when they feel better — made with [visual-explainer](https://github.com/ruinosus/dna). |
 
-<p align="center"><img src="https://ruinosus.github.io/dna/service-blueprint/images/reembolso-despesas-lesson.png" alt="The lesson: the customer at each moment of a return, lower at the six days with no news; under the line of visibility, who does what" width="760"></p>
+<p align="center"><img src="https://ruinosus.github.io/dna/service-blueprint/images/reembolso-despesas-explainer.png" alt="The explainer: the customer at each moment of a return, lower at the six days with no news; under the line of visibility, who does what" width="760"></p>
 
 ## How a conversation goes
 
@@ -93,7 +93,7 @@ The recipe written from it cites the concepts as `okf:<path>`.
 
 ```
 npm install       # at the repository root: the six skills are npm workspaces
-npm run assets -w dev/service-blueprint/tools   # scripts/engine.mjs, assets/map.html, assets/lesson.html
+npm run assets -w dev/service-blueprint/tools   # scripts/engine.mjs, assets/map.html, assets/explainer.html
 npm run check -w dev/service-blueprint/tools    # the engine's checks, every example built (and what each must look at), a broken file, the map in Chrome
 npm run site -w dev/service-blueprint/tools     # docs/: the gallery
 npm run zip -w dev/service-blueprint/tools      # dist/service-blueprint.zip
@@ -101,5 +101,5 @@ npm run zip -w dev/service-blueprint/tools      # dist/service-blueprint.zip
 
 ## License
 
-MIT. Lessons by [visual-explainer](https://github.com/ruinosus/dna) (MIT; Rough.js MIT; Caveat and Shantell Sans, SIL
+MIT. Explainers by [visual-explainer](https://github.com/ruinosus/dna) (MIT; Rough.js MIT; Caveat and Shantell Sans, SIL
 Open Font License). Its sibling [way-of-working](https://github.com/ruinosus/dna) maps how the work goes inside.

@@ -2,7 +2,7 @@
 // orchestrator, a lens per pattern and the anatomy of each type — so the team's docs (GitHub, a wiki, a README, VS Code)
 // show it with nothing of ours. Everything comes from the stage (stageOf): the same nodes, arrows, scenes and lenses, so
 // the stage and the diagrams never disagree. Each one also carries `%% title`, `%% # chapter` and `%% > narration`,
-// comments for Mermaid that visual-explainer and visual-pitch read to draw it as a lesson.
+// comments for Mermaid that visual-explainer and visual-pitch read to draw it as an explainer.
 import type { Result } from './compare'
 import { labelOf, shortNames, type Lang } from './labels'
 import { groupLooks, type Look } from './review'

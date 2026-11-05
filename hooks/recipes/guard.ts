@@ -1,5 +1,5 @@
 // The recipes' guard: every recipe of a skill Claude writes or edits — a way of working, a service blueprint, an
-// incident drill, a visual-explainer lesson, an solution solution (its own format only: the pieces are checked by
+// incident drill, an explainer drawn with visual-explainer, an solution solution (its own format only: the pieces are checked by
 // /check-solution) — is checked first by that skill's own script (its --check, or visual-explainer's build
 // with no review), on a copy of the new text in a folder of its own, and refused with the script's messages when it
 // breaks its format, so Claude fixes it and writes again. A way or a blueprint that passes is kept for the preview pane
@@ -22,8 +22,8 @@ const RECIPES: { test: RegExp; recipe: Recipe }[] = [
   { test: /\.blueprint\.ya?ml$/i, recipe: { what: 'service blueprint', skill: 'service-blueprint', kind: 'blueprint', args: (f) => [f, '--check', '--json'] } },
   { test: /\.drill\.ya?ml$/i, recipe: { what: 'incident drill', skill: 'incident-drill', args: (f) => [f, '--check'] } },
   { test: /\.solution\.ya?ml$/i, recipe: { what: 'solution', skill: 'solution', args: (f) => [f, '--check', '--format'] } },
-  { test: /\.chalk$/i, recipe: { what: 'visual-explainer lesson', skill: 'visual-explainer', args: (f, dir) => [f, `${dir}/out.html`, '--no-review'] } },
-  { test: /\.json$/i, recipe: { what: 'visual-explainer lesson', skill: 'visual-explainer', args: (f, dir) => [f, `${dir}/out.html`, '--no-review'] } },
+  { test: /\.chalk$/i, recipe: { what: 'explainer', skill: 'visual-explainer', args: (f, dir) => [f, `${dir}/out.html`, '--no-review'] } },
+  { test: /\.json$/i, recipe: { what: 'explainer', skill: 'visual-explainer', args: (f, dir) => [f, `${dir}/out.html`, '--no-review'] } },
 ]
 
 /** The recipe a file is, by its name — and, for a .json, only a visual-explainer recipe (a title and steps), never any JSON. */

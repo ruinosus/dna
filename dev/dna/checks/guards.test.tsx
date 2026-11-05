@@ -69,8 +69,8 @@ test('a .json is checked only when it is a visual-explainer recipe', async ($, o
   const plain = await $.tool.call({ tool: 'Write', file_path: `${ROOT}/package.json`, content: '{"name": "BROKEN"}' })
   expect(denied(plain)).not.toContain('is not a valid')
   expect(runs.some((r) => r[0] === 'node')).toBe(false)
-  const lesson = await $.tool.call({ tool: 'Write', file_path: `${ROOT}/juros.json`, content: '{"title": "Juros", "steps": [{"type": "BROKEN"}]}' })
-  expect(denied(lesson)).toContain('is not a valid visual-explainer lesson yet')
+  const explainer = await $.tool.call({ tool: 'Write', file_path: `${ROOT}/juros.json`, content: '{"title": "Juros", "steps": [{"type": "BROKEN"}]}' })
+  expect(denied(explainer)).toContain('is not a valid explainer yet')
 })
 
 test('an edit that breaks a blueprint is refused', async ($, on) => {

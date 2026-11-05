@@ -1,10 +1,10 @@
 ---
 name: solution
-description: Puts one process together as a solution — the way of working, the what-if simulation, the customer's journey, the incident drill, the Copilot Studio agents and the lesson that explains it — in one short .solution.yaml that names the pieces, checks each with its own skill, says which piece fell behind the way, and makes one offline page with a tab per piece. Comes with solution accelerators to start from (an employee self-service assistant with Workday, a customer service desk with its agents, the delivery of an assistant). In English or Portuguese. Use when someone wants the whole picture of a process in one place, to bring the skills' outputs together for a team or a client, or to start from a ready example ("put our HR self-service together as one solution", "start from the service desk accelerator", "monta a solução do atendimento").
+description: Puts one process together as a solution — the way of working, the what-if simulation, the customer's journey, the incident drill, the Copilot Studio agents and the explainer that explains it — in one short .solution.yaml that names the pieces, checks each with its own skill, says which piece fell behind the way, and makes one offline page with a tab per piece. Comes with solution accelerators to start from (an employee self-service assistant with Workday, a customer service desk with its agents, the delivery of an assistant). In English or Portuguese. Use when someone wants the whole picture of a process in one place, to bring the skills' outputs together for a team or a client, or to start from a ready example ("put our HR self-service together as one solution", "start from the service desk accelerator", "monta a solução do atendimento").
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Each piece is checked and drawn by its own dna skill, so it works fully where the other skills are beside it (the plugin, the npm package); alone, it checks the solution file and lists the pieces. In Claude Code the dna mod adds /solution.
 metadata:
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # solution: a process, every piece together
@@ -46,7 +46,7 @@ sim: service-desk.sim         # what if (process-simulation)
 blueprint: service-desk.blueprint.yaml   # the journey (service-blueprint)
 drill: service-desk.drill.yaml           # when it goes wrong (incident-drill)
 agents: agents                # the Copilot Studio agents (agent-review), with profile: <team>.standard.yaml
-lesson: service-desk.chalk    # the idea explained by drawing (visual-explainer)
+explainer: service-desk.chalk    # the idea explained by drawing (visual-explainer)
 ```
 
 Every piece is optional; name at least one. **The way is the source:** when there is one and a piece is missing, make
@@ -73,7 +73,7 @@ node scripts/build.mjs <id>.solution.yaml [--lang en|pt] [--out <folder>]
 
 It writes `<id>.solution.html`: one file that opens offline, with a summary (each piece, the question it answers, where
 it stands) and a tab per piece, each drawn by its own skill — the map, the simulation, the journey, the drill, the
-agents compared, the lesson. Tell the person what to open first, and that every number in it is **a model, not a
+agents compared, the explainer. Tell the person what to open first, and that every number in it is **a model, not a
 forecast**: each piece says where its numbers came from.
 
 ## 5. As an OKF bundle, and a person's review

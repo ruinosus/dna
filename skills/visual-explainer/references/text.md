@@ -62,7 +62,7 @@ quiz "Se n dobra, o total do ano…"
 | `polyline 0,0 10,0 10,10` · `polygon …` · `curve …` | points |
 | `circle at 100,100 r=40` · `ellipse at 100,100 rx=60 ry=30` | circle, ellipse |
 | `plot "x^2" domain 0..10 range 0..100 box 50,50,300,200` | a curve of a formula |
-| `pause` · `pause 400` · `pause ask "E agora?"` | a breath; with `ask`, the lesson waits for «Show me» |
+| `pause` · `pause 400` · `pause ask "E agora?"` | a breath; with `ask`, the explainer waits for «Show me» |
 | `row at 470,150 gap 14` · `column …` · `grid at 300,300 columns=3` | + indented steps |
 | `repeat n: coin size 44` | one step repeated (`i` counts from 0) |
 | `when atraso:` | + indented steps drawn when the condition holds |

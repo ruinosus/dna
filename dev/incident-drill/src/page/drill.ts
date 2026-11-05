@@ -2,7 +2,7 @@
 // the choices (1–9 on the keyboard); who is in the room (and calling someone in), the impact, what the runbook says
 // for these choices. At the end, the debrief: the numbers, the timeline, what the runbook did not say, play again, and
 // the debrief and the improvements to download. No score: the clock and what was left behind are the score.
-import { readRecipe, stillLesson } from '@ruinosus/visual-explainer/embed'
+import { readRecipe, stillExplainer } from '@ruinosus/visual-explainer/embed'
 import type { Drill } from '../drill'
 import { call, canDo, choose, clockAt, debrief, startPlay, whoCan, type Lang, type Play } from '../play'
 import type { Look } from '../review'
@@ -81,7 +81,7 @@ function render() {
   if (scene.draw) {
     const el = document.getElementById('draw')!
     try {
-      void stillLesson(el, readRecipe(scene.draw))
+      void stillExplainer(el, readRecipe(scene.draw))
     } catch {
       el.remove()
     }

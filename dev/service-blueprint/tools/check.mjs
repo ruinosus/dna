@@ -1,5 +1,5 @@
 // Checks the skill as a person gets it: the engine's checks (checks/*.check.ts); every example makes its map, workbook
-// and lesson (the lesson passing visual-explainer's reviewer when there is a browser) and prints what it should look at — the
+// and explainer (the explainer passing visual-explainer's reviewer when there is a browser) and prints what it should look at — the
 // return blueprint on purpose has four things, the others none; a broken file says its line; the map loads nothing from
 // the internet; and, in a browser, the map opens a moment, its tabs and its downloads. Run after npm run assets.
 import { checkNoOldName, checkSkillMd } from '@ruinosus/visual-explainer/kit/tools/checks.mjs'
@@ -37,8 +37,8 @@ ok(files.length === Object.keys(LANG).length, `${files.length} examples`)
 for (const f of files) {
   const id = f.replace('.blueprint.yaml', '')
   const r = run(join(examples, f), '--all', '--lang', LANG[id] ?? 'en', '--out', work)
-  const made = ['html', 'xlsx', 'lesson.html'].every((ext) => existsSync(join(work, `${id}.${ext}`)))
-  ok(r.status === 0 && made, `${id}: map, workbook and lesson`, r.stdout + r.stderr)
+  const made = ['html', 'xlsx', 'explainer.html'].every((ext) => existsSync(join(work, `${id}.${ext}`)))
+  ok(r.status === 0 && made, `${id}: map, workbook and explainer`, r.stdout + r.stderr)
   const n = (r.stdout.match(/^! (to look at|para olhar)/gm) ?? []).length
   ok(n === LOOKS[id], `${id}: ${LOOKS[id]} to look at`, r.stdout)
 }

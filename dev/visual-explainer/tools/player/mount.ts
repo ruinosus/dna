@@ -1,19 +1,19 @@
-// visual-explainer/mount: every [data-visual-explainer] block on the page becomes a lesson — the ones there now and the ones that
+// visual-explainer/mount: every [data-visual-explainer] block on the page becomes an explainer — the ones there now and the ones that
 // appear later (a Markdown preview redrawn while you type, a docs site moving between pages). A block holds its text
-// (the text syntax, JSON, or a Mermaid diagram) in a .visual-explainer-source element, which stays readable until the lesson
+// (the text syntax, JSON, or a Mermaid diagram) in a .visual-explainer-source element, which stays readable until the explainer
 // replaces it. visual-explainer/markdown writes these blocks from ```visual-explainer and ```visual-explainer-mermaid fences (and ```chalk-talk, ```chalk-mermaid, from before).
 // Spec 2026-10-30 (VS Code e sites de documentação).
 import type { Scene } from '@engine/recipe'
 import type { Theme } from '@engine/renderer'
-import { ChalkTextError, ensureStyles, mountLesson, readRecipe } from './embed.js'
-import type { Mounted } from './lesson'
+import { ChalkTextError, ensureStyles, mountExplainer, readRecipe } from './embed.js'
+import type { Mounted } from './explainer'
 
 // [data-chalk-talk] is the block of before DNA (a page rendered with the chalk-talk package): it still mounts
 const BLOCK = '[data-visual-explainer], [data-chalk-talk]'
 const mounted = new Map<HTMLElement, Mounted | null>()
 
 /** The page's light or dark, as VS Code, Docusaurus (data-theme) or the system say: a light page gets DNA's business
- *  look (the lesson's «Hand-drawn» switches to the paper), a dark one the chalkboard — there is no dark business look. */
+ *  look (the explainer's «Hand-drawn» switches to the paper), a dark one the chalkboard — there is no dark business look. */
 function theme(): Theme {
   const body = document.body.classList
   const page = document.documentElement.dataset.theme
@@ -29,7 +29,7 @@ async function read(block: HTMLElement, source: string): Promise<Scene> {
   return readMermaid(source, { locale: navigator.language.toLowerCase().startsWith('pt') ? 'pt-BR' : 'en-US' })
 }
 
-/** «Expand»: the whole lesson in a dialog over the page. */
+/** «Expand»: the whole explainer in a dialog over the page. */
 function expand(scene: Scene) {
   const dialog = document.createElement('dialog')
   dialog.className = 'visual-explainer-dialog'
@@ -41,14 +41,14 @@ function expand(scene: Scene) {
   const box = document.createElement('div')
   dialog.append(close, box)
   document.body.append(dialog)
-  let lesson: Mounted | undefined
+  let explainer: Mounted | undefined
   close.addEventListener('click', () => dialog.close())
   dialog.addEventListener('close', () => {
-    lesson?.destroy()
+    explainer?.destroy()
     dialog.remove()
   })
   dialog.showModal()
-  void mountLesson(box, scene, { theme: theme() }).then((m) => (lesson = m))
+  void mountExplainer(box, scene, { theme: theme() }).then((m) => (explainer = m))
 }
 
 async function mountBlock(block: HTMLElement) {
@@ -61,10 +61,10 @@ async function mountBlock(block: HTMLElement) {
     const scene = await read(block, source)
     if (!block.isConnected) return
     block.append(root)
-    mounted.set(block, await mountLesson(root, scene, { compact: true, theme: theme(), onExpand: () => expand(scene) }))
+    mounted.set(block, await mountExplainer(root, scene, { compact: true, theme: theme(), onExpand: () => expand(scene) }))
     if (holder) holder.hidden = true
   } catch (e) {
-    // The mistake where the lesson would be: the line it is on, when the text syntax knows it.
+    // The mistake where the explainer would be: the line it is on, when the text syntax knows it.
     const box = document.createElement('div')
     box.className = 'visual-explainer-error'
     const title = document.createElement('b')
@@ -84,9 +84,9 @@ async function mountBlock(block: HTMLElement) {
 
 /** Mounts the blocks inside `root` not mounted yet, and lets go of the ones no longer on the page. */
 export function mountAll(root: ParentNode = document) {
-  for (const [block, lesson] of mounted) {
+  for (const [block, explainer] of mounted) {
     if (block.isConnected) continue
-    lesson?.destroy()
+    explainer?.destroy()
     mounted.delete(block)
   }
   for (const block of root.querySelectorAll<HTMLElement>(BLOCK)) if (!mounted.has(block)) void mountBlock(block)

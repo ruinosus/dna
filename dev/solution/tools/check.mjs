@@ -6,7 +6,7 @@
 import { checkSkillMd } from '@ruinosus/visual-explainer/kit/tools/checks.mjs'
 import { browser, runPages } from '@ruinosus/visual-explainer/kit/browser.mjs'
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -40,7 +40,7 @@ for (const a of accs) {
   const p = run(file, '--out', out)
   const page = join(out, `${a}.solution.html`)
   const html = existsSync(page) ? readFileSync(page, 'utf8') : ''
-  const kinds = readFileSync(file, 'utf8').match(/^(way|sim|blueprint|drill|agents|lesson):/gm).map((k) => k.slice(0, -1))
+  const kinds = readFileSync(file, 'utf8').match(/^(way|sim|blueprint|drill|agents|explainer):/gm).map((k) => k.slice(0, -1))
   ok(p.status === 0 && kinds.every((k) => html.includes(`id="piece-${k}"`)), `${a}: the page has its ${kinds.length} pieces inside (${kinds.join(', ')})`, p.stdout + p.stderr)
   ok(!/<(script|link|img)\b[^>]*\b(src|href)=["']?https?:/i.test(html.replace(/<script type="application\/octet-stream"[\s\S]*?<\/script>/g, '')), `${a}: the page loads nothing from the internet`)
   ok(html.includes(`content="solution ${release}"`), `${a}: the page carries its version`)
@@ -157,7 +157,7 @@ if (browser()) {
     const bad = existsSync(out) ? conformance(out) : ['no bundle']
     ok(e.status === 0 && !bad.length && /^✓ okf /m.test(e.stdout), `${a}: --okf writes a conformant OKF v0.2 bundle`, e.stdout + e.stderr + bad.join('\n'))
     const b = existsSync(out) ? readBundle(out, { now: new Date(T1) }) : { concepts: [] }
-    const kinds = readFileSync(file, 'utf8').match(/^(way|sim|blueprint|drill|agents|lesson):/gm).length
+    const kinds = readFileSync(file, 'utf8').match(/^(way|sim|blueprint|drill|agents|explainer):/gm).length
     ok(b.dna === true && b.concepts.filter((c) => c.path.split('/').length === 2 || c.path === '/computations/simulation.md').length === kinds &&
        b.concepts.filter((c) => c.dna && !c.path.startsWith('/references/')).every((c) => c.trust === 'machine-confirmed' && c.status === 'stable'),
        `${a}: the kit's reader reads it back — made by DNA, one concept per piece (${kinds}), each machine-confirmed`, JSON.stringify(b.concepts.map((c) => [c.path, c.trust, c.status])))
@@ -232,8 +232,25 @@ if (browser()) {
   const c3 = spawnSync(process.execPath, [build, sol(dir), '--check'], env('2026-11-07T09:00:00Z'))
   const line = readFileSync(sol(dir), 'utf8').trimEnd().split('\n').length
   ok(c3.status === 1 && c3.stderr.includes(`employee-self-service.solution.yaml:${line}:`) && /agents/.test(c3.stderr), 'a review of a piece the solution does not have is an error, with its line', c3.stdout + c3.stderr)
-  const nb = spawnSync(process.execPath, [build, join(examples, 'employee-self-service', 'employee-self-service.solution.yaml'), '--review', 'lesson', '--by', 'x'], env('2026-11-07T09:00:00Z'))
-  ok(nb.status === 2 && /lesson/.test(nb.stderr), '--review of a piece the solution does not have: exit 2', nb.stdout + nb.stderr)
+  const nb = spawnSync(process.execPath, [build, join(examples, 'employee-self-service', 'employee-self-service.solution.yaml'), '--review', 'explainer', '--by', 'x'], env('2026-11-07T09:00:00Z'))
+  ok(nb.status === 2 && /explainer/.test(nb.stderr), '--review of a piece the solution does not have: exit 2', nb.stdout + nb.stderr)
+}
+
+// DNA 2.2.0: the explainer was the lesson — a solution that still says lesson: is read the same; and explainer.md in the
+// bundle carries the recipe in a ```visual-explainer block, so a Markdown preview with DNA draws it in place.
+{
+  const dir = join(work, 'old-lesson')
+  cpSync(join(examples, 'employee-self-service'), dir, { recursive: true })
+  copyFileSync(join(repo, 'dev/visual-explainer/examples/pedido-ferias.chalk'), join(dir, 'pedido-ferias.chalk'))
+  const file = join(dir, 'employee-self-service.solution.yaml')
+  writeFileSync(file, readFileSync(file, 'utf8') + 'lesson: pedido-ferias.chalk\n')
+  const c = run(file, '--check')
+  ok(c.status === 0 && /explainer/.test(c.stdout), 'lesson:, the name before 2.2.0, is read as the explainer', c.stdout + c.stderr)
+  const out = join(dir, 'b.okf')
+  const e = run(file, '--okf', '--out', out)
+  const md = existsSync(join(out, 'explainer.md')) ? readFileSync(join(out, 'explainer.md'), 'utf8') : ''
+  const chalk = readFileSync(join(dir, 'pedido-ferias.chalk'), 'utf8').trim()
+  ok(e.status === 0 && /^type: Explainer$/m.test(md) && md.includes('```visual-explainer\n' + chalk + '\n```'), 'explainer.md: type Explainer, with the recipe in a ```visual-explainer block', e.stdout + e.stderr + md.slice(0, 400))
 }
 
 rmSync(work, { recursive: true, force: true })

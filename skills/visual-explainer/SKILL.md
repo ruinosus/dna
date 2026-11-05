@@ -1,10 +1,10 @@
 ---
 name: visual-explainer
-description: Explains an idea by drawing it — a clean lesson that draws itself chapter by chapter (hand-drawn or on a chalkboard when asked), with narration and values the person can move, delivered as one HTML file that opens offline. Use when someone asks to explain, teach or show something by drawing it ("explain compound interest by drawing", "draw how a web request works", "desenha pra mim como funciona…"), or wants a visual, step-by-step explanation of a concept, a process, an argument or a system for a class, a talk or themselves.
+description: Explains an idea by drawing it — a clean explainer that draws itself chapter by chapter (hand-drawn or on a chalkboard when asked), with narration and values the person can move, delivered as one HTML file that opens offline. Use when someone asks to explain, teach or show something by drawing it ("explain compound interest by drawing", "draw how a web request works", "desenha pra mim como funciona…"), or wants a visual, step-by-step explanation of a concept, a process, an argument or a system for a class, a talk or themselves.
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "2.1.0"
+  version: "2.2.0"
 ---
 
 # visual-explainer: explain by drawing
@@ -17,7 +17,7 @@ player yourself. Paths below are relative to this skill's folder.
 
 It draws in the **business** look by default: straight lines, a sans-serif face, a white page, a sober palette —
 for a meeting room. Add `theme paper` for the hand-drawn look or `theme chalkboard` for a classroom board only when
-the person asks for it; the lesson's «Hand-drawn» button switches any lesson to the paper and back.
+the person asks for it; the explainer's «Hand-drawn» button switches any explainer to the paper and back.
 ## 1. Draw first
 
 For an ordinary request ("explain X by drawing", "draw how Y works") **do not ask and do not show an outline: draw.**
@@ -104,7 +104,7 @@ drawing:
 animate caminhao drive
 ```
 
-A ready-made animated emoji — **only when the person asks for one, and one per lesson at most** (it is polished, not
+A ready-made animated emoji — **only when the person asks for one, and one per explainer at most** (it is polished, not
 chalk): `celebrate`, `think`, `surprised`, `ok`, `idea` or `time`, centred at `at`; or `./file.json`, a Lottie file the
 person gave, beside the recipe. The build puts it inside the file, with its credit — and the file grows from about
 340 KB to about 610 KB (the player and the animation):
@@ -173,9 +173,9 @@ It writes `<id>.html` next to the recipe and prints:
 At most **two** rounds of fixes; then deliver and say in plain words what is left ("with 15 % the label touches the
 title").
 
-**Several lessons** (a course): one recipe each, built together — `node scripts/build.mjs one.chalk two.chalk --out
+**Several explainers** (a course): one recipe each, built together — `node scripts/build.mjs one.chalk two.chalk --out
 course.html --title "The course"`. **For a README** (or wherever only an image goes), when asked: `node
-scripts/build.mjs <id>.chalk --svg` writes `<id>.svg`, a picture that draws itself; the lesson is still the `.html`.
+scripts/build.mjs <id>.chalk --svg` writes `<id>.svg`, a picture that draws itself; the explainer is still the `.html`.
 
 ## 4. Deliver
 
@@ -206,11 +206,11 @@ it. The player loads from the CDN and checks the recipe itself:
 ```html
 <!doctype html>
 <meta charset="utf-8">
-<title>LESSON TITLE</title>
+<title>EXPLAINER TITLE</title>
 <script type="text/visual-explainer" id="chalk-recipe">
 THE RECIPE AS TEXT
 </script>
-<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.21.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.22.0/player.js"></script>
 ```
 
 If the page says the recipe could not be opened, fix the line it names.

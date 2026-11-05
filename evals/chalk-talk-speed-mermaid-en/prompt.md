@@ -5,7 +5,7 @@ max_turns: 30
 timeout_seconds: 600
 allowed_tools: [Skill, Read, Write, Edit, Bash]
 ---
-Turn this into a lesson I can step through, one chapter per stage. Save it as lesson.mmd.
+Turn this into an explainer I can step through, one chapter per stage. Save it as explainer.mmd.
 
 ```mermaid
 flowchart LR

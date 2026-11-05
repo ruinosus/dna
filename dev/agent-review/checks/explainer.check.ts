@@ -1,4 +1,4 @@
-// The lesson: a scene the drawing engine takes, in five chapters (the agents, what repeats, who is off, what is missing,
+// The explainer: a scene the drawing engine takes, in five chapters (the agents, what repeats, who is off, what is missing,
 // what to decide); every agent drawn by name; a red × for each one off a pattern and nobody else; nothing off the
 // paper; the screen words never say «agent»; and many agents fit (two rows past a row's room).
 import { readFileSync } from 'node:fs'
@@ -9,7 +9,7 @@ import { readCast, type Cast } from '../src/cast'
 import { compare } from '../src/compare'
 import { extractAgent, type AgentFacts } from '../src/extract'
 import { agentsIn } from '../src/folder'
-import { lessonOf } from '../src/lesson'
+import { explainerOf } from '../src/explainer'
 import { readProfile } from '../src/profile'
 import { reviewCast } from '../src/review'
 import { done, ok } from './ok'
@@ -22,7 +22,7 @@ const demo = readCast(readFileSync(join(examples, 'demo.review.yaml'), 'utf8')).
 type Step = { type: string; chapter?: string; say?: string; text?: string; at?: [number, number]; from?: [number, number]; to?: [number, number]; name?: string }
 const sceneOf = (as: AgentFacts[], cast: Cast, lang: 'en' | 'pt') => {
   const r = compare(as, profile, cast)
-  return validateScene(lessonOf(r, reviewCast(r), lang)) as unknown as { width: number; height: number; steps: Step[] }
+  return validateScene(explainerOf(r, reviewCast(r), lang)) as unknown as { width: number; height: number; steps: Step[] }
 }
 
 const s = sceneOf(agents, demo, 'pt')
@@ -66,7 +66,7 @@ const rows = new Set(big.steps.filter((x) => x.type === 'prop' && x.name === 'ro
 ok(big.width <= 4000 && rows.size === 3, `thirty-one: the orchestrator and two rows (${big.width} wide)`, [...rows])
 // wave 1: the cast drawn by type — each specialist once, under its first type's name
 const r1 = compare(agents, wave1(profile), demo)
-const t1 = validateScene(lessonOf(r1, reviewCast(r1), 'pt')) as unknown as { width: number; height: number; steps: Step[] }
+const t1 = validateScene(explainerOf(r1, reviewCast(r1), 'pt')) as unknown as { width: number; height: number; steps: Step[] }
 const robots = t1.steps.filter((x) => x.type === 'prop' && x.name === 'robot')
 ok(robots.length === 6, 'six robots: admissao, with two types, is drawn once')
 const textAt = (t: string) => t1.steps.find((x) => x.type === 'text' && x.text === t)

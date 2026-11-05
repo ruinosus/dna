@@ -1,5 +1,5 @@
-// The GitHub Pages gallery (docs/): every example made into its map, workbook and lesson (docs/examples/), a picture of
-// each map and lesson (docs/images/, taken by a headless browser) and docs/index.html listing them. Run after
+// The GitHub Pages gallery (docs/): every example made into its map, workbook and explainer (docs/examples/), a picture of
+// each map and explainer (docs/images/, taken by a headless browser) and docs/index.html listing them. Run after
 // `npm run assets`: npm run site.
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
@@ -36,7 +36,7 @@ for (const f of readdirSync(examples).filter((x) => x.endsWith('.way.yaml')).sor
   copyFileSync(join(examples, f), join(docs, 'examples', f))
   execFileSync(process.execPath, [join(repo, 'skills/way-of-working/scripts/build.mjs'), join(docs, 'examples', f), '--all', '--lang', lang], { stdio: 'ignore' })
   shot(join(docs, 'examples', `${id}.html`), join(docs, 'images', `${id}-map.png`), [1440, 620])
-  shot(join(docs, 'examples', `${id}.lesson.html`), join(docs, 'images', `${id}-lesson.png`), [1200, 760], 'still')
+  shot(join(docs, 'examples', `${id}.explainer.html`), join(docs, 'images', `${id}-explainer.png`), [1200, 760], 'still')
   const name = readFileSync(join(examples, f), 'utf8').match(/^name:\s*(.+)$/m)?.[1] ?? id
   ways.push({ id, name, lang, about })
 }
@@ -55,7 +55,7 @@ const card = ({ id, name, lang, about }) => `
         <span class="meta">${lang === 'pt' ? 'Português' : 'English'}</span>
         <b>${esc(name)}</b>
         <span class="about">${esc(about)}</span>
-        <span class="links"><a href="examples/${id}.html">Map</a><a href="examples/${id}.lesson.html">Lesson</a><a href="examples/${id}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${id}.way.yaml" download>File (.way.yaml)</a></span>
+        <span class="links"><a href="examples/${id}.html">Map</a><a href="examples/${id}.explainer.html">Explainer</a><a href="examples/${id}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${id}.way.yaml" download>File (.way.yaml)</a></span>
       </article>`
 
 writeFileSync(join(docs, 'index.html'), `<!doctype html>
@@ -64,7 +64,7 @@ writeFileSync(join(docs, 'index.html'), `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>way-of-working</title>
-<meta name="description" content="A skill that turns a team's process documents into one clear, checkable way of working: a file, an offline map, an Excel workbook and a drawn lesson.">
+<meta name="description" content="A skill that turns a team's process documents into one clear, checkable way of working: a file, an offline map, an Excel workbook and a drawn explainer.">
 <style>
 :root { --ink: #1d2330; --muted: #5f6878; --line: #dfe3ea; --page: #f5f6f8; --card: #fff; --accent: #2f5bea; --gate: #c8442c; color-scheme: light dark; }
 @media (prefers-color-scheme: dark) { :root { --ink: #e8ebf0; --muted: #9aa3b2; --line: #313744; --page: #14171c; --card: #1d2129; --accent: #8fb0ff; --gate: #ff8a70; } }
@@ -114,11 +114,11 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
       <div><b><code>&lt;id&gt;.way.yaml</code></b>The source: plain text you keep in Git. Every other file is made from it.</div>
       <div><b>The map (.html)</b>One page that opens offline: click a stage or a gate, see roles (RACI), gates and outputs, download a PNG.</div>
       <div><b>The workbook (.xlsx)</b>Summary, Stages, Gates, Roles (RACI), Outputs, KPIs and a checklist for the gate meeting. Edit it and Claude proposes the changes back.</div>
-      <div><b>The lesson (.html)</b>The flow drawn stroke by stroke, a chapter per phase — made with <a href="../visual-explainer/">visual-explainer</a>.</div>
+      <div><b>The explainer (.html)</b>The flow drawn stroke by stroke, a chapter per phase — made with <a href="../visual-explainer/">visual-explainer</a>.</div>
     </div>
   </section>
   <section>
-    <h2>Examples — open a map, play a lesson, download the workbook</h2>
+    <h2>Examples — open a map, play an explainer, download the workbook</h2>
     <div class="grid">${ways.map(card).join('')}
     </div>
   </section>

@@ -2,7 +2,7 @@
 
 A **solution** is one process seen by every skill that has something to say about it — the way of working
 (way-of-working), the «what if» simulation (process-simulation), the customer's journey (service-blueprint), the incident
-drill (incident-drill), the Copilot Studio agents (agent-review), the lesson that explains it (visual-explainer) — kept in one
+drill (incident-drill), the Copilot Studio agents (agent-review), the explainer that explains it (visual-explainer) — kept in one
 short file beside the pieces:
 
 ```yaml

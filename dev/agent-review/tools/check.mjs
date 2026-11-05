@@ -1,5 +1,5 @@
 // Checks the skill as a person gets it: the engine's checks (checks/*.check.ts); the example agents make the map, the
-// workbook, the lesson (passing visual-explainer's reviewer when there is a browser) and the review file and print what to look at — 24 with the example profile, 27 with the demo review file and the telemetry (what
+// workbook, the explainer (passing visual-explainer's reviewer when there is a browser) and the review file and print what to look at — 24 with the example profile, 27 with the demo review file and the telemetry (what
 // people said that the YAML contradicts); the workbook filled in comes back (--from, --take); --facts; a clean copy with
 // no node_modules runs on Node alone; 18 agents in under 30 s with the network blocked; broken files never stop it; a
 // broken profile says its line; a folder with no agent says so; the map loads nothing from the internet; and, in a browser, «to look at» opens its fact, a pattern shows the files, the
@@ -37,8 +37,8 @@ for (const f of readdirSync(join(root, 'checks')).filter((x) => x.endsWith('.che
 // the examples, with the profile and no review file yet
 const plain = join(work, 'plain')
 const a = run(agents, '--profile', profile, '--all', '--lang', 'pt', '--out', plain)
-ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.lesson.html', 'agents.team.html', 'agents.topology.html', 'agents.review.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, lesson, RH, stage and review file', a.stdout + a.stderr)
-ok(/✓ review|• review/.test(a.stdout) && !/! review/.test(a.stdout), "the lesson passes visual-explainer's reviewer (when there is a browser)", a.stdout)
+ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.explainer.html', 'agents.team.html', 'agents.topology.html', 'agents.review.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, explainer, RH, stage and review file', a.stdout + a.stderr)
+ok(/✓ review|• review/.test(a.stdout) && !/! review/.test(a.stdout), "the explainer passes visual-explainer's reviewer (when there is a browser)", a.stdout)
 ok(looks(a.stdout) === 24, `24 to look at (${looks(a.stdout)})`, a.stdout)
 const heads = [...a.stdout.matchAll(/^▸ (.+) · (\d+)$/gm)].map((m) => [m[1], Number(m[2])])
 ok(heads.length >= 4 && heads.reduce((n, [, c]) => n + c, 0) === 24 && heads[0][0] === 'Contradições' && heads.some(([g]) => g === 'Só um tem'), 'in groups, each with how many, adding up to the list', JSON.stringify(heads))
@@ -142,7 +142,7 @@ ok(f.status === 0 && facts.format === 'agent-review/facts-v1' && facts.agents.le
 const clean = join(work, 'clean')
 cpSync(skill, join(clean, 'agent-review'), { recursive: true })
 const c = spawnSync(process.execPath, [join(clean, 'agent-review/scripts/build.mjs'), join(clean, 'agent-review/examples/agents'), '--all', '--out', join(clean, 'out')], { encoding: 'utf8', cwd: clean })
-ok(c.status === 0 && existsSync(join(clean, 'out/agents.html')) && existsSync(join(clean, 'out/agents.xlsx')) && existsSync(join(clean, 'out/agents.lesson.html')), 'a clean copy, no node_modules: map, workbook and lesson on Node alone', c.stdout + c.stderr)
+ok(c.status === 0 && existsSync(join(clean, 'out/agents.html')) && existsSync(join(clean, 'out/agents.xlsx')) && existsSync(join(clean, 'out/agents.explainer.html')), 'a clean copy, no node_modules: map, workbook and explainer on Node alone', c.stdout + c.stderr)
 
 // 18 agents (the examples three times over) in under 30 s, with no network: any connection throws
 const many = join(work, 'many')
@@ -282,14 +282,14 @@ mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' })
   const mr = (await runPage(join(mmdDir, 'probe.html'), 'probe', '', { timeout: 90 })) ?? { bad: ['the page did not answer'] }
   ok(mr.n === mmds.length && !mr.bad?.length, `Mermaid draws all ${mmds.length} diagrams, with no error and no code on the screen`, mr)
   const chalk = join(repo, 'skills/visual-explainer/scripts/build.mjs')
-  const lessons = ['topologia.mmd', 'cena-folha.mmd'].map((f) => spawnSync(process.execPath, [chalk, join(mmdDir, f), join(work, f.replace('.mmd', '.lesson.html'))], { encoding: 'utf8' }))
-  ok(lessons.every((l) => (l.status === 0 || l.status === 3) && /→ .*opens offline/.test(l.stdout)), 'visual-explainer builds the topology and a scene as lessons', lessons.map((l) => l.stdout + l.stderr).join('\n'))
+  const explainers = ['topologia.mmd', 'cena-folha.mmd'].map((f) => spawnSync(process.execPath, [chalk, join(mmdDir, f), join(work, f.replace('.mmd', '.explainer.html'))], { encoding: 'utf8' }))
+  ok(explainers.every((l) => (l.status === 0 || l.status === 3) && /→ .*opens offline/.test(l.stdout)), 'visual-explainer builds the topology and a scene as explainers', explainers.map((l) => l.stdout + l.stderr).join('\n'))
 }
 if (browser()) {
   const w1 = join(work, 'w1')
   mkdirSync(w1)
-  const t = run(agents, '--profile', profile, '--html', '--lesson', '--lang', 'pt', '--out', w1)
-  ok(t.status === 0 && /✓ review/.test(t.stdout), "the examples with the wave 1 profile: the map, and the lesson by type passing visual-explainer's reviewer", t.stdout + t.stderr)
+  const t = run(agents, '--profile', profile, '--html', '--explainer', '--lang', 'pt', '--out', w1)
+  ok(t.status === 0 && /✓ review/.test(t.stdout), "the examples with the wave 1 profile: the map, and the explainer by type passing visual-explainer's reviewer", t.stdout + t.stderr)
   const page = readFileSync(join(w1, 'agents.html'), 'utf8').replace('</body>', `<script>
     const errs = []; addEventListener('error', (e) => errs.push(String(e.message)))
     setTimeout(() => { const q = (s) => document.querySelector(s); const all = (s) => [...document.querySelectorAll(s)]; const out = {}

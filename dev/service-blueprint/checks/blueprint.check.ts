@@ -1,10 +1,10 @@
 // The blueprint read with its lines, what the review finds (the return example on purpose has what to look at), the
-// workbook's sheets and the lesson in visual-explainer's contract.
+// workbook's sheets and the explainer in visual-explainer's contract.
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { validateScene } from '@lib/drawing/recipe'
 import { readBlueprint, problemText } from '../src/blueprint'
-import { lessonOf } from '../src/lesson'
+import { explainerOf } from '../src/explainer'
 import { reviewBlueprint } from '../src/review'
 import { workbookFile, workbookOf } from '../src/workbook'
 
@@ -57,8 +57,8 @@ assert.ok(pains.some((r) => r[2] === 'O gestor estava de férias e a aprovação
 const bytes = workbookFile(sheets)
 assert.equal(String.fromCharCode(bytes[0], bytes[1]), 'PK')
 
-// the lesson: a recipe visual-explainer takes, a chapter per phase, a person per moment with its mood
-const scene = validateScene(lessonOf(b, 'pt')) as { steps: { type: string; chapter?: string; mood?: string; name?: string }[] }
+// the explainer: a recipe visual-explainer takes, a chapter per phase, a person per moment with its mood
+const scene = validateScene(explainerOf(b, 'pt')) as { steps: { type: string; chapter?: string; mood?: string; name?: string }[] }
 assert.deepEqual(scene.steps.filter((s) => s.chapter).map((s) => s.chapter), ['Lançar', 'Aprovar', 'Receber'])
 assert.deepEqual(scene.steps.filter((s) => s.name === 'person').map((s) => s.mood ?? '-'), ['-', 'happy', 'worried', 'sad', 'happy'])
 console.log('blueprint checks ok')

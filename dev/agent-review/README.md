@@ -10,7 +10,7 @@ with the file and line behind every finding.</b></p>
 
 <p align="center">
   An <a href="https://agentskills.io">Agent Skill</a> for Claude Code, claude.ai, the Claude API and other tools that load skills.<br>
-  <a href="https://ruinosus.github.io/dna/agent-review/">Open the gallery</a> to click through the map, play the lesson and download the workbook.
+  <a href="https://ruinosus.github.io/dna/agent-review/">Open the gallery</a> to click through the map, play the explainer and download the workbook.
 </p>
 
 ---
@@ -32,7 +32,7 @@ locked-down environment where a model has few credits or none.
 |---|---|
 | **The map** (`.html`) | One page that opens offline: «to look at» on top, in groups with how many (Contradictions · Contract and telemetry · Off pattern · Rules · Only one has it · Unused · Not understood; «Only one has it» and «Unused» folded at first); the matrix of facts by dimension (conversation, integrations, knowledge, orchestrator, governance) and agent — ● has it, × off a pattern, ◐ declared — filtered by role and focus area; the patterns to decide; a click shows who has it and the file and line. Tabs for the patterns, the cast (each one's chain — agent → flow → system — and its events, with the times they fired), the Microsoft reference patterns, what nobody uses and what was not understood. |
 | **The workbook** (`.xlsx`) | Summary, Matrix, Patterns (with a Decision column to fill), Text (the blocks agents share, who has a variation), Off pattern, Gaps, Conflicts, Cast (with each one's types), Routing (what the orchestrator passes to each), Telemetry (each event as written, its form, its fields and, with an export, the times it fired), Unused, Evidence, Declared (to fill). Read back with `--from`, taken with `--take`. |
-| **The lesson** (`.lesson.html`) | A visual-explainer lesson: the cast, what repeats, who is off, what is missing, what to decide. |
+| **The explainer** (`.explainer.html`) | an explainer drawn with visual-explainer: the cast, what repeats, who is off, what is missing, what to decide. |
 | **The RH of the cast** (`.team.html`) | The same cast as people: the staff board (being hired, with no owner, never published, with a development plan, in good standing), the org chart by type, the post of each role and type, and a résumé each — the first sentence of its instructions, manager, team, owner, tools, goal, performance from the telemetry and its development plan (PDI): what «to look at» says about it alone, as actions. The workbook gets the Staff and PDI sheets. |
 | **The stage** (`.topology.html`) | The cast on a stage, to show in a meeting: the traffic moving along the arrows (each one's topic starts, from the export), lenses that light who follows a pattern and who is off, a follow spot that walks each call of the orchestrator and stops where it breaks, and a card per actor. |
 | **The diagrams** (`.diagrams.md`, `.diagrams/*.mmd`) | What was read, in plain Mermaid, for the team's docs (GitHub, a wiki, VS Code): the topology, a sequence per call of the orchestrator, a lens per pattern and the anatomy of each type — from the same data as the stage. Each one also draws in visual-explainer. |
@@ -110,7 +110,7 @@ explain a kind or a pattern; agent-review works without them.
 
 ```
 npm install       # at the repository root: the six skills are npm workspaces
-npm run assets -w dev/agent-review/tools   # scripts/engine.mjs, assets/map.html, the lesson page, references/keys.md
+npm run assets -w dev/agent-review/tools   # scripts/engine.mjs, assets/map.html, the explainer page, references/keys.md
 npm run check -w dev/agent-review/tools    # the engine's checks, the examples, the way back, a clean copy, no network
 ```
 

@@ -1,5 +1,5 @@
 // The page of every visual-explainer HTML file (and of player.js on a CDN): it reads the recipe from the page, checks it and
-// mounts the lesson (lesson.ts) — or, for a course, the list of lessons above it. Opened with #review, #snapshot,
+// mounts the explainer (explainer.ts) — or, for a course, the list of explainers above it. Opened with #review, #snapshot,
 // #snapshots, #svg, #still or #export, it does the job of scripts/build.mjs and of the repository's tools instead; with
 // #present it opens presenting.
 import { buildScope, playbackBeats, Renderer, setLottiePlayer, type LottiePlayer } from '@engine/renderer'
@@ -10,9 +10,9 @@ import { combinations, reviewScene } from '@engine/review'
 import { animatedSvg, playFrames, recordVideo, videoType } from '@engine/record'
 import { formatNumber, interpolate } from '@engine/expr'
 import { applyPalette, GIFEncoder, quantize } from 'gifenc'
-import { browserLang, fontsLoaded, langOf, mountLesson, stillLesson, svgText, tag, TEXT } from './lesson'
+import { browserLang, fontsLoaded, langOf, mountExplainer, stillExplainer, svgText, tag, TEXT } from './explainer'
 
-// Lottie: the build puts lottie-web's light player before this script only when the lesson has an animation.
+// Lottie: the build puts lottie-web's light player before this script only when the explainer has an animation.
 declare const lottie: LottiePlayer | undefined
 if (typeof lottie !== 'undefined') setLottiePlayer(lottie)
 
@@ -38,8 +38,8 @@ function mount() {
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 const faces = () => $('chalk-fonts')?.textContent ?? ''
 
-// Onda 4: the page holds one recipe, or a course — { course, lessons } — of which `?lesson=n` is the one shown.
-interface Course { title: string; lessons: Scene[]; at: number }
+// Onda 4: the page holds one recipe, or a course — { course, explainers } — of which `?explainer=n` is the one shown.
+interface Course { title: string; explainers: Scene[]; at: number }
 
 function readRecipe(): { scene: Scene; course?: Course } {
   const holder = $('chalk-recipe')
@@ -47,25 +47,28 @@ function readRecipe(): { scene: Scene; course?: Course } {
   const raw = holder.getAttribute('type') === 'text/visual-explainer'
     ? parseChalk(holder.textContent ?? '', [...PROP_NAMES, ...Object.keys(PROP_ALIASES)])
     : JSON.parse(holder.textContent ?? '')
-  // DNA 2.0.0: a recipe that names no theme is drawn in business — the lesson, its pictures, its SVG, video and PowerPoint
+  // DNA 2.0.0: a recipe that names no theme is drawn in business — the explainer, its pictures, its SVG, video and PowerPoint
   const themed = (s: Scene): Scene => (s.theme ? s : { ...s, theme: 'business' })
-  if (!raw || !Array.isArray(raw.lessons)) return { scene: themed(validateScene(raw)) }
-  const lessons = (raw.lessons as unknown[]).map((l) => themed(validateScene(l)))
-  const wanted = Number(new URLSearchParams(location.search).get('lesson'))
-  const at = Number.isInteger(wanted) && wanted >= 1 && wanted <= lessons.length ? wanted - 1 : 0
-  return { scene: lessons[at], course: { title: String(raw.course ?? lessons[0].title), lessons, at } }
+  // DNA 2.2.0: a course from before keeps its explainers under `lessons`, and its links say `?lesson=n`; both still read.
+  const list = raw?.explainers ?? raw?.lessons
+  if (!raw || !Array.isArray(list)) return { scene: themed(validateScene(raw)) }
+  const explainers = (list as unknown[]).map((l) => themed(validateScene(l)))
+  const query = new URLSearchParams(location.search)
+  const wanted = Number(query.get('explainer') ?? query.get('lesson'))
+  const at = Number.isInteger(wanted) && wanted >= 1 && wanted <= explainers.length ? wanted - 1 : 0
+  return { scene: explainers[at], course: { title: String(raw.course ?? explainers[0].title), explainers, at } }
 }
 
-/** The list of the course's lessons; each is a link to the same page with `?lesson=n`. */
+/** The list of the course's explainers; each is a link to the same page with `?explainer=n`. */
 function contents(course: Course, label: string) {
   const nav = $('course')
   nav.hidden = false
   nav.setAttribute('aria-label', label)
   nav.append(tag('b', {}, course.title))
   const list = tag('ol')
-  course.lessons.forEach((lesson, k) => {
+  course.explainers.forEach((explainer, k) => {
     const item = tag('li')
-    const link = tag('a', { href: `?lesson=${k + 1}` }, lesson.title)
+    const link = tag('a', { href: `?explainer=${k + 1}` }, explainer.title)
     if (k === course.at) link.setAttribute('aria-current', 'page')
     item.append(link)
     list.append(item)
@@ -314,7 +317,7 @@ async function exported(scene: Scene) {
 // ---------- #still: only the paper, the whole drawing, for a picture of it (tools/site.mjs) ----------
 async function still(scene: Scene) {
   document.body.classList.add('still')
-  await stillLesson($('stage'), scene)
+  await stillExplainer($('stage'), scene)
   document.body.dataset.ready = '1'
 }
 
@@ -338,8 +341,8 @@ async function main() {
   document.title = scene.title
   const lang = langOf(scene)
   document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en'
-  if (course) contents(course, TEXT[lang].lessons)
-  await mountLesson($('lesson'), scene, { faces: faces(), lang, keys: 'document', present: mode === 'present' || document.body.dataset.present === '1' })
+  if (course) contents(course, TEXT[lang].explainers)
+  await mountExplainer($('explainer'), scene, { faces: faces(), lang, keys: 'document', present: mode === 'present' || document.body.dataset.present === '1' })
 }
 
 // A page with only the recipe and this script has no body yet while the script runs: start once it is parsed.

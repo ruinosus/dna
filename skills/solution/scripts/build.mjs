@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // solution: a solution — one process seen by every skill that has something to say about it — kept in one short
 // file, <id>.solution.yaml, that names its pieces: the way of working, the simulation, the service blueprint, the drill,
-// the Copilot Studio agents, the lesson. Each piece is an ordinary recipe of its skill, beside the solution.
+// the Copilot Studio agents, the explainer. Each piece is an ordinary recipe of its skill, beside the solution.
 //
 //   node build.mjs <id>.solution.yaml --check [--json] [--lang en|pt]   each piece there, passing its skill's check,
 //                                                                       and each lens up to date with the way
@@ -32,8 +32,10 @@ export const PIECES = {
   blueprint: { skill: 'service-blueprint', test: /\.blueprint\.ya?ml$/i, check: (f, o) => [f, '--check', '--lang', o.lang], page: (f, o) => [f, '--html', '--lang', o.lang, '--out', o.dir] },
   drill: { skill: 'incident-drill', test: /\.drill\.ya?ml$/i, check: (f, o) => [f, '--check', '--lang', o.lang], page: (f, o) => [f, '--lang', o.lang, '--out', o.dir] },
   agents: { skill: 'agent-review', folder: true, check: (f, o) => [f, '--check', '--lang', o.lang, ...o.profile], page: (f, o) => [f, '--html', '--lang', o.lang, ...o.profile, '--out', o.dir] },
-  lesson: { skill: 'visual-explainer', test: /\.(chalk|json|mmd)$/i, check: (f, o) => [f, join(o.dir, 'out.html'), '--no-review'], page: (f, o) => [f, join(o.dir, 'lesson.html'), '--no-review'] },
+  explainer: { skill: 'visual-explainer', test: /\.(chalk|json|mmd)$/i, check: (f, o) => [f, join(o.dir, 'out.html'), '--no-review'], page: (f, o) => [f, join(o.dir, 'explainer.html'), '--no-review'] },
 }
+// DNA 2.2.0: the explainer was the lesson before; a solution that still says lesson: is read the same.
+const OLD_KEYS = { lesson: 'explainer' }
 const KEYS = ['apiVersion', 'kind', 'metadata', 'format', 'name', 'about', 'lang', ...Object.keys(PIECES), 'profile', 'reviewed']
 // What the file says it is: DNA's header (apiVersion, kind Solution, the name in metadata) or the format line of before.
 const DNA_API = 'github.com/ruinosus/dna/v1'
@@ -158,6 +160,7 @@ export function readSolution(text, lang = 'en') {
     if (inReviewed && /^\s/.test(line)) {
       const r = /^\s+([a-z]+):\s*(human:\S+)\s+(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z)\s+([0-9a-f]{8})\s*$/.exec(line)
       if (!r) return problems.push({ line: i + 1, text: t.review(i + 1) })
+      r[1] = OLD_KEYS[r[1]] ?? r[1]
       if (!(r[1] in PIECES)) return problems.push({ line: i + 1, text: t.reviewPiece(r[1]) })
       if (r[1] in reviewed) return problems.push({ line: i + 1, text: t.twice(`reviewed.${r[1]}`) })
       reviewed[r[1]] = { by: r[2], at: r[3], version: r[4], line: i + 1 }
@@ -179,6 +182,7 @@ export function readSolution(text, lang = 'en') {
     if (!m) return problems.push({ line: i + 1, text: t.syntax(i + 1) })
     const value = unquote(m[2].replace(/\s+#.*$/, ''))
     if (value === null) return problems.push({ line: i + 1, text: t.syntax(i + 1) })
+    m[1] = OLD_KEYS[m[1]] ?? m[1]
     if (!KEYS.includes(m[1])) return problems.push({ line: i + 1, text: t.unknown(m[1]) })
     if (m[1] in def) return problems.push({ line: i + 1, text: t.twice(m[1]) })
     if (m[1] === 'metadata') return void (inMetadata = true)
@@ -235,8 +239,8 @@ export function checkPieces(sol, folder, lang) {
 // ---- the page: one file, a tab per piece, each piece drawn by its own skill ----
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c])
 const TAB = {
-  en: { way: 'The process', sim: 'What if', blueprint: 'The journey', drill: 'The drill', agents: 'The agents', lesson: 'The lesson', summary: 'Summary', asks: { way: 'Who does what, and where it is decided', sim: 'Where the queue forms, and what would change it', blueprint: 'What the person lives at each step', drill: 'What the team does when it goes wrong', agents: 'How the agents compare, and who is off the pattern', lesson: 'The idea, explained by drawing' }, made: 'Made with DNA · solution', missing: 'not there', broken: 'does not pass its check', unchecked: 'not checked', stale: 'behind the way', ok: 'passes its check', notDrawn: 'This piece could not be drawn.', of: 'by' },
-  pt: { way: 'O processo', sim: 'E se', blueprint: 'A jornada', drill: 'O ensaio', agents: 'Os agentes', lesson: 'A explicação', summary: 'Resumo', asks: { way: 'Quem faz o quê, e onde se decide', sim: 'Onde a fila se forma, e o que mudaria isso', blueprint: 'O que a pessoa vive em cada passo', drill: 'O que o time faz quando dá errado', agents: 'Como os agentes se comparam, e quem está fora do padrão', lesson: 'A ideia, explicada desenhando' }, made: 'Feito com DNA · solution', missing: 'não está lá', broken: 'não passa no check', unchecked: 'não conferido', stale: 'atrás do way', ok: 'passa no check', notDrawn: 'Esta peça não pôde ser desenhada.', of: 'por' },
+  en: { way: 'The process', sim: 'What if', blueprint: 'The journey', drill: 'The drill', agents: 'The agents', explainer: 'The explainer', summary: 'Summary', asks: { way: 'Who does what, and where it is decided', sim: 'Where the queue forms, and what would change it', blueprint: 'What the person lives at each step', drill: 'What the team does when it goes wrong', agents: 'How the agents compare, and who is off the pattern', explainer: 'The idea, explained by drawing' }, made: 'Made with DNA · solution', missing: 'not there', broken: 'does not pass its check', unchecked: 'not checked', stale: 'behind the way', ok: 'passes its check', notDrawn: 'This piece could not be drawn.', of: 'by' },
+  pt: { way: 'O processo', sim: 'E se', blueprint: 'A jornada', drill: 'O ensaio', agents: 'Os agentes', explainer: 'A explicação', summary: 'Resumo', asks: { way: 'Quem faz o quê, e onde se decide', sim: 'Onde a fila se forma, e o que mudaria isso', blueprint: 'O que a pessoa vive em cada passo', drill: 'O que o time faz quando dá errado', agents: 'Como os agentes se comparam, e quem está fora do padrão', explainer: 'A ideia, explicada desenhando' }, made: 'Feito com DNA · solution', missing: 'não está lá', broken: 'não passa no check', unchecked: 'não conferido', stale: 'atrás do way', ok: 'passa no check', notDrawn: 'Esta peça não pôde ser desenhada.', of: 'por' },
 }
 
 function pageOf(sol, checked, drawn, lang) {

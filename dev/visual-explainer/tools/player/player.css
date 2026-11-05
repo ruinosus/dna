@@ -1,4 +1,4 @@
-/* One lesson (lesson.ts), wherever it is mounted: everything under .visual-explainer, so a page or a note keeps its own look.
+/* One explainer (explainer.ts), wherever it is mounted: everything under .visual-explainer, so a page or a note keeps its own look.
    The colours are variables a host can set (the Obsidian plugin maps them to its theme). */
 .visual-explainer {
   --ink: #1f2a37;
@@ -84,7 +84,7 @@
 /* the whole drawing, still: a picture of it, a PDF */
 .visual-explainer.is-still .paper { border: 0; border-radius: 0; padding: 0; }
 
-/* spec 2026-10-30 (Obsidian): the lesson inside a note — chapters and the two buttons on top, the bar below, the values
+/* spec 2026-10-30 (Obsidian): the explainer inside a note — chapters and the two buttons on top, the bar below, the values
    only when opened, nothing beside the paper */
 .visual-explainer.is-compact { gap: 8px; font-size: 14px; }
 .visual-explainer.is-compact .head { display: none; }

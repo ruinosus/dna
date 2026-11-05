@@ -1,6 +1,6 @@
 # visual-explainer
 
-Lessons that draw themselves — in a clean business look, or hand-drawn — from a small JSON **recipe** — the player behind the
+Explainers that draw themselves — in a clean business look, or hand-drawn — from a small JSON **recipe** — the player behind the
 [visual-explainer skill](https://github.com/ruinosus/dna). See the [gallery](https://ruinosus.github.io/dna/visual-explainer/).
 
 ## In a web page (or a claude.ai artifact)
@@ -8,35 +8,35 @@ Lessons that draw themselves — in a clean business look, or hand-drawn — fro
 ```html
 <!doctype html>
 <meta charset="utf-8">
-<title>My lesson</title>
-<script type="application/json" id="chalk-recipe">{ "id": "my-lesson", "title": "…", "width": 900, "height": 560, "steps": [ … ] }</script>
-<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.21.0/player.js"></script>
+<title>My explainer</title>
+<script type="application/json" id="chalk-recipe">{ "id": "my-explainer", "title": "…", "width": 900, "height": 560, "steps": [ … ] }</script>
+<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.22.0/player.js"></script>
 ```
 
 The player builds the page around the recipe — chapters, Next / Back, values to move, the check, downloads — and needs
-nothing else. A course is `{ "course": "Title", "lessons": [recipe, recipe, …] }`, each lesson opened with
-`?lesson=n`.
+nothing else. A course is `{ "course": "Title", "explainers": [recipe, recipe, …] }`, each explainer opened with
+`?explainer=n`.
 
 ## Inside an element (a note, a docs page, an app)
 
 ```js
-import { mountLesson, readRecipe } from '@ruinosus/visual-explainer/embed'
+import { mountExplainer, readRecipe } from '@ruinosus/visual-explainer/embed'
 
-const lesson = await mountLesson(element, readRecipe(text), { compact: true })
-// … later: lesson.destroy()
+const explainer = await mountExplainer(element, readRecipe(text), { compact: true })
+// … later: explainer.destroy()
 ```
 
 `readRecipe` takes the text syntax or JSON (a mistake in the text says its line: `ChalkTextError`). `compact` is the
-lesson for a note: chapters, Values and Expand on top, the bar below, opening on chapter 1 drawn and still. Several
-lessons can share a page. A Mermaid flowchart: `readMermaid(text)` from `visual-explainer/embed-mermaid` (apart, as it carries
+explainer for a note: chapters, Values and Expand on top, the bar below, opening on chapter 1 drawn and still. Several
+explainers can share a page. A Mermaid flowchart: `readMermaid(text)` from `visual-explainer/embed-mermaid` (apart, as it carries
 Mermaid).
 
 ## From the command line
 
 ```
-npx @ruinosus/visual-explainer lesson.json                       # checks the recipe and writes lesson.html
+npx @ruinosus/visual-explainer explainer.json                       # checks the recipe and writes explainer.html
 npx @ruinosus/visual-explainer one.json two.json --out course.html --title "The course"
-npx @ruinosus/visual-explainer lesson.chalk --svg                # an SVG that draws itself, for a README on GitHub
+npx @ruinosus/visual-explainer explainer.chalk --svg                # an SVG that draws itself, for a README on GitHub
 ```
 
 It checks the recipe contract, builds one HTML file that opens offline and, when Chrome, Chromium or Edge is

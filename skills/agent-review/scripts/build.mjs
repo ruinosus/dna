@@ -4,7 +4,7 @@
 // (.xlsx) and the review file (what people said, what was decided). No model, no install, no network: Node 18 or later.
 //
 //   node build.mjs <agents-folder> --check [--profile <team>.standard.yaml] [--lang en|pt]     only compare: nothing is written
-//   node build.mjs <agents-folder> [--profile <team>.standard.yaml] [--html] [--xlsx] [--lesson] [--team] [--topology] [--diagrams] [--all] [--lang en|pt] [--out <folder>]
+//   node build.mjs <agents-folder> [--profile <team>.standard.yaml] [--html] [--xlsx] [--explainer] [--team] [--topology] [--diagrams] [--all] [--lang en|pt] [--out <folder>]
 //   node build.mjs <agents-folder> --facts [--out <folder>]                         only the facts, for a model: <id>.facts.json
 //   node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]
 //                                  what was filled in the workbook (Declared, the Decision column): listed with a key each,
@@ -17,26 +17,27 @@
 //   … --telemetry <export.csv|.xlsx> [--telemetry-days <n>]   what fired, from Application Insights (references/telemetry.md):
 //                                  the events in the YAML that did not fire, and who has no line at all
 //
-// With no --html/--xlsx/--lesson/--team/--topology/--diagrams it makes the map. Files go in --out (or beside the folder), named by the folder:
-// <id>.html, <id>.xlsx, <id>.lesson.html (a visual-explainer lesson), <id>.team.html (the agents as a team), <id>.topology.html (who calls whom),
+// With no --html/--xlsx/--explainer/--team/--topology/--diagrams it makes the map. Files go in --out (or beside the folder), named by the folder:
+// <id>.html, <id>.xlsx, <id>.explainer.html (an explainer drawn with visual-explainer), <id>.team.html (the agents as a team), <id>.topology.html (who calls whom),
 // <id>.diagrams.md with <id>.diagrams/*.mmd (what was read, in plain Mermaid) and
 // <id>.review.yaml, kept up to date (read again on every
 // run). Exit codes: 0 done (what to look at is printed, and is not an error); 1 the profile or the review file breaks its
-// format (each problem with its line), or no agent in the folder; 2 bad arguments; 3 made, but the lesson's reviewer
-// found something to fix. The outputs hold the client's data: keep them in the client's environment. The lesson's
+// format (each problem with its line), or no agent in the folder; 2 bad arguments; 3 made, but the explainer's reviewer
+// found something to fix. The outputs hold the client's data: keep them in the client's environment. The explainer's
 // review uses Chrome, Chromium or Edge when there is one.
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
-import { CAST_FORMAT, CAST_KIND, DNA_API, PROFILE_FORMAT, PROFILE_KIND, upgradeHeader, agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, evalsFrom, extractAgent, firedFrom, fromSheets, groupLooks, playbillOf, stageOf, mergeDeclared, knownKinds, labelOf, lessonOf, problemText, readCast, readCsv, readProfile, reviewCast, diagramsDoc, diagramsOf, validateScene, withEvals, workbookFile, workbookOf, writeCast } from './engine.mjs'
+import { CAST_FORMAT, CAST_KIND, DNA_API, PROFILE_FORMAT, PROFILE_KIND, upgradeHeader, agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, evalsFrom, extractAgent, firedFrom, fromSheets, groupLooks, playbillOf, stageOf, mergeDeclared, knownKinds, labelOf, explainerOf, problemText, readCast, readCsv, readProfile, reviewCast, diagramsDoc, diagramsOf, validateScene, withEvals, workbookFile, workbookOf, writeCast } from './engine.mjs'
 import { readXlsx } from './read-xlsx.mjs'
 import { fill, inline } from './page.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const argv = process.argv.slice(2)
+// DNA 2.2.0: --lesson, the explainer's flag before, still works.
+const argv = process.argv.slice(2).map((a) => (a === '--lesson' ? '--explainer' : a))
 const valued = new Set(['--lang', '--out', '--profile', '--from', '--take', '--declared', '--agent-column', '--telemetry', '--telemetry-days', '--evals'])
-const flags = new Set(['--check', '--html', '--xlsx', '--lesson', '--team', '--topology', '--playbill', '--plot', '--diagrams', '--all', '--facts', '--upgrade', '--write', ...valued])
+const flags = new Set(['--check', '--html', '--xlsx', '--explainer', '--team', '--topology', '--playbill', '--plot', '--diagrams', '--all', '--facts', '--upgrade', '--write', ...valued])
 const option = (name) => {
   const at = argv.indexOf(name)
   return at >= 0 ? argv[at + 1] : undefined
@@ -44,7 +45,7 @@ const option = (name) => {
 const options = (name) => argv.flatMap((a, i) => (a === name && argv[i + 1] ? [argv[i + 1]] : []))
 const args = argv.filter((a, i) => !a.startsWith('--') && !valued.has(argv[i - 1]))
 const usage = `usage: node build.mjs <agents-folder> --check [--profile <team>.standard.yaml] [--lang en|pt]
-       node build.mjs <agents-folder> [--profile <team>.standard.yaml] [--html] [--xlsx] [--lesson] [--team] [--topology] [--diagrams] [--all] [--lang en|pt] [--out <folder>]
+       node build.mjs <agents-folder> [--profile <team>.standard.yaml] [--html] [--xlsx] [--explainer] [--team] [--topology] [--diagrams] [--all] [--lang en|pt] [--out <folder>]
        node build.mjs <agents-folder> --facts [--out <folder>]
        node build.mjs <agents-folder> --from <edited.xlsx> [--take <key,key…|all>] [--out <folder>]
        node build.mjs <agents-folder> --declared <table.csv|.xlsx> [--agent-column <title>] [--take <key,key…|all>] [--out <folder>]
@@ -266,8 +267,8 @@ if (argv.includes('--check')) process.exit(0)
 
 const all = argv.includes('--all')
 // --team and --topology (--playbill and --plot, their names of before, still work)
-const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), lesson: all || argv.includes('--lesson'), playbill: all || argv.includes('--team') || argv.includes('--playbill'), plot: all || argv.includes('--topology') || argv.includes('--plot'), diagrams: all || argv.includes('--diagrams') }
-if (!want.xlsx && !want.lesson && !want.playbill && !want.plot && !want.diagrams) want.html = true
+const want = { html: all || argv.includes('--html'), xlsx: all || argv.includes('--xlsx'), explainer: all || argv.includes('--explainer'), playbill: all || argv.includes('--team') || argv.includes('--playbill'), plot: all || argv.includes('--topology') || argv.includes('--plot'), diagrams: all || argv.includes('--diagrams') }
+if (!want.xlsx && !want.explainer && !want.playbill && !want.plot && !want.diagrams) want.html = true
 mkdirSync(out, { recursive: true })
 // the review file keeps this run's roles and blocks of text (so a block keeps its id across small edits), under what
 // people wrote in it; the types a person gave an agent stay, the ones the profile works out are not written
@@ -309,12 +310,12 @@ if (want.xlsx) {
   console.log(`✓ workbook  ${book}`)
 }
 let exit = 0
-if (want.lesson) {
-  const page = join(out, `${id}.lesson.html`)
-  writeFileSync(page, fill(readFileSync(join(here, '../assets/lesson.html'), 'utf8'), { RECIPE: inline(validateScene(lessonOf(result, looks, lang))) }))
-  console.log(`✓ lesson    ${page}`)
+if (want.explainer) {
+  const page = join(out, `${id}.explainer.html`)
+  writeFileSync(page, fill(readFileSync(join(here, '../assets/explainer.html'), 'utf8'), { RECIPE: inline(validateScene(explainerOf(result, looks, lang))) }))
+  console.log(`✓ explainer    ${page}`)
   const r = await runPage(page, 'review')
-  if (r === null) console.log('• review    no Chrome, Chromium or Edge here: the lesson checks itself when opened')
+  if (r === null) console.log('• review    no Chrome, Chromium or Edge here: the explainer checks itself when opened')
   else if (r.error) console.log(`✗ review    not checked: ${r.error}`)
   else if (!r.problems.length) console.log(`✓ review    ${r.combos} ${r.combos === 1 ? 'setting' : 'settings'}: nothing off the paper, no text over text`)
   else {

@@ -15,7 +15,7 @@ dependentes, folha, admissão e facilities, com o Workday por trás. Nenhum dado
 
 - 69 de 75 arquivos passam sem falha.
 - Os 6 `settings.mcs.yml` falham com "No 'kind' property found at root level" — **igual à fixture da própria
-  Microsoft** (`evals/fixtures/basic-agent/settings.mcs.yml`). Lição para o extrator: identificar `settings` pelo
+  Microsoft** (`evals/fixtures/basic-agent/settings.mcs.yml`). Explicação para o extrator: identificar `settings` pelo
   nome do arquivo, não pelo `kind`.
 - O validador completo (o da extensão do VS Code) exige conexão com um ambiente real e não foi rodado.
 

@@ -8,7 +8,7 @@
 
 <p align="center">
   An <a href="https://agentskills.io">Agent Skill</a> for Claude Code, claude.ai, the Claude API and other tools that load skills.<br>
-  <a href="https://ruinosus.github.io/dna/way-of-working/">Open the gallery</a> to click through the maps, play the lessons and download the workbooks.
+  <a href="https://ruinosus.github.io/dna/way-of-working/">Open the gallery</a> to click through the maps, play the explainers and download the workbooks.
 </p>
 
 ---
@@ -30,7 +30,7 @@ It **bets, asks, and never invents**: what the material implies becomes a bet yo
 a question — all of them in one message. It also sorts out the usual mix-ups on its own: an activity written as a stage,
 a daily or a planning in the flow, DEV/QA/PRD used as phases, a person's name where a role should be.
 
-**For** whoever leads a team (get the process out of the PDF), whoever joins it (a map or a lesson instead of 30 pages),
+**For** whoever leads a team (get the process out of the PDF), whoever joins it (a map or an explainer instead of 30 pages),
 whoever decides at the gates (the checklist in hand), and whoever designs processes for others.
 
 ## What you get
@@ -42,15 +42,15 @@ From the one `<id>.way.yaml`:
 | **The file** (`.way.yaml`) | The source. Plain text you keep in Git; everything else is made from it. A mistake says its line. |
 | **The map** (`.html`) | One page that opens offline: phases on top, who leads in the rows, stages in order, gates under the stage they close. Click a stage or a gate for its detail — where each input comes from, who receives each output. A **Stages** tab with the table teams know (comes in, delivers, roles, metrics; the gate as a row); tabs for Roles (RACI), Gates and Outputs; download the workbook, the file or a PNG. «To look at» says what does not hold. |
 | **The workbook** (`.xlsx`) | Summary, Stages (with where each input comes from, and metrics), Gates (with what comes out), Roles (RACI), Outputs, KPIs, a **Gate checklist** for the meeting and the **Thread** — who delivers each output and who receives it. Header frozen, filters on, lanes in colour. Opens in Excel, Numbers and LibreOffice. |
-| **The lesson** (`.lesson.html`) | The flow drawn stroke by stroke, a chapter per phase, each gate with who approves it and its way back — made with [visual-explainer](https://github.com/ruinosus/dna). |
+| **The explainer** (`.explainer.html`) | The flow drawn stroke by stroke, a chapter per phase, each gate with who approves it and its way back — made with [visual-explainer](https://github.com/ruinosus/dna). |
 
 <table>
   <tr>
-    <td width="50%"><img src="https://ruinosus.github.io/dna/way-of-working/images/scrum-lesson.png" alt="A hand-drawn lesson of a Scrum team: Capture, Refine, Build, Accept, Release and Measure, with the Ready and Done gates"></td>
+    <td width="50%"><img src="https://ruinosus.github.io/dna/way-of-working/images/scrum-explainer.png" alt="A hand-drawn explainer of a Scrum team: Capture, Refine, Build, Accept, Release and Measure, with the Ready and Done gates"></td>
     <td width="50%"><img src="https://ruinosus.github.io/dna/way-of-working/images/service-desk-map.png" alt="The map of a service desk: Customer, first level and specialists in the rows; a gate decides whether the ticket is escalated"></td>
   </tr>
   <tr>
-    <td>The lesson of a Scrum team: Definition of Ready and Done as gates, and where each sends the work back.</td>
+    <td>The explainer of a Scrum team: Definition of Ready and Done as gates, and where each sends the work back.</td>
     <td>A service desk (in Portuguese): solved at first level, or escalated to a specialist.</td>
   </tr>
 </table>
@@ -87,7 +87,7 @@ shortened):
 > **You:** 1 yes. 2 yes. 3 merge it with Publishing, Staging is not a phase. 4 yes. 5 skip, no target yet. 6 archived.
 > Go ahead and make everything.
 >
-> **Claude:** Done — the map, the workbook and the lesson. Still open: no stage measures the result (you skipped the
+> **Claude:** Done — the map, the workbook and the explainer. Still open: no stage measures the result (you skipped the
 > target), and the document does not say where "Ready to publish?" sends the work back, so I left it blank.
 
 ## Install
@@ -155,13 +155,13 @@ skills/way-of-working/
   SKILL.md                  what Claude follows: read, draft, check, ask once, make, and the way back
   references/               the format, what the words mean, what the check points out, how to ask
   examples/                 four fictional ways of working (feature delivery, Scrum, service desk, initiative portfolio)
-  scripts/build.mjs         checks a .way.yaml and makes the map, the workbook and the lesson; reads a workbook back
+  scripts/build.mjs         checks a .way.yaml and makes the map, the workbook and the explainer; reads a workbook back
   scripts/engine.mjs        the rules (generated)
   assets/map.html           the map page (generated)
-  assets/lesson.html        the lesson page — visual-explainer's player (generated)
+  assets/explainer.html        the explainer page — visual-explainer's player (generated)
 ```
 
-Node.js 18 or later and nothing else. Chrome, Chromium or Edge, when installed, checks the lesson's drawing.
+Node.js 18 or later and nothing else. Chrome, Chromium or Edge, when installed, checks the explainer's drawing.
 
 ## Not yet
 
@@ -182,8 +182,8 @@ The recipe written from it cites the concepts as `okf:<path>`.
 
 ```
 npm install       # at the repository root: the six skills are npm workspaces
-npm run assets -w dev/way-of-working/tools   # scripts/engine.mjs, assets/map.html, assets/lesson.html
-npm run check -w dev/way-of-working/tools    # every example: map, workbook (and back), lesson; a broken file says its line
+npm run assets -w dev/way-of-working/tools   # scripts/engine.mjs, assets/map.html, assets/explainer.html
+npm run check -w dev/way-of-working/tools    # every example: map, workbook (and back), explainer; a broken file says its line
 npm run site -w dev/way-of-working/tools     # docs/: the gallery
 npm run zip -w dev/way-of-working/tools      # dist/way-of-working.zip
 claude plugin eval . --ablation none --allow-tools Bash Write Edit   # the evals in evals/
@@ -191,5 +191,5 @@ claude plugin eval . --ablation none --allow-tools Bash Write Edit   # the evals
 
 ## License
 
-MIT. The lesson's player is [visual-explainer](https://github.com/ruinosus/dna) (MIT; Rough.js MIT; Caveat and Shantell
+MIT. The explainer's player is [visual-explainer](https://github.com/ruinosus/dna) (MIT; Rough.js MIT; Caveat and Shantell
 Sans, SIL Open Font License).

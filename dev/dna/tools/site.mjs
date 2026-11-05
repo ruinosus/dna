@@ -6,10 +6,10 @@ import { fileURLToPath } from 'node:url'
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 const SKILLS = [
-  ['visual-explainer', 'images/visual-explainer-how.png', 'Explain an idea by drawing it', 'A lesson that draws itself chapter by chapter, with narration and the values to move — clean enough for a meeting room.'],
+  ['visual-explainer', 'images/visual-explainer-how.png', 'Explain an idea by drawing it', 'An explainer that draws itself chapter by chapter, with narration and the values to move — clean enough for a meeting room.'],
   ['visual-pitch', 'thumbs/pitch-hr-self-service.png', 'Present the idea', 'A pitch, an architecture, a decision, data, a timeline or a story, drawn to be shown — it opens presenting, and becomes a PowerPoint.'],
   ['incident-drill', 'images/checkout-scene.png', 'Rehearse the incident', 'A runbook becomes a drill to play, with a clock and choices, and a debrief of what the runbook does not say.'],
-  ['way-of-working', 'images/feature-delivery-map.png', 'Map how the team works', 'Stages, gates and who approves them, roles and outputs: one checkable file, a map, a workbook and a lesson.'],
+  ['way-of-working', 'images/feature-delivery-map.png', 'Map how the team works', 'Stages, gates and who approves them, roles and outputs: one checkable file, a map, a workbook and an explainer.'],
   ['service-blueprint', 'images/employee-onboarding-map.png', 'Map what the customer lives', 'Each moment of a journey, how it feels, and who makes it happen on stage, backstage and in the systems.'],
   ['agent-review', 'images/rh-agents-map.png', 'Compare the agents', 'Copilot Studio agents side by side: what repeats, who is off the pattern, what the orchestrator passes on, which events fire, what nobody uses — with the file behind each.'],
   ['process-simulation', 'images/employee-self-service.png', 'Ask «what if» of a process', 'What arrives, who handles it, what it costs: a short recipe becomes a simulation to watch, with a slider for every control and the scenarios side by side.'],

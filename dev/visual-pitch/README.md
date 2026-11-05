@@ -45,7 +45,7 @@ nothing leaves the paper and no text covers another.
 - **Claude's Slides:** `--slides <folder>` gives a picture and a GIF per chapter and the notes, for the Slides type.
 
 **visual-pitch or visual-explainer?** To **teach** a concept — a class, «explain how X works by drawing» — use its sibling
-[visual-explainer](https://github.com/ruinosus/dna), which draws a lesson. visual-pitch is for drawing to
+[visual-explainer](https://github.com/ruinosus/dna), which draws an explainer. visual-pitch is for drawing to
 **present, convince, decide, document or tell what happened**. Both draw with the same engine.
 
 ## Install

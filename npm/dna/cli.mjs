@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const SKILLS = {
-  'visual-explainer': 'teach an idea by drawing it — a lesson from a .chalk, .json or .mmd recipe',
+  'visual-explainer': 'teach an idea by drawing it — an explainer from a .chalk, .json or .mmd recipe',
   'visual-pitch': 'present by drawing — a pitch, an architecture, a decision, data, a timeline or a story (.chalk)',
   'incident-drill': 'play an incident drill made from a runbook (.drill.yaml)',
   'way-of-working': "map a team's way of working — stages, gates, roles, outputs (.way.yaml)",

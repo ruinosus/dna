@@ -8,7 +8,7 @@ line, so a misspelled `treshold` never goes unnoticed.
 apiVersion: github.com/ruinosus/dna/v1
 kind: AgentStandard
 metadata:
-  name: Customer service agents          # the title of the map and the lesson
+  name: Customer service agents          # the title of the map and the explainer
 roles:
   orchestrator: [main-orchestrator]    # agent folders by name, or "*"
   specialist: "*"                      # everyone not named elsewhere

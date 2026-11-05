@@ -1,5 +1,5 @@
-// The GitHub Pages gallery (docs/): every example made into its map, workbook and lesson (docs/examples/), pictures of
-// each map and lesson (docs/images/, a headless browser in the light theme) and docs/index.html. Run after npm run assets.
+// The GitHub Pages gallery (docs/): every example made into its map, workbook and explainer (docs/examples/), pictures of
+// each map and explainer (docs/images/, a headless browser in the light theme) and docs/index.html. Run after npm run assets.
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -29,7 +29,7 @@ for (const f of readdirSync(examples).filter((x) => x.endsWith('.blueprint.yaml'
   copyFileSync(join(examples, f), join(docs, 'examples', f))
   execFileSync(process.execPath, [join(repo, 'skills/service-blueprint/scripts/build.mjs'), join(docs, 'examples', f), '--all', '--lang', lang], { stdio: 'ignore' })
   shot(join(docs, 'examples', `${id}.html`), join(docs, 'images', `${id}-map.png`), [1440, 860])
-  shot(join(docs, 'examples', `${id}.lesson.html`), join(docs, 'images', `${id}-lesson.png`), [1100, 640], 'still')
+  shot(join(docs, 'examples', `${id}.explainer.html`), join(docs, 'images', `${id}-explainer.png`), [1100, 640], 'still')
   items.push({ id, lang, about, name: (readFileSync(join(examples, f), 'utf8').match(/^name:\s*(.+)$/m) ?? [])[1] ?? id })
 }
 const { results } = await runPages(shots, { timeout: 60 })
@@ -80,17 +80,17 @@ a:focus-visible, .button:focus-visible { outline: 2px solid var(--accent); outli
     <div class="actions"><a class="button primary" href="https://github.com/ruinosus/dna#install">Install the skill</a><a class="button" href="https://github.com/ruinosus/dna">GitHub</a></div>
   </section>
   <section>
-    <h2>Examples — open a map, play a lesson, download the workbook</h2>
+    <h2>Examples — open a map, play an explainer, download the workbook</h2>
     <div class="grid">${items.map((d) => `
       <article class="card">
-        <a href="examples/${d.id}.html"><img src="images/${d.id}-lesson.png" alt="The lesson of «${esc(d.name)}»: the customer at each moment, higher when they feel better" loading="lazy"></a>
+        <a href="examples/${d.id}.html"><img src="images/${d.id}-explainer.png" alt="The explainer of «${esc(d.name)}»: the customer at each moment, higher when they feel better" loading="lazy"></a>
         <span class="meta">${d.lang === 'pt' ? 'Português' : 'English'}</span>
         <b>${esc(d.name)}</b><span>${esc(d.about)}</span>
-        <span class="links"><a href="examples/${d.id}.html">Map</a><a href="examples/${d.id}.lesson.html">Lesson</a><a href="examples/${d.id}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${d.id}.blueprint.yaml" download>File (.blueprint.yaml)</a></span>
+        <span class="links"><a href="examples/${d.id}.html">Map</a><a href="examples/${d.id}.explainer.html">Explainer</a><a href="examples/${d.id}.xlsx" download>Workbook (.xlsx)</a><a href="examples/${d.id}.blueprint.yaml" download>File (.blueprint.yaml)</a></span>
       </article>`).join('')}
     </div>
   </section>
-  <footer>service-blueprint is MIT licensed. All examples are fictional. Lessons by <a href="../visual-explainer/">visual-explainer</a>; its sibling <a href="../way-of-working/">way-of-working</a> maps how the work goes inside.</footer>
+  <footer>service-blueprint is MIT licensed. All examples are fictional. Explainers by <a href="../visual-explainer/">visual-explainer</a>; its sibling <a href="../way-of-working/">way-of-working</a> maps how the work goes inside.</footer>
 </main>
 </body>
 </html>

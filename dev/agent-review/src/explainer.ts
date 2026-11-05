@@ -1,4 +1,4 @@
-// The comparison explained by drawing it — a visual-explainer lesson on one paper, in five chapters: the cast (the
+// The comparison explained by drawing it — an explainer drawn with visual-explainer on one paper, in five chapters: the cast (the
 // orchestrator on top, an arrow to each specialist it calls, every agent a robot with its name), what repeats (the
 // patterns), who is off (a red × and why, under the agent), what is missing (the rules not met) and what to decide
 // (the patterns in the open, what only one has). Many agents go in rows, so the paper stays one the engine takes.
@@ -43,7 +43,7 @@ const WORDS = {
   },
 }
 
-export function lessonOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
+export function explainerOf(r: Result, looks: Look[], lang: Lang = 'en'): Obj {
   const w = WORDS[lang]
   const orchestrators = r.agents.filter((a) => a.role === 'orchestrator').sort((a, b) => a.id.localeCompare(b.id))
   // the specialists by their first type (in the profile's order), those with none last; by name within a type

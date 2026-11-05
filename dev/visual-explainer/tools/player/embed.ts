@@ -1,10 +1,10 @@
-// visual-explainer/embed (npm): a lesson mounted inside any element — an Obsidian note, a docs page, an app. The engine, the
-// lesson and its fonts and styles are inside; the styles go on the page once, under .visual-explainer.
+// visual-explainer/embed (npm): an explainer mounted inside any element — an Obsidian note, a docs page, an app. The engine, the
+// explainer and its fonts and styles are inside; the styles go on the page once, under .visual-explainer.
 import { validateScene, type Scene } from '@engine/recipe'
 import { PROP_ALIASES, PROP_NAMES } from '@engine/props'
 import { ChalkTextError, parseChalk } from '@engine/text'
 import type { Theme } from '@engine/renderer'
-import { mountLesson as mount, stillLesson as still, type LessonOptions, type Mounted } from './lesson'
+import { mountExplainer as mount, stillExplainer as still, type ExplainerOptions, type Mounted } from './explainer'
 
 declare const __CHALK_EMBED__: { css: string; fonts: string }
 
@@ -20,7 +20,7 @@ export function readRecipe(source: string): Scene {
   return validateScene(text.startsWith('{') ? JSON.parse(text) : parseChalk(text, PROPS))
 }
 
-/** The faces and the lesson's styles, once per page. */
+/** The faces and the explainer's styles, once per page. */
 export function ensureStyles(doc: Document = document) {
   if (doc.getElementById('visual-explainer-styles')) return
   const style = doc.createElement('style')
@@ -34,12 +34,15 @@ export function removeStyles(doc: Document = document) {
   doc.getElementById('visual-explainer-styles')?.remove()
 }
 
-export function mountLesson(root: HTMLElement, scene: Scene, opts: Omit<LessonOptions, 'faces'> = {}): Promise<Mounted> {
+export function mountExplainer(root: HTMLElement, scene: Scene, opts: Omit<ExplainerOptions, 'faces'> = {}): Promise<Mounted> {
   ensureStyles(root.ownerDocument)
   return mount(root, scene, { faces: __CHALK_EMBED__.fonts, ...opts })
 }
 
-export function stillLesson(root: HTMLElement, scene: Scene, theme?: Theme): Promise<void> {
+export function stillExplainer(root: HTMLElement, scene: Scene, theme?: Theme): Promise<void> {
   ensureStyles(root.ownerDocument)
   return still(root, scene, theme)
 }
+
+/** DNA 2.2.0: the names before, for a page that still calls them. */
+export { mountExplainer as mountLesson, stillExplainer as stillLesson }

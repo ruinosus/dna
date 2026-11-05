@@ -1,8 +1,8 @@
-// One lesson mounted inside an element: chapters, Next / Back, the narration, the values, the question that waits, the
+// One explainer mounted inside an element: chapters, Next / Back, the narration, the values, the question that waits, the
 // quiz, the check and the downloads, around the drawing engine (Renderer, chapters, reviewer). It is not a second
-// engine: it only builds the lesson around the drawing. Nothing is global (no ids, styles under .visual-explainer), so a page
+// engine: it only builds the explainer around the drawing. Nothing is global (no ids, styles under .visual-explainer), so a page
 // can hold several — the HTML file holds one, an Obsidian note as many as it has blocks.
-// Spec 2026-10-30 (visual-explainer no Obsidian): `compact` is the lesson inside a note — chapters, Values and Expand on top,
+// Spec 2026-10-30 (visual-explainer no Obsidian): `compact` is the explainer inside a note — chapters, Values and Expand on top,
 // the bar below, nothing beside it; it opens on chapter 1 drawn and still.
 import { buildScope, Renderer, type Theme } from '@engine/renderer'
 import { chaptersFor, defaultValues, type Scene } from '@engine/recipe'
@@ -21,7 +21,7 @@ export const TEXT = {
     board: 'Hand-drawn', voice: 'Narration', recording: (p: number) => `Recording… ${p}%`, show: 'Show me', yourTurn: 'Your turn', transcript: 'Transcript', again: 'Try another',
     valuesShort: (n: number) => `Values (${n})`, expand: 'Expand', all: 'All',
     present: 'Present', presentKeys: 'click, → or PageDown next · ← or PageUp back · Esc stop', notes: 'Speaker notes', now: 'Now', after: 'Next', end: 'The end',
-    notesBlocked: 'the browser blocked the notes window', since: 'since the start', on: 'on', off: 'off', lessons: 'Lessons',
+    notesBlocked: 'the browser blocked the notes window', since: 'since the start', on: 'on', off: 'off', explainers: 'Explainers',
   },
   pt: {
     start: 'Início', back: 'Voltar', next: 'Próximo', playAll: 'Tocar tudo', chapter: (n: number, of: number) => `Capítulo ${n} de ${of}`,
@@ -32,7 +32,7 @@ export const TEXT = {
     board: 'Traço à mão', voice: 'Narração', recording: (p: number) => `Gravando… ${p}%`, show: 'Mostrar', yourTurn: 'Sua vez', transcript: 'Transcrição', again: 'Tentar outra',
     valuesShort: (n: number) => `Valores (${n})`, expand: 'Expandir', all: 'Tudo',
     present: 'Apresentar', presentKeys: 'clique, → ou PageDown avança · ← ou PageUp volta · Esc sai', notes: 'Notas do apresentador', now: 'Agora', after: 'Depois', end: 'Fim',
-    notesBlocked: 'o navegador bloqueou a janela de notas', since: 'desde o começo', on: 'ligado', off: 'desligado', lessons: 'Aulas',
+    notesBlocked: 'o navegador bloqueou a janela de notas', since: 'desde o começo', on: 'ligado', off: 'desligado', explainers: 'Explicações',
   },
 }
 export type Lang = keyof typeof TEXT
@@ -43,15 +43,15 @@ export const browserLang = (): Lang => (navigator.language.toLowerCase().startsW
  * with none, the browser's. */
 export const langOf = (scene: Scene): Lang => (scene.locale ? (scene.locale.toLowerCase().startsWith('pt') ? 'pt' : 'en') : browserLang())
 
-export interface LessonOptions {
+export interface ExplainerOptions {
   /** The @font-face rules of the drawing's faces: they go inside the SVG and PNG downloads and the recordings. */
   faces: string
   lang?: Lang
-  /** The lesson inside a note: no side panel, and it opens on chapter 1 drawn and still. */
+  /** The explainer inside a note: no side panel, and it opens on chapter 1 drawn and still. */
   compact?: boolean
   /** The theme when the recipe has none (the recipe's own wins). */
   theme?: Theme
-  /** 'document': the arrow keys and Space move the lesson anywhere on the page (the HTML file); otherwise only while
+  /** 'document': the arrow keys and Space move the explainer anywhere on the page (the HTML file); otherwise only while
    * the focus is inside it. */
   keys?: 'document' | 'self'
   /** Shows «Expand», which calls this. */
@@ -64,7 +64,7 @@ export interface Mounted {
   destroy(): void
 }
 
-// The lesson's markup: parts are found by data-part inside the root, never by id.
+// The explainer's markup: parts are found by data-part inside the root, never by id.
 const MARKUP = `
   <header class="head">
     <div><span class="eyebrow" data-part="category"></span><h1 data-part="title"></h1></div>
@@ -105,7 +105,7 @@ export function tag<K extends keyof HTMLElementTagNameMap>(name: K, attrs: Recor
 export const fontsLoaded = () => Promise.all([...document.fonts].map((f) => f.load())).catch(() => undefined)
 
 /** Mounts `scene` inside `root` (its children are replaced). The recipe must already be valid (validateScene). */
-export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonOptions): Promise<Mounted> {
+export async function mountExplainer(root: HTMLElement, scene: Scene, opts: ExplainerOptions): Promise<Mounted> {
   const t: Words = TEXT[opts.lang ?? langOf(scene)]
   const compact = !!opts.compact
   root.classList.add('visual-explainer')
@@ -148,7 +148,7 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
   button('all').textContent = compact ? `▶ ${t.all}` : t.playAll
   part('keys').textContent = opts.keys === 'document' ? t.keys : ''
   part('made').textContent = t.made
-  // Lottie: what the lesson uses under another license (an animation pack under CC BY) is credited here.
+  // Lottie: what the explainer uses under another license (an animation pack under CC BY) is credited here.
   for (const c of scene.credits ?? []) part('credits').append(tag('br'), tag('span', {}, c))
 
   function paint() {
@@ -170,7 +170,7 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
     return scene.steps.slice(c.start, c.end + 1).flatMap((s) => [s.say, s.type === 'pause' ? s.ask : undefined].filter((x): x is string => !!x)).map((x) => interpolate(x, scope, scene.locale)).join(' ')
   }
 
-  /** The notes window: a blank page the lesson fills — it works offline, from a file on disk. */
+  /** The notes window: a blank page the explainer fills — it works offline, from a file on disk. */
   function notesOpen() {
     notes = window.open('', 'chalk-notes', 'width=560,height=420')
     if (!notes) return void (part('present-foot').dataset.note = t.notesBlocked)
@@ -355,7 +355,7 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
   }
 
   await fontsLoaded()
-  // The check draws hidden on its own paper: it does not wait for the lesson (a question may be waiting for a click).
+  // The check draws hidden on its own paper: it does not wait for the explainer (a question may be waiting for a click).
   if (!compact) void check()
   if (opts.present) {
     root.classList.add('is-presenting')
@@ -437,7 +437,7 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
     box.append(tag('h2', {}, t.yourTurn), tag('p', {}, scene.quiz.question), options, why)
   }
 
-  /** Everything the lesson says, in order, by chapter — for reading and for screen readers. */
+  /** Everything the explainer says, in order, by chapter — for reading and for screen readers. */
   function transcript() {
     const box = part('transcript')
     const scope = buildScope(scene, defaultValues(scene))
@@ -452,7 +452,7 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
     box.append(tag('summary', {}, t.transcript), list)
   }
 
-  // ---------- download: the paper as SVG (with its fonts) or PNG, the lesson drawing itself as GIF or WebM ----------
+  // ---------- download: the paper as SVG (with its fonts) or PNG, the explainer drawing itself as GIF or WebM ----------
   function downloads() {
     const box = part('downloads')
     box.prepend(tag('span', {}, t.download))
@@ -511,7 +511,7 @@ export async function mountLesson(root: HTMLElement, scene: Scene, opts: LessonO
 }
 
 /** The whole drawing at once, still, inside `root` (an exported PDF, a printed page, a picture of it). */
-export async function stillLesson(root: HTMLElement, scene: Scene, theme?: Theme): Promise<void> {
+export async function stillExplainer(root: HTMLElement, scene: Scene, theme?: Theme): Promise<void> {
   root.classList.add('visual-explainer', 'is-still')
   const look: Theme = scene.theme ?? theme ?? 'business'
   const box = tag('div', { class: `paper${look === 'chalkboard' ? ' is-board' : look === 'paper' ? ' is-hand' : ''}` })

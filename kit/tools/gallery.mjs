@@ -8,7 +8,7 @@ import { join } from 'node:path'
 import { browser, runPages } from '../browser.mjs'
 
 /** `items`: [{ name, html }]. Writes every page, then every picture in one opening of the browser. */
-export async function gallery(docs, items, { pages = 'lessons', mode, pick = (r) => r.png, shot, timeout = 60 }) {
+export async function gallery(docs, items, { pages = 'explainers', mode, pick = (r) => r.png, shot, timeout = 60 }) {
   if (!browser()) throw new Error('No Chrome, Chromium or Edge: the pictures need one (set CHROME_PATH).')
   for (const dir of [pages, 'thumbs']) {
     rmSync(join(docs, dir), { recursive: true, force: true })

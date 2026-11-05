@@ -2,7 +2,7 @@
 
 ## 0.3.0 — 2026-11-01
 
-The lesson's review no longer hangs in cloud sandboxes.
+The explainer's review no longer hangs in cloud sandboxes.
 
 - The headless browser is chalk-talk's kit (`chalk-talk/kit`, from its npm package): it talks to the browser over the
   DevTools pipe instead of `--dump-dom`, which hung until a timeout on some machines. It finds Playwright's Chromium,
@@ -10,7 +10,7 @@ The lesson's review no longer hangs in cloud sandboxes.
   now says «not checked».
 - The gallery's pictures are taken over the same pipe. The zip, the name audit and a Linux check
   (`npm run linux`) come from the kit.
-- The lesson uses chalk-talk 0.14.1 and its engine (chains, the new props, a figure over a figure found by the
+- The explainer uses chalk-talk 0.14.1 and its engine (chains, the new props, a figure over a figure found by the
   review).
 
 ## 0.2.0 — 2026-10-30
@@ -23,7 +23,7 @@ The lesson's review no longer hangs in cloud sandboxes.
 - The workbook: where each input comes from, Metrics and Description in Stages, What comes out and Metrics in Gates,
   and a **Thread** sheet; the way back reads them.
 - The check: an input from nowhere, one that arrives late, an output nobody receives, a gate with nothing coming out
-  (only when the file describes inputs). The lesson says what each stage receives.
+  (only when the file describes inputs). The explainer says what each stage receives.
 - A fourth example, the initiative portfolio; the three others now carry the thread.
 
 ## 0.1.1 — 2026-10-30
@@ -39,6 +39,6 @@ First version.
   check it, ask what is missing once and all together, then make what the person needs.
 - `scripts/build.mjs`: `--check` (each problem with its line; what does not hold as «to look at»); the map (`.html`,
   offline: grid of phases × who leads, stage and gate detail, Roles (RACI), Gates and Outputs tabs, Excel / YAML / PNG
-  downloads); the workbook (`.xlsx`: Summary, Stages, Gates, Roles (RACI), Outputs, KPIs, Gate checklist); the lesson
-  (`.lesson.html`, chalk-talk's player); `--from edited.xlsx` and `--take` for the way back.
+  downloads); the workbook (`.xlsx`: Summary, Stages, Gates, Roles (RACI), Outputs, KPIs, Gate checklist); the explainer
+  (`.explainer.html`, chalk-talk's player); `--from edited.xlsx` and `--take` for the way back.
 - Three fictional examples (feature delivery, Scrum, service desk), evals, the gallery and the npm package.
