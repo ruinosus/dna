@@ -30,8 +30,8 @@
       "post": {
         "tags": ["workers"],
         "summary": "Starts a request for a work arrangement for a person.",
-        "description": "Starts the business process that asks for a work arrangement.\n\n<b>Secured By Domain:</b> Self-Service: Arrangements\n\n<b>Scope:</b> People Basics",
-        "parameters": [{ "$ref": "#/parameters/workerId" }, { "in": "body", "name": "arrangementRequest", "required": true, "schema": { "$ref": "#/definitions/arrangementRequest_1" } }],
+        "description": "Starts the business process that asks for a work arrangement. The request names the arrangement, the day it starts and, when the worker has more than one position, which one. The request names the arrangement, the day it starts and, when the worker has more than one position, which one. The request names the arrangement, the day it starts and, when the worker has more than one position, which one. The request names the arrangement, the day it starts and, when the worker has more than one position, which one. The request names the arrangement, the day it starts and, when the worker has more than one position, which one. To submit the event, specify action.id as Submitted, 0123456789abcdef0123456789abcdef.\n\n<b>Secured By Business Process Type:</b> Request Arrangement\n\n<b>Secured By Domain:</b> Self-Service: Arrangements\n\n<b>Scope:</b> People Basics",
+        "parameters": [{ "$ref": "#/parameters/workerId" }, { "name": "wd-warning-action", "in": "header", "type": "string", "required": false, "description": "What to do on a warning." }, { "in": "body", "name": "arrangementRequest", "required": true, "schema": { "$ref": "#/definitions/arrangementRequest_1" } }],
         "responses": { "201": { "description": "Created", "schema": { "$ref": "#/definitions/arrangementRequest_1" } } }
       }
     }

@@ -15,8 +15,11 @@ export function securityOf(description) {
     const m = new RegExp(`${label}:\\s*([^\\n]+)`, 'i').exec(text)
     return m ? m[1].split(/,\s*/).map((x) => x.trim()).filter(Boolean) : []
   }
-  return { domains: list('Secured By Domain'), scope: list('Scope') }
+  return { domains: list('Secured By Domain'), scope: list('Scope'), businessProcesses: list('Secured By Business Process Type') }
 }
+
+/** Workday's description without its security lines («Secured By …:», «Scope:»): those are facts of their own. */
+export const withoutSecurity = (description) => (description ?? '').split('\n').filter((l) => !/^\s*(?:<[^>]+>\s*)*(?:Secured By [^:<]+|Scope)\s*:/i.test(l)).join('\n')
 
 /** What an ID parameter accepts, from its description: a WID, Reference ID types, named entries such as `me`. */
 export function acceptsOf(param) {
@@ -52,7 +55,7 @@ export function parseOpenApi(spec, fileName = '') {
         method: method.toUpperCase(),
         path,
         summary: plain(o.summary),
-        description: plain(o.description),
+        description: plain(withoutSecurity(o.description)),
         tags: o.tags ?? [],
         ...securityOf(o.description),
         params: params.filter((p) => p.in !== 'body').map((p) => ({

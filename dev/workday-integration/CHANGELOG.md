@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.3.3 — 2026-11-05
+
+From the VS Code write test (a day of time off, by REST):
+
+- `rest` gives Workday's description whole: it was cut at 600 characters, and the WID of the Submitted action
+  (`businessProcessParameters.action.id`) came out as `d9e4223e44…` (47 of the 671 endpoints have more). The security
+  lines leave the description and are facts of their own. To fit, a tree goes down in depth, then its field
+  descriptions shorten, and says so; `--field body.a` (MCP `field`) gives one part whole. The JSON trees had one level
+  more than asked: fixed.
+- «Secured By Business Process Type» is read as a fact, beside the domains (57 endpoints; `validTimeOffDates` said it
+  named no security). An index from before needs `fetch --rest` (or `ingest`) again, and says so.
+- The Power Fx writes each value with `JSON()`, which Microsoft lists for Copilot Studio: a text escaped (a line break
+  in a comment broke the JSON body), a number with a point whatever the person's language (`Text(1.5)` can be `1,5`),
+  a date as yyyy-mm-dd. The SOAP numbers too.
+- `copilot-rest` says when the endpoint takes a header (`wd-warning-action`): Execute REST request sends none.
+- `search`: the words in their order in a description count more, and say so — «request time off» finds
+  `Enter_Time_Off` («uses the Request Time Off business process») first among the SOAP operations. Two bench cases.
+
 ## 0.3.2 — 2026-11-05
 
 - `connector` (MCP `wws_list_connector_actions`): each parameter with Microsoft's words, what each action returns,

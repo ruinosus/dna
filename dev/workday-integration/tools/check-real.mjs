@@ -98,7 +98,7 @@ if (ix.data.rest.endpoints.length) {
   const ok = tp.domains.includes('Self-Service: Time Off Balances') && tp.scope.includes('Time Off and Leave') && tp.params[0].accepts?.named.includes('me')
   if (!ok) restBad++
   console.log(`${ok ? '✓' : '✗'} REST: GET common/v1 /workers/{ID}/timeOffPlans/{subresourceID} — its domains, its scope, an ID that accepts me`)
-  const ENDS = [['GET', '/workers/{ID}/timeOffPlans', 'common'], ['GET', '/workers/{ID}/inboxTasks', 'common'], ['GET', '/events', 'businessProcess'], ['POST', '/workers/{ID}/organizationAssignmentChanges', 'staffing'], ['GET', '/workers/{ID}', 'common']]
+  const ENDS = [['GET', '/workers/{ID}/timeOffPlans', 'common'], ['GET', '/workers/{ID}/inboxTasks', 'common'], ['GET', '/events', 'businessProcess'], ['POST', '/workers/{ID}/organizationAssignmentChanges', 'staffing'], ['GET', '/workers/{ID}', 'common'], ['POST', '/workers/{ID}/requestTimeOff', 'absenceManagement'], ['POST', '/workers/{ID}/jobChanges', 'staffing'], ['PATCH', '/jobChanges/{ID}/administrative/{subresourceID}', 'staffing']]
   let lr = ['', 0]
   for (const [m, p, svc] of ENDS) {
     if (!ix.data.rest.endpoints.some((e) => e.method === m && e.path === p && e.service === svc)) continue
@@ -120,6 +120,14 @@ if (ix.data.rest.endpoints.length) {
     const inboxOk = shownPaths.length > 0 && plain.response.reads.every((r) => r.repeats && r.json_path.startsWith('data[]')) && pg?.left_out.some((q) => q.name === 'limit' && /maximum is 100/i.test(q.description)) && pg.left_out.some((q) => q.name === 'offset') && paged.parameters.relativePath === 'common/v1/{tenant}/workers/me/inboxTasks?limit={{Limit}}&offset={{Offset}}'
     if (!inboxOk) restBad++
     console.log(`${inboxOk ? '✓' : '✗'} REST: the inbox as the VS Code test asks it — read with the paths rest shows, paging (limit at most 100, offset) a decision, include adds it`)
+  }
+  // what the VS Code write test found (0.3.3): the description whole (the Submitted WID), the business process type
+  if (ix.data.rest.endpoints.some((e) => e.service === 'absenceManagement' && e.path === '/workers/{ID}/requestTimeOff')) {
+    const rt = getRestEndpoint(ix, 'POST', '/workers/{ID}/requestTimeOff', { service: 'absenceManagement' })
+    const vd = getRestEndpoint(ix, 'GET', '/workers/{ID}/validTimeOffDates', { service: 'absenceManagement' })
+    const timeOffOk = /\bd9e4223e446c11de98360015c5e6daf6\b/.test(rt.description) && vd.facts.some((f) => /business process types .*Request Time Off/.test(f)) && !vd.facts.some((f) => /names no security domain/.test(f))
+    if (!timeOffOk) restBad++
+    console.log(`${timeOffOk ? '✓' : '✗'} REST: time off — the request's description whole (the Submitted WID), validTimeOffDates secured by the Request Time Off business process`)
   }
   // the endpoints the connector's ready-made actions likely call (inferred notes) are in the index, by service and path
   const missing = CONNECTOR_ACTIONS.flatMap((x) => (x.notes ?? []).filter((n) => n.endpoint)).map((n) => n.endpoint).filter((ep) => {

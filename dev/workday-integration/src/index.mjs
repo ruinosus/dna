@@ -287,6 +287,14 @@ export class Index {
     const exact = new Set((query.match(/[A-Za-z0-9_]+/g) ?? []).filter((t) => t.includes('_')).map((t) => t.toLowerCase()))
     const intent = new Set(terms)
     const words = new Set(expand ? [] : terms.flatMap((t) => tokens(t)).filter((t) => !STOP_STEMS.has(t)))
+    // the words in the order they were given (a phrase): when a description has them so, side by side, it counts more
+    const phrase = expand ? [] : tokens(query).filter((t) => !STOP_STEMS.has(t))
+    const hasPhrase = (text) => {
+      if (phrase.length < 2 || !text) return false
+      const t = tokens(text).filter((x) => !STOP_STEMS.has(x))
+      return t.some((_, i) => phrase.every((w, j) => t[i + j] === w))
+    }
+    const PHRASE = 'your words, in this order, are in the description'
     const scored = new Map()
     const matchedBy = new Map()
     // REST: every spec indexed (fetch --rest takes the HR ones); services, when named, narrow it
@@ -311,9 +319,12 @@ export class Index {
             byName = `all your words are in the service and path (and ${extra} other${extra === 1 ? '' : 's'})`
           }
         }
+        const desc = phrase.length > 1 ? this.data.rest.endpoints.find((x) => `rest|${x.service}|${x.version}|${x.method} ${x.path}` === r.key) : null
+        const byPhrase = hasPhrase(desc && `${desc.summary} ${desc.description}`)
+        if (byPhrase) s -= 10
         if (!scored.has(r.key) || s < scored.get(r.key)) {
           scored.set(r.key, s)
-          matchedBy.set(r.key, byName ? [{ term: byName, in: ['path'] }, ...r.matched] : r.matched)
+          matchedBy.set(r.key, [...(byName ? [{ term: byName, in: ['path'] }] : []), ...(byPhrase ? [{ term: PHRASE, in: ['description'] }] : []), ...r.matched])
         }
         continue
       }
@@ -337,9 +348,11 @@ export class Index {
           byName = `all your words are in the name (and ${extra} other${extra === 1 ? '' : 's'})`
         }
       }
+      const byPhrase = phrase.length > 1 && hasPhrase(this.data.operations.find((x) => x.op === op && x.service === svc)?.description)
+      if (byPhrase) s -= 10
       if (!scored.has(r.key) || s < scored.get(r.key)) {
         scored.set(r.key, s)
-        matchedBy.set(r.key, byName ? [{ term: byName, in: ['operation name'] }, ...r.matched] : r.matched)
+        matchedBy.set(r.key, [...(byName ? [{ term: byName, in: ['operation name'] }] : []), ...(byPhrase ? [{ term: PHRASE, in: ['description'] }] : []), ...r.matched])
       }
     }
     // an exact name, even when the tokens miss it

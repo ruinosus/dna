@@ -194,7 +194,7 @@ export function powerFx(xml, variables, prefix) {
     if (!v.enum?.length && [undefined, null, 'xsd:string'].includes(v.xsd_type) && !v.id_type) ref = `Substitute(Substitute(Substitute(${ref}, "&", "&amp;"), "<", "&lt;"), ">", "&gt;")`
     else if (v.xsd_type === 'xsd:date') ref = `Text(${ref}, "yyyy-mm-dd")`
     else if (v.xsd_type === 'xsd:boolean') ref = `If(${ref}, "true", "false")`
-    else if (['xsd:decimal', 'xsd:int', 'xsd:integer', 'xsd:long'].includes(v.xsd_type)) ref = `Text(${ref})`
+    else if (['xsd:decimal', 'xsd:int', 'xsd:integer', 'xsd:long'].includes(v.xsd_type)) ref = `JSON(${ref})` // a number with a point, whatever the person's language
     parts.push(ref)
     pos = m.index + m[0].length
   }
@@ -329,16 +329,40 @@ export function essTemplate(ix, op, { service, version, include = [], mode = 're
 
 /** A REST endpoint: its parameters (with what each ID accepts), its body and response trees, the security domains and
  * the scope Workday's description names (facts of the specification), and the other endpoints on the same path. */
-export function getRestEndpoint(ix, method, path, { service, version, depth = 4, fmt = 'text', budget = 8000 } = {}) {
+/** What secures an endpoint, as Workday's description says it: its domains, the business process types (an index from
+ * before 0.3.3 did not keep them: say so), and the scope. */
+function securityFacts(e) {
+  const bp = e.businessProcesses
+  const by = [
+    ...(e.domains.length ? [`Secured by the domains (Workday's description): ${e.domains.join('; ')}.`] : []),
+    ...(bp?.length ? [`Secured by the business process types (Workday's description): ${bp.join('; ')}.`] : []),
+  ]
+  if (!by.length) by.push(bp ? "Workday's description names no security domain and no business process type." : "Workday's description names no security domain; this index is from before 0.3.3 and did not keep the business process types — run fetch --rest (or ingest the files) again.")
+  return [...by, ...(e.scope.length ? [`Scope (functional areas the API client needs): ${e.scope.join('; ')}.`] : [])]
+}
+
+export function getRestEndpoint(ix, method, path, { service, version, depth = 4, fmt = 'text', budget = 8000, field } = {}) {
   const e = ix.resolveRest(method, path, service, version)
   const defs = ix.restDefinitions(e.service, e.version)
+  // Workday's description whole (it may hold a value the request needs, a WID); the trees take what is left
+  const description = e.description.replace(/\s*Secured By Domain:.*$/i, '')
+  // field (body.days, response.data[].status): that part of the body or the response alone, its descriptions whole
+  const [part, ...rest] = (field ?? '').split('.')
+  if (field && !['body', 'response'].includes(part)) throw new LookupError(`field: start it with body. or response. (body.days, response.data[].status) — not ${field}`)
+  const trimmed = (n, chars) => ({ ...n, ...(chars === 0 ? { ref: undefined } : {}), ...(n.description && [...n.description].length > chars ? { description: chars ? [...n.description].slice(0, chars - 1).join('') + '…' : undefined } : {}), ...(n.items ? { items: trimmed(n.items, chars) } : {}), ...(n.children ? { children: n.children.map((c) => trimmed(c, chars)) } : {}) })
   const tree = (schema, name) => {
     if (!schema) return null
+    const make = (d, chars) => { const t = jsonTree(defs, schema, name, { maxDepth: d + (fmt === 'json' ? 0 : 1) + rest.length }); const r = rest.length ? findJsonPath(t, rest.join('.')) : t; return fmt === 'json' ? (chars === Infinity ? r : trimmed(r, chars)) : renderJsonTree(r, { maxDepth: d, docChars: chars === Infinity ? (field ? 100000 : 100) : chars }) }
+    // what is left of the budget once the rest of the answer is counted (samePath and sameResource: set before it runs)
+    const treeBudget = Math.max(Math.min(1200, budget / 4), (budget - description.length - JSON.stringify([e.params, samePath, sameResource, e.domains, e.scope, e.businessProcesses ?? []]).length - 1000) / (field ? 1 : 2))
+    // to fit: first less depth, then shorter field descriptions — and say so, with how to have a field whole
     let d = depth
-    const make = (x) => { const t = jsonTree(defs, schema, name, { maxDepth: x + 1 }); return fmt === 'json' ? t : renderJsonTree(t, { maxDepth: x }) }
-    let out = make(d)
-    while (JSON.stringify(out).length > budget / 2 && d > 1) out = make(--d)
-    return { tree: out, ...(d < depth ? { cut: `cut to depth ${d} of the ${depth} asked, to fit` } : {}) }
+    let chars = Infinity
+    let out = make(d, chars)
+    while (JSON.stringify(out).length > treeBudget && d > 1) out = make(--d, chars)
+    for (const c of [100, 40, 0]) if (JSON.stringify(out).length > treeBudget) out = make(d, (chars = c))
+    const cuts = [...(d < depth ? [`to depth ${d} of the ${depth} asked`] : []), ...(chars !== Infinity ? [chars ? `field descriptions to ${chars} characters` : 'without field descriptions (nor definition names)'] : [])]
+    return { tree: out, ...(cuts.length ? { cut: `cut ${cuts.join(', ')}, to fit — a part whole: field (${name}.<field>)` } : {}) }
   }
   const samePath = ix.data.rest.endpoints.filter((x) => x.path === e.path && x.service === e.service && x.version === e.version && x.method !== e.method).map((x) => `${x.method} ${x.path} — ${x.summary}`)
   const resource = e.path.split('/')[1]
@@ -347,16 +371,15 @@ export function getRestEndpoint(ix, method, path, { service, version, depth = 4,
   return {
     api: 'rest', method: e.method, path: e.path, service: e.service, version: e.version, prefix: e.prefix,
     relative_path: `${e.prefix}/{tenant}${e.path}`,
-    summary: e.summary, description: e.description.replace(/\s*Secured By Domain:.*$/i, '').slice(0, 600),
+    summary: e.summary, description,
     facts: [
-      e.domains.length ? `Secured by the domains (Workday's description): ${e.domains.join('; ')}.` : "Workday's description names no security domain.",
-      ...(e.scope.length ? [`Scope (functional areas the API client needs): ${e.scope.join('; ')}.`] : []),
+      ...securityFacts(e),
       ...(newer.length ? [`A newer version of ${e.service} is indexed: ${newer.join(', ')}.`] : []),
     ],
-    domains: e.domains, scope: e.scope,
+    domains: e.domains, scope: e.scope, ...(e.businessProcesses ? { business_processes: e.businessProcesses } : {}),
     params: e.params,
-    body: e.body ? { name: e.body.name, required: e.body.required, ...tree(e.body.schema, 'body') } : null,
-    response: e.response ? { status: e.response.status, ...tree(e.response.schema, 'response') } : null,
+    body: e.body && (!field || part === 'body') ? { name: e.body.name, required: e.body.required, ...tree(e.body.schema, 'body') } : null,
+    response: e.response && (!field || part === 'response') ? { status: e.response.status, ...tree(e.response.schema, 'response') } : null,
     same_path: samePath, same_resource: sameResource,
   }
 }
@@ -432,11 +455,10 @@ export function restActionSpec(ix, method, path, { service, version, include = [
       const v = byVar[m[1]]
       const ref = `${variablePrefix}${m[1]}`
       let val
-      if (!json) val = v?.written_as ? `"${v.written_as.split('=')[0]}=" & EncodeUrl(${ref})` : v?.type === 'Number' ? `EncodeUrl(Text(${ref}))` : v?.type === 'Boolean' ? `If(${ref}, "true", "false")` : `EncodeUrl(${ref})`
-      else if (v?.type === 'Number') val = `Text(${ref})`
-      else if (v?.type === 'Boolean') val = `If(${ref}, "true", "false")`
-      else if (v?.type === 'Date') val = `"""" & Text(${ref}, "yyyy-mm-dd") & """"`
-      else val = `"""" & Substitute(Substitute(${ref}, "\\", "\\\\"), """", "\\""") & """"`
+      // JSON() writes a value as JSON whatever the person's language: a text escaped (quotes, backslashes, line
+      // breaks), a number with a point, a date as "yyyy-mm-dd", true or false
+      if (!json) val = v?.written_as ? `"${v.written_as.split('=')[0]}=" & EncodeUrl(${ref})` : v?.type === 'Number' ? `EncodeUrl(JSON(${ref}))` : v?.type === 'Boolean' ? `If(${ref}, "true", "false")` : `EncodeUrl(${ref})`
+      else val = `JSON(${ref})`
       parts.push(val)
       pos = m.index + m[0].length
     }
@@ -457,8 +479,11 @@ export function restActionSpec(ix, method, path, { service, version, include = [
   const notes = [
     { kind: 'documentation', text: "Execute REST request (Preview) runs with the signed-in user's OAuth credentials and Workday enforces that user's permissions; it requires an OAuth 2.0 connection and the REST base URL on it." },
     { kind: 'documentation', text: 'No idempotency keys: retrying a write (POST, PUT, PATCH) is the caller\'s to make safe. Limit: 200 calls per connection per 60 s.' },
-    { kind: 'spec', text: e.domains.length ? `Secured by the domains: ${e.domains.join('; ')}${e.scope.length ? ` — scope: ${e.scope.join('; ')}` : ''}.` : 'Workday\'s description names no security domain.' },
+    ...(bodyText || inputs.some((i) => i.type === 'Number') ? [{ kind: 'documentation', text: 'The Power Fx writes each value with JSON(), which Microsoft lists for Copilot Studio: a text escaped (quotes, backslashes, line breaks), a number with a point and a date as yyyy-mm-dd whatever the person\'s language.', source: 'https://learn.microsoft.com/en-us/power-platform/power-fx/reference/function-json' }] : []),
+    { kind: 'spec', text: securityFacts(e).join(' ') },
   ]
+  const headers = e.params.filter((x) => x.in === 'header')
+  if (headers.length) notes.push({ kind: 'documentation', text: `The endpoint takes the header${headers.length > 1 ? 's' : ''} ${headers.map((h) => `${h.name} (${h.required ? 'required' : 'optional'}${h.description ? `: ${h.description.slice(0, 120)}` : ''})`).join('; ')}; Execute REST request sends none — its parameters are relativePath, method, contentType and body — so ${headers.some((h) => h.required) ? 'it cannot call this endpoint as the specification asks' : 'Workday\'s default for it applies'}.`, headers: headers.map((h) => h.name) })
   return {
     connector: 'Workday (Microsoft, Premium)', action: 'Execute REST request (Preview)', operation_id: 'REST_Operation',
     endpoint: `${e.method} ${e.prefix} ${e.path}`, service: e.service, version: e.version,

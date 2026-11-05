@@ -32,7 +32,7 @@ const USAGE = `usage: node scripts/wws.mjs <command> [options]   (--json on any 
   ess <Operation>              a template of Microsoft's Employee Self-Service Workday pack [--include …] [--id-type …]
                                [--read A/B]…
   rest <METHOD> <path>         a REST endpoint: its parameters (what each ID accepts), body and response, the security
-                               domains and scope Workday's description names [--service S] [--depth N]
+                               domains and scope Workday's description names [--service S] [--depth N] [--field body.a]
   copilot-rest <METHOD> <path> the Copilot Studio «Execute REST request (Preview)» spec [--id-form ID=me]… [--include a.b]…
                                [--read a.b]…
   connector [action]           the Workday connector's actions (SOAP, REST, RaaS and the ready-made ones), from Microsoft's docs
@@ -43,7 +43,7 @@ fetch --rest [--rest-services staffing,common…] [--rest-all-versions]: the RES
 Each envelope, spec and template lists its decisions (an ID type, a choice's alternative, an optional container):
 change any of them with --id-type and --choose.`
 
-const VALUED = new Set(['--index', '--scope', '--limit', '--path', '--depth', '--service', '--version', '--include', '--services', '--filter', '--id-type', '--choose', '--read', '--api', '--id-form', '--rest-services'])
+const VALUED = new Set(['--index', '--scope', '--limit', '--path', '--depth', '--service', '--version', '--include', '--services', '--filter', '--id-type', '--choose', '--read', '--api', '--id-form', '--rest-services', '--field'])
 const FLAGS = new Set(['--json', '--response', '--all', '--wsse', '--body-only', '--envelope', '--expand', '--rest', '--rest-all-versions'])
 
 function parseArgs(argv) {
@@ -280,8 +280,8 @@ export async function main(argv) {
       if (args.length < 2) throw new LookupError(`${cmd} needs a method and a path: ${cmd} GET /workers/{ID}`)
       const [m, p] = args
       if (cmd === 'rest') {
-        const e = getRestEndpoint(ix, m, p, { service: opts.service, version: opts.version, depth: Number(opts.depth ?? 4), fmt: opts.json ? 'json' : 'text' })
-        say(opts.json ? JSON.stringify(e, null, 2) : [`${e.method} ${e.relative_path}  (${e.service} ${e.version})`, e.summary, '', ...e.facts.map((f) => `• ${f}`), '', 'Parameters:', ...e.params.map((x) => `  ${x.in}:${x.name}${x.required ? '' : '?'} ${x.type ?? ''}${x.accepts ? ` — accepts ${[...(x.accepts.wid ? ['WID'] : []), ...x.accepts.reference_id_types.map((t) => `${t}=…`), ...x.accepts.named].join(', ')}` : ''}`), ...(e.body ? ['', `Body (${e.body.name}):`, e.body.tree] : []), ...(e.response ? ['', `Response ${e.response.status}:`, e.response.tree] : []), ...(e.same_path.length ? ['', 'On the same path:', ...e.same_path.map((x) => `  ${x}`)] : [])].join('\n'))
+        const e = getRestEndpoint(ix, m, p, { service: opts.service, version: opts.version, depth: Number(opts.depth ?? 4), fmt: opts.json ? 'json' : 'text', field: opts.field })
+        say(opts.json ? JSON.stringify(e, null, 2) : [`${e.method} ${e.relative_path}  (${e.service} ${e.version})`, e.summary, ...(e.description && e.description !== e.summary ? ['', e.description] : []), '', ...e.facts.map((f) => `• ${f}`), '', 'Parameters:', ...e.params.map((x) => `  ${x.in}:${x.name}${x.required ? '' : '?'} ${x.type ?? ''}${x.accepts ? ` — accepts ${[...(x.accepts.wid ? ['WID'] : []), ...x.accepts.reference_id_types.map((t) => `${t}=…`), ...x.accepts.named].join(', ')}` : ''}`), ...(e.body ? ['', `Body (${e.body.name}):${e.body.cut ? ` (${e.body.cut})` : ''}`, e.body.tree] : []), ...(e.response ? ['', `Response ${e.response.status}:${e.response.cut ? ` (${e.response.cut})` : ''}`, e.response.tree] : []), ...(e.same_path.length ? ['', 'On the same path:', ...e.same_path.map((x) => `  ${x}`)] : [])].join('\n'))
         return 0
       }
       json(restActionSpec(ix, m, p, { service: opts.service, version: opts.version, include: opts.include, idForms: opts.idForms, read: opts.read }))
