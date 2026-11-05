@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.2 — 2026-11-05
+
+Each note shows what proves it, for the agent too: besides a schema note's `evidence`, the operations it says are
+absent (`absent_operations`), the fields it says the request lacks (`absent_fields`), and a description note's
+`quote` of Workday's words; the CLI prints them beside the note. The tenant note reads as one sentence.
+
 ## 0.2.1 — 2026-11-05
 
 **Each note says what it is.** A note's `kind` is one of: `schema` (Workday's WSDLs show it, and its `evidence`

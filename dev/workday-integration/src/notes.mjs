@@ -68,10 +68,14 @@ const SOURCE = {
 /** An operation's curated notes, each with its kind, its source and (for the schema's) its evidence. */
 export function curatedNotes(op) {
   return (NOTES[op] ?? []).map((n) => ({
-    text: n.kind === 'tenant' ? `To confirm in the tenant: ${n.text}` : n.kind === 'sensitive' ? `Sensitive: ${n.text}` : n.text,
+    text: n.kind === 'tenant' ? `To confirm in the tenant: ${n.text[0].toLowerCase()}${n.text.slice(1)}` : n.kind === 'sensitive' ? `Sensitive: ${n.text}` : n.text,
     kind: n.kind,
     source: SOURCE[n.kind],
+    // what proves it, for the agent to see too: the names it rests on, what it says is absent, the words it quotes
     ...(n.evidence ? { evidence: n.evidence } : {}),
+    ...(n.absent ? { absent_operations: n.absent } : {}),
+    ...(n.absentFields ? { absent_fields: n.absentFields } : {}),
+    ...(n.quote ? { quote: n.quote } : {}),
   }))
 }
 

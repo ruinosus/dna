@@ -205,6 +205,7 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
   ok(['Get_Workers', 'Get_Worker_Event_History', 'Get_Event_Detail'].every((op) => NOTES[op].some((n) => n.kind === 'sensitive')), 'what may come back about a person is a «sensitive» note')
   const shown = getOperation(ix, 'Add_Flexible_Work_Arrangement').notes
   ok(shown.every((n) => n.text && n.kind && n.source) && shown.some((n) => n.kind === 'inferred' && /inferred/.test(n.source)) && shown.some((n) => n.kind === 'schema' && n.evidence), 'show: each note with its kind, its source and, from the schema, its evidence')
+  ok(shown.some((n) => n.absent_operations?.includes('Get_Flexible_Work_Arrangement')) && shown.some((n) => n.absent_fields?.includes('Questionnaire')) && shown.some((n) => n.kind === 'description' && n.quote) && shown.some((n) => /^To confirm in the tenant: the /.test(n.text)), 'show: what proves each note — the absent operations and fields, the quote — and the tenant note in one sentence')
 }
 
 // ---------- the CLI (the bundled scripts/wws.mjs): no index, errors, --json, no network ----------

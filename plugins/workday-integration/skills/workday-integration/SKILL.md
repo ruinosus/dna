@@ -4,7 +4,7 @@ description: Finds which Workday Web Service (SOAP) operation does what someone 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Reads only the files the person gives it; calls no Workday tenant. Not affiliated with Workday.
 metadata:
-  version: "0.2.1"
+  version: "0.2.2"
 ---
 
 # workday-integration: the Workday operation for a use case, and what to send it

@@ -137,11 +137,14 @@ async function fetchServices(ix, opts) {
   return got
 }
 
+const proofOf = (n) => [n.evidence && `evidence: ${n.evidence.join(', ')}`, n.absent_operations && `absent: ${n.absent_operations.join(', ')}`, n.absent_fields && `no field named after: ${n.absent_fields.join(', ')}`, n.quote && `«${n.quote}»`].filter(Boolean).join('; ')
+const noteLine = (n) => `  • ${n.text}  [${n.source}${proofOf(n) ? ` — ${proofOf(n)}` : ''}]`
+
 function relatedText(r) {
   const lines = [`${r.operation} (${r.service} ${r.version})`, r.description, '', 'Facts:', ...r.facts.map((f) => `  • ${f}`)]
   if (r.same_noun.length) lines.push('', 'On the same noun:', ...r.same_noun.map((x) => `  ${x.operation} (${x.service}) — ${x.description.slice(0, 110)}`))
   if (r.business_process_events.length) lines.push('', 'On business process events:', ...r.business_process_events.map((x) => `  ${x.operation} (${x.service}) — ${x.description.slice(0, 110)}`))
-  if (r.notes.length) lines.push('', 'Notes (curated):', ...r.notes.map((n) => `  • ${n.text}  [${n.source}]`))
+  if (r.notes.length) lines.push('', 'Notes (curated):', ...r.notes.map(noteLine))
   return lines.join('\n')
 }
 
@@ -150,7 +153,7 @@ const decisionsText = (ds) => (ds?.length ? ['', 'Decisions (change them with --
 function showText(o) {
   const lines = [`${o.operation} (${o.service} ${o.version})${o.deprecated ? ' — DEPRECATED' : ''}`, o.description]
   if (o.also_in.length) lines.push(`also in: ${o.also_in.join(', ')}`)
-  if (o.notes) lines.push('', 'Notes (curated):', ...o.notes.map((n) => `  • ${n.text}  [${n.source}]`))
+  if (o.notes) lines.push('', 'Notes (curated):', ...o.notes.map(noteLine))
   lines.push('', o.schema ?? o.hint)
   return lines.join('\n')
 }

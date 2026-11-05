@@ -1,6 +1,6 @@
 {
   "name": "workday-integration",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A local catalog of the Workday Web Services (SOAP), for whoever designs an integration: find the operation for a use case in Portuguese or English, see its request and response, write its SOAP envelope with {{placeholders}}, the spec of the Copilot Studio Workday connector's «Execute SOAP operation» (inputs, template, Power Fx, what to read back) and a template of Microsoft's Employee Self-Service Workday pack — as a skill and as an MCP server. It reads the Operation Directory and the WSDLs from Workday Community or your files; it calls no tenant. Not affiliated with Workday.",
   "author": {
     "name": "ruinosus"
