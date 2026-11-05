@@ -1,5 +1,21 @@
 # Changelog
 
+## 2.2.0 — 2026-11-05
+
+**The explainer** — what was the *lesson* is now the *explainer* (*explicação* in Portuguese), a word for work, not for
+school. Everything you made before still opens.
+
+- The drawing that explains is `kind explainer` (the default); the skills write `<id>.explainer.html` with
+  `--explainer`, the solution's piece is `explainer:`, and the OKF concept is `explainer.md`, `type: Explainer`.
+- What you made before is still read: `kind lesson`, `--lesson`, `lesson:` in a solution, `{ lessons }` and
+  `?lesson=n` in a course page, and `mountLesson` / `stillLesson` from `@ruinosus/visual-explainer/embed`.
+- **`explainer.md` draws itself**: the OKF bundle carries the explainer's recipe in a ```` ```visual-explainer ````
+  block (```` ```visual-explainer-mermaid ```` for a Mermaid one), so a Markdown preview with DNA — VS Code, Obsidian —
+  draws it in place.
+- The asset builders remove their link to the engine without following it (Node 25's `rmSync` refuses a link to a
+  folder).
+- `@ruinosus/visual-explainer` 0.22.0, on the drawing engine 0.262.0.
+
 ## 2.1.0 — 2026-11-04
 
 **DNA speaks OKF** — [Open Knowledge Format](https://github.com/GoogleCloudPlatform/open-knowledge-format) v0.2, Google's
