@@ -1,13 +1,17 @@
 # workday-integration
 
-A sibling of [DNA](https://github.com/ruinosus/dna) for whoever designs a Workday integration: a catalog of the
-**Workday Web Services (SOAP)** on your machine. Ask in Portuguese or English which operation does what you need, see
-its request and response with every field, and get what the integration needs:
+A sibling of [DNA](https://github.com/ruinosus/dna) for whoever designs a Workday integration — and for the agent
+helping them: a catalog of the **Workday Web Services (SOAP)** on your machine, so the agent finds and reads an
+operation without reading WSDL or XSD. It hands over **what the WSDLs say** and lets the agent decide:
 
-- the **chain** for a use case — who the user is, the operation, the approver's inbox, the business process (approve,
-  deny, send back, cancel, rescind) and the gaps (no `Get_` → read with a RaaS report);
+- **search** by words, each result with what matched and where; **related**: what is around an operation (the
+  business process Workday's description names, the operations on the same noun, whether a `Get_` exists, the
+  operations on business process events) — facts, no verdict;
+- **browse**: a service's operations, a type's fields, which operations carry a field (`operations`, `type`,
+  `where`), and an operation's request and response with every field (`show`);
 - a **SOAP envelope** with `{{placeholders}}` (only what is required, or `--include` / `--all`, an optional
-  WS-Security header);
+  WS-Security header), with every **decision** it made — a reference's ID type, a choice's alternative, an optional
+  container taken in — each one changed with `--id-type` and `--choose`;
 - the spec of the **Copilot Studio Workday connector's «Execute SOAP operation»**: service and version, typed inputs,
   the XML template (the operation's element, as the connector takes it), the **Power Fx** of `requestBody` (free text
   escaped, dates as text), what to read back, and the identity and security notes;
@@ -39,9 +43,11 @@ command that uses the network. Or index what you have: `ingest <the directory pa
 ## Use
 
 ```
-node scripts/wws.mjs trace "colaborador pede trabalho flexível e o gestor aprova"
+node scripts/wws.mjs search "request flexible work arrangement"
+node scripts/wws.mjs related Add_Flexible_Work_Arrangement
+node scripts/wws.mjs where Flexible_Work_Arrangement_Type_Reference
 node scripts/wws.mjs show Add_Flexible_Work_Arrangement --depth 3
-node scripts/wws.mjs envelope Approve_Business_Process --wsse
+node scripts/wws.mjs envelope Add_Flexible_Work_Arrangement --id-type Worker_Reference=WID
 node scripts/wws.mjs copilot End_Flexible_Work_Arrangement --json
 node scripts/wws.mjs ess Approve_Business_Process
 ```
@@ -51,8 +57,8 @@ Every command takes `--json`. The index is in `~/.cache/dna/workday-integration`
 
 ## As an MCP server
 
-The same catalog as MCP tools (`wws_search_operations`, `wws_trace_use_case`, `wws_get_operation`,
-`wws_build_envelope`, `wws_copilot_action_spec`, `wws_ess_template`, `wws_list_services`, `wws_index_status`), all
+The same catalog as MCP tools (`wws_search_operations`, `wws_related_operations`, `wws_list_operations`,
+`wws_get_type`, `wws_find_element`, `wws_get_operation`, `wws_build_envelope`, `wws_copilot_action_spec`, `wws_ess_template`, `wws_list_services`, `wws_index_status`), all
 read-only, over stdio: `scripts/mcp.mjs`, one file. Claude Code starts it with the plugin (`.mcp.json`). Elsewhere —
 VS Code's Copilot (`.vscode/mcp.json`), Claude Desktop:
 

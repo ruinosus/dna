@@ -253,6 +253,9 @@ export function renderTree(root, { maxDepth = 4, requiredOnly = false, docChars 
   return legend + '\n' + lines.join('\n')
 }
 
+/** The ID type the envelope uses when nobody said which: WID for an event or a business process, Employee_ID for a
+ * person when it is an option (Workday lists Contingent_Worker_ID first), else the first that is not WID. A default,
+ * said in the decisions: the caller changes it with idTypes. */
 function pickIdType(node, enumv) {
   if (!enumv.length) return 'WID'
   const lname = node.name.toLowerCase()
@@ -263,9 +266,12 @@ function pickIdType(node, enumv) {
   return nonWid[0] ?? enumv[0]
 }
 
-/** A SOAP envelope (or only the body) and the variables it needs. mode 'required': only what is required, plus the
- * `include` paths (their ancestors come with them); 'all': every element down to the tree's depth. */
-export function buildEnvelope(root, { operationVersion = null, include = [], mode = 'required', withHeader = false, bodyOnly = false } = {}) {
+/** A SOAP envelope (or only the body), the variables it needs, and every choice it made (`decisions`: an ID type among
+ * its options, the alternative kept in a choice, an optional container taken in), each one the caller can change.
+ * mode 'required': only what is required, plus the `include` paths (their ancestors come with them); 'all': every
+ * element down to the tree's depth. idTypes: { <reference name or path>: <ID type> }; choose: the alternatives to keep
+ * (names or paths). */
+export function buildEnvelope(root, { operationVersion = null, include = [], mode = 'required', withHeader = false, bodyOnly = false, idTypes = {}, choose = [] } = {}) {
   const forced = new Set()
   for (let p of include) {
     p = p.replace(/^\/+|\/+$/g, '')
@@ -282,8 +288,23 @@ export function buildEnvelope(root, { operationVersion = null, include = [], mod
   }
   collect(root)
   const variables = []
+  const decisions = []
   const used = new Map()
   const seenChoice = new Set()
+  // what the caller chose: an alternative of a choice, by name or path, must be one of its alternatives
+  const members = new Map()
+  const index = (n) => {
+    if (n.choice) members.set(n.choice, [...(members.get(n.choice) ?? []), n])
+    n.children.forEach(index)
+  }
+  index(root)
+  const picked = new Map()
+  for (const c of choose) {
+    const hits = [...members.values()].flat().filter((n) => n.name === c || n.path === c || n.path.endsWith('/' + c))
+    if (!hits.length) throw new LookupError(`choose: «${c}» is not an alternative of a choice here; the choices: ${[...members.values()].map((ms) => ms.map((m) => m.name).join(' | ')).join('; ') || 'none'}`)
+    for (const n of hits) picked.set(n.choice, n.path)
+  }
+  const usedIdTypes = new Set()
 
   const varName = (n) => {
     const segs = n.path.split('/')
@@ -295,11 +316,25 @@ export function buildEnvelope(root, { operationVersion = null, include = [], mod
   }
 
   const want = (n) => {
+    // a choice the caller decided comes first: the alternative chosen in, the others out, whatever include says
+    if (n.choice && picked.has(n.choice)) {
+      if (picked.get(n.choice) !== n.path) return false
+      if (!seenChoice.has(n.choice)) decisions.push({ kind: 'choice', path: n.path, kept: n.name, alternatives: members.get(n.choice).map((m) => m.name), why: 'you chose it' })
+      seenChoice.add(n.choice)
+      return true
+    }
     if (forced.has(n.path) || forcedUnder(n.path)) return true
     if (mode === 'all') return true
     if (n.choice) {
+      if (picked.has(n.choice)) {
+        if (picked.get(n.choice) !== n.path) return false
+        if (!seenChoice.has(n.choice)) decisions.push({ kind: 'choice', path: n.path, kept: n.name, alternatives: members.get(n.choice).map((m) => m.name), why: 'you chose it' })
+        seenChoice.add(n.choice)
+        return true
+      }
       if (n.choice.endsWith('?') || seenChoice.has(n.choice)) return false
       seenChoice.add(n.choice)
+      decisions.push({ kind: 'choice', path: n.path, kept: n.name, alternatives: members.get(n.choice).map((m) => m.name), why: 'a required choice: the first alternative, by default (choose another with choose)' })
       return true
     }
     return n.min >= 1
@@ -318,7 +353,12 @@ export function buildEnvelope(root, { operationVersion = null, include = [], mod
       const idNode = n.children.find((c) => c.name === 'ID')
       const typeAttr = idNode.attrs.find((a) => a.name === 'type') ?? {}
       const enumv = typeAttr.enum ?? []
-      const chosen = pickIdType(n, enumv)
+      const asked = idTypes[n.path] ?? idTypes[n.path.split('/').slice(1).join('/')] ?? idTypes[n.name]
+      const askedKey = [n.path, n.path.split('/').slice(1).join('/'), n.name].find((k) => k in idTypes)
+      if (asked !== undefined && enumv.length && !enumv.includes(asked)) throw new LookupError(`id type: ${n.name} takes ${enumv.join(', ')} — not ${asked}`)
+      if (askedKey) usedIdTypes.add(askedKey)
+      const chosen = asked ?? pickIdType(n, enumv)
+      if (enumv.length > 1 || asked !== undefined) decisions.push({ kind: 'id_type', path: n.path, chosen, options: enumv, why: asked !== undefined ? 'you chose it' : 'the default (WID for an event or a business process, Employee_ID for a person, else the first that is not WID); change it with idTypes' })
       const v = varName(new Node({ name: 'ID', path: `${n.path}/ID` }))
       variables.push({ var: v, path: `${n.path}/ID`, xsd_type: 'xsd:string', required: n.required, enum: enumv, doc: n.doc, id_type: chosen })
       if (enumv.length > 1) out.push(`${pad}<!-- ${n.name}: ID @type options: ${enumv.slice(0, 12).join(', ')}${enumv.length > 12 ? '…' : ''} -->`)
@@ -340,6 +380,7 @@ export function buildEnvelope(root, { operationVersion = null, include = [], mod
     if (carriers.length) {
       kids = carriers
       carried.push(...carriers.map((c) => c.path))
+      for (const c of carriers) decisions.push({ kind: 'optional_container', path: c.path, included: true, why: `optional in the schema, but it holds required fields (${c.children.filter((d) => d.required).map((d) => d.name).join(', ')}), and ${n.name} would go empty without it` })
     }
     if (!kids.length) {
       out.push(n.recursive || n.truncated ? `${pad}<${tag}${attrs}><!-- expand with include=[...] --></${tag}>` : n.any ? `${pad}<${tag}${attrs}><!-- any element may go here (xsd:any) --></${tag}>` : `${pad}<${tag}${attrs}/>`)
@@ -351,10 +392,15 @@ export function buildEnvelope(root, { operationVersion = null, include = [], mod
     out.push(`${pad}</${tag}>`)
   }
 
+  const unused = () => {
+    const off = Object.keys(idTypes).filter((k) => !usedIdTypes.has(k))
+    if (off.length) throw new LookupError(`id type: ${off.join(', ')} is not a reference in this envelope`)
+  }
   if (bodyOnly) {
     emit(root, 0, true)
+    unused()
     const body = out.join('\n').replace(`<wd:${root.name}`, `<wd:${root.name} xmlns:wd="${BSVC}"`)
-    return { xml: body, variables }
+    return { xml: body, variables, decisions }
   }
   const head = ['<?xml version="1.0" encoding="UTF-8"?>', `<env:Envelope xmlns:env="${SOAP_ENV}" xmlns:wd="${BSVC}">`]
   if (withHeader) {
@@ -371,7 +417,8 @@ export function buildEnvelope(root, { operationVersion = null, include = [], mod
   }
   head.push('  <env:Body>')
   emit(root, 2, true)
-  return { xml: [...head, ...out, '  </env:Body>', '</env:Envelope>'].join('\n'), variables }
+  unused()
+  return { xml: [...head, ...out, '  </env:Body>', '</env:Envelope>'].join('\n'), variables, decisions }
 }
 
 /** The paths worth reading from a response: its references, down to `depth`. */

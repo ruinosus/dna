@@ -4,16 +4,18 @@ description: Finds which Workday Web Service (SOAP) operation does what someone 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Reads only the files the person gives it; calls no Workday tenant. Not affiliated with Workday.
 metadata:
-  version: "0.1.1"
+  version: "0.2.0"
 ---
 
 # workday-integration: the Workday operation for a use case, and what to send it
 
-A catalog on this machine: `scripts/wws.mjs` indexes the **Operation Directory** text (copied from the Workday
-Community page) and the **WSDLs** the person has, then answers. It **calls no tenant** and asks for no credential;
-what it writes has only `{{placeholders}}`, never a person's data. Paths are relative to this skill's folder; every
-command takes `--json` (read that) and `--index <folder>` (the index is in `~/.cache/dna/workday-integration` by
-default, never in this skill). Not affiliated with Workday.
+A catalog on this machine: `scripts/wws.mjs` indexes the **Operation Directory** and the **WSDLs** of the Workday Web
+Services, then answers with **what the WSDLs say** — the operations, their descriptions, their fields, what is around
+them. **You** read it and decide which operation fits, what the chain is, and what to send: the tool does not decide
+for you, and what it ranks or chooses by default is a lead, not an answer. It **calls no tenant** and asks for no
+credential; what it writes has only `{{placeholders}}`, never a person's data. Paths are relative to this skill's
+folder; every command takes `--json` (read that) and `--index <folder>` (the index is in
+`~/.cache/dna/workday-integration` by default, never in this skill). Not affiliated with Workday.
 
 ## 1. The index first
 
@@ -33,28 +35,37 @@ indexes them; run it only when the person agrees to go to the network. `ingest` 
 its text as `.txt`) and the `<Service>.wsdl` (and `.xsd`) files. To try the commands without real files, `examples/`
 has synthetic ones (made-up fields: never quote them as Workday's).
 
-## 2. The order: trace → search → show → write
+## 2. Find, check, then write
 
-1. **Trace the use case**, in the person's words: `node scripts/wws.mjs trace "<the use case>" --json`. Read
-   `primary`, `steps` (who the user is, the operation, the approver's inbox, the business process: approve, deny,
-   send back, cancel, rescind), `related` and `notes` (a gap such as «no Get_ → read with RaaS» is there).
-2. If the primary hit looks wrong, **search**: `search "<words>" --json`, with Workday's terms ("time off", "job
-   change", "business process"); `--scope all` beyond HR.
-3. **Show before writing**: `show <Operation> --json` (depth 3–4); for a big request go down with `--path A/B` rather
-   than a deeper `--depth`; `--response` for what comes back. Check each reference's `@type` options (Employee_ID or
-   WID).
-4. **Write**:
+1. **Translate first.** Put the person's words into Workday's English terms yourself — «pedir trabalho flexível» is
+   «flexible work arrangement», «férias» is «time off», «aprovar» is «approve business process». Try two or three
+   phrasings when the first finds little.
+2. **Search**: `search "<Workday's words>" --json`. Each result says what matched and where (the operation's name,
+   Workday's description, its fields). The order is bm25 over those words, nothing more: read the descriptions and
+   pick yourself. `--scope all` beyond HR; `--expand` adds a Portuguese synonym list when you have nothing better.
+3. **See what is around it**: `related <Operation> --json` — the business process Workday's description names, the
+   operations on the same noun (Add_, End_, Get_…), whether a Get_ for it exists **among what is indexed**, and the
+   operations on business process events (approve, deny, send back, cancel, rescind, the event's detail, a worker's
+   event history), each with Workday's own description. From these, you work out the chain; say which steps you
+   inferred.
+4. **Check before you state anything**: `show <Operation> --json` (depth 3–4; `--path A/B` to go down a big request,
+   `--response` for what comes back). To browse: `operations <Service>` (all of a service, `--filter word`),
+   `type <Type>` (a type's fields), `where <Element or Type>` (which operations carry a field, by which path). A field,
+   an ID type or a cardinality you name must be one `show`, `type` or `where` showed you.
+5. **Write**, then read its **decisions**:
    - Copilot Studio: `copilot <Operation> --json` → `parameters`, `inputs`, `power_fx` (the requestBody — the
      operation's element alone, as the connector takes it; `--envelope` only if asked for the whole envelope),
      `response.read_paths`; `--include A/B/C` for an optional field.
-   - Microsoft's Employee Self-Service agent: `ess <Operation>` writes it as a template of the ESS Workday pack
+   - Microsoft's Employee Self-Service agent: `ess <Operation>` writes a template of the ESS Workday pack
      (`workdayEntityConfigurationTemplate`: the scenario, the request template with `{Placeholders}`, the
      `extractPath`s).
    - A test in SoapUI or Postman: `envelope <Operation> --wsse` (the whole envelope, the WS-Security header with
      placeholders).
 
-In an envelope, `<!-- one of … — keep one -->` marks a choice (keep one alternative), and `<!-- optional in the
-schema, but it holds the required fields -->` a container Workday makes optional that the request still needs.
+   Every one of them lists its `decisions`: the **ID type** of each reference among its options (a default: WID for
+   an event, Employee_ID for a person), the **alternative kept** in a choice (the first, by default), an **optional
+   container** taken in because it holds required fields. Decide each for the use case and change it —
+   `--id-type Worker_Reference=WID`, `--choose Job_Reference` — and tell the person the ones that matter.
 
 `✗ … not found` (exit 2): say the name is not in the catalog and show the closest ones it lists. `No WSDL ingested for
 <Service>` (exit 3): the operation is known only from the directory — give the person the command it prints; do not
@@ -69,15 +80,21 @@ write fields for it.
 - **Sensitive data**: say what a response may carry about a person (the notes that start with «Sensitive:» — pay,
   events, comments and reasons); ask for the smallest response group that answers; in Copilot Studio turn on **Secure
   inputs and Secure outputs** and give the agent back only the fields it uses, never the raw XML.
-- A note marked **«to confirm in the tenant»** is not in the schema: say it as a question for the tenant, not a fact.
+- Every note says where it comes from (`source`): **from the index** (a fact the tool computed), **curated** (checked
+  by hand against Workday's public WSDLs, with the date), **Microsoft's documentation** (with the link), or **to
+  confirm in the tenant** — say that last kind as a question for the tenant, not a fact.
+- Connector actions outside SOAP (REST, Preview: the worker's profile, the inbox tasks…) are not in the WSDLs: if you
+  suggest one, say to check it exists in the person's Workday connector.
 
 ## 4. Deliver
 
-The operation chain in a few lines (what runs, as whom, in which service), then what was asked — the spec, the
-envelope, the fields — as the command wrote it, and one sentence on what to confirm in the tenant.
+The operation chain in a few lines (what runs, as whom, in which service), saying what came from the WSDLs and what
+you inferred; then what was asked — the spec, the envelope, the fields — as the command wrote it, with the decisions
+you kept or changed; and one sentence on what to confirm in the tenant.
 
 ## Never
 
 - Never invent a field, an element or an ID type: if the WSDL of that service is not indexed, say so.
+- Never present the search's order or a default decision as the answer: check it, and say what you decided.
 - Never call a tenant, ask for a password or a token, or put a person's data in an envelope or a spec.
 - Never present a synthetic example's fields as Workday's, nor copy Workday's WSDLs or directory into a repository.

@@ -1,28 +1,8 @@
-// What the commands answer: an operation's tree, its envelope, a use case traced to the chain of operations, and the
-// spec of the Copilot Studio Workday connector's «Execute SOAP operation». Port of workday-wws-mcp's workflows.py.
-import { NOTES } from './notes.mjs'
-import { buildEnvelope, findPath, renderTree, responseHints, TreeBuilder } from './render.mjs'
-
-// the business process's lifecycle (all in the Integrations service)
-export const BP_LIFECYCLE = [
-  ['track', 'Get_Event_Detail', "Status of the event: step, who it's awaiting, state."],
-  ['approve', 'Approve_Business_Process', 'Approver acts on the event WID (runs as the approver).'],
-  ['deny', 'Deny_Business_Process', 'Approver denies.'],
-  ['send_back', 'Send_Back_Business_Process', 'Approver returns it to a completed step.'],
-  ['cancel', 'Cancel_Business_Process', 'Initiator cancels while in progress.'],
-  ['rescind', 'Rescind_Business_Process', 'Undo a completed event, if rescindable.'],
-  ['reassign', 'Reassign_Business_Process_Step', 'Move a step to another qualified user.'],
-]
-
-// the Microsoft Workday connector's own (REST, Preview) actions that fill the SOAP's gaps
-export const CONNECTOR_NATIVE = {
-  me: ['GetWorkerMe', 'Get my worker profile (Preview)', "Resolve the signed-in user's worker ID; needs an OAuth-based connection."],
-  inbox: ['GetWorkerInboxTasks', 'Get worker inbox tasks (Preview)', "List pending inbox tasks for a worker (e.g. approvals) — there is no SOAP 'Get Inbox'."],
-  reports: ['GetWorkerDirectReports', 'Get worker direct reports (Preview)', 'Who the manager can approve for (advisees).'],
-  search: ['SearchWorkers', 'Search workers (Preview)', 'Find a worker by name.'],
-}
-
-const BP_VERBS = ['Add', 'Request', 'Change', 'Submit', 'End', 'Terminate', 'Hire', 'Enter', 'Assign', 'Start', 'Edit', 'Manage', 'Create', 'Close', 'Contract']
+// What the commands answer, from the index: an operation's tree, its surroundings (facts only), a service's operations,
+// a type, where an element appears, the envelope with every choice it made, and the spec of the Copilot Studio Workday
+// connector's «Execute SOAP operation». Port of workday-wws-mcp's workflows.py, without its verdicts (0.2.0).
+import { CONNECTOR_SOURCES, curatedNotes, NOTES } from './notes.mjs'
+import { buildEnvelope, findPath, LookupError, renderTree, responseHints, TreeBuilder } from './render.mjs'
 
 export const camel = (v) => v.split(/[_\W]+/).filter(Boolean).map((p) => p[0].toUpperCase() + p.slice(1)).join('') || 'Value'
 
@@ -48,7 +28,7 @@ export function getOperation(ix, op, { service, version, which = 'request', path
     description: summary.description ?? '', also_in: summary.also_in ?? [], deprecated: summary.deprecated ?? false,
     request_element: row.request_element, response_element: row.response_element,
   }
-  if (NOTES[row.op]) out.notes = NOTES[row.op]
+  if (NOTES[row.op]) out.notes = curatedNotes(row.op)
   if (!root) {
     out.schema = null
     out.hint = missingSchema(row)
@@ -59,51 +39,130 @@ export function getOperation(ix, op, { service, version, which = 'request', path
   return out
 }
 
-export function makeEnvelope(ix, op, { service, version, mode = 'required', include = [], withHeader = false, bodyOnly = false } = {}) {
+export function makeEnvelope(ix, op, { service, version, mode = 'required', include = [], withHeader = false, bodyOnly = false, idTypes = {}, choose = [] } = {}) {
   // 'all' on a huge request (Get_Workers) would flood the context: the depth is capped
   let depth = mode === 'required' ? 12 : 6
   if (include.length) depth = Math.max(depth, ...include.map((p) => (p.replace(/^\/+|\/+$/g, '').match(/\//g) ?? []).length + 2))
   const { row, root } = treeFor(ix, op, service, version, 'request', depth)
   if (!root) return { operation: row.op, service: row.service, version: row.version, xml: null, hint: missingSchema(row) }
-  const { xml, variables } = buildEnvelope(root, { operationVersion: row.version, include, mode, withHeader, bodyOnly })
+  const { xml, variables, decisions } = buildEnvelope(root, { operationVersion: row.version, include, mode, withHeader, bodyOnly, idTypes, choose })
   return {
     operation: row.op, service: row.service, version: row.version,
     endpoint: `https://<host>/ccx/service/<tenant>/${row.service}/${row.version}`,
-    xml, variables,
+    xml, variables, decisions,
   }
 }
 
-const exists = (ix, op) => {
-  const r = ix.data.operations.find((x) => x.op === op)
-  return r ? ix.operationSummary(op, r.service) : null
+/** What the index says about an operation's surroundings — facts, no verdict: the business process its description names
+ * (quoted), the operations on the same noun (Add_/End_/Get_…), whether a Get_ for it exists among what is indexed, and
+ * the operations that act on business process events, with Workday's own descriptions. The agent decides the chain. */
+export function relatedOperations(ix, op, { service, version } = {}) {
+  const row = ix.resolve(op, service, version)
+  const summary = ix.operationSummary(row.op, row.service) ?? {}
+  const description = summary.description ?? ''
+  const bp = /Uses the (.+?) business process/i.exec(description)
+  const noun = /^[A-Za-z]+?_(.+)$/.exec(row.op)?.[1] ?? row.op
+  const sameNoun = ix.related(row.op).map((r) => ({ ...r, description: ix.operationSummary(r.operation, r.service)?.description ?? '' }))
+  const indexed = [...new Set(ix.data.operations.map((r) => r.service))]
+  const withSchema = Object.values(ix.data.schemas).map((x) => x.service)
+  const events = [...new Map(ix.data.operations.filter((r) => /_Business_Process(_Step)?$|^Get_Event_Detail$|^Get_Worker_Event_History$/.test(r.op)).map((r) => [r.op, r])).values()]
+    .map((r) => ({ operation: r.op, service: r.service, description: ix.operationSummary(r.op, r.service)?.description ?? '' }))
+  const facts = []
+  facts.push(bp ? `Workday's description says it uses the «${bp[1]}» business process.` : /business process/i.test(description) ? "Workday's description mentions a business process." : "Workday's description names no business process.")
+  if (row.op.split('_')[0] !== 'Get') {
+    facts.push(sameNoun.some((r) => r.verb === 'Get')
+      ? `A Get_ on the same noun is indexed: ${sameNoun.filter((r) => r.verb === 'Get').map((r) => r.operation).join(', ')}.`
+      : `No Get_${noun} (or Get_${noun}s) among the ${indexed.length} services indexed (${withSchema.length} with their WSDL); reading it may need another way (a report, an event's details) — check.`)
+  }
+  return {
+    operation: row.op, service: row.service, version: row.version, description,
+    business_process: bp ? bp[1] : null,
+    same_noun: sameNoun,
+    business_process_events: events,
+    facts,
+    notes: curatedNotes(row.op),
+  }
 }
 
-export function traceUseCase(ix, goal, { scope = 'hr', limit = 6 } = {}) {
-  const hits = ix.search(goal, { scope, limit })
-  if (!hits.length) return { goal, steps: [], hint: "No matches. Try English Workday terms (e.g. 'time off', 'job change') or scope='all'." }
-  const primary = hits[0]
-  const op = primary.operation
-  const verb = op.split('_')[0]
-  const isBp = primary.description.toLowerCase().includes('business process') || BP_VERBS.includes(verb)
-  const steps = [
-    { role: 'identify_user', kind: 'connector', action: CONNECTOR_NATIVE.me[1], operation_id: CONNECTOR_NATIVE.me[0], why: CONNECTOR_NATIVE.me[2] },
-    { role: 'action', kind: 'soap', operation: op, service: primary.service, why: primary.description },
-  ]
-  if (isBp) {
-    steps.push({ role: 'approver_inbox', kind: 'connector', action: CONNECTOR_NATIVE.inbox[1], operation_id: CONNECTOR_NATIVE.inbox[0], why: CONNECTOR_NATIVE.inbox[2] })
-    for (const [role, name, why] of BP_LIFECYCLE) {
-      const s = exists(ix, name)
-      if (s) steps.push({ role, kind: 'soap', operation: name, service: s.service, why })
+/** Every operation of a service, with Workday's description and whether its WSDL is in. */
+export function listOperations(ix, service, { filter } = {}) {
+  const rows = ix.data.operations.filter((r) => r.service === service)
+  if (!rows.length) throw new LookupError(`No service ${service} indexed; the services: ${[...new Set(ix.data.operations.map((r) => r.service))].sort().join(', ')}`)
+  const re = filter ? new RegExp(filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') : null
+  const ops = [...new Map(rows.map((r) => [r.op, r])).keys()].sort()
+    .map((o) => ix.operationSummary(o, service))
+    .filter((o) => !re || re.test(o.operation) || re.test(o.description))
+    .map(({ operation, description, deprecated, schema_versions }) => ({ operation, description, deprecated, schema: schema_versions.length > 0 }))
+  return { service, operations: ops }
+}
+
+/** A type (complex or simple) as a tree, wherever it is defined among the indexed WSDLs. */
+export function getType(ix, name, { service, depth = 3, fmt = 'text' } = {}) {
+  const regs = Object.values(ix.data.schemas).filter((x) => !service || x.service === service)
+  for (const s of regs) {
+    const reg = ix.registry(s.service, s.version)
+    if (!reg || !(reg.complex[name] || reg.simple[name])) continue
+    const tb = new TreeBuilder(reg, { maxDepth: depth + 2 })
+    const root = tb.expand(name, name, name, 1, '1', '', [], 0)
+    const defined = regs.filter((x) => { const r = ix.registry(x.service, x.version); return r && (r.complex[name] || r.simple[name]) }).map((x) => x.service)
+    return { type: name, service: s.service, version: s.version, also_defined_in: defined.filter((x) => x !== s.service), schema: fmt === 'json' ? root.toDict(depth) : renderTree(root, { maxDepth: depth }) }
+  }
+  throw new LookupError(`No type ${name} in the indexed WSDLs${service ? ` of ${service}` : ''}`)
+}
+
+/** The elements directly inside a complex type (its base's first, for an extension; groups opened). */
+function elementsOf(reg, tname, seen = new Set()) {
+  const ct = reg.complex[tname]
+  if (!ct) return []
+  const out = []
+  if (ct.base && ct.derivation === 'extension' && reg.complex[ct.base] && !seen.has(ct.base)) out.push(...elementsOf(reg, ct.base, new Set([...seen, ct.base])))
+  const walk = (items) => {
+    for (const it of items ?? []) {
+      if (it.kind === 'element') out.push({ name: it.name, type: it.type ?? (it.ref ? reg.elements[it.ref]?.type : null) ?? null })
+      else if (it.kind === 'group') walk(reg.groups[it.ref]?.content)
+      else walk(it.items)
     }
-    const hist = exists(ix, 'Get_Worker_Event_History')
-    if (hist) steps.push({ role: 'find_events', kind: 'soap', operation: 'Get_Worker_Event_History', service: hist.service, why: "Find a worker's events (filter by event type and dates) to get event WIDs." })
   }
-  const related = ix.related(op)
-  const notes = [...(NOTES[op] ?? [])]
-  if (!related.some((r) => r.verb === 'Get') && verb !== 'Get') {
-    notes.push(`No Get_ counterpart found for '${op.split('_').slice(1).join('_') || op}': plan reads via a RaaS custom report (connector action 'Execute RaaS operation').`)
+  walk(ct.content)
+  return out
+}
+
+/** Where an element or a type appears: in which operations' request or response, and by which paths (a few). */
+export function findElement(ix, name, { service, limit = 40 } = {}) {
+  const hits = []
+  for (const s of Object.values(ix.data.schemas).filter((x) => !service || x.service === service)) {
+    const reg = ix.registry(s.service, s.version)
+    if (!reg) continue
+    const has = new Map() // does a type hold `name`, at any depth (memoised; a cycle counts as no)
+    const holds = (t, stack = new Set()) => {
+      if (!t || t.startsWith('xsd:') || !reg.complex[t]) return false
+      if (has.has(t)) return has.get(t)
+      if (stack.has(t)) return false
+      stack.add(t)
+      const v = elementsOf(reg, t).some((e) => e.name === name || e.type === name || holds(e.type, stack))
+      stack.delete(t)
+      has.set(t, v)
+      return v
+    }
+    const pathsTo = (t, prefix, out, stack = new Set()) => {
+      for (const e of elementsOf(reg, t)) {
+        if (out.length >= 3) return
+        const p = `${prefix}/${e.name}`
+        if (e.name === name || e.type === name) out.push(p)
+        else if (holds(e.type) && !stack.has(e.type)) pathsTo(e.type, p, out, new Set([...stack, e.type]))
+      }
+    }
+    for (const row of ix.data.operations.filter((r) => r.service === s.service && r.version === s.version)) {
+      for (const [which, el] of [['request', row.request_element], ['response', row.response_element]]) {
+        const t = el && reg.elements[el]?.type
+        if (!t || !holds(t)) continue
+        const paths = []
+        pathsTo(t, el, paths, new Set([t]))
+        hits.push({ operation: row.op, service: s.service, in: which, paths })
+      }
+    }
   }
-  return { goal, primary, business_process: isBp, steps, related, alternatives: hits.slice(1), notes }
+  return { name, found: hits.length, operations: hits.slice(0, limit), ...(hits.length > limit ? { more: hits.length - limit } : {}) }
 }
 
 /** An XML template with {{Var}} as a Power Fx concatenation: free text escaped, dates, booleans and numbers as text. */
@@ -131,8 +190,8 @@ const INPUT_TYPE = { 'xsd:date': 'Date', 'xsd:boolean': 'Boolean', 'xsd:decimal'
 
 // The connector's requestBody is the operation's element, without the envelope and without WS-Security: the connection
 // authenticates (Microsoft's own ESS Workday templates send the element alone). bodyStyle 'envelope' for the whole one.
-export function copilotActionSpec(ix, op, { service, version, include = [], mode = 'required', bodyStyle = 'body', variablePrefix = 'Topic.' } = {}) {
-  const env = makeEnvelope(ix, op, { service, version, mode, include, bodyOnly: bodyStyle === 'body' })
+export function copilotActionSpec(ix, op, { service, version, include = [], mode = 'required', bodyStyle = 'body', variablePrefix = 'Topic.', idTypes = {}, choose = [] } = {}) {
+  const env = makeEnvelope(ix, op, { service, version, mode, include, bodyOnly: bodyStyle === 'body', idTypes, choose })
   const row = ix.resolve(op, service, version)
   const spec = {
     connector: 'Workday (Microsoft, Premium)',
@@ -142,13 +201,13 @@ export function copilotActionSpec(ix, op, { service, version, include = [], mode
     operation: row.op,
   }
   const notes = [
-    "Identity: self-service and approval run as the signed-in user — a per-user OAuth connection (Microsoft Entra ID Integrated, the one Microsoft's simplified Employee Self-Service setup for Workday uses; or Entra ID Integrated with API Management, 'oauthapim'). With an integration system user (ISU, Basic) Workday sees the ISU as the initiator: routing, the 'self' rules and the no-self-approval rule stop reflecting the real person.",
-    "Access, as the user: the employees' security group needs Get (or Put, to write) under Integration Permissions on the domain that governs the data, in Workday's domain security; the API client's scopes do not replace it. An operation that works with an ISU can answer 'Task not authorized' for an employee: find the domain and grant it.",
-    'Connections are not shareable: each user creates their own.',
-    'Throttling: 200 calls per connection per 60 s.',
-    "requestBody is the operation's element alone (no SOAP envelope, no WS-Security header: the connection authenticates), as Microsoft's ESS templates send it; confirm once in your environment.",
-    "Turn on Secure inputs and Secure outputs on the SOAP action: the run history keeps the responses. Give the agent back only the fields it uses, never the raw XML.",
-    ...(NOTES[row.op] ?? []),
+    { text: "Identity: self-service and approval run as the signed-in user — a per-user OAuth connection (Microsoft Entra ID Integrated, the one Microsoft's simplified Employee Self-Service setup for Workday uses; or Entra ID Integrated with API Management, 'oauthapim'). With an integration system user (ISU, Basic) Workday sees the ISU as the initiator: routing, the 'self' rules and the no-self-approval rule stop reflecting the real person.", source: CONNECTOR_SOURCES.ess },
+    { text: "Access, as the user: the employees' security group needs Get under Integration Permissions (Put, to write — confirm in the tenant) on the domain that governs the data, in Workday's domain security; the API client's scopes do not replace it. An operation that works with an ISU can answer 'Task not authorized' for an employee: find the domain and grant it.", source: CONNECTOR_SOURCES.ess },
+    { text: 'Connections are not shareable: each user creates their own.', source: CONNECTOR_SOURCES.connector },
+    { text: 'Throttling: 200 calls per connection per 60 s.', source: CONNECTOR_SOURCES.connector },
+    { text: "requestBody is the operation's element alone (no SOAP envelope, no WS-Security header: the connection authenticates), as Microsoft's ESS templates send it; confirm once in your environment.", source: CONNECTOR_SOURCES.ess },
+    { text: "Turn on Secure inputs and Secure outputs on the SOAP action: the run history keeps the responses. Give the agent back only the fields it uses, never the raw XML.", source: 'curated: Power Platform practice — the run history keeps inputs and outputs unless they are secured' },
+    ...curatedNotes(row.op),
   ]
   if (env.xml === null) {
     spec.warning = env.hint
@@ -171,7 +230,7 @@ export function copilotActionSpec(ix, op, { service, version, include = [], mode
     response.read_paths = responseHints(respRoot)
     if (response.read_paths.some((p) => p.includes('Event_Reference'))) response.tip = 'Keep the Event_Reference WID: it drives Get_Event_Detail and Approve/Deny/Cancel_Business_Process.'
   }
-  return Object.assign(spec, { inputs, xml_template: env.xml, power_fx: powerFx(env.xml, env.variables, variablePrefix), response, notes })
+  return Object.assign(spec, { inputs, xml_template: env.xml, power_fx: powerFx(env.xml, env.variables, variablePrefix), decisions: env.decisions, response, notes })
 }
 
 const xmlAttr = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
@@ -179,8 +238,8 @@ const xmlAttr = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').
 /** The operation as a template of Microsoft's Employee Self-Service Workday pack (workdayEntityConfigurationTemplate):
  * a scenario whose apiRequest names the request template, the service and the version, with what to read back as
  * local-name() XPaths; and the request template, the element alone with {Placeholders}. */
-export function essTemplate(ix, op, { service, version, include = [], mode = 'required' } = {}) {
-  const env = makeEnvelope(ix, op, { service, version, mode, include, bodyOnly: true })
+export function essTemplate(ix, op, { service, version, include = [], mode = 'required', idTypes = {}, choose = [] } = {}) {
+  const env = makeEnvelope(ix, op, { service, version, mode, include, bodyOnly: true, idTypes, choose })
   if (env.xml === null) return { operation: env.operation, service: env.service, version: env.version, xml: null, hint: env.hint }
   const name = `Template_${env.operation}`
   const body = env.xml
@@ -227,5 +286,5 @@ export function essTemplate(ix, op, { service, version, include = [], mode = 're
     pad(1, '</requestTemplates>'),
     '</workdayEntityConfigurationTemplate>',
   ].join('\n')
-  return { operation: env.operation, service: env.service, version: env.version, placeholders: env.variables.map((v) => v.var), response_properties: properties, xml }
+  return { operation: env.operation, service: env.service, version: env.version, placeholders: env.variables.map((v) => v.var), decisions: env.decisions, response_properties: properties, xml }
 }

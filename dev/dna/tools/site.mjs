@@ -85,17 +85,18 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
   </section>
   <section class="sibling" id="workday-integration">
     <div>
-      <span class="meta"><span>a sibling plugin</span><span>0.1.1</span></span>
+      <span class="meta"><span>a sibling plugin</span><span>0.2.0</span></span>
       <h2>workday-integration</h2>
-      <p>For whoever designs a Workday integration: a catalog of the Workday Web Services (SOAP) on your machine. Ask in Portuguese or English which operation does what you need; it traces the chain — who the user is, the operation, the approver's inbox, the business process — shows the request with every field, and writes the SOAP envelope, the spec of the Copilot Studio Workday connector's «Execute SOAP operation» (typed inputs, Power Fx, what to read back) and a template of Microsoft's Employee Self-Service Workday pack. As a skill and as an MCP server.</p>
+      <p>For whoever designs a Workday integration: a catalog of the Workday Web Services (SOAP) on your machine. It hands the agent what the WSDLs say — the operations that match, what is around one, its fields, which operations carry a field — so it does not read WSDL or XSD, and decides itself; then writes the SOAP envelope, the spec of the Copilot Studio Workday connector's «Execute SOAP operation» (typed inputs, Power Fx, what to read back) and a template of Microsoft's Employee Self-Service Workday pack. As a skill and as an MCP server.</p>
       <p class="note">It reads the Operation Directory and the WSDLs from Workday Community or your files, and calls no tenant: no credential, nothing of a person in what it writes. Not affiliated with Workday.</p>
-      <p><a href="https://github.com/ruinosus/dna/tree/main/plugins/workday-integration">README</a> · <a href="https://github.com/ruinosus/dna/releases/tag/workday-integration-v0.1.1">release</a></p>
+      <p><a href="https://github.com/ruinosus/dna/tree/main/plugins/workday-integration">README</a> · <a href="https://github.com/ruinosus/dna/releases/tag/workday-integration-v0.2.0">release</a></p>
     </div>
     <pre>/plugin install workday-integration@dna
 
 node scripts/wws.mjs fetch --services hr
-node scripts/wws.mjs trace "colaborador pede trabalho
-  flexível e o gestor aprova"
+node scripts/wws.mjs search "request flexible work
+  arrangement"
+node scripts/wws.mjs related Add_Flexible_Work_Arrangement
 node scripts/wws.mjs copilot Approve_Business_Process
 node scripts/wws.mjs ess Approve_Business_Process</pre>
   </section>

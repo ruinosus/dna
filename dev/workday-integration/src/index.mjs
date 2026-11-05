@@ -167,6 +167,11 @@ export class Index {
     })
   }
 
+  /** The words as they are: folded, without stopwords and repeats. */
+  static plainTerms(query) {
+    return unique((fold(query).match(/[\p{L}\p{N}_]+/gu) ?? []).filter((t) => !STOPWORDS.has(t) && t.length >= 2))
+  }
+
   /** Fold, drop stopwords, add the PT/EN synonyms (and a Portuguese word's inflections). */
   static expandTerms(query) {
     let q = fold(query)
@@ -187,10 +192,8 @@ export class Index {
   /** FTS5's bm25 for an OR of phrases ("term"* for 4 letters or more), with its weights: the lower, the better. */
   bm25(terms) {
     const docs = this.documents()
-    const phrases = terms.map((t) => {
-      const words = tokens(t.replace(/"/g, ''))
-      return { words, prefix: t.replace(/"/g, '').length >= 4 }
-    }).filter((p) => p.words.length)
+    terms = terms.filter((t) => tokens(t.replace(/"/g, '')).length)
+    const phrases = terms.map((t) => ({ words: tokens(t.replace(/"/g, '')), prefix: t.replace(/"/g, '').length >= 4 }))
     const matches = (col, p) => {
       let n = 0
       for (let i = 0; i + p.words.length <= col.length; i++) {
@@ -215,31 +218,43 @@ export class Index {
         const f = counts[k][i].reduce((s, x, c) => s + W[c] * x, 0)
         score += idf[i] * ((f * (1.2 + 1)) / (f + 1.2 * (1 - 0.75 + (0.75 * d.length) / avg)))
       })
-      out.push({ key: d.key, score: -score })
+      const COLS = ['operation name', 'description', 'services', 'fields']
+      const matched = phrases.map((p, i) => ({ term: terms[i], in: counts[k][i].map((x, c) => (x ? COLS[c] : null)).filter(Boolean) })).filter((m) => m.in.length)
+      out.push({ key: d.key, score: -score, matched })
     })
     return out.sort((a, b) => a.score - b.score).slice(0, 400)
   }
 
-  search(query, { scope = 'hr', services = [], limit = 10, includeDeprecated = false } = {}) {
-    const terms = Index.expandTerms(query)
+  /** The operations the words find, best first, each with what it matched and where. By default the words are taken as
+   * they are (in Workday's English, as the agent translates them); expand: true adds the Portuguese synonyms and the
+   * verb boost of the Python port. */
+  search(query, { scope = 'hr', services = [], limit = 10, includeDeprecated = false, expand = false } = {}) {
+    const terms = expand ? Index.expandTerms(query) : Index.plainTerms(query)
     let allowed = new Set(services)
     if (!allowed.size && scope === 'hr') allowed = new Set(HR_SERVICES)
     const exact = new Set((query.match(/[A-Za-z0-9_]+/g) ?? []).filter((t) => t.includes('_')).map((t) => t.toLowerCase()))
     const intent = new Set(terms)
     const scored = new Map()
+    const matchedBy = new Map()
     for (const r of terms.length ? this.bm25(terms) : []) {
       const [op, svc] = r.key.split('|')
       if (allowed.size && !allowed.has(svc)) continue
       let s = r.score
       if (exact.has(op.toLowerCase())) s -= 100
-      if (intent.has(op.split('_')[0].toLowerCase())) s -= 3 // the operation's verb is the intent (add, end, get, approve…)
-      scored.set(r.key, Math.min(s, scored.get(r.key) ?? 1e9))
+      if (expand && intent.has(op.split('_')[0].toLowerCase())) s -= 3 // the operation's verb is the intent (add, end, get, approve…)
+      if (!scored.has(r.key) || s < scored.get(r.key)) {
+        scored.set(r.key, s)
+        matchedBy.set(r.key, r.matched)
+      }
     }
     // an exact name, even when the tokens miss it
     for (const name of exact) {
       for (const key of unique(this.data.operations.filter((r) => r.op.toLowerCase() === name).map((r) => `${r.op}|${r.service}`))) {
         if (allowed.size && !allowed.has(key.split('|')[1])) continue
-        if (!scored.has(key)) scored.set(key, -1000)
+        if (!scored.has(key)) {
+          scored.set(key, -1000)
+          matchedBy.set(key, [{ term: name, in: ['the exact name'] }])
+        }
       }
     }
     const results = []
@@ -248,6 +263,7 @@ export class Index {
       const info = this.operationSummary(op, svc)
       if (!info || (info.deprecated && !includeDeprecated)) continue
       info.score = Math.round(-score * 1000) / 1000
+      info.matched = matchedBy.get(key) ?? []
       results.push(info)
       if (results.length >= limit) break
     }

@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.2.0 — 2026-11-05
+
+**The facts are the WSDL's; the decisions are the agent's.** The catalog no longer concludes for the agent: it hands
+over what the WSDLs say, says what it chose by default, and lets the agent change it.
+
+- `search` takes the words as they are (the agent writes Workday's terms), and each result says what matched and
+  where; `--expand` keeps the Portuguese synonym list.
+- `trace` is gone: `related <Operation>` gives the facts around an operation — the business process Workday's
+  description names, the operations on the same noun, whether a `Get_` exists among what is indexed, the operations on
+  business process events with Workday's descriptions. No «primary», no fixed steps, no connector action it could not
+  check.
+- New, to browse without reading XML: `operations <Service>`, `type <Type>`, `where <Element or Type>`.
+- `envelope`, `copilot` and `ess` list their `decisions` (an ID type among its options, a choice's alternative, an
+  optional container taken in) and take `--id-type Ref=Type` and `--choose Alt`; a wrong one is refused with the
+  options.
+- Each note says its source: curated (checked by hand, dated), Microsoft's documentation (linked), or to confirm in the
+  tenant.
+- MCP: `wws_related_operations`, `wws_list_operations`, `wws_get_type`, `wws_find_element`; `id_types` and `choose`
+  on the envelope, spec and template tools; `wws_trace_use_case` is gone.
+
 ## 0.1.1 — 2026-11-05
 
 The search understands the short forms of the verbs people use — «pede», «peço», «aprova», «cancela», «encerra»… —

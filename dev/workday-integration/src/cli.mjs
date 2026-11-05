@@ -1,6 +1,7 @@
-// node scripts/wws.mjs — the catalog of Workday Web Services (SOAP) on this machine: index the Operation Directory text
-// and the WSDLs a person has, then search by intent, trace a use case, show an operation, write its SOAP envelope or the
-// Copilot Studio «Execute SOAP operation» spec. It calls no tenant and asks for no credential; only `fetch` goes to the
+// node scripts/wws.mjs — the catalog of Workday Web Services (SOAP) on this machine: index the Operation Directory and
+// the WSDLs, then search, see what is around an operation, browse services, types and where a field is, show an
+// operation, and write its SOAP envelope, the Copilot Studio «Execute SOAP operation» spec or an ESS template — each
+// with the choices it made, for the agent to keep or change. The facts are the WSDL's; the decisions are the agent's. It calls no tenant and asks for no credential; only `fetch` goes to the
 // network (Workday Community), and only when asked.
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -8,26 +9,34 @@ import { COMMUNITY_DIRECTORY_URL, COMMUNITY_WSDL_URL, DEFAULT_VERSION, HR_SERVIC
 import { defaultIndexDir, Index } from './index.mjs'
 import { LookupError } from './render.mjs'
 import { parseWsdl } from './schema.mjs'
-import { copilotActionSpec, essTemplate, getOperation, makeEnvelope, traceUseCase } from './workflows.mjs'
+import { copilotActionSpec, essTemplate, findElement, getOperation, getType, listOperations, makeEnvelope, relatedOperations } from './workflows.mjs'
 
 const USAGE = `usage: node scripts/wws.mjs <command> [options]   (--json on any command; --index <folder> for another index)
-  ingest <files or folders>…   the Operation Directory text (.txt) and the WSDL/XSD files you have
-  status                       what is indexed
-  search "<intent>"            [--scope hr|all] [--limit N]
-  trace "<use case>"           the chain: who the user is, the operation, the approver's inbox, the business process
-  show <Operation>             [--path A/B] [--depth N] [--response] [--service S] [--version V]
-  envelope <Operation>         [--include A/B/C]… [--all] [--wsse] [--body-only]
-  copilot <Operation>          [--include A/B/C]… [--envelope]   the Copilot Studio Execute SOAP operation spec
-                               (requestBody is the element alone; --envelope for the whole SOAP envelope)
-  ess <Operation>              [--include A/B/C]…   a template of Microsoft's Employee Self-Service Workday pack
+  ingest <files or folders>…   the Operation Directory (its page .html, or its text .txt) and the WSDL/XSD files
   fetch [--services hr|all|A,B] [--version ${DEFAULT_VERSION}]   downloads the Operation Directory and the WSDLs from
-                               Workday Community and indexes them (the only command that uses the network)`
+                               Workday Community and indexes them (the only command that uses the network)
+  status                       what is indexed
+  search "<words>"             the operations those words find, with what matched where; write Workday's English terms
+                               ("flexible work arrangement", "time off"); [--scope hr|all] [--limit N] [--expand: add the
+                               Portuguese synonyms]
+  related <Operation>          facts around it: the business process it names, the operations on the same noun, whether a
+                               Get_ exists, the operations on business process events
+  operations <Service>         every operation of a service [--filter word]
+  show <Operation>             its request (or --response) tree [--path A/B] [--depth N] [--service S] [--version V]
+  type <Type>                  a type's tree [--depth N] [--service S]
+  where <Element or Type>      which operations carry it, and by which paths [--service S]
+  envelope <Operation>         [--include A/B/C]… [--all] [--wsse] [--body-only] [--id-type Ref=Type]… [--choose Alt]…
+  copilot <Operation>          the Copilot Studio Execute SOAP operation spec (requestBody is the element alone;
+                               --envelope for the whole one) [--include …] [--id-type …] [--choose …]
+  ess <Operation>              a template of Microsoft's Employee Self-Service Workday pack [--include …] [--id-type …]
+Each envelope, spec and template lists its decisions (an ID type, a choice's alternative, an optional container):
+change any of them with --id-type and --choose.`
 
-const VALUED = new Set(['--index', '--scope', '--limit', '--path', '--depth', '--service', '--version', '--include', '--services'])
-const FLAGS = new Set(['--json', '--response', '--all', '--wsse', '--body-only', '--envelope'])
+const VALUED = new Set(['--index', '--scope', '--limit', '--path', '--depth', '--service', '--version', '--include', '--services', '--filter', '--id-type', '--choose'])
+const FLAGS = new Set(['--json', '--response', '--all', '--wsse', '--body-only', '--envelope', '--expand'])
 
 function parseArgs(argv) {
-  const opts = { include: [] }
+  const opts = { include: [], idTypes: {}, choose: [] }
   const rest = []
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -35,6 +44,12 @@ function parseArgs(argv) {
       const v = argv[++i]
       if (v === undefined) throw new LookupError(`${a} needs a value`)
       if (a === '--include') opts.include.push(v)
+      else if (a === '--choose') opts.choose.push(v)
+      else if (a === '--id-type') {
+        const m = /^(.+?)=(.+)$/.exec(v)
+        if (!m) throw new LookupError(`--id-type takes Reference=Type, e.g. Worker_Reference=WID (got ${v})`)
+        opts.idTypes[m[1]] = m[2]
+      }
       else opts[a.slice(2)] = v
     } else if (FLAGS.has(a)) opts[a.slice(2)] = true
     else if (a.startsWith('--')) throw new LookupError(`${a} is not an option`)
@@ -122,20 +137,20 @@ async function fetchServices(ix, opts) {
   return got
 }
 
-function traceText(t) {
-  if (!t.primary) return t.hint
-  const lines = [`${t.goal}`, '', `→ ${t.primary.operation} (${t.primary.service})${t.business_process ? ' — a business process' : ''}`, '', 'Steps:']
-  for (const s of t.steps) lines.push(`  ${s.role.padEnd(14)} ${s.kind === 'connector' ? `connector: ${s.action}` : `${s.operation} (${s.service})`} — ${s.why}`)
-  if (t.related.length) lines.push('', 'Related: ' + t.related.map((r) => `${r.operation} (${r.service})`).join(', '))
-  if (t.alternatives.length) lines.push('', 'Also matched: ' + t.alternatives.map((r) => r.operation).join(', '))
-  if (t.notes.length) lines.push('', 'Notes:', ...t.notes.map((n) => `  • ${n}`))
+function relatedText(r) {
+  const lines = [`${r.operation} (${r.service} ${r.version})`, r.description, '', 'Facts:', ...r.facts.map((f) => `  • ${f}`)]
+  if (r.same_noun.length) lines.push('', 'On the same noun:', ...r.same_noun.map((x) => `  ${x.operation} (${x.service}) — ${x.description.slice(0, 110)}`))
+  if (r.business_process_events.length) lines.push('', 'On business process events:', ...r.business_process_events.map((x) => `  ${x.operation} (${x.service}) — ${x.description.slice(0, 110)}`))
+  if (r.notes.length) lines.push('', 'Notes (curated):', ...r.notes.map((n) => `  • ${n.text}  [${n.source}]`))
   return lines.join('\n')
 }
+
+const decisionsText = (ds) => (ds?.length ? ['', 'Decisions (change them with --id-type and --choose):', ...ds.map((d) => `  • ${d.path}: ${d.kind === 'id_type' ? `ID type ${d.chosen} (options: ${d.options.join(', ')})` : d.kind === 'choice' ? `kept ${d.kept} (alternatives: ${d.alternatives.join(' | ')})` : 'included'} — ${d.why}`)].join('\n') : '')
 
 function showText(o) {
   const lines = [`${o.operation} (${o.service} ${o.version})${o.deprecated ? ' — DEPRECATED' : ''}`, o.description]
   if (o.also_in.length) lines.push(`also in: ${o.also_in.join(', ')}`)
-  if (o.notes) lines.push('', 'Notes:', ...o.notes.map((n) => `  • ${n}`))
+  if (o.notes) lines.push('', 'Notes (curated):', ...o.notes.map((n) => `  • ${n.text}  [${n.source}]`))
   lines.push('', o.schema ?? o.hint)
   return lines.join('\n')
 }
@@ -185,35 +200,50 @@ export async function main(argv) {
       return args.join(' ')
     }
     if (cmd === 'search') {
-      const r = ix.search(need('what to look for'), { scope: opts.scope ?? 'hr', limit: Number(opts.limit ?? 10) })
+      const r = ix.search(need('what to look for'), { scope: opts.scope ?? 'hr', limit: Number(opts.limit ?? 10), expand: Boolean(opts.expand) })
       if (opts.json) json(r)
-      else say(r.length ? r.map((x) => `${x.schema_versions.length ? 'S' : ' '} ${x.operation.padEnd(50)} ${x.service.padEnd(22)} ${x.description.slice(0, 90)}`).join('\n') : 'No matches. Try Workday terms in English (time off, job change, business process) or --scope all.')
+      else say(r.length ? r.map((x) => `${x.schema_versions.length ? 'S' : ' '} ${x.operation.padEnd(50)} ${x.service.padEnd(22)} ${x.description.slice(0, 80)}\n    matched: ${x.matched.map((m) => `${m.term} (${m.in.join(', ')})`).join('; ')}`).join('\n') : 'No matches. Try Workday terms in English (time off, job change, business process), --expand, or --scope all.')
       return 0
     }
-    if (cmd === 'trace') {
-      const t = traceUseCase(ix, need('the use case'), { scope: opts.scope ?? 'hr' })
-      say(opts.json ? JSON.stringify(t, null, 2) : traceText(t))
+    if (cmd === 'operations') {
+      const r = listOperations(ix, need('a service'), { filter: opts.filter })
+      say(opts.json ? JSON.stringify(r, null, 2) : [`${r.service}: ${r.operations.length} operations`, ...r.operations.map((o) => `${o.schema ? 'S' : ' '} ${o.operation.padEnd(55)}${o.deprecated ? ' DEPRECATED ' : ' '}${o.description.slice(0, 90)}`)].join('\n'))
+      return 0
+    }
+    if (cmd === 'type') {
+      const t = getType(ix, need('a type'), { service: opts.service, depth: Number(opts.depth ?? 3), fmt: opts.json ? 'json' : 'text' })
+      say(opts.json ? JSON.stringify(t, null, 2) : [`${t.type} (${t.service} ${t.version})${t.also_defined_in.length ? ` — also in ${t.also_defined_in.join(', ')}` : ''}`, '', t.schema].join('\n'))
+      return 0
+    }
+    if (cmd === 'where') {
+      const w = findElement(ix, need('an element or a type'), { service: opts.service })
+      say(opts.json ? JSON.stringify(w, null, 2) : [`${w.name}: in ${w.found} operation request/responses`, ...w.operations.map((o) => `  ${o.operation} (${o.service}, ${o.in}): ${o.paths.join(' · ')}`), ...(w.more ? [`  … and ${w.more} more (--json, or --service)`] : [])].join('\n'))
       return 0
     }
     const op = need('an operation')
+    if (cmd === 'related') {
+      const r = relatedOperations(ix, op, { service: opts.service, version: opts.version })
+      say(opts.json ? JSON.stringify(r, null, 2) : relatedText(r))
+      return 0
+    }
     if (cmd === 'show') {
       const o = getOperation(ix, op, { service: opts.service, version: opts.version, which: opts.response ? 'response' : 'request', path: opts.path, depth: Number(opts.depth ?? 4), fmt: opts.json ? 'json' : 'text' })
       say(opts.json ? JSON.stringify(o, null, 2) : showText(o))
       return o.schema ? 0 : 3
     }
     if (cmd === 'envelope') {
-      const e = makeEnvelope(ix, op, { service: opts.service, version: opts.version, mode: opts.all ? 'all' : 'required', include: opts.include, withHeader: Boolean(opts.wsse), bodyOnly: Boolean(opts['body-only']) })
-      say(opts.json ? JSON.stringify(e, null, 2) : e.xml ?? e.hint)
+      const e = makeEnvelope(ix, op, { service: opts.service, version: opts.version, mode: opts.all ? 'all' : 'required', include: opts.include, withHeader: Boolean(opts.wsse), bodyOnly: Boolean(opts['body-only']), idTypes: opts.idTypes, choose: opts.choose })
+      say(opts.json ? JSON.stringify(e, null, 2) : e.xml ? e.xml + decisionsText(e.decisions) : e.hint)
       return e.xml ? 0 : 3
     }
     if (cmd === 'copilot') {
-      const s = copilotActionSpec(ix, op, { service: opts.service, version: opts.version, include: opts.include, bodyStyle: opts.envelope ? 'envelope' : 'body' })
+      const s = copilotActionSpec(ix, op, { service: opts.service, version: opts.version, include: opts.include, bodyStyle: opts.envelope ? 'envelope' : 'body', idTypes: opts.idTypes, choose: opts.choose })
       json(s)
       return s.warning ? 3 : 0
     }
     if (cmd === 'ess') {
-      const t = essTemplate(ix, op, { service: opts.service, version: opts.version, include: opts.include })
-      say(opts.json ? JSON.stringify(t, null, 2) : t.xml ?? t.hint)
+      const t = essTemplate(ix, op, { service: opts.service, version: opts.version, include: opts.include, idTypes: opts.idTypes, choose: opts.choose })
+      say(opts.json ? JSON.stringify(t, null, 2) : t.xml ? t.xml + decisionsText(t.decisions) : t.hint)
       return t.xml ? 0 : 3
     }
     throw new LookupError(`${cmd} is not a command`)

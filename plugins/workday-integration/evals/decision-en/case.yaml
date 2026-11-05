@@ -1,0 +1,32 @@
+schema_version: "1.0"
+name: workday-integration-decision-en
+description: The spec's default decision does not fit the use case — the agent reads the decisions and changes the reference's ID type, instead of keeping the default.
+tags: [decision, en]
+runs: 1
+context:
+  scaffold_script: setup.sh
+execution:
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Skill, Read, Write, Edit, Bash]
+  prompt: |
+    The Workday operation directory and WSDLs I downloaded are in ./workday-files. I need the Copilot Studio "Execute SOAP operation" spec for Add_Flexible_Work_Arrangement, saved as fwa-spec.json. In our agent we already have the worker's WID (not the employee ID). Don't ask me anything.
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?workday-integration"'
+  - name: changed-the-id-type
+    type: tool_used
+    tool: Bash
+    input_match: 'wws\.mjs[^\n]*\bcopilot\b[^\n]*--id-type[ =]["'']?Worker_Reference=WID'
+  - name: the-file
+    type: file_exists
+    path: "fwa-spec.json"
+  - name: the-spec
+    type: llm
+    focus: { source: file, path: fwa-spec.json }
+    criteria: >-
+      The file is a Copilot Studio Execute SOAP operation spec for Add_Flexible_Work_Arrangement whose Worker_Reference
+      ID goes with wd:type="WID" (in the xml_template and the inputs' id_type), not Employee_ID; the other fields are
+      ones the indexed WSDL has (nothing invented).

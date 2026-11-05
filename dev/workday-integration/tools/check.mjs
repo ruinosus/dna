@@ -10,7 +10,7 @@ import { Index, parseDirectory } from '../src/index.mjs'
 import { NOTES } from '../src/notes.mjs'
 import { buildEnvelope, findPath, LookupError, TreeBuilder } from '../src/render.mjs'
 import { parseWsdl, parseXml, registryOf } from '../src/schema.mjs'
-import { copilotActionSpec, essTemplate, getOperation, makeEnvelope, traceUseCase } from '../src/workflows.mjs'
+import { copilotActionSpec, essTemplate, findElement, getOperation, getType, listOperations, makeEnvelope, relatedOperations } from '../src/workflows.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repo = join(here, '../../..')
@@ -106,35 +106,53 @@ ix.ingestDirectory(readFileSync(join(ex, 'operation-directory-sample.txt'), 'utf
 for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
 {
   const top = (q, opts) => ix.search(q, { limit: 3, ...opts }).map((r) => r.operation)
+  // 0.2.0: the words as they are — the agent writes Workday's terms; each result says what matched where
+  const plain = ix.search('request flexible work arrangement', { limit: 3 })
+  ok(plain.some((r) => r.operation === 'Add_Flexible_Work_Arrangement') && plain.every((r) => r.matched.length && r.matched.every((m) => m.in.length)), 'search, the words as they are (Workday\'s terms): each result says what matched, and where', JSON.stringify(plain.map((r) => [r.operation, r.matched])))
+  ok(!ix.search('colaborador pede trabalho flexível').some((r) => r.matched.some((m) => m.term === 'request')), 'search without --expand adds no word of its own (no synonym, no verb boost)')
+  ok(ix.search('Approve_Business_Process')[0].operation === 'Approve_Business_Process', 'an exact operation name comes first')
+  // --expand: the Portuguese synonyms of the Python port, still there for whoever wants them
   for (const [q, want] of [
     ['quero aprovar o home office do meu advisee', 'Flexible_Work_Arrangement'],
     ['encerrar trabalho remoto', 'End_Flexible_Work_Arrangement'],
     ['saldo de férias', 'Get_Time_Off_Plan_Balances'],
-    ['Approve_Business_Process', 'Approve_Business_Process'],
     ['histórico de eventos do colaborador', 'Get_Worker_Event_History'],
-  ]) ok(top(q).some((o) => o.includes(want)), `search «${q}» → ${want}`, top(q).join(', '))
-  // 0.1.1: the short forms of the verbs (pede, aprova…), with the operation the person wants first
+  ]) ok(top(q, { expand: true }).some((o) => o.includes(want)), `search --expand «${q}» → ${want}`, top(q, { expand: true }).join(', '))
   for (const [q, want] of [
     ['colaborador pede trabalho flexível e o gestor aprova', 'Add_Flexible_Work_Arrangement'],
     ['o colaborador encerra o trabalho remoto', 'End_Flexible_Work_Arrangement'],
     ['o gestor cancela o pedido', 'Cancel_Business_Process'],
-  ]) ok(top(q)[0] === want, `search «${q}» → ${want} first`, top(q).join(', '))
+  ]) ok(top(q, { expand: true })[0] === want, `search --expand «${q}» → ${want} first (the short verb forms)`, top(q, { expand: true }).join(', '))
   ok(!ix.search('journals').length && top('journals', { scope: 'all' })[0] === 'Get_Journals', 'the HR scope by default; --scope all for the rest')
   ok(!ix.search('expense sheet', { scope: 'all' }).length && ix.search('expense sheet', { scope: 'all', includeDeprecated: true }).length, 'a deprecated operation is left out')
   const none = getOperation(ix, 'Enter_Time_Off')
   ok(none.schema === null && /node scripts\/wws\.mjs ingest/.test(none.hint), 'known from the directory only: the hint says what to ingest')
   ok(throws(() => ix.resolve('Add_Flexible_Work'), /not found/), 'an operation that is not there')
-  const t = traceUseCase(ix, 'colaborador solicita trabalho híbrido e o gestor aprova')
-  const roles = Object.fromEntries(t.steps.map((s) => [s.role, s]))
-  ok(t.primary.operation === 'Add_Flexible_Work_Arrangement' && roles.approve.operation === 'Approve_Business_Process' && roles.approver_inbox.operation_id === 'GetWorkerInboxTasks', 'trace: the operation, the approver\'s inbox and the approval')
-  ok(roles.track?.operation === 'Get_Event_Detail', 'trace: the event tracked by Get_Event_Detail (its request element is Get_Event_Details_Request)')
-  ok(t.related.some((r) => r.operation === 'End_Flexible_Work_Arrangement') && t.notes.some((n) => n.includes('RaaS')), 'trace: the related operations, and no Get_ → RaaS')
+  // related: facts, no verdict
+  const r = relatedOperations(ix, 'Add_Flexible_Work_Arrangement')
+  ok(r.same_noun.some((x) => x.operation === 'End_Flexible_Work_Arrangement' && x.description) && ['Approve_Business_Process', 'Deny_Business_Process', 'Send_Back_Business_Process', 'Cancel_Business_Process', 'Rescind_Business_Process', 'Get_Event_Detail', 'Get_Worker_Event_History'].every((o) => r.business_process_events.some((x) => x.operation === o)), 'related: the operations on the same noun, and those on business process events, with Workday\'s descriptions')
+  ok(r.facts.some((f) => /No Get_Flexible_Work_Arrangement/.test(f) && /indexed/.test(f)) && !('primary' in r) && !('steps' in r) && r.notes.every((n) => n.text && n.source), 'related: «no Get_» as a fact about the index, no primary, no steps; the notes with their source')
+  ok(!/GetWorkerMe|GetWorkerInboxTasks/.test(JSON.stringify(r)), 'related: no connector action it cannot check')
+  // browsing: a service, a type, where a field is
+  const ops = listOperations(ix, 'Integrations')
+  ok(ops.operations.length === 6 && ops.operations.every((o) => o.schema) && listOperations(ix, 'Human_Resources', { filter: 'flexible' }).operations.length === 2, 'operations: a service\'s, and filtered')
+  const ty = getType(ix, 'WorkerObjectType')
+  ok(ty.service === 'Human_Resources' && /ID\* : string @type\{WID\|Employee_ID\|Contingent_Worker_ID\}/.test(ty.schema), 'type: a type\'s tree, wherever it is defined')
+  const wh = findElement(ix, 'Worker_Reference')
+  ok(wh.operations.some((o) => o.operation === 'Add_Flexible_Work_Arrangement' && o.in === 'request' && o.paths.includes('Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Worker_Reference')) && wh.operations.some((o) => o.operation === 'Get_Worker_Event_History'), 'where: which operations carry a field, and by which path', JSON.stringify(wh).slice(0, 600))
+  ok(findElement(ix, 'Unique_IdentifierObjectType').found > 5 && throws(() => getType(ix, 'Nope_Type'), /No type/), 'where by a type; a type that is not there')
+  // the envelope's decisions, and changing them
+  const env = makeEnvelope(ix, 'Add_Flexible_Work_Arrangement')
+  ok(env.decisions.some((d) => d.kind === 'id_type' && d.path.endsWith('Worker_Reference') && d.chosen === 'Employee_ID' && d.options.length === 3 && /default/.test(d.why)), 'envelope: the ID type it chose, among its options, said as a default')
+  const env2 = makeEnvelope(ix, 'Add_Flexible_Work_Arrangement', { idTypes: { Worker_Reference: 'WID' }, include: ['Arrangement_Data/Job_Reference'], choose: ['Job_Reference'] })
+  ok(/<wd:Worker_Reference>\n\s*<wd:ID wd:type="WID">/.test(env2.xml) && /<wd:Job_Reference>/.test(env2.xml) && !/<wd:Position_Reference>/.test(env2.xml) && env2.decisions.some((d) => d.kind === 'choice' && d.kept === 'Job_Reference' && /you chose/.test(d.why)), 'envelope: --id-type and --choose change them')
+  ok(throws(() => makeEnvelope(ix, 'Add_Flexible_Work_Arrangement', { idTypes: { Worker_Reference: 'Badge_ID' } }), /takes WID, Employee_ID, Contingent_Worker_ID — not Badge_ID/) && throws(() => makeEnvelope(ix, 'Add_Flexible_Work_Arrangement', { choose: ['Nope'] }), /not an alternative/) && throws(() => makeEnvelope(ix, 'Add_Flexible_Work_Arrangement', { idTypes: { Nope_Reference: 'WID' } }), /not a reference in this envelope/), 'envelope: an ID type, a choice or a reference that is not there is refused, with the options')
   const spec = copilotActionSpec(ix, 'Add_Flexible_Work_Arrangement', { include: ['Arrangement_Data/Note'] })
   const inputs = Object.fromEntries(spec.inputs.map((i) => [i.name, i]))
   ok(spec.operation_id === 'SOAP_Operation' && JSON.stringify(spec.parameters) === '{"service":"Human_Resources","version":"v47.0","requestBody":"<see power_fx / xml_template>"}', 'copilot: Execute SOAP operation, its service and version')
   ok(inputs.WorkerID.id_type === 'Employee_ID' && inputs.FirstDay.type === 'Date', 'copilot: typed inputs')
   ok(spec.power_fx.includes('Text(Topic.FirstDay, "yyyy-mm-dd")') && spec.power_fx.includes('Substitute(Substitute(Substitute(Topic.Note') && spec.power_fx.includes('version=""v47.0""'), 'copilot: Power Fx — dates as text, free text escaped, quotes doubled')
-  ok(spec.notes.some((n) => /signed-in user/.test(n) && /Entra ID Integrated/.test(n)) && spec.notes.some((n) => /Integration Permissions/.test(n) && /Task not authorized/.test(n)) && spec.notes.some((n) => /200 calls/.test(n)) && spec.notes.some((n) => /Secure inputs and Secure outputs/.test(n)) && spec.response.read_paths.length, 'copilot: the identity as the signed-in user, the domain security, the limit, Secure inputs/outputs, what to read back')
+  ok(spec.notes.some((n) => /signed-in user/.test(n.text) && /Entra ID Integrated/.test(n.text)) && spec.notes.some((n) => /Integration Permissions/.test(n.text) && /Task not authorized/.test(n.text)) && spec.notes.some((n) => /200 calls/.test(n.text)) && spec.notes.some((n) => /Secure inputs and Secure outputs/.test(n.text)) && spec.notes.every((n) => n.source) && spec.decisions.length && spec.response.read_paths.length, 'copilot: the identity as the signed-in user, the domain security, the limit, Secure inputs/outputs — each note with its source —, its decisions, what to read back')
   ok(!/<env:Envelope|wsse:/.test(spec.xml_template) && /^<wd:Add_Flexible_Work_Arrangement_Request xmlns:wd=/.test(spec.xml_template), 'copilot: requestBody is the element alone by default (no envelope, no WS-Security)')
   ok(/<env:Envelope/.test(copilotActionSpec(ix, 'Add_Flexible_Work_Arrangement', { bodyStyle: 'envelope' }).xml_template), 'copilot --envelope: the whole envelope, when asked')
   const nospec = copilotActionSpec(ix, 'Enter_Time_Off')
@@ -145,17 +163,18 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
 // ---------- the same answers as the Python port (checks/golden.json) ----------
 {
   const golden = JSON.parse(readFileSync(join(here, '../checks/golden.json'), 'utf8'))
-  // notes are rewritten here and hints name this CLI: left out of the comparison
+  // notes are rewritten here, hints name this CLI, and decisions and matched are new (0.2.0): left out of the comparison;
+  // the trace is gone (0.2.0: related, with facts only) and its cases are not compared; the search is compared with
+  // --expand, the Python's synonyms
   // and a choice's comment now names its alternatives (it said «alternatives exist»): those comment lines too
   const noChoice = (v) => (typeof v === 'string' ? v.split('\n').filter((l) => !/^\s*<!-- (choice |one of )/.test(l)).join('\n').replace(/<!-- (choice |one of )[^>]*-->\n?/g, '') : v)
-  const strip = (o) => (Array.isArray(o) ? o.map(strip) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).filter(([k]) => !['notes', 'score', 'hint', 'warning'].includes(k)).map(([k, v]) => [k, strip(v)])) : noChoice(o))
+  const strip = (o) => (Array.isArray(o) ? o.map(strip) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).filter(([k]) => !['notes', 'score', 'hint', 'warning', 'decisions', 'matched'].includes(k)).map(([k, v]) => [k, strip(v)])) : noChoice(o))
   const run = (c) => {
     const a = c.args
     try {
-      if (c.cmd === 'search') return ix.search(a.query, { scope: a.scope, limit: 10 })
+      if (c.cmd === 'search') return ix.search(a.query, { scope: a.scope, limit: 10, expand: true })
       if (c.cmd === 'show') return getOperation(ix, a.operation, { which: a.which, path: a.path, depth: a.depth, fmt: a.fmt })
       if (c.cmd === 'envelope') return makeEnvelope(ix, a.operation, { include: a.include, mode: a.mode, withHeader: a.with_header, bodyOnly: a.body_only })
-      if (c.cmd === 'trace') return traceUseCase(ix, a.goal)
       if (c.cmd === 'copilot') return copilotActionSpec(ix, a.operation, { include: a.include, bodyStyle: a.body_style ?? 'envelope' })
     } catch (e) {
       if (e instanceof LookupError) return { error: e.message }
@@ -163,7 +182,8 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
     }
   }
   const off = []
-  for (const c of golden.cases) {
+  const cases = golden.cases.filter((c) => c.cmd !== 'trace')
+  for (const c of cases) {
     const got = JSON.parse(JSON.stringify(run(c)))
     // search: the same operations with the same bm25 scores; equal scores may come in any order (the Python's did)
     const same = c.cmd === 'search'
@@ -171,7 +191,7 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
       : JSON.stringify(strip(c.out)) === JSON.stringify(strip(got))
     if (!same) off.push(`${c.cmd} ${JSON.stringify(c.args)}`)
   }
-  ok(!off.length, `the same answers as the Python port on the examples (${golden.cases.length - off.length}/${golden.cases.length}: search with its bm25 scores, show, envelope, trace, copilot)`, off.join('\n'))
+  ok(!off.length && cases.length >= 30, `the same answers as the Python port on the examples (${cases.length - off.length}/${cases.length}: search --expand with its bm25 scores, show, envelope, copilot)`, off.join('\n'))
 }
 
 // ---------- the notes ----------
@@ -193,10 +213,10 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
   ok(empty.status === 2 && /nothing indexed .* Run: node scripts\/wws\.mjs ingest/.test(empty.stderr), 'no index: it says what to run, and exits 2', empty.stderr)
   const ing = cli('ingest', ex, '--index', idx)
   ok(ing.status === 0 && /indexed 15 operations from the directory, 10 with schemas/.test(ing.stdout), 'ingest a folder: the directory and the WSDLs', ing.stdout + ing.stderr)
-  const steps = [['status'], ['search', 'aprovar home office'], ['trace', 'colaborador solicita trabalho híbrido e o gestor aprova'], ['show', 'Add_Flexible_Work_Arrangement', '--path', 'Arrangement_Data'], ['envelope', 'Approve_Business_Process', '--body-only'], ['copilot', 'Approve_Business_Process']]
+  const steps = [['status'], ['search', 'aprovar home office'], ['related', 'Add_Flexible_Work_Arrangement'], ['operations', 'Integrations'], ['type', 'WorkerObjectType'], ['where', 'Worker_Reference'], ['show', 'Add_Flexible_Work_Arrangement', '--path', 'Arrangement_Data'], ['envelope', 'Approve_Business_Process', '--body-only'], ['copilot', 'Approve_Business_Process']]
   const outs = steps.map((s) => cli(...s, '--json', '--index', idx))
-  ok(outs.every((o) => o.status === 0 && JSON.parse(o.stdout) && !/NETWORK/.test(o.stderr)), 'status, search, trace, show, envelope, copilot: --json, and no network', outs.map((o) => o.stderr).join('\n'))
-  ok(JSON.parse(outs[5].stdout).parameters.service === 'Integrations', 'copilot by the CLI: the service of the operation')
+  ok(outs.every((o) => o.status === 0 && JSON.parse(o.stdout) && !/NETWORK/.test(o.stderr)), 'status, search, related, operations, type, where, show, envelope, copilot: --json, and no network', outs.map((o) => o.stderr).join('\n'))
+  ok(JSON.parse(outs[outs.length - 1].stdout).parameters.service === 'Integrations', 'copilot by the CLI: the service of the operation')
   const bad = cli('show', 'Nope_Operation', '--index', idx)
   ok(bad.status === 2 && /not found/.test(bad.stderr), 'an operation that is not there: exit 2', bad.stderr)
   const nos = cli('envelope', 'Enter_Time_Off', '--index', idx)
@@ -298,7 +318,7 @@ globalThis.fetch = async (url) => {
   }
   const out = talk([
     { method: 'tools/list', params: {} },
-    { method: 'tools/call', params: { name: 'wws_search_operations', arguments: { query: 'aprovar home office' } } },
+    { method: 'tools/call', params: { name: 'wws_search_operations', arguments: { query: 'approve business process flexible work arrangement' } } },
     { method: 'tools/call', params: { name: 'wws_get_operation', arguments: { operation: 'Add_Flexible_Work_Arrangement', path: 'Arrangement_Data' } } },
     { method: 'tools/call', params: { name: 'wws_get_operation', arguments: { operation: 'Nope_Operation' } } },
     { method: 'tools/call', params: { name: 'wws_copilot_action_spec', arguments: { operation: 'Approve_Business_Process' } } },
@@ -306,8 +326,8 @@ globalThis.fetch = async (url) => {
   ])
   const text = (n) => out[n]?.result?.content?.[0]?.text ?? ''
   const tools = out[1]?.result?.tools ?? []
-  const WANT = ['wws_search_operations', 'wws_trace_use_case', 'wws_get_operation', 'wws_build_envelope', 'wws_copilot_action_spec', 'wws_ess_template', 'wws_list_services', 'wws_index_status']
-  ok(out[0]?.result?.serverInfo?.name === 'workday-wws' && WANT.every((n) => tools.some((t) => t.name === n)) && tools.every((t) => t.annotations?.readOnlyHint === true), `MCP: initialize, and the ${WANT.length} tools of the Python server (and ess), all read-only`, JSON.stringify(out).slice(0, 800))
+  const WANT = ['wws_search_operations', 'wws_related_operations', 'wws_list_operations', 'wws_get_type', 'wws_find_element', 'wws_get_operation', 'wws_build_envelope', 'wws_copilot_action_spec', 'wws_ess_template', 'wws_list_services', 'wws_index_status']
+  ok(out[0]?.result?.serverInfo?.name === 'workday-wws' && WANT.every((n) => tools.some((t) => t.name === n)) && tools.every((t) => t.annotations?.readOnlyHint === true), `MCP: initialize, and its ${WANT.length} tools, all read-only`, JSON.stringify(out).slice(0, 800))
   const top = text(2) ? JSON.parse(text(2)).results.slice(0, 3).map((r) => r.operation) : []
   ok(top.includes('Approve_Business_Process') && top.some((o) => o.endsWith('Flexible_Work_Arrangement')), 'MCP: the search', top.join(', '))
   ok(text(3).includes('Worker_Reference') && out[4]?.result?.isError === true && /not found/.test(text(4)), 'MCP: an operation with a path; one that is not there is an error, not a crash')

@@ -37,3 +37,21 @@ export const NOTES = {
   Send_Back_Business_Process: ['It takes the step to return to (Business_Process_Step_ID).'],
   Cancel_Business_Process: ['Suppress_Notifications cancels without telling the people involved.'],
 }
+
+/** An operation's curated notes, each with where it comes from — so the agent weighs it as what it is. */
+export function curatedNotes(op) {
+  return (NOTES[op] ?? []).map((text) => ({
+    text,
+    source: text.startsWith('To confirm in the tenant')
+      ? 'curated: not in the schema — ask the tenant'
+      : text.startsWith('Sensitive:')
+        ? "curated: what the response's fields may carry, from their names and documentation"
+        : "curated: checked by hand against Workday's public WSDLs (v47.0) on 2026-11-05",
+  }))
+}
+
+// The Copilot Studio Workday connector, as Microsoft documents it (checked on 2026-11-05)
+export const CONNECTOR_SOURCES = {
+  connector: 'https://learn.microsoft.com/en-us/connectors/workdaysoap/',
+  ess: 'https://learn.microsoft.com/en-us/microsoft-365/copilot/employee-self-service/workday-simplified-setup',
+}

@@ -1,7 +1,7 @@
 schema_version: "1.0"
 name: workday-integration-trace-pt
-description: A use case in Portuguese traced to the chain of Workday operations, from the person's own files — the request, the approval, the business process, the gap with no Get_, and the rule that it runs as the user.
-tags: [trace, pt]
+description: A use case in Portuguese worked out by the agent from what the catalog says — it translates, searches, checks — the request, the approval, the business process, the gap with no Get_, and the rule that it runs as the user.
+tags: [find, pt]
 runs: 1
 context:
   scaffold_script: setup.sh
@@ -16,10 +16,10 @@ graders:
     type: tool_used
     tool: Skill
     input_match: '"skill"\s*:\s*"(?:[\w-]+:)?workday-integration"'
-  - name: indexed-and-traced
+  - name: searched-and-checked
     type: tool_used
     tool: Bash
-    input_match: 'wws\.mjs[^\n]*\btrace\b'
+    input_match: 'wws\.mjs[^\n]*\b(related|show)\b'
   - name: the-chain
     type: llm
     criteria: >-
