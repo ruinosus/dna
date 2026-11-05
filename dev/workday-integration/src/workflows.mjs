@@ -201,12 +201,12 @@ export function copilotActionSpec(ix, op, { service, version, include = [], mode
     operation: row.op,
   }
   const notes = [
-    { text: "Identity: self-service and approval run as the signed-in user — a per-user OAuth connection (Microsoft Entra ID Integrated, the one Microsoft's simplified Employee Self-Service setup for Workday uses; or Entra ID Integrated with API Management, 'oauthapim'). With an integration system user (ISU, Basic) Workday sees the ISU as the initiator: routing, the 'self' rules and the no-self-approval rule stop reflecting the real person.", source: CONNECTOR_SOURCES.ess },
-    { text: "Access, as the user: the employees' security group needs Get under Integration Permissions (Put, to write — confirm in the tenant) on the domain that governs the data, in Workday's domain security; the API client's scopes do not replace it. An operation that works with an ISU can answer 'Task not authorized' for an employee: find the domain and grant it.", source: CONNECTOR_SOURCES.ess },
-    { text: 'Connections are not shareable: each user creates their own.', source: CONNECTOR_SOURCES.connector },
-    { text: 'Throttling: 200 calls per connection per 60 s.', source: CONNECTOR_SOURCES.connector },
-    { text: "requestBody is the operation's element alone (no SOAP envelope, no WS-Security header: the connection authenticates), as Microsoft's ESS templates send it; confirm once in your environment.", source: CONNECTOR_SOURCES.ess },
-    { text: "Turn on Secure inputs and Secure outputs on the SOAP action: the run history keeps the responses. Give the agent back only the fields it uses, never the raw XML.", source: 'curated: Power Platform practice — the run history keeps inputs and outputs unless they are secured' },
+    { kind: 'documentation', text: "Identity: self-service and approval run as the signed-in user — a per-user OAuth connection (Microsoft Entra ID Integrated, the one Microsoft's simplified Employee Self-Service setup for Workday uses; or Entra ID Integrated with API Management, 'oauthapim'). With an integration system user (ISU, Basic) Workday sees the ISU as the initiator: routing, the 'self' rules and the no-self-approval rule stop reflecting the real person.", source: CONNECTOR_SOURCES.ess },
+    { kind: 'documentation', text: "Access, as the user: the employees' security group needs Get under Integration Permissions (Put, to write — confirm in the tenant) on the domain that governs the data, in Workday's domain security; the API client's scopes do not replace it. An operation that works with an ISU can answer 'Task not authorized' for an employee: find the domain and grant it.", source: CONNECTOR_SOURCES.ess },
+    { kind: 'documentation', text: 'Connections are not shareable: each user creates their own.', source: CONNECTOR_SOURCES.connector },
+    { kind: 'documentation', text: 'Throttling: 200 calls per connection per 60 s.', source: CONNECTOR_SOURCES.connector },
+    { kind: 'documentation', text: "requestBody is the operation's element alone (no SOAP envelope, no WS-Security header: the connection authenticates), as Microsoft's ESS templates send it; confirm once in your environment.", source: CONNECTOR_SOURCES.ess },
+    { kind: 'practice', text: "Turn on Secure inputs and Secure outputs on the SOAP action: the run history keeps the responses. Give the agent back only the fields it uses, never the raw XML.", source: 'curated: Power Platform practice — the run history keeps inputs and outputs unless they are secured' },
     ...curatedNotes(row.op),
   ]
   if (env.xml === null) {

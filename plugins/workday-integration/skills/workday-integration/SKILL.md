@@ -4,7 +4,7 @@ description: Finds which Workday Web Service (SOAP) operation does what someone 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Reads only the files the person gives it; calls no Workday tenant. Not affiliated with Workday.
 metadata:
-  version: "0.2.0"
+  version: "0.2.1"
 ---
 
 # workday-integration: the Workday operation for a use case, and what to send it
@@ -77,12 +77,13 @@ write fields for it.
   Integrated, as Microsoft's Employee Self-Service setup uses) — never as an integration system user, or Workday's
   «self» rules and «no approving your own request» stop seeing the real person. As the user, the employees' security
   group needs the domain's Integration Permissions in Workday; without them the answer is «Task not authorized».
-- **Sensitive data**: say what a response may carry about a person (the notes that start with «Sensitive:» — pay,
-  events, comments and reasons); ask for the smallest response group that answers; in Copilot Studio turn on **Secure
+- **Sensitive data**: say what a response may carry about a person (the «sensitive» notes — pay, events, comments and
+  reasons); ask for the smallest response group that answers; in Copilot Studio turn on **Secure
   inputs and Secure outputs** and give the agent back only the fields it uses, never the raw XML.
-- Every note says where it comes from (`source`): **from the index** (a fact the tool computed), **curated** (checked
-  by hand against Workday's public WSDLs, with the date), **Microsoft's documentation** (with the link), or **to
-  confirm in the tenant** — say that last kind as a question for the tenant, not a fact.
+- Every note has a `kind` and a `source`: **schema** (Workday's WSDLs show it; its `evidence` names the fields),
+  **description** (Workday's own words), **inferred** (a deduction: check it before saying it), **sensitive** (what a
+  response may carry about a person), **tenant** (not in the schema: say it as a question for the tenant). Connector
+  notes cite Microsoft's documentation. Say an inferred note as «likely», never as a fact.
 - Connector actions outside SOAP (REST, Preview: the worker's profile, the inbox tasks…) are not in the WSDLs: if you
   suggest one, say to check it exists in the person's Workday connector.
 

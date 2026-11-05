@@ -152,7 +152,7 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
   ok(spec.operation_id === 'SOAP_Operation' && JSON.stringify(spec.parameters) === '{"service":"Human_Resources","version":"v47.0","requestBody":"<see power_fx / xml_template>"}', 'copilot: Execute SOAP operation, its service and version')
   ok(inputs.WorkerID.id_type === 'Employee_ID' && inputs.FirstDay.type === 'Date', 'copilot: typed inputs')
   ok(spec.power_fx.includes('Text(Topic.FirstDay, "yyyy-mm-dd")') && spec.power_fx.includes('Substitute(Substitute(Substitute(Topic.Note') && spec.power_fx.includes('version=""v47.0""'), 'copilot: Power Fx — dates as text, free text escaped, quotes doubled')
-  ok(spec.notes.some((n) => /signed-in user/.test(n.text) && /Entra ID Integrated/.test(n.text)) && spec.notes.some((n) => /Integration Permissions/.test(n.text) && /Task not authorized/.test(n.text)) && spec.notes.some((n) => /200 calls/.test(n.text)) && spec.notes.some((n) => /Secure inputs and Secure outputs/.test(n.text)) && spec.notes.every((n) => n.source) && spec.decisions.length && spec.response.read_paths.length, 'copilot: the identity as the signed-in user, the domain security, the limit, Secure inputs/outputs — each note with its source —, its decisions, what to read back')
+  ok(spec.notes.some((n) => /signed-in user/.test(n.text) && /Entra ID Integrated/.test(n.text)) && spec.notes.some((n) => /Integration Permissions/.test(n.text) && /Task not authorized/.test(n.text)) && spec.notes.some((n) => /200 calls/.test(n.text)) && spec.notes.some((n) => /Secure inputs and Secure outputs/.test(n.text)) && spec.notes.every((n) => n.source && n.kind) && spec.decisions.length && spec.response.read_paths.length, 'copilot: the identity as the signed-in user, the domain security, the limit, Secure inputs/outputs — each note with its source —, its decisions, what to read back')
   ok(!/<env:Envelope|wsse:/.test(spec.xml_template) && /^<wd:Add_Flexible_Work_Arrangement_Request xmlns:wd=/.test(spec.xml_template), 'copilot: requestBody is the element alone by default (no envelope, no WS-Security)')
   ok(/<env:Envelope/.test(copilotActionSpec(ix, 'Add_Flexible_Work_Arrangement', { bodyStyle: 'envelope' }).xml_template), 'copilot --envelope: the whole envelope, when asked')
   const nospec = copilotActionSpec(ix, 'Enter_Time_Off')
@@ -196,9 +196,15 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
 
 // ---------- the notes ----------
 {
-  const all = Object.values(NOTES).flat().join('\n')
-  ok(!/Staffing functional area security|self-approval is blocked by BP security|Approval routing follows the supervisory organization/.test(all) && /To confirm in the tenant/.test(all), 'the notes the schema does not show are marked «to confirm in the tenant»')
-  ok(['Get_Workers', 'Get_Worker_Event_History', 'Get_Event_Detail'].every((op) => NOTES[op].some((n) => n.startsWith('Sensitive:'))), 'what may come back about a person is said (Sensitive:)')
+  const all = Object.values(NOTES).flat()
+  const KINDS = ['schema', 'description', 'inferred', 'sensitive', 'tenant']
+  ok(all.every((n) => KINDS.includes(n.kind)), `every note has a kind (${KINDS.join(', ')})`)
+  ok(all.filter((n) => n.kind === 'schema').every((n) => n.evidence?.length || n.absent?.length || n.absentFields?.length), "every «schema» note names its evidence (tools/check-notes.mjs finds it in an index of Workday's real WSDLs)")
+  ok(all.filter((n) => n.kind === 'description').every((n) => n.quote), "every «description» note quotes Workday's words")
+  ok(!/Staffing functional area security|self-approval is blocked by BP security|Approval routing follows the supervisory organization/.test(all.map((n) => n.text).join('\n')) && all.some((n) => n.kind === 'tenant'), 'what the schema cannot show is a «tenant» note')
+  ok(['Get_Workers', 'Get_Worker_Event_History', 'Get_Event_Detail'].every((op) => NOTES[op].some((n) => n.kind === 'sensitive')), 'what may come back about a person is a «sensitive» note')
+  const shown = getOperation(ix, 'Add_Flexible_Work_Arrangement').notes
+  ok(shown.every((n) => n.text && n.kind && n.source) && shown.some((n) => n.kind === 'inferred' && /inferred/.test(n.source)) && shown.some((n) => n.kind === 'schema' && n.evidence), 'show: each note with its kind, its source and, from the schema, its evidence')
 }
 
 // ---------- the CLI (the bundled scripts/wws.mjs): no index, errors, --json, no network ----------

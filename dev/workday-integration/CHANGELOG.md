@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.1 — 2026-11-05
+
+**Each note says what it is.** A note's `kind` is one of: `schema` (Workday's WSDLs show it, and its `evidence`
+names the fields), `description` (Workday's own words, quoted), `inferred` (a deduction: check it), `sensitive`
+(what a response may carry about a person), `tenant` (not in the schema); the connector's notes are `documentation`
+(linked) or `practice`. Two notes that said «checked against the WSDLs» were deductions — the questionnaire step
+that lands in the inbox, and changing an arrangement by ending it — and are now `inferred`; a field name that was not
+exact (Company_Insider → Company_Insider_Data) is fixed. `tools/check-notes.mjs` checks every note against an index
+of Workday's real WSDLs (29/29 on v47.0).
+
 ## 0.2.0 — 2026-11-05
 
 **The facts are the WSDL's; the decisions are the agent's.** The catalog no longer concludes for the agent: it hands
