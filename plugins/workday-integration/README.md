@@ -49,6 +49,7 @@ node scripts/wws.mjs where Flexible_Work_Arrangement_Type_Reference
 node scripts/wws.mjs show Add_Flexible_Work_Arrangement --depth 3
 node scripts/wws.mjs envelope Add_Flexible_Work_Arrangement --id-type Worker_Reference=WID
 node scripts/wws.mjs copilot End_Flexible_Work_Arrangement --json
+node scripts/wws.mjs copilot Get_Time_Off_Plan_Balances --read <path to Time_Off_Plan_Balance>
 node scripts/wws.mjs ess Approve_Business_Process
 ```
 

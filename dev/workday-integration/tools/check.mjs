@@ -124,6 +124,12 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
     ['o gestor cancela o pedido', 'Cancel_Business_Process'],
   ]) ok(top(q, { expand: true })[0] === want, `search --expand «${q}» → ${want} first (the short verb forms)`, top(q, { expand: true }).join(', '))
   ok(!ix.search('journals').length && top('journals', { scope: 'all' })[0] === 'Get_Journals', 'the HR scope by default; --scope all for the rest')
+  // 0.2.4: an operation whose name is the words (in any order), or holds them all, comes first and says so; each result has its verb
+  const byName = ix.search('arrangement flexible work end')
+  ok(byName[0].operation === 'End_Flexible_Work_Arrangement' && byName[0].matched[0].term === 'the name is your words' && byName.every((r) => r.verb === r.operation.split('_')[0]), 'search: the name is the words (any order) → first, and said; each result has its verb', JSON.stringify(byName.slice(0, 2).map((r) => [r.operation, r.matched[0]])))
+  const holds = ix.search('worker event')
+  ok(holds[0].operation === 'Get_Worker_Event_History' && /all your words are in the name \(and 2 others\)/.test(holds[0].matched[0].term), 'search: all the words in the name → ahead, and how many other words it has', JSON.stringify(holds.slice(0, 2).map((r) => [r.operation, r.matched[0]])))
+
   ok(!ix.search('expense sheet', { scope: 'all' }).length && ix.search('expense sheet', { scope: 'all', includeDeprecated: true }).length, 'a deprecated operation is left out')
   const none = getOperation(ix, 'Enter_Time_Off')
   ok(none.schema === null && /node scripts\/wws\.mjs ingest/.test(none.hint), 'known from the directory only: the hint says what to ingest')
@@ -146,6 +152,14 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
   ok(env.decisions.some((d) => d.kind === 'id_type' && d.path.endsWith('Worker_Reference') && d.chosen === 'Employee_ID' && d.options.length === 3 && d.why === 'default') && /Employee_ID for a person/.test(env.decision_rules.default), 'envelope: the ID type it chose, among its options, said as a default (the rule once, in decision_rules)')
   const env2 = makeEnvelope(ix, 'Add_Flexible_Work_Arrangement', { idTypes: { Worker_Reference: 'WID' }, include: ['Arrangement_Data/Job_Reference'], choose: ['Job_Reference'] })
   ok(/<wd:Worker_Reference>\n\s*<wd:ID wd:type="WID">/.test(env2.xml) && /<wd:Job_Reference>/.test(env2.xml) && !/<wd:Position_Reference>/.test(env2.xml) && env2.decisions.some((d) => d.kind === 'choice' && d.kept === 'Job_Reference' && d.why === 'chosen'), 'envelope: --id-type and --choose change them')
+  // 0.2.4: what to read back — the fields asked for, checked, with the connector's path and an ESS XPath
+  const rd = copilotActionSpec(ix, 'Get_Worker_Event_History', { read: ['Event/Effective', 'Event/Event_Reference'] })
+  const [eff, ref] = rd.response.reads
+  ok(eff.kind === 'value' && eff.value_type === 'xsd:date' && eff.repeats === true && eff.xpath === "//*[local-name()='Worker_Event_History_Response']/*[local-name()='Event']/*[local-name()='Effective']/text()" && ref.kind === 'reference' && /ID\[@wd:type='WID'\]$/.test(rd.response.read_paths[1]), 'copilot --read: a value (its type, that it repeats, its XPath) and a reference (its WID)', JSON.stringify(rd.response))
+  ok(throws(() => copilotActionSpec(ix, 'Get_Worker_Event_History', { read: ['Event'] }), /holds fields, not a value — read one of them: Event_Reference, Effective/) && throws(() => copilotActionSpec(ix, 'Get_Worker_Event_History', { read: ['Event/Nope'] }), /not under/), 'copilot --read: a container or a path that is not there is refused, with the fields to pick')
+  const essRead = essTemplate(ix, 'Get_Worker_Event_History', { read: ['Event/Effective'] })
+  ok(/<key>Effective<\/key>/.test(essRead.xml) && /local-name\(\)='Effective'\]\/text\(\)/.test(essRead.xml) && essRead.response_properties[0].repeats, 'ess --read: the field asked for as a responseProperty, said to repeat')
+  ok(copilotActionSpec(ix, 'Add_Flexible_Work_Arrangement').response.read_default, 'copilot without --read: the references, said as the default')
   ok(throws(() => makeEnvelope(ix, 'Add_Flexible_Work_Arrangement', { idTypes: { Worker_Reference: 'Badge_ID' } }), /takes WID, Employee_ID, Contingent_Worker_ID — not Badge_ID/) && throws(() => makeEnvelope(ix, 'Add_Flexible_Work_Arrangement', { choose: ['Nope'] }), /not an alternative/) && throws(() => makeEnvelope(ix, 'Add_Flexible_Work_Arrangement', { idTypes: { Nope_Reference: 'WID' } }), /not a reference in this envelope/), 'envelope: an ID type, a choice or a reference that is not there is refused, with the options')
   const spec = copilotActionSpec(ix, 'Add_Flexible_Work_Arrangement', { include: ['Arrangement_Data/Note'] })
   const inputs = Object.fromEntries(spec.inputs.map((i) => [i.name, i]))
@@ -173,7 +187,7 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
   // input's description at 100 — applied to both sides, so what is compared is still the Python's logic
   const cut = (t, n) => ([...t].length > n ? [...t].slice(0, n - 1).join('') + '…' : t)
   const noComments = (t) => t.split('\n').filter((l) => !/^\s*<!--.*-->\s*$/.test(l)).map((l) => l.replace(/\s*<!--.*?-->/g, '')).join('\n')
-  const strip = (o, key = '', parent = '') => (Array.isArray(o) ? o.map((x) => strip(x, key, parent)) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).filter(([k]) => !['notes', 'score', 'hint', 'warning', 'decisions', 'decision_rules', 'matched', 'sources', 'cut'].includes(k)).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => [k, strip(v, k, key)])) : typeof o === 'string' && key === 'doc' ? cut(o, 160) : typeof o === 'string' && key === 'description' && parent === 'inputs' ? cut(o, 100) : typeof o === 'string' && (key === 'xml_template' || key === 'power_fx') ? noComments(noChoice(o)) : noChoice(o))
+  const strip = (o, key = '', parent = '') => (Array.isArray(o) ? o.map((x) => strip(x, key, parent)) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).filter(([k]) => !['notes', 'score', 'hint', 'warning', 'decisions', 'decision_rules', 'matched', 'sources', 'cut', 'verb', 'read_default'].includes(k)).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => [k, strip(v, k, key)])) : typeof o === 'string' && key === 'doc' ? cut(o, 160) : typeof o === 'string' && key === 'description' && parent === 'inputs' ? cut(o, 100) : typeof o === 'string' && (key === 'xml_template' || key === 'power_fx') ? noComments(noChoice(o)) : noChoice(o))
   const run = (c) => {
     const a = c.args
     try {

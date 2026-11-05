@@ -27,16 +27,18 @@ const USAGE = `usage: node scripts/wws.mjs <command> [options]   (--json on any 
   where <Element or Type>      which operations carry it, and by which paths [--service S]
   envelope <Operation>         [--include A/B/C]… [--all] [--wsse] [--body-only] [--id-type Ref=Type]… [--choose Alt]…
   copilot <Operation>          the Copilot Studio Execute SOAP operation spec (requestBody is the element alone;
-                               --envelope for the whole one) [--include …] [--id-type …] [--choose …]
+                               --envelope for the whole one) [--include …] [--id-type …] [--choose …] [--read A/B]…
   ess <Operation>              a template of Microsoft's Employee Self-Service Workday pack [--include …] [--id-type …]
+                               [--read A/B]…
+--read: the response's fields to read back (paths as show --response gives them), checked; by default, its references.
 Each envelope, spec and template lists its decisions (an ID type, a choice's alternative, an optional container):
 change any of them with --id-type and --choose.`
 
-const VALUED = new Set(['--index', '--scope', '--limit', '--path', '--depth', '--service', '--version', '--include', '--services', '--filter', '--id-type', '--choose'])
+const VALUED = new Set(['--index', '--scope', '--limit', '--path', '--depth', '--service', '--version', '--include', '--services', '--filter', '--id-type', '--choose', '--read'])
 const FLAGS = new Set(['--json', '--response', '--all', '--wsse', '--body-only', '--envelope', '--expand'])
 
 function parseArgs(argv) {
-  const opts = { include: [], idTypes: {}, choose: [] }
+  const opts = { include: [], idTypes: {}, choose: [], read: [] }
   const rest = []
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -45,6 +47,7 @@ function parseArgs(argv) {
       if (v === undefined) throw new LookupError(`${a} needs a value`)
       if (a === '--include') opts.include.push(v)
       else if (a === '--choose') opts.choose.push(v)
+      else if (a === '--read') opts.read.push(v)
       else if (a === '--id-type') {
         const m = /^(.+?)=(.+)$/.exec(v)
         if (!m) throw new LookupError(`--id-type takes Reference=Type, e.g. Worker_Reference=WID (got ${v})`)
@@ -206,7 +209,7 @@ export async function main(argv) {
     if (cmd === 'search') {
       const r = ix.search(need('what to look for'), { scope: opts.scope ?? 'hr', limit: Number(opts.limit ?? 10), expand: Boolean(opts.expand) })
       if (opts.json) json(r)
-      else say(r.length ? r.map((x) => `${x.schema_versions.length ? 'S' : ' '} ${x.operation.padEnd(50)} ${x.service.padEnd(22)} ${x.description.slice(0, 80)}\n    matched: ${x.matched.map((m) => `${m.term} (${m.in.join(', ')})`).join('; ')}`).join('\n') : 'No matches. Try Workday terms in English (time off, job change, business process), --expand, or --scope all.')
+      else say(r.length ? r.map((x) => `${x.schema_versions.length ? 'S' : ' '} ${x.verb.padEnd(9)} ${x.operation.padEnd(50)} ${x.service.padEnd(22)} ${x.description.slice(0, 80)}\n    matched: ${x.matched.map((m) => `${m.term} (${m.in.join(', ')})`).join('; ')}`).join('\n') : 'No matches. Try Workday terms in English (time off, job change, business process), --expand, or --scope all.')
       return 0
     }
     if (cmd === 'operations') {
@@ -241,12 +244,12 @@ export async function main(argv) {
       return e.xml ? 0 : 3
     }
     if (cmd === 'copilot') {
-      const s = copilotActionSpec(ix, op, { service: opts.service, version: opts.version, include: opts.include, bodyStyle: opts.envelope ? 'envelope' : 'body', idTypes: opts.idTypes, choose: opts.choose })
+      const s = copilotActionSpec(ix, op, { service: opts.service, version: opts.version, include: opts.include, bodyStyle: opts.envelope ? 'envelope' : 'body', idTypes: opts.idTypes, choose: opts.choose, read: opts.read })
       json(s)
       return s.warning ? 3 : 0
     }
     if (cmd === 'ess') {
-      const t = essTemplate(ix, op, { service: opts.service, version: opts.version, include: opts.include, idTypes: opts.idTypes, choose: opts.choose })
+      const t = essTemplate(ix, op, { service: opts.service, version: opts.version, include: opts.include, idTypes: opts.idTypes, choose: opts.choose, read: opts.read })
       say(opts.json ? JSON.stringify(t, null, 2) : t.xml ? t.xml + decisionsText(t.decisions) : t.hint)
       return t.xml ? 0 : 3
     }

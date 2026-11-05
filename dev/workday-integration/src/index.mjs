@@ -79,6 +79,7 @@ export function parseDirectory(text) {
 
 // FTS5's unicode61 tokenizer (remove_diacritics 2), then porter
 const tokens = (text) => (fold(text).match(/[\p{L}\p{N}]+/gu) ?? []).map(stem)
+const STOP_STEMS = new Set([...STOPWORDS].map(stem))
 
 export class Index {
   constructor(dir = defaultIndexDir()) {
@@ -234,6 +235,7 @@ export class Index {
     if (!allowed.size && scope === 'hr') allowed = new Set(HR_SERVICES)
     const exact = new Set((query.match(/[A-Za-z0-9_]+/g) ?? []).filter((t) => t.includes('_')).map((t) => t.toLowerCase()))
     const intent = new Set(terms)
+    const words = new Set(expand ? [] : terms.flatMap((t) => tokens(t)).filter((t) => !STOP_STEMS.has(t)))
     const scored = new Map()
     const matchedBy = new Map()
     for (const r of terms.length ? this.bm25(terms) : []) {
@@ -242,9 +244,23 @@ export class Index {
       let s = r.score
       if (exact.has(op.toLowerCase())) s -= 100
       if (expand && intent.has(op.split('_')[0].toLowerCase())) s -= 3 // the operation's verb is the intent (add, end, get, approve…)
+      // the words as they are: an operation whose name is the words, or holds them all, comes first — and says so
+      let byName = null
+      if (!expand && words.size) {
+        const name = new Set(tokens(opWords(op)).filter((t) => !STOP_STEMS.has(t)))
+        if (name.size === words.size && [...words].every((w) => name.has(w))) {
+          s -= 50
+          byName = 'the name is your words'
+        } else if ([...words].every((w) => name.has(w))) {
+          // the fewer other words in its name, the closer it is
+          const extra = name.size - words.size
+          s -= 5 + 5 / extra
+          byName = `all your words are in the name (and ${extra} other${extra === 1 ? '' : 's'})`
+        }
+      }
       if (!scored.has(r.key) || s < scored.get(r.key)) {
         scored.set(r.key, s)
-        matchedBy.set(r.key, r.matched)
+        matchedBy.set(r.key, byName ? [{ term: byName, in: ['operation name'] }, ...r.matched] : r.matched)
       }
     }
     // an exact name, even when the tokens miss it
@@ -276,6 +292,8 @@ export class Index {
     const last = latest(rows)
     return {
       operation: op,
+      // the operation's verb (Add, End, Get, Approve…): what it does, the first word of its name
+      verb: op.split('_')[0],
       service,
       also_in: unique(this.rows(op).filter((r) => r.service !== service).map((r) => r.service)),
       description: last.description,

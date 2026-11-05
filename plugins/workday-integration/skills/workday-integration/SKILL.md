@@ -4,7 +4,7 @@ description: Finds which Workday Web Service (SOAP) operation does what someone 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Reads only the files the person gives it; calls no Workday tenant. Not affiliated with Workday.
 metadata:
-  version: "0.2.3"
+  version: "0.2.4"
 ---
 
 # workday-integration: the Workday operation for a use case, and what to send it
@@ -40,9 +40,10 @@ has synthetic ones (made-up fields: never quote them as Workday's).
 1. **Translate first.** Put the person's words into Workday's English terms yourself — «pedir trabalho flexível» is
    «flexible work arrangement», «férias» is «time off», «aprovar» is «approve business process». Try two or three
    phrasings when the first finds little.
-2. **Search**: `search "<Workday's words>" --json`. Each result says what matched and where (the operation's name,
-   Workday's description, its fields). The order is bm25 over those words, nothing more: read the descriptions and
-   pick yourself. `--scope all` beyond HR; `--expand` adds a Portuguese synonym list when you have nothing better.
+2. **Search**: `search "<Workday's words>" --json`. Each result has its verb (Add, End, Get, Approve…) and says what
+   matched and where (the operation's name, Workday's description, its fields); an operation whose name is your words
+   comes first and says so. Beyond that the order is bm25, nothing more: read the descriptions and pick yourself — an
+   `Import_` operation is the batch version of the one without it. `--scope all` beyond HR; `--expand` adds a Portuguese synonym list when you have nothing better.
 3. **See what is around it**: `related <Operation> --json` — the business process Workday's description names, the
    operations on the same noun (Add_, End_, Get_…), whether a Get_ for it exists **among what is indexed**, and the
    operations on business process events (approve, deny, send back, cancel, rescind, the event's detail, a worker's
@@ -55,10 +56,13 @@ has synthetic ones (made-up fields: never quote them as Workday's).
 5. **Write**, then read its **decisions**:
    - Copilot Studio: `copilot <Operation> --json` → `parameters`, `inputs`, `power_fx` (the requestBody — the
      operation's element alone, as the connector takes it; `--envelope` only if asked for the whole envelope),
-     `response.read_paths`; `--include A/B/C` for an optional field.
+     `response.read_paths`; `--include A/B/C` for an optional field. To read values back (a balance, a date, a name),
+     name them: `--read <path>` (repeatable; paths as `show --response` gives them) — checked, with the connector's
+     path, an ESS-style XPath, the value's type, and whether it repeats (one per plan, per event…); without `--read`,
+     the spec reads the references the response returns.
    - Microsoft's Employee Self-Service agent: `ess <Operation>` writes a template of the ESS Workday pack
      (`workdayEntityConfigurationTemplate`: the scenario, the request template with `{Placeholders}`, the
-     `extractPath`s).
+     `extractPath`s — the fields of `--read`, or the references).
    - A test in SoapUI or Postman: `envelope <Operation> --wsse` (the whole envelope, the WS-Security header with
      placeholders).
 

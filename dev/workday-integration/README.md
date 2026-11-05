@@ -11,6 +11,8 @@ npm run assets -w dev/workday-integration/tools   # scripts/wws.mjs
 npm run check -w dev/workday-integration/tools    # the checks, and the same answers as the Python port
 npm run zip -w dev/workday-integration/tools      # dist/workday-integration.zip and -plugin.zip
 node dev/workday-integration/tools/check-real.mjs # the notes and the answers' sizes against Workday's real WSDLs (fetch first)
+node dev/workday-integration/tools/bench-real.mjs [--agent]  # 12 HR use cases (bench/cases.json) on the real WSDLs: the
+                                                  # search, and with --agent Claude with the plugin (about US$ 3)
 ```
 
 `checks/golden.json` is what the Python port answered on the synthetic examples (`skills/…/examples/`): the check

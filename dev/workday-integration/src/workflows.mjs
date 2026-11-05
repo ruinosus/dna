@@ -5,7 +5,7 @@ import { CONNECTOR_SOURCES, curatedNotes, NOTES, sourcesOf } from './notes.mjs'
 
 const rulesOf = (decisions) => Object.fromEntries([...new Set(decisions.map((d) => d.why))].map((w) => [w, DECISION_RULES[w]]))
 const CONNECTOR_SOURCES_OF = (notes) => Object.fromEntries(Object.entries(CONNECTOR_SOURCES).filter(([k]) => notes.some((n) => n.kind === k)))
-import { buildEnvelope, DECISION_RULES, findPath, LookupError, renderTree, responseHints, TreeBuilder } from './render.mjs'
+import { buildEnvelope, DECISION_RULES, findPath, LookupError, readPaths, renderTree, responseHints, TreeBuilder } from './render.mjs'
 
 export const camel = (v) => v.split(/[_\W]+/).filter(Boolean).map((p) => p[0].toUpperCase() + p.slice(1)).join('') || 'Value'
 
@@ -204,7 +204,7 @@ const INPUT_TYPE = { 'xsd:date': 'Date', 'xsd:boolean': 'Boolean', 'xsd:decimal'
 
 // The connector's requestBody is the operation's element, without the envelope and without WS-Security: the connection
 // authenticates (Microsoft's own ESS Workday templates send the element alone). bodyStyle 'envelope' for the whole one.
-export function copilotActionSpec(ix, op, { service, version, include = [], mode = 'required', bodyStyle = 'body', variablePrefix = 'Topic.', idTypes = {}, choose = [] } = {}) {
+export function copilotActionSpec(ix, op, { service, version, include = [], mode = 'required', bodyStyle = 'body', variablePrefix = 'Topic.', idTypes = {}, choose = [], read = [] } = {}) {
   const made = makeEnvelope(ix, op, { service, version, mode, include, bodyOnly: bodyStyle === 'body', idTypes, choose })
   // the request body Workday receives: without the comments the envelope carries for a person (the decisions say them)
   const env = made.xml === null ? made : { ...made, xml: made.xml.split('\n').filter((l) => !/^\s*<!--.*-->\s*$/.test(l)).map((l) => l.replace(/\s*<!--.*?-->/g, '')).join('\n') }
@@ -244,10 +244,16 @@ export function copilotActionSpec(ix, op, { service, version, include = [], mode
     if (v.doc) entry.description = [...v.doc].length > 100 ? [...v.doc].slice(0, 99).join('') + '…' : v.doc
     return entry
   })
-  const { root: respRoot, element: respEl } = treeFor(ix, op, row.service, row.version, 'response', 4)
+  const readDepth = Math.max(4, ...read.map((p) => p.split('/').length + 2))
+  const { root: respRoot, element: respEl } = treeFor(ix, op, row.service, row.version, 'response', readDepth)
   const response = { element: respEl }
+  if (read.length && !respRoot) throw new LookupError(`read: ${row.op} has no response schema indexed`)
   if (respRoot) {
-    response.read_paths = responseHints(respRoot)
+    // what to read back: the fields the caller asked for (checked), or, by default, the references it returns
+    const reads = read.length ? readPaths(respRoot, read) : null
+    response.read_paths = reads ? reads.map((x) => x.read_path) : responseHints(respRoot)
+    if (reads) response.reads = reads.map(({ read_path, ...rest }) => rest)
+    else response.read_default = 'the references the response returns (their WID); ask for other fields with read'
     if (response.read_paths.some((p) => p.includes('Event_Reference'))) response.tip = 'Keep the Event_Reference WID: it drives Get_Event_Detail and Approve/Deny/Cancel_Business_Process.'
   }
   // the essential first (an MCP client may cut a long answer): the formula, the template, the inputs, the decisions
@@ -259,7 +265,7 @@ const xmlAttr = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').
 /** The operation as a template of Microsoft's Employee Self-Service Workday pack (workdayEntityConfigurationTemplate):
  * a scenario whose apiRequest names the request template, the service and the version, with what to read back as
  * local-name() XPaths; and the request template, the element alone with {Placeholders}. */
-export function essTemplate(ix, op, { service, version, include = [], mode = 'required', idTypes = {}, choose = [] } = {}) {
+export function essTemplate(ix, op, { service, version, include = [], mode = 'required', idTypes = {}, choose = [], read = [] } = {}) {
   const env = makeEnvelope(ix, op, { service, version, mode, include, bodyOnly: true, idTypes, choose })
   if (env.xml === null) return { operation: env.operation, service: env.service, version: env.version, xml: null, hint: env.hint }
   const name = `Template_${env.operation}`
@@ -272,15 +278,22 @@ export function essTemplate(ix, op, { service, version, include = [], mode = 're
     .replace(/(<\/?)wd:/g, '$1bsvc:')
     .replace(/ wd:/g, ' bsvc:')
     .replace(/\{\{([A-Za-z0-9_]+)\}\}/g, '{$1}')
-  const { root } = treeFor(ix, op, env.service, env.version, 'response', 4)
+  const { root } = treeFor(ix, op, env.service, env.version, 'response', Math.max(4, ...read.map((p) => p.split('/').length + 2)))
+  if (read.length && !root) throw new LookupError(`read: ${env.operation} has no response schema indexed`)
   const keys = new Set()
-  const properties = (root ? responseHints(root) : []).map((p) => {
-    const m = /([A-Za-z0-9_]+)\/ID\[@wd:type='([^']+)'\]$/.exec(p)
-    let key = `${camel(m[1].replace(/_Reference$/, ''))}${m[2]}`
-    for (let n = 2; keys.has(key); n++) key = `${camel(m[1].replace(/_Reference$/, ''))}${m[2]}${n}`
+  const unique = (k) => {
+    let key = k
+    for (let n = 2; keys.has(key); n++) key = `${k}${n}`
     keys.add(key)
-    return { key, extractPath: `//*[local-name()='${m[1]}']/*[local-name()='ID' and @*[local-name()='type']='${m[2]}']/text()` }
-  })
+    return key
+  }
+  // the fields asked for (checked, with their full local-name() path), or by default the references it returns
+  const properties = read.length
+    ? readPaths(root, read).map((x) => ({ key: unique(camel(x.read_path.replace(/\/ID\[.*$/, '').split('/').pop().replace(/_Reference$/, '')) + (x.kind === 'reference' ? 'WID' : '')), extractPath: x.xpath, ...(x.repeats ? { repeats: true } : {}) }))
+    : (root ? responseHints(root) : []).map((p) => {
+      const m = /([A-Za-z0-9_]+)\/ID\[@wd:type='([^']+)'\]$/.exec(p)
+      return { key: unique(`${camel(m[1].replace(/_Reference$/, ''))}${m[2]}`), extractPath: `//*[local-name()='${m[1]}']/*[local-name()='ID' and @*[local-name()='type']='${m[2]}']/text()` }
+    })
   const pad = (n, s) => '  '.repeat(n) + s
   const xml = [
     '<?xml version="1.0" encoding="utf-8" ?>',

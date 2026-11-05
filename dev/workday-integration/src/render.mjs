@@ -443,3 +443,22 @@ export function responseHints(root, depth = 3) {
   walk(root, 0)
   return hints.slice(0, 25)
 }
+
+/** The fields of a response the caller wants to read, each checked against the tree: its path as the connector reads
+ * it, an XPath with local-name() (what Microsoft's ESS templates use), whether it repeats, its type. A path that is not
+ * there, or a container, is refused with the children to pick from. */
+export function readPaths(root, reads) {
+  return reads.map((r) => {
+    const node = findPath(root, r)
+    const chain = node.path.split('/')
+    const nodes = chain.map((_, i) => findPath(root, chain.slice(0, i + 1).join('/')))
+    const repeats = nodes.some((n) => n.max !== '1' && n.max !== '0')
+    const steps = `//*[local-name()='${chain[0]}']` + chain.slice(1).map((s) => `/*[local-name()='${s}']`).join('')
+    if (node.isReference) {
+      const types = node.children.find((c) => c.name === 'ID')?.attrs.find((a) => a.name === 'type')?.enum ?? []
+      return { kind: 'reference', read_path: `${node.path}/ID[@wd:type='WID']`, xpath: `${steps}/*[local-name()='ID' and @*[local-name()='type']='WID']/text()`, id_types: types.slice(0, 12), repeats }
+    }
+    if (!node.leaf) throw new LookupError(`read: ${node.path} holds fields, not a value — read one of them: ${node.children.map((c) => c.name).join(', ')}`)
+    return { kind: 'value', read_path: node.path, xpath: `${steps}/text()`, value_type: node.value_type, ...(node.enum?.length ? { enum: node.enum.slice(0, 12) } : {}), repeats }
+  })
+}

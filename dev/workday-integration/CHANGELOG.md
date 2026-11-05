@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.4 — 2026-11-05
+
+**Read the answer, and measure on real cases.**
+
+- `copilot` and `ess` take `--read <path>` (MCP: `read`): the response's fields to read back — a balance, a date, a
+  reference — checked against the tree, each with the connector's path, an XPath with `local-name()` (as Microsoft's
+  ESS templates), its type, and whether it repeats; a container or a path that is not there is refused with the fields
+  to pick. Without it, the references, said as the default.
+- `search`: each result has its verb (Add, End, Get…); an operation whose name is the words (in any order) comes
+  first, one that holds them all comes ahead (the fewer other words, the closer), and `matched` says so. `--expand`
+  unchanged.
+- `tools/bench-real.mjs` and `bench/cases.json`: 12 common HR use cases on Workday's real WSDLs — the search with
+  Workday's terms (12/12 in the first three; 9/12 before the name rule), and with `--agent` Claude with the plugin
+  from a request in Portuguese (12/12).
+
 ## 0.2.3 — 2026-11-05
 
 **Answers that fit.** VS Code's Copilot cut the 0.2.2 Copilot Studio spec (11 KB) before its Power Fx. Now:

@@ -1,0 +1,17 @@
+{
+  "about": "Common HR use cases, each with the operation that does it, to measure the catalog on Workday's real WSDLs (tools/bench-real.mjs): the search with Workday's terms, and an agent from a request in Portuguese.",
+  "cases": [
+    { "id": "pedir-ferias", "ask": "o colaborador pedir férias", "terms": "enter time off", "want": "Enter_Time_Off" },
+    { "id": "saldo-ferias", "ask": "o colaborador ver quanto saldo de férias ainda tem", "terms": "time off plan balance", "want": "Get_Time_Off_Plan_Balances" },
+    { "id": "telefone-trabalho", "ask": "atualizar o telefone e o e-mail de trabalho de um colaborador", "terms": "work contact information", "want": "Change_Work_Contact_Information" },
+    { "id": "endereco-casa", "ask": "o colaborador mudar o endereço residencial dele", "terms": "home contact information address", "want": "Change_Home_Contact_Information" },
+    { "id": "desligar", "ask": "desligar um funcionário da empresa", "terms": "terminate employee", "want": "Terminate_Employee" },
+    { "id": "mudar-cargo", "ask": "promover um colaborador para outro cargo", "terms": "job change", "want": "Change_Job" },
+    { "id": "gestor-aprova", "ask": "o gestor aprovar uma solicitação que está pendente com ele", "terms": "approve business process", "want": "Approve_Business_Process" },
+    { "id": "cancelar-pedido", "ask": "o colaborador cancelar um pedido que ainda está em andamento", "terms": "cancel business process", "want": "Cancel_Business_Process" },
+    { "id": "ver-gestor", "ask": "consultar o cargo e o gestor de um colaborador", "terms": "get workers", "want": "Get_Workers" },
+    { "id": "licenca", "ask": "o colaborador pedir uma licença (afastamento) por motivo de saúde", "terms": "leave of absence", "want": "Request_Leave_of_Absence" },
+    { "id": "encerrar-home-office", "ask": "encerrar o trabalho remoto de um colaborador", "terms": "end flexible work arrangement", "want": "End_Flexible_Work_Arrangement" },
+    { "id": "nome-social", "ask": "o colaborador mudar o nome pelo qual quer ser chamado", "terms": "preferred name", "want": "Change_Preferred_Name" }
+  ]
+}
