@@ -113,6 +113,12 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
     ['Approve_Business_Process', 'Approve_Business_Process'],
     ['histórico de eventos do colaborador', 'Get_Worker_Event_History'],
   ]) ok(top(q).some((o) => o.includes(want)), `search «${q}» → ${want}`, top(q).join(', '))
+  // 0.1.1: the short forms of the verbs (pede, aprova…), with the operation the person wants first
+  for (const [q, want] of [
+    ['colaborador pede trabalho flexível e o gestor aprova', 'Add_Flexible_Work_Arrangement'],
+    ['o colaborador encerra o trabalho remoto', 'End_Flexible_Work_Arrangement'],
+    ['o gestor cancela o pedido', 'Cancel_Business_Process'],
+  ]) ok(top(q)[0] === want, `search «${q}» → ${want} first`, top(q).join(', '))
   ok(!ix.search('journals').length && top('journals', { scope: 'all' })[0] === 'Get_Journals', 'the HR scope by default; --scope all for the rest')
   ok(!ix.search('expense sheet', { scope: 'all' }).length && ix.search('expense sheet', { scope: 'all', includeDeprecated: true }).length, 'a deprecated operation is left out')
   const none = getOperation(ix, 'Enter_Time_Off')

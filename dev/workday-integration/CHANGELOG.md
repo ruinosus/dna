@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.1 — 2026-11-05
+
+The search understands the short forms of the verbs people use — «pede», «peço», «aprova», «cancela», «encerra»… —
+so «colaborador pede trabalho flexível e o gestor aprova» finds `Add_Flexible_Work_Arrangement` first (it found the
+`End_` one: the inflection rule reaches only words of 6 letters or more).
+
 ## 0.1.0 — 2026-11-05
 
 First version: `scripts/wws.mjs` with `ingest`, `status`, `search`, `trace`, `show`, `envelope`, `copilot`, `ess`

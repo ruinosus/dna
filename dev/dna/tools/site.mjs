@@ -85,11 +85,11 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
   </section>
   <section class="sibling" id="workday-integration">
     <div>
-      <span class="meta"><span>a sibling plugin</span><span>0.1.0</span></span>
+      <span class="meta"><span>a sibling plugin</span><span>0.1.1</span></span>
       <h2>workday-integration</h2>
       <p>For whoever designs a Workday integration: a catalog of the Workday Web Services (SOAP) on your machine. Ask in Portuguese or English which operation does what you need; it traces the chain — who the user is, the operation, the approver's inbox, the business process — shows the request with every field, and writes the SOAP envelope, the spec of the Copilot Studio Workday connector's «Execute SOAP operation» (typed inputs, Power Fx, what to read back) and a template of Microsoft's Employee Self-Service Workday pack. As a skill and as an MCP server.</p>
       <p class="note">It reads the Operation Directory and the WSDLs from Workday Community or your files, and calls no tenant: no credential, nothing of a person in what it writes. Not affiliated with Workday.</p>
-      <p><a href="https://github.com/ruinosus/dna/tree/main/plugins/workday-integration">README</a> · <a href="https://github.com/ruinosus/dna/releases/tag/workday-integration-v0.1.0">release</a></p>
+      <p><a href="https://github.com/ruinosus/dna/tree/main/plugins/workday-integration">README</a> · <a href="https://github.com/ruinosus/dna/releases/tag/workday-integration-v0.1.1">release</a></p>
     </div>
     <pre>/plugin install workday-integration@dna
 

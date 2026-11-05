@@ -1,5 +1,5 @@
 // The HR services (the default scope), the PT/EN synonyms (accent-free token → Workday words) and the stopwords of the
-// search. Port of workday-wws-mcp's config.py.
+// search. Port of workday-wws-mcp's config.py, with the short verb forms added (0.1.1).
 export const DEFAULT_VERSION = "v47.0"
 
 // the HR universe (the default scope); everything else is reached with --scope all
@@ -44,6 +44,14 @@ export const SYNONYMS = {
   "finalizar": ["end"],
   "terminar": ["end"],
   "solicitar": ["request", "add", "submit"],
+  // the short forms of the verbs people use (the inflection rule reaches only words of 6 letters or more)
+  "pede": ["request", "add", "submit"],
+  "peco": ["request", "add", "submit"],
+  "pedi": ["request", "add", "submit"],
+  "pediu": ["request", "add", "submit"],
+  "pedem": ["request", "add", "submit"],
+  "solicita": ["request", "add", "submit"],
+  "quer": ["request", "add"],
   "pedir": ["request", "add", "submit"],
   "pedido": ["request"],
   "solicitacao": ["request"],
@@ -64,6 +72,12 @@ export const SYNONYMS = {
   "iniciar": ["start", "launch"],
   "executar": ["launch"],
   "aprovar": ["approve", "business", "process"],
+  "aprova": ["approve", "business", "process"],
+  "aprovou": ["approve", "business", "process"],
+  "nega": ["deny"],
+  "negou": ["deny"],
+  "cancela": ["cancel", "rescind"],
+  "encerra": ["end"],
   "aprovacao": ["approve", "business", "process"],
   "aprovador": ["approve", "business", "process"],
   "negar": ["deny"],
