@@ -1,6 +1,6 @@
 {
   "name": "workday-integration",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A local catalog of the Workday Web Services (SOAP) and of Workday's REST APIs, for whoever designs an integration: find the operation or the endpoint for a use case, see its fields (and, for REST, the security domains Workday names), and write the SOAP envelope, the Copilot Studio Workday connector's «Execute SOAP operation» or «Execute REST request» spec, or a template of Microsoft's Employee Self-Service Workday pack — as a skill and as an MCP server. It reads Workday Community's files or yours; it calls no tenant. Not affiliated with Workday.",
   "author": {
     "name": "ruinosus"

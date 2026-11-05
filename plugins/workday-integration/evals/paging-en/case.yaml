@@ -1,0 +1,41 @@
+schema_version: "1.0"
+name: workday-integration-paging-en
+description: A REST endpoint that pages its answer — the agent reads the decisions of the Execute REST request spec, adds the paging query parameters by name, and reads back the fields with the paths the endpoint shows.
+tags: [rest, paging, en]
+runs: 1
+context:
+  scaffold_script: setup.sh
+execution:
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Skill, Read, Write, Edit, Bash]
+  prompt: |
+    The Workday files I downloaded (the operation directory, WSDLs and a REST specification) are in ./workday-files. Our Copilot Studio agent should list every leave balance of the signed-in employee — all of their plans, even when there are more than one page of them — with the Workday connector's Execute REST request. Write the action spec to all-balances-spec.json, read back each plan's balance and the plan's id, and tell me in two sentences what the topic must do to get every page. Don't ask me anything.
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?workday-integration"'
+  - name: paged-spec
+    type: tool_used
+    tool: Bash
+    input_match: 'wws\.mjs[^\n]*\bcopilot-rest\b[^\n]*leaveBalances[^\n]*--include[ =]+(?:limit|offset)'
+  - name: the-file
+    type: file_exists
+    path: "all-balances-spec.json"
+  - name: the-spec
+    type: llm
+    focus: { source: file, path: all-balances-spec.json }
+    criteria: >-
+      The file is a spec for the Workday connector's Execute REST request (REST_Operation), method GET, whose
+      relativePath is peopleDesk/v1/{tenant}/workers/me/leaveBalances with the query parameters asOf, limit and offset
+      (each an input, e.g. ?asOf={{AsOf}}&limit={{Limit}}&offset={{Offset}}), the person as me; it reads each plan's
+      balance and the plan's id (data[].balance and data[].plan.id, or data.balance and data.plan.id), marked as
+      repeating. The files are synthetic examples with made-up names: a note saying so is right, not a fault.
+  - name: paging
+    type: llm
+    criteria: >-
+      The final answer says the topic must call the action again with a larger offset (offset + limit) until it has
+      every balance — for example until it has read total of them, or a page comes back with fewer than limit —, and
+      it uses only what the files show (limit's maximum of 100 and offset starting at 0 are in the specification),
+      without inventing another parameter or field.

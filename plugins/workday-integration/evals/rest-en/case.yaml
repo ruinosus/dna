@@ -28,8 +28,8 @@ graders:
     focus: { source: file, path: balances-spec.json }
     criteria: >-
       The file is a spec for the Workday connector's Execute REST request (REST_Operation) with method GET and a
-      relativePath of the form peopleDesk/v1/{tenant}/workers/me/leaveBalances (the signed-in person as me, not an ID
-      to fill), and it reads the balance of each plan (data.balance, marked as repeating, or an equivalent). The files
+      relativePath of the form peopleDesk/v1/{tenant}/workers/me/leaveBalances, with the required asOf query parameter
+      (?asOf= and its input) — the signed-in person as me, not an ID to fill —, and it reads the balance of each plan (data.balance, marked as repeating, or an equivalent). The files
       are synthetic examples with made-up names: the fields must be those the REST specification in the files has, and
       a note that the files are synthetic is right, not a fault.
   - name: why

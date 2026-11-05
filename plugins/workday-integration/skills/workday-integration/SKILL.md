@@ -4,7 +4,7 @@ description: Finds which Workday Web Service (SOAP) operation does what someone 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Reads only the files the person gives it; calls no Workday tenant. Not affiliated with Workday.
 metadata:
-  version: "0.3.1"
+  version: "0.3.2"
 ---
 
 # workday-integration: the Workday operation for a use case, and what to send it
@@ -87,7 +87,9 @@ Weigh them for the use case and say why you chose one:
   key.
 - `connector` lists the connector's ready-made actions (Get my worker profile, Get worker inbox tasks, Get worker
   direct reports, Transfer employee…), from Microsoft's documentation: one of them may do the job with no request to
-  write.
+  write. Each with the REST endpoint it likely calls (inferred: say it as likely); `connector <action>` gives one in
+  full — Microsoft's words for each parameter, what it returns, and what the page does not say (which form of worker
+  ID `workerID` takes: do not assume `me`).
 
 `✗ … not found` (exit 2): say the name is not in the catalog and show the closest ones it lists. `No WSDL ingested for
 <Service>` (exit 3): the operation is known only from the directory — give the person the command it prints; do not

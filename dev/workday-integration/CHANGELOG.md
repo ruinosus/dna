@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.2 — 2026-11-05
+
+- `connector` (MCP `wws_list_connector_actions`): each parameter with Microsoft's words, what each action returns,
+  and notes of a kind — `documentation`: what the page says, or does not (which form of worker ID `workerID` takes;
+  the inbox action names a status filter the page does not list); `inferred`: the REST endpoint each action likely
+  calls (the same resource and fields; `check-real.mjs` finds each in the index) and that Get my worker profile is how
+  the signed-in person's `workerID` is had. The list stays within 9 KB; `connector <action>` (MCP `action`) gives one
+  in full.
+- A cut list of values says how many are left out: `{WID|Absence_Case_ID|…+61}` in the trees, `… +61 more` in the XML
+  comments, `id_types_total` and `enum_total` in what to read; the legend says the JSON format lists them all.
+- `check-real.mjs` checks the inbox as the VS Code test asks it (the paths `rest` shows, paging as a decision); a new
+  eval, `paging-en` (every page of an answer: `--include limit --include offset`); `rest-en` follows the synthetic
+  specification's required `asOf`.
+
 ## 0.3.1 — 2026-11-05
 
 - `copilot-rest` (MCP `wws_rest_action_spec`): `read` and `include` take a path as `rest` shows it (`data[].id`), and

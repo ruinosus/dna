@@ -35,7 +35,7 @@ const USAGE = `usage: node scripts/wws.mjs <command> [options]   (--json on any 
                                domains and scope Workday's description names [--service S] [--depth N]
   copilot-rest <METHOD> <path> the Copilot Studio «Execute REST request (Preview)» spec [--id-form ID=me]… [--include a.b]…
                                [--read a.b]…
-  connector                    the Workday connector's actions (SOAP, REST, RaaS and the ready-made ones), from Microsoft's docs
+  connector [action]           the Workday connector's actions (SOAP, REST, RaaS and the ready-made ones), from Microsoft's docs
 search finds SOAP operations and REST endpoints together (api: soap|rest); --api soap|rest for one.
 fetch --rest [--rest-services staffing,common…] [--rest-all-versions]: the REST specifications too (the latest version of
                                each HR service by default)
@@ -271,8 +271,9 @@ export async function main(argv) {
       return 0
     }
     if (cmd === 'connector') {
-      const c = connectorActions()
-      say(opts.json ? JSON.stringify(c, null, 2) : [`The Workday connector's actions (${c.source}):`, ...c.actions.map((a) => `  ${a.id.padEnd(36)} ${a.name}${a.params.length ? ` (${a.params.join(', ')})` : ''} — ${a.about}`), '  (* required)'].join('\n'))
+      const c = connectorActions({ action: args[0] })
+      if (opts.json || args[0]) json(c)
+      else say([`The Workday connector's actions (${c.source}):`, ...c.actions.map((a) => `  ${a.id.padEnd(36)} ${a.name}${a.params.length ? ` (${a.params.join(', ')})` : ''} — ${a.about}${a.likely_endpoint ? `\n      likely calls (inferred): ${a.likely_endpoint}` : ''}`), '  (* required)', ...c.facts].join('\n'))
       return 0
     }
     if (cmd === 'rest' || cmd === 'copilot-rest') {

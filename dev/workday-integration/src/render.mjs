@@ -226,16 +226,16 @@ const short = (t) => (t ? t.replace(/xsd:/g, '') : '')
 
 export function renderTree(root, { maxDepth = 4, requiredOnly = false, docChars = 110 } = {}) {
   const lines = []
-  const legend = 'card: (none)=1  ?=0..1  *=0..n  +=1..n  |=choice member  @=attribute  ↻=recursive'
+  const legend = 'card: (none)=1  ?=0..1  *=0..n  +=1..n  |=choice member  @=attribute  ↻=recursive  {a|b|…+N}=N more values (the JSON format lists them all)'
   const walk = (n, depth) => {
     if (requiredOnly && depth > 0 && !n.required) return
     const bits = ['  '.repeat(depth) + (n.choice ? '| ' : '') + n.name + n.card]
     if (n.leaf) bits.push(`: ${short(n.value_type)}`)
     else if (n.type) bits.push(`<${n.type}>`)
-    if (n.enum?.length) bits.push('{' + n.enum.slice(0, 8).join('|') + (n.enum.length > 8 ? '|…' : '') + '}')
+    if (n.enum?.length) bits.push('{' + n.enum.slice(0, 8).join('|') + (n.enum.length > 8 ? `|…+${n.enum.length - 8}` : '') + '}')
     for (const a of n.attrs) {
       let txt = `@${a.name}${a.use === 'required' ? '' : '?'}`
-      if (a.enum?.length) txt += '{' + a.enum.slice(0, 6).join('|') + (a.enum.length > 6 ? '|…' : '') + '}'
+      if (a.enum?.length) txt += '{' + a.enum.slice(0, 6).join('|') + (a.enum.length > 6 ? `|…+${a.enum.length - 6}` : '') + '}'
       bits.push(txt)
     }
     if (n.recursive) bits.push('↻')
@@ -369,7 +369,7 @@ export function buildEnvelope(root, { operationVersion = null, include = [], mod
       if (enumv.length > 1 || asked !== undefined) decisions.push({ kind: 'id_type', path: n.path, chosen, options: enumv.slice(0, 12), ...(enumv.length > 12 ? { options_total: enumv.length } : {}), why: asked !== undefined ? 'chosen' : 'default' })
       const v = varName(new Node({ name: 'ID', path: `${n.path}/ID` }))
       variables.push({ var: v, path: `${n.path}/ID`, xsd_type: 'xsd:string', required: n.required, enum: enumv, doc: n.doc, id_type: chosen })
-      if (enumv.length > 1) out.push(`${pad}<!-- ${n.name}: ID @type options: ${enumv.slice(0, 12).join(', ')}${enumv.length > 12 ? '…' : ''} -->`)
+      if (enumv.length > 1) out.push(`${pad}<!-- ${n.name}: ID @type options: ${enumv.slice(0, 12).join(', ')}${enumv.length > 12 ? ` … +${enumv.length - 12} more` : ''} -->`)
       out.push(`${pad}<${tag}>`, `${pad}  <wd:ID wd:type="${chosen}">{{${v}}}</wd:ID>`, `${pad}</${tag}>`)
       return
     }
@@ -456,9 +456,9 @@ export function readPaths(root, reads) {
     const steps = `//*[local-name()='${chain[0]}']` + chain.slice(1).map((s) => `/*[local-name()='${s}']`).join('')
     if (node.isReference) {
       const types = node.children.find((c) => c.name === 'ID')?.attrs.find((a) => a.name === 'type')?.enum ?? []
-      return { kind: 'reference', read_path: `${node.path}/ID[@wd:type='WID']`, xpath: `${steps}/*[local-name()='ID' and @*[local-name()='type']='WID']/text()`, id_types: types.slice(0, 12), repeats }
+      return { kind: 'reference', read_path: `${node.path}/ID[@wd:type='WID']`, xpath: `${steps}/*[local-name()='ID' and @*[local-name()='type']='WID']/text()`, id_types: types.slice(0, 12), ...(types.length > 12 ? { id_types_total: types.length } : {}), repeats }
     }
     if (!node.leaf) throw new LookupError(`read: ${node.path} holds fields, not a value — read one of them: ${node.children.map((c) => c.name).join(', ')}`)
-    return { kind: 'value', read_path: node.path, xpath: `${steps}/text()`, value_type: node.value_type, ...(node.enum?.length ? { enum: node.enum.slice(0, 12) } : {}), repeats }
+    return { kind: 'value', read_path: node.path, xpath: `${steps}/text()`, value_type: node.value_type, ...(node.enum?.length ? { enum: node.enum.slice(0, 12), ...(node.enum.length > 12 ? { enum_total: node.enum.length } : {}) } : {}), repeats }
   })
 }

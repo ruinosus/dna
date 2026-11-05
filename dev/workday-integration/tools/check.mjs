@@ -8,7 +8,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Index, parseDirectory } from '../src/index.mjs'
 import { NOTES } from '../src/notes.mjs'
-import { buildEnvelope, findPath, LookupError, TreeBuilder } from '../src/render.mjs'
+import { buildEnvelope, findPath, LookupError, renderTree, TreeBuilder } from '../src/render.mjs'
 import { parseWsdl, parseXml, registryOf } from '../src/schema.mjs'
 import { parseOpenApi } from '../src/rest.mjs'
 import { connectorActions, copilotActionSpec, essTemplate, findElement, getOperation, getRestEndpoint, getType, listOperations, makeEnvelope, relatedOperations, restActionSpec } from '../src/workflows.mjs'
@@ -186,9 +186,12 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
   const noChoice = (v) => (typeof v === 'string' ? v.split('\n').filter((l) => !/^\s*<!-- (choice |one of )/.test(l)).join('\n').replace(/<!-- (choice |one of )[^>]*-->\n?/g, '') : v)
   // 0.2.3 cuts for an agent's answer — the spec's XML without comments, a field's documentation at 160 characters, an
   // input's description at 100 — applied to both sides, so what is compared is still the Python's logic
+  // 0.3.2: a cut list of values says how many are left out ({a|b|…+N}, «… +N more», id_types_total, enum_total) and
+  // the legend says what that is: back to the Python's «…» on our side
+  const cutLists = (t) => (typeof t === 'string' ? t.replace(/\|…\+\d+\}/g, '|…}').replace(/ … \+\d+ more -->/g, '… -->').replace('  {a|b|…+N}=N more values (the JSON format lists them all)', '') : t)
   const cut = (t, n) => ([...t].length > n ? [...t].slice(0, n - 1).join('') + '…' : t)
   const noComments = (t) => t.split('\n').filter((l) => !/^\s*<!--.*-->\s*$/.test(l)).map((l) => l.replace(/\s*<!--.*?-->/g, '')).join('\n')
-  const strip = (o, key = '', parent = '') => (Array.isArray(o) ? o.map((x) => strip(x, key, parent)) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).filter(([k]) => !['notes', 'score', 'hint', 'warning', 'decisions', 'decision_rules', 'matched', 'sources', 'cut', 'verb', 'read_default', 'api'].includes(k)).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => [k, strip(v, k, key)])) : typeof o === 'string' && key === 'doc' ? cut(o, 160) : typeof o === 'string' && key === 'description' && parent === 'inputs' ? cut(o, 100) : typeof o === 'string' && (key === 'xml_template' || key === 'power_fx') ? noComments(noChoice(o)) : noChoice(o))
+  const strip = (o, key = '', parent = '') => (Array.isArray(o) ? o.map((x) => strip(x, key, parent)) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).filter(([k]) => !['notes', 'score', 'hint', 'warning', 'decisions', 'decision_rules', 'matched', 'sources', 'cut', 'verb', 'read_default', 'api', 'id_types_total', 'enum_total'].includes(k)).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => [k, strip(v, k, key)])) : typeof o === 'string' && key === 'doc' ? cut(o, 160) : typeof o === 'string' && key === 'description' && parent === 'inputs' ? cut(o, 100) : typeof o === 'string' && (key === 'xml_template' || key === 'power_fx') ? noComments(noChoice(cutLists(o))) : noChoice(cutLists(o)))
   const run = (c) => {
     const a = c.args
     try {
@@ -375,6 +378,16 @@ globalThis.fetch = async (url) => {
   ok(throws(() => restActionSpec(rx, 'GET', '/workers/{ID}', { idForms: { ID: 'Badge_ID' } }), /takes WID, Employee_ID=…, Contingent_Worker_ID=…, me — not Badge_ID/) && throws(() => restActionSpec(rx, 'POST', '/workers/{ID}/arrangementRequests', { include: ['nope'] }), /not a field of/) && throws(() => restActionSpec(rx, 'GET', '/workers/{ID}/leaveBalances', { read: ['data'] }), /holds fields, not a value/), 'copilot-rest: a wrong ID form, body field or read is refused, with the options')
   const actions = connectorActions()
   ok(['SOAP_Operation', 'REST_Operation', 'RaaS_Operation', 'GetWorkerMe', 'GetWorkerInboxTasks', 'TransferEmployee'].every((id) => actions.actions.some((a) => a.id === id)) && /learn\.microsoft\.com/.test(actions.source), "connector: the connector's actions, from Microsoft's documentation")
+  const full = Object.fromEntries(actions.actions.map((x) => [x.id, connectorActions({ action: x.id })]))
+  ok(JSON.stringify(actions).length < 9000 && actions.actions.find((x) => x.id === 'GetWorkerInboxTasks').likely_endpoint === 'GET common/v1 /workers/{ID}/inboxTasks' && actions.facts.some((f) => /does not say which form of worker ID/.test(f)) && connectorActions({ action: 'get worker inbox' }).id === 'GetWorkerInboxTasks' && throws(() => connectorActions({ action: 'nope' }), /No connector action nope; the actions: SOAP_Operation/), 'connector: a list within 9 KB (the endpoint each likely calls, what the page does not say, once), an action in full by id or name', String(JSON.stringify(actions).length))
+  const ready = Object.values(full).filter((x) => x.preview && x.id !== 'REST_Operation')
+  const takesWorker = ready.filter((x) => x.params.some((q) => q.name === 'workerID'))
+  ok(Object.values(full).every((x) => x.params.every((q) => q.name && q.doc && typeof q.required === 'boolean')) && takesWorker.length >= 6 && takesWorker.every((x) => x.notes.some((n) => n.kind === 'documentation' && /does not say which form of worker ID/.test(n.text))), "connector: each parameter with Microsoft's words; where workerID is, that the page does not say its form")
+  const inbox = full.GetWorkerInboxTasks
+  ok(inbox.notes.some((n) => n.kind === 'documentation' && /no status parameter/.test(n.text)) && inbox.notes.some((n) => n.kind === 'inferred' && n.endpoint === 'GET common/v1 /workers/{ID}/inboxTasks') && inbox.notes.some((n) => n.kind === 'inferred' && /Get my worker profile/.test(n.text)) && /A link to the task in the Workday portal/.test(inbox.returns), 'connector: the inbox action — the status filter the page names but does not list, the endpoint it likely calls and how to get the workerID (inferred), what it returns')
+  ok(ready.flatMap((x) => x.notes ?? []).every((n) => ['documentation', 'inferred'].includes(n.kind) && (n.kind !== 'inferred' || n.endpoint || /likely/.test(n.text))) && actions.facts.some((f) => /OAuth 2\.0/.test(f)) && /deduction/.test(full.GetWorkerInboxTasks.sources.inferred), 'connector: each note of a kind, the inferred ones said as likely; OAuth 2.0 said once')
+  const longEnum = renderTree({ name: 'ID', card: '', leaf: true, value_type: 'xsd:string', attrs: [{ name: 'type', use: 'required', enum: 'ABCDEFGHIJ'.split('') }], children: [] })
+  ok(/@type\{A\|B\|C\|D\|E\|F\|…\+4\}/.test(longEnum) && /…\+N\}=N more values/.test(longEnum), 'show: a cut list of values says how many are left out ({…|…+4}), and the legend says where all of them are', longEnum)
   // fetch --rest, with a fake network: the directory page, its script, the spec
   const served = join(work, 'served-rest.json')
   writeFileSync(served, JSON.stringify({ page: '<script src="bundle.0a1b2c.js"></script>', bundle: 'x="peopleDesk_v1_20260101_oas2.json";y="peopleDesk_v1_20260101_oas2.json";z="otherThing_v2_20260101_oas2.json"', spec: readFileSync(REST, 'utf8') }))

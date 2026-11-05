@@ -473,4 +473,23 @@ export function restActionSpec(ix, method, path, { service, version, include = [
 }
 
 /** The connector's actions, as Microsoft documents them. */
-export const connectorActions = () => ({ source: `Microsoft: ${CONNECTOR_DOC} (checked on 2026-11-05)`, actions: CONNECTOR_ACTIONS })
+/** The connector's actions, as Microsoft documents them: a list (each action with its parameters' names, the endpoint
+ * it likely calls) or, with action, one in full (Microsoft's words for each parameter, what it returns, its notes). */
+export function connectorActions({ action } = {}) {
+  const source = `Microsoft: ${CONNECTOR_DOC} (checked on 2026-11-05)`
+  const sources = { documentation: "Microsoft's page of the connector", inferred: "a deduction from Microsoft's page and Workday's REST specifications, not said by either: check it, say it as likely" }
+  if (action) {
+    const a = CONNECTOR_ACTIONS.find((x) => x.id.toLowerCase() === action.toLowerCase() || x.name.toLowerCase().startsWith(action.toLowerCase()))
+    if (!a) throw new LookupError(`No connector action ${action}; the actions: ${CONNECTOR_ACTIONS.map((x) => x.id).join(', ')}`)
+    return { source, ...a, ...(a.notes ? { sources } : {}) }
+  }
+  return {
+    source,
+    facts: [
+      'Every ready-made action (Preview) and Execute REST request require OAuth 2.0 authentication; the connector allows 200 calls per connection per 60 s.',
+      'Where an action takes workerID, the page does not say which form of worker ID it takes (a WID, a Reference ID, me) — documentation.',
+      'likely_endpoint is inferred (the same resource and fields), not said by Microsoft: check it. Each action in full — Microsoft\'s words for each parameter, what it returns, its notes: action (--action / the action parameter).',
+    ],
+    actions: CONNECTOR_ACTIONS.map((a) => ({ id: a.id, name: a.name, about: a.about, params: a.params.map((q) => q.name + (q.required ? '*' : '')), ...(a.notes?.find((n) => n.endpoint) ? { likely_endpoint: a.notes.find((n) => n.endpoint).endpoint } : {}) })),
+  }
+}

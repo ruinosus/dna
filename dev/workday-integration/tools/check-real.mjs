@@ -9,6 +9,7 @@
 //
 //   node dev/workday-integration/tools/check-real.mjs [--index <folder>]   (the default index otherwise)
 import { defaultIndexDir, Index } from '../src/index.mjs'
+import { CONNECTOR_ACTIONS } from '../src/connector.mjs'
 import { NOTES } from '../src/notes.mjs'
 import { TreeBuilder } from '../src/render.mjs'
 import { copilotActionSpec, essTemplate, getOperation, getRestEndpoint, makeEnvelope, relatedOperations, restActionSpec } from '../src/workflows.mjs'
@@ -110,6 +111,23 @@ if (ix.data.rest.endpoints.length) {
       }
     }
   }
+  // the inbox, as the VS Code test asks it (0.3.1): read takes the paths rest shows; paging is a decision, include adds it
+  if (ix.data.rest.endpoints.some((e) => e.service === 'common' && e.path === '/workers/{ID}/inboxTasks')) {
+    const shownPaths = JSON.stringify(getRestEndpoint(ix, 'GET', '/workers/{ID}/inboxTasks', { service: 'common', fmt: 'json' })).match(/data\[\]\.due/g) ?? []
+    const plain = restActionSpec(ix, 'GET', '/workers/{ID}/inboxTasks', { service: 'common', idForms: { ID: 'me' }, read: ['data[].descriptor', 'data.status.descriptor'] })
+    const paged = restActionSpec(ix, 'GET', '/workers/{ID}/inboxTasks', { service: 'common', idForms: { ID: 'me' }, include: ['limit', 'offset'] })
+    const pg = plain.decisions.find((d) => d.kind === 'optional_query')
+    const inboxOk = shownPaths.length > 0 && plain.response.reads.every((r) => r.repeats && r.json_path.startsWith('data[]')) && pg?.left_out.some((q) => q.name === 'limit' && /maximum is 100/i.test(q.description)) && pg.left_out.some((q) => q.name === 'offset') && paged.parameters.relativePath === 'common/v1/{tenant}/workers/me/inboxTasks?limit={{Limit}}&offset={{Offset}}'
+    if (!inboxOk) restBad++
+    console.log(`${inboxOk ? '✓' : '✗'} REST: the inbox as the VS Code test asks it — read with the paths rest shows, paging (limit at most 100, offset) a decision, include adds it`)
+  }
+  // the endpoints the connector's ready-made actions likely call (inferred notes) are in the index, by service and path
+  const missing = CONNECTOR_ACTIONS.flatMap((x) => (x.notes ?? []).filter((n) => n.endpoint)).map((n) => n.endpoint).filter((ep) => {
+    const [m, sv, p] = ep.split(' ')
+    return !ix.data.rest.endpoints.some((e) => e.method === m && `${e.service}/` === sv.replace(/v\d+$/, '') && e.path === p)
+  })
+  if (missing.length) restBad++
+  console.log(`${missing.length ? '✗' : '✓'} connector: the endpoints its ready-made actions likely call are in the index${missing.length ? ` — not: ${missing.join('; ')}` : ''}`)
   console.log(`${restBad ? '✗' : '✓'} REST answers within ${MAX / 1000} KB (the largest: ${lr[0]}, ${(lr[1] / 1000).toFixed(1)} KB)`)
 } else console.log('• no REST indexed (fetch --rest): its checks skipped')
 process.exit(bad || big || restBad ? 1 : 0)
