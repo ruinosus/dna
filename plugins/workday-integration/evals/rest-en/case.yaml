@@ -1,0 +1,40 @@
+schema_version: "1.0"
+name: workday-integration-rest-en
+description: A use case a REST endpoint fits — the agent indexes the files (WSDLs and a REST specification), weighs SOAP and REST, picks the endpoint, writes the Execute REST request spec with the ID as me and what to read back, and says why.
+tags: [rest, en]
+runs: 1
+context:
+  scaffold_script: setup.sh
+execution:
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Skill, Read, Write, Edit, Bash]
+  prompt: |
+    The Workday files I downloaded (the operation directory, WSDLs and a REST specification) are in ./workday-files. Our Copilot Studio agent should show the signed-in employee their leave balance in each plan, with the Workday connector. Pick SOAP or REST, whichever fits, write the connector action spec to balances-spec.json, and tell me in one sentence why. Don't ask me anything.
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?workday-integration"'
+  - name: rest-spec
+    type: tool_used
+    tool: Bash
+    input_match: 'wws\.mjs[^\n]*\bcopilot-rest\b[^\n]*leaveBalances'
+  - name: the-file
+    type: file_exists
+    path: "balances-spec.json"
+  - name: the-spec
+    type: llm
+    focus: { source: file, path: balances-spec.json }
+    criteria: >-
+      The file is a spec for the Workday connector's Execute REST request (REST_Operation) with method GET and a
+      relativePath of the form peopleDesk/v1/{tenant}/workers/me/leaveBalances (the signed-in person as me, not an ID
+      to fill), and it reads the balance of each plan (data.balance, marked as repeating, or an equivalent). The files
+      are synthetic examples with made-up names: the fields must be those the REST specification in the files has, and
+      a note that the files are synthetic is right, not a fault.
+  - name: why
+    type: llm
+    criteria: >-
+      The final answer says why REST fits here — for example that the REST endpoint takes `me` for the signed-in
+      person, or that the SOAP side has no schema for a balance in these files — in a sentence or two, without
+      inventing a field.

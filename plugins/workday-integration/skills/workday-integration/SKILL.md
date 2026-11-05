@@ -4,13 +4,13 @@ description: Finds which Workday Web Service (SOAP) operation does what someone 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Reads only the files the person gives it; calls no Workday tenant. Not affiliated with Workday.
 metadata:
-  version: "0.2.4"
+  version: "0.3.0"
 ---
 
 # workday-integration: the Workday operation for a use case, and what to send it
 
 A catalog on this machine: `scripts/wws.mjs` indexes the **Operation Directory** and the **WSDLs** of the Workday Web
-Services, then answers with **what the WSDLs say** — the operations, their descriptions, their fields, what is around
+Services (SOAP), and the **OpenAPI specifications** of Workday's REST APIs, then answers with **what they say** — the operations, their descriptions, their fields, what is around
 them. **You** read it and decide which operation fits, what the chain is, and what to send: the tool does not decide
 for you, and what it ranks or chooses by default is a lead, not an answer. It **calls no tenant** and asks for no
 credential; what it writes has only `{{placeholders}}`, never a person's data. Paths are relative to this skill's
@@ -31,7 +31,8 @@ node scripts/wws.mjs ingest <files or folders>               # what the person a
 ```
 
 `fetch` downloads the Operation Directory page and the WSDLs of the HR services (or `--services A,B`, `all`) and
-indexes them; run it only when the person agrees to go to the network. `ingest` takes the directory page (`.html`, or
+indexes them; `fetch --rest` the REST specifications too (the latest version of each HR service); run it only when the
+person agrees to go to the network. `ingest` takes the directory page (`.html`, or
 its text as `.txt`) and the `<Service>.wsdl` (and `.xsd`) files. To try the commands without real files, `examples/`
 has synthetic ones (made-up fields: never quote them as Workday's).
 
@@ -70,6 +71,22 @@ has synthetic ones (made-up fields: never quote them as Workday's).
    an event, Employee_ID for a person), the **alternative kept** in a choice (the first, by default), an **optional
    container** taken in because it holds required fields. Decide each for the use case and change it —
    `--id-type Worker_Reference=WID`, `--choose Job_Reference` — and tell the person the ones that matter.
+
+### SOAP or REST
+
+The search gives both, each result with `api: soap|rest` (a REST one: `GET common/v1 /workers/{ID}/timeOffPlans`).
+Weigh them for the use case and say why you chose one:
+
+- REST: `rest <METHOD> <path>` shows the endpoint — its parameters (what each ID accepts: a WID, a Reference ID such as
+  `Employee_ID=…`, or `me` for the signed-in person), its body and response, and **the security domains and scope
+  Workday's description names** (facts: say them). `copilot-rest <METHOD> <path>` writes the spec of the connector's
+  **Execute REST request (Preview)**: `relativePath` with `{tenant}`, the body in JSON with placeholders, the Power Fx;
+  decide each ID's form (`--id-form ID=me`), the optional body fields (`--include a.b`), what to read (`--read a.b`).
+  It needs an OAuth 2.0 connection with the REST base URL, and runs as the signed-in user; a write has no idempotency
+  key.
+- `connector` lists the connector's ready-made actions (Get my worker profile, Get worker inbox tasks, Get worker
+  direct reports, Transfer employee…), from Microsoft's documentation: one of them may do the job with no request to
+  write.
 
 `✗ … not found` (exit 2): say the name is not in the catalog and show the closest ones it lists. `No WSDL ingested for
 <Service>` (exit 3): the operation is known only from the directory — give the person the command it prints; do not

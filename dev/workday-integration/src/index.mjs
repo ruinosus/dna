@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { HR_SERVICES, STOPWORDS, SYNONYMS } from './config.mjs'
 import { stem } from './porter.mjs'
 import { LookupError, TreeBuilder } from './render.mjs'
+import { pathWords } from './rest.mjs'
 import { registryOf } from './schema.mjs'
 
 /** The default folder: $WWS_INDEX, else $XDG_CACHE_HOME/dna/workday-integration, else ~/.cache/dna/workday-integration. */
@@ -86,11 +87,12 @@ export class Index {
     this.dir = dir
     this.file = join(dir, 'index.json')
     this.data = existsSync(this.file) ? JSON.parse(readFileSync(this.file, 'utf8')) : { format: 'dna/workday-integration/index-v1', operations: [], schemas: {}, fields: {}, meta: {} }
+    this.data.rest ??= { specs: {}, endpoints: [] }
     this.cache = new Map()
   }
 
   get empty() {
-    return !this.data.operations.length
+    return !this.data.operations.length && !this.data.rest.endpoints.length
   }
 
   save() {
@@ -156,6 +158,45 @@ export class Index {
     return Object.keys(ss.operations).length
   }
 
+  /** A REST spec (parseOpenApi's): its endpoints in the index, its definitions in rest/<service>-<version>.json. */
+  ingestRest(spec, sourcePath = null) {
+    mkdirSync(join(this.dir, 'rest'), { recursive: true })
+    const file = `rest/${spec.service}-${spec.version}.json`
+    writeFileSync(join(this.dir, file), JSON.stringify(spec.definitions))
+    const key = `${spec.service}|${spec.version}`
+    this.data.rest.specs[key] = { service: spec.service, version: spec.version, prefix: spec.prefix, file, endpoints: spec.endpoints.length, source_path: sourcePath, ingested_at: new Date().toISOString() }
+    this.data.rest.endpoints = this.data.rest.endpoints.filter((e) => !(e.service === spec.service && e.version === spec.version))
+    for (const e of spec.endpoints) this.data.rest.endpoints.push({ service: spec.service, version: spec.version, prefix: spec.prefix, ...e })
+    this.cache.delete(`rest|${key}`)
+    this.save()
+    return spec.endpoints.length
+  }
+
+  /** A REST spec's definitions. */
+  restDefinitions(service, version) {
+    const key = `rest|${service}|${version}`
+    if (this.cache.has(key)) return this.cache.get(key)
+    const s = this.data.rest.specs[`${service}|${version}`]
+    if (!s || !existsSync(join(this.dir, s.file))) return {}
+    const defs = JSON.parse(readFileSync(join(this.dir, s.file), 'utf8'))
+    this.cache.set(key, defs)
+    return defs
+  }
+
+  /** A REST endpoint by method and path (and service/version when the path is in more than one); the latest version. */
+  resolveRest(method, path, service, version) {
+    const m = method.toUpperCase()
+    const norm = (p) => '/' + p.replace(/^\/+/, '')
+    const hits = this.data.rest.endpoints.filter((e) => e.method === m && e.path === norm(path) && (!service || e.service === service) && (!version || e.version === version))
+    if (!hits.length) {
+      const near = this.data.rest.endpoints.filter((e) => e.path === norm(path)).map((e) => `${e.method} ${e.prefix}`)
+      throw new LookupError(`No REST endpoint ${m} ${norm(path)}${service ? ` in ${service}` : ''}${near.length ? `; on that path: ${[...new Set(near)].join(', ')}` : ''}`)
+    }
+    const services = [...new Set(hits.map((e) => e.service))]
+    if (services.length > 1 && !service) throw new LookupError(`${m} ${norm(path)} is in ${services.join(', ')}: say which with --service`)
+    return latest(hits)
+  }
+
   /** The search documents, one per operation and service, as FTS5 held them. */
   documents() {
     const keys = unique(this.data.operations.map((r) => `${r.op}|${r.service}`))
@@ -165,6 +206,16 @@ export class Index {
       const services = unique(this.rows(op).map((r) => r.service)).join(' ')
       const cols = [opWords(op), desc, opWords(services), this.data.fields[key] ?? ''].map(tokens)
       return { key, cols, length: cols.reduce((n, c) => n + c.length, 0) }
+    }).concat(this.restDocuments())
+  }
+
+  /** The REST endpoints as search documents: the path's words as the name, Workday's summary and description, the
+   * service, the parameters' and the body's field names. */
+  restDocuments() {
+    return this.data.rest.endpoints.map((e) => {
+      const fields = e.params.map((p) => p.name).join(' ')
+      const cols = [pathWords(e.path), `${e.summary} ${e.description}`, pathWords(e.service), fields].map(tokens)
+      return { key: `rest|${e.service}|${e.version}|${e.method} ${e.path}`, cols, length: cols.reduce((n, c) => n + c.length, 0) }
     })
   }
 
@@ -219,7 +270,7 @@ export class Index {
         const f = counts[k][i].reduce((s, x, c) => s + W[c] * x, 0)
         score += idf[i] * ((f * (1.2 + 1)) / (f + 1.2 * (1 - 0.75 + (0.75 * d.length) / avg)))
       })
-      const COLS = ['operation name', 'description', 'services', 'fields']
+      const COLS = d.key.startsWith('rest|') ? ['path', 'description', 'service', 'parameters'] : ['operation name', 'description', 'services', 'fields']
       const matched = phrases.map((p, i) => ({ term: terms[i], in: counts[k][i].map((x, c) => (x ? COLS[c] : null)).filter(Boolean) })).filter((m) => m.in.length)
       out.push({ key: d.key, score: -score, matched })
     })
@@ -229,7 +280,7 @@ export class Index {
   /** The operations the words find, best first, each with what it matched and where. By default the words are taken as
    * they are (in Workday's English, as the agent translates them); expand: true adds the Portuguese synonyms and the
    * verb boost of the Python port. */
-  search(query, { scope = 'hr', services = [], limit = 10, includeDeprecated = false, expand = false } = {}) {
+  search(query, { scope = 'hr', services = [], limit = 10, includeDeprecated = false, expand = false, api } = {}) {
     const terms = expand ? Index.expandTerms(query) : Index.plainTerms(query)
     let allowed = new Set(services)
     if (!allowed.size && scope === 'hr') allowed = new Set(HR_SERVICES)
@@ -238,7 +289,35 @@ export class Index {
     const words = new Set(expand ? [] : terms.flatMap((t) => tokens(t)).filter((t) => !STOP_STEMS.has(t)))
     const scored = new Map()
     const matchedBy = new Map()
+    // REST: every spec indexed (fetch --rest takes the HR ones); services, when named, narrow it
+    const restAllowed = new Set(services)
     for (const r of terms.length ? this.bm25(terms) : []) {
+      if (r.key.startsWith('rest|')) {
+        // a REST endpoint: its own scope; the same name rule, on its path's words
+        if (api === 'soap' || expand) continue
+        const [, svc, , mp] = r.key.split('|')
+        if (restAllowed.size && !restAllowed.has(svc)) continue
+        let s = r.score
+        let byName = null
+        if (words.size) {
+          // the endpoint's name is its service and its path, as the connector's relativePath has them (businessProcess/v1/events)
+          const name = new Set(tokens(`${pathWords(svc)} ${pathWords(mp.split(' ')[1])}`).filter((t) => !STOP_STEMS.has(t)))
+          if (name.size === words.size && [...words].every((w) => name.has(w))) {
+            s -= 50
+            byName = 'the service and path are your words'
+          } else if ([...words].every((w) => name.has(w))) {
+            const extra = name.size - words.size
+            s -= 5 + 5 / extra
+            byName = `all your words are in the service and path (and ${extra} other${extra === 1 ? '' : 's'})`
+          }
+        }
+        if (!scored.has(r.key) || s < scored.get(r.key)) {
+          scored.set(r.key, s)
+          matchedBy.set(r.key, byName ? [{ term: byName, in: ['path'] }, ...r.matched] : r.matched)
+        }
+        continue
+      }
+      if (api === 'rest') continue
       const [op, svc] = r.key.split('|')
       if (allowed.size && !allowed.has(svc)) continue
       let s = r.score
@@ -275,6 +354,15 @@ export class Index {
     }
     const results = []
     for (const [key, score] of [...scored].sort((a, b) => a[1] - b[1])) {
+      if (key.startsWith('rest|')) {
+        const [, svc, ver, mp] = key.split('|')
+        const [method, path] = mp.split(' ')
+        const e = this.data.rest.endpoints.find((x) => x.service === svc && x.version === ver && x.method === method && x.path === path)
+        const newer = Object.values(this.data.rest.specs).filter((x) => x.service === svc && cmpVersion(x.version, ver) > 0).map((x) => x.version)
+        results.push({ api: 'rest', operation: `${method} ${e.prefix} ${path}`, method, path, service: svc, version: ver, prefix: e.prefix, verb: method, description: e.summary || e.description.slice(0, 160), domains: e.domains, scope: e.scope, ...(newer.length ? { newer_versions: newer } : {}), score: Math.round(-score * 1000) / 1000, matched: matchedBy.get(key) ?? [] })
+        if (results.length >= limit) break
+        continue
+      }
       const [op, svc] = key.split('|')
       const info = this.operationSummary(op, svc)
       if (!info || (info.deprecated && !includeDeprecated)) continue
@@ -291,6 +379,7 @@ export class Index {
     if (!rows.length) return null
     const last = latest(rows)
     return {
+      api: 'soap',
       operation: op,
       // the operation's verb (Add, End, Get, Approve…): what it does, the first word of its name
       verb: op.split('_')[0],
@@ -359,6 +448,7 @@ export class Index {
       services: [...perService.values()].sort((a, b) => b.ops.size - a.ops.size || (a.service < b.service ? -1 : 1)).map((s) => ({ service: s.service, operations: s.ops.size, versions: s.versions.join(',') })),
       schemas: Object.values(this.data.schemas).sort((a, b) => (a.service < b.service ? -1 : 1)).map(({ service, version, source_path, ingested_at }) => ({ service, version, source_path, ingested_at })),
       meta: this.data.meta,
+      rest: { specs: Object.values(this.data.rest.specs).map(({ service, version, endpoints }) => ({ service, version, endpoints })).sort((a, b) => (a.service < b.service ? -1 : 1)), endpoints: this.data.rest.endpoints.length },
     }
   }
 }

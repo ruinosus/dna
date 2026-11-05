@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.3.0 — 2026-11-05
+
+**Workday's REST APIs beside the SOAP.**
+
+- `fetch --rest` downloads Workday's REST specifications (OpenAPI 2.0) from Workday Community — the latest version of
+  each HR service, or `--rest-services`, `--rest-all-versions`; their names are read from the directory page's script,
+  and a page that changed is said, with `ingest` of the files as the way. `ingest` takes `.json` specifications too.
+- `search` finds SOAP operations and REST endpoints together, each with `api: soap|rest` (a REST one as
+  `GET common/v1 /workers/{ID}/timeOffPlans`, its domains with it); `--api` for one. A REST endpoint's name is its
+  service and path.
+- `rest <METHOD> <path>`: an endpoint — its parameters (what each ID accepts: a WID, a Reference ID, `me`), its body
+  and response as trees ($ref and allOf resolved), and the security domains and scope Workday's description names, as
+  facts.
+- `copilot-rest <METHOD> <path>`: the spec of the connector's Execute REST request (Preview) — `relativePath` with
+  `{tenant}`, the JSON body with placeholders (the required fields, `--include`), the Power Fx of both, what to read
+  (`--read` dotted paths), and its decisions (`--id-form ID=me`, the optional fields left out).
+- `connector`: the connector's actions as Microsoft documents them (SOAP, REST, RaaS and the ready-made ones).
+- MCP: `wws_get_rest_endpoint`, `wws_rest_action_spec`, `wws_list_connector_actions`; `api` on the search.
+- `status` shows the REST indexed. The bench has three REST cases (15/15 in the search); `check-real.mjs` checks a
+  known endpoint's domains and the REST answers' sizes. A synthetic REST specification, written from scratch, for the
+  checks.
+
 ## 0.2.4 — 2026-11-05
 
 **Read the answer, and measure on real cases.**

@@ -160,3 +160,9 @@ export const SYNONYMS = {
   "seguranca": ["security", "group"],
   "conta": ["account"],
 }
+
+// the HR universe of the REST APIs (the default scope; --scope all for the rest)
+export const HR_REST_SERVICES = ["absenceManagement", "asor", "attachments", "benefitEnrollmentEventOfferings", "benefitPartner", "businessProcess", "common", "communications", "compensation", "connect", "globalPayroll", "helpArticle", "helpCase", "holiday", "journeys", "learning", "payroll", "payrollPublic", "performanceEnablement", "performanceManagement", "person", "privacy", "recruiting", "request", "skill", "staffing", "talentManagement", "timeTracking", "wql"]
+
+// the REST directory of Workday Community: its page, and the script whose text names the specification files
+export const COMMUNITY_REST_URL = "https://community.workday.com/sites/default/files/file-hosting/restapi/"

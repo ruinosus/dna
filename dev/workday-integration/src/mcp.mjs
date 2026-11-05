@@ -10,7 +10,7 @@ import { z } from 'zod'
 import { HR_SERVICES } from './config.mjs'
 import { defaultIndexDir, Index } from './index.mjs'
 import { LookupError } from './render.mjs'
-import { copilotActionSpec, essTemplate, findElement, getOperation, getType, listOperations, makeEnvelope, relatedOperations } from './workflows.mjs'
+import { connectorActions, copilotActionSpec, essTemplate, findElement, getOperation, getRestEndpoint, getType, listOperations, makeEnvelope, relatedOperations, restActionSpec } from './workflows.mjs'
 
 const VERSION = typeof __WWS_VERSION__ === 'string' ? __WWS_VERSION__ : '0.0.0'
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false }
@@ -25,7 +25,7 @@ const failure = (text) => ({ content: [{ type: 'text', text }], isError: true })
 function tool(server, name, description, shape, run) {
   server.registerTool(name, { description, inputSchema: shape, annotations: READ_ONLY }, async (args) => {
     const ix = index()
-    if (ix.empty && name !== 'wws_index_status') return failure(EMPTY)
+    if (ix.empty && name !== 'wws_index_status' && name !== 'wws_list_connector_actions') return failure(EMPTY)
     try {
       return answer(run(ix, args))
     } catch (e) {
@@ -46,8 +46,8 @@ export function server() {
   const read = z.array(z.string()).optional().describe('The response fields to read back, as paths (wws_get_operation with response: true shows them): ["Add_Flexible_Work_Arrangement_Response/Request_Flexible_Work_Arrangement_Event_Reference"]; checked; by default, the references the response returns')
   const choose = z.array(z.string()).optional().describe('The alternative to keep in a choice, by name or path: ["Job_Reference"]; each envelope lists the alternatives in its decisions')
 
-  tool(s, 'wws_search_operations', "Search the operations by words, best first (bm25 over the operation's name, Workday's description, its services and its fields), each with its verb (Add, End, Get, Approve…) and what matched where. Write Workday's English terms — translate the person's words yourself (\"flexible work arrangement\", \"time off\", \"business process\"); expand: true adds a Portuguese synonym list. The ranking is a lead, not an answer: confirm with wws_get_operation.", { query: z.string(), scope, limit: z.number().int().min(1).max(50).optional(), expand: z.boolean().optional() },
-    (ix, a) => ({ results: ix.search(a.query, { scope: a.scope ?? 'hr', limit: a.limit ?? 10, expand: Boolean(a.expand) }) }))
+  tool(s, 'wws_search_operations', "Search the SOAP operations and the REST endpoints by words, best first (bm25 over the name or path, Workday's description, the service and the fields), each with api: soap|rest and with its verb (Add, End, Get, Approve…) and what matched where. Write Workday's English terms — translate the person's words yourself (\"flexible work arrangement\", \"time off\", \"business process\"); expand: true adds a Portuguese synonym list. The ranking is a lead, not an answer: confirm with wws_get_operation.", { query: z.string(), scope, limit: z.number().int().min(1).max(50).optional(), expand: z.boolean().optional(), api: z.enum(['soap', 'rest']).optional().describe('only SOAP operations or only REST endpoints; both by default') },
+    (ix, a) => ({ results: ix.search(a.query, { scope: a.scope ?? 'hr', limit: a.limit ?? 10, expand: Boolean(a.expand), api: a.api }) }))
   tool(s, 'wws_related_operations', "Facts around an operation, no verdict: the business process its Workday description names (quoted), the operations on the same noun (Add_/End_/Get_…), whether a Get_ for it exists among what is indexed, the operations on business process events (approve, deny, send back, cancel, rescind, event detail, a worker's event history) with Workday's descriptions, and the curated notes with their source.", { operation, service, version },
     (ix, a) => relatedOperations(ix, a.operation, { service: a.service, version: a.version }))
   tool(s, 'wws_list_operations', "Every operation of a service, with Workday's description and whether its WSDL is indexed; filter by a word.", { service: z.string(), filter: z.string().optional() },
@@ -71,6 +71,12 @@ export function server() {
       const hr = new Set(HR_SERVICES)
       return { services: st.services.filter((x) => (a.scope ?? 'hr') === 'all' || hr.has(x.service)).map((x) => ({ ...x, schema: withSchema.has(x.service) })) }
     })
+  const method = z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'get', 'post', 'put', 'patch', 'delete'])
+  tool(s, 'wws_get_rest_endpoint', "A REST endpoint: its parameters (what each ID accepts: a WID, a Reference ID such as Employee_ID=…, or me), its body and response as trees, the security domains and the scope Workday's description names (facts of the specification), and the other endpoints on the same path.", { method, path: z.string().describe('the path as the search gives it, e.g. /workers/{ID}/timeOffPlans'), service, version, depth: z.number().int().min(1).max(8).optional(), format: z.enum(['text', 'json']).optional() },
+    (ix, a) => getRestEndpoint(ix, a.method, a.path, { service: a.service, version: a.version, depth: a.depth ?? 4, fmt: a.format ?? 'text' }))
+  tool(s, 'wws_rest_action_spec', "The spec of the Copilot Studio Workday connector's «Execute REST request (Preview)» (REST_Operation) for an endpoint: relativePath with {tenant} and the path's IDs as inputs, method, contentType, a JSON body with placeholders (the required fields, and include), the Power Fx of the path and the body, what to read back (read: dotted paths), and its decisions — each ID's form (WID by default; id_forms: { ID: 'me' } or a Reference ID type), the optional fields left out.", { method, path: z.string(), service, version, include: z.array(z.string()).optional().describe('optional body fields to add, as dotted paths'), id_forms: z.record(z.string()).optional().describe('how a path ID is written: { "ID": "me" }, { "ID": "Employee_ID" }; WID by default'), read: z.array(z.string()).optional().describe('the response fields to read, as dotted paths (wws_get_rest_endpoint shows them)') },
+    (ix, a) => restActionSpec(ix, a.method, a.path, { service: a.service, version: a.version, include: a.include ?? [], idForms: a.id_forms ?? {}, read: a.read ?? [] }))
+  tool(s, 'wws_list_connector_actions', "The Workday connector's actions as Microsoft documents them: Execute SOAP operation, Execute REST request (Preview), Execute RaaS operation, and the ready-made ones (Get my worker profile, Get worker inbox tasks, Get worker direct reports, Get worker pay slips, Search workers, Transfer employee…), with their parameters.", {}, () => connectorActions())
   tool(s, 'wws_index_status', 'What is indexed: operations, services, the WSDLs and when.', {}, (ix) => (ix.empty ? { empty: true, hint: EMPTY, index: ix.dir } : ix.status()))
   return s
 }

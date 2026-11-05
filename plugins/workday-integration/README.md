@@ -1,8 +1,8 @@
 # workday-integration
 
 A sibling of [DNA](https://github.com/ruinosus/dna) for whoever designs a Workday integration — and for the agent
-helping them: a catalog of the **Workday Web Services (SOAP)** on your machine, so the agent finds and reads an
-operation without reading WSDL or XSD. It hands over **what the WSDLs say** and lets the agent decide:
+helping them: a catalog of the **Workday Web Services (SOAP)** and of **Workday's REST APIs** on your machine, so the
+agent finds and reads an operation or an endpoint without reading WSDL, XSD or OpenAPI. It hands over **what the WSDLs say** and lets the agent decide:
 
 - **search** by words, each result with what matched and where; **related**: what is around an operation (the
   business process Workday's description names, the operations on the same noun, whether a `Get_` exists, the
@@ -15,7 +15,10 @@ operation without reading WSDL or XSD. It hands over **what the WSDLs say** and 
 - the spec of the **Copilot Studio Workday connector's «Execute SOAP operation»**: service and version, typed inputs,
   the XML template (the operation's element, as the connector takes it), the **Power Fx** of `requestBody` (free text
   escaped, dates as text), what to read back, and the identity and security notes;
-- a **template of Microsoft's Employee Self-Service Workday pack** (`workdayEntityConfigurationTemplate`).
+- a **template of Microsoft's Employee Self-Service Workday pack** (`workdayEntityConfigurationTemplate`);
+- for REST: an endpoint with its parameters (what each ID accepts, `me` too), body and response, and **the security
+  domains and scope** Workday's description names; and the spec of the connector's **Execute REST request (Preview)**
+  (`relativePath` with `{tenant}`, the JSON body, the Power Fx); the connector's ready-made actions (`connector`).
 
 It reads the Operation Directory text and the WSDLs **you** give it, and **calls no tenant**: no credential, no
 token, nothing of a person in what it writes. It carries no Workday file: the examples are synthetic, with made-up
@@ -51,6 +54,9 @@ node scripts/wws.mjs envelope Add_Flexible_Work_Arrangement --id-type Worker_Ref
 node scripts/wws.mjs copilot End_Flexible_Work_Arrangement --json
 node scripts/wws.mjs copilot Get_Time_Off_Plan_Balances --read <path to Time_Off_Plan_Balance>
 node scripts/wws.mjs ess Approve_Business_Process
+node scripts/wws.mjs fetch --rest
+node scripts/wws.mjs rest GET "/workers/{ID}/timeOffPlans"
+node scripts/wws.mjs copilot-rest GET "/workers/{ID}/timeOffPlans" --id-form ID=me --read data.timeOffBalance
 ```
 
 Every command takes `--json`. The index is in `~/.cache/dna/workday-integration` (or `--index <folder>`, or
@@ -59,7 +65,8 @@ Every command takes `--json`. The index is in `~/.cache/dna/workday-integration`
 ## As an MCP server
 
 The same catalog as MCP tools (`wws_search_operations`, `wws_related_operations`, `wws_list_operations`,
-`wws_get_type`, `wws_find_element`, `wws_get_operation`, `wws_build_envelope`, `wws_copilot_action_spec`, `wws_ess_template`, `wws_list_services`, `wws_index_status`), all
+`wws_get_type`, `wws_find_element`, `wws_get_operation`, `wws_build_envelope`, `wws_get_rest_endpoint`,
+`wws_rest_action_spec`, `wws_list_connector_actions`, `wws_copilot_action_spec`, `wws_ess_template`, `wws_list_services`, `wws_index_status`), all
 read-only, over stdio: `scripts/mcp.mjs`, one file. Claude Code starts it with the plugin (`.mcp.json`). Elsewhere —
 VS Code's Copilot (`.vscode/mcp.json`), Claude Desktop:
 

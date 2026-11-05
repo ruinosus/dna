@@ -1,0 +1,61 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "peopleDesk",
+    "version": "v1",
+    "description": "SYNTHETIC EXAMPLE, written for workday-integration's checks: the shape of a Workday REST specification (OpenAPI 2.0, $ref, allOf, an ID that accepts me, Secured By Domain and Scope in the descriptions), with made-up resources and fields. It is not one of Workday's APIs."
+  },
+  "basePath": "/peopleDesk/v1",
+  "securityDefinitions": { "OAuth2": { "type": "oauth2", "authorizationUrl": "https://<tenantAuthorizationHostname>", "flow": "implicit" } },
+  "paths": {
+    "/workers/{ID}": {
+      "get": {
+        "tags": ["workers"],
+        "summary": "Retrieves a person's card.",
+        "description": "Retrieves the card of the person with the specified ID.\n\n<b>Secured By Domain:</b> Self-Service: Card, Person Data: Card\n\n<b>Scope:</b> People Basics",
+        "parameters": [{ "$ref": "#/parameters/workerId" }],
+        "responses": { "200": { "description": "OK", "schema": { "$ref": "#/definitions/card_1" } } }
+      }
+    },
+    "/workers/{ID}/leaveBalances": {
+      "get": {
+        "tags": ["workers"],
+        "summary": "Retrieves the leave balances of a person, one per plan.",
+        "description": "Retrieves the leave balances of a person.\n\n<b>Secured By Domain:</b> Self-Service: Leave Balances\n\n<b>Scope:</b> Time Away",
+        "parameters": [{ "$ref": "#/parameters/workerId" }, { "name": "limit", "in": "query", "type": "integer", "required": false, "description": "How many to return." }],
+        "responses": { "200": { "description": "OK", "schema": { "$ref": "#/definitions/leaveBalances_1" } } }
+      }
+    },
+    "/workers/{ID}/arrangementRequests": {
+      "post": {
+        "tags": ["workers"],
+        "summary": "Starts a request for a work arrangement for a person.",
+        "description": "Starts the business process that asks for a work arrangement.\n\n<b>Secured By Domain:</b> Self-Service: Arrangements\n\n<b>Scope:</b> People Basics",
+        "parameters": [{ "$ref": "#/parameters/workerId" }, { "in": "body", "name": "arrangementRequest", "required": true, "schema": { "$ref": "#/definitions/arrangementRequest_1" } }],
+        "responses": { "201": { "description": "Created", "schema": { "$ref": "#/definitions/arrangementRequest_1" } } }
+      }
+    }
+  },
+  "parameters": {
+    "workerId": {
+      "name": "ID", "in": "path", "required": true, "type": "string",
+      "description": "The Workday ID of the resource.\n\nAccepts:\n- **Workday ID**: Workday ID (32-character lowercase hexadecimal string).\n- **Reference ID**: Workday reference ID (Type=Value). Valid types: Employee_ID, Contingent_Worker_ID\n- **Named entry**: Valid values: `me`."
+    }
+  },
+  "definitions": {
+    "ref_1": { "type": "object", "required": ["id"], "properties": { "id": { "type": "string", "description": "Workday Id or Reference Id of the instance." }, "descriptor": { "type": "string", "readOnly": true, "description": "The display name of the instance" } } },
+    "card_1": { "type": "object", "properties": { "preferredName": { "type": "string", "description": "The name the person goes by." }, "team": { "$ref": "#/definitions/ref_1" } } },
+    "leaveBalances_1": { "type": "object", "properties": { "total": { "type": "integer" }, "data": { "type": "array", "items": { "type": "object", "properties": { "balance": { "type": "number", "description": "What is left in the plan." }, "plan": { "$ref": "#/definitions/ref_1" } } } } } },
+    "arrangementRequest_1": {
+      "allOf": [
+        { "type": "object", "required": ["startDate", "kind"], "properties": {
+          "startDate": { "type": "string", "format": "date", "description": "The first day of the arrangement." },
+          "kind": { "$ref": "#/definitions/ref_1" },
+          "note": { "type": "string", "description": "A note for the approver." },
+          "office": { "$ref": "#/definitions/ref_1" },
+          "id": { "type": "string", "readOnly": true, "description": "The request's ID." }
+        } }
+      ]
+    }
+  }
+}

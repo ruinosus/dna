@@ -5,11 +5,12 @@
 // network (Workday Community), and only when asked.
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { COMMUNITY_DIRECTORY_URL, COMMUNITY_WSDL_URL, DEFAULT_VERSION, HR_SERVICES } from './config.mjs'
+import { COMMUNITY_DIRECTORY_URL, COMMUNITY_REST_URL, COMMUNITY_WSDL_URL, DEFAULT_VERSION, HR_REST_SERVICES, HR_SERVICES } from './config.mjs'
 import { defaultIndexDir, Index } from './index.mjs'
 import { LookupError } from './render.mjs'
 import { parseWsdl } from './schema.mjs'
-import { copilotActionSpec, essTemplate, findElement, getOperation, getType, listOperations, makeEnvelope, relatedOperations } from './workflows.mjs'
+import { parseOpenApi } from './rest.mjs'
+import { connectorActions, copilotActionSpec, essTemplate, findElement, getOperation, getRestEndpoint, getType, listOperations, makeEnvelope, relatedOperations, restActionSpec } from './workflows.mjs'
 
 const USAGE = `usage: node scripts/wws.mjs <command> [options]   (--json on any command; --index <folder> for another index)
   ingest <files or folders>…   the Operation Directory (its page .html, or its text .txt) and the WSDL/XSD files
@@ -30,15 +31,23 @@ const USAGE = `usage: node scripts/wws.mjs <command> [options]   (--json on any 
                                --envelope for the whole one) [--include …] [--id-type …] [--choose …] [--read A/B]…
   ess <Operation>              a template of Microsoft's Employee Self-Service Workday pack [--include …] [--id-type …]
                                [--read A/B]…
+  rest <METHOD> <path>         a REST endpoint: its parameters (what each ID accepts), body and response, the security
+                               domains and scope Workday's description names [--service S] [--depth N]
+  copilot-rest <METHOD> <path> the Copilot Studio «Execute REST request (Preview)» spec [--id-form ID=me]… [--include a.b]…
+                               [--read a.b]…
+  connector                    the Workday connector's actions (SOAP, REST, RaaS and the ready-made ones), from Microsoft's docs
+search finds SOAP operations and REST endpoints together (api: soap|rest); --api soap|rest for one.
+fetch --rest [--rest-services staffing,common…] [--rest-all-versions]: the REST specifications too (the latest version of
+                               each HR service by default)
 --read: the response's fields to read back (paths as show --response gives them), checked; by default, its references.
 Each envelope, spec and template lists its decisions (an ID type, a choice's alternative, an optional container):
 change any of them with --id-type and --choose.`
 
-const VALUED = new Set(['--index', '--scope', '--limit', '--path', '--depth', '--service', '--version', '--include', '--services', '--filter', '--id-type', '--choose', '--read'])
-const FLAGS = new Set(['--json', '--response', '--all', '--wsse', '--body-only', '--envelope', '--expand'])
+const VALUED = new Set(['--index', '--scope', '--limit', '--path', '--depth', '--service', '--version', '--include', '--services', '--filter', '--id-type', '--choose', '--read', '--api', '--id-form', '--rest-services'])
+const FLAGS = new Set(['--json', '--response', '--all', '--wsse', '--body-only', '--envelope', '--expand', '--rest', '--rest-all-versions'])
 
 function parseArgs(argv) {
-  const opts = { include: [], idTypes: {}, choose: [], read: [] }
+  const opts = { include: [], idTypes: {}, choose: [], read: [], idForms: {} }
   const rest = []
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -48,6 +57,11 @@ function parseArgs(argv) {
       if (a === '--include') opts.include.push(v)
       else if (a === '--choose') opts.choose.push(v)
       else if (a === '--read') opts.read.push(v)
+      else if (a === '--id-form') {
+        const m = /^(.+?)=(.+)$/.exec(v)
+        if (!m) throw new LookupError(`--id-form takes Param=Form, e.g. ID=me (got ${v})`)
+        opts.idForms[m[1]] = m[2]
+      }
       else if (a === '--id-type') {
         const m = /^(.+?)=(.+)$/.exec(v)
         if (!m) throw new LookupError(`--id-type takes Reference=Type, e.g. Worker_Reference=WID (got ${v})`)
@@ -62,6 +76,8 @@ function parseArgs(argv) {
 }
 
 const say = (s) => process.stdout.write(s + '\n')
+// the one way out to the network: Workday Community, for fetch
+const get = (url) => fetch(url, { headers: { 'User-Agent': 'dna-workday-integration (developer catalog)' } })
 const json = (v) => say(JSON.stringify(v, null, 2))
 
 /** The WSDL, .txt and .html files under the paths (a folder is walked; .xsd files are read through their WSDL). */
@@ -69,7 +85,7 @@ function filesOf(paths) {
   const out = []
   const walk = (p) => {
     if (statSync(p).isDirectory()) for (const f of readdirSync(p).sort()) walk(join(p, f))
-    else if (/\.(wsdl|txt|html?)$/i.test(p)) out.push(p)
+    else if (/\.(wsdl|txt|html?|json)$/i.test(p)) out.push(p)
   }
   for (const p of paths) {
     if (!existsSync(p)) throw new LookupError(`${p} is not there`)
@@ -83,12 +99,20 @@ function ingest(ix, paths, opts) {
   const lines = []
   let ops = 0
   let schemas = 0
+  let endpoints = 0
   // the directory first: its descriptions win over a WSDL's, as in the Python port
   const files = filesOf(paths.map((p) => resolve(p)))
   const isDirectory = (f) => /\.(txt|html?)$/i.test(f)
   for (const f of [...files.filter(isDirectory), ...files.filter((x) => !isDirectory(x))]) {
     try {
-      if (isDirectory(f)) {
+      if (/\.json$/i.test(f)) {
+        const spec = JSON.parse(readFileSync(f, 'utf8'))
+        if (spec.swagger !== '2.0') continue // not an OpenAPI 2.0 file (an index.json, a schema): left alone
+        const parsed = parseOpenApi(spec, f.split('/').pop())
+        const n = ix.ingestRest(parsed, f)
+        lines.push(`✓ REST ${parsed.service} ${parsed.version}: ${n} endpoints  (${f})`)
+        endpoints += n
+      } else if (isDirectory(f)) {
         const n = ix.ingestDirectory(readFileSync(f, 'utf8'), opts.version)
         lines.push(`✓ directory  ${n} operations  (${f})`)
         ops += n
@@ -102,13 +126,12 @@ function ingest(ix, paths, opts) {
       lines.push(`✗ ${f}: ${e.message}`)
     }
   }
-  return { lines, ops, schemas }
+  return { lines, ops, schemas, endpoints }
 }
 
 async function fetchServices(ix, opts) {
   const version = opts.version ?? DEFAULT_VERSION
   const got = []
-  const get = (url) => fetch(url, { headers: { 'User-Agent': 'dna-workday-integration (developer catalog)' } })
   // the Operation Directory first (the current production version's): every operation, its services, what is deprecated
   const dir = await get(COMMUNITY_DIRECTORY_URL)
   if (dir.ok) {
@@ -136,6 +159,41 @@ async function fetchServices(ix, opts) {
       writeFileSync(file, Buffer.from(await r.arrayBuffer()))
       if (ext === 'wsdl') got.push(file)
     }
+  }
+  return got
+}
+
+/** The REST specifications of Workday Community: their names are in the directory page's script. */
+async function fetchRest(ix, opts) {
+  const page = await get(COMMUNITY_REST_URL + 'index.html')
+  const script = page.ok ? /src="(bundle\.[0-9a-f]+\.js)"/.exec(await page.text())?.[1] : null
+  const fail = (why) => {
+    say(`✗ REST: ${why}. Workday may have changed its REST directory page (${COMMUNITY_REST_URL}index.html): download the *_oas2.json files you need from it and run: node scripts/wws.mjs ingest <the files>`)
+    return []
+  }
+  if (!script) return fail('the page has no script that names the specifications')
+  const bundle = await get(COMMUNITY_REST_URL + script)
+  const names = bundle.ok ? [...new Set((await bundle.text()).match(/[A-Za-z0-9]+_v\d+_\d{8}_oas2\.json/g) ?? [])] : []
+  if (!names.length) return fail('no specification named in its script')
+  const wanted = opts['rest-services'] ? new Set(opts['rest-services'].split(',').map((x) => x.trim())) : new Set(HR_REST_SERVICES)
+  const byService = new Map()
+  for (const n of names) {
+    const [, svc, ver] = /^([A-Za-z0-9]+)_v(\d+)_/.exec(n)
+    if (!wanted.has(svc)) continue
+    byService.set(svc, [...(byService.get(svc) ?? []), [Number(ver), n]])
+  }
+  const files = [...byService.values()].flatMap((vs) => (opts['rest-all-versions'] ? vs : [vs.sort((a, b) => b[0] - a[0])[0]]).map(([, n]) => n))
+  mkdirSync(join(ix.dir, 'rest-files'), { recursive: true })
+  const got = []
+  for (const n of files) {
+    const r = await get(COMMUNITY_REST_URL + n)
+    if (!r.ok) {
+      say(`✗ ${n}: ${r.status}`)
+      continue
+    }
+    const file = join(ix.dir, 'rest-files', n)
+    writeFileSync(file, Buffer.from(await r.arrayBuffer()))
+    got.push(file)
   }
   return got
 }
@@ -181,11 +239,11 @@ export async function main(argv) {
       if (!args.length) throw new LookupError('name the files or folders to ingest')
       const r = ingest(ix, args, opts)
       if (opts.json) json(r)
-      else say([...r.lines, `indexed ${r.ops} operations from the directory, ${r.schemas} with schemas, in ${ix.dir}`].join('\n'))
+      else say([...r.lines, `indexed ${r.ops} operations from the directory, ${r.schemas} with schemas${r.endpoints ? `, ${r.endpoints} REST endpoints` : ''}, in ${ix.dir}`].join('\n'))
       return r.lines.some((l) => l.startsWith('✗')) ? 3 : 0
     }
     if (cmd === 'fetch') {
-      const got = await fetchServices(ix, opts)
+      const got = [...(opts.rest && !opts.services ? [] : await fetchServices(ix, opts)), ...(opts.rest ? await fetchRest(ix, opts) : [])]
       const r = got.length ? ingest(ix, got, opts) : { lines: [], ops: 0, schemas: 0 }
       if (opts.json) json({ downloaded: got, ...r })
       else say([...got.map((f) => `↓ ${f}`), ...r.lines].join('\n') || 'nothing downloaded')
@@ -195,7 +253,7 @@ export async function main(argv) {
       const s = ix.status()
       if (opts.json) json(s)
       else if (ix.empty) say(`Nothing indexed in ${ix.dir} yet. Run: node scripts/wws.mjs ingest <the Operation Directory .txt and the WSDLs you have>`)
-      else say([`${s.operations} operations in ${s.index}`, ...s.services.map((x) => `  ${x.service.padEnd(28)} ${String(x.operations).padStart(5)}  ${x.versions}`), `schemas: ${s.schemas.map((x) => `${x.service} ${x.version}`).join(', ') || 'none'}`].join('\n'))
+      else say([`${s.operations} operations in ${s.index}`, ...s.services.map((x) => `  ${x.service.padEnd(28)} ${String(x.operations).padStart(5)}  ${x.versions}`), `schemas: ${s.schemas.map((x) => `${x.service} ${x.version}`).join(', ') || 'none'}`, `REST: ${s.rest.endpoints} endpoints in ${s.rest.specs.length} specifications${s.rest.specs.length ? ` (${s.rest.specs.map((x) => `${x.service} ${x.version}`).join(', ')})` : ' — fetch --rest to add them'}`].join('\n'))
       return 0
     }
     if (ix.empty) {
@@ -207,9 +265,25 @@ export async function main(argv) {
       return args.join(' ')
     }
     if (cmd === 'search') {
-      const r = ix.search(need('what to look for'), { scope: opts.scope ?? 'hr', limit: Number(opts.limit ?? 10), expand: Boolean(opts.expand) })
+      const r = ix.search(need('what to look for'), { scope: opts.scope ?? 'hr', limit: Number(opts.limit ?? 10), expand: Boolean(opts.expand), api: opts.api })
       if (opts.json) json(r)
-      else say(r.length ? r.map((x) => `${x.schema_versions.length ? 'S' : ' '} ${x.verb.padEnd(9)} ${x.operation.padEnd(50)} ${x.service.padEnd(22)} ${x.description.slice(0, 80)}\n    matched: ${x.matched.map((m) => `${m.term} (${m.in.join(', ')})`).join('; ')}`).join('\n') : 'No matches. Try Workday terms in English (time off, job change, business process), --expand, or --scope all.')
+      else say(r.length ? r.map((x) => `${x.api === 'rest' ? 'R' : x.schema_versions.length ? 'S' : ' '} ${x.verb.padEnd(9)} ${x.operation.padEnd(50)} ${x.service.padEnd(22)} ${x.description.slice(0, 80)}\n    matched: ${x.matched.map((m) => `${m.term} (${m.in.join(', ')})`).join('; ')}`).join('\n') : 'No matches. Try Workday terms in English (time off, job change, business process), --expand, or --scope all.')
+      return 0
+    }
+    if (cmd === 'connector') {
+      const c = connectorActions()
+      say(opts.json ? JSON.stringify(c, null, 2) : [`The Workday connector's actions (${c.source}):`, ...c.actions.map((a) => `  ${a.id.padEnd(36)} ${a.name}${a.params.length ? ` (${a.params.join(', ')})` : ''} — ${a.about}`), '  (* required)'].join('\n'))
+      return 0
+    }
+    if (cmd === 'rest' || cmd === 'copilot-rest') {
+      if (args.length < 2) throw new LookupError(`${cmd} needs a method and a path: ${cmd} GET /workers/{ID}`)
+      const [m, p] = args
+      if (cmd === 'rest') {
+        const e = getRestEndpoint(ix, m, p, { service: opts.service, version: opts.version, depth: Number(opts.depth ?? 4), fmt: opts.json ? 'json' : 'text' })
+        say(opts.json ? JSON.stringify(e, null, 2) : [`${e.method} ${e.relative_path}  (${e.service} ${e.version})`, e.summary, '', ...e.facts.map((f) => `• ${f}`), '', 'Parameters:', ...e.params.map((x) => `  ${x.in}:${x.name}${x.required ? '' : '?'} ${x.type ?? ''}${x.accepts ? ` — accepts ${[...(x.accepts.wid ? ['WID'] : []), ...x.accepts.reference_id_types.map((t) => `${t}=…`), ...x.accepts.named].join(', ')}` : ''}`), ...(e.body ? ['', `Body (${e.body.name}):`, e.body.tree] : []), ...(e.response ? ['', `Response ${e.response.status}:`, e.response.tree] : []), ...(e.same_path.length ? ['', 'On the same path:', ...e.same_path.map((x) => `  ${x}`)] : [])].join('\n'))
+        return 0
+      }
+      json(restActionSpec(ix, m, p, { service: opts.service, version: opts.version, include: opts.include, idForms: opts.idForms, read: opts.read }))
       return 0
     }
     if (cmd === 'operations') {

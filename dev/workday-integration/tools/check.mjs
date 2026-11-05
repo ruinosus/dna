@@ -10,7 +10,8 @@ import { Index, parseDirectory } from '../src/index.mjs'
 import { NOTES } from '../src/notes.mjs'
 import { buildEnvelope, findPath, LookupError, TreeBuilder } from '../src/render.mjs'
 import { parseWsdl, parseXml, registryOf } from '../src/schema.mjs'
-import { copilotActionSpec, essTemplate, findElement, getOperation, getType, listOperations, makeEnvelope, relatedOperations } from '../src/workflows.mjs'
+import { parseOpenApi } from '../src/rest.mjs'
+import { connectorActions, copilotActionSpec, essTemplate, findElement, getOperation, getRestEndpoint, getType, listOperations, makeEnvelope, relatedOperations, restActionSpec } from '../src/workflows.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repo = join(here, '../../..')
@@ -187,7 +188,7 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
   // input's description at 100 — applied to both sides, so what is compared is still the Python's logic
   const cut = (t, n) => ([...t].length > n ? [...t].slice(0, n - 1).join('') + '…' : t)
   const noComments = (t) => t.split('\n').filter((l) => !/^\s*<!--.*-->\s*$/.test(l)).map((l) => l.replace(/\s*<!--.*?-->/g, '')).join('\n')
-  const strip = (o, key = '', parent = '') => (Array.isArray(o) ? o.map((x) => strip(x, key, parent)) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).filter(([k]) => !['notes', 'score', 'hint', 'warning', 'decisions', 'decision_rules', 'matched', 'sources', 'cut', 'verb', 'read_default'].includes(k)).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => [k, strip(v, k, key)])) : typeof o === 'string' && key === 'doc' ? cut(o, 160) : typeof o === 'string' && key === 'description' && parent === 'inputs' ? cut(o, 100) : typeof o === 'string' && (key === 'xml_template' || key === 'power_fx') ? noComments(noChoice(o)) : noChoice(o))
+  const strip = (o, key = '', parent = '') => (Array.isArray(o) ? o.map((x) => strip(x, key, parent)) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).filter(([k]) => !['notes', 'score', 'hint', 'warning', 'decisions', 'decision_rules', 'matched', 'sources', 'cut', 'verb', 'read_default', 'api'].includes(k)).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => [k, strip(v, k, key)])) : typeof o === 'string' && key === 'doc' ? cut(o, 160) : typeof o === 'string' && key === 'description' && parent === 'inputs' ? cut(o, 100) : typeof o === 'string' && (key === 'xml_template' || key === 'power_fx') ? noComments(noChoice(o)) : noChoice(o))
   const run = (c) => {
     const a = c.args
     try {
@@ -252,7 +253,7 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
   const nos = cli('envelope', 'Enter_Time_Off', '--index', idx)
   ok(nos.status === 3 && /No WSDL ingested for Absence_Management/.test(nos.stdout), 'no WSDL for its service: exit 3, with what to ingest', nos.stdout)
   const code = readFileSync(wws, 'utf8')
-  ok(!/from ["']node:(http|https|net|tls|dgram)["']|require\(["'](http|https|net)/.test(code) && (code.match(/\bfetch\(/g) ?? []).length === 1, 'the bundle: no http/net module, one fetch (the fetch command)')
+  ok(!/from ["']node:(http|https|net|tls|dgram)["']|require\(["'](http|https|net)/.test(code) && (code.match(/\bfetch\(/g) ?? []).length === 1, 'the bundle: no http/net module, one call to fetch (the fetch command, SOAP and REST)')
 }
 
 // ---------- the Operation Directory page, fetch (with a fake network), xsd:any, a choice, the ESS template ----------
@@ -333,6 +334,59 @@ globalThis.fetch = async (url) => {
   ok(/<extractPath>\/\/\*\[local-name\(\)='Arrangement_Event_Reference'\]\/\*\[local-name\(\)='ID' and @\*\[local-name\(\)='type'\]='WID'\]\/text\(\)<\/extractPath>/.test(t.xml), 'ess: what to read back, as local-name() XPaths')
 }
 
+// ---------- 0.3.0: REST — Workday's OpenAPI specifications, beside the SOAP ----------
+{
+  const REST = join(ex, 'rest/peopleDesk_v1_20260101_oas2.json')
+  const spec = parseOpenApi(JSON.parse(readFileSync(REST, 'utf8')), 'peopleDesk_v1_20260101_oas2.json')
+  const card = spec.endpoints.find((e) => e.method === 'GET' && e.path === '/workers/{ID}')
+  ok(spec.service === 'peopleDesk' && spec.version === 'v1' && spec.prefix === 'peopleDesk/v1' && spec.endpoints.length === 3, 'REST: a spec — its service, version and prefix, from its name and basePath; an endpoint per method and path')
+  ok(JSON.stringify(card.domains) === '["Self-Service: Card","Person Data: Card"]' && JSON.stringify(card.scope) === '["People Basics"]', "REST: the security domains and the scope, from Workday's description")
+  ok(card.params[0].accepts.wid && JSON.stringify(card.params[0].accepts.reference_id_types) === '["Employee_ID","Contingent_Worker_ID"]' && JSON.stringify(card.params[0].accepts.named) === '["me"]', 'REST: what an ID accepts — a WID, Reference ID types, me (a $ref parameter resolved)')
+  const rx = new Index(join(work, 'rest-index'))
+  rx.ingestDirectory(readFileSync(join(ex, 'operation-directory-sample.txt'), 'utf8'))
+  for (const f of [HR, INT]) rx.ingestSchema(parseWsdl(f), f)
+  rx.ingestRest(spec, REST)
+  const mixed = rx.search('leave balances')
+  ok(mixed[0].api === 'rest' && mixed[0].operation === 'GET peopleDesk/v1 /workers/{ID}/leaveBalances' && mixed[0].domains.length && /path/.test(mixed[0].matched[0].term), 'search: a REST endpoint among the SOAP operations, marked api: rest, with its domains; the path as its name', JSON.stringify(mixed.slice(0, 2)))
+  ok(rx.search('arrangement', { api: 'soap' }).every((r) => r.api === 'soap') && rx.search('arrangement', { api: 'rest' }).every((r) => r.api === 'rest') && rx.search('arrangement').some((r) => r.api === 'rest') && rx.search('arrangement').some((r) => r.api === 'soap'), 'search: SOAP and REST together by default; --api soap|rest for one')
+  const ep = getRestEndpoint(rx, 'get', 'workers/{ID}/leaveBalances')
+  ok(ep.relative_path === 'peopleDesk/v1/{tenant}/workers/{ID}/leaveBalances' && ep.facts.some((f) => /Secured by the domains .*Self-Service: Leave Balances/.test(f)) && ep.facts.some((f) => /Scope .*Time Away/.test(f)) && /balance\? : number/.test(ep.response.tree), "rest: the endpoint — its relativePath with {tenant}, the domains and scope as facts, the response's fields")
+  const post = getRestEndpoint(rx, 'POST', '/workers/{ID}/arrangementRequests')
+  ok(/startDate : string \(date\)/.test(post.body.tree) && /note\? : string/.test(post.body.tree) && /id\? : string ro/.test(post.body.tree), 'rest: the body — allOf and $ref resolved, required and optional, read-only said')
+  ok(throws(() => getRestEndpoint(rx, 'DELETE', '/workers/{ID}'), /No REST endpoint DELETE \/workers\/\{ID\}.*on that path: GET peopleDesk\/v1/), 'rest: an endpoint that is not there names what is on that path')
+  // the connector's Execute REST request (Preview)
+  const r1 = restActionSpec(rx, 'GET', '/workers/{ID}/leaveBalances', { idForms: { ID: 'me' }, read: ['data.balance', 'data.plan.id'] })
+  ok(r1.operation_id === 'REST_Operation' && r1.parameters.relativePath === 'peopleDesk/v1/{tenant}/workers/me/leaveBalances' && r1.parameters.method === 'GET' && !r1.parameters.body && r1.decisions[0].chosen === 'me', 'copilot-rest: Execute REST request — relativePath with {tenant}, the ID as me (a decision), no body for a GET')
+  ok(r1.response.reads.every((x) => x.repeats) && r1.response.reads[0].type === 'number' && r1.notes.some((n) => /signed-in user's OAuth/.test(n.text)) && r1.notes.some((n) => /idempotency/.test(n.text)) && r1.notes.some((n) => n.kind === 'spec' && /Leave Balances/.test(n.text)), 'copilot-rest: what to read (a number, one per plan), the OAuth and idempotency notes, the domains from the spec')
+  const r2 = restActionSpec(rx, 'POST', '/workers/{ID}/arrangementRequests', { idForms: { ID: 'Employee_ID' }, include: ['office.id'] })
+  const body = JSON.parse(r2.body_template.replace(/"\{\{[A-Za-z0-9_]+\}\}"/g, '"x"'))
+  ok(JSON.stringify(Object.keys(body)) === '["startDate","kind","office"]' && !('id' in body) && r2.decisions.some((d) => d.kind === 'optional_fields' && d.left_out.includes('note')), 'copilot-rest: the body — the required fields and include, no read-only field; the optional ones left out said')
+  const inp = Object.fromEntries(r2.inputs.map((i) => [i.name, i]))
+  ok(inp.ID.written_as === 'Employee_ID=<value>' && r2.power_fx.relativePath.includes('"Employee_ID=" & EncodeUrl(Topic.ID)') && inp.StartDate.type === 'Date' && inp.KindId.required && !inp.OfficeId.required, 'copilot-rest: the inputs — the ID written as a Reference ID, a date, a field required only when what holds it is')
+  ok(r2.power_fx.body.includes('Text(Topic.StartDate, "yyyy-mm-dd")') && r2.power_fx.body.includes('Substitute(Substitute(Topic.KindId, "\\", "\\\\"), """", "\\""")'), 'copilot-rest: the Power Fx of the body — a date as text, a string escaped for JSON', r2.power_fx.body)
+  ok(throws(() => restActionSpec(rx, 'GET', '/workers/{ID}', { idForms: { ID: 'Badge_ID' } }), /takes WID, Employee_ID=…, Contingent_Worker_ID=…, me — not Badge_ID/) && throws(() => restActionSpec(rx, 'POST', '/workers/{ID}/arrangementRequests', { include: ['nope'] }), /not a field of/) && throws(() => restActionSpec(rx, 'GET', '/workers/{ID}/leaveBalances', { read: ['data'] }), /holds fields, not a value/), 'copilot-rest: a wrong ID form, body field or read is refused, with the options')
+  const actions = connectorActions()
+  ok(['SOAP_Operation', 'REST_Operation', 'RaaS_Operation', 'GetWorkerMe', 'GetWorkerInboxTasks', 'TransferEmployee'].every((id) => actions.actions.some((a) => a.id === id)) && /learn\.microsoft\.com/.test(actions.source), "connector: the connector's actions, from Microsoft's documentation")
+  // fetch --rest, with a fake network: the directory page, its script, the spec
+  const served = join(work, 'served-rest.json')
+  writeFileSync(served, JSON.stringify({ page: '<script src="bundle.0a1b2c.js"></script>', bundle: 'x="peopleDesk_v1_20260101_oas2.json";y="peopleDesk_v1_20260101_oas2.json";z="otherThing_v2_20260101_oas2.json"', spec: readFileSync(REST, 'utf8') }))
+  const fake = join(work, 'fake-rest.mjs')
+  writeFileSync(fake, `import { readFileSync, appendFileSync } from 'node:fs'
+const s = JSON.parse(readFileSync(${JSON.stringify(served)}, 'utf8'))
+globalThis.fetch = async (url) => {
+  appendFileSync(${JSON.stringify(join(work, 'asked-rest.txt'))}, url + '\\n')
+  const body = url.endsWith('/index.html') ? s.page : url.endsWith('.js') ? s.bundle : url.endsWith('peopleDesk_v1_20260101_oas2.json') ? s.spec : null
+  return { ok: body !== null, status: body === null ? 404 : 200, text: async () => body, arrayBuffer: async () => new TextEncoder().encode(body ?? '').buffer }
+}
+`)
+  const f = spawnSync(process.execPath, ['--import', fake, join(skill, 'scripts/wws.mjs'), 'fetch', '--rest', '--rest-services', 'peopleDesk', '--index', join(work, 'fetched-rest')], { encoding: 'utf8' })
+  const asked = readFileSync(join(work, 'asked-rest.txt'), 'utf8').trim().split('\n')
+  ok(f.status === 0 && /REST peopleDesk v1: 3 endpoints/.test(f.stdout) && asked.length === 3 && asked.every((u) => u.startsWith('https://community.workday.com/sites/default/files/file-hosting/restapi/')), 'fetch --rest: the page, its script, the spec it names (only the services asked), from Workday Community only', f.stdout + f.stderr + asked.join('\n'))
+  writeFileSync(served, JSON.stringify({ page: '<html>changed</html>', bundle: '', spec: '' }))
+  const changed = spawnSync(process.execPath, ['--import', fake, join(skill, 'scripts/wws.mjs'), 'fetch', '--rest', '--index', join(work, 'fetched-rest-2')], { encoding: 'utf8' })
+  ok(changed.status !== 0 && /Workday may have changed its REST directory page.*ingest/.test(changed.stdout), 'fetch --rest: a page that changed is said, with how to ingest the files instead', changed.stdout)
+}
+
 // ---------- the MCP server (scripts/mcp.mjs, alone in a folder: nothing from node_modules) ----------
 {
   const alone = join(work, 'mcp-alone')
@@ -348,7 +402,7 @@ globalThis.fetch = async (url) => {
   }
   const out = talk([
     { method: 'tools/list', params: {} },
-    { method: 'tools/call', params: { name: 'wws_search_operations', arguments: { query: 'approve business process flexible work arrangement' } } },
+    { method: 'tools/call', params: { name: 'wws_search_operations', arguments: { query: 'approve business process flexible work arrangement', api: 'soap' } } },
     { method: 'tools/call', params: { name: 'wws_get_operation', arguments: { operation: 'Add_Flexible_Work_Arrangement', path: 'Arrangement_Data' } } },
     { method: 'tools/call', params: { name: 'wws_get_operation', arguments: { operation: 'Nope_Operation' } } },
     { method: 'tools/call', params: { name: 'wws_copilot_action_spec', arguments: { operation: 'Approve_Business_Process' } } },
@@ -356,7 +410,7 @@ globalThis.fetch = async (url) => {
   ])
   const text = (n) => out[n]?.result?.content?.[0]?.text ?? ''
   const tools = out[1]?.result?.tools ?? []
-  const WANT = ['wws_search_operations', 'wws_related_operations', 'wws_list_operations', 'wws_get_type', 'wws_find_element', 'wws_get_operation', 'wws_build_envelope', 'wws_copilot_action_spec', 'wws_ess_template', 'wws_list_services', 'wws_index_status']
+  const WANT = ['wws_get_rest_endpoint', 'wws_rest_action_spec', 'wws_list_connector_actions', 'wws_search_operations', 'wws_related_operations', 'wws_list_operations', 'wws_get_type', 'wws_find_element', 'wws_get_operation', 'wws_build_envelope', 'wws_copilot_action_spec', 'wws_ess_template', 'wws_list_services', 'wws_index_status']
   ok(out[0]?.result?.serverInfo?.name === 'workday-wws' && WANT.every((n) => tools.some((t) => t.name === n)) && tools.every((t) => t.annotations?.readOnlyHint === true), `MCP: initialize, and its ${WANT.length} tools, all read-only`, JSON.stringify(out).slice(0, 800))
   const top = text(2) ? JSON.parse(text(2)).results.slice(0, 3).map((r) => r.operation) : []
   ok(top.includes('Approve_Business_Process') && top.some((o) => o.endsWith('Flexible_Work_Arrangement')), 'MCP: the search', top.join(', '))
@@ -370,8 +424,8 @@ globalThis.fetch = async (url) => {
 
 // ---------- the skill ----------
 {
-  const files = readdirSync(ex, { recursive: true }).filter((f) => /\.(wsdl|xsd|txt)$/.test(f))
-  ok(files.length === 4 && files.every((f) => /SYNTHETIC/.test(readFileSync(join(ex, f), 'utf8').slice(0, 400))), `the ${files.length} example files say they are synthetic`)
+  const files = readdirSync(ex, { recursive: true }).filter((f) => /\.(wsdl|xsd|txt|json)$/.test(f))
+  ok(files.length === 5 && files.every((f) => /SYNTHETIC/.test(readFileSync(join(ex, f), 'utf8').slice(0, 400))), `the ${files.length} example files say they are synthetic`)
   const md = readFileSync(join(skill, 'SKILL.md'), 'utf8')
   const version = JSON.parse(readFileSync(join(plugin, '.claude-plugin/plugin.json'), 'utf8')).version
   ok(md.includes(`version: "${version}"`), `SKILL.md carries the plugin's version (${version})`)

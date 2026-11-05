@@ -1,7 +1,9 @@
 // What the commands answer, from the index: an operation's tree, its surroundings (facts only), a service's operations,
 // a type, where an element appears, the envelope with every choice it made, and the spec of the Copilot Studio Workday
 // connector's «Execute SOAP operation». Port of workday-wws-mcp's workflows.py, without its verdicts (0.2.0).
+import { CONNECTOR_ACTIONS, CONNECTOR_DOC } from './connector.mjs'
 import { CONNECTOR_SOURCES, curatedNotes, NOTES, sourcesOf } from './notes.mjs'
+import { findJsonPath, jsonTree, renderJsonTree } from './rest.mjs'
 
 const rulesOf = (decisions) => Object.fromEntries([...new Set(decisions.map((d) => d.why))].map((w) => [w, DECISION_RULES[w]]))
 const CONNECTOR_SOURCES_OF = (notes) => Object.fromEntries(Object.entries(CONNECTOR_SOURCES).filter(([k]) => notes.some((n) => n.kind === k)))
@@ -322,3 +324,141 @@ export function essTemplate(ix, op, { service, version, include = [], mode = 're
   ].join('\n')
   return { operation: env.operation, service: env.service, version: env.version, placeholders: env.variables.map((v) => v.var), decisions: env.decisions, decision_rules: env.decision_rules, response_properties: properties, xml }
 }
+
+// ---------- REST ----------
+
+/** A REST endpoint: its parameters (with what each ID accepts), its body and response trees, the security domains and
+ * the scope Workday's description names (facts of the specification), and the other endpoints on the same path. */
+export function getRestEndpoint(ix, method, path, { service, version, depth = 4, fmt = 'text', budget = 8000 } = {}) {
+  const e = ix.resolveRest(method, path, service, version)
+  const defs = ix.restDefinitions(e.service, e.version)
+  const tree = (schema, name) => {
+    if (!schema) return null
+    let d = depth
+    const make = (x) => { const t = jsonTree(defs, schema, name, { maxDepth: x + 1 }); return fmt === 'json' ? t : renderJsonTree(t, { maxDepth: x }) }
+    let out = make(d)
+    while (JSON.stringify(out).length > budget / 2 && d > 1) out = make(--d)
+    return { tree: out, ...(d < depth ? { cut: `cut to depth ${d} of the ${depth} asked, to fit` } : {}) }
+  }
+  const samePath = ix.data.rest.endpoints.filter((x) => x.path === e.path && x.service === e.service && x.version === e.version && x.method !== e.method).map((x) => `${x.method} ${x.path} — ${x.summary}`)
+  const resource = e.path.split('/')[1]
+  const sameResource = ix.data.rest.endpoints.filter((x) => x.service === e.service && x.version === e.version && x.path.split('/')[1] === resource && x.path !== e.path).slice(0, 15).map((x) => `${x.method} ${x.path}`)
+  const newer = Object.values(ix.data.rest.specs).filter((x) => x.service === e.service && x.version > e.version).map((x) => x.version)
+  return {
+    api: 'rest', method: e.method, path: e.path, service: e.service, version: e.version, prefix: e.prefix,
+    relative_path: `${e.prefix}/{tenant}${e.path}`,
+    summary: e.summary, description: e.description.replace(/\s*Secured By Domain:.*$/i, '').slice(0, 600),
+    facts: [
+      e.domains.length ? `Secured by the domains (Workday's description): ${e.domains.join('; ')}.` : "Workday's description names no security domain.",
+      ...(e.scope.length ? [`Scope (functional areas the API client needs): ${e.scope.join('; ')}.`] : []),
+      ...(newer.length ? [`A newer version of ${e.service} is indexed: ${newer.join(', ')}.`] : []),
+    ],
+    domains: e.domains, scope: e.scope,
+    params: e.params,
+    body: e.body ? { name: e.body.name, required: e.body.required, ...tree(e.body.schema, 'body') } : null,
+    response: e.response ? { status: e.response.status, ...tree(e.response.schema, 'response') } : null,
+    same_path: samePath, same_resource: sameResource,
+  }
+}
+
+const jsonPlaceholder = (n) => (n.type === 'object' ? null : `{{${camel(n.path.replace(/\[\]/g, '').replace(/\./g, '_'))}}}`)
+
+/** The spec of the connector's «Execute REST request (Preview)» for an endpoint: relativePath (with {tenant} and the
+ * path's IDs as inputs), method, contentType, a JSON body with {{placeholders}} (the required fields, and include),
+ * the Power Fx of the path and the body, what to read back (--read: dotted paths of the response), and its decisions:
+ * the form of each ID (a WID, a Reference ID, `me`). */
+export function restActionSpec(ix, method, path, { service, version, include = [], idForms = {}, read = [], variablePrefix = 'Topic.' } = {}) {
+  const e = ix.resolveRest(method, path, service, version)
+  const defs = ix.restDefinitions(e.service, e.version)
+  const decisions = []
+  const inputs = []
+  // the path: each {param} an input; how its ID is written is a decision
+  const pathParts = []
+  let rest = `${e.prefix}/{tenant}${e.path}`
+  for (const p of e.params.filter((x) => x.in === 'path')) {
+    const form = idForms[p.name] ?? 'WID'
+    const acc = p.accepts
+    const forms = acc ? [...(acc.wid ? ['WID'] : []), ...acc.reference_id_types.map((t) => `${t}=…`), ...acc.named] : []
+    if (acc && form !== 'WID' && !acc.named.includes(form) && !acc.reference_id_types.includes(form)) throw new LookupError(`id form: ${p.name} takes ${forms.join(', ')} — not ${form}`)
+    if (acc) decisions.push({ kind: 'id_form', param: p.name, chosen: form, options: forms, why: p.name in idForms ? 'chosen' : 'default' })
+    const v = camel(p.name)
+    if (acc?.named.includes(form)) rest = rest.replace(`{${p.name}}`, form)
+    else {
+      inputs.push({ name: v, copilot_variable: `${variablePrefix}${v}`, in: 'path', type: 'String', required: true, ...(form !== 'WID' ? { written_as: `${form}=<value>` } : {}), description: p.description.slice(0, 100) })
+      rest = rest.replace(`{${p.name}}`, `{{${v}}}`)
+    }
+  }
+  for (const k of Object.keys(idForms)) if (!e.params.some((p) => p.in === 'path' && p.name === k)) throw new LookupError(`id form: ${k} is not a path parameter of ${e.method} ${e.path}`)
+  // the body: the required fields, and those include names (dotted paths)
+  let bodyText = null
+  if (e.body?.schema) {
+    const tree = jsonTree(defs, e.body.schema, 'body', { maxDepth: 6 })
+    const forced = new Set(include.flatMap((p) => p.split('.').map((_, i, a) => a.slice(0, i + 1).join('.'))))
+    for (const p of include) findJsonPath(tree, p)
+    // a field is required only when every field above it is too (position.id is, if position is sent)
+    const build = (n, above = true) => {
+      const kids = (n.type === 'array' ? n.items?.children : n.children) ?? []
+      const want = kids.filter((c) => !c.readOnly && (c.required || forced.has(c.path)))
+      if (!kids.length) {
+        const ph = jsonPlaceholder(n)
+        inputs.push({ name: camel(n.path.replace(/\[\]/g, '').replace(/\./g, '_')), copilot_variable: `${variablePrefix}${camel(n.path.replace(/\[\]/g, '').replace(/\./g, '_'))}`, in: 'body', json_path: n.path, type: n.type === 'boolean' ? 'Boolean' : ['number', 'integer'].includes(n.type) ? 'Number' : n.format === 'date' ? 'Date' : 'String', required: n.required && above, ...(n.enum ? { allowed_values: n.enum.slice(0, 20) } : {}), ...(n.description ? { description: n.description.slice(0, 100) } : {}) })
+        return ph
+      }
+      const obj = Object.fromEntries(want.map((c) => [c.name, build(c, above && (n.required || n.path === ''))]))
+      return n.type === 'array' ? [obj] : obj
+    }
+    bodyText = JSON.stringify(build(tree), null, 2)
+    const optional = ((tree.children ?? []).filter((c) => !c.required && !c.readOnly && !forced.has(c.path))).map((c) => c.name)
+    if (optional.length) decisions.push({ kind: 'optional_fields', left_out: optional.slice(0, 20), why: 'default' })
+  }
+  const byVar = Object.fromEntries(inputs.map((i) => [i.name, i]))
+  const fx = (text, json) => {
+    const parts = []
+    let pos = 0
+    for (const m of text.matchAll(/"?\{\{([A-Za-z0-9_]+)\}\}"?/g)) {
+      if (m.index > pos) parts.push('"' + text.slice(pos, m.index).replace(/"/g, '""') + '"')
+      const v = byVar[m[1]]
+      const ref = `${variablePrefix}${m[1]}`
+      let val
+      if (!json) val = v?.written_as ? `"${v.written_as.split('=')[0]}=" & EncodeUrl(${ref})` : `EncodeUrl(${ref})`
+      else if (v?.type === 'Number') val = `Text(${ref})`
+      else if (v?.type === 'Boolean') val = `If(${ref}, "true", "false")`
+      else if (v?.type === 'Date') val = `"""" & Text(${ref}, "yyyy-mm-dd") & """"`
+      else val = `"""" & Substitute(Substitute(${ref}, "\\", "\\\\"), """", "\\""") & """"`
+      parts.push(val)
+      pos = m.index + m[0].length
+    }
+    if (pos < text.length) parts.push('"' + text.slice(pos).replace(/"/g, '""') + '"')
+    return parts.join(' &\n')
+  }
+  const response = { status: e.response?.status ?? null }
+  if (read.length) {
+    if (!e.response?.schema) throw new LookupError(`read: ${e.method} ${e.path} has no response schema`)
+    const tree = jsonTree(defs, e.response.schema, 'response', { maxDepth: 8 })
+    response.reads = read.map((p) => {
+      const n = findJsonPath(tree, p)
+      const kids = n.type === 'array' ? n.items?.children : n.children
+      if (kids?.length) throw new LookupError(`read: ${p} holds fields, not a value — read one of them: ${kids.map((c) => c.name).join(', ')}`)
+      return { json_path: p, type: n.type, ...(n.path.includes('[]') ? { repeats: true } : {}) }
+    })
+  } else response.read_default = 'none chosen: name the response fields with read (dotted paths, as rest <METHOD> <path> shows them)'
+  const notes = [
+    { kind: 'documentation', text: "Execute REST request (Preview) runs with the signed-in user's OAuth credentials and Workday enforces that user's permissions; it requires an OAuth 2.0 connection and the REST base URL on it." },
+    { kind: 'documentation', text: 'No idempotency keys: retrying a write (POST, PUT, PATCH) is the caller\'s to make safe. Limit: 200 calls per connection per 60 s.' },
+    { kind: 'spec', text: e.domains.length ? `Secured by the domains: ${e.domains.join('; ')}${e.scope.length ? ` — scope: ${e.scope.join('; ')}` : ''}.` : 'Workday\'s description names no security domain.' },
+  ]
+  return {
+    connector: 'Workday (Microsoft, Premium)', action: 'Execute REST request (Preview)', operation_id: 'REST_Operation',
+    endpoint: `${e.method} ${e.prefix} ${e.path}`, service: e.service, version: e.version,
+    parameters: { relativePath: rest, method: e.method, ...(bodyText ? { contentType: 'application/json', body: '<see power_fx.body / body_template>' } : {}) },
+    power_fx: { relativePath: fx(rest, false), ...(bodyText ? { body: fx(bodyText, true) } : {}) },
+    ...(bodyText ? { body_template: bodyText } : {}),
+    inputs, decisions,
+    decision_rules: { default: 'the tool\'s default — an ID in the path as a WID; a body with only its required fields. Change them with id_forms (--id-form ID=me) and include (--include a.b).', chosen: 'what the caller asked for' },
+    response, notes,
+    sources: { documentation: `Microsoft: ${CONNECTOR_DOC} (checked on 2026-11-05)`, spec: "the endpoint's OpenAPI specification (Workday's description of it)" },
+  }
+}
+
+/** The connector's actions, as Microsoft documents them. */
+export const connectorActions = () => ({ source: `Microsoft: ${CONNECTOR_DOC} (checked on 2026-11-05)`, actions: CONNECTOR_ACTIONS })

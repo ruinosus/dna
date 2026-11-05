@@ -11,7 +11,7 @@
 import { defaultIndexDir, Index } from '../src/index.mjs'
 import { NOTES } from '../src/notes.mjs'
 import { TreeBuilder } from '../src/render.mjs'
-import { copilotActionSpec, essTemplate, getOperation, makeEnvelope, relatedOperations } from '../src/workflows.mjs'
+import { copilotActionSpec, essTemplate, getOperation, getRestEndpoint, makeEnvelope, relatedOperations, restActionSpec } from '../src/workflows.mjs'
 
 const at = process.argv.indexOf('--index')
 const ix = new Index(at > 0 ? process.argv[at + 1] : defaultIndexDir())
@@ -89,4 +89,27 @@ for (const op of OPS.filter((o) => ix.data.operations.some((r) => r.op === o && 
   }
 }
 console.log(`${big ? '✗' : '✓'} every answer of ${OPS.length} operations within ${MAX / 1000} KB (the largest: ${largest[0]}, ${(largest[1] / 1000).toFixed(1)} KB)`)
-process.exit(bad || big ? 1 : 0)
+
+// REST: a known endpoint says its domains and scope; the REST answers fit too
+let restBad = 0
+if (ix.data.rest.endpoints.length) {
+  const tp = getRestEndpoint(ix, 'GET', '/workers/{ID}/timeOffPlans/{subresourceID}', { service: 'common' })
+  const ok = tp.domains.includes('Self-Service: Time Off Balances') && tp.scope.includes('Time Off and Leave') && tp.params[0].accepts?.named.includes('me')
+  if (!ok) restBad++
+  console.log(`${ok ? '✓' : '✗'} REST: GET common/v1 /workers/{ID}/timeOffPlans/{subresourceID} — its domains, its scope, an ID that accepts me`)
+  const ENDS = [['GET', '/workers/{ID}/timeOffPlans', 'common'], ['GET', '/workers/{ID}/inboxTasks', 'common'], ['GET', '/events', 'businessProcess'], ['POST', '/workers/{ID}/organizationAssignmentChanges', 'staffing'], ['GET', '/workers/{ID}', 'common']]
+  let lr = ['', 0]
+  for (const [m, p, svc] of ENDS) {
+    if (!ix.data.rest.endpoints.some((e) => e.method === m && e.path === p && e.service === svc)) continue
+    for (const [name, fn] of [['rest', () => getRestEndpoint(ix, m, p, { service: svc })], ['rest --json', () => getRestEndpoint(ix, m, p, { service: svc, fmt: 'json' })], ['copilot-rest', () => restActionSpec(ix, m, p, { service: svc })]]) {
+      const n = JSON.stringify(fn()).length
+      if (n > lr[1]) lr = [`${name} ${m} ${p}`, n]
+      if (n > MAX) {
+        restBad++
+        console.log(`✗ ${name} ${m} ${p}: ${n} characters (more than ${MAX})`)
+      }
+    }
+  }
+  console.log(`${restBad ? '✗' : '✓'} REST answers within ${MAX / 1000} KB (the largest: ${lr[0]}, ${(lr[1] / 1000).toFixed(1)} KB)`)
+} else console.log('• no REST indexed (fetch --rest): its checks skipped')
+process.exit(bad || big || restBad ? 1 : 0)
