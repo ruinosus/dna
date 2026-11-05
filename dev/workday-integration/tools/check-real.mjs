@@ -1,12 +1,17 @@
-// Checks the curated notes against an index of Workday's real WSDLs (the repository has only synthetic ones):
+// Checks against an index of Workday's real WSDLs (the repository has only synthetic ones) the curated notes and the
+// size of the answers an agent reads. The notes:
 // each «schema» note's evidence is a name the WSDLs have (an element, a type, an attribute, an enumeration value or an
 // operation), each operation it says is absent is absent, and no field of the request is named after what it says the
 // request lacks; each «description» note's quote is in Workday's description of the operation. Every note has a kind.
 //
-//   node dev/workday-integration/tools/check-notes.mjs [--index <folder>]   (the default index otherwise)
+// The sizes: each answer of a few operations, as compact JSON (what the MCP sends), within MAX — an MCP client may cut a
+// long answer (VS Code's cut the 0.2.2 spec, 11 KB indented).
+//
+//   node dev/workday-integration/tools/check-real.mjs [--index <folder>]   (the default index otherwise)
 import { defaultIndexDir, Index } from '../src/index.mjs'
 import { NOTES } from '../src/notes.mjs'
 import { TreeBuilder } from '../src/render.mjs'
+import { copilotActionSpec, essTemplate, getOperation, makeEnvelope, relatedOperations } from '../src/workflows.mjs'
 
 const at = process.argv.indexOf('--index')
 const ix = new Index(at > 0 ? process.argv[at + 1] : defaultIndexDir())
@@ -67,4 +72,21 @@ for (const [op, notes] of Object.entries(NOTES)) {
   }
 }
 console.log(`${bad ? '✗' : '✓'} ${checked - bad}/${checked} notes hold against ${ix.dir} (${services.length} WSDLs)`)
-process.exit(bad ? 1 : 0)
+
+const MAX = 9000
+const OPS = ['Add_Flexible_Work_Arrangement', 'End_Flexible_Work_Arrangement', 'Approve_Business_Process', 'Get_Workers', 'Get_Event_Detail', 'Hire_Employee', 'Change_Job']
+const ANSWERS = { copilot: copilotActionSpec, ess: essTemplate, envelope: makeEnvelope, related: relatedOperations, show: getOperation, 'show --json': (i, o) => getOperation(i, o, { fmt: 'json' }) }
+let big = 0
+let largest = ['', 0]
+for (const op of OPS.filter((o) => ix.data.operations.some((r) => r.op === o && r.request_element))) {
+  for (const [name, fn] of Object.entries(ANSWERS)) {
+    const n = JSON.stringify(fn(ix, op)).length
+    if (n > largest[1]) largest = [`${name} ${op}`, n]
+    if (n > MAX) {
+      big++
+      console.log(`✗ ${name} ${op}: ${n} characters (more than ${MAX})`)
+    }
+  }
+}
+console.log(`${big ? '✗' : '✓'} every answer of ${OPS.length} operations within ${MAX / 1000} KB (the largest: ${largest[0]}, ${(largest[1] / 1000).toFixed(1)} KB)`)
+process.exit(bad || big ? 1 : 0)

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.3 — 2026-11-05
+
+**Answers that fit.** VS Code's Copilot cut the 0.2.2 Copilot Studio spec (11 KB) before its Power Fx. Now:
+
+- The MCP answers in compact JSON.
+- The spec puts the essential first — `power_fx`, `xml_template`, `inputs`, `decisions` — and the notes last; its
+  request body has no XML comment (they were going to Workday); of the curated notes it keeps the ones to act on
+  (`tenant`, `sensitive`) and says where the rest is (`related`, `show`).
+- The source of each kind of note, and the rule behind each decision, are said once (`sources`, `decision_rules`), not
+  on every note and decision; a reference's ID options list the first 12 and how many there are.
+- `show` cuts a tree too big for an answer to a lower depth (about 8 KB), and says so and how to go down (`cut`); a
+  field's documentation stops at 160 characters, an input's at 100.
+- `tools/check-real.mjs` (was `check-notes.mjs`) also checks, on Workday's real WSDLs, that every answer of seven
+  operations is within 9 KB (the spec of Add_Flexible_Work_Arrangement: 6.3 KB).
+
 ## 0.2.2 — 2026-11-05
 
 Each note shows what proves it, for the agent too: besides a schema note's `evidence`, the operations it says are

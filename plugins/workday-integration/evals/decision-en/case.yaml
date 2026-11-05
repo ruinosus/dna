@@ -28,5 +28,6 @@ graders:
     focus: { source: file, path: fwa-spec.json }
     criteria: >-
       The file is a Copilot Studio Execute SOAP operation spec for Add_Flexible_Work_Arrangement whose Worker_Reference
-      ID goes with wd:type="WID" (in the xml_template and the inputs' id_type), not Employee_ID; the other fields are
-      ones the indexed WSDL has (nothing invented).
+      ID goes with wd:type="WID" (in the xml_template and the inputs' id_type), not Employee_ID. The files in
+      ./workday-files are synthetic examples with made-up field names: the fields in the spec must be the ones those
+      files have (nothing beyond them), and a warning that the files are synthetic is right, not a fault.

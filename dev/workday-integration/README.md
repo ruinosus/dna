@@ -10,7 +10,7 @@ Studio spec) and `notes` (only what Workday's public schema shows; the rest «to
 npm run assets -w dev/workday-integration/tools   # scripts/wws.mjs
 npm run check -w dev/workday-integration/tools    # the checks, and the same answers as the Python port
 npm run zip -w dev/workday-integration/tools      # dist/workday-integration.zip and -plugin.zip
-node dev/workday-integration/tools/check-notes.mjs # the notes against an index of Workday's real WSDLs (fetch first)
+node dev/workday-integration/tools/check-real.mjs # the notes and the answers' sizes against Workday's real WSDLs (fetch first)
 ```
 
 `checks/golden.json` is what the Python port answered on the synthetic examples (`skills/…/examples/`): the check

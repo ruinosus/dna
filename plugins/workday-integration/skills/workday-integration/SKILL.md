@@ -4,7 +4,7 @@ description: Finds which Workday Web Service (SOAP) operation does what someone 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Reads only the files the person gives it; calls no Workday tenant. Not affiliated with Workday.
 metadata:
-  version: "0.2.2"
+  version: "0.2.3"
 ---
 
 # workday-integration: the Workday operation for a use case, and what to send it
@@ -49,7 +49,7 @@ has synthetic ones (made-up fields: never quote them as Workday's).
    event history), each with Workday's own description. From these, you work out the chain; say which steps you
    inferred.
 4. **Check before you state anything**: `show <Operation> --json` (depth 3–4; `--path A/B` to go down a big request,
-   `--response` for what comes back). To browse: `operations <Service>` (all of a service, `--filter word`),
+   `--response` for what comes back; a tree too big comes cut, with `cut` saying to which depth and where to go down). To browse: `operations <Service>` (all of a service, `--filter word`),
    `type <Type>` (a type's fields), `where <Element or Type>` (which operations carry a field, by which path). A field,
    an ID type or a cardinality you name must be one `show`, `type` or `where` showed you.
 5. **Write**, then read its **decisions**:

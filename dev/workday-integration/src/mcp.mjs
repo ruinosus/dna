@@ -17,7 +17,8 @@ const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: 
 const EMPTY = 'Nothing indexed yet. Run: node <plugin>/skills/workday-integration/scripts/wws.mjs ingest <the Operation Directory and the WSDLs> (or fetch --services hr), then call again.'
 
 const index = () => new Index(process.env.WWS_INDEX || defaultIndexDir())
-const answer = (value) => ({ content: [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value, null, 2) }] })
+// compact JSON: an MCP client may cut a long answer, and indentation is a third of it
+const answer = (value) => ({ content: [{ type: 'text', text: typeof value === 'string' ? value : JSON.stringify(value) }] })
 const failure = (text) => ({ content: [{ type: 'text', text }], isError: true })
 
 /** One tool: the index read fresh at each call (an ingest may have run meanwhile), a missing name an error, not a crash. */

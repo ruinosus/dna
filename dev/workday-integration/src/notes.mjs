@@ -1,12 +1,12 @@
 // Curated notes on operations, each of one kind, so the agent weighs it as what it is:
 //   schema       — what Workday's public WSDLs (v47.0, read on 2026-11-05) show: `evidence` names the elements, types
-//                  and values it rests on (tools/check-notes.mjs finds each of them in an index), `absent` the
+//                  and values it rests on (tools/check-real.mjs finds each of them in an index), `absent` the
 //                  operations it says do not exist, `absentFields` what no field of the request is named after;
 //   description  — what Workday's own description of the operation says (`quote`: the words, checked against it);
 //   inferred     — a deduction from the schema or the descriptions, not shown by them: check it;
 //   sensitive    — what a response may carry about a person, from its fields' names and documentation;
 //   tenant       — not in the schema at all: ask the tenant.
-// Shown by show, related and copilot, each with its source.
+// Shown by show, related and copilot, with the source of each kind once (`sources`).
 export const NOTES = {
   Add_Flexible_Work_Arrangement: [
     { kind: 'schema', text: 'No Get_Flexible_Work_Arrangement(s) operation exists in any service.', absent: ['Get_Flexible_Work_Arrangement', 'Get_Flexible_Work_Arrangements'] },
@@ -57,21 +57,20 @@ export const NOTES = {
   ],
 }
 
-const SOURCE = {
-  schema: "the schema: Workday's public WSDLs (v47.0), checked on 2026-11-05",
-  description: "Workday's description of the operation",
-  inferred: 'inferred — not shown by the schema: check it',
-  sensitive: "inferred from the fields' names and documentation",
-  tenant: 'not in the schema — ask the tenant',
+// Where each kind of note comes from: said once per answer (`sources`), not on every note.
+export const NOTE_SOURCES = {
+  schema: "Workday's public WSDLs (v47.0), checked on 2026-11-05; evidence, absent_operations and absent_fields are what it rests on",
+  description: "Workday's description of the operation; quote is its words",
+  inferred: 'a deduction, not shown by the schema: check it, say it as likely',
+  sensitive: "what the response may carry about a person, from its fields' names and documentation",
+  tenant: 'not in the schema: ask the tenant',
 }
 
-/** An operation's curated notes, each with its kind, its source and (for the schema's) its evidence. */
+/** An operation's curated notes: each its kind, its text and what proves it (the source of each kind: NOTE_SOURCES). */
 export function curatedNotes(op) {
   return (NOTES[op] ?? []).map((n) => ({
-    text: n.kind === 'tenant' ? `To confirm in the tenant: ${n.text[0].toLowerCase()}${n.text.slice(1)}` : n.kind === 'sensitive' ? `Sensitive: ${n.text}` : n.text,
     kind: n.kind,
-    source: SOURCE[n.kind],
-    // what proves it, for the agent to see too: the names it rests on, what it says is absent, the words it quotes
+    text: n.kind === 'tenant' ? `To confirm in the tenant: ${n.text[0].toLowerCase()}${n.text.slice(1)}` : n.kind === 'sensitive' ? `Sensitive: ${n.text}` : n.text,
     ...(n.evidence ? { evidence: n.evidence } : {}),
     ...(n.absent ? { absent_operations: n.absent } : {}),
     ...(n.absentFields ? { absent_fields: n.absentFields } : {}),
@@ -79,8 +78,12 @@ export function curatedNotes(op) {
   }))
 }
 
-// The Copilot Studio Workday connector, as Microsoft documents it (checked on 2026-11-05)
+/** The sources of the kinds the notes have, once. */
+export const sourcesOf = (notes) => Object.fromEntries([...new Set(notes.map((n) => n.kind))].filter((k) => k in NOTE_SOURCES).map((k) => [k, NOTE_SOURCES[k]]))
+
+// The Copilot Studio Workday connector, as Microsoft documents it (checked on 2026-11-05): the connector notes' kinds
 export const CONNECTOR_SOURCES = {
-  connector: 'https://learn.microsoft.com/en-us/connectors/workdaysoap/',
-  ess: 'https://learn.microsoft.com/en-us/microsoft-365/copilot/employee-self-service/workday-simplified-setup',
+  documentation: 'Microsoft: https://learn.microsoft.com/en-us/connectors/workdaysoap/ and https://learn.microsoft.com/en-us/microsoft-365/copilot/employee-self-service/workday-simplified-setup (checked on 2026-11-05)',
+  practice: 'Power Platform practice',
+  pointer: 'where the rest is',
 }

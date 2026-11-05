@@ -138,7 +138,7 @@ async function fetchServices(ix, opts) {
 }
 
 const proofOf = (n) => [n.evidence && `evidence: ${n.evidence.join(', ')}`, n.absent_operations && `absent: ${n.absent_operations.join(', ')}`, n.absent_fields && `no field named after: ${n.absent_fields.join(', ')}`, n.quote && `«${n.quote}»`].filter(Boolean).join('; ')
-const noteLine = (n) => `  • ${n.text}  [${n.source}${proofOf(n) ? ` — ${proofOf(n)}` : ''}]`
+const noteLine = (n) => `  • ${n.text}  [${n.kind}${proofOf(n) ? ` — ${proofOf(n)}` : ''}]`
 
 function relatedText(r) {
   const lines = [`${r.operation} (${r.service} ${r.version})`, r.description, '', 'Facts:', ...r.facts.map((f) => `  • ${f}`)]
@@ -148,13 +148,14 @@ function relatedText(r) {
   return lines.join('\n')
 }
 
-const decisionsText = (ds) => (ds?.length ? ['', 'Decisions (change them with --id-type and --choose):', ...ds.map((d) => `  • ${d.path}: ${d.kind === 'id_type' ? `ID type ${d.chosen} (options: ${d.options.join(', ')})` : d.kind === 'choice' ? `kept ${d.kept} (alternatives: ${d.alternatives.join(' | ')})` : 'included'} — ${d.why}`)].join('\n') : '')
+const decisionsText = (ds) => (ds?.length ? ['', 'Decisions (change them with --id-type and --choose):', ...ds.map((d) => `  • ${d.path}: ${d.kind === 'id_type' ? `ID type ${d.chosen} (options: ${d.options.join(', ')}${d.options_total ? `… ${d.options_total} in all` : ''})` : d.kind === 'choice' ? `kept ${d.kept} (alternatives: ${d.alternatives.join(' | ')})` : `included (holds ${d.holds.join(', ')})`} — ${d.why}`)].join('\n') : '')
 
 function showText(o) {
   const lines = [`${o.operation} (${o.service} ${o.version})${o.deprecated ? ' — DEPRECATED' : ''}`, o.description]
   if (o.also_in.length) lines.push(`also in: ${o.also_in.join(', ')}`)
   if (o.notes) lines.push('', 'Notes (curated):', ...o.notes.map(noteLine))
   lines.push('', o.schema ?? o.hint)
+  if (o.cut) lines.push('', `(${o.cut})`)
   return lines.join('\n')
 }
 

@@ -131,7 +131,7 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
   // related: facts, no verdict
   const r = relatedOperations(ix, 'Add_Flexible_Work_Arrangement')
   ok(r.same_noun.some((x) => x.operation === 'End_Flexible_Work_Arrangement' && x.description) && ['Approve_Business_Process', 'Deny_Business_Process', 'Send_Back_Business_Process', 'Cancel_Business_Process', 'Rescind_Business_Process', 'Get_Event_Detail', 'Get_Worker_Event_History'].every((o) => r.business_process_events.some((x) => x.operation === o)), 'related: the operations on the same noun, and those on business process events, with Workday\'s descriptions')
-  ok(r.facts.some((f) => /No Get_Flexible_Work_Arrangement/.test(f) && /indexed/.test(f)) && !('primary' in r) && !('steps' in r) && r.notes.every((n) => n.text && n.source), 'related: «no Get_» as a fact about the index, no primary, no steps; the notes with their source')
+  ok(r.facts.some((f) => /No Get_Flexible_Work_Arrangement/.test(f) && /indexed/.test(f)) && !('primary' in r) && !('steps' in r) && r.notes.every((n) => n.text && n.kind) && Object.keys(r.sources).length, 'related: «no Get_» as a fact about the index, no primary, no steps; the notes with their kind, the sources once')
   ok(!/GetWorkerMe|GetWorkerInboxTasks/.test(JSON.stringify(r)), 'related: no connector action it cannot check')
   // browsing: a service, a type, where a field is
   const ops = listOperations(ix, 'Integrations')
@@ -143,16 +143,17 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
   ok(findElement(ix, 'Unique_IdentifierObjectType').found > 5 && throws(() => getType(ix, 'Nope_Type'), /No type/), 'where by a type; a type that is not there')
   // the envelope's decisions, and changing them
   const env = makeEnvelope(ix, 'Add_Flexible_Work_Arrangement')
-  ok(env.decisions.some((d) => d.kind === 'id_type' && d.path.endsWith('Worker_Reference') && d.chosen === 'Employee_ID' && d.options.length === 3 && /default/.test(d.why)), 'envelope: the ID type it chose, among its options, said as a default')
+  ok(env.decisions.some((d) => d.kind === 'id_type' && d.path.endsWith('Worker_Reference') && d.chosen === 'Employee_ID' && d.options.length === 3 && d.why === 'default') && /Employee_ID for a person/.test(env.decision_rules.default), 'envelope: the ID type it chose, among its options, said as a default (the rule once, in decision_rules)')
   const env2 = makeEnvelope(ix, 'Add_Flexible_Work_Arrangement', { idTypes: { Worker_Reference: 'WID' }, include: ['Arrangement_Data/Job_Reference'], choose: ['Job_Reference'] })
-  ok(/<wd:Worker_Reference>\n\s*<wd:ID wd:type="WID">/.test(env2.xml) && /<wd:Job_Reference>/.test(env2.xml) && !/<wd:Position_Reference>/.test(env2.xml) && env2.decisions.some((d) => d.kind === 'choice' && d.kept === 'Job_Reference' && /you chose/.test(d.why)), 'envelope: --id-type and --choose change them')
+  ok(/<wd:Worker_Reference>\n\s*<wd:ID wd:type="WID">/.test(env2.xml) && /<wd:Job_Reference>/.test(env2.xml) && !/<wd:Position_Reference>/.test(env2.xml) && env2.decisions.some((d) => d.kind === 'choice' && d.kept === 'Job_Reference' && d.why === 'chosen'), 'envelope: --id-type and --choose change them')
   ok(throws(() => makeEnvelope(ix, 'Add_Flexible_Work_Arrangement', { idTypes: { Worker_Reference: 'Badge_ID' } }), /takes WID, Employee_ID, Contingent_Worker_ID — not Badge_ID/) && throws(() => makeEnvelope(ix, 'Add_Flexible_Work_Arrangement', { choose: ['Nope'] }), /not an alternative/) && throws(() => makeEnvelope(ix, 'Add_Flexible_Work_Arrangement', { idTypes: { Nope_Reference: 'WID' } }), /not a reference in this envelope/), 'envelope: an ID type, a choice or a reference that is not there is refused, with the options')
   const spec = copilotActionSpec(ix, 'Add_Flexible_Work_Arrangement', { include: ['Arrangement_Data/Note'] })
   const inputs = Object.fromEntries(spec.inputs.map((i) => [i.name, i]))
   ok(spec.operation_id === 'SOAP_Operation' && JSON.stringify(spec.parameters) === '{"service":"Human_Resources","version":"v47.0","requestBody":"<see power_fx / xml_template>"}', 'copilot: Execute SOAP operation, its service and version')
   ok(inputs.WorkerID.id_type === 'Employee_ID' && inputs.FirstDay.type === 'Date', 'copilot: typed inputs')
   ok(spec.power_fx.includes('Text(Topic.FirstDay, "yyyy-mm-dd")') && spec.power_fx.includes('Substitute(Substitute(Substitute(Topic.Note') && spec.power_fx.includes('version=""v47.0""'), 'copilot: Power Fx — dates as text, free text escaped, quotes doubled')
-  ok(spec.notes.some((n) => /signed-in user/.test(n.text) && /Entra ID Integrated/.test(n.text)) && spec.notes.some((n) => /Integration Permissions/.test(n.text) && /Task not authorized/.test(n.text)) && spec.notes.some((n) => /200 calls/.test(n.text)) && spec.notes.some((n) => /Secure inputs and Secure outputs/.test(n.text)) && spec.notes.every((n) => n.source && n.kind) && spec.decisions.length && spec.response.read_paths.length, 'copilot: the identity as the signed-in user, the domain security, the limit, Secure inputs/outputs — each note with its source —, its decisions, what to read back')
+  ok(spec.notes.some((n) => /signed-in user/.test(n.text) && /Entra ID Integrated/.test(n.text)) && spec.notes.some((n) => /Integration Permissions/.test(n.text) && /Task not authorized/.test(n.text)) && spec.notes.some((n) => /200 calls/.test(n.text)) && spec.notes.some((n) => /Secure inputs and Secure outputs/.test(n.text)) && spec.notes.every((n) => n.kind) && spec.sources.documentation && /learn\.microsoft\.com/.test(spec.sources.documentation) && spec.decisions.length && spec.response.read_paths.length, 'copilot: the identity as the signed-in user, the domain security, the limit, Secure inputs/outputs — the sources once —, its decisions, what to read back')
+  ok(Object.keys(spec)[5] === 'power_fx' && Object.keys(spec).indexOf('notes') > Object.keys(spec).indexOf('decisions') && !/<!--/.test(spec.xml_template + spec.power_fx) && spec.notes.some((n) => n.kind === 'pointer') && spec.notes.every((n) => !['schema', 'inferred', 'description'].includes(n.kind)), 'copilot (0.2.3): the formula first, the notes last; no comment in the request body; of the curated notes the ones to act on, and where the rest is')
   ok(!/<env:Envelope|wsse:/.test(spec.xml_template) && /^<wd:Add_Flexible_Work_Arrangement_Request xmlns:wd=/.test(spec.xml_template), 'copilot: requestBody is the element alone by default (no envelope, no WS-Security)')
   ok(/<env:Envelope/.test(copilotActionSpec(ix, 'Add_Flexible_Work_Arrangement', { bodyStyle: 'envelope' }).xml_template), 'copilot --envelope: the whole envelope, when asked')
   const nospec = copilotActionSpec(ix, 'Enter_Time_Off')
@@ -168,12 +169,16 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
   // --expand, the Python's synonyms
   // and a choice's comment now names its alternatives (it said «alternatives exist»): those comment lines too
   const noChoice = (v) => (typeof v === 'string' ? v.split('\n').filter((l) => !/^\s*<!-- (choice |one of )/.test(l)).join('\n').replace(/<!-- (choice |one of )[^>]*-->\n?/g, '') : v)
-  const strip = (o) => (Array.isArray(o) ? o.map(strip) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).filter(([k]) => !['notes', 'score', 'hint', 'warning', 'decisions', 'matched'].includes(k)).map(([k, v]) => [k, strip(v)])) : noChoice(o))
+  // 0.2.3 cuts for an agent's answer — the spec's XML without comments, a field's documentation at 160 characters, an
+  // input's description at 100 — applied to both sides, so what is compared is still the Python's logic
+  const cut = (t, n) => ([...t].length > n ? [...t].slice(0, n - 1).join('') + '…' : t)
+  const noComments = (t) => t.split('\n').filter((l) => !/^\s*<!--.*-->\s*$/.test(l)).map((l) => l.replace(/\s*<!--.*?-->/g, '')).join('\n')
+  const strip = (o, key = '', parent = '') => (Array.isArray(o) ? o.map((x) => strip(x, key, parent)) : o && typeof o === 'object' ? Object.fromEntries(Object.entries(o).filter(([k]) => !['notes', 'score', 'hint', 'warning', 'decisions', 'decision_rules', 'matched', 'sources', 'cut'].includes(k)).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => [k, strip(v, k, key)])) : typeof o === 'string' && key === 'doc' ? cut(o, 160) : typeof o === 'string' && key === 'description' && parent === 'inputs' ? cut(o, 100) : typeof o === 'string' && (key === 'xml_template' || key === 'power_fx') ? noComments(noChoice(o)) : noChoice(o))
   const run = (c) => {
     const a = c.args
     try {
       if (c.cmd === 'search') return ix.search(a.query, { scope: a.scope, limit: 10, expand: true })
-      if (c.cmd === 'show') return getOperation(ix, a.operation, { which: a.which, path: a.path, depth: a.depth, fmt: a.fmt })
+      if (c.cmd === 'show') return getOperation(ix, a.operation, { which: a.which, path: a.path, depth: a.depth, fmt: a.fmt, budget: Infinity })
       if (c.cmd === 'envelope') return makeEnvelope(ix, a.operation, { include: a.include, mode: a.mode, withHeader: a.with_header, bodyOnly: a.body_only })
       if (c.cmd === 'copilot') return copilotActionSpec(ix, a.operation, { include: a.include, bodyStyle: a.body_style ?? 'envelope' })
     } catch (e) {
@@ -199,12 +204,16 @@ for (const f of [HR, INT]) ix.ingestSchema(parseWsdl(f), f)
   const all = Object.values(NOTES).flat()
   const KINDS = ['schema', 'description', 'inferred', 'sensitive', 'tenant']
   ok(all.every((n) => KINDS.includes(n.kind)), `every note has a kind (${KINDS.join(', ')})`)
-  ok(all.filter((n) => n.kind === 'schema').every((n) => n.evidence?.length || n.absent?.length || n.absentFields?.length), "every «schema» note names its evidence (tools/check-notes.mjs finds it in an index of Workday's real WSDLs)")
+  ok(all.filter((n) => n.kind === 'schema').every((n) => n.evidence?.length || n.absent?.length || n.absentFields?.length), "every «schema» note names its evidence (tools/check-real.mjs finds it in an index of Workday's real WSDLs)")
   ok(all.filter((n) => n.kind === 'description').every((n) => n.quote), "every «description» note quotes Workday's words")
   ok(!/Staffing functional area security|self-approval is blocked by BP security|Approval routing follows the supervisory organization/.test(all.map((n) => n.text).join('\n')) && all.some((n) => n.kind === 'tenant'), 'what the schema cannot show is a «tenant» note')
   ok(['Get_Workers', 'Get_Worker_Event_History', 'Get_Event_Detail'].every((op) => NOTES[op].some((n) => n.kind === 'sensitive')), 'what may come back about a person is a «sensitive» note')
   const shown = getOperation(ix, 'Add_Flexible_Work_Arrangement').notes
-  ok(shown.every((n) => n.text && n.kind && n.source) && shown.some((n) => n.kind === 'inferred' && /inferred/.test(n.source)) && shown.some((n) => n.kind === 'schema' && n.evidence), 'show: each note with its kind, its source and, from the schema, its evidence')
+  const shownAll = getOperation(ix, 'Add_Flexible_Work_Arrangement')
+  ok(shown.every((n) => n.text && n.kind) && /deduction/.test(shownAll.sources.inferred) && shown.some((n) => n.kind === 'schema' && n.evidence), 'show: each note with its kind (the source of each kind once) and, from the schema, its evidence')
+  // a tree too big for an agent's answer is cut to a lower depth, and says so
+  const small = getOperation(ix, 'Add_Flexible_Work_Arrangement', { depth: 6, budget: 600 })
+  ok(small.cut && /cut to depth \d of the 6 asked/.test(small.cut) && /path/.test(small.cut) && small.schema.length <= 600 * 2, 'show: a tree too big is cut to a lower depth, with how to go down', small.cut)
   ok(shown.some((n) => n.absent_operations?.includes('Get_Flexible_Work_Arrangement')) && shown.some((n) => n.absent_fields?.includes('Questionnaire')) && shown.some((n) => n.kind === 'description' && n.quote) && shown.some((n) => /^To confirm in the tenant: the /.test(n.text)), 'show: what proves each note — the absent operations and fields, the quote — and the tenant note in one sentence')
 }
 

@@ -1,8 +1,11 @@
 // What the commands answer, from the index: an operation's tree, its surroundings (facts only), a service's operations,
 // a type, where an element appears, the envelope with every choice it made, and the spec of the Copilot Studio Workday
 // connector's «Execute SOAP operation». Port of workday-wws-mcp's workflows.py, without its verdicts (0.2.0).
-import { CONNECTOR_SOURCES, curatedNotes, NOTES } from './notes.mjs'
-import { buildEnvelope, findPath, LookupError, renderTree, responseHints, TreeBuilder } from './render.mjs'
+import { CONNECTOR_SOURCES, curatedNotes, NOTES, sourcesOf } from './notes.mjs'
+
+const rulesOf = (decisions) => Object.fromEntries([...new Set(decisions.map((d) => d.why))].map((w) => [w, DECISION_RULES[w]]))
+const CONNECTOR_SOURCES_OF = (notes) => Object.fromEntries(Object.entries(CONNECTOR_SOURCES).filter(([k]) => notes.some((n) => n.kind === k)))
+import { buildEnvelope, DECISION_RULES, findPath, LookupError, renderTree, responseHints, TreeBuilder } from './render.mjs'
 
 export const camel = (v) => v.split(/[_\W]+/).filter(Boolean).map((p) => p[0].toUpperCase() + p.slice(1)).join('') || 'Value'
 
@@ -20,7 +23,7 @@ const missingSchema = (row) =>
   `Run: node scripts/wws.mjs ingest <path/to/${row.service}.wsdl>  ` +
   `(download it from Workday Community, or: node scripts/wws.mjs fetch --services ${row.service} --version ${row.version})`
 
-export function getOperation(ix, op, { service, version, which = 'request', path, depth = 4, requiredOnly = false, fmt = 'text' } = {}) {
+export function getOperation(ix, op, { service, version, which = 'request', path, depth = 4, requiredOnly = false, fmt = 'text', budget = 8000 } = {}) {
   const { row, root } = treeFor(ix, op, service, version, which, Math.max(depth + (path ? (path.match(/\//g) ?? []).length + 2 : 0), 6))
   const summary = ix.operationSummary(row.op, row.service) ?? {}
   const out = {
@@ -28,14 +31,24 @@ export function getOperation(ix, op, { service, version, which = 'request', path
     description: summary.description ?? '', also_in: summary.also_in ?? [], deprecated: summary.deprecated ?? false,
     request_element: row.request_element, response_element: row.response_element,
   }
-  if (NOTES[row.op]) out.notes = curatedNotes(row.op)
+  if (NOTES[row.op]) {
+    out.notes = curatedNotes(row.op)
+    out.sources = sourcesOf(out.notes)
+  }
   if (!root) {
     out.schema = null
     out.hint = missingSchema(row)
     return out
   }
   const node = path ? findPath(root, path) : root
-  out.schema = fmt === 'json' ? node.toDict(depth) : renderTree(node, { maxDepth: depth, requiredOnly })
+  // a tree that does not fit an agent's answer is cut to a lower depth — said, with how to go down
+  const render = (d) => (fmt === 'json' ? node.toDict(d) : renderTree(node, { maxDepth: d, requiredOnly }))
+  const size = (x) => (typeof x === 'string' ? x.length : JSON.stringify(x).length)
+  let shown = depth
+  let schema = render(shown)
+  while (size(schema) > budget && shown > 1) schema = render(--shown)
+  out.schema = schema
+  if (shown < depth) out.cut = `cut to depth ${shown} of the ${depth} asked, to fit (about ${Math.round(budget / 1000)} KB): go down with path (e.g. ${(node.children.find((c) => c.children.length && c.required) ?? node.children.find((c) => c.children.length))?.path ?? node.path})`
   return out
 }
 
@@ -49,7 +62,7 @@ export function makeEnvelope(ix, op, { service, version, mode = 'required', incl
   return {
     operation: row.op, service: row.service, version: row.version,
     endpoint: `https://<host>/ccx/service/<tenant>/${row.service}/${row.version}`,
-    xml, variables, decisions,
+    xml, variables, decisions, decision_rules: rulesOf(decisions),
   }
 }
 
@@ -81,6 +94,7 @@ export function relatedOperations(ix, op, { service, version } = {}) {
     business_process_events: events,
     facts,
     notes: curatedNotes(row.op),
+    sources: sourcesOf(curatedNotes(row.op)),
   }
 }
 
@@ -191,7 +205,9 @@ const INPUT_TYPE = { 'xsd:date': 'Date', 'xsd:boolean': 'Boolean', 'xsd:decimal'
 // The connector's requestBody is the operation's element, without the envelope and without WS-Security: the connection
 // authenticates (Microsoft's own ESS Workday templates send the element alone). bodyStyle 'envelope' for the whole one.
 export function copilotActionSpec(ix, op, { service, version, include = [], mode = 'required', bodyStyle = 'body', variablePrefix = 'Topic.', idTypes = {}, choose = [] } = {}) {
-  const env = makeEnvelope(ix, op, { service, version, mode, include, bodyOnly: bodyStyle === 'body', idTypes, choose })
+  const made = makeEnvelope(ix, op, { service, version, mode, include, bodyOnly: bodyStyle === 'body', idTypes, choose })
+  // the request body Workday receives: without the comments the envelope carries for a person (the decisions say them)
+  const env = made.xml === null ? made : { ...made, xml: made.xml.split('\n').filter((l) => !/^\s*<!--.*-->\s*$/.test(l)).map((l) => l.replace(/\s*<!--.*?-->/g, '')).join('\n') }
   const row = ix.resolve(op, service, version)
   const spec = {
     connector: 'Workday (Microsoft, Premium)',
@@ -201,17 +217,21 @@ export function copilotActionSpec(ix, op, { service, version, include = [], mode
     operation: row.op,
   }
   const notes = [
-    { kind: 'documentation', text: "Identity: self-service and approval run as the signed-in user — a per-user OAuth connection (Microsoft Entra ID Integrated, the one Microsoft's simplified Employee Self-Service setup for Workday uses; or Entra ID Integrated with API Management, 'oauthapim'). With an integration system user (ISU, Basic) Workday sees the ISU as the initiator: routing, the 'self' rules and the no-self-approval rule stop reflecting the real person.", source: CONNECTOR_SOURCES.ess },
-    { kind: 'documentation', text: "Access, as the user: the employees' security group needs Get under Integration Permissions (Put, to write — confirm in the tenant) on the domain that governs the data, in Workday's domain security; the API client's scopes do not replace it. An operation that works with an ISU can answer 'Task not authorized' for an employee: find the domain and grant it.", source: CONNECTOR_SOURCES.ess },
-    { kind: 'documentation', text: 'Connections are not shareable: each user creates their own.', source: CONNECTOR_SOURCES.connector },
-    { kind: 'documentation', text: 'Throttling: 200 calls per connection per 60 s.', source: CONNECTOR_SOURCES.connector },
-    { kind: 'documentation', text: "requestBody is the operation's element alone (no SOAP envelope, no WS-Security header: the connection authenticates), as Microsoft's ESS templates send it; confirm once in your environment.", source: CONNECTOR_SOURCES.ess },
-    { kind: 'practice', text: "Turn on Secure inputs and Secure outputs on the SOAP action: the run history keeps the responses. Give the agent back only the fields it uses, never the raw XML.", source: 'curated: Power Platform practice — the run history keeps inputs and outputs unless they are secured' },
-    ...curatedNotes(row.op),
+    { kind: 'documentation', text: "Runs as the signed-in user: a per-user OAuth connection (Microsoft Entra ID Integrated, as Microsoft's simplified ESS setup; or Entra ID with API Management, 'oauthapim'). With an integration system user (ISU) Workday sees the ISU as the initiator, and its 'self' and no-self-approval rules stop seeing the person." },
+    { kind: 'documentation', text: "As the user, the employees' security group needs Get under Integration Permissions on the domain that governs the data (Put to write: confirm); without it Workday answers 'Task not authorized'. The API client's scopes do not replace it." },
+    { kind: 'documentation', text: 'Connections are per user, not shareable. Limit: 200 calls per connection per 60 s.' },
+    { kind: 'documentation', text: "requestBody is the operation's element alone, no envelope, no WS-Security (as Microsoft's ESS templates send it): confirm once." },
+    { kind: 'practice', text: 'Turn on Secure inputs and Secure outputs on the action (the run history keeps them); give the agent only the fields it uses, never the raw XML.' },
+    // of the curated notes, the ones to act on when writing it (tenant, sensitive); all of them, with their proofs, are
+    // in related and show
+    ...curatedNotes(row.op).filter((n) => n.kind === 'tenant' || n.kind === 'sensitive').map(({ kind, text }) => ({ kind, text })),
   ]
+  const more = curatedNotes(row.op).filter((n) => n.kind !== 'tenant' && n.kind !== 'sensitive').length
+  if (more) notes.push({ kind: 'pointer', text: `${more} more notes on ${row.op} (schema, description, inferred), with what proves each: wws_related_operations / related ${row.op}.` })
   if (env.xml === null) {
     spec.warning = env.hint
     spec.notes = notes
+    spec.sources = { ...CONNECTOR_SOURCES_OF(notes), ...sourcesOf(notes) }
     return spec
   }
   const inputs = env.variables.map((v) => {
@@ -221,7 +241,7 @@ export function copilotActionSpec(ix, op, { service, version, include = [], mode
       entry.id_type = v.id_type
       entry.id_type_options = (v.enum ?? []).slice(0, 15)
     }
-    if (v.doc) entry.description = [...v.doc].slice(0, 300).join('')
+    if (v.doc) entry.description = [...v.doc].length > 100 ? [...v.doc].slice(0, 99).join('') + '…' : v.doc
     return entry
   })
   const { root: respRoot, element: respEl } = treeFor(ix, op, row.service, row.version, 'response', 4)
@@ -230,7 +250,8 @@ export function copilotActionSpec(ix, op, { service, version, include = [], mode
     response.read_paths = responseHints(respRoot)
     if (response.read_paths.some((p) => p.includes('Event_Reference'))) response.tip = 'Keep the Event_Reference WID: it drives Get_Event_Detail and Approve/Deny/Cancel_Business_Process.'
   }
-  return Object.assign(spec, { inputs, xml_template: env.xml, power_fx: powerFx(env.xml, env.variables, variablePrefix), decisions: env.decisions, response, notes })
+  // the essential first (an MCP client may cut a long answer): the formula, the template, the inputs, the decisions
+  return Object.assign(spec, { power_fx: powerFx(env.xml, env.variables, variablePrefix), xml_template: env.xml, inputs, decisions: env.decisions, decision_rules: env.decision_rules, response, notes, sources: { ...CONNECTOR_SOURCES_OF(notes), ...sourcesOf(notes) } })
 }
 
 const xmlAttr = (s) => String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
@@ -286,5 +307,5 @@ export function essTemplate(ix, op, { service, version, include = [], mode = 're
     pad(1, '</requestTemplates>'),
     '</workdayEntityConfigurationTemplate>',
   ].join('\n')
-  return { operation: env.operation, service: env.service, version: env.version, placeholders: env.variables.map((v) => v.var), decisions: env.decisions, response_properties: properties, xml }
+  return { operation: env.operation, service: env.service, version: env.version, placeholders: env.variables.map((v) => v.var), decisions: env.decisions, decision_rules: env.decision_rules, response_properties: properties, xml }
 }

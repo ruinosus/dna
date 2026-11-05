@@ -42,7 +42,8 @@ export class Node {
     const out = { name: this.name, path: this.path, card: this.card || '1' }
     if (this.type) out.type = this.type
     if (this.value_type) out.value_type = this.value_type
-    if (this.doc) out.doc = this.doc
+    // a long documentation cut, as the text tree cuts it: a big request stays readable for the agent
+    if (this.doc) out.doc = [...this.doc].length > 160 ? [...this.doc].slice(0, 159).join('') + '…' : this.doc
     if (this.enum?.length) out.enum = this.enum
     if (this.attrs.length) out.attrs = this.attrs
     if (this.choice) out.choice = this.choice
@@ -266,6 +267,13 @@ function pickIdType(node, enumv) {
   return nonWid[0] ?? enumv[0]
 }
 
+/** What a decision's `why` means: said once with the decisions (DECISION_RULES), not on each one. */
+export const DECISION_RULES = {
+  default: "the tool's default — an ID type: WID for an event or a business process, Employee_ID for a person, else the first that is not WID; a required choice: its first alternative. Change it with id_types / choose (--id-type, --choose).",
+  chosen: 'what the caller asked for',
+  'holds required fields': 'an optional container taken in: the fields in `holds` are required, and its parent would go empty without it',
+}
+
 /** A SOAP envelope (or only the body), the variables it needs, and every choice it made (`decisions`: an ID type among
  * its options, the alternative kept in a choice, an optional container taken in), each one the caller can change.
  * mode 'required': only what is required, plus the `include` paths (their ancestors come with them); 'all': every
@@ -319,7 +327,7 @@ export function buildEnvelope(root, { operationVersion = null, include = [], mod
     // a choice the caller decided comes first: the alternative chosen in, the others out, whatever include says
     if (n.choice && picked.has(n.choice)) {
       if (picked.get(n.choice) !== n.path) return false
-      if (!seenChoice.has(n.choice)) decisions.push({ kind: 'choice', path: n.path, kept: n.name, alternatives: members.get(n.choice).map((m) => m.name), why: 'you chose it' })
+      if (!seenChoice.has(n.choice)) decisions.push({ kind: 'choice', path: n.path, kept: n.name, alternatives: members.get(n.choice).map((m) => m.name), why: 'chosen' })
       seenChoice.add(n.choice)
       return true
     }
@@ -328,13 +336,13 @@ export function buildEnvelope(root, { operationVersion = null, include = [], mod
     if (n.choice) {
       if (picked.has(n.choice)) {
         if (picked.get(n.choice) !== n.path) return false
-        if (!seenChoice.has(n.choice)) decisions.push({ kind: 'choice', path: n.path, kept: n.name, alternatives: members.get(n.choice).map((m) => m.name), why: 'you chose it' })
+        if (!seenChoice.has(n.choice)) decisions.push({ kind: 'choice', path: n.path, kept: n.name, alternatives: members.get(n.choice).map((m) => m.name), why: 'chosen' })
         seenChoice.add(n.choice)
         return true
       }
       if (n.choice.endsWith('?') || seenChoice.has(n.choice)) return false
       seenChoice.add(n.choice)
-      decisions.push({ kind: 'choice', path: n.path, kept: n.name, alternatives: members.get(n.choice).map((m) => m.name), why: 'a required choice: the first alternative, by default (choose another with choose)' })
+      decisions.push({ kind: 'choice', path: n.path, kept: n.name, alternatives: members.get(n.choice).map((m) => m.name), why: 'default' })
       return true
     }
     return n.min >= 1
@@ -358,7 +366,7 @@ export function buildEnvelope(root, { operationVersion = null, include = [], mod
       if (asked !== undefined && enumv.length && !enumv.includes(asked)) throw new LookupError(`id type: ${n.name} takes ${enumv.join(', ')} — not ${asked}`)
       if (askedKey) usedIdTypes.add(askedKey)
       const chosen = asked ?? pickIdType(n, enumv)
-      if (enumv.length > 1 || asked !== undefined) decisions.push({ kind: 'id_type', path: n.path, chosen, options: enumv, why: asked !== undefined ? 'you chose it' : 'the default (WID for an event or a business process, Employee_ID for a person, else the first that is not WID); change it with idTypes' })
+      if (enumv.length > 1 || asked !== undefined) decisions.push({ kind: 'id_type', path: n.path, chosen, options: enumv.slice(0, 12), ...(enumv.length > 12 ? { options_total: enumv.length } : {}), why: asked !== undefined ? 'chosen' : 'default' })
       const v = varName(new Node({ name: 'ID', path: `${n.path}/ID` }))
       variables.push({ var: v, path: `${n.path}/ID`, xsd_type: 'xsd:string', required: n.required, enum: enumv, doc: n.doc, id_type: chosen })
       if (enumv.length > 1) out.push(`${pad}<!-- ${n.name}: ID @type options: ${enumv.slice(0, 12).join(', ')}${enumv.length > 12 ? '…' : ''} -->`)
@@ -380,7 +388,7 @@ export function buildEnvelope(root, { operationVersion = null, include = [], mod
     if (carriers.length) {
       kids = carriers
       carried.push(...carriers.map((c) => c.path))
-      for (const c of carriers) decisions.push({ kind: 'optional_container', path: c.path, included: true, why: `optional in the schema, but it holds required fields (${c.children.filter((d) => d.required).map((d) => d.name).join(', ')}), and ${n.name} would go empty without it` })
+      for (const c of carriers) decisions.push({ kind: 'optional_container', path: c.path, included: true, why: 'holds required fields', holds: c.children.filter((d) => d.required).map((d) => d.name) })
     }
     if (!kids.length) {
       out.push(n.recursive || n.truncated ? `${pad}<${tag}${attrs}><!-- expand with include=[...] --></${tag}>` : n.any ? `${pad}<${tag}${attrs}><!-- any element may go here (xsd:any) --></${tag}>` : `${pad}<${tag}${attrs}/>`)
