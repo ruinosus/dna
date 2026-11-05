@@ -1,5 +1,6 @@
 // The front page of the GitHub Pages site (docs/index.html): the eight skills, each with a picture from its own gallery
-// (docs/<skill>/, made by that skill's site), what it is for and how to install them all. Run after the eight sites.
+// (docs/<skill>/, made by that skill's site), what it is for, the sibling plugin (workday-integration) and how to install
+// them all. Run after the eight sites.
 import { existsSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -60,6 +61,10 @@ pre { margin: 0; padding: 14px 16px; border-radius: 10px; background: var(--card
 .install { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; max-width: 760px; margin: 0 auto; width: 100%; }
 code { font-size: 14px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
 .note { color: var(--muted); }
+.sibling { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 24px; align-items: center; padding: 24px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+.sibling > div { display: grid; gap: 12px; }
+.sibling pre { background: var(--page); }
+@media (max-width: 760px) { .sibling { grid-template-columns: minmax(0, 1fr); padding: 16px; } }
 footer { color: var(--muted); font-size: 14px; text-align: center; }
 @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
 </style>
@@ -77,6 +82,22 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
   <section>
     <div class="grid">${SKILLS.map(card).join('')}
     </div>
+  </section>
+  <section class="sibling" id="workday-integration">
+    <div>
+      <span class="meta"><span>a sibling plugin</span><span>0.1.0</span></span>
+      <h2>workday-integration</h2>
+      <p>For whoever designs a Workday integration: a catalog of the Workday Web Services (SOAP) on your machine. Ask in Portuguese or English which operation does what you need; it traces the chain — who the user is, the operation, the approver's inbox, the business process — shows the request with every field, and writes the SOAP envelope, the spec of the Copilot Studio Workday connector's «Execute SOAP operation» (typed inputs, Power Fx, what to read back) and a template of Microsoft's Employee Self-Service Workday pack. As a skill and as an MCP server.</p>
+      <p class="note">It reads the Operation Directory and the WSDLs from Workday Community or your files, and calls no tenant: no credential, nothing of a person in what it writes. Not affiliated with Workday.</p>
+      <p><a href="https://github.com/ruinosus/dna/tree/main/plugins/workday-integration">README</a> · <a href="https://github.com/ruinosus/dna/releases/tag/workday-integration-v0.1.0">release</a></p>
+    </div>
+    <pre>/plugin install workday-integration@dna
+
+node scripts/wws.mjs fetch --services hr
+node scripts/wws.mjs trace "colaborador pede trabalho
+  flexível e o gestor aprova"
+node scripts/wws.mjs copilot Approve_Business_Process
+node scripts/wws.mjs ess Approve_Business_Process</pre>
   </section>
   <section class="install" id="install">
     <h2>Install</h2>
