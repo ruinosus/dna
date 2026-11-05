@@ -28,6 +28,6 @@ learning question "Um SLA sem dono é um SLA?"
 learning answer "Não: sem dono, ninguém avisa quando o prazo não vai ser cumprido."
 learning caveat "O prazo certo depende do pedido; um único prazo para tudo engana."
 
-quiz "O que um SLA precisa ter?"
+knowledge_check "O que um SLA precisa ter?"
   * um prazo e um dono -- sem um dos dois, não há promessa
   - só um prazo -- sem dono, ninguém responde pelo atraso

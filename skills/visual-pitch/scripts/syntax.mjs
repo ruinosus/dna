@@ -32,7 +32,7 @@ export const SYNTAX = {
   animate: { line: 'animate caminhao drive', needs: 'truck caminhao at 600,320 "caminhão"' },
   lottie: { line: 'lottie celebrate at 720,180 size=120' },
   highlight: { line: 'highlight 90,500 -> 810,500 thickness=24' },
-  quiz: { line: 'quiz "Se a taxa dobra, a fatura em seis meses…"\n  * mais que dobra o juro -- é juro sobre juro\n  - só dobra -- isso seria juro simples' },
+  knowledge_check: { line: 'knowledge_check "Se a taxa dobra, a fatura em seis meses…"\n  * mais que dobra o juro -- é juro sobre juro\n  - só dobra -- isso seria juro simples' },
   // Not in the cheat sheet (references/text.md has them all), but a mistake in one still shows how it is written.
   line: { line: 'line 60,350 -> 840,350 dashed', sheet: false },
   polyline: { line: 'polyline 100,100 200,80 300,120', sheet: false },

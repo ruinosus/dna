@@ -1,6 +1,6 @@
 // Checks the skill as someone installing it would get it: SKILL.md's frontmatter and one version everywhere; every
 // example drawn clean (no review problem, nothing the purpose misses); one recipe per purpose warning (exit 3); a
-// explainer, a drawing with no purpose, a quiz and a Mermaid file refused (exit 1); and the cheat sheet in SKILL.md, word
+// explainer, a drawing with no purpose, a knowledge check and a Mermaid file refused (exit 1); and the cheat sheet in SKILL.md, word
 // for word. Run after npm run assets.
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -62,7 +62,7 @@ const refused = [
   ['an explainer', recipe('explainer.chalk', plain('explainer')), /✗ purpose: an explainer is visual-explainer's/],
   ['a drawing with no purpose', recipe('none.chalk', 'title X\ntext "algo" at 40,64\n'), /✗ purpose: say what the drawing is for[\s\S]*kind pitch/],
   ['an unknown purpose', recipe('odd.chalk', plain('memo')), /✗ purpose: kind memo is not one of/],
-  ['a quiz outside an explainer', recipe('quiz.chalk', `${plain('pitch')}quiz "Qual?" options "a","b" answer 1\n`), /quiz/],
+  ['a knowledge check outside an explainer', recipe('knowledge-check.chalk', `${plain('pitch')}knowledge_check "Qual?" options "a","b" answer 1\n`), /knowledge check/],
   ['a Mermaid file', recipe('flow.mmd', 'flowchart LR\n  a --> b\n'), /a Mermaid diagram is not drawn by visual-pitch/],
 ]
 for (const [what, file, says] of refused) {
@@ -90,11 +90,11 @@ for (const [what, file, says] of refused) {
   }
 }
 
-// The cheat sheet: every line meant for SKILL.md is in it, word for word (a quiz is an explainer's, so it is left out).
+// The cheat sheet: every line meant for SKILL.md is in it, word for word (a knowledge check is an explainer's, so it is left out).
 {
   const { SYNTAX } = await import('../../../skills/visual-pitch/scripts/syntax.mjs')
   const text = readFileSync(join(skill, 'SKILL.md'), 'utf8')
-  const absent = Object.entries(SYNTAX).filter(([k, { line, sheet }]) => sheet !== false && !['quiz', 'learning'].includes(k) && !text.includes(line)).map(([k]) => k)
+  const absent = Object.entries(SYNTAX).filter(([k, { line, sheet }]) => sheet !== false && !['knowledge_check', 'learning'].includes(k) && !text.includes(line)).map(([k]) => k)
   expect(!absent.length, `SKILL.md's cheat sheet has every example meant for it${absent.length ? ` — missing ${absent.join(', ')}` : ''}`)
 }
 

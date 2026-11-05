@@ -876,7 +876,7 @@ function validateLottie(key, data) {
 }
 function validateScene(data) {
   object(data, "The recipe");
-  const s = data;
+  const s = { ...data };
   finite(s.width, "width", 100, 4e3);
   finite(s.height, "height", 100, 4e3);
   for (const key of ["id", "title", "category"]) optionalText(s[key], key);
@@ -888,19 +888,24 @@ function validateScene(data) {
   if (typeof s.kind === "string" && s.kind in OLD_KINDS) s.kind = OLD_KINDS[s.kind];
   choice(s.kind, KINDS, "kind");
   optionalText(s.source, "source");
-  if (s.quiz !== void 0 && s.kind !== void 0 && s.kind !== "explainer") throw new Error(`quiz: only an explainer has a quiz (this drawing is a ${s.kind}).`);
-  choice(s.theme, ["paper", "chalkboard", "business"], "theme");
   if (s.quiz !== void 0) {
-    object(s.quiz, "quiz");
-    text(s.quiz.question, "quiz.question");
-    if (!Array.isArray(s.quiz.options) || s.quiz.options.length < 2 || s.quiz.options.length > 4) throw new Error("quiz.options: expected 2 to 4 options.");
-    s.quiz.options.forEach((o, j) => {
-      object(o, `quiz.options[${j}]`);
-      text(o.text, `quiz.options[${j}].text`);
-      text(o.why, `quiz.options[${j}].why`);
-      if (typeof o.right !== "boolean") throw new Error(`quiz.options[${j}].right: expected true or false.`);
+    if (s.knowledge_check !== void 0) throw new Error("quiz: the name before knowledge_check; write only knowledge_check.");
+    s.knowledge_check = s.quiz;
+    delete s.quiz;
+  }
+  if (s.knowledge_check !== void 0 && s.kind !== void 0 && s.kind !== "explainer") throw new Error(`knowledge_check: only an explainer has a knowledge check (this drawing is a ${s.kind}).`);
+  choice(s.theme, ["paper", "chalkboard", "business"], "theme");
+  if (s.knowledge_check !== void 0) {
+    object(s.knowledge_check, "knowledge_check");
+    text(s.knowledge_check.question, "knowledge_check.question");
+    if (!Array.isArray(s.knowledge_check.options) || s.knowledge_check.options.length < 2 || s.knowledge_check.options.length > 4) throw new Error("knowledge_check.options: expected 2 to 4 options.");
+    s.knowledge_check.options.forEach((o, j) => {
+      object(o, `knowledge_check.options[${j}]`);
+      text(o.text, `knowledge_check.options[${j}].text`);
+      text(o.why, `knowledge_check.options[${j}].why`);
+      if (typeof o.right !== "boolean") throw new Error(`knowledge_check.options[${j}].right: expected true or false.`);
     });
-    if (s.quiz.options.filter((o) => o.right === true).length !== 1) throw new Error("quiz.options: exactly one option is right.");
+    if (s.knowledge_check.options.filter((o) => o.right === true).length !== 1) throw new Error("knowledge_check.options: exactly one option is right.");
   }
   if (s.learning !== void 0) {
     object(s.learning, "learning");
@@ -1485,12 +1490,14 @@ function parseChalk(text2, props) {
         names.add(name);
         continue;
       }
-      case "quiz": {
-        scene.quiz = {
+      case "quiz":
+      // DNA 2.2.0: the name before, still read
+      case "knowledge_check": {
+        scene.knowledge_check = {
           question: unquote(rest[0] ?? ""),
           options: line2.children.map((c) => {
             const [mark, ...words] = c.tokens;
-            if (mark !== "*" && mark !== "-") throw new ChalkTextError(c.no, "under a quiz, write * right option -- why, or - wrong option -- why.");
+            if (mark !== "*" && mark !== "-") throw new ChalkTextError(c.no, "under a knowledge_check, write * right option -- why, or - wrong option -- why.");
             const body = words.map(unquote).join(" ");
             const [t, why = ""] = body.split(/\s+--\s+/);
             return { text: t.trim(), right: mark === "*", why: why.trim() };
@@ -1628,10 +1635,10 @@ function printChalk(scene, props) {
     if (s.say !== void 0) out.push(`> ${s.say}`);
     out.push(...printStep(s, names, ""));
   }
-  const quiz = scene.quiz;
-  if (quiz) {
-    out.push("", `quiz ${q(quiz.question)}`);
-    for (const o of quiz.options) out.push(`  ${o.right ? "*" : "-"} ${o.text} -- ${o.why}`);
+  const check = scene.knowledge_check;
+  if (check) {
+    out.push("", `knowledge_check ${q(check.question)}`);
+    for (const o of check.options) out.push(`  ${o.right ? "*" : "-"} ${o.text} -- ${o.why}`);
   }
   return out.join("\n").replace(/\n{3,}/g, "\n\n") + "\n";
 }

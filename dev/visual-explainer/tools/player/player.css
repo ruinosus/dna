@@ -69,14 +69,14 @@
 .visual-explainer .ask { position: absolute; inset: auto 16px 16px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; box-shadow: 0 6px 20px rgba(0,0,0,.15); }
 .visual-explainer .ask[hidden] { display: none; }
 .visual-explainer .ask p { margin: 0; flex: 1 1 240px; font-size: 18px; font-weight: 700; }
-.visual-explainer .quiz[hidden] { display: none; }
-.visual-explainer .quiz p { margin: 0; font-size: 14px; }
-.visual-explainer .quiz .options { display: flex; flex-direction: column; gap: 6px; }
-.visual-explainer .quiz .options button { text-align: left; }
-.visual-explainer .quiz .options button.is-right { background: var(--ok-bg); border-color: #9fd89f; color: var(--ok); }
-.visual-explainer .quiz .options button.is-wrong { background: var(--warn-bg); border-color: #f1c27b; color: var(--warn); }
-.visual-explainer .quiz .why { color: var(--muted); }
-.visual-explainer .quiz .why.is-right { color: var(--ok); }
+.visual-explainer .knowledge-check[hidden] { display: none; }
+.visual-explainer .knowledge-check p { margin: 0; font-size: 14px; }
+.visual-explainer .knowledge-check .options { display: flex; flex-direction: column; gap: 6px; }
+.visual-explainer .knowledge-check .options button { text-align: left; }
+.visual-explainer .knowledge-check .options button.is-right { background: var(--ok-bg); border-color: #9fd89f; color: var(--ok); }
+.visual-explainer .knowledge-check .options button.is-wrong { background: var(--warn-bg); border-color: #f1c27b; color: var(--warn); }
+.visual-explainer .knowledge-check .why { color: var(--muted); }
+.visual-explainer .knowledge-check .why.is-right { color: var(--ok); }
 .visual-explainer .transcript summary { cursor: pointer; font-size: 14px; font-weight: 700; }
 .visual-explainer .transcript ol { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
 .visual-explainer .transcript p { margin: 2px 0 0; }

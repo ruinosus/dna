@@ -5,10 +5,10 @@ body { margin: 0; background: #f4f6f8; color: #1f2a37; font: 15px/1.5 'IBM Plex 
 body.still { background: #ffffff; }
 body.still #stage { padding: 0; max-width: none; }
 
-/* onda 4: a course */
-.course { display: flex; flex-direction: column; gap: 6px; background: #fff; border: 1px solid #e4e7ec; border-radius: 10px; padding: 10px 14px; }
-.course[hidden] { display: none; }
-.course b { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #6b665c; }
-.course ol { margin: 0; padding-left: 20px; display: flex; flex-wrap: wrap; gap: 4px 22px; }
-.course a { color: #242424; }
-.course a[aria-current="page"] { font-weight: 700; }
+/* onda 4: a collection */
+.collection { display: flex; flex-direction: column; gap: 6px; background: #fff; border: 1px solid #e4e7ec; border-radius: 10px; padding: 10px 14px; }
+.collection[hidden] { display: none; }
+.collection b { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #6b665c; }
+.collection ol { margin: 0; padding-left: 20px; display: flex; flex-wrap: wrap; gap: 4px 22px; }
+.collection a { color: #242424; }
+.collection a[aria-current="page"] { font-weight: 700; }

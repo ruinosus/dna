@@ -11,7 +11,7 @@
     "answer": "Não: sem dono, ninguém avisa quando o prazo não vai ser cumprido.",
     "caveat": "O prazo certo depende do pedido; um único prazo para tudo engana."
   },
-  "quiz": {
+  "knowledge_check": {
     "question": "O que um SLA precisa ter?",
     "options": [
       {

@@ -30,7 +30,7 @@ writeFileSync(join(repo, 'docs/index.html'), `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DNA — Domain Notation of Anything</title>
-<meta name="description" content="Eight Claude skills for showing an idea to people: teach it by drawing, present it, rehearse an incident, map a team's way of working and a customer journey, compare Copilot Studio agents, simulate a process, and put the whole process together — each one HTML file that opens offline.">
+<meta name="description" content="Eight Claude skills for showing an idea to people: explain it by drawing, present it, rehearse an incident, map a team's way of working and a customer journey, compare Copilot Studio agents, simulate a process, and put the whole process together — each one HTML file that opens offline.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">

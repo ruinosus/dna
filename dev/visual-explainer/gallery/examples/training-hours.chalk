@@ -18,6 +18,6 @@ ana -> academia "estuda"
 pause ask "E em um ano, quantas horas?"
 counter at 470,270 "12*n" "{v:0} horas num ano"
 
-quiz "Se n dobra, o total do ano…"
+knowledge_check "Se n dobra, o total do ano…"
   * dobra -- 12 × n cresce em linha reta
   - quadruplica -- não há n² aqui

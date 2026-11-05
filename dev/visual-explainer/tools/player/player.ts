@@ -1,5 +1,5 @@
 // The page of every visual-explainer HTML file (and of player.js on a CDN): it reads the recipe from the page, checks it and
-// mounts the explainer (explainer.ts) — or, for a course, the list of explainers above it. Opened with #review, #snapshot,
+// mounts the explainer (explainer.ts) — or, for a collection, the list of explainers above it. Opened with #review, #snapshot,
 // #snapshots, #svg, #still or #export, it does the job of scripts/build.mjs and of the repository's tools instead; with
 // #present it opens presenting.
 import { buildScope, playbackBeats, Renderer, setLottiePlayer, type LottiePlayer } from '@engine/renderer'
@@ -38,10 +38,10 @@ function mount() {
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T
 const faces = () => $('chalk-fonts')?.textContent ?? ''
 
-// Onda 4: the page holds one recipe, or a course — { course, explainers } — of which `?explainer=n` is the one shown.
-interface Course { title: string; explainers: Scene[]; at: number }
+// Onda 4: the page holds one recipe, or a collection — { collection, explainers } — of which `?explainer=n` is the one shown.
+interface Collection { title: string; explainers: Scene[]; at: number }
 
-function readRecipe(): { scene: Scene; course?: Course } {
+function readRecipe(): { scene: Scene; collection?: Collection } {
   const holder = $('chalk-recipe')
   // The recipe may come as text (<script type="text/visual-explainer">) instead of JSON.
   const raw = holder.getAttribute('type') === 'text/visual-explainer'
@@ -49,27 +49,28 @@ function readRecipe(): { scene: Scene; course?: Course } {
     : JSON.parse(holder.textContent ?? '')
   // DNA 2.0.0: a recipe that names no theme is drawn in business — the explainer, its pictures, its SVG, video and PowerPoint
   const themed = (s: Scene): Scene => (s.theme ? s : { ...s, theme: 'business' })
-  // DNA 2.2.0: a course from before keeps its explainers under `lessons`, and its links say `?lesson=n`; both still read.
+  // DNA 2.2.0: a collection from before is a course, with its explainers under `lessons` and links that say `?lesson=n`;
+  // all still read.
   const list = raw?.explainers ?? raw?.lessons
   if (!raw || !Array.isArray(list)) return { scene: themed(validateScene(raw)) }
   const explainers = (list as unknown[]).map((l) => themed(validateScene(l)))
   const query = new URLSearchParams(location.search)
   const wanted = Number(query.get('explainer') ?? query.get('lesson'))
   const at = Number.isInteger(wanted) && wanted >= 1 && wanted <= explainers.length ? wanted - 1 : 0
-  return { scene: explainers[at], course: { title: String(raw.course ?? explainers[0].title), explainers, at } }
+  return { scene: explainers[at], collection: { title: String(raw.collection ?? raw.course ?? explainers[0].title), explainers, at } }
 }
 
-/** The list of the course's explainers; each is a link to the same page with `?explainer=n`. */
-function contents(course: Course, label: string) {
-  const nav = $('course')
+/** The list of the collection's explainers; each is a link to the same page with `?explainer=n`. */
+function contents(collection: Collection, label: string) {
+  const nav = $('collection')
   nav.hidden = false
   nav.setAttribute('aria-label', label)
-  nav.append(tag('b', {}, course.title))
+  nav.append(tag('b', {}, collection.title))
   const list = tag('ol')
-  course.explainers.forEach((explainer, k) => {
+  collection.explainers.forEach((explainer, k) => {
     const item = tag('li')
     const link = tag('a', { href: `?explainer=${k + 1}` }, explainer.title)
-    if (k === course.at) link.setAttribute('aria-current', 'page')
+    if (k === collection.at) link.setAttribute('aria-current', 'page')
     item.append(link)
     list.append(item)
   })
@@ -323,10 +324,10 @@ async function still(scene: Scene) {
 
 async function main() {
   let scene: Scene
-  let course: Course | undefined
+  let collection: Collection | undefined
   const mode = location.hash.slice(1)
   try {
-    ;({ scene, course } = readRecipe())
+    ;({ scene, collection } = readRecipe())
   } catch (e) {
     if (['review', 'snapshot', 'snapshots', 'svg', 'export'].includes(mode)) return report(mode, { error: (e as Error).message })
     $('stage').replaceChildren(tag('p', { class: 'broken' }, `${t.broken} ${(e as Error).message}`))
@@ -341,7 +342,7 @@ async function main() {
   document.title = scene.title
   const lang = langOf(scene)
   document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en'
-  if (course) contents(course, TEXT[lang].explainers)
+  if (collection) contents(collection, TEXT[lang].explainers)
   await mountExplainer($('explainer'), scene, { faces: faces(), lang, keys: 'document', present: mode === 'present' || document.body.dataset.present === '1' })
 }
 

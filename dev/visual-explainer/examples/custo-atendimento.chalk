@@ -31,6 +31,6 @@ learning question "Quanto custa um atendimento de 8 minutos?"
 learning answer "R$ 8: 8 minutos a R$ 1 por minuto."
 learning caveat "Os valores são ilustrativos; o custo real inclui sistemas e gestão."
 
-quiz "Se o atendimento passa de 8 para 16 minutos, o custo…"
+knowledge_check "Se o atendimento passa de 8 para 16 minutos, o custo…"
   * dobra -- o custo cresce em linha reta com os minutos
   - fica igual -- cada minuto custa o mesmo

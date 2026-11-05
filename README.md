@@ -118,7 +118,7 @@ stage-door, front-of-house, dress-rehearsal) and house-lights itself point here.
 
 ## Em português
 
-Oito skills para mostrar uma ideia a alguém: **visual-explainer** ensina desenhando, **visual-pitch** desenha para
+Oito skills para mostrar uma ideia a alguém: **visual-explainer** explica desenhando, **visual-pitch** desenha para
 apresentar (e vira PowerPoint), **incident-drill** transforma o runbook num ensaio de incidente, **way-of-working**
 mapeia o jeito de trabalhar do time, **service-blueprint** mapeia a jornada do cliente e **agent-review** compara os
 agentes do Copilot Studio (o que se repete, quem está fora do padrão), **process-simulation** simula um processo para perguntar «e se»

@@ -1,5 +1,5 @@
 ---
-name: boundary-teach-pt
+name: boundary-explain-pt
 tags: [scope, pt]
 max_turns: 30
 timeout_seconds: 600

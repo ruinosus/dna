@@ -32,7 +32,7 @@ learning question "…"
 learning answer "…"
 learning caveat "…"
 
-quiz "Se n dobra, o total do ano…"
+knowledge_check "Se n dobra, o total do ano…"
   * dobra -- 12 × n cresce em linha reta
   - quadruplica -- não há n² aqui
 ```
@@ -50,7 +50,7 @@ quiz "Se n dobra, o total do ano…"
   can also go with a space (`size 44`).
 - **Placing** instead of `at x,y`: `right-of <id>`, `left-of`, `above`, `below`, then `gap 16` and `align=start|end`.
 - **Indented lines** are the steps inside `row`, `column`, `grid` and `when`, the marks of a `timeline`, the rows of a
-  `table` and the options of a `quiz`.
+  `table` and the options of a `knowledge_check`.
 
 ## Every step
 

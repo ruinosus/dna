@@ -1,5 +1,5 @@
 // One explainer mounted inside an element: chapters, Next / Back, the narration, the values, the question that waits, the
-// quiz, the check and the downloads, around the drawing engine (Renderer, chapters, reviewer). It is not a second
+// knowledge check, the check and the downloads, around the drawing engine (Renderer, chapters, reviewer). It is not a second
 // engine: it only builds the explainer around the drawing. Nothing is global (no ids, styles under .visual-explainer), so a page
 // can hold several — the HTML file holds one, an Obsidian note as many as it has blocks.
 // Spec 2026-10-30 (visual-explainer no Obsidian): `compact` is the explainer inside a note — chapters, Values and Expand on top,
@@ -86,7 +86,7 @@ const MARKUP = `
     <aside>
       <section data-part="controls" class="card controls"></section>
       <section data-part="learning" class="card learning"></section>
-      <section data-part="quiz" class="card quiz" hidden></section>
+      <section data-part="knowledge-check" class="card knowledge-check" hidden></section>
       <div data-part="check" class="check" role="status"></div>
       <details data-part="transcript" class="card transcript"></details>
       <p class="foot"><span data-part="keys"></span><br><span data-part="made"></span><span data-part="credits"></span></p>
@@ -260,7 +260,7 @@ export async function mountExplainer(root: HTMLElement, scene: Scene, opts: Expl
         theme,
         beforeBeat: (text, start) => beat(text, start, mine),
       })
-      if (mine === run && at === chapters.length - 1) quiz()
+      if (mine === run && at === chapters.length - 1) knowledgeCheck()
     } catch (e) {
       // A newer drawing took over (another click, a value moved): nothing to show.
       if (mine === run) throw e
@@ -337,7 +337,7 @@ export async function mountExplainer(root: HTMLElement, scene: Scene, opts: Expl
         toggle.setAttribute('aria-expanded', String(open))
       })
     }
-    for (const p of ['learning', 'quiz', 'check', 'transcript']) part(p).remove()
+    for (const p of ['learning', 'knowledge-check', 'check', 'transcript']) part(p).remove()
     part('downloads').remove()
     part('board').remove()
     part('present').remove()
@@ -418,13 +418,13 @@ export async function mountExplainer(root: HTMLElement, scene: Scene, opts: Expl
   }
 
   /** The question at the end, once the last chapter is drawn: pick one, see why. */
-  function quiz() {
-    const box = part('quiz')
-    if (!box || !scene.quiz || box.childElementCount) return
+  function knowledgeCheck() {
+    const box = part('knowledge-check')
+    if (!box || !scene.knowledge_check || box.childElementCount) return
     box.hidden = false
     const why = tag('p', { class: 'why', role: 'status' })
     const options = tag('div', { class: 'options' })
-    for (const o of scene.quiz.options) {
+    for (const o of scene.knowledge_check.options) {
       const b = tag('button', { type: 'button' }, o.text)
       b.addEventListener('click', () => {
         options.querySelectorAll('button').forEach((x) => x.classList.remove('is-right', 'is-wrong'))
@@ -434,7 +434,7 @@ export async function mountExplainer(root: HTMLElement, scene: Scene, opts: Expl
       })
       options.append(b)
     }
-    box.append(tag('h2', {}, t.yourTurn), tag('p', {}, scene.quiz.question), options, why)
+    box.append(tag('h2', {}, t.yourTurn), tag('p', {}, scene.knowledge_check.question), options, why)
   }
 
   /** Everything the explainer says, in order, by chapter — for reading and for screen readers. */

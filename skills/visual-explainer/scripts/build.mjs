@@ -1,11 +1,11 @@
 #!/usr/bin/env node
-// Checks visual-explainer recipes and turns them into one HTML file that plays the explainer — or, given several, a course: one
+// Checks visual-explainer recipes and turns them into one HTML file that plays the explainer — or, given several, a collection: one
 // file with every explainer and a list to go from one to another. A recipe can be JSON (.json), text (.chalk), a Mermaid
 // flowchart (.mmd, with `%% # chapter` and `%% > narration`), or Markdown (.md): each ```visual-explainer or ```mermaid block
 // in it is an explainer.
 //
 //   node build.mjs <recipe.json|.chalk|.mmd|.md> [out.html] [--no-review] [--snapshots [folder]] [--review-timeout <s>]
-//   node build.mjs <one> <two> … --out course.html [--title "The course"] [--no-review]
+//   node build.mjs <one> <two> … --out collection.html [--title "The collection"] [--no-review]
 //   node build.mjs <recipe> [out.svg] --svg      an SVG that draws itself, with no script: it plays inside an <img>,
 //                                                in a README on GitHub too (one SVG per explainer, named by its id)
 //
@@ -60,7 +60,7 @@ const noReview = argv.includes('--no-review')
 const timeout = Number(option('--review-timeout') ?? 20)
 const sources = args.filter((a) => KINDS.some((k) => a.endsWith(k)))
 const outArg = option('--out') ?? args.find((a) => a.endsWith(ext))
-const usage = 'usage: node build.mjs <recipe.json> [out.html] [--no-review] [--snapshots [folder]] [--review-timeout <s>]\n       node build.mjs <recipe> [--present] [--pptx [static|steps|video|all]] [--slides <folder> [--slides-steps]] [--settings a,b]\n       node build.mjs <one.json> <two.json> … --out course.html [--title "…"] [--no-review]\n       node build.mjs <recipe.json> [out.svg] --svg'
+const usage = 'usage: node build.mjs <recipe.json> [out.html] [--no-review] [--snapshots [folder]] [--review-timeout <s>]\n       node build.mjs <recipe> [--present] [--pptx [static|steps|video|all]] [--slides <folder> [--slides-steps]] [--settings a,b]\n       node build.mjs <one.json> <two.json> … --out collection.html [--title "…"] [--no-review]\n       node build.mjs <recipe.json> [out.svg] --svg'
 const presentsOne = !(presenting || exporting) || (sources.length === 1 && !asSvg)
 if (!sources.length || args.some((a) => !KINDS.some((k) => a.endsWith(k)) && !a.endsWith(ext)) || (outArg && !outArg.endsWith(ext)) || !(timeout > 0) || (asSvg && snapAt >= 0) || !presentsOne || (argv.includes('--slides') && !slidesFolder)) {
   console.error(usage)
@@ -154,13 +154,13 @@ for (const file of sources) {
   }
 }
 
-const course = scenes.length > 1
+const collection = scenes.length > 1
 const slugOf = (scene, file) => String(scene.id || basename(file).replace(/\.[^.]+$/, '')).replace(/[^a-z0-9-]+/gi, '-').slice(0, 60) || 'drawing'
 const slug = slugOf(scenes[0], sources[0])
 // With --svg the page is only the browser's workbench: it goes to a folder of its own and away at the end.
 const work = asSvg ? mkdtempSync(join(tmpdir(), 'visual-explainer-svg-')) : undefined
 const out = work ? join(work, 'page.html') : resolve(outArg ?? join(dirname(resolve(sources[0])), `${slug}.html`))
-const content = course ? { course: option('--title') ?? scenes[0].title, explainers: scenes } : scenes[0]
+const content = collection ? { collection: option('--title') ?? scenes[0].title, explainers: scenes } : scenes[0]
 let page = fill(readFileSync(join(here, '../assets/player.html'), 'utf8'), { RECIPE: inline(content) })
 // Lottie: the light player goes in only when an explainer has an animation (it is 168 KB).
 if (scenes.some((s) => Object.keys(s.lotties ?? {}).length)) {
@@ -176,13 +176,13 @@ writeFileSync(out, page)
 let warned = false
 scenes.forEach((scene, k) => {
   const values = Object.keys(scene.params ?? {}).length + Object.keys(scene.switches ?? {}).length
-  const who = course ? `  (${k + 1}) ${scene.title}: ` : '  '
+  const who = collection ? `  (${k + 1}) ${scene.title}: ` : '  '
   console.log(`✓ contract${who}${scene.steps.length} steps, ${chaptersFor(scene).length} chapters, ${values} values`)
   // one ready-made animation per drawing reads better (it is polished, not chalk): said, not an error
   const lotties = JSON.stringify(scene.steps).match(/"type":"lottie"/g)?.length ?? 0
-  if (lotties > 1) console.log(`• lottie   ${course ? `(${k + 1}) ` : ''}${lotties} animations in one drawing: one reads better (keep the others only if the person asked for them)`)
+  if (lotties > 1) console.log(`• lottie   ${collection ? `(${k + 1}) ` : ''}${lotties} animations in one drawing: one reads better (keep the others only if the person asked for them)`)
   for (const w of purposeWarnings(scene)) {
-    console.log(`! ${scene.kind.padEnd(9)}${course ? ` (${k + 1})` : ''} ${w.text}`)
+    console.log(`! ${scene.kind.padEnd(9)}${collection ? ` (${k + 1})` : ''} ${w.text}`)
     warned = true
   }
 })
@@ -193,7 +193,7 @@ const defined = [...new Set(scenes.flatMap((s) => Object.keys(s.defs ?? {})))]
 const snapshots = snapAt >= 0 || (defined.length > 0 && !asSvg)
 
 // One browser for everything the page has to do: the review, the snapshots and the SVGs, explainer by explainer.
-const query = (k) => (course ? `explainer=${k + 1}` : '')
+const query = (k) => (collection ? `explainer=${k + 1}` : '')
 const jobs = []
 scenes.forEach((_, k) => {
   if (!noReview) jobs.push({ what: 'review', k, file: out, mode: 'review', query: query(k) })
@@ -219,7 +219,7 @@ if (noReview) console.log('• review    skipped (--no-review); the page checks 
 else if (!ran.results) console.log('• review    no Chrome, Chromium or Edge here: the page checks itself when opened')
 else {
   for (let k = 0; k < scenes.length; k++) {
-    const who = course ? ` (${k + 1})` : ''
+    const who = collection ? ` (${k + 1})` : ''
     const r = result('review', k)
     if (r.error) console.log(`✗ review${who}    not checked: ${r.error}`)
     else if (!r.problems.length) console.log(`✓ review${who}    ${r.combos} ${r.combos === 1 ? 'setting' : 'settings'}: nothing off the paper, no text over text (${name(ran.used)})`)
@@ -245,7 +245,7 @@ if (snapshots) {
       break
     }
     const explainer = slugOf(scenes[k], sources[0])
-    const into = course ? join(folder, explainer) : folder
+    const into = collection ? join(folder, explainer) : folder
     mkdirSync(into, { recursive: true })
     const png = (file, data) => writeFileSync(join(into, file), Buffer.from(data.replace(/^data:image\/png;base64,/, ''), 'base64'))
     for (const s of r.shots) png(`${explainer}.ch${s.chapter}.${s.label}.png`, s.png)
@@ -261,12 +261,12 @@ if (snapshots) {
 if (exporting) code = Math.max(code, await exportsFrom(result('export', 0)))
 
 if (!asSvg) {
-  console.log(`→ ${out} (${Math.round(statSync(out).size / 1024)} KB, opens offline${course ? `, ${scenes.length} explainers` : ''}${presenting ? ', opens presenting' : ''})`)
+  console.log(`→ ${out} (${Math.round(statSync(out).size / 1024)} KB, opens offline${collection ? `, ${scenes.length} explainers` : ''}${presenting ? ', opens presenting' : ''})`)
   process.exit(code)
 }
 
 // --svg: each explainer drawn by the browser with its timing as CSS; one file, or one per explainer beside the first source.
-const where = outArg && !course ? undefined : dirname(resolve(outArg ?? sources[0]))
+const where = outArg && !collection ? undefined : dirname(resolve(outArg ?? sources[0]))
 for (let k = 0; k < scenes.length; k++) {
   const r = result('svg', k)
   if (!r) {

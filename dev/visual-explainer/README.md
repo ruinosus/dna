@@ -64,7 +64,7 @@ these drawings are in [`gallery/examples/`](gallery/examples). Build any of them
 - **Chalkboard**: a button turns the paper into a green board with chalk (or the recipe asks for it, for a class).
 - **A question that waits**: the explainer can stop on a question until someone presses «Show me» — time for the class
   to answer.
-- **Quiz** at the end: pick an option, see why it is right or not.
+- **Knowledge check** at the end: pick an option, see why it is right or not.
 - **Narration** with the browser's own voice (off by default) and a **transcript** of everything the explainer says.
 - **Download** the paper as PNG or SVG, or the explainer drawing itself as a **GIF** or a **video** (WebM) — for slides
   and messages.
@@ -94,9 +94,9 @@ explainer, and then says what it chose. A real answer from the evals (Claude Cod
 > a line running down; the three messages — SYN, SYN-ACK, ACK; connected. Press Next to step through; in chapter 3,
 > move the two starting numbers and watch each `ack` change to that number plus one.
 
-For a class, students or a talk, Claude asks first — once, only what is missing — and shows the outline before drawing.
+For a training, a workshop or a talk, Claude asks first — once, only what is missing — and shows the outline before drawing.
 Afterwards it changes only what you ask («make the arrow blue», «use 5 % instead»). Ask for several explainers and they
-come as **one course file**, with a list to go from one to the next.
+come as **one collection file**, with a list to go from one to the next.
 
 ## Write it as text — or bring a Mermaid diagram
 

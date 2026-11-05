@@ -23,7 +23,7 @@
     "answer": "R$ 8: 8 minutos a R$ 1 por minuto.",
     "caveat": "Os valores são ilustrativos; o custo real inclui sistemas e gestão."
   },
-  "quiz": {
+  "knowledge_check": {
     "question": "Se o atendimento passa de 8 para 16 minutos, o custo…",
     "options": [
       {

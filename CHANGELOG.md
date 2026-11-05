@@ -2,13 +2,17 @@
 
 ## 2.2.0 — 2026-11-05
 
-**The explainer** — what was the *lesson* is now the *explainer* (*explicação* in Portuguese), a word for work, not for
-school. Everything you made before still opens.
+**The explainer** — words for work, not for school: the *lesson* is now the *explainer* (*explicação*), its *quiz* the
+*knowledge check*, several explainers on one page a *collection* (not a *course*), and visual-explainer *explains* by
+drawing (it no longer *teaches*). Everything you made before still opens.
 
 - The drawing that explains is `kind explainer` (the default); the skills write `<id>.explainer.html` with
   `--explainer`, the solution's piece is `explainer:`, and the OKF concept is `explainer.md`, `type: Explainer`.
-- What you made before is still read: `kind lesson`, `--lesson`, `lesson:` in a solution, `{ lessons }` and
-  `?lesson=n` in a course page, and `mountLesson` / `stillLesson` from `@ruinosus/visual-explainer/embed`.
+- The question at the end is `knowledge_check` (the field and the text line); several recipes built together make a
+  collection, `{ "collection": "Title", "explainers": […] }`, with `--title "The collection"`. When it is for a
+  training, a workshop or a talk, visual-explainer asks first.
+- What you made before is still read: `kind lesson`, `quiz`, `--lesson`, `lesson:` in a solution, `{ course, lessons }`
+  and `?lesson=n`, and `mountLesson` / `stillLesson` from `@ruinosus/visual-explainer/embed`.
 - **`explainer.md` draws itself**: the OKF bundle carries the explainer's recipe in a ```` ```visual-explainer ````
   block (```` ```visual-explainer-mermaid ```` for a Mermaid one), so a Markdown preview with DNA — VS Code, Obsidian —
   draws it in place.

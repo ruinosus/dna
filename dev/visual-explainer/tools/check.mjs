@@ -255,7 +255,7 @@ setTimeout(() => {
   expect(/no such file beside the recipe/.test(run(join(dir, 'gone.chalk')).stderr), 'a missing animation file says so')
 }
 
-// visual-pitch (0.17.0): what each purpose usually misses is said (exit 3), a quiz outside an explainer is refused, and
+// visual-pitch (0.17.0): what each purpose usually misses is said (exit 3), a knowledge check outside an explainer is refused, and
 // bars with no max keep one scale over the settings.
 {
   const warn = (name, body, why) => {
@@ -275,8 +275,8 @@ setTimeout(() => {
   writeFileSync(join(dir, 'pitch-ok.chalk'), 'title X\nkind pitch\n# The ask\nhighlight 100,300 -> 500,300\ntext "a pilot" at 300,310 anchor=middle\n')
   const ok = run(join(dir, 'pitch-ok.chalk'), ['--no-review'])
   expect(ok.status === 0 && !/^! /m.test(ok.stdout), 'a pitch that ends with its ask has nothing to say', ok.stdout)
-  writeFileSync(join(dir, 'pitch-quiz.chalk'), 'title X\nkind pitch\ntext "x" at 40,60\nquiz "q"\n  * a -- b\n  - c -- d\n')
-  expect(/only an explainer has a quiz/.test(run(join(dir, 'pitch-quiz.chalk')).stderr), 'a quiz outside an explainer is refused')
+  writeFileSync(join(dir, 'pitch-knowledge-check.chalk'), 'title X\nkind pitch\ntext "x" at 40,60\nquiz "q"\n  * a -- b\n  - c -- d\n')
+  expect(/only an explainer has a knowledge check/.test(run(join(dir, 'pitch-knowledge-check.chalk')).stderr), 'a knowledge check outside an explainer is refused')
   // bars with no max: at the switch's two settings, the taller bar is a different height (one scale), not the same —
   // measured by the hatching of the paper theme (a taller hatched bar is more strokes; business fills it solid)
   writeFileSync(join(dir, 'bars.chalk'), 'title X\nid bars\ntheme paper\nswitch dobro "o dobro" off\nvar v = "10 + 10*dobro"\nbars box 100,100,300,300 values v labels a\n')

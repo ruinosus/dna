@@ -1,6 +1,6 @@
 ---
 name: visual-explainer
-description: Explains an idea by drawing it — a clean explainer that draws itself chapter by chapter (hand-drawn or on a chalkboard when asked), with narration and values the person can move, delivered as one HTML file that opens offline. Use when someone asks to explain, teach or show something by drawing it ("explain compound interest by drawing", "draw how a web request works", "desenha pra mim como funciona…"), or wants a visual, step-by-step explanation of a concept, a process, an argument or a system for a class, a talk or themselves.
+description: Explains an idea by drawing it — a clean explainer that draws itself chapter by chapter (hand-drawn or on a chalkboard when asked), with narration and values the person can move, delivered as one HTML file that opens offline. Use when someone asks to explain or show something by drawing it ("explain compound interest by drawing", "draw how a web request works", "desenha pra mim como funciona…"), or wants a visual, step-by-step explanation of a concept, a process, an argument or a system for a training, a talk or themselves.
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
@@ -16,7 +16,7 @@ player yourself. Paths below are relative to this skill's folder.
 
 
 It draws in the **business** look by default: straight lines, a sans-serif face, a white page, a sober palette —
-for a meeting room. Add `theme paper` for the hand-drawn look or `theme chalkboard` for a classroom board only when
+for a meeting room. Add `theme paper` for the hand-drawn look or `theme chalkboard` for a dark board only when
 the person asks for it; the explainer's «Hand-drawn» button switches any explainer to the paper and back.
 ## 1. Draw first
 
@@ -29,10 +29,10 @@ Decide the three things a drawing needs yourself, and say them when you deliver:
 - **the value the person moves**: a real quantity in the idea (the monthly rate, people arriving per minute), or none.
 
 A drawing to present, convince, decide, document or tell what happened (a pitch, an architecture for a client, a
-post-mortem) is **visual-pitch**'s, when it is installed; this skill teaches.
+post-mortem) is **visual-pitch**'s, when it is installed; this skill explains.
 
-Ask first — once, all together, and only what is missing — when it is **for a class, students, a talk or a course**
-(see «For a class»), when the request could mean two different things, or when the person asks to see the plan first.
+Ask first — once, all together, and only what is missing — when it is **for a training, a workshop or a talk**
+(see «For a training»), when the request could mean two different things, or when the person asks to see the plan first.
 
 The drawing has four parts, a chapter each: **the hook as a question** ("why does R$ 1,000 become R$ 1,974?"); **take
 it apart** (the real thing, simply, and what is hidden in it); **the idea** (the rule, the flow or the argument, with
@@ -132,11 +132,11 @@ define xicara
 xicara minha at 450,300 "minha xícara"
 ```
 
-Waiting for the person, and a quiz (both for a class):
+Waiting for the person, and a knowledge check (both for a training):
 
 ```
 pause ask "Quanto vai virar a fatura em seis meses?"
-quiz "Se a taxa dobra, a fatura em seis meses…"
+knowledge_check "Se a taxa dobra, a fatura em seis meses…"
   * mais que dobra o juro -- é juro sobre juro
   - só dobra -- isso seria juro simples
 ```
@@ -173,8 +173,8 @@ It writes `<id>.html` next to the recipe and prints:
 At most **two** rounds of fixes; then deliver and say in plain words what is left ("with 15 % the label touches the
 title").
 
-**Several explainers** (a course): one recipe each, built together — `node scripts/build.mjs one.chalk two.chalk --out
-course.html --title "The course"`. **For a README** (or wherever only an image goes), when asked: `node
+**Several explainers** (a collection): one recipe each, built together — `node scripts/build.mjs one.chalk two.chalk --out
+collection.html --title "The collection"`. **For a README** (or wherever only an image goes), when asked: `node
 scripts/build.mjs <id>.chalk --svg` writes `<id>.svg`, a picture that draws itself; the explainer is still the `.html`.
 
 ## 4. Deliver
@@ -185,18 +185,18 @@ monthly rate to move — want another hook, another audience or anything changed
 ("press Next; in chapter 3, move the rate"). The file opens offline, with chapters, the values beside the paper, and
 PNG, SVG, GIF and WebM download — it can go by e-mail or on a projector.
 
-**To present it** (a talk, a class on a projector): build with `--present` — the page opens on one chapter at a time,
+**To present it** (a talk, a training on a projector): build with `--present` — the page opens on one chapter at a time,
 full screen and the speaker notes with the first key; a clicker's PageDown moves on. **A PowerPoint**, when asked:
 `--pptx` (a slide per chapter; `steps` grows the drawing click by click, `video` embeds each chapter drawing itself),
 with the narration as speaker notes.
 
-## For a class
+## For a training
 
-When the drawing is for a class, students, a talk or a course, **ask first, in one message**: up to three hooks, best
+When the drawing is for a training, a workshop or a talk, **ask first, in one message**: up to three hooks, best
 first, each with a line on why it works for that audience (`references/hooks.md`), who exactly it is for, and which
-number the students may move. Never ask what was already said. Then show the four-part outline in a few lines and
+number the audience may move. Never ask what was already said. Then show the four-part outline in a few lines and
 wait for the go ("pode", "go"). The recipe adds a `pause ask` opening the part that answers it,
-and a `quiz` at the end.
+and a `knowledge_check` at the end.
 
 ## No code execution (an artifact instead)
 

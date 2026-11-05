@@ -14,7 +14,7 @@ Explainers that draw themselves — in a clean business look, or hand-drawn — 
 ```
 
 The player builds the page around the recipe — chapters, Next / Back, values to move, the check, downloads — and needs
-nothing else. A course is `{ "course": "Title", "explainers": [recipe, recipe, …] }`, each explainer opened with
+nothing else. A collection is `{ "collection": "Title", "explainers": [recipe, recipe, …] }`, each explainer opened with
 `?explainer=n`.
 
 ## Inside an element (a note, a docs page, an app)
@@ -35,7 +35,7 @@ Mermaid).
 
 ```
 npx @ruinosus/visual-explainer explainer.json                       # checks the recipe and writes explainer.html
-npx @ruinosus/visual-explainer one.json two.json --out course.html --title "The course"
+npx @ruinosus/visual-explainer one.json two.json --out collection.html --title "The collection"
 npx @ruinosus/visual-explainer explainer.chalk --svg                # an SVG that draws itself, for a README on GitHub
 ```
 

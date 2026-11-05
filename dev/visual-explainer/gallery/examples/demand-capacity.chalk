@@ -30,6 +30,6 @@ learning question "Com 4 analistas e 50 chamados por hora, a fila para?"
 learning answer "Não: 4 × 12 = 48 por hora, abaixo de 50."
 learning caveat "Os números são ilustrativos; a demanda varia ao longo do dia."
 
-quiz "Com 4 analistas, a fila…"
+knowledge_check "Com 4 analistas, a fila…"
   * cresce -- 48 de capacidade não dá conta de 50
   - some -- a capacidade ainda está abaixo da demanda
