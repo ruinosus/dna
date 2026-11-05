@@ -40,7 +40,7 @@ research into actions with owners, and anyone who keeps hearing «on our side it
 | **The file** (`.blueprint.yaml`) | The source, plain text in Git; everything else is made from it. A mistake says its line. |
 | **The map** (`.html`) | One page that opens offline: the phases, the line of how the customer feels, the five layers with the three lines (interaction, visibility, internal), ⚠ failure points and ⏱ waits. A moment opens its detail; tabs for pains and actions, and promises; download the workbook, the file or a PNG. |
 | **The workbook** (`.xlsx`) | Summary, Blueprint, Pains and actions, Promises, Systems — for the meeting and the follow-up. |
-| **The explainer** (`.explainer.html`) | The journey walked by drawing it, moment by moment, the customer higher when they feel better — made with [visual-explainer](https://github.com/ruinosus/dna). |
+| **The explainer** (`.explainer.html`, `.explainer.md`) | The journey walked by drawing it, moment by moment, the customer higher when they feel better — made with [visual-explainer](https://github.com/ruinosus/dna). |
 
 <p align="center"><img src="https://ruinosus.github.io/dna/service-blueprint/images/reembolso-despesas-explainer.png" alt="The explainer: the customer at each moment of a return, lower at the six days with no news; under the line of visibility, who does what" width="760"></p>
 

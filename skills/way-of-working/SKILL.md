@@ -67,7 +67,7 @@ node scripts/build.mjs <id>.way.yaml --all [--lang pt] [--out <folder>]
   workbook, the file and a PNG.
 - `<id>.xlsx` — **the workbook**: Summary, Stages, Gates, Roles (RACI), Outputs, KPIs, a Gate checklist and the
   **Thread** (who delivers each output and who receives it).
-- `<id>.explainer.html` — **the explainer** (visual-explainer): the flow drawn stroke by stroke, a chapter per phase.
+- `<id>.explainer.html` — **the explainer** (visual-explainer): the flow drawn stroke by stroke, a chapter per phase; and `<id>.explainer.md`, the same explainer in a ```visual-explainer block that a Markdown preview with DNA (VS Code, Obsidian) draws.
 
 `--html`, `--xlsx` and `--explainer` make one each. End with a short summary: what the flow is in one sentence, the files,
 what is still open, and that the `.way.yaml` is the source — the one to keep in version control.
@@ -124,7 +124,7 @@ recipes themselves in `references/dna/`: use those.
 
 - Never invent what the material and the person did not say — ask.
 - Never put a person's name as a role or a lane, an environment as a phase, an activity or a ritual as a stage.
-- Never edit the generated `.html`, `.xlsx` or `.explainer.html`: change the `.way.yaml` and build again.
+- Never edit the generated `.html`, `.xlsx`, `.explainer.html` or `.explainer.md`: change the `.way.yaml` and build again.
 - This maps how the work *should* go. It does not track items moving through it, nor decide a gate: say so if asked.
 
 ## In Claude Code

@@ -61,7 +61,7 @@ node scripts/build.mjs <id>.blueprint.yaml --all [--lang pt] [--out <folder>]
   (interaction, visibility, internal), ⚠ failure points and ⏱ waits; a moment opens its detail; tabs for pains and
   actions, and promises; downloads for the workbook, the file and a PNG; «To look at» on top.
 - `<id>.xlsx` — **the workbook**: Summary, Blueprint, Pains and actions, Promises, Systems.
-- `<id>.explainer.html` — **the explainer** (visual-explainer): the journey walked moment by moment.
+- `<id>.explainer.html` — **the explainer** (visual-explainer): the journey walked moment by moment; and `<id>.explainer.md`, the same explainer in a ```visual-explainer block that a Markdown preview with DNA (VS Code, Obsidian) draws.
 
 End with a short summary: the journey in one sentence, **the worst moment and who owns it (or that nobody does)**, the
 files, and what is still open.

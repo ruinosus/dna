@@ -42,7 +42,7 @@ From the one `<id>.way.yaml`:
 | **The file** (`.way.yaml`) | The source. Plain text you keep in Git; everything else is made from it. A mistake says its line. |
 | **The map** (`.html`) | One page that opens offline: phases on top, who leads in the rows, stages in order, gates under the stage they close. Click a stage or a gate for its detail — where each input comes from, who receives each output. A **Stages** tab with the table teams know (comes in, delivers, roles, metrics; the gate as a row); tabs for Roles (RACI), Gates and Outputs; download the workbook, the file or a PNG. «To look at» says what does not hold. |
 | **The workbook** (`.xlsx`) | Summary, Stages (with where each input comes from, and metrics), Gates (with what comes out), Roles (RACI), Outputs, KPIs, a **Gate checklist** for the meeting and the **Thread** — who delivers each output and who receives it. Header frozen, filters on, lanes in colour. Opens in Excel, Numbers and LibreOffice. |
-| **The explainer** (`.explainer.html`) | The flow drawn stroke by stroke, a chapter per phase, each gate with who approves it and its way back — made with [visual-explainer](https://github.com/ruinosus/dna). |
+| **The explainer** (`.explainer.html`, `.explainer.md`) | The flow drawn stroke by stroke, a chapter per phase, each gate with who approves it and its way back — made with [visual-explainer](https://github.com/ruinosus/dna). |
 
 <table>
   <tr>

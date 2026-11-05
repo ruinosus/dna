@@ -37,6 +37,11 @@ for (const f of drills) {
   const r = run(join(examples, f), '--all', '--lang', LANG[id] ?? 'en', '--out', work)
   ok(r.status === 0 && existsSync(join(work, `${id}.drill.html`)) && existsSync(join(work, `${id}.facilitator.md`)), `${id}: game and facilitator's script`, r.stdout + r.stderr)
   ok(!/^! /m.test(r.stdout), `${id}: nothing to look at`, r.stdout)
+  // DNA 2.2.0: the paths in the script — plain Mermaid, and folded under it a visual-explainer-mermaid block
+  const script = existsSync(join(work, `${id}.facilitator.md`)) ? readFileSync(join(work, `${id}.facilitator.md`), 'utf8') : ''
+  const plain = /^```mermaid\nflowchart LR\n([\s\S]*?)\n```$/m.exec(script)?.[1] ?? ''
+  const folded = /<details><summary>[^<]+<\/summary>\n\n```visual-explainer-mermaid\nflowchart LR\n%% title [^\n]+\n%% # [^\n]+\n%% > [^\n]+\n([\s\S]*?)\n```\n\n<\/details>/.exec(script)?.[1]
+  ok(plain.includes('-->|') && folded === plain, `${id}: the paths, as plain Mermaid and as an explainer folded under it`, script.slice(0, 600))
 }
 
 // a broken file and a broken drawing say their line; nothing is written

@@ -31,7 +31,7 @@ import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
 import { CAST_FORMAT, CAST_KIND, DNA_API, PROFILE_FORMAT, PROFILE_KIND, upgradeHeader, agentsIn, applyChanges, compare, declaredFrom, DEFAULT_PROFILE, evalsFrom, extractAgent, firedFrom, fromSheets, groupLooks, playbillOf, stageOf, mergeDeclared, knownKinds, labelOf, explainerOf, problemText, readCast, readCsv, readProfile, reviewCast, diagramsDoc, diagramsOf, validateScene, withEvals, workbookFile, workbookOf, writeCast } from './engine.mjs'
 import { readXlsx } from './read-xlsx.mjs'
-import { fill, inline } from './page.mjs'
+import { explainerMarkdown, fill, inline } from './page.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 // DNA 2.2.0: --lesson, the explainer's flag before, still works.
@@ -312,8 +312,10 @@ if (want.xlsx) {
 let exit = 0
 if (want.explainer) {
   const page = join(out, `${id}.explainer.html`)
-  writeFileSync(page, fill(readFileSync(join(here, '../assets/explainer.html'), 'utf8'), { RECIPE: inline(validateScene(explainerOf(result, looks, lang))) }))
-  console.log(`✓ explainer    ${page}`)
+  const scene = validateScene(explainerOf(result, looks, lang))
+  writeFileSync(page, fill(readFileSync(join(here, '../assets/explainer.html'), 'utf8'), { RECIPE: inline(scene) }))
+  writeFileSync(join(out, `${id}.explainer.md`), explainerMarkdown(scene, `${id}.explainer.html`, lang))
+  console.log(`✓ explainer    ${page} (and ${id}.explainer.md)`)
   const r = await runPage(page, 'review')
   if (r === null) console.log('• review    no Chrome, Chromium or Edge here: the explainer checks itself when opened')
   else if (r.error) console.log(`✗ review    not checked: ${r.error}`)

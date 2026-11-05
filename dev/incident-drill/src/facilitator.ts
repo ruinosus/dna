@@ -20,6 +20,7 @@ export function facilitator(drill: Drill, looks: Look[], lang: Lang = 'en'): str
     '',
     ...drill.roles.map((r) => `- **${r.name}**${r.you ? (pt ? ' — quem joga' : ' — the player') : r.in ? (pt ? ' — já na sala' : ' — in the room') : ''}${r.can?.length ? ` · ${pt ? 'pode' : 'can'}: ${r.can.join(', ')}` : ''}`),
     '',
+    ...paths(drill, order, pt),
     `## ${pt ? 'Cenas' : 'Scenes'}`,
     '',
   ]
@@ -36,4 +37,27 @@ export function facilitator(drill: Drill, looks: Look[], lang: Lang = 'en'): str
   const gaps = [...(drill.gaps ?? []).map((g) => `${g.says}${g.source ? ` _(${g.source})_` : ''}`), ...looks.map((l) => l[lang])]
   out.push(`## ${pt ? 'O que o runbook não diz' : 'What the runbook does not say'}`, '', ...(gaps.length ? gaps.map((g) => `- ${g}`) : [pt ? '- Nada encontrado.' : '- Nothing found.']), '')
   return out.join('\n')
+}
+
+/** The paths: each scene a box, each choice an arrow to the scene it leads to — twice, as plain Mermaid (GitHub and Azure
+ * DevOps draw it) and, folded under it, as a visual-explainer-mermaid block (a Markdown preview with DNA draws it). */
+function paths(drill: Drill, order: string[], pt: boolean): string[] {
+  const node = new Map(order.map((id, i) => [id, `s${i}`]))
+  const text = (t: string) => `"${t.replace(/"/g, '#quot;').replace(/\s+/g, ' ').slice(0, 60)}"`
+  const lines = ['flowchart LR']
+  for (const id of order) {
+    const sc = drill.scenes.find((x) => x.id === id)!
+    lines.push(`  ${node.get(id)}${sc.end ? `([${text(id)}])` : `[${text(id)}]`}`)
+  }
+  for (const id of order) {
+    for (const c of drill.scenes.find((x) => x.id === id)!.choices ?? []) {
+      if (node.has(c.go)) lines.push(`  ${node.get(id)} -->|${text(c.label)}| ${node.get(c.go)}`)
+    }
+  }
+  const title = pt ? 'Os caminhos' : 'The paths'
+  const say = pt ? `Cada escolha leva a uma cena; começa em ${drill.start}.` : `Each choice leads to a scene; it starts at ${drill.start}.`
+  const [type, ...rest] = lines
+  return [`## ${title}`, '', '```mermaid', ...lines, '```', '',
+    `<details><summary>${pt ? 'Como explicação (VS Code, Obsidian)' : 'As an explainer (VS Code, Obsidian)'}</summary>`, '',
+    '```visual-explainer-mermaid', type, `%% title ${drill.name}`, `%% # ${title}`, `%% > ${say}`, ...rest, '```', '', '</details>', '']
 }

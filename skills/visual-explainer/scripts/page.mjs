@@ -13,3 +13,15 @@ export function fill(template, values) {
   }
   return page
 }
+
+const SAYS = {
+  en: (page) => `An explainer drawn with DNA's visual-explainer: a Markdown preview with DNA (VS Code, Obsidian) draws the block below; \`${page}\` is the same explainer as a page that opens offline.`,
+  pt: (page) => `Uma explicação desenhada pelo visual-explainer do DNA: um preview de Markdown com o DNA (VS Code, Obsidian) desenha o bloco abaixo; \`${page}\` é a mesma explicação como uma página que abre offline.`,
+}
+
+/** The explainer as Markdown: its title, a line on how to see it, and the recipe in a ```visual-explainer block. */
+export function explainerMarkdown(scene, page, lang = 'en') {
+  const recipe = JSON.stringify(scene, null, 2)
+  const fence = '`'.repeat(Math.max(3, ...[...recipe.matchAll(/`+/g)].map((m) => m[0].length + 1)))
+  return [`# ${scene.title || page}`, '', (SAYS[lang] ?? SAYS.en)(page), '', `${fence}visual-explainer`, recipe, fence, ''].join('\n')
+}

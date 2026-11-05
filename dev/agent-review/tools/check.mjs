@@ -6,7 +6,7 @@
 // role filter leaves the orchestrator out, the tabs open and the downloads work. Run after npm run assets.
 import { checkSkillMd } from '@ruinosus/visual-explainer/kit/tools/checks.mjs'
 import { spawnSync } from 'node:child_process'
-import { cpSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -37,7 +37,7 @@ for (const f of readdirSync(join(root, 'checks')).filter((x) => x.endsWith('.che
 // the examples, with the profile and no review file yet
 const plain = join(work, 'plain')
 const a = run(agents, '--profile', profile, '--all', '--lang', 'pt', '--out', plain)
-ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.explainer.html', 'agents.team.html', 'agents.topology.html', 'agents.review.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, explainer, RH, stage and review file', a.stdout + a.stderr)
+ok(a.status === 0 && ['agents.html', 'agents.xlsx', 'agents.explainer.html', 'agents.explainer.md', 'agents.team.html', 'agents.topology.html', 'agents.review.yaml'].every((f) => existsSync(join(plain, f))), 'the examples: map, workbook, explainer, RH, stage and review file', a.stdout + a.stderr)
 ok(/✓ review|• review/.test(a.stdout) && !/! review/.test(a.stdout), "the explainer passes visual-explainer's reviewer (when there is a browser)", a.stdout)
 ok(looks(a.stdout) === 24, `24 to look at (${looks(a.stdout)})`, a.stdout)
 const heads = [...a.stdout.matchAll(/^▸ (.+) · (\d+)$/gm)].map((m) => [m[1], Number(m[2])])
@@ -94,6 +94,9 @@ const mmdDir = join(rh, 'agents.diagrams')
 const mmds = existsSync(mmdDir) ? readdirSync(mmdDir).filter((f) => f.endsWith('.mmd')).sort() : []
 const diagDoc = existsSync(join(rh, 'agents.diagrams.md')) ? readFileSync(join(rh, 'agents.diagrams.md'), 'utf8') : ''
 ok(rhOut.stdout.includes('✓ diagrams') && mmds.length >= 10 && mmds.includes('topologia.mmd') && (diagDoc.match(/^```mermaid$/gm) ?? []).length === mmds.length && mmds.every((f) => diagDoc.includes(readFileSync(join(mmdDir, f), 'utf8').trimEnd())), '--all writes the diagrams: a ```mermaid block in the document per .mmd', [mmds.length, rhOut.stdout])
+// DNA 2.2.0: each diagram also folded under it as a ```visual-explainer-mermaid block, the same diagram with its title
+const folded = [...diagDoc.matchAll(/<details><summary>[^<]+<\/summary>\n\n```visual-explainer-mermaid\n([\s\S]*?)\n```\n\n<\/details>/g)].map((m) => m[1])
+ok(folded.length === mmds.length && folded.every((b) => /^%% title /m.test(b)), `each diagram also as a visual-explainer-mermaid block, folded under it (${folded.length})`)
 ok(mmds.every((f) => readFileSync(join(mmdDir, f), 'utf8') === readFileSync(join(rh2, 'agents.diagrams', f), 'utf8')) && readFileSync(join(rh2, 'agents.diagrams.md'), 'utf8') === diagDoc, 'the same run, the same diagrams')
 const diagOnly = run(agents, '--diagrams', '--out', join(work, 'diagrams-only'))
 ok(diagOnly.status === 0 && existsSync(join(work, 'diagrams-only', 'agents.diagrams.md')) && existsSync(join(work, 'diagrams-only', 'agents.diagrams', 'topology.mmd')) && !existsSync(join(work, 'diagrams-only', 'agents.html')), '--diagrams alone writes only the diagrams (in English by default)', diagOnly.stdout)

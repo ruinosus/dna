@@ -34,7 +34,7 @@ node scripts/build.mjs <agents-folder> --all [--profile <team>.standard.yaml] [-
   with the value it captures, «no máximo 3 bullets»), the **official blocks** the team pastes in every agent, and the
   **types** of specialist (transaction, guidance, triage…), so patterns are also found within each type. With no
   profile, the orchestrator is whoever calls another agent, and the shared blocks of text are still found.
-- It writes `<id>.html` (the map), `<id>.xlsx`, `<id>.explainer.html`, `<id>.team.html` (the agents as a team), `<id>.topology.html` (who
+- It writes `<id>.html` (the map), `<id>.xlsx`, `<id>.explainer.html` (and `<id>.explainer.md`, the same explainer in a ```visual-explainer block), `<id>.team.html` (the agents as a team), `<id>.topology.html` (who
   calls whom), `<id>.diagrams.md` with `<id>.diagrams/*.mmd` (what was read, in plain Mermaid) and `<id>.review.yaml`, named
   by the folder. The review
   file is read again on every run: what people declared and decided stays.
@@ -195,7 +195,8 @@ person to it when they want to show the agents to others.
 
 `--diagrams` (also in `--all`) writes what was read as plain Mermaid, for the team's docs — a PR, a wiki, a README, VS
 Code: it shows on GitHub with nothing of ours. `<id>.diagrams.md` has the summary, «to look at» in words and each
-diagram in a ```mermaid block with a sentence on what it shows; `<id>.diagrams/` has each one alone. They come from the
+diagram in a ```mermaid block with a sentence on what it shows, and folded under it the same diagram in a
+```visual-explainer-mermaid block (a Markdown preview with DNA draws it as an explainer); `<id>.diagrams/` has each one alone. They come from the
 same data as the topology page, so the two never disagree:
 
 - **the topology** (a flowchart): the customer, the orchestrators, the specialists by type, the flows and the systems;

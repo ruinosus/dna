@@ -39,6 +39,11 @@ for (const f of files) {
   const r = run(join(examples, f), '--all', '--lang', LANG[id] ?? 'en', '--out', work)
   const made = ['html', 'xlsx', 'explainer.html'].every((ext) => existsSync(join(work, `${id}.${ext}`)))
   ok(r.status === 0 && made, `${id}: map, workbook and explainer`, r.stdout + r.stderr)
+
+  // DNA 2.2.0: the explainer as Markdown too — its recipe in a ```visual-explainer block a preview with DNA draws
+  const md = existsSync(join(work, `${id}.explainer.md`)) ? readFileSync(join(work, `${id}.explainer.md`), 'utf8') : ''
+  const block = /^```visual-explainer\n([\s\S]*?)\n```$/m.exec(md)?.[1]
+  ok(!!block && JSON.parse(block).steps?.length > 0 && md.includes(`${id}.explainer.html`), `${id}: ${id}.explainer.md, the explainer in a visual-explainer block`, md.slice(0, 300))
   const n = (r.stdout.match(/^! (to look at|para olhar)/gm) ?? []).length
   ok(n === LOOKS[id], `${id}: ${LOOKS[id]} to look at`, r.stdout)
 }

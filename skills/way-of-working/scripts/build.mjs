@@ -18,7 +18,7 @@ import { spawnSync } from 'node:child_process'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
-import { fill, inline } from './page.mjs'
+import { explainerMarkdown, fill, inline } from './page.mjs'
 import { applyRows, checkWay, DNA, DNA_API, DNA_KIND, exportWay, fromSheets, itemName, problemText, readWay, reviewWay, show, STAGE_DOOR, upgradeHeader, validateScene, wayDiff, wayLesson, workbookOf, xlsx } from './engine.mjs'
 import { readXlsx } from './read-xlsx.mjs'
 import { blueprintOf, drillOf, simOf } from './lenses.mjs'
@@ -211,7 +211,8 @@ if (want.explainer) {
   const scene = validateScene(wayLesson(name, way, lang))
   const page = join(out, `${id}.explainer.html`)
   writeFileSync(page, fill(asset('explainer.html'), { RECIPE: inline(scene) }))
-  console.log(`✓ explainer    ${page}`)
+  writeFileSync(join(out, `${id}.explainer.md`), explainerMarkdown(scene, `${id}.explainer.html`, lang))
+  console.log(`✓ explainer    ${page} (and ${id}.explainer.md)`)
   const r = await runPage(page, 'review')
   if (r === null) console.log('• review    no Chrome, Chromium or Edge here: the explainer checks itself when opened')
   else if (r.error) console.log(`✗ review    not checked: ${r.error}`)

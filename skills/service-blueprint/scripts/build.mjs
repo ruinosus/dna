@@ -13,7 +13,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { runPage } from './browser.mjs'
-import { fill, inline } from './page.mjs'
+import { explainerMarkdown, fill, inline } from './page.mjs'
 import { DNA_API, FORMAT, KIND, explainerOf, problemText, readBlueprint, reviewBlueprint, upgradeHeader, validateScene, workbookFile, workbookOf } from './engine.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -107,7 +107,8 @@ if (want.explainer) {
   const scene = validateScene(explainerOf(blueprint, lang))
   const page = join(out, `${id}.explainer.html`)
   writeFileSync(page, fill(asset('explainer.html'), { RECIPE: inline(scene) }))
-  console.log(`✓ explainer    ${page}`)
+  writeFileSync(join(out, `${id}.explainer.md`), explainerMarkdown(scene, `${id}.explainer.html`, lang))
+  console.log(`✓ explainer    ${page} (and ${id}.explainer.md)`)
   const r = await runPage(page, 'review')
   if (r === null) console.log('• review    no Chrome, Chromium or Edge here: the explainer checks itself when opened')
   else if (r.error) console.log(`✗ review    not checked: ${r.error}`)

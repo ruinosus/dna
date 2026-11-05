@@ -70,7 +70,7 @@ node scripts/build.mjs <id>.drill.yaml --all [--lang pt] [--out <folder>]
 - `<id>.drill.html` — **the game**: open it and play (alone, or projected for the team: each role decides its part).
   No score — the clock and what was left behind are the score. The end shows the debrief: the numbers, the timeline,
   what the runbook did not say, play again, and `debrief.md` and the improvements as `.csv` to download.
-- `<id>.facilitator.md` — **the facilitator's script**, every scene and path (spoilers).
+- `<id>.facilitator.md` — **the facilitator's script**, every scene and path (spoilers), with the paths as a diagram: plain Mermaid for GitHub, and folded under it the same diagram as an explainer a Markdown preview with DNA draws.
 
 End with a short summary: the drill in one sentence, the files, **the gaps found** (the runbook's fixes), and how to run
 it (alone in 10 minutes, or as a 30-minute team session).

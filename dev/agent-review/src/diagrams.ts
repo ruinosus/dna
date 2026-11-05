@@ -41,7 +41,7 @@ const W = {
     scenePrefix: 'scene', lensPrefix: 'lens', typePrefix: 'type', topologyFile: 'topology',
     doc: (n: string) => `${n}: what agent-review read`, privacy: 'These diagrams hold the client’s data: keep this file in the client’s environment.',
     summary: (n: number, o: number, s: number, p: number, off: number, solo: number) => `${n} agents (${o} orchestrator${o === 1 ? '' : 's'}, ${s} specialist${s === 1 ? '' : 's'}) · ${p} patterns · ${off} off a pattern · ${solo} only one has`,
-    look: 'To look at', nothing: 'Nothing to look at.', diagrams: 'The diagrams', alone: (d: string) => `Each diagram is also on its own in \`${d}/\`, to paste anywhere Mermaid is read.`, made: (v: string) => `Written by agent-review ${v}.`,
+    look: 'To look at', explainer: 'As an explainer (VS Code, Obsidian)', nothing: 'Nothing to look at.', diagrams: 'The diagrams', alone: (d: string) => `Each diagram is also on its own in \`${d}/\`, to paste anywhere Mermaid is read.`, made: (v: string) => `Written by agent-review ${v}.`,
   },
   pt: {
     customer: 'Cliente', orchestrators: 'Orquestradores', specialists: 'Especialistas', flows: 'Fluxos', systems: 'Sistemas', outside: 'Fora da pasta',
@@ -55,7 +55,7 @@ const W = {
     scenePrefix: 'cena', lensPrefix: 'lente', typePrefix: 'tipo', topologyFile: 'topologia',
     doc: (n: string) => `${n}: o que o agent-review leu`, privacy: 'Estes diagramas têm dados do cliente: deixe este arquivo no ambiente dele.',
     summary: (n: number, o: number, s: number, p: number, off: number, solo: number) => `${n} agentes (${o} ${o === 1 ? 'orquestrador' : 'orquestradores'}, ${s} ${s === 1 ? 'especialista' : 'especialistas'}) · ${p} padrões · ${off} fora do padrão · ${solo} só um tem`,
-    look: 'Para olhar', nothing: 'Nada para olhar.', diagrams: 'Os diagramas', alone: (d: string) => `Cada diagrama também está sozinho em \`${d}/\`, para colar onde o Mermaid for lido.`, made: (v: string) => `Escrito pelo agent-review ${v}.`,
+    look: 'Para olhar', explainer: 'Como explicação (VS Code, Obsidian)', nothing: 'Nada para olhar.', diagrams: 'Os diagramas', alone: (d: string) => `Cada diagrama também está sozinho em \`${d}/\`, para colar onde o Mermaid for lido.`, made: (v: string) => `Escrito pelo agent-review ${v}.`,
   },
 }
 
@@ -205,7 +205,14 @@ export function diagramsDoc(id: string, diagrams: Diagram[], r: Result, looks: L
   if (!groups.length) out.push(w.nothing, '')
   for (const g of groups) out.push(`### ${g[lang]} · ${g.looks.length}`, '', ...g.looks.map(({ look }) => `- ${look[lang]}`), '')
   out.push(`## ${w.diagrams}`, '', w.alone(`${id}.diagrams`), '')
-  for (const d of diagrams) out.push(`### ${d.title}`, '', d.intro, '', '```mermaid', d.mermaid.trimEnd(), '```', '')
+  // Each diagram twice: plain Mermaid, which GitHub and Azure DevOps draw; and, folded under it, the same diagram as a
+  // visual-explainer-mermaid block, which a Markdown preview with DNA (VS Code, Obsidian) draws as an explainer.
+  for (const d of diagrams) {
+    const [type, ...rest] = d.mermaid.trimEnd().split('\n')
+    const explainer = [type, `%% title ${d.title}`, `%% # ${d.title}`, `%% > ${d.intro.replace(/\s+/g, ' ')}`, ...rest]
+    out.push(`### ${d.title}`, '', d.intro, '', '```mermaid', d.mermaid.trimEnd(), '```', '',
+      `<details><summary>${w.explainer}</summary>`, '', '```visual-explainer-mermaid', ...explainer, '```', '', '</details>', '')
+  }
   out.push('---', '', w.made(RELEASE), '')
   return out.join('\n')
 }
