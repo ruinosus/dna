@@ -1,0 +1,2006 @@
+{
+ "from": "workday-wws-mcp 0.1.0 (Python), on the synthetic examples",
+ "cases": [
+  {
+   "cmd": "search",
+   "args": {
+    "query": "colaborador solicita trabalho híbrido",
+    "scope": "hr"
+   },
+   "out": [
+    {
+     "operation": "Add_Flexible_Work_Arrangement",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Starts the business process that asks for a flexible work arrangement for a person.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "End_Flexible_Work_Arrangement",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Starts the business process that ends a flexible work arrangement.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Get_Worker_Event_History",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Lists the events of a person, optionally between two dates.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Get_Organizations",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Lists organizations and the one each sits under.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Cancel_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Cancels a business process that is still running.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Send_Back_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Returns a business process to an earlier step.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Get_Event_Detail",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Tells where a business process event stands and who it waits for.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Rescind_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Undoes a business process that is done, when it can be undone.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Approve_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Approves the step of a business process that waits for the person calling.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Deny_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Denies the step of a business process that waits for the person calling.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    }
+   ],
+   "scores": [
+    16.922,
+    10.255,
+    5.307,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "cmd": "search",
+   "args": {
+    "query": "aprovar home office",
+    "scope": "hr"
+   },
+   "out": [
+    {
+     "operation": "End_Flexible_Work_Arrangement",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Starts the business process that ends a flexible work arrangement.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Add_Flexible_Work_Arrangement",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Starts the business process that asks for a flexible work arrangement for a person.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Approve_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Approves the step of a business process that waits for the person calling.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Get_Worker_Event_History",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Lists the events of a person, optionally between two dates.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Cancel_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Cancels a business process that is still running.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Send_Back_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Returns a business process to an earlier step.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Rescind_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Undoes a business process that is done, when it can be undone.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Deny_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Denies the step of a business process that waits for the person calling.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Get_Event_Detail",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Tells where a business process event stands and who it waits for.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    }
+   ],
+   "scores": [
+    9.42,
+    9.065,
+    6.493,
+    2.653,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "cmd": "search",
+   "args": {
+    "query": "encerrar trabalho remoto",
+    "scope": "hr"
+   },
+   "out": [
+    {
+     "operation": "End_Flexible_Work_Arrangement",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Starts the business process that ends a flexible work arrangement.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Add_Flexible_Work_Arrangement",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Starts the business process that asks for a flexible work arrangement for a person.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Get_Worker_Event_History",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Lists the events of a person, optionally between two dates.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    }
+   ],
+   "scores": [
+    16.923,
+    9.065,
+    2.653
+   ]
+  },
+  {
+   "cmd": "search",
+   "args": {
+    "query": "saldo de férias",
+    "scope": "hr"
+   },
+   "out": [
+    {
+     "operation": "Get_Time_Off_Plan_Balances",
+     "service": "Absence_Management",
+     "also_in": [],
+     "description": "Tells how much time off is left in each plan of a person.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": []
+    },
+    {
+     "operation": "Enter_Time_Off",
+     "service": "Absence_Management",
+     "also_in": [],
+     "description": "Asks for time off for a person.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": []
+    }
+   ],
+   "scores": [
+    12.949,
+    8.789
+   ]
+  },
+  {
+   "cmd": "search",
+   "args": {
+    "query": "Approve_Business_Process",
+    "scope": "hr"
+   },
+   "out": [
+    {
+     "operation": "Approve_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Approves the step of a business process that waits for the person calling.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    }
+   ],
+   "scores": [
+    104.559
+   ]
+  },
+  {
+   "cmd": "search",
+   "args": {
+    "query": "histórico de eventos do colaborador",
+    "scope": "hr"
+   },
+   "out": [
+    {
+     "operation": "Get_Worker_Event_History",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Lists the events of a person, optionally between two dates.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Get_Event_Detail",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Tells where a business process event stands and who it waits for.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "End_Flexible_Work_Arrangement",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Starts the business process that ends a flexible work arrangement.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Add_Flexible_Work_Arrangement",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Starts the business process that asks for a flexible work arrangement for a person.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Cancel_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Cancels a business process that is still running.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Send_Back_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Returns a business process to an earlier step.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Rescind_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Undoes a business process that is done, when it can be undone.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Approve_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Approves the step of a business process that waits for the person calling.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Deny_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Denies the step of a business process that waits for the person calling.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    }
+   ],
+   "scores": [
+    6.555,
+    1.841,
+    0.835,
+    0.667,
+    0.191,
+    0.187,
+    0.18,
+    0.177,
+    0.177
+   ]
+  },
+  {
+   "cmd": "search",
+   "args": {
+    "query": "journals",
+    "scope": "hr"
+   },
+   "out": [],
+   "scores": []
+  },
+  {
+   "cmd": "search",
+   "args": {
+    "query": "journals",
+    "scope": "all"
+   },
+   "out": [
+    {
+     "operation": "Get_Journals",
+     "service": "Financial_Management",
+     "also_in": [],
+     "description": "Lists accounting journals.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": []
+    }
+   ],
+   "scores": [
+    4.903
+   ]
+  },
+  {
+   "cmd": "search",
+   "args": {
+    "query": "expense sheet",
+    "scope": "all"
+   },
+   "out": [],
+   "scores": []
+  },
+  {
+   "cmd": "search",
+   "args": {
+    "query": "devolver o pedido ao passo anterior",
+    "scope": "hr"
+   },
+   "out": [
+    {
+     "operation": "Send_Back_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Returns a business process to an earlier step.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Get_Organizations",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Lists organizations and the one each sits under.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Cancel_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Cancels a business process that is still running.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Get_Event_Detail",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Tells where a business process event stands and who it waits for.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Rescind_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Undoes a business process that is done, when it can be undone.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Approve_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Approves the step of a business process that waits for the person calling.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Deny_Business_Process",
+     "service": "Integrations",
+     "also_in": [],
+     "description": "Denies the step of a business process that waits for the person calling.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "End_Flexible_Work_Arrangement",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Starts the business process that ends a flexible work arrangement.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    {
+     "operation": "Add_Flexible_Work_Arrangement",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Starts the business process that asks for a flexible work arrangement for a person.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    }
+   ],
+   "scores": [
+    11.069,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "cmd": "show",
+   "args": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "depth": 5
+   },
+   "out": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "service": "Human_Resources",
+    "version": "v47.0",
+    "description": "Starts the business process that asks for a flexible work arrangement for a person.",
+    "also_in": [],
+    "deprecated": false,
+    "request_element": "Add_Flexible_Work_Arrangement_Request",
+    "response_element": "Add_Flexible_Work_Arrangement_Response",
+    "schema": "card: (none)=1  ?=0..1  *=0..n  +=1..n  |=choice member  @=attribute  ↻=recursive\nAdd_Flexible_Work_Arrangement_Request <Add_Flexible_Work_Arrangement_RequestType> @version? — Starts a request for a flexible work arrangement.\n  Business_Process_Parameters? <Business_Process_ParametersType> — How the business process runs once submitted.\n    Run_Now? : boolean — Process it at once, without waiting in a queue.\n    Note_Data? <Note_Data__inline1>\n      Note? : string\n  Arrangement_Data <Arrangement_DataType>\n    Worker_Reference <WorkerObjectType> @Descriptor? — The person the arrangement is for.\n      ID* : string @type{WID|Employee_ID|Contingent_Worker_ID}\n    | Position_Reference? <PositionObjectType>\n      ID* : string @type{WID|Position_ID}\n    | Job_Reference? <PositionObjectType>\n      ID* : string @type{WID|Position_ID}\n    Arrangement_Kind_Reference <Arrangement_KindObjectType>\n      ID* : string @type{WID|Arrangement_Kind_ID}\n    First_Day : date\n    Planned_Last_Day? : date\n    Weekdays* : string {Monday|Tuesday|Wednesday|Thursday|Friday}\n    Hours_per_Week? : decimal\n    Note? : string"
+   }
+  },
+  {
+   "cmd": "show",
+   "args": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "path": "Arrangement_Data",
+    "depth": 2
+   },
+   "out": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "service": "Human_Resources",
+    "version": "v47.0",
+    "description": "Starts the business process that asks for a flexible work arrangement for a person.",
+    "also_in": [],
+    "deprecated": false,
+    "request_element": "Add_Flexible_Work_Arrangement_Request",
+    "response_element": "Add_Flexible_Work_Arrangement_Response",
+    "schema": "card: (none)=1  ?=0..1  *=0..n  +=1..n  |=choice member  @=attribute  ↻=recursive\nArrangement_Data <Arrangement_DataType>\n  Worker_Reference <WorkerObjectType> @Descriptor? — The person the arrangement is for.\n    ID* : string @type{WID|Employee_ID|Contingent_Worker_ID}\n  | Position_Reference? <PositionObjectType>\n    ID* : string @type{WID|Position_ID}\n  | Job_Reference? <PositionObjectType>\n    ID* : string @type{WID|Position_ID}\n  Arrangement_Kind_Reference <Arrangement_KindObjectType>\n    ID* : string @type{WID|Arrangement_Kind_ID}\n  First_Day : date\n  Planned_Last_Day? : date\n  Weekdays* : string {Monday|Tuesday|Wednesday|Thursday|Friday}\n  Hours_per_Week? : decimal\n  Note? : string"
+   }
+  },
+  {
+   "cmd": "show",
+   "args": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "which": "response"
+   },
+   "out": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "service": "Human_Resources",
+    "version": "v47.0",
+    "description": "Starts the business process that asks for a flexible work arrangement for a person.",
+    "also_in": [],
+    "deprecated": false,
+    "request_element": "Add_Flexible_Work_Arrangement_Request",
+    "response_element": "Add_Flexible_Work_Arrangement_Response",
+    "schema": "card: (none)=1  ?=0..1  *=0..n  +=1..n  |=choice member  @=attribute  ↻=recursive\nAdd_Flexible_Work_Arrangement_Response <Flexible_Work_Arrangement_Event_ResponseType> @version?\n  Arrangement_Event_Reference? <Unique_IdentifierObjectType>\n    ID* : string @type{WID}"
+   }
+  },
+  {
+   "cmd": "show",
+   "args": {
+    "operation": "Get_Organizations",
+    "which": "response",
+    "depth": 6
+   },
+   "out": {
+    "operation": "Get_Organizations",
+    "service": "Human_Resources",
+    "version": "v47.0",
+    "description": "Lists organizations and the one each sits under.",
+    "also_in": [],
+    "deprecated": false,
+    "request_element": "Get_Organizations_Request",
+    "response_element": "Get_Organizations_Response",
+    "schema": "card: (none)=1  ?=0..1  *=0..n  +=1..n  |=choice member  @=attribute  ↻=recursive\nGet_Organizations_Response <Get_Organizations_ResponseType>\n  Organization* <OrganizationType>\n    Organization_Reference? <Unique_IdentifierObjectType>\n      ID* : string @type{WID}\n    Name? : string\n    Parent_Organization? <OrganizationType> ↻"
+   }
+  },
+  {
+   "cmd": "show",
+   "args": {
+    "operation": "Get_Organizations",
+    "depth": 4
+   },
+   "out": {
+    "operation": "Get_Organizations",
+    "service": "Human_Resources",
+    "version": "v47.0",
+    "description": "Lists organizations and the one each sits under.",
+    "also_in": [],
+    "deprecated": false,
+    "request_element": "Get_Organizations_Request",
+    "response_element": "Get_Organizations_Response",
+    "schema": "card: (none)=1  ?=0..1  *=0..n  +=1..n  |=choice member  @=attribute  ↻=recursive\nGet_Organizations_Request <Get_Organizations_RequestType> @version?\n  Filter? <Organization_FilterType>\n    Also_Inactive? : boolean\n    Organization_Kind? : string"
+   }
+  },
+  {
+   "cmd": "show",
+   "args": {
+    "operation": "Get_Worker_Event_History"
+   },
+   "out": {
+    "operation": "Get_Worker_Event_History",
+    "service": "Human_Resources",
+    "version": "v47.0",
+    "description": "Lists the events of a person, optionally between two dates.",
+    "also_in": [],
+    "deprecated": false,
+    "request_element": "Worker_Event_History_Get",
+    "response_element": "Worker_Event_History_Response",
+    "schema": "card: (none)=1  ?=0..1  *=0..n  +=1..n  |=choice member  @=attribute  ↻=recursive\nWorker_Event_History_Get <Worker_Event_History_GetType> @version?\n  Worker_Reference <WorkerObjectType> @Descriptor?\n    ID* : string @type{WID|Employee_ID|Contingent_Worker_ID}\n  Date_Range? <Date_Range__inline2>\n    From : date\n    To : date"
+   }
+  },
+  {
+   "cmd": "show",
+   "args": {
+    "operation": "Enter_Time_Off"
+   },
+   "out": {
+    "operation": "Enter_Time_Off",
+    "service": "Absence_Management",
+    "version": "v47.0",
+    "description": "Asks for time off for a person.",
+    "also_in": [],
+    "deprecated": false,
+    "request_element": null,
+    "response_element": null,
+    "schema": null,
+    "hint": "No WSDL ingested for Absence_Management (operation known from the directory only). Run: wws fetch --services Absence_Management --version v47.0  or  wws ingest-wsdl <path/to/Absence_Management.wsdl>"
+   }
+  },
+  {
+   "cmd": "show",
+   "args": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "fmt": "json",
+    "depth": 3
+   },
+   "out": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "service": "Human_Resources",
+    "version": "v47.0",
+    "description": "Starts the business process that asks for a flexible work arrangement for a person.",
+    "also_in": [],
+    "deprecated": false,
+    "request_element": "Add_Flexible_Work_Arrangement_Request",
+    "response_element": "Add_Flexible_Work_Arrangement_Response",
+    "schema": {
+     "name": "Add_Flexible_Work_Arrangement_Request",
+     "path": "Add_Flexible_Work_Arrangement_Request",
+     "card": "1",
+     "type": "Add_Flexible_Work_Arrangement_RequestType",
+     "doc": "Starts a request for a flexible work arrangement.",
+     "attrs": [
+      {
+       "name": "version",
+       "use": "optional",
+       "type": "xsd:string"
+      }
+     ],
+     "children": [
+      {
+       "name": "Business_Process_Parameters",
+       "path": "Add_Flexible_Work_Arrangement_Request/Business_Process_Parameters",
+       "card": "?",
+       "type": "Business_Process_ParametersType",
+       "doc": "How the business process runs once submitted.",
+       "children": [
+        {
+         "name": "Run_Now",
+         "path": "Add_Flexible_Work_Arrangement_Request/Business_Process_Parameters/Run_Now",
+         "card": "?",
+         "type": "xsd:boolean",
+         "value_type": "xsd:boolean",
+         "doc": "Process it at once, without waiting in a queue."
+        },
+        {
+         "name": "Note_Data",
+         "path": "Add_Flexible_Work_Arrangement_Request/Business_Process_Parameters/Note_Data",
+         "card": "?",
+         "type": "Note_Data__inline1",
+         "children": [
+          {
+           "name": "Note",
+           "path": "Add_Flexible_Work_Arrangement_Request/Business_Process_Parameters/Note_Data/Note",
+           "card": "?",
+           "type": "xsd:string",
+           "value_type": "xsd:string"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Arrangement_Data",
+       "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data",
+       "card": "1",
+       "type": "Arrangement_DataType",
+       "children": [
+        {
+         "name": "Worker_Reference",
+         "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Worker_Reference",
+         "card": "1",
+         "type": "WorkerObjectType",
+         "doc": "The person the arrangement is for.",
+         "attrs": [
+          {
+           "name": "Descriptor",
+           "use": "optional",
+           "type": "xsd:string"
+          }
+         ],
+         "children": [
+          {
+           "name": "ID",
+           "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Worker_Reference/ID",
+           "card": "*",
+           "type": "WorkerObjectIDType",
+           "value_type": "xsd:string",
+           "attrs": [
+            {
+             "name": "type",
+             "use": "required",
+             "type": "xsd:string",
+             "enum": [
+              "WID",
+              "Employee_ID",
+              "Contingent_Worker_ID"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "name": "Position_Reference",
+         "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Position_Reference",
+         "card": "?",
+         "type": "PositionObjectType",
+         "choice": "choice1?",
+         "children": [
+          {
+           "name": "ID",
+           "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Position_Reference/ID",
+           "card": "*",
+           "type": "PositionObjectIDType",
+           "value_type": "xsd:string",
+           "attrs": [
+            {
+             "name": "type",
+             "use": "required",
+             "type": "xsd:string",
+             "enum": [
+              "WID",
+              "Position_ID"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "name": "Job_Reference",
+         "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Job_Reference",
+         "card": "?",
+         "type": "PositionObjectType",
+         "choice": "choice1?",
+         "children": [
+          {
+           "name": "ID",
+           "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Job_Reference/ID",
+           "card": "*",
+           "type": "PositionObjectIDType",
+           "value_type": "xsd:string",
+           "attrs": [
+            {
+             "name": "type",
+             "use": "required",
+             "type": "xsd:string",
+             "enum": [
+              "WID",
+              "Position_ID"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "name": "Arrangement_Kind_Reference",
+         "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Arrangement_Kind_Reference",
+         "card": "1",
+         "type": "Arrangement_KindObjectType",
+         "children": [
+          {
+           "name": "ID",
+           "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Arrangement_Kind_Reference/ID",
+           "card": "*",
+           "type": "Arrangement_KindObjectIDType",
+           "value_type": "xsd:string",
+           "attrs": [
+            {
+             "name": "type",
+             "use": "required",
+             "type": "xsd:string",
+             "enum": [
+              "WID",
+              "Arrangement_Kind_ID"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "name": "First_Day",
+         "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/First_Day",
+         "card": "1",
+         "type": "xsd:date",
+         "value_type": "xsd:date"
+        },
+        {
+         "name": "Planned_Last_Day",
+         "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Planned_Last_Day",
+         "card": "?",
+         "type": "xsd:date",
+         "value_type": "xsd:date"
+        },
+        {
+         "name": "Weekdays",
+         "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Weekdays",
+         "card": "*",
+         "type": "WeekdayEnumeration",
+         "value_type": "xsd:string",
+         "enum": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday"
+         ]
+        },
+        {
+         "name": "Hours_per_Week",
+         "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Hours_per_Week",
+         "card": "?",
+         "type": "xsd:decimal",
+         "value_type": "xsd:decimal"
+        },
+        {
+         "name": "Note",
+         "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Note",
+         "card": "?",
+         "type": "xsd:string",
+         "value_type": "xsd:string"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  {
+   "cmd": "show",
+   "args": {
+    "operation": "Add_Flexible_Work"
+   },
+   "out": {
+    "error": "Operation 'Add_Flexible_Work' not found. Closest: Add_Flexible_Work_Arrangement (Human_Resources), End_Flexible_Work_Arrangement (Human_Resources), Get_Worker_Event_History (Human_Resources)"
+   }
+  },
+  {
+   "cmd": "envelope",
+   "args": {
+    "operation": "Add_Flexible_Work_Arrangement"
+   },
+   "out": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "service": "Human_Resources",
+    "version": "v47.0",
+    "endpoint": "https://<host>/ccx/service/<tenant>/Human_Resources/v47.0",
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<env:Envelope xmlns:env=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:wd=\"urn:com.workday/bsvc\">\n  <env:Body>\n    <wd:Add_Flexible_Work_Arrangement_Request wd:version=\"v47.0\">\n      <wd:Arrangement_Data>\n        <!-- Worker_Reference: ID @type options: WID, Employee_ID, Contingent_Worker_ID -->\n        <wd:Worker_Reference>\n          <wd:ID wd:type=\"Employee_ID\">{{Worker_ID}}</wd:ID>\n        </wd:Worker_Reference>\n        <!-- Arrangement_Kind_Reference: ID @type options: WID, Arrangement_Kind_ID -->\n        <wd:Arrangement_Kind_Reference>\n          <wd:ID wd:type=\"Arrangement_Kind_ID\">{{Arrangement_Kind_ID}}</wd:ID>\n        </wd:Arrangement_Kind_Reference>\n        <wd:First_Day>{{First_Day}}</wd:First_Day>  <!-- YYYY-MM-DD -->\n      </wd:Arrangement_Data>\n    </wd:Add_Flexible_Work_Arrangement_Request>\n  </env:Body>\n</env:Envelope>",
+    "variables": [
+     {
+      "var": "Worker_ID",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Worker_Reference/ID",
+      "xsd_type": "xsd:string",
+      "required": true,
+      "enum": [
+       "WID",
+       "Employee_ID",
+       "Contingent_Worker_ID"
+      ],
+      "doc": "The person the arrangement is for.",
+      "id_type": "Employee_ID"
+     },
+     {
+      "var": "Arrangement_Kind_ID",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Arrangement_Kind_Reference/ID",
+      "xsd_type": "xsd:string",
+      "required": true,
+      "enum": [
+       "WID",
+       "Arrangement_Kind_ID"
+      ],
+      "doc": "",
+      "id_type": "Arrangement_Kind_ID"
+     },
+     {
+      "var": "First_Day",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/First_Day",
+      "xsd_type": "xsd:date",
+      "required": true,
+      "enum": null,
+      "doc": "",
+      "id_type": null
+     }
+    ]
+   }
+  },
+  {
+   "cmd": "envelope",
+   "args": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "include": [
+     "Business_Process_Parameters/Run_Now",
+     "Arrangement_Data/Planned_Last_Day"
+    ],
+    "with_header": true
+   },
+   "out": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "service": "Human_Resources",
+    "version": "v47.0",
+    "endpoint": "https://<host>/ccx/service/<tenant>/Human_Resources/v47.0",
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<env:Envelope xmlns:env=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:wd=\"urn:com.workday/bsvc\">\n  <env:Header>\n    <wsse:Security xmlns:wsse=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd\">\n      <wsse:UsernameToken>\n        <wsse:Username>{{ISU_USER}}@{{TENANT}}</wsse:Username>\n        <wsse:Password Type=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText\">{{ISU_PASSWORD}}</wsse:Password>\n      </wsse:UsernameToken>\n    </wsse:Security>\n  </env:Header>\n  <env:Body>\n    <wd:Add_Flexible_Work_Arrangement_Request wd:version=\"v47.0\">\n      <wd:Business_Process_Parameters>\n        <wd:Run_Now>{{Run_Now}}</wd:Run_Now>  <!-- true|false -->\n      </wd:Business_Process_Parameters>\n      <wd:Arrangement_Data>\n        <!-- Worker_Reference: ID @type options: WID, Employee_ID, Contingent_Worker_ID -->\n        <wd:Worker_Reference>\n          <wd:ID wd:type=\"Employee_ID\">{{Worker_ID}}</wd:ID>\n        </wd:Worker_Reference>\n        <!-- Arrangement_Kind_Reference: ID @type options: WID, Arrangement_Kind_ID -->\n        <wd:Arrangement_Kind_Reference>\n          <wd:ID wd:type=\"Arrangement_Kind_ID\">{{Arrangement_Kind_ID}}</wd:ID>\n        </wd:Arrangement_Kind_Reference>\n        <wd:First_Day>{{First_Day}}</wd:First_Day>  <!-- YYYY-MM-DD -->\n        <wd:Planned_Last_Day>{{Planned_Last_Day}}</wd:Planned_Last_Day>  <!-- YYYY-MM-DD -->\n      </wd:Arrangement_Data>\n    </wd:Add_Flexible_Work_Arrangement_Request>\n  </env:Body>\n</env:Envelope>",
+    "variables": [
+     {
+      "var": "Run_Now",
+      "path": "Add_Flexible_Work_Arrangement_Request/Business_Process_Parameters/Run_Now",
+      "xsd_type": "xsd:boolean",
+      "required": false,
+      "enum": null,
+      "doc": "Process it at once, without waiting in a queue.",
+      "id_type": null
+     },
+     {
+      "var": "Worker_ID",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Worker_Reference/ID",
+      "xsd_type": "xsd:string",
+      "required": true,
+      "enum": [
+       "WID",
+       "Employee_ID",
+       "Contingent_Worker_ID"
+      ],
+      "doc": "The person the arrangement is for.",
+      "id_type": "Employee_ID"
+     },
+     {
+      "var": "Arrangement_Kind_ID",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Arrangement_Kind_Reference/ID",
+      "xsd_type": "xsd:string",
+      "required": true,
+      "enum": [
+       "WID",
+       "Arrangement_Kind_ID"
+      ],
+      "doc": "",
+      "id_type": "Arrangement_Kind_ID"
+     },
+     {
+      "var": "First_Day",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/First_Day",
+      "xsd_type": "xsd:date",
+      "required": true,
+      "enum": null,
+      "doc": "",
+      "id_type": null
+     },
+     {
+      "var": "Planned_Last_Day",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Planned_Last_Day",
+      "xsd_type": "xsd:date",
+      "required": false,
+      "enum": null,
+      "doc": "",
+      "id_type": null
+     }
+    ]
+   }
+  },
+  {
+   "cmd": "envelope",
+   "args": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "mode": "all"
+   },
+   "out": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "service": "Human_Resources",
+    "version": "v47.0",
+    "endpoint": "https://<host>/ccx/service/<tenant>/Human_Resources/v47.0",
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<env:Envelope xmlns:env=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:wd=\"urn:com.workday/bsvc\">\n  <env:Body>\n    <wd:Add_Flexible_Work_Arrangement_Request wd:version=\"v47.0\">\n      <wd:Business_Process_Parameters>\n        <wd:Run_Now>{{Run_Now}}</wd:Run_Now>  <!-- true|false -->\n        <wd:Note_Data>\n          <wd:Note>{{Note}}</wd:Note>\n        </wd:Note_Data>\n      </wd:Business_Process_Parameters>\n      <wd:Arrangement_Data>\n        <!-- Worker_Reference: ID @type options: WID, Employee_ID, Contingent_Worker_ID -->\n        <wd:Worker_Reference>\n          <wd:ID wd:type=\"Employee_ID\">{{Worker_ID}}</wd:ID>\n        </wd:Worker_Reference>\n        <!-- Position_Reference: ID @type options: WID, Position_ID -->\n        <wd:Position_Reference>\n          <wd:ID wd:type=\"Position_ID\">{{Position_ID}}</wd:ID>\n        </wd:Position_Reference>\n        <!-- Job_Reference: ID @type options: WID, Position_ID -->\n        <wd:Job_Reference>\n          <wd:ID wd:type=\"Position_ID\">{{Job_ID}}</wd:ID>\n        </wd:Job_Reference>\n        <!-- Arrangement_Kind_Reference: ID @type options: WID, Arrangement_Kind_ID -->\n        <wd:Arrangement_Kind_Reference>\n          <wd:ID wd:type=\"Arrangement_Kind_ID\">{{Arrangement_Kind_ID}}</wd:ID>\n        </wd:Arrangement_Kind_Reference>\n        <wd:First_Day>{{First_Day}}</wd:First_Day>  <!-- YYYY-MM-DD -->\n        <wd:Planned_Last_Day>{{Planned_Last_Day}}</wd:Planned_Last_Day>  <!-- YYYY-MM-DD -->\n        <wd:Weekdays>{{Weekdays}}</wd:Weekdays>  <!-- one of: Monday, Tuesday, Wednesday, Thursday, Friday -->\n        <wd:Hours_per_Week>{{Hours_per_Week}}</wd:Hours_per_Week>  <!-- number -->\n        <wd:Note>{{Note_2}}</wd:Note>\n      </wd:Arrangement_Data>\n    </wd:Add_Flexible_Work_Arrangement_Request>\n  </env:Body>\n</env:Envelope>",
+    "variables": [
+     {
+      "var": "Run_Now",
+      "path": "Add_Flexible_Work_Arrangement_Request/Business_Process_Parameters/Run_Now",
+      "xsd_type": "xsd:boolean",
+      "required": false,
+      "enum": null,
+      "doc": "Process it at once, without waiting in a queue.",
+      "id_type": null
+     },
+     {
+      "var": "Note",
+      "path": "Add_Flexible_Work_Arrangement_Request/Business_Process_Parameters/Note_Data/Note",
+      "xsd_type": "xsd:string",
+      "required": false,
+      "enum": null,
+      "doc": "",
+      "id_type": null
+     },
+     {
+      "var": "Worker_ID",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Worker_Reference/ID",
+      "xsd_type": "xsd:string",
+      "required": true,
+      "enum": [
+       "WID",
+       "Employee_ID",
+       "Contingent_Worker_ID"
+      ],
+      "doc": "The person the arrangement is for.",
+      "id_type": "Employee_ID"
+     },
+     {
+      "var": "Position_ID",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Position_Reference/ID",
+      "xsd_type": "xsd:string",
+      "required": false,
+      "enum": [
+       "WID",
+       "Position_ID"
+      ],
+      "doc": "",
+      "id_type": "Position_ID"
+     },
+     {
+      "var": "Job_ID",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Job_Reference/ID",
+      "xsd_type": "xsd:string",
+      "required": false,
+      "enum": [
+       "WID",
+       "Position_ID"
+      ],
+      "doc": "",
+      "id_type": "Position_ID"
+     },
+     {
+      "var": "Arrangement_Kind_ID",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Arrangement_Kind_Reference/ID",
+      "xsd_type": "xsd:string",
+      "required": true,
+      "enum": [
+       "WID",
+       "Arrangement_Kind_ID"
+      ],
+      "doc": "",
+      "id_type": "Arrangement_Kind_ID"
+     },
+     {
+      "var": "First_Day",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/First_Day",
+      "xsd_type": "xsd:date",
+      "required": true,
+      "enum": null,
+      "doc": "",
+      "id_type": null
+     },
+     {
+      "var": "Planned_Last_Day",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Planned_Last_Day",
+      "xsd_type": "xsd:date",
+      "required": false,
+      "enum": null,
+      "doc": "",
+      "id_type": null
+     },
+     {
+      "var": "Weekdays",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Weekdays",
+      "xsd_type": "xsd:string",
+      "required": false,
+      "enum": [
+       "Monday",
+       "Tuesday",
+       "Wednesday",
+       "Thursday",
+       "Friday"
+      ],
+      "doc": "",
+      "id_type": null
+     },
+     {
+      "var": "Hours_per_Week",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Hours_per_Week",
+      "xsd_type": "xsd:decimal",
+      "required": false,
+      "enum": null,
+      "doc": "",
+      "id_type": null
+     },
+     {
+      "var": "Note_2",
+      "path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Note",
+      "xsd_type": "xsd:string",
+      "required": false,
+      "enum": null,
+      "doc": "",
+      "id_type": null
+     }
+    ]
+   }
+  },
+  {
+   "cmd": "envelope",
+   "args": {
+    "operation": "Approve_Business_Process",
+    "body_only": true
+   },
+   "out": {
+    "operation": "Approve_Business_Process",
+    "service": "Integrations",
+    "version": "v47.0",
+    "endpoint": "https://<host>/ccx/service/<tenant>/Integrations/v47.0",
+    "xml": "<wd:Approve_Business_Process_Request xmlns:wd=\"urn:com.workday/bsvc\" wd:version=\"v47.0\">\n  <!-- Event_Reference: ID @type options: WID, Event_ID -->\n  <wd:Event_Reference>\n    <wd:ID wd:type=\"WID\">{{Event_ID}}</wd:ID>\n  </wd:Event_Reference>\n</wd:Approve_Business_Process_Request>",
+    "variables": [
+     {
+      "var": "Event_ID",
+      "path": "Approve_Business_Process_Request/Event_Reference/ID",
+      "xsd_type": "xsd:string",
+      "required": true,
+      "enum": [
+       "WID",
+       "Event_ID"
+      ],
+      "doc": "",
+      "id_type": "WID"
+     }
+    ]
+   }
+  },
+  {
+   "cmd": "envelope",
+   "args": {
+    "operation": "End_Flexible_Work_Arrangement"
+   },
+   "out": {
+    "operation": "End_Flexible_Work_Arrangement",
+    "service": "Human_Resources",
+    "version": "v47.0",
+    "endpoint": "https://<host>/ccx/service/<tenant>/Human_Resources/v47.0",
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<env:Envelope xmlns:env=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:wd=\"urn:com.workday/bsvc\">\n  <env:Body>\n    <wd:End_Flexible_Work_Arrangement_Request wd:version=\"v47.0\">\n      <!-- Worker_Reference: ID @type options: WID, Employee_ID, Contingent_Worker_ID -->\n      <wd:Worker_Reference>\n        <wd:ID wd:type=\"Employee_ID\">{{Worker_ID}}</wd:ID>\n      </wd:Worker_Reference>\n      <!-- Arrangement_Reference: ID @type options: WID, Arrangement_ID -->\n      <wd:Arrangement_Reference>\n        <wd:ID wd:type=\"Arrangement_ID\">{{Arrangement_ID}}</wd:ID>\n      </wd:Arrangement_Reference>\n      <wd:Last_Day>{{Last_Day}}</wd:Last_Day>  <!-- YYYY-MM-DD -->\n    </wd:End_Flexible_Work_Arrangement_Request>\n  </env:Body>\n</env:Envelope>",
+    "variables": [
+     {
+      "var": "Worker_ID",
+      "path": "End_Flexible_Work_Arrangement_Request/Worker_Reference/ID",
+      "xsd_type": "xsd:string",
+      "required": true,
+      "enum": [
+       "WID",
+       "Employee_ID",
+       "Contingent_Worker_ID"
+      ],
+      "doc": "",
+      "id_type": "Employee_ID"
+     },
+     {
+      "var": "Arrangement_ID",
+      "path": "End_Flexible_Work_Arrangement_Request/Arrangement_Reference/ID",
+      "xsd_type": "xsd:string",
+      "required": true,
+      "enum": [
+       "WID",
+       "Arrangement_ID"
+      ],
+      "doc": "",
+      "id_type": "Arrangement_ID"
+     },
+     {
+      "var": "Last_Day",
+      "path": "End_Flexible_Work_Arrangement_Request/Last_Day",
+      "xsd_type": "xsd:date",
+      "required": true,
+      "enum": null,
+      "doc": "",
+      "id_type": null
+     }
+    ]
+   }
+  },
+  {
+   "cmd": "envelope",
+   "args": {
+    "operation": "Send_Back_Business_Process"
+   },
+   "out": {
+    "operation": "Send_Back_Business_Process",
+    "service": "Integrations",
+    "version": "v47.0",
+    "endpoint": "https://<host>/ccx/service/<tenant>/Integrations/v47.0",
+    "xml": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<env:Envelope xmlns:env=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:wd=\"urn:com.workday/bsvc\">\n  <env:Body>\n    <wd:Send_Back_Business_Process_Request wd:version=\"v47.0\">\n      <!-- Event_Reference: ID @type options: WID, Event_ID -->\n      <wd:Event_Reference>\n        <wd:ID wd:type=\"WID\">{{Event_ID}}</wd:ID>\n      </wd:Event_Reference>\n      <!-- Step_Reference: ID @type options: WID, Event_ID -->\n      <wd:Step_Reference>\n        <wd:ID wd:type=\"Event_ID\">{{Step_ID}}</wd:ID>\n      </wd:Step_Reference>\n      <wd:Reason>{{Reason}}</wd:Reason>\n    </wd:Send_Back_Business_Process_Request>\n  </env:Body>\n</env:Envelope>",
+    "variables": [
+     {
+      "var": "Event_ID",
+      "path": "Send_Back_Business_Process_Request/Event_Reference/ID",
+      "xsd_type": "xsd:string",
+      "required": true,
+      "enum": [
+       "WID",
+       "Event_ID"
+      ],
+      "doc": "",
+      "id_type": "WID"
+     },
+     {
+      "var": "Step_ID",
+      "path": "Send_Back_Business_Process_Request/Step_Reference/ID",
+      "xsd_type": "xsd:string",
+      "required": true,
+      "enum": [
+       "WID",
+       "Event_ID"
+      ],
+      "doc": "",
+      "id_type": "Event_ID"
+     },
+     {
+      "var": "Reason",
+      "path": "Send_Back_Business_Process_Request/Reason",
+      "xsd_type": "xsd:string",
+      "required": true,
+      "enum": null,
+      "doc": "",
+      "id_type": null
+     }
+    ]
+   }
+  },
+  {
+   "cmd": "envelope",
+   "args": {
+    "operation": "Enter_Time_Off"
+   },
+   "out": {
+    "operation": "Enter_Time_Off",
+    "service": "Absence_Management",
+    "version": "v47.0",
+    "xml": null,
+    "hint": "No WSDL ingested for Absence_Management (operation known from the directory only). Run: wws fetch --services Absence_Management --version v47.0  or  wws ingest-wsdl <path/to/Absence_Management.wsdl>"
+   }
+  },
+  {
+   "cmd": "trace",
+   "args": {
+    "goal": "colaborador solicita trabalho híbrido e o gestor aprova"
+   },
+   "out": {
+    "goal": "colaborador solicita trabalho híbrido e o gestor aprova",
+    "primary": {
+     "operation": "Add_Flexible_Work_Arrangement",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Starts the business process that asks for a flexible work arrangement for a person.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    "business_process": true,
+    "steps": [
+     {
+      "role": "identify_user",
+      "kind": "connector",
+      "action": "Get my worker profile (Preview)",
+      "operation_id": "GetWorkerMe",
+      "why": "Resolve the signed-in user's worker ID; needs an OAuth-based connection."
+     },
+     {
+      "role": "action",
+      "kind": "soap",
+      "operation": "Add_Flexible_Work_Arrangement",
+      "service": "Human_Resources",
+      "why": "Starts the business process that asks for a flexible work arrangement for a person."
+     },
+     {
+      "role": "approver_inbox",
+      "kind": "connector",
+      "action": "Get worker inbox tasks (Preview)",
+      "operation_id": "GetWorkerInboxTasks",
+      "why": "List pending inbox tasks for a worker (e.g. approvals) — there is no SOAP 'Get Inbox'."
+     },
+     {
+      "role": "track",
+      "kind": "soap",
+      "operation": "Get_Event_Detail",
+      "service": "Integrations",
+      "why": "Status of the event: step, who it's awaiting, state."
+     },
+     {
+      "role": "approve",
+      "kind": "soap",
+      "operation": "Approve_Business_Process",
+      "service": "Integrations",
+      "why": "Approver acts on the event WID (runs as the approver)."
+     },
+     {
+      "role": "deny",
+      "kind": "soap",
+      "operation": "Deny_Business_Process",
+      "service": "Integrations",
+      "why": "Approver denies."
+     },
+     {
+      "role": "send_back",
+      "kind": "soap",
+      "operation": "Send_Back_Business_Process",
+      "service": "Integrations",
+      "why": "Approver returns it to a completed step."
+     },
+     {
+      "role": "cancel",
+      "kind": "soap",
+      "operation": "Cancel_Business_Process",
+      "service": "Integrations",
+      "why": "Initiator cancels while in progress."
+     },
+     {
+      "role": "rescind",
+      "kind": "soap",
+      "operation": "Rescind_Business_Process",
+      "service": "Integrations",
+      "why": "Undo a completed event, if rescindable."
+     },
+     {
+      "role": "find_events",
+      "kind": "soap",
+      "operation": "Get_Worker_Event_History",
+      "service": "Human_Resources",
+      "why": "Find a worker's events (filter by event type and dates) to get event WIDs."
+     }
+    ],
+    "related": [
+     {
+      "operation": "End_Flexible_Work_Arrangement",
+      "service": "Human_Resources",
+      "verb": "End"
+     }
+    ],
+    "alternatives": [
+     {
+      "operation": "End_Flexible_Work_Arrangement",
+      "service": "Human_Resources",
+      "also_in": [],
+      "description": "Starts the business process that ends a flexible work arrangement.",
+      "deprecated": false,
+      "versions": [
+       "v47.0"
+      ],
+      "schema_versions": [
+       "v47.0"
+      ]
+     },
+     {
+      "operation": "Approve_Business_Process",
+      "service": "Integrations",
+      "also_in": [],
+      "description": "Approves the step of a business process that waits for the person calling.",
+      "deprecated": false,
+      "versions": [
+       "v47.0"
+      ],
+      "schema_versions": [
+       "v47.0"
+      ]
+     },
+     {
+      "operation": "Get_Worker_Event_History",
+      "service": "Human_Resources",
+      "also_in": [],
+      "description": "Lists the events of a person, optionally between two dates.",
+      "deprecated": false,
+      "versions": [
+       "v47.0"
+      ],
+      "schema_versions": [
+       "v47.0"
+      ]
+     },
+     {
+      "operation": "Enter_Time_Off",
+      "service": "Absence_Management",
+      "also_in": [],
+      "description": "Asks for time off for a person.",
+      "deprecated": false,
+      "versions": [
+       "v47.0"
+      ],
+      "schema_versions": []
+     },
+     {
+      "operation": "Get_Time_Off_Plan_Balances",
+      "service": "Absence_Management",
+      "also_in": [],
+      "description": "Tells how much time off is left in each plan of a person.",
+      "deprecated": false,
+      "versions": [
+       "v47.0"
+      ],
+      "schema_versions": []
+     }
+    ]
+   }
+  },
+  {
+   "cmd": "trace",
+   "args": {
+    "goal": "saldo de férias"
+   },
+   "out": {
+    "goal": "saldo de férias",
+    "primary": {
+     "operation": "Get_Time_Off_Plan_Balances",
+     "service": "Absence_Management",
+     "also_in": [],
+     "description": "Tells how much time off is left in each plan of a person.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": []
+    },
+    "business_process": false,
+    "steps": [
+     {
+      "role": "identify_user",
+      "kind": "connector",
+      "action": "Get my worker profile (Preview)",
+      "operation_id": "GetWorkerMe",
+      "why": "Resolve the signed-in user's worker ID; needs an OAuth-based connection."
+     },
+     {
+      "role": "action",
+      "kind": "soap",
+      "operation": "Get_Time_Off_Plan_Balances",
+      "service": "Absence_Management",
+      "why": "Tells how much time off is left in each plan of a person."
+     }
+    ],
+    "related": [],
+    "alternatives": [
+     {
+      "operation": "Enter_Time_Off",
+      "service": "Absence_Management",
+      "also_in": [],
+      "description": "Asks for time off for a person.",
+      "deprecated": false,
+      "versions": [
+       "v47.0"
+      ],
+      "schema_versions": []
+     }
+    ]
+   }
+  },
+  {
+   "cmd": "trace",
+   "args": {
+    "goal": "nada a ver com isso"
+   },
+   "out": {
+    "goal": "nada a ver com isso",
+    "primary": {
+     "operation": "Get_Organizations",
+     "service": "Human_Resources",
+     "also_in": [],
+     "description": "Lists organizations and the one each sits under.",
+     "deprecated": false,
+     "versions": [
+      "v47.0"
+     ],
+     "schema_versions": [
+      "v47.0"
+     ]
+    },
+    "business_process": false,
+    "steps": [
+     {
+      "role": "identify_user",
+      "kind": "connector",
+      "action": "Get my worker profile (Preview)",
+      "operation_id": "GetWorkerMe",
+      "why": "Resolve the signed-in user's worker ID; needs an OAuth-based connection."
+     },
+     {
+      "role": "action",
+      "kind": "soap",
+      "operation": "Get_Organizations",
+      "service": "Human_Resources",
+      "why": "Lists organizations and the one each sits under."
+     }
+    ],
+    "related": [],
+    "alternatives": [
+     {
+      "operation": "Get_Time_Off_Plan_Balances",
+      "service": "Absence_Management",
+      "also_in": [],
+      "description": "Tells how much time off is left in each plan of a person.",
+      "deprecated": false,
+      "versions": [
+       "v47.0"
+      ],
+      "schema_versions": []
+     },
+     {
+      "operation": "Get_Event_Detail",
+      "service": "Integrations",
+      "also_in": [],
+      "description": "Tells where a business process event stands and who it waits for.",
+      "deprecated": false,
+      "versions": [
+       "v47.0"
+      ],
+      "schema_versions": [
+       "v47.0"
+      ]
+     },
+     {
+      "operation": "Get_Worker_Event_History",
+      "service": "Human_Resources",
+      "also_in": [],
+      "description": "Lists the events of a person, optionally between two dates.",
+      "deprecated": false,
+      "versions": [
+       "v47.0"
+      ],
+      "schema_versions": [
+       "v47.0"
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "cmd": "copilot",
+   "args": {
+    "operation": "Add_Flexible_Work_Arrangement",
+    "include": [
+     "Arrangement_Data/Note"
+    ]
+   },
+   "out": {
+    "connector": "Workday (Microsoft, Premium)",
+    "action": "Execute SOAP operation",
+    "operation_id": "SOAP_Operation",
+    "parameters": {
+     "service": "Human_Resources",
+     "version": "v47.0",
+     "requestBody": "<see power_fx / xml_template>"
+    },
+    "operation": "Add_Flexible_Work_Arrangement",
+    "inputs": [
+     {
+      "name": "WorkerID",
+      "copilot_variable": "Topic.WorkerID",
+      "xml_path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Worker_Reference/ID",
+      "type": "String",
+      "required": true,
+      "id_type": "Employee_ID",
+      "id_type_options": [
+       "WID",
+       "Employee_ID",
+       "Contingent_Worker_ID"
+      ],
+      "description": "The person the arrangement is for."
+     },
+     {
+      "name": "ArrangementKindID",
+      "copilot_variable": "Topic.ArrangementKindID",
+      "xml_path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Arrangement_Kind_Reference/ID",
+      "type": "String",
+      "required": true,
+      "id_type": "Arrangement_Kind_ID",
+      "id_type_options": [
+       "WID",
+       "Arrangement_Kind_ID"
+      ]
+     },
+     {
+      "name": "FirstDay",
+      "copilot_variable": "Topic.FirstDay",
+      "xml_path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/First_Day",
+      "type": "Date",
+      "required": true
+     },
+     {
+      "name": "Note",
+      "copilot_variable": "Topic.Note",
+      "xml_path": "Add_Flexible_Work_Arrangement_Request/Arrangement_Data/Note",
+      "type": "String",
+      "required": false
+     }
+    ],
+    "xml_template": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<env:Envelope xmlns:env=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:wd=\"urn:com.workday/bsvc\">\n  <env:Body>\n    <wd:Add_Flexible_Work_Arrangement_Request wd:version=\"v47.0\">\n      <wd:Arrangement_Data>\n        <!-- Worker_Reference: ID @type options: WID, Employee_ID, Contingent_Worker_ID -->\n        <wd:Worker_Reference>\n          <wd:ID wd:type=\"Employee_ID\">{{Worker_ID}}</wd:ID>\n        </wd:Worker_Reference>\n        <!-- Arrangement_Kind_Reference: ID @type options: WID, Arrangement_Kind_ID -->\n        <wd:Arrangement_Kind_Reference>\n          <wd:ID wd:type=\"Arrangement_Kind_ID\">{{Arrangement_Kind_ID}}</wd:ID>\n        </wd:Arrangement_Kind_Reference>\n        <wd:First_Day>{{First_Day}}</wd:First_Day>  <!-- YYYY-MM-DD -->\n        <wd:Note>{{Note}}</wd:Note>\n      </wd:Arrangement_Data>\n    </wd:Add_Flexible_Work_Arrangement_Request>\n  </env:Body>\n</env:Envelope>",
+    "power_fx": "\"<?xml version=\"\"1.0\"\" encoding=\"\"UTF-8\"\"?>\n<env:Envelope xmlns:env=\"\"http://schemas.xmlsoap.org/soap/envelope/\"\" xmlns:wd=\"\"urn:com.workday/bsvc\"\">\n  <env:Body>\n    <wd:Add_Flexible_Work_Arrangement_Request wd:version=\"\"v47.0\"\">\n      <wd:Arrangement_Data>\n        <!-- Worker_Reference: ID @type options: WID, Employee_ID, Contingent_Worker_ID -->\n        <wd:Worker_Reference>\n          <wd:ID wd:type=\"\"Employee_ID\"\">\" &\nTopic.WorkerID &\n\"</wd:ID>\n        </wd:Worker_Reference>\n        <!-- Arrangement_Kind_Reference: ID @type options: WID, Arrangement_Kind_ID -->\n        <wd:Arrangement_Kind_Reference>\n          <wd:ID wd:type=\"\"Arrangement_Kind_ID\"\">\" &\nTopic.ArrangementKindID &\n\"</wd:ID>\n        </wd:Arrangement_Kind_Reference>\n        <wd:First_Day>\" &\nText(Topic.FirstDay, \"yyyy-mm-dd\") &\n\"</wd:First_Day>  <!-- YYYY-MM-DD -->\n        <wd:Note>\" &\nSubstitute(Substitute(Substitute(Topic.Note, \"&\", \"&amp;\"), \"<\", \"&lt;\"), \">\", \"&gt;\") &\n\"</wd:Note>\n      </wd:Arrangement_Data>\n    </wd:Add_Flexible_Work_Arrangement_Request>\n  </env:Body>\n</env:Envelope>\"",
+    "response": {
+     "element": "Add_Flexible_Work_Arrangement_Response",
+     "read_paths": [
+      "Add_Flexible_Work_Arrangement_Response/Arrangement_Event_Reference/ID[@wd:type='WID']"
+     ],
+     "tip": "Keep the Event_Reference WID: it drives Get_Event_Detail and Approve/Deny/Cancel_Business_Process."
+    }
+   }
+  },
+  {
+   "cmd": "copilot",
+   "args": {
+    "operation": "Approve_Business_Process"
+   },
+   "out": {
+    "connector": "Workday (Microsoft, Premium)",
+    "action": "Execute SOAP operation",
+    "operation_id": "SOAP_Operation",
+    "parameters": {
+     "service": "Integrations",
+     "version": "v47.0",
+     "requestBody": "<see power_fx / xml_template>"
+    },
+    "operation": "Approve_Business_Process",
+    "inputs": [
+     {
+      "name": "EventID",
+      "copilot_variable": "Topic.EventID",
+      "xml_path": "Approve_Business_Process_Request/Event_Reference/ID",
+      "type": "String",
+      "required": true,
+      "id_type": "WID",
+      "id_type_options": [
+       "WID",
+       "Event_ID"
+      ]
+     }
+    ],
+    "xml_template": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<env:Envelope xmlns:env=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:wd=\"urn:com.workday/bsvc\">\n  <env:Body>\n    <wd:Approve_Business_Process_Request wd:version=\"v47.0\">\n      <!-- Event_Reference: ID @type options: WID, Event_ID -->\n      <wd:Event_Reference>\n        <wd:ID wd:type=\"WID\">{{Event_ID}}</wd:ID>\n      </wd:Event_Reference>\n    </wd:Approve_Business_Process_Request>\n  </env:Body>\n</env:Envelope>",
+    "power_fx": "\"<?xml version=\"\"1.0\"\" encoding=\"\"UTF-8\"\"?>\n<env:Envelope xmlns:env=\"\"http://schemas.xmlsoap.org/soap/envelope/\"\" xmlns:wd=\"\"urn:com.workday/bsvc\"\">\n  <env:Body>\n    <wd:Approve_Business_Process_Request wd:version=\"\"v47.0\"\">\n      <!-- Event_Reference: ID @type options: WID, Event_ID -->\n      <wd:Event_Reference>\n        <wd:ID wd:type=\"\"WID\"\">\" &\nTopic.EventID &\n\"</wd:ID>\n      </wd:Event_Reference>\n    </wd:Approve_Business_Process_Request>\n  </env:Body>\n</env:Envelope>\"",
+    "response": {
+     "element": "Approve_Business_Process_Response",
+     "read_paths": [
+      "Approve_Business_Process_Response/Event_Reference/ID[@wd:type='WID']"
+     ],
+     "tip": "Keep the Event_Reference WID: it drives Get_Event_Detail and Approve/Deny/Cancel_Business_Process."
+    }
+   }
+  },
+  {
+   "cmd": "copilot",
+   "args": {
+    "operation": "Approve_Business_Process",
+    "body_style": "body"
+   },
+   "out": {
+    "connector": "Workday (Microsoft, Premium)",
+    "action": "Execute SOAP operation",
+    "operation_id": "SOAP_Operation",
+    "parameters": {
+     "service": "Integrations",
+     "version": "v47.0",
+     "requestBody": "<see power_fx / xml_template>"
+    },
+    "operation": "Approve_Business_Process",
+    "inputs": [
+     {
+      "name": "EventID",
+      "copilot_variable": "Topic.EventID",
+      "xml_path": "Approve_Business_Process_Request/Event_Reference/ID",
+      "type": "String",
+      "required": true,
+      "id_type": "WID",
+      "id_type_options": [
+       "WID",
+       "Event_ID"
+      ]
+     }
+    ],
+    "xml_template": "<wd:Approve_Business_Process_Request xmlns:wd=\"urn:com.workday/bsvc\" wd:version=\"v47.0\">\n  <!-- Event_Reference: ID @type options: WID, Event_ID -->\n  <wd:Event_Reference>\n    <wd:ID wd:type=\"WID\">{{Event_ID}}</wd:ID>\n  </wd:Event_Reference>\n</wd:Approve_Business_Process_Request>",
+    "power_fx": "\"<wd:Approve_Business_Process_Request xmlns:wd=\"\"urn:com.workday/bsvc\"\" wd:version=\"\"v47.0\"\">\n  <!-- Event_Reference: ID @type options: WID, Event_ID -->\n  <wd:Event_Reference>\n    <wd:ID wd:type=\"\"WID\"\">\" &\nTopic.EventID &\n\"</wd:ID>\n  </wd:Event_Reference>\n</wd:Approve_Business_Process_Request>\"",
+    "response": {
+     "element": "Approve_Business_Process_Response",
+     "read_paths": [
+      "Approve_Business_Process_Response/Event_Reference/ID[@wd:type='WID']"
+     ],
+     "tip": "Keep the Event_Reference WID: it drives Get_Event_Detail and Approve/Deny/Cancel_Business_Process."
+    }
+   }
+  },
+  {
+   "cmd": "copilot",
+   "args": {
+    "operation": "Enter_Time_Off"
+   },
+   "out": {
+    "connector": "Workday (Microsoft, Premium)",
+    "action": "Execute SOAP operation",
+    "operation_id": "SOAP_Operation",
+    "parameters": {
+     "service": "Absence_Management",
+     "version": "v47.0",
+     "requestBody": "<see power_fx / xml_template>"
+    },
+    "operation": "Enter_Time_Off",
+    "warning": "No WSDL ingested for Absence_Management (operation known from the directory only). Run: wws fetch --services Absence_Management --version v47.0  or  wws ingest-wsdl <path/to/Absence_Management.wsdl>"
+   }
+  },
+  {
+   "cmd": "copilot",
+   "args": {
+    "operation": "End_Flexible_Work_Arrangement"
+   },
+   "out": {
+    "connector": "Workday (Microsoft, Premium)",
+    "action": "Execute SOAP operation",
+    "operation_id": "SOAP_Operation",
+    "parameters": {
+     "service": "Human_Resources",
+     "version": "v47.0",
+     "requestBody": "<see power_fx / xml_template>"
+    },
+    "operation": "End_Flexible_Work_Arrangement",
+    "inputs": [
+     {
+      "name": "WorkerID",
+      "copilot_variable": "Topic.WorkerID",
+      "xml_path": "End_Flexible_Work_Arrangement_Request/Worker_Reference/ID",
+      "type": "String",
+      "required": true,
+      "id_type": "Employee_ID",
+      "id_type_options": [
+       "WID",
+       "Employee_ID",
+       "Contingent_Worker_ID"
+      ]
+     },
+     {
+      "name": "ArrangementID",
+      "copilot_variable": "Topic.ArrangementID",
+      "xml_path": "End_Flexible_Work_Arrangement_Request/Arrangement_Reference/ID",
+      "type": "String",
+      "required": true,
+      "id_type": "Arrangement_ID",
+      "id_type_options": [
+       "WID",
+       "Arrangement_ID"
+      ]
+     },
+     {
+      "name": "LastDay",
+      "copilot_variable": "Topic.LastDay",
+      "xml_path": "End_Flexible_Work_Arrangement_Request/Last_Day",
+      "type": "Date",
+      "required": true
+     }
+    ],
+    "xml_template": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<env:Envelope xmlns:env=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:wd=\"urn:com.workday/bsvc\">\n  <env:Body>\n    <wd:End_Flexible_Work_Arrangement_Request wd:version=\"v47.0\">\n      <!-- Worker_Reference: ID @type options: WID, Employee_ID, Contingent_Worker_ID -->\n      <wd:Worker_Reference>\n        <wd:ID wd:type=\"Employee_ID\">{{Worker_ID}}</wd:ID>\n      </wd:Worker_Reference>\n      <!-- Arrangement_Reference: ID @type options: WID, Arrangement_ID -->\n      <wd:Arrangement_Reference>\n        <wd:ID wd:type=\"Arrangement_ID\">{{Arrangement_ID}}</wd:ID>\n      </wd:Arrangement_Reference>\n      <wd:Last_Day>{{Last_Day}}</wd:Last_Day>  <!-- YYYY-MM-DD -->\n    </wd:End_Flexible_Work_Arrangement_Request>\n  </env:Body>\n</env:Envelope>",
+    "power_fx": "\"<?xml version=\"\"1.0\"\" encoding=\"\"UTF-8\"\"?>\n<env:Envelope xmlns:env=\"\"http://schemas.xmlsoap.org/soap/envelope/\"\" xmlns:wd=\"\"urn:com.workday/bsvc\"\">\n  <env:Body>\n    <wd:End_Flexible_Work_Arrangement_Request wd:version=\"\"v47.0\"\">\n      <!-- Worker_Reference: ID @type options: WID, Employee_ID, Contingent_Worker_ID -->\n      <wd:Worker_Reference>\n        <wd:ID wd:type=\"\"Employee_ID\"\">\" &\nTopic.WorkerID &\n\"</wd:ID>\n      </wd:Worker_Reference>\n      <!-- Arrangement_Reference: ID @type options: WID, Arrangement_ID -->\n      <wd:Arrangement_Reference>\n        <wd:ID wd:type=\"\"Arrangement_ID\"\">\" &\nTopic.ArrangementID &\n\"</wd:ID>\n      </wd:Arrangement_Reference>\n      <wd:Last_Day>\" &\nText(Topic.LastDay, \"yyyy-mm-dd\") &\n\"</wd:Last_Day>  <!-- YYYY-MM-DD -->\n    </wd:End_Flexible_Work_Arrangement_Request>\n  </env:Body>\n</env:Envelope>\"",
+    "response": {
+     "element": "End_Flexible_Work_Arrangement_Response",
+     "read_paths": [
+      "End_Flexible_Work_Arrangement_Response/Arrangement_Event_Reference/ID[@wd:type='WID']"
+     ],
+     "tip": "Keep the Event_Reference WID: it drives Get_Event_Detail and Approve/Deny/Cancel_Business_Process."
+    }
+   }
+  }
+ ]
+}

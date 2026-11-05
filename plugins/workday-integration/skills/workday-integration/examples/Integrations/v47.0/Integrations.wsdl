@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SYNTHETIC EXAMPLE (made-up fields and texts): a WSDL whose schema is in a separate XSD, imported, with other prefixes. -->
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+                  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                  xmlns:tns="urn:com.workday/bsvc"
+                  name="Integrations" targetNamespace="urn:com.workday/bsvc">
+  <wsdl:types>
+    <xsd:schema targetNamespace="urn:com.workday/bsvc">
+      <xsd:import namespace="urn:com.workday/bsvc" schemaLocation="Integrations.xsd"/>
+    </xsd:schema>
+  </wsdl:types>
+  <wsdl:message name="Approve_Business_Process_RequestInput"><wsdl:part name="body" element="tns:Approve_Business_Process_Request"/></wsdl:message>
+  <wsdl:message name="Approve_Business_Process_ResponseOutput"><wsdl:part name="body" element="tns:Approve_Business_Process_Response"/></wsdl:message>
+  <wsdl:message name="Deny_Business_Process_RequestInput"><wsdl:part name="body" element="tns:Deny_Business_Process_Request"/></wsdl:message>
+  <wsdl:message name="Deny_Business_Process_ResponseOutput"><wsdl:part name="body" element="tns:Deny_Business_Process_Response"/></wsdl:message>
+  <wsdl:message name="Send_Back_Business_Process_RequestInput"><wsdl:part name="body" element="tns:Send_Back_Business_Process_Request"/></wsdl:message>
+  <wsdl:message name="Send_Back_Business_Process_ResponseOutput"><wsdl:part name="body" element="tns:Send_Back_Business_Process_Response"/></wsdl:message>
+  <wsdl:message name="Cancel_Business_Process_RequestInput"><wsdl:part name="body" element="tns:Cancel_Business_Process_Request"/></wsdl:message>
+  <wsdl:message name="Cancel_Business_Process_ResponseOutput"><wsdl:part name="body" element="tns:Cancel_Business_Process_Response"/></wsdl:message>
+  <wsdl:message name="Rescind_Business_Process_RequestInput"><wsdl:part name="body" element="tns:Rescind_Business_Process_Request"/></wsdl:message>
+  <wsdl:message name="Rescind_Business_Process_ResponseOutput"><wsdl:part name="body" element="tns:Rescind_Business_Process_Response"/></wsdl:message>
+  <wsdl:message name="Get_Event_Detail_RequestInput"><wsdl:part name="body" element="tns:Get_Event_Details_Request"/></wsdl:message>
+  <wsdl:message name="Get_Event_Detail_ResponseOutput"><wsdl:part name="body" element="tns:Get_Event_Details_Response"/></wsdl:message>
+  <wsdl:portType name="IntegrationsPort">
+    <wsdl:operation name="Approve_Business_Process">
+      <wsdl:documentation>Approves the step of a business process that waits for the person calling.</wsdl:documentation>
+      <wsdl:input message="tns:Approve_Business_Process_RequestInput"/>
+      <wsdl:output message="tns:Approve_Business_Process_ResponseOutput"/>
+    </wsdl:operation>
+    <wsdl:operation name="Deny_Business_Process">
+      <wsdl:documentation>Denies the step of a business process that waits for the person calling.</wsdl:documentation>
+      <wsdl:input message="tns:Deny_Business_Process_RequestInput"/>
+      <wsdl:output message="tns:Deny_Business_Process_ResponseOutput"/>
+    </wsdl:operation>
+    <wsdl:operation name="Send_Back_Business_Process">
+      <wsdl:documentation>Returns a business process to an earlier step.</wsdl:documentation>
+      <wsdl:input message="tns:Send_Back_Business_Process_RequestInput"/>
+      <wsdl:output message="tns:Send_Back_Business_Process_ResponseOutput"/>
+    </wsdl:operation>
+    <wsdl:operation name="Cancel_Business_Process">
+      <wsdl:documentation>Cancels a business process that is still running.</wsdl:documentation>
+      <wsdl:input message="tns:Cancel_Business_Process_RequestInput"/>
+      <wsdl:output message="tns:Cancel_Business_Process_ResponseOutput"/>
+    </wsdl:operation>
+    <wsdl:operation name="Rescind_Business_Process">
+      <wsdl:documentation>Undoes a business process that is done, when it can be undone.</wsdl:documentation>
+      <wsdl:input message="tns:Rescind_Business_Process_RequestInput"/>
+      <wsdl:output message="tns:Rescind_Business_Process_ResponseOutput"/>
+    </wsdl:operation>
+    <wsdl:operation name="Get_Event_Detail">
+      <wsdl:documentation>Tells where a business process event stands and who it waits for.</wsdl:documentation>
+      <wsdl:input message="tns:Get_Event_Detail_RequestInput"/>
+      <wsdl:output message="tns:Get_Event_Detail_ResponseOutput"/>
+    </wsdl:operation>
+  </wsdl:portType>
+</wsdl:definitions>

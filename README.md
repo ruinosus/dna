@@ -81,6 +81,13 @@ npx @ruinosus/dna process-simulation hr.sim --lang pt
 The drawing engine alone, to embed explainers in a page, is the [visual-explainer](https://www.npmjs.com/package/@ruinosus/visual-explainer)
 package (it also powers the VS Code and Obsidian extensions).
 
+## A sibling: workday-integration
+
+[`plugins/workday-integration`](plugins/workday-integration) is a second plugin in this marketplace, for whoever
+designs a Workday integration: a local catalog of the Workday Web Services (SOAP) — the operation for a use case, its
+fields, a SOAP envelope and the Copilot Studio «Execute SOAP operation» spec. It calls no tenant. Install it with
+`/plugin install workday-integration@dna`. Not affiliated with Workday.
+
 ## DNA and OKF
 
 DNA says **what a thing is** — a recipe with an `apiVersion` and a `kind`, checked by code. [OKF](https://github.com/GoogleCloudPlatform/open-knowledge-format),

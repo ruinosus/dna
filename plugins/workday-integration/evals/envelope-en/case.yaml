@@ -1,0 +1,33 @@
+schema_version: "1.0"
+name: workday-integration-envelope-en
+description: A SOAP envelope asked for — written by the script from the indexed WSDL, with placeholders, the reference's ID type and wd:version, nothing invented.
+tags: [envelope, en]
+runs: 1
+context:
+  scaffold_script: setup.sh
+execution:
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Skill, Read, Write, Edit, Bash]
+  prompt: |
+    The Workday operation directory and WSDLs I downloaded are in ./workday-files. Write the SOAP envelope for Approve_Business_Process, with the WS-Security header for SoapUI, to approve.xml. Don't ask me anything.
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?workday-integration"'
+  - name: by-the-script
+    type: tool_used
+    tool: Bash
+    input_match: 'wws\.mjs[^\n]*\benvelope\b[^\n]*Approve_Business_Process'
+  - name: the-file
+    type: file_exists
+    path: "approve.xml"
+  - name: the-envelope
+    type: llm
+    focus: { source: file, path: approve.xml }
+    criteria: >-
+      The file is a SOAP envelope for Approve_Business_Process_Request with wd:version="v47.0", a WS-Security header
+      with placeholders (no real user or password), and the Event_Reference as <wd:ID wd:type="WID">{{Event_ID}}</wd:ID>
+      or another {{placeholder}}; every element in it is one the indexed WSDL has (Event_Reference, and optionally
+      Comment_Data/Comment) — nothing invented, no real value.

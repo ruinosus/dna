@@ -1,0 +1,18 @@
+schema_version: "1.0"
+name: workday-integration-not-workday-en
+description: A question that is not about Workday — the skill stays out.
+tags: [scope, en]
+runs: 1
+execution:
+  max_turns: 10
+  timeout_seconds: 300
+  allowed_tools: [Skill, Read, Write, Edit, Bash]
+  prompt: |
+    What is the difference between a SOAP fault and an HTTP 500 in a REST API? Two short paragraphs.
+graders:
+  - name: no-skill
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?workday-integration"'
+    min: 0
+    max: 0

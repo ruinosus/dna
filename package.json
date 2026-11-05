@@ -13,10 +13,11 @@
     "dev/agent-review/tools",
     "dev/process-simulation/tools",
     "dev/solution/tools",
-    "dev/dna/tools"
+    "dev/dna/tools",
+    "dev/workday-integration/tools"
   ],
   "scripts": {
-    "assets": "npm run -s assets -w dev/visual-explainer/tools && npm run -s assets -w dev/visual-pitch/tools -w dev/incident-drill/tools -w dev/way-of-working/tools -w dev/service-blueprint/tools -w dev/agent-review/tools -w dev/process-simulation/tools",
+    "assets": "npm run -s assets -w dev/visual-explainer/tools && npm run -s assets -w dev/visual-pitch/tools -w dev/incident-drill/tools -w dev/way-of-working/tools -w dev/service-blueprint/tools -w dev/agent-review/tools -w dev/process-simulation/tools && npm run -s assets -w dev/workday-integration/tools",
     "check": "npm run -s check --workspaces --if-present",
     "typecheck": "npm run -s typecheck --workspaces --if-present",
     "linux": "npm run -s linux --workspaces --if-present",

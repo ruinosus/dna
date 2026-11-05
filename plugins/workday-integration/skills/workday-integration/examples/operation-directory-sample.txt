@@ -1,0 +1,20 @@
+SYNTHETIC EXAMPLE of the text of the Operation Directory page (made-up descriptions, a few operations).
+Operation Directory: (v47.0 - sample)
+
+Operation	Description	Web Service(s)
+Add_Flexible_Work_Arrangement	Starts the business process that asks for a flexible work arrangement for a person.	Human_Resources
+End_Flexible_Work_Arrangement	Starts the business process that ends a flexible work arrangement.	Human_Resources
+Get_Worker_Event_History	Lists the events of a person, optionally between two dates.	Human_Resources
+Get_Organizations	Lists organizations and the one each sits under.	Human_Resources
+Change_Preferred_Name	Changes the name a person goes by.	Human_Resources
+Staffing
+Approve_Business_Process	Approves the step of a business process that waits for the person calling.	Integrations
+Deny_Business_Process	Denies the step of a business process that waits for the person calling.	Integrations
+Send_Back_Business_Process	Returns a business process to an earlier step.	Integrations
+Cancel_Business_Process	Cancels a business process that is still running.	Integrations
+Rescind_Business_Process	Undoes a business process that is done, when it can be undone.	Integrations
+Get_Event_Detail	Tells where a business process event stands and who it waits for.	Integrations
+Enter_Time_Off	Asks for time off for a person.	Absence_Management
+Get_Time_Off_Plan_Balances	Tells how much time off is left in each plan of a person.	Absence_Management
+Get_Journals	Lists accounting journals.	Financial_Management
+Submit_Expense_Sheet DEPRECATED	Sends an expense sheet for approval.	Resource_Management

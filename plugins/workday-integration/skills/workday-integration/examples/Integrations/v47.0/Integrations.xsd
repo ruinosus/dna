@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SYNTHETIC EXAMPLE (made-up fields and texts, not Workday's schema), imported by Integrations.wsdl. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:bsvc="urn:com.workday/bsvc"
+           targetNamespace="urn:com.workday/bsvc" elementFormDefault="qualified">
+  <xs:attribute name="version" type="xs:string"/>
+  <xs:element name="Approve_Business_Process_Request">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Event_Reference" type="bsvc:Unique_IdentifierObjectType"/>
+        <xs:element name="Comment_Data" minOccurs="0">
+          <xs:complexType><xs:sequence><xs:element name="Comment" type="xs:string" minOccurs="0"/></xs:sequence></xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute ref="bsvc:version"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Approve_Business_Process_Response" type="bsvc:Event_ResponseType"/>
+  <xs:element name="Deny_Business_Process_Request">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Event_Reference" type="bsvc:Unique_IdentifierObjectType"/>
+        <xs:element name="Comment_Data" minOccurs="0">
+          <xs:complexType><xs:sequence><xs:element name="Comment" type="xs:string" minOccurs="0"/></xs:sequence></xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute ref="bsvc:version"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Deny_Business_Process_Response" type="bsvc:Event_ResponseType"/>
+  <xs:element name="Cancel_Business_Process_Request">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Event_Reference" type="bsvc:Unique_IdentifierObjectType"/>
+        <xs:element name="Comment_Data" minOccurs="0">
+          <xs:complexType><xs:sequence><xs:element name="Comment" type="xs:string" minOccurs="0"/></xs:sequence></xs:complexType>
+        </xs:element>
+        <xs:element name="Quiet" type="xs:boolean" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute ref="bsvc:version"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Cancel_Business_Process_Response" type="bsvc:Event_ResponseType"/>
+  <xs:element name="Rescind_Business_Process_Request">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Event_Reference" type="bsvc:Unique_IdentifierObjectType"/>
+        <xs:element name="Comment_Data" minOccurs="0">
+          <xs:complexType><xs:sequence><xs:element name="Comment" type="xs:string" minOccurs="0"/></xs:sequence></xs:complexType>
+        </xs:element>
+      </xs:sequence>
+      <xs:attribute ref="bsvc:version"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Rescind_Business_Process_Response" type="bsvc:Event_ResponseType"/>
+  <xs:element name="Send_Back_Business_Process_Request">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Event_Reference" type="bsvc:Unique_IdentifierObjectType"/>
+        <xs:element name="Step_Reference" type="bsvc:Unique_IdentifierObjectType"/>
+        <xs:element name="Reason" type="xs:string"/>
+      </xs:sequence>
+      <xs:attribute ref="bsvc:version"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Send_Back_Business_Process_Response" type="bsvc:Event_ResponseType"/>
+  <xs:element name="Get_Event_Details_Request">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Event_Reference" type="bsvc:Unique_IdentifierObjectType"/>
+        <xs:element name="Without_History" type="xs:boolean" minOccurs="0"/>
+      </xs:sequence>
+      <xs:attribute ref="bsvc:version"/>
+    </xs:complexType>
+  </xs:element>
+  <xs:element name="Get_Event_Details_Response">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element name="Event_Reference" type="bsvc:Unique_IdentifierObjectType" minOccurs="0"/>
+        <xs:element name="Status" type="bsvc:Event_StatusEnumeration" minOccurs="0"/>
+        <xs:element name="Waiting_For" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+  <xs:complexType name="Event_ResponseType">
+    <xs:sequence>
+      <xs:element name="Event_Reference" type="bsvc:Unique_IdentifierObjectType" minOccurs="0"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:simpleType name="Event_StatusEnumeration">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="In_Progress"/><xs:enumeration value="Successful"/><xs:enumeration value="Denied"/><xs:enumeration value="Canceled"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="Unique_IdentifierObjectType">
+    <xs:sequence>
+      <xs:element name="ID" type="bsvc:Unique_IdentifierObjectIDType" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="Unique_IdentifierObjectIDType">
+    <xs:simpleContent>
+      <xs:extension base="xs:string">
+        <xs:attribute name="type" type="bsvc:Unique_IdentifierReferenceEnumeration" use="required"/>
+      </xs:extension>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:simpleType name="Unique_IdentifierReferenceEnumeration">
+    <xs:restriction base="xs:string"><xs:enumeration value="WID"/><xs:enumeration value="Event_ID"/></xs:restriction>
+  </xs:simpleType>
+</xs:schema>

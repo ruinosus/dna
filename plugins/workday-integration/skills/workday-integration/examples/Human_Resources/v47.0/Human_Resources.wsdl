@@ -1,0 +1,289 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  SYNTHETIC EXAMPLE, written for workday-integration's checks. It has the SHAPE of a Workday WSDL (urn:com.workday/bsvc,
+  the schema inline, *ObjectType references with ID/@type, wd:version, a choice, an extension, a recursion), but its
+  fields and texts are made up: it is not Workday's schema. Index the WSDL you download for the real fields.
+-->
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+                  xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                  xmlns:wd="urn:com.workday/bsvc"
+                  name="Human_Resources" targetNamespace="urn:com.workday/bsvc">
+  <wsdl:types>
+    <xsd:schema elementFormDefault="qualified" attributeFormDefault="qualified" targetNamespace="urn:com.workday/bsvc">
+      <xsd:attribute name="version" type="xsd:string">
+        <xsd:annotation><xsd:documentation>Which version of the service the request is written for.</xsd:documentation></xsd:annotation>
+      </xsd:attribute>
+
+      <xsd:element name="Add_Flexible_Work_Arrangement_Request" type="wd:Add_Flexible_Work_Arrangement_RequestType"/>
+      <xsd:element name="Add_Flexible_Work_Arrangement_Response" type="wd:Flexible_Work_Arrangement_Event_ResponseType"/>
+      <xsd:element name="End_Flexible_Work_Arrangement_Request" type="wd:End_Flexible_Work_Arrangement_RequestType"/>
+      <xsd:element name="End_Flexible_Work_Arrangement_Response" type="wd:Flexible_Work_Arrangement_Event_ResponseType"/>
+      <xsd:element name="Worker_Event_History_Get" type="wd:Worker_Event_History_GetType"/>
+      <xsd:element name="Worker_Event_History_Response" type="wd:Worker_Event_History_ResponseType"/>
+      <xsd:element name="Get_Organizations_Request" type="wd:Get_Organizations_RequestType"/>
+      <xsd:element name="Get_Organizations_Response" type="wd:Get_Organizations_ResponseType"/>
+
+      <xsd:complexType name="Add_Flexible_Work_Arrangement_RequestType">
+        <xsd:annotation><xsd:documentation>Starts a request for a flexible work arrangement.</xsd:documentation></xsd:annotation>
+        <xsd:sequence>
+          <xsd:element name="Business_Process_Parameters" type="wd:Business_Process_ParametersType" minOccurs="0"/>
+          <xsd:element name="Arrangement_Data" type="wd:Arrangement_DataType"/>
+        </xsd:sequence>
+        <xsd:attribute ref="wd:version"/>
+      </xsd:complexType>
+
+      <xsd:complexType name="End_Flexible_Work_Arrangement_RequestType">
+        <xsd:sequence>
+          <xsd:element name="Business_Process_Parameters" type="wd:Business_Process_ParametersType" minOccurs="0"/>
+          <xsd:element name="Worker_Reference" type="wd:WorkerObjectType"/>
+          <xsd:element name="Arrangement_Reference" type="wd:ArrangementObjectType"/>
+          <xsd:element name="Last_Day" type="xsd:date"/>
+          <xsd:element name="Reason_Reference" type="wd:Event_ReasonObjectType" minOccurs="0"/>
+        </xsd:sequence>
+        <xsd:attribute ref="wd:version"/>
+      </xsd:complexType>
+
+      <xsd:complexType name="Business_Process_ParametersType">
+        <xsd:annotation><xsd:documentation>How the business process runs once submitted.</xsd:documentation></xsd:annotation>
+        <xsd:sequence>
+          <xsd:element name="Run_Now" type="xsd:boolean" minOccurs="0">
+            <xsd:annotation><xsd:documentation>Process it at once, without waiting in a queue.</xsd:documentation></xsd:annotation>
+          </xsd:element>
+          <xsd:element name="Note_Data" minOccurs="0">
+            <xsd:complexType><xsd:sequence>
+              <xsd:element name="Note" type="xsd:string" minOccurs="0"/>
+            </xsd:sequence></xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="Arrangement_DataType">
+        <xsd:sequence>
+          <xsd:element name="Worker_Reference" type="wd:WorkerObjectType">
+            <xsd:annotation><xsd:documentation>The person the arrangement is for.</xsd:documentation></xsd:annotation>
+          </xsd:element>
+          <xsd:choice minOccurs="0">
+            <xsd:element name="Position_Reference" type="wd:PositionObjectType"/>
+            <xsd:element name="Job_Reference" type="wd:PositionObjectType"/>
+          </xsd:choice>
+          <xsd:element name="Arrangement_Kind_Reference" type="wd:Arrangement_KindObjectType"/>
+          <xsd:element name="First_Day" type="xsd:date"/>
+          <xsd:element name="Planned_Last_Day" type="xsd:date" minOccurs="0"/>
+          <xsd:element name="Weekdays" type="wd:WeekdayEnumeration" minOccurs="0" maxOccurs="unbounded"/>
+          <xsd:element name="Hours_per_Week" type="xsd:decimal" minOccurs="0"/>
+          <xsd:element name="Note" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:simpleType name="WeekdayEnumeration">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="Monday"/><xsd:enumeration value="Tuesday"/><xsd:enumeration value="Wednesday"/>
+          <xsd:enumeration value="Thursday"/><xsd:enumeration value="Friday"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:complexType name="Flexible_Work_Arrangement_Event_ResponseType">
+        <xsd:sequence>
+          <xsd:element name="Arrangement_Event_Reference" type="wd:Unique_IdentifierObjectType" minOccurs="0"/>
+        </xsd:sequence>
+        <xsd:attribute ref="wd:version"/>
+      </xsd:complexType>
+
+      <xsd:complexType name="Worker_Event_History_GetType">
+        <xsd:sequence>
+          <xsd:element name="Worker_Reference" type="wd:WorkerObjectType"/>
+          <xsd:element name="Date_Range" minOccurs="0">
+            <xsd:complexType><xsd:sequence>
+              <xsd:element name="From" type="xsd:date"/>
+              <xsd:element name="To" type="xsd:date"/>
+            </xsd:sequence></xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+        <xsd:attribute ref="wd:version"/>
+      </xsd:complexType>
+
+      <xsd:complexType name="Worker_Event_History_ResponseType">
+        <xsd:sequence>
+          <xsd:element name="Event" minOccurs="0" maxOccurs="unbounded">
+            <xsd:complexType><xsd:sequence>
+              <xsd:element name="Event_Reference" type="wd:Unique_IdentifierObjectType"/>
+              <xsd:element name="Effective" type="xsd:date" minOccurs="0"/>
+            </xsd:sequence></xsd:complexType>
+          </xsd:element>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="Get_Organizations_RequestType">
+        <xsd:sequence>
+          <xsd:element name="Filter" type="wd:Organization_FilterType" minOccurs="0"/>
+        </xsd:sequence>
+        <xsd:attribute ref="wd:version"/>
+      </xsd:complexType>
+      <xsd:complexType name="Base_FilterType">
+        <xsd:sequence>
+          <xsd:element name="Also_Inactive" type="xsd:boolean" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="Organization_FilterType">
+        <xsd:complexContent>
+          <xsd:extension base="wd:Base_FilterType">
+            <xsd:sequence>
+              <xsd:element name="Organization_Kind" type="xsd:string" minOccurs="0"/>
+            </xsd:sequence>
+          </xsd:extension>
+        </xsd:complexContent>
+      </xsd:complexType>
+      <xsd:complexType name="Get_Organizations_ResponseType">
+        <xsd:sequence>
+          <xsd:element name="Organization" type="wd:OrganizationType" minOccurs="0" maxOccurs="unbounded"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="OrganizationType">
+        <xsd:sequence>
+          <xsd:element name="Organization_Reference" type="wd:Unique_IdentifierObjectType" minOccurs="0"/>
+          <xsd:element name="Name" type="xsd:string" minOccurs="0"/>
+          <xsd:element name="Parent_Organization" type="wd:OrganizationType" minOccurs="0"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="WorkerObjectType">
+        <xsd:sequence>
+          <xsd:element name="ID" type="wd:WorkerObjectIDType" minOccurs="0" maxOccurs="unbounded"/>
+        </xsd:sequence>
+        <xsd:attribute name="Descriptor" type="xsd:string"/>
+      </xsd:complexType>
+      <xsd:complexType name="WorkerObjectIDType">
+        <xsd:simpleContent>
+          <xsd:extension base="xsd:string">
+            <xsd:attribute name="type" type="wd:WorkerReferenceEnumeration" use="required"/>
+          </xsd:extension>
+        </xsd:simpleContent>
+      </xsd:complexType>
+      <xsd:simpleType name="WorkerReferenceEnumeration">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="WID"/><xsd:enumeration value="Employee_ID"/><xsd:enumeration value="Contingent_Worker_ID"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:complexType name="PositionObjectType">
+        <xsd:sequence>
+          <xsd:element name="ID" type="wd:PositionObjectIDType" minOccurs="0" maxOccurs="unbounded"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="PositionObjectIDType">
+        <xsd:simpleContent>
+          <xsd:extension base="xsd:string">
+            <xsd:attribute name="type" type="wd:PositionReferenceEnumeration" use="required"/>
+          </xsd:extension>
+        </xsd:simpleContent>
+      </xsd:complexType>
+      <xsd:simpleType name="PositionReferenceEnumeration">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="WID"/><xsd:enumeration value="Position_ID"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:complexType name="Arrangement_KindObjectType">
+        <xsd:sequence>
+          <xsd:element name="ID" type="wd:Arrangement_KindObjectIDType" minOccurs="0" maxOccurs="unbounded"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="Arrangement_KindObjectIDType">
+        <xsd:simpleContent>
+          <xsd:extension base="xsd:string">
+            <xsd:attribute name="type" type="wd:Arrangement_KindReferenceEnumeration" use="required"/>
+          </xsd:extension>
+        </xsd:simpleContent>
+      </xsd:complexType>
+      <xsd:simpleType name="Arrangement_KindReferenceEnumeration">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="WID"/><xsd:enumeration value="Arrangement_Kind_ID"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:complexType name="ArrangementObjectType">
+        <xsd:sequence>
+          <xsd:element name="ID" type="wd:ArrangementObjectIDType" minOccurs="0" maxOccurs="unbounded"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="ArrangementObjectIDType">
+        <xsd:simpleContent>
+          <xsd:extension base="xsd:string">
+            <xsd:attribute name="type" type="wd:ArrangementReferenceEnumeration" use="required"/>
+          </xsd:extension>
+        </xsd:simpleContent>
+      </xsd:complexType>
+      <xsd:simpleType name="ArrangementReferenceEnumeration">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="WID"/><xsd:enumeration value="Arrangement_ID"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:complexType name="Event_ReasonObjectType">
+        <xsd:sequence>
+          <xsd:element name="ID" type="wd:Event_ReasonObjectIDType" minOccurs="0" maxOccurs="unbounded"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="Event_ReasonObjectIDType">
+        <xsd:simpleContent>
+          <xsd:extension base="xsd:string">
+            <xsd:attribute name="type" type="wd:Event_ReasonReferenceEnumeration" use="required"/>
+          </xsd:extension>
+        </xsd:simpleContent>
+      </xsd:complexType>
+      <xsd:simpleType name="Event_ReasonReferenceEnumeration">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="WID"/><xsd:enumeration value="Event_Reason_ID"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:complexType name="Unique_IdentifierObjectType">
+        <xsd:sequence>
+          <xsd:element name="ID" type="wd:Unique_IdentifierObjectIDType" minOccurs="0" maxOccurs="unbounded"/>
+        </xsd:sequence>
+      </xsd:complexType>
+      <xsd:complexType name="Unique_IdentifierObjectIDType">
+        <xsd:simpleContent>
+          <xsd:extension base="xsd:string">
+            <xsd:attribute name="type" type="wd:Unique_IdentifierReferenceEnumeration" use="required"/>
+          </xsd:extension>
+        </xsd:simpleContent>
+      </xsd:complexType>
+      <xsd:simpleType name="Unique_IdentifierReferenceEnumeration">
+        <xsd:restriction base="xsd:string"><xsd:enumeration value="WID"/></xsd:restriction>
+      </xsd:simpleType>
+    </xsd:schema>
+  </wsdl:types>
+
+  <wsdl:message name="Add_Flexible_Work_Arrangement_RequestInput"><wsdl:part name="body" element="wd:Add_Flexible_Work_Arrangement_Request"/></wsdl:message>
+  <wsdl:message name="Add_Flexible_Work_Arrangement_ResponseOutput"><wsdl:part name="body" element="wd:Add_Flexible_Work_Arrangement_Response"/></wsdl:message>
+  <wsdl:message name="End_Flexible_Work_Arrangement_RequestInput"><wsdl:part name="body" element="wd:End_Flexible_Work_Arrangement_Request"/></wsdl:message>
+  <wsdl:message name="End_Flexible_Work_Arrangement_ResponseOutput"><wsdl:part name="body" element="wd:End_Flexible_Work_Arrangement_Response"/></wsdl:message>
+  <wsdl:message name="Get_Worker_Event_History_RequestInput"><wsdl:part name="body" element="wd:Worker_Event_History_Get"/></wsdl:message>
+  <wsdl:message name="Get_Worker_Event_History_ResponseOutput"><wsdl:part name="body" element="wd:Worker_Event_History_Response"/></wsdl:message>
+  <wsdl:message name="Get_Organizations_RequestInput"><wsdl:part name="body" element="wd:Get_Organizations_Request"/></wsdl:message>
+  <wsdl:message name="Get_Organizations_ResponseOutput"><wsdl:part name="body" element="wd:Get_Organizations_Response"/></wsdl:message>
+
+  <wsdl:portType name="Human_ResourcesPort">
+    <wsdl:operation name="Add_Flexible_Work_Arrangement">
+      <wsdl:documentation>Starts the business process that asks for a flexible work arrangement for a person.</wsdl:documentation>
+      <wsdl:input message="wd:Add_Flexible_Work_Arrangement_RequestInput"/>
+      <wsdl:output message="wd:Add_Flexible_Work_Arrangement_ResponseOutput"/>
+    </wsdl:operation>
+    <wsdl:operation name="End_Flexible_Work_Arrangement">
+      <wsdl:documentation>Starts the business process that ends a person's flexible work arrangement.</wsdl:documentation>
+      <wsdl:input message="wd:End_Flexible_Work_Arrangement_RequestInput"/>
+      <wsdl:output message="wd:End_Flexible_Work_Arrangement_ResponseOutput"/>
+    </wsdl:operation>
+    <wsdl:operation name="Get_Worker_Event_History">
+      <wsdl:documentation>Lists the events of a person, optionally between two dates.</wsdl:documentation>
+      <wsdl:input message="wd:Get_Worker_Event_History_RequestInput"/>
+      <wsdl:output message="wd:Get_Worker_Event_History_ResponseOutput"/>
+    </wsdl:operation>
+    <wsdl:operation name="Get_Organizations">
+      <wsdl:documentation>Lists organizations and the one each sits under.</wsdl:documentation>
+      <wsdl:input message="wd:Get_Organizations_RequestInput"/>
+      <wsdl:output message="wd:Get_Organizations_ResponseOutput"/>
+    </wsdl:operation>
+  </wsdl:portType>
+</wsdl:definitions>

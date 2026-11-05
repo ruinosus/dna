@@ -1,0 +1,30 @@
+schema_version: "1.0"
+name: workday-integration-trace-pt
+description: A use case in Portuguese traced to the chain of Workday operations, from the person's own files — the request, the approval, the business process, the gap with no Get_, and the rule that it runs as the user.
+tags: [trace, pt]
+runs: 1
+context:
+  scaffold_script: setup.sh
+execution:
+  max_turns: 30
+  timeout_seconds: 900
+  allowed_tools: [Skill, Read, Write, Edit, Bash]
+  prompt: |
+    Baixei o diretório de operações e os WSDLs do Workday em ./workday-files. Qual operação do Workday serve para o colaborador pedir trabalho flexível e o gestor aprovar? E como acompanho o pedido? Não precisa me perguntar nada.
+graders:
+  - name: skill-fired
+    type: tool_used
+    tool: Skill
+    input_match: '"skill"\s*:\s*"(?:[\w-]+:)?workday-integration"'
+  - name: indexed-and-traced
+    type: tool_used
+    tool: Bash
+    input_match: 'wws\.mjs[^\n]*\btrace\b'
+  - name: the-chain
+    type: llm
+    criteria: >-
+      In Portuguese, the answer names Add_Flexible_Work_Arrangement as the operation to request it and
+      Approve_Business_Process for the manager's approval, says how to follow the request (Get_Event_Detail or the
+      approver's inbox), says there is no Get_ operation for the arrangement (read it with a RaaS report or the event
+      history), and says the flow must run as the user (a per-user connection), not as an integration user. It does
+      not invent fields that are not in the files.

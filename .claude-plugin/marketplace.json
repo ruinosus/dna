@@ -1,12 +1,19 @@
 {
   "name": "dna",
-  "owner": { "name": "ruinosus" },
+  "owner": {
+    "name": "ruinosus"
+  },
   "description": "DNA — Domain Notation of Anything: eight skills for showing an idea to people, by drawing it or playing it.",
   "plugins": [
     {
       "name": "dna",
       "source": "./",
       "description": "Eight skills for showing an idea to people: explain it by drawing (visual-explainer), present it (visual-pitch), rehearse an incident (incident-drill), map a team's way of working (way-of-working) and a customer journey (service-blueprint), compare Copilot Studio agents (agent-review), simulate a process to ask «what if» (process-simulation), and put the whole process together as one solution (solution) — with a mod that checks each recipe as Claude writes it."
+    },
+    {
+      "name": "workday-integration",
+      "source": "./plugins/workday-integration",
+      "description": "A sibling of DNA for whoever designs a Workday integration: a local catalog of the Workday Web Services (SOAP) — the operation for a use case in Portuguese or English, its request and response, a SOAP envelope with {{placeholders}}, and the spec of the Copilot Studio Workday connector's «Execute SOAP operation». It reads the files you have and calls no tenant. Not affiliated with Workday."
     }
   ]
 }

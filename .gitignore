@@ -2,6 +2,7 @@
 node_modules/
 dist/
 evals/results/
+plugins/*/evals/results/
 npm/*/*.tgz
 dev/*/tools/sources.json
 dev/*/tools/.engine
