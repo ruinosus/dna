@@ -4,7 +4,7 @@ description: Puts one process together as a solution — the way of working, the
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Each piece is checked and drawn by its own dna skill, so it works fully where the other skills are beside it (the plugin, the npm package); alone, it checks the solution file and lists the pieces. In Claude Code the dna mod adds /solution.
 metadata:
-  version: "2.2.0"
+  version: "2.3.0"
 ---
 
 # solution: a process, every piece together

@@ -4,7 +4,7 @@ description: Explains anything by drawing it for a meeting — a pitch, an archi
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first).
 metadata:
-  version: "2.2.0"
+  version: "2.3.0"
 ---
 
 # visual-pitch: explain anything by drawing it

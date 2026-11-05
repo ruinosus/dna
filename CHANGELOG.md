@@ -1,5 +1,20 @@
 # Changelog
 
+## 2.3.0 — 2026-11-05
+
+**The Markdown draws itself** — what the skills write in Markdown now draws in a preview with DNA (VS Code, Obsidian),
+and still reads on GitHub.
+
+- way-of-working, service-blueprint and agent-review write **`<id>.explainer.md`** beside the explainer page: the same
+  explainer in a ```` ```visual-explainer ```` block.
+- agent-review's **`<id>.diagrams.md`** keeps each diagram in plain ```` ```mermaid ```` (GitHub and Azure DevOps draw
+  it) and folds the same diagram under it as a ```` ```visual-explainer-mermaid ```` block, with its title and sentence.
+- incident-drill's **facilitator script** has **the paths** — each choice an arrow to the scene it leads to — the same
+  two ways.
+- A wide Mermaid diagram (a sequence with many participants) gets a wider paper instead of text over text (drawing
+  engine 0.263.0).
+- `@ruinosus/visual-explainer` 0.23.0: the kit's `explainerMarkdown`.
+
 ## 2.2.0 — 2026-11-05
 
 **The explainer** — words for work, not for school: the *lesson* is now the *explainer* (*explicação*), its *quiz* the

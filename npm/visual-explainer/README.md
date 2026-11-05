@@ -10,7 +10,7 @@ Explainers that draw themselves — in a clean business look, or hand-drawn — 
 <meta charset="utf-8">
 <title>My explainer</title>
 <script type="application/json" id="chalk-recipe">{ "id": "my-explainer", "title": "…", "width": 900, "height": 560, "steps": [ … ] }</script>
-<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.22.0/player.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.23.0/player.js"></script>
 ```
 
 The player builds the page around the recipe — chapters, Next / Back, values to move, the check, downloads — and needs
