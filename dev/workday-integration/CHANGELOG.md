@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.1 — 2026-11-05
+
+- `copilot-rest` (MCP `wws_rest_action_spec`): `read` and `include` take a path as `rest` shows it (`data[].id`), and
+  without the brackets (`data.id`) — before, the path the endpoint showed was refused.
+- The query parameters: a required one is an input, in `relativePath` (`?asOf={{AsOf}}`); the optional ones left out
+  are a decision (`optional_query`, with what Workday says of each — paging: `limit`, default 20, at most 100;
+  `offset`), and `include` adds one by its name (`--include limit`). A number goes in the path as `EncodeUrl(Text(…))`.
+  Before, the query parameters were left out with nothing said.
+
 ## 0.3.0 — 2026-11-05
 
 **Workday's REST APIs beside the SOAP.**

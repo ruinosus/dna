@@ -145,13 +145,13 @@ export function renderJsonTree(node, { maxDepth = 4, docChars = 100 } = {}) {
   return 'card: (none)=required  ?=optional  array of …  ro=read-only  ↻=recursive\n' + lines.join('\n')
 }
 
-/** A field of a JSON tree by its dotted path (a.b, an array's fields under it: items.c — written a.c). */
+/** A field of a JSON tree by its dotted path, as the tree shows it (data[].id) or without the brackets (data.id). */
 export function findJsonPath(root, path) {
   let cur = root
-  for (const part of path.split('.').filter(Boolean)) {
+  for (const part of path.replace(/\[\]/g, '').split('.').filter(Boolean)) {
     const kids = cur.type === 'array' ? cur.items?.children ?? [] : cur.children ?? []
     const next = kids.find((c) => c.name === part)
-    if (!next) throw new LookupError(`'${part}' is not a field of ${cur.path || '(the body)'}; its fields: ${kids.map((c) => c.name).join(', ') || '(none)'}`)
+    if (!next) throw new LookupError(`'${part}' is not a field of ${cur.path || '(the body)'}; its fields: ${kids.map((c) => c.name).join(', ') || '(none)'} (write a path as data[].id or data.id)`)
     cur = next
   }
   return cur

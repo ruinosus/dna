@@ -22,7 +22,7 @@
         "tags": ["workers"],
         "summary": "Retrieves the leave balances of a person, one per plan.",
         "description": "Retrieves the leave balances of a person.\n\n<b>Secured By Domain:</b> Self-Service: Leave Balances\n\n<b>Scope:</b> Time Away",
-        "parameters": [{ "$ref": "#/parameters/workerId" }, { "name": "limit", "in": "query", "type": "integer", "required": false, "description": "How many to return." }],
+        "parameters": [{ "$ref": "#/parameters/workerId" }, { "name": "asOf", "in": "query", "type": "string", "required": true, "description": "The day the balances are counted on." }, { "name": "limit", "in": "query", "type": "integer", "required": false, "description": "How many to return; default 20, at most 100." }, { "name": "offset", "in": "query", "type": "integer", "required": false, "description": "Where the page starts; default 0." }],
         "responses": { "200": { "description": "OK", "schema": { "$ref": "#/definitions/leaveBalances_1" } } }
       }
     },

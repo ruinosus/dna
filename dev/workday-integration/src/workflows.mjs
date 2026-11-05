@@ -366,7 +366,7 @@ const jsonPlaceholder = (n) => (n.type === 'object' ? null : `{{${camel(n.path.r
 /** The spec of the connector's «Execute REST request (Preview)» for an endpoint: relativePath (with {tenant} and the
  * path's IDs as inputs), method, contentType, a JSON body with {{placeholders}} (the required fields, and include),
  * the Power Fx of the path and the body, what to read back (--read: dotted paths of the response), and its decisions:
- * the form of each ID (a WID, a Reference ID, `me`). */
+ * the form of each ID (a WID, a Reference ID, `me`), the optional query parameters and body fields left out. */
 export function restActionSpec(ix, method, path, { service, version, include = [], idForms = {}, read = [], variablePrefix = 'Topic.' } = {}) {
   const e = ix.resolveRest(method, path, service, version)
   const defs = ix.restDefinitions(e.service, e.version)
@@ -389,12 +389,24 @@ export function restActionSpec(ix, method, path, { service, version, include = [
     }
   }
   for (const k of Object.keys(idForms)) if (!e.params.some((p) => p.in === 'path' && p.name === k)) throw new LookupError(`id form: ${k} is not a path parameter of ${e.method} ${e.path}`)
+  // the query: the required parameters, and those include names; the optional ones left out are a decision
+  const query = e.params.filter((p) => p.in === 'query')
+  const queryType = (p) => (['integer', 'number'].includes(p.type) ? 'Number' : p.type === 'boolean' ? 'Boolean' : 'String')
+  const sent = query.filter((p) => p.required || include.includes(p.name))
+  sent.forEach((p, i) => {
+    const v = camel(p.name)
+    inputs.push({ name: v, copilot_variable: `${variablePrefix}${v}`, in: 'query', type: queryType(p), required: p.required, ...(p.enum ? { allowed_values: p.enum.slice(0, 20) } : {}), description: p.description.slice(0, 100) })
+    rest += `${i ? '&' : '?'}${p.name}={{${v}}}`
+  })
+  const queryLeftOut = query.filter((p) => !sent.includes(p))
+  if (queryLeftOut.length) decisions.push({ kind: 'optional_query', left_out: queryLeftOut.map((p) => ({ name: p.name, type: p.type, ...(p.description ? { description: p.description.slice(0, 100) } : {}) })), why: 'default' })
+  const bodyInclude = include.filter((p) => !query.some((q) => q.name === p))
+  if (bodyInclude.length && !e.body?.schema) throw new LookupError(`include: ${bodyInclude.join(', ')} — ${e.method} ${e.path} has no body; its query parameters: ${query.map((q) => q.name).join(', ') || '(none)'}`)
   // the body: the required fields, and those include names (dotted paths)
   let bodyText = null
   if (e.body?.schema) {
     const tree = jsonTree(defs, e.body.schema, 'body', { maxDepth: 6 })
-    const forced = new Set(include.flatMap((p) => p.split('.').map((_, i, a) => a.slice(0, i + 1).join('.'))))
-    for (const p of include) findJsonPath(tree, p)
+    const forced = new Set(bodyInclude.flatMap((p) => findJsonPath(tree, p).path.split('.').flatMap((_, i, a) => { const x = a.slice(0, i + 1).join('.'); return [x, x.replace(/\[\]$/, '')] })))
     // a field is required only when every field above it is too (position.id is, if position is sent)
     const build = (n, above = true) => {
       const kids = (n.type === 'array' ? n.items?.children : n.children) ?? []
@@ -420,7 +432,7 @@ export function restActionSpec(ix, method, path, { service, version, include = [
       const v = byVar[m[1]]
       const ref = `${variablePrefix}${m[1]}`
       let val
-      if (!json) val = v?.written_as ? `"${v.written_as.split('=')[0]}=" & EncodeUrl(${ref})` : `EncodeUrl(${ref})`
+      if (!json) val = v?.written_as ? `"${v.written_as.split('=')[0]}=" & EncodeUrl(${ref})` : v?.type === 'Number' ? `EncodeUrl(Text(${ref}))` : v?.type === 'Boolean' ? `If(${ref}, "true", "false")` : `EncodeUrl(${ref})`
       else if (v?.type === 'Number') val = `Text(${ref})`
       else if (v?.type === 'Boolean') val = `If(${ref}, "true", "false")`
       else if (v?.type === 'Date') val = `"""" & Text(${ref}, "yyyy-mm-dd") & """"`
@@ -439,9 +451,9 @@ export function restActionSpec(ix, method, path, { service, version, include = [
       const n = findJsonPath(tree, p)
       const kids = n.type === 'array' ? n.items?.children : n.children
       if (kids?.length) throw new LookupError(`read: ${p} holds fields, not a value — read one of them: ${kids.map((c) => c.name).join(', ')}`)
-      return { json_path: p, type: n.type, ...(n.path.includes('[]') ? { repeats: true } : {}) }
+      return { json_path: n.path, type: n.type, ...(n.path.includes('[]') ? { repeats: true } : {}) }
     })
-  } else response.read_default = 'none chosen: name the response fields with read (dotted paths, as rest <METHOD> <path> shows them)'
+  } else response.read_default = 'none chosen: name the response fields with read (paths as rest <METHOD> <path> shows them: data[].id, or data.id)'
   const notes = [
     { kind: 'documentation', text: "Execute REST request (Preview) runs with the signed-in user's OAuth credentials and Workday enforces that user's permissions; it requires an OAuth 2.0 connection and the REST base URL on it." },
     { kind: 'documentation', text: 'No idempotency keys: retrying a write (POST, PUT, PATCH) is the caller\'s to make safe. Limit: 200 calls per connection per 60 s.' },
@@ -454,7 +466,7 @@ export function restActionSpec(ix, method, path, { service, version, include = [
     power_fx: { relativePath: fx(rest, false), ...(bodyText ? { body: fx(bodyText, true) } : {}) },
     ...(bodyText ? { body_template: bodyText } : {}),
     inputs, decisions,
-    decision_rules: { default: 'the tool\'s default — an ID in the path as a WID; a body with only its required fields. Change them with id_forms (--id-form ID=me) and include (--include a.b).', chosen: 'what the caller asked for' },
+    decision_rules: { default: 'the tool\'s default — an ID in the path as a WID; the required query parameters only; a body with only its required fields. Change them with id_forms (--id-form ID=me) and include (a query parameter by name: --include limit; a body field by path: --include a.b).', chosen: 'what the caller asked for' },
     response, notes,
     sources: { documentation: `Microsoft: ${CONNECTOR_DOC} (checked on 2026-11-05)`, spec: "the endpoint's OpenAPI specification (Workday's description of it)" },
   }
