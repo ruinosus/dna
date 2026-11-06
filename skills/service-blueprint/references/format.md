@@ -31,4 +31,5 @@ actions:
 ```
 
 Rules: ids in `a-z0-9-`; a moment's `phase`, an actor in `front`/`back`/`promise.owner`/`actions.owner`, a system in
-`support` and an action's `moment` must exist; `feels` is 1 to 5. Errors say their line.
+`support` and an action's `moment` must exist; `feels` is 1 to 5; a key not shown here is an error (with the key it is
+closest to). Errors say their line.

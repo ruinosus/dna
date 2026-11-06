@@ -1,6 +1,7 @@
 // A service blueprint (format front-of-house/v1): what the customer does at each moment and how they feel, what they see,
 // and who makes it happen in front of them, behind the scenes and in the systems — with the promises, the pains and the
-// actions. Read from YAML (or JSON) with the line of every problem; what names nothing is an error.
+// actions. Read from YAML (or JSON) with the line of every problem; what names nothing is an error, and so is a key the
+// format does not have («phasez:» would be read as nothing).
 import { DNA_API, readFormat } from '@kit/format'
 
 export const FORMAT = 'front-of-house/v1'
@@ -58,6 +59,7 @@ export type Problem =
   | { line: number; key: 'duplicate'; what: string; id: string }
   | { line: number; key: 'unknown'; what: 'phase' | 'actor' | 'system' | 'moment'; id: string; at: string }
   | { line: number; key: 'feels'; moment: string; value: string }
+  | { line: number; key: 'field'; name: string; where: string; known: string[]; like?: string }
 
 export interface Read {
   blueprint?: Blueprint
@@ -70,16 +72,66 @@ const str = (v: unknown) => (typeof v === 'string' ? v.trim() : typeof v === 'nu
 const slug = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40)
 const texts = (v: unknown) => (Array.isArray(v) ? v.map(str).filter(Boolean) : str(v) ? [str(v)] : [])
 
+// the keys of each part of the format (format and name are the header's, read before)
+const KEYS = {
+  blueprint: ['format', 'name', 'who', 'about', 'phases', 'actors', 'systems', 'moments', 'actions'],
+  phase: ['id', 'name'],
+  actor: ['id', 'name', 'layer'],
+  system: ['id', 'name'],
+  moment: ['id', 'phase', 'customer', 'feels', 'marks', 'evidence', 'front', 'back', 'support', 'promise', 'pains', 'way'],
+  doing: ['actor', 'does'],
+  promise: ['says', 'owner', 'within'],
+  pain: ['says', 'source'],
+  action: ['id', 'moment', 'does', 'owner', 'due'],
+}
+/** The edits from a to b (Levenshtein), for the key a typo meant. */
+const distance = (a: string, b: string) => {
+  let row = Array.from({ length: b.length + 1 }, (_, j) => j)
+  for (let i = 1; i <= a.length; i++) {
+    const next = [i]
+    for (let j = 1; j <= b.length; j++) next[j] = Math.min(row[j]! + 1, next[j - 1]! + 1, row[j - 1]! + (a[i - 1] === b[j - 1] ? 0 : 1))
+    row = next
+  }
+  return row[b.length]!
+}
+
 export function readBlueprint(text: string): Read {
   const read = readFormat(text, FORMAT, KIND)
   if (!read.ok) return { problems: [read.problem] }
-  const { raw, at } = read.format
+  const { raw, at, doc, lineOf } = read.format
   const problems: Problem[] = []
   const need = (v: unknown, what: string, path: (string | number)[]) => {
     if (!str(v)) problems.push({ line: at(path), key: 'missing', what })
     return str(v)
   }
   const list = (k: string) => (Array.isArray(raw[k]) ? (raw[k] as unknown[]) : [])
+  // a key the format does not have, with its line and the key it is closest to
+  // the line of the key itself (at() gives its value's, which in a block list is the next line)
+  const keyLine = (path: (string | number)[], k: string) => {
+    const map = (path.length ? doc.getIn(path, true) : doc.contents) as { items?: { key?: { value?: unknown; range?: [number, number, number] } }[] } | undefined
+    const key = map?.items?.find((x) => x.key?.value === k)?.key
+    return key?.range ? lineOf(key.range[0]) : at([...path, k])
+  }
+  const fields = (v: unknown, part: keyof typeof KEYS, path: (string | number)[], where: string) => {
+    if (!isObj(v)) return
+    for (const k of Object.keys(v).filter((x) => !KEYS[part].includes(x))) {
+      const like = KEYS[part].map((x) => [x, distance(k.toLowerCase(), x.toLowerCase())] as const).sort((a, b) => a[1] - b[1])[0]
+      problems.push({ line: keyLine(path, k), key: 'field', name: k, where, known: KEYS[part].filter((x) => x !== 'format'), ...(like && like[1] <= 2 ? { like: like[0] } : {}) })
+    }
+  }
+  fields(raw, 'blueprint', [], 'the blueprint')
+  list('phases').forEach((p, i) => fields(p, 'phase', ['phases', i], `phases[${i}]`))
+  list('actors').forEach((a, i) => fields(a, 'actor', ['actors', i], `actors[${i}]`))
+  list('systems').forEach((x, i) => fields(x, 'system', ['systems', i], `systems[${i}]`))
+  list('moments').forEach((m, i) => {
+    if (!isObj(m)) return
+    const id = str(m.id) || `moments[${i}]`
+    fields(m, 'moment', ['moments', i], id)
+    ;(['front', 'back'] as const).forEach((layer) => (Array.isArray(m[layer]) ? (m[layer] as unknown[]) : [m[layer]]).forEach((d, k) => fields(d, 'doing', Array.isArray(m[layer]) ? ['moments', i, layer, k] : ['moments', i, layer], `${id}.${layer}`)))
+    fields(m.promise, 'promise', ['moments', i, 'promise'], `${id}.promise`)
+    ;(Array.isArray(m.pains) ? m.pains : []).forEach((p, k) => fields(p, 'pain', ['moments', i, 'pains', k], `${id}.pains`))
+  })
+  list('actions').forEach((a, i) => fields(a, 'action', ['actions', i], `actions[${i}]`))
   const name = need(raw.name, 'name', ['name'])
   // a phase, an actor or a system may be a plain name: its id is made from it
   const phases: Phase[] = list('phases').map((p) => (isObj(p) ? { id: str(p.id) || slug(str(p.name)), name: str(p.name) || str(p.id) } : { id: slug(str(p)), name: str(p) }))
@@ -159,6 +211,9 @@ export function problemText(p: Problem, lang: 'en' | 'pt' = 'en'): string {
     case 'missing': return pt ? `falta «${p.what}»` : `«${p.what}» is missing`
     case 'duplicate': return pt ? `${p.what}: o id «${p.id}» se repete` : `${p.what}: the id «${p.id}» is repeated`
     case 'unknown': return pt ? `«${p.at}» cita o ${what[p.what]} «${p.id}», que não existe` : `«${p.at}» names the ${what[p.what]} «${p.id}», which does not exist`
+    case 'field': return pt
+      ? `${p.where}: «${p.name}» não é uma chave do formato${p.like ? ` — seria «${p.like}»?` : ''} (as chaves: ${p.known.join(', ')})`
+      : `${p.where}: «${p.name}» is not a key of the format${p.like ? ` — did you mean «${p.like}»?` : ''} (the keys: ${p.known.join(', ')})`
     case 'feels': return pt ? `«${p.moment}»: «feels» vai de 1 a 5 (está «${p.value}»)` : `«${p.moment}»: «feels» goes from 1 to 5 (it is «${p.value}»)`
   }
 }

@@ -4,7 +4,7 @@ description: Turns what a team knows about a customer journey — interviews, su
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Chrome, Chromium or Edge, when installed, lets the script check the explainer's drawing.
 metadata:
-  version: "2.3.0"
+  version: "2.3.1"
 ---
 
 # service-blueprint: what the customer lives, and who makes it happen behind

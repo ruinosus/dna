@@ -4,7 +4,7 @@ description: Explains an idea by drawing it — a clean explainer that draws its
 license: MIT
 compatibility: Best with code execution and Node.js 18 or later (Chrome, Chromium or Edge, when installed, lets the script check the drawing first). Without code execution, an HTML artifact that loads the player from a CDN works too; the page then checks itself.
 metadata:
-  version: "2.3.0"
+  version: "2.3.1"
 ---
 
 # visual-explainer: explain by drawing

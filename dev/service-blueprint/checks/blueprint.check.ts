@@ -43,6 +43,14 @@ assert.match(problemText(p, 'pt'), /«reembolso» cita o ator «tesouraria», qu
 assert.equal(readBlueprint(text.replace('feels: 2', 'feels: 9')).problems[0].key, 'feels')
 assert.equal(readBlueprint(text.replace('support: [erp]', 'support: [armazem]')).problems[0].key, 'unknown')
 assert.equal(readBlueprint('format: x').problems[0].key, 'format')
+// a key the format does not have is an error with its line, and the key a typo meant («phasez:» was read as nothing)
+const typo = text.replace(/^phases:/m, 'phasez:')
+const tp = readBlueprint(typo).problems.find((x) => x.key === 'field')!
+assert.equal(tp.line, lineOf(typo, 'phasez'))
+assert.match(problemText(tp, 'pt'), /«phasez» não é uma chave do formato — seria «phases»\?/)
+const deep = readBlueprint(text.replace(/customer:/, 'custommer:')).problems.find((x) => x.key === 'field')!
+assert.match(problemText(deep), /«custommer» is not a key of the format — did you mean «customer»\?/)
+assert.ok(!problemText(readBlueprint(text.replace(/^who:/m, 'whatever:')).problems.find((x) => x.key === 'field')!).includes('did you mean'))
 
 // the workbook: the blueprint's layers in the rows, the moments in the columns
 const sheets = workbookOf(b, looks, 'pt')

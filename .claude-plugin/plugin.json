@@ -1,6 +1,6 @@
 {
   "name": "dna",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "Eight skills for showing an idea to people: explain it by drawing (visual-explainer), present it (visual-pitch), rehearse an incident (incident-drill), map a team's way of working (way-of-working) and a customer journey (service-blueprint), compare Copilot Studio agents (agent-review), simulate a process to ask «what if» (process-simulation), and put the whole process together as one solution (solution) — with a mod that checks each recipe as Claude writes it.",
   "author": {
     "name": "ruinosus"

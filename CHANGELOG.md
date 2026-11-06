@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.3.1 — 2026-11-06
+
+- service-blueprint: **a key the format does not have is an error**, with its line and the key a typo meant —
+  `phasez:` was read as nothing and the blueprint came out with no phases; now «the blueprint: «phasez» is not a key
+  of the format — did you mean «phases»?». It checks every part: the blueprint, phases, actors, systems, moments
+  (their `front`/`back`, `promise` and `pains`) and actions.
+
 ## 2.3.0 — 2026-11-05
 
 **The Markdown draws itself** — what the skills write in Markdown now draws in a preview with DNA (VS Code, Obsidian),

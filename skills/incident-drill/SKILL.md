@@ -4,7 +4,7 @@ description: Turns a team's incident runbook (or a post-mortem) into a playable 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install.
 metadata:
-  version: "2.3.0"
+  version: "2.3.1"
 ---
 
 # incident-drill: test your runbook by playing it
