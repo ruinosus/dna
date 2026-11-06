@@ -256,7 +256,7 @@ then Settings › Capabilities › Skills › Upload. Code execution must be on.
 
 **Without installing anything** — on npm as [`visual-explainer`](https://www.npmjs.com/package/@ruinosus/visual-explainer): a page needs
 only the recipe and `<script src="https://cdn.jsdelivr.net/npm/@ruinosus/visual-explainer@0.23.0/player.js"></script>` (that is also
-how the skill shows an explainer where it cannot run code), and `npx @ruinosus/dnan explainer drawn with visual-explainer.json` builds the one-file explainer.
+how the skill shows an explainer where it cannot run code), and `npx @ruinosus/dna visual-explainer explainer.json` builds the one-file explainer.
 
 **Other tools** (Codex, GitHub Copilot, Cursor, Gemini CLI…): copy `skills/visual-explainer` to the folder where the tool
 reads skills (for example `.agents/skills/`). The tool needs Node.js 18 or later.

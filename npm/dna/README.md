@@ -21,8 +21,8 @@ npx @ruinosus/dna agent-review <agents-folder> [options]
 | `solution` | a solution: one process seen by every skill, each piece checked, one page with a tab per piece |
 
 ```
-npx @ruinosus/dnan explainer drawn with visual-explainer.chalk                       # explainer.html, checked and offline
-npx @ruinosus/dnan explainer drawn with visual-explainer.chalk --svg                 # an SVG that draws itself, for a README
+npx @ruinosus/dna visual-explainer explainer.chalk                    # explainer.html, checked and offline
+npx @ruinosus/dna visual-explainer explainer.chalk --svg              # an SVG that draws itself, for a README
 npx @ruinosus/dna visual-pitch pitch.chalk                    # pitch.html, opens presenting (PageDown, speaker notes)
 npx @ruinosus/dna visual-pitch pitch.chalk --pptx steps       # pitch.pptx: static, steps or video, notes included
 npx @ruinosus/dna incident-drill checkout.drill.yaml --all     # the game and the facilitator's script
