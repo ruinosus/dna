@@ -92,6 +92,7 @@ footer { color: var(--muted); font-size: 14px; text-align: center; }
       <p><a href="https://github.com/ruinosus/dna/tree/main/plugins/workday-integration">README</a> · <a href="https://github.com/ruinosus/dna/releases/tag/workday-integration-v0.3.6">release</a></p>
     </div>
     <pre>/plugin install workday-integration@dna
+npx @ruinosus/workday-integration search "time off"
 
 node scripts/wws.mjs fetch --services hr
 node scripts/wws.mjs search "request flexible work

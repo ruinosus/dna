@@ -485,6 +485,14 @@ globalThis.fetch = async (url) => {
   const md = readFileSync(join(skill, 'SKILL.md'), 'utf8')
   const version = JSON.parse(readFileSync(join(plugin, '.claude-plugin/plugin.json'), 'utf8')).version
   ok(md.includes(`version: "${version}"`), `SKILL.md carries the plugin's version (${version})`)
+  // the npm package: the plugin's version, the two scripts and the synthetic examples, nothing else (no index, no WSDL
+  // of Workday's)
+  const npmDir = join(repo, 'npm/workday-integration')
+  const pkg = JSON.parse(readFileSync(join(npmDir, 'package.json'), 'utf8'))
+  const pack = spawnSync('npm', ['pack', '--dry-run', '--json'], { cwd: npmDir, encoding: 'utf8' })
+  const packed = pack.status === 0 ? JSON.parse(pack.stdout.slice(pack.stdout.indexOf('['))).at(0).files.map((f) => f.path).sort() : []
+  const want = ['LICENSE', 'README.md', 'package.json', 'scripts/mcp.mjs', 'scripts/wws.mjs', ...files.map((f) => `examples/${f}`)].sort()
+  ok(pkg.version === version && pkg.bin['workday-integration'] === 'scripts/wws.mjs' && pkg.bin['workday-wws-mcp'] === 'scripts/mcp.mjs' && JSON.stringify(packed) === JSON.stringify(want), `npm @ruinosus/workday-integration ${pkg.version}: the plugin's version, the two scripts and the synthetic examples`, packed.join(', ') || pack.stderr)
   ok(md.split('\n').length < 500 && /as the user/i.test(md) && /never invent/i.test(md) && /calls no tenant/i.test(md) && /not affiliated with Workday/i.test(md), 'SKILL.md: under 500 lines, the identity rule, no invented field, no tenant, not affiliated')
 }
 

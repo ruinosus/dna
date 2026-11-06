@@ -31,6 +31,9 @@ fields. **Not affiliated with Workday**; Workday is a trademark of Workday, Inc.
 /plugin install workday-integration@dna
 ```
 
+Without Claude Code, from npm: `npx @ruinosus/workday-integration <command>` (the same commands as `node scripts/wws.mjs`),
+and the MCP server as `npx -y -p @ruinosus/workday-integration workday-wws-mcp`.
+
 For claude.ai, upload `workday-integration.zip` from the [latest release](https://github.com/ruinosus/dna/releases)
 (Settings › Capabilities › Skills, code execution on).
 

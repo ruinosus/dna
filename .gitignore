@@ -18,3 +18,7 @@ npm/visual-explainer/scripts/
 npm/visual-explainer/assets/
 npm/visual-explainer/references/
 npm/visual-explainer/LICENSE
+# the workday-integration npm package's built files: copied from the plugin by its prepack
+npm/workday-integration/scripts/
+npm/workday-integration/examples/
+npm/workday-integration/LICENSE

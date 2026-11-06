@@ -1,0 +1,40 @@
+{
+  "name": "@ruinosus/workday-integration",
+  "version": "0.3.6",
+  "description": "A local catalog of the Workday Web Services (SOAP) and Workday's REST APIs, as a CLI and an MCP server: find the operation or endpoint, read its fields, and write the SOAP envelope or the Copilot Studio Workday connector spec. Calls no tenant. Not affiliated with Workday.",
+  "type": "module",
+  "bin": {
+    "workday-integration": "scripts/wws.mjs",
+    "wws": "scripts/wws.mjs",
+    "workday-wws-mcp": "scripts/mcp.mjs"
+  },
+  "files": [
+    "scripts/",
+    "examples/",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "author": "ruinosus",
+  "homepage": "https://github.com/ruinosus/dna/tree/main/plugins/workday-integration",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ruinosus/dna.git",
+    "directory": "npm/workday-integration"
+  },
+  "keywords": [
+    "workday",
+    "soap",
+    "wsdl",
+    "rest",
+    "mcp",
+    "copilot-studio",
+    "power-fx"
+  ],
+  "scripts": {
+    "prepack": "node ../../dev/workday-integration/tools/pack.mjs"
+  }
+}
