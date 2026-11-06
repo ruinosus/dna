@@ -4,7 +4,7 @@ description: Finds which Workday Web Service (SOAP) operation does what someone 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Reads only the files the person gives it; calls no Workday tenant. Not affiliated with Workday.
 metadata:
-  version: "0.3.3"
+  version: "0.3.4"
 ---
 
 # workday-integration: the Workday operation for a use case, and what to send it
@@ -84,8 +84,9 @@ Weigh them for the use case and say why you chose one:
   a tree cut to fit. `copilot-rest <METHOD> <path>` writes the spec of the connector's
   **Execute REST request (Preview)**: `relativePath` with `{tenant}`, the body in JSON with placeholders, the Power Fx;
   decide each ID's form (`--id-form ID=me`), the optional query parameters — paging: `limit`, `offset` — and body fields
-  (`--include limit`, `--include a.b`), what to read (`--read data[].id`, as `rest` shows the path).
-  The Power Fx writes each value with `JSON()` (escaped text, a number with a point, a date as yyyy-mm-dd). The
+  (`--include limit`, `--include a.b`), what to read (`--read data[].id`, as `rest` shows the path; a value, not an object: `data[].unit.id`).
+  The Power Fx writes each value with `JSON()` (escaped text, a number with a point, a date as yyyy-mm-dd), and the body
+  template writes a number or a boolean without quotes; an optional input left blank goes as `null`. The
   action sends no headers: a header the endpoint takes is said in the notes. It needs an OAuth 2.0 connection with the
   REST base URL, and runs as the signed-in user; a write has no idempotency key.
 - `connector` lists the connector's ready-made actions (Get my worker profile, Get worker inbox tasks, Get worker

@@ -442,7 +442,10 @@ export function restActionSpec(ix, method, path, { service, version, include = [
       const obj = Object.fromEntries(want.map((c) => [c.name, build(c, above && (n.required || n.path === ''))]))
       return n.type === 'array' ? [obj] : obj
     }
-    bodyText = JSON.stringify(build(tree), null, 2)
+    // a number or a boolean as JSON writes it, without quotes, as the Power Fx sends it
+    const body = build(tree)
+    const bare = new Set(inputs.filter((i) => i.in === 'body' && (i.type === 'Number' || i.type === 'Boolean')).map((i) => i.name))
+    bodyText = JSON.stringify(body, null, 2).replace(/"\{\{([A-Za-z0-9_]+)\}\}"/g, (m, v) => (bare.has(v) ? `{{${v}}}` : m))
     const optional = ((tree.children ?? []).filter((c) => !c.required && !c.readOnly && !forced.has(c.path))).map((c) => c.name)
     if (optional.length) decisions.push({ kind: 'optional_fields', left_out: optional.slice(0, 20), why: 'default' })
   }
@@ -472,7 +475,7 @@ export function restActionSpec(ix, method, path, { service, version, include = [
     response.reads = read.map((p) => {
       const n = findJsonPath(tree, p)
       const kids = n.type === 'array' ? n.items?.children : n.children
-      if (kids?.length) throw new LookupError(`read: ${p} holds fields, not a value — read one of them: ${kids.map((c) => c.name).join(', ')}`)
+      if (kids?.length) throw new LookupError(`read: ${p} holds fields, not a value — read one of them: ${kids.map((c) => `${p}.${c.name}`).join(', ')}`)
       return { json_path: n.path, type: n.type, ...(n.path.includes('[]') ? { repeats: true } : {}) }
     })
   } else response.read_default = 'none chosen: name the response fields with read (paths as rest <METHOD> <path> shows them: data[].id, or data.id)'
@@ -482,6 +485,8 @@ export function restActionSpec(ix, method, path, { service, version, include = [
     ...(bodyText || inputs.some((i) => i.type === 'Number') ? [{ kind: 'documentation', text: 'The Power Fx writes each value with JSON(), which Microsoft lists for Copilot Studio: a text escaped (quotes, backslashes, line breaks), a number with a point and a date as yyyy-mm-dd whatever the person\'s language.', source: 'https://learn.microsoft.com/en-us/power-platform/power-fx/reference/function-json' }] : []),
     { kind: 'spec', text: securityFacts(e).join(' ') },
   ]
+  const blankable = inputs.filter((i) => i.in === 'body' && !i.required)
+  if (blankable.length) notes.push({ kind: 'documentation', text: `An optional input left blank goes as null (JSON() writes Blank() as null): ${blankable.map((i) => i.name).join(', ')}. To leave a field out instead, write its part with If(IsBlank(${variablePrefix}${blankable[0].name}), "", …).`, inputs: blankable.map((i) => i.name), source: 'https://learn.microsoft.com/en-us/power-platform/power-fx/reference/function-json' })
   const headers = e.params.filter((x) => x.in === 'header')
   if (headers.length) notes.push({ kind: 'documentation', text: `The endpoint takes the header${headers.length > 1 ? 's' : ''} ${headers.map((h) => `${h.name} (${h.required ? 'required' : 'optional'}${h.description ? `: ${h.description.slice(0, 120)}` : ''})`).join('; ')}; Execute REST request sends none — its parameters are relativePath, method, contentType and body — so ${headers.some((h) => h.required) ? 'it cannot call this endpoint as the specification asks' : 'Workday\'s default for it applies'}.`, headers: headers.map((h) => h.name) })
   return {

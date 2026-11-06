@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.3.4 — 2026-11-06
+
+From the VS Code write test, run again on 0.3.3:
+
+- `copilot-rest`: the body template wrote a number or a boolean in quotes (`"dailyQuantity": "{{DaysDailyQuantity}}"`)
+  while the Power Fx sends it bare with `JSON()`; the template now writes it as the Power Fx does
+  (`"dailyQuantity": {{DaysDailyQuantity}}`).
+- A note names the optional body inputs: left blank, `JSON()` writes them as `null`; to leave a field out, write its
+  part with `If(IsBlank(…), "", …)`.
+- `read` on an object names its fields as whole paths (`data[].unitOfTime.id`), and the MCP tool says a read is a
+  value, not an object.
+
 ## 0.3.3 — 2026-11-05
 
 From the VS Code write test (a day of time off, by REST):
