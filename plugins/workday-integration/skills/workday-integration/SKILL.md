@@ -4,7 +4,7 @@ description: Finds which Workday Web Service (SOAP) operation does what someone 
 license: MIT
 compatibility: Needs code execution and Node.js 18 or later; nothing to install. Reads only the files the person gives it; calls no Workday tenant. Not affiliated with Workday.
 metadata:
-  version: "0.3.5"
+  version: "0.3.6"
 ---
 
 # workday-integration: the Workday operation for a use case, and what to send it
@@ -86,7 +86,8 @@ Weigh them for the use case and say why you chose one:
   decide each ID's form (`--id-form ID=me`), the optional query parameters — paging: `limit`, `offset` — and body fields
   (`--include limit`, `--include a.b`), what to read (`--read data[].id`, as `rest` shows the path; a value, not an object: `data[].unit.id`).
   The Power Fx writes each value with `JSON()` (escaped text, a number with a point, a date as yyyy-mm-dd), and the body
-  template writes a number or a boolean without quotes; an optional input left blank goes as `null`. A value that never
+  template writes a number or a boolean without quotes; an optional input left blank goes as `null`, or is left out
+  when named in `--omit-if-blank a.b` (MCP `omit_if_blank`: the Power Fx writes it with `If(IsBlank(…))`). A value that never
   changes — the WID of the Submitted action the description gives — goes in as a fixed value
   (`--value businessProcessParameters.action.id=<WID>`, MCP `values`), not an input. Show the body as the spec's
   `body_template` gives it; do not write it again by hand. The

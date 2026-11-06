@@ -390,7 +390,7 @@ const jsonPlaceholder = (n) => (n.type === 'object' ? null : `{{${camel(n.path.r
  * path's IDs as inputs), method, contentType, a JSON body with {{placeholders}} (the required fields, and include),
  * the Power Fx of the path and the body, what to read back (--read: dotted paths of the response), and its decisions:
  * the form of each ID (a WID, a Reference ID, `me`), the optional query parameters and body fields left out. */
-export function restActionSpec(ix, method, path, { service, version, include = [], idForms = {}, read = [], values = {}, variablePrefix = 'Topic.' } = {}) {
+export function restActionSpec(ix, method, path, { service, version, include = [], idForms = {}, read = [], values = {}, omitIfBlank = [], variablePrefix = 'Topic.' } = {}) {
   const e = ix.resolveRest(method, path, service, version)
   const defs = ix.restDefinitions(e.service, e.version)
   const decisions = []
@@ -428,6 +428,9 @@ export function restActionSpec(ix, method, path, { service, version, include = [
   if (bodyInclude.length && !e.body?.schema) throw new LookupError(`include: ${bodyInclude.join(', ')} — ${e.method} ${e.path} has no body; its query parameters: ${query.map((q) => q.name).join(', ') || '(none)'}`)
   // the body: the required fields, and those include names (dotted paths)
   let bodyText = null
+  let fxText = null
+  const omitted = new Map()
+  if (omitIfBlank.length && !e.body?.schema) throw new LookupError(`omit_if_blank: ${e.method} ${e.path} has no body`)
   if (e.body?.schema) {
     const tree = jsonTree(defs, e.body.schema, 'body', { maxDepth: 6 })
     // values: a body field written as a fixed value, not an input (the Submitted action's WID)
@@ -439,11 +442,20 @@ export function restActionSpec(ix, method, path, { service, version, include = [
       if (val === null || (num && !Number.isFinite(val))) throw new LookupError(`values: ${p} is ${n.type === 'boolean' ? 'a boolean (true or false)' : 'a number'} — not ${v}`)
       return [n.path, val]
     }))
-    const forced = new Set([...bodyInclude, ...fixed.keys()].flatMap((p) => findJsonPath(tree, p).path.split('.').flatMap((_, i, a) => { const x = a.slice(0, i + 1).join('.'); return [x, x.replace(/\[\]$/, '')] })))
+    // omit_if_blank: an optional body field the Power Fx leaves out when its input is blank, instead of sending null
+    const omit = new Set(omitIfBlank.map((p) => {
+      const n = findJsonPath(tree, p)
+      if ((n.type === 'array' ? n.items?.children : n.children)?.length) throw new LookupError(`omit_if_blank: ${p} holds fields, not a value`)
+      if (fixed.has(n.path)) throw new LookupError(`omit_if_blank: ${p} has a fixed value (values)`)
+      return n.path
+    }))
+    const forced = new Set([...bodyInclude, ...fixed.keys(), ...omit].flatMap((p) => findJsonPath(tree, p).path.split('.').flatMap((_, i, a) => { const x = a.slice(0, i + 1).join('.'); return [x, x.replace(/\[\]$/, '')] })))
     // a field is required only when every field above it is too (position.id is, if position is sent)
     const build = (n, above = true) => {
       const kids = (n.type === 'array' ? n.items?.children : n.children) ?? []
-      const want = kids.filter((c) => !c.readOnly && (c.required || forced.has(c.path)))
+      // the fields left out when blank go last in their object, so each is written with the comma before it
+      const want = kids.filter((c) => !c.readOnly && (c.required || forced.has(c.path))).sort((a, b) => omit.has(a.path) - omit.has(b.path))
+      if (want.length && want.every((c) => omit.has(c.path))) throw new LookupError(`omit_if_blank: ${want.map((c) => c.path).join(', ')} — every field of ${n.path || 'the body'}; keep one that is always sent`)
       if (!kids.length) {
         if (fixed.has(n.path)) return fixed.get(n.path)
         const ph = jsonPlaceholder(n)
@@ -457,6 +469,13 @@ export function restActionSpec(ix, method, path, { service, version, include = [
     const body = build(tree)
     const bare = new Set(inputs.filter((i) => i.in === 'body' && (i.type === 'Number' || i.type === 'Boolean')).map((i) => i.name))
     bodyText = JSON.stringify(body, null, 2).replace(/"\{\{([A-Za-z0-9_]+)\}\}"/g, (m, v) => (bare.has(v) ? `{{${v}}}` : m))
+    for (const i of inputs.filter((x) => omit.has(x.json_path))) {
+      if (i.required) throw new LookupError(`omit_if_blank: ${i.json_path} is required`)
+      omitted.set(i.name, i)
+    }
+    // the Power Fx's text: each field left out when blank a marker in place of its comma, name and value
+    fxText = bodyText.replace(/,(\n *)"([^"]+)": "?\{\{([A-Za-z0-9_]+)\}\}"?/g, (m, ws, key, v) => (omitted.has(v) ? `\u0000${v}\u0001${ws}\u0001${key}\u0000` : m))
+    if (omit.size) decisions.push({ kind: 'omit_if_blank', json_paths: [...omit], why: 'chosen' })
     const optional = ((tree.children ?? []).filter((c) => !c.required && !c.readOnly && !forced.has(c.path))).map((c) => c.name)
     for (const [p, v] of fixed) decisions.push({ kind: 'fixed_value', json_path: p, value: v, why: 'chosen' })
     if (optional.length) decisions.push({ kind: 'optional_fields', left_out: optional.slice(0, 20), why: 'default' })
@@ -465,8 +484,16 @@ export function restActionSpec(ix, method, path, { service, version, include = [
   const fx = (text, json) => {
     const parts = []
     let pos = 0
-    for (const m of text.matchAll(/"?\{\{([A-Za-z0-9_]+)\}\}"?/g)) {
-      if (m.index > pos) parts.push('"' + text.slice(pos, m.index).replace(/"/g, '""') + '"')
+    const lit = (t) => '"' + t.replace(/"/g, '""') + '"'
+    for (const m of text.matchAll(/\u0000([A-Za-z0-9_]+)\u0001(\n *)\u0001([^\u0000]+)\u0000|"?\{\{([A-Za-z0-9_]+)\}\}"?/g)) {
+      if (m.index > pos) parts.push(lit(text.slice(pos, m.index)))
+      pos = m.index + m[0].length
+      if (m[1]) {
+        const ref = `${variablePrefix}${m[1]}`
+        parts.push(`If(IsBlank(${ref}), "", ${lit(`,${m[2]}"${m[3]}": `)} & JSON(${ref}))`)
+        continue
+      }
+      m[1] = m[4]
       const v = byVar[m[1]]
       const ref = `${variablePrefix}${m[1]}`
       let val
@@ -475,9 +502,8 @@ export function restActionSpec(ix, method, path, { service, version, include = [
       if (!json) val = v?.written_as ? `"${v.written_as.split('=')[0]}=" & EncodeUrl(${ref})` : v?.type === 'Number' ? `EncodeUrl(JSON(${ref}))` : v?.type === 'Boolean' ? `If(${ref}, "true", "false")` : `EncodeUrl(${ref})`
       else val = `JSON(${ref})`
       parts.push(val)
-      pos = m.index + m[0].length
     }
-    if (pos < text.length) parts.push('"' + text.slice(pos).replace(/"/g, '""') + '"')
+    if (pos < text.length) parts.push(lit(text.slice(pos)))
     return parts.join(' &\n')
   }
   const response = { status: e.response?.status ?? null }
@@ -497,15 +523,15 @@ export function restActionSpec(ix, method, path, { service, version, include = [
     ...(bodyText || inputs.some((i) => i.type === 'Number') ? [{ kind: 'documentation', text: 'The Power Fx writes each value with JSON(), which Microsoft lists for Copilot Studio: a text escaped (quotes, backslashes, line breaks), a number with a point and a date as yyyy-mm-dd whatever the person\'s language.', source: 'https://learn.microsoft.com/en-us/power-platform/power-fx/reference/function-json' }] : []),
     { kind: 'spec', text: securityFacts(e).join(' ') },
   ]
-  const blankable = inputs.filter((i) => i.in === 'body' && !i.required)
-  if (blankable.length) notes.push({ kind: 'documentation', text: `An optional input left blank goes as null (JSON() writes Blank() as null): ${blankable.map((i) => i.name).join(', ')}. To leave a field out instead, write its part with If(IsBlank(${variablePrefix}${blankable[0].name}), "", …).`, inputs: blankable.map((i) => i.name), source: 'https://learn.microsoft.com/en-us/power-platform/power-fx/reference/function-json' })
+  const blankable = inputs.filter((i) => i.in === 'body' && !i.required && !omitted.has(i.name))
+  if (blankable.length) notes.push({ kind: 'documentation', text: `An optional input left blank goes as null (JSON() writes Blank() as null): ${blankable.map((i) => i.name).join(', ')}. To leave a field out instead, name it in omit_if_blank (${blankable[0].json_path}): the Power Fx then writes it with If(IsBlank(…), "", …).`, inputs: blankable.map((i) => i.name), source: 'https://learn.microsoft.com/en-us/power-platform/power-fx/reference/function-json' })
   const headers = e.params.filter((x) => x.in === 'header')
   if (headers.length) notes.push({ kind: 'documentation', text: `The endpoint takes the header${headers.length > 1 ? 's' : ''} ${headers.map((h) => `${h.name} (${h.required ? 'required' : 'optional'}${h.description ? `: ${h.description.slice(0, 120)}` : ''})`).join('; ')}; Execute REST request sends none — its parameters are relativePath, method, contentType and body — so ${headers.some((h) => h.required) ? 'it cannot call this endpoint as the specification asks' : 'Workday\'s default for it applies'}.`, headers: headers.map((h) => h.name) })
   return {
     connector: 'Workday (Microsoft, Premium)', action: 'Execute REST request (Preview)', operation_id: 'REST_Operation',
     endpoint: `${e.method} ${e.prefix} ${e.path}`, service: e.service, version: e.version,
     parameters: { relativePath: rest, method: e.method, ...(bodyText ? { contentType: 'application/json', body: '<see power_fx.body / body_template>' } : {}) },
-    power_fx: { relativePath: fx(rest, false), ...(bodyText ? { body: fx(bodyText, true) } : {}) },
+    power_fx: { relativePath: fx(rest, false), ...(bodyText ? { body: fx(fxText, true) } : {}) },
     ...(bodyText ? { body_template: bodyText } : {}),
     inputs, decisions,
     decision_rules: { default: 'the tool\'s default — an ID in the path as a WID; the required query parameters only; a body with only its required fields. Change them with id_forms (--id-form ID=me) and include (a query parameter by name: --include limit; a body field by path: --include a.b).', chosen: 'what the caller asked for' },

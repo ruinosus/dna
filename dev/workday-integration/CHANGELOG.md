@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.6 — 2026-11-06
+
+From the VS Code write test, run again on 0.3.5 (it passed; the agent wrote the Power Fx again by hand to leave a
+blank comment out):
+
+- `copilot-rest --omit-if-blank a.b` (MCP `omit_if_blank`): the Power Fx leaves an optional body field out when its
+  input is blank, with `If(IsBlank(…), "", …)` and the comma in its place (the field goes last in its object), instead
+  of sending `null`; a decision says so. A check runs the Power Fx with and without the value and parses the JSON. A
+  required field, an object, a fixed value or every field of an object is refused.
+
 ## 0.3.5 — 2026-11-06
 
 From the VS Code write test, run again on 0.3.4 (it passed):

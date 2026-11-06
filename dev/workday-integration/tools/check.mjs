@@ -384,6 +384,23 @@ globalThis.fetch = async (url) => {
   const r4body = JSON.parse(r4.body_template.replace(/"\{\{[A-Za-z0-9_]+\}\}"/g, '"x"'))
   ok(r4body.kind.id === '0123456789abcdef0123456789abcdef' && r4body.hoursPerWeek === 20 && r4body.remote === false && !r4.inputs.some((i) => ['KindId', 'HoursPerWeek', 'Remote'].includes(i.name)) && r4.power_fx.body.includes('""id"": ""0123456789abcdef0123456789abcdef""') && !r4.power_fx.body.includes('Topic.KindId') && r4.decisions.filter((d) => d.kind === 'fixed_value').length === 3, 'copilot-rest: values writes a body field as a fixed value — in the template and the Power Fx, not an input, a decision', r4.body_template)
   ok(throws(() => restActionSpec(rx, 'POST', '/workers/{ID}/arrangementRequests', { values: { hoursPerWeek: 'many' } }), /is a number — not many/) && throws(() => restActionSpec(rx, 'POST', '/workers/{ID}/arrangementRequests', { values: { kind: 'x' } }), /holds fields/) && throws(() => restActionSpec(rx, 'GET', '/workers/{ID}/leaveBalances', { values: { a: 1 } }), /has no body/), 'copilot-rest: a value of the wrong type, on an object or on an endpoint with no body is refused')
+  // the Power Fx of a body run as Copilot Studio would: its parts joined by &, JSON() of each input, If(IsBlank(…)) for
+  // the fields left out when blank
+  const runFx = (fx, vars) => {
+    const str = (t) => t.slice(1, -1).replace(/""/g, '"')
+    return fx.split(' &\n').map((part) => {
+      let m
+      if ((m = /^If\(IsBlank\(Topic\.(\w+)\), "", ("(?:[^"]|"")*") & JSON\(Topic\.\1\)\)$/.exec(part))) return vars[m[1]] == null ? '' : str(m[2]) + JSON.stringify(vars[m[1]])
+      if ((m = /^JSON\(Topic\.(\w+)\)$/.exec(part))) return JSON.stringify(vars[m[1]] ?? null)
+      if (/^"(?:[^"]|"")*"$/.test(part)) return str(part)
+      throw new Error(`a part not understood: ${part}`)
+    }).join('')
+  }
+  const r5 = restActionSpec(rx, 'POST', '/workers/{ID}/arrangementRequests', { include: ['note', 'hoursPerWeek'], omitIfBlank: ['note', 'hoursPerWeek'] })
+  const full5 = JSON.parse(runFx(r5.power_fx.body, { StartDate: '2026-11-06', KindId: 'k', Note: 'a "quoted"\nline', HoursPerWeek: 20 }))
+  const bare5 = JSON.parse(runFx(r5.power_fx.body, { StartDate: '2026-11-06', KindId: 'k' }))
+  ok(full5.note === 'a "quoted"\nline' && full5.hoursPerWeek === 20 && !('note' in bare5) && !('hoursPerWeek' in bare5) && bare5.kind.id === 'k' && r5.decisions.some((d) => d.kind === 'omit_if_blank' && d.json_paths.includes('note')) && !r5.notes.some((n) => n.inputs?.includes('Note')), 'copilot-rest: omit_if_blank — the Power Fx leaves the field out when its input is blank, and the body is JSON either way', r5.power_fx.body)
+  ok(throws(() => restActionSpec(rx, 'POST', '/workers/{ID}/arrangementRequests', { omitIfBlank: ['startDate'] }), /is required/) && throws(() => restActionSpec(rx, 'POST', '/workers/{ID}/arrangementRequests', { omitIfBlank: ['kind'] }), /holds fields/) && throws(() => restActionSpec(rx, 'POST', '/workers/{ID}/arrangementRequests', { omitIfBlank: ['office.id'] }), /every field of office/) && throws(() => restActionSpec(rx, 'POST', '/workers/{ID}/arrangementRequests', { values: { note: 'x' }, omitIfBlank: ['note'] }), /fixed value/), 'copilot-rest: omit_if_blank on a required field, an object, a fixed value or every field of an object is refused')
   const arr = getRestEndpoint(rx, 'POST', '/workers/{ID}/arrangementRequests')
   ok(/Submitted, 0123456789abcdef0123456789abcdef\.?$/.test(arr.description) && arr.description.length > 600 && !/Secured By|Scope:/.test(arr.description), "rest: Workday's description whole (a WID at its end, past 600 characters), without its security lines", arr.description.slice(-80))
   ok(arr.facts.some((f) => /business process types .*Request Arrangement/.test(f)) && arr.facts.some((f) => /domains .*Self-Service: Arrangements/.test(f)) && JSON.stringify(arr.business_processes) === '["Request Arrangement"]', '«Secured By Business Process Type» is a fact, beside the domains', JSON.stringify(arr.facts))

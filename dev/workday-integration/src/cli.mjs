@@ -34,6 +34,7 @@ const USAGE = `usage: node scripts/wws.mjs <command> [options]   (--json on any 
   rest <METHOD> <path>         a REST endpoint: its parameters (what each ID accepts), body and response, the security
                                domains and scope Workday's description names [--service S] [--depth N] [--field body.a]
   copilot-rest <METHOD> <path> the Copilot Studio «Execute REST request (Preview)» spec [--id-form ID=me]… [--include a.b]… [--value a.b=v]…
+                               [--omit-if-blank a.b]…
                                [--read a.b]…
   connector [action]           the Workday connector's actions (SOAP, REST, RaaS and the ready-made ones), from Microsoft's docs
 search finds SOAP operations and REST endpoints together (api: soap|rest); --api soap|rest for one.
@@ -43,11 +44,11 @@ fetch --rest [--rest-services staffing,common…] [--rest-all-versions]: the RES
 Each envelope, spec and template lists its decisions (an ID type, a choice's alternative, an optional container):
 change any of them with --id-type and --choose.`
 
-const VALUED = new Set(['--index', '--scope', '--limit', '--path', '--depth', '--service', '--version', '--include', '--services', '--filter', '--id-type', '--choose', '--read', '--api', '--id-form', '--rest-services', '--field', '--value'])
+const VALUED = new Set(['--index', '--scope', '--limit', '--path', '--depth', '--service', '--version', '--include', '--services', '--filter', '--id-type', '--choose', '--read', '--api', '--id-form', '--rest-services', '--field', '--value', '--omit-if-blank'])
 const FLAGS = new Set(['--json', '--response', '--all', '--wsse', '--body-only', '--envelope', '--expand', '--rest', '--rest-all-versions'])
 
 function parseArgs(argv) {
-  const opts = { include: [], idTypes: {}, choose: [], read: [], idForms: {}, values: {} }
+  const opts = { include: [], idTypes: {}, choose: [], read: [], idForms: {}, values: {}, omitIfBlank: [] }
   const rest = []
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
@@ -57,6 +58,7 @@ function parseArgs(argv) {
       if (a === '--include') opts.include.push(v)
       else if (a === '--choose') opts.choose.push(v)
       else if (a === '--read') opts.read.push(v)
+      else if (a === '--omit-if-blank') opts.omitIfBlank.push(v)
       else if (a === '--value') {
         const m = /^(.+?)=(.*)$/.exec(v)
         if (!m) throw new LookupError(`--value takes path=value, e.g. businessProcessParameters.action.id=<WID> (got ${v})`)
@@ -289,7 +291,7 @@ export async function main(argv) {
         say(opts.json ? JSON.stringify(e, null, 2) : [`${e.method} ${e.relative_path}  (${e.service} ${e.version})`, e.summary, ...(e.description && e.description !== e.summary ? ['', e.description] : []), '', ...e.facts.map((f) => `• ${f}`), '', 'Parameters:', ...e.params.map((x) => `  ${x.in}:${x.name}${x.required ? '' : '?'} ${x.type ?? ''}${x.accepts ? ` — accepts ${[...(x.accepts.wid ? ['WID'] : []), ...x.accepts.reference_id_types.map((t) => `${t}=…`), ...x.accepts.named].join(', ')}` : ''}`), ...(e.body ? ['', `Body (${e.body.name}):${e.body.cut ? ` (${e.body.cut})` : ''}`, e.body.tree] : []), ...(e.response ? ['', `Response ${e.response.status}:${e.response.cut ? ` (${e.response.cut})` : ''}`, e.response.tree] : []), ...(e.same_path.length ? ['', 'On the same path:', ...e.same_path.map((x) => `  ${x}`)] : [])].join('\n'))
         return 0
       }
-      json(restActionSpec(ix, m, p, { service: opts.service, version: opts.version, include: opts.include, idForms: opts.idForms, read: opts.read, values: opts.values }))
+      json(restActionSpec(ix, m, p, { service: opts.service, version: opts.version, include: opts.include, idForms: opts.idForms, read: opts.read, values: opts.values, omitIfBlank: opts.omitIfBlank }))
       return 0
     }
     if (cmd === 'operations') {
