@@ -390,7 +390,7 @@ const jsonPlaceholder = (n) => (n.type === 'object' ? null : `{{${camel(n.path.r
  * path's IDs as inputs), method, contentType, a JSON body with {{placeholders}} (the required fields, and include),
  * the Power Fx of the path and the body, what to read back (--read: dotted paths of the response), and its decisions:
  * the form of each ID (a WID, a Reference ID, `me`), the optional query parameters and body fields left out. */
-export function restActionSpec(ix, method, path, { service, version, include = [], idForms = {}, read = [], variablePrefix = 'Topic.' } = {}) {
+export function restActionSpec(ix, method, path, { service, version, include = [], idForms = {}, read = [], values = {}, variablePrefix = 'Topic.' } = {}) {
   const e = ix.resolveRest(method, path, service, version)
   const defs = ix.restDefinitions(e.service, e.version)
   const decisions = []
@@ -424,17 +424,28 @@ export function restActionSpec(ix, method, path, { service, version, include = [
   const queryLeftOut = query.filter((p) => !sent.includes(p))
   if (queryLeftOut.length) decisions.push({ kind: 'optional_query', left_out: queryLeftOut.map((p) => ({ name: p.name, type: p.type, ...(p.description ? { description: p.description.slice(0, 100) } : {}) })), why: 'default' })
   const bodyInclude = include.filter((p) => !query.some((q) => q.name === p))
+  if (Object.keys(values).length && !e.body?.schema) throw new LookupError(`values: ${e.method} ${e.path} has no body — values fixes a body field`)
   if (bodyInclude.length && !e.body?.schema) throw new LookupError(`include: ${bodyInclude.join(', ')} — ${e.method} ${e.path} has no body; its query parameters: ${query.map((q) => q.name).join(', ') || '(none)'}`)
   // the body: the required fields, and those include names (dotted paths)
   let bodyText = null
   if (e.body?.schema) {
     const tree = jsonTree(defs, e.body.schema, 'body', { maxDepth: 6 })
-    const forced = new Set(bodyInclude.flatMap((p) => findJsonPath(tree, p).path.split('.').flatMap((_, i, a) => { const x = a.slice(0, i + 1).join('.'); return [x, x.replace(/\[\]$/, '')] })))
+    // values: a body field written as a fixed value, not an input (the Submitted action's WID)
+    const fixed = new Map(Object.entries(values).map(([p, v]) => {
+      const n = findJsonPath(tree, p)
+      if ((n.type === 'array' ? n.items?.children : n.children)?.length) throw new LookupError(`values: ${p} holds fields, not a value`)
+      const num = ['number', 'integer'].includes(n.type)
+      const val = num ? Number(v) : n.type === 'boolean' ? v === true || v === 'true' ? true : v === false || v === 'false' ? false : null : String(v)
+      if (val === null || (num && !Number.isFinite(val))) throw new LookupError(`values: ${p} is ${n.type === 'boolean' ? 'a boolean (true or false)' : 'a number'} — not ${v}`)
+      return [n.path, val]
+    }))
+    const forced = new Set([...bodyInclude, ...fixed.keys()].flatMap((p) => findJsonPath(tree, p).path.split('.').flatMap((_, i, a) => { const x = a.slice(0, i + 1).join('.'); return [x, x.replace(/\[\]$/, '')] })))
     // a field is required only when every field above it is too (position.id is, if position is sent)
     const build = (n, above = true) => {
       const kids = (n.type === 'array' ? n.items?.children : n.children) ?? []
       const want = kids.filter((c) => !c.readOnly && (c.required || forced.has(c.path)))
       if (!kids.length) {
+        if (fixed.has(n.path)) return fixed.get(n.path)
         const ph = jsonPlaceholder(n)
         inputs.push({ name: camel(n.path.replace(/\[\]/g, '').replace(/\./g, '_')), copilot_variable: `${variablePrefix}${camel(n.path.replace(/\[\]/g, '').replace(/\./g, '_'))}`, in: 'body', json_path: n.path, type: n.type === 'boolean' ? 'Boolean' : ['number', 'integer'].includes(n.type) ? 'Number' : n.format === 'date' ? 'Date' : 'String', required: n.required && above, ...(n.enum ? { allowed_values: n.enum.slice(0, 20) } : {}), ...(n.description ? { description: n.description.slice(0, 100) } : {}) })
         return ph
@@ -447,6 +458,7 @@ export function restActionSpec(ix, method, path, { service, version, include = [
     const bare = new Set(inputs.filter((i) => i.in === 'body' && (i.type === 'Number' || i.type === 'Boolean')).map((i) => i.name))
     bodyText = JSON.stringify(body, null, 2).replace(/"\{\{([A-Za-z0-9_]+)\}\}"/g, (m, v) => (bare.has(v) ? `{{${v}}}` : m))
     const optional = ((tree.children ?? []).filter((c) => !c.required && !c.readOnly && !forced.has(c.path))).map((c) => c.name)
+    for (const [p, v] of fixed) decisions.push({ kind: 'fixed_value', json_path: p, value: v, why: 'chosen' })
     if (optional.length) decisions.push({ kind: 'optional_fields', left_out: optional.slice(0, 20), why: 'default' })
   }
   const byVar = Object.fromEntries(inputs.map((i) => [i.name, i]))

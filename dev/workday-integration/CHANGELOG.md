@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.3.5 — 2026-11-06
+
+From the VS Code write test, run again on 0.3.4 (it passed):
+
+- `copilot-rest --value a.b=v` (MCP `values`): a body field written as a fixed value — the WID of the Submitted action
+  — in the template and the Power Fx, not an input; a decision says so. A value of the wrong type, on an object or on
+  an endpoint with no body is refused.
+- SKILL.md: show the body as the spec's `body_template` gives it, not written again by hand (the test wrote a number in
+  quotes).
+
 ## 0.3.4 — 2026-11-06
 
 From the VS Code write test, run again on 0.3.3:
